@@ -146,21 +146,24 @@ class FakeSyncDelegate : public DelayingFakeSyncDelegate {
 // |NOT_IMPLEMENTED| error in all other cases.
 class FakePageDbImpl : public PageDbEmptyImpl {
  public:
-  FakePageDbImpl() {}
+  FakePageDbImpl(rng::Random* random) : random_(random) {}
 
   Status Init(CoroutineHandler* /*handler*/) override { return Status::OK; }
   Status CreateJournalId(CoroutineHandler* /*handler*/,
                          JournalType /*journal_type*/, const CommitId& /*base*/,
                          JournalId* journal_id) override {
-    *journal_id = RandomString(10);
+    *journal_id = RandomString(random_, 10);
     return Status::OK;
   }
 
   Status StartBatch(CoroutineHandler* /*handler*/,
                     std::unique_ptr<PageDb::Batch>* batch) override {
-    *batch = std::make_unique<FakePageDbImpl>();
+    *batch = std::make_unique<FakePageDbImpl>(random_);
     return Status::OK;
   }
+
+ private:
+  rng::Random* const random_;
 };
 
 class PageStorageTest : public ledger::TestWithEnvironment {
@@ -178,7 +181,7 @@ class PageStorageTest : public ledger::TestWithEnvironment {
       storage_.reset();
     }
     tmpfs_ = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
-    PageId id = RandomString(10);
+    PageId id = RandomString(environment_.random(), 10);
     storage_ = std::make_unique<PageStorageImpl>(
         &environment_, &encryption_service_,
         ledger::DetachedPath(tmpfs_->root_fd()), id);
@@ -326,7 +329,8 @@ class PageStorageTest : public ledger::TestWithEnvironment {
       if (key.size() < min_key_size) {
         key.resize(min_key_size);
       }
-      EXPECT_TRUE(PutInJournal(journal.get(), key, RandomObjectIdentifier(),
+      EXPECT_TRUE(PutInJournal(journal.get(), key,
+                               RandomObjectIdentifier(environment_.random()),
                                KeyPriority::EAGER));
     }
 
@@ -578,7 +582,7 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
   bool called;
   Status status;
   std::unique_ptr<const Commit> lookup_commit;
-  storage_->GetCommit(RandomCommitId(),
+  storage_->GetCommit(RandomCommitId(environment_.random()),
                       callback::Capture(callback::SetWhenCalled(&called),
                                         &status, &lookup_commit));
   RunLoopUntilIdle();
@@ -589,8 +593,8 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(GetFirstHead());
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      environment_.clock(), storage_.get(), RandomObjectIdentifier(),
-      std::move(parent));
+      environment_.clock(), storage_.get(),
+      RandomObjectIdentifier(environment_.random()), std::move(parent));
   CommitId id = commit->GetId();
   std::string storage_bytes = commit->GetStorageBytes().ToString();
 
@@ -610,8 +614,8 @@ TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(GetFirstHead());
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      environment_.clock(), storage_.get(), RandomObjectIdentifier(),
-      std::move(parent));
+      environment_.clock(), storage_.get(),
+      RandomObjectIdentifier(environment_.random()), std::move(parent));
   CommitId id = commit->GetId();
   std::string storage_bytes = commit->GetStorageBytes().ToString();
 
@@ -650,10 +654,11 @@ TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
 TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
   // Try to add a commit before its parent and see the error.
   std::vector<std::unique_ptr<const Commit>> parent;
-  parent.emplace_back(new CommitRandomImpl());
+  parent.emplace_back(
+      std::make_unique<CommitRandomImpl>(environment_.random()));
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      environment_.clock(), storage_.get(), RandomObjectIdentifier(),
-      std::move(parent));
+      environment_.clock(), storage_.get(),
+      RandomObjectIdentifier(environment_.random()), std::move(parent));
 
   bool called;
   Status status;
@@ -840,8 +845,8 @@ TEST_F(PageStorageTest, SyncCommits) {
   parent.emplace_back(GetFirstHead());
   // After adding a commit it should marked as unsynced.
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      environment_.clock(), storage_.get(), RandomObjectIdentifier(),
-      std::move(parent));
+      environment_.clock(), storage_.get(),
+      RandomObjectIdentifier(environment_.random()), std::move(parent));
   CommitId id = commit->GetId();
   std::string storage_bytes = commit->GetStorageBytes().ToString();
 
@@ -879,8 +884,8 @@ TEST_F(PageStorageTest, HeadCommits) {
   // Adding a new commit with the previous head as its parent should replace the
   // old head.
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      environment_.clock(), storage_.get(), RandomObjectIdentifier(),
-      std::move(parent));
+      environment_.clock(), storage_.get(),
+      RandomObjectIdentifier(environment_.random()), std::move(parent));
   CommitId id = commit->GetId();
 
   bool called;
@@ -995,8 +1000,9 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   // Using FakePageDbImpl will cause all PageDb operations that have to do
   // with journal entry update, to fail with a NOT_IMPLEMENTED error.
   auto test_storage = std::make_unique<PageStorageImpl>(
-      &environment_, &encryption_service_, std::make_unique<FakePageDbImpl>(),
-      RandomString(10));
+      &environment_, &encryption_service_,
+      std::make_unique<FakePageDbImpl>(environment_.random()),
+      RandomString(environment_.random(), 10));
 
   bool called;
   Status status;
@@ -1006,13 +1012,14 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   // returns an error. After a failed call all other Put/Delete/Commit
   // operations should fail with ILLEGAL_STATE.
   test_storage->StartCommit(
-      RandomCommitId(), JournalType::EXPLICIT,
+      RandomCommitId(environment_.random()), JournalType::EXPLICIT,
       callback::Capture(callback::SetWhenCalled(&called), &status, &journal));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
-  ObjectIdentifier random_identifier = RandomObjectIdentifier();
+  ObjectIdentifier random_identifier =
+      RandomObjectIdentifier(environment_.random());
 
   journal->Put("key", random_identifier, KeyPriority::EAGER,
                callback::Capture(callback::SetWhenCalled(&called), &status));
@@ -1043,7 +1050,7 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   // All calls will fail because of FakePageDbImpl implementation, not because
   // of an ILLEGAL_STATE error.
   test_storage->StartCommit(
-      RandomCommitId(), JournalType::IMPLICIT,
+      RandomCommitId(environment_.random()), JournalType::IMPLICIT,
       callback::Capture(callback::SetWhenCalled(&called), &status, &journal));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
@@ -1093,7 +1100,8 @@ TEST_F(PageStorageTest, DestroyUncommittedJournal) {
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_NE(nullptr, journal);
-  EXPECT_TRUE(PutInJournal(journal.get(), "key", RandomObjectIdentifier(),
+  EXPECT_TRUE(PutInJournal(journal.get(), "key",
+                           RandomObjectIdentifier(environment_.random()),
                            KeyPriority::EAGER));
 }
 
@@ -1292,7 +1300,7 @@ TEST_F(PageStorageTest, GetObjectFromSyncWrongId) {
 }
 
 TEST_F(PageStorageTest, AddAndGetHugeObjectFromLocal) {
-  std::string data_str = RandomString(65536);
+  std::string data_str = RandomString(environment_.random(), 65536);
 
   ObjectData data(std::move(data_str), InlineBehavior::PREVENT);
 
@@ -1898,16 +1906,16 @@ TEST_F(PageStorageTest, WatcherForReEntrantCommits) {
   parent.emplace_back(GetFirstHead());
 
   std::unique_ptr<const Commit> commit1 = CommitImpl::FromContentAndParents(
-      environment_.clock(), storage_.get(), RandomObjectIdentifier(),
-      std::move(parent));
+      environment_.clock(), storage_.get(),
+      RandomObjectIdentifier(environment_.random()), std::move(parent));
   CommitId id1 = commit1->GetId();
 
   parent.clear();
   parent.emplace_back(commit1->Clone());
 
   std::unique_ptr<const Commit> commit2 = CommitImpl::FromContentAndParents(
-      environment_.clock(), storage_.get(), RandomObjectIdentifier(),
-      std::move(parent));
+      environment_.clock(), storage_.get(),
+      RandomObjectIdentifier(environment_.random()), std::move(parent));
   CommitId id2 = commit2->GetId();
 
   FakeCommitWatcher watcher;
@@ -1948,7 +1956,8 @@ TEST_F(PageStorageTest, NoOpCommit) {
   EXPECT_EQ(Status::OK, status);
 
   // Create a key, and delete it.
-  EXPECT_TRUE(PutInJournal(journal.get(), "key", RandomObjectIdentifier(),
+  EXPECT_TRUE(PutInJournal(journal.get(), "key",
+                           RandomObjectIdentifier(environment_.random()),
                            KeyPriority::EAGER));
   EXPECT_TRUE(DeleteFromJournal(journal.get(), "key"));
 
@@ -2073,7 +2082,8 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(PutInJournal(journal_a.get(), "a", RandomObjectIdentifier(),
+  EXPECT_TRUE(PutInJournal(journal_a.get(), "a",
+                           RandomObjectIdentifier(environment_.random()),
                            KeyPriority::EAGER));
   std::unique_ptr<const Commit> commit_a =
       TryCommitJournal(std::move(journal_a), Status::OK);
@@ -2087,7 +2097,8 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(PutInJournal(journal_b.get(), "b", RandomObjectIdentifier(),
+  EXPECT_TRUE(PutInJournal(journal_b.get(), "b",
+                           RandomObjectIdentifier(environment_.random()),
                            KeyPriority::EAGER));
   std::unique_ptr<const Commit> commit_b =
       TryCommitJournal(std::move(journal_b), Status::OK);
@@ -2114,7 +2125,8 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(PutInJournal(journal_c.get(), "c", RandomObjectIdentifier(),
+  EXPECT_TRUE(PutInJournal(journal_c.get(), "c",
+                           RandomObjectIdentifier(environment_.random()),
                            KeyPriority::EAGER));
   std::unique_ptr<const Commit> commit_c =
       TryCommitJournal(std::move(journal_c), Status::OK);

@@ -16,6 +16,7 @@
 #include "peridot/bin/cloud_provider_firestore/testing/cloud_provider_factory.h"
 #include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/bin/ledger/tests/cloud_provider/launcher/validation_tests_launcher.h"
+#include "peridot/lib/rng/system_random.h"
 
 namespace cloud_provider_firestore {
 void PrintUsage(const char* executable_name) {
@@ -49,13 +50,17 @@ int main(int argc, char** argv) {
     }
   }
 
+  rng::SystemRandom random;
+
   cloud_provider_firestore::CloudProviderFactory factory(
-      startup_context.get(), sync_params.api_key,
+      startup_context.get(), &random, sync_params.api_key,
       sync_params.credentials->Clone());
 
   cloud_provider::ValidationTestsLauncher launcher(
       startup_context.get(), [&factory](auto request) {
-        factory.MakeCloudProvider(std::move(request));
+        factory.MakeCloudProvider(
+            cloud_provider_firestore::CloudProviderFactory::UserId::New(),
+            std::move(request));
       });
 
   int32_t return_code = -1;

@@ -22,7 +22,7 @@ class FakeCommit : public Commit {
   ~FakeCommit() override;
 
   // Commit:
-  std::unique_ptr<Commit> Clone() const override;
+  std::unique_ptr<const Commit> Clone() const override;
 
   const CommitId& GetId() const override;
 

@@ -20,7 +20,7 @@ std::vector<std::unique_ptr<const storage::Commit>> TestCommit::AsList() {
   return result;
 }
 
-std::unique_ptr<storage::Commit> TestCommit::Clone() const {
+std::unique_ptr<const storage::Commit> TestCommit::Clone() const {
   return std::make_unique<TestCommit>(id, content);
 }
 

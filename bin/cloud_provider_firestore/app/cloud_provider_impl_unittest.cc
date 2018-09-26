@@ -14,24 +14,26 @@
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
+#include "peridot/lib/rng/test_random.h"
 
 namespace cloud_provider_firestore {
 
 class CloudProviderImplTest : public gtest::TestLoopFixture {
  public:
-  CloudProviderImplTest() {
+  CloudProviderImplTest() : random_(test_loop().initial_state()) {
     auto firebase_auth =
         std::make_unique<firebase_auth::TestFirebaseAuth>(dispatcher());
     firebase_auth_ = firebase_auth.get();
     auto firestore_service = std::make_unique<TestFirestoreService>();
     firestore_service_ = firestore_service.get();
     cloud_provider_impl_ = std::make_unique<CloudProviderImpl>(
-        "some user id", std::move(firebase_auth), std::move(firestore_service),
-        cloud_provider_.NewRequest());
+        &random_, "some user id", std::move(firebase_auth),
+        std::move(firestore_service), cloud_provider_.NewRequest());
   }
   ~CloudProviderImplTest() override {}
 
  protected:
+  rng::TestRandom random_;
   firebase_auth::TestFirebaseAuth* firebase_auth_ = nullptr;
 
   TestFirestoreService* firestore_service_;

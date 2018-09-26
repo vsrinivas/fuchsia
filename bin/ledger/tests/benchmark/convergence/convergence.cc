@@ -18,7 +18,6 @@
 #include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/memory/ref_ptr.h>
-#include <lib/fxl/random/uuid.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
@@ -32,6 +31,7 @@
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
 #include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/lib/convert/convert.h"
+#include "peridot/lib/rng/test_random.h"
 
 namespace ledger {
 namespace {
@@ -97,13 +97,14 @@ class ConvergenceBenchmark : public PageWatcher {
   fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
+  rng::TestRandom random_;
   DataGenerator generator_;
   std::unique_ptr<component::StartupContext> startup_context_;
   cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
   const int entry_count_;
   const int value_size_;
   const int device_count_;
-  const std::string user_id_;
+  const cloud_provider_firestore::CloudProviderFactory::UserId user_id_;
   // Track all Ledger instances running for this test and allow to interact with
   // it.
   std::vector<std::unique_ptr<DeviceContext>> devices_;
@@ -119,14 +120,16 @@ ConvergenceBenchmark::ConvergenceBenchmark(
     std::unique_ptr<component::StartupContext> startup_context, int entry_count,
     int value_size, int device_count, SyncParams sync_params)
     : loop_(loop),
+      random_(0),
+      generator_(&random_),
       startup_context_(std::move(startup_context)),
-      cloud_provider_factory_(startup_context_.get(),
+      cloud_provider_factory_(startup_context_.get(), &random_,
                               std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
       entry_count_(entry_count),
       value_size_(value_size),
       device_count_(device_count),
-      user_id_("convergence_" + fxl::GenerateUUID()),
+      user_id_(cloud_provider_firestore::CloudProviderFactory::UserId::New()),
       devices_(device_count) {
   FXL_DCHECK(loop_);
   FXL_DCHECK(entry_count_ > 0);
@@ -155,8 +158,8 @@ void ConvergenceBenchmark::Run() {
     FXL_DCHECK(ret);
 
     cloud_provider::CloudProviderPtr cloud_provider;
-    cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
-        user_id_, cloud_provider.NewRequest());
+    cloud_provider_factory_.MakeCloudProvider(user_id_,
+                                              cloud_provider.NewRequest());
 
     GetLedger(startup_context_.get(), device_context->controller.NewRequest(),
               std::move(cloud_provider), "convergence",

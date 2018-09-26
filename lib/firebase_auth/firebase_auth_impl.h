@@ -19,6 +19,7 @@
 #include <lib/fit/function.h>
 
 #include "peridot/lib/firebase_auth/firebase_auth.h"
+#include "peridot/lib/rng/random.h"
 
 namespace firebase_auth {
 
@@ -47,6 +48,7 @@ class FirebaseAuthImpl : public FirebaseAuth {
   };
 
   FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher,
+                   rng::Random* random,
                    fuchsia::modular::auth::TokenProviderPtr token_provider,
                    component::StartupContext* startup_context);
   // For tests.

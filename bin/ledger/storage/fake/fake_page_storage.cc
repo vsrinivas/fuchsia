@@ -32,17 +32,11 @@ storage::ObjectDigest ComputeDigest(fxl::StringView value) {
 
 }  // namespace
 
-FakePageStorage::FakePageStorage(PageId page_id)
-    : rng_(0),
-      dispatcher_(async_get_default_dispatcher()),
+FakePageStorage::FakePageStorage(ledger::Environment* environment,
+                                 PageId page_id)
+    : environment_(environment),
       page_id_(std::move(page_id)),
-      encryption_service_(async_get_default_dispatcher()) {}
-
-FakePageStorage::FakePageStorage(async_dispatcher_t* dispatcher, PageId page_id)
-    : rng_(0),
-      dispatcher_(dispatcher),
-      page_id_(std::move(page_id)),
-      encryption_service_(dispatcher) {}
+      encryption_service_(environment_->dispatcher()) {}
 
 FakePageStorage::~FakePageStorage() {}
 
@@ -67,7 +61,7 @@ void FakePageStorage::GetCommit(
   }
 
   async::PostDelayedTask(
-      dispatcher_,
+      environment_->dispatcher(),
       [this, commit_id = commit_id.ToString(), callback = std::move(callback)] {
         callback(Status::OK,
                  std::make_unique<FakeCommit>(journals_[commit_id].get()));
@@ -85,7 +79,8 @@ void FakePageStorage::StartCommit(
     data = journals_[commit_id].get()->GetData();
   }
   auto delegate = std::make_unique<FakeJournalDelegate>(
-      std::move(data), commit_id, autocommit_, next_generation);
+      environment_->random(), std::move(data), commit_id, autocommit_,
+      next_generation);
   auto journal = std::make_unique<FakeJournal>(delegate.get());
   journals_[delegate->GetId()] = std::move(delegate);
   callback(Status::OK, std::move(journal));
@@ -95,7 +90,8 @@ void FakePageStorage::StartMergeCommit(
     const CommitId& left, const CommitId& right,
     fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
   auto delegate = std::make_unique<FakeJournalDelegate>(
-      journals_[left].get()->GetData(), left, right, autocommit_,
+      environment_->random(), journals_[left].get()->GetData(), left, right,
+      autocommit_,
       1 + std::max(journals_[left].get()->GetGeneration(),
                    journals_[right].get()->GetGeneration()));
   auto journal = std::make_unique<FakeJournal>(delegate.get());
@@ -121,7 +117,8 @@ void FakePageStorage::CommitJournal(
         if (!drop_commit_notifications_) {
           for (CommitWatcher* watcher : watchers_) {
             async::PostTask(
-                dispatcher_, [watcher, commit = commit->Clone()]() mutable {
+                environment_->dispatcher(),
+                [watcher, commit = commit->Clone()]() mutable {
                   std::vector<std::unique_ptr<const Commit>> commits;
                   commits.push_back(std::move(commit));
                   watcher->OnNewCommits(commits, ChangeSource::LOCAL);
@@ -200,8 +197,8 @@ void FakePageStorage::GetPiece(
         callback(Status::OK,
                  std::make_unique<FakeObject>(object_identifier, it->second));
       });
-  async::PostDelayedTask(dispatcher_, [this] { SendNextObject(); },
-                         kFakePageStorageDelay);
+  async::PostDelayedTask(environment_->dispatcher(),
+                         [this] { SendNextObject(); }, kFakePageStorageDelay);
 }
 
 void FakePageStorage::GetCommitContents(const Commit& commit,
@@ -251,9 +248,10 @@ const std::map<ObjectIdentifier, std::string>& FakePageStorage::GetObjects()
 }
 
 void FakePageStorage::SendNextObject() {
+  auto rng = environment_->random()->NewBitGenerator<uint64_t>();
   std::uniform_int_distribution<size_t> distribution(
       0u, object_requests_.size() - 1);
-  auto it = object_requests_.begin() + distribution(rng_);
+  auto it = object_requests_.begin() + distribution(rng);
   auto closure = std::move(*it);
   object_requests_.erase(it);
   closure();

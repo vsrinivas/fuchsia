@@ -14,6 +14,7 @@
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/testing/test_with_environment.h"
+#include "peridot/lib/rng/random.h"
 
 namespace storage {
 
@@ -53,16 +54,16 @@ ObjectIdentifier MakeObjectIdentifier(
     InlineBehavior inline_behavior = InlineBehavior::ALLOW);
 
 // Returns a random string of the given length.
-std::string RandomString(size_t size);
+std::string RandomString(rng::Random* random, size_t size);
 
 // Create a new random commit id.
-CommitId RandomCommitId();
+CommitId RandomCommitId(rng::Random* random);
 
 // Create a new random object digest.
-ObjectDigest RandomObjectDigest();
+ObjectDigest RandomObjectDigest(rng::Random* random);
 
 // Create a new random object identifier.
-ObjectIdentifier RandomObjectIdentifier();
+ObjectIdentifier RandomObjectIdentifier(rng::Random* random);
 
 // Creates and returns a new EntryChange adding or updating the entry with the
 // given information.

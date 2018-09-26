@@ -16,29 +16,30 @@ namespace storage {
 namespace fake {
 namespace {
 
-storage::CommitId RandomCommitId() {
-  std::string result;
+storage::CommitId RandomCommitId(rng::Random* random) {
+  storage::CommitId result;
   result.resize(kCommitIdSize);
-  zx_cprng_draw(&result[0], kCommitIdSize);
+  random->Draw(&result);
   return result;
 }
 
 }  // namespace
 
-FakeJournalDelegate::FakeJournalDelegate(Data initial_data, CommitId parent_id,
-                                         bool autocommit,
+FakeJournalDelegate::FakeJournalDelegate(rng::Random* random, Data initial_data,
+                                         CommitId parent_id, bool autocommit,
                                          uint64_t generation = 0)
     : autocommit_(autocommit),
-      id_(RandomCommitId()),
+      id_(RandomCommitId(random)),
       parent_id_(std::move(parent_id)),
       data_(std::move(initial_data)),
       generation_(generation) {}
 
-FakeJournalDelegate::FakeJournalDelegate(Data initial_data, CommitId parent_id,
-                                         CommitId other_id, bool autocommit,
+FakeJournalDelegate::FakeJournalDelegate(rng::Random* random, Data initial_data,
+                                         CommitId parent_id, CommitId other_id,
+                                         bool autocommit,
                                          uint64_t generation = 0)
     : autocommit_(autocommit),
-      id_(RandomCommitId()),
+      id_(RandomCommitId(random)),
       parent_id_(std::move(parent_id)),
       other_id_(std::move(other_id)),
       data_(std::move(initial_data)),

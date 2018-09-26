@@ -17,7 +17,6 @@
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/logging.h>
-#include <lib/fxl/random/uuid.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
@@ -32,6 +31,7 @@
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
 #include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/lib/convert/convert.h"
+#include "peridot/lib/rng/test_random.h"
 
 namespace ledger {
 namespace {
@@ -90,6 +90,7 @@ class FetchBenchmark : public SyncWatcher {
   fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
+  rng::TestRandom random_;
   DataGenerator generator_;
   PageDataGenerator page_data_generator_;
   std::unique_ptr<component::StartupContext> startup_context_;
@@ -98,7 +99,7 @@ class FetchBenchmark : public SyncWatcher {
   const size_t entry_count_;
   const size_t value_size_;
   const size_t part_size_;
-  const std::string user_id_;
+  const cloud_provider_firestore::CloudProviderFactory::UserId user_id_;
   files::ScopedTempDir writer_tmp_dir_;
   files::ScopedTempDir reader_tmp_dir_;
   fuchsia::sys::ComponentControllerPtr writer_controller_;
@@ -120,15 +121,18 @@ FetchBenchmark::FetchBenchmark(
     size_t entry_count, size_t value_size, size_t part_size,
     SyncParams sync_params)
     : loop_(loop),
+      random_(0),
+      generator_(&random_),
+      page_data_generator_(&random_),
       startup_context_(std::move(startup_context)),
-      cloud_provider_factory_(startup_context_.get(),
+      cloud_provider_factory_(startup_context_.get(), &random_,
                               std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
       sync_watcher_binding_(this),
       entry_count_(entry_count),
       value_size_(value_size),
       part_size_(part_size),
-      user_id_("fetch_" + fxl::GenerateUUID()),
+      user_id_(cloud_provider_firestore::CloudProviderFactory::UserId::New()),
       writer_tmp_dir_(kStoragePath),
       reader_tmp_dir_(kStoragePath) {
   FXL_DCHECK(loop_);
@@ -154,8 +158,8 @@ void FetchBenchmark::Run() {
   FXL_DCHECK(ret);
 
   cloud_provider::CloudProviderPtr cloud_provider_writer;
-  cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
-      user_id_, cloud_provider_writer.NewRequest());
+  cloud_provider_factory_.MakeCloudProvider(user_id_,
+                                            cloud_provider_writer.NewRequest());
   GetLedger(startup_context_.get(), writer_controller_.NewRequest(),
             std::move(cloud_provider_writer), "fetch",
             DetachedPath(std::move(writer_path)), QuitLoopClosure(),
@@ -218,8 +222,8 @@ void FetchBenchmark::ConnectReader() {
   FXL_DCHECK(ret);
 
   cloud_provider::CloudProviderPtr cloud_provider_reader;
-  cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
-      user_id_, cloud_provider_reader.NewRequest());
+  cloud_provider_factory_.MakeCloudProvider(user_id_,
+                                            cloud_provider_reader.NewRequest());
   GetLedger(startup_context_.get(), reader_controller_.NewRequest(),
             std::move(cloud_provider_reader), "fetch",
             DetachedPath(std::move(reader_path)), QuitLoopClosure(),

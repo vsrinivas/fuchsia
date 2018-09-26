@@ -26,6 +26,7 @@
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
 #include "peridot/lib/convert/convert.h"
+#include "peridot/lib/rng/test_random.h"
 
 namespace ledger {
 namespace {
@@ -74,6 +75,7 @@ class UpdateEntryBenchmark {
   fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
+  rng::TestRandom random_;
   DataGenerator generator_;
 
   files::ScopedTempDir tmp_dir_;
@@ -95,6 +97,8 @@ UpdateEntryBenchmark::UpdateEntryBenchmark(
     std::unique_ptr<component::StartupContext> startup_context, int entry_count,
     int value_size, int transaction_size)
     : loop_(loop),
+      random_(0),
+      generator_(&random_),
       tmp_dir_(kStoragePath),
       startup_context_(std::move(startup_context)),
       entry_count_(entry_count),

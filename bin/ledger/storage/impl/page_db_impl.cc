@@ -177,7 +177,8 @@ Status PageDbImpl::StartBatch(coroutine::CoroutineHandler* handler,
                               std::unique_ptr<Batch>* batch) {
   std::unique_ptr<Db::Batch> db_batch;
   RETURN_ON_ERROR(db_.StartBatch(handler, &db_batch));
-  *batch = std::make_unique<PageDbBatchImpl>(std::move(db_batch), this);
+  *batch = std::make_unique<PageDbBatchImpl>(environment_->random(),
+                                             std::move(db_batch), this);
   return Status::OK;
 }
 

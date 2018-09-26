@@ -16,6 +16,8 @@
 #include "peridot/bin/cloud_provider_firestore/include/types.h"
 #include "peridot/lib/firebase_auth/testing/credentials.h"
 #include "peridot/lib/firebase_auth/testing/service_account_token_provider.h"
+#include "peridot/lib/rng/random.h"
+#include "peridot/lib/rng/system_random.h"
 
 namespace cloud_provider_firestore {
 
@@ -26,30 +28,44 @@ namespace cloud_provider_firestore {
 // the cloud provider.
 class CloudProviderFactory {
  public:
+  // Opaque container for user id.
+  class UserId {
+   public:
+    UserId(const UserId& user_id);
+    UserId(UserId&& user_id);
+    UserId& operator=(const UserId& user_id);
+    UserId& operator=(UserId&& user_id);
+
+    static UserId New();
+
+    const std::string& user_id() { return user_id_; }
+
+   private:
+    UserId();
+
+    std::string user_id_;
+  };
+
   CloudProviderFactory(
-      component::StartupContext* startup_context, std::string api_key,
+      component::StartupContext* startup_context, rng::Random* random,
+      std::string api_key,
       std::unique_ptr<service_account::Credentials> credentials);
   ~CloudProviderFactory();
 
   void Init();
 
   void MakeCloudProvider(
-      fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
-
-  void MakeCloudProviderWithGivenUserId(
-      std::string user_id,
+      UserId user_id,
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
 
   void MakeTokenProvider(
-      fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request);
-
-  void MakeTokenProviderWithGivenUserId(
-      std::string user_id,
+      UserId user_id,
       fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request);
 
  private:
   class TokenProviderContainer;
   component::StartupContext* const startup_context_;
+  rng::Random* const random_;
   const std::string api_key_;
   std::unique_ptr<service_account::Credentials> credentials_;
 

@@ -601,7 +601,7 @@ TEST_F(MergeResolverTest, UpdateMidResolution) {
 // implies using a fake PageStorage, we don't test the resolution itself, only
 // that backoff is triggered correctly.
 TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
-  storage::fake::FakePageStorage page_storage(dispatcher(), "page_id");
+  storage::fake::FakePageStorage page_storage(&environment_, "page_id");
 
   int get_next_count = 0;
   bool on_empty_called;

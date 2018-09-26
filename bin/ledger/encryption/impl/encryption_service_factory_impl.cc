@@ -9,14 +9,14 @@
 namespace encryption {
 
 EncryptionServiceFactoryImpl::EncryptionServiceFactoryImpl(
-    async_dispatcher_t* dispatcher)
-    : dispatcher_(dispatcher) {}
+    ledger::Environment* environment)
+    : environment_(environment) {}
 
 EncryptionServiceFactoryImpl::~EncryptionServiceFactoryImpl() {}
 
 std::unique_ptr<EncryptionService>
 EncryptionServiceFactoryImpl::MakeEncryptionService(std::string namespace_id) {
-  return std::make_unique<EncryptionServiceImpl>(dispatcher_,
+  return std::make_unique<EncryptionServiceImpl>(environment_,
                                                  std::move(namespace_id));
 }
 

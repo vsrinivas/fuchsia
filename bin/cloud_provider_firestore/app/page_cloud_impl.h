@@ -20,6 +20,7 @@
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call_client.h"
 #include "peridot/bin/cloud_provider_firestore/include/types.h"
 #include "peridot/lib/commit_pack/commit_pack.h"
+#include "peridot/lib/rng/random.h"
 
 namespace cloud_provider_firestore {
 
@@ -27,7 +28,8 @@ class PageCloudImpl : public cloud_provider::PageCloud,
                       public ListenCallClient {
  public:
   explicit PageCloudImpl(
-      std::string page_path, CredentialsProvider* credentials_provider,
+      std::string page_path, rng::Random* random,
+      CredentialsProvider* credentials_provider,
       FirestoreService* firestore_service,
       fidl::InterfaceRequest<cloud_provider::PageCloud> request);
   ~PageCloudImpl() override;
@@ -76,6 +78,7 @@ class PageCloudImpl : public cloud_provider::PageCloud,
   void ShutDownWatcher();
 
   const std::string page_path_;
+  rng::Random* const random_;
   CredentialsProvider* const credentials_provider_;
   FirestoreService* const firestore_service_;
 

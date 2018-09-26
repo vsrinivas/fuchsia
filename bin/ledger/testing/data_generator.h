@@ -12,14 +12,13 @@
 #include <lib/fidl/cpp/vector.h>
 
 #include "peridot/bin/ledger/fidl/include/types.h"
+#include "peridot/lib/rng/random.h"
 
 namespace ledger {
 
 class DataGenerator {
  public:
-  DataGenerator();
-
-  explicit DataGenerator(uint64_t seed);
+  explicit DataGenerator(rng::Random* random);
 
   ~DataGenerator();
 
@@ -41,7 +40,8 @@ class DataGenerator {
                                                  size_t unique_key_count);
 
  private:
-  std::independent_bits_engine<std::default_random_engine, CHAR_BIT, uint8_t>
+  std::independent_bits_engine<rng::Random::BitGenerator<uint64_t>, CHAR_BIT,
+                               uint8_t>
       generator_;
 };
 

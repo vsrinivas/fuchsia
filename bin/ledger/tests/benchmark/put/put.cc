@@ -14,7 +14,6 @@
 #include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/memory/ref_ptr.h>
-#include <lib/fxl/random/rand.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
@@ -27,6 +26,7 @@
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
 #include "peridot/lib/convert/convert.h"
+#include "peridot/lib/rng/test_random.h"
 
 namespace ledger {
 namespace {
@@ -77,6 +77,7 @@ class PutBenchmark : public PageWatcher {
   fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
+  rng::TestRandom random_;
   DataGenerator generator_;
   PageDataGenerator page_data_generator_;
 
@@ -116,7 +117,9 @@ PutBenchmark::PutBenchmark(
     int transaction_size, int key_size, int value_size, bool update,
     PageDataGenerator::ReferenceStrategy reference_strategy, uint64_t seed)
     : loop_(loop),
-      generator_(seed),
+      random_(seed),
+      generator_(&random_),
+      page_data_generator_(&random_),
       tmp_dir_(kStoragePath),
       startup_context_(std::move(startup_context)),
       entry_count_(entry_count),
@@ -441,7 +444,7 @@ int Main(int argc, const char** argv) {
       return -1;
     }
   } else {
-    seed = fxl::RandUint64();
+    seed = 0;
   }
 
   PutBenchmark app(&loop, std::move(startup_context), entry_count,

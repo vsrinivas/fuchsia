@@ -111,16 +111,17 @@ Environment EnvironmentBuilder::Build() {
   if (!coroutine_service_) {
     coroutine_service_ = std::make_unique<coroutine::CoroutineServiceImpl>();
   }
-  if (!backoff_factory_) {
-    backoff_factory_ = [] {
-      return std::make_unique<backoff::ExponentialBackoff>();
-    };
-  }
   if (!clock_) {
     clock_ = std::make_unique<timekeeper::SystemClock>();
   }
   if (!random_) {
     random_ = std::make_unique<rng::SystemRandom>();
+  }
+  if (!backoff_factory_) {
+    backoff_factory_ = [random = random_.get()] {
+      return std::make_unique<backoff::ExponentialBackoff>(
+          random->NewBitGenerator<uint64_t>());
+    };
   }
   return Environment(dispatcher_, io_dispatcher_, std::move(firebase_api_key_),
                      std::move(coroutine_service_), std::move(backoff_factory_),

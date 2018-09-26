@@ -263,7 +263,7 @@ LedgerManager::LedgerManager(
       encryption_service_(std::move(encryption_service)),
       storage_(std::move(storage)),
       ledger_sync_(std::move(ledger_sync)),
-      ledger_impl_(this),
+      ledger_impl_(environment_, this),
       merge_manager_(environment_),
       page_usage_listener_(page_usage_listener) {
   bindings_.set_empty_set_handler([this] { CheckEmpty(); });

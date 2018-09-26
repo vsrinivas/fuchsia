@@ -18,6 +18,7 @@ executable("validation") {
     "//peridot/bin/cloud_provider_firestore/testing",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/bin/ledger/tests/cloud_provider/launcher",
+    "//peridot/lib/rng:system",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

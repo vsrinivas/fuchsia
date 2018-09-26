@@ -100,8 +100,7 @@ void PageManager::BindPageSnapshot(
 
 Reference PageManager::CreateReference(
     storage::ObjectIdentifier object_identifier) {
-  uint64_t index;
-  zx_cprng_draw(&index, sizeof(index));
+  uint64_t index = environment_->random()->Draw<uint64_t>();
   FXL_DCHECK(references_.find(index) == references_.end());
   references_[index] = std::move(object_identifier);
   Reference reference;

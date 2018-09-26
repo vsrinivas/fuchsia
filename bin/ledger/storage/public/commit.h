@@ -21,7 +21,7 @@ class Commit {
   virtual ~Commit() {}
 
   // Returns a copy of the commit.
-  virtual std::unique_ptr<Commit> Clone() const = 0;
+  virtual std::unique_ptr<const Commit> Clone() const = 0;
 
   // Returns the id of this commit.
   virtual const CommitId& GetId() const = 0;

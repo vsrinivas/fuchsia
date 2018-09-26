@@ -208,7 +208,7 @@ void CommitImpl::Empty(
       });
 }
 
-std::unique_ptr<Commit> CommitImpl::Clone() const {
+std::unique_ptr<const Commit> CommitImpl::Clone() const {
   return std::make_unique<CommitImpl>(Token(), page_storage_, id_, timestamp_,
                                       generation_, root_node_identifier_,
                                       parent_ids_, storage_bytes_);

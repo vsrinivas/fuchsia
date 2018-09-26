@@ -11,13 +11,15 @@
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "peridot/lib/firebase_auth/testing/test_token_provider.h"
+#include "peridot/lib/rng/test_random.h"
 
 namespace cloud_provider_firestore {
 
 class FactoryImplTest : public gtest::TestLoopFixture {
  public:
   FactoryImplTest()
-      : factory_impl_(dispatcher(), /*startup_context=*/nullptr,
+      : random_(test_loop().initial_state()),
+        factory_impl_(dispatcher(), &random_, /*startup_context=*/nullptr,
                       /*cobalt_client_name=*/""),
         factory_binding_(&factory_impl_, factory_.NewRequest()),
         token_provider_(dispatcher()),
@@ -25,6 +27,7 @@ class FactoryImplTest : public gtest::TestLoopFixture {
   ~FactoryImplTest() override {}
 
  protected:
+  rng::TestRandom random_;
   FactoryImpl factory_impl_;
   FactoryPtr factory_;
   fidl::Binding<Factory> factory_binding_;

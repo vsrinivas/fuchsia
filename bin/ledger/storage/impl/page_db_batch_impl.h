@@ -8,12 +8,14 @@
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/impl/db.h"
 #include "peridot/bin/ledger/storage/impl/page_db.h"
+#include "peridot/lib/rng/random.h"
 
 namespace storage {
 
 class PageDbBatchImpl : public PageDb::Batch {
  public:
-  explicit PageDbBatchImpl(std::unique_ptr<Db::Batch> batch, PageDb* db);
+  explicit PageDbBatchImpl(rng::Random* random,
+                           std::unique_ptr<Db::Batch> batch, PageDb* db);
   ~PageDbBatchImpl() override;
 
   // Heads.
@@ -78,8 +80,9 @@ class PageDbBatchImpl : public PageDb::Batch {
   Status DCheckHasObject(coroutine::CoroutineHandler* handler,
                          convert::ExtendedStringView key);
 
+  rng::Random* const random_;
   std::unique_ptr<Db::Batch> batch_;
-  PageDb* db_;
+  PageDb* const db_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDbBatchImpl);
 };

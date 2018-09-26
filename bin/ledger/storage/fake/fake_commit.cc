@@ -19,7 +19,7 @@ namespace fake {
 FakeCommit::FakeCommit(FakeJournalDelegate* journal) : journal_(journal) {}
 FakeCommit::~FakeCommit() {}
 
-std::unique_ptr<Commit> FakeCommit::Clone() const {
+std::unique_ptr<const Commit> FakeCommit::Clone() const {
   return std::make_unique<FakeCommit>(journal_);
 }
 

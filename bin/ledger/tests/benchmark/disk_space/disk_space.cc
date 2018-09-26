@@ -27,6 +27,7 @@
 #include "peridot/bin/ledger/testing/page_data_generator.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
+#include "peridot/lib/rng/test_random.h"
 
 namespace ledger {
 namespace {
@@ -92,6 +93,7 @@ class DiskSpaceBenchmark {
   fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
+  rng::TestRandom random_;
   files::ScopedTempDir tmp_dir_;
   DataGenerator generator_;
   PageDataGenerator page_data_generator_;
@@ -114,7 +116,10 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(
     size_t page_count, size_t unique_key_count, size_t commit_count,
     size_t key_size, size_t value_size)
     : loop_(loop),
+      random_(0),
       tmp_dir_(kStoragePath),
+      generator_(&random_),
+      page_data_generator_(&random_),
       startup_context_(std::move(startup_context)),
       page_count_(page_count),
       unique_key_count_(unique_key_count),

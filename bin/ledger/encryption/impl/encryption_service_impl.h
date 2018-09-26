@@ -14,13 +14,14 @@
 #include "peridot/bin/ledger/cache/lazy_value.h"
 #include "peridot/bin/ledger/cache/lru_cache.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
+#include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace encryption {
 
 class EncryptionServiceImpl : public EncryptionService {
  public:
-  EncryptionServiceImpl(async_dispatcher_t* dispatcher,
+  EncryptionServiceImpl(ledger::Environment* environment,
                         std::string namespace_id);
   ~EncryptionServiceImpl() override;
 
@@ -63,6 +64,7 @@ class EncryptionServiceImpl : public EncryptionService {
   void FetchReferenceKey(DeletionScopeSeed deletion_scope_seed,
                          fit::function<void(Status, std::string)> callback);
 
+  ledger::Environment* const environment_;
   const std::string namespace_id_;
   std::unique_ptr<KeyService> key_service_;
 

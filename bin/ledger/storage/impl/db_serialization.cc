@@ -98,12 +98,13 @@ constexpr char JournalEntryRow::kExplicitPrefix;
 constexpr char JournalEntryRow::kAddPrefix;
 constexpr char JournalEntryRow::kClear;
 
-std::string JournalEntryRow::NewJournalId(JournalType journal_type) {
+std::string JournalEntryRow::NewJournalId(rng::Random* random,
+                                          JournalType journal_type) {
   std::string id;
   id.resize(kJournalIdSize);
   id[0] = (journal_type == JournalType::IMPLICIT ? kImplicitPrefix
                                                  : kExplicitPrefix);
-  zx_cprng_draw(&id[1], kJournalIdSize - 1);
+  random->Draw(&id[1], kJournalIdSize - 1);
   return id;
 }
 

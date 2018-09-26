@@ -16,7 +16,6 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 #include <lib/fxl/memory/ref_ptr.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <zircon/syscalls.h>
 
 #include "gtest/gtest.h"
@@ -24,6 +23,7 @@
 #include "peridot/bin/ledger/app/disk_cleanup_manager_impl.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
+#include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
@@ -34,17 +34,12 @@
 namespace ledger {
 namespace {
 
-ledger::PageId RandomId() {
-  ledger::PageId result;
-  zx_cprng_draw(&result.id[0], result.id.count());
-  return result;
-}
-
 class DelayIsSyncedCallbackFakePageStorage
     : public storage::fake::FakePageStorage {
  public:
-  explicit DelayIsSyncedCallbackFakePageStorage(storage::PageId id)
-      : storage::fake::FakePageStorage(id) {}
+  explicit DelayIsSyncedCallbackFakePageStorage(
+      ledger::Environment* environment, storage::PageId id)
+      : storage::fake::FakePageStorage(environment, id) {}
   ~DelayIsSyncedCallbackFakePageStorage() override {}
 
   void IsSynced(fit::function<void(storage::Status, bool)> callback) override {
@@ -76,8 +71,8 @@ class DelayIsSyncedCallbackFakePageStorage
 
 class FakeLedgerStorage : public storage::LedgerStorage {
  public:
-  explicit FakeLedgerStorage(async_dispatcher_t* dispatcher)
-      : dispatcher_(dispatcher) {}
+  explicit FakeLedgerStorage(ledger::Environment* environment)
+      : environment_(environment) {}
   ~FakeLedgerStorage() override {}
 
   void CreatePageStorage(
@@ -95,12 +90,14 @@ class FakeLedgerStorage : public storage::LedgerStorage {
                           callback) override {
     get_page_calls.push_back(page_id);
     async::PostTask(
-        dispatcher_, [this, callback = std::move(callback), page_id]() mutable {
+        environment_->dispatcher(),
+        [this, callback = std::move(callback), page_id]() mutable {
           if (should_get_page_fail) {
             callback(storage::Status::NOT_FOUND, nullptr);
           } else {
             auto fake_page_storage =
-                std::make_unique<DelayIsSyncedCallbackFakePageStorage>(page_id);
+                std::make_unique<DelayIsSyncedCallbackFakePageStorage>(
+                    environment_, page_id);
             // If the page was opened before, restore the previous sync state.
             fake_page_storage->set_syned(synced_pages_.find(page_id) !=
                                          synced_pages_.end());
@@ -179,7 +176,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
   fit::function<void(storage::Status)> delete_page_storage_callback;
 
  private:
-  async_dispatcher_t* const dispatcher_;
+  ledger::Environment* const environment_;
   std::map<storage::PageId, DelayIsSyncedCallbackFakePageStorage*>
       page_storages_;
   std::set<storage::PageId> synced_pages_;
@@ -241,11 +238,11 @@ class LedgerManagerTest : public TestWithEnvironment {
 
   ~LedgerManagerTest() override {}
 
-  // gtest::TestLoopFixture:
+  // gtest::TestWithEnvironment:
   void SetUp() override {
-    gtest::TestLoopFixture::SetUp();
+    TestWithEnvironment::SetUp();
     std::unique_ptr<FakeLedgerStorage> storage =
-        std::make_unique<FakeLedgerStorage>(dispatcher());
+        std::make_unique<FakeLedgerStorage>(&environment_);
     storage_ptr = storage.get();
     std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
     sync_ptr = sync.get();
@@ -256,6 +253,12 @@ class LedgerManagerTest : public TestWithEnvironment {
         std::move(storage), std::move(sync), disk_cleanup_manager_.get());
     ledger_manager_->BindLedger(ledger_.NewRequest());
     ledger_manager_->BindLedgerDebug(ledger_debug_.NewRequest());
+  }
+
+  ledger::PageId RandomId() {
+    ledger::PageId result;
+    environment_.random()->Draw(&result.id);
+    return result;
   }
 
  protected:

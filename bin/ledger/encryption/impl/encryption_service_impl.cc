@@ -102,10 +102,11 @@ class EncryptionServiceImpl::KeyService {
   fxl::WeakPtrFactory<EncryptionServiceImpl::KeyService> weak_factory_;
 };
 
-EncryptionServiceImpl::EncryptionServiceImpl(async_dispatcher_t* dispatcher,
+EncryptionServiceImpl::EncryptionServiceImpl(ledger::Environment* environment,
                                              std::string namespace_id)
-    : namespace_id_(std::move(namespace_id)),
-      key_service_(std::make_unique<KeyService>(dispatcher)),
+    : environment_(environment),
+      namespace_id_(std::move(namespace_id)),
+      key_service_(std::make_unique<KeyService>(environment_->dispatcher())),
       master_keys_(kKeyIndexCacheSize, Status::OK,
                    [this](auto k, auto c) {
                      FetchMasterKey(std::move(k), std::move(c));
@@ -225,20 +226,22 @@ void EncryptionServiceImpl::GetReferenceKey(
 void EncryptionServiceImpl::Encrypt(
     size_t key_index, std::string data,
     fit::function<void(Status, std::string)> callback) {
-  master_keys_.Get(key_index,
-                   [data = std::move(data), callback = std::move(callback)](
-                       Status status, const std::string& key) {
-                     if (status != Status::OK) {
-                       callback(status, "");
-                       return;
-                     }
-                     std::string encrypted_data;
-                     if (!AES128GCMSIVEncrypt(key, data, &encrypted_data)) {
-                       callback(Status::INTERNAL_ERROR, "");
-                       return;
-                     }
-                     callback(Status::OK, std::move(encrypted_data));
-                   });
+  master_keys_.Get(
+      key_index,
+      [environment = environment_, data = std::move(data),
+       callback = std::move(callback)](Status status, const std::string& key) {
+        if (status != Status::OK) {
+          callback(status, "");
+          return;
+        }
+        std::string encrypted_data;
+        if (!AES128GCMSIVEncrypt(environment->random(), key, data,
+                                 &encrypted_data)) {
+          callback(Status::INTERNAL_ERROR, "");
+          return;
+        }
+        callback(Status::OK, std::move(encrypted_data));
+      });
 }
 
 void EncryptionServiceImpl::Decrypt(

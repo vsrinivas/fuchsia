@@ -41,7 +41,8 @@ constexpr fxl::StringView kPageUsageDbPath = "page_usage_db";
 constexpr fxl::StringView kStagingPath = "staging";
 constexpr fxl::StringView kNamePath = "name";
 
-bool GetRepositoryName(const DetachedPath& base_path, std::string* name) {
+bool GetRepositoryName(rng::Random* random, const DetachedPath& base_path,
+                       std::string* name) {
   DetachedPath name_path = base_path.SubPath(kNamePath);
 
   if (files::ReadFileToStringAt(name_path.root_fd(), name_path.path(), name)) {
@@ -54,7 +55,7 @@ bool GetRepositoryName(const DetachedPath& base_path, std::string* name) {
 
   std::string new_name;
   new_name.resize(16);
-  zx_cprng_draw(&new_name[0], new_name.size());
+  random->Draw(&new_name);
   if (!files::WriteFileAt(name_path.root_fd(), name_path.path(),
                           new_name.c_str(), new_name.size())) {
     FXL_LOG(ERROR) << "Unable to write file at: " << name_path.path();
@@ -170,7 +171,9 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
   RepositoryInformation(const RepositoryInformation& other) = default;
   RepositoryInformation(RepositoryInformation&& other) = default;
 
-  bool Init() { return GetRepositoryName(content_path, &name); }
+  bool Init(rng::Random* random) {
+    return GetRepositoryName(random, content_path, &name);
+  }
 
   DetachedPath base_path;
   DetachedPath content_path;
@@ -213,7 +216,7 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   TRACE_DURATION("ledger", "repository_factory_get_repository");
 
   RepositoryInformation repository_information(root_fd.get());
-  if (!repository_information.Init()) {
+  if (!repository_information.Init(environment_->random())) {
     callback(Status::IO_ERROR);
     return;
   }

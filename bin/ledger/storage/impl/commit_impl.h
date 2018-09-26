@@ -49,7 +49,7 @@ class CommitImpl : public Commit {
       fit::function<void(Status, std::unique_ptr<const Commit>)> callback);
 
   // Commit:
-  std::unique_ptr<Commit> Clone() const override;
+  std::unique_ptr<const Commit> Clone() const override;
   const CommitId& GetId() const override;
   std::vector<CommitIdView> GetParentIds() const override;
   int64_t GetTimestamp() const override;

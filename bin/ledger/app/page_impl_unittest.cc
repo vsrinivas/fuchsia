@@ -62,13 +62,14 @@ class PageImplTest : public TestWithEnvironment {
   void SetUp() override {
     ::testing::Test::SetUp();
     page_id1_ = storage::PageId(::fuchsia::ledger::kPageIdSize, 'a');
-    auto fake_storage =
-        std::make_unique<storage::fake::FakePageStorage>(page_id1_);
+    auto fake_storage = std::make_unique<storage::fake::FakePageStorage>(
+        &environment_, page_id1_);
     fake_storage_ = fake_storage.get();
     auto resolver = std::make_unique<MergeResolver>(
         [] {}, &environment_, fake_storage_,
-        std::make_unique<backoff::ExponentialBackoff>(zx::sec(0), 1u,
-                                                      zx::sec(0)));
+        std::make_unique<backoff::ExponentialBackoff>(
+            zx::sec(0), 1u, zx::sec(0),
+            environment_.random()->NewBitGenerator<uint64_t>()));
     resolver_ = resolver.get();
 
     manager_ = std::make_unique<PageManager>(

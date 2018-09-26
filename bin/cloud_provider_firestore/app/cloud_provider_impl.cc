@@ -61,11 +61,12 @@ std::string GetPagePath(fxl::StringView namespace_path,
 }
 
 CloudProviderImpl::CloudProviderImpl(
-    std::string user_id,
+    rng::Random* random, std::string user_id,
     std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
     std::unique_ptr<FirestoreService> firestore_service,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request)
-    : user_id_(std::move(user_id)),
+    : random_(random),
+      user_id_(std::move(user_id)),
       firestore_service_(std::move(firestore_service)),
       binding_(this, std::move(request)),
       weak_ptr_factory_(this) {
@@ -137,7 +138,7 @@ void CloudProviderImpl::GetPageCloud(
   const std::string namespace_path = GetNamespacePath(version_path, app_id_str);
   const std::string page_id_str = convert::ToString(page_id);
   const std::string page_path = GetPagePath(namespace_path, page_id_str);
-  page_clouds_.emplace(page_path, credentials_provider_.get(),
+  page_clouds_.emplace(page_path, random_, credentials_provider_.get(),
                        firestore_service_.get(), std::move(page_cloud));
   callback(cloud_provider::Status::OK);
 

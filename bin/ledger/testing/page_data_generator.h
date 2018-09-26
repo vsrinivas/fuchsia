@@ -12,6 +12,7 @@
 
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
+#include "peridot/lib/rng/random.h"
 
 namespace ledger {
 
@@ -26,7 +27,7 @@ class PageDataGenerator {
     REFERENCE,
   };
 
-  PageDataGenerator();
+  PageDataGenerator(rng::Random* random);
 
   // Put an entry (|key|, |value|) to the given page |page|, inline or as
   // reference depending on |ref_strategy| and with priority specified by

@@ -13,6 +13,7 @@
 #include <lib/fxl/macros.h>
 
 #include "peridot/bin/ledger/testing/loop_controller.h"
+#include "peridot/lib/rng/random.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace ledger {
@@ -77,6 +78,9 @@ class LedgerAppInstanceFactory {
   // Returns the Loop controller controlling the loops of the LedgerAppInstances
   // created by this.
   virtual LoopController* GetLoopController() = 0;
+
+  // Returns a random instance to control the randomness of the test.
+  virtual rng::Random* GetRandom() = 0;
 };
 
 // Returns the list of LedgerAppInstanceFactoryBuilder to be passed as

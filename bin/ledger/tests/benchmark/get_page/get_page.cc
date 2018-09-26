@@ -23,6 +23,7 @@
 #include "peridot/bin/ledger/testing/get_page_ensure_initialized.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
+#include "peridot/lib/rng/test_random.h"
 
 namespace ledger {
 namespace {
@@ -61,6 +62,7 @@ class GetPageBenchmark {
   fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
+  rng::TestRandom random_;
   files::ScopedTempDir tmp_dir_;
   DataGenerator generator_;
   std::unique_ptr<component::StartupContext> startup_context_;
@@ -81,7 +83,9 @@ GetPageBenchmark::GetPageBenchmark(
     std::unique_ptr<component::StartupContext> startup_context,
     size_t requests_count, bool reuse)
     : loop_(loop),
+      random_(0),
       tmp_dir_(kStoragePath),
+      generator_(&random_),
       startup_context_(std::move(startup_context)),
       requests_count_(requests_count),
       reuse_(reuse) {

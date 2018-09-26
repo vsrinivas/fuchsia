@@ -23,18 +23,18 @@
 namespace ledger {
 namespace {
 
-std::string RandomString(size_t size) {
-  std::string result;
-  result.resize(size);
-  zx_cprng_draw(&result[0], size);
-  return result;
-}
-
 class PageUsageDbTest : public TestWithEnvironment {
  public:
   PageUsageDbTest() : db_(&environment_, DetachedPath(tmpfs_.root_fd())) {}
 
   ~PageUsageDbTest() override {}
+
+  std::string RandomString(size_t size) {
+    std::string result;
+    result.resize(size);
+    environment_.random()->Draw(&result);
+    return result;
+  }
 
  protected:
   scoped_tmpfs::ScopedTmpFS tmpfs_;

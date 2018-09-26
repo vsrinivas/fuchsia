@@ -9,19 +9,13 @@
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
+#include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "third_party/leveldb/include/leveldb/db.h"
 #include "util/env_fuchsia.h"
 
 namespace storage {
 namespace {
-
-std::string RandomString(size_t size) {
-  std::string result;
-  result.resize(size);
-  zx_cprng_draw(&result[0], size);
-  return result;
-}
 
 ObjectIdentifier CreateObjectIdentifier(std::string digest) {
   return {1u, 2u, std::move(digest)};
@@ -70,7 +64,17 @@ ObjectIdentifier CreateObjectIdentifier(std::string digest) {
   return ::testing::AssertionSuccess();
 }
 
-TEST(ObjectImplTest, InlinedObject) {
+class ObjectImplTest : public ledger::TestWithEnvironment {
+ public:
+  std::string RandomString(size_t size) {
+    std::string result;
+    result.resize(size);
+    environment_.random()->Draw(&result);
+    return result;
+  }
+};
+
+TEST_F(ObjectImplTest, InlinedObject) {
   std::string data = RandomString(12);
   ObjectIdentifier identifier =
       CreateObjectIdentifier(ComputeObjectDigest(ObjectType::CHUNK, data));
@@ -79,7 +83,7 @@ TEST(ObjectImplTest, InlinedObject) {
   EXPECT_TRUE(CheckObjectValue(object, identifier, data));
 }
 
-TEST(ObjectImplTest, StringObject) {
+TEST_F(ObjectImplTest, StringObject) {
   std::string data = RandomString(256);
   ObjectIdentifier identifier =
       CreateObjectIdentifier(ComputeObjectDigest(ObjectType::CHUNK, data));
@@ -88,7 +92,7 @@ TEST(ObjectImplTest, StringObject) {
   EXPECT_TRUE(CheckObjectValue(object, identifier, data));
 }
 
-TEST(ObjectImplTest, LevelDBObject) {
+TEST_F(ObjectImplTest, LevelDBObject) {
   scoped_tmpfs::ScopedTmpFS tmpfs;
   auto env = leveldb::MakeFuchsiaEnv(tmpfs.root_fd());
 
@@ -119,7 +123,7 @@ TEST(ObjectImplTest, LevelDBObject) {
   EXPECT_TRUE(CheckObjectValue(object, identifier, data));
 }
 
-TEST(ObjectImplTest, VmoObject) {
+TEST_F(ObjectImplTest, VmoObject) {
   std::string data = RandomString(256);
   ObjectIdentifier identifier =
       CreateObjectIdentifier(ComputeObjectDigest(ObjectType::CHUNK, data));

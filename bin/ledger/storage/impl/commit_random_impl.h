@@ -10,17 +10,20 @@
 #include <vector>
 
 #include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/lib/rng/random.h"
 
 namespace storage {
 
 // Implementaton of Commit returning random values (fixed for each instance).
 class CommitRandomImpl : public Commit {
  public:
-  CommitRandomImpl();
-  ~CommitRandomImpl() override = default;
+  CommitRandomImpl(rng::Random* random);
+  ~CommitRandomImpl() override;
+  CommitRandomImpl(const CommitRandomImpl& other);
+  CommitRandomImpl& operator=(const CommitRandomImpl& other);
 
   // Commit:
-  std::unique_ptr<Commit> Clone() const override;
+  std::unique_ptr<const Commit> Clone() const override;
 
   const CommitId& GetId() const override;
 
@@ -35,8 +38,6 @@ class CommitRandomImpl : public Commit {
   fxl::StringView GetStorageBytes() const override;
 
  private:
-  CommitRandomImpl(const CommitRandomImpl& other);
-
   CommitId id_;
   int64_t timestamp_;
   uint64_t generation_;

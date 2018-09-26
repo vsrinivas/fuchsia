@@ -19,6 +19,7 @@ source_set("impl") {
     "//garnet/public/lib/callback",
     "//peridot/bin/ledger/cache",
     "//peridot/bin/ledger/encryption/primitives",
+    "//peridot/bin/ledger/environment",
   ]
 
   public_deps = [

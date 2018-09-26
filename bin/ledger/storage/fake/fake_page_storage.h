@@ -6,17 +6,16 @@
 #define PERIDOT_BIN_LEDGER_STORAGE_FAKE_FAKE_PAGE_STORAGE_H_
 
 #include <map>
-#include <random>
 #include <set>
 #include <string>
 #include <vector>
 
-#include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 #include <lib/fxl/strings/string_view.h>
 
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
+#include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
@@ -30,8 +29,7 @@ constexpr zx::duration kFakePageStorageDelay = zx::msec(5);
 
 class FakePageStorage : public PageStorageEmptyImpl {
  public:
-  explicit FakePageStorage(PageId page_id);
-  FakePageStorage(async_dispatcher_t* dispatcher, PageId page_id);
+  FakePageStorage(ledger::Environment* environment, PageId page_id);
   ~FakePageStorage() override;
 
   // PageStorage:
@@ -90,13 +88,12 @@ class FakePageStorage : public PageStorageEmptyImpl {
   bool drop_commit_notifications_ = false;
   bool is_synced_ = false;
 
-  std::default_random_engine rng_;
+  ledger::Environment* const environment_;
   std::map<std::string, std::unique_ptr<FakeJournalDelegate>> journals_;
   std::map<ObjectIdentifier, std::string> objects_;
   std::set<CommitId> heads_;
   std::set<CommitWatcher*> watchers_;
   std::vector<fit::closure> object_requests_;
-  async_dispatcher_t* const dispatcher_;
   PageId page_id_;
   encryption::FakeEncryptionService encryption_service_;
 

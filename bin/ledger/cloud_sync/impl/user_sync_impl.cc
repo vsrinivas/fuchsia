@@ -132,7 +132,7 @@ void UserSyncImpl::CreateFingerprint() {
 
   // Generate the fingerprint.
   char fingerprint_array[kFingerprintSize];
-  zx_cprng_draw(fingerprint_array, kFingerprintSize);
+  environment_->random()->Draw(fingerprint_array, kFingerprintSize);
   fingerprint_ =
       convert::ToHex(fxl::StringView(fingerprint_array, kFingerprintSize));
 

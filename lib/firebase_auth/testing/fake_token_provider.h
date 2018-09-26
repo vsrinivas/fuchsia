@@ -10,6 +10,8 @@
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <lib/fxl/macros.h>
 
+#include "peridot/lib/rng/random.h"
+
 namespace firebase_auth {
 // FakeTokenProvider is a dummy implementation of a TokenProvider intended to be
 // used to connect to unauthenticated firebase instances.
@@ -20,7 +22,7 @@ namespace firebase_auth {
 // Other token values are set to dummy const values.
 class FakeTokenProvider : public fuchsia::modular::auth::TokenProvider {
  public:
-  FakeTokenProvider();
+  FakeTokenProvider(rng::Random* random);
   ~FakeTokenProvider() override {}
 
  private:

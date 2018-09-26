@@ -6,6 +6,7 @@
 #define PERIDOT_LIB_RNG_RANDOM_H_
 
 #include <limits>
+#include <string>
 #include <type_traits>
 
 namespace rng {
@@ -62,8 +63,9 @@ class Random {
   // range of at least |string_like->size()| bytes. Usual datatype that support
   // this schema are std::string and std::vector<uint8_t>.
   template <typename S>
-  void Draw(S* string_like) {
+  S& Draw(S* string_like) {
     Draw(&(*string_like)[0], string_like->size());
+    return *string_like;
   }
 
   // Returns an instance of |I| where the content has been filled with randomly
@@ -75,6 +77,14 @@ class Random {
     I result;
     Draw(&result, sizeof(I));
     return result;
+  }
+
+  // Returns a random string that is statistically certain to be unique.
+  std::string RandomUniqueBytes() {
+    constexpr size_t kBitsCountForUnicity = 128;
+    char bytes[kBitsCountForUnicity / 8];
+    Draw(bytes, sizeof(bytes));
+    return std::string(bytes, sizeof(bytes));
   }
 
   // Returns an object satifying the |UniformRandomBitGenerator| requirements.

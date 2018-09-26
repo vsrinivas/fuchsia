@@ -20,7 +20,7 @@ namespace {
 
 class TreeNodeTest : public StorageTest {
  public:
-  TreeNodeTest() : fake_storage_("page_id") {}
+  TreeNodeTest() : fake_storage_(&environment_, "page_id") {}
 
   ~TreeNodeTest() override {}
 
@@ -75,7 +75,8 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_NE(nullptr, found_node);
 
-  TreeNode::FromIdentifier(&fake_storage_, RandomObjectIdentifier(),
+  TreeNode::FromIdentifier(&fake_storage_,
+                           RandomObjectIdentifier(environment_.random()),
                            callback::Capture(callback::SetWhenCalled(&called),
                                              &status, &found_node));
   RunLoopFor(kSufficientDelay);

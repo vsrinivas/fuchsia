@@ -6,7 +6,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <random>
 #include <string>
 #include <utility>
 #include <vector>
@@ -14,7 +13,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fxl/macros.h>
-#include <lib/fxl/random/rand.h>
+#include <lib/zx/time.h>
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
@@ -84,8 +83,10 @@ TEST_F(PageDbTest, HeadCommits) {
     EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
     EXPECT_TRUE(heads.empty());
 
-    CommitId cid = RandomCommitId();
-    EXPECT_EQ(Status::OK, page_db_.AddHead(handler, cid, fxl::RandUint64()));
+    CommitId cid = RandomCommitId(environment_.random());
+    EXPECT_EQ(Status::OK,
+              page_db_.AddHead(handler, cid,
+                               environment_.random()->Draw<uint64_t>()));
     EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
     EXPECT_EQ(1u, heads.size());
     EXPECT_EQ(cid, heads[0]);
@@ -98,13 +99,14 @@ TEST_F(PageDbTest, HeadCommits) {
 
 TEST_F(PageDbTest, OrderHeadCommitsByTimestamp) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    std::vector<int64_t> timestamps = {std::numeric_limits<int64_t>::min(),
-                                       std::numeric_limits<int64_t>::max(), 0};
+    std::vector<zx::time_utc> timestamps = {zx::time_utc::infinite_past(),
+                                            zx::time_utc::infinite(),
+                                            zx::time_utc()};
 
     for (size_t i = 0; i < 10; ++i) {
-      int64_t ts;
+      zx::time_utc ts;
       do {
-        ts = fxl::RandUint64();
+        ts = environment_.random()->Draw<zx::time_utc>();
       } while (std::find(timestamps.begin(), timestamps.end(), ts) !=
                timestamps.end());
       timestamps.push_back(ts);
@@ -113,14 +115,15 @@ TEST_F(PageDbTest, OrderHeadCommitsByTimestamp) {
     auto sorted_timestamps = timestamps;
     std::sort(sorted_timestamps.begin(), sorted_timestamps.end());
     auto random_ordered_timestamps = timestamps;
-    auto rng = std::default_random_engine(42);
+    auto rng = environment_.random()->NewBitGenerator<uint64_t>();
     std::shuffle(random_ordered_timestamps.begin(),
                  random_ordered_timestamps.end(), rng);
 
     std::map<int64_t, CommitId> commits;
     for (auto ts : random_ordered_timestamps) {
-      commits[ts] = RandomCommitId();
-      EXPECT_EQ(Status::OK, page_db_.AddHead(handler, commits[ts], ts));
+      commits[ts.get()] = RandomCommitId(environment_.random());
+      EXPECT_EQ(Status::OK,
+                page_db_.AddHead(handler, commits[ts.get()], ts.get()));
     }
 
     std::vector<CommitId> heads;
@@ -128,7 +131,7 @@ TEST_F(PageDbTest, OrderHeadCommitsByTimestamp) {
     EXPECT_EQ(timestamps.size(), heads.size());
 
     for (size_t i = 0; i < heads.size(); ++i) {
-      EXPECT_EQ(commits[sorted_timestamps[i]], heads[i]);
+      EXPECT_EQ(commits[sorted_timestamps[i].get()], heads[i]);
     }
   });
 }
@@ -136,11 +139,12 @@ TEST_F(PageDbTest, OrderHeadCommitsByTimestamp) {
 TEST_F(PageDbTest, Commits) {
   RunInCoroutine([&](CoroutineHandler* handler) {
     std::vector<std::unique_ptr<const Commit>> parents;
-    parents.emplace_back(new CommitRandomImpl());
+    parents.emplace_back(
+        std::make_unique<CommitRandomImpl>(environment_.random()));
 
     std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-        environment_.clock(), &page_storage_, RandomObjectIdentifier(),
-        std::move(parents));
+        environment_.clock(), &page_storage_,
+        RandomObjectIdentifier(environment_.random()), std::move(parents));
 
     std::string storage_bytes;
     EXPECT_EQ(Status::NOT_FOUND, page_db_.GetCommitStorageBytes(
@@ -161,7 +165,7 @@ TEST_F(PageDbTest, Commits) {
 
 TEST_F(PageDbTest, Journals) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    CommitId commit_id = RandomCommitId();
+    CommitId commit_id = RandomCommitId(environment_.random());
 
     JournalId implicit_journal_id;
     JournalId explicit_journal_id;
@@ -197,7 +201,7 @@ TEST_F(PageDbTest, Journals) {
 
 TEST_F(PageDbTest, JournalEntries) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    CommitId commit_id = RandomCommitId();
+    CommitId commit_id = RandomCommitId(environment_.random());
 
     JournalId journal_id;
     EXPECT_EQ(Status::OK,
@@ -244,7 +248,7 @@ TEST_F(PageDbTest, JournalEntries) {
 
 TEST_F(PageDbTest, JournalEntriesWithClear) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    CommitId commit_id = RandomCommitId();
+    CommitId commit_id = RandomCommitId(environment_.random());
 
     JournalId journal_id;
     EXPECT_EQ(Status::OK,
@@ -287,8 +291,9 @@ TEST_F(PageDbTest, JournalEntriesWithClear) {
 
 TEST_F(PageDbTest, ObjectStorage) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    ObjectIdentifier object_identifier = RandomObjectIdentifier();
-    std::string content = RandomString(32 * 1024);
+    ObjectIdentifier object_identifier =
+        RandomObjectIdentifier(environment_.random());
+    std::string content = RandomString(environment_.random(), 32 * 1024);
     std::unique_ptr<const Object> object;
     PageDbObjectStatus object_status;
 
@@ -310,7 +315,7 @@ TEST_F(PageDbTest, ObjectStorage) {
 
 TEST_F(PageDbTest, UnsyncedCommits) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    CommitId commit_id = RandomCommitId();
+    CommitId commit_id = RandomCommitId(environment_.random());
     std::vector<CommitId> commit_ids;
     EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(handler, &commit_ids));
     EXPECT_TRUE(commit_ids.empty());
@@ -335,8 +340,9 @@ TEST_F(PageDbTest, UnsyncedCommits) {
 
 TEST_F(PageDbTest, OrderUnsyncedCommitsByTimestamp) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    CommitId commit_ids[] = {RandomCommitId(), RandomCommitId(),
-                             RandomCommitId()};
+    CommitId commit_ids[] = {RandomCommitId(environment_.random()),
+                             RandomCommitId(environment_.random()),
+                             RandomCommitId(environment_.random())};
     // Add three unsynced commits with timestamps 200, 300 and 100.
     EXPECT_EQ(Status::OK,
               page_db_.MarkCommitIdUnsynced(handler, commit_ids[0], 200));
@@ -357,7 +363,7 @@ TEST_F(PageDbTest, OrderUnsyncedCommitsByTimestamp) {
 
 TEST_F(PageDbTest, UnsyncedPieces) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    auto object_identifier = RandomObjectIdentifier();
+    auto object_identifier = RandomObjectIdentifier(environment_.random());
     std::vector<ObjectIdentifier> object_identifiers;
     EXPECT_EQ(Status::OK,
               page_db_.GetUnsyncedPieces(handler, &object_identifiers));
@@ -395,7 +401,7 @@ TEST_F(PageDbTest, Batch) {
     ASSERT_EQ(Status::OK, page_db_.StartBatch(handler, &batch));
     ASSERT_TRUE(batch);
 
-    auto object_identifier = RandomObjectIdentifier();
+    auto object_identifier = RandomObjectIdentifier(environment_.random());
     EXPECT_EQ(Status::OK, batch->WriteObject(handler, object_identifier,
                                              DataSource::DataChunk::Create(""),
                                              PageDbObjectStatus::LOCAL));
@@ -423,7 +429,7 @@ TEST_F(PageDbTest, PageDbObjectStatus) {
                                           PageDbObjectStatus::SYNCED};
     for (auto initial_status : initial_statuses) {
       for (auto next_status : next_statuses) {
-        auto object_identifier = RandomObjectIdentifier();
+        auto object_identifier = RandomObjectIdentifier(environment_.random());
         PageDbObjectStatus object_status;
         ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(
                                   handler, object_identifier, &object_status));
@@ -485,7 +491,7 @@ TEST_F(PageDbTest, PageIsOnline) {
 // This test reproduces the crash of LE-451. The crash is due to a subtle
 // ordering of coroutine execution that is exactly reproduced here.
 TEST_F(PageDbTest, LE_451_ReproductionTest) {
-  auto id = RandomObjectIdentifier();
+  auto id = RandomObjectIdentifier(environment_.random());
   RunInCoroutine([&](CoroutineHandler* handler) {
     EXPECT_EQ(Status::OK, page_db_.WriteObject(
                               handler, id, DataSource::DataChunk::Create(""),

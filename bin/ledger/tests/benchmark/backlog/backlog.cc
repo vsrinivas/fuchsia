@@ -18,7 +18,6 @@
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/logging.h>
-#include <lib/fxl/random/uuid.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <trace/event.h>
 
@@ -33,6 +32,7 @@
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
 #include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/lib/convert/convert.h"
+#include "peridot/lib/rng/test_random.h"
 
 namespace ledger {
 
@@ -121,6 +121,7 @@ class BacklogBenchmark : public SyncWatcher {
   fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
+  rng::TestRandom random_;
   DataGenerator generator_;
   PageDataGenerator page_data_generator_;
   std::unique_ptr<component::StartupContext> startup_context_;
@@ -131,7 +132,7 @@ class BacklogBenchmark : public SyncWatcher {
   const size_t value_size_;
   const size_t commit_count_;
   const PageDataGenerator::ReferenceStrategy reference_strategy_;
-  const std::string user_id_;
+  const cloud_provider_firestore::CloudProviderFactory::UserId user_id_;
   files::ScopedTempDir writer_tmp_dir_;
   files::ScopedTempDir reader_tmp_dir_;
   fuchsia::sys::ComponentControllerPtr writer_controller_;
@@ -158,8 +159,11 @@ BacklogBenchmark::BacklogBenchmark(
     PageDataGenerator::ReferenceStrategy reference_strategy,
     SyncParams sync_params)
     : loop_(loop),
+      random_(0),
+      generator_(&random_),
+      page_data_generator_(&random_),
       startup_context_(std::move(startup_context)),
-      cloud_provider_factory_(startup_context_.get(),
+      cloud_provider_factory_(startup_context_.get(), &random_,
                               std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
       sync_watcher_binding_(this),
@@ -168,7 +172,7 @@ BacklogBenchmark::BacklogBenchmark(
       value_size_(value_size),
       commit_count_(commit_count),
       reference_strategy_(reference_strategy),
-      user_id_("backlog_" + fxl::GenerateUUID()),
+      user_id_(cloud_provider_firestore::CloudProviderFactory::UserId::New()),
       writer_tmp_dir_(kStoragePath),
       reader_tmp_dir_(kStoragePath) {
   FXL_DCHECK(loop_);
@@ -257,7 +261,7 @@ void BacklogBenchmark::ConnectUploader() {
   std::string uploader_path = writer_tmp_dir_.path() + kUserDirectory;
 
   cloud_provider::CloudProviderPtr cloud_provider_uploader;
-  cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
+  cloud_provider_factory_.MakeCloudProvider(
       user_id_, cloud_provider_uploader.NewRequest());
   GetLedger(
       startup_context_.get(), uploader_controller_.NewRequest(),
@@ -305,8 +309,8 @@ void BacklogBenchmark::ConnectReader() {
   FXL_DCHECK(ret);
 
   cloud_provider::CloudProviderPtr cloud_provider_reader;
-  cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
-      user_id_, cloud_provider_reader.NewRequest());
+  cloud_provider_factory_.MakeCloudProvider(user_id_,
+                                            cloud_provider_reader.NewRequest());
   GetLedger(startup_context_.get(), reader_controller_.NewRequest(),
             std::move(cloud_provider_reader), "backlog",
             DetachedPath(std::move(reader_path)), QuitLoopClosure(),

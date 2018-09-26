@@ -21,16 +21,8 @@
 
 namespace ledger {
 
-namespace {
-
-void GenerateRandomId(
-    ::fidl::Array<uint8_t, ::fuchsia::ledger::kPageIdSize>* id) {
-  zx_cprng_draw(id->mutable_data(), ::fuchsia::ledger::kPageIdSize);
-}
-
-}  // namespace
-
-LedgerImpl::LedgerImpl(Delegate* delegate) : delegate_(delegate) {}
+LedgerImpl::LedgerImpl(Environment* environment, Delegate* delegate)
+    : environment_(environment), delegate_(delegate) {}
 
 LedgerImpl::~LedgerImpl() {}
 
@@ -47,7 +39,7 @@ void LedgerImpl::GetPage(PageIdPtr id,
   Delegate::PageState page_state = Delegate::PageState::NAMED;
   if (!id) {
     id = fidl::MakeOptional(PageId());
-    GenerateRandomId(&id->id);
+    environment_->random()->Draw(&id->id);
     page_state = Delegate::PageState::NEW;
   }
   delegate_->GetPage(

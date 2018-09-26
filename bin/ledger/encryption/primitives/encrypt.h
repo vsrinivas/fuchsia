@@ -7,12 +7,14 @@
 
 #include <lib/fxl/strings/string_view.h>
 
+#include "peridot/lib/rng/random.h"
+
 namespace encryption {
 
 // Encrypt the given |data| with the given |key| using AES128-GCM-SIV. The key
 // size must be 128 bits.
-bool AES128GCMSIVEncrypt(fxl::StringView key, fxl::StringView data,
-                         std::string* output);
+bool AES128GCMSIVEncrypt(rng::Random* random, fxl::StringView key,
+                         fxl::StringView data, std::string* output);
 
 // Descript the given |encrypteddata| with the given |key| using AES128-GCM-SIV.
 // The key size must be 128 bits.

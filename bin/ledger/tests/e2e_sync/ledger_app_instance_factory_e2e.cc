@@ -11,7 +11,6 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fxl/files/scoped_temp_dir.h>
-#include <lib/fxl/random/uuid.h>
 #include <lib/fxl/strings/string_view.h>
 #include <lib/svc/cpp/services.h>
 
@@ -31,9 +30,10 @@ class LedgerAppInstanceImpl final
     : public LedgerAppInstanceFactory::LedgerAppInstance {
  public:
   LedgerAppInstanceImpl(
-      LoopController* loop_controller,
+      LoopController* loop_controller, rng::Random* random,
       ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
-      SyncParams sync_params, std::string user_id);
+      SyncParams sync_params,
+      cloud_provider_firestore::CloudProviderFactory::UserId user_id);
 
   void Init(fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
                 repository_factory_request);
@@ -47,28 +47,28 @@ class LedgerAppInstanceImpl final
   cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
 
   fuchsia::sys::ComponentControllerPtr controller_;
-  const std::string user_id_;
+  const cloud_provider_firestore::CloudProviderFactory::UserId user_id_;
 };
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
-    LoopController* loop_controller,
+    LoopController* loop_controller, rng::Random* random,
     ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
-    SyncParams sync_params, std::string user_id)
+    SyncParams sync_params,
+    cloud_provider_firestore::CloudProviderFactory::UserId user_id)
     : LedgerAppInstanceFactory::LedgerAppInstance(
           loop_controller, convert::ToArray(kLedgerName),
           std::move(ledger_repository_factory)),
       sync_params_(sync_params),
       startup_context_(
           component::StartupContext::CreateFromStartupInfoNotChecked()),
-      cloud_provider_factory_(startup_context_.get(),
+      cloud_provider_factory_(startup_context_.get(), random,
                               std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
       user_id_(std::move(user_id)) {
   service_provider_impl_.AddService<fuchsia::modular::auth::TokenProvider>(
       [this](fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider>
                  request) {
-        cloud_provider_factory_.MakeTokenProviderWithGivenUserId(
-            user_id_, std::move(request));
+        cloud_provider_factory_.MakeTokenProvider(user_id_, std::move(request));
       });
 }
 
@@ -95,8 +95,8 @@ void LedgerAppInstanceImpl::Init(
 
 cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
   cloud_provider::CloudProviderPtr cloud_provider;
-  cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
-      user_id_, cloud_provider.NewRequest());
+  cloud_provider_factory_.MakeCloudProvider(user_id_,
+                                            cloud_provider.NewRequest());
   return cloud_provider;
 }
 
@@ -106,7 +106,7 @@ LedgerAppInstanceFactoryImpl::LedgerAppInstanceFactoryImpl(
     std::unique_ptr<LoopController> loop_controller, SyncParams sync_params)
     : loop_controller_(std::move(loop_controller)),
       sync_params_(std::move(sync_params)),
-      user_id_("e2e_test_" + fxl::GenerateUUID()) {}
+      user_id_(cloud_provider_firestore::CloudProviderFactory::UserId::New()) {}
 
 LedgerAppInstanceFactoryImpl::~LedgerAppInstanceFactoryImpl() {}
 
@@ -116,8 +116,8 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
       repository_factory_request = repository_factory.NewRequest();
   auto result = std::make_unique<LedgerAppInstanceImpl>(
-      loop_controller_.get(), std::move(repository_factory), sync_params_,
-      user_id_);
+      loop_controller_.get(), &random_, std::move(repository_factory),
+      sync_params_, user_id_);
   result->Init(std::move(repository_factory_request));
   return result;
 }
@@ -125,5 +125,7 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
 LoopController* LedgerAppInstanceFactoryImpl::GetLoopController() {
   return loop_controller_.get();
 }
+
+rng::Random* LedgerAppInstanceFactoryImpl::GetRandom() { return &random_; }
 
 }  // namespace ledger

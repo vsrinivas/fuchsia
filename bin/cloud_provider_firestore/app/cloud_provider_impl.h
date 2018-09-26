@@ -17,6 +17,7 @@
 #include "peridot/bin/cloud_provider_firestore/app/page_cloud_impl.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
 #include "peridot/lib/firebase_auth/firebase_auth_impl.h"
+#include "peridot/lib/rng/random.h"
 
 namespace cloud_provider_firestore {
 
@@ -27,7 +28,7 @@ namespace cloud_provider_firestore {
 class CloudProviderImpl : public cloud_provider::CloudProvider {
  public:
   CloudProviderImpl(
-      std::string user_id,
+      rng::Random* random, std::string user_id,
       std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
       std::unique_ptr<FirestoreService> firestore_service,
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
@@ -64,6 +65,7 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
   void ScopedGetCredentials(
       fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback);
 
+  rng::Random* const random_;
   const std::string user_id_;
 
   std::unique_ptr<CredentialsProvider> credentials_provider_;

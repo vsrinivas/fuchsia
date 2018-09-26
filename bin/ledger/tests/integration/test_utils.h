@@ -12,12 +12,13 @@
 
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
+#include "peridot/lib/rng/random.h"
 
 namespace ledger {
 
 // Builds an array of length |size|, starting with |prefix| and completed with
 // random data.
-fidl::VectorPtr<uint8_t> RandomArray(size_t size,
+fidl::VectorPtr<uint8_t> RandomArray(rng::Random* random, size_t size,
                                      const std::vector<uint8_t>& prefix = {});
 
 // Extracts the content of |vmo| as a std::string.

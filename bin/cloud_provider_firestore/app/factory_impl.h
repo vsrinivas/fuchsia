@@ -16,12 +16,13 @@
 #include <lib/fxl/memory/ref_ptr.h>
 
 #include "peridot/bin/cloud_provider_firestore/app/cloud_provider_impl.h"
+#include "peridot/lib/rng/random.h"
 
 namespace cloud_provider_firestore {
 
 class FactoryImpl : public Factory {
  public:
-  explicit FactoryImpl(async_dispatcher_t* dispatcher,
+  explicit FactoryImpl(async_dispatcher_t* dispatcher, rng::Random* random,
                        component::StartupContext* startup_context,
                        std::string cobalt_client_name);
 
@@ -44,6 +45,7 @@ class FactoryImpl : public Factory {
       GetCloudProviderCallback callback) override;
 
   async_dispatcher_t* const dispatcher_;
+  rng::Random* random_;
   component::StartupContext* const startup_context_;
   const std::string cobalt_client_name_;
   callback::CancellableContainer token_requests_;

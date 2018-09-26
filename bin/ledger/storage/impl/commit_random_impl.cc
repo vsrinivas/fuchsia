@@ -5,32 +5,40 @@
 #include "peridot/bin/ledger/storage/impl/commit_random_impl.h"
 
 #include <lib/fxl/logging.h>
-#include <lib/fxl/random/rand.h>
 
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 
 namespace storage {
 
-CommitRandomImpl::CommitRandomImpl()
-    : id_(RandomCommitId()),
-      timestamp_(fxl::RandUint64()),
-      generation_(fxl::RandUint64()),
-      root_node_identifier_(RandomObjectIdentifier()),
-      parent_ids_{RandomCommitId()},
+CommitRandomImpl::CommitRandomImpl(rng::Random* random)
+    : id_(RandomCommitId(random)),
+      timestamp_(random->Draw<int64_t>()),
+      generation_(random->Draw<uint64_t>()),
+      root_node_identifier_(RandomObjectIdentifier(random)),
+      parent_ids_{RandomCommitId(random)},
       parent_ids_views_{parent_ids_[0]},
-      storage_bytes_(RandomString(64)) {}
+      storage_bytes_(RandomString(random, 64)) {}
 
-CommitRandomImpl::CommitRandomImpl(const CommitRandomImpl& other)
-    : id_(other.id_),
-      timestamp_(other.timestamp_),
-      generation_(other.generation_),
-      root_node_identifier_(other.root_node_identifier_),
-      parent_ids_(other.parent_ids_),
-      storage_bytes_(other.storage_bytes_) {}
+CommitRandomImpl::~CommitRandomImpl() = default;
 
-std::unique_ptr<Commit> CommitRandomImpl::Clone() const {
-  return std::unique_ptr<Commit>(new CommitRandomImpl(*this));
+CommitRandomImpl::CommitRandomImpl(const CommitRandomImpl& other) {
+  *this = other;
+}
+
+CommitRandomImpl& CommitRandomImpl::operator=(const CommitRandomImpl& other) {
+  id_ = other.id_;
+  timestamp_ = other.timestamp_;
+  generation_ = other.generation_;
+  root_node_identifier_ = other.root_node_identifier_;
+  parent_ids_ = other.parent_ids_;
+  storage_bytes_ = other.storage_bytes_;
+  parent_ids_views_ = {parent_ids_[0]};
+  return *this;
+}
+
+std::unique_ptr<const Commit> CommitRandomImpl::Clone() const {
+  return std::make_unique<CommitRandomImpl>(*this);
 }
 
 const CommitId& CommitRandomImpl::GetId() const { return id_; }

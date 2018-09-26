@@ -10,8 +10,10 @@
 
 #include <lib/component/cpp/startup_context.h>
 
+#include "peridot/bin/cloud_provider_firestore/testing/cloud_provider_factory.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 #include "peridot/bin/ledger/testing/sync_params.h"
+#include "peridot/lib/rng/system_random.h"
 
 namespace ledger {
 
@@ -22,13 +24,14 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
   ~LedgerAppInstanceFactoryImpl() override;
 
   std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance() override;
-
   LoopController* GetLoopController() override;
+  rng::Random* GetRandom() override;
 
  private:
   std::unique_ptr<LoopController> loop_controller_;
+  rng::SystemRandom random_;
   const SyncParams sync_params_;
-  const std::string user_id_;
+  const cloud_provider_firestore::CloudProviderFactory::UserId user_id_;
 };
 
 }  // namespace ledger

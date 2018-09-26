@@ -5,13 +5,14 @@
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 
 #include <lib/fxl/logging.h>
-#include <lib/fxl/random/uuid.h>
+
+#include "peridot/lib/convert/convert.h"
 
 namespace firebase_auth {
 
-FakeTokenProvider::FakeTokenProvider()
+FakeTokenProvider::FakeTokenProvider(rng::Random* random)
     : firebase_id_token_(""),
-      firebase_local_id_(fxl::GenerateUUID()),
+      firebase_local_id_(convert::ToHex(random->RandomUniqueBytes())),
       email_("dummy@example.com"),
       client_id_("client_id") {}
 

@@ -252,15 +252,15 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   // Add entries and grab a new snapshot.
   const size_t N = 4;
   fidl::VectorPtr<uint8_t> keys[N] = {
-      RandomArray(20, {0, 0, 0}),
-      RandomArray(20, {0, 0, 1}),
-      RandomArray(20, {0, 1, 0}),
-      RandomArray(20, {0, 1, 1}),
+      RandomArray(GetRandom(), 20, {0, 0, 0}),
+      RandomArray(GetRandom(), 20, {0, 0, 1}),
+      RandomArray(GetRandom(), 20, {0, 1, 0}),
+      RandomArray(GetRandom(), 20, {0, 1, 1}),
   };
   Status status;
   for (auto& key : keys) {
     auto waiter = NewWaiter();
-    page->Put(key.Clone(), RandomArray(50),
+    page->Put(key.Clone(), RandomArray(GetRandom(), 50),
               callback::Capture(waiter->GetCallback(), &status));
     ASSERT_TRUE(waiter->RunUntilCalled());
     EXPECT_EQ(Status::OK, status);
@@ -335,14 +335,15 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   for (size_t i = 0; i < N; ++i) {
     // Generate keys so that they are in increasing order to match the order
     // of results from GetKeys().
-    keys[i] = RandomArray(key_size, {static_cast<uint8_t>(i >> 8),
-                                     static_cast<uint8_t>(i & 0xFF)});
+    keys[i] = RandomArray(
+        GetRandom(), key_size,
+        {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
   }
 
   Status status;
   for (auto& key : keys) {
     auto waiter = NewWaiter();
-    page->Put(key.Clone(), RandomArray(10),
+    page->Put(key.Clone(), RandomArray(GetRandom(), 10),
               callback::Capture(waiter->GetCallback(), &status));
     ASSERT_TRUE(waiter->RunUntilCalled());
     EXPECT_EQ(Status::OK, status);
@@ -372,16 +373,16 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   // Add entries and grab a new snapshot.
   const size_t N = 4;
   fidl::VectorPtr<uint8_t> keys[N] = {
-      RandomArray(20, {0, 0, 0}),
-      RandomArray(20, {0, 0, 1}),
-      RandomArray(20, {0, 1, 0}),
-      RandomArray(20, {0, 1, 1}),
+      RandomArray(GetRandom(), 20, {0, 0, 0}),
+      RandomArray(GetRandom(), 20, {0, 0, 1}),
+      RandomArray(GetRandom(), 20, {0, 1, 0}),
+      RandomArray(GetRandom(), 20, {0, 1, 1}),
   };
   fidl::VectorPtr<uint8_t> values[N] = {
-      RandomArray(50),
-      RandomArray(50),
-      RandomArray(50),
-      RandomArray(50),
+      RandomArray(GetRandom(), 50),
+      RandomArray(GetRandom(), 50),
+      RandomArray(GetRandom(), 50),
+      RandomArray(GetRandom(), 50),
   };
   Status status;
   for (size_t i = 0; i < N; ++i) {
@@ -462,9 +463,10 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   for (size_t i = 0; i < N; ++i) {
     // Generate keys so that they are in increasing order to match the order
     // of results from GetEntries().
-    keys[i] = RandomArray(key_size, {static_cast<uint8_t>(i >> 8),
-                                     static_cast<uint8_t>(i & 0xFF)});
-    values[i] = RandomArray(value_size);
+    keys[i] = RandomArray(
+        GetRandom(), key_size,
+        {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
+    values[i] = RandomArray(GetRandom(), value_size);
   }
 
   Status status;
@@ -511,8 +513,9 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
     // Generate keys so that they are in increasing order to match the order
     // of results from GetEntries().
     keys[i] = RandomArray(
-        20, {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
-    values[i] = RandomArray(100);
+        GetRandom(), 20,
+        {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
+    values[i] = RandomArray(GetRandom(), 100);
   }
 
   for (size_t i = 0; i < N; ++i) {
@@ -542,16 +545,16 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
 
   const size_t N = 4;
   fidl::VectorPtr<uint8_t> keys[N] = {
-      RandomArray(20, {2}),
-      RandomArray(20, {5}),
-      RandomArray(20, {3}),
-      RandomArray(20, {0}),
+      RandomArray(GetRandom(), 20, {2}),
+      RandomArray(GetRandom(), 20, {5}),
+      RandomArray(GetRandom(), 20, {3}),
+      RandomArray(GetRandom(), 20, {0}),
   };
   fidl::VectorPtr<uint8_t> values[N] = {
-      RandomArray(20),
-      RandomArray(20),
-      RandomArray(20),
-      RandomArray(20),
+      RandomArray(GetRandom(), 20),
+      RandomArray(GetRandom(), 20),
+      RandomArray(GetRandom(), 20),
+      RandomArray(GetRandom(), 20),
   };
   for (size_t i = 0; i < N; ++i) {
     Status status;

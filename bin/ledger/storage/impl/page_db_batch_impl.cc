@@ -24,8 +24,9 @@ namespace storage {
 
 using coroutine::CoroutineHandler;
 
-PageDbBatchImpl::PageDbBatchImpl(std::unique_ptr<Db::Batch> batch, PageDb* db)
-    : batch_(std::move(batch)), db_(db) {}
+PageDbBatchImpl::PageDbBatchImpl(rng::Random* random,
+                                 std::unique_ptr<Db::Batch> batch, PageDb* db)
+    : random_(random), batch_(std::move(batch)), db_(db) {}
 
 PageDbBatchImpl::~PageDbBatchImpl() {}
 
@@ -55,7 +56,7 @@ Status PageDbBatchImpl::CreateJournalId(coroutine::CoroutineHandler* handler,
                                         JournalType journal_type,
                                         const CommitId& base,
                                         JournalId* journal_id) {
-  JournalId id = JournalEntryRow::NewJournalId(journal_type);
+  JournalId id = JournalEntryRow::NewJournalId(random_, journal_type);
 
   Status status = Status::OK;
   if (journal_type == JournalType::IMPLICIT) {

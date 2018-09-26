@@ -9,6 +9,7 @@
 
 #include "peridot/bin/ledger/storage/impl/page_db.h"
 #include "peridot/bin/ledger/storage/public/types.h"
+#include "peridot/lib/rng/random.h"
 
 namespace storage {
 
@@ -88,7 +89,8 @@ class JournalEntryRow {
   static const char kEagerPrefix = 'E';
   static const size_t kAddPrefixSize = 2;
 
-  static std::string NewJournalId(JournalType journal_type);
+  static std::string NewJournalId(rng::Random* random,
+                                  JournalType journal_type);
 
   static std::string GetPrefixFor(const JournalId& journal_id);
 

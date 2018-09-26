@@ -12,6 +12,7 @@
 #include <lib/fxl/strings/string_view.h>
 
 #include "peridot/bin/ledger/app/page_manager.h"
+#include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
 #include "peridot/lib/convert/convert.h"
@@ -50,7 +51,7 @@ class LedgerImpl : public Ledger {
   };
 
   // |delegate| outlives LedgerImpl.
-  explicit LedgerImpl(Delegate* delegate);
+  explicit LedgerImpl(Environment* environment, Delegate* delegate);
   ~LedgerImpl() override;
 
  private:
@@ -64,6 +65,7 @@ class LedgerImpl : public Ledger {
       fidl::InterfaceHandle<ConflictResolverFactory> factory,
       SetConflictResolverFactoryCallback callback) override;
 
+  Environment* const environment_;
   Delegate* const delegate_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerImpl);

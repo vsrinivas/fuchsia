@@ -11,6 +11,7 @@
 #include <trace-provider/provider.h>
 
 #include "peridot/bin/cloud_provider_firestore/app/factory_impl.h"
+#include "peridot/lib/rng/system_random.h"
 
 namespace cloud_provider_firestore {
 namespace {
@@ -28,7 +29,7 @@ class App : public fuchsia::modular::Lifecycle {
         startup_context_(component::StartupContext::CreateFromStartupInfo()),
         trace_provider_(loop_.dispatcher()),
         factory_impl_(
-            loop_.dispatcher(), startup_context_.get(),
+            loop_.dispatcher(), &random_, startup_context_.get(),
             app_params.disable_statistics ? "" : "cloud_provider_firestore") {
     FXL_DCHECK(startup_context_);
   }
@@ -51,6 +52,7 @@ class App : public fuchsia::modular::Lifecycle {
 
  private:
   async::Loop loop_;
+  rng::SystemRandom random_;
   std::unique_ptr<component::StartupContext> startup_context_;
   trace::TraceProvider trace_provider_;
 

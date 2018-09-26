@@ -9,6 +9,8 @@
 #include <gtest/gtest.h>
 #include <zircon/syscalls.h>
 
+#include "peridot/lib/rng/test_random.h"
+
 namespace encryption {
 namespace {
 
@@ -16,17 +18,18 @@ using EncryptTest = ::testing::TestWithParam<size_t>;
 
 TEST_P(EncryptTest, Correctness) {
   const size_t kMessageSize = GetParam();
+  rng::TestRandom random(0);
 
   std::string key;
   key.resize(16);
-  zx_cprng_draw(&key[0], key.size());
+  random.Draw(&key);
   std::string message;
   message.resize(kMessageSize);
-  zx_cprng_draw(&message[0], message.size());
+  random.Draw(&message);
 
   std::string encrypted;
   std::string decrypted;
-  ASSERT_TRUE(AES128GCMSIVEncrypt(key, message, &encrypted));
+  ASSERT_TRUE(AES128GCMSIVEncrypt(&random, key, message, &encrypted));
 
   // Check that decrypted is the original message.
   ASSERT_TRUE(AES128GCMSIVDecrypt(key, encrypted, &decrypted));

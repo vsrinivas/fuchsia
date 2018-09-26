@@ -9,7 +9,7 @@
 #include <lib/fxl/macros.h>
 
 #include "gtest/gtest.h"
-#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
+#include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/impl/btree/builder.h"
 #include "peridot/bin/ledger/storage/impl/btree/entry_change_iterator.h"
@@ -34,7 +34,7 @@ std::unique_ptr<Entry> CreateEntryPtr() { return std::unique_ptr<Entry>(); }
 
 class DiffTest : public StorageTest {
  public:
-  DiffTest() : fake_storage_("page_id") {}
+  DiffTest() : fake_storage_(&environment_, "page_id") {}
 
   ~DiffTest() override {}
 
@@ -56,7 +56,6 @@ class DiffTest : public StorageTest {
     return identifier;
   }
 
-  coroutine::CoroutineServiceImpl coroutine_service_;
   fake::FakePageStorage fake_storage_;
 
  private:
@@ -90,8 +89,8 @@ TEST_F(DiffTest, ForEachDiff) {
   bool called;
   Status status;
   size_t current_change = 0;
-  ForEachDiff(&coroutine_service_, &fake_storage_, base_root_identifier,
-              other_root_identifier, "",
+  ForEachDiff(environment_.coroutine_service(), &fake_storage_,
+              base_root_identifier, other_root_identifier, "",
               [&other_changes, &current_change](EntryChange e) {
                 EXPECT_EQ(other_changes[current_change].deleted, e.deleted);
                 if (e.deleted) {
@@ -138,8 +137,8 @@ TEST_F(DiffTest, ForEachDiffWithMinKey) {
 
   // ForEachDiff with a "key0" as min_key should return both changes.
   size_t current_change = 0;
-  ForEachDiff(&coroutine_service_, &fake_storage_, base_root_identifier,
-              other_root_identifier, "key0",
+  ForEachDiff(environment_.coroutine_service(), &fake_storage_,
+              base_root_identifier, other_root_identifier, "key0",
               [&changes, &current_change](EntryChange e) {
                 EXPECT_EQ(changes[current_change++].entry, e.entry);
                 return true;
@@ -151,8 +150,8 @@ TEST_F(DiffTest, ForEachDiffWithMinKey) {
   EXPECT_EQ(changes.size(), current_change);
 
   // With "key60" as min_key, only key75 should be returned.
-  ForEachDiff(&coroutine_service_, &fake_storage_, base_root_identifier,
-              other_root_identifier, "key60",
+  ForEachDiff(environment_.coroutine_service(), &fake_storage_,
+              base_root_identifier, other_root_identifier, "key60",
               [&changes](EntryChange e) {
                 EXPECT_EQ(changes[1].entry, e.entry);
                 return true;
@@ -187,8 +186,8 @@ TEST_F(DiffTest, ForEachDiffWithMinKeySkipNodes) {
   ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, changes,
                                     &other_root_identifier));
 
-  ForEachDiff(&coroutine_service_, &fake_storage_, base_root_identifier,
-              other_root_identifier, "key01",
+  ForEachDiff(environment_.coroutine_service(), &fake_storage_,
+              base_root_identifier, other_root_identifier, "key01",
               [&changes](EntryChange e) {
                 EXPECT_EQ(changes[0].entry, e.entry);
                 return true;
@@ -220,8 +219,8 @@ TEST_F(DiffTest, ForEachDiffPriorityChange) {
   // ForEachDiff should return all changes just applied.
   size_t change_count = 0;
   EntryChange actual_change;
-  ForEachDiff(&coroutine_service_, &fake_storage_, base_root_identifier,
-              other_root_identifier, "",
+  ForEachDiff(environment_.coroutine_service(), &fake_storage_,
+              base_root_identifier, other_root_identifier, "",
               [&actual_change, &change_count](EntryChange e) {
                 actual_change = e;
                 ++change_count;
@@ -315,7 +314,7 @@ TEST_F(DiffTest, ForEachThreeWayDiff) {
   Status status;
   unsigned int current_change = 0;
   ForEachThreeWayDiff(
-      &coroutine_service_, &fake_storage_, base_root_identifier,
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
       left_root_identifier, right_root_identifier, "",
       [&expected_three_way_changes, &current_change](ThreeWayChange e) {
         EXPECT_LT(current_change, expected_three_way_changes.size());
@@ -397,7 +396,7 @@ TEST_F(DiffTest, ForEachThreeWayDiffMinKey) {
   Status status;
   unsigned int current_change = 0;
   ForEachThreeWayDiff(
-      &coroutine_service_, &fake_storage_, base_root_identifier,
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
       left_root_identifier, right_root_identifier, "key257",
       [&expected_three_way_changes, &current_change](ThreeWayChange e) {
         EXPECT_LT(current_change, expected_three_way_changes.size());
@@ -470,7 +469,7 @@ TEST_F(DiffTest, ForEachThreeWayDiffNoDiff) {
   Status status;
   // No change is expected.
   ForEachThreeWayDiff(
-      &coroutine_service_, &fake_storage_, base_root_identifier,
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
       left_root_identifier, right_root_identifier, "key5",
       [](ThreeWayChange e) {
         ADD_FAILURE();
@@ -539,7 +538,7 @@ TEST_F(DiffTest, ForEachThreeWayNoBaseChange) {
   Status status;
   unsigned int current_change = 0;
   ForEachThreeWayDiff(
-      &coroutine_service_, &fake_storage_, base_root_identifier,
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
       left_root_identifier, right_root_identifier, "",
       [&expected_three_way_changes, &current_change](ThreeWayChange e) {
         EXPECT_LT(current_change, expected_three_way_changes.size());

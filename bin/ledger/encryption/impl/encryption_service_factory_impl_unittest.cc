@@ -4,17 +4,17 @@
 
 #include "peridot/bin/ledger/encryption/impl/encryption_service_factory_impl.h"
 
-#include <lib/gtest/test_loop_fixture.h>
+#include "peridot/bin/ledger/testing/test_with_environment.h"
 
 #include "gtest/gtest.h"
 
 namespace encryption {
 namespace {
 
-using EncryptionServiceFactoryTest = gtest::TestLoopFixture;
+using EncryptionServiceFactoryTest = ledger::TestWithEnvironment;
 
 TEST_F(EncryptionServiceFactoryTest, MakeEncryptionService) {
-  EncryptionServiceFactoryImpl factory(dispatcher());
+  EncryptionServiceFactoryImpl factory(&environment_);
   EXPECT_TRUE(factory.MakeEncryptionService("namespace_id"));
 }
 

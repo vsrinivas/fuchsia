@@ -10,16 +10,14 @@
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fxl/logging.h>
-#include <lib/fxl/random/rand.h>
 #include <lib/fxl/strings/concatenate.h>
 
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {
 
-DataGenerator::DataGenerator() : generator_(fxl::RandUint64()) {}
-
-DataGenerator::DataGenerator(uint64_t seed) : generator_(seed) {}
+DataGenerator::DataGenerator(rng::Random* random)
+    : generator_(random->NewBitGenerator<uint64_t>()) {}
 
 DataGenerator::~DataGenerator() {}
 

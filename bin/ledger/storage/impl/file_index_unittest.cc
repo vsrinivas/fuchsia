@@ -7,24 +7,30 @@
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/storage/impl/object_identifier_encoding.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
+#include "peridot/bin/ledger/testing/test_with_environment.h"
 
 namespace storage {
 namespace {
 
-TEST(FileIndexSerialization, CheckInvalid) {
+using FileIndexSerializationTest = ledger::TestWithEnvironment;
+
+TEST_F(FileIndexSerializationTest, CheckInvalid) {
   EXPECT_FALSE(FileIndexSerialization::CheckValidFileIndexSerialization(""));
 
   std::string ones(200, '\1');
   EXPECT_FALSE(FileIndexSerialization::CheckValidFileIndexSerialization(ones));
 }
 
-TEST(FileIndexSerialization, SerializationDeserialization) {
+TEST_F(FileIndexSerializationTest, SerializationDeserialization) {
   const std::vector<FileIndexSerialization::ObjectIdentifierAndSize> elements =
       {
-          {RandomObjectIdentifier(), 1}, {RandomObjectIdentifier(), 2},
-          {RandomObjectIdentifier(), 3}, {RandomObjectIdentifier(), 4},
-          {RandomObjectIdentifier(), 3}, {RandomObjectIdentifier(), 2},
-          {RandomObjectIdentifier(), 1},
+          {RandomObjectIdentifier(environment_.random()), 1},
+          {RandomObjectIdentifier(environment_.random()), 2},
+          {RandomObjectIdentifier(environment_.random()), 3},
+          {RandomObjectIdentifier(environment_.random()), 4},
+          {RandomObjectIdentifier(environment_.random()), 3},
+          {RandomObjectIdentifier(environment_.random()), 2},
+          {RandomObjectIdentifier(environment_.random()), 1},
       };
 
   constexpr size_t expected_total_size = 16;

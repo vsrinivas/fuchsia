@@ -11,7 +11,6 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/memory/ref_ptr.h>
-#include <lib/fxl/random/rand.h>
 
 #include "peridot/lib/convert/convert.h"
 
@@ -32,7 +31,8 @@ bool LogOnError(Status status, fxl::StringView description) {
 
 }  // namespace
 
-PageDataGenerator::PageDataGenerator() : generator_(fxl::RandUint64()) {}
+PageDataGenerator::PageDataGenerator(rng::Random* random)
+    : generator_(random) {}
 
 void PageDataGenerator::PutEntry(PagePtr* page, fidl::VectorPtr<uint8_t> key,
                                  fidl::VectorPtr<uint8_t> value,

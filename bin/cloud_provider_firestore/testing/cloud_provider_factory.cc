@@ -11,28 +11,53 @@
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/functional/make_copyable.h>
-#include <lib/fxl/random/uuid.h>
 #include <lib/svc/cpp/services.h>
 
-namespace cloud_provider_firestore {
+#include "peridot/lib/convert/convert.h"
 
+namespace cloud_provider_firestore {
+namespace {
 namespace http = ::fuchsia::net::oldhttp;
 
-namespace {
 constexpr char kAppUrl[] = "cloud_provider_firestore";
+
+std::string GenerateUserId() {
+  // Always use a real random generator for user ids.
+  rng::SystemRandom system_random;
+  return convert::ToHex(system_random.RandomUniqueBytes());
+}
+
 }  // namespace
+
+CloudProviderFactory::UserId::UserId(const UserId& user_id) = default;
+
+CloudProviderFactory::UserId::UserId(UserId&& user_id) = default;
+
+CloudProviderFactory::UserId& CloudProviderFactory::UserId::operator=(
+    const UserId& user_id) = default;
+
+CloudProviderFactory::UserId& CloudProviderFactory::UserId::operator=(
+    UserId&& user_id) = default;
+
+CloudProviderFactory::UserId CloudProviderFactory::UserId::New() {
+  return UserId();
+}
+
+CloudProviderFactory::UserId::UserId() : user_id_(GenerateUserId()) {}
 
 class CloudProviderFactory::TokenProviderContainer {
  public:
   TokenProviderContainer(
       component::StartupContext* startup_context,
-      async_dispatcher_t* dispatcher,
+      async_dispatcher_t* dispatcher, rng::Random* random,
       std::unique_ptr<service_account::Credentials> credentials,
       std::string user_id,
       fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request)
       : startup_context_(startup_context),
         network_wrapper_(
-            dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
+            dispatcher,
+            std::make_unique<backoff::ExponentialBackoff>(
+                random->NewBitGenerator<uint64_t>()),
             [this] {
               return startup_context_
                   ->ConnectToEnvironmentService<http::HttpService>();
@@ -55,9 +80,11 @@ class CloudProviderFactory::TokenProviderContainer {
 };
 
 CloudProviderFactory::CloudProviderFactory(
-    component::StartupContext* startup_context, std::string api_key,
+    component::StartupContext* startup_context, rng::Random* random,
+    std::string api_key,
     std::unique_ptr<service_account::Credentials> credentials)
     : startup_context_(startup_context),
+      random_(random),
       api_key_(std::move(api_key)),
       credentials_(std::move(credentials)),
       services_loop_(&kAsyncLoopConfigNoAttachToThread) {
@@ -79,16 +106,10 @@ void CloudProviderFactory::Init() {
 }
 
 void CloudProviderFactory::MakeCloudProvider(
-    fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
-  MakeCloudProviderWithGivenUserId(fxl::GenerateUUID(), std::move(request));
-}
-
-void CloudProviderFactory::MakeCloudProviderWithGivenUserId(
-    std::string user_id,
+    UserId user_id,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
   fuchsia::modular::auth::TokenProviderPtr token_provider;
-  MakeTokenProviderWithGivenUserId(std::move(user_id),
-                                   token_provider.NewRequest());
+  MakeTokenProvider(std::move(user_id), token_provider.NewRequest());
 
   cloud_provider_firestore::Config firebase_config;
   firebase_config.server_id = credentials_->project_id();
@@ -105,19 +126,15 @@ void CloudProviderFactory::MakeCloudProviderWithGivenUserId(
 }
 
 void CloudProviderFactory::MakeTokenProvider(
-    fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request) {
-  MakeTokenProviderWithGivenUserId(fxl::GenerateUUID(), std::move(request));
-}
-
-void CloudProviderFactory::MakeTokenProviderWithGivenUserId(
-    std::string user_id,
+    UserId user_id,
     fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request) {
   async::PostTask(services_loop_.dispatcher(),
                   fxl::MakeCopyable([this, user_id = std::move(user_id),
                                      request = std::move(request)]() mutable {
                     token_providers_.emplace(
-                        startup_context_, services_loop_.dispatcher(),
-                        credentials_->Clone(), user_id, std::move(request));
+                        startup_context_, services_loop_.dispatcher(), random_,
+                        credentials_->Clone(), std::move(user_id.user_id()),
+                        std::move(request));
                   }));
 }
 

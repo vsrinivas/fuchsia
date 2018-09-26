@@ -21,10 +21,11 @@ std::shared_ptr<grpc::Channel> MakeChannel() {
 }
 }  // namespace
 
-FactoryImpl::FactoryImpl(async_dispatcher_t* dispatcher,
+FactoryImpl::FactoryImpl(async_dispatcher_t* dispatcher, rng::Random* random,
                          component::StartupContext* startup_context,
                          std::string cobalt_client_name)
     : dispatcher_(dispatcher),
+      random_(random),
       startup_context_(startup_context),
       cobalt_client_name_(std::move(cobalt_client_name)) {}
 
@@ -52,7 +53,7 @@ void FactoryImpl::GetCloudProvider(
   auto firebase_auth = std::make_unique<firebase_auth::FirebaseAuthImpl>(
       firebase_auth::FirebaseAuthImpl::Config{config.api_key,
                                               cobalt_client_name_},
-      dispatcher_, std::move(token_provider_ptr), startup_context_);
+      dispatcher_, random_, std::move(token_provider_ptr), startup_context_);
   firebase_auth::FirebaseAuthImpl* firebase_auth_ptr = firebase_auth.get();
   auto token_request =
       firebase_auth_ptr->GetFirebaseUserId(fxl::MakeCopyable(
@@ -71,7 +72,7 @@ void FactoryImpl::GetCloudProvider(
             auto firestore_service = std::make_unique<FirestoreServiceImpl>(
                 config.server_id, dispatcher_, MakeChannel());
 
-            providers_.emplace(user_id, std::move(firebase_auth),
+            providers_.emplace(random_, user_id, std::move(firebase_auth),
                                std::move(firestore_service),
                                std::move(cloud_provider_request));
             callback(cloud_provider::Status::OK);

@@ -23,20 +23,14 @@
 
 namespace ledger {
 
-fidl::VectorPtr<uint8_t> RandomArray(size_t size,
+fidl::VectorPtr<uint8_t> RandomArray(rng::Random* random, size_t size,
                                      const std::vector<uint8_t>& prefix) {
   EXPECT_TRUE(size >= prefix.size());
   fidl::VectorPtr<uint8_t> array = fidl::VectorPtr<uint8_t>::New(size);
   for (size_t i = 0; i < prefix.size(); ++i) {
     array->at(i) = prefix[i];
   }
-  for (size_t i = prefix.size(); i < size / 4; ++i) {
-    int random = std::rand();
-    for (size_t j = 0; j < 4 && 4 * i + j < size; ++j) {
-      array->at(4 * i + j) = random & 0xFF;
-      random = random >> 8;
-    }
-  }
+  random->Draw(&(*array)[prefix.size()], size - prefix.size());
   return array;
 }
 

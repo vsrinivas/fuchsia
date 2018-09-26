@@ -22,7 +22,7 @@ class TestCommit : public storage::CommitEmptyImpl {
 
   std::vector<std::unique_ptr<const Commit>> AsList();
 
-  std::unique_ptr<Commit> Clone() const override;
+  std::unique_ptr<const Commit> Clone() const override;
 
   const storage::CommitId& GetId() const override;
 

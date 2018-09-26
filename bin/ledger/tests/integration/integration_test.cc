@@ -83,8 +83,11 @@ LedgerAppInstanceFactory* BaseIntegrationTest::GetAppFactory() {
 }
 
 LoopController* BaseIntegrationTest::GetLoopController() {
-  FXL_DCHECK(factory_) << "|SetUp| has not been called.";
-  return factory_->GetLoopController();
+  return GetAppFactory()->GetLoopController();
+}
+
+rng::Random* BaseIntegrationTest::GetRandom() {
+  return GetAppFactory()->GetRandom();
 }
 
 IntegrationTest::IntegrationTest() : BaseIntegrationTest(GetParam()) {}

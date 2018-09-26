@@ -26,6 +26,7 @@ source_set("firebase_auth") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/cobalt/cpp:cobalt_logger",
     "//peridot/public/fidl/fuchsia.modular.auth",
+    "//peridot/lib/rng",
     "//zircon/public/lib/fit",
   ]
 }

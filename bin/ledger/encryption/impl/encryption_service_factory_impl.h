@@ -5,14 +5,13 @@
 #ifndef PERIDOT_BIN_LEDGER_ENCRYPTION_IMPL_ENCRYPTION_SERVICE_FACTORY_IMPL_H_
 #define PERIDOT_BIN_LEDGER_ENCRYPTION_IMPL_ENCRYPTION_SERVICE_FACTORY_IMPL_H_
 
-#include <lib/async/dispatcher.h>
-
 #include "peridot/bin/ledger/encryption/public/encryption_service_factory.h"
+#include "peridot/bin/ledger/environment/environment.h"
 
 namespace encryption {
 class EncryptionServiceFactoryImpl : public EncryptionServiceFactory {
  public:
-  explicit EncryptionServiceFactoryImpl(async_dispatcher_t* dispatcher);
+  explicit EncryptionServiceFactoryImpl(ledger::Environment* environment);
   ~EncryptionServiceFactoryImpl() override;
 
   // EncryptionServiceFactory
@@ -20,7 +19,7 @@ class EncryptionServiceFactoryImpl : public EncryptionServiceFactory {
       std::string namespace_id) override;
 
  private:
-  async_dispatcher_t* const dispatcher_;
+  ledger::Environment* const environment_;
 };
 }  // namespace encryption
 

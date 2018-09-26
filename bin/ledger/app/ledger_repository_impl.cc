@@ -21,7 +21,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
     std::unique_ptr<DiskCleanupManager> disk_cleanup_manager)
     : content_path_(std::move(content_path)),
       environment_(environment),
-      encryption_service_factory_(environment->dispatcher()),
+      encryption_service_factory_(environment),
       watchers_(std::move(watchers)),
       user_sync_(std::move(user_sync)),
       disk_cleanup_manager_(std::move(disk_cleanup_manager)) {

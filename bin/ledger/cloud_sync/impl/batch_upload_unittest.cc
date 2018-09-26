@@ -38,7 +38,7 @@ class TestCommit : public storage::CommitEmptyImpl {
 
   fxl::StringView GetStorageBytes() const override { return storage_bytes; }
 
-  std::unique_ptr<storage::Commit> Clone() const override {
+  std::unique_ptr<const storage::Commit> Clone() const override {
     return std::make_unique<TestCommit>(id, storage_bytes);
   }
 

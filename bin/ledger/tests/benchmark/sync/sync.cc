@@ -16,7 +16,6 @@
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/logging.h>
-#include <lib/fxl/random/uuid.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
@@ -31,6 +30,7 @@
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
 #include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/lib/convert/convert.h"
+#include "peridot/lib/rng/test_random.h"
 
 namespace ledger {
 namespace {
@@ -96,6 +96,7 @@ class SyncBenchmark : public PageWatcher {
   fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
+  rng::TestRandom random_;
   DataGenerator generator_;
   PageDataGenerator page_data_generator_;
   std::unique_ptr<component::StartupContext> startup_context_;
@@ -104,7 +105,7 @@ class SyncBenchmark : public PageWatcher {
   const size_t value_size_;
   const size_t entries_per_change_;
   const PageDataGenerator::ReferenceStrategy reference_strategy_;
-  const std::string user_id_;
+  const cloud_provider_firestore::CloudProviderFactory::UserId user_id_;
   fidl::Binding<PageWatcher> page_watcher_binding_;
   files::ScopedTempDir alpha_tmp_dir_;
   files::ScopedTempDir beta_tmp_dir_;
@@ -128,15 +129,18 @@ SyncBenchmark::SyncBenchmark(
     PageDataGenerator::ReferenceStrategy reference_strategy,
     SyncParams sync_params)
     : loop_(loop),
+      random_(0),
+      generator_(&random_),
+      page_data_generator_(&random_),
       startup_context_(std::move(startup_context)),
-      cloud_provider_factory_(startup_context_.get(),
+      cloud_provider_factory_(startup_context_.get(), &random_,
                               std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
       change_count_(change_count),
       value_size_(value_size),
       entries_per_change_(entries_per_change),
       reference_strategy_(reference_strategy),
-      user_id_("sync_" + fxl::GenerateUUID()),
+      user_id_(cloud_provider_firestore::CloudProviderFactory::UserId::New()),
       page_watcher_binding_(this),
       alpha_tmp_dir_(kStoragePath),
       beta_tmp_dir_(kStoragePath) {
@@ -159,8 +163,8 @@ void SyncBenchmark::Run() {
   FXL_DCHECK(ret);
 
   cloud_provider::CloudProviderPtr cloud_provider_alpha;
-  cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
-      user_id_, cloud_provider_alpha.NewRequest());
+  cloud_provider_factory_.MakeCloudProvider(user_id_,
+                                            cloud_provider_alpha.NewRequest());
   GetLedger(
       startup_context_.get(), alpha_controller_.NewRequest(),
       std::move(cloud_provider_alpha), "sync",
@@ -173,7 +177,7 @@ void SyncBenchmark::Run() {
         alpha_ = std::move(ledger);
 
         cloud_provider::CloudProviderPtr cloud_provider_beta;
-        cloud_provider_factory_.MakeCloudProviderWithGivenUserId(
+        cloud_provider_factory_.MakeCloudProvider(
             user_id_, cloud_provider_beta.NewRequest());
 
         GetLedger(

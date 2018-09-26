@@ -221,6 +221,9 @@ class ConvergenceTest
 
   void SetUp() override {
     BaseIntegrationTest::SetUp();
+
+    data_generator_ = std::make_unique<DataGenerator>(GetRandom());
+
     std::tie(merge_function_type_, num_ledgers_, std::ignore) = GetParam();
 
     ASSERT_GT(num_ledgers_, 1);
@@ -303,7 +306,7 @@ class ConvergenceTest
   std::vector<std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>>
       ledger_instances_;
   std::vector<PagePtr> pages_;
-  DataGenerator data_generator_;
+  std::unique_ptr<DataGenerator> data_generator_;
 };
 
 // Verify that the Ledger converges over different settings of merging functions
@@ -344,7 +347,7 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
                      DoubleToArray(distribution(generator)),
                      callback::Capture(QuitLoopClosure(), &status));
     } else {
-      pages_[i]->Put(convert::ToArray("value"), data_generator_.MakeValue(50),
+      pages_[i]->Put(convert::ToArray("value"), data_generator_->MakeValue(50),
                      callback::Capture(QuitLoopClosure(), &status));
     }
     RunLoop();

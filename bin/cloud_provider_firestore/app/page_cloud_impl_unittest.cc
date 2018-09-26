@@ -23,6 +23,7 @@
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
 #include "peridot/lib/commit_pack/commit_pack.h"
 #include "peridot/lib/convert/convert.h"
+#include "peridot/lib/rng/test_random.h"
 
 namespace cloud_provider_firestore {
 namespace {
@@ -73,12 +74,14 @@ class TestPageCloudWatcher : public cloud_provider::PageCloudWatcher {
 class PageCloudImplTest : public gtest::TestLoopFixture {
  public:
   PageCloudImplTest()
-      : test_credentials_provider_(dispatcher()),
-        page_cloud_impl_("page_path", &test_credentials_provider_,
+      : random_(test_loop().initial_state()),
+        test_credentials_provider_(dispatcher()),
+        page_cloud_impl_("page_path", &random_, &test_credentials_provider_,
                          &firestore_service_, page_cloud_.NewRequest()) {}
   ~PageCloudImplTest() override {}
 
  protected:
+  rng::TestRandom random_;
   cloud_provider::PageCloudPtr page_cloud_;
   TestCredentialsProvider test_credentials_provider_;
   TestFirestoreService firestore_service_;

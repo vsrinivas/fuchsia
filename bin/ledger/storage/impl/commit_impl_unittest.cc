@@ -19,7 +19,7 @@ namespace {
 
 class CommitImplTest : public StorageTest {
  public:
-  CommitImplTest() : page_storage_("page_id") {}
+  CommitImplTest() : page_storage_(&environment_, "page_id") {}
 
   ~CommitImplTest() override {}
 
@@ -52,12 +52,14 @@ class CommitImplTest : public StorageTest {
 };
 
 TEST_F(CommitImplTest, CommitStorageBytes) {
-  ObjectIdentifier root_node_identifier = RandomObjectIdentifier();
+  ObjectIdentifier root_node_identifier =
+      RandomObjectIdentifier(environment_.random());
 
   std::vector<std::unique_ptr<const Commit>> parents;
 
   // A commit with one parent.
-  parents.emplace_back(new CommitRandomImpl());
+  parents.emplace_back(
+      std::make_unique<CommitRandomImpl>(environment_.random()));
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       environment_.clock(), &page_storage_, root_node_identifier,
       std::move(parents));
@@ -65,8 +67,10 @@ TEST_F(CommitImplTest, CommitStorageBytes) {
 
   // A commit with two parents.
   parents = std::vector<std::unique_ptr<const Commit>>();
-  parents.emplace_back(new CommitRandomImpl());
-  parents.emplace_back(new CommitRandomImpl());
+  parents.emplace_back(
+      std::make_unique<CommitRandomImpl>(environment_.random()));
+  parents.emplace_back(
+      std::make_unique<CommitRandomImpl>(environment_.random()));
   std::unique_ptr<const Commit> commit2 = CommitImpl::FromContentAndParents(
       environment_.clock(), &page_storage_, root_node_identifier,
       std::move(parents));
@@ -74,10 +78,12 @@ TEST_F(CommitImplTest, CommitStorageBytes) {
 }
 
 TEST_F(CommitImplTest, CloneCommit) {
-  ObjectIdentifier root_node_identifier = RandomObjectIdentifier();
+  ObjectIdentifier root_node_identifier =
+      RandomObjectIdentifier(environment_.random());
 
   std::vector<std::unique_ptr<const Commit>> parents;
-  parents.emplace_back(new CommitRandomImpl());
+  parents.emplace_back(
+      std::make_unique<CommitRandomImpl>(environment_.random()));
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       environment_.clock(), &page_storage_, root_node_identifier,
       std::move(parents));
@@ -91,11 +97,14 @@ TEST_F(CommitImplTest, CloneCommit) {
 }
 
 TEST_F(CommitImplTest, MergeCommitTimestamp) {
-  ObjectIdentifier root_node_identifier = RandomObjectIdentifier();
+  ObjectIdentifier root_node_identifier =
+      RandomObjectIdentifier(environment_.random());
 
   std::vector<std::unique_ptr<const Commit>> parents;
-  parents.emplace_back(new CommitRandomImpl());
-  parents.emplace_back(new CommitRandomImpl());
+  parents.emplace_back(
+      std::make_unique<CommitRandomImpl>(environment_.random()));
+  parents.emplace_back(
+      std::make_unique<CommitRandomImpl>(environment_.random()));
   EXPECT_NE(parents[0]->GetTimestamp(), parents[1]->GetTimestamp());
   auto max_timestamp =
       std::max(parents[0]->GetTimestamp(), parents[1]->GetTimestamp());

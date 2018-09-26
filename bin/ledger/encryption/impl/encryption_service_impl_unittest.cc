@@ -6,17 +6,18 @@
 
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
+#include "peridot/bin/ledger/testing/test_with_environment.h"
 
 namespace encryption {
 namespace {
 
-class EncryptionServiceTest : public gtest::TestLoopFixture {
+class EncryptionServiceTest : public ledger::TestWithEnvironment {
  public:
-  EncryptionServiceTest() : encryption_service_(dispatcher(), "namespace_id") {}
+  EncryptionServiceTest()
+      : encryption_service_(&environment_, "namespace_id") {}
 
  protected:
   void EncryptCommit(std::string commit_storage, Status* status,

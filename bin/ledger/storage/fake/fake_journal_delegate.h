@@ -14,6 +14,7 @@
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/lib/convert/convert.h"
+#include "peridot/lib/rng/random.h"
 
 namespace storage {
 namespace fake {
@@ -27,13 +28,14 @@ class FakeJournalDelegate {
   // Regular commit.
   // |initial_data| must contain the content of the page when the transaction
   // starts.
-  FakeJournalDelegate(Data initial_data, CommitId parent_id, bool autocommit,
-                      uint64_t generation);
+  FakeJournalDelegate(rng::Random* random, Data initial_data,
+                      CommitId parent_id, bool autocommit, uint64_t generation);
   // Merge commit.
   // |initial_data| must contain the content of the page when the transaction
   // starts.
-  FakeJournalDelegate(Data initial_data, CommitId parent_id, CommitId other_id,
-                      bool autocommit, uint64_t generation);
+  FakeJournalDelegate(rng::Random* random, Data initial_data,
+                      CommitId parent_id, CommitId other_id, bool autocommit,
+                      uint64_t generation);
   ~FakeJournalDelegate();
 
   const CommitId& GetId() const { return id_; }

@@ -11,7 +11,6 @@
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/functional/make_copyable.h>
-#include <lib/fxl/random/uuid.h>
 #include <lib/fxl/strings/concatenate.h>
 
 #include "peridot/bin/cloud_provider_firestore/app/grpc_status.h"
@@ -80,10 +79,12 @@ google::firestore::v1beta1::StructuredQuery MakeCommitQuery(
 }  // namespace
 
 PageCloudImpl::PageCloudImpl(
-    std::string page_path, CredentialsProvider* credentials_provider,
+    std::string page_path, rng::Random* random,
+    CredentialsProvider* credentials_provider,
     FirestoreService* firestore_service,
     fidl::InterfaceRequest<cloud_provider::PageCloud> request)
     : page_path_(std::move(page_path)),
+      random_(random),
       credentials_provider_(credentials_provider),
       firestore_service_(firestore_service),
       binding_(this, std::move(request)),
@@ -117,8 +118,8 @@ void PageCloudImpl::AddCommits(cloud_provider::CommitPack commits,
 
   // Set the document name to a new UUID. Firestore Commit() API doesn't allow
   // to request the ID to be assigned by the server.
-  const std::string document_name =
-      GetCommitBatchPath(page_path_, fxl::GenerateUUID());
+  const std::string document_name = GetCommitBatchPath(
+      page_path_, convert::ToHex(random_->RandomUniqueBytes()));
 
   // The commit batch is added in a single commit containing multiple writes.
   //

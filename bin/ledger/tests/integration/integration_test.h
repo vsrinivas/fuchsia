@@ -55,8 +55,11 @@ class BaseIntegrationTest : public ::testing::Test, public LoopController {
   std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
   NewLedgerAppInstance();
 
-  virtual LedgerAppInstanceFactory* GetAppFactory();
-  virtual LoopController* GetLoopController();
+  LedgerAppInstanceFactory* GetAppFactory();
+
+  LoopController* GetLoopController();
+
+  rng::Random* GetRandom();
 
  private:
   const LedgerAppInstanceFactoryBuilder* factory_builder_;

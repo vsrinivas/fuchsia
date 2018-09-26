@@ -21,12 +21,14 @@ source_set("testing") {
 
   public_deps = [
     "//peridot/lib/firebase_auth",
+    "//peridot/lib/rng",
     "//peridot/public/fidl/fuchsia.modular.auth",
   ]
 
   deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/lib/convert",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

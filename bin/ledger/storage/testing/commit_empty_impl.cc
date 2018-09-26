@@ -8,7 +8,7 @@
 
 namespace storage {
 
-std::unique_ptr<Commit> CommitEmptyImpl::Clone() const {
+std::unique_ptr<const Commit> CommitEmptyImpl::Clone() const {
   FXL_NOTIMPLEMENTED();
   return nullptr;
 }

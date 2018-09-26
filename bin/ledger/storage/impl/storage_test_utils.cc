@@ -101,22 +101,24 @@ ObjectIdentifier MakeObjectIdentifier(std::string content,
   return data.object_identifier;
 }
 
-std::string RandomString(size_t size) {
+std::string RandomString(rng::Random* random, size_t size) {
   std::string value;
   value.resize(size);
-  zx_cprng_draw(&value[0], value.size());
+  random->Draw(&value);
   return value;
 }
 
-CommitId RandomCommitId() { return RandomString(kCommitIdSize); }
+CommitId RandomCommitId(rng::Random* random) {
+  return RandomString(random, kCommitIdSize);
+}
 
-ObjectDigest RandomObjectDigest() {
-  ObjectData data(RandomString(16), InlineBehavior::PREVENT);
+ObjectDigest RandomObjectDigest(rng::Random* random) {
+  ObjectData data(RandomString(random, 16), InlineBehavior::PREVENT);
   return data.object_identifier.object_digest;
 }
 
-ObjectIdentifier RandomObjectIdentifier() {
-  return encryption::MakeDefaultObjectIdentifier(RandomObjectDigest());
+ObjectIdentifier RandomObjectIdentifier(rng::Random* random) {
+  return encryption::MakeDefaultObjectIdentifier(RandomObjectDigest(random));
 }
 
 EntryChange NewEntryChange(std::string key, std::string object_digest,

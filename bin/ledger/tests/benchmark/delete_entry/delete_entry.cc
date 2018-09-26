@@ -28,6 +28,7 @@
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
 #include "peridot/lib/convert/convert.h"
+#include "peridot/lib/rng/test_random.h"
 
 namespace ledger {
 namespace {
@@ -76,6 +77,7 @@ class DeleteEntryBenchmark {
   fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
+  rng::TestRandom random_;
   files::ScopedTempDir tmp_dir_;
   DataGenerator generator_;
   PageDataGenerator page_data_generator_;
@@ -98,7 +100,10 @@ DeleteEntryBenchmark::DeleteEntryBenchmark(
     size_t entry_count, size_t transaction_size, size_t key_size,
     size_t value_size)
     : loop_(loop),
+      random_(0),
       tmp_dir_(kStoragePath),
+      generator_(&random_),
+      page_data_generator_(&random_),
       startup_context_(std::move(startup_context)),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
