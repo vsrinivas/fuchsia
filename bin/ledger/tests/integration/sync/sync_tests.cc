@@ -8,45 +8,16 @@
 #include <lib/fsl/vmo/strings.h>
 
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
+#include "peridot/bin/ledger/tests/integration/sync/test_sync_state_watcher.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {
 namespace {
 
-class SyncWatcherImpl : public SyncWatcher {
- public:
-  SyncWatcherImpl() : binding_(this) {}
-  ~SyncWatcherImpl() override {}
-
-  auto NewBinding() { return binding_.NewBinding(); }
-
-  bool Equals(SyncState download, SyncState upload) {
-    return download == download_state && upload == upload_state;
-  }
-
-  SyncState download_state = SyncState::PENDING;
-  SyncState upload_state = SyncState::PENDING;
-  int state_change_count = 0;
-
- private:
-  // SyncWatcher:
-  void SyncStateChanged(SyncState download, SyncState upload,
-                        SyncStateChangedCallback callback) override {
-    state_change_count++;
-    download_state = download;
-    upload_state = upload;
-    callback();
-  }
-
-  fidl::Binding<SyncWatcher> binding_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherImpl);
-};
-
 class SyncIntegrationTest : public IntegrationTest {
  protected:
-  std::unique_ptr<SyncWatcherImpl> WatchPageSyncState(PagePtr* page) {
-    auto watcher = std::make_unique<SyncWatcherImpl>();
+  std::unique_ptr<TestSyncStateWatcher> WatchPageSyncState(PagePtr* page) {
+    auto watcher = std::make_unique<TestSyncStateWatcher>();
 
     Status status = Status::INTERNAL_ERROR;
     (*page)->SetSyncStateWatcher(watcher->NewBinding(),
@@ -57,7 +28,7 @@ class SyncIntegrationTest : public IntegrationTest {
     return watcher;
   }
 
-  bool WaitUntilSyncIsIdle(SyncWatcherImpl* watcher) {
+  bool WaitUntilSyncIsIdle(TestSyncStateWatcher* watcher) {
     return RunLoopUntil([watcher] {
       return watcher->Equals(SyncState::IDLE, SyncState::IDLE);
     });

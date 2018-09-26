@@ -9,7 +9,10 @@ source_set("sync") {
 
   sources = [
     "convergence.cc",
+    "long_history.cc",
     "sync_tests.cc",
+    "test_sync_state_watcher.cc",
+    "test_sync_state_watcher.h",
   ]
 
   deps = [
