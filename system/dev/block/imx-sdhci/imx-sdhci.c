@@ -17,6 +17,7 @@
 #include <ddk/device.h>
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/phys-iter.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/gpio.h>
@@ -24,6 +25,7 @@
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/sdmmc.h>
 #include <ddk/protocol/sdhci.h>
+#include <hw/reg.h>
 #include <hw/sdmmc.h>
 #include <zircon/types.h>
 
@@ -96,12 +98,10 @@ typedef struct imx_sdhci_device {
     platform_device_protocol_t  pdev;
     platform_bus_protocol_t     pbus;
     zx_device_t*                zxdev;
-    io_buffer_t                 mmios;
+    mmio_buffer_t               mmios;
     zx_handle_t                 irq_handle;
     gpio_protocol_t             gpio;
     volatile imx_sdhci_regs_t*  regs;
-    uint64_t                    regs_size;
-    zx_handle_t                 regs_handle;
     zx_handle_t                 bti_handle;
 
     // DMA descriptors
@@ -150,37 +150,37 @@ static void esdhc_dump(imx_sdhci_device_t* dev)
 {
     SDHCI_ERROR("#######################\n");
     SDHCI_ERROR("Dumping Registers\n\n");
-    SDHCI_ERROR("    ds_addr = 0x%x\n", dev->regs->ds_addr);
-    SDHCI_ERROR("    blk_att = 0x%x\n", dev->regs->blk_att);
-    SDHCI_ERROR("    cmd_arg = 0x%x\n", dev->regs->cmd_arg);
-    SDHCI_ERROR("    cmd_xfr_typ = 0x%x\n", dev->regs->cmd_xfr_typ);
-    SDHCI_ERROR("    cmd_rsp0 = 0x%x\n", dev->regs->cmd_rsp0);
-    SDHCI_ERROR("    cmd_rsp1 = 0x%x\n", dev->regs->cmd_rsp1);
-    SDHCI_ERROR("    cmd_rsp2 = 0x%x\n", dev->regs->cmd_rsp2);
-    SDHCI_ERROR("    cmd_rsp3 = 0x%x\n", dev->regs->cmd_rsp3);
-    SDHCI_ERROR("    data_buff_acc_port = 0x%x\n", dev->regs->data_buff_acc_port);
-    SDHCI_ERROR("    pres_state = 0x%x\n", dev->regs->pres_state);
-    SDHCI_ERROR("    prot_ctrl = 0x%x\n", dev->regs->prot_ctrl);
-    SDHCI_ERROR("    sys_ctrl = 0x%x\n", dev->regs->sys_ctrl);
-    SDHCI_ERROR("    int_status = 0x%x\n", dev->regs->int_status);
-    SDHCI_ERROR("    int_status_en = 0x%x\n", dev->regs->int_status_en);
-    SDHCI_ERROR("    int_signal_en = 0x%x\n", dev->regs->int_signal_en);
-    SDHCI_ERROR("    autocmd12_err_status = 0x%x\n", dev->regs->autocmd12_err_status);
-    SDHCI_ERROR("    host_ctrl_cap = 0x%x\n", dev->regs->host_ctrl_cap);
-    SDHCI_ERROR("    wtmk_lvl = 0x%x\n", dev->regs->wtmk_lvl);
-    SDHCI_ERROR("    mix_ctrl = 0x%x\n", dev->regs->mix_ctrl);
-    SDHCI_ERROR("    force_event = 0x%x\n", dev->regs->force_event);
-    SDHCI_ERROR("    adma_err_status = 0x%x\n", dev->regs->adma_err_status);
-    SDHCI_ERROR("    adma_sys_addr = 0x%x\n", dev->regs->adma_sys_addr);
-    SDHCI_ERROR("    dll_ctrl = 0x%x\n", dev->regs->dll_ctrl);
-    SDHCI_ERROR("    dll_status = 0x%x\n", dev->regs->dll_status);
-    SDHCI_ERROR("    clk_tune_ctrl_status = 0x%x\n", dev->regs->clk_tune_ctrl_status);
-    SDHCI_ERROR("    strobe_dll_ctrl = 0x%x\n", dev->regs->strobe_dll_ctrl);
-    SDHCI_ERROR("    strobe_dll_status = 0x%x\n", dev->regs->strobe_dll_status);
-    SDHCI_ERROR("    vend_spec = 0x%x\n", dev->regs->vend_spec);
-    SDHCI_ERROR("    mmc_boot = 0x%x\n", dev->regs->mmc_boot);
-    SDHCI_ERROR("    vend_spec2 = 0x%x\n", dev->regs->vend_spec2);
-    SDHCI_ERROR("    tuning_ctrl = 0x%x\n", dev->regs->tuning_ctrl);
+    SDHCI_ERROR("    ds_addr = 0x%x\n", readl(&dev->regs->ds_addr));
+    SDHCI_ERROR("    blk_att = 0x%x\n", readl(&dev->regs->blk_att));
+    SDHCI_ERROR("    cmd_arg = 0x%x\n", readl(&dev->regs->cmd_arg));
+    SDHCI_ERROR("    cmd_xfr_typ = 0x%x\n", readl(&dev->regs->cmd_xfr_typ));
+    SDHCI_ERROR("    cmd_rsp0 = 0x%x\n", readl(&dev->regs->cmd_rsp0));
+    SDHCI_ERROR("    cmd_rsp1 = 0x%x\n", readl(&dev->regs->cmd_rsp1));
+    SDHCI_ERROR("    cmd_rsp2 = 0x%x\n", readl(&dev->regs->cmd_rsp2));
+    SDHCI_ERROR("    cmd_rsp3 = 0x%x\n", readl(&dev->regs->cmd_rsp3));
+    SDHCI_ERROR("    data_buff_acc_port = 0x%x\n", readl(&dev->regs->data_buff_acc_port));
+    SDHCI_ERROR("    pres_state = 0x%x\n", readl(&dev->regs->pres_state));
+    SDHCI_ERROR("    prot_ctrl = 0x%x\n", readl(&dev->regs->prot_ctrl));
+    SDHCI_ERROR("    sys_ctrl = 0x%x\n", readl(&dev->regs->sys_ctrl));
+    SDHCI_ERROR("    int_status = 0x%x\n", readl(&dev->regs->int_status));
+    SDHCI_ERROR("    int_status_en = 0x%x\n", readl(&dev->regs->int_status_en));
+    SDHCI_ERROR("    int_signal_en = 0x%x\n", readl(&dev->regs->int_signal_en));
+    SDHCI_ERROR("    autocmd12_err_status = 0x%x\n", readl(&dev->regs->autocmd12_err_status));
+    SDHCI_ERROR("    host_ctrl_cap = 0x%x\n", readl(&dev->regs->host_ctrl_cap));
+    SDHCI_ERROR("    wtmk_lvl = 0x%x\n", readl(&dev->regs->wtmk_lvl));
+    SDHCI_ERROR("    mix_ctrl = 0x%x\n", readl(&dev->regs->mix_ctrl));
+    SDHCI_ERROR("    force_event = 0x%x\n", readl(&dev->regs->force_event));
+    SDHCI_ERROR("    adma_err_status = 0x%x\n", readl(&dev->regs->adma_err_status));
+    SDHCI_ERROR("    adma_sys_addr = 0x%x\n", readl(&dev->regs->adma_sys_addr));
+    SDHCI_ERROR("    dll_ctrl = 0x%x\n", readl(&dev->regs->dll_ctrl));
+    SDHCI_ERROR("    dll_status = 0x%x\n", readl(&dev->regs->dll_status));
+    SDHCI_ERROR("    clk_tune_ctrl_status = 0x%x\n", readl(&dev->regs->clk_tune_ctrl_status));
+    SDHCI_ERROR("    strobe_dll_ctrl = 0x%x\n", readl(&dev->regs->strobe_dll_ctrl));
+    SDHCI_ERROR("    strobe_dll_status = 0x%x\n", readl(&dev->regs->strobe_dll_status));
+    SDHCI_ERROR("    vend_spec = 0x%x\n", readl(&dev->regs->vend_spec));
+    SDHCI_ERROR("    mmc_boot = 0x%x\n", readl(&dev->regs->mmc_boot));
+    SDHCI_ERROR("    vend_spec2 = 0x%x\n", readl(&dev->regs->vend_spec2));
+    SDHCI_ERROR("    tuning_ctrl = 0x%x\n", readl(&dev->regs->tuning_ctrl));
     SDHCI_ERROR("\n\n");
 }
 
@@ -279,7 +279,7 @@ static zx_status_t imx_sdhci_wait_for_reset(imx_sdhci_device_t* dev,
                                             const uint32_t mask, zx_time_t timeout) {
     zx_time_t deadline = zx_clock_get_monotonic() + timeout;
     while (true) {
-        if (!(dev->regs->sys_ctrl & mask)) {
+        if (!(readl(&dev->regs->sys_ctrl) & mask)) {
             break;
         }
         if (zx_clock_get_monotonic() > deadline) {
@@ -295,7 +295,7 @@ static void imx_sdhci_complete_request_locked(imx_sdhci_device_t* dev, sdmmc_req
     SDHCI_TRACE("complete cmd 0x%08x status %d\n", req->cmd_idx, status);
 
     // Disable interrupts when no pending transfer
-    dev->regs->int_signal_en = 0;
+    writel(0, &dev->regs->int_signal_en);
 
     dev->cmd_req = NULL;
     dev->data_req = NULL;
@@ -357,7 +357,7 @@ static void imx_sdhci_data_stage_read_ready_locked(imx_sdhci_device_t* dev) {
     for (size_t byteid = 0; byteid < req->blocksize; byteid += 4) {
         const size_t offset = dev->data_blockid * req->blocksize + byteid;
         uint32_t* wrd = req->virt + offset;
-        *wrd = dev->regs->data_buff_acc_port; //TODO: Can't read this if DMA is enabled!
+        *wrd = readl(&dev->regs->data_buff_acc_port); //TODO: Can't read this if DMA is enabled!
     }
     dev->data_blockid += 1;
 }
@@ -376,7 +376,7 @@ static void imx_sdhci_data_stage_write_ready_locked(imx_sdhci_device_t* dev) {
     for (size_t byteid = 0; byteid < req->blocksize; byteid += 4) {
         const size_t offset = dev->data_blockid * req->blocksize + byteid;
         uint32_t* wrd = req->virt + offset;
-        dev->regs->data_buff_acc_port = *wrd; //TODO: Can't write if DMA is enabled
+        writel(*wrd, &dev->regs->data_buff_acc_port); //TODO: Can't write if DMA is enabled
     }
     dev->data_blockid += 1;
 }
@@ -397,9 +397,9 @@ static void imx_sdhci_transfer_complete_locked(imx_sdhci_device_t* dev) {
 
 static void imx_sdhci_error_recovery_locked(imx_sdhci_device_t* dev) {
     // Reset internal state machines
-    dev->regs->sys_ctrl |= IMX_SDHC_SYS_CTRL_RSTC;
+    set_bitsl(IMX_SDHC_SYS_CTRL_RSTC, &dev->regs->sys_ctrl);
     imx_sdhci_wait_for_reset(dev, IMX_SDHC_SYS_CTRL_RSTC, ZX_SEC(1));
-    dev->regs->sys_ctrl |= IMX_SDHC_SYS_CTRL_RSTD;
+    set_bitsl( IMX_SDHC_SYS_CTRL_RSTD, &dev->regs->sys_ctrl);
     imx_sdhci_wait_for_reset(dev, IMX_SDHC_SYS_CTRL_RSTD, ZX_SEC(1));
 
     // Complete any pending txn with error status
@@ -623,7 +623,7 @@ static zx_status_t imx_sdhci_start_req_locked(imx_sdhci_device_t* dev, sdmmc_req
     }
 
     // Wait for the inhibit masks from above to become 0 before issuing the command
-    while(regs->pres_state & inhibit_mask) {
+    while(readl(&regs->pres_state) & inhibit_mask) {
         zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
     }
 
@@ -638,35 +638,35 @@ static zx_status_t imx_sdhci_start_req_locked(imx_sdhci_device_t* dev, sdmmc_req
             zx_paddr_t desc_phys = io_buffer_phys(&dev->iobuf);
             io_buffer_cache_flush(&dev->iobuf, 0,
                           DMA_DESC_COUNT * sizeof(sdhci_adma64_desc_t));
-            regs->adma_sys_addr = (uint32_t) desc_phys;
-            dev->regs->prot_ctrl &= ~(IMX_SDHC_PROT_CTRL_DMASEL_MASK);
-            dev->regs->prot_ctrl |= IMX_SDHC_PROT_CTRL_DMASEL_ADMA2;
-            regs->adma_err_status = 0;
-            regs->mix_ctrl |= IMX_SDHC_MIX_CTRL_DMAEN;
+            writel((uint32_t)desc_phys, &regs->adma_sys_addr);
+            clr_bitsl(IMX_SDHC_PROT_CTRL_DMASEL_MASK, &dev->regs->prot_ctrl);
+            set_bitsl(IMX_SDHC_PROT_CTRL_DMASEL_ADMA2, &dev->regs->prot_ctrl);
+            writel(0, &regs->adma_err_status);
+            set_bitsl(IMX_SDHC_MIX_CTRL_DMAEN, &regs->mix_ctrl);
         } else {
-            dev->regs->prot_ctrl &= ~(IMX_SDHC_PROT_CTRL_DMASEL_MASK);
+            clr_bitsl(IMX_SDHC_PROT_CTRL_DMASEL_MASK, &dev->regs->prot_ctrl);
         }
         if (cmd & SDHCI_CMD_MULTI_BLK) {
             cmd |= SDHCI_CMD_AUTO12;
         }
     }
 
-    regs->blk_att = (blksiz | (blkcnt << 16));
-    dev->regs->wtmk_lvl = (blksiz/4) | (blksiz/4) << 16;
+    writel(blksiz | (blkcnt << 16), &regs->blk_att);
+    writel((blksiz/4) | (blksiz/4) << 16, &dev->regs->wtmk_lvl);
 
-    regs->cmd_arg = arg;
+    writel(arg, &regs->cmd_arg);
 
     // Clear any pending interrupts before starting the transaction
-    regs->int_status = 0xFFFFFFFF;
+    writel(0xFFFFFFFF, &regs->int_status);
 
     if (req->use_dma) {
         // Unmask and enable interrupts
-        regs->int_signal_en = error_interrupts | dma_normal_interrupts;
-        regs->int_status_en = error_interrupts | dma_normal_interrupts;
+        writel(error_interrupts | dma_normal_interrupts, &regs->int_signal_en);
+        writel(error_interrupts | dma_normal_interrupts, &regs->int_status_en);
     } else {
         // Unmask and enable interrupts
-        regs->int_signal_en = error_interrupts | normal_interrupts;
-        regs->int_status_en = error_interrupts | normal_interrupts;
+        writel(error_interrupts | normal_interrupts, &regs->int_signal_en);
+        writel(error_interrupts | normal_interrupts, &regs->int_status_en);
     }
 
     dev->cmd_req = req;
@@ -680,26 +680,27 @@ static zx_status_t imx_sdhci_start_req_locked(imx_sdhci_device_t* dev, sdmmc_req
     dev->data_done = false;
 
     // Start command
-    regs->mix_ctrl &= ~(IMX_SDHC_MIX_CTRL_CMD_MASK);
-    regs->mix_ctrl |= (cmd & IMX_SDHC_MIX_CTRL_CMD_MASK);
-    regs->cmd_xfr_typ = (cmd & IMX_SDHC_CMD_XFER_TYPE_CMD_MASK);
+    clr_bitsl(IMX_SDHC_MIX_CTRL_CMD_MASK, &regs->mix_ctrl);
+    set_bitsl(cmd & IMX_SDHC_MIX_CTRL_CMD_MASK, &regs->mix_ctrl);
+    writel(cmd & IMX_SDHC_CMD_XFER_TYPE_CMD_MASK, &regs->cmd_xfr_typ);
 
 #ifdef ENABLE_POLLING
     bool pio_done = false;
 
     while (!pio_done) {
         // wait for interrupt to occur
-        while((regs->int_status & regs->int_status_en) == 0) {
+        while((readl(&regs->int_status) & readl(&regs->int_status_en)) == 0) {
             usleep(1);
         }
 
         // we got an interrupt. process it
-        const uint32_t irq = regs->int_status;
+        const uint32_t irq = readl(&regs->int_status);
         SDHCI_TRACE("(PIO MODE) got irq 0x%08x 0x%08x en 0x%08x sig 0x%08x, data_req %p\n",
-            regs->int_status, irq, regs->int_status_en, regs->int_signal_en, dev->data_req);
+            readl(&regs->int_status), irq, readl(&regs->int_status_en), readl(&regs->int_signal_en),
+            dev->data_req);
 
         // Acknowledge the IRQs that we stashed.
-        regs->int_status = irq;
+        writel(irq, &regs->int_status);
 
         if (irq & error_interrupts) {
             SDHCI_ERROR("IRQ ERROR: 0x%x\n", irq);
@@ -707,7 +708,7 @@ static zx_status_t imx_sdhci_start_req_locked(imx_sdhci_device_t* dev, sdmmc_req
             esdhc_dump(dev);
             if (irq & IMX_SDHC_INT_STAT_DMAE) {
                 SDHCI_TRACE("ADMA error 0x%x ADMAADDR0 0x%x\n",
-                regs->adma_err_status, regs->adma_sys_addr);
+                readl(&regs->adma_err_status), readl(&regs->adma_sys_addr));
             }
             imx_sdhci_error_recovery_locked(dev);
         }
@@ -796,16 +797,16 @@ static zx_status_t imx_sdhci_set_bus_width(void* ctx, uint32_t bus_width) {
 
     switch (bus_width) {
         case SDMMC_BUS_WIDTH_1:
-            dev->regs->prot_ctrl &= ~IMX_SDHC_PROT_CTRL_DTW_MASK;
-            dev->regs->prot_ctrl |= IMX_SDHC_PROT_CTRL_DTW_1;
+            clr_bitsl(IMX_SDHC_PROT_CTRL_DTW_MASK, &dev->regs->prot_ctrl);
+            set_bitsl(IMX_SDHC_PROT_CTRL_DTW_1, &dev->regs->prot_ctrl);
             break;
         case SDMMC_BUS_WIDTH_4:
-            dev->regs->prot_ctrl &= ~IMX_SDHC_PROT_CTRL_DTW_MASK;
-            dev->regs->prot_ctrl |= IMX_SDHC_PROT_CTRL_DTW_4;
+            clr_bitsl(IMX_SDHC_PROT_CTRL_DTW_MASK, &dev->regs->prot_ctrl);
+            set_bitsl(IMX_SDHC_PROT_CTRL_DTW_4, &dev->regs->prot_ctrl);
             break;
         case SDMMC_BUS_WIDTH_8:
-            dev->regs->prot_ctrl &= ~IMX_SDHC_PROT_CTRL_DTW_MASK;
-            dev->regs->prot_ctrl |= IMX_SDHC_PROT_CTRL_DTW_8;
+            clr_bitsl(IMX_SDHC_PROT_CTRL_DTW_MASK, &dev->regs->prot_ctrl);
+            set_bitsl(IMX_SDHC_PROT_CTRL_DTW_8, &dev->regs->prot_ctrl);
             break;
         default:
             break;
@@ -836,7 +837,7 @@ static zx_status_t imx_sdhci_set_bus_freq(void* ctx, uint32_t bus_freq) {
     volatile struct imx_sdhci_regs* regs = dev->regs;
 
     uint32_t iterations = 0;
-    while (regs->pres_state & (IMX_SDHC_PRES_STATE_CIHB | IMX_SDHC_PRES_STATE_CDIHB)) {
+    while (readl(&regs->pres_state) & (IMX_SDHC_PRES_STATE_CIHB | IMX_SDHC_PRES_STATE_CDIHB)) {
         if (++iterations > 1000) {
             status = ZX_ERR_TIMED_OUT;
             goto unlock;
@@ -845,21 +846,22 @@ static zx_status_t imx_sdhci_set_bus_freq(void* ctx, uint32_t bus_freq) {
     }
 
     if(dev->ddr_mode) {
-        regs->mix_ctrl |= IMX_SDHC_MIX_CTRL_DDR_EN;
+        set_bitsl(IMX_SDHC_MIX_CTRL_DDR_EN, &regs->mix_ctrl);
     }
 
-    regs->vend_spec &= ~(IMX_SDHC_VEND_SPEC_CARD_CLK_SOFT_EN);
+    clr_bitsl(IMX_SDHC_VEND_SPEC_CARD_CLK_SOFT_EN, &regs->vend_spec);
 
-    regs->sys_ctrl &=   ~(IMX_SDHC_SYS_CTRL_CLOCK_MASK);
+    clr_bitsl(IMX_SDHC_SYS_CTRL_CLOCK_MASK, &regs->sys_ctrl);
 
-    regs->sys_ctrl |=   (pre_div << IMX_SDHC_SYS_CTRL_PREDIV_SHIFT) |
-                        (div << IMX_SDHC_SYS_CTRL_DIVIDER_SHIFT);
+    set_bitsl((pre_div << IMX_SDHC_SYS_CTRL_PREDIV_SHIFT) |
+                  (div << IMX_SDHC_SYS_CTRL_DIVIDER_SHIFT),
+              &regs->sys_ctrl);
 
     // Add delay to make sure clocks are stable
     zx_nanosleep(zx_deadline_after(ZX_MSEC(2)));
 
-    regs->vend_spec |=  (IMX_SDHC_VEND_SPEC_IPG_PERCLK_SOFT_EN) |
-                        (IMX_SDHC_VEND_SPEC_CARD_CLK_SOFT_EN);
+    set_bitsl(IMX_SDHC_VEND_SPEC_IPG_PERCLK_SOFT_EN | IMX_SDHC_VEND_SPEC_CARD_CLK_SOFT_EN,
+              &regs->vend_spec);
 
     zx_nanosleep(zx_deadline_after(ZX_MSEC(2)));
 
@@ -874,15 +876,15 @@ unlock:
 
 static void imx_sdhci_set_strobe_dll(imx_sdhci_device_t* dev) {
 
-    dev->regs->vend_spec &= ~(IMX_SDHC_VEND_SPEC_FRC_SDCLK_ON);
-    dev->regs->dll_ctrl = IMX_SDHC_DLLCTRL_RESET;
+    clr_bitsl(IMX_SDHC_VEND_SPEC_FRC_SDCLK_ON, &dev->regs->vend_spec);
+    writel(IMX_SDHC_DLLCTRL_RESET, &dev->regs->dll_ctrl);
 
-    dev->regs->dll_ctrl = (IMX_SDHC_DLLCTRL_ENABLE | IMX_SDHC_DLLCTRL_SLV_DLY_TARGET);
+    writel((IMX_SDHC_DLLCTRL_ENABLE | IMX_SDHC_DLLCTRL_SLV_DLY_TARGET), &dev->regs->dll_ctrl);
     usleep(10);
-    if(!(dev->regs->dll_status & IMX_SDHC_DLLSTS_REF_LOCK)) {
+    if(!(readl(&dev->regs->dll_status) & IMX_SDHC_DLLSTS_REF_LOCK)) {
         SDHCI_ERROR("HS400 Strobe DLL status REF not locked!!\n");
     }
-    if(!(dev->regs->dll_status & IMX_SDHC_DLLSTS_SLV_LOCK)) {
+    if(!(readl(&dev->regs->dll_status) & IMX_SDHC_DLLSTS_SLV_LOCK)) {
         SDHCI_ERROR("HS400 Strobe DLL status SLV not locked!!\n");
     }
 
@@ -900,7 +902,7 @@ static zx_status_t imx_sdhci_set_timing(void* ctx, sdmmc_timing_t timing) {
 
     mtx_lock(&dev->mtx);
 
-    uint32_t regVal = dev->regs->mix_ctrl;
+    uint32_t regVal = readl(&dev->regs->mix_ctrl);
     regVal &= ~(IMX_SDHC_MIX_CTRL_HS400 | IMX_SDHC_MIX_CTRL_DDR_EN);
     dev->ddr_mode = false;
     switch(timing) {
@@ -908,12 +910,12 @@ static zx_status_t imx_sdhci_set_timing(void* ctx, sdmmc_timing_t timing) {
             mtx_unlock(&dev->mtx);
             imx_sdhci_set_bus_freq(dev, 25000000);
             mtx_lock(&dev->mtx);
-            dev->regs->autocmd12_err_status &= ~(IMX_SDHC_AUTOCMD12_ERRSTS_SMP_CLK_SEL |
-                                                    IMX_SDHC_AUTOCMD12_ERRSTS_EXE_TUNING);
+            clr_bitsl(IMX_SDHC_AUTOCMD12_ERRSTS_SMP_CLK_SEL | IMX_SDHC_AUTOCMD12_ERRSTS_EXE_TUNING,
+                      &dev->regs->autocmd12_err_status);
             break;
         case SDMMC_TIMING_HS400:
             regVal |= (IMX_SDHC_MIX_CTRL_HS400 | IMX_SDHC_MIX_CTRL_DDR_EN);
-            dev->regs->mix_ctrl = regVal;
+            writel(regVal, &dev->regs->mix_ctrl);
             // make sure we are running at 200MHz already
             mtx_unlock(&dev->mtx);
             dev->ddr_mode = true;
@@ -929,7 +931,7 @@ static zx_status_t imx_sdhci_set_timing(void* ctx, sdmmc_timing_t timing) {
             mtx_unlock(&dev->mtx);
             imx_sdhci_set_bus_freq(dev, 52000000);
             mtx_lock(&dev->mtx);
-            dev->regs->mix_ctrl = regVal;
+            writel(regVal, &dev->regs->mix_ctrl);
             break;
     }
 
@@ -952,34 +954,35 @@ static void imx_sdhci_hw_reset(void* ctx) {
     dev->info.caps |= SDMMC_HOST_CAP_AUTO_CMD12;
 
     // Reset host controller
-    dev->regs->sys_ctrl |= IMX_SDHC_SYS_CTRL_RSTA;
+    set_bitsl(IMX_SDHC_SYS_CTRL_RSTA, &dev->regs->sys_ctrl);
     if (imx_sdhci_wait_for_reset(dev, IMX_SDHC_SYS_CTRL_RSTA, ZX_SEC(1)) != ZX_OK) {
-        SDHCI_ERROR("Did not recover from reset 0x%x\n", dev->regs->sys_ctrl);
+        SDHCI_ERROR("Did not recover from reset 0x%x\n", readl(&dev->regs->sys_ctrl));
         mtx_unlock(&dev->mtx);
         return;
     }
 
-    dev->regs->mmc_boot = 0;
-    dev->regs->mix_ctrl = 0;
-    dev->regs->clk_tune_ctrl_status = 0;
-    dev->regs->dll_ctrl = 0;
-    dev->regs->autocmd12_err_status = 0;
-    dev->regs->vend_spec = IMX_SDHC_VEND_SPEC_INIT;
-    dev->regs->vend_spec |= IMX_SDHC_VEND_SPEC_HCLK_SOFT_EN | IMX_SDHC_VEND_SPEC_IPG_CLK_SOFT_EN;
-    dev->regs->sys_ctrl &= ~(IMX_SDHC_SYS_CTRL_DTOCV_MASK);
-    dev->regs->sys_ctrl |= (IMX_SDHC_SYS_CTRL_DTOCV(0xe));
-    dev->regs->prot_ctrl = IMX_SDHC_PROT_CTRL_INIT;
+    writel(0, &dev->regs->mmc_boot);
+    writel(0, &dev->regs->mix_ctrl);
+    writel(0, &dev->regs->clk_tune_ctrl_status);
+    writel(0, &dev->regs->dll_ctrl);
+    writel(0, &dev->regs->autocmd12_err_status);
+    writel(IMX_SDHC_VEND_SPEC_INIT, &dev->regs->vend_spec);
+    set_bitsl(IMX_SDHC_VEND_SPEC_HCLK_SOFT_EN | IMX_SDHC_VEND_SPEC_IPG_CLK_SOFT_EN,
+              &dev->regs->vend_spec);
+    clr_bitsl(IMX_SDHC_SYS_CTRL_DTOCV_MASK, &dev->regs->sys_ctrl);
+    set_bitsl(IMX_SDHC_SYS_CTRL_DTOCV(0xe), &dev->regs->sys_ctrl);
+    writel(IMX_SDHC_PROT_CTRL_INIT, &dev->regs->prot_ctrl);
 
-    uint32_t regVal = dev->regs->tuning_ctrl;
+    uint32_t regVal = readl(&dev->regs->tuning_ctrl);
     regVal &= ~(IMX_SDHC_TUNING_CTRL_START_TAP_MASK);
     regVal &= ~(IMX_SDHC_TUNING_CTRL_STEP_MASK);
     regVal &= ~(IMX_SDHC_TUNING_CTRL_STD_TUN_EN);
     regVal |=   (IMX_SDHC_TUNING_CTRL_START_TAP(20)) |
                 (IMX_SDHC_TUNING_CTRL_STEP(2)) |
                 (IMX_SDHC_TUNING_CTRL_STD_TUN_EN);
-    dev->regs->tuning_ctrl = regVal;
+    writel(regVal, &dev->regs->tuning_ctrl);
 
-    dev->regs->vend_spec |= (1 << 1);
+    set_bitsl(1 << 1, &dev->regs->vend_spec);
     usleep(100);
 
     // enable clocks
@@ -1036,19 +1039,19 @@ static zx_status_t imx_sdhci_perform_tuning(void* ctx, uint32_t tuning_cmd_idx) 
         .cmd_flags = MMC_SEND_TUNING_BLOCK_FLAGS,
         .arg = 0,
         .blockcount = 0,
-        .blocksize = (dev->regs->prot_ctrl & IMX_SDHC_PROT_CTRL_DTW_8) ? 128 : 64,
+        .blocksize = (readl(&dev->regs->prot_ctrl) & IMX_SDHC_PROT_CTRL_DTW_8) ? 128 : 64,
     };
 
     // Setup Standard Tuning
-    regVal = dev->regs->autocmd12_err_status;
+    regVal = readl(&dev->regs->autocmd12_err_status);
     regVal &= ~(IMX_SDHC_AUTOCMD12_ERRSTS_SMP_CLK_SEL);
     regVal |= IMX_SDHC_AUTOCMD12_ERRSTS_EXE_TUNING;
-    dev->regs->autocmd12_err_status = regVal;
+    writel(regVal, &dev->regs->autocmd12_err_status);
 
-    regVal = dev->regs->mix_ctrl;
+    regVal = readl(&dev->regs->mix_ctrl);
     regVal &= ~(IMX_SDHC_MIX_CTRL_FBCLK_SEL | IMX_SDHC_MIX_CTRL_AUTO_TUNE);
     regVal |= (IMX_SDHC_MIX_CTRL_FBCLK_SEL | IMX_SDHC_MIX_CTRL_AUTO_TUNE);
-    dev->regs->mix_ctrl = regVal;
+    writel(regVal, &dev->regs->mix_ctrl);
 
     int count = 0;
     do {
@@ -1060,11 +1063,11 @@ static zx_status_t imx_sdhci_perform_tuning(void* ctx, uint32_t tuning_cmd_idx) 
             return st;
         }
         mtx_lock(&dev->mtx);
-    } while (   ((dev->regs->autocmd12_err_status & IMX_SDHC_AUTOCMD12_ERRSTS_EXE_TUNING)) &&
-                count++ < (MAX_TUNING_COUNT));
+    } while (((readl(&dev->regs->autocmd12_err_status) & IMX_SDHC_AUTOCMD12_ERRSTS_EXE_TUNING)) &&
+             count++ < (MAX_TUNING_COUNT));
 
-    bool fail = (dev->regs->autocmd12_err_status & IMX_SDHC_AUTOCMD12_ERRSTS_EXE_TUNING) ||
-                !(dev->regs->autocmd12_err_status & IMX_SDHC_AUTOCMD12_ERRSTS_SMP_CLK_SEL);
+    bool fail = (readl(&dev->regs->autocmd12_err_status) & IMX_SDHC_AUTOCMD12_ERRSTS_EXE_TUNING) ||
+                !(readl(&dev->regs->autocmd12_err_status) & IMX_SDHC_AUTOCMD12_ERRSTS_SMP_CLK_SEL);
 
     // Give the card some time to finish up
     usleep(1000);
@@ -1097,9 +1100,7 @@ static void imx_sdhci_unbind(void* ctx) {
 
 static void imx_sdhci_release(void* ctx) {
     imx_sdhci_device_t* dev = ctx;
-    if (dev->regs != NULL) {
-        zx_handle_close(dev->regs_handle);
-    }
+    mmio_buffer_release(&dev->mmios);
     zx_handle_close(dev->bti_handle);
     free(dev);
 }
@@ -1131,15 +1132,13 @@ static zx_status_t imx_sdhci_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    status = pdev_map_mmio_buffer(&dev->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer2(&dev->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                     &dev->mmios);
     if (status != ZX_OK) {
         SDHCI_ERROR("pdev_map_mmio_buffer failed %d\n", status);
         goto fail;
     }
-
-    // hook up mmio to dev->regs
-    dev->regs = io_buffer_virt(&dev->mmios);
+    dev->regs = dev->mmios.vaddr;
 
     status = pdev_get_bti(&dev->pdev, 0, &dev->bti_handle);
     if (status != ZX_OK) {
@@ -1170,7 +1169,7 @@ static zx_status_t imx_sdhci_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    uint32_t caps0 = dev->regs->host_ctrl_cap;
+    uint32_t caps0 = readl(&dev->regs->host_ctrl_cap);
 
     //TODO: Turn off 8-bit mode for now since it doesn't work
     dev->info.caps |= SDMMC_HOST_CAP_BUS_WIDTH_8;
@@ -1197,8 +1196,8 @@ static zx_status_t imx_sdhci_bind(void* ctx, zx_device_t* parent) {
         SDHCI_ERROR("0x%lx %p\n", io_buffer_phys(&dev->iobuf), io_buffer_virt(&dev->iobuf));
         dev->descs = io_buffer_virt(&dev->iobuf);
         dev->info.max_transfer_size = DMA_DESC_COUNT * PAGE_SIZE;
-        dev->regs->prot_ctrl &= ~(IMX_SDHC_PROT_CTRL_DMASEL_MASK);
-        dev->regs->prot_ctrl |= IMX_SDHC_PROT_CTRL_DMASEL_ADMA2;
+        clr_bitsl(IMX_SDHC_PROT_CTRL_DMASEL_MASK, &dev->regs->prot_ctrl);
+        set_bitsl(IMX_SDHC_PROT_CTRL_DMASEL_ADMA2, &dev->regs->prot_ctrl);
         dev->dma_mode = true;
         SDHCI_ERROR("Enabling DMA Mode\n");
     }
@@ -1210,8 +1209,8 @@ static zx_status_t imx_sdhci_bind(void* ctx, zx_device_t* parent) {
     dev->info.max_transfer_size_non_dma = BLOCK_MAX_TRANSFER_UNBOUNDED;
 
     // Disable all interrupts
-    dev->regs->int_signal_en = 0;
-    dev->regs->int_status = 0xffffffff;
+    writel(0,  &dev->regs->int_signal_en);
+    writel(0xffffffff, & dev->regs->int_status);
 
 #ifdef ENABLE_POLLING
     SDHCI_INFO("Interrupts Disabled! Polling Mode Active\n");
