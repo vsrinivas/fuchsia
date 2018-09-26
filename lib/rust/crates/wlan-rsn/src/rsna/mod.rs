@@ -5,7 +5,7 @@
 use crate::akm::Akm;
 use crate::cipher::{Cipher, GROUP_CIPHER_SUITE, TKIP};
 use crate::key::exchange::Key;
-use crate::rsne::Rsne;
+use crate::rsne::{Rsne, RsnCapabilities};
 use crate::Error;
 use eapol;
 use failure::{self, bail, ensure};
@@ -20,6 +20,9 @@ pub struct NegotiatedRsne {
     pub pairwise: Cipher,
     pub akm: Akm,
     pub mic_size: u16,
+    // Some networks carry RSN capabilities.
+    // To construct a valid RSNE, these capabilities must be tracked.
+    caps: Option<RsnCapabilities>,
 }
 
 impl NegotiatedRsne {
@@ -48,6 +51,7 @@ impl NegotiatedRsne {
             pairwise: pairwise.clone(),
             akm: akm.clone(),
             mic_size,
+            caps: rsne.rsn_capabilities.clone(),
         })
     }
 
@@ -56,6 +60,7 @@ impl NegotiatedRsne {
         s_rsne.group_data_cipher_suite = Some(self.group_data.clone());
         s_rsne.pairwise_cipher_suites = vec![self.pairwise.clone()];
         s_rsne.akm_suites = vec![self.akm.clone()];
+        s_rsne.rsn_capabilities = self.caps.clone();
         s_rsne
     }
 }

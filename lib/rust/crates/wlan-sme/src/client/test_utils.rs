@@ -4,7 +4,7 @@
 
 use bytes::Bytes;
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
-use wlan_rsn::{akm, cipher, rsne::Rsne, suite_selector::OUI};
+use wlan_rsn::{akm, cipher, rsne::{RsnCapabilities, Rsne}, suite_selector::OUI};
 
 use crate::{InfoEvent, InfoStream, Ssid};
 
@@ -66,6 +66,18 @@ pub fn make_rsne(data: Option<u8>, pairwise: Vec<u8>, akms: Vec<u8>) -> Rsne {
         group_data_cipher_suite: data.map(|t| make_cipher(t)),
         pairwise_cipher_suites: pairwise.into_iter().map(|t| make_cipher(t)).collect(),
         akm_suites: akms.into_iter().map(|t| make_akm(t)).collect(),
+        ..Default::default()
+    };
+    a_rsne
+}
+
+pub fn wpa2_psk_ccmp_rsne_with_caps(caps: RsnCapabilities) -> Rsne {
+    let a_rsne = Rsne {
+        version: 1,
+        group_data_cipher_suite: Some(make_cipher(cipher::CCMP_128)),
+        pairwise_cipher_suites: vec![make_cipher(cipher::CCMP_128)],
+        akm_suites: vec![make_akm(akm::PSK)],
+        rsn_capabilities: Some(caps),
         ..Default::default()
     };
     a_rsne
