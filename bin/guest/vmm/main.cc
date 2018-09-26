@@ -160,7 +160,7 @@ int main(int argc, char** argv) {
   trace::TraceProvider trace_provider(loop.dispatcher());
   std::unique_ptr<component::StartupContext> context =
       component::StartupContext::CreateFromStartupInfo();
-  InstanceControllerImpl instance_controller(context.get());
+  InstanceControllerImpl instance_controller;
 
   fuchsia::sys::LauncherPtr launcher;
   context->environment()->GetLauncher(launcher.NewRequest());
@@ -527,6 +527,12 @@ int main(int argc, char** argv) {
   status = guest.StartVcpu(guest_ip, 0 /* id */);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to start VCPU-0 " << status;
+    loop.Quit();
+  }
+
+  status = instance_controller.AddPublicService(context.get());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to add public service " << status;
     loop.Quit();
   }
 

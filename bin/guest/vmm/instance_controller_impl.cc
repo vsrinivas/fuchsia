@@ -6,40 +6,33 @@
 
 #include <lib/fxl/logging.h>
 
-template <typename T>
-static T duplicate(const T& handle, zx_rights_t rights) {
-  T handle_out;
-  zx_status_t status = handle.duplicate(rights, &handle_out);
-  FXL_CHECK(status == ZX_OK) << "Failed to duplicate handle";
-  return handle_out;
+InstanceControllerImpl::InstanceControllerImpl() {
+  zx_status_t status = zx::socket::create(0, &socket_, &remote_socket_);
+  FXL_CHECK(status == ZX_OK) << "Failed to create socket";
 }
 
-InstanceControllerImpl::InstanceControllerImpl(
-    component::StartupContext* context) {
-  zx_status_t status = zx::socket::create(0, &server_socket_, &client_socket_);
-  FXL_CHECK(status == ZX_OK) << "Failed to create socket";
-
-  context->outgoing().AddPublicService(bindings_.GetHandler(this));
+zx_status_t InstanceControllerImpl::AddPublicService(component::StartupContext *context) {
+  return context->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
 void InstanceControllerImpl::GetSerial(GetSerialCallback callback) {
-  callback(duplicate(client_socket_, ZX_RIGHT_SAME_RIGHTS));
-}
-
-void InstanceControllerImpl::GetViewProvider(GetViewProviderCallback callback) {
-  if (view_provider_ == nullptr) {
-    // AddBinding gives a "valid" handle to a null ImplPtr, so we explicitly
-    // pass a nullptr to the callback here.
-    callback(nullptr);
+  zx::socket dup;
+  zx_status_t status = remote_socket_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to duplicate socket";
     return;
   }
-  callback(view_provider_bindings_.AddBinding(view_provider_));
+  callback(std::move(dup));
+}
+
+void InstanceControllerImpl::GetViewProvider(
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider> request) {
+  FXL_DCHECK(view_provider_ != nullptr);
+  view_provider_bindings_.AddBinding(view_provider_, std::move(request));
 }
 
 void InstanceControllerImpl::GetInputDispatcher(
-    fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher>
-        input_dispatcher_request) {
+    fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher> request) {
   FXL_DCHECK(input_dispatcher_ != nullptr);
-  input_dispatcher_bindings_.AddBinding(input_dispatcher_,
-                                        std::move(input_dispatcher_request));
+  input_dispatcher_bindings_.AddBinding(input_dispatcher_, std::move(request));
 }

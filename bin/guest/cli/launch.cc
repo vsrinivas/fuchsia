@@ -7,9 +7,10 @@
 #include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <lib/fxl/command_line.h>
+#include <lib/svc/cpp/services.h>
 
 #include "garnet/bin/guest/cli/serial.h"
-#include "lib/svc/cpp/services.h"
 
 void handle_launch(int argc, const char* argv[], async::Loop* loop,
                    component::StartupContext* context) {
@@ -32,21 +33,19 @@ void handle_launch(int argc, const char* argv[], async::Loop* loop,
       std::move(launch_info), instance_controller.NewRequest(), &instance_info);
   instance_controller.set_error_handler([loop] { loop->Shutdown(); });
 
-  // Create the framebuffer view.
-  instance_controller->GetViewProvider([context](auto view_provider) {
-    if (!view_provider.is_valid()) {
-      return;
-    }
-    auto view_provider_ptr = view_provider.Bind();
-
+  fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);
+  if (cl.GetOptionValueWithDefault("display", "scenic") == "scenic") {
+    // Create the framebuffer view.
+    fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
+    instance_controller->GetViewProvider(view_provider.NewRequest());
     fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner;
-    view_provider_ptr->CreateView(view_owner.NewRequest(), nullptr);
+    view_provider->CreateView(view_owner.NewRequest(), nullptr);
 
     // Ask the presenter to display it.
-    fuchsia::ui::policy::PresenterSyncPtr presenter;
+    fuchsia::ui::policy::PresenterPtr presenter;
     context->ConnectToEnvironmentService(presenter.NewRequest());
     presenter->Present(std::move(view_owner), nullptr);
-  });
+  }
 
   // Open the serial service of the guest and process IO.
   zx::socket socket;

@@ -16,7 +16,9 @@
 // interface. This exposes some guest services over FIDL.
 class InstanceControllerImpl : public fuchsia::guest::InstanceController {
  public:
-  InstanceControllerImpl(component::StartupContext* context);
+  InstanceControllerImpl();
+
+  zx_status_t AddPublicService(component::StartupContext* context);
 
   void SetViewProvider(fuchsia::ui::viewsv1::ViewProvider* view_provider) {
     view_provider_ = view_provider;
@@ -28,24 +30,25 @@ class InstanceControllerImpl : public fuchsia::guest::InstanceController {
   // Extracts the socket handle to be used for the host end of serial
   // communication. The other end of this socket will be provided to clients
   // via |GetSerial|.
-  zx::socket TakeSocket() { return std::move(server_socket_); }
+  zx::socket TakeSocket() { return std::move(socket_); }
 
   // |fuchsia::guest::InstanceController|
   void GetSerial(GetSerialCallback callback) override;
-  void GetViewProvider(GetViewProviderCallback callback) override;
+  void GetViewProvider(
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider> request)
+      override;
   void GetInputDispatcher(
-      fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher>
-          input_dispatcher_request) override;
+      fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher> request)
+      override;
 
  private:
   fidl::BindingSet<fuchsia::guest::InstanceController> bindings_;
-  fidl::BindingSet<fuchsia::ui::viewsv1::ViewProvider>
-      view_provider_bindings_;
+  fidl::BindingSet<fuchsia::ui::viewsv1::ViewProvider> view_provider_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDispatcher>
       input_dispatcher_bindings_;
 
-  zx::socket server_socket_;
-  zx::socket client_socket_;
+  zx::socket socket_;
+  zx::socket remote_socket_;
   fuchsia::ui::viewsv1::ViewProvider* view_provider_;
   machina::InputDispatcherImpl* input_dispatcher_;
 };

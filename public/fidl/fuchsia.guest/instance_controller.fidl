@@ -7,17 +7,17 @@ library fuchsia.guest;
 using fuchsia.ui.input;
 using fuchsia.ui.viewsv1;
 
-// A |InstanceController| provides access to services vended by a guest instance.
+// A |InstanceController| provides access to services of a guest instance.
 [Discoverable]
 interface InstanceController {
-    // Fetch a socket for the primary serial device of the guest. The details
-    // regarding what output is produced and what input is accepted are determined
-    // by each guest.
+    // Get the socket for the primary serial device of the guest. The details
+    // regarding what output is produced and what input is accepted are
+    // determined by each guest.
     1: GetSerial() -> (handle<socket> socket);
 
-    // Fetch the guest display view provider.
-    2: GetViewProvider() -> (fuchsia.ui.viewsv1.ViewProvider view_provider);
+    // Get the guest display view provider.
+    2: GetViewProvider(request<fuchsia.ui.viewsv1.ViewProvider> view_provider);
 
-    // Fetch the input dispatcher for this instance.
-    3: GetInputDispatcher(request<fuchsia.ui.input.InputDispatcher> input_dispatcher_request);
+    // Get the input dispatcher for this instance.
+    3: GetInputDispatcher(request<fuchsia.ui.input.InputDispatcher> input_dispatcher);
 };
