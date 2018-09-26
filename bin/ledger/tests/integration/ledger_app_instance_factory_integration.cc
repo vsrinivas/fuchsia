@@ -41,10 +41,10 @@ const char kUserId[] = "user";
 // Implementation of rng::Random that delegates to another instance. This is
 // needed because EnvironmentBuilder requires taking ownership of the random
 // implementation.
-class RandomDelegate final : public rng::Random {
+class DelegatedRandom final : public rng::Random {
  public:
-  RandomDelegate(rng::Random* base) : base_(base) {}
-  ~RandomDelegate() override = default;
+  DelegatedRandom(rng::Random* base) : base_(base) {}
+  ~DelegatedRandom() override = default;
 
  private:
   void InternalDraw(void* buffer, size_t buffer_size) {
@@ -65,7 +65,7 @@ Environment BuildEnvironment(async_dispatcher_t* dispatcher,
             kBackoffDuration, 1u, kBackoffDuration);
       })
       .SetClock(std::make_unique<timekeeper::TestClock>())
-      .SetRandom(std::make_unique<RandomDelegate>(random))
+      .SetRandom(std::make_unique<DelegatedRandom>(random))
       .Build();
 }
 
