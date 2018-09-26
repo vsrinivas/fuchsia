@@ -196,6 +196,7 @@ zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& re
     chan_sched_->EnsureOnChannel(timer_mgr_.Now() + kOnChannelTimeAfterSend);
 
     join_chan_ = chan;
+    join_phy_ = req.body()->phy;
     zx::time deadline = deadline_after_bcn_period(req.body()->join_failure_timeout);
     status = timer_mgr_.Schedule(deadline, &join_timeout_);
     if (status != ZX_OK) {
@@ -392,8 +393,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
         }
     }
 
-    auto is_ht = client_capability.has_ht_cap && (bss_->ht_cap != nullptr);
-    if (is_ht) {
+    if (IsHtOrLater()) {
         auto ht_cap = client_capability.ht_cap;
         debugf("HT cap(hardware reports): %s\n", debug::Describe(ht_cap).c_str());
 
@@ -633,13 +633,14 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
     infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n",
           self_addr().ToString().c_str(), debug::ToAsciiOrHexStr(*bss_->ssid).c_str(),
           bssid.ToString().c_str(), common::ChanStr(GetJoinChan()).c_str(),
-          common::BandStr(GetJoinChan()).c_str(), assoc_ctx_.is_ht ? "802.11n HT" : "802.11g/a");
+          common::BandStr(GetJoinChan()).c_str(), GetPhyStr().c_str());
 
     // TODO(porce): Time when to establish BlockAck session
     // Handle MLME-level retry, if MAC-level retry ultimately fails
     // Wrap this as EstablishBlockAckSession(peer_mac_addr)
     // Signal to lower MAC for proper session handling
-    SendAddBaRequestFrame();
+
+    if (IsHtOrLater()) { SendAddBaRequestFrame(); }
     return ZX_OK;
 }
 
@@ -897,13 +898,17 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
 
     // Ralink appears to setup BlockAck session AND AMPDU handling
     // TODO(porce): Use a separate sequence number space in that case
-    if (assoc_ctx_.is_cbw40_tx && data_hdr->addr3.IsUcast()) {
-        // 40 MHz direction does not matter here.
-        // Radio uses the operational channel setting. This indicates the bandwidth without
-        // direction.
-        data_frame.FillTxInfo(CBW40, WLAN_PHY_HT);
+    if (assoc_ctx_.is_ht) {
+        if (assoc_ctx_.is_cbw40_tx && data_hdr->addr3.IsUcast()) {
+            // 40 MHz direction does not matter here.
+            // Radio uses the operational channel setting. This indicates the bandwidth without
+            // direction.
+            data_frame.FillTxInfo(CBW40, WLAN_PHY_HT);
+        } else {
+            data_frame.FillTxInfo(CBW20, WLAN_PHY_HT);
+        }
     } else {
-        data_frame.FillTxInfo(CBW20, WLAN_PHY_HT);
+        data_frame.FillTxInfo(CBW20, WLAN_PHY_OFDM);
     }
 
     if (data_hdr->HasQosCtrl()) {  // QoS Control field
@@ -1442,7 +1447,7 @@ bool Station::IsQosReady() const {
 
     // Aruba / Ubiquiti are confirmed to be compatible with QoS field for the BlockAck session,
     // independently of 40MHz operation.
-    return true;
+    return assoc_ctx_.is_ht;
 }
 
 CapabilityInfo Station::OverrideCapability(CapabilityInfo cap) const {
@@ -1738,6 +1743,18 @@ void SetAssocCtxSuppRates(const AssocContext& ap, const AssocContext& client,
         std::move(supp_rates->cbegin() + SupportedRatesElement::kMaxLen, supp_rates->cend(),
                   std::back_inserter(*ext_rates));
         supp_rates->resize(SupportedRatesElement::kMaxLen);
+    }
+}
+
+std::string Station::GetPhyStr() const {
+    if (assoc_ctx_.is_vht) {
+        return "802.11ac VHT";
+    } else if (assoc_ctx_.is_ht) {
+        return "802.11n HT";
+    } else if (common::Is5Ghz(join_chan_)) {
+        return "802.11a";
+    } else {
+        return "802.11g";
     }
 }
 

@@ -73,6 +73,8 @@ struct AssocContext {
     bool is_cbw40_tx = false;
 
     void set_aid(uint16_t aid) { aid = aid & kAidMask; }
+
+    bool is_vht = false;
 };
 
 class Station {
@@ -97,6 +99,10 @@ class Station {
         // (3) if bssid_ is kZeroMac.
         if (!bss_) { return nullptr; }
         return &bssid_;
+    }
+
+    bool IsHtOrLater() const {
+        return (join_phy_ == wlan_mlme::PHY::HT || join_phy_ == wlan_mlme::PHY::VHT);
     }
 
     wlan_channel_t GetBssChan() const {
@@ -181,6 +187,7 @@ class Station {
 
     bool IsCbw40Rx() const;
     bool IsQosReady() const;
+    std::string GetPhyStr() const;
 
     CapabilityInfo OverrideCapability(CapabilityInfo cap) const;
     zx_status_t OverrideHtCapability(HtCapabilities* htc) const;
@@ -215,6 +222,7 @@ class Station {
     eapol::PortState controlled_port_ = eapol::PortState::kBlocked;
 
     wlan_channel_t join_chan_;
+    wlan_mlme::PHY join_phy_;
     common::WlanStats<common::ClientMlmeStats, ::fuchsia::wlan::stats::ClientMlmeStats> stats_;
     AssocContext assoc_ctx_{};
 
