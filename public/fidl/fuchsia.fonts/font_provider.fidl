@@ -11,6 +11,17 @@ enum Slant {
     ITALIC = 2;
 };
 
+enum FallbackGroup {
+    NONE = 0;
+    SERIF = 1;
+    SANS_SERIF = 2;
+    MONOSPACE = 3;
+    CURSIVE = 4;
+    FANTASY = 5;
+};
+
+const uint32 REQUEST_FLAG_NO_FALLBACK = 1;
+
 struct Request {
     // For example, "Roboto".
     string family;
@@ -33,7 +44,14 @@ struct Request {
     // Caller that specify this field are expected to extract character set from
     // the result and cache it in order to avoid calling the API more than
     // necessary.
-    uint32 character;
+    uint32 character = 0;
+
+    // Fallback group preference. Caller can leave this field set to NONE. In
+    // that case the font provider will use fallback group of the specified font
+    // family.
+    FallbackGroup fallback_group = NONE;
+
+    uint32 flags = 0;
 };
 
 struct Response {

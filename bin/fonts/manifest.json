@@ -1,16 +1,18 @@
 {
-  "fallback": "Roboto",
   "families": [
     {
       "family": "MaterialIcons",
       "fonts": [
         {
-          "asset": "fonts/MaterialIcons-Regular.ttf"
+          "asset": "fonts/MaterialIcons-Regular.ttf",
+          "fallback": true
         }
       ]
     },
     {
       "family": "Roboto",
+      "fallback_group": "sans-serif",
+      "fallback": true,
       "fonts": [
         {
           "asset": "fonts/Roboto-Regular.ttf"
@@ -68,6 +70,7 @@
     },
     {
       "family": "RobotoCondensed",
+      "fallback_group": "sans-serif",
       "fonts": [
         {
           "asset": "fonts/RobotoCondensed-Regular.ttf"
@@ -98,6 +101,7 @@
     },
     {
       "family": "RobotoMono",
+      "fallback_group": "monospace",
       "fonts": [
         {
           "asset": "fonts/RobotoMono-Regular.ttf"
@@ -146,6 +150,7 @@
     },
     {
       "family": "RobotoSlab",
+      "fallback_group": "serif",
       "fonts": [
         {
           "asset": "fonts/RobotoSlab-Regular.ttf"

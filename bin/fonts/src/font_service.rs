@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use super::font_info;
-use super::manifest::FontsManifest;
+use super::manifest;
 use failure::{format_err, Error, ResultExt};
 use fdio;
 use fidl;
@@ -55,17 +55,17 @@ impl AssetCollection {
         }
     }
 
-    fn add_or_get_asset_id(&mut self, path: PathBuf) -> u32 {
-        if let Some(id) = self.assets_map.get(&path) {
+    fn add_or_get_asset_id(&mut self, path: &Path) -> u32 {
+        if let Some(id) = self.assets_map.get(path) {
             return *id;
         }
 
         let id = self.assets.len() as u32;
         self.assets.push(Asset {
-            path: path.clone(),
+            path: path.to_path_buf(),
             buffer: RwLock::new(None),
         });
-        self.assets_map.insert(path, id);
+        self.assets_map.insert(path.to_path_buf(), id);
         id
     }
 
@@ -101,11 +101,67 @@ struct Font {
     _width: u32,
     language: LanguageSet,
     info: font_info::FontInfo,
+    fallback_group: fonts::FallbackGroup,
+}
+
+impl Font {
+    fn new(
+        asset_id: u32, manifest: manifest::Font, info: font_info::FontInfo,
+        fallback_group: fonts::FallbackGroup,
+    ) -> Font {
+        Font {
+            asset_id,
+            font_index: manifest.index,
+            weight: manifest.weight,
+            _width: manifest.width,
+            slant: manifest.slant,
+            language: manifest.language.iter().map(|x| x.clone()).collect(),
+            info,
+            fallback_group,
+        }
+    }
+}
+
+struct FontCollection {
+    // Some fonts may be in more than one collections. Particularly fallback fonts
+    // are added to the family collection and also to the fallback collection.
+    fonts: Vec<Arc<Font>>,
+}
+
+impl FontCollection {
+    fn new() -> FontCollection {
+        FontCollection { fonts: vec![] }
+    }
+
+    fn match_request<'a>(&'a self, request: &fonts::Request) -> Option<&'a Font> {
+        self.fonts
+            .iter()
+            .filter(|f| (request.character == 0) | f.info.charset.contains(request.character))
+            .min_by_key(|f| compute_font_request_score(f, request))
+            .map(|a| a.as_ref())
+    }
+
+    fn is_empty(&self) -> bool {
+        self.fonts.is_empty()
+    }
+
+    fn add_font(&mut self, font: Arc<Font>) {
+        self.fonts.push(font);
+    }
 }
 
 struct FontFamily {
-    _name: String,
-    fonts: Vec<Font>,
+    fonts: FontCollection,
+    fallback_group: fonts::FallbackGroup,
+}
+
+impl FontFamily {
+    fn new(fallback_group: fonts::FallbackGroup) -> FontFamily {
+        FontFamily {
+            fonts: FontCollection::new(),
+            fallback_group: fallback_group,
+        }
+    }
 }
 
 fn abs_diff(a: u32, b: u32) -> u32 {
@@ -119,8 +175,11 @@ fn abs_diff(a: u32, b: u32) -> u32 {
 fn compute_font_request_score(font: &Font, request: &fonts::Request) -> u32 {
     let mut score = 0;
 
-    let char_matches = request.character != 0 && font.info.charset.contains(request.character);
-    score += 4000 * (!char_matches) as u32;
+    if (request.fallback_group != fonts::FallbackGroup::None)
+        & (request.fallback_group != font.fallback_group)
+    {
+        score += 4000;
+    }
 
     let language_matches = request
         .language
@@ -135,31 +194,45 @@ fn compute_font_request_score(font: &Font, request: &fonts::Request) -> u32 {
     score
 }
 
-impl FontFamily {
-    fn find_best_match<'a>(&'a self, request: &fonts::Request) -> &'a Font {
-        self.fonts
-            .iter()
-            .min_by_key(|f| compute_font_request_score(f, request))
-            .unwrap()
-    }
-}
-
-struct FontCollection {
-    fallback_family: String,
+pub struct FontService {
     assets: AssetCollection,
     families: BTreeMap<String, FontFamily>,
+    fallback_collection: FontCollection,
 }
 
-impl FontCollection {
-    fn new() -> FontCollection {
-        FontCollection {
-            fallback_family: String::new(),
-            families: BTreeMap::new(),
+impl FontService {
+    pub fn new() -> FontService {
+        FontService {
             assets: AssetCollection::new(),
+            families: BTreeMap::new(),
+            fallback_collection: FontCollection::new(),
         }
     }
 
-    fn add_from_manifest(&mut self, mut manifest: FontsManifest) -> Result<(), Error> {
+    // Verifies that we have a reasonable font configuration and can start.
+    pub fn check_can_start(&self) -> Result<(), Error> {
+        if self.fallback_collection.is_empty() {
+            return Err(format_err!("Need at least one fallback font"));
+        }
+
+        Ok(())
+    }
+
+    pub fn load_manifest(&mut self, manifest_path: &Path) -> Result<(), Error> {
+        let manifest = manifest::FontsManifest::load_from_file(&manifest_path)?;
+        self.add_fonts_from_manifest(manifest).with_context(|_| {
+            format!(
+                "Failed to load fonts from {}",
+                manifest_path.to_string_lossy()
+            )
+        })?;
+
+        Ok(())
+    }
+
+    fn add_fonts_from_manifest(
+        &mut self, mut manifest: manifest::FontsManifest,
+    ) -> Result<(), Error> {
         for mut family_manifest in manifest.families.drain(..) {
             if family_manifest.fonts.is_empty() {
                 continue;
@@ -168,18 +241,20 @@ impl FontCollection {
             let family = self
                 .families
                 .entry(family_manifest.family.clone())
-                .or_insert_with(|| FontFamily {
-                    _name: family_manifest.family.clone(),
-                    fonts: vec![],
-                });
+                .or_insert_with(|| FontFamily::new(family_manifest.fallback_group));
 
             let font_info_loader = font_info::FontInfoLoader::new()?;
 
-            for font in family_manifest.fonts.drain(..) {
-                let asset_id = self.assets.add_or_get_asset_id(font.asset.clone());
+            for font_manifest in family_manifest.fonts.drain(..) {
+                let asset_id = self
+                    .assets
+                    .add_or_get_asset_id(font_manifest.asset.as_path());
 
                 let buffer = self.assets.get_asset(asset_id).with_context(|_| {
-                    format!("Failed to load font from {}", font.asset.to_string_lossy())
+                    format!(
+                        "Failed to load font from {}",
+                        font_manifest.asset.to_string_lossy()
+                    )
                 })?;
 
                 // Unsafe because in VMOs may be resized while being mapped and
@@ -190,34 +265,28 @@ impl FontCollection {
                 // manifest file that refers to files that are not on pkgs.
                 let info = unsafe {
                     font_info_loader
-                        .load_font_info_from_vmo(&buffer.vmo, buffer.size as usize, font.index)
-                        .with_context(|_| {
+                        .load_font_info_from_vmo(
+                            &buffer.vmo,
+                            buffer.size as usize,
+                            font_manifest.index,
+                        ).with_context(|_| {
                             format!(
                                 "Failed to load font info from {}",
-                                font.asset.to_string_lossy()
+                                font_manifest.asset.to_string_lossy()
                             )
                         })?
                 };
-                family.fonts.push(Font {
+                let font = Arc::new(Font::new(
                     asset_id,
-                    font_index: font.index,
-                    weight: font.weight,
-                    _width: font.width,
-                    slant: font.slant,
-                    language: font.language.iter().map(|x| x.clone()).collect(),
+                    font_manifest,
                     info,
-                });
-            }
-        }
-
-        if let Some(fallback) = manifest.fallback {
-            if !self.families.contains_key(&fallback) {
-                return Err(format_err!(
-                    "Font manifest contains invalid fallback family {}",
-                    fallback
+                    family_manifest.fallback_group,
                 ));
+                family.fonts.add_font(font.clone());
+                if family_manifest.fallback {
+                    self.fallback_collection.add_font(font);
+                }
             }
-            self.fallback_family = fallback;
         }
 
         // Flush the cache. Font files will be loaded again when they are needed.
@@ -226,53 +295,35 @@ impl FontCollection {
         Ok(())
     }
 
-    fn get_fallback_family<'a>(&'a self) -> &'a FontFamily {
-        // fallback_family is expected to be always valid.
-        self.families.get(&self.fallback_family).unwrap()
-    }
+    fn match_request(&self, mut request: fonts::Request) -> Result<fonts::Response, Error> {
+        let mut font = self.families.get(&request.family).and_then(|family| {
+            if request.fallback_group == fonts::FallbackGroup::None {
+                request.fallback_group = family.fallback_group;
+            }
+            family.fonts.match_request(&request)
+        });
 
-    fn find_best_match(&self, request: &fonts::Request) -> Result<fonts::Response, Error> {
-        let family = self
-            .families
-            .get(&request.family)
-            .unwrap_or_else(|| self.get_fallback_family());
-        let font = family.find_best_match(request);
-
-        Ok(fonts::Response {
-            buffer: self.assets.get_asset(font.asset_id)?,
-            buffer_id: font.asset_id,
-            font_index: font.font_index,
-        })
-    }
-}
-
-pub struct FontService {
-    font_collection: FontCollection,
-}
-
-impl FontService {
-    pub fn new(manifests: &[PathBuf]) -> Result<FontService, Error> {
-        let mut font_collection = FontCollection::new();
-        for manifest_path in manifests {
-            let manifest = FontsManifest::load_from_file(&manifest_path)
-                .with_context(|_| format!("Failed to load {}", manifest_path.to_string_lossy()))?;
-            font_collection
-                .add_from_manifest(manifest)
-                .with_context(|_| {
-                    format!(
-                        "Failed to load fonts from {}",
-                        manifest_path.to_string_lossy()
-                    )
-                })?;
+        if (request.flags & fonts::REQUEST_FLAG_NO_FALLBACK) == 0 {
+            font = font.or_else(|| self.fallback_collection.match_request(&request));
         }
 
-        if font_collection.fallback_family == "" {
-            return Err(format_err!(
-                "Font manifest didn't contain a valid fallback family."
-            ));
-        }
+        let response = match font {
+            Some(f) => fonts::Response {
+                buffer: self.assets.get_asset(f.asset_id)?,
+                buffer_id: f.asset_id,
+                font_index: f.font_index,
+            },
+            None => fonts::Response {
+                buffer: mem::Buffer {
+                    vmo: zx::Vmo::from_handle(zx::Handle::invalid()),
+                    size: 0,
+                },
+                buffer_id: 0,
+                font_index: 0,
+            },
+        };
 
-        Ok(FontService { font_collection })
+        Ok(response)
     }
 
     fn handle_font_provider_request(
@@ -283,7 +334,7 @@ impl FontService {
                 // TODO(sergeyu): Currently the service returns an empty response when
                 // it fails to load a font. This matches behavior of the old
                 // FontProvider implementation, but it isn't the right thing to do.
-                let mut response = self.font_collection.find_best_match(&request).ok();
+                let mut response = self.match_request(request).ok();
                 future::ready(responder.send(response.as_mut().map(OutOfLine)))
             }
         }

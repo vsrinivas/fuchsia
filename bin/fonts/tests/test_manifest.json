@@ -2,6 +2,8 @@
   "families": [
     {
       "family": "NotoSerifCJK",
+      "fallback_group": "serif",
+      "fallback": true,
       "fonts": [
         {
           "asset": "NotoSerifCJK-Regular.ttc",
@@ -27,6 +29,8 @@
     },
     {
       "family": "NotoSansCJK",
+      "fallback_group": "sans-serif",
+      "fallback": true,
       "fonts": [
         {
           "asset": "NotoSansCJK-Regular.ttc",

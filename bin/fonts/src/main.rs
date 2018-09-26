@@ -10,7 +10,7 @@ mod freetype_ffi;
 mod manifest;
 
 use self::font_service::FontService;
-use failure::{format_err, Error, ResultExt};
+use failure::{Error, ResultExt};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_fonts::ProviderMarker as FontProviderMarker;
 use fuchsia_app::server::ServicesServer;
@@ -39,29 +39,27 @@ fn main() -> Result<(), Error> {
     let args: Vec<String> = std::env::args().collect();
     let options = opts.parse(args)?;
 
-    let mut manifests = Vec::new();
+    let mut service = FontService::new();
 
     if !options.opt_present("n") {
-        manifests.push(PathBuf::from(FONT_MANIFEST_PATH));
+        service.load_manifest(&PathBuf::from(FONT_MANIFEST_PATH))?;
 
         let vendor_font_manifest_path = PathBuf::from(VENDOR_FONT_MANIFEST_PATH);
         if vendor_font_manifest_path.exists() {
-            manifests.push(vendor_font_manifest_path);
+            service.load_manifest(&vendor_font_manifest_path)?;
         }
     }
 
     for m in options.opt_strs("m") {
-        manifests.push(PathBuf::from(m.as_str()));
+        service.load_manifest(&PathBuf::from(m.as_str()))?;
     }
 
-    if manifests.is_empty() {
-        return Err(format_err!("At least manifest file is expected."));
-    }
+    service.check_can_start()?;
+
+    let service = Arc::new(service);
 
     let mut executor = fuchsia_async::Executor::new()
         .context("Creating async executor for Font service failed")?;
-
-    let service = Arc::new(FontService::new(&manifests[..])?);
 
     let fut = ServicesServer::new()
         .add_service((FontProviderMarker::NAME, move |channel| {

@@ -23,6 +23,15 @@ pub struct FontsManifest {
 pub struct Family {
     pub family: String,
     pub fonts: Vec<Font>,
+
+    #[serde(default = "default_fallback")]
+    pub fallback: bool,
+
+    #[serde(
+        default = "default_fallback_group",
+        deserialize_with = "deserialize_fallback_group"
+    )]
+    pub fallback_group: fonts::FallbackGroup,
 }
 
 pub type LanguageSet = Vec<String>;
@@ -53,6 +62,14 @@ pub struct Font {
     pub language: LanguageSet,
 }
 
+fn default_fallback() -> bool {
+    false
+}
+
+fn default_fallback_group() -> fonts::FallbackGroup {
+    fonts::FallbackGroup::None
+}
+
 fn default_index() -> u32 {
     0
 }
@@ -71,6 +88,24 @@ fn default_width() -> u32 {
 
 fn default_language() -> LanguageSet {
     LanguageSet::new()
+}
+
+fn deserialize_fallback_group<'d, D>(deserializer: D) -> Result<fonts::FallbackGroup, D::Error>
+where
+    D: Deserializer<'d>,
+{
+    let s = String::deserialize(deserializer)?;
+    match s.as_str() {
+        "serif" => Ok(fonts::FallbackGroup::Serif),
+        "sans_serif" | "sans-serif" => Ok(fonts::FallbackGroup::SansSerif),
+        "monospace" => Ok(fonts::FallbackGroup::Monospace),
+        "cursive" => Ok(fonts::FallbackGroup::Cursive),
+        "fantasy" => Ok(fonts::FallbackGroup::Fantasy),
+        x => Err(D::Error::custom(format!(
+            "unknown value for fallback_group in manifest: {}",
+            x
+        ))),
+    }
 }
 
 fn deserialize_slant<'d, D>(deserializer: D) -> Result<fonts::Slant, D::Error>
