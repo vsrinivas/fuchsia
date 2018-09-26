@@ -6009,7 +6009,7 @@ ath10k_wmi_op_gen_start_scan(struct ath10k* ar,
 }
 #endif  // NEEDS PORTING
 
-zx_status_t
+static zx_status_t
 ath10k_wmi_10x_op_gen_start_scan(struct ath10k* ar,
                                  struct ath10k_msg_buf** msg_buf_ptr,
                                  const struct wmi_start_scan_arg* arg) {
@@ -6357,62 +6357,69 @@ ath10k_wmi_op_gen_vdev_spectral_enable(struct ath10k* ar, uint32_t vdev_id,
 
     return skb;
 }
+#endif  // NEEDS PORTING
 
-static struct sk_buff*
-ath10k_wmi_op_gen_peer_create(struct ath10k* ar, uint32_t vdev_id,
+static zx_status_t
+ath10k_wmi_op_gen_peer_create(struct ath10k* ar,
+                              struct ath10k_msg_buf** msg_buf_ptr,
+                              uint32_t vdev_id,
                               const uint8_t peer_addr[ETH_ALEN],
                               enum wmi_peer_type peer_type) {
-    struct wmi_peer_create_cmd* cmd;
-    struct sk_buff* skb;
-
-    skb = ath10k_wmi_alloc_skb(ar, sizeof(*cmd));
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    struct ath10k_msg_buf* msg_buf;
+    zx_status_t status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_PEER_CREATE, 0);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    cmd = (struct wmi_peer_create_cmd*)skb->data;
+    struct wmi_peer_create_cmd* cmd = ath10k_msg_buf_get_header(
+            msg_buf, ATH10K_MSG_TYPE_WMI_PEER_CREATE);
     cmd->vdev_id = vdev_id;
     memcpy(cmd->peer_macaddr.addr, peer_addr, ETH_ALEN);
 
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "wmi peer create vdev_id %d peer_addr %pM\n",
                vdev_id, peer_addr);
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
 
-static struct sk_buff*
-ath10k_wmi_op_gen_peer_delete(struct ath10k* ar, uint32_t vdev_id,
+static zx_status_t
+ath10k_wmi_op_gen_peer_delete(struct ath10k* ar,
+                              struct ath10k_msg_buf** msg_buf_ptr,
+                              uint32_t vdev_id,
                               const uint8_t peer_addr[ETH_ALEN]) {
-    struct wmi_peer_delete_cmd* cmd;
-    struct sk_buff* skb;
-
-    skb = ath10k_wmi_alloc_skb(ar, sizeof(*cmd));
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    struct ath10k_msg_buf* msg_buf;
+    zx_status_t status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_PEER_DELETE, 0);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    cmd = (struct wmi_peer_delete_cmd*)skb->data;
+    struct wmi_peer_delete_cmd* cmd = ath10k_msg_buf_get_header(
+            msg_buf, ATH10K_MSG_TYPE_WMI_PEER_DELETE);
     cmd->vdev_id = vdev_id;
     memcpy(cmd->peer_macaddr.addr, peer_addr, ETH_ALEN);
 
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "wmi peer delete vdev_id %d peer_addr %pM\n",
                vdev_id, peer_addr);
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
 
-static struct sk_buff*
-ath10k_wmi_op_gen_peer_flush(struct ath10k* ar, uint32_t vdev_id,
-                             const uint8_t peer_addr[ETH_ALEN], uint32_t tid_bitmap) {
-    struct wmi_peer_flush_tids_cmd* cmd;
-    struct sk_buff* skb;
-
-    skb = ath10k_wmi_alloc_skb(ar, sizeof(*cmd));
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+static zx_status_t
+ath10k_wmi_op_gen_peer_flush(struct ath10k* ar,
+                             struct ath10k_msg_buf** msg_buf_ptr,
+                             uint32_t vdev_id,
+                             const uint8_t peer_addr[ETH_ALEN],
+                             uint32_t tid_bitmap) {
+    struct ath10k_msg_buf* msg_buf;
+    zx_status_t status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_PEER_FLUSH, 0);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    cmd = (struct wmi_peer_flush_tids_cmd*)skb->data;
+    struct wmi_peer_flush_tids_cmd* cmd = ath10k_msg_buf_get_header(
+            msg_buf, ATH10K_MSG_TYPE_WMI_PEER_FLUSH);
     cmd->vdev_id         = vdev_id;
     cmd->peer_tid_bitmap = tid_bitmap;
     memcpy(cmd->peer_macaddr.addr, peer_addr, ETH_ALEN);
@@ -6420,23 +6427,25 @@ ath10k_wmi_op_gen_peer_flush(struct ath10k* ar, uint32_t vdev_id,
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "wmi peer flush vdev_id %d peer_addr %pM tids %08x\n",
                vdev_id, peer_addr, tid_bitmap);
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
 
-static struct sk_buff*
-ath10k_wmi_op_gen_peer_set_param(struct ath10k* ar, uint32_t vdev_id,
+static zx_status_t
+ath10k_wmi_op_gen_peer_set_param(struct ath10k* ar,
+                                 struct ath10k_msg_buf** msg_buf_ptr,
+                                 uint32_t vdev_id,
                                  const uint8_t* peer_addr,
                                  enum wmi_peer_param param_id,
                                  uint32_t param_value) {
-    struct wmi_peer_set_param_cmd* cmd;
-    struct sk_buff* skb;
-
-    skb = ath10k_wmi_alloc_skb(ar, sizeof(*cmd));
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    struct ath10k_msg_buf* msg_buf;
+    zx_status_t status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_PEER_SET_PARAM, 0);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    cmd = (struct wmi_peer_set_param_cmd*)skb->data;
+    struct wmi_peer_set_param_cmd* cmd = ath10k_msg_buf_get_header(
+            msg_buf, ATH10K_MSG_TYPE_WMI_PEER_SET_PARAM);
     cmd->vdev_id     = vdev_id;
     cmd->param_id    = param_id;
     cmd->param_value = param_value;
@@ -6445,9 +6454,11 @@ ath10k_wmi_op_gen_peer_set_param(struct ath10k* ar, uint32_t vdev_id,
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "wmi vdev %d peer 0x%pM set param %d value %d\n",
                vdev_id, peer_addr, param_id, param_value);
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
 
+#if 0   // NEEDS PORTING
 static struct sk_buff*
 ath10k_wmi_op_gen_set_psmode(struct ath10k* ar, uint32_t vdev_id,
                              enum wmi_sta_ps_mode psmode) {
@@ -6542,12 +6553,9 @@ ath10k_wmi_op_gen_scan_chan_list(struct ath10k* ar,
     return ZX_OK;
 }
 
-#if 0   // NEEDS PORTING
 static void
-ath10k_wmi_peer_assoc_fill(struct ath10k* ar, void* buf,
-                           const struct wmi_peer_assoc_complete_arg* arg) {
+ath10k_wmi_peer_assoc_fill(void* buf, const struct wmi_peer_assoc_complete_arg* arg) {
     struct wmi_common_peer_assoc_complete_cmd* cmd = buf;
-
     cmd->vdev_id            = arg->vdev_id;
     cmd->peer_new_assoc     = arg->peer_reassoc ? 0 : 1;
     cmd->peer_associd       = arg->peer_aid;
@@ -6584,39 +6592,34 @@ ath10k_wmi_peer_assoc_fill(struct ath10k* ar, void* buf,
         arg->peer_vht_rates.tx_mcs_set;
 }
 
+#if 0   // NEEDS PORTING
 static void
-ath10k_wmi_peer_assoc_fill_main(struct ath10k* ar, void* buf,
-                                const struct wmi_peer_assoc_complete_arg* arg) {
+ath10k_wmi_peer_assoc_fill_main(void* buf, const struct wmi_peer_assoc_complete_arg* arg) {
+    ath10k_wmi_peer_assoc_fill(buf, arg);
     struct wmi_main_peer_assoc_complete_cmd* cmd = buf;
-
-    ath10k_wmi_peer_assoc_fill(ar, buf, arg);
     memset(cmd->peer_ht_info, 0, sizeof(cmd->peer_ht_info));
 }
 
 static void
-ath10k_wmi_peer_assoc_fill_10_1(struct ath10k* ar, void* buf,
-                                const struct wmi_peer_assoc_complete_arg* arg) {
-    ath10k_wmi_peer_assoc_fill(ar, buf, arg);
+ath10k_wmi_peer_assoc_fill_10_1(void* buf, const struct wmi_peer_assoc_complete_arg* arg) {
+    ath10k_wmi_peer_assoc_fill(buf, arg);
 }
+#endif  // NEEDS PORTING
 
 static void
-ath10k_wmi_peer_assoc_fill_10_2(struct ath10k* ar, void* buf,
-                                const struct wmi_peer_assoc_complete_arg* arg) {
-    struct wmi_10_2_peer_assoc_complete_cmd* cmd = buf;
-    int max_mcs, max_nss;
-    uint32_t info0;
+ath10k_wmi_peer_assoc_fill_10_2(void* buf, const struct wmi_peer_assoc_complete_arg* arg) {
+    ath10k_wmi_peer_assoc_fill(buf, arg);
 
     /* TODO: Is using max values okay with firmware? */
-    max_mcs = 0xf;
-    max_nss = 0xf;
+    int max_mcs = 0xf;
+    int max_nss = 0xf;
 
-    info0 = SM(max_mcs, WMI_PEER_ASSOC_INFO0_MAX_MCS_IDX) |
-            SM(max_nss, WMI_PEER_ASSOC_INFO0_MAX_NSS);
-
-    ath10k_wmi_peer_assoc_fill(ar, buf, arg);
-    cmd->info0 = info0;
+    struct wmi_10_2_peer_assoc_complete_cmd* cmd = buf;
+    cmd->info0 = SM(max_mcs, WMI_PEER_ASSOC_INFO0_MAX_MCS_IDX) |
+                 SM(max_nss, WMI_PEER_ASSOC_INFO0_MAX_NSS);
 }
 
+#if 0   // NEEDS PORTING
 static void
 ath10k_wmi_peer_assoc_fill_10_4(struct ath10k* ar, void* buf,
                                 const struct wmi_peer_assoc_complete_arg* arg) {
@@ -6631,22 +6634,24 @@ ath10k_wmi_peer_assoc_fill_10_4(struct ath10k* ar, void* buf,
         cmd->peer_bw_rxnss_override = 0;
     }
 }
+#endif  // NEEDS PORTING
 
-static int
+static zx_status_t
 ath10k_wmi_peer_assoc_check_arg(const struct wmi_peer_assoc_complete_arg* arg) {
     if (arg->peer_mpdu_density > 16) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (arg->peer_legacy_rates.num_rates > MAX_SUPPORTED_RATES) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (arg->peer_ht_rates.num_rates > MAX_SUPPORTED_RATES) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
+#if 0   // NEEDS PORTING
 static struct sk_buff*
 ath10k_wmi_op_gen_peer_assoc(struct ath10k* ar,
                              const struct wmi_peer_assoc_complete_arg* arg) {
@@ -6698,33 +6703,35 @@ ath10k_wmi_10_1_op_gen_peer_assoc(struct ath10k* ar,
                arg->peer_reassoc ? "reassociate" : "new");
     return skb;
 }
+#endif  // NEEDS PORTING
 
-static struct sk_buff*
+static zx_status_t
 ath10k_wmi_10_2_op_gen_peer_assoc(struct ath10k* ar,
+                                  struct ath10k_msg_buf** msg_buf_ptr,
                                   const struct wmi_peer_assoc_complete_arg* arg) {
-    size_t len = sizeof(struct wmi_10_2_peer_assoc_complete_cmd);
-    struct sk_buff* skb;
-    int ret;
-
-    ret = ath10k_wmi_peer_assoc_check_arg(arg);
-    if (ret) {
-        return ERR_PTR(ret);
+    zx_status_t status = ath10k_wmi_peer_assoc_check_arg(arg);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    skb = ath10k_wmi_alloc_skb(ar, len);
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    struct ath10k_msg_buf* msg_buf;
+    status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_10_2_PEER_ASSOC, 0);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    ath10k_wmi_peer_assoc_fill_10_2(ar, skb->data, arg);
+    void* cmd = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_WMI_10_2_PEER_ASSOC);
+    ath10k_wmi_peer_assoc_fill_10_2(cmd, arg);
 
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "wmi peer assoc vdev %d addr %pM (%s)\n",
                arg->vdev_id, arg->addr,
                arg->peer_reassoc ? "reassociate" : "new");
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
 
+#if 0   // NEEDS PORTING
 static struct sk_buff*
 ath10k_wmi_10_4_op_gen_peer_assoc(struct ath10k* ar,
                                   const struct wmi_peer_assoc_complete_arg* arg) {
@@ -6832,7 +6839,7 @@ void ath10k_wmi_set_wmm_param(struct wmi_wmm_params* params, const struct wmi_wm
     params->no_ack = arg->no_ack;
 }
 
-zx_status_t
+static zx_status_t
 ath10k_wmi_op_gen_pdev_set_wmm(struct ath10k* ar,
                                struct ath10k_msg_buf** msg_buf_ptr,
                                const struct wmi_wmm_params_all_arg* arg) {
@@ -7795,10 +7802,12 @@ static const struct wmi_ops wmi_ops = {
     .gen_vdev_spectral_conf = ath10k_wmi_op_gen_vdev_spectral_conf,
     .gen_vdev_spectral_enable = ath10k_wmi_op_gen_vdev_spectral_enable,
     /* .gen_vdev_wmm_conf not implemented */
+#endif  // NEEDS PORTING
     .gen_peer_create = ath10k_wmi_op_gen_peer_create,
     .gen_peer_delete = ath10k_wmi_op_gen_peer_delete,
     .gen_peer_flush = ath10k_wmi_op_gen_peer_flush,
     .gen_peer_set_param = ath10k_wmi_op_gen_peer_set_param,
+#if 0   // NEEDS PORTING
     .gen_peer_assoc = ath10k_wmi_op_gen_peer_assoc,
     .gen_set_psmode = ath10k_wmi_op_gen_set_psmode,
     .gen_set_sta_ps = ath10k_wmi_op_gen_set_sta_ps,
@@ -7879,10 +7888,12 @@ static const struct wmi_ops wmi_10_1_ops = {
     .gen_vdev_spectral_conf = ath10k_wmi_op_gen_vdev_spectral_conf,
     .gen_vdev_spectral_enable = ath10k_wmi_op_gen_vdev_spectral_enable,
     /* .gen_vdev_wmm_conf not implemented */
+#endif  // NEEDS PORTING
     .gen_peer_create = ath10k_wmi_op_gen_peer_create,
     .gen_peer_delete = ath10k_wmi_op_gen_peer_delete,
     .gen_peer_flush = ath10k_wmi_op_gen_peer_flush,
     .gen_peer_set_param = ath10k_wmi_op_gen_peer_set_param,
+#if 0   // NEEDS PORTING
     .gen_set_psmode = ath10k_wmi_op_gen_set_psmode,
     .gen_set_sta_ps = ath10k_wmi_op_gen_set_sta_ps,
     .gen_set_ap_ps = ath10k_wmi_op_gen_set_ap_ps,
@@ -7916,8 +7927,8 @@ static const struct wmi_ops wmi_10_2_ops = {
     .rx = ath10k_wmi_10_2_op_rx,
     .pull_fw_stats = ath10k_wmi_10_2_op_pull_fw_stats,
     .gen_init = ath10k_wmi_10_2_op_gen_init,
-    .gen_peer_assoc = ath10k_wmi_10_2_op_gen_peer_assoc,
 #endif  // NEEDS PORTING
+    .gen_peer_assoc = ath10k_wmi_10_2_op_gen_peer_assoc,
     /* .gen_pdev_get_temperature not implemented */
 
     /* shared with 10.1 */
@@ -7963,10 +7974,12 @@ static const struct wmi_ops wmi_10_2_ops = {
     .gen_vdev_spectral_conf = ath10k_wmi_op_gen_vdev_spectral_conf,
     .gen_vdev_spectral_enable = ath10k_wmi_op_gen_vdev_spectral_enable,
     /* .gen_vdev_wmm_conf not implemented */
+#endif  // NEEDS PORTING
     .gen_peer_create = ath10k_wmi_op_gen_peer_create,
     .gen_peer_delete = ath10k_wmi_op_gen_peer_delete,
     .gen_peer_flush = ath10k_wmi_op_gen_peer_flush,
     .gen_peer_set_param = ath10k_wmi_op_gen_peer_set_param,
+#if 0   // NEEDS PORTING
     .gen_set_psmode = ath10k_wmi_op_gen_set_psmode,
     .gen_set_sta_ps = ath10k_wmi_op_gen_set_sta_ps,
     .gen_set_ap_ps = ath10k_wmi_op_gen_set_ap_ps,
@@ -7996,8 +8009,8 @@ static const struct wmi_ops wmi_10_2_4_ops = {
     .pull_fw_stats = ath10k_wmi_10_2_4_op_pull_fw_stats,
 #endif  // NEEDS PORTING
     .gen_init = ath10k_wmi_10_2_op_gen_init,
-#if 0   // NEEDS PORTING
     .gen_peer_assoc = ath10k_wmi_10_2_op_gen_peer_assoc,
+#if 0   // NEEDS PORTING
     .gen_pdev_get_temperature = ath10k_wmi_10_2_op_gen_pdev_get_temperature,
     .gen_pdev_bss_chan_info_req = ath10k_wmi_10_2_op_gen_pdev_bss_chan_info,
 #endif  // NEEDS PORTING
@@ -8044,10 +8057,12 @@ static const struct wmi_ops wmi_10_2_4_ops = {
 #if 0   // NEEDS PORTING
     .gen_vdev_spectral_conf = ath10k_wmi_op_gen_vdev_spectral_conf,
     .gen_vdev_spectral_enable = ath10k_wmi_op_gen_vdev_spectral_enable,
+#endif  // NEEDS PORTING
     .gen_peer_create = ath10k_wmi_op_gen_peer_create,
     .gen_peer_delete = ath10k_wmi_op_gen_peer_delete,
     .gen_peer_flush = ath10k_wmi_op_gen_peer_flush,
     .gen_peer_set_param = ath10k_wmi_op_gen_peer_set_param,
+#if 0   // NEEDS PORTING
     .gen_set_psmode = ath10k_wmi_op_gen_set_psmode,
     .gen_set_sta_ps = ath10k_wmi_op_gen_set_sta_ps,
     .gen_set_ap_ps = ath10k_wmi_op_gen_set_ap_ps,
@@ -8128,10 +8143,12 @@ static const struct wmi_ops wmi_10_4_ops = {
 #if 0   // NEEDS PORTING
     .gen_vdev_spectral_conf = ath10k_wmi_op_gen_vdev_spectral_conf,
     .gen_vdev_spectral_enable = ath10k_wmi_op_gen_vdev_spectral_enable,
+#endif  // NEEDS PORTING
     .gen_peer_create = ath10k_wmi_op_gen_peer_create,
     .gen_peer_delete = ath10k_wmi_op_gen_peer_delete,
     .gen_peer_flush = ath10k_wmi_op_gen_peer_flush,
     .gen_peer_set_param = ath10k_wmi_op_gen_peer_set_param,
+#if 0   // NEEDS PORTING
     .gen_peer_assoc = ath10k_wmi_10_4_op_gen_peer_assoc,
     .gen_set_psmode = ath10k_wmi_op_gen_set_psmode,
     .gen_set_sta_ps = ath10k_wmi_op_gen_set_sta_ps,
