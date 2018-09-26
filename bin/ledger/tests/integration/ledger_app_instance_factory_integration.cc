@@ -13,7 +13,7 @@
 #include <lib/fsl/handles/object_info.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fxl/files/scoped_temp_dir.h>
-#include <lib/timekeeper/test_clock.h>
+#include <lib/timekeeper/test_loop_test_clock.h>
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
@@ -54,7 +54,8 @@ class DelegatedRandom final : public rng::Random {
   rng::Random* base_;
 };
 
-Environment BuildEnvironment(async_dispatcher_t* dispatcher,
+Environment BuildEnvironment(async::TestLoop* loop,
+                             async_dispatcher_t* dispatcher,
                              async_dispatcher_t* io_dispatcher,
                              rng::Random* random) {
   return EnvironmentBuilder()
@@ -64,7 +65,7 @@ Environment BuildEnvironment(async_dispatcher_t* dispatcher,
         return std::make_unique<backoff::ExponentialBackoff>(
             kBackoffDuration, 1u, kBackoffDuration);
       })
-      .SetClock(std::make_unique<timekeeper::TestClock>())
+      .SetClock(std::make_unique<timekeeper::TestLoopTestClock>(loop))
       .SetRandom(std::make_unique<DelegatedRandom>(random))
       .Build();
 }
@@ -82,8 +83,8 @@ class LedgerAppInstanceImpl final
     : public LedgerAppInstanceFactory::LedgerAppInstance {
  public:
   LedgerAppInstanceImpl(
-      LoopController* loop_controller, async_dispatcher_t* services_dispatcher,
-      rng::Random* random,
+      LoopControllerTestLoop* loop_controller,
+      async_dispatcher_t* services_dispatcher, rng::Random* random,
       fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
           repository_factory_request,
       fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory>
@@ -98,13 +99,14 @@ class LedgerAppInstanceImpl final
   class LedgerRepositoryFactoryContainer {
    public:
     LedgerRepositoryFactoryContainer(
-        async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
-        rng::Random* random,
+        async::TestLoop* loop, async_dispatcher_t* dispatcher,
+        async_dispatcher_t* io_dispatcher, rng::Random* random,
         fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
             request,
         std::unique_ptr<p2p_sync::UserCommunicatorFactory>
             user_communicator_factory)
-        : environment_(BuildEnvironment(dispatcher, io_dispatcher, random)),
+        : environment_(
+              BuildEnvironment(loop, dispatcher, io_dispatcher, random)),
           factory_impl_(&environment_, std::move(user_communicator_factory)),
           factory_binding_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() {}
@@ -131,8 +133,8 @@ class LedgerAppInstanceImpl final
 };
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
-    LoopController* loop_controller, async_dispatcher_t* services_dispatcher,
-    rng::Random* random,
+    LoopControllerTestLoop* loop_controller,
+    async_dispatcher_t* services_dispatcher, rng::Random* random,
     fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
         repository_factory_request,
     fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory>
@@ -148,15 +150,17 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
       services_dispatcher_(services_dispatcher),
       cloud_provider_(cloud_provider),
       weak_ptr_factory_(this) {
-  async::PostTask(
-      loop_->dispatcher(),
-      [this, random, request = std::move(repository_factory_request),
-       user_communicator_factory =
-           std::move(user_communicator_factory)]() mutable {
-        factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
-            loop_->dispatcher(), io_loop_->dispatcher(), random,
-            std::move(request), std::move(user_communicator_factory));
-      });
+  async::PostTask(loop_->dispatcher(),
+                  [this, loop_controller, random,
+                   request = std::move(repository_factory_request),
+                   user_communicator_factory =
+                       std::move(user_communicator_factory)]() mutable {
+                    factory_container_ =
+                        std::make_unique<LedgerRepositoryFactoryContainer>(
+                            &loop_controller->test_loop(), loop_->dispatcher(),
+                            io_loop_->dispatcher(), random, std::move(request),
+                            std::move(user_communicator_factory));
+                  });
 }
 
 cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
@@ -178,13 +182,14 @@ LedgerAppInstanceImpl::~LedgerAppInstanceImpl() {
 
 class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
  public:
-  FakeUserCommunicatorFactory(async_dispatcher_t* services_dispatcher,
+  FakeUserCommunicatorFactory(async::TestLoop* loop,
+                              async_dispatcher_t* services_dispatcher,
                               rng::Random* random,
                               NetConnectorFactory* netconnector_factory,
                               std::string host_name)
       : services_dispatcher_(services_dispatcher),
-        environment_(
-            BuildEnvironment(services_dispatcher, services_dispatcher, random)),
+        environment_(BuildEnvironment(loop, services_dispatcher,
+                                      services_dispatcher, random)),
         netconnector_factory_(netconnector_factory),
         host_name_(std::move(host_name)),
         weak_ptr_factory_(this) {}
@@ -268,8 +273,8 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   if (enable_p2p_mesh_ == EnableP2PMesh::YES) {
     std::string host_name = "host_" + std::to_string(app_instance_counter_);
     user_communicator_factory = std::make_unique<FakeUserCommunicatorFactory>(
-        services_loop_->dispatcher(), random_.get(), &netconnector_factory_,
-        std::move(host_name));
+        &loop_controller_->test_loop(), services_loop_->dispatcher(),
+        random_.get(), &netconnector_factory_, std::move(host_name));
   }
   auto result = std::make_unique<LedgerAppInstanceImpl>(
       loop_controller_.get(), services_loop_->dispatcher(), random_.get(),

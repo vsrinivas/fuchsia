@@ -5,7 +5,7 @@
 #include "peridot/bin/ledger/testing/test_with_environment.h"
 
 #include <lib/fit/function.h>
-#include <lib/timekeeper/test_clock.h>
+#include <lib/timekeeper/test_loop_test_clock.h>
 
 #include "peridot/lib/rng/test_random.h"
 
@@ -54,13 +54,15 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
 }  // namespace
 
 TestWithEnvironment::TestWithEnvironment()
-    : environment_(EnvironmentBuilder()
-                       .SetAsync(dispatcher())
-                       .SetIOAsync(dispatcher())
-                       .SetClock(std::make_unique<timekeeper::TestClock>())
-                       .SetRandom(std::make_unique<rng::TestRandom>(
-                           test_loop().initial_state()))
-                       .Build()) {}
+    : environment_(
+          EnvironmentBuilder()
+              .SetAsync(dispatcher())
+              .SetIOAsync(dispatcher())
+              .SetClock(
+                  std::make_unique<timekeeper::TestLoopTestClock>(&test_loop()))
+              .SetRandom(std::make_unique<rng::TestRandom>(
+                  test_loop().initial_state()))
+              .Build()) {}
 
 void TestWithEnvironment::RunInCoroutine(
     fit::function<void(coroutine::CoroutineHandler*)> run_test) {
