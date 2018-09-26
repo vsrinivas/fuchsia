@@ -1036,74 +1036,74 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
     ExitInfo exit_info(*vmcs);
     switch (exit_info.exit_reason) {
     case ExitReason::EXTERNAL_INTERRUPT:
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_EXTERNAL_INTERRUPT);
+        ktrace_vcpu_exit(VCPU_EXTERNAL_INTERRUPT, exit_info.guest_rip);
         status = handle_external_interrupt(vmcs, local_apic_state);
         break;
     case ExitReason::INTERRUPT_WINDOW:
         LTRACEF("handling interrupt window\n\n");
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_INTERRUPT_WINDOW);
+        ktrace_vcpu_exit(VCPU_INTERRUPT_WINDOW, exit_info.guest_rip);
         status = handle_interrupt_window(vmcs, local_apic_state);
         break;
     case ExitReason::CPUID:
         LTRACEF("handling CPUID\n\n");
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_CPUID);
+        ktrace_vcpu_exit(VCPU_CPUID, exit_info.guest_rip);
         status = handle_cpuid(exit_info, vmcs, guest_state);
         break;
     case ExitReason::HLT:
         LTRACEF("handling HLT\n\n");
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_HLT);
+        ktrace_vcpu_exit(VCPU_HLT, exit_info.guest_rip);
         status = handle_hlt(exit_info, vmcs, local_apic_state);
         break;
     case ExitReason::CONTROL_REGISTER_ACCESS:
         LTRACEF("handling control-register access\n\n");
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_CONTROL_REGISTER_ACCESS);
+        ktrace_vcpu_exit(VCPU_CONTROL_REGISTER_ACCESS, exit_info.guest_rip);
         status = handle_control_register_access(exit_info, vmcs, guest_state);
         break;
     case ExitReason::IO_INSTRUCTION:
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_IO_INSTRUCTION);
+        ktrace_vcpu_exit(VCPU_IO_INSTRUCTION, exit_info.guest_rip);
         status = handle_io_instruction(exit_info, vmcs, guest_state, traps, packet);
         break;
     case ExitReason::RDMSR:
         LTRACEF("handling RDMSR %#lx\n\n", guest_state->rcx);
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_RDMSR);
+        ktrace_vcpu_exit(VCPU_RDMSR, exit_info.guest_rip);
         status = handle_rdmsr(exit_info, vmcs, guest_state, local_apic_state);
         break;
     case ExitReason::WRMSR:
         LTRACEF("handling WRMSR %#lx\n\n", guest_state->rcx);
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_WRMSR);
+        ktrace_vcpu_exit(VCPU_WRMSR, exit_info.guest_rip);
         status = handle_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pvclock, gpas, packet);
         break;
     case ExitReason::ENTRY_FAILURE_GUEST_STATE:
     case ExitReason::ENTRY_FAILURE_MSR_LOADING:
         LTRACEF("handling VM entry failure\n\n");
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_VM_ENTRY_FAILURE);
+        ktrace_vcpu_exit(VCPU_VM_ENTRY_FAILURE, exit_info.guest_rip);
         status = ZX_ERR_BAD_STATE;
         break;
     case ExitReason::EPT_VIOLATION:
         LTRACEF("handling EPT violation\n\n");
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_EPT_VIOLATION);
+        ktrace_vcpu_exit(VCPU_EPT_VIOLATION, exit_info.guest_rip);
         status = handle_ept_violation(exit_info, vmcs, gpas, traps, packet);
         break;
     case ExitReason::XSETBV:
         LTRACEF("handling XSETBV\n\n");
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_XSETBV);
+        ktrace_vcpu_exit(VCPU_XSETBV, exit_info.guest_rip);
         status = handle_xsetbv(exit_info, vmcs, guest_state);
         break;
     case ExitReason::PAUSE:
         LTRACEF("handling PAUSE\n\n");
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_PAUSE);
+        ktrace_vcpu_exit(VCPU_PAUSE, exit_info.guest_rip);
         status = handle_pause(exit_info, vmcs);
         break;
     case ExitReason::VMCALL:
         LTRACEF("handling VMCALL\n\n");
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_VMCALL);
+        ktrace_vcpu_exit(VCPU_VMCALL, exit_info.guest_rip);
         status = handle_vmcall(exit_info, vmcs, gpas, guest_state);
         break;
     // Currently all exceptions except NMI delivered to guest directly. NMI causes vmexit
     // and handled by host via IDT as any other interrupt/exception.
     case ExitReason::EXCEPTION:
     default:
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_UNKNOWN);
+        ktrace_vcpu_exit(VCPU_UNKNOWN, exit_info.guest_rip);
         status = ZX_ERR_NOT_SUPPORTED;
         break;
     }

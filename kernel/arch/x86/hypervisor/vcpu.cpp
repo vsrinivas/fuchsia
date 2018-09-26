@@ -271,8 +271,8 @@ static void edit_msr_list(VmxPage* msr_list_page, size_t index, uint32_t msr, ui
 }
 
 static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
-                      paddr_t msr_bitmaps_address, paddr_t pml4_address, VmxState* vmx_state,
-                      VmxPage* host_msr_page, VmxPage* guest_msr_page) {
+                             paddr_t msr_bitmaps_address, paddr_t pml4_address, VmxState* vmx_state,
+                             VmxPage* host_msr_page, VmxPage* guest_msr_page) {
     zx_status_t status = vmclear(vmcs_address);
     if (status != ZX_OK)
         return status;
@@ -748,7 +748,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
         }
 
         if (status != ZX_OK) {
-            ktrace_vcpu(TAG_VCPU_EXIT, VCPU_FAILURE);
+            ktrace_vcpu_exit(VCPU_FAILURE, vmcs.Read(VmcsFieldXX::GUEST_RIP));
             uint64_t error = vmcs.Read(VmcsField32::INSTRUCTION_ERROR);
             dprintf(INFO, "VCPU resume failed: %#lx\n", error);
         } else {

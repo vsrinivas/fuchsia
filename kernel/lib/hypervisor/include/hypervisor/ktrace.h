@@ -9,7 +9,15 @@
 #include <stdint.h>
 
 enum VcpuMeta : uint32_t {
-    // Exits.
+    // Waits.
+    VCPU_INTERRUPT,
+    VCPU_PORT,
+
+    // Do not use.
+    VCPU_META_COUNT,
+};
+
+enum VcpuExit : uint32_t {
 #if ARCH_ARM64
     VCPU_UNDERFLOW_MAINTENANCE_INTERRUPT,
     VCPU_PHYSICAL_INTERRUPT,
@@ -37,13 +45,10 @@ enum VcpuMeta : uint32_t {
     VCPU_UNKNOWN,
     VCPU_FAILURE,
 
-    // Waits.
-    VCPU_INTERRUPT,
-    VCPU_PORT,
-
     // Do not use.
-    VCPU_META_COUNT,
+    VCPU_EXIT_COUNT,
 };
 
 void ktrace_report_vcpu_meta();
 void ktrace_vcpu(uint32_t tag, VcpuMeta meta);
+void ktrace_vcpu_exit(VcpuExit exit, uint64_t exit_address);

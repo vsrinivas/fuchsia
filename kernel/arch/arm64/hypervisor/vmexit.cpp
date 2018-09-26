@@ -90,11 +90,11 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
     next_pc(guest_state);
     const WaitInstruction wi(iss);
     if (wi.is_wfe) {
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_WFE_INSTRUCTION);
+        ktrace_vcpu_exit(VCPU_WFE_INSTRUCTION, guest_state->system_state.elr_el2);
         thread_reschedule();
         return ZX_OK;
     }
-    ktrace_vcpu(TAG_VCPU_EXIT, VCPU_WFI_INSTRUCTION);
+    ktrace_vcpu_exit(VCPU_WFI_INSTRUCTION, guest_state->system_state.elr_el2);
 
     bool pending = gich_state->active_interrupts.GetOne(kTimerVector);
     bool enabled = guest_state->cntv_ctl_el0 & TimerControl::ENABLE;
@@ -322,28 +322,28 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
         break;
     case ExceptionClass::SMC_INSTRUCTION:
         LTRACEF("handling smc instruction, iss %#x func %#lx\n", syndrome.iss, guest_state->x[0]);
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_SMC_INSTRUCTION);
+        ktrace_vcpu_exit(VCPU_SMC_INSTRUCTION, guest_state->system_state.elr_el2);
         status = handle_smc_instruction(syndrome.iss, guest_state, packet);
         break;
     case ExceptionClass::SYSTEM_INSTRUCTION:
         LTRACEF("handling system instruction\n");
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_SYSTEM_INSTRUCTION);
+        ktrace_vcpu_exit(VCPU_SYSTEM_INSTRUCTION, guest_state->system_state.elr_el2);
         status = handle_system_instruction(syndrome.iss, hcr, guest_state, gpas, packet);
         break;
     case ExceptionClass::INSTRUCTION_ABORT:
         LTRACEF("handling instruction abort at %#lx\n", guest_state->hpfar_el2);
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_INSTRUCTION_ABORT);
+        ktrace_vcpu_exit(VCPU_INSTRUCTION_ABORT, guest_state->system_state.elr_el2);
         status = handle_instruction_abort(guest_state, gpas);
         break;
     case ExceptionClass::DATA_ABORT:
         LTRACEF("handling data abort at %#lx\n", guest_state->hpfar_el2);
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_DATA_ABORT);
+        ktrace_vcpu_exit(VCPU_DATA_ABORT, guest_state->system_state.elr_el2);
         status = handle_data_abort(syndrome.iss, guest_state, gpas, traps, packet);
         break;
     default:
         LTRACEF("unhandled exception syndrome, ec %#x iss %#x\n",
                 static_cast<uint32_t>(syndrome.ec), syndrome.iss);
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_UNKNOWN);
+        ktrace_vcpu_exit(VCPU_UNKNOWN, guest_state->system_state.elr_el2);
         status = ZX_ERR_NOT_SUPPORTED;
         break;
     }

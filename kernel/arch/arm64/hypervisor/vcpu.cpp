@@ -82,7 +82,7 @@ static bool gich_active_interrupts(GichState* gich_state) {
     return lr_limit > 0;
 }
 
-static VcpuMeta vmexit_interrupt_ktrace_meta(uint32_t misr) {
+static VcpuExit vmexit_interrupt_ktrace_meta(uint32_t misr) {
     if ((misr & kGichMisrU) != 0) {
         return VCPU_UNDERFLOW_MAINTENANCE_INTERRUPT;
     }
@@ -236,7 +236,8 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             // We received a physical interrupt. If it was due to the thread
             // being killed, then we should exit with an error, otherwise return
             // to the guest.
-            ktrace_vcpu(TAG_VCPU_EXIT, vmexit_interrupt_ktrace_meta(misr));
+            ktrace_vcpu_exit(vmexit_interrupt_ktrace_meta(misr),
+                             guest_state->system_state.elr_el2);
             status = thread_->signals & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
             // If there were active interrupts when the physical interrupt
             // occurred, raise a virtual interrupt when we re-enter the guest.
@@ -245,7 +246,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             status = vmexit_handler(&hcr_, guest_state, &gich_state_, guest_->AddressSpace(),
                                     guest_->Traps(), packet);
         } else {
-            ktrace_vcpu(TAG_VCPU_EXIT, VCPU_FAILURE);
+            ktrace_vcpu_exit(VCPU_FAILURE, guest_state->system_state.elr_el2);
             dprintf(INFO, "VCPU resume failed: %d\n", status);
         }
     } while (status == ZX_OK);
