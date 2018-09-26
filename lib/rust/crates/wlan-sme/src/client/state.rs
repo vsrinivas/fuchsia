@@ -239,10 +239,7 @@ impl<T: Tokens> State<T> {
                 join_failure_timeout: DEFAULT_JOIN_FAILURE_TIMEOUT,
                 nav_sync_delay: 0,
                 op_rate_set: vec![],
-                override_phy: cmd.params.phy.is_some(),
                 phy: phy_to_use,
-                override_cbw: cmd.params.cbw.is_some(),
-                cbw: cbw_to_use,
             }
         ));
         context.att_id += 1;

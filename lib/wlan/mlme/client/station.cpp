@@ -167,10 +167,9 @@ zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& re
     bssid_.Set(bss_->bssid.data());
 
     auto chan = GetBssChan();
-    infof("JoinReq BSSID %s Chan %u CBW %u Sec80 %u\n", common::MacAddr(bssid_).ToString().c_str(),
-          chan.primary, chan.cbw, chan.secondary80);
-    debugf("Overriders: override_phy %u phy %u overide_cbw %u cbw %u\n", req.body()->override_phy,
-           req.body()->phy, req.body()->override_cbw, req.body()->cbw);
+    infof("JoinReq BSSID %s Chan %u CBW %u Sec80 %u Phy %u\n",
+          common::MacAddr(bssid_).ToString().c_str(), chan.primary, chan.cbw, chan.secondary80,
+          req.body()->phy);
 
     if (!common::IsValidChan(chan)) {
         // If what SME instructs seems invalid, treat it as an error.
