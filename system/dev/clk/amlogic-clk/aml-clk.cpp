@@ -23,46 +23,30 @@ static constexpr uint32_t kMsrClk = 1;
 #define MSR_WAIT_BUSY_TIMEOUT_US 10000
 
 zx_status_t AmlClock::InitHiuRegs(pdev_device_info_t* info) {
-
     // Map the HIU registers.
-    zx_status_t status = pdev_map_mmio_buffer(&pdev_, kHiuMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                              &hiu_mmio_);
+    mmio_buffer_t mmio;
+    zx_status_t status = pdev_map_mmio_buffer2(&pdev_, kHiuMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                              &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-clk: could not map periph mmio: %d\n", status);
         return status;
     }
+    hiu_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
-    auto cleanup = fbl::MakeAutoCall([&]() { io_buffer_release(&hiu_mmio_); });
-
-    fbl::AllocChecker ac;
-    hiu_regs_ = fbl::make_unique_checked<hwreg::RegisterIo>(&ac, reinterpret_cast<volatile void*>(
-                                                                     io_buffer_virt(&hiu_mmio_)));
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    cleanup.cancel();
     return ZX_OK;
 }
 
 zx_status_t AmlClock::InitMsrRegs(pdev_device_info_t* info) {
-
     // Map the MSR registers.
-    zx_status_t status = pdev_map_mmio_buffer(&pdev_, kMsrClk, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                              &msr_mmio_);
+    mmio_buffer_t mmio;
+    zx_status_t status = pdev_map_mmio_buffer2(&pdev_, kMsrClk, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                              &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-clk: could not map periph mmio: %d\n", status);
         return status;
     }
+    msr_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
-    auto cleanup = fbl::MakeAutoCall([&]() { io_buffer_release(&msr_mmio_); });
-
-    fbl::AllocChecker ac;
-    msr_regs_ = fbl::make_unique_checked<hwreg::RegisterIo>(&ac, reinterpret_cast<volatile void*>(
-                                                                     io_buffer_virt(&msr_mmio_)));
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    cleanup.cancel();
     return ZX_OK;
 }
 
@@ -94,17 +78,9 @@ zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
         // Map the CLK MSR registers.
         status = InitMsrRegs(&info);
         if (status != ZX_OK) {
-            io_buffer_release(&hiu_mmio_);
             return status;
         }
     }
-
-    auto cleanup = fbl::MakeAutoCall([&]() {
-        io_buffer_release(&hiu_mmio_);
-        if (info.mmio_count > 1) {
-            io_buffer_release(&msr_mmio_);
-        }
-    });
 
     meson_clk_gate_t* clk_gates;
 
@@ -169,7 +145,6 @@ zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
         return status;
     }
 
-    cleanup.cancel();
     return ZX_OK;
 }
 
@@ -199,15 +174,13 @@ zx_status_t AmlClock::ClkToggle(uint32_t clk, const bool enable) {
 
     const meson_clk_gate_t* gate = &gates_[clk];
     fbl::AutoLock al(&lock_);
-    uint32_t value = hiu_regs_->Read<uint32_t>(gate->reg);
 
     if (enable) {
-        value |= (1 << gate->bit);
+        hiu_mmio_->SetBits32(1 << gate->bit, gate->reg);
     } else {
-        value &= ~(1 << gate->bit);
+        hiu_mmio_->ClearBits32(1 << gate->bit, gate->reg);
     }
 
-    hiu_regs_->Write(gate->reg, value);
     return ZX_OK;
 }
 
@@ -235,34 +208,31 @@ zx_status_t AmlClock::ClkDisable(uint32_t clk) {
 zx_status_t AmlClock::ClkMeasureUtil(uint32_t clk, uint32_t* clk_freq) {
     // Set the measurement gate to 64uS.
     uint32_t value = 64 - 1;
-    msr_regs_->Write(clk_msr_offsets_.reg0_offset, value);
+    msr_mmio_->Write32(value, clk_msr_offsets_.reg0_offset);
     // Disable continuous measurement.
     // Disable interrupts.
-    value = msr_regs_->Read<uint32_t>(clk_msr_offsets_.reg0_offset);
-    value &= ~(MSR_CONT | MSR_INTR);
+    value = MSR_CONT | MSR_INTR;
     // Clear the clock source.
-    value &= ~(MSR_CLK_SRC_MASK << MSR_CLK_SRC_SHIFT);
-    msr_regs_->Write(clk_msr_offsets_.reg0_offset, value);
+    value |= MSR_CLK_SRC_MASK << MSR_CLK_SRC_SHIFT;
+    msr_mmio_->ClearBits32(value, clk_msr_offsets_.reg0_offset);
 
-    value = msr_regs_->Read<uint32_t>(clk_msr_offsets_.reg0_offset);
-    value |= ((clk << MSR_CLK_SRC_SHIFT) | // Select the MUX.
-              MSR_RUN |                    // Enable the clock.
-              MSR_ENABLE);                 // Enable measuring.
-    msr_regs_->Write(clk_msr_offsets_.reg0_offset, value);
+    value = ((clk << MSR_CLK_SRC_SHIFT) | // Select the MUX.
+             MSR_RUN |                    // Enable the clock.
+             MSR_ENABLE);                 // Enable measuring.
+    msr_mmio_->SetBits32(value, clk_msr_offsets_.reg0_offset);
 
     // Wait for the measurement to be done.
     for (uint32_t i = 0; i < MSR_WAIT_BUSY_RETRIES; i++) {
-        value = msr_regs_->Read<uint32_t>(clk_msr_offsets_.reg0_offset);
+        value = msr_mmio_->Read32(clk_msr_offsets_.reg0_offset);
         if (value & MSR_BUSY) {
             // Wait a little bit before trying again.
             zx_nanosleep(zx_deadline_after(ZX_USEC(MSR_WAIT_BUSY_TIMEOUT_US)));
             continue;
         } else {
             // Disable measuring.
-            value &= ~(MSR_ENABLE);
-            msr_regs_->Write(clk_msr_offsets_.reg0_offset, value);
+            msr_mmio_->ClearBits32(MSR_ENABLE, clk_msr_offsets_.reg0_offset);
             // Get the clock value.
-            value = msr_regs_->Read<uint32_t>(clk_msr_offsets_.reg2_offset);
+            value = msr_mmio_->Read32(clk_msr_offsets_.reg2_offset);
             // Magic numbers, since lack of documentation.
             *clk_freq = (((value + 31) & MSR_VAL_MASK) / 64);
             return ZX_OK;
@@ -287,8 +257,8 @@ zx_status_t AmlClock::ClkMeasure(uint32_t clk, clk_freq_info_t* info) {
 }
 
 void AmlClock::ShutDown() {
-    io_buffer_release(&hiu_mmio_);
-    io_buffer_release(&msr_mmio_);
+    hiu_mmio_.reset();
+    msr_mmio_.reset();
 }
 
 zx_status_t AmlClock::DdkIoctl(uint32_t op, const void* in_buf,

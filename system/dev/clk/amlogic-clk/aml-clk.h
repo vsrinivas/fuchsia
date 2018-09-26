@@ -9,6 +9,7 @@
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/device.h>
+#include <ddktl/mmio.h>
 #include <ddktl/protocol/clk.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
@@ -63,10 +64,8 @@ private:
     // Platform device protocol.
     platform_device_protocol_t pdev_;
     // IO MMIO
-    io_buffer_t hiu_mmio_;
-    io_buffer_t msr_mmio_;
-    fbl::unique_ptr<hwreg::RegisterIo> hiu_regs_;
-    fbl::unique_ptr<hwreg::RegisterIo> msr_regs_;
+    fbl::unique_ptr<ddk::MmioBuffer> hiu_mmio_;
+    fbl::unique_ptr<ddk::MmioBuffer> msr_mmio_;
     // Protects clock gate registers.
     fbl::Mutex lock_;
     // Clock gates.
