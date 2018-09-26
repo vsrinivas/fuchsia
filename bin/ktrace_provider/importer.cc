@@ -68,6 +68,7 @@ Importer::Importer(trace_context_t* context)
       page_fault_name_ref_(MAKE_STRING("page_fault")),
       vaddr_name_ref_(MAKE_STRING("vaddr")),
       flags_name_ref_(MAKE_STRING("flags")),
+      exit_address_name_ref_(MAKE_STRING("exit_address")),
       arg0_name_ref_(MAKE_STRING("arg0")),
       arg1_name_ref_(MAKE_STRING("arg1")) {}
 
@@ -226,7 +227,8 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record,
     case KTRACE_EVENT(TAG_VCPU_ENTER):
       return HandleVcpuEnter(record->ts, record->tid);
     case KTRACE_EVENT(TAG_VCPU_EXIT):
-      return HandleVcpuExit(record->ts, record->tid, record->a);
+      return HandleVcpuExit(record->ts, record->tid, record->a,
+                            ToUInt64(record->b, record->c));
     case KTRACE_EVENT(TAG_VCPU_BLOCK):
       return HandleVcpuBlock(record->ts, record->tid, record->a);
     case KTRACE_EVENT(TAG_VCPU_UNBLOCK):
@@ -259,6 +261,8 @@ bool Importer::ImportNameRecord(const ktrace_rec_name_t* record,
       return HandleProbeName(record->id, name);
     case KTRACE_EVENT(TAG_VCPU_META):
       return HandleVcpuMeta(record->id, name);
+    case KTRACE_EVENT(TAG_VCPU_EXIT_META):
+      return HandleVcpuExitMeta(record->id, name);
     default:
       return false;
   }
@@ -343,6 +347,12 @@ bool Importer::HandleProbeName(uint32_t probe, const fbl::StringPiece& name) {
 bool Importer::HandleVcpuMeta(uint32_t meta, const fbl::StringPiece& name) {
   vcpu_meta_.emplace(meta, trace_context_make_registered_string_copy(
                                context_, name.data(), name.length()));
+  return true;
+}
+
+bool Importer::HandleVcpuExitMeta(uint32_t exit, const fbl::StringPiece& name) {
+  vcpu_exit_meta_.emplace(exit, trace_context_make_registered_string_copy(
+                                    context_, name.data(), name.length()));
   return true;
 }
 
@@ -603,8 +613,12 @@ bool Importer::HandleVcpuEnter(trace_ticks_t event_time, zx_koid_t thread) {
 }
 
 bool Importer::HandleVcpuExit(trace_ticks_t event_time, zx_koid_t thread,
-                              uint32_t meta) {
+                              uint32_t exit, uint64_t exit_addr) {
   auto& duration = vcpu_durations_[thread];
+  trace_arg_t args[] = {
+      trace_make_arg(exit_address_name_ref_,
+                     trace_make_pointer_arg_value(exit_addr)),
+  };
   if (!duration.valid) {
     FXL_LOG(WARNING) << "VCPU duration for thread " << thread
                      << " does not have a beginning";
@@ -612,10 +626,10 @@ bool Importer::HandleVcpuExit(trace_ticks_t event_time, zx_koid_t thread,
   }
 
   trace_thread_ref_t thread_ref = GetThreadRef(thread);
-  trace_string_ref_t name_ref = GetVcpuMetaNameRef(meta);
+  trace_string_ref_t name_ref = GetNameRef(vcpu_exit_meta_, "exit", exit);
   trace_context_write_duration_event_record(
       context_, duration.begin, event_time, &thread_ref, &vcpu_category_ref_,
-      &name_ref, nullptr, 0);
+      &name_ref, args, fbl::count_of(args));
 
   duration.valid = false;
   return true;
@@ -624,7 +638,7 @@ bool Importer::HandleVcpuExit(trace_ticks_t event_time, zx_koid_t thread,
 bool Importer::HandleVcpuBlock(trace_ticks_t event_time, zx_koid_t thread,
                                uint32_t meta) {
   trace_thread_ref_t thread_ref = GetThreadRef(thread);
-  trace_string_ref_t name_ref = GetVcpuMetaNameRef(meta);
+  trace_string_ref_t name_ref = GetNameRef(vcpu_meta_, "meta", meta);
   trace_context_write_duration_begin_event_record(
       context_, event_time, &thread_ref, &vcpu_category_ref_, &name_ref,
       nullptr, 0u);
@@ -634,7 +648,7 @@ bool Importer::HandleVcpuBlock(trace_ticks_t event_time, zx_koid_t thread,
 bool Importer::HandleVcpuUnblock(trace_ticks_t event_time, zx_koid_t thread,
                                  uint32_t meta) {
   trace_thread_ref_t thread_ref = GetThreadRef(thread);
-  trace_string_ref_t name_ref = GetVcpuMetaNameRef(meta);
+  trace_string_ref_t name_ref = GetNameRef(vcpu_meta_, "meta", meta);
   trace_context_write_duration_end_event_record(
       context_, event_time, &thread_ref, &vcpu_category_ref_, &name_ref,
       nullptr, 0u);
@@ -672,17 +686,6 @@ const trace_string_ref_t& Importer::GetNameRef(
     std::tie(it, std::ignore) =
         table.emplace(id, trace_context_make_registered_string_copy(
                               context_, name.data(), name.length()));
-  }
-  return it->second;
-}
-
-const trace_string_ref_t& Importer::GetVcpuMetaNameRef(uint32_t meta) {
-  auto it = vcpu_meta_.find(meta);
-  if (it == vcpu_meta_.end()) {
-    fbl::String str = fbl::StringPrintf("meta:%#x", meta);
-    std::tie(it, std::ignore) =
-        vcpu_meta_.emplace(meta, trace_context_make_registered_string_copy(
-                                     context_, str.data(), str.length()));
   }
   return it->second;
 }

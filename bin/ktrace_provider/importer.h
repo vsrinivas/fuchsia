@@ -53,6 +53,7 @@ class Importer {
   bool HandleIRQName(uint32_t irq, const fbl::StringPiece& name);
   bool HandleProbeName(uint32_t probe, const fbl::StringPiece& name);
   bool HandleVcpuMeta(uint32_t meta, const fbl::StringPiece& name);
+  bool HandleVcpuExitMeta(uint32_t exit, const fbl::StringPiece& name);
 
   bool HandleIRQEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
                       uint32_t irq);
@@ -113,8 +114,8 @@ class Importer {
   bool HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t probe,
                    uint32_t arg0, uint32_t arg1);
   bool HandleVcpuEnter(trace_ticks_t event_time, zx_koid_t thread);
-  bool HandleVcpuExit(trace_ticks_t event_time, zx_koid_t thread,
-                      uint32_t meta);
+  bool HandleVcpuExit(trace_ticks_t event_time, zx_koid_t thread, uint32_t exit,
+                      uint64_t exit_address);
   bool HandleVcpuBlock(trace_ticks_t event_time, zx_koid_t thread,
                        uint32_t meta);
   bool HandleVcpuUnblock(trace_ticks_t event_time, zx_koid_t thread,
@@ -133,7 +134,6 @@ class Importer {
   const trace_string_ref_t& GetNameRef(
       std::unordered_map<uint32_t, trace_string_ref_t>& table, const char* kind,
       uint32_t id);
-  const trace_string_ref_t& GetVcpuMetaNameRef(uint32_t meta);
   const trace_thread_ref_t& GetThreadRef(zx_koid_t thread);
   const trace_thread_ref_t& GetKernelThreadRef(KernelThread kernel_thread);
 
@@ -154,6 +154,7 @@ class Importer {
   trace_string_ref_t const page_fault_name_ref_;
   trace_string_ref_t const vaddr_name_ref_;
   trace_string_ref_t const flags_name_ref_;
+  trace_string_ref_t const exit_address_name_ref_;
   trace_string_ref_t const arg0_name_ref_;
   trace_string_ref_t const arg1_name_ref_;
 
@@ -174,6 +175,7 @@ class Importer {
   std::unordered_map<uint32_t, trace_string_ref_t> probe_names_;
   std::unordered_map<uint32_t, trace_string_ref_t> syscall_names_;
   std::unordered_map<uint32_t, trace_string_ref_t> vcpu_meta_;
+  std::unordered_map<uint32_t, trace_string_ref_t> vcpu_exit_meta_;
 
   struct Channels {
     using ChannelId = uint64_t;
