@@ -167,7 +167,7 @@ __EXPORT zx_status_t device_ioctl(zx_device_t* dev, uint32_t op,
 
 extern zx_handle_t root_resource_handle;
 
-__EXPORT zx_handle_t get_root_resource(void) {
+__EXPORT zx_handle_t get_root_resource() {
     return root_resource_handle;
 }
 

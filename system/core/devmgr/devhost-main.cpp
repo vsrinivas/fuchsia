@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
 // caught either.
 #if __has_feature(address_sanitizer)
 #include <sanitizer/asan_interface.h>
-const char* __asan_default_options(void) {
+const char* __asan_default_options() {
     return "detect_odr_violation=0";
 }
 #endif

@@ -55,7 +55,7 @@ static zx_status_t callback(void* arg, const bootfs_entry_t* entry) {
 
 static bool has_secondary_bootfs = false;
 
-bool secondary_bootfs_ready(void) {
+bool secondary_bootfs_ready() {
     return has_secondary_bootfs;
 }
 
@@ -165,7 +165,7 @@ static int ramctl_watcher(void* arg) {
 #define HND_BOOTFS(n) PA_HND(PA_VMO_BOOTFS, n)
 #define HND_BOOTDATA(n) PA_HND(PA_VMO_BOOTDATA, n)
 
-static void setup_bootfs(void) {
+static void setup_bootfs() {
     zx_handle_t vmo;
     unsigned idx = 0;
 
@@ -312,7 +312,7 @@ static zx_handle_t svc_root;
 static zx_handle_t fshost_event;
 static zx_handle_t fs_root;
 
-void fshost_start(void) {
+void fshost_start() {
     setup_bootfs();
 
     vfs_global_init(vfs_create_global_root());
@@ -327,7 +327,7 @@ void fshost_start(void) {
     }
 }
 
-zx_handle_t fs_root_clone(void) {
+zx_handle_t fs_root_clone() {
     zx_handle_t h;
     zx_status_t status = vfs_create_global_root_handle(&h);
     if (status != ZX_OK)
@@ -357,7 +357,7 @@ zx_handle_t fs_clone(const char* path) {
     return h0;
 }
 
-void fuchsia_start(void) {
+void fuchsia_start() {
     zx_object_signal(fshost_event, 0, FSHOST_SIGNAL_READY);
 }
 

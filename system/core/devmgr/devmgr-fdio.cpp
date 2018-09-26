@@ -21,7 +21,7 @@
 #include <string.h>
 #include <unistd.h>
 
-void devmgr_io_init(void) {
+void devmgr_io_init() {
     // setup stdout
     zx_handle_t h;
     if (zx_debuglog_create(ZX_HANDLE_INVALID, 0, &h) < 0) {
@@ -57,7 +57,7 @@ static struct {
     { "/tmp",       "tmp",       FS_TMP },
 };
 
-void devmgr_disable_appmgr_services(void) {
+void devmgr_disable_appmgr_services() {
     FSTAB[1].flags = 0;
 }
 

@@ -65,11 +65,11 @@ static zx_handle_t svchost_outgoing;
 
 zx_handle_t virtcon_open;
 
-zx_handle_t get_root_resource(void) {
+zx_handle_t get_root_resource() {
     return root_resource_handle;
 }
 
-zx_handle_t get_sysinfo_job_root(void) {
+zx_handle_t get_sysinfo_job_root() {
     zx_handle_t h;
     //TODO: limit to enumerate rights
     if (zx_handle_duplicate(root_job_handle, ZX_RIGHT_SAME_RIGHTS, &h) < 0) {
@@ -469,7 +469,7 @@ static int pwrbtn_monitor_starter(void* arg) {
     return 0;
 }
 
-static void start_console_shell(void) {
+static void start_console_shell() {
     // start a shell on the kernel console if it isn't already running a shell
     if (!getenv_bool("kernel.shell", false)) {
         thrd_t t;
@@ -479,7 +479,7 @@ static void start_console_shell(void) {
     }
 }
 
-static void load_cmdline_from_bootfs(void) {
+static void load_cmdline_from_bootfs() {
     uint32_t file_size;
     zx_handle_t vmo = devmgr_load_file("/boot/config/devmgr", &file_size);
     if (vmo == ZX_HANDLE_INVALID) {
@@ -541,7 +541,7 @@ static void load_cmdline_from_bootfs(void) {
     }
 }
 
-static zx_status_t fuchsia_create_job(void) {
+static zx_status_t fuchsia_create_job() {
     zx_status_t status = zx_job_create(root_job_handle, 0u, &fuchsia_job_handle);
     if (status != ZX_OK) {
         printf("devmgr: unable to create fuchsia job: %d (%s)\n", status,
@@ -664,7 +664,7 @@ static loader_service_t* loader_service;
 
 #define MAXHND ZX_CHANNEL_MAX_MSG_HANDLES
 
-void bootfs_create_from_startup_handle(void) {
+void bootfs_create_from_startup_handle() {
     zx_handle_t bootfs_vmo = zx_take_startup_handle(PA_HND(PA_VMO_BOOTFS, 0));
     if ((bootfs_vmo == ZX_HANDLE_INVALID) ||
         (bootfs_create(&bootfs, bootfs_vmo) != ZX_OK)) {
@@ -686,7 +686,7 @@ void bootfs_create_from_startup_handle(void) {
     zx_handle_close(dl_set_loader_service(ldsvc));
 }
 
-void fshost_start(void) {
+void fshost_start() {
     // assemble handles to pass down to fshost
     zx_handle_t handles[MAXHND];
     uint32_t types[MAXHND];
@@ -803,7 +803,7 @@ zx_status_t devmgr_launch_load(void* ctx, launchpad_t* lp, const char* file) {
     }
 }
 
-void devmgr_vfs_exit(void) {
+void devmgr_vfs_exit() {
     zx_status_t status;
     if ((status = zx_object_signal(fshost_event, 0, FSHOST_SIGNAL_EXIT)) != ZX_OK) {
         printf("devmgr: Failed to signal VFS exit\n");
@@ -848,7 +848,7 @@ zx_handle_t fs_clone(const char* path) {
     return h0;
 }
 
-void devmgr_vfs_init(void) {
+void devmgr_vfs_init() {
     printf("devmgr: vfs init\n");
 
     fshost_start();
@@ -873,7 +873,7 @@ void devmgr_vfs_init(void) {
     }
 }
 
-zx_status_t svchost_start(void) {
+zx_status_t svchost_start() {
     zx_handle_t dir_request = ZX_HANDLE_INVALID;
     zx_handle_t logger = ZX_HANDLE_INVALID;
     zx_handle_t appmgr_svc_req = ZX_HANDLE_INVALID;
@@ -953,7 +953,7 @@ error:
     return status;
 }
 
-void devmgr_svc_init(void) {
+void devmgr_svc_init() {
     printf("devmgr: svc init\n");
 
     svchost_start();

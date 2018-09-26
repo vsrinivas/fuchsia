@@ -72,7 +72,7 @@ static void pkgfs_finish(zx::process proc, zx::channel pkgfs_root) {
 
 // TODO(mcgrathr): Remove this fallback path when the old args
 // are no longer used.
-static void old_launch_blob_init(void) {
+static void old_launch_blob_init() {
     const char* blob_init = getenv("zircon.system.blob-init");
     if (blob_init == nullptr) {
         return;
@@ -219,7 +219,7 @@ static zx_status_t pkgfs_launch_load(void* ctx, launchpad_t* lp,
     return status;
 }
 
-static bool pkgfs_launch(void) {
+static bool pkgfs_launch() {
     const char* cmd = getenv("zircon.system.pkgfs.cmd");
     if (cmd == nullptr) {
         return false;
@@ -257,7 +257,7 @@ static bool pkgfs_launch(void) {
     return true;
 }
 
-static void launch_blob_init(void) {
+static void launch_blob_init() {
     if (!pkgfs_launch()) {
         // TODO(mcgrathr): Remove when the old args are no longer used.
         old_launch_blob_init();

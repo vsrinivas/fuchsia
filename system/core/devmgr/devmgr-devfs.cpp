@@ -119,7 +119,7 @@ static devnode_t* proto_dir(uint32_t id) {
     return nullptr;
 }
 
-static void prepopulate_protocol_dirs(void) {
+static void prepopulate_protocol_dirs() {
     class_devnode = devfs_mkdir(&root_devnode, "class");
     for (pinfo_t* info = proto_info; info->name; info++) {
         if (!(info->flags & PF_NOPUB)) {
@@ -771,7 +771,7 @@ static zx_status_t dc_fidl_handler(port_handler_t* ph, zx_signals_t signals, uin
 
 static zx_handle_t devfs_root;
 
-zx_handle_t devfs_root_clone(void) {
+zx_handle_t devfs_root_clone() {
     return fdio_service_clone(devfs_root);
 }
 

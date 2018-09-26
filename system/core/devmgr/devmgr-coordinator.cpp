@@ -46,9 +46,9 @@ bool dc_launched_first_devhost = false;
 
 static zx_handle_t bootdata_vmo;
 
-static void dc_dump_state(void);
-static void dc_dump_devprops(void);
-static void dc_dump_drivers(void);
+static void dc_dump_state();
+static void dc_dump_devprops();
+static void dc_dump_drivers();
 
 typedef struct {
     zx_status_t status;
@@ -82,7 +82,7 @@ typedef struct {
 
 static list_node_t published_metadata = LIST_INITIAL_VALUE(published_metadata);
 
-static bool dc_in_suspend(void) {
+static bool dc_in_suspend() {
     return !!suspend_ctx.flags;
 }
 static void dc_suspend(uint32_t flags);
@@ -364,7 +364,7 @@ static void dc_dump_device(device_t* dev, size_t indent) {
     }
 }
 
-static void dc_dump_state(void) {
+static void dc_dump_state() {
     dc_dump_device(&root_device, 0);
     dc_dump_device(&misc_device, 1);
     dc_dump_device(&sys_device, 1);
@@ -424,14 +424,14 @@ static void dc_dump_device_props(device_t* dev) {
     }
 }
 
-static void dc_dump_devprops(void) {
+static void dc_dump_devprops() {
     dc_dump_device_props(&root_device);
     dc_dump_device_props(&misc_device);
     dc_dump_device_props(&sys_device);
     dc_dump_device_props(&test_device);
 }
 
-static void dc_dump_drivers(void) {
+static void dc_dump_drivers() {
     driver_t* drv;
     bool first = true;
     list_for_every_entry(&list_drivers, drv, driver_t, node) {
@@ -453,7 +453,7 @@ static void dc_dump_drivers(void) {
 }
 
 static void dc_handle_new_device(device_t* dev);
-static void dc_handle_new_driver(void);
+static void dc_handle_new_driver();
 
 #define WORK_IDLE 0
 #define WORK_DEVICE_ADDED 1
@@ -495,7 +495,7 @@ static void process_work(work_t* work) {
     }
 }
 
-static const char* get_devhost_bin(void) {
+static const char* get_devhost_bin() {
     // If there are any ASan drivers, use the ASan-supporting devhost for
     // all drivers because even a devhost launched initially with just a
     // non-ASan driver might later load an ASan driver.  One day we might
@@ -507,7 +507,7 @@ static const char* get_devhost_bin(void) {
     return "/boot/bin/devhost";
 }
 
-zx_handle_t get_service_root(void);
+zx_handle_t get_service_root();
 
 static zx_status_t dc_get_topo_path(device_t* dev, char* out, size_t max) {
     char tmp[max];
@@ -2099,7 +2099,7 @@ void dc_bind_driver(driver_t* drv) {
     }
 }
 
-void dc_handle_new_driver(void) {
+void dc_handle_new_driver() {
     driver_t* drv;
     while ((drv = list_remove_head_type(&list_drivers_new, driver_t, node)) != nullptr) {
         list_add_tail(&list_drivers, &drv->node);
@@ -2183,12 +2183,12 @@ static int system_driver_loader(void* arg) {
     return 0;
 }
 
-void load_system_drivers(void) {
+void load_system_drivers() {
     system_available = true;
     port_queue(&dc_port, &control_handler, CTL_SCAN_SYSTEM);
 }
 
-void coordinator(void) {
+void coordinator() {
     log(INFO, "devmgr: coordinator()\n");
 
     if (getenv_bool("devmgr.verbose", false)) {

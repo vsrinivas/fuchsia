@@ -214,7 +214,7 @@ static struct list_node defer_device_list USE_DM_LOCK = LIST_INITIAL_VALUE(defer
 
 static int devhost_enumerators USE_DM_LOCK = 0;
 
-static void devhost_finalize(void) REQ_DM_LOCK {
+static void devhost_finalize() REQ_DM_LOCK {
     // Early exit if there's no work
     if (list_is_empty(&defer_device_list)) {
         return;
@@ -274,11 +274,11 @@ static void devhost_finalize(void) REQ_DM_LOCK {
 // legal to remove a child.  This avoids badness when we have to
 // drop the DM lock to call into device ops while enumerating.
 
-static void enum_lock_acquire(void) REQ_DM_LOCK {
+static void enum_lock_acquire() REQ_DM_LOCK {
     devhost_enumerators++;
 }
 
-static void enum_lock_release(void) REQ_DM_LOCK {
+static void enum_lock_release() REQ_DM_LOCK {
     if (--devhost_enumerators == 0) {
         devhost_finalize();
     }
