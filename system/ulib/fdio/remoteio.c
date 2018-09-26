@@ -122,7 +122,7 @@ static zx_status_t zxrio_connect(zx_handle_t svc, zx_handle_t cnxn,
     case fuchsia_io_NodeCloneOrdinal:
         r = fidl_clone_request(svc, cnxn, flags);
         break;
-    case ZXFIDL_OPEN:
+    case fuchsia_io_DirectoryOpenOrdinal:
         r = fidl_open_request(svc, cnxn, flags, mode, name, len);
         break;
     default:
@@ -404,7 +404,7 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
         zx_handle_close(h);
         return ZX_ERR_UNAVAILABLE;
     }
-    return zxrio_connect(dir, h, ZXFIDL_OPEN, ZX_FS_RIGHT_READABLE |
+    return zxrio_connect(dir, h, fuchsia_io_DirectoryOpenOrdinal, ZX_FS_RIGHT_READABLE |
                          ZX_FS_RIGHT_WRITABLE, 0755, path);
 }
 
@@ -418,7 +418,7 @@ zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags, zx_h
         zx_handle_close(h);
         return ZX_ERR_UNAVAILABLE;
     }
-    return zxrio_connect(dir, h, ZXFIDL_OPEN, flags, 0755, path);
+    return zxrio_connect(dir, h, fuchsia_io_DirectoryOpenOrdinal, flags, 0755, path);
 }
 
 __EXPORT
@@ -644,7 +644,7 @@ static zx_status_t zxrio_sync_open_connection(zx_handle_t svc, uint32_t op,
     case fuchsia_io_NodeCloneOrdinal:
         r = fidl_clone_request(svc, cnxn, flags);
         break;
-    case ZXFIDL_OPEN:
+    case fuchsia_io_DirectoryOpenOrdinal:
         r = fidl_open_request(svc, cnxn, flags, mode, path, pathlen);
         break;
     default:
@@ -707,7 +707,7 @@ zx_status_t zxrio_open_handle(zx_handle_t h, const char* path, uint32_t flags,
                               uint32_t mode, fdio_t** out) {
     zx_handle_t control_channel;
     zxrio_describe_t info;
-    zx_status_t r = zxrio_getobject(h, ZXFIDL_OPEN, path, flags, mode, &info, &control_channel);
+    zx_status_t r = zxrio_getobject(h, fuchsia_io_DirectoryOpenOrdinal, path, flags, mode, &info, &control_channel);
     if (r < 0) {
         return r;
     }

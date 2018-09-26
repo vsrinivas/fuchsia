@@ -1386,11 +1386,11 @@ static int two_path_op_at(uint32_t op, int olddirfd, const char* oldpath,
         goto newparent_open;
     }
 
-    if (op == ZXFIDL_RENAME) {
+    if (op == fuchsia_io_DirectoryRenameOrdinal) {
         status = io_oldparent->ops->rename(io_oldparent, oldname,
                                            strlen(oldname), token, newname,
                                            strlen(newname));
-    } else if (op == ZXFIDL_LINK) {
+    } else if (op == fuchsia_io_DirectoryLinkOrdinal) {
         status = io_oldparent->ops->link(io_oldparent, oldname, strlen(oldname),
                                          token, newname, strlen(newname));
     } else {
@@ -1408,17 +1408,17 @@ oldparent_open:
 
 __EXPORT
 int renameat(int olddirfd, const char* oldpath, int newdirfd, const char* newpath) {
-    return two_path_op_at(ZXFIDL_RENAME, olddirfd, oldpath, newdirfd, newpath);
+    return two_path_op_at(fuchsia_io_DirectoryRenameOrdinal, olddirfd, oldpath, newdirfd, newpath);
 }
 
 __EXPORT
 int rename(const char* oldpath, const char* newpath) {
-    return two_path_op_at(ZXFIDL_RENAME, AT_FDCWD, oldpath, AT_FDCWD, newpath);
+    return two_path_op_at(fuchsia_io_DirectoryRenameOrdinal, AT_FDCWD, oldpath, AT_FDCWD, newpath);
 }
 
 __EXPORT
 int link(const char* oldpath, const char* newpath) {
-    return two_path_op_at(ZXFIDL_LINK, AT_FDCWD, oldpath, AT_FDCWD, newpath);
+    return two_path_op_at(fuchsia_io_DirectoryLinkOrdinal, AT_FDCWD, oldpath, AT_FDCWD, newpath);
 }
 
 __EXPORT

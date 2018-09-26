@@ -18,28 +18,6 @@ __BEGIN_CDECLS
 
 // clang-format off
 
-// FIDL Ordinals
-
-// File
-#define ZXFIDL_READ       0x82000001
-#define ZXFIDL_READ_AT    0x82000002
-#define ZXFIDL_WRITE      0x82000003
-#define ZXFIDL_WRITE_AT   0x82000004
-#define ZXFIDL_SEEK       0x82000005
-#define ZXFIDL_TRUNCATE   0x82000006
-#define ZXFIDL_GET_FLAGS  0x82000007
-#define ZXFIDL_SET_FLAGS  0x82000008
-#define ZXFIDL_GET_VMO    0x82000009
-
-// Directory
-#define ZXFIDL_OPEN       0x83000001
-#define ZXFIDL_UNLINK     0x83000002
-#define ZXFIDL_READDIR    0x83000003
-#define ZXFIDL_REWIND     0x83000004
-#define ZXFIDL_GET_TOKEN  0x83000005
-#define ZXFIDL_RENAME     0x83000006
-#define ZXFIDL_LINK       0x83000007
-
 // Fuchsia-io limits.
 //
 // TODO(FIDL-127): Compute these values with the "union of all fuchsia-io"

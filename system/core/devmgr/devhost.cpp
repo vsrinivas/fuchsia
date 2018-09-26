@@ -250,7 +250,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
     char buffer[512];
     const char* path = mkdevpath(ios->dev, buffer, sizeof(buffer));
 
-    if (msize >= sizeof(fidl_message_header_t) && msg.op == ZXFIDL_OPEN) {
+    if (msize >= sizeof(fidl_message_header_t) && msg.op == fuchsia_io_DirectoryOpenOrdinal) {
         log(RPC_RIO, "devhost[%s] FIDL OPEN\n", path);
 
         fidl_msg_t fidl_msg = {
