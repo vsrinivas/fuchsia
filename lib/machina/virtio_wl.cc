@@ -597,7 +597,7 @@ void VirtioWl::OnDataAvailable(uint32_t vfd_id, async::Wait* wait,
     return;
   }
 
-  ready_vfds_[vfd_id] |= signal->observed;
+  ready_vfds_[vfd_id] |= signal->observed & wait->trigger();
   if (signal->observed & __ZX_OBJECT_PEER_CLOSED) {
     wait->set_trigger(wait->trigger() & ~__ZX_OBJECT_PEER_CLOSED);
   }
