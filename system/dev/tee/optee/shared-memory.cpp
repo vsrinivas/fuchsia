@@ -16,14 +16,10 @@ SharedMemory::SharedMemory(zx_vaddr_t base_vaddr, zx_paddr_t base_paddr, RegionP
 
 zx_status_t SharedMemoryManager::Create(zx_paddr_t shared_mem_start,
                                         size_t shared_mem_size,
-                                        fbl::unique_ptr<io_buffer_t> secure_world_memory,
+                                        ddk::MmioBuffer secure_world_memory,
+                                        zx::bti bti,
                                         fbl::unique_ptr<SharedMemoryManager>* out_manager) {
-    ZX_DEBUG_ASSERT(secure_world_memory != nullptr);
     ZX_DEBUG_ASSERT(out_manager != nullptr);
-
-    auto io_buffer_cleanup = fbl::MakeAutoCall([io_buffer = secure_world_memory.get()]() {
-        io_buffer_release(io_buffer);
-    });
 
     // Round the start and end to the nearest page boundaries within the range and calculate a
     // new size.
@@ -36,13 +32,19 @@ zx_status_t SharedMemoryManager::Create(zx_paddr_t shared_mem_start,
     }
     shared_mem_size = shared_mem_end - shared_mem_start;
 
+    fbl::unique_ptr<ddk::MmioPinnedBuffer> pinned;
+    zx_status_t status = secure_world_memory.Pin(bti, &pinned);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "optee: unable to pin secure world memory\n");
+        return status;
+    }
+
     // The secure world shared memory exists within some subrange of the secure_world_memory.
     // Get the addresses from the io_buffer and validate that the requested subrange is within
     // the mmio range.
-    const zx_vaddr_t secure_world_vaddr = reinterpret_cast<zx_vaddr_t>(io_buffer_virt(
-        secure_world_memory.get()));
-    const zx_paddr_t secure_world_paddr = io_buffer_phys(secure_world_memory.get());
-    const size_t secure_world_size = io_buffer_size(secure_world_memory.get(), 0);
+    const zx_vaddr_t secure_world_vaddr = reinterpret_cast<zx_vaddr_t>(secure_world_memory.get());
+    const zx_paddr_t secure_world_paddr = pinned->get_paddr();
+    const size_t secure_world_size = secure_world_memory.get_size();
 
     if ((shared_mem_start < secure_world_paddr) ||
         (shared_mem_end > secure_world_paddr + secure_world_size)) {
@@ -62,28 +64,24 @@ zx_status_t SharedMemoryManager::Create(zx_paddr_t shared_mem_start,
         secure_world_vaddr + shared_mem_offset,
         secure_world_paddr + shared_mem_offset,
         shared_mem_size,
-        fbl::move(secure_world_memory)));
+        fbl::move(secure_world_memory),
+        fbl::move(*pinned.release())));
 
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    // We've successfully created the Manager and it now owns the io_buffer memory
-    io_buffer_cleanup.cancel();
-
     *out_manager = fbl::move(manager);
     return ZX_OK;
-}
-
-SharedMemoryManager::~SharedMemoryManager() {
-    io_buffer_release(secure_world_memory_.get());
 }
 
 SharedMemoryManager::SharedMemoryManager(zx_vaddr_t base_vaddr,
                                          zx_paddr_t base_paddr,
                                          size_t total_size,
-                                         fbl::unique_ptr<io_buffer_t> secure_world_memory)
+                                         ddk::MmioBuffer secure_world_memory,
+                                         ddk::MmioPinnedBuffer secure_world_memory_pin)
     : secure_world_memory_(fbl::move(secure_world_memory)),
+      secure_world_memory_pin_(fbl::move(secure_world_memory_pin)),
       driver_pool_(base_vaddr, base_paddr, kDriverPoolSize),
       client_pool_(base_vaddr + kDriverPoolSize,
                    base_paddr + kDriverPoolSize,

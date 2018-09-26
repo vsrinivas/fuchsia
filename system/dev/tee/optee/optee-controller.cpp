@@ -119,10 +119,13 @@ zx_status_t OpteeController::InitializeSharedMemory() {
         return status;
     }
 
-    fbl::AllocChecker ac;
-    auto secure_world_memory = fbl::make_unique_checked<io_buffer_t>(&ac);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
+
+    static constexpr uint32_t kTeeBtiIndex = 0;
+    zx::bti bti;
+    status = pdev_get_bti(&pdev_proto_, kTeeBtiIndex, bti.reset_and_get_address());
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "optee: Unable to get bti\n");
+        return status;
     }
 
     // The Secure World memory is located at a fixed physical address in RAM, so we have to request
@@ -131,8 +134,9 @@ zx_status_t OpteeController::InitializeSharedMemory() {
     // doesn't currently have a way of only mapping a portion of it. OP-TEE tells us exactly the
     // physical sub range to use.
     static constexpr uint32_t kSecureWorldMemoryMmioIndex = 0;
-    status = pdev_map_mmio_buffer(&pdev_proto_, kSecureWorldMemoryMmioIndex, ZX_CACHE_POLICY_CACHED,
-                                  secure_world_memory.get());
+    mmio_buffer_t mmio;
+    status = pdev_map_mmio_buffer2(&pdev_proto_, kSecureWorldMemoryMmioIndex, ZX_CACHE_POLICY_CACHED,
+                                  &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "optee: Unable to map secure world memory\n");
         return status;
@@ -140,7 +144,8 @@ zx_status_t OpteeController::InitializeSharedMemory() {
 
     status = SharedMemoryManager::Create(shared_mem_start,
                                          shared_mem_size,
-                                         fbl::move(secure_world_memory),
+                                         ddk::MmioBuffer(mmio),
+                                         fbl::move(bti),
                                          &shared_memory_manager_);
 
     if (status != ZX_OK) {

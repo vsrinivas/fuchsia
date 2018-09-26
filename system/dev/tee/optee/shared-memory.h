@@ -4,11 +4,12 @@
 
 #pragma once
 
-#include <ddk/io-buffer.h>
+#include <ddktl/mmio.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
 #include <region-alloc/region-alloc.h>
+#include <lib/zx/bti.h>
 
 namespace optee {
 
@@ -119,9 +120,9 @@ public:
     using ClientMemoryPool = SharedMemoryPool<ClientPoolTraits>;
 
     static zx_status_t Create(zx_paddr_t shared_mem_start, size_t shared_mem_size,
-                              fbl::unique_ptr<io_buffer_t> secure_world_memory,
+                              ddk::MmioBuffer secure_world_memory, zx::bti bti,
                               fbl::unique_ptr<SharedMemoryManager>* out_manager);
-    ~SharedMemoryManager();
+    ~SharedMemoryManager() = default;
 
     DriverMemoryPool* driver_pool() { return &driver_pool_; }
     ClientMemoryPool* client_pool() { return &client_pool_; }
@@ -131,9 +132,11 @@ private:
     static constexpr size_t kDriverPoolSize = 4 * PAGE_SIZE;
 
     explicit SharedMemoryManager(zx_vaddr_t base_vaddr, zx_paddr_t base_paddr, size_t total_size,
-                                 fbl::unique_ptr<io_buffer_t> secure_world_memory);
+                                 ddk::MmioBuffer secure_world_memory,
+                                 ddk::MmioPinnedBuffer secure_world_memory_pin);
 
-    fbl::unique_ptr<io_buffer_t> secure_world_memory_;
+    ddk::MmioBuffer secure_world_memory_;
+    ddk::MmioPinnedBuffer secure_world_memory_pin_;
     DriverMemoryPool driver_pool_;
     ClientMemoryPool client_pool_;
 };
