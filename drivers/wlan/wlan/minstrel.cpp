@@ -263,6 +263,17 @@ void MinstrelRateSelector::HandleTxStatusReport(const wlan_tx_status_t& tx_statu
     outdated_peers_.emplace(peer_addr);
 }
 
+bool BetterThroughput(const TxStats& lhs, const TxStats& rhs) {
+    return lhs.cur_tp > rhs.cur_tp ||
+           (lhs.cur_tp == rhs.cur_tp && lhs.probability > rhs.probability);
+}
+
+bool BetterProbability(const TxStats& lhs, const TxStats& rhs) {
+    // When probability is "high enough", consider throughput instead.
+    return (lhs.probability >= kMinstrelProbabilityThreshold && lhs.cur_tp > rhs.cur_tp) ||
+           lhs.probability > rhs.probability;
+}
+
 void UpdateStatsPeer(Peer* peer) {
     // Default to the lowest rate supported.
     peer->max_tp = peer->tx_stats_map.cbegin()->first;
@@ -293,20 +304,9 @@ void UpdateStatsPeer(Peer* peer) {
             tsp->success_cur = 0;
         }
 
-        const float tp = tsp->cur_tp;
-        const float probability = tsp->probability;
+        if (BetterThroughput(*tsp, (*sm)[peer->max_tp])) { peer->max_tp = tx_idx; }
 
-        auto& incumbent = (*sm)[peer->max_tp];
-        if ((tp > incumbent.cur_tp) ||
-            ((tp == incumbent.cur_tp) && (probability > incumbent.probability))) {
-            peer->max_tp = tx_idx;
-        }
-
-        incumbent = (*sm)[peer->max_probability];
-
-        // if probability is high enough, compare throughput instead.
-        if (((probability >= kMinstrelProbabilityThreshold) && (tp > incumbent.cur_tp)) ||
-            (probability > incumbent.probability)) {
+        if (BetterProbability(*tsp, (*sm)[peer->max_probability])) {
             peer->max_probability = tx_idx;
         }
     }

@@ -32,12 +32,12 @@ static constexpr float kMinstrelProbabilityThreshold =
 struct TxStats {
     tx_vec_idx_t tx_vector_idx;
     zx::duration perfect_tx_time;
-    size_t success_cur = 0;   // successful transmissions since last update.
-    size_t attempts_cur = 0;  // transmission attempts since last update.
-    float probability = kMinstrelProbabilityThreshold;  // Moving Average Probability of success.
-    float cur_tp = 0.0;                                 // Expected average throughput.
-    size_t success_total = 0;                           // cumulative succcess counts.
-    size_t attempts_total = 0;                          // cumulative attempts.
+    size_t success_cur = 0;                 // successful transmissions since last update.
+    size_t attempts_cur = 0;                // transmission attempts since last update.
+    float probability = 0;                  // Moving Average Probability of success.
+    float cur_tp = 0.0;                     // Expected average throughput.
+    size_t success_total = 0;               // cumulative succcess counts.
+    size_t attempts_total = 0;              // cumulative attempts.
 
     ::fuchsia::wlan::minstrel::StatsEntry ToFidl() const;
 };
