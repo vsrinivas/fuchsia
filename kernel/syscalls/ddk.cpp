@@ -15,31 +15,29 @@
 #include <dev/interrupt.h>
 #include <dev/iommu.h>
 #include <dev/udisplay.h>
-#include <vm/vm.h>
-#include <vm/vm_object_paged.h>
-#include <vm/vm_object_physical.h>
+#include <fbl/auto_call.h>
+#include <fbl/inline_array.h>
 #include <lib/user_copy/user_ptr.h>
 #include <object/bus_transaction_initiator_dispatcher.h>
 #include <object/handle.h>
 #include <object/interrupt_dispatcher.h>
 #include <object/interrupt_event_dispatcher.h>
-#include <object/virtual_interrupt_dispatcher.h>
 #include <object/iommu_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/resource.h>
+#include <object/virtual_interrupt_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
+#include <vm/vm.h>
+#include <vm/vm_object_paged.h>
+#include <vm/vm_object_physical.h>
+#include <zircon/syscalls/iommu.h>
+#include <zircon/syscalls/pci.h>
+#include <zircon/syscalls/smc.h>
 #include <zxcpp/new.h>
-
 
 #if ARCH_X86
 #include <platform/pc/bootloader.h>
 #endif
-
-#include <zircon/syscalls/iommu.h>
-#include <zircon/syscalls/pci.h>
-#include <zircon/syscalls/smc.h>
-#include <fbl/auto_call.h>
-#include <fbl/inline_array.h>
 
 #include "ddk_priv.h"
 #include "priv.h"
@@ -374,7 +372,7 @@ zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint
     }
 
     status = static_cast<PinnedMemoryTokenDispatcher*>(new_pmt.get())
-            ->EncodeAddrs(compress_results, contiguous, mapped_addrs.get(), addrs_count);
+                 ->EncodeAddrs(compress_results, contiguous, mapped_addrs.get(), addrs_count);
     if (status != ZX_OK) {
         return status;
     }
@@ -423,7 +421,7 @@ zx_status_t sys_pmt_unpin(zx_handle_t pmt) {
 }
 
 zx_status_t sys_interrupt_create(zx_handle_t src_obj, uint32_t src_num,
-                           uint32_t options, user_out_handle* out_handle) {
+                                 uint32_t options, user_out_handle* out_handle) {
     LTRACEF("options 0x%x\n", options);
 
     // resource not required for virtual interrupts
@@ -449,7 +447,7 @@ zx_status_t sys_interrupt_create(zx_handle_t src_obj, uint32_t src_num,
 }
 
 zx_status_t sys_interrupt_bind(zx_handle_t inth, zx_handle_t porth,
-                         uint64_t key, uint32_t options) {
+                               uint64_t key, uint32_t options) {
     LTRACEF("handle %x\n", inth);
     if (options) {
         return ZX_ERR_INVALID_ARGS;
@@ -516,8 +514,8 @@ zx_status_t sys_interrupt_destroy(zx_handle_t handle) {
 }
 
 zx_status_t sys_interrupt_trigger(zx_handle_t handle,
-                            uint32_t options,
-                            zx_time_t timestamp) {
+                                  uint32_t options,
+                                  zx_time_t timestamp) {
     LTRACEF("handle %x\n", handle);
 
     if (options) {
