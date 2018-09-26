@@ -12,9 +12,9 @@ use log::{error, info};
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
-use wlan_sme::{client as client_sme, DeviceInfo, InfoEvent, InfoStream};
-use wlan_sme::client::{BssInfo, ConnectionAttemptId, ConnectResult,
-                       DiscoveryError, DiscoveryResult, EssInfo, ScanTxnId};
+use wlan_sme::{client as client_sme, DeviceInfo, InfoStream};
+use wlan_sme::client::{BssInfo, ConnectionAttemptId, ConnectResult, DiscoveryError,
+                       DiscoveryResult, EssInfo, InfoEvent, ScanTxnId};
 use fuchsia_zircon as zx;
 
 use crate::cobalt_reporter::CobaltSender;
@@ -231,7 +231,7 @@ fn handle_info_event(e: InfoEvent,
             }
         },
         InfoEvent::ScanDiscoveryFinished { bss_count, ess_count } => {
-            telemetry::report_scanned_networks_count(cobalt_sender, bss_count, ess_count);
+            telemetry::report_neighbor_networks_count(cobalt_sender, bss_count, ess_count);
         },
         InfoEvent::AssociationStarted { att_id } => {
             connection_times.att_id = att_id;

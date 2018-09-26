@@ -15,7 +15,7 @@ use futures::channel::mpsc;
 use log::error;
 use std::sync::Arc;
 
-use super::{DeviceInfo, InfoEvent, InfoStream, MlmeRequest, MlmeStream, Ssid};
+use super::{DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid};
 
 use self::scan::{DiscoveryScan, JoinScan, JoinScanFailure, ScanResult, ScanScheduler};
 use self::rsn::get_rsna;
@@ -103,6 +103,37 @@ pub enum UserEvent<T: Tokens> {
     ConnectFinished {
         token: T::ConnectToken,
         result: ConnectResult,
+    },
+}
+
+#[derive(Debug, PartialEq)]
+pub enum InfoEvent {
+    ConnectStarted,
+    ConnectFinished {
+        result: ConnectResult,
+        failure: Option<ConnectFailure>,
+    },
+    MlmeScanStart {
+        txn_id: ScanTxnId,
+    },
+    MlmeScanEnd {
+        txn_id: ScanTxnId,
+    },
+    ScanDiscoveryFinished {
+        bss_count: usize,
+        ess_count: usize,
+    },
+    AssociationStarted {
+        att_id: ConnectionAttemptId,
+    },
+    AssociationSuccess {
+        att_id: ConnectionAttemptId,
+    },
+    RsnaStarted {
+        att_id: ConnectionAttemptId,
+    },
+    RsnaEstablished {
+        att_id: ConnectionAttemptId,
     },
 }
 

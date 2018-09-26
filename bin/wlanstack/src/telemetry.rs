@@ -297,7 +297,7 @@ pub fn report_rsna_established_delay(
     sender.log_elapsed_time(CobaltMetricId::RsnaDelay as u32, 0, delay_micros);
 }
 
-pub fn report_scanned_networks_count(
+pub fn report_neighbor_networks_count(
     sender: &mut CobaltSender, bss_count: usize, ess_count: usize,
 ) {
     const BSS_COUNT_INDEX: u32 = 0;
