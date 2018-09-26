@@ -5,15 +5,18 @@
 #include "peridot/lib/util/filesystem.h"
 
 #include <fcntl.h>
+#include <string.h>
 #include <unistd.h>
 #include <memory>
 
+#include <fbl/unique_fd.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/fxl/files/file.h>
-#include <lib/fxl/files/unique_fd.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 #include <lib/fxl/strings/string_printf.h>
 #include <lib/fxl/strings/string_view.h>
+#include <lib/fzl/fdio.h>
 #include <lib/zx/time.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
@@ -29,15 +32,19 @@ void WaitForMinfs() {
   auto delay = zx::msec(10);
   zx::time now = zx::clock::get_monotonic();
   while (zx::clock::get_monotonic() - now < kMaxPollingDelay) {
-    fxl::UniqueFD fd(open(kPersistentFileSystem.data(), O_RDONLY));
+    fbl::unique_fd fd(open(kPersistentFileSystem.data(), O_RDONLY));
     if (fd.is_valid()) {
-      char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
-      auto* info = reinterpret_cast<vfs_query_info_t*>(buf);
-      ssize_t len = ioctl_vfs_query_fs(fd.get(), info, sizeof(buf) - 1);
-      FXL_DCHECK(len > (ssize_t)sizeof(vfs_query_info_t));
-      fxl::StringView fs_name(info->name, len - sizeof(vfs_query_info_t));
-      if (fs_name == kMinFsName) {
-        return;
+      fuchsia_io_FilesystemInfo info;
+      zx_status_t status, io_status;
+      fzl::FdioCaller caller(fbl::move(fd));
+      io_status = fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(),
+                                                           &status, &info);
+      if (io_status == ZX_OK && status == ZX_OK) {
+        const char* name = reinterpret_cast<const char*>(info.name);
+        fxl::StringView fs_name(name, strnlen(name, fuchsia_io_MAX_FS_NAME_BUFFER));
+        if (fs_name == kMinFsName) {
+          return;
+        }
       }
     }
 
