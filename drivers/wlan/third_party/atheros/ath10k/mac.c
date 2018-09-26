@@ -4977,7 +4977,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
         ret = ZX_ERR_NO_RESOURCES;
         goto err;
     }
-    unsigned bit = __builtin_ffsll(ar->free_vdev_map);
+    unsigned bit = __builtin_ffsll(ar->free_vdev_map) - 1;
 
     ath10k_dbg(ar, ATH10K_DBG_MAC, "mac create vdev %i map %llx\n", bit, ar->free_vdev_map);
 
