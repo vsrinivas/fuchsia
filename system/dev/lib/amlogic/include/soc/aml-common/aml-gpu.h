@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/scpi.h>
 #include <ddk/debug.h>
@@ -19,20 +19,14 @@
 #define PWR_KEY         0x14
 #define PWR_OVERRIDE1   0x16
 
-#define READ32_GPU_REG(offset)          readl(io_buffer_virt(&gpu->gpu_buffer) \
-                                        + offset*4)
-#define WRITE32_GPU_REG(offset, value)  writel(value, io_buffer_virt(&gpu->gpu_buffer) \
-                                        + offset*4)
+#define READ32_GPU_REG(offset)          readl((uint32_t*)gpu->gpu_buffer.vaddr + offset)
+#define WRITE32_GPU_REG(offset, value)  writel(value, (uint32_t*)gpu->gpu_buffer.vaddr + offset)
 
-#define READ32_HIU_REG(offset)          readl(io_buffer_virt(&gpu->hiu_buffer) \
-                                        + offset*4)
-#define WRITE32_HIU_REG(offset, value)  writel(value, io_buffer_virt(&gpu->hiu_buffer) \
-                                        + offset*4)
+#define READ32_HIU_REG(offset)          readl((uint32_t*)gpu->hiu_buffer.vaddr + offset)
+#define WRITE32_HIU_REG(offset, value)  writel(value, (uint32_t*)gpu->hiu_buffer.vaddr + offset)
 
-#define READ32_PRESET_REG(offset)          readl(io_buffer_virt(&gpu->preset_buffer) \
-                                           + offset*4)
-#define WRITE32_PRESET_REG(offset, value)  writel(value, io_buffer_virt(&gpu->preset_buffer) \
-                                           + offset*4)
+#define READ32_PRESET_REG(offset)         readl((uint32_t*)gpu->preset_buffer.vaddr + offset)
+#define WRITE32_PRESET_REG(offset, value) writel(value, (uint32_t*)gpu->preset_buffer.vaddr + offset)
 
 #define CLK_ENABLED_BIT_SHIFT             8
 #define CALCULATE_CLOCK_MUX(enabled, base, divisor) \
@@ -68,9 +62,9 @@ typedef struct {
 
     zx_handle_t                 bti;
 
-    io_buffer_t                 hiu_buffer;
-    io_buffer_t                 preset_buffer;
-    io_buffer_t                 gpu_buffer;
+    mmio_buffer_t               hiu_buffer;
+    mmio_buffer_t               preset_buffer;
+    mmio_buffer_t               gpu_buffer;
 
     aml_gpu_block_t*            gpu_block;
     aml_hiu_dev_t*              hiu_dev;

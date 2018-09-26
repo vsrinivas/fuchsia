@@ -126,9 +126,9 @@ static void aml_gpu_init(aml_gpu_t* gpu) {
 static void aml_gpu_release(void* ctx) {
     aml_gpu_t* gpu = ctx;
     aml_gp0_release(gpu);
-    io_buffer_release(&gpu->hiu_buffer);
-    io_buffer_release(&gpu->preset_buffer);
-    io_buffer_release(&gpu->gpu_buffer);
+    mmio_buffer_release(&gpu->hiu_buffer);
+    mmio_buffer_release(&gpu->preset_buffer);
+    mmio_buffer_release(&gpu->gpu_buffer);
     zx_handle_close(gpu->bti);
     free(gpu);
 }
@@ -193,21 +193,21 @@ static zx_status_t aml_gpu_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    status = pdev_map_mmio_buffer(&gpu->pdev, MMIO_GPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer2(&gpu->pdev, MMIO_GPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &gpu->gpu_buffer);
     if (status != ZX_OK) {
         GPU_ERROR("pdev_map_mmio_buffer failed\n");
         goto fail;
     }
 
-    status = pdev_map_mmio_buffer(&gpu->pdev, MMIO_HIU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer2(&gpu->pdev, MMIO_HIU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &gpu->hiu_buffer);
     if (status != ZX_OK) {
         GPU_ERROR("pdev_map_mmio_buffer failed\n");
         goto fail;
     }
 
-    status = pdev_map_mmio_buffer(&gpu->pdev, MMIO_PRESET, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer2(&gpu->pdev, MMIO_PRESET, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &gpu->preset_buffer);
     if (status != ZX_OK) {
         GPU_ERROR("pdev_map_mmio_buffer failed\n");
