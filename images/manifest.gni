@@ -42,6 +42,9 @@ declare_args() {
   # Zircon source directory and thus their contents can be taken as
   # relative to `get_path_info(entry, "dir") + "/.."`.
   zircon_boot_manifests = [ "$zircon_build_dir/bootfs.manifest" ]
+
+  # Extra args to globally apply to the manifest generation script.
+  extra_manifest_args = []
 }
 
 # Action target that generates a response file in GN's "shlex" format.
@@ -170,7 +173,7 @@ template("generate_manifest") {
       manifest_file,
       build_id_file,
     ]
-    args = [
+    args = extra_manifest_args + [
       "--depfile=" + rebase_path(depfile, root_build_dir),
       "--build-id-file=" + rebase_path(build_id_file, root_build_dir),
       "--stripped-dir=" + rebase_path(stripped_dir, root_build_dir),
