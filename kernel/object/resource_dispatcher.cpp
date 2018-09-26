@@ -6,17 +6,17 @@
 
 #include <object/resource_dispatcher.h>
 
-#include <zircon/rights.h>
-#include <zircon/syscalls/resource.h>
 #include <fbl/alloc_checker.h>
-#include <pretty/sizes.h>
 #include <inttypes.h>
-#include <lib/counters.h>
 #include <kernel/auto_lock.h>
 #include <kernel/range_check.h>
+#include <lib/counters.h>
+#include <pretty/sizes.h>
 #include <string.h>
-#include <vm/vm.h>
 #include <trace.h>
+#include <vm/vm.h>
+#include <zircon/rights.h>
+#include <zircon/syscalls/resource.h>
 
 #define LOCAL_TRACE 0
 
@@ -71,7 +71,7 @@ zx_status_t ResourceDispatcher::Create(fbl::RefPtr<ResourceDispatcher>* dispatch
         }
         break;
     default:
-        status = rallocs[kind].GetRegion({ .base = base, .size = size }, region_uptr);
+        status = rallocs[kind].GetRegion({.base = base, .size = size}, region_uptr);
         if (status != ZX_OK) {
             LTRACEF("%s couldn't pull the resource out of the ralloc %d\n", kLogTag, status);
             return status;
@@ -85,7 +85,7 @@ zx_status_t ResourceDispatcher::Create(fbl::RefPtr<ResourceDispatcher>* dispatch
     // then the region above will be released back to the pool anyway.
     if (flags & ZX_RSRC_FLAG_EXCLUSIVE) {
         auto callback = [&](const ResourceDispatcher& rsrc) {
-            LTRACEF("%s walking resources, found [%u, %#lx, %zu]\n", kLogTag,  rsrc.get_kind(),
+            LTRACEF("%s walking resources, found [%u, %#lx, %zu]\n", kLogTag, rsrc.get_kind(),
                     rsrc.get_base(), rsrc.get_size());
             if (kind != rsrc.get_kind()) {
                 return ZX_OK;
@@ -126,7 +126,6 @@ zx_status_t ResourceDispatcher::Create(fbl::RefPtr<ResourceDispatcher>* dispatch
 
     LTRACEF("%s [%u, %#lx, %zu] resource created.\n", kLogTag, kind, base, size);
     return ZX_OK;
-
 }
 
 ResourceDispatcher::ResourceDispatcher(uint32_t kind,
@@ -137,18 +136,30 @@ ResourceDispatcher::ResourceDispatcher(uint32_t kind,
                                        RegionAllocator rallocs[ZX_RSRC_KIND_COUNT],
                                        ResourceList* resource_list)
     : kind_(kind), base_(base), size_(size), flags_(flags),
-        resource_list_(resource_list) {
+      resource_list_(resource_list) {
     if (flags_ & ZX_RSRC_FLAG_EXCLUSIVE) {
         exclusive_region_ = fbl::move(region);
     }
 
-    switch(kind_) {
-    case ZX_RSRC_KIND_ROOT:       kcounter_add(root_resource_created, 1);       break;
-    case ZX_RSRC_KIND_HYPERVISOR: kcounter_add(hypervisor_resource_created, 1); break;
-    case ZX_RSRC_KIND_VMEX:       kcounter_add(vmex_resource_created, 1);       break;
-    case ZX_RSRC_KIND_MMIO:       kcounter_add(mmio_resource_created, 1);       break;
-    case ZX_RSRC_KIND_IRQ:        kcounter_add(irq_resource_created, 1);        break;
-    case ZX_RSRC_KIND_IOPORT:     kcounter_add(ioport_resource_created, 1);     break;
+    switch (kind_) {
+    case ZX_RSRC_KIND_ROOT:
+        kcounter_add(root_resource_created, 1);
+        break;
+    case ZX_RSRC_KIND_HYPERVISOR:
+        kcounter_add(hypervisor_resource_created, 1);
+        break;
+    case ZX_RSRC_KIND_VMEX:
+        kcounter_add(vmex_resource_created, 1);
+        break;
+    case ZX_RSRC_KIND_MMIO:
+        kcounter_add(mmio_resource_created, 1);
+        break;
+    case ZX_RSRC_KIND_IRQ:
+        kcounter_add(irq_resource_created, 1);
+        break;
+    case ZX_RSRC_KIND_IOPORT:
+        kcounter_add(ioport_resource_created, 1);
+        break;
     }
     resource_list_->push_back(this);
 }
@@ -190,12 +201,12 @@ zx_status_t ResourceDispatcher::InitializeAllocator(uint32_t kind,
         return status;
     }
 
-
     // Add the initial address space specified by the platform to the region allocator.
     // This will be used for verifying both shared and exclusive allocations of address
     // space.
-    status = rallocs[kind].AddRegion({ .base = base, .size = size });
-    LTRACEF("%s added [%#lx, %zu] to kind %u in allocator %p: %d\n", kLogTag, base, size, kind, rallocs, status);
+    status = rallocs[kind].AddRegion({.base = base, .size = size});
+    LTRACEF("%s added [%#lx, %zu] to kind %u in allocator %p: %d\n",
+            kLogTag, base, size, kind, rallocs, status);
     return status;
 }
 
@@ -240,41 +251,41 @@ void ResourceDispatcher::Dump() {
         // IRQs are allocated one at a time, so range display doesn't make much sense.
         switch (r.get_kind()) {
         case ZX_RSRC_KIND_ROOT:
-            printf("%.*s",           kTypeLen, "root");
-            pad_field(kFlagLen);     // Root has no flags
-            printf("\t%.*s",         kNameLen, name);
+            printf("%.*s", kTypeLen, "root");
+            pad_field(kFlagLen); // Root has no flags
+            printf("\t%.*s", kNameLen, name);
             printf("\n");
             break;
         case ZX_RSRC_KIND_HYPERVISOR:
-            printf("%.*s",           kTypeLen, "hypervisor");
-            printf("\t%.*s",         kFlagLen, flag_str);
-            printf("\t%.*s",         kNameLen, name);
+            printf("%.*s", kTypeLen, "hypervisor");
+            printf("\t%.*s", kFlagLen, flag_str);
+            printf("\t%.*s", kNameLen, name);
             printf("\n");
             break;
         case ZX_RSRC_KIND_IRQ:
-            printf("%.*s",           kTypeLen, "irq");
-            printf("\t%.*s",         kFlagLen, flag_str);
-            printf("\t%.*s",         kNameLen, name);
+            printf("%.*s", kTypeLen, "irq");
+            printf("\t%.*s", kFlagLen, flag_str);
+            printf("\t%.*s", kNameLen, name);
             printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
             printf("\n");
             break;
         case ZX_RSRC_KIND_IOPORT:
-            printf("%.*s",           kTypeLen, "io");
-            printf("\t%.*s",         kFlagLen, flag_str);
-            printf("\t%.*s",         kNameLen, name);
+            printf("%.*s", kTypeLen, "io");
+            printf("\t%.*s", kFlagLen, flag_str);
+            printf("\t%.*s", kNameLen, name);
             printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
             printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
-            printf("\t%.*s",         kPrettyLen,
+            printf("\t%.*s", kPrettyLen,
                    format_size(pretty_size, sizeof(pretty_size), r.get_size()));
             printf("\n");
             break;
         case ZX_RSRC_KIND_MMIO:
-            printf("%.*s",           kTypeLen, "mmio");
-            printf("\t%.*s",         kFlagLen, flag_str);
-            printf("\t%.*s",         kNameLen, name);
+            printf("%.*s", kTypeLen, "mmio");
+            printf("\t%.*s", kFlagLen, flag_str);
+            printf("\t%.*s", kNameLen, name);
             printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
             printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
-            printf("\t%.*s",         kPrettyLen,
+            printf("\t%.*s", kPrettyLen,
                    format_size(pretty_size, sizeof(pretty_size), r.get_size()));
             printf("\n");
             break;

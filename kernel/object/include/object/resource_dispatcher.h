@@ -77,6 +77,7 @@ public:
     uint32_t get_kind() const { return kind_; }
     uint32_t get_flags() const { return flags_; }
     ~ResourceDispatcher();
+
 private:
     fbl::Canary<fbl::magic("RSRD")> canary_;
 
