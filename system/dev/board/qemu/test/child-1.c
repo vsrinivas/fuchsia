@@ -54,8 +54,8 @@ static zx_status_t qemu_test_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Make sure we can access our MMIO.
-    io_buffer_t mmio;
-    status = pdev_map_mmio_buffer(&pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    mmio_buffer_t mmio;
+    status = pdev_map_mmio_buffer2(&pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_map_mmio_buffer failed\n", DRIVER_NAME);
         return status;
@@ -64,7 +64,7 @@ static zx_status_t qemu_test_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "%s: mmio.size expected %u got %zu\n", DRIVER_NAME, TEST_MMIO_2_SIZE,
                mmio.size);
     }
-    io_buffer_release(&mmio);
+    mmio_buffer_release(&mmio);
 
     status = qemu_test_bti(&pdev);
     if (status != ZX_OK) {
