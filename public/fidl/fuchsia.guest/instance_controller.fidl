@@ -7,6 +7,15 @@ library fuchsia.guest;
 using fuchsia.ui.input;
 using fuchsia.ui.viewsv1;
 
+// A |BalloonController| controls a guest instance's memory balloon.
+interface BalloonController {
+    // Get the number of pages in the memory balloon.
+    1: GetNumPages() -> (uint32 num_pages);
+
+    // Request a number of pages to supply to the memory balloon.
+    2: RequestNumPages(uint32 num_pages);
+};
+
 // A |InstanceController| provides access to services of a guest instance.
 [Discoverable]
 interface InstanceController {
@@ -20,4 +29,7 @@ interface InstanceController {
 
     // Get the input dispatcher for this instance.
     3: GetInputDispatcher(request<fuchsia.ui.input.InputDispatcher> input_dispatcher);
+
+    // Get the balloon controller for this instance.
+    4: GetBalloonController(request<BalloonController> balloon_controller);
 };

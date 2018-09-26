@@ -11,7 +11,8 @@ InstanceControllerImpl::InstanceControllerImpl() {
   FXL_CHECK(status == ZX_OK) << "Failed to create socket";
 }
 
-zx_status_t InstanceControllerImpl::AddPublicService(component::StartupContext *context) {
+zx_status_t InstanceControllerImpl::AddPublicService(
+    component::StartupContext* context) {
   return context->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
@@ -35,4 +36,19 @@ void InstanceControllerImpl::GetInputDispatcher(
     fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher> request) {
   FXL_DCHECK(input_dispatcher_ != nullptr);
   input_dispatcher_bindings_.AddBinding(input_dispatcher_, std::move(request));
+}
+
+void InstanceControllerImpl::GetBalloonController(
+    fidl::InterfaceRequest<fuchsia::guest::BalloonController> request) {
+  balloon_controller_bindings_.AddBinding(this, std::move(request));
+}
+
+void InstanceControllerImpl::GetNumPages(GetNumPagesCallback callback) {
+  FXL_DCHECK(balloon_ != nullptr);
+  callback(balloon_->num_pages());
+}
+
+void InstanceControllerImpl::RequestNumPages(uint32_t num_pages) {
+  FXL_DCHECK(balloon_ != nullptr);
+  balloon_->UpdateNumPages(num_pages);
 }
