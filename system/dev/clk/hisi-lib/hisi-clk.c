@@ -13,6 +13,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/clk.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
@@ -45,8 +46,8 @@ typedef struct hisi_clk {
     clk_protocol_t clk;
     zx_device_t* zxdev;
 
-    io_buffer_t peri_crg_mmio;  // Separated Clock Gates
-    io_buffer_t sctrl_mmio;     // Regular Clock Gates
+    mmio_buffer_t peri_crg_mmio;  // Separated Clock Gates
+    mmio_buffer_t sctrl_mmio;     // Regular Clock Gates
 
     hisi_clk_gate_t* gates;
     size_t gate_count;
@@ -97,11 +98,11 @@ static zx_status_t hisi_clk_toggle(void* ctx, const uint32_t idx,
     mtx_lock(&hisi_clk->lock);
     if (HISI_CLK_FLAG_BANK(flags) == HISI_CLK_FLAG_BANK_SCTRL) {
         volatile uint8_t* base =
-            (volatile uint8_t*)io_buffer_virt(&hisi_clk->sctrl_mmio);
+            (volatile uint8_t*)hisi_clk->sctrl_mmio.vaddr;
         hisi_gate_clk_toggle_locked(base + gate->reg, gate->bit, enable);
     } else if (HISI_CLK_FLAG_BANK(flags) == HISI_CLK_FLAG_BANK_PERI) {
         volatile uint8_t* base =
-            (volatile uint8_t*)io_buffer_virt(&hisi_clk->peri_crg_mmio);
+            (volatile uint8_t*)hisi_clk->peri_crg_mmio.vaddr;
         hisi_sep_clk_toggle_locked(base + gate->reg, gate->bit, enable);
     } else {
         // Maybe you passed an unimplemented clock bank?
@@ -127,8 +128,8 @@ clk_protocol_ops_t clk_ops = {
 
 static void hisi_clk_release(void* ctx) {
     hisi_clk_t* clk = ctx;
-    io_buffer_release(&clk->peri_crg_mmio);
-    io_buffer_release(&clk->sctrl_mmio);
+    mmio_buffer_release(&clk->peri_crg_mmio);
+    mmio_buffer_release(&clk->sctrl_mmio);
     mtx_destroy(&clk->lock);
     free(clk);
 }
@@ -189,7 +190,7 @@ zx_status_t hisi_clk_init(const char* name, hisi_clk_gate_t* gates,
     }
 
     // Map in MMIO for separated clock gates.
-    st = pdev_map_mmio_buffer(&hisi_clk->pdev, 0,
+    st = pdev_map_mmio_buffer2(&hisi_clk->pdev, 0,
                               ZX_CACHE_POLICY_UNCACHED_DEVICE,
                               &hisi_clk->peri_crg_mmio);
     if (st != ZX_OK) {
@@ -199,7 +200,7 @@ zx_status_t hisi_clk_init(const char* name, hisi_clk_gate_t* gates,
 
 
     // Map in MMIO for regular clock gates.
-    st = pdev_map_mmio_buffer(&hisi_clk->pdev, 1,
+    st = pdev_map_mmio_buffer2(&hisi_clk->pdev, 1,
                               ZX_CACHE_POLICY_UNCACHED_DEVICE,
                               &hisi_clk->sctrl_mmio);
     if (st != ZX_OK) {
