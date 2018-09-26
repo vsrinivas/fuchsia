@@ -7,13 +7,11 @@
 #include <ddk/protocol/i2c.h>
 
 #include <ddktl/device.h>
+#include <ddktl/mmio.h>
 #include <ddktl/protocol/i2c-impl.h>
 
 #include <fbl/atomic.h>
 #include <fbl/unique_ptr.h>
-
-#include <hw/reg.h>
-#include <hwreg/mmio.h>
 
 namespace imx_i2c {
 
@@ -55,8 +53,7 @@ private:
     }
     const uint32_t dev_cnt_;
     thrd_t thread_;
-    io_buffer_t regs_iobuff_;
-    fbl::unique_ptr<hwreg::RegisterIo> mmio_;
+    fbl::unique_ptr<ddk::MmioBuffer> mmio_;
     fbl::atomic<bool> ready_;
 
     void Reset();

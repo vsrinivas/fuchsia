@@ -235,7 +235,7 @@ int ImxI2cDevice::Thread() {
 
 void ImxI2cDevice::ShutDown() {
     thrd_join(thread_, NULL);
-    io_buffer_release(&regs_iobuff_);
+    mmio_.reset();
 }
 
 zx_status_t ImxI2cDevice::Bind(int id) {
@@ -257,17 +257,17 @@ zx_status_t ImxI2cDevice::Bind(int id) {
     };
     pbus_register_protocol(&pbus, ZX_PROTOCOL_I2C_IMPL, &i2c_proto, NULL, NULL);
 
-    status = pdev_map_mmio_buffer(&pdev, id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &regs_iobuff_);
+    mmio_buffer_t mmio;
+    status = pdev_map_mmio_buffer2(&pdev, id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "ImxI2cDevice::Bind: pdev_map_mmio_buffer failed: %d\n", status);
         return status;
     }
 
     fbl::AllocChecker ac;
-    mmio_ = fbl::make_unique_checked<hwreg::RegisterIo>(&ac, io_buffer_virt(&regs_iobuff_));
+    mmio_ = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mmio);
     if (!ac.check()) {
-        zxlogf(ERROR, "ImxI2cDevice::Bind: no memory for RegisterIo\n");
-        io_buffer_release(&regs_iobuff_);
+        zxlogf(ERROR, "ImxI2cDevice::Bind: no memory for MmioBuffer\n");
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -278,7 +278,6 @@ zx_status_t ImxI2cDevice::Bind(int id) {
                                    this,
                                    "imxi2c-thread");
     if (rc != thrd_success) {
-        io_buffer_release(&regs_iobuff_);
         return ZX_ERR_INTERNAL;
     }
 
