@@ -830,7 +830,7 @@ void ViewRegistry::ActivateFocusChain(uint32_t view_token,
   }
 
   ViewState* view = FindView(view_token);
-  if (!view) {
+  if (!view || !view->view_stub()) {
     callback(nullptr);
     return;
   }
