@@ -464,12 +464,8 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   // Start kMaxwellUrl
   fuchsia::modular::AppConfig maxwell_config;
   maxwell_config.url = kMaxwellUrl;
-  if (options_.test) {
-    // TODO(mesch): This path name is local to the maxwell package. It should
-    // not be exposed outside it at all. Presumably just pass --test.
-    maxwell_config.args.push_back(
-        "--config=/pkg/data/maxwell/test_config.json");
-  }
+  maxwell_config.args.push_back("--startup_agents=" + options_.startup_agents);
+  maxwell_config.args.push_back("--session_agents=" + options_.session_agents);
 
   maxwell_app_ = std::make_unique<
       AppClient<fuchsia::modular::UserIntelligenceProviderFactory>>(

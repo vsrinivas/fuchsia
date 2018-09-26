@@ -13,10 +13,6 @@
 
 #include "peridot/bin/maxwell/config.h"
 #include "peridot/bin/maxwell/user_intelligence_provider_impl.h"
-#include "rapidjson/document.h"
-#include "rapidjson/error/en.h"
-#include "rapidjson/schema.h"
-#include "rapidjson/stringbuffer.h"
 
 namespace maxwell {
 namespace {
@@ -40,94 +36,17 @@ class App {
       factory_bindings_;
 };
 
-const char kConfigSchema[] = R"SCHEMA(
-{
-  "type": "object",
-  "properties": {
-    "startup_agents": {
-      "type": "array",
-      "items": { "type": "string" }
-    },
-    "session_agents": {
-      "type": "array",
-      "items": { "type": "string" }
-    }
-  },
-  "required": [ "startup_agents" ],
-  "extra_properties": false
-}
-)SCHEMA";
-
-bool LoadAndValidateConfig(const std::string& path, Config* out) {
-  // Load the config datafile to a string.
-  std::string data;
-  if (!files::ReadFileToString(path, &data)) {
-    FXL_LOG(WARNING) << "Missing config file: " << path;
-    return false;
-  }
-
-  // Parse the JSON config.
-  rapidjson::Document config_doc;
-  config_doc.Parse(data);
-  if (config_doc.HasParseError()) {
-    fprintf(stderr, "Invalid config JSON (at %lu): %s\n",
-            config_doc.GetErrorOffset(),
-            rapidjson::GetParseError_En(config_doc.GetParseError()));
-    return false;
-  }
-
-  // Initialize our schema.
-  rapidjson::Document schema;
-  bool parseError = schema.Parse(kConfigSchema).HasParseError();
-  FXL_DCHECK(!parseError);
-  rapidjson::SchemaDocument schema_doc(schema);
-
-  // Validate the config against the schema.
-  rapidjson::SchemaValidator validator(schema_doc);
-  if (!config_doc.Accept(validator)) {
-    rapidjson::StringBuffer uri_buffer;
-    validator.GetInvalidSchemaPointer().StringifyUriFragment(uri_buffer);
-    std::cerr << "Startup config does not match schema at: "
-              << uri_buffer.GetString()
-              << " , schema violation: " << validator.GetInvalidSchemaKeyword();
-    return false;
-  }
-
-  // Read values into the |out| struct.
-
-  for (const auto& agent : config_doc["startup_agents"].GetArray()) {
-    out->startup_agents.push_back(agent.GetString());
-  }
-
-  for (const auto& agent : config_doc["session_agents"].GetArray()) {
-    out->session_agents.push_back(agent.GetString());
-  }
-
-  return true;
-}
-
 }  // namespace
 }  // namespace maxwell
 
-const char kDefaultConfigPaths[] =
-    "/pkg/data/maxwell/default_config.json,"
-    "/pkg/data/maxwell/second_config.json";
-const char kUsage[] = R"USAGE(%s --config=<files>
+const char kUsage[] = R"USAGE(%s
+--startup_agents=<agents>
+--session_agents=<agents>
 
-<files> = comma-separated list of paths to JSON configuration files
-with the following format:
-
-{
-  "startup_agents": [
-    "/path/to/binary1",
-    "/path/to/binary2",
-    ...
-  ],
-  "session_agents": [
-    "/path/to/binary1",
-    "/path/to/binary2",
-  ]
-}
+  <agents> = comma-separated list of agents
+  Example:
+    --startup_agents=experiment_agent,usage_log
+    --session_agents=kronk,puddy
 )USAGE";
 
 int main(int argc, const char** argv) {
@@ -136,32 +55,22 @@ int main(int argc, const char** argv) {
     printf(kUsage, argv[0]);
     return 0;
   }
-  const std::string config_paths =
-      command_line.GetOptionValueWithDefault("config", kDefaultConfigPaths);
-  std::vector<std::string> config_paths_list = fxl::SplitStringCopy(
-      config_paths, ",", fxl::kTrimWhitespace, fxl::kSplitWantAll);
 
   maxwell::Config config;
-  if (config_paths_list.size() > 0) {
-    // the first listed config file must exist and be valid
-    if (!maxwell::LoadAndValidateConfig(config_paths_list[0], &config)) {
-      FXL_LOG(FATAL) << "First config file missing or failed to load: "
-                     << config_paths_list[0];
-      return 1;
-    }
+  // Setup startup_agents and session_agents from command line args.
+  auto startup_agents = fxl::SplitStringCopy(
+      command_line.GetOptionValueWithDefault("startup_agents", ""), ",",
+      fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
 
-    // Startup agents from all config files will be merged. Other global
-    // settings will be superseded by later files.
-    for (size_t i = 1; i < config_paths_list.size(); i++) {
-      auto const& path = config_paths_list[i];
-      if (files::IsFile(path) &&
-          !maxwell::LoadAndValidateConfig(path, &config)) {
-        FXL_LOG(WARNING) << "Config file failed to load: " << path;
-      }
-    }
-  } else {
-    FXL_LOG(FATAL) << "No config files specified.";
-    return 1;
+  auto session_agents = fxl::SplitStringCopy(
+      command_line.GetOptionValueWithDefault("session_agents", ""), ",",
+      fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+
+  for (auto agent : startup_agents) {
+    config.startup_agents.push_back(agent);
+  }
+  for (auto agent : session_agents) {
+    config.session_agents.push_back(agent);
   }
 
   FXL_LOG(INFO) << "Starting Maxwell with config: \n" << config;

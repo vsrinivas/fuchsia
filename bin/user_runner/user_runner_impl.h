@@ -63,6 +63,10 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
     // directory to the ledger for the user's repository, or to use
     // /data/LEDGER.
     bool use_memfs_for_ledger;
+
+    // User runner passes args startup agents and session agent to maxwell.
+    std::string startup_agents;
+    std::string session_agents;
   };
 
   UserRunnerImpl(component::StartupContext* startup_context,

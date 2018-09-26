@@ -1,9 +1,0 @@
-{
-  "startup_agents": [
-    "usage_log",
-    "experiment_agent"
-  ],
-  "session_agents": [
-    "kronk"
-  ]
-}

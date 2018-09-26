@@ -40,6 +40,11 @@ int main(int argc, const char** argv) {
   auto cobalt_cleanup =
       SetupCobalt(opts.test, std::move(loop.dispatcher()), context.get());
 
+  opts.startup_agents =
+      command_line.GetOptionValueWithDefault("startup_agents", "");
+  opts.session_agents =
+      command_line.GetOptionValueWithDefault("session_agents", "");
+
   modular::AppDriver<modular::UserRunnerImpl> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<modular::UserRunnerImpl>(context.get(), opts),

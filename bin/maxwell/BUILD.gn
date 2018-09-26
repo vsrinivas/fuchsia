@@ -5,17 +5,6 @@
 import("//peridot/build/executable_package.gni")
 
 executable_package("maxwell") {
-  resources = [
-    {
-      path = rebase_path("//peridot/bin/maxwell/resources/default_config.json")
-      dest = "maxwell/default_config.json"
-    },
-    {
-      path = rebase_path("//peridot/bin/maxwell/resources/test_config.json")
-      dest = "maxwell/test_config.json"
-    },
-  ]
-
   sources = [
     "maxwell_main.cc",
   ]
