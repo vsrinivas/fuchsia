@@ -171,9 +171,17 @@ def run_addr2line(arch, elf_path, addr_as_hex_string):
     return run_tool(path, "-Cipfe", elf_path, addr_as_hex_string)
 
 
-def run_gdb(arch, *args):
+# The caller passes in a list of arguments, this is not a varargs function.
+def run_gdb(arch, arguments):
     path = tool_path(arch, "gdb", gdb_tool_path)
-    return run_tool(path, *args)
+    return run_tool(path, *arguments)
+
+
+GDB_ARCH_LUT = { "x86_64": "i386:x86-64",
+                 "aarch64": "aarch64" }
+def get_gdb_set_arch_cmd(arch):
+    gdb_arch = GDB_ARCH_LUT[arch]
+    return "set arch %s" % gdb_arch
 
 
 def get_call_location(arch, elf_path, addr_as_hex_string):
@@ -244,6 +252,11 @@ def choose_build_dirs(cli_args, arch):
         build_dirs = [fuchsia_unstripped_dir, fuchsia_build_dir] + build_dirs
     return build_dirs
 
+def get_zircon_source_dir():
+    zircon_source_dir = os.path.join(
+        os.path.dirname(SCRIPT_DIR), os.pardir, "zircon")
+    return zircon_source_dir
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -255,6 +268,8 @@ def parse_args():
                         help="List of build directories to search instead of the default (out/x64)")
     parser.add_argument("--disassemble", "-d", action="store_true",
                         help="Show disassembly of each function")
+    parser.add_argument("--source", "-S", action="store_true",
+                        help="Include source in the disassembly (requires -d)")
     parser.add_argument("--stack_size", "-s", type=int,
                         default=256*1024,
                         help="Change the assumed size of the stack (e.g. use 1048576 for ftl or "
@@ -404,13 +419,27 @@ class Symbolizer:
                 "#%s: %s" % (frame_num, call_loc))
         if self.args.disassemble:
             pc = int(off, 16)
-            disassembly = run_gdb(
-                self.arch, "--nx", "--batch", "-ex",
-                "disassemble %#x" % pc, dso_full_path)
+            # GDB can get confused what the default arch should be.
+            # Cope by explicitly setting it.
+            gdb_set_arch_cmd = get_gdb_set_arch_cmd(self.arch)
+            run_gdb_options = [ "--nx", "--batch",
+                                "-ex", gdb_set_arch_cmd ]
+            if self.args.source:
+                gdb_source_search_dirs = self.build_dirs
+                gdb_source_search_dirs.append(get_zircon_source_dir())
+                run_gdb_options += [ "-ex", "dir %s" % (
+                    ":".join(gdb_source_search_dirs)) ]
+            disassemble_cmd = "disassemble %s %#x" % (
+                "/s" if self.args.source else "", pc)
+            run_gdb_options += [ "-ex", disassemble_cmd, dso_full_path ]
+            disassembly = run_gdb(self.arch, run_gdb_options)
             if disassembly:
                 for line in disassembly.splitlines():
                     m = Symbolizer.disasm_re.match(line)
                     if not m:
+                        # If we're printing source, include these lines.
+                        if self.args.source:
+                            self.processed_lines.append(line)
                         continue
                     addr, rest = m.groups()
                     addr = int(addr, 16)
