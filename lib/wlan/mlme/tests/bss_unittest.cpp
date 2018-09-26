@@ -65,7 +65,8 @@ TEST(BssTest, DeriveChannel) {
     // Now have ht_op, but note discrepancy the CBW infos in ht_cap and ht_op
     desc.ht_op = wlan_mlme::HtOperation::New();
     desc.ht_op->primary_chan = 6;
-    desc.ht_op->ht_op_info.secondary_chan_offset = to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_NONE);
+    desc.ht_op->ht_op_info.secondary_chan_offset =
+        to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_NONE);
     desc.ht_op->ht_op_info.sta_chan_width = to_enum_type(wlan_mlme::StaChanWidth::ANY);
     got = DeriveChanFromBssDesc(desc, bcn_chan, has_dsss_param, dsss_chan);
     EXPECT_EQ(false, want == got);
@@ -75,7 +76,8 @@ TEST(BssTest, DeriveChannel) {
     EXPECT_EQ(true, want == got);
 
     // Make ht_cap's and ht_op's CBW consistent, but want is not updated
-    desc.ht_op->ht_op_info.secondary_chan_offset = to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_ABOVE);
+    desc.ht_op->ht_op_info.secondary_chan_offset =
+        to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_ABOVE);
     got = DeriveChanFromBssDesc(desc, bcn_chan, has_dsss_param, dsss_chan);
     EXPECT_EQ(false, want == got);
 
@@ -120,14 +122,16 @@ TEST(BssTest, DeriveChannel) {
     desc.vht_op->center_freq_seg0 = 36;
     desc.vht_op->center_freq_seg1 = 0;
     desc.ht_op->primary_chan = 36;
-    desc.ht_op->ht_op_info.secondary_chan_offset = to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_NONE);
+    desc.ht_op->ht_op_info.secondary_chan_offset =
+        to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_NONE);
     want.primary = 36;
     want.cbw = CBW20;
     got = DeriveChanFromBssDesc(desc, bcn_chan, has_dsss_param, dsss_chan);
     EXPECT_EQ(true, want == got);
 
     desc.vht_op->center_freq_seg0 = 38;
-    desc.ht_op->ht_op_info.secondary_chan_offset = to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_ABOVE);
+    desc.ht_op->ht_op_info.secondary_chan_offset =
+        to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_ABOVE);
     want.cbw = CBW40;
     got = DeriveChanFromBssDesc(desc, bcn_chan, has_dsss_param, dsss_chan);
     EXPECT_EQ(true, want == got);
@@ -161,5 +165,32 @@ TEST(BssTest, DeriveChannel) {
     EXPECT_EQ(true, want == got);
 }
 
+struct TestVector {
+    std::vector<uint8_t> supp_rates;
+    std::vector<uint8_t> ext_supp_rates;
+    std::vector<uint8_t> want_basic;
+    std::vector<uint8_t> want_op;
+};
+
+TEST(BssTest, BasicRateSetAndOpRateSet) {
+    std::vector<TestVector> tvs{
+        // clang-format off
+        {{111,},                       {},                           {},         {111,},    },
+        {{},                           {111,},                       {},         {111,},    },
+        {{SupportedRate::basic(111),}, {},                           {111,},     {111,},    },
+        {{},                           {SupportedRate::basic(111),}, {111,},     {111,},    },
+        {{97,},                        {SupportedRate::basic(111),}, {111,},     {97, 111,},},
+        {{SupportedRate::basic(97),},  {111,},                       {97,},      {97, 111,},},
+        {{SupportedRate::basic(97),},  {SupportedRate::basic(111),}, {97, 111,}, {97, 111,},},
+        // clang-format on
+    };
+    for (auto tv : tvs) {
+        fidl::VectorPtr<uint8_t> got_basic{};
+        fidl::VectorPtr<uint8_t> got_op{};
+        BuildMlmeRateSets(tv.supp_rates, tv.ext_supp_rates, &got_basic, &got_op);
+        EXPECT_EQ(*got_basic, tv.want_basic);
+        EXPECT_EQ(*got_op, tv.want_op);
+    }
+}
 }  // namespace
 }  // namespace wlan

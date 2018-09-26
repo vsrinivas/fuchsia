@@ -391,6 +391,10 @@ struct BSSDescription {
     uint64 local_time;
 
     CapabilityInfo cap;
+    // in 0.5 Mbps, always non-basic.
+    vector<uint8> basic_rate_set;
+    // in 0.5 Mbps, non-basic, super set of basic_rate_set
+    vector<uint8> op_rate_set;
     vector<uint8>? country;
 
     // TODO(hahnr): This field represents an IE and should thus be named RSNE.

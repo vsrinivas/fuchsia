@@ -523,8 +523,10 @@ fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescription {
         timestamp: d.timestamp,
         local_time: d.local_time,
 
-        country: d.country.clone(),
         cap: fidl_mlme::CapabilityInfo { ..d.cap },
+        basic_rate_set: d.basic_rate_set.clone(),
+        op_rate_set: d.op_rate_set.clone(),
+        country: d.country.clone(),
 
         rsn: d.rsn.clone(),
 

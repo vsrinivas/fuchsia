@@ -127,6 +127,9 @@ zx_status_t Bss::Update(const Beacon& beacon, size_t frame_len) {
 
     // Post processing after IE parsing
 
+    BuildMlmeRateSets(supported_rates_, ext_supp_rates_, &bss_desc_.basic_rate_set,
+                      &bss_desc_.op_rate_set);
+
     // Interop: Do not discard the beacon unless it is confirmed to be safe to do.
     // TODO(porce): Do something with the validation result.
     ValidateBssDesc(bss_desc_, has_dsss_param_set_chan_, dsss_param_set_chan_);
@@ -456,7 +459,8 @@ wlan_channel_t DeriveChanFromBssDesc(const wlan_mlme::BSSDescription& bss_desc,
 
     // This overrides Secondary Channel Offset.
     // TODO(NET-677): Conditionally apply
-    if (bss_desc.ht_op->ht_op_info.sta_chan_width == to_enum_type(wlan_mlme::StaChanWidth::TWENTY)) {
+    if (bss_desc.ht_op->ht_op_info.sta_chan_width ==
+        to_enum_type(wlan_mlme::StaChanWidth::TWENTY)) {
         chan.cbw = CBW20;
         return chan;
     }
@@ -496,6 +500,24 @@ wlan_channel_t DeriveChanFromBssDesc(const wlan_mlme::BSSDescription& bss_desc,
         // Deprecated
         return chan;
     }
+}
+
+void ClassifyRateSets(const std::vector<uint8_t>& rates, ::fidl::VectorPtr<uint8_t>* basic,
+                      ::fidl::VectorPtr<uint8_t>* op) {
+    for (uint8_t r : rates) {
+        uint8_t numeric_rate = SupportedRate{r}.rate();
+        if (SupportedRate{r}.is_basic()) { (*basic).push_back(numeric_rate); }
+        (*op).push_back(numeric_rate);
+    }
+}
+
+void BuildMlmeRateSets(const std::vector<uint8_t>& supp_rates,
+                       const std::vector<uint8_t>& ext_supp_rates,
+                       ::fidl::VectorPtr<uint8_t>* basic, ::fidl::VectorPtr<uint8_t>* op) {
+    basic->resize(0);
+    op->resize(0);
+    ClassifyRateSets(supp_rates, basic, op);
+    ClassifyRateSets(ext_supp_rates, basic, op);
 }
 
 }  // namespace wlan
