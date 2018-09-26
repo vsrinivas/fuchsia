@@ -58,9 +58,8 @@ zx_status_t add_vmofile(fbl::RefPtr<VnodeDir> vnb, const char* path, zx_handle_t
             if (path[0] == 0) {
                 return ZX_ERR_INVALID_ARGS;
             }
-            bool vmofile = true;
-            return vnb->vfs()->CreateFromVmo(vnb.get(), vmofile,
-                                             fbl::StringPiece(path, strlen(path)), vmo, off, len);
+            return vnb->vfs()->CreateFromVmo(vnb.get(), fbl::StringPiece(path, strlen(path)),
+                                             vmo, off, len);
         } else {
             if (nextpath == path) {
                 return ZX_ERR_INVALID_ARGS;

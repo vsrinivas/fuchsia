@@ -278,7 +278,7 @@ void VnodeDir::MountSubtree(fbl::RefPtr<VnodeDir> subtree) {
     Dnode::AddChild(dnode_, subtree->dnode_);
 }
 
-zx_status_t VnodeDir::CreateFromVmo(bool vmofile, fbl::StringPiece name,
+zx_status_t VnodeDir::CreateFromVmo(fbl::StringPiece name,
                                     zx_handle_t vmo, zx_off_t off, zx_off_t len) {
     zx_status_t status;
     if ((status = CanCreate(name)) != ZX_OK) {
@@ -287,11 +287,7 @@ zx_status_t VnodeDir::CreateFromVmo(bool vmofile, fbl::StringPiece name,
 
     fbl::AllocChecker ac;
     fbl::RefPtr<VnodeMemfs> vn;
-    if (vmofile) {
-        vn = fbl::AdoptRef(new (&ac) VnodeVmo(vfs(), vmo, off, len));
-    } else {
-        vn = fbl::AdoptRef(new (&ac) VnodeFile(vfs(), vmo, len));
-    }
+    vn = fbl::AdoptRef(new (&ac) VnodeVmo(vfs(), vmo, off, len));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

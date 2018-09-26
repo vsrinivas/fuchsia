@@ -66,7 +66,6 @@ private:
 class VnodeFile final : public VnodeMemfs {
 public:
     VnodeFile(Vfs* vfs);
-    VnodeFile(Vfs* vfs, zx_handle_t vmo, zx_off_t length);
     ~VnodeFile();
 
     virtual zx_status_t ValidateFlags(uint32_t flags) final;
@@ -106,7 +105,7 @@ public:
     // Create a vnode from a VMO.
     // Fails if the vnode already exists.
     // Passes the vmo to the Vnode; does not duplicate it.
-    zx_status_t CreateFromVmo(bool vmofile, fbl::StringPiece name, zx_handle_t vmo,
+    zx_status_t CreateFromVmo(fbl::StringPiece name, zx_handle_t vmo,
                               zx_off_t off, zx_off_t len);
 
     // Mount a subtree as a child of this directory.
@@ -172,7 +171,7 @@ private:
 
 class Vfs : public fs::ManagedVfs {
 public:
-    zx_status_t CreateFromVmo(VnodeDir* parent, bool vmofile, fbl::StringPiece name,
+    zx_status_t CreateFromVmo(VnodeDir* parent, fbl::StringPiece name,
                               zx_handle_t vmo, zx_off_t off,
                               zx_off_t len);
 

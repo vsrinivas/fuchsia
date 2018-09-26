@@ -27,11 +27,11 @@
 
 namespace memfs {
 
-zx_status_t Vfs::CreateFromVmo(VnodeDir* parent, bool vmofile, fbl::StringPiece name,
-                             zx_handle_t vmo, zx_off_t off,
-                             zx_off_t len) {
+zx_status_t Vfs::CreateFromVmo(VnodeDir* parent, fbl::StringPiece name,
+                               zx_handle_t vmo, zx_off_t off,
+                               zx_off_t len) {
     fbl::AutoLock lock(&vfs_lock_);
-    return parent->CreateFromVmo(vmofile, name, vmo, off, len);
+    return parent->CreateFromVmo(name, vmo, off, len);
 }
 
 void Vfs::MountSubtree(VnodeDir* parent, fbl::RefPtr<VnodeDir> subtree) {

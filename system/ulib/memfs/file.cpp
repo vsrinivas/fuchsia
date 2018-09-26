@@ -29,11 +29,6 @@ constexpr size_t kMemfsMaxFileSize = 512 * 1024 * 1024;
 VnodeFile::VnodeFile(Vfs* vfs)
     : VnodeMemfs(vfs), vmo_size_(0), length_(0) {}
 
-VnodeFile::VnodeFile(Vfs* vfs, zx_handle_t vmo, zx_off_t length)
-    : VnodeMemfs(vfs), vmo_(vmo), length_(length) {
-    ZX_ASSERT(vmo_.get_size(&vmo_size_) == ZX_OK);
-}
-
 VnodeFile::~VnodeFile() = default;
 
 zx_status_t VnodeFile::ValidateFlags(uint32_t flags) {
