@@ -8,7 +8,7 @@
 mod test {
     use fuchsia_wayland_core::{Arg, FromArgs, IntoMessage};
     use fuchsia_zircon::{self as zx, HandleBased};
-    use test_protocol::{TestInterfaceEvent, TestInterfaceRequest};
+    use test_protocol::{test_interface, TestInterfaceEvent, TestInterfaceRequest};
     use zerocopy::AsBytes;
 
     static SENDER_ID: u32 = 3;
@@ -62,10 +62,8 @@ mod test {
 
     #[test]
     fn test_deserialize_uint() {
-        let request = TestInterfaceRequest::from_args(
-            0, /* opcode */
-            vec![Arg::Uint(UINT_VALUE)],
-        ).unwrap();
+        let request =
+            TestInterfaceRequest::from_args(0 /* opcode */, vec![Arg::Uint(UINT_VALUE)]).unwrap();
 
         assert_match!(request, TestInterfaceRequest::Uint{arg} => assert_eq!(arg, UINT_VALUE));
     }
@@ -85,8 +83,7 @@ mod test {
     #[test]
     fn test_deserialize_int() {
         let request =
-            TestInterfaceRequest::from_args(1 /* opcode */, vec![Arg::Int(INT_VALUE)])
-                .unwrap();
+            TestInterfaceRequest::from_args(1 /* opcode */, vec![Arg::Int(INT_VALUE)]).unwrap();
 
         assert_match!(request, TestInterfaceRequest::Int{arg} => assert_eq!(arg, INT_VALUE));
     }
@@ -108,10 +105,8 @@ mod test {
 
     #[test]
     fn test_deserialize_fixed() {
-        let request = TestInterfaceRequest::from_args(
-            2, /* opcode */
-            vec![Arg::Fixed(FIXED_VALUE)],
-        ).unwrap();
+        let request =
+            TestInterfaceRequest::from_args(2 /* opcode */, vec![Arg::Fixed(FIXED_VALUE)]).unwrap();
 
         assert_match!(request, TestInterfaceRequest::Fixed{arg} => assert_eq!(arg, FIXED_VALUE));
     }
@@ -169,10 +164,9 @@ mod test {
 
     #[test]
     fn test_deserialize_object() {
-        let request = TestInterfaceRequest::from_args(
-            4, /* opcode */
-            vec![Arg::Object(OBJECT_VALUE)],
-        ).unwrap();
+        let request =
+            TestInterfaceRequest::from_args(4 /* opcode */, vec![Arg::Object(OBJECT_VALUE)])
+                .unwrap();
 
         assert_match!(request, TestInterfaceRequest::Object{arg} => assert_eq!(arg, OBJECT_VALUE));
     }
@@ -194,10 +188,9 @@ mod test {
 
     #[test]
     fn test_deserialize_new_id() {
-        let request = TestInterfaceRequest::from_args(
-            5, /* opcode */
-            vec![Arg::NewId(NEW_ID_VALUE)],
-        ).unwrap();
+        let request =
+            TestInterfaceRequest::from_args(5 /* opcode */, vec![Arg::NewId(NEW_ID_VALUE)])
+                .unwrap();
 
         assert_match!(request, TestInterfaceRequest::NewId{arg} => assert_eq!(arg, NEW_ID_VALUE));
     }
@@ -233,12 +226,13 @@ mod test {
     #[test]
     fn test_deserialize_untyped_new_id() {
         let request = TestInterfaceRequest::from_args(
-            9 /* opcode */,
+            9, /* opcode */
             vec![
                 Arg::String(UNTYPED_NEW_ID_INTERFACE_NAME.to_string()),
                 Arg::Uint(UNTYPED_NEW_ID_INTERFACE_VERSION),
                 Arg::NewId(UNTYPED_NEW_ID_VALUE),
-            ]).unwrap();
+            ],
+        ).unwrap();
 
         assert_match!(request, TestInterfaceRequest::UntypedNewId{
             arg,
@@ -405,4 +399,10 @@ mod test {
         assert!(result.is_err());
     }
 
+    #[test]
+    fn test_enum() {
+        assert_eq!(0, test_interface::TestEnum::Entry1.bits());
+        assert_eq!(1, test_interface::TestEnum::Entry2.bits());
+        assert_eq!(2, test_interface::TestEnum::_0StartsWithNumber.bits());
+    }
 }

@@ -37,20 +37,48 @@ use \
         )?;
 
         for interface in protocol.interfaces.into_iter() {
-            let interface_name = to_camel_case(&interface.name);
-            let request_type_name = format!("{}Request", interface_name);
-            let event_type_name = format!("{}Event", interface_name);
-            self.codegen_message_enum(
-                &request_type_name,
-                &interface.requests,
-                format_dispatch_arg_rust,
-            )?;
-            self.codegen_message_enum(&event_type_name, &interface.events, format_wire_arg_rust)?;
-
-            self.codegen_impl_event(&event_type_name, &interface.events)?;
-            self.codegen_from_args(&request_type_name, &interface.requests)?;
-
+            // Most symbols will be defined in a nested module, but re-export
+            // some into the top-level namespace.
+            //
+            // Ex, for wl_display:
+            //
+            // pub mod wl_display {
+            //      pub enum Request { ... }
+            //      pub enum Event { ... }
+            //      pub struct WlDisplay;
+            // }
+            //
+            // pub use wl_display::WlDisplay;
+            // pub use wl_display::Request as WlDisplayRequest;
+            // pub use wl_display::Event as WlDisplayEvent;
+            writeln!(self.w, "pub mod {} {{", interface.name)?;
+            writeln!(self.w, "use super::*;")?;
             self.codegen_interface_trait(&interface)?;
+            self.codegen_message_enum("Request", &interface.requests, format_dispatch_arg_rust)?;
+            self.codegen_message_enum("Event", &interface.events, format_wire_arg_rust)?;
+            self.codegen_impl_event(&interface.events)?;
+            self.codegen_from_args(&interface.requests)?;
+            self.codegen_enum_types(&interface)?;
+            writeln!(self.w, "}} // mod {}", interface.name)?;
+            writeln!(self.w, "")?;
+            writeln!(
+                self.w,
+                "pub use crate::{}::{};",
+                interface.name,
+                interface.rust_name()
+            )?;
+            writeln!(
+                self.w,
+                "pub use crate::{}::Request as {}Request;",
+                interface.name,
+                interface.rust_name()
+            )?;
+            writeln!(
+                self.w,
+                "pub use crate::{}::Event as {}Event;",
+                interface.name,
+                interface.rust_name()
+            )?;
         }
         Ok(())
     }
@@ -96,7 +124,7 @@ use \
     /// a Message that can be sent over channel.
     ///
     /// Ex:
-    ///   impl IntoMessage for MyInterfaceEvent {
+    ///   impl IntoMessage for Event {
     ///       fn into_message(self, id: u32) -> Result<Message, Self::Error> {
     ///           let mut header = MessageHeader {...};
     ///           let mut message = Message::new();
@@ -115,11 +143,11 @@ use \
     ///           message.write_header(&header);
     ///       }
     ///   }
-    fn codegen_impl_event(&mut self, for_type: &str, messages: &Vec<ast::Message>) -> Result {
+    fn codegen_impl_event(&mut self, messages: &Vec<ast::Message>) -> Result {
         write!(
             self.w,
             "\
-impl IntoMessage for {target_type} {{
+impl IntoMessage for Event {{
     type Error = EncodeError;
     fn \
              into_message(self, id: u32) -> Result<Message, Self::Error> {{
@@ -131,16 +159,14 @@ impl IntoMessage for {target_type} {{
         }};
         let mut msg = Message::new();
         msg.write_header(&header)?;
-        match self {{",
-            target_type = for_type
+        match self {{"
         )?;
 
         for (op, event) in messages.iter().enumerate() {
             write!(
                 self.w,
                 "
-        {self_type}::{message_name} {{\n",
-                self_type = for_type,
+        Event::{message_name} {{\n",
                 message_name = to_camel_case(&event.name)
             )?;
             for arg in event.args.iter() {
@@ -174,15 +200,14 @@ impl IntoMessage for {target_type} {{
         )
     }
 
-    fn codegen_from_args(&mut self, for_type: &str, messages: &Vec<ast::Message>) -> Result {
+    fn codegen_from_args(&mut self, messages: &Vec<ast::Message>) -> Result {
         write!(
             self.w,
             "\
-impl FromArgs for {target_type} {{
-    fn from_args(op: u16, mut args: \
-             Vec<Arg>) -> Result<Self, failure::Error> {{
+impl FromArgs for Request {{
+    fn from_args(op: u16, mut args: Vec<Arg>) -> \
+             Result<Self, failure::Error> {{
         match op {{",
-            target_type = for_type
         )?;
 
         for (op, message) in messages.iter().enumerate() {
@@ -192,10 +217,9 @@ impl FromArgs for {target_type} {{
         {opcode} /* {op_name} */ => {{
             let mut iter = \
                  args.into_iter();
-            Ok({self_type}::{message_name} {{\n",
+            Ok(Request::{message_name} {{\n",
                 opcode = op,
                 op_name = message.name,
-                self_type = for_type,
                 message_name = to_camel_case(&message.name)
             )?;
             for arg in message.args.iter() {
@@ -253,8 +277,8 @@ impl FromArgs for {target_type} {{
         self.codegen_message_group_spec(&interface.requests)?;
         write!(self.w, "    const EVENTS: MessageGroupSpec = ")?;
         self.codegen_message_group_spec(&interface.events)?;
-        writeln!(self.w, "    type Request = {}Request;", camel_name)?;
-        writeln!(self.w, "    type Event = {}Event;", camel_name)?;
+        writeln!(self.w, "    type Request = Request;")?;
+        writeln!(self.w, "    type Event = Event;")?;
         writeln!(self.w, "}}")?;
         writeln!(self.w, "")?;
         Ok(())
@@ -271,6 +295,33 @@ impl FromArgs for {target_type} {{
             writeln!(self.w, "        ]),")?;
         }
         writeln!(self.w, "    ]);")?;
+        Ok(())
+    }
+
+    fn codegen_enum_types(&mut self, interface: &ast::Interface) -> Result {
+        for e in interface.enums.iter() {
+            writeln!(self.w, "pub enum {} {{", e.rust_name())?;
+            for entry in e.entries.iter() {
+                writeln!(self.w, "    {},", entry.rust_name())?;
+            }
+            writeln!(self.w, "}}")?;
+            writeln!(self.w, "")?;
+            writeln!(self.w, "impl {} {{", e.rust_name())?;
+            writeln!(self.w, "    pub fn bits(&self) -> u32 {{")?;
+            writeln!(self.w, "        match self {{")?;
+            for entry in e.entries.iter() {
+                writeln!(
+                    self.w,
+                    "        {}::{} => {},",
+                    e.rust_name(),
+                    entry.rust_name(),
+                    entry.value
+                )?;
+            }
+            writeln!(self.w, "        }}")?;
+            writeln!(self.w, "    }}")?;
+            writeln!(self.w, "}}")?;
+        }
         Ok(())
     }
 }
@@ -344,5 +395,36 @@ fn arg_to_primitive(arg: &ast::Arg) -> &'static str {
         ArgKind::NewId => "as_new_id()",
         ArgKind::Array => "as_array()",
         ArgKind::Fd => "as_handle()",
+    }
+}
+
+/// Helper trait for transforming wayland protocol names into the rust
+/// counterparts.
+///
+/// Ex, wl_display is written WlDisplay in rust code.
+trait RustName {
+    fn rust_name(&self) -> String;
+}
+
+impl RustName for ast::EnumEntry {
+    // some wayland enums are just numbers, which would result in illegal rust
+    // symbols. If we see a name that starts with a number we'll just prefix
+    // with '_'.
+    fn rust_name(&self) -> String {
+        let is_digit = self.name.chars().next().map_or(false, |c| c.is_digit(10));
+        let prefix = if is_digit { "_" } else { "" };
+        format!("{}{}", prefix, to_camel_case(&self.name))
+    }
+}
+
+impl RustName for ast::Enum {
+    fn rust_name(&self) -> String {
+        to_camel_case(&self.name)
+    }
+}
+
+impl RustName for ast::Interface {
+    fn rust_name(&self) -> String {
+        to_camel_case(&self.name)
     }
 }
