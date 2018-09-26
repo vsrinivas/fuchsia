@@ -55,7 +55,7 @@ func (am *ActivationMonitor) Do() {
 				am.CompleteReqs = nil
 				break
 			}
-			lg.Infof("Blocking update request received for %q", r.pkgData.Update.Merkle)
+			lg.Log.Printf("Blocking update request received for %q\n", r.pkgData.Update.Merkle)
 			if err := am.writeMetaFAR(r.pkgData); err != nil {
 				r.pkgData.Err = err
 				msg := fmt.Sprintf("could not write package meta file: %s", err)
@@ -84,7 +84,7 @@ func (am *ActivationMonitor) Do() {
 			if !ok {
 				am.Acts = nil
 			}
-			lg.Infof("Getting availablility for %q", pkg)
+			lg.Log.Printf("Getting availablility for %q", pkg)
 			if l, ok := am.waitList[pkg]; ok {
 				for _, wtrChan := range l {
 					wtrChan.Write([]byte(pkg), []zx.Handle{}, 0)
@@ -95,7 +95,7 @@ func (am *ActivationMonitor) Do() {
 		}
 
 		if am.CompleteReqs == nil && am.WriteReqs == nil && am.Acts == nil {
-			lg.Infof("All channels closed, exiting.")
+			lg.Log.Println("All channels closed, exiting.")
 			return
 		}
 	}
@@ -134,10 +134,10 @@ func (am *ActivationMonitor) writeMetaFAR(pkgData *daemon.GetResult) error {
 // sendError sends an error back through the client handle. This method will
 // return an error if it is unable to send an error throug the client handle.
 func sendError(replyChan *zx.Channel, msg string) error {
-	lg.Errorf("sending error: %q", msg)
+	lg.Log.Println(msg)
 	signalErr := replyChan.Handle().SignalPeer(0, zx.SignalUser0)
 	if signalErr != nil {
-		lg.Errorf("signal failed: %s", signalErr)
+		lg.Log.Printf("signal failed: %s", signalErr)
 	} else {
 		replyChan.Write([]byte(msg), []zx.Handle{}, 0)
 	}

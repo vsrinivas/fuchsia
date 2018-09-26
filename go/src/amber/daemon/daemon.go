@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -16,9 +17,9 @@ import (
 	"sync"
 	"time"
 
-	"amber/lg"
 	"amber/pkg"
 	"amber/source"
+
 	"fidl/fuchsia/amber"
 )
 
@@ -127,13 +128,13 @@ func (d *Daemon) addToActiveSrcs(s source.Source) {
 	id := s.GetId()
 
 	if oldSource, ok := d.srcs[id]; ok {
-		lg.Infof("overwriting active source: %s", id)
+		log.Printf("overwriting active source: %s", id)
 		oldSource.Close()
 	}
 
 	d.srcs[id] = NewSourceKeeper(s)
 
-	lg.Infof("added source: %s", id)
+	log.Printf("added source: %s", id)
 }
 
 // AddTUFSource is called to add a Source that can be used to get updates. When
@@ -149,13 +150,13 @@ func (d *Daemon) AddTUFSource(cfg *amber.SourceConfig) error {
 	}
 	src, err := source.NewTUFSource(store, cfg)
 	if err != nil {
-		lg.Errorf("failed to create TUF source: %v: %s", cfg.Id, err)
+		log.Printf("failed to create TUF source: %v: %s", cfg.Id, err)
 		return err
 	}
 
 	// Save the config.
 	if err := src.Save(); err != nil {
-		lg.Errorf("failed to save TUF config %v: %s", cfg.Id, err)
+		log.Printf("failed to save TUF config %v: %s", cfg.Id, err)
 		return err
 	}
 
@@ -267,7 +268,7 @@ func (d *Daemon) addSource(src source.Source) error {
 		m.SourcesAdded()
 	}
 
-	lg.Infof("added TUF source %s %v", cfg.Id, cfg.RepoUrl)
+	log.Printf("added TUF source %s %v\n", cfg.Id, cfg.RepoUrl)
 
 	return nil
 }
@@ -287,7 +288,7 @@ func (d *Daemon) RemoveTUFSource(id string) (amber.Status, error) {
 	cfg := s.GetConfig()
 	if cfg != nil {
 		if found := d.RemoveBlobRepo(cfg.BlobRepoUrl); !found {
-			lg.Warnf("blob repo not found: %s", cfg.BlobRepoUrl)
+			log.Printf("blob repo not found: %s", cfg.BlobRepoUrl)
 		}
 	}
 
@@ -295,9 +296,9 @@ func (d *Daemon) RemoveTUFSource(id string) (amber.Status, error) {
 
 	err = s.Delete()
 	if err != nil {
-		lg.Errorf("unable to remove TUFSource from disk: %v", err)
+		log.Printf("unable to remove TUFSource from disk: %v\n", err)
 	}
-	lg.Infof("removed source: %s", id)
+	log.Printf("removed source: %s", id)
 
 	return amber.StatusOk, nil
 }
@@ -308,13 +309,13 @@ func (d *Daemon) removeTUFSource(id string) (source.Source, error) {
 
 	s, err := d.srcLock(id)
 	if err != nil {
-		lg.Errorf("source %q not found: %s", id, err)
+		log.Printf("source %q not found: %s", id, err)
 		return nil, nil
 	}
 
 	err = s.DeleteConfig()
 	if err != nil {
-		lg.Errorf("unable to remove source config from disk: %v", err)
+		log.Printf("unable to remove source config from disk: %v", err)
 		return nil, err
 	}
 
@@ -346,15 +347,14 @@ func (d *Daemon) srcLock(srcID string) (source.Source, error) {
 }
 
 func (d *Daemon) Login(srcId string) (*amber.DeviceCode, error) {
-	lg.Infof("logging into %s", srcId)
+	log.Printf("logging into %s", srcId)
 	d.muSrcs.Lock()
 	src, err := d.srcLock(srcId)
 	d.muSrcs.Unlock()
 
 	if err != nil {
-		err := fmt.Errorf("error getting source by ID: %s", err)
-		lg.Errorf("%s", err)
-		return nil, err
+		log.Printf("error getting source by ID: %s", err)
+		return nil, fmt.Errorf("unknown source: %s", err)
 	}
 
 	return src.Login()
@@ -372,7 +372,7 @@ func (d *Daemon) blobRepos() []BlobRepo {
 
 func (d *Daemon) AddBlobRepo(br BlobRepo) error {
 	if _, err := url.ParseRequestURI(br.Address); err != nil {
-		lg.Errorf("Provided URL %q is not valid", br.Address)
+		log.Printf("Provided URL %q is not valid", br.Address)
 		return err
 	}
 
@@ -380,7 +380,7 @@ func (d *Daemon) AddBlobRepo(br BlobRepo) error {
 	d.repos[br.Address] = br
 	d.muRepos.Unlock()
 
-	lg.Infof("added blob repo: %v", br.Address)
+	log.Printf("added blob repo: %v\n", br.Address)
 
 	return nil
 }
@@ -399,11 +399,8 @@ func (d *Daemon) RemoveBlobRepo(blobUrl string) bool {
 	delete(d.repos, blobUrl)
 
 	if ok {
-		lg.Infof("removed blob repo: %q", blobUrl)
-	} else {
-		lg.Warnf("unknown blob repo: %q", blobUrl)
+		log.Printf("removed blob repo: %v\n", blobUrl)
 	}
-
 	return ok
 }
 
@@ -602,7 +599,7 @@ func detectExisting(pkgs []*pkg.Package, resultSet map[pkg.Package]*GetResult) [
 				f.Close()
 				// any error should be benign or result in an error down the line
 				if rmErr := os.Remove(f.Name()); rmErr != nil {
-					lg.Errorf("Unexpected error removing file: %s", rmErr)
+					log.Printf("Unexpected error removing file: %s", rmErr)
 				}
 			}
 		}
@@ -626,11 +623,11 @@ func (d *Daemon) getUpdates(rec *upRec) map[pkg.Package]*GetResult {
 		updates, err := src.AvailableUpdates(unfoundPkgs)
 		if len(updates) == 0 || err != nil {
 			if err == ErrRateExceeded {
-				lg.Errorf("source rate limit exceeded")
+				log.Printf("daemon: source rate limit exceeded")
 			} else if err != nil {
-				lg.Errorf("error checking source for updates %s", err)
+				log.Printf("daemon: error checking source for updates %s", err)
 			} else {
-				lg.Infof("no update found at source")
+				log.Printf("daemon: no update found at source")
 			}
 			continue
 		}
@@ -674,7 +671,7 @@ func (d *Daemon) getUpdates(rec *upRec) map[pkg.Package]*GetResult {
 	}
 
 	if len(unfoundPkgs) > 0 {
-		lg.Errorf("While getting updates, the following packages were not found")
+		log.Println("daemon: While getting updates, the following packages were not found")
 	}
 
 	for _, pkg := range unfoundPkgs {
@@ -683,7 +680,7 @@ func (d *Daemon) getUpdates(rec *upRec) map[pkg.Package]*GetResult {
 			File: nil,
 			Err:  NewErrProcessPackage("update not found"),
 		}
-		lg.Errorf("daemon: %s", pkg)
+		log.Printf("daemon: %s\n", pkg)
 		results[*pkg] = &res
 	}
 	return results
@@ -738,7 +735,7 @@ func (d *Daemon) GetSources() map[string]source.Source {
 	// using
 	allSrcs, err := loadSourcesFromPath(d.store)
 	if err != nil {
-		lg.Errorf("couldn't load sources from disk: %s", err)
+		log.Printf("couldn't load sources from disk: %s", err)
 	} else {
 		// don't override any in-memory entries
 		for _, src := range allSrcs {

@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -70,7 +71,7 @@ func LoadSourceConfigs(dir string) ([]*amber.SourceConfig, error) {
 	configs := make([]*amber.SourceConfig, 0, len(files))
 	for _, file := range files {
 		p := filepath.Join(dir, file.Name(), configFileName)
-		lg.Infof("loading source config %s", p)
+		log.Printf("loading source config %s", p)
 
 		cfg, err := LoadConfigFromDir(p)
 		if err != nil {
@@ -210,7 +211,7 @@ func setEnabledStatus(cfg *tufSourceConfig) bool {
 }
 
 func LoadTUFSourceFromPath(dir string) (*TUFSource, error) {
-	lg.Infof("loading source from %s", dir)
+	log.Printf("loading source from %s", dir)
 
 	f, err := os.Open(filepath.Join(dir, configFileName))
 	if err != nil {
@@ -389,6 +390,7 @@ func newTLSClientConfig(cfg *amber.TlsClientConfig) (*tls.Config, error) {
 		t.RootCAs = x509.NewCertPool()
 		for _, ca := range cfg.RootCAs {
 			if !t.RootCAs.AppendCertsFromPEM([]byte(ca)) {
+				log.Printf("failed to add cert")
 				return nil, fmt.Errorf("failed to add certificate")
 			}
 		}
@@ -400,7 +402,7 @@ func newTLSClientConfig(cfg *amber.TlsClientConfig) (*tls.Config, error) {
 // Note, the mutex should be held when this is called.
 func (f *TUFSource) initLocalStoreLocked() error {
 	if needsInit(f.localStore) {
-		lg.Infof("initializing local TUF store")
+		log.Print("initializing local TUF store")
 		err := f.tufClient.Init(f.keys, len(f.keys))
 		if err != nil {
 			return fmt.Errorf("TUF init failed: %s", err)
@@ -472,7 +474,7 @@ func (f *TUFSource) refreshOauth2TokenLocked() error {
 	}
 
 	if newToken.AccessToken != f.cfg.Oauth2Token.AccessToken {
-		lg.Infof("refreshed oauth2 token for: %s", f.cfg.Config.Id)
+		log.Printf("refreshed oauth2 token for: %s", f.cfg.Config.Id)
 		f.cfg.Oauth2Token = newToken
 		f.saveLocked()
 	}
@@ -481,26 +483,24 @@ func (f *TUFSource) refreshOauth2TokenLocked() error {
 }
 
 func (f *TUFSource) Login() (*amber.DeviceCode, error) {
-	lg.Infof("logging into tuf source: %s", f.cfg.Config.Id)
+	log.Printf("logging into tuf source: %s", f.cfg.Config.Id)
 
 	c := oauth2deviceConfig(f.cfg.Config.Oauth2Config)
 	if c == nil {
-		return nil, fmt.Errorf("source %q is not configured for oauth2", f.cfg.Config.Id)
+		log.Printf("source is not configured for oauth2")
+		return nil, fmt.Errorf("source is not configured for oauth2")
 	}
 
 	code, err := oauth2device.RequestDeviceCode(http.DefaultClient, c)
 	if err != nil {
+		log.Printf("failed to get device code: %s", err)
 		return nil, fmt.Errorf("failed to get device code: %s", err)
 	}
 
 	// Wait for the device authorization in a separate thread so we don't
 	// block the response. This thread will eventually time out if the user
 	// does not enter in the code.
-	go func() {
-		if err := f.waitForDeviceAuthorization(c, code); err != nil {
-			lg.Errorf("device authorization failed: %s", err)
-		}
-	}()
+	go f.waitForDeviceAuthorization(c, code)
 
 	return &amber.DeviceCode{
 		VerificationUrl: code.VerificationURL,
@@ -511,15 +511,16 @@ func (f *TUFSource) Login() (*amber.DeviceCode, error) {
 
 // Wait for the oauth2 server to authorize us to access the TUF repository. If
 // we are denied access, we will log the error, but otherwise do nothing.
-func (f *TUFSource) waitForDeviceAuthorization(config *oauth2device.Config, code *oauth2device.DeviceCode) error {
-	lg.Infof("waiting for device authorization: %s", f.cfg.Config.Id)
+func (f *TUFSource) waitForDeviceAuthorization(config *oauth2device.Config, code *oauth2device.DeviceCode) {
+	log.Printf("waiting for device authorization: %s", f.cfg.Config.Id)
 
 	token, err := oauth2device.WaitForDeviceAuthorization(http.DefaultClient, config, code)
 	if err != nil {
-		return fmt.Errorf("failed to get device authorization token: %s", err)
+		log.Printf("failed to get device authorization token: %s", err)
+		return
 	}
 
-	lg.Infof("token received for remote store: %s", f.cfg.Config.Id)
+	log.Printf("token received for remote store: %s", f.cfg.Config.Id)
 
 	// Now that we have a token, grab the lock, and update our client.
 	f.mu.Lock()
@@ -528,16 +529,16 @@ func (f *TUFSource) waitForDeviceAuthorization(config *oauth2device.Config, code
 	f.cfg.Oauth2Token = token
 
 	if err := f.updateTUFClientLocked(); err != nil {
-		return fmt.Errorf("failed to update tuf client: %s", err)
+		log.Printf("failed to update tuf client: %s", err)
+		return
 	}
 
 	if err := f.saveLocked(); err != nil {
-		return fmt.Errorf("failed to save config: %s", err)
+		log.Printf("failed to save config: %s", err)
+		return
 	}
 
-	lg.Infof("remote store updated: %s", f.cfg.Config.Id)
-
-	return nil
+	log.Printf("remote store updated: %s", f.cfg.Config.Id)
 }
 
 // AvailableUpdates takes a list of Packages and returns a map from those Packages
@@ -594,7 +595,7 @@ func (f *TUFSource) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.P
 
 		if (len(p.Version) == 0 || p.Version == hashStr) &&
 			(len(p.Merkle) == 0 || p.Merkle == m.Root) {
-			lg.Infof("tuf_source: available update %s version %s",
+			lg.Log.Printf("tuf_source: available update %s version %s\n",
 				p.Name, hashStr[:8])
 			updates[*p] = pkg.Package{
 				Name:    p.Name,
@@ -626,7 +627,7 @@ func (f *TUFSource) FetchPkg(pkg *pkg.Package) (*os.File, error) {
 	if err := f.initLocalStoreLocked(); err != nil {
 		return nil, fmt.Errorf("tuf_source: source could not be initialized: %s", err)
 	}
-	lg.Infof("tuf_source: requesting download for: %s", pkg.Name)
+	lg.Log.Printf("tuf_source: requesting download for: %s\n", pkg.Name)
 
 	if err := f.refreshOauth2TokenLocked(); err != nil {
 		return nil, fmt.Errorf("failed to refresh oauth2 token: %s", err)

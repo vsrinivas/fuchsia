@@ -10,11 +10,11 @@ package sys_update
 import (
 	"amber/daemon"
 	"amber/ipcclient"
-	"amber/lg"
 	"amber/pkg"
 	"bufio"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -63,7 +63,7 @@ func NewErrNoPackage(name string) ErrNoPackage {
 func NewSystemUpdateMonitor(d *daemon.Daemon, a bool) (*SystemUpdateMonitor, error) {
 	amber, err := connectToUpdateSrvc()
 	if err != nil {
-		lg.Errorf("sys_upd_mon: binding to update service failed: %s", err)
+		log.Printf("sys_upd_mon: binding to update service failed: %s", err)
 		return nil, err
 	}
 
@@ -82,7 +82,6 @@ func (upMon *SystemUpdateMonitor) Stop() {
 
 func (upMon *SystemUpdateMonitor) Check() {
 	if atomic.LoadUint32(&upMon.halt) == 1 {
-		lg.Infof("Skipping system update, system is halting")
 		return
 	}
 	upMon.checkNow <- struct{}{}
@@ -107,11 +106,8 @@ func (upMon *SystemUpdateMonitor) Start() {
 		}
 
 		if atomic.LoadUint32(&upMon.halt) == 1 {
-			lg.Infof("Skipping system update, system is halting")
 			return
 		}
-
-		lg.Infof("Checking for system update")
 
 		// If we haven't computed the initial "update" package's
 		// "meta/contents" merkle, do it now.
@@ -121,9 +117,9 @@ func (upMon *SystemUpdateMonitor) Start() {
 				upMon.updateMerkle = updateMerkle
 			} else {
 				if _, ok := err.(ErrNoPackage); ok {
-					lg.Infof("sys_upd_mon: \"update\" package not present on system")
+					log.Printf("sys_upd_mon: \"update\" package not present on system")
 				} else {
-					lg.Errorf("sys_upd_mon: error computing \"update\" package's "+
+					log.Printf("sys_upd_mon: error computing \"update\" package's "+
 						"\"meta/contents\" merkle. Treating package as "+
 						"nonexistent: %s", err)
 				}
@@ -135,9 +131,9 @@ func (upMon *SystemUpdateMonitor) Start() {
 		if upMon.systemImageMerkle == "" {
 			systemImageMerkle, err := currentSystemImageMerkle()
 			if err != nil {
-				lg.Errorf("sys_upd_mon: error determining \"system_image\"'s merkle: %s", err)
+				log.Printf("sys_upd_mon: error determining \"system_image\"'s merkle: %s", err)
 			} else {
-				lg.Infof("sys_upd_mon: current \"system_image\" merkle: %q", systemImageMerkle)
+				log.Printf("sys_upd_mon: current \"system_image\" merkle: %q", systemImageMerkle)
 				upMon.systemImageMerkle = systemImageMerkle
 			}
 		}
@@ -146,7 +142,7 @@ func (upMon *SystemUpdateMonitor) Start() {
 		updatePkg := &pkg.Package{Name: fmt.Sprintf("/update/%d", 0)}
 
 		if err := ipcclient.GetUpdateComplete(upMon.amber, updatePkg.Name, &updatePkg.Merkle); err != nil {
-			lg.Errorf("sys_upd_mon: unable to fetch package update: %s", err)
+			log.Printf("sys_upd_mon: unable to fetch package update: %s", err)
 			continue
 		}
 
@@ -154,20 +150,20 @@ func (upMon *SystemUpdateMonitor) Start() {
 		// it's "meta/contents" merkle.
 		latestUpdateMerkle, err := updatePackageContentMerkle()
 		if err != nil {
-			lg.Errorf("sys_upd_mon: error computing \"update\" package's "+
+			log.Printf("sys_upd_mon: error computing \"update\" package's "+
 				"\"meta/contents\" merkle: %s", err)
 			continue
 		}
 
 		if upMon.needsUpdate(latestUpdateMerkle) {
-			lg.Infof("System update starting...")
+			log.Println("System update starting...")
 
 			launchDesc := sys.LaunchInfo{Url: "system_updater"}
 			if err := runProgram(&launchDesc); err != nil {
-				lg.Errorf("sys_upd_mon: updater failed to start: %s", err)
+				log.Printf("sys_upd_mon: updater failed to start: %s", err)
 			}
 		} else {
-			lg.Infof("sys_upd_mon: no newer system version available")
+			log.Println("sys_upd_mon: no newer system version available")
 		}
 
 		upMon.updateMerkle = latestUpdateMerkle
@@ -201,10 +197,10 @@ func (upMon *SystemUpdateMonitor) needsUpdate(latestUpdateMerkle string) bool {
 	//     rm -r /data/pkgfs_index/packages/update
 	//
 	if upMon.updateMerkle != latestUpdateMerkle {
-		lg.Infof("sys_upd_mon: \"update\" package's \"meta/contents\" merkle has changed, triggering update")
+		log.Printf("sys_upd_mon: \"update\" package's \"meta/contents\" merkle has changed, triggering update")
 		return true
 	} else {
-		lg.Infof("sys_upd_mon: \"update\" package \"meta/contents\" merkle has not changed")
+		log.Printf("sys_upd_mon: \"update\" package \"meta/contents\" merkle has not changed")
 	}
 
 	// If we made it to this point, we've already seen this update package
@@ -229,21 +225,21 @@ func (upMon *SystemUpdateMonitor) needsUpdate(latestUpdateMerkle string) bool {
 
 	latestSystemImageMerkle, err := latestSystemImageMerkle()
 	if err != nil {
-		lg.Errorf("sys_upd_mon: error parsing \"update\"'s package \"meta/contents\": %s", err)
+		log.Printf("sys_upd_mon: error parsing \"update\"'s package \"meta/contents\": %s", err)
 	} else {
-		lg.Infof("sys_upd_mon: latest system_image merkle: %q", latestSystemImageMerkle)
+		log.Printf("sys_upd_mon: latest system_image merkle: %q", latestSystemImageMerkle)
 
 		// If the "/boot/config/devmgr" file format changed, we might
 		// not be able to parse out the "system_image" merkle, which
 		// would leave this variable blank. In that case, we ignore
 		// this check because we don't want to keep triggering an OTA.
 		if upMon.systemImageMerkle == "" {
-			lg.Infof("sys_upd_mon: no current \"system_image\" package merkle, skipping check")
+			log.Printf("sys_upd_mon: no current \"system_image\" package merkle, skipping check")
 		} else if upMon.systemImageMerkle != latestSystemImageMerkle {
-			lg.Infof("sys_upd_mon: \"system_image\" merkle changed, triggering update")
+			log.Printf("sys_upd_mon: \"system_image\" merkle changed, triggering update")
 			return true
 		} else {
-			lg.Infof("sys_upd_mon: \"system_image\" merkle has not changed")
+			log.Printf("sys_upd_mon: \"system_image\" merkle has not changed")
 		}
 	}
 
@@ -287,7 +283,7 @@ func readManifest(path string) (map[string]string, error) {
 		line := scanner.Text()
 		parts := strings.SplitN(scanner.Text(), "=", 2)
 		if len(parts) != 2 {
-			lg.Errorf("manifest %q line is malformed: %q", path, line)
+			log.Printf("manifest %q line is malformed: %q", path, line)
 		} else {
 			m[parts[0]] = parts[1]
 		}
@@ -417,13 +413,13 @@ func updatePackageContentMerkle() (string, error) {
 
 	merkleBytes, err := statMerkle(filepath.Join(path, "meta", "contents"))
 	if err != nil {
-		lg.Errorf("sys_upd_mon: merkle computation of \"update\" package's \"meta/contents\" file failed. " +
+		log.Printf("sys_upd_mon: merkle computation of \"update\" package's \"meta/contents\" file failed. " +
 			"treating \"update\" package as nonexistent")
 		return "", NewErrNoPackage("update")
 	}
 
 	merkle := hex.EncodeToString(merkleBytes)
-	lg.Infof("sys_upd_mon: \"update\" package's \"meta/contents\" merkle: %q", merkle)
+	log.Printf("sys_upd_mon: \"update\" package's \"meta/contents\" merkle: %q", merkle)
 
 	return merkle, nil
 }

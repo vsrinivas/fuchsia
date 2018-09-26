@@ -89,7 +89,7 @@ func (sm *SourceMonitor) check(t time.Time, ps *pkg.PackageSet) {
 	updates := sm.d.GetUpdates(ps)
 	for _, up := range updates {
 		if err := sm.processor(up, ps); err != nil {
-			lg.Errorf("error processing package %v", err)
+			lg.Log.Printf("error processing package %v\n", err)
 		}
 	}
 

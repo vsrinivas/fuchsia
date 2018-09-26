@@ -18,7 +18,6 @@ import (
 
 	"amber/daemon"
 	"amber/ipcserver"
-	"amber/lg"
 	"amber/pkg"
 	"amber/source"
 	"amber/sys_update"
@@ -27,6 +26,7 @@ import (
 
 	"app/context"
 	"syscall/zx"
+	"syslog/logger"
 )
 
 const (
@@ -63,12 +63,12 @@ func main() {
 	// load in the default sources.
 	storeExists, err := exists(*store)
 	if err != nil {
-		lg.Fatalf("%s", err)
+		log.Fatal(err)
 	}
 
 	d, err := startupDaemon(*store)
 	if err != nil {
-		lg.Fatalf("failed to start daemon: %s", err)
+		log.Fatalf("failed to start daemon: %s", err)
 	}
 	defer d.CancelAll()
 
@@ -79,21 +79,21 @@ func main() {
 	// there's currently no way to upgrade them. PKG-82 is tracking coming
 	// up with a plan to address this.
 	if !storeExists {
-		lg.Infof("initializing store: %s", *store)
+		log.Printf("initializing store: %s", *store)
 
 		if err := addDefaultSourceConfigs(d, defaultSourceDir); err != nil {
-			lg.Fatalf("failed to register default sources: %s", err)
+			log.Fatalf("failed to register default sources: %s", err)
 		}
 	}
 
 	supMon, err := sys_update.NewSystemUpdateMonitor(d, *autoUpdate)
 	if err != nil {
-		lg.Fatalf("failed to start system update monitor: %s", err)
+		log.Fatalf("failed to start system update monitor: %s", err)
 	}
 
 	go func(s *sys_update.SystemUpdateMonitor) {
 		s.Start()
-		lg.Infof("system update monitor exited")
+		log.Println("system update monitor exited")
 	}(supMon)
 
 	startFIDLSvr(ctx, d, supMon)
@@ -102,21 +102,27 @@ func main() {
 	select {}
 }
 
-func registerLogger(ctx *context.Context) {
-	fileLogger := lg.NewFileLogger("/data/amber/amber.log")
+type logWriter struct{}
 
-	var logger lg.Logger
-
-	fuchsiaLogger, err := lg.NewFuchsiaLoggerWithTags(ctx.Connector(), "amber")
-	if err == nil {
-		logger = lg.NewTeeLogger(fuchsiaLogger, fileLogger)
-	} else {
-		log.Printf("error initializing syslog interface: %s", err)
-		logger = lg.NewTeeLogger(lg.GetDefaultLogger(), fileLogger)
+func (l *logWriter) Write(data []byte) (n int, err error) {
+	// Strip out the trailing newline the `log` library adds because the
+	// logging service also adds a trailing newline.
+	if len(data) > 0 && data[len(data)-1] == '\n' {
+		data = data[:len(data)-1]
 	}
 
-	// Also override the standard log output in case we accidentally log to it.
-	lg.SetDefaultLogger(logger)
+	if err := logger.Infof("%s", data); err != nil {
+		return 0, err
+	}
+
+	return len(data), nil
+}
+
+func registerLogger(ctx *context.Context) {
+	if err := logger.InitDefaultLoggerWithTags(ctx.Connector(), "amber"); err != nil {
+		log.Printf("error initializing syslog interface: %s", err)
+	}
+	log.SetOutput(&logWriter{})
 }
 
 // addDefaultSourceConfigs installs source configs from a directory.
@@ -154,7 +160,7 @@ func startupDaemon(store string) (*daemon.Daemon, error) {
 		return nil, err
 	}
 
-	lg.Infof("monitoring for updates")
+	log.Println("monitoring for updates")
 
 	return d, err
 }
@@ -180,7 +186,7 @@ func readExtraFlags() {
 	d, err := os.Open(flagsDir)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			lg.Errorf("unexpected error reading %q: %s", flagsDir, err)
+			log.Printf("unexpected error reading %q: %s", flagsDir, err)
 		}
 		return
 	}
@@ -188,7 +194,7 @@ func readExtraFlags() {
 
 	files, err := d.Readdir(0)
 	if err != nil {
-		lg.Errorf("error listing flags directory %s", err)
+		log.Printf("error listing flags directory %s", err)
 		return
 	}
 	for _, f := range files {
@@ -199,14 +205,14 @@ func readExtraFlags() {
 		fPath := filepath.Join(d.Name(), f.Name())
 		file, err := os.Open(fPath)
 		if err != nil {
-			lg.Errorf("flags file %q could not be opened: %s", fPath, err)
+			log.Printf("flags file %q could not be opened: %s", fPath, err)
 			continue
 		}
 		r := bufio.NewReader(file)
 		for {
 			line, err := r.ReadString('\n')
 			if err != nil && err != io.EOF {
-				lg.Errorf("flags file %q had read error: %s", fPath, err)
+				log.Printf("flags file %q had read error: %s", fPath, err)
 				break
 			}
 
