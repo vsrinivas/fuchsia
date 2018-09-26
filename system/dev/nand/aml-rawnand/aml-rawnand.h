@@ -99,7 +99,7 @@ struct aml_controller_params {
  */
 struct __attribute__((packed)) aml_info_format {
     uint16_t info_bytes;
-    uint8_t zero_cnt; /* bit0~5 is valid */
+    uint8_t zero_bits; /* bit0~5 is valid */
     struct ecc_sta {
         uint8_t eccerr_cnt : 6;
         uint8_t notused : 1;

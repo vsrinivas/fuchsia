@@ -20,7 +20,13 @@
 #include <string.h>
 
 /*
- * Database of settings for the NAND flash devices we support
+ * Database of settings for the NAND flash devices we support.
+ * Note on chip_delay: chip_delay is the delay after we enqueue certain ONFI
+ * commands (RESET, READSTART). The value of 30us was experimentally picked for
+ * the Samsung NAND, and 20us for the Toshiba NAND. It turns out that a value
+ * of 25us works better for the Micron NAND (25us reduces the number of ECC
+ * errors significantly).
+ * TODO(ZX-2696): Determine the value of chip delay more scientifically.
  */
 struct nand_chip_table nand_chip_table[] = {
     {0x2C, 0xDC, "Micron", "MT29F4G08ABAEA", {20, 16, 15}, 25, true, 512, 0, 0, 0, 0},
