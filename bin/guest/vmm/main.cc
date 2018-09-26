@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <atomic>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -9,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <unordered_map>
 #include <vector>
 
 #include <fbl/unique_fd.h>
@@ -56,6 +58,8 @@
 static constexpr char kDsdtPath[] = "/pkg/data/dsdt.aml";
 static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
 #endif
+
+static constexpr char kWaylandDispatcherPackage[] = "wayland_bridge";
 
 static constexpr size_t kInputQueueDepth = 64;
 
@@ -360,8 +364,34 @@ int main(int argc, char** argv) {
     FXL_LOG(INFO) << "Could not create VMAR for wayland device";
     return status;
   }
-  machina::VirtioWl wl(guest.phys_mem(), std::move(wl_vmar),
-                       guest.device_dispatcher(), [](zx::channel channel) {});
+  std::atomic<uint32_t> wl_connection_id = 0;
+  std::unordered_map<uint32_t, fuchsia::sys::ComponentControllerPtr> wl_dispatchers;
+  machina::VirtioWl wl(
+      guest.phys_mem(), std::move(wl_vmar), guest.device_dispatcher(),
+      [&launcher, &wl_dispatchers, &wl_connection_id](zx::channel channel) {
+        // Launch the bridge process.
+        component::Services services;
+        fuchsia::sys::LaunchInfo launch_info{
+            .url = kWaylandDispatcherPackage,
+            .directory_request = services.NewRequest(),
+        };
+        fuchsia::sys::ComponentControllerPtr controller;
+        launcher->CreateComponent(std::move(launch_info),
+                                  controller.NewRequest());
+
+        // Retain the component controller so that the bridge stays alive.
+        uint32_t connection_id = wl_connection_id++;
+        controller.set_error_handler([connection_id, &wl_dispatchers]() {
+          wl_dispatchers.erase(connection_id);
+        });
+        wl_dispatchers.insert({connection_id, std::move(controller)});
+
+        // Connect to the |WaylandDispatcher| FIDL interface and forward the
+        // channel along.
+        fuchsia::guest::WaylandDispatcherPtr dispatcher;
+        services.ConnectToService(dispatcher.NewRequest());
+        dispatcher->OnNewConnection(std::move(channel));
+      });
   status = wl.Init();
   if (status != ZX_OK) {
     FXL_LOG(INFO) << "Could not init wayland device";
