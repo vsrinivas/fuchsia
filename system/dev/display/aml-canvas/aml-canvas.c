@@ -23,7 +23,7 @@
 
 static void aml_canvas_release(void* ctx) {
     aml_canvas_t* canvas = ctx;
-    io_buffer_release(&canvas->dmc_regs);
+    mmio_buffer_release(&canvas->dmc_regs);
     for (uint32_t index = 0; index < NUM_CANVAS_ENTRIES; index++) {
         if (canvas->pmt_handle[index] != ZX_HANDLE_INVALID) {
             zx_pmt_unpin(canvas->pmt_handle[index]);
@@ -228,7 +228,7 @@ static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Map all MMIOs
-    status = pdev_map_mmio_buffer(&canvas->pdev, 0,
+    status = pdev_map_mmio_buffer2(&canvas->pdev, 0,
                                   ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &canvas->dmc_regs);
     if (status != ZX_OK) {

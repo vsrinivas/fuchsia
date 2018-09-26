@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/device.h>
 #include <ddk/protocol/amlogic-canvas.h>
 #include <ddk/protocol/platform-bus.h>
@@ -21,8 +21,8 @@
 #define CANVAS_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define CANVAS_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 
-#define READ32_DMC_REG(a)                readl(io_buffer_virt(&canvas->dmc_regs) + a)
-#define WRITE32_DMC_REG(a, v)            writel(v, io_buffer_virt(&canvas->dmc_regs) + a)
+#define READ32_DMC_REG(a)                readl(canvas->dmc_regs.vaddr + a)
+#define WRITE32_DMC_REG(a, v)            writel(v, canvas->dmc_regs.vaddr + a)
 
 #define DMC_CAV_LUT_DATAL                   (0x12 << 2)
 #define DMC_CAV_LUT_DATAH                   (0x13 << 2)
@@ -75,7 +75,7 @@ typedef struct {
 typedef struct {
     zx_device_t* zxdev;
     platform_device_protocol_t pdev;
-    io_buffer_t dmc_regs;
+    mmio_buffer_t dmc_regs;
     mtx_t lock;
     canvas_protocol_t canvas;
     zx_handle_t bti;
