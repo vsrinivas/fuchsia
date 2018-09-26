@@ -45,12 +45,12 @@ class GuestVsockAcceptor : public fuchsia::guest::HostVsockAcceptor {
 
 void handle_socat_listen(uint32_t env_id, uint32_t port, async::Loop* loop,
                          component::StartupContext* context) {
-  fuchsia::guest::EnvironmentManagerSyncPtr guestmgr;
-  context->ConnectToEnvironmentService(guestmgr.NewRequest());
-  fuchsia::guest::EnvironmentControllerSyncPtr guest_env;
-  guestmgr->Connect(env_id, guest_env.NewRequest());
+  fuchsia::guest::EnvironmentManagerSyncPtr environment_manager;
+  context->ConnectToEnvironmentService(environment_manager.NewRequest());
+  fuchsia::guest::EnvironmentControllerSyncPtr environment_controller;
+  environment_manager->Connect(env_id, environment_controller.NewRequest());
   fuchsia::guest::HostVsockEndpointSyncPtr vsock_endpoint;
-  guest_env->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
+  environment_controller->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
 
   GuestVsockAcceptor acceptor(port, loop);
   fidl::Binding<fuchsia::guest::HostVsockAcceptor> binding(&acceptor);
@@ -67,12 +67,12 @@ void handle_socat_listen(uint32_t env_id, uint32_t port, async::Loop* loop,
 void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port,
                           async::Loop* loop,
                           component::StartupContext* context) {
-  fuchsia::guest::EnvironmentManagerSyncPtr guestmgr;
-  context->ConnectToEnvironmentService(guestmgr.NewRequest());
-  fuchsia::guest::EnvironmentControllerSyncPtr guest_env;
-  guestmgr->Connect(env_id, guest_env.NewRequest());
+  fuchsia::guest::EnvironmentManagerSyncPtr environment_manager;
+  context->ConnectToEnvironmentService(environment_manager.NewRequest());
+  fuchsia::guest::EnvironmentControllerSyncPtr environment_controller;
+  environment_manager->Connect(env_id, environment_controller.NewRequest());
   fuchsia::guest::HostVsockEndpointSyncPtr vsock_endpoint;
-  guest_env->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
+  environment_controller->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
 
   zx::socket socket, remote_socket;
   zx_status_t status =

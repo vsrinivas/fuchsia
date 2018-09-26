@@ -34,7 +34,7 @@ class GuestComponent {
   std::unique_ptr<GuestVsockEndpoint> endpoint_;
   component::Services services_;
   fuchsia::sys::ComponentControllerPtr component_controller_;
-  fuchsia::guest::InstanceControllerPtr guest_controller_;
+  fuchsia::guest::InstanceControllerPtr instance_controller_;
   fidl::BindingSet<fuchsia::guest::InstanceController> bindings_;
 };
 

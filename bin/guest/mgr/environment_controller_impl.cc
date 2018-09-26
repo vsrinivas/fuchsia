@@ -74,10 +74,10 @@ void EnvironmentControllerImpl::LaunchInstance(
     return;
   }
 
-  fuchsia::guest::InstanceInfo guest_info;
-  guest_info.cid = cid;
-  guest_info.label = label;
-  callback(std::move(guest_info));
+  callback(fuchsia::guest::InstanceInfo{
+      .cid = cid,
+      .label = label,
+  });
 }
 
 void EnvironmentControllerImpl::GetHostVsockEndpoint(
@@ -87,15 +87,15 @@ void EnvironmentControllerImpl::GetHostVsockEndpoint(
 
 fidl::VectorPtr<fuchsia::guest::InstanceInfo>
 EnvironmentControllerImpl::ListGuests() {
-  fidl::VectorPtr<fuchsia::guest::InstanceInfo> guest_infos =
+  fidl::VectorPtr<fuchsia::guest::InstanceInfo> infos =
       fidl::VectorPtr<fuchsia::guest::InstanceInfo>::New(0);
   for (const auto& it : guests_) {
-    fuchsia::guest::InstanceInfo guest_info;
-    guest_info.cid = it.first;
-    guest_info.label = it.second->label();
-    guest_infos.push_back(std::move(guest_info));
+    infos.push_back(fuchsia::guest::InstanceInfo{
+        .cid = it.first,
+        .label = it.second->label(),
+    });
   }
-  return guest_infos;
+  return infos;
 }
 
 void EnvironmentControllerImpl::ListInstances(ListInstancesCallback callback) {

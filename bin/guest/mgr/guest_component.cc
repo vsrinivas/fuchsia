@@ -14,12 +14,12 @@ GuestComponent::GuestComponent(
       endpoint_(std::move(endpoint)),
       services_(std::move(services)),
       component_controller_(std::move(component_controller)) {
-  services_.ConnectToService(guest_controller_.NewRequest());
+  services_.ConnectToService(instance_controller_.NewRequest());
 }
 
 void GuestComponent::AddBinding(
     fidl::InterfaceRequest<fuchsia::guest::InstanceController> request) {
-  bindings_.AddBinding(guest_controller_.get(), std::move(request));
+  bindings_.AddBinding(instance_controller_.get(), std::move(request));
 }
 
 }  // namespace guestmgr

@@ -14,26 +14,26 @@
 void handle_launch(int argc, const char* argv[], async::Loop* loop,
                    component::StartupContext* context) {
   // Create environment.
-  fuchsia::guest::EnvironmentManagerSyncPtr guestmgr;
+  fuchsia::guest::EnvironmentManagerSyncPtr environment_manager;
 
-  context->ConnectToEnvironmentService(guestmgr.NewRequest());
-  fuchsia::guest::EnvironmentControllerSyncPtr guest_env;
-  guestmgr->Create(argv[0], guest_env.NewRequest());
+  context->ConnectToEnvironmentService(environment_manager.NewRequest());
+  fuchsia::guest::EnvironmentControllerSyncPtr environment_controller;
+  environment_manager->Create(argv[0], environment_controller.NewRequest());
 
   // Launch guest.
-  fuchsia::guest::InstanceControllerPtr guest_controller;
+  fuchsia::guest::InstanceControllerPtr instance_controller;
   fuchsia::guest::LaunchInfo launch_info;
   launch_info.url = argv[0];
   for (int i = 0; i < argc - 1; ++i) {
     launch_info.args.push_back(argv[i + 1]);
   }
-  fuchsia::guest::InstanceInfo guest_info;
-  guest_env->LaunchInstance(std::move(launch_info),
-                            guest_controller.NewRequest(), &guest_info);
-  guest_controller.set_error_handler([loop] { loop->Shutdown(); });
+  fuchsia::guest::InstanceInfo instance_info;
+  environment_controller->LaunchInstance(
+      std::move(launch_info), instance_controller.NewRequest(), &instance_info);
+  instance_controller.set_error_handler([loop] { loop->Shutdown(); });
 
   // Create the framebuffer view.
-  guest_controller->GetViewProvider([context](auto view_provider) {
+  instance_controller->GetViewProvider([context](auto view_provider) {
     if (!view_provider.is_valid()) {
       return;
     }
@@ -51,7 +51,7 @@ void handle_launch(int argc, const char* argv[], async::Loop* loop,
   // Open the serial service of the guest and process IO.
   zx::socket socket;
   SerialConsole console(loop);
-  guest_controller->GetSerial(
+  instance_controller->GetSerial(
       [&console](zx::socket socket) { console.Start(std::move(socket)); });
   loop->Run();
 }

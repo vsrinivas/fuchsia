@@ -31,7 +31,7 @@ void EnvironmentManagerImpl::List(ListCallback callback) {
   fidl::VectorPtr<fuchsia::guest::EnvironmentInfo> env_infos =
       fidl::VectorPtr<fuchsia::guest::EnvironmentInfo>::New(0);
   for (const auto& env : environments_) {
-    fidl::VectorPtr<fuchsia::guest::InstanceInfo> guest_infos =
+    fidl::VectorPtr<fuchsia::guest::InstanceInfo> instance_infos =
         fidl::VectorPtr<fuchsia::guest::InstanceInfo>::New(0);
     fuchsia::guest::EnvironmentInfo env_info;
     env_info.id = env.first;
