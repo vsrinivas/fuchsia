@@ -4,7 +4,7 @@
 
 use bytes::Bytes;
 use failure::bail;
-use wlan_rsn::{akm, cipher, rsna::NegotiatedRsne, rsne::{Rsne, RsnCapabilities}, suite_selector::OUI};
+use wlan_rsn::{akm, cipher, NegotiatedRsne, rsne::{Rsne, RsnCapabilities}, OUI};
 
 fn make_cipher(suite_type: u8) -> cipher::Cipher {
     cipher::Cipher { oui: Bytes::from(&OUI[..]), suite_type }

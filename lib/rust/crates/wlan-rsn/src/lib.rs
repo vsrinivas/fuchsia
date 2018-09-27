@@ -8,6 +8,8 @@
 
 use failure::{self, Fail};
 
+// TODO(hahnr): Limit exports and rearrange modules.
+
 pub mod akm;
 pub mod auth;
 pub mod cipher;
@@ -28,9 +30,13 @@ use crate::key::exchange::{
     handshake::fourway::{self, MessageNumber},
     handshake::group_key,
 };
-use crate::rsne::Rsne;
 use crate::rsna::esssa::EssSa;
-use crate::rsna::{NegotiatedRsne, UpdateSink, Role};
+use crate::rsna::{UpdateSink, Role};
+use std::sync::Arc;
+
+pub use crate::crypto_utils::nonce as nonce;
+pub use crate::rsna::NegotiatedRsne as NegotiatedRsne;
+pub use crate::suite_selector::OUI as OUI;
 
 #[derive(Debug, PartialEq)]
 pub struct Supplicant {
@@ -40,12 +46,13 @@ pub struct Supplicant {
 impl Supplicant {
     /// WPA2-PSK CCMP-128 Supplicant which supports 4-Way- and Group-Key Handshakes.
     pub fn new_wpa2psk_ccmp128(
+        nonce_rdr: Arc<nonce::NonceReader>,
         ssid: &[u8],
         passphrase: &[u8],
         s_addr: [u8; 6],
-        s_rsne: Rsne,
+        s_rsne: rsne::Rsne,
         a_addr: [u8; 6],
-        a_rsne: Rsne,
+        a_rsne: rsne::Rsne,
     ) -> Result<Supplicant, failure::Error> {
         let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;
         let akm = negotiated_rsne.akm.clone();
@@ -56,7 +63,7 @@ impl Supplicant {
             negotiated_rsne,
             auth::Config::Psk(psk::Config::new(passphrase, ssid)?),
             exchange::Config::FourWayHandshake(fourway::Config::new(
-                Role::Supplicant, s_addr, s_rsne, a_addr, a_rsne
+                Role::Supplicant, s_addr, s_rsne, a_addr, a_rsne, nonce_rdr
             )?),
             Some(exchange::Config::GroupKeyHandshake(group_key::Config {
                 role: Role::Supplicant, akm, cipher: group_data
@@ -97,12 +104,13 @@ impl Authenticator {
     /// WPA2-PSK CCMP-128 Authenticator which supports 4-Way Handshake.
     /// The Authenticator does not support GTK rotations.
     pub fn new_wpa2psk_ccmp128(
+        nonce_rdr: Arc<nonce::NonceReader>,
         ssid: &[u8],
         passphrase: &[u8],
         s_addr: [u8; 6],
-        s_rsne: Rsne,
+        s_rsne: rsne::Rsne,
         a_addr: [u8; 6],
-        a_rsne: Rsne
+        a_rsne: rsne::Rsne
     ) -> Result<Authenticator, failure::Error> {
         let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;
         let esssa = EssSa::new(
@@ -110,7 +118,7 @@ impl Authenticator {
             negotiated_rsne,
             auth::Config::Psk(psk::Config::new(passphrase, ssid)?),
             exchange::Config::FourWayHandshake(fourway::Config::new(
-                Role::Authenticator, s_addr, s_rsne, a_addr, a_rsne
+                Role::Authenticator, s_addr, s_rsne, a_addr, a_rsne, nonce_rdr
             )?),
             // Group-Key Handshake does not support Authenticator role yet.
             None,

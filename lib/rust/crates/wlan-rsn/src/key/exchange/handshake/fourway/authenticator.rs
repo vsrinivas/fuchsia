@@ -2,22 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Allow unused until Authenticator is fully supported.
-#![allow(unused)]
-
 use bytes::Bytes;
-use crate::crypto_utils::nonce::NonceReader;
+use crate::crypto_utils::nonce::Nonce;
 use crate::integrity;
 use crate::key::exchange::handshake::fourway::{self, Config, FourwayHandshakeFrame};
 use crate::key::exchange::Key;
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
 use crate::key_data::{self, kde};
-use crate::rsna::{derive_key_descriptor_version, KeyFrameState, KeyFrameKeyDataState, NegotiatedRsne, SecAssocUpdate, UpdateSink};
+use crate::rsna::{derive_key_descriptor_version, KeyFrameState, NegotiatedRsne, SecAssocUpdate, UpdateSink};
 use crate::Error;
 use failure::{self, bail, ensure};
 use log::error;
-use std::rc::Rc;
 
 #[derive(Debug, PartialEq)]
 pub enum State {
@@ -28,7 +24,7 @@ pub enum State {
     AwaitingMsg2 {
         pmk: Vec<u8>,
         cfg: Config,
-        anonce: Vec<u8>,
+        anonce: Nonce,
         last_krc: u64,
     },
     AwaitingMsg4 {
@@ -48,20 +44,29 @@ pub fn new(cfg: Config, pmk: Vec<u8>) -> State {
 }
 
 impl State {
-    pub fn initiate(self, update_sink: &mut UpdateSink, krc: u64, anonce: Vec<u8>) -> Self {
+    pub fn initiate(self, update_sink: &mut UpdateSink, krc: u64) -> Self {
         match self {
-            State::Idle { cfg, pmk } => match initiate_internal(update_sink, &cfg, krc, &anonce[..]) {
-                Ok(()) => State::AwaitingMsg2 {anonce, cfg, pmk, last_krc: krc + 1 },
-                Err(e) => {
-                    error!("error: {}", e);
-                    State::Idle { cfg, pmk }
+            State::Idle { cfg, pmk } => {
+                let anonce = match cfg.nonce_rdr.next() {
+                    Ok(nonce) => nonce,
+                    Err(e) => {
+                        error!("error generating anonce: {}", e);
+                        return State::Idle { cfg, pmk }
+                    }
+                };
+                match initiate_internal(update_sink, &cfg, krc, &anonce[..]) {
+                    Ok(()) => State::AwaitingMsg2 {anonce: anonce, cfg, pmk, last_krc: krc + 1 },
+                    Err(e) => {
+                        error!("error: {}", e);
+                        State::Idle { cfg, pmk }
+                    }
                 }
             },
             other_state => other_state,
         }
     }
 
-    pub fn on_eapol_key_frame(self, update_sink: &mut UpdateSink, krc: u64, frame: FourwayHandshakeFrame) -> Self {
+    pub fn on_eapol_key_frame(self, update_sink: &mut UpdateSink, _krc: u64, frame: FourwayHandshakeFrame) -> Self {
         match self {
             State::Idle { cfg, pmk } => {
                 error!("received EAPOL Key frame before initiate 4-Way Handshake");

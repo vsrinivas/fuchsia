@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use bytes::Bytes;
-use crate::crypto_utils::nonce::NonceReader;
+use crate::crypto_utils::nonce::Nonce;
 use crate::integrity;
 use crate::key::exchange::handshake::fourway::{self, Config, FourwayHandshakeFrame};
 use crate::key::exchange::Key;
@@ -16,8 +16,6 @@ use crate::Error;
 use eapol;
 use failure::{self, bail, ensure};
 use log::error;
-
-type Nonce = Vec<u8>;
 
 // IEEE Std 802.11-2016, 12.7.6.2
 fn handle_message_1(
@@ -38,7 +36,7 @@ fn handle_message_1(
     let ptk = Ptk::new(pmk, &cfg.a_addr, &cfg.s_addr, &anonce[..], snonce, &rsne.akm, pairwise)?;
     let msg2 = create_message_2(cfg, ptk.kck(), &rsne, frame, &snonce[..])?;
 
-    Ok((msg2, ptk, anonce.to_vec()))
+    Ok((msg2, ptk, anonce))
 }
 
 // IEEE Std 802.11-2016, 12.7.6.3
@@ -168,24 +166,21 @@ pub enum State {
     AwaitingMsg1 {
         pmk: Vec<u8>,
         cfg: Config,
-        nonce_rdr: NonceReader,
     },
     AwaitingMsg3 {
         pmk: Vec<u8>,
         ptk: Ptk,
-        anonce: Vec<u8>,
+        anonce: Nonce,
         cfg: Config,
-        nonce_rdr: NonceReader,
     },
     Completed {
         pmk: Vec<u8>,
         cfg: Config,
-        nonce_rdr: NonceReader,
     },
 }
 
-pub fn new(cfg: Config, pmk: Vec<u8>, nonce_rdr: NonceReader) -> State {
-    State::AwaitingMsg1 { pmk, cfg, nonce_rdr }
+pub fn new(cfg: Config, pmk: Vec<u8>) -> State {
+    State::AwaitingMsg1 { pmk, cfg }
 }
 
 impl State {
@@ -195,41 +190,41 @@ impl State {
         frame: FourwayHandshakeFrame,
     ) -> Self {
         match self {
-            State::AwaitingMsg1 { pmk, cfg, mut nonce_rdr } => {
+            State::AwaitingMsg1 { pmk, cfg } => {
                 // Safe since the frame is only used for deriving the message number.
                 match fourway::message_number(frame.get().unsafe_get_raw()) {
                     fourway::MessageNumber::Message1 => {
-                        let snonce = match nonce_rdr.next() {
+                        let snonce = match cfg.nonce_rdr.next() {
                             Ok(nonce) => nonce,
                             Err(e) => {
                                 error!("error: {}", e);
-                                return State::AwaitingMsg1 { pmk, cfg, nonce_rdr };
+                                return State::AwaitingMsg1 { pmk, cfg };
                             }
                         };
                         match handle_message_1(&cfg, &pmk[..], &snonce[..], frame) {
                             Err(e) => {
                                 error!("error: {}", e);
-                                return State::AwaitingMsg1 { pmk, cfg, nonce_rdr };
+                                return State::AwaitingMsg1 { pmk, cfg };
                             },
                             Ok((msg2, ptk, anonce)) => {
                                 update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg2));
                                 update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
-                                State::AwaitingMsg3 { pmk, ptk, cfg, nonce_rdr, anonce }
+                                State::AwaitingMsg3 { pmk, ptk, cfg, anonce }
                             }
                         }
                     },
                     unexpected_msg => {
                         error!("error: {}", Error::Unexpected4WayHandshakeMessage(unexpected_msg));
-                        State::AwaitingMsg1 { pmk, cfg, nonce_rdr }
+                        State::AwaitingMsg1 { pmk, cfg }
                     },
                 }
             },
-            State::AwaitingMsg3 { pmk, ptk, cfg, nonce_rdr, .. } => {
+            State::AwaitingMsg3 { pmk, ptk, cfg, .. } => {
                 // Safe since the frame is only used for deriving the message number.
                 match fourway::message_number(frame.get().unsafe_get_raw()) {
                     // Restart handshake if first message was received.
                     fourway::MessageNumber::Message1 => {
-                        State::AwaitingMsg1 { pmk, cfg, nonce_rdr }
+                        State::AwaitingMsg1 { pmk, cfg }
                     },
                     // Third message of the handshake is only processed once to prevent replay
                     // attacks.
@@ -237,28 +232,28 @@ impl State {
                         match handle_message_3(&cfg, ptk.kck(), ptk.kek(), frame) {
                             Err(e) => {
                                 error!("error: {}", e);
-                                State::AwaitingMsg1 { pmk, cfg, nonce_rdr }
+                                State::AwaitingMsg1 { pmk, cfg }
                             },
                             Ok((msg4, gtk)) => {
                                 update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg4));
                                 update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk)));
-                                State::Completed { pmk, cfg, nonce_rdr }
+                                State::Completed { pmk, cfg }
                             }
                         }
                     },
                     unexpected_msg => {
                         error!("error: {}", Error::Unexpected4WayHandshakeMessage(unexpected_msg));
-                        State::AwaitingMsg1 { pmk, cfg, nonce_rdr }
+                        State::AwaitingMsg1 { pmk, cfg }
                     },
                 }
 
             },
-            State::Completed { pmk, cfg, nonce_rdr } => {
+            State::Completed { pmk, cfg } => {
                 // Safe since the frame is only used for deriving the message number.
                 match fourway::message_number(frame.get().unsafe_get_raw()) {
                     // Restart handshake if first message was received to support re-keying.
-                    fourway::MessageNumber::Message1 => State::AwaitingMsg1 { pmk, cfg, nonce_rdr },
-                    _ => State::Completed { pmk, cfg, nonce_rdr }
+                    fourway::MessageNumber::Message1 => State::AwaitingMsg1 { pmk, cfg },
+                    _ => State::Completed { pmk, cfg }
                 }
             },
         }

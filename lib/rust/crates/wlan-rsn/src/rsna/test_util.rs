@@ -13,10 +13,10 @@ use crate::key::exchange::{
 use crate::key::{ptk::Ptk, gtk::Gtk};
 use crate::key_data;
 use crate::key_data::kde;
-use crate::{Authenticator, Supplicant};
 use crate::rsna::{
     SecAssocUpdate, NegotiatedRsne, VerifiedKeyFrame
 };
+use crate::{Authenticator, Supplicant};
 use crate::rsne::Rsne;
 use crate::suite_selector::OUI;
 use hex::FromHex;
@@ -69,17 +69,21 @@ pub fn get_s_rsne() -> Rsne {
 }
 
 pub fn get_supplicant() -> Supplicant {
-    Supplicant::new_wpa2psk_ccmp128("ThisIsASSID".as_bytes(),
-                                  "ThisIsAPassword".as_bytes(),
-                                  test_util::S_ADDR,
-                                  test_util::get_s_rsne(),
-                                  test_util::A_ADDR,
-                                  test_util::get_a_rsne())
+    let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
+    Supplicant::new_wpa2psk_ccmp128(nonce_rdr,
+                                    "ThisIsASSID".as_bytes(),
+                                    "ThisIsAPassword".as_bytes(),
+                                    test_util::S_ADDR,
+                                    test_util::get_s_rsne(),
+                                    test_util::A_ADDR,
+                                    test_util::get_a_rsne())
         .expect("could not create Supplicant")
 }
 
 pub fn get_authenticator() -> Authenticator {
-    Authenticator::new_wpa2psk_ccmp128("ThisIsASSID".as_bytes(),
+    let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
+    Authenticator::new_wpa2psk_ccmp128(nonce_rdr,
+                                       "ThisIsASSID".as_bytes(),
                                        "ThisIsAPassword".as_bytes(),
                                        test_util::S_ADDR,
                                        test_util::get_s_rsne(),
@@ -134,19 +138,8 @@ pub fn mic_len() -> usize {
     get_akm().mic_bytes().expect("AKM has no known MIC size") as usize
 }
 
-pub fn get_nonce() -> Vec<u8> {
-    NonceReader::new(&S_ADDR[..])
-        .expect("error creating NonceReader")
-        .next()
-        .expect("error generating nonce")
-}
-
 pub fn get_akm() -> akm::Akm {
     get_s_rsne().akm_suites.remove(0)
-}
-
-pub fn get_pairwise_cipher() -> cipher::Cipher {
-    get_s_rsne().pairwise_cipher_suites.remove(0)
 }
 
 pub fn get_4whs_msg1<F>(anonce: &[u8], msg_modifier: F) -> eapol::KeyFrame
@@ -272,12 +265,14 @@ pub fn is_zero(slice: &[u8]) -> bool {
 }
 
 pub fn make_fourway_cfg(role: Role) -> fourway::Config {
+    let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
     fourway::Config::new(
         role,
         test_util::S_ADDR,
         test_util::get_s_rsne(),
         test_util::A_ADDR,
         test_util::get_a_rsne(),
+        nonce_rdr,
     ).expect("could not construct PTK exchange method")
 }
 

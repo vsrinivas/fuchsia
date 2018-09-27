@@ -10,7 +10,7 @@ use failure::{bail, ensure};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent};
 use futures::channel::mpsc;
 use log::{debug, info, error, warn};
-use wlan_rsn::{Authenticator, rsna::{UpdateSink, SecAssocUpdate}, rsne::Rsne};
+use wlan_rsn::{Authenticator, rsna::{UpdateSink, SecAssocUpdate}, rsne::Rsne, nonce::NonceReader};
 
 use crate::ap::{
     aid::AssociationId,
@@ -236,8 +236,16 @@ impl<T: Tokens> InfraBss<T> {
             warn!("incompatible client RSNE");
             fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
         })?;
+
+        // Note: There should be one Reader per device, not per SME.
+        // Follow-up with improving on this.
+        let nonce_rdr = NonceReader::new(&self.device_info.addr[..]).map_err(|e| {
+            warn!("failed to create NonceReader: {}", e);
+            fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
+        })?;
         let authenticator =
-            Authenticator::new_wpa2psk_ccmp128(&self.ssid, &a_rsn.password, client_addr.clone(),
+            Authenticator::new_wpa2psk_ccmp128(nonce_rdr,
+                                               &self.ssid, &a_rsn.password, client_addr.clone(),
                                                s_rsne, self.device_info.addr, a_rsn.rsne)
                 .map_err(|e| {
                     warn!("failed to create authenticator: {}", e);

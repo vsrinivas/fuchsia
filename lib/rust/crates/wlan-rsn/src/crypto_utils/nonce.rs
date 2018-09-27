@@ -7,27 +7,32 @@ use crate::crypto_utils::prf;
 use failure::{self, bail};
 use num::bigint::{BigUint, RandBigInt};
 use rand::OsRng;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use time;
 
-// Thread-safe nonce generator.
-// According to IEEE Std 802.11-2016, 12.7.5 each STA should be configured with an initial, random
-// counter at system boot up time.
+pub type Nonce = [u8; 32];
+
+/// Thread-safe nonce generator.
+/// According to IEEE Std 802.11-2016, 12.7.5 each STA should be configured with an initial,
+/// cryptographic-quality random counter at system boot up time.
 #[derive(Debug)]
 pub struct NonceReader {
     key_counter: Mutex<BigUint>,
 }
 
-// There should only ever be one NonceReader which renders this comparison superfluous. In addition,
-// this check would require acquiring the lock to access the underlying counter. As a result, simply
-// always assume two NonceReader match.
+// This implementation is a direct result of a test outside of this crate comparing an object which
+// owns a NonceReader to an expected value. As a result, many struct in this crate now have to
+// derive PartialEq. This should get fixed.
+// For now, assume NonceReaders always match as there should only ever be one created.
 impl PartialEq for NonceReader {
     fn eq(&self, _other: &NonceReader) -> bool { true }
 }
 
 impl NonceReader {
-    pub fn new(sta_addr: &[u8]) -> Result<NonceReader, failure::Error> {
+    pub fn new(sta_addr: &[u8]) -> Result<Arc<NonceReader>, failure::Error> {
         // Write time and STA's address to buffer for PRF-256.
+        // It's unclear whether or not using PRF has any significant cryptographic advantage.
+        // For the time being, follow IEEE's recommendation for nonce generation.
         // IEEE Std 802.11-2016, 12.7.5 recommends using a time in NTP format.
         // Fuchsia has no support for NTP yet; instead use a regular timestamp.
         // TODO(NET-430): Use time in NTP format once Fuchsia added support.
@@ -36,21 +41,23 @@ impl NonceReader {
         buf.put_slice(sta_addr);
         let k = OsRng::new()?.gen_biguint(256).to_bytes_le();
         let init = prf(&k[..], "Init Counter", &buf[..], 256)?;
-        Ok(NonceReader {
+        Ok(Arc::new(NonceReader {
             key_counter: Mutex::new(BigUint::from_bytes_le(&init[..])),
-        })
+        }))
     }
 
-    pub fn next(&mut self) -> Result<Vec<u8>, failure::Error> {
+    pub fn next(&self) -> Result<Nonce, failure::Error> {
         match self.key_counter.lock() {
-            Err(_) => bail!("NonceReader lock is poisoned"),
+            Err(_) => bail!("NonceReader's lock is poisoned"),
             Ok(mut counter) => {
                 *counter += 1u8;
 
                 // Expand nonce if it's less than 32 bytes.
                 let mut result = (*counter).to_bytes_le();
                 result.resize(32, 0);
-                Ok(result)
+                let mut nonce = Nonce::default();
+                nonce.copy_from_slice(&result[..]);
+                Ok(nonce)
             }
         }
     }
@@ -63,7 +70,7 @@ mod tests {
     #[test]
     fn test_next_nonce() {
         let addr: [u8; 6] = [1, 2, 3, 4, 5, 6];
-        let mut rdr = NonceReader::new(&addr[..]).expect("error creating NonceReader");
+        let rdr = NonceReader::new(&addr[..]).expect("error creating NonceReader");
         let mut previous_nonce = rdr.next().expect("error generating nonce");
         for _ in 0..300 {
             let nonce = rdr.next().expect("error generating nonce");

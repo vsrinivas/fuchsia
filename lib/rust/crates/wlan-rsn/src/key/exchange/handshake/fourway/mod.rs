@@ -13,6 +13,7 @@ use crate::Error;
 use crate::crypto_utils::nonce::NonceReader;
 use eapol;
 use failure::{self, bail, ensure};
+use std::sync::Arc;
 
 #[derive(Debug, PartialEq)]
 pub enum MessageNumber {
@@ -79,6 +80,7 @@ pub struct Config {
     pub s_rsne: Rsne,
     pub a_addr: [u8; 6],
     pub a_rsne: Rsne,
+    pub nonce_rdr: Arc<NonceReader>,
 }
 
 impl Config {
@@ -88,6 +90,7 @@ impl Config {
         s_rsne: Rsne,
         a_addr: [u8; 6],
         a_rsne: Rsne,
+        nonce_rdr: Arc<NonceReader>,
     ) -> Result<Config, failure::Error> {
         let _ = NegotiatedRsne::from_rsne(&s_rsne)?;
         Ok(Config {
@@ -96,6 +99,7 @@ impl Config {
             s_rsne,
             a_addr,
             a_rsne,
+            nonce_rdr,
         })
     }
 }
@@ -108,10 +112,9 @@ pub enum Fourway {
 
 impl Fourway {
     pub fn new(cfg: Config, pmk: Vec<u8>) -> Result<Fourway, failure::Error> {
-        let nonce_rdr = NonceReader::new(&cfg.s_addr[..])?;
         let fourway = match &cfg.role {
             Role::Supplicant => {
-                let state = supplicant::new(cfg, pmk, nonce_rdr);
+                let state = supplicant::new(cfg, pmk);
                 Fourway::Supplicant(StateMachine::new(state))
             },
             Role::Authenticator => {
@@ -127,9 +130,7 @@ impl Fourway {
         match self {
             Fourway::Authenticator(state_machine) => {
                 state_machine.replace_state(|state| {
-                    // TODO(hahnr): Take anonce from NonceReader.
-                    let anonce = vec![0xAc; 32];
-                    state.initiate(update_sink, key_replay_counter, anonce)
+                    state.initiate(update_sink, key_replay_counter)
                 });
                 Ok(())
             }

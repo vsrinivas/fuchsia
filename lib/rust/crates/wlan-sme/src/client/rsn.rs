@@ -1,8 +1,7 @@
 use bytes::Bytes;
 use failure::{bail, ensure, format_err};
 use fidl_fuchsia_wlan_mlme::BssDescription;
-use wlan_rsn::{akm, cipher, rsne::{self, Rsne}, Supplicant, suite_selector::OUI};
-use wlan_rsn::rsna::NegotiatedRsne;
+use wlan_rsn::{akm, cipher, NegotiatedRsne, nonce::NonceReader, rsne::{self, Rsne}, Supplicant, OUI};
 
 use crate::DeviceInfo;
 
@@ -47,6 +46,9 @@ pub fn get_rsna(device_info: &DeviceInfo, password: &[u8], bss: &BssDescription)
     let s_rsne = derive_s_rsne(&a_rsne)?;
     let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;
     let supplicant = Supplicant::new_wpa2psk_ccmp128(
+            // Note: There should be one Reader per device, not per SME.
+            // Follow-up with improving on this.
+            NonceReader::new(&device_info.addr[..])?,
             &bss.ssid[..], &password[..],
             device_info.addr, s_rsne,
             bss.bssid, a_rsne)
