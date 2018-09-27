@@ -10,6 +10,7 @@ import (
 	"netstack/util"
 
 	"fidl/fuchsia/net"
+	"fidl/fuchsia/net/stack"
 
 	"github.com/google/netstack/tcpip"
 )
@@ -218,6 +219,50 @@ func TestPrefixLenInvalidLength(t *testing.T) {
 
 	GetPrefixLen(tcpip.Address("\x00\x00"))
 	t.Errorf("Expected to fail on invalid address length")
+}
+
+func TestForwardingEntryAndTcpipRouteConversions(t *testing.T) {
+	for _, tc := range []struct {
+		dest stack.ForwardingDestination
+		want tcpip.Route
+	}{
+		{dest: func() stack.ForwardingDestination {
+			var dest stack.ForwardingDestination
+			dest.SetDeviceId(789)
+			return dest
+		}(),
+			want: tcpip.Route{
+				Destination: tcpip.Address("abcd"),
+				Mask:        "\xff\xff\xe0\x00",
+				NIC:         789,
+			}},
+		{dest: func() stack.ForwardingDestination {
+			var dest stack.ForwardingDestination
+			dest.SetNextHop(ToNetIpAddress(tcpip.Address("efghijklmnopqrst")))
+			return dest
+		}(),
+			want: tcpip.Route{
+				Destination: tcpip.Address("abcd"),
+				Mask:        "\xff\xff\xe0\x00",
+				Gateway:     tcpip.Address("efghijklmnopqrst"),
+			}},
+	} {
+		fe := stack.ForwardingEntry{
+			Subnet: net.Subnet{
+				Addr:      ToNetIpAddress(tcpip.Address("abcd")),
+				PrefixLen: 19,
+			},
+			Destination: tc.dest,
+		}
+		got := ForwardingEntryToTcpipRoute(fe)
+		if got != tc.want {
+			t.Errorf("got ForwardingEntryToTcpipRoute(%v) = %v, want = %v", fe, got, tc.want)
+		}
+		roundtripFe := TcpipRouteToForwardingEntry(got)
+		if roundtripFe != fe {
+			t.Errorf("got TcpipRouteToForwardingEntry(%+v) = %+v, want = %+v", got, roundtripFe, fe)
+		}
+	}
 }
 
 func newNetSubnet(addr [4]uint8, prefix uint8) net.Subnet {

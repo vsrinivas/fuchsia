@@ -13,6 +13,7 @@ import (
 	"netstack/util"
 
 	"fidl/fuchsia/net"
+	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 
 	"github.com/google/netstack/tcpip"
@@ -133,4 +134,38 @@ func GetPrefixLen(mask tcpip.Address) uint8 {
 	default:
 		panic("invalid tcpip.Address length")
 	}
+}
+
+func TcpipRouteToForwardingEntry(tcpipRoute tcpip.Route) stack.ForwardingEntry {
+	var dest stack.ForwardingDestination
+	// There are two types of destinations: link-local and next-hop.
+	//   If a route has a gateway, use that as the next-hop, and ignore the NIC.
+	//   Otherwise, it is considered link-local, and use the NIC.
+	if tcpipRoute.Gateway == tcpip.Address("") {
+		dest.SetDeviceId(uint64(tcpipRoute.NIC))
+	} else {
+		dest.SetNextHop(ToNetIpAddress(tcpipRoute.Gateway))
+	}
+	return stack.ForwardingEntry{
+		Subnet: net.Subnet{
+			Addr:      ToNetIpAddress(tcpipRoute.Destination),
+			PrefixLen: GetPrefixLen(tcpipRoute.Mask),
+		},
+		Destination: dest,
+	}
+}
+
+func ForwardingEntryToTcpipRoute(forwardingEntry stack.ForwardingEntry) tcpip.Route {
+	dest := ToTCPIPAddress(forwardingEntry.Subnet.Addr)
+	tcpipRoute := tcpip.Route{
+		Destination: dest,
+		Mask:        tcpip.Address(util.CIDRMask(int(forwardingEntry.Subnet.PrefixLen), len(dest)*8)),
+	}
+	switch forwardingEntry.Destination.Which() {
+	case stack.ForwardingDestinationDeviceId:
+		tcpipRoute.NIC = tcpip.NICID(forwardingEntry.Destination.DeviceId)
+	case stack.ForwardingDestinationNextHop:
+		tcpipRoute.Gateway = ToTCPIPAddress(forwardingEntry.Destination.NextHop)
+	}
+	return tcpipRoute
 }

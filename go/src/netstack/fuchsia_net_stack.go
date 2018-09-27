@@ -13,6 +13,7 @@ import (
 
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
+	"fidl/fuchsia/netstack"
 	"fidl/zircon/ethernet"
 
 	"github.com/google/netstack/tcpip"
@@ -180,25 +181,95 @@ func (ns *Netstack) getForwardingTable() []stack.ForwardingEntry {
 
 	entries := make([]stack.ForwardingEntry, 0)
 	for _, route := range table {
-		dest := stack.ForwardingDestination{}
-		// There are two types of destinations: link-local and next-hop.
-		//   If a route has a gateway, use that as the next-hop, and ignore the NIC.
-		//   Otherwise, it is considered link-local, and use the NIC.
-		if route.Gateway == tcpip.Address("") {
-			dest.SetDeviceId(uint64(route.NIC))
-		} else {
-			dest.SetNextHop(fidlconv.ToNetIpAddress(route.Gateway))
-		}
-		entry := stack.ForwardingEntry{
-			Subnet: net.Subnet{
-				Addr:      fidlconv.ToNetIpAddress(route.Destination),
-				PrefixLen: fidlconv.GetPrefixLen(route.Mask),
-			},
-			Destination: dest,
-		}
-		entries = append(entries, entry)
+		entries = append(entries, fidlconv.TcpipRouteToForwardingEntry(route))
 	}
 	return entries
+}
+
+func equalNetAddress(a netstack.NetAddress, b netstack.NetAddress) bool {
+	if a.Family != b.Family {
+		return false
+	}
+	switch a.Family {
+	case netstack.NetAddressFamilyIpv4:
+		return a.Ipv4.Addr == b.Ipv4.Addr
+	case netstack.NetAddressFamilyIpv6:
+		return a.Ipv6.Addr == b.Ipv6.Addr
+	default:
+		return false
+	}
+}
+
+// equalSubnetAndRoute returns true if and only if the route matches
+// the subnet.  Only the the ip and subnet are compared and must be
+// exact.
+func equalSubnetAndRoute(subnet net.Subnet, tcpipRoute tcpip.Route) bool {
+	return fidlconv.ToTCPIPAddress(subnet.Addr) == tcpipRoute.Destination &&
+		subnet.PrefixLen == fidlconv.GetPrefixLen(tcpipRoute.Mask)
+}
+
+// validateSubnet returns true if the prefix length is valid and no
+// address bits are set beyond the prefix length.
+func validateSubnet(subnet net.Subnet) bool {
+	var ipBytes []uint8
+	switch subnet.Addr.Which() {
+	case net.IpAddressIpv4:
+		ipBytes = subnet.Addr.Ipv4.Addr[:]
+	case net.IpAddressIpv6:
+		ipBytes = subnet.Addr.Ipv6.Addr[:]
+	}
+	if int(subnet.PrefixLen) > len(ipBytes)*8 {
+		return false
+	}
+	prefixBytes := subnet.PrefixLen / 8
+	ipBytes = ipBytes[prefixBytes:]
+	if prefixBits := subnet.PrefixLen - (prefixBytes * 8); prefixBits > 0 {
+		// prefixBits is only greater than zero when ipBytes is non-empty.
+		mask := uint8((1 << (8 - prefixBits)) - 1)
+		ipBytes[0] &= mask
+	}
+	for _, byte := range ipBytes {
+		if byte != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func (ns *Netstack) addForwardingEntry(entry stack.ForwardingEntry) *stack.Error {
+	if !validateSubnet(entry.Subnet) {
+		return &stack.Error{Type: stack.ErrorTypeInvalidArgs}
+	}
+	ns.mu.Lock()
+	defer ns.mu.Unlock()
+	table := ns.mu.stack.GetRouteTable()
+
+	for _, route := range table {
+		if equalSubnetAndRoute(entry.Subnet, route) {
+			return &stack.Error{Type: stack.ErrorTypeAlreadyExists}
+		}
+	}
+	ns.mu.stack.SetRouteTable(append(table, fidlconv.ForwardingEntryToTcpipRoute(entry)))
+	return nil
+}
+
+func (ns *Netstack) delForwardingEntry(subnet net.Subnet) *stack.Error {
+	if !validateSubnet(subnet) {
+		return &stack.Error{Type: stack.ErrorTypeInvalidArgs}
+	}
+	ns.mu.Lock()
+	defer ns.mu.Unlock()
+	table := ns.mu.stack.GetRouteTable()
+
+	for i, route := range table {
+		if equalSubnetAndRoute(subnet, route) {
+			table[i] = table[len(table)-1]
+			table = table[:len(table)-1]
+			ns.mu.stack.SetRouteTable(table)
+			return nil
+		}
+	}
+	return &stack.Error{Type: stack.ErrorTypeNotFound}
 }
 
 func (ni *stackImpl) ListInterfaces() ([]stack.InterfaceInfo, error) {
@@ -231,9 +302,9 @@ func (ni *stackImpl) GetForwardingTable() ([]stack.ForwardingEntry, error) {
 }
 
 func (ni *stackImpl) AddForwardingEntry(entry stack.ForwardingEntry) (*stack.Error, error) {
-	panic("not implemented")
+	return ni.ns.addForwardingEntry(entry), nil
 }
 
-func (ni *stackImpl) DelForwardingEntry(subset net.Subnet) (*stack.Error, error) {
-	panic("not implemented")
+func (ni *stackImpl) DelForwardingEntry(subnet net.Subnet) (*stack.Error, error) {
+	return ni.ns.delForwardingEntry(subnet), nil
 }
