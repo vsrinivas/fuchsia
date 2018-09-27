@@ -12,6 +12,7 @@
 #include <string.h>
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/display-controller.h>
 #include <zircon/listnode.h>
@@ -34,7 +35,7 @@ typedef struct {
     // Lock for imported images.
     mtx_t                               image_lock;
 
-    io_buffer_t                         mmio_dc;
+    mmio_buffer_t                       mmio_dc;
     io_buffer_t                         fbuffer;
 
     display_controller_cb_t*            dc_cb;

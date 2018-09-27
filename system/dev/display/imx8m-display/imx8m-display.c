@@ -184,7 +184,7 @@ static void imx8m_apply_configuration(void* ctx, const display_config_t** displa
         addr = 0;
     }
 
-    writel(addr, io_buffer_virt(&display->mmio_dc) +  0x80c0);
+    writel(addr, display->mmio_dc.vaddr +  0x80c0);
 
     mtx_unlock(&display->display_lock);
 }
@@ -216,7 +216,7 @@ static void display_release(void* ctx) {
         int res;
         thrd_join(display->main_thread, &res);
 
-        io_buffer_release(&display->mmio_dc);
+        mmio_buffer_release(&display->mmio_dc);
         io_buffer_release(&display->fbuffer);
         zx_handle_close(display->bti);
     }
@@ -244,7 +244,7 @@ static int main_hdmi_thread(void *arg) {
         return status;
     }
 
-    writel(io_buffer_phys(&display->fbuffer), io_buffer_virt(&display->mmio_dc) +  0x80c0);
+    writel(io_buffer_phys(&display->fbuffer), display->mmio_dc.vaddr +  0x80c0);
 
     if (display->dc_cb) {
         added_display_args_t args;
@@ -281,7 +281,7 @@ zx_status_t imx8m_display_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Map all the various MMIOs
-    status = pdev_map_mmio_buffer(&display->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer2(&display->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &display->mmio_dc);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO DC\n");
