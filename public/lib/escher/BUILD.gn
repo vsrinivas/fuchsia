@@ -376,6 +376,8 @@ source_set("escher") {
     "util/depth_to_color.h",
     "util/enum_cast.h",
     "util/enum_count.h",
+    "util/enum_flags.h",
+    "util/enum_utils.h",
     "util/epsilon_compare.h",
     "util/hash.h",
     "util/hash_cache.h",

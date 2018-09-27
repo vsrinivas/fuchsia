@@ -42,6 +42,7 @@ if (is_mac) {
       "util/bit_ops_unittest.cc",
       "util/bitmap_unittest.cc",
       "util/block_allocator_unittest.cc",
+      "util/enum_utils_unittest.cc",
       "util/hash_cache_unittest.cc",
       "util/hash_unittest.cc",
       "util/hashable_unittest.cc",

@@ -10,7 +10,8 @@
 namespace escher {
 
 // Return the number of elements in an enum, which must properly define
-// kEnumCount.  For example, see escher/vk/shader_stage.h
+// kEnumCount: they should start at zero and monotonically increase by 1,
+// so that kEnumCount is equal to the number of previous values in the enum.
 template <typename E>
 constexpr size_t EnumCount() {
   return static_cast<size_t>(E::kEnumCount);

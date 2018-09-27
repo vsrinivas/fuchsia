@@ -5,6 +5,8 @@
 #ifndef LIB_ESCHER_UTIL_ENUM_CAST_H_
 #define LIB_ESCHER_UTIL_ENUM_CAST_H_
 
+#include <type_traits>
+
 namespace escher {
 
 template <typename E>
