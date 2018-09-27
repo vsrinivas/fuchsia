@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/client/test_data/zxdb_symbol_test.h"
+#include "garnet/bin/zxdb/symbols/test_data/zxdb_symbol_test.h"
 
 class ClassInTest2 {
   EXPORT static int FunctionInTest2();

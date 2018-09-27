@@ -42,7 +42,7 @@ inline std::string GetTestFilePath(const std::string& rel_path) {
 const char kRelativeSharedLibPath[] = "../test_data/zxdb/";
 // The binary is located in $fuchsia_build_root
 const char kRelativeTestDataPath[] =
-    "../../../garnet/bin/zxdb/client/test_data/";
+    "../../../garnet/bin/zxdb/symbols/test_data/";
 
 }  // namespace
 

@@ -62,7 +62,7 @@ TEST(ModuleSymbolIndex, FindFileMatches) {
       index.FindFileMatches("zxdb_symbol_test.cc");
   ASSERT_EQ(1u, result.size());
   EXPECT_TRUE(
-      StringEndsWith(result[0], "client/test_data/zxdb_symbol_test.cc"));
+      StringEndsWith(result[0], "symbols/test_data/zxdb_symbol_test.cc"));
 
   // Save the full path for later.
   std::string full_path = result[0];
@@ -72,7 +72,7 @@ TEST(ModuleSymbolIndex, FindFileMatches) {
   EXPECT_EQ(0u, result.size());
 
   // Multiple path components.
-  result = index.FindFileMatches("client/test_data/zxdb_symbol_test.cc");
+  result = index.FindFileMatches("symbols/test_data/zxdb_symbol_test.cc");
   EXPECT_EQ(1u, result.size());
 
   // Ends-with match but doesn't start on a slash boundary.

@@ -149,6 +149,6 @@ source_set("tests") {
 
 
   data_deps = [
-    "//garnet/bin/zxdb/client/test_data:copy_test_so(${default_toolchain}-shared)",
+    "test_data:copy_test_so(${default_toolchain}-shared)",
   ]
 }

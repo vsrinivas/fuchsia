@@ -8,9 +8,7 @@
 
 # This should be the shared library toolchain only. Normally one could
 # reference this in the default toolchain and that will redirect to the shared
-# one. But our write_so_dir target needs to write out the correct file for
-# the corresponding toolchain so they need to match. write_so_dir must only
-# be referenced once to generate the correct file.
+# one.
 assert(current_toolchain == "${default_toolchain}-shared")
 
 # This rule will be called as a dependency of the zxdb tests.
