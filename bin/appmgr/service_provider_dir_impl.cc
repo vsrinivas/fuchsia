@@ -6,6 +6,8 @@
 
 #include <lib/async/default.h>
 #include <lib/fdio/util.h>
+#include <zircon/status.h>
+
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/substitute.h"
 
@@ -24,6 +26,15 @@ std::string ServiceNotInSandbox(const std::string& component_url,
       "information.",
       component_url, service_name, kSandboxDocUrl);
 }
+
+std::string ErrorServingService(const std::string& component_url,
+                                const std::string& service_name,
+                                zx_status_t status) {
+  return fxl::Substitute("Cannot serve service $0 for component $1: $2",
+                         service_name, component_url,
+                         std::string(zx_status_get_string(status)));
+}
+
 }  // namespace
 
 ServiceProviderDirImpl::ServiceProviderDirImpl(
@@ -81,8 +92,12 @@ void ServiceProviderDirImpl::ConnectToService(fidl::StringPtr service_name,
   if (status == ZX_OK) {
     status = child->Serve(&vfs_, std::move(channel), 0);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Could not serve " << service_name << ": " << status;
+      FXL_LOG(ERROR) << ErrorServingService(component_url_, service_name.get(),
+                                            status);
     }
+  } else {
+    FXL_LOG(ERROR) << ErrorServingService(component_url_, service_name.get(),
+                                          status);
   }
 }
 
