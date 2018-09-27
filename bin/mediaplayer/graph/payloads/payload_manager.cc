@@ -208,7 +208,7 @@ bool PayloadManager::MaybeAllocatePayloadBufferForCopy(
   if (size == 0) {
     // Need to copy, but the size is zero, so we don't need a destination
     // buffer.
-    payload_buffer_out = nullptr;
+    *payload_buffer_out = nullptr;
     return true;
   }
 
@@ -390,8 +390,6 @@ void PayloadManager::UpdateAllocators() {
       FXL_DCHECK(false);
       break;
   }
-
-  DumpInternal(FXL_LOG_STREAM(INFO) << "UpdateAllocators: ");
 }
 
 bool PayloadManager::ConfigsAreCompatible() const {
@@ -545,18 +543,31 @@ void PayloadManager::ProvideVmosForSharedAllocator(
 
   PayloadConfig config;
 
-  // TODO(dalesat): This is wrong. Because some values can be missing (0) and
-  // need to be provided by the other party, we can get into a situation where
-  // we configure for the max of the two requirements instead of the sum.
-  // Needs some thinking.
-
-  config.max_aggregate_payload_size_ =
-      output_.config_.max_aggregate_payload_size_ +
-      input_.config_.max_aggregate_payload_size_;
-  config.max_payload_count_ =
-      output_.config_.max_payload_count_ + input_.config_.max_payload_count_;
   config.max_payload_size_ = std::max(output_.config_.max_payload_size_,
                                       input_.config_.max_payload_size_);
+  config.max_payload_count_ =
+      output_.config_.max_payload_count_ + input_.config_.max_payload_count_;
+
+  // We can't simply add the |max_aggregate_payload_size_| from the two
+  // connectors to get the combined value, because they may be using different
+  // methods of expressing their requirements. If one connector is using
+  // |max_aggregate_payload_size_| and the other is using the count/size values,
+  // we can get a situation where we satisfy the max of their requirements
+  // rather than the sum. For this reason, we artificially adjust the
+  // |max_aggregate_payload_size_| values before adding them. If the
+  // |max_payload_count_| for a given connector times the combined
+  // |max_payload_size_| value is greater than that connector's
+  // |max_aggregate_payload_size_|, we use that instead.
+  uint64_t output_max_aggregate_payload_size =
+      std::max(output_.config_.max_aggregate_payload_size_,
+               config.max_payload_size_ * output_.config_.max_payload_count_);
+  uint64_t input_max_aggregate_payload_size =
+      std::max(input_.config_.max_aggregate_payload_size_,
+               config.max_payload_size_ * input_.config_.max_payload_count_);
+
+  config.max_aggregate_payload_size_ =
+      output_max_aggregate_payload_size + input_max_aggregate_payload_size;
+
   config.vmo_allocation_ = CombinedVmoAllocation();
   config.physically_contiguous_ = output_.config_.physically_contiguous_ ||
                                   input_.config_.physically_contiguous_;
