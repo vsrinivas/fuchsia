@@ -49,3 +49,4 @@ typedef struct {
 
 #define VFS_TYPE_BLOBFS 0x9e694d21
 #define VFS_TYPE_MINFS 0x6e694d21
+#define VFS_TYPE_MEMFS 0x3e694d21

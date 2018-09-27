@@ -59,8 +59,17 @@ protected:
     uint64_t create_time_;
     uint64_t modify_time_;
 
+    uint64_t GetInoCounter() const {
+        return ino_ctr_.load(fbl::memory_order_relaxed);
+    }
+
+    uint64_t GetDeletedInoCounter() const {
+        return deleted_ino_ctr_.load(fbl::memory_order_relaxed);
+    }
+
 private:
     static fbl::atomic<uint64_t> ino_ctr_;
+    static fbl::atomic<uint64_t> deleted_ino_ctr_;
 };
 
 class VnodeFile final : public VnodeMemfs {
@@ -191,6 +200,8 @@ public:
 
     size_t NumAllocatedPages() const { return num_allocated_pages_; }
 
+    uint64_t GetFsId() const { return fs_id_; }
+
 private:
     // Maximum number of pages available; fixed at Vfs creation time.
     // Puts a bound on maximum memory usage.
@@ -198,6 +209,14 @@ private:
 
     // Number of pages currently in use by VnodeFiles.
     size_t num_allocated_pages_;
+
+    uint64_t fs_id_{};
+
+    // Called by |CreateFilesystem| to initialize fs_id_ on the first time.
+    // Calling more than once is a no-op.
+    zx_status_t FillFsId();
+    friend zx_status_t CreateFilesystem(
+        const char* name, memfs::Vfs* vfs, fbl::RefPtr<VnodeDir>* out);
 
     // Allows VnodeFile (and no other class) to manipulate number of allocated pages
     // using GrowVMO and WillFreeVMO.
@@ -217,6 +236,8 @@ private:
     void WillFreeVMO(size_t vmo_size);
 };
 
+// Initializes the Vfs object and names the root directory |name|. The Vfs object is considered
+// invalid prior to this call. Returns the root VnodeDir via |out|.
 zx_status_t CreateFilesystem(const char* name, memfs::Vfs* vfs, fbl::RefPtr<VnodeDir>* out);
 
 } // namespace memfs

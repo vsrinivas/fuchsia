@@ -45,6 +45,25 @@ void Vfs::MountSubtree(VnodeDir* parent, fbl::RefPtr<VnodeDir> subtree) {
     parent->MountSubtree(fbl::move(subtree));
 }
 
+zx_status_t Vfs::FillFsId() {
+    if (fs_id_) {
+        return ZX_OK;
+    }
+    zx::event event;
+    zx_status_t status = zx::event::create(0, &event);
+    if (status != ZX_OK) {
+        return status;
+    }
+    zx_info_handle_basic_t info;
+    status = event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    fs_id_ = info.koid;
+    return ZX_OK;
+}
+
 zx_status_t Vfs::GrowVMO(zx::vmo& vmo, size_t current_size,
                          size_t request_size, size_t* actual_size) {
     if (request_size <= current_size) {
@@ -82,13 +101,16 @@ void Vfs::WillFreeVMO(size_t vmo_size) {
 }
 
 fbl::atomic<uint64_t> VnodeMemfs::ino_ctr_(0);
+fbl::atomic<uint64_t> VnodeMemfs::deleted_ino_ctr_(0);
 
 VnodeMemfs::VnodeMemfs(Vfs* vfs) : dnode_(nullptr), link_count_(0), vfs_(vfs),
     ino_(ino_ctr_.fetch_add(1, fbl::memory_order_relaxed)) {
     create_time_ = modify_time_ = zx_clock_get(ZX_CLOCK_UTC);
 }
 
-VnodeMemfs::~VnodeMemfs() {}
+VnodeMemfs::~VnodeMemfs() {
+    deleted_ino_ctr_.fetch_add(1, fbl::memory_order_relaxed);
+}
 
 zx_status_t VnodeMemfs::Setattr(const vnattr_t* attr) {
     if ((attr->valid & ~(ATTR_MTIME)) != 0) {
@@ -118,6 +140,10 @@ zx_status_t VnodeMemfs::AttachRemote(fs::MountChannel h) {
 }
 
 zx_status_t CreateFilesystem(const char* name, memfs::Vfs* vfs, fbl::RefPtr<VnodeDir>* out) {
+    zx_status_t status;
+    if ((status = vfs->FillFsId()) != ZX_OK) {
+        return status;
+    }
     fbl::AllocChecker ac;
     fbl::RefPtr<VnodeDir> fs = fbl::AdoptRef(new (&ac) VnodeDir(vfs));
     if (!ac.check()) {

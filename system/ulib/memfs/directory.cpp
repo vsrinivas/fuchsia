@@ -51,8 +51,23 @@ zx_status_t VnodeDir::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
     static_assert(fbl::constexpr_strlen(kFsName) + 1 < fuchsia_io_MAX_FS_NAME_BUFFER,
                   "Memfs name too long");
     memset(info, 0, sizeof(*info));
-    //TODO(planders): eventually report something besides 0.
     strlcpy(reinterpret_cast<char*>(info->name), kFsName, fuchsia_io_MAX_FS_NAME_BUFFER);
+    info->block_size = kMemfsBlksize;
+    info->max_filename_size = kDnodeNameMax;
+    info->fs_type = VFS_TYPE_MEMFS;
+    info->fs_id = vfs()->GetFsId();
+    size_t total_bytes = 0;
+    if (mul_overflow(vfs()->PagesLimit(), kMemfsBlksize, &total_bytes)) {
+        info->total_bytes = UINT64_MAX;
+    } else {
+        info->total_bytes = total_bytes;
+    }
+    info->used_bytes = vfs()->NumAllocatedPages() * kMemfsBlksize;
+    info->total_nodes = UINT64_MAX;
+    uint64_t deleted_ino_count = GetDeletedInoCounter();
+    uint64_t ino_count = GetInoCounter();
+    ZX_DEBUG_ASSERT(ino_count >= deleted_ino_count);
+    info->used_nodes = ino_count - deleted_ino_count;
     return ZX_OK;
 }
 

@@ -28,7 +28,8 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
-    system/ulib/fbl
+    system/ulib/fbl \
+    system/ulib/fzl \
 
 MODULE_LIBS := \
     system/ulib/async.default \
