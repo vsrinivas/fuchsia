@@ -89,3 +89,34 @@ impl From<io::Error> for EncodeError {
         EncodeError::IoError(e)
     }
 }
+
+#[derive(Debug, Fail)]
+#[fail(display = "Unknown enum value {}", _0)]
+pub struct UnknownEnumValue(u32);
+
+impl UnknownEnumValue {
+    pub fn value(&self) -> u32 {
+        self.0
+    }
+}
+
+/// Thin wrapper around the typed enum values that allow us to transport
+/// unknown enum values.
+#[derive(Copy, Clone, Debug)]
+pub enum Enum<E: Copy> {
+    Recognized(E),
+    Unrecognized(u32),
+}
+
+impl<E: Copy> Enum<E> {
+    /// Extract the inner enum type as a result.
+    ///
+    /// Ex:
+    ///   let inner = some_argument.as_enum()?;
+    pub fn as_enum(&self) -> Result<E, UnknownEnumValue> {
+        match *self {
+            Enum::Recognized(e) => Ok(e),
+            Enum::Unrecognized(i) => Err(UnknownEnumValue(i)),
+        }
+    }
+}

@@ -31,7 +31,7 @@ impl<W: io::Write> Codegen<W> {
 use bitflags::*;
 use failure;
 use \
-             fuchsia_wayland_core::{{ArgKind, Arg, FromArgs, IntoMessage, Message,
+             fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,
                             MessageGroupSpec, MessageHeader, MessageSpec, NewId,
                             ObjectId, EncodeError, DecodeError,
                             Interface }};"
@@ -92,7 +92,7 @@ use \
     ///    Request1 { arg1: u32 },
     ///    Request2 { name: String},
     ///  }
-    fn codegen_message_enum<F: FnMut(&ast::Arg) -> &'static str>(
+    fn codegen_message_enum<F: FnMut(&ast::Arg) -> String>(
         &mut self, name: &str, messages: &Vec<ast::Message>, arg_formatter: F,
     ) -> Result {
         writeln!(self.w, "#[derive(Debug)]");
@@ -320,6 +320,21 @@ impl FromArgs for Request {{
         writeln!(self.w, "}}")?;
         writeln!(self.w, "")?;
         writeln!(self.w, "impl {} {{", e.rust_name())?;
+        writeln!(self.w, "    pub fn from_bits(v: u32) -> Option<Self> {{")?;
+        writeln!(self.w, "        match v {{")?;
+        for entry in e.entries.iter() {
+            writeln!(
+                self.w,
+                "        {} => Some({}::{}),",
+                entry.value,
+                e.rust_name(),
+                entry.rust_name()
+            )?;
+        }
+        writeln!(self.w, "        _ => None,")?;
+        writeln!(self.w, "        }}")?;
+        writeln!(self.w, "    }}")?;
+        writeln!(self.w, "")?;
         writeln!(self.w, "    pub fn bits(&self) -> u32 {{")?;
         writeln!(self.w, "        *self as u32")?;
         writeln!(self.w, "    }}")?;
@@ -351,7 +366,40 @@ fn to_camel_case(s: &str) -> String {
         .collect()
 }
 
-fn format_dispatch_arg_rust(arg: &ast::Arg) -> &'static str {
+/// Enums can be referenced outside of the interface that defines them. When
+/// arguments are tagged with an enum, they'll provide the path to the enum
+/// in the form <interface>.<enum>.
+///
+/// For example, 'wl_output.transform' refers to the enum named 'transform'
+/// that's defined in the 'wl_output' interface.
+///
+/// Since our rust modules already mirror this structure, we can simply use a
+/// relative path to the enum when it's defined in the same interface, or
+/// reference the interface module for foreign enums.
+///
+/// Ex:
+///   Within the 'wl_output' module, the 'transform' enum can be referred to
+///   as just 'Transform'.
+///
+///   When 'wl_output' is referred to from another module we can use the crate-
+///   relative path 'crate::wl_output::Transform'.
+///
+/// Note we could always use the crate-relative path, but that would require
+/// passing the 'interface' parameter around to lots of logic that otherwise
+/// doesn't care.
+fn enum_path(name: &str) -> String {
+    let parts: Vec<&str> = name.splitn(2, ".").collect();
+    if parts.len() == 1 {
+        to_camel_case(name)
+    } else {
+        format!("crate::{}::{}", parts[0], to_camel_case(parts[1]))
+    }
+}
+
+fn format_dispatch_arg_rust(arg: &ast::Arg) -> String {
+    if let Some(ref enum_type) = arg.enum_type {
+        return format!("Enum<{}>", enum_path(enum_type));
+    }
     match arg.kind {
         ArgKind::Int => "i32",
         ArgKind::Uint => "u32",
@@ -361,10 +409,13 @@ fn format_dispatch_arg_rust(arg: &ast::Arg) -> &'static str {
         ArgKind::NewId => "ObjectId",
         ArgKind::Array => "Vec<u8>",
         ArgKind::Fd => "fuchsia_zircon::Handle",
-    }
+    }.to_string()
 }
 
-fn format_wire_arg_rust(arg: &ast::Arg) -> &'static str {
+fn format_wire_arg_rust(arg: &ast::Arg) -> String {
+    if let Some(ref enum_type) = arg.enum_type {
+        return enum_path(enum_type);
+    }
     match arg.kind {
         ArgKind::Int => "i32",
         ArgKind::Uint => "u32",
@@ -374,7 +425,7 @@ fn format_wire_arg_rust(arg: &ast::Arg) -> &'static str {
         ArgKind::NewId => "NewId",
         ArgKind::Array => "Vec<u8>",
         ArgKind::Fd => "fuchsia_zircon::Handle",
-    }
+    }.to_string()
 }
 
 fn format_arg_kind(arg: &ast::Arg) -> &'static str {
@@ -391,6 +442,9 @@ fn format_arg_kind(arg: &ast::Arg) -> &'static str {
 }
 
 fn format_wire_arg(arg: &ast::Arg, var: &str) -> String {
+    if arg.enum_type.is_some() {
+        return format!("Arg::Uint({}.bits())", var);
+    }
     match arg.kind {
         ArgKind::Int => format!("Arg::Int({})", var),
         ArgKind::Uint => format!("Arg::Uint({})", var),
@@ -403,7 +457,16 @@ fn format_wire_arg(arg: &ast::Arg, var: &str) -> String {
     }
 }
 
-fn arg_to_primitive(arg: &ast::Arg) -> &'static str {
+fn arg_to_primitive(arg: &ast::Arg) -> String {
+    if let Some(ref enum_type) = arg.enum_type {
+        return format!(
+            "as_uint().map(|i| match {}::from_bits(i) {{
+                                      Some(e) => Enum::Recognized(e),
+                                      None => Enum::Unrecognized(i),
+                                 }})",
+            enum_path(enum_type)
+        );
+    }
     match arg.kind {
         ArgKind::Int => "as_int()",
         ArgKind::Uint => "as_uint()",
@@ -413,7 +476,7 @@ fn arg_to_primitive(arg: &ast::Arg) -> &'static str {
         ArgKind::NewId => "as_new_id()",
         ArgKind::Array => "as_array()",
         ArgKind::Fd => "as_handle()",
-    }
+    }.to_string()
 }
 
 /// Helper trait for transforming wayland protocol names into the rust

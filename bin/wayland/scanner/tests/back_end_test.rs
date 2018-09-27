@@ -404,6 +404,20 @@ mod test {
         assert_eq!(0, test_interface::TestEnum::Entry1.bits());
         assert_eq!(1, test_interface::TestEnum::Entry2.bits());
         assert_eq!(2, test_interface::TestEnum::_0StartsWithNumber.bits());
+
+        assert_eq!(
+            Some(test_interface::TestEnum::Entry1),
+            test_interface::TestEnum::from_bits(0)
+        );
+        assert_eq!(
+            Some(test_interface::TestEnum::Entry2),
+            test_interface::TestEnum::from_bits(1)
+        );
+        assert_eq!(
+            Some(test_interface::TestEnum::_0StartsWithNumber),
+            test_interface::TestEnum::from_bits(2)
+        );
+        assert_eq!(None, test_interface::TestEnum::from_bits(3));
     }
 
     #[test]
@@ -411,5 +425,18 @@ mod test {
         assert_eq!(1, test_interface::TestBitfield::Entry1.bits());
         assert_eq!(2, test_interface::TestBitfield::Entry2.bits());
         assert_eq!(4, test_interface::TestBitfield::_0StartsWithNumber.bits());
+
+        assert_eq!(
+            Some(test_interface::TestBitfield::Entry1),
+            test_interface::TestBitfield::from_bits(1)
+        );
+        assert_eq!(
+            Some(test_interface::TestBitfield::Entry2),
+            test_interface::TestBitfield::from_bits(2)
+        );
+        assert_eq!(
+            Some(test_interface::TestBitfield::_0StartsWithNumber),
+            test_interface::TestBitfield::from_bits(4)
+        );
     }
 }
