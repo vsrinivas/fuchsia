@@ -7,71 +7,11 @@ package ir
 import (
 	"fmt"
 	"reflect"
-	"strconv"
 	"testing"
 
 	"fidl/compiler/backend/types"
+	. "fidl/compiler/backend/typestest"
 )
-
-func numericLiteral(value int) types.Constant {
-	return types.Constant{
-		Kind: types.LiteralConstant,
-		Literal: types.Literal{
-			Kind:  types.NumericLiteral,
-			Value: strconv.Itoa(value),
-		},
-	}
-}
-
-func boolLiteral(val bool) types.Constant {
-	var kind types.LiteralKind
-	if val {
-		kind = types.TrueLiteral
-	} else {
-		kind = types.FalseLiteral
-	}
-	return types.Constant{
-		Kind: types.LiteralConstant,
-		Literal: types.Literal{
-			Kind: kind,
-		},
-	}
-}
-
-func primitiveType(kind types.PrimitiveSubtype) types.Type {
-	return types.Type{
-		Kind:             types.PrimitiveType,
-		PrimitiveSubtype: kind,
-	}
-}
-
-func arrayType(elementType types.Type, elementCount int) types.Type {
-	return types.Type{
-		Kind:         types.ArrayType,
-		ElementType:  &elementType,
-		ElementCount: &elementCount,
-	}
-}
-
-func vectorType(elementType types.Type, elementCount *int) types.Type {
-	return types.Type{
-		Kind:         types.VectorType,
-		ElementType:  &elementType,
-		ElementCount: elementCount,
-	}
-}
-
-func stringType(elementCount *int) types.Type {
-	return types.Type{
-		Kind:         types.StringType,
-		ElementCount: elementCount,
-	}
-}
-
-func nullable(t types.Type) types.Type {
-	t.Nullable = true
-	return t
-}
 
 type expectKind int
 
@@ -124,11 +64,11 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
-					Type: primitiveType(types.Int8),
+					Type: PrimitiveType(types.Int8),
 					Name: types.Identifier("Test"),
 				},
 				{
-					Type: primitiveType(types.Float32),
+					Type: PrimitiveType(types.Float32),
 					Name: types.Identifier("Test2"),
 				},
 			},
@@ -156,7 +96,7 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("test"),
 			Members: []types.StructMember{
 				{
-					Type: primitiveType(types.Int8),
+					Type: PrimitiveType(types.Int8),
 					Name: types.Identifier("test"),
 				},
 			},
@@ -179,11 +119,11 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
-					Type: arrayType(primitiveType(types.Uint8), 10),
+					Type: ArrayType(PrimitiveType(types.Uint8), 10),
 					Name: types.Identifier("Flat"),
 				},
 				{
-					Type: arrayType(arrayType(primitiveType(types.Bool), 1), 27),
+					Type: ArrayType(ArrayType(PrimitiveType(types.Bool), 1), 27),
 					Name: types.Identifier("Nested"),
 				},
 			},
@@ -212,23 +152,23 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
-					Type: stringType(nil),
+					Type: StringType(nil),
 					Name: types.Identifier("Flat"),
 				},
 				{
-					Type: nullable(stringType(nil)),
+					Type: Nullable(StringType(nil)),
 					Name: types.Identifier("Nullable"),
 				},
 				{
-					Type: nullable(stringType(&maxElems)),
+					Type: Nullable(StringType(&maxElems)),
 					Name: types.Identifier("Max"),
 				},
 				{
-					Type: arrayType(stringType(nil), 27),
+					Type: ArrayType(StringType(nil), 27),
 					Name: types.Identifier("Nested"),
 				},
 				{
-					Type: arrayType(nullable(stringType(&maxElems)), 27),
+					Type: ArrayType(Nullable(StringType(&maxElems)), 27),
 					Name: types.Identifier("NestedNullableMax"),
 				},
 			},
@@ -273,23 +213,23 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
-					Type: vectorType(primitiveType(types.Uint8), nil),
+					Type: VectorType(PrimitiveType(types.Uint8), nil),
 					Name: types.Identifier("Flat"),
 				},
 				{
-					Type: vectorType(primitiveType(types.Uint8), &maxElems),
+					Type: VectorType(PrimitiveType(types.Uint8), &maxElems),
 					Name: types.Identifier("Max"),
 				},
 				{
-					Type: vectorType(vectorType(primitiveType(types.Bool), nil), nil),
+					Type: VectorType(VectorType(PrimitiveType(types.Bool), nil), nil),
 					Name: types.Identifier("Nested"),
 				},
 				{
-					Type: vectorType(nullable(vectorType(primitiveType(types.Bool), nil)), nil),
+					Type: VectorType(Nullable(VectorType(PrimitiveType(types.Bool), nil)), nil),
 					Name: types.Identifier("Nullable"),
 				},
 				{
-					Type: vectorType(vectorType(vectorType(primitiveType(types.Uint8), &maxElems), nil), nil),
+					Type: VectorType(VectorType(VectorType(PrimitiveType(types.Uint8), &maxElems), nil), nil),
 					Name: types.Identifier("NestedMax"),
 				},
 			},
@@ -340,11 +280,11 @@ func TestCompileEnum(t *testing.T) {
 			Members: []types.EnumMember{
 				{
 					Name:  types.Identifier("One"),
-					Value: numericLiteral(1),
+					Value: NumericLiteral(1),
 				},
 				{
 					Name:  types.Identifier("Two"),
-					Value: numericLiteral(2),
+					Value: NumericLiteral(2),
 				},
 			},
 		},
@@ -372,11 +312,11 @@ func TestCompileEnum(t *testing.T) {
 			Members: []types.EnumMember{
 				{
 					Name:  types.Identifier("One"),
-					Value: boolLiteral(true),
+					Value: BoolLiteral(true),
 				},
 				{
 					Name:  types.Identifier("Two"),
-					Value: boolLiteral(false),
+					Value: BoolLiteral(false),
 				},
 			},
 		},
@@ -404,7 +344,7 @@ func TestCompileEnum(t *testing.T) {
 			Members: []types.EnumMember{
 				{
 					Name:  types.Identifier("test"),
-					Value: numericLiteral(125412512),
+					Value: NumericLiteral(125412512),
 				},
 			},
 		},
@@ -437,7 +377,7 @@ func TestCompileInterface(t *testing.T) {
 				HasRequest: true,
 				Request: []types.Parameter{
 					{
-						Type: primitiveType(types.Int16),
+						Type: PrimitiveType(types.Int16),
 						Name: types.Identifier("Value"),
 					},
 				},
@@ -449,7 +389,7 @@ func TestCompileInterface(t *testing.T) {
 				HasRequest: true,
 				Request: []types.Parameter{
 					{
-						Type: nullable(stringType(nil)),
+						Type: Nullable(StringType(nil)),
 						Name: types.Identifier("Value"),
 					},
 				},
@@ -457,7 +397,7 @@ func TestCompileInterface(t *testing.T) {
 				HasResponse: true,
 				Response: []types.Parameter{
 					{
-						Type: primitiveType(types.Uint32),
+						Type: PrimitiveType(types.Uint32),
 						Name: types.Identifier("Value"),
 					},
 				},
@@ -538,7 +478,7 @@ func TestCompileInterface(t *testing.T) {
 				HasResponse: true,
 				Response: []types.Parameter{
 					{
-						Type: stringType(nil),
+						Type: StringType(nil),
 						Name: types.Identifier("value"),
 					},
 				},

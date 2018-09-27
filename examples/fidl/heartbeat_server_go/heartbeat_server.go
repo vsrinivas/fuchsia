@@ -34,7 +34,7 @@ func main() {
 					if !quiet {
 						fmt.Println("heartbeat server: sending heartbeat")
 					}
-					p.Beat(false)
+					p.Heartbeat(false)
 				}
 			}
 		}

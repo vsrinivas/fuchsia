@@ -103,7 +103,7 @@ func main() {
 	done := make(chan struct{}, 1)
 	go func() {
 		for {
-			shuttingDown, err := a.heartbeat.ExpectBeat()
+			shuttingDown, err := a.heartbeat.ExpectHeartbeat()
 			if err != nil {
 				fmt.Println("waiting for heartbeat failed:", err)
 				return

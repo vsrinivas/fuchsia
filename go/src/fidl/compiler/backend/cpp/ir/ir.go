@@ -5,14 +5,15 @@
 package ir
 
 import (
-	"fidl/compiler/backend/common"
-	"fidl/compiler/backend/types"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"strings"
 	"text/template"
+
+	"fidl/compiler/backend/common"
+	"fidl/compiler/backend/types"
 )
 
 var legacyCallbacks = flag.Bool("cpp-legacy-callbacks", false,
@@ -84,6 +85,7 @@ type StructMember struct {
 type Interface struct {
 	Namespace       string
 	Name            string
+	ClassName       string
 	ServiceName     string
 	ProxyName       string
 	StubName        string
@@ -545,15 +547,16 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
-		c.namespace,
-		c.compileCompoundIdentifier(val.Name, ""),
-		val.GetServiceName(),
-		c.compileCompoundIdentifier(val.Name, "_Proxy"),
-		c.compileCompoundIdentifier(val.Name, "_Stub"),
-		c.compileCompoundIdentifier(val.Name, "_EventSender"),
-		c.compileCompoundIdentifier(val.Name, "_Sync"),
-		c.compileCompoundIdentifier(val.Name, "_SyncProxy"),
-		[]Method{},
+		Namespace:       c.namespace,
+		Name:            c.compileCompoundIdentifier(val.Name, ""),
+		ClassName:       c.compileCompoundIdentifier(val.Name, "_clazz"),
+		ServiceName:     val.GetServiceName(),
+		ProxyName:       c.compileCompoundIdentifier(val.Name, "_Proxy"),
+		StubName:        c.compileCompoundIdentifier(val.Name, "_Stub"),
+		EventSenderName: c.compileCompoundIdentifier(val.Name, "_EventSender"),
+		SyncName:        c.compileCompoundIdentifier(val.Name, "_Sync"),
+		SyncProxyName:   c.compileCompoundIdentifier(val.Name, "_SyncProxy"),
+		Methods:         []Method{},
 	}
 
 	for _, v := range val.Methods {

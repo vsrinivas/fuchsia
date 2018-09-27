@@ -126,7 +126,8 @@ class {{ .ProxyName }} : public ::fidl::internal::Proxy, public {{ .Name }} {
 
 class {{ .StubName }} : public ::fidl::internal::Stub, public {{ .EventSenderName }} {
  public:
-  explicit {{ .StubName }}({{ .Name }}* impl);
+  typedef class {{ .Name }} {{ .ClassName }};
+  explicit {{ .StubName }}({{ .ClassName }}* impl);
   ~{{ .StubName }}() override;
 
   zx_status_t Dispatch_(::fidl::Message message,
@@ -141,7 +142,7 @@ class {{ .StubName }} : public ::fidl::internal::Stub, public {{ .EventSenderNam
   {{- end }}
 
  private:
-  {{ .Name }}* impl_;
+  {{ .ClassName }}* impl_;
 };
 
 class {{ .SyncProxyName }} : public {{ .SyncName }} {
@@ -296,7 +297,7 @@ void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
   {{- end }}
 {{- end }}
 
-{{ .StubName }}::{{ .StubName }}({{ .Name }}* impl) : impl_(impl) {
+{{ .StubName }}::{{ .StubName }}({{ .ClassName }}* impl) : impl_(impl) {
   (void) impl_;
 }
 

@@ -28,6 +28,12 @@ install_host_tools("fidl") {
   ]
 }
 
+go_test("fidlgen_cpp_ir_test") {
+  gopackage = "fidl/compiler/backend/cpp/ir"
+
+  deps = [ ":fidl_lib" ]
+}
+
 go_test("fidlgen_golang_ir_test") {
   gopackage = "fidl/compiler/backend/golang/ir"
 
