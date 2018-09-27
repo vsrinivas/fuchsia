@@ -87,6 +87,10 @@ pub enum IfaceCmd {
 
     #[structopt(name = "list")]
     List,
+    #[structopt(name = "stats")]
+    Stats {
+        iface_id: Option<u16>,
+    },
 }
 
 #[derive(StructOpt, Clone, Debug)]

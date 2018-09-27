@@ -68,7 +68,7 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
 
             let response = await!(wlan_svc.create_iface(&mut req)).context("error getting response")?;
             println!("response: {:?}", response);
-        }
+        },
         opts::IfaceCmd::Delete { phy_id, iface_id } => {
             let mut req = wlan_service::DestroyIfaceRequest {
                 phy_id: phy_id,
@@ -80,11 +80,35 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
                 Ok(()) => println!("destroyed iface {:?}", iface_id),
                 Err(s) => println!("error destroying iface: {:?}", s),
             }
-        }
+        },
         opts::IfaceCmd::List => {
             let response = await!(wlan_svc.list_ifaces()).context("error getting response")?;
             println!("response: {:?}", response);
-        }
+        },
+        opts::IfaceCmd::Stats { iface_id } => {
+            let ids = match iface_id {
+                Some(id) => vec![id],
+                None => {
+                  let response = await!(wlan_svc.list_ifaces()).context("error listing ifaces")?;
+                  response.ifaces.into_iter().map(|iface| iface.iface_id).collect()
+                }
+            };
+
+            for iface_id in ids {
+                let (status, resp) = await!(wlan_svc.get_iface_stats(iface_id))
+                                      .context("error getting stats for iface")?;
+                match status {
+                    zx::sys::ZX_OK => {
+                        match resp {
+                            // TODO(eyw): Implement fmt::Display
+                            Some(r) => println!("Iface {}: {:#?}", iface_id, r),
+                            None => println!("Iface {} returns empty stats resonse", iface_id),
+                        }
+                    },
+                    status => println!("error getting stats for Iface {}: {}", iface_id, status),
+                }
+            }
+        },
     }
     Ok(())
 }
