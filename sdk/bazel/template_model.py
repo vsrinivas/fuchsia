@@ -77,3 +77,7 @@ class DartLibrary(object):
         self.name = name
         self.package_name = package
         self.deps = []
+
+class Images(object):
+    def __init__(self, arches):
+        self.arches = arches

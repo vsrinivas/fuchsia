@@ -73,6 +73,9 @@ cc_test(
         ":shared_library",
         "@fuchsia_sdk//pkg/svc",
     ],
+    tags = [
+        "compile-only"
+    ],
 )
 
 packageable_cc_binary(

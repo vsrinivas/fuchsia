@@ -12,11 +12,19 @@ import sys
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def build(bazel, targets):
-    command = [bazel, 'build', '--config=fuchsia', '--keep_going'] + targets
+def invoke_bazel(bazel, command, targets):
+    command = [bazel, command, '--config=fuchsia', '--keep_going'] + targets
     job = Popen(command, cwd=SCRIPT_DIR)
     job.communicate()
     return job.returncode
+
+
+def build(bazel, targets):
+    return invoke_bazel(bazel, 'build', targets)
+
+
+def test(bazel, targets):
+    return invoke_bazel(bazel, 'test', targets)
 
 
 def query(bazel, query):
@@ -66,7 +74,14 @@ def main():
 
     # Build the tests targets.
     print('Building test targets')
-    return build(bazel, targets)
+    if build(bazel, targets):
+        return 1
+
+    # Run tests
+    args = 'attr("tags", "^((?!compile-only).)*$", kind(".*test rule", //...))'
+    test_targets = list(query(bazel, args))
+    print('Running test targets')
+    return test(bazel, test_targets)
 
 
 if __name__ == '__main__':

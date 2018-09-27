@@ -267,8 +267,20 @@ class BazelBuilder(Frontend):
         # needed.
         root = ''
         dest = ''
+        target_architectures = {}
         for image_file in atom['file'].itervalues():
             self._copy_file(image_file, root, dest)
+            # The image file looks like this: target/x64/fuchsia.zbi
+            # where x64 is the architecture
+            target, arch = os.path.split(os.path.dirname(image_file))
+            if target not in target_architectures:
+                target_architectures[target] = set()
+            target_architectures[target].add(arch)
+
+        for target in target_architectures:
+            data = model.Images(list(target_architectures[target]))
+            self.write_file(self.dest(os.path.join(target, 'BUILD')), 'images',
+                            data)
 
 
 def main():
