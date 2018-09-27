@@ -71,9 +71,10 @@ void Screenshotter::OnCommandBufferDone(
 }
 
 void Screenshotter::TakeScreenshot(
+    Engine* engine,
     fuchsia::ui::scenic::Scenic::TakeScreenshotCallback done_callback) {
-  auto* escher = engine_->escher();
-  Compositor* compositor = engine_->GetFirstCompositor();
+  auto* escher = engine->escher();
+  Compositor* compositor = engine->GetFirstCompositor();
 
   if (compositor->GetNumDrawableLayers() == 0) {
     FXL_LOG(ERROR) << "No drawable layers.";
@@ -94,7 +95,7 @@ void Screenshotter::TakeScreenshot(
 
   escher::ImagePtr image = escher->image_cache()->NewImage(image_info);
   auto frame_done_semaphore = escher::Semaphore::New(escher->vk_device());
-  compositor->DrawToImage(engine_->paper_renderer(), engine_->shadow_renderer(),
+  compositor->DrawToImage(engine->paper_renderer(), engine->shadow_renderer(),
                           image, frame_done_semaphore);
 
   vk::Queue queue = escher->command_buffer_pool()->queue();
@@ -107,11 +108,9 @@ void Screenshotter::TakeScreenshot(
         OnCommandBufferDone(image, width, height, device,
                             std::move(done_callback));
       }));
+
   // Force the command buffer to retire so that the submitted commands will run.
-  // TODO(SCN-211): Make this a proper wait instead of spinning.
-  while (!escher->command_buffer_pool()->Cleanup()) {
-    zx::nanosleep(zx::deadline_after(zx::sec(1)));
-  }
+  engine->CleanupEscher();
 }
 
 }  // namespace gfx

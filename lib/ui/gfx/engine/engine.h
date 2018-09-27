@@ -142,6 +142,11 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
     return &command_context_;
   }
 
+  // Invoke Escher::Cleanup().  If more work remains afterward, post a delayed
+  // task to try again; this is typically because cleanup couldn't finish due to
+  // unfinished GPU work.
+  void CleanupEscher();
+
  protected:
   // Only used by subclasses used in testing.
   Engine(DisplayManager* display_manager,
@@ -171,11 +176,6 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   void UpdateMetrics(Node* node,
                      const ::fuchsia::ui::gfx::Metrics& parent_metrics,
                      std::vector<Node*>* updated_nodes);
-
-  // Invoke Escher::Cleanup().  If more work remains afterward, post a delayed
-  // task to try again; this is typically because cleanup couldn't finish due to
-  // unfinished GPU work.
-  void CleanupEscher();
 
   DisplayManager* const display_manager_;
   const escher::EscherWeakPtr escher_;

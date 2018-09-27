@@ -209,8 +209,7 @@ void GfxSystem::GetDisplayInfo(
 void GfxSystem::TakeScreenshot(
     fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
   FXL_CHECK(initialized_);
-  Screenshotter screenshotter(engine_.get());
-  screenshotter.TakeScreenshot(std::move(callback));
+  Screenshotter::TakeScreenshot(engine_.get(), std::move(callback));
 }
 
 void GfxSystem::GetDisplayOwnershipEventImmediately(

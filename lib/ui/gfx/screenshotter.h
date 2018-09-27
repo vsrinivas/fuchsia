@@ -17,9 +17,8 @@ namespace gfx {
 
 class Screenshotter {
  public:
-  explicit Screenshotter(Engine* engine) : engine_(engine) {}
-
-  void TakeScreenshot(
+  static void TakeScreenshot(
+      Engine* engine,
       fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback);
 
  private:
@@ -27,8 +26,6 @@ class Screenshotter {
       const escher::ImagePtr& image, uint32_t width, uint32_t height,
       vk::Device device,
       fuchsia::ui::scenic::Scenic::TakeScreenshotCallback done_callback);
-
-  Engine* const engine_;  // Not owned.
 };
 
 }  // namespace gfx
