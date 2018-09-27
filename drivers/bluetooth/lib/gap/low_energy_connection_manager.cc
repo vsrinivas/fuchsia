@@ -97,6 +97,15 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
         return;
       }
 
+      // Obtain existing pairing data, if any.
+      common::Optional<sm::LTK> ltk;
+      auto* dev = self->conn_mgr_->device_cache()->FindDeviceById(self->id_);
+      ZX_DEBUG_ASSERT_MSG(dev, "connected device must be present in cache!");
+
+      if (dev->le() && dev->le()->bond_data() && dev->le()->bond_data()->ltk) {
+        ltk = *dev->le()->bond_data()->ltk;
+      }
+
       // Obtain the local I/O capabilities from the delegate. Default to
       // NoInputNoOutput if no delegate is available.
       auto io_cap = sm::IOCapability::kNoInputNoOutput;
@@ -111,13 +120,21 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
       // services are discovered immediately and pairing happens in response to
       // a service request unless the peer is already paired.
       gatt->AddConnection(self->id(), std::move(att));
-      pairing->UpdateSecurity(
-          sm::SecurityLevel::kEncrypted,
-          [gatt, id = self->id()](sm::Status status, const auto& props) {
-            bt_log(INFO, "gap-le", "pairing status: %s, properties: %s",
-                   status.ToString().c_str(), props.ToString().c_str());
-            gatt->DiscoverServices(id);
-          });
+
+      if (ltk) {
+        bt_log(INFO, "gap-le", "encrypting link with existing LTK");
+        pairing->SetCurrentSecurity(*ltk);
+        gatt->DiscoverServices(self->id_);
+      } else {
+        bt_log(INFO, "gap-le", "pairing with device");
+        pairing->UpdateSecurity(
+            sm::SecurityLevel::kEncrypted,
+            [gatt, id = self->id()](sm::Status status, const auto& props) {
+              bt_log(INFO, "gap-le", "pairing status: %s, properties: %s",
+                     status.ToString().c_str(), props.ToString().c_str());
+              gatt->DiscoverServices(id);
+            });
+      }
       self->pairing_ = std::move(pairing);
     };
 
@@ -173,6 +190,14 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
     if (delegate) {
       delegate->CompletePairing(id_, status);
     }
+  }
+
+  // sm::PairingState::Delegate override:
+  void OnAuthenticationFailure(hci::Status status) override {
+    // TODO(armansito): Clear bonding data from the remote device cache as any
+    // stored link key is not valid.
+    bt_log(ERROR, "gap-le", "link layer authentication failed: %s",
+           status.ToString().c_str());
   }
 
   // sm::PairingState::Delegate override:

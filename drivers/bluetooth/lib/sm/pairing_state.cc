@@ -137,6 +137,24 @@ void PairingState::Reset(IOCapability io_capability) {
   le_smp_->set_io_capability(io_capability);
 }
 
+bool PairingState::SetCurrentSecurity(const LTK& ltk) {
+  if (legacy_state_) {
+    bt_log(TRACE, "sm", "Cannot directly set LTK while pairing is in progress");
+    return false;
+  }
+
+  le_link_->set_link_key(ltk.key());
+  if (le_link_->role() == hci::Connection::Role::kMaster &&
+      !le_link_->StartEncryption()) {
+    bt_log(ERROR, "sm", "Failed to initiate authentication procedure");
+    le_link_->set_link_key({});
+    return false;
+  }
+
+  le_sec_ = ltk.security();
+  return true;
+}
+
 void PairingState::UpdateSecurity(SecurityLevel level,
                                   PairingCallback callback) {
   // If pairing is in progress then we queue the request.
@@ -744,6 +762,12 @@ void PairingState::OnIdentityAddress(
 }
 
 void PairingState::OnEncryptionChange(hci::Status status, bool enabled) {
+  // First notify the delegate in case of failure.
+  if (bt_is_error(status, ERROR, "sm", "link layer authentication failed")) {
+    ZX_DEBUG_ASSERT(delegate_);
+    delegate_->OnAuthenticationFailure(status);
+  }
+
   // TODO(armansito): Have separate subroutines to handle this event for legacy
   // and secure connections.
   if (!legacy_state_) {
@@ -752,7 +776,7 @@ void PairingState::OnEncryptionChange(hci::Status status, bool enabled) {
   }
 
   if (!status || !enabled) {
-    bt_log(ERROR, "sm", "failed to encrypt link");
+    bt_log(ERROR, "sm", "failed to encrypt link during pairing");
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }

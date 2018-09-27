@@ -59,6 +59,13 @@ class PairingState final : public Bearer::Listener {
 
     // Called when new pairing data has been obtained for this peer.
     virtual void OnNewPairingData(const sm::PairingData& data) = 0;
+
+    // Called when the link layer authentication procedure fails. This likely
+    // indicates that the LTK or STK used to encrypt the connection was rejected
+    // by the peer device.
+    //
+    // The underlying link will disconnect after this callback runs.
+    virtual void OnAuthenticationFailure(hci::Status status) = 0;
   };
 
   // |link|: The LE logical link over which pairing procedures occur.
@@ -70,6 +77,24 @@ class PairingState final : public Bearer::Listener {
                fbl::RefPtr<l2cap::Channel> smp, IOCapability io_capability,
                fxl::WeakPtr<Delegate> delegate);
   ~PairingState() override;
+
+  // Returns the current security properties of the LE link.
+  const SecurityProperties& security() const { return le_sec_; }
+
+  // Assigns the requested |ltk| to this connection, adopting the security
+  // properties of |ltk|. If the local device is the master of the underlying
+  // link, then the link layer authentication procedure will be initiated.
+  //
+  // Returns false if a pairing procedure is in progress when this method is
+  // called. If the link layer authentication procedure fails, then the link
+  // will be disconnected by the controller (Vol 2, Part E, 7.8.24;
+  // hci::Connection guarantees this by severing the link directly).
+  //
+  // TODO(armansito): The failure path is less obvious when the local device is
+  // the slave since there is no way to immediately tell whether |ltk| is still
+  // valid or not, since the master initiates the authentication procedure. Make
+  // sure that we disconnect the link in that case?
+  bool SetCurrentSecurity(const LTK& ltk);
 
   // TODO(armansito): Add function to register a BR/EDR link and SMP channel.
 
