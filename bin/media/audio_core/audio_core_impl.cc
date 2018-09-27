@@ -109,18 +109,28 @@ void AudioCoreImpl::SetSystemGain(float gain_db) {
   gain_db = std::max(std::min(gain_db, kMaxSystemAudioGainDb),
                      fuchsia::media::MUTED_GAIN_DB);
 
+  // This system gain is the same as the last one we broadcast. Only send this
+  // to devices that received SetDeviceGain calls since last time we set this.
   if (system_gain_db_ == gain_db) {
+    device_manager_.OnSystemGainUnchanged();
     return;
   }
 
   system_gain_db_ = gain_db;
 
+  // This will be broadcast to all output devices.
   device_manager_.OnSystemGainChanged();
   NotifyGainMuteChanged();
 }
 
 void AudioCoreImpl::SetSystemMute(bool muted) {
+  // This will be broadcast to all output devices. However, the device might
+  // have received its own SetDeviceMute call, after the last time we set this.
+  // Until the device has a way to tell us our understanding of its state is
+  // 'dirty', we should disable the optimization below:
+  //
   if (system_muted_ == muted) {
+    device_manager_.OnSystemGainUnchanged();
     return;
   }
 

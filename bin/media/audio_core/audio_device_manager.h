@@ -115,6 +115,7 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   }
 
   void OnSystemGainChanged();
+  void OnSystemGainUnchanged();
 
   // Implementation of the AudioDeviceEnumerator FIDL interface.
   void GetDevices(GetDevicesCallback cbk) final;
@@ -206,7 +207,8 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   // The set of AudioDeviceEnumerator clients we are currently tending to.
   fidl::BindingSet<::fuchsia::media::AudioDeviceEnumerator> bindings_;
 
-  // Our sets of currently active audio devices, AudioCapturers, and AudioRenderers.
+  // Our sets of currently active audio devices, AudioCapturers, and
+  // AudioRenderers.
   //
   // Contents of these collections must only be manipulated on the main message
   // loop thread, so no synchronization should be needed.
@@ -215,8 +217,7 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   fbl::DoublyLinkedList<fbl::RefPtr<AudioCapturerImpl>> audio_capturers_;
   fbl::DoublyLinkedList<fbl::RefPtr<AudioRendererImpl>> audio_renderers_;
 
-  // The special throttle output always exists and is used by every
-  // AudioRenderer.
+  // The special throttle output always exists and is used by every renderer.
   fbl::RefPtr<AudioOutput> throttle_output_;
 
   // A helper class we will use to detect plug/unplug events for audio devices

@@ -38,11 +38,14 @@ interface Audio {
   // one's value does not restrict the other's possible values in any way.
   //
   // Sets the system-wide gain in decibels. |db| values are clamped to the range
-  // -160db to 0db, inclusive. Gain changes do not affect the system Mute state.
+  // -160db to 0db, inclusive. This setting is applied to all audio output
+  // devices. Audio input devices are unaffected. System Gain changes do not
+  // affect the System Mute state.
   0x0703: SetSystemGain(float32 gain_db);
 
-  // Sets/clears the systemwide 'Mute' state. Changes to this setting do not
-  // affect the value of the system Gain.
+  // Sets/clears the systemwide 'Mute' state for audio output devices. Audio
+  // input devices are unaffected. Changes to the System Mute state do not
+  // affect the value of System Gain.
   0x0704: SetSystemMute(bool muted);
 
   // Provides current values for the systemwide Gain and Mute.

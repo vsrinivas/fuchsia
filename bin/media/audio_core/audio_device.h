@@ -282,6 +282,8 @@ class AudioDevice : public AudioObject,
     return device_settings_;
   }
 
+  bool system_gain_dirty = true;
+
   // Plug state is protected by the fact that it is only ever accessed on the
   // main message loop thread.
   bool plugged_ = false;

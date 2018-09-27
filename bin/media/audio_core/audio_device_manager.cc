@@ -290,9 +290,20 @@ void AudioDeviceManager::OnSystemGainChanged() {
     if (device.is_output()) {
       UpdateDeviceToSystemGain(&device);
       NotifyDeviceGainChanged(device);
+      device.system_gain_dirty = false;
     }
-    // TODO(mpuryear): update src_gain for Gain objects in capture-side links,
-    // so that master (or device) gain is accounted for in AudioCapturer volume.
+    // We intentionally route System Gain only to Output devices, not Inputs.
+    // If needed, we could revisit this in the future.
+  }
+}
+
+void AudioDeviceManager::OnSystemGainUnchanged() {
+  for (auto& device : devices_) {
+    if (device.is_output() && device.system_gain_dirty) {
+      UpdateDeviceToSystemGain(&device);
+      NotifyDeviceGainChanged(device);
+      device.system_gain_dirty = false;
+    }
   }
 }
 
@@ -335,6 +346,8 @@ void AudioDeviceManager::SetDeviceGain(
     return;
   }
 
+  dev->system_gain_dirty = true;
+
   // Change the gain and then report the new settings to our clients.
   dev->SetGainInfo(gain_info, set_flags);
   NotifyDeviceGainChanged(*dev);
@@ -359,8 +372,7 @@ void AudioDeviceManager::SelectOutputsForAudioRenderer(
 
   // TODO(johngro): Add a way to assert that we are on the message loop thread.
 
-  // Regardless of policy, link the special throttle output to every
-  // AudioRenderer.
+  // Regardless of policy, link the special throttle output to every renderer.
   LinkOutputToAudioRenderer(throttle_output_.get(), audio_renderer);
 
   switch (routing_policy_) {
@@ -752,8 +764,7 @@ void AudioDeviceManager::CommitDirtySettings() {
     commit_settings_task_.Cancel();
   }
 
-  // If we need to try to update in the future, schedule a our commit task to do
-  // so.
+  // If we need to try to update in the future, schedule a commit task to do so.
   if (next != zx::time::infinite()) {
     commit_settings_task_.PostForTime(service_->dispatcher(), next);
   }

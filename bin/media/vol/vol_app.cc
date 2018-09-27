@@ -87,7 +87,7 @@ class VolApp {
 
     fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
-    if (command_line.HasOption("help")) {
+    if (command_line.HasOption("help") || command_line.HasOption("?")) {
       Usage();
       return;
     }
@@ -183,27 +183,33 @@ class VolApp {
     kToggle,
   };
 
-  void InteractiveUsage() {
-    std::cout << "\ninteractive mode:\n";
-    std::cout << "    +            increase system gain\n";
-    std::cout << "    -            decrease system gain\n";
-    std::cout << "    m            toggle mute\n";
-    std::cout << "    a            toggle agc\n";
+  void InteractiveKeystrokes() {
+    std::cout << "    +            increase device gain\n";
+    std::cout << "    -            decrease device gain\n";
+    std::cout << "    m            toggle device mute\n";
+    std::cout << "    a            toggle device Automatic Gain Control\n";
     std::cout << "    enter        quit\n";
   }
 
+  void InteractiveUsage() {
+    std::cout << "\ninteractive mode:\n";
+    InteractiveKeystrokes();
+  }
+
   void Usage() {
-    std::cout << "\n";
-    std::cout << "vol <args>\n";
-    std::cout << "    --show           show system audio status\n";
+    std::cout << "\nThis tool queries and sets device-level gain/mute/AGC\n";
+    std::cout << "These changes persist after the tool is closed.\n";
+    std::cout << "\nvol <args>\n";
+    std::cout << "    --show           show system audio status by device\n";
     std::cout << "    --token=<id>     select the device by token\n";
     std::cout << "    --uid=<uid>      select the device by partial UID\n";
     std::cout << "    --input          select the default input device\n";
-    std::cout << "    --gain=<db>      set system audio gain\n";
-    std::cout << "    --mute=(on|off)  mute/unmute system audio\n";
-    std::cout << "    --agc=(on|off)   enable/disable AGC\n\n";
-    std::cout << "Given no arguments, vol waits for the following keystrokes\n";
-    InteractiveUsage();
+    std::cout << "    --gain=<db>      set this device's audio gain\n";
+    std::cout << "    --mute=(on|off)  mute/unmute this device\n";
+    std::cout << "    --agc=(on|off)   enable/disable AGC for this device\n\n";
+    std::cout
+        << "Given no arguments, vol waits for the following keystrokes:\n";
+    InteractiveKeystrokes();
     std::cout << "\n";
 
     quit_callback_();
