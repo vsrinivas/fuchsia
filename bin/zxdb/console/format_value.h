@@ -163,32 +163,37 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
                     const ExprValue& value, const Type* array_value_type,
                     int known_elt_count, const FormatValueOptions& options,
                     OutputKey output_key);
-  void FormatArray(fxl::RefPtr<SymbolDataProvider> data_provider,
-                   const ExprValue& value, const Type* array_value_type,
-                   int elt_count, const FormatValueOptions& options,
-                   OutputKey output_key);
 
-  // Helper for FormatArray for when the data has been retrieved from the
-  // debugged process.
-  void FormatArrayData(const Err& err,
-                       fxl::RefPtr<SymbolDataProvider> data_provider,
-                       uint64_t address, const std::vector<ExprValue>& items,
-                       int known_size, const FormatValueOptions& options,
+  // Checks array and string types and formats the value accordingly. Returns
+  // true if it was an array or string type that was handled, false if it
+  // was anything else.
+  bool TryFormatArrayOrString(fxl::RefPtr<SymbolDataProvider> data_provider,
+                              const Type* type, const ExprValue& value,
+                              const FormatValueOptions& options,
+                              OutputKey output_key);
+
+  // Array and string format helpers.
+  void FormatCharPointer(fxl::RefPtr<SymbolDataProvider> data_provider,
+                         const Type* type, const ExprValue& value,
+                         const FormatValueOptions& options,
+                         OutputKey output_key);
+  void FormatCharArray(const uint8_t* data, size_t length, bool truncated,
                        OutputKey output_key);
+  void FormatArray(fxl::RefPtr<SymbolDataProvider> data_provider,
+                   const ExprValue& value, int elt_count,
+                   const FormatValueOptions& options, OutputKey output_key);
 
   // Simpler synchronous outputs.
   void FormatBoolean(const ExprValue& value, OutputBuffer* out);
   void FormatFloat(const ExprValue& value, OutputBuffer* out);
   void FormatSignedInt(const ExprValue& value, OutputBuffer* out);
   void FormatUnsignedInt(const ExprValue& value,
-                         const FormatValueOptions& options,
-                         OutputBuffer* out);
+                         const FormatValueOptions& options, OutputBuffer* out);
   void FormatChar(const ExprValue& value, OutputBuffer* out);
   void FormatPointer(const ExprValue& value, OutputBuffer* out);
   void FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
                        const ExprValue& value,
-                       const FormatValueOptions& options,
-                       OutputKey output_key);
+                       const FormatValueOptions& options, OutputKey output_key);
 
   OutputKey GetRootOutputKey();
 

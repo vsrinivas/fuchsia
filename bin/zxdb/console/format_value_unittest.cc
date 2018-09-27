@@ -233,23 +233,24 @@ TEST_F(FormatValueTest, GoodStrings) {
   FormatValueOptions opts;
 
   constexpr uint64_t kAddress = 0x1100;
-  provider()->AddMemory(
-      kAddress, {'A', 'B', 'C', 'D', 'E', 'F', '\n', 0x01, 'z', '\\', '"', 0});
+  std::vector<uint8_t> data = {'A',  'B',  'C', 'D',  'E', 'F',
+                               '\n', 0x01, 'z', '\\', '"', 0};
+  provider()->AddMemory(kAddress, data);
 
   // Little-endian version of the address.
   std::vector<uint8_t> address_data = {0x00, 0x11, 0x00, 0x00,
                                        0x00, 0x00, 0x00, 0x00};
 
   // This string is a char* and it should stop printing at the null terminator.
+  const char kExpected[] = R"("ABCDEF\n\x01z\\\"")";
   auto ptr_type = GetCharPointerType();
-  EXPECT_EQ(R"("ABCDEF\n\x01z\\\"")",
+  EXPECT_EQ(kExpected,
             SyncFormatValue(ExprValue(ptr_type, address_data), opts));
 
-  // This string points to the same data but is type encoded as char[4].
-  auto array_type =
-      fxl::MakeRefCounted<ArrayType>(LazySymbol(GetCharType()), 4);
-  EXPECT_EQ(R"("ABCD")",
-            SyncFormatValue(ExprValue(array_type, address_data), opts));
+  // This string has the same data but is type encoded as char[12], it should
+  // give the same output.
+  auto array_type = fxl::MakeRefCounted<ArrayType>(GetCharType(), 12);
+  EXPECT_EQ(kExpected, SyncFormatValue(ExprValue(array_type, data), opts));
 }
 
 TEST_F(FormatValueTest, BadStrings) {
@@ -294,35 +295,21 @@ TEST_F(FormatValueTest, EmptyAndBadArray) {
 
   // Array of two int32's: [1, 2]
   constexpr uint64_t kAddress = 0x1100;
-  provider()->AddMemory(kAddress,
-                        {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00});
+  ExprValueSource source(kAddress);
 
   // Empty array with valid pointer.
-  std::vector<uint8_t> addr_data = {0x00, 0x11, 0x00, 0x00,
-                                    0x00, 0x00, 0x00, 0x00};
-  auto empty_array_type =
-      fxl::MakeRefCounted<ArrayType>(LazySymbol(GetInt32Type()), 0);
-  EXPECT_EQ(R"([])",
-            SyncFormatValue(ExprValue(empty_array_type, addr_data), opts));
+  auto empty_array_type = fxl::MakeRefCounted<ArrayType>(GetInt32Type(), 0);
+  EXPECT_EQ(
+      R"([])",
+      SyncFormatValue(
+          ExprValue(empty_array_type, std::vector<uint8_t>(), source), opts));
 
-  // Null array.
-  std::vector<uint8_t> null_addr_data = {0x00, 0x00, 0x00, 0x00,
-                                         0x00, 0x00, 0x00, 0x00};
-  auto array_type =
-      fxl::MakeRefCounted<ArrayType>(LazySymbol(GetInt32Type()), 1);
-  EXPECT_EQ(R"(0x0)",
-            SyncFormatValue(ExprValue(array_type, null_addr_data), opts));
-
-  // Non-null but invalid pointer.
-  std::vector<uint8_t> bad_addr_data = {0x00, 0x00, 0x00, 0xff,
-                                        0x00, 0x00, 0x00, 0x00};
-  EXPECT_EQ(R"(0xff000000 <invalid pointer>)",
-            SyncFormatValue(ExprValue(array_type, bad_addr_data), opts));
-
-  // Array with bad element type.
-  auto corrupt_array_type = fxl::MakeRefCounted<ArrayType>(LazySymbol(), 4);
-  EXPECT_EQ(R"(<bad type information>)",
-            SyncFormatValue(ExprValue(corrupt_array_type, addr_data), opts));
+  // Array type declares a size but there's no data.
+  auto array_type = fxl::MakeRefCounted<ArrayType>(GetInt32Type(), 1);
+  EXPECT_EQ(
+      R"(<Array data (0 bytes) is too small for the expected size (4 bytes).>)",
+      SyncFormatValue(ExprValue(array_type, std::vector<uint8_t>(), source),
+                      opts));
 }
 
 TEST_F(FormatValueTest, TruncatedArray) {
@@ -331,23 +318,19 @@ TEST_F(FormatValueTest, TruncatedArray) {
 
   // Array of two int32's: [1, 2]
   constexpr uint64_t kAddress = 0x1100;
-  provider()->AddMemory(kAddress,
-                        {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00});
+  ExprValueSource source(kAddress);
+  std::vector<uint8_t> data = {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00};
 
-  // 64-bit pointer to above data.
-  std::vector<uint8_t> addr_data = {0x00, 0x11, 0x00, 0x00,
-                                    0x00, 0x00, 0x00, 0x00};
-  auto array_type =
-      fxl::MakeRefCounted<ArrayType>(LazySymbol(GetInt32Type()), 2);
+  auto array_type = fxl::MakeRefCounted<ArrayType>(GetInt32Type(), 2);
 
   // This array has exactly the max size, we shouldn't mark it as truncated.
   EXPECT_EQ(R"([1, 2])",
-            SyncFormatValue(ExprValue(array_type, addr_data), opts));
+            SyncFormatValue(ExprValue(array_type, data, source), opts));
 
   // This one is truncated.
   opts.max_array_size = 1;
   EXPECT_EQ(R"([1, ...])",
-            SyncFormatValue(ExprValue(array_type, addr_data), opts));
+            SyncFormatValue(ExprValue(array_type, data, source), opts));
 }
 
 TEST_F(FormatValueTest, Reference) {

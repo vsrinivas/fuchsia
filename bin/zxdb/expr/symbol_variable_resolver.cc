@@ -82,22 +82,6 @@ void SymbolVariableResolver::OnDwarfEvalComplete(const Err& err,
   // The DWARF expression will produce either the address of the value or the
   // value itself.
   DwarfExprEval::ResultType result_type = dwarf_eval_.GetResultType();
-  if (type->GetConcreteType()->AsArrayType()) {
-    // Special-case array types. When DWARF tells us the address of an array,
-    // it's telling us the address of the first element. But our "array"
-    // ExprValue are themselves pointers. In this case, just declare DWARF
-    // produced a value result (the value of the pointer we put in the result).
-    if (result_type == DwarfExprEval::ResultType::kPointer) {
-      result_type = DwarfExprEval::ResultType::kValue;
-    } else {
-      // Don't expect the expression to produce a literal array out of thin
-      // air. All of our arrays must be in memory.
-      OnComplete(Err("DWARF expression produced array literal. Please file a "
-                     "bug with a repro."),
-                 ExprValue());
-    }
-  }
-
   if (result_type == DwarfExprEval::ResultType::kValue) {
     // The DWARF expression produced the exact value (it's not in memory).
     uint32_t type_size = type->byte_size();

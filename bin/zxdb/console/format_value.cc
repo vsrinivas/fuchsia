@@ -57,103 +57,26 @@ bool IsNumericBaseType(int base_type) {
          base_type == BaseType::kBaseTypeUTF;
 }
 
-// Formats the preview of a string from known data. known_elt_count is the
-// statically known element count, or -1 if not statically known. The
-// bytes_requested is sent also so we can tell if the data was truncated.
-//
-// This is designed to be called from a callback so it takes an Err also. If
-// set, it will output the error and do nothing else.
-OutputBuffer FormatStringData(const Err& err, uint64_t address,
-                              uint32_t bytes_requested, int known_elt_count,
-                              const std::vector<uint8_t>& data) {
-  if (err.has_error())
-    return ErrToOutput(err);
-  if (data.empty()) {
-    // No data came back. Since FormatString filters out known-0-length strings
-    // in advance, we know this case is due to a memory error.
-    return InvalidPointerToOutput(address);
-  }
-
-  size_t output_len =
-      strnlen(reinterpret_cast<const char*>(&data[0]), data.size());
-
-  std::string result("\"");
-  for (size_t i = 0; i < output_len; i++) {
-    char ch = data[i];
-    if (ch == '\'' || ch == '\"' || ch == '\\') {
-      // These characters get backslash-escaped.
-      result.push_back('\\');
-      result.push_back(ch);
-    } else if (ch == '\n') {
-      result += "\\n";
-    } else if (ch == '\r') {
-      result += "\\r";
-    } else if (ch == '\t') {
-      result += "\\t";
-    } else if (isprint(ch)) {
-      result.push_back(ch);
-    } else {
-      // Hex-encode everything else.
-      result += fxl::StringPrintf("\\x%02x", static_cast<unsigned>(ch));
-    }
-  }
-  result.push_back('"');
-
-  // Add an indication if the string was truncated to the max size.
-  if (output_len == bytes_requested &&
-      known_elt_count != static_cast<int>(bytes_requested))
-    result += "...";
-
-  return OutputBuffer(result);
-}
-
-// Returns true if the type should be formatted as a string. The input type
-// should already be concrete.
-//
-// On success computes two out params: the array value type and the statically
-// known array size (-1 if not statically known).
-bool ShouldFormatAsString(const Type* type, const Type** array_value_type,
-                          int* known_array_size) {
-  FXL_DCHECK(type == type->GetConcreteType());
-
-  const Type* value_type = nullptr;
-
-  // Check for pointer or array types.
-  if (type->tag() == Symbol::kTagPointerType) {
-    const ModifiedType* modified = type->AsModifiedType();
-    if (!modified)
-      return false;
-    value_type = modified->modified().Get()->AsType();
-  } else if (type->tag() == Symbol::kTagArrayType) {
-    const ArrayType* array = type->AsArrayType();
-    if (!array)
-      return false;
-    value_type = array->value_type().Get()->AsType();
-    *known_array_size = array->num_elts();
-  } else {
-    // Only pointers and arrays get string handling.
+// Returns true if the given symbol points to a character type that would
+// appear in a pretty-printed string.
+bool IsCharacterType(const Type* type) {
+  if (!type)
     return false;
-  }
+  const Type* concrete = type->GetConcreteType();
 
-  // Anything above may have failed to produce a type.
-  if (!value_type)
-    return false;
-  value_type = value_type->GetConcreteType();
-
-  // The underlying type should be a 1-byte character type.
+  // Expect a 1-byte character type.
   // TODO(brettw) handle Unicode.
-  if (value_type->byte_size() != 1)
+  if (concrete->byte_size() != 1)
     return false;
-  const BaseType* base_type = value_type->AsBaseType();
+  const BaseType* base_type = concrete->AsBaseType();
   if (!base_type)
     return false;
 
-  if (base_type->base_type() == BaseType::kBaseTypeSignedChar ||
-      base_type->base_type() == BaseType::kBaseTypeUnsignedChar) {
-    *array_value_type = value_type;
-    return true;
-  }
-  return false;
+  return base_type->base_type() == BaseType::kBaseTypeSignedChar ||
+         base_type->base_type() == BaseType::kBaseTypeUnsignedChar;
+}
+bool IsCharacterType(const LazySymbol& symbol) {
+  return IsCharacterType(symbol.Get()->AsType());
 }
 
 }  // namespace
@@ -233,20 +156,8 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
   }
 
   // Arrays and strings.
-  const Type* str_array_value_type = nullptr;
-  int known_elt_count = -1;
-  if (ShouldFormatAsString(type, &str_array_value_type, &known_elt_count)) {
-    // String formatting.
-    FormatString(std::move(data_provider), value, str_array_value_type,
-                 known_elt_count, options, output_key);
+  if (TryFormatArrayOrString(data_provider, type, value, options, output_key))
     return;
-  } else if (const ArrayType* array = type->AsArrayType()) {
-    // Array formatting.
-    FormatArray(std::move(data_provider), value,
-                array->value_type().Get()->AsType(), known_elt_count, options,
-                output_key);
-    return;
-  }
 
   // References (these require asynchronous calls to format so can't be in the
   // "modified types" block below in the synchronous section).
@@ -398,9 +309,53 @@ void FormatValue::FormatString(fxl::RefPtr<SymbolDataProvider> data_provider,
                                const Type* array_value_type,
                                int known_elt_count,
                                const FormatValueOptions& options,
-                               OutputKey output_key) {
+                               OutputKey output_key) {}
+
+bool FormatValue::TryFormatArrayOrString(
+    fxl::RefPtr<SymbolDataProvider> data_provider, const Type* type,
+    const ExprValue& value, const FormatValueOptions& options,
+    OutputKey output_key) {
+  FXL_DCHECK(type == type->GetConcreteType());
+
+  if (type->tag() == Symbol::kTagPointerType) {
+    // Any pointer type (we only char about char*).
+    const ModifiedType* modified = type->AsModifiedType();
+    if (!modified)
+      return false;
+
+    if (IsCharacterType(modified->modified())) {
+      FormatCharPointer(data_provider, type, value, options, output_key);
+      return true;
+    }
+    return false;  // All other pointer types are unhandled.
+  } else if (type->tag() == Symbol::kTagArrayType) {
+    // Any array type with a known size (we care about both).
+    const ArrayType* array = type->AsArrayType();
+    if (!array)
+      return false;
+
+    if (IsCharacterType(array->value_type())) {
+      size_t length = array->num_elts();
+      bool truncated = false;
+      if (length > options.max_array_size) {
+        length = options.max_array_size;
+        truncated = true;
+      }
+      FormatCharArray(value.data().data(), length, truncated, output_key);
+    } else {
+      FormatArray(data_provider, value, array->num_elts(), options, output_key);
+    }
+    return true;
+  }
+  return false;
+}
+
+void FormatValue::FormatCharPointer(
+    fxl::RefPtr<SymbolDataProvider> data_provider, const Type* type,
+    const ExprValue& value, const FormatValueOptions& options,
+    OutputKey output_key) {
   if (value.data().size() != sizeof(uint64_t)) {
-    OutputKeyComplete(output_key, ErrStringToOutput("bad pointer type"));
+    OutputKeyComplete(output_key, ErrStringToOutput("Bad pointer data."));
     return;
   }
 
@@ -411,91 +366,92 @@ void FormatValue::FormatString(fxl::RefPtr<SymbolDataProvider> data_provider,
     return;
   }
 
-  // Compute the bytes to fetch.
-  uint32_t bytes_to_fetch;
-  if (known_elt_count == -1) {
-    // Speculatively request the max if the length is unknown.
-    bytes_to_fetch = options.max_array_size;
-  } else if (known_elt_count == 0 || options.max_array_size == 0) {
-    // Known 0-length string. This shouldn't happen in C since 0-length arrays
-    // are invalid, but handle anyway (maybe the user specifically requested
-    // this by mistake) to prevent weirdness handling a 0 byte request later.
-    OutputKeyComplete(output_key, OutputBuffer("\"\""));
+  // Speculatively request the max string size.
+  uint32_t bytes_to_fetch = options.max_array_size;
+  if (bytes_to_fetch == 0) {
+    // No array data should be fetched. Indicate that the result was truncated.
+    OutputKeyComplete(output_key, OutputBuffer("\"\"..."));
     return;
-  } else {
-    // Statically known size, but still cap.
-    bytes_to_fetch = std::min(options.max_array_size,
-                              static_cast<uint32_t>(known_elt_count));
   }
 
-  // Request the data and format in the callback.
-  ResolveByteArray(data_provider, address, 0, bytes_to_fetch, [
-    weak_this = weak_factory_.GetWeakPtr(), address, bytes_to_fetch,
-    known_elt_count, output_key
+  data_provider->GetMemoryAsync(address, bytes_to_fetch, [
+    address, bytes_to_fetch, weak_this = weak_factory_.GetWeakPtr(), output_key
   ](const Err& err, std::vector<uint8_t> data) {
-    if (weak_this) {
-      return weak_this->OutputKeyComplete(
-          output_key, FormatStringData(err, address, bytes_to_fetch,
-                                       known_elt_count, data));
+    if (!weak_this)
+      return;
+
+    if (data.empty()) {
+      // Should not have requested 0 size, so it if came back empty the
+      // pointer was invalid.
+      weak_this->OutputKeyComplete(output_key, InvalidPointerToOutput(address));
+      return;
     }
+
+    // Report as truncated because if the string goes to the end of this array
+    // it will be. FormatCharArray will clear this flag if it finds a null
+    // before the end of the buffer.
+    //
+    // Don't want to set truncated if the data ended before the requested size,
+    // this means it hit the end of valid memory, so we're not omitting data
+    // by only showing that part of it.
+    bool truncated = data.size() == bytes_to_fetch;
+    weak_this->FormatCharArray(&data[0], data.size(), truncated, output_key);
   });
 }
 
+void FormatValue::FormatCharArray(const uint8_t* data, size_t length,
+                                  bool truncated, OutputKey output_key) {
+  // Expect the string to be null-terminated. If we didn't find a null before
+  // the end of the buffer, mark as truncated.
+  size_t output_len = strnlen(reinterpret_cast<const char*>(data), length);
+
+  // It's possible a null happened before the end of the buffer, in which
+  // case it's no longer truncated.
+  if (output_len < length)
+    truncated = false;
+
+  std::string result("\"");
+  for (size_t i = 0; i < output_len; i++) {
+    char ch = data[i];
+    if (ch == '\'' || ch == '\"' || ch == '\\') {
+      // These characters get backslash-escaped.
+      result.push_back('\\');
+      result.push_back(ch);
+    } else if (ch == '\n') {
+      result += "\\n";
+    } else if (ch == '\r') {
+      result += "\\r";
+    } else if (ch == '\t') {
+      result += "\\t";
+    } else if (isprint(ch)) {
+      result.push_back(ch);
+    } else {
+      // Hex-encode everything else.
+      result += fxl::StringPrintf("\\x%02x", static_cast<unsigned>(ch));
+    }
+  }
+  result.push_back('"');
+
+  // Add an indication if the string was truncated to the max size.
+  if (truncated)
+    result += "...";
+
+  OutputKeyComplete(output_key, OutputBuffer(result));
+}
+
 void FormatValue::FormatArray(fxl::RefPtr<SymbolDataProvider> data_provider,
-                              const ExprValue& value,
-                              const Type* array_value_type, int elt_count,
+                              const ExprValue& value, int elt_count,
                               const FormatValueOptions& options,
                               OutputKey output_key) {
   // Arrays should have known non-zero sizes.
   FXL_DCHECK(elt_count >= 0);
-
-  if (value.data().size() != sizeof(uint64_t)) {
-    OutputKeyComplete(output_key, ErrStringToOutput("bad pointer type"));
-    return;
-  }
-  if (!array_value_type) {
-    OutputKeyComplete(output_key, ErrStringToOutput("bad type information"));
-    return;
-  }
-
-  uint64_t address = value.GetAs<uint64_t>();
-  if (!address) {
-    // Special-case null pointers to just print a null address.
-    OutputKeyComplete(output_key, OutputBuffer("0x0"));
-    return;
-  }
-
-  int fetch_count =
+  int print_count =
       std::min(static_cast<int>(options.max_array_size), elt_count);
-  if (fetch_count == 0) {
-    // Empty array.
-    OutputKeyComplete(output_key, OutputBuffer("[]"));
-    return;
-  }
 
-  ResolveValueArray(data_provider, array_value_type, address, 0, fetch_count, [
-    weak_this = weak_factory_.GetWeakPtr(), data_provider, address, elt_count,
-    options, output_key
-  ](const Err& err, std::vector<ExprValue> items) {
-    if (weak_this) {
-      weak_this->FormatArrayData(err, data_provider, address, items, elt_count,
-                                 options, output_key);
-    }
-  });
-}
-
-void FormatValue::FormatArrayData(
-    const Err& err, fxl::RefPtr<SymbolDataProvider> data_provider,
-    uint64_t address, const std::vector<ExprValue>& items, int known_size,
-    const FormatValueOptions& options, OutputKey output_key) {
+  std::vector<ExprValue> items;
+  Err err = ResolveArray(value, 0, print_count, &items);
   if (err.has_error()) {
     OutputKeyComplete(output_key, ErrToOutput(err));
-    return;
-  }
-  if (items.empty()) {
-    // No data came back. Since FormatArray filters out known-0-length arrays
-    // in advance, we know this case is due to a memory error.
-    OutputKeyComplete(output_key, InvalidPointerToOutput(address));
     return;
   }
 
@@ -509,8 +465,8 @@ void FormatValue::FormatArrayData(
 
   AppendToOutputKey(
       output_key,
-      OutputBuffer(static_cast<uint32_t>(known_size) > items.size() ? ", ...]"
-                                                                    : "]"));
+      OutputBuffer(static_cast<uint32_t>(elt_count) > items.size() ? ", ...]"
+                                                                   : "]"));
 
   // Now we can mark the root output key as complete. The children added above
   // may or may not have completed synchronously.

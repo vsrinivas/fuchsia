@@ -11,6 +11,7 @@
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/expr/resolve_array.h"
 #include "garnet/bin/zxdb/expr/resolve_member.h"
 #include "garnet/bin/zxdb/expr/resolve_ptr_ref.h"
 #include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
@@ -187,40 +188,22 @@ Err ArrayAccessExprNode::InnerValueToOffset(const ExprValue& inner,
 void ArrayAccessExprNode::DoAccess(fxl::RefPtr<ExprEvalContext> context,
                                    ExprValue left, int64_t offset,
                                    EvalCallback cb) {
-  const Type* type = left.type();
-  if (!type) {
-    cb(Err("Missing type information, please file a bug with repro."),
-       ExprValue());
-    return;
-  }
-  type = type->GetConcreteType();  // Skip "const", etc.
-
-  // You can use [] for either pointer or array types.
-  const Type* inner_type = nullptr;
-  if (const ArrayType* array_type = type->AsArrayType()) {
-    inner_type = array_type->value_type().Get()->AsType();
-  } else if (const ModifiedType* mod_type = type->AsModifiedType()) {
-    if (mod_type->tag() == Symbol::kTagPointerType)
-      inner_type = mod_type->modified().Get()->AsType();
-  }
-  if (!inner_type) {
-    cb(Err("Attempting to use [] on a non-pointer."), ExprValue());
-    return;
-  }
-
-  // In both pointer and array cases, the data in the value is a pointer
-  // to the beginning of the array.
-  if (left.data().size() != sizeof(uint64_t)) {
-    cb(Err("Incorrect pointer size, please file a bug with a repto."),
-       ExprValue());
-    return;
-  }
-  uint64_t array_base = left.GetAs<uint64_t>();
-  uint32_t elt_size = inner_type->GetConcreteType()->byte_size();
-
-  ResolvePointer(context->GetDataProvider(), array_base + elt_size * offset,
-                 fxl::RefPtr<Type>(const_cast<Type*>(inner_type)),
-                 std::move(cb));
+  ResolveArray(
+      context->GetDataProvider(), left, static_cast<size_t>(offset),
+      static_cast<size_t>(offset) + 1,
+      [cb = std::move(cb)](const Err& err, std::vector<ExprValue> result) {
+        if (err.has_error()) {
+          cb(err, ExprValue());
+          return;
+        }
+        if (result.size() == 0) {
+          // Short read, array not big enough.
+          cb(Err("Array index out of range."), ExprValue());
+          return;
+        }
+        FXL_DCHECK(result.size() == 1);
+        cb(Err(), result[0]);
+      });
 }
 
 void ArrayAccessExprNode::Print(std::ostream& out, int indent) const {

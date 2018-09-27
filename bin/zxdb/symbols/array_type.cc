@@ -8,11 +8,11 @@
 
 namespace zxdb {
 
-ArrayType::ArrayType(LazySymbol value_type, size_t num_elts)
+ArrayType::ArrayType(fxl::RefPtr<Type> value_type, size_t num_elts)
     : Type(Symbol::kTagArrayType),
-      value_type_(value_type),
+      value_type_(std::move(value_type)),
       num_elts_(num_elts) {
-  set_byte_size(sizeof(uint64_t));  // Contents is a pointer.
+  set_byte_size(num_elts * value_type_->byte_size());
 }
 
 ArrayType::~ArrayType() = default;
@@ -20,8 +20,7 @@ ArrayType::~ArrayType() = default;
 const ArrayType* ArrayType::AsArrayType() const { return this; }
 
 std::string ArrayType::ComputeFullName() const {
-  return value_type_.Get()->GetFullName() +
-         fxl::StringPrintf("[%zu]", num_elts_);
+  return value_type_->GetFullName() + fxl::StringPrintf("[%zu]", num_elts_);
 }
 
 }  // namespace zxdb

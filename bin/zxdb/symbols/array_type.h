@@ -18,19 +18,23 @@ class ArrayType final : public Type {
  public:
   const ArrayType* AsArrayType() const override;
 
-  const LazySymbol& value_type() const { return value_type_; }
+  const Type* value_type() const { return value_type_.get(); }
   size_t num_elts() const { return num_elts_; }
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(ArrayType);
   FRIEND_MAKE_REF_COUNTED(ArrayType);
 
-  ArrayType(LazySymbol value_type, size_t num_elts);
+  // The actual type (rather than a LazySymbol) is passed to this constructor
+  // because all Types expect to have their size set as a member, and we can't
+  // compute the size of an array without knowing the size of the contained
+  // elements.
+  ArrayType(fxl::RefPtr<Type> value_type, size_t num_elts);
   ~ArrayType() override;
 
   std::string ComputeFullName() const override;
 
-  const LazySymbol value_type_;
+  const fxl::RefPtr<Type> value_type_;
   const size_t num_elts_;
 };
 

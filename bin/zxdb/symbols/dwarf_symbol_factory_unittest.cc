@@ -150,7 +150,7 @@ TEST(DwarfSymbolFactory, ArrayType) {
   EXPECT_EQ("const char[14]", array_type->GetFullName());
 
   // The inner type should be a "char".
-  const Type* elt_type = array_type->value_type().Get()->AsType();
+  const Type* elt_type = array_type->value_type();
   ASSERT_TRUE(elt_type);
   EXPECT_EQ("const char", elt_type->GetFullName());
 }

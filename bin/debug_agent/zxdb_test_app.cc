@@ -74,11 +74,14 @@ void DoFoo(Foo* f) {
 }
 
 void DoRefs(int& a, const Foo& f) {
-  int array[5] = { 100, 101, 102, 103, 104 };
+  int array[5] = {100, 101, 102, 103, 104};
+
+  int* array2 = &array[0];
 
   a = 56;
   if (f.bar > 1)
     zx_debug_write("         ", array[a] - 100);
+  (void)array2;
 }
 
 int main(int argc, char* argv[]) {

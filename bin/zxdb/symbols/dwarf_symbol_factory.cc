@@ -324,6 +324,14 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeArrayType(
   if (!array_decoder.Decode(die) || !type)
     return fxl::MakeRefCounted<Symbol>();
 
+  // Need the concrete symbol for the contained type for the array constructor.
+  auto contained = DecodeSymbol(type);
+  if (!contained)
+    return fxl::MakeRefCounted<Symbol>();
+  Type* contained_type = contained->AsType();
+  if (!contained_type)
+    return fxl::MakeRefCounted<Symbol>();
+
   // Find the subrange child DIE (normally there will be only this one child).
   llvm::DWARFDie subrange_die;
   for (const llvm::DWARFDie& child : die) {
@@ -347,7 +355,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeArrayType(
   if (!range_decoder.Decode(subrange_die) || !count)
     return fxl::MakeRefCounted<Symbol>();
 
-  return fxl::MakeRefCounted<ArrayType>(MakeLazy(type), *count);
+  return fxl::MakeRefCounted<ArrayType>(fxl::RefPtr<Type>(contained_type),
+                                        *count);
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeBaseType(
