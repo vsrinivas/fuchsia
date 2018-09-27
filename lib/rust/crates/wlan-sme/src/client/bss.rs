@@ -3,10 +3,13 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_wlan_mlme::BssDescription;
+use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::cmp::Ordering;
 use wlan_rsn::rsne;
 
 use crate::Ssid;
+use crate::client::clone_utils::clone_bss_desc;
 use super::rsn::is_rsn_compatible;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -22,7 +25,6 @@ pub struct BssInfo {
 #[derive(Clone, Debug, PartialEq)]
 pub struct EssInfo {
     pub best_bss: BssInfo,
-    pub bss_count: usize,
 }
 
 pub fn convert_bss_description(bss: &BssDescription) -> BssInfo {
@@ -61,11 +63,37 @@ fn is_bss_compatible(bss: &BssDescription) -> bool {
     }
 }
 
+pub fn get_best_bss(bss_list: &[BssDescription]) -> Option<&BssDescription> {
+    bss_list.iter().max_by(|x, y| compare_bss(x, y))
+}
+
+pub fn group_networks(bss_set: &[BssDescription]) -> Vec<EssInfo> {
+    let mut bss_by_ssid: HashMap<Ssid, Vec<BssDescription>> = HashMap::new();
+
+    for bss in bss_set.iter() {
+        match bss_by_ssid.entry(bss.ssid.clone()) {
+            Entry::Vacant(e) => {
+                e.insert(vec![clone_bss_desc(bss)]);
+            },
+            Entry::Occupied(mut e) => {
+                e.get_mut().push(clone_bss_desc(bss));
+            }
+        };
+    }
+
+    bss_by_ssid.values()
+        .filter_map(|bss_list| get_best_bss(bss_list))
+        .map(|bss| EssInfo { best_bss: convert_bss_description(&bss) })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use std::cmp::Ordering;
+
+    use crate::client::test_utils::fake_bss_with_bssid;
 
     #[test]
     fn compare() {
@@ -82,6 +110,32 @@ mod tests {
         assert_bss_cmp(&bss(0, 0, true), &bss(0, -200, true));
         // Having an RSSI measurement is always better than not having any measurement
         assert_bss_cmp(&bss(0, 0, true), &bss(-100, 0, true));
+    }
+
+    #[test]
+    fn get_best_bss_empty_list() {
+        assert!(get_best_bss(&vec![]).is_none());
+    }
+
+    #[test]
+    fn get_best_bss_nonempty_list() {
+        let bss1 = bss(-30, -10, false);
+        let bss2 = bss(-20, -10, true);
+        let bss3 = bss(-80, -80, true);
+        let bss_list = vec![bss1, bss2, bss3];
+        assert_eq!(get_best_bss(&bss_list), Some(&bss_list[1]));
+    }
+
+    #[test]
+    fn group_networks_by_ssid() {
+        let bss1 = fake_bss_with_bssid(b"foo".to_vec(), [1, 1, 1, 1, 1, 1]);
+        let bss2 = fake_bss_with_bssid(b"bar".to_vec(), [2, 2, 2, 2, 2, 2]);
+        let bss3 = fake_bss_with_bssid(b"foo".to_vec(), [3, 3, 3, 3, 3, 3]);
+        let mut ess_list = group_networks(&vec![bss1, bss2, bss3]);
+
+        let mut ssid_list = ess_list.into_iter().map(|ess| ess.best_bss.ssid).collect::<Vec<_>>();
+        ssid_list.sort();
+        assert_eq!(vec![b"bar".to_vec(), b"foo".to_vec()], ssid_list);
     }
 
     fn assert_bss_cmp(worse: &fidl_mlme::BssDescription, better: &fidl_mlme::BssDescription) {

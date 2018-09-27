@@ -9,13 +9,11 @@ use wlan_rsn::rsna::{self, NegotiatedRsne, SecAssocUpdate, SecAssocStatus};
 
 use super::bss::convert_bss_description;
 use super::phy_selection::{derive_phy_cbw};
-use super::{ConnectFailure, ConnectPhyParams, ConnectResult, InfoEvent,
-            InfoSink, Status, Tokens, UserEvent};
-use super::internal::UserSink;
+use super::{ConnectFailure, ConnectPhyParams, ConnectResult, InfoEvent, Status, Tokens};
 use super::rsn::Rsna;
 
 use crate::MlmeRequest;
-use crate::client::Context;
+use crate::client::{Context, report_connect_finished};
 use crate::client::clone_utils::clone_bss_desc;
 use crate::sink::MlmeSink;
 
@@ -83,8 +81,7 @@ impl<T: Tokens> State<T> {
                     },
                     other => {
                         error!("Join request failed with result code {:?}", other);
-                        report_connect_finished(cmd.token, &context.user_sink,
-                                                &context.info_sink, ConnectResult::Failed,
+                        report_connect_finished(cmd.token, &context, ConnectResult::Failed,
                                                 Some(ConnectFailure::JoinFailure(other)),
                         );
                         State::Idle
@@ -101,8 +98,7 @@ impl<T: Tokens> State<T> {
                     },
                     other => {
                         error!("Authenticate request failed with result code {:?}", other);
-                        report_connect_finished(cmd.token, &context.user_sink,
-                                                &context.info_sink, ConnectResult::Failed,
+                        report_connect_finished(cmd.token, &context, ConnectResult::Failed,
                                                 Some(ConnectFailure::AuthenticationFailure(other)),
                         );
                         State::Idle
@@ -127,8 +123,7 @@ impl<T: Tokens> State<T> {
                                 }
                             },
                             None => {
-                                report_connect_finished(cmd.token, &context.user_sink,
-                                                        &context.info_sink,
+                                report_connect_finished(cmd.token, &context,
                                                         ConnectResult::Success, None);
                                 State::Associated {
                                     bss: cmd.bss,
@@ -141,8 +136,7 @@ impl<T: Tokens> State<T> {
                     },
                     other => {
                         error!("Associate request failed with result code {:?}", other);
-                        report_connect_finished(cmd.token, &context.user_sink,
-                                                &context.info_sink, ConnectResult::Failed,
+                        report_connect_finished(cmd.token, &context, ConnectResult::Failed,
                                                 Some(ConnectFailure::AssociationFailure(other)),
                         );
                         State::Idle
@@ -173,8 +167,7 @@ impl<T: Tokens> State<T> {
                 MlmeEvent::DeauthenticateInd{ ind } => {
                     if let LinkState::EstablishingRsna(token, _) = link_state {
                         let connect_result = deauth_code_to_connect_result(ind.reason_code);
-                        report_connect_finished(token, &context.user_sink, &context.info_sink,
-                                                connect_result, None);
+                        report_connect_finished(token, &context, connect_result, None);
                     }
                     State::Idle
                 },
@@ -192,15 +185,13 @@ impl<T: Tokens> State<T> {
                             RsnaStatus::Established => {
                                 context.info_sink.send(
                                     InfoEvent::RsnaEstablished { att_id: context.att_id });
-                                report_connect_finished(token, &context.user_sink,
-                                                        &context.info_sink,
+                                report_connect_finished(token, &context,
                                                         ConnectResult::Success, None);
                                 let link_state = LinkState::LinkUp(Some(rsna));
                                 State::Associated { bss, last_rssi, link_state, params, }
                             },
                             RsnaStatus::Failed(result) => {
-                                report_connect_finished(token, &context.user_sink,
-                                                        &context.info_sink, result, None);
+                                report_connect_finished(token, &context, result, None);
                                 send_deauthenticate_request(bss, &context.mlme_sink);
                                 State::Idle
                             },
@@ -257,12 +248,10 @@ impl<T: Tokens> State<T> {
         match self {
             State::Idle => {},
             State::Joining { cmd } | State::Authenticating { cmd }  => {
-                report_connect_finished(cmd.token, &context.user_sink, &context.info_sink,
-                                        ConnectResult::Canceled, None);
+                report_connect_finished(cmd.token, &context, ConnectResult::Canceled, None);
             },
             State::Associating{ cmd, .. } => {
-                report_connect_finished(cmd.token, &context.user_sink, &context.info_sink,
-                                        ConnectResult::Canceled, None);
+                report_connect_finished(cmd.token, &context, ConnectResult::Canceled, None);
                 send_deauthenticate_request(cmd.bss, &context.mlme_sink);
             },
             State::Associated { bss, .. } => {
@@ -441,25 +430,6 @@ fn to_associating_state<T>(cmd: ConnectCommand<T::ConnectToken>, mlme_sink: &Mlm
     State::Associating { cmd }
 }
 
-fn report_connect_finished<T>(token: Option<T::ConnectToken>,
-                              user_sink: &UserSink<T>,
-                              info_sink: &InfoSink,
-                              result: ConnectResult,
-                              failure: Option<ConnectFailure>)
-    where T: Tokens
-{
-    if let Some(token) = token {
-        user_sink.send(UserEvent::ConnectFinished {
-            token,
-            result: result.clone(),
-        });
-    }
-    info_sink.send(InfoEvent::ConnectFinished {
-        result,
-        failure,
-    });
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -469,7 +439,7 @@ mod tests {
     use std::sync::Arc;
 
     use crate::client::test_utils::{expect_info_event, fake_unprotected_bss_description};
-    use crate::client::{UserEvent, UserStream};
+    use crate::client::{InfoSink, UserEvent, UserStream, UserSink};
     use crate::{DeviceInfo, InfoStream, MlmeStream, Ssid};
 
     #[derive(Debug, PartialEq)]
@@ -803,7 +773,7 @@ mod tests {
                 mlme_sink: MlmeSink::new(mlme_sink),
                 user_sink: UserSink::new(user_sink),
                 info_sink: InfoSink::new(info_sink),
-                att_id: 0, 
+                att_id: 0,
             };
             TestHelper { mlme_stream, user_stream, info_stream, context }
         }

@@ -19,14 +19,16 @@ use std::sync::Arc;
 
 use super::{DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid};
 
-use self::scan::{DiscoveryScan, JoinScan, JoinScanFailure, ScanResult, ScanScheduler};
+use self::scan::{DiscoveryScan, JoinScan, ScanResult, ScanScheduler};
 use self::rsn::get_rsna;
 use self::state::{ConnectCommand, State};
 
+use crate::client::bss::{get_best_bss, group_networks};
+use crate::client::clone_utils::clone_bss_desc;
 use crate::sink::{InfoSink, MlmeSink};
 
 pub use self::bss::{BssInfo, EssInfo};
-pub use self::scan::{DiscoveryError, DiscoveryResult};
+pub use self::scan::{DiscoveryError};
 
 // A token is an opaque value that identifies a particular request from a user.
 // To avoid parameterizing over many different token types, we introduce a helper
@@ -102,12 +104,14 @@ pub enum ConnectFailure {
     AssociationFailure(fidl_mlme::AssociateResultCodes),
 }
 
+pub type EssDiscoveryResult = Result<Vec<EssInfo>, DiscoveryError>;
+
 // A message from the Client to a user or a group of listeners
 #[derive(Debug)]
 pub enum UserEvent<T: Tokens> {
     ScanFinished {
         tokens: Vec<T::ScanToken>,
-        result: DiscoveryResult,
+        result: EssDiscoveryResult,
     },
     ConnectFinished {
         token: T::ConnectToken,
@@ -189,11 +193,9 @@ impl<T: Tokens> ClientSme<T> {
                 },
             });
         // If the new scan replaced an existing pending JoinScan, notify the existing transaction
-        if let Some(t) = canceled_token {
-            self.context.user_sink.send(UserEvent::ConnectFinished {
-                token: t.user_token,
-                result: ConnectResult::Canceled,
-            });
+        if let Some(token) = canceled_token {
+            report_connect_finished(Some(token.user_token), &self.context,
+                                    ConnectResult::Canceled, None);
         }
         self.send_scan_request(req);
     }
@@ -243,51 +245,58 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                 self.send_scan_request(request);
                 match result {
                     ScanResult::None => state,
-                    ScanResult::ReadyToJoin { token, best_bss } => {
-                        match get_rsna(&self.context.device_info, &token.password, &best_bss) {
-                            Ok(rsna) => {
-                                let cmd = ConnectCommand {
-                                    bss: Box::new(best_bss),
-                                    token: Some(token.user_token),
-                                    rsna,
-                                    params: token.params,
-                                };
-                                state.connect(cmd, &mut self.context)
+                    ScanResult::JoinScanFinished { token, result: Ok(bss_list) } => {
+                        match get_best_bss(&bss_list) {
+                            Some(best_bss) => {
+                                match get_rsna(&self.context.device_info,
+                                               &token.password, &best_bss) {
+                                    Ok(rsna) => {
+                                        let cmd = ConnectCommand {
+                                            bss: Box::new(clone_bss_desc(&best_bss)),
+                                            token: Some(token.user_token),
+                                            rsna,
+                                            params: token.params,
+                                        };
+                                        state.connect(cmd, &mut self.context)
+                                    },
+                                    Err(err) => {
+                                        error!("cannot join BSS {:?} {:?}", best_bss.bssid, err);
+                                        report_connect_finished(Some(token.user_token),
+                                                                &self.context,
+                                                                ConnectResult::Failed, None);
+                                        state
+                                    }
+                                }
                             },
-                            Err(err) => {
-                                error!("cannot join BSS {:?} {:?}", best_bss.bssid, err);
-                                self.context.user_sink.send(UserEvent::ConnectFinished {
-                                    token: token.user_token,
-                                    result: ConnectResult::Failed,
-                                });
+                            None => {
+                                error!("no matching BSS found");
+                                report_connect_finished(Some(token.user_token),
+                                                        &self.context,
+                                                        ConnectResult::Failed, None);
                                 state
                             }
                         }
                     },
-                    ScanResult::CannotJoin { token, reason } => {
-                        error!("cannot join network because scan failed: {:?}", reason);
-                        self.context.user_sink.send(UserEvent::ConnectFinished {
-                            token: token.user_token,
-                            result: match reason {
-                                JoinScanFailure::Canceled => ConnectResult::Canceled,
-                                _ => ConnectResult::Failed,
-                            },
-                        });
+                    ScanResult::JoinScanFinished {token, result: Err(e) } => {
+                        error!("cannot join network because scan failed: {:?}", e);
+                        report_connect_finished(Some(token.user_token),
+                                                &self.context,
+                                                ConnectResult::Failed, None);
                         state
                     },
                     ScanResult::DiscoveryFinished { tokens, result } => {
-                        match &result {
-                            Ok(ess_list) => {
-                                let bss_count = ess_list
-                                    .into_iter()
-                                    .map(|ess_info| ess_info.bss_count)
-                                    .sum();
+                        let result = match result {
+                            Ok(bss_list) => {
+                                let bss_count = bss_list.len();
+                                let ess_list = group_networks(&bss_list);
+                                let ess_count = ess_list.len();
                                 self.context.info_sink.send(InfoEvent::ScanDiscoveryFinished {
                                     bss_count,
-                                    ess_count: ess_list.len(),
+                                    ess_count,
                                 });
-                            }
-                            _ => {}
+                                Ok(ess_list)
+                            },
+                            Err(e) => Err(e)
                         };
                         self.context.user_sink.send(UserEvent::ScanFinished {
                             tokens,
@@ -302,6 +311,24 @@ impl<T: Tokens> super::Station for ClientSme<T> {
             }
         });
     }
+}
+
+fn report_connect_finished<T>(token: Option<T::ConnectToken>,
+                              context: &Context<T>,
+                              result: ConnectResult,
+                              failure: Option<ConnectFailure>)
+    where T: Tokens
+{
+    if let Some(token) = token {
+        context.user_sink.send(UserEvent::ConnectFinished {
+            token,
+            result: result.clone(),
+        });
+    }
+    context.info_sink.send(InfoEvent::ConnectFinished {
+        result,
+        failure,
+    });
 }
 
 #[cfg(test)]

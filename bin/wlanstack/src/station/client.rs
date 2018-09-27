@@ -15,7 +15,7 @@ use std::sync::{Arc, Mutex};
 use wlan_sme::{client as client_sme, DeviceInfo, InfoStream};
 use wlan_sme::client::{BssInfo, ConnectionAttemptId, ConnectResult,
                        ConnectPhyParams, DiscoveryError,
-                       DiscoveryResult, EssInfo, InfoEvent, ScanTxnId};
+                       EssDiscoveryResult, EssInfo, InfoEvent, ScanTxnId};
 use fuchsia_zircon as zx;
 
 use crate::cobalt_reporter::CobaltSender;
@@ -300,7 +300,7 @@ fn handle_info_event(e: InfoEvent,
 }
 
 fn send_all_scan_results(tokens: Vec<fidl_sme::ScanTransactionControlHandle>,
-                         result: DiscoveryResult) {
+                         result: EssDiscoveryResult) {
     let mut fidl_result = result
         .map(|ess_list| ess_list.into_iter().map(convert_ess_info).collect::<Vec<_>>())
         .map_err(|e| {

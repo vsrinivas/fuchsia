@@ -5,13 +5,10 @@
 use failure::Fail;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, ScanResultCodes, ScanRequest};
 use log::error;
-use std::collections::HashMap;
-use std::collections::hash_map::Entry;
-use std::cmp::Ordering;
 use std::mem;
 use std::sync::Arc;
 
-use crate::client::{bss::*, DeviceInfo, Ssid};
+use crate::client::{DeviceInfo, Ssid};
 
 // Scans can be performed for two different purposes:
 //      1) Discover available wireless networks. These scans are initiated by the "user",
@@ -53,7 +50,7 @@ enum ScanState<D, J> {
     ScanningToJoin {
         cmd: JoinScan<J>,
         mlme_txn_id: u64,
-        best_bss: Option<BssDescription>
+        bss_list: Vec<BssDescription>
     },
     ScanningToDiscover {
         tokens: Vec<D>,
@@ -62,11 +59,8 @@ enum ScanState<D, J> {
     },
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum JoinScanFailure {
-    // MLME returned a set of BSS descriptions, but none of them matched our criteria
-    // (SSID, RSN, etc)
-    NoMatchingBssFound,
     // MLME returned an error code
     ScanFailed(ScanResultCodes),
     // Scan was canceled or superseded by another request
@@ -78,16 +72,11 @@ pub enum ScanResult<D, J> {
     // No reaction: the scan results are not relevant anymore, or we received
     // an unexpected ScanConfirm.
     None,
-    // "Join" scan has finished successfully and a matching BSS was found.
+    // "Join" scan has finished, either successfully or not.
     // The SME state machine can now send a JoinRequest to MLME if it desires so.
-    ReadyToJoin {
+    JoinScanFinished{
         token: J,
-        best_bss: BssDescription,
-    },
-    // "Join" scan was unsuccessful.
-    CannotJoin{
-        token: J,
-        reason: JoinScanFailure,
+        result: JoinScanResult,
     },
     // "Discovery" scan has finished, either successfully or not.
     // SME is expected to forward the result to the user.
@@ -97,7 +86,8 @@ pub enum ScanResult<D, J> {
     },
 }
 
-pub type DiscoveryResult = Result<Vec<EssInfo>, DiscoveryError>;
+pub type JoinScanResult = Result<Vec<BssDescription>, JoinScanFailure>;
+pub type DiscoveryResult = Result<Vec<BssDescription>, DiscoveryError>;
 
 #[derive(Debug, Fail)]
 pub enum DiscoveryError {
@@ -154,13 +144,9 @@ impl<D, J> ScanScheduler<D, J> {
         }
         match &mut self.current {
             ScanState::NotScanning => {},
-            ScanState::ScanningToJoin { cmd, best_bss, .. } => {
+            ScanState::ScanningToJoin { cmd, bss_list, .. } => {
                 if cmd.ssid == msg.bss.ssid {
-                    match best_bss {
-                        Some(best_bss) if
-                            compare_bss(best_bss, &msg.bss) != Ordering::Less => {},
-                        other => *other = Some(msg.bss),
-                    }
+                    bss_list.push(msg.bss)
                 }
             },
             ScanState::ScanningToDiscover { bss_list, .. } => {
@@ -181,33 +167,17 @@ impl<D, J> ScanScheduler<D, J> {
         let old_state = mem::replace(&mut self.current, ScanState::NotScanning);
         let result = match old_state {
             ScanState::NotScanning => ScanResult::None,
-            ScanState::ScanningToJoin{ cmd, best_bss, .. } => {
-                if self.pending_join.is_some() {
+            ScanState::ScanningToJoin{ cmd, bss_list, .. } => {
+                let result = if self.pending_join.is_some() {
                     // The scan that just finished was superseded by a newer join scan request
-                    ScanResult::CannotJoin {
-                        token: cmd.token,
-                        reason: JoinScanFailure::Canceled,
-                    }
+                    Err(JoinScanFailure::Canceled)
                 } else {
                     match msg.code {
-                        ScanResultCodes::Success => {
-                            match best_bss {
-                                None => ScanResult::CannotJoin {
-                                    token: cmd.token,
-                                    reason: JoinScanFailure::NoMatchingBssFound,
-                                },
-                                Some(bss) => ScanResult::ReadyToJoin {
-                                    token: cmd.token,
-                                    best_bss: bss,
-                                },
-                            }
-                        },
-                        other => ScanResult::CannotJoin {
-                            token: cmd.token,
-                            reason: JoinScanFailure::ScanFailed(other),
-                        }
+                        ScanResultCodes::Success => Ok(bss_list),
+                        other => Err(JoinScanFailure::ScanFailed(other)),
                     }
-                }
+                };
+                ScanResult::JoinScanFinished { token: cmd.token, result }
             },
             ScanState::ScanningToDiscover{ tokens, bss_list, .. } => {
                 ScanResult::DiscoveryFinished {
@@ -250,7 +220,7 @@ impl<D, J> ScanScheduler<D, J> {
                     self.current = ScanState::ScanningToJoin {
                         cmd: join_scan,
                         mlme_txn_id: self.last_mlme_txn_id,
-                        best_bss: None,
+                        bss_list: Vec::new(),
                     };
                     Some(request)
                 } else if !self.pending_discovery.is_empty() {
@@ -311,7 +281,7 @@ fn new_discovery_scan_request(mlme_txn_id: u64,
 fn convert_discovery_result(msg: fidl_mlme::ScanEnd,
                             bss_list: Vec<BssDescription>) -> DiscoveryResult {
     match msg.code {
-        ScanResultCodes::Success => Ok(group_networks(bss_list)),
+        ScanResultCodes::Success => Ok(bss_list),
         ScanResultCodes::NotSupported => Err(DiscoveryError::NotSupported),
         ScanResultCodes::InvalidArgs => {
             error!("Scan returned INVALID_ARGS");
@@ -319,29 +289,6 @@ fn convert_discovery_result(msg: fidl_mlme::ScanEnd,
         },
         ScanResultCodes::InternalError => Err(DiscoveryError::InternalError),
     }
-}
-
-fn group_networks(bss_set: Vec<BssDescription>) -> Vec<EssInfo> {
-    let mut best_bss_by_ssid: HashMap<Ssid, (BssDescription, usize)> = HashMap::new();
-    for bss in bss_set {
-        match best_bss_by_ssid.entry(bss.ssid.clone()) {
-            Entry::Vacant(e) => { e.insert((bss, 1)); },
-            Entry::Occupied(mut e) => {
-                let (bss_desc, bss_count) = e.get_mut();
-                *bss_count += 1;
-                if compare_bss(bss_desc, &bss) == Ordering::Less {
-                    *bss_desc = bss;
-                }
-            }
-
-        };
-    }
-    best_bss_by_ssid.values()
-        .map(|(bss, bss_count)| EssInfo {
-                best_bss: convert_bss_description(&bss),
-                bss_count: *bss_count,
-            })
-        .collect()
 }
 
 fn get_channels_to_scan(device_info: &DeviceInfo) -> Vec<u8> {
@@ -369,7 +316,8 @@ mod tests {
     use super::*;
 
     use std::collections::HashSet;
-    use crate::client::test_utils::fake_unprotected_bss_description;
+    use crate::client::test_utils::{fake_bss_with_bssid, fake_unprotected_bss_description};
+    use crate::client::clone_utils::clone_bss_desc;
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
@@ -404,7 +352,7 @@ mod tests {
             _ => panic!("expected ScanResult::DiscoveryFinished")
         };
         let mut ssid_list = result.expect("expected a successful scan result")
-            .into_iter().map(|ess| ess.best_bss.ssid).collect::<Vec<_>>();
+            .into_iter().map(|bss| bss.ssid).collect::<Vec<_>>();
         ssid_list.sort();
         assert_eq!(vec![b"foo".to_vec(), b"qux".to_vec()], ssid_list);
     }
@@ -450,7 +398,7 @@ mod tests {
             _ => panic!("expected ScanResult::DiscoveryFinished")
         };
         let mut ssid_list = result.expect("expected a successful scan result")
-            .into_iter().map(|ess| ess.best_bss.ssid).collect::<Vec<_>>();
+            .into_iter().map(|bss| bss.ssid).collect::<Vec<_>>();
         ssid_list.sort();
         assert_eq!(vec![b"bar".to_vec(), b"foo".to_vec()], ssid_list);
     }
@@ -463,34 +411,32 @@ mod tests {
         assert!(discarded_token.is_none());
         let txn_id = req.expect("expected a ScanRequest").txn_id;
 
-        // Matching BSS with poor signal quality
+        // Matching BSS
+        let bss1 = fake_bss_with_bssid(b"foo".to_vec(), [1, 1, 1, 1, 1, 1]);
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss_rcpi(b"foo".to_vec(), [1, 1, 1, 1, 1, 1], -100),
+            bss: clone_bss_desc(&bss1),
         });
 
-        // Great signal quality but mismatching transaction ID
+        // Mismatching transaction ID
+        let bss2 = fake_bss_with_bssid(b"foo".to_vec(), [2, 2, 2, 2, 2, 2]);
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id: txn_id + 100,
-            bss: fake_bss_rcpi(b"foo".to_vec(), [2, 2, 2, 2, 2, 2], -10),
+            bss: bss2,
         });
 
-        // Great signal quality but mismatching SSID
+        // Mismatching SSID
+        let bss3 = fake_bss_with_bssid(b"bar".to_vec(), [3, 3, 3, 3, 3, 3]);
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss_rcpi(b"bar".to_vec(), [3, 3, 3, 3, 3, 3], -10),
+            bss: bss3,
         });
 
-        // Matching BSS with good signal quality
+        // Matching BSS
+        let bss4 = fake_bss_with_bssid(b"foo".to_vec(), [4, 4, 4, 4, 4, 4]);
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss_rcpi(b"foo".to_vec(), [4, 4, 4, 4, 4, 4], -30),
-        });
-
-        // Matching BSS with decent signal quality
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
-            txn_id,
-            bss: fake_bss_rcpi(b"foo".to_vec(), [5, 5, 5, 5, 5, 5], -50),
+            bss: clone_bss_desc(&bss4),
         });
 
         let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
@@ -498,16 +444,13 @@ mod tests {
             code: fidl_mlme::ScanResultCodes::Success,
         });
         assert!(req.is_none());
-        let best_bss = match result {
-            ScanResult::ReadyToJoin { token, best_bss } => {
+        match result {
+            ScanResult::JoinScanFinished { token, result } => {
                 assert_eq!(10, token);
-                best_bss
+                assert_eq!(result, Ok(vec![bss1, bss4]));
             },
             _ => panic!("expected ScanResult::ReadyToJoin")
         };
-
-        // Expect the matching bss with best signal quality to be picked
-        assert_eq!(fake_bss_rcpi(b"foo".to_vec(), [4, 4, 4, 4, 4, 4], -30), best_bss);
     }
 
     #[test]
@@ -521,7 +464,7 @@ mod tests {
         assert_eq!(ScanState::ScanningToJoin{
             cmd: JoinScan{ ssid: b"foo".to_vec(), token: 10 },
             mlme_txn_id: 1,
-            best_bss: None,
+            bss_list: vec![],
         }, sched.current);
         assert_eq!(None, sched.pending_join);
 
@@ -534,7 +477,7 @@ mod tests {
         assert_eq!(ScanState::ScanningToJoin{
             cmd: JoinScan{ ssid: b"foo".to_vec(), token: 10 },
             mlme_txn_id: 1,
-            best_bss: None,
+            bss_list: vec![],
         }, sched.current);
         assert_eq!(Some(JoinScan{ ssid: b"bar".to_vec(), token: 20 }),
                    sched.pending_join);
@@ -543,14 +486,6 @@ mod tests {
         // once the scan finishes
         assert_eq!(Some(&JoinScan{ ssid: b"bar".to_vec(), token: 20 }),
                    sched.get_join_scan());
-    }
-
-    fn fake_bss_rcpi(ssid: Ssid, bssid: [u8; 6], rcpi_dbmh: i16) -> BssDescription {
-        BssDescription {
-            bssid,
-            rcpi_dbmh,
-            .. fake_unprotected_bss_description(ssid)
-        }
     }
 
     fn create_sched() -> ScanScheduler<i32, i32> {
