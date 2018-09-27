@@ -201,6 +201,15 @@ next_format:
                 format_num *= 10;
                 format_num += c - '0';
                 goto next_format;
+            case '*': {
+                int width = va_arg(ap, int);
+                if (width < 0) {
+                    flags |= LEFTFORMATFLAG;
+                    width = -width;
+                }
+                format_num = width;
+                goto next_format;
+            }
             case '.':
                 // Check the next character. It either should be * (if valid)
                 // or something else (if invalid) that we consume as invalid.

@@ -90,7 +90,6 @@ static void usage(const char* progname) {
 }
 
 static void list_cases(void) {
-    char fmt_string[32];
     size_t count = 0;
     size_t max_namelen = 0;
 
@@ -111,20 +110,19 @@ static void list_cases(void) {
            count == 1 ? "is" : "are",
            count,
            count == 1 ? "" : "s");
-    snprintf(fmt_string, sizeof(fmt_string), "  %%-%zus : %%s\n", max_namelen);
 
     for (testcase = __start_unittest_testcases;
          testcase != __stop_unittest_testcases;
          ++testcase) {
 
         if (testcase->name)
-            printf(fmt_string, testcase->name,
+            printf("  %-*s : %s\n",
+                   static_cast<int>(max_namelen), testcase->name,
                    testcase->desc ? testcase->desc : "<no description>");
     }
 }
 
 static bool run_unittest(const unittest_testcase_registration_t* testcase) {
-    char fmt_string[32];
     size_t max_namelen = 0;
     size_t passed = 0;
 
@@ -140,7 +138,6 @@ static bool run_unittest(const unittest_testcase_registration_t* testcase) {
                 max_namelen = namelen;
         }
     }
-    snprintf(fmt_string, sizeof(fmt_string), "  %%-%zus : ", max_namelen);
 
     unittest_printf("%s : Running %zu test%s...\n",
                     testcase->name,
@@ -152,7 +149,8 @@ static bool run_unittest(const unittest_testcase_registration_t* testcase) {
     for (size_t i = 0; i < testcase->test_cnt; ++i) {
         const unittest_registration_t* test = &testcase->tests[i];
 
-        printf(fmt_string, test->name ? test->name : "");
+        printf("  %-*s : ",
+               static_cast<int>(max_namelen), test->name ? test->name : "");
 
         zx_time_t test_start = current_time();
         bool good = test->fn ? test->fn() : false;
@@ -161,7 +159,8 @@ static bool run_unittest(const unittest_testcase_registration_t* testcase) {
         if (good) {
             passed++;
         } else {
-            printf(fmt_string, test->name ? test->name : "");
+            printf("  %-*s : ",
+                   static_cast<int>(max_namelen), test->name ? test->name : "");
         }
 
         unittest_printf("%s (%" PRIu64 " nSec)\n",
