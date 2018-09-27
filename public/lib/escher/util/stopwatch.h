@@ -19,6 +19,7 @@ class Stopwatch {
   explicit Stopwatch(bool start_immediately = true);
   void Start();
   void Stop();
+  void Toggle();
   void Reset();
   uint64_t GetElapsedMicroseconds() const;
   double GetElapsedSeconds() const {
@@ -55,6 +56,13 @@ inline void Stopwatch::Stop() {
     auto duration = std::chrono::duration_cast<UnitT>(stop - start_);
     elapsed_microseconds_ += duration.count();
   }
+}
+
+inline void Stopwatch::Toggle() {
+  if (is_started_)
+    Stop();
+  else
+    Start();
 }
 
 inline void Stopwatch::Reset() {

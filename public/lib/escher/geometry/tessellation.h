@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "lib/escher/forward_declarations.h"
+#include "lib/escher/geometry/indexed_triangle_mesh.h"
 #include "lib/escher/geometry/types.h"
 
 namespace escher {
@@ -18,7 +19,13 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
                       int subdivisions, vec2 center, float radius,
                       float offset_magnitude = 0.f);
 
-// Tessellate a basic rectangle
+// Tessellate a circle and return it as an IndexedTriangleMesh suitable for
+// further processing on the CPU.
+IndexedTriangleMesh2d<vec2> NewCircleIndexedTriangleMesh(const MeshSpec& spec,
+                                                         uint32_t subdivisions,
+                                                         vec2 center,
+                                                         float radius);
+// Tessellate a basic rectangle.
 MeshPtr NewSimpleRectangleMesh(MeshBuilderFactory* factory);
 
 // Tessellate a rectangle with multiple vertices along the top and bottom edges.

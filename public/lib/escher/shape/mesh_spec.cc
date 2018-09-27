@@ -28,6 +28,8 @@ uint32_t GetMeshAttributeSize(MeshAttribute attr) {
       return sizeof(vec2);
     case MeshAttribute::kPerimeterPos:
       return sizeof(float);
+    case MeshAttribute::kBlendWeight1:
+      return sizeof(float);
     case MeshAttribute::kStride:
       FXL_CHECK(false);
       return 0;
@@ -81,6 +83,12 @@ uint32_t GetMeshAttributeOffset(const MeshAttributes& attrs,
   if (attr == MeshAttribute::kPerimeterPos) {
     return offset;
   } else if (attrs & MeshAttribute::kPerimeterPos) {
+    offset += sizeof(float);
+  }
+
+  if (attr == MeshAttribute::kBlendWeight1) {
+    return offset;
+  } else if (attrs & MeshAttribute::kBlendWeight1) {
     offset += sizeof(float);
   }
 

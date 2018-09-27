@@ -14,11 +14,13 @@
 
 namespace escher {
 
-template <typename PositionT, typename AttributeT>
-MeshPtr IndexedTriangleMeshUpload(
-    Escher* escher, BatchGpuUploader* uploader, const MeshSpec& mesh_spec,
-    const BoundingBox& bounding_box,
-    const IndexedTriangleMesh<PositionT, AttributeT>& mesh) {
+// Uploads the contents of an IndexedTriangleMesh<> to a Vulkan buffer, and
+// returns a new Mesh that is bound to this buffer.
+template <typename IndexedTriangleMeshT>
+MeshPtr IndexedTriangleMeshUpload(Escher* escher, BatchGpuUploader* uploader,
+                                  const MeshSpec& mesh_spec,
+                                  const BoundingBox& bounding_box,
+                                  const IndexedTriangleMeshT& mesh) {
   TRACE_DURATION("gfx", "escher::IndexedTriangleMeshUpload", "triangles",
                  mesh.triangle_count(), "vertices", mesh.vertex_count());
   if (mesh.index_count() == 0)

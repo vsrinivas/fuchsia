@@ -15,11 +15,11 @@ namespace escher {
 // lifetime of this allocation is defined by the allocator that this is obtained
 // from.
 struct UniformAllocation {
-  Buffer* buffer;
-  vk::DeviceSize offset;
-  vk::DeviceSize size;
+  Buffer* buffer = nullptr;
+  vk::DeviceSize offset = 0;
+  vk::DeviceSize size = 0;
   // Host-accessible pointer to offset region of the buffer's memory.
-  void* host_ptr;
+  void* host_ptr = nullptr;
 
   // Convenient way to refer to the host-accessible memory as a typed reference.
   template <typename T>

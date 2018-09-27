@@ -28,8 +28,11 @@ enum class MeshAttribute {
   // float. Parameterization around the perimeter of an shape, which varies from
   // 0 - 1, and allows the vertex shader to know "where it is" on the shape.
   kPerimeterPos = 1 << 4,
+  // float.  Describes how much this vertex should be affected by some
+  // transformation implemented by the vertex shader.
+  kBlendWeight1 = 1 << 5,
   // Pseudo-attribute, used to obtain the vertex stride for the mesh.
-  kStride = 1 << 5,
+  kStride = 1 << 6,
 };
 
 using MeshAttributes = vk::Flags<MeshAttribute, uint32_t>;
@@ -59,6 +62,7 @@ uint32_t GetMeshAttributeOffset(const MeshAttributes& attributes,
 // and the layout of attributes within those buffers.
 struct MeshSpec {
   using IndexType = uint32_t;
+  static constexpr vk::IndexType IndexTypeEnum = vk::IndexType::eUint32;
 
   // Describes the vertex attributes for each vertex buffer bound by the mesh.
   // Requirements:

@@ -43,9 +43,9 @@ struct IndexedTriangleMesh {
     attributes3.clear();
   }
 
-  size_t index_count() const { return indices.size(); }
-  size_t vertex_count() const { return positions.size(); }
-  size_t triangle_count() const { return index_count() / 3; }
+  uint32_t index_count() const { return indices.size(); }
+  uint32_t vertex_count() const { return positions.size(); }
+  uint32_t triangle_count() const { return index_count() / 3; }
 
   void resize_indices(uint32_t num_indices) {
     FXL_DCHECK(num_indices % 3 == 0);

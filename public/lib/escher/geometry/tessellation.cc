@@ -60,6 +60,65 @@ VertexAttributePointers GetVertexAttributePointers(uint8_t* vertex,
   return attribute_pointers;
 }
 
+IndexedTriangleMesh2d<vec2> NewCircleIndexedTriangleMesh(const MeshSpec& spec,
+                                                         uint32_t subdivisions,
+                                                         vec2 center,
+                                                         float radius) {
+  FXL_DCHECK((spec == MeshSpec{.attributes = {MeshAttribute::kPosition2D,
+                                              MeshAttribute::kUV}}));
+  IndexedTriangleMesh2d<vec2> mesh;
+
+  // Compute the number of vertices in the tessellated circle.
+  size_t outer_vertex_count = 4;
+  while (subdivisions-- > 0) {
+    outer_vertex_count *= 2;
+  }
+
+  const size_t vertex_count = outer_vertex_count + 1;  // Add 1 for center.
+  const size_t index_count = outer_vertex_count * 3;
+
+  mesh.resize_indices(index_count);
+  mesh.resize_vertices(vertex_count);
+
+  // Generate vertex positions.
+
+  vec2* pos = mesh.positions.data();
+  vec2* uv = mesh.attributes1.data();
+
+  // Build center vertex.
+  pos[0] = center;
+  uv[0] = vec2(0.5, 0.5);
+  pos += 1;
+  uv += 1;
+
+  // Outer vertices.
+  const float radian_step = 2 * M_PI / outer_vertex_count;
+  for (size_t i = 0; i < outer_vertex_count; ++i) {
+    // Direction of the current vertex from the center of the circle.
+    float radians = i * radian_step;
+    vec2 dir(sin(radians), cos(radians));
+
+    pos[i] = dir * radius + center;
+    uv[i] = 0.5f * (dir + vec2(1.f, 1.f));
+  }
+
+  // Generate triangle indices.
+  auto* current_tri = mesh.indices.data();
+  const uint32_t triangle_count = index_count / 3;
+  current_tri[0] = 0;
+  current_tri[1] = 1;
+  current_tri[2] = triangle_count;
+  current_tri += 3;
+  for (size_t i = 1; i < triangle_count; ++i) {
+    current_tri[0] = 0;
+    current_tri[1] = i + 1;
+    current_tri[2] = i;
+    current_tri += 3;
+  }
+
+  return mesh;
+}
+
 MeshPtr NewCircleMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
                       int subdivisions, vec2 center, float radius,
                       float offset_magnitude) {

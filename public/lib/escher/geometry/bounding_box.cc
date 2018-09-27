@@ -28,10 +28,12 @@ BoundingBox BoundingBox::NewChecked(vec3 min, vec3 max,
   if (diff.x < 0.f || diff.y < 0.f || diff.z < 0.f)
     return BoundingBox();
 
-  uint32_t dimensions = (diff.x == 0.f ? 0 : 1) + (diff.y == 0.f ? 0 : 1) +
-                        (diff.z == 0.f ? 0 : 1);
-  return dimensions > max_degenerate_dimensions ? BoundingBox()
-                                                : BoundingBox(min, max);
+  uint32_t degenerate_dimensions = (diff.x == 0.f ? 1 : 0) +
+                                   (diff.y == 0.f ? 1 : 0) +
+                                   (diff.z == 0.f ? 1 : 0);
+  return degenerate_dimensions > max_degenerate_dimensions
+             ? BoundingBox()
+             : BoundingBox(min, max);
 }
 
 BoundingBox& BoundingBox::Join(const BoundingBox& box) {

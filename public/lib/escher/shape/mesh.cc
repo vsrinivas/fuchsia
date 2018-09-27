@@ -72,7 +72,7 @@ Mesh::Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,
                {std::move(attribute_buffer0), std::move(attribute_buffer1),
                 std::move(attribute_buffer2), std::move(attribute_buffer3)},
                {attribute_buffer0_offset, attribute_buffer1_offset,
-                attribute_buffer1_offset, attribute_buffer2_offset}),
+                attribute_buffer2_offset, attribute_buffer3_offset}),
            std::move(index_buffer), index_buffer_offset) {}
 
 Mesh::Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,
