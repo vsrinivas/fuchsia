@@ -20,7 +20,18 @@ ArrayType::~ArrayType() = default;
 const ArrayType* ArrayType::AsArrayType() const { return this; }
 
 std::string ArrayType::ComputeFullName() const {
-  return value_type_->GetFullName() + fxl::StringPrintf("[%zu]", num_elts_);
+  // Same as the nested case but with no "outer" string.
+  return ComputeFullNameOfNestedArray(std::string());
+}
+
+std::string ArrayType::ComputeFullNameOfNestedArray(
+    const std::string& outer_dims) const {
+  std::string elt_count = fxl::StringPrintf("[%zu]", num_elts_);
+  if (const ArrayType* inner_array = value_type_->AsArrayType()) {
+    // Special-case nested arrays.
+    return inner_array->ComputeFullNameOfNestedArray(outer_dims + elt_count);
+  }
+  return value_type_->GetFullName() + outer_dims + elt_count;
 }
 
 }  // namespace zxdb

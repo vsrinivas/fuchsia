@@ -84,6 +84,16 @@ void DoRefs(int& a, const Foo& f) {
   (void)array2;
 }
 
+void DoArrays(int x, int y) {
+  double array[4][3] = { {0, 1, 2}, {3, 4, 5}, {6, 7, 8}, {9, 10, 11}};
+  double foo = array[1][2];
+  (void)foo;
+  char buf[2];
+  buf[0] = '0' + (int)array[x][y];
+  buf[1] = 0;
+  zx_debug_write(buf, 1);
+}
+
 int main(int argc, char* argv[]) {
   // Print out the address of main to the system debug log.
   char buf[128];
@@ -95,6 +105,8 @@ int main(int argc, char* argv[]) {
   DebugBreak();
   PrintHello();
   RecursiveCall(3);
+
+  DoArrays(1, 2);
 
   Foo foo;
   foo.bar = 0;

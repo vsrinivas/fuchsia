@@ -38,14 +38,14 @@ fxl::RefPtr<const Function> GetFunctionWithName(ModuleSymbolsImpl& module,
     return fxl::RefPtr<Function>();
 
   // Find the GetIntPtr function.
-  llvm::DWARFDie get_int_ptr_function_die = GetFirstDieOfTagAndName(
+  llvm::DWARFDie function_die = GetFirstDieOfTagAndName(
       module.context(), unit, llvm::dwarf::DW_TAG_subprogram, name);
-  EXPECT_TRUE(get_int_ptr_function_die);
-  if (!get_int_ptr_function_die)
+  EXPECT_TRUE(function_die);
+  if (!function_die)
     return fxl::RefPtr<Function>();
 
   // Should make a valid lazy reference to the function DIE.
-  LazySymbol lazy_function = factory->MakeLazy(get_int_ptr_function_die);
+  LazySymbol lazy_function = factory->MakeLazy(function_die);
   EXPECT_TRUE(lazy_function);
   if (!lazy_function)
     return fxl::RefPtr<Function>();
@@ -153,6 +153,46 @@ TEST(DwarfSymbolFactory, ArrayType) {
   const Type* elt_type = array_type->value_type();
   ASSERT_TRUE(elt_type);
   EXPECT_EQ("const char", elt_type->GetFullName());
+}
+
+TEST(DwarfSymbolFactory, Array2D) {
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  Err err = module.Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  // Find the My2DArray function.
+  const char kMy2DArray[] = "My2DArray";
+  fxl::RefPtr<const Function> function =
+      GetFunctionWithName(module, kMy2DArray);
+  ASSERT_TRUE(function);
+
+  // Find the "array" variable in the function. It's declared as:
+  //
+  //   int array[3][4]
+  //
+  ASSERT_EQ(1u, function->variables().size());
+  const Variable* array = function->variables()[0].Get()->AsVariable();
+  ASSERT_TRUE(array);
+  EXPECT_EQ("array", array->GetAssignedName());
+
+  // It should be an array type with length 3 (outer dimension).
+  const ArrayType* outer_array_type = array->type().Get()->AsArrayType();
+  ASSERT_TRUE(outer_array_type);
+  EXPECT_EQ(3u, outer_array_type->num_elts());
+  EXPECT_EQ("int[3][4]", outer_array_type->GetFullName());
+
+  // The inner array type should be a int[4].
+  const Type* inner_type = outer_array_type->value_type();
+  ASSERT_TRUE(inner_type);
+  const ArrayType* inner_array_type = inner_type->AsArrayType();
+  ASSERT_TRUE(inner_array_type);
+  EXPECT_EQ(4u, inner_array_type->num_elts());
+  EXPECT_EQ("int[4]", inner_array_type->GetFullName());
+
+  // The final contained type type should be a "int".
+  const Type* elt_type = inner_array_type->value_type();
+  ASSERT_TRUE(elt_type);
+  EXPECT_EQ("int", elt_type->GetFullName());
 }
 
 TEST(DwarfSymbolFactory, StructClass) {

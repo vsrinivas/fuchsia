@@ -34,6 +34,12 @@ class ArrayType final : public Type {
 
   std::string ComputeFullName() const override;
 
+  // Normally array names are the contained type with a "[...]" on the end,
+  // but nested array dimensions work in the other direction, so it will look
+  // like "array[outer][inner]". This function takes a previously computed
+  // substring for what should be "[outer]" and creates the final type name.
+  std::string ComputeFullNameOfNestedArray(const std::string& outer_dims) const;
+
   const fxl::RefPtr<Type> value_type_;
   const size_t num_elts_;
 };

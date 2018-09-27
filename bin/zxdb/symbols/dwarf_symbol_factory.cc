@@ -134,6 +134,20 @@ VariableLocation DecodeVariableLocation(const llvm::DWARFUnit* unit,
   return VariableLocation(std::move(entries));
 }
 
+// Extracts the subrange size from an array subrange DIE. Puts the result in
+// *size and returns true on success, false on failure.
+bool ReadArraySubrange(llvm::DWARFContext* context,
+                       const llvm::DWARFDie& subrange_die, uint64_t* size) {
+  // Extract the DW_AT_count attribute (an unsigned number).
+  DwarfDieDecoder range_decoder(context, subrange_die.getDwarfUnit());
+  llvm::Optional<uint64_t> count;
+  range_decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_count, &count);
+  if (!range_decoder.Decode(subrange_die) || !count)
+    return false;
+  *size = *count;
+  return true;
+}
+
 }  // namespace
 
 DwarfSymbolFactory::DwarfSymbolFactory(fxl::WeakPtr<ModuleSymbolsImpl> symbols)
@@ -307,13 +321,18 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
 
 // We expect array types to have two things:
 // - An attribute linking to the underlying type of the array.
-// - A DW_TAG_subrange_type child that holds the size of the array in a
-//   DW_AT_count attribute.
+// - One or more DW_TAG_subrange_type children that hold the size of the array
+//   in a DW_AT_count attribute.
 //
 // The subrange child is weird because the subrange links to its own type.
 // LLVM generates a synthetic type __ARRAY_SIZE_TYPE__ that the
 // DW_TAG_subrange_count DIE references from DW_AT_type attribute. We ignore
 // this and only use the count.
+//
+// One might expect 2-dimensional arrays to be expressed as an array of one
+// dimension where the contained type is an array of another. But both Clang
+// and GCC generate one array entry with two subrange children. The order of
+// these represents the declaration order in the code.
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeArrayType(
     const llvm::DWARFDie& die) {
   // Extract the type attribute from the root DIE (should be a
@@ -332,31 +351,33 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeArrayType(
   if (!contained_type)
     return fxl::MakeRefCounted<Symbol>();
 
-  // Find the subrange child DIE (normally there will be only this one child).
-  llvm::DWARFDie subrange_die;
+  // Find all subranges stored in the declaration order. More than one means a
+  // multi-dimensional array.
+  std::vector<uint64_t> subrange_sizes;
   for (const llvm::DWARFDie& child : die) {
     if (child.getTag() == llvm::dwarf::DW_TAG_subrange_type) {
-      subrange_die = child;
-      break;
+      subrange_sizes.push_back(0);
+      if (!ReadArraySubrange(symbols_->context(), child,
+                             &subrange_sizes.back()))
+        return fxl::MakeRefCounted<Symbol>();
     }
   }
 
   // Require a subrange with a count in it. If we find cases where this isn't
   // the case, we could add support for array types with unknown lengths,
   // but currently ArrayType requires a size.
-  if (!subrange_die)
+  if (subrange_sizes.empty())
     return fxl::MakeRefCounted<Symbol>();
 
-  // Extract the DW_AT_count attribute (an unsigned number).
-  DwarfDieDecoder range_decoder(symbols_->context(),
-                                subrange_die.getDwarfUnit());
-  llvm::Optional<uint64_t> count;
-  range_decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_count, &count);
-  if (!range_decoder.Decode(subrange_die) || !count)
-    return fxl::MakeRefCounted<Symbol>();
-
-  return fxl::MakeRefCounted<ArrayType>(fxl::RefPtr<Type>(contained_type),
-                                        *count);
+  // Work backwards in the array dimensions generating nested array
+  // definitions. The innermost definition refers to the contained type.
+  fxl::RefPtr<Type> cur(contained_type);
+  for (int i = static_cast<int>(subrange_sizes.size()) - 1; i >= 0; i--) {
+    auto new_array = fxl::MakeRefCounted<ArrayType>(
+        std::move(cur), subrange_sizes[i]);
+    cur = std::move(new_array);
+  }
+  return cur;
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeBaseType(

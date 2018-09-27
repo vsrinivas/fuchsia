@@ -40,6 +40,12 @@ EXPORT int DoStructCall(const Struct& arg1, int arg2) {
 
 }  // namespace my_ns
 
+void My2DArray() {
+  int array[3][4];
+  array[1][2] = 1;
+  (void)array;
+}
+
 // TODO(brettw) test:
 //   stuff in an anonymous namespace
 //   typedef
