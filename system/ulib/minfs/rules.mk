@@ -22,8 +22,7 @@ COMMON_SRCS := \
 
 # minfs implementation
 MODULE_SRCS := \
-    $(COMMON_SRCS) \
-    $(LOCAL_DIR)/metrics.cpp \
+    $(COMMON_SRCS)
 
 MODULE_STATIC_LIBS := \
     system/ulib/fs \
@@ -50,6 +49,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-minfs \
 
 include make/module.mk
 

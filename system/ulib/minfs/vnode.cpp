@@ -1105,6 +1105,50 @@ zx_status_t VnodeMinfs::ValidateFlags(uint32_t flags) {
     return ZX_OK;
 }
 
+#ifdef __Fuchsia__
+
+#define ZXFIDL_OPERATION(Method)                                  \
+template <typename... Args>                                       \
+zx_status_t Method ## Op(void* ctx, Args... args) {               \
+    TRACE_DURATION("vfs", #Method);                               \
+    auto vn = reinterpret_cast<VnodeMinfs*>(ctx);                 \
+    return (vn->VnodeMinfs::Method)(fbl::forward<Args>(args)...); \
+}
+
+ZXFIDL_OPERATION(GetMetrics)
+ZXFIDL_OPERATION(ToggleMetrics)
+
+const fuchsia_minfs_Minfs_ops kMinfsOps = {
+    .GetMetrics = GetMetricsOp,
+    .ToggleMetrics = ToggleMetricsOp,
+};
+
+// MinfsConnection overrides the base Connection class to allow Minfs to
+// dispatch its own ordinals.
+class MinfsConnection : public fs::Connection {
+public:
+    MinfsConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
+                    uint32_t flags)
+            : Connection(vfs, fbl::move(vnode), fbl::move(channel), flags) {}
+
+private:
+    zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) final {
+        fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+        if (hdr->ordinal >= fuchsia_minfs_MinfsGetMetricsOrdinal &&
+            hdr->ordinal <= fuchsia_minfs_MinfsToggleMetricsOrdinal) {
+            return fuchsia_minfs_Minfs_dispatch(this, txn, msg, &kMinfsOps);
+        }
+        zx_handle_close_many(msg->handles, msg->num_handles);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+};
+
+zx_status_t VnodeMinfs::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
+    return vfs->ServeConnection(fbl::make_unique<MinfsConnection>(
+        vfs, fbl::WrapRefPtr(this), fbl::move(channel), flags));
+}
+#endif
+
 zx_status_t VnodeMinfs::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
     fd_count_++;
     return ZX_OK;
@@ -1669,6 +1713,17 @@ zx_status_t VnodeMinfs::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
 
 zx_status_t VnodeMinfs::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
     return fs_->bc_->GetDevicePath(buffer_len, out_name, out_len);
+}
+
+zx_status_t VnodeMinfs::GetMetrics(fidl_txn_t* txn) {
+    fuchsia_minfs_Metrics metrics;
+    zx_status_t status = fs_->GetMetrics(&metrics);
+    return fuchsia_minfs_MinfsGetMetrics_reply(txn, status, status == ZX_OK ? &metrics : nullptr);
+}
+
+zx_status_t VnodeMinfs::ToggleMetrics(bool enable, fidl_txn_t* txn) {
+    fs_->SetMetrics(enable);
+    return fuchsia_minfs_MinfsToggleMetrics_reply(txn, ZX_OK);
 }
 
 #endif

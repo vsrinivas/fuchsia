@@ -814,6 +814,11 @@ zx_status_t Connection::DirectoryAdminGetDevicePath(fidl_txn_t* txn) {
     return fuchsia_io_DirectoryAdminGetDevicePath_reply(txn, status, name, actual);
 }
 
+zx_status_t Connection::HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t Connection::HandleMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
     if (hdr->ordinal >= fuchsia_io_NodeCloneOrdinal &&
@@ -829,9 +834,7 @@ zx_status_t Connection::HandleMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
                hdr->ordinal <= fuchsia_io_DirectoryAdminGetDevicePathOrdinal) {
         return fuchsia_io_DirectoryAdmin_dispatch(this, txn, msg, &kDirectoryAdminOps);
     } else {
-        fprintf(stderr, "connection.cpp: Unsupported FIDL operation: 0x%x\n", hdr->ordinal);
-        zx_handle_close_many(msg->handles, msg->num_handles);
-        return ZX_ERR_NOT_SUPPORTED;
+        return HandleFsSpecificMessage(msg, txn);
     }
 }
 

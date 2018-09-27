@@ -50,7 +50,7 @@ public:
     // In practice, this means the connection must have already been remotely
     // closed, or it must be destroyed on the wait handler's dispatch thread
     // to prevent a race.
-    ~Connection();
+    virtual ~Connection();
 
     // Set a signal on the channel which causes it to be torn down and
     // closed asynchronously.
@@ -112,6 +112,17 @@ public:
     zx_status_t DirectoryAdminQueryFilesystem(fidl_txn_t* txn);
     zx_status_t DirectoryAdminGetDevicePath(fidl_txn_t* txn);
 
+protected:
+    // Dispatches incoming FIDL messages which aren't recognized by
+    // |HandleMessage|.
+    //
+    // Takes ownership of the FIDL message's handles.
+    // The default implementation just closes these handles.
+    //
+    // This implementation may be overriden to support additional non-VFS
+    // FIDL protocols.
+    virtual zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+
 private:
     void HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                        const zx_packet_signal_t* signal);
@@ -119,7 +130,7 @@ private:
     void Terminate(bool call_close);
 
     // Method used to dispatch into filesystem.
-    // Invoked by |HandleMessage()| or synthesized internally.
+    // Invoked by |HandleSignals()| or synthesized internally.
     zx_status_t CallHandler();
 
     // Sends an explicit close message to the underlying vnode.
@@ -127,6 +138,10 @@ private:
     // and has been opened.
     void CallClose();
 
+    // Dispatches incoming FIDL messages.
+    //
+    // By default, handles the Node, File, Directory and DirectoryAdmin
+    // protocols, dispatching to |HandleFsSpecificMessage| if the ordinal is not recognized.
     static zx_status_t HandleMessageThunk(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);
     zx_status_t HandleMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 

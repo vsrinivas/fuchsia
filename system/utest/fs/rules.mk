@@ -82,6 +82,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-minfs \
 
 MODULE_COMPILEFLAGS := \
     -Isystem/ulib/bitmap/include \

@@ -14,6 +14,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fuchsia/io/c/fidl.h>
+#include <fuchsia/minfs/c/fidl.h>
 #include <fvm/fvm.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fzl/fdio.h>
@@ -72,7 +73,7 @@ bool VerifyQueryInfo(const ExpectedQueryInfo& expected) {
 
 // Verify intial conditions on a filesystem, and validate that filesystem
 // modifications adjust the query info accordingly.
-bool TestQueryInfo(void) {
+bool TestQueryInfo() {
     BEGIN_TEST;
 
     // This test assumes it is running on a disk with the default slice size.
@@ -110,6 +111,75 @@ bool TestQueryInfo(void) {
     // difference.
     expected_info.used_nodes += kExtraNodeCount;
     ASSERT_TRUE(VerifyQueryInfo(expected_info));
+    END_TEST;
+}
+
+bool ToggleMetrics(bool enabled) {
+    BEGIN_HELPER;
+    fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
+    ASSERT_TRUE(fd);
+    fzl::FdioCaller caller(fbl::move(fd));
+    zx_status_t status;
+    ASSERT_EQ(fuchsia_minfs_MinfsToggleMetrics(caller.borrow_channel(), enabled, &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    END_HELPER;
+}
+
+bool GetMetricsUnavailable() {
+    BEGIN_HELPER;
+    fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
+    ASSERT_TRUE(fd);
+    zx_status_t status;
+    fzl::FdioCaller caller(fbl::move(fd));
+    fuchsia_minfs_Metrics metrics;
+    ASSERT_EQ(fuchsia_minfs_MinfsGetMetrics(caller.borrow_channel(), &status, &metrics),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_ERR_UNAVAILABLE);
+    END_HELPER;
+}
+
+bool GetMetrics(fuchsia_minfs_Metrics* metrics) {
+    BEGIN_HELPER;
+    fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
+    ASSERT_TRUE(fd);
+    zx_status_t status;
+    fzl::FdioCaller caller(fbl::move(fd));
+    ASSERT_EQ(fuchsia_minfs_MinfsGetMetrics(caller.borrow_channel(), &status, metrics),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    END_HELPER;
+}
+
+// Validate that Minfs metrics are functioning correctly.
+bool TestMetrics() {
+    BEGIN_TEST;
+
+    ASSERT_TRUE(GetMetricsUnavailable());
+    ASSERT_TRUE(ToggleMetrics(true));
+
+    fuchsia_minfs_Metrics metrics;
+    ASSERT_TRUE(GetMetrics(&metrics));
+
+    ASSERT_EQ(metrics.create_calls, 0);
+    ASSERT_EQ(metrics.create_calls_success, 0);
+
+    char path[128];
+    snprintf(path, sizeof(path) - 1, "%s/test-file", kMountPath);
+    fbl::unique_fd fd(open(path, O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd);
+    ASSERT_TRUE(GetMetrics(&metrics));
+    ASSERT_EQ(metrics.create_calls, 1);
+    ASSERT_EQ(metrics.create_calls_success, 1);
+
+    fd.reset(open(path, O_CREAT | O_RDWR | O_EXCL));
+    ASSERT_FALSE(fd);
+    ASSERT_TRUE(GetMetrics(&metrics));
+    ASSERT_EQ(metrics.create_calls, 2);
+    ASSERT_EQ(metrics.create_calls_success, 1);
+
+    ASSERT_TRUE(ToggleMetrics(false));
+    ASSERT_TRUE(GetMetricsUnavailable());
+
     END_TEST;
 }
 
@@ -181,7 +251,7 @@ bool FillDirectory(int dir_fd, uint32_t max_blocks) {
 }
 
 // Test various operations when the Minfs partition is near capacity.
-bool TestFullOperations(void) {
+bool TestFullOperations() {
     BEGIN_TEST;
 
     // Define file names we will use upfront.
@@ -367,4 +437,5 @@ RUN_MINFS_TESTS_NORMAL(FsMinfsTests,
 
 RUN_MINFS_TESTS_FVM(FsMinfsFvmTests,
     RUN_TEST_MEDIUM(TestQueryInfo)
+    RUN_TEST_MEDIUM(TestMetrics)
 )

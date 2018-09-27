@@ -15,6 +15,7 @@
 #include <fs/remote.h>
 #include <fs/watcher.h>
 #include <fuchsia/io/c/fidl.h>
+#include <fuchsia/minfs/c/fidl.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #endif
@@ -39,10 +40,6 @@
 #include <minfs/inode-manager.h>
 #include <minfs/superblock.h>
 #include <minfs/writeback.h>
-
-#ifdef __Fuchsia__
-#include "metrics.h"
-#endif
 
 #define EXTENT_COUNT 5
 
@@ -231,8 +228,17 @@ public:
     void UpdateUnlinkMetrics(bool success, const fs::Duration& duration);
     // Update aggregate information about renaming Vnodes.
     void UpdateRenameMetrics(bool success, const fs::Duration& duration);
-    // Print information about filesystem metrics.
-    void DumpMetrics() const;
+
+#ifdef __Fuchsia__
+    // Acquire a copy of the collected metrics.
+    zx_status_t GetMetrics(fuchsia_minfs_Metrics* out) const {
+        if (collecting_metrics_) {
+            memcpy(out, &metrics_, sizeof(metrics_));
+            return ZX_OK;
+        }
+        return ZX_ERR_UNAVAILABLE;
+    }
+#endif
 
     // Return an immutable reference to a copy of the internal info.
     const minfs_info_t& Info() const {
@@ -288,7 +294,7 @@ private:
     bool collecting_metrics_ = false;
 #ifdef __Fuchsia__
     fbl::Closure on_unmount_{};
-    MinfsMetrics metrics_ = {};
+    fuchsia_minfs_Metrics metrics_ = {};
     fbl::unique_ptr<WritebackBuffer> writeback_;
     uint64_t fs_id_{};
 #else
@@ -344,11 +350,20 @@ public:
     static size_t GetHash(ino_t key) { return fnv1a_tiny(key, kMinfsHashBits); }
 
     // fs::Vnode interface (invoked publicly).
+#ifdef __Fuchsia__
+    zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
+#endif
     zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
     zx_status_t Close() final;
 
     // fbl::Recyclable interface.
     void fbl_recycle() final;
+
+#ifdef __Fuchsia__
+    // Minfs FIDL interface.
+    zx_status_t GetMetrics(fidl_txn_t* txn);
+    zx_status_t ToggleMetrics(bool enabled, fidl_txn_t* txn);
+#endif
 
     // TODO(rvargas): Make private.
     Minfs* const fs_;
