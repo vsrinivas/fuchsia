@@ -13,135 +13,45 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 zx_status_t SendJoinConfirm(DeviceInterface* device, wlan_mlme::JoinResultCodes result_code) {
     debugfn();
-
-    auto resp = wlan_mlme::JoinConfirm::New();
-    resp->result_code = result_code;
-
-    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
-    // everyone.
-    size_t buf_len = 4096;
-    auto buffer = GetBuffer(buf_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
-    packet->set_peer(Packet::Peer::kService);
-    auto status =
-        SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEJoinConfOrdinal, resp.get());
-    if (status != ZX_OK) {
-        errorf("could not serialize JoinConfirm: %d\n", status);
-    } else {
-        status = device->SendService(fbl::move(packet));
-    }
-
-    return status;
+    wlan_mlme::JoinConfirm conf;
+    conf.result_code = result_code;
+    return SendServiceMsg(device, &conf, fuchsia_wlan_mlme_MLMEJoinConfOrdinal);
 }
 
 zx_status_t SendAuthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta,
                             wlan_mlme::AuthenticateResultCodes code) {
     debugfn();
-
-    auto resp = wlan_mlme::AuthenticateConfirm::New();
-    peer_sta.CopyTo(resp->peer_sta_address.mutable_data());
+    wlan_mlme::AuthenticateConfirm conf;
+    peer_sta.CopyTo(conf.peer_sta_address.mutable_data());
     // TODO(tkilbourn): set this based on the actual auth type
-    resp->auth_type = wlan_mlme::AuthenticationTypes::OPEN_SYSTEM;
-    resp->result_code = code;
-
-    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
-    // everyone.
-    size_t buf_len = 4096;
-    auto buffer = GetBuffer(buf_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
-    packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal,
-                                      resp.get());
-    if (status != ZX_OK) {
-        errorf("could not serialize AuthenticateConfirm: %d\n", status);
-    } else {
-        status = device->SendService(fbl::move(packet));
-    }
-
-    return status;
+    conf.auth_type = wlan_mlme::AuthenticationTypes::OPEN_SYSTEM;
+    conf.result_code = code;
+    return SendServiceMsg(device, &conf, fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal);
 }
 
 zx_status_t SendAuthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                wlan_mlme::AuthenticationTypes auth_type) {
     debugfn();
-
-    auto ind = wlan_mlme::AuthenticateIndication::New();
-    peer_sta.CopyTo(ind->peer_sta_address.mutable_data());
-    ind->auth_type = auth_type;
-
-    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
-    // everyone.
-    size_t buf_len = 4096;
-    auto buffer = GetBuffer(buf_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
-    packet->set_peer(Packet::Peer::kService);
-    auto status =
-        SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEAuthenticateIndOrdinal, ind.get());
-    if (status != ZX_OK) {
-        errorf("could not serialize AuthenticateIndication: %d\n", status);
-    } else {
-        status = device->SendService(fbl::move(packet));
-    }
-
-    return status;
+    wlan_mlme::AuthenticateIndication ind;
+    peer_sta.CopyTo(ind.peer_sta_address.mutable_data());
+    ind.auth_type = auth_type;
+    return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEAuthenticateIndOrdinal);
 }
 
 zx_status_t SendDeauthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta) {
     debugfn();
-
-    auto resp = wlan_mlme::DeauthenticateConfirm::New();
-    peer_sta.CopyTo(resp->peer_sta_address.mutable_data());
-
-    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
-    // everyone.
-    size_t buf_len = 4096;
-    auto buffer = GetBuffer(buf_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
-    packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEDeauthenticateConfOrdinal,
-                                      resp.get());
-    if (status != ZX_OK) {
-        errorf("could not serialize DeauthenticateConfirm: %d\n", status);
-    } else {
-        status = device->SendService(fbl::move(packet));
-    }
-
-    return status;
+    wlan_mlme::DeauthenticateConfirm conf;
+    peer_sta.CopyTo(conf.peer_sta_address.mutable_data());
+    return SendServiceMsg(device, &conf, fuchsia_wlan_mlme_MLMEDeauthenticateConfOrdinal);
 }
 
 zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                  wlan_mlme::ReasonCode code) {
     debugfn();
-
-    auto ind = wlan_mlme::DeauthenticateIndication::New();
-    peer_sta.CopyTo(ind->peer_sta_address.mutable_data());
-    ind->reason_code = code;
-
-    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
-    // everyone.
-    size_t buf_len = 4096;
-    auto buffer = GetBuffer(buf_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
-    packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal,
-                                      ind.get());
-    if (status != ZX_OK) {
-        errorf("could not serialize DeauthenticateIndication: %d\n", status);
-    } else {
-        status = device->SendService(fbl::move(packet));
-    }
-
-    return status;
+    wlan_mlme::DeauthenticateIndication ind;
+    peer_sta.CopyTo(ind.peer_sta_address.mutable_data());
+    ind.reason_code = code;
+    return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal);
 }
 
 zx_status_t SendAssocConfirm(DeviceInterface* device, wlan_mlme::AssociateResultCodes code,
@@ -149,39 +59,21 @@ zx_status_t SendAssocConfirm(DeviceInterface* device, wlan_mlme::AssociateResult
     debugfn();
     ZX_DEBUG_ASSERT(code != wlan_mlme::AssociateResultCodes::SUCCESS || aid != 0);
 
-    auto resp = wlan_mlme::AssociateConfirm::New();
-    resp->result_code = code;
-    resp->association_id = aid;
-
-    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
-    // everyone.
-    size_t buf_len = 4096;
-    auto buffer = GetBuffer(buf_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
-    packet->set_peer(Packet::Peer::kService);
-    auto status =
-        SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEAssociateConfOrdinal, resp.get());
-    if (status != ZX_OK) {
-        errorf("could not serialize AssociateConfirm: %d\n", status);
-    } else {
-        status = device->SendService(fbl::move(packet));
-    }
-
-    return status;
+    wlan_mlme::AssociateConfirm conf;
+    conf.result_code = code;
+    conf.association_id = aid;
+    return SendServiceMsg(device, &conf, fuchsia_wlan_mlme_MLMEAssociateConfOrdinal);
 }
 
 zx_status_t SendAssocIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                 uint16_t listen_interval, const SsidElement& ssid_element,
                                 const RsnElement* rsn_elem) {
     debugfn();
-
-    auto ind = wlan_mlme::AssociateIndication::New();
-    peer_sta.CopyTo(ind->peer_sta_address.mutable_data());
-    ind->listen_interval = listen_interval;
-    ind->ssid = ::fidl::VectorPtr<uint8_t>::New(ssid_element.body_len());
-    std::memcpy(ind->ssid->data(), ssid_element.ssid, ssid_element.body_len());
+    wlan_mlme::AssociateIndication ind;
+    peer_sta.CopyTo(ind.peer_sta_address.mutable_data());
+    ind.listen_interval = listen_interval;
+    ind.ssid = ::fidl::VectorPtr<uint8_t>::New(ssid_element.body_len());
+    std::memcpy(ind.ssid->data(), ssid_element.ssid, ssid_element.body_len());
 
     if (rsn_elem != nullptr) {
         std::vector<uint8_t> rsne_raw;
@@ -192,104 +84,34 @@ zx_status_t SendAssocIndication(DeviceInterface* device, const common::MacAddr& 
         rsne_raw.emplace_back(static_cast<uint8_t>(rsn_elem->version >> 8u));
         rsne_raw.insert(rsne_raw.end(), rsn_elem->fields,
                         rsn_elem->fields + rsn_elem->body_len() - sizeof(rsn_elem->version));
-        ind->rsn.reset(std::move(rsne_raw));
+        ind.rsn.reset(std::move(rsne_raw));
     } else {
-        ind->rsn.reset();
+        ind.rsn.reset();
     }
-
-    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
-    // everyone.
-    size_t buf_len = 4096;
-    auto buffer = GetBuffer(buf_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
-    packet->set_peer(Packet::Peer::kService);
-    auto status =
-        SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEAssociateIndOrdinal, ind.get());
-    if (status != ZX_OK) {
-        errorf("could not serialize AssociateIndication: %d\n", status);
-    } else {
-        status = device->SendService(fbl::move(packet));
-    }
-
-    return status;
+    return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEAssociateIndOrdinal);
 }
 
 zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                        uint16_t code) {
     debugfn();
-
-    auto ind = wlan_mlme::DisassociateIndication::New();
-    peer_sta.CopyTo(ind->peer_sta_address.mutable_data());
-    ind->reason_code = code;
-
-    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
-    // everyone.
-    size_t buf_len = 4096;
-    auto buffer = GetBuffer(buf_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
-    packet->set_peer(Packet::Peer::kService);
-    auto status =
-        SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEDisassociateIndOrdinal, ind.get());
-    if (status != ZX_OK) {
-        errorf("could not serialize DisassociateIndication: %d\n", status);
-    } else {
-        status = device->SendService(fbl::move(packet));
-    }
-
-    return status;
+    wlan_mlme::DisassociateIndication ind;
+    peer_sta.CopyTo(ind.peer_sta_address.mutable_data());
+    ind.reason_code = code;
+    return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEDisassociateIndOrdinal);
 }
 
 zx_status_t SendSignalReportIndication(DeviceInterface* device, common::dBm rssi_dbm) {
     debugfn();
-
-    auto ind = wlan_mlme::SignalReportIndication::New();
-    ind->rssi_dbm = rssi_dbm.val;
-
-    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
-    // everyone.
-    size_t buf_len = 4096;
-    auto buffer = GetBuffer(buf_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
-    packet->set_peer(Packet::Peer::kService);
-    auto status =
-        SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMESignalReportOrdinal, ind.get());
-    if (status != ZX_OK) {
-        errorf("could not serialize SignalReportIndication: %d\n", status);
-    } else {
-        status = device->SendService(fbl::move(packet));
-    }
-
-    return status;
+    wlan_mlme::SignalReportIndication ind;
+    ind.rssi_dbm = rssi_dbm.val;
+    return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMESignalReportOrdinal);
 }
 
 zx_status_t SendEapolConfirm(DeviceInterface* device, wlan_mlme::EapolResultCodes result_code) {
     debugfn();
-
-    auto resp = wlan_mlme::EapolConfirm::New();
-    resp->result_code = result_code;
-
-    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
-    // everyone.
-    size_t buf_len = 4096;
-    auto buffer = GetBuffer(buf_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
-    packet->set_peer(Packet::Peer::kService);
-    auto status =
-        SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEEapolConfOrdinal, resp.get());
-    if (status != ZX_OK) {
-        errorf("could not serialize EapolConfirm: %d\n", status);
-    } else {
-        status = device->SendService(fbl::move(packet));
-    }
-    return status;
+    wlan_mlme::EapolConfirm resp;
+    resp.result_code = result_code;
+    return SendServiceMsg(device, &resp, fuchsia_wlan_mlme_MLMEEapolConfOrdinal);
 }
 
 zx_status_t SendEapolIndication(DeviceInterface* device, const EapolHdr& eapol,
@@ -303,28 +125,12 @@ zx_status_t SendEapolIndication(DeviceInterface* device, const EapolHdr& eapol,
     size_t frame_len = eapol.len() + eapol.get_packet_body_length();
     if (frame_len > 255) { return ZX_OK; }
 
-    auto ind = wlan_mlme::EapolIndication::New();
-    ind->data = ::fidl::VectorPtr<uint8_t>::New(frame_len);
-    std::memcpy(ind->data->data(), &eapol, frame_len);
-    src.CopyTo(ind->src_addr.mutable_data());
-    dst.CopyTo(ind->dst_addr.mutable_data());
-
-    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
-    // everyone.
-    size_t buf_len = 4096;
-    auto buffer = GetBuffer(buf_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
-    packet->set_peer(Packet::Peer::kService);
-    auto status =
-        SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEEapolIndOrdinal, ind.get());
-    if (status != ZX_OK) {
-        errorf("could not serialize MLME-Eapol.indication: %d\n", status);
-    } else {
-        status = device->SendService(fbl::move(packet));
-    }
-    return status;
+    wlan_mlme::EapolIndication ind;
+    ind.data = ::fidl::VectorPtr<uint8_t>::New(frame_len);
+    std::memcpy(ind.data->data(), &eapol, frame_len);
+    src.CopyTo(ind.src_addr.mutable_data());
+    dst.CopyTo(ind.dst_addr.mutable_data());
+    return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEEapolIndOrdinal);
 }
 
 }  // namespace service
