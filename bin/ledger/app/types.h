@@ -21,7 +21,8 @@ enum class PagePredicateResult { YES, NO, PAGE_OPENED };
 // Holds information on when a page was last used.
 struct PageInfo {
   //  The timestamp used for all currently opened pages.
-  static constexpr zx::time_utc kOpenedPageTimestamp = zx::time_utc();
+  static constexpr zx::time_utc kOpenedPageTimestamp =
+      zx::time_utc::infinite_past();
 
   std::string ledger_name;
   storage::PageId page_id;
