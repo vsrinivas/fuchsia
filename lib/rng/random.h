@@ -20,16 +20,16 @@ class Random {
   // An object satifying the |UniformRandomBitGenerator| requirements. See:
   // https://en.cppreference.com/w/cpp/named_req/UniformRandomBitGenerator
   template <typename I>
-  class RandomBitGenerator {
+  class BitGenerator {
    public:
     static_assert(std::is_unsigned<I>::value,
                   "RandomBitGenerator only valid for unsigned integers");
     using result_type = I;
 
-    RandomBitGenerator(Random* random) : random_(random) {}
-    ~RandomBitGenerator() = default;
-    RandomBitGenerator(const RandomBitGenerator&) = default;
-    RandomBitGenerator& operator=(const RandomBitGenerator&) = default;
+    BitGenerator(Random* random) : random_(random) {}
+    ~BitGenerator() = default;
+    BitGenerator(const BitGenerator&) = default;
+    BitGenerator& operator=(const BitGenerator&) = default;
 
     static constexpr result_type min() {
       return std::numeric_limits<result_type>::min();
@@ -80,8 +80,8 @@ class Random {
   // Returns an object satifying the |UniformRandomBitGenerator| requirements.
   // See: https://en.cppreference.com/w/cpp/named_req/UniformRandomBitGenerator
   template <typename I>
-  RandomBitGenerator<I> NewRandomBitGenerator() {
-    return RandomBitGenerator<I>(this);
+  BitGenerator<I> NewBitGenerator() {
+    return BitGenerator<I>(this);
   }
 
  protected:

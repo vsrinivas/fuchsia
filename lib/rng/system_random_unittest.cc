@@ -48,11 +48,11 @@ TEST(SystemRandomTest, MiscRandomTest) {
                           [](const uint8_t& v) { return v != 0; }));
 }
 
-TEST(SystemRandomTest, RandomBitGeneratorTest) {
+TEST(SystemRandomTest, BitGeneratorTest) {
   constexpr size_t kNbElement = 100;
   SystemRandom random;
 
-  auto engine = random.NewRandomBitGenerator<uint32_t>();
+  auto engine = random.NewBitGenerator<uint32_t>();
   std::discrete_distribution<> d({1, 1, 1, 1});
   std::set<uint32_t> s;
   for (size_t i = 0; i < kNbElement; ++i) {
