@@ -4,10 +4,6 @@
 
 import("//build/package.gni")
 
-declare_args() {
-  guest_display = "scenic"
-}
-
 # Defines a guest package.
 #
 # Parameters
@@ -95,7 +91,7 @@ template("guest_package") {
     }
     args += [
       "--display",
-      guest_display,
+      "scenic",
       rebase_path("$guest_config_file"),
     ]
   }

@@ -12,7 +12,7 @@ device.
 ## Build host system with the guest package
 Configure, build, and boot the guest package as follows:
 ```
-$ fx set S{ARCH} --packages garnet/packages/default --args guest_display=\"framebuffer\"
+$ fx set S{ARCH} --packages garnet/packages/default
 $ fx full-build
 $ fx boot
 ```
