@@ -177,6 +177,7 @@ void CommandBufferPipelineState::InitPipelineDepthStencilStateCreateInfo(
     info->front.failOp = vk::StencilOp(static_state.stencil_front_fail);
     info->front.depthFailOp =
         vk::StencilOp(static_state.stencil_front_depth_fail);
+    info->back.compareOp = vk::CompareOp(static_state.stencil_back_compare_op);
     info->back.passOp = vk::StencilOp(static_state.stencil_back_pass);
     info->back.failOp = vk::StencilOp(static_state.stencil_back_fail);
     info->back.depthFailOp =

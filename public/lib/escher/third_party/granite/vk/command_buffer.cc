@@ -299,17 +299,23 @@ void CommandBuffer::BindTexture(unsigned set_index, unsigned binding,
   dirty_descriptor_sets_ |= 1u << set_index;
 }
 
-void CommandBuffer::BindVertices(uint32_t binding, Buffer* buffer,
+void CommandBuffer::BindVertices(uint32_t binding, vk::Buffer buffer,
                                  vk::DeviceSize offset, vk::DeviceSize stride,
                                  vk::VertexInputRate step_rate) {
   FXL_DCHECK(IsInRenderPass());
 
-  impl_->KeepAlive(buffer);
-  if (pipeline_state_.BindVertices(binding, buffer->vk(), offset, stride,
+  if (pipeline_state_.BindVertices(binding, buffer, offset, stride,
                                    step_rate)) {
     // Pipeline change is required.
     SetDirty(kDirtyStaticVertexBit);
   }
+}
+
+void CommandBuffer::BindVertices(uint32_t binding, Buffer* buffer,
+                                 vk::DeviceSize offset, vk::DeviceSize stride,
+                                 vk::VertexInputRate step_rate) {
+  impl_->KeepAlive(buffer);
+  BindVertices(binding, buffer->vk(), offset, stride, step_rate);
 }
 
 void CommandBuffer::BindIndices(vk::Buffer buffer, vk::DeviceSize offset,
@@ -450,7 +456,8 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
   // UBOs
   ForEachBitIndex(set_layout.uniform_buffer_mask, [&](uint32_t binding) {
     const auto b = GetDescriptorBindingInfo(set_bindings, binding);
-    FXL_DCHECK(b->buffer.buffer);
+    FXL_DCHECK(b->buffer.buffer)
+        << "No buffer for uniform binding " << set_index << "," << binding;
 
     h.u64(set_bindings->uids[binding]);
     h.u32(b->buffer.range);
@@ -601,23 +608,31 @@ void CommandBuffer::SetToDefaultState(DefaultState default_state) {
   memset(static_state, 0, sizeof(PipelineStaticState));
   SetDirty(kDirtyStaticStateBit);
 
-  // TODO(ES-83): when we add additional default states, we will probably find
-  // that many of the fields are shared, and can be factored out of the switch
-  // statement.
+  // The following state is common to all currently-supported defaults.
+  static_state->front_face = VK_FRONT_FACE_CLOCKWISE;
+  static_state->cull_mode = VK_CULL_MODE_BACK_BIT;
+  static_state->depth_test = true;
+  static_state->depth_compare = VK_COMPARE_OP_LESS_OR_EQUAL;
+  static_state->depth_write = true;
+  static_state->depth_bias_enable = false;
+  static_state->primitive_restart = false;
+  static_state->stencil_test = false;
+  static_state->primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+  static_state->color_write_mask = ~0u;
+
+  // These states differ between the various supported defaults.
   switch (default_state) {
     case DefaultState::kOpaque: {
-      static_state->front_face = EnumCast(vk::FrontFace::eClockwise);
-      static_state->cull_mode = EnumCast(vk::CullModeFlagBits::eBack);
       static_state->blend_enable = false;
-      static_state->depth_test = true;
-      static_state->depth_compare = EnumCast(vk::CompareOp::eLessOrEqual);
-      static_state->depth_write = true;
-      static_state->depth_bias_enable = false;
-      static_state->primitive_restart = false;
-      static_state->stencil_test = false;
-      static_state->primitive_topology =
-          EnumCast(vk::PrimitiveTopology::eTriangleList);
-      static_state->color_write_mask = ~0u;
+    } break;
+    case DefaultState::kTranslucent: {
+      static_state->blend_enable = true;
+      static_state->src_color_blend = VK_BLEND_FACTOR_SRC_ALPHA;
+      static_state->dst_color_blend = VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+      static_state->src_alpha_blend = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+      static_state->dst_alpha_blend = VK_BLEND_FACTOR_ONE;
+      static_state->color_blend_op = VK_BLEND_OP_ADD;
+      static_state->alpha_blend_op = VK_BLEND_OP_ADD;
     } break;
   }
 }

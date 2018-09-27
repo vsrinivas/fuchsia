@@ -127,8 +127,13 @@ class CommandBuffer : public Reffable {
   }
 
   // Set/dirty a vertex buffer binding that will later be flushed, causing
-  // descriptor sets to be written/bound as necessary.  Keeps |buffer| alive
-  // while command buffer is pending.
+  // descriptor sets to be written/bound as necessary.
+  void BindVertices(
+      uint32_t binding, vk::Buffer buffer, vk::DeviceSize offset,
+      vk::DeviceSize stride,
+      vk::VertexInputRate step_rate = vk::VertexInputRate::eVertex);
+  // These two variants keep |buffer| alive while the command buffer is pending;
+  // the one above makes this the responsiblity of the caller.
   void BindVertices(
       uint32_t binding, Buffer* buffer, vk::DeviceSize offset,
       vk::DeviceSize stride,
@@ -173,7 +178,7 @@ class CommandBuffer : public Reffable {
   // Convenient way to bring CommandBuffer to a known default state.  See the
   // implementation of SetToDefaultState() for more details; it's basically a
   // big switch statement.
-  enum class DefaultState { kOpaque };
+  enum class DefaultState { kOpaque, kTranslucent };
   void SetToDefaultState(DefaultState state);
 
   // Set the ShaderProgram that will be used to obtain the VkPipeline to be used
@@ -201,6 +206,13 @@ class CommandBuffer : public Reffable {
   void SetBlendFactors(vk::BlendFactor src_blend, vk::BlendFactor dst_blend);
   void SetBlendOp(vk::BlendOp color_blend_op, vk::BlendOp alpha_blend_op);
   void SetBlendOp(vk::BlendOp blend_op);
+
+  // Packs vk::ColorComponentFlags for many color attachments into a 32-bit int.
+  // Each attachment uses 4 bits, one for each of the RGBA components, for a
+  // maximum of 8 attachments.  Not coincidentally, this is the value of
+  // VulkanLimits::kNumColorAttachments.  Color attachment #0 is stored in the
+  // least-significant 4 bits.
+  void SetColorWriteMask(uint32_t color_write_mask);
 
   void SetCullMode(vk::CullModeFlags cull_mode);
 
@@ -566,6 +578,10 @@ inline void CommandBuffer::SetBlendOp(vk::BlendOp color_blend_op,
 
 inline void CommandBuffer::SetBlendOp(vk::BlendOp blend_op) {
   SetBlendOp(blend_op, blend_op);
+}
+
+inline void CommandBuffer::SetColorWriteMask(uint32_t color_write_mask) {
+  SET_STATIC_STATE(color_write_mask);
 }
 
 inline void CommandBuffer::SetDepthBias(bool depth_bias_enable) {
