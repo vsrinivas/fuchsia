@@ -15,12 +15,6 @@ use eapol;
 use failure::{self, bail, ensure};
 
 #[derive(Debug, PartialEq)]
-enum RoleHandler {
-    Authenticator(StateMachine<authenticator::State>),
-    Supplicant(StateMachine<supplicant::State>),
-}
-
-#[derive(Debug, PartialEq)]
 pub enum MessageNumber {
     Message1 = 1,
     Message2 = 2,
@@ -106,30 +100,32 @@ impl Config {
     }
 }
 
-// TODO(hahnr): Flatten hierarchy.
 #[derive(Debug, PartialEq)]
-pub struct Fourway(RoleHandler);
+pub enum Fourway {
+    Authenticator(StateMachine<authenticator::State>),
+    Supplicant(StateMachine<supplicant::State>),
+}
 
 impl Fourway {
     pub fn new(cfg: Config, pmk: Vec<u8>) -> Result<Fourway, failure::Error> {
         let nonce_rdr = NonceReader::new(&cfg.s_addr[..])?;
-        let handler = match &cfg.role {
+        let fourway = match &cfg.role {
             Role::Supplicant => {
                 let state = supplicant::new(cfg, pmk, nonce_rdr);
-                RoleHandler::Supplicant(StateMachine::new(state))
+                Fourway::Supplicant(StateMachine::new(state))
             },
             Role::Authenticator => {
                 let state = authenticator::new(cfg, pmk);
-                RoleHandler::Authenticator(StateMachine::new(state))
+                Fourway::Authenticator(StateMachine::new(state))
             },
         };
-        Ok(Fourway(handler))
+        Ok(fourway)
     }
     pub fn initiate(&mut self, update_sink: &mut Vec<SecAssocUpdate>, key_replay_counter: u64)
         -> Result<(), failure::Error>
     {
-        match &mut self.0 {
-            RoleHandler::Authenticator(state_machine) => {
+        match self {
+            Fourway::Authenticator(state_machine) => {
                 state_machine.replace_state(|state| {
                     // TODO(hahnr): Take anonce from NonceReader.
                     let anonce = vec![0xAc; 32];
@@ -148,15 +144,15 @@ impl Fourway {
         key_replay_counter: u64,
         frame: VerifiedKeyFrame,
     ) -> Result<(), failure::Error> {
-        match &mut self.0 {
-            RoleHandler::Authenticator(state_machine) => {
+        match self {
+            Fourway::Authenticator(state_machine) => {
                 let frame = FourwayHandshakeFrame::from_verified(frame, Role::Authenticator, None)?;
                 state_machine.replace_state(|state| {
                     state.on_eapol_key_frame(update_sink, key_replay_counter, frame)
                 });
                 Ok(())
             }
-            RoleHandler::Supplicant(state_machine) => {
+            Fourway::Supplicant(state_machine) => {
                 let anonce = state_machine.state().anonce();
                 let frame = FourwayHandshakeFrame::from_verified(frame, Role::Supplicant, anonce)?;
                 state_machine.replace_state(|state| {
@@ -168,9 +164,9 @@ impl Fourway {
     }
 
     pub fn destroy(self) -> exchange::Config {
-        let cfg = match self.0 {
-            RoleHandler::Supplicant(state_machine) => state_machine.into_state().destroy(),
-            RoleHandler::Authenticator(state_machine) => state_machine.into_state().destroy(),
+        let cfg = match self {
+            Fourway::Supplicant(state_machine) => state_machine.into_state().destroy(),
+            Fourway::Authenticator(state_machine) => state_machine.into_state().destroy(),
         };
         exchange::Config::FourWayHandshake(cfg)
     }
