@@ -282,6 +282,17 @@ bool vmo_pool_reset_test() {
     END_TEST;
 }
 
+bool vmo_pool_reinit() {
+    BEGIN_TEST;
+    VmoPoolTester tester;
+    ASSERT_TRUE(tester.Init());
+    ASSERT_TRUE(tester.CheckAccounting(false, 0));
+
+    ASSERT_TRUE(tester.Init());
+    ASSERT_TRUE(tester.CheckAccounting(false, 0));
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(vmo_pool_tests)
@@ -292,4 +303,5 @@ RUN_NAMED_TEST("vmo_pool_release_wrong_buffer", vmo_pool_release_wrong_buffer_te
 RUN_NAMED_TEST("vmo_pool_release_before_complete", vmo_pool_release_before_complete_test)
 RUN_NAMED_TEST("vmo_pool_fill_and_empty_pool", vmo_pool_fill_and_empty_pool_test)
 RUN_NAMED_TEST("vmo_pool_out_of_order", vmo_pool_out_of_order_test)
+RUN_NAMED_TEST("vmo_pool_reinit", vmo_pool_reinit)
 END_TEST_CASE(vmo_pool_tests)

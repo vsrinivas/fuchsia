@@ -26,6 +26,7 @@ zx_status_t VmoPool::Init(const zx::vmo* vmos, size_t num_vmos) {
         return ZX_ERR_NO_MEMORY;
     }
     buffers_ = fbl::move(buffers);
+    free_buffers_.clear_unsafe();
 
     zx_status_t status;
     for (size_t i = 0; i < num_vmos; ++i) {
