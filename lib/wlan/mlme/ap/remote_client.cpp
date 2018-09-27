@@ -263,6 +263,7 @@ void AssociatedState::HandleAnyCtrlFrame(CtrlFrame<>&& frame) {
     UpdatePowerSaveMode(frame.hdr()->fc);
 
     if (auto pspoll = frame.View().CheckBodyType<PsPollFrame>().CheckLength()) {
+        if (aid_ != pspoll.body()->aid) { return; }
         HandlePsPollFrame(pspoll.IntoOwned(frame.Take()));
     }
 }
@@ -315,7 +316,7 @@ void AssociatedState::HandleEthFrame(EthFrame&& frame) {
     if (dozing_) {
         // Enqueue ethernet frame and postpone conversion to when the frame is sent
         // to the client.
-        auto status = client_->EnqueueEthernetFrame(frame);
+        auto status = EnqueueEthernetFrame(frame);
         if (status == ZX_ERR_NO_RESOURCES) {
             debugps("[client] [%s] reached PS buffering limit; dropping frame\n",
                     client_->addr().ToString().c_str());
@@ -352,7 +353,7 @@ void AssociatedState::HandleDisassociation(MgmtFrame<Disassociation>&& frame) {
 void AssociatedState::HandlePsPollFrame(CtrlFrame<PsPollFrame>&& frame) {
     debugbss("[client] [%s] client requested BU\n", client_->addr().ToString().c_str());
 
-    if (client_->HasBufferedFrames()) {
+    if (HasBufferedFrames()) {
         SendNextBu();
         return;
     }
@@ -401,6 +402,8 @@ void AssociatedState::OnExit() {
     client_->ReportDisassociation(aid_);
     debugbss("[client] [%s] reported disassociation, AID: %u\n", client_->addr().ToString().c_str(),
              aid_);
+
+    bu_queue_.clear();
 }
 
 void AssociatedState::HandleDataLlcFrame(DataFrame<LlcHeader>&& frame) {
@@ -457,10 +460,6 @@ zx_status_t AssociatedState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     }
 }
 
-aid_t AssociatedState::GetAid() {
-    return aid_;
-}
-
 void AssociatedState::HandleTimeout() {
     if (!client_->IsDeadlineExceeded(inactive_timeout_)) { return; }
 
@@ -501,7 +500,7 @@ void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
             // Send all buffered frames when client woke up.
             // TODO(hahnr): Once we implemented a smarter way of queuing packets, this
             // code should be revisited.
-            while (client_->HasBufferedFrames()) {
+            while (HasBufferedFrames()) {
                 auto status = SendNextBu();
                 if (status != ZX_OK) { return; }
             }
@@ -570,12 +569,12 @@ zx_status_t AssociatedState::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKe
 }
 
 zx_status_t AssociatedState::SendNextBu() {
-    ZX_DEBUG_ASSERT(client_->HasBufferedFrames());
-    if (!client_->HasBufferedFrames()) { return ZX_ERR_BAD_STATE; }
+    ZX_DEBUG_ASSERT(HasBufferedFrames());
+    if (!HasBufferedFrames()) { return ZX_ERR_BAD_STATE; }
 
     // Dequeue buffered Ethernet frame.
     fbl::unique_ptr<Packet> packet;
-    auto status = client_->DequeueEthernetFrame(&packet);
+    auto status = DequeueEthernetFrame(&packet);
     if (status != ZX_OK) {
         errorf("[client] [%s] unable to dequeue buffered frames\n",
                client_->addr().ToString().c_str());
@@ -594,7 +593,7 @@ zx_status_t AssociatedState::SendNextBu() {
 
     // Set `more` bit if there are more frames buffered.
     auto fc = data_packet->mut_field<FrameControl>(0);
-    fc->set_more_data(client_->HasBufferedFrames() ? 1 : 0);
+    fc->set_more_data(HasBufferedFrames() ? 1 : 0);
 
     // Send Data frame.
     debugps("[client] [%s] sent BU to client\n", client_->addr().ToString().c_str());
@@ -618,6 +617,41 @@ void AssociatedState::HandleActionFrame(MgmtFrame<ActionFrame>&& frame) {
             finspect("  addba req: %s\n", debug::Describe(*add_ba_req_frame.body()).c_str());
         }
     }
+}
+
+zx_status_t AssociatedState::EnqueueEthernetFrame(const EthFrame& frame) {
+    // Drop oldest frame if queue reached its limit.
+    if (bu_queue_.size() >= kMaxPowerSavingQueueSize) {
+        bu_queue_.Dequeue();
+        warnf("[client] [%s] dropping oldest unicast frame\n", client_->addr().ToString().c_str());
+    }
+
+    debugps("[client] [%s] client is dozing; buffer outbound frame\n",
+            client_->addr().ToString().c_str());
+
+    size_t eth_len = frame.len();
+    auto packet = GetEthPacket(eth_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    memcpy(packet->mut_data(), frame.hdr(), eth_len);
+    bu_queue_.Enqueue(fbl::move(packet));
+    client_->ReportBuChange(aid_, bu_queue_.size());
+
+    return ZX_OK;
+}
+
+zx_status_t AssociatedState::DequeueEthernetFrame(fbl::unique_ptr<Packet>* out_packet) {
+    ZX_DEBUG_ASSERT(bu_queue_.size() > 0);
+    if (bu_queue_.size() == 0) { return ZX_ERR_NO_RESOURCES; }
+
+    *out_packet = bu_queue_.Dequeue();
+    client_->ReportBuChange(aid_, bu_queue_.size());
+
+    return ZX_OK;
+}
+
+bool AssociatedState::HasBufferedFrames() const {
+    return bu_queue_.size() > 0;
 }
 
 // RemoteClient implementation.
@@ -655,10 +689,6 @@ void RemoteClient::MoveToState(fbl::unique_ptr<BaseState> to) {
     state_ = fbl::move(to);
 
     state_->OnEnter();
-}
-
-aid_t RemoteClient::GetAid() {
-    return state_->GetAid();
 }
 
 void RemoteClient::HandleTimeout() {
@@ -821,43 +851,8 @@ zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_co
     return status;
 }
 
-// TODO(hahnr): Transfer ownership of Ethernet frame rather than copying it.
-zx_status_t RemoteClient::EnqueueEthernetFrame(const EthFrame& frame) {
-    // Drop oldest frame if queue reached its limit.
-    if (bu_queue_.size() >= kMaxPowerSavingQueueSize) {
-        bu_queue_.Dequeue();
-        warnf("[client] [%s] dropping oldest unicast frame\n", addr().ToString().c_str());
-    }
-
-    debugps("[client] [%s] client is dozing; buffer outbound frame\n", addr().ToString().c_str());
-
-    size_t eth_len = frame.len();
-    auto packet = GetEthPacket(eth_len);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    memcpy(packet->mut_data(), frame.hdr(), eth_len);
-    bu_queue_.Enqueue(fbl::move(packet));
-    ReportBuChange(bu_queue_.size());
-
-    return ZX_OK;
-}
-
-zx_status_t RemoteClient::DequeueEthernetFrame(fbl::unique_ptr<Packet>* out_packet) {
-    ZX_DEBUG_ASSERT(bu_queue_.size() > 0);
-    if (bu_queue_.size() == 0) { return ZX_ERR_NO_RESOURCES; }
-
-    *out_packet = bu_queue_.Dequeue();
-    ReportBuChange(bu_queue_.size());
-
-    return ZX_OK;
-}
-
-bool RemoteClient::HasBufferedFrames() const {
-    return bu_queue_.size() > 0;
-}
-
-void RemoteClient::ReportBuChange(size_t bu_count) {
-    if (listener_ != nullptr) { listener_->HandleClientBuChange(addr_, bu_count); }
+void RemoteClient::ReportBuChange(aid_t aid, size_t bu_count) {
+    if (listener_ != nullptr) { listener_->HandleClientBuChange(addr_, aid, bu_count); }
 }
 
 void RemoteClient::ReportDeauthentication() {

@@ -24,7 +24,8 @@ class RemoteClient : public RemoteClientInterface {
     struct Listener {
         virtual zx_status_t HandleClientDeauth(const common::MacAddr& client) = 0;
         virtual void HandleClientDisassociation(aid_t aid) = 0;
-        virtual void HandleClientBuChange(const common::MacAddr& client, size_t bu_count) = 0;
+        virtual void HandleClientBuChange(const common::MacAddr& client, aid_t aid,
+                                          size_t bu_count) = 0;
     };
 
     RemoteClient(DeviceInterface* device, fbl::unique_ptr<Timer> timer, BssInterface* bss,
@@ -32,7 +33,6 @@ class RemoteClient : public RemoteClientInterface {
     ~RemoteClient();
 
     // RemoteClientInterface implementation
-    aid_t GetAid() override;
     void HandleTimeout() override;
     void HandleAnyEthFrame(EthFrame&& frame) override;
     void HandleAnyMgmtFrame(MgmtFrame<>&& frame) override;
@@ -48,15 +48,8 @@ class RemoteClient : public RemoteClientInterface {
     uint8_t GetTid();
     uint8_t GetTid(const EthFrame& frame);
 
-    // Enqueues an ethernet frame which can be sent at a later point in time.
-    zx_status_t EnqueueEthernetFrame(const EthFrame& frame);
-    zx_status_t DequeueEthernetFrame(fbl::unique_ptr<Packet>* out_packet);
-    bool HasBufferedFrames() const;
-    zx_status_t ConvertEthernetToDataFrame(const EthFrame& frame,
-                                           fbl::unique_ptr<Packet>* out_frame);
-
     void MoveToState(fbl::unique_ptr<BaseState> state);
-    void ReportBuChange(size_t bu_count);
+    void ReportBuChange(aid_t aid, size_t bu_count);
     void ReportDeauthentication();
     void ReportDisassociation(aid_t aid);
 
@@ -74,11 +67,6 @@ class RemoteClient : public RemoteClientInterface {
    private:
     zx_status_t WriteHtCapabilities(ElementWriter* w);
     zx_status_t WriteHtOperation(ElementWriter* w);
-
-    // Maximum number of packets buffered while the client is in power saving
-    // mode.
-    // TODO(NET-687): Find good BU limit.
-    static constexpr size_t kMaxPowerSavingQueueSize = 30;
 
     Listener* const listener_;
     DeviceInterface* const device_;
@@ -98,7 +86,6 @@ class BaseState {
 
     virtual void OnEnter() {}
     virtual void OnExit() {}
-    virtual aid_t GetAid() { return kUnknownAid; }
     virtual void HandleTimeout() {}
     virtual zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) { return ZX_OK; }
     virtual void HandleAnyDataFrame(DataFrame<>&&) {}
@@ -198,7 +185,6 @@ class AssociatedState : public BaseState {
     void OnEnter() override;
     void OnExit() override;
 
-    aid_t GetAid() override;
     void HandleTimeout() override;
 
     zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
@@ -211,6 +197,10 @@ class AssociatedState : public BaseState {
 
    private:
     static constexpr const char* kName = "Associated";
+    // Maximum number of packets buffered while the client is in power saving
+    // mode.
+    // TODO(NET-687): Find good BU limit.
+    static constexpr size_t kMaxPowerSavingQueueSize = 30;
 
     zx_status_t HandleMlmeEapolReq(const MlmeMsg<::fuchsia::wlan::mlme::EapolRequest>& req);
     zx_status_t HandleMlmeSetKeysReq(const MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest>& req);
@@ -228,16 +218,24 @@ class AssociatedState : public BaseState {
     void HandleDataLlcFrame(DataFrame<LlcHeader>&&);
     void HandlePsPollFrame(CtrlFrame<PsPollFrame>&&);
 
+    // Enqueues an ethernet frame which can be sent at a later point in time.
+    zx_status_t EnqueueEthernetFrame(const EthFrame& frame);
+    zx_status_t DequeueEthernetFrame(fbl::unique_ptr<Packet>* out_packet);
+    bool HasBufferedFrames() const;
+
     const uint16_t aid_;
     zx::time inactive_timeout_;
     // `true` if the client was active during the last inactivity timeout.
-    bool active_;
+    bool active_ = false;
     // `true` if the client entered Power Saving mode's doze state.
-    bool dozing_;
+    bool dozing_ = false;
     // `true` if a Deauthentication notification should be sent when leaving the
     // state.
     bool req_deauth_ = true;
     eapol::PortState eapol_controlled_port_ = eapol::PortState::kBlocked;
+    // Queue which holds buffered `EthernetII` packets while the client is in
+    // power saving mode.
+    PacketQueue bu_queue_;
 };
 
 }  // namespace wlan

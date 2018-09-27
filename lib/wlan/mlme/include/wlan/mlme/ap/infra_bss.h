@@ -90,7 +90,8 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
     // RemoteClient::Listener implementation
     zx_status_t HandleClientDeauth(const common::MacAddr& client_addr) override;
     void HandleClientDisassociation(aid_t aid) override;
-    void HandleClientBuChange(const common::MacAddr& client_addr, size_t bu_count) override;
+    void HandleClientBuChange(const common::MacAddr& client_addr, aid_t aid,
+                              size_t bu_count) override;
 
     zx_status_t CreateClientTimer(const common::MacAddr& client_addr,
                                   fbl::unique_ptr<Timer>* out_timer);

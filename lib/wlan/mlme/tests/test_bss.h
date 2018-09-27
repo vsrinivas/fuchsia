@@ -71,8 +71,8 @@ zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateAssocRespFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateDataFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* payload,
                             size_t len);
-zx_status_t CreateNullDataFrame(fbl::unique_ptr<Packet>* out_packet);
-zx_status_t CreateEthFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* payload, size_t len);
+DataFrame<> CreateNullDataFrame();
+EthFrame CreateEthFrame(const uint8_t* payload, size_t len);
 
 template <typename F> zx_status_t CreateFrame(fbl::unique_ptr<Packet>* pkt) {
     if (std::is_same<F, Authentication>::value) { return CreateAuthRespFrame(pkt); }

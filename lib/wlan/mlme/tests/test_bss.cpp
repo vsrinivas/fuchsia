@@ -442,41 +442,36 @@ zx_status_t CreateDataFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* 
     return ZX_OK;
 }
 
-zx_status_t CreateNullDataFrame(fbl::unique_ptr<Packet>* out_packet) {
+DataFrame<> CreateNullDataFrame() {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
     auto packet = GetWlanPacket(DataFrameHeader::max_len());
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    if (packet == nullptr) { return {}; }
+
+    wlan_rx_info_t rx_info{.rx_flags = 0};
+    packet->CopyCtrlFrom(rx_info);
 
     DataFrame<> data_frame(fbl::move(packet));
     auto data_hdr = data_frame.hdr();
     std::memset(data_hdr, 0, DataFrameHeader::max_len());
     data_hdr->fc.set_type(FrameType::kData);
     data_hdr->fc.set_subtype(DataSubtype::kNull);
-    data_hdr->fc.set_to_ds(1);
-    data_hdr->addr1 = bssid;
+    data_hdr->fc.set_from_ds(1);
+    data_hdr->addr1 = client;
     data_hdr->addr2 = bssid;
-    data_hdr->addr3 = client;
+    data_hdr->addr3 = bssid;
     data_hdr->sc.set_val(42);
-
-    auto pkt = data_frame.Take();
-    wlan_rx_info_t rx_info{.rx_flags = 0};
-    pkt->CopyCtrlFrom(rx_info);
-
-    *out_packet = fbl::move(pkt);
-
-    return ZX_OK;
+    return data_frame;
 }
 
-zx_status_t CreateEthFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* payload,
-                           size_t len) {
+EthFrame CreateEthFrame(const uint8_t* payload, size_t len) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
     size_t buf_len = EthernetII::max_len() + len;
     auto packet = GetEthPacket(buf_len);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    if (packet == nullptr) { return {}; }
 
     EthFrame eth_frame(fbl::move(packet));
     auto eth_hdr = eth_frame.hdr();
@@ -486,9 +481,7 @@ zx_status_t CreateEthFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* p
     eth_hdr->ether_type = 2;
     std::memcpy(eth_hdr->payload, payload, len);
 
-    *out_packet = eth_frame.Take();
-
-    return ZX_OK;
+    return eth_frame;
 }
 
 }  // namespace wlan

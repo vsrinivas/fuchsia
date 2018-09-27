@@ -182,7 +182,6 @@ void InfraBss::HandleAnyCtrlFrame(CtrlFrame<>&& frame) {
         const auto& client_addr = pspoll_frame.body()->ta;
         auto client = GetClient(client_addr);
         if (client == nullptr) { return; }
-        if (client->GetAid() != pspoll_frame.body()->aid) { return; }
 
         client->HandleAnyCtrlFrame(fbl::move(frame));
     }
@@ -283,7 +282,8 @@ void InfraBss::HandleClientDisassociation(aid_t aid) {
     ps_cfg_.GetTim()->SetTrafficIndication(aid, false);
 }
 
-void InfraBss::HandleClientBuChange(const common::MacAddr& client_addr, size_t bu_count) {
+void InfraBss::HandleClientBuChange(const common::MacAddr& client_addr, aid_t aid,
+                                    size_t bu_count) {
     debugfn();
     auto client = GetClient(client_addr);
     ZX_DEBUG_ASSERT(client != nullptr);
@@ -292,7 +292,6 @@ void InfraBss::HandleClientBuChange(const common::MacAddr& client_addr, size_t b
                bssid_.ToString().c_str(), client_addr.ToString().c_str());
         return;
     }
-    auto aid = client->GetAid();
     ZX_DEBUG_ASSERT(aid != kUnknownAid);
     if (aid == kUnknownAid) {
         errorf(

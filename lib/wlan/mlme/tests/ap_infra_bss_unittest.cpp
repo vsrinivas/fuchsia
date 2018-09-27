@@ -24,6 +24,8 @@ namespace {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
+const std::vector<uint8_t> kTestPayload = {'F', 'u', 'c', 'h', 's', 'i', 'a'};
+
 struct ApInfraBssTest : public ::testing::Test {
     ApInfraBssTest()
         : bss(&device, fbl::make_unique<BeaconSender>(&device), common::MacAddr(kBssid1)) {}
@@ -76,6 +78,34 @@ struct ApInfraBssTest : public ::testing::Test {
 
     zx_status_t SendClientAssocReqFrame() {
         return HandleFrame([](auto pkt) { return CreateAssocReqFrame(pkt); });
+    }
+
+    zx_status_t SendNullDataFrame(bool pwr_mgmt) {
+        return HandleFrame([=](auto pkt) {
+            auto frame = CreateNullDataFrame();
+            if (frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
+
+            common::MacAddr bssid(kBssid1);
+            frame.hdr()->fc.set_from_ds(0);
+            frame.hdr()->fc.set_to_ds(1);
+            frame.hdr()->fc.set_pwr_mgmt(pwr_mgmt ? 1 : 0);
+            frame.hdr()->addr1 = bssid;
+            frame.hdr()->addr2 = common::MacAddr(kClientAddress);
+            frame.hdr()->addr3 = bssid;
+            *pkt = frame.Take();
+            return ZX_OK;
+        });
+    }
+
+    zx_status_t SendEthFrame(std::vector<uint8_t> payload) {
+        return HandleFrame([&](auto pkt) {
+            auto eth_frame = CreateEthFrame(payload.data(), payload.size());
+            if (eth_frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
+            eth_frame.hdr()->src = common::MacAddr(kBssid1);
+            eth_frame.hdr()->dest = common::MacAddr(kClientAddress);
+            *pkt = eth_frame.Take();
+            return ZX_OK;
+        });
     }
 
     zx_status_t SendAuthResponseMsg(wlan_mlme::AuthenticateResultCodes result_code) {
@@ -135,6 +165,22 @@ struct ApInfraBssTest : public ::testing::Test {
         EXPECT_EQ(msg.body()->listen_interval, kListenInterval);
         EXPECT_EQ(std::memcmp(msg.body()->ssid->data(), kSsid, msg.body()->ssid->size()), 0);
         EXPECT_EQ(std::memcmp(msg.body()->rsn->data(), kRsne, sizeof(kRsne)), 0);
+    }
+
+    void AssertDataFrameSentToClient(fbl::unique_ptr<Packet> pkt,
+                                     std::vector<uint8_t> expected_payload,
+                                     bool more_data = false) {
+        auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.get());
+        ASSERT_TRUE(frame);
+        EXPECT_EQ(frame.hdr()->fc.more_data(), more_data ? 1 : 0);
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kClientAddress, 6), 0);
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
+        EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+
+        auto llc_hdr = frame.body();
+        EXPECT_EQ(frame.body_len() - llc_hdr->len(), expected_payload.size());
+        EXPECT_EQ(std::memcmp(llc_hdr->payload, expected_payload.data(), expected_payload.size()),
+                  0);
     }
 
     MockDevice device;
@@ -220,6 +266,10 @@ TEST_F(ApInfraBssTest, Associate_Success) {
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
     EXPECT_EQ(frame.body()->status_code, status_code::kSuccess);
     EXPECT_EQ(frame.body()->aid, kAid);
+
+    device.wlan_queue.clear();
+    SendEthFrame(kTestPayload);
+    ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
 }
 
 TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
@@ -240,6 +290,11 @@ TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
     EXPECT_EQ(frame.body()->status_code, status_code::kRefused);
     EXPECT_EQ(frame.body()->aid, kUnknownAid);
+
+    device.wlan_queue.clear();
+    // Sending frame should be a no-op since association fails
+    SendEthFrame(kTestPayload);
+    EXPECT_TRUE(device.wlan_queue.empty());
 }
 
 TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {
@@ -273,6 +328,41 @@ TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {
     ASSERT_TRUE(llc_eapol_frame);
     EXPECT_EQ(llc_eapol_frame.body_len(), static_cast<size_t>(5));
     EXPECT_EQ(std::memcmp(llc_eapol_frame.body_data(), kEapolPdu, sizeof(kEapolPdu)), 0);
+}
+
+TEST_F(ApInfraBssTest, SendFrameAfterAssociation) {
+    AssociateClient();
+
+    // Have BSS processes Eth frame.
+    SendEthFrame(kTestPayload);
+
+    // Verify a data WLAN frame was sent.
+    EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
+    auto pkt = std::move(*device.wlan_queue.begin());
+    AssertDataFrameSentToClient(fbl::move(pkt), kTestPayload);
+}
+
+TEST_F(ApInfraBssTest, PowerSaving) {
+    AssociateClient();
+
+    // Simulate client sending null data frame with power saving.
+    auto pwr_mgmt = true;
+    SendNullDataFrame(pwr_mgmt);
+    EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(0));
+
+    // Two Ethernet frames arrive. Verify no WLAN frame is sent out yet.
+    std::vector<uint8_t> payload2 = {'m', 's', 'g', '2'};
+    SendEthFrame(kTestPayload);
+    SendEthFrame(payload2);
+    EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(0));
+
+    // Client notifies that it wakes up. Buffered frames should be sent out now
+    SendNullDataFrame(!pwr_mgmt);
+    EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(2));
+    auto pkt = std::move(*device.wlan_queue.begin());
+    AssertDataFrameSentToClient(fbl::move(pkt), kTestPayload, true);
+    pkt = std::move(*(device.wlan_queue.begin() + 1));
+    AssertDataFrameSentToClient(fbl::move(pkt), payload2);
 }
 
 }  // namespace

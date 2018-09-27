@@ -78,18 +78,16 @@ struct ClientTest : public ::testing::Test {
     }
 
     zx_status_t SendNullDataFrame() {
-        fbl::unique_ptr<Packet> pkt;
-        auto status = CreateNullDataFrame(&pkt);
-        if (status != ZX_OK) { return status; }
-        station.HandleAnyWlanFrame(fbl::move(pkt));
+        auto frame = CreateNullDataFrame();
+        if (frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
+        station.HandleAnyWlanFrame(frame.Take());
         return ZX_OK;
     }
 
     zx_status_t SendEthFrame() {
-        fbl::unique_ptr<Packet> pkt;
-        auto status = CreateEthFrame(&pkt, kTestPayload, sizeof(kTestPayload));
-        if (status != ZX_OK) { return status; }
-        station.HandleEthFrame(EthFrame(fbl::move(pkt)));
+        auto eth_frame = CreateEthFrame(kTestPayload, sizeof(kTestPayload));
+        if (eth_frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
+        station.HandleEthFrame(EthFrame(eth_frame.Take()));
         return ZX_OK;
     }
 
