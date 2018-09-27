@@ -122,6 +122,7 @@ static void hdmi_gpio_init(dsi_t* dsi) {
 
 static void dsi_release(void* ctx) {
     dsi_t* dsi = ctx;
+    mmio_buffer_release(&dsi->mmio);
     free(dsi);
 }
 
@@ -356,7 +357,7 @@ static zx_status_t dsi_bind(void* ctx, zx_device_t* parent) {
     }
     dsi->parent = parent;
 
-    status = pdev_map_mmio_buffer(&dsi->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer2(&dsi->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &dsi->mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "dsi_bind: pdev_map_mmio_buffer failed\n");
@@ -397,7 +398,7 @@ static zx_status_t dsi_bind(void* ctx, zx_device_t* parent) {
     dsi_mipi_test(dsi);
 
     // dsi_mipi_init(dsi);
-    zxlogf(INFO, "MIPI Initialized. Version is 0x%x\n", readl(io_buffer_virt(&dsi->mmio)));
+    zxlogf(INFO, "MIPI Initialized. Version is 0x%x\n", readl(dsi->mmio.vaddr));
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
