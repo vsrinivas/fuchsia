@@ -12,47 +12,45 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <fbl/algorithm.h>
+
 #include "bootfs.h"
 
-zx_status_t bootfs_create(bootfs_t* bfs, zx_handle_t vmo) {
+Bootfs::~Bootfs() = default;
+
+zx_status_t Bootfs::Create(zx::vmo vmo, Bootfs* bfs_out) {
     bootfs_header_t hdr;
-    zx_status_t r = zx_vmo_read(vmo, &hdr, 0, sizeof(hdr));
+    zx_status_t r = vmo.read(&hdr, 0, sizeof(hdr));
     if (r < 0) {
         printf("bootfs_create: couldn't read boot_data - %d\n", r);
-        zx_handle_close(vmo);
         return r;
     }
     if (hdr.magic != BOOTFS_MAGIC) {
         printf("bootfs_create: incorrect bootdata header: %x\n", hdr.magic);
-        zx_handle_close(vmo);
         return ZX_ERR_IO;
     }
     zx_vaddr_t addr;
-    if ((r = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0,
+    if ((r = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo.get(), 0,
                          sizeof(hdr) + hdr.dirsize,
                          &addr)) < 0) {
         printf("boofts_create: couldn't map directory: %d\n", r);
-        zx_handle_close(vmo);
         return r;
     }
-    bfs->vmo = vmo;
-    bfs->dirsize = hdr.dirsize;
-    bfs->dir = reinterpret_cast<char*>(addr) + sizeof(hdr);
+    auto dir = reinterpret_cast<char*>(addr) + sizeof(hdr);
+    *bfs_out = Bootfs(fbl::move(vmo), hdr.dirsize, dir);
     return ZX_OK;
 }
 
-void bootfs_destroy(bootfs_t* bfs) {
-    zx_handle_close(bfs->vmo);
+void Bootfs::Destroy() {
+    vmo_.reset();
     zx_vmar_unmap(zx_vmar_root_self(),
-                  (uintptr_t)bfs->dir - sizeof(bootfs_header_t),
-                  bfs->dirsize);
+                  (uintptr_t)dir_ - sizeof(bootfs_header_t),
+                  MappingSize());
 }
 
-zx_status_t bootfs_parse(bootfs_t* bfs,
-                         zx_status_t (*cb)(void* cookie, const bootfs_entry_t* entry),
-                         void* cookie) {
-    size_t avail = bfs->dirsize;
-    auto* p = static_cast<char*>(bfs->dir);
+zx_status_t Bootfs::Parse(Callback callback, void* cookie) {
+    size_t avail = dirsize_;
+    auto* p = static_cast<char*>(dir_);
     zx_status_t r;
     while (avail > sizeof(bootfs_entry_t)) {
         auto e = reinterpret_cast<bootfs_entry_t*>(p);
@@ -62,7 +60,7 @@ zx_status_t bootfs_parse(bootfs_t* bfs,
             printf("bootfs: bogus entry!\n");
             return ZX_ERR_IO;
         }
-        if ((r = cb(cookie, e)) != ZX_OK) {
+        if ((r = callback(cookie, e)) != ZX_OK) {
             return r;
         }
         p += sz;
@@ -71,11 +69,10 @@ zx_status_t bootfs_parse(bootfs_t* bfs,
     return ZX_OK;
 }
 
-zx_status_t bootfs_open(bootfs_t* bfs, const char* name,
-                        zx_handle_t* vmo_out, uint32_t* size_out) {
+zx_status_t Bootfs::Open(const char* name, zx::vmo* vmo_out, uint32_t* size_out) {
     size_t name_len = strlen(name) + 1;
-    size_t avail = bfs->dirsize;
-    auto p = static_cast<char*>(bfs->dir);
+    size_t avail = dirsize_;
+    auto p = static_cast<char*>(dir_);
     bootfs_entry_t* e;
     while (avail > sizeof(bootfs_entry_t)) {
         e = reinterpret_cast<bootfs_entry_t*>(p);
@@ -95,36 +92,41 @@ zx_status_t bootfs_open(bootfs_t* bfs, const char* name,
     return ZX_ERR_NOT_FOUND;
 
 found:;
-    zx_handle_t vmo;
+    zx::vmo vmo;
     zx_status_t r;
 
     // Clone a private copy of the file's subset of the bootfs VMO.
     // TODO(mcgrathr): Create a plain read-only clone when the feature
     // is implemented in the VM.
-    if ((r = zx_vmo_clone(bfs->vmo, ZX_VMO_CLONE_COPY_ON_WRITE,
-                          e->data_off, e->data_len, &vmo)) != ZX_OK) {
+    if ((r = vmo_.clone(ZX_VMO_CLONE_COPY_ON_WRITE,
+                        e->data_off, e->data_len, &vmo)) != ZX_OK) {
         return r;
     }
 
-    zx_object_set_property(vmo, ZX_PROP_NAME, name, name_len - 1);
+    vmo.set_property(ZX_PROP_NAME, name, name_len - 1);
 
     // Drop unnecessary ZX_RIGHT_WRITE rights.
     // TODO(mcgrathr): Should be superfluous with read-only zx_vmo_clone.
-    if ((r = zx_handle_replace(vmo,
-                               ZX_RIGHTS_BASIC | ZX_RIGHT_READ |
-                               ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY,
-                               &vmo)) != ZX_OK) {
+    if ((r = vmo.replace(ZX_RIGHTS_BASIC | ZX_RIGHT_READ |
+                         ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY,
+                         &vmo)) != ZX_OK) {
         return r;
     }
 
     // TODO(mdempsky): Restrict to bin/ and lib/.
-    if ((r = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &vmo)) != ZX_OK) {
+    if ((vmo.replace_as_executable(zx::handle(), &vmo)) != ZX_OK) {
         return r;
     }
 
-    *vmo_out = vmo;
+    *vmo_out = fbl::move(vmo);
     if (size_out) {
         *size_out = e->data_len;
     }
     return ZX_OK;
+}
+
+zx::vmo Bootfs::DuplicateVmo() {
+    zx::vmo duplicate;
+    vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate);
+    return duplicate;
 }

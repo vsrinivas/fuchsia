@@ -91,18 +91,16 @@ static zx_status_t setup_bootfs_vmo(uint32_t n, uint32_t type, zx_handle_t vmo) 
     // We need to duplicate |vmo| because |bootfs_create| takes ownership of the
     // |vmo| and closes it during |bootfs_destroy|. However, we've stored |vmo|
     // in |cd|, and |callback| will further store |vmo| in memfs.
-    zx_handle_t bootfs_vmo;
-    status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &bootfs_vmo);
+    zx::vmo bootfs_vmo;
+    status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, bootfs_vmo.reset_and_get_address());
     if (status != ZX_OK) {
         printf("devmgr: failed to duplicate vmo for /system (%d)\n", status);
         return status;
     }
-    bootfs_t bfs;
-    if (bootfs_create(&bfs, bootfs_vmo) == ZX_OK) {
-        bootfs_parse(&bfs, callback, &cd);
-        bootfs_destroy(&bfs);
-    } else {
-        zx_handle_close(bootfs_vmo);
+    Bootfs bfs;
+    if (Bootfs::Create(fbl::move(bootfs_vmo), &bfs) == ZX_OK) {
+        bfs.Parse(callback, &cd);
+        bfs.Destroy();
     }
     if (type == BOOTDATA_BOOTFS_SYSTEM) {
         systemfs_set_readonly(getenv("zircon.system.writable") == nullptr);

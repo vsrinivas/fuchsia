@@ -633,15 +633,20 @@ int main(int argc, char** argv) {
 
 static zx_handle_t fs_root;
 
-static bootfs_t bootfs;
+static Bootfs bootfs;
 
-static zx_status_t load_object(void* ctx, const char* name, zx_handle_t* vmo) {
+static zx_status_t load_object(void* ctx, const char* name, zx_handle_t* vmo_out) {
     char tmp[256];
     if (snprintf(tmp, sizeof(tmp), "lib/%s", name) >= (int)sizeof(tmp)) {
         return ZX_ERR_BAD_PATH;
     }
-    auto bootfs = static_cast<bootfs_t*>(ctx);
-    return bootfs_open(bootfs, tmp, vmo, nullptr);
+    auto bootfs = static_cast<Bootfs*>(ctx);
+    zx::vmo vmo;
+    zx_status_t status = bootfs->Open(tmp, &vmo, nullptr);
+    if (status == ZX_OK) {
+        *vmo_out = vmo.release();
+    }
+    return status;
 }
 
 static zx_status_t load_abspath(void* ctx, const char* name, zx_handle_t* vmo) {
@@ -665,9 +670,9 @@ static loader_service_t* loader_service;
 #define MAXHND ZX_CHANNEL_MAX_MSG_HANDLES
 
 void bootfs_create_from_startup_handle() {
-    zx_handle_t bootfs_vmo = zx_take_startup_handle(PA_HND(PA_VMO_BOOTFS, 0));
-    if ((bootfs_vmo == ZX_HANDLE_INVALID) ||
-        (bootfs_create(&bootfs, bootfs_vmo) != ZX_OK)) {
+    zx::vmo bootfs_vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTFS, 0)));
+    if ((!bootfs_vmo.is_valid()) ||
+        (Bootfs::Create(fbl::move(bootfs_vmo), &bootfs) != ZX_OK)) {
         printf("devmgr: cannot find and open bootfs\n");
         exit(1);
     }
@@ -710,7 +715,8 @@ void fshost_start() {
     }
 
     // pass primary bootfs to fshost
-    if (zx_handle_duplicate(bootfs.vmo, ZX_RIGHT_SAME_RIGHTS, &handles[n]) == ZX_OK) {
+    handles[n] = bootfs.DuplicateVmo().release();
+    if (handles[n] != ZX_HANDLE_INVALID) {
         types[n++] = PA_HND(PA_VMO_BOOTFS, 0);
     }
 
@@ -788,9 +794,11 @@ zx_handle_t devmgr_load_file(const char* path, uint32_t* out_size) {
     if (strncmp(path, "/boot/", 6)) {
         return ZX_HANDLE_INVALID;
     }
-    zx_handle_t vmo = ZX_HANDLE_INVALID;
-    bootfs_open(&bootfs, path + 6, &vmo, out_size);
-    return vmo;
+    zx::vmo vmo;
+    if (bootfs.Open(path + 6, &vmo, out_size) != ZX_OK) {
+        return ZX_HANDLE_INVALID;
+    }
+    return vmo.release();
 }
 
 zx_status_t devmgr_launch_load(void* ctx, launchpad_t* lp, const char* file) {
