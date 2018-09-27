@@ -140,7 +140,7 @@ class Station {
    private:
     static constexpr size_t kAssocBcnCountTimeout = 20;
     static constexpr size_t kSignalReportBcnCountTimeout = 10;
-    static constexpr size_t kAutoDeauthBcnCountTimeout = 50;
+    static constexpr size_t kAutoDeauthBcnCountTimeout = 100;
     static constexpr zx::duration kOnChannelTimeAfterSend = zx::msec(500);
     // Maximum number of packets buffered while station is in power saving mode.
     // TODO(NET-687): Find good BU limit.
