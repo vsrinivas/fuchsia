@@ -1,4 +1,4 @@
-# Cloud Provider Validation Test Suite
+# Validation Test Suite for cloud providers
 
 This directory contains implementation-independent tests for implementations of
 the [CloudProvider] interface.

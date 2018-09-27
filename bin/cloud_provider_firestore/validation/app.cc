@@ -6,7 +6,6 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include <lib/cloud_provider/validation/launcher/validation_tests_launcher.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/logging.h>
@@ -16,6 +15,7 @@
 #include "peridot/bin/cloud_provider_firestore/include/types.h"
 #include "peridot/bin/cloud_provider_firestore/testing/cloud_provider_factory.h"
 #include "peridot/bin/ledger/testing/sync_params.h"
+#include "peridot/bin/ledger/tests/cloud_provider/launcher/validation_tests_launcher.h"
 
 namespace cloud_provider_firestore {
 void PrintUsage(const char* executable_name) {
@@ -34,7 +34,8 @@ int main(int argc, char** argv) {
       component::StartupContext::CreateFromStartupInfo();
 
   ledger::SyncParams sync_params;
-  if (!ledger::ParseSyncParamsFromCommandLine(command_line, startup_context.get(), &sync_params)) {
+  if (!ledger::ParseSyncParamsFromCommandLine(
+          command_line, startup_context.get(), &sync_params)) {
     cloud_provider_firestore::PrintUsage(argv[0]);
     return -1;
   }

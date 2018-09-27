@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_CLOUD_PROVIDER_VALIDATION_TYPES_H_
-#define LIB_CLOUD_PROVIDER_VALIDATION_TYPES_H_
+#ifndef PERIDOT_BIN_LEDGER_TESTS_CLOUD_PROVIDER_TYPES_H_
+#define PERIDOT_BIN_LEDGER_TESTS_CLOUD_PROVIDER_TYPES_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 
@@ -28,4 +28,4 @@ using Status = fuchsia::ledger::cloud::Status;
 using Token = fuchsia::ledger::cloud::Token;
 }  // namespace cloud_provider
 
-#endif  // LIB_CLOUD_PROVIDER_VALIDATION_TYPES_H_
+#endif  // PERIDOT_BIN_LEDGER_TESTS_CLOUD_PROVIDER_TYPES_H_

@@ -45,11 +45,11 @@ package("ledger_tests") {
   deps = [
     ":ledger_e2e_sync_credentials",
     ":ledger_unittests",
+    "tests/cloud_provider",
     "tests/e2e_local",
     "tests/e2e_sync",
     "tests/integration",
     "//peridot/bin/cloud_provider_firestore:tests",
-    "//peridot/public/lib/cloud_provider/validation",
   ]
 
   meta = [

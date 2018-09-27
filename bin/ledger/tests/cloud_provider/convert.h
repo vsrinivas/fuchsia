@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_CLOUD_PROVIDER_VALIDATION_CONVERT_H_
-#define LIB_CLOUD_PROVIDER_VALIDATION_CONVERT_H_
+#ifndef PERIDOT_BIN_LEDGER_TESTS_CLOUD_PROVIDER_CONVERT_H_
+#define PERIDOT_BIN_LEDGER_TESTS_CLOUD_PROVIDER_CONVERT_H_
 
 #include <string>
 
@@ -19,4 +19,4 @@ std::string ToHex(const fidl::VectorPtr<uint8_t>& bytes);
 
 }  // namespace cloud_provider
 
-#endif  // LIB_CLOUD_PROVIDER_VALIDATION_CONVERT_H_
+#endif  // PERIDOT_BIN_LEDGER_TESTS_CLOUD_PROVIDER_CONVERT_H_

@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_CLOUD_PROVIDER_VALIDATION_VALIDATION_TEST_H_
-#define LIB_CLOUD_PROVIDER_VALIDATION_VALIDATION_TEST_H_
+#ifndef PERIDOT_BIN_LEDGER_TESTS_CLOUD_PROVIDER_VALIDATION_TEST_H_
+#define PERIDOT_BIN_LEDGER_TESTS_CLOUD_PROVIDER_VALIDATION_TEST_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <lib/cloud_provider/validation/types.h>
+#include <gtest/gtest.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "gtest/gtest.h"
+#include "peridot/bin/ledger/tests/cloud_provider/types.h"
 
 namespace cloud_provider {
 
@@ -33,4 +33,4 @@ class ValidationTest : public ::gtest::TestLoopFixture {
 
 }  // namespace cloud_provider
 
-#endif  // LIB_CLOUD_PROVIDER_VALIDATION_VALIDATION_TEST_H_
+#endif  // PERIDOT_BIN_LEDGER_TESTS_CLOUD_PROVIDER_VALIDATION_TEST_H_

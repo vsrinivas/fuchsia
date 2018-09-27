@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <lib/cloud_provider/validation/convert.h>
-#include <lib/cloud_provider/validation/types.h>
-#include <lib/cloud_provider/validation/validation_test.h>
+#include <gtest/gtest.h>
 #include <lib/fxl/logging.h>
 
-#include "gtest/gtest.h"
+#include "peridot/bin/ledger/tests/cloud_provider/convert.h"
+#include "peridot/bin/ledger/tests/cloud_provider/types.h"
+#include "peridot/bin/ledger/tests/cloud_provider/validation_test.h"
 
 namespace cloud_provider {
 namespace {
