@@ -44,6 +44,7 @@ Options:
   --block (-b) xxx : Use the xxx block number.
   --count (-n) xxx : Limit the operation to xxx blocks.
                      Only supported with --check.
+  --live-dangerously (-y) : Don't prompt for confirmation.
 )""";
 
 // Configuration info (what to do).
@@ -59,6 +60,7 @@ struct Config {
     bool read;
     bool erase;
     bool read_check;
+    bool skip_prompt;
 };
 
 // Broker device wrapper.
@@ -226,6 +228,7 @@ bool GetOptions(int argc, char** argv, Config* config) {
             {"block", required_argument, nullptr, 'b'},
             {"absolute", required_argument, nullptr, 'a'},
             {"count", required_argument, nullptr, 'n'},
+            {"live-dangerously", no_argument, nullptr, 'y'},
             {"help", no_argument, nullptr, 'h'},
             {nullptr, 0, nullptr, 0},
         };
@@ -269,6 +272,9 @@ bool GetOptions(int argc, char** argv, Config* config) {
         case 'n':
             config->count = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
             break;
+        case 'y':
+            config->skip_prompt = true;
+            break;
         case 'h':
             printf("%s\n", kUsageMessage);
             return 0;
@@ -299,11 +305,6 @@ bool ValidateOptions(const Config& config) {
         return false;
     }
 
-    if (config.erase && config.block_num < 24) {
-        printf("Erasing the restricted area is not a good idea, sorry\n");
-        return false;
-    }
-
     if (!config.info && !config.actions) {
         printf("Nothing to do\n");
         return false;
@@ -329,6 +330,11 @@ bool ValidateOptionsWithNand(const NandBroker& nand, const Config& config) {
 
     if (config.abs_page >= nand.Info().num_blocks * nand.Info().pages_per_block) {
         printf("Page not within device:\n");
+        return false;
+    }
+
+    if (config.erase && nand.Info().nand_class == NAND_CLASS_PARTMAP && config.block_num < 24) {
+        printf("Erasing the restricted area is not a good idea, sorry\n");
         return false;
     }
 
@@ -432,9 +438,11 @@ int main(int argc, char** argv) {
     }
 
     if (config.erase) {
-        printf("About to erase block %d. Press y to confirm\n", config.block_num);
-        if (getchar() != 'y') {
-            return -1;
+        if (!config.skip_prompt) {
+            printf("About to erase block %d. Press y to confirm\n", config.block_num);
+            if (getchar() != 'y') {
+                return -1;
+            }
         }
         return nand.EraseBlock(config.block_num) ? 0 : -1;
     }
