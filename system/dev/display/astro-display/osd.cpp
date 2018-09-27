@@ -10,8 +10,8 @@
 
 namespace astro_display {
 
-#define READ32_VPU_REG(a)               vpu_regs_->Read<uint32_t>(a)
-#define WRITE32_VPU_REG(a, v)           vpu_regs_->Write<uint32_t>(a, v)
+#define READ32_VPU_REG(a)               vpu_mmio_->Read32(a)
+#define WRITE32_VPU_REG(a, v)           vpu_mmio_->Write32(v, a)
 
 namespace {
 constexpr uint32_t VpuViuOsd1BlkCfgTblAddrShift = 16;
@@ -49,32 +49,29 @@ zx_status_t Osd::Init(zx_device_t* parent) {
     }
 
     // Map vpu mmio used by the OSD object
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &mmio_vpu_);
+    mmio_buffer_t mmio;
+    status = pdev_map_mmio_buffer2(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("osd: Could not map VPU mmio\n");
         return status;
     }
 
-    vpu_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_vpu_));
+    vpu_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
     // OSD object is ready to be used.
     initialized_ = true;
     return ZX_OK;
 }
 
-void Osd::Disable() {
+void Osd::Disable(void) {
     ZX_DEBUG_ASSERT(initialized_);
-    uint32_t regVal = vpu_regs_->Read<uint32_t>(VPU_VIU_OSD1_CTRL_STAT);
-    regVal &= ~(1 << 0);
-    vpu_regs_->Write(VPU_VIU_OSD1_CTRL_STAT, regVal);
+    vpu_mmio_->ClearBits32(1 << 0, VPU_VIU_OSD1_CTRL_STAT);
 }
 
-void Osd::Enable() {
+void Osd::Enable(void) {
     ZX_DEBUG_ASSERT(initialized_);
-    uint32_t regVal = vpu_regs_->Read<uint32_t>(VPU_VIU_OSD1_CTRL_STAT);
-    regVal |= (1 << 0);
-    vpu_regs_->Write(VPU_VIU_OSD1_CTRL_STAT, regVal);
+    vpu_mmio_->SetBits32(1 << 0, VPU_VIU_OSD1_CTRL_STAT);
 }
 
 zx_status_t Osd::Configure() {
@@ -84,11 +81,10 @@ zx_status_t Osd::Configure() {
     // scaling.
     // For now, we will only configure the OSD layer to use the new Canvas index,
     // and use 32-bit color.
-    uint32_t ctrl_stat2 = vpu_regs_->Read<uint32_t>(VPU_VIU_OSD1_CTRL_STAT2);
-    ctrl_stat2 |= VpuViuOsd1CtrlStat2ReplacedAlphaEn |
-                  (0xff << VpuViuOsd1CtrlStat2ReplacedAlphaShift);
     // Set to use BGRX instead of BGRA.
-    vpu_regs_->Write(VPU_VIU_OSD1_CTRL_STAT2, ctrl_stat2);
+    vpu_mmio_->SetBits32(VpuViuOsd1CtrlStat2ReplacedAlphaEn |
+                             (0xff << VpuViuOsd1CtrlStat2ReplacedAlphaShift),
+                         VPU_VIU_OSD1_CTRL_STAT2);
 
     return ZX_OK;
 }
@@ -100,7 +96,7 @@ void Osd::Flip(uint8_t idx) {
         (VpuViuOsd1BlkCfgOsdBlkMode32Bit << VpuViuOsd1BlkCfgOsdBlkModeShift) |
         (VpuViuOsd1BlkCfgColorMatrixArgb << VpuViuOsd1BlkCfgColorMatrixShift);
 
-    vpu_regs_->Write(VPU_VIU_OSD1_BLK0_CFG_W0, cfg_w0);
+    vpu_mmio_->Write32(cfg_w0, VPU_VIU_OSD1_BLK0_CFG_W0);
     Enable();
 }
 

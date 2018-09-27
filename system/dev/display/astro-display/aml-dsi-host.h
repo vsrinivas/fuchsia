@@ -24,11 +24,6 @@ public:
     AmlDsiHost(zx_device_t* parent, uint32_t bitrate, uint8_t panel_type)
         : parent_(parent), bitrate_(bitrate), panel_type_(panel_type) {}
 
-    ~AmlDsiHost() {
-        io_buffer_release(&mmio_hhi_);
-        io_buffer_release(&mmio_mipi_dsi_);
-    }
-
     // This function sets up mipi dsi interface. It includes both DWC and AmLogic blocks
     // The DesignWare setup could technically be moved to the dw_mipi_dsi driver. However,
     // given the highly configurable nature of this block, we'd have to provide a lot of
@@ -45,13 +40,10 @@ private:
     void PhyDisable();
     zx_status_t HostModeInit(uint32_t opp, const DisplaySetting& disp_setting);
 
-    io_buffer_t                                 mmio_mipi_dsi_;
-    io_buffer_t                                 mmio_hhi_;
+    fbl::unique_ptr<ddk::MmioBuffer>            mipi_dsi_mmio_;
+    fbl::unique_ptr<ddk::MmioBuffer>            hhi_mmio_;
 
     platform_device_protocol_t                  pdev_ = {};
-
-    fbl::unique_ptr<hwreg::RegisterIo>          mipi_dsi_regs_;
-    fbl::unique_ptr<hwreg::RegisterIo>          hhi_regs_;
 
     zx_device_t*                                parent_;
 

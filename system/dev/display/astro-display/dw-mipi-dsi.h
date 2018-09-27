@@ -7,8 +7,8 @@
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddktl/mmio.h>
 #include <fbl/unique_ptr.h>
-#include <hwreg/mmio.h>
 #include "mipi-dsi.h"
 #include "dw-mipi-dsi-reg.h"
 #include "common.h"
@@ -24,7 +24,6 @@ namespace astro_display {
 class DwMipiDsi {
 public:
     DwMipiDsi() {}
-    ~DwMipiDsi() { io_buffer_release(&mmio_mipi_dsi_); }
     zx_status_t Init(zx_device_t* parent);
     zx_status_t Cmd(const uint8_t* tbuf, size_t tlen, uint8_t* rbuf, size_t rlen, bool is_dcs);
 
@@ -55,9 +54,8 @@ private:
     zx_status_t GenRead(const MipiDsiCmd& cmd);
     zx_status_t SendCmd(const MipiDsiCmd& cmd);
 
-    io_buffer_t                             mmio_mipi_dsi_;
-    platform_device_protocol_t              pdev_ = {};
-    fbl::unique_ptr<hwreg::RegisterIo>      mipi_dsi_regs_;
+    fbl::unique_ptr<ddk::MmioBuffer>        mipi_dsi_mmio_;
+    platform_device_protocol_t              pdev_ = {nullptr, nullptr};
 
     bool                                    initialized_ = false;
 };

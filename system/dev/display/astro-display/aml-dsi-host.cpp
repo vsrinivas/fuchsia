@@ -7,11 +7,11 @@
 
 namespace astro_display {
 
-#define READ32_MIPI_DSI_REG(a)              mipi_dsi_regs_->Read<uint32_t>(a)
-#define WRITE32_MIPI_DSI_REG(a, v)          mipi_dsi_regs_->Write<uint32_t>(a, v)
+#define READ32_MIPI_DSI_REG(a)              mipi_dsi_mmio_->Read32(a)
+#define WRITE32_MIPI_DSI_REG(a, v)          mipi_dsi_mmio_->Write32(v, a)
 
-#define READ32_HHI_REG(a)                   hhi_regs_->Read<uint32_t>(a)
-#define WRITE32_HHI_REG(a, v)               hhi_regs_->Write<uint32_t>(a, v)
+#define READ32_HHI_REG(a)                   hhi_mmio_->Read32(a)
+#define WRITE32_HHI_REG(a, v)               hhi_mmio_->Write32(v, a)
 
 zx_status_t AmlDsiHost::HostModeInit(uint32_t opp, const DisplaySetting& disp_setting) {
     uint32_t lane_num = disp_setting.lane_num;
@@ -229,24 +229,22 @@ zx_status_t AmlDsiHost::Init() {
     }
 
     // Map MIPI DSI and HHI registers
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_MPI_DSI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &mmio_mipi_dsi_);
+    mmio_buffer_t mmio;
+    status = pdev_map_mmio_buffer2(&pdev_, MMIO_MPI_DSI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map MIPI DSI mmio\n");
         return status;
     }
+    mipi_dsi_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &mmio_hhi_);
+    status = pdev_map_mmio_buffer2(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map HHI mmio\n");
-        io_buffer_release(&mmio_mipi_dsi_);
         return status;
     }
-
-    // Create register IO
-    mipi_dsi_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_mipi_dsi_));
-    hhi_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_hhi_));
+    hhi_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
     initialized_ = true;
     return ZX_OK;

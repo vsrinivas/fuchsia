@@ -7,8 +7,8 @@
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddktl/mmio.h>
 #include <fbl/unique_ptr.h>
-#include <hwreg/mmio.h>
 #include <ddktl/device.h>
 
 #include "aml-dsi.h"
@@ -20,10 +20,6 @@ namespace astro_display {
 class AmlMipiPhy {
 public:
     AmlMipiPhy() {}
-    ~AmlMipiPhy() {
-        io_buffer_release(&mmio_mipi_dsi_);
-        io_buffer_release(&mmio_dsi_phy_);
-    }
     // This function initializes internal state of the object
     zx_status_t Init(zx_device_t* parent, uint32_t lane_num);
     // This function enables and starts up the Mipi Phy
@@ -60,11 +56,9 @@ private:
     void PhyInit();
     zx_status_t WaitforPhyReady();
 
-    io_buffer_t                                 mmio_mipi_dsi_;
-    io_buffer_t                                 mmio_dsi_phy_;
-    platform_device_protocol_t                  pdev_ = {};
-    fbl::unique_ptr<hwreg::RegisterIo>          mipi_dsi_regs_;
-    fbl::unique_ptr<hwreg::RegisterIo>          dsi_phy_regs_;
+    fbl::unique_ptr<ddk::MmioBuffer>            mipi_dsi_mmio_;
+    fbl::unique_ptr<ddk::MmioBuffer>            dsi_phy_mmio_;
+    platform_device_protocol_t                  pdev_ = {nullptr, nullptr};
     uint32_t                                    num_of_lanes_;
     DsiPhyConfig                                dsi_phy_cfg_;
 

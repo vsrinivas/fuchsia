@@ -8,8 +8,8 @@
 
 namespace astro_display {
 
-#define READ32_MIPI_DSI_REG(a)              mipi_dsi_regs_->Read<uint32_t>(a)
-#define WRITE32_MIPI_DSI_REG(a, v)          mipi_dsi_regs_->Write<uint32_t>(a, v)
+#define READ32_MIPI_DSI_REG(a)              mipi_dsi_mmio_->Read32(a)
+#define WRITE32_MIPI_DSI_REG(a, v)          mipi_dsi_mmio_->Write32(v, a)
 
 
 inline bool DwMipiDsi::IsPldREmpty() {
@@ -458,15 +458,14 @@ zx_status_t DwMipiDsi::Init(zx_device_t* parent) {
     }
 
     // Map Mipi Dsi registers
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_MPI_DSI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &mmio_mipi_dsi_);
+    mmio_buffer_t mmio;
+    status = pdev_map_mmio_buffer2(&pdev_, MMIO_MPI_DSI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("DwMipiDsi: Could not map MIPI DSI mmio\n");
         return status;
     }
-
-    // Create register io
-    mipi_dsi_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_mipi_dsi_));
+    mipi_dsi_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
     initialized_ = true;
     return status;

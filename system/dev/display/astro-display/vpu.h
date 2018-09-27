@@ -6,8 +6,8 @@
 
 #include <zircon/compiler.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddktl/mmio.h>
 #include <fbl/unique_ptr.h>
-#include <hwreg/mmio.h>
 #include "vpu-regs.h"
 #include "common.h"
 
@@ -17,10 +17,6 @@ namespace astro_display {
 class Vpu {
 public:
     Vpu() {}
-    ~Vpu() {
-        io_buffer_release(&mmio_vpu_);
-        io_buffer_release(&mmio_hhi_);
-    }
     zx_status_t Init(zx_device_t* parent);
     // This function powers on VPU related blocks. The function contains undocumented
     // register and/or power-on sequences.
@@ -36,15 +32,11 @@ private:
     // and/or clock initialization sequences
     void ConfigureClock();
 
-    io_buffer_t                         mmio_vpu_;
-    io_buffer_t                         mmio_hhi_;
-    io_buffer_t                         mmio_aobus_;
-    io_buffer_t                         mmio_cbus_;
+    fbl::unique_ptr<ddk::MmioBuffer>    vpu_mmio_;
+    fbl::unique_ptr<ddk::MmioBuffer>    hhi_mmio_;
+    fbl::unique_ptr<ddk::MmioBuffer>    aobus_mmio_;
+    fbl::unique_ptr<ddk::MmioBuffer>    cbus_mmio_;
     platform_device_protocol_t          pdev_ = {};
-    fbl::unique_ptr<hwreg::RegisterIo>  vpu_regs_;
-    fbl::unique_ptr<hwreg::RegisterIo>  hhi_regs_;
-    fbl::unique_ptr<hwreg::RegisterIo>  aobus_regs_;
-    fbl::unique_ptr<hwreg::RegisterIo>  cbus_regs_;
 
     bool                                initialized_ = false;
 

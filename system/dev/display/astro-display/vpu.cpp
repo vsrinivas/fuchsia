@@ -48,17 +48,17 @@ constexpr int16_t YUV709l_to_RGB709_coeff12[24] = {
 #define RESET4_LEVEL                    (0x0424 << 2)
 #define RESET7_LEVEL                    (0x0427 << 2)
 
-#define READ32_VPU_REG(a)               vpu_regs_->Read<uint32_t>(a)
-#define WRITE32_VPU_REG(a, v)           vpu_regs_->Write<uint32_t>(a, v)
+#define READ32_VPU_REG(a)               vpu_mmio_->Read32(a)
+#define WRITE32_VPU_REG(a, v)           vpu_mmio_->Write32(v, a)
 
-#define READ32_HHI_REG(a)               hhi_regs_->Read<uint32_t>(a)
-#define WRITE32_HHI_REG(a, v)           hhi_regs_->Write<uint32_t>(a, v)
+#define READ32_HHI_REG(a)               hhi_mmio_->Read32(a)
+#define WRITE32_HHI_REG(a, v)           hhi_mmio_->Write32(v, a)
 
-#define READ32_AOBUS_REG(a)             aobus_regs_->Read<uint32_t>(a)
-#define WRITE32_AOBUS_REG(a, v)         aobus_regs_->Write<uint32_t>(a, v)
+#define READ32_AOBUS_REG(a)             aobus_mmio_->Read32(a)
+#define WRITE32_AOBUS_REG(a, v)         aobus_mmio_->Write32(v, a)
 
-#define READ32_CBUS_REG(a)              cbus_regs_->Read<uint32_t>(a)
-#define WRITE32_CBUS_REG(a, v)          cbus_regs_->Write<uint32_t>(a, v)
+#define READ32_CBUS_REG(a)              cbus_mmio_->Read32(a)
+#define WRITE32_CBUS_REG(a, v)          cbus_mmio_->Write32(v, a)
 
 zx_status_t Vpu::Init(zx_device_t* parent) {
     if (initialized_) {
@@ -70,40 +70,41 @@ zx_status_t Vpu::Init(zx_device_t* parent) {
     }
 
     // Map VPU registers
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &mmio_vpu_);
+    mmio_buffer_t mmio;
+    status = pdev_map_mmio_buffer2(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("vpu: Could not map VPU mmio\n");
         return status;
     }
-    vpu_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_vpu_));
+    vpu_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
     // Map HHI registers
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &mmio_hhi_);
+    status = pdev_map_mmio_buffer2(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("vpu: Could not map HHI mmio\n");
         return status;
     }
-    hhi_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_hhi_));
+    hhi_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
     // Map AOBUS registers
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_AOBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &mmio_aobus_);
+    status = pdev_map_mmio_buffer2(&pdev_, MMIO_AOBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("vpu: Could not map AOBUS mmio\n");
         return status;
     }
-    aobus_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_aobus_));
+    aobus_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
     // Map CBUS registers
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_CBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &mmio_cbus_);
+    status = pdev_map_mmio_buffer2(&pdev_, MMIO_CBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("vpu: Could not map CBUS mmio\n");
         return status;
     }
-    cbus_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_cbus_));
+    cbus_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
     // VPU object is ready to be used
     initialized_ = true;

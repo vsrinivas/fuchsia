@@ -8,6 +8,7 @@
 #include <zircon/compiler.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddktl/mmio.h>
 #include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
 #include <ddktl/device.h>
@@ -22,10 +23,6 @@ namespace astro_display {
 class AstroDisplayClock {
 public:
     AstroDisplayClock() {}
-    ~AstroDisplayClock() {
-        io_buffer_release(&mmio_vpu_);
-        io_buffer_release(&mmio_hhi_);
-    }
     zx_status_t Init(zx_device_t* parent);
     zx_status_t Enable(const DisplaySetting& d);
     void Disable();
@@ -46,11 +43,9 @@ private:
     // the desired lcd clock
     zx_status_t GenerateHPLL(const DisplaySetting& disp_setting);
 
-    io_buffer_t                             mmio_vpu_;
-    io_buffer_t                             mmio_hhi_;
-    platform_device_protocol_t              pdev_ = {};
-    fbl::unique_ptr<hwreg::RegisterIo>      vpu_regs_;
-    fbl::unique_ptr<hwreg::RegisterIo>      hhi_regs_;
+    fbl::unique_ptr<ddk::MmioBuffer>        vpu_mmio_;
+    fbl::unique_ptr<ddk::MmioBuffer>        hhi_mmio_;
+    platform_device_protocol_t              pdev_ = {nullptr, nullptr};
 
     PllConfig                               pll_cfg_;
     LcdTiming                               lcd_timing_;

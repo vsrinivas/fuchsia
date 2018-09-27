@@ -7,11 +7,11 @@
 
 namespace astro_display {
 
-#define READ32_MIPI_DSI_REG(a)              mipi_dsi_regs_->Read<uint32_t>(a)
-#define WRITE32_MIPI_DSI_REG(a, v)          mipi_dsi_regs_->Write<uint32_t>(a, v)
+#define READ32_MIPI_DSI_REG(a)              mipi_dsi_mmio_->Read32(a)
+#define WRITE32_MIPI_DSI_REG(a, v)          mipi_dsi_mmio_->Write32(v, a)
 
-#define READ32_DSI_PHY_REG(a)               dsi_phy_regs_->Read<uint32_t>(a)
-#define WRITE32_DSI_PHY_REG(a, v)           dsi_phy_regs_->Write<uint32_t>(a, v)
+#define READ32_DSI_PHY_REG(a)               dsi_phy_mmio_->Read32(a)
+#define WRITE32_DSI_PHY_REG(a, v)           dsi_phy_mmio_->Write32(v, a)
 
 template<typename T>
 constexpr inline uint8_t NsToLaneByte(T x, uint32_t lanebytetime) {
@@ -266,23 +266,22 @@ zx_status_t AmlMipiPhy::Init(zx_device_t* parent, uint32_t lane_num) {
     }
 
     // Map Mipi Dsi and Dsi Phy registers
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_MPI_DSI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &mmio_mipi_dsi_);
+    mmio_buffer_t mmio;
+    status = pdev_map_mmio_buffer2(&pdev_, MMIO_MPI_DSI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("AmlMipiPhy: Could not map MIPI DSI mmio\n");
         return status;
     }
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_DSI_PHY, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &mmio_dsi_phy_);
+    mipi_dsi_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+
+    status = pdev_map_mmio_buffer2(&pdev_, MMIO_DSI_PHY, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("AmlMipiPhy: Could not map DSI PHY mmio\n");
-        io_buffer_release(&mmio_mipi_dsi_);
         return status;
     }
-
-    // Create register io
-    mipi_dsi_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_mipi_dsi_));
-    dsi_phy_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_dsi_phy_));
+    dsi_phy_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
     initialized_ = true;
     return ZX_OK;

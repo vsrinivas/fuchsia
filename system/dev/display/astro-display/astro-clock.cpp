@@ -14,11 +14,11 @@ constexpr uint8_t kStv1Sel              = 4;
 constexpr uint32_t kKHZ                 = 1000;
 } // namespace
 
-#define READ32_HHI_REG(a)                   hhi_regs_->Read<uint32_t>(a)
-#define WRITE32_HHI_REG(a, v)               hhi_regs_->Write<uint32_t>(a, v)
+#define READ32_HHI_REG(a)                   hhi_mmio_->Read32(a)
+#define WRITE32_HHI_REG(a, v)               hhi_mmio_->Write32(v, a)
 
-#define READ32_VPU_REG(a)                   vpu_regs_->Read<uint32_t>(a)
-#define WRITE32_VPU_REG(a, v)               vpu_regs_->Write<uint32_t>(a, v)
+#define READ32_VPU_REG(a)                   vpu_mmio_->Read32(a)
+#define WRITE32_VPU_REG(a, v)               vpu_mmio_->Write32(v, a)
 
 void AstroDisplayClock::CalculateLcdTiming(const DisplaySetting& d) {
     // Calculate and store DataEnable horizontal and vertical start/stop times
@@ -200,8 +200,6 @@ zx_status_t AstroDisplayClock::Enable(const DisplaySetting& d) {
     zx_status_t status = PllLockWait();
     if (status != ZX_OK) {
         DISP_ERROR("hpll lock failed\n");
-        io_buffer_release(&mmio_vpu_);
-        io_buffer_release(&mmio_hhi_);
         return status;
     }
 
@@ -359,23 +357,22 @@ zx_status_t AstroDisplayClock::Init(zx_device_t* parent) {
     }
 
     // Map VPU and HHI registers
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &mmio_vpu_);
+    mmio_buffer_t mmio;
+    status = pdev_map_mmio_buffer2(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("AstroDisplayClock: Could not map VPU mmio\n");
         return status;
     }
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &mmio_hhi_);
+    vpu_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+
+    status = pdev_map_mmio_buffer2(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("AstroDisplayClock: Could not map HHI mmio\n");
-        io_buffer_release(&mmio_vpu_);
         return status;
     }
-
-    // Create register io
-    vpu_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_vpu_));
-    hhi_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_hhi_));
+    hhi_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
     initialized_ = true;
     return ZX_OK;

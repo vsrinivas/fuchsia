@@ -89,8 +89,6 @@
 #define LPCMD_PKT_SIZE                          (4)
 
 
-#define max(x, y)                               ((x > y)? x : y)
-
 // The following values are based on MIPI D-PHY Spec Version 2.1 Table 14. The
 // values defined are recommended values coming from AmLogic
 
@@ -133,7 +131,7 @@
 
 // Time that the transmitter drives the flipped differential state after last
 // payload data bit of a HS transmissoin burst  max(n*8*ui, 60+n*4*ui) <n = 1>
-#define DPHY_TIME_HS_TRAIL(ui)                  (max((8 * ui), (60 * UI_X_100  + 4 * ui)))
+#define DPHY_TIME_HS_TRAIL(ui)                  (fbl::max((8 * ui), (60 * UI_X_100  + 4 * ui)))
 
 // >100us
 #define DPHY_TIME_INIT                          (110 * UI_X_100  * 1000)
