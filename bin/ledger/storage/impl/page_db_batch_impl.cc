@@ -8,9 +8,9 @@
 
 #include <lib/fxl/strings/concatenate.h>
 
+#include "peridot/bin/ledger/storage/impl/data_serialization.h"
 #include "peridot/bin/ledger/storage/impl/db_serialization.h"
 #include "peridot/bin/ledger/storage/impl/journal_impl.h"
-#include "peridot/bin/ledger/storage/impl/number_serialization.h"
 
 #define RETURN_ON_ERROR(expr)   \
   do {                          \
@@ -31,9 +31,9 @@ PageDbBatchImpl::PageDbBatchImpl(rng::Random* random,
 PageDbBatchImpl::~PageDbBatchImpl() {}
 
 Status PageDbBatchImpl::AddHead(CoroutineHandler* handler, CommitIdView head,
-                                int64_t timestamp) {
+                                zx::time_utc timestamp) {
   return batch_->Put(handler, HeadRow::GetKeyFor(head),
-                     SerializeNumber(timestamp));
+                     SerializeData(timestamp));
 }
 
 Status PageDbBatchImpl::RemoveHead(CoroutineHandler* handler,
@@ -165,7 +165,7 @@ Status PageDbBatchImpl::MarkCommitIdUnsynced(CoroutineHandler* handler,
                                              const CommitId& commit_id,
                                              uint64_t generation) {
   return batch_->Put(handler, UnsyncedCommitRow::GetKeyFor(commit_id),
-                     SerializeNumber(generation));
+                     SerializeData(generation));
 }
 
 Status PageDbBatchImpl::SetSyncMetadata(CoroutineHandler* handler,

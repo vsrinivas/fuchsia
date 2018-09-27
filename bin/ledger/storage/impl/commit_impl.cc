@@ -73,7 +73,7 @@ bool CheckValidSerialization(fxl::StringView storage_bytes) {
 }
 
 std::string SerializeCommit(
-    uint64_t generation, int64_t timestamp,
+    uint64_t generation, zx::time_utc timestamp,
     const ObjectIdentifier& root_node_identifier,
     std::vector<std::unique_ptr<const Commit>> parent_commits) {
   flatbuffers::FlatBufferBuilder builder;
@@ -87,7 +87,7 @@ std::string SerializeCommit(
 
   auto root_node_storage =
       ToObjectIdentifierStorage(&builder, root_node_identifier);
-  auto storage = CreateCommitStorage(builder, timestamp, generation,
+  auto storage = CreateCommitStorage(builder, timestamp.get(), generation,
                                      root_node_storage, parents_id);
   builder.Finish(storage);
   return std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()),
@@ -96,7 +96,7 @@ std::string SerializeCommit(
 }  // namespace
 
 CommitImpl::CommitImpl(Token /* token */, PageStorage* page_storage,
-                       CommitId id, int64_t timestamp, uint64_t generation,
+                       CommitId id, zx::time_utc timestamp, uint64_t generation,
                        ObjectIdentifier root_node_identifier,
                        std::vector<CommitIdView> parent_ids,
                        fxl::RefPtr<SharedStorageBytes> storage_bytes)
@@ -137,9 +137,9 @@ Status CommitImpl::FromStorageBytes(PageStorage* page_storage, CommitId id,
     parent_ids.emplace_back(ToCommitIdView(commit_storage->parents()->Get(i)));
   }
   *commit = std::make_unique<CommitImpl>(
-      Token(), page_storage, std::move(id), commit_storage->timestamp(),
-      commit_storage->generation(), std::move(root_node_identifier), parent_ids,
-      std::move(storage_ptr));
+      Token(), page_storage, std::move(id),
+      zx::time_utc(commit_storage->timestamp()), commit_storage->generation(),
+      std::move(root_node_identifier), parent_ids, std::move(storage_ptr));
   return Status::OK;
 }
 
@@ -162,15 +162,13 @@ std::unique_ptr<const Commit> CommitImpl::FromContentAndParents(
               return c1->GetId() < c2->GetId();
             });
   // Compute timestamp.
-  int64_t timestamp;
+  zx::time_utc timestamp;
   if (parent_commits.size() == 2) {
     timestamp = std::max(parent_commits[0]->GetTimestamp(),
                          parent_commits[1]->GetTimestamp());
   } else {
-    zx::time_utc timestamp_utc;
-    zx_status_t status = clock->Now(&timestamp_utc);
+    zx_status_t status = clock->Now(&timestamp);
     FXL_CHECK(status == ZX_OK);
-    timestamp = timestamp_utc.get();
   }
 
   std::string storage_bytes = SerializeCommit(
@@ -201,9 +199,9 @@ void CommitImpl::Empty(
         auto storage_ptr = fxl::MakeRefCounted<SharedStorageBytes>("");
 
         auto ptr = std::make_unique<CommitImpl>(
-            Token(), page_storage, kFirstPageCommitId.ToString(), 0, 0,
-            std::move(root_identifier), std::vector<CommitIdView>(),
-            std::move(storage_ptr));
+            Token(), page_storage, kFirstPageCommitId.ToString(),
+            zx::time_utc(), 0, std::move(root_identifier),
+            std::vector<CommitIdView>(), std::move(storage_ptr));
         callback(Status::OK, std::move(ptr));
       });
 }
@@ -220,7 +218,7 @@ std::vector<CommitIdView> CommitImpl::GetParentIds() const {
   return parent_ids_;
 }
 
-int64_t CommitImpl::GetTimestamp() const { return timestamp_; }
+zx::time_utc CommitImpl::GetTimestamp() const { return timestamp_; }
 
 uint64_t CommitImpl::GetGeneration() const { return generation_; }
 

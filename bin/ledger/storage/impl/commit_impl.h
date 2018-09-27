@@ -21,10 +21,9 @@ class CommitImpl : public Commit {
   class SharedStorageBytes;
 
  public:
-  // Creates a new |CommitImpl| object with the given contents. |timestamp| is
-  // the number of nanoseconds since epoch.
+  // Creates a new |CommitImpl| object with the given contents.
   CommitImpl(Token token, PageStorage* page_storage, CommitId id,
-             int64_t timestamp, uint64_t generation,
+             zx::time_utc timestamp, uint64_t generation,
              ObjectIdentifier root_node_identifier,
              std::vector<CommitIdView> parent_ids,
              fxl::RefPtr<SharedStorageBytes> storage_bytes);
@@ -52,7 +51,7 @@ class CommitImpl : public Commit {
   std::unique_ptr<const Commit> Clone() const override;
   const CommitId& GetId() const override;
   std::vector<CommitIdView> GetParentIds() const override;
-  int64_t GetTimestamp() const override;
+  zx::time_utc GetTimestamp() const override;
   uint64_t GetGeneration() const override;
   ObjectIdentifier GetRootIdentifier() const override;
   fxl::StringView GetStorageBytes() const override;
@@ -66,7 +65,7 @@ class CommitImpl : public Commit {
 
   PageStorage* page_storage_;
   const CommitId id_;
-  const int64_t timestamp_;
+  const zx::time_utc timestamp_;
   const uint64_t generation_;
   const ObjectIdentifier root_node_identifier_;
   const std::vector<CommitIdView> parent_ids_;

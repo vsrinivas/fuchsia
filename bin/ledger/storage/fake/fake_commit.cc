@@ -29,7 +29,7 @@ std::vector<CommitIdView> FakeCommit::GetParentIds() const {
   return journal_->GetParentIds();
 }
 
-int64_t FakeCommit::GetTimestamp() const { return 0; }
+zx::time_utc FakeCommit::GetTimestamp() const { return zx::time_utc(); }
 
 uint64_t FakeCommit::GetGeneration() const { return journal_->GetGeneration(); }
 

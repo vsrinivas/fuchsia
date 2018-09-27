@@ -67,7 +67,7 @@ class PageDbImpl : public PageDb {
                       bool* page_is_online) override;
 
   Status AddHead(coroutine::CoroutineHandler* handler, CommitIdView head,
-                 int64_t timestamp) override;
+                 zx::time_utc timestamp) override;
   Status RemoveHead(coroutine::CoroutineHandler* handler,
                     CommitIdView head) override;
   Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler,

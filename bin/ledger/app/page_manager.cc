@@ -13,7 +13,7 @@
 
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
-#include "peridot/bin/ledger/storage/impl/number_serialization.h"
+#include "peridot/bin/ledger/storage/impl/data_serialization.h"
 
 namespace ledger {
 
@@ -104,7 +104,7 @@ Reference PageManager::CreateReference(
   FXL_DCHECK(references_.find(index) == references_.end());
   references_[index] = std::move(object_identifier);
   Reference reference;
-  reference.opaque_id = convert::ToArray(storage::SerializeNumber(index));
+  reference.opaque_id = convert::ToArray(storage::SerializeData(index));
   return reference;
 }
 
@@ -113,7 +113,7 @@ Status PageManager::ResolveReference(
   if (reference.opaque_id->size() != sizeof(uint64_t)) {
     return Status::REFERENCE_NOT_FOUND;
   }
-  uint64_t index = storage::DeserializeNumber<uint64_t>(
+  uint64_t index = storage::DeserializeData<uint64_t>(
       convert::ToStringView(reference.opaque_id));
   auto iterator = references_.find(index);
   if (iterator == references_.end()) {
@@ -219,7 +219,7 @@ void PageManager::GetCommit(ledger_internal::CommitId commit_id,
             id.id = convert::ToArray(parent);
             commit_struct->parents_ids.push_back(std::move(id));
           }
-          commit_struct->timestamp = commit->GetTimestamp();
+          commit_struct->timestamp = commit->GetTimestamp().get();
           commit_struct->generation = commit->GetGeneration();
         }
         callback(PageUtils::ConvertStatus(status, Status::INVALID_ARGUMENT),

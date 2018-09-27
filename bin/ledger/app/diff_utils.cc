@@ -90,7 +90,7 @@ void ComputePageChange(
       fxl::MakeRefCounted<callback::Waiter<Status, fsl::SizedVmo>>(Status::OK);
 
   auto context = std::make_unique<Context>();
-  context->page_change->timestamp = other.GetTimestamp();
+  context->page_change->timestamp = other.GetTimestamp().get();
   context->page_change->changed_entries.resize(0);
   context->page_change->deleted_keys.resize(0);
 

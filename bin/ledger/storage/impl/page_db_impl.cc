@@ -12,9 +12,9 @@
 #include <lib/fxl/memory/ref_counted.h>
 #include <lib/fxl/strings/concatenate.h>
 
+#include "peridot/bin/ledger/storage/impl/data_serialization.h"
 #include "peridot/bin/ledger/storage/impl/db_serialization.h"
 #include "peridot/bin/ledger/storage/impl/journal_impl.h"
-#include "peridot/bin/ledger/storage/impl/number_serialization.h"
 #include "peridot/bin/ledger/storage/impl/object_identifier_encoding.h"
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 #include "peridot/bin/ledger/storage/impl/page_db_batch_impl.h"
@@ -34,14 +34,17 @@ using coroutine::CoroutineHandler;
 
 namespace {
 
+// Extracts a sorted list of commit its from |entries|. Entries must be a map
+// from commit ids to serialized |A|.
+template <typename A>
 void ExtractSortedCommitsIds(
     std::vector<std::pair<std::string, std::string>>* entries,
     std::vector<CommitId>* commit_ids) {
   std::sort(entries->begin(), entries->end(),
-            [](const std::pair<std::string, std::string>& p1,
-               const std::pair<std::string, std::string>& p2) {
-              auto t1 = DeserializeNumber<int64_t>(p1.second);
-              auto t2 = DeserializeNumber<int64_t>(p2.second);
+            [&](const std::pair<std::string, std::string>& p1,
+                const std::pair<std::string, std::string>& p2) {
+              auto t1 = DeserializeData<A>(p1.second);
+              auto t2 = DeserializeData<A>(p2.second);
               if (t1 != t2) {
                 return t1 < t2;
               }
@@ -187,7 +190,7 @@ Status PageDbImpl::GetHeads(CoroutineHandler* handler,
   std::vector<std::pair<std::string, std::string>> entries;
   RETURN_ON_ERROR(db_.GetEntriesByPrefix(
       handler, convert::ToSlice(HeadRow::kPrefix), &entries));
-  ExtractSortedCommitsIds(&entries, heads);
+  ExtractSortedCommitsIds<zx::time_utc>(&entries, heads);
   return Status::OK;
 }
 
@@ -280,7 +283,8 @@ Status PageDbImpl::GetUnsyncedCommitIds(CoroutineHandler* handler,
   std::vector<std::pair<std::string, std::string>> entries;
   RETURN_ON_ERROR(db_.GetEntriesByPrefix(
       handler, convert::ToSlice(UnsyncedCommitRow::kPrefix), &entries));
-  ExtractSortedCommitsIds(&entries, commit_ids);
+  // Unsynced commit row values are the commit's generation.
+  ExtractSortedCommitsIds<uint64_t>(&entries, commit_ids);
   return Status::OK;
 }
 
@@ -327,7 +331,7 @@ Status PageDbImpl::IsPageOnline(coroutine::CoroutineHandler* handler,
 }
 
 Status PageDbImpl::AddHead(CoroutineHandler* handler, CommitIdView head,
-                           int64_t timestamp) {
+                           zx::time_utc timestamp) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(batch->AddHead(handler, head, timestamp));

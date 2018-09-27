@@ -11,7 +11,7 @@
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/lock/lock.h"
-#include "peridot/bin/ledger/storage/impl/number_serialization.h"
+#include "peridot/bin/ledger/storage/impl/data_serialization.h"
 #include "peridot/bin/ledger/storage/public/iterator.h"
 #include "peridot/lib/convert/convert.h"
 
@@ -80,8 +80,7 @@ class PageInfoIterator final : public storage::Iterator<const PageInfo> {
         key_value = **it_;
     GetPageFromOpenedRow(key_value.first, &(page_->ledger_name),
                          &(page_->page_id));
-    page_->timestamp =
-        zx::time_utc(storage::DeserializeNumber<zx_time_t>(key_value.second));
+    page_->timestamp = storage::DeserializeData<zx::time_utc>(key_value.second);
   }
 
   std::unique_ptr<storage::Iterator<const std::pair<
@@ -106,7 +105,7 @@ Status PageUsageDb::MarkPageOpened(coroutine::CoroutineHandler* handler,
                                    fxl::StringView ledger_name,
                                    storage::PageIdView page_id) {
   return Put(handler, GetKeyForOpenedPage(ledger_name, page_id),
-             storage::SerializeNumber<zx_time_t>(0));
+             storage::SerializeData(PageInfo::kOpenedPageTimestamp));
 }
 
 Status PageUsageDb::MarkPageClosed(coroutine::CoroutineHandler* handler,
@@ -118,7 +117,7 @@ Status PageUsageDb::MarkPageClosed(coroutine::CoroutineHandler* handler,
     return Status::IO_ERROR;
   }
   return Put(handler, GetKeyForOpenedPage(ledger_name, page_id),
-             storage::SerializeNumber(now.get()));
+             storage::SerializeData(now));
 }
 
 Status PageUsageDb::MarkPageEvicted(coroutine::CoroutineHandler* handler,
@@ -142,10 +141,10 @@ Status PageUsageDb::MarkAllPagesClosed(coroutine::CoroutineHandler* handler) {
     return PageUtils::ConvertStatus(db_status);
   }
   while (rows->Valid()) {
-    if (storage::DeserializeNumber<zx_time_t>((*rows)->second) == 0) {
+    if (storage::DeserializeData<zx::time_utc>((*rows)->second) ==
+        PageInfo::kOpenedPageTimestamp) {
       // No need to deserialize the key.
-      Status status =
-          Put(handler, (*rows)->first, storage::SerializeNumber(now.get()));
+      Status status = Put(handler, (*rows)->first, storage::SerializeData(now));
       if (status != Status::OK) {
         return status;
       }

@@ -379,7 +379,7 @@ Status PageEvictionManagerImpl::GetPagesByTimestamp(
   while (pages_it->Valid()) {
     // Sort out pages that are currently in use, i.e. those for which
     // timestamp is 0.
-    if ((*pages_it)->timestamp.get() != 0) {
+    if ((*pages_it)->timestamp != PageInfo::kOpenedPageTimestamp) {
       pages.push_back(**pages_it);
     }
     pages_it->Next();

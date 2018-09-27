@@ -67,6 +67,7 @@ source_set("lib") {
   sources = [
     "commit_impl.cc",
     "commit_impl.h",
+    "data_serialization.h",
     "db.h",
     "db_serialization.cc",
     "db_serialization.h",
@@ -78,7 +79,6 @@ source_set("lib") {
     "ledger_storage_impl.h",
     "leveldb.cc",
     "leveldb.h",
-    "number_serialization.h",
     "object_impl.cc",
     "object_impl.h",
     "page_db.h",

@@ -86,7 +86,7 @@ TEST_F(PageDbTest, HeadCommits) {
     CommitId cid = RandomCommitId(environment_.random());
     EXPECT_EQ(Status::OK,
               page_db_.AddHead(handler, cid,
-                               environment_.random()->Draw<uint64_t>()));
+                               environment_.random()->Draw<zx::time_utc>()));
     EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
     EXPECT_EQ(1u, heads.size());
     EXPECT_EQ(cid, heads[0]);
@@ -119,11 +119,10 @@ TEST_F(PageDbTest, OrderHeadCommitsByTimestamp) {
     std::shuffle(random_ordered_timestamps.begin(),
                  random_ordered_timestamps.end(), rng);
 
-    std::map<int64_t, CommitId> commits;
+    std::map<zx::time_utc, CommitId> commits;
     for (auto ts : random_ordered_timestamps) {
-      commits[ts.get()] = RandomCommitId(environment_.random());
-      EXPECT_EQ(Status::OK,
-                page_db_.AddHead(handler, commits[ts.get()], ts.get()));
+      commits[ts] = RandomCommitId(environment_.random());
+      EXPECT_EQ(Status::OK, page_db_.AddHead(handler, commits[ts], ts));
     }
 
     std::vector<CommitId> heads;
@@ -131,7 +130,7 @@ TEST_F(PageDbTest, OrderHeadCommitsByTimestamp) {
     EXPECT_EQ(timestamps.size(), heads.size());
 
     for (size_t i = 0; i < heads.size(); ++i) {
-      EXPECT_EQ(commits[sorted_timestamps[i].get()], heads[i]);
+      EXPECT_EQ(commits[sorted_timestamps[i]], heads[i]);
     }
   });
 }

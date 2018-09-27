@@ -42,7 +42,7 @@ struct IdStorage {
 }
 
 table CommitStorage {
-  timestamp: ulong;
+  timestamp: long;
   generation: ulong;
   root_node_id: ObjectIdentifierStorage;
   parents: [storage.IdStorage];

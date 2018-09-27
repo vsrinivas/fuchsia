@@ -13,7 +13,7 @@ namespace storage {
 
 CommitRandomImpl::CommitRandomImpl(rng::Random* random)
     : id_(RandomCommitId(random)),
-      timestamp_(random->Draw<int64_t>()),
+      timestamp_(random->Draw<zx::time_utc>()),
       generation_(random->Draw<uint64_t>()),
       root_node_identifier_(RandomObjectIdentifier(random)),
       parent_ids_{RandomCommitId(random)},
@@ -47,7 +47,7 @@ std::vector<CommitIdView> CommitRandomImpl::GetParentIds() const {
   return parent_ids_views_;
 }
 
-int64_t CommitRandomImpl::GetTimestamp() const { return timestamp_; }
+zx::time_utc CommitRandomImpl::GetTimestamp() const { return timestamp_; }
 
 uint64_t CommitRandomImpl::GetGeneration() const { return generation_; }
 

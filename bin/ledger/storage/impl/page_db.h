@@ -11,6 +11,7 @@
 
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_view.h>
+#include <lib/zx/time.h>
 
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/impl/db.h"
@@ -47,7 +48,7 @@ class PageDbMutator {
   // Adds the given |head| in the set of commit heads.
   FXL_WARN_UNUSED_RESULT virtual Status AddHead(
       coroutine::CoroutineHandler* handler, CommitIdView head,
-      int64_t timestamp) = 0;
+      zx::time_utc timestamp) = 0;
 
   // Removes the given |head| from the head commits.
   FXL_WARN_UNUSED_RESULT virtual Status RemoveHead(

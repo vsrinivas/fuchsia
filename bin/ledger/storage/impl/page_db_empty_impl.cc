@@ -78,7 +78,8 @@ Status PageDbEmptyImpl::IsPageOnline(coroutine::CoroutineHandler* /*handler*/,
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::AddHead(CoroutineHandler* /*handler*/,
-                                CommitIdView /*head*/, int64_t /*timestamp*/) {
+                                CommitIdView /*head*/,
+                                zx::time_utc /*timestamp*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::RemoveHead(CoroutineHandler* /*handler*/,

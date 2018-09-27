@@ -5,6 +5,7 @@
 library fuchsia.ledger;
 
 using fuchsia.mem;
+using zx;
 
 // This file contains definitions of interfaces and data structures to access
 // the Fuchsia Ledger.
@@ -315,7 +316,7 @@ struct PageChange {
   // seconds). This value is set by the device that created the change and is
   // not synchronized across devices. In particular, there is no guarantee that
   // the |timestamp| of a follow up change is greater than this one's.
-  int64 timestamp;
+  zx.time timestamp;
   // List of new and modified entries. |changed_entries| are sorted by |key|.
   vector<Entry> changed_entries;
   // List of deleted keys, in sorted order.

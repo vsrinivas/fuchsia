@@ -29,7 +29,7 @@ class CommitRandomImpl : public Commit {
 
   std::vector<CommitIdView> GetParentIds() const override;
 
-  int64_t GetTimestamp() const override;
+  zx::time_utc GetTimestamp() const override;
 
   uint64_t GetGeneration() const override;
 
@@ -39,7 +39,7 @@ class CommitRandomImpl : public Commit {
 
  private:
   CommitId id_;
-  int64_t timestamp_;
+  zx::time_utc timestamp_;
   uint64_t generation_;
   ObjectIdentifier root_node_identifier_;
   std::vector<CommitId> parent_ids_;

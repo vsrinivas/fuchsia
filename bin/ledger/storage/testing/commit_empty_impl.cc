@@ -24,9 +24,9 @@ std::vector<CommitIdView> CommitEmptyImpl::GetParentIds() const {
   return {};
 }
 
-int64_t CommitEmptyImpl::GetTimestamp() const {
+zx::time_utc CommitEmptyImpl::GetTimestamp() const {
   FXL_NOTIMPLEMENTED();
-  return 0;
+  return zx::time_utc();
 }
 
 uint64_t CommitEmptyImpl::GetGeneration() const {

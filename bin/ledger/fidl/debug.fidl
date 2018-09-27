@@ -5,6 +5,7 @@
 library fuchsia.ledger.internal;
 
 using fuchsia.ledger;
+using zx;
 
 [Discoverable]
 interface LedgerRepositoryDebug {
@@ -51,7 +52,7 @@ struct Commit {
   vector<CommitId> parents_ids;
 
   // The creation timestamp of this commit in nanoseconds since epoch.
-  int64 timestamp;
+  zx.time timestamp;
 
   // The generation timestamp of this commit (the number of commits to the root).
   int64 generation;

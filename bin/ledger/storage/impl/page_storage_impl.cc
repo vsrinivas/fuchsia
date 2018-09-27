@@ -1049,7 +1049,7 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
     return s;
   }
   if (heads.empty()) {
-    s = db_->AddHead(handler, kFirstPageCommitId, 0);
+    s = db_->AddHead(handler, kFirstPageCommitId, zx::time_utc());
     if (s != Status::OK) {
       return s;
     }
@@ -1301,7 +1301,7 @@ Status PageStorageImpl::SynchronousAddCommits(
   std::set<const CommitId*, StringPointerComparator> added_commits;
   std::vector<std::unique_ptr<const Commit>> commits_to_send;
 
-  std::map<CommitId, int64_t> heads_to_add;
+  std::map<CommitId, zx::time_utc> heads_to_add;
 
   int orphaned_commits = 0;
   for (auto& commit : commits) {

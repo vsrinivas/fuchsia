@@ -27,7 +27,7 @@ class CommitEmptyImpl : public Commit {
 
   std::vector<CommitIdView> GetParentIds() const override;
 
-  int64_t GetTimestamp() const override;
+  zx::time_utc GetTimestamp() const override;
 
   uint64_t GetGeneration() const override;
 

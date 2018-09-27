@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <lib/fxl/macros.h>
+#include <zx/time.h>
 
 #include "peridot/bin/ledger/storage/public/types.h"
 
@@ -30,8 +31,7 @@ class Commit {
   virtual std::vector<CommitIdView> GetParentIds() const = 0;
 
   // Returns the creation timestamp of this commit in nanoseconds since epoch.
-  // TODO(nellyv): Replace return value with a time/clock type.
-  virtual int64_t GetTimestamp() const = 0;
+  virtual zx::time_utc GetTimestamp() const = 0;
 
   // Returns the generation of this commit (ie. the number of commits to the
   // root).
