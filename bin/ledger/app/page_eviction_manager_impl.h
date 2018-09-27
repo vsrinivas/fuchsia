@@ -22,8 +22,7 @@ namespace ledger {
 
 class PageEvictionManagerImpl : public PageEvictionManager {
  public:
-  PageEvictionManagerImpl(async_dispatcher_t* dispatcher,
-                          coroutine::CoroutineService* coroutine_service,
+  PageEvictionManagerImpl(ledger::Environment* environment,
                           ledger::DetachedPath db_path);
   ~PageEvictionManagerImpl() override;
 
@@ -123,7 +122,7 @@ class PageEvictionManagerImpl : public PageEvictionManager {
 
   ExpiringToken NewExpiringToken();
 
-  async_dispatcher_t* dispatcher_;
+  ledger::Environment* environment_;
   // The initialization completer. |Init| method starts marking pages as closed,
   // and returns before that operation is done. This completer makes sure that
   // all methods accessing the page usage database wait until the initialization

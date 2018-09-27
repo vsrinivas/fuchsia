@@ -59,7 +59,8 @@ TEST_F(CommitImplTest, CommitStorageBytes) {
   // A commit with one parent.
   parents.emplace_back(new CommitRandomImpl());
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      &page_storage_, root_node_identifier, std::move(parents));
+      environment_.clock(), &page_storage_, root_node_identifier,
+      std::move(parents));
   EXPECT_TRUE(CheckCommitStorageBytes(commit));
 
   // A commit with two parents.
@@ -67,7 +68,8 @@ TEST_F(CommitImplTest, CommitStorageBytes) {
   parents.emplace_back(new CommitRandomImpl());
   parents.emplace_back(new CommitRandomImpl());
   std::unique_ptr<const Commit> commit2 = CommitImpl::FromContentAndParents(
-      &page_storage_, root_node_identifier, std::move(parents));
+      environment_.clock(), &page_storage_, root_node_identifier,
+      std::move(parents));
   EXPECT_TRUE(CheckCommitStorageBytes(commit2));
 }
 
@@ -77,7 +79,8 @@ TEST_F(CommitImplTest, CloneCommit) {
   std::vector<std::unique_ptr<const Commit>> parents;
   parents.emplace_back(new CommitRandomImpl());
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      &page_storage_, root_node_identifier, std::move(parents));
+      environment_.clock(), &page_storage_, root_node_identifier,
+      std::move(parents));
   std::unique_ptr<const Commit> copy;
   Status status =
       CommitImpl::FromStorageBytes(&page_storage_, commit->GetId(),
@@ -97,7 +100,8 @@ TEST_F(CommitImplTest, MergeCommitTimestamp) {
   auto max_timestamp =
       std::max(parents[0]->GetTimestamp(), parents[1]->GetTimestamp());
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      &page_storage_, root_node_identifier, std::move(parents));
+      environment_.clock(), &page_storage_, root_node_identifier,
+      std::move(parents));
 
   EXPECT_EQ(max_timestamp, commit->GetTimestamp());
 }

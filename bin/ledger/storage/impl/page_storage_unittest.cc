@@ -272,8 +272,9 @@ class PageStorageTest : public ledger::TestWithEnvironment {
 
     std::vector<std::unique_ptr<const Commit>> parent;
     parent.emplace_back(GetFirstHead());
-    std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-        storage_.get(), root_identifier, std::move(parent));
+    std::unique_ptr<const Commit> commit =
+        CommitImpl::FromContentAndParents(environment_.clock(), storage_.get(),
+                                          root_identifier, std::move(parent));
 
     bool called;
     Status status;
@@ -588,7 +589,8 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(GetFirstHead());
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      storage_.get(), RandomObjectIdentifier(), std::move(parent));
+      environment_.clock(), storage_.get(), RandomObjectIdentifier(),
+      std::move(parent));
   CommitId id = commit->GetId();
   std::string storage_bytes = commit->GetStorageBytes().ToString();
 
@@ -608,7 +610,8 @@ TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(GetFirstHead());
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      storage_.get(), RandomObjectIdentifier(), std::move(parent));
+      environment_.clock(), storage_.get(), RandomObjectIdentifier(),
+      std::move(parent));
   CommitId id = commit->GetId();
   std::string storage_bytes = commit->GetStorageBytes().ToString();
 
@@ -649,7 +652,8 @@ TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(new CommitRandomImpl());
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      storage_.get(), RandomObjectIdentifier(), std::move(parent));
+      environment_.clock(), storage_.get(), RandomObjectIdentifier(),
+      std::move(parent));
 
   bool called;
   Status status;
@@ -669,11 +673,11 @@ TEST_F(PageStorageTest, AddCommitsOutOfOrderError) {
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(GetFirstHead());
   auto commit1 = CommitImpl::FromContentAndParents(
-      storage_.get(), root_identifier, std::move(parent));
+      environment_.clock(), storage_.get(), root_identifier, std::move(parent));
   parent.clear();
   parent.push_back(commit1->Clone());
   auto commit2 = CommitImpl::FromContentAndParents(
-      storage_.get(), root_identifier, std::move(parent));
+      environment_.clock(), storage_.get(), root_identifier, std::move(parent));
 
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
   commits_and_bytes.emplace_back(commit2->GetId(),
@@ -730,8 +734,9 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
 
     std::vector<std::unique_ptr<const Commit>> parent;
     parent.emplace_back(GetFirstHead());
-    std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-        storage_.get(), root_identifier, std::move(parent));
+    std::unique_ptr<const Commit> commit =
+        CommitImpl::FromContentAndParents(environment_.clock(), storage_.get(),
+                                          root_identifier, std::move(parent));
     CommitId id = commit->GetId();
 
     // Adding the commit should only request the tree node and the eager value.
@@ -792,7 +797,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(GetFirstHead());
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      storage_.get(), root_identifier, std::move(parent));
+      environment_.clock(), storage_.get(), root_identifier, std::move(parent));
   CommitId id = commit->GetId();
 
   bool called;
@@ -835,7 +840,8 @@ TEST_F(PageStorageTest, SyncCommits) {
   parent.emplace_back(GetFirstHead());
   // After adding a commit it should marked as unsynced.
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      storage_.get(), RandomObjectIdentifier(), std::move(parent));
+      environment_.clock(), storage_.get(), RandomObjectIdentifier(),
+      std::move(parent));
   CommitId id = commit->GetId();
   std::string storage_bytes = commit->GetStorageBytes().ToString();
 
@@ -873,7 +879,8 @@ TEST_F(PageStorageTest, HeadCommits) {
   // Adding a new commit with the previous head as its parent should replace the
   // old head.
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      storage_.get(), RandomObjectIdentifier(), std::move(parent));
+      environment_.clock(), storage_.get(), RandomObjectIdentifier(),
+      std::move(parent));
   CommitId id = commit->GetId();
 
   bool called;
@@ -1787,17 +1794,20 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
     std::vector<std::unique_ptr<const Commit>> parent;
     parent.emplace_back(GetFirstHead());
     std::unique_ptr<const Commit> commit0 = CommitImpl::FromContentAndParents(
-        storage_.get(), object_identifiers[0], std::move(parent));
+        environment_.clock(), storage_.get(), object_identifiers[0],
+        std::move(parent));
     parent.clear();
 
     parent.emplace_back(GetFirstHead());
     std::unique_ptr<const Commit> commit1 = CommitImpl::FromContentAndParents(
-        storage_.get(), object_identifiers[1], std::move(parent));
+        environment_.clock(), storage_.get(), object_identifiers[1],
+        std::move(parent));
     parent.clear();
 
     parent.emplace_back(commit1->Clone());
     std::unique_ptr<const Commit> commit2 = CommitImpl::FromContentAndParents(
-        storage_.get(), object_identifiers[2], std::move(parent));
+        environment_.clock(), storage_.get(), object_identifiers[2],
+        std::move(parent));
 
     std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
     commits_and_bytes.emplace_back(commit0->GetId(),
@@ -1888,14 +1898,16 @@ TEST_F(PageStorageTest, WatcherForReEntrantCommits) {
   parent.emplace_back(GetFirstHead());
 
   std::unique_ptr<const Commit> commit1 = CommitImpl::FromContentAndParents(
-      storage_.get(), RandomObjectIdentifier(), std::move(parent));
+      environment_.clock(), storage_.get(), RandomObjectIdentifier(),
+      std::move(parent));
   CommitId id1 = commit1->GetId();
 
   parent.clear();
   parent.emplace_back(commit1->Clone());
 
   std::unique_ptr<const Commit> commit2 = CommitImpl::FromContentAndParents(
-      storage_.get(), RandomObjectIdentifier(), std::move(parent));
+      environment_.clock(), storage_.get(), RandomObjectIdentifier(),
+      std::move(parent));
   CommitId id2 = commit2->GetId();
 
   FakeCommitWatcher watcher;
@@ -1981,7 +1993,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   parent.emplace_back(GetFirstHead());
 
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      storage_.get(), root_identifier, std::move(parent));
+      environment_.clock(), storage_.get(), root_identifier, std::move(parent));
   CommitId id = commit->GetId();
 
   // Start adding the remote commit.
@@ -2128,11 +2140,11 @@ TEST_F(PageStorageTest, AddCommitsMissingParent) {
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(GetFirstHead());
   auto commit_parent = CommitImpl::FromContentAndParents(
-      storage_.get(), root_identifier, std::move(parent));
+      environment_.clock(), storage_.get(), root_identifier, std::move(parent));
   parent.clear();
   parent.push_back(commit_parent->Clone());
   auto commit_child = CommitImpl::FromContentAndParents(
-      storage_.get(), root_identifier, std::move(parent));
+      environment_.clock(), storage_.get(), root_identifier, std::move(parent));
 
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
   commits_and_bytes.emplace_back(commit_child->GetId(),

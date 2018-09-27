@@ -144,7 +144,8 @@ Status CommitImpl::FromStorageBytes(PageStorage* page_storage, CommitId id,
 }
 
 std::unique_ptr<const Commit> CommitImpl::FromContentAndParents(
-    PageStorage* page_storage, ObjectIdentifier root_node_identifier,
+    timekeeper::Clock* clock, PageStorage* page_storage,
+    ObjectIdentifier root_node_identifier,
     std::vector<std::unique_ptr<const Commit>> parent_commits) {
   FXL_DCHECK(parent_commits.size() == 1 || parent_commits.size() == 2);
 
@@ -166,10 +167,10 @@ std::unique_ptr<const Commit> CommitImpl::FromContentAndParents(
     timestamp = std::max(parent_commits[0]->GetTimestamp(),
                          parent_commits[1]->GetTimestamp());
   } else {
-    struct timeval tv;
-    gettimeofday(&tv, nullptr);
-    timestamp = static_cast<int64_t>(tv.tv_sec) * 1000000000L +
-                static_cast<int64_t>(tv.tv_usec) * 1000L;
+    zx::time_utc timestamp_utc;
+    zx_status_t status = clock->Now(&timestamp_utc);
+    FXL_CHECK(status == ZX_OK);
+    timestamp = timestamp_utc.get();
   }
 
   std::string storage_bytes = SerializeCommit(

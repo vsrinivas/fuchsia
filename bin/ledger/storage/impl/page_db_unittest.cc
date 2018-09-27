@@ -139,7 +139,8 @@ TEST_F(PageDbTest, Commits) {
     parents.emplace_back(new CommitRandomImpl());
 
     std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-        &page_storage_, RandomObjectIdentifier(), std::move(parents));
+        environment_.clock(), &page_storage_, RandomObjectIdentifier(),
+        std::move(parents));
 
     std::string storage_bytes;
     EXPECT_EQ(Status::NOT_FOUND, page_db_.GetCommitStorageBytes(

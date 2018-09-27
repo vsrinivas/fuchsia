@@ -14,6 +14,7 @@
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/app/types.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/storage/impl/db.h"
 #include "peridot/bin/ledger/storage/impl/leveldb.h"
 #include "peridot/bin/ledger/storage/public/iterator.h"
@@ -32,7 +33,7 @@ namespace ledger {
 // - Value: "<timestamp>" or timestamp 0 for open pages
 class PageUsageDb {
  public:
-  PageUsageDb(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path);
+  PageUsageDb(ledger::Environment* environment, ledger::DetachedPath db_path);
   ~PageUsageDb();
 
   // Initializes the underlying database. Init should be called before any other
@@ -74,6 +75,7 @@ class PageUsageDb {
   // Deletes the row with the given |key| in the underlying database.
   Status Delete(coroutine::CoroutineHandler* handler, fxl::StringView key);
 
+  ledger::Environment* environment_;
   storage::LevelDb db_;
 
   // A serializer used for Put and Delete. Both these operations need to be

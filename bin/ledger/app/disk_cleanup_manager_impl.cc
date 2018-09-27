@@ -6,12 +6,9 @@
 
 namespace ledger {
 
-DiskCleanupManagerImpl::DiskCleanupManagerImpl(
-    async_dispatcher_t* dispatcher,
-    coroutine::CoroutineService* coroutine_service,
-    ledger::DetachedPath db_path)
-    : page_eviction_manager_(dispatcher, coroutine_service,
-                             std::move(db_path)) {}
+DiskCleanupManagerImpl::DiskCleanupManagerImpl(ledger::Environment* environment,
+                                               ledger::DetachedPath db_path)
+    : page_eviction_manager_(environment, std::move(db_path)) {}
 
 DiskCleanupManagerImpl::~DiskCleanupManagerImpl() {}
 

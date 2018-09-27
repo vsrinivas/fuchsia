@@ -21,11 +21,11 @@
 namespace storage {
 
 JournalImpl::JournalImpl(Token /* token */, JournalType type,
-                         coroutine::CoroutineService* coroutine_service,
+                         ledger::Environment* environment,
                          PageStorageImpl* page_storage, JournalId id,
                          CommitId base)
     : type_(type),
-      coroutine_service_(coroutine_service),
+      environment_(environment),
       page_storage_(page_storage),
       id_(std::move(id)),
       base_(std::move(base)),
@@ -39,20 +39,22 @@ JournalImpl::~JournalImpl() {
   }
 }
 
-std::unique_ptr<Journal> JournalImpl::Simple(
-    JournalType type, coroutine::CoroutineService* coroutine_service,
-    PageStorageImpl* page_storage, const JournalId& id, const CommitId& base) {
-  return std::make_unique<JournalImpl>(Token(), type, coroutine_service,
-                                       page_storage, id, base);
+std::unique_ptr<Journal> JournalImpl::Simple(JournalType type,
+                                             ledger::Environment* environment,
+                                             PageStorageImpl* page_storage,
+                                             const JournalId& id,
+                                             const CommitId& base) {
+  return std::make_unique<JournalImpl>(Token(), type, environment, page_storage,
+                                       id, base);
 }
 
-std::unique_ptr<Journal> JournalImpl::Merge(
-    coroutine::CoroutineService* coroutine_service,
-    PageStorageImpl* page_storage, const JournalId& id, const CommitId& base,
-    const CommitId& other) {
-  auto journal =
-      std::make_unique<JournalImpl>(Token(), JournalType::EXPLICIT,
-                                    coroutine_service, page_storage, id, base);
+std::unique_ptr<Journal> JournalImpl::Merge(ledger::Environment* environment,
+                                            PageStorageImpl* page_storage,
+                                            const JournalId& id,
+                                            const CommitId& base,
+                                            const CommitId& other) {
+  auto journal = std::make_unique<JournalImpl>(
+      Token(), JournalType::EXPLICIT, environment, page_storage, id, base);
   journal->other_ = std::make_unique<CommitId>(other);
   return journal;
 }
@@ -215,8 +217,8 @@ void JournalImpl::CreateCommitFromChanges(
     fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
   btree::ApplyChanges(
-      coroutine_service_, page_storage_, std::move(root_identifier),
-      std::move(changes),
+      environment_->coroutine_service(), page_storage_,
+      std::move(root_identifier), std::move(changes),
       [this, parents = std::move(parents), callback = std::move(callback)](
           Status status, ObjectIdentifier object_identifier,
           std::set<ObjectIdentifier> new_nodes) mutable {
@@ -244,7 +246,8 @@ void JournalImpl::CreateCommitFromChanges(
           return;
         }
         std::unique_ptr<const storage::Commit> commit =
-            CommitImpl::FromContentAndParents(page_storage_, object_identifier,
+            CommitImpl::FromContentAndParents(environment_->clock(),
+                                              page_storage_, object_identifier,
                                               std::move(parents));
         GetObjectsToSync([this, new_nodes = std::move(new_nodes),
                           commit = std::move(commit),

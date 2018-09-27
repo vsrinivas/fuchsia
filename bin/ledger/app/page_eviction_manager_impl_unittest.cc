@@ -13,6 +13,7 @@
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
+#include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace ledger {
@@ -50,10 +51,10 @@ class FakeDelegate : public PageEvictionManager::Delegate {
   PagePredicateResult closed_and_empty = PagePredicateResult::YES;
 };
 
-class PageEvictionManagerTest : public gtest::TestLoopFixture {
+class PageEvictionManagerTest : public TestWithEnvironment {
  public:
   PageEvictionManagerTest()
-      : page_eviction_manager_(dispatcher(), &coroutine_service_,
+      : page_eviction_manager_(&environment_,
                                ledger::DetachedPath(tmpfs_.root_fd())) {}
 
   // gtest::TestLoopFixture:
@@ -65,7 +66,6 @@ class PageEvictionManagerTest : public gtest::TestLoopFixture {
 
  private:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
-  coroutine::CoroutineServiceImpl coroutine_service_;
 
  protected:
   FakeDelegate delegate_;

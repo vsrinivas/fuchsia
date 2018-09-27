@@ -9,6 +9,7 @@
 
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/lock/lock.h"
 #include "peridot/bin/ledger/storage/impl/number_serialization.h"
 #include "peridot/bin/ledger/storage/public/iterator.h"
@@ -92,9 +93,10 @@ class PageInfoIterator final : public storage::Iterator<const PageInfo> {
 };
 }  // namespace
 
-PageUsageDb::PageUsageDb(async_dispatcher_t* dispatcher,
+PageUsageDb::PageUsageDb(ledger::Environment* environment,
                          ledger::DetachedPath db_path)
-    : db_(dispatcher, std::move(db_path)) {}
+    : environment_(environment),
+      db_(environment_->dispatcher(), std::move(db_path)) {}
 
 PageUsageDb::~PageUsageDb() {}
 
@@ -112,7 +114,7 @@ Status PageUsageDb::MarkPageClosed(coroutine::CoroutineHandler* handler,
                                    storage::PageIdView page_id) {
   FXL_DCHECK(page_id.size() == ::fuchsia::ledger::kPageIdSize);
   zx::time_utc now;
-  if (zx::clock::get(&now) != ZX_OK) {
+  if (environment_->clock()->Now(&now) != ZX_OK) {
     return Status::IO_ERROR;
   }
   return Put(handler, GetKeyForOpenedPage(ledger_name, page_id),
@@ -127,7 +129,7 @@ Status PageUsageDb::MarkPageEvicted(coroutine::CoroutineHandler* handler,
 
 Status PageUsageDb::MarkAllPagesClosed(coroutine::CoroutineHandler* handler) {
   zx::time_utc now;
-  if (zx::clock::get(&now) != ZX_OK) {
+  if (environment_->clock()->Now(&now) != ZX_OK) {
     return Status::IO_ERROR;
   }
 

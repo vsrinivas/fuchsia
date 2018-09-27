@@ -15,8 +15,7 @@ namespace ledger {
 
 class DiskCleanupManagerImpl : public DiskCleanupManager {
  public:
-  DiskCleanupManagerImpl(async_dispatcher_t* dispatcher,
-                         coroutine::CoroutineService* coroutine_service,
+  DiskCleanupManagerImpl(ledger::Environment* environment,
                          ledger::DetachedPath db_path);
   ~DiskCleanupManagerImpl() override;
 

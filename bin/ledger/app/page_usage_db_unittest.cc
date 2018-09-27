@@ -32,7 +32,7 @@ std::string RandomString(size_t size) {
 
 class PageUsageDbTest : public TestWithEnvironment {
  public:
-  PageUsageDbTest() : db_(dispatcher(), DetachedPath(tmpfs_.root_fd())) {}
+  PageUsageDbTest() : db_(&environment_, DetachedPath(tmpfs_.root_fd())) {}
 
   ~PageUsageDbTest() override {}
 

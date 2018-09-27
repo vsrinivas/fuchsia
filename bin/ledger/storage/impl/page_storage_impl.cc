@@ -184,9 +184,8 @@ void PageStorageImpl::StartCommit(
           return;
         }
 
-        std::unique_ptr<Journal> journal =
-            JournalImpl::Simple(journal_type, environment_->coroutine_service(),
-                                this, journal_id, commit_id);
+        std::unique_ptr<Journal> journal = JournalImpl::Simple(
+            journal_type, environment_, this, journal_id, commit_id);
         callback(Status::OK, std::move(journal));
       });
 }
@@ -207,8 +206,8 @@ void PageStorageImpl::StartMergeCommit(
           return;
         }
 
-        std::unique_ptr<Journal> journal = JournalImpl::Merge(
-            environment_->coroutine_service(), this, journal_id, left, right);
+        std::unique_ptr<Journal> journal =
+            JournalImpl::Merge(environment_, this, journal_id, left, right);
         callback(Status::OK, std::move(journal));
       });
 }
@@ -1085,9 +1084,8 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
                      << ". journal id: " << id;
       return s;
     }
-    std::unique_ptr<Journal> journal =
-        JournalImpl::Simple(JournalType::IMPLICIT,
-                            environment_->coroutine_service(), this, id, base);
+    std::unique_ptr<Journal> journal = JournalImpl::Simple(
+        JournalType::IMPLICIT, environment_, this, id, base);
 
     CommitJournal(
         std::move(journal), [status_callback = waiter->NewCallback()](

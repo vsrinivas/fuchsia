@@ -28,21 +28,23 @@ class JournalImpl : public Journal {
   class Token;
 
  public:
-  JournalImpl(Token token, JournalType type,
-              coroutine::CoroutineService* coroutine_service,
+  JournalImpl(Token token, JournalType type, ledger::Environment* environment,
               PageStorageImpl* page_storage, JournalId id, CommitId base);
   ~JournalImpl() override;
 
   // Creates a new Journal for a simple commit.
-  static std::unique_ptr<Journal> Simple(
-      JournalType type, coroutine::CoroutineService* coroutine_service,
-      PageStorageImpl* page_storage, const JournalId& id, const CommitId& base);
+  static std::unique_ptr<Journal> Simple(JournalType type,
+                                         ledger::Environment* environment,
+                                         PageStorageImpl* page_storage,
+                                         const JournalId& id,
+                                         const CommitId& base);
 
   // Creates a new Journal for a merge commit.
-  static std::unique_ptr<Journal> Merge(
-      coroutine::CoroutineService* coroutine_service,
-      PageStorageImpl* page_storage, const JournalId& id, const CommitId& base,
-      const CommitId& other);
+  static std::unique_ptr<Journal> Merge(ledger::Environment* environment,
+                                        PageStorageImpl* page_storage,
+                                        const JournalId& id,
+                                        const CommitId& base,
+                                        const CommitId& other);
 
   // Commits the changes of this |Journal|. Trying to update entries or rollback
   // will fail after a successful commit. The callback will be called with the
@@ -99,7 +101,7 @@ class JournalImpl : public Journal {
   bool StateAllowsMutation();
 
   const JournalType type_;
-  coroutine::CoroutineService* const coroutine_service_;
+  ledger::Environment* const environment_;
   PageStorageImpl* const page_storage_;
   const JournalId id_;
   CommitId base_;

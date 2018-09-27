@@ -233,8 +233,7 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   container->BindRepository(std::move(repository_request), std::move(callback));
 
   auto disk_cleanup_manager = std::make_unique<DiskCleanupManagerImpl>(
-      environment_->dispatcher(), environment_->coroutine_service(),
-      repository_information.page_usage_db_path);
+      environment_, repository_information.page_usage_db_path);
   Status status = disk_cleanup_manager->Init();
   if (status != Status::OK) {
     container->SetRepository(status, nullptr);

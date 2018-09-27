@@ -103,13 +103,11 @@ void PageEvictionManagerImpl::Completer::CallCallbacks(Status status) {
 }
 
 PageEvictionManagerImpl::PageEvictionManagerImpl(
-    async_dispatcher_t* dispatcher,
-    coroutine::CoroutineService* coroutine_service,
-    ledger::DetachedPath db_path)
-    : dispatcher_(dispatcher),
-      db_(dispatcher, db_path.SubPath({storage::kSerializationVersion,
-                                       kPageUsageDbSerializationVersion})),
-      coroutine_manager_(coroutine_service),
+    ledger::Environment* environment, ledger::DetachedPath db_path)
+    : environment_(environment),
+      db_(environment, db_path.SubPath({storage::kSerializationVersion,
+                                        kPageUsageDbSerializationVersion})),
+      coroutine_manager_(environment_->coroutine_service()),
       weak_factory_(this) {}
 
 PageEvictionManagerImpl::~PageEvictionManagerImpl() {}
@@ -453,7 +451,7 @@ PageEvictionManagerImpl::NewExpiringToken() {
     // executed, and if |on_empty_callback_| is executed directly, it might end
     // up deleting the PageEvictionManagerImpl object, which will delete the
     // |coroutine_manager_|.
-    async::PostTask(dispatcher_,
+    async::PostTask(environment_->dispatcher(),
                     callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
                       if (on_empty_callback_ && pending_operations_ == 0) {
                         on_empty_callback_();

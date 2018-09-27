@@ -7,6 +7,7 @@
 
 #include <lib/fit/function.h>
 #include <lib/fxl/memory/ref_ptr.h>
+#include <lib/timekeeper/clock.h>
 
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
@@ -37,7 +38,8 @@ class CommitImpl : public Commit {
                                  std::unique_ptr<const Commit>* commit);
 
   static std::unique_ptr<const Commit> FromContentAndParents(
-      PageStorage* page_storage, ObjectIdentifier root_node_identifier,
+      timekeeper::Clock* clock, PageStorage* page_storage,
+      ObjectIdentifier root_node_identifier,
       std::vector<std::unique_ptr<const Commit>> parent_commits);
 
   // Factory method for creating an empty |CommitImpl| object, i.e. without
