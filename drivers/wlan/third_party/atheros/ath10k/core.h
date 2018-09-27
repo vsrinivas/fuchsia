@@ -27,6 +27,7 @@
 #include <lib/sync/completion.h>
 #include <wlan/protocol/mac.h>
 
+#include "bitarr.h"
 #include "htc.h"
 #include "htt.h"
 #include "hw.h"

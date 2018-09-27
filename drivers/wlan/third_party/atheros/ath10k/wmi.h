@@ -24,6 +24,7 @@
 
 #include <zircon/status.h>
 
+#include "bitarr.h"
 #include "hw.h"
 
 /*

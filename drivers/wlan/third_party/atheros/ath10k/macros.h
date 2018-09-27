@@ -20,17 +20,6 @@
 
 #define ASSERT_MTX_HELD(mtx) ZX_ASSERT(mtx_trylock(mtx) != thrd_success)
 
-#define BITARR_TYPE uint64_t
-#define BITARR_TYPE_NUM_BITS (sizeof(BITARR_TYPE) * 8)
-#define BITARR(name, num_bits) BITARR_TYPE name[DIV_ROUNDUP(num_bits, BITARR_TYPE_NUM_BITS)]
-#define BITARR_SET(name, bit) \
-    (name)[(bit) / BITARR_TYPE_NUM_BITS] |= ((BITARR_TYPE)1 << ((bit) % BITARR_TYPE_NUM_BITS))
-#define BITARR_CLEAR(name, bit) \
-    (name)[(bit) / BITARR_TYPE_NUM_BITS] &= ~((BITARR_TYPE)1 << ((bit) % BITARR_TYPE_NUM_BITS))
-#define BITARR_TEST(name, bit)               \
-    (((name)[(bit) / BITARR_TYPE_NUM_BITS] & \
-      ((BITARR_TYPE)1 << ((bit) % BITARR_TYPE_NUM_BITS))) != 0)
-
 #define BITMASK1(val) ((1UL << (val)) - 1)
 #define BITMASK(lo, hi) ((BITMASK1((hi) + 1) & ~BITMASK1(lo)))
 

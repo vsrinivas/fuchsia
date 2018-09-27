@@ -22,6 +22,7 @@ driver_module("ath10k_driver") {
 
   sources = [
     "ahb.h",
+    "bitarr.c",
     "bmi.c",
     "bmi.h",
     "ce.c",
@@ -161,6 +162,20 @@ executable("sparse_array_tests") {
   ]
 }
 
+executable("bitarr_tests") {
+  output_name = "bitarr_tests"
+  testonly = true
+  sources = [
+    "bitarr.c",
+    "bitarr.h",
+    "bitarr_tests.cc",
+  ]
+
+  deps = [
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
 package("ath10k_test") {
   testonly = true
 
@@ -168,11 +183,15 @@ package("ath10k_test") {
 
   deps = [
     ":sparse_array_tests",
+    ":bitarr_tests",
   ]
 
   tests = [
     {
       name = "sparse_array_tests"
+    },
+    {
+      name = "bitarr_tests"
     },
   ]
 }
