@@ -44,12 +44,12 @@ pub struct Sl4f {
 }
 
 impl Sl4f {
-    pub fn new() -> Arc<RwLock<Sl4f>> {
-        Arc::new(RwLock::new(Sl4f {
+    pub fn new() -> Result<Arc<RwLock<Sl4f>>, Error> {
+        Ok(Arc::new(RwLock::new(Sl4f {
             ble_advertise_facade: BleAdvertiseFacade::new(None),
             bt_facade: BluetoothFacade::new(None),
             clients: Arc::new(Mutex::new(HashMap::new())),
-        }))
+        })))
     }
 
     pub fn get_ble_advertise_facade(&self) -> Arc<RwLock<BleAdvertiseFacade>> {

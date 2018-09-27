@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use failure::Error;
-use failure::ResultExt;
 use fuchsia_async::{self as fasync, unsafe_many_futures};
 use fuchsia_bluetooth::error::Error as BTError;
 use fuchsia_syslog::macros::*;
@@ -24,12 +23,9 @@ use crate::bluetooth::commands::ble_advertise_method_to_fidl;
 use crate::bluetooth::commands::ble_method_to_fidl;
 
 pub fn run_fidl_loop(
+    executor: &mut fasync::Executor,
     sl4f_session: Arc<RwLock<Sl4f>>, receiver: mpsc::UnboundedReceiver<AsyncRequest>,
 ) {
-    let mut executor = fasync::Executor::new()
-        .context("Error creating event loop")
-        .expect("Failed to create an executor!");
-
     let receiver_fut = receiver.map(|request| match request {
         AsyncRequest {
             tx,
@@ -56,12 +52,16 @@ pub fn run_fidl_loop(
                 // Ignore any tx sending errors, other requests can still be outstanding
                 tx.send(response).unwrap();
                 future::ready(Ok(()))
-            }).map(|_| ())
+            }).map(|r| {
+                if let Err(e) = r {
+                    println!("ERROR in run_fidl_loop response processing: {}", e);
+                }
+            })
         }
     }).buffered(10) // TODO figure out a good parallel value for this
     .collect::<()>();
 
-    executor.run_singlethreaded(receiver_fut)
+    executor.run_singlethreaded(receiver_fut);
 }
 
 fn method_to_fidl(

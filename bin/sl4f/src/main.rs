@@ -6,6 +6,7 @@
 #![deny(warnings)]
 
 use failure::Error;
+use fuchsia_async as fasync;
 use futures::channel::mpsc;
 use parking_lot::RwLock;
 use std::sync::Arc;
@@ -29,23 +30,27 @@ pub enum Never {}
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["sl4f"]).expect("Can't init logger");
     fx_log_info!("Starting sl4f server");
+    let mut executor = fasync::Executor::new().expect("Failed to create an executor!");
 
     let address = format!("{}:{}", SERVER_IP, SERVER_PORT);
     fx_log_info!("Now listening on: {:?}", address);
 
     // Session storing all information about state
     // Current support is Bluetooth, add other stacks to sl4f.rs
-    let sl4f_session: Arc<RwLock<Sl4f>> = Sl4f::new();
+    let sl4f_session: Arc<RwLock<Sl4f>> = Sl4f::new()?;
 
     // Create channel for communication: rouille sync side -> async exec side
     let (rouille_sender, async_receiver) = mpsc::unbounded();
     let sl4f_session_async = sl4f_session.clone();
 
-    // Create the async execution thread
-    thread::spawn(move || run_fidl_loop(sl4f_session_async, async_receiver));
-
-    // Start listening on address
-    rouille::start_server(address, move |request| {
-        serve(&request, sl4f_session.clone(), rouille_sender.clone())
+    // Create thread for listening to test commands
+    thread::spawn(move || {
+        // Start listening on address
+        rouille::start_server(address, move |request| {
+            serve(&request, sl4f_session.clone(), rouille_sender.clone())
+        });
     });
+
+    run_fidl_loop(&mut executor, sl4f_session_async, async_receiver);
+    Ok(())
 }
