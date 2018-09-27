@@ -42,8 +42,13 @@ class PageEvictionManagerImpl : public PageEvictionManager {
 
   void TryEvictPages(fit::function<void(Status)> callback) override;
 
-  void EvictIfEmpty(fxl::StringView ledger_name, storage::PageIdView page_id,
-                    fit::function<void(Status)> callback) override;
+  void TryEvictPage(
+      fxl::StringView ledger_name, storage::PageIdView page_id,
+      fit::function<void(Status, PageWasEvicted)> callback) override;
+
+  void TryEvictPageIfEmpty(
+      fxl::StringView ledger_name, storage::PageIdView page_id,
+      fit::function<void(Status, PageWasEvicted)> callback) override;
 
   void OnPageOpened(fxl::StringView ledger_name,
                     storage::PageIdView page_id) override;
@@ -110,6 +115,11 @@ class PageEvictionManagerImpl : public PageEvictionManager {
 
   // Marks the given page as evicted in the page usage database.
   void MarkPageEvicted(std::string ledger_name, storage::PageId page_id);
+
+  Status SynchronousTryEvictPage(coroutine::CoroutineHandler* handler,
+                                 std::string ledger_name,
+                                 storage::PageId page_id,
+                                 PageWasEvicted* was_evicted);
 
   ExpiringToken NewExpiringToken();
 

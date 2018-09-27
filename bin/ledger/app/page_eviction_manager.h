@@ -20,6 +20,21 @@
 namespace ledger {
 
 // Manages page eviction based on page usage information.
+//
+// |PageEvictionManager| provides methods to evict a given page (see
+// |TryEvictPage| and |TryEvictPageIfEmpty|), as well as one that selects and
+// evicts a set of pages, among those that are stored on the device.
+//
+// Regardless of the method used, a page can only be evicted if it is closed,
+// i.e. is not currently opened by an external request, and either of the
+// following is true:
+// - All contents of the page (commits and objects) are synced to the cloud.
+// - The page is offline and empty. A page is offline if it has never been
+//   synced to the cloud or a peer. It is empty, if it has a single head commit
+//   and the contents of that commit is empty.
+//
+// If neither of these conditions is fulfilled, the page will fail to be
+// evicted.
 class PageEvictionManager : public PageUsageListener {
  public:
   // A Delegate, providing the necessary functionality to allow
@@ -48,6 +63,8 @@ class PageEvictionManager : public PageUsageListener {
                                    fit::function<void(Status)> callback) = 0;
   };
 
+  using PageWasEvicted = bool;
+
   PageEvictionManager() {}
   ~PageEvictionManager() override {}
 
@@ -59,17 +76,28 @@ class PageEvictionManager : public PageUsageListener {
   virtual bool IsEmpty() = 0;
 
   // Tries to evict from the local storage the least recently used page among
-  // those that are not currectly in use and can be evicted. A closed page can
-  // be evicted if it has never been synced and is empty, or if has been
-  // completely backed up in the cloud. Returns |IO_ERROR| through the callback
-  // in case of failure to retrieve data on page usage, or when trying to evict
-  // a given page; |OK| otherwise. It is not an error if there is no page
-  // fulfilling the requirements.
+  // those that are not currectly in use and can be evicted. Returns |IO_ERROR|
+  // through the callback in case of failure to retrieve data on page usage, or
+  // when trying to evict a given page; |OK| otherwise. It is not an error if
+  // there is no page fulfilling the requirements.
   virtual void TryEvictPages(fit::function<void(Status)> callback) = 0;
 
-  virtual void EvictIfEmpty(fxl::StringView ledger_name,
-                            storage::PageIdView page_id,
-                            fit::function<void(Status)> callback) = 0;
+  // Checks whether the given page can be evicted and if it can, evicts it.
+  // Returns |IO_ERROR| through the callback in case of failure while retrieving
+  // information on the page, or when trying to evict it; |OK| otherwise. The
+  // boolean in the callback will indicate whether the page was evicted.
+  virtual void TryEvictPage(
+      fxl::StringView ledger_name, storage::PageIdView page_id,
+      fit::function<void(Status, PageWasEvicted)> callback) = 0;
+
+  // Checks whether the given page is closed, offline and empty, and if it is,
+  // evicts it. Returns |IO_ERROR| through the callback in case of failure while
+  // retrieving information on the page, or when trying to evict it; |OK|
+  // otherwise. The boolean in the callback will indicate whether the page was
+  // evicted.
+  virtual void TryEvictPageIfEmpty(
+      fxl::StringView ledger_name, storage::PageIdView page_id,
+      fit::function<void(Status, PageWasEvicted)> callback) = 0;
 
   // PageUsageListener:
   void OnPageOpened(fxl::StringView ledger_name,

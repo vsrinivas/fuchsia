@@ -168,33 +168,15 @@ void PageEvictionManagerImpl::TryEvictPages(
         }
 
         for (const auto& page_info : pages) {
-          bool can_evict;
-          Status status = CanEvictPage(handler, page_info.ledger_name,
-                                       page_info.page_id, &can_evict);
-          if (status == Status::PAGE_NOT_FOUND) {
-            // The page was already removed, maybe from a previous call to
-            // |TryEvictPages|. Mark it as evicted in the Page Usage DB.
-            MarkPageEvicted(page_info.ledger_name, page_info.page_id);
-            continue;
-          }
+          PageWasEvicted was_evicted;
+          Status status = SynchronousTryEvictPage(
+              handler, page_info.ledger_name, page_info.page_id, &was_evicted);
           if (status != Status::OK) {
             callback(status);
             return;
           }
-          if (can_evict) {
-            auto sync_call_status = coroutine::SyncCall(
-                handler,
-                [this, ledger_name = page_info.ledger_name,
-                 page_id = page_info.page_id](auto callback) {
-                  EvictPage(ledger_name, page_id, std::move(callback));
-                },
-                &status);
-            if (sync_call_status ==
-                coroutine::ContinuationStatus::INTERRUPTED) {
-              callback(Status::INTERNAL_ERROR);
-            } else {
-              callback(status);
-            }
+          if (was_evicted) {
+            callback(Status::OK);
             return;
           }
         }
@@ -202,18 +184,41 @@ void PageEvictionManagerImpl::TryEvictPages(
       });
 }
 
-void PageEvictionManagerImpl::EvictIfEmpty(
+void PageEvictionManagerImpl::TryEvictPage(
     fxl::StringView ledger_name, storage::PageIdView page_id,
-    fit::function<void(Status)> callback) {
+    fit::function<void(Status, PageWasEvicted)> callback) {
   coroutine_manager_.StartCoroutine(
-      std::move(callback), [this, ledger_name = ledger_name.ToString(),
-                            page_id = page_id.ToString()](
-                               coroutine::CoroutineHandler* handler,
-                               fit::function<void(Status)> callback) mutable {
+      std::move(callback),
+      [this, ledger_name = ledger_name.ToString(),
+       page_id = page_id.ToString()](
+          coroutine::CoroutineHandler* handler,
+          fit::function<void(Status, PageWasEvicted)> callback) mutable {
         ExpiringToken token = NewExpiringToken();
         Status status = initialization_completer_.WaitUntilDone(handler);
-        if (LogOnInitializationError("EvictIfEmpty", status)) {
-          callback(status);
+        if (LogOnInitializationError("TryEvictPage", status)) {
+          callback(status, false);
+          return;
+        }
+        PageWasEvicted was_evicted;
+        status = SynchronousTryEvictPage(handler, ledger_name, page_id,
+                                         &was_evicted);
+        callback(status, was_evicted);
+      });
+}
+
+void PageEvictionManagerImpl::TryEvictPageIfEmpty(
+    fxl::StringView ledger_name, storage::PageIdView page_id,
+    fit::function<void(Status, PageWasEvicted)> callback) {
+  coroutine_manager_.StartCoroutine(
+      std::move(callback),
+      [this, ledger_name = ledger_name.ToString(),
+       page_id = page_id.ToString()](
+          coroutine::CoroutineHandler* handler,
+          fit::function<void(Status, PageWasEvicted)> callback) mutable {
+        ExpiringToken token = NewExpiringToken();
+        Status status = initialization_completer_.WaitUntilDone(handler);
+        if (LogOnInitializationError("TryEvictPageIfEmpty", status)) {
+          callback(status, false);
           return;
         }
         bool can_evict;
@@ -222,15 +227,15 @@ void PageEvictionManagerImpl::EvictIfEmpty(
           // The page was already removed, maybe from a previous eviction
           // call. Mark it as evicted in the Page Usage DB.
           MarkPageEvicted(ledger_name, page_id);
-          callback(Status::OK);
+          callback(Status::OK, false);
           return;
         }
         if (status != Status::OK) {
-          callback(status);
+          callback(status, false);
           return;
         }
         if (!can_evict) {
-          callback(Status::OK);
+          callback(Status::OK, false);
           return;
         }
         // The page is closed, empty and offline. Evict it.
@@ -241,9 +246,11 @@ void PageEvictionManagerImpl::EvictIfEmpty(
               EvictPage(ledger_name, page_id, std::move(callback));
             },
             &status);
-        callback(sync_call_status == coroutine::ContinuationStatus::INTERRUPTED
-                     ? Status::INTERNAL_ERROR
-                     : status);
+        if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
+          callback(Status::INTERNAL_ERROR, false);
+        } else {
+          callback(status, status == Status::OK);
+        }
       });
 }
 
@@ -405,6 +412,36 @@ void PageEvictionManagerImpl::MarkPageEvicted(std::string ledger_name,
     Status status = db_.MarkPageEvicted(handler, ledger_name, page_id);
     LogOnPageUpdateError("mark page as evicted", status, ledger_name, page_id);
   });
+}
+
+Status PageEvictionManagerImpl::SynchronousTryEvictPage(
+    coroutine::CoroutineHandler* handler, std::string ledger_name,
+    storage::PageId page_id, PageWasEvicted* was_evicted) {
+  bool can_evict;
+  Status status = CanEvictPage(handler, ledger_name, page_id, &can_evict);
+  if (status == Status::PAGE_NOT_FOUND) {
+    // The page was already removed. Mark it as evicted in Page Usage DB.
+    MarkPageEvicted(ledger_name, page_id);
+    *was_evicted = false;
+    return Status::OK;
+  }
+  if (status != Status::OK || !can_evict) {
+    *was_evicted = false;
+    return status;
+  }
+
+  auto sync_call_status = coroutine::SyncCall(
+      handler,
+      [this, ledger_name = std::move(ledger_name),
+       page_id = std::move(page_id)](auto callback) {
+        EvictPage(ledger_name, page_id, std::move(callback));
+      },
+      &status);
+  if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
+    return Status::INTERNAL_ERROR;
+  }
+  *was_evicted = (status == Status::OK);
+  return status;
 }
 
 PageEvictionManagerImpl::ExpiringToken
