@@ -28,6 +28,7 @@ impl<W: io::Write> Codegen<W> {
             "\
 // GENERATED FILE -- DO NOT EDIT
 
+use bitflags::*;
 use failure;
 use \
              fuchsia_wayland_core::{{ArgKind, Arg, FromArgs, IntoMessage, Message,
@@ -300,28 +301,45 @@ impl FromArgs for Request {{
 
     fn codegen_enum_types(&mut self, interface: &ast::Interface) -> Result {
         for e in interface.enums.iter() {
-            writeln!(self.w, "pub enum {} {{", e.rust_name())?;
-            for entry in e.entries.iter() {
-                writeln!(self.w, "    {},", entry.rust_name())?;
+            if e.bitfield {
+                self.codegen_bitflags_enum(e)?;
+            } else {
+                self.codegen_value_enum(e)?;
             }
-            writeln!(self.w, "}}")?;
-            writeln!(self.w, "")?;
-            writeln!(self.w, "impl {} {{", e.rust_name())?;
-            writeln!(self.w, "    pub fn bits(&self) -> u32 {{")?;
-            writeln!(self.w, "        match self {{")?;
-            for entry in e.entries.iter() {
-                writeln!(
-                    self.w,
-                    "        {}::{} => {},",
-                    e.rust_name(),
-                    entry.rust_name(),
-                    entry.value
-                )?;
-            }
-            writeln!(self.w, "        }}")?;
-            writeln!(self.w, "    }}")?;
-            writeln!(self.w, "}}")?;
         }
+        Ok(())
+    }
+
+    fn codegen_value_enum(&mut self, e: &ast::Enum) -> Result {
+        writeln!(self.w, "#[derive(Copy, Clone, Debug, Eq, PartialEq)]")?;
+        writeln!(self.w, "#[repr(u32)]")?;
+        writeln!(self.w, "pub enum {} {{", e.rust_name())?;
+        for entry in e.entries.iter() {
+            writeln!(self.w, "    {} = {},", entry.rust_name(), entry.value)?;
+        }
+        writeln!(self.w, "}}")?;
+        writeln!(self.w, "")?;
+        writeln!(self.w, "impl {} {{", e.rust_name())?;
+        writeln!(self.w, "    pub fn bits(&self) -> u32 {{")?;
+        writeln!(self.w, "        *self as u32")?;
+        writeln!(self.w, "    }}")?;
+        writeln!(self.w, "}}")?;
+        Ok(())
+    }
+
+    fn codegen_bitflags_enum(&mut self, e: &ast::Enum) -> Result {
+        writeln!(self.w, "::bitflags::bitflags! {{")?;
+        writeln!(self.w, "    pub struct {}: u32 {{", e.rust_name())?;
+        for entry in e.entries.iter() {
+            writeln!(
+                self.w,
+                "        const {} = {};",
+                entry.rust_name(),
+                entry.value
+            )?;
+        }
+        writeln!(self.w, "    }}")?;
+        writeln!(self.w, "}}")?;
         Ok(())
     }
 }

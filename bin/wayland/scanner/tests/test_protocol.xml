@@ -10,6 +10,11 @@
       <entry name="entry2" value="1" />
       <entry name="0_starts_with_number" value="0x2" />
     </enum>
+    <enum name="test_bitfield" bitfield="true">
+      <entry name="entry1" value="1" />
+      <entry name="entry2" value="2" />
+      <entry name="0_starts_with_number" value="0x4" />
+    </enum>
     <!-- Opcode 0: uint request/event -->
     <request name="uint">
       <arg name="arg" type="uint"/>

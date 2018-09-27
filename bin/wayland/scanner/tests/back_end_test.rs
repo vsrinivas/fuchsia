@@ -405,4 +405,11 @@ mod test {
         assert_eq!(1, test_interface::TestEnum::Entry2.bits());
         assert_eq!(2, test_interface::TestEnum::_0StartsWithNumber.bits());
     }
+
+    #[test]
+    fn test_bitfield() {
+        assert_eq!(1, test_interface::TestBitfield::Entry1.bits());
+        assert_eq!(2, test_interface::TestBitfield::Entry2.bits());
+        assert_eq!(4, test_interface::TestBitfield::_0StartsWithNumber.bits());
+    }
 }
