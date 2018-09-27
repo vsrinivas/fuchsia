@@ -6,6 +6,7 @@
 
 use clap::{_clap_count_exprs, arg_enum};
 use fidl_fuchsia_wlan_device as wlan;
+use fidl_fuchsia_wlan_sme as sme;
 use structopt::StructOpt;
 
 arg_enum!{
@@ -16,11 +17,49 @@ arg_enum!{
     }
 }
 
+arg_enum!{
+    #[derive(PartialEq, Copy, Clone, Debug)]
+    pub enum PhyArg {
+        Erp,
+        Ht,
+        Vht,
+    }
+}
+
+arg_enum!{
+    #[derive(PartialEq, Copy, Clone, Debug)]
+    pub enum CbwArg {
+        Cbw20,
+        Cbw40,
+        Cbw80,
+    }
+}
+
 impl ::std::convert::From<RoleArg> for wlan::MacRole {
     fn from(arg: RoleArg) -> Self {
         match arg {
             RoleArg::Client => wlan::MacRole::Client,
             RoleArg::Ap => wlan::MacRole::Ap,
+        }
+    }
+}
+
+impl ::std::convert::From<PhyArg> for sme::Phy {
+    fn from(arg: PhyArg) -> Self {
+        match arg {
+            PhyArg::Erp => sme::Phy::Erp,
+            PhyArg::Ht => sme::Phy::Ht,
+            PhyArg::Vht => sme::Phy::Vht,
+        }
+    }
+}
+
+impl ::std::convert::From<CbwArg> for sme::Cbw {
+    fn from(arg: CbwArg) -> Self {
+        match arg {
+            CbwArg::Cbw20 => sme::Cbw::Cbw20,
+            CbwArg::Cbw40 => sme::Cbw::Cbw40,
+            CbwArg::Cbw80 => sme::Cbw::Cbw80,
         }
     }
 }
@@ -108,10 +147,12 @@ pub enum ClientCmd {
         ssid: String,
         #[structopt(short = "p", long = "password", help = "WPA2 PSK")]
         password: Option<String>,
-        #[structopt(short = "y", long = "phy", help = "Choose one from (hr, erp, ht, vht, hew) to specify an upper bound")]
-        phy_str: Option<String>,
-        #[structopt(short = "w", long = "cbw", help = "Choose one from (20, 40, 80, 160, 80p80) to specify an upper bound")]
-        cbw_str: Option<String>,
+        #[structopt(short = "y", long = "phy", raw(possible_values = "&PhyArg::variants()"),
+                    raw(case_insensitive = "true"), help = "Specify an upper bound")]
+        phy: Option<PhyArg>,
+        #[structopt(short = "w", long = "cbw", raw(possible_values = "&CbwArg::variants()"),
+                     raw(case_insensitive = "true"), help = "Specify an upper bound")]
+        cbw: Option<CbwArg>,
     },
     #[structopt(name = "disconnect")]
     Disconnect {
