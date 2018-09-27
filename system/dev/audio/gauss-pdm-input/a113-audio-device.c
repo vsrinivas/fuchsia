@@ -6,6 +6,7 @@
 #include <ddk/device.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
+#include <hw/reg.h>
 
 #include "a113-audio-device.h"
 
@@ -48,38 +49,35 @@ void a113_pdm_dump_registers(a113_audio_device_t* audio_device) {
 }
 
 uint32_t a113_pdm_read(a113_audio_device_t* audio_device, uint32_t reg) {
-    return ((volatile uint32_t*)io_buffer_virt(&audio_device->pdm_mmio))[reg];
+    return readl((uint32_t*)audio_device->pdm_mmio.vaddr + reg);
 }
 
-uint32_t a113_pdm_write(a113_audio_device_t* audio_device, uint32_t reg,
-                        uint32_t value) {
-    return ((volatile uint32_t*)io_buffer_virt(&audio_device->pdm_mmio))[reg] = value;
+void a113_pdm_write(a113_audio_device_t* audio_device, uint32_t reg, uint32_t value) {
+    return writel(value, (uint32_t*)audio_device->pdm_mmio.vaddr + reg);
 }
 
 void a113_pdm_update_bits(a113_audio_device_t* audio_device, uint32_t reg,
                           uint32_t mask, uint32_t value) {
-    uint32_t register_value = ((uint32_t*)io_buffer_virt(&audio_device->pdm_mmio))[reg];
+    uint32_t register_value = a113_pdm_read(audio_device, reg);
     register_value &= ~mask;
     register_value |= value & mask;
-    ((volatile uint32_t*)io_buffer_virt(&audio_device->pdm_mmio))[reg] = register_value;
+    a113_pdm_write(audio_device, reg, register_value);
 }
 
 uint32_t a113_ee_audio_read(a113_audio_device_t* audio_device, uint32_t reg) {
-    return ((volatile uint32_t*)io_buffer_virt(&audio_device->ee_audio_mmio))[reg];
+    return readl((uint32_t*)audio_device->ee_audio_mmio.vaddr + reg);
 }
 
-uint32_t a113_ee_audio_write(a113_audio_device_t* audio_device, uint32_t reg,
-                             uint32_t value) {
-    return ((volatile uint32_t*)io_buffer_virt(&audio_device->ee_audio_mmio))[reg] = value;
+void a113_ee_audio_write(a113_audio_device_t* audio_device, uint32_t reg, uint32_t value) {
+    return writel(value, (uint32_t*)audio_device->ee_audio_mmio.vaddr + reg);
 }
 
 void a113_ee_audio_update_bits(a113_audio_device_t* audio_device, uint32_t reg,
                                uint32_t mask, uint32_t value) {
-    volatile uint32_t register_value =
-        ((volatile uint32_t*)io_buffer_virt(&audio_device->ee_audio_mmio))[reg];
+    uint32_t register_value = a113_ee_audio_read(audio_device, reg);
     register_value &= ~mask;
     register_value |= value & mask;
-    ((volatile uint32_t*)io_buffer_virt(&audio_device->ee_audio_mmio))[reg] = register_value;
+    a113_ee_audio_write(audio_device, reg, register_value);
 }
 
 // Map registers to our address space for future access, and do some very basic
@@ -96,7 +94,7 @@ zx_status_t a113_audio_device_init(a113_audio_device_t* audio_device,
     }
 
     // Map EE_AUDIO registers to our address space.
-    status = pdev_map_mmio_buffer(&audio_device->pdev, 0 /* EE_AUDIO */,
+    status = pdev_map_mmio_buffer2(&audio_device->pdev, 0 /* EE_AUDIO */,
                                   ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &audio_device->ee_audio_mmio);
     if (status != ZX_OK) {
@@ -114,7 +112,7 @@ zx_status_t a113_audio_device_init(a113_audio_device_t* audio_device,
     a113_ee_audio_write(audio_device, EE_AUDIO_CLK_GATE_EN, 0x000fffff);
 
     // Map the PDM registers to our address space.
-    status = pdev_map_mmio_buffer(&audio_device->pdev, 1 /* PDM */,
+    status = pdev_map_mmio_buffer2(&audio_device->pdev, 1 /* PDM */,
                                   ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &audio_device->pdm_mmio);
     if (status != ZX_OK) {
@@ -126,8 +124,8 @@ zx_status_t a113_audio_device_init(a113_audio_device_t* audio_device,
 
 init_fail:
     if (audio_device) {
-        io_buffer_release(&audio_device->ee_audio_mmio);
-        io_buffer_release(&audio_device->pdm_mmio);
+        mmio_buffer_release(&audio_device->ee_audio_mmio);
+        mmio_buffer_release(&audio_device->pdm_mmio);
     };
     return status;
 }
