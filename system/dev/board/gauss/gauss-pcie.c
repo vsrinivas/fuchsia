@@ -144,6 +144,8 @@ static const pbus_dev_t pcie_dev = {
     .irq_count = countof(dw_pcie_irqs),
     .metadata = iatu_metadata,
     .metadata_count = countof(iatu_metadata),
+    .btis = pci_btis,
+    .bti_count = countof(pci_btis),
 
     // Allow this device to publish the Kernel PCI device on the Platform Bus
     .children = pcie_dev_children,

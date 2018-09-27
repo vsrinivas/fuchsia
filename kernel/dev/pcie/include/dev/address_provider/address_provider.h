@@ -65,3 +65,21 @@ public:
                           vaddr_t* virt, paddr_t* phys) override;
     fbl::RefPtr<PciConfig> CreateConfig(const uintptr_t addr) override;
 };
+
+
+class DesignWarePcieAddressProvider : public PcieAddressProvider {
+  public:
+    DesignWarePcieAddressProvider() {}
+    ~DesignWarePcieAddressProvider() {}
+
+    zx_status_t Init(const PciEcamRegion& root_bridge,
+                     const PciEcamRegion& downstream_device);
+
+    zx_status_t Translate(uint bus_id, uint device_id, uint function_id,
+                          vaddr_t* virt, paddr_t* phys) override;
+    fbl::RefPtr<PciConfig> CreateConfig(const uintptr_t addr) override;
+
+  private:
+    fbl::unique_ptr<MappedEcamRegion> root_bridge_region_;
+    fbl::unique_ptr<MappedEcamRegion> downstream_region_;
+};

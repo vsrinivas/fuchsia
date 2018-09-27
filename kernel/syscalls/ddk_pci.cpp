@@ -132,6 +132,30 @@ zx_status_t sys_pci_add_subtract_io_range(zx_handle_t handle, bool mmio, uint64_
     }
 }
 
+static inline PciEcamRegion addr_window_to_pci_ecam_region(zx_pci_init_arg_t* arg, size_t index) {
+    ASSERT(index < arg->addr_window_count);
+
+    const PciEcamRegion result = {
+        .phys_base = static_cast<paddr_t>(arg->addr_windows[index].base),
+        .size = arg->addr_windows[index].size,
+        .bus_start = arg->addr_windows[index].bus_start,
+        .bus_end = arg->addr_windows[index].bus_end,
+    };
+
+    return result;
+}
+
+static inline bool is_designware(const zx_pci_init_arg_t* arg) {
+    for (size_t i = 0; i < arg->addr_window_count; i++) {
+        if ((arg->addr_windows[i].cfg_space_type == PCI_CFG_SPACE_TYPE_DW_ROOT) ||
+            (arg->addr_windows[i].cfg_space_type == PCI_CFG_SPACE_TYPE_DW_DS)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // zx_status_t zx_pci_init
 zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t> _init_buf, uint32_t len) {
     // TODO(ZX-971): finer grained validation
@@ -165,13 +189,21 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
     }
 
     if (LOCAL_TRACE) {
+        const char* kAddrWindowTypes[] = {
+            "PIO", "MMIO", "DW Root Bridge (MMIO)", "DW Downstream (MMIO)",
+            "Unknown"
+        };
         TRACEF("%u address window%s found in init arg\n", arg->addr_window_count,
                (arg->addr_window_count == 1) ? "" : "s");
         for (uint32_t i = 0; i < arg->addr_window_count; i++) {
-            printf("[%u]\n\tis_mmio: %d\n\thas_ecam: %d\n\tbase: %#" PRIxPTR "\n"
+            const size_t window_type_idx =
+                MIN(fbl::count_of(kAddrWindowTypes) - 1, arg->addr_windows[i].cfg_space_type);
+            const char* window_type_name = kAddrWindowTypes[window_type_idx];
+
+            printf("[%u]\n\tcfg_space_type: %s\n\thas_ecam: %d\n\tbase: %#" PRIxPTR "\n"
                    "\tsize: %zu\n\tbus_start: %u\n\tbus_end: %u\n",
                    i,
-                   arg->addr_windows[i].is_mmio, arg->addr_windows[i].has_ecam,
+                   window_type_name, arg->addr_windows[i].has_ecam,
                    arg->addr_windows[i].base, arg->addr_windows[i].size,
                    arg->addr_windows[i].bus_start, arg->addr_windows[i].bus_end);
         }
@@ -212,9 +244,19 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
             return status;
         }
     }
-    // TODO(teisenbe): For now assume there is only one ECAM
-    if (win_count != 1) {
-        return ZX_ERR_INVALID_ARGS;
+    // TODO(teisenbe): For now assume there is only one ECAM, unless it's a
+    // DesignWare Controller.
+    // The DesignWare controller needs exactly two windows: One specifying where
+    // the root bridge is and the other specifying where the downstream devices
+    // are.
+    if (is_designware(arg.get())) {
+        if (win_count != 2) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+    } else {
+        if (win_count != 1) {
+            return ZX_ERR_INVALID_ARGS;
+        }
     }
 
     if (arg->addr_windows[0].bus_start != 0) {
@@ -250,7 +292,7 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
     }
 #endif
 
-    if (arg->addr_windows[0].is_mmio) {
+    if (arg->addr_windows[0].cfg_space_type == PCI_CFG_SPACE_TYPE_MMIO) {
         if (arg->addr_windows[0].size < PCIE_ECAM_BYTE_PER_BUS) {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -291,7 +333,7 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
             TRACEF("Failed to set Address Translation Provider, st = %d\n", ret);
             return ret;
         }
-    } else {
+    } else if (arg->addr_windows[0].cfg_space_type == PCI_CFG_SPACE_TYPE_PIO) {
         // Create a PIO address provider.
         fbl::AllocChecker ac;
 
@@ -306,8 +348,54 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
             TRACEF("Failed to set Address Translation Provider, st = %d\n", ret);
             return ret;
         }
-    }
+    } else if (is_designware(arg.get())) {
+        fbl::AllocChecker ac;
 
+        if (win_count < 2) {
+            TRACEF("DesignWare Config Space requires at least 2 windows\n");
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        auto addr_provider = fbl::make_unique_checked<DesignWarePcieAddressProvider>(&ac);
+        if (!ac.check()) {
+            TRACEF("Failed to allocate PCIe address provider\n");
+            return ZX_ERR_NO_MEMORY;
+        }
+
+        PciEcamRegion dw_root_bridge{};
+        PciEcamRegion dw_downstream{};
+        for (size_t i = 0; i < win_count; i++) {
+            switch (arg->addr_windows[i].cfg_space_type) {
+            case PCI_CFG_SPACE_TYPE_DW_ROOT:
+                dw_root_bridge = addr_window_to_pci_ecam_region(arg.get(), i);
+                break;
+            case PCI_CFG_SPACE_TYPE_DW_DS:
+                dw_downstream = addr_window_to_pci_ecam_region(arg.get(), i);
+                break;
+            }
+        }
+
+        if (dw_root_bridge.size == 0 || dw_downstream.size == 0) {
+            TRACEF("Did not find DesignWare root and downstream device in init arg\n");
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        zx_status_t ret = addr_provider->Init(dw_root_bridge, dw_downstream);
+        if (ret != ZX_OK) {
+            TRACEF("Failed to initialize DesignWare PCIe Address Provider, error = %d\n", ret);
+            return ret;
+        }
+
+        ret = pcie->SetAddressTranslationProvider(fbl::move(addr_provider));
+        if (ret != ZX_OK) {
+            TRACEF("Failed to set Address Translation Provider, st = %d\n", ret);
+            return ret;
+        }
+
+    } else {
+        TRACEF("Unknown config space type!\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
     // TODO(johngro): Change the user-mode and devmgr behavior to add all of the
     // roots in the system.  Do not assume that there is a single root, nor that
     // it manages bus ID 0.

@@ -16,9 +16,13 @@ MappedEcamRegion::~MappedEcamRegion() {
 
 zx_status_t MappedEcamRegion::MapEcam() {
     DEBUG_ASSERT(ecam_.bus_start <= ecam_.bus_end);
-    DEBUG_ASSERT((ecam_.size % PCIE_ECAM_BYTE_PER_BUS) == 0);
-    DEBUG_ASSERT((ecam_.size / PCIE_ECAM_BYTE_PER_BUS) ==
-                 (static_cast<size_t>(ecam_.bus_end) - ecam_.bus_start + 1u));
+
+    // TODO(gkalsi): These asserts are helpful but they don't apply for the DWC
+    //               since the ECAM is broken up and mapped in different places.
+    //               We should find a way to enforce these only for MMIO ECAMs
+    // DEBUG_ASSERT((ecam_.size % PCIE_ECAM_BYTE_PER_BUS) == 0);
+    // DEBUG_ASSERT((ecam_.size / PCIE_ECAM_BYTE_PER_BUS) ==
+                 // (static_cast<size_t>(ecam_.bus_end) - ecam_.bus_start + 1u));
 
     if (vaddr_ != nullptr) {
         return ZX_ERR_BAD_STATE;

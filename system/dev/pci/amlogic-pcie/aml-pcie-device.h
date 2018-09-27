@@ -45,6 +45,9 @@ class AmlPcieDevice {
     fbl::unique_ptr<ddk::MmioBuffer> rst_;
     fbl::unique_ptr<ddk::MmioBuffer> pll_;
 
+    // Pinned MMIO Buffers
+    fbl::unique_ptr<ddk::MmioPinnedBuffer> dbi_pinned_;
+
     // Device Metadata
     iatu_translation_entry_t atu_cfg_;
     iatu_translation_entry_t atu_io_;

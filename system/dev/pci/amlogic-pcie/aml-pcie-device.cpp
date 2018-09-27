@@ -8,6 +8,8 @@
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
+#include <fbl/unique_free_ptr.h>
 #include <zircon/driver/binding.h>
 
 #include "aml-pcie-clk.h"
@@ -58,7 +60,13 @@ zx_status_t AmlPcieDevice::InitProtocols() {
 zx_status_t AmlPcieDevice::InitMmios() {
     zx_status_t st;
 
+    // Get a BTI for pinning the DBI.
+    zx_handle_t pin_bti;
+    pdev_get_bti(&pdev_, 0, &pin_bti);
+    auto cleanup = fbl::MakeAutoCall([pin_bti]() { zx_handle_close(pin_bti); });
+
     mmio_buffer_t mmio;
+    mmio_pinned_buffer_t mmio_pinned;
     st = pdev_map_mmio_buffer2(&pdev_, kElbMmio,
                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (st != ZX_OK) {
@@ -66,6 +74,14 @@ zx_status_t AmlPcieDevice::InitMmios() {
         return st;
     }
     dbi_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+
+
+    st = mmio_buffer_pin(&mmio, pin_bti, &mmio_pinned);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "aml_pcie: failed to pin DBI, st = %d\n", st);
+        return st;
+    }
+    dbi_pinned_ = fbl::make_unique<ddk::MmioPinnedBuffer>(mmio_pinned);
 
     st = pdev_map_mmio_buffer2(&pdev_, kCfgMmio,
                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
@@ -225,7 +241,7 @@ zx_status_t AmlPcieDevice::Init() {
 
     // Fire up the kernel PCI driver!
     zx_pci_init_arg_t* arg;
-    const size_t arg_size = sizeof(*arg) + sizeof(arg->addr_windows[0]);
+    const size_t arg_size = sizeof(*arg) + sizeof(arg->addr_windows[0]) * 2;
     arg = (zx_pci_init_arg_t*)calloc(1, arg_size);
     if (!arg) {
         zxlogf(ERROR, "aml_pcie: failed to allocate pci init arg\n");
@@ -233,17 +249,27 @@ zx_status_t AmlPcieDevice::Init() {
     }
 
     // Automatically release this object when it goes out of scope.
-    fbl::unique_ptr<zx_pci_init_arg_t> deleter;
+    fbl::unique_free_ptr<zx_pci_init_arg_t> deleter;
     deleter.reset(arg);
 
     arg->num_irqs = 0;
-    arg->addr_window_count = 1;
-    arg->addr_windows[0].is_mmio = true;
+    arg->addr_window_count = 2;
+
+    // Root Bridge Config Window.
+    arg->addr_windows[0].cfg_space_type = PCI_CFG_SPACE_TYPE_DW_ROOT;
     arg->addr_windows[0].has_ecam = true;
-    arg->addr_windows[0].base = atu_cfg_.cpu_addr;
-    arg->addr_windows[0].size = 1 * 1024 * 1024;
+    arg->addr_windows[0].base = dbi_pinned_->get_paddr();
+    arg->addr_windows[0].size = 4 * 1024;   // Just enough for CFG 0:0.0
     arg->addr_windows[0].bus_start = 0;
-    arg->addr_windows[0].bus_end = 0xff;
+    arg->addr_windows[0].bus_end = 0;
+
+    // Downstream Config Window.
+    arg->addr_windows[1].cfg_space_type = PCI_CFG_SPACE_TYPE_DW_DS;
+    arg->addr_windows[1].has_ecam = true;
+    arg->addr_windows[1].base = atu_cfg_.cpu_addr;
+    arg->addr_windows[1].size = atu_cfg_.length;
+    arg->addr_windows[1].bus_start = 1;
+    arg->addr_windows[1].bus_end = 1;
 
     st = zx_pci_init(get_root_resource(), arg, arg_size);
     if (st != ZX_OK) {

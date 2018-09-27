@@ -65,8 +65,12 @@
 #define PCIE_HEADER_TYPE1                     (0x1)
 #define PCIE_HEADER_BUS_REG_OFF               (0x18)
 
-#define PCI_TYPE1_BAR0  (0x10)
-#define PCI_TYPE1_BAR1  (0x14)
+#define PCI_CLASSREV                          (0x08)
+#define PCI_TYPE1_BAR0                        (0x10)
+#define PCI_TYPE1_BAR1                        (0x14)
+#define PCI_IO_BASE_LIMIT                     (0x1C)
+#define PCI_MEM_BASE_LIMIT                    (0x20)
+#define PCI_PFMEM_BASE_LIMIT                  (0x24)
 
 namespace pcie {
 namespace aml {

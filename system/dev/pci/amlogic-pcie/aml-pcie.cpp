@@ -108,7 +108,7 @@ zx_status_t AmlPcie::AwaitLinkUp() {
     return ZX_ERR_TIMED_OUT;
 }
 
-void AmlPcie::ConfigureRootBridge() {
+void AmlPcie::ConfigureRootBridge(const iatu_translation_entry_t* mem) {
     // PCIe Type 1 header Bus Register (offset 0x18 into the Ecam)
     auto reg = PciBusReg::Get().ReadFrom(dbi_.get());
 
@@ -120,7 +120,7 @@ void AmlPcie::ConfigureRootBridge() {
 
     // This bridge will also claim all transactions for any other bus IDs on
     // this bus.
-    reg.set_subordinate_bus(0x1);
+    reg.set_subordinate_bus(0xff);
 
     reg.WriteTo(dbi_.get());
 
@@ -128,6 +128,29 @@ void AmlPcie::ConfigureRootBridge() {
     // need them.
     dbi_->Write32(0, PCI_TYPE1_BAR0);
     dbi_->Write32(0, PCI_TYPE1_BAR1);
+
+    const uint32_t kRevisionMask    = 0x000000ff;
+    const uint32_t kDeviceBridge    = 0x600;
+    const uint32_t kDevicePciBridge = 0x004;
+    const uint32_t kDeviceShift     = 8;
+
+    // This device improperly reports the class of the root bridge so we need
+    // to fill in the correct value.
+    uint32_t val = dbi_->Read32(PCI_CLASSREV);
+    val &= kRevisionMask;
+    val |= (kDeviceBridge | kDevicePciBridge) << kDeviceShift;
+    dbi_->Write32(val, PCI_CLASSREV);
+
+    // Set the Base and limit registers for this root bridge.
+    // On x86 we rely on the BIOS to do this for us, but on arm we must size our
+    // own bridges. Normally we'd scan the bus and perform this dynamically but
+    // our bus driver doesn't handle this for now. Fortunately we already know
+    // the exact topology of our bus so sizing the bridges is not terribly
+    // difficult.
+    // These are both hacks for the AMLogic implementation of this driver.
+    // Ideally we should be pulling these out of the iATU config.
+    dbi_->Write32(0x000000f0, PCI_IO_BASE_LIMIT);
+    dbi_->Write32(0xf9f0f9e0, PCI_MEM_BASE_LIMIT);
 }
 
 zx_status_t AmlPcie::EstablishLink(const iatu_translation_entry_t* cfg,
@@ -155,7 +178,7 @@ zx_status_t AmlPcie::EstablishLink(const iatu_translation_entry_t* cfg,
         return st;
     }
 
-    ConfigureRootBridge();
+    ConfigureRootBridge(mem);
 
     return ZX_OK;
 }

@@ -59,7 +59,7 @@ static zx_status_t qemu_pci_init(void) {
     }
     arg->num_irqs = 0;
     arg->addr_window_count = 1;
-    arg->addr_windows[0].is_mmio = true;
+    arg->addr_windows[0].cfg_space_type = PCI_CFG_SPACE_TYPE_MMIO;
     arg->addr_windows[0].has_ecam = true;
     arg->addr_windows[0].base = PCIE_ECAM_BASE_PHYS;
     arg->addr_windows[0].size = PCIE_ECAM_SIZE;

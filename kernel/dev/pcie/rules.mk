@@ -22,6 +22,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/pcie_upstream_node.cpp \
 	$(LOCAL_DIR)/address_provider/mmio.cpp \
 	$(LOCAL_DIR)/address_provider/pio.cpp \
+	$(LOCAL_DIR)/address_provider/designware.cpp \
 	$(LOCAL_DIR)/address_provider/ecam_region.cpp \
 
 

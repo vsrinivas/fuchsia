@@ -72,6 +72,12 @@ typedef struct zx_pcie_device_info {
 
 #define ZX_PCI_NO_IRQ_MAPPING UINT32_MAX
 
+// Used for zx_pci_init_arg_t::addr_windows::cfg_space_type
+#define PCI_CFG_SPACE_TYPE_PIO     (0u)
+#define PCI_CFG_SPACE_TYPE_MMIO    (1u)
+#define PCI_CFG_SPACE_TYPE_DW_ROOT (2u)  // Designware Root Bridge ECAM
+#define PCI_CFG_SPACE_TYPE_DW_DS   (3u)  // Designware Downstream ECAM
+
 // Dimensions: device id, function id, legacy pin number
 // ZX_PCI_NO_IRQ_MAPPING if no mapping specified.
 typedef uint32_t zx_pci_irq_swizzle_lut_t[ZX_PCI_MAX_DEVICES_PER_BUS]
@@ -90,16 +96,16 @@ typedef struct zx_pci_init_arg {
 
     uint32_t addr_window_count;
     struct {
-        bool is_mmio;
-        bool has_ecam;
         uint64_t base;
         size_t size;
         uint8_t bus_start;
         uint8_t bus_end;
+        uint8_t cfg_space_type;
+        bool has_ecam;
     } addr_windows[];
 } zx_pci_init_arg_t;
 
-#define ZX_PCI_INIT_ARG_MAX_ECAM_WINDOWS 1
+#define ZX_PCI_INIT_ARG_MAX_ECAM_WINDOWS 2
 #define ZX_PCI_INIT_ARG_MAX_SIZE (sizeof(((zx_pci_init_arg_t*)NULL)->addr_windows[0]) * \
                                   ZX_PCI_INIT_ARG_MAX_ECAM_WINDOWS + \
                                   sizeof(zx_pci_init_arg_t))

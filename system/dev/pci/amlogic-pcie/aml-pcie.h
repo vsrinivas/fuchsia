@@ -42,7 +42,7 @@ class AmlPcie : public designware::DwPcie {
     void SetMaxReadRequest(const uint32_t size);
     void EnableMemorySpace();
     zx_status_t AwaitLinkUp();
-    void ConfigureRootBridge();
+    void ConfigureRootBridge(const iatu_translation_entry_t* mem);
     void RmwCtrlSts(const uint32_t size, const uint32_t shift, const uint32_t mask);
 
     fbl::unique_ptr<ddk::MmioBuffer> rst_;
