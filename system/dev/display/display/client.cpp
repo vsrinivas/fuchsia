@@ -1505,6 +1505,9 @@ void ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
 
 void ClientProxy::OnClientDead() {
     controller_->OnClientDead(this);
+    // After OnClientDead, there won't be any more vsync calls. Since that is the only use of
+    // the channel off of the loop thread, there's no need to worry about synchronization.
+    server_handle_.reset();
 }
 
 void ClientProxy::Close() {
