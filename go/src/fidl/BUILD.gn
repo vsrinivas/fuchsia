@@ -4,6 +4,7 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
 import("//build/host.gni")
 
 go_library("fidl_lib") {
@@ -25,4 +26,10 @@ install_host_tools("fidl") {
   outputs = [
     "fidlgen",
   ]
+}
+
+go_test("fidlgen_golang_ir_test") {
+  gopackage = "fidl/compiler/backend/golang/ir"
+
+  deps = [ ":fidl_lib" ]
 }
