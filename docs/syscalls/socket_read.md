@@ -21,9 +21,13 @@ successful, the number of bytes actually read are return via
 *actual*.
 
 If a NULL *buffer* and 0 *buffer_size* are passed in, then this syscall
-instead requests that the number of outstanding bytes to be returned
-via *actual*. In this case, if no bytes are available, this syscall will
-return **ZX_OK**, rather than **ZX_ERR_SHOULD_WAIT**.
+instead returns the number of outstanding bytes via *actual*.
+If the socket was created with **ZX_SOCKET_DATAGRAM**, this is the
+number of bytes in the first datagram.
+If the socket was created with **ZX_SOCKET_STREAM**, this is the
+total number of bytes in the stream.
+If no bytes are available, this syscall will still return **ZX_OK**,
+rather than **ZX_ERR_SHOULD_WAIT**.
 
 If a NULL *actual* is passed in, it will be ignored.
 

@@ -311,7 +311,7 @@ zx_status_t SocketDispatcher::Read(user_out_ptr<void> dst, size_t len,
 
     // Just query for bytes outstanding.
     if (!dst && len == 0) {
-        *nread = data_.size();
+        *nread = data_.size(flags_ & ZX_SOCKET_DATAGRAM);
         return ZX_OK;
     }
 

@@ -783,9 +783,10 @@ static bool socket_datagram(void) {
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_EQ(count, sizeof(rbuf), "");
 
+    count = 0;
     status = zx_socket_read(h1, 0u, NULL, 0, &count);
     EXPECT_EQ(status, ZX_OK, "");
-    EXPECT_EQ(count, sizeof(rbuf) + 8u + 5u, "");
+    EXPECT_EQ(count, 8u, "");
     count = 0;
 
     bzero(rbuf, sizeof(rbuf));
@@ -797,7 +798,7 @@ static bool socket_datagram(void) {
 
     status = zx_socket_read(h1, 0u, NULL, 0, &count);
     EXPECT_EQ(status, ZX_OK, "");
-    EXPECT_EQ(count, sizeof(rbuf) + 5u, "");
+    EXPECT_EQ(count, 5u, "");
     count = 0;
 
     status = zx_socket_read(h1, 0u, rbuf, sizeof(rbuf), &count);

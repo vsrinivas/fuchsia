@@ -51,7 +51,14 @@ public:
     bool is_empty() const;
 
     // Returns number of bytes stored in the chain.
-    size_t size() const { return size_; }
+    // When |datagram| is true, return only the number of bytes in the first
+    // datagram, or 0 if in ZX_SOCKET_STREAM mode.
+    size_t size(bool datagram = false) const {
+        if (datagram && size_) {
+            return tail_.front().pkt_len_;
+        }
+        return size_;
+    }
 
     // Returns the maximum number of bytes that can be stored in the chain.
     size_t max_size() const { return kSizeMax; }
@@ -89,6 +96,6 @@ private:
 
     fbl::SinglyLinkedList<MBuf*> freelist_;
     fbl::SinglyLinkedList<MBuf*> tail_;
-    MBuf* head_ = nullptr;;
+    MBuf* head_ = nullptr;
     size_t size_ = 0u;
 };
