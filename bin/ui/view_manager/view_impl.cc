@@ -83,6 +83,13 @@ void ViewImpl::SetChildProperties(
                                 std::move(child_view_properties));
 }
 
+void ViewImpl::SendSizeChangeHintHACK(uint32_t child_key,
+                                      float width_change_factor,
+                                      float height_change_factor) {
+  registry_->SendSizeChangeHintHACK(state_, child_key, width_change_factor,
+                                    height_change_factor);
+};
+
 void ViewImpl::RequestFocus(uint32_t child_key) {
   registry_->RequestFocus(state_, child_key);
 }

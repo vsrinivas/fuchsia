@@ -7,12 +7,15 @@ library fuchsia.ui.gfx;
 // Reports metrics information.
 // This event type is only reported for node resources.
 const uint32 kMetricsEventMask = 1;
+const uint32 kSizeChangeHintEventMask = 2;
 
 // These are all of the types of events which can be reported by a |Session|.
 // Use |SetEventMaskCmd| to enable event delivery for a resource.
 union Event {
   // Events which are controlled by a mask.
   MetricsEvent metrics;
+
+  SizeChangeHintEvent size_change_hint;
 
   // Events which are always delivered, regardless of mask.
   ImportUnboundEvent import_unbound;
@@ -37,6 +40,22 @@ union Event {
 struct MetricsEvent {
   uint32 node_id;
   Metrics metrics;
+};
+
+// Delivered in response to a size change hint from a parent node
+// (SendSizeChangeHintCmd).
+//
+// This event is delivered when the following conditions are true:
+// - The node has |kSizeChangeEventMask| set to an enabled state.
+// - A parent node has sent a SendSizeChangeHintCmd.
+//
+// Subscribe to this event to receive information about how large textures you
+// will need in the near future for your nodes. The canonical use case is to
+// pre-allocate memory to avoid repeated re-allocations.
+struct SizeChangeHintEvent {
+  uint32 node_id;
+  float32 width_change_factor;
+  float32 height_change_factor;
 };
 
 // Delivered when the imported resource with the given ID is no longer bound to

@@ -141,6 +141,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   bool ApplySetAnchorCmd(::fuchsia::ui::gfx::SetAnchorCmd command);
   bool ApplySetSizeCmd(::fuchsia::ui::gfx::SetSizeCmd command);
   bool ApplySetOpacityCmd(::fuchsia::ui::gfx::SetOpacityCmd command);
+  bool ApplySendSizeChangeHintCmd(
+      ::fuchsia::ui::gfx::SendSizeChangeHintCmdHACK command);
   bool ApplySetShapeCmd(::fuchsia::ui::gfx::SetShapeCmd command);
   bool ApplySetMaterialCmd(::fuchsia::ui::gfx::SetMaterialCmd command);
   bool ApplySetClipCmd(::fuchsia::ui::gfx::SetClipCmd command);

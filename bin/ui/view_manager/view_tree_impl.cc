@@ -79,6 +79,13 @@ void ViewTreeImpl::SetChildProperties(
                                 std::move(child_view_properties));
 }
 
+void ViewTreeImpl::SendSizeChangeHintHACK(uint32_t child_key,
+                                          float width_change_factor,
+                                          float height_change_factor) {
+  registry_->SendSizeChangeHintHACK(state_, child_key, width_change_factor,
+                                    height_change_factor);
+};
+
 void ViewTreeImpl::RequestFocus(uint32_t child_key) {
   registry_->RequestFocus(state_, child_key);
 }

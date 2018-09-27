@@ -28,6 +28,8 @@ union Command {
   SetSizeCmd set_size;
   SetOpacityCmd set_opacity;
 
+  SendSizeChangeHintCmdHACK send_size_change_hint_hack;
+
   // Node-specific commands.
   AddChildCmd add_child;  // TODO: Should we require a DetachCmd before
                               // re-parenting?
@@ -281,6 +283,18 @@ struct SetAnchorCmd {
 struct SetSizeCmd {
   uint32 id;
   Vector2Value value;
+};
+
+// Sends a hint about a pending size change to the given node and all nodes
+// below. This is generally sent before an animation.
+//
+// |width_change_factor| and |height_change_factor| is how much bigger or smaller
+// the item is expected to be in the near future. This one number encapsulate
+// both changes in scale, as well as changes to layout width and height.
+struct SendSizeChangeHintCmdHACK {
+  uint32 node_id;
+  float32 width_change_factor;
+  float32 height_change_factor;
 };
 
 // Sets a node's opacity.

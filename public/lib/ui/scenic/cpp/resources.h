@@ -211,6 +211,9 @@ class Node : public Resource {
   void SetAnchor(const float anchor[3]);
   void SetAnchor(uint32_t variable_id);
 
+  void SendSizeChangeHint(float width_change_factor,
+                          float height_change_factor);
+
   // Sets the node's tag value.
   void SetTag(uint32_t tag_value);
 

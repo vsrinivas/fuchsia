@@ -19,6 +19,8 @@ std::ostream& operator<<(std::ostream& stream,
   switch (event.Which()) {
     case Event::Tag::kMetrics:
       return stream << event.metrics();
+    case Event::Tag::kSizeChangeHint:
+      return stream << event.size_change_hint();
     case Event::Tag::kImportUnbound:
       return stream << event.import_unbound();
     case Event::Tag::kViewConnected:
@@ -42,6 +44,12 @@ std::ostream& operator<<(std::ostream& stream,
                          const fuchsia::ui::gfx::MetricsEvent& event) {
   return stream << "MetricsEvent(node_id=" << event.node_id
                 << ", metrics=<TBD>)";
+}
+
+std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::SizeChangeHintEvent& event) {
+  return stream << "SizeChangeHintEvent(node_id=" << event.node_id
+                << ", size_change_factor=<TBD>)";
 }
 
 std::ostream& operator<<(std::ostream& stream,

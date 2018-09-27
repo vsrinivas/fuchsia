@@ -54,6 +54,8 @@ class ViewImpl : public ::fuchsia::ui::viewsv1::View,
   void SetChildProperties(
       uint32_t child_key,
       ::fuchsia::ui::viewsv1::ViewPropertiesPtr child_view_properties) override;
+  void SendSizeChangeHintHACK(uint32_t child_key, float width_change_factor,
+                              float height_change_factor) override;
   void RequestFocus(uint32_t child_key) override;
   void RequestSnapshotHACK(uint32_t child_key,
                            RequestSnapshotHACKCallback callback) override;

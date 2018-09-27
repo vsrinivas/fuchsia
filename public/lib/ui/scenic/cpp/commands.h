@@ -143,6 +143,8 @@ fuchsia::ui::gfx::Command NewSetAnchorCmd(uint32_t node_id,
                                           uint32_t variable_id);
 
 fuchsia::ui::gfx::Command NewSetOpacityCmd(uint32_t node_id, float opacity);
+fuchsia::ui::gfx::Command NewSendSizeChangeHintCmdHACK(
+    uint32_t node_id, float width_change_factor, float height_change_factor);
 fuchsia::ui::gfx::Command NewSetShapeCmd(uint32_t node_id, uint32_t shape_id);
 fuchsia::ui::gfx::Command NewSetMaterialCmd(uint32_t node_id,
                                             uint32_t material_id);

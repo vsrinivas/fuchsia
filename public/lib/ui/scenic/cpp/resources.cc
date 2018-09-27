@@ -217,6 +217,12 @@ void Node::SetAnchor(uint32_t variable_id) {
   session()->Enqueue(NewSetAnchorCmd(id(), variable_id));
 }
 
+void Node::SendSizeChangeHint(float width_change_factor,
+                              float height_change_factor) {
+  session()->Enqueue(NewSendSizeChangeHintCmdHACK(id(), width_change_factor,
+                                                  height_change_factor));
+}
+
 void Node::SetTag(uint32_t tag_value) {
   session()->Enqueue(NewSetTagCmd(id(), tag_value));
 }

@@ -132,16 +132,6 @@ interface ViewContainer {
   // set the view's properties before it can be rendered.  Rendering for
   // children without properties is blocked until properties are set.
   //
-  // The child will receive the new properties along with a scene version
-  // which it should apply to the first scene update which includes the
-  // effects of the property change.
-  //
-  // The |child_scene_version| specifies the version number which
-  // the child should use when publishing scene updates which incorporate
-  // the new properties.  May be |kSceneVersionNone| if the version number
-  // is not important (meaning that there is no need to coordinate the
-  // scene updates with the child).
-  //
   // The |child_view_properties| specifies the properties for the child, or
   // null to remove the properties from the child which will cause rendering
   // of the child's scene to be blocked until new properties are set.
@@ -153,11 +143,25 @@ interface ViewContainer {
   // as invalid layout properties; the connection will be closed.
   6: SetChildProperties(uint32 child_key, ViewProperties? child_view_properties);
 
+  // WIP API
+  // Sends a hint about a pending size change to the given node and all nodes
+  // below. This is generally sent before an animation.
+  //
+  // |width_change_factor| and |height_change_factor| is how much bigger or smaller
+  // the item is expected to be in the near future. This one number encapsulate
+  // both changes in scale, as well as changes to layout width and height.
+  //
+  // It is an error to specify a |child_key| that does not appear in
+  // the container's list of children; the connection will be closed.
+  //
+  7: SendSizeChangeHintHACK(uint32 child_key, float32 width_change_factor,
+                            float32 height_change_factor);
+
   // Request the child view to get input focus for key events.
-  7: RequestFocus(uint32 child_key);
+  8: RequestFocus(uint32 child_key);
 
   // Request the snapshot of the child view.
-  8: RequestSnapshotHACK(uint32 child_key)-> (fuchsia.mem.Buffer data);
+  9: RequestSnapshotHACK(uint32 child_key)-> (fuchsia.mem.Buffer data);
 };
 
 // An interface clients may implement to receive events from a view container.

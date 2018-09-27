@@ -478,6 +478,39 @@ void ViewRegistry::RequestSnapshotHACK(
   SchedulePresentSession();
 }
 
+void ViewRegistry::SendSizeChangeHintHACK(ViewContainerState* container_state,
+                                          uint32_t child_key,
+                                          float width_change_factor,
+                                          float height_change_factor) {
+  FXL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
+  FXL_VLOG(1) << "SendSizeChangeHintHACK: container=" << container_state
+              << ", width_change_factor=" << width_change_factor
+              << ", height_change_factor=" << height_change_factor << "}";
+
+  // Check whether the child key exists in the container.
+  auto child_it = container_state->children().find(child_key);
+  if (child_it == container_state->children().end()) {
+    FXL_LOG(ERROR) << "Attempted to modify child with an invalid key: "
+                   << "container=" << container_state
+                   << ", child_key=" << child_key;
+    UnregisterViewContainer(container_state);
+    return;
+  }
+
+  // Immediately discard requests on unavailable views.
+  ViewStub* child_stub = child_it->second.get();
+  if (child_stub->is_unavailable() || child_stub->is_pending()) {
+    FXL_VLOG(1) << "SendSizeChangeHintHACK called for view that is currently "
+                << (child_stub->is_unavailable() ? "unavailable" : "pending");
+    return;
+  }
+  FXL_DCHECK(child_stub->state());
+
+  child_stub->state()->top_node().SendSizeChangeHint(width_change_factor,
+                                                     height_change_factor);
+  SchedulePresentSession();
+}
+
 void ViewRegistry::OnViewResolved(ViewStub* view_stub, ViewState* view_state) {
   FXL_DCHECK(view_stub);
 

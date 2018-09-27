@@ -13,6 +13,9 @@ std::ostream& operator<<(std::ostream& stream,
                          const fuchsia::ui::gfx::Event& event);
 
 std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::SizeChangeHintEvent& event);
+
+std::ostream& operator<<(std::ostream& stream,
                          const fuchsia::ui::gfx::MetricsEvent& event);
 
 std::ostream& operator<<(std::ostream& stream,

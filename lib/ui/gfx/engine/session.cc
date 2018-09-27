@@ -129,6 +129,8 @@ bool Session::ApplyCommand(::fuchsia::ui::gfx::Command command) {
       return ApplySetSizeCmd(std::move(command.set_size()));
     case ::fuchsia::ui::gfx::Command::Tag::kSetOpacity:
       return ApplySetOpacityCmd(command.set_opacity());
+    case ::fuchsia::ui::gfx::Command::Tag::kSendSizeChangeHintHack:
+      return ApplySendSizeChangeHintCmd(command.send_size_change_hint_hack());
     case ::fuchsia::ui::gfx::Command::Tag::kSetShape:
       return ApplySetShapeCmd(std::move(command.set_shape()));
     case ::fuchsia::ui::gfx::Command::Tag::kSetMaterial:
@@ -471,6 +473,15 @@ bool Session::ApplySetOpacityCmd(::fuchsia::ui::gfx::SetOpacityCmd command) {
   if (auto node = resources_.FindResource<OpacityNode>(command.node_id)) {
     node->SetOpacity(command.opacity);
     return true;
+  }
+  return false;
+}
+
+bool Session::ApplySendSizeChangeHintCmd(
+    ::fuchsia::ui::gfx::SendSizeChangeHintCmdHACK command) {
+  if (auto node = resources_.FindResource<Node>(command.node_id)) {
+    return node->SendSizeChangeHint(command.width_change_factor,
+                                    command.height_change_factor);
   }
   return false;
 }

@@ -7,6 +7,7 @@
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+#include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
@@ -333,6 +334,24 @@ bool Node::SetClipToSelf(bool clip_to_self) {
 bool Node::SetHitTestBehavior(
     ::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior) {
   hit_test_behavior_ = hit_test_behavior;
+  return true;
+}
+
+bool Node::SendSizeChangeHint(float width_change_factor,
+                              float height_change_factor) {
+  if (event_mask() & ::fuchsia::ui::gfx::kSizeChangeHintEventMask) {
+    auto event = ::fuchsia::ui::gfx::Event();
+    event.set_size_change_hint(::fuchsia::ui::gfx::SizeChangeHintEvent());
+    event.size_change_hint().node_id = id();
+    event.size_change_hint().width_change_factor = width_change_factor;
+    event.size_change_hint().height_change_factor = height_change_factor;
+    session()->EnqueueEvent(std::move(event));
+  }
+
+  ForEachDirectDescendantFrontToBack(
+      *this, [width_change_factor, height_change_factor](Node* node) {
+        node->SendSizeChangeHint(width_change_factor, height_change_factor);
+      });
   return true;
 }
 

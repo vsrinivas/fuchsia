@@ -702,6 +702,19 @@ fuchsia::ui::gfx::Command NewSetOpacityCmd(uint32_t node_id, float opacity) {
   return command;
 }
 
+fuchsia::ui::gfx::Command NewSendSizeChangeHintCmdHACK(
+    uint32_t node_id, float width_change_factor, float height_change_factor) {
+  fuchsia::ui::gfx::SendSizeChangeHintCmdHACK send_size_change_hint;
+  send_size_change_hint.node_id = node_id;
+  send_size_change_hint.width_change_factor = width_change_factor;
+  send_size_change_hint.height_change_factor = height_change_factor;
+
+  fuchsia::ui::gfx::Command command;
+  command.set_send_size_change_hint_hack(std::move(send_size_change_hint));
+
+  return command;
+}
+
 fuchsia::ui::gfx::Command NewSetShapeCmd(uint32_t node_id, uint32_t shape_id) {
   fuchsia::ui::gfx::SetShapeCmd set_shape;
   set_shape.node_id = node_id;

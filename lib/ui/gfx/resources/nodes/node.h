@@ -55,6 +55,8 @@ class Node : public Resource {
   bool SetAnchor(Vector3VariablePtr anchor);
   bool SetClipToSelf(bool clip_to_self);
   bool SetHitTestBehavior(::fuchsia::ui::gfx::HitTestBehavior behavior);
+  bool SendSizeChangeHint(float width_change_factor,
+                          float height_change_factor);
 
   const escher::mat4& GetGlobalTransform() const;
 
@@ -119,8 +121,7 @@ class Node : public Resource {
   View* FindOwningView() const;
 
  protected:
-  Node(Session* session, ResourceId node_id,
-       const ResourceTypeInfo& type_info);
+  Node(Session* session, ResourceId node_id, const ResourceTypeInfo& type_info);
 
  private:
   // Describes the manner in which a node is related to its parent.

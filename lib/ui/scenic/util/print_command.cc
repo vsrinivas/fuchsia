@@ -48,6 +48,8 @@ std::ostream& operator<<(std::ostream& stream,
       return stream << "DetachChildren";
     case Command::Tag::kSetOpacity:
       return stream << "SetOpacity";
+    case Command::Tag::kSendSizeChangeHintHack:
+      return stream << "SendChildSizeHintHack";
     case Command::Tag::kSetShape:
       return stream << "SetShape";
     case Command::Tag::kSetMaterial:

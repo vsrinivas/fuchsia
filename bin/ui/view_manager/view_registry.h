@@ -100,6 +100,12 @@ class ViewRegistry : public ViewInspector,
       ViewContainerState* container_state, uint32_t child_key,
       ::fuchsia::ui::viewsv1::ViewPropertiesPtr child_properties);
 
+  // Sets a hint on changes to a child's target size.
+  // Destroys |container_state| if an error occurs.
+  void SendSizeChangeHintHACK(ViewContainerState* container_state,
+                              uint32_t child_key, float width_change_factor,
+                              float size_change_factor);
+
   // Make child the first responder
   // Destroys |container_state| if an error occurs.
   void RequestFocus(ViewContainerState* container_state, uint32_t child_key);
