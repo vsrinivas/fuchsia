@@ -15,7 +15,8 @@ namespace {
 
 class MaxBytesLibrary : public TestLibrary {
 public:
-    MaxBytesLibrary() : TestLibrary("max_bytes.fidl", R"FIDL(
+    MaxBytesLibrary()
+        : TestLibrary("max_bytes.fidl", R"FIDL(
 library fidl.test.maxbytes;
 
 struct OneBool {
@@ -87,9 +88,88 @@ struct AnArray {
   array<int64>:5 a;
 };
 
-)FIDL") {}
+table TableWithOneBool {
+  1: bool b;
 };
 
+table TableWithOptionalOneBool {
+  1: OneBool s;
+};
+
+table TableWithOptionalTableWithOneBool {
+  1: TableWithOneBool s;
+};
+
+table TableWithTwoBools {
+  1: bool a;
+  2: bool b;
+};
+
+table TableWithOptionalTwoBools {
+  1: TwoBools s;
+};
+
+table TableWithOptionalTableWithTwoBools {
+  1: TableWithTwoBools s;
+};
+
+table TableWithBoolAndU32 {
+  1: bool b;
+  2: uint32 u;
+};
+
+table TableWithOptionalBoolAndU32 {
+  1: BoolAndU32 s;
+};
+
+table TableWithOptionalTableWithBoolAndU32 {
+  1: TableWithBoolAndU32 s;
+};
+
+table TableWithBoolAndU64 {
+  1: bool b;
+  2: uint64 u;
+};
+
+table TableWithOptionalBoolAndU64 {
+  1: BoolAndU64 s;
+};
+
+table TableWithOptionalTableWithBoolAndU64 {
+  1: TableWithBoolAndU64 s;
+};
+
+table TableWithOptionalUnion {
+  1: UnionOfThings u;
+};
+
+table TableWithPaddedVector {
+  1: vector<int32>:3 pv;
+};
+
+table TableWithUnboundedVector {
+  1: vector<int32> uv;
+};
+
+table TableWithUnboundedVectors {
+  1: vector<int32> uv1;
+  2: vector<int32> uv2;
+};
+
+table TableWithShortString {
+  1: string:5 s;
+};
+
+table TableWithUnboundedString {
+  1: string s;
+};
+
+table TableWithAnArray {
+  1: array<int64>:5 a;
+};
+
+)FIDL") {}
+};
 
 static bool simple_structs(void) {
     BEGIN_TEST;
@@ -116,6 +196,35 @@ static bool simple_structs(void) {
     EXPECT_NONNULL(bool_and_u64);
     EXPECT_EQ(bool_and_u64->typeshape.Size(), 16);
     EXPECT_EQ(bool_and_u64->typeshape.MaxOutOfLine(), 0);
+
+    END_TEST;
+}
+
+static bool simple_tables(void) {
+    BEGIN_TEST;
+
+    MaxBytesLibrary test_library;
+    EXPECT_TRUE(test_library.Compile());
+
+    auto one_bool = test_library.LookupTable("TableWithOneBool");
+    EXPECT_NONNULL(one_bool);
+    EXPECT_EQ(one_bool->typeshape.Size(), 16);
+    EXPECT_EQ(one_bool->typeshape.MaxOutOfLine(), 24);
+
+    auto two_bools = test_library.LookupTable("TableWithTwoBools");
+    EXPECT_NONNULL(two_bools);
+    EXPECT_EQ(two_bools->typeshape.Size(), 16);
+    EXPECT_EQ(two_bools->typeshape.MaxOutOfLine(), 48);
+
+    auto bool_and_u32 = test_library.LookupTable("TableWithBoolAndU32");
+    EXPECT_NONNULL(bool_and_u32);
+    EXPECT_EQ(bool_and_u32->typeshape.Size(), 16);
+    EXPECT_EQ(bool_and_u32->typeshape.MaxOutOfLine(), 48);
+
+    auto bool_and_u64 = test_library.LookupTable("TableWithBoolAndU64");
+    EXPECT_NONNULL(bool_and_u64);
+    EXPECT_EQ(bool_and_u64->typeshape.Size(), 16);
+    EXPECT_EQ(bool_and_u64->typeshape.MaxOutOfLine(), 48);
 
     END_TEST;
 }
@@ -149,6 +258,55 @@ static bool optional_structs(void) {
     END_TEST;
 }
 
+static bool optional_tables(void) {
+    BEGIN_TEST;
+
+    MaxBytesLibrary test_library;
+    EXPECT_TRUE(test_library.Compile());
+
+    auto one_bool = test_library.LookupTable("TableWithOptionalOneBool");
+    EXPECT_NONNULL(one_bool);
+    EXPECT_EQ(one_bool->typeshape.Size(), 16);
+    EXPECT_EQ(one_bool->typeshape.MaxOutOfLine(), 24);
+
+    auto table_with_one_bool = test_library.LookupTable("TableWithOptionalTableWithOneBool");
+    EXPECT_NONNULL(table_with_one_bool);
+    EXPECT_EQ(table_with_one_bool->typeshape.Size(), 16);
+    EXPECT_EQ(table_with_one_bool->typeshape.MaxOutOfLine(), 56);
+
+    auto two_bools = test_library.LookupTable("TableWithOptionalTwoBools");
+    EXPECT_NONNULL(two_bools);
+    EXPECT_EQ(two_bools->typeshape.Size(), 16);
+    EXPECT_EQ(two_bools->typeshape.MaxOutOfLine(), 24);
+
+    auto table_with_two_bools = test_library.LookupTable("TableWithOptionalTableWithTwoBools");
+    EXPECT_NONNULL(table_with_two_bools);
+    EXPECT_EQ(table_with_two_bools->typeshape.Size(), 16);
+    EXPECT_EQ(table_with_two_bools->typeshape.MaxOutOfLine(), 80);
+
+    auto bool_and_u32 = test_library.LookupTable("TableWithOptionalBoolAndU32");
+    EXPECT_NONNULL(bool_and_u32);
+    EXPECT_EQ(bool_and_u32->typeshape.Size(), 16);
+    EXPECT_EQ(bool_and_u32->typeshape.MaxOutOfLine(), 24);
+
+    auto table_with_bool_and_u32 = test_library.LookupTable("TableWithOptionalTableWithBoolAndU32");
+    EXPECT_NONNULL(table_with_bool_and_u32);
+    EXPECT_EQ(table_with_bool_and_u32->typeshape.Size(), 16);
+    EXPECT_EQ(table_with_bool_and_u32->typeshape.MaxOutOfLine(), 80);
+
+    auto bool_and_u64 = test_library.LookupTable("TableWithOptionalBoolAndU64");
+    EXPECT_NONNULL(bool_and_u64);
+    EXPECT_EQ(bool_and_u64->typeshape.Size(), 16);
+    EXPECT_EQ(bool_and_u64->typeshape.MaxOutOfLine(), 32);
+
+    auto table_with_bool_and_u64 = test_library.LookupTable("TableWithOptionalTableWithBoolAndU64");
+    EXPECT_NONNULL(table_with_bool_and_u64);
+    EXPECT_EQ(table_with_bool_and_u64->typeshape.Size(), 16);
+    EXPECT_EQ(table_with_bool_and_u64->typeshape.MaxOutOfLine(), 80);
+
+    END_TEST;
+}
+
 static bool unions(void) {
     BEGIN_TEST;
 
@@ -164,6 +322,11 @@ static bool unions(void) {
     EXPECT_NONNULL(optional_union);
     EXPECT_EQ(optional_union->typeshape.Size(), 8);
     EXPECT_EQ(optional_union->typeshape.MaxOutOfLine(), 24);
+
+    auto table_with_optional_union = test_library.LookupTable("TableWithOptionalUnion");
+    EXPECT_NONNULL(table_with_optional_union);
+    EXPECT_EQ(table_with_optional_union->typeshape.Size(), 16);
+    EXPECT_EQ(table_with_optional_union->typeshape.MaxOutOfLine(), 40);
 
     END_TEST;
 }
@@ -189,6 +352,21 @@ static bool vectors(void) {
     EXPECT_EQ(unbounded_vectors->typeshape.Size(), 32);
     EXPECT_EQ(unbounded_vectors->typeshape.MaxOutOfLine(), std::numeric_limits<uint32_t>::max());
 
+    auto table_with_padded_vector = test_library.LookupTable("TableWithPaddedVector");
+    EXPECT_NONNULL(table_with_padded_vector);
+    EXPECT_EQ(table_with_padded_vector->typeshape.Size(), 16);
+    EXPECT_EQ(table_with_padded_vector->typeshape.MaxOutOfLine(), 48);
+
+    auto table_with_unbounded_vector = test_library.LookupTable("TableWithUnboundedVector");
+    EXPECT_NONNULL(table_with_unbounded_vector);
+    EXPECT_EQ(table_with_unbounded_vector->typeshape.Size(), 16);
+    EXPECT_EQ(table_with_unbounded_vector->typeshape.MaxOutOfLine(), std::numeric_limits<uint32_t>::max());
+
+    auto table_with_unbounded_vectors = test_library.LookupTable("TableWithUnboundedVectors");
+    EXPECT_NONNULL(table_with_unbounded_vectors);
+    EXPECT_EQ(table_with_unbounded_vectors->typeshape.Size(), 16);
+    EXPECT_EQ(table_with_unbounded_vectors->typeshape.MaxOutOfLine(), std::numeric_limits<uint32_t>::max());
+
     END_TEST;
 }
 
@@ -208,6 +386,16 @@ static bool strings(void) {
     EXPECT_EQ(unbounded_string->typeshape.Size(), 16);
     EXPECT_EQ(unbounded_string->typeshape.MaxOutOfLine(), std::numeric_limits<uint32_t>::max());
 
+    auto table_with_short_string = test_library.LookupTable("TableWithShortString");
+    EXPECT_NONNULL(table_with_short_string);
+    EXPECT_EQ(table_with_short_string->typeshape.Size(), 16);
+    EXPECT_EQ(table_with_short_string->typeshape.MaxOutOfLine(), 40);
+
+    auto table_with_unbounded_string = test_library.LookupTable("TableWithUnboundedString");
+    EXPECT_NONNULL(table_with_unbounded_string);
+    EXPECT_EQ(table_with_unbounded_string->typeshape.Size(), 16);
+    EXPECT_EQ(table_with_unbounded_string->typeshape.MaxOutOfLine(), std::numeric_limits<uint32_t>::max());
+
     END_TEST;
 }
 
@@ -222,15 +410,21 @@ static bool arrays(void) {
     EXPECT_EQ(an_array->typeshape.Size(), 40);
     EXPECT_EQ(an_array->typeshape.MaxOutOfLine(), 0);
 
+    auto table_with_an_array = test_library.LookupTable("TableWithAnArray");
+    EXPECT_NONNULL(table_with_an_array);
+    EXPECT_EQ(table_with_an_array->typeshape.Size(), 16);
+    EXPECT_EQ(table_with_an_array->typeshape.MaxOutOfLine(), 56);
+
     END_TEST;
 }
-
 
 } // namespace
 
 BEGIN_TEST_CASE(max_bytes_tests);
 RUN_TEST(simple_structs);
+RUN_TEST(simple_tables);
 RUN_TEST(optional_structs);
+RUN_TEST(optional_tables);
 RUN_TEST(unions);
 RUN_TEST(vectors);
 RUN_TEST(strings);

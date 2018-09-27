@@ -84,6 +84,12 @@ private:
         const flat::Struct& struct_info;
     };
 
+    struct NamedTable {
+        std::string c_name;
+        std::string coded_name;
+        const flat::Table& table_info;
+    };
+
     struct NamedUnion {
         std::string name;
         const flat::Union& union_info;
@@ -109,6 +115,8 @@ private:
     NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& interface_infos);
     std::map<const flat::Decl*, NamedStruct>
     NameStructs(const std::vector<std::unique_ptr<flat::Struct>>& struct_infos);
+    std::map<const flat::Decl*, NamedTable>
+    NameTables(const std::vector<std::unique_ptr<flat::Table>>& table_infos);
     std::map<const flat::Decl*, NamedUnion>
     NameUnions(const std::vector<std::unique_ptr<flat::Union>>& union_infos);
 
@@ -116,6 +124,7 @@ private:
     void ProduceEnumForwardDeclaration(const NamedEnum& named_enum);
     void ProduceInterfaceForwardDeclaration(const NamedInterface& named_interface);
     void ProduceStructForwardDeclaration(const NamedStruct& named_struct);
+    void ProduceTableForwardDeclaration(const NamedTable& named_table);
     void ProduceUnionForwardDeclaration(const NamedUnion& named_union);
 
     void ProduceInterfaceExternDeclaration(const NamedInterface& named_interface);
@@ -124,6 +133,7 @@ private:
     void ProduceMessageDeclaration(const NamedMessage& named_message);
     void ProduceInterfaceDeclaration(const NamedInterface& named_interface);
     void ProduceStructDeclaration(const NamedStruct& named_struct);
+    void ProduceTableDeclaration(const NamedStruct& named_struct);
     void ProduceUnionDeclaration(const NamedUnion& named_union);
 
     void ProduceInterfaceClientDeclaration(const NamedInterface& named_interface);

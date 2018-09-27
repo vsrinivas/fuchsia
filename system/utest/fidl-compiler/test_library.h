@@ -11,7 +11,6 @@
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
 
-
 static fidl::SourceFile MakeSourceFile(const std::string& filename, const std::string& raw_source_code) {
     std::string source_code(raw_source_code);
     // NUL terminate the string.
@@ -40,7 +39,7 @@ public:
         return true;
     }
 
-    bool Parse(std::unique_ptr<fidl::raw::File> &ast_ptr) {
+    bool Parse(std::unique_ptr<fidl::raw::File>& ast_ptr) {
         ast_ptr.reset(parser_.Parse().release());
         return parser_.Ok();
     }
@@ -73,6 +72,15 @@ public:
         for (const auto& struct_decl : library_->struct_declarations_) {
             if (struct_decl->GetName() == name) {
                 return struct_decl.get();
+            }
+        }
+        return nullptr;
+    }
+
+    const fidl::flat::Table* LookupTable(const std::string& name) {
+        for (const auto& table_decl : library_->table_declarations_) {
+            if (table_decl->GetName() == name) {
+                return table_decl.get();
             }
         }
         return nullptr;
@@ -113,7 +121,5 @@ private:
     fidl::flat::Libraries all_libraries_;
     std::unique_ptr<fidl::flat::Library> library_;
 };
-
-
 
 #endif // ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_TEST_LIBRARY_H_

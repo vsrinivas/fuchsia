@@ -22,16 +22,52 @@ namespace flat {
 
 namespace {
 
-template <typename T>
-class Scope {
+class ScopeInsertResult {
 public:
-    bool Insert(const T& t) {
-        auto iter = scope_.insert(t);
-        return iter.second;
+    explicit ScopeInsertResult(std::unique_ptr<SourceLocation> previous_occurance)
+        : previous_occurance_(std::move(previous_occurance)) {}
+
+    static ScopeInsertResult Ok() { return ScopeInsertResult(nullptr); }
+    static ScopeInsertResult FailureAt(SourceLocation previous) {
+        return ScopeInsertResult(std::make_unique<SourceLocation>(previous));
+    }
+
+    bool ok() const {
+        return previous_occurance_ == nullptr;
+    }
+
+    const SourceLocation& previous_occurance() const {
+        assert(!ok());
+        return *previous_occurance_;
     }
 
 private:
-    std::set<T> scope_;
+    std::unique_ptr<SourceLocation> previous_occurance_;
+};
+
+template <typename T>
+class Scope {
+public:
+    ScopeInsertResult Insert(const T& t, SourceLocation location) {
+        auto iter = scope_.find(t);
+        if (iter != scope_.end()) {
+            return ScopeInsertResult::FailureAt(iter->second);
+        } else {
+            scope_.emplace(t, location);
+            return ScopeInsertResult::Ok();
+        }
+    }
+
+    typename std::map<T, SourceLocation>::const_iterator begin() const {
+        return scope_.begin();
+    }
+
+    typename std::map<T, SourceLocation>::const_iterator end() const {
+        return scope_.end();
+    }
+
+private:
+    std::map<T, SourceLocation> scope_;
 };
 
 struct MethodScope {
@@ -162,6 +198,37 @@ TypeShape PointerTypeShape(TypeShape element, uint32_t max_element_count = 1u) {
     uint32_t max_out_of_line = ClampedAdd(elements_size, elements_out_of_line);
 
     return TypeShape(8u, 8u, depth, max_handles, max_out_of_line);
+}
+
+TypeShape CEnvelopeTypeShape(TypeShape contained_type) {
+    auto packed_sizes_field = FieldShape(kUint64TypeShape);
+    auto pointer_type = FieldShape(PointerTypeShape(contained_type));
+    std::vector<FieldShape*> header{&packed_sizes_field, &pointer_type};
+    return CStructTypeShape(&header);
+}
+
+TypeShape CTableTypeShape(std::vector<TypeShape*>* fields, uint32_t extra_handles = 0u) {
+    uint32_t element_depth = 0u;
+    uint32_t max_handles = 0u;
+    uint32_t max_out_of_line = 0u;
+    uint32_t array_size = 0u;
+    for (auto field : *fields) {
+        if (field == nullptr) {
+            continue;
+        }
+        auto envelope = CEnvelopeTypeShape(*field);
+        element_depth = std::max(element_depth, envelope.Depth());
+        array_size = ClampedAdd(array_size, envelope.Size());
+        max_handles = ClampedAdd(max_handles, envelope.MaxHandles());
+        max_out_of_line = ClampedAdd(max_out_of_line, envelope.MaxOutOfLine());
+        assert(envelope.Alignment() == 8u);
+    }
+    auto pointer_element = TypeShape(array_size, 8u, 1 + element_depth,
+                                     max_handles, max_out_of_line);
+    auto num_fields = FieldShape(kUint32TypeShape);
+    auto data_field = FieldShape(PointerTypeShape(pointer_element));
+    std::vector<FieldShape*> header{&num_fields, &data_field};
+    return CStructTypeShape(&header, extra_handles);
 }
 
 TypeShape ArrayTypeShape(TypeShape element, uint32_t count) {
@@ -660,7 +727,7 @@ bool Library::ConsumeInterfaceDeclaration(
         auto attributes = std::move(method->attributes);
         auto ordinal_literal = std::move(method->ordinal);
         uint32_t value;
-        if (!ParseIntegerLiteral<decltype(value)>(ordinal_literal.get(), &value))
+        if (!ParseOrdinal<decltype(value)>(ordinal_literal.get(), &value))
             return Fail(ordinal_literal->location(), "Unable to parse ordinal");
         if (value == 0u)
             return Fail(ordinal_literal->location(), "Fidl ordinals cannot be 0");
@@ -730,6 +797,47 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
     struct_declarations_.push_back(
         std::make_unique<Struct>(std::move(attributes), std::move(name), std::move(members)));
     return RegisterDecl(struct_declarations_.back().get());
+}
+
+bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration) {
+    auto attributes = std::move(table_declaration->attributes);
+    auto name = Name(this, table_declaration->identifier->location());
+
+    std::vector<Table::Member> members;
+    for (auto& member : table_declaration->members) {
+        auto ordinal_literal = std::move(member->ordinal);
+        uint32_t value;
+        if (!ParseOrdinal<decltype(value)>(ordinal_literal.get(), &value))
+            return Fail(ordinal_literal->location(), "Unable to parse ordinal");
+        if (value == 0u)
+            return Fail(ordinal_literal->location(), "Fidl ordinals cannot be 0");
+        auto ordinal = std::make_unique<Ordinal>(std::move(ordinal_literal), value);
+
+        if (member->maybe_used) {
+            std::unique_ptr<Type> type;
+            if (!ConsumeType(std::move(member->maybe_used->type), member->location(), &type))
+                return false;
+            std::unique_ptr<Constant> maybe_default_value;
+            if (member->maybe_used->maybe_default_value != nullptr) {
+                if (!ConsumeConstant(std::move(member->maybe_used->maybe_default_value),
+                                     member->location(), &maybe_default_value))
+                    return false;
+            }
+            if (type->nullability != types::Nullability::kNonnullable) {
+                return Fail(member->location(), "Table members cannot be nullable");
+            }
+            auto attributes = std::move(member->maybe_used->attributes);
+            members.emplace_back(std::move(ordinal), std::move(type),
+                                 member->maybe_used->identifier->location(),
+                                 std::move(maybe_default_value), std::move(attributes));
+        } else {
+            members.emplace_back(std::move(ordinal));
+        }
+    }
+
+    table_declarations_.push_back(
+        std::make_unique<Table>(std::move(attributes), std::move(name), std::move(members)));
+    return RegisterDecl(table_declarations_.back().get());
 }
 
 bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
@@ -814,6 +922,13 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     auto struct_declaration_list = std::move(file->struct_declaration_list);
     for (auto& struct_declaration : struct_declaration_list) {
         if (!ConsumeStructDeclaration(std::move(struct_declaration))) {
+            return false;
+        }
+    }
+
+    auto table_declaration_list = std::move(file->table_declaration_list);
+    for (auto& table_declaration : table_declaration_list) {
+        if (!ConsumeTableDeclaration(std::move(table_declaration))) {
             return false;
         }
     }
@@ -942,6 +1057,8 @@ bool Library::TypecheckConst(const Const* const_declaration) {
             return Fail("Tried to create a const declaration of interface type");
         case Decl::Kind::kStruct:
             return Fail("Tried to create a const declaration of struct type");
+        case Decl::Kind::kTable:
+            return Fail("Tried to create a const declaration of table type");
         case Decl::Kind::kUnion:
             return Fail("Tried to create a const declaration of union type");
         }
@@ -1097,6 +1214,20 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
         }
         break;
     }
+    case Decl::Kind::kTable: {
+        auto table_decl = static_cast<const Table*>(decl);
+        for (const auto& member : table_decl->members) {
+            if (!member.maybe_used)
+                continue;
+            maybe_add_decl(member.maybe_used->type.get(), LookupOption::kIgnoreNullable);
+            if (member.maybe_used->maybe_default_value) {
+                if (!maybe_add_constant(member.maybe_used->type.get(),
+                                        member.maybe_used->maybe_default_value.get()))
+                    return false;
+            }
+        }
+        break;
+    }
     case Decl::Kind::kUnion: {
         auto union_decl = static_cast<const Union*>(decl);
         for (const auto& member : union_decl->members) {
@@ -1223,7 +1354,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
             if (decl->kind != Decl::Kind::kInterface)
                 return Fail(name, "This superinterface declaration is not an interface");
             auto superinterface = static_cast<const Interface*>(decl);
-            if (method_scope.interfaces.Insert(superinterface)) {
+            if (method_scope.interfaces.Insert(superinterface, superinterface->name.name()).ok()) {
                 if (!Visitor(superinterface, Visitor))
                     return false;
             } else {
@@ -1232,10 +1363,16 @@ bool Library::CompileInterface(Interface* interface_declaration) {
             }
         }
         for (const auto& method : interface->methods) {
-            if (!method_scope.names.Insert(method.name.data()))
-                return Fail(method.name, "Multiple methods with the same name in an interface");
-            if (!method_scope.ordinals.Insert(method.ordinal.Value()))
-                return Fail(method.name, "Mulitple methods with the same ordinal in an interface");
+            auto name_result = method_scope.names.Insert(method.name.data(), method.name);
+            if (!name_result.ok())
+                return Fail(method.name,
+                            "Multiple methods with the same name in an interface; last occurance was at " +
+                                name_result.previous_occurance().position());
+            auto ordinal_result = method_scope.ordinals.Insert(method.ordinal.Value(), method.name);
+            if (!ordinal_result.ok())
+                return Fail(method.name,
+                            "Mulitple methods with the same ordinal in an interface; last occurance was at " +
+                                ordinal_result.previous_occurance().position());
 
             // Add a pointer to this method to the interface_declarations list.
             interface_declaration->all_methods.push_back(&method);
@@ -1252,7 +1389,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
             std::vector<FieldShape*> message_struct;
             message_struct.push_back(&header_field_shape);
             for (auto& param : message->parameters) {
-                if (!scope.Insert(param.name.data()))
+                if (!scope.Insert(param.name.data(), param.name).ok())
                     return Fail(param.name, "Multiple parameters with the same name in a method");
                 if (!CompileType(param.type.get(), &param.fieldshape.Typeshape()))
                     return false;
@@ -1301,8 +1438,11 @@ bool Library::CompileStruct(Struct* struct_declaration) {
 
     uint32_t max_member_handles = 0;
     for (auto& member : struct_declaration->members) {
-        if (!scope.Insert(member.name.data()))
-            return Fail(member.name, "Multiple struct fields with the same name");
+        auto name_result = scope.Insert(member.name.data(), member.name);
+        if (!name_result.ok())
+            return Fail(member.name,
+                        "Multiple struct fields with the same name; previous was at " +
+                            name_result.previous_occurance().position());
         if (!CompileType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;
         fidl_struct.push_back(&member.fieldshape);
@@ -1320,12 +1460,66 @@ bool Library::CompileStruct(Struct* struct_declaration) {
     return true;
 }
 
+bool Library::CompileTable(Table* table_declaration) {
+    Compiling guard(table_declaration);
+    Scope<StringView> name_scope;
+    Scope<uint32_t> ordinal_scope;
+
+    uint32_t max_member_handles = 0;
+    for (auto& member : table_declaration->members) {
+        auto ordinal_result = ordinal_scope.Insert(member.ordinal->Value(), member.ordinal->source_element()->location());
+        if (!ordinal_result.ok())
+            return Fail(member.ordinal->source_element()->location(),
+                        "Multiple table fields with the same ordinal; previous was at " +
+                            ordinal_result.previous_occurance().position());
+        if (member.maybe_used) {
+            auto name_result = name_scope.Insert(member.maybe_used->name.data(), member.maybe_used->name);
+            if (!name_result.ok())
+                return Fail(member.maybe_used->name,
+                            "Multiple table fields with the same name; previous was at " +
+                                name_result.previous_occurance().position());
+            if (!CompileType(member.maybe_used->type.get(), &member.maybe_used->typeshape))
+                return false;
+        }
+    }
+
+    uint32_t last_ordinal_seen = 0;
+    for (const auto& ordinal_and_loc : ordinal_scope) {
+        if (ordinal_and_loc.first != last_ordinal_seen + 1) {
+            return Fail(ordinal_and_loc.second,
+                        "Missing ordinal (table ordinals do not form a dense space)");
+        }
+        last_ordinal_seen = ordinal_and_loc.first;
+    }
+
+    if (table_declaration->recursive) {
+        max_member_handles = std::numeric_limits<uint32_t>::max();
+    } else {
+        // Member handles will be counted by CTableTypeShape.
+        max_member_handles = 0;
+    }
+
+    std::vector<TypeShape*> fields(table_declaration->members.size());
+    for (auto& member : table_declaration->members) {
+        if (member.maybe_used) {
+            fields[member.ordinal->Value() - 1] = &member.maybe_used->typeshape;
+        }
+    }
+
+    table_declaration->typeshape = CTableTypeShape(&fields, max_member_handles);
+
+    return true;
+}
+
 bool Library::CompileUnion(Union* union_declaration) {
     Compiling guard(union_declaration);
     Scope<StringView> scope;
     for (auto& member : union_declaration->members) {
-        if (!scope.Insert(member.name.data()))
-            return Fail(member.name, "Multiple union members with the same name");
+        auto name_result = scope.Insert(member.name.data(), member.name);
+        if (!name_result.ok())
+            return Fail(member.name,
+                        "Multiple union members with the same name; previous was at " +
+                            name_result.previous_occurance().position());
         if (!CompileType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;
     }
@@ -1403,6 +1597,13 @@ bool Library::Compile() {
         case Decl::Kind::kStruct: {
             auto struct_decl = static_cast<Struct*>(decl);
             if (!CompileStruct(struct_decl)) {
+                return false;
+            }
+            break;
+        }
+        case Decl::Kind::kTable: {
+            auto table_decl = static_cast<Table*>(decl);
+            if (!CompileTable(table_decl)) {
                 return false;
             }
             break;
@@ -1519,6 +1720,22 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
             }
         }
         typeshape = struct_decl->typeshape;
+        if (identifier_type->nullability == types::Nullability::kNullable)
+            typeshape = PointerTypeShape(typeshape);
+        break;
+    }
+    case Decl::Kind::kTable: {
+        Table* table_decl = static_cast<Table*>(named_decl);
+        if (!table_decl->compiled) {
+            if (table_decl->compiling) {
+                table_decl->recursive = true;
+            } else {
+                if (!CompileTable(table_decl)) {
+                    return false;
+                }
+            }
+        }
+        typeshape = table_decl->typeshape;
         if (identifier_type->nullability == types::Nullability::kNullable)
             typeshape = PointerTypeShape(typeshape);
         break;

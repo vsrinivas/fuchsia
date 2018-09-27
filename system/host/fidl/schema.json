@@ -8,6 +8,7 @@
         "enum_declarations",
         "interface_declarations",
         "struct_declarations",
+        "table_declarations",
         "union_declarations",
         "declaration_order",
         "declarations",
@@ -42,6 +43,12 @@
             "type": "array",
             "items": {
                 "$ref": "#/definitions/struct"
+            }
+        },
+        "table_declarations": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/table"
             }
         },
         "union_declarations": {
@@ -291,6 +298,67 @@
                 }
             }
         },
+        "table": {
+            "type": "object",
+            "required": [
+                "name",
+                "members",
+                "size"
+            ],
+            "properties": {
+                "max_handles": {
+                    "$ref": "#/definitions/max-handles"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list"
+                },
+                "name": {
+                    "$ref": "#/definitions/compound-identifier"
+                },
+                "members": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/table-member"
+                    }
+                },
+                "size": {
+                    "$ref": "#/definitions/size"
+                }
+            }
+        },
+        "table-member": {
+            "type": "object",
+            "required": [
+                "ordinal",
+                "reserved"
+            ],
+            "properties": {
+                "reserved": {
+                    "type": "boolean"
+                },
+                "type": {
+                    "$ref": "#/definitions/type"
+                },
+                "name": {
+                    "$ref": "#/definitions/identifier"
+                },
+                "ordinal": {
+                    "$ref": "#/definitions/ordinal"
+                },
+                "size": {
+                    "$ref": "#/definitions/size"
+                },
+                "alignment": {
+                    "$ref": "#/definitions/size"
+                },
+                "offset": {
+                    "$ref": "#/definitions/size"
+                },
+                "maybe_default_value": {
+                    "$ref": "#/definitions/constant"
+                }
+            }
+        },
         "union": {
             "type": "object",
             "required": [
@@ -363,6 +431,7 @@
                         "enum",
                         "interface",
                         "struct",
+                        "table",
                         "union"
                     ]
                 }

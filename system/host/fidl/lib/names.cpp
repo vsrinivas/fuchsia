@@ -274,6 +274,7 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
             case flat::Decl::Kind::kConst:
             case flat::Decl::Kind::kEnum:
             case flat::Decl::Kind::kStruct:
+            case flat::Decl::Kind::kTable:
             case flat::Decl::Kind::kUnion: {
                 std::string name = NameName(identifier_type->name, "_", "_");
                 if (identifier_type->nullability == types::Nullability::kNullable) {
@@ -369,6 +370,10 @@ std::string NameFields(StringView name) {
 
 std::string NameCodedStruct(const flat::Struct* struct_decl) {
     return NameName(struct_decl->name, "_", "_");
+}
+
+std::string NameCodedTable(const flat::Table* table_decl) {
+    return NameName(table_decl->name, "_", "_");
 }
 
 std::string NameCodedUnion(const flat::Union* union_decl) {

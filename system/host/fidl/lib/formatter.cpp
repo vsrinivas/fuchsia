@@ -307,7 +307,7 @@ void FormattingTreeVisitor::Segment::Indent(int& current_nesting) {
             current_nesting++;
         }
         if (output_[i] == ')') {
-            visitor_->interface_method_alignment_size_ = visitor_->offset_of_first_id;
+            visitor_->interface_method_alignment_size_ = visitor_->offset_of_first_id_;
         }
         if (output_[i] == ';') {
             visitor_->interface_method_alignment_size_ = -1;
@@ -325,7 +325,6 @@ void FormattingTreeVisitor::Segment::Indent(int& current_nesting) {
 //    align at the same vertical column as that parameter.
 void FormattingTreeVisitor::TrackInterfaceMethodAlignment(const std::string& str) {
     if (interface_method_alignment_) {
-        bool next_nonws_char_is_checkpoint = false;
         for (int i = 0; i < str.size(); i++) {
             MaybeWindPastComment(str, i);
 
@@ -355,17 +354,17 @@ void FormattingTreeVisitor::TrackInterfaceMethodAlignment(const std::string& str
             // This tracks the distance from the beginning of the method name,
             // in case we need it (i.e., in case we don't indent to the '('
             // character.
-            if (!isspace(ch) && next_nonws_char_is_checkpoint) {
-                offset_of_first_id =
+            if (!isspace(ch) && next_nonws_char_is_checkpoint_) {
+                offset_of_first_id_ =
                     interface_method_alignment_size_ =
                         distance_from_last_newline_ + kIndentSpaces - 1;
-                next_nonws_char_is_checkpoint = false;
+                next_nonws_char_is_checkpoint_ = false;
             }
             if (str[i] == ':' && interface_method_alignment_size_ == -1) {
                 // The first ':' we see - means it is the gap after the ordinal.
                 // The next thing we see is the method name, so that might
                 // become the indentation level.
-                next_nonws_char_is_checkpoint = true;
+                next_nonws_char_is_checkpoint_ = true;
             }
         }
     }

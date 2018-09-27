@@ -59,6 +59,7 @@ KEYWORD(Const, "const")
 KEYWORD(Enum, "enum")
 KEYWORD(Interface, "interface")
 KEYWORD(Struct, "struct")
+KEYWORD(Table, "table")
 KEYWORD(Union, "union")
 
 KEYWORD(Bool, "bool")
@@ -75,6 +76,8 @@ KEYWORD(Float64, "float64")
 
 KEYWORD(True, "true")
 KEYWORD(False, "false")
+
+KEYWORD(Reserved, "reserved")
 
 #undef KEYWORD
 #undef TOKEN

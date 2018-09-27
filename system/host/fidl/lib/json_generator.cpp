@@ -435,6 +435,38 @@ void JSONGenerator::Generate(const flat::Struct::Member& value) {
     });
 }
 
+void JSONGenerator::Generate(const flat::Table& value) {
+    GenerateObject([&]() {
+        GenerateObjectMember("name", value.name, Position::kFirst);
+        if (value.attributes)
+            GenerateObjectMember("maybe_attributes", value.attributes);
+        GenerateObjectMember("members", value.members);
+        GenerateObjectMember("size", value.typeshape.Size());
+        GenerateObjectMember("alignment", value.typeshape.Alignment());
+        GenerateObjectMember("max_handles", value.typeshape.MaxHandles());
+    });
+}
+
+void JSONGenerator::Generate(const flat::Table::Member& value) {
+    GenerateObject([&]() {
+        GenerateObjectMember("ordinal", *value.ordinal, Position::kFirst);
+        if (value.maybe_used) {
+            GenerateObjectMember("reserved", false);
+            GenerateObjectMember("type", value.maybe_used->type);
+            GenerateObjectMember("name", value.maybe_used->name);
+            if (value.maybe_used->attributes)
+                GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
+            if (value.maybe_used->maybe_default_value)
+                GenerateObjectMember("maybe_default_value", value.maybe_used->maybe_default_value);
+            GenerateObjectMember("size", value.maybe_used->typeshape.Size());
+            GenerateObjectMember("alignment", value.maybe_used->typeshape.Alignment());
+            GenerateObjectMember("max_handles", value.maybe_used->typeshape.MaxHandles());
+        } else {
+            GenerateObjectMember("reserved", true);
+        }
+    });
+}
+
 void JSONGenerator::Generate(const flat::Union& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::kFirst);
@@ -493,6 +525,9 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Library* library, Pos
         for (const auto& decl : library->struct_declarations_)
             GenerateDeclarationsEntry(count++, decl->name, "struct");
 
+        for (const auto& decl : library->table_declarations_)
+            GenerateDeclarationsEntry(count++, decl->name, "table");
+
         for (const auto& decl : library->union_declarations_)
             GenerateDeclarationsEntry(count++, decl->name, "union");
     });
@@ -520,6 +555,7 @@ std::ostringstream JSONGenerator::Produce() {
         GenerateObjectMember("enum_declarations", library_->enum_declarations_);
         GenerateObjectMember("interface_declarations", library_->interface_declarations_);
         GenerateObjectMember("struct_declarations", library_->struct_declarations_);
+        GenerateObjectMember("table_declarations", library_->table_declarations_);
         GenerateObjectMember("union_declarations", library_->union_declarations_);
 
         // The library's declaration_order_ contains all the declarations for all

@@ -90,7 +90,6 @@ public:
     CompoundIdentifier(Token start, Token end, std::vector<std::unique_ptr<Identifier>> components)
         : SourceElement(start, end), components(std::move(components)) {}
 
-
     virtual ~CompoundIdentifier() {}
 
     std::vector<std::unique_ptr<Identifier>> components;
@@ -127,6 +126,14 @@ class NumericLiteral : public Literal {
 public:
     NumericLiteral(Token token)
         : Literal(token, Kind::kNumeric) {}
+
+    void Accept(TreeVisitor& visitor);
+};
+
+class Ordinal : public SourceElement {
+public:
+    explicit Ordinal(Token ordinal, Token colon)
+        : SourceElement(ordinal, colon) {}
 
     void Accept(TreeVisitor& visitor);
 };
@@ -415,7 +422,7 @@ public:
 class InterfaceMethod : public SourceElement {
 public:
     InterfaceMethod(Token start, Token end, std::unique_ptr<AttributeList> attributes,
-                    std::unique_ptr<NumericLiteral> ordinal,
+                    std::unique_ptr<Ordinal> ordinal,
                     std::unique_ptr<Identifier> identifier,
                     std::unique_ptr<ParameterList> maybe_request,
                     std::unique_ptr<ParameterList> maybe_response)
@@ -426,7 +433,7 @@ public:
     void Accept(TreeVisitor& visitor);
 
     std::unique_ptr<AttributeList> attributes;
-    std::unique_ptr<NumericLiteral> ordinal;
+    std::unique_ptr<Ordinal> ordinal;
     std::unique_ptr<Identifier> identifier;
     std::unique_ptr<ParameterList> maybe_request;
     std::unique_ptr<ParameterList> maybe_response;
@@ -481,6 +488,52 @@ public:
     std::vector<std::unique_ptr<StructMember>> members;
 };
 
+struct TableMember : public SourceElement {
+    TableMember(Token start, Token end, std::unique_ptr<Ordinal> ordinal,
+                std::unique_ptr<Type> type,
+                std::unique_ptr<Identifier> identifier,
+                std::unique_ptr<Constant> maybe_default_value,
+                std::unique_ptr<AttributeList> attributes)
+        : SourceElement(start, end), ordinal(std::move(ordinal)),
+          maybe_used(std::make_unique<Used>(std::move(type), std::move(identifier),
+                                            std::move(maybe_default_value), std::move(attributes))) {}
+
+    TableMember(Token start, Token end, std::unique_ptr<Ordinal> ordinal)
+        : SourceElement(start, end), ordinal(std::move(ordinal)) {}
+
+    void Accept(TreeVisitor& visitor);
+
+    std::unique_ptr<Ordinal> ordinal;
+    // A used member is not 'reserved'
+    struct Used {
+        Used(std::unique_ptr<Type> type,
+             std::unique_ptr<Identifier> identifier,
+             std::unique_ptr<Constant> maybe_default_value,
+             std::unique_ptr<AttributeList> attributes)
+            : type(std::move(type)), identifier(std::move(identifier)),
+              maybe_default_value(std::move(maybe_default_value)), attributes(std::move(attributes)) {}
+        std::unique_ptr<Type> type;
+        std::unique_ptr<Identifier> identifier;
+        std::unique_ptr<Constant> maybe_default_value;
+        std::unique_ptr<AttributeList> attributes;
+    };
+    std::unique_ptr<Used> maybe_used;
+};
+
+struct TableDeclaration : public SourceElement {
+    TableDeclaration(Token start, Token end, std::unique_ptr<AttributeList> attributes,
+                     std::unique_ptr<Identifier> identifier,
+                     std::vector<std::unique_ptr<TableMember>> members)
+        : SourceElement(start, end), attributes(std::move(attributes)), identifier(std::move(identifier)),
+          members(std::move(members)) {}
+
+    void Accept(TreeVisitor& visitor);
+
+    std::unique_ptr<AttributeList> attributes;
+    std::unique_ptr<Identifier> identifier;
+    std::vector<std::unique_ptr<TableMember>> members;
+};
+
 class UnionMember : public SourceElement {
 public:
     UnionMember(Token start, Token end, std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier,
@@ -519,6 +572,7 @@ public:
          std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list,
          std::vector<std::unique_ptr<InterfaceDeclaration>> interface_declaration_list,
          std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list,
+         std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list,
          std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list)
         : SourceElement(start, end),
           attributes(std::move(attributes)),
@@ -528,6 +582,7 @@ public:
           enum_declaration_list(std::move(enum_declaration_list)),
           interface_declaration_list(std::move(interface_declaration_list)),
           struct_declaration_list(std::move(struct_declaration_list)),
+          table_declaration_list(std::move(table_declaration_list)),
           union_declaration_list(std::move(union_declaration_list)),
           end_(end) {}
 
@@ -540,6 +595,7 @@ public:
     std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list;
     std::vector<std::unique_ptr<InterfaceDeclaration>> interface_declaration_list;
     std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list;
+    std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list;
     std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list;
     Token end_;
 };

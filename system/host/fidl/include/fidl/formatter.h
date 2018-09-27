@@ -33,17 +33,17 @@ private:
 
 class ScopedIncrement {
 public:
-    ScopedIncrement(int& source) : source_(source) {
-	source_++;
+    ScopedIncrement(int& source)
+        : source_(source) {
+        source_++;
     }
     ~ScopedIncrement() {
-	source_--;
+        source_--;
     }
 
 private:
     int& source_;
 };
-
 
 // A Visitor that pretty prints its AST and makes its result available via
 // formatted_output().
@@ -79,7 +79,7 @@ public:
         // the next visited AST node in the method.
         newline_means_indent_more_ = false;
         interface_method_alignment_ = false;
-	// This prevents the above from being reenabled during our walk of the
+        // This prevents the above from being reenabled during our walk of the
         // AttributeList
         ScopedBool suppress(is_member_decl_, false);
         TreeVisitor::OnAttributeList(element);
@@ -111,6 +111,7 @@ public:
     virtual void OnInterfaceMethod(std::unique_ptr<InterfaceMethod> const& element) override {
         interface_method_alignment_ = true;
         interface_method_alignment_size_ = -1;
+        next_nonws_char_is_checkpoint_ = false;
         OnBlankLineRespectingNode();
         ScopedBool before(blank_space_before_colon_, false);
         ScopedBool mem(is_member_decl_);
@@ -122,6 +123,25 @@ public:
         TreeVisitor::OnStructDeclaration(element);
     }
 
+    virtual void OnStructMember(std::unique_ptr<StructMember> const& element) override {
+        OnBlankLineRespectingNode();
+        ScopedBool mem(is_member_decl_);
+        TreeVisitor::OnStructMember(element);
+    }
+
+    virtual void OnTableDeclaration(std::unique_ptr<TableDeclaration> const& element) override {
+        OnBlankLineRequiringNode();
+        TreeVisitor::OnTableDeclaration(element);
+    }
+
+    virtual void OnTableMember(std::unique_ptr<TableMember> const& element) override {
+        OnBlankLineRespectingNode();
+        ScopedBool mem(is_member_decl_);
+        ScopedBool before_colon(blank_space_before_colon_, false);
+        ScopedBool after_colon(blank_space_after_colon_, true);
+        TreeVisitor::OnTableMember(element);
+    }
+
     virtual void OnUnionDeclaration(std::unique_ptr<UnionDeclaration> const& element) override {
         OnBlankLineRequiringNode();
         TreeVisitor::OnUnionDeclaration(element);
@@ -131,11 +151,6 @@ public:
         ScopedBool mem(is_member_decl_);
         OnBlankLineRespectingNode();
         TreeVisitor::OnUnionMember(element);
-    }
-    virtual void OnStructMember(std::unique_ptr<StructMember> const& element) override {
-        OnBlankLineRespectingNode();
-        ScopedBool mem(is_member_decl_);
-        TreeVisitor::OnStructMember(element);
     }
 
     virtual void OnType(std::unique_ptr<Type> const& element) override {
@@ -201,7 +216,8 @@ private:
     bool interface_method_alignment_ = false;
     int interface_method_alignment_size_ = -1;
     int distance_from_last_newline_ = 0;
-    int offset_of_first_id = 0;
+    int offset_of_first_id_ = 0;
+    bool next_nonws_char_is_checkpoint_ = false;
 
     // When we complete a node and know the next thing needs to be whitespace
     bool ws_required_next_ = false;

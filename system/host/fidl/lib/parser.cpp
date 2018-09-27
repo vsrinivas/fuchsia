@@ -80,7 +80,7 @@ bool Parser::LookupHandleSubtype(const raw::Identifier* identifier,
 }
 
 decltype(nullptr) Parser::Fail() {
-  return Fail("found unexpected token");
+    return Fail("found unexpected token");
 }
 
 decltype(nullptr) Parser::Fail(StringView message) {
@@ -143,6 +143,17 @@ std::unique_ptr<raw::NumericLiteral> Parser::ParseNumericLiteral() {
         return Fail();
 
     return std::make_unique<raw::NumericLiteral>(numeric_literal);
+}
+
+std::unique_ptr<raw::Ordinal> Parser::ParseOrdinal() {
+    auto numeric_literal = ConsumeToken(Token::Kind::kNumericLiteral);
+    if (!Ok())
+        return Fail();
+    auto colon = ConsumeToken(Token::Kind::kColon);
+    if (!Ok())
+        return Fail();
+
+    return std::make_unique<raw::Ordinal>(numeric_literal, colon);
 }
 
 std::unique_ptr<raw::TrueLiteral> Parser::ParseTrueLiteral() {
@@ -713,17 +724,14 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
 
 std::unique_ptr<raw::InterfaceMethod> Parser::ParseInterfaceMethod(std::unique_ptr<raw::AttributeList> attributes) {
     Token start;
-    auto ordinal = ParseNumericLiteral();
+    auto ordinal = ParseOrdinal();
+    if (!Ok())
+        return Fail();
     if (attributes != nullptr && attributes->attributes_->attributes_.size() != 0) {
         start = attributes->start_;
     } else {
         start = ordinal->start_;
     }
-    if (!Ok())
-        return Fail();
-    ConsumeToken(Token::Kind::kColon, true);
-    if (!Ok())
-        return Fail();
 
     std::unique_ptr<raw::Identifier> method_name;
     std::unique_ptr<raw::ParameterList> maybe_request;
@@ -913,6 +921,97 @@ Parser::ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
                                                     std::move(members));
 }
 
+std::unique_ptr<raw::TableMember>
+Parser::ParseTableMember() {
+    std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
+    if (!Ok())
+        return Fail();
+
+    auto ordinal = ParseOrdinal();
+    if (!Ok())
+        return Fail();
+
+    if (MaybeConsumeToken(Token::Kind::kReserved)) {
+        if (!Ok())
+            return Fail();
+        if (attributes != nullptr)
+            return Fail("Cannot attach attributes to reserved ordinals");
+        return std::make_unique<raw::TableMember>(ordinal->start_, MarkLastUseful(), std::move(ordinal));
+    }
+
+    auto type = ParseType();
+    if (!Ok())
+        return Fail();
+    auto identifier = ParseIdentifier();
+    if (!Ok())
+        return Fail();
+
+    std::unique_ptr<raw::Constant> maybe_default_value;
+    if (MaybeConsumeToken(Token::Kind::kEqual)) {
+        if (!Ok())
+            return Fail();
+        maybe_default_value = ParseConstant();
+        if (!Ok())
+            return Fail();
+    }
+
+    Token start;
+    if (attributes != nullptr) {
+        start = attributes->start_;
+    } else {
+        start = ordinal->start_;
+    }
+
+    return std::make_unique<raw::TableMember>(start, MarkLastUseful(), std::move(ordinal), std::move(type),
+                                              std::move(identifier),
+                                              std::move(maybe_default_value), std::move(attributes));
+}
+
+std::unique_ptr<raw::TableDeclaration>
+Parser::ParseTableDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
+    std::vector<std::unique_ptr<raw::TableMember>> members;
+
+    Token start = ConsumeTokenReturnEarliest(Token::Kind::kTable, attributes);
+    if (!Ok())
+        return Fail();
+    auto identifier = ParseIdentifier();
+    if (!Ok())
+        return Fail();
+    ConsumeToken(Token::Kind::kLeftCurly, true);
+    if (!Ok())
+        return Fail();
+
+    auto parse_member = [&members, this]() {
+        switch (Peek()) {
+        default:
+            ConsumeToken(Token::Kind::kRightCurly, true);
+            return Done;
+
+        case Token::Kind::kNumericLiteral:
+        TOKEN_ATTR_CASES:
+            members.emplace_back(ParseTableMember());
+            return More;
+        }
+    };
+
+    while (parse_member() == More) {
+        if (!Ok())
+            Fail();
+        ConsumeToken(Token::Kind::kSemicolon, true);
+        if (!Ok())
+            return Fail();
+    }
+    if (!Ok())
+        Fail();
+
+    if (members.empty())
+        return Fail("Tables must have at least one member");
+
+    return std::make_unique<raw::TableDeclaration>(start, MarkLastUseful(),
+                                                   std::move(attributes), std::move(identifier),
+                                                   std::move(members));
+}
+
 std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
     auto attributes = MaybeParseAttributeList();
     if (!Ok())
@@ -985,6 +1084,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     std::vector<std::unique_ptr<raw::EnumDeclaration>> enum_declaration_list;
     std::vector<std::unique_ptr<raw::InterfaceDeclaration>> interface_declaration_list;
     std::vector<std::unique_ptr<raw::StructDeclaration>> struct_declaration_list;
+    std::vector<std::unique_ptr<raw::TableDeclaration>> table_declaration_list;
     std::vector<std::unique_ptr<raw::UnionDeclaration>> union_declaration_list;
 
     auto attributes = MaybeParseAttributeList();
@@ -1021,7 +1121,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
     auto parse_declaration = [&const_declaration_list, &enum_declaration_list,
                               &interface_declaration_list, &struct_declaration_list,
-                              &union_declaration_list, this]() {
+                              &table_declaration_list, &union_declaration_list, this]() {
         std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
         if (!Ok())
             return More;
@@ -1047,6 +1147,10 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
             struct_declaration_list.emplace_back(ParseStructDeclaration(std::move(attributes)));
             return More;
 
+        case Token::Kind::kTable:
+            table_declaration_list.emplace_back(ParseTableDeclaration(std::move(attributes)));
+            return More;
+
         case Token::Kind::kUnion:
             union_declaration_list.emplace_back(ParseUnionDeclaration(std::move(attributes)));
             return More;
@@ -1069,7 +1173,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         start, end,
         std::move(attributes), std::move(library_name), std::move(using_list), std::move(const_declaration_list),
         std::move(enum_declaration_list), std::move(interface_declaration_list),
-        std::move(struct_declaration_list), std::move(union_declaration_list));
+        std::move(struct_declaration_list), std::move(table_declaration_list), std::move(union_declaration_list));
 }
 
 } // namespace fidl

@@ -115,6 +115,7 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
             *file << member.type << " " << member.name;
             break;
         case flat::Decl::Kind::kStruct:
+        case flat::Decl::Kind::kTable:
         case flat::Decl::Kind::kUnion:
             switch (member.nullability) {
             case types::Nullability::kNullable:
@@ -162,6 +163,7 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
             *file << member.type << "* out_" << member.name;
             break;
         case flat::Decl::Kind::kStruct:
+        case flat::Decl::Kind::kTable:
         case flat::Decl::Kind::kUnion:
             switch (member.nullability) {
             case types::Nullability::kNullable:
@@ -314,6 +316,9 @@ void EmitLinearizeMessage(std::ostream* file,
             case flat::Decl::Kind::kEnum:
             case flat::Decl::Kind::kInterface:
                 *file << kIndent << receiver << "->" << name << " = " << name << ";\n";
+                break;
+            case flat::Decl::Kind::kTable:
+                assert(false && "c-codegen for tables not yet implemented");
                 break;
             case flat::Decl::Kind::kStruct:
             case flat::Decl::Kind::kUnion:
@@ -705,6 +710,18 @@ CGenerator::NameStructs(const std::vector<std::unique_ptr<flat::Struct>>& struct
     return named_structs;
 }
 
+std::map<const flat::Decl*, CGenerator::NamedTable>
+CGenerator::NameTables(const std::vector<std::unique_ptr<flat::Table>>& table_infos) {
+    std::map<const flat::Decl*, NamedTable> named_tables;
+    for (const auto& table_info : table_infos) {
+        std::string c_name = NameName(table_info->name, "_", "_");
+        std::string coded_name = c_name + "Coded";
+        named_tables.emplace(table_info.get(),
+                             NamedTable{std::move(c_name), std::move(coded_name), *table_info});
+    }
+    return named_tables;
+}
+
 std::map<const flat::Decl*, CGenerator::NamedUnion>
 CGenerator::NameUnions(const std::vector<std::unique_ptr<flat::Union>>& union_infos) {
     std::map<const flat::Decl*, NamedUnion> named_unions;
@@ -750,6 +767,10 @@ void CGenerator::ProduceInterfaceForwardDeclaration(const NamedInterface& named_
 }
 
 void CGenerator::ProduceStructForwardDeclaration(const NamedStruct& named_struct) {
+    GenerateStructTypedef(named_struct.c_name);
+}
+
+void CGenerator::ProduceTableForwardDeclaration(const NamedTable& named_struct) {
     GenerateStructTypedef(named_struct.c_name);
 }
 
@@ -1013,6 +1034,9 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
                     case flat::Decl::Kind::kInterface:
                         file_ << kIndent << "*out_" << name << " = _response->" << name << ";\n";
                         break;
+                    case flat::Decl::Kind::kTable:
+                        assert(false && "c-codegen for tables not yet implemented");
+                        break;
                     case flat::Decl::Kind::kStruct:
                     case flat::Decl::Kind::kUnion:
                         switch (member.nullability) {
@@ -1125,6 +1149,9 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
                 case flat::Decl::Kind::kInterface:
                     file_ << ", request->" << member.name;
                     break;
+                case flat::Decl::Kind::kTable:
+                    assert(false && "c-codegen for tables not yet implemented");
+                    break;
                 case flat::Decl::Kind::kStruct:
                 case flat::Decl::Kind::kUnion:
                     switch (member.nullability) {
@@ -1228,6 +1255,8 @@ std::ostringstream CGenerator::ProduceHeader() {
         NameInterfaces(library_->interface_declarations_);
     std::map<const flat::Decl*, NamedStruct> named_structs =
         NameStructs(library_->struct_declarations_);
+    std::map<const flat::Decl*, NamedTable> named_tables =
+        NameTables(library_->table_declarations_);
     std::map<const flat::Decl*, NamedUnion> named_unions =
         NameUnions(library_->union_declarations_);
 
@@ -1263,6 +1292,13 @@ std::ostringstream CGenerator::ProduceHeader() {
             }
             break;
         }
+        case flat::Decl::Kind::kTable: {
+            auto iter = named_tables.find(decl);
+            if (iter != named_tables.end()) {
+                ProduceTableForwardDeclaration(iter->second);
+            }
+            break;
+        }
         case flat::Decl::Kind::kUnion: {
             auto iter = named_unions.find(decl);
             if (iter != named_unions.end()) {
@@ -1282,6 +1318,7 @@ std::ostringstream CGenerator::ProduceHeader() {
         case flat::Decl::Kind::kConst:
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kStruct:
+        case flat::Decl::Kind::kTable:
         case flat::Decl::Kind::kUnion:
             // Only messages have extern fidl_type_t declarations.
             break;
@@ -1326,6 +1363,10 @@ std::ostringstream CGenerator::ProduceHeader() {
             }
             break;
         }
+        case flat::Decl::Kind::kTable:
+            // Tables are entirely forward declared, and their body is defined only in
+            // implementation files.
+            break;
         case flat::Decl::Kind::kUnion: {
             auto iter = named_unions.find(decl);
             if (iter != named_unions.end()) {
@@ -1345,6 +1386,7 @@ std::ostringstream CGenerator::ProduceHeader() {
         case flat::Decl::Kind::kConst:
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kStruct:
+        case flat::Decl::Kind::kTable:
         case flat::Decl::Kind::kUnion:
             // Only interfaces have client declarations.
             break;
@@ -1384,6 +1426,7 @@ std::ostringstream CGenerator::ProduceClient() {
         case flat::Decl::Kind::kConst:
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kStruct:
+        case flat::Decl::Kind::kTable:
         case flat::Decl::Kind::kUnion:
             // Only interfaces have client implementations.
             break;
@@ -1420,6 +1463,7 @@ std::ostringstream CGenerator::ProduceServer() {
         case flat::Decl::Kind::kConst:
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kStruct:
+        case flat::Decl::Kind::kTable:
         case flat::Decl::Kind::kUnion:
             // Only interfaces have client implementations.
             break;

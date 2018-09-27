@@ -70,6 +70,10 @@ public:
         element.Accept(*this);
     }
 
+    virtual void OnOrdinal(Ordinal& element) {
+        element.Accept(*this);
+    }
+
 #ifdef DISPATCH_TO
 #error "Cannot define macro DISPATCH_TO: already defined"
 #endif
@@ -200,6 +204,12 @@ public:
         element->Accept(*this);
     }
     virtual void OnStructDeclaration(std::unique_ptr<StructDeclaration> const& element) {
+        element->Accept(*this);
+    }
+    virtual void OnTableMember(std::unique_ptr<TableMember> const& element) {
+        element->Accept(*this);
+    }
+    virtual void OnTableDeclaration(std::unique_ptr<TableDeclaration> const& element) {
         element->Accept(*this);
     }
     virtual void OnUnionMember(std::unique_ptr<UnionMember> const& element) {

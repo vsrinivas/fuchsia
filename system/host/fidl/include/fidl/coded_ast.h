@@ -38,11 +38,20 @@ enum struct CodingNeeded {
 
 struct Type;
 
-struct Field {
-    Field(const Type* type, uint32_t offset) : type(type), offset(offset) {}
+struct StructField {
+    StructField(const Type* type, uint32_t offset)
+        : type(type), offset(offset) {}
 
     const Type* type;
     const uint32_t offset;
+};
+
+struct TableField {
+    TableField(const Type* type, uint32_t ordinal)
+        : type(type), ordinal(ordinal) {}
+
+    const Type* type;
+    const uint32_t ordinal;
 };
 
 struct Type {
@@ -55,6 +64,8 @@ struct Type {
         kRequestHandle,
         kStruct,
         kStructPointer,
+        kTable,
+        kTablePointer,
         kUnion,
         kUnionPointer,
         kMessage,
@@ -107,13 +118,13 @@ struct RequestHandleType : public Type {
 };
 
 struct StructType : public Type {
-    StructType(std::string name, std::vector<Field> fields, uint32_t size, std::string pointer_name,
+    StructType(std::string name, std::vector<StructField> fields, uint32_t size, std::string pointer_name,
                std::string qname)
         : Type(Kind::kStruct, std::move(name), size, CodingNeeded::kNeeded),
           fields(std::move(fields)), pointer_name(std::move(pointer_name)),
           qname(std::move(qname)) {}
 
-    std::vector<Field> fields;
+    std::vector<StructField> fields;
     std::string pointer_name;
     std::string qname;
     bool referenced_by_pointer = false;
@@ -125,6 +136,27 @@ struct StructPointerType : public Type {
           struct_type(struct_type) {}
 
     const StructType* struct_type;
+};
+
+struct TableType : public Type {
+    TableType(std::string name, std::vector<TableField> fields, uint32_t size, std::string pointer_name,
+              std::string qname)
+        : Type(Kind::kTable, std::move(name), size, CodingNeeded::kNeeded),
+          fields(std::move(fields)), pointer_name(std::move(pointer_name)),
+          qname(std::move(qname)) {}
+
+    std::vector<TableField> fields;
+    std::string pointer_name;
+    std::string qname;
+    bool referenced_by_pointer = false;
+};
+
+struct TablePointerType : public Type {
+    TablePointerType(std::string name, const TableType* table_type)
+        : Type(Kind::kTablePointer, std::move(name), 8u, CodingNeeded::kNeeded),
+          table_type(table_type) {}
+
+    const TableType* table_type;
 };
 
 struct UnionType : public Type {
@@ -150,11 +182,11 @@ struct UnionPointerType : public Type {
 };
 
 struct MessageType : public Type {
-    MessageType(std::string name, std::vector<Field> fields, uint32_t size, std::string qname)
+    MessageType(std::string name, std::vector<StructField> fields, uint32_t size, std::string qname)
         : Type(Kind::kMessage, std::move(name), size, CodingNeeded::kNeeded),
           fields(std::move(fields)), qname(std::move(qname)) {}
 
-    std::vector<Field> fields;
+    std::vector<StructField> fields;
     std::string qname;
 };
 
