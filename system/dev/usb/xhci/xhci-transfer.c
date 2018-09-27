@@ -686,7 +686,8 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
 
     bool req_status_set = false;
 
-    if (trb_get_ptr(trb) && !list_is_empty(&ep->pending_reqs)) {
+    if (trb_get_ptr(trb) && !list_is_empty(&ep->pending_reqs)
+            && ep->state != EP_STATE_DISABLED && ep->state != EP_STATE_DEAD) {
         if (control & EVT_TRB_ED) {
             req = (usb_request_t *)trb_get_ptr(trb);
             if (ep_index == 0) {

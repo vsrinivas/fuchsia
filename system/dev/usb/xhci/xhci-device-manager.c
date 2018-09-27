@@ -386,7 +386,8 @@ static zx_status_t xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_ind
     xhci_endpoint_t* ep =  &slot->eps[ep_index];
     xhci_transfer_ring_t* transfer_ring = &ep->transfer_ring;
 
-    if (new_state == EP_STATE_RUNNING) {
+    if (new_state != EP_STATE_DISABLED && new_state != EP_STATE_DEAD) {
+        ZX_DEBUG_ASSERT_MSG(false, "xhci_stop_endpoint: bad state argument %d\n", new_state);
         return ZX_ERR_INTERNAL;
     }
 
