@@ -10,6 +10,7 @@
         "//garnet/go/src/netstack/tests:netstack_tests"
     ],
     "host_tests": [
+        "//garnet/go/src/netstack/dns:netstack_dns_test",
         "//garnet/go/src/netstack/util:netstack_util_test"
     ]
 }

@@ -59,7 +59,6 @@ package("netstack_gotests") {
 
   deps = [
     ":netstack_connectivity_test",
-    ":netstack_dns_test",
     ":netstack_fidlconv_test",
     ":netstack_filter_test",
     ":netstack_link_bridge_test",
@@ -81,9 +80,6 @@ package("netstack_gotests") {
   tests = [
     {
       name = "netstack_connectivity_test"
-    },
-    {
-      name = "netstack_dns_test"
     },
     {
       name = "netstack_fidlconv_test"
@@ -137,13 +133,6 @@ go_library("netstack_lib") {
 
 go_test("netstack_connectivity_test") {
   gopackage = "netstack/connectivity"
-  deps = [
-    ":netstack_lib",
-  ]
-}
-
-go_test("netstack_dns_test") {
-  gopackage = "netstack/dns"
   deps = [
     ":netstack_lib",
   ]
