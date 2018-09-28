@@ -30,7 +30,7 @@ typedef struct pl031_regs {
 
 typedef struct pl031 {
     zx_device_t* parent;
-
+    mmio_buffer_t mmio;
     pl031_regs_t* regs;
 } pl031_t;
 
@@ -78,14 +78,12 @@ static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Carve out some address space for this device.
-    size_t mmio_size;
-    zx_handle_t mmio_handle = ZX_HANDLE_INVALID;
-    st = pdev_map_mmio(&proto, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, (void**)&pl031->regs,
-                       &mmio_size, &mmio_handle);
+    st = pdev_map_mmio_buffer2(&proto, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &pl031->mmio);
     if (st != ZX_OK) {
         zxlogf(ERROR, "pl031_rtc: bind failed to pdev_map_mmio.\n");
         goto error_return;
     }
+    pl031->regs = pl031->mmio.vaddr;
 
     pl031->parent = parent;
 
@@ -110,20 +108,24 @@ static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent) {
     return ZX_OK;
 
 error_return:
-    if (pl031->regs) {
-        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)pl031->regs, mmio_size);
-    }
-    zx_handle_close(mmio_handle);
     if (pl031) {
+        mmio_buffer_release(&pl031->mmio);
         free(pl031);
     }
 
     return st;
 }
 
+static void pl031_rtc_release(void* ctx) {
+    pl031_t* pl031 = (pl031_t*)ctx;
+    mmio_buffer_release(&pl031->mmio);
+    free(pl031);
+}
+
 static zx_driver_ops_t pl031_rtc_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = pl031_rtc_bind,
+    .release = pl031_rtc_release,
 };
 
 // The formatter does not play nice with these macros.
