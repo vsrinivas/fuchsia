@@ -306,6 +306,9 @@ template <typename Header, typename Body = UnknownBody> class Frame {
         return Frame<Header, NewBody>(View().hdr_offset(), Take());
     }
 
+    // Similar to `Specialize()` but drops the Frame's body type.
+    Frame<Header> Generalize() { return Specialize<UnknownBody>(); }
+
     // `true` if the frame was 'taken' and should no longer be used.
     bool IsEmpty() const { return pkt_ == nullptr; }
 

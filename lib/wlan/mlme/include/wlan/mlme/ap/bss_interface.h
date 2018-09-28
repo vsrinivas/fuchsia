@@ -13,6 +13,7 @@
 #include <zircon/types.h>
 
 #include <chrono>
+#include <optional>
 
 namespace wlan {
 
@@ -69,8 +70,7 @@ class BssInterface {
     virtual seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) = 0;
     virtual seq_t NextSeq(const DataFrameHeader& hdr) = 0;
 
-    virtual zx_status_t EthToDataFrame(const EthFrame& frame,
-                                       fbl::unique_ptr<Packet>* out_packet) = 0;
+    virtual std::optional<DataFrame<LlcHeader>> EthToDataFrame(const EthFrame& eth_frame) = 0;
 
     virtual bool IsRsn() const = 0;
     virtual bool IsHTReady() const = 0;
@@ -79,9 +79,9 @@ class BssInterface {
     virtual HtCapabilities BuildHtCapabilities() const = 0;
     virtual HtOperation BuildHtOperation(const wlan_channel_t& chan) const = 0;
 
-    virtual zx_status_t SendMgmtFrame(fbl::unique_ptr<Packet> packet) = 0;
-    virtual zx_status_t SendDataFrame(fbl::unique_ptr<Packet> packet) = 0;
-    virtual zx_status_t SendEthFrame(fbl::unique_ptr<Packet> packet) = 0;
+    virtual zx_status_t SendMgmtFrame(MgmtFrame<>&& mgmt_frame) = 0;
+    virtual zx_status_t SendDataFrame(DataFrame<>&& data_frame) = 0;
+    virtual zx_status_t SendEthFrame(EthFrame&& eth_frame) = 0;
 
     // Indications reported from lower MAC layer.
     virtual void OnPreTbtt() = 0;

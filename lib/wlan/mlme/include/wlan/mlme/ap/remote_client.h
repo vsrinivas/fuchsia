@@ -15,6 +15,9 @@
 
 #include <zircon/types.h>
 
+#include <optional>
+#include <queue>
+
 namespace wlan {
 
 class BaseState;
@@ -73,9 +76,8 @@ class RemoteClient : public RemoteClientInterface {
     BssInterface* const bss_;
     const common::MacAddr addr_;
     const fbl::unique_ptr<Timer> timer_;
-    // Queue which holds buffered `EthernetII` packets while the client is in
-    // power saving mode.
-    PacketQueue bu_queue_;
+    // Queue which holds buffered ethernet frames while the client is dozing.
+    std::queue<EthFrame> bu_queue_;
     fbl::unique_ptr<BaseState> state_;
 };
 
@@ -219,8 +221,8 @@ class AssociatedState : public BaseState {
     void HandlePsPollFrame(CtrlFrame<PsPollFrame>&&);
 
     // Enqueues an ethernet frame which can be sent at a later point in time.
-    zx_status_t EnqueueEthernetFrame(const EthFrame& frame);
-    zx_status_t DequeueEthernetFrame(fbl::unique_ptr<Packet>* out_packet);
+    zx_status_t EnqueueEthernetFrame(EthFrame&& frame);
+    std::optional<EthFrame> DequeueEthernetFrame();
     bool HasBufferedFrames() const;
 
     const uint16_t aid_;
@@ -233,9 +235,8 @@ class AssociatedState : public BaseState {
     // state.
     bool req_deauth_ = true;
     eapol::PortState eapol_controlled_port_ = eapol::PortState::kBlocked;
-    // Queue which holds buffered `EthernetII` packets while the client is in
-    // power saving mode.
-    PacketQueue bu_queue_;
+    // Queue which holds buffered ethernet frames while the client is dozing.
+    std::queue<EthFrame> bu_queue_;
 };
 
 }  // namespace wlan

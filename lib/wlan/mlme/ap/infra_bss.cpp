@@ -194,23 +194,19 @@ zx_status_t InfraBss::HandleTimeout(const common::MacAddr& client_addr) {
     return ZX_OK;
 }
 
-void InfraBss::HandleEthFrame(EthFrame&& frame) {
+void InfraBss::HandleEthFrame(EthFrame&& eth_frame) {
     // Lookup client associated with incoming unicast frame.
-    auto& dest_addr = frame.hdr()->dest;
+    auto& dest_addr = eth_frame.hdr()->dest;
     if (dest_addr.IsUcast()) {
         auto client = GetClient(dest_addr);
-        if (client != nullptr) { client->HandleAnyEthFrame(fbl::move(frame)); }
-        return;
-    }
-
-    // Process multicast frames ourselves.
-    fbl::unique_ptr<Packet> out_frame;
-    auto status = EthToDataFrame(frame, &out_frame);
-    if (status == ZX_OK) {
-        SendDataFrame(fbl::move(out_frame));
+        if (client != nullptr) { client->HandleAnyEthFrame(fbl::move(eth_frame)); }
     } else {
-        errorf("[infra-bss] [%s] couldn't convert ethernet frame: %d\n", bssid_.ToString().c_str(),
-               status);
+        // Process multicast frames ourselves.
+        if (auto data_frame = EthToDataFrame(eth_frame)) {
+            SendDataFrame(data_frame->Generalize());
+        } else {
+            errorf("[infra-bss] [%s] couldn't convert ethernet frame\n", bssid_.ToString().c_str());
+        }
     }
 }
 
@@ -340,124 +336,107 @@ bool InfraBss::ShouldBufferFrame(const common::MacAddr& receiver_addr) const {
 zx_status_t InfraBss::BufferFrame(fbl::unique_ptr<Packet> packet) {
     // Drop oldest frame if queue reached its limit.
     if (bu_queue_.size() >= kMaxGroupAddressedBu) {
-        bu_queue_.Dequeue();
+        bu_queue_.pop();
         warnf("[infra-bss] [%s] dropping oldest group addressed frame\n",
               bssid_.ToString().c_str());
     }
 
     debugps("[infra-bss] [%s] buffer outbound frame\n", bssid_.ToString().c_str());
-    bu_queue_.Enqueue(fbl::move(packet));
+    bu_queue_.push(fbl::move(packet));
     ps_cfg_.GetTim()->SetTrafficIndication(kGroupAdressedAid, true);
     return ZX_OK;
 }
 
-zx_status_t InfraBss::SendDataFrame(fbl::unique_ptr<Packet> packet) {
-    ZX_DEBUG_ASSERT(packet->len() >= sizeof(DataFrameHeader));
-    if (packet->len() < sizeof(DataFrameHeader)) { return ZX_ERR_INVALID_ARGS; }
+zx_status_t InfraBss::SendDataFrame(DataFrame<>&& data_frame) {
+    if (ShouldBufferFrame(data_frame.hdr()->addr1)) { return BufferFrame(data_frame.Take()); }
 
-    auto hdr = packet->field<DataFrameHeader>(0);
-    if (ShouldBufferFrame(hdr->addr1)) { return BufferFrame(fbl::move(packet)); }
-
-    return device_->SendWlan(fbl::move(packet));
+    return device_->SendWlan(data_frame.Take());
 }
 
-zx_status_t InfraBss::SendMgmtFrame(fbl::unique_ptr<Packet> packet) {
-    ZX_DEBUG_ASSERT(packet->len() >= sizeof(MgmtFrameHeader));
-    if (packet->len() < sizeof(MgmtFrameHeader)) { return ZX_ERR_INVALID_ARGS; }
+zx_status_t InfraBss::SendMgmtFrame(MgmtFrame<>&& mgmt_frame) {
+    if (ShouldBufferFrame(mgmt_frame.hdr()->addr1)) { return BufferFrame(mgmt_frame.Take()); }
 
-    auto hdr = packet->field<MgmtFrameHeader>(0);
-    if (ShouldBufferFrame(hdr->addr1)) { return BufferFrame(fbl::move(packet)); }
-
-    return device_->SendWlan(fbl::move(packet));
+    return device_->SendWlan(mgmt_frame.Take());
 }
 
-zx_status_t InfraBss::SendEthFrame(fbl::unique_ptr<Packet> packet) {
-    return device_->SendEthernet(fbl::move(packet));
+zx_status_t InfraBss::SendEthFrame(EthFrame&& eth_frame) {
+    return device_->SendEthernet(eth_frame.Take());
 }
 
 zx_status_t InfraBss::SendNextBu() {
     ZX_DEBUG_ASSERT(bu_queue_.size() > 0);
-    if (bu_queue_.size() == 0) { return ZX_ERR_BAD_STATE; }
+    if (bu_queue_.empty()) { return ZX_ERR_BAD_STATE; }
 
-    auto packet = bu_queue_.Dequeue();
-    ZX_DEBUG_ASSERT(packet->len() > sizeof(FrameControl));
-    if (packet->len() < sizeof(FrameControl)) { return ZX_ERR_BAD_STATE; }
+    auto packet = std::move(bu_queue_.front());
+    bu_queue_.pop();
 
-    // Set `more` bit if there are more BU available.
-    // IEEE Std 802.11-2016, 9.2.4.1.8
-    auto fc = packet->mut_field<FrameControl>(0);
-    fc->set_more_data(bu_queue_.size() > 0 ? 1 : 0);
-
-    debugps("[infra-bss] [%s] sent group addressed BU\n", bssid_.ToString().c_str());
-    return device_->SendWlan(fbl::move(packet));
+    if (auto fc = packet->mut_field<FrameControl>(0)) {
+        // Set `more` bit if there are more BU available.
+        // IEEE Std 802.11-2016, 9.2.4.1.8
+        fc->set_more_data(bu_queue_.size() > 0);
+        debugps("[infra-bss] [%s] sent group addressed BU\n", bssid_.ToString().c_str());
+        return device_->SendWlan(fbl::move(packet));
+    } else {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
 }
 
-zx_status_t InfraBss::EthToDataFrame(const EthFrame& frame, fbl::unique_ptr<Packet>* out_packet) {
-    size_t max_frame_len = DataFrameHeader::max_len() + LlcHeader::max_len() + frame.body_len();
+std::optional<DataFrame<LlcHeader>> InfraBss::EthToDataFrame(const EthFrame& eth_frame) {
+    size_t payload_len = eth_frame.body_len();
+    size_t max_frame_len = DataFrameHeader::max_len() + LlcHeader::max_len() + payload_len;
     auto packet = GetWlanPacket(max_frame_len);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    if (packet == nullptr) {
+        errorf("[infra-bss] [%s] cannot convert ethernet to data frame: out of packets (%zu)\n",
+               bssid_.ToString().c_str(), max_frame_len);
+        return std::nullopt;
+    }
+    packet->clear();
 
-    auto hdr = packet->mut_field<DataFrameHeader>(0);
-    hdr->fc.clear();
-    hdr->fc.set_type(FrameType::kData);
-    hdr->fc.set_subtype(DataSubtype::kDataSubtype);
-    hdr->fc.set_from_ds(1);
+    DataFrame<LlcHeader> data_frame(fbl::move(packet));
+    auto data_hdr = data_frame.hdr();
+    data_hdr->fc.set_type(FrameType::kData);
+    data_hdr->fc.set_subtype(DataSubtype::kDataSubtype);
+    data_hdr->fc.set_from_ds(1);
     // TODO(hahnr): Protect outgoing frames when RSNA is established.
-    hdr->addr1 = frame.hdr()->dest;
-    hdr->addr2 = bssid_;
-    hdr->addr3 = frame.hdr()->src;
+    data_hdr->addr1 = eth_frame.hdr()->dest;
+    data_hdr->addr2 = bssid_;
+    data_hdr->addr3 = eth_frame.hdr()->src;
+    data_hdr->sc.set_seq(NextSeq(*data_hdr));
 
-    hdr->sc.set_seq(NextSeq(*hdr));
+    auto llc_hdr = data_frame.body();
+    llc_hdr->dsap = kLlcSnapExtension;
+    llc_hdr->ssap = kLlcSnapExtension;
+    llc_hdr->control = kLlcUnnumberedInformation;
+    std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
+    llc_hdr->protocol_id = eth_frame.hdr()->ether_type;
+    std::memcpy(llc_hdr->payload, eth_frame.body(), payload_len);
 
-    wlan_tx_info_t txinfo = {
-        // TODO(porce): Determine PHY and CBW based on the association
-        // negotiation.
-        .tx_flags = 0x0,
-        .valid_fields =
-            WLAN_TX_INFO_VALID_PHY | WLAN_TX_INFO_VALID_CHAN_WIDTH | WLAN_TX_INFO_VALID_MCS,
-        .phy = WLAN_PHY_HT,
-        .cbw = CBW20,
-        //.date_rate = 0x0,
-        .mcs = 0x7,
-    };
-
-    if (IsCbw40TxReady()) {
-        // Ralink appears to setup BlockAck session AND AMPDU handling
-        // TODO(porce): Use a separate sequence number space in that case
-        if (hdr->addr3.IsUcast()) {
-            // 40MHz direction does not matter here.
-            // Radio uses the operational channel setting. This indicates the
-            // bandwidth without direction.
-            txinfo.cbw = CBW40;
-        }
-    }
-
-    auto llc = packet->mut_field<LlcHeader>(hdr->len());
-    llc->dsap = kLlcSnapExtension;
-    llc->ssap = kLlcSnapExtension;
-    llc->control = kLlcUnnumberedInformation;
-    std::memcpy(llc->oui, kLlcOui, sizeof(llc->oui));
-    llc->protocol_id = frame.hdr()->ether_type;
-    std::memcpy(llc->payload, frame.body(), frame.body_len());
-
-    auto frame_len = hdr->len() + llc->len() + frame.body_len();
-    auto status = packet->set_len(frame_len);
+    size_t actual_body_len = llc_hdr->len() + payload_len;
+    auto status = data_frame.set_body_len(actual_body_len);
     if (status != ZX_OK) {
-        errorf("[infra-bss] [%s] could not set data frame length to %zu: %d\n",
-               bssid_.ToString().c_str(), frame_len, status);
-        return status;
+        errorf("[infra-bss] [%s] could not set data body length to %zu: %d\n",
+               bssid_.ToString().c_str(), actual_body_len, status);
+        return std::nullopt;
     }
 
-    finspect("Outbound data frame: len %zu, hdr_len:%zu body_len:%zu frame_len:%zu\n",
-             packet->len(), hdr->len(), frame.body_len(), frame_len);
-    finspect("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
-    finspect("  llc  hdr: %s\n", debug::Describe(*llc).c_str());
-    finspect("  frame   : %s\n", debug::HexDump(packet->data(), frame_len).c_str());
+    finspect("Outbound data frame: len %zu, hdr_len:%zu body_len:%zu\n", data_frame.len(),
+             data_hdr->len(), llc_hdr->len());
+    finspect("  wlan hdr: %s\n", debug::Describe(*data_hdr).c_str());
+    finspect("  llc  hdr: %s\n", debug::Describe(*llc_hdr).c_str());
+    finspect("  frame   : %s\n",
+             debug::HexDump(data_frame.View().data(), data_frame.len()).c_str());
 
-    packet->CopyCtrlFrom(txinfo);
-    *out_packet = fbl::move(packet);
-
-    return ZX_OK;
+    // Ralink appears to setup BlockAck session AND AMPDU handling
+    // TODO(porce): Use a separate sequence number space in that case
+    CBW cbw = CBW20;
+    if (IsCbw40TxReady() && eth_frame.hdr()->src.IsUcast()) {
+        // 40MHz direction does not matter here.
+        // Radio uses the operational channel setting. This indicates the
+        // bandwidth without direction.
+        cbw = CBW40;
+    }
+    data_frame.FillTxInfo(cbw, WLAN_PHY_HT);
+    return std::make_optional(fbl::move(data_frame));
 }
 
 void InfraBss::OnPreTbtt() {

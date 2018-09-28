@@ -17,6 +17,8 @@
 #include <wlan/common/macaddr.h>
 #include <zircon/types.h>
 
+#include <queue>
+
 namespace wlan {
 
 class ObjectId;
@@ -47,15 +49,15 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
     const common::MacAddr& bssid() const override;
     uint64_t timestamp() override;
 
-    zx_status_t SendMgmtFrame(fbl::unique_ptr<Packet> packet) override;
-    zx_status_t SendDataFrame(fbl::unique_ptr<Packet> packet) override;
-    zx_status_t SendEthFrame(fbl::unique_ptr<Packet> packet) override;
+    zx_status_t SendMgmtFrame(MgmtFrame<>&& mgmt_frame) override;
+    zx_status_t SendDataFrame(DataFrame<>&& data_frame) override;
+    zx_status_t SendEthFrame(EthFrame&& eth_frame) override;
 
     seq_t NextSeq(const MgmtFrameHeader& hdr) override;
     seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) override;
     seq_t NextSeq(const DataFrameHeader& hdr) override;
 
-    zx_status_t EthToDataFrame(const EthFrame& frame, fbl::unique_ptr<Packet>* out_packet) override;
+    std::optional<DataFrame<LlcHeader>> EthToDataFrame(const EthFrame& eth_frame) override;
     void OnPreTbtt() override;
     void OnBcnTxComplete() override;
 
@@ -108,7 +110,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
     Sequence seq_;
     // Queue which holds buffered non-GCR-SP frames when at least one client is
     // dozing.
-    PacketQueue bu_queue_;
+    std::queue<fbl::unique_ptr<Packet>> bu_queue_;
     PsCfg ps_cfg_;
     wlan_channel_t chan_;
     // MLME-START.request holds all information required to correctly configure

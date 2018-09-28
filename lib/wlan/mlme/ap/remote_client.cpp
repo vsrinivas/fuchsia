@@ -312,11 +312,11 @@ void AssociatedState::OnEnter() {
     client_->SendAddBaRequest();
 }
 
-void AssociatedState::HandleEthFrame(EthFrame&& frame) {
+void AssociatedState::HandleEthFrame(EthFrame&& eth_frame) {
     if (dozing_) {
         // Enqueue ethernet frame and postpone conversion to when the frame is sent
         // to the client.
-        auto status = EnqueueEthernetFrame(frame);
+        auto status = EnqueueEthernetFrame(fbl::move(eth_frame));
         if (status == ZX_ERR_NO_RESOURCES) {
             debugps("[client] [%s] reached PS buffering limit; dropping frame\n",
                     client_->addr().ToString().c_str());
@@ -328,13 +328,12 @@ void AssociatedState::HandleEthFrame(EthFrame&& frame) {
 
     // If the client is awake and not in power saving mode, convert and send frame
     // immediately.
-    fbl::unique_ptr<Packet> out_frame;
-    auto status = client_->bss()->EthToDataFrame(frame, &out_frame);
-    if (status != ZX_OK) {
-        errorf("[client] couldn't convert ethernet frame: %d\n", status);
+    auto data_frame = client_->bss()->EthToDataFrame(eth_frame);
+    if (!data_frame) {
+        errorf("[client] couldn't convert ethernet frame\n");
         return;
     }
-    client_->bss()->SendDataFrame(fbl::move(out_frame));
+    client_->bss()->SendDataFrame(data_frame->Generalize());
 }
 
 void AssociatedState::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame) {
@@ -361,21 +360,22 @@ void AssociatedState::HandlePsPollFrame(CtrlFrame<PsPollFrame>&& frame) {
     debugbss("[client] [%s] no more BU available\n", client_->addr().ToString().c_str());
     // There are no frames buffered for the client.
     // Respond with a null data frame and report the situation.
-    size_t len = DataFrameHeader::max_len();
-    auto packet = GetWlanPacket(len);
+    auto packet = GetWlanPacket(DataFrameHeader::max_len());
     if (packet == nullptr) { return; }
     packet->clear();
 
-    auto hdr = packet->mut_field<DataFrameHeader>(0);
-    hdr->fc.set_type(FrameType::kData);
-    hdr->fc.set_subtype(DataSubtype::kNull);
-    hdr->fc.set_from_ds(1);
-    hdr->addr1 = client_->addr();
-    hdr->addr2 = client_->bss()->bssid();
-    hdr->addr3 = client_->bss()->bssid();
-    hdr->sc.set_seq(client_->bss()->NextSeq(*hdr));
+    DataFrame<NullDataHdr> data_frame(fbl::move(packet));
+    auto data_hdr = data_frame.hdr();
+    data_hdr->fc.set_type(FrameType::kData);
+    data_hdr->fc.set_subtype(DataSubtype::kNull);
+    data_hdr->fc.set_from_ds(1);
+    data_hdr->addr1 = client_->addr();
+    data_hdr->addr2 = client_->bss()->bssid();
+    data_hdr->addr3 = client_->bss()->bssid();
+    data_hdr->sc.set_seq(client_->bss()->NextSeq(*data_hdr));
 
-    zx_status_t status = client_->bss()->SendDataFrame(fbl::move(packet));
+    data_frame.set_body_len(0);
+    zx_status_t status = client_->bss()->SendDataFrame(data_frame.Generalize());
     if (status != ZX_OK) {
         errorf(
             "[client] [%s] could not send null data frame as PS-POLL response: "
@@ -403,7 +403,8 @@ void AssociatedState::OnExit() {
     debugbss("[client] [%s] reported disassociation, AID: %u\n", client_->addr().ToString().c_str(),
              aid_);
 
-    bu_queue_.clear();
+    std::queue<EthFrame> empty_queue;
+    std::swap(bu_queue_, empty_queue);
 }
 
 void AssociatedState::HandleDataLlcFrame(DataFrame<LlcHeader>&& frame) {
@@ -433,17 +434,19 @@ void AssociatedState::HandleDataLlcFrame(DataFrame<LlcHeader>&& frame) {
     // yet.
     if (eapol_controlled_port_ != eapol::PortState::kOpen) { return; }
 
-    const size_t eth_len = EthernetII::max_len() + llc_frame.body_len();
-    auto eth_packet = GetEthPacket(eth_len);
-    if (eth_packet == nullptr) { return; }
+    size_t payload_len = llc_frame.body_len();
+    size_t eth_frame_len = EthernetII::max_len() + payload_len;
+    auto packet = GetEthPacket(eth_frame_len);
+    if (packet == nullptr) { return; }
 
-    auto eth = eth_packet->mut_field<EthernetII>(0);
-    eth->dest = data_hdr->addr3;
-    eth->src = data_hdr->addr2;
-    eth->ether_type = llc_frame.hdr()->protocol_id;
-    std::memcpy(eth->payload, llc_frame.body()->data, llc_frame.body_len());
+    EthFrame eth_frame(fbl::move(packet));
+    eth_frame.hdr()->dest = data_hdr->addr3;
+    eth_frame.hdr()->src = data_hdr->addr2;
+    eth_frame.hdr()->ether_type = llc_frame.hdr()->protocol_id;
 
-    auto status = client_->bss()->SendEthFrame(std::move(eth_packet));
+    std::memcpy(eth_frame.body()->data, llc_frame.body()->data, payload_len);
+
+    auto status = client_->bss()->SendEthFrame(fbl::move(eth_frame));
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send ethernet data: %d\n",
                client_->addr().ToString().c_str(), status);
@@ -510,29 +513,30 @@ void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
 
 zx_status_t AssociatedState::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& req) {
     size_t eapol_pdu_len = req.body()->data->size();
-    size_t len = DataFrameHeader::max_len() + LlcHeader::max_len() + eapol_pdu_len;
-    auto packet = GetWlanPacket(len);
+    size_t max_frame_len = DataFrameHeader::max_len() + LlcHeader::max_len() + eapol_pdu_len;
+    auto packet = GetWlanPacket(max_frame_len);
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
     packet->clear();
 
-    auto hdr = packet->mut_field<DataFrameHeader>(0);
-    hdr->fc.set_type(FrameType::kData);
-    hdr->fc.set_from_ds(1);
-    hdr->addr1.Set(req.body()->dst_addr.data());
-    hdr->addr2 = client_->bss()->bssid();
-    hdr->addr3.Set(req.body()->src_addr.data());
-    hdr->sc.set_seq(client_->bss()->NextSeq(*hdr));
+    DataFrame<LlcHeader> data_frame(fbl::move(packet));
+    auto data_hdr = data_frame.hdr();
+    data_hdr->fc.set_type(FrameType::kData);
+    data_hdr->fc.set_from_ds(1);
+    data_hdr->addr1.Set(req.body()->dst_addr.data());
+    data_hdr->addr2 = client_->bss()->bssid();
+    data_hdr->addr3.Set(req.body()->src_addr.data());
+    data_hdr->sc.set_seq(client_->bss()->NextSeq(*data_hdr));
 
-    auto llc = packet->mut_field<LlcHeader>(hdr->len());
-    llc->dsap = kLlcSnapExtension;
-    llc->ssap = kLlcSnapExtension;
-    llc->control = kLlcUnnumberedInformation;
-    std::memcpy(llc->oui, kLlcOui, sizeof(llc->oui));
-    llc->protocol_id = htobe16(kEapolProtocolId);
-    std::memcpy(llc->payload, req.body()->data->data(), eapol_pdu_len);
+    auto llc_hdr = data_frame.body();
+    llc_hdr->dsap = kLlcSnapExtension;
+    llc_hdr->ssap = kLlcSnapExtension;
+    llc_hdr->control = kLlcUnnumberedInformation;
+    std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
+    llc_hdr->protocol_id = htobe16(kEapolProtocolId);
+    std::memcpy(llc_hdr->payload, req.body()->data->data(), eapol_pdu_len);
 
-    packet->set_len(hdr->len() + llc->len() + eapol_pdu_len);
-    auto status = client_->bss()->SendDataFrame(fbl::move(packet));
+    data_frame.set_body_len(llc_hdr->len() + eapol_pdu_len);
+    auto status = client_->bss()->SendDataFrame(data_frame.Generalize());
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send EAPOL request packet: %d\n",
                client_->addr().ToString().c_str(), status);
@@ -573,31 +577,25 @@ zx_status_t AssociatedState::SendNextBu() {
     if (!HasBufferedFrames()) { return ZX_ERR_BAD_STATE; }
 
     // Dequeue buffered Ethernet frame.
-    fbl::unique_ptr<Packet> packet;
-    auto status = DequeueEthernetFrame(&packet);
-    if (status != ZX_OK) {
-        errorf("[client] [%s] unable to dequeue buffered frames\n",
-               client_->addr().ToString().c_str());
-        return status;
+    auto eth_frame = DequeueEthernetFrame();
+    if (!eth_frame) {
+        errorf("[client] [%s] no more BU available\n", client_->addr().ToString().c_str());
+        return ZX_ERR_BAD_STATE;
     }
 
-    // Treat Packet as Ethernet frame and convert Ethernet to Data frame.
-    EthFrame eth_frame(fbl::move(packet));
-    fbl::unique_ptr<Packet> data_packet;
-    status = client_->bss()->EthToDataFrame(eth_frame, &data_packet);
-    if (status != ZX_OK) {
-        errorf("[client] [%s] couldn't convert ethernet frame: %d\n",
-               client_->addr().ToString().c_str(), status);
-        return status;
+    auto data_frame = client_->bss()->EthToDataFrame(eth_frame.value());
+    if (!data_frame) {
+        errorf("[client] [%s] couldn't convert ethernet frame\n",
+               client_->addr().ToString().c_str());
+        return ZX_ERR_NO_RESOURCES;
     }
 
     // Set `more` bit if there are more frames buffered.
-    auto fc = data_packet->mut_field<FrameControl>(0);
-    fc->set_more_data(HasBufferedFrames() ? 1 : 0);
+    data_frame->hdr()->fc.set_more_data(HasBufferedFrames());
 
     // Send Data frame.
     debugps("[client] [%s] sent BU to client\n", client_->addr().ToString().c_str());
-    return client_->bss()->SendDataFrame(fbl::move(data_packet));
+    return client_->bss()->SendDataFrame(data_frame->Generalize());
 }
 
 void AssociatedState::HandleActionFrame(MgmtFrame<ActionFrame>&& frame) {
@@ -619,35 +617,29 @@ void AssociatedState::HandleActionFrame(MgmtFrame<ActionFrame>&& frame) {
     }
 }
 
-zx_status_t AssociatedState::EnqueueEthernetFrame(const EthFrame& frame) {
+zx_status_t AssociatedState::EnqueueEthernetFrame(EthFrame&& eth_frame) {
     // Drop oldest frame if queue reached its limit.
     if (bu_queue_.size() >= kMaxPowerSavingQueueSize) {
-        bu_queue_.Dequeue();
+        bu_queue_.pop();
         warnf("[client] [%s] dropping oldest unicast frame\n", client_->addr().ToString().c_str());
     }
 
     debugps("[client] [%s] client is dozing; buffer outbound frame\n",
             client_->addr().ToString().c_str());
 
-    size_t eth_len = frame.len();
-    auto packet = GetEthPacket(eth_len);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    memcpy(packet->mut_data(), frame.hdr(), eth_len);
-    bu_queue_.Enqueue(fbl::move(packet));
+    bu_queue_.push(fbl::move(eth_frame));
     client_->ReportBuChange(aid_, bu_queue_.size());
 
     return ZX_OK;
 }
 
-zx_status_t AssociatedState::DequeueEthernetFrame(fbl::unique_ptr<Packet>* out_packet) {
-    ZX_DEBUG_ASSERT(bu_queue_.size() > 0);
-    if (bu_queue_.size() == 0) { return ZX_ERR_NO_RESOURCES; }
+std::optional<EthFrame> AssociatedState::DequeueEthernetFrame() {
+    if (bu_queue_.empty()) { return std::nullopt; }
 
-    *out_packet = bu_queue_.Dequeue();
+    auto eth_frame = std::move(bu_queue_.front());
+    bu_queue_.pop();
     client_->ReportBuChange(aid_, bu_queue_.size());
-
-    return ZX_OK;
+    return std::make_optional(std::move(eth_frame));
 }
 
 bool AssociatedState::HasBufferedFrames() const {
@@ -755,7 +747,7 @@ zx_status_t RemoteClient::SendAuthentication(status_code::StatusCode result) {
     // track seq number.
     auth->auth_txn_seq_number = 2;
 
-    status = bss_->SendMgmtFrame(frame.Take());
+    status = bss_->SendMgmtFrame(frame.Generalize());
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send auth response packet: %d\n", addr_.ToString().c_str(),
                status);
@@ -818,7 +810,7 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
         return status;
     }
 
-    status = bss_->SendMgmtFrame(frame.Take());
+    status = bss_->SendMgmtFrame(frame.Generalize());
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send auth response packet: %d\n", addr_.ToString().c_str(),
                status);
@@ -843,7 +835,7 @@ zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_co
     auto deauth = frame.body();
     deauth->reason_code = static_cast<uint16_t>(reason_code);
 
-    status = bss_->SendMgmtFrame(frame.Take());
+    status = bss_->SendMgmtFrame(frame.Generalize());
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send dauthentication packet: %d\n",
                addr_.ToString().c_str(), status);
@@ -895,22 +887,22 @@ zx_status_t RemoteClient::SendAddBaRequest() {
 
     debugbss("[client] [%s] sending AddBaRequest\n", addr_.ToString().c_str());
 
-    MgmtFrame<ActionFrame> tx_frame;
+    MgmtFrame<ActionFrame> mgmt_frame;
     size_t body_payload_len = ActionFrameBlockAck::max_len() + AddBaRequestFrame::max_len();
-    auto status = CreateMgmtFrame(&tx_frame, body_payload_len);
+    auto status = CreateMgmtFrame(&mgmt_frame, body_payload_len);
     if (status != ZX_OK) { return status; }
 
-    auto hdr = tx_frame.hdr();
+    auto hdr = mgmt_frame.hdr();
     hdr->addr1 = addr_;
     hdr->addr2 = bss_->bssid();
     hdr->addr3 = bss_->bssid();
     hdr->sc.set_seq(bss_->NextSeq(*hdr));
-    tx_frame.FillTxInfo();
+    mgmt_frame.FillTxInfo();
 
-    auto action_hdr = tx_frame.body();
+    auto action_hdr = mgmt_frame.body();
     action_hdr->category = ActionFrameBlockAck::ActionCategory();
 
-    auto ba_frame = tx_frame.NextFrame<ActionFrameBlockAck>();
+    auto ba_frame = mgmt_frame.NextFrame<ActionFrameBlockAck>();
     ba_frame.hdr()->action = AddBaRequestFrame::BlockAckAction();
 
     auto addbareq_frame = ba_frame.NextFrame<AddBaRequestFrame>();
@@ -930,7 +922,7 @@ zx_status_t RemoteClient::SendAddBaRequest() {
     finspect("Outbound ADDBA Req frame: len %zu\n", addbareq_frame.len());
     finspect("  addba req: %s\n", debug::Describe(*addbareq).c_str());
 
-    status = bss_->SendMgmtFrame(addbareq_frame.Take());
+    status = bss_->SendMgmtFrame(MgmtFrame<>(addbareq_frame.Take()));
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send AddbaRequest: %d\n", addr_.ToString().c_str(), status);
     }
@@ -939,22 +931,22 @@ zx_status_t RemoteClient::SendAddBaRequest() {
 }
 
 zx_status_t RemoteClient::SendAddBaResponse(const AddBaRequestFrame& req) {
-    MgmtFrame<ActionFrame> tx_frame;
+    MgmtFrame<ActionFrame> mgmt_frame;
     size_t body_payload_len = ActionFrameBlockAck::max_len() + AddBaRequestFrame::max_len();
-    auto status = CreateMgmtFrame(&tx_frame, body_payload_len);
+    auto status = CreateMgmtFrame(&mgmt_frame, body_payload_len);
     if (status != ZX_OK) { return status; }
 
-    auto hdr = tx_frame.hdr();
+    auto hdr = mgmt_frame.hdr();
     hdr->addr1 = addr_;
     hdr->addr2 = bss_->bssid();
     hdr->addr3 = bss_->bssid();
     hdr->sc.set_seq(bss_->NextSeq(*hdr));
-    tx_frame.FillTxInfo();
+    mgmt_frame.FillTxInfo();
 
-    auto action_frame = tx_frame.body();
+    auto action_frame = mgmt_frame.body();
     action_frame->category = ActionFrameBlockAck::ActionCategory();
 
-    auto ba_frame = tx_frame.NextFrame<ActionFrameBlockAck>();
+    auto ba_frame = mgmt_frame.NextFrame<ActionFrameBlockAck>();
     ba_frame.hdr()->action = AddBaResponseFrame::BlockAckAction();
 
     auto addbaresp_frame = ba_frame.NextFrame<AddBaResponseFrame>();
@@ -981,7 +973,7 @@ zx_status_t RemoteClient::SendAddBaResponse(const AddBaRequestFrame& req) {
     finspect("Outbound ADDBA Resp frame: len %zu\n", addbaresp_frame.len());
     finspect("Outbound Mgmt Frame(ADDBA Resp): %s\n", debug::Describe(*addbaresp).c_str());
 
-    status = bss_->SendMgmtFrame(addbaresp_frame.Take());
+    status = bss_->SendMgmtFrame(MgmtFrame<>(addbaresp_frame.Take()));
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send AddBaResponse: %d\n", addr_.ToString().c_str(),
                status);
