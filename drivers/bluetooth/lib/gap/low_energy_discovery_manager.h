@@ -187,11 +187,24 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
       fit::function<void(std::unique_ptr<LowEnergyDiscoverySession>)>;
   void StartDiscovery(SessionCallback callback);
 
+  // Enable or disable the background scan feature. When enabled, the discovery
+  // manager will perform a low duty-cycle passive scan when no discovery
+  // sessions are active.
+  void EnableBackgroundScan(bool enable);
+
   // Sets a new scan period to any future and ongoing discovery procedures.
   void set_scan_period(int64_t period_ms) { scan_period_ = period_ms; }
 
   // Returns whether there is an active discovery session.
   bool discovering() const { return !sessions_.empty(); }
+
+  // Registers a callback which runs after a directed connectable advertisement
+  // is received from a bonded device with the given |id|.
+  using DirectedConnectableCallback =
+      fit::function<void(const std::string& id)>;
+  void set_directed_connectable_callback(DirectedConnectableCallback callback) {
+    directed_conn_cb_ = std::move(callback);
+  }
 
  private:
   friend class LowEnergyDiscoverySession;
@@ -212,12 +225,16 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
   // hci::LowEnergyScanner::Delegate override:
   void OnDeviceFound(const hci::LowEnergyScanResult& result,
                      const common::ByteBuffer& data) override;
+  void OnDirectedAdvertisement(const hci::LowEnergyScanResult& result) override;
 
   // Called by hci::LowEnergyScanner
   void OnScanStatus(hci::LowEnergyScanner::ScanStatus status);
 
-  // Tells the scanner to start scanning.
-  void StartScan();
+  // Tells the scanner to start scanning. Aliases are provided for improved
+  // readability.
+  void StartScan(bool active);
+  inline void StartActiveScan() { StartScan(true); }
+  inline void StartPassiveScan() { StartScan(false); }
 
   // The dispatcher that we use for invoking callbacks asynchronously.
   async_dispatcher_t* dispatcher_;
@@ -225,6 +242,13 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
   // The device cache that we use for storing and looking up scan results. We
   // hold a raw pointer as we expect this to out-live us.
   RemoteDeviceCache* device_cache_;
+
+  // True if background scanning is enabled.
+  bool background_scan_enabled_;
+
+  // Called when a directed connectable advertisement is received during an
+  // active or passive scan.
+  DirectedConnectableCallback directed_conn_cb_;
 
   // The list of currently pending calls to start discovery.
   std::queue<SessionCallback> pending_;

@@ -71,9 +71,6 @@ class LegacyLowEnergyScanner : public LowEnergyScanner {
   void NotifyDeviceFound(const LowEnergyScanResult& result,
                          const common::ByteBuffer& data);
 
-  // True if an active scan is currenty being performed. False, if passive.
-  bool active_scanning_;
-
   // Callback passed in to the most recently accepted call to StartScan();
   ScanStatusCallback scan_cb_;
 

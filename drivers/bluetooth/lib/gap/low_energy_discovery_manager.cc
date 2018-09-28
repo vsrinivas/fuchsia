@@ -68,6 +68,7 @@ LowEnergyDiscoveryManager::LowEnergyDiscoveryManager(
     Mode mode, fxl::RefPtr<hci::Transport> hci, RemoteDeviceCache* device_cache)
     : dispatcher_(async_get_default_dispatcher()),
       device_cache_(device_cache),
+      background_scan_enabled_(false),
       weak_ptr_factory_(this) {
   ZX_DEBUG_ASSERT(hci);
   ZX_DEBUG_ASSERT(dispatcher_);
@@ -115,10 +116,39 @@ void LowEnergyDiscoveryManager::StartDiscovery(SessionCallback callback) {
     return;
   }
 
-  ZX_DEBUG_ASSERT(scanner_->state() == hci::LowEnergyScanner::State::kIdle);
-
   pending_.push(std::move(callback));
-  StartScan();
+
+  // If currently scanning in the background, stop it and wait for
+  // OnScanStatus() to initiate the active scan. Otherwise, request an active
+  // scan if the scanner is idle.
+  if (scanner_->IsPassiveScanning()) {
+    ZX_DEBUG_ASSERT(background_scan_enabled_);
+    scanner_->StopScan();
+  } else if (!background_scan_enabled_ && scanner_->IsIdle()) {
+    StartActiveScan();
+  }
+}
+
+void LowEnergyDiscoveryManager::EnableBackgroundScan(bool enable) {
+  if (background_scan_enabled_ == enable) {
+    bt_log(TRACE, "gap-le", "background scan already %s",
+           (enable ? "enabled" : "disabled"));
+    return;
+  }
+
+  background_scan_enabled_ = enable;
+
+  // Do nothing if an active scan is in progress.
+  if (!sessions_.empty() || !pending_.empty()) {
+    return;
+  }
+
+  if (enable && scanner_->IsIdle()) {
+    StartPassiveScan();
+  } else if (!enable && scanner_->IsPassiveScanning()) {
+    scanner_->StopScan();
+  }
+  // If neither condition is true, we'll apply a scan policy in OnScanStatus().
 }
 
 std::unique_ptr<LowEnergyDiscoverySession>
@@ -153,6 +183,11 @@ void LowEnergyDiscoveryManager::OnDeviceFound(
     const hci::LowEnergyScanResult& result, const common::ByteBuffer& data) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
+  // Ignore regular scan results during a passive scan.
+  if (scanner_->IsPassiveScanning()) {
+    return;
+  }
+
   auto device = device_cache_->FindDeviceByAddress(result.address);
   if (!device) {
     device = device_cache_->NewDevice(result.address, result.connectable);
@@ -163,6 +198,39 @@ void LowEnergyDiscoveryManager::OnDeviceFound(
 
   for (const auto& session : sessions_) {
     session->NotifyDiscoveryResult(*device);
+  }
+}
+
+void LowEnergyDiscoveryManager::OnDirectedAdvertisement(
+    const hci::LowEnergyScanResult& result) {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+
+  // TODO(NET-1572): Resolve the address in the host if it is random and
+  // |result.resolved| is false.
+  bt_log(SPEW, "gap", "Received directed advertisement (address: %s, %s)",
+         result.address.ToString().c_str(),
+         (result.resolved ? "resolved" : "not resolved"));
+
+  auto device = device_cache_->FindDeviceByAddress(result.address);
+  if (!device) {
+    bt_log(TRACE, "gap",
+           "ignoring connection request from unknown peripheral: %s",
+           result.address.ToString().c_str());
+    return;
+  }
+
+  if (!device->le() || !device->le()->bonded()) {
+    bt_log(TRACE, "gap",
+           "rejecting connection request from unbonded peripheral: %s",
+           result.address.ToString().c_str());
+    return;
+  }
+
+  // TODO(armansito): We shouldn't always accept connection requests from all
+  // bonded peripherals (e.g. if one is explicitly disconnected). Maybe add an
+  // "auto_connect()" property to RemoteDevice?
+  if (directed_conn_cb_) {
+    directed_conn_cb_(device->identifier());
   }
 }
 
@@ -187,10 +255,21 @@ void LowEnergyDiscoveryManager::OnScanStatus(
 
         callback(nullptr);
       }
-      break;
+      return;
     }
-    case hci::LowEnergyScanner::ScanStatus::kStarted:
-      bt_log(TRACE, "gap-le", "started scanning");
+    case hci::LowEnergyScanner::ScanStatus::kPassive:
+      bt_log(SPEW, "gap-le", "passive scan started");
+
+      // Stop the background scan if active scan was requested or background
+      // scan was disabled while waiting for the scan to start. If an active
+      // scan was requested then the active scan we'll start it once the passive
+      // scan stops.
+      if (!pending_.empty() || !background_scan_enabled_) {
+        scanner_->StopScan();
+      }
+      return;
+    case hci::LowEnergyScanner::ScanStatus::kActive:
+      bt_log(SPEW, "gap-le", "active scan started");
 
       // Create and register all sessions before notifying the clients. We do
       // this so that the reference count is incremented for all new sessions
@@ -210,21 +289,23 @@ void LowEnergyDiscoveryManager::OnScanStatus(
         }
       }
       ZX_DEBUG_ASSERT(pending_.empty());
-      break;
+      return;
     case hci::LowEnergyScanner::ScanStatus::kStopped:
-      // TODO(armansito): Revise this logic when we support pausing a scan even
-      // with active sessions.
       bt_log(TRACE, "gap-le", "stopped scanning");
 
       cached_scan_results_.clear();
 
       // Some clients might have requested to start scanning while we were
-      // waiting for it to stop. Restart scanning if that is the case.
+      // waiting for it to stop. Restart active scanning if that is the case.
+      // Otherwise start a background scan, if enabled.
       if (!pending_.empty()) {
-        StartScan();
+        bt_log(TRACE, "gap-le", "initiate active scan");
+        StartActiveScan();
+      } else if (background_scan_enabled_) {
+        bt_log(TRACE, "gap-le", "initiate background scan");
+        StartPassiveScan();
       }
-
-      break;
+      return;
     case hci::LowEnergyScanner::ScanStatus::kComplete:
       bt_log(SPEW, "gap-le", "end of scan period");
       cached_scan_results_.clear();
@@ -234,23 +315,21 @@ void LowEnergyDiscoveryManager::OnScanStatus(
       // scan as long as clients are waiting for it.
       if (!sessions_.empty() || !pending_.empty()) {
         bt_log(SPEW, "gap-le", "continuing periodic scan");
-        StartScan();
+        StartActiveScan();
+      } else if (background_scan_enabled_) {
+        bt_log(SPEW, "gap-le", "continuing periodic background scan");
+        StartPassiveScan();
       }
-      break;
+      return;
   }
 }
 
-void LowEnergyDiscoveryManager::StartScan() {
+void LowEnergyDiscoveryManager::StartScan(bool active) {
   auto cb = [self = weak_ptr_factory_.GetWeakPtr()](auto status) {
     if (self)
       self->OnScanStatus(status);
   };
 
-  // TODO(armansito): For now we always do an active scan. When we support the
-  // auto-connection procedure we should also implement background scanning
-  // using the controller white list.
-  // TODO(armansito): Use the appropriate "slow" interval & window values for
-  // background scanning.
   // TODO(armansito): A client that is interested in scanning nearby beacons and
   // calculating proximity based on RSSI changes may want to disable duplicate
   // filtering. We generally shouldn't allow this unless a client has the
@@ -260,12 +339,22 @@ void LowEnergyDiscoveryManager::StartScan() {
   // case but needs proper management. For now we always make the controller
   // filter duplicate reports.
 
+  // See Vol 3, Part C, 9.3.11 "Connection Establishment Timing Parameters".
+  uint16_t interval, window;
+  if (active) {
+    interval = kLEScanFastInterval;
+    window = kLEScanFastWindow;
+  } else {
+    interval = kLEScanSlowInterval1;
+    window = kLEScanSlowWindow1;
+    // TODO(armansito): Use the controller whitelist to filter advertisements.
+  }
+
   // Since we use duplicate filtering, we stop and start the scan periodically
   // to re-process advertisements. We use the minimum required scan period for
   // general discovery (by default; |scan_period_| can be modified, e.g. by unit
   // tests).
-  scanner_->StartScan(true /* active */, kLEScanFastInterval, kLEScanFastWindow,
-                      true /* filter_duplicates */,
+  scanner_->StartScan(active, interval, window, true /* filter_duplicates */,
                       hci::LEScanFilterPolicy::kNoWhiteList, scan_period_, cb);
 }
 

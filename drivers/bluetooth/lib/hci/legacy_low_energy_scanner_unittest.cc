@@ -231,7 +231,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScan) {
   RunLoopUntilIdle();
 
   // Scan should have started.
-  EXPECT_EQ(LowEnergyScanner::ScanStatus::kStarted, status);
+  EXPECT_EQ(LowEnergyScanner::ScanStatus::kActive, status);
   EXPECT_EQ(defaults::kLEScanInterval,
             test_device()->le_scan_state().scan_interval);
   EXPECT_EQ(defaults::kLEScanWindow,
@@ -241,7 +241,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScan) {
   EXPECT_EQ(LEScanType::kActive, test_device()->le_scan_state().scan_type);
   EXPECT_TRUE(test_device()->le_scan_state().filter_duplicates);
   EXPECT_TRUE(test_device()->le_scan_state().enabled);
-  EXPECT_EQ(LowEnergyScanner::State::kScanning, scanner()->state());
+  EXPECT_EQ(LowEnergyScanner::State::kActiveScanning, scanner()->state());
   EXPECT_TRUE(scanner()->IsScanning());
 
   // Calling StartScan should fail as a scan is already in progress.
@@ -283,9 +283,9 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopScan) {
   RunLoopUntilIdle();
 
   // Scan should have started.
-  EXPECT_EQ(LowEnergyScanner::ScanStatus::kStarted, status);
+  EXPECT_EQ(LowEnergyScanner::ScanStatus::kActive, status);
   EXPECT_TRUE(test_device()->le_scan_state().enabled);
-  EXPECT_EQ(LowEnergyScanner::State::kScanning, scanner()->state());
+  EXPECT_EQ(LowEnergyScanner::State::kActiveScanning, scanner()->state());
   EXPECT_TRUE(scanner()->IsScanning());
 
   // StopScan() should terminate the scan session and the status should be
@@ -454,7 +454,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopDuringActiveScan) {
       LEScanFilterPolicy::kNoWhiteList, LowEnergyScanner::kPeriodInfinite, cb));
   EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
   RunLoopUntilIdle();
-  EXPECT_EQ(LowEnergyScanner::State::kScanning, scanner()->state());
+  EXPECT_EQ(LowEnergyScanner::State::kActiveScanning, scanner()->state());
 
   // Run the loop until we've seen an event for the last device that we
   // added. Fake Device 4 (i.e. kRandomAddress3) is scannable but it never sends
@@ -498,6 +498,8 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, PassiveScanResults) {
   EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
 
   RunLoopUntilIdle();
+  EXPECT_EQ(LowEnergyScanner::State::kPassiveScanning, scanner()->state());
+  EXPECT_EQ(LowEnergyScanner::ScanStatus::kPassive, status);
   ASSERT_EQ(kExpectedResultCount, results.size());
 
   // Verify the 6 results against the fake devices that were set up by
@@ -613,7 +615,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, DirectedReport) {
 
   RunLoopUntilIdle();
 
-  ASSERT_EQ(LowEnergyScanner::ScanStatus::kStarted, status);
+  ASSERT_EQ(LowEnergyScanner::ScanStatus::kActive, status);
   ASSERT_EQ(kExpectedResultCount, results.size());
 
   ASSERT_TRUE(results.count(kPublicUnresolved));

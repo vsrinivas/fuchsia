@@ -118,6 +118,9 @@ class RemoteDeviceCache final {
     device_bonded_callback_ = std::move(callback);
   }
 
+  // Returns the number of devices that are currently in the device cache.
+  size_t count() const { return devices_.size(); }
+
  private:
   // Maps unique device IDs to the corresponding RemoteDevice entry.
   using RemoteDeviceMap =

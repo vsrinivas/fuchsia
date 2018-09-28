@@ -29,8 +29,10 @@ std::string ScanStateToString(LowEnergyScanner::State state) {
       return "(stopping)";
     case LowEnergyScanner::State::kInitiating:
       return "(initiating)";
-    case LowEnergyScanner::State::kScanning:
-      return "(scanning)";
+    case LowEnergyScanner::State::kActiveScanning:
+      return "(active scanning)";
+    case LowEnergyScanner::State::kPassiveScanning:
+      return "(passive scanning)";
     default:
       break;
   }
@@ -41,11 +43,10 @@ std::string ScanStateToString(LowEnergyScanner::State state) {
 
 }  // namespace
 
-LegacyLowEnergyScanner::LegacyLowEnergyScanner(
-    Delegate* delegate,
-    fxl::RefPtr<Transport> hci,
-    async_dispatcher_t* dispatcher)
-    : LowEnergyScanner(delegate, hci, dispatcher), active_scanning_(false) {
+LegacyLowEnergyScanner::LegacyLowEnergyScanner(Delegate* delegate,
+                                               fxl::RefPtr<Transport> hci,
+                                               async_dispatcher_t* dispatcher)
+    : LowEnergyScanner(delegate, hci, dispatcher) {
   event_handler_id_ = transport()->command_channel()->AddLEMetaEventHandler(
       kLEAdvertisingReportSubeventCode,
       fit::bind_member(this, &LegacyLowEnergyScanner::OnAdvertisingReportEvent),
@@ -84,7 +85,7 @@ bool LegacyLowEnergyScanner::StartScan(bool active,
   ZX_DEBUG_ASSERT(pending_results_.empty());
 
   set_state(State::kInitiating);
-  active_scanning_ = active;
+  set_active_scan_requested(active);
   scan_cb_ = std::move(callback);
 
   // HCI_LE_Set_Scan_Parameters
@@ -145,9 +146,13 @@ bool LegacyLowEnergyScanner::StartScan(bool active,
           zx::msec(period_ms));
     }
 
-    set_state(State::kScanning);
-
-    scan_cb_(ScanStatus::kStarted);
+    if (active_scan_requested()) {
+      set_state(State::kActiveScanning);
+      scan_cb_(ScanStatus::kActive);
+    } else {
+      set_state(State::kPassiveScanning);
+      scan_cb_(ScanStatus::kPassive);
+    }
   });
 
   return true;
@@ -250,12 +255,14 @@ void LegacyLowEnergyScanner::OnAdvertisingReportEvent(
         connectable = true;
         __FALLTHROUGH;
       case LEAdvertisingEventType::kAdvScanInd:
-        if (active_scanning_)
+        if (IsActiveScanning()) {
           needs_scan_rsp = true;
+        }
         break;
       case LEAdvertisingEventType::kScanRsp:
-        if (active_scanning_)
+        if (IsActiveScanning()) {
           HandleScanResponse(*report, rssi);
+        }
         continue;
       default:
         break;

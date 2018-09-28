@@ -71,6 +71,8 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
     return discovery_manager_.get();
   }
 
+  RemoteDeviceCache* device_cache() { return &device_cache_; }
+
   // Returns the last reported scan state of the FakeController.
   bool scan_enabled() const { return scan_enabled_; }
 
@@ -766,6 +768,247 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
   EXPECT_CONTAINS(kAddress3, devices_session4);
 
 #undef EXPECT_CONTAINS
+}
+
+TEST_F(GAP_LowEnergyDiscoveryManagerTest, DirectedConnectableEvent) {
+  auto fake_dev = std::make_unique<FakeDevice>(kAddress0, true, false);
+  fake_dev->enable_directed_advertising(true);
+  test_device()->AddDevice(std::move(fake_dev));
+
+  int count = 0;
+  discovery_manager()->set_directed_connectable_callback(
+      [&](const auto&) { count++; });
+  discovery_manager()->set_scan_period(kTestScanPeriodMs);
+
+  // Start discovery. Advertisements from the device should be ignored since the
+  // device is not bonded.
+  auto session = StartDiscoverySession();
+  RunLoopUntilIdle();
+  ASSERT_TRUE(session);
+  EXPECT_EQ(0, count);
+
+  // Mark the device as bonded.
+  sm::PairingData pdata;
+  pdata.ltk = sm::LTK();
+  device_cache()->AddBondedDevice("1234", kAddress0, pdata);
+  EXPECT_EQ(1u, device_cache()->count());
+
+  // Advance to the next scan period. We should receive a new notification.
+  RunLoopFor(zx::msec(kTestScanPeriodMs));
+  EXPECT_EQ(1, count);
+}
+
+TEST_F(GAP_LowEnergyDiscoveryManagerTest, EnableBackgroundScan) {
+  ASSERT_FALSE(test_device()->le_scan_state().enabled);
+
+  discovery_manager()->EnableBackgroundScan(true);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(test_device()->le_scan_state().enabled);
+  EXPECT_EQ(hci::LEScanType::kPassive,
+            test_device()->le_scan_state().scan_type);
+}
+
+TEST_F(GAP_LowEnergyDiscoveryManagerTest, DisableBackgroundScan) {
+  discovery_manager()->EnableBackgroundScan(true);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(test_device()->le_scan_state().enabled);
+
+  discovery_manager()->EnableBackgroundScan(false);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(test_device()->le_scan_state().enabled);
+}
+
+TEST_F(GAP_LowEnergyDiscoveryManagerTest,
+       EnableAndDisableBackgroundScanQuickly) {
+  ASSERT_FALSE(test_device()->le_scan_state().enabled);
+
+  discovery_manager()->EnableBackgroundScan(true);
+  discovery_manager()->EnableBackgroundScan(false);
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(test_device()->le_scan_state().enabled);
+  EXPECT_EQ(2u, scan_states().size());
+
+  // This should not result in a request to stop scan.
+  discovery_manager()->EnableBackgroundScan(true);
+  discovery_manager()->EnableBackgroundScan(false);
+  discovery_manager()->EnableBackgroundScan(true);
+  RunLoopUntilIdle();
+  EXPECT_EQ(3u, scan_states().size());
+
+  EXPECT_TRUE(test_device()->le_scan_state().enabled);
+}
+
+TEST_F(GAP_LowEnergyDiscoveryManagerTest, EnableBackgroundScanDuringDiscovery) {
+  auto session = StartDiscoverySession();
+  ASSERT_TRUE(session);
+  ASSERT_TRUE(test_device()->le_scan_state().enabled);
+  ASSERT_EQ(hci::LEScanType::kActive, test_device()->le_scan_state().scan_type);
+
+  // The scan state should transition to enabled.
+  ASSERT_EQ(1u, scan_states().size());
+  EXPECT_TRUE(scan_states()[0]);
+
+  // Enabling background scans should not disable the active scan.
+  discovery_manager()->EnableBackgroundScan(true);
+  RunLoopUntilIdle();
+  ASSERT_EQ(hci::LEScanType::kActive, test_device()->le_scan_state().scan_type);
+  EXPECT_TRUE(test_device()->le_scan_state().enabled);
+  EXPECT_EQ(1u, scan_states().size());
+
+  // Stopping the discovery session should fall back to passive scan.
+  session = nullptr;
+  RunLoopUntilIdle();
+  EXPECT_TRUE(test_device()->le_scan_state().enabled);
+  EXPECT_EQ(hci::LEScanType::kPassive,
+            test_device()->le_scan_state().scan_type);
+
+  // We expect the following state transitions: -> disabled -> enabled
+  ASSERT_EQ(3u, scan_states().size());
+  EXPECT_FALSE(scan_states()[1]);
+  EXPECT_TRUE(scan_states()[2]);
+}
+
+TEST_F(GAP_LowEnergyDiscoveryManagerTest,
+       DisableBackgroundScanDuringDiscovery) {
+  auto session = StartDiscoverySession();
+  ASSERT_TRUE(session);
+  ASSERT_TRUE(test_device()->le_scan_state().enabled);
+  ASSERT_EQ(hci::LEScanType::kActive, test_device()->le_scan_state().scan_type);
+
+  // The scan state should transition to enabled.
+  ASSERT_EQ(1u, scan_states().size());
+  EXPECT_TRUE(scan_states()[0]);
+
+  // Enabling background scans should not disable the active scan.
+  discovery_manager()->EnableBackgroundScan(true);
+  RunLoopUntilIdle();
+  ASSERT_EQ(hci::LEScanType::kActive, test_device()->le_scan_state().scan_type);
+  EXPECT_TRUE(test_device()->le_scan_state().enabled);
+  EXPECT_EQ(1u, scan_states().size());
+
+  // Disabling the background scan should not disable the active scan.
+  discovery_manager()->EnableBackgroundScan(false);
+  RunLoopUntilIdle();
+  ASSERT_EQ(hci::LEScanType::kActive, test_device()->le_scan_state().scan_type);
+  EXPECT_TRUE(test_device()->le_scan_state().enabled);
+  EXPECT_EQ(1u, scan_states().size());
+
+  // Stopping the discovery session should stop scans.
+  session = nullptr;
+  RunLoopUntilIdle();
+  EXPECT_FALSE(test_device()->le_scan_state().enabled);
+
+  // We expect the following state transitions: -> disabled
+  ASSERT_EQ(2u, scan_states().size());
+  EXPECT_FALSE(scan_states()[1]);
+}
+
+TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryDuringBackgroundScan) {
+  discovery_manager()->EnableBackgroundScan(true);
+  RunLoopUntilIdle();
+  ASSERT_TRUE(test_device()->le_scan_state().enabled);
+  ASSERT_EQ(hci::LEScanType::kPassive,
+            test_device()->le_scan_state().scan_type);
+
+  // The scan state should transition to enabled.
+  ASSERT_EQ(1u, scan_states().size());
+  EXPECT_TRUE(scan_states()[0]);
+
+  // Starting discovery should turn off the passive scan and initiate an active
+  // scan.
+  auto session = StartDiscoverySession();
+  EXPECT_TRUE(session);
+  EXPECT_TRUE(test_device()->le_scan_state().enabled);
+  EXPECT_EQ(hci::LEScanType::kActive, test_device()->le_scan_state().scan_type);
+
+  // We expect the following state transitions: -> disabled -> enabled
+  ASSERT_EQ(3u, scan_states().size());
+  EXPECT_FALSE(scan_states()[1]);
+  EXPECT_TRUE(scan_states()[2]);
+}
+
+TEST_F(GAP_LowEnergyDiscoveryManagerTest,
+       StartDiscoveryWhileEnablingBackgroundScan) {
+  discovery_manager()->EnableBackgroundScan(true);
+  std::unique_ptr<LowEnergyDiscoverySession> session;
+  discovery_manager()->StartDiscovery([&](auto cb_session) {
+    ZX_DEBUG_ASSERT(cb_session);
+    session = std::move(cb_session);
+  });
+  ASSERT_FALSE(session);
+
+  // Scan should not be enabled yet.
+  EXPECT_FALSE(test_device()->le_scan_state().enabled);
+  EXPECT_TRUE(scan_states().empty());
+
+  // Process all the requests. We should observe multiple state transitions:
+  // -> enabled (passive) -> disabled -> enabled (active)
+  RunLoopUntilIdle();
+  ASSERT_TRUE(test_device()->le_scan_state().enabled);
+  ASSERT_EQ(hci::LEScanType::kActive, test_device()->le_scan_state().scan_type);
+  ASSERT_EQ(3u, scan_states().size());
+  EXPECT_TRUE(scan_states()[0]);
+  EXPECT_FALSE(scan_states()[1]);
+  EXPECT_TRUE(scan_states()[2]);
+}
+
+TEST_F(GAP_LowEnergyDiscoveryManagerTest,
+       BackgroundScanOnlyHandlesDirectedEventsFromBondedDevices) {
+  const char kBondedDeviceId[] = "1234";
+  AddFakeDevices();
+
+  // Add a bonded device.
+  auto fake_dev = std::make_unique<FakeDevice>(kAddress0, true, false);
+  fake_dev->enable_directed_advertising(true);
+  test_device()->AddDevice(std::move(fake_dev));
+
+  sm::PairingData pdata;
+  pdata.ltk = sm::LTK();
+  device_cache()->AddBondedDevice(kBondedDeviceId, kAddress0, pdata);
+  EXPECT_EQ(1u, device_cache()->count());
+
+  // Add a second device the sends directed advertisements but do not mark it as
+  // bonded. Advertisements from this device should be ignored.
+  fake_dev = std::make_unique<FakeDevice>(kAddress1, true, false);
+  fake_dev->enable_directed_advertising(true);
+  test_device()->AddDevice(std::move(fake_dev));
+
+  int count = 0;
+  discovery_manager()->set_directed_connectable_callback([&](const auto& id) {
+    count++;
+    EXPECT_EQ(kBondedDeviceId, id);
+  });
+  discovery_manager()->EnableBackgroundScan(true);
+  RunLoopUntilIdle();
+  EXPECT_EQ(1, count);
+
+  // No new remote device cache entries should have been created.
+  EXPECT_EQ(1u, device_cache()->count());
+}
+
+TEST_F(GAP_LowEnergyDiscoveryManagerTest, BackgroundScanPeriodRestart) {
+  discovery_manager()->set_scan_period(kTestScanPeriodMs);
+  discovery_manager()->EnableBackgroundScan(true);
+
+  // The scan state should transition to enabled.
+  RunLoopUntilIdle();
+  EXPECT_TRUE(scan_enabled());
+  ASSERT_EQ(1u, scan_states().size());
+  EXPECT_TRUE(scan_states()[0]);
+
+  // End the scan period by advancing time.
+  RunLoopFor(zx::msec(kTestScanPeriodMs));
+  EXPECT_TRUE(test_device()->le_scan_state().enabled);
+  EXPECT_EQ(hci::LEScanType::kPassive,
+            test_device()->le_scan_state().scan_type);
+
+  // We expect the following state transitions due to the timeout:
+  // -> disabled -> enabled.
+  ASSERT_EQ(3u, scan_states().size());
+  EXPECT_FALSE(scan_states()[1]);
+  EXPECT_TRUE(scan_states()[2]);
 }
 
 }  // namespace

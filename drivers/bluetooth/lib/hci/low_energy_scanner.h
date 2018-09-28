@@ -66,8 +66,11 @@ class LowEnergyScanner {
     // A scan is being initiated.
     kInitiating,
 
-    // A scan is currently being performed.
-    kScanning,
+    // An active scan is currently being performed.
+    kActiveScanning,
+
+    // A passive scan is currently being performed.
+    kPassiveScanning,
   };
 
   // Interface for receiving events related to Low Energy device scan.
@@ -94,7 +97,9 @@ class LowEnergyScanner {
   State state() const { return state_; }
 
   // True if a device scan is currently being performed.
-  bool IsScanning() const { return state() == State::kScanning; }
+  bool IsActiveScanning() const { return state() == State::kActiveScanning; }
+  bool IsPassiveScanning() const { return state() == State::kPassiveScanning; }
+  bool IsScanning() const { return IsActiveScanning() || IsPassiveScanning(); }
 
   // True if no scan procedure is currently enabled.
   bool IsIdle() const { return state() == State::kIdle; }
@@ -136,8 +141,11 @@ class LowEnergyScanner {
     // Reported when the scan could not be started.
     kFailed,
 
-    // Reported when the scan was started and is currently in progress.
-    kStarted,
+    // Reported when an active scan was started and is currently in progress.
+    kActive,
+
+    // Reported when a passive scan was started and is currently in progress.
+    kPassive,
 
     // Called when the scan was terminated naturally at the end of the scan
     // period.
@@ -170,8 +178,14 @@ class LowEnergyScanner {
 
   void set_state(State state) { state_ = state; }
 
+  // Returns true if an active scan was most recently requested. This applies to
+  // the on-going scan only if IsScanning() returns true.
+  bool active_scan_requested() const { return active_scan_requested_; }
+  void set_active_scan_requested(bool value) { active_scan_requested_ = value; }
+
  private:
   State state_;
+  bool active_scan_requested_;
 
   Delegate* delegate_;  // weak
 

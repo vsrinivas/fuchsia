@@ -36,6 +36,7 @@ LowEnergyScanner::LowEnergyScanner(Delegate* delegate,
                                    fxl::RefPtr<Transport> hci,
                                    async_dispatcher_t* dispatcher)
     : state_(State::kIdle),
+      active_scan_requested_(false),
       delegate_(delegate),
       dispatcher_(dispatcher),
       transport_(hci) {
