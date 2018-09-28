@@ -424,23 +424,25 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
                                const zx_device_prop_t* props, uint32_t prop_count,
                                const char* proxy_args)
                                REQ_DM_LOCK {
+    auto fail = [&dev](zx_status_t status) {
+        dev->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
+        return status;
+    };
+
     zx_status_t status;
     if ((status = device_validate(dev)) < 0) {
-        goto fail;
+        return fail(status);
     }
     if (parent == nullptr) {
         printf("device_add: cannot add %p(%s) to nullptr parent\n", dev, dev->name);
-        status = ZX_ERR_NOT_SUPPORTED;
-        goto fail;
+        return fail(ZX_ERR_NOT_SUPPORTED);
     }
     if (parent->flags & DEV_FLAG_DEAD) {
         printf("device add: %p: is dead, cannot add child %p\n", parent, dev);
-        status = ZX_ERR_BAD_STATE;
-        goto fail;
+        return fail(ZX_ERR_BAD_STATE);
     }
 
-    creation_context_t* ctx;
-    ctx = nullptr;
+    creation_context_t* ctx = nullptr;
 
     // if creation ctx (thread local) is set, we are in a thread
     // that is handling a bind() or create() callback and if that
@@ -467,7 +469,7 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
         ((status = zx_eventpair_create(0, &dev->event, &dev->local_event)) < 0)) {
         printf("device add: %p(%s): cannot create event: %d\n",
                dev, dev->name, status);
-        goto fail;
+        return fail(status);
     }
 
     dev->flags |= DEV_FLAG_BUSY;
@@ -521,10 +523,6 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
         ctx->child = dev;
     }
     return ZX_OK;
-
-fail:
-    dev->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
-    return status;
 }
 
 #define REMOVAL_BAD_FLAGS \

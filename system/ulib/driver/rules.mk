@@ -33,6 +33,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fidl \
     system/ulib/sync \
     system/ulib/port \
+    system/ulib/zx \
     system/ulib/zxcpp \
 
 MODULE_LIBS := system/ulib/fdio system/ulib/zircon system/ulib/c

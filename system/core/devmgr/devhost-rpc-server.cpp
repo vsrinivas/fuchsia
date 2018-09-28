@@ -29,6 +29,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fidl/coding.h>
+#include <lib/zx/channel.h>
 #include <zxcpp/new.h>
 
 #define ZXDEBUG 0
@@ -36,13 +37,12 @@
 #define CAN_WRITE(ios) (ios->flags & ZX_FS_RIGHT_WRITABLE)
 #define CAN_READ(ios) (ios->flags & ZX_FS_RIGHT_READABLE)
 
-void describe_error(zx_handle_t h, zx_status_t status) {
+void describe_error(zx::channel h, zx_status_t status) {
     zxrio_describe_t msg;
     memset(&msg, 0, sizeof(msg));
     msg.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
     msg.status = status;
-    zx_channel_write(h, 0, &msg, sizeof(msg), nullptr, 0);
-    zx_handle_close(h);
+    h.write(0, &msg, sizeof(msg), nullptr, 0);
 }
 
 static zx_status_t create_description(zx_device_t* dev, zxrio_describe_t* msg,
@@ -78,7 +78,7 @@ devhost_iostate_t* create_devhost_iostate(zx_device_t* dev) {
     return ios;
 }
 
-static zx_status_t devhost_get_handles(zx_handle_t rh, zx_device_t* dev,
+static zx_status_t devhost_get_handles(zx::channel rh, zx_device_t* dev,
                                        const char* path, uint32_t flags) {
     zx_status_t r;
     devhost_iostate_t* newios;
@@ -89,7 +89,7 @@ static zx_status_t devhost_get_handles(zx_handle_t rh, zx_device_t* dev,
 
     if ((newios = create_devhost_iostate(dev)) == nullptr) {
         if (describe) {
-            describe_error(rh, ZX_ERR_NO_MEMORY);
+            describe_error(fbl::move(rh), ZX_ERR_NO_MEMORY);
         }
         return ZX_ERR_NO_MEMORY;
     }
@@ -110,7 +110,7 @@ static zx_status_t devhost_get_handles(zx_handle_t rh, zx_device_t* dev,
             goto fail_open;
         }
         uint32_t hcount = (handle != ZX_HANDLE_INVALID) ? 1 : 0;
-        r = zx_channel_write(rh, 0, &info, sizeof(info), &handle, hcount);
+        r = rh.write(0, &info, sizeof(info), &handle, hcount);
         if (r != ZX_OK) {
             goto fail_open;
         }
@@ -118,9 +118,12 @@ static zx_status_t devhost_get_handles(zx_handle_t rh, zx_device_t* dev,
 
     // If we can't add the new ios and handle to the dispatcher our only option
     // is to give up and tear down.  In practice, this should never happen.
-    if ((r = devhost_start_iostate(newios, rh)) < 0) {
+    if ((r = devhost_start_iostate(newios, rh.get())) != ZX_OK) {
         fprintf(stderr, "devhost_get_handles: failed to start iostate\n");
         goto fail;
+    } else {
+        // If the iostate successfully started, it now owns the channel.
+        __UNUSED auto channel = rh.release();
     }
     return ZX_OK;
 
@@ -129,9 +132,7 @@ fail_open:
 fail:
     free(newios);
     if (describe) {
-        describe_error(rh, r);
-    } else {
-        zx_handle_close(rh);
+        describe_error(fbl::move(rh), r);
     }
     return r;
 }
@@ -254,8 +255,9 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
 
 static zx_status_t fidl_node_clone(void* ctx, uint32_t flags, zx_handle_t object) {
     auto ios = static_cast<devhost_iostate_t*>(ctx);
+    zx::channel c(object);
     flags = ios->flags | (flags & ZX_FS_FLAG_DESCRIBE);
-    devhost_get_handles(object, ios->dev, nullptr, flags);
+    devhost_get_handles(fbl::move(c), ios->dev, nullptr, flags);
     return ZX_OK;
 }
 
@@ -289,10 +291,10 @@ static zx_status_t fidl_node_describe(void* ctx, fidl_txn_t* txn) {
 static zx_status_t fidl_directory_open(void* ctx, uint32_t flags, uint32_t mode,
                                        const char* path_data, size_t path_size,
                                        zx_handle_t object) {
+    zx::channel c(object);
     auto ios = static_cast<devhost_iostate_t*>(ctx);
     zx_device_t* dev = ios->dev;
     if ((path_size < 1) || (path_size > 1024)) {
-        zx_handle_close(object);
         return ZX_OK;
     }
     // TODO(smklein): Avoid assuming paths are null-terminated; this is only
@@ -303,7 +305,7 @@ static zx_status_t fidl_directory_open(void* ctx, uint32_t flags, uint32_t mode,
     if (!strcmp(path_data, ".")) {
         path_data = nullptr;
     }
-    devhost_get_handles(object, dev, path_data, flags);
+    devhost_get_handles(fbl::move(c), dev, path_data, flags);
     return ZX_OK;
 }
 

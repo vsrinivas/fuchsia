@@ -9,6 +9,7 @@
 
 #include <lib/fdio/io.h>
 #include <lib/fdio/util.h>
+#include <lib/zx/vmo.h>
 
 #include <zircon/paths.h>
 #include <zircon/processargs.h>
@@ -171,8 +172,8 @@ zx_status_t devmgr_launch_cmdline(
 }
 
 zx_status_t copy_vmo(zx_handle_t src, zx_off_t offset, size_t length, zx_handle_t* out_dest) {
-    zx_handle_t dest;
-    zx_status_t status = zx_vmo_create(length, 0, &dest);
+    zx::vmo dest;
+    zx_status_t status = zx::vmo::create(length, 0, &dest);
     if (status != ZX_OK) {
         return status;
     }
@@ -184,20 +185,16 @@ zx_status_t copy_vmo(zx_handle_t src, zx_off_t offset, size_t length, zx_handle_
     while (length > 0) {
         size_t copy = (length > sizeof(buffer) ? sizeof(buffer) : length);
         if ((status = zx_vmo_read(src, buffer, src_offset, copy)) != ZX_OK) {
-            goto fail;
+            return status;
         }
-        if ((status = zx_vmo_write(dest, buffer, dest_offset, copy)) != ZX_OK) {
-            goto fail;
+        if ((status = dest.write(buffer, dest_offset, copy)) != ZX_OK) {
+            return status;
         }
         src_offset += copy;
         dest_offset += copy;
         length -= copy;
     }
 
-    *out_dest = dest;
+    *out_dest = dest.release();
     return ZX_OK;
-
-fail:
-    zx_handle_close(dest);
-    return status;
 }

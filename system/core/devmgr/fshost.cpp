@@ -164,37 +164,35 @@ static int ramctl_watcher(void* arg) {
 #define HND_BOOTDATA(n) PA_HND(PA_VMO_BOOTDATA, n)
 
 static void setup_bootfs() {
-    zx_handle_t vmo;
     unsigned idx = 0;
 
-    if ((vmo = zx_take_startup_handle(HND_BOOTFS(0)))) {
-        setup_bootfs_vmo(idx++, BOOTDATA_BOOTFS_BOOT, vmo);
+    zx::vmo vmo(zx_take_startup_handle(HND_BOOTFS(0)));
+    if (vmo.is_valid()) {
+        setup_bootfs_vmo(idx++, BOOTDATA_BOOTFS_BOOT, vmo.release());
     } else {
         printf("devmgr: missing primary bootfs?!\n");
     }
 
-    for (unsigned n = 0; (vmo = zx_take_startup_handle(HND_BOOTDATA(n))); n++) {
+    for (unsigned n = 0; vmo.reset(zx_take_startup_handle(HND_BOOTDATA(n))), vmo.is_valid(); n++) {
         bootdata_t bootdata;
-        zx_status_t status = zx_vmo_read(vmo, &bootdata, 0, sizeof(bootdata));
+        zx_status_t status = vmo.read(&bootdata, 0, sizeof(bootdata));
         if (status < 0) {
-            goto done;
+            continue;
         }
         if ((bootdata.type != BOOTDATA_CONTAINER) || (bootdata.extra != BOOTDATA_MAGIC)) {
             printf("devmgr: bootdata item does not contain bootdata\n");
-            goto done;
+            continue;
         }
         if (!(bootdata.flags & BOOTDATA_FLAG_V2)) {
             printf("devmgr: bootdata v1 no longer supported\n");
-            goto done;
+            continue;
         }
 
-        size_t len;
-        size_t off;
-        len = bootdata.length;
-        off = sizeof(bootdata);
+        size_t len = bootdata.length;
+        size_t off = sizeof(bootdata);
 
         while (len > sizeof(bootdata)) {
-            zx_status_t status = zx_vmo_read(vmo, &bootdata, off, sizeof(bootdata));
+            zx_status_t status = vmo.read(&bootdata, off, sizeof(bootdata));
             if (status < 0) {
                 break;
             }
@@ -206,7 +204,7 @@ static void setup_bootfs() {
             switch (bootdata.type) {
             case BOOTDATA_CONTAINER:
                 printf("devmgr: unexpected bootdata container header\n");
-                goto done;
+                continue;
             case BOOTDATA_BOOTFS_DISCARD:
                 // this was already unpacked for us by userboot
                 break;
@@ -214,7 +212,7 @@ static void setup_bootfs() {
             case BOOTDATA_BOOTFS_SYSTEM: {
                 const char* errmsg;
                 zx_handle_t bootfs_vmo;
-                status = decompress_bootdata(zx_vmar_root_self(), vmo,
+                status = decompress_bootdata(zx_vmar_root_self(), vmo.release(),
                                              off, bootdata.length + sizeof(bootdata_t),
                                              &bootfs_vmo, &errmsg);
                 if (status < 0) {
@@ -228,7 +226,7 @@ static void setup_bootfs() {
                 const char* errmsg;
                 zx_handle_t ramdisk_vmo;
                 status = decompress_bootdata(
-                    zx_vmar_root_self(), vmo,
+                    zx_vmar_root_self(), vmo.release(),
                     off, bootdata.length + sizeof(bootdata_t),
                     &ramdisk_vmo, &errmsg);
                 if (status != ZX_OK) {
@@ -244,7 +242,7 @@ static void setup_bootfs() {
                 break;
             }
             case BOOTDATA_LAST_CRASHLOG:
-                setup_last_crashlog(vmo, off + sizeof(bootdata_t), bootdata.length);
+                setup_last_crashlog(vmo.release(), off + sizeof(bootdata_t), bootdata.length);
                 break;
             default:
                 break;
@@ -252,8 +250,6 @@ static void setup_bootfs() {
             off += itemlen;
             len -= itemlen;
         }
-    done:
-        zx_handle_close(vmo);
     }
 }
 
