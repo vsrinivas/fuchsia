@@ -148,4 +148,54 @@ bool LoadTaRpcMessage::TryInitializeMembers() {
     return true;
 }
 
+bool AllocateMemoryRpcMessage::TryInitializeMembers() {
+    if (header()->num_params != kNumParams) {
+        zxlogf(ERROR,
+               "optee: RPC command to allocate shared memory received unexpected number of "
+               "parameters!\n");
+        set_return_origin(TEEC_ORIGIN_COMMS);
+        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return false;
+    }
+
+    // Parse the memory specifications parameter
+    MessageParam& value_param = params()[kMemorySpecsParamIndex];
+    if (value_param.attribute != MessageParam::kAttributeTypeValueInput) {
+        zxlogf(ERROR,
+               "optee: RPC command to allocate shared memory received unexpected first parameter!"
+               "\n");
+        set_return_origin(TEEC_ORIGIN_COMMS);
+        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return false;
+    }
+
+    auto& memory_specs_param = value_param.payload.value.allocate_memory_specs;
+
+    switch (memory_specs_param.memory_type) {
+    case SharedMemoryType::kApplication:
+    case SharedMemoryType::kKernel:
+    case SharedMemoryType::kGlobal:
+        memory_type_ = static_cast<SharedMemoryType>(memory_specs_param.memory_type);
+        break;
+    default:
+        zxlogf(ERROR,
+               "optee: received unknown memory type %" PRIu64 " to allocate\n",
+               memory_specs_param.memory_type);
+        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return false;
+    }
+
+    memory_size_ = static_cast<size_t>(memory_specs_param.memory_size);
+
+    // Set up the memory output parameter
+    MessageParam& out_param = params()[kOutputTemporaryMemoryParamIndex];
+    out_param.attribute = MessageParam::AttributeType::kAttributeTypeTempMemOutput;
+    MessageParam::TemporaryMemory& out_temp_mem_param = out_param.payload.temporary_memory;
+    out_memory_size_ = &out_temp_mem_param.size;
+    out_memory_buffer_ = &out_temp_mem_param.buffer;
+    out_memory_id_ = &out_temp_mem_param.shared_memory_reference;
+
+    return true;
+}
+
 } // namespace optee

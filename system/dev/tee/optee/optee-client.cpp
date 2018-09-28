@@ -410,8 +410,13 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
     case RpcMessage::Command::kSuspend:
         zxlogf(ERROR, "optee: RPC command to suspend recognized but not implemented\n");
         return ZX_ERR_NOT_SUPPORTED;
-    case RpcMessage::Command::kAllocateMemory:
-        return HandleRpcCommandAllocateMemory(&message);
+    case RpcMessage::Command::kAllocateMemory: {
+        AllocateMemoryRpcMessage alloc_mem_msg(fbl::move(message));
+        if (!alloc_mem_msg.is_valid()) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return HandleRpcCommandAllocateMemory(&alloc_mem_msg);
+    }
     case RpcMessage::Command::kFreeMemory:
         return HandleRpcCommandFreeMemory(&message);
     case RpcMessage::Command::kPerformSocketIo:
@@ -542,51 +547,22 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
     return ZX_OK;
 }
 
-zx_status_t OpteeClient::HandleRpcCommandAllocateMemory(RpcMessage* message) {
+zx_status_t OpteeClient::HandleRpcCommandAllocateMemory(AllocateMemoryRpcMessage* message) {
+    ZX_DEBUG_ASSERT(message->is_valid());
+
     // Mark that the return code will originate from driver
     message->set_return_origin(TEEC_ORIGIN_COMMS);
 
-    MessageParamList params = message->params();
-    if (params.size() != 1) {
-        zxlogf(ERROR,
-               "optee: RPC command to allocate shared memory received a bad number of parameters!"
-               "\n");
-        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    // The first parameter outlines the specifications of the memory to be allocated
-    const MessageParam& memory_specs_param = params[0];
-    if (memory_specs_param.attribute != MessageParam::AttributeType::kAttributeTypeValueInput) {
-        zxlogf(ERROR,
-               "optee: RPC command to allocate shared memory received an unexpected parameter type!"
-               "\n");
-        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    // The first parameter in the Message specifies what kind of memory to allocate and how much
-    auto& mem_specs = memory_specs_param.payload.value.allocate_memory_specs;
-    switch (mem_specs.memory_type) {
-    case SharedMemoryType::kApplication:
-    case SharedMemoryType::kKernel:
-        break;
-    case SharedMemoryType::kGlobal:
+    if (message->memory_type() == SharedMemoryType::kGlobal) {
         zxlogf(ERROR, "optee: implementation currently does not support global shared memory!\n");
+        message->set_return_code(TEEC_ERROR_NOT_SUPPORTED);
         return ZX_ERR_NOT_SUPPORTED;
-    default:
-        zxlogf(ERROR,
-               "optee: cannot allocate unknown memory type %" PRIu64 "\n", mem_specs.memory_type);
-        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return ZX_ERR_INVALID_ARGS;
     }
 
+    size_t size = message->memory_size();
     zx_paddr_t paddr;
     uint64_t mem_id;
-    zx_status_t status = AllocateSharedMemory(static_cast<size_t>(mem_specs.memory_size),
-                                              controller_->client_pool(),
-                                              &paddr,
-                                              &mem_id);
+    zx_status_t status = AllocateSharedMemory(size, controller_->client_pool(), &paddr, &mem_id);
     if (status != ZX_OK) {
         if (status == ZX_ERR_NO_MEMORY) {
             message->set_return_code(TEEC_ERROR_OUT_OF_MEMORY);
@@ -597,14 +573,9 @@ zx_status_t OpteeClient::HandleRpcCommandAllocateMemory(RpcMessage* message) {
         return status;
     }
 
-    // The first parameter in the Message gets reused to output the result of the allocated memory
-    MessageParam& out_memory_result_param = params[0];
-    out_memory_result_param.attribute = MessageParam::AttributeType::kAttributeTypeTempMemOutput;
-
-    MessageParam::TemporaryMemory& out_temp_mem = out_memory_result_param.payload.temporary_memory;
-    out_temp_mem.size = mem_specs.memory_size;
-    out_temp_mem.buffer = static_cast<uint64_t>(paddr);
-    out_temp_mem.shared_memory_reference = mem_id;
+    message->set_output_memory_size(size);
+    message->set_output_buffer(paddr);
+    message->set_output_memory_identifier(mem_id);
 
     message->set_return_code(TEEC_SUCCESS);
 

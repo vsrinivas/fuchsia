@@ -362,4 +362,69 @@ private:
     bool TryInitializeMembers();
 };
 
+// AllocateMemoryRpcMessage
+//
+// A RpcMessage that should be interpreted with the command of allocating shared memory.
+// A RpcMessage can be converted into a AllocateMemoryRpcMessage via a constructor.
+class AllocateMemoryRpcMessage : public RpcMessage {
+public:
+    // AllocateMemoryRpcMessage
+    //
+    // Move constructor for AllocateMemoryRpcMessage. Uses the default implicit implementation.
+    AllocateMemoryRpcMessage(AllocateMemoryRpcMessage&&) = default;
+
+    // AllocateMemoryRpcMessage
+    //
+    // Constructs a AllocateMemoryRpcMessage from a moved-in RpcMessage.
+    explicit AllocateMemoryRpcMessage(RpcMessage&& rpc_message)
+        : RpcMessage(fbl::move(rpc_message)) {
+        ZX_DEBUG_ASSERT(is_valid()); // The RPC message passed in should've been valid
+        ZX_DEBUG_ASSERT(command() == RpcMessage::Command::kAllocateMemory);
+
+        is_valid_ = is_valid_ && TryInitializeMembers();
+    }
+
+    SharedMemoryType memory_type() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return memory_type_;
+    }
+
+    size_t memory_size() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return static_cast<size_t>(memory_size_);
+    }
+
+    void set_output_memory_size(size_t memory_size) {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        ZX_DEBUG_ASSERT(out_memory_size_ != nullptr);
+        *out_memory_size_ = static_cast<uint64_t>(memory_size);
+    }
+
+    void set_output_buffer(zx_paddr_t buffer_paddr) {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        ZX_DEBUG_ASSERT(out_memory_buffer_ != nullptr);
+        *out_memory_buffer_ = static_cast<uint64_t>(buffer_paddr);
+    }
+
+    void set_output_memory_identifier(uint64_t id) {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        ZX_DEBUG_ASSERT(out_memory_id_ != nullptr);
+        *out_memory_id_ = id;
+    }
+
+protected:
+    static constexpr size_t kNumParams = 1;
+    static constexpr size_t kMemorySpecsParamIndex = 0;
+    static constexpr size_t kOutputTemporaryMemoryParamIndex = 0;
+
+    SharedMemoryType memory_type_;
+    size_t memory_size_;
+    uint64_t* out_memory_size_;
+    uint64_t* out_memory_buffer_;
+    uint64_t* out_memory_id_;
+
+private:
+    bool TryInitializeMembers();
+};
+
 } // namespace optee
