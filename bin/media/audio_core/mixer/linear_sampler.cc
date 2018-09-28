@@ -31,6 +31,7 @@ class LinearSamplerImpl : public LinearSampler {
            const void* src, uint32_t frac_src_frames, int32_t* frac_src_offset,
            bool accumulate, Bookkeeping* info) override;
 
+  // If/when Bookkeeping is included in this class, clear src_pos_modulo here.
   void Reset() override { ::memset(filter_data_, 0, sizeof(filter_data_)); }
 
  private:
@@ -56,6 +57,7 @@ class NxNLinearSamplerImpl : public LinearSampler {
            const void* src, uint32_t frac_src_frames, int32_t* frac_src_offset,
            bool accumulate, Bookkeeping* info) override;
 
+  // If/when Bookkeeping is included in this class, clear src_pos_modulo here.
   void Reset() override {
     ::memset(filter_data_u_.get(), 0,
              2 * chan_count_ * sizeof(filter_data_u_[0]));
@@ -502,11 +504,8 @@ bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
     float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
     uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate,
     Bookkeeping* info) {
-  Bookkeeping bk;
-  if (info == nullptr) {
-    info = &bk;
-    info->denominator = 0;
-  }
+  FXL_DCHECK(info != nullptr);
+
   bool hasModulo = (info->denominator > 0 && info->rate_modulo > 0);
 
   if (info->gain.IsUnity()) {

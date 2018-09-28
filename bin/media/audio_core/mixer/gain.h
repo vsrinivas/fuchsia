@@ -14,16 +14,9 @@
 namespace media {
 namespace audio {
 
-// A small class used to hold the representation of a factor used for software
-// scaling of audio in the mixer pipeline.
+// A class containing factors used for software scaling in the mixer pipeline.
 class Gain {
  public:
-  // Amplitude scale factors are expressed as 32-bit IEEE-754 floating point.
-  using AScale = float;
-
-  // constructor
-  Gain() : target_src_gain_db_(0.0f), target_dest_gain_db_(0.0f) {}
-
   // Audio gains for AudioRenderers/AudioCapturers and output devices are
   // expressed as floating-point values, in decibels. For each signal path, two
   // gain values are combined and then stored in the API-to-device link (usually
@@ -32,9 +25,23 @@ class Gain {
   // Examples: renderer gain + Output gain = combined gain for a playback path.
   // Input device gain + audio in gain = combined gain for an audio input path.
   static constexpr float kMinGainDb = fuchsia::media::MUTED_GAIN_DB;
+  static constexpr float kUnityGainDb = 0.0f;
   static constexpr float kMaxGainDb = fuchsia::media::MAX_GAIN_DB;
 
+  // constructor
+  Gain()
+      : target_src_gain_db_(kUnityGainDb), target_dest_gain_db_(kUnityGainDb) {}
+
+  // Amplitude scale factors are expressed as 32-bit IEEE-754 floating point.
+  using AScale = float;
+
   // Helper constant values in the gain-scale domain.
+  //
+  // kMinScale is the value at which the amplitude scaler is guaranteed to drive
+  // all sample values to a value of 0 (meaning that we waste compute cycles if
+  // we actually scale anything). Note: because we normalize all input formats
+  // to the same full-scale bounds, this value is identical for all input types.
+  // This gain_scale value takes rounding into account in its calculation.
   //
   // kUnityScale is the scale value at which mix inputs are passed bit-for-bit
   // through the mixer into the accumulation buffer. This is used during the Mix
@@ -43,15 +50,9 @@ class Gain {
   // kMaxScale is the scale value corresponding to the largest allowed gainDb
   // values, which is currently +24.0 decibels. Scale values above this value
   // will be clamped to this value.
-  //
-  // kMinScale is the value at which the amplitude scaler is guaranteed to drive
-  // all sample values to a value of 0 (meaning that we waste compute cycles if
-  // we actually scale anything). Note: because we normalize all input formats
-  // to the same full-scale bounds, this value is identical for all input types.
-  // This gain_scale value takes rounding into account in its calculation.
+  static constexpr AScale kMinScale = 0.00000001f;  // kMinGainDb is -160.0 dB
   static constexpr AScale kUnityScale = 1.0f;
   static constexpr AScale kMaxScale = 15.8489319f;  // kMaxGainDb is +24.0 dB
-  static constexpr AScale kMinScale = 0.00000001f;  // kMinGainDb is -160.0 dB
 
   // TODO(mpuryear): MTWN-70 Clarify/document/test audio::Gain's thread-safety
   //
@@ -87,7 +88,7 @@ class Gain {
 
   // The DEST gain "written" to a Gain object is just a snapshot of the dest
   // gain held by the audio_capturer_impl or output device. We use this snapshot
-  // when performing future Mix operations for that particular source.
+  // when performing the current Mix operation for that particular source.
   void SetDestGain(float gain_db) { target_dest_gain_db_.store(gain_db); }
 
   // Retrieve the combined amplitude scale for this Gain, when provided the
@@ -108,7 +109,7 @@ class Gain {
   // NOTE: These methods expect the caller to use SetDestGain, NOT the
   // GetGainScale(dest_gain_db) variant -- it doesn't cache dest_gain_db.
   bool IsUnity() { return (GetGainScale() == kUnityScale); }
-  bool IsSilent() { return (GetGainScale() == 0.0f); }
+  bool IsSilent() { return (GetGainScale() <= kMinScale); }
 
  private:
   // Called by the above GetGainScale variants. For performance reasons, this
@@ -120,8 +121,8 @@ class Gain {
   std::atomic<float> target_src_gain_db_;
   std::atomic<float> target_dest_gain_db_;
 
-  float current_src_gain_db_ = 0.0f;
-  float current_dest_gain_db_ = 0.0f;
+  float current_src_gain_db_ = kUnityGainDb;
+  float current_dest_gain_db_ = kUnityGainDb;
   AScale combined_gain_scale_ = kUnityScale;
 };
 

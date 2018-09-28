@@ -237,7 +237,7 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
     // 1) plumb SetGainInfo to also SetDestGain for render links (and
     // SetSourceGain for capture links), and 2) initialize these values
     // correctly when gain/bk are created.
-    FXL_DCHECK(cur_mix_job_.sw_output_gain_db <= 0.0f);
+    FXL_DCHECK(cur_mix_job_.sw_output_gain_db <= Gain::kUnityGainDb);
     info->gain.SetDestGain(cur_mix_job_.sw_output_gain_db);
 
     bool setup_done = false;
@@ -532,7 +532,7 @@ void StandardOutputBase::UpdateDestTrans(const MixJob& job, Bookkeeping* bk) {
   FXL_DCHECK(dest.rate().reference_delta());
   if (!dest.rate().subject_delta()) {
     bk->step_size = 0;
-    bk->rate_modulo = 0;
+    bk->denominator = 0;  // shouldn't also need to clear rate_mod and pos_mod
   } else {
     int64_t tmp_step_size = dest.rate().Scale(1);
 
@@ -540,7 +540,7 @@ void StandardOutputBase::UpdateDestTrans(const MixJob& job, Bookkeeping* bk) {
     FXL_DCHECK(tmp_step_size <= std::numeric_limits<uint32_t>::max());
 
     bk->step_size = static_cast<uint32_t>(tmp_step_size);
-    bk->denominator = bk->denom();
+    bk->denominator = bk->SnapshotDenominatorFromDestTrans();
     bk->rate_modulo =
         dest.rate().subject_delta() - (bk->denominator * bk->step_size);
   }

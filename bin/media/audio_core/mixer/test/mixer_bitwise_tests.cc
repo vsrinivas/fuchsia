@@ -232,8 +232,6 @@ TEST(PassThru, NoOp) {
   int32_t frac_src_offset = 0;
 
   Bookkeeping info;
-  info.step_size = Mixer::FRAC_ONE;
-
   bool mix_result =
       no_op_mixer->Mix(accum, fbl::count_of(accum), &dest_offset, source,
                        fbl::count_of(source) << kPtsFractionalBits,

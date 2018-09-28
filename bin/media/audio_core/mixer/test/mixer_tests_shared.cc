@@ -77,7 +77,6 @@ void DoMix(MixerPtr mixer, const void* src_buf, float* accum_buf,
   int32_t frac_src_offset = 0;
 
   Bookkeeping info;
-  info.step_size = Mixer::FRAC_ONE;
   info.gain.SetSourceGain(gain_db);
 
   bool mix_result = mixer->Mix(accum_buf, num_frames, &dest_offset, src_buf,

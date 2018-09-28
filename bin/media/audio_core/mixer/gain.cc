@@ -12,9 +12,12 @@
 namespace media {
 namespace audio {
 
+constexpr Gain::AScale Gain::kMinScale;
 constexpr Gain::AScale Gain::kUnityScale;
 constexpr Gain::AScale Gain::kMaxScale;
+
 constexpr float Gain::kMinGainDb;
+constexpr float Gain::kUnityGainDb;
 constexpr float Gain::kMaxGainDb;
 
 // Calculate a stream's gain-scale multiplier from source and dest gains in dB.

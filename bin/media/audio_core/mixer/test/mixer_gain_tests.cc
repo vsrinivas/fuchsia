@@ -22,6 +22,14 @@ using Resampler = media::audio::Mixer::Resampler;
 //
 // Gain tests using the Gain and AScale objects only
 //
+TEST(Bookkeeping, GainDefaults) {
+  Gain gain;
+
+  EXPECT_TRUE(gain.IsUnity());
+  EXPECT_FALSE(gain.IsSilent());
+  EXPECT_EQ(gain.GetGainScale(), Gain::kUnityScale);
+}
+
 // Test the internally-used inline func that converts AScale gain to dB.
 TEST(Gain, GainScaleToDb) {
   // Unity scale is 0.0dB (no change).

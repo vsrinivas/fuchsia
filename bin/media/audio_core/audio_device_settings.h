@@ -28,6 +28,7 @@ class AudioDeviceSettings
  public:
   struct GainState {
     float gain_db = 0.0f;
+    //  TODO(mpuryear): make this true, consistent w/driver_output.cc?
     bool muted = false;
     bool agc_enabled = false;
   };

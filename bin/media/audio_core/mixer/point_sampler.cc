@@ -157,11 +157,8 @@ bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
     uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate,
     Bookkeeping* info) {
-  Bookkeeping bk;
-  if (info == nullptr) {
-    info = &bk;
-    info->denominator = 0;
-  }
+  FXL_DCHECK(info != nullptr);
+
   bool hasModulo = (info->denominator > 0 && info->rate_modulo > 0);
 
   if (info->gain.IsUnity()) {
@@ -305,10 +302,7 @@ bool NxNPointSamplerImpl<SrcSampleType>::Mix(
     float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
     uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate,
     Bookkeeping* info) {
-  Bookkeeping bk;
-  if (info == nullptr) {
-    info = &bk;
-  }
+  FXL_DCHECK(info != nullptr);
 
   bool hasModulo = (info->denominator > 0 && info->rate_modulo > 0);
 

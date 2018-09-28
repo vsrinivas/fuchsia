@@ -31,7 +31,6 @@ void MeasureSummaryDynamicRange(float gain_db, double* level_db,
   int32_t frac_src_offset = 0;
 
   Bookkeeping info;
-  info.step_size = Mixer::FRAC_ONE;
   info.gain.SetSourceGain(gain_db);
 
   mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
@@ -139,8 +138,6 @@ TEST(DynamicRange, MonoToStereo) {
   int32_t frac_src_offset = 0;
 
   Bookkeeping info;
-  info.step_size = Mixer::FRAC_ONE;
-
   mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
              kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false,
              &info);
@@ -197,8 +194,6 @@ TEST(DynamicRange, StereoToMono) {
   int32_t frac_src_offset = 0;
 
   Bookkeeping info;
-  info.step_size = Mixer::FRAC_ONE;
-
   mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
              kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false,
              &info);
@@ -286,7 +281,6 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
 
   // -6.0206 dB leads to 0.500 scale (exactly 50%), to be mixed with itself
   Bookkeeping info;
-  info.step_size = Mixer::FRAC_ONE;
   info.gain.SetSourceGain(-6.0205999f);
 
   EXPECT_TRUE(mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset,

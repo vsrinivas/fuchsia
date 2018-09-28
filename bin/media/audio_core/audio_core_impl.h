@@ -83,7 +83,7 @@ class AudioCoreImpl : public fuchsia::media::Audio {
  private:
   static constexpr float kDefaultSystemGainDb = -12.0f;
   static constexpr bool kDefaultSystemMuted = false;
-  static constexpr float kMaxSystemAudioGainDb = 0.0f;
+  static constexpr float kMaxSystemAudioGainDb = Gain::kUnityGainDb;
 
   void NotifyGainMuteChanged();
   void PublishServices();

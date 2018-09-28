@@ -22,7 +22,7 @@ namespace audio {
 
 zx_duration_t kAssumedWorstSourceFenceTime = ZX_MSEC(5);
 
-constexpr float kInitialCaptureGainDb = 0.0f;
+constexpr float kInitialCaptureGainDb = Gain::kUnityGainDb;
 
 // static
 AtomicGenerationId AudioCapturerImpl::PendingCaptureBuffer::sequence_generator;
@@ -1146,7 +1146,7 @@ void AudioCapturerImpl::UpdateTransformation(
   FXL_DCHECK(tmp_step_size >= 0);
   FXL_DCHECK(tmp_step_size <= std::numeric_limits<uint32_t>::max());
   bk->step_size = static_cast<uint32_t>(tmp_step_size);
-  bk->denominator = bk->denom();
+  bk->denominator = bk->SnapshotDenominatorFromDestTrans();
   bk->rate_modulo =
       bk->dest_frames_to_frac_source_frames.rate().subject_delta() -
       (bk->denominator * bk->step_size);
