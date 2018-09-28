@@ -127,6 +127,7 @@ private:
     zx_status_t HandleRpcCommandLoadTa(LoadTaRpcMessage* message);
     zx_status_t HandleRpcCommandAllocateMemory(AllocateMemoryRpcMessage* message);
     zx_status_t HandleRpcCommandFreeMemory(FreeMemoryRpcMessage* message);
+    zx_status_t HandleRpcCommandFileSystem(FileSystemRpcMessage* message);
 
     OpteeController* controller_;
     bool needs_to_close_ = false;

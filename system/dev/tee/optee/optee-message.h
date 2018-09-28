@@ -84,6 +84,9 @@ struct MessageParam {
             SharedMemoryType memory_type;
             uint64_t memory_id;
         } free_memory_specs;
+        struct {
+            uint64_t command_number;
+        } file_system_command;
     };
 
     uint64_t attribute;
@@ -465,6 +468,58 @@ protected:
 
     SharedMemoryType memory_type_;
     uint64_t memory_id_;
+
+private:
+    bool TryInitializeMembers();
+};
+
+// FileSystemRpcMessage
+//
+// A RpcMessage that should be interpreted with the command of accessing the file system.
+// A RpcMessage can be converted into a FileSystemRpcMessage via a constructor.
+class FileSystemRpcMessage : public RpcMessage {
+public:
+    enum FileSystemCommand : uint64_t {
+        kOpenFile = 0,
+        kCreateFile = 1,
+        kCloseFile = 2,
+        kReadFile = 3,
+        kWriteFile = 4,
+        kTruncateFile = 5,
+        kRemoveFile = 6,
+        kRenameFile = 7,
+        kOpenDirectory = 8,
+        kCloseDirectory = 9,
+        kGetNextFileInDirectory = 10
+    };
+
+    // FileSystemRpcMessage
+    //
+    // Move constructor for FileSystemRpcMessage. Uses the default implicit implementation.
+    FileSystemRpcMessage(FileSystemRpcMessage&&) = default;
+
+    // FileSystemRpcMessage
+    //
+    // Constructs a FileSystemRpcMessage from a moved-in RpcMessage.
+    explicit FileSystemRpcMessage(RpcMessage&& rpc_message)
+        : RpcMessage(fbl::move(rpc_message)) {
+        ZX_DEBUG_ASSERT(is_valid()); // The RPC message passed in should've been valid
+        ZX_DEBUG_ASSERT(command() == RpcMessage::Command::kAccessFileSystem);
+
+        is_valid_ = is_valid_ && TryInitializeMembers();
+    }
+
+    FileSystemCommand file_system_command() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return fs_command_;
+    }
+
+protected:
+    static constexpr size_t kNumFileSystemCommands = 11;
+    static constexpr size_t kMinNumParams = 1;
+    static constexpr size_t kFileSystemCommandParamIndex = 0;
+
+    FileSystemCommand fs_command_;
 
 private:
     bool TryInitializeMembers();

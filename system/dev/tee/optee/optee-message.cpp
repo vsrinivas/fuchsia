@@ -239,4 +239,39 @@ bool FreeMemoryRpcMessage::TryInitializeMembers() {
     return true;
 }
 
+bool FileSystemRpcMessage::TryInitializeMembers() {
+    if (header()->num_params < kMinNumParams) {
+        zxlogf(ERROR,
+               "optee: RPC command to access file system received unexpected number of parameters!"
+               "\n");
+        set_return_origin(TEEC_ORIGIN_COMMS);
+        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return false;
+    }
+
+    // Parse the file system command parameter
+    MessageParam& command_param = params()[kFileSystemCommandParamIndex];
+    switch (command_param.attribute) {
+    case MessageParam::kAttributeTypeValueInput:
+    case MessageParam::kAttributeTypeValueInOut:
+        break;
+    default:
+        zxlogf(ERROR,
+               "optee: RPC command to access file system received unexpected first parameter!\n");
+        set_return_origin(TEEC_ORIGIN_COMMS);
+        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return false;
+    }
+
+    uint64_t command_num = command_param.payload.value.file_system_command.command_number;
+    if (command_num >= kNumFileSystemCommands) {
+        zxlogf(ERROR, "optee: received unknown file system command %" PRIu64 "\n", command_num);
+        set_return_code(TEEC_ERROR_NOT_SUPPORTED);
+        return false;
+    }
+
+    fs_command_ = static_cast<FileSystemCommand>(command_num);
+    return true;
+}
+
 } // namespace optee

@@ -398,9 +398,13 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
         }
         return HandleRpcCommandLoadTa(&load_ta_msg);
     }
-    case RpcMessage::Command::kAccessFileSystem:
-        zxlogf(ERROR, "optee: RPC command to access file system recognized but not implemented\n");
-        return ZX_ERR_NOT_SUPPORTED;
+    case RpcMessage::Command::kAccessFileSystem: {
+        FileSystemRpcMessage fs_msg(fbl::move(message));
+        if (!fs_msg.is_valid()) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return HandleRpcCommandFileSystem(&fs_msg);
+    }
     case RpcMessage::Command::kGetTime:
         zxlogf(ERROR, "optee: RPC command to access file system recognized but not implemented\n");
         return ZX_ERR_NOT_SUPPORTED;
@@ -612,6 +616,53 @@ zx_status_t OpteeClient::HandleRpcCommandFreeMemory(FreeMemoryRpcMessage* messag
 
     message->set_return_code(TEEC_SUCCESS);
     return status;
+}
+
+zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage* message) {
+    ZX_DEBUG_ASSERT(message->is_valid());
+
+    // Mark that the return code will originate from driver
+    message->set_return_origin(TEEC_ORIGIN_COMMS);
+
+    switch (message->command()) {
+    case FileSystemRpcMessage::FileSystemCommand::kOpenFile:
+        zxlogf(ERROR, "optee: RPC command to open file recognized but not implemented\n");
+        break;
+    case FileSystemRpcMessage::FileSystemCommand::kCreateFile:
+        zxlogf(ERROR, "optee: RPC command to create file recognized but not implemented\n");
+        break;
+    case FileSystemRpcMessage::FileSystemCommand::kCloseFile:
+        zxlogf(ERROR, "optee: RPC command to close file recognized but not implemented\n");
+        break;
+    case FileSystemRpcMessage::FileSystemCommand::kReadFile:
+        zxlogf(ERROR, "optee: RPC command to read file recognized but not implemented\n");
+        break;
+    case FileSystemRpcMessage::FileSystemCommand::kWriteFile:
+        zxlogf(ERROR, "optee: RPC command to write file recognized but not implemented\n");
+        break;
+    case FileSystemRpcMessage::FileSystemCommand::kTruncateFile:
+        zxlogf(ERROR, "optee: RPC command to truncate file recognized but not implemented\n");
+        break;
+    case FileSystemRpcMessage::FileSystemCommand::kRemoveFile:
+        zxlogf(ERROR, "optee: RPC command to remove file recognized but not implemented\n");
+        break;
+    case FileSystemRpcMessage::FileSystemCommand::kRenameFile:
+        zxlogf(ERROR, "optee: RPC command to rename file recognized but not implemented\n");
+        break;
+    case FileSystemRpcMessage::FileSystemCommand::kOpenDirectory:
+        zxlogf(ERROR, "optee: RPC command to open directory recognized but not implemented\n");
+        break;
+    case FileSystemRpcMessage::FileSystemCommand::kCloseDirectory:
+        zxlogf(ERROR, "optee: RPC command to close directory recognized but not implemented\n");
+        break;
+    case FileSystemRpcMessage::FileSystemCommand::kGetNextFileInDirectory:
+        zxlogf(ERROR,
+               "optee: RPC command to get next file in directory recognized but not implemented\n");
+        break;
+    }
+
+    message->set_return_code(TEEC_ERROR_NOT_SUPPORTED);
+    return ZX_OK;
 }
 
 } // namespace optee
