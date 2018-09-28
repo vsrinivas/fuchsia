@@ -121,4 +121,5 @@ C and C++ client libraries should use `ZX_DEBUG_ASSERT` and `ZX_ASSERT`, defined
 in `<zircon/assert.h>`, to assert invariants. Client libraries may also use the
 `_MSG` variants to provide a message when the assertion fails.
 
+
 [FIDL API readability rubric]: ../api/fidl.md
