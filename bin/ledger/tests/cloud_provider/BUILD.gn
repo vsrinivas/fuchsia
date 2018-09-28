@@ -26,6 +26,7 @@ executable("cloud_provider") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
+    "//peridot/lib/commit_pack",
     "//peridot/public/fidl/fuchsia.ledger.cloud",
     "//third_party/googletest:gtest_main",
   ]

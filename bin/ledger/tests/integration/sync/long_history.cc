@@ -48,7 +48,7 @@ TEST_P(LongHistorySyncTest, SyncLongHistory) {
   auto page1 = instance1->GetTestPage();
   auto page1_state_watcher = WatchPageSyncState(&page1);
   ASSERT_TRUE(page1_state_watcher);
-  const int commit_history_length = 100;
+  const int commit_history_length = 500;
   // Overwrite one key N times, creating N implicit commits.
   for (int i = 0; i < commit_history_length; i++) {
     // TODO(ppi): switch to using a StatusWaiter to wait in parallel on all

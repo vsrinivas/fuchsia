@@ -13,14 +13,28 @@
 
 namespace cloud_sync {
 
-cloud_provider::Commit MakeTestCommit(
+cloud_provider::CommitPackEntry MakeTestCommit(
     encryption::FakeEncryptionService* encryption_service,
     const std::string& id, const std::string& data) {
-  cloud_provider::Commit commit;
-  commit.id = convert::ToArray(id);
-  commit.data =
-      convert::ToArray(encryption_service->EncryptCommitSynchronous(data));
+  cloud_provider::CommitPackEntry commit;
+  commit.id = id;
+  commit.data = encryption_service->EncryptCommitSynchronous(data);
   return commit;
+}
+
+std::unique_ptr<cloud_provider::CommitPack> MakeTestCommitPack(
+    encryption::FakeEncryptionService* encryption_service,
+    std::vector<std::tuple<std::string, std::string>> commit_data) {
+  std::vector<cloud_provider::CommitPackEntry> entries;
+  for (auto& data : commit_data) {
+    entries.push_back(MakeTestCommit(encryption_service, std::get<0>(data),
+                                     std::get<1>(data)));
+  }
+  cloud_provider::CommitPack result;
+  if (!cloud_provider::EncodeCommitPack(entries, &result)) {
+    return nullptr;
+  }
+  return fidl::MakeOptional(std::move(result));
 }
 
 TestPageCloud::TestPageCloud(
@@ -36,14 +50,17 @@ void TestPageCloud::RunPendingCallbacks() {
 }
 
 // cloud_provider::PageCloud:
-void TestPageCloud::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
+void TestPageCloud::AddCommits(cloud_provider::CommitPack commits,
                                AddCommitsCallback callback) {
+  std::vector<cloud_provider::CommitPackEntry> entries;
+  if (!cloud_provider::DecodeCommitPack(commits, &entries)) {
+    callback(cloud_provider::Status::INTERNAL_ERROR);
+    return;
+  }
+
   add_commits_calls++;
-  for (auto& commit : *commits) {
-    ReceivedCommit received_commit;
-    received_commit.id = convert::ToString(commit.id);
-    received_commit.data = convert::ToString(commit.data);
-    received_commits.push_back(std::move(received_commit));
+  for (auto& entry : entries) {
+    received_commits.push_back(std::move(entry));
   }
   callback(commit_status_to_return);
 }
@@ -52,7 +69,12 @@ void TestPageCloud::GetCommits(
     std::unique_ptr<cloud_provider::Token> /*min_position_token*/,
     GetCommitsCallback callback) {
   get_commits_calls++;
-  callback(status_to_return, std::move(commits_to_return),
+  cloud_provider::CommitPack commit_pack;
+  if (!cloud_provider::EncodeCommitPack(commits_to_return, &commit_pack)) {
+    callback(cloud_provider::Status::INTERNAL_ERROR, nullptr, nullptr);
+    return;
+  }
+  callback(status_to_return, fidl::MakeOptional(std::move(commit_pack)),
            std::move(position_token_to_return));
 }
 

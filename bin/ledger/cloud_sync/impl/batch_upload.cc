@@ -17,6 +17,8 @@
 #include <lib/fxl/memory/ref_ptr.h>
 #include <trace/event.h>
 
+#include "peridot/lib/commit_pack/commit_pack.h"
+
 namespace cloud_sync {
 
 BatchUpload::BatchUpload(
@@ -255,7 +257,7 @@ void BatchUpload::UploadCommits() {
   FXL_DCHECK(!errored_);
   std::vector<storage::CommitId> ids;
   auto waiter = fxl::MakeRefCounted<
-      callback::Waiter<encryption::Status, cloud_provider::Commit>>(
+      callback::Waiter<encryption::Status, cloud_provider::CommitPackEntry>>(
       encryption::Status::OK);
   for (auto& storage_commit : commits_) {
     storage::CommitId id = storage_commit->GetId();
@@ -264,10 +266,10 @@ void BatchUpload::UploadCommits() {
         [id, callback = waiter->NewCallback()](
             encryption::Status status,
             std::string encrypted_storage_bytes) mutable {
-          cloud_provider::Commit commit;
-          commit.id = convert::ToArray(id);
-          commit.data = convert::ToArray(encrypted_storage_bytes);
-          callback(status, std::move(commit));
+          cloud_provider::CommitPackEntry entry;
+          entry.id = std::move(id);
+          entry.data = std::move(encrypted_storage_bytes);
+          callback(status, std::move(entry));
         });
     ids.push_back(std::move(id));
   }
@@ -275,19 +277,21 @@ void BatchUpload::UploadCommits() {
       weak_ptr_factory_.GetWeakPtr(),
       [this, ids = std::move(ids)](
           encryption::Status status,
-          std::vector<cloud_provider::Commit> commits) mutable {
+          std::vector<cloud_provider::CommitPackEntry> entries) mutable {
         if (status != encryption::Status::OK) {
           errored_ = true;
           on_error_(ErrorType::PERMANENT);
           return;
         }
-        fidl::VectorPtr<cloud_provider::Commit> commit_array;
-        for (auto& commit : commits) {
-          commit_array.push_back(std::move(commit));
+        cloud_provider::CommitPack commit_pack;
+        if (!cloud_provider::EncodeCommitPack(entries, &commit_pack)) {
+          errored_ = true;
+          on_error_(ErrorType::PERMANENT);
+          return;
         }
         (*page_cloud_)
             ->AddCommits(
-                std::move(commit_array),
+                std::move(commit_pack),
                 callback::MakeScoped(
                     weak_ptr_factory_.GetWeakPtr(),
                     [this, commit_ids =

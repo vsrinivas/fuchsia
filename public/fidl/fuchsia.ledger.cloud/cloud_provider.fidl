@@ -83,20 +83,11 @@ interface DeviceSetWatcher {
   2: OnNetworkError();
 };
 
-// Commit stored in the cloud.
-struct Commit {
-  // The id of the commit.
-  vector<uint8> id;
-
-  // The content of the commit.
-  vector<uint8> data;
-};
-
 // Contains an ordered list of commits serialized using the SerializedCommits
 // schema defined in serialized_commits.fbs.
 //
-// This is unused yet, to be swapped in where we're currently passing
-// vector<Commit>.
+// TODO(ppi): switch to a format defined in a FIDL table, so that the protocol
+// is fully described by the FIDL file.
 struct CommitPack {
     fuchsia.mem.Buffer buffer;
 };
@@ -122,7 +113,7 @@ interface PageCloud {
   //
   // The commits are added in one batch, on the receiving side they are
   // delivered in the same order in a single OnNewCommits() call.
-  1: AddCommits(vector<Commit> commits) -> (Status @status);
+  1: AddCommits(CommitPack commits) -> (Status @status);
 
   // Retrieves commits from the cloud.
   //
@@ -136,7 +127,7 @@ interface PageCloud {
   // most recent of the |commits| (equivalent to |min_position_token| if
   // |commits| is empty).
   2: GetCommits(Token? min_position_token)
-      -> (Status @status, vector<Commit> commits, Token? position_token);
+      -> (Status @status, CommitPack? commits, Token? position_token);
 
   // Uploads the given object to the cloud under the given id.
   //
@@ -173,7 +164,7 @@ interface PageCloudWatcher {
   //
   // No subsequent calls are made until the client calls the callback of the
   // previous one.
-  1: OnNewCommits(vector<Commit> commits, Token position_token) -> ();
+  1: OnNewCommits(CommitPack commits, Token position_token) -> ();
 
   // Called when a new object is added to the cloud.
   //

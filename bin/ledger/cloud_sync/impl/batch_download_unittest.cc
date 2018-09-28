@@ -94,10 +94,10 @@ class BatchDownloadTest : public gtest::TestLoopFixture {
 TEST_F(BatchDownloadTest, AddCommit) {
   int done_calls = 0;
   int error_calls = 0;
-  fidl::VectorPtr<cloud_provider::Commit> commits;
-  commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
+  std::vector<cloud_provider::CommitPackEntry> entries;
+  entries.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   BatchDownload batch_download(
-      &storage_, &encryption_service_, std::move(commits), MakeToken("42"),
+      &storage_, &encryption_service_, std::move(entries), MakeToken("42"),
       [&done_calls] { done_calls++; }, [&error_calls] { error_calls++; });
   batch_download.Start();
 
@@ -112,11 +112,11 @@ TEST_F(BatchDownloadTest, AddCommit) {
 TEST_F(BatchDownloadTest, AddMultipleCommits) {
   int done_calls = 0;
   int error_calls = 0;
-  fidl::VectorPtr<cloud_provider::Commit> commits;
-  commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
-  commits.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
+  std::vector<cloud_provider::CommitPackEntry> entries;
+  entries.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
+  entries.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
   BatchDownload batch_download(
-      &storage_, &encryption_service_, std::move(commits), MakeToken("43"),
+      &storage_, &encryption_service_, std::move(entries), MakeToken("43"),
       [&done_calls] { done_calls++; }, [&error_calls] { error_calls++; });
   batch_download.Start();
 
@@ -132,10 +132,10 @@ TEST_F(BatchDownloadTest, AddMultipleCommits) {
 TEST_F(BatchDownloadTest, FailToAddCommit) {
   int done_calls = 0;
   int error_calls = 0;
-  fidl::VectorPtr<cloud_provider::Commit> commits;
-  commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
+  std::vector<cloud_provider::CommitPackEntry> entries;
+  entries.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   BatchDownload batch_download(
-      &storage_, &encryption_service_, std::move(commits), MakeToken("42"),
+      &storage_, &encryption_service_, std::move(entries), MakeToken("42"),
       [&done_calls] { done_calls++; }, [&error_calls] { error_calls++; });
   storage_.should_fail_add_commit_from_sync = true;
   batch_download.Start();

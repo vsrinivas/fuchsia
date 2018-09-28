@@ -13,6 +13,7 @@
 #include <lib/fxl/strings/string_view.h>
 
 #include "peridot/bin/cloud_provider_firestore/include/types.h"
+#include "peridot/lib/commit_pack/commit_pack.h"
 
 namespace cloud_provider_firestore {
 
@@ -30,13 +31,14 @@ bool DecodeKey(fxl::StringView input, std::string* output);
 
 // Encodes a batch of commits in the cloud provider FIDL format as a Firestore
 // document.
-bool EncodeCommitBatch(const fidl::VectorPtr<cloud_provider::Commit>& commits,
+bool EncodeCommitBatch(const cloud_provider::CommitPack& commits,
                        google::firestore::v1beta1::Document* document);
 
 // Decodes a Firestore document representing a commit batch.
-bool DecodeCommitBatch(const google::firestore::v1beta1::Document& document,
-                       fidl::VectorPtr<cloud_provider::Commit>* commits,
-                       std::string* timestamp);
+bool DecodeCommitBatch(
+    const google::firestore::v1beta1::Document& document,
+    std::vector<cloud_provider::CommitPackEntry>* commit_entries,
+    std::string* timestamp);
 
 }  // namespace cloud_provider_firestore
 

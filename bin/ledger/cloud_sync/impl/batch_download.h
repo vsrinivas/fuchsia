@@ -13,6 +13,7 @@
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/lib/commit_pack/commit_pack.h"
 
 namespace cloud_sync {
 
@@ -28,7 +29,7 @@ class BatchDownload {
  public:
   BatchDownload(storage::PageStorage* storage,
                 encryption::EncryptionService* encryption_service,
-                fidl::VectorPtr<cloud_provider::Commit> commits,
+                std::vector<cloud_provider::CommitPackEntry> entries,
                 std::unique_ptr<cloud_provider::Token> position_token,
                 fit::closure on_done, fit::closure on_error);
   ~BatchDownload();
@@ -41,7 +42,7 @@ class BatchDownload {
 
   storage::PageStorage* const storage_;
   encryption::EncryptionService* const encryption_service_;
-  fidl::VectorPtr<cloud_provider::Commit> commits_;
+  std::vector<cloud_provider::CommitPackEntry> entries_;
   std::unique_ptr<cloud_provider::Token> position_token_;
   fit::closure on_done_;
   fit::closure on_error_;

@@ -21,6 +21,7 @@
 #include "peridot/bin/cloud_provider_firestore/firestore/encoding.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/encoding.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
+#include "peridot/lib/commit_pack/commit_pack.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace cloud_provider_firestore {
@@ -39,19 +40,19 @@ class TestPageCloudWatcher : public cloud_provider::PageCloudWatcher {
   TestPageCloudWatcher() {}
   ~TestPageCloudWatcher() override {}
 
-  std::vector<cloud_provider::Commit> received_commits;
+  std::vector<cloud_provider::CommitPackEntry> received_commits;
   std::vector<cloud_provider::Token> received_tokens;
   OnNewCommitsCallback pending_on_new_commit_callback = nullptr;
 
  private:
   // cloud_provider::PageCloudWatcher:
-  void OnNewCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
+  void OnNewCommits(cloud_provider::CommitPack commit_pack,
                     cloud_provider::Token position_token,
                     OnNewCommitsCallback callback) override {
-    if (commits) {
-      std::move(commits->begin(), commits->end(),
-                std::back_inserter(received_commits));
-    }
+    std::vector<cloud_provider::CommitPackEntry> entries;
+    EXPECT_TRUE(cloud_provider::DecodeCommitPack(commit_pack, &entries));
+    std::move(entries.begin(), entries.end(),
+              std::back_inserter(received_commits));
     received_tokens.push_back(std::move(position_token));
 
     EXPECT_FALSE(pending_on_new_commit_callback);
@@ -98,11 +99,11 @@ TEST_F(PageCloudImplTest, EmptyWhenDisconnected) {
 TEST_F(PageCloudImplTest, AddCommits) {
   bool callback_called = false;
   auto status = cloud_provider::Status::INTERNAL_ERROR;
-  fidl::VectorPtr<cloud_provider::Commit> commits;
-  commits.push_back(cloud_provider::Commit{convert::ToArray("id0"),
-                                           convert::ToArray("data0")});
+  std::vector<cloud_provider::CommitPackEntry> entries{{"id0", "data0"}};
+  cloud_provider::CommitPack commit_pack;
+  ASSERT_TRUE(cloud_provider::EncodeCommitPack(entries, &commit_pack));
   page_cloud_->AddCommits(
-      std::move(commits),
+      std::move(commit_pack),
       callback::Capture(callback::SetWhenCalled(&callback_called), &status));
 
   RunLoopUntilIdle();
@@ -128,11 +129,11 @@ TEST_F(PageCloudImplTest, AddCommits) {
 TEST_F(PageCloudImplTest, GetCommits) {
   bool callback_called = false;
   auto status = cloud_provider::Status::INTERNAL_ERROR;
-  fidl::VectorPtr<cloud_provider::Commit> commits;
+  std::unique_ptr<cloud_provider::CommitPack> commit_pack;
   std::unique_ptr<cloud_provider::Token> position_token;
   page_cloud_->GetCommits(
       nullptr, callback::Capture(callback::SetWhenCalled(&callback_called),
-                                 &status, &commits, &position_token));
+                                 &status, &commit_pack, &position_token));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(callback_called);
@@ -141,23 +142,22 @@ TEST_F(PageCloudImplTest, GetCommits) {
   std::vector<google::firestore::v1beta1::RunQueryResponse> responses;
   {
     // First batch contains one commit.
-    fidl::VectorPtr<cloud_provider::Commit> batch_commits;
-    batch_commits.push_back(cloud_provider::Commit{convert::ToArray("id0"),
-                                                   convert::ToArray("data0")});
+    std::vector<cloud_provider::CommitPackEntry> entries{{"id0", "data0"}};
+    cloud_provider::CommitPack commit_pack;
+    ASSERT_TRUE(cloud_provider::EncodeCommitPack(entries, &commit_pack));
     google::firestore::v1beta1::RunQueryResponse response;
-    ASSERT_TRUE(EncodeCommitBatch(batch_commits, response.mutable_document()));
+    ASSERT_TRUE(EncodeCommitBatch(commit_pack, response.mutable_document()));
     SetTimestamp(response.mutable_document(), 100, 1);
     responses.push_back(std::move(response));
   }
   {
     // The second batch contains two commits.
-    fidl::VectorPtr<cloud_provider::Commit> batch_commits;
-    batch_commits.push_back(cloud_provider::Commit{convert::ToArray("id1"),
-                                                   convert::ToArray("data1")});
-    batch_commits.push_back(cloud_provider::Commit{convert::ToArray("id2"),
-                                                   convert::ToArray("data2")});
+    std::vector<cloud_provider::CommitPackEntry> entries{{"id1", "data1"},
+                                                         {"id2", "data2"}};
+    cloud_provider::CommitPack commit_pack;
+    ASSERT_TRUE(cloud_provider::EncodeCommitPack(entries, &commit_pack));
     google::firestore::v1beta1::RunQueryResponse response;
-    ASSERT_TRUE(EncodeCommitBatch(batch_commits, response.mutable_document()));
+    ASSERT_TRUE(EncodeCommitBatch(commit_pack, response.mutable_document()));
     SetTimestamp(response.mutable_document(), 100, 2);
     responses.push_back(std::move(response));
   }
@@ -168,9 +168,11 @@ TEST_F(PageCloudImplTest, GetCommits) {
 
   EXPECT_TRUE(callback_called);
   EXPECT_EQ(cloud_provider::Status::OK, status);
-  ASSERT_TRUE(commits);
+  ASSERT_TRUE(commit_pack);
+  std::vector<cloud_provider::CommitPackEntry> entries;
+  ASSERT_TRUE(cloud_provider::DecodeCommitPack(*commit_pack, &entries));
   // The result should be a flat vector of all three commits.
-  EXPECT_EQ(3u, commits->size());
+  EXPECT_EQ(3u, entries.size());
 
   EXPECT_TRUE(position_token);
   google::protobuf::Timestamp decoded_timestamp;
@@ -183,7 +185,7 @@ TEST_F(PageCloudImplTest, GetCommits) {
 TEST_F(PageCloudImplTest, GetCommitsQueryPositionToken) {
   bool callback_called = false;
   auto status = cloud_provider::Status::INTERNAL_ERROR;
-  fidl::VectorPtr<cloud_provider::Commit> commits;
+  std::unique_ptr<cloud_provider::CommitPack> commit_pack;
   google::protobuf::Timestamp timestamp;
   timestamp.set_seconds(42);
   timestamp.set_nanos(1);
@@ -194,7 +196,7 @@ TEST_F(PageCloudImplTest, GetCommitsQueryPositionToken) {
   page_cloud_->GetCommits(
       std::move(position_token),
       callback::Capture(callback::SetWhenCalled(&callback_called), &status,
-                        &commits, &position_token));
+                        &commit_pack, &position_token));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(callback_called);
@@ -339,18 +341,18 @@ TEST_F(PageCloudImplTest, SetWatcherGetCommits) {
   EXPECT_TRUE(callback_called);
   EXPECT_EQ(cloud_provider::Status::OK, status);
 
-  fidl::VectorPtr<cloud_provider::Commit> commits;
-  commits.push_back(cloud_provider::Commit{convert::ToArray("id0"),
-                                           convert::ToArray("data0")});
+  std::vector<cloud_provider::CommitPackEntry> entries{{"id0", "data0"}};
   google::protobuf::Timestamp protobuf_timestamp;
   ASSERT_TRUE(google::protobuf::util::TimeUtil::FromString(
       "2018-06-26T14:39:22+00:00", &protobuf_timestamp));
   std::string original_timestamp;
   ASSERT_TRUE(protobuf_timestamp.SerializeToString(&original_timestamp));
 
+  cloud_provider::CommitPack commit_pack;
+  ASSERT_TRUE(cloud_provider::EncodeCommitPack(entries, &commit_pack));
   auto response = google::firestore::v1beta1::ListenResponse();
   ASSERT_TRUE(EncodeCommitBatchWithTimestamp(
-      commits, original_timestamp,
+      commit_pack, original_timestamp,
       response.mutable_document_change()->mutable_document()));
   firestore_service_.listen_clients[0]->OnResponse(std::move(response));
 
@@ -391,18 +393,18 @@ TEST_F(PageCloudImplTest, SetWatcherNotificationOneAtATime) {
 
   // Deliver a commit notificiation from the cloud.
   {
-    fidl::VectorPtr<cloud_provider::Commit> commits;
-    commits.push_back(cloud_provider::Commit{convert::ToArray("id0"),
-                                             convert::ToArray("data0")});
+    std::vector<cloud_provider::CommitPackEntry> entries{{"id0", "data0"}};
     google::protobuf::Timestamp protobuf_timestamp;
     ASSERT_TRUE(google::protobuf::util::TimeUtil::FromString(
         "2018-06-26T14:39:22+00:00", &protobuf_timestamp));
     std::string timestamp;
     ASSERT_TRUE(protobuf_timestamp.SerializeToString(&timestamp));
 
+    cloud_provider::CommitPack commit_pack;
+    ASSERT_TRUE(cloud_provider::EncodeCommitPack(entries, &commit_pack));
     auto response = google::firestore::v1beta1::ListenResponse();
     ASSERT_TRUE(EncodeCommitBatchWithTimestamp(
-        commits, timestamp,
+        commit_pack, timestamp,
         response.mutable_document_change()->mutable_document()));
     firestore_service_.listen_clients[0]->OnResponse(std::move(response));
   }
@@ -415,18 +417,18 @@ TEST_F(PageCloudImplTest, SetWatcherNotificationOneAtATime) {
   // Deliver another commit notificiation from the cloud without calling the
   // watcher pending callback.
   {
-    fidl::VectorPtr<cloud_provider::Commit> commits;
-    commits.push_back(cloud_provider::Commit{convert::ToArray("id1"),
-                                             convert::ToArray("data1")});
+    std::vector<cloud_provider::CommitPackEntry> entries{{"id1", "data1"}};
     google::protobuf::Timestamp protobuf_timestamp;
     ASSERT_TRUE(google::protobuf::util::TimeUtil::FromString(
         "2018-06-26T14:39:24+00:00", &protobuf_timestamp));
     std::string timestamp;
     ASSERT_TRUE(protobuf_timestamp.SerializeToString(&timestamp));
 
+    cloud_provider::CommitPack commit_pack;
+    ASSERT_TRUE(cloud_provider::EncodeCommitPack(entries, &commit_pack));
     auto response = google::firestore::v1beta1::ListenResponse();
     ASSERT_TRUE(EncodeCommitBatchWithTimestamp(
-        commits, timestamp,
+        commit_pack, timestamp,
         response.mutable_document_change()->mutable_document()));
     firestore_service_.listen_clients[0]->OnResponse(std::move(response));
   }

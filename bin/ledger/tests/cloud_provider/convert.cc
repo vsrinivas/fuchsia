@@ -21,10 +21,10 @@ std::string ToString(const fidl::VectorPtr<uint8_t>& bytes) {
                      bytes->size());
 }
 
-std::string ToHex(const fidl::VectorPtr<uint8_t>& bytes) {
+std::string ToHex(const std::string& bytes) {
   std::string result;
-  result.reserve(bytes->size() * 2);
-  for (unsigned char c : *bytes) {
+  result.reserve(bytes.size() * 2);
+  for (unsigned char c : bytes) {
     result.push_back(kHexDigits[c >> 4]);
     result.push_back(kHexDigits[c & 0xf]);
   }

@@ -104,8 +104,14 @@ void PageCloudImpl::ScopedGetCredentials(
       weak_ptr_factory_.GetWeakPtr(), std::move(callback)));
 }
 
-void PageCloudImpl::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
+void PageCloudImpl::AddCommits(cloud_provider::CommitPack commits,
                                AddCommitsCallback callback) {
+  std::vector<cloud_provider::CommitPackEntry> commit_pack_entries;
+  if (!cloud_provider::DecodeCommitPack(commits, &commit_pack_entries)) {
+    callback(cloud_provider::Status::ARGUMENT_ERROR);
+    return;
+  }
+
   auto request = google::firestore::v1beta1::CommitRequest();
   request.set_database(firestore_service_->GetDatabasePath());
 
@@ -160,8 +166,7 @@ void PageCloudImpl::GetCommits(
     timestamp_or_null = std::make_unique<google::protobuf::Timestamp>();
     if (!timestamp_or_null->ParseFromString(
             convert::ToString(min_position_token->opaque_id))) {
-      callback(cloud_provider::Status::ARGUMENT_ERROR,
-               fidl::VectorPtr<cloud_provider::Commit>::New(0), nullptr);
+      callback(cloud_provider::Status::ARGUMENT_ERROR, nullptr, nullptr);
       return;
     }
   }
@@ -178,13 +183,11 @@ void PageCloudImpl::GetCommits(
         std::move(request), std::move(call_credentials),
         [callback = std::move(callback)](auto status, auto result) {
           if (LogGrpcRequestError(status)) {
-            callback(ConvertGrpcStatus(status.error_code()),
-                     fidl::VectorPtr<cloud_provider::Commit>::New(0), nullptr);
+            callback(ConvertGrpcStatus(status.error_code()), nullptr, nullptr);
             return;
           }
 
-          fidl::VectorPtr<cloud_provider::Commit> commits =
-              fidl::VectorPtr<cloud_provider::Commit>::New(0);
+          std::vector<cloud_provider::CommitPackEntry> commit_entries;
           std::string timestamp;
 
           for (const auto& response : result) {
@@ -192,25 +195,30 @@ void PageCloudImpl::GetCommits(
               continue;
             }
 
-            fidl::VectorPtr<cloud_provider::Commit> batch_commits;
-            if (!DecodeCommitBatch(response.document(), &batch_commits,
+            std::vector<cloud_provider::CommitPackEntry> batch_entries;
+            if (!DecodeCommitBatch(response.document(), &batch_entries,
                                    &timestamp)) {
-              callback(cloud_provider::Status::PARSE_ERROR,
-                       fidl::VectorPtr<cloud_provider::Commit>::New(0),
-                       nullptr);
+              callback(cloud_provider::Status::PARSE_ERROR, nullptr, nullptr);
               return;
             }
 
-            std::move(batch_commits->begin(), batch_commits->end(),
-                      std::back_inserter(*commits));
+            std::move(batch_entries.begin(), batch_entries.end(),
+                      std::back_inserter(commit_entries));
+          }
+
+          cloud_provider::CommitPack commit_pack;
+          if (!cloud_provider::EncodeCommitPack(commit_entries, &commit_pack)) {
+            callback(cloud_provider::Status::INTERNAL_ERROR, nullptr, nullptr);
+            return;
           }
 
           std::unique_ptr<cloud_provider::Token> token;
-          if (!commits->empty()) {
+          if (!commit_entries.empty()) {
             token = std::make_unique<cloud_provider::Token>();
             token->opaque_id = convert::ToArray(timestamp);
           }
-          callback(cloud_provider::Status::OK, std::move(commits),
+          callback(cloud_provider::Status::OK,
+                   fidl::MakeOptional(std::move(commit_pack)),
                    std::move(token));
         });
   });
@@ -344,16 +352,16 @@ void PageCloudImpl::OnResponse(
   if (response.has_document_change()) {
     std::string timestamp;
 
-    fidl::VectorPtr<cloud_provider::Commit> commits;
-    if (!DecodeCommitBatch(response.document_change().document(), &commits,
-                           &timestamp)) {
+    std::vector<cloud_provider::CommitPackEntry> commit_entries;
+    if (!DecodeCommitBatch(response.document_change().document(),
+                           &commit_entries, &timestamp)) {
       watcher_->OnError(cloud_provider::Status::PARSE_ERROR);
       ShutDownWatcher();
     }
 
     cloud_provider::Token token;
     token.opaque_id = convert::ToArray(timestamp);
-    HandleCommits(std::move(commits), std::move(token));
+    HandleCommits(std::move(commit_entries), std::move(token));
   }
 }
 
@@ -370,10 +378,10 @@ void PageCloudImpl::OnFinished(grpc::Status status) {
 }
 
 void PageCloudImpl::HandleCommits(
-    fidl::VectorPtr<cloud_provider::Commit> commits,
+    std::vector<cloud_provider::CommitPackEntry> commit_entries,
     cloud_provider::Token token) {
-  std::move(commits->begin(), commits->end(),
-            std::back_inserter(*commits_waiting_for_ack_));
+  std::move(commit_entries.begin(), commit_entries.end(),
+            std::back_inserter(commits_waiting_for_ack_));
   token_for_waiting_commits_ = std::move(token);
 
   if (!waiting_for_watcher_to_ack_commits_) {
@@ -383,17 +391,23 @@ void PageCloudImpl::HandleCommits(
 
 void PageCloudImpl::SendWaitingCommits() {
   FXL_DCHECK(watcher_);
-  FXL_DCHECK(!commits_waiting_for_ack_->empty());
+  FXL_DCHECK(!commits_waiting_for_ack_.empty());
   cloud_provider::Token token = std::move(token_for_waiting_commits_);
-  watcher_->OnNewCommits(std::move(commits_waiting_for_ack_), std::move(token),
-                         [this] {
-                           waiting_for_watcher_to_ack_commits_ = false;
-                           if (!commits_waiting_for_ack_->empty()) {
-                             SendWaitingCommits();
-                           }
-                         });
+  cloud_provider::CommitPack commit_pack;
+  if (!cloud_provider::EncodeCommitPack(commits_waiting_for_ack_,
+                                        &commit_pack)) {
+    watcher_->OnError(cloud_provider::Status::INTERNAL_ERROR);
+    ShutDownWatcher();
+    return;
+  }
+  watcher_->OnNewCommits(std::move(commit_pack), std::move(token), [this] {
+    waiting_for_watcher_to_ack_commits_ = false;
+    if (!commits_waiting_for_ack_.empty()) {
+      SendWaitingCommits();
+    }
+  });
   waiting_for_watcher_to_ack_commits_ = true;
-  commits_waiting_for_ack_->clear();
+  commits_waiting_for_ack_.clear();
 }
 
 void PageCloudImpl::ShutDownWatcher() {

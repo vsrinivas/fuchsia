@@ -21,8 +21,8 @@ namespace cloud_provider_firestore {
 //
 // |timestamp| must be a valid serialized protobuf::Timestamp.
 bool EncodeCommitBatchWithTimestamp(
-    const fidl::VectorPtr<cloud_provider::Commit>& commits,
-    std::string timestamp, google::firestore::v1beta1::Document* document);
+    const cloud_provider::CommitPack& commits, std::string timestamp,
+    google::firestore::v1beta1::Document* document);
 
 }  // namespace cloud_provider_firestore
 

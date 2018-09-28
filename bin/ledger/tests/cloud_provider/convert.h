@@ -15,7 +15,7 @@ fidl::VectorPtr<uint8_t> ToArray(const std::string& val);
 
 std::string ToString(const fidl::VectorPtr<uint8_t>& bytes);
 
-std::string ToHex(const fidl::VectorPtr<uint8_t>& bytes);
+std::string ToHex(const std::string& bytes);
 
 }  // namespace cloud_provider
 

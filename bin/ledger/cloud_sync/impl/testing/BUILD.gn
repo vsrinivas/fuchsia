@@ -26,6 +26,7 @@ source_set("testing") {
     "//peridot/bin/ledger/fidl/include",
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/storage/testing",
+    "//peridot/lib/commit_pack",
     "//peridot/public/fidl/fuchsia.ledger.cloud",
   ]
 

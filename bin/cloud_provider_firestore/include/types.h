@@ -13,7 +13,7 @@
 namespace cloud_provider {
 using CloudProvider = fuchsia::ledger::cloud::CloudProvider;
 using CloudProviderPtr = fuchsia::ledger::cloud::CloudProviderPtr;
-using Commit = fuchsia::ledger::cloud::Commit;
+using CommitPack = fuchsia::ledger::cloud::CommitPack;
 using DeviceSet = fuchsia::ledger::cloud::DeviceSet;
 using DeviceSetPtr = fuchsia::ledger::cloud::DeviceSetPtr;
 using DeviceSetWatcher = fuchsia::ledger::cloud::DeviceSetWatcher;

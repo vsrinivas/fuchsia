@@ -19,6 +19,7 @@
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call_client.h"
 #include "peridot/bin/cloud_provider_firestore/include/types.h"
+#include "peridot/lib/commit_pack/commit_pack.h"
 
 namespace cloud_provider_firestore {
 
@@ -38,7 +39,7 @@ class PageCloudImpl : public cloud_provider::PageCloud,
       fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback);
 
   // cloud_provider::PageCloud:
-  void AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
+  void AddCommits(cloud_provider::CommitPack commits,
                   AddCommitsCallback callback) override;
   void GetCommits(std::unique_ptr<cloud_provider::Token> min_position_token,
                   GetCommitsCallback callback) override;
@@ -62,8 +63,9 @@ class PageCloudImpl : public cloud_provider::PageCloud,
   //
   // This will either send over the commits immediately or queue them if we're
   // waiting the the watcher to ack the previous call.
-  void HandleCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
-                     cloud_provider::Token token);
+  void HandleCommits(
+      std::vector<cloud_provider::CommitPackEntry> commit_entries,
+      cloud_provider::Token token);
 
   void SendWaitingCommits();
 
@@ -91,7 +93,7 @@ class PageCloudImpl : public cloud_provider::PageCloud,
   // between an OnNewCommits() call and its callback executing are queued in
   // |commits_waiting_for_ack_|.
   bool waiting_for_watcher_to_ack_commits_ = false;
-  fidl::VectorPtr<cloud_provider::Commit> commits_waiting_for_ack_;
+  std::vector<cloud_provider::CommitPackEntry> commits_waiting_for_ack_;
   cloud_provider::Token token_for_waiting_commits_;
 
   // Must be the last member.

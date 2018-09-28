@@ -30,34 +30,41 @@ bool DecodeKey(fxl::StringView input, std::string* output) {
   return base64url::Base64UrlDecode(input, output);
 }
 
-bool EncodeCommitBatch(const fidl::VectorPtr<cloud_provider::Commit>& commits,
+bool EncodeCommitBatch(const cloud_provider::CommitPack& commits,
                        google::firestore::v1beta1::Document* document) {
   FXL_DCHECK(document);
+
+  std::vector<cloud_provider::CommitPackEntry> entries;
+  if (!cloud_provider::DecodeCommitPack(commits, &entries)) {
+    return false;
+  }
+
   // TODO(ppi): fail and return false if the resulting batch exceeds max
   // Firestore document size.
   google::firestore::v1beta1::Document result;
   google::firestore::v1beta1::ArrayValue* commit_array =
       (*result.mutable_fields())[kCommitsKey].mutable_array_value();
-  for (const auto& commit : *commits) {
+  for (const auto& entry : entries) {
     google::firestore::v1beta1::MapValue* commit_value =
         commit_array->add_values()->mutable_map_value();
     *((*commit_value->mutable_fields())[kIdKey].mutable_bytes_value()) =
-        convert::ToString(commit.id);
+        convert::ToString(entry.id);
     *((*commit_value->mutable_fields())[kDataKey].mutable_bytes_value()) =
-        convert::ToString(commit.data);
+        convert::ToString(entry.data);
   }
 
   document->Swap(&result);
   return true;
 }
 
-bool DecodeCommitBatch(const google::firestore::v1beta1::Document& document,
-                       fidl::VectorPtr<cloud_provider::Commit>* commits,
-                       std::string* timestamp) {
-  FXL_DCHECK(commits);
+bool DecodeCommitBatch(
+    const google::firestore::v1beta1::Document& document,
+    std::vector<cloud_provider::CommitPackEntry>* commit_entries,
+    std::string* timestamp) {
+  FXL_DCHECK(commit_entries);
   FXL_DCHECK(timestamp);
 
-  fidl::VectorPtr<cloud_provider::Commit> result;
+  std::vector<cloud_provider::CommitPackEntry> result;
   if (document.fields().count(kCommitsKey) != 1) {
     return false;
   }
@@ -77,18 +84,18 @@ bool DecodeCommitBatch(const google::firestore::v1beta1::Document& document,
 
     const google::firestore::v1beta1::MapValue& commit_map_value =
         commit_value.map_value();
-    cloud_provider::Commit commit;
+    cloud_provider::CommitPackEntry entry;
     if (commit_map_value.fields().count(kIdKey) != 1) {
       return false;
     }
-    commit.id =
-        convert::ToArray(commit_map_value.fields().at(kIdKey).bytes_value());
+    entry.id =
+        convert::ToString(commit_map_value.fields().at(kIdKey).bytes_value());
     if (commit_map_value.fields().count(kDataKey) != 1) {
       return false;
     }
-    commit.data =
-        convert::ToArray(commit_map_value.fields().at(kDataKey).bytes_value());
-    result.push_back(std::move(commit));
+    entry.data =
+        convert::ToString(commit_map_value.fields().at(kDataKey).bytes_value());
+    result.push_back(std::move(entry));
   }
 
   // Read the timestamp field.
@@ -107,7 +114,7 @@ bool DecodeCommitBatch(const google::firestore::v1beta1::Document& document,
     return false;
   }
 
-  commits->swap(result);
+  commit_entries->swap(result);
   return true;
 }
 

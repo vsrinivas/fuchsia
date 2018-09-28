@@ -92,12 +92,11 @@ void PageDownload::StartDownload() {
           position_token = std::make_unique<cloud_provider::Token>();
           position_token->opaque_id = convert::ToArray(last_commit_token_id);
         }
-        // TODO(ppi): handle pagination when the response is huge.
         (*page_cloud_)
             ->GetCommits(
                 std::move(position_token),
                 [this](cloud_provider::Status cloud_status,
-                       fidl::VectorPtr<cloud_provider::Commit> commits,
+                       std::unique_ptr<cloud_provider::CommitPack> commit_pack,
                        std::unique_ptr<cloud_provider::Token> position_token) {
                   if (cloud_status != cloud_provider::Status::OK) {
                     // Fetching the remote commits failed, schedule a retry.
@@ -110,9 +109,22 @@ void PageDownload::StartDownload() {
                     RetryWithBackoff([this] { StartDownload(); });
                     return;
                   }
+                  if (!commit_pack) {
+                    FXL_LOG(ERROR) << "Null commits despite status OK.";
+                    SetCommitState(DOWNLOAD_PERMANENT_ERROR);
+                    return;
+                  }
                   backoff_->Reset();
 
-                  if (commits->empty()) {
+                  std::vector<cloud_provider::CommitPackEntry> entries;
+                  if (!cloud_provider::DecodeCommitPack(*commit_pack,
+                                                        &entries)) {
+                    FXL_LOG(ERROR) << "Failed to decode the commits.";
+                    SetCommitState(DOWNLOAD_PERMANENT_ERROR);
+                    return;
+                  }
+
+                  if (entries.empty()) {
                     // If there is no remote commits to add, announce that
                     // we're done.
                     FXL_VLOG(1)
@@ -120,14 +132,13 @@ void PageDownload::StartDownload() {
                         << "initial sync finished, no new remote commits";
                     BacklogDownloaded();
                   } else {
-                    FXL_VLOG(1)
-                        << log_prefix_ << "retrieved " << commits->size()
-                        << " (possibly) new remote commits, "
-                        << "adding them to storage.";
+                    FXL_VLOG(1) << log_prefix_ << "retrieved " << entries.size()
+                                << " (possibly) new remote commits, "
+                                << "adding them to storage.";
                     // If not, fire the backlog download callback when the
                     // remote commits are downloaded.
-                    const auto commit_count = commits->size();
-                    DownloadBatch(std::move(commits), std::move(position_token),
+                    const auto commit_count = entries.size();
+                    DownloadBatch(std::move(entries), std::move(position_token),
                                   [this, commit_count] {
                                     FXL_VLOG(1)
                                         << log_prefix_
@@ -201,21 +212,26 @@ void PageDownload::SetRemoteWatcher(bool is_retry) {
       }));
 }
 
-void PageDownload::OnNewCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
+void PageDownload::OnNewCommits(cloud_provider::CommitPack commits,
                                 cloud_provider::Token position_token,
                                 OnNewCommitsCallback callback) {
+  std::vector<cloud_provider::CommitPackEntry> entries;
+  if (!cloud_provider::DecodeCommitPack(commits, &entries)) {
+    HandleDownloadCommitError("Failed to decode the commits");
+    return;
+  }
+
   if (batch_download_) {
     // If there is already a commit batch being downloaded, save the new commits
     // to be downloaded when it is done.
-    for (auto& commit : *commits) {
-      commits_to_download_.push_back(std::move(commit));
-    }
+    std::move(entries.begin(), entries.end(),
+              std::back_inserter(commits_to_download_));
     position_token_ = fidl::MakeOptional(std::move(position_token));
     callback();
     return;
   }
   SetCommitState(DOWNLOAD_IN_PROGRESS);
-  DownloadBatch(std::move(commits),
+  DownloadBatch(std::move(entries),
                 fidl::MakeOptional(std::move(position_token)),
                 std::move(callback));
 }
@@ -257,12 +273,12 @@ void PageDownload::OnError(cloud_provider::Status status) {
 }
 
 void PageDownload::DownloadBatch(
-    fidl::VectorPtr<cloud_provider::Commit> commits,
+    std::vector<cloud_provider::CommitPackEntry> entries,
     std::unique_ptr<cloud_provider::Token> position_token,
     fit::closure on_done) {
   FXL_DCHECK(!batch_download_);
   batch_download_ = std::make_unique<BatchDownload>(
-      storage_, encryption_service_, std::move(commits),
+      storage_, encryption_service_, std::move(entries),
       std::move(position_token),
       [this, on_done = std::move(on_done)] {
         if (on_done) {
@@ -270,7 +286,7 @@ void PageDownload::DownloadBatch(
         }
         batch_download_.reset();
 
-        if (commits_to_download_->empty()) {
+        if (commits_to_download_.empty()) {
           // Don't set to idle if we're in process of setting the remote
           // watcher.
           if (commit_state_ == DOWNLOAD_IN_PROGRESS) {
@@ -278,9 +294,9 @@ void PageDownload::DownloadBatch(
           }
           return;
         }
-        auto commits = std::move(commits_to_download_);
-        commits_to_download_ = fidl::VectorPtr<cloud_provider::Commit>::New(0);
-        DownloadBatch(std::move(commits), std::move(position_token_), nullptr);
+        auto entries = std::move(commits_to_download_);
+        commits_to_download_.clear();
+        DownloadBatch(std::move(entries), std::move(position_token_), nullptr);
       },
       [this] {
         HandleDownloadCommitError(

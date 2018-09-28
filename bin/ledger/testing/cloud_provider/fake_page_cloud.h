@@ -14,6 +14,7 @@
 
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"
+#include "peridot/lib/commit_pack/commit_pack.h"
 
 namespace ledger {
 
@@ -31,7 +32,7 @@ class FakePageCloud : public cloud_provider::PageCloud {
   bool MustReturnError(uint64_t request_signature);
 
   // cloud_provider::PageCloud:
-  void AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
+  void AddCommits(cloud_provider::CommitPack commits,
                   AddCommitsCallback callback) override;
   void GetCommits(std::unique_ptr<cloud_provider::Token> min_position_token,
                   GetCommitsCallback callback) override;
@@ -50,7 +51,7 @@ class FakePageCloud : public cloud_provider::PageCloud {
   fidl::BindingSet<cloud_provider::PageCloud> bindings_;
   fit::closure on_empty_;
 
-  fidl::VectorPtr<cloud_provider::Commit> commits_;
+  std::vector<cloud_provider::CommitPackEntry> commits_;
   std::map<std::string, std::string> objects_;
 
   // Watchers set by the client.

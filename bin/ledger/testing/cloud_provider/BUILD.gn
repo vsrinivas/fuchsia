@@ -21,6 +21,7 @@ source_set("cloud_provider") {
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/fidl/include",
+    "//peridot/lib/commit_pack",
   ]
 
   deps = [

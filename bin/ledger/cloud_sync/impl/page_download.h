@@ -18,6 +18,7 @@
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
+#include "peridot/lib/commit_pack/commit_pack.h"
 
 namespace cloud_sync {
 // PageDownload handles all the download operations (commits and objects) for a
@@ -51,7 +52,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
 
  private:
   // cloud_provider::PageCloudWatcher:
-  void OnNewCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
+  void OnNewCommits(cloud_provider::CommitPack commits,
                     cloud_provider::Token position_token,
                     OnNewCommitsCallback callback) override;
 
@@ -67,7 +68,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   void SetRemoteWatcher(bool is_retry);
 
   // Downloads the given batch of commits.
-  void DownloadBatch(fidl::VectorPtr<cloud_provider::Commit> commits,
+  void DownloadBatch(std::vector<cloud_provider::CommitPackEntry> entries,
                      std::unique_ptr<cloud_provider::Token> position_token,
                      fit::closure on_done);
 
@@ -119,7 +120,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   // The current batch of remote commits being downloaded.
   std::unique_ptr<BatchDownload> batch_download_;
   // Pending remote commits to download.
-  fidl::VectorPtr<cloud_provider::Commit> commits_to_download_;
+  std::vector<cloud_provider::CommitPackEntry> commits_to_download_;
   std::unique_ptr<cloud_provider::Token> position_token_;
   // Container for in-progress datasource.
   callback::ManagedContainer managed_container_;
