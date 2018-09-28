@@ -432,10 +432,10 @@ static int pwrbtn_monitor_starter(void* arg) {
     // create a namespace containing /dev/class/input and /dev/misc
     const char* nametable[2] = { };
     uint32_t count = 0;
-    zx_handle_t fs_handle = fs_clone("dev/class/input");
-    if (fs_handle != ZX_HANDLE_INVALID) {
+    zx::channel fs_handle = fs_clone("dev/class/input");
+    if (!fs_handle.is_valid()) {
         nametable[count] = "/input";
-        launchpad_add_handle(lp, fs_handle, PA_HND(PA_NS_DIR, count++));
+        launchpad_add_handle(lp, fs_handle.release(), PA_HND(PA_NS_DIR, count++));
     } else {
         launchpad_abort(lp, ZX_ERR_BAD_STATE, "devmgr: failed to clone /dev/class/input");
     }
@@ -443,9 +443,9 @@ static int pwrbtn_monitor_starter(void* arg) {
     // Ideally we'd only expose /dev/misc/dmctl, but we do not support exposing
     // single files
     fs_handle = fs_clone("dev/misc");
-    if (fs_handle != ZX_HANDLE_INVALID) {
+    if (!fs_handle.is_valid()) {
         nametable[count] = "/misc";
-        launchpad_add_handle(lp, fs_handle, PA_HND(PA_NS_DIR, count++));
+        launchpad_add_handle(lp, fs_handle.release(), PA_HND(PA_NS_DIR, count++));
     } else {
         launchpad_abort(lp, ZX_ERR_BAD_STATE, "devmgr: failed to clone /dev/misc");
     }
@@ -705,7 +705,7 @@ void fshost_start() {
     if ((handles[n] = devfs_root_clone()) != ZX_HANDLE_INVALID) {
         types[n++] = PA_HND(PA_USER0, 1);
     }
-    if ((handles[n] = fs_clone("svc")) != ZX_HANDLE_INVALID) {
+    if ((handles[n] = fs_clone("svc").release()) != ZX_HANDLE_INVALID) {
         types[n++] = PA_HND(PA_USER0, 2);
     }
     if (zx_channel_create(0, &ldsvc, &handles[n]) == ZX_OK) {
@@ -823,13 +823,13 @@ void devmgr_vfs_exit() {
     }
 }
 
-zx_handle_t fs_clone(const char* path) {
+zx::channel fs_clone(const char* path) {
     if (!strcmp(path, "dev")) {
-        return devfs_root_clone();
+        return zx::channel(devfs_root_clone());
     }
-    zx_handle_t h0, h1;
-    if (zx_channel_create(0, &h0, &h1) != ZX_OK) {
-        return ZX_HANDLE_INVALID;
+    zx::channel h0, h1;
+    if (zx::channel::create(0, &h0, &h1) != ZX_OK) {
+        return zx::channel();
     }
     bool close_fs = false;
     zx_handle_t fs = fs_root;
@@ -845,13 +845,12 @@ zx_handle_t fs_clone(const char* path) {
         close_fs = true;
         path += 4;
     }
-    zx_status_t status = fdio_open_at(fs, path, flags, h1);
+    zx_status_t status = fdio_open_at(fs, path, flags, h1.release());
     if (close_fs) {
         zx_handle_close(fs);
     }
     if (status != ZX_OK) {
-        zx_handle_close(h0);
-        return ZX_HANDLE_INVALID;
+        return zx::channel();
     }
     return h0;
 }
@@ -867,13 +866,13 @@ void devmgr_vfs_init() {
         printf("devmgr: cannot create namespace: %d\n", r);
         return;
     }
-    if ((r = fdio_ns_bind(ns, "/dev", fs_clone("dev"))) != ZX_OK) {
+    if ((r = fdio_ns_bind(ns, "/dev", fs_clone("dev").release())) != ZX_OK) {
         printf("devmgr: cannot bind /dev to namespace: %d\n", r);
     }
-    if ((r = fdio_ns_bind(ns, "/boot", fs_clone("boot"))) != ZX_OK) {
+    if ((r = fdio_ns_bind(ns, "/boot", fs_clone("boot").release())) != ZX_OK) {
         printf("devmgr: cannot bind /boot to namespace: %d\n", r);
     }
-    if ((r = fdio_ns_bind(ns, "/system", fs_clone("system"))) != ZX_OK) {
+    if ((r = fdio_ns_bind(ns, "/system", fs_clone("system").release())) != ZX_OK) {
         printf("devmgr: cannot bind /system to namespace: %d\n", r);
     }
     if ((r = fdio_ns_install(ns)) != ZX_OK) {

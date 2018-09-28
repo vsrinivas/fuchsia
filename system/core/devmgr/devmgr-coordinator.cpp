@@ -627,11 +627,11 @@ static zx_status_t dc_launch_devhost(devhost_t* host,
     uint32_t name_count = 0;
 
     //TODO: eventually devhosts should not have vfs access
-    launchpad_add_handle(lp, fs_clone("boot"),
+    launchpad_add_handle(lp, fs_clone("boot").release(),
                          PA_HND(PA_NS_DIR, name_count++));
 
     //TODO: constrain to /svc/device
-    if ((h = fs_clone("svc")) != ZX_HANDLE_INVALID) {
+    if ((h = fs_clone("svc").release()) != ZX_HANDLE_INVALID) {
         launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, name_count++));
     }
 

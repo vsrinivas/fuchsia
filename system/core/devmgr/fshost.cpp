@@ -338,20 +338,19 @@ zx_handle_t fs_root_clone() {
     (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN | \
      ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE)
 
-zx_handle_t fs_clone(const char* path) {
+zx::channel fs_clone(const char* path) {
     if (!strcmp(path, "svc")) {
-        return fdio_service_clone(svc_root);
+        return zx::channel(fdio_service_clone(svc_root));
     }
     if (!strcmp(path, "dev")) {
-        return fdio_service_clone(devfs_root);
+        return zx::channel(fdio_service_clone(devfs_root));
     }
-    zx_handle_t h0, h1;
-    if (zx_channel_create(0, &h0, &h1) != ZX_OK) {
-        return ZX_HANDLE_INVALID;
+    zx::channel h0, h1;
+    if (zx::channel::create(0, &h0, &h1) != ZX_OK) {
+        return zx::channel();
     }
-    if (fdio_open_at(fs_root, path, FS_DIR_FLAGS, h1) != ZX_OK) {
-        zx_handle_close(h0);
-        return ZX_HANDLE_INVALID;
+    if (fdio_open_at(fs_root, path, FS_DIR_FLAGS, h1.release()) != ZX_OK) {
+        return zx::channel();
     }
     return h0;
 }
@@ -396,13 +395,13 @@ int main(int argc, char** argv) {
     if ((r = fdio_ns_bind(ns, "/fs", (fs_root = fs_root_clone()))) != ZX_OK) {
         printf("fshost: cannot bind /fs to namespace: %d\n", r);
     }
-    if ((r = fdio_ns_bind(ns, "/dev", fs_clone("dev"))) != ZX_OK) {
+    if ((r = fdio_ns_bind(ns, "/dev", fs_clone("dev").release())) != ZX_OK) {
         printf("fshost: cannot bind /dev to namespace: %d\n", r);
     }
-    if ((r = fdio_ns_bind(ns, "/boot", fs_clone("boot"))) != ZX_OK) {
+    if ((r = fdio_ns_bind(ns, "/boot", fs_clone("boot").release())) != ZX_OK) {
         printf("devmgr: cannot bind /boot to namespace: %d\n", r);
     }
-    if ((r = fdio_ns_bind(ns, "/system", fs_clone("system"))) != ZX_OK) {
+    if ((r = fdio_ns_bind(ns, "/system", fs_clone("system").release())) != ZX_OK) {
         printf("devmgr: cannot bind /system to namespace: %d\n", r);
     }
     if ((r = fdio_ns_install(ns)) != ZX_OK) {

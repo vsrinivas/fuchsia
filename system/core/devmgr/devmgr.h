@@ -10,6 +10,7 @@
 #include <zircon/types.h>
 #include <zircon/device/vfs.h>
 #include <launchpad/launchpad.h>
+#include <lib/zx/channel.h>
 
 void coordinator();
 
@@ -80,7 +81,7 @@ void devmgr_disable_appmgr_services();
 #define LDSO_TRACE_ENV "LD_TRACE=1"
 
 zx_handle_t devfs_root_clone();
-zx_handle_t fs_clone(const char* path);
+zx::channel fs_clone(const char* path);
 
 void block_device_watcher(zx_handle_t job, bool netboot);
 

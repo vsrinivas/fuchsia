@@ -102,7 +102,7 @@ zx_status_t devmgr_launch(
         if (!(FSTAB[n].flags & flags)) {
             continue;
         }
-        if ((h = fs_clone(FSTAB[n].name)) != ZX_HANDLE_INVALID) {
+        if ((h = fs_clone(FSTAB[n].name).release()) != ZX_HANDLE_INVALID) {
             nametable[count] = FSTAB[n].mount;
             launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, count++));
         }
