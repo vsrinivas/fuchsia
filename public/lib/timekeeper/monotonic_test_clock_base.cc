@@ -5,8 +5,17 @@
 #include "garnet/public/lib/timekeeper/monotonic_test_clock_base.h"
 
 #include <algorithm>
+#include <type_traits>
 
 namespace timekeeper {
+namespace {
+
+// Returns the starting value for the given clock. Ensures that
+// |ZX_CLOCK_MONOTONIC| has a starting value of zero.
+zx_time_t GetClockStartingValue(zx_clock_t clock_id) {
+  return (clock_id - ZX_CLOCK_MONOTONIC) * ZX_HOUR(24);
+}
+}  // namespace
 
 MonotonicTestClockBase::MonotonicTestClockBase(fit::function<zx_time_t()> clock)
     : clock_(std::move(clock)) {}
@@ -15,7 +24,7 @@ MonotonicTestClockBase::~MonotonicTestClockBase() = default;
 
 zx_status_t MonotonicTestClockBase::GetTime(zx_clock_t clock_id,
                                             zx_time_t* time) const {
-  *time = GetMonotonicTime();
+  *time = GetClockStartingValue(clock_id) + GetMonotonicTime();
   return ZX_OK;
 }
 
