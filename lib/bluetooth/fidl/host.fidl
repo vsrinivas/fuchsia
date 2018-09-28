@@ -26,6 +26,7 @@ interface Host {
   //   connections initiated via FIDL clients are severed.
   // * All scan, discovery, and advertising procedures are stopped.
   // * Bonded devices are cleared and removed from the auto-connect lists.
+  // * Auto-connected peripherals are disconnected.
   //
   // This effectively resets the host to its initial state and the host remains
   // available for future requests.
@@ -83,11 +84,17 @@ interface Host {
   // Sets whether this host should be discoverable.
   12: SetDiscoverable(bool enabled) -> (fuchsia.bluetooth.Status status);
 
+  // Enable or disable a passive LE background scan. When enabled, the bt-host
+  // device will continuously perform a passive LE scan in the background when
+  // no device discovery sessions are active and accept connection requests from
+  // bonded peripherals.
+  13: EnableBackgroundScan(bool enabled);
+
   // Assigns the pairing delegate that will respond to authentication challenges using the given
   // I/O capabilities. Setting a pairing delegate cancels any on-going pairing procedure started
   // using a previous delegate. Pairing requests will be rejected if no PairingDelegate has been
   // assigned.
-  13: SetPairingDelegate(
+  14: SetPairingDelegate(
           fuchsia.bluetooth.control.InputCapabilityType input,
           fuchsia.bluetooth.control.OutputCapabilityType output,
           fuchsia.bluetooth.control.PairingDelegate? delegate);

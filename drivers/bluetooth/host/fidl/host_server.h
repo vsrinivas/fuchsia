@@ -53,6 +53,12 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
                       SetConnectableCallback callback) override;
   void SetDiscoverable(bool discoverable,
                        SetDiscoverableCallback callback) override;
+  void EnableBackgroundScan(bool enabled) override;
+  void SetPairingDelegate(
+      ::fuchsia::bluetooth::control::InputCapabilityType input,
+      ::fuchsia::bluetooth::control::OutputCapabilityType output,
+      ::fidl::InterfaceHandle<::fuchsia::bluetooth::control::PairingDelegate>
+          delegate) override;
 
   void RequestLowEnergyCentral(
       ::fidl::InterfaceRequest<fuchsia::bluetooth::le::Central> central)
@@ -63,11 +69,6 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
   void RequestGattServer(
       ::fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Server> server)
       override;
-  void SetPairingDelegate(
-      ::fuchsia::bluetooth::control::InputCapabilityType input,
-      ::fuchsia::bluetooth::control::OutputCapabilityType output,
-      ::fidl::InterfaceHandle<::fuchsia::bluetooth::control::PairingDelegate>
-          delegate) override;
   void RequestProfile(
       ::fidl::InterfaceRequest<fuchsia::bluetooth::bredr::Profile> profile)
       override;
@@ -92,6 +93,11 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
   // Called by |adapter()->remote_device_cache()| when a remote device is
   // bonded.
   void OnRemoteDeviceBonded(const ::btlib::gap::RemoteDevice& remote_device);
+
+  // Called by |adapter()->le_discovery_manager()| when a connection is
+  // automatically established to a bonded device in the directed connectable
+  // mode.
+  void OnAutoConnect(btlib::gap::LowEnergyConnectionRefPtr conn_ref);
 
   // Called when |server| receives a channel connection error.
   void OnConnectionError(Server* server);
@@ -135,6 +141,13 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
   // This allows us to create a set of managed objects that can be looked up via
   // raw pointer.
   std::unordered_map<Server*, std::unique_ptr<Server>> servers_;
+
+  // All LE connections that were either initiated by this HostServer or
+  // auto-connected by the system.
+  // TODO(armansito): Consider storing auto-connected references separately from
+  // directly connected references.
+  std::unordered_map<std::string, btlib::gap::LowEnergyConnectionRefPtr>
+      le_connections_;
 
   // Keep this as the last member to make sure that all weak pointers are
   // invalidated before other members get destroyed.

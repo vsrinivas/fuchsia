@@ -56,17 +56,22 @@ HostServer::HostServer(zx::channel channel,
         }
       });
   adapter->remote_device_cache()->set_device_removed_callback(
-      [self = weak_ptr_factory_.GetWeakPtr()](const auto& identifier) {
+      [self](const auto& identifier) {
         if (self) {
           self->OnRemoteDeviceRemoved(identifier);
         }
       });
   adapter->remote_device_cache()->set_device_bonded_callback(
-      [self = weak_ptr_factory_.GetWeakPtr()](const auto& device) {
+      [self](const auto& device) {
         if (self) {
           self->OnRemoteDeviceBonded(device);
         }
       });
+  adapter->set_auto_connect_callback([self](auto conn_ref) {
+    if (self) {
+      self->OnAutoConnect(std::move(conn_ref));
+    }
+  });
 }
 
 HostServer::~HostServer() { Close(); }
@@ -296,6 +301,26 @@ void HostServer::OnRemoteDeviceBonded(
       fidl_helpers::NewBondingData(*adapter(), remote_device));
 }
 
+void HostServer::OnAutoConnect(btlib::gap::LowEnergyConnectionRefPtr conn_ref) {
+  ZX_DEBUG_ASSERT(conn_ref);
+
+  const auto& id = conn_ref->device_identifier();
+  auto iter = le_connections_.find(id);
+  if (iter != le_connections_.end()) {
+    bt_log(WARN, "bt-host",
+           "auto-connected device already connected; reference dropped");
+    return;
+  }
+
+  bt_log(TRACE, "bt-host", "LE device auto-connected: %s", id.c_str());
+  conn_ref->set_closed_callback([self = weak_ptr_factory_.GetWeakPtr(), id] {
+    if (self) {
+      self->le_connections_.erase(id);
+    }
+  });
+  le_connections_[id] = std::move(conn_ref);
+}
+
 void HostServer::SetDiscoverable(bool discoverable,
                                  SetDiscoverableCallback callback) {
   bt_log(TRACE, "bt-host", "SetDiscoverable(%s)",
@@ -357,20 +382,13 @@ void HostServer::SetDiscoverable(bool discoverable,
       });
 }
 
-void HostServer::RequestLowEnergyCentral(
-    fidl::InterfaceRequest<fuchsia::bluetooth::le::Central> request) {
-  BindServer<LowEnergyCentralServer>(std::move(request), gatt_host_);
-}
-
-void HostServer::RequestLowEnergyPeripheral(
-    fidl::InterfaceRequest<fuchsia::bluetooth::le::Peripheral> request) {
-  BindServer<LowEnergyPeripheralServer>(std::move(request));
-}
-
-void HostServer::RequestGattServer(
-    fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Server> request) {
-  // GATT FIDL requests are handled by GattHost.
-  gatt_host_->BindGattServer(std::move(request));
+void HostServer::EnableBackgroundScan(bool enabled) {
+  bt_log(TRACE, "bt-host", "%s background scan",
+         (enabled ? "enabled" : "disable"));
+  auto le_manager = adapter()->le_discovery_manager();
+  if (le_manager) {
+    le_manager->EnableBackgroundScan(enabled);
+  }
 }
 
 void HostServer::SetPairingDelegate(
@@ -401,6 +419,22 @@ void HostServer::SetPairingDelegate(
   });
 }
 
+void HostServer::RequestLowEnergyCentral(
+    fidl::InterfaceRequest<fuchsia::bluetooth::le::Central> request) {
+  BindServer<LowEnergyCentralServer>(std::move(request), gatt_host_);
+}
+
+void HostServer::RequestLowEnergyPeripheral(
+    fidl::InterfaceRequest<fuchsia::bluetooth::le::Peripheral> request) {
+  BindServer<LowEnergyPeripheralServer>(std::move(request));
+}
+
+void HostServer::RequestGattServer(
+    fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Server> request) {
+  // GATT FIDL requests are handled by GattHost.
+  gatt_host_->BindGattServer(std::move(request));
+}
+
 void HostServer::RequestProfile(
     fidl::InterfaceRequest<fuchsia::bluetooth::bredr::Profile> request) {
   BindServer<ProfileServer>(std::move(request));
@@ -408,6 +442,10 @@ void HostServer::RequestProfile(
 
 void HostServer::Close() {
   bt_log(TRACE, "bt-host", "closing FIDL handles");
+
+  // Invalidate all weak pointers. This will guarantee that all pending tasks
+  // that reference this HostServer will return early if they run in the future.
+  weak_ptr_factory_.InvalidateWeakPtrs();
 
   // Destroy all FIDL bindings.
   servers_.clear();
@@ -439,8 +477,15 @@ void HostServer::Close() {
     state.discoverable->value = false;
   }
 
-  // TODO(NET-1092): Clean up connections here as well.
-  // TODO(armansito): Clear auto-connectable devices.
+  // Drop all connections that are attached to this HostServer.
+  // TODO(NET-1092): Clean up direct connections here as well.
+  le_connections_.clear();
+
+  // Stop background scan if enabled.
+  auto le_manager = adapter()->le_discovery_manager();
+  if (le_manager) {
+    le_manager->EnableBackgroundScan(false);
+  }
 
   // Disallow future pairing.
   pairing_delegate_ = nullptr;

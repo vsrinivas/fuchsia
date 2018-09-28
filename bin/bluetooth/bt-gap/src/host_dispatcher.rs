@@ -500,8 +500,10 @@ async fn add_adapter(hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf) -> Res
     let handle = fasync::Channel::from_channel(handle.into())?;
     let host = HostProxy::new(handle);
 
-    // TODO(NET-1445): Only the active host should be made connectable.
+    // TODO(NET-1445): Only the active host should be made connectable and scanning in the
+    // background.
     await!(host.set_connectable(true)).map_err(|_| BTError::new("failed to set connectable"))?;
+    host.enable_background_scan(true).map_err(|_| BTError::new("failed to enable background scan"))?;
 
     // Obtain basic information and create and entry in the disptacher's map.
     let adapter_info = await!(host.get_info())
