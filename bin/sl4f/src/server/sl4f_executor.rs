@@ -9,7 +9,7 @@ use fuchsia_syslog::macros::*;
 use futures::channel::mpsc;
 use futures::future::ready as fready;
 use futures::prelude::*;
-use futures::{StreamExt, TryFutureExt};
+use futures::StreamExt;
 use parking_lot::RwLock;
 use serde_json::Value;
 use std::sync::Arc;
@@ -58,7 +58,7 @@ pub fn run_fidl_loop(
                 }
             })
         }
-    }).buffered(10) // TODO figure out a good parallel value for this
+    }).buffer_unordered(10) // TODO figure out a good parallel value for this
     .collect::<()>();
 
     executor.run_singlethreaded(receiver_fut);
@@ -68,18 +68,16 @@ fn method_to_fidl(
     method_type: String, method_name: String, args: Value, sl4f_session: Arc<RwLock<Sl4f>>,
 ) -> impl Future<Output = Result<Value, Error>> {
     unsafe_many_futures!(MethodType, [BleAdvertiseFacade, Bluetooth, Wlan, Error]);
-    match FacadeType::from_str(method_type) {
-        FacadeType::BleAdvertiseFacade => {
-            MethodType::BleAdvertiseFacade(ble_advertise_method_to_fidl(
+    match FacadeType::from_str(&method_type) {
+        FacadeType::BleAdvertiseFacade => MethodType::BleAdvertiseFacade(ble_advertise_method_to_fidl(
                 method_name,
                 args,
-                sl4f_session.write().get_ble_advertise_facade().clone(),
-            ))
-        }
+                sl4f_session.write().get_ble_advertise_facade(),
+        )),
         FacadeType::Bluetooth => MethodType::Bluetooth(ble_method_to_fidl(
             method_name,
             args,
-            sl4f_session.write().get_bt_facade().clone(),
+            sl4f_session.write().get_bt_facade(),
         )),
         FacadeType::Wlan => MethodType::Wlan(fready(Err(BTError::new(
             "Nice try. WLAN not implemented yet",

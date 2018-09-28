@@ -126,7 +126,7 @@ pub enum FacadeType {
 }
 
 impl FacadeType {
-    pub fn from_str(facade: String) -> FacadeType {
+    pub fn from_str(facade: &String) -> FacadeType {
         match facade.as_ref() {
             "ble_advertise_facade" => FacadeType::BleAdvertiseFacade,
             "bluetooth" => FacadeType::Bluetooth,

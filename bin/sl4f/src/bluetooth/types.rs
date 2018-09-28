@@ -11,22 +11,26 @@ pub enum BluetoothMethod {
     BleAdvertise,
     BleConnectPeripheral,
     BleDisconnectPeripheral,
+    BleGetDiscoveredDevices,
     BleListServices,
     BlePublishService,
-    BleScan,
+    BleStartScan,
+    BleStopScan,
     BleStopAdvertise,
     BleUndefined,
 }
 
 impl BluetoothMethod {
-    pub fn from_str(method: String) -> BluetoothMethod {
+    pub fn from_str(method: &String) -> BluetoothMethod {
         match method.as_ref() {
             "BleAdvertise" => BluetoothMethod::BleAdvertise,
             "BleConnectPeripheral" => BluetoothMethod::BleConnectPeripheral,
             "BleDisconnectPeripheral" => BluetoothMethod::BleDisconnectPeripheral,
             "BleListServices" => BluetoothMethod::BleListServices,
             "BlePublishService" => BluetoothMethod::BlePublishService,
-            "BleScan" => BluetoothMethod::BleScan,
+            "BleStartScan" => BluetoothMethod::BleStartScan,
+            "BleStopScan" => BluetoothMethod::BleStopScan,
+            "BleGetDiscoveredDevices" => BluetoothMethod::BleGetDiscoveredDevices,
             "BleStopAdvertise" => BluetoothMethod::BleStopAdvertise,
             _ => BluetoothMethod::BleUndefined,
         }

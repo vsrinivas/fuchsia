@@ -32,7 +32,7 @@ use crate::bluetooth::facade::BluetoothFacade;
 #[derive(Debug, Clone)]
 pub struct Sl4f {
     // bt_facade: Thread safe object for state for ble functions.
-    ble_advertise_facade: Arc<RwLock<BleAdvertiseFacade>>,
+    ble_advertise_facade: Arc<BleAdvertiseFacade>,
 
     // bt_facade: Thread safe object for state for bluetooth connectivity tests
     bt_facade: Arc<RwLock<BluetoothFacade>>,
@@ -45,14 +45,15 @@ pub struct Sl4f {
 
 impl Sl4f {
     pub fn new() -> Result<Arc<RwLock<Sl4f>>, Error> {
+        let ble_advertise_facade = Arc::new(BleAdvertiseFacade::new());
         Ok(Arc::new(RwLock::new(Sl4f {
-            ble_advertise_facade: BleAdvertiseFacade::new(None),
+            ble_advertise_facade,
             bt_facade: BluetoothFacade::new(None),
             clients: Arc::new(Mutex::new(HashMap::new())),
         })))
     }
 
-    pub fn get_ble_advertise_facade(&self) -> Arc<RwLock<BleAdvertiseFacade>> {
+    pub fn get_ble_advertise_facade(&self) -> Arc<BleAdvertiseFacade> {
         self.ble_advertise_facade.clone()
     }
 
@@ -64,13 +65,13 @@ impl Sl4f {
         self.clients.clone()
     }
 
-    pub fn cleanup_clients(&mut self) {
+    pub fn cleanup_clients(&self) {
         self.clients.lock().clear();
     }
 
     pub fn cleanup(&mut self) {
         BluetoothFacade::cleanup(self.bt_facade.clone());
-        BleAdvertiseFacade::cleanup(self.ble_advertise_facade.clone());
+        self.ble_advertise_facade.cleanup();
         self.cleanup_clients();
     }
 
@@ -81,7 +82,7 @@ impl Sl4f {
     // Add *_facade.print() when new Facade objects are added (i.e WlanFacade)
     pub fn print(&self) {
         self.bt_facade.read().print();
-        self.ble_advertise_facade.read().print();
+        self.ble_advertise_facade.print();
     }
 }
 
