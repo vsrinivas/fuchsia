@@ -144,8 +144,8 @@ bool DisplaySwapchain::InitializeFramebuffers(
 
     auto image_result = device_.createImage(create_info);
     if (image_result.result != vk::Result::eSuccess) {
-      FXL_DLOG(ERROR) << "VkCreateImage failed: "
-                      << vk::to_string(image_result.result);
+      FXL_LOG(ERROR) << "VkCreateImage failed: "
+                     << vk::to_string(image_result.result);
       return false;
     }
 
@@ -158,7 +158,7 @@ bool DisplaySwapchain::InitializeFramebuffers(
     zx::vmo memory =
         display_manager_->AllocateDisplayMemory(memory_requirements.size);
     if (!memory) {
-      FXL_DLOG(ERROR) << "allocating vmo failed";
+      FXL_LOG(ERROR) << "allocating vmo failed";
       return false;
     }
     vk::ImportMemoryFuchsiaHandleInfoKHR import_info;
@@ -173,15 +173,15 @@ bool DisplaySwapchain::InitializeFramebuffers(
     auto mem_result = device_.allocateMemory(alloc_info);
 
     if (mem_result.result != vk::Result::eSuccess) {
-      FXL_DLOG(ERROR) << "vkAllocMemory failed: "
-                      << vk::to_string(mem_result.result);
+      FXL_LOG(ERROR) << "vkAllocMemory failed: "
+                     << vk::to_string(mem_result.result);
       return false;
     }
 
     Framebuffer buffer;
     buffer.device_memory = escher::GpuMem::New(
         device_, mem_result.value, memory_requirements.size, memory_type_index);
-    FXL_DCHECK(buffer.device_memory);
+    FXL_CHECK(buffer.device_memory);
 
     // Wrap the image and device memory in a escher::Image.
     escher::ImageInfo image_info;
@@ -196,7 +196,7 @@ bool DisplaySwapchain::InitializeFramebuffers(
                            buffer.device_memory);
 
     if (!buffer.escher_image) {
-      FXL_DLOG(ERROR) << "Creating escher::EscherImage failed.";
+      FXL_LOG(ERROR) << "Creating escher::EscherImage failed.";
       device_.destroyImage(image_result.value);
       return false;
     }
@@ -223,15 +223,15 @@ bool DisplaySwapchain::InitializeFramebuffers(
             device_, export_memory_info);
 
     if (export_result.result != vk::Result::eSuccess) {
-      FXL_DLOG(ERROR) << "VkGetMemoryFuchsiaHandleKHR failed: "
-                      << vk::to_string(export_result.result);
+      FXL_LOG(ERROR) << "VkGetMemoryFuchsiaHandleKHR failed: "
+                     << vk::to_string(export_result.result);
       return false;
     }
 
     buffer.vmo = zx::vmo(export_result.value);
     buffer.fb_id = display_manager_->ImportImage(buffer.vmo);
     if (buffer.fb_id == fuchsia::display::invalidId) {
-      FXL_DLOG(ERROR) << "Importing image failed.";
+      FXL_LOG(ERROR) << "Importing image failed.";
       return false;
     }
 
@@ -240,7 +240,7 @@ bool DisplaySwapchain::InitializeFramebuffers(
 
   if (!display_manager_->EnableVsync(
           fit::bind_member(this, &DisplaySwapchain::OnVsync))) {
-    FXL_DLOG(ERROR) << "Failed to enable vsync";
+    FXL_LOG(ERROR) << "Failed to enable vsync";
     return false;
   }
 
