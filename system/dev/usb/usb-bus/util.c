@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/debug.h>
 #include <ddk/protocol/usb.h>
 #include <usb/usb-request.h>
 #include <endian.h>
@@ -200,10 +201,27 @@ zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id,
                                      &string_desc, sizeof(string_desc));
 
     if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
-        usb_hci_reset_endpoint(&dev->hci, dev->device_id, 0);
+        zx_status_t reset_result = usb_hci_reset_endpoint(&dev->hci, dev->device_id, 0);
+        if (reset_result != ZX_OK) {
+            zxlogf(ERROR, "failed to reset endpoint, err: %d\n", reset_result);
+            return result;
+        }
+        result = usb_util_get_descriptor(dev, USB_DT_STRING, desc_id, le16toh(lang_id),
+                                         &string_desc, sizeof(string_desc));
+        if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
+            reset_result = usb_hci_reset_endpoint(&dev->hci, dev->device_id, 0);
+            if (reset_result != ZX_OK) {
+                zxlogf(ERROR, "failed to reset endpoint, err: %d\n", reset_result);
+                return result;
+            }
+        }
     }
 
-    if ((result >= 0) && ((result < 2) || (result != string_desc.bLength))) {
+    if (result < 0) {
+        return result;
+    }
+
+    if ((result < 2) || (result != string_desc.bLength)) {
         result = ZX_ERR_INTERNAL;
     } else  {
         // Success! Convert this result from UTF16LE to UTF8 and store the
