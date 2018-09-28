@@ -2090,6 +2090,8 @@ static zx_status_t ath10k_wmi_op_pull_mgmt_rx_ev(struct ath10k* ar, struct ath10
         return ZX_ERR_INVALID_ARGS;
     }
 
+    msg_buf->rx.frame_size = msdu_len;
+
     if (arg->status & WMI_RX_STATUS_EXT_INFO) {
         len = ALIGN(arg->buf_len, 4);
         ext_info = (struct wmi_mgmt_rx_ext_info*)((uint8_t*)payload + len);
