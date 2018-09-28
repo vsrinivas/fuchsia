@@ -1,4 +1,7 @@
 {
+    "imports": [
+        "garnet/packages/prod/mdns"
+    ],
     "packages": [
         "//garnet/bin/netconnector"
     ]

@@ -37,15 +37,15 @@ executable("bin") {
 
   deps = [
     "//garnet/bin/media/util",
-    "//garnet/public/lib/component/cpp",
+    "//garnet/public/fidl/fuchsia.mdns",
+    "//garnet/public/fidl/fuchsia.netconnector",
+    "//garnet/public/fidl/fuchsia.netstack",
     "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/mdns/cpp",
-    "//garnet/public/fidl/fuchsia.mdns",
     "//garnet/public/lib/netconnector/cpp",
-    "//garnet/public/fidl/fuchsia.netconnector",
-    "//garnet/public/fidl/fuchsia.netstack",
     "//garnet/public/lib/svc/cpp",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
@@ -71,6 +71,17 @@ package("netconnector") {
     {
       path = rebase_path("netconnector.config")
       dest = "netconnector.config"
+    },
+  ]
+}
+
+package("config") {
+  deprecated_system_image = true
+  package_name = "netconnector_config"
+  resources = [
+    {
+      dest = "sysmgr/netconnector.config"
+      path = rebase_path("service.config")
     },
   ]
 }
