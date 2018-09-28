@@ -4,6 +4,7 @@
 
 library fuchsia.modular;
 
+using fuchsia.auth;
 using fuchsia.modular.auth;
 
 // An instance of this service is exposed to agents in their namespace.
@@ -16,7 +17,8 @@ interface AgentContext {
   1: GetComponentContext(request<ComponentContext> request);
 
   // The auth token provider this Agent may use for accessing external services.
-  2: GetTokenProvider(request<fuchsia.modular.auth.TokenProvider> request);
+  // @Deprecated
+  2: GetTokenProvider(request<fuchsia.modular.auth.TokenProvider> @request);
 
   // Connects to the IntelligenceServices for this Agent.
   3: GetIntelligenceServices(request<IntelligenceServices> request);
@@ -34,6 +36,9 @@ interface AgentContext {
 
   // No new runs of this task will be scheduled.
   6: DeleteTask(string task_id);
+
+  // The auth token manager this Agent may use for accessing external services.
+  7: GetTokenManager(request<fuchsia.auth.TokenManager> @request);
 };
 
 // Used to describe a task to the framework.

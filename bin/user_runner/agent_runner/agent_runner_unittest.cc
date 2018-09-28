@@ -46,7 +46,8 @@ class AgentRunnerTest : public TestWithLedger {
     // order for agent creation to be synchronous, which these tests assume.
     agent_runner_ = std::make_unique<AgentRunner>(
         &launcher_, mqm_.get(), ledger_repository(), &agent_runner_storage_,
-        token_provider_factory_.get(), nullptr, entity_provider_runner_.get());
+        token_provider_factory_.get(), token_manager_.get(), nullptr,
+        entity_provider_runner_.get());
   }
 
   void TearDown() override {
@@ -73,6 +74,7 @@ class AgentRunnerTest : public TestWithLedger {
   std::unique_ptr<AgentRunner> agent_runner_;
 
   fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory_;
+  fuchsia::auth::TokenManagerPtr token_manager_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerTest);
 };

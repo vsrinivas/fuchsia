@@ -162,6 +162,7 @@ class AgentContextImpl::StopCall : public Operation<bool> {
     stopped_ = true;
     agent_context_impl_->agent_.Unbind();
     agent_context_impl_->agent_context_bindings_.CloseAll();
+    agent_context_impl_->token_manager_bindings_.CloseAll();
   }
 
   bool stopped_ = false;
@@ -178,6 +179,7 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
       component_context_impl_(info.component_context_info,
                               kAgentComponentNamespace, url_, url_),
       token_provider_factory_(info.token_provider_factory),
+      token_manager_(info.token_manager),
       entity_provider_runner_(
           info.component_context_info.entity_provider_runner),
       user_intelligence_provider_(info.user_intelligence_provider) {
@@ -259,6 +261,11 @@ void AgentContextImpl::GetTokenProvider(
   token_provider_factory_->GetTokenProvider(url_, std::move(request));
 }
 
+void AgentContextImpl::GetTokenManager(
+    fidl::InterfaceRequest<fuchsia::auth::TokenManager> request) {
+  token_manager_bindings_.AddBinding(this, std::move(request));
+}
+
 void AgentContextImpl::GetIntelligenceServices(
     fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request) {
   fuchsia::modular::AgentScope agent_scope;
@@ -281,6 +288,51 @@ void AgentContextImpl::ScheduleTask(fuchsia::modular::TaskInfo task_info) {
 
 void AgentContextImpl::DeleteTask(fidl::StringPtr task_id) {
   agent_runner_->DeleteTask(url_, task_id);
+}
+
+void AgentContextImpl::Authorize(fuchsia::auth::AppConfig app_config,
+                                 fidl::VectorPtr<::fidl::StringPtr> app_scopes,
+                                 fidl::StringPtr user_profile_id,
+                                 fidl::StringPtr auth_code,
+                                 AuthorizeCallback callback) {
+  FXL_LOG(ERROR) << "AgentContextImpl::Authorize() not supported from agent "
+                 << "context";
+  callback(fuchsia::auth::Status::INVALID_REQUEST, nullptr);
+}
+
+void AgentContextImpl::GetAccessToken(
+    fuchsia::auth::AppConfig app_config, fidl::StringPtr user_profile_id,
+    fidl::VectorPtr<::fidl::StringPtr> app_scopes,
+    GetAccessTokenCallback callback) {
+  token_manager_->GetAccessToken(std::move(app_config),
+                                 std::move(user_profile_id),
+                                 std::move(app_scopes), std::move(callback));
+}
+
+void AgentContextImpl::GetIdToken(fuchsia::auth::AppConfig app_config,
+                                  fidl::StringPtr user_profile_id,
+                                  fidl::StringPtr audience,
+                                  GetIdTokenCallback callback) {
+  token_manager_->GetIdToken(std::move(app_config), std::move(user_profile_id),
+                             std::move(audience), std::move(callback));
+}
+
+void AgentContextImpl::GetFirebaseToken(fuchsia::auth::AppConfig app_config,
+                                        fidl::StringPtr user_profile_id,
+                                        fidl::StringPtr audience,
+                                        fidl::StringPtr firebase_api_key,
+                                        GetFirebaseTokenCallback callback) {
+  token_manager_->GetFirebaseToken(
+      std::move(app_config), std::move(user_profile_id), std::move(audience),
+      std::move(firebase_api_key), std::move(callback));
+}
+
+void AgentContextImpl::DeleteAllTokens(fuchsia::auth::AppConfig app_config,
+                                       fidl::StringPtr user_profile_id,
+                                       DeleteAllTokensCallback callback) {
+  FXL_LOG(ERROR) << "AgentContextImpl::DeleteAllTokens() not supported from "
+                 << "agent context";
+  callback(fuchsia::auth::Status::INVALID_REQUEST);
 }
 
 void AgentContextImpl::StopAgentIfIdle() {

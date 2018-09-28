@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include <fuchsia/modular/auth/cpp/fidl.h>
+#include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
@@ -28,6 +28,7 @@ struct AgentContextInfo {
   const ComponentContextInfo component_context_info;
   fuchsia::sys::Launcher* const launcher;
   fuchsia::modular::auth::TokenProviderFactory* const token_provider_factory;
+  fuchsia::auth::TokenManager* const token_manager;
   fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider;
 };
 
@@ -36,7 +37,8 @@ struct AgentContextInfo {
 // this agent (identified for now by the agent's URL) are routed to this
 // class. This class manages all AgentControllers associated with this agent.
 class AgentContextImpl : fuchsia::modular::AgentContext,
-                         fuchsia::modular::AgentController {
+                         fuchsia::modular::AgentController,
+                         fuchsia::auth::TokenManager {
  public:
   // Starts the agent specified in |agent_config| and provides it:
   //  1) AgentContext service
@@ -86,6 +88,9 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
       fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request)
       override;
   // |fuchsia::modular::AgentContext|
+  void GetTokenManager(
+      fidl::InterfaceRequest<fuchsia::auth::TokenManager> request) override;
+  // |fuchsia::modular::AgentContext|
   void ScheduleTask(fuchsia::modular::TaskInfo task_info) override;
   // |fuchsia::modular::AgentContext|
   void DeleteTask(fidl::StringPtr task_id) override;
@@ -97,6 +102,35 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   void GetEntityReferenceFactory(
       fidl::InterfaceRequest<fuchsia::modular::EntityReferenceFactory> request)
       override;
+
+  // |fuchsia::auth::TokenManager|
+  void Authorize(fuchsia::auth::AppConfig app_config,
+                 fidl::VectorPtr<::fidl::StringPtr> app_scopes,
+                 fidl::StringPtr user_profile_id, fidl::StringPtr auth_code,
+                 AuthorizeCallback callback) override;
+
+  // |fuchsia::auth::TokenManager|
+  void GetAccessToken(fuchsia::auth::AppConfig app_config,
+                      fidl::StringPtr user_profile_id,
+                      fidl::VectorPtr<::fidl::StringPtr> app_scopes,
+                      GetAccessTokenCallback callback) override;
+
+  // |fuchsia::auth::TokenManager|
+  void GetIdToken(fuchsia::auth::AppConfig app_config,
+                  fidl::StringPtr user_profile_id, fidl::StringPtr audience,
+                  GetIdTokenCallback callback) override;
+
+  // |fuchsia::auth::TokenManager|
+  void GetFirebaseToken(fuchsia::auth::AppConfig app_config,
+                        fidl::StringPtr user_profile_id,
+                        fidl::StringPtr audience,
+                        fidl::StringPtr firebase_api_key,
+                        GetFirebaseTokenCallback callback) override;
+
+  // |fuchsia::auth::TokenManager|
+  void DeleteAllTokens(fuchsia::auth::AppConfig app_config,
+                       fidl::StringPtr user_profile_id,
+                       DeleteAllTokensCallback callback) override;
 
   // Adds an operation on |operation_queue_|. This operation is immediately
   // Done() if this agent is not |ready_|. Else if there are no active
@@ -111,6 +145,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   fidl::BindingSet<fuchsia::modular::AgentContext> agent_context_bindings_;
   fidl::BindingSet<fuchsia::modular::AgentController>
       agent_controller_bindings_;
+  fidl::BindingSet<fuchsia::auth::TokenManager> token_manager_bindings_;
 
   AgentRunner* const agent_runner_;
 
@@ -122,6 +157,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
 
   fuchsia::modular::auth::TokenProviderFactory* const
       token_provider_factory_;                          // Not owned.
+  fuchsia::auth::TokenManager* const token_manager_;    // Not owned.
   EntityProviderRunner* const entity_provider_runner_;  // Not owned.
   fuchsia::modular::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned.

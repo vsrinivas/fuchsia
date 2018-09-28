@@ -219,7 +219,6 @@ void UserRunnerImpl::InitializeUser(
   } else {
     agent_token_manager_ = agent_token_manager.Bind();
     AtEnd(Reset(&agent_token_manager_));
-    // TODO(ukode): Initialize Agent Runner with this token_manager handle.
   }
 
   user_context_ = user_context.Bind();
@@ -493,7 +492,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   agent_runner_.reset(new AgentRunner(
       user_environment_->GetLauncher(), message_queue_manager_.get(),
       ledger_repository_.get(), agent_runner_storage_.get(),
-      token_provider_factory_.get(),
+      token_provider_factory_.get(), agent_token_manager_.get(),
       user_intelligence_provider_.get(), entity_provider_runner_.get()));
   AtEnd(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 

@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>
 
+#include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
@@ -44,6 +45,7 @@ class AgentRunner : fuchsia::modular::AgentProvider,
       fuchsia::ledger::internal::LedgerRepository* ledger_repository,
       AgentRunnerStorage* agent_runner_storage,
       fuchsia::modular::auth::TokenProviderFactory* token_provider_factory,
+      fuchsia::auth::TokenManager* token_manager,
       fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
       EntityProviderRunner* entity_provider_runner);
   ~AgentRunner() override;
@@ -209,6 +211,7 @@ class AgentRunner : fuchsia::modular::AgentProvider,
   // |agent_runner_storage_| must outlive this class.
   AgentRunnerStorage* const agent_runner_storage_;
   fuchsia::modular::auth::TokenProviderFactory* const token_provider_factory_;
+  fuchsia::auth::TokenManager* const token_manager_;
   fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider_;
   EntityProviderRunner* const entity_provider_runner_;
 
