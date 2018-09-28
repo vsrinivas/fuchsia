@@ -70,7 +70,7 @@ The next step is to add that content to an existing SDK definition. For a target
 
 ### Producing an SDK distribution
 
-This is done by running a frontend. See the [frontend documentation][frontend]
+This is done by running a frontend. See the [frontend documentation][frontends]
 for more details.
 
 
