@@ -6,17 +6,14 @@ the Fuchsia GN build.
 
 ## Overview
 
-The build output of "an SDK build" is a manifest file describing the various
-elements of the SDK, the files that constitute them, as well as metadata.
+The build output of "an SDK build" is a tarball containing files collected from
+the source tree and the output directory, augmented with metadata files.
 
 Metadata includes the nature of an element (e.g. programming language(s),
 runtime type), its relationship with other elements (e.g. dependencies,
 supporting tools), the context in which the element was constructed (e.g.
 target architecture, high-level compilation options), etc...
-
-The packaging of an SDK is a post-build step using this manifest as a blueprint.
-
-A single build can produce multiple SDK manifests.
+Schemas for the various types of SDK elements are available under [meta/](meta).
 
 
 ## Implementation
@@ -35,13 +32,13 @@ way to provide hierarchy to SDK atoms.
 
 There are a few GN templates developers should use to enable the inclusion of
 their code in an SDK:
-- [`prebuilt_shared_library`](/cpp/prebuilt_shared_library.gni)
 - [`sdk_shared_library`](/cpp/sdk_shared_library.gni)
 - [`sdk_source_set`](/cpp/sdk_source_set.gni)
-- [`sdk_static_library`](/cpp/sdk_static_library.gni)
 - [`sdk_executable`](/cpp/sdk_executable.gni)
 
 Some language-specific targets are also SDK-ready:
+- [`dart_library`](/dart/dart_library.gni)
+- [`fidl_library`](/fidl/fidl_library.gni)
 - [`go_binary`](/go/go_binary.gni)
 
 A target `//foo/bar` declared with one of these templates will yield an
@@ -51,6 +48,12 @@ an SDK.
 Additionally, the [`sdk`](sdk.gni) template should be used to declare an
 SDK.
 
+### Visibility
+
+The `sdk_atom` template declares a `category` parameter which allows developers
+to control who may be able to use their atom. See the parameter's documentation
+for more information on this.
+
 
 ## Creating a custom SDK
 
@@ -58,22 +61,28 @@ Once elements have been set up for inclusion in an SDK, declaring such an SDK
 only takes a few steps:
 
 1. Identify the atoms needed in the SDK;
-2. Create a new SDK `//my/api` with the `sdk` template, regrouping the atoms and
-   molecules that should be included;
+2. Create a new SDK `//some/place:my_sdk` with the `sdk` template, regrouping
+   the atoms and molecules that should be included;
 3. Add a new
    [package](https://fuchsia.googlesource.com/docs/+/master/build_packages.md)
    file for the molecule:
 ```
 {
   "labels": [
-    "//my/api"
+    "//some/place:my_sdk"
   ]
 }
 ```
 
 The package file can now be used in a standard Fuchsia build and will produce
-the manifest at `//out/foobar/gen/my/api/api.sdk`. A JSON schema for this
-manifest is available [here](manifest_schema.json).
+the archive at `//out/<build-type>/sdk/archive/my_sdk.tar.gz`.
+
+Note that in order for the archive to be generated, an extra GN argument has to
+be passed to GN:
+```
+build_sdk_archives=true
+```
+
 
 #### Using a custom SDK in the build
 
@@ -82,11 +91,7 @@ become available in the build output directory and may be used for other GN
 targets to depend on. This is useful for example when building third-party code
 which would otherwise rely on an official SDK.
 
-For an SDK declared at `//my/api` and marked as "exported", an additional GN
-target exists: `//my/api:api_export`. This target will generate a usable SDK
-under `out/<build-type>/sdks/<sdk-target-name>`.
-
-An exported SDK can also be declared as "old school", in which case it will
-produce a sysroot with all the libraries in that SDK.
-Note that this is a temporary feature which will disappear once the third-party
-runtimes that need it have all been updated.
+For an SDK declared at `//some/place:my_sdk` and marked as "exported", an
+additional GN target exists: `//some/place:my_sdk_export`.
+This target will generate a usable SDK under
+`//out/<build-type>/sdk/exported/my_sdk`.
