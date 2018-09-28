@@ -613,7 +613,6 @@ ath10k_mac_get_any_chandef_iter(struct ieee80211_hw* hw,
 }
 #endif  //NEEDS PORTING
 
-__attribute__ ((unused))
 static zx_status_t ath10k_peer_create(struct ath10k* ar,
                                       uint32_t vdev_id,
                                       const uint8_t* addr,
@@ -726,7 +725,6 @@ static int ath10k_mac_set_rts(struct ath10k_vif* arvif, uint32_t value) {
 }
 #endif  // NEEDS PORTING
 
-__attribute__ ((unused))
 static zx_status_t ath10k_peer_delete(struct ath10k* ar, uint32_t vdev_id, const uint8_t* addr) {
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
@@ -2875,6 +2873,15 @@ static void ethaddr_sprintf(char* str, uint8_t* addr) {
     }
 }
 
+static bool is_zero_ether_addr(uint8_t* addr) {
+    for (size_t i = 0; i < ETH_ALEN; ++i) {
+        if (addr[i] != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static void ath10k_mac_parse_ampdu(uint8_t response_ampdu,
                                    struct wmi_peer_assoc_complete_arg* assoc_arg) {
     assoc_arg->peer_max_mpdu = response_ampdu & IEEE80211_AMPDU_MAX_RX_LEN;
@@ -2986,6 +2993,23 @@ invalid_data:
     ath10k_info("improperly formatted association response seen\n");
 }
 
+static zx_status_t ath10k_mac_delete_bss_peer(struct ath10k* ar, struct ath10k_vif* arvif) {
+    ASSERT_MTX_HELD(&ar->conf_mutex);
+
+    if (!is_zero_ether_addr(arvif->bssid)) {
+        zx_status_t status = ath10k_peer_delete(ar, arvif->vdev_id, arvif->bssid);
+        if (status != ZX_OK) {
+            char ethaddr_str[ETH_ALEN * 3];
+            ethaddr_sprintf(ethaddr_str, arvif->bssid);
+            ath10k_err("Failed to delete peer %s in vdev %i: %s\n", ethaddr_str, arvif->vdev_id,
+                       zx_status_get_string(status));
+            return status;
+        }
+        memset(arvif->bssid, 0, ETH_ALEN);
+    }
+    return ZX_OK;
+}
+
 // Take the vdev down, and tell the firmware to forget about the previous association.
 static zx_status_t ath10k_mac_bss_disassoc(struct ath10k* ar) {
     struct ath10k_vif* arvif = &ar->arvif;
@@ -2994,14 +3018,11 @@ static zx_status_t ath10k_mac_bss_disassoc(struct ath10k* ar) {
 
     if (!arvif->is_up) { return ZX_ERR_BAD_STATE; }
 
-    zx_status_t ret = ath10k_wmi_peer_delete(ar, arvif->vdev_id, arvif->bssid);
+    zx_status_t ret = ath10k_mac_delete_bss_peer(ar, arvif);
     if (ret != ZX_OK) {
-        char ethaddr_str[ETH_ALEN * 3];
-        ethaddr_sprintf(ethaddr_str, arvif->bssid);
-        ath10k_err("Failed to delete peer %s in vdev %i: %s\n", ethaddr_str, arvif->vdev_id,
-                   zx_status_get_string(ret));
         return ret;
     }
+
     arvif->is_up = false;
 
     ret = ath10k_wmi_vdev_down(ar, arvif->vdev_id);
@@ -3016,24 +3037,38 @@ static zx_status_t ath10k_mac_bss_disassoc(struct ath10k* ar) {
 
 zx_status_t ath10k_mac_set_bss(struct ath10k* ar, wlan_bss_config_t* config) {
     struct ath10k_vif* arvif = &ar->arvif;
-    zx_status_t ret = ZX_OK;
 
     mtx_lock(&ar->conf_mutex);
+
+    zx_status_t ret = ath10k_mac_delete_bss_peer(ar, arvif);
+    if (ret != ZX_OK) {
+        goto out;
+    }
+
     if (arvif->is_started && arvif->is_up) {
         ret = ath10k_mac_bss_disassoc(ar);
         if (ret != ZX_OK) {
             ath10k_warn("failed to disassociate vdev %i: %s\n", arvif->vdev_id,
                         zx_status_get_string(ret));
+            goto out;
         }
         ret = ath10k_vdev_restart(arvif, &ar->rx_channel);
         if (ret != ZX_OK) {
             ath10k_warn("failed to restart vdev %i: %s\n", arvif->vdev_id,
                         zx_status_get_string(ret));
-        } else {
-            arvif->is_started = true;
+            goto out;
         }
+        arvif->is_started = true;
     }
+
     memcpy(&arvif->bssid, config->bssid, ETH_ALEN);
+    ret = ath10k_peer_create(ar, arvif->vdev_id, arvif->bssid, WMI_PEER_TYPE_DEFAULT);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to create peer: %s\n", zx_status_get_string(ret));
+        goto out;
+    }
+
+out:
     mtx_unlock(&ar->conf_mutex);
     return ret;
 }
@@ -3113,17 +3148,10 @@ int ath10k_mac_bss_assoc(void* thrd_data) {
         char bssid_str[ETH_ALEN * 3];
         ethaddr_sprintf(bssid_str, arvif->bssid);
 
-        status = ath10k_wmi_peer_create(ar, arvif->vdev_id, frame_bssid, WMI_PEER_TYPE_BSS);
-        if (status != ZX_OK) {
-            ath10k_warn("failed to create peer: %s\n", zx_status_get_string(status));
-            goto done;
-        }
-
         status = ath10k_wmi_peer_assoc(ar, &assoc_arg);
         if (status != ZX_OK) {
             ath10k_warn("failed to run peer assoc for %pM vdev %i: %s\n", arvif->bssid,
                         arvif->vdev_id, zx_status_get_string(status));
-            ath10k_wmi_peer_delete(ar, arvif->vdev_id, frame_bssid);
             goto done;
         }
 
