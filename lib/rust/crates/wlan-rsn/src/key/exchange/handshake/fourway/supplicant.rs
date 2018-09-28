@@ -15,6 +15,7 @@ use crate::rsne::Rsne;
 use crate::Error;
 use eapol;
 use failure::{self, bail, ensure};
+use log::error;
 
 type Nonce = Vec<u8>;
 
@@ -201,13 +202,13 @@ impl State {
                         let snonce = match nonce_rdr.next() {
                             Ok(nonce) => nonce,
                             Err(e) => {
-                                eprintln!("error: {}", e);
+                                error!("error: {}", e);
                                 return State::AwaitingMsg1 { pmk, cfg, nonce_rdr };
                             }
                         };
                         match handle_message_1(&cfg, &pmk[..], &snonce[..], frame) {
                             Err(e) => {
-                                eprintln!("error: {}", e);
+                                error!("error: {}", e);
                                 return State::AwaitingMsg1 { pmk, cfg, nonce_rdr };
                             },
                             Ok((msg2, ptk, anonce)) => {
@@ -218,7 +219,7 @@ impl State {
                         }
                     },
                     unexpected_msg => {
-                        eprintln!("error: {}", Error::Unexpected4WayHandshakeMessage(unexpected_msg));
+                        error!("error: {}", Error::Unexpected4WayHandshakeMessage(unexpected_msg));
                         State::AwaitingMsg1 { pmk, cfg, nonce_rdr }
                     },
                 }
@@ -235,7 +236,7 @@ impl State {
                     fourway::MessageNumber::Message3 => {
                         match handle_message_3(&cfg, ptk.kck(), ptk.kek(), frame) {
                             Err(e) => {
-                                eprintln!("error: {}", e);
+                                error!("error: {}", e);
                                 State::AwaitingMsg1 { pmk, cfg, nonce_rdr }
                             },
                             Ok((msg4, gtk)) => {
@@ -246,7 +247,7 @@ impl State {
                         }
                     },
                     unexpected_msg => {
-                        eprintln!("error: {}", Error::Unexpected4WayHandshakeMessage(unexpected_msg));
+                        error!("error: {}", Error::Unexpected4WayHandshakeMessage(unexpected_msg));
                         State::AwaitingMsg1 { pmk, cfg, nonce_rdr }
                     },
                 }

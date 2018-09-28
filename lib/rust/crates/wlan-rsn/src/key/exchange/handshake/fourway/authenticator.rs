@@ -16,6 +16,7 @@ use crate::key_data::{self, kde};
 use crate::rsna::{derive_key_descriptor_version, KeyFrameState, KeyFrameKeyDataState, NegotiatedRsne, SecAssocUpdate, UpdateSink};
 use crate::Error;
 use failure::{self, bail, ensure};
+use log::error;
 use std::rc::Rc;
 
 #[derive(Debug, PartialEq)]
@@ -52,7 +53,7 @@ impl State {
             State::Idle { cfg, pmk } => match initiate_internal(update_sink, &cfg, krc, &anonce[..]) {
                 Ok(()) => State::AwaitingMsg2 {anonce, cfg, pmk, last_krc: krc + 1 },
                 Err(e) => {
-                    eprintln!("error: {}", e);
+                    error!("error: {}", e);
                     State::Idle { cfg, pmk }
                 }
             },
@@ -63,7 +64,7 @@ impl State {
     pub fn on_eapol_key_frame(self, update_sink: &mut UpdateSink, krc: u64, frame: FourwayHandshakeFrame) -> Self {
         match self {
             State::Idle { cfg, pmk } => {
-                eprintln!("received EAPOL Key frame before initiate 4-Way Handshake");
+                error!("received EAPOL Key frame before initiate 4-Way Handshake");
                 State::Idle { cfg, pmk }
             }
             State::AwaitingMsg2 { pmk, cfg, anonce, last_krc } => {
@@ -75,13 +76,13 @@ impl State {
                                 State::AwaitingMsg4 { pmk, ptk, gtk, cfg, last_krc: last_krc + 1 }
                             },
                             Err(e) => {
-                                eprintln!("error: {}", e);
+                                error!("error: {}", e);
                                 State::AwaitingMsg2 { pmk, cfg, anonce, last_krc }
                             },
                         }
                     }
                     unexpected_msg => {
-                        eprintln!("error: {:?}", Error::Unexpected4WayHandshakeMessage(unexpected_msg));
+                        error!("error: {:?}", Error::Unexpected4WayHandshakeMessage(unexpected_msg));
                         State::AwaitingMsg2 { pmk, cfg, anonce, last_krc }
                     }
                 }
@@ -90,7 +91,7 @@ impl State {
                 match process_message_4(update_sink, &cfg, &ptk, &gtk, last_krc, frame) {
                     Ok(()) => State::Completed { cfg },
                     Err(e) => {
-                        eprintln!("error: {}", e);
+                        error!("error: {}", e);
                         State::AwaitingMsg4 { pmk, ptk, gtk, cfg, last_krc }
                     },
                 }

@@ -192,7 +192,6 @@ impl<'a> VerifiedKeyFrame<'a> {
 
         // IEEE Std 802.11-2016, 12.7.2 b.5)
         if let Role::Supplicant = sender {
-            println!("frame.key_info: {:?}", frame.key_info);
             ensure!(!frame.key_info.key_ack(), Error::InvalidKeyAckBitSupplicant);
         }
 

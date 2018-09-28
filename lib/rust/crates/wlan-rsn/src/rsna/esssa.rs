@@ -16,6 +16,7 @@ use crate::state_machine::StateMachine;
 use crate::Error;
 use eapol;
 use failure::{self, bail};
+use log::{info, error};
 
 #[derive(Debug, PartialEq)]
 enum Pmksa {
@@ -59,7 +60,7 @@ impl Ptksa {
                 exchange::Config::FourWayHandshake(method_cfg) => {
                     match Fourway::new(method_cfg.clone(), pmk) {
                         Err(e) => {
-                            eprintln!("error creating 4-Way Handshake from config: {}", e);
+                            error!("error creating 4-Way Handshake from config: {}", e);
                             Ptksa::Uninitialized {
                                 cfg: exchange::Config::FourWayHandshake(method_cfg),
                             }
@@ -112,7 +113,7 @@ impl Gtksa {
                 Some(exchange::Config::GroupKeyHandshake(method_cfg)) => {
                     match GroupKey::new(method_cfg.clone(), kck, kek) {
                         Err(e) => {
-                            eprintln!("error creating Group KeyHandshake from config: {}", e);
+                            error!("error creating Group KeyHandshake from config: {}", e);
                             Gtksa::Uninitialized {
                                 cfg: Some(exchange::Config::GroupKeyHandshake(method_cfg)),
                             }
@@ -167,8 +168,9 @@ impl EssSa {
         ptk_exch_cfg: exchange::Config,
         gtk_exch_cfg: Option<exchange::Config>,
     ) -> Result<EssSa, failure::Error> {
-        let auth_method = auth::Method::from_config(auth_cfg)?;
+        info!("spawned ESSSA for: {:?}", role);
 
+        let auth_method = auth::Method::from_config(auth_cfg)?;
         let rsna = EssSa {
             role,
             negotiated_rsne,
@@ -182,6 +184,7 @@ impl EssSa {
 
     pub fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), failure::Error> {
         self.reset();
+        info!("establishing ESSSA...");
 
         // PSK allows deriving the PMK without exchanging
         let pmk = match &self.pmksa.state() {
@@ -199,6 +202,7 @@ impl EssSa {
     }
 
     pub fn reset(&mut self) {
+        info!("resetting ESSSA");
         self.pmksa.replace_state(|state| state.reset());
         self.ptksa.replace_state(|state| state.reset());
         self.gtksa.replace_state(|state| state.reset());
@@ -218,10 +222,11 @@ impl EssSa {
             Key::Pmk(pmk) => {
                 self.pmksa.replace_state(|state| match state {
                     Pmksa::Initialized { method } => {
+                        info!("established PMKSA");
                         Pmksa::Established { method, pmk: pmk.clone() }
                     },
                     other => {
-                        eprintln!("received PMK with PMK already being established");
+                        error!("received PMK with PMK already being established");
                         other
                     },
                 });
@@ -242,11 +247,12 @@ impl EssSa {
 
                 self.ptksa.replace_state(|state| match state {
                     Ptksa::Initialized { method } => {
+                        info!("established PTKSA");
                         Ptksa::Established { method, ptk }
                     },
                     other => {
                         // PTK re-keying is not supported.
-                        eprintln!("received PTK in unexpected PTKSA state");
+                        error!("received PTK in unexpected PTKSA state");
                         other
                     }
                 });
@@ -254,14 +260,15 @@ impl EssSa {
             Key::Gtk(gtk) => {
                 self.gtksa.replace_state(|state| match state {
                     Gtksa::Initialized { method } => {
+                        info!("established GTKSA");
                         Gtksa::Established { method, gtk }
                     },
                     Gtksa::Established { method, .. } => {
-                        println!("re-key'ed GTK");
+                        info!("re-key'ed GTK");
                         Gtksa::Established { method, gtk }
                     },
                     Gtksa::Uninitialized { cfg } => {
-                        eprintln!("received GTK in unexpected GTKSA state");
+                        error!("received GTK in unexpected GTKSA state");
                         Gtksa::Uninitialized { cfg }
                     }
                 });
@@ -285,7 +292,7 @@ impl EssSa {
                     for update in &updates {
                         if let SecAssocUpdate::TxEapolKeyFrame(frame) = update {
                             if frame.key_replay_counter <= self.key_replay_counter {
-                                eprintln!("tx EAPOL Key frame uses invalid key replay counter: {:?} ({:?})",
+                                error!("tx EAPOL Key frame uses invalid key replay counter: {:?} ({:?})",
                                           frame.key_replay_counter,
                                           self.key_replay_counter);
                             }
@@ -309,7 +316,7 @@ impl EssSa {
             }).for_each(|update| {
                 if let SecAssocUpdate::Key(key) = update {
                     if let Err(e) = self.on_key_confirmed(update_sink, key.clone()) {
-                        eprintln!("error while processing key: {}", e);
+                        error!("error while processing key: {}", e);
                     };
                 }
             });
@@ -320,6 +327,7 @@ impl EssSa {
         if !was_esssa_established {
             let state = (self.ptksa.state(), self.gtksa.state());
             if let (Ptksa::Established {ptk, ..}, Gtksa::Established {gtk, .. }) = state {
+                info!("established ESSSA");
                 update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
                 update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())));
                 update_sink.push(SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished));
@@ -389,7 +397,7 @@ impl EssSa {
                 },
             }
         } else {
-            eprintln!("unsupported EAPOL Key frame key type: {:?}", frame.key_info.key_type());
+            error!("unsupported EAPOL Key frame key type: {:?}", frame.key_info.key_type());
             Ok(())
         }
     }
