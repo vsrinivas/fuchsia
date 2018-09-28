@@ -200,7 +200,7 @@ TEST(CatapultConverter, Convert) {
         "unit": "ms_smallerIsBetter",
         "description": "",
         "diagnostics": {
-            "chromiumCommitPositions": "dummy_guid_0",
+            "pointId": "dummy_guid_0",
             "bots": "dummy_guid_1",
             "masters": "dummy_guid_2",
             "logUrls": "dummy_guid_3",
@@ -224,7 +224,7 @@ TEST(CatapultConverter, Convert) {
         "unit": "ms_smallerIsBetter",
         "description": "",
         "diagnostics": {
-            "chromiumCommitPositions": "dummy_guid_0",
+            "pointId": "dummy_guid_0",
             "bots": "dummy_guid_1",
             "masters": "dummy_guid_2",
             "logUrls": "dummy_guid_3",
@@ -327,7 +327,7 @@ TEST(CatapultConverter, ConvertWithSplitFirst) {
         "unit": "ms_smallerIsBetter",
         "description": "",
         "diagnostics": {
-            "chromiumCommitPositions": "dummy_guid_0",
+            "pointId": "dummy_guid_0",
             "bots": "dummy_guid_1",
             "masters": "dummy_guid_2",
             "logUrls": "dummy_guid_3",
@@ -351,7 +351,7 @@ TEST(CatapultConverter, ConvertWithSplitFirst) {
         "unit": "ms_smallerIsBetter",
         "description": "",
         "diagnostics": {
-            "chromiumCommitPositions": "dummy_guid_0",
+            "pointId": "dummy_guid_0",
             "bots": "dummy_guid_1",
             "masters": "dummy_guid_2",
             "logUrls": "dummy_guid_3",
@@ -454,7 +454,7 @@ TEST(CatapultConverter, ConvertThroughputUnits) {
         "unit": "unitless_biggerIsBetter",
         "description": "",
         "diagnostics": {
-            "chromiumCommitPositions": "dummy_guid_0",
+            "pointId": "dummy_guid_0",
             "bots": "dummy_guid_1",
             "masters": "dummy_guid_2",
             "logUrls": "dummy_guid_3",
@@ -549,7 +549,7 @@ TEST(CatapultConverter, ConvertBytesUnit) {
         "unit": "sizeInBytes",
         "description": "",
         "diagnostics": {
-            "chromiumCommitPositions": "dummy_guid_0",
+            "pointId": "dummy_guid_0",
             "bots": "dummy_guid_1",
             "masters": "dummy_guid_2",
             "logUrls": "dummy_guid_3",

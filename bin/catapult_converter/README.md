@@ -13,7 +13,7 @@ The Catapult dashboard requires the following parameters (called
 "diagnostics") to be present in each HistogramSet that is uploaded to
 the dashboard:
 
-* chromiumCommitPositions: This parameter is taken from the
+* pointId: This parameter is taken from the
   `--execution-timestamp-ms` argument.  The dashboard uses this value
   to order results from different builds in a graph.
 

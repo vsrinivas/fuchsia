@@ -247,7 +247,7 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
   };
   rapidjson::Value timestamp;
   timestamp.SetInt64(args->timestamp);
-  AddSharedDiagnostic("chromiumCommitPositions", std::move(timestamp));
+  AddSharedDiagnostic("pointId", std::move(timestamp));
   AddSharedDiagnostic("bots", helper.MakeString(args->bots));
   AddSharedDiagnostic("masters", helper.MakeString(args->masters));
 
