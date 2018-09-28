@@ -39,6 +39,8 @@ FakeDevice::FakeDevice(const common::DeviceAddress& address, bool connectable,
       connected_(false),
       connectable_(connectable),
       scannable_(scannable),
+      directed_(false),
+      address_resolved_(false),
       connect_status_(hci::StatusCode::kSuccess),
       connect_response_(hci::StatusCode::kSuccess),
       force_pending_connect_(false),
@@ -131,19 +133,24 @@ common::DynamicByteBuffer FakeDevice::CreateAdvertisingReportEvent(
 
   auto report = reinterpret_cast<hci::LEAdvertisingReportData*>(
       subevent_payload->reports);
-  if (connectable_) {
+  if (directed_) {
+    report->event_type = hci::LEAdvertisingEventType::kAdvDirectInd;
+  } else if (connectable_) {
     report->event_type = hci::LEAdvertisingEventType::kAdvInd;
   } else if (scannable_) {
     report->event_type = hci::LEAdvertisingEventType::kAdvScanInd;
   } else {
     report->event_type = hci::LEAdvertisingEventType::kAdvNonConnInd;
   }
-
-  // TODO(armansito): Use the resolved address types for <5.0 LE Privacy.
-  report->address_type =
-      (address_.type() == common::DeviceAddress::Type::kLERandom)
-          ? hci::LEAddressType::kRandom
-          : hci::LEAddressType::kPublic;
+  if (address_.type() == common::DeviceAddress::Type::kLERandom) {
+    report->address_type = address_resolved_
+                               ? hci::LEAddressType::kRandomIdentity
+                               : hci::LEAddressType::kRandom;
+  } else {
+    report->address_type = address_resolved_
+                               ? hci::LEAddressType::kPublicIdentity
+                               : hci::LEAddressType::kPublic;
+  }
   report->address = address_.value();
   report->length_data = adv_data_.size();
   std::memcpy(report->data, adv_data_.data(), adv_data_.size());

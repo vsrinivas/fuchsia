@@ -15,6 +15,9 @@
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
 
 namespace btlib {
+
+using common::BufferView;
+
 namespace hci {
 namespace {
 
@@ -38,11 +41,6 @@ std::string ScanStateToString(LowEnergyScanner::State state) {
 
 }  // namespace
 
-LegacyLowEnergyScanner::PendingScanResult::PendingScanResult(
-    const common::DeviceAddress& address) {
-  result.address = address;
-}
-
 LegacyLowEnergyScanner::LegacyLowEnergyScanner(
     Delegate* delegate,
     fxl::RefPtr<Transport> hci,
@@ -50,8 +48,7 @@ LegacyLowEnergyScanner::LegacyLowEnergyScanner(
     : LowEnergyScanner(delegate, hci, dispatcher), active_scanning_(false) {
   event_handler_id_ = transport()->command_channel()->AddLEMetaEventHandler(
       kLEAdvertisingReportSubeventCode,
-      std::bind(&LegacyLowEnergyScanner::OnAdvertisingReportEvent, this,
-                std::placeholders::_1),
+      fit::bind_member(this, &LegacyLowEnergyScanner::OnAdvertisingReportEvent),
       this->dispatcher());
 }
 
@@ -244,14 +241,14 @@ void LegacyLowEnergyScanner::OnAdvertisingReportEvent(
   while (parser.GetNextReport(&report, &rssi)) {
     bool needs_scan_rsp = false;
     bool connectable = false;
+    bool directed = false;
     switch (report->event_type) {
       case LEAdvertisingEventType::kAdvDirectInd:
-        // TODO(armansito): Forward this to a subroutine that can be shared with
-        // the LE Directed Advertising eport event handler.
-        bt_log(SPEW, "hci-le", "ignoring ADV_DIRECT_IND");
-        continue;
+        directed = true;
+        break;
       case LEAdvertisingEventType::kAdvInd:
         connectable = true;
+        __FALLTHROUGH;
       case LEAdvertisingEventType::kAdvScanInd:
         if (active_scanning_)
           needs_scan_rsp = true;
@@ -270,26 +267,27 @@ void LegacyLowEnergyScanner::OnAdvertisingReportEvent(
     }
 
     common::DeviceAddress address;
-    if (!DeviceAddressFromAdvReport(*report, &address))
+    bool resolved;
+    if (!DeviceAddressFromAdvReport(*report, &address, &resolved))
       continue;
 
-    LowEnergyScanResult result(address, connectable, rssi);
-
-    if (!needs_scan_rsp) {
-      NotifyDeviceFound(result,
-                        common::BufferView(report->data, report->length_data));
+    LowEnergyScanResult result(address, resolved, connectable, rssi);
+    if (directed) {
+      delegate()->OnDirectedAdvertisement(result);
       continue;
     }
 
-    auto iter =
-        pending_results_.emplace(address, PendingScanResult(address)).first;
+    if (!needs_scan_rsp) {
+      NotifyDeviceFound(result, BufferView(report->data, report->length_data));
+      continue;
+    }
+
+    auto iter = pending_results_.emplace(address, PendingScanResult()).first;
     auto& pending = iter->second;
 
     // We overwrite the pending result entry with the most recent report, even
     // if one from this device was already pending.
-    ZX_DEBUG_ASSERT(address == pending.result.address);
-    pending.result.connectable = connectable;
-    pending.result.rssi = rssi;
+    pending.result = result;
     pending.adv_data_len = report->length_data;
     pending.data.Write(report->data, report->length_data);
   }
@@ -299,7 +297,8 @@ void LegacyLowEnergyScanner::HandleScanResponse(
     const LEAdvertisingReportData& report,
     int8_t rssi) {
   common::DeviceAddress address;
-  if (!DeviceAddressFromAdvReport(report, &address))
+  bool resolved;
+  if (!DeviceAddressFromAdvReport(report, &address, &resolved))
     return;
 
   auto iter = pending_results_.find(address);
@@ -315,7 +314,8 @@ void LegacyLowEnergyScanner::HandleScanResponse(
   auto& pending = iter->second;
   ZX_DEBUG_ASSERT(address == pending.result.address);
 
-  // Use the newer RSSI.
+  // Update the result.
+  pending.result.resolved = resolved;
   pending.result.rssi = rssi;
 
   // Append the scan response to the pending advertising data.

@@ -15,9 +15,10 @@ namespace btlib {
 namespace hci {
 namespace {
 
-using ::btlib::testing::FakeController;
-using ::btlib::testing::FakeDevice;
-using TestingBase = ::btlib::testing::FakeControllerTest<FakeController>;
+using common::DeviceAddress;
+using testing::FakeController;
+using testing::FakeDevice;
+using TestingBase = testing::FakeControllerTest<FakeController>;
 
 constexpr int64_t kScanPeriodMs = 10000;
 
@@ -25,18 +26,19 @@ constexpr char kPlainAdvData[] = "Test";
 constexpr char kPlainScanRsp[] = "Data";
 constexpr char kAdvDataAndScanRsp[] = "TestData";
 
-const common::DeviceAddress kAddress0(common::DeviceAddress::Type::kLEPublic,
-                                      "00:00:00:00:00:01");
-const common::DeviceAddress kAddress1(common::DeviceAddress::Type::kLERandom,
-                                      "00:00:00:00:00:02");
-const common::DeviceAddress kAddress2(common::DeviceAddress::Type::kLERandom,
-                                      "00:00:00:00:00:03");
-const common::DeviceAddress kAddress3(common::DeviceAddress::Type::kLERandom,
-                                      "00:00:00:00:00:04");
-const common::DeviceAddress kAddress4(common::DeviceAddress::Type::kLERandom,
-                                      "00:00:00:00:00:05");
-const common::DeviceAddress kAddress5(common::DeviceAddress::Type::kLERandom,
-                                      "00:00:00:00:00:06");
+const DeviceAddress kPublicAddress1(DeviceAddress::Type::kLEPublic,
+                                    "00:00:00:00:00:01");
+const DeviceAddress kPublicAddress2(DeviceAddress::Type::kLEPublic,
+                                    "00:00:00:00:00:02");
+
+const DeviceAddress kRandomAddress1(DeviceAddress::Type::kLERandom,
+                                    "00:00:00:00:00:01");
+const DeviceAddress kRandomAddress2(DeviceAddress::Type::kLERandom,
+                                    "00:00:00:00:00:02");
+const DeviceAddress kRandomAddress3(DeviceAddress::Type::kLERandom,
+                                    "00:00:00:00:00:03");
+const DeviceAddress kRandomAddress4(DeviceAddress::Type::kLERandom,
+                                    "00:00:00:00:00:04");
 
 class LegacyLowEnergyScannerTest : public TestingBase,
                                    public LowEnergyScanner::Delegate {
@@ -72,11 +74,23 @@ class LegacyLowEnergyScannerTest : public TestingBase,
     device_found_cb_ = std::move(cb);
   }
 
+  using DirectedAdvCallback = fit::function<void(const LowEnergyScanResult&)>;
+  void set_directed_adv_callback(DirectedAdvCallback cb) {
+    directed_adv_cb_ = std::move(cb);
+  }
+
   // LowEnergyScanner::Observer overrides:
   void OnDeviceFound(const LowEnergyScanResult& result,
                      const common::ByteBuffer& data) override {
-    if (device_found_cb_)
+    if (device_found_cb_) {
       device_found_cb_(result, data);
+    }
+  }
+
+  void OnDirectedAdvertisement(const LowEnergyScanResult& result) override {
+    if (directed_adv_cb_) {
+      directed_adv_cb_(result);
+    }
   }
 
   // Adds 6 fake devices using kAddress[0-5] above.
@@ -88,39 +102,40 @@ class LegacyLowEnergyScannerTest : public TestingBase,
     auto empty_data = common::DynamicByteBuffer();
 
     // Generates ADV_IND, scan response is reported in a single HCI event.
-    auto fake_device = std::make_unique<FakeDevice>(kAddress0, true, true);
+    auto fake_device =
+        std::make_unique<FakeDevice>(kPublicAddress1, true, true);
     fake_device->SetAdvertisingData(adv_data);
     fake_device->SetScanResponse(true, scan_rsp);
     test_device()->AddDevice(std::move(fake_device));
 
     // Generates ADV_SCAN_IND, scan response is reported over multiple HCI
     // events.
-    fake_device = std::make_unique<FakeDevice>(kAddress1, false, true);
+    fake_device = std::make_unique<FakeDevice>(kRandomAddress1, false, true);
     fake_device->SetAdvertisingData(adv_data);
     fake_device->SetScanResponse(false, scan_rsp);
     test_device()->AddDevice(std::move(fake_device));
 
     // Generates ADV_IND, empty scan response is reported over multiple HCI
     // events.
-    fake_device = std::make_unique<FakeDevice>(kAddress2, true, true);
+    fake_device = std::make_unique<FakeDevice>(kPublicAddress2, true, true);
     fake_device->SetAdvertisingData(adv_data);
     fake_device->SetScanResponse(false, empty_data);
     test_device()->AddDevice(std::move(fake_device));
 
     // Generates ADV_IND, empty adv data and non-empty scan response is reported
     // over multiple HCI events.
-    fake_device = std::make_unique<FakeDevice>(kAddress3, true, true);
+    fake_device = std::make_unique<FakeDevice>(kRandomAddress2, true, true);
     fake_device->SetScanResponse(false, scan_rsp);
     test_device()->AddDevice(std::move(fake_device));
 
     // Generates ADV_IND, a scan response is never sent even though ADV_IND is
     // scannable.
-    fake_device = std::make_unique<FakeDevice>(kAddress4, true, false);
+    fake_device = std::make_unique<FakeDevice>(kRandomAddress3, true, false);
     fake_device->SetAdvertisingData(adv_data);
     test_device()->AddDevice(std::move(fake_device));
 
     // Generates ADV_NONCONN_IND
-    fake_device = std::make_unique<FakeDevice>(kAddress5, false, false);
+    fake_device = std::make_unique<FakeDevice>(kRandomAddress4, false, false);
     fake_device->SetAdvertisingData(adv_data);
     test_device()->AddDevice(std::move(fake_device));
   }
@@ -129,6 +144,7 @@ class LegacyLowEnergyScannerTest : public TestingBase,
 
  private:
   DeviceFoundCallback device_found_cb_;
+  DirectedAdvCallback directed_adv_cb_;
   std::unique_ptr<LegacyLowEnergyScanner> scanner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LegacyLowEnergyScannerTest);
@@ -327,8 +343,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, ActiveScanResults) {
     status = in_status;
   };
 
-  std::map<common::DeviceAddress, std::pair<LowEnergyScanResult, std::string>>
-      results;
+  std::map<DeviceAddress, std::pair<LowEnergyScanResult, std::string>> results;
   set_device_found_callback([&, this](const auto& result, const auto& data) {
     results[result.address] = std::make_pair(result, data.ToString());
   });
@@ -353,65 +368,65 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, ActiveScanResults) {
   // AddFakeDevices(). Since the scan period ended naturally, LowEnergyScanner
   // should generate a device found event for all pending reports even if a scan
   // response was not received for a scannable device (see Fake Device 4, i.e.
-  // kAddress4).
+  // kRandomAddress3).
 
   // Result 0
-  auto iter = results.find(kAddress0);
+  auto iter = results.find(kPublicAddress1);
   EXPECT_NE(iter, results.end());
 
   auto& result_pair = iter->second;
   EXPECT_EQ(kAdvDataAndScanRsp, result_pair.second);
-  EXPECT_EQ(kAddress0, result_pair.first.address);
+  EXPECT_EQ(kPublicAddress1, result_pair.first.address);
   EXPECT_TRUE(result_pair.first.connectable);
   results.erase(iter);
 
   // Result 1
-  iter = results.find(kAddress1);
+  iter = results.find(kRandomAddress1);
   EXPECT_NE(iter, results.end());
 
   result_pair = iter->second;
   EXPECT_EQ(kAdvDataAndScanRsp, result_pair.second);
-  EXPECT_EQ(kAddress1, result_pair.first.address);
+  EXPECT_EQ(kRandomAddress1, result_pair.first.address);
   EXPECT_FALSE(result_pair.first.connectable);
   results.erase(iter);
 
   // Result 2
-  iter = results.find(kAddress2);
+  iter = results.find(kPublicAddress2);
   EXPECT_NE(iter, results.end());
 
   result_pair = iter->second;
   EXPECT_EQ(kPlainAdvData, result_pair.second);
-  EXPECT_EQ(kAddress2, result_pair.first.address);
+  EXPECT_EQ(kPublicAddress2, result_pair.first.address);
   EXPECT_TRUE(result_pair.first.connectable);
   results.erase(iter);
 
   // Result 3
-  iter = results.find(kAddress3);
+  iter = results.find(kRandomAddress2);
   EXPECT_NE(iter, results.end());
 
   result_pair = iter->second;
   EXPECT_EQ(kPlainScanRsp, result_pair.second);
-  EXPECT_EQ(kAddress3, result_pair.first.address);
+  EXPECT_EQ(kRandomAddress2, result_pair.first.address);
   EXPECT_TRUE(result_pair.first.connectable);
   results.erase(iter);
 
   // Result 4
-  iter = results.find(kAddress4);
+  iter = results.find(kRandomAddress3);
   EXPECT_NE(iter, results.end());
 
   result_pair = iter->second;
   EXPECT_EQ(kPlainAdvData, result_pair.second);
-  EXPECT_EQ(kAddress4, result_pair.first.address);
+  EXPECT_EQ(kRandomAddress3, result_pair.first.address);
   EXPECT_TRUE(result_pair.first.connectable);
   results.erase(iter);
 
   // Result 5
-  iter = results.find(kAddress5);
+  iter = results.find(kRandomAddress4);
   EXPECT_NE(iter, results.end());
 
   result_pair = iter->second;
   EXPECT_EQ(kPlainAdvData, result_pair.second);
-  EXPECT_EQ(kAddress5, result_pair.first.address);
+  EXPECT_EQ(kRandomAddress4, result_pair.first.address);
   EXPECT_FALSE(result_pair.first.connectable);
   results.erase(iter);
 
@@ -426,8 +441,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopDuringActiveScan) {
     status = in_status;
   };
 
-  std::map<common::DeviceAddress, std::pair<LowEnergyScanResult, std::string>>
-      results;
+  std::map<DeviceAddress, std::pair<LowEnergyScanResult, std::string>> results;
   set_device_found_callback(
       [&results, this](const auto& result, const auto& data) {
         results[result.address] = std::make_pair(result, data.ToString());
@@ -443,12 +457,12 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopDuringActiveScan) {
   EXPECT_EQ(LowEnergyScanner::State::kScanning, scanner()->state());
 
   // Run the loop until we've seen an event for the last device that we
-  // added. Fake Device 4 (i.e. kAddress4) is scannable but it never sends a
-  // scan response so we expect that remain in the scanner's pending reports
+  // added. Fake Device 4 (i.e. kRandomAddress3) is scannable but it never sends
+  // a scan response so we expect that remain in the scanner's pending reports
   // list.
   RunLoopUntilIdle();
   EXPECT_EQ(5u, results.size());
-  EXPECT_EQ(results.find(kAddress4), results.end());
+  EXPECT_EQ(results.find(kRandomAddress3), results.end());
 
   // Stop the scan. Since we are terminating the scan period early,
   // LowEnergyScanner should not send a report for the pending device.
@@ -457,7 +471,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopDuringActiveScan) {
   EXPECT_EQ(LowEnergyScanner::State::kIdle, scanner()->state());
 
   EXPECT_EQ(5u, results.size());
-  EXPECT_EQ(results.find(kAddress4), results.end());
+  EXPECT_EQ(results.find(kRandomAddress3), results.end());
 }
 
 TEST_F(HCI_LegacyLowEnergyScannerTest, PassiveScanResults) {
@@ -471,8 +485,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, PassiveScanResults) {
     status = in_status;
   };
 
-  std::map<common::DeviceAddress, std::pair<LowEnergyScanResult, std::string>>
-      results;
+  std::map<DeviceAddress, std::pair<LowEnergyScanResult, std::string>> results;
   set_device_found_callback([&, this](const auto& result, const auto& data) {
     results[result.address] = std::make_pair(result, data.ToString());
   });
@@ -491,66 +504,129 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, PassiveScanResults) {
   // AddFakeDevices(). All Scan Response PDUs should have been ignored.
 
   // Result 0
-  auto iter = results.find(kAddress0);
+  auto iter = results.find(kPublicAddress1);
   EXPECT_NE(iter, results.end());
 
   auto& result_pair = iter->second;
   EXPECT_EQ(kPlainAdvData, result_pair.second);
-  EXPECT_EQ(kAddress0, result_pair.first.address);
+  EXPECT_EQ(kPublicAddress1, result_pair.first.address);
   EXPECT_TRUE(result_pair.first.connectable);
   results.erase(iter);
 
   // Result 1
-  iter = results.find(kAddress1);
+  iter = results.find(kRandomAddress1);
   EXPECT_NE(iter, results.end());
 
   result_pair = iter->second;
   EXPECT_EQ(kPlainAdvData, result_pair.second);
-  EXPECT_EQ(kAddress1, result_pair.first.address);
+  EXPECT_EQ(kRandomAddress1, result_pair.first.address);
   EXPECT_FALSE(result_pair.first.connectable);
   results.erase(iter);
 
   // Result 2
-  iter = results.find(kAddress2);
+  iter = results.find(kPublicAddress2);
   EXPECT_NE(iter, results.end());
 
   result_pair = iter->second;
   EXPECT_EQ(kPlainAdvData, result_pair.second);
-  EXPECT_EQ(kAddress2, result_pair.first.address);
+  EXPECT_EQ(kPublicAddress2, result_pair.first.address);
   EXPECT_TRUE(result_pair.first.connectable);
   results.erase(iter);
 
   // Result 3
-  iter = results.find(kAddress3);
+  iter = results.find(kRandomAddress2);
   EXPECT_NE(iter, results.end());
 
   result_pair = iter->second;
   EXPECT_EQ("", result_pair.second);
-  EXPECT_EQ(kAddress3, result_pair.first.address);
+  EXPECT_EQ(kRandomAddress2, result_pair.first.address);
   EXPECT_TRUE(result_pair.first.connectable);
   results.erase(iter);
 
   // Result 4
-  iter = results.find(kAddress4);
+  iter = results.find(kRandomAddress3);
   EXPECT_NE(iter, results.end());
 
   result_pair = iter->second;
   EXPECT_EQ(kPlainAdvData, result_pair.second);
-  EXPECT_EQ(kAddress4, result_pair.first.address);
+  EXPECT_EQ(kRandomAddress3, result_pair.first.address);
   EXPECT_TRUE(result_pair.first.connectable);
   results.erase(iter);
 
   // Result 5
-  iter = results.find(kAddress5);
+  iter = results.find(kRandomAddress4);
   EXPECT_NE(iter, results.end());
 
   result_pair = iter->second;
   EXPECT_EQ(kPlainAdvData, result_pair.second);
-  EXPECT_EQ(kAddress5, result_pair.first.address);
+  EXPECT_EQ(kRandomAddress4, result_pair.first.address);
   EXPECT_FALSE(result_pair.first.connectable);
   results.erase(iter);
 
   EXPECT_TRUE(results.empty());
+}
+
+TEST_F(HCI_LegacyLowEnergyScannerTest, DirectedReport) {
+  const auto& kPublicUnresolved = kPublicAddress1;
+  const auto& kPublicResolved = kPublicAddress2;
+  const auto& kRandomUnresolved = kRandomAddress1;
+  const auto& kRandomResolved = kRandomAddress2;
+
+  constexpr int64_t kTestPeriod = LowEnergyScanner::kPeriodInfinite;
+  constexpr size_t kExpectedResultCount = 4u;
+
+  // Unresolved public.
+  auto fake_dev = std::make_unique<FakeDevice>(kPublicUnresolved, true, false);
+  fake_dev->enable_directed_advertising(true);
+  test_device()->AddDevice(std::move(fake_dev));
+
+  // Unresolved random.
+  fake_dev = std::make_unique<FakeDevice>(kRandomUnresolved, true, false);
+  fake_dev->enable_directed_advertising(true);
+  test_device()->AddDevice(std::move(fake_dev));
+
+  // Resolved public.
+  fake_dev = std::make_unique<FakeDevice>(kPublicResolved, true, false);
+  fake_dev->set_address_resolved(true);
+  fake_dev->enable_directed_advertising(true);
+  test_device()->AddDevice(std::move(fake_dev));
+
+  // Resolved random.
+  fake_dev = std::make_unique<FakeDevice>(kRandomResolved, true, false);
+  fake_dev->set_address_resolved(true);
+  fake_dev->enable_directed_advertising(true);
+  test_device()->AddDevice(std::move(fake_dev));
+
+  std::unordered_map<DeviceAddress, LowEnergyScanResult> results;
+  set_directed_adv_callback(
+      [&](const auto& result) { results[result.address] = result; });
+
+  LowEnergyScanner::ScanStatus status;
+  auto cb = [&status, this](LowEnergyScanner::ScanStatus in_status) {
+    status = in_status;
+  };
+
+  EXPECT_TRUE(scanner()->StartScan(
+      true, defaults::kLEScanInterval, defaults::kLEScanWindow, true,
+      LEScanFilterPolicy::kNoWhiteList, kTestPeriod, cb));
+  EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
+
+  RunLoopUntilIdle();
+
+  ASSERT_EQ(LowEnergyScanner::ScanStatus::kStarted, status);
+  ASSERT_EQ(kExpectedResultCount, results.size());
+
+  ASSERT_TRUE(results.count(kPublicUnresolved));
+  EXPECT_FALSE(results[kPublicUnresolved].resolved);
+
+  ASSERT_TRUE(results.count(kRandomUnresolved));
+  EXPECT_FALSE(results[kRandomUnresolved].resolved);
+
+  ASSERT_TRUE(results.count(kPublicResolved));
+  EXPECT_TRUE(results[kPublicResolved].resolved);
+
+  ASSERT_TRUE(results.count(kRandomResolved));
+  EXPECT_TRUE(results[kRandomResolved].resolved);
 }
 
 }  // namespace

@@ -18,13 +18,19 @@ void LowEnergyScanner::Delegate::OnDeviceFound(
     const LowEnergyScanResult& result,
     const common::ByteBuffer& data) {}
 
+void LowEnergyScanner::Delegate::OnDirectedAdvertisement(
+    const LowEnergyScanResult& result) {}
+
 LowEnergyScanResult::LowEnergyScanResult()
-    : connectable(false), rssi(hci::kRSSIInvalid) {}
+    : resolved(false), connectable(false), rssi(hci::kRSSIInvalid) {}
 
 LowEnergyScanResult::LowEnergyScanResult(const common::DeviceAddress& address,
-                                         bool connectable,
+                                         bool resolved, bool connectable,
                                          int8_t rssi)
-    : address(address), connectable(connectable), rssi(rssi) {}
+    : address(address),
+      resolved(resolved),
+      connectable(connectable),
+      rssi(rssi) {}
 
 LowEnergyScanner::LowEnergyScanner(Delegate* delegate,
                                    fxl::RefPtr<Transport> hci,

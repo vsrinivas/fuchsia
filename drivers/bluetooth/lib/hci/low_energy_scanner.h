@@ -24,14 +24,15 @@ class Transport;
 // Represents a discovered Bluetooth Low Energy device.
 struct LowEnergyScanResult {
   LowEnergyScanResult();
-  LowEnergyScanResult(const common::DeviceAddress& address,
-                      bool connectable,
-                      int8_t rssi);
+  LowEnergyScanResult(const common::DeviceAddress& address, bool resolved,
+                      bool connectable, int8_t rssi);
 
   // The device address of the remote device.
-  // TODO(armansito): Report resolved address if address is resolvable and we
-  // can resolve it.
   common::DeviceAddress address;
+
+  // True if |address| is a static or random identity address resolved by the
+  // controller.
+  bool resolved;
 
   // True if this device accepts connections. This is the case if this device
   // sent a connectable advertising PDU.
@@ -79,7 +80,9 @@ class LowEnergyScanner {
     virtual void OnDeviceFound(const LowEnergyScanResult& result,
                                const common::ByteBuffer& data);
 
-    // TODO(armansito): Add function for directed advertising reports.
+    // Called when a directed advertising report is received from the device
+    // with the given address.
+    virtual void OnDirectedAdvertisement(const LowEnergyScanResult& result);
   };
 
   LowEnergyScanner(Delegate* delegate,
@@ -92,6 +95,9 @@ class LowEnergyScanner {
 
   // True if a device scan is currently being performed.
   bool IsScanning() const { return state() == State::kScanning; }
+
+  // True if no scan procedure is currently enabled.
+  bool IsIdle() const { return state() == State::kIdle; }
 
   // Initiates a device scan. This is an asynchronous operation that abides by
   // the following rules:

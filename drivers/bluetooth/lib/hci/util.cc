@@ -118,18 +118,28 @@ std::string StatusCodeToString(StatusCode code) {
 // clang-format on
 
 bool DeviceAddressFromAdvReport(const LEAdvertisingReportData& report,
-                                DeviceAddress* out_address) {
+                                DeviceAddress* out_address,
+                                bool* out_resolved) {
   ZX_DEBUG_ASSERT(out_address);
+  ZX_DEBUG_ASSERT(out_resolved);
 
   DeviceAddress::Type type;
   switch (report.address_type) {
-    case LEAddressType::kPublic:
     case LEAddressType::kPublicIdentity:
       type = DeviceAddress::Type::kLEPublic;
+      *out_resolved = true;
       break;
-    case LEAddressType::kRandom:
+    case LEAddressType::kPublic:
+      type = DeviceAddress::Type::kLEPublic;
+      *out_resolved = false;
+      break;
     case LEAddressType::kRandomIdentity:
       type = DeviceAddress::Type::kLERandom;
+      *out_resolved = true;
+      break;
+    case LEAddressType::kRandom:
+      type = DeviceAddress::Type::kLERandom;
+      *out_resolved = false;
       break;
     default:
       bt_log(WARN, "hci", "invalid address type in advertising report: %#.2x",

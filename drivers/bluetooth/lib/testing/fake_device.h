@@ -34,8 +34,15 @@ class FakeDevice {
 
   void SetAdvertisingData(const common::ByteBuffer& data);
 
+  // Mark this device for directed advertising. CreateAdvertisingReportEvent
+  // will return directed advertisements only.
+  void enable_directed_advertising(bool enable) { directed_ = enable; }
+
+  // Toggles whether the address of this device represents a resolved RPA.
+  void set_address_resolved(bool value) { address_resolved_ = value; }
+
   bool has_advertising_reports() {
-    return (adv_data_.size() > 0) || (scan_rsp_.size() > 0);
+    return (adv_data_.size() > 0) || (scan_rsp_.size() > 0) || directed_;
   };
 
   bool has_inquiry_response() {
@@ -143,6 +150,8 @@ class FakeDevice {
   bool connected_;
   bool connectable_;
   bool scannable_;
+  bool directed_;
+  bool address_resolved_;
 
   hci::StatusCode connect_status_;
   hci::StatusCode connect_response_;

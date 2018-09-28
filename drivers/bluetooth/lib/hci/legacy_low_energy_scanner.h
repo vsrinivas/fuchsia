@@ -50,8 +50,6 @@ class LegacyLowEnergyScanner : public LowEnergyScanner {
 
  private:
   struct PendingScanResult {
-    explicit PendingScanResult(const common::DeviceAddress& address);
-
     LowEnergyScanResult result;
 
     // Make this large enough to store both advertising and scan response data
