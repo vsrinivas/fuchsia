@@ -8,11 +8,13 @@
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/device.h>
+#include <ddktl/mmio.h>
 #include <ddktl/device-internal.h>
 #include <zircon/listnode.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 #include <fbl/mutex.h>
+#include <fbl/optional.h>
 #include <fbl/vector.h>
 
 #include <audio-proto/audio-proto.h>
@@ -133,8 +135,7 @@ private:
 
 
     // control registers for the tdm block
-    aml_tdm_regs_t* regs_ = nullptr;
-    zx::vmo regs_vmo_;
+    fbl::optional<ddk::MmioBuffer> mmio_;
 
     fbl::RefPtr<dispatcher::Timer> notify_timer_;
 

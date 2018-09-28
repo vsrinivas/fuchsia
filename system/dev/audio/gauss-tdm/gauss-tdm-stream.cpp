@@ -17,6 +17,8 @@
 namespace audio {
 namespace gauss {
 
+#define RegOffset(field) offsetof(aml_tdm_regs_t, field)
+
 TdmOutputStream::~TdmOutputStream() {}
 
 // static
@@ -38,17 +40,14 @@ zx_status_t TdmOutputStream::Create(zx_device_t* parent) {
         return res;
     }
 
-    size_t mmio_size;
-    void *regs;
-    res = pdev_map_mmio(&stream->pdev_, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                        &regs, &mmio_size,
-                        stream->regs_vmo_.reset_and_get_address());
+    mmio_buffer_t mmio;
+    res = pdev_map_mmio_buffer2(&stream->pdev_, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
 
     if (res != ZX_OK) {
         zxlogf(ERROR, "tdm-output-driver: failed to map mmio.\n");
         return res;
     }
-    stream->regs_ = static_cast<aml_tdm_regs_t*>(regs);
+    stream->mmio_ = ddk::MmioBuffer(mmio);
 
     stream->SetModuleClocks();
 
@@ -164,8 +163,7 @@ void TdmOutputStream::DdkUnbind() {
     // Close all of our client event sources if we have not already.
     default_domain_->Deactivate();
     // Quiet the data being output on tdm
-    regs_->tdmout[TDM_OUT_C].ctl0 &= ~(1 << 31);
-
+    mmio_->ClearBits32(1 << 31, RegOffset(tdmout[TDM_OUT_C].ctl0));
     // TODO(hollande) - implement more thorough teardown/reset of the hw state.
 
     // Unpublish our device node.
@@ -586,16 +584,16 @@ zx_status_t TdmOutputStream::SetModuleClocks() {
        divide mclk by 10 to get 12287938.5603 Hz SCLK
        SCLK is 256 x fs => 47999.7600012 frames per sec
     */
-    regs_->mclk_ctl[MCLK_C] = (1 << 31) | (2 << 24) | (9);
+    mmio_->Write32((1 << 31) | (2 << 24) | (9), RegOffset(mclk_ctl[MCLK_C]));
 
     // configure mst_sclk_gen
-    regs_->sclk_ctl[MCLK_C].ctl0 = (0x03 << 30) | (1 << 20) | (0 << 10) | 255;
-    regs_->sclk_ctl[MCLK_C].ctl1 = 0x00000001;
+    mmio_->Write32((0x03 << 30) | (1 << 20) | (0 << 10) | 255, RegOffset(sclk_ctl[MCLK_C].ctl0));
+    mmio_->Write32(0x1, RegOffset(sclk_ctl[MCLK_C].ctl1));
 
-    regs_->clk_tdmout_ctl[TDM_OUT_C] = (0x03 << 30) | (2 << 24) | (2 << 20);
+    mmio_->Write32((0x03 << 30) | (2 << 24) | (2 << 20), RegOffset(clk_tdmout_ctl[TDM_OUT_C]));
 
     // Enable clock gates for PDM and TDM blocks
-    regs_->clk_gate_en |= (1 << 8) | (1 << 11);
+    mmio_->SetBits32((1 << 8) | (1 << 11), RegOffset(clk_gate_en));
     return ZX_OK;
 }
 
@@ -680,7 +678,7 @@ zx_status_t TdmOutputStream::ProcessRingNotification() {
     audio_proto::RingBufPositionNotify resp = { };
     resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
 
-    resp.ring_buffer_pos = regs_->frddr[2].status2 - ring_buffer_phys_;
+    resp.ring_buffer_pos = mmio_->Read32(RegOffset(frddr[2].status2)) - ring_buffer_phys_;
 
     fbl::AutoLock lock(&lock_);
     if (rb_channel_) {
@@ -705,34 +703,36 @@ zx_status_t TdmOutputStream::OnStartLocked(dispatcher::Channel* channel,
     resp.hdr = req.hdr;
     resp.result = ZX_OK;
 
-    regs_->arb_ctl |= (1 << 31) | (1 << 6);
+    mmio_->SetBits32((1 << 31) | (1 << 6), RegOffset(arb_ctl));
 
-    regs_->frddr[2].ctl0 = (2 << 0);
+    mmio_->Write32((2 << 0), RegOffset(frddr[2].ctl0));
     // Set fifo depth and threshold to half the depth
-    regs_->frddr[2].ctl1 = (kFifoDepth << 24) | ((kFifoDepth / 2) << 16) | (0 << 8);
+    mmio_->Write32((kFifoDepth << 24) | ((kFifoDepth / 2) << 16) | (0 << 8),
+                   RegOffset(frddr[2].ctl1));
 
-    regs_->frddr[2].start_addr = (uint32_t)ring_buffer_phys_;
-    regs_->frddr[2].finish_addr = (uint32_t)(ring_buffer_phys_ + ring_buffer_size_ - 8);
+    mmio_->Write32((uint32_t)ring_buffer_phys_, RegOffset(frddr[2].start_addr));
+    mmio_->Write32((uint32_t)(ring_buffer_phys_ + ring_buffer_size_ - 8),
+                   RegOffset(frddr[2].finish_addr));
 
-    regs_->tdmout[TDM_OUT_C].ctl0 =  (1 << 15) | (7 << 5 ) | (31 << 0);
+    mmio_->Write32((1 << 15) | (7 << 5 ) | (31 << 0), RegOffset(tdmout[TDM_OUT_C].ctl0));
 
-    regs_->tdmout[TDM_OUT_C].ctl1 =  (15 << 8) | (2 << 24) | (2  << 4);
+    mmio_->Write32((15 << 8) | (2 << 24) | (2  << 4), RegOffset(tdmout[TDM_OUT_C].ctl1));
 
-    regs_->tdmout[TDM_OUT_C].mask[0]=0x00000003;
-    regs_->tdmout[TDM_OUT_C].swap = 0x00000010;
-    regs_->tdmout[TDM_OUT_C].mask_val=0x00000000;
-    regs_->tdmout[TDM_OUT_C].mute_val=0x00000000;
+    mmio_->Write32(0x00000003, RegOffset(tdmout[TDM_OUT_C].mask[0]));
+    mmio_->Write32(0x00000010, RegOffset(tdmout[TDM_OUT_C].swap));
+    mmio_->Write32(0x00000000, RegOffset(tdmout[TDM_OUT_C].mask_val));
+    mmio_->Write32(0x00000000, RegOffset(tdmout[TDM_OUT_C].mute_val));
 
     //reset the module
-    regs_->tdmout[TDM_OUT_C].ctl0 &= ~(3 << 28);
-    regs_->tdmout[TDM_OUT_C].ctl0 |=  (1 << 29);
-    regs_->tdmout[TDM_OUT_C].ctl0 |=  (1 << 28);
+    mmio_->ClearBits32(3 << 28, RegOffset(tdmout[TDM_OUT_C].ctl0));
+    mmio_->SetBits32(1 << 29, RegOffset(tdmout[TDM_OUT_C].ctl0));
+    mmio_->SetBits32(1 << 28, RegOffset(tdmout[TDM_OUT_C].ctl0));
 
     //enable frddr
-    regs_->frddr[TDM_OUT_C].ctl0 |= (1 << 31);
+    mmio_->SetBits32(1 << 31, RegOffset(frddr[TDM_OUT_C].ctl0));
 
     //enable tdmout
-    regs_->tdmout[TDM_OUT_C].ctl0 |= (1 << 31);
+    mmio_->SetBits32(1 << 31, RegOffset(tdmout[TDM_OUT_C].ctl0));
 
     resp.start_time = zx_clock_get_monotonic();
     return channel->Write(&resp, sizeof(resp));
@@ -741,7 +741,7 @@ zx_status_t TdmOutputStream::OnStartLocked(dispatcher::Channel* channel,
 zx_status_t TdmOutputStream::OnStopLocked(dispatcher::Channel* channel,
                                           const audio_proto::RingBufStopReq& req) {
     notify_timer_->Cancel();
-    regs_->tdmout[TDM_OUT_C].ctl0 &= ~(1 << 31);
+    mmio_->ClearBits32(1 << 31, RegOffset(tdmout[TDM_OUT_C].ctl0));
     running_ = false;
     audio_proto::RingBufStopResp resp = { };
     resp.hdr = req.hdr;
