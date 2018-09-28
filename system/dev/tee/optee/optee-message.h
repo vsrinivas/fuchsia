@@ -77,11 +77,11 @@ struct MessageParam {
         } generic;
         TEEC_UUID uuid_big_endian;
         struct {
-            SharedMemoryType memory_type;
+            uint64_t memory_type;
             uint64_t memory_size;
         } allocate_memory_specs;
         struct {
-            SharedMemoryType memory_type;
+            uint64_t memory_type;
             uint64_t memory_id;
         } free_memory_specs;
         struct {
@@ -312,7 +312,7 @@ public:
     // LoadTaRpcMessage
     //
     // Move constructor for LoadTaRpcMessage. Uses the default implicit implementation.
-    LoadTaRpcMessage(LoadTaRpcMessage&& load_ta_msg) = default;
+    LoadTaRpcMessage(LoadTaRpcMessage&&) = default;
 
     // LoadTaRpcMessage
     //
@@ -335,19 +335,20 @@ public:
         return mem_id_;
     }
 
-    uint64_t memory_reference_size() const {
+    size_t memory_reference_size() const {
         ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
         return mem_size_;
     }
 
-    uint64_t memory_reference_offset() const {
+    zx_off_t memory_reference_offset() const {
         ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
         return mem_offset_;
     }
 
-    void set_output_ta_size(uint64_t ta_size) {
+    void set_output_ta_size(size_t ta_size) {
         ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
-        *out_ta_size_ = ta_size;
+        ZX_DEBUG_ASSERT(out_ta_size_ != nullptr);
+        *out_ta_size_ = static_cast<uint64_t>(ta_size);
     }
 
 protected:
@@ -357,8 +358,8 @@ protected:
 
     TEEC_UUID ta_uuid_;
     uint64_t mem_id_;
-    uint64_t mem_size_;
-    size_t mem_offset_;
+    size_t mem_size_;
+    zx_off_t mem_offset_;
     uint64_t* out_ta_size_;
 
 private:

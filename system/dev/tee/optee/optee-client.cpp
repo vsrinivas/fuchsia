@@ -456,13 +456,6 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
     // Mark that the return code will originate from driver
     message->set_return_origin(TEEC_ORIGIN_COMMS);
 
-    if (message->memory_reference_offset() >= message->memory_reference_size() &&
-        message->memory_reference_offset() > 0) {
-        zxlogf(ERROR, "optee: RPC command received a memory offset out of bounds!\n");
-        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return ZX_ERR_INVALID_ARGS;
-    }
-
     // The amount of memory available for loading the TA
     uint64_t mem_usable_size = message->memory_reference_size() -
                                message->memory_reference_offset();

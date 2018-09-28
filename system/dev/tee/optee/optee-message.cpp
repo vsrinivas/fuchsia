@@ -121,15 +121,17 @@ bool LoadTaRpcMessage::TryInitializeMembers() {
     MessageParam& memory_reference_param = params()[kMemoryReferenceParamIndex];
     switch (memory_reference_param.attribute) {
     case MessageParam::kAttributeTypeTempMemOutput:
-    case MessageParam::kAttributeTypeTempMemInOut:
-        mem_id_ = memory_reference_param.payload.temporary_memory.shared_memory_reference;
-        mem_size_ = memory_reference_param.payload.temporary_memory.size;
-        out_ta_size_ = &memory_reference_param.payload.temporary_memory.size;
+    case MessageParam::kAttributeTypeTempMemInOut: {
+        MessageParam::TemporaryMemory& temp_mem = memory_reference_param.payload.temporary_memory;
+        mem_id_ = temp_mem.shared_memory_reference;
+        mem_size_ = static_cast<size_t>(temp_mem.size);
+        out_ta_size_ = &temp_mem.size;
         // Temporary Memory References are owned by the TEE/TA and used only for the duration of
         // this operation. Thus, it is sized exactly for the operation being performed and does not
         // have an offset.
         mem_offset_ = 0;
         break;
+    }
     case MessageParam::kAttributeTypeRegMemOutput:
     case MessageParam::kAttributeTypeRegMemInOut:
         zxlogf(ERROR,
@@ -140,6 +142,13 @@ bool LoadTaRpcMessage::TryInitializeMembers() {
     default:
         zxlogf(ERROR,
                "optee: RPC command to load trusted app received unexpected second parameter!\n");
+        set_return_origin(TEEC_ORIGIN_COMMS);
+        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return false;
+    }
+
+    if (mem_offset_ >= mem_size_ && mem_offset_ > 0) {
+        zxlogf(ERROR, "optee: RPC command received a memory offset out of bounds!\n");
         set_return_origin(TEEC_ORIGIN_COMMS);
         set_return_code(TEEC_ERROR_BAD_PARAMETERS);
         return false;
