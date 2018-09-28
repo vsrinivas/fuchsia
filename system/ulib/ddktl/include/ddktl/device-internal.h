@@ -235,6 +235,20 @@ constexpr void CheckIoctlable() {
                   "'zx_status_t DdkIoctl(uint32_t, const void*, size_t, void*, size_t, size_t*)'.");
 }
 
+DECLARE_HAS_MEMBER_FN(has_ddk_message, DdkMessage);
+
+template <typename D>
+constexpr void CheckMessageable() {
+    static_assert(has_ddk_message<D>::value,
+                  "Messageable classes must implement DdkMessage");
+    static_assert(fbl::is_base_of<base_device, D>::value,
+                  "Messageable classes must be derived from ddk::Device<...>.");
+    static_assert(fbl::is_same<decltype(&D::DdkMessage),
+                               zx_status_t (D::*)(fidl_msg_t*, fidl_txn_t*)>::value,
+                  "DdkMessage must be a public non-static member function with signature "
+                  "'zx_status_t DdkMessage(fidl_msg_t*, fidl_txn_t*)'.");
+}
+
 DECLARE_HAS_MEMBER_FN(has_ddk_suspend, DdkSuspend);
 
 template <typename D>

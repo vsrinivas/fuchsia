@@ -69,6 +69,12 @@ BEGIN_SUCCESS_CASE(Ioctlable)
     }
 END_SUCCESS_CASE
 
+BEGIN_SUCCESS_CASE(Messageable)
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+        return ZX_OK;
+    }
+END_SUCCESS_CASE
+
 BEGIN_SUCCESS_CASE(Suspendable)
     zx_status_t DdkSuspend(uint32_t flags) { return ZX_OK; }
 END_SUCCESS_CASE

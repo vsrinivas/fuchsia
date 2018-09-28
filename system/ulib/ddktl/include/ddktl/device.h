@@ -60,6 +60,9 @@
 // |                      |                      size_t out_len,               |
 // |                      |                      size_t* actual)               |
 // |                      |                                                    |
+// | ddk::Messageable     | zx_status_t DdkMessage(fidl_msg_t* msg,            |
+// |                      |                        fidl_txn_t* txn)            |
+// |                      |                                                    |
 // | ddk::Suspendable     | zx_status_t DdkSuspend(uint32_t flags)             |
 // |                      |                                                    |
 // | ddk::Resumable       | zx_status_t DdkResume(uint32_t flags)              |
@@ -245,6 +248,20 @@ class Ioctlable : public internal::base_mixin {
     static zx_status_t Ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
                              void* out_buf, size_t out_len, size_t* out_actual) {
         return static_cast<D*>(ctx)->DdkIoctl(op, in_buf, in_len, out_buf, out_len, out_actual);
+    }
+};
+
+template <typename D>
+class Messageable : public internal::base_mixin {
+  protected:
+    explicit Messageable(zx_protocol_device_t* proto) {
+        internal::CheckMessageable<D>();
+        proto->message = Message;
+    }
+
+  private:
+    static zx_status_t Message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+        return static_cast<D*>(ctx)->DdkMessage(msg, txn);
     }
 };
 
