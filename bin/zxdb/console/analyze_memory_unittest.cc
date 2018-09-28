@@ -137,7 +137,7 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   EXPECT_EQ(
       "Address               Data \n"
       " 0x1000 0x0000000000001000 ◁ rax. ▷ inside map \"inner\"\n"
-      " 0x1008 0x0000000010000000 ◁ frame 1 SP\n"
+      " 0x1008 0x0000000010000000 ◁ frame 1 BP, frame 1 SP\n"
       " 0x1010 0x0000000000000000 \n",
       output.AsString());
 }

@@ -120,13 +120,12 @@ void MemoryAnalysis::SetFrames(const std::vector<Frame*>& frames) {
   FXL_DCHECK(!have_frames_);
   have_frames_ = true;
 
-  // Note that this skips frame 0. Frame 0 SP will always be the SP register
-  // which will be annotated also.
-  //
-  // Note: if we add more stuff per frame (like return addresses and base
-  // pointers), we'll wan to change this so frame 0's relevant stuff is
-  // added but not its SP.
+  // This loop avoids adding frame 0's information because that should be
+  // covered by the CPU registers.
   for (int i = 1; i < static_cast<int>(frames.size()); i++) {
+    AddAnnotation(frames[i]->GetAddress(), fxl::StringPrintf("frame %d IP", i));
+    AddAnnotation(frames[i]->GetBasePointer(),
+                  fxl::StringPrintf("frame %d BP", i));
     AddAnnotation(frames[i]->GetStackPointer(),
                   fxl::StringPrintf("frame %d SP", i));
   }
@@ -141,11 +140,13 @@ void MemoryAnalysis::SetMemory(MemoryDump dump) {
 void MemoryAnalysis::SetRegisters(const RegisterSet& registers) {
   FXL_DCHECK(!have_registers_);
   have_registers_ = true;
-  for (const auto& kv : registers.category_map())
+  for (const auto& kv : registers.category_map()) {
     // We look for the general section registers
-    if (kv.first == debug_ipc::RegisterCategory::Type::kGeneral)
+    if (kv.first == debug_ipc::RegisterCategory::Type::kGeneral) {
       for (const auto& reg : kv.second)
         AddAnnotation(reg.GetValue(), RegisterIDToString(reg.id()));
+    }
+  }
 }
 
 void MemoryAnalysis::DoAnalysis() {
