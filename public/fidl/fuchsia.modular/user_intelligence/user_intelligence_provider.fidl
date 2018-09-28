@@ -7,21 +7,6 @@ library fuchsia.modular;
 using fuchsia.speech;
 using fuchsia.sys;
 
-[Discoverable]
-interface UserIntelligenceProviderFactory {
-    // Creates and returns a |UserIntelligenceProvider|.
-    //
-    // NOTE: Any future dependencies needed are provided here, and are assumed to
-    // be scoped to the user.
-    1: GetUserIntelligenceProvider(
-           ContextEngine context_engine,
-           StoryProvider story_provider,
-           FocusProvider focus_provider,
-           VisibleStoriesProvider visible_stories_provider,
-           PuppetMaster puppet_master,
-           request<UserIntelligenceProvider> provider);
-};
-
 interface UserIntelligenceProvider {
     // Creates an |IntelligenceServices| scoped to a specific Component,
     // identified by |scope|.
@@ -42,7 +27,9 @@ interface UserIntelligenceProvider {
     3: GetSpeechToText(request<fuchsia.speech.SpeechToText> speech_to_text);
 
     // The |ComponentContext| is used to create agents and use message queues.
-    5: StartAgents(ComponentContext user_intelligence_context);
+    5: StartAgents(ComponentContext user_intelligence_context,
+                   vector<string> session_agents,
+                   vector<string> startup_agents);
 
     // A standard set of services provided to all agents at startup,
     // along with services particuarly for this agent.

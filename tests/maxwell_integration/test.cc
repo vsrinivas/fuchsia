@@ -13,7 +13,7 @@ MaxwellTestBase::MaxwellTestBase() : loop_(&kAsyncLoopConfigAttachToThread) {
   auto root_environment = startup_context_->environment().get();
   FXL_CHECK(root_environment != nullptr);
 
-  agent_launcher_ = std::make_unique<maxwell::AgentLauncher>(root_environment);
+  agent_launcher_ = std::make_unique<modular::AgentLauncher>(root_environment);
 
   child_app_services_.AddService<fuchsia::modular::ComponentContext>(
       [this](

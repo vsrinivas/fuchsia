@@ -26,6 +26,7 @@
 #include "peridot/bin/user_runner/agent_runner/agent_runner_storage_impl.h"
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_launcher.h"
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_runner.h"
+#include "peridot/bin/user_runner/user_intelligence_provider_impl.h"
 #include "peridot/lib/common/async_holder.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/array_to_string.h"
@@ -68,8 +69,8 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
     bool no_cloud_provider_for_ledger;
 
     // User runner passes args startup agents and session agent to maxwell.
-    std::string startup_agents;
-    std::string session_agents;
+    std::vector<std::string> startup_agents;
+    std::vector<std::string> session_agents;
   };
 
   UserRunnerImpl(component::StartupContext* startup_context,
@@ -224,8 +225,6 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
 
   fuchsia::modular::auth::AccountPtr account_;
 
-  std::unique_ptr<AppClient<fuchsia::modular::UserIntelligenceProviderFactory>>
-      maxwell_app_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> context_engine_app_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> module_resolver_app_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> user_shell_app_;
@@ -250,20 +249,16 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
   component::ServiceProviderImpl context_engine_ns_services_;
 
   // These component contexts are supplied to:
-  // - the user intelligence provider (from |maxwell_app_|) so it can run agents
-  //   and create message queues
+  // - the user intelligence provider so it can run agents and create message
+  //   queues
   // - |context_engine_app_| so it can resolve entity references
   // - |modular resolver_service_| so it can resolve entity references
   std::unique_ptr<fidl::BindingSet<fuchsia::modular::ComponentContext,
                                    std::unique_ptr<ComponentContextImpl>>>
       maxwell_component_context_bindings_;
 
-  // Service provider interfaces for maxwell services. They are created with
-  // the component context above as parameters.
-  fidl::InterfacePtr<fuchsia::modular::UserIntelligenceProvider>
-      user_intelligence_provider_;
-  fidl::InterfacePtr<fuchsia::modular::IntelligenceServices>
-      intelligence_services_;
+  std::unique_ptr<UserIntelligenceProviderImpl>
+      user_intelligence_provider_impl_;
 
   // Services we provide to the module resolver's namespace.
   component::ServiceProviderImpl module_resolver_ns_services_;

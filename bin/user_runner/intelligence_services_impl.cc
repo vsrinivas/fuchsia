@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/maxwell/intelligence_services_impl.h"
+#include "peridot/bin/user_runner/intelligence_services_impl.h"
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-namespace maxwell {
+namespace modular {
 
 IntelligenceServicesImpl::IntelligenceServicesImpl(
     fuchsia::modular::ComponentScope scope,
@@ -65,4 +65,4 @@ void IntelligenceServicesImpl::RegisterQueryHandler(
                                            std::move(query_handler));
 }
 
-}  // namespace maxwell
+}  // namespace modular

@@ -11,6 +11,7 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/macros.h>
+#include <lib/fxl/strings/split_string.h>
 #include <trace-provider/provider.h>
 
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
@@ -34,11 +35,6 @@ int main(int argc, const char** argv) {
   opts.no_cloud_provider_for_ledger =
       command_line.HasOption("no_cloud_provider_for_ledger");
 
-  opts.startup_agents =
-      command_line.GetOptionValueWithDefault("startup_agents", "");
-  opts.session_agents =
-      command_line.GetOptionValueWithDefault("session_agents", "");
-
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
   std::unique_ptr<component::StartupContext> context =
@@ -46,6 +42,20 @@ int main(int argc, const char** argv) {
 
   auto cobalt_cleanup =
       SetupCobalt(opts.test, std::move(loop.dispatcher()), context.get());
+
+  auto startup_agents = fxl::SplitStringCopy(
+      command_line.GetOptionValueWithDefault("startup_agents", ""), ",",
+      fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+  auto session_agents = fxl::SplitStringCopy(
+      command_line.GetOptionValueWithDefault("session_agents", ""), ",",
+      fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+
+  for (const auto& startup_agent : startup_agents) {
+    opts.startup_agents.push_back(startup_agent);
+  }
+  for (const auto& session_agent : session_agents) {
+    opts.session_agents.push_back(session_agent);
+  }
 
   modular::AppDriver<modular::UserRunnerImpl> driver(
       context->outgoing().deprecated_services(),

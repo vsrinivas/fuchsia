@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/maxwell/user_intelligence_provider_impl.h"
+#include "peridot/bin/user_runner/user_intelligence_provider_impl.h"
 
 #include <fuchsia/bluetooth/le/cpp/fidl.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
@@ -12,9 +12,9 @@
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/functional/make_copyable.h>
 
-#include "peridot/bin/maxwell/intelligence_services_impl.h"
+#include "peridot/bin/user_runner/intelligence_services_impl.h"
 
-namespace maxwell {
+namespace modular {
 
 namespace {
 
@@ -81,7 +81,7 @@ void UserIntelligenceProviderImpl::SessionAgentData::
 }
 
 UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
-    component::StartupContext* context, const Config& config,
+    component::StartupContext* const context,
     fidl::InterfaceHandle<fuchsia::modular::ContextEngine>
         context_engine_handle,
     fidl::InterfaceHandle<fuchsia::modular::StoryProvider>
@@ -91,7 +91,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
         visible_stories_provider_handle,
     fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master_handle)
-    : context_(context), config_(config) {
+    : context_(context) {
   context_engine_.Bind(std::move(context_engine_handle));
   story_provider_.Bind(std::move(story_provider_handle));
   focus_provider_.Bind(std::move(focus_provider_handle));
@@ -148,14 +148,20 @@ void UserIntelligenceProviderImpl::GetSpeechToText(
 
 void UserIntelligenceProviderImpl::StartAgents(
     fidl::InterfaceHandle<fuchsia::modular::ComponentContext>
-        component_context_handle) {
+        component_context_handle,
+    fidl::VectorPtr<fidl::StringPtr> session_agents,
+    fidl::VectorPtr<fidl::StringPtr> startup_agents) {
   component_context_.Bind(std::move(component_context_handle));
 
-  for (const auto& agent : config_.session_agents) {
+  FXL_LOG(INFO) << "Starting session_agents:";
+  for (const auto& agent : *session_agents) {
+    FXL_LOG(INFO) << " " << agent;
     StartSessionAgent(agent);
   }
 
-  for (const auto& agent : config_.startup_agents) {
+  FXL_LOG(INFO) << "Starting startup_agents:";
+  for (const auto& agent : *startup_agents) {
+    FXL_LOG(INFO) << " " << agent;
     StartAgent(agent);
   }
 
@@ -315,31 +321,4 @@ UserIntelligenceProviderImpl::AddStandardServices(
   return service_names;
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-UserIntelligenceProviderFactoryImpl::UserIntelligenceProviderFactoryImpl(
-    component::StartupContext* context, const Config& config)
-    : context_(context), config_(config) {}
-
-void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
-    fidl::InterfaceHandle<fuchsia::modular::ContextEngine> context_engine,
-    fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
-    fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
-    fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
-        visible_stories_provider,
-    fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master,
-    fidl::InterfaceRequest<fuchsia::modular::UserIntelligenceProvider>
-        user_intelligence_provider_request) {
-  // Fail if someone has already used this Factory to create an instance of
-  // fuchsia::modular::UserIntelligenceProvider.
-  FXL_CHECK(!impl_);
-  impl_.reset(new UserIntelligenceProviderImpl(
-      context_, config_, std::move(context_engine), std::move(story_provider),
-      std::move(focus_provider), std::move(visible_stories_provider),
-      std::move(puppet_master)));
-  binding_.reset(new fidl::Binding<fuchsia::modular::UserIntelligenceProvider>(
-      impl_.get()));
-  binding_->Bind(std::move(user_intelligence_provider_request));
-}
-
-}  // namespace maxwell
+}  // namespace modular

@@ -11,7 +11,7 @@
 #include <lib/component/cpp/startup_context.h>
 
 #include "gtest/gtest.h"
-#include "peridot/bin/maxwell/agent_launcher.h"
+#include "peridot/bin/user_runner/agent_launcher.h"
 #include "peridot/lib/testing/component_context_fake.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
@@ -45,7 +45,7 @@ class MaxwellTestBase : public testing::Test {
 
  private:
   std::unique_ptr<component::StartupContext> startup_context_;
-  std::unique_ptr<AgentLauncher> agent_launcher_;
+  std::unique_ptr<modular::AgentLauncher> agent_launcher_;
   std::vector<fuchsia::sys::ComponentControllerPtr> component_ptrs_;
 
   component::ServiceProviderImpl child_app_services_;
