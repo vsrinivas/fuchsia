@@ -11,8 +11,6 @@
 #include <fbl/algorithm.h>
 #include <lib/zx/vmo.h>
 
-__BEGIN_CDECLS
-
 typedef struct bootfs_entry bootfs_entry_t;
 
 class Bootfs {
@@ -67,5 +65,3 @@ private:
     uint32_t dirsize_;
     void* dir_;
 };
-
-__END_CDECLS

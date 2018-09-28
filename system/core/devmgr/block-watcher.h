@@ -4,10 +4,4 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
-
-__BEGIN_CDECLS
-
-void fuchsia_start(void);
-
-__END_CDECLS
+void fuchsia_start();

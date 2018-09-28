@@ -7,8 +7,6 @@
 #include <ddk/device.h>
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS
-
 typedef struct proxy_iostate proxy_iostate_t;
 
 struct zx_device {
@@ -135,5 +133,3 @@ struct zx_device {
 zx_status_t device_bind(zx_device_t* dev, const char* drv_libname);
 zx_status_t device_open_at(zx_device_t* dev, zx_device_t** out, const char* path, uint32_t flags);
 zx_status_t device_close(zx_device_t* dev, uint32_t flags);
-
-__END_CDECLS

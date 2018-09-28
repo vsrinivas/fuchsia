@@ -4,10 +4,4 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
-
-__BEGIN_CDECLS
-
 int device_host_main(int argc, char** argv);
-
-__END_CDECLS

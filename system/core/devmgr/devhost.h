@@ -23,8 +23,6 @@
 #include <threads.h>
 #include <stdint.h>
 
-__BEGIN_CDECLS
-
 // Handle IDs for USER0 handles
 #define ID_HJOBROOT 4
 
@@ -108,7 +106,7 @@ static inline void dev_ref_acquire(zx_device_t* dev) {
     dev->refcount++;
 }
 
-zx_handle_t get_root_resource(void);
+zx_handle_t get_root_resource();
 
 typedef struct {
     zx_device_t* parent;
@@ -142,13 +140,11 @@ static inline void __DM_UNLOCK(const char* fn, int ln) __TA_RELEASE(&__devhost_a
 #define DM_LOCK() __DM_LOCK(__FILE__, __LINE__)
 #define DM_UNLOCK() __DM_UNLOCK(__FILE__, __LINE__)
 #else
-static inline void DM_LOCK(void) __TA_ACQUIRE(&__devhost_api_lock) {
+static inline void DM_LOCK() __TA_ACQUIRE(&__devhost_api_lock) {
     mtx_lock(&__devhost_api_lock);
 }
 
-static inline void DM_UNLOCK(void) __TA_RELEASE(&__devhost_api_lock) {
+static inline void DM_UNLOCK() __TA_RELEASE(&__devhost_api_lock) {
     mtx_unlock(&__devhost_api_lock);
 }
 #endif
-
-__END_CDECLS

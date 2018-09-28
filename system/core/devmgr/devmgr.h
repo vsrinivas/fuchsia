@@ -11,15 +11,13 @@
 #include <zircon/device/vfs.h>
 #include <launchpad/launchpad.h>
 
-__BEGIN_CDECLS
-
-void coordinator(void);
+void coordinator();
 
 void devfs_init(zx_handle_t root_job);
 
-void devmgr_io_init(void);
-void devmgr_svc_init(void);
-void devmgr_vfs_init(void);
+void devmgr_io_init();
+void devmgr_svc_init();
+void devmgr_vfs_init();
 void devmgr_set_bootdata(zx_handle_t vmo);
 
 zx_handle_t devmgr_load_file(const char* path, uint32_t* out_size);
@@ -59,21 +57,21 @@ zx_status_t devmgr_launch_cmdline(
     const char* cmdline,
     const zx_handle_t* handles, const uint32_t* types, size_t hcount,
     zx_handle_t* proc_out, uint32_t flags);
-bool secondary_bootfs_ready(void);
+bool secondary_bootfs_ready();
 
 #define FSHOST_SIGNAL_READY      ZX_USER_SIGNAL_0  // Signalled by fshost
 #define FSHOST_SIGNAL_EXIT       ZX_USER_SIGNAL_1  // Signalled by devmgr
 #define FSHOST_SIGNAL_EXIT_DONE  ZX_USER_SIGNAL_2  // Signalled by fshost
 
-void bootfs_create_from_startup_handle(void);
-void fshost_start(void);
+void bootfs_create_from_startup_handle();
+void fshost_start();
 zx_status_t copy_vmo(zx_handle_t src, zx_off_t offset, size_t length, zx_handle_t* out_dest);
 
-zx_handle_t get_sysinfo_job_root(void);
+zx_handle_t get_sysinfo_job_root();
 
-void load_system_drivers(void);
+void load_system_drivers();
 
-void devmgr_disable_appmgr_services(void);
+void devmgr_disable_appmgr_services();
 
 // The variable to set on the kernel command line to enable ld.so tracing
 // of the processes we launch.
@@ -81,7 +79,7 @@ void devmgr_disable_appmgr_services(void);
 // The env var to set to enable ld.so tracing.
 #define LDSO_TRACE_ENV "LD_TRACE=1"
 
-zx_handle_t devfs_root_clone(void);
+zx_handle_t devfs_root_clone();
 zx_handle_t fs_clone(const char* path);
 
 void block_device_watcher(zx_handle_t job, bool netboot);
@@ -94,5 +92,3 @@ bool getenv_bool(const char* key, bool _default);
 // Global flag tracking if devmgr believes this is a full Fuchsia build
 // (requiring /system, etc) or not.
 extern bool require_system;
-
-__END_CDECLS

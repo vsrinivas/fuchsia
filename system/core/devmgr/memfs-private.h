@@ -11,8 +11,6 @@
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/vfs.h>
 
-#ifdef __cplusplus
-
 #include <lib/memfs/cpp/vnode.h>
 
 using VnodeMemfs = memfs::VnodeMemfs;
@@ -22,15 +20,6 @@ fbl::RefPtr<VnodeDir> BootfsRoot();
 fbl::RefPtr<VnodeDir> MemfsRoot();
 fbl::RefPtr<VnodeDir> SystemfsRoot();
 fbl::RefPtr<VnodeDir> DevfsRoot();
-
-#else
-
-typedef struct VnodeMemfs VnodeMemfs;
-typedef struct VnodeDir VnodeDir;
-
-#endif  // ifdef __cplusplus
-
-__BEGIN_CDECLS
 
 void vfs_global_init(VnodeDir* root);
 void vfs_watch_exit(zx_handle_t event);
@@ -50,15 +39,13 @@ zx_status_t devfs_mount(zx_handle_t h);
 zx_status_t bootfs_add_file(const char* path, zx_handle_t vmo, zx_off_t off, size_t len);
 
 // system fs
-VnodeDir* systemfs_get_root(void);
+VnodeDir* systemfs_get_root();
 zx_status_t systemfs_add_file(const char* path, zx_handle_t vmo, zx_off_t off, size_t len);
 void systemfs_set_readonly(bool value);
 
 // Create the global root to memfs
-VnodeDir* vfs_create_global_root(void) TA_NO_THREAD_SAFETY_ANALYSIS;
+VnodeDir* vfs_create_global_root() TA_NO_THREAD_SAFETY_ANALYSIS;
 
 zx_status_t memfs_mount(VnodeDir* parent, const char* name, VnodeDir* subtree);
 
-void devmgr_vfs_exit(void);
-
-__END_CDECLS
+void devmgr_vfs_exit();

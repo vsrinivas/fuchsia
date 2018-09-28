@@ -14,8 +14,6 @@
 
 #include <port/port.h>
 
-__BEGIN_CDECLS
-
 typedef struct dc_work work_t;
 typedef struct dc_pending pending_t;
 typedef struct dc_devhost devhost_t;
@@ -161,7 +159,7 @@ void devfs_advertise(device_t* dev);
 void devfs_advertise_modified(device_t* dev);
 
 device_t* coordinator_init(zx_handle_t root_job);
-void coordinator(void);
+void coordinator();
 
 void load_driver(const char* path,
                  void (*func)(driver_t* drv, const char* version));
@@ -243,5 +241,3 @@ zx_status_t dc_msg_rpc(zx_handle_t h, dc_msg_t* msg, size_t msglen,
 
 extern bool dc_asan_drivers;
 extern bool dc_launched_first_devhost;
-
-__END_CDECLS
