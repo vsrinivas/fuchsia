@@ -1,7 +1,6 @@
 {
     "packages": [
         "//peridot/bin/context_engine",
-        "//peridot/bin/maxwell",
         "//peridot/bin/suggestion_engine"
     ]
 }

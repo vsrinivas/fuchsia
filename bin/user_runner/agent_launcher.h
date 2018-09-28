@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_MAXWELL_AGENT_LAUNCHER_H_
-#define PERIDOT_BIN_MAXWELL_AGENT_LAUNCHER_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_AGENT_LAUNCHER_H_
+#define PERIDOT_BIN_USER_RUNNER_AGENT_LAUNCHER_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -11,7 +11,7 @@
 
 #include "peridot/lib/environment_host/maxwell_service_provider_bridge.h"
 
-namespace maxwell {
+namespace modular {
 
 class AgentLauncher {
  public:
@@ -19,14 +19,14 @@ class AgentLauncher {
       : environment_(environment) {}
   component::Services StartAgent(
       const std::string& url,
-      std::unique_ptr<MaxwellServiceProviderBridge> bridge);
+      std::unique_ptr<maxwell::MaxwellServiceProviderBridge> bridge);
 
  private:
   fuchsia::sys::Environment* environment_;
 
-  std::unique_ptr<MaxwellServiceProviderBridge> bridge_;
+  std::unique_ptr<maxwell::MaxwellServiceProviderBridge> bridge_;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
-#endif  // PERIDOT_BIN_MAXWELL_AGENT_LAUNCHER_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_AGENT_LAUNCHER_H_

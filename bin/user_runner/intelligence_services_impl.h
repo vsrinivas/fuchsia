@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_MAXWELL_INTELLIGENCE_SERVICES_IMPL_H_
-#define PERIDOT_BIN_MAXWELL_INTELLIGENCE_SERVICES_IMPL_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_INTELLIGENCE_SERVICES_IMPL_H_
+#define PERIDOT_BIN_USER_RUNNER_INTELLIGENCE_SERVICES_IMPL_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-namespace maxwell {
+namespace modular {
 
 class IntelligenceServicesImpl : public fuchsia::modular::IntelligenceServices {
  public:
@@ -39,6 +39,6 @@ class IntelligenceServicesImpl : public fuchsia::modular::IntelligenceServices {
   fuchsia::modular::SuggestionEngine* const suggestion_engine_;  // Not owned.
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
-#endif  // PERIDOT_BIN_MAXWELL_INTELLIGENCE_SERVICES_IMPL_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_INTELLIGENCE_SERVICES_IMPL_H_

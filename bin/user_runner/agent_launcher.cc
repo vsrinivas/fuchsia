@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/maxwell/agent_launcher.h"
+#include "peridot/bin/user_runner/agent_launcher.h"
 
 #include <lib/fxl/logging.h>
 
-namespace maxwell {
+namespace modular {
 namespace {
 
 constexpr char kEnvironmentLabel[] = "agent";
@@ -15,7 +15,7 @@ constexpr char kEnvironmentLabel[] = "agent";
 
 component::Services AgentLauncher::StartAgent(
     const std::string& url,
-    std::unique_ptr<MaxwellServiceProviderBridge> bridge) {
+    std::unique_ptr<maxwell::MaxwellServiceProviderBridge> bridge) {
   bridge_ = std::move(bridge);
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
   service_list->names = bridge_->service_names().Clone();
@@ -32,9 +32,9 @@ component::Services AgentLauncher::StartAgent(
   launch_info.url = url;
   component::Services services;
   launch_info.directory_request = services.NewRequest();
-  FXL_LOG(INFO) << "Starting Maxwell agent " << url;
+  FXL_LOG(INFO) << "Starting modular agent " << url;
   agent_launcher->CreateComponent(std::move(launch_info), nullptr);
   return services;
 }
 
-}  // namespace maxwell
+}  // namespace modular

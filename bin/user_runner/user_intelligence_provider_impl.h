@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_MAXWELL_USER_INTELLIGENCE_PROVIDER_IMPL_H_
-#define PERIDOT_BIN_MAXWELL_USER_INTELLIGENCE_PROVIDER_IMPL_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_USER_INTELLIGENCE_PROVIDER_IMPL_H_
+#define PERIDOT_BIN_USER_RUNNER_USER_INTELLIGENCE_PROVIDER_IMPL_H_
 
 #include <deque>
 #include <string>
@@ -14,18 +14,17 @@
 #include <lib/svc/cpp/services.h>
 #include <lib/zx/channel.h>
 
-#include "peridot/bin/maxwell/agent_launcher.h"
-#include "peridot/bin/maxwell/config.h"
+#include "peridot/bin/user_runner/agent_launcher.h"
 #include "peridot/lib/util/rate_limited_retry.h"
 
-namespace maxwell {
+namespace modular {
 
 class UserIntelligenceProviderImpl
     : public fuchsia::modular::UserIntelligenceProvider {
  public:
   // |context| is not owned and must outlive this instance.
   UserIntelligenceProviderImpl(
-      component::StartupContext* context, const Config& config,
+      component::StartupContext* context,
       fidl::InterfaceHandle<fuchsia::modular::ContextEngine>
           context_engine_handle,
       fidl::InterfaceHandle<fuchsia::modular::StoryProvider>
@@ -51,7 +50,9 @@ class UserIntelligenceProviderImpl
       fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) override;
 
   void StartAgents(fidl::InterfaceHandle<fuchsia::modular::ComponentContext>
-                       component_context_handle) override;
+                       component_context_handle,
+                   fidl::VectorPtr<fidl::StringPtr> session_agents,
+                   fidl::VectorPtr<fidl::StringPtr> startup_agents) override;
 
   void GetServicesForAgent(fidl::StringPtr url,
                            GetServicesForAgentCallback callback) override;
@@ -101,7 +102,6 @@ class UserIntelligenceProviderImpl
   void StartSessionAgent(const std::string& url);
 
   component::StartupContext* context_;  // Not owned.
-  const Config config_;
 
   fuchsia::modular::ContextEnginePtr context_engine_;
   component::Services suggestion_services_;
@@ -129,35 +129,6 @@ class UserIntelligenceProviderImpl
   std::deque<component::ServiceNamespace> agent_namespaces_;
 };
 
-class UserIntelligenceProviderFactoryImpl
-    : public fuchsia::modular::UserIntelligenceProviderFactory {
- public:
-  // |context| is not owned and must outlive this instance.
-  UserIntelligenceProviderFactoryImpl(component::StartupContext* context,
-                                      const Config& config);
-  ~UserIntelligenceProviderFactoryImpl() override = default;
+}  // namespace modular
 
-  void GetUserIntelligenceProvider(
-      fidl::InterfaceHandle<fuchsia::modular::ContextEngine> context_engine,
-      fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
-      fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
-      fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
-          visible_stories_provider,
-      fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master,
-      fidl::InterfaceRequest<fuchsia::modular::UserIntelligenceProvider>
-          user_intelligence_provider_request) override;
-
- private:
-  component::StartupContext* context_;  // Not owned.
-  const Config config_;
-
-  // We expect a 1:1 relationship between instances of this Factory and
-  // instances of fuchsia::modular::UserIntelligenceProvider.
-  std::unique_ptr<UserIntelligenceProviderImpl> impl_;
-  std::unique_ptr<fidl::Binding<fuchsia::modular::UserIntelligenceProvider>>
-      binding_;
-};
-
-}  // namespace maxwell
-
-#endif  // PERIDOT_BIN_MAXWELL_USER_INTELLIGENCE_PROVIDER_IMPL_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_USER_INTELLIGENCE_PROVIDER_IMPL_H_
