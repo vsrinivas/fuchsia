@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_bluetooth::assigned_numbers::{
+    find_characteristic_number,
+    find_descriptor_number,
+    find_service_uuid,
+};
 use {
     fidl_fuchsia_bluetooth_gatt::{
         self as fidl_gatt,
@@ -36,10 +41,13 @@ impl Service {
 
 impl fmt::Display for Service {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let type_pretty = find_service_uuid(&self.info.type_)
+            .map(|an| an.name)
+            .unwrap_or(&self.info.type_);
         write!(
             f,
             "[service: id: {}, primary: {}, type: {}]",
-            self.info.id, self.info.primary, self.info.type_
+            self.info.id, self.info.primary, type_pretty
         )?;
         if let Some(ref chrcs) = self.characteristics {
             let mut i: i32 = 0;
@@ -56,20 +64,26 @@ struct Characteristic(FidlCharacteristic);
 
 impl fmt::Display for Characteristic {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let type_pretty = find_characteristic_number(&self.0.type_)
+            .map(|an| an.name)
+            .unwrap_or(&self.0.type_);
         write!(
             f,
             "[chara.: id: {}, type: {}, prop.: {}]",
             self.0.id,
-            self.0.type_,
+            type_pretty,
             props_to_string(self.0.properties)
         )?;
         if let Some(ref descrs) = self.0.descriptors {
             let mut i: i32 = 0;
             for ref descr in descrs {
+                let type_pretty = find_descriptor_number(&descr.type_)
+                    .map(|an| an.name)
+                    .unwrap_or(&descr.type_);
                 write!(
                     f,
                     "\n          {}: [descr.: id: {}, type: {}]",
-                    i, descr.id, descr.type_
+                    i, descr.id, type_pretty
                 )?;
                 i += 1;
             }

@@ -8,6 +8,8 @@
 
 //! The fuchsia_bluetooth crate is meant to be used for bluetooth specific functionality.
 
+/// Lists of Bluetooth SIG assigned numbers and conversion functions
+pub mod assigned_numbers;
 /// Bluetooth Error type
 pub mod error;
 /// Bluetooth hci API

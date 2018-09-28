@@ -9,7 +9,10 @@ use {
     failure::{Error, Fail, ResultExt},
     fidl::encoding::OutOfLine,
     fidl_fuchsia_bluetooth_le::{CentralMarker, CentralProxy, ScanFilter},
-    fuchsia_bluetooth::error::Error as BTError,
+    fuchsia_bluetooth::{
+        assigned_numbers::find_service_uuid,
+        error::Error as BTError,
+    },
     fuchsia_async::{
         self as fasync,
         temp::Either::{Left, Right},
@@ -95,10 +98,13 @@ fn do_scan(
 
     let uuids = match matches.opt_str("u") {
         None => None,
-        Some(val) => Some(vec![match val.len() {
-            4 => format!("0000{}-0000-1000-8000-00805F9B34FB", val),
-            36 => val,
-            _ => {
+        Some(val) => {
+            let uuids = find_service_uuid(&val)
+                .map(|sn| sn.number.to_string())
+                .or_else(|| if val.len() == 36 { Some(val.clone()) } else { None })
+                .map(|uuid| vec![uuid]);
+
+            if uuids.is_none() {
                 println!("invalid service UUID: {}", val);
                 return (
                     None,
@@ -106,8 +112,11 @@ fn do_scan(
                     Left(future::ready(Err(BTError::new("invalid input").into()))),
                 );
             }
-        }]),
+
+            uuids
+        }
     };
+
 
     let name = matches.opt_str("n");
 
