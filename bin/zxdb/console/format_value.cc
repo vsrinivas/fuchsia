@@ -455,7 +455,7 @@ void FormatValue::FormatArray(fxl::RefPtr<SymbolDataProvider> data_provider,
     return;
   }
 
-  AppendToOutputKey(output_key, OutputBuffer("["));
+  AppendToOutputKey(output_key, OutputBuffer("{"));
 
   for (size_t i = 0; i < items.size(); i++) {
     if (i > 0)
@@ -465,8 +465,8 @@ void FormatValue::FormatArray(fxl::RefPtr<SymbolDataProvider> data_provider,
 
   AppendToOutputKey(
       output_key,
-      OutputBuffer(static_cast<uint32_t>(elt_count) > items.size() ? ", ...]"
-                                                                   : "]"));
+      OutputBuffer(static_cast<uint32_t>(elt_count) > items.size() ? ", ...}"
+                                                                   : "}"));
 
   // Now we can mark the root output key as complete. The children added above
   // may or may not have completed synchronously.

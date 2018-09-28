@@ -300,7 +300,7 @@ TEST_F(FormatValueTest, EmptyAndBadArray) {
   // Empty array with valid pointer.
   auto empty_array_type = fxl::MakeRefCounted<ArrayType>(GetInt32Type(), 0);
   EXPECT_EQ(
-      R"([])",
+      R"({})",
       SyncFormatValue(
           ExprValue(empty_array_type, std::vector<uint8_t>(), source), opts));
 
@@ -316,7 +316,7 @@ TEST_F(FormatValueTest, TruncatedArray) {
   FormatValueOptions opts;
   opts.max_array_size = 2;
 
-  // Array of two int32's: [1, 2]
+  // Array of two int32's: {1, 2}
   constexpr uint64_t kAddress = 0x1100;
   ExprValueSource source(kAddress);
   std::vector<uint8_t> data = {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00};
@@ -324,12 +324,12 @@ TEST_F(FormatValueTest, TruncatedArray) {
   auto array_type = fxl::MakeRefCounted<ArrayType>(GetInt32Type(), 2);
 
   // This array has exactly the max size, we shouldn't mark it as truncated.
-  EXPECT_EQ(R"([1, 2])",
+  EXPECT_EQ(R"({1, 2})",
             SyncFormatValue(ExprValue(array_type, data, source), opts));
 
   // This one is truncated.
   opts.max_array_size = 1;
-  EXPECT_EQ(R"([1, ...])",
+  EXPECT_EQ(R"({1, ...})",
             SyncFormatValue(ExprValue(array_type, data, source), opts));
 }
 
