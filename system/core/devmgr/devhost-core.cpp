@@ -23,6 +23,7 @@
 #include <zircon/types.h>
 
 #include <lib/fdio/remoteio.h>
+#include <zxcpp/new.h>
 
 #define TRACE 0
 
@@ -339,6 +340,7 @@ zx_status_t devhost_device_create(zx_driver_t* drv, zx_device_t* parent,
     if (dev == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
+    new (dev) zx_device_t;
 
     memset(dev, 0, sizeof(zx_device_t));
     dev->magic = DEV_MAGIC;

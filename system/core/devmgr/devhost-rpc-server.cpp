@@ -29,6 +29,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fidl/coding.h>
+#include <zxcpp/new.h>
 
 #define ZXDEBUG 0
 
@@ -72,6 +73,7 @@ devhost_iostate_t* create_devhost_iostate(zx_device_t* dev) {
     if ((ios = static_cast<devhost_iostate_t*>(calloc(1, sizeof(devhost_iostate_t)))) == nullptr) {
         return nullptr;
     }
+    new (ios) devhost_iostate_t;
     ios->dev = dev;
     return ios;
 }

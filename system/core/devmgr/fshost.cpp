@@ -238,6 +238,7 @@ static void setup_bootfs() {
                            errmsg);
                 } else {
                     bootdata_ramdisk* br = static_cast<bootdata_ramdisk*>(malloc(sizeof(*br)));
+                    new (br) bootdata_ramdisk;
                     br->vmo = ramdisk_vmo;
                     br->next = bootdata_ramdisk_list;
                     bootdata_ramdisk_list = br;

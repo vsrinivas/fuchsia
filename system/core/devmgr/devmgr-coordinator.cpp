@@ -671,6 +671,7 @@ static zx_status_t dc_new_devhost(const char* name, devhost_t* parent,
     if (dh == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
+    new (dh) devhost_t;
 
     zx_handle_t hrpc;
     zx_status_t r;
@@ -779,6 +780,7 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
     if ((dev = static_cast<device_t*>(calloc(1, sz))) == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
+    new (dev) device_t;
     list_initialize(&dev->children);
     list_initialize(&dev->pending);
     list_initialize(&dev->metadata);
@@ -1135,6 +1137,7 @@ static zx_status_t dc_add_metadata(device_t* dev, uint32_t type, const void* dat
     if (!md) {
         return ZX_ERR_NO_MEMORY;
     }
+    new (md) dc_metadata_t;
 
     md->type = type;
     md->length = length;
@@ -1173,6 +1176,7 @@ static zx_status_t dc_publish_metadata(device_t* dev, const char* path, uint32_t
     if (!md) {
         return ZX_ERR_NO_MEMORY;
     }
+    new (md) dc_metadata_t;
 
     md->type = type;
     md->length = length;
@@ -1557,6 +1561,7 @@ static zx_status_t dc_create_proxy(device_t* parent) {
     if (dev == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
+    new (dev) device_t;
     char* text = (char*) (dev + 1);
     memcpy(text, parent->name, namelen + 1);
     dev->name = text;
@@ -1590,6 +1595,7 @@ static zx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     if (pending == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
+    new (pending) pending_t;
 
     zx_status_t r;
     if ((r = dc_msg_pack(&msg, &mlen, nullptr, 0, libname, nullptr)) < 0) {
@@ -1772,6 +1778,7 @@ static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
     if (pending == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
+    new (pending) pending_t;
 
     dc_msg_t msg;
     uint32_t mlen;

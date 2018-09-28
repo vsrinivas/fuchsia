@@ -25,6 +25,7 @@
 #include <lib/fdio/util.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fidl/coding.h>
+#include <zxcpp/new.h>
 
 #include "devcoordinator.h"
 #include "devhost.h"
@@ -139,6 +140,7 @@ static zx_status_t dh_find_driver(const char* libname, zx_handle_t vmo, zx_drive
         zx_handle_close(vmo);
         return ZX_ERR_NO_MEMORY;
     }
+    new (drv) zx_driver_t;
     memcpy((void*) (drv + 1), libname, len);
     drv->libname = (const char*) (drv + 1);
     dh_drivers.push_back(drv);
@@ -286,6 +288,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
             r = ZX_ERR_NO_MEMORY;
             break;
         }
+        new (newios) iostate_t;
 
         //TODO: dev->ops and other lifecycle bits
         // no name means a dummy proxy device
@@ -294,6 +297,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
             r = ZX_ERR_NO_MEMORY;
             break;
         }
+        new (newios->dev) zx_device_t;
         zx_device_t* dev = newios->dev;
         strcpy(dev->name, "proxy");
         dev->protocol_id = msg.protocol_id;
@@ -333,6 +337,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
             r = ZX_ERR_NO_MEMORY;
             break;
         }
+        new (newios) iostate_t;
 
         // named driver -- ask it to create the device
         zx_driver_t* drv;
@@ -584,6 +589,7 @@ static void proxy_ios_create(zx_device_t* dev, zx_handle_t h) {
         zx_handle_close(h);
         return;
     }
+    new (ios) proxy_iostate_t;
 
     ios->dev = dev;
     ios->ph.handle = h;
@@ -622,7 +628,7 @@ static void proxy_ios_destroy(zx_device_t* dev) {
 static zx_handle_t devhost_log_handle;
 
 static ssize_t _devhost_log_write(uint32_t flags, const void* _data, size_t len) {
-    static thread_local struct {
+    static thread_local struct Context {
         uint32_t next;
         zx_handle_t handle;
         char data[LOGBUF_MAX];
@@ -632,6 +638,7 @@ static ssize_t _devhost_log_write(uint32_t flags, const void* _data, size_t len)
         if ((ctx = static_cast<decltype(ctx)>(calloc(1, sizeof(*ctx)))) == nullptr) {
             return len;
         }
+        new (ctx) Context;
         ctx->handle = devhost_log_handle;
     }
 
@@ -709,6 +716,7 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child, const char* pro
         r = ZX_ERR_NO_MEMORY;
         goto fail;
     }
+    new (ios) iostate_t;
 
     dc_msg_t msg;
     uint32_t msglen;

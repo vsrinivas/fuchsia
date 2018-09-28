@@ -16,6 +16,7 @@
 #include <driver-info/driver-info.h>
 
 #include <zircon/driver/binding.h>
+#include <zxcpp/new.h>
 
 typedef struct {
     const char* libname;
@@ -62,6 +63,7 @@ static void found_driver(zircon_driver_note_payload_t* note,
     if ((drv = static_cast<driver_t*>(malloc(len))) == nullptr) {
         return;
     }
+    new (drv) driver_t;
 
     memset(drv, 0, sizeof(driver_t));
     drv->binding_size = static_cast<uint32_t>(bindlen);

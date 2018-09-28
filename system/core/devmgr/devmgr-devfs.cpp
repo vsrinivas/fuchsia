@@ -142,6 +142,7 @@ static zx_status_t iostate_create(devnode_t* dn, zx_handle_t h) {
     if (ios == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
+    new (ios) iostate_t;
 
     ios->ph.handle = h;
     ios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
@@ -234,6 +235,7 @@ static zx_status_t devfs_watch(devnode_t* dn, zx_handle_t h, uint32_t mask) {
         zx_handle_close(h);
         return ZX_ERR_NO_MEMORY;
     }
+    new (watcher) watcher_t;
 
     watcher->devnode = dn;
     watcher->next = dn->watchers;
@@ -268,6 +270,7 @@ static devnode_t* devfs_mknode(device_t* dev, const char* name, size_t namelen) 
     if (dn == nullptr) {
         return nullptr;
     }
+    new (dn) devnode_t;
     if (namelen > 0) {
         char* p = (char*) (dn + 1);
         memcpy(p, name, namelen);
