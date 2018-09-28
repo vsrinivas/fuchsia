@@ -124,6 +124,7 @@ typedef struct dwc_usb {
     zx_handle_t bti_handle;
     thrd_t irq_thread;
     zx_device_t* parent;
+    mmio_buffer_t mmio;
 
     // Pertaining to root hub transactions.
     mtx_t rh_req_mtx;
@@ -1756,14 +1757,12 @@ static zx_status_t usb_dwc_bind(void* ctx, zx_device_t* dev) {
     usb_request_pool_init(&usb_dwc->free_usb_reqs);
 
     // Carve out some address space for this device.
-    size_t mmio_size;
-    zx_handle_t mmio_handle = ZX_HANDLE_INVALID;
-    st = pdev_map_mmio(&proto, MMIO_INDEX, ZX_CACHE_POLICY_UNCACHED_DEVICE, (void **)&regs,
-                       &mmio_size, &mmio_handle);
+    st = pdev_map_mmio_buffer2(&proto, MMIO_INDEX, ZX_CACHE_POLICY_UNCACHED_DEVICE, &usb_dwc->mmio);
     if (st != ZX_OK) {
         zxlogf(ERROR, "usb_dwc: bind failed to pdev_map_mmio.\n");
         goto error_return;
     }
+    regs = usb_dwc->mmio.vaddr;
 
     // Create an IRQ Handle for this device.
     st = pdev_map_interrupt(&proto, IRQ_INDEX, &usb_dwc->irq_handle);
@@ -1840,11 +1839,8 @@ static zx_status_t usb_dwc_bind(void* ctx, zx_device_t* dev) {
     return ZX_OK;
 
 error_return:
-    if (regs) {
-        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)regs, mmio_size);
-    }
-    zx_handle_close(mmio_handle);
     if (usb_dwc) {
+        mmio_buffer_release(&usb_dwc->mmio);
         zx_handle_close(usb_dwc->irq_handle);
         zx_handle_close(usb_dwc->bti_handle);
         free(usb_dwc);
