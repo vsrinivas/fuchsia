@@ -42,6 +42,7 @@ enum CobaltMetricId {
     RxTxFrameBytes = 10,
     NeighborNetworks = 11,
     WlanStandards = 12,
+    WlanChannels = 13,
 }
 
 // Export MLME stats to Cobalt every REPORT_PERIOD_MINUTES.
@@ -334,6 +335,16 @@ pub fn report_standards(sender: &mut CobaltSender, num_bss_by_standard: HashMap<
             label.clone() as u32,
             count,
         )
+    });
+}
+
+pub fn report_channels(sender: &mut CobaltSender, num_bss_by_channel: HashMap<u8, usize>) {
+    num_bss_by_channel.into_iter().for_each(|(channel, count)| {
+        sender.log_event_count(
+            CobaltMetricId::WlanChannels as u32,
+            channel as u32,
+            count as i64,
+        );
     });
 }
 

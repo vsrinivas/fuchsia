@@ -6,6 +6,7 @@ use fidl_fuchsia_wlan_mlme::BssDescription;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::cmp::Ordering;
+use std::hash::Hash;
 use wlan_rsn::rsne;
 
 use crate::Ssid;
@@ -89,16 +90,28 @@ pub fn group_networks(bss_set: &[BssDescription]) -> Vec<EssInfo> {
 }
 
 pub fn get_standard_map(bss_list: &Vec<BssDescription>) -> HashMap<Standard, usize> {
-    let mut standard_map: HashMap<Standard, usize> = HashMap::new();
+    get_info_map(bss_list, get_standard)
+}
+
+pub fn get_channel_map(bss_list: &Vec<BssDescription>) -> HashMap<u8, usize> {
+    get_info_map(bss_list, |bss| bss.chan.primary)
+}
+
+fn get_info_map<F, T>(bss_list: &Vec<BssDescription>, f: F) -> HashMap<T, usize>
+where
+    T: Eq + Hash,
+    F: Fn(&BssDescription) -> T,
+{
+    let mut info_map: HashMap<T, usize> = HashMap::new();
     for bss in bss_list {
-        match standard_map.entry(get_standard(&bss)) {
+        match info_map.entry(f(&bss)) {
             Entry::Vacant(e) => { e.insert(1); },
             Entry::Occupied(mut e) => {
                 *e.get_mut() += 1;
             }
         }
     }
-    standard_map
+    info_map
 }
 
 fn get_standard(bss: &BssDescription) -> Standard {
