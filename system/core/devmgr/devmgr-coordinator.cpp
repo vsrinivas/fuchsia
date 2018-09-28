@@ -455,43 +455,39 @@ static void dc_dump_drivers() {
 static void dc_handle_new_device(device_t* dev);
 static void dc_handle_new_driver();
 
-#define WORK_IDLE 0
-#define WORK_DEVICE_ADDED 1
-#define WORK_DRIVER_ADDED 2
-
 static list_node_t list_pending_work = LIST_INITIAL_VALUE(list_pending_work);
 static list_node_t list_unbound_devices = LIST_INITIAL_VALUE(list_unbound_devices);
 
-static void queue_work(work_t* work, uint32_t op, uint32_t arg) {
-    ZX_ASSERT(work->op == WORK_IDLE);
+static void queue_work(work_t* work, dc_work::Op op, uint32_t arg) {
+    ZX_ASSERT(work->op == dc_work::Op::kIdle);
     work->op = op;
     work->arg = arg;
     list_add_tail(&list_pending_work, &work->node);
 }
 
 static void cancel_work(work_t* work) {
-    if (work->op != WORK_IDLE) {
+    if (work->op != dc_work::Op::kIdle) {
         list_delete(&work->node);
-        work->op = WORK_IDLE;
+        work->op = dc_work::Op::kIdle;
     }
 }
 
 static void process_work(work_t* work) {
-    uint32_t op = work->op;
-    work->op = WORK_IDLE;
+    dc_work::Op op = work->op;
+    work->op = dc_work::Op::kIdle;
 
     switch (op) {
-    case WORK_DEVICE_ADDED: {
+    case dc_work::Op::kDeviceAdded: {
         device_t* dev = containerof(work, device_t, work);
         dc_handle_new_device(dev);
         break;
     }
-    case WORK_DRIVER_ADDED: {
+    case dc_work::Op::kDriverAdded: {
         dc_handle_new_driver();
         break;
     }
     default:
-        log(ERROR, "devcoord: unknown work: op=%u\n", op);
+        log(ERROR, "devcoord: unknown work: op=%u\n", static_cast<uint32_t>(op));
     }
 }
 
@@ -869,7 +865,7 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
 
     if (!invisible) {
         dc_notify(dev, DEVMGR_OP_DEVICE_ADDED);
-        queue_work(&dev->work, WORK_DEVICE_ADDED, 0);
+        queue_work(&dev->work, dc_work::Op::kDeviceAdded, 0);
     }
     return ZX_OK;
 }
@@ -882,7 +878,7 @@ static zx_status_t dc_make_visible(device_t* dev) {
         dev->flags &= ~DEV_CTX_INVISIBLE;
         devfs_advertise(dev);
         dc_notify(dev, DEVMGR_OP_DEVICE_ADDED);
-        queue_work(&dev->work, WORK_DEVICE_ADDED, 0);
+        queue_work(&dev->work, dc_work::Op::kDeviceAdded, 0);
     }
     return ZX_OK;
 }
@@ -925,7 +921,7 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
             log(ERROR, "devcoord: dc_msg_pack failed in dc_remove_device\n");
         } else {
             msg.txid = 0;
-            msg.op = DC_OP_REMOVE_DEVICE;
+            msg.op = dc_msg_t::Op::kRemoveDevice;
             if ((r = zx_channel_write(dev->proxy->hrpc, 0, &msg, mlen, nullptr, 0)) != ZX_OK) {
             log(ERROR, "devcoord: zx_channel_write failed in dc_remove_devicey\n");
             }
@@ -993,7 +989,7 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
                         parent, parent->name);
 
                     //TODO: introduce timeout, exponential backoff
-                    queue_work(&parent->work, WORK_DEVICE_ADDED, 0);
+                    queue_work(&parent->work, dc_work::Op::kDeviceAdded, 0);
                 }
             }
         }
@@ -1218,8 +1214,8 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
     dcs.txid = msg.txid;
 
     switch (msg.op) {
-    case DC_OP_ADD_DEVICE:
-    case DC_OP_ADD_DEVICE_INVISIBLE:
+    case dc_msg_t::Op::kAddDevice:
+    case dc_msg_t::Op::kAddDeviceInvisible:
         if (hcount != 1) {
             goto fail_wrong_hcount;
         }
@@ -1231,12 +1227,12 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         }
         log(RPC_IN, "devcoord: rpc: add-device '%s' args='%s'\n", name, args);
         if ((r = dc_add_device(dev, hin[0], &msg, name, args, data,
-                               msg.op == DC_OP_ADD_DEVICE_INVISIBLE)) < 0) {
+                               msg.op == dc_msg_t::Op::kAddDeviceInvisible)) < 0) {
             zx_handle_close(hin[0]);
         }
         break;
 
-    case DC_OP_REMOVE_DEVICE:
+    case dc_msg_t::Op::kRemoveDevice:
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
@@ -1250,7 +1246,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         dc_remove_device(dev, false);
         goto disconnect;
 
-    case DC_OP_MAKE_VISIBLE:
+    case dc_msg_t::Op::kMakeVisible:
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
@@ -1265,7 +1261,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         r = ZX_OK;
         break;
 
-    case DC_OP_BIND_DEVICE:
+    case dc_msg_t::Op::kBindDevice:
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
@@ -1279,7 +1275,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         r = dc_bind_device(dev, args);
         break;
 
-    case DC_OP_DM_COMMAND:
+    case dc_msg_t::Op::kDmCommand:
         if (hcount > 1) {
             goto fail_wrong_hcount;
         }
@@ -1298,7 +1294,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         }
         break;
 
-    case DC_OP_DM_OPEN_VIRTCON:
+    case dc_msg_t::Op::kDmOpenVirtcon:
         if (hcount != 1) {
             goto fail_wrong_hcount;
         }
@@ -1306,7 +1302,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         r = ZX_OK;
         break;
 
-    case DC_OP_DM_WATCH:
+    case dc_msg_t::Op::kDmWatch:
         if (hcount != 1) {
             goto fail_wrong_hcount;
         }
@@ -1314,7 +1310,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         r = ZX_OK;
         break;
 
-    case DC_OP_DM_MEXEC:
+    case dc_msg_t::Op::kDmMexec:
         if (hcount != 2) {
             log(ERROR, "devcoord: rpc: mexec wrong hcount %d\n", hcount);
             goto fail_wrong_hcount;
@@ -1323,7 +1319,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         r = ZX_OK;
         break;
 
-    case DC_OP_GET_TOPO_PATH: {
+    case dc_msg_t::Op::kGetTopoPath: {
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
@@ -1341,7 +1337,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         }
         return ZX_OK;
     }
-    case DC_OP_LOAD_FIRMWARE: {
+    case dc_msg_t::Op::kLoadFirmware: {
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
@@ -1360,7 +1356,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         }
         return ZX_OK;
     }
-    case DC_OP_STATUS: {
+    case dc_msg_t::Op::kStatus: {
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
@@ -1372,7 +1368,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
             return ZX_OK;
         }
         switch (pending->op) {
-        case PENDING_BIND:
+        case dc_pending::Op::kBind:
             if (msg.status != ZX_OK) {
                 log(ERROR, "devcoord: rpc: bind-driver '%s' status %d\n",
                     dev->name, msg.status);
@@ -1381,7 +1377,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
             }
             //TODO: try next driver, clear BOUND flag
             break;
-        case PENDING_SUSPEND: {
+        case dc_pending::Op::kSuspend: {
             if (msg.status != ZX_OK) {
                 log(ERROR, "devcoord: rpc: suspend '%s' status %d\n",
                     dev->name, msg.status);
@@ -1395,7 +1391,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         free(pending);
         return ZX_OK;
     }
-    case DC_OP_GET_METADATA: {
+    case dc_msg_t::Op::kGetMetadata: {
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
@@ -1410,14 +1406,14 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         uint32_t reply_size = static_cast<uint32_t>(sizeof(reply.rsp) + actual);
         return zx_channel_write(dev->hrpc, 0, &reply, reply_size, nullptr, 0);
     }
-    case DC_OP_ADD_METADATA: {
+    case dc_msg_t::Op::kAddMetadata: {
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
         r = dc_add_metadata(dev, msg.value, data, msg.datalen);
         break;
     }
-    case DC_OP_PUBLISH_METADATA: {
+    case dc_msg_t::Op::kPublishMetadata: {
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
@@ -1425,7 +1421,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         break;
     }
     default:
-        log(ERROR, "devcoord: invalid rpc op %08x\n", msg.op);
+        log(ERROR, "devcoord: invalid rpc op %08x\n", static_cast<uint32_t>(msg.op));
         r = ZX_ERR_NOT_SUPPORTED;
         goto fail_close_handles;
     }
@@ -1501,9 +1497,9 @@ static zx_status_t dh_create_device(device_t* dev, devhost_t* dh,
             goto fail;
         }
         hcount++;
-        msg.op = DC_OP_CREATE_DEVICE;
+        msg.op = dc_msg_t::Op::kCreateDevice;
     } else {
-        msg.op = DC_OP_CREATE_DEVICE_STUB;
+        msg.op = dc_msg_t::Op::kCreateDeviceStub;
     }
 
     if (rpc_proxy) {
@@ -1610,7 +1606,7 @@ static zx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     }
 
     msg.txid = 0;
-    msg.op = DC_OP_BIND_DRIVER;
+    msg.op = dc_msg_t::Op::kBindDriver;
 
     if ((r = zx_channel_write(dev->hrpc, 0, &msg, mlen, &vmo, 1)) < 0) {
         free(pending);
@@ -1618,7 +1614,7 @@ static zx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     }
 
     dev->flags |= DEV_CTX_BOUND;
-    pending->op = PENDING_BIND;
+    pending->op = dc_pending::Op::kBind;
     pending->ctx = nullptr;
     list_add_tail(&dev->pending, &pending->node);
     return ZX_OK;
@@ -1633,7 +1629,7 @@ static zx_status_t dh_connect_proxy(device_t* dev, zx_handle_t h) {
         return r;
     }
     msg.txid = 0;
-    msg.op = DC_OP_CONNECT_PROXY;
+    msg.op = dc_msg_t::Op::kConnectProxy;
     return zx_channel_write(dev->hrpc, 0, &msg, mlen, &h, 1);
 }
 
@@ -1788,7 +1784,7 @@ static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
         return r;
     }
     msg.txid = 0;
-    msg.op = DC_OP_SUSPEND;
+    msg.op = dc_msg_t::Op::kSuspend;
     msg.value = ctx->sflags;
     rpc = dev->hrpc;
     if ((r = zx_channel_write(rpc, 0, &msg, mlen, nullptr, 0)) != ZX_OK) {
@@ -1797,7 +1793,7 @@ static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
     }
 
     dh->flags |= DEV_HOST_SUSPEND;
-    pending->op = PENDING_SUSPEND;
+    pending->op = dc_pending::Op::kSuspend;
     pending->ctx = ctx;
     list_add_tail(&dev->pending, &pending->node);
 
@@ -1834,7 +1830,7 @@ static void process_suspend_list(suspend_context_t* ctx) {
     devhost_t* parent = nullptr;
     do {
         if (!parent || (dh->parent == parent)) {
-            // send DC_OP_SUSPEND each set of children of a devhost at a time,
+            // send dc_msg_t::Op::kSuspend each set of children of a devhost at a time,
             // since they can run in parallel
             dc_suspend_devhost(dh, &suspend_ctx);
             parent = dh->parent;
@@ -1859,7 +1855,7 @@ static bool check_pending(device_t* dev) {
     } else {
         pending = list_peek_tail_type(&dev->pending, pending_t, node);
     }
-    if ((pending == nullptr) || (pending->op != PENDING_SUSPEND)) {
+    if ((pending == nullptr) || (pending->op != dc_pending::Op::kSuspend)) {
         return false;
     } else {
         log(ERROR, "  devhost with device '%s' timed out\n", dev->name);
@@ -2047,8 +2043,8 @@ static work_t new_driver_work;
 // list and work is queued to process it.
 static void dc_driver_added(driver_t* drv, const char* version) {
     list_add_tail(&list_drivers_new, &drv->node);
-    if (new_driver_work.op == WORK_IDLE) {
-        queue_work(&new_driver_work, WORK_DRIVER_ADDED, 0);
+    if (new_driver_work.op == dc_work::Op::kIdle) {
+        queue_work(&new_driver_work, dc_work::Op::kDriverAdded, 0);
     }
 }
 
@@ -2149,8 +2145,8 @@ static zx_status_t dc_control_event(port_handler_t* ph, zx_signals_t signals, ui
             list_add_tail(&list_drivers_new, &drv->node);
         }
         // Queue Driver Added work if not already queued
-        if (new_driver_work.op == WORK_IDLE) {
-            queue_work(&new_driver_work, WORK_DRIVER_ADDED, 0);
+        if (new_driver_work.op == dc_work::Op::kIdle) {
+            queue_work(&new_driver_work, dc_work::Op::kDriverAdded, 0);
         }
         break;
     }

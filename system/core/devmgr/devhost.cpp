@@ -224,7 +224,7 @@ done:
 static void dh_send_status(zx_handle_t h, zx_status_t status) {
     dc_msg_t reply = {};
     reply.txid = 0;
-    reply.op = DC_OP_STATUS;
+    reply.op = dc_msg_t::Op::kStatus;
     reply.status = status;
     zx_channel_write(h, 0, &reply, sizeof(reply), nullptr, 0);
 }
@@ -252,7 +252,8 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
     char buffer[512];
     const char* path = mkdevpath(ios->dev, buffer, sizeof(buffer));
 
-    if (msize >= sizeof(fidl_message_header_t) && msg.op == fuchsia_io_DirectoryOpenOrdinal) {
+    if (msize >= sizeof(fidl_message_header_t) &&
+        static_cast<uint32_t>(msg.op) == fuchsia_io_DirectoryOpenOrdinal) {
         log(RPC_RIO, "devhost[%s] FIDL OPEN\n", path);
 
         fidl_msg_t fidl_msg = {
@@ -277,7 +278,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         goto fail;
     }
     switch (msg.op) {
-    case DC_OP_CREATE_DEVICE_STUB: {
+    case dc_msg_t::Op::kCreateDeviceStub: {
         log(RPC_IN, "devhost[%s] create device stub drv='%s'\n", path, name);
         if (hcount != 1) {
             r = ZX_ERR_INVALID_ARGS;
@@ -318,7 +319,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         return ZX_OK;
     }
 
-    case DC_OP_CREATE_DEVICE: {
+    case dc_msg_t::Op::kCreateDevice: {
         // This does not operate under the devhost api lock,
         // since the newly created device is not visible to
         // any API surface until a driver is bound to it.
@@ -388,7 +389,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         return ZX_OK;
     }
 
-    case DC_OP_BIND_DRIVER:
+    case dc_msg_t::Op::kBindDriver:
         if (hcount != 1) {
             r = ZX_ERR_INVALID_ARGS;
             break;
@@ -429,7 +430,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         dh_send_status(h, r);
         return ZX_OK;
 
-    case DC_OP_CONNECT_PROXY:
+    case dc_msg_t::Op::kConnectProxy:
         if (hcount != 1) {
             r = ZX_ERR_INVALID_ARGS;
             break;
@@ -439,7 +440,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         proxy_ios_create(ios->dev, hin[0]);
         return ZX_OK;
 
-    case DC_OP_SUSPEND: {
+    case dc_msg_t::Op::kSuspend: {
         if (hcount != 0) {
             r = ZX_ERR_INVALID_ARGS;
             break;
@@ -456,7 +457,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         return ZX_OK;
     }
 
-    case DC_OP_REMOVE_DEVICE:
+    case dc_msg_t::Op::kRemoveDevice:
         if (hcount != 0) {
             r = ZX_ERR_INVALID_ARGS;
             break;
@@ -465,7 +466,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         return ZX_OK;
 
     default:
-        log(ERROR, "devhost[%s] invalid rpc op %08x\n", path, msg.op);
+        log(ERROR, "devhost[%s] invalid rpc op %08x\n", path, static_cast<uint32_t>(msg.op));
         r = ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -725,7 +726,8 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child, const char* pro
                          name, proxy_args)) < 0) {
         goto fail;
     }
-    msg.op = (child->flags & DEV_FLAG_INVISIBLE) ? DC_OP_ADD_DEVICE_INVISIBLE : DC_OP_ADD_DEVICE;
+    msg.op = (child->flags & DEV_FLAG_INVISIBLE) ?
+        dc_msg_t::Op::kAddDeviceInvisible : dc_msg_t::Op::kAddDevice;
     msg.protocol_id = child->protocol_id;
 
     // handles: remote endpoint, resource (optional)
@@ -758,7 +760,7 @@ fail:
     return r;
 }
 
-static zx_status_t devhost_rpc_etc(zx_device_t* dev, uint32_t op,
+static zx_status_t devhost_rpc_etc(zx_device_t* dev, dc_msg_t::Op op,
                                    const char* args, const char* opname,
                                    uint32_t value, const void* data, size_t datalen,
                                    dc_status_t* rsp, size_t rsp_len, size_t* actual,
@@ -775,14 +777,14 @@ static zx_status_t devhost_rpc_etc(zx_device_t* dev, uint32_t op,
     msg.op = op;
     msg.value = value;
     if ((r = dc_msg_rpc(dev->rpc, &msg, msglen, nullptr, 0, rsp, rsp_len, actual, outhandle)) < 0) {
-        if (!(op == DC_OP_GET_METADATA && r == ZX_ERR_NOT_FOUND)) {
+        if (!(op == dc_msg_t::Op::kGetMetadata && r == ZX_ERR_NOT_FOUND)) {
             log(ERROR, "devhost: rpc:%s failed: %d\n", opname, r);
         }
     }
     return r;
 }
 
-static zx_status_t devhost_rpc(zx_device_t* dev, uint32_t op,
+static zx_status_t devhost_rpc(zx_device_t* dev, dc_msg_t::Op op,
                                const char* args, const char* opname,
                                dc_status_t* rsp, size_t rsp_len,
                                zx_handle_t* outhandle) {
@@ -791,7 +793,8 @@ static zx_status_t devhost_rpc(zx_device_t* dev, uint32_t op,
 
 void devhost_make_visible(zx_device_t* dev) {
     dc_status_t rsp;
-    devhost_rpc(dev, DC_OP_MAKE_VISIBLE, nullptr, "make-visible", &rsp, sizeof(rsp), nullptr);
+    devhost_rpc(dev, dc_msg_t::Op::kMakeVisible, nullptr, "make-visible", &rsp,
+                sizeof(rsp), nullptr);
 }
 
 // Send message to devcoordinator informing it that this device
@@ -820,7 +823,8 @@ zx_status_t devhost_remove(zx_device_t* dev) {
     dev->ios = nullptr;
 
     dc_status_t rsp;
-    devhost_rpc(dev, DC_OP_REMOVE_DEVICE, nullptr, "remove-device", &rsp, sizeof(rsp), nullptr);
+    devhost_rpc(dev, dc_msg_t::Op::kRemoveDevice, nullptr, "remove-device", &rsp,
+                sizeof(rsp), nullptr);
 
     // shut down our rpc channel
     zx_handle_close(dev->rpc);
@@ -854,7 +858,7 @@ zx_status_t devhost_get_topo_path(zx_device_t* dev, char* path, size_t max, size
         char path[DC_PATH_MAX];
     } reply;
     zx_status_t r;
-    if ((r = devhost_rpc(remote_dev, DC_OP_GET_TOPO_PATH, nullptr, "get-topo-path",
+    if ((r = devhost_rpc(remote_dev, dc_msg_t::Op::kGetTopoPath, nullptr, "get-topo-path",
                          &reply.rsp, sizeof(reply), nullptr)) < 0) {
         return r;
     }
@@ -872,7 +876,7 @@ zx_status_t devhost_get_topo_path(zx_device_t* dev, char* path, size_t max, size
 
 zx_status_t devhost_device_bind(zx_device_t* dev, const char* drv_libname) {
     dc_status_t rsp;
-    return devhost_rpc(dev, DC_OP_BIND_DEVICE, drv_libname,
+    return devhost_rpc(dev, dc_msg_t::Op::kBindDevice, drv_libname,
                        "bind-device", &rsp, sizeof(rsp), nullptr);
 }
 
@@ -887,7 +891,7 @@ zx_status_t devhost_load_firmware(zx_device_t* dev, const char* path,
         size_t size;
     } reply;
     zx_status_t r;
-    if ((r = devhost_rpc(dev, DC_OP_LOAD_FIRMWARE, path, "load-firmware",
+    if ((r = devhost_rpc(dev, dc_msg_t::Op::kLoadFirmware, path, "load-firmware",
                          &reply.rsp, sizeof(reply), vmo)) < 0) {
         return r;
     }
@@ -910,8 +914,8 @@ zx_status_t devhost_get_metadata(zx_device_t* dev, uint32_t type, void* buf, siz
     } reply;
     zx_status_t r;
     size_t resp_actual = 0;
-    if ((r = devhost_rpc_etc(dev, DC_OP_GET_METADATA, nullptr, "get-metadata", type, nullptr, 0,
-                             &reply.rsp, sizeof(reply), &resp_actual, nullptr)) < 0) {
+    if ((r = devhost_rpc_etc(dev, dc_msg_t::Op::kGetMetadata, nullptr, "get-metadata", type,
+                             nullptr, 0, &reply.rsp, sizeof(reply), &resp_actual, nullptr)) < 0) {
         return r;
     }
     if (resp_actual < sizeof(reply.rsp)) {
@@ -936,8 +940,8 @@ zx_status_t devhost_add_metadata(zx_device_t* dev, uint32_t type, const void* da
     if (!data && length) {
         return ZX_ERR_INVALID_ARGS;
     }
-    return devhost_rpc_etc(dev, DC_OP_ADD_METADATA, nullptr, "add-metadata", type, data, length,
-                            &rsp, sizeof(rsp), nullptr, nullptr);
+    return devhost_rpc_etc(dev, dc_msg_t::Op::kAddMetadata, nullptr, "add-metadata", type, data,
+                           length, &rsp, sizeof(rsp), nullptr, nullptr);
 }
 
 zx_status_t devhost_publish_metadata(zx_device_t* dev, const char* path, uint32_t type,
@@ -947,8 +951,8 @@ zx_status_t devhost_publish_metadata(zx_device_t* dev, const char* path, uint32_
     if (!path || (!data && length)) {
         return ZX_ERR_INVALID_ARGS;
     }
-    return devhost_rpc_etc(dev, DC_OP_PUBLISH_METADATA, path, "publish-metadata", type, data,
-                           length, &rsp, sizeof(rsp), nullptr, nullptr);
+    return devhost_rpc_etc(dev, dc_msg_t::Op::kPublishMetadata, path, "publish-metadata", type,
+                           data, length, &rsp, sizeof(rsp), nullptr, nullptr);
 }
 
 zx_handle_t root_resource_handle;

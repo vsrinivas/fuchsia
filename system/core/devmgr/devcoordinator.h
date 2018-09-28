@@ -23,7 +23,11 @@ typedef struct dc_devnode devnode_t;
 
 struct dc_work {
     list_node_t node;
-    uint32_t op;
+    enum struct Op : uint32_t {
+        kIdle = 0,
+        kDeviceAdded = 1,
+        kDriverAdded = 2,
+    } op;
     uint32_t arg;
     void* ptr;
 };
@@ -31,11 +35,11 @@ struct dc_work {
 struct dc_pending {
     list_node_t node;
     void* ctx;
-    uint32_t op;
+    enum struct Op : uint32_t {
+        kBind = 1,
+        kSuspend = 2,
+    } op;
 };
-
-#define PENDING_BIND 1
-#define PENDING_SUSPEND 2
 
 struct dc_devhost {
     port_handler_t ph;
@@ -179,8 +183,39 @@ bool dc_is_bindable(driver_t* drv, uint32_t protocol_id,
 typedef struct {
     zx_txid_t txid;     // FIDL message header
     uint32_t reserved0;
+
     uint32_t flags;
-    uint32_t op;
+
+    enum struct Op : uint32_t {
+        // This bit differentiates DC OPs from RIO OPs
+        kIdBit = 0x10000000,
+
+        // Coord->Host Ops
+        kCreateDeviceStub = 0x10000001,
+        kCreateDevice = 0x10000002,
+        kBindDriver = 0x10000003,
+        kConnectProxy = 0x10000004,
+        kSuspend = 0x10000005,
+
+        // Host->Coord Ops
+        kStatus = 0x10000010,
+        kAddDevice = 0x10000011,
+        kAddDeviceInvisible = 0x10000012,
+        kRemoveDevice = 0x10000013,  // also Coord->Host
+        kMakeVisible = 0x10000014,
+        kBindDevice = 0x10000015,
+        kGetTopoPath = 0x10000016,
+        kLoadFirmware = 0x10000017,
+        kGetMetadata = 0x10000018,
+        kAddMetadata = 0x10000019,
+        kPublishMetadata = 0x1000001a,
+
+        // Host->Coord Ops for DmCtl
+        kDmCommand = 0x10000020,
+        kDmOpenVirtcon = 0x10000021,
+        kDmWatch = 0x10000022,
+        kDmMexec = 0x10000023,
+    } op;
 
     union {
         zx_status_t status;
@@ -199,34 +234,6 @@ typedef struct {
     zx_status_t status;
 } dc_status_t;
 
-// This bit differentiates DC OPs from RIO OPs
-#define DC_OP_ID_BIT                0x10000000
-
-// Coord->Host Ops
-#define DC_OP_CREATE_DEVICE_STUB    0x10000001
-#define DC_OP_CREATE_DEVICE         0x10000002
-#define DC_OP_BIND_DRIVER           0x10000003
-#define DC_OP_CONNECT_PROXY         0x10000004
-#define DC_OP_SUSPEND               0x10000005
-
-// Host->Coord Ops
-#define DC_OP_STATUS                0x10000010
-#define DC_OP_ADD_DEVICE            0x10000011
-#define DC_OP_ADD_DEVICE_INVISIBLE  0x10000012
-#define DC_OP_REMOVE_DEVICE         0x10000013  // also Coord->Host
-#define DC_OP_MAKE_VISIBLE          0x10000014
-#define DC_OP_BIND_DEVICE           0x10000015
-#define DC_OP_GET_TOPO_PATH         0x10000016
-#define DC_OP_LOAD_FIRMWARE         0x10000017
-#define DC_OP_GET_METADATA          0x10000018
-#define DC_OP_ADD_METADATA          0x10000019
-#define DC_OP_PUBLISH_METADATA      0x1000001A
-
-// Host->Coord Ops for DmCtl
-#define DC_OP_DM_COMMAND            0x10000020
-#define DC_OP_DM_OPEN_VIRTCON       0x10000021
-#define DC_OP_DM_WATCH              0x10000022
-#define DC_OP_DM_MEXEC              0x10000023
 #define DC_PATH_MAX 1024
 
 zx_status_t dc_msg_pack(dc_msg_t* msg, uint32_t* len_out,
