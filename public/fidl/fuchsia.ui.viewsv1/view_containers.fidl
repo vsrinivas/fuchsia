@@ -97,8 +97,15 @@ interface ViewContainer {
   //
   // It is an error to add more than one child to a |ViewTree|'s container;
   // it can only have at most one child (its root).
+  //
+  // This method is deprecated in favor of the eventpair-based one below.
+  // TODO(SCN-1018): Remove this.
   2: AddChild(uint32 child_key,
       fuchsia.ui.viewsv1token.ViewOwner child_view_owner,
+      handle<eventpair> host_import_token);
+
+  3: AddChild2(uint32 child_key,
+      handle<eventpair> view_holder_token,
       handle<eventpair> host_import_token);
 
   // Removes the view referenced by |child_key| from the view's
@@ -110,8 +117,14 @@ interface ViewContainer {
   //
   // It is an error to remove a view whose |child_key| does not appear
   // in the container's list of children; the connection will be closed.
-  3: RemoveChild(uint32 child_key,
+  //
+  // This method is deprecated in favor of the eventpair-based one below.
+  // TODO(SCN-1018): Remove this.
+  4: RemoveChild(uint32 child_key,
       request<fuchsia.ui.viewsv1token.ViewOwner>? transferred_view_owner);
+
+  5: RemoveChild2(uint32 child_key,
+      handle<eventpair>? transferred_view_holder_token);
 
   // Sets view properties for the child, such as layout constraints.
   //
@@ -138,13 +151,13 @@ interface ViewContainer {
   //
   // It is an error to specify malformed |child_view_properties| such
   // as invalid layout properties; the connection will be closed.
-  4: SetChildProperties(uint32 child_key, ViewProperties? child_view_properties);
+  6: SetChildProperties(uint32 child_key, ViewProperties? child_view_properties);
 
   // Request the child view to get input focus for key events.
-  5: RequestFocus(uint32 child_key);
+  7: RequestFocus(uint32 child_key);
 
   // Request the snapshot of the child view.
-  6: RequestSnapshotHACK(uint32 child_key)-> (fuchsia.mem.Buffer data);
+  8: RequestSnapshotHACK(uint32 child_key)-> (fuchsia.mem.Buffer data);
 };
 
 // An interface clients may implement to receive events from a view container.

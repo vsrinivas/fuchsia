@@ -5,7 +5,9 @@
 #ifndef GARNET_BIN_UI_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_
 #define GARNET_BIN_UI_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_
 
-#include <fuchsia/ui/views/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
+
 #include "garnet/bin/ui/view_manager/view_registry.h"
 #include "lib/fxl/macros.h"
 
@@ -25,6 +27,11 @@ class ViewManagerImpl : public ::fuchsia::ui::viewsv1::ViewManager {
       fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
       fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewListener> view_listener,
+      zx::eventpair parent_export_token, fidl::StringPtr label) override;
+  void CreateView2(
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
+      zx::eventpair view_token,
       fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewListener> view_listener,
       zx::eventpair parent_export_token, fidl::StringPtr label) override;
   void CreateViewTree(

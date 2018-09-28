@@ -29,8 +29,7 @@ class FakeView : public ::fuchsia::ui::viewsv1::View,
 
   // Binds the view.
   void Bind(fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
-            fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-                view_owner_request,
+            zx::eventpair view_token,
             ::fuchsia::ui::viewsv1::ViewListenerPtr listener,
             zx::eventpair parent_export_token, fidl::StringPtr label);
 
@@ -68,26 +67,12 @@ class FakeView : public ::fuchsia::ui::viewsv1::View,
   void HideKeyboard() override;
 
  private:
-  class Owner : public ::fuchsia::ui::viewsv1token::ViewOwner {
-   public:
-    Owner();
-
-    ~Owner() override;
-
-    // Binds the view owner.
-    void Bind(fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-                  view_owner_request);
-
-   private:
-    fidl::Binding<::fuchsia::ui::viewsv1token::ViewOwner> binding_;
-  };
-
   async_dispatcher_t* dispatcher_;
   fidl::Binding<::fuchsia::ui::viewsv1::View> binding_;
   ::fuchsia::ui::viewsv1::ViewListenerPtr view_listener_;
+  zx::eventpair view_token_;
   zx::eventpair parent_export_token_;
   std::string label_;
-  Owner owner_;
 
   // ServiceProvider fields.
   fidl::Binding<::fuchsia::sys::ServiceProvider> service_provider_binding_;

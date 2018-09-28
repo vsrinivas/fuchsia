@@ -22,8 +22,8 @@ class ViewRegistry;
 class ViewState;
 class ViewStub;
 class ViewTreeState;
-class PendingViewOwnerTransferState;
-using View1Linker = scenic_impl::gfx::ObjectLinker<ViewStub, ViewState>;
+class PendingViewTransferState;
+using ViewLinker = scenic_impl::gfx::ObjectLinker<ViewStub, ViewState>;
 
 // Describes a link in the view hierarchy either from a parent view to one
 // of its children or from the view tree to its root view.
@@ -48,7 +48,7 @@ class ViewStub {
   // Begins the process of resolving a view.
   // |host_import_token| is the import token for the node exported by the parent
   // view in order to host this view's graphical contents.
-  ViewStub(ViewRegistry* registry, View1Linker::ExportLink view_link,
+  ViewStub(ViewRegistry* registry, ViewLinker::ExportLink view_link,
            zx::eventpair host_import_token);
   ~ViewStub();
 
@@ -114,10 +114,8 @@ class ViewStub {
   // Called in the rare case when |OnViewResolved| hasn't been called, but
   // we have already been removed and the child view's ownership is supposed to
   // be transferred
-  void TransferViewOwnerWhenViewResolved(
-      std::unique_ptr<ViewStub> view_stub,
-      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-          transferred_view_owner_request);
+  void TransferViewWhenResolved(std::unique_ptr<ViewStub> view_stub,
+                                zx::eventpair transferred_view_token);
 
   // Releases the host import token and host node.
   void ReleaseHost();
@@ -141,22 +139,23 @@ class ViewStub {
   // has been called, and the child view's ownership is supposed to be
   // transferred. In that case, we will transfer ownership of the child
   // immediately once |OnViewResolved| is called.
-  inline bool transfer_view_owner_when_view_resolved() const {
-    return pending_view_owner_transfer_ != nullptr;
+  inline bool transfer_view_when_resolved() const {
+    return pending_view_transfer_ != nullptr;
   }
 
   ViewRegistry* registry_;
   ViewState* state_ = nullptr;
   bool unavailable_ = false;
 
-  View1Linker::ExportLink view_link_;
+  ViewLinker::ExportLink view_link_;
   zx::eventpair host_import_token_;
   std::unique_ptr<scenic::ImportNode> host_node_;
 
-  // Non-null when we are waiting to transfer the |ViewOwner|.
-  // Saves the |ViewOwner| we want to transfer ownership to, and a reference to
-  // ourselves to keep us alive until |OnViewResolved| is called.
-  std::unique_ptr<PendingViewOwnerTransferState> pending_view_owner_transfer_;
+  // Non-null when we are waiting to transfer the view.
+  //
+  // Saves the ViewHolder token we want to transfer ownership to, and a
+  // reference to ourselves to keep us alive until |OnViewResolved| is called.
+  std::unique_ptr<PendingViewTransferState> pending_view_transfer_;
 
   ::fuchsia::ui::viewsv1::ViewPropertiesPtr properties_;
 

@@ -30,7 +30,7 @@
 
 namespace view_manager {
 
-using View1Linker = scenic_impl::gfx::ObjectLinker<ViewStub, ViewState>;
+using ViewLinker = scenic_impl::gfx::ObjectLinker<ViewStub, ViewState>;
 
 // Maintains a registry of the state of all views.
 // All ViewState objects are owned by the registry.
@@ -42,7 +42,7 @@ class ViewRegistry : public ViewInspector,
   explicit ViewRegistry(component::StartupContext* startup_context);
   ~ViewRegistry() override;
 
-  View1Linker& view_linker() { return viewv1_linker_; }
+  ViewLinker& view_linker() { return view_linker_; }
 
   // |ErrorReporter|
   void ReportError(fxl::LogSeverity severity,
@@ -56,8 +56,7 @@ class ViewRegistry : public ViewInspector,
       fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> scenic_request);
   void CreateView(
       fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
-      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request,
+      zx::eventpair view_token,
       ::fuchsia::ui::viewsv1::ViewListenerPtr view_listener,
       zx::eventpair parent_export_token, fidl::StringPtr label);
   void CreateViewTree(
@@ -69,10 +68,8 @@ class ViewRegistry : public ViewInspector,
   // VIEW STUB REQUESTS
 
   void OnViewResolved(ViewStub* view_stub, ViewState* view_state);
-  void TransferViewOwner(
-      ViewState* view_state,
-      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-          transferred_view_owner_request);
+  void TransferView(ViewState* view_state,
+                    zx::eventpair transferred_view_token);
 
   // VIEW REQUESTS
 
@@ -89,16 +86,13 @@ class ViewRegistry : public ViewInspector,
   // Adds a child, reparenting it if necessary.
   // Destroys |container_state| if an error occurs.
   void AddChild(ViewContainerState* container_state, uint32_t child_key,
-                fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
-                    child_view_owner,
+                zx::eventpair view_holder_token,
                 zx::eventpair host_import_token);
 
   // Removes a child.
   // Destroys |container_state| if an error occurs.
-  void RemoveChild(
-      ViewContainerState* container_state, uint32_t child_key,
-      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-          transferred_view_owner_request);
+  void RemoveChild(ViewContainerState* container_state, uint32_t child_key,
+                   zx::eventpair transferred_view_holder_token);
 
   // Sets a child's properties.
   // Destroys |container_state| if an error occurs.
@@ -167,10 +161,8 @@ class ViewRegistry : public ViewInspector,
 
   void AttachResolvedViewAndNotify(ViewStub* view_stub, ViewState* view_state);
   void ReleaseUnavailableViewAndNotify(ViewStub* view_stub);
-  void TransferOrUnregisterViewStub(
-      std::unique_ptr<ViewStub> view_stub,
-      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-          transferred_view_owner_request);
+  void TransferOrUnregisterViewStub(std::unique_ptr<ViewStub> view_stub,
+                                    zx::eventpair transferred_view_token);
 
   // INVALIDATION
 
@@ -260,10 +252,10 @@ class ViewRegistry : public ViewInspector,
 
   bool traversal_scheduled_ = false;
   bool present_session_scheduled_ = false;
-  uint32_t next_view_token_value_ = 1u;
+  uint32_t next_view_id_value_ = 1u;
   uint32_t next_view_tree_token_value_ = 1u;
 
-  View1Linker viewv1_linker_;
+  ViewLinker view_linker_;
   std::unordered_map<uint32_t, std::unique_ptr<ViewState>> views_by_token_;
   std::unordered_map<uint32_t, std::unique_ptr<ViewTreeState>>
       view_trees_by_token_;

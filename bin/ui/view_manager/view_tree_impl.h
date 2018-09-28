@@ -6,6 +6,7 @@
 #define GARNET_BIN_UI_VIEW_MANAGER_VIEW_TREE_IMPL_H_
 
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
+
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
@@ -40,10 +41,14 @@ class ViewTreeImpl : public ::fuchsia::ui::viewsv1::ViewTree,
                 fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
                     child_view_owner,
                 zx::eventpair host_import_token) override;
+  void AddChild2(uint32_t child_key, zx::eventpair view_holder_token,
+                 zx::eventpair host_import_token) override;
   void RemoveChild(
       uint32_t child_key,
       fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
           transferred_view_owner_request) override;
+  void RemoveChild2(uint32_t child_key,
+                    zx::eventpair transferred_view_holder_token) override;
   void SetChildProperties(
       uint32_t child_key,
       ::fuchsia::ui::viewsv1::ViewPropertiesPtr child_view_properties) override;

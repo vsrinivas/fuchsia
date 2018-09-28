@@ -27,7 +27,20 @@ void ViewManagerImpl::CreateView(
         view_owner_request,
     fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewListener> view_listener,
     zx::eventpair parent_export_token, fidl::StringPtr label) {
-  registry_->CreateView(std::move(view_request), std::move(view_owner_request),
+  // "Cast" the ViewOwner channel endpoint to an eventpair endpoint.  Should
+  // work for the time being while this interface is being deprecated.
+  // TODO(SCN-1018): Remove this along with the interface.
+  CreateView2(std::move(view_request),
+              zx::eventpair(view_owner_request.TakeChannel().release()),
+              view_listener.Bind(), std::move(parent_export_token), label);
+}
+
+void ViewManagerImpl::CreateView2(
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
+    zx::eventpair view_token,
+    fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewListener> view_listener,
+    zx::eventpair parent_export_token, fidl::StringPtr label) {
+  registry_->CreateView(std::move(view_request), std::move(view_token),
                         view_listener.Bind(), std::move(parent_export_token),
                         label);
 }

@@ -25,7 +25,7 @@ class ViewRegistry;
 class ViewImpl;
 class ViewState;
 class ViewStub;
-using View1Linker = scenic_impl::gfx::ObjectLinker<ViewStub, ViewState>;
+using ViewLinker = scenic_impl::gfx::ObjectLinker<ViewStub, ViewState>;
 
 // Describes the state of a particular view.
 // This object is owned by the ViewRegistry that created it.
@@ -97,7 +97,7 @@ class ViewState : public ViewContainerState {
   //
   // After this view is bound to the |owner_link|, it's lifetime will be
   // connected to the |ViewStub| via the |owner_link|.
-  void BindOwner(View1Linker::ImportLink owner_link);
+  void BindOwner(ViewLinker::ImportLink owner_link);
 
   ViewState* AsViewState() override;
 
@@ -131,7 +131,7 @@ class ViewState : public ViewContainerState {
 
   std::unique_ptr<ViewImpl> impl_;
   fidl::Binding<::fuchsia::ui::viewsv1::View> view_binding_;
-  View1Linker::ImportLink owner_link_;
+  ViewLinker::ImportLink owner_link_;
   ViewStub* view_stub_ = nullptr;
 
   ::fuchsia::ui::viewsv1::ViewPropertiesPtr issued_properties_;

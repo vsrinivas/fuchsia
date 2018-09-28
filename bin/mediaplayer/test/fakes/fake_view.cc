@@ -22,13 +22,11 @@ FakeView::~FakeView() {}
 
 void FakeView::Bind(
     fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request,
-    ::fuchsia::ui::viewsv1::ViewListenerPtr listener,
+    zx::eventpair view_token, ::fuchsia::ui::viewsv1::ViewListenerPtr listener,
     zx::eventpair parent_export_token, fidl::StringPtr label) {
   binding_.Bind(std::move(view_request));
-  owner_.Bind(std::move(view_owner_request));
   view_listener_ = std::move(listener);
+  view_token_ = std::move(view_token);
   parent_export_token_ = std::move(parent_export_token);
   label_ = label;
 }
@@ -76,16 +74,6 @@ void FakeView::GetInputMethodEditor(
 void FakeView::ShowKeyboard() { FXL_NOTIMPLEMENTED(); }
 
 void FakeView::HideKeyboard() { FXL_NOTIMPLEMENTED(); }
-
-FakeView::Owner::Owner() : binding_(this) {}
-
-FakeView::Owner::~Owner() {}
-
-void FakeView::Owner::Bind(
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request) {
-  binding_.Bind(std::move(view_owner_request));
-}
 
 }  // namespace test
 }  // namespace media_player

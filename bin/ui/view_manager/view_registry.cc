@@ -158,24 +158,23 @@ void ViewRegistry::GetScenic(
 
 void ViewRegistry::CreateView(
     fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request,
+    zx::eventpair view_token,
     ::fuchsia::ui::viewsv1::ViewListenerPtr view_listener,
     zx::eventpair parent_export_token, fidl::StringPtr label) {
   FXL_DCHECK(view_request.is_valid());
-  FXL_DCHECK(view_owner_request.is_valid());
+  FXL_DCHECK(view_token);
   FXL_DCHECK(view_listener);
   FXL_DCHECK(parent_export_token);
 
-  uint32_t view_token = next_view_token_value_++;
-  FXL_CHECK(view_token);
-  FXL_CHECK(!FindView(view_token));
+  uint32_t view_id = next_view_id_value_++;
+  FXL_CHECK(view_id);
+  FXL_CHECK(!FindView(view_id));
 
   // Create the state and bind the interfaces to it.
-  View1Linker::ImportLink view_owner_link =
-      viewv1_linker_.CreateImport(view_owner_request.TakeChannel(), this);
+  ViewLinker::ImportLink view_owner_link =
+      view_linker_.CreateImport(std::move(view_token), this);
   auto view_state = std::make_unique<ViewState>(
-      this, view_token, std::move(view_request), std::move(view_listener),
+      this, view_id, std::move(view_request), std::move(view_listener),
       &session_, SanitizeLabel(label));
 
   // Export a node which represents the view's attachment point.
@@ -192,7 +191,7 @@ void ViewRegistry::CreateView(
   // the ViewStub to be attached, so we make sure to begin tracking the view in
   // the map beforehand.
   ViewState* view_state_ptr = view_state.get();
-  views_by_token_.emplace(view_token, std::move(view_state));
+  views_by_token_.emplace(view_id, std::move(view_state));
   view_state_ptr->BindOwner(std::move(view_owner_link));
   FXL_VLOG(1) << "CreateView: view=" << view_state_ptr;
 }
@@ -305,13 +304,11 @@ void ViewRegistry::ReleaseViewStubChildHost(ViewStub* view_stub) {
 
 // TREE MANIPULATION
 
-void ViewRegistry::AddChild(
-    ViewContainerState* container_state, uint32_t child_key,
-    fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
-        child_view_owner,
-    zx::eventpair host_import_token) {
+void ViewRegistry::AddChild(ViewContainerState* container_state,
+                            uint32_t child_key, zx::eventpair view_holder_token,
+                            zx::eventpair host_import_token) {
   FXL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
-  FXL_DCHECK(child_view_owner);
+  FXL_DCHECK(view_holder_token);
   FXL_DCHECK(host_import_token);
   FXL_VLOG(1) << "AddChild: container=" << container_state
               << ", child_key=" << child_key;
@@ -339,17 +336,16 @@ void ViewRegistry::AddChild(
   // Add a stub, pending resolution of the view owner.
   // Assuming the stub isn't removed prematurely, |OnViewResolved| will be
   // called asynchronously with the result of the resolution.
-  View1Linker::ExportLink view_link =
-      viewv1_linker_.CreateExport(child_view_owner.TakeChannel(), this);
+  ViewLinker::ExportLink view_link =
+      view_linker_.CreateExport(std::move(view_holder_token), this);
   container_state->LinkChild(child_key, std::unique_ptr<ViewStub>(new ViewStub(
                                             this, std::move(view_link),
                                             std::move(host_import_token))));
 }
 
-void ViewRegistry::RemoveChild(
-    ViewContainerState* container_state, uint32_t child_key,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        transferred_view_owner_request) {
+void ViewRegistry::RemoveChild(ViewContainerState* container_state,
+                               uint32_t child_key,
+                               zx::eventpair transferred_view_holder_token) {
   FXL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
   FXL_VLOG(1) << "RemoveChild: container=" << container_state
               << ", child_key=" << child_key;
@@ -366,7 +362,7 @@ void ViewRegistry::RemoveChild(
 
   // Unlink the child from its container.
   TransferOrUnregisterViewStub(container_state->UnlinkChild(child_key),
-                               std::move(transferred_view_owner_request));
+                               std::move(transferred_view_holder_token));
 }
 
 void ViewRegistry::SetChildProperties(
@@ -491,19 +487,17 @@ void ViewRegistry::OnViewResolved(ViewStub* view_stub, ViewState* view_state) {
     ReleaseUnavailableViewAndNotify(view_stub);
 }
 
-void ViewRegistry::TransferViewOwner(
-    ViewState* view_state,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        transferred_view_owner_request) {
-  FXL_DCHECK(transferred_view_owner_request.is_valid());
+void ViewRegistry::TransferView(ViewState* view_state,
+                                zx::eventpair transferred_view_token) {
+  FXL_DCHECK(transferred_view_token);
 
   if (view_state) {
     InvalidateView(view_state, ViewState::INVALIDATION_PARENT_CHANGED);
 
     // This will cause the view_state to be rebound, and released from the
     // view_stub.
-    View1Linker::ImportLink view_owner_link = viewv1_linker_.CreateImport(
-        transferred_view_owner_request.TakeChannel(), this);
+    ViewLinker::ImportLink view_owner_link =
+        view_linker_.CreateImport(std::move(transferred_view_token), this);
     view_state->BindOwner(std::move(view_owner_link));
   }
 }
@@ -546,17 +540,15 @@ void ViewRegistry::ReleaseUnavailableViewAndNotify(ViewStub* view_stub) {
 }
 
 void ViewRegistry::TransferOrUnregisterViewStub(
-    std::unique_ptr<ViewStub> view_stub,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        transferred_view_owner_request) {
+    std::unique_ptr<ViewStub> view_stub, zx::eventpair transferred_view_token) {
   FXL_DCHECK(view_stub);
 
-  if (transferred_view_owner_request.is_valid()) {
+  if (transferred_view_token) {
     ReleaseViewStubChildHost(view_stub.get());
 
     if (view_stub->state()) {
       ViewState* view_state = view_stub->ReleaseView();
-      TransferViewOwner(view_state, std::move(transferred_view_owner_request));
+      TransferView(view_state, std::move(transferred_view_token));
 
       return;
     }
@@ -565,8 +557,8 @@ void ViewRegistry::TransferOrUnregisterViewStub(
       FXL_DCHECK(!view_stub->state());
 
       // Handle transfer of pending view.
-      view_stub->TransferViewOwnerWhenViewResolved(
-          std::move(view_stub), std::move(transferred_view_owner_request));
+      view_stub->TransferViewWhenResolved(std::move(view_stub),
+                                          std::move(transferred_view_token));
 
       return;
     }

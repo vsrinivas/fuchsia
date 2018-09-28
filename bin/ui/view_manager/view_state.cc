@@ -41,7 +41,7 @@ void ViewState::IssueProperties(
   issued_properties_ = std::move(properties);
 }
 
-void ViewState::BindOwner(View1Linker::ImportLink owner_link) {
+void ViewState::BindOwner(ViewLinker::ImportLink owner_link) {
   FXL_DCHECK(owner_link.valid());
   FXL_DCHECK(!owner_link.initialized());
 
@@ -61,8 +61,8 @@ void ViewState::BindOwner(View1Linker::ImportLink owner_link) {
                            // at all.
                            FXL_VLOG(1) << "View disconnected: " << this;
                            view_stub_ = nullptr;
-                           registry_->OnViewDied(this,
-                                                 "ViewOwner connection closed");
+                           registry_->OnViewDied(
+                               this, "ViewHolder connection closed");
                          });
 }
 

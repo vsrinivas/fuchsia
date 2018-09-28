@@ -13,27 +13,22 @@
 
 namespace view_manager {
 
-class PendingViewOwnerTransferState {
+class PendingViewTransferState {
  public:
-  PendingViewOwnerTransferState(
-      std::unique_ptr<ViewStub> view_stub,
-      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-          transferred_view_owner_request)
+  PendingViewTransferState(std::unique_ptr<ViewStub> view_stub,
+                           zx::eventpair transferred_view_token)
       : view_stub_(std::move(view_stub)),
-        transferred_view_owner_request_(
-            std::move(transferred_view_owner_request)) {}
-
-  ~PendingViewOwnerTransferState() {}
+        transferred_view_token_(std::move(transferred_view_token)) {}
+  ~PendingViewTransferState() {}
 
   // A reference to keep the |ViewStub| alive until |OnViewResolved| is called.
   std::unique_ptr<ViewStub> view_stub_;
 
-  // The |ViewOwner| we want to transfer ownership to.
-  fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-      transferred_view_owner_request_;
+  // The token paired with the ViewHolder we want to transfer ownership to.
+  zx::eventpair transferred_view_token_;
 };
 
-ViewStub::ViewStub(ViewRegistry* registry, View1Linker::ExportLink view_link,
+ViewStub::ViewStub(ViewRegistry* registry, ViewLinker::ExportLink view_link,
                    zx::eventpair host_import_token)
     : registry_(registry),
       view_link_(std::move(view_link)),
@@ -140,27 +135,24 @@ void ViewStub::SetTreeForChildrenOfView(ViewState* view, ViewTreeState* tree) {
 }
 
 void ViewStub::OnViewResolved(ViewState* view_state, bool success) {
-  if (success && transfer_view_owner_when_view_resolved()) {
+  if (success && transfer_view_when_resolved()) {
     // While we were waiting for linking, the view was transferred to a new
     // ViewOwner. Now that we are linked, transfer the ownership
     // correctly internally.
     FXL_DCHECK(!container());  // Make sure we're removed from the view tree
-    FXL_DCHECK(pending_view_owner_transfer_->view_stub_ != nullptr);
-    FXL_DCHECK(pending_view_owner_transfer_->transferred_view_owner_request_
-                   .is_valid());
+    FXL_DCHECK(pending_view_transfer_->view_stub_ != nullptr);
+    FXL_DCHECK(pending_view_transfer_->transferred_view_token_);
 
-    registry_->TransferViewOwner(
-        view_state,
-        std::move(
-            pending_view_owner_transfer_->transferred_view_owner_request_));
+    registry_->TransferView(
+        view_state, std::move(pending_view_transfer_->transferred_view_token_));
 
     // We don't have any |view_state| resolved to us now, but |ReleaseView| will
     // still mark us as unavailable and clear properties
     ReleaseView();
 
-    // |pending_view_owner_transfer_| holds a reference to ourselves. Don't hold
-    // that reference anymore, which should release us immediately.
-    pending_view_owner_transfer_.reset();
+    // |pending_view_transfer_| holds a reference to ourselves. Don't hold that
+    // reference anymore, which should release us immediately.
+    pending_view_transfer_.reset();
   } else {
     // 1. We got the linking callback as expected (in which case view_state is
     // non-null and success is true).
@@ -170,21 +162,16 @@ void ViewStub::OnViewResolved(ViewState* view_state, bool success) {
   }
 }
 
-void ViewStub::TransferViewOwnerWhenViewResolved(
-    std::unique_ptr<ViewStub> view_stub,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        transferred_view_owner_request) {
+void ViewStub::TransferViewWhenResolved(std::unique_ptr<ViewStub> view_stub,
+                                        zx::eventpair transferred_view_token) {
   FXL_DCHECK(!container());  // Make sure we've been removed from the view tree
-  FXL_DCHECK(!pending_view_owner_transfer_);
+  FXL_DCHECK(!pending_view_transfer_);
 
   // When |OnViewResolved| gets called, we'll just transfer ownership
   // of the view instead of calling |ViewRegistry.OnViewResolved|.
-  // Save the necessary state in |pending_view_owner_transfer_|
-  pending_view_owner_transfer_.reset(new PendingViewOwnerTransferState(
-      std::move(view_stub), std::move(transferred_view_owner_request)));
-
-  // TODO(mikejurka): should we have an error handler on
-  // transferred_view_owner_request_?
+  // Save the necessary state in |pending_view_transfer_|
+  pending_view_transfer_.reset(new PendingViewTransferState(
+      std::move(view_stub), std::move(transferred_view_token)));
 }
 
 void ViewStub::ReleaseHost() {

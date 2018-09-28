@@ -45,7 +45,16 @@ void ViewImpl::AddChild(
     fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
         child_view_owner,
     zx::eventpair host_import_token) {
-  registry_->AddChild(state_, child_key, std::move(child_view_owner),
+  // "Cast" the ViewOwner channel endpoint to an eventpair endpoint.  Should
+  // work for the time being while this interface is being deprecated.
+  // TODO(SCN-1018): Remove this along with the interface.
+  AddChild2(child_key, zx::eventpair(child_view_owner.TakeChannel().release()),
+            std::move(host_import_token));
+}
+
+void ViewImpl::AddChild2(uint32_t child_key, zx::eventpair view_holder_token,
+                         zx::eventpair host_import_token) {
+  registry_->AddChild(state_, child_key, std::move(view_holder_token),
                       std::move(host_import_token));
 }
 
@@ -53,8 +62,18 @@ void ViewImpl::RemoveChild(
     uint32_t child_key,
     fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         transferred_view_owner_request) {
+  // "Cast" the ViewOwner channel endpoint to an eventpair endpoint.  Should
+  // work for the time being while this interface is being deprecated.
+  // TODO(SCN-1018): Remove this along with the interface.
+  RemoveChild2(
+      child_key,
+      zx::eventpair(transferred_view_owner_request.TakeChannel().release()));
+}
+
+void ViewImpl::RemoveChild2(uint32_t child_key,
+                            zx::eventpair transferred_view_holder_token) {
   registry_->RemoveChild(state_, child_key,
-                         std::move(transferred_view_owner_request));
+                         std::move(transferred_view_holder_token));
 }
 
 void ViewImpl::SetChildProperties(
