@@ -407,10 +407,10 @@ zx_status_t Device::GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) {
 
 zx_status_t Device::SendEthernet(fbl::unique_ptr<Packet> packet) {
     ZX_DEBUG_ASSERT(packet != nullptr);
-    ZX_DEBUG_ASSERT(packet->len() <= ETH_FRAME_MAX_SIZE);
 
     if (packet->len() > ETH_FRAME_MAX_SIZE) {
         errorf("SendEthernet drops Ethernet frame of invalid length: %zu\n", packet->len());
+        ZX_DEBUG_ASSERT(false);
         return ZX_ERR_INVALID_ARGS;
     }
 
