@@ -393,8 +393,11 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
         }
     }
 
+    // Error-prone as IsHtOrLater can be out of sync with client_capability's ht_cap.
+    // We should instead check the client capabilities for a presence of ht_caps.
+    // For now, fall back to a default value for ht_cap.
     if (IsHtOrLater()) {
-        auto ht_cap = client_capability.ht_cap;
+        auto ht_cap = client_capability.ht_cap.value_or(HtCapabilities{});
         debugf("HT cap(hardware reports): %s\n", debug::Describe(ht_cap).c_str());
 
         zx_status_t status = OverrideHtCapability(&ht_cap);
@@ -1411,28 +1414,28 @@ bool Station::IsCbw40Rx() const {
         "IsCbw40Rx: bss.ht_cap:%s, bss.chan_width_set:%s client_assoc.has_ht_cap:%s "
         "client_assoc.chan_width_set:%u\n",
         (bss_->ht_cap != nullptr) ? "yes" : "no",
-        (bss_->ht_cap == nullptr)
-            ? "invalid"
-            : (bss_->ht_cap->ht_cap_info.chan_width_set == to_enum_type(wlan_mlme::ChanWidthSet::TWENTY_ONLY))
-                  ? "20"
-                  : "40",
-        client_assoc.has_ht_cap ? "yes" : "no",
-        static_cast<uint8_t>(client_assoc.ht_cap.ht_cap_info.chan_width_set()));
+        (bss_->ht_cap == nullptr) ? "invalid"
+                                  : (bss_->ht_cap->ht_cap_info.chan_width_set ==
+                                     to_enum_type(wlan_mlme::ChanWidthSet::TWENTY_ONLY))
+                                        ? "20"
+                                        : "40",
+        client_assoc.ht_cap ? "yes" : "no",
+        static_cast<uint8_t>(client_assoc.ht_cap->ht_cap_info.chan_width_set()));
 
     if (bss_->ht_cap == nullptr) {
         debugjoin("Disable CBW40: no HT support in target BSS\n");
         return false;
     }
-    if (bss_->ht_cap->ht_cap_info.chan_width_set == to_enum_type(wlan_mlme::ChanWidthSet::TWENTY_ONLY)) {
+    if (bss_->ht_cap->ht_cap_info.chan_width_set ==
+        to_enum_type(wlan_mlme::ChanWidthSet::TWENTY_ONLY)) {
         debugjoin("Disable CBW40: no CBW40 support in target BSS\n");
         return false;
     }
 
-    if (!client_assoc.has_ht_cap) {
+    if (!client_assoc.ht_cap) {
         debugjoin("Disable CBW40: no HT support in the this device\n");
         return false;
-    }
-    if (client_assoc.ht_cap.ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_ONLY) {
+    } else if (client_assoc.ht_cap->ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_ONLY) {
         debugjoin("Disable CBW40: no CBW40 support in the this device\n");
         return false;
     }
@@ -1520,50 +1523,48 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
     assoc_ctx_.cap = IntersectCapInfo(ap.cap, client.cap);
     SetAssocCtxSuppRates(ap, client, &assoc_ctx_.supported_rates, &assoc_ctx_.ext_supported_rates);
 
-    assoc_ctx_.has_ht_cap = ap.has_ht_cap && client.has_ht_cap;
-    if (assoc_ctx_.has_ht_cap) {
+    if (ap.ht_cap.has_value() && client.ht_cap.has_value()) {
         // TODO(porce): Supported MCS Set field from the outcome of the intersection
         // requires the conditional treatment depending on the value of the following fields:
         // - "Tx MCS Set Defined"
         // - "Tx Rx MCS Set Not Equal"
         // - "Tx Maximum Number Spatial Streams Supported"
         // - "Tx Unequal Modulation Supported"
-        assoc_ctx_.ht_cap = IntersectHtCap(ap.ht_cap, client.ht_cap);
+        assoc_ctx_.ht_cap =
+            std::make_optional(IntersectHtCap(ap.ht_cap.value(), client.ht_cap.value()));
 
         // Override the outcome of IntersectHtCap(), which is role agnostic.
 
         // If AP can't rx STBC, then the client shall not tx STBC.
         // Otherwise, the client shall do what it can do.
-        if (ap.ht_cap.ht_cap_info.rx_stbc() == 0) {
-            assoc_ctx_.ht_cap.ht_cap_info.set_tx_stbc(0);
+        if (ap.ht_cap->ht_cap_info.rx_stbc() == 0) {
+            assoc_ctx_.ht_cap->ht_cap_info.set_tx_stbc(0);
         } else {
-            assoc_ctx_.ht_cap.ht_cap_info.set_tx_stbc(client.ht_cap.ht_cap_info.tx_stbc());
+            assoc_ctx_.ht_cap->ht_cap_info.set_tx_stbc(client.ht_cap->ht_cap_info.tx_stbc());
         }
 
         // If AP can't tx STBC, then the client shall not expect to rx STBC.
         // Otherwise, the client shall do what it can do.
-        if (ap.ht_cap.ht_cap_info.tx_stbc() == 0) {
-            assoc_ctx_.ht_cap.ht_cap_info.set_rx_stbc(0);
+        if (ap.ht_cap->ht_cap_info.tx_stbc() == 0) {
+            assoc_ctx_.ht_cap->ht_cap_info.set_rx_stbc(0);
         } else {
-            assoc_ctx_.ht_cap.ht_cap_info.set_rx_stbc(client.ht_cap.ht_cap_info.rx_stbc());
+            assoc_ctx_.ht_cap->ht_cap_info.set_rx_stbc(client.ht_cap->ht_cap_info.rx_stbc());
         }
 
-        assoc_ctx_.has_ht_op = ap.has_ht_op;
-        if (assoc_ctx_.has_ht_op) { assoc_ctx_.ht_op = ap.ht_op; }
+        assoc_ctx_.ht_op = ap.ht_op;
     }
-    assoc_ctx_.has_vht_cap = ap.has_vht_cap && client.has_vht_cap;
-    if (assoc_ctx_.has_vht_cap) {
-        assoc_ctx_.vht_cap = IntersectVhtCap(ap.vht_cap, client.vht_cap);
-        assoc_ctx_.has_vht_cap = ap.has_vht_op;
-        if (assoc_ctx_.has_vht_op) { assoc_ctx_.vht_op = ap.vht_op; }
+    if (ap.vht_cap.has_value() && client.vht_cap.has_value()) {
+        assoc_ctx_.vht_cap =
+            std::make_optional(IntersectVhtCap(ap.vht_cap.value(), client.vht_cap.value()));
+        assoc_ctx_.vht_op = ap.vht_op;
     }
     debugjoin("final AssocCtx:[%s]\n", debug::Describe(assoc_ctx_).c_str());
 
-    assoc_ctx_.is_ht = assoc_ctx_.has_ht_cap;
+    assoc_ctx_.is_ht = assoc_ctx_.ht_cap.has_value();
     assoc_ctx_.is_cbw40_rx =
-        assoc_ctx_.has_ht_cap &&
-        ap.ht_cap.ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_FORTY &&
-        client.ht_cap.ht_cap_info.chan_width_set() != HtCapabilityInfo::TWENTY_FORTY;
+        assoc_ctx_.ht_cap &&
+        ap.ht_cap->ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_FORTY &&
+        client.ht_cap->ht_cap_info.chan_width_set() != HtCapabilityInfo::TWENTY_FORTY;
 
     // TODO(porce): Test capabilities and configurations of the client and its BSS.
     // TODO(porce): Ralink dependency on BlockAck, AMPDU handling
@@ -1587,17 +1588,17 @@ zx_status_t Station::NotifyAssocContext() {
     ddk.ext_supported_rates_cnt = static_cast<uint8_t>(esr.size());
     std::copy(esr.begin(), esr.end(), ddk.ext_supported_rates);
 
-    ddk.has_ht_cap = assoc_ctx_.has_ht_cap;
-    if (ddk.has_ht_cap) { ddk.ht_cap = assoc_ctx_.ht_cap.ToDdk(); }
+    ddk.has_ht_cap = assoc_ctx_.ht_cap.has_value();
+    if (assoc_ctx_.ht_cap.has_value()) { ddk.ht_cap = assoc_ctx_.ht_cap->ToDdk(); }
 
-    ddk.has_ht_op = assoc_ctx_.has_ht_op;
-    if (ddk.has_ht_op) { ddk.ht_op = assoc_ctx_.ht_op.ToDdk(); }
+    ddk.has_ht_op = assoc_ctx_.ht_op.has_value();
+    if (assoc_ctx_.ht_op.has_value()) { ddk.ht_op = assoc_ctx_.ht_op->ToDdk(); }
 
-    ddk.has_vht_cap = assoc_ctx_.has_vht_cap;
-    if (ddk.has_vht_cap) { ddk.vht_cap = assoc_ctx_.vht_cap.ToDdk(); }
+    ddk.has_vht_cap = assoc_ctx_.vht_cap.has_value();
+    if (assoc_ctx_.vht_cap.has_value()) { ddk.vht_cap = assoc_ctx_.vht_cap->ToDdk(); }
 
-    ddk.has_vht_op = assoc_ctx_.has_vht_op;
-    if (ddk.has_vht_op) { ddk.vht_op = assoc_ctx_.vht_op.ToDdk(); }
+    ddk.has_vht_op = assoc_ctx_.vht_op.has_value();
+    if (assoc_ctx_.vht_op.has_value()) { ddk.vht_op = assoc_ctx_.vht_op->ToDdk(); }
 
     return device_->ConfigureAssoc(&ddk);
 }
@@ -1657,29 +1658,25 @@ zx_status_t ParseAssocRespIe(const uint8_t* ie_chains, size_t ie_chains_len,
         case element_id::kHtCapabilities: {
             auto ie = reader.read<HtCapabilities>();
             if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->has_ht_cap = true;
-            assoc_ctx->ht_cap = *ie;
+            assoc_ctx->ht_cap = std::make_optional(*ie);
             break;
         }
         case element_id::kHtOperation: {
             auto ie = reader.read<HtOperation>();
             if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->has_ht_op = true;
-            assoc_ctx->ht_op = *ie;
+            assoc_ctx->ht_op = std::make_optional(*ie);
             break;
         }
         case element_id::kVhtCapabilities: {
             auto ie = reader.read<VhtCapabilities>();
             if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->has_vht_cap = true;
-            assoc_ctx->vht_cap = *ie;
+            assoc_ctx->vht_cap = std::make_optional(*ie);
             break;
         }
         case element_id::kVhtOperation: {
             auto ie = reader.read<VhtOperation>();
             if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->has_vht_op = true;
-            assoc_ctx->vht_op = *ie;
+            assoc_ctx->vht_op = std::make_optional(*ie);
             break;
         }
         default:
@@ -1693,11 +1690,9 @@ zx_status_t ParseAssocRespIe(const uint8_t* ie_chains, size_t ie_chains_len,
 
 AssocContext ToAssocContext(const wlan_info_t& ifc_info, const wlan_channel_t join_chan) {
     AssocContext assoc_ctx{};
-
     assoc_ctx.cap = CapabilityInfo::FromDdk(ifc_info.caps);
 
     auto band_info = FindBand(ifc_info, common::Is5Ghz(join_chan));
-
     for (uint8_t rate : band_info->basic_rates) {
         if (rate == 0) { break; }  // basic_rates has fixed-length and is "null-terminated".
         // SupportedRates Element can hold only 8 rates.
@@ -1709,19 +1704,11 @@ AssocContext ToAssocContext(const wlan_info_t& ifc_info, const wlan_channel_t jo
     }
 
     if (ifc_info.supported_phys & WLAN_PHY_HT) {
-        assoc_ctx.has_ht_cap = true;
-        static_assert(sizeof(HtCapabilities) == sizeof(wlan_ht_caps_t) + sizeof(ElementHeader),
-                      "HtCap size mimatch between IE and DDK");
-        auto elem = reinterpret_cast<uint8_t*>(&assoc_ctx.ht_cap);
-        memcpy(elem + sizeof(ElementHeader), &band_info->ht_caps, sizeof(wlan_ht_caps_t));
+        assoc_ctx.ht_cap = std::make_optional(HtCapabilities::FromDdk(band_info->ht_caps));
     }
 
     if (band_info->vht_supported) {
-        assoc_ctx.has_vht_cap = true;
-        static_assert(sizeof(VhtCapabilities) == sizeof(wlan_vht_caps_t) + sizeof(ElementHeader),
-                      "VhtCap size mimatch between IE and DDK");
-        auto elem = reinterpret_cast<uint8_t*>(&assoc_ctx.vht_cap);
-        memcpy(elem + sizeof(ElementHeader), &band_info->vht_caps, sizeof(wlan_vht_caps_t));
+        assoc_ctx.vht_cap = std::make_optional(VhtCapabilities::FromDdk(band_info->vht_caps));
     }
 
     return assoc_ctx;

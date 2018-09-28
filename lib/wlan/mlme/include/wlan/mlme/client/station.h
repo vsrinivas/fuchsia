@@ -23,6 +23,7 @@
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
+#include <optional>
 #include <vector>
 
 namespace wlan {
@@ -56,25 +57,18 @@ struct AssocContext {
 
     // Rx MCS Bitmask in Supported MCS Set field represents the set of MCS
     // the peer can receive at from this device, considering this device's Tx capability.
-    bool has_ht_cap;
-    HtCapabilities ht_cap;
-
-    bool has_ht_op;
-    HtOperation ht_op;
-
-    bool has_vht_cap;
-    VhtCapabilities vht_cap;
-
-    bool has_vht_op;
-    VhtOperation vht_op;
+    std::optional<HtCapabilities> ht_cap = std::nullopt;
+    std::optional<HtOperation> ht_op = std::nullopt;
+    std::optional<VhtCapabilities> vht_cap = std::nullopt;
+    std::optional<VhtOperation> vht_op = std::nullopt;
 
     bool is_ht = false;
     bool is_cbw40_rx = false;
     bool is_cbw40_tx = false;
+    bool is_vht = false;
 
     void set_aid(uint16_t aid) { aid = aid & kAidMask; }
 
-    bool is_vht = false;
 };
 
 class Station {
