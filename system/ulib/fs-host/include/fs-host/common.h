@@ -32,6 +32,7 @@ enum class Option {
     kReadonly,
     kOffset,
     kLength,
+    kCompress,
     kHelp,
 };
 
@@ -58,7 +59,8 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(FsCreator);
 
     FsCreator(uint64_t data_blocks) : data_blocks_(data_blocks),command_(Command::kNone),
-                                      offset_(0), length_(0), read_only_(false), depfile_lock_() {}
+                                      offset_(0), length_(0), read_only_(false), compress_(false),
+                                      depfile_lock_() {}
     virtual ~FsCreator() {}
 
     // Process the command line arguments and run the specified command.
@@ -114,6 +116,7 @@ protected:
     Command GetCommand() const { return command_; }
     off_t GetOffset() const { return offset_; }
     off_t GetLength() const { return length_; }
+    bool ShouldCompress() const { return compress_; }
 
     fbl::unique_fd fd_;
 
@@ -138,6 +141,7 @@ private:
     off_t offset_;
     off_t length_;
     bool read_only_;
+    bool compress_;
     std::mutex depfile_lock_;
     fbl::unique_fd depfile_;
 };

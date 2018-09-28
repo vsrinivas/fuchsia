@@ -15,16 +15,14 @@
 namespace {
 
 // Add the blob described by |info| on host to the |blobfs| blobfs store.
-zx_status_t AddBlob(blobfs::Blobfs* blobfs, MerkleInfo& info) {
+zx_status_t AddBlob(blobfs::Blobfs* blobfs, const blobfs::MerkleInfo& info) {
     const char* path = info.path.c_str();
     fbl::unique_fd data_fd(open(path, O_RDONLY, 0644));
     if (!data_fd) {
         fprintf(stderr, "error: cannot open '%s'\n", path);
         return ZX_ERR_IO;
     }
-    zx_status_t status = blobfs::blobfs_add_blob_with_merkle(blobfs, data_fd.get(), info.length,
-                                                             fbl::move(info.digest),
-                                                             fbl::move(info.merkle));
+    zx_status_t status = blobfs::blobfs_add_blob_with_merkle(blobfs, data_fd.get(), info);
     if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
         fprintf(stderr, "blobfs: Failed to add blob '%s': %d\n", path, status);
         return status;
@@ -61,6 +59,7 @@ bool BlobfsCreator::IsOptionValid(Option option) {
     switch (option) {
     case Option::kDepfile:
     case Option::kReadonly:
+    case Option::kCompress:
     case Option::kHelp:
         return true;
     default:
@@ -145,25 +144,17 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
                     return;
                 }
 
-                MerkleInfo info;
+                blobfs::MerkleInfo info;
                 fbl::unique_fd data_fd(open(path, O_RDONLY, 0644));
-                if ((res = blobfs::blobfs_create_merkle(data_fd.get(), &info.digest,
-                                                        &info.merkle)) != ZX_OK) {
-                    mtx.lock();
+
+                if ((res = blobfs::blobfs_preprocess(data_fd.get(), ShouldCompress(), &info))
+                    != ZX_OK) {
                     status = res;
                     mtx.unlock();
                     return;
                 }
 
-                struct stat s;
-                if (fstat(data_fd.get(), &s) < 0) {
-                    mtx.lock();
-                    status = ZX_ERR_BAD_STATE;
-                    mtx.unlock();
-                    return;
-                }
                 info.path = path;
-                info.length = s.st_size;
 
                 mtx.lock();
                 merkle_list_.push_back(fbl::move(info));
@@ -183,7 +174,7 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
     // Remove all duplicate blobs by first sorting the merkle trees by
     // digest, and then by reshuffling the vector to exclude duplicates.
     std::sort(merkle_list_.begin(), merkle_list_.end(), DigestCompare());
-    auto compare = [](const MerkleInfo& lhs, const MerkleInfo& rhs) {
+    auto compare = [](const blobfs::MerkleInfo& lhs, const blobfs::MerkleInfo& rhs) {
         return lhs.digest == rhs.digest;
     };
     auto it = std::unique(merkle_list_.begin(), merkle_list_.end(), compare);

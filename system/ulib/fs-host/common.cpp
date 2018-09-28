@@ -24,7 +24,7 @@ struct {
     const char* default_value;
     const char* help;
 } OPTS[] = {
-    {"depfile", Option::kDepfile, "",          nullptr,
+    {"depfile",  Option::kDepfile,  "",        nullptr,
         "Produce a depfile"},
     {"readonly", Option::kReadonly, "",        nullptr,
         "Mount filesystem read-only"},
@@ -32,6 +32,8 @@ struct {
         "Byte offset at which minfs partition starts"},
     {"length",   Option::kLength,   "[bytes]", "Remaining Length",
         "Length in bytes of minfs partition"},
+    {"compress", Option::kCompress, "",        nullptr,
+        "Compress files before adding them to blobfs"},
     {"help",     Option::kHelp,     "",        nullptr,
         "Display this message"},
 };
@@ -228,8 +230,7 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
         opts[index] = {nullptr, 0, nullptr, 0};
 
         int opt_index;
-
-        int c = getopt_long(argc, argv, "+dro:l:h", opts, &opt_index);
+        int c = getopt_long(argc, argv, "+dro:l:ch", opts, &opt_index);
         if (c < 0) {
             break;
         }
@@ -246,6 +247,9 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
             break;
         case 'l':
             length_ = atoll(optarg);
+            break;
+        case 'c':
+            compress_ = true;
             break;
         case 'h':
         default:

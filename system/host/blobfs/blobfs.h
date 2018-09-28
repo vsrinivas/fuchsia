@@ -13,17 +13,6 @@
 #include <fs-host/common.h>
 #include <lib/fit/defer.h>
 
-// Merkle Tree information associated with a file.
-struct MerkleInfo {
-    // Merkle-Tree related information.
-    digest::Digest digest;
-    fbl::Array<uint8_t> merkle;
-
-    // The path which generated this file, and a cached file length.
-    fbl::String path;
-    uint64_t length;
-};
-
 class BlobfsCreator : public FsCreator {
 public:
     BlobfsCreator()
@@ -53,7 +42,7 @@ private:
 
     // A comparison function used to quickly compare MerkleInfo.
     struct DigestCompare {
-        inline bool operator()(const MerkleInfo& lhs, const MerkleInfo& rhs) const {
+        inline bool operator()(const blobfs::MerkleInfo& lhs, const blobfs::MerkleInfo& rhs) const {
             const uint8_t* lhs_bytes = lhs.digest.AcquireBytes();
             const uint8_t* rhs_bytes = rhs.digest.AcquireBytes();
             auto auto_release = fit::defer([&]() {
@@ -74,5 +63,5 @@ private:
     fbl::Vector<fbl::String> blob_list_;
 
     // A list of Merkle Information for blobs in |blob_list_|.
-    std::vector<MerkleInfo> merkle_list_;
+    std::vector<blobfs::MerkleInfo> merkle_list_;
 };

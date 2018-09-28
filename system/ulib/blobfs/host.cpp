@@ -8,8 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
 #include <unistd.h>
 
 #include <digest/digest.h>
@@ -37,52 +35,6 @@ using digest::MerkleTree;
 
 namespace blobfs {
 namespace {
-
-// A mapping of a file. Does not own the file.
-class FileMapping {
-public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(FileMapping);
-
-    FileMapping() : data_(nullptr), length_(0) {}
-
-    ~FileMapping() {
-        reset();
-    }
-
-    void reset() {
-        if (data_ != nullptr) {
-            munmap(data_, length_);
-            data_ = nullptr;
-        }
-    }
-
-    zx_status_t Map(int fd) {
-        reset();
-
-        struct stat s;
-        if (fstat(fd, &s) < 0) {
-            return ZX_ERR_BAD_STATE;
-        }
-        data_ = mmap(nullptr, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-        if (data_ == nullptr) {
-            return ZX_ERR_BAD_STATE;
-        }
-        length_ = s.st_size;
-        return ZX_OK;
-    }
-
-    void* data() const {
-        return data_;
-    }
-
-    uint64_t length() const {
-        return length_;
-    }
-
-private:
-    void* data_;
-    uint64_t length_;
-};
 
 zx_status_t readblk_offset(int fd, uint64_t bno, off_t offset, void* data) {
     off_t off = offset + bno * kBlobfsBlockSize;
@@ -114,39 +66,66 @@ zx_status_t writeblk_offset(int fd, uint64_t bno, off_t offset, const void* data
 //
 // Given a mapped blob at |blob_data| of length |length|, compute the
 // Merkle digest and the output merkle tree as a uint8_t array.
-zx_status_t buffer_create_merkle(void* blob_data, size_t length,
-                                 digest::Digest* out_digest, fbl::Array<uint8_t>* out_merkle) {
+zx_status_t buffer_create_merkle(const FileMapping& mapping, MerkleInfo* out_info) {
     zx_status_t status;
-    size_t merkle_size = MerkleTree::GetTreeLength(length);
+    size_t merkle_size = MerkleTree::GetTreeLength(mapping.length());
     auto merkle_tree = fbl::unique_ptr<uint8_t[]>(new uint8_t[merkle_size]);
-    if ((status = MerkleTree::Create(blob_data, length, merkle_tree.get(),
-                                     merkle_size, out_digest)) != ZX_OK) {
+    if ((status = MerkleTree::Create(mapping.data(), mapping.length(), merkle_tree.get(),
+                                     merkle_size, &out_info->digest)) != ZX_OK) {
         return status;
     }
-    out_merkle->reset(merkle_tree.release(), merkle_size);
+    out_info->merkle.reset(merkle_tree.release(), merkle_size);
+    out_info->length = mapping.length();
+    return ZX_OK;
+}
+
+zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
+    Compressor compressor;
+    size_t max = compressor.BufferMax(mapping.length());
+    out_info->compressed_data.reset(new uint8_t[max]);
+    out_info->compressed = false;
+
+    if (mapping.length() < kCompressionMinBytesSaved) {
+        return ZX_OK;
+    }
+
+    zx_status_t status;
+    if ((status = compressor.Initialize(out_info->compressed_data.get(), max)) != ZX_OK) {
+        fprintf(stderr, "Failed to initialize blobfs compressor: %d\n", status);
+        return status;
+    }
+
+    if ((status = compressor.Update(mapping.data(), mapping.length())) != ZX_OK) {
+        fprintf(stderr, "Failed to update blobfs compressor: %d\n", status);
+        return status;
+    }
+
+    if ((status = compressor.End()) != ZX_OK) {
+        fprintf(stderr, "Failed to complete blobfs compressor: %d\n", status);
+        return status;
+    }
+
+    if (mapping.length() > compressor.Size() + kCompressionMinBytesSaved) {
+        out_info->length = compressor.Size();
+        out_info->compressed = true;
+    }
 
     return ZX_OK;
 }
 
 // Given a buffer (and pre-computed merkle tree), add the buffer as a
 // blob in Blobfs.
-zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, void* blob_data, uint64_t length,
-                                               digest::Digest digest, fbl::Array<uint8_t> merkle) {
-    // Attempt to optionally compress the blob.
-    size_t data_blocks = fbl::round_up(length, kBlobfsBlockSize) / kBlobfsBlockSize;
-    Compressor compressor;
-    size_t max = compressor.BufferMax(length);
-    auto compressed_data = fbl::unique_ptr<uint8_t[]>(new uint8_t[max]);
-    bool compressed = false;
-    if ((length >= kCompressionMinBytesSaved) &&
-        (compressor.Initialize(compressed_data.get(), max) == ZX_OK) &&
-        (compressor.Update(blob_data, length) == ZX_OK) &&
-        (compressor.End() == ZX_OK) &&
-        (length - kCompressionMinBytesSaved >= compressor.Size())) {
-        compressed = true;
-        data_blocks = fbl::round_up(compressor.Size(), kBlobfsBlockSize) / kBlobfsBlockSize;
+zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, const FileMapping& mapping,
+                                               const MerkleInfo& info) {
+    const void* data;
+    size_t data_blocks = fbl::round_up(info.length, kBlobfsBlockSize) / kBlobfsBlockSize;
+
+    if (info.compressed) {
+        data = info.compressed_data.get();
+    } else {
+        ZX_ASSERT(mapping.length() == info.length);
+        data = mapping.data();
     }
-    const void* data = compressed ? compressed_data.get() : blob_data;
 
     // After we've pre-calculated all necessary information, actually add the
     // blob to the filesystem itself.
@@ -154,7 +133,7 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, void* blob_data, uint
     std::lock_guard<std::mutex> lock(add_blob_mutex_);
     fbl::unique_ptr<InodeBlock> inode_block;
     zx_status_t status;
-    if ((status = bs->NewBlob(digest, &inode_block)) < 0) {
+    if ((status = bs->NewBlob(info.digest, &inode_block)) < 0) {
         return status;
     }
     if (inode_block == nullptr) {
@@ -163,15 +142,15 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, void* blob_data, uint
     }
 
     Inode* inode = inode_block->GetInode();
-    inode->blob_size = length;
+    inode->blob_size = mapping.length();
     inode->num_blocks = MerkleTreeBlocks(*inode) + data_blocks;
-    inode->flags |= (compressed ? kBlobFlagLZ4Compressed : 0);
+    inode->flags |= (info.compressed ? kBlobFlagLZ4Compressed : 0);
 
     if ((status = bs->AllocateBlocks(inode->num_blocks,
                                      reinterpret_cast<size_t*>(&inode->start_block))) != ZX_OK) {
         fprintf(stderr, "error: No blocks available\n");
         return status;
-    } else if ((status = bs->WriteData(inode, merkle.get(), data)) != ZX_OK) {
+    } else if ((status = bs->WriteData(inode, info.merkle.get(), data)) != ZX_OK) {
         return status;
     } else if ((status = bs->WriteBitmap(inode->num_blocks, inode->start_block)) != ZX_OK) {
         return status;
@@ -271,14 +250,22 @@ zx_status_t blobfs_create_sparse(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd
     return ZX_OK;
 }
 
-zx_status_t blobfs_create_merkle(int data_fd, digest::Digest* out_digest,
-                                 fbl::Array<uint8_t>* out_merkle) {
+zx_status_t blobfs_preprocess(int data_fd, bool compress, MerkleInfo* out_info) {
     FileMapping mapping;
     zx_status_t status = mapping.Map(data_fd);
     if (status != ZX_OK) {
         return status;
     }
-    return buffer_create_merkle(mapping.data(), mapping.length(), out_digest, out_merkle);
+
+    if ((status = buffer_create_merkle(mapping, out_info)) != ZX_OK) {
+        return status;
+    }
+
+    if (compress) {
+        status = buffer_compress(mapping, out_info);
+    }
+
+    return status;
 }
 
 zx_status_t blobfs_add_blob(Blobfs* bs, int data_fd) {
@@ -289,29 +276,23 @@ zx_status_t blobfs_add_blob(Blobfs* bs, int data_fd) {
     }
 
     // Calculate the actual Merkle tree.
-    digest::Digest digest;
-    fbl::Array<uint8_t> merkle_tree;
-    status = buffer_create_merkle(mapping.data(), mapping.length(), &digest, &merkle_tree);
+    MerkleInfo info;
+    status = buffer_create_merkle(mapping, &info);
     if (status != ZX_OK) {
         return status;
     }
 
-    return blobfs_add_mapped_blob_with_merkle(bs, mapping.data(),
-                                              mapping.length(),
-                                              fbl::move(digest),
-                                              fbl::move(merkle_tree));
+    return blobfs_add_mapped_blob_with_merkle(bs, mapping, info);
 }
 
-zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, int data_fd, uint64_t length,
-                                        digest::Digest digest, fbl::Array<uint8_t> merkle) {
+zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, int data_fd, const MerkleInfo& info) {
     FileMapping mapping;
     zx_status_t status = mapping.Map(data_fd);
     if (status != ZX_OK) {
         return status;
     }
 
-    return blobfs_add_mapped_blob_with_merkle(bs, mapping.data(), mapping.length(),
-                                              fbl::move(digest), fbl::move(merkle));
+    return blobfs_add_mapped_blob_with_merkle(bs, mapping, info);
 }
 
 zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,

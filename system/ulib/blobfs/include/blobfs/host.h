@@ -10,6 +10,9 @@
 #error Host-only Header
 #endif
 
+#include <sys/mman.h>
+#include <sys/stat.h>
+
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
 #include <digest/digest.h>
@@ -17,6 +20,7 @@
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_free_ptr.h>
 #include <fbl/vector.h>
@@ -32,6 +36,67 @@
 #include <blobfs/format.h>
 
 namespace blobfs {
+
+// Merkle Tree information associated with a file.
+struct MerkleInfo {
+    // Merkle-Tree related information.
+    digest::Digest digest;
+    fbl::Array<uint8_t> merkle;
+
+    // The path which generated this file, and a cached file length.
+    fbl::String path;
+    uint64_t length = 0;
+
+    // Compressed blob data, if the blob is compressible.
+    fbl::unique_ptr<uint8_t[]> compressed_data;
+    bool compressed = false;
+};
+
+// A mapping of a file. Does not own the file.
+class FileMapping {
+public:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(FileMapping);
+
+    FileMapping() : data_(nullptr), length_(0) {}
+
+    ~FileMapping() {
+        reset();
+    }
+
+    void reset() {
+        if (data_ != nullptr) {
+            munmap(data_, length_);
+            data_ = nullptr;
+        }
+    }
+
+    zx_status_t Map(int fd) {
+        reset();
+
+        struct stat s;
+        if (fstat(fd, &s) < 0) {
+            return ZX_ERR_BAD_STATE;
+        }
+        data_ = mmap(nullptr, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+        if (data_ == nullptr) {
+            return ZX_ERR_BAD_STATE;
+        }
+        length_ = s.st_size;
+        return ZX_OK;
+    }
+
+    void* data() const {
+        return data_;
+    }
+
+    uint64_t length() const {
+        return length_;
+    }
+
+private:
+    void* data_;
+    uint64_t length_;
+};
 
 typedef union {
     uint8_t block[kBlobfsBlockSize];
@@ -136,17 +201,17 @@ private:
 
 zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd);
 
-// Create a merkle tree and digest from the supplied file.
-zx_status_t blobfs_create_merkle(int data_fd, digest::Digest* out_digest,
-                                 fbl::Array<uint8_t>* out_merkle);
+// Pre-process a blob by creating a merkle tree and digest from the supplied file.
+// Also return the length of the file. If |compress| is true and we decide to compress the file,
+// the compressed length and data are returned.
+zx_status_t blobfs_preprocess(int data_fd, bool compress, MerkleInfo* out_info);
 
 // blobfs_add_blob may be called by multiple threads to gain concurrent
 // merkle tree generation. No other methods are thread safe.
 zx_status_t blobfs_add_blob(Blobfs* bs, int data_fd);
 
 // Identical to blobfs_add_blob, but uses a precomputed Merkle Tree and digest.
-zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, int data_fd, uint64_t length,
-                                        digest::Digest digest, fbl::Array<uint8_t> merkle);
+zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, int data_fd, const MerkleInfo& info);
 
 zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
                         const fbl::Vector<size_t>& extent_lengths);
