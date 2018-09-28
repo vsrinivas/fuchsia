@@ -136,7 +136,7 @@ template("sdk_atom") {
     meta_copy_target_name = "${target_name}_meta_copy"
     assert(defined(meta_content.source), "Meta scope needs a source or value")
     # Copy the file to a canonical location for access by other rules.
-    # TODO(DX-340): instead, make sure that all atoms generate their metadata
+    # TODO(DX-497): instead, make sure that all atoms generate their metadata
     # file in the right location.
     copy(meta_copy_target_name) {
       sources = [
