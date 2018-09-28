@@ -103,25 +103,24 @@ package("debugserver_tests") {
     {
       name = "debugserver-unittests"
     },
+  ]
+
+  # These have been very useful with interactive debugging/testing.
+  binaries = [
     {
       name = "exit-test"
-      dest = "debugserver/exit-test"
     },
     {
       name = "crash-test"
-      dest = "debugserver/crash-test"
     },
     {
       name = "loop-test"
-      dest = "debugserver/loop-test"
     },
     {
       name = "syscall-test"
-      dest = "debugserver/syscall-test"
     },
     {
       name = "thread-test"
-      dest = "debugserver/thread-test"
     },
   ]
 }
