@@ -6,8 +6,10 @@
 
 #include <zircon/assert.h>
 
-void PtsManager::InsertPts(uint64_t offset, uint64_t pts) {
+void PtsManager::InsertPts(uint64_t offset, bool has_pts, uint64_t pts) {
   std::lock_guard<std::mutex> lock(lock_);
+
+  ZX_DEBUG_ASSERT(has_pts || !pts);
 
   // caller should not insert duplicates
   ZX_DEBUG_ASSERT(offset_to_result_.find(offset) == offset_to_result_.end());
@@ -16,7 +18,7 @@ void PtsManager::InsertPts(uint64_t offset, uint64_t pts) {
                   offset > (*offset_to_result_.rbegin()).first);
 
   offset_to_result_.emplace(
-      std::make_pair(offset, LookupResult(false, true, pts)));
+      std::make_pair(offset, LookupResult(false, has_pts, pts)));
 
   // Erase the oldest PTS, assuming they probably won't be used anymore.
   while (offset_to_result_.size() > 100) {

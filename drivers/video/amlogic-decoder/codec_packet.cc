@@ -64,7 +64,7 @@ void CodecPacket::ClearTimestampIsh() {
 bool CodecPacket::has_timestamp_ish() const { return has_timestamp_ish_; }
 
 uint64_t CodecPacket::timestamp_ish() const {
-  ZX_DEBUG_ASSERT(has_timestamp_ish_);
+  ZX_DEBUG_ASSERT(has_timestamp_ish_ || !timestamp_ish_);
   return timestamp_ish_;
 }
 

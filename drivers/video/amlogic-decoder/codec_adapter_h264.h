@@ -53,6 +53,15 @@ class CodecAdapterH264 : public CodecAdapter {
   void QueueInputItem(CodecInputItem input_item);
   CodecInputItem DequeueInputItem();
   void ProcessInput();
+  bool ParseAndDeliverCodecOobBytes();
+  // If parsing something whose format depends on is_avcc_, use this method.
+  bool ParseVideo(const uint8_t* data, uint32_t length);
+  // If parsing something that's known to be in AVCC format, such as a bunch of
+  // 0x00 without start codes or emulation prevention bytes, use this method.
+  bool ParseVideoAvcc(const uint8_t* data, uint32_t length);
+  // If parsing something that's known to be in AnnexB format, such as the
+  // end-of-stream marker data, use this method.
+  bool ParseVideoAnnexB(const uint8_t* data, uint32_t length);
   zx_status_t InitializeFramesHandler(::zx::bti bti, uint32_t frame_count,
                                       uint32_t width, uint32_t height,
                                       uint32_t stride, uint32_t display_width,
@@ -64,6 +73,7 @@ class CodecAdapterH264 : public CodecAdapter {
   AmlogicVideo* video_ = nullptr;
 
   fuchsia::mediacodec::CodecFormatDetails initial_input_format_details_;
+  fuchsia::mediacodec::CodecFormatDetails latest_input_format_details_;
 
   // Currently, AmlogicVideo::ParseVideo() can indirectly block on availability
   // of output buffers to make space in the ring buffer the parser is outputting
@@ -99,6 +109,24 @@ class CodecAdapterH264 : public CodecAdapter {
   // frames.  This counts all bytes delivered to the amlogic firmware, including
   // start code bytes.
   uint64_t parsed_video_size_ = 0;
+  // If true, the core codec will need the codec_oob_bytes info, if any.  The
+  // core codec in this case wants the info in annex B form in-band, not
+  // AVCC/avcC form out-of-band.
+  bool is_input_format_details_pending_ = false;
+
+  // For any new stream, remains false until proven otherwise.  If this is true
+  // we have to add start code emulation prevention bytes, and replace AVCC
+  // nal_length fields (themselves usually 4 bytes long but not always) with
+  // start codes (out-of-place conversion).
+  bool is_avcc_ = false;
+  // This is the length in bytes of the pseudo_nal_length field, which in turn
+  // has the length of a pseudo_nal in bytes.  Feel free to suggest a better
+  // name for this field, but I want to strongly emphasize that it's the length
+  // of a length field, not itself directly the length...
+  //
+  // Typically 4 if is_avcc_, but not always.
+  uint32_t pseudo_nal_length_field_bytes_ = 0;
+
   bool is_input_end_of_stream_queued_ = false;
 
   bool is_stream_failed_ = false;

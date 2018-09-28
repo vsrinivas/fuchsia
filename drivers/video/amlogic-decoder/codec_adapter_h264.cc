@@ -125,6 +125,7 @@ void CodecAdapterH264::CoreCodecInit(
   }
 
   initial_input_format_details_ = fidl::Clone(initial_input_format_details);
+  latest_input_format_details_ = fidl::Clone(initial_input_format_details);
 
   // TODO(dustingreen): We do most of the setup in CoreCodecStartStream()
   // currently, but we should do more here and less there.
@@ -139,6 +140,9 @@ void CodecAdapterH264::CoreCodecStartStream() {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
     parsed_video_size_ = 0;
+    is_input_format_details_pending_ = true;
+    // At least until proven otherwise.
+    is_avcc_ = false;
     is_input_end_of_stream_queued_ = false;
     is_stream_failed_ = false;
     auto core = std::make_unique<Vdec1>(video_);
@@ -464,6 +468,8 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   video_uncompressed.tertiary_start_offset = stride_ * height_ + 1;
   video_uncompressed.primary_pixel_stride = 1;
   video_uncompressed.secondary_pixel_stride = 2;
+  video_uncompressed.primary_display_width_pixels = display_width_;
+  video_uncompressed.primary_display_height_pixels = display_height_;
 
   // TODO(dustingreen): Switching to FIDL table should make this not be
   // required.
@@ -574,32 +580,35 @@ void CodecAdapterH264::ProcessInput() {
       // TODO(dustingreen): Be more strict about what the input format actually
       // is, and less strict about it matching the initial format.
       ZX_ASSERT(item.format_details() == initial_input_format_details_);
+
+      latest_input_format_details_ = fidl::Clone(item.format_details());
+
+      // Even if the new item.format_details() are the same as
+      // initial_input_format_details_, this CodecAdapter doesn't notice any
+      // in-band SPS/PPS info, so the new codec_oob_bytes still need to be
+      // (converted and) re-delivered to the core codec in case any in-band
+      // SPS/PPS changes have been seen by the core codec since the previous
+      // time.
+      //
+      // Or maybe we have no codec_oob_bytes in which case this is irrelevant
+      // but harmless.
+      //
+      // Or maybe the codec_oob_bytes changed.  Either way, the core codec will
+      // want that info, but in-band.  We delay sending the info to the core
+      // codec until we see the first input data, to more consistently handle
+      // the codec_oob_bytes that we get initially during Codec creation.
+      is_input_format_details_pending_ = true;
       continue;
     }
 
     if (item.is_end_of_stream()) {
       video_->pts_manager()->SetEndOfStreamOffset(parsed_video_size_);
-      if (ZX_OK !=
-          video_->ParseVideo(reinterpret_cast<void*>(&new_stream_h264[0]),
-                             new_stream_h264_len)) {
-        OnCoreCodecFailStream();
-        return;
-      }
-      if (ZX_OK != video_->WaitForParsingCompleted(ZX_SEC(10))) {
-        video_->CancelParsing();
-        OnCoreCodecFailStream();
+      if (!ParseVideoAnnexB(&new_stream_h264[0], new_stream_h264_len)) {
         return;
       }
       auto bytes = std::make_unique<uint8_t[]>(kFlushThroughBytes);
       memset(bytes.get(), 0, kFlushThroughBytes);
-      if (ZX_OK != video_->ParseVideo(reinterpret_cast<void*>(bytes.get()),
-                                      kFlushThroughBytes)) {
-        OnCoreCodecFailStream();
-        return;
-      }
-      if (ZX_OK != video_->WaitForParsingCompleted(ZX_SEC(10))) {
-        video_->CancelParsing();
-        OnCoreCodecFailStream();
+      if (!ParseVideoAnnexB(bytes.get(), kFlushThroughBytes)) {
         return;
       }
       continue;
@@ -607,15 +616,20 @@ void CodecAdapterH264::ProcessInput() {
 
     ZX_DEBUG_ASSERT(item.is_packet());
 
+    if (is_input_format_details_pending_) {
+      is_input_format_details_pending_ = false;
+      if (!ParseAndDeliverCodecOobBytes()) {
+        return;
+      }
+    }
+
     uint8_t* data =
         item.packet()->buffer().buffer_base() + item.packet()->start_offset();
     uint32_t len = item.packet()->valid_length_bytes();
 
-    if (item.packet()->has_timestamp_ish()) {
-      video_->pts_manager()->InsertPts(parsed_video_size_,
-                                       item.packet()->timestamp_ish());
-    }
-    parsed_video_size_ += len;
+    video_->pts_manager()->InsertPts(parsed_video_size_,
+                                     item.packet()->has_timestamp_ish(),
+                                     item.packet()->timestamp_ish());
 
     // This call is the main reason the current thread exists, as this call can
     // wait synchronously until there are empty output frames available to
@@ -627,13 +641,7 @@ void CodecAdapterH264::ProcessInput() {
     // TODO(dustingreen): The current wait duration within ParseVideo() assumes
     // that free output frames will become free on an ongoing basis, which isn't
     // really what'll happen when video output is paused.
-    if (ZX_OK != video_->ParseVideo(data, len)) {
-      OnCoreCodecFailStream();
-      return;
-    }
-    if (ZX_OK != video_->WaitForParsingCompleted(ZX_SEC(10))) {
-      video_->CancelParsing();
-      OnCoreCodecFailStream();
+    if (!ParseVideo(data, len)) {
       return;
     }
 
@@ -644,6 +652,243 @@ void CodecAdapterH264::ProcessInput() {
     //
     // ~item
   }
+}
+
+bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
+  // Our latest codec_oob_bytes may contain SPS/PPS info.  If we have any
+  // such info, the core codec needs it (possibly converted first).
+
+  // We check oob.empty() below, which covers when !codec_oob_bytes as well.
+  const std::vector<uint8_t>& oob =
+      latest_input_format_details_.codec_oob_bytes.get();
+  ZX_DEBUG_ASSERT(oob.empty() || latest_input_format_details_.codec_oob_bytes);
+
+  // If there's no OOB info, then there's nothing to do, as all such info will
+  // be in-band in normal packet-based AnnexB NALs (including start codes and
+  // start code emulation prevention bytes).
+  if (oob.empty()) {
+    // success
+    return true;
+  }
+
+  // We need to deliver Annex B style SPS/PPS to this core codec, regardless of
+  // what format the codec_oob_bytes is in.
+
+  // The codec_oob_bytes can be in two different forms, which can be detected by
+  // the value of the first byte:
+  //
+  // 0 - Annex B form already.  The 0 is the first byte of a start code.
+  // 1 - AVCC form, which we'll convert to Annex B form.  AVCC version 1.  There
+  //   is no AVCC version 0.
+  // anything else - fail.
+  //
+  // In addition, we need to know if AVCC or not since we need to know whether
+  // to add start code emulation prevention bytes or not.  And if it's AVCC,
+  // how many bytes long the pseudo_nal_length field is - that field is before
+  // each input NAL.
+
+  // We already checked empty() above.
+  ZX_DEBUG_ASSERT(oob.size() >= 1);
+  switch (oob[0]) {
+    case 0:
+      is_avcc_ = false;
+      // This ParseVideo() consumes AnnexB oob data directly.  We don't
+      // presently check if the oob data has only SPS/PPS.  This data is just
+      // logically pre-pended to the stream.
+      if (!ParseVideo(oob.data(), oob.size())) {
+        return false;
+      }
+      return true;
+    case 1: {
+      // This applies to both the oob data and the input packet payload data.
+      // Both are AVCC, or both are AnnexB.
+      is_avcc_ = true;
+
+      /*
+        AVCC OOB data layout (bits):
+        [0] (8) - version 1
+        [1] (8) - h264 profile #
+        [2] (8) - compatible profile bits
+        [3] (8) - h264 level (eg. 31 == "3.1")
+        [4] (6) - reserved, can be set to all 1s
+            (2) - pseudo_nal_length_field_bytes_ - 1
+        [5] (3) - reserved, can be set to all 1s
+            (5) - sps_count
+              (16) - sps_bytes
+              (8*sps_bytes) - SPS nal_unit_type (that byte) + SPS data as RBSP.
+            (8) - pps_count
+              (16) - pps_bytes
+              (8*pps_bytes) - PPS nal_unit_type (that byte) + PPS data as RBSP.
+      */
+
+      // We accept 0 SPS and/or 0 PPS, but typically there's one of each.  At
+      // minimum the oob buffer needs to be large enough to contain both the
+      // sps_count and pps_count fields, which is a min of 7 bytes.
+      if (oob.size() < 7) {
+        OnCoreCodecFailStream();
+        return false;
+      }
+      uint32_t stashed_pseudo_nal_length_bytes = (oob[4] & 0x3) + 1;
+      // Temporarily, the pseudo_nal_length_field_bytes_ is 2 so we can
+      // ParseVideo() directly out of "oob".
+      pseudo_nal_length_field_bytes_ = 2;
+      uint32_t sps_count = oob[5] & 0x1F;
+      uint32_t offset = 6;
+      for (uint32_t i = 0; i < sps_count; ++i) {
+        if (offset + 2 > oob.size()) {
+          OnCoreCodecFailStream();
+          return false;
+        }
+        uint32_t sps_length = oob[offset] * 256 + oob[offset + 1];
+        if (offset + 2 + sps_length > oob.size()) {
+          OnCoreCodecFailStream();
+          return false;
+        }
+        if (!ParseVideo(&oob.data()[offset], 2 + sps_length)) {
+          return false;
+        }
+        offset += 2 + sps_length;
+      }
+      if (offset + 1 > oob.size()) {
+        OnCoreCodecFailStream();
+        return false;
+      }
+      uint32_t pps_count = oob[offset++];
+      for (uint32_t i = 0; i < pps_count; ++i) {
+        if (offset + 2 > oob.size()) {
+          OnCoreCodecFailStream();
+          return false;
+        }
+        uint32_t pps_length = oob[offset] * 256 + oob[offset + 1];
+        if (offset + 2 + pps_length > oob.size()) {
+          OnCoreCodecFailStream();
+          return false;
+        }
+        if (!ParseVideo(&oob.data()[offset], 2 + pps_length)) {
+          return false;
+        }
+        offset += 2 + pps_length;
+      }
+      // All pseudo-NALs in input packet payloads will use the
+      // parsed count of bytes of the length field.
+      pseudo_nal_length_field_bytes_ = stashed_pseudo_nal_length_bytes;
+      return true;
+    }
+    default:
+      OnCoreCodecFailStream();
+      return false;
+  }
+}
+
+bool CodecAdapterH264::ParseVideo(const uint8_t* data, uint32_t length) {
+  return is_avcc_ ? ParseVideoAvcc(data, length)
+                  : ParseVideoAnnexB(data, length);
+}
+
+bool CodecAdapterH264::ParseVideoAvcc(const uint8_t* data, uint32_t length) {
+  // We don't necessarily know that is_avcc_ is true on entry to this method.
+  // We use this method to send the decoder a bunch of 0x00 sometimes, which
+  // will call this method regardless of is_avcc_ or not.
+
+  // So far, the "avcC"/"AVCC" we've seen has emulation prevention bytes on it
+  // already.  So we don't add those here.  But if we did need to add them, we'd
+  // add them here.
+
+  // For now we assume the heap is pretty fast and doesn't mind the size thrash,
+  // but maybe we'll want to keep a buffer around (we'll optimize only if/when
+  // we determine this is actually a problem).  We only actually use this buffer
+  // if is_avcc_ (which is not uncommon).
+
+  // We do parse more than one pseudo_nal per input packet.
+  //
+  // No splitting NALs across input packets, for now.
+  //
+  // TODO(dustingreen): Allow splitting NALs across input packets (not a small
+  // change).  Probably also move into a source_set for sharing with other
+  // CodecAdapter(s).
+
+  // Count the input pseudo_nal(s)
+  uint32_t pseudo_nal_count = 0;
+  uint32_t i = 0;
+  while (i < length) {
+    if (i + pseudo_nal_length_field_bytes_ > length) {
+      OnCoreCodecFailStream();
+      return false;
+    }
+    // Read pseudo_nal_length field, which is a field which can be 1-4 bytes
+    // long because AVCC/avcC.
+    uint32_t pseudo_nal_length = 0;
+    for (uint32_t length_byte = 0; length_byte < pseudo_nal_length_field_bytes_;
+         ++length_byte) {
+      pseudo_nal_length = pseudo_nal_length * 256 + data[i + length_byte];
+    }
+    i += pseudo_nal_length_field_bytes_;
+    if (i + pseudo_nal_length > length) {
+      OnCoreCodecFailStream();
+      return false;
+    }
+    i += pseudo_nal_length;
+    ++pseudo_nal_count;
+  }
+
+  static constexpr uint32_t kStartCodeBytes = 4;
+  uint32_t local_length = length -
+                          pseudo_nal_count * pseudo_nal_length_field_bytes_ +
+                          pseudo_nal_count * kStartCodeBytes;
+  std::unique_ptr<uint8_t[]> local_buffer =
+      std::make_unique<uint8_t[]>(local_length);
+  uint8_t* local_data = local_buffer.get();
+
+  i = 0;
+  uint32_t o = 0;
+  while (i < length) {
+    if (i + pseudo_nal_length_field_bytes_ > length) {
+      OnCoreCodecFailStream();
+      return false;
+    }
+    uint32_t pseudo_nal_length = 0;
+    for (uint32_t length_byte = 0; length_byte < pseudo_nal_length_field_bytes_;
+         ++length_byte) {
+      pseudo_nal_length = pseudo_nal_length * 256 + data[i + length_byte];
+    }
+    i += pseudo_nal_length_field_bytes_;
+    if (i + pseudo_nal_length > length) {
+      OnCoreCodecFailStream();
+      return false;
+    }
+
+    local_data[o++] = 0;
+    local_data[o++] = 0;
+    local_data[o++] = 0;
+    local_data[o++] = 1;
+
+    memcpy(&local_data[o], &data[i], pseudo_nal_length);
+    o += pseudo_nal_length;
+    i += pseudo_nal_length;
+  }
+  ZX_DEBUG_ASSERT(o == local_length);
+  ZX_DEBUG_ASSERT(i == length);
+
+  return ParseVideoAnnexB(local_data, local_length);
+}
+
+bool CodecAdapterH264::ParseVideoAnnexB(const uint8_t* data, uint32_t length) {
+  // Parse AnnexB data, with start codes and start code emulation prevention
+  // bytes present.
+  //
+  // The data won't be modified by ParseVideo().
+  if (ZX_OK != video_->ParseVideo(
+                   static_cast<void*>(const_cast<uint8_t*>(data)), length)) {
+    OnCoreCodecFailStream();
+    return false;
+  }
+  parsed_video_size_ += length;
+  if (ZX_OK != video_->WaitForParsingCompleted(ZX_SEC(10))) {
+    video_->CancelParsing();
+    OnCoreCodecFailStream();
+    return false;
+  }
+  return true;
 }
 
 zx_status_t CodecAdapterH264::InitializeFramesHandler(

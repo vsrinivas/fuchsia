@@ -330,7 +330,7 @@ class TestVP9 {
       auto aml_data = ConvertIvfToAmlVFrames(test_ivf->ptr, test_ivf->size);
       uint32_t stream_offset = 0;
       for (auto& data : aml_data) {
-        video->pts_manager()->InsertPts(stream_offset,
+        video->pts_manager()->InsertPts(stream_offset, true,
                                         data.presentation_timestamp);
         EXPECT_EQ(ZX_OK, video->ParseVideo(data.data.data(), data.data.size()));
         EXPECT_EQ(ZX_OK, video->WaitForParsingCompleted(ZX_SEC(10)));

@@ -14,6 +14,13 @@
 #include "device_ctx.h"
 #include "macros.h"
 
+// "is_bound_checks" - In serveral lamdas that just send a message, we check
+// is_bound() first, only becaues of ZX_POL_BAD_HANDLE ZX_POL_ACTION_EXCEPTION.
+// If it weren't for that, we really wouldn't care about passing
+// ZX_HANDLE_INVALID to zx_channel_write(), since the channel error handling is
+// async (we Unbind(), sweep the in-proc send queue, and only then delete the
+// Binding).
+
 // The VLOGF() and LOGF() macros are here because we want the calls sites to
 // look like FX_VLOGF and FX_LOGF, but without hard-wiring to those.  For now,
 // printf() seems to work fine.
@@ -283,7 +290,10 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
     sent_buffer_constraints_version_ordinal_[kInputPort] =
         kInputBufferConstraintsVersionOrdinal;
     PostToSharedFidl([this] {
-      binding_.events().OnInputConstraints(fidl::Clone(*input_constraints_));
+      // See "is_bound_checks" comment up top.
+      if (binding_.is_bound()) {
+        binding_.events().OnInputConstraints(fidl::Clone(*input_constraints_));
+      }
     });
   });
 }
@@ -1780,7 +1790,10 @@ void CodecImpl::GenerateAndSendNewOutputConfig(
   // for now).
   PostToSharedFidl(
       [this, output_config = fidl::Clone(*output_config_)]() mutable {
-        binding_.events().OnOutputConfig(std::move(output_config));
+        // See "is_bound_checks" comment up top.
+        if (binding_.is_bound()) {
+          binding_.events().OnOutputConfig(std::move(output_config));
+        }
       });
 }
 
@@ -1853,7 +1866,10 @@ void CodecImpl::SendFreeInputPacketLocked(
                   thrd_current() != fidl_thread());
   // We only send using fidl_thread().
   PostToSharedFidl([this, header = std::move(header)] {
-    binding_.events().OnFreeInputPacket(std::move(header));
+    // See "is_bound_checks" comment up top.
+    if (binding_.is_bound()) {
+      binding_.events().OnFreeInputPacket(std::move(header));
+    }
   });
 }
 
@@ -2075,7 +2091,10 @@ void CodecImpl::onCoreCodecFailStream() {
     // stream to a new stream, or close the Codec channel.
     PostToSharedFidl(
         [this, stream_lifetime_ordinal = stream_lifetime_ordinal_] {
-          binding_.events().OnStreamFailed(stream_lifetime_ordinal);
+          // See "is_bound_checks" comment up top.
+          if (binding_.is_bound()) {
+            binding_.events().OnStreamFailed(stream_lifetime_ordinal);
+          }
         });
   }  // ~lock
 }
@@ -2154,6 +2173,13 @@ void CodecImpl::onCoreCodecInputPacketDone(const CodecPacket* packet) {
   // the client, so assert we're doing it right server-side.
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
+    // Unfortunately we have to insist that the core codec not call
+    // onCoreCodecInputPacketDone() arbitrarily late because we need to know
+    // when it's safe to deallocate binding_, and the core codec, etc.  So the
+    // rule is the core codec needs to ensure that all calls to stream-related
+    // callbacks have completed (to structure-touching degree; not
+    // code-unloading degree) before CoreCodecStopStream() returns.
+    ZX_DEBUG_ASSERT(is_core_codec_stream_started_);
     ZX_DEBUG_ASSERT(
         !all_packets_[kInputPort][packet->packet_index()]->is_free());
     all_packets_[kInputPort][packet->packet_index()]->SetFree(true);
@@ -2172,11 +2198,9 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet,
     ZX_DEBUG_ASSERT(packet->has_start_offset());
     ZX_DEBUG_ASSERT(packet->has_valid_length_bytes());
     // packet->has_timestamp_ish() is optional even if
-    // promise_separate_access_units_on_input is true.  When
-    // !has_timestamp_ish(), timestamp_ish() returns kTimsestampIshNotSet which
-    // is what we want, so no need to redundantly check has_timestamp_ish()
-    // here.  We do want to enforce that the client gets no set timestamp_ish
-    // values if the client didn't promise_separate_access_units_on_input.
+    // promise_separate_access_units_on_input is true.  We do want to enforce
+    // that the client gets no set timestamp_ish values if the client didn't
+    // promise_separate_access_units_on_input.
     bool has_timestamp_ish =
         decoder_params_->promise_separate_access_units_on_input &&
         packet->has_timestamp_ish();
@@ -2199,8 +2223,11 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet,
                  .known_end_access_unit = decoder_params_ ? true : false,
              },
          error_detected_before, error_detected_during] {
-          binding_.events().OnOutputPacket(std::move(p), error_detected_before,
-                                           error_detected_during);
+          // See "is_bound_checks" comment up top.
+          if (binding_.is_bound()) {
+            binding_.events().OnOutputPacket(
+                std::move(p), error_detected_before, error_detected_during);
+          }
         });
   }  // ~lock
 }
@@ -2214,8 +2241,11 @@ void CodecImpl::onCoreCodecOutputEndOfStream(bool error_detected_before) {
     PostToSharedFidl(
         [this, stream_lifetime_ordinal = stream_lifetime_ordinal_,
          error_detected_before] {
-          binding_.events().OnOutputEndOfStream(stream_lifetime_ordinal,
-                                                error_detected_before);
+          // See "is_bound_checks" comment up top.
+          if (binding_.is_bound()) {
+            binding_.events().OnOutputEndOfStream(stream_lifetime_ordinal,
+                                                  error_detected_before);
+          }
         },
         true);
   }  // ~lock

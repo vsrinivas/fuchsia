@@ -455,6 +455,8 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConfig(
   video_uncompressed.tertiary_start_offset = stride_ * height_ + 1;
   video_uncompressed.primary_pixel_stride = 1;
   video_uncompressed.secondary_pixel_stride = 2;
+  video_uncompressed.primary_display_width_pixels = display_width_;
+  video_uncompressed.primary_display_height_pixels = display_height_;
 
   // TODO(dustingreen): Switching to FIDL table should make this not be
   // required.
@@ -619,10 +621,9 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
         item.packet()->buffer().buffer_base() + item.packet()->start_offset();
     uint32_t len = item.packet()->valid_length_bytes();
 
-    if (item.packet()->has_timestamp_ish()) {
-      video_->pts_manager()->InsertPts(parsed_video_size_,
-                                       item.packet()->timestamp_ish());
-    }
+    video_->pts_manager()->InsertPts(parsed_video_size_,
+                                     item.packet()->has_timestamp_ish(),
+                                     item.packet()->timestamp_ish());
     std::vector<uint8_t> split_data;
     std::vector<uint32_t> new_queued_frame_sizes;
     SplitSuperframe(data, len, &split_data, &new_queued_frame_sizes);

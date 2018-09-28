@@ -21,7 +21,7 @@ class PtsManager {
     LookupResult(const LookupResult& from) = default;
 
     bool is_end_of_stream() const { return is_end_of_stream_; }
-    bool has_pts() const { return !is_end_of_stream_; }
+    bool has_pts() const { return has_pts_; }
     uint64_t pts() const { return pts_; }
 
    private:
@@ -53,7 +53,7 @@ class PtsManager {
   };
 
   // Offset is the byte offset into the stream of the beginning of the frame.
-  void InsertPts(uint64_t offset, uint64_t pts);
+  void InsertPts(uint64_t offset, bool has_pts, uint64_t pts);
 
   // |end_of_stream_offset| is the first byte offset which is not part of the
   // input stream data (stream offset of last input stream byte + 1).

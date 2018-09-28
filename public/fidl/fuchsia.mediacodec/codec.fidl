@@ -739,6 +739,21 @@ struct CodecPacket {
   // codec unmodified from an input packet to the exactly-corresponding output
   // packet.
   //
+  // For timestamp_ish values to be propagated from input to output the
+  // following conditions must be true:
+  //  * promise_separate_access_units_on_input must be true
+  //  * has_timestamp_ish must be true for a given input packet, to have that
+  //    timestamp_ish value (potentially) propagate through to an output
+  //  * the Codec instance itself decides (async) that the input packet
+  //    generates an output packet - if a given input never generates an output
+  //    packet then the timestamp_ish value on the input will never show up on
+  //    any output packet - depending on the characteristics of the input and
+  //    output formats, and whether a decoder is willing to join mid-stream, etc
+  //    this can be more or less likely to occur, but clients should be written
+  //    to accomodate timestamp_ish values that are fed on input but never show
+  //    up on output, at least to a reasonable degree (not crashing, not
+  //    treating as an error).
+  //
   // See codec.md for more on timestamp_ish.
   bool has_timestamp_ish;
   uint64 timestamp_ish;

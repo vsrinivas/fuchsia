@@ -354,6 +354,16 @@ struct VideoUncompressedFormat {
   // equal to primary_pixel_stride.
   uint32 secondary_pixel_stride;
 
+  // These override the primary_width_pixels and primary_height_pixels for
+  // purposes of display (but not for purposes of determining the pixel layout
+  // in memory).  These can crop on the right and bottom.  These must be <= the
+  // corresponding coded dimension.
+  //
+  // This value must be <= primary_width_pixels.
+  uint32 primary_display_width_pixels;
+  // This value must be <= primary_height_pixels.
+  uint32 primary_display_height_pixels;
+
   // TODO(dustingreen): Currently this assumes 8 bits per channel, but we'll
   // need fields to indicate more bits per pixel such as 10 or 12 bits per
   // pixel.  Also, potentially a way to indicate different number of bits per

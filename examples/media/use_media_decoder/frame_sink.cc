@@ -128,6 +128,8 @@ void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(
   fuchsia::mediacodec::VideoUncompressedFormat blank_frame_video_format{
       .primary_width_pixels = kBlankFrameWidth,
       .primary_height_pixels = kBlankFrameHeight,
+      .primary_display_width_pixels = kBlankFrameWidth,
+      .primary_display_height_pixels = kBlankFrameHeight,
       .primary_line_stride_bytes = kBlankFramePixelBytes * kBlankFrameWidth,
       .fourcc = kBlankFrameFourcc,
       // None of the other fields matter for BGRA / BGRA_8.
