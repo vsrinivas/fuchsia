@@ -10,6 +10,7 @@ import subprocess
 import sys
 
 CATEGORIES = [
+  'dart-codespace',
   'dart-oldspace',
   'dart-newspace',
   'jemalloc-heap',
