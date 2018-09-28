@@ -4,6 +4,10 @@
 
 import("//build/package.gni")
 
+config("wlan_mlme_tests_config") {
+  include_dirs = [ "." ]
+}
+
 group("tests") {
   testonly = true
   public_deps = [

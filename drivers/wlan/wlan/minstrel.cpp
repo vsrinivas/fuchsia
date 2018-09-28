@@ -235,6 +235,8 @@ void MinstrelRateSelector::AddPeer(const wlan_assoc_ctx_t& assoc_ctx) {
         warnf("Peer %s already exists. Forgot to clean up?\n", addr.ToString().c_str());
     }
     peer_map_.emplace(addr, std::move(peer));
+    outdated_peers_.emplace(addr);
+    UpdateStats();
     // TODO(eyw): RemovePeer() for roles other than client.
 }
 
@@ -304,7 +306,6 @@ void UpdateStatsPeer(Peer* peer) {
                 tsp->probability =
                     tsp->probability * kMinstrelExpWeight + prob * (1 - kMinstrelExpWeight);
             }
-            tsp->cur_tp = 1e9 / tsp->perfect_tx_time.to_nsecs() * tsp->probability;
 
             if (tsp->attempts_total + tsp->attempts_cur < tsp->attempts_total) {  // overflow
                 tsp->attempts_total = 0;
@@ -317,6 +318,9 @@ void UpdateStatsPeer(Peer* peer) {
             tsp->success_cur = 0;
             debugmstl("%s\n", debug::Describe(*tsp).c_str());
         }
+        constexpr float kNanoSecondsPerSecond = 1e9;
+        // perfect_tx_time is always non-zero as guaranteed by AddSupportedHt and AddSupportedErp
+        tsp->cur_tp = kNanoSecondsPerSecond / tsp->perfect_tx_time.to_nsecs() * tsp->probability;
 
         if (BetterThroughput(*tsp, (*sm)[peer->max_tp])) { peer->max_tp = tx_idx; }
 
@@ -327,11 +331,14 @@ void UpdateStatsPeer(Peer* peer) {
     debugmstl("max_tp: %hu, max_prob: %hu\n", peer->max_tp, peer->max_probability);
 }
 
-void MinstrelRateSelector::HandleTimeout() {
+bool MinstrelRateSelector::HandleTimeout() {
     zx::time now = timer_mgr_.HandleTimeout();
     if (next_update_event_.Triggered(now)) {
         timer_mgr_.Schedule(now + kMinstrelUpdateInterval, &next_update_event_);
         UpdateStats();
+        return true;
+    } else {
+        return false;
     }
 }
 
@@ -353,6 +360,13 @@ Peer* MinstrelRateSelector::GetPeer(const common::MacAddr& addr) {
     if (iter != peer_map_.end()) { return &(iter->second); }
     return nullptr;
 }
+
+const Peer* MinstrelRateSelector::GetPeer(const common::MacAddr& addr) const {
+    auto iter = peer_map_.find(addr);
+    if (iter != peer_map_.end()) { return &(iter->second); }
+    return nullptr;
+}
+
 
 zx_status_t MinstrelRateSelector::GetListToFidl(wlan_minstrel::Peers* peers_fidl) const {
     peers_fidl->peers.resize(peer_map_.size());
@@ -378,19 +392,25 @@ wlan_minstrel::StatsEntry TxStats::ToFidl() const {
 
 zx_status_t MinstrelRateSelector::GetStatsToFidl(const common::MacAddr& peer_addr,
                                                  wlan_minstrel::Peer* peer_fidl) const {
-    auto iter = peer_map_.find(peer_addr);
-    if (iter == peer_map_.end()) { return ZX_ERR_INVALID_ARGS; }
+    const auto* peer = GetPeer(peer_addr);
+    if (peer == nullptr) { return ZX_ERR_NOT_FOUND; }
 
     peer_addr.CopyTo(peer_fidl->mac_addr.mutable_data());
 
-    peer_fidl->entries.resize(iter->second.tx_stats_map.size());
+    peer_fidl->entries.resize(peer->tx_stats_map.size());
 
     size_t idx = 0;
-    for (const auto& tx_stats_iter : iter->second.tx_stats_map) {
-        (*peer_fidl->entries)[idx++] = tx_stats_iter.second.ToFidl();
+    for (const auto& [_, tx_stats] : peer->tx_stats_map) {
+        (*peer_fidl->entries)[idx++] = tx_stats.ToFidl();
     }
+    peer_fidl->max_tp = peer->max_tp;
+    peer_fidl->max_probability = peer->max_probability;
 
     return ZX_OK;
+}
+
+bool MinstrelRateSelector::IsActive() const {
+    return next_update_event_.IsActive();
 }
 
 namespace debug {
