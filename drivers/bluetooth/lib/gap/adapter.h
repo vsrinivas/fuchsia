@@ -13,6 +13,7 @@
 #include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/gap/adapter_state.h"
+#include "garnet/drivers/bluetooth/lib/gap/low_energy_connection_manager.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
@@ -36,7 +37,6 @@ class BrEdrConnectionManager;
 class BrEdrDiscoveryManager;
 class PairingDelegate;
 class LowEnergyAdvertisingManager;
-class LowEnergyConnectionManager;
 class LowEnergyDiscoveryManager;
 
 // Represents the host-subsystem state for a Bluetooth controller. All
@@ -156,6 +156,14 @@ class Adapter final {
   // public LE services.
   void SetLocalName(std::string name, hci::StatusCallback callback);
 
+  // Assign a callback to be notified when a connection is automatically
+  // established to a bonded LE device in the directed connectable mode (Vol 3,
+  // Part C, 9.3.3).
+  using AutoConnectCallback = fit::function<void(LowEnergyConnectionRefPtr)>;
+  void set_auto_connect_callback(AutoConnectCallback callback) {
+    auto_conn_cb_ = std::move(callback);
+  }
+
  private:
   // Second step of the initialization sequence. Called by Initialize() when the
   // first batch of HCI commands have been sent.
@@ -185,6 +193,12 @@ class Adapter final {
 
   // Called by Transport after it has been unexpectedly closed.
   void OnTransportClosed();
+
+  // Called when a directed connectable advertisement is received from a bonded
+  // LE device. This amounts to a connection request from a bonded peripheral
+  // which is handled by routing the request to |le_connection_manager_| to
+  // initiate a Direct Connection Establishment procedure.
+  void OnLeAutoConnectRequest(const std::string& device_id);
 
   // Uniquely identifies this adapter on the current system.
   std::string identifier_;
@@ -240,6 +254,9 @@ class Adapter final {
   std::unique_ptr<BrEdrConnectionManager> bredr_connection_manager_;
   std::unique_ptr<BrEdrDiscoveryManager> bredr_discovery_manager_;
   std::unique_ptr<sdp::Server> sdp_server_;
+
+  // Callback to propagate ownership of an auto-connected LE link.
+  AutoConnectCallback auto_conn_cb_;
 
   fxl::ThreadChecker thread_checker_;
 

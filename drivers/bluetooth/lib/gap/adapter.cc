@@ -520,6 +520,17 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
     }
   };
 
+  // Called by |le_discovery_manager_| when a directed connectable advertising
+  // event is received from a bonded device. We use this to auto-connect to the
+  // device using the "Direct Connection Establishment Procedure" (Vol 3, Part
+  // C, 9.3.8).
+  auto directed_conn_cb = [self](const auto& device_id) {
+    if (self) {
+      self->OnLeAutoConnectRequest(device_id);
+    }
+  };
+
+  // Initialize the HCI adapters.
   hci_le_advertiser_ = std::make_unique<hci::LegacyLowEnergyAdvertiser>(hci_);
   hci_le_connector_ = std::make_unique<hci::LowEnergyConnector>(
       hci_,
@@ -527,14 +538,17 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
                             state_.controller_address()),
       dispatcher_, std::move(incoming_conn_cb));
 
+  // Initialize the LE manager objects
   le_discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
       Mode::kLegacy, hci_, &device_cache_);
-
+  le_discovery_manager_->set_directed_connectable_callback(
+      std::move(directed_conn_cb));
   le_connection_manager_ = std::make_unique<LowEnergyConnectionManager>(
       hci_, hci_le_connector_.get(), &device_cache_, l2cap_, gatt_);
   le_advertising_manager_ =
       std::make_unique<LowEnergyAdvertisingManager>(hci_le_advertiser_.get());
 
+  // Initialize the BR/EDR manager objects if the controller supports BR/EDR.
   if (state_.IsBREDRSupported()) {
     bredr_connection_manager_ = std::make_unique<BrEdrConnectionManager>(
         hci_, &device_cache_, l2cap_,
@@ -645,6 +659,27 @@ void Adapter::OnTransportClosed() {
   bt_log(INFO, "gap", "HCI transport was closed");
   if (transport_closed_cb_)
     transport_closed_cb_();
+}
+
+void Adapter::OnLeAutoConnectRequest(const std::string& device_id) {
+  ZX_DEBUG_ASSERT(le_connection_manager_);
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  le_connection_manager_->Connect(device_id, [self](auto status, auto conn) {
+    const auto& id = conn->device_identifier();
+    if (!self) {
+      bt_log(INFO, "gap", "ignoring auto-connection (adapter destroyed)");
+      return;
+    }
+
+    if (bt_is_error(status, INFO, "gap", "failed to auto-connect")) {
+      return;
+    }
+
+    bt_log(INFO, "gap", "device auto-connected (id: %s)", id.c_str());
+    if (self->auto_conn_cb_) {
+      self->auto_conn_cb_(std::move(conn));
+    }
+  });
 }
 
 }  // namespace gap

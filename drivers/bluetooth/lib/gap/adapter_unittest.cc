@@ -9,10 +9,12 @@
 #include <lib/async/cpp/task.h>
 #include <lib/zx/channel.h>
 
+#include "garnet/drivers/bluetooth/lib/gap/low_energy_discovery_manager.h"
 #include "garnet/drivers/bluetooth/lib/gatt/fake_layer.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_layer.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
+#include "garnet/drivers/bluetooth/lib/testing/fake_device.h"
 #include "lib/fxl/macros.h"
 
 namespace btlib {
@@ -20,6 +22,7 @@ namespace gap {
 namespace {
 
 using ::btlib::testing::FakeController;
+using ::btlib::testing::FakeDevice;
 
 using TestingBase = ::btlib::testing::FakeControllerTest<FakeController>;
 
@@ -286,6 +289,47 @@ TEST_F(GAP_AdapterTest, SetNameSuccess) {
 
 TEST_F(GAP_AdapterTest, RemoteDeviceCacheReturnsNonNull) {
   EXPECT_TRUE(adapter()->remote_device_cache());
+}
+
+TEST_F(GAP_AdapterTest, LeAutoConnect) {
+  constexpr int64_t kTestScanPeriodMs = 10000;
+  const char kDeviceId[] = "1234";
+  const common::DeviceAddress kAddress(common::DeviceAddress::Type::kLEPublic,
+                                       "00:00:00:00:00:01");
+
+  FakeController::Settings settings;
+  settings.ApplyLEOnlyDefaults();
+  test_device()->set_settings(settings);
+
+  InitializeAdapter([](bool) {});
+  RunLoopUntilIdle();
+  adapter()->le_discovery_manager()->set_scan_period(kTestScanPeriodMs);
+
+  auto fake_dev = std::make_unique<FakeDevice>(kAddress, true, false);
+  fake_dev->enable_directed_advertising(true);
+  test_device()->AddDevice(std::move(fake_dev));
+
+  LowEnergyConnectionRefPtr conn;
+  adapter()->set_auto_connect_callback(
+      [&](auto conn_ref) { conn = std::move(conn_ref); });
+
+  // Enable background scanning. No auto-connect should take place since the
+  // device isn't yet bonded.
+  adapter()->le_discovery_manager()->EnableBackgroundScan(true);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(conn);
+  EXPECT_EQ(0u, adapter()->remote_device_cache()->count());
+
+  // Mark the device as bonded and advance the scan period.
+  sm::PairingData pdata;
+  pdata.ltk = sm::LTK();
+  adapter()->remote_device_cache()->AddBondedDevice(kDeviceId, kAddress, pdata);
+  EXPECT_EQ(1u, adapter()->remote_device_cache()->count());
+  RunLoopFor(zx::msec(kTestScanPeriodMs));
+
+  // The device should have been auto-connected.
+  ASSERT_TRUE(conn);
+  EXPECT_EQ(kDeviceId, conn->device_identifier());
 }
 
 }  // namespace
