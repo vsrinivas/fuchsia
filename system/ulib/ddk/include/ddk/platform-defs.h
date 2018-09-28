@@ -134,5 +134,6 @@ __BEGIN_CDECLS;
 // Mediatek
 #define PDEV_VID_MEDIATEK           13
 #define PDEV_PID_MEDIATEK_8167S_REF 1
+#define PDEV_DID_MEDIATEK_GPIO      1
 
 __END_CDECLS;

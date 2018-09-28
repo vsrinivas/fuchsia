@@ -5,9 +5,13 @@
 #pragma once
 
 #include <ddk/device.h>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform-bus.h>
+
 #include <fbl/macros.h>
+
+#include <threads.h>
 
 namespace board_mt8167 {
 
@@ -28,10 +32,14 @@ public:
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Mt8167);
 
-    void Start();
+    zx_status_t Start();
+    zx_status_t GpioInit();
+    int Thread();
 
     ddk::PlatformBusProtocolProxy pbus_;
+    thrd_t thread_;
 };
+
 
 } // namespace board_mt8167
 

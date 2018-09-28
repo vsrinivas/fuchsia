@@ -41,17 +41,33 @@ zx_status_t Mt8167::Create(zx_device_t* parent) {
         return status;
     }
 
-    // devmgr is now in charge of the device.
-    __UNUSED auto* dummy = board.release();
-
     // Start up our protocol helpers and platform devices.
-    board->Start();
-
-    return ZX_OK;
+    status = board->Start();
+    if (status == ZX_OK) {
+        // devmgr is now in charge of the device.
+        __UNUSED auto* dummy = board.release();
+    }
+    return status;
 }
 
-void Mt8167::Start() {
-    // TODO: Start various drivers here.
+int Mt8167::Thread() {
+    if (GpioInit() != ZX_OK) {
+        return -1;
+    }
+    return 0;
+}
+
+zx_status_t Mt8167::Start() {
+    int rc = thrd_create_with_name(&thread_,
+                                   [](void* arg) -> int {
+                                       return reinterpret_cast<Mt8167*>(arg)->Thread();
+                                   },
+                                   this,
+                                   "mt8167-start-thread");
+    if (rc != thrd_success) {
+        return ZX_ERR_INTERNAL;
+    }
+    return ZX_OK;
 }
 
 void Mt8167::DdkRelease() {
