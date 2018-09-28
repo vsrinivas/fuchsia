@@ -9,7 +9,10 @@
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/files/file.h>
+#include <lib/fxl/strings/string_view.h>
+#include <openssl/sha.h>
 
+#include "peridot/lib/convert/convert.h"
 #include "peridot/lib/firebase_auth/testing/credentials.h"
 #include "peridot/lib/firebase_auth/testing/json_schema.h"
 
@@ -127,6 +130,15 @@ bool GetCredentialsContent(const fxl::CommandLine& command_line,
   return FetchCredentials(startup_context, credentials_path, credentials);
 }
 
+std::string Hash(fxl::StringView data) {
+  char result[SHA256_DIGEST_LENGTH];
+  SHA256_CTX sha256;
+  SHA256_Init(&sha256);
+  SHA256_Update(&sha256, data.data(), data.size());
+  SHA256_Final(reinterpret_cast<uint8_t*>(result), &sha256);
+  return convert::ToHex(fxl::StringView(result, SHA256_DIGEST_LENGTH));
+}
+
 }  // namespace
 
 namespace ledger {
@@ -165,17 +177,18 @@ bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
     return false;
   }
 
+  FXL_LOG(INFO) << "Sync credentials sha256: " << Hash(credentials);
+
   rapidjson::Document document;
   document.Parse(credentials);
   if (document.HasParseError()) {
-    std::cerr << "Cannot parse credentials at " << credentials_path
+    std::cerr << "Cannot parse sync parameters at " << credentials_path
               << std::endl;
     return false;
   }
   auto sync_params_schema = json_schema::InitSchema(kSyncParamsSchema);
   if (!json_schema::ValidateSchema(document, *sync_params_schema)) {
-    std::cerr << "Cannot parse credentials at " << credentials_path
-              << std::endl;
+    std::cerr << "Invalid schema at " << credentials_path << std::endl;
     return false;
   }
 

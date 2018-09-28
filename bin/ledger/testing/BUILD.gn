@@ -62,6 +62,7 @@ source_set("lib") {
     "//peridot/lib/firebase_auth/testing",
     "//peridot/lib/firebase_auth/testing:json_schema",
     "//peridot/lib/firebase_auth/testing:service_account",
+    "//third_party/boringssl",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]
