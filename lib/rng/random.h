@@ -16,6 +16,10 @@ namespace rng {
 // This class allows to get random values. It can generate random bytes on a
 // given buffer, fill a mutable string-like object, or return a POD like
 // object.
+//
+// Using this class allows to control the randomness when running tests by
+// injecting a seedable PRNG and reseeding it with the same value to re-run the
+// same test.
 class Random {
  public:
   // An object satifying the |UniformRandomBitGenerator| requirements. See:
