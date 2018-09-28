@@ -198,7 +198,6 @@ class Station {
     Sequence seq_;
 
     WlanState state_ = WlanState::kUnjoined;
-    TimedEvent join_timeout_;
     TimedEvent auth_timeout_;
     TimedEvent assoc_timeout_;
     TimedEvent signal_report_timeout_;

@@ -220,15 +220,13 @@ TEST_F(ClientTest, Join) {
     device.SetTime(zx::time(0));
     ASSERT_TRUE(device.svc_queue.empty());
 
-    // Send JOIN.request. Verify that no confirmation was sent yet.
+    // Send JOIN.request
     ASSERT_EQ(SendMlmeMsg<wlan_mlme::JoinRequest>(), ZX_OK);
-    ASSERT_TRUE(device.svc_queue.empty());
 
     // Ensure station moved onto the BSS channel.
     ASSERT_EQ(device.state->channel().primary, kBssChannel.primary);
 
-    // Respond with a Beacon frame and verify a JOIN.confirm message was sent.
-    ASSERT_EQ(SendFrame<Beacon>(), ZX_OK);
+    // Verify a JOIN.confirm message was sent.
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     auto joins = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEJoinConfOrdinal>);
     ASSERT_FALSE(joins.empty());
@@ -312,28 +310,6 @@ TEST_F(ClientTest, Associate) {
     station.HandleTimeout();
     assocs = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateConfOrdinal>);
     ASSERT_TRUE(assocs.empty());
-}
-
-TEST_F(ClientTest, JoinTimeout) {
-    device.SetTime(zx::time(0));
-    ASSERT_TRUE(device.svc_queue.empty());
-
-    // Send JOIN.request. Verify that no confirmation was sent yet.
-    ASSERT_EQ(SendMlmeMsg<wlan_mlme::JoinRequest>(), ZX_OK);
-    ASSERT_TRUE(device.svc_queue.empty());
-
-    // Timeout not yet hit.
-    SetTimeInBeaconPeriods(kJoinTimeout - 1);
-    station.HandleTimeout();
-    ASSERT_TRUE(device.svc_queue.empty());
-
-    // Timeout hit, verify a JOIN.confirm message was sent.
-    SetTimeInBeaconPeriods(kJoinTimeout);
-    station.HandleTimeout();
-    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-    auto joins = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEJoinConfOrdinal>);
-    ASSERT_FALSE(joins.empty());
-    AssertJoinConfirm(fbl::move(*joins.begin()), wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
 }
 
 TEST_F(ClientTest, AuthTimeout) {

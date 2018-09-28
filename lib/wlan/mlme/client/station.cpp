@@ -41,7 +41,6 @@ void Station::Reset() {
 
     state_ = WlanState::kUnjoined;
     bss_.reset();
-    join_timeout_.Cancel();
     auth_timeout_.Cancel();
     assoc_timeout_.Cancel();
     signal_report_timeout_.Cancel();
@@ -192,19 +191,8 @@ zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& re
         return status;
     }
 
-    // Stay on channel to make sure we don't miss the beacon
-    chan_sched_->EnsureOnChannel(timer_mgr_.Now() + kOnChannelTimeAfterSend);
-
     join_chan_ = chan;
     join_phy_ = req.body()->phy;
-    zx::time deadline = deadline_after_bcn_period(req.body()->join_failure_timeout);
-    status = timer_mgr_.Schedule(deadline, &join_timeout_);
-    if (status != ZX_OK) {
-        errorf("could not set join timeout event: %d\n", status);
-        Reset();
-        service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
-        return status;
-    }
 
     // TODO(hahnr): Update when other BSS types are supported.
     wlan_bss_config_t cfg{
@@ -213,7 +201,9 @@ zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& re
     };
     bssid_.CopyTo(cfg.bssid);
     device_->ConfigureBss(&cfg);
-    return status;
+
+    state_ = WlanState::kJoined;
+    return service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::SUCCESS);
 }
 
 zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequest>& req) {
@@ -469,15 +459,6 @@ zx_status_t Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
     avg_rssi_dbm_.add(dBm(rssi_dbm));
 
     WLAN_RSSI_HIST_INC(beacon_rssi, rssi_dbm);
-
-    // TODO(tkilbourn): update any other info (like rolling average of rssi)
-    if (join_timeout_.IsActive()) {
-        join_timeout_.Cancel();
-
-        state_ = WlanState::kJoined;
-        debugjoin("joined \"%s\"\n", debug::ToAsciiOrHexStr(*bss_->ssid).c_str());
-        return service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::SUCCESS);
-    }
 
     if (state_ != WlanState::kAssociated) { return ZX_OK; }
 
@@ -961,12 +942,7 @@ zx_status_t Station::HandleTimeout() {
     debugfn();
     zx::time now = timer_mgr_.HandleTimeout();
 
-    if (join_timeout_.Triggered(now)) {
-        debugjoin("join timed out; resetting\n");
-        join_timeout_.Cancel();
-        Reset();
-        service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
-    } else if (auth_timeout_.Triggered(now)) {
+    if (auth_timeout_.Triggered(now)) {
         debugjoin("auth timed out; moving back to joined state\n");
         auth_timeout_.Cancel();
         state_ = WlanState::kJoined;
