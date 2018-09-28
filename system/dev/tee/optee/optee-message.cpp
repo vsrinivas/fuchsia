@@ -198,4 +198,45 @@ bool AllocateMemoryRpcMessage::TryInitializeMembers() {
     return true;
 }
 
+bool FreeMemoryRpcMessage::TryInitializeMembers() {
+    if (header()->num_params != kNumParams) {
+        zxlogf(ERROR,
+               "optee: RPC command to free shared memory received unexpected number of parameters!"
+               "\n");
+        set_return_origin(TEEC_ORIGIN_COMMS);
+        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return false;
+    }
+
+    // Parse the memory specifications parameter
+    MessageParam& value_param = params()[kMemorySpecsParamIndex];
+    if (value_param.attribute != MessageParam::kAttributeTypeValueInput) {
+        zxlogf(ERROR,
+               "optee: RPC command to free shared memory received unexpected first parameter!"
+               "\n");
+        set_return_origin(TEEC_ORIGIN_COMMS);
+        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return false;
+    }
+
+    auto& memory_specs_param = value_param.payload.value.free_memory_specs;
+
+    switch (memory_specs_param.memory_type) {
+    case SharedMemoryType::kApplication:
+    case SharedMemoryType::kKernel:
+    case SharedMemoryType::kGlobal:
+        memory_type_ = static_cast<SharedMemoryType>(memory_specs_param.memory_type);
+        break;
+    default:
+        zxlogf(ERROR,
+               "optee: received unknown memory type %" PRIu64 " to free\n",
+               memory_specs_param.memory_type);
+        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return false;
+    }
+
+    memory_id_ = memory_specs_param.memory_id;
+    return true;
+}
+
 } // namespace optee

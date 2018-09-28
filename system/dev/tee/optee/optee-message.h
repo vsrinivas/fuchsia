@@ -427,4 +427,47 @@ private:
     bool TryInitializeMembers();
 };
 
+// FreeMemoryRpcMessage
+//
+// A RpcMessage that should be interpreted with the command of freeing shared memory.
+// A RpcMessage can be converted into a FreeMemoryRpcMessage via a constructor.
+class FreeMemoryRpcMessage : public RpcMessage {
+public:
+    // FreeMemoryRpcMessage
+    //
+    // Move constructor for FreeMemoryRpcMessage. Uses the default implicit implementation.
+    FreeMemoryRpcMessage(FreeMemoryRpcMessage&&) = default;
+
+    // FreeMemoryRpcMessage
+    //
+    // Constructs a FreeMemoryRpcMessage from a moved-in RpcMessage.
+    explicit FreeMemoryRpcMessage(RpcMessage&& rpc_message)
+        : RpcMessage(fbl::move(rpc_message)) {
+        ZX_DEBUG_ASSERT(is_valid()); // The RPC message passed in should've been valid
+        ZX_DEBUG_ASSERT(command() == RpcMessage::Command::kFreeMemory);
+
+        is_valid_ = is_valid_ && TryInitializeMembers();
+    }
+
+    SharedMemoryType memory_type() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return memory_type_;
+    }
+
+    uint64_t memory_identifier() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return memory_id_;
+    }
+
+protected:
+    static constexpr size_t kNumParams = 1;
+    static constexpr size_t kMemorySpecsParamIndex = 0;
+
+    SharedMemoryType memory_type_;
+    uint64_t memory_id_;
+
+private:
+    bool TryInitializeMembers();
+};
+
 } // namespace optee

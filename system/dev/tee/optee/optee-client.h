@@ -126,7 +126,7 @@ private:
                                  RpcFunctionExecuteCommandsResult* out_result);
     zx_status_t HandleRpcCommandLoadTa(LoadTaRpcMessage* message);
     zx_status_t HandleRpcCommandAllocateMemory(AllocateMemoryRpcMessage* message);
-    zx_status_t HandleRpcCommandFreeMemory(RpcMessage* message);
+    zx_status_t HandleRpcCommandFreeMemory(FreeMemoryRpcMessage* message);
 
     OpteeController* controller_;
     bool needs_to_close_ = false;

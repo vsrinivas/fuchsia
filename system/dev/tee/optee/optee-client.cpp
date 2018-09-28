@@ -417,8 +417,13 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
         }
         return HandleRpcCommandAllocateMemory(&alloc_mem_msg);
     }
-    case RpcMessage::Command::kFreeMemory:
-        return HandleRpcCommandFreeMemory(&message);
+    case RpcMessage::Command::kFreeMemory: {
+        FreeMemoryRpcMessage free_mem_msg(fbl::move(message));
+        if (!free_mem_msg.is_valid()) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return HandleRpcCommandFreeMemory(&free_mem_msg);
+    }
     case RpcMessage::Command::kPerformSocketIo:
         zxlogf(ERROR, "optee: RPC command to perform socket IO recognized but not implemented\n");
         message.set_return_origin(TEEC_ORIGIN_COMMS);
@@ -582,43 +587,19 @@ zx_status_t OpteeClient::HandleRpcCommandAllocateMemory(AllocateMemoryRpcMessage
     return status;
 }
 
-zx_status_t OpteeClient::HandleRpcCommandFreeMemory(RpcMessage* message) {
+zx_status_t OpteeClient::HandleRpcCommandFreeMemory(FreeMemoryRpcMessage* message) {
+    ZX_DEBUG_ASSERT(message->is_valid());
+
     // Mark that the return code will originate from driver
     message->set_return_origin(TEEC_ORIGIN_COMMS);
 
-    MessageParamList params = message->params();
-    if (params.size() != 1) {
-        zxlogf(ERROR,
-               "optee: RPC command to free shared memory received a bad number of parameters!\n");
-        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    // The first parameter outlines the specifications of the memory to be freed
-    const MessageParam& memory_specs_param = params[0];
-    if (memory_specs_param.attribute != MessageParam::AttributeType::kAttributeTypeValueInput) {
-        zxlogf(ERROR,
-               "optee: RPC command to free shared memory received an unexpected parameter type!\n");
-        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    auto& mem_specs = memory_specs_param.payload.value.free_memory_specs;
-    switch (mem_specs.memory_type) {
-    case SharedMemoryType::kApplication:
-    case SharedMemoryType::kKernel:
-        break;
-    case SharedMemoryType::kGlobal:
+    if (message->memory_type() == SharedMemoryType::kGlobal) {
         zxlogf(ERROR, "optee: implementation currently does not support global shared memory!\n");
+        message->set_return_code(TEEC_ERROR_NOT_SUPPORTED);
         return ZX_ERR_NOT_SUPPORTED;
-    default:
-        zxlogf(ERROR,
-               "optee: cannot free unknown memory type %" PRIu64 "\n", mem_specs.memory_type);
-        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return ZX_ERR_INVALID_ARGS;
     }
 
-    zx_status_t status = FreeSharedMemory(mem_specs.memory_id);
+    zx_status_t status = FreeSharedMemory(message->memory_identifier());
     if (status != ZX_OK) {
         if (status == ZX_ERR_NOT_FOUND) {
             message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
