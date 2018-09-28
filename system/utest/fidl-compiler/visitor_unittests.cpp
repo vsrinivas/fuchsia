@@ -50,6 +50,33 @@ private:
     const char* last_source_location_;
 };
 
+// Provides more useful context for string diff than EXPECT_STR_EQ, which shows
+// a limited prefix.  When the string is long, and the difference is buried
+// past the limited prefix, the limited prefix doesn't give useful information.
+std::string targeted_diff(const char* expected, const char* actual, int size) {
+    // We want two lines of useful context:
+    int i = 0;
+    int last_nl = 0;
+    int last_last_nl = 0;
+    while (i <= size && expected[i] == actual[i]) {
+        if (expected[i] == '\n') {
+            last_last_nl = last_nl;
+            last_nl = i;
+        }
+        i++;
+    }
+
+    int start = last_last_nl;
+    int expected_end = (i + 10 < strlen(expected)) ? i + 10 : strlen(expected) - 1;
+    int actual_end = (i + 10 < strlen(actual)) ? i + 10 : strlen(actual) - 1;
+    std::string s("Expected contains \"");
+    s.append(std::string(expected + start, expected_end - start));
+    s.append("\" and actual contains \"");
+    s.append(std::string(actual + start, actual_end - start));
+    s.append("\"");
+    return s;
+}
+
 // Test that the AST visitor works: ensure that if you visit a file, you can
 // reconstruct its original contents.
 bool read_and_write_direct_test() {
@@ -62,9 +89,13 @@ bool read_and_write_direct_test() {
 
         NoopTreeVisitor visitor;
         visitor.OnFile(ast);
+        std::string expected(library.source_file().data());
+        std::string output = visitor.output();
+        const char* actual = output.c_str();
+        std::string d = targeted_diff(expected.c_str(), actual, output.size());
+        d = element.first + ": " + d;
 
-        EXPECT_STR_EQ(library.source_file().data().data(),
-                      visitor.output().c_str());
+        EXPECT_STR_EQ(expected.c_str(), actual, d.c_str());
     }
 
     END_TEST;

@@ -26,24 +26,83 @@ private:
 
     Token::KindAndSubkind Peek() { return last_token_.kind_and_subkind(); }
 
-    // Each AST node stores the beginning of the code it is associated with, the
-    // end of that code, and the end of the previous AST node (so that it can
-    // track comments and whitespace between them).
-    // This method allows us to track the last SourceLocation that might be
-    // interesting to the AST node we're constructing.
-    Token LexAndSetPrevious(bool is_discarded, Token& token) {
-        backup_end_ = latest_discarded_end_;
-        if (is_discarded) {
-            if (!latest_discarded_end_.valid()) {
-                latest_discarded_end_ = token.previous_end();
-            }
-        } else {
-            if (latest_discarded_end_.valid()) {
-                token.set_previous_end(latest_discarded_end_);
-            }
-            latest_discarded_end_ = SourceLocation();
+    // ASTScope is a tool to track the start and end source location of each
+    // node automatically.  The parser associates each node with the start and
+    // end of its source location.  It also tracks the "gap" is between the the
+    // start and the previous interesting source element.  As we walk the tree,
+    // we create ASTScope objects that can track the beginning and end of the
+    // text associated with the Node being built.  The ASTScope object then
+    // colludes with the Parser to figure out where the beginning and end of
+    // that node are.
+    //
+    // ASTScope should only be created on the stack, when starting to parse
+    // something that will result in a new AST node.
+    class ASTScope {
+    public:
+        explicit ASTScope(Parser* parser)
+            : parser_(parser) {
+            suppress_ = parser_->suppress_gap_checks_;
+            parser_->suppress_gap_checks_ = false;
+            parser_->active_ast_scopes_.push_back(raw::SourceElement(Token(), Token()));
         }
-        return Lex();
+        // The suppress mechanism
+        ASTScope(Parser* parser, bool suppress)
+            : parser_(parser), suppress_(suppress) {
+            parser_->active_ast_scopes_.push_back(raw::SourceElement(Token(), Token()));
+            suppress_ = parser_->suppress_gap_checks_;
+            parser_->suppress_gap_checks_ = suppress;
+        }
+        raw::SourceElement GetSourceElement() {
+            parser_->active_ast_scopes_.back().end_ = parser_->previous_token_;
+            if (!parser_->suppress_gap_checks_) {
+                parser_->last_was_gap_start_ = true;
+            }
+            return raw::SourceElement(parser_->active_ast_scopes_.back());
+        }
+        ~ASTScope() {
+            parser_->suppress_gap_checks_ = suppress_;
+            parser_->active_ast_scopes_.pop_back();
+        }
+
+        ASTScope(const ASTScope&) = delete;
+        ASTScope& operator=(const ASTScope&) = delete;
+    private:
+        Parser* parser_;
+        bool suppress_;
+    };
+
+    void UpdateMarks(Token& token) {
+        // There should always be at least one of these - the outermost.
+        if (active_ast_scopes_.size() == 0) {
+            Fail("Internal compiler error: unbalanced parse tree");
+        }
+
+        if (!suppress_gap_checks_) {
+            // If the end of the last node was the start of a gap, record that.
+            if (last_was_gap_start_ && previous_token_.kind() != Token::Kind::kNotAToken) {
+                gap_start_ = token.previous_end();
+                last_was_gap_start_ = false;
+            }
+
+            // If this is a start node, then the end of it will be the start of
+            // a gap.
+            if (active_ast_scopes_.back().start_.kind() == Token::Kind::kNotAToken) {
+                last_was_gap_start_ = true;
+            }
+        }
+        // Update the token to record the correct location of the beginning of
+        // the gap prior to it.
+        if (gap_start_.valid()) {
+            token.set_previous_end(gap_start_);
+        }
+
+        for (int i = 0; i < active_ast_scopes_.size(); i++) {
+            if (active_ast_scopes_[i].start_.kind() == Token::Kind::kNotAToken) {
+                active_ast_scopes_[i].start_ = token;
+            }
+        }
+
+        previous_token_ = token;
     }
 
     // ConsumeToken consumes a token, and matches using the predicate |p|.
@@ -59,8 +118,9 @@ private:
             Fail(*failure_message);
         }
         auto token = last_token_;
-        last_token_ = LexAndSetPrevious(is_discarded, token);
-        previous_token_ = token;
+        last_token_ = Lex();
+        UpdateMarks(token);
+
         return token;
     }
 
@@ -74,7 +134,8 @@ private:
             return false;
         }
         previous_token_ = last_token_;
-        last_token_ = LexAndSetPrevious(true, last_token_);
+        UpdateMarks(last_token_);
+        last_token_ = Lex();
         return true;
     }
 
@@ -105,30 +166,7 @@ private:
         };
     }
 
-    // Helper function that figures the earliest token associated with something
-    // that can have an attribute list: is it the attribute list, or is it the
-    // declaration (struct, enum, etc...)?
-    Token ConsumeIdentifierReturnEarliest(Token::Subkind subkind,
-                                     std::unique_ptr<raw::AttributeList> const& attributes) {
-        if (attributes != nullptr && attributes->attributes_->attributes_.size() != 0) {
-            ConsumeToken(IdentifierOfSubkind(subkind), true);
-            return attributes->start_;
-        }
-        return ConsumeToken(IdentifierOfSubkind(subkind));
-    }
-
     bool LookupHandleSubtype(const raw::Identifier* identifier, types::HandleSubtype* subtype_out);
-
-    // If the last token seemed to be discarded, but turned out to be important
-    // (e.g., a ')' at the end of a parameter list marking the end),
-    // retroactively mark it useful again.
-    Token MarkLastUseful() {
-        if (backup_end_.valid()) {
-            previous_token_.set_previous_end(backup_end_);
-        }
-        latest_discarded_end_ = SourceLocation();
-        return previous_token_;
-    }
 
     decltype(nullptr) Fail();
     decltype(nullptr) Fail(StringView message);
@@ -147,7 +185,7 @@ private:
 
     std::unique_ptr<raw::Attribute> ParseAttribute();
     std::unique_ptr<raw::Attribute> ParseDocComment();
-    std::unique_ptr<raw::AttributeList> ParseAttributeList(std::unique_ptr<raw::Attribute>&& doc_comment);
+    std::unique_ptr<raw::AttributeList> ParseAttributeList(std::unique_ptr<raw::Attribute>&& doc_comment, ASTScope& scope);
     std::unique_ptr<raw::AttributeList> MaybeParseAttributeList();
 
     std::unique_ptr<raw::Using> ParseUsing();
@@ -161,31 +199,31 @@ private:
     std::unique_ptr<raw::Type> ParseType();
 
     std::unique_ptr<raw::ConstDeclaration>
-    ParseConstDeclaration(std::unique_ptr<raw::AttributeList> attributes);
+    ParseConstDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
 
     std::unique_ptr<raw::EnumMember> ParseEnumMember();
     std::unique_ptr<raw::EnumDeclaration>
-    ParseEnumDeclaration(std::unique_ptr<raw::AttributeList> attributes);
+    ParseEnumDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
 
     std::unique_ptr<raw::Parameter> ParseParameter();
     std::unique_ptr<raw::ParameterList> ParseParameterList();
     std::unique_ptr<raw::InterfaceMethod> ParseInterfaceMethod(
-        std::unique_ptr<raw::AttributeList> attributes);
+        std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope);
     std::unique_ptr<raw::InterfaceDeclaration>
-    ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes);
+    ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
 
     std::unique_ptr<raw::StructMember> ParseStructMember();
     std::unique_ptr<raw::StructDeclaration>
-    ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes);
+    ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
 
     std::unique_ptr<raw::TableMember>
     ParseTableMember();
     std::unique_ptr<raw::TableDeclaration>
-    ParseTableDeclaration(std::unique_ptr<raw::AttributeList> attributes);
+    ParseTableDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
 
     std::unique_ptr<raw::UnionMember> ParseUnionMember();
     std::unique_ptr<raw::UnionDeclaration>
-    ParseUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes);
+    ParseUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
 
     std::unique_ptr<raw::File> ParseFile();
 
@@ -194,18 +232,20 @@ private:
     Lexer* lexer_;
     ErrorReporter* error_reporter_;
 
-    // A little explanation of the next three fields.  Each AST node has a
-    // pointer to the end of the last non-whitespace, non-comment SourceLocation
-    // prior to the beginning of that node.  As the parser walks through tokens,
-    // it has to keep track of everything that might be the last non-whitespace,
-    // non-comment source location.  That's the latest_discarded_end_ field.
-    SourceLocation latest_discarded_end_;
-
-    // As the parser walks the tokens, it discards many of them.  However, it
-    // can later realize that the last one it discarded contained the last
-    // non-whitespace, non-comment source location. backup_end_ and
-    // previous_token_ are used to save and restore that location.
-    SourceLocation backup_end_;
+    // The stack of information interesting to the currently active ASTScope
+    // objects.
+    std::vector<raw::SourceElement> active_ast_scopes_;
+    // The most recent start of a "gap" - the uninteresting source prior to the
+    // beginning of a token (usually mostly containing whitespace).
+    SourceLocation gap_start_;
+    // Indicates that the last element was the start of a gap, and that the
+    // scope should be updated accordingly.
+    bool last_was_gap_start_ = false;
+    // Suppress updating the gap for the current Scope.  Useful when
+    // you don't know whether a scope is going to be interesting lexically, and
+    // you have to decide at runtime.
+    bool suppress_gap_checks_ = false;
+    // The token before last_token_ (below).
     Token previous_token_;
 
     Token last_token_;
