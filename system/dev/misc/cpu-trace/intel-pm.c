@@ -9,6 +9,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/platform-device.h>
 
 #include <lib/zircon-internal/device/cpu-trace/intel-pm.h>
 #include <lib/zircon-internal/mtrace.h>
@@ -23,8 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "cpu-trace-private.h"
+#include <threads.h>
 
 // TODO(dje): Having trouble getting this working, so just punt for now.
 #define TRY_FREEZE_ON_PMI 0
@@ -148,6 +149,11 @@ typedef struct ipm_per_trace_state {
 } ipm_per_trace_state_t;
 
 typedef struct cpuperf_device {
+    mtx_t lock;
+
+    // Only one open of this device is supported at a time. KISS for now.
+    bool opened;
+
     // Once tracing has started various things are not allowed until it stops.
     bool active;
 
@@ -155,6 +161,8 @@ typedef struct cpuperf_device {
     // TODO(dje): At the moment we only support one trace at a time.
     // "trace" == "data collection run"
     ipm_per_trace_state_t* per_trace_state;
+
+    zx_handle_t bti;
 } cpuperf_device_t;
 
 static bool ipm_supported = false;
@@ -164,7 +172,7 @@ static zx_x86_ipm_properties_t ipm_properties;
 // maximum space, in bytes, for trace buffers (per cpu)
 #define MAX_PER_TRACE_SPACE (256 * 1024 * 1024)
 
-void cpuperf_init_once(void)
+static zx_status_t cpuperf_init_once(void)
 {
     ipm_init_misc_event_table();
 
@@ -179,14 +187,14 @@ void cpuperf_init_once(void)
         else
             zxlogf(INFO, "%s: Error %d fetching ipm properties\n",
                    __func__, status);
-        return;
+        return status;
     }
 
     // Skylake supports version 4. KISS and begin with that.
     // Note: This should agree with the kernel driver's check.
     if (props.pm_version < 4) {
         zxlogf(INFO, "%s: PM version 4 or above is required\n", __func__);
-        return;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     ipm_supported = true;
@@ -206,6 +214,8 @@ void cpuperf_init_once(void)
            ipm_properties.fixed_counter_width);
     zxlogf(TRACE, "IPM: perf_capabilities: 0x%lx\n",
            ipm_properties.perf_capabilities);
+
+    return ZX_OK;
 }
 
 
@@ -276,7 +286,7 @@ static int ipm_lookup_misc_event(cpuperf_event_id_t id) {
 
 // The userspace side of the driver.
 
-static zx_status_t ipm_get_properties(cpu_trace_device_t* dev,
+static zx_status_t ipm_get_properties(cpuperf_device_t* dev,
                                       void* reply, size_t replymax,
                                       size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
@@ -309,13 +319,13 @@ static zx_status_t ipm_get_properties(cpu_trace_device_t* dev,
     return ZX_OK;
 }
 
-static zx_status_t ipm_alloc_trace(cpu_trace_device_t* dev,
+static zx_status_t ipm_alloc_trace(cpuperf_device_t* dev,
                                    const void* cmd, size_t cmdlen) {
     zxlogf(TRACE, "%s called\n", __func__);
 
     if (!ipm_supported)
         return ZX_ERR_NOT_SUPPORTED;
-    if (dev->cpuperf)
+    if (dev->per_trace_state)
         return ZX_ERR_BAD_STATE;
 
     // Note: The remaining API calls don't have to check |ipm_supported|
@@ -332,20 +342,14 @@ static zx_status_t ipm_alloc_trace(cpu_trace_device_t* dev,
     if (alloc.num_buffers != num_cpus) // TODO(dje): for now
         return ZX_ERR_INVALID_ARGS;
 
-    cpuperf_device_t* ipm = calloc(1, sizeof(*dev->cpuperf));
-    if (!ipm)
-        return ZX_ERR_NO_MEMORY;
-
-    ipm_per_trace_state_t* per_trace = calloc(1, sizeof(ipm->per_trace_state[0]));
+    ipm_per_trace_state_t* per_trace = calloc(1, sizeof(dev->per_trace_state[0]));
     if (!per_trace) {
-        free(ipm);
         return ZX_ERR_NO_MEMORY;
     }
 
     per_trace->buffers = calloc(num_cpus, sizeof(per_trace->buffers[0]));
     if (!per_trace->buffers) {
         free(per_trace);
-        free(ipm);
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -359,62 +363,58 @@ static zx_status_t ipm_alloc_trace(cpu_trace_device_t* dev,
     if (i != num_cpus) {
         ipm_free_buffers_for_trace(per_trace, i);
         free(per_trace);
-        free(ipm);
         return ZX_ERR_NO_MEMORY;
     }
 
     per_trace->num_buffers = alloc.num_buffers;
     per_trace->buffer_size = alloc.buffer_size;
-    ipm->per_trace_state = per_trace;
-    dev->cpuperf = ipm;
+    dev->per_trace_state = per_trace;
     return ZX_OK;
 }
 
-static zx_status_t ipm_free_trace(cpu_trace_device_t* dev) {
+static zx_status_t ipm_free_trace(cpuperf_device_t* dev) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    cpuperf_device_t* ipm = dev->cpuperf;
-    if (!ipm)
+    if (dev->active)
         return ZX_ERR_BAD_STATE;
-    if (ipm->active)
+    ipm_per_trace_state_t* per_trace = dev->per_trace_state;
+    if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
-    ipm_per_trace_state_t* per_trace = ipm->per_trace_state;
     ipm_free_buffers_for_trace(per_trace, per_trace->num_buffers);
     free(per_trace);
-    free(ipm);
-    dev->cpuperf = NULL;
+    dev->per_trace_state = NULL;
     return ZX_OK;
 }
 
-static zx_status_t ipm_get_alloc(cpu_trace_device_t* dev,
+static zx_status_t ipm_get_alloc(cpuperf_device_t* dev,
                                  void* reply, size_t replymax,
                                  size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    const cpuperf_device_t* ipm = dev->cpuperf;
-    if (!ipm)
+    const ipm_per_trace_state_t* per_trace = dev->per_trace_state;
+    if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
     ioctl_cpuperf_alloc_t alloc;
     if (replymax < sizeof(alloc))
         return ZX_ERR_BUFFER_TOO_SMALL;
 
-    alloc.num_buffers = ipm->per_trace_state->num_buffers;
-    alloc.buffer_size = ipm->per_trace_state->buffer_size;
+    alloc.num_buffers = per_trace->num_buffers;
+    alloc.buffer_size = per_trace->buffer_size;
     memcpy(reply, &alloc, sizeof(alloc));
     *out_actual = sizeof(alloc);
     return ZX_OK;
 }
 
-static zx_status_t ipm_get_buffer_handle(cpu_trace_device_t* dev,
+static zx_status_t ipm_get_buffer_handle(cpuperf_device_t* dev,
                                          const void* cmd, size_t cmdlen,
                                          void* reply, size_t replymax,
                                          size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    cpuperf_device_t* ipm = dev->cpuperf;
-    if (!ipm)
+    const ipm_per_trace_state_t* per_trace = dev->per_trace_state;
+    if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
     ioctl_cpuperf_buffer_handle_req_t req;
@@ -424,7 +424,6 @@ static zx_status_t ipm_get_buffer_handle(cpu_trace_device_t* dev,
         return ZX_ERR_INVALID_ARGS;
     if (replymax < sizeof(h))
         return ZX_ERR_BUFFER_TOO_SMALL;
-    const ipm_per_trace_state_t* per_trace = ipm->per_trace_state;
     memcpy(&req, cmd, sizeof(req));
     if (req.descriptor >= per_trace->num_buffers)
         return ZX_ERR_INVALID_ARGS;
@@ -632,19 +631,18 @@ static zx_status_t ipm_stage_misc_config(const cpuperf_config_t* icfg,
     return ZX_OK;
 }
 
-static zx_status_t ipm_stage_config(cpu_trace_device_t* dev,
+static zx_status_t ipm_stage_config(cpuperf_device_t* dev,
                                     const void* cmd, size_t cmdlen) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    cpuperf_device_t* ipm = dev->cpuperf;
-    if (!ipm)
+    if (dev->active)
         return ZX_ERR_BAD_STATE;
-    if (ipm->active)
+    ipm_per_trace_state_t* per_trace = dev->per_trace_state;
+    if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
     // If we subsequently get an error, make sure any previous configuration
     // can't be used.
-    ipm_per_trace_state_t* per_trace = ipm->per_trace_state;
     per_trace->configured = false;
 
     cpuperf_config_t ioctl_config;
@@ -755,16 +753,15 @@ static zx_status_t ipm_stage_config(cpu_trace_device_t* dev,
     return ZX_OK;
 }
 
-static zx_status_t ipm_get_config(cpu_trace_device_t* dev,
+static zx_status_t ipm_get_config(cpuperf_device_t* dev,
                                   void* reply, size_t replymax,
                                   size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    const cpuperf_device_t* ipm = dev->cpuperf;
-    if (!ipm)
+    const ipm_per_trace_state_t* per_trace = dev->per_trace_state;
+    if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
-    const ipm_per_trace_state_t* per_trace = ipm->per_trace_state;
     if (!per_trace->configured)
         return ZX_ERR_BAD_STATE;
 
@@ -777,16 +774,15 @@ static zx_status_t ipm_get_config(cpu_trace_device_t* dev,
     return ZX_OK;
 }
 
-static zx_status_t ipm_start(cpu_trace_device_t* dev) {
+static zx_status_t ipm_start(cpuperf_device_t* dev) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    cpuperf_device_t* ipm = dev->cpuperf;
-    if (!ipm)
+    if (dev->active)
         return ZX_ERR_BAD_STATE;
-    if (ipm->active)
+    ipm_per_trace_state_t* per_trace = dev->per_trace_state;
+    if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
-    ipm_per_trace_state_t* per_trace = ipm->per_trace_state;
     if (!per_trace->configured)
         return ZX_ERR_BAD_STATE;
 
@@ -833,7 +829,7 @@ static zx_status_t ipm_start(cpu_trace_device_t* dev) {
     if (status != ZX_OK)
         goto fail;
 
-    ipm->active = true;
+    dev->active = true;
     return ZX_OK;
 
   fail:
@@ -848,11 +844,11 @@ static zx_status_t ipm_start(cpu_trace_device_t* dev) {
     }
 }
 
-static zx_status_t ipm_stop(cpu_trace_device_t* dev) {
+static zx_status_t ipm_stop(cpuperf_device_t* dev) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    cpuperf_device_t* ipm = dev->cpuperf;
-    if (!ipm)
+    ipm_per_trace_state_t* per_trace = dev->per_trace_state;
+    if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
     zx_handle_t resource = get_root_resource();
@@ -860,17 +856,17 @@ static zx_status_t ipm_stop(cpu_trace_device_t* dev) {
         zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
                           MTRACE_CPUPERF_STOP, 0, NULL, 0);
     if (status == ZX_OK) {
-        ipm->active = false;
+        dev->active = false;
         status = zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
                                    MTRACE_CPUPERF_FINI, 0, NULL, 0);
     }
     return status;
 }
 
-zx_status_t cpuperf_ioctl(cpu_trace_device_t* dev, uint32_t op,
-                          const void* cmd, size_t cmdlen,
-                          void* reply, size_t replymax,
-                          size_t* out_actual) {
+zx_status_t cpuperf_ioctl_worker(cpuperf_device_t* dev, uint32_t op,
+                                 const void* cmd, size_t cmdlen,
+                                 void* reply, size_t replymax,
+                                 size_t* out_actual) {
     assert(IOCTL_FAMILY(op) == IOCTL_FAMILY_CPUPERF);
 
     switch (op) {
@@ -920,9 +916,106 @@ zx_status_t cpuperf_ioctl(cpu_trace_device_t* dev, uint32_t op,
     }
 }
 
-void cpuperf_release(cpu_trace_device_t* dev) {
+// Devhost interface.
+
+static zx_status_t cpuperf_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
+    cpuperf_device_t* dev = ctx;
+    if (dev->opened)
+        return ZX_ERR_ALREADY_BOUND;
+
+    dev->opened = true;
+    return ZX_OK;
+}
+
+static zx_status_t cpuperf_close(void* ctx, uint32_t flags) {
+    cpuperf_device_t* dev = ctx;
+
+    dev->opened = false;
+    return ZX_OK;
+}
+
+static zx_status_t cpuperf_ioctl(void* ctx, uint32_t op,
+                                 const void* cmd, size_t cmdlen,
+                                 void* reply, size_t replymax,
+                                 size_t* out_actual) {
+    cpuperf_device_t* dev = ctx;
+
+    mtx_lock(&dev->lock);
+
+    ssize_t result;
+    switch (IOCTL_FAMILY(op)) {
+        case IOCTL_FAMILY_CPUPERF:
+            result = cpuperf_ioctl_worker(dev, op, cmd, cmdlen,
+                                          reply, replymax, out_actual);
+            break;
+        default:
+            result = ZX_ERR_INVALID_ARGS;
+            break;
+    }
+
+    mtx_unlock(&dev->lock);
+
+    return result;
+}
+
+static void cpuperf_release(void* ctx) {
+    cpuperf_device_t* dev = ctx;
+
     // TODO(dje): None of these should fail. What to do?
     // Suggest flagging things as busted and prevent further use.
     ipm_stop(dev);
     ipm_free_trace(dev);
+
+    zx_handle_close(dev->bti);
+    free(dev);
+}
+
+static zx_protocol_device_t cpuperf_device_proto = {
+    .version = DEVICE_OPS_VERSION,
+    .open = cpuperf_open,
+    .close = cpuperf_close,
+    .ioctl = cpuperf_ioctl,
+    .release = cpuperf_release,
+};
+
+zx_status_t cpuperf_bind(void* ctx, zx_device_t* parent) {
+    zx_status_t status = cpuperf_init_once();
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    platform_device_protocol_t pdev;
+    status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    cpuperf_device_t* dev = calloc(1, sizeof(*dev));
+    if (!dev) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    dev->bti = ZX_HANDLE_INVALID;
+    status = pdev_get_bti(&pdev, 0, &dev->bti);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "cpuperf",
+        .ctx = dev,
+        .ops = &cpuperf_device_proto,
+    };
+
+    if ((status = device_add(parent, &args, NULL)) < 0) {
+        goto fail;
+    }
+
+    return ZX_OK;
+
+fail:
+    zx_handle_close(dev->bti);
+    free(dev);
+    return status;
 }

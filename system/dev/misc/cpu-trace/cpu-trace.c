@@ -4,11 +4,8 @@
 
 // See the README.md in this directory for documentation.
 
-#include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <threads.h>
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
@@ -17,116 +14,23 @@
 #include <ddk/protocol/platform-device.h>
 
 #include <zircon/syscalls.h>
-#include <zircon/syscalls/resource.h>
-#include <zircon/types.h>
 
 #include "cpu-trace-private.h"
 
-static zx_status_t cpu_trace_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
-    cpu_trace_device_t* dev = ctx;
-    if (dev->opened)
-        return ZX_ERR_ALREADY_BOUND;
-
-    dev->opened = true;
-    return ZX_OK;
-}
-
-static zx_status_t cpu_trace_close(void* ctx, uint32_t flags) {
-    cpu_trace_device_t* dev = ctx;
-
-    dev->opened = false;
-    return ZX_OK;
-}
-
-static zx_status_t cpu_trace_ioctl(void* ctx, uint32_t op,
-                                   const void* cmd, size_t cmdlen,
-                                   void* reply, size_t replymax,
-                                   size_t* out_actual) {
-    cpu_trace_device_t* dev = ctx;
-
-    mtx_lock(&dev->lock);
-
-    ssize_t result;
-    switch (IOCTL_FAMILY(op)) {
-#ifdef __x86_64__
-        case IOCTL_FAMILY_CPUPERF:
-            result = cpuperf_ioctl(dev, op, cmd, cmdlen,
-                                   reply, replymax, out_actual);
-            break;
-        case IOCTL_FAMILY_INSNTRACE:
-            result = insntrace_ioctl(dev, op, cmd, cmdlen,
-                                     reply, replymax, out_actual);
-            break;
-#endif
-        default:
-            result = ZX_ERR_INVALID_ARGS;
-            break;
-    }
-
-    mtx_unlock(&dev->lock);
-
-    return result;
-}
-
-static void cpu_trace_release(void* ctx) {
-    cpu_trace_device_t* dev = ctx;
-
-#ifdef __x86_64__
-    insntrace_release(dev);
-    cpuperf_release(dev);
-#endif
-
-    zx_handle_close(dev->bti);
-    free(dev);
-}
-
-static zx_protocol_device_t cpu_trace_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .open = cpu_trace_open,
-    .close = cpu_trace_close,
-    .ioctl = cpu_trace_ioctl,
-    .release = cpu_trace_release,
-};
-
 static zx_status_t cpu_trace_bind(void* ctx, zx_device_t* parent) {
 #ifdef __x86_64__
-    insntrace_init_once();
-    cpuperf_init_once();
+    zx_status_t cpuperf_status = cpuperf_bind(ctx, parent);
+    zx_status_t insntrace_status = insntrace_bind(ctx, parent);
+
+    // If at least one succeeded return ZX_OK.
+    // E.g., Devhost may dlclose us some day if we fail.
+    if (cpuperf_status != ZX_OK && insntrace_status != ZX_OK) {
+        // Doesn't matter which one we return.
+        return cpuperf_status;
+    }
 #endif
 
-    platform_device_protocol_t pdev;
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    cpu_trace_device_t* dev = calloc(1, sizeof(*dev));
-    if (!dev) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    status = pdev_get_bti(&pdev, 0, &dev->bti);
-    if (status != ZX_OK) {
-        goto fail;
-    }
-
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "cpu-trace",
-        .ctx = dev,
-        .ops = &cpu_trace_device_proto,
-    };
-
-    if ((status = device_add(parent, &args, NULL)) < 0) {
-        goto fail;
-    }
-
     return ZX_OK;
-
-fail:
-    zx_handle_close(dev->bti);
-    free(dev);
-    return status;
 }
 
 static zx_driver_ops_t cpu_trace_driver_ops = {
