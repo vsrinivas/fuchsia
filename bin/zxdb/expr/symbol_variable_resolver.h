@@ -8,6 +8,8 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/symbols/dwarf_expr_eval.h"
+#include "lib/fxl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
@@ -23,8 +25,9 @@ class Variable;
 // asynchronous because reading the values from the debugged program may
 // require IPC.
 //
-// This can resolve different things, but only one request can be in progress
-// at a time.
+// Multiple requests can be pending at a time. This can happen if another
+// resolve request happens while a previous one is pending on an asynchronous
+// memory ot register read.
 class SymbolVariableResolver {
  public:
   using Callback = std::function<void(const Err&, ExprValue)>;
@@ -45,21 +48,34 @@ class SymbolVariableResolver {
                        Callback cb);
 
  private:
+  // The data associated with one in-progress variable resolution. This must be
+  // heap allocated for each resolution operation since multiple operations can
+  // be pending.
+  struct ResolutionState : public fxl::RefCountedThreadSafe<ResolutionState> {
+    DwarfExprEval dwarf_eval;
+    Callback callback;
+
+    // This private stuff prevents refcounted mistakes.
+   private:
+    FRIEND_REF_COUNTED_THREAD_SAFE(ResolutionState);
+    FRIEND_MAKE_REF_COUNTED(ResolutionState);
+
+    explicit ResolutionState(Callback cb) : callback(std::move(cb)) {}
+    ~ResolutionState() = default;
+  };
+
   // The functions below represent a flow that is usually executed in order.
 
   // Callback for when the dwarf_eval_ has completed evaluation.
-  void OnDwarfEvalComplete(const Err& err, fxl::RefPtr<Type> type);
+  void OnDwarfEvalComplete(fxl::RefPtr<ResolutionState> state, const Err& err,
+                           fxl::RefPtr<Type> type);
 
   // Issuse the callback. The callback could possibly delete |this| so don't
   // do anything after calling.
-  void OnComplete(const Err& err, ExprValue value);
+  void OnComplete(fxl::RefPtr<ResolutionState> state, const Err& err,
+                  ExprValue value);
 
   fxl::RefPtr<SymbolDataProvider> data_provider_;
-
-  DwarfExprEval dwarf_eval_;
-
-  // Non-null when an operation is in progress.
-  Callback current_callback_;
 
   fxl::WeakPtrFactory<SymbolVariableResolver> weak_factory_;
 };

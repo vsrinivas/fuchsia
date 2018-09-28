@@ -36,7 +36,7 @@ class SymbolVariableResolverTest : public testing::Test {
 }  // namespace
 
 // Test a lookup of the value where everything is found.
-TEST_F(SymbolVariableResolverTest, Found) {
+TEST_F(SymbolVariableResolverTest, FoundAndNot) {
   constexpr uint64_t kValue = 0x1234567890123;
   provider()->AddRegisterValue(0, true, kValue);
 
@@ -160,6 +160,9 @@ TEST_F(SymbolVariableResolverTest, CharValue) {
   EXPECT_EQ(ExprValue(kValueLo), out_value);
 }
 
+// Tests asynchronously reading an integer from memory. This also tests
+// interleaved execution of multiple requests by having a resolution miss
+// request execute while the memory request is pending.
 TEST_F(SymbolVariableResolverTest, IntOnStack) {
   // Define a 4-byte integer (=0x12345678) at location bp+8
   constexpr int32_t kValue = 0x12345678;
@@ -193,8 +196,28 @@ TEST_F(SymbolVariableResolverTest, IntOnStack) {
   // Should be run async since it requests memory.
   EXPECT_FALSE(called);
   EXPECT_FALSE(out_err.has_error()) << out_err.msg();
-  loop().Run();
 
+  // Before running the loop and receiving the memory, start a new request,
+  // this one will fail synchronously due to a range miss.
+  auto rangemiss = MakeUint64VariableForTest("rangemiss", 0x6000, 0x7000,
+                                             {llvm::dwarf::DW_OP_reg0});
+  bool called2 = false;
+  Err out_err2;
+  ExprValue out_value2;
+  resolver.ResolveVariable(
+      symbol_context, rangemiss.get(),
+      [&called2, &out_err2, &out_value2](const Err& err, ExprValue value) {
+        called2 = true;
+        out_err2 = err;
+        out_value2 = value;
+      });
+  EXPECT_TRUE(called2);
+  EXPECT_TRUE(out_err2.has_error());
+  EXPECT_EQ(ErrType::kOptimizedOut, out_err2.type());
+  EXPECT_EQ(ExprValue(), out_value2);
+
+  // Now let the first request complete.
+  loop().Run();
   EXPECT_TRUE(called);
   EXPECT_FALSE(out_err.has_error()) << out_err.msg();
   EXPECT_EQ(ExprValue(kValue), out_value);
