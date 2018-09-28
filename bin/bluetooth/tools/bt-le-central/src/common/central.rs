@@ -25,8 +25,8 @@ use {
 type CentralStatePtr = Arc<RwLock<CentralState>>;
 
 pub struct CentralState {
-    // If true, stop scanning and close the delegate handle after the first scan result.
-    pub scan_once: bool,
+    // If `Some(n)`, stop scanning and close the delegate handle after n more scan results.
+    pub remaining_scan_results: Option<u64>,
 
     // If true, attempt to connect to the first scan result.
     pub connect: bool,
@@ -38,7 +38,7 @@ pub struct CentralState {
 impl CentralState {
     pub fn new(proxy: CentralProxy) -> CentralStatePtr {
         Arc::new(RwLock::new(CentralState {
-            scan_once: false,
+            remaining_scan_results: None,
             connect: false,
             svc: proxy,
         }))
@@ -46,6 +46,22 @@ impl CentralState {
 
     pub fn get_svc(&self) -> &CentralProxy {
         &self.svc
+    }
+
+    /// If the remaining_scan_results is specified, decrement until it reaches 0.
+    /// Scanning should continue if the user is not attempted to connect to a device
+    /// and there are remaining scans left to run.
+    ///
+    /// return: true if scanning should continue
+    ///         false if scanning should stop
+    pub fn decrement_scan_count(&mut self) -> bool {
+        self.remaining_scan_results = self.remaining_scan_results.map(
+            // decrement until n is 0
+            |n| if n > 0 {n - 1} else {n}
+        );
+        // scanning should continue if connection will not be attempted and
+        // there are remaining scan results
+        !(self.connect || self.remaining_scan_results.iter().any(|&n| n == 0))
     }
 }
 
@@ -68,8 +84,9 @@ pub async fn listen_central_events(
 
                     eprintln!(" {}", RemoteDeviceWrapper(device));
 
-                    let central = state.read();
-                    if !central.scan_once && !central.connect {
+                    let mut central = state.write();
+                    if central.decrement_scan_count() {
+                        // Continue scanning
                         return Ok(());
                     }
 
@@ -145,9 +162,9 @@ struct RemoteDeviceWrapper(RemoteDevice);
 impl fmt::Display for RemoteDeviceWrapper {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let connectable = if self.0.connectable {
-            "conn"
+            "connectable"
         } else {
-            "non-conn"
+            "non-connectable"
         };
 
         write!(f, "[device({}), ", connectable)?;

@@ -26,13 +26,18 @@ use self::common::central::{listen_central_events, CentralState};
 
 fn do_scan(
     args: &[String], central: &CentralProxy,
-) -> (bool, bool, impl Future<Output = Result<(), Error>>) {
+) -> (Option<u64>, bool, impl Future<Output = Result<(), Error>>) {
     let mut opts = Options::new();
 
     opts.optflag("h", "help", "");
 
     // Options for scan/connection behavior.
-    opts.optflag("o", "once", "stop scanning after first result");
+    opts.optopt(
+        "s",
+        "scan-count",
+        "number of scan results to return before scanning is stopped",
+        "SCAN_COUNT",
+    );
     opts.optflag(
         "c",
         "connect",
@@ -46,22 +51,47 @@ fn do_scan(
     let matches = match opts.parse(args) {
         Ok(m) => m,
         Err(fail) => {
-            return (false, false, Left(future::ready(Err(fail.into()))));
+            return (None, false, Left(future::ready(Err(fail.into()))));
         }
     };
 
     if matches.opt_present("h") {
-        let brief = "Usage: ble-central-tool scan [options]";
+        let brief = "Usage: ble-central-tool scan (--connect|--scan-count=N) [--name-filter=NAME] \
+            [--uuid-filter=UUID]";
         print!("{}", opts.usage(&brief));
         return (
-            false,
+            None,
             false,
             Left(future::ready(Err(BTError::new("invalid input").into()))),
         );
     }
 
-    let scan_once: bool = matches.opt_present("o");
+    let remaining_scan_results: Option<u64> = match matches.opt_str("s") {
+        Some(num) => match num.parse() {
+            Err(_) | Ok(0) => {
+                println!("{} is not a valid input \
+                        - the value must be a positive non-zero number", num);
+                return (
+                    None,
+                    false,
+                    Left(future::ready(Err(BTError::new("invalid input").into()))),
+                    );
+            }
+            Ok(num) => Some(num),
+        }
+        None => None,
+    };
+
     let connect: bool = matches.opt_present("c");
+
+    if remaining_scan_results.is_some() && connect {
+        println!("Cannot use both -s and -c options at the same time");
+        return (
+            None,
+            false,
+            Left(future::ready(Err(BTError::new("invalid input").into()))),
+            );
+    }
 
     let uuids = match matches.opt_str("u") {
         None => None,
@@ -71,7 +101,7 @@ fn do_scan(
             _ => {
                 println!("invalid service UUID: {}", val);
                 return (
-                    false,
+                    None,
                     false,
                     Left(future::ready(Err(BTError::new("invalid input").into()))),
                 );
@@ -104,7 +134,7 @@ fn do_scan(
             })),
     );
 
-    (scan_once, connect, fut)
+    (remaining_scan_results, connect, fut)
 }
 
 async fn do_connect<'a>(args: &'a [String], central: &'a CentralProxy)
@@ -158,8 +188,8 @@ fn main() -> Result<(), Error> {
             "scan" => {
                 let fut = {
                     let mut central = state.write();
-                    let (scan_once, connect, fut) = do_scan(&args[2..], central.get_svc());
-                    central.scan_once = scan_once;
+                    let (remaining_scan_results, connect, fut) = do_scan(&args[2..], central.get_svc());
+                    central.remaining_scan_results = remaining_scan_results;
                     central.connect = connect;
                     fut
                 };
