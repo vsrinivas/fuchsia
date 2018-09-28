@@ -13,8 +13,10 @@ package("netstack") {
     ":netstack_bin",
   ]
 
-  binaries = [ 
-    { name = "netstack" },
+  binaries = [
+    {
+      name = "netstack"
+    },
   ]
 
   meta = [
@@ -61,6 +63,7 @@ package("netstack_gotests") {
   deps = [
     ":netstack_bridge_test",
     ":netstack_connectivity_test",
+    ":netstack_dns_test",
     ":netstack_fidlconv_test",
     ":netstack_filter_test",
     ":netstack_link_eth_test",
@@ -83,6 +86,9 @@ package("netstack_gotests") {
     },
     {
       name = "netstack_connectivity_test"
+    },
+    {
+      name = "netstack_dns_test"
     },
     {
       name = "netstack_fidlconv_test"
@@ -141,6 +147,13 @@ go_test("netstack_bridge_test") {
 
 go_test("netstack_connectivity_test") {
   gopackage = "netstack/connectivity"
+  deps = [
+    ":netstack_lib",
+  ]
+}
+
+go_test("netstack_dns_test") {
+  gopackage = "netstack/dns"
   deps = [
     ":netstack_lib",
   ]

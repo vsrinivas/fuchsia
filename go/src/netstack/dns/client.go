@@ -189,7 +189,7 @@ func (c *Client) exchange(server tcpip.FullAddress, name string, qtype dnsmessag
 			RecursionDesired: true,
 		},
 		Questions: []dnsmessage.Question{
-			{name, qtype, dnsmessage.ClassINET},
+			{Name: name, Type: qtype, Class: dnsmessage.ClassINET},
 		},
 	}
 
