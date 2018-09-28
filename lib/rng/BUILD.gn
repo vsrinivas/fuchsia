@@ -10,12 +10,12 @@ source_set("rng") {
 
 source_set("system") {
   sources = [
-    "system_random.cc",
     "system_random.h",
   ]
 
   public_deps = [
     ":rng",
+    "//zircon/public/lib/zx",
   ]
 }
 
