@@ -376,7 +376,10 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
 }
 
 zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
-  ZX_DEBUG_ASSERT(!parser_running_);
+  {
+    std::lock_guard<std::mutex> lock(parser_running_lock_);
+    ZX_DEBUG_ASSERT(!parser_running_);
+  }
   if (!parser_input_ || io_buffer_size(parser_input_.get(), 0) < len) {
     if (parser_input_) {
       io_buffer_release(parser_input_.get());
@@ -439,7 +442,10 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
 }
 
 zx_status_t AmlogicVideo::WaitForParsingCompleted(zx_duration_t deadline) {
-  ZX_DEBUG_ASSERT(parser_running_);
+  {
+    std::lock_guard<std::mutex> lock(parser_running_lock_);
+    ZX_DEBUG_ASSERT(parser_running_);
+  }
   zx_status_t status = parser_finished_event_.wait_one(
       ZX_USER_SIGNAL_0, zx::deadline_after(zx::duration(deadline)), nullptr);
   if (status == ZX_OK) {
