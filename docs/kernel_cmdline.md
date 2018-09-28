@@ -63,6 +63,10 @@ then all `-fsanitize=address` drivers will be supported regardless of this
 option.  If this option is not set and there are no such drivers in /boot, then
 drivers built with `-fsanitize=address` cannot be loaded and will be rejected.
 
+## devmgr\.verbose
+
+Turn on verbose logging.
+
 ## driver.\<name>.disable
 
 Disables the driver with the given name. The driver name comes from the

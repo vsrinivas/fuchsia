@@ -19,7 +19,7 @@ namespace devmgr {
 #define LOG_RPC_SDW  0x080
 #define LOG_DEVFS    0x100
 #define LOG_DEVLC    0x200
-#define LOG_ALL      0x177
+#define LOG_ALL      0x3ff
 
 extern uint32_t log_flags;
 

@@ -2196,7 +2196,7 @@ void coordinator() {
     log(INFO, "devmgr: coordinator()\n");
 
     if (getenv_bool("devmgr.verbose", false)) {
-        log_flags |= LOG_DEVLC;
+        log_flags |= LOG_ALL;
     }
 
     suspend_fallback = getenv_bool("devmgr.suspend-timeout-fallback", false);
