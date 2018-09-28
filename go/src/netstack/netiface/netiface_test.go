@@ -5,7 +5,6 @@
 package netiface_test
 
 import (
-	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -16,6 +15,7 @@ import (
 
 	"fidl/fuchsia/netstack"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/netstack/tcpip"
 )
 
@@ -116,8 +116,8 @@ func TestLoopbackBeforeAny(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(expected, routes) {
-		t.Fatalf("Expected:\n  %v\nActual:\n  %v", expected, routes)
+	if diff := cmp.Diff(expected, routes); diff != "" {
+		t.Errorf("(-want +got)\n%s", diff)
 	}
 }
 
@@ -170,8 +170,8 @@ func TestGatewayBeforeAddr(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(expected, routes) {
-		t.Fatalf("Expected:\n  %v\nActual:\n  %v", expected, routes)
+	if diff := cmp.Diff(expected, routes); diff != "" {
+		t.Errorf("(-want +got)\n%s", diff)
 	}
 }
 
@@ -221,8 +221,8 @@ func TestAddrBeforeAny(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(expected, routes) {
-		t.Fatalf("Expected:\n  %v\nActual:\n  %v", expected, routes)
+	if diff := cmp.Diff(expected, routes); diff != "" {
+		t.Errorf("(-want +got)\n%s", diff)
 	}
 }
 
@@ -273,8 +273,8 @@ func TestSortByIDAsFallback(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(expected, routes) {
-		t.Fatalf("Expected:\n  %v\nActual:\n  %v", expected, routes)
+	if diff := cmp.Diff(expected, routes); diff != "" {
+		t.Errorf("(-want +got)\n%s", diff)
 	}
 }
 
@@ -336,8 +336,8 @@ func TestSpecificGatewayBeforeAnyGateway(t *testing.T) {
 		return netiface.Less(&routes[i], &routes[j], indexedByID)
 	})
 
-	if !reflect.DeepEqual(expected, routes) {
-		t.Fatalf("Expected:\n  %v\nActual:\n  %v", expected, routes)
+	if diff := cmp.Diff(expected, routes); diff != "" {
+		t.Errorf("(-want +got)\n%s", diff)
 	}
 }
 
@@ -387,8 +387,8 @@ func TestSpecificMaskFirst(t *testing.T) {
 		return netiface.Less(&routes[i], &routes[j], indexedByID)
 	})
 
-	if !reflect.DeepEqual(expected, routes) {
-		t.Fatalf("Expected:\n  %v\nActual:\n  %v", expected, routes)
+	if diff := cmp.Diff(expected, routes); diff != "" {
+		t.Errorf("(-want +got)\n%s", diff)
 	}
 }
 

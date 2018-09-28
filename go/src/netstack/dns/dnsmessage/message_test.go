@@ -7,9 +7,10 @@ package dnsmessage
 import (
 	"fmt"
 	"net"
-	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func (m *Message) String() string {
@@ -63,7 +64,7 @@ func TestQuestionPackUnpack(t *testing.T) {
 	if p.off != len(buf) {
 		t.Errorf("Unpacked different amount than packed: got n = %d, want = %d", p.off, len(buf))
 	}
-	if !reflect.DeepEqual(got, want) {
+	if got != want {
 		t.Errorf("Got = %+v, want = %+v", got, want)
 	}
 }
@@ -135,12 +136,11 @@ func TestDNSPackUnpack(t *testing.T) {
 			t.Fatalf("%d: packing failed: %v", i, err)
 		}
 		var got Message
-		err = got.Unpack(b)
-		if err != nil {
+		if err := got.Unpack(b); err != nil {
 			t.Fatalf("%d: unpacking failed: %v", i, err)
 		}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("%d: got = %+v, want = %+v", i, &got, &want)
+		if diff := cmp.Diff(got, want); diff != "" {
+			t.Errorf("%d: diff after pack/unpack: (-want +got)\n%s", i, diff)
 		}
 	}
 }
@@ -262,8 +262,8 @@ func TestVeryLongTxt(t *testing.T) {
 	if n != len(buf) {
 		t.Errorf("Unpacked different amount than packed: got n = %d, want = %d", n, len(buf))
 	}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("Got = %+v, want = %+v", got, want)
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Errorf("diff after pack/unpack: (-want +got)\n%s", diff)
 	}
 }
 
