@@ -117,3 +117,14 @@ package("service") {
     },
   ]
 }
+
+package("config") {
+  deprecated_system_image = true
+  package_name = "mdns_config"
+  resources = [
+    {
+      dest = "sysmgr/mdns.config"
+      path = rebase_path("service.config")
+    },
+  ]
+}

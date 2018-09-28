@@ -2,6 +2,7 @@
     "imports": [
         "garnet/packages/products/graphical",
         "garnet/packages/products/network_installer",
+        "garnet/packages/config/mdns",
         "garnet/packages/config/thermd",
         "garnet/packages/prod/auth",
         "garnet/packages/prod/bluetooth",
