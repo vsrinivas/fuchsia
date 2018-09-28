@@ -31,22 +31,12 @@ class CppPrebuiltSet(object):
 
 class CppPrebuiltLibrary(_CppLibrary):
 
-    # TODO(DX-340): remove target_arch argument.
-    def __init__(self, name, target_arch=''):
+    def __init__(self, name):
         super(CppPrebuiltLibrary, self).__init__(name)
         self.prebuilt = ""
         self.is_static = False
-        self.target_arch = target_arch
         self.packaged_files = {}
         self.prebuilts = {}
-
-
-# TODO(DX-340): remove this model.
-class Sysroot(object):
-
-    def __init__(self, target_arch):
-        self.target_arch = target_arch
-        self.packaged_files = {}
 
 
 class FidlLibrary(object):

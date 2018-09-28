@@ -187,11 +187,6 @@ class BazelBuilder(Frontend):
                 prebuilt_set.dist_lib = _copy_prebuilt(dist, 'dist')
                 prebuilt_set.dist_path = 'lib/' + os.path.basename(dist)
 
-            # TODO(DX-340): this is only to reach parity with the old version of
-            # the frontend, should be removed.
-            if 'debug' in binaries:
-                _copy_prebuilt(binaries['debug'], 'debug')
-
             library.prebuilts[arch] = prebuilt_set
 
         for dep in atom['deps']:
@@ -200,7 +195,6 @@ class BazelBuilder(Frontend):
         library.includes.append(os.path.relpath(atom['include_dir'],
                                                 atom['root']))
 
-        # TODO(DX-340): remove the _top and _srcs templates.
         self.write_file(os.path.join(base, 'BUILD'), 'cc_prebuilt_library',
                         library)
 
