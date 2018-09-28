@@ -19,7 +19,7 @@ class TestRandom final : public Random {
  private:
   void InternalDraw(void* buffer, size_t buffer_size) override;
 
-  std::mt19937_64 engine_;
+  std::independent_bits_engine<std::mt19937_64, 8, uint8_t> char_engine_;
 };
 
 }  // namespace rng

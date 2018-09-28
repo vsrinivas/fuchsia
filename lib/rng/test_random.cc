@@ -8,13 +8,11 @@
 
 namespace rng {
 
-TestRandom::TestRandom(std::uint_fast64_t seed) : engine_(seed) {}
+TestRandom::TestRandom(std::uint_fast64_t seed) : char_engine_(seed) {}
 
 void TestRandom::InternalDraw(void* buffer, size_t buffer_size) {
-  std::independent_bits_engine<decltype(engine_), 8, uint8_t> char_engine(
-      engine_);
   uint8_t* char_buffer = static_cast<uint8_t*>(buffer);
-  std::generate(char_buffer, char_buffer + buffer_size, std::ref(char_engine));
+  std::generate(char_buffer, char_buffer + buffer_size, std::ref(char_engine_));
 }
 
 }  // namespace rng

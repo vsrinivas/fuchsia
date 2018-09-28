@@ -34,6 +34,20 @@ TEST(TestRandomTest, DependantDraws) {
   EXPECT_THAT(v1, ElementsAreArray(v2));
 }
 
+TEST(TestRandomTest, ConsequentDraws) {
+  constexpr size_t kNbElement = 20;
+
+  TestRandom random1(0);
+
+  std::vector<uint8_t> v1(kNbElement, 0);
+  std::vector<uint8_t> v2(kNbElement, 0);
+
+  random1.Draw(&v1);
+  random1.Draw(&v2);
+
+  EXPECT_THAT(v1, Not(ElementsAreArray(v2)));
+}
+
 TEST(TestRandomTest, IndependantDraws) {
   constexpr size_t kNbElement = 20;
 
