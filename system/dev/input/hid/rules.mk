@@ -12,7 +12,8 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/hid-fifo.c \
     $(LOCAL_DIR)/hid.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk
+MODULE_FIDL_LIBS := system/fidl/zircon-input
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/fidl
 
 MODULE_LIBS := \
     system/ulib/driver \

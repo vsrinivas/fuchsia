@@ -10,6 +10,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/hidbus.h>
 #include <zircon/device/input.h>
+#include <zircon/input/c/fidl.h>
 
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
@@ -40,7 +41,7 @@
 #define BOOT_MOUSE_HACK 1
 
 typedef struct hid_report_size {
-    int16_t id;
+    uint8_t id;
     input_report_size_t in_size;
     input_report_size_t out_size;
     input_report_size_t feat_size;
@@ -109,8 +110,8 @@ static inline zx_status_t hid_op_get_report(hid_device_t* hid, uint8_t rpt_type,
 }
 
 static inline zx_status_t hid_op_set_report(hid_device_t* hid, uint8_t rpt_type, uint8_t rpt_id,
-                                            void* data, size_t len) {
-    return hid->hid.ops->set_report(hid->hid.ctx, rpt_type, rpt_id, data, len);
+                                            const void* data, size_t len) {
+    return hid->hid.ops->set_report(hid->hid.ctx, rpt_type, rpt_id, (void*)data, len);
 }
 
 static inline zx_status_t hid_op_get_idle(hid_device_t* hid, uint8_t rpt_id, uint8_t* duration) {
@@ -149,17 +150,21 @@ static input_report_size_t hid_get_report_size_by_id(hid_device_t* hid,
     return 0;
 }
 
+static zircon_input_BootProtocol get_boot_protocol(hid_device_t* hid) {
+    if (hid->info.dev_class == HID_DEV_CLASS_KBD || hid->info.dev_class == HID_DEV_CLASS_KBD_POINTER) {
+        return zircon_input_BootProtocol_KBD;
+    } else if (hid->info.dev_class == HID_DEV_CLASS_POINTER) {
+        return zircon_input_BootProtocol_MOUSE;
+    }
+    return zircon_input_BootProtocol_NONE;
+}
+
 static zx_status_t hid_get_protocol(hid_device_t* hid, void* out_buf, size_t out_len,
                                     size_t* out_actual) {
     if (out_len < sizeof(int)) return ZX_ERR_INVALID_ARGS;
 
     int* reply = out_buf;
-    *reply = INPUT_PROTO_NONE;
-    if (hid->info.dev_class == HID_DEV_CLASS_KBD || hid->info.dev_class == HID_DEV_CLASS_KBD_POINTER) {
-        *reply = INPUT_PROTO_KBD;
-    } else if (hid->info.dev_class == HID_DEV_CLASS_POINTER) {
-        *reply = INPUT_PROTO_MOUSE;
-    }
+    *reply = get_boot_protocol(hid);
     *out_actual = sizeof(*reply);
     return ZX_OK;
 }
@@ -223,19 +228,22 @@ static zx_status_t hid_get_report_size(hid_device_t* hid, const void* in_buf, si
     return ZX_OK;
 }
 
+static uint16_t get_max_input_reportsize(hid_device_t* hid) {
+    size_t size = 0;
+    for (size_t i = 0; i < hid->num_reports; i++) {
+        if (hid->sizes[i].in_size > size)
+            size = hid->sizes[i].in_size;
+    }
+
+    return bits_to_bytes(size);
+}
+
 static ssize_t hid_get_max_input_reportsize(hid_device_t* hid, void* out_buf, size_t out_len,
                                             size_t* out_actual) {
     if (out_len < sizeof(input_report_size_t)) return ZX_ERR_INVALID_ARGS;
 
     input_report_size_t* reply = out_buf;
-
-    *reply = 0;
-    for (size_t i = 0; i < hid->num_reports; i++) {
-        if (hid->sizes[i].in_size > *reply)
-            *reply = hid->sizes[i].in_size;
-    }
-
-    *reply = bits_to_bytes(*reply);
+    *reply = get_max_input_reportsize(hid);
     *out_actual = sizeof(*reply);
     return ZX_OK;
 }
@@ -358,11 +366,100 @@ static void hid_release_instance(void* ctx) {
     free(hid);
 }
 
+static zx_status_t fidl_GetBootProtocol(void* ctx, fidl_txn_t* txn) {
+    hid_instance_t* hid = ctx;
+    return zircon_input_DeviceGetBootProtocol_reply(txn, get_boot_protocol(hid->base));
+}
+
+static zx_status_t fidl_GetReportDescSize(void* ctx, fidl_txn_t* txn) {
+    hid_instance_t* hid = ctx;
+    return zircon_input_DeviceGetReportDescSize_reply(txn, hid->base->hid_report_desc_len);
+}
+
+static zx_status_t fidl_GetReportDesc(void* ctx, fidl_txn_t* txn) {
+    hid_instance_t* hid = ctx;
+    return zircon_input_DeviceGetReportDesc_reply(txn, hid->base->hid_report_desc,
+                                                  hid->base->hid_report_desc_len);
+}
+
+static zx_status_t fidl_GetNumReports(void* ctx, fidl_txn_t* txn) {
+    hid_instance_t* hid = ctx;
+    return zircon_input_DeviceGetNumReports_reply(txn, hid->base->num_reports);
+}
+
+static zx_status_t fidl_GetReportIds(void* ctx, fidl_txn_t* txn) {
+    hid_instance_t* hid = ctx;
+    uint8_t report[zircon_input_MAX_REPORT_IDS];
+    for (size_t i = 0; i < hid->base->num_reports; i++) {
+        report[i] = hid->base->sizes[i].id;
+    }
+    return zircon_input_DeviceGetReportIds_reply(txn, report, hid->base->num_reports);
+}
+
+static zx_status_t fidl_GetReportSize(void* ctx, zircon_input_ReportType type, uint8_t id,
+                                      fidl_txn_t* txn) {
+    hid_instance_t* hid = ctx;
+    uint16_t size = hid_get_report_size_by_id(hid->base, id, type);
+    return zircon_input_DeviceGetReportSize_reply(txn, size == 0 ? ZX_ERR_NOT_FOUND : ZX_OK, size);
+}
+
+static zx_status_t fidl_GetMaxInputReportSize(void* ctx, fidl_txn_t* txn) {
+    hid_instance_t* hid = ctx;
+    return zircon_input_DeviceGetMaxInputReportSize_reply(txn, get_max_input_reportsize(hid->base));
+}
+
+static zx_status_t fidl_GetReport(void* ctx, zircon_input_ReportType type, uint8_t id,
+                                  fidl_txn_t* txn) {
+    hid_instance_t* hid = ctx;
+    input_report_size_t needed = hid_get_report_size_by_id(hid->base, id, type);
+    if (needed == 0) {
+        return zircon_input_DeviceGetReport_reply(txn, ZX_ERR_NOT_FOUND, NULL, 0);
+    }
+
+    uint8_t report[needed];
+    size_t actual = 0;
+    zx_status_t status = hid_op_get_report(hid->base, type, id, report, needed, &actual);
+    return zircon_input_DeviceGetReport_reply(txn, status, report, actual);
+}
+
+static zx_status_t fidl_SetReport(void* ctx, zircon_input_ReportType type, uint8_t id,
+                                  const uint8_t* report, size_t report_len, fidl_txn_t* txn) {
+    hid_instance_t* hid = ctx;
+    input_report_size_t needed = hid_get_report_size_by_id(hid->base, id, type);
+    if (needed < report_len) {
+        return zircon_input_DeviceSetReport_reply(txn, ZX_ERR_BUFFER_TOO_SMALL);
+    }
+    zx_status_t status = hid_op_set_report(hid->base, type, id, report, report_len);
+    return zircon_input_DeviceSetReport_reply(txn, status);
+}
+
+static zircon_input_Device_ops_t fidl_ops = {
+    .GetBootProtocol = fidl_GetBootProtocol,
+    .GetReportDescSize = fidl_GetReportDescSize,
+    .GetReportDesc = fidl_GetReportDesc,
+    .GetNumReports = fidl_GetNumReports,
+    .GetReportIds = fidl_GetReportIds,
+    .GetReportSize = fidl_GetReportSize,
+    .GetMaxInputReportSize = fidl_GetMaxInputReportSize,
+    .GetReport = fidl_GetReport,
+    .SetReport = fidl_SetReport,
+};
+
+static zx_status_t hid_message_instance(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    hid_instance_t* hid = ctx;
+    if (hid->flags & HID_FLAGS_DEAD) {
+        return ZX_ERR_PEER_CLOSED;
+    }
+
+    return zircon_input_Device_dispatch(ctx, txn, msg, &fidl_ops);
+}
+
 zx_protocol_device_t hid_instance_proto = {
     .version = DEVICE_OPS_VERSION,
     .read = hid_read_instance,
     .ioctl = hid_ioctl_instance,
     .close = hid_close_instance,
+    .message = hid_message_instance,
     .release = hid_release_instance,
 };
 
