@@ -52,9 +52,10 @@ static void dc_dump_drivers();
 
 typedef struct {
     zx_status_t status;
-    uint32_t flags;
-#define RUNNING 0
-#define SUSPEND 1
+    enum struct Flags : uint32_t {
+        kRunning = 0u,
+        kSuspend = 1u,
+    } flags;
     uint32_t sflags;    // suspend flags
     uint32_t count;     // outstanding msgs
     devhost_t* dh;      // next devhost to process
@@ -83,7 +84,7 @@ typedef struct {
 static list_node_t published_metadata = LIST_INITIAL_VALUE(published_metadata);
 
 static bool dc_in_suspend() {
-    return !!suspend_ctx.flags;
+    return suspend_ctx.flags == suspend_context_t::Flags::kSuspend;
 }
 static void dc_suspend(uint32_t flags);
 static void dc_mexec(zx_handle_t* h);
@@ -1871,7 +1872,7 @@ static int suspend_timeout_thread(void* arg) {
 
     auto ctx = static_cast<suspend_context_t*>(arg);
     if (suspend_debug) {
-        if (ctx->flags == RUNNING) {
+        if (ctx->flags == suspend_context_t::Flags::kRunning) {
             return 0; // success
         }
         log(ERROR, "devcoord: suspend time out\n");
@@ -1899,12 +1900,12 @@ static void dc_suspend(uint32_t flags) {
     }
 
     suspend_context_t* ctx = &suspend_ctx;
-    if (ctx->flags) {
+    if (ctx->flags == suspend_context_t::Flags::kSuspend) {
         return;
     }
     memset(ctx, 0, sizeof(*ctx));
     ctx->status = ZX_OK;
-    ctx->flags = SUSPEND;
+    ctx->flags = suspend_context_t::Flags::kSuspend;
     ctx->sflags = flags;
     ctx->socket = dmctl_socket;
     dmctl_socket = ZX_HANDLE_INVALID;   // to prevent the rpc handler from closing this handle
@@ -1933,12 +1934,12 @@ static void dc_mexec(zx_handle_t* h) {
     }
 
     suspend_context_t* ctx = &suspend_ctx;
-    if (ctx->flags) {
+    if (ctx->flags == suspend_context_t::Flags::kSuspend) {
         return;
     }
     memset(ctx, 0, sizeof(*ctx));
     ctx->status = ZX_OK;
-    ctx->flags = SUSPEND;
+    ctx->flags = suspend_context_t::Flags::kSuspend;
     ctx->sflags = DEVICE_SUSPEND_FLAG_MEXEC;
     list_initialize(&ctx->devhosts);
 
@@ -1964,7 +1965,7 @@ static void dc_continue_suspend(suspend_context_t* ctx) {
         if (ctx->sflags == DEVICE_SUSPEND_FLAG_MEXEC) {
             zx_object_signal(ctx->kernel, 0, ZX_USER_SIGNAL_0);
         }
-        ctx->flags = 0;
+        ctx->flags = suspend_context_t::Flags::kRunning;
         return;
     }
 
@@ -1984,7 +1985,7 @@ static void dc_continue_suspend(suspend_context_t* ctx) {
                 zx_handle_close(ctx->socket);
             }
             // if we get here the system did not suspend successfully
-            ctx->flags = RUNNING;
+            ctx->flags = suspend_context_t::Flags::kRunning;
         }
     }
 }
