@@ -114,9 +114,7 @@ struct xhci {
     // actual number of interrupts we are using
     uint32_t num_interrupts;
 
-    zx_handle_t mmio_handle;
-    void* mmio;
-    size_t mmio_size;
+    mmio_buffer_t mmio;
 
     // PCI support
     pci_protocol_t pci;

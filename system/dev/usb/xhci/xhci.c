@@ -50,7 +50,7 @@ int xhci_get_root_hub_index(xhci_t* xhci, uint32_t device_id) {
 
 static void xhci_read_extended_caps(xhci_t* xhci) {
     uint32_t* cap_ptr = NULL;
-    while ((cap_ptr = xhci_get_next_ext_cap(xhci->mmio, cap_ptr, NULL))) {
+    while ((cap_ptr = xhci_get_next_ext_cap(xhci->mmio.vaddr, cap_ptr, NULL))) {
         uint32_t cap_id = XHCI_GET_BITS32(cap_ptr, EXT_CAP_CAPABILITY_ID_START,
                                           EXT_CAP_CAPABILITY_ID_BITS);
 
@@ -153,7 +153,7 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
 
     usb_request_pool_init(&xhci->free_reqs);
 
-    xhci->cap_regs = (xhci_cap_regs_t*)xhci->mmio;
+    xhci->cap_regs = (xhci_cap_regs_t*)xhci->mmio.vaddr;
     xhci->op_regs = (xhci_op_regs_t*)((uint8_t*)xhci->cap_regs + xhci->cap_regs->length);
     xhci->doorbells = (uint32_t*)((uint8_t*)xhci->cap_regs + xhci->cap_regs->dboff);
     xhci->runtime_regs = (xhci_runtime_regs_t*)((uint8_t*)xhci->cap_regs + xhci->cap_regs->rtsoff);
@@ -345,7 +345,7 @@ fail:
 }
 
 uint32_t xhci_get_max_interrupters(xhci_t* xhci) {
-    xhci_cap_regs_t* cap_regs = (xhci_cap_regs_t*)xhci->mmio;
+    xhci_cap_regs_t* cap_regs = (xhci_cap_regs_t*)xhci->mmio.vaddr;
     volatile uint32_t* hcsparams1 = &cap_regs->hcsparams1;
     return XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_INTRS_START,
                            HCSPARAMS1_MAX_INTRS_BITS);
@@ -454,7 +454,7 @@ zx_status_t xhci_start(xhci_t* xhci) {
 
 #if defined(__x86_64__)
     // TODO(jocelyndang): start xdc in a new process.
-    zx_status_t status = xdc_bind(xhci->zxdev, xhci->bti_handle, xhci->mmio);
+    zx_status_t status = xdc_bind(xhci->zxdev, xhci->bti_handle, xhci->mmio.vaddr);
     if (status != ZX_OK) {
         zxlogf(ERROR, "xhci_start: xdc_bind failed %d\n", status);
     }
@@ -527,6 +527,7 @@ void xhci_free(xhci_t* xhci) {
     io_buffer_release(&xhci->input_context_buffer);
     io_buffer_release(&xhci->scratch_pad_pages_buffer);
     io_buffer_release(&xhci->scratch_pad_index_buffer);
+    mmio_buffer_release(&xhci->mmio);
 
     // this must done after releasing anything that relies
     // on our bti, like our io_buffers

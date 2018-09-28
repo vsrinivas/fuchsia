@@ -202,10 +202,7 @@ static void xhci_unbind(void* ctx) {
 static void xhci_release(void* ctx) {
     zxlogf(INFO, "xhci_release\n");
     xhci_t* xhci = ctx;
-    if (xhci->mmio) {
-        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)xhci->mmio, xhci->mmio_size);
-        zx_handle_close(xhci->mmio_handle);
-    }
+    mmio_buffer_release(&xhci->mmio);
     zx_handle_close(xhci->cfg_handle);
     xhci_free(xhci);
 }
@@ -347,12 +344,17 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
      * eXtensible Host Controller Interface revision 1.1, section 5, xhci
      * should only use BARs 0 and 1. 0 for 32 bit addressing, and 0+1 for 64 bit addressing.
      */
-    status = pci_map_bar(pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                              &xhci->mmio, &xhci->mmio_size, &xhci->mmio_handle);
+    zx_pci_bar_t bar;
+    status = pci_get_bar(pci, 0u, &bar);
     if (status != ZX_OK) {
         zxlogf(ERROR, "usb_xhci_bind could not find bar\n");
-        status = ZX_ERR_INTERNAL;
-         goto error_return;
+        goto error_return;
+    }
+    ZX_ASSERT(bar.type == ZX_PCI_BAR_TYPE_MMIO);
+    status = mmio_buffer_init(&xhci->mmio, 0, bar.handle, bar.size, ZX_CACHE_POLICY_UNCACHED);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "usb_xhci_bind could not map bar\n");
+        goto error_return;
     }
 
     uint32_t irq_cnt = 0;
@@ -416,10 +418,7 @@ error_return:
     for (uint32_t i = 0; i < num_irq_handles_initialized; i++) {
         zx_handle_close(xhci->irq_handles[i]);
     }
-    if (xhci->mmio) {
-        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)xhci->mmio, xhci->mmio_size);
-        zx_handle_close(xhci->mmio_handle);
-    }
+    mmio_buffer_release(&xhci->mmio);
     zx_handle_close(xhci->cfg_handle);
     free(xhci);
     return status;
@@ -442,8 +441,8 @@ static zx_status_t usb_xhci_bind_pdev(zx_device_t* parent, platform_device_proto
         goto error_return;
     }
 
-    status = pdev_map_mmio(pdev, PDEV_MMIO_INDEX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                           &xhci->mmio, &xhci->mmio_size, &xhci->mmio_handle);
+    status = pdev_map_mmio_buffer2(pdev, PDEV_MMIO_INDEX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &xhci->mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "usb_xhci_bind_pdev: pdev_map_mmio failed\n");
         goto error_return;
@@ -470,11 +469,8 @@ static zx_status_t usb_xhci_bind_pdev(zx_device_t* parent, platform_device_proto
 
 error_return:
     zx_handle_close(xhci->bti_handle);
+    mmio_buffer_release(&xhci->mmio);
     free(xhci);
-    if (xhci->mmio) {
-        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)xhci->mmio, xhci->mmio_size);
-        zx_handle_close(xhci->mmio_handle);
-    }
     zx_handle_close(irq_handle);
     return status;
 }
