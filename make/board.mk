@@ -56,8 +56,8 @@ ifeq ($(PLATFORM_CMDLINE),)
 $(error PLATFORM_CMDLINE not defined)
 endif
 
-MKBOOTIMG := $(BUILDROOT)/third_party/tools/android/mkbootimg
-DUMMY_DTB := $(BUILDROOT)/kernel/target/arm64/dtb/dummy-device-tree.dtb
+MKBOOTIMG := third_party/tools/android/mkbootimg
+DUMMY_DTB := kernel/target/arm64/dtb/dummy-device-tree.dtb
 
 BOARD_BOOTIMG := $(BUILDDIR)/$(PLATFORM_BOARD_NAME)-boot.img
 BOARD_ZIRCON_ZBOOTIMAGE := $(BUILDDIR)/$(PLATFORM_BOARD_NAME)-zircon-bootimage.gz
@@ -115,7 +115,7 @@ ifeq ($(PLATFORM_BOOT_PARTITION_SIZE),)
 $(error PLATFORM_BOOT_PARTITION_SIZE not defined)
 endif
 
-AVBDIR := $(BUILDROOT)/third_party/tools/android/avb
+AVBDIR := third_party/tools/android/avb
 AVBTOOL := $(AVBDIR)/avbtool
 AVB_KEY := $(AVBDIR)/test/data/testkey_atx_psk.pem
 AVB_PUBLIC_KEY_METADATA := $(AVBDIR)/test/data/atx_metadata.bin
