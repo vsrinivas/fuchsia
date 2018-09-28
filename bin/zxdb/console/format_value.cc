@@ -79,6 +79,26 @@ bool IsCharacterType(const LazySymbol& symbol) {
   return IsCharacterType(symbol.Get()->AsType());
 }
 
+// Appends the given byte to the destination, escaping as per C rules.
+void AppendEscapedChar(uint8_t ch, std::string* dest) {
+  if (ch == '\'' || ch == '\"' || ch == '\\') {
+    // These characters get backslash-escaped.
+    dest->push_back('\\');
+    dest->push_back(ch);
+  } else if (ch == '\n') {
+    dest->append("\\n");
+  } else if (ch == '\r') {
+    dest->append("\\r");
+  } else if (ch == '\t') {
+    dest->append("\\t");
+  } else if (isprint(ch)) {
+    dest->push_back(ch);
+  } else {
+    // Hex-encode everything else.
+    *dest += fxl::StringPrintf("\\x%02x", static_cast<unsigned>(ch));
+  }
+}
+
 }  // namespace
 
 FormatValue::FormatValue() : weak_factory_(this) {}
@@ -411,25 +431,8 @@ void FormatValue::FormatCharArray(const uint8_t* data, size_t length,
     truncated = false;
 
   std::string result("\"");
-  for (size_t i = 0; i < output_len; i++) {
-    char ch = data[i];
-    if (ch == '\'' || ch == '\"' || ch == '\\') {
-      // These characters get backslash-escaped.
-      result.push_back('\\');
-      result.push_back(ch);
-    } else if (ch == '\n') {
-      result += "\\n";
-    } else if (ch == '\r') {
-      result += "\\r";
-    } else if (ch == '\t') {
-      result += "\\t";
-    } else if (isprint(ch)) {
-      result.push_back(ch);
-    } else {
-      // Hex-encode everything else.
-      result += fxl::StringPrintf("\\x%02x", static_cast<unsigned>(ch));
-    }
-  }
+  for (size_t i = 0; i < output_len; i++)
+    AppendEscapedChar(data[i], &result);
   result.push_back('"');
 
   // Add an indication if the string was truncated to the max size.
@@ -528,8 +531,11 @@ void FormatValue::FormatChar(const ExprValue& value, OutputBuffer* out) {
     out->Append(ErrStringToOutput("invalid char type"));
     return;
   }
-  char c = static_cast<char>(value.data()[0]);
-  out->Append(fxl::StringPrintf("'%c'", c));
+  std::string str;
+  str.push_back('\'');
+  AppendEscapedChar(value.data()[0], &str);
+  str.push_back('\'');
+  out->Append(str);
 }
 
 void FormatValue::FormatPointer(const ExprValue& value, OutputBuffer* out) {

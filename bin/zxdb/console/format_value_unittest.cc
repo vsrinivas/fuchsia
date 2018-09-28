@@ -172,6 +172,18 @@ TEST_F(FormatValueTest, Char) {
       {'c'});
   EXPECT_EQ("'c'", SyncFormatValue(val_char8, opts));
 
+  // Hex encoded 8-bit char.
+  ExprValue val_char8_zero(
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 1, "char"),
+      {0});
+  EXPECT_EQ(R"('\x00')", SyncFormatValue(val_char8_zero, opts));
+
+  // Backslash-escaped 8-bit char.
+  ExprValue val_char8_quote(
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 1, "char"),
+      {'\"'});
+  EXPECT_EQ(R"('\"')", SyncFormatValue(val_char8_quote, opts));
+
   // 32-bit char (downcasted to 8 for printing).
   ExprValue val_char32(
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSignedChar, 4, "big"),
