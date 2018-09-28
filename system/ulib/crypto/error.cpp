@@ -5,12 +5,15 @@
 #include <stddef.h>
 
 #include <lib/fdio/debug.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
+
+// See note in //zircon/third_party/ulib/uboringssl/rules.mk
+#define BORINGSSL_NO_CXX
 #include <openssl/cipher.h>
 #include <openssl/digest.h>
 #include <openssl/err.h>
 #include <openssl/hkdf.h>
-#include <zircon/errors.h>
-#include <zircon/types.h>
 
 #include "error.h"
 

@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Modules which depend on uboringssl should have a "#define BORINGSSL_NO_CXX"
+# statement before any "#include <openssl/...>" statements to avoid pulling in
+# C++ headers.
+
 # Variables shared between the userlib and hostlib
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
@@ -42,7 +46,7 @@ SHARED_SRCS := \
     $(CRYPTO_DIR)/mem.c \
     $(CRYPTO_DIR)/rand_extra/forkunsafe.c \
     $(CRYPTO_DIR)/rand_extra/fuchsia.c \
-    $(CRYPTO_DIR)/thread_none.c \
+    $(CRYPTO_DIR)/thread_pthread.c \
 
 # TODO(aarongreen): Replace or get upstream to support more fully.
 DECREPIT_DIR=$(LOCAL_DIR)/decrepit

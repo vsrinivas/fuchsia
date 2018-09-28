@@ -11,9 +11,12 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
-#include <openssl/sha.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
+
+// See note in //zircon/third_party/ulib/uboringssl/rules.mk
+#define BORINGSSL_NO_CXX
+#include <openssl/sha.h>
 
 namespace digest {
 

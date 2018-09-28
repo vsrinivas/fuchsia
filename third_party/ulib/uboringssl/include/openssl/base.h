@@ -131,9 +131,7 @@ extern "C" {
 #endif
 
 #if defined(__Fuchsia__)
-#define BORINGSSL_NO_CXX
 #define OPENSSL_FUCHSIA
-#define OPENSSL_NO_THREADS
 #endif
 
 #if defined(TRUSTY)

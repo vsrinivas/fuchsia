@@ -13,7 +13,6 @@
 #include <fbl/mutex.h>
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
-#include <openssl/sha.h>
 #include <zircon/thread_annotations.h>
 
 namespace crypto {
@@ -86,8 +85,9 @@ private:
     // Controls access to |key_| |and nonce_|.
     SpinLock spinlock_;
 
-    // ChaCha20 key and nonce as described in RFC 7539.
-    uint8_t key_[SHA256_DIGEST_LENGTH] TA_GUARDED(spinlock_);
+    // ChaCha20 key and nonce as described in RFC 7539.  The key length is
+    // enforced by a static assertion in the constructor.
+    uint8_t key_[32] TA_GUARDED(spinlock_);
     uint128_t nonce_ TA_GUARDED(spinlock_);
 
     // Events used to signal when calls to |Draw| may proceed, if

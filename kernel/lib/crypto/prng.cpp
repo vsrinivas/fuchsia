@@ -14,11 +14,14 @@
 #include <fbl/mutex.h>
 #include <kernel/auto_lock.h>
 #include <lib/crypto/prng.h>
-#include <openssl/chacha.h>
-#include <openssl/sha.h>
 #include <pow2.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+// See note in //zircon/third_party/ulib/uboringssl/rules.mk
+#define BORINGSSL_NO_CXX
+#include <openssl/chacha.h>
+#include <openssl/sha.h>
 
 namespace crypto {
 namespace {
@@ -29,6 +32,7 @@ const uint128_t kNonceOverflow = ((uint128_t)1ULL) << 96;
 
 PRNG::PRNG(const void* data, size_t size)
     : PRNG(data, size, NonThreadSafeTag()) {
+    static_assert(sizeof(key_) == SHA256_DIGEST_LENGTH, "Bad key length");
     BecomeThreadSafe();
 }
 

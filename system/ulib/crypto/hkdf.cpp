@@ -11,10 +11,13 @@
 #include <explicit-memory/bytes.h>
 #include <fbl/auto_call.h>
 #include <lib/fdio/debug.h>
-#include <openssl/digest.h>
-#include <openssl/hkdf.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
+
+// See note in //zircon/third_party/ulib/uboringssl/rules.mk
+#define BORINGSSL_NO_CXX
+#include <openssl/digest.h>
+#include <openssl/hkdf.h>
 
 #include "error.h"
 
