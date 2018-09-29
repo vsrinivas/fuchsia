@@ -80,7 +80,15 @@ filesystem, launching [AppMgr]( #AppMgr), and so on).
 
 The Driver Development Kit is the documentation, APIs, and ABIs necessary to build Zircon Device
 Drivers.  Device drivers are implemented as ELF shared libraries loaded by Zircon's Device Manager.
+- [DDK Overview](https://fuchsia.googlesource.com/zircon/+/master/docs/ddk/overview.md)
 - [DDK includes](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/ddk/include/ddk/)
+
+#### **Driver**
+
+A driver is a dynamic shared library which [DevMgr](#DevMgr) can load into a [DevHost](#DevHost)
+and that enables, and controls one or more devices.
+- [Reference](https://fuchsia.googlesource.com/zircon/+/master/docs/ddk/driver-development.md)
+- [Driver Sources](https://fuchsia.googlesource.com/zircon/+/master/system/dev)
 
 #### **Environment**
 
@@ -150,9 +158,9 @@ GN is a meta-build system which generates build files so that Fuchsia can be bui
 
 #### **Handle**
 
-The "file descriptor" of the Zircon kernel.  A Handle is how a userspace process refers to a kernel
-object.  They can be passed to other processes over [Channel](#Channel)s.
-- [Handle (in Zircon Concepts)](https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md)
+A Handle is how a userspace process refers to a [kernel object](#Kernel-Object). They can be passed
+to other processes over [Channel](#Channel)s.
+- [Reference](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/handles.md)
 
 #### **Hub**
 
@@ -172,7 +180,17 @@ various subcommands which makes it easy for developers to manage their local che
 
 #### **Job**
 
-TODO(cpu): add definition
+A Job is a [kernel object](#Kernel-Object) that groups a set of related processes, their child
+processes and their jobs (if any). Every process in the system belongs to a job and all jobs form
+a single rooted tree.
+- [Job Overview](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/job.md)
+
+#### **Kernel Object**
+
+A kernel object is a kernel data structure which is used to regulate access to system resources
+such as memory, i/o, processor time and access to other processes. Userspace can only reference
+kernel objects via [Handles](#Handle).
+- [Reference](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/objects.md)
 
 #### **Ledger**
 
@@ -298,15 +316,15 @@ representing the VDSO.
 
 #### **VMAR**
 
-A Virtual Memory Address Range is a Zircon Kernel Object that controls where and how VMOs may be
-mapped into the address space of a process.
+A Virtual Memory Address Range is a Zircon [kernel object](#Kernel-Object) that controls where and
+how VMOs may be mapped into the address space of a process.
 - [VMAR Overview](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/vm_address_region.md)
 
 #### **VMO**
 
-A Virtual Memory Object is a Zircon Kernel Object that represents a collection of pages (or the
-potential for pages) which may be read, written, mapped into the address space of a process, or
-shared with another process by passing a Handle over a Channel.
+A Virtual Memory Object is a Zircon [kernel object](#Kernel-Object) that represents a collection of
+pages (or the potential for pages) which may be read, written, mapped into the address space of a
+process, or shared with another process by passing a [Handle](#Handle) over a [Channel](#Channel).
 - [VMO Overview](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/vm_object.md)
 
 #### **Zedboot** ####
@@ -332,3 +350,8 @@ kernel itself. Zircon is also one of the four layers of the Fuchsia codebase.
 
 ZX is an abbreviation of "Zircon" used in Zircon C APIs/ABIs (`zx_channel_create()`, `zx_handle_t`,
 `ZX_EVENT_SIGNALED`, etc) and libraries (libzx in particular).
+
+#### **ZXDB**
+
+The native low-level system debugger.
+- [Reference](https://fuchsia.googlesource.com/garnet/+/master/docs/debugger.md)
