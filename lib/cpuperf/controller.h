@@ -29,6 +29,9 @@ class Controller {
   // 2 gigabytes per cpu is plenty for now.
   static constexpr uint32_t kMaxBufferSizeInMb = 2 * 1024;
 
+  // Return true if cpuperf is supported on this device.
+  static bool IsSupported();
+
   static bool Create(uint32_t buffer_size_in_mb,
                      const cpuperf_config_t& config,
                      std::unique_ptr<Controller>* out_controller);

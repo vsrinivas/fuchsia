@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <sys/stat.h>
 
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_printf.h>
@@ -42,6 +43,14 @@ static uint32_t GetBufferSize(Controller::Mode mode,
   default:
     __UNREACHABLE;
   }
+}
+
+bool Controller::IsSupported() {
+  // The device path isn't present if it's not supported.
+  struct stat stat_buffer;
+  if (stat(kCpuPerfDev, &stat_buffer) != 0)
+    return false;
+  return S_ISCHR(stat_buffer.st_mode);
 }
 
 bool Controller::Alloc(int fd, uint32_t num_traces, uint32_t buffer_size,

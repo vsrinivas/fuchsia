@@ -73,4 +73,73 @@ bool EventIdToEventDetails(cpuperf_event_id_t id,
   return true;
 }
 
+// This just uses a linear search for now.
+bool LookupEventByName(const char* group_name, const char* event_name,
+                       const EventDetails** out_details) {
+  const EventDetails* details;
+  size_t num_events;
+
+  if (strcmp(group_name, "arch") == 0) {
+    details = &g_arch_event_details[0];
+    num_events = arraysize(g_arch_event_details);
+  } else if (strcmp(group_name, "fixed") == 0) {
+    details = &g_fixed_event_details[0];
+    num_events = arraysize(g_fixed_event_details);
+  } else if (strcmp(group_name, "model") == 0) {
+    details = &g_skl_event_details[0];
+    num_events = arraysize(g_skl_event_details);
+  } else if (strcmp(group_name, "misc") == 0) {
+    details = &g_skl_misc_event_details[0];
+    num_events = arraysize(g_skl_misc_event_details);
+  } else {
+    return false;
+  }
+
+  for (size_t i = 0; i < num_events; ++i) {
+    if (details[i].id == 0)
+      continue;
+    if (strcmp(details[i].name, event_name) == 0) {
+      *out_details = &details[i];
+      return true;
+    }
+  }
+
+  return false;
+}
+
+size_t GetConfigEventCount(const cpuperf_config_t& config) {
+  size_t count;
+  for (count = 0; count < CPUPERF_MAX_EVENTS; ++count) {
+    if (config.events[count] == CPUPERF_EVENT_ID_NONE)
+      break;
+  }
+  return count;
+}
+
+static void AddEvents(GroupTable& gt, const char* group_name_literal,
+                      const EventDetails* details, size_t count) {
+  gt.emplace_back(GroupEvents{group_name_literal, {}});
+  auto& v = gt.back();
+  for (size_t i = 0; i < count; ++i) {
+    if (details[i].id != CPUPERF_EVENT_ID_NONE) {
+      v.events.push_back(&details[i]);
+    }
+  }
+}
+
+GroupTable GetAllGroups() {
+  GroupTable groups;
+
+  AddEvents(groups, "arch", &g_arch_event_details[0],
+            arraysize(g_arch_event_details));
+  AddEvents(groups, "fixed", &g_fixed_event_details[0],
+            arraysize(g_fixed_event_details));
+  AddEvents(groups, "model", &g_skl_event_details[0],
+            arraysize(g_skl_event_details));
+  AddEvents(groups, "misc", &g_skl_misc_event_details[0],
+            arraysize(g_skl_misc_event_details));
+
+  return groups;
+}
+
 }  // namespace cpuperf

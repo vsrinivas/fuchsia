@@ -13,6 +13,7 @@
         "garnet/packages/prod/chrealm",
         "garnet/packages/prod/cmdutils",
         "garnet/packages/prod/cobalt_client",
+        "garnet/packages/prod/cpuperf",
         "garnet/packages/prod/crashpad",
         "garnet/packages/prod/debug_agent",
         "garnet/packages/prod/debugserver",

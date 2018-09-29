@@ -1,0 +1,37 @@
+// L3 stats
+// There are more stats than just these.
+// This is for illustration purposes.
+{
+  "config_name": "l3-stats",
+  "events": [
+    {
+      "group_name": "arch",
+      "event_name": "llc_references",
+      "rate": 0,
+      "flags": [ "os", "user" ]
+    },
+    {
+      "group_name": "arch",
+      "event_name": "llc_misses",
+      "rate": 0,
+      "flags": [ "os", "user" ]
+    },
+    {
+      "group_name": "model",
+      "event_name": "l3_miss_demand_load_outstanding",
+      "rate": 0,
+      "flags": [ "os", "user" ]
+    },
+    {
+      "group_name": "model",
+      "event_name": "l3_miss_execution_stalls",
+      "rate": 0,
+      "flags": [ "os", "user" ]
+    }
+  ],
+  "buffer_size_in_mb": 1,
+  "duration": 1,
+  "num_iterations": 100,
+  "output_path_prefix": "/tmp/cpuperf-test",
+  "session_result_spec_path": "/tmp/cpuperf-test.cpsession"
+}

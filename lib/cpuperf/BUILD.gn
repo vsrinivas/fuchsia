@@ -10,6 +10,8 @@ static_library("cpuperf") {
     "buffer_reader.h",
     "events.cc",
     "events.h",
+    "file_reader.cc",
+    "file_reader.h",
     "reader.cc",
     "reader.h",
     "records.cc",

@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/bin/cpuperf",
+        "//garnet/bin/cpuperf:cpuperf_binary"
+    ]
+}
