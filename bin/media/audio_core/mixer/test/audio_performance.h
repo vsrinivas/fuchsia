@@ -12,11 +12,8 @@ namespace media {
 namespace audio {
 namespace test {
 
-enum class OutputDataRange {
-  Silence = 0,
-  OutOfRange,
-  Normal,
-};
+enum GainType : uint32_t { Mute, Unity, Scaled, Ramped };
+enum OutputDataRange : uint32_t { Silence, OutOfRange, Normal };
 
 class AudioPerformance {
  public:
@@ -54,16 +51,18 @@ class AudioPerformance {
   static void ProfileSamplerChansRateScale(uint32_t in_chans,
                                            uint32_t out_chans,
                                            Mixer::Resampler sampler_type,
-                                           uint32_t source_rate, float gain_db);
+                                           uint32_t source_rate,
+                                           GainType gain_type);
   static void ProfileSamplerChansRateScaleMix(uint32_t num_input_chans,
                                               uint32_t num_output_chans,
                                               Mixer::Resampler sampler_type,
                                               uint32_t source_rate,
-                                              float gain_db, bool accumulate);
+                                              GainType gain_type,
+                                              bool accumulate);
   template <typename SampleType>
   static void ProfileMixer(uint32_t num_input_chans, uint32_t num_output_chans,
                            Mixer::Resampler sampler_type, uint32_t source_rate,
-                           float gain_db, bool accumulate);
+                           GainType gain_type, bool accumulate);
 
   static void ProfileOutputProducers();
 

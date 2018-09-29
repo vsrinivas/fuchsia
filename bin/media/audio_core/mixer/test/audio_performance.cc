@@ -40,7 +40,7 @@ void AudioPerformance::ProfileMixers() {
 }
 
 void AudioPerformance::DisplayMixerColumnHeader() {
-  printf("Configuration\t    Mean\t   First\t    Best\t   Worst\n");
+  printf("Configuration\t\t    Mean\t   First\t    Best\t   Worst\n");
 }
 
 void AudioPerformance::DisplayMixerConfigLegend() {
@@ -52,7 +52,7 @@ void AudioPerformance::DisplayMixerConfigLegend() {
       "\t   fff: Format - un8, i16, i24, f32,\n"
       "\t     I: Input channels (one-digit number),\n"
       "\t     O: Output channels (one-digit number),\n"
-      "\t     G: Gain factor - [M]ute, [U]nity, [S]caled,\n"
+      "\t     G: Gain factor - [M]ute, [U]nity, [S]caled, [R]amping,\n"
       "\t     A: Accumulate - [-] no or [+] yes,\n"
       "\t nnnnn: Sample rate (five-digit number)\n\n");
 }
@@ -95,13 +95,16 @@ void AudioPerformance::ProfileSamplerChansRate(uint32_t num_input_chans,
                                                uint32_t source_rate) {
   // Mute scenario
   ProfileSamplerChansRateScale(num_input_chans, num_output_chans, sampler_type,
-                               source_rate, fuchsia::media::MUTED_GAIN_DB);
+                               source_rate, GainType::Mute);
   // Unity scenario
   ProfileSamplerChansRateScale(num_input_chans, num_output_chans, sampler_type,
-                               source_rate, 0.0f);
+                               source_rate, GainType::Unity);
   // Scaling (non-mute, non-unity) scenario
   ProfileSamplerChansRateScale(num_input_chans, num_output_chans, sampler_type,
-                               source_rate, -42.68f);
+                               source_rate, GainType::Scaled);
+  // Ramping scenario
+  ProfileSamplerChansRateScale(num_input_chans, num_output_chans, sampler_type,
+                               source_rate, GainType::Ramped);
 }
 
 // Profile the samplers when not accumulating and when accumulating
@@ -109,32 +112,32 @@ void AudioPerformance::ProfileSamplerChansRateScale(uint32_t num_input_chans,
                                                     uint32_t num_output_chans,
                                                     Resampler sampler_type,
                                                     uint32_t source_rate,
-                                                    float gain_db) {
+                                                    GainType gain_type) {
   ProfileSamplerChansRateScaleMix(num_input_chans, num_output_chans,
-                                  sampler_type, source_rate, gain_db, false);
+                                  sampler_type, source_rate, gain_type, false);
   ProfileSamplerChansRateScaleMix(num_input_chans, num_output_chans,
-                                  sampler_type, source_rate, gain_db, true);
+                                  sampler_type, source_rate, gain_type, true);
 }
 
 // Profile the samplers when mixing data types: uint8, int16, int24-in-32, float
 void AudioPerformance::ProfileSamplerChansRateScaleMix(
     uint32_t num_input_chans, uint32_t num_output_chans, Resampler sampler_type,
-    uint32_t source_rate, float gain_db, bool accumulate) {
+    uint32_t source_rate, GainType gain_type, bool accumulate) {
   ProfileMixer<uint8_t>(num_input_chans, num_output_chans, sampler_type,
-                        source_rate, gain_db, accumulate);
+                        source_rate, gain_type, accumulate);
   ProfileMixer<int16_t>(num_input_chans, num_output_chans, sampler_type,
-                        source_rate, gain_db, accumulate);
+                        source_rate, gain_type, accumulate);
   ProfileMixer<int32_t>(num_input_chans, num_output_chans, sampler_type,
-                        source_rate, gain_db, accumulate);
+                        source_rate, gain_type, accumulate);
   ProfileMixer<float>(num_input_chans, num_output_chans, sampler_type,
-                      source_rate, gain_db, accumulate);
+                      source_rate, gain_type, accumulate);
 }
 
 template <typename SampleType>
 void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
                                     uint32_t num_output_chans,
                                     Resampler sampler_type,
-                                    uint32_t source_rate, float gain_db,
+                                    uint32_t source_rate, GainType gain_type,
                                     bool accumulate) {
   fuchsia::media::AudioSampleFormat sample_format;
   double amplitude;
@@ -173,7 +176,7 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
       std::make_unique<float[]>(kFreqTestBufSize * num_output_chans);
   uint32_t frac_src_frames = source_frames * Mixer::FRAC_ONE;
   int32_t frac_src_offset;
-  uint32_t dest_offset;
+  uint32_t dest_offset, previous_dest_offset;
 
   OverwriteCosine(source.get(), source_buffer_size * num_input_chans,
                   FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx],
@@ -186,9 +189,37 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
   info.denominator = dest_rate;
   info.rate_modulo =
       (source_rate * Mixer::FRAC_ONE) - (info.step_size * dest_rate);
-  info.gain.SetSourceGain(gain_db);
 
+  float gain_db;
+  char gain_char;
+  switch (gain_type) {
+    case GainType::Mute:
+      gain_db = Gain::kMinGainDb;
+      gain_char = 'M';
+      break;
+    case GainType::Unity:
+      gain_db = Gain::kUnityGainDb;
+      gain_char = 'U';
+      break;
+    case GainType::Scaled:
+      gain_db = -42.0f;
+      gain_char = 'S';
+      break;
+    case GainType::Ramped:
+      gain_db = -1.0f;
+      gain_char = 'R';
+      break;
+  }
+
+  info.gain.SetDestGain(Gain::kUnityGainDb);
   for (uint32_t i = 0; i < kNumMixerProfilerRuns; ++i) {
+    info.gain.SetSourceGain(gain_db);
+    if (gain_type == GainType::Ramped) {
+      // Ramp within the "greater than Mute but less than Unity" range.
+      // Ramp duration assumes a mix duration of less than two secs.
+      info.gain.SetSourceGainWithRamp(-121.0f, ZX_SEC(2));
+    }
+
     zx_duration_t elapsed;
     zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
 
@@ -196,8 +227,15 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
     frac_src_offset = 0;
     info.src_pos_modulo = 0;
 
-    mixer->Mix(accum.get(), kFreqTestBufSize, &dest_offset, source.get(),
-               frac_src_frames, &frac_src_offset, accumulate, &info);
+    while (dest_offset < kFreqTestBufSize) {
+      previous_dest_offset = dest_offset;
+      mixer->Mix(accum.get(), kFreqTestBufSize, &dest_offset, source.get(),
+                 frac_src_frames, &frac_src_offset, accumulate, &info);
+
+      // Mix() might process less than all of accum, so Advance() after each.
+      info.gain.Advance(dest_offset - previous_dest_offset,
+                        TimelineRate(source_rate, ZX_SEC(1)));
+    }
 
     elapsed = zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time;
 
@@ -213,12 +251,10 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
   }
 
   double mean = total_elapsed / kNumMixerProfilerRuns;
-  printf(
-      "%c-%s.%u%u%c%c%u:",
-      (sampler_type == Resampler::SampleAndHold ? 'P' : 'L'), format.c_str(),
-      num_input_chans, num_output_chans,
-      (gain_db ? (gain_db == fuchsia::media::MUTED_GAIN_DB ? 'M' : 'S') : 'U'),
-      (accumulate ? '+' : '-'), source_rate);
+  printf("%c-%s.%u%u%c%c%u:",
+         (sampler_type == Resampler::SampleAndHold ? 'P' : 'L'), format.c_str(),
+         num_input_chans, num_output_chans, gain_char, (accumulate ? '+' : '-'),
+         source_rate);
 
   printf("\t%9.3lf\t%9.3lf\t%9.3lf\t%9.3lf\n", mean / 1000.0, first / 1000.0,
          best / 1000.0, worst / 1000.0);
