@@ -192,6 +192,35 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
             return ZX_OK;
         }
     }
+    if ((len == 7) && !memcmp(cmd, "drivers", 7)) {
+        dc_dump_drivers();
+        return ZX_OK;
+    }
+    if (len == 8) {
+        if (!memcmp(cmd, "ktraceon", 8)) {
+            zx_ktrace_control(get_root_resource(), KTRACE_ACTION_START, KTRACE_GRP_ALL, nullptr);
+            return ZX_OK;
+        }
+        if (!memcmp(cmd, "devprops", 8)) {
+            dc_dump_devprops();
+            return ZX_OK;
+        }
+    }
+    if ((len == 9) && (!memcmp(cmd, "ktraceoff", 9))) {
+        zx_ktrace_control(get_root_resource(), KTRACE_ACTION_STOP, 0, nullptr);
+        zx_ktrace_control(get_root_resource(), KTRACE_ACTION_REWIND, 0, nullptr);
+        return ZX_OK;
+    }
+    if ((len > 12) && !memcmp(cmd, "kerneldebug ", 12)) {
+        return zx_debug_send_command(get_root_resource(), cmd + 12, len - 12);
+    }
+
+    if (dc_in_suspend()) {
+        log(ERROR, "devcoord: rpc: dm-command \"%.*s\" forbidden in suspend\n",
+            static_cast<uint32_t>(len), cmd);
+        return ZX_ERR_BAD_STATE;
+    }
+
     if ((len == 6) && !memcmp(cmd, "reboot", 6)) {
         devmgr_vfs_exit();
         dc_suspend(DEVICE_SUSPEND_FLAG_REBOOT);
@@ -211,32 +240,10 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
         dc_suspend(DEVICE_SUSPEND_FLAG_SUSPEND_RAM);
         return ZX_OK;
     }
-    if ((len == 7) && !memcmp(cmd, "drivers", 7)) {
-        dc_dump_drivers();
+    if (len == 8 && (!memcmp(cmd, "poweroff", 8) || !memcmp(cmd, "shutdown", 8))) {
+        devmgr_vfs_exit();
+        dc_suspend(DEVICE_SUSPEND_FLAG_POWEROFF);
         return ZX_OK;
-    }
-    if (len == 8) {
-        if (!memcmp(cmd, "poweroff", 8) || !memcmp(cmd, "shutdown", 8)) {
-            devmgr_vfs_exit();
-            dc_suspend(DEVICE_SUSPEND_FLAG_POWEROFF);
-            return ZX_OK;
-        }
-        if (!memcmp(cmd, "ktraceon", 8)) {
-            zx_ktrace_control(get_root_resource(), KTRACE_ACTION_START, KTRACE_GRP_ALL, nullptr);
-            return ZX_OK;
-        }
-        if (!memcmp(cmd, "devprops", 8)) {
-            dc_dump_devprops();
-            return ZX_OK;
-        }
-    }
-    if ((len == 9) && (!memcmp(cmd, "ktraceoff", 9))) {
-        zx_ktrace_control(get_root_resource(), KTRACE_ACTION_STOP, 0, nullptr);
-        zx_ktrace_control(get_root_resource(), KTRACE_ACTION_REWIND, 0, nullptr);
-        return ZX_OK;
-    }
-    if ((len > 12) && !memcmp(cmd, "kerneldebug ", 12)) {
-        return zx_debug_send_command(get_root_resource(), cmd + 12, len - 12);
     }
     if ((len > 11) && !memcmp(cmd, "add-driver:", 11)) {
         len -= 11;
@@ -1278,11 +1285,6 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
     case dc_msg_t::Op::kDmCommand:
         if (hcount > 1) {
             goto fail_wrong_hcount;
-        }
-        if (dc_in_suspend()) {
-            log(ERROR, "devcoord: rpc: dm-command forbidden in suspend\n");
-            r = ZX_ERR_BAD_STATE;
-            goto fail_close_handles;
         }
         if (hcount == 1) {
             dmctl_socket = hin[0];
