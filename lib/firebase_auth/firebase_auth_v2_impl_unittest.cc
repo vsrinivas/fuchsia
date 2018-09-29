@@ -1,4 +1,4 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include <fuchsia/modular/auth/cpp/fidl.h>
+#include <fuchsia/auth/cpp/fidl.h>
 #include <lib/backoff/testing/test_backoff.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
@@ -14,7 +14,7 @@
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "peridot/lib/firebase_auth/testing/test_token_provider.h"
+#include "peridot/lib/firebase_auth/testing/test_token_manager.h"
 
 namespace firebase_auth {
 
@@ -30,7 +30,7 @@ class MockCobaltLogger : public cobalt::CobaltLogger {
   void LogEventCount(uint32_t metric_id, uint32_t event_type_index,
                      const std::string& component, zx::duration period_duration,
                      int64_t count) override {
-    EXPECT_EQ(3u, metric_id);
+    EXPECT_EQ(4u, metric_id);
     // The value should contain the client name.
     EXPECT_TRUE(component.find("firebase-test") != std::string::npos);
     *called_ += 1;
@@ -60,17 +60,17 @@ class MockCobaltLogger : public cobalt::CobaltLogger {
   int* called_;
 };
 
-class FirebaseAuthImplTest : public gtest::TestLoopFixture {
+class FirebaseAuthV2ImplTest : public gtest::TestLoopFixture {
  public:
-  FirebaseAuthImplTest()
-      : token_provider_(dispatcher()),
-        token_provider_binding_(&token_provider_),
+  FirebaseAuthV2ImplTest()
+      : token_manager_(dispatcher()),
+        token_manager_binding_(&token_manager_),
         firebase_auth_(
-            {"api_key", "firebase-test", 1}, dispatcher(),
-            token_provider_binding_.NewBinding().Bind(), nullptr, InitBackoff(),
+            {"api_key", "firebase-test", 1}, dispatcher(), nullptr,
+            token_manager_binding_.NewBinding().Bind(), InitBackoff(),
             std::make_unique<MockCobaltLogger>(&report_observation_count_)) {}
 
-  ~FirebaseAuthImplTest() override {}
+  ~FirebaseAuthV2ImplTest() override {}
 
  protected:
   std::unique_ptr<backoff::Backoff> InitBackoff() {
@@ -80,18 +80,18 @@ class FirebaseAuthImplTest : public gtest::TestLoopFixture {
     return backoff;
   }
 
-  TestTokenProvider token_provider_;
-  fidl::Binding<fuchsia::modular::auth::TokenProvider> token_provider_binding_;
+  TestTokenManager token_manager_;
+  fidl::Binding<fuchsia::auth::TokenManager> token_manager_binding_;
   FirebaseAuthImpl firebase_auth_;
   int report_observation_count_ = 0;
   backoff::TestBackoff* backoff_;
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(FirebaseAuthImplTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FirebaseAuthV2ImplTest);
 };
 
-TEST_F(FirebaseAuthImplTest, GetFirebaseToken) {
-  token_provider_.Set("this is a token", "some id", "me@example.com");
+TEST_F(FirebaseAuthV2ImplTest, GetFirebaseToken) {
+  token_manager_.Set("this is a token", "some id", "me@example.com");
 
   bool called;
   AuthStatus auth_status;
@@ -105,11 +105,11 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseToken) {
   EXPECT_EQ(0, report_observation_count_);
 }
 
-TEST_F(FirebaseAuthImplTest, GetFirebaseTokenRetryOnError) {
+TEST_F(FirebaseAuthV2ImplTest, GetFirebaseTokenRetryOnError) {
   bool called;
   AuthStatus auth_status;
   std::string firebase_token;
-  token_provider_.SetError(fuchsia::modular::auth::Status::NETWORK_ERROR);
+  token_manager_.SetError(fuchsia::auth::Status::NETWORK_ERROR);
   backoff_->SetOnGetNext(QuitLoopClosure());
   firebase_auth_.GetFirebaseToken(callback::Capture(
       callback::SetWhenCalled(&called), &auth_status, &firebase_token));
@@ -119,7 +119,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseTokenRetryOnError) {
   EXPECT_EQ(0, backoff_->reset_count);
   EXPECT_EQ(0, report_observation_count_);
 
-  token_provider_.Set("this is a token", "some id", "me@example.com");
+  token_manager_.Set("this is a token", "some id", "me@example.com");
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(AuthStatus::OK, auth_status);
@@ -129,8 +129,8 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseTokenRetryOnError) {
   EXPECT_EQ(0, report_observation_count_);
 }
 
-TEST_F(FirebaseAuthImplTest, GetFirebaseUserId) {
-  token_provider_.Set("this is a token", "some id", "me@example.com");
+TEST_F(FirebaseAuthV2ImplTest, GetFirebaseUserId) {
+  token_manager_.Set("this is a token", "some id", "me@example.com");
 
   bool called;
   AuthStatus auth_status;
@@ -144,11 +144,11 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserId) {
   EXPECT_EQ(0, report_observation_count_);
 }
 
-TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
+TEST_F(FirebaseAuthV2ImplTest, GetFirebaseUserIdRetryOnError) {
   bool called;
   AuthStatus auth_status;
   std::string firebase_id;
-  token_provider_.SetError(fuchsia::modular::auth::Status::NETWORK_ERROR);
+  token_manager_.SetError(fuchsia::auth::Status::NETWORK_ERROR);
   backoff_->SetOnGetNext(QuitLoopClosure());
   firebase_auth_.GetFirebaseUserId(callback::Capture(
       callback::SetWhenCalled(&called), &auth_status, &firebase_id));
@@ -158,7 +158,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
   EXPECT_EQ(0, backoff_->reset_count);
   EXPECT_EQ(0, report_observation_count_);
 
-  token_provider_.Set("this is a token", "some id", "me@example.com");
+  token_manager_.Set("this is a token", "some id", "me@example.com");
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(AuthStatus::OK, auth_status);
@@ -168,10 +168,10 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
   EXPECT_EQ(0, report_observation_count_);
 }
 
-TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdMaxRetry) {
+TEST_F(FirebaseAuthV2ImplTest, GetFirebaseUserIdMaxRetry) {
   bool called;
   AuthStatus auth_status;
-  token_provider_.SetError(fuchsia::modular::auth::Status::NETWORK_ERROR);
+  token_manager_.SetError(fuchsia::auth::Status::NETWORK_ERROR);
   backoff_->SetOnGetNext(QuitLoopClosure());
   firebase_auth_.GetFirebaseUserId(callback::Capture(
       callback::SetWhenCalled(&called), &auth_status, &std::ignore));
@@ -182,7 +182,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdMaxRetry) {
   EXPECT_EQ(0, report_observation_count_);
 
   // Exceeding the maximum number of retriable errors returns an error.
-  token_provider_.SetError(fuchsia::modular::auth::Status::INTERNAL_ERROR);
+  token_manager_.SetError(fuchsia::auth::Status::INTERNAL_ERROR);
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(AuthStatus::ERROR, auth_status);
@@ -191,10 +191,10 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdMaxRetry) {
   EXPECT_EQ(1, report_observation_count_);
 }
 
-TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdNonRetriableError) {
+TEST_F(FirebaseAuthV2ImplTest, GetFirebaseUserIdNonRetriableError) {
   bool called;
   AuthStatus auth_status;
-  token_provider_.SetError(fuchsia::modular::auth::Status::BAD_REQUEST);
+  token_manager_.SetError(fuchsia::auth::Status::INVALID_REQUEST);
   backoff_->SetOnGetNext(QuitLoopClosure());
   firebase_auth_.GetFirebaseUserId(callback::Capture(
       callback::SetWhenCalled(&called), &auth_status, &std::ignore));

@@ -80,6 +80,41 @@ class CloudProviderFactory::TokenProviderContainer {
   FXL_DISALLOW_COPY_AND_ASSIGN(TokenProviderContainer);
 };
 
+class CloudProviderFactory::TokenManagerContainer {
+ public:
+  TokenManagerContainer(
+      component::StartupContext* startup_context,
+      async_dispatcher_t* dispatcher, rng::Random* random,
+      std::unique_ptr<service_account::Credentials> credentials,
+      std::string user_id,
+      fidl::InterfaceRequest<fuchsia::auth::TokenManager> request)
+      : startup_context_(startup_context),
+        network_wrapper_(
+            dispatcher,
+            std::make_unique<backoff::ExponentialBackoff>(
+                random->NewBitGenerator<uint64_t>()),
+            [this] {
+              return startup_context_
+                  ->ConnectToEnvironmentService<http::HttpService>();
+            }),
+        token_manager_(&network_wrapper_, std::move(credentials),
+                       std::move(user_id)),
+        binding_(&token_manager_, std::move(request)) {}
+
+  void set_on_empty(fit::closure on_empty) {
+    binding_.set_error_handler(
+        [on_empty = std::move(on_empty)](zx_status_t status) { on_empty(); });
+  }
+
+ private:
+  component::StartupContext* const startup_context_;
+  network_wrapper::NetworkWrapperImpl network_wrapper_;
+  service_account::ServiceAccountTokenManager token_manager_;
+  fidl::Binding<fuchsia::auth::TokenManager> binding_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TokenManagerContainer);
+};
+
 CloudProviderFactory::CloudProviderFactory(
     component::StartupContext* startup_context, rng::Random* random,
     std::string api_key,
@@ -126,6 +161,26 @@ void CloudProviderFactory::MakeCloudProvider(
       });
 }
 
+void CloudProviderFactory::MakeCloudProviderV2(
+    UserId user_id,
+    fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
+  fuchsia::auth::TokenManagerPtr token_manager;
+  MakeTokenManager(std::move(user_id), token_manager.NewRequest());
+
+  cloud_provider_firestore::Config firebase_config;
+  firebase_config.server_id = credentials_->project_id();
+  firebase_config.api_key = api_key_;
+
+  cloud_provider_factory_->GetCloudProviderV2(
+      std::move(firebase_config), std::move(token_manager), std::move(request),
+      [](cloud_provider::Status status) {
+        if (status != cloud_provider::Status::OK) {
+          FXL_LOG(ERROR) << "Failed to create a cloud provider: "
+                         << fidl::ToUnderlying(status);
+        }
+      });
+}
+
 void CloudProviderFactory::MakeTokenProvider(
     UserId user_id,
     fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request) {
@@ -133,6 +188,19 @@ void CloudProviderFactory::MakeTokenProvider(
                   fxl::MakeCopyable([this, user_id = std::move(user_id),
                                      request = std::move(request)]() mutable {
                     token_providers_.emplace(
+                        startup_context_, services_loop_.dispatcher(), random_,
+                        credentials_->Clone(), std::move(user_id.user_id()),
+                        std::move(request));
+                  }));
+}
+
+void CloudProviderFactory::MakeTokenManager(
+    UserId user_id,
+    fidl::InterfaceRequest<fuchsia::auth::TokenManager> request) {
+  async::PostTask(services_loop_.dispatcher(),
+                  fxl::MakeCopyable([this, user_id = std::move(user_id),
+                                     request = std::move(request)]() mutable {
+                    token_managers_.emplace(
                         startup_context_, services_loop_.dispatcher(), random_,
                         credentials_->Clone(), std::move(user_id.user_id()),
                         std::move(request));

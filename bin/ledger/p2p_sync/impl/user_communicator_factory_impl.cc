@@ -31,6 +31,7 @@ UserCommunicatorFactoryImpl::GetUserCommunicator(
   fuchsia::netconnector::NetConnectorPtr net_connector =
       environment_->startup_context()
           ->ConnectToEnvironmentService<fuchsia::netconnector::NetConnector>();
+
   return std::make_unique<p2p_sync::UserCommunicatorImpl>(
       std::make_unique<p2p_provider::P2PProviderImpl>(
           host_name_buffer, std::move(net_connector),

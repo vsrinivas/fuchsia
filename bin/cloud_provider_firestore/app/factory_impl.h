@@ -44,6 +44,26 @@ class FactoryImpl : public Factory {
           cloud_provider_request,
       GetCloudProviderCallback callback) override;
 
+  // Factory:
+  void GetCloudProviderV2(
+      Config config,
+      fidl::InterfaceHandle<fuchsia::auth::TokenManager> token_manager,
+      fidl::InterfaceRequest<cloud_provider::CloudProvider>
+          cloud_provider_request,
+      GetCloudProviderCallback callback) override;
+
+  std::unique_ptr<firebase_auth::FirebaseAuthImpl> GetFirebaseAuth(
+      fuchsia::modular::auth::TokenProviderPtr token_provider,
+      fuchsia::auth::TokenManagerPtr token_manager,
+      fidl::StringPtr firebase_api_key);
+
+  void GetFirebaseCloudProvider(
+      Config config,
+      std::unique_ptr<firebase_auth::FirebaseAuthImpl> firebase_auth,
+      fidl::InterfaceRequest<cloud_provider::CloudProvider>
+          cloud_provider_request,
+      fit::function<void(cloud_provider::Status)> callback);
+
   async_dispatcher_t* const dispatcher_;
   rng::Random* random_;
   component::StartupContext* const startup_context_;

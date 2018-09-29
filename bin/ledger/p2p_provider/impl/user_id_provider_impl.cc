@@ -13,6 +13,19 @@
 
 namespace p2p_provider {
 
+namespace {
+
+firebase_auth::FirebaseAuthImpl::Config GetFirebaseAuthConfig(
+    const std::string& api_key, const std::string& cobalt_client_name) {
+  firebase_auth::FirebaseAuthImpl::Config config;
+  config.api_key = api_key;
+  config.cobalt_client_name = cobalt_client_name;
+
+  return config;
+}
+
+}  // namespace
+
 constexpr fxl::StringView user_id_filename = "p2p_user_id";
 
 UserIdProviderImpl::UserIdProviderImpl(
@@ -21,10 +34,11 @@ UserIdProviderImpl::UserIdProviderImpl(
     std::string cobalt_client_name)
     : user_id_path_(user_directory.SubPath(user_id_filename)),
       firebase_auth_(std::make_unique<firebase_auth::FirebaseAuthImpl>(
-          firebase_auth::FirebaseAuthImpl::Config{
-              environment->firebase_api_key(), cobalt_client_name},
+          GetFirebaseAuthConfig(environment->firebase_api_key(),
+                                cobalt_client_name),
           environment->dispatcher(), environment->random(),
-          std::move(token_provider_ptr), environment->startup_context())) {}
+          std::move(token_provider_ptr), nullptr,
+          environment->startup_context())) {}
 
 UserIdProviderImpl::~UserIdProviderImpl() = default;
 

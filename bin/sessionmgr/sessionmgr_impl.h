@@ -174,7 +174,8 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       fuchsia::modular::AppConfig config);
   fuchsia::sys::ServiceProviderPtr GetServiceProvider(const std::string& url);
 
-  fuchsia::ledger::cloud::CloudProviderPtr GetCloudProvider();
+  fuchsia::ledger::cloud::CloudProviderPtr GetCloudProvider(
+      fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager);
 
   // Called during initialization. Schedules the given action to be executed
   // during termination. This allows to create something like an asynchronous

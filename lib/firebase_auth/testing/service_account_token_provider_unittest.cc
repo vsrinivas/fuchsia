@@ -16,6 +16,7 @@
 #include <rapidjson/writer.h>
 
 #include "peridot/lib/firebase_auth/testing/service_account_test_constants.h"
+#include "peridot/lib/firebase_auth/testing/service_account_test_util.h"
 
 namespace service_account {
 namespace {
@@ -30,37 +31,6 @@ class ServiceAccountTokenProviderTest : public gtest::TestLoopFixture {
                         "user_id") {}
 
  protected:
-  std::string GetSuccessResponseBody(std::string token, size_t expiration) {
-    rapidjson::StringBuffer string_buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(string_buffer);
-
-    writer.StartObject();
-
-    writer.Key("idToken");
-    writer.String(token);
-
-    writer.Key("expiresIn");
-    writer.String(fxl::NumberToString(expiration));
-
-    writer.EndObject();
-
-    return std::string(string_buffer.GetString(), string_buffer.GetSize());
-  }
-
-  http::URLResponse GetResponse(http::HttpErrorPtr error, uint32_t status,
-                                std::string body) {
-    http::URLResponse response;
-    response.error = std::move(error);
-    response.status_code = status;
-    fsl::SizedVmo buffer;
-    if (!fsl::VmoFromString(body, &buffer)) {
-      ADD_FAILURE() << "Unable to convert string to Vmo.";
-    }
-    response.body = http::URLBody::New();
-    response.body->set_buffer(std::move(buffer).ToTransport());
-    return response;
-  }
-
   bool GetToken(std::string api_key,
                 fuchsia::modular::auth::FirebaseTokenPtr* token,
                 fuchsia::modular::auth::AuthErr* error) {
@@ -77,8 +47,8 @@ class ServiceAccountTokenProviderTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(ServiceAccountTokenProviderTest, GetToken) {
-  network_wrapper_.SetResponse(
-      GetResponse(nullptr, 200, GetSuccessResponseBody("token", 3600)));
+  network_wrapper_.SetResponse(GetResponseForTest(
+      nullptr, 200, GetSuccessResponseBodyForTest("token", 3600)));
 
   fuchsia::modular::auth::FirebaseTokenPtr token;
   fuchsia::modular::auth::AuthErr error;
@@ -88,8 +58,8 @@ TEST_F(ServiceAccountTokenProviderTest, GetToken) {
 }
 
 TEST_F(ServiceAccountTokenProviderTest, GetTokenFromCache) {
-  network_wrapper_.SetResponse(
-      GetResponse(nullptr, 200, GetSuccessResponseBody("token", 3600)));
+  network_wrapper_.SetResponse(GetResponseForTest(
+      nullptr, 200, GetSuccessResponseBodyForTest("token", 3600)));
 
   fuchsia::modular::auth::FirebaseTokenPtr token;
   fuchsia::modular::auth::AuthErr error;
@@ -100,8 +70,8 @@ TEST_F(ServiceAccountTokenProviderTest, GetTokenFromCache) {
   EXPECT_TRUE(network_wrapper_.GetRequest());
 
   network_wrapper_.ResetRequest();
-  network_wrapper_.SetResponse(
-      GetResponse(nullptr, 200, GetSuccessResponseBody("token2", 3600)));
+  network_wrapper_.SetResponse(GetResponseForTest(
+      nullptr, 200, GetSuccessResponseBodyForTest("token2", 3600)));
 
   ASSERT_TRUE(GetToken("api_key", &token, &error));
   EXPECT_EQ(fuchsia::modular::auth::Status::OK, error.status) << error.message;
@@ -110,8 +80,8 @@ TEST_F(ServiceAccountTokenProviderTest, GetTokenFromCache) {
 }
 
 TEST_F(ServiceAccountTokenProviderTest, GetTokenNoCacheCache) {
-  network_wrapper_.SetResponse(
-      GetResponse(nullptr, 200, GetSuccessResponseBody("token", 0)));
+  network_wrapper_.SetResponse(GetResponseForTest(
+      nullptr, 200, GetSuccessResponseBodyForTest("token", 0)));
 
   fuchsia::modular::auth::FirebaseTokenPtr token;
   fuchsia::modular::auth::AuthErr error;
@@ -121,8 +91,8 @@ TEST_F(ServiceAccountTokenProviderTest, GetTokenNoCacheCache) {
   EXPECT_EQ("token", token->id_token);
   EXPECT_TRUE(network_wrapper_.GetRequest());
 
-  network_wrapper_.SetResponse(
-      GetResponse(nullptr, 200, GetSuccessResponseBody("token2", 0)));
+  network_wrapper_.SetResponse(GetResponseForTest(
+      nullptr, 200, GetSuccessResponseBodyForTest("token2", 0)));
 
   ASSERT_TRUE(GetToken("api_key", &token, &error));
   EXPECT_EQ(fuchsia::modular::auth::Status::OK, error.status) << error.message;
@@ -134,7 +104,8 @@ TEST_F(ServiceAccountTokenProviderTest, NetworkError) {
   auto network_error = http::HttpError::New();
   network_error->description = "Error";
 
-  network_wrapper_.SetResponse(GetResponse(std::move(network_error), 0, ""));
+  network_wrapper_.SetResponse(
+      GetResponseForTest(std::move(network_error), 0, ""));
 
   fuchsia::modular::auth::FirebaseTokenPtr token;
   fuchsia::modular::auth::AuthErr error;
@@ -146,7 +117,8 @@ TEST_F(ServiceAccountTokenProviderTest, NetworkError) {
 }
 
 TEST_F(ServiceAccountTokenProviderTest, AuthenticationError) {
-  network_wrapper_.SetResponse(GetResponse(nullptr, 401, "Unauthorized"));
+  network_wrapper_.SetResponse(
+      GetResponseForTest(nullptr, 401, "Unauthorized"));
 
   fuchsia::modular::auth::FirebaseTokenPtr token;
   fuchsia::modular::auth::AuthErr error;
@@ -158,7 +130,7 @@ TEST_F(ServiceAccountTokenProviderTest, AuthenticationError) {
 }
 
 TEST_F(ServiceAccountTokenProviderTest, ResponseFormatError) {
-  network_wrapper_.SetResponse(GetResponse(nullptr, 200, ""));
+  network_wrapper_.SetResponse(GetResponseForTest(nullptr, 200, ""));
 
   fuchsia::modular::auth::FirebaseTokenPtr token;
   fuchsia::modular::auth::AuthErr error;

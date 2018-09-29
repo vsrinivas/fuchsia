@@ -296,7 +296,7 @@ void SessionmgrImpl::InitializeLedger(
     cloud_provider_app_->services().ConnectToService(
         cloud_provider_factory_.NewRequest());
 
-    cloud_provider = GetCloudProvider();
+    cloud_provider = GetCloudProvider(std::move(ledger_token_manager));
     ledger_user_id = account_->profile_id;
 
     // TODO(mesch): Teardown cloud_provider_app_ ?
@@ -882,22 +882,34 @@ void SessionmgrImpl::ConnectToEntityProvider(
                                          std::move(agent_controller_request));
 }
 
-fuchsia::ledger::cloud::CloudProviderPtr SessionmgrImpl::GetCloudProvider() {
+fuchsia::ledger::cloud::CloudProviderPtr SessionmgrImpl::GetCloudProvider(
+    fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager) {
   fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
-  fidl::InterfaceHandle<fuchsia::modular::auth::TokenProvider>
-      ledger_token_provider;
-  token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
-                                            ledger_token_provider.NewRequest());
   auto cloud_provider_config = GetLedgerFirestoreConfig();
 
-  cloud_provider_factory_->GetCloudProvider(
-      std::move(cloud_provider_config), std::move(ledger_token_provider),
-      cloud_provider.NewRequest(), [](fuchsia::ledger::cloud::Status status) {
-        if (status != fuchsia::ledger::cloud::Status::OK) {
-          FXL_LOG(ERROR) << "Failed to create a cloud provider: "
-                         << fidl::ToUnderlying(status);
-        }
-      });
+  if (ledger_token_manager.is_valid()) {
+    cloud_provider_factory_->GetCloudProviderV2(
+        std::move(cloud_provider_config), std::move(ledger_token_manager),
+        cloud_provider.NewRequest(), [](fuchsia::ledger::cloud::Status status) {
+          if (status != fuchsia::ledger::cloud::Status::OK) {
+            FXL_LOG(ERROR) << "Failed to create a cloud provider: "
+                           << fidl::ToUnderlying(status);
+          }
+        });
+  } else {
+    fidl::InterfaceHandle<fuchsia::modular::auth::TokenProvider>
+        ledger_token_provider;
+    token_provider_factory_->GetTokenProvider(
+        kLedgerAppUrl, ledger_token_provider.NewRequest());
+    cloud_provider_factory_->GetCloudProvider(
+        std::move(cloud_provider_config), std::move(ledger_token_provider),
+        cloud_provider.NewRequest(), [](fuchsia::ledger::cloud::Status status) {
+          if (status != fuchsia::ledger::cloud::Status::OK) {
+            FXL_LOG(ERROR) << "Failed to create a cloud provider: "
+                           << fidl::ToUnderlying(status);
+          }
+        });
+  }
   return cloud_provider;
 }
 

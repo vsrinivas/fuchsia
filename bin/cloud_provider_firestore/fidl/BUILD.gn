@@ -12,6 +12,7 @@ fidl("fidl") {
   ]
 
   deps = [
+    "//garnet/public/fidl/fuchsia.auth",
     "//peridot/public/fidl/fuchsia.ledger",
     "//peridot/public/fidl/fuchsia.ledger.cloud",
     "//peridot/public/fidl/fuchsia.modular.auth",

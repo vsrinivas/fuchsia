@@ -15,6 +15,7 @@
 
 #include "peridot/bin/cloud_provider_firestore/include/types.h"
 #include "peridot/lib/firebase_auth/testing/credentials.h"
+#include "peridot/lib/firebase_auth/testing/service_account_token_manager.h"
 #include "peridot/lib/firebase_auth/testing/service_account_token_provider.h"
 #include "peridot/lib/rng/random.h"
 #include "peridot/lib/rng/system_random.h"
@@ -58,12 +59,21 @@ class CloudProviderFactory {
       UserId user_id,
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
 
+  void MakeCloudProviderV2(
+      UserId user_id,
+      fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
+
   void MakeTokenProvider(
       UserId user_id,
       fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request);
 
+  void MakeTokenManager(
+      UserId user_id,
+      fidl::InterfaceRequest<fuchsia::auth::TokenManager> request);
+
  private:
   class TokenProviderContainer;
+  class TokenManagerContainer;
   component::StartupContext* const startup_context_;
   rng::Random* const random_;
   const std::string api_key_;
@@ -73,6 +83,7 @@ class CloudProviderFactory {
   async::Loop services_loop_;
 
   callback::AutoCleanableSet<TokenProviderContainer> token_providers_;
+  callback::AutoCleanableSet<TokenManagerContainer> token_managers_;
 
   fuchsia::sys::ComponentControllerPtr cloud_provider_controller_;
   FactoryPtr cloud_provider_factory_;

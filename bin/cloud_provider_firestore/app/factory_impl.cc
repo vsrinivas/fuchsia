@@ -19,6 +19,16 @@ std::shared_ptr<grpc::Channel> MakeChannel() {
   auto credentials = grpc::SslCredentials(opts);
   return grpc::CreateChannel("firestore.googleapis.com:443", credentials);
 }
+
+firebase_auth::FirebaseAuthImpl::Config GetFirebaseAuthConfig(
+    const std::string& api_key, const std::string& cobalt_client_name) {
+  firebase_auth::FirebaseAuthImpl::Config config;
+  config.api_key = api_key;
+  config.cobalt_client_name = cobalt_client_name;
+
+  return config;
+}
+
 }  // namespace
 
 FactoryImpl::FactoryImpl(async_dispatcher_t* dispatcher, rng::Random* random,
@@ -49,14 +59,48 @@ void FactoryImpl::GetCloudProvider(
     fidl::InterfaceRequest<cloud_provider::CloudProvider>
         cloud_provider_request,
     GetCloudProviderCallback callback) {
-  auto token_provider_ptr = token_provider.Bind();
-  auto firebase_auth = std::make_unique<firebase_auth::FirebaseAuthImpl>(
-      firebase_auth::FirebaseAuthImpl::Config{config.api_key,
-                                              cobalt_client_name_},
-      dispatcher_, random_, std::move(token_provider_ptr), startup_context_);
-  firebase_auth::FirebaseAuthImpl* firebase_auth_ptr = firebase_auth.get();
+  auto firebase_auth =
+      GetFirebaseAuth(token_provider.Bind(), nullptr, config.api_key);
+
+  GetFirebaseCloudProvider(std::move(config), std::move(firebase_auth),
+                           std::move(cloud_provider_request),
+                           std::move(callback));
+}
+
+void FactoryImpl::GetCloudProviderV2(
+    Config config,
+    fidl::InterfaceHandle<fuchsia::auth::TokenManager> token_manager,
+    fidl::InterfaceRequest<cloud_provider::CloudProvider>
+        cloud_provider_request,
+    GetCloudProviderV2Callback callback) {
+  auto firebase_auth =
+      GetFirebaseAuth(nullptr, token_manager.Bind(), config.api_key);
+
+  GetFirebaseCloudProvider(std::move(config), std::move(firebase_auth),
+                           std::move(cloud_provider_request),
+                           std::move(callback));
+}
+
+std::unique_ptr<firebase_auth::FirebaseAuthImpl> FactoryImpl::GetFirebaseAuth(
+    fuchsia::modular::auth::TokenProviderPtr token_provider,
+    fuchsia::auth::TokenManagerPtr token_manager,
+    fidl::StringPtr firebase_api_key) {
+  return std::make_unique<firebase_auth::FirebaseAuthImpl>(
+      GetFirebaseAuthConfig(firebase_api_key, cobalt_client_name_), dispatcher_,
+      random_, std::move(token_provider), std::move(token_manager),
+      startup_context_);
+}
+
+void FactoryImpl::GetFirebaseCloudProvider(
+    Config config,
+    std::unique_ptr<firebase_auth::FirebaseAuthImpl> firebase_auth,
+    fidl::InterfaceRequest<cloud_provider::CloudProvider>
+        cloud_provider_request,
+    fit::function<void(cloud_provider::Status)> callback) {
+  FXL_DCHECK(firebase_auth);
+
   auto token_request =
-      firebase_auth_ptr->GetFirebaseUserId(fxl::MakeCopyable(
+      firebase_auth->GetFirebaseUserId(fxl::MakeCopyable(
           [this, config = std::move(config),
            firebase_auth = std::move(firebase_auth),
            cloud_provider_request = std::move(cloud_provider_request),
