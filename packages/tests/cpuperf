@@ -4,5 +4,8 @@
     ],
     "packages": [
         "//garnet/bin/cpuperf/tests:cpuperf_tests"
+    ],
+    "host_tests": [
+        "//garnet/bin/cpuperf/print/tests:cpuperf_raw_printer_test"
     ]
 }

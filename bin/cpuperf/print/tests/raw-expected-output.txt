@@ -1,0 +1,552 @@
+
+Iteration 0
+==============
+
+Trace 0
+--------
+0018: Time: 1724097353974
+0024: PC: Event 0x801, aspace 0xc65e000, pc 0x3d213fdb3a1b
+0038: Value: Event 0x101c, 44
+0044: Time: 1724182866116
+0050: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff0012db68
+0064: Value: Event 0x101c, 44
+0070: Time: 1724259737480
+007c: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff00150df8
+0090: Value: Event 0x101c, 44
+009c: Time: 1724282981146
+00a8: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0014f6b1
+00bc: Value: Event 0x101c, 44
+00c8: Time: 1724283015176
+00d4: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001867dd
+00e8: Value: Event 0x101c, 44
+00f4: Time: 1724309088112
+0100: PC: Event 0x801, aspace 0x271000, pc 0xffffffff001321ef
+0114: Value: Event 0x101c, 44
+0120: Time: 1724413457540
+012c: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff0012db68
+0140: Value: Event 0x101c, 44
+014c: Time: 1724485932144
+0158: PC: Event 0x801, aspace 0xc65e000, pc 0x3d213fdadafa
+016c: Value: Event 0x101c, 45
+0178: Time: 1724528762284
+0184: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+0198: Value: Event 0x101c, 44
+01a4: Time: 1724644049070
+01b0: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff0012db68
+01c4: Value: Event 0x101c, 44
+01d0: Time: 1724720919990
+01dc: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff00150df8
+01f0: Value: Event 0x101c, 44
+01fc: Time: 1724836208580
+0208: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff0012db68
+021c: Value: Event 0x101c, 44
+0228: Time: 1724913080008
+0234: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff00150df8
+0248: Value: Event 0x101c, 44
+0254: Time: 1725028368066
+0260: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff0012db68
+0274: Value: Event 0x101c, 44
+0280: Time: 1725105239594
+028c: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff00150df8
+02a0: Value: Event 0x101c, 44
+02ac: Time: 1725176355448
+02b8: PC: Event 0x801, aspace 0x7ece000, pc 0xffffffff0012db68
+02cc: Value: Event 0x101c, 44
+02d8: Time: 1725220536804
+02e4: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+02f8: Value: Event 0x101c, 44
+0304: Time: 1725335823290
+0310: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff0012db68
+0324: Value: Event 0x101c, 44
+0330: Time: 1725412694784
+033c: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff00150df8
+0350: Value: Event 0x101c, 44
+035c: Time: 1725527982370
+0368: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff0012db68
+037c: Value: Event 0x101c, 44
+0388: Time: 1725604853928
+0394: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff00150df8
+03a8: Value: Event 0x101c, 44
+03b4: Time: 1725720142090
+03c0: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff0012db68
+03d4: Value: Event 0x101c, 45
+03e0: Time: 1725797013962
+03ec: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff00150df8
+0400: Value: Event 0x101c, 44
+040c: Time: 1725912302298
+0418: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff0012db68
+042c: Value: Event 0x101c, 44
+0438: Time: 1725919655522
+0444: PC: Event 0x801, aspace 0xc65e000, pc 0x3d213fdb3e92
+0458: Value: Event 0x101c, 44
+0464: Time: 1725919676472
+0470: PC: Event 0x801, aspace 0xc65e000, pc 0x3d213fe751c4
+0484: Value: Event 0x101c, 44
+0490: Time: 1725919696122
+049c: PC: Event 0x801, aspace 0xc65e000, pc 0x3d213fd89019
+04b0: Value: Event 0x101c, 44
+04bc: Time: 1725950743760
+04c8: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff00150df8
+04dc: Value: Event 0x101c, 44
+04e8: Time: 1726066029688
+04f4: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff0012db68
+0508: Value: Event 0x101c, 44
+0514: Time: 1726141183008
+0520: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+0534: Value: Event 0x101c, 44
+0540: Time: 1726219757424
+054c: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff0012db68
+0560: Value: Event 0x101c, 44
+056c: Time: 1726296628350
+0578: PC: Event 0x801, aspace 0x7ecf000, pc 0xffffffff00150df8
+058c: Value: Event 0x101c, 44
+0598: Time: 1726346026328
+05a4: PC: Event 0x801, aspace 0xfafc000, pc 0x3f898bca8871
+05b8: Value: Event 0x101c, 45
+05c4: Time: 1726346046498
+05d0: PC: Event 0x801, aspace 0xfafc000, pc 0xffffffff001502e8
+05e4: Value: Event 0x101c, 45
+05f0: Time: 1726346063388
+05fc: PC: Event 0x801, aspace 0xfafc000, pc 0xffffffff0016cbf1
+0610: Value: Event 0x101c, 45
+061c: Time: 1726346083884
+0628: PC: Event 0x801, aspace 0xfafc000, pc 0xffffffff0014ae1b
+063c: Value: Event 0x101c, 45
+0648: Time: 1726346703196
+0654: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+0668: Value: Event 0x101c, 45
+0674: Time: 1726346926680
+0680: PC: Event 0x801, aspace 0xc65e000, pc 0x3d213fd82d38
+0694: Value: Event 0x101c, 45
+06a0: Time: 1726346950264
+06ac: PC: Event 0x801, aspace 0xc65e000, pc 0x3d213fdb3e43
+06c0: Value: Event 0x101c, 45
+06cc: Time: 1726371291688
+06d8: Count: Event 0x801, 9767
+06e4: Value: Event 0x101c, 44
+
+Trace 1
+--------
+0018: Time: 1724067238658
+0024: PC: Event 0x801, aspace 0xe860000, pc 0x33c7291bcd3a
+0038: Time: 1724067297632
+0044: PC: Event 0x801, aspace 0xe860000, pc 0x33c7291bcc5c
+0058: Time: 1724067308610
+0064: PC: Event 0x801, aspace 0xe860000, pc 0x33c7291bbae7
+0078: Time: 1724067334472
+0084: PC: Event 0x801, aspace 0xe860000, pc 0x33c7291ebec0
+0098: Time: 1724281520454
+00a4: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+00b8: Time: 1724281533692
+00c4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff001738b0
+00d8: Time: 1724281546806
+00e4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012e98a
+00f8: Time: 1724281559620
+0104: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012e9a1
+0118: Time: 1724281572672
+0124: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0015d022
+0138: Time: 1724281585506
+0144: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0014d64d
+0158: Time: 1724281598532
+0164: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012e98a
+0178: Time: 1724281611400
+0184: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00180078
+0198: Time: 1724281624492
+01a4: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16ca18
+01b8: Time: 1724281637436
+01c4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+01d8: Time: 1724281650424
+01e4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0010648c
+01f8: Time: 1724281663392
+0204: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+0218: Time: 1724281676504
+0224: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+0238: Time: 1724281689246
+0244: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0010648c
+0258: Time: 1724281702288
+0264: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+0278: Time: 1724281715272
+0284: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+0298: Time: 1724281728240
+02a4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0010648c
+02b8: Time: 1724281741192
+02c4: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+02d8: Time: 1724281754282
+02e4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+02f8: Time: 1724281767044
+0304: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0010648c
+0318: Time: 1724281780112
+0324: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+0338: Time: 1724281793062
+0344: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff001738b0
+0358: Time: 1724281806000
+0364: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012e98a
+0378: Time: 1724281818792
+0384: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012e9a1
+0398: Time: 1724281831720
+03a4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0015d022
+03b8: Time: 1724281844502
+03c4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0014d64d
+03d8: Time: 1724281857400
+03e4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012e98a
+03f8: Time: 1724281870248
+0404: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00180078
+0418: Time: 1724281883308
+0424: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16ca18
+0438: Time: 1724281896226
+0444: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+0458: Time: 1724281909116
+0464: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00106488
+0478: Time: 1724281922002
+0484: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+0498: Time: 1724281935022
+04a4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+04b8: Time: 1724281947814
+04c4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00106490
+04d8: Time: 1724281960888
+04e4: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+04f8: Time: 1724281973808
+0504: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+0518: Time: 1724281986672
+0524: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00106490
+0538: Time: 1724281999584
+0544: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+0558: Time: 1724282012628
+0564: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+0578: Time: 1724282025418
+0584: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00106490
+0598: Time: 1724282038506
+05a4: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+05b8: Time: 1724282051426
+05c4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff001738b0
+05d8: Time: 1724282064338
+05e4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012e98a
+05f8: Time: 1724282077104
+0604: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012e9a1
+0618: Time: 1724282090026
+0624: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0015d022
+0638: Time: 1724282102836
+0644: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0014d64d
+0658: Time: 1724282115736
+0664: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012e98a
+0678: Time: 1724282128518
+0684: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00180078
+0698: Time: 1724282141492
+06a4: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16ca18
+06b8: Time: 1724282154386
+06c4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+06d8: Time: 1724282167312
+06e4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0010648c
+06f8: Time: 1724282180232
+0704: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+0718: Time: 1724282193136
+0724: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+0738: Time: 1724282205904
+0744: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0010648c
+0758: Time: 1724282218802
+0764: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+0778: Time: 1724282231744
+0784: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+0798: Time: 1724282248484
+07a4: PC: Event 0x801, aspace 0x4d5d000, pc 0x506e703b89eb
+07b8: Time: 1724282259506
+07c4: PC: Event 0x801, aspace 0x4d5d000, pc 0x506e703dbece
+07d8: Time: 1724282271496
+07e4: PC: Event 0x801, aspace 0x4d5d000, pc 0x4cddb463730a
+07f8: Time: 1724282961660
+0804: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012e98a
+0818: Time: 1724485920006
+0824: PC: Event 0x801, aspace 0xc65e000, pc 0x3d213fd7f4e6
+0838: Time: 1724512686520
+0844: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00180078
+0858: Time: 1724512699612
+0864: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16ca18
+0878: Time: 1724512712536
+0884: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+0898: Time: 1724512725348
+08a4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00106490
+08b8: Time: 1724512738294
+08c4: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+08d8: Time: 1724512751196
+08e4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+08f8: Time: 1724512763932
+0904: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00106488
+0918: Time: 1724512776824
+0924: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+0938: Time: 1724512789768
+0944: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+0958: Time: 1724512802562
+0964: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0010648c
+0978: Time: 1724512815490
+0984: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+0998: Time: 1724512828396
+09a4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+09b8: Time: 1724512841140
+09c4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00106490
+09d8: Time: 1724512854150
+09e4: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+09f8: Time: 1724512867092
+0a04: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff001738b0
+0a18: Time: 1724512879984
+0a24: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012e98a
+0a38: Time: 1724512892788
+0a44: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012e9a1
+0a58: Time: 1724512905554
+0a64: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0015d022
+0a78: Time: 1724512918322
+0a84: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0014d64d
+0a98: Time: 1724512931258
+0aa4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012e98a
+0ab8: Time: 1724512944052
+0ac4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00180078
+0ad8: Time: 1724512956984
+0ae4: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16ca18
+0af8: Time: 1724512969884
+0b04: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+0b18: Time: 1724512982632
+0b24: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00106488
+0b38: Time: 1724512995496
+0b44: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+0b58: Time: 1724513008422
+0b64: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+0b78: Time: 1724513021228
+0b84: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00106488
+0b98: Time: 1724513034094
+0ba4: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+0bb8: Time: 1724513047016
+0bc4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+0bd8: Time: 1724513059764
+0be4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00106490
+0bf8: Time: 1724513072680
+0c04: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+0c18: Time: 1724513085752
+0c24: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+0c38: Time: 1724513098566
+0c44: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0010648c
+0c58: Time: 1724513111590
+0c64: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+0c78: Time: 1724513124522
+0c84: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff001738b0
+0c98: Time: 1724513137302
+0ca4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012e98a
+0cb8: Time: 1724513150082
+0cc4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012e9a1
+0cd8: Time: 1724513162900
+0ce4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0015d022
+0cf8: Time: 1724513175672
+0d04: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0014d64d
+0d18: Time: 1724513188428
+0d24: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012e98a
+0d38: Time: 1724513201178
+0d44: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00180078
+0d58: Time: 1724513214080
+0d64: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16ca18
+0d78: Time: 1724513227024
+0d84: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+0d98: Time: 1724513239800
+0da4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00106488
+0db8: Time: 1724513252706
+0dc4: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+0dd8: Time: 1724513265614
+0de4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+0df8: Time: 1724513278348
+0e04: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00106488
+0e18: Time: 1724513291240
+0e24: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+0e38: Time: 1724513304184
+0e44: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+0e58: Time: 1724513316950
+0e64: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00106488
+0e78: Time: 1724513329854
+0e84: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+0e98: Time: 1724513342750
+0ea4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0016c8b8
+0eb8: Time: 1724513355508
+0ec4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0010648c
+0ed8: Time: 1724743768038
+0ee4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff00180006
+0ef8: Time: 1724974180498
+0f04: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012eb50
+0f18: Time: 1725204584876
+0f24: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0015cfb9
+0f38: Time: 1725434997304
+0f44: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012eb6e
+0f58: Time: 1725835449496
+0f64: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+0f78: Time: 1725919641210
+0f84: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16ca23
+0f98: Time: 1726126217998
+0fa4: PC: Event 0x801, aspace 0x4d5d000, pc 0xffffffff0012eba3
+0fb8: Time: 1726346149336
+0fc4: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0014f5f1
+0fd8: Time: 1726346242700
+0fe4: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+0ff8: Time: 1726346443236
+1004: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+1018: Time: 1726346600636
+1024: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0016c9c5
+1038: Time: 1726346755068
+1044: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+1058: Time: 1726346853734
+1064: PC: Event 0x801, aspace 0xc65e000, pc 0x3d213fdadafa
+1078: Time: 1726346882312
+1084: PC: Event 0x801, aspace 0xc65e000, pc 0x3d213fd854e5
+1098: Time: 1726346909310
+10a4: PC: Event 0x801, aspace 0xc65e000, pc 0x3d213fd89019
+10b8: Time: 1726346926864
+10c4: PC: Event 0x801, aspace 0xc65e000, pc 0x3d213fdadafa
+10d8: Time: 1726346962490
+10e4: PC: Event 0x801, aspace 0xfafc000, pc 0x3f898bcbd8a3
+10f8: Time: 1726346976852
+1104: PC: Event 0x801, aspace 0xfafc000, pc 0xffffffff00186a0b
+1118: Time: 1726356627602
+1124: PC: Event 0x801, aspace 0x4d5d000, pc 0x594f6a16c6ee
+1138: Time: 1726371292024
+1144: Count: Event 0x801, 4305
+
+Trace 2
+--------
+0018: Time: 1724067205378
+0024: PC: Event 0x801, aspace 0x4f15000, pc 0x71a894ae1c5b
+0038: Time: 1724067225442
+0044: PC: Event 0x801, aspace 0x4f15000, pc 0x71a894ae1690
+0058: Time: 1724067231660
+0064: PC: Event 0x801, aspace 0x4f15000, pc 0x71a894ae1afc
+0078: Time: 1724067242944
+0084: PC: Event 0x801, aspace 0x4f15000, pc 0x71a894adf6ba
+0098: Time: 1724067252140
+00a4: PC: Event 0x801, aspace 0x4f15000, pc 0xffffffff00150947
+00b8: Time: 1724097396708
+00c4: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+00d8: Time: 1724282970568
+00e4: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0014f6b1
+00f8: Time: 1724996661936
+0104: PC: Event 0x801, aspace 0xeeb2000, pc 0xffffffff0014f5f1
+0118: Time: 1725175791978
+0124: PC: Event 0x801, aspace 0x7ece000, pc 0x59457e2f1934
+0138: Time: 1725919695684
+0144: PC: Event 0x801, aspace 0x7d76000, pc 0xffffffff00116ee3
+0158: Time: 1726346081664
+0164: PC: Event 0x801, aspace 0xc65e000, pc 0x3d213fdb1c96
+0178: Time: 1726346111032
+0184: PC: Event 0x801, aspace 0xc65e000, pc 0x3d213fdd3146
+0198: Time: 1726346137306
+01a4: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001d3644
+01b8: Time: 1726346934668
+01c4: PC: Event 0x801, aspace 0x7d76000, pc 0x4d8f2bf358db
+01d8: Time: 1726371292968
+01e4: Count: Event 0x801, 5576
+
+Trace 3
+--------
+0018: Time: 1724071799904
+0024: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+0038: Time: 1724283129932
+0044: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+0058: Time: 1724283286176
+0064: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0016c9c5
+0078: Time: 1724283440532
+0084: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+0098: Time: 1724283640924
+00a4: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+00b8: Time: 1724283797042
+00c4: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0016c9c5
+00d8: Time: 1724283951388
+00e4: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+00f8: Time: 1724284151752
+0104: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+0118: Time: 1724284307856
+0124: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0016c9c5
+0138: Time: 1724284462240
+0144: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+0158: Time: 1724284662750
+0164: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+0178: Time: 1724284818770
+0184: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0016c9c5
+0198: Time: 1724284973160
+01a4: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+01b8: Time: 1724285173654
+01c4: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+01d8: Time: 1724285329782
+01e4: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0016c9c5
+01f8: Time: 1724285484160
+0204: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+0218: Time: 1724286191440
+0224: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+0238: Time: 1724291369938
+0244: PC: Event 0x801, aspace 0xc65e000, pc 0x3d213fdb2a2d
+0258: Time: 1724309130074
+0264: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+0278: Time: 1724752882546
+0284: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0010648c
+0298: Time: 1725919756704
+02a4: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+02b8: Time: 1725919957444
+02c4: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+02d8: Time: 1725920113862
+02e4: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0016c9c5
+02f8: Time: 1725920268232
+0304: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+0318: Time: 1725920468860
+0324: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+0338: Time: 1725920625150
+0344: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0016c9c5
+0358: Time: 1725920779532
+0364: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+0378: Time: 1725920980050
+0384: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+0398: Time: 1725921136244
+03a4: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0016c9c5
+03b8: Time: 1725921290644
+03c4: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+03d8: Time: 1725921491048
+03e4: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+03f8: Time: 1725921647254
+0404: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0016c9c5
+0418: Time: 1725921801640
+0424: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+0438: Time: 1725922002058
+0444: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+0458: Time: 1725922158362
+0464: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0016c9c5
+0478: Time: 1725922497050
+0484: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+0498: Time: 1725928042762
+04a4: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+04b8: Time: 1725945802792
+04c4: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+04d8: Time: 1726346135238
+04e4: PC: Event 0x801, aspace 0xc65e000, pc 0x638a9ba50594
+04f8: Time: 1726346861022
+0504: PC: Event 0x801, aspace 0xc65e000, pc 0x3d213fdb3e43
+0518: Time: 1726346932732
+0524: PC: Event 0x801, aspace 0xc65e000, pc 0x3d213fdb3e5c
+0538: Time: 1726347063486
+0544: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+0558: Time: 1726347219676
+0564: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0016c9c5
+0578: Time: 1726347374006
+0584: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+0598: Time: 1726347574686
+05a4: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+05b8: Time: 1726347730864
+05c4: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0016c9c5
+05d8: Time: 1726347885206
+05e4: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+05f8: Time: 1726348085696
+0604: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+0618: Time: 1726348241928
+0624: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0016c9c5
+0638: Time: 1726348396308
+0644: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+0658: Time: 1726348596794
+0664: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff001325e5
+0678: Time: 1726348937250
+0684: PC: Event 0x801, aspace 0xc65e000, pc 0xffffffff0016c9c5
+0698: Time: 1726351533458
+06a4: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011626e
+06b8: Time: 1726371263906
+06c4: PC: Event 0x801, aspace 0x5022000, pc 0xffffffff00160059
+06d8: Time: 1726371290694
+06e4: Count: Event 0x801, 8085
+
