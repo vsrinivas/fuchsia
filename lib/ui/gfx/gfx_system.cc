@@ -216,7 +216,10 @@ void GfxSystem::GetDisplayOwnershipEventImmediately(
     fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) {
   FXL_DCHECK(initialized_);
   Display* display = engine_->display_manager()->default_display();
-  FXL_CHECK(display) << "There must be a default display.";
+
+  if (escher::VulkanIsSupported()) {
+    FXL_CHECK(display) << "There must be a default display.";
+  }
 
   static_assert(fuchsia::ui::scenic::displayNotOwnedSignal == ZX_USER_SIGNAL_0,
                 "Bad constant");
