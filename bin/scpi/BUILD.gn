@@ -68,7 +68,7 @@ package("scpi_server_tests") {
   tests = [
     {
       name = "scpi_unittests"
-      dest = "disabled/scpi_unittests"
+      disabled = true
     },
   ]
 }
