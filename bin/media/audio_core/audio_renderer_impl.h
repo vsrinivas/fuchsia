@@ -7,6 +7,7 @@
 
 #include <fbl/unique_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "garnet/bin/media/audio_core/audio_link_packet_source.h"
 #include "garnet/bin/media/audio_core/audio_object.h"
@@ -84,9 +85,7 @@ class AudioRendererImpl
   // GainControl interface.
   void SetGain(float gain_db) final;
   void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
-                       fuchsia::media::AudioRamp rampType) final {
-    FXL_NOTIMPLEMENTED();
-  }
+                       fuchsia::media::AudioRamp rampType) final;
   void SetMute(bool muted) final;
 
  protected:
@@ -101,6 +100,9 @@ class AudioRendererImpl
   // Minimum Clock Lead Time state
   int64_t min_clock_lead_nsec_ = 0;
 
+  using LinkFunction = fit::function<void(AudioLinkPacketSource* link)>;
+  void ForEachPacketLink(LinkFunction task);
+
  private:
   class GainControlBinding : public fuchsia::media::GainControl {
    public:
@@ -114,9 +116,7 @@ class AudioRendererImpl
     // GainControl interface.
     void SetGain(float gain_db) final;
     void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
-                         fuchsia::media::AudioRamp rampType) final {
-      FXL_NOTIMPLEMENTED();
-    }
+                         fuchsia::media::AudioRamp rampType) final;
     void SetMute(bool muted) final;
     // TODO(mpuryear): Need to implement OnGainMuteChanged event.
 

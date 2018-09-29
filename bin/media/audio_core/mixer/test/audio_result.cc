@@ -659,7 +659,7 @@ void AudioResult::DumpNoiseFloorValues() {
 void AudioResult::DumpDynamicRangeValues() {
   printf("\n\n Dynamic Range");
   printf("\n       Epsilon:  %10.8f  (%13.6le dB)", AudioResult::ScaleEpsilon,
-         GainScaleToDb(AudioResult::ScaleEpsilon));
+         Gain::ScaleToDb(AudioResult::ScaleEpsilon));
   printf("  Level: %12.8lf dB  Sinad: %10.6lf dB",
          AudioResult::LevelEpsilonDown, AudioResult::SinadEpsilonDown);
 
@@ -679,7 +679,7 @@ void AudioResult::DumpDynamicRangeValues() {
          AudioResult::DynRangeTolerance);
 
   printf("\n       MinScale: %10.8f  (%11.8f dB)", AudioResult::MinScaleNonZero,
-         GainScaleToDb(AudioResult::MinScaleNonZero));
+         Gain::ScaleToDb(AudioResult::MinScaleNonZero));
 }
 
 }  // namespace test

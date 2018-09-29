@@ -81,10 +81,10 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
 
   // Calculate Signal-to-Noise-And-Distortion (SINAD)
   // We can directly compare 'signal' and 'other', regardless of source format.
-  *sinad_db = ValToDb(magn_signal / magn_other);
+  *sinad_db = Gain::DoubleToDb(magn_signal / magn_other);
 
   // All sources (8-bit, 16-bit, ...) are normalized to float in accum buffer.
-  return ValToDb(magn_signal / expected_amplitude);
+  return Gain::DoubleToDb(magn_signal / expected_amplitude);
 }
 
 // Measure level response and noise floor for 1kHz sine from 8-bit source.
@@ -199,9 +199,9 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
 
   // Calculate Signal-to-Noise-And-Distortion (SINAD)
   // We can directly compare 'signal' and 'other', regardless of output format.
-  *sinad_db = ValToDb(magn_signal / magn_other);
+  *sinad_db = Gain::DoubleToDb(magn_signal / magn_other);
 
-  return ValToDb(magn_signal / expected_amplitude);
+  return Gain::DoubleToDb(magn_signal / expected_amplitude);
 }
 
 // Measure level response and noise floor for 1kHz sine, to an 8-bit output.
@@ -345,8 +345,8 @@ void MeasureFreqRespSinad(MixerPtr mixer, uint32_t src_buf_size,
                      &magn_other);
 
     // Calculate Frequency Response and Signal-to-Noise-And-Distortion (SINAD).
-    level_db[freq_idx] = ValToDb(magn_signal);
-    sinad_db[freq_idx] = ValToDb(magn_signal / magn_other);
+    level_db[freq_idx] = Gain::DoubleToDb(magn_signal);
+    sinad_db[freq_idx] = Gain::DoubleToDb(magn_signal / magn_other);
   }
 }
 
@@ -818,8 +818,8 @@ void TestNxNEquivalence(Resampler sampler_type, double* freq_resp_results,
                      FrequencySet::kReferenceFreqs[freq_idx], &magn_signal,
                      &magn_other);
 
-    freq_resp_results[freq_idx] = ValToDb(magn_signal);
-    sinad_results[freq_idx] = ValToDb(magn_signal / magn_other);
+    freq_resp_results[freq_idx] = Gain::DoubleToDb(magn_signal);
+    sinad_results[freq_idx] = Gain::DoubleToDb(magn_signal / magn_other);
   }
 }
 

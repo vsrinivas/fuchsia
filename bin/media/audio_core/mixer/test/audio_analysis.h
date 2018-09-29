@@ -12,20 +12,18 @@ namespace media {
 namespace audio {
 namespace test {
 
-// Convert double into decibels, from RMS *level* (hence 20dB per 10x, not 10).
-inline double ValToDb(double value) { return std::log10(value) * 20.0; }
-
 // Numerically compare two buffers of integers. A bool (default true) represents
 // whether we expect the comparison to fail (for error logging purposes).
 template <typename T>
 bool CompareBuffers(const T* actual, const T* expected, uint32_t buf_size,
-                    bool expect_to_pass = true);
+                    bool expect_to_pass = true, bool float_tolerance = false);
 
 // Numerically compare buffer of integers to a specific value. A bool represents
 // whether we expect the comparison to fail (for error logging purposes).
 template <typename T>
 bool CompareBufferToVal(const T* buf, T val, uint32_t buf_size,
-                        bool expect_to_pass = true);
+                        bool expect_to_pass = true,
+                        bool float_tolerance = false);
 
 // Print values of a double-float array -- used during debugging, not test-runs
 void DisplayVals(const double* buf, uint32_t buf_size);

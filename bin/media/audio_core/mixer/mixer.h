@@ -263,7 +263,14 @@ struct Bookkeeping {
   void Reset() {
     mixer->Reset();
     src_pos_modulo = 0;
+    gain.ClearSourceRamp();
   }
+
+  // TODO(mpuryear): move this into the Mixer or Gain class, along with the
+  // other Bookkeeping parameters.
+  static constexpr uint32_t kScaleArrLen = 960;
+  std::unique_ptr<Gain::AScale[]> scale_arr =
+      std::make_unique<Gain::AScale[]>(kScaleArrLen);
 };
 
 }  // namespace audio

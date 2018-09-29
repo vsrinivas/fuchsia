@@ -11,16 +11,6 @@ namespace media {
 namespace audio {
 namespace test {
 
-// Test the inline function that converts a numerical value to dB.
-TEST(AnalysisHelpers, ValToDb) {
-  EXPECT_EQ(ValToDb(1.0), 0.0);     // Unity is 0 dB
-  EXPECT_EQ(ValToDb(100.0), 40.0);  // 100x is 40 dB
-  EXPECT_EQ(ValToDb(0.1), -20.0);   // 10% is -20 dB
-
-  EXPECT_GE(ValToDb(0.5), -6.0206 * 1.000001);  // 50% is roughly -6.0206 dB
-  EXPECT_LE(ValToDb(0.5), -6.0206 * 0.999999);  // FP representation => 2 comps
-}
-
 // Test uint8 version of CompareBuffers, which we use to test output buffers
 TEST(AnalysisHelpers, CompareBuffers_8) {
   uint8_t source[] = {0x42, 0x55};

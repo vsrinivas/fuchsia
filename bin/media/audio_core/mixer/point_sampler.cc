@@ -75,9 +75,11 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
 
   using SR = SrcReader<SrcSampleType, SrcChanCount, DestChanCount>;
   using DM = DestMixer<ScaleType, DoAccumulate>;
-
   const SrcSampleType* src = static_cast<const SrcSampleType*>(src_void);
+
   uint32_t dest_off = *dest_offset;
+  uint32_t dest_off_start = dest_off;  // Only used when ramping.
+
   int32_t src_off = *frac_src_offset;
 
   // Cache these locally, in the template specialization that uses them.
@@ -92,6 +94,16 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     FXL_DCHECK(denominator > 0);
     FXL_DCHECK(denominator > rate_modulo);
     FXL_DCHECK(denominator > src_pos_modulo);
+  }
+  if (kVerboseRampDebug) {
+    FXL_LOG(INFO) << "Point Ramping: " << (ScaleType == ScalerType::RAMPING)
+                  << ", dest_frames: " << dest_frames
+                  << ", dest_off: " << dest_off;
+  }
+  if (ScaleType == ScalerType::RAMPING) {
+    if (dest_frames > Bookkeeping::kScaleArrLen + dest_off) {
+      dest_frames = Bookkeeping::kScaleArrLen + dest_off;
+    }
   }
 
   FXL_DCHECK(dest_off < dest_frames);
@@ -110,10 +122,16 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets.
   if (ScaleType != ScalerType::MUTED) {
-    Gain::AScale amplitude_scale = info->gain.GetGainScale();
+    Gain::AScale amplitude_scale;
+    if (ScaleType != ScalerType::RAMPING) {
+      amplitude_scale = info->gain.GetGainScale();
+    }
 
     while ((dest_off < dest_frames) &&
            (src_off < static_cast<int32_t>(frac_src_frames))) {
+      if (ScaleType == ScalerType::RAMPING) {
+        amplitude_scale = info->scale_arr[dest_off - dest_off_start];
+      }
       uint32_t src_iter = (src_off >> kPtsFractionalBits) * SrcChanCount;
       float* out = dest + (dest_off * DestChanCount);
 
@@ -194,6 +212,20 @@ bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
                       : Mix<ScalerType::MUTED, true, false>(
                             dest, dest_frames, dest_offset, src,
                             frac_src_frames, frac_src_offset, info));
+  } else if (info->gain.IsRamping()) {
+    return accumulate
+               ? (hasModulo ? Mix<ScalerType::RAMPING, true, true>(
+                                  dest, dest_frames, dest_offset, src,
+                                  frac_src_frames, frac_src_offset, info)
+                            : Mix<ScalerType::RAMPING, true, false>(
+                                  dest, dest_frames, dest_offset, src,
+                                  frac_src_frames, frac_src_offset, info))
+               : (hasModulo ? Mix<ScalerType::RAMPING, false, true>(
+                                  dest, dest_frames, dest_offset, src,
+                                  frac_src_frames, frac_src_offset, info)
+                            : Mix<ScalerType::RAMPING, false, false>(
+                                  dest, dest_frames, dest_offset, src,
+                                  frac_src_frames, frac_src_offset, info));
   } else {
     return accumulate
                ? (hasModulo ? Mix<ScalerType::NE_UNITY, true, true>(
@@ -232,9 +264,11 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
              static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
 
   using DM = DestMixer<ScaleType, DoAccumulate>;
-
   const SrcSampleType* src = static_cast<const SrcSampleType*>(src_void);
+
   uint32_t dest_off = *dest_offset;
+  uint32_t dest_off_start = dest_off;  // Only used when ramping.
+
   int32_t src_off = *frac_src_offset;
 
   // Cache these locally, in the template specialization that uses them.
@@ -249,6 +283,16 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
     FXL_DCHECK(denominator > 0);
     FXL_DCHECK(denominator > rate_modulo);
     FXL_DCHECK(denominator > src_pos_modulo);
+  }
+  if (kVerboseRampDebug) {
+    FXL_LOG(INFO) << "Point-NxN Ramping: " << (ScaleType == ScalerType::RAMPING)
+                  << ", dest_frames: " << dest_frames
+                  << ", dest_off: " << dest_off;
+  }
+  if (ScaleType == ScalerType::RAMPING) {
+    if (dest_frames > Bookkeeping::kScaleArrLen + dest_off) {
+      dest_frames = Bookkeeping::kScaleArrLen + dest_off;
+    }
   }
 
   FXL_DCHECK(dest_off < dest_frames);
@@ -267,9 +311,17 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets.
   if (ScaleType != ScalerType::MUTED) {
-    Gain::AScale amplitude_scale = info->gain.GetGainScale();
+    Gain::AScale amplitude_scale;
+    if (ScaleType != ScalerType::RAMPING) {
+      amplitude_scale = info->gain.GetGainScale();
+    }
+
     while ((dest_off < dest_frames) &&
            (src_off < static_cast<int32_t>(frac_src_frames))) {
+      if (ScaleType == ScalerType::RAMPING) {
+        amplitude_scale = info->scale_arr[dest_off - dest_off_start];
+      }
+
       uint32_t src_iter = (src_off >> kPtsFractionalBits) * chan_count;
       float* out = dest + (dest_off * chan_count);
 
@@ -355,6 +407,24 @@ bool NxNPointSamplerImpl<SrcSampleType>::Mix(
                 : Mix<ScalerType::MUTED, true, false>(
                       dest, dest_frames, dest_offset, src, frac_src_frames,
                       frac_src_offset, info, chan_count_));
+  } else if (info->gain.IsRamping()) {
+    return accumulate
+               ? (hasModulo
+                      ? Mix<ScalerType::RAMPING, true, true>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info, chan_count_)
+                      : Mix<ScalerType::RAMPING, true, false>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info,
+                            chan_count_))
+               : (hasModulo
+                      ? Mix<ScalerType::RAMPING, false, true>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info, chan_count_)
+                      : Mix<ScalerType::RAMPING, false, false>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info,
+                            chan_count_));
   } else {
     return accumulate
                ? (hasModulo

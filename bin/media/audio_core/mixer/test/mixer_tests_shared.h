@@ -22,7 +22,7 @@ namespace test {
 // Converts a gain multiplier (in fixed-pt 4.28) to decibels (in double floating
 // point). Here, dB refers to Power, so 10x change is +20 dB (not +10dB).
 inline double GainScaleToDb(Gain::AScale gain_scale) {
-  return ValToDb(static_cast<double>(gain_scale) / Gain::kUnityScale);
+  return Gain::DoubleToDb(static_cast<double>(gain_scale) / Gain::kUnityScale);
 }
 
 // Find a suitable mixer for the provided format, channels and frame rates.

@@ -8,11 +8,16 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <stdint.h>
 #include <atomic>
+#include <cmath>
 
 #include "garnet/bin/media/audio_core/mixer/constants.h"
+#include "lib/fxl/logging.h"
+#include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
 namespace audio {
+
+constexpr bool kVerboseRampDebug = false;
 
 // A class containing factors used for software scaling in the mixer pipeline.
 class Gain {
@@ -30,10 +35,18 @@ class Gain {
 
   // constructor
   Gain()
-      : target_src_gain_db_(kUnityGainDb), target_dest_gain_db_(kUnityGainDb) {}
+      : target_src_gain_db_(kUnityGainDb),
+        target_dest_gain_db_(kUnityGainDb),
+        source_ramp_duration_ns_(0),
+        frames_ramped_(0) {}
 
   // Amplitude scale factors are expressed as 32-bit IEEE-754 floating point.
   using AScale = float;
+
+  static AScale DbToScale(float gain_db) { return pow(10.0f, gain_db * 0.05); }
+  static float ScaleToDb(AScale scale) { return std::log10(scale) * 20.0f; }
+  // Higher-precision (but slower) version currently used only by fidelity tests
+  static double DoubleToDb(double val) { return std::log10(val) * 20.0; }
 
   // Helper constant values in the gain-scale domain.
   //
@@ -73,7 +86,19 @@ class Gain {
   // components (not mixer) call this from their execution domain (guaranteeing
   // single-threadedness). This value is stored in atomic float -- the Mixer can
   // consume it at any time without needing a lock for synchronization.
-  void SetSourceGain(float gain_db) { target_src_gain_db_.store(gain_db); }
+  void SetSourceGain(float gain_db) {
+    target_src_gain_db_.store(gain_db);
+    if (kVerboseRampDebug) {
+      FXL_LOG(INFO) << "Gain(" << this << "): SetSourceGain(" << gain_db << ")";
+    }
+  }
+
+  // Smoothly change the source gain over the specified period of playback time.
+  void SetSourceGainWithRamp(float gain_db, zx_duration_t duration_ns,
+                             fuchsia::media::AudioRamp rampType =
+                                 fuchsia::media::AudioRamp::SCALE_LINEAR);
+
+  void ClearSourceRamp() { source_ramp_duration_ns_ = 0; }
 
   // The atomics for target_src_gain_db and target_dest_gain_db are meant to
   // defend a Mix thread's gain READs, against gain WRITEs by another thread in
@@ -89,10 +114,15 @@ class Gain {
   // The DEST gain "written" to a Gain object is just a snapshot of the dest
   // gain held by the audio_capturer_impl or output device. We use this snapshot
   // when performing the current Mix operation for that particular source.
-  void SetDestGain(float gain_db) { target_dest_gain_db_.store(gain_db); }
+  void SetDestGain(float gain_db) {
+    target_dest_gain_db_.store(gain_db);
+    if (kVerboseRampDebug) {
+      FXL_LOG(INFO) << "Gain(" << this << "): SetDestGain(" << gain_db << ")";
+    }
+  }
 
   // Calculate the stream's gain-scale, from cached source and dest values.
-  Gain::AScale GetGainScale() {
+  AScale GetGainScale() {
     return GetGainScale(target_src_gain_db_.load(),
                         target_dest_gain_db_.load());
   }
@@ -101,20 +131,44 @@ class Gain {
   // the mix's "destination" (output device, or capturer in API). This is only
   // called by the link's mixer. For performance reasons, values are cached and
   // recomputed only as needed.
-  Gain::AScale GetGainScale(float dest_gain_db) {
+  AScale GetGainScale(float dest_gain_db) {
     return GetGainScale(target_src_gain_db_.load(), dest_gain_db);
   }
+
+  void GetScaleArray(AScale* scale_arr, uint32_t num_frames,
+                     const TimelineRate& rate);
+
+  // Advance the state of any gain ramp by the specified number of frames.
+  void Advance(uint32_t num_frames, const TimelineRate& rate);
 
   // Convenience functions to aid in performance optimization.
   // NOTE: These methods expect the caller to use SetDestGain, NOT the
   // GetGainScale(dest_gain_db) variant -- it doesn't cache dest_gain_db.
-  bool IsUnity() { return (GetGainScale() == kUnityScale); }
-  bool IsSilent() { return (GetGainScale() <= kMinScale); }
+  bool IsUnity() {
+    return (target_src_gain_db_.load() == -(target_dest_gain_db_.load())) &&
+           !IsRamping();
+  }
+
+  bool IsSilent() {
+    return (IsSilentNow() &&
+            (!IsRamping() || start_src_gain_db_ >= end_src_gain_db_ ||
+             end_src_gain_db_ <= kMinGainDb));
+  }
+
+  bool IsRamping() { return (source_ramp_duration_ns_ > 0); }
 
  private:
   // Called by the above GetGainScale variants. For performance reasons, this
   // implementation caches values and recomputes the result only as needed.
-  Gain::AScale GetGainScale(float src_gain_db, float dest_gain_db);
+  AScale GetGainScale(float src_gain_db, float dest_gain_db);
+
+  // Used internally only -- the instananeous gain state
+  bool IsSilentNow() {
+    return (target_src_gain_db_.load() <= kMinGainDb) ||
+           (target_dest_gain_db_.load() <= kMinGainDb) ||
+           (target_src_gain_db_.load() + target_dest_gain_db_.load() <=
+            kMinGainDb);
+  }
 
   // TODO(mpuryear): at some point, examine whether using a lock provides better
   // performance and scalability than using these two atomics.
@@ -124,6 +178,13 @@ class Gain {
   float current_src_gain_db_ = kUnityGainDb;
   float current_dest_gain_db_ = kUnityGainDb;
   AScale combined_gain_scale_ = kUnityScale;
+
+  float start_src_scale_ = kUnityScale;
+  float start_src_gain_db_ = kUnityGainDb;
+  float end_src_scale_ = kUnityScale;
+  float end_src_gain_db_ = kUnityGainDb;
+  zx_duration_t source_ramp_duration_ns_;
+  uint32_t frames_ramped_;
 };
 
 }  // namespace audio

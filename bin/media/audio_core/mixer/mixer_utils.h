@@ -27,6 +27,7 @@ enum class ScalerType {
   MUTED,     // Massive attenuation. Just skip data.
   NE_UNITY,  // Non-unity non-zero gain. Scaling is needed.
   EQ_UNITY,  // Unity gain. Scaling is not needed.
+  RAMPING,   // Scaling is needed, using a non-constant scaler value
 };
 
 //
@@ -89,8 +90,9 @@ class SampleScaler<ScaleType, typename std::enable_if<(
 };
 
 template <ScalerType ScaleType>
-class SampleScaler<ScaleType, typename std::enable_if<(
-                                  ScaleType == ScalerType::NE_UNITY)>::type> {
+class SampleScaler<ScaleType, typename std::enable_if<
+                                  (ScaleType == ScalerType::NE_UNITY) ||
+                                  (ScaleType == ScalerType::RAMPING)>::type> {
  public:
   static inline float Scale(float val, Gain::AScale scale) {
     return scale * val;

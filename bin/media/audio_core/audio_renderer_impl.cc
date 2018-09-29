@@ -123,7 +123,7 @@ bool AudioRendererImpl::IsOperating() {
 
   for (const auto& link : dest_links_) {
     FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
-    auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+    auto packet_link = reinterpret_cast<AudioLinkPacketSource*>(link.get());
     if (!packet_link->pending_queue_empty()) {
       return true;
     }
@@ -381,7 +381,7 @@ void AudioRendererImpl::SetReferenceClock(zx::handle ref_clock) {
     return;
   }
 
-  FXL_LOG(WARNING) << "Not Implemented : " << __PRETTY_FUNCTION__;
+  FXL_NOTIMPLEMENTED();
 }
 
 void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
@@ -478,7 +478,7 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
     fbl::AutoLock links_lock(&links_lock_);
     for (const auto& link : dest_links_) {
       FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
-      auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+      auto packet_link = reinterpret_cast<AudioLinkPacketSource*>(link.get());
       packet_link->PushToPendingQueue(packet_ref);
     }
   }
@@ -511,7 +511,7 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
     fbl::AutoLock links_lock(&links_lock_);
     for (const auto& link : dest_links_) {
       FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
-      auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+      auto packet_link = reinterpret_cast<AudioLinkPacketSource*>(link.get());
       packet_link->FlushPendingQueue(flush_token);
     }
   }
@@ -665,70 +665,100 @@ void AudioRendererImpl::Pause(PauseCallback callback) {
 
 void AudioRendererImpl::PauseNoReply() { Pause(nullptr); }
 
-void AudioRendererImpl::SetGain(float gain_db) {
-  auto cleanup = fit::defer([this]() { Shutdown(); });
+// Call the provided function for each destination link (except throttle). This
+// distributes calls (such as SetGain) to each AudioRenderer output path.
+void AudioRendererImpl::ForEachPacketLink(LinkFunction link_task) {
+  FXL_DCHECK(link_task != nullptr);
+  //
+  // TODO(mpuryear): Review and improve this pattern, creating a mechanism that
+  // can be used for audio links and audio objects as well.
+  //
+  // As an example, upper-layer components explicitly provide a means to
+  // downcast the base class, as in mediaplayer/graph/types/stream_type.h#71.
+  // This is akin to a tagged union, in a way that makes sense in context.
+  //
+  // An alternative is to have the downcasting accessor return either a mutable
+  // object reference (once properly cast), or a RefPtr<ObjType>. Here, the
+  // former makes sense.
+  // To downcast and maintain a reference potentially Out Of Scope from this
+  // method, a version which downcasts and returns a RefPtr instance would make
+  // sense, such as:
+  //    fbl::RefPtr<Base> foo = MakeBase();
+  //    auto bar = fbl::RefPtr<Derived>::Downcast( foo -or- (fbl::move(foo) );
+  //
 
+  fbl::AutoLock links_lock(&links_lock_);
+  for (const auto& link : dest_links_) {
+    FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
+    auto packet_link = reinterpret_cast<AudioLinkPacketSource*>(link.get());
+
+    // Don't waste time on links to the throttle output.
+    if (packet_link == throttle_output_link_.get()) {
+      continue;
+    }
+
+    link_task(packet_link);
+  }
+}
+
+// Set the stream gain, in each Renderer -> Output audio path. The Gain object
+// contains multiple stages. In playback, renderer gain is pre-mix and hence is
+// "source" gain; the Output device (or master) gain is "dest" gain.
+void AudioRendererImpl::SetGain(float gain_db) {
   if (stream_gain_db_ != gain_db) {
+    // Anywhere we set stream_gain_db_, we should perform this range check.
     if (gain_db > fuchsia::media::MAX_GAIN_DB ||
         gain_db < fuchsia::media::MUTED_GAIN_DB) {
       FXL_LOG(ERROR) << "Stream gain value (" << gain_db << ") out of range.";
+      Shutdown();  // Use fit::defer() pattern if more than 1 error return case.
       return;
     }
-    // Anywhere we set stream_gain_db_, we should perform the above range check.
-    stream_gain_db_ = gain_db;
 
+    stream_gain_db_ = gain_db;
     float effective_gain_db =
         mute_ ? fuchsia::media::MUTED_GAIN_DB : stream_gain_db_;
 
-    fbl::AutoLock links_lock(&links_lock_);
-    for (const auto& link : dest_links_) {
-      FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
-      auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
-
-      // Don't waste time on links to the throttle output.
-      if (packet_link == throttle_output_link_.get()) {
-        continue;
-      }
-
-      // The Gain object contains multiple stages. In playback, renderer gain is
-      // "source" gain and device (or master) gain is "dest" gain.
-      packet_link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
-    }
+    ForEachPacketLink([effective_gain_db](AudioLinkPacketSource* link) {
+      link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
+    });
   }
-
-  // Things went well, cancel the cleanup hook.
-  cleanup.cancel();
 }
 
-void AudioRendererImpl::SetMute(bool mute) {
-  auto cleanup = fit::defer([this]() { Shutdown(); });
+// Set a stream gain ramp, in each Renderer -> Output audio path. Renderer gain
+// is pre-mix and hence is the Source component in the Gain object.
+void AudioRendererImpl::SetGainWithRamp(float gain_db,
+                                        zx_duration_t duration_ns,
+                                        fuchsia::media::AudioRamp rampType) {
+  if (gain_db > fuchsia::media::MAX_GAIN_DB ||
+      gain_db < fuchsia::media::MUTED_GAIN_DB) {
+    FXL_LOG(ERROR) << "Ramp gain value (" << gain_db << ") out of range.";
+    Shutdown();  // Use fit::defer() pattern if more than 1 error return case.
+    return;
+  }
 
+  ForEachPacketLink(
+      [gain_db, duration_ns, rampType](AudioLinkPacketSource* link) {
+        link->bookkeeping()->gain.SetSourceGainWithRamp(gain_db, duration_ns,
+                                                        rampType);
+      });
+}
+
+// Set a stream mute, in each Renderer -> Output audio path. For now, mute is
+// handled by setting gain to a value guaranteed to be silent, but going forward
+// we may pass this thru to the Gain object. Renderer gain/mute is pre-mix and
+// hence is the Source component in the Gain object.
+void AudioRendererImpl::SetMute(bool mute) {
+  // Only do the work if the request represents a change in state.
   if (mute_ != mute) {
     mute_ = mute;
 
     float effective_gain_db =
         mute_ ? fuchsia::media::MUTED_GAIN_DB : stream_gain_db_;
 
-    fbl::AutoLock links_lock(&links_lock_);
-    for (const auto& link : dest_links_) {
-      FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
-      auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
-
-      // Don't waste time on links to the throttle output.
-      if (packet_link == throttle_output_link_.get()) {
-        continue;
-      }
-
-      // The Gain object contains multiple stages. In playback, renderer gain is
-      // "source" gain and device (or master) gain is "dest" gain.
-      //
-      // TODO(mpuryear): implement a true Mute in the Gain object; use it here.
-      packet_link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
-    }
+    ForEachPacketLink([effective_gain_db](AudioLinkPacketSource* link) {
+      link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
+    });
   }
-
-  // Things went well, cancel the cleanup hook.
-  cleanup.cancel();
 }
 
 void AudioRendererImpl::BindGainControl(
@@ -756,6 +786,12 @@ void AudioRendererImpl::ReportNewMinClockLeadTime() {
 // Shorthand to save horizontal space for the thunks which follow.
 void AudioRendererImpl::GainControlBinding::SetGain(float gain_db) {
   owner_->SetGain(gain_db);
+}
+
+void AudioRendererImpl::GainControlBinding::SetGainWithRamp(
+    float gain_db, zx_duration_t duration_ns,
+    fuchsia::media::AudioRamp rampType) {
+  owner_->SetGainWithRamp(gain_db, duration_ns, rampType);
 }
 
 void AudioRendererImpl::GainControlBinding::SetMute(bool mute) {

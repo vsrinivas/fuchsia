@@ -440,17 +440,34 @@ bool StandardOutputBase::ProcessMix(
     // time, causing clearly measurable distortion that becomes crippling with
     // larger jobs. For *position*, there is no accumulated magnification over
     // time -- in analyzing the distortion that this should cause, mix job
-    // size would affect the distortion frequency but not amplitude. We expect
+    // size affects the distortion's frequency but not its amplitude. We expect
     // the effects to be below audible thresholds. Until the effects are
     // measurable and attributable to this jitter, we will defer this work.
     //
     // TODO(mpuryear): integrate bookkeeping into the Mixer itself (MTWN-129).
+
+    uint32_t prev_output_offset = output_offset;
+
+    // Check whether we are still ramping
+    bool ramping = info->gain.IsRamping();
+    if (ramping) {
+      info->gain.GetScaleArray(
+          info->scale_arr.get(),
+          std::min(frames_left - output_offset, Bookkeeping::kScaleArrLen),
+          cur_mix_job_.local_to_output->rate());
+    }
 
     consumed_source =
         info->mixer->Mix(buf, frames_left, &output_offset, packet->payload(),
                          packet->frac_frame_len(), &frac_input_offset,
                          cur_mix_job_.accumulate, info);
     FXL_DCHECK(output_offset <= frames_left);
+
+    // If src is ramping, advance by delta of output_offset
+    if (ramping) {
+      info->gain.Advance(output_offset - prev_output_offset,
+                         cur_mix_job_.local_to_output->rate());
+    }
   }
 
   if (consumed_source) {

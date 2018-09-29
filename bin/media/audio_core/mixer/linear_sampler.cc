@@ -98,7 +98,10 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   using SR = SrcReader<SrcSampleType, SrcChanCount, DestChanCount>;
   using DM = DestMixer<ScaleType, DoAccumulate>;
   const SrcSampleType* src = static_cast<const SrcSampleType*>(src_void);
+
   uint32_t dest_off = *dest_offset;
+  uint32_t dest_off_start = dest_off;  // Only used when ramping.
+
   int32_t src_off = *frac_src_offset;
 
   // Cache these locally, in the template specialization that uses them.
@@ -113,6 +116,17 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     FXL_DCHECK(denominator > 0);
     FXL_DCHECK(denominator > rate_modulo);
     FXL_DCHECK(denominator > src_pos_modulo);
+  }
+  if (kVerboseRampDebug) {
+    FXL_LOG(INFO) << "Linear(" << this
+                  << ") Ramping: " << (ScaleType == ScalerType::RAMPING)
+                  << ", dest_frames: " << dest_frames
+                  << ", dest_off: " << dest_off;
+  }
+  if (ScaleType == ScalerType::RAMPING) {
+    if (dest_frames > Bookkeeping::kScaleArrLen + dest_off) {
+      dest_frames = Bookkeeping::kScaleArrLen + dest_off;
+    }
   }
 
   // "Source end" is the last valid input sub-frame that can be sampled.
@@ -134,7 +148,10 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   // For linear_sampler this implies that src_off < frac_src_frames.
   FXL_DCHECK(src_off + FRAC_ONE <= frac_src_frames + neg_filter_width());
 
-  Gain::AScale amplitude_scale = info->gain.GetGainScale();
+  Gain::AScale amplitude_scale;
+  if (ScaleType != ScalerType::RAMPING) {
+    amplitude_scale = info->gain.GetGainScale();
+  }
 
   // TODO(mpuryear): optimize the logic below for common-case performance.
 
@@ -150,6 +167,10 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       }
 
       while ((dest_off < dest_frames) && (src_off < 0)) {
+        if (ScaleType == ScalerType::RAMPING) {
+          amplitude_scale = info->scale_arr[dest_off - dest_off_start];
+        }
+
         float* out = dest + (dest_off * DestChanCount);
 
         for (size_t D = 0; D < DestChanCount; ++D) {
@@ -176,6 +197,9 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     while ((dest_off < dest_frames) && (src_off < src_end)) {
       uint32_t S = (src_off >> kPtsFractionalBits) * SrcChanCount;
       float* out = dest + (dest_off * DestChanCount);
+      if (ScaleType == ScalerType::RAMPING) {
+        amplitude_scale = info->scale_arr[dest_off - dest_off_start];
+      }
 
       for (size_t D = 0; D < DestChanCount; ++D) {
         float s1 = SR::Read(src + S + (D / SR::DestPerSrc));
@@ -223,6 +247,9 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       // We need not _interpolate_ since fractional position is exactly zero.
       uint32_t S = (src_off >> kPtsFractionalBits) * SrcChanCount;
       float* out = dest + (dest_off * DestChanCount);
+      if (ScaleType == ScalerType::RAMPING) {
+        amplitude_scale = info->scale_arr[dest_off - dest_off_start];
+      }
 
       for (size_t D = 0; D < DestChanCount; ++D) {
         float sample = SR::Read(src + S + (D / SR::DestPerSrc));
@@ -307,6 +334,20 @@ bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
                       : Mix<ScalerType::MUTED, true, false>(
                             dest, dest_frames, dest_offset, src,
                             frac_src_frames, frac_src_offset, info));
+  } else if (info->gain.IsRamping()) {
+    return accumulate
+               ? (hasModulo ? Mix<ScalerType::RAMPING, true, true>(
+                                  dest, dest_frames, dest_offset, src,
+                                  frac_src_frames, frac_src_offset, info)
+                            : Mix<ScalerType::RAMPING, true, false>(
+                                  dest, dest_frames, dest_offset, src,
+                                  frac_src_frames, frac_src_offset, info))
+               : (hasModulo ? Mix<ScalerType::RAMPING, false, true>(
+                                  dest, dest_frames, dest_offset, src,
+                                  frac_src_frames, frac_src_offset, info)
+                            : Mix<ScalerType::RAMPING, false, false>(
+                                  dest, dest_frames, dest_offset, src,
+                                  frac_src_frames, frac_src_offset, info));
   } else {
     return accumulate
                ? (hasModulo ? Mix<ScalerType::NE_UNITY, true, true>(
@@ -347,7 +388,10 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
 
   using DM = DestMixer<ScaleType, DoAccumulate>;
   const SrcSampleType* src = static_cast<const SrcSampleType*>(src_void);
+
   uint32_t dest_off = *dest_offset;
+  uint32_t dest_off_start = dest_off;  // Only used when ramping
+
   int32_t src_off = *frac_src_offset;
 
   // Cache these locally, in the template specialization that uses them.
@@ -362,6 +406,17 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
     FXL_DCHECK(denominator > 0);
     FXL_DCHECK(denominator > rate_modulo);
     FXL_DCHECK(denominator > src_pos_modulo);
+  }
+  if (kVerboseRampDebug) {
+    FXL_LOG(INFO) << "Linear-NxN(" << this
+                  << ") Ramping: " << (ScaleType == ScalerType::RAMPING)
+                  << ", dest_frames: " << dest_frames
+                  << ", dest_off: " << dest_off;
+  }
+  if (ScaleType == ScalerType::RAMPING) {
+    if (dest_frames > Bookkeeping::kScaleArrLen + dest_off) {
+      dest_frames = Bookkeeping::kScaleArrLen + dest_off;
+    }
   }
 
   // This is the last sub-frame at which we can output without additional data.
@@ -379,7 +434,10 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
   // Source offset must also be within neg_filter_width of our last sample.
   FXL_DCHECK(src_off + FRAC_ONE <= frac_src_frames + neg_filter_width());
 
-  Gain::AScale amplitude_scale = info->gain.GetGainScale();
+  Gain::AScale amplitude_scale;
+  if (ScaleType != ScalerType::RAMPING) {
+    amplitude_scale = info->gain.GetGainScale();
+  }
 
   // TODO(mpuryear): optimize the logic below for common-case performance.
 
@@ -394,7 +452,11 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
             SampleNormalizer<SrcSampleType>::Read(src + D);
       }
 
-      do {
+      while ((dest_off < dest_frames) && (src_off < 0)) {
+        if (ScaleType == ScalerType::RAMPING) {
+          amplitude_scale = info->scale_arr[dest_off - dest_off_start];
+        }
+
         float* out = dest + (dest_off * chan_count);
 
         for (size_t D = 0; D < chan_count; ++D) {
@@ -413,13 +475,16 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
             src_pos_modulo -= denominator;
           }
         }
-      } while ((dest_off < dest_frames) && (src_off < 0));
+      }
     }
 
     // Now we are fully in the current buffer and need not rely on our cache.
     while ((dest_off < dest_frames) && (src_off < src_end)) {
       uint32_t S = (src_off >> kPtsFractionalBits) * chan_count;
       float* out = dest + (dest_off * chan_count);
+      if (ScaleType == ScalerType::RAMPING) {
+        amplitude_scale = info->scale_arr[dest_off - dest_off_start];
+      }
 
       for (size_t D = 0; D < chan_count; ++D) {
         float s1 = SampleNormalizer<SrcSampleType>::Read(src + S + D);
@@ -468,6 +533,9 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
       // We need not _interpolate_ since fractional position is exactly zero.
       uint32_t S = (src_off >> kPtsFractionalBits) * chan_count;
       float* out = dest + (dest_off * chan_count);
+      if (ScaleType == ScalerType::RAMPING) {
+        amplitude_scale = info->scale_arr[dest_off - dest_off_start];
+      }
 
       for (size_t D = 0; D < chan_count; ++D) {
         float sample = SampleNormalizer<SrcSampleType>::Read(src + S + D);
@@ -556,6 +624,24 @@ bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
                 : Mix<ScalerType::MUTED, true, false>(
                       dest, dest_frames, dest_offset, src, frac_src_frames,
                       frac_src_offset, info, chan_count_));
+  } else if (info->gain.IsRamping()) {
+    return accumulate
+               ? (hasModulo
+                      ? Mix<ScalerType::RAMPING, true, true>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info, chan_count_)
+                      : Mix<ScalerType::RAMPING, true, false>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info,
+                            chan_count_))
+               : (hasModulo
+                      ? Mix<ScalerType::RAMPING, false, true>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info, chan_count_)
+                      : Mix<ScalerType::RAMPING, false, false>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info,
+                            chan_count_));
   } else {
     return accumulate
                ? (hasModulo

@@ -15,6 +15,7 @@ namespace audio {
 
 constexpr uint32_t Mixer::FRAC_ONE;
 constexpr uint32_t Mixer::FRAC_MASK;
+constexpr uint32_t Bookkeeping::kScaleArrLen;
 
 Mixer::~Mixer() {}
 

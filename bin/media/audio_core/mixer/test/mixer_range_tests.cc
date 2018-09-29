@@ -45,8 +45,8 @@ void MeasureSummaryDynamicRange(float gain_db, double* level_db,
   MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                    &magn_signal, &magn_other);
 
-  *level_db = ValToDb(magn_signal);
-  *sinad_db = ValToDb(magn_signal / magn_other);
+  *level_db = Gain::DoubleToDb(magn_signal);
+  *sinad_db = Gain::DoubleToDb(magn_signal / magn_other);
 }
 
 // Measure dynamic range at two gain settings: less than 1.0 by the smallest
@@ -156,8 +156,8 @@ TEST(DynamicRange, MonoToStereo) {
   MeasureAudioFreq(left.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                    &magn_left_signal, &magn_left_other);
 
-  level_left_db = ValToDb(magn_left_signal);
-  sinad_left_db = ValToDb(magn_left_signal / magn_left_other);
+  level_left_db = Gain::DoubleToDb(magn_left_signal);
+  sinad_left_db = Gain::DoubleToDb(magn_left_signal / magn_left_other);
 
   EXPECT_NEAR(level_left_db, 0.0, AudioResult::kPrevLevelToleranceSourceFloat);
   AudioResult::LevelToleranceSourceFloat =
@@ -206,9 +206,9 @@ TEST(DynamicRange, StereoToMono) {
   MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                    &magn_signal, &magn_other);
 
-  AudioResult::LevelStereoMono = ValToDb(magn_signal);
+  AudioResult::LevelStereoMono = Gain::DoubleToDb(magn_signal);
   AudioResult::FloorStereoMono =
-      ValToDb(kFullScaleFloatAccumAmplitude / magn_other);
+      Gain::DoubleToDb(kFullScaleFloatAccumAmplitude / magn_other);
 
   // We added identical signals, so accuracy should be high. However, noise
   // floor is doubled as well, so we expect 6dB reduction in sinad.
@@ -303,8 +303,8 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                    &magn_signal, &magn_other);
 
-  *level_mix_db = ValToDb(magn_signal / expected_amplitude);
-  *sinad_mix_db = ValToDb(expected_amplitude / magn_other);
+  *level_mix_db = Gain::DoubleToDb(magn_signal / expected_amplitude);
+  *sinad_mix_db = Gain::DoubleToDb(expected_amplitude / magn_other);
 }
 
 // Test our mix level and noise floor, when accumulating 8-bit sources.
