@@ -439,4 +439,7 @@ int main(int argc, char** argv) {
     }
 
     block_device_watcher(zx_job_default(), netboot);
+
+    printf("fshost: terminating (block device watcher finished?)\n");
+    return 0;
 }
