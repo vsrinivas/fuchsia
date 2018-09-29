@@ -20,7 +20,7 @@ use std::sync::Arc;
 
 use super::{DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid};
 
-use self::scan::{DiscoveryScan, JoinScan, ScanResult, ScanScheduler};
+use self::scan::{DiscoveryScan, JoinScan, JoinScanFailure, ScanResult, ScanScheduler};
 use self::rsn::get_rsna;
 use self::state::{ConnectCommand, State};
 
@@ -100,6 +100,8 @@ pub enum ConnectResult {
 
 #[derive(Debug, PartialEq)]
 pub enum ConnectFailure {
+    NoMatchingBssFound,
+    ScanFailure(fidl_mlme::ScanResultCodes),
     JoinFailure(fidl_mlme::JoinResultCodes),
     AuthenticationFailure(fidl_mlme::AuthenticateResultCodes),
     AssociationFailure(fidl_mlme::AssociateResultCodes),
@@ -284,16 +286,22 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                                 error!("no matching BSS found");
                                 report_connect_finished(Some(token.user_token),
                                                         &self.context,
-                                                        ConnectResult::Failed, None);
+                                                        ConnectResult::Failed,
+                                                        Some(ConnectFailure::NoMatchingBssFound));
                                 state
                             }
                         }
                     },
                     ScanResult::JoinScanFinished {token, result: Err(e) } => {
                         error!("cannot join network because scan failed: {:?}", e);
+                        let (result, failure) = match e {
+                            JoinScanFailure::Canceled => (ConnectResult::Canceled, None),
+                            JoinScanFailure::ScanFailed(code) =>
+                                (ConnectResult::Failed, Some(ConnectFailure::ScanFailure(code)))
+                        };
                         report_connect_finished(Some(token.user_token),
                                                 &self.context,
-                                                ConnectResult::Failed, None);
+                                                result, failure);
                         state
                     },
                     ScanResult::DiscoveryFinished { tokens, result } => {

@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_cobalt::HistogramBucket;
-use fidl_fuchsia_wlan_mlme::{AssociateResultCodes, AuthenticateResultCodes, JoinResultCodes};
+use fidl_fuchsia_wlan_mlme::{AssociateResultCodes, AuthenticateResultCodes,
+                             JoinResultCodes, ScanResultCodes};
 use fidl_fuchsia_wlan_stats as fidl_stats;
 use fidl_fuchsia_wlan_stats::MlmeStats::{ApMlmeStats, ClientMlmeStats};
 use fuchsia_async as fasync;
@@ -361,6 +362,7 @@ enum StandardLabel {
 enum ConnectionResultLabel {
     SuccessId = 0,
     FailId = 1,
+    NoMatchingBssFoundId = 2,
     JoinFailureTimeoutId = 1000,
     AuthRefusedId = 2000,
     AuthAntiCloggingTokenRequiredId = 2001,
@@ -375,6 +377,9 @@ enum ConnectionResultLabel {
     AssocRefusedBasicRatesMismatchId = 3005,
     AssocRejectedEmergencyServicesNotSupportedId = 3006,
     AssocRefusedTemporarilyId = 3007,
+    ScanNotSupportedId = 4000,
+    ScanInvalidArgsId = 4001,
+    ScanInternalErrorId = 4002,
 }
 
 fn convert_connect_failure(result: &ConnectFailure) -> Option<ConnectionResultLabel> {
@@ -382,8 +387,16 @@ fn convert_connect_failure(result: &ConnectFailure) -> Option<ConnectionResultLa
     use fidl_fuchsia_wlan_mlme::AssociateResultCodes::*;
     use fidl_fuchsia_wlan_mlme::AuthenticateResultCodes::*;
     use fidl_fuchsia_wlan_mlme::JoinResultCodes::*;
+    use fidl_fuchsia_wlan_mlme::ScanResultCodes::*;
 
     let result = match result {
+        ConnectFailure::NoMatchingBssFound => NoMatchingBssFoundId,
+        ConnectFailure::ScanFailure(scan_failure) => match scan_failure {
+            ScanResultCodes::Success => { return None; }
+            NotSupported => ScanNotSupportedId,
+            InvalidArgs => ScanInvalidArgsId,
+            InternalError => ScanInternalErrorId,
+        }
         ConnectFailure::JoinFailure(join_failure) => match join_failure {
             JoinResultCodes::Success => { return None; }
             JoinFailureTimeout => JoinFailureTimeoutId,
