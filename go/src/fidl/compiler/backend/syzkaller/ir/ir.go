@@ -495,7 +495,7 @@ func (c *compiler) compileUnion(p types.Union) ([]StructMember, []StructMember, 
 		})
 
 		i = append(i, StructMember{
-			Type: Type(fmt.Sprintf("fidl_union_member[%sTag%s, %s]", c.compileCompoundIdentifier(p.Name, ""), m.Name, inLine.Type)),
+			Type: Type(fmt.Sprintf("fidl_union_member[%sTag_%s, %s]", c.compileCompoundIdentifier(p.Name, ""), m.Name, inLine.Type)),
 			Name: inLine.Name,
 		})
 
