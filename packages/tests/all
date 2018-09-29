@@ -13,6 +13,7 @@
         "garnet/packages/tests/cobalt_client",
         "garnet/packages/tests/pkg_url",
         "garnet/packages/tests/components_binary_test",
+        "garnet/packages/tests/cpuperf",
         "garnet/packages/tests/crashpad",
         "garnet/packages/tests/debug_agent",
         "garnet/packages/tests/debugserver",

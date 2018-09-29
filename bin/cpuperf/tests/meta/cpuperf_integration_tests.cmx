@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/cpuperf_integration_tests"
+    },
+    "sandbox": {
+        "dev": [ "sys/cpu-trace" ],
+        "features": [ "persistent-storage" ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher"
+        ],
+        "system": [ "bin" ]
+    }
+}
