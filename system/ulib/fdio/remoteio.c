@@ -870,7 +870,7 @@ fdio_ops_t zx_remote_ops = {
     .shutdown = fdio_default_shutdown,
 };
 
-#define FDIO_USE_ZXIO 0
+#define FDIO_USE_ZXIO 1
 
 __EXPORT
 fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t event) {
