@@ -476,6 +476,41 @@ void Controller::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
         }
     }
 
+    if (!info->pending_layer_change) {
+        // Since we know there are no pending layer changes, we know that every layer (i.e z_index)
+        // has an image. So every image either matches a handle (in which case it's being
+        // displayed), is older than its layer's image (i.e. in front of in the queue) and can be
+        // retired, or is newer than its layer's image (i.e. behind in the queue) and has yet to be
+        // presented.
+        uint32_t z_indices[handle_count];
+        for (unsigned i = 0; i < handle_count; i++) {
+            z_indices[i] = UINT32_MAX;
+        }
+        image_node_t* cur;
+        image_node_t* tmp;
+        list_for_every_entry_safe(&info->images, cur, tmp, image_node_t, link) {
+            bool z_already_matched = false;
+            for (unsigned i = 0; i < handle_count; i++) {
+                if (handles[i] == cur->self->info().handle) {
+                    z_indices[i] = cur->self->z_index();
+                    z_already_matched = true;
+                    break;
+                } else if (z_indices[i] == cur->self->z_index()) {
+                    z_already_matched = true;
+                    break;
+                }
+            }
+
+            // Retire any images for which we don't already have a z-match, since
+            // those are older than whatever is currently in their layer.
+            if (!z_already_matched) {
+                list_delete(&cur->link);
+                cur->self->OnRetire();
+                cur->self.reset();
+            }
+        }
+    }
+
     // Drop the vsync event if we're in the middle of switching clients, since we don't want to
     // send garbage image ids. Switching clients is rare enough that any minor timing issues that
     // this could cause aren't worth worrying about.
@@ -498,42 +533,6 @@ void Controller::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
         }
     } else {
         zxlogf(TRACE, "Dropping vsync\n");
-    }
-
-    if (info->pending_layer_change) {
-        return;
-    }
-
-    // Since we know there are no pending layer changes, we know that every layer (i.e z_index)
-    // has an image. So every image either matches a handle (in which case it's being displayed),
-    // is older than its layer's image (i.e. in front of in the queue) and can be retired, or is
-    // newer than its layer's image (i.e. behind in the queue) and has yet to be presented.
-    uint32_t z_indices[handle_count];
-    for (unsigned i = 0; i < handle_count; i++) {
-        z_indices[i] = UINT32_MAX;
-    }
-    image_node_t* cur;
-    image_node_t* tmp;
-    list_for_every_entry_safe(&info->images, cur, tmp, image_node_t, link) {
-        bool z_already_matched = false;
-        for (unsigned i = 0; i < handle_count; i++) {
-            if (handles[i] == cur->self->info().handle) {
-                z_indices[i] = cur->self->z_index();
-                z_already_matched = true;
-                break;
-            } else if (z_indices[i] == cur->self->z_index()) {
-                z_already_matched = true;
-                break;
-            }
-        }
-
-        // Retire any images for which we don't already have a z-match, since
-        // those are older than whatever is currently in their layer.
-        if (!z_already_matched) {
-            list_delete(&cur->link);
-            cur->self->OnRetire();
-            cur->self.reset();
-        }
     }
 }
 
