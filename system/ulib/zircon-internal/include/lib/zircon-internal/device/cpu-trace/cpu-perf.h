@@ -7,6 +7,9 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
+#ifndef __cplusplus
+#include <stdalign.h>  // for alignof
+#endif
 
 #include <zircon/types.h>
 
@@ -49,7 +52,7 @@ typedef struct {
 
     // Offset into the buffer of the end of the data.
     uint64_t capture_end;
-} __PACKED cpuperf_buffer_header_t;
+} cpuperf_buffer_header_t;
 
 // The various types of emitted records.
 typedef enum {
@@ -67,8 +70,6 @@ typedef enum {
   CPUPERF_RECORD_VALUE = 4,
   // The record is a |cpuperf_pc_record_t|.
   CPUPERF_RECORD_PC = 5,
-  // non-ABI
-  CPUPERF_NUM_RECORD_TYPES = 6,
 } cpuperf_record_type_t;
 
 // Trace buffer space is expensive, we want to keep records small.
@@ -99,6 +100,12 @@ typedef enum {
     CPUPERF_GROUP_MISC = 4,
 } cpuperf_group_type_t;
 
+// The typical record is a tick record which is 4 + 8 bytes.
+// Aligning records to 8-byte boundaries would waste a lot of space,
+// so currently we align everything to 4-byte boundaries.
+// TODO(dje): Collect data to see what this saves. Keep it?
+#define CPUPERF_ALIGN_RECORD __PACKED __ALIGNED(4)
+
 // Trace record header.
 // Note: Avoid holes in all trace records.
 typedef struct {
@@ -111,10 +118,11 @@ typedef struct {
     // The event the record is for.
     // If there is none then use CPUPERF_EVENT_ID_NONE.
     cpuperf_event_id_t event;
-} __PACKED cpuperf_record_header_t;
+} CPUPERF_ALIGN_RECORD cpuperf_record_header_t;
 
-static_assert(sizeof(cpuperf_record_header_t) % 4 == 0,
-              "record header not multiple of 32 bits");
+// Verify our alignment assumptions.
+static_assert(sizeof(cpuperf_record_header_t) == 4,
+              "record header not 4 bytes");
 
 // Record the current time of the trace.
 // If the event id is non-zero (!NONE) then it must be for a counting event
@@ -127,7 +135,15 @@ typedef struct {
     // conversion factor from this value to ticks per second.
     // For x86 this is the TSC value.
     zx_time_t time;
-} __PACKED cpuperf_time_record_t;
+} CPUPERF_ALIGN_RECORD cpuperf_time_record_t;
+
+// Verify our alignment assumptions.
+// We don't need to do this for every record, but doing it for this one
+// verifies CPUPERF_ALIGN_RECORD is working.
+static_assert(sizeof(cpuperf_time_record_t) == 12,
+              "time record not 12 bytes");
+static_assert(alignof(cpuperf_time_record_t) == 4,
+              "time record not 4-byte aligned");
 
 // Record that a counting event reached its sample rate.
 // It is expected that this record follows a TIME record.
@@ -136,7 +152,7 @@ typedef struct {
 // the value is the sample rate which is known from the configuration.
 typedef struct {
     cpuperf_record_header_t header;
-} __PACKED cpuperf_tick_record_t;
+} CPUPERF_ALIGN_RECORD cpuperf_tick_record_t;
 
 // Record the value of a counter at a particular time.
 // It is expected that this record follows a TIME record.
@@ -147,7 +163,7 @@ typedef struct {
 typedef struct {
     cpuperf_record_header_t header;
     uint64_t count;
-} __PACKED cpuperf_count_record_t;
+} CPUPERF_ALIGN_RECORD cpuperf_count_record_t;
 
 // Record the value of an event.
 // It is expected that this record follows a TIME record.
@@ -156,7 +172,7 @@ typedef struct {
 typedef struct {
     cpuperf_record_header_t header;
     uint64_t value;
-} __PACKED cpuperf_value_record_t;
+} CPUPERF_ALIGN_RECORD cpuperf_value_record_t;
 
 // Record the aspace+pc values.
 // If the event id is not NONE, then this record also indicates that the
@@ -173,7 +189,7 @@ typedef struct {
     // In the case of x86 this is the cr3 value.
     uint64_t aspace;
     uint64_t pc;
-} __PACKED cpuperf_pc_record_t;
+} CPUPERF_ALIGN_RECORD cpuperf_pc_record_t;
 
 // The properties of this system.
 typedef struct {
