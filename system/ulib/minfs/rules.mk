@@ -25,20 +25,20 @@ MODULE_SRCS := \
     $(COMMON_SRCS)
 
 MODULE_STATIC_LIBS := \
-    system/ulib/fs \
-    system/ulib/fzl \
-    system/ulib/async.cpp \
     system/ulib/async \
-    system/ulib/async-loop.cpp \
+    system/ulib/async.cpp \
     system/ulib/async-loop \
+    system/ulib/async-loop.cpp \
     system/ulib/bitmap \
     system/ulib/block-client \
-    system/ulib/trace \
-    system/ulib/zx \
-    system/ulib/zircon-internal \
-    system/ulib/zxcpp \
     system/ulib/fbl \
+    system/ulib/fs \
+    system/ulib/fzl \
     system/ulib/sync \
+    system/ulib/trace \
+    system/ulib/zircon-internal \
+    system/ulib/zx \
+    system/ulib/zxcpp \
 
 MODULE_LIBS := \
     system/ulib/async.default \
@@ -62,11 +62,11 @@ MODULE_HOST_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \
     -Isystem/ulib/bitmap/include \
-    -Isystem/ulib/zxcpp/include \
-    -Isystem/ulib/fdio/include \
     -Isystem/ulib/fbl/include \
+    -Isystem/ulib/fdio/include \
     -Isystem/ulib/fs/include \
     -Isystem/ulib/fzl/include \
+    -Isystem/ulib/zxcpp/include \
 
 # host minfs lib
 

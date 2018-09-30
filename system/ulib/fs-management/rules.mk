@@ -31,9 +31,9 @@ MODULE_STATIC_LIBS := \
     third_party/ulib/uboringssl \
 
 MODULE_LIBS := \
-    system/ulib/zircon \
     system/ulib/c \
     system/ulib/fdio \
+    system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io

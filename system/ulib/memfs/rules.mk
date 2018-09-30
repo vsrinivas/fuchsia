@@ -29,8 +29,8 @@ MODULE_PACKAGE_INCS := \
     $(LOCAL_INC)/cpp/vnode.h \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/async.cpp \
     system/ulib/async \
+    system/ulib/async.cpp \
     system/ulib/fbl \
     system/ulib/fs \
     system/ulib/sync \
@@ -70,13 +70,13 @@ MODULE_PACKAGE_INCS := \
     $(LOCAL_INC)/memfs.h \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/memfs.cpp \
-    system/ulib/fs \
-    system/ulib/async.cpp \
     system/ulib/async \
+    system/ulib/async.cpp \
     system/ulib/fbl \
-    system/ulib/trace \
+    system/ulib/fs \
+    system/ulib/memfs.cpp \
     system/ulib/sync \
+    system/ulib/trace \
     system/ulib/zx \
     system/ulib/zxcpp \
 

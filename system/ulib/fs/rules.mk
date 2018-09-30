@@ -35,14 +35,14 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io
 
 MODULE_STATIC_LIBS := \
-    system/ulib/async.cpp \
     system/ulib/async \
+    system/ulib/async.cpp \
+    system/ulib/fbl \
     system/ulib/fit \
     system/ulib/sync \
     system/ulib/trace \
     system/ulib/zx \
     system/ulib/zxcpp \
-    system/ulib/fbl \
 
 MODULE_LIBS := \
     system/ulib/c \
@@ -63,9 +63,9 @@ MODULE_HOST_SRCS := \
 MODULE_HOST_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \
-    -Isystem/ulib/zxcpp/include \
-    -Isystem/ulib/fdio/include \
     -Isystem/ulib/fbl/include \
+    -Isystem/ulib/fdio/include \
+    -Isystem/ulib/zxcpp/include \
 
 MODULE := $(LOCAL_DIR).hostlib
 

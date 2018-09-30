@@ -32,9 +32,9 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync \
     system/ulib/trace \
     system/ulib/trace-provider \
-    third_party/ulib/uboringssl \
     system/ulib/zx \
     system/ulib/zxcpp \
+    third_party/ulib/uboringssl \
 
 MODULE_LIBS := \
     system/ulib/async.default \
