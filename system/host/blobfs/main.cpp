@@ -190,12 +190,12 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
     merkle_list_.resize(std::distance(merkle_list_.begin(), it));
 
     for (const auto& info : merkle_list_) {
-        blobfs::blobfs_inode_t node;
+        blobfs::Inode node;
         node.blob_size = info.length;
         data_blocks_ += MerkleTreeBlocks(node) + BlobDataBlocks(node);
     }
 
-    blobfs::blobfs_info_t info;
+    blobfs::Superblock info;
     info.inode_count = blobfs::kBlobfsDefaultInodeCount;
     info.block_count = data_blocks_;
     *out = (data_blocks_ + blobfs::DataStartBlock(info)) * blobfs::kBlobfsBlockSize;
@@ -204,12 +204,12 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
 
 zx_status_t BlobfsCreator::Mkfs() {
     uint64_t block_count;
-    if (blobfs::blobfs_get_blockcount(fd_.get(), &block_count)) {
+    if (blobfs::GetBlockCount(fd_.get(), &block_count)) {
         fprintf(stderr, "blobfs: cannot find end of underlying device\n");
         return ZX_ERR_IO;
     }
 
-    int r = blobfs::blobfs_mkfs(fd_.get(), block_count);
+    int r = blobfs::Mkfs(fd_.get(), block_count);
 
     if (r >= 0 && !blob_list_.is_empty()) {
         zx_status_t status;
@@ -227,7 +227,7 @@ zx_status_t BlobfsCreator::Fsck() {
         return status;
     }
 
-    return blobfs::blobfs_check(fbl::move(vn));
+    return blobfs::Fsck(fbl::move(vn));
 }
 
 zx_status_t BlobfsCreator::Add() {

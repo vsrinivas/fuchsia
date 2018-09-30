@@ -28,7 +28,7 @@ void WriteTxn::Enqueue(zx_handle_t vmo, uint64_t relative_block, uint64_t absolu
         }
     }
 
-    write_request_t request;
+    WriteRequest request;
     request.vmo = vmo;
     request.vmo_offset = relative_block;
     request.dev_offset = absolute_block;
@@ -246,9 +246,9 @@ void WritebackBuffer::CopyToBufferLocked(WriteTxn* txn) {
             len_ += wb_len;
 
             // Shift down all following write requests
-            static_assert(fbl::is_pod<write_request_t>::value, "Can't memmove non-POD");
+            static_assert(fbl::is_pod<WriteRequest>::value, "Can't memmove non-POD");
             // Insert the "new" request, which is the latter half of the last request
-            write_request_t request;
+            WriteRequest request;
             request.vmo = reqs[i].vmo;
             request.vmo_offset = 0;
             request.dev_offset = dev_offset;

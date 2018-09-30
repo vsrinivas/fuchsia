@@ -16,7 +16,7 @@ namespace blobfs {
 
 void BlobfsChecker::TraverseInodeBitmap() {
     for (unsigned n = 0; n < blobfs_->info_.inode_count; n++) {
-        blobfs_inode_t* inode = blobfs_->GetNode(n);
+        Inode* inode = blobfs_->GetNode(n);
         if (inode->start_block >= kStartBlockMinimum) {
             alloc_inodes_++;
             inode_blocks_ += static_cast<uint32_t>(inode->num_blocks);
@@ -94,7 +94,7 @@ void BlobfsChecker::Init(fbl::unique_ptr<Blobfs> blob) {
     blobfs_ = fbl::move(blob);
 }
 
-zx_status_t blobfs_check(fbl::unique_ptr<Blobfs> blob) {
+zx_status_t Fsck(fbl::unique_ptr<Blobfs> blob) {
     zx_status_t status = ZX_OK;
     BlobfsChecker chk;
     chk.Init(fbl::move(blob));

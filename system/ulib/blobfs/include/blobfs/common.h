@@ -39,14 +39,14 @@ void* GetBitBlock(const RawBitmap& bitmap, uint32_t* blkno_out, uint32_t bitno);
 
 zx_status_t readblk(int fd, uint64_t bno, void* data);
 zx_status_t writeblk(int fd, uint64_t bno, const void* data);
-zx_status_t blobfs_check_info(const blobfs_info_t* info, uint64_t max);
-zx_status_t blobfs_get_blockcount(int fd, uint64_t* out);
-int blobfs_mkfs(int fd, uint64_t block_count);
+zx_status_t CheckSuperblock(const Superblock* info, uint64_t max);
+zx_status_t GetBlockCount(int fd, uint64_t* out);
+int Mkfs(int fd, uint64_t block_count);
 
-uint64_t MerkleTreeBlocks(const blobfs_inode_t& blobNode);
+uint64_t MerkleTreeBlocks(const Inode& blobNode);
 
 // Get a pointer to the nth block of the bitmap.
-inline void* get_raw_bitmap_data(const RawBitmap& bm, uint64_t n) {
+inline void* GetRawBitmapData(const RawBitmap& bm, uint64_t n) {
     assert(n * kBlobfsBlockSize < bm.size());             // Accessing beyond end of bitmap
     assert(kBlobfsBlockSize <= (n + 1) * kBlobfsBlockSize); // Avoid overflow
     return fs::GetBlock(kBlobfsBlockSize, bm.StorageUnsafe()->GetData(), n);

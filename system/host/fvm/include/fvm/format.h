@@ -170,12 +170,12 @@ private:
     // Input superblock
     union {
         char blk_[blobfs::kBlobfsBlockSize];
-        blobfs::blobfs_info_t info_;
+        blobfs::Superblock info_;
     };
 
     // Output superblock
     union {
         char fvm_blk_[blobfs::kBlobfsBlockSize];
-        blobfs::blobfs_info_t fvm_info_;
+        blobfs::Superblock fvm_info_;
     };
 };

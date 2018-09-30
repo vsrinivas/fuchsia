@@ -36,12 +36,12 @@ class Blobfs;
 class VnodeBlob;
 class WritebackWork;
 
-typedef struct {
+struct WriteRequest {
     zx_handle_t vmo;
     size_t vmo_offset;
     size_t dev_offset;
     size_t length;
-} write_request_t;
+};
 
 class WritebackBuffer;
 
@@ -63,7 +63,7 @@ public:
     void Enqueue(zx_handle_t vmo, uint64_t relative_block, uint64_t absolute_block,
                  uint64_t nblocks);
 
-    fbl::Vector<write_request_t>& Requests() { return requests_; }
+    fbl::Vector<WriteRequest>& Requests() { return requests_; }
 
     size_t BlkStart() const;
     size_t BlkCount() const;
@@ -86,7 +86,7 @@ private:
     friend class WritebackBuffer;
     Blobfs* bs_;
     vmoid_t vmoid_;
-    fbl::Vector<write_request_t> requests_;
+    fbl::Vector<WriteRequest> requests_;
 };
 
 

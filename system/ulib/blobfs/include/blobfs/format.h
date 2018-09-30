@@ -64,7 +64,7 @@ inline size_t WriteBufferSize(void) {
 // - block 0 is always allocated
 // - inode 0 is never used, should be marked allocated but ignored
 
-typedef struct {
+struct Superblock {
     uint64_t magic0;
     uint64_t magic1;
     uint32_t version;
@@ -81,9 +81,9 @@ typedef struct {
     uint32_t abm_slices;    // Slices allocated to block bitmap
     uint32_t ino_slices;    // Slices allocated to node map
     uint32_t dat_slices;    // Slices allocated to file data section
-} blobfs_info_t;
+};
 
-constexpr uint64_t BlockMapStartBlock(const blobfs_info_t& info) {
+constexpr uint64_t BlockMapStartBlock(const Superblock& info) {
     if (info.flags & kBlobFlagFVM) {
         return kFVMBlockMapStart;
     } else {
@@ -91,11 +91,11 @@ constexpr uint64_t BlockMapStartBlock(const blobfs_info_t& info) {
     }
 }
 
-constexpr uint64_t BlockMapBlocks(const blobfs_info_t& info) {
+constexpr uint64_t BlockMapBlocks(const Superblock& info) {
     return fbl::round_up(info.block_count, kBlobfsBlockBits) / kBlobfsBlockBits;
 }
 
-constexpr uint64_t NodeMapStartBlock(const blobfs_info_t& info) {
+constexpr uint64_t NodeMapStartBlock(const Superblock& info) {
     // Node map immediately follows the block map
     if (info.flags & kBlobFlagFVM) {
         return kFVMNodeMapStart;
@@ -104,15 +104,15 @@ constexpr uint64_t NodeMapStartBlock(const blobfs_info_t& info) {
     }
 }
 
-constexpr uint64_t NodeBitmapBlocks(const blobfs_info_t& info) {
+constexpr uint64_t NodeBitmapBlocks(const Superblock& info) {
     return fbl::round_up(info.inode_count, kBlobfsBlockBits) / kBlobfsBlockBits;
 }
 
-constexpr uint64_t NodeMapBlocks(const blobfs_info_t& info) {
+constexpr uint64_t NodeMapBlocks(const Superblock& info) {
     return fbl::round_up(info.inode_count, kBlobfsInodesPerBlock) / kBlobfsInodesPerBlock;
 }
 
-constexpr uint64_t DataStartBlock(const blobfs_info_t& info) {
+constexpr uint64_t DataStartBlock(const Superblock& info) {
     // Data immediately follows the node map
     if (info.flags & kBlobFlagFVM) {
         return kFVMDataStart;
@@ -121,11 +121,11 @@ constexpr uint64_t DataStartBlock(const blobfs_info_t& info) {
     }
 }
 
-constexpr uint64_t DataBlocks(const blobfs_info_t& info) {
+constexpr uint64_t DataBlocks(const Superblock& info) {
     return info.block_count;
 }
 
-constexpr uint64_t TotalBlocks(const blobfs_info_t& info) {
+constexpr uint64_t TotalBlocks(const Superblock& info) {
     return BlockMapStartBlock(info) + BlockMapBlocks(info) + NodeMapBlocks(info) + DataBlocks(info);
 }
 
@@ -137,22 +137,23 @@ constexpr uint64_t kStartBlockMinimum  = 1; // Smallest 'data' block possible.
 constexpr uint32_t kBlobFlagLZ4Compressed = 0x00000001;
 
 using digest::Digest;
-typedef struct {
+
+struct Inode {
     uint8_t  merkle_root_hash[Digest::kLength];
     uint64_t start_block;
     uint64_t num_blocks;
     uint64_t blob_size;
     uint32_t flags;
     uint32_t reserved;
-} blobfs_inode_t;
+};
 
-static_assert(sizeof(blobfs_inode_t) == kBlobfsInodeSize,
+static_assert(sizeof(Inode) == kBlobfsInodeSize,
               "Blobfs Inode size is wrong");
 static_assert(kBlobfsBlockSize % kBlobfsInodeSize == 0,
               "Blobfs Inodes should fit cleanly within a blobfs block");
 
 // Number of blocks reserved for the blob itself
-constexpr uint64_t BlobDataBlocks(const blobfs_inode_t& blobNode) {
+constexpr uint64_t BlobDataBlocks(const Inode& blobNode) {
     return fbl::round_up(blobNode.blob_size, kBlobfsBlockSize) / kBlobfsBlockSize;
 }
 

@@ -37,7 +37,7 @@ using digest::MerkleTree;
 namespace blobfs {
 namespace {
 
-zx_status_t CheckFvmConsistency(const blobfs_info_t* info, int block_fd) {
+zx_status_t CheckFvmConsistency(const Superblock* info, int block_fd) {
     if ((info->flags & kBlobFlagFVM) == 0) {
         return ZX_OK;
     }
@@ -142,8 +142,8 @@ zx_status_t EnqueuePaginated(fbl::unique_ptr<WritebackWork>* work, Blobfs* blobf
 
 }  // namespace
 
-blobfs_inode_t* Blobfs::GetNode(size_t index) const {
-    return &reinterpret_cast<blobfs_inode_t*>(node_map_->GetData())[index];
+Inode* Blobfs::GetNode(size_t index) const {
+    return &reinterpret_cast<Inode*>(node_map_->GetData())[index];
 }
 
 zx_status_t VnodeBlob::Verify() const {
@@ -301,7 +301,7 @@ void VnodeBlob::PopulateInode(size_t node_index) {
     ZX_DEBUG_ASSERT(inode_.start_block < kStartBlockMinimum);
     SetState(kBlobStateReadable);
     map_index_ = node_index;
-    blobfs_inode_t* inode = blobfs_->GetNode(node_index);
+    Inode* inode = blobfs_->GetNode(node_index);
     inode_ = *inode;
 }
 
@@ -690,7 +690,7 @@ void VnodeBlob::QueueUnlink() {
 }
 
 zx_status_t VnodeBlob::VerifyBlob(Blobfs* bs, size_t node_index) {
-    blobfs_inode_t* inode = bs->GetNode(node_index);
+    Inode* inode = bs->GetNode(node_index);
     Digest digest(inode->merkle_root_hash);
     fbl::AllocChecker ac;
     fbl::RefPtr<VnodeBlob> vn =
@@ -862,11 +862,11 @@ zx_status_t Blobfs::ReserveNode(size_t* node_index_out) {
     return ZX_ERR_NO_SPACE;
 }
 
-void Blobfs::PersistNode(WritebackWork* wb, size_t node_index, const blobfs_inode_t& inode) {
+void Blobfs::PersistNode(WritebackWork* wb, size_t node_index, const Inode& inode) {
     TRACE_DURATION("blobfs", "Blobfs::AllocateNode");
 
     ZX_DEBUG_ASSERT(inode.start_block >= kStartBlockMinimum);
-    blobfs_inode_t* mapped_inode = GetNode(node_index);
+    Inode* mapped_inode = GetNode(node_index);
     ZX_DEBUG_ASSERT(mapped_inode->start_block < kStartBlockMinimum);
 
     size_t blkno_out;
@@ -884,7 +884,7 @@ void Blobfs::PersistNode(WritebackWork* wb, size_t node_index, const blobfs_inod
 
 void Blobfs::FreeNode(WritebackWork* wb, size_t node_index) {
     TRACE_DURATION("blobfs", "Blobfs::FreeNode", "node_index", node_index);
-    blobfs_inode_t* mapped_inode = GetNode(node_index);
+    Inode* mapped_inode = GetNode(node_index);
 
     // Write to disk if node has been allocated within inode table
     if (mapped_inode->start_block >= kStartBlockMinimum) {
@@ -987,7 +987,7 @@ void Blobfs::WriteBitmap(WritebackWork* wb, uint64_t nblocks, uint64_t start_blo
 
 void Blobfs::WriteNode(WritebackWork* wb, size_t map_index) {
     TRACE_DURATION("blobfs", "Blobfs::WriteNode", "map_index", map_index);
-    uint64_t b = (map_index * sizeof(blobfs_inode_t)) / kBlobfsBlockSize;
+    uint64_t b = (map_index * sizeof(Inode)) / kBlobfsBlockSize;
     wb->Enqueue(node_map_->GetVmo(), b, NodeMapStartBlock(info_) + b, 1);
 }
 
@@ -1371,9 +1371,9 @@ void Blobfs::UpdateMerkleVerifyMetrics(uint64_t size_data, uint64_t size_merkle,
     }
 }
 
-Blobfs::Blobfs(fbl::unique_fd fd, const blobfs_info_t* info)
+Blobfs::Blobfs(fbl::unique_fd fd, const Superblock* info)
     : blockfd_(fbl::move(fd)) {
-    memcpy(&info_, info, sizeof(blobfs_info_t));
+    memcpy(&info_, info, sizeof(Superblock));
 }
 
 Blobfs::~Blobfs() {
@@ -1387,10 +1387,10 @@ Blobfs::~Blobfs() {
     }
 }
 
-zx_status_t Blobfs::Create(fbl::unique_fd fd, const blobfs_info_t* info,
-                           fbl::unique_ptr<Blobfs>* out) {
+zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options,
+                           const Superblock* info, fbl::unique_ptr<Blobfs>* out) {
     TRACE_DURATION("blobfs", "Blobfs::Create");
-    zx_status_t status = blobfs_check_info(info, TotalBlocks(*info));
+    zx_status_t status = CheckSuperblock(info, TotalBlocks(*info));
     if (status < 0) {
         fprintf(stderr, "blobfs: Check info failure\n");
         return status;
@@ -1398,6 +1398,10 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const blobfs_info_t* info,
 
     fbl::AllocChecker ac;
     auto fs = fbl::unique_ptr<Blobfs>(new Blobfs(fbl::move(fd), info));
+    fs->SetReadonly(options.readonly);
+    if (options.metrics) {
+        fs->CollectMetrics();
+    }
 
     zx::fifo fifo;
     ssize_t r;
@@ -1460,7 +1464,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const blobfs_info_t* info,
 zx_status_t Blobfs::InitializeVnodes() {
     fbl::AutoLock lock(&hash_lock_);
     for (size_t i = 0; i < info_.inode_count; ++i) {
-        const blobfs_inode_t* inode = GetNode(i);
+        const Inode* inode = GetNode(i);
         if (inode->start_block >= kStartBlockMinimum) {
             fbl::AllocChecker ac;
             Digest digest(inode->merkle_root_hash);
@@ -1551,7 +1555,8 @@ zx_status_t Blobfs::LoadBitmaps() {
     return txn.Transact();
 }
 
-zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd) {
+zx_status_t Initialize(fbl::unique_fd blockfd, const MountOptions& options,
+                       fbl::unique_ptr<Blobfs>* out) {
     zx_status_t status;
 
     char block[kBlobfsBlockSize];
@@ -1560,15 +1565,15 @@ zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd) 
         return status;
     }
 
-    blobfs_info_t* info = reinterpret_cast<blobfs_info_t*>(&block[0]);
+    Superblock* info = reinterpret_cast<Superblock*>(&block[0]);
 
     uint64_t blocks;
-    if ((status = blobfs_get_blockcount(blockfd.get(), &blocks)) != ZX_OK) {
+    if ((status = GetBlockCount(blockfd.get(), &blocks)) != ZX_OK) {
         fprintf(stderr, "blobfs: cannot find end of underlying device\n");
         return status;
     }
 
-    if ((status = blobfs_check_info(info, blocks)) != ZX_OK) {
+    if ((status = CheckSuperblock(info, blocks)) != ZX_OK) {
         fprintf(stderr, "blobfs: Info check failed\n");
         return status;
     }
@@ -1578,7 +1583,7 @@ zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd) 
         return status;
     }
 
-    if ((status = Blobfs::Create(fbl::move(blockfd), info, out)) != ZX_OK) {
+    if ((status = Blobfs::Create(fbl::move(blockfd), options, info, out)) != ZX_OK) {
         fprintf(stderr, "blobfs: mount failed; could not create blobfs\n");
         return status;
     }
@@ -1586,13 +1591,13 @@ zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd) 
     return ZX_OK;
 }
 
-zx_status_t blobfs_mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
-                         const blob_options_t* options, zx::channel root,
-                         fbl::Closure on_unmount) {
+zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
+                  const MountOptions& options, zx::channel root,
+                  fbl::Closure on_unmount) {
     zx_status_t status;
     fbl::unique_ptr<Blobfs> fs;
 
-    if ((status = blobfs_create(&fs, fbl::move(blockfd))) != ZX_OK) {
+    if ((status = Initialize(fbl::move(blockfd), options, &fs)) != ZX_OK) {
         return status;
     }
 
@@ -1601,10 +1606,6 @@ zx_status_t blobfs_mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
     }
 
     fs->SetDispatcher(dispatcher);
-    fs->SetReadonly(options->readonly);
-    if (options->metrics) {
-        fs->CollectMetrics();
-    }
     fs->SetUnmountCallback(fbl::move(on_unmount));
 
     fbl::RefPtr<VnodeBlob> vn;

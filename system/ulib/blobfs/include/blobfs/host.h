@@ -35,13 +35,13 @@ namespace blobfs {
 
 typedef union {
     uint8_t block[kBlobfsBlockSize];
-    blobfs_info_t info;
+    Superblock info;
 } info_block_t;
 
 // Stores pointer to an inode's metadata and the matching block number
 class InodeBlock {
 public:
-    InodeBlock(size_t bno, blobfs_inode_t* inode, const Digest& digest)
+    InodeBlock(size_t bno, Inode* inode, const Digest& digest)
         : bno_(bno) {
         inode_ = inode;
         digest.CopyTo(inode_->merkle_root_hash, sizeof(inode_->merkle_root_hash));
@@ -51,13 +51,13 @@ public:
         return bno_;
     }
 
-    blobfs_inode_t* GetInode() {
+    Inode* GetInode() {
         return inode_;
     }
 
 private:
     size_t bno_;
-    blobfs_inode_t* inode_;
+    Inode* inode_;
 };
 
 class Blobfs : public fbl::RefCounted<Blobfs> {
@@ -78,17 +78,17 @@ public:
     // Allocate |nblocks| starting at |*blkno_out| in memory
     zx_status_t AllocateBlocks(size_t nblocks, size_t* blkno_out);
 
-    zx_status_t WriteData(blobfs_inode_t* inode, const void* merkle_data,
+    zx_status_t WriteData(Inode* inode, const void* merkle_data,
                           const void* blob_data);
     zx_status_t WriteBitmap(size_t nblocks, size_t start_block);
     zx_status_t WriteNode(fbl::unique_ptr<InodeBlock> ino_block);
     zx_status_t WriteInfo();
 
 private:
-    typedef struct {
+    struct BlockCache {
         size_t bno;
         uint8_t blk[kBlobfsBlockSize];
-    } block_cache_t;
+    };
 
     friend class BlobfsChecker;
 
@@ -97,7 +97,7 @@ private:
     zx_status_t LoadBitmap();
 
     // Access the |index|th inode
-    blobfs_inode_t* GetNode(size_t index);
+    Inode* GetNode(size_t index);
 
     // Read data from block |bno| into the block cache.
     // If the block cache already contains data from the specified bno, nothing happens.
@@ -126,12 +126,12 @@ private:
     size_t data_block_count_;
 
     union {
-        blobfs_info_t info_;
+        Superblock info_;
         uint8_t info_block_[kBlobfsBlockSize];
     };
 
     // Caches the most recent block read from disk
-    block_cache_t cache_;
+    BlockCache cache_;
 };
 
 zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd);

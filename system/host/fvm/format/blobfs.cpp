@@ -22,10 +22,10 @@ BlobfsFormat::BlobfsFormat(fbl::unique_fd fd, const char* type)
         exit(-1);
     }
 
-    if (blobfs::blobfs_get_blockcount(fd_.get(), &blocks_) != ZX_OK) {
+    if (blobfs::GetBlockCount(fd_.get(), &blocks_) != ZX_OK) {
         fprintf(stderr, "blobfs: cannot find end of underlying device\n");
         exit(-1);
-    } else if (blobfs::blobfs_check_info(&info_, blocks_) != ZX_OK) {
+    } else if (blobfs::CheckSuperblock(&info_, blocks_) != ZX_OK) {
         fprintf(stderr, "blobfs: Info check failed\n");
         exit(-1);
     }
@@ -68,7 +68,7 @@ zx_status_t BlobfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) 
     fvm_info_.flags |= blobfs::kBlobFlagFVM;
 
     zx_status_t status;
-    if ((status = blobfs_check_info(&fvm_info_, blocks_)) != ZX_OK) {
+    if ((status = CheckSuperblock(&fvm_info_, blocks_)) != ZX_OK) {
         fprintf(stderr, "Check info failed\n");
         return status;
     }

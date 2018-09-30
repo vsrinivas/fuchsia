@@ -892,7 +892,7 @@ static bool TestDiskTooSmall(BlobfsTest* blobfsTest) {
         ASSERT_EQ(minimum_size - blobfs_size,
                   fvm::MetadataSize(minimum_size, kTestFvmSliceSize) * 2);
     } else {
-        blobfs::blobfs_info_t info;
+        blobfs::Superblock info;
         info.inode_count = blobfs::kBlobfsDefaultInodeCount;
         info.block_count = blobfs::kMinimumDataBlocks;
         info.flags = 0;

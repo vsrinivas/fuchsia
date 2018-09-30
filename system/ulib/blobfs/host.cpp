@@ -162,7 +162,7 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, void* blob_data, uint
         return ZX_ERR_NO_RESOURCES;
     }
 
-    blobfs_inode_t* inode = inode_block->GetInode();
+    Inode* inode = inode_block->GetInode();
     inode->blob_size = length;
     inode->num_blocks = MerkleTreeBlocks(*inode) + data_blocks;
     inode->flags |= (compressed ? kBlobFlagLZ4Compressed : 0);
@@ -194,10 +194,10 @@ zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd) {
     }
     uint64_t blocks;
     zx_status_t status;
-    if ((status = blobfs_get_blockcount(fd.get(), &blocks)) != ZX_OK) {
+    if ((status = GetBlockCount(fd.get(), &blocks)) != ZX_OK) {
         fprintf(stderr, "blobfs: cannot find end of underlying device\n");
         return status;
-    } else if ((status = blobfs_check_info(&info_block.info, blocks)) != ZX_OK) {
+    } else if ((status = CheckSuperblock(&info_block.info, blocks)) != ZX_OK) {
         fprintf(stderr, "blobfs: Info check failed\n");
         return status;
     }
@@ -247,7 +247,7 @@ zx_status_t blobfs_create_sparse(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd
     }
 
     zx_status_t status;
-    if ((status = blobfs_check_info(&info_block.info, (end - start) / kBlobfsBlockSize)) != ZX_OK) {
+    if ((status = CheckSuperblock(&info_block.info, (end - start) / kBlobfsBlockSize)) != ZX_OK) {
         fprintf(stderr, "blobfs: Info check failed\n");
         return status;
     }
@@ -320,7 +320,7 @@ zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
     zx_status_t status;
     if ((status = blobfs_create_sparse(&blob, fbl::move(fd), start, end, extent_lengths)) != ZX_OK) {
         return status;
-    } else if ((status = blobfs_check(fbl::move(blob))) != ZX_OK) {
+    } else if ((status = Fsck(fbl::move(blob))) != ZX_OK) {
         return status;
     }
     return ZX_OK;
@@ -345,7 +345,7 @@ Blobfs::Blobfs(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
 zx_status_t Blobfs::Create(fbl::unique_fd blockfd_, off_t offset, const info_block_t& info_block,
                            const fbl::Array<size_t>& extent_lengths,
                            fbl::unique_ptr<Blobfs>* out) {
-    zx_status_t status = blobfs_check_info(&info_block.info, TotalBlocks(info_block.info));
+    zx_status_t status = CheckSuperblock(&info_block.info, TotalBlocks(info_block.info));
     if (status < 0) {
         fprintf(stderr, "blobfs: Check info failure\n");
         return status;
@@ -405,7 +405,7 @@ zx_status_t Blobfs::NewBlob(const Digest& digest, fbl::unique_ptr<InodeBlock>* o
             return status;
         }
 
-        auto iblk = reinterpret_cast<const blobfs_inode_t*>(cache_.blk);
+        auto iblk = reinterpret_cast<const Inode*>(cache_.blk);
         auto observed_inode = &iblk[i % kBlobfsInodesPerBlock];
         if (observed_inode->start_block >= kStartBlockMinimum) {
             if (digest == observed_inode->merkle_root_hash) {
@@ -430,7 +430,7 @@ zx_status_t Blobfs::NewBlob(const Digest& digest, fbl::unique_ptr<InodeBlock>* o
     }
 
     fbl::AllocChecker ac;
-    blobfs_inode_t* inodes = reinterpret_cast<blobfs_inode_t*>(cache_.blk);
+    Inode* inodes = reinterpret_cast<Inode*>(cache_.blk);
 
     fbl::unique_ptr<InodeBlock> ino_block(
         new (&ac) InodeBlock(bno, &inodes[ino % kBlobfsInodesPerBlock], digest));
@@ -482,7 +482,7 @@ zx_status_t Blobfs::WriteNode(fbl::unique_ptr<InodeBlock> ino_block) {
     return WriteBlock(cache_.bno, cache_.blk);
 }
 
-zx_status_t Blobfs::WriteData(blobfs_inode_t* inode, const void* merkle_data, const void* blob_data) {
+zx_status_t Blobfs::WriteData(Inode* inode, const void* merkle_data, const void* blob_data) {
     const size_t merkle_blocks = MerkleTreeBlocks(*inode);
     const size_t data_blocks = inode->num_blocks - merkle_blocks;
     for (size_t n = 0; n < merkle_blocks; n++) {
@@ -552,7 +552,7 @@ zx_status_t Blobfs::ResetCache() {
     return ZX_OK;
 }
 
-blobfs_inode_t* Blobfs::GetNode(size_t index) {
+Inode* Blobfs::GetNode(size_t index) {
     size_t bno = node_map_start_block_ + index / kBlobfsInodesPerBlock;
 
     if (bno >= data_start_block_) {
@@ -564,12 +564,12 @@ blobfs_inode_t* Blobfs::GetNode(size_t index) {
         return nullptr;
     }
 
-    auto iblock = reinterpret_cast<blobfs_inode_t*>(cache_.blk);
+    auto iblock = reinterpret_cast<Inode*>(cache_.blk);
     return &iblock[index % kBlobfsInodesPerBlock];
 }
 
 zx_status_t Blobfs::VerifyBlob(size_t node_index) {
-    blobfs_inode_t inode = *GetNode(node_index);
+    Inode inode = *GetNode(node_index);
 
     // Determine size for (uncompressed) data buffer.
     uint64_t data_blocks = BlobDataBlocks(inode);

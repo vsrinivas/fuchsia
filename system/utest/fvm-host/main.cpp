@@ -109,9 +109,9 @@ bool CreateBlobfs(const char* path) {
     ASSERT_GE(r, 0, "Unable to create path");
     ASSERT_EQ(ftruncate(r, PARTITION_SIZE), 0, "Unable to truncate disk");
     uint64_t block_count;
-    ASSERT_EQ(blobfs::blobfs_get_blockcount(r, &block_count), ZX_OK,
+    ASSERT_EQ(blobfs::GetBlockCount(r, &block_count), ZX_OK,
               "Cannot find end of underlying device");
-    ASSERT_EQ(blobfs::blobfs_mkfs(r, block_count), ZX_OK,
+    ASSERT_EQ(blobfs::Mkfs(r, block_count), ZX_OK,
               "Failed to make blobfs partition");
     ASSERT_EQ(close(r), 0, "Unable to close disk\n");
     END_HELPER;

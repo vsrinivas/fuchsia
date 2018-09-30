@@ -33,14 +33,14 @@ using digest::MerkleTree;
 namespace blobfs {
 
 // Number of blocks reserved for the Merkle Tree
-uint64_t MerkleTreeBlocks(const blobfs_inode_t& blobNode) {
+uint64_t MerkleTreeBlocks(const Inode& blobNode) {
     uint64_t size_merkle = MerkleTree::GetTreeLength(blobNode.blob_size);
     return fbl::round_up(size_merkle, kBlobfsBlockSize) / kBlobfsBlockSize;
 }
 
 // Sanity check the metadata for the blobfs, given a maximum number of
 // available blocks.
-zx_status_t blobfs_check_info(const blobfs_info_t* info, uint64_t max) {
+zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
     if ((info->magic0 != kBlobfsMagic0) ||
         (info->magic1 != kBlobfsMagic1)) {
         fprintf(stderr, "blobfs: bad magic\n");
@@ -104,7 +104,7 @@ zx_status_t blobfs_check_info(const blobfs_info_t* info, uint64_t max) {
     return ZX_OK;
 }
 
-zx_status_t blobfs_get_blockcount(int fd, uint64_t* out) {
+zx_status_t GetBlockCount(int fd, uint64_t* out) {
 #ifdef __Fuchsia__
     block_info_t info;
     ssize_t r;
@@ -148,10 +148,10 @@ zx_status_t writeblk(int fd, uint64_t bno, const void* data) {
     return ZX_OK;
 }
 
-int blobfs_mkfs(int fd, uint64_t block_count) {
+int Mkfs(int fd, uint64_t block_count) {
     uint64_t inodes = kBlobfsDefaultInodeCount;
 
-    blobfs_info_t info;
+    Superblock info;
     memset(&info, 0x00, sizeof(info));
     info.magic0 = kBlobfsMagic0;
     info.magic1 = kBlobfsMagic1;
@@ -246,7 +246,7 @@ int blobfs_mkfs(int fd, uint64_t block_count) {
     abm.Set(0, kStartBlockMinimum);
     info.alloc_block_count += kStartBlockMinimum;
 
-    if (info.inode_count * sizeof(blobfs_inode_t) != nbm_blocks * kBlobfsBlockSize) {
+    if (info.inode_count * sizeof(Inode) != nbm_blocks * kBlobfsBlockSize) {
         fprintf(stderr, "For simplicity, inode table block must be entirely filled\n");
         return -1;
     }
@@ -265,7 +265,7 @@ int blobfs_mkfs(int fd, uint64_t block_count) {
 
     // write allocation bitmap to disk
     for (uint64_t n = 0; n < bbm_blocks; n++) {
-        void* bmdata = get_raw_bitmap_data(abm, n);
+        void* bmdata = GetRawBitmapData(abm, n);
         if ((status = writeblk(fd, BlockMapStartBlock(info) + n, bmdata)) < 0) {
             fprintf(stderr, "Failed to write blockmap block %" PRIu64 "\n", n);
             return status;

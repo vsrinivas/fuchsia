@@ -113,7 +113,7 @@ public:
 
     uint64_t SizeData() const;
 
-    const blobfs_inode_t& GetNode() const {
+    const Inode& GetNode() const {
         return inode_;
     }
 
@@ -277,7 +277,7 @@ private:
 
     uint32_t fd_count_ = {};
     size_t map_index_ = {};
-    blobfs_inode_t inode_ = {};
+    Inode inode_ = {};
 
     // Data used exclusively during writeback.
     struct WritebackInfo {
@@ -300,6 +300,13 @@ struct MerkleRootTraits {
     static bool EqualTo(const uint8_t* k1, const uint8_t* k2) {
         return memcmp(k1, k2, Digest::kLength) == 0;
     }
+};
+
+
+// Toggles that may be set on blobfs during initialization.
+struct MountOptions {
+    bool readonly = false;
+    bool metrics = false;
 };
 
 class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>,
@@ -338,8 +345,8 @@ public:
     ////////////////
     // Other methods.
 
-    static zx_status_t Create(fbl::unique_fd blockfd, const blobfs_info_t* info,
-                              fbl::unique_ptr<Blobfs>* out);
+    static zx_status_t Create(fbl::unique_fd blockfd, const MountOptions& options,
+                              const Superblock* info, fbl::unique_ptr<Blobfs>* out);
 
     void CollectMetrics() { collecting_metrics_ = true; }
     bool CollectingMetrics() const { return collecting_metrics_; }
@@ -442,7 +449,7 @@ public:
     void UpdateMerkleVerifyMetrics(uint64_t size_data, uint64_t size_merkle,
                                    const fs::Duration& duration);
 
-    blobfs_info_t info_;
+    Superblock info_;
 
     zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, VnodeBlob* vnode) {
         ZX_DEBUG_ASSERT(writeback_ != nullptr);
@@ -479,7 +486,7 @@ public:
 private:
     friend class BlobfsChecker;
 
-    Blobfs(fbl::unique_fd fd, const blobfs_info_t* info);
+    Blobfs(fbl::unique_fd fd, const Superblock* info);
     zx_status_t LoadBitmaps();
     fbl::unique_ptr<WritebackBuffer> writeback_;
 
@@ -524,7 +531,7 @@ private:
     zx_status_t ReserveNode(size_t* node_index_out);
 
     // Writes node data to the inode table and updates disk.
-    void PersistNode(WritebackWork* wb, size_t node_index, const blobfs_inode_t& inode);
+    void PersistNode(WritebackWork* wb, size_t node_index, const Inode& inode);
 
     // Frees a node, from both the reserved map and the inode table. If the inode was allocated
     // in the inode table, write the deleted inode out to disk.
@@ -535,7 +542,7 @@ private:
     // 1. To populate an existing Vnode on Lookup.
     // 2. To update with full contents when a Vnode write has completed.
     // No updates should occur directly on the blobfs's node.
-    blobfs_inode_t* GetNode(size_t index) const;
+    Inode* GetNode(size_t index) const;
 
     // Given a contiguous number of blocks after a starting block,
     // write out the bitmap to disk for the corresponding blocks.
@@ -596,13 +603,10 @@ private:
     fbl::Closure on_unmount_ = {};
 };
 
-typedef struct {
-    bool readonly = false;
-    bool metrics = false;
-} blob_options_t;
+zx_status_t Initialize(fbl::unique_fd blockfd, const MountOptions& options,
+                       fbl::unique_ptr<Blobfs>* out);
+zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
+                  const MountOptions& options, zx::channel root,
+                  fbl::Closure on_unmount);
 
-zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd);
-zx_status_t blobfs_mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
-                         const blob_options_t* options, zx::channel root,
-                         fbl::Closure on_unmount);
 } // namespace blobfs

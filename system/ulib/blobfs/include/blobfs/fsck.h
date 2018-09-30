@@ -38,6 +38,6 @@ private:
     uint32_t inode_blocks_;
 };
 
-zx_status_t blobfs_check(fbl::unique_ptr<Blobfs> vnode);
+zx_status_t Fsck(fbl::unique_ptr<Blobfs> vnode);
 
 } // namespace blobfs
