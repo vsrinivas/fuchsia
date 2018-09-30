@@ -60,7 +60,7 @@ using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 #ifdef __Fuchsia__
 // Validate that |vmo| is large enough to access block |blk|,
 // relative to the start of the vmo.
-inline void validate_vmo_size(zx_handle_t vmo, blk_t blk) {
+inline void ValidateVmoSize(zx_handle_t vmo, blk_t blk) {
 #ifdef MINFS_PARANOID_MODE
     uint64_t size;
     size_t min = (blk + 1) * kMinfsBlockSize;
@@ -71,7 +71,7 @@ inline void validate_vmo_size(zx_handle_t vmo, blk_t blk) {
 }
 #endif // __Fuchsia__
 
-// minfs_sync_vnode flags
+// SyncVnode flags
 constexpr uint32_t kMxFsSyncDefault = 0; // default: no implicit time update
 constexpr uint32_t kMxFsSyncMtime = (1 << 0);
 constexpr uint32_t kMxFsSyncCtime = (1 << 1);
@@ -89,7 +89,7 @@ using SyncCallback = fs::Vnode::SyncCallback;
 // sparse files.
 class BlockOffsets {
 public:
-    BlockOffsets(const Bcache* bc, const Superblock* sb);
+    BlockOffsets(const Bcache& bc, const SuperblockManager& sb);
 
     blk_t IbmStartBlock() const { return ibm_start_block_; }
     blk_t IbmBlockCount() const { return ibm_block_count_; }
@@ -130,7 +130,7 @@ public:
 
     ~Minfs();
 
-    static zx_status_t Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
+    static zx_status_t Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
                               fbl::unique_ptr<Minfs>* out);
 
     // instantiate a vnode from an inode
@@ -159,12 +159,12 @@ public:
 
     // Writes back an inode into the inode table on persistent storage.
     // Does not modify inode bitmap.
-    void InodeUpdate(WriteTxn* txn, ino_t ino, const minfs_inode_t* inode) {
+    void InodeUpdate(WriteTxn* txn, ino_t ino, const Inode* inode) {
         inodes_->Update(txn, ino, inode);
     }
 
     // Reads an inode from the inode table into memory.
-    void InodeLoad(ino_t ino, minfs_inode_t* out) const {
+    void InodeLoad(ino_t ino, Inode* out) const {
         inodes_->Load(ino, out);
     }
 
@@ -241,7 +241,7 @@ public:
 #endif
 
     // Return an immutable reference to a copy of the internal info.
-    const minfs_info_t& Info() const {
+    const Superblock& Info() const {
         return sb_->Info();
     }
 
@@ -254,19 +254,19 @@ private:
     using HashTable = fbl::HashTable<ino_t, VnodeMinfs*>;
 
 #ifdef __Fuchsia__
-    Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<Superblock> sb,
+    Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
           fbl::unique_ptr<Allocator> block_allocator,
           fbl::unique_ptr<InodeManager> inodes,
           fbl::unique_ptr<WritebackBuffer> writeback,
           uint64_t fs_id);
 #else
-    Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<Superblock> sb,
+    Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
           fbl::unique_ptr<Allocator> block_allocator,
           fbl::unique_ptr<InodeManager> inodes, BlockOffsets offsets);
 #endif
 
     // Find a free inode, allocate it in the inode bitmap, and write it back to disk
-    void InoNew(Transaction* state, const minfs_inode_t* inode, ino_t* out_ino);
+    void InoNew(Transaction* state, const Inode* inode, ino_t* out_ino);
 
     // Enqueues an update to the super block.
     void WriteInfo(WriteTxn* txn);
@@ -280,7 +280,7 @@ private:
 #endif
 
     // Global information about the filesystem.
-    fbl::unique_ptr<Superblock> sb_;
+    fbl::unique_ptr<SuperblockManager> sb_;
     fbl::unique_ptr<Allocator> block_allocator_;
     fbl::unique_ptr<InodeManager> inodes_;
 
@@ -342,7 +342,7 @@ public:
     bool IsUnlinked() const { return inode_.link_count == 0; }
     zx_status_t CanUnlink() const;
 
-    const minfs_inode_t* GetInode() const { return &inode_; }
+    const Inode* GetInode() const { return &inode_; }
 
     ino_t GetKey() const { return ino_; }
     // Should only be called once for the VnodeMinfs lifecycle.
@@ -415,8 +415,7 @@ private:
     // Traces the path from newdir back to the root inode.
     zx_status_t CheckNotSubdirectory(fbl::RefPtr<VnodeMinfs> newdir);
 
-    using DirentCallback = zx_status_t (*)(fbl::RefPtr<VnodeMinfs>,
-                                           minfs_dirent_t*, DirArgs*);
+    using DirentCallback = zx_status_t (*)(fbl::RefPtr<VnodeMinfs>, Dirent*, DirArgs*);
 
     // Enumerates directories.
     zx_status_t ForEachDirent(DirArgs* args, const DirentCallback func);
@@ -426,15 +425,15 @@ private:
     // The following functions are passable to |ForEachDirent|, which reads the parent directory,
     // one dirent at a time, and passes each entry to the callback function, along with the DirArgs
     // information passed to the initial call of |ForEachDirent|.
-    static zx_status_t DirentCallbackFind(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*, DirArgs*);
-    static zx_status_t DirentCallbackUnlink(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*, DirArgs*);
-    static zx_status_t DirentCallbackForceUnlink(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*,
+    static zx_status_t DirentCallbackFind(fbl::RefPtr<VnodeMinfs>, Dirent*, DirArgs*);
+    static zx_status_t DirentCallbackUnlink(fbl::RefPtr<VnodeMinfs>, Dirent*, DirArgs*);
+    static zx_status_t DirentCallbackForceUnlink(fbl::RefPtr<VnodeMinfs>, Dirent*,
                                                  DirArgs*);
-    static zx_status_t DirentCallbackAttemptRename(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*,
+    static zx_status_t DirentCallbackAttemptRename(fbl::RefPtr<VnodeMinfs>, Dirent*,
                                                    DirArgs*);
-    static zx_status_t DirentCallbackUpdateInode(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*,
+    static zx_status_t DirentCallbackUpdateInode(fbl::RefPtr<VnodeMinfs>, Dirent*,
                                                  DirArgs*);
-    static zx_status_t DirentCallbackFindSpace(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*, DirArgs*);
+    static zx_status_t DirentCallbackFindSpace(fbl::RefPtr<VnodeMinfs>, Dirent*, DirArgs*);
 
     // Appends a new directory at the specified offset within |args|. This requires a prior call to
     // DirentCallbackFindSpace to find an offset where there is space for the direntry. It takes
@@ -442,7 +441,7 @@ private:
     zx_status_t AppendDirent(DirArgs* args);
 
     zx_status_t UnlinkChild(Transaction* state, fbl::RefPtr<VnodeMinfs> child,
-                            minfs_dirent_t* de, DirectoryOffset* offs);
+                            Dirent* de, DirectoryOffset* offs);
     // Remove the link to a vnode (referring to inodes exclusively).
     // Has no impact on direntries (or parent inode).
     void RemoveInodeLink(WritebackWork* wb);
@@ -472,14 +471,14 @@ private:
 #endif  // MINFS_PARANOID_MODE && __Fuchsia__
     }
 
-    typedef enum {
-        READ,
-        WRITE,
-        DELETE,
-    } blk_op_t;
+    enum class BlockOp {
+        kRead,
+        kWrite,
+        kDelete,
+    };
 
-    typedef struct bop_params {
-        bop_params(blk_t start, blk_t count, blk_t* bnos)
+    struct BlockOpArgs {
+        BlockOpArgs(blk_t start, blk_t count, blk_t* bnos)
             : start(start), count(count), bnos(bnos) {
                 // Initialize output array to 0 in case the indirect block(s) containing these bnos
                 // do not exist
@@ -491,14 +490,14 @@ private:
         blk_t start;
         blk_t count;
         blk_t* bnos;
-    } bop_params_t;
+    };
 
     class DirectArgs {
     public:
-        DirectArgs(blk_op_t op, blk_t* array, blk_t count, blk_t* bnos)
+        DirectArgs(BlockOp op, blk_t* array, blk_t count, blk_t* bnos)
             : op_(op), array_(array), count_(count), bnos_(bnos), dirty_(false) {}
 
-        blk_op_t GetOp() const { return op_; }
+        BlockOp GetOp() const { return op_; }
         blk_t GetBno(blk_t index) const { return array_[index]; }
         void SetBno(blk_t index, blk_t value) {
             ZX_DEBUG_ASSERT(index < GetCount());
@@ -517,7 +516,7 @@ private:
 
         bool IsDirty() const { return dirty_; }
     protected:
-        const blk_op_t op_; // determines what operation to perform on blocks
+        const BlockOp op_; // determines what operation to perform on blocks
         blk_t* const array_; // array containing blocks to be operated on
         const blk_t count_; // number of direct blocks to operate on
         blk_t* const bnos_; // array of |count| bnos returned to the user
@@ -526,7 +525,7 @@ private:
 
     class IndirectArgs : public DirectArgs {
     public:
-        IndirectArgs(blk_op_t op, blk_t* array, blk_t count, blk_t* bnos, blk_t bindex,
+        IndirectArgs(BlockOp op, blk_t* array, blk_t count, blk_t* bnos, blk_t bindex,
                      blk_t ib_vmo_offset)
             : DirectArgs(op, array, count, bnos), bindex_(bindex), ib_vmo_offset_(ib_vmo_offset) {}
 
@@ -557,7 +556,7 @@ private:
 
     class DindirectArgs : public IndirectArgs {
     public:
-        DindirectArgs(blk_op_t op, blk_t* array, blk_t count, blk_t* bnos, blk_t bindex,
+        DindirectArgs(BlockOp op, blk_t* array, blk_t count, blk_t* bnos, blk_t bindex,
                       blk_t ib_vmo_offset, blk_t ibindex, blk_t dib_vmo_offset)
             : IndirectArgs(op, array, count, bnos, bindex, ib_vmo_offset),
               ibindex_(ibindex), dib_vmo_offset_(dib_vmo_offset) {}
@@ -588,7 +587,7 @@ private:
     // Perform operation |op| on blocks as specified by |params|
     // The BlockOp methods should not be called directly
     // All BlockOp methods assume that vmo_indirect_ has been grown to the required size
-    zx_status_t BlockOp(Transaction* state, blk_op_t op, bop_params_t* params);
+    zx_status_t ApplyOperation(Transaction* state, BlockOp op, BlockOpArgs* params);
     zx_status_t BlockOpDirect(Transaction* state, DirectArgs* params);
     zx_status_t BlockOpIndirect(Transaction* state, IndirectArgs* params);
     zx_status_t BlockOpDindirect(Transaction* state, DindirectArgs* params);
@@ -677,7 +676,7 @@ private:
 #endif
 
     ino_t ino_{};
-    minfs_inode_t inode_{};
+    Inode inode_{};
 
     // This field tracks the current number of file descriptors with
     // an open reference to this Vnode. Notably, this is distinct from the
@@ -714,13 +713,13 @@ constexpr size_t GetVmoSizeForDoublyIndirect() {
 zx_status_t GetRequiredBlockCount(size_t offset, size_t length, uint32_t* num_req_blocks);
 
 // write the inode data of this vnode to disk (default does not update time values)
-void minfs_sync_vnode(fbl::RefPtr<VnodeMinfs> vn, uint32_t flags);
-void minfs_dump_info(const minfs_info_t* info);
-void minfs_dump_inode(const minfs_inode_t* inode, ino_t ino);
-void minfs_dir_init(void* bdata, ino_t ino_self, ino_t ino_parent);
+void SyncVnode(fbl::RefPtr<VnodeMinfs> vn, uint32_t flags);
+void DumpInfo(const Superblock* info);
+void DumpInode(const Inode* inode, ino_t ino);
+void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent);
 
 // Given an input bcache, initialize the filesystem and return a reference to the
 // root node.
-zx_status_t minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinfs>* root_out);
+zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinfs>* root_out);
 
 } // namespace minfs

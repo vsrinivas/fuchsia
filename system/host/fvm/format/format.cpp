@@ -70,7 +70,7 @@ zx_status_t Format::Check(fbl::unique_fd fd, off_t start, off_t end,
     if (part == DISK_FORMAT_BLOBFS) {
         return blobfs::blobfs_fsck(fbl::move(fd), start, end, extent_lengths);
     } else if (part == DISK_FORMAT_MINFS) {
-        return minfs::minfs_fsck(fbl::move(fd), start, end, extent_lengths);
+        return minfs::SparseFsck(fbl::move(fd), start, end, extent_lengths);
     }
 
     fprintf(stderr, "Format not supported\n");

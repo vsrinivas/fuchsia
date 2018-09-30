@@ -351,7 +351,7 @@ zx_status_t MinfsCreator::Fsck() {
     if ((status = GenerateBcache(&bc)) != ZX_OK) {
         return status;
     }
-    return minfs::minfs_check(fbl::move(bc));
+    return minfs::Fsck(fbl::move(bc));
 }
 
 zx_status_t MinfsCreator::Add() {

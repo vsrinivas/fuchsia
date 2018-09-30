@@ -32,19 +32,49 @@
 #define xprintf(args...)
 #endif
 
+namespace minfs {
 namespace {
 
-zx_time_t minfs_gettime_utc() {
-    // linux/zircon compatible
+// Immediately stop iterating over the directory.
+constexpr zx_status_t kDirIteratorDone = 0;
+// Access the next direntry in the directory. Offsets updated.
+constexpr zx_status_t kDirIteratorNext = 1;
+// Identify that the direntry record was modified. Stop iterating.
+constexpr zx_status_t kDirIteratorSaveSync = 2;
+
+zx_time_t GetTimeUTC() {
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
     zx_time_t time = zx_time_add_duration(ZX_SEC(ts.tv_sec), ts.tv_nsec);
     return time;
 }
 
-} // namespace anonymous
+zx_status_t ValidateDirent(Dirent* de, size_t bytes_read, size_t off) {
+    uint32_t reclen = static_cast<uint32_t>(MinfsReclen(de, off));
+    if ((bytes_read < MINFS_DIRENT_SIZE) || (reclen < MINFS_DIRENT_SIZE)) {
+        FS_TRACE_ERROR("vn_dir: Could not read dirent at offset: %zd\n", off);
+        return ZX_ERR_IO;
+    } else if ((off + reclen > kMinfsMaxDirectorySize) || (reclen & 3)) {
+        FS_TRACE_ERROR("vn_dir: bad reclen %u > %u\n", reclen, kMinfsMaxDirectorySize);
+        return ZX_ERR_IO;
+    } else if (de->ino != 0) {
+        if ((de->namelen == 0) ||
+            (de->namelen > (reclen - MINFS_DIRENT_SIZE))) {
+            FS_TRACE_ERROR("vn_dir: bad namelen %u / %u\n", de->namelen, reclen);
+            return ZX_ERR_IO;
+        }
+    }
+    return ZX_OK;
+}
 
-namespace minfs {
+// Updates offset information to move to the next direntry in the directory.
+zx_status_t NextDirent(Dirent* de, DirectoryOffset* offs) {
+    offs->off_prev = offs->off;
+    offs->off += MinfsReclen(de, offs->off);
+    return kDirIteratorNext;
+}
+
+} // namespace anonymous
 
 void VnodeMinfs::SetIno(ino_t ino) {
     ZX_DEBUG_ASSERT(ino_ == 0);
@@ -54,7 +84,7 @@ void VnodeMinfs::SetIno(ino_t ino) {
 void VnodeMinfs::InodeSync(WritebackWork* wb, uint32_t flags) {
     // by default, c/mtimes are not updated to current time
     if (flags != kMxFsSyncDefault) {
-        zx_time_t cur_time = minfs_gettime_utc();
+        zx_time_t cur_time = GetTimeUTC();
         // update times before syncing
         if ((flags & kMxFsSyncMtime) != 0) {
             inode_.modify_time = cur_time;
@@ -71,9 +101,9 @@ void VnodeMinfs::InodeSync(WritebackWork* wb, uint32_t flags) {
 // the file. Does not update mtime/atime.
 zx_status_t VnodeMinfs::BlocksShrink(Transaction* state, blk_t start) {
     ZX_DEBUG_ASSERT(state != nullptr);
-    bop_params_t boparams(start, static_cast<blk_t>(kMinfsMaxFileBlock - start), nullptr);
+    BlockOpArgs op_args(start, static_cast<blk_t>(kMinfsMaxFileBlock - start), nullptr);
     zx_status_t status;
-    if ((status = BlockOp(state, DELETE, &boparams)) != ZX_OK) {
+    if ((status = ApplyOperation(state, BlockOp::kDelete, &op_args)) != ZX_OK) {
         return status;
     }
 
@@ -324,7 +354,7 @@ zx_status_t VnodeMinfs::BlockOpDirect(Transaction* state, DirectArgs* params) {
     for (unsigned i = 0; i < params->GetCount(); i++) {
         blk_t bno = params->GetBno(i);
         switch (params->GetOp()) {
-            case DELETE: {
+            case BlockOp::kDelete: {
                 // If we found a valid block, delete it.
                 if (bno) {
                     fs_->ValidateBno(bno);
@@ -334,7 +364,7 @@ zx_status_t VnodeMinfs::BlockOpDirect(Transaction* state, DirectArgs* params) {
                 }
                 break;
             }
-            case WRITE: {
+            case BlockOp::kWrite: {
                 ZX_DEBUG_ASSERT(state != nullptr);
                 if (bno == 0) {
                     fs_->BlockNew(state, &bno);
@@ -344,7 +374,7 @@ zx_status_t VnodeMinfs::BlockOpDirect(Transaction* state, DirectArgs* params) {
                 fs_->ValidateBno(bno);
             }
             __FALLTHROUGH;
-            case READ: {
+            case BlockOp::kRead: {
                 params->SetBno(i, bno);
                 break;
             }
@@ -362,8 +392,8 @@ zx_status_t VnodeMinfs::BlockOpIndirect(Transaction* state, IndirectArgs* params
     zx_status_t status;
 
 #ifdef __Fuchsia__
-    if (params->GetOp() == READ || params->GetOp() == WRITE) {
-        validate_vmo_size(vmo_indirect_->GetVmo(), params->GetOffset() + params->GetCount());
+    if (params->GetOp() == BlockOp::kRead || params->GetOp() == BlockOp::kWrite) {
+        ValidateVmoSize(vmo_indirect_->GetVmo(), params->GetOffset() + params->GetCount());
     }
 #endif
 
@@ -371,11 +401,11 @@ zx_status_t VnodeMinfs::BlockOpIndirect(Transaction* state, IndirectArgs* params
         bool dirty = false;
         if (params->GetBno(i) == 0) {
             switch (params->GetOp()) {
-            case DELETE:
+            case BlockOp::kDelete:
                 continue;
-            case READ:
+            case BlockOp::kRead:
                 return ZX_OK;
-            case WRITE:
+            case BlockOp::kWrite:
                 AllocateIndirect(state, i, params);
                 break;
             default:
@@ -409,7 +439,7 @@ zx_status_t VnodeMinfs::BlockOpIndirect(Transaction* state, IndirectArgs* params
         }
 
         // We can delete the current indirect block if all direct blocks within it are deleted
-        if (params->GetOp() == DELETE && direct_params.GetCount() == kMinfsDirectPerIndirect) {
+        if (params->GetOp() == BlockOp::kDelete && direct_params.GetCount() == kMinfsDirectPerIndirect) {
             // release the direct block itself
             fs_->BlockFree(state->GetWork(), params->GetBno(i));
             params->SetBno(i, 0);
@@ -425,8 +455,8 @@ zx_status_t VnodeMinfs::BlockOpDindirect(Transaction* state, DindirectArgs* para
     zx_status_t status;
 
 #ifdef __Fuchsia__
-    if (params->GetOp() == READ || params->GetOp() == WRITE) {
-        validate_vmo_size(vmo_indirect_->GetVmo(), params->GetOffset() + params->GetCount());
+    if (params->GetOp() == BlockOp::kRead || params->GetOp() == BlockOp::kWrite) {
+        ValidateVmoSize(vmo_indirect_->GetVmo(), params->GetOffset() + params->GetCount());
     }
 #endif
 
@@ -435,11 +465,11 @@ zx_status_t VnodeMinfs::BlockOpDindirect(Transaction* state, DindirectArgs* para
         bool dirty = false;
         if (params->GetBno(i) == 0) {
             switch (params->GetOp()) {
-            case DELETE:
+            case BlockOp::kDelete:
                 continue;
-            case READ:
+            case BlockOp::kRead:
                 return ZX_OK;
-            case WRITE:
+            case BlockOp::kWrite:
                 AllocateIndirect(state, i, params);
                 break;
             default:
@@ -474,7 +504,8 @@ zx_status_t VnodeMinfs::BlockOpDindirect(Transaction* state, DindirectArgs* para
 
         // We can delete the current doubly indirect block if all indirect blocks within it
         // (and direct blocks within those) are deleted
-        if (params->GetOp() == DELETE && indirect_params.GetCount() == kMinfsDirectPerDindirect) {
+        if (params->GetOp() == BlockOp::kDelete &&
+            indirect_params.GetCount() == kMinfsDirectPerDindirect) {
             // release the doubly indirect block itself
             fs_->BlockFree(state->GetWork(), params->GetBno(i));
             params->SetBno(i, 0);
@@ -489,14 +520,14 @@ zx_status_t VnodeMinfs::BlockOpDindirect(Transaction* state, DindirectArgs* para
 void VnodeMinfs::ReadIndirectVmoBlock(uint32_t offset, uint32_t** entry) {
     ZX_DEBUG_ASSERT(vmo_indirect_ != nullptr);
     uintptr_t addr = reinterpret_cast<uintptr_t>(vmo_indirect_->GetData());
-    validate_vmo_size(vmo_indirect_->GetVmo(), offset);
+    ValidateVmoSize(vmo_indirect_->GetVmo(), offset);
     *entry = reinterpret_cast<uint32_t*>(addr + kMinfsBlockSize * offset);
 }
 
 void VnodeMinfs::ClearIndirectVmoBlock(uint32_t offset) {
     ZX_DEBUG_ASSERT(vmo_indirect_ != nullptr);
     uintptr_t addr = reinterpret_cast<uintptr_t>(vmo_indirect_->GetData());
-    validate_vmo_size(vmo_indirect_->GetVmo(), offset);
+    ValidateVmoSize(vmo_indirect_->GetVmo(), offset);
     memset(reinterpret_cast<void*>(addr + kMinfsBlockSize * offset), 0, kMinfsBlockSize);
 }
 #else
@@ -511,17 +542,17 @@ void VnodeMinfs::ClearIndirectBlock(blk_t bno) {
 }
 #endif
 
-zx_status_t VnodeMinfs::BlockOp(Transaction* state, blk_op_t op, bop_params_t* boparams) {
-    blk_t start = boparams->start;
+zx_status_t VnodeMinfs::ApplyOperation(Transaction* state, BlockOp op, BlockOpArgs* op_args) {
+    blk_t start = op_args->start;
     blk_t found = 0;
     bool dirty = false;
-    if (found < boparams->count && start < kMinfsDirect) {
+    if (found < op_args->count && start < kMinfsDirect) {
         // array starting with first direct block
         blk_t* array = &inode_.dnum[start];
         // number of direct blocks to process
-        blk_t count = fbl::min(boparams->count - found, kMinfsDirect - start);
+        blk_t count = fbl::min(op_args->count - found, kMinfsDirect - start);
         // if bnos exist, adjust past found (should be 0)
-        blk_t* bnos = boparams->bnos == nullptr ? nullptr : &boparams->bnos[found];
+        blk_t* bnos = op_args->bnos == nullptr ? nullptr : &op_args->bnos[found];
 
         DirectArgs direct_params(op, array, count, bnos);
         zx_status_t status;
@@ -540,7 +571,7 @@ zx_status_t VnodeMinfs::BlockOp(Transaction* state, blk_op_t op, bop_params_t* b
         start -= kMinfsDirect;
     }
 
-    if (found < boparams->count && start < kMinfsIndirect * kMinfsDirectPerIndirect) {
+    if (found < op_args->count && start < kMinfsIndirect * kMinfsDirectPerIndirect) {
         // index of indirect block, and offset of that block within indirect vmo
         blk_t ibindex = start / kMinfsDirectPerIndirect;
         // index of direct block within indirect block
@@ -549,10 +580,10 @@ zx_status_t VnodeMinfs::BlockOp(Transaction* state, blk_op_t op, bop_params_t* b
         // array starting with first indirect block
         blk_t* array = &inode_.inum[ibindex];
         // number of direct blocks to process within indirect blocks
-        blk_t count = fbl::min(boparams->count - found,
+        blk_t count = fbl::min(op_args->count - found,
                                kMinfsIndirect * kMinfsDirectPerIndirect - start);
         // if bnos exist, adjust past found
-        blk_t* bnos = boparams->bnos == nullptr ? nullptr : &boparams->bnos[found];
+        blk_t* bnos = op_args->bnos == nullptr ? nullptr : &op_args->bnos[found];
 
         IndirectArgs indirect_params(op, array, count, bnos, bindex, ibindex);
         zx_status_t status;
@@ -571,7 +602,7 @@ zx_status_t VnodeMinfs::BlockOp(Transaction* state, blk_op_t op, bop_params_t* b
         start -= kMinfsIndirect * kMinfsDirectPerIndirect;
     }
 
-    if (found < boparams->count &&
+    if (found < op_args->count &&
         start < kMinfsDoublyIndirect * kMinfsDirectPerIndirect * kMinfsDirectPerIndirect) {
         // index of doubly indirect block
         uint32_t dibindex = start / (kMinfsDirectPerIndirect * kMinfsDirectPerIndirect);
@@ -581,10 +612,10 @@ zx_status_t VnodeMinfs::BlockOp(Transaction* state, blk_op_t op, bop_params_t* b
         // array starting with first doubly indirect block
         blk_t* array = &inode_.dinum[dibindex];
         // number of direct blocks to process within doubly indirect blocks
-        blk_t count = fbl::min(boparams->count - found,
+        blk_t count = fbl::min(op_args->count - found,
                 kMinfsDoublyIndirect * kMinfsDirectPerIndirect * kMinfsDirectPerIndirect - start);
         // if bnos exist, adjust past found
-        blk_t* bnos = boparams->bnos == nullptr ? nullptr : &boparams->bnos[found];
+        blk_t* bnos = op_args->bnos == nullptr ? nullptr : &op_args->bnos[found];
         // index of direct block within indirect block
         blk_t bindex = start % kMinfsDirectPerIndirect;
         // offset of indirect block within indirect vmo
@@ -611,7 +642,7 @@ zx_status_t VnodeMinfs::BlockOp(Transaction* state, blk_op_t op, bop_params_t* b
     }
 
     // Return out of range if we were not able to process all blocks
-    return found == boparams->count ? ZX_OK : ZX_ERR_OUT_OF_RANGE;
+    return found == op_args->count ? ZX_OK : ZX_ERR_OUT_OF_RANGE;
 }
 
 zx_status_t VnodeMinfs::BlockGet(Transaction* state, blk_t n, blk_t* bno) {
@@ -640,16 +671,9 @@ zx_status_t VnodeMinfs::BlockGet(Transaction* state, blk_t n, blk_t* bno) {
     }
 #endif
 
-    bop_params_t boparams(n, 1, bno);
-    return BlockOp(state, state ? WRITE : READ, &boparams);
+    BlockOpArgs op_args(n, 1, bno);
+    return ApplyOperation(state, state ? BlockOp::kWrite : BlockOp::kRead, &op_args);
 }
-
-// Immediately stop iterating over the directory.
-#define DIR_CB_DONE 0
-// Access the next direntry in the directory. Offsets updated.
-#define DIR_CB_NEXT 1
-// Identify that the direntry record was modified. Stop iterating.
-#define DIR_CB_SAVE_SYNC 2
 
 zx_status_t VnodeMinfs::ReadExactInternal(void* data, size_t len, size_t off) {
     size_t actual;
@@ -675,39 +699,14 @@ zx_status_t VnodeMinfs::WriteExactInternal(Transaction* state, const void* data,
     return ZX_OK;
 }
 
-static zx_status_t validate_dirent(minfs_dirent_t* de, size_t bytes_read, size_t off) {
-    uint32_t reclen = static_cast<uint32_t>(MinfsReclen(de, off));
-    if ((bytes_read < MINFS_DIRENT_SIZE) || (reclen < MINFS_DIRENT_SIZE)) {
-        FS_TRACE_ERROR("vn_dir: Could not read dirent at offset: %zd\n", off);
-        return ZX_ERR_IO;
-    } else if ((off + reclen > kMinfsMaxDirectorySize) || (reclen & 3)) {
-        FS_TRACE_ERROR("vn_dir: bad reclen %u > %u\n", reclen, kMinfsMaxDirectorySize);
-        return ZX_ERR_IO;
-    } else if (de->ino != 0) {
-        if ((de->namelen == 0) ||
-            (de->namelen > (reclen - MINFS_DIRENT_SIZE))) {
-            FS_TRACE_ERROR("vn_dir: bad namelen %u / %u\n", de->namelen, reclen);
-            return ZX_ERR_IO;
-        }
-    }
-    return ZX_OK;
-}
-
-// Updates offset information to move to the next direntry in the directory.
-static zx_status_t do_next_dirent(minfs_dirent_t* de, DirectoryOffset* offs) {
-    offs->off_prev = offs->off;
-    offs->off += MinfsReclen(de, offs->off);
-    return DIR_CB_NEXT;
-}
-
-zx_status_t VnodeMinfs::DirentCallbackFind(fbl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t* de,
+zx_status_t VnodeMinfs::DirentCallbackFind(fbl::RefPtr<VnodeMinfs> vndir, Dirent* de,
                                            DirArgs* args) {
     if ((de->ino != 0) && fbl::StringPiece(de->name, de->namelen) == args->name) {
         args->ino = de->ino;
         args->type = de->type;
-        return DIR_CB_DONE;
+        return kDirIteratorDone;
     } else {
-        return do_next_dirent(de, &args->offs);
+        return NextDirent(de, &args->offs);
     }
 }
 
@@ -729,13 +728,13 @@ zx_status_t VnodeMinfs::CanUnlink() const {
 
 zx_status_t VnodeMinfs::UnlinkChild(Transaction* state,
                                     fbl::RefPtr<VnodeMinfs> childvn,
-                                    minfs_dirent_t* de, DirectoryOffset* offs) {
+                                    Dirent* de, DirectoryOffset* offs) {
     // Coalesce the current dirent with the previous/next dirent, if they
     // (1) exist and (2) are free.
     size_t off_prev = offs->off_prev;
     size_t off = offs->off;
     size_t off_next = off + MinfsReclen(de, off);
-    minfs_dirent_t de_prev, de_next;
+    Dirent de_prev, de_next;
     zx_status_t status;
 
     // Read the direntries we're considering merging with.
@@ -748,7 +747,7 @@ zx_status_t VnodeMinfs::UnlinkChild(Transaction* state,
         if ((status = ReadExactInternal(&de_next, len, off_next)) != ZX_OK) {
             FS_TRACE_ERROR("unlink: Failed to read next dirent\n");
             return status;
-        } else if ((status = validate_dirent(&de_next, len, off_next)) != ZX_OK) {
+        } else if ((status = ValidateDirent(&de_next, len, off_next)) != ZX_OK) {
             FS_TRACE_ERROR("unlink: Read invalid dirent\n");
             return status;
         }
@@ -763,7 +762,7 @@ zx_status_t VnodeMinfs::UnlinkChild(Transaction* state,
         if ((status = ReadExactInternal(&de_prev, len, off_prev)) != ZX_OK) {
             FS_TRACE_ERROR("unlink: Failed to read previous dirent\n");
             return status;
-        } else if ((status = validate_dirent(&de_prev, len, off_prev)) != ZX_OK) {
+        } else if ((status = ValidateDirent(&de_prev, len, off_prev)) != ZX_OK) {
             FS_TRACE_ERROR("unlink: Read invalid dirent\n");
             return status;
         }
@@ -801,7 +800,7 @@ zx_status_t VnodeMinfs::UnlinkChild(Transaction* state,
     childvn->RemoveInodeLink(state->GetWork());
     state->GetWork()->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
     state->GetWork()->PinVnode(childvn);
-    return DIR_CB_SAVE_SYNC;
+    return kDirIteratorSaveSync;
 }
 
 void VnodeMinfs::RemoveInodeLink(WritebackWork* wb) {
@@ -824,10 +823,10 @@ void VnodeMinfs::RemoveInodeLink(WritebackWork* wb) {
 }
 
 // caller is expected to prevent unlink of "." or ".."
-zx_status_t VnodeMinfs::DirentCallbackUnlink(fbl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t* de,
+zx_status_t VnodeMinfs::DirentCallbackUnlink(fbl::RefPtr<VnodeMinfs> vndir, Dirent* de,
                                              DirArgs* args) {
     if ((de->ino == 0) || fbl::StringPiece(de->name, de->namelen) != args->name) {
-        return do_next_dirent(de, &args->offs);
+        return NextDirent(de, &args->offs);
     }
 
     fbl::RefPtr<VnodeMinfs> vn;
@@ -847,10 +846,10 @@ zx_status_t VnodeMinfs::DirentCallbackUnlink(fbl::RefPtr<VnodeMinfs> vndir, minf
 }
 
 // same as unlink, but do not validate vnode
-zx_status_t VnodeMinfs::DirentCallbackForceUnlink(fbl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t* de,
+zx_status_t VnodeMinfs::DirentCallbackForceUnlink(fbl::RefPtr<VnodeMinfs> vndir, Dirent* de,
                                                   DirArgs* args) {
     if ((de->ino == 0) || fbl::StringPiece(de->name, de->namelen) != args->name) {
-        return do_next_dirent(de, &args->offs);
+        return NextDirent(de, &args->offs);
     }
 
     fbl::RefPtr<VnodeMinfs> vn;
@@ -871,9 +870,9 @@ zx_status_t VnodeMinfs::DirentCallbackForceUnlink(fbl::RefPtr<VnodeMinfs> vndir,
 //      - Remove the old vnode (decrement link count by one)
 //      - Replace the old vnode's position in the directory with the new inode
 zx_status_t VnodeMinfs::DirentCallbackAttemptRename(fbl::RefPtr<VnodeMinfs> vndir,
-                                                    minfs_dirent_t* de, DirArgs* args) {
+                                                    Dirent* de, DirArgs* args) {
     if ((de->ino == 0) || fbl::StringPiece(de->name, de->namelen) != args->name) {
-        return do_next_dirent(de, &args->offs);
+        return NextDirent(de, &args->offs);
     }
 
     fbl::RefPtr<VnodeMinfs> vn;
@@ -906,13 +905,13 @@ zx_status_t VnodeMinfs::DirentCallbackAttemptRename(fbl::RefPtr<VnodeMinfs> vndi
 
     args->state->GetWork()->PinVnode(vn);
     args->state->GetWork()->PinVnode(vndir);
-    return DIR_CB_SAVE_SYNC;
+    return kDirIteratorSaveSync;
 }
 
-zx_status_t VnodeMinfs::DirentCallbackUpdateInode(fbl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t* de,
+zx_status_t VnodeMinfs::DirentCallbackUpdateInode(fbl::RefPtr<VnodeMinfs> vndir, Dirent* de,
                                                   DirArgs* args) {
     if ((de->ino == 0) || fbl::StringPiece(de->name, de->namelen) != args->name) {
-        return do_next_dirent(de, &args->offs);
+        return NextDirent(de, &args->offs);
     }
 
     de->ino = args->ino;
@@ -923,18 +922,18 @@ zx_status_t VnodeMinfs::DirentCallbackUpdateInode(fbl::RefPtr<VnodeMinfs> vndir,
         return status;
     }
     args->state->GetWork()->PinVnode(vndir);
-    return DIR_CB_SAVE_SYNC;
+    return kDirIteratorSaveSync;
 }
 
-zx_status_t VnodeMinfs::DirentCallbackFindSpace(fbl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t* de,
+zx_status_t VnodeMinfs::DirentCallbackFindSpace(fbl::RefPtr<VnodeMinfs> vndir, Dirent* de,
                                                 DirArgs* args) {
     uint32_t reclen = static_cast<uint32_t>(MinfsReclen(de, args->offs.off));
     if (de->ino == 0) {
         // empty entry, do we fit?
         if (args->reclen > reclen) {
-            return do_next_dirent(de, &args->offs);
+            return NextDirent(de, &args->offs);
         }
-        return DIR_CB_DONE;
+        return kDirIteratorDone;
     } else {
         // filled entry, can we sub-divide?
         uint32_t size = static_cast<uint32_t>(DirentSize(de->namelen));
@@ -944,20 +943,20 @@ zx_status_t VnodeMinfs::DirentCallbackFindSpace(fbl::RefPtr<VnodeMinfs> vndir, m
         }
         uint32_t extra = reclen - size;
         if (extra < args->reclen) {
-            return do_next_dirent(de, &args->offs);
+            return NextDirent(de, &args->offs);
         }
-        return DIR_CB_DONE;
+        return kDirIteratorDone;
     }
 }
 
 zx_status_t VnodeMinfs::AppendDirent(DirArgs* args) {
     char data[kMinfsMaxDirentSize];
-    minfs_dirent_t* de = reinterpret_cast<minfs_dirent_t*>(data);
+    Dirent* de = reinterpret_cast<Dirent*>(data);
     size_t r;
     zx_status_t status = ReadInternal(data, kMinfsMaxDirentSize, args->offs.off, &r);
     if (status != ZX_OK) {
         return status;
-    } else if ((status = validate_dirent(de, r, args->offs.off)) != ZX_OK) {
+    } else if ((status = ValidateDirent(de, r, args->offs.off)) != ZX_OK) {
         return status;
     }
 
@@ -1027,7 +1026,7 @@ zx_status_t VnodeMinfs::AppendDirent(DirArgs* args) {
 //          updating the offset information to access the next dirent.
 zx_status_t VnodeMinfs::ForEachDirent(DirArgs* args, const DirentCallback func) {
     char data[kMinfsMaxDirentSize];
-    minfs_dirent_t* de = (minfs_dirent_t*) data;
+    Dirent* de = (Dirent*) data;
     args->offs.off = 0;
     args->offs.off_prev = 0;
     while (args->offs.off + MINFS_DIRENT_SIZE < kMinfsMaxDirectorySize) {
@@ -1036,19 +1035,19 @@ zx_status_t VnodeMinfs::ForEachDirent(DirArgs* args, const DirentCallback func) 
         zx_status_t status = ReadInternal(data, kMinfsMaxDirentSize, args->offs.off, &r);
         if (status != ZX_OK) {
             return status;
-        } else if ((status = validate_dirent(de, r, args->offs.off)) != ZX_OK) {
+        } else if ((status = ValidateDirent(de, r, args->offs.off)) != ZX_OK) {
             return status;
         }
 
         switch ((status = func(fbl::RefPtr<VnodeMinfs>(this), de, args))) {
-        case DIR_CB_NEXT:
+        case kDirIteratorNext:
             break;
-        case DIR_CB_SAVE_SYNC:
+        case kDirIteratorSaveSync:
             inode_.seq_num++;
             InodeSync(args->state->GetWork(), kMxFsSyncMtime);
             args->state->GetWork()->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
             return ZX_OK;
-        case DIR_CB_DONE:
+        case kDirIteratorDone:
         default:
             return status;
         }
@@ -1476,20 +1475,20 @@ zx_status_t VnodeMinfs::Setattr(const vnattr_t* a) {
     return ZX_OK;
 }
 
-typedef struct dircookie {
+struct DirCookie {
     size_t off;        // Offset into directory
     uint32_t reserved; // Unused
     uint32_t seqno;    // inode seq no
-} dircookie_t;
+};
 
-static_assert(sizeof(dircookie_t) <= sizeof(fs::vdircookie_t),
-              "MinFS dircookie too large to fit in IO state");
+static_assert(sizeof(DirCookie) <= sizeof(fs::vdircookie_t),
+              "MinFS DirCookie too large to fit in IO state");
 
 zx_status_t VnodeMinfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
                                 size_t* out_actual) {
     TRACE_DURATION("minfs", "VnodeMinfs::Readdir");
     xprintf("minfs_readdir() vn=%p(#%u) cookie=%p len=%zd\n", this, ino_, cookie, len);
-    dircookie_t* dc = reinterpret_cast<dircookie_t*>(cookie);
+    DirCookie* dc = reinterpret_cast<DirCookie*>(cookie);
     fs::DirentFiller df(dirents, len);
 
     if (!IsDirectory()) {
@@ -1499,7 +1498,7 @@ zx_status_t VnodeMinfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t 
     size_t off = dc->off;
     size_t r;
     char data[kMinfsMaxDirentSize];
-    minfs_dirent_t* de = (minfs_dirent_t*) data;
+    Dirent* de = (Dirent*) data;
 
     if (off != 0 && dc->seqno != inode_.seq_num) {
         // The offset *might* be invalid, if we called Readdir after a directory
@@ -1513,7 +1512,7 @@ zx_status_t VnodeMinfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t 
                 goto fail;
             }
             zx_status_t status = ReadInternal(de, kMinfsMaxDirentSize, off_recovered, &r);
-            if ((status != ZX_OK) || (validate_dirent(de, r, off_recovered) != ZX_OK)) {
+            if ((status != ZX_OK) || (ValidateDirent(de, r, off_recovered) != ZX_OK)) {
                 FS_TRACE_ERROR("minfs: Readdir: Corrupt dirent unreadable/failed validation\n");
                 goto fail;
             }
@@ -1527,7 +1526,7 @@ zx_status_t VnodeMinfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t 
         if (status != ZX_OK) {
             FS_TRACE_ERROR("minfs: Readdir: Unreadable dirent\n");
             goto fail;
-        } else if (validate_dirent(de, r, off) != ZX_OK) {
+        } else if (ValidateDirent(de, r, off) != ZX_OK) {
             FS_TRACE_ERROR("minfs: Readdir: Corrupt dirent failed validation\n");
             goto fail;
         }
@@ -1546,7 +1545,7 @@ zx_status_t VnodeMinfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t 
     }
 
 done:
-    // save our place in the dircookie
+    // save our place in the DirCookie
     dc->off = off;
     dc->seqno = inode_.seq_num;
     *out_actual = df.BytesFilled();
@@ -1578,7 +1577,7 @@ void VnodeMinfs::Allocate(Minfs* fs, uint32_t type, fbl::RefPtr<VnodeMinfs>* out
     *out = fbl::AdoptRef(new VnodeMinfs(fs));
     memset(&(*out)->inode_, 0, sizeof((*out)->inode_));
     (*out)->inode_.magic = MinfsMagic(type);
-    (*out)->inode_.create_time = (*out)->inode_.modify_time = minfs_gettime_utc();
+    (*out)->inode_.create_time = (*out)->inode_.modify_time = GetTimeUTC();
     (*out)->inode_.link_count = (type == kMinfsTypeDir ? 2 : 1);
 }
 
@@ -1657,7 +1656,7 @@ zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece nam
     // If the new node is a directory, fill it with '.' and '..'.
     if (type == kMinfsTypeDir) {
         char bdata[DirentSize(1) + DirentSize(2)];
-        minfs_dir_init(bdata, vn->ino_, ino_);
+        InitializeDirectory(bdata, vn->ino_, ino_);
         size_t expected = DirentSize(1) + DirentSize(2);
         if ((status = vn->WriteExactInternal(state.get(), bdata, expected, 0)) != ZX_OK) {
             FS_TRACE_ERROR("minfs: Create: Failed to initialize empty directory: %d\n", status);

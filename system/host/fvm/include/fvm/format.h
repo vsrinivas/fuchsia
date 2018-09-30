@@ -137,13 +137,13 @@ private:
     // Input superblock
     union {
         char blk_[minfs::kMinfsBlockSize];
-        minfs::minfs_info_t info_;
+        minfs::Superblock info_;
     };
 
     // Output superblock
     union {
         char fvm_blk_[minfs::kMinfsBlockSize];
-        minfs::minfs_info_t fvm_info_;
+        minfs::Superblock fvm_info_;
     };
 };
 

@@ -73,5 +73,5 @@ int run_fsck() {
         return -1;
     }
 
-    return minfs_check(fbl::move(block_cache));
+    return Fsck(fbl::move(block_cache));
 }

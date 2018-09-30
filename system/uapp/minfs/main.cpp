@@ -27,11 +27,11 @@
 
 namespace {
 
-int do_minfs_check(fbl::unique_ptr<minfs::Bcache> bc, const minfs::Options& options) {
-    return minfs_check(fbl::move(bc));
+int Fsck(fbl::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
+    return Fsck(fbl::move(bc));
 }
 
-int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, const minfs::Options& options) {
+int Mount(fbl::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
     zx_handle_t h = zx_take_startup_handle(PA_HND(PA_USER0, 0));
     if (h == ZX_HANDLE_INVALID) {
         FS_TRACE_ERROR("minfs: Could not access startup handle to mount point\n");
@@ -59,20 +59,20 @@ int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, const minfs::Options& opti
     return 0;
 }
 
-int do_minfs_mkfs(fbl::unique_ptr<minfs::Bcache> bc, const minfs::Options& options) {
+int Mkfs(fbl::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
     return Mkfs(options, fbl::move(bc));
 }
 
 struct {
     const char* name;
-    int (*func)(fbl::unique_ptr<minfs::Bcache> bc, const minfs::Options&);
+    int (*func)(fbl::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions&);
     uint32_t flags;
     const char* help;
 } CMDS[] = {
-    {"create", do_minfs_mkfs, O_RDWR | O_CREAT, "initialize filesystem"},
-    {"mkfs", do_minfs_mkfs, O_RDWR | O_CREAT, "initialize filesystem"},
-    {"check", do_minfs_check, O_RDONLY, "check filesystem integrity"},
-    {"fsck", do_minfs_check, O_RDONLY, "check filesystem integrity"},
+    {"create", Mkfs, O_RDWR | O_CREAT, "initialize filesystem"},
+    {"mkfs", Mkfs, O_RDWR | O_CREAT, "initialize filesystem"},
+    {"check", Fsck, O_RDONLY, "check filesystem integrity"},
+    {"fsck", Fsck, O_RDONLY, "check filesystem integrity"},
 };
 
 int usage() {
@@ -110,7 +110,7 @@ off_t get_size(int fd) {
 } // namespace
 
 int main(int argc, char** argv) {
-    minfs::minfs_options_t options;
+    minfs::MountOptions options;
     options.readonly = false;
     options.metrics = false;
     options.verbose = false;
@@ -184,7 +184,7 @@ int main(int argc, char** argv) {
     }
 
     if (!strcmp(cmd, "mount")) {
-        return do_minfs_mount(fbl::move(bc), options);
+        return Mount(fbl::move(bc), options);
     }
 
     for (unsigned i = 0; i < fbl::count_of(CMDS); i++) {

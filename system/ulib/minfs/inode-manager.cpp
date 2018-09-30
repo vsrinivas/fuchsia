@@ -13,7 +13,7 @@ InodeManager::InodeManager(Bcache* bc, blk_t start_block) :
     bc_(bc), start_block_(start_block) {}
 InodeManager::~InodeManager() = default;
 
-zx_status_t InodeManager::Create(Bcache* bc, Superblock* sb, fs::ReadTxn* txn,
+zx_status_t InodeManager::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn* txn,
                                  AllocatorMetadata metadata,
                                  blk_t start_block, size_t inodes,
                                  fbl::unique_ptr<InodeManager>* out) {
@@ -50,7 +50,7 @@ zx_status_t InodeManager::Create(Bcache* bc, Superblock* sb, fs::ReadTxn* txn,
     return ZX_OK;
 }
 
-void InodeManager::Update(WriteTxn* txn, ino_t ino, const minfs_inode_t* inode) {
+void InodeManager::Update(WriteTxn* txn, ino_t ino, const Inode* inode) {
     // Obtain the offset of the inode within its containing block
     const uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
     const blk_t inoblock_rel = ino / kMinfsInodesPerBlock;
@@ -71,7 +71,7 @@ void InodeManager::Update(WriteTxn* txn, ino_t ino, const minfs_inode_t* inode) 
 #endif
 }
 
-void InodeManager::Load(ino_t ino, minfs_inode_t* out) const {
+void InodeManager::Load(ino_t ino, Inode* out) const {
     // obtain the block of the inode table we need
     uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
 #ifdef __Fuchsia__
@@ -81,7 +81,7 @@ void InodeManager::Load(ino_t ino, minfs_inode_t* out) const {
     uint8_t inodata[kMinfsBlockSize];
     bc_->Readblk(start_block_ + (ino / kMinfsInodesPerBlock), inodata);
 #endif
-    const minfs_inode_t* inode = reinterpret_cast<const minfs_inode_t*>((uintptr_t)inodata +
+    const Inode* inode = reinterpret_cast<const Inode*>((uintptr_t)inodata +
                                                                         off_of_ino);
     memcpy(out, inode, kMinfsInodeSize);
 }

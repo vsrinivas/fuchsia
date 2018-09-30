@@ -15,24 +15,24 @@ namespace minfs {
 
 #ifdef __Fuchsia__
 
-Superblock::Superblock(const minfs_info_t* info,
-                       fbl::unique_ptr<fzl::MappedVmo> info_vmo) :
+SuperblockManager::SuperblockManager(const Superblock* info,
+                                     fbl::unique_ptr<fzl::MappedVmo> info_vmo) :
     info_vmo_(fbl::move(info_vmo)) {
 }
 
 #else
 
-Superblock::Superblock(const minfs_info_t* info) {
-    memcpy(&info_blk_[0], info, sizeof(minfs_info_t));
+SuperblockManager::SuperblockManager(const Superblock* info) {
+    memcpy(&info_blk_[0], info, sizeof(Superblock));
 }
 
 #endif
 
-Superblock::~Superblock() = default;
+SuperblockManager::~SuperblockManager() = default;
 
-zx_status_t Superblock::Create(Bcache* bc, const minfs_info_t* info,
-                               fbl::unique_ptr<Superblock>* out) {
-    zx_status_t status = minfs_check_info(info, bc);
+zx_status_t SuperblockManager::Create(Bcache* bc, const Superblock* info,
+                                      fbl::unique_ptr<SuperblockManager>* out) {
+    zx_status_t status = CheckSuperblock(info, bc);
     if (status != ZX_OK) {
         FS_TRACE_ERROR("Minfs::Create failed to check info: %d\n", status);
         return status;
@@ -50,17 +50,17 @@ zx_status_t Superblock::Create(Bcache* bc, const minfs_info_t* info,
     if ((status = bc->AttachVmo(info_vmo->GetVmo(), &info_vmoid)) != ZX_OK) {
         return status;
     }
-    memcpy(info_vmo->GetData(), info, sizeof(minfs_info_t));
+    memcpy(info_vmo->GetData(), info, sizeof(Superblock));
 
-    auto sb = fbl::unique_ptr<Superblock>(new Superblock(info, fbl::move(info_vmo)));
+    auto sb = fbl::unique_ptr<SuperblockManager>(new SuperblockManager(info, fbl::move(info_vmo)));
 #else
-    auto sb = fbl::unique_ptr<Superblock>(new Superblock(info));
+    auto sb = fbl::unique_ptr<SuperblockManager>(new SuperblockManager(info));
 #endif
     *out = fbl::move(sb);
     return ZX_OK;
 }
 
-void Superblock::Write(WriteTxn* txn) {
+void SuperblockManager::Write(WriteTxn* txn) {
 #ifdef __Fuchsia__
     auto data = info_vmo_->GetVmo();
 #else

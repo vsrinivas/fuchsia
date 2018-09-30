@@ -192,7 +192,7 @@ public:
     //
     // |grow_cb| is an optional callback to increase the size of the
     // allocator.
-    static zx_status_t Create(Bcache* bc, Superblock* sb, fs::ReadTxn* txn,
+    static zx_status_t Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn* txn,
                               size_t unit_size, GrowHandler grow_cb,
                               AllocatorMetadata metadata, fbl::unique_ptr<Allocator>* out);
 
@@ -207,7 +207,7 @@ private:
     friend class MinfsChecker;
     friend class AllocatorPromise;
 
-    Allocator(Bcache* bc, Superblock* sb, size_t unit_size, GrowHandler grow_cb,
+    Allocator(Bcache* bc, SuperblockManager* sb, size_t unit_size, GrowHandler grow_cb,
               AllocatorMetadata metadata);
 
     // Extend the on-disk extent containing map_.
@@ -230,7 +230,7 @@ private:
     }
 
     Bcache* bc_;
-    Superblock* sb_;
+    SuperblockManager* sb_;
     size_t unit_size_;
     GrowHandler grow_cb_;
     AllocatorMetadata metadata_;

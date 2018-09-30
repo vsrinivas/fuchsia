@@ -28,7 +28,7 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(InodeManager);
     ~InodeManager();
 
-    static zx_status_t Create(Bcache* bc, Superblock* sb, fs::ReadTxn* txn,
+    static zx_status_t Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn* txn,
                               AllocatorMetadata metadata,
                               blk_t start_block, size_t inodes,
                               fbl::unique_ptr<InodeManager>* out);
@@ -45,10 +45,10 @@ public:
     }
 
     // Persist the inode to storage.
-    void Update(WriteTxn* txn, ino_t ino, const minfs_inode_t* inode);
+    void Update(WriteTxn* txn, ino_t ino, const Inode* inode);
 
     // Load the inode from storage.
-    void Load(ino_t ino, minfs_inode_t* out) const;
+    void Load(ino_t ino, Inode* out) const;
 
     // Extend the number of inodes managed.
     //

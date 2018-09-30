@@ -88,7 +88,7 @@ bool TestQueryInfo() {
     // TODO(ZX-1372): Adjust this once minfs accounting on truncate is fixed.
     expected_info.used_bytes = 2 * minfs::kMinfsBlockSize;
     // The inode table's implementation is currently a flat array on disk.
-    expected_info.total_nodes = kSliceSize / sizeof(minfs::minfs_inode_t);
+    expected_info.total_nodes = kSliceSize / sizeof(minfs::Inode);
     // The "zero-th" inode is reserved, as well as the root directory.
     expected_info.used_nodes = 2;
     // The remainder of the FVM should be unused during this filesystem test.

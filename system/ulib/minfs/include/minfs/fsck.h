@@ -19,12 +19,12 @@
 namespace minfs {
 
 // Validate header information about the filesystem backed by |bc|.
-zx_status_t minfs_check_info(const minfs_info_t* info, Bcache* bc);
+zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc);
 
 // Run fsck on an unmounted filesystem backed by |bc|.
 //
-// Invokes minfs_check_info, but also verifies inode and block usage.
-zx_status_t minfs_check(fbl::unique_ptr<Bcache> bc);
+// Invokes CheckSuperblock, but also verifies inode and block usage.
+zx_status_t Fsck(fbl::unique_ptr<Bcache> bc);
 
 #ifndef __Fuchsia__
 // Run fsck on a sparse minfs partition
@@ -32,7 +32,7 @@ zx_status_t minfs_check(fbl::unique_ptr<Bcache> bc);
 // |end| indicates the end of the minfs partition (in bytes)
 // |extent_lengths| contains the length (in bytes) of each minfs extent: currently this includes
 // the superblock, inode bitmap, block bitmap, inode table, and data blocks.
-zx_status_t minfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
+zx_status_t SparseFsck(fbl::unique_fd fd, off_t start, off_t end,
                        const fbl::Vector<size_t>& extent_lengths);
 #endif
 } // namespace minfs

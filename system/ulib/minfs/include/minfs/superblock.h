@@ -15,7 +15,7 @@
 
 namespace minfs {
 
-// Superblock contains all filesystem-global metadata.
+// SuperblockManager contains all filesystem-global metadata.
 //
 // It also contains mechanisms for updating this information
 // on persistent storage. Although these fields may be
@@ -24,31 +24,31 @@ namespace minfs {
 // caution should be taken to avoid Writing a snapshot of the
 // superblock to disk while another thread has only partially
 // updated the superblock.
-class Superblock {
+class SuperblockManager {
 public:
-    Superblock() = delete;
-    ~Superblock();
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Superblock);
+    SuperblockManager() = delete;
+    ~SuperblockManager();
+    DISALLOW_COPY_ASSIGN_AND_MOVE(SuperblockManager);
 
-    static zx_status_t Create(Bcache* bc, const minfs_info_t* info,
-                              fbl::unique_ptr<Superblock>* out);
+    static zx_status_t Create(Bcache* bc, const Superblock* info,
+                              fbl::unique_ptr<SuperblockManager>* out);
 
-    const minfs_info_t& Info() const {
+    const Superblock& Info() const {
 #ifdef __Fuchsia__
-        return *reinterpret_cast<const minfs_info_t*>(info_vmo_->GetData());
+        return *reinterpret_cast<const Superblock*>(info_vmo_->GetData());
 #else
-        return *reinterpret_cast<const minfs_info_t*>(&info_blk_[0]);
+        return *reinterpret_cast<const Superblock*>(&info_blk_[0]);
 #endif
     }
 
     // Acquire a pointer to the superblock, such that any
     // modifications will be carried out to persistent storage
     // the next time "Write" is invoked.
-    minfs_info_t* MutableInfo() {
+    Superblock* MutableInfo() {
 #ifdef __Fuchsia__
-        return reinterpret_cast<minfs_info_t*>(info_vmo_->GetData());
+        return reinterpret_cast<Superblock*>(info_vmo_->GetData());
 #else
-        return reinterpret_cast<minfs_info_t*>(&info_blk_[0]);
+        return reinterpret_cast<Superblock*>(&info_blk_[0]);
 #endif
     }
 
@@ -57,9 +57,9 @@ public:
 
 private:
 #ifdef __Fuchsia__
-    Superblock(const minfs_info_t* info, fbl::unique_ptr<fzl::MappedVmo> info_vmo_);
+    SuperblockManager(const Superblock* info, fbl::unique_ptr<fzl::MappedVmo> info_vmo_);
 #else
-    Superblock(const minfs_info_t* info);
+    SuperblockManager(const Superblock* info);
 #endif
 
 #ifdef __Fuchsia__

@@ -79,7 +79,7 @@ constexpr size_t kMinfsMinimumSlices = 5;
 
 constexpr uint64_t kMinfsDefaultInodeCount = 32768;
 
-typedef struct {
+struct Superblock {
     uint64_t magic0;
     uint64_t magic1;
     uint32_t version;
@@ -101,7 +101,7 @@ typedef struct {
     uint32_t abm_slices;    // Slices allocated to block bitmap
     uint32_t ino_slices;    // Slices allocated to inode table
     uint32_t dat_slices;    // Slices allocated to file data section
-} minfs_info_t;
+};
 
 // Notes:
 // - the ibm, abm, ino, and dat regions must be in that order
@@ -117,7 +117,7 @@ typedef struct {
 //   at offset: ino % kMinfsInodesPerBlock
 // - inode 0 is never used, should be marked allocated but ignored
 
-typedef struct {
+struct Inode {
     uint32_t magic;
     uint32_t size;
     uint32_t block_count;
@@ -131,21 +131,21 @@ typedef struct {
     blk_t dnum[kMinfsDirect];    // direct blocks
     blk_t inum[kMinfsIndirect];  // indirect blocks
     blk_t dinum[kMinfsDoublyIndirect]; // doubly indirect blocks
-} minfs_inode_t;
+};
 
-static_assert(sizeof(minfs_inode_t) == kMinfsInodeSize,
+static_assert(sizeof(Inode) == kMinfsInodeSize,
               "minfs inode size is wrong");
 
-typedef struct {
+struct Dirent {
     ino_t ino;                      // inode number
     uint32_t reclen;                // Low 28 bits: Length of record
                                     // High 4 bits: Flags
     uint8_t namelen;                // length of the filename
     uint8_t type;                   // kMinfsType*
     char name[];                    // name does not have trailing \0
-} minfs_dirent_t;
+};
 
-constexpr uint32_t MINFS_DIRENT_SIZE = sizeof(minfs_dirent_t);
+constexpr uint32_t MINFS_DIRENT_SIZE = sizeof(Dirent);
 
 constexpr uint32_t DirentSize(uint8_t namelen) {
     return MINFS_DIRENT_SIZE + ((namelen + 3) & (~3));
@@ -164,7 +164,7 @@ static_assert(kMinfsMaxNameSize >= NAME_MAX,
 constexpr uint32_t kMinfsReclenMask = 0x0FFFFFFF;
 constexpr uint32_t kMinfsReclenLast = 0x80000000;
 
-constexpr uint32_t MinfsReclen(minfs_dirent_t* de, size_t off) {
+constexpr uint32_t MinfsReclen(Dirent* de, size_t off) {
     return (de->reclen & kMinfsReclenLast) ?
            kMinfsMaxDirectorySize - static_cast<uint32_t>(off) :
            de->reclen & kMinfsReclenMask;

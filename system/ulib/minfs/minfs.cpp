@@ -42,7 +42,7 @@ namespace minfs {
 namespace {
 
 // Deletes all known slices from an MinFS Partition.
-void minfs_free_slices(Bcache* bc, const minfs_info_t* info) {
+void minfs_free_slices(Bcache* bc, const Superblock* info) {
     if ((info->flags & kMinfsFlagFVM) == 0) {
         return;
     }
@@ -74,7 +74,7 @@ void minfs_free_slices(Bcache* bc, const minfs_info_t* info) {
 
 } // namespace
 
-void minfs_dump_info(const minfs_info_t* info) {
+void DumpInfo(const Superblock* info) {
     xprintf("minfs: data blocks:  %10u (size %u)\n", info->block_count, info->block_size);
     xprintf("minfs: inodes:  %10u (size %u)\n", info->inode_count, info->inode_size);
     xprintf("minfs: allocated blocks  @ %10u\n", info->alloc_block_count);
@@ -86,16 +86,16 @@ void minfs_dump_info(const minfs_info_t* info) {
     xprintf("minfs: FVM-aware: %s\n", (info->flags & kMinfsFlagFVM) ? "YES" : "NO");
 }
 
-void minfs_dump_inode(const minfs_inode_t* inode, ino_t ino) {
+void DumpInode(const Inode* inode, ino_t ino) {
     xprintf("inode[%u]: magic:  %10u\n", ino, inode->magic);
     xprintf("inode[%u]: size:   %10u\n", ino, inode->size);
     xprintf("inode[%u]: blocks: %10u\n", ino, inode->block_count);
     xprintf("inode[%u]: links:  %10u\n", ino, inode->link_count);
 }
 
-zx_status_t minfs_check_info(const minfs_info_t* info, Bcache* bc) {
+zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
     uint32_t max = bc->Maxblk();
-    minfs_dump_info(info);
+    DumpInfo(info);
 
     if ((info->magic0 != kMinfsMagic0) || (info->magic1 != kMinfsMagic1)) {
         FS_TRACE_ERROR("minfs: bad magic\n");
@@ -229,28 +229,28 @@ zx_status_t minfs_check_info(const minfs_info_t* info, Bcache* bc) {
 }
 
 #ifndef __Fuchsia__
-BlockOffsets::BlockOffsets(const Bcache* bc, const Superblock* sb) {
-    if (bc->extent_lengths_.size() > 0) {
-        ZX_ASSERT(bc->extent_lengths_.size() == EXTENT_COUNT);
-        ibm_block_count_ = bc->extent_lengths_[1] / kMinfsBlockSize;
-        abm_block_count_ = bc->extent_lengths_[2] / kMinfsBlockSize;
-        ino_block_count_ = bc->extent_lengths_[3] / kMinfsBlockSize;
-        dat_block_count_ = bc->extent_lengths_[4] / kMinfsBlockSize;
+BlockOffsets::BlockOffsets(const Bcache& bc, const SuperblockManager& sb) {
+    if (bc.extent_lengths_.size() > 0) {
+        ZX_ASSERT(bc.extent_lengths_.size() == EXTENT_COUNT);
+        ibm_block_count_ = bc.extent_lengths_[1] / kMinfsBlockSize;
+        abm_block_count_ = bc.extent_lengths_[2] / kMinfsBlockSize;
+        ino_block_count_ = bc.extent_lengths_[3] / kMinfsBlockSize;
+        dat_block_count_ = bc.extent_lengths_[4] / kMinfsBlockSize;
 
-        ibm_start_block_ = bc->extent_lengths_[0] / kMinfsBlockSize;
+        ibm_start_block_ = bc.extent_lengths_[0] / kMinfsBlockSize;
         abm_start_block_ = ibm_start_block_ + ibm_block_count_;
         ino_start_block_ = abm_start_block_ + abm_block_count_;
         dat_start_block_ = ino_start_block_ + ino_block_count_;
     } else {
-        ibm_start_block_ = sb->Info().ibm_block;
-        abm_start_block_ = sb->Info().abm_block;
-        ino_start_block_ = sb->Info().ino_block;
-        dat_start_block_ = sb->Info().dat_block;
+        ibm_start_block_ = sb.Info().ibm_block;
+        abm_start_block_ = sb.Info().abm_block;
+        ino_start_block_ = sb.Info().ino_block;
+        dat_start_block_ = sb.Info().dat_block;
 
         ibm_block_count_ = abm_start_block_ - ibm_start_block_;
         abm_block_count_ = ino_start_block_ - abm_start_block_;
         ino_block_count_ = dat_start_block_ - ino_start_block_;
-        dat_block_count_ = sb->Info().block_count;
+        dat_block_count_ = sb.Info().block_count;
     }
 }
 #endif
@@ -288,13 +288,13 @@ void Minfs::Sync(SyncCallback closure) {
 #endif
 
 #ifdef __Fuchsia__
-Minfs::Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<Superblock> sb,
+Minfs::Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
              fbl::unique_ptr<Allocator> block_allocator, fbl::unique_ptr<InodeManager> inodes,
              fbl::unique_ptr<WritebackBuffer> writeback, uint64_t fs_id)
     : bc_(fbl::move(bc)), sb_(fbl::move(sb)), block_allocator_(fbl::move(block_allocator)),
       inodes_(fbl::move(inodes)), writeback_(fbl::move(writeback)), fs_id_(fs_id) {}
 #else
-Minfs::Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<Superblock> sb,
+Minfs::Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
              fbl::unique_ptr<Allocator> block_allocator, fbl::unique_ptr<InodeManager> inodes,
              BlockOffsets offsets)
     : bc_(fbl::move(bc)), sb_(fbl::move(sb)), block_allocator_(fbl::move(block_allocator)),
@@ -442,7 +442,7 @@ zx_status_t Minfs::CreateFsId(uint64_t* out) {
 }
 #endif
 
-void Minfs::InoNew(Transaction* state, const minfs_inode_t* inode, ino_t* out_ino) {
+void Minfs::InoNew(Transaction* state, const Inode* inode, ino_t* out_ino) {
     size_t allocated_ino = state->AllocateInode();
     *out_ino = static_cast<ino_t>(allocated_ino);
     // Write the inode back to storage.
@@ -554,11 +554,11 @@ void Minfs::BlockFree(WriteTxn* txn, blk_t bno) {
     block_allocator_->Free(txn, bno);
 }
 
-void minfs_dir_init(void* bdata, ino_t ino_self, ino_t ino_parent) {
+void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent) {
 #define DE0_SIZE DirentSize(1)
 
     // directory entry for self
-    minfs_dirent_t* de = (minfs_dirent_t*)bdata;
+    Dirent* de = (Dirent*)bdata;
     de->ino = ino_self;
     de->reclen = DE0_SIZE;
     de->namelen = 1;
@@ -566,7 +566,7 @@ void minfs_dir_init(void* bdata, ino_t ino_self, ino_t ino_parent) {
     de->name[0] = '.';
 
     // directory entry for parent
-    de = (minfs_dirent_t*)((uintptr_t)bdata + DE0_SIZE);
+    de = (Dirent*)((uintptr_t)bdata + DE0_SIZE);
     de->ino = ino_parent;
     de->reclen = DirentSize(2) | kMinfsReclenLast;
     de->namelen = 2;
@@ -575,7 +575,7 @@ void minfs_dir_init(void* bdata, ino_t ino_self, ino_t ino_parent) {
     de->name[1] = '.';
 }
 
-zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
+zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
                           fbl::unique_ptr<Minfs>* out) {
 #ifndef __Fuchsia__
     if (bc->extent_lengths_.size() != 0 && bc->extent_lengths_.size() != EXTENT_COUNT) {
@@ -584,10 +584,10 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
     }
 #endif
 
-    fbl::unique_ptr<Superblock> sb;
+    fbl::unique_ptr<SuperblockManager> sb;
     zx_status_t status;
 
-    if ((status = Superblock::Create(bc.get(), info, &sb)) != ZX_OK) {
+    if ((status = SuperblockManager::Create(bc.get(), info, &sb)) != ZX_OK) {
         FS_TRACE_ERROR("Minfs::Create failed to initialize superblock: %d\n", status);
         return status;
     }
@@ -597,7 +597,7 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
     const blk_t ibm_start_block = sb->Info().ibm_block;
     const blk_t ino_start_block = sb->Info().ino_block;
 #else
-    BlockOffsets offsets(bc.get(), sb.get());
+    BlockOffsets offsets(*bc, *sb);
     const blk_t abm_start_block = offsets.AbmStartBlock();
     const blk_t ibm_start_block = offsets.IbmStartBlock();
     const blk_t ino_start_block = offsets.InoStartBlock();
@@ -723,7 +723,7 @@ zx_status_t GetRequiredBlockCount(size_t offset, size_t length, blk_t* num_req_b
     return ZX_OK;
 }
 
-zx_status_t minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinfs>* root_out) {
+zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinfs>* root_out) {
     TRACE_DURATION("minfs", "minfs_mount");
     zx_status_t status;
 
@@ -732,7 +732,7 @@ zx_status_t minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinf
         FS_TRACE_ERROR("minfs: could not read info block\n");
         return status;
     }
-    const minfs_info_t* info = reinterpret_cast<minfs_info_t*>(blk);
+    const Superblock* info = reinterpret_cast<Superblock*>(blk);
 
     fbl::unique_ptr<Minfs> fs;
     if ((status = Minfs::Create(fbl::move(bc), info, &fs)) != ZX_OK) {
@@ -753,13 +753,13 @@ zx_status_t minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinf
 }
 
 #ifdef __Fuchsia__
-zx_status_t MountAndServe(const minfs_options_t* options, async_dispatcher_t* dispatcher,
+zx_status_t MountAndServe(const MountOptions* options, async_dispatcher_t* dispatcher,
                           fbl::unique_ptr<Bcache> bc, zx::channel mount_channel,
                           fbl::Closure on_unmount) {
     TRACE_DURATION("minfs", "MountAndServe");
 
     fbl::RefPtr<VnodeMinfs> vn;
-    zx_status_t status = minfs_mount(fbl::move(bc), &vn);
+    zx_status_t status = Mount(fbl::move(bc), &vn);
     if (status != ZX_OK) {
         return status;
     }
@@ -801,8 +801,8 @@ void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
 }
 #endif
 
-zx_status_t Mkfs(const Options& options, fbl::unique_ptr<Bcache> bc) {
-    minfs_info_t info;
+zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
+    Superblock info;
     memset(&info, 0x00, sizeof(info));
     info.magic0 = kMinfsMagic0;
     info.magic1 = kMinfsMagic1;
@@ -906,7 +906,7 @@ zx_status_t Mkfs(const Options& options, fbl::unique_ptr<Bcache> bc) {
         info.dat_block = kFVMBlockDataStart;
     }
 
-    minfs_dump_info(&info);
+    DumpInfo(&info);
 
     RawBitmap abm;
     RawBitmap ibm;
@@ -934,7 +934,7 @@ zx_status_t Mkfs(const Options& options, fbl::unique_ptr<Bcache> bc) {
     // write rootdir
     uint8_t blk[kMinfsBlockSize];
     memset(blk, 0, sizeof(blk));
-    minfs_dir_init(blk, kMinfsRootIno, kMinfsRootIno);
+    InitializeDirectory(blk, kMinfsRootIno, kMinfsRootIno);
     if ((status = bc->Writeblk(info.dat_block + 1, blk)) != ZX_OK) {
         FS_TRACE_ERROR("mkfs: Failed to write root directory\n");
         return status;
@@ -972,7 +972,7 @@ zx_status_t Mkfs(const Options& options, fbl::unique_ptr<Bcache> bc) {
     }
 
     // setup root inode
-    minfs_inode_t* ino = reinterpret_cast<minfs_inode_t*>(&blk[0]);
+    Inode* ino = reinterpret_cast<Inode*>(&blk[0]);
     ino[kMinfsRootIno].magic = kMinfsMagicDir;
     ino[kMinfsRootIno].size = kMinfsBlockSize;
     ino[kMinfsRootIno].block_count = 1;
@@ -1011,7 +1011,7 @@ zx_status_t Minfs::ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_ma
     return bc_->Readblk(start + bno, data);
 }
 
-zx_status_t minfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
+zx_status_t SparseFsck(fbl::unique_fd fd, off_t start, off_t end,
                        const fbl::Vector<size_t>& extent_lengths) {
     if (extent_lengths.size() != EXTENT_COUNT) {
         fprintf(stderr, "error: invalid number of extents\n");
@@ -1044,7 +1044,7 @@ zx_status_t minfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
         return status;
     }
 
-    return minfs_check(fbl::move(bc));
+    return Fsck(fbl::move(bc));
 }
 #endif
 

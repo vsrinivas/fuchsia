@@ -30,7 +30,7 @@ namespace minfs {
 
 void WriteTxn::Enqueue(zx_handle_t vmo, uint64_t vmo_offset, uint64_t dev_offset,
                        uint64_t nblocks) {
-    validate_vmo_size(vmo, static_cast<blk_t>(vmo_offset));
+    ValidateVmoSize(vmo, static_cast<blk_t>(vmo_offset));
     for (size_t i = 0; i < requests_.size(); i++) {
         if (requests_[i].vmo != vmo) {
             continue;
@@ -49,7 +49,7 @@ void WriteTxn::Enqueue(zx_handle_t vmo, uint64_t vmo_offset, uint64_t dev_offset
         }
     }
 
-    write_request_t request;
+    WriteRequest request;
     request.vmo = vmo;
     // NOTE: It's easier to compare everything when dealing
     // with blocks (not offsets!) so the following are described in
@@ -244,7 +244,7 @@ void WritebackBuffer::CopyToBufferLocked(WriteTxn* txn) {
                       wb_len * kMinfsBlockSize)) == ZX_OK, "VMO Read Fail: %d", status);
         len_ += wb_len;
 
-        // Update the write_request to transfer from the writeback buffer
+        // Update the WriteRequest to transfer from the writeback buffer
         // out to disk, rather than the supplied VMO
         reqs[i].vmo_offset = wb_offset;
         reqs[i].length = wb_len;
@@ -261,11 +261,11 @@ void WritebackBuffer::CopyToBufferLocked(WriteTxn* txn) {
             len_ += wb_len;
 
             // Shift down all following write requests
-            static_assert(fbl::is_pod<write_request_t>::value, "Can't memmove non-POD");
+            static_assert(fbl::is_pod<WriteRequest>::value, "Can't memmove non-POD");
 
             // Insert the "new" request, which is the latter half of
             // the request we wrote out earlier
-            write_request_t request;
+            WriteRequest request;
             request.vmo = reqs[i].vmo;
             request.vmo_offset = 0;
             request.dev_offset = dev_offset;

@@ -41,7 +41,7 @@ MinfsFormat::MinfsFormat(fbl::unique_fd fd, const char* type)
         exit(-1);
     }
 
-    if (minfs_check_info(&info_, bc_.get()) != ZX_OK) {
+    if (CheckSuperblock(&info_, bc_.get()) != ZX_OK) {
         fprintf(stderr, "Check info failed\n");
         exit(-1);
     }
@@ -89,7 +89,7 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) {
 
     zx_status_t status;
     // Check if bitmaps are the wrong size, slice extents run on too long, etc.
-    if ((status = minfs_check_info(&fvm_info_, bc_.get())) != ZX_OK) {
+    if ((status = CheckSuperblock(&fvm_info_, bc_.get())) != ZX_OK) {
         fprintf(stderr, "Check info failed\n");
         return status;
     }

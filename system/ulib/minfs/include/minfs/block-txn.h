@@ -16,12 +16,12 @@ namespace minfs {
 
 #ifdef __Fuchsia__
 
-typedef struct {
+struct WriteRequest {
     zx_handle_t vmo;
     size_t vmo_offset;
     size_t dev_offset;
     size_t length;
-} write_request_t;
+};
 
 // A transaction consisting of enqueued VMOs to be written
 // out to disk at specified locations.
@@ -40,7 +40,7 @@ public:
     // Identify that a block should be written to disk at a later point in time.
     void Enqueue(zx_handle_t vmo, uint64_t vmo_offset, uint64_t dev_offset, uint64_t nblocks);
 
-    fbl::Vector<write_request_t>& Requests() { return requests_; }
+    fbl::Vector<WriteRequest>& Requests() { return requests_; }
 
     size_t BlkCount() const;
 
@@ -53,7 +53,7 @@ protected:
 
 private:
     Bcache* bc_;
-    fbl::Vector<write_request_t> requests_;
+    fbl::Vector<WriteRequest> requests_;
 };
 
 #else

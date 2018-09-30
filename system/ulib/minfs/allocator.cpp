@@ -73,13 +73,13 @@ AllocatorMetadata::AllocatorMetadata(AllocatorMetadata&&) = default;
 AllocatorMetadata& AllocatorMetadata::operator=(AllocatorMetadata&&) = default;
 AllocatorMetadata::~AllocatorMetadata() = default;
 
-Allocator::Allocator(Bcache* bc, Superblock* sb, size_t unit_size, GrowHandler grow_cb,
+Allocator::Allocator(Bcache* bc, SuperblockManager* sb, size_t unit_size, GrowHandler grow_cb,
                      AllocatorMetadata metadata) :
     bc_(bc), sb_(sb), unit_size_(unit_size), grow_cb_(fbl::move(grow_cb)),
     metadata_(fbl::move(metadata)), reserved_(0), hint_(0) {}
 Allocator::~Allocator() = default;
 
-zx_status_t Allocator::Create(Bcache* bc, Superblock* sb, fs::ReadTxn* txn, size_t unit_size,
+zx_status_t Allocator::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn* txn, size_t unit_size,
                               GrowHandler grow_cb, AllocatorMetadata metadata,
                               fbl::unique_ptr<Allocator>* out) {
     auto allocator = fbl::unique_ptr<Allocator>(new Allocator(bc, sb, unit_size,
