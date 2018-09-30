@@ -38,6 +38,11 @@ constexpr char kSaveToFileDefaultName[] = "/tmp/signal_generator.wav";
 
 constexpr char kStreamGainSwitch[] = "gain";
 constexpr char kStreamGainDefaultDb[] = "0.0";
+constexpr char kStreamRampSwitch[] = "ramp";
+constexpr char kStreamRampDurationSwitch[] = "rampdur";
+constexpr char kStreamRampTargetGainSwitch[] = "endgain";
+constexpr char kStreamRampTargetGainDefaultDb[] = "-75.0";
+
 constexpr char kSystemGainSwitch[] = "sgain";
 constexpr char kSystemGainDefaultDb[] = "-12.0";
 constexpr char kSystemMuteSwitch[] = "smute";
@@ -76,23 +81,47 @@ void usage(const char* prog_name) {
   printf(
       "\n\t--%s=<AMPL>\t\tSet signal amplitude (full-scale=1.0, default %s)\n",
       kAmplitudeSwitch, kAmplitudeDefaultScale);
-  printf("\n\t--%s=<DURATION>\tSet playback length, in seconds (default %s)\n",
-         kDurationSwitch, kDurationDefaultSecs);
+  printf(
+      "\n\t--%s=<DURATION_SEC>\tSet playback length, in seconds (default %s)\n",
+      kDurationSwitch, kDurationDefaultSecs);
   printf("\t--%s=<FRAMES>\tSet data buffer size, in frames (default %s)\n",
          kFramesPerPayloadSwitch, kFramesPerPayloadDefault);
 
-  printf("\n\t--%s[=<FILEPATH>]\tSave this signal to .wav file (default %s)\n",
+  printf("\n\t--%s[=<FILEPATH>]\tSave signal to .wav file (default %s)\n",
          kSaveToFileSwitch, kSaveToFileDefaultName);
-  printf(
-      "\t\t\t\tNote: gain/mute settings do not affect .wav file contents, and");
+  printf("\t\t\t\tGain/mute/ramp settings do not affect .wav file contents.");
   printf("\n\t\t\t\t24-bit signals are saved left-justified in 32-bit ints.\n");
 
   printf(
-      "\n\t--%s=<GAIN>\t\tSet AudioRenderer (stream) Gain to [%.1f, %.1f] dB "
-      "(default %s)\n",
-      kStreamGainSwitch, fuchsia::media::MUTED_GAIN_DB,
-      fuchsia::media::MAX_GAIN_DB, kStreamGainDefaultDb);
-  printf("\t--%s=<GAIN>\t\tSet System Gain to [%.1f, 0.0] dB (default %s)\n",
+      "\n\t--%s[=<GAIN_DB>]\tSet AudioRenderer gain, in dB (default %s, "
+      "range %.1f, %.1f])\n",
+      kStreamGainSwitch, kStreamGainDefaultDb, fuchsia::media::MUTED_GAIN_DB,
+      fuchsia::media::MAX_GAIN_DB);
+  printf("\t\t\t\tIf '--%s' is not specified, stream plays at unity gain.\n",
+         kStreamGainSwitch);
+
+  printf(
+      "\n\t--%s\t\t\tSmoothly ramp gain to %s dB, over the signal duration.\n",
+      kStreamRampSwitch, kStreamRampTargetGainDefaultDb);
+  printf(
+      "\t\t\t\tValues for end-of-ramp gain and ramp duration are overridden\n"
+      "\t\t\t\tby '--%s' and '--%s', respectively.\n",
+      kStreamRampTargetGainSwitch, kStreamRampDurationSwitch);
+  printf("\t\t\t\tIf '--%s' is not specified, ramping starts at unity gain.\n",
+         kStreamGainSwitch);
+  printf(
+      "\t--%s=<GAIN_DB>\tRamp stream gain to the specified value (in dB),\n"
+      "\t\t\t\tinstead of the default %s dB. (implies '--%s')\n",
+      kStreamRampTargetGainSwitch, kStreamRampTargetGainDefaultDb,
+      kStreamRampSwitch);
+  printf(
+      "\t--%s=<DURATION_MS>\tRamp stream gain over the specified duration "
+      "(in milliseconds),\n",
+      kStreamRampDurationSwitch);
+  printf("\t\t\t\trather than the signal's entire length. (implies '--%s')\n",
+         kStreamRampSwitch);
+
+  printf("\n\t--%s=<GAIN>\t\tSet System Gain to [%.1f, 0.0] dB (default %s)\n",
          kSystemGainSwitch, fuchsia::media::MUTED_GAIN_DB,
          kSystemGainDefaultDb);
   printf("\t--%s[=<0|1>]\t\tSet System Mute (1=mute, 0=unmute, default %s)\n",
@@ -171,11 +200,15 @@ int main(int argc, const char** argv) {
   // Handle duration and amplitude of generated signal
   std::string amplitude_str = command_line.GetOptionValueWithDefault(
       kAmplitudeSwitch, kAmplitudeDefaultScale);
-  media_app.set_amplitude(std::stof(amplitude_str));
+  if (amplitude_str != "") {
+    media_app.set_amplitude(std::stof(amplitude_str));
+  }
 
   std::string duration_str = command_line.GetOptionValueWithDefault(
       kDurationSwitch, kDurationDefaultSecs);
-  media_app.set_duration(std::stod(duration_str));
+  if (duration_str != "") {
+    media_app.set_duration(std::stod(duration_str));
+  }
 
   // Handle payload buffer size
   std::string frames_per_payload_str = command_line.GetOptionValueWithDefault(
@@ -183,17 +216,58 @@ int main(int argc, const char** argv) {
   media_app.set_frames_per_payload(
       fxl::StringToNumber<uint32_t>(frames_per_payload_str));
 
-  // Handle stream gain, system gain and system mute
-  media_app.set_will_set_stream_gain(command_line.HasOption(kStreamGainSwitch));
-  std::string stream_gain_str = command_line.GetOptionValueWithDefault(
-      kStreamGainSwitch, kStreamGainDefaultDb);
-  media_app.set_stream_gain(std::stof(stream_gain_str));
+  // Handle stream gain
+  if (command_line.HasOption(kStreamGainSwitch)) {
+    std::string stream_gain_str;
+    command_line.GetOptionValue(kStreamGainSwitch, &stream_gain_str);
+    if (stream_gain_str == "") {
+      stream_gain_str = kStreamGainDefaultDb;
+    }
 
+    media_app.set_will_set_stream_gain(true);
+    media_app.set_stream_gain(std::stof(stream_gain_str));
+  }
+
+  // Handle stream gain ramping, target gain and ramp duration.
+  if (command_line.HasOption(kStreamRampSwitch) ||
+      command_line.HasOption(kStreamRampTargetGainSwitch) ||
+      command_line.HasOption(kStreamRampDurationSwitch)) {
+    media_app.set_will_ramp_stream_gain();
+
+    std::string target_gain_db_str = command_line.GetOptionValueWithDefault(
+        kStreamRampTargetGainSwitch, kStreamRampTargetGainDefaultDb);
+    if (target_gain_db_str == "") {
+      target_gain_db_str = kStreamRampTargetGainDefaultDb;
+    }
+    media_app.set_ramp_target_gain_db(std::stof(target_gain_db_str));
+
+    // Convert signal duration of doublefloat seconds, to int64 nanoseconds.
+    zx_duration_t ramp_duration_nsec =
+        static_cast<zx_duration_t>(media_app.get_duration() * 1000000000.0);
+    if (command_line.HasOption(kStreamRampDurationSwitch)) {
+      std::string ramp_duration_str = "";
+      command_line.GetOptionValue(kStreamRampDurationSwitch,
+                                  &ramp_duration_str);
+
+      if (ramp_duration_str != "") {
+        // Convert input of doublefloat milliseconds, to int64 nanoseconds.
+        ramp_duration_nsec = static_cast<zx_duration_t>(
+            std::stod(ramp_duration_str) * 1000000.0);
+      }
+    }
+    media_app.set_ramp_duration_nsec(ramp_duration_nsec);
+  }
+
+  // Handle system gain and system mute
   if (command_line.HasOption(kSystemGainSwitch)) {
-    media_app.set_will_set_system_gain(
-        command_line.HasOption(kSystemGainSwitch));
-    std::string system_gain_str = command_line.GetOptionValueWithDefault(
-        kSystemGainSwitch, kSystemGainDefaultDb);
+    media_app.set_will_set_system_gain();
+
+    std::string system_gain_str;
+    command_line.GetOptionValue(kSystemGainSwitch, &system_gain_str);
+    if (system_gain_str == "") {
+      system_gain_str = kSystemGainDefaultDb;
+    }
+
     media_app.set_system_gain(std::stof(system_gain_str));
   }
 

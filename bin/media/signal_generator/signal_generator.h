@@ -40,6 +40,8 @@ class MediaApp {
   void set_amplitude(float amplitude) { amplitude_ = amplitude; }
 
   void set_duration(double duration_secs) { duration_secs_ = duration_secs; }
+  double get_duration() { return duration_secs_; }
+
   void set_frames_per_payload(uint32_t frames_per_payload) {
     frames_per_payload_ = frames_per_payload;
   }
@@ -47,16 +49,18 @@ class MediaApp {
   void set_save_to_file(bool save_to_file) { save_to_file_ = save_to_file; }
   void set_save_file_name(std::string file_name) { file_name_ = file_name; }
 
-  void set_will_set_stream_gain(bool set_stream_gain) {
-    set_stream_gain_ = set_stream_gain;
+  void set_will_set_stream_gain(bool set_gain) { set_stream_gain_ = set_gain; }
+  void set_stream_gain(float gain_db) { stream_gain_db_ = gain_db; }
+  void set_will_ramp_stream_gain() { ramp_stream_gain_ = true; }
+  void set_ramp_duration_nsec(zx_duration_t duration_nsec) {
+    ramp_duration_nsec_ = duration_nsec;
   }
-  void set_stream_gain(float stream_gain_db) {
-    stream_gain_db_ = stream_gain_db;
+  void set_ramp_target_gain_db(float gain_db) {
+    ramp_target_gain_db_ = gain_db;
   }
-  void set_will_set_system_gain(bool set_system_gain) {
-    set_system_gain_ = set_system_gain;
-  }
-  void set_system_gain(float system_gain) { system_gain_db_ = system_gain; }
+
+  void set_will_set_system_gain() { set_system_gain_ = true; }
+  void set_system_gain(float gain_db) { system_gain_db_ = gain_db; }
   void set_system_mute() { set_system_mute_ = true; }
   void set_system_unmute() { set_system_unmute_ = true; }
 
@@ -132,7 +136,11 @@ class MediaApp {
   bool wav_writer_is_initialized_ = false;
 
   bool set_stream_gain_ = false;
-  float stream_gain_db_;
+  float stream_gain_db_ = 0.0;
+  bool ramp_stream_gain_ = false;
+  float ramp_target_gain_db_ = 0.0;
+  zx_duration_t ramp_duration_nsec_;
+
   bool set_system_gain_ = false;
   float system_gain_db_;
   bool set_system_mute_ = false;

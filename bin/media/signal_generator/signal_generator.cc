@@ -186,12 +186,19 @@ void MediaApp::DisplayConfigurationSettings() {
                                                               : "sine");
   }
 
-  printf(" (amplitude %f", amplitude_);
-  if (set_stream_gain_) {
-    printf(", setting stream gain %.2f dB", stream_gain_db_);
+  printf(", amplitude %f", amplitude_);
+  if (ramp_stream_gain_) {
+    printf(
+        ",\nramping stream gain from %.3f dB to %.3f dB over %.6lf seconds "
+        "(%ld nanoseconds)",
+        stream_gain_db_, ramp_target_gain_db_,
+        static_cast<double>(ramp_duration_nsec_) / 1000000000,
+        ramp_duration_nsec_);
+  } else if (set_stream_gain_) {
+    printf(", at stream gain %.3f dB", stream_gain_db_);
   }
 
-  printf(").\nSignal will play for %.2f seconds, using %u buffers of %u frames",
+  printf(".\nSignal will play for %.3f seconds, using %u buffers of %u frames",
          duration_secs_, payloads_per_total_mapping_, frames_per_payload_);
 
   if (set_system_gain_ || set_system_mute_ || set_system_unmute_) {
@@ -261,10 +268,15 @@ void MediaApp::SetStreamType() {
 
   audio_renderer_->SetPcmStreamType(std::move(format));
 
-  if (set_stream_gain_) {
+  if (set_stream_gain_ || ramp_stream_gain_) {
     // Set stream gain, and clear the mute status.
     gain_control_->SetGain(stream_gain_db_);
     gain_control_->SetMute(false);
+
+    if (ramp_stream_gain_) {
+      gain_control_->SetGainWithRamp(ramp_target_gain_db_, ramp_duration_nsec_,
+                                     fuchsia::media::AudioRamp::SCALE_LINEAR);
+    }
   }
 }
 
