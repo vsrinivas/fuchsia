@@ -212,12 +212,14 @@ typedef struct {
     uint8_t bmAttributes;
     uint16_t wBytesPerInterval;
 } __attribute__ ((packed)) usb_ss_ep_comp_descriptor_t;
+#define usb_ss_ep_comp_isoc_mult(ep) ((ep)->bmAttributes & 0x3)
+#define usb_ss_ep_comp_isoc_comp(ep) (!!((ep)->bmAttributes & 0x80))
 
 typedef struct {
     uint8_t bLength;
     uint8_t bDescriptorType;    // USB_DT_SS_ISOCH_EP_COMPANION
     uint16_t wReserved;
-    uint16_t wBytesPerInterval;
+    uint32_t dwBytesPerInterval;
 } __attribute__ ((packed)) usb_ss_isoch_ep_comp_descriptor_t;
 
 typedef struct {
