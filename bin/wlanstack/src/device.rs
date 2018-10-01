@@ -201,7 +201,7 @@ fn create_sme<S>(proxy: fidl_mlme::MlmeProxy,
         fidl_mlme::MacRole::Ap => {
             let (sender, receiver) = mpsc::unbounded();
             let fut = station::ap::serve(
-                proxy, event_stream, receiver, stats_requests);
+                proxy, device_info, event_stream, receiver, stats_requests);
             Ok((SmeServer::Ap(sender), FutureObj::new(Box::new(fut))))
         },
         fidl_mlme::MacRole::Mesh => {

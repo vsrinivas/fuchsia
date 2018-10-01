@@ -12,7 +12,7 @@ use log::{debug, warn};
 use wlan_rsn::rsne::Rsne;
 
 use crate::ap::rsn::{create_wpa2_psk_rsne, is_valid_rsne_subset};
-use crate::{MacAddr, MlmeRequest, Ssid};
+use crate::{DeviceInfo, MacAddr, MlmeRequest, Ssid};
 use crate::sink::MlmeSink;
 
 const DEFAULT_BEACON_PERIOD: u16 = 100;
@@ -51,6 +51,8 @@ enum State {
 
 pub struct ApSme<T: Tokens> {
     state: State,
+    #[allow(dead_code)]
+    device_info: DeviceInfo,
     mlme_sink: MlmeSink,
     user_sink: UserSink<T>,
 }
@@ -75,11 +77,12 @@ pub enum UserEvent<T: Tokens> {
 }
 
 impl<T: Tokens> ApSme<T> {
-    pub fn new() -> (Self, crate::MlmeStream, UserStream<T>) {
+    pub fn new(device_info: DeviceInfo) -> (Self, crate::MlmeStream, UserStream<T>) {
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (user_sink, user_stream) = mpsc::unbounded();
         let sme = ApSme {
             state: State::Idle,
+            device_info,
             mlme_sink: MlmeSink::new(mlme_sink),
             user_sink: UserSink::new(user_sink),
         };
@@ -222,10 +225,12 @@ fn create_start_request(config: &Config, rsne: Option<&Rsne>) -> fidl_mlme::Star
 mod tests {
     use super::*;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
+    use std::collections::HashSet;
     use std::error::Error;
 
-    use crate::Station;
+    use crate::{MlmeStream, Station};
 
+    const AP_ADDR: [u8; 6] = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
     const SSID: &'static [u8] = &[0x46, 0x55, 0x43, 0x48, 0x53, 0x49, 0x41];
     const RSNE: &'static [u8] = &[
@@ -261,7 +266,7 @@ mod tests {
 
     #[test]
     fn authenticate_while_sme_is_idle() {
-        let (mut sme, mut mlme_stream, _) = ApSme::<FakeTokens>::new();
+        let (mut sme, mut mlme_stream, _) = create_sme();
         sme.on_mlme_event(create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
 
         match mlme_stream.try_next() {
@@ -272,7 +277,7 @@ mod tests {
 
     #[test]
     fn ap_starting() {
-        let (mut sme, mut mlme_stream, _) = ApSme::<FakeTokens>::new();
+        let (mut sme, mut mlme_stream, _) = create_sme();
         sme.on_start_command(unprotected_config(), 10);
 
         let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
@@ -419,7 +424,7 @@ mod tests {
     }
 
     fn start_ap(protected: bool) -> (ApSme<FakeTokens>, crate::MlmeStream, UserStream<FakeTokens>) {
-        let (mut sme, mut mlme_stream, event_stream) = ApSme::<FakeTokens>::new();
+        let (mut sme, mut mlme_stream, event_stream) = create_sme();
         let config = if protected { protected_config() } else { unprotected_config() };
         sme.on_start_command(config, 10);
         match mlme_stream.try_next().unwrap().expect("expect mlme message") {
@@ -427,6 +432,13 @@ mod tests {
             _ => panic!("expect start AP to MLME"),
         }
         (sme, mlme_stream, event_stream)
+    }
+
+    fn create_sme() -> (ApSme<FakeTokens>, MlmeStream, UserStream<FakeTokens>) {
+        ApSme::new(DeviceInfo {
+            supported_channels: HashSet::new(),
+            addr: AP_ADDR,
+        })
     }
 
     struct FakeTokens;

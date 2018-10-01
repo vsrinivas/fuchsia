@@ -12,7 +12,7 @@ use log::error;
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
-use wlan_sme::ap::{self as ap_sme, UserEvent};
+use wlan_sme::{ap::{self as ap_sme, UserEvent}, DeviceInfo};
 
 use crate::future_util::ConcurrentTasks;
 use crate::Never;
@@ -29,13 +29,14 @@ pub type Endpoint = fidl::endpoints::ServerEnd<fidl_sme::ApSmeMarker>;
 type Sme = ap_sme::ApSme<Tokens>;
 
 pub async fn serve<S>(proxy: MlmeProxy,
+                      device_info: DeviceInfo,
                       event_stream: MlmeEventStream,
                       new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
                       stats_requests: S)
     -> Result<(), failure::Error>
     where S: Stream<Item = StatsRequest> + Send + Unpin
 {
-    let (sme, mlme_stream, user_stream) = Sme::new();
+    let (sme, mlme_stream, user_stream) = Sme::new(device_info);
     let sme = Arc::new(Mutex::new(sme));
     let mlme_sme = super::serve_mlme_sme(
         proxy, event_stream, Arc::clone(&sme), mlme_stream, stats_requests);
