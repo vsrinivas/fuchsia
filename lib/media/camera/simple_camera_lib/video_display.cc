@@ -82,19 +82,21 @@ zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
 // This function is a stand-in for the fact that our formats are not
 // standardized accross the platform.  This is an issue, we are tracking
 // it as (MTWN-98).
-fuchsia::images::PixelFormat ConvertFormat(
-    fuchsia::sysmem::PixelFormat driver_format) {
+bool ConvertFormat(fuchsia::sysmem::PixelFormat driver_format,
+                   fuchsia::images::PixelFormat* out_fmt) {
   switch (driver_format.type) {
     case fuchsia::sysmem::PixelFormatType::BGRA32:
-      return fuchsia::images::PixelFormat::BGRA_8;
+      *out_fmt = fuchsia::images::PixelFormat::BGRA_8;
+      return true;
     case fuchsia::sysmem::PixelFormatType::YUY2:
-      return fuchsia::images::PixelFormat::YUY2;
+      *out_fmt = fuchsia::images::PixelFormat::YUY2;
+      return true;
     case fuchsia::sysmem::PixelFormatType::NV12:
-      return fuchsia::images::PixelFormat::NV12;
+      *out_fmt = fuchsia::images::PixelFormat::NV12;
+      return true;
     default:
-      FXL_DCHECK(false) << "Unsupported format!";
+      return false;
   }
-  return fuchsia::images::PixelFormat::BGRA_8;
 }
 
 zx_status_t VideoDisplay::SetupBuffers(
@@ -108,8 +110,11 @@ zx_status_t VideoDisplay::SetupBuffers(
 
   // To make things look like a webcam application, mirror left-right.
   image_info.transform = fuchsia::images::Transform::FLIP_HORIZONTAL;
-  image_info.pixel_format =
-      ConvertFormat(buffer_collection.format.image().pixel_format);
+
+  if (!ConvertFormat(buffer_collection.format.image().pixel_format,
+                     &image_info.pixel_format)) {
+    FXL_CHECK(false) << "Unsupported format";
+  }
 
   for (size_t id = 0; id < buffer_collection.buffer_count; ++id) {
     zx::vmo vmo_dup;
@@ -274,7 +279,14 @@ zx_status_t VideoDisplay::ConnectToCamera(
                     << formats[i].format.planes[0].bytes_per_row;
     }
   }
-  auto chosen_format = formats[0];
+  uint32_t idx = 0;
+  fuchsia::images::PixelFormat fmt;
+  while (!ConvertFormat(formats[idx].format.pixel_format, &fmt)) {
+    if (++idx == formats.size()) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+  }
+  auto chosen_format = formats[idx];
   // Allocate VMO buffer storage
   {
     fuchsia::sysmem::BufferCollectionInfo buffer_collection;
