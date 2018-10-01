@@ -2289,18 +2289,20 @@ static bool TestCompressorBufferTooSmall(void) {
     EXPECT_EQ(ac.check(), true);
     ASSERT_EQ(c.Initialize(buf.get(), buf_size), ZX_OK);
 
-    // Keep compressing data until Compressor returns an error.
-    unsigned int seed = 0;
-    zx_status_t result = ZX_OK;
-    for (;;) {
-        char data = static_cast<char>(rand_r(&seed));
-        result = c.Update(&data, 1);
-        if (result != ZX_OK) {
-            break;
-        }
-    }
-    ASSERT_EQ(result, ZX_ERR_IO_DATA_INTEGRITY);
+    // Create data that is just too big to fit within this buffer size.
+    size_t data_size = 0;
+    while (c.BufferMax(++data_size) <= buf_size) {}
+    ASSERT_GT(data_size, 0);
 
+    unsigned int seed = 0;
+    fbl::unique_ptr<char[]> data(new (&ac) char[data_size]);
+    EXPECT_EQ(ac.check(), true);
+
+    for (size_t i = 0; i < data_size; i++) {
+        data[i] = static_cast<char>(rand_r(&seed));
+    }
+
+    ASSERT_EQ(c.Update(&data, data_size), ZX_ERR_IO_DATA_INTEGRITY);
     END_TEST;
 }
 
