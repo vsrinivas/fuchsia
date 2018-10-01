@@ -17,6 +17,7 @@
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
+#include "peridot/bin/ledger/fidl/error_notifier.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/p2p_provider/impl/p2p_provider_impl.h"
 #include "peridot/bin/ledger/p2p_sync/impl/user_communicator_impl.h"
@@ -110,13 +111,13 @@ class LedgerAppInstanceImpl final
         : environment_(
               BuildEnvironment(loop, dispatcher, io_dispatcher, random)),
           factory_impl_(&environment_, std::move(user_communicator_factory)),
-          factory_binding_(&factory_impl_, std::move(request)) {}
+          proxy_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() {}
 
    private:
     Environment environment_;
     LedgerRepositoryFactoryImpl factory_impl_;
-    fidl::Binding<ledger_internal::LedgerRepositoryFactory> factory_binding_;
+    fuchsia::ledger::internal::LedgerRepositoryFactoryErrorNotifierProxy proxy_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryContainer);
   };

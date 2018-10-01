@@ -1,0 +1,16 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ledger.errornotifiertest;
+
+using fuchsia.ledger;
+
+interface ErrorNotifierTest : fuchsia.ledger.ErrorNotifier {
+    1: NoResponse();
+    2: NoResponseWithParameter(int8 input);
+    3: EmptyResponse() -> ();
+    4: EmptyResponseWithParameter(int8 input) -> ();
+    5: NotEmptyResponse() -> (int8 value);
+    6: NotEmptyResponseWithParameter(int8 input) -> (int8 value);
+};

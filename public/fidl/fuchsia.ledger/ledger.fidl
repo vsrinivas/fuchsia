@@ -37,6 +37,20 @@ struct PageId {
     array<uint8>:kPageIdSize id;
 };
 
+/// Base interface for all services offered by the Ledger.
+//
+/// In case of an unexpected error on one of the service offered by the Ledger,
+/// the service will close the connected channel, sending a |ledger.Status| as an epitaph.
+///
+/// If a client needs to ensure a sequence of operation has been processed by
+/// the service, it can issue a |Sync| command. The response will be send once
+/// all request started before the |Sync| request has been processed by the
+/// service.
+[FragileBase]
+interface ErrorNotifier {
+    1000: Sync() -> ();
+};
+
 [Discoverable]
 interface Ledger {
     /// Retrieves the page with the given identifier, creating it if needed. A

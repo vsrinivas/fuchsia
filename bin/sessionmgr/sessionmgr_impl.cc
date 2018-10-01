@@ -300,23 +300,21 @@ void SessionmgrImpl::InitializeLedger(
     // TODO(mesch): Teardown cloud_provider_app_ ?
   }
 
+  ledger_repository_factory_.set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "LedgerRepositoryFactory.GetRepository() failed: "
+                   << LedgerEpitaphToString(status) << std::endl
+                   << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
+    Logout();
+  });
   ledger_app_->services().ConnectToService(
       ledger_repository_factory_.NewRequest());
   AtEnd(Reset(&ledger_repository_factory_));
 
   // The directory "/data" is the data root "/data/LEDGER" that the ledger app
   // client is configured to.
-  ledger_repository_factory_->GetRepository(
-      GetLedgerRepositoryDirectory(), std::move(cloud_provider),
-      ledger_repository_.NewRequest(), [this](fuchsia::ledger::Status status) {
-        if (status != fuchsia::ledger::Status::OK) {
-          FXL_LOG(ERROR)
-              << "LedgerRepositoryFactory.GetRepository() failed: "
-              << LedgerStatusToString(status) << std::endl
-              << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
-          Logout();
-        }
-      });
+  ledger_repository_factory_->GetRepository(GetLedgerRepositoryDirectory(),
+                                            std::move(cloud_provider),
+                                            ledger_repository_.NewRequest());
 
   // If ledger state is erased from underneath us (happens when the cloud store
   // is cleared), ledger will close the connection to |ledger_repository_|.

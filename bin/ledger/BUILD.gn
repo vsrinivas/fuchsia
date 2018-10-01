@@ -154,6 +154,7 @@ executable("ledger_unittests") {
     "//peridot/bin/ledger/encryption/impl:unittests",
     "//peridot/bin/ledger/encryption/primitives:unittests",
     "//peridot/bin/ledger/environment:unittests",
+    "//peridot/bin/ledger/fidl/error_notifier:unittests",
     "//peridot/bin/ledger/filesystem:unittests",
     "//peridot/bin/ledger/lock:unittests",
     "//peridot/bin/ledger/p2p_provider/impl:unittests",

@@ -28,6 +28,7 @@ executable("integration") {
     "//garnet/public/lib/timekeeper:testing",
     "//peridot/bin/ledger/app:lib",
     "//peridot/bin/ledger/fidl",
+    "//peridot/bin/ledger/fidl:error_notifier",
     "//peridot/bin/ledger/p2p_provider/impl",
     "//peridot/bin/ledger/p2p_provider/public",
     "//peridot/bin/ledger/p2p_sync/impl",

@@ -12,6 +12,7 @@
 namespace modular {
 
 std::string LedgerStatusToString(fuchsia::ledger::Status status);
+std::string LedgerEpitaphToString(zx_status_t status);
 
 }  // namespace modular
 

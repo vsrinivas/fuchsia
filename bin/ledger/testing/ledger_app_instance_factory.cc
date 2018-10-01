@@ -18,7 +18,14 @@ LedgerAppInstanceFactory::LedgerAppInstance::LedgerAppInstance(
     ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory)
     : loop_controller_(loop_controller),
       test_ledger_name_(std::move(test_ledger_name)),
-      ledger_repository_factory_(std::move(ledger_repository_factory)) {}
+      ledger_repository_factory_(std::move(ledger_repository_factory)) {
+  ledger_repository_factory_.set_error_handler([](zx_status_t status) {
+    if (status != ZX_ERR_PEER_CLOSED) {
+      ADD_FAILURE() << "|LedgerRepositoryFactory| failed with an error: "
+                    << status;
+    }
+  });
+}
 
 LedgerAppInstanceFactory::LedgerAppInstance::~LedgerAppInstance() {}
 
@@ -30,17 +37,9 @@ LedgerAppInstanceFactory::LedgerAppInstance::ledger_repository_factory() {
 ledger_internal::LedgerRepositoryPtr
 LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
   ledger_internal::LedgerRepositoryPtr repository;
-  Status status;
-  auto waiter = loop_controller_->NewWaiter();
   ledger_repository_factory_->GetRepository(
       fsl::CloneChannelFromFileDescriptor(tmpfs_.root_fd()),
-      MakeCloudProvider(), repository.NewRequest(),
-      callback::Capture(waiter->GetCallback(), &status));
-  if (!waiter->RunUntilCalled()) {
-    ADD_FAILURE() << "|GetRepository| failed to call back.";
-    return nullptr;
-  }
-  EXPECT_EQ(Status::OK, status);
+      MakeCloudProvider(), repository.NewRequest());
   return repository;
 }
 

@@ -12,6 +12,7 @@
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/ledger_client/constants.h"
+#include "peridot/lib/ledger_client/status.h"
 
 namespace modular {
 
@@ -27,6 +28,10 @@ LedgerRepositoryForTesting::LedgerRepositoryForTesting()
       std::make_unique<AppClient<fuchsia::ledger::internal::LedgerController>>(
           launcher.get(), std::move(ledger_config));
 
+  ledger_repo_factory_.set_error_handler([](zx_status_t status) {
+    FXL_CHECK(false) << "LedgerRepositoryFactory returned an error. Status: "
+                     << LedgerEpitaphToString(status);
+  });
   ledger_app_client_->services().ConnectToService(
       ledger_repo_factory_.NewRequest());
 }
@@ -38,9 +43,7 @@ LedgerRepositoryForTesting::ledger_repository() {
   if (!ledger_repo_) {
     ledger_repo_factory_->GetRepository(
         fsl::CloneChannelFromFileDescriptor(tmp_fs_.root_fd()), nullptr,
-        ledger_repo_.NewRequest(), [this](fuchsia::ledger::Status status) {
-          FXL_CHECK(status == fuchsia::ledger::Status::OK);
-        });
+        ledger_repo_.NewRequest());
   }
 
   return ledger_repo_.get();

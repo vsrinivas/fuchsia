@@ -177,6 +177,7 @@ source_set("ledger_repository_for_testing") {
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/ledger_client:constants",
+    "//peridot/lib/ledger_client:status",
     "//peridot/public/fidl/fuchsia.ledger",
   ]
 

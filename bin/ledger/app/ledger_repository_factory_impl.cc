@@ -230,7 +230,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
     fidl::InterfaceRequest<ledger_internal::LedgerRepository>
         repository_request,
-    GetRepositoryCallback callback) {
+    fit::function<void(Status)> callback) {
   fxl::UniqueFD root_fd =
       fsl::OpenChannelAsFileDescriptor(std::move(repository_handle));
   if (!root_fd.is_valid()) {
@@ -246,7 +246,7 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
     fidl::InterfaceRequest<ledger_internal::LedgerRepository>
         repository_request,
-    GetRepositoryCallback callback) {
+    fit::function<void(Status)> callback) {
   TRACE_DURATION("ledger", "repository_factory_get_repository");
 
   RepositoryInformation repository_information(root_fd.get());

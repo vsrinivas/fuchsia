@@ -8,6 +8,7 @@
 
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <lib/fxl/logging.h>
+#include <zircon/status.h>
 
 namespace modular {
 
@@ -47,5 +48,12 @@ std::string LedgerStatusToString(fuchsia::ledger::Status status) {
       return "UNKNOWN_ERROR";
   }
 };
+
+std::string LedgerEpitaphToString(zx_status_t status) {
+  if (status > 0) {
+    return LedgerStatusToString(static_cast<fuchsia::ledger::Status>(status));
+  }
+  return zx_status_get_string(status);
+}
 
 }  // namespace modular

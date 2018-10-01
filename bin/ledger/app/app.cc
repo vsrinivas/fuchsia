@@ -24,6 +24,7 @@
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 #include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/fidl/error_notifier.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/p2p_sync/impl/user_communicator_factory_impl.h"
 
@@ -96,8 +97,8 @@ class App : public ledger_internal::LedgerController {
             [this](
                 fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
                     request) {
-              factory_bindings_.AddBinding(factory_impl_.get(),
-                                           std::move(request));
+              factory_bindings_.emplace(factory_impl_.get(),
+                                        std::move(request));
             });
     startup_context_->outgoing().AddPublicService<LedgerController>(
         [this](fidl::InterfaceRequest<LedgerController> request) {
@@ -121,7 +122,9 @@ class App : public ledger_internal::LedgerController {
   fit::deferred_action<fit::closure> cobalt_cleaner_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
-  fidl::BindingSet<ledger_internal::LedgerRepositoryFactory> factory_bindings_;
+  callback::AutoCleanableSet<
+      fuchsia::ledger::internal::LedgerRepositoryFactoryErrorNotifierProxy>
+      factory_bindings_;
   fidl::BindingSet<LedgerController> controller_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);

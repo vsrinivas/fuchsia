@@ -73,6 +73,11 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
       }
     });
 
+    ledger_repository_factory_.set_error_handler([](zx_status_t status) {
+      if (status != ZX_ERR_PEER_CLOSED) {
+        ADD_FAILURE() << "Ledger repository error: " << status;
+      }
+    });
     child_services.ConnectToService(ledger_repository_factory_.NewRequest());
     child_services.ConnectToService(controller_.NewRequest());
   }
@@ -155,10 +160,7 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
   scoped_tmpfs::ScopedTmpFS tmpfs;
   ledger_repository_factory_->GetRepository(
       fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()), nullptr,
-      ledger_repository.NewRequest(),
-      callback::Capture(QuitLoopClosure(), &status));
-  RunLoop();
-  ASSERT_EQ(ledger::Status::OK, status);
+      ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest(), &status);
   ASSERT_EQ(ledger::Status::OK, status);
@@ -202,7 +204,6 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   bool ledger_shut_down = false;
   RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
 
-  ledger::Status status;
   ledger_internal::LedgerRepositoryPtr ledger_repository;
   scoped_tmpfs::ScopedTmpFS tmpfs;
   const std::string content_path = "content";
@@ -231,10 +232,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
 
   ledger_repository_factory_->GetRepository(
       fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-      std::move(cloud_provider_ptr), ledger_repository.NewRequest(),
-      callback::Capture(QuitLoopClosure(), &status));
-  RunLoop();
-  ASSERT_EQ(ledger::Status::OK, status);
+      std::move(cloud_provider_ptr), ledger_repository.NewRequest());
 
   bool repo_disconnected = false;
   ledger_repository.set_error_handler(
@@ -274,7 +272,6 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
   bool ledger_shut_down = false;
   RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
 
-  ledger::Status status;
   ledger_internal::LedgerRepositoryPtr ledger_repository;
   scoped_tmpfs::ScopedTmpFS tmpfs;
   const std::string content_path = "content";
@@ -296,10 +293,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
 
   ledger_repository_factory_->GetRepository(
       fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-      std::move(cloud_provider_ptr), ledger_repository.NewRequest(),
-      callback::Capture(QuitLoopClosure(), &status));
-  RunLoop();
-  ASSERT_EQ(ledger::Status::OK, status);
+      std::move(cloud_provider_ptr), ledger_repository.NewRequest());
 
   bool repo_disconnected = false;
   ledger_repository.set_error_handler(
@@ -339,10 +333,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
       &cloud_provider, cloud_provider_ptr.NewRequest());
   ledger_repository_factory_->GetRepository(
       fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-      std::move(cloud_provider_ptr), ledger_repository.NewRequest(),
-      callback::Capture(QuitLoopClosure(), &status));
-  RunLoop();
-  ASSERT_EQ(ledger::Status::OK, status);
+      std::move(cloud_provider_ptr), ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest(), &status);
   ASSERT_EQ(ledger::Status::OK, status);
@@ -392,10 +383,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
       &cloud_provider, cloud_provider_ptr.NewRequest());
   ledger_repository_factory_->GetRepository(
       fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-      std::move(cloud_provider_ptr), ledger_repository.NewRequest(),
-      callback::Capture(QuitLoopClosure(), &status));
-  RunLoop();
-  ASSERT_EQ(ledger::Status::OK, status);
+      std::move(cloud_provider_ptr), ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest(), &status);
   ASSERT_EQ(ledger::Status::OK, status);

@@ -22,6 +22,7 @@
 #include "peridot/bin/ledger/app/ledger_repository_impl.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"
 #include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/fidl/error_notifier.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/p2p_sync/public/user_communicator_factory.h"
 #include "peridot/bin/ledger/sync_coordinator/impl/user_sync_impl.h"
@@ -29,7 +30,8 @@
 namespace ledger {
 
 class LedgerRepositoryFactoryImpl
-    : public ledger_internal::LedgerRepositoryFactory {
+    : public ::fuchsia::ledger::internal::
+          LedgerRepositoryFactoryErrorNotifierDelegate {
  public:
   explicit LedgerRepositoryFactoryImpl(
       Environment* environment,
@@ -41,13 +43,13 @@ class LedgerRepositoryFactoryImpl
   class LedgerRepositoryContainer;
   struct RepositoryInformation;
 
-  // LedgerRepositoryFactory:
+  // LedgerRepositoryFactoryErrorNotifierDelegate:
   void GetRepository(
       zx::channel repository_handle,
       fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
       fidl::InterfaceRequest<ledger_internal::LedgerRepository>
           repository_request,
-      GetRepositoryCallback callback) override;
+      fit::function<void(Status)> callback) override;
 
   // Binds |repository_request| to the repository stored in the directory opened
   // in |root_fd|.
@@ -56,7 +58,7 @@ class LedgerRepositoryFactoryImpl
       fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
       fidl::InterfaceRequest<ledger_internal::LedgerRepository>
           repository_request,
-      GetRepositoryCallback callback);
+      fit::function<void(Status)> callback);
   std::unique_ptr<sync_coordinator::UserSyncImpl> CreateUserSync(
       const RepositoryInformation& repository_information,
       fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,

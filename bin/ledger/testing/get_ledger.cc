@@ -43,7 +43,6 @@ void GetLedger(component::StartupContext* context,
                                        std::move(controller_request));
   child_services.ConnectToService(repository_factory->NewRequest());
 
-  auto repository_factory_ptr = repository_factory->get();
   auto repository = std::make_unique<ledger_internal::LedgerRepositoryPtr>();
   auto request = repository->NewRequest();
 
@@ -56,40 +55,38 @@ void GetLedger(component::StartupContext* context,
     return;
   }
 
-  repository_factory_ptr->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(dir.get()), std::move(cloud_provider),
-      std::move(request),
+  repository_factory->set_error_handler(
+      [callback = callback.share()](zx_status_t status) {
+        if (status > 0) {
+          FXL_LOG(ERROR) << "Failure while getting repository: " << status;
+          callback(static_cast<ledger::Status>(status), nullptr);
+        }
+      });
+
+  (*repository_factory)
+      ->GetRepository(fsl::CloneChannelFromFileDescriptor(dir.get()),
+                      std::move(cloud_provider), std::move(request));
+
+  auto repository_ptr = repository->get();
+  auto ledger = std::make_unique<LedgerPtr>();
+  auto ledger_request = ledger->NewRequest();
+  repository_ptr->GetLedger(
+      convert::ToArray(ledger_name), std::move(ledger_request),
       [repository_factory = std::move(repository_factory),
-       repository = std::move(repository), ledger_name = std::move(ledger_name),
-       ledger_repository_path, error_handler = std::move(error_handler),
+       repository = std::move(repository), ledger = std::move(ledger),
+       error_handler = std::move(error_handler),
        callback = std::move(callback)](Status status) mutable {
         if (status != Status::OK) {
-          FXL_LOG(ERROR) << "Failure while getting repository.";
+          FXL_LOG(ERROR) << "Failure while getting ledger.";
           callback(status, nullptr);
           return;
         }
-
-        auto repository_ptr = repository->get();
-        auto ledger = std::make_unique<LedgerPtr>();
-        auto request = ledger->NewRequest();
-        repository_ptr->GetLedger(
-            convert::ToArray(ledger_name), std::move(request),
-            [repository = std::move(repository), ledger = std::move(ledger),
-             error_handler = std::move(error_handler),
-             callback = std::move(callback)](Status status) mutable {
-              if (status != Status::OK) {
-                FXL_LOG(ERROR) << "Failure while getting ledger.";
-                callback(status, nullptr);
-                return;
-              }
-              ledger->set_error_handler([error_handler =
-                                             std::move(error_handler)](
-                                            zx_status_t status) {
-                FXL_LOG(ERROR) << "The ledger connection was closed, quitting.";
-                error_handler();
-              });
-              callback(Status::OK, std::move(*ledger));
+        ledger->set_error_handler(
+            [error_handler = std::move(error_handler)](zx_status_t status) {
+              FXL_LOG(ERROR) << "The ledger connection was closed, quitting.";
+              error_handler();
             });
+        callback(Status::OK, std::move(*ledger));
       });
 }
 

@@ -11,7 +11,7 @@ using fuchsia.ledger.cloud;
 // the process setting up the user environment to obtain repositories for
 // individual users.
 [Discoverable]
-interface LedgerRepositoryFactory {
+interface LedgerRepositoryFactory : fuchsia.ledger.ErrorNotifier {
     // Binds to the directory referenced by |repository|. If this is called
     // multiple times for the same directory, only the first instance of
     // |server_id| / |token_provider| will be used. Any subsequent ones will
@@ -28,8 +28,7 @@ interface LedgerRepositoryFactory {
     //     repository and disconnects all clients.
     1: GetRepository(handle<channel> repository_directory,
                      fuchsia.ledger.cloud.CloudProvider? cloud_provider,
-                     request<LedgerRepository> repository)
-           -> (fuchsia.ledger.Status status);
+                     request<LedgerRepository> repository);
 };
 
 // Controller interface for the Ledger application lifecycle.
