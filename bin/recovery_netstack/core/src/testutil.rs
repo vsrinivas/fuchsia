@@ -71,7 +71,15 @@ pub fn set_logger_for_test() {
 }
 
 #[derive(Default)]
-pub struct DummyEventDispatcher;
+pub struct DummyEventDispatcher {
+    frames_sent: Vec<(DeviceId, Vec<u8>)>,
+}
+
+impl DummyEventDispatcher {
+    pub fn frames_sent(&self) -> &[(DeviceId, Vec<u8>)] {
+        &self.frames_sent
+    }
+}
 
 impl UdpEventDispatcher for DummyEventDispatcher {
     type UdpConn = ();
@@ -82,7 +90,7 @@ impl TransportLayerEventDispatcher for DummyEventDispatcher {}
 
 impl DeviceLayerEventDispatcher for DummyEventDispatcher {
     fn send_frame(&mut self, device: DeviceId, frame: &[u8]) {
-        unimplemented!()
+        self.frames_sent.push((device, frame.to_vec()));
     }
 }
 

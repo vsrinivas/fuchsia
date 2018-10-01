@@ -86,7 +86,7 @@ mod tests {
     fn test_send_echo_request() {
         use crate::ip::testdata::icmp_echo::*;
 
-        let mut ctx = Context::new(Default::default(), DummyEventDispatcher);
+        let mut ctx = Context::new(Default::default(), DummyEventDispatcher::default());
         let src = <Ipv4 as Ip>::LOOPBACK_ADDRESS;
         let dst = Ipv4Addr::new([192, 168, 1, 5]);
         let mut bytes = REQUEST_IP_PACKET_BYTES.to_owned();
