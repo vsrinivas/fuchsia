@@ -124,6 +124,7 @@ zx_status_t UsbVideoStream::Bind(const char* devname,
     fbl::AutoLock lock(&lock_);
 
     list_initialize(&free_reqs_);
+    num_free_reqs_ = 0;
 
     // For isochronous transfers we know the maximum payload size to
     // use for the usb request size.
