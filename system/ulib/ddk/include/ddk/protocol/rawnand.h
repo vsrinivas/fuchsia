@@ -16,16 +16,16 @@ __BEGIN_CDECLS;
 
 typedef struct raw_nand_protocol_ops {
     // Read one nand page with hwecc.
-    zx_status_t (*read_page_hwecc)(void* ctx, void *data, void *oob,
-                                   uint32_t nandpage, int *ecc_correct);
+    zx_status_t (*read_page_hwecc)(void* ctx, void* data, void* oob,
+                                   uint32_t nandpage, int* ecc_correct);
     // Write one nand page with hwecc.
     zx_status_t (*write_page_hwecc)(void* ctx, const void* data, const void* oob,
                                     uint32_t nandpage);
     // Erase nand block.
     zx_status_t (*erase_block)(void* ctx, uint32_t nandpage);
-    zx_status_t (*get_nand_info)(void *ctx, struct nand_info *info);
+    zx_status_t (*get_nand_info)(void* ctx, nand_info_t* info);
     // Send ONFI command down to controller.
-    void (*cmd_ctrl)(void *ctx, int32_t cmd, uint32_t ctrl);
+    void (*cmd_ctrl)(void* ctx, int32_t cmd, uint32_t ctrl);
     // Read byte (used to read status as well as other info, such as ID).
     uint8_t (*read_byte)(void *ctx);
 } raw_nand_protocol_ops_t;
@@ -58,7 +58,7 @@ static inline zx_status_t raw_nand_erase_block(raw_nand_protocol_t *raw_nand,
 }
 
 static inline zx_status_t raw_nand_get_info(raw_nand_protocol_t *raw_nand,
-                                            struct nand_info *info)
+                                            nand_info_t* info)
 {
     return raw_nand->ops->get_nand_info(raw_nand->ctx, info);
 }

@@ -10,7 +10,7 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/ram-nand.h>
 #include <lib/fzl/mapped-vmo.h>
-#include <zircon/device/nand.h>
+#include <zircon/nand/c/fidl.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zxcpp/new.h>
@@ -79,7 +79,7 @@ bool ValidateOptions(const Config& config) {
     return true;
 }
 
-nand_info_t GetNandInfo(const Config& config) {
+zircon_nand_Info GetNandInfo(const Config& config) {
     nand_info_t info = {};
     info.page_size = config.page_size;
     info.pages_per_block = config.block_size;
@@ -90,7 +90,7 @@ nand_info_t GetNandInfo(const Config& config) {
 };
 
 // Sets the vmo and nand size from the contents of the input file.
-bool FinishDeviceConfig(const char* path, ram_nand_info_t* device_config) {
+bool FinishDeviceConfig(const char* path, zircon_nand_RamNandInfo* device_config) {
     fbl::unique_fd in(open(path, O_RDONLY));
     if (!in) {
         printf("Unable to open image file\n");
@@ -144,14 +144,14 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    ram_nand_info_t ram_nand_config = {};
+    zircon_nand_RamNandInfo ram_nand_config = {};
     ram_nand_config.nand_info = GetNandInfo(config);
     if (!FinishDeviceConfig(config.path, &ram_nand_config)) {
         return -1;
     }
 
     char path[PATH_MAX];
-    if (create_ram_nand(&ram_nand_config, path) != 0) {
+    if (create_ram_nand(&ram_nand_config, path) != ZX_OK) {
         printf("Unable to load device\n");
         return -1;
     }

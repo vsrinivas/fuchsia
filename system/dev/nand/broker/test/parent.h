@@ -7,7 +7,7 @@
 #include <limits.h>
 
 #include <fbl/unique_fd.h>
-#include <zircon/device/nand.h>
+#include <zircon/nand/c/fidl.h>
 
 // The nand device that will be used as the parent of the broker device. This
 // can be a ram-nand device instantiated for the test, or any nand device
@@ -15,7 +15,7 @@
 class ParentDevice {
   public:
     struct TestConfig {
-        nand_info_t info;       // Configuration for a new ram-nand.
+        zircon_nand_Info info;  // Configuration for a new ram-nand.
         const char* path;       // Path to an existing device.
         bool is_broker;         // True is the device is a broker (not a nand).
         uint32_t num_blocks;    // Number of blocks to use.
@@ -34,8 +34,8 @@ class ParentDevice {
     // Returns a file descriptor for the device.
     int get() const { return ram_nand_ ? ram_nand_.get() : device_.get(); }
 
-    const nand_info_t& Info() const { return config_.info; }
-    void SetInfo(const nand_info_t& info);
+    const zircon_nand_Info& Info() const { return config_.info; }
+    void SetInfo(const zircon_nand_Info& info);
 
     uint32_t NumBlocks() const { return config_.num_blocks; }
     uint32_t FirstBlock() const { return config_.first_block; }

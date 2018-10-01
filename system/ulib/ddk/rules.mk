@@ -17,6 +17,9 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := system/ulib/pretty system/ulib/sync
 
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-nand \
+
 MODULE_EXPORT := a
 
 include make/module.mk

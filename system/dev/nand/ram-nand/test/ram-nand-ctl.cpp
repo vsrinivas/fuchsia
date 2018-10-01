@@ -15,17 +15,16 @@
 
 namespace {
 
-ram_nand_info_t BuildConfig() {
-    ram_nand_info_t config = {};
+zircon_nand_RamNandInfo BuildConfig() {
+    zircon_nand_RamNandInfo config = {};
     config.vmo = ZX_HANDLE_INVALID;
-    config.nand_info = {4096, 4, 5, 6, 0, NAND_CLASS_DUMMY, {}};
+    config.nand_info = {4096, 4, 5, 6, 0, zircon_nand_Class_TEST, {}};
     return config;
 }
 
 class NandDevice {
   public:
-    NandDevice() {
-        const ram_nand_info_t config = BuildConfig();
+    explicit NandDevice(const zircon_nand_RamNandInfo& config = BuildConfig()) {
         if (create_ram_nand(&config, path_) == ZX_OK) {
             fbl::unique_fd device(open(path_, O_RDWR));
             caller_.reset(fbl::move(device));
@@ -65,8 +64,30 @@ bool TrivialLifetimeTest() {
     END_TEST;
 }
 
+bool ExportConfigTest() {
+    BEGIN_TEST;
+    zircon_nand_RamNandInfo config = BuildConfig();
+    config.export_nand_config = true;
+
+    NandDevice device(config);
+    ASSERT_TRUE(device.IsValid());
+    END_TEST;
+}
+
+bool ExportPartitionsTest() {
+    BEGIN_TEST;
+    zircon_nand_RamNandInfo config = BuildConfig();
+    config.export_partition_map = true;
+
+    NandDevice device(config);
+    ASSERT_TRUE(device.IsValid());
+    END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(RamNandCtlTests)
 RUN_TEST_SMALL(TrivialLifetimeTest)
+RUN_TEST_SMALL(ExportConfigTest)
+RUN_TEST_SMALL(ExportPartitionsTest)
 END_TEST_CASE(RamNandCtlTests)

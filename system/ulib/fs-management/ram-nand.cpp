@@ -21,25 +21,24 @@ constexpr char kBasePath[] = "/dev/misc/nand-ctl";
 
 } // namespace
 
-zx_status_t create_ram_nand(const ram_nand_info_t* config, char* out_path) {
+zx_status_t create_ram_nand(const zircon_nand_RamNandInfo* config, char* out_path) {
     fbl::unique_fd control(open(kBasePath, O_RDWR));
-    if (!control) {
-        fprintf(stderr, "Could not open nand-ctl\n");
-        return ZX_ERR_BAD_STATE;
+    fzl::FdioCaller caller(fbl::move(control));
+    char name[zircon_nand_NAME_LEN + 1];
+    size_t out_name_size;
+    zx_status_t status;
+    zx_status_t st = zircon_nand_RamNandCtlCreateDevice(caller.borrow_channel(), config, &status,
+                                                        name, zircon_nand_NAME_LEN, &out_name_size);
+    if (st != ZX_OK || status != ZX_OK) {
+        st = st != ZX_OK ? st : status;
+        fprintf(stderr, "Could not create ram_nand device, %d\n", st);
+        return st;
     }
-
-    ram_nand_name_t response = {};
-    ssize_t rc = (config->vmo == ZX_HANDLE_INVALID)
-                     ? ioctl_ram_nand_create(control.get(), config, &response)
-                     : ioctl_ram_nand_create_vmo(control.get(), config, &response);
-    if (rc < 0) {
-        fprintf(stderr, "Could not create ram_nand device\n");
-        return static_cast<zx_status_t>(rc);
-    }
+    name[out_name_size] = '\0';
 
     strcpy(out_path, kBasePath);
     out_path[sizeof(kBasePath) - 1] = '/';
-    strcpy(out_path + sizeof(kBasePath), response.name);
+    strcpy(out_path + sizeof(kBasePath), name);
     return ZX_OK;
 }
 
@@ -53,11 +52,9 @@ zx_status_t destroy_ram_nand(const char* ram_nand_path) {
 
     zx_status_t status;
     zx_status_t io_status = zircon_nand_RamNandUnlink(caller.borrow_channel(), &status);
-    if (io_status != ZX_OK) {
-        fprintf(stderr, "Could not unlink ram_nand (FIDL error)\n");
-        return io_status;
-    } else if (status != ZX_OK) {
-        fprintf(stderr, "Could not open ram_nand\n");
+    if (io_status != ZX_OK || status != ZX_OK) {
+        status = io_status != ZX_OK ? io_status : status;
+        fprintf(stderr, "Could not unlink ram_nand, %d\n", status);
         return status;
     }
     return ZX_OK;

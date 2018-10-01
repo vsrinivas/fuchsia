@@ -13,7 +13,6 @@
 #include <zircon/assert.h>
 #include <zircon/device/device.h>
 #include <zircon/device/nand-broker.h>
-#include <zircon/nand/c/fidl.h>
 
 constexpr char kUsageMessage[] = R"""(
 Basic functionality test for a nand device.
@@ -52,13 +51,13 @@ Existing broker device:
 
 )""";
 
-const nand_info_t kDefaultNandInfo = {
+const zircon_nand_Info kDefaultNandInfo = {
     .page_size = 4096,
     .pages_per_block = 4,
     .num_blocks = 5,
     .ecc_bits = 6,
     .oob_size = 4,
-    .nand_class = NAND_CLASS_DUMMY,
+    .nand_class = zircon_nand_Class_TEST,
     .partition_guid = {}
 };
 
@@ -67,8 +66,9 @@ ParentDevice::ParentDevice(const TestConfig& config) : config_(config) {
         device_.reset(open(config_.path, O_RDWR));
         strncpy(path_, config_.path, sizeof(path_) - 1);
     } else {
-        ram_nand_info_t ram_nand_config = {};
+        zircon_nand_RamNandInfo ram_nand_config = {};
         ram_nand_config.nand_info = config_.info;
+        ram_nand_config.vmo = ZX_HANDLE_INVALID;
         if (create_ram_nand(&ram_nand_config, path_) == ZX_OK) {
             ram_nand_.reset(open(path_, O_RDWR));
             config_.num_blocks = config.info.num_blocks;

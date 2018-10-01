@@ -17,6 +17,7 @@
 #include <lib/sync/completion.h>
 #include <zircon/device/ram-nand.h>
 #include <zircon/listnode.h>
+#include <zircon/nand/c/fidl.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
@@ -52,7 +53,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice> {
     explicit NandDevice(const NandParams& params, zx_device_t* parent = nullptr);
     ~NandDevice();
 
-    zx_status_t Bind(const ram_nand_info_t& info);
+    zx_status_t Bind(const zircon_nand_RamNandInfo& info);
     void DdkRelease() { delete this; }
 
     // Performs the object initialization, returning the required data to create

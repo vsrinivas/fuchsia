@@ -21,6 +21,9 @@ MODULE_LIBS := \
     system/ulib/c \
     system/ulib/zircon \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-nand \
+
 MODULE_HEADER_DEPS := $(LOCAL_DIR) system/dev/lib/amlogic
 
 include make/module.mk

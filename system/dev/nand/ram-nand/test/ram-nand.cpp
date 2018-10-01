@@ -5,9 +5,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <ddk/metadata/nand.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
+#include <zircon/boot/image.h>
 #include <zircon/device/ram-nand.h>
 #include <zircon/nand/c/fidl.h>
 #include <zircon/process.h>
@@ -23,17 +25,11 @@ constexpr int kBlockSize = 4;
 constexpr int kNumBlocks = 5;
 constexpr int kNumPages = kBlockSize * kNumBlocks;
 
-ram_nand_info_t BuildConfig() {
-    return ram_nand_info_t{
-        .vmo = 0,
-        .nand_info = {4096, 4, 5, 6, 0, NAND_CLASS_FTL, {}},
-        .export_nand_config = false,
-        .export_partition_map = false,
-        .bad_block_config = {},
-        .extra_partition_config_count = 0,
-        .extra_partition_config = {},
-        .partition_map = {},
-    };
+zircon_nand_RamNandInfo BuildConfig() {
+    zircon_nand_RamNandInfo config = {};
+    config.vmo = ZX_HANDLE_INVALID;
+    config.nand_info = {4096, 4, 5, 6, 0, zircon_nand_Class_TEST, {}};
+    return config;
 }
 
 bool TrivialLifetimeTest() {
@@ -67,6 +63,130 @@ bool DdkLifetimeTest() {
 
     // This should delete the object, which means this test should not leak.
     device->DdkRelease();
+    END_TEST;
+}
+
+bool ExportNandConfigTest() {
+    BEGIN_TEST;
+    NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);
+    NandDevice device(params, fake_ddk::kFakeParent);
+
+    zircon_nand_RamNandInfo config = BuildConfig();
+    config.export_nand_config = true;
+    config.partition_map.partition_count = 3;
+
+    // Setup the first and third partitions with extra copies, and the second one with a bbt.
+    memset(config.partition_map.partitions[0].unique_guid, 11, ZBI_PARTITION_GUID_LEN);
+    config.partition_map.partitions[0].copy_count = 12;
+    config.partition_map.partitions[0].copy_byte_offset = 13;
+
+    config.partition_map.partitions[1].first_block = 66;
+    config.partition_map.partitions[1].last_block = 77;
+    config.partition_map.partitions[1].hidden = true;
+    config.partition_map.partitions[1].bbt = true;
+
+    memset(config.partition_map.partitions[2].unique_guid, 22, ZBI_PARTITION_GUID_LEN);
+    config.partition_map.partitions[2].copy_count = 23;
+    config.partition_map.partitions[2].copy_byte_offset = 24;
+
+    nand_config_t expected = {{0, {66, 77}}, 2, {}};
+    memset(expected.extra_partition_config[0].type_guid, 11, ZBI_PARTITION_GUID_LEN);
+    expected.extra_partition_config[0].copy_count = 12;
+    expected.extra_partition_config[0].copy_byte_offset = 13;
+
+    memset(expected.extra_partition_config[1].type_guid, 22, ZBI_PARTITION_GUID_LEN);
+    expected.extra_partition_config[1].copy_count = 23;
+    expected.extra_partition_config[1].copy_byte_offset = 24;
+
+    fake_ddk::Bind ddk;
+    ddk.ExpectMetadata(&expected, sizeof(expected));
+    ASSERT_EQ(ZX_OK, device.Bind(config));
+
+    int calls;
+    size_t length;
+    ddk.GetMetadataInfo(&calls, &length);
+    EXPECT_EQ(1, calls);
+    EXPECT_EQ(sizeof(expected), length);
+    END_TEST;
+}
+
+bool ExportPartitionMapTest() {
+    BEGIN_TEST;
+    NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);
+    NandDevice device(params, fake_ddk::kFakeParent);
+
+    zircon_nand_RamNandInfo config = BuildConfig();
+    config.export_partition_map = true;
+    config.partition_map.partition_count = 3;
+    memset(config.partition_map.device_guid, 33, ZBI_PARTITION_GUID_LEN);
+
+    // Setup the first and third partitions with data, and the second one hidden.
+    memset(config.partition_map.partitions[0].type_guid, 44, ZBI_PARTITION_GUID_LEN);
+    memset(config.partition_map.partitions[0].unique_guid, 45, ZBI_PARTITION_GUID_LEN);
+    config.partition_map.partitions[0].first_block = 46;
+    config.partition_map.partitions[0].last_block = 47;
+    memset(config.partition_map.partitions[0].name, 48, ZBI_PARTITION_NAME_LEN);
+
+    config.partition_map.partitions[1].hidden = true;
+
+    memset(config.partition_map.partitions[2].type_guid, 55, ZBI_PARTITION_GUID_LEN);
+    memset(config.partition_map.partitions[2].unique_guid, 56, ZBI_PARTITION_GUID_LEN);
+    config.partition_map.partitions[2].first_block = 57;
+    config.partition_map.partitions[2].last_block = 58;
+    memset(config.partition_map.partitions[2].name, 59, ZBI_PARTITION_NAME_LEN);
+
+    // Expect only two partitions on the result.
+    size_t expected_size = sizeof(zbi_partition_map_t) + 2 * sizeof(zbi_partition_t);
+    fbl::unique_ptr<char[]> buffer(new char[expected_size]);
+    memset(buffer.get(), 0, expected_size);
+    zbi_partition_map_t* expected = reinterpret_cast<zbi_partition_map_t*>(buffer.get());
+
+    expected->block_count = kNumBlocks;
+    expected->block_size = kPageSize * kBlockSize;
+    expected->partition_count = 2;
+
+    memset(expected->guid, 33, ZBI_PARTITION_GUID_LEN);
+    memset(expected->partitions[0].type_guid, 44, ZBI_PARTITION_GUID_LEN);
+    memset(expected->partitions[0].uniq_guid, 45, ZBI_PARTITION_GUID_LEN);
+    expected->partitions[0].first_block = 46;
+    expected->partitions[0].last_block = 47;
+    memset(expected->partitions[0].name, 48, ZBI_PARTITION_NAME_LEN);
+
+    memset(expected->partitions[1].type_guid, 55, ZBI_PARTITION_GUID_LEN);
+    memset(expected->partitions[1].uniq_guid, 56, ZBI_PARTITION_GUID_LEN);
+    expected->partitions[1].first_block = 57;
+    expected->partitions[1].last_block = 58;
+    memset(expected->partitions[1].name, 59, ZBI_PARTITION_NAME_LEN);
+
+    fake_ddk::Bind ddk;
+    ddk.ExpectMetadata(expected, expected_size);
+    ASSERT_EQ(ZX_OK, device.Bind(config));
+
+    int calls;
+    size_t length;
+    ddk.GetMetadataInfo(&calls, &length);
+    EXPECT_EQ(1, calls);
+    EXPECT_EQ(expected_size, length);
+    END_TEST;
+}
+
+bool AddMetadataTest() {
+    BEGIN_TEST;
+    NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);
+    NandDevice device(params, fake_ddk::kFakeParent);
+
+    zircon_nand_RamNandInfo config = BuildConfig();
+    config.export_nand_config = true;
+    config.export_partition_map = true;
+
+    fake_ddk::Bind ddk;
+    ASSERT_EQ(ZX_OK, device.Bind(config));
+
+    int calls;
+    size_t length;
+    ddk.GetMetadataInfo(&calls, &length);
+    EXPECT_EQ(2, calls);
+    EXPECT_EQ(sizeof(nand_config_t) + sizeof(zbi_partition_map_t), length);
     END_TEST;
 }
 
@@ -684,6 +804,9 @@ bool EraseTest() {
 BEGIN_TEST_CASE(RamNandTests)
 RUN_TEST_SMALL(TrivialLifetimeTest)
 RUN_TEST_SMALL(DdkLifetimeTest)
+RUN_TEST_SMALL(ExportNandConfigTest)
+RUN_TEST_SMALL(ExportPartitionMapTest)
+RUN_TEST_SMALL(AddMetadataTest)
 RUN_TEST_SMALL(BasicDeviceProtocolTest)
 RUN_TEST_SMALL(UnlinkTest)
 RUN_TEST_SMALL(QueryTest)

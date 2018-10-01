@@ -783,7 +783,7 @@ static int aml_raw_nand_irq_thread(void* arg) {
     return 0;
 }
 
-static zx_status_t aml_get_nand_info(void* ctx, struct nand_info* nand_info) {
+static zx_status_t aml_get_nand_info(void* ctx, nand_info_t* nand_info) {
     aml_raw_nand_t* raw_nand = (aml_raw_nand_t*)ctx;
     uint64_t capacity;
     zx_status_t status = ZX_OK;

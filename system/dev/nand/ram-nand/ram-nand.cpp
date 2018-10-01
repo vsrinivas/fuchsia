@@ -13,11 +13,11 @@
 #include <ddk/metadata/nand.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <zircon/assert.h>
 #include <zircon/device/ram-nand.h>
 #include <zircon/driver/binding.h>
-#include <zircon/nand/c/fidl.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
@@ -37,6 +37,70 @@ zx_status_t Unlink(void* ctx, fidl_txn_t* txn)  {
 zircon_nand_RamNand_ops_t fidl_ops = {
     .Unlink = Unlink
 };
+
+static_assert(ZBI_PARTITION_NAME_LEN == zircon_nand_NAME_LEN, "bad fidl name");
+static_assert(ZBI_PARTITION_GUID_LEN == zircon_nand_GUID_LEN, "bad fidl guid");
+
+uint32_t GetNumPartitions(const zircon_nand_RamNandInfo& info) {
+    return fbl::min(info.partition_map.partition_count, zircon_nand_MAX_PARTITIONS);
+}
+
+void ExtractNandConfig(const zircon_nand_RamNandInfo& info, nand_config_t* config) {
+    config->bad_block_config.type = kAmlogicUboot;
+
+    uint32_t extra_count = 0;
+    for (uint32_t i = 0; i < GetNumPartitions(info); i++) {
+        const auto& partition = info.partition_map.partitions[i];
+        if (partition.hidden && partition.bbt) {
+            config->bad_block_config.aml.table_start_block = partition.first_block;
+            config->bad_block_config.aml.table_end_block = partition.last_block;
+        } else if (!partition.hidden) {
+            if (partition.copy_count > 1) {
+                nand_partition_config_t* extra = &config->extra_partition_config[extra_count];
+
+                memcpy(extra->type_guid, partition.unique_guid, ZBI_PARTITION_GUID_LEN);
+                extra->copy_count = partition.copy_count;
+                extra->copy_byte_offset = partition.copy_byte_offset;
+                extra_count++;
+            }
+        }
+    }
+    config->extra_partition_config_count = extra_count;
+}
+
+fbl::Array<char> ExtractPartitionMap(const zircon_nand_RamNandInfo& info) {
+    uint32_t num_partitions = GetNumPartitions(info);
+    uint32_t dest_partitions = num_partitions;
+    for (uint32_t i = 0; i < num_partitions; i++) {
+        if (info.partition_map.partitions[i].hidden) {
+            dest_partitions--;
+        }
+    }
+
+    size_t len = sizeof(zbi_partition_map_t) + sizeof(zbi_partition_t) * dest_partitions;
+    fbl::Array<char> buffer(new char[len], len);
+    memset(buffer.get(), 0, len);
+    zbi_partition_map_t* map = reinterpret_cast<zbi_partition_map_t*>(buffer.get());
+
+    map->block_count = info.nand_info.num_blocks;
+    map->block_size = info.nand_info.page_size * info.nand_info.pages_per_block;
+    map->partition_count = dest_partitions;
+    memcpy(map->guid, info.partition_map.device_guid, sizeof(map->guid));
+
+    zbi_partition_t* dest = map->partitions;
+    for (uint32_t i = 0; i < num_partitions; i++) {
+        const auto& src = info.partition_map.partitions[i];
+        if (!src.hidden) {
+            memcpy(dest->type_guid, src.type_guid, sizeof(dest->type_guid));
+            memcpy(dest->uniq_guid, src.unique_guid, sizeof(dest->uniq_guid));
+            dest->first_block = src.first_block;
+            dest->last_block = src.last_block;
+            memcpy(dest->name, src.name, sizeof(dest->name));
+            dest++;
+        }
+    }
+    return buffer;
+}
 
 }  // namespace
 
@@ -67,8 +131,8 @@ NandDevice::~NandDevice() {
     DdkRemove();
 }
 
-zx_status_t NandDevice::Bind(const ram_nand_info_t& info) {
-    char name[NAME_MAX];
+zx_status_t NandDevice::Bind(const zircon_nand_RamNandInfo& info) {
+    char name[zircon_nand_NAME_LEN];
     zx_status_t status = Init(name, zx::vmo(info.vmo));
     if (status != ZX_OK) {
         return status;
@@ -85,33 +149,16 @@ zx_status_t NandDevice::Bind(const ram_nand_info_t& info) {
     }
 
     if (info.export_nand_config) {
-        nand_config_t config = {
-            .bad_block_config = {
-                .type = kAmlogicUboot,
-                .aml = {
-                    .table_start_block = info.bad_block_config.table_start_block,
-                    .table_end_block = info.bad_block_config.table_end_block,
-                },
-            },
-            .extra_partition_config_count = info.extra_partition_config_count,
-            .extra_partition_config = {},
-        };
-        for (size_t i = 0; i < info.extra_partition_config_count; i++) {
-            memcpy(config.extra_partition_config[i].type_guid,
-                   info.extra_partition_config[i].type_guid, ZBI_PARTITION_GUID_LEN);
-            config.extra_partition_config[i].copy_count =
-                    info.extra_partition_config[i].copy_count;
-            config.extra_partition_config[i].copy_byte_offset =
-                    info.extra_partition_config[i].copy_byte_offset;
-        }
+        nand_config_t config = {};
+        ExtractNandConfig(info, &config);
         status = DdkAddMetadata(DEVICE_METADATA_PRIVATE, &config, sizeof(config));
         if (status != ZX_OK) {
             return status;
         }
     }
     if (info.export_partition_map) {
-        status = DdkAddMetadata(DEVICE_METADATA_PARTITION_MAP, &info.partition_map,
-                                sizeof(info.partition_map));
+        fbl::Array<char> map = ExtractPartitionMap(info);
+        status = DdkAddMetadata(DEVICE_METADATA_PARTITION_MAP, map.get(), map.size());
         if (status != ZX_OK) {
             return status;
         }

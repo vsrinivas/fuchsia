@@ -45,6 +45,16 @@ class Bind {
     // Verifies that the whole process of bind and unbind went as expected.
     bool Ok();
 
+    // Sets optional expectations for DeviceAddMetadata(). If used, the provided
+    // pointer must remain valid until the call to DeviceAddMetadata(). If the
+    // provided data doesn't match the expectations, DeviceAddMetadata will fail
+    // with ZX_ERR_BAD_STATE.
+    void ExpectMetadata(const void* data, size_t data_length);
+
+    // Returns the number of times DeviceAddMetadata has been called and the
+    // total length of all the data provided.
+    void GetMetadataInfo(int* num_calls, size_t* length);
+
     static Bind* instance_;
 
   private:
@@ -52,8 +62,11 @@ class Bind {
     bool bad_device_ = false;
     bool add_called_ = false;
     bool remove_called_ = false;
-    bool add_metadata_called_ = false;
     bool make_visible_called_ = false;
+
+    int add_metadata_calls_ = 0;
+    size_t metadata_length_ = 0;
+    const void* metadata_ = nullptr;
 };
 
 }  // namespace fake_ddk

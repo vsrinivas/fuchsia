@@ -12,6 +12,7 @@
 #include <fbl/unique_ptr.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/ram-nand.h>
+#include <zircon/nand/c/fidl.h>
 #include <zircon/types.h>
 
 #include "ram-nand.h"
@@ -20,7 +21,7 @@
 namespace {
 
 class RamNandCtl;
-using RamNandCtlDeviceType = ddk::Device<RamNandCtl, ddk::Ioctlable>;
+using RamNandCtlDeviceType = ddk::Device<RamNandCtl, ddk::Messageable>;
 
 class RamNandCtl : public RamNandCtlDeviceType {
   public:
@@ -29,57 +30,47 @@ class RamNandCtl : public RamNandCtlDeviceType {
     zx_status_t Bind() { return DdkAdd("nand-ctl"); }
     void DdkRelease() { delete this; }
 
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
     zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
                          void* out_buf, size_t out_len, size_t* out_actual);
-  private:
-    zx_status_t CreateDevice(const ram_nand_info_t& in, void* out_buf,
-                             size_t* out_actual);
+
+    zx_status_t CreateDevice(const zircon_nand_RamNandInfo* info, const char** name);
+
     DISALLOW_COPY_ASSIGN_AND_MOVE(RamNandCtl);
 };
 
-zx_status_t RamNandCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                                 void* out_buf, size_t out_len, size_t* out_actual) {
-    if (out_len < sizeof(ram_nand_name_t)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    switch (op) {
-    case IOCTL_RAM_NAND_CREATE:
-    case IOCTL_RAM_NAND_CREATE_VMO: {
-        if (in_len < sizeof(ram_nand_info_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        const auto* in = static_cast<const ram_nand_info_t*>(in_buf);
-        if (op == IOCTL_RAM_NAND_CREATE && in->vmo != ZX_HANDLE_INVALID) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        return CreateDevice(*in, out_buf, out_actual);
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+zx_status_t CreateDevice(void* ctx, const zircon_nand_RamNandInfo* info, fidl_txn_t* txn) {
+    RamNandCtl* device = reinterpret_cast<RamNandCtl*>(ctx);
+    const char* name = nullptr;
+    zx_status_t status = device->CreateDevice(info, &name);
+    return zircon_nand_RamNandCtlCreateDevice_reply(txn, status, name, strlen(name));
 }
 
-zx_status_t RamNandCtl::CreateDevice(const ram_nand_info_t& in, void* out_buf,
-                                     size_t* out_actual) {
-    const auto& params = static_cast<const NandParams>(in.nand_info);
+zircon_nand_RamNandCtl_ops_t fidl_ops = {
+    .CreateDevice = CreateDevice
+};
+
+zx_status_t RamNandCtl::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return zircon_nand_RamNandCtl_dispatch(this, txn, msg, &fidl_ops);
+}
+
+zx_status_t RamNandCtl::CreateDevice(const zircon_nand_RamNandInfo* info, const char** name) {
+    const auto& params = static_cast<const NandParams>(info->nand_info);
     fbl::AllocChecker checker;
     fbl::unique_ptr<NandDevice> device(new (&checker) NandDevice(params, zxdev()));
     if (!checker.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = device->Bind(in);
+    zx_status_t status = device->Bind(*info);
     if (status != ZX_OK) {
         return status;
     }
-
-    *out_actual = strlen(device->name());
-    strcpy(static_cast<char*>(out_buf), device->name());
+    *name = device->name();
 
     // devmgr is now in charge of the device.
     __UNUSED NandDevice* dummy = device.release();
-    return ZX_OK;
+    return status;
 }
 
 }  // namespace

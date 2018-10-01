@@ -45,7 +45,16 @@ zx_status_t Bind::DeviceAddMetadata(zx_device_t* device, uint32_t type, const vo
     if (device != kFakeDevice) {
         bad_device_ = true;
     }
-    add_metadata_called_ = true;
+
+    if (metadata_) {
+        if (length != metadata_length_ || memcmp(data, metadata_, length) != 0) {
+            unittest_printf_critical("Unexpected metadata\n");
+            return ZX_ERR_BAD_STATE;
+        }
+    } else {
+        metadata_length_ += length;
+    }
+    add_metadata_calls_++;
     return ZX_OK;
 }
 
@@ -64,6 +73,16 @@ bool Bind::Ok() {
     EXPECT_FALSE(bad_parent_);
     EXPECT_FALSE(bad_device_);
     END_HELPER;
+}
+
+void Bind::ExpectMetadata(const void* data, size_t data_length) {
+    metadata_ = data;
+    metadata_length_ = data_length;
+}
+
+void Bind::GetMetadataInfo(int* num_calls, size_t* length) {
+    *num_calls = add_metadata_calls_;
+    *length = metadata_length_;
 }
 
 }  // namespace fake_ddk

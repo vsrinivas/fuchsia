@@ -23,4 +23,7 @@ MODULE_LIBS := \
     system/ulib/c \
     system/ulib/zircon \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-nand \
+
 include make/module.mk

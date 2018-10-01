@@ -19,6 +19,7 @@
 #include <zircon/boot/image.h>
 #include <zircon/device/device.h>
 #include <zircon/hw/gpt.h>
+#include <zircon/nand/c/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -36,8 +37,9 @@ constexpr uint32_t kOobSize = 8;
 constexpr uint32_t kPageSize = 1024;
 constexpr uint32_t kPagesPerBlock = 16;
 constexpr uint32_t kNumBlocks = 16;
-constexpr ram_nand_info_t kNandInfo = {
+constexpr zircon_nand_RamNandInfo kNandInfo = {
     .vmo = ZX_HANDLE_INVALID,
+    .padding = 0,
     .nand_info = {
         .page_size = kPageSize,
         .pages_per_block = kPagesPerBlock,
@@ -47,55 +49,75 @@ constexpr ram_nand_info_t kNandInfo = {
         .nand_class = NAND_CLASS_PARTMAP,
         .partition_guid = {},
     },
-    .export_nand_config = true,
-    .export_partition_map = true,
-    .bad_block_config = {
-        .table_start_block = 0,
-        .table_end_block = 3,
-    },
-    .extra_partition_config_count = 0,
-    .extra_partition_config = {},
     .partition_map = {
-        .block_count = kNumBlocks,
-        .block_size = kPageSize * kPagesPerBlock,
-        .partition_count = 4,
-        .reserved = 0,
-        .guid = {},
+        .device_guid = {},
+        .padding = 0,
+        .partition_count = 5,
         .partitions = {
             {
+                .type_guid = {},
+                .unique_guid = {},
+                .first_block = 0,
+                .last_block = 3,
+                .copy_count = 0,
+                .copy_byte_offset = 0,
+                .name = {},
+                .padding = 0,
+                .hidden = true,
+                .bbt = true,
+            },
+            {
                 .type_guid = GUID_BOOTLOADER_VALUE,
-                .uniq_guid = {},
+                .unique_guid = {},
                 .first_block = 4,
                 .last_block = 7,
-                .flags = 0,
+                .copy_count = 0,
+                .copy_byte_offset = 0,
                 .name = {'b', 'o', 'o', 't', 'l', 'o', 'a', 'd', 'e', 'r'},
+                .padding = 0,
+                .hidden = false,
+                .bbt = false,
             },
             {
                 .type_guid = GUID_ZIRCON_A_VALUE,
-                .uniq_guid = {},
+                .unique_guid = {},
                 .first_block = 8,
                 .last_block = 9,
-                .flags = 0,
+                .copy_count = 0,
+                .copy_byte_offset = 0,
                 .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'a'},
+                .padding = 0,
+                .hidden = false,
+                .bbt = false,
             },
             {
                 .type_guid = GUID_ZIRCON_B_VALUE,
-                .uniq_guid = {},
+                .unique_guid = {},
                 .first_block = 10,
                 .last_block = 11,
-                .flags = 0,
+                .copy_count = 0,
+                .copy_byte_offset = 0,
                 .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'b'},
+                .padding = 0,
+                .hidden = false,
+                .bbt = false,
             },
             {
                 .type_guid = GUID_ZIRCON_R_VALUE,
-                .uniq_guid = {},
+                .unique_guid = {},
                 .first_block = 12,
                 .last_block = 13,
-                .flags = 0,
+                .copy_count = 0,
+                .copy_byte_offset = 0,
                 .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'r'},
+                .padding = 0,
+                .hidden = false,
+                .bbt = false,
             },
         },
     },
+    .export_nand_config = true,
+    .export_partition_map = true,
 };
 
 
@@ -213,7 +235,7 @@ public:
         ASSERT_EQ(zx_handle_duplicate(mapped_vmo->GetVmo(), ZX_RIGHT_SAME_RIGHTS, &dup), ZX_OK);
 
         fbl::String path(PATH_MAX, '\0');
-        ram_nand_info_t info = kNandInfo;
+        zircon_nand_RamNandInfo info = kNandInfo;
         info.vmo = dup;
         ASSERT_EQ(create_ram_nand(&info, const_cast<char*>(path.data())), ZX_OK);
         ASSERT_TRUE(InsertTestDevices(path.ToStringPiece(), true));
