@@ -473,7 +473,7 @@ void Client::HandleSetLayerPrimaryPosition(
         return;
     }
     if (req->transform > fuchsia_display_Transform_ROT_90_REFLECT_Y) {
-        zxlogf(ERROR, "Invalid transform %d\n", req->transform);
+        zxlogf(ERROR, "Invalid transform %ld\n", req->transform);
         TearDown();
         return;
     }
@@ -491,7 +491,7 @@ void Client::HandleSetLayerPrimaryPosition(
 
     memcpy(&primary_layer->src_frame, &req->src_frame, sizeof(frame_t));
     memcpy(&primary_layer->dest_frame, &req->dest_frame, sizeof(frame_t));
-    primary_layer->transform_mode = req->transform;
+    primary_layer->transform_mode = static_cast<uint8_t>(req->transform);
 
     layer->config_change_ = true;
     pending_config_valid_ = false;
