@@ -23,11 +23,12 @@ class FakeDecoder : public Decoder {
   const char* label() const override { return "FakeDecoder"; }
 
   // Decoder implementation.
-  void GetConfiguration(size_t* input_count, size_t* output_count) override {
-    FXL_DCHECK(input_count);
-    FXL_DCHECK(output_count);
-    *input_count = 1;
-    *output_count = 1;
+  void ConfigureConnectors() override {
+    stage()->ConfigureInputToUseLocalMemory(1,    // max_aggregate_payload_size
+                                            0);   // max_payload_count
+    stage()->ConfigureOutputToUseLocalMemory(1,   // max_aggregate_payload_size
+                                             0,   // max_payload_count
+                                             0);  // max_payload_size
   }
 
   void FlushInput(bool hold_frame, size_t input_index,
@@ -39,21 +40,9 @@ class FakeDecoder : public Decoder {
     callback();
   }
 
-  std::shared_ptr<PayloadAllocator> allocator_for_input(
-      size_t input_index) override {
-    return nullptr;
-  }
-
   void PutInputPacket(PacketPtr packet, size_t input_index) override {
     stage()->RequestInputPacket();
   }
-
-  bool can_accept_allocator_for_output(size_t output_index) const override {
-    return false;
-  }
-
-  void SetAllocatorForOutput(std::shared_ptr<PayloadAllocator> allocator,
-                             size_t output_index) override {}
 
   void RequestOutputPacket() override {}
 

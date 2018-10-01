@@ -5,10 +5,8 @@
 #ifndef GARNET_BIN_MEDIAPLAYER_FIDL_FIDL_DECODER_H_
 #define GARNET_BIN_MEDIAPLAYER_FIDL_FIDL_DECODER_H_
 
-#include <memory>
-
 #include <fuchsia/mediacodec/cpp/fidl.h>
-
+#include <memory>
 #include "garnet/bin/mediaplayer/decode/decoder.h"
 #include "garnet/bin/mediaplayer/fidl/buffer_set.h"
 
@@ -36,13 +34,10 @@ class FidlDecoder : public Decoder {
 
   void Dump(std::ostream& os) const override;
 
-  void GetConfiguration(size_t* input_count, size_t* output_count) override;
+  void ConfigureConnectors() override;
 
   void FlushInput(bool hold_frame, size_t input_index,
                   fit::closure callback) override;
-
-  std::shared_ptr<PayloadAllocator> allocator_for_input(
-      size_t input_index) override;
 
   void PutInputPacket(PacketPtr packet, size_t input_index) override;
 

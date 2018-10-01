@@ -70,22 +70,12 @@ class SoftwareDecoder : public Decoder {
   // AsyncNode implementation.
   void Dump(std::ostream& os) const override;
 
-  void GetConfiguration(size_t* input_count, size_t* output_count) override;
-
   void FlushInput(bool hold_frame, size_t input_index,
                   fit::closure callback) override;
 
   void FlushOutput(size_t output_index, fit::closure callback) override;
 
-  std::shared_ptr<PayloadAllocator> allocator_for_input(
-      size_t input_index) override;
-
   void PutInputPacket(PacketPtr packet, size_t input_index) override;
-
-  bool can_accept_allocator_for_output(size_t output_index) const override;
-
-  void SetAllocatorForOutput(std::shared_ptr<PayloadAllocator> allocator,
-                             size_t output_index) override;
 
   void RequestOutputPacket() override;
 
@@ -104,10 +94,6 @@ class SoftwareDecoder : public Decoder {
 
   bool is_worker_thread() const {
     return async_get_default_dispatcher() == worker_loop_.dispatcher();
-  }
-
-  const std::shared_ptr<PayloadAllocator>& allocator() const {
-    return allocator_;
   }
 
   // Notifies that a flush has occurred on the worker thread.
@@ -171,11 +157,6 @@ class SoftwareDecoder : public Decoder {
   // null, we can be sure we've requested an input packet from upstream.
   PacketPtr input_packet_;
   fit::closure flush_callback_;
-
-  // |allocator_| is initialized on the main thread during prepare and isn't
-  // changed until unprepare. The worker thread uses it to allocate payload
-  // memory.
-  std::shared_ptr<PayloadAllocator> allocator_;
 
   // |decode_duration_| is updated on the worker thread and read on the main
   // thread when |Dump| is called.

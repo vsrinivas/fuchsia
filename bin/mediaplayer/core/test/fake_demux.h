@@ -23,11 +23,11 @@ class FakeDemux : public Demux {
   const char* label() const override { return "FakeDemux"; }
 
   // Demux implementation.
-  void GetConfiguration(size_t* input_count, size_t* output_count) override {
-    FXL_DCHECK(input_count);
-    FXL_DCHECK(output_count);
-    *input_count = 0;
-    *output_count = streams_.size();
+  void ConfigureConnectors() override {
+    for (size_t output_index = 0; output_index < streams_.size();
+         ++output_index) {
+      stage()->ConfigureOutputToProvideLocalMemory(output_index);
+    }
   }
 
   void FlushOutput(size_t output_index, fit::closure callback) override {

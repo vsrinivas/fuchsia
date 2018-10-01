@@ -89,10 +89,6 @@ class InputRef {
   // on a null |InputRef| results in undefined behavior.
   bool connected() const;
 
-  // Indicates whether this input is prepared. Calling this method on a null
-  // |InputRef| results in undefined behavior.
-  bool prepared() const;
-
   // Returns a reference to the output to which this input is connected. Returns
   // an invalid reference if this input isn't connected to an output.
   OutputRef mate() const;

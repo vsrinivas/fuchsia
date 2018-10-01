@@ -8,11 +8,11 @@
 #include <atomic>
 
 #include "garnet/bin/mediaplayer/graph/packet.h"
+#include "garnet/bin/mediaplayer/graph/payloads/payload_manager.h"
 
 namespace media_player {
 
 class StageImpl;
-class Engine;
 class Output;
 
 // Represents a stage's connector to an adjacent upstream stage.
@@ -38,18 +38,12 @@ class Input {
 
   // Breaks a connection. Called only by the engine.
   void Disconnect() {
-    FXL_DCHECK(!prepared_);
     mate_ = nullptr;
+    payload_manager_.OnDisconnect();
   }
 
   // Determines whether the input is connected to an output.
   bool connected() const { return mate_; }
-
-  // Determines if the input is prepared.
-  bool prepared() const { return prepared_; }
-
-  // Changes the prepared state of the input.
-  void set_prepared(bool prepared) { prepared_ = prepared; }
 
   // Indicates current need for a packet. Called only by the upstream |Output|.
   bool needs_packet() const;
@@ -71,15 +65,24 @@ class Input {
   // Flushes retained media.
   void Flush();
 
+  // Returns a reference to the payload configuration.
+  PayloadConfig& payload_config() { return payload_config_; }
+  const PayloadConfig& payload_config() const { return payload_config_; }
+
+  // Returns a reference to the buffer manager for this input.
+  PayloadManager& payload_manager() { return payload_manager_; }
+  const PayloadManager& payload_manager() const { return payload_manager_; }
+
  private:
   enum class State { kNeedsPacket, kRefusesPacket, kHasPacket };
 
   StageImpl* stage_;
   size_t index_;
   Output* mate_ = nullptr;
-  bool prepared_ = false;
   PacketPtr packet_;
   std::atomic<State> state_;
+  PayloadConfig payload_config_;
+  PayloadManager payload_manager_;
 };
 
 }  // namespace media_player

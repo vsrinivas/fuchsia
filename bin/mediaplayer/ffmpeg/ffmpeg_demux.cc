@@ -60,7 +60,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
 
   void Dump(std::ostream& os) const override;
 
-  void GetConfiguration(size_t* input_count, size_t* output_count) override;
+  void ConfigureConnectors() override;
 
   void FlushOutput(size_t output_index, fit::closure callback) override;
 
@@ -208,12 +208,11 @@ void FfmpegDemuxImpl::Dump(std::ostream& os) const {
   os << fostr::Outdent;
 }
 
-void FfmpegDemuxImpl::GetConfiguration(size_t* input_count,
-                                       size_t* output_count) {
-  FXL_DCHECK(input_count);
-  FXL_DCHECK(output_count);
-  *input_count = 0;
-  *output_count = streams_.size();
+void FfmpegDemuxImpl::ConfigureConnectors() {
+  for (size_t output_index = 0; output_index < streams_.size();
+       ++output_index) {
+    stage()->ConfigureOutputToProvideLocalMemory(output_index);
+  }
 }
 
 void FfmpegDemuxImpl::FlushOutput(size_t output_index, fit::closure callback) {

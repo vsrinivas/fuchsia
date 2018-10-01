@@ -4,10 +4,8 @@
 
 #include "garnet/bin/mediaplayer/render/fidl_video_renderer.h"
 
-#include <limits>
-
 #include <trace/event.h>
-
+#include <limits>
 #include "garnet/bin/mediaplayer/fidl/fidl_type_conversions.h"
 #include "garnet/bin/mediaplayer/graph/formatting.h"
 #include "lib/fxl/logging.h"
@@ -81,6 +79,11 @@ void FidlVideoRenderer::Dump(std::ostream& os) const {
   }
 
   os << fostr::Outdent;
+}
+
+void FidlVideoRenderer::ConfigureConnectors() {
+  // TODO: Use ImagePipe and send the VMOs down the pipe.
+  stage()->ConfigureInputToUseLocalMemory(0, kPacketDemand);
 }
 
 void FidlVideoRenderer::FlushInput(bool hold_frame, size_t input_index,

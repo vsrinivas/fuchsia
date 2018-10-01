@@ -10,18 +10,27 @@ namespace media_player {
 
 Output::Output(StageImpl* stage, size_t index) : stage_(stage), index_(index) {}
 
+Output::Output(Output&& output)
+    : stage_(output.stage()),
+      index_(output.index()),
+      payload_config_(output.payload_config()),
+      bti_handle_(std::move(output.bti_handle_)) {
+  // We can't move an output that's connected.
+  // TODO(dalesat): Make |Output| non-movable.
+  FXL_DCHECK(output.mate() == nullptr);
+}
+
 Output::~Output() {}
 
 void Output::Connect(Input* input) {
   FXL_DCHECK(input);
   FXL_DCHECK(!mate_);
   mate_ = input;
-}
 
-void Output::SetCopyAllocator(
-    std::shared_ptr<PayloadAllocator> copy_allocator) {
-  FXL_DCHECK(connected());
-  copy_allocator_ = copy_allocator;
+  if (payload_config_.mode_ != PayloadMode::kNotConfigured) {
+    mate_->payload_manager().ApplyOutputConfiguration(payload_config_,
+                                                      std::move(bti_handle_));
+  }
 }
 
 bool Output::needs_packet() const {
@@ -33,28 +42,6 @@ void Output::SupplyPacket(PacketPtr packet) const {
   FXL_DCHECK(packet);
   FXL_DCHECK(mate_);
   FXL_DCHECK(needs_packet());
-
-  if (copy_allocator_ != nullptr) {
-    // Need to copy the packet due to an allocation conflict.
-    size_t size = packet->size();
-    fbl::RefPtr<PayloadBuffer> buffer;
-
-    if (size == 0) {
-      buffer = nullptr;
-    } else {
-      buffer = copy_allocator_->AllocatePayloadBuffer(size);
-      if (buffer == nullptr) {
-        FXL_LOG(WARNING) << "allocator starved copying output";
-        return;
-      }
-
-      memcpy(buffer->data(), packet->payload(), size);
-    }
-
-    packet =
-        Packet::Create(packet->pts(), packet->pts_rate(), packet->keyframe(),
-                       packet->end_of_stream(), size, std::move(buffer));
-  }
 
   mate_->PutPacket(std::move(packet));
 }

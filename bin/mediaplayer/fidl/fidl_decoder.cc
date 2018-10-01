@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/mediaplayer/fidl/fidl_decoder.h"
-
 #include <vector>
-
 #include "garnet/bin/mediaplayer/fidl/fidl_type_conversions.h"
 #include "garnet/bin/mediaplayer/graph/formatting.h"
 #include "garnet/bin/mediaplayer/graph/types/audio_stream_type.h"
@@ -131,11 +129,9 @@ void FidlDecoder::Dump(std::ostream& os) const {
   // TODO(dalesat): More.
 }
 
-void FidlDecoder::GetConfiguration(size_t* input_count, size_t* output_count) {
-  FXL_DCHECK(input_count);
-  FXL_DCHECK(output_count);
-  *input_count = 1;
-  *output_count = 1;
+void FidlDecoder::ConfigureConnectors() {
+  // TODO(dalesat): Implement.
+  FXL_NOTIMPLEMENTED();
 }
 
 void FidlDecoder::FlushInput(bool hold_frame, size_t input_index,
@@ -154,12 +150,6 @@ void FidlDecoder::FlushInput(bool hold_frame, size_t input_index,
   update_oob_bytes_ = (input_format_details_.mime_type == kAacAdtsMimeType);
   flushing_ = true;
   callback();
-}
-
-std::shared_ptr<PayloadAllocator> FidlDecoder::allocator_for_input(
-    size_t input_index) {
-  FXL_DCHECK(input_index == 0);
-  return nullptr;
 }
 
 void FidlDecoder::PutInputPacket(PacketPtr packet, size_t input_index) {

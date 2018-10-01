@@ -31,7 +31,7 @@ class LpcmUtil {
   // ("planar") layout, in which the buffer (in) is divided evenly into a
   // channel buffer per channel. The samples for each channel are contiguous
   // in the respective channel buffer with possible empty space at the end
-  // (hence the in_type_count and the frame_count).
+  // (hence the in_byte_count and the frame_count).
   virtual void Interleave(const void* in, size_t in_byte_count, void* out,
                           size_t frame_count) const = 0;
 };

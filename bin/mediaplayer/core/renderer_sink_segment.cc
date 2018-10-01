@@ -86,24 +86,6 @@ void RendererSinkSegment::Disconnect() {
   connected_output_ = nullptr;
 }
 
-void RendererSinkSegment::Prepare() {
-  FXL_DCHECK(provisioned());
-  FXL_DCHECK(renderer_node_);
-  FXL_DCHECK(connected_output_);
-
-  graph().PrepareInput(renderer_node_.input());
-}
-
-void RendererSinkSegment::Unprepare() {
-  FXL_DCHECK(provisioned());
-  FXL_DCHECK(renderer_node_);
-  FXL_DCHECK(connected_output_);
-
-  if (renderer_node_.input().prepared()) {
-    graph().UnprepareInput(renderer_node_.input());
-  }
-}
-
 void RendererSinkSegment::Prime(fit::closure callback) {
   FXL_DCHECK(renderer_);
   renderer_->Prime(std::move(callback));

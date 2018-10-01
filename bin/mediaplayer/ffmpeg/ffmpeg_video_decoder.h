@@ -20,16 +20,19 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
 
   ~FfmpegVideoDecoder() override;
 
+  // AsyncNode implementation.
+  void ConfigureConnectors() override;
+
  protected:
   // FfmpegDecoderBase overrides.
   void OnNewInputPacket(const PacketPtr& packet) override;
 
-  int BuildAVFrame(const AVCodecContext& av_codec_context, AVFrame* av_frame,
-                   const std::shared_ptr<PayloadAllocator>& allocator) override;
+  int BuildAVFrame(const AVCodecContext& av_codec_context,
+                   AVFrame* av_frame) override;
 
   PacketPtr CreateOutputPacket(
-      const AVFrame& av_frame, fbl::RefPtr<PayloadBuffer> payload_buffer,
-      const std::shared_ptr<PayloadAllocator>& allocator) override;
+      const AVFrame& av_frame,
+      fbl::RefPtr<PayloadBuffer> payload_buffer) override;
 
   const char* label() const override;
 
@@ -38,6 +41,11 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
   // operations.
   static const int kFrameBufferAlign = 32;
 
+  // Indicates whether the decoder has a non-zero coded size.
+  bool has_size() const {
+    return coded_size_.width() != 0 && coded_size_.height() != 0;
+  }
+
   FfmpegVideoFrameLayout frame_layout_;
   std::unique_ptr<StreamType> revised_stream_type_;
 
@@ -45,6 +53,8 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
   bool first_frame_ = true;
   AVColorSpace colorspace_;
   VideoStreamType::Extent coded_size_;
+  
+  size_t configured_output_buffer_size_ = 0;
 };
 
 }  // namespace media_player

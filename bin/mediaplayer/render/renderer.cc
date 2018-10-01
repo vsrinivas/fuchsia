@@ -39,11 +39,9 @@ void Renderer::Dump(std::ostream& os) const {
   os << fostr::Outdent;
 }
 
-void Renderer::GetConfiguration(size_t* input_count, size_t* output_count) {
-  FXL_DCHECK(input_count);
-  FXL_DCHECK(output_count);
-  *input_count = 1;
-  *output_count = 0;
+void Renderer::ConfigureConnectors() {
+  // We'll have one input, but we not ready to configure it.
+  stage()->ConfigureInputDeferred();
 }
 
 void Renderer::SetProgramRange(uint64_t program, int64_t min_pts,

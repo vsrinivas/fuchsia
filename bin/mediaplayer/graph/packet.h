@@ -69,7 +69,7 @@ class Packet {
   }
 
   // Returns the packet's payload buffer.
-  fbl::RefPtr<PayloadBuffer> payload_buffer() { return payload_buffer_; }
+  fbl::RefPtr<PayloadBuffer> payload_buffer() const { return payload_buffer_; }
 
   // Retrieves the PTS using the specified PTS tick rate. Use this method to
   // obtain the PTS at a specific tick rate once, possibly at the cost of a
@@ -83,7 +83,7 @@ class Packet {
   void SetPtsRate(media::TimelineRate pts_rate);
 
   // Gets the revised stream type, which may be null.
-  const std::unique_ptr<StreamType>& revised_stream_type() {
+  const std::unique_ptr<StreamType>& revised_stream_type() const {
     return revised_stream_type_;
   }
 

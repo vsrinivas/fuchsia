@@ -31,11 +31,18 @@ FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
     // Prepare for interleaving.
     stream_type_ = std::move(stream_type);
     lpcm_util_ = LpcmUtil::Create(*stream_type_->audio());
-    default_allocator_ = PayloadAllocator::CreateDefault();
   }
 }
 
 FfmpegAudioDecoder::~FfmpegAudioDecoder() {}
+
+void FfmpegAudioDecoder::ConfigureConnectors() {
+  stage()->ConfigureInputToUseLocalMemory(0, 2);
+  // TODO(dalesat): Real numbers here. How big are packets?
+  // We're OK for now, because the audio renderer asks for a single VMO that's
+  // big enough to handle any packet we want to produce.
+  stage()->ConfigureOutputToUseLocalMemory(0, 1, 1);
+}
 
 void FfmpegAudioDecoder::OnNewInputPacket(const PacketPtr& packet) {
   incoming_pts_rate_ = packet->pts_rate();
@@ -50,18 +57,9 @@ void FfmpegAudioDecoder::OnNewInputPacket(const PacketPtr& packet) {
   }
 }
 
-int FfmpegAudioDecoder::BuildAVFrame(
-    const AVCodecContext& av_codec_context, AVFrame* av_frame,
-    const std::shared_ptr<PayloadAllocator>& allocator) {
+int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
+                                     AVFrame* av_frame) {
   FXL_DCHECK(av_frame);
-  FXL_DCHECK(allocator);
-
-  // Use the provided allocator unless we intend to interleave later, in which
-  // case use the default allocator. We'll interleave into a buffer from the
-  // provided allocator in CreateOutputPacket.
-  const std::shared_ptr<PayloadAllocator>& allocator_to_use =
-      (lpcm_util_ == nullptr) ? allocator : default_allocator_;
-  FXL_DCHECK(allocator_to_use);
 
   AVSampleFormat av_sample_format =
       static_cast<AVSampleFormat>(av_frame->format);
@@ -74,8 +72,12 @@ int FfmpegAudioDecoder::BuildAVFrame(
     return buffer_size;
   }
 
+  // Get the right payload buffer. If we need to interleave later, we just get
+  // a buffer allocated using malloc. If not, we ask the stage for a buffer.
   fbl::RefPtr<PayloadBuffer> buffer =
-      allocator_to_use->AllocatePayloadBuffer(buffer_size);
+      lpcm_util_ ? PayloadBuffer::CreateWithMalloc(buffer_size)
+                 : stage()->AllocatePayloadBuffer(buffer_size);
+
   if (!buffer) {
     // TODO(dalesat): Renderer VMO is full. What can we do about this?
     FXL_LOG(FATAL) << "Ran out of memory for decoded audio.";
@@ -132,11 +134,9 @@ int FfmpegAudioDecoder::BuildAVFrame(
 }
 
 PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
-    const AVFrame& av_frame, fbl::RefPtr<PayloadBuffer> payload_buffer,
-    const std::shared_ptr<PayloadAllocator>& allocator) {
+    const AVFrame& av_frame, fbl::RefPtr<PayloadBuffer> payload_buffer) {
   FXL_DCHECK(av_frame.buf[0]);
   FXL_DCHECK(payload_buffer);
-  FXL_DCHECK(allocator);
 
   // We infer the PTS for a packet based on the assumption that the decoder
   // produces an uninterrupted stream of frames. The PTS value in av_frame is
@@ -151,14 +151,13 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
 
   if (lpcm_util_) {
     // We need to interleave. The non-interleaved frames are in
-    // |payload_buffer|, which was allocated from the default allocator. That
-    // buffer will get released later in ReleaseBufferForAvFrame. We need a new
-    // buffer for the interleaved frames, which we get from the provided
-    // allocator.
+    // |payload_buffer|, which was allocated from system memory. That buffer
+    // will get released later in ReleaseBufferForAvFrame. We need a new
+    // buffer for the interleaved frames, which we get from the stage.
     FXL_DCHECK(stream_type_);
     FXL_DCHECK(stream_type_->audio());
 
-    auto new_payload_buffer = allocator->AllocatePayloadBuffer(payload_size);
+    auto new_payload_buffer = stage()->AllocatePayloadBuffer(payload_size);
     if (!new_payload_buffer) {
       // TODO(dalesat): Renderer VMO is full. What can we do about this?
       FXL_LOG(FATAL) << "Ran out of memory for decoded, interleaved audio.";

@@ -29,7 +29,6 @@ std::shared_ptr<FidlAudioRenderer> FidlAudioRenderer::Create(
 FidlAudioRenderer::FidlAudioRenderer(
     fuchsia::media::AudioRendererPtr audio_renderer)
     : audio_renderer_(std::move(audio_renderer)),
-      allocator_(0),
       arrivals_(true),
       departures_(false) {
   FXL_DCHECK(audio_renderer_);
@@ -110,6 +109,16 @@ void FidlAudioRenderer::Dump(std::ostream& os) const {
   os << fostr::Outdent;
 }
 
+void FidlAudioRenderer::OnInputConnectionReady(size_t input_index) {
+  FXL_DCHECK(input_index == 0);
+
+  auto vmos = stage()->UseInputVmos().GetVmos();
+  FXL_DCHECK(vmos.size() == 1);
+  audio_renderer_->AddPayloadBuffer(
+      0,
+      vmos.front()->Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP));
+}
+
 void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
                                    fit::closure callback) {
   FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
@@ -179,11 +188,7 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
     fuchsia::media::StreamPacket audioPacket;
     audioPacket.pts = start_pts;
     audioPacket.payload_size = packet->size();
-
-    {
-      std::lock_guard<std::mutex> locker(mutex_);
-      audioPacket.payload_offset = buffer_.OffsetFromPtr(packet->payload());
-    }
+    audioPacket.payload_offset = packet->payload_buffer()->offset();
 
     audio_renderer_->SendPacket(audioPacket, [this, packet]() {
       FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
@@ -227,19 +232,12 @@ void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
 
   // TODO: What about stream type changes?
 
-  // Tell the allocator and buffer how large the buffer is.
+  // Configure the input for a single VMO of adequate size.
   size_t size = stream_type.audio()->min_buffer_size(
       stream_type.audio()->frames_per_second());  // TODO How many seconds?
 
-  {
-    std::lock_guard<std::mutex> locker(mutex_);
-    buffer_.InitNew(size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
-    allocator_.Reset(size);
-
-    // Give the renderer a handle to the buffer vmo.
-    audio_renderer_->AddPayloadBuffer(
-        0, buffer_.GetDuplicateVmo(ZX_RIGHTS_BASIC | ZX_RIGHT_READ |
-                                   ZX_RIGHT_MAP));
+  if (stage()->ConfigureInputToUseVmos(size, 0, 0, VmoAllocation::kSingleVmo)) {
+    OnInputConnectionReady(0);
   }
 
   // Tell the renderer that media time is in frames.
@@ -293,26 +291,6 @@ void FidlAudioRenderer::SetTimelineFunction(
 void FidlAudioRenderer::BindGainControl(
     fidl::InterfaceRequest<fuchsia::media::GainControl> gain_control_request) {
   audio_renderer_->BindGainControl(std::move(gain_control_request));
-}
-
-fbl::RefPtr<PayloadBuffer> FidlAudioRenderer::AllocatePayloadBuffer(
-    uint64_t size) {
-  // This method runs on an arbitrary thread.
-  FXL_DCHECK(size != 0);
-  std::lock_guard<std::mutex> locker(mutex_);
-  // The region allocated at the top of the VMO will be aligned to 4096 bytes.
-  // We ensure that subsequent allocations will be |kByteAlignment|-aligned by
-  // aligning-up all the sizes.
-  return PayloadBuffer::Create(
-      size,
-      buffer_.PtrFromOffset(
-          allocator_.AllocateRegion(PayloadBuffer::AlignUp(size))),
-      [this](PayloadBuffer* payload_buffer) {
-        FXL_DCHECK(payload_buffer);
-        std::lock_guard<std::mutex> locker(mutex_);
-        allocator_.ReleaseRegion(buffer_.OffsetFromPtr(payload_buffer->data()));
-        // The |PayloadBuffer| deletes itself.
-      });
 }
 
 void FidlAudioRenderer::OnTimelineTransition() {

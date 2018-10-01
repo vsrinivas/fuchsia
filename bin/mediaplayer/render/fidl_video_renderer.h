@@ -5,11 +5,9 @@
 #ifndef GARNET_BIN_MEDIAPLAYER_RENDER_FIDL_VIDEO_RENDERER_H_
 #define GARNET_BIN_MEDIAPLAYER_RENDER_FIDL_VIDEO_RENDERER_H_
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <deque>
 #include <unordered_map>
-
-#include <fuchsia/media/cpp/fidl.h>
-
 #include "garnet/bin/mediaplayer/metrics/packet_timing_tracker.h"
 #include "garnet/bin/mediaplayer/metrics/rate_tracker.h"
 #include "garnet/bin/mediaplayer/metrics/value_tracker.h"
@@ -35,6 +33,8 @@ class FidlVideoRenderer
   const char* label() const override;
 
   void Dump(std::ostream& os) const override;
+
+  void ConfigureConnectors() override;
 
   void FlushInput(bool hold_frame, size_t input_index,
                   fit::closure callback) override;

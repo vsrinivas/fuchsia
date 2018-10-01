@@ -60,7 +60,6 @@ void DemuxSourceSegment::DidProvision() {
 
 void DemuxSourceSegment::WillDeprovision() {
   if (demux_node_) {
-    graph().Unprepare();
     graph().RemoveNode(demux_node_);
     demux_node_ = nullptr;
   }

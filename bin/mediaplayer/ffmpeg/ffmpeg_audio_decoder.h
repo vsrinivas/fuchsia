@@ -22,16 +22,19 @@ class FfmpegAudioDecoder : public FfmpegDecoderBase {
 
   ~FfmpegAudioDecoder() override;
 
+  // AsyncNode implementation.
+  void ConfigureConnectors() override;
+
  protected:
   // FfmpegDecoderBase overrides.
   void OnNewInputPacket(const PacketPtr& packet) override;
 
-  int BuildAVFrame(const AVCodecContext& av_codec_context, AVFrame* av_frame,
-                   const std::shared_ptr<PayloadAllocator>& allocator) override;
+  int BuildAVFrame(const AVCodecContext& av_codec_context,
+                   AVFrame* av_frame) override;
 
   PacketPtr CreateOutputPacket(
-      const AVFrame& av_frame, fbl::RefPtr<PayloadBuffer> payload_buffer,
-      const std::shared_ptr<PayloadAllocator>& allocator) override;
+      const AVFrame& av_frame,
+      fbl::RefPtr<PayloadBuffer> payload_buffer) override;
 
   const char* label() const override;
 
@@ -44,7 +47,6 @@ class FfmpegAudioDecoder : public FfmpegDecoderBase {
 
   // For interleaving, if needed.
   std::unique_ptr<LpcmUtil> lpcm_util_;
-  std::shared_ptr<PayloadAllocator> default_allocator_;
 
   // For interleaving, if needed.
   std::unique_ptr<StreamType> stream_type_;

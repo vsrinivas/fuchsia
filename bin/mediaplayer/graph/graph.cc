@@ -40,21 +40,32 @@ void Graph::RemoveNode(NodeRef node) {
   stages_.remove(stage->shared_from_this());
 }
 
-NodeRef Graph::Connect(const OutputRef& output, const InputRef& input) {
-  FXL_DCHECK(output);
-  FXL_DCHECK(input);
+NodeRef Graph::Connect(const OutputRef& output_ref, const InputRef& input_ref) {
+  FXL_DCHECK(output_ref);
+  FXL_DCHECK(input_ref);
 
-  if (output.connected()) {
-    DisconnectOutput(output);
+  if (output_ref.connected()) {
+    DisconnectOutput(output_ref);
   }
-  if (input.connected()) {
-    DisconnectInput(input);
+  if (input_ref.connected()) {
+    DisconnectInput(input_ref);
   }
 
-  output.actual()->Connect(input.actual());
-  input.actual()->Connect(output.actual());
+  Output& output = *output_ref.actual();
+  Input& input = *input_ref.actual();
 
-  return input.node();
+  input.Connect(&output);
+
+  // This call might apply the output configuration to the payload manager.
+  output.Connect(&input);
+
+  // If the payload manager is ready, notify the nodes.
+  if (input.payload_manager().ready()) {
+    input.stage()->NotifyInputConnectionReady(input.index());
+    output.stage()->NotifyOutputConnectionReady(output.index());
+  }
+
+  return input_ref.node();
 }
 
 NodeRef Graph::ConnectNodes(NodeRef upstream_node, NodeRef downstream_node) {
@@ -92,11 +103,6 @@ void Graph::DisconnectOutput(const OutputRef& output) {
   Input* mate = actual_output->mate();
   FXL_DCHECK(mate);
 
-  if (mate->prepared()) {
-    FXL_CHECK(false) << "attempt to disconnect prepared input " << *mate;
-    return;
-  }
-
   mate->Disconnect();
   actual_output->Disconnect();
 }
@@ -112,12 +118,6 @@ void Graph::DisconnectInput(const InputRef& input) {
   FXL_DCHECK(actual_input);
   Output* mate = actual_input->mate();
   FXL_DCHECK(mate);
-
-  if (actual_input->prepared()) {
-    FXL_CHECK(false) << "attempt to disconnect prepared input "
-                     << *actual_input;
-    return;
-  }
 
   mate->Disconnect();
   actual_input->Disconnect();
@@ -189,32 +189,6 @@ void Graph::Reset() {
       stage->ShutDown();
     }
   });
-}
-
-void Graph::Prepare() {
-  for (StageImpl* sink : sinks_) {
-    for (size_t i = 0; i < sink->input_count(); ++i) {
-      PrepareInput(&sink->input(i));
-    }
-  }
-}
-
-void Graph::PrepareInput(const InputRef& input) {
-  FXL_DCHECK(input);
-  PrepareInput(input.actual());
-}
-
-void Graph::Unprepare() {
-  for (StageImpl* sink : sinks_) {
-    for (size_t i = 0; i < sink->input_count(); ++i) {
-      UnprepareInput(&sink->input(i));
-    }
-  }
-}
-
-void Graph::UnprepareInput(const InputRef& input) {
-  FXL_DCHECK(input);
-  UnprepareInput(input.actual());
 }
 
 void Graph::FlushOutput(const OutputRef& output, bool hold_frame,
@@ -297,8 +271,6 @@ void Graph::FlushOutputs(std::queue<Output*>* backlog, bool hold_frame,
 
     Input* input = output->mate();
     FXL_DCHECK(input);
-    FXL_DCHECK(input->prepared())
-        << "Attempt to flush unprepared input " << *input;
     StageImpl* input_stage = input->stage();
 
     output->stage()->FlushOutput(output->index(),
@@ -314,31 +286,6 @@ void Graph::FlushOutputs(std::queue<Output*>* backlog, bool hold_frame,
   }
 
   callback_joiner->WhenJoined(std::move(callback));
-}
-
-void Graph::PrepareInput(Input* input) {
-  FXL_DCHECK(input);
-  VisitUpstream(input, [](Input* input, Output* output) {
-    FXL_DCHECK(input);
-    FXL_DCHECK(output);
-    FXL_DCHECK(!input->prepared()) << *input << " already prepared.";
-    std::shared_ptr<PayloadAllocator> allocator =
-        input->stage()->PrepareInput(input->index());
-    input->set_prepared(true);
-    output->stage()->PrepareOutput(output->index(), allocator);
-  });
-}
-
-void Graph::UnprepareInput(Input* input) {
-  FXL_DCHECK(input);
-  VisitUpstream(input, [](Input* input, Output* output) {
-    FXL_DCHECK(input);
-    FXL_DCHECK(output);
-    FXL_DCHECK(input->prepared()) << *input << " already unprepared.";
-    input->stage()->UnprepareInput(input->index());
-    input->set_prepared(false);
-    output->stage()->UnprepareOutput(output->index());
-  });
 }
 
 void Graph::VisitUpstream(Input* input, const Visitor& visitor) {

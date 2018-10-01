@@ -11,18 +11,14 @@
 #include "garnet/bin/mediaplayer/metrics/packet_timing_tracker.h"
 #include "garnet/bin/mediaplayer/render/audio_renderer.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
-#include "lib/media/transport/fifo_allocator.h"
-#include "lib/media/transport/mapped_shared_buffer.h"
 
 namespace media_player {
 
 // AudioRenderer that renders audio via FIDL services.
 //
-// This class run single-threaded with the execption of the |PayloadAllocator|
-// methods, which can run on an arbitrary thread.
+// This class run single-threaded.
 class FidlAudioRenderer
     : public AudioRenderer,
-      public PayloadAllocator,
       public std::enable_shared_from_this<FidlAudioRenderer> {
  public:
   static std::shared_ptr<FidlAudioRenderer> Create(
@@ -37,14 +33,10 @@ class FidlAudioRenderer
 
   void Dump(std::ostream& os) const override;
 
+  void OnInputConnectionReady(size_t input_index) override;
+
   void FlushInput(bool hold_frame, size_t input_index,
                   fit::closure callback) override;
-
-  std::shared_ptr<PayloadAllocator> allocator_for_input(
-      size_t input_index) override {
-    FXL_DCHECK(input_index == 0);
-    return shared_from_this();
-  }
 
   void PutInputPacket(PacketPtr packet, size_t input_index) override;
 
@@ -62,9 +54,6 @@ class FidlAudioRenderer
 
   void BindGainControl(fidl::InterfaceRequest<fuchsia::media::GainControl>
                            gain_control_request) override;
-
-  // PayloadAllocator implementation.
-  fbl::RefPtr<PayloadBuffer> AllocatePayloadBuffer(uint64_t size) override;
 
  protected:
   // Renderer overrides.
@@ -99,10 +88,6 @@ class FidlAudioRenderer
   bool flushed_ = true;
   int64_t min_lead_time_ns_ = ZX_MSEC(100);
   async::TaskClosure demand_task_;
-
-  mutable std::mutex mutex_;
-  media::MappedSharedBuffer buffer_ FXL_GUARDED_BY(mutex_);
-  media::FifoAllocator allocator_ FXL_GUARDED_BY(mutex_);
 
   PacketTimingTracker arrivals_;
   PacketTimingTracker departures_;

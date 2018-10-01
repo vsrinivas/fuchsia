@@ -4,8 +4,8 @@
 
 #include "garnet/bin/mediaplayer/ffmpeg/ffmpeg_video_decoder.h"
 
+#include <lib/sync/completion.h>
 #include <algorithm>
-
 #include "garnet/bin/mediaplayer/ffmpeg/ffmpeg_formatting.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
@@ -38,6 +38,22 @@ FfmpegVideoDecoder::FfmpegVideoDecoder(AvCodecContextPtr av_codec_context)
 
 FfmpegVideoDecoder::~FfmpegVideoDecoder() {}
 
+void FfmpegVideoDecoder::ConfigureConnectors() {
+  // TODO(dalesat): Make sure these numbers are adequate.
+  // The demux allocates local memory itself, so we don't have to say much
+  // here.
+  stage()->ConfigureInputToUseLocalMemory(0,   // max_aggregate_payload_size
+                                          2);  // max_payload_count
+
+  if (has_size()) {
+    configured_output_buffer_size_ = frame_layout_.buffer_size();
+    stage()->ConfigureOutputToUseLocalMemory(0, 3,
+                                             configured_output_buffer_size_);
+  } else {
+    stage()->ConfigureOutputDeferred();
+  }
+}
+
 void FfmpegVideoDecoder::OnNewInputPacket(const PacketPtr& packet) {
   FXL_DCHECK(context());
   FXL_DCHECK(packet->pts() != Packet::kUnknownPts);
@@ -53,11 +69,9 @@ void FfmpegVideoDecoder::OnNewInputPacket(const PacketPtr& packet) {
   context()->reordered_opaque = packet->pts();
 }
 
-int FfmpegVideoDecoder::BuildAVFrame(
-    const AVCodecContext& av_codec_context, AVFrame* av_frame,
-    const std::shared_ptr<PayloadAllocator>& allocator) {
+int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
+                                     AVFrame* av_frame) {
   FXL_DCHECK(av_frame);
-  FXL_DCHECK(allocator);
 
   if (frame_layout_.Update(av_codec_context)) {
     revised_stream_type_ = AvCodecContext::GetStreamType(av_codec_context);
@@ -106,8 +120,26 @@ int FfmpegVideoDecoder::BuildAVFrame(
     coded_size_ = coded_size;
   }
 
+  size_t buffer_size = frame_layout_.buffer_size();
+  if (has_size() && configured_output_buffer_size_ < buffer_size) {
+    configured_output_buffer_size_ = buffer_size;
+
+    // We need to configure the output, but that has to happen on the graph
+    // thread. Do that and block until it's done.
+    sync_completion completion;
+    stage()->PostTask([this, buffer_size, &completion]() {
+      stage()->ConfigureOutputToUseLocalMemory(
+          0,             // max_aggregate_payload_size
+          3,             // max_payload_count
+          buffer_size);  // max_payload_size
+      sync_completion_signal(&completion);
+    });
+
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
+  }
+
   fbl::RefPtr<PayloadBuffer> payload_buffer =
-      allocator->AllocatePayloadBuffer(frame_layout_.buffer_size());
+      stage()->AllocatePayloadBuffer(frame_layout_.buffer_size());
 
   if (!payload_buffer) {
     FXL_LOG(ERROR) << "failed to allocate payload buffer of size "
@@ -146,11 +178,9 @@ int FfmpegVideoDecoder::BuildAVFrame(
 }
 
 PacketPtr FfmpegVideoDecoder::CreateOutputPacket(
-    const AVFrame& av_frame, fbl::RefPtr<PayloadBuffer> payload_buffer,
-    const std::shared_ptr<PayloadAllocator>& allocator) {
+    const AVFrame& av_frame, fbl::RefPtr<PayloadBuffer> payload_buffer) {
   FXL_DCHECK(av_frame.buf[0]);
   FXL_DCHECK(payload_buffer);
-  FXL_DCHECK(allocator);
 
   // Recover the pts deposited in Decode.
   set_next_pts(av_frame.reordered_opaque);

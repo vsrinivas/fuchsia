@@ -53,21 +53,17 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   // Returns the indicated output connection.
   virtual Output& output(size_t index) = 0;
 
-  // Prepares the input for operation. Returns nullptr unless the connected
-  // output must use a specific allocator, in which case it returns that
-  // allocator.
-  virtual std::shared_ptr<PayloadAllocator> PrepareInput(size_t index) = 0;
+  // Notifies the node that the connection for the indicated input is ready
+  // for allocation activity.
+  //
+  // This method may be called on an arbitrary thread.
+  virtual void NotifyInputConnectionReady(size_t index) = 0;
 
-  // Prepares the output for operation, passing an allocator that must be used
-  // by the output or nullptr if there is no such requirement.
-  virtual void PrepareOutput(size_t index,
-                             std::shared_ptr<PayloadAllocator> allocator) = 0;
-
-  // Unprepares the input. The default implementation does nothing.
-  virtual void UnprepareInput(size_t index);
-
-  // Unprepares the output. The default implementation does nothing.
-  virtual void UnprepareOutput(size_t index);
+  // Notifies the node that the connection for the indicated output is ready
+  // for allocation activity.
+  //
+  // This method may be called on an arbitrary thread.
+  virtual void NotifyOutputConnectionReady(size_t index) = 0;
 
   // Flushes an input. |hold_frame| indicates whether a video renderer should
   // hold and display the newest frame. The callback is used to indicate that

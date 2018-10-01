@@ -43,10 +43,6 @@ class FakeSinkSegment : public SinkSegment {
 
   bool connected() const override { return connected_; }
 
-  void Prepare() override { prepare_called_ = true; }
-
-  void Unprepare() override { unprepare_called_ = true; }
-
   void Prime(fit::closure callback) override {
     prime_called_ = true;
     prime_call_param_callback_ = std::move(callback);
@@ -100,10 +96,6 @@ class FakeSinkSegment : public SinkSegment {
   bool disconnect_called_ = false;
 
   bool connected_ = false;
-
-  bool prepare_called_ = false;
-
-  bool unprepare_called_ = false;
 
   bool prime_called_ = false;
   fit::closure prime_call_param_callback_;

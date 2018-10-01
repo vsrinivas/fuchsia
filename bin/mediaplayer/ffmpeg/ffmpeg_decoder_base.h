@@ -46,14 +46,12 @@ class FfmpegDecoderBase : public SoftwareDecoder {
   // Fills in |av_frame|, probably using an |AVBuffer| allocated via
   // CreateAVBuffer. |av_codec_context| may be distinct from context() and
   // should be used when a codec context is required.
-  virtual int BuildAVFrame(
-      const AVCodecContext& av_codec_context, AVFrame* av_frame,
-      const std::shared_ptr<PayloadAllocator>& allocator) = 0;
+  virtual int BuildAVFrame(const AVCodecContext& av_codec_context,
+                           AVFrame* av_frame) = 0;
 
   // Creates a Packet from av_frame.
   virtual PacketPtr CreateOutputPacket(
-      const AVFrame& av_frame, fbl::RefPtr<PayloadBuffer> payload_buffer,
-      const std::shared_ptr<PayloadAllocator>& allocator) = 0;
+      const AVFrame& av_frame, fbl::RefPtr<PayloadBuffer> payload_buffer) = 0;
 
   // The ffmpeg codec context.
   const AvCodecContextPtr& context() { return av_codec_context_; }

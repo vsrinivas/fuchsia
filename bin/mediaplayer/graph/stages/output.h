@@ -6,18 +6,19 @@
 #define GARNET_BIN_MEDIAPLAYER_GRAPH_STAGES_OUTPUT_H_
 
 #include "garnet/bin/mediaplayer/graph/packet.h"
-#include "garnet/bin/mediaplayer/graph/payloads/payload_allocator.h"
+#include "garnet/bin/mediaplayer/graph/payloads/payload_config.h"
 
 namespace media_player {
 
 class StageImpl;
-class Engine;
 class Input;
 
 // Represents a stage's connector to an adjacent downstream stage.
 class Output {
  public:
   Output(StageImpl* stage, size_t index);
+
+  Output(Output&& output);
 
   ~Output();
 
@@ -39,11 +40,6 @@ class Output {
   // Determines whether the output is connected to an input.
   bool connected() const { return mate_; }
 
-  // Sets the allocator the output must use to copy the payload of output
-  // packets. This is used when the connected input insists that a specific
-  // allocator be used, but the stage can't use it.
-  void SetCopyAllocator(std::shared_ptr<PayloadAllocator> copy_allocator);
-
   // Need for a packet signalled from downstream, or false if the downstream
   // input is currently holding a packet.
   bool needs_packet() const;
@@ -52,11 +48,16 @@ class Output {
   // implementations.
   void SupplyPacket(PacketPtr packet) const;
 
+  // Returns a reference to the payload configuration.
+  PayloadConfig& payload_config() { return payload_config_; }
+  const PayloadConfig& payload_config() const { return payload_config_; }
+
  private:
   StageImpl* stage_;
   size_t index_;
   Input* mate_ = nullptr;
-  std::shared_ptr<PayloadAllocator> copy_allocator_ = nullptr;
+  PayloadConfig payload_config_;
+  zx::handle bti_handle_;
 };
 
 }  // namespace media_player

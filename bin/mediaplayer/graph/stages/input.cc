@@ -9,6 +9,29 @@
 #include "garnet/bin/mediaplayer/graph/stages/stage_impl.h"
 
 namespace media_player {
+namespace {
+
+// Creates a copy of |original| with |copied_payload_buffer| replacing the
+// original's payload buffer. |copied_payload_buffer| may be nullptr if and
+// only if |original| has no payload.
+PacketPtr CopyPacket(const Packet& original,
+                     fbl::RefPtr<PayloadBuffer> copied_payload_buffer) {
+  FXL_DCHECK(copied_payload_buffer ||
+             (original.size() == 0 && !original.payload_buffer()));
+
+  PacketPtr copy =
+      Packet::Create(original.pts(), original.pts_rate(), original.keyframe(),
+                     original.end_of_stream(), original.size(),
+                     std::move(copied_payload_buffer));
+
+  if (original.revised_stream_type()) {
+    copy->SetRevisedStreamType(original.revised_stream_type()->Clone());
+  }
+
+  return copy;
+}
+
+}  // namespace
 
 Input::Input(StageImpl* stage, size_t index)
     : stage_(stage), index_(index), state_(State::kRefusesPacket) {
@@ -18,10 +41,13 @@ Input::Input(StageImpl* stage, size_t index)
 Input::Input(Input&& input)
     : stage_(input.stage()),
       index_(input.index()),
-      mate_(input.mate()),
-      prepared_(input.prepared()),
-      packet_(std::move(input.packet())),
-      state_(input.state_.load()) {}
+      state_(input.state_.load()) {
+  // We can't move an input that's connected, has a packet or is configured.
+  // TODO(dalesat): Make |Input| non-movable.
+  FXL_DCHECK(input.mate() == nullptr);
+  FXL_DCHECK(input.packet() == nullptr);
+  FXL_DCHECK(input.payload_config().mode_ == PayloadMode::kNotConfigured);
+}
 
 Input::~Input() {}
 
@@ -57,7 +83,38 @@ PacketPtr Input::TakePacket(bool request_another) {
     state_.store(State::kRefusesPacket);
   }
 
-  return packet;
+  if (!packet) {
+    return nullptr;
+  }
+
+  size_t size = packet->size();
+
+  fbl::RefPtr<PayloadBuffer> copy_destination_buffer;
+  if (!payload_manager_.MaybeAllocatePayloadBufferForCopy(
+          size, &copy_destination_buffer)) {
+    // Copying is not required, so we just return the packet.
+    return packet;
+  }
+
+  if (size == 0) {
+    // Copying is required, but there's no payload. Return a new packet with the
+    // same attributes as |packet|.
+    return CopyPacket(*packet, nullptr);
+  }
+
+  if (!copy_destination_buffer) {
+    // TODO(dalesat): Mitigation?
+    // We just drop the packet, so there will be a glitch.
+    FXL_LOG(WARNING) << "Allocator starved copying payload.";
+    return nullptr;
+  }
+
+  // Copy the payload.
+  FXL_DCHECK(copy_destination_buffer->size() >= size);
+  memcpy(copy_destination_buffer->data(), packet->payload(), size);
+
+  // Return a new packet like |packet| but with the new payload buffer.
+  return CopyPacket(*packet, std::move(copy_destination_buffer));
 }
 
 void Input::RequestPacket() {

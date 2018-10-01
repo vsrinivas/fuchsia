@@ -21,15 +21,6 @@ SoftwareDecoder::SoftwareDecoder()
 
 SoftwareDecoder::~SoftwareDecoder() { FXL_DCHECK(is_main_thread()); }
 
-void SoftwareDecoder::GetConfiguration(size_t* input_count,
-                                       size_t* output_count) {
-  FXL_DCHECK(is_main_thread());
-  FXL_DCHECK(input_count);
-  FXL_DCHECK(output_count);
-  *input_count = 1;
-  *output_count = 1;
-}
-
 void SoftwareDecoder::FlushInput(bool hold_frame, size_t input_index,
                                  fit::closure callback) {
   FXL_DCHECK(is_main_thread());
@@ -70,13 +61,6 @@ void SoftwareDecoder::FlushOutput(size_t output_index, fit::closure callback) {
   });
 }
 
-std::shared_ptr<PayloadAllocator> SoftwareDecoder::allocator_for_input(
-    size_t input_index) {
-  FXL_DCHECK(is_main_thread());
-  FXL_DCHECK(input_index == 0);
-  return nullptr;
-}
-
 void SoftwareDecoder::PutInputPacket(PacketPtr packet, size_t input_index) {
   FXL_DCHECK(is_main_thread());
   FXL_DCHECK(packet);
@@ -108,20 +92,6 @@ void SoftwareDecoder::PutInputPacket(PacketPtr packet, size_t input_index) {
     // Request another packet to keep |input_packet_| full.
     stage()->RequestInputPacket();
   }
-}
-
-bool SoftwareDecoder::can_accept_allocator_for_output(
-    size_t output_index) const {
-  FXL_DCHECK(is_main_thread());
-  FXL_DCHECK(output_index == 0);
-  return true;
-}
-
-void SoftwareDecoder::SetAllocatorForOutput(
-    std::shared_ptr<PayloadAllocator> allocator, size_t output_index) {
-  FXL_DCHECK(is_main_thread());
-  FXL_DCHECK(output_index == 0);
-  allocator_ = allocator;
 }
 
 void SoftwareDecoder::RequestOutputPacket() {

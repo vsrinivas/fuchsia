@@ -35,7 +35,7 @@ class Renderer : public AsyncNode {
   // AsyncNode implementation.
   void Dump(std::ostream& os) const override;
 
-  void GetConfiguration(size_t* input_count, size_t* output_count) override;
+  void ConfigureConnectors() override;
 
   // Returns the types of the streams the renderer is able
   // to consume.

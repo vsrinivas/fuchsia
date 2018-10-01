@@ -4,12 +4,10 @@
 
 #include "garnet/bin/mediaplayer/core/player_core.h"
 
-#include <queue>
-#include <unordered_set>
-
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
-
+#include <queue>
+#include <unordered_set>
 #include "garnet/bin/mediaplayer/graph/formatting.h"
 #include "garnet/bin/mediaplayer/util/callback_joiner.h"
 #include "lib/fxl/logging.h"
@@ -91,7 +89,7 @@ void PlayerCore::SetSinkSegment(std::unique_ptr<SinkSegment> sink_segment,
   if (stream) {
     FXL_DCHECK(!stream->sink_segment_);
     stream->sink_segment_ = std::move(sink_segment);
-    ConnectAndPrepareStream(stream);
+    ConnectStream(stream);
     return;
   }
 
@@ -286,7 +284,7 @@ void PlayerCore::OnStreamUpdated(size_t index, const StreamType& type,
     }
   }
 
-  ConnectAndPrepareStream(&stream);
+  ConnectStream(&stream);
 }
 
 void PlayerCore::OnStreamRemoval(size_t index) {
@@ -348,14 +346,13 @@ std::unique_ptr<SinkSegment> PlayerCore::TakeSinkSegment(Stream* stream) {
   FXL_DCHECK(stream->sink_segment_);
 
   if (stream->sink_segment_->connected()) {
-    stream->sink_segment_->Unprepare();
     stream->sink_segment_->Disconnect();
   }
 
   return std::move(stream->sink_segment_);
 }
 
-void PlayerCore::ConnectAndPrepareStream(Stream* stream) {
+void PlayerCore::ConnectStream(Stream* stream) {
   FXL_DCHECK(stream);
   FXL_DCHECK(stream->sink_segment_);
   FXL_DCHECK(stream->stream_type_);
@@ -367,11 +364,6 @@ void PlayerCore::ConnectAndPrepareStream(Stream* stream) {
         if (result != Result::kOk) {
           // The segment will report a problem separately.
           return;
-        }
-
-        Stream* stream = GetStream(medium);
-        if (stream && stream->sink_segment_) {
-          stream->sink_segment_->Prepare();
         }
 
         MaybeCompleteSetSourceSegment();

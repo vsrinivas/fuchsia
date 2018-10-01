@@ -36,8 +36,8 @@ class PlayerCore {
 
   // Sets the current source segment. |source_segment| may be null, indicating
   // there is no source segment. The callback is called when the initial set
-  // of streams supplied by the segment have been connected and prepared to the
-  // extent possible. |callback| may be null.
+  // of streams supplied by the segment have been connected. |callback| may be
+  // null.
   void SetSourceSegment(std::unique_ptr<SourceSegment> source_segment,
                         fit::closure callback);
 
@@ -171,8 +171,8 @@ class PlayerCore {
   // Takes the sink segment from a stream.
   std::unique_ptr<SinkSegment> TakeSinkSegment(Stream* stream);
 
-  // Connects and prepares the specified stream.
-  void ConnectAndPrepareStream(Stream* stream);
+  // Connects the specified stream.
+  void ConnectStream(Stream* stream);
 
   Graph graph_;
   async_dispatcher_t* dispatcher_;

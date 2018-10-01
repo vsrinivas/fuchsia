@@ -29,12 +29,6 @@ namespace media_player {
 // to prevent collisions. In this case, the caller must also acquire the same
 // lock when making calls that cause nodes to add or remove inputs or outputs.
 //
-// The graph prevents the disconnection of prepared inputs and outputs. Once
-// a connected input/output pair is prepared, it must be unprepared before
-// disconnection. This allows the graph to operate freely over prepared
-// portions of the graph (prepare and unprepare are synchronized with the
-// graph).
-//
 // Nodes added to the graph are referenced using shared pointers. The graph
 // holds pointers to the nodes it contains, and the application, in many cases,
 // also holds pointers to the nodes so it can call methods that are outside the
@@ -87,6 +81,7 @@ class Graph {
     FXL_DCHECK(node_ptr);
     auto stage = std::make_shared<TStageImpl>(node_ptr);
     node_ptr->SetStage(stage.get());
+    node_ptr->ConfigureConnectors();
     return AddStage(stage);
   }
 
@@ -129,20 +124,6 @@ class Graph {
   // Removes all nodes from the graph.
   void Reset();
 
-  // Prepares the graph for operation.
-  void Prepare();
-
-  // Prepares the input and everything upstream of it. This method is used to
-  // prepare subgraphs added when the rest of the graph is already prepared.
-  void PrepareInput(const InputRef& input);
-
-  // Unprepares the graph after operation.
-  void Unprepare();
-
-  // Unprepares the input and everything upstream of it. This method is used to
-  // unprepare subgraphs.
-  void UnprepareInput(const InputRef& input);
-
   // Flushes the output and the subgraph downstream of it. |hold_frame|
   // indicates whether a video renderer should hold and display the newest
   // frame. |callback| is called when all flushes are complete.
@@ -169,12 +150,6 @@ class Graph {
   // empty when this method returns.
   void FlushOutputs(std::queue<Output*>* backlog, bool hold_frame,
                     fit::closure callback);
-
-  // Prepares the input and the subgraph upstream of it.
-  void PrepareInput(Input* input);
-
-  // Unprepares the input and the subgraph upstream of it.
-  void UnprepareInput(Input* input);
 
   // Flushes the output and the subgraph downstream of it. |hold_frame|
   // indicates whether a video renderer should hold and display the newest

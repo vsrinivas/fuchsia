@@ -58,11 +58,6 @@ bool InputRef::connected() const {
   return input_->connected();
 }
 
-bool InputRef::prepared() const {
-  FXL_DCHECK(input_);
-  return input_->prepared();
-}
-
 OutputRef InputRef::mate() const {
   FXL_DCHECK(input_);
   return OutputRef(input_->mate());

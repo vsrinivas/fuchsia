@@ -40,15 +40,6 @@ class SinkSegment : public Segment {
   // Indicates whether the segment is connected.
   virtual bool connected() const = 0;
 
-  // Prepares this sink segment in the |Graph::Prepare| sense. This involves
-  // walking the graph upstream assigning allocators to the various nodes.
-  virtual void Prepare() = 0;
-
-  // Unprepares this sink segment in the |Graph::Unprepare| sense. This involves
-  // disconnecting the nodes from the allocators they were assigned during
-  // |Prepare|.
-  virtual void Unprepare() = 0;
-
   // Prepares the sink segment for playback by satisfying initial renderer
   // demand.
   virtual void Prime(fit::closure callback) = 0;

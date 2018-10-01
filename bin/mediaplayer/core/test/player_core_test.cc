@@ -257,7 +257,6 @@ TEST_F(PlayerTest, FakeSegments) {
   std::unique_ptr<FakeSinkSegment> audio_sink_segment = FakeSinkSegment::Create(
       [&audio_sink_segment_destroyed](FakeSinkSegment* sink_segment) {
         audio_sink_segment_destroyed = true;
-        EXPECT_TRUE(sink_segment->unprepare_called_);
         EXPECT_TRUE(sink_segment->disconnect_called_);
         EXPECT_TRUE(sink_segment->will_deprovision_called_);
         EXPECT_FALSE(sink_segment->TEST_provisioned());
@@ -291,15 +290,12 @@ TEST_F(PlayerTest, FakeSegments) {
 
   EXPECT_TRUE(audio_sink_segment_raw->connect_called_);
   audio_sink_segment_raw->connect_called_ = false;
-  EXPECT_FALSE(audio_sink_segment_raw->prepare_called_);
   EXPECT_NE(nullptr, audio_sink_segment_raw->connect_call_param_type_);
   ExpectEqual(&audio_type, audio_sink_segment_raw->connect_call_param_type_);
   EXPECT_NE(nullptr, audio_sink_segment_raw->connect_call_param_callback_);
 
   audio_sink_segment_raw->connected_ = true;
   audio_sink_segment_raw->connect_call_param_callback_(Result::kOk);
-  EXPECT_TRUE(audio_sink_segment_raw->prepare_called_);
-  audio_sink_segment_raw->prepare_called_ = false;
 
   EXPECT_TRUE(player_core.has_sink_segment(StreamType::Medium::kAudio));
   EXPECT_TRUE(player_core.content_has_medium(StreamType::Medium::kAudio));
@@ -315,7 +311,6 @@ TEST_F(PlayerTest, FakeSegments) {
   std::unique_ptr<FakeSinkSegment> video_sink_segment = FakeSinkSegment::Create(
       [&video_sink_segment_destroyed](FakeSinkSegment* sink_segment) {
         video_sink_segment_destroyed = true;
-        EXPECT_TRUE(sink_segment->unprepare_called_);
         EXPECT_TRUE(sink_segment->disconnect_called_);
         EXPECT_TRUE(sink_segment->will_deprovision_called_);
         EXPECT_FALSE(sink_segment->TEST_provisioned());
@@ -349,15 +344,12 @@ TEST_F(PlayerTest, FakeSegments) {
 
   EXPECT_TRUE(video_sink_segment_raw->connect_called_);
   video_sink_segment_raw->connect_called_ = false;
-  EXPECT_FALSE(video_sink_segment_raw->prepare_called_);
   EXPECT_NE(nullptr, video_sink_segment_raw->connect_call_param_type_);
   ExpectEqual(&video_type, video_sink_segment_raw->connect_call_param_type_);
   EXPECT_NE(nullptr, video_sink_segment_raw->connect_call_param_callback_);
 
   video_sink_segment_raw->connected_ = true;
   video_sink_segment_raw->connect_call_param_callback_(Result::kOk);
-  EXPECT_TRUE(video_sink_segment_raw->prepare_called_);
-  video_sink_segment_raw->prepare_called_ = false;
 
   EXPECT_TRUE(player_core.has_sink_segment(StreamType::Medium::kAudio));
   EXPECT_TRUE(player_core.content_has_medium(StreamType::Medium::kAudio));
@@ -471,7 +463,6 @@ TEST_F(PlayerTest, FakeSegments) {
   EXPECT_TRUE(player_core.end_of_stream());
 
   // Remove the sink for audio.
-  EXPECT_FALSE(audio_sink_segment_raw->unprepare_called_);
   EXPECT_FALSE(audio_sink_segment_raw->disconnect_called_);
   EXPECT_FALSE(audio_sink_segment_raw->will_deprovision_called_);
 
@@ -493,7 +484,6 @@ TEST_F(PlayerTest, FakeSegments) {
   ExpectNoStreams(player_core, StreamType::Medium::kSubpicture);
 
   // Remove the sink for video.
-  EXPECT_FALSE(video_sink_segment_raw->unprepare_called_);
   EXPECT_FALSE(video_sink_segment_raw->disconnect_called_);
   EXPECT_FALSE(video_sink_segment_raw->will_deprovision_called_);
 
@@ -556,7 +546,6 @@ void ExpectRealSegmentsGraph(const PlayerCore& player_core) {
   EXPECT_EQ(1u, audio_decoder_node_ref.input_count());
   EXPECT_EQ(1u, audio_decoder_node_ref.output_count());
   EXPECT_TRUE(audio_decoder_node_ref.input().connected());
-  EXPECT_TRUE(audio_decoder_node_ref.input().prepared());
   EXPECT_TRUE(audio_decoder_node_ref.output().connected());
   EXPECT_EQ("FakeDecoder", audio_decoder_node_ref.GetGenericNode()->label());
 
@@ -566,7 +555,6 @@ void ExpectRealSegmentsGraph(const PlayerCore& player_core) {
   EXPECT_EQ(1u, audio_renderer_node_ref.input_count());
   EXPECT_EQ(0u, audio_renderer_node_ref.output_count());
   EXPECT_TRUE(audio_renderer_node_ref.input().connected());
-  EXPECT_TRUE(audio_renderer_node_ref.input().prepared());
   EXPECT_EQ("FakeAudioRenderer",
             audio_renderer_node_ref.GetGenericNode()->label());
 
@@ -576,7 +564,6 @@ void ExpectRealSegmentsGraph(const PlayerCore& player_core) {
   EXPECT_EQ(1u, video_decoder_node_ref.input_count());
   EXPECT_EQ(1u, video_decoder_node_ref.output_count());
   EXPECT_TRUE(video_decoder_node_ref.input().connected());
-  EXPECT_TRUE(video_decoder_node_ref.input().prepared());
   EXPECT_TRUE(video_decoder_node_ref.output().connected());
   EXPECT_EQ("FakeDecoder", video_decoder_node_ref.GetGenericNode()->label());
 
@@ -586,7 +573,6 @@ void ExpectRealSegmentsGraph(const PlayerCore& player_core) {
   EXPECT_EQ(1u, video_renderer_node_ref.input_count());
   EXPECT_EQ(0u, video_renderer_node_ref.output_count());
   EXPECT_TRUE(video_renderer_node_ref.input().connected());
-  EXPECT_TRUE(video_renderer_node_ref.input().prepared());
   EXPECT_EQ("FakeVideoRenderer",
             video_renderer_node_ref.GetGenericNode()->label());
 

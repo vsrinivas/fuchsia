@@ -22,8 +22,7 @@ The framework *does not* address the following concerns:
 
 The `Graph` class is the primary entry point for the framework API. The client
 instantiates a graph and uses its methods to add nodes to the graph and connect
-the nodes together. The client then calls the `Graph::Prepare` method, at which
-point the graph is ready to move packets.
+the nodes together. At this point, the graph is ready to move packets.
 
 Here's an example:
 
@@ -35,8 +34,6 @@ NodeRef renderer = graph.Add(renderer_node);
 
 graph.ConnectNodes(demux, decoder);
 graph.ConnectNodes(decoder, renderer);
-
-graph.Prepare();
 ```
 
 The framework itself doesn't implement any of the nodes in the example, but it

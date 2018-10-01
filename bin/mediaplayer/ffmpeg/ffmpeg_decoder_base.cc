@@ -132,8 +132,7 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input, bool new_input,
       // |PayloadBuffer| attached to the frame's |AVBuffer| in |CreateAVBuffer|.
       *output = CreateOutputPacket(*av_frame_ptr_,
                                    CopyOpaqueRefPtr<PayloadBuffer>(
-                                       av_frame_ptr_->buf[0]->buffer->opaque),
-                                   allocator());
+                                       av_frame_ptr_->buf[0]->buffer->opaque));
 
       // Release the frame returned by |avcodec_receive_frame|.
       av_frame_unref(av_frame_ptr_.get());
@@ -234,7 +233,7 @@ int FfmpegDecoderBase::AllocateBufferForAvFrame(
       reinterpret_cast<FfmpegDecoderBase*>(av_codec_context->opaque);
   FXL_DCHECK(self);
 
-  return self->BuildAVFrame(*av_codec_context, av_frame, self->allocator());
+  return self->BuildAVFrame(*av_codec_context, av_frame);
 }
 
 // static

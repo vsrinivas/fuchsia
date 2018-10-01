@@ -34,10 +34,6 @@ class RendererSinkSegment : public SinkSegment {
 
   bool connected() const override { return !!connected_output_; }
 
-  void Prepare() override;
-
-  void Unprepare() override;
-
   void Prime(fit::closure callback) override;
 
   void SetTimelineFunction(media::TimelineFunction timeline_function,

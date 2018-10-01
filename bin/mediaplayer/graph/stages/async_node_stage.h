@@ -11,6 +11,7 @@
 #include "garnet/bin/mediaplayer/graph/models/async_node.h"
 #include "garnet/bin/mediaplayer/graph/stages/stage_impl.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
+#include "lib/fxl/synchronization/thread_checker.h"
 
 namespace media_player {
 
@@ -32,12 +33,9 @@ class AsyncNodeStageImpl : public AsyncNodeStage, public StageImpl {
 
   Output& output(size_t output_index) override;
 
-  std::shared_ptr<PayloadAllocator> PrepareInput(size_t input_index) override;
+  void NotifyInputConnectionReady(size_t index) override;
 
-  void PrepareOutput(size_t output_index,
-                     std::shared_ptr<PayloadAllocator> allocator) override;
-
-  void UnprepareOutput(size_t output_index) override;
+  void NotifyOutputConnectionReady(size_t index) override;
 
   void FlushInput(size_t input_index, bool hold_frame,
                   fit::closure callback) override;
@@ -56,7 +54,60 @@ class AsyncNodeStageImpl : public AsyncNodeStage, public StageImpl {
 
   void Dump(std::ostream& os) const override;
 
+  void ConfigureInputDeferred(size_t input_index = 0) override;
+
+  bool ConfigureInputToUseLocalMemory(uint64_t max_aggregate_payload_size,
+                                      uint32_t max_payload_count,
+                                      size_t input_index = 0) override;
+
+  bool ConfigureInputToUseVmos(
+      uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
+      uint64_t max_payload_size, VmoAllocation vmo_allocation,
+      bool physically_contiguous, zx::handle bti_handle,
+      AllocateCallback allocate_callback, size_t input_index = 0) override;
+
+  bool ConfigureInputToProvideVmos(VmoAllocation vmo_allocation,
+                                   bool physically_contiguous,
+                                   AllocateCallback allocate_callback,
+                                   size_t input_index = 0) override;
+
+  bool InputConnectionReady(size_t input_index = 0) const override;
+
+  const PayloadVmos& UseInputVmos(size_t input_index = 0) const override;
+
+  PayloadVmoProvision& ProvideInputVmos(size_t input_index = 0) override;
+
   void RequestInputPacket(size_t input_index = 0) override;
+
+  void ConfigureOutputDeferred(size_t output_index = 0) override;
+
+  bool ConfigureOutputToUseLocalMemory(uint64_t max_aggregate_payload_size,
+                                       uint32_t max_payload_count,
+                                       uint64_t max_payload_size,
+                                       size_t output_index = 0) override;
+
+  bool ConfigureOutputToProvideLocalMemory(size_t output_index = 0) override;
+
+  bool ConfigureOutputToUseVmos(uint64_t max_aggregate_payload_size,
+                                uint32_t max_payload_count,
+                                uint64_t max_payload_size,
+                                VmoAllocation vmo_allocation,
+                                bool physically_contiguous,
+                                zx::handle bti_handle,
+                                size_t output_index = 0) override;
+
+  bool ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation,
+                                    bool physically_contiguous,
+                                    size_t output_index = 0) override;
+
+  bool OutputConnectionReady(size_t output_index = 0) const override;
+
+  fbl::RefPtr<PayloadBuffer> AllocatePayloadBuffer(
+      uint64_t size, size_t output_index = 0) override;
+
+  const PayloadVmos& UseOutputVmos(size_t output_index = 0) const override;
+
+  PayloadVmoProvision& ProvideOutputVmos(size_t output_index = 0) override;
 
   void PutOutputPacket(PacketPtr packet, size_t output_index = 0) override;
 
@@ -69,9 +120,17 @@ class AsyncNodeStageImpl : public AsyncNodeStage, public StageImpl {
 
   void DumpOutputDetail(std::ostream& os, const Output& output) const;
 
-  // The fields below are not changed between the completion of the constructor
-  // and the initiation of the destructor.
+  void EnsureInput(size_t input_index);
+
+  void EnsureOutput(size_t output_index);
+
+  // The stage's thread is always the main graph thread.
+  FXL_DECLARE_THREAD_CHECKER(thread_checker_);
+
+  // This field is set in the constructor and not modified thereafter.
   std::shared_ptr<AsyncNode> node_;
+
+  // These fields are modified on the main graph thread only.
   std::vector<Input> inputs_;
   std::vector<Output> outputs_;
 
