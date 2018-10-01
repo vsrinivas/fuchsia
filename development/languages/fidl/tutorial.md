@@ -105,7 +105,7 @@ calls across languages.
 The example file `echo2.fidl`, with line numbers added, looks like this:
 
 ```
-1. library echo2;
+1. library fidl.examples.echo;
 
 2. [Discoverable]
 3. interface Echo {
