@@ -18,11 +18,18 @@ class PaperDemoScene1 : public Scene {
   explicit PaperDemoScene1(Demo* demo);
   ~PaperDemoScene1();
 
+  // Illegal, use the PaperScene version instead.
   void Init(escher::Stage* stage) override;
 
+  // Illegal, use the PaperScene version instead.
   escher::Model* Update(const escher::Stopwatch& stopwatch,
                         uint64_t frame_count, escher::Stage* stage,
                         escher::PaperRenderer2* renderer) override;
+
+  void Init(escher::PaperScene* scene) override;
+  void Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
+              escher::PaperScene* scene,
+              escher::PaperRenderer2* renderer) override;
 
  private:
   struct AnimatedState {
@@ -59,7 +66,7 @@ class PaperDemoScene1 : public Scene {
     float radians1, radians2;
 
     // Compute an animation parameter and return the corresponding clip plane.
-    escher::plane2 Update(float current_time_sec);
+    escher::plane3 Update(float current_time_sec);
   };
 
   std::vector<RectState> rectangles_;

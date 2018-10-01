@@ -49,14 +49,18 @@ class PaperShapeCache {
   // post-processed in whatever way is required by the current |PaperRenderer2|
   // configuration (e.g. perhaps adding a vertex attribute to allow
   // shadow-volume extrusion in the vertex shader).
-  Mesh* GetRoundedRectMesh(const RoundedRectSpec& spec,
-                           const plane2* clip_planes, size_t num_clip_planes);
-  Mesh* GetCircleMesh(float radius, const plane2* clip_planes,
-                      size_t num_clip_planes);
-  Mesh* GetRectMesh(vec2 min, vec2 max, const plane2* clip_planes,
-                    size_t num_clip_planes);
-  Mesh* GetRectMesh(float width, float height, const plane2* clip_planes,
-                    size_t num_clip_planes) {
+  const PaperShapeCacheEntry& GetRoundedRectMesh(const RoundedRectSpec& spec,
+                                                 const plane3* clip_planes,
+                                                 size_t num_clip_planes);
+  const PaperShapeCacheEntry& GetCircleMesh(float radius,
+                                            const plane3* clip_planes,
+                                            size_t num_clip_planes);
+  const PaperShapeCacheEntry& GetRectMesh(vec2 min, vec2 max,
+                                          const plane3* clip_planes,
+                                          size_t num_clip_planes);
+  const PaperShapeCacheEntry& GetRectMesh(float width, float height,
+                                          const plane3* clip_planes,
+                                          size_t num_clip_planes) {
     vec2 half_extent(0.5f * width, 0.5f * height);
     return GetRectMesh(-half_extent, half_extent, clip_planes, num_clip_planes);
   }
@@ -66,12 +70,14 @@ class PaperShapeCache {
 
   void SetConfig(const PaperRendererConfig& config);
 
+  size_t size() const { return cache_.size(); }
+
  private:
   enum class ShapeType { kRect, kRoundedRect, kCircle };
 
   // Args: array of planes to clip the generated mesh, and size of the array.
   using CacheMissMeshGenerator = std::function<PaperShapeCacheEntry(
-      const plane2* planes, size_t num_planes)>;
+      const plane3* planes, size_t num_planes)>;
 
   // Computes a lookup key by starting with |shape_hash| and then hashing the
   // list of |clip_planes|.  If no mesh is found with this key, a secondary key
@@ -86,9 +92,10 @@ class PaperShapeCache {
   //   For example, when an object is moving freely within a large clip region,
   //   the list of unculled planes will be empty; it would be a shame to
   //   continually regenerate the mesh in such a situation.
-  Mesh* GetShapeMesh(const Hash& shape_hash, const BoundingBox& bounding_box,
-                     const plane2* clip_planes, size_t num_clip_planes,
-                     CacheMissMeshGenerator mesh_generator);
+  const PaperShapeCacheEntry& GetShapeMesh(
+      const Hash& shape_hash, const BoundingBox& bounding_box,
+      const plane3* clip_planes, size_t num_clip_planes,
+      CacheMissMeshGenerator mesh_generator);
 
   // Populates |unculled_planes_out| with the planes that clip at least one of
   // the bounding box corners; other planes are culled, because they cannot
@@ -103,8 +110,8 @@ class PaperShapeCache {
   //
   // Preserves the order of any unculled planes.
   bool CullPlanesAgainstBoundingBox(const BoundingBox& bounding_box,
-                                    const plane2* planes,
-                                    plane2* unculled_planes_out,
+                                    const plane3* planes,
+                                    plane3* unculled_planes_out,
                                     size_t* num_planes_inout);
 
   // Called from EndFrame(); evicts all entries that have not been touched for

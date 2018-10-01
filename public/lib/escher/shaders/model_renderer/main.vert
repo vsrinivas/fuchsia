@@ -3,30 +3,20 @@
 
 out gl_PerVertex {
   vec4 gl_Position;
+
+  #ifdef NUM_CLIP_PLANES
   float gl_ClipDistance[NUM_CLIP_PLANES];
+  #endif
 };
 
-layout(set = 0, binding = 0) uniform PerModel {
-  mat4 vp_matrix;
-
-  // Currently unused.
-  vec2 frag_coord_to_uv_multiplier;
-  float time;
-  vec3 ambient_light_intensity;
-  vec3 direct_light_intensity;
-};
-
-// Attribute locations must match constants in model_data.h
-layout(location = 0) in vec3 inPosition;
-#ifdef USE_POSITION_OFFSET_ATTRIBUTE
-layout(location = 1) in vec3 inPositionOffset;
-#endif
-#ifdef USE_UV_ATTRIBUTE
-layout(location = 2) in vec2 inUV;
-#endif
-#ifdef USE_PERIMETER_ATTRIBUTE
-layout(location = 3) in vec2 inPerimeter;
-#endif
+// Definitions here are used by all programs.  The C++ code which creates the
+// ShaderProgram will add other USE_* definitions that are appropriate for that
+// shader variant.
+#define IS_VERTEX_SHADER 1
+#define USE_PAPER_SHADER_CAMERA_AMBIENT 1
+#define USE_PAPER_SHADER_MESH_INSTANCE 1
+#define USE_ATTRIBUTE_POSITION 1
+#include "shaders/paper/common/use.glsl"
 
 // Defines ComputeVertexPosition(), which returns the model-space position of
 // the vertex.
@@ -46,9 +36,11 @@ layout(location = 3) in vec2 inPerimeter;
 void ClipWorldSpaceAndOutputScreenSpaceCoords(vec4 world_pos) {
   gl_Position = vp_matrix * world_pos;
 
+  #ifdef NUM_CLIP_PLANES
   for (int i = 0; i < NUM_CLIP_PLANES; ++i) {
     gl_ClipDistance[i] = dot(clip_planes[i], world_pos);
   }
+  #endif
 }
 
 #ifdef SHADOW_MAP_LIGHTING_PASS
@@ -86,5 +78,23 @@ void main() {
 void main() {
   ClipWorldSpaceAndOutputScreenSpaceCoords(
     model_transform * ComputeVertexPosition());
+}
+#endif
+
+#ifdef EXTRUDE_SHADOW_VOLUME
+void main() {
+  #ifdef NUM_CLIP_PLANES
+  #error Vertex clip planes are incompatible with shadow-volume extrusion.
+  #endif
+
+  vec4 world_pos = model_transform * ComputeVertexPosition();
+  vec4 light_position =
+      point_lights[PaperShaderPushConstants.light_index].position;
+  // TODO(ES-160): optimize length of extrusion vec so that it doesn't
+  // extend far below the floor of the stage.  This can improve performance
+  // by reducing the number of stencil-buffer pixels that are touched.
+  vec4 extrusion_vec =
+      500.f * normalize(world_pos - light_position);
+  gl_Position = vp_matrix * (world_pos + inBlendWeight.x * extrusion_vec);
 }
 #endif

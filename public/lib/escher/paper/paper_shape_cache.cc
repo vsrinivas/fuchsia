@@ -33,12 +33,23 @@ const PaperShapeCacheEntry kNullCacheEntry;
 // include any IndexedTriangleMesh headers in our header.
 PaperShapeCacheEntry ProcessTriangleMesh2d(
     IndexedTriangleMesh2d<vec2> mesh, const MeshSpec& mesh_spec,
-    const plane2* clip_planes, size_t num_clip_planes,
+    const plane3* clip_planes3, size_t num_clip_planes,
     const BoundingBox& bounding_box, PaperRendererShadowType shadow_type,
     Escher* escher, BatchGpuUploader* uploader) {
   TRACE_DURATION("gfx", "PaperShapeCache::ProcessTriangleMesh2d");
   FXL_DCHECK((mesh_spec ==
               MeshSpec{{MeshAttribute::kPosition2D, MeshAttribute::kUV}}));
+
+  // Convert 3d clip planes to 2d before clipping.
+  plane2* clip_planes = ESCHER_ALLOCA(plane2, num_clip_planes);
+  for (size_t i = 0; i < num_clip_planes; ++i) {
+    // TODO(ES-141): support arbitrary plane3 (where the direction has a
+    // Z-component) by projecting them onto the Z == 0 plane.  Don't want to
+    // deal with this now, so we just DCHECK.
+    FXL_DCHECK(clip_planes3[i].dir().z == 0);
+    clip_planes[i] =
+        plane2(vec2(clip_planes3[i].dir()), clip_planes3[i].dist());
+  }
 
   IndexedTriangleMesh2d<vec2> tri_mesh;
   std::tie(tri_mesh, std::ignore) =
@@ -207,12 +218,12 @@ void PaperShapeCache::SetConfig(const PaperRendererConfig& config) {
   cache_.clear();
 }
 
-Mesh* PaperShapeCache::GetRoundedRectMesh(const RoundedRectSpec& spec,
-                                          const plane2* clip_planes,
-                                          size_t num_clip_planes) {
+const PaperShapeCacheEntry& PaperShapeCache::GetRoundedRectMesh(
+    const RoundedRectSpec& spec, const plane3* clip_planes,
+    size_t num_clip_planes) {
   TRACE_DURATION("gfx", "PaperShapeCache::GetRoundedRectMesh");
   if (spec.width <= 0.f || spec.height <= 0.f)
-    return nullptr;
+    return kNullCacheEntry;
 
   Hash rect_hash;
   {
@@ -227,7 +238,7 @@ Mesh* PaperShapeCache::GetRoundedRectMesh(const RoundedRectSpec& spec,
 
   return GetShapeMesh(
       rect_hash, bounding_box, clip_planes, num_clip_planes,
-      [this, &spec, &bounding_box](const plane2* unculled_clip_planes,
+      [this, &spec, &bounding_box](const plane3* unculled_clip_planes,
                                    size_t num_unculled_clip_planes) {
         // No mesh was found, so we need to generate one.
 
@@ -254,11 +265,11 @@ Mesh* PaperShapeCache::GetRoundedRectMesh(const RoundedRectSpec& spec,
       });
 }
 
-Mesh* PaperShapeCache::GetCircleMesh(float radius, const plane2* clip_planes,
-                                     size_t num_clip_planes) {
+const PaperShapeCacheEntry& PaperShapeCache::GetCircleMesh(
+    float radius, const plane3* clip_planes, size_t num_clip_planes) {
   TRACE_DURATION("gfx", "PaperShapeCache::GetCircleMesh");
   if (radius <= 0.f)
-    return nullptr;
+    return kNullCacheEntry;
 
   Hash circle_hash;
   {
@@ -273,7 +284,7 @@ Mesh* PaperShapeCache::GetCircleMesh(float radius, const plane2* clip_planes,
 
   return GetShapeMesh(
       circle_hash, bounding_box, clip_planes, num_clip_planes,
-      [this, radius, &bounding_box](const plane2* unculled_clip_planes,
+      [this, radius, &bounding_box](const plane3* unculled_clip_planes,
                                     size_t num_unculled_clip_planes) {
         // No mesh was found, so we need to generate one.
 
@@ -289,15 +300,14 @@ Mesh* PaperShapeCache::GetCircleMesh(float radius, const plane2* clip_planes,
       });
 }
 
-Mesh* PaperShapeCache::GetRectMesh(vec2 min, vec2 max,
-                                   const plane2* clip_planes,
-                                   size_t num_clip_planes) {
+const PaperShapeCacheEntry& PaperShapeCache::GetRectMesh(
+    vec2 min, vec2 max, const plane3* clip_planes, size_t num_clip_planes) {
   TRACE_DURATION("gfx", "PaperShapeCache::GetRectMesh");
 
   const BoundingBox bounding_box =
       BoundingBox::NewChecked(vec3(min, 0), vec3(max, 0), 1);
   if (bounding_box.is_empty()) {
-    return nullptr;
+    return kNullCacheEntry;
   }
 
   Hash rect_hash;
@@ -313,7 +323,7 @@ Mesh* PaperShapeCache::GetRectMesh(vec2 min, vec2 max,
 
   return GetShapeMesh(
       rect_hash, bounding_box, clip_planes, num_clip_planes,
-      [this, min, max, &bounding_box](const plane2* unculled_clip_planes,
+      [this, min, max, &bounding_box](const plane3* unculled_clip_planes,
                                       size_t num_unculled_clip_planes) {
         // No mesh was found, so we need to generate one.
 
@@ -333,11 +343,10 @@ Mesh* PaperShapeCache::GetRectMesh(vec2 min, vec2 max,
       });
 }
 
-Mesh* PaperShapeCache::GetShapeMesh(const Hash& shape_hash,
-                                    const BoundingBox& bounding_box,
-                                    const plane2* clip_planes,
-                                    size_t num_clip_planes,
-                                    CacheMissMeshGenerator mesh_generator) {
+const PaperShapeCacheEntry& PaperShapeCache::GetShapeMesh(
+    const Hash& shape_hash, const BoundingBox& bounding_box,
+    const plane3* clip_planes, size_t num_clip_planes,
+    CacheMissMeshGenerator mesh_generator) {
   TRACE_DURATION("gfx", "PaperShapeCache::GetShapeMesh");
   FXL_DCHECK(clip_planes || num_clip_planes == 0);
 
@@ -363,7 +372,7 @@ Mesh* PaperShapeCache::GetShapeMesh(const Hash& shape_hash,
   // mesh.
   if (auto* entry = FindEntry(lookup_hash)) {
     ++cache_hit_count_;
-    return entry->mesh.get();
+    return *entry;
   }
 
   // There are two separate optimizations to perform against the bounding box:
@@ -373,7 +382,7 @@ Mesh* PaperShapeCache::GetShapeMesh(const Hash& shape_hash,
   //      next plane.  Don't bother clipping individual triangles with such
   //      planes, because we know they will all pass.
   size_t num_unculled_clip_planes = num_clip_planes;
-  plane2* unculled_clip_planes = ESCHER_ALLOCA(plane2, num_clip_planes);
+  plane3* unculled_clip_planes = ESCHER_ALLOCA(plane3, num_clip_planes);
   if (auto bbox_was_completely_clipped = CullPlanesAgainstBoundingBox(
           bounding_box, clip_planes, unculled_clip_planes,
           &num_unculled_clip_planes)) {
@@ -382,7 +391,7 @@ Mesh* PaperShapeCache::GetShapeMesh(const Hash& shape_hash,
     ++cache_hit_count_;
 
     AddEntry(lookup_hash, kNullCacheEntry);
-    return nullptr;
+    return kNullCacheEntry;
   }
 
   // If some of the planes were culled, recompute the lookup hash and try again.
@@ -437,7 +446,7 @@ Mesh* PaperShapeCache::GetShapeMesh(const Hash& shape_hash,
       // that whenever a mesh is looked up via |key|, the timestamp for |key2|
       // is also updated.
 
-      return entry->mesh.get();
+      return *entry;
     }
   }
   ++cache_miss_count_;
@@ -454,12 +463,12 @@ Mesh* PaperShapeCache::GetShapeMesh(const Hash& shape_hash,
   }
   // Slightly inefficient to look up the newly-inserted entry, but nothing
   // compared to what we just did to create/upload the new mesh.
-  return FindEntry(lookup_hash)->mesh.get();
+  return *FindEntry(lookup_hash);
 }
 
 bool PaperShapeCache::CullPlanesAgainstBoundingBox(
-    const BoundingBox& bounding_box, const plane2* planes,
-    plane2* unculled_planes_out, size_t* num_planes_inout) {
+    const BoundingBox& bounding_box, const plane3* planes,
+    plane3* unculled_planes_out, size_t* num_planes_inout) {
   TRACE_DURATION("gfx", "PaperShapeCache::CullPlanesAgainstBoundingBox");
   const size_t num_planes = *num_planes_inout;
   size_t& num_unculled_planes_out = *num_planes_inout = 0;

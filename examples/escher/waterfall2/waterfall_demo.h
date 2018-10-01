@@ -17,7 +17,6 @@
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/fs/hack_filesystem.h"
 #include "lib/escher/paper/paper_renderer2.h"
-#include "lib/escher/scene/stage.h"
 #include "lib/escher/util/stopwatch.h"
 #include "lib/fxl/logging.h"
 
@@ -44,12 +43,13 @@ class WaterfallDemo : public Demo {
  private:
   void ProcessCommandLineArgs(int argc, char** argv);
 
-  void InitializeEscherStage(const DemoHarness::WindowParams& window_params);
+  void InitializePaperScene(const DemoHarness::WindowParams& window_params);
   void InitializeDemoScenes();
 
+  escher::PaperRendererConfig renderer_config_;
   escher::PaperRenderer2Ptr renderer_;
 
-  escher::Stage stage_;
+  escher::PaperScenePtr paper_scene_;
 
   // 4 camera projection modes:
   // - orthographic full-screen
@@ -59,9 +59,13 @@ class WaterfallDemo : public Demo {
   int camera_projection_mode_ = 0;
 
   int current_scene_ = 0;
-  std::vector<std::unique_ptr<Scene>> scenes_;
+  std::vector<std::unique_ptr<Scene>> demo_scenes_;
 
+  // Used for FPS calculations and animating lighting params.
   escher::Stopwatch stopwatch_;
+  // Used for animating object shapes and positions.
+  escher::Stopwatch animation_stopwatch_;
+
   uint64_t frame_count_ = 0;
   uint64_t first_frame_microseconds_;
 

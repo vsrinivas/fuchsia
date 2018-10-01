@@ -230,6 +230,11 @@ TexturePtr Escher::NewAttachmentTexture(vk::Format format, uint32_t width,
                      ? vk::ImageUsageFlagBits::eDepthStencilAttachment
                      : vk::ImageUsageFlagBits::eColorAttachment;
   if (is_transient_attachment) {
+    // TODO(SCN-634): when specifying that it is being used as a transient
+    // attachment, we should use lazy memory if supported by the Vulkan
+    // device... but only if no non-attachment flags are present.
+    // TODO(SCN-634): also, clients should probably just add this usage flag
+    // themselves, rather than having a separate bool to do it.
     usage_flags |= vk::ImageUsageFlagBits::eTransientAttachment;
   }
   if (is_input_attachment) {

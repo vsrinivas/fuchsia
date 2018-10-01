@@ -164,31 +164,18 @@ escher::Model* RingTricks2::Update(const escher::Stopwatch& stopwatch,
   // Therefore it will no longer be necessary to collect these objects in a
   // vector.
   if (renderer) {
-    auto render_queue = renderer->render_queue();
-
-    render_queue->PushObject(circle1);
-    render_queue->PushObject(circle2);
-    render_queue->PushObject(inner_ring);
-    render_queue->PushObject(bg_plane);
-    render_queue->PushObject(round_rect1);
-    render_queue->PushObject(sphere);
-
-    // Animate a clip plane to wipe the stack of circles.
-    auto clip_planes =
-        escher::ClipPlanes::FromBox(stage->viewing_volume().bounding_box());
-    float dist_from_origin = glm::length(vec2(100, 100));
-    vec3 clip_dir(1, 1, 0);
-    clip_dir = glm::normalize(clip_dir);
-    float x_clip = dist_from_origin + 70.f * sin(current_time_sec * 1.5);
-    clip_planes.planes[0] = escher::vec4(-clip_dir, x_clip);
-    render_queue->SetClipPlanes(clip_planes);
-
-    render_queue->PushObject(circle4);
-    render_queue->PushObject(circle5);
-    render_queue->PushObject(circle6);
-    render_queue->PushObject(circle7);
-    render_queue->PushObject(circle8);
-    render_queue->PushObject(circle9);
+    renderer->DrawLegacyObject(circle1);
+    renderer->DrawLegacyObject(circle2);
+    renderer->DrawLegacyObject(inner_ring);
+    renderer->DrawLegacyObject(bg_plane);
+    renderer->DrawLegacyObject(round_rect1);
+    renderer->DrawLegacyObject(sphere);
+    renderer->DrawLegacyObject(circle4);
+    renderer->DrawLegacyObject(circle5);
+    renderer->DrawLegacyObject(circle6);
+    renderer->DrawLegacyObject(circle7);
+    renderer->DrawLegacyObject(circle8);
+    renderer->DrawLegacyObject(circle9);
   }
 
   return model_.get();

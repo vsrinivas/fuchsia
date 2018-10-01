@@ -60,7 +60,8 @@ RenderPassInfo::LoadStoreOpsForColorAttachment(uint32_t index) const {
     store_op = vk::AttachmentStoreOp::eStore;
   } else {
     FXL_DCHECK(!color_attachments[index]->image()->is_swapchain_image())
-        << "Swapchain attachment images must be marked as eStore.";
+        << "Swapchain attachment image " << index
+        << " must be marked as eStore.";
   }
 
   return {load_op, store_op};

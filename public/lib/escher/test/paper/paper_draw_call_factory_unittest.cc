@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/escher/paper/paper_render_queue.h"
+#include "lib/escher/paper/paper_draw_call_factory.h"
 
 #include <glm/gtc/matrix_access.hpp>
 
@@ -11,38 +11,38 @@
 namespace {
 using namespace escher;
 
-TEST(PaperRenderQueue, OpaqueSortKeyBits) {
+TEST(PaperDrawCallFactory, OpaqueSortKeyBits) {
   Hash dddd, bbbb;
   dddd.val = 0xdddddddddddddddd;
   bbbb.val = 0xbbbbbbbbbbbbbbbb;
   float depth = 11.2345f;
 
-  auto key = PaperRenderQueue::SortKey::NewOpaque(dddd, bbbb, depth);
+  auto key = PaperDrawCallFactory::SortKey::NewOpaque(dddd, bbbb, depth);
 
   EXPECT_EQ(0xdddd00000000bbbb, key.key() & 0xffff00000000ffff);
   EXPECT_EQ(depth, glm::uintBitsToFloat((key.key() >> 16) & 0xffffffff));
 }
 
-TEST(PaperRenderQueue, TranslucentSortKeyBits) {
+TEST(PaperDrawCallFactory, TranslucentSortKeyBits) {
   Hash dddd, bbbb;
   dddd.val = 0xdddddddddddddddd;
   bbbb.val = 0xbbbbbbbbbbbbbbbb;
   float depth = 11.2345f;
 
-  auto key = PaperRenderQueue::SortKey::NewTranslucent(dddd, bbbb, depth);
+  auto key = PaperDrawCallFactory::SortKey::NewTranslucent(dddd, bbbb, depth);
 
   EXPECT_EQ(0x00000000ddddbbbb, key.key() & 0x00000000ffffffff);
   EXPECT_EQ(depth, glm::uintBitsToFloat((key.key() >> 32) ^ 0xffffffff));
 }
 
-TEST(PaperRenderQueue, SortKeyComparisons) {
+TEST(PaperDrawCallFactory, SortKeyComparisons) {
   Hash low_hash, high_hash;
   low_hash.val = 0xaaaaaaaaaaaaaaaa;
   high_hash.val = 0xbbbbbbbbbbbbbbbb;
   float near_depth = 11.2345f;
   float far_depth = 22.6789f;
 
-  using Key = PaperRenderQueue::SortKey;
+  using Key = PaperDrawCallFactory::SortKey;
 
   // For both opaque and translucent, all else being equal, a low hash is sorted
   // earlier than a high hash.

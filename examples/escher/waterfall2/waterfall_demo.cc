@@ -8,9 +8,11 @@
 #include "garnet/examples/escher/waterfall/scenes/ring_tricks2.h"
 #include "lib/escher/defaults/default_shader_program_factory.h"
 #include "lib/escher/geometry/tessellation.h"
+#include "lib/escher/paper/paper_scene.h"
 #include "lib/escher/scene/camera.h"
-#include "lib/escher/scene/model.h"
+#include "lib/escher/scene/viewing_volume.h"
 #include "lib/escher/shape/mesh.h"
+#include "lib/escher/util/enum_utils.h"
 #include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/shader_module_template.h"
 #include "lib/escher/vk/shader_program.h"
@@ -18,11 +20,8 @@
 
 using namespace escher;
 
-static constexpr float kNear = 100.f;
+static constexpr float kNear = 200.f;
 static constexpr float kFar = -1.f;
-
-// Directional light is 50% intensity; ambient light will adjust automatically.
-static constexpr float kLightIntensity = 0.5f;
 
 WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
     : Demo(harness, "Waterfall Demo") {
@@ -35,12 +34,24 @@ WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
        "shaders/model_renderer/default_position.vert",
        "shaders/model_renderer/shadow_map_generation.frag",
        "shaders/model_renderer/shadow_map_lighting.frag",
-       "shaders/model_renderer/wobble_position.vert"});
+       "shaders/model_renderer/wobble_position.vert",
+       "shaders/paper/common/use.glsl",
+       "shaders/paper/frag/main_ambient_light.frag",
+       "shaders/paper/frag/main_point_light.frag",
+       "shaders/paper/vert/compute_model_space_position.vert",
+       "shaders/paper/vert/compute_world_space_position.vert",
+       "shaders/paper/vert/main_shadow_volume_extrude.vert",
+       "shaders/paper/vert/vertex_attributes.vert"});
 
   renderer_ = escher::PaperRenderer2::New(GetEscherWeakPtr());
-  renderer_->SetNumDepthBuffers(harness->GetVulkanSwapchain().images.size());
 
-  InitializeEscherStage(harness->GetWindowParams());
+  renderer_config_.shadow_type = PaperRendererShadowType::kShadowVolume;
+  renderer_config_.msaa_sample_count = 2;
+  renderer_config_.num_depth_buffers =
+      harness->GetVulkanSwapchain().images.size();
+  renderer_->SetConfig(renderer_config_);
+
+  InitializePaperScene(harness->GetWindowParams());
   InitializeDemoScenes();
 }
 
@@ -57,21 +68,24 @@ WaterfallDemo::~WaterfallDemo() {
   escher()->Cleanup();
 }
 
-void WaterfallDemo::InitializeEscherStage(
+void WaterfallDemo::InitializePaperScene(
     const DemoHarness::WindowParams& window_params) {
-  stage_.set_viewing_volume(escher::ViewingVolume(
-      window_params.width, window_params.height, kNear, kFar));
-  stage_.set_key_light(
-      escher::DirectionalLight(escher::vec2(1.5f * M_PI, 1.5f * M_PI),
-                               0.15f * M_PI, vec3(kLightIntensity)));
-  stage_.set_fill_light(escher::AmbientLight(1.f - kLightIntensity));
+  paper_scene_ = fxl::MakeRefCounted<PaperScene>();
+
+  // Number of lights can be cycled via keyboard event.  Light positions and
+  // colors are animated by UpdateLighting().
+  paper_scene_->point_lights.resize(1);
+
+  paper_scene_->bounding_box = escher::BoundingBox(
+      vec3(0.f, 0.f, kFar),
+      vec3(window_params.width, window_params.height, kNear));
 }
 
 void WaterfallDemo::InitializeDemoScenes() {
-  scenes_.emplace_back(new PaperDemoScene1(this));
-  scenes_.emplace_back(new RingTricks2(this));
-  for (auto& scene : scenes_) {
-    scene->Init(&stage_);
+  demo_scenes_.emplace_back(new PaperDemoScene1(this));
+  demo_scenes_.emplace_back(new RingTricks2(this));
+  for (auto& scene : demo_scenes_) {
+    scene->Init(paper_scene_.get());
   }
 }
 
@@ -88,13 +102,15 @@ void WaterfallDemo::ProcessCommandLineArgs(int argc, char** argv) {
 bool WaterfallDemo::HandleKeyPress(std::string key) {
   if (key.size() > 1) {
     if (key == "SPACE") {
-      // This is where we would handle the space bar.
+      // Start/stop the animation stopwatch.
+      animation_stopwatch_.Toggle();
       return true;
     }
     return Demo::HandleKeyPress(key);
   } else {
     char key_char = key[0];
     switch (key_char) {
+      // Cycle through camera projection modes.
       case 'C': {
         camera_projection_mode_ = (camera_projection_mode_ + 1) % 4;
         const char* kCameraModeStrings[4] = {"orthographic", "perspective",
@@ -104,9 +120,57 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
                       << kCameraModeStrings[camera_projection_mode_];
         return true;
       }
-      case 'D':
+      // Toggle display of debug information.
+      case 'D': {
         show_debug_info_ = !show_debug_info_;
+        renderer_config_.debug = show_debug_info_;
+        FXL_LOG(INFO) << "WaterfallDemo "
+                      << (show_debug_info_ ? "enabled" : "disabled")
+                      << " debugging.";
+        renderer_->SetConfig(renderer_config_);
         return true;
+      }
+      case 'L': {
+        uint32_t num_point_lights = (paper_scene_->num_point_lights() + 1) % 3;
+        paper_scene_->point_lights.resize(num_point_lights);
+        FXL_LOG(INFO) << "WaterfallDemo number of point lights: "
+                      << paper_scene_->num_point_lights();
+        return true;
+      }
+      // Cycle through MSAA sample counts.
+      case 'M': {
+        auto sample_count = renderer_config_.msaa_sample_count;
+        if (sample_count == 1) {
+          sample_count = 2;
+        } else if (sample_count == 2) {
+          // TODO(ES-156): there seems to be a RenderPass-caching bug where if
+          // we change the RenderPassInfo's images to have a different sample
+          // count, then the old cached RenderPass is not flushed from the
+          // cache.  For now, just toggle between two values.
+          sample_count = 1;
+          // sample_count = 4;
+        } else {
+          sample_count = 1;
+        }
+        FXL_LOG(INFO) << "MSAA sample count: " << sample_count;
+        renderer_config_.msaa_sample_count = sample_count;
+        renderer_->SetConfig(renderer_config_);
+        return true;
+      }
+      // Cycle through shadow algorithms..
+      case 'S': {
+        auto& shadow_type = renderer_config_.shadow_type;
+        shadow_type = EnumCycle(shadow_type);
+        while (!renderer_->SupportsShadowType(shadow_type)) {
+          FXL_LOG(INFO) << "WaterfallDemo skipping unsupported shadow type: "
+                        << shadow_type;
+          shadow_type = EnumCycle(shadow_type);
+        }
+        renderer_->SetConfig(renderer_config_);
+        FXL_LOG(INFO) << "WaterfallDemo changed shadow type: "
+                      << renderer_config_;
+        return true;
+      }
       case '1':
       case '2':
       case '3':
@@ -118,7 +182,7 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
       case '9':
       case '0':
         current_scene_ =
-            (scenes_.size() + (key_char - '0') - 1) % scenes_.size();
+            (demo_scenes_.size() + (key_char - '0') - 1) % demo_scenes_.size();
         FXL_LOG(INFO) << "Current scene index: " << current_scene_;
         return true;
       default:
@@ -166,18 +230,66 @@ static escher::Camera GenerateCamera(int camera_projection_mode,
   }
 }
 
+static void UpdateLighting(PaperScene* paper_scene,
+                           const escher::Stopwatch& stopwatch,
+                           PaperRendererShadowType shadow_type) {
+  const size_t num_point_lights = paper_scene->num_point_lights();
+  if (num_point_lights == 0 || shadow_type == PaperRendererShadowType::kNone) {
+    paper_scene->ambient_light.color = vec3(1, 1, 1);
+    return;
+  }
+
+  // Set the ambient light to an arbitrary value that looks OK.  The intensities
+  // of the point lights will be chosen so that the total light intensity on an
+  // unshadowed fragment is vec3(1,1,1).
+  const vec3 kAmbientLightColor(0.4f, 0.5f, 0.5f);
+  paper_scene->ambient_light.color = kAmbientLightColor;
+
+  for (auto& pl : paper_scene->point_lights) {
+    pl.color = (vec3(1, 1, 1) - kAmbientLightColor) / float(num_point_lights);
+  }
+
+  // Simple animation of point light.
+  const float width = paper_scene->width();
+  const float height = paper_scene->height();
+  if (num_point_lights == 1) {
+    paper_scene->point_lights[0].position =
+        vec3(width * .3f, height * .3f,
+             800.f + 200.f * sin(stopwatch.GetElapsedSeconds() * 1.2f));
+  } else {
+    FXL_DCHECK(num_point_lights == 2);
+
+    paper_scene->point_lights[0].position =
+        vec3(width * .3f, height * .3f,
+             800.f + 300.f * sin(stopwatch.GetElapsedSeconds() * 1.2f));
+    paper_scene->point_lights[1].position =
+        vec3(width * (0.6f + 0.3f * sin(stopwatch.GetElapsedSeconds() * 0.7f)),
+             height * (0.4f + 0.2f * sin(stopwatch.GetElapsedSeconds() * 0.6f)),
+             900.f);
+
+    // Make the light colors subtly different.
+    vec3 color_diff =
+        vec3(.02f, -.01f, .04f) * paper_scene->point_lights[0].color;
+    paper_scene->point_lights[0].color += color_diff;
+    paper_scene->point_lights[1].color -= color_diff;
+  }
+}
+
 void WaterfallDemo::DrawFrame(const FramePtr& frame,
                               const ImagePtr& output_image) {
   TRACE_DURATION("gfx", "WaterfallDemo::DrawFrame");
 
-  Camera camera =
-      GenerateCamera(camera_projection_mode_, stage_.viewing_volume());
+  Camera camera = GenerateCamera(camera_projection_mode_,
+                                 ViewingVolume(paper_scene_->bounding_box));
 
-  renderer_->BeginFrame(frame, &stage_, camera, output_image);
+  // Animate light positions and intensities.
+  UpdateLighting(paper_scene_.get(), stopwatch_, renderer_config_.shadow_type);
+
+  renderer_->BeginFrame(frame, paper_scene_, camera, output_image);
   {
     TRACE_DURATION("gfx", "WaterfallDemo::DrawFrame[scene]");
-    scenes_[current_scene_]->Update(stopwatch_, frame_count(), &stage_,
-                                    renderer_.get());
+    demo_scenes_[current_scene_]->Update(animation_stopwatch_, frame_count(),
+                                         paper_scene_.get(), renderer_.get());
   }
   renderer_->EndFrame();
 

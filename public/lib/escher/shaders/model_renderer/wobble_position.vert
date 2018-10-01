@@ -13,6 +13,13 @@ float EvalSineParams(SineParams params) {
   return params.amplitude * sin(arg);
 }
 
+// TODO(ES-153):  PerObject binds to the same point as PaperShaderMeshInstance.
+// The additional wobble parameters should be moved into a different object,
+// probably bound at set(1, 1).  Or we could get fancy about ensuring that only
+// one of PerObject and PaperShaderMeshInstance are bound.  Anyway, this isn't
+// currently used.
+#error Needs fixing.
+
 layout(set = 1, binding = 0) uniform PerObject {
   mat4 model_transform;
   vec4 color;
@@ -20,7 +27,9 @@ layout(set = 1, binding = 0) uniform PerObject {
   // Format of each plane:
   // - xyz: normalized plane normal, pointing toward the non-clipped half-space.
   // - w: distance from origin to plane along plane normal vector, negated.
+  #ifdef NUM_CLIP_PLANES
   vec4 clip_planes[NUM_CLIP_PLANES];
+  #endif
 
   // Corresponds to ModifierWobble::SineParams[0].
   float speed_0;

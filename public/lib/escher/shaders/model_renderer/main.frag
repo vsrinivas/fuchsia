@@ -23,20 +23,27 @@ layout(location = 0) out vec4 outColor;
 #endif  // SHADOW_MAP_LIGHTING_PASS
 
 #ifdef NO_SHADOW_LIGHTING_PASS
-
 layout(location = 0) in vec2 inUV;
 layout(set = 0, binding = 0) uniform PerModel {
   vec2 frag_coord_to_uv_multiplier;
   float time;
 };
 layout(set = 1, binding = 0) uniform PerObject {
-  mat4 camera_transform;
-  vec4 color;
+  mat4 model_transform;
+  vec4 model_color;
 };
 layout(set = 1, binding = 1) uniform sampler2D material_tex;
 
 void main() {
-  outColor = color * texture(material_tex, inUV);
+  outColor = model_color * texture(material_tex, inUV);
 }
-
 #endif  // NO_SHADOW_LIGHTING_PASS
+
+
+#ifdef EXTRUDE_SHADOW_VOLUME
+#define USE_PAPER_SHADER_MESH_INSTANCE 1
+#include "shaders/paper/common/use.glsl"
+void main() {
+  outColor = model_color;
+}
+#endif  // EXTRUDE_SHADOW_VOLUME

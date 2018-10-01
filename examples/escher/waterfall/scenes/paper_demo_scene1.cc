@@ -10,6 +10,7 @@
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/material/material.h"
 #include "lib/escher/math/lerp.h"
+#include "lib/escher/paper/paper_scene.h"
 #include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/stage.h"
@@ -26,13 +27,25 @@ using escher::Object;
 using escher::RoundedRectSpec;
 using escher::ShapeModifier;
 
-using escher::plane2;
+using escher::plane3;
 using escher::vec2;
 using escher::vec3;
 
 PaperDemoScene1::PaperDemoScene1(Demo* demo) : Scene(demo) {}
 
 void PaperDemoScene1::Init(escher::Stage* stage) {
+  FXL_DCHECK(false) << "Use PaperScene* version instead.";
+}
+
+escher::Model* PaperDemoScene1::Update(const escher::Stopwatch& stopwatch,
+                                       uint64_t frame_count,
+                                       escher::Stage* stage,
+                                       escher::PaperRenderer2* renderer) {
+  FXL_DCHECK(false) << "Use PaperScene* version instead.";
+  return nullptr;
+}
+
+void PaperDemoScene1::Init(escher::PaperScene* scene) {
   red_ = fxl::MakeRefCounted<escher::Material>();
   bg_ = fxl::MakeRefCounted<escher::Material>();
   color1_ = fxl::MakeRefCounted<escher::Material>();
@@ -46,8 +59,8 @@ void PaperDemoScene1::Init(escher::Stage* stage) {
   // animated.
   for (int i = 0; i < 10; ++i) {
     const float x = 20.f * i;
-    const float y = 80.f * i;
-    const float z = 10.f * i;
+    const float y = 400.f + 80.f * i;
+    const float z = 187.5 - 20.f * i;
     const float big_radius = 75.f;
     const float tiny_radius = 25.f;
     rectangles_.push_back(RectState{
@@ -55,8 +68,8 @@ void PaperDemoScene1::Init(escher::Stage* stage) {
                       .cycle_count_before_pause = 3,
                       .inter_cycle_pause_duration = 5 - 0.4f * i},
         .material = (i % 2) ? color1_ : red_,
-        .pos1 = vec3(400 - x, 400 + y, 7.5f + z),
-        .pos2 = vec3(1800 + x, 400 + y, 7.5f + z),
+        .pos1 = vec3(400 - x, y, z),
+        .pos2 = vec3(1800 + x, y, z),
         .spec1 = {350, 250, big_radius, tiny_radius, big_radius, tiny_radius},
         .spec2 = {120, 450, tiny_radius, big_radius, tiny_radius, big_radius},
     });
@@ -73,62 +86,56 @@ void PaperDemoScene1::Init(escher::Stage* stage) {
       .radians2 = M_PI * 7 / 6,
   });
   world_space_clip_planes_.push_back(ClipPlaneState{
-      .animation = {.cycle_duration = 2.f,
-                    .cycle_count_before_pause = 3,
-                    .inter_cycle_pause_duration = 6},
-      .pos1 = vec2(0, 0),
-      .pos2 = vec2(2000, 0),
-      .radians1 = 0,
-      .radians2 = 0,
+      .animation = {.cycle_duration = 4.f,
+                    .cycle_count_before_pause = 2,
+                    .inter_cycle_pause_duration = 5},
+      .pos1 = vec2(0, 0.9f * scene->bounding_box.height()),
+      .pos2 = vec2(0, 0.15f * scene->bounding_box.height()),
+      .radians1 = M_PI * 1.5f,
+      .radians2 = M_PI * 1.5f,
   });
 }
 
 PaperDemoScene1::~PaperDemoScene1() {}
 
-escher::Model* PaperDemoScene1::Update(const escher::Stopwatch& stopwatch,
-                                       uint64_t frame_count,
-                                       escher::Stage* stage,
-                                       escher::PaperRenderer2* renderer) {
-  FXL_CHECK(renderer)
-      << "PaperDemoScene1 can only be rendered via PaperRenderer2.";
-  auto render_queue = renderer->render_queue();
-  auto shape_cache = renderer->shape_cache();
+void PaperDemoScene1::Update(const escher::Stopwatch& stopwatch,
+                             uint64_t frame_count, escher::PaperScene* scene,
+                             escher::PaperRenderer2* renderer) {
+  const float current_time_sec = stopwatch.GetElapsedSeconds();
+  const float screen_width = scene->bounding_box.width();
+  const float screen_height = scene->bounding_box.height();
 
-  float current_time_sec = stopwatch.GetElapsedSeconds();
+  escher::PaperTransformStack* transform_stack = renderer->transform_stack();
 
-  float screen_width = stage->viewing_volume().width();
-  float screen_height = stage->viewing_volume().height();
-
-  // Create our background plane.
-  Object bg_plane(
-      Object::NewRect(vec3(0, 0, 0), vec2(screen_width, screen_height), bg_));
-  render_queue->PushObject(bg_plane);
+  // Create our background plane.  Don't waste GPU cycles casting shadows from
+  // it, because there is nothing beneath it.
+  transform_stack->PushElevation(10);
+  renderer->DrawRect(vec2(0, 0), vec2(screen_width, screen_height), bg_,
+                     escher::PaperDrawableFlagBits::kDisableShadowCasting);
 
   // Render clipped rounded rectangles obtained from PaperShapeCache.
   {
-    const size_t num_world_space_clip_planes = world_space_clip_planes_.size();
-    const size_t num_object_space_clip_planes =
-        object_space_clip_planes_.size();
-    const size_t num_clip_planes =
-        num_world_space_clip_planes + num_object_space_clip_planes;
+    const size_t num_world_space_planes = world_space_clip_planes_.size();
+    const size_t num_object_space_planes = object_space_clip_planes_.size();
 
     // Allocate enough space for all clip-planes, including additional
     // scratch-space for world-space clip-planes, which must be transformed for
     // each object.
-    plane2* clip_planes =
-        ESCHER_ALLOCA(plane2, num_clip_planes + num_world_space_clip_planes);
-    plane2* untransformed_world_space_clip_planes =
-        clip_planes + num_clip_planes;
+    plane3* object_space_planes =
+        ESCHER_ALLOCA(plane3, num_object_space_planes + num_world_space_planes);
+    plane3* world_space_planes = object_space_planes + num_object_space_planes;
 
     // Animate the clip-planes.
-    for (size_t i = 0; i < num_world_space_clip_planes; ++i) {
-      untransformed_world_space_clip_planes[i] =
-          world_space_clip_planes_[i].Update(current_time_sec);
-    }
-    for (size_t i = 0; i < num_object_space_clip_planes; ++i) {
-      clip_planes[i + num_world_space_clip_planes] =
+    for (size_t i = 0; i < num_object_space_planes; ++i) {
+      object_space_planes[i] =
           object_space_clip_planes_[i].Update(current_time_sec);
     }
+    for (size_t i = 0; i < num_world_space_planes; ++i) {
+      world_space_planes[i] =
+          world_space_clip_planes_[i].Update(current_time_sec);
+    }
+
+    transform_stack->AddClipPlanes(world_space_planes, num_world_space_planes);
 
     // Animate and render the clipped rounded-rectangles.
     for (auto& rect : rectangles_) {
@@ -136,42 +143,39 @@ escher::Model* PaperDemoScene1::Update(const escher::Stopwatch& stopwatch,
       const vec3 position = escher::Lerp(rect.pos1, rect.pos2, t);
       const RoundedRectSpec rect_spec = escher::Lerp(rect.spec1, rect.spec2, t);
 
-      // Translate the world-space clip planes into the current rectangle's
-      // object-space.
-      for (size_t i = 0; i < num_world_space_clip_planes; ++i) {
-        clip_planes[i] =
-            TranslatePlane(position, untransformed_world_space_clip_planes[i]);
-      }
-
-      if (auto* mesh = shape_cache->GetRoundedRectMesh(rect_spec, clip_planes,
-                                                       num_clip_planes)) {
-        render_queue->PushObject(
-            escher::Object(position, escher::MeshPtr(mesh), rect.material));
-      }
+      transform_stack->PushTranslation(position);
+      transform_stack->AddClipPlanes(object_space_planes,
+                                     num_object_space_planes);
+      renderer->DrawRoundedRect(rect_spec, rect.material);
+      transform_stack->Pop();
     }
+
+    transform_stack->Pop();
   }
 
-  // Stack of circles, with an animated clip plane (these use vertex shader clip
-  // planes, not the CPU clipping used by PaperShapeCache).
-  const vec2 kCenterOfStack(100, 100);
-  auto clip_planes =
-      escher::ClipPlanes::FromBox(stage->viewing_volume().bounding_box());
-  float dist_from_origin = glm::length(kCenterOfStack);
-  vec3 clip_dir(1, 1, 0);
-  clip_dir = glm::normalize(clip_dir);
-  float x_clip = dist_from_origin + 70.f * sin(current_time_sec * 1.5);
-  clip_planes.planes[0] = escher::vec4(-clip_dir, x_clip);
-  render_queue->SetClipPlanes(clip_planes);
-  render_queue->PushObject(Object::NewCircle(kCenterOfStack, 90, 35, red_));
-  render_queue->PushObject(Object::NewCircle(kCenterOfStack, 80, 45, color2_));
-  render_queue->PushObject(Object::NewCircle(kCenterOfStack, 70, 55, color1_));
-  render_queue->PushObject(Object::NewCircle(kCenterOfStack, 60, 65, red_));
-  render_queue->PushObject(Object::NewCircle(kCenterOfStack, 50, 75, color2_));
-  render_queue->PushObject(Object::NewCircle(kCenterOfStack, 40, 85, color1_));
+  // Animated stack of circles, and a clip plane.
 
-  // Never used.
-  static escher::Model model{std::vector<escher::Object>()};
-  return &model;
+  const vec3 kInitialCenterOfStack(100, 100, 0);
+  transform_stack->PushTranslation(kInitialCenterOfStack);
+  plane3 circle_stack_clip_plane(vec3(0, 0, 0), glm::normalize(vec3(1, 1, 0)));
+  transform_stack->AddClipPlanes(&circle_stack_clip_plane, 1);
+  transform_stack->PushTranslation(
+      vec3(70.f + 70.f * sin(current_time_sec * 1.5), 0, 0));
+
+  transform_stack->PushElevation(35);
+  renderer->DrawCircle(90, red_);
+  transform_stack->Pop().PushElevation(45);
+  renderer->DrawCircle(80, color2_);
+  transform_stack->Pop().PushElevation(55);
+  renderer->DrawCircle(70, color1_);
+  transform_stack->Pop().PushElevation(65);
+  renderer->DrawCircle(60, red_);
+  transform_stack->Pop().PushElevation(75);
+  renderer->DrawCircle(50, color2_);
+  transform_stack->Pop().PushElevation(85);
+  renderer->DrawCircle(40, color1_);
+  transform_stack->Pop();
+  transform_stack->Pop();
 }
 
 float PaperDemoScene1::AnimatedState::Update(float current_time_sec) {
@@ -196,10 +200,10 @@ float PaperDemoScene1::AnimatedState::Update(float current_time_sec) {
   return t;
 }
 
-escher::plane2 PaperDemoScene1::ClipPlaneState::Update(float current_time_sec) {
+escher::plane3 PaperDemoScene1::ClipPlaneState::Update(float current_time_sec) {
   const float t = animation.Update(current_time_sec);
   const vec2 pos = escher::Lerp(pos1, pos2, t);
   const float radians = escher::Lerp(radians1, radians2, t);
   const vec2 dir(cos(radians), sin(radians));
-  return plane2(pos, dir);
+  return plane3(vec3(pos, 0), vec3(dir, 0));
 }

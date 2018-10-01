@@ -32,12 +32,15 @@ class ShaderProgramTest : public ::testing::Test, public VulkanTester {
     EXPECT_TRUE(escher->Cleanup());
 
     auto factory = escher->shader_program_factory();
-    bool success = factory->filesystem()->InitializeWithRealFiles(
-        {"shaders/model_renderer/default_position.vert",
-         "shaders/model_renderer/main.frag", "shaders/model_renderer/main.vert",
-         "shaders/model_renderer/shadow_map_generation.frag",
-         "shaders/model_renderer/shadow_map_lighting.frag",
-         "shaders/model_renderer/wobble_position.vert"});
+    bool success = factory->filesystem()->InitializeWithRealFiles({
+        "shaders/model_renderer/default_position.vert",
+        "shaders/model_renderer/main.frag",
+        "shaders/model_renderer/main.vert",
+        "shaders/model_renderer/shadow_map_generation.frag",
+        "shaders/model_renderer/shadow_map_lighting.frag",
+        "shaders/model_renderer/wobble_position.vert",
+        "shaders/paper/common/use.glsl",
+    });
     EXPECT_TRUE(success);
 
     ring_mesh1_ = NewRingMesh(
@@ -70,13 +73,9 @@ VK_TEST_F(ShaderProgramTest, CachedVariants) {
   auto escher = test::GetEscher();
 
   ShaderVariantArgs variant1(
-      {{"NO_SHADOW_LIGHTING_PASS", "1"},
-       {"USE_UV_ATTRIBUTE", "1"},
-       {"NUM_CLIP_PLANES", ToString(ClipPlanes::kNumPlanes)}});
+      {{"NO_SHADOW_LIGHTING_PASS", "1"}, {"USE_ATTRIBUTE_UV", "1"}});
   ShaderVariantArgs variant2(
-      {{"NO_SHADOW_LIGHTING_PASS", "1"},
-       {"USE_UV_ATTRIBUTE", "0"},
-       {"NUM_CLIP_PLANES", ToString(ClipPlanes::kNumPlanes)}});
+      {{"NO_SHADOW_LIGHTING_PASS", "1"}, {"USE_ATTRIBUTE_UV", "0"}});
 
   const char* kMainVert = "shaders/model_renderer/main.vert";
   const char* kMainFrag = "shaders/model_renderer/main.frag";
@@ -101,9 +100,7 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
   auto escher = test::GetEscher();
 
   ShaderVariantArgs variant(
-      {{"NO_SHADOW_LIGHTING_PASS", "1"},
-       {"USE_UV_ATTRIBUTE", "1"},
-       {"NUM_CLIP_PLANES", ToString(ClipPlanes::kNumPlanes)}});
+      {{"NO_SHADOW_LIGHTING_PASS", "1"}, {"USE_ATTRIBUTE_UV", "1"}});
 
   auto program =
       escher->GetGraphicsProgram("shaders/model_renderer/main.vert",

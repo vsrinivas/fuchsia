@@ -20,7 +20,14 @@ class Scene {
 
   // Convenience method for initializing scene. Use this to create meshes,
   // materials, and other long-lived objects.
+  // TODO(ES-155): deprecated, use PaperScene instead.
   virtual void Init(escher::Stage* stage) = 0;
+
+  // Convenience method for initializing scene. Use this to create meshes,
+  // materials, and other long-lived objects.
+  // Default implementation invokes Init(Stage*);
+  // TODO(ES-155): make this pure virtual when Init(Stage*) dies.
+  virtual void Init(escher::PaperScene* scene);
 
   // Returns a |Model| for the specified time and frame_count, and gives
   // subclasses a chance to update properties on |stage| (mainly brightness).
@@ -31,9 +38,16 @@ class Scene {
   // Model, and the latter by pushing objects into |render_queue|.  In the
   // near-ish future, Waterfall will be deleted, and the |render_queue| argument
   // to this method will become non-optional.
+  // TODO(ES-155): deprecated, use PaperScene instead.
   virtual escher::Model* Update(const escher::Stopwatch& stopwatch,
                                 uint64_t frame_count, escher::Stage* stage,
                                 escher::PaperRenderer2* renderer = nullptr) = 0;
+
+  // Default implementation delegates to the escher::Stage version.
+  // TODO(ES-155): make this pure virtual when Init(Stage*) dies.
+  virtual void Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
+                      escher::PaperScene* scene,
+                      escher::PaperRenderer2* renderer);
 
   // Optionally returns a |Model| for the specified time, frame_count, and
   // screen dimensions.  The returned Model only needs to be valid for the

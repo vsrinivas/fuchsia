@@ -7,58 +7,70 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "lib/escher/forward_declarations.h"
+#include "lib/escher/paper/paper_readme.h"
 
-#include "lib/escher/renderer/render_queue_item.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/paper/paper_drawable_flags.h"
+#include "lib/escher/renderer/frame.h"
+#include "lib/escher/renderer/uniform_binding.h"
+#include "lib/escher/vk/command_buffer.h"
 
 namespace escher {
+
+struct RenderQueueContext;
+struct RenderQueueItem;
 
 // Helper functions and structs used by e.g. PaperRenderQueue to produce
 // RenderQueueItems for the RenderQueues that it encapsulates.
 class PaperRenderFuncs {
  public:
   // Matches signature of |RenderQueueItem::RenderFunc|.  Expects the items'
-  // |object_data| and |instance_data| to be of type |MeshObjectData| and
-  // |MeshInstanceData|, respectively; these types are defined below.
+  // |object_data| and |instance_data| to be of type |MeshData| and
+  // |MeshDrawData|, respectively; these types are defined below.
   static void RenderMesh(CommandBuffer* cb, const RenderQueueContext* context,
                          const RenderQueueItem* items, uint32_t instance_count);
 
-  // Struct referenced by |MeshObjectData|, see below.
-  // TODO(ES-133):  Why not store a vk::Buffer instead of a Buffer*?
+  // Struct referenced by |MeshData|, see below.
+  struct IndexBinding {
+    vk::Buffer index_buffer;
+    vk::IndexType index_type;
+    uint64_t index_buffer_offset;
+
+    void Bind(CommandBuffer* cb) const {
+      cb->BindIndices(index_buffer, index_buffer_offset, index_type);
+    }
+  };
+
+  // Struct referenced by |MeshData|, see below.
   struct VertexBinding {
     uint32_t binding_index;
-    Buffer* buffer;
+    vk::Buffer buffer;
     uint64_t offset;
     uint32_t stride;
+
+    void Bind(CommandBuffer* cb) const {
+      cb->BindVertices(binding_index, buffer, offset, stride);
+    }
   };
 
-  // Struct referenced by |MeshObjectData| and |MeshInstanceData|, see below.
-  // Typically populated from a |UniformAllocation|, such as obtained from a
-  // |UniformBlockAllocator|.
-  // TODO(ES-133):  Why not store a vk::Buffer instead of a Buffer*?
-  struct UniformBinding {
-    uint32_t descriptor_set_index;
-    uint32_t binding_index;
-    Buffer* buffer;
-    vk::DeviceSize offset;
-    vk::DeviceSize size;
-  };
-
-  // Struct referenced by |MeshObjectData|, see below.
+  // Struct referenced by |MeshData|, see below.
   struct VertexAttributeBinding {
     uint32_t binding_index;
     uint32_t attribute_index;
     vk::Format format;
     uint32_t offset;
+
+    void Bind(CommandBuffer* cb) const {
+      cb->SetVertexAttributes(binding_index, attribute_index, format, offset);
+    }
   };
 
   // Struct intended to be used as the |object_data| of a |RenderQueueItem|.
-  // Typically populated via the helper function NewMeshObjectData(); see below.
-  struct MeshObjectData {
-    vk::Buffer index_buffer;
-    vk::IndexType index_type;
-    uint64_t index_buffer_offset;
+  // Typically populated via the helper function NewMeshData(); see below.
+  struct MeshData {
+    IndexBinding index_binding;
     uint32_t num_indices;
+    uint32_t num_shadow_volume_indices;
 
     uint32_t vertex_binding_count;
     VertexBinding* vertex_bindings;
@@ -69,22 +81,29 @@ class PaperRenderFuncs {
     uint32_t uniform_binding_count;
     UniformBinding* uniform_bindings;
 
-    // TODO(ES-109): move these into MeshInstanceData.
+    // TODO(ES-159): Texture bindings, not just one texture hardcoded to (1,1).
     Texture* texture;
-    ShaderProgram* shader_program;
+
+    void Bind(CommandBuffer* cb) const;
   };
 
   // Struct intended to be used as the |instance_data| of a |RenderQueueItem|.
-  struct MeshInstanceData {
+  struct MeshDrawData {
     UniformBinding object_properties;
+    PaperDrawableFlags flags;
   };
 
-  // Helper function for allocating/populating a |MeshObjectData|.  Both CPU and
+  // Helper function for allocating/populating a |MeshData|.  Both CPU and
   // uniform GPU memory is allocated using per-Frame allocators.
-  static PaperRenderFuncs::MeshObjectData* NewMeshObjectData(
-      const FramePtr& frame, const MeshPtr& mesh, const TexturePtr& texture,
-      const ShaderProgramPtr& program,
-      const UniformAllocation& view_projection_uniform);
+  static PaperRenderFuncs::MeshData* NewMeshData(
+      const FramePtr& frame, Mesh* mesh, const TexturePtr& texture,
+      uint32_t num_indices, uint32_t num_shadow_volume_indices);
+
+  // Helper function for allocating/populating a |MeshDrawData|.  Both CPU and
+  // uniform GPU memory is allocated using per-Frame allocators.
+  static PaperRenderFuncs::MeshDrawData* NewMeshDrawData(
+      const FramePtr& frame, const mat4& transform, const vec4& color,
+      PaperDrawableFlags flags);
 };
 
 }  // namespace escher

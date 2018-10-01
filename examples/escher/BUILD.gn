@@ -42,16 +42,16 @@ package("escher_waterfall2") {
   loadable_modules = vulkan_validation_layers.loadable_modules
   resources = [
       {
+          path = "//garnet/public/lib/escher/shaders/model_renderer/default_position.vert"
+          dest = "shaders/model_renderer/default_position.vert"
+      },
+      {
           path = "//garnet/public/lib/escher/shaders/model_renderer/main.frag"
           dest = "shaders/model_renderer/main.frag"
       },
       {
           path = "//garnet/public/lib/escher/shaders/model_renderer/main.vert"
           dest = "shaders/model_renderer/main.vert"
-      },
-      {
-          path = "//garnet/public/lib/escher/shaders/model_renderer/default_position.vert"
-          dest = "shaders/model_renderer/default_position.vert"
       },
       {
           path = "//garnet/public/lib/escher/shaders/model_renderer/shadow_map_generation.frag"
@@ -64,6 +64,34 @@ package("escher_waterfall2") {
       {
           path = "//garnet/public/lib/escher/shaders/model_renderer/wobble_position.vert"
           dest = "shaders/model_renderer/wobble_position.vert"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/paper/common/use.glsl"
+          dest = "shaders/paper/common/use.glsl"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/paper/frag/main_ambient_light.frag"
+          dest = "shaders/paper/frag/main_ambient_light.frag"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/paper/frag/main_point_light.frag"
+          dest = "shaders/paper/frag/main_point_light.frag"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/paper/vert/compute_model_space_position.vert"
+          dest = "shaders/paper/vert/compute_model_space_position.vert"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/paper/vert/compute_world_space_position.vert"
+          dest = "shaders/paper/vert/compute_world_space_position.vert"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/paper/vert/main_shadow_volume_extrude.vert"
+          dest = "shaders/paper/vert/main_shadow_volume_extrude.vert"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/paper/vert/vertex_attributes.vert"
+          dest = "shaders/paper/vert/vertex_attributes.vert"
       },
   ] + vulkan_validation_layers.resources
 }
