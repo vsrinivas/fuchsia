@@ -578,9 +578,11 @@ template("package") {
           ":${pkg_target_name}.meta",
         ]
         response_file_contents = [
-          "--manifest-no-meta=" + rebase_path("${pkg_target_name}.manifest",
+          "--exclude=meta/*",
+          "--manifest=" + rebase_path("${pkg_target_name}.manifest",
                                       root_build_dir,
                                       target_out_dir),
+          "--reset-exclude",
           "--entry-manifest=${pkg_label}",
           "--entry=${pkg.package_name}/meta.far=" +
               rebase_path("${pkg_target_name}.meta/meta.far",

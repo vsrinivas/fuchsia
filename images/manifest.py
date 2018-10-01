@@ -199,22 +199,6 @@ class input_manifest_action(input_action_base):
             return ingest_manifest_lines(getattr(namespace, 'separator', '='),
                                          file, file.name, *args)
 
-class input_manifest_no_meta_action(input_action_base):
-    def __init__(self, *args, **kwargs):
-        super(input_manifest_no_meta_action, self).__init__(*args, **kwargs)
-
-    def get_manifest_lines(self, namespace, filename, *args):
-        all_inputs = getattr(namespace, 'manifest', None)
-        if all_inputs is None:
-            all_inputs = []
-            setattr(namespace, 'manifest', all_inputs)
-        all_inputs.append(filename)
-        with open(filename, 'r') as file:
-            sel, un, grp = ingest_manifest_lines(getattr(namespace, 'separator', '='), file,
-                                                 file.name, *args)
-            sel = list(filter(lambda me: not me.target.startswith('meta/'), sel))
-            return sel, un, grp
-
 
 class input_entry_action(input_action_base):
     def __init__(self, *args, **kwargs):
@@ -244,9 +228,6 @@ def common_parse_args(parser):
     parser.add_argument('--manifest', action=input_manifest_action,
                         metavar='FILE', default=[],
                         help='Input manifest file (must exist)')
-    parser.add_argument('--manifest-no-meta', action=input_manifest_no_meta_action,
-                        metavar='FILE', default=[],
-                        help='Input manifest file (must exist), meta/ entries exlcuded')
     parser.add_argument('--entry', action=input_entry_action,
                         metavar='PATH=FILE',
                         help='Add a single entry as if from an input manifest')
