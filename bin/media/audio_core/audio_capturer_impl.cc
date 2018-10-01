@@ -1380,8 +1380,8 @@ zx_status_t AudioCapturerImpl::ChooseMixer(
   FXL_DCHECK(source);
 
   if (!source->is_input() && !source->is_output()) {
-    FXL_LOG(INFO) << "Failed to find mixer for source of type "
-                  << static_cast<uint32_t>(source->type());
+    FXL_LOG(WARNING) << "Failed to find mixer for source of type "
+                     << static_cast<uint32_t>(source->type());
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -1397,7 +1397,7 @@ zx_status_t AudioCapturerImpl::ChooseMixer(
   fuchsia::media::AudioStreamTypePtr source_format;
   source_format = device->driver()->GetSourceFormat();
   if (!source_format) {
-    FXL_LOG(INFO)
+    FXL_LOG(WARNING)
         << "Failed to find mixer. Source currently has no configured format";
     return ZX_ERR_BAD_STATE;
   }
@@ -1410,13 +1410,13 @@ zx_status_t AudioCapturerImpl::ChooseMixer(
   info->mixer = Mixer::Select(*source_format, *format_);
 
   if (info->mixer == nullptr) {
-    FXL_LOG(INFO) << "Failed to find mixer for capturer.";
-    FXL_LOG(INFO) << "Source cfg: rate " << source_format->frames_per_second
-                  << " ch " << source_format->channels << " sample fmt "
-                  << fidl::ToUnderlying(source_format->sample_format);
-    FXL_LOG(INFO) << "Dest cfg  : rate " << format_->frames_per_second << " ch "
-                  << format_->channels << " sample fmt "
-                  << fidl::ToUnderlying(format_->sample_format);
+    FXL_LOG(WARNING) << "Failed to find mixer for capturer.";
+    FXL_LOG(WARNING) << "Source cfg: rate " << source_format->frames_per_second
+                     << " ch " << source_format->channels << " sample fmt "
+                     << fidl::ToUnderlying(source_format->sample_format);
+    FXL_LOG(WARNING) << "Dest cfg  : rate " << format_->frames_per_second
+                     << " ch " << format_->channels << " sample fmt "
+                     << fidl::ToUnderlying(format_->sample_format);
     return ZX_ERR_NOT_SUPPORTED;
   }
 

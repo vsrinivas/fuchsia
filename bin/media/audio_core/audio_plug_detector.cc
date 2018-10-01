@@ -103,8 +103,8 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
   res =
       ioctl_audio_get_channel(dev_node.get(), channel.reset_and_get_address());
   if (res < 0) {
-    FXL_LOG(INFO) << "Failed to open channel to Audio output (res " << res
-                  << ")";
+    FXL_LOG(WARNING) << "Failed to open channel to AudioOutput (res " << res
+                     << ")";
     return;
   }
 

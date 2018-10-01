@@ -43,7 +43,6 @@ bool fuchsia_audio_dfx_get_info(uint32_t effect_id,
     return false;
   }
 
-  FXL_LOG(INFO) << "";
   std::strcpy(fx_desc->name, "Pass-thru");
   fx_desc->num_controls = 0;
   fx_desc->incoming_channels = FUCHSIA_AUDIO_DFX_CHANNELS_ANY;
