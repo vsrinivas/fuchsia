@@ -4,6 +4,7 @@
 
 pub mod ap;
 pub mod client;
+pub mod mesh;
 
 use failure::{bail, format_err};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent, MlmeEventStream, MlmeProxy};

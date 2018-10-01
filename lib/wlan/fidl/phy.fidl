@@ -22,6 +22,7 @@ enum DriverFeature {
 enum MacRole {
   CLIENT = 0;
   AP = 1;
+  MESH = 2;
 };
 
 enum Capability {

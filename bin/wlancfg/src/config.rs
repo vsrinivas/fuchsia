@@ -20,6 +20,7 @@ const DEFAULT_CONFIG_FILE: &str = "/pkg/data/default.json";
 pub enum Role {
     Client,
     Ap,
+    Mesh,
 }
 
 impl From<Role> for wlan::MacRole {
@@ -27,6 +28,7 @@ impl From<Role> for wlan::MacRole {
         match r {
             Role::Client => wlan::MacRole::Client,
             Role::Ap => wlan::MacRole::Ap,
+            Role::Mesh => wlan::MacRole::Mesh,
         }
     }
 }

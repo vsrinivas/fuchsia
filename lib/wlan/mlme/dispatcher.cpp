@@ -211,6 +211,9 @@ zx_status_t Dispatcher::HandleDeviceQueryRequest() {
     case WLAN_MAC_ROLE_AP:
         resp.role = wlan_mlme::MacRole::AP;
         break;
+    case WLAN_MAC_ROLE_MESH:
+        resp.role = wlan_mlme::MacRole::MESH;
+        break;
     default:
         // TODO(NET-1116): return an error!
         break;

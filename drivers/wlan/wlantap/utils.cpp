@@ -60,6 +60,8 @@ uint16_t ConvertMacRole(wlan_device::MacRole role) {
         return WLAN_MAC_ROLE_AP;
     case wlan_device::MacRole::CLIENT:
         return WLAN_MAC_ROLE_CLIENT;
+    case wlan_device::MacRole::MESH:
+        return WLAN_MAC_ROLE_MESH;
     }
 }
 
@@ -69,6 +71,8 @@ wlan_device::MacRole ConvertMacRole(uint16_t role) {
         return wlan_device::MacRole::AP;
     case WLAN_MAC_ROLE_CLIENT:
         return wlan_device::MacRole::CLIENT;
+    case WLAN_MAC_ROLE_MESH:
+        return wlan_device::MacRole::MESH;
     }
     ZX_ASSERT(0);
 }

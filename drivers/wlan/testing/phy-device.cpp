@@ -192,6 +192,9 @@ void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCall
     case wlan_device::MacRole::AP:
         role = WLAN_MAC_ROLE_AP;
         break;
+    case wlan_device::MacRole::MESH:
+        role = WLAN_MAC_ROLE_MESH;
+        break;
     default:
         resp.status = ZX_ERR_NOT_SUPPORTED;
         callback(std::move(resp));

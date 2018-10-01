@@ -36,6 +36,7 @@ struct DeviceQueryRequest {
 enum MacRole {
     CLIENT = 1;
     AP = 2;
+    MESH = 3;
 };
 
 struct BandCapabilities {

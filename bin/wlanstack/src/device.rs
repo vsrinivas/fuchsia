@@ -34,10 +34,12 @@ pub struct PhyDevice {
 
 pub type ClientSmeServer = mpsc::UnboundedSender<super::station::client::Endpoint>;
 pub type ApSmeServer = mpsc::UnboundedSender<super::station::ap::Endpoint>;
+pub type MeshSmeServer = mpsc::UnboundedSender<super::station::mesh::Endpoint>;
 
 pub enum SmeServer {
     Client(ClientSmeServer),
     Ap(ApSmeServer),
+    Mesh(MeshSmeServer),
 }
 
 pub struct IfaceDevice {
@@ -193,6 +195,12 @@ fn create_sme<S>(proxy: fidl_mlme::MlmeProxy,
             let fut = station::ap::serve(
                 proxy, event_stream, receiver, stats_requests);
             Ok((SmeServer::Ap(sender), FutureObj::new(Box::new(fut))))
+        },
+        fidl_mlme::MacRole::Mesh => {
+            let (sender, receiver) = mpsc::unbounded();
+            let fut = station::mesh::serve(
+                proxy, event_stream, receiver, stats_requests);
+            Ok((SmeServer::Mesh(sender), FutureObj::new(Box::new(fut))))
         }
     }
 }

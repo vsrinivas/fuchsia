@@ -98,7 +98,9 @@ enum {
     WLAN_MAC_ROLE_CLIENT = (1 << 0),
     // Device operating as an access point.
     WLAN_MAC_ROLE_AP = (1 << 1),
-    // TODO: IBSS, PBSS, mesh
+    // Device operating as a mesh node
+    WLAN_MAC_ROLE_MESH = (1 << 2),
+    // TODO: IBSS, PBSS
 };
 
 // Hardware capabilities.

@@ -6,6 +6,7 @@
 
 pub mod ap;
 pub mod client;
+pub mod mesh;
 mod sink;
 
 use fidl_fuchsia_wlan_mlme as fidl_mlme;

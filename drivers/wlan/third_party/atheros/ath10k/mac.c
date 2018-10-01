@@ -5003,18 +5003,16 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
     case NL80211_IFTYPE_ADHOC:
         arvif->vdev_type = WMI_VDEV_TYPE_IBSS;
         break;
-    case ATH10K_VIF_TYPE_MESH:
-        if (BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_MESH_11S)) {
-            arvif->vdev_subtype = ath10k_wmi_get_vdev_subtype
-                                  (ar, WMI_VDEV_SUBTYPE_MESH_11S);
-        } else if (!BITARR_TEST(ar->dev_flags, ATH10K_FLAG_RAW_MODE)) {
+#endif  // NEEDS PORTING
+    case WLAN_MAC_ROLE_MESH:
+        if (!BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_MESH_11S)) {
             ret = ZX_ERR_INVALID_ARGS;
-            ath10k_warn("must load driver with rawmode=1 to add mesh interfaces\n");
+            ath10k_err("the firmware does not support MESH_11S vif subtype\n");
             goto err;
         }
+        arvif->vdev_subtype = ath10k_wmi_get_vdev_subtype(ar, WMI_VDEV_SUBTYPE_MESH_11S);
         arvif->vdev_type = WMI_VDEV_TYPE_AP;
         break;
-#endif  // NEEDS PORTING
     case WLAN_MAC_ROLE_AP:
         arvif->vdev_type = WMI_VDEV_TYPE_AP;
         ath10k_info("Adding an AP interface (vdev_id=%d) ...\n", arvif->vdev_id);

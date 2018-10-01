@@ -14,6 +14,7 @@
 #include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/client/client_mlme.h>
 #include <wlan/mlme/debug.h>
+#include <wlan/mlme/mesh/mesh_mlme.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/timer_manager.h>
@@ -142,6 +143,10 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     case WLAN_MAC_ROLE_AP:
         infof("Initialize an AP MLME.\n");
         mlme.reset(new ApMlme(this));
+        break;
+    case WLAN_MAC_ROLE_MESH:
+        infof("Initialize a mesh MLME.\n");
+        mlme.reset(new MeshMlme(this));
         break;
     default:
         errorf("unsupported MAC role: %u\n", wlanmac_info_.ifc_info.mac_role);

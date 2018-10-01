@@ -136,6 +136,7 @@ static void ConvertPhyRolesInfo(::fidl::VectorPtr<wlan_device::MacRole>* MacRole
         MacRoles->push_back(wlan_device::MacRole::CLIENT);
     }
     if (mac_roles_mask & WLAN_MAC_ROLE_AP) { MacRoles->push_back(wlan_device::MacRole::AP); }
+    if (mac_roles_mask & WLAN_MAC_ROLE_MESH) { MacRoles->push_back(wlan_device::MacRole::MESH); }
 }
 
 static void ConvertPhyCaps(::fidl::VectorPtr<wlan_device::Capability>* Capabilities,
@@ -245,6 +246,9 @@ void Device::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallbac
         break;
     case wlan_device::MacRole::AP:
         role = WLAN_MAC_ROLE_AP;
+        break;
+    case wlan_device::MacRole::MESH:
+        role = WLAN_MAC_ROLE_MESH;
         break;
     }
 

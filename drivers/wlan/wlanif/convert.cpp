@@ -714,6 +714,8 @@ wlan_mlme::MacRole ConvertMacRole(uint8_t role) {
         return wlan_mlme::MacRole::CLIENT;
     case WLAN_MAC_ROLE_AP:
         return wlan_mlme::MacRole::AP;
+    case WLAN_MAC_ROLE_MESH:
+        return wlan_mlme::MacRole::MESH;
     default:
         ZX_ASSERT(0);
     }

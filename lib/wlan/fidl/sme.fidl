@@ -117,3 +117,6 @@ interface ApSme {
     1: Start(ApConfig config) -> (StartApResultCode code);
     2: Stop() -> ();
 };
+
+interface MeshSme {
+};

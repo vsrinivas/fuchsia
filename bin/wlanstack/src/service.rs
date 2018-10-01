@@ -99,6 +99,10 @@ async fn handle_fidl_request(request: fidl_svc::DeviceServiceRequest,
             let status = get_ap_sme(&ifaces, iface_id, sme);
             responder.send(status.into_raw())
         },
+        DeviceServiceRequest::GetMeshSme{ iface_id, sme, responder } => {
+            let status = get_mesh_sme(&ifaces, iface_id, sme);
+            responder.send(status.into_raw())
+        },
         DeviceServiceRequest::GetIfaceStats{ iface_id, responder } => {
             match await!(get_iface_stats(&ifaces, iface_id)) {
                 Ok(stats_ref) => {
@@ -210,6 +214,24 @@ fn get_ap_sme(ifaces: &IfaceMap, iface_id: u16, endpoint: station::ap::Endpoint)
         None => return zx::Status::NOT_FOUND,
         Some(ref iface) => match iface.sme_server {
             device::SmeServer::Ap(ref server) => server,
+            _ => return zx::Status::NOT_SUPPORTED
+        }
+    };
+    match server.unbounded_send(endpoint) {
+        Ok(()) => zx::Status::OK,
+        Err(e) => {
+            error!("error sending an endpoint to the SME server future: {}", e);
+            zx::Status::INTERNAL
+        }
+    }
+}
+
+fn get_mesh_sme(ifaces: &IfaceMap, iface_id: u16, endpoint: station::mesh::Endpoint) -> zx::Status {
+    let iface = ifaces.get(&iface_id);
+    let server = match iface {
+        None => return zx::Status::NOT_FOUND,
+        Some(ref iface) => match iface.sme_server {
+            device::SmeServer::Mesh(ref server) => server,
             _ => return zx::Status::NOT_SUPPORTED
         }
     };
