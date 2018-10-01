@@ -25,7 +25,8 @@ public:
     // Creates a message whose storage is backed by |bytes| and |handles|.
     //
     // The constructed |Message| object does not take ownership of the given
-    // storage.
+    // storage, although does take ownership of zircon handles contained withing
+    // handles.
     Message(BytePart bytes, HandlePart handles);
 
     ~Message();
