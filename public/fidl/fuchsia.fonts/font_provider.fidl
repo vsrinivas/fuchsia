@@ -9,6 +9,7 @@ using fuchsia.mem;
 enum Slant {
     UPRIGHT = 1;
     ITALIC = 2;
+    OBLIQUE = 3;
 };
 
 enum FallbackGroup {
@@ -21,6 +22,7 @@ enum FallbackGroup {
 };
 
 const uint32 REQUEST_FLAG_NO_FALLBACK = 1;
+const uint32 REQUEST_FLAG_EXACT_MATCH = 2;
 
 struct Request {
     // For example, "Roboto".

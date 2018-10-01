@@ -98,7 +98,7 @@ struct Font {
     font_index: u32,
     slant: fonts::Slant,
     weight: u32,
-    _width: u32,
+    width: u32,
     language: LanguageSet,
     info: font_info::FontInfo,
     fallback_group: fonts::FallbackGroup,
@@ -113,13 +113,211 @@ impl Font {
             asset_id,
             font_index: manifest.index,
             weight: manifest.weight,
-            _width: manifest.width,
+            width: manifest.width,
             slant: manifest.slant,
-            language: manifest.language.iter().map(|x| x.clone()).collect(),
+            language: manifest
+                .language
+                .iter()
+                .map(|x| x.to_ascii_lowercase())
+                .collect(),
             info,
             fallback_group,
         }
     }
+}
+
+struct FontAndLangScore<'a> {
+    font: &'a Font,
+    lang_score: usize,
+}
+
+// Returns value in the range [0, 2*request_lang.len()]. First half is used
+// for exact matches, the second half is for partial matches.
+fn get_lang_match_score(font: &Font, request_lang: &[String]) -> usize {
+    let mut best_partial_match_pos = None;
+    for i in 0..request_lang.len() {
+        let lang = &request_lang[i];
+
+        // Iterate all language in the font that start with |lang|.
+        for font_lang in font
+            .language
+            .range::<String, std::ops::RangeFrom<&String>>(lang..)
+        {
+            if !font_lang.starts_with(lang.as_str()) {
+                break;
+            }
+
+            if font_lang.len() == lang.len() {
+                // Exact match.
+                return i;
+            }
+
+            // Partial match is valid only when it's followed by '-' character
+            // (45 in ascii).
+            if (font_lang.as_bytes()[lang.len()] == 45) & best_partial_match_pos.is_none() {
+                best_partial_match_pos = Some(i);
+                continue;
+            }
+        }
+    }
+
+    best_partial_match_pos.unwrap_or(request_lang.len()) + request_lang.len()
+}
+
+impl<'a> FontAndLangScore<'a> {
+    fn new(font: &'a Font, request: &fonts::Request) -> FontAndLangScore<'a> {
+        FontAndLangScore {
+            font,
+            lang_score: get_lang_match_score(font, &request.language),
+        }
+    }
+}
+
+const FONT_WIDTH_NORMAL: u32 = 5;
+
+// Selects between fonts |a| and |b| for the |request|. Fonts are passed in
+// FontAndLangScore so the language match score is calculated only once for each
+// font. If |a| and |b| are equivalent then |a| is returned.
+// The style matching logic follows the CSS3 Fonts spec (see Section 5.2,
+// Item 4: https://www.w3.org/TR/css-fonts-3/#font-style-matching ) with 2
+// additions:
+//   1. Fonts with higher language match score are preferred. The score value
+//      is expected to be pre-calculated by get_lang_match_score(). Note that if
+//      the request specifies a character then the fonts are expected to be
+//      already filtered based on that character, i.e. they both contain that
+//      character, so this function doesn't need to verify it.
+//   2. If the request specifies |fallback_group| then fonts with the same
+//      |fallback_group| are preferred.
+fn select_best_match<'a>(
+    mut a: FontAndLangScore<'a>, mut b: FontAndLangScore<'a>, request: &'a fonts::Request,
+) -> FontAndLangScore<'a> {
+    if a.lang_score != b.lang_score {
+        if a.lang_score < b.lang_score {
+            return a;
+        } else {
+            return b;
+        }
+    }
+
+    if (request.fallback_group != fonts::FallbackGroup::None)
+        & (a.font.fallback_group != b.font.fallback_group)
+    {
+        if a.font.fallback_group == request.fallback_group {
+            return a;
+        } else if b.font.fallback_group == request.fallback_group {
+            return b;
+        }
+        // If fallback_group of a and b doesn't match the request then
+        // fall-through to compare them based on style parameters.
+    }
+
+    // Select based on width, see CSS3 Section 5.2, Item 4.a.
+    if a.font.width != b.font.width {
+        // Reorder a and b, so a has lower width.
+        if a.font.width > b.font.width {
+            std::mem::swap(&mut a, &mut b)
+        }
+        if request.width <= FONT_WIDTH_NORMAL {
+            if b.font.width <= FONT_WIDTH_NORMAL {
+                if (a.font.width as i32 - request.width as i32).abs()
+                    < (b.font.width as i32 - request.width as i32).abs()
+                {
+                    return a;
+                } else {
+                    return b;
+                }
+            }
+            return a;
+        } else {
+            if a.font.width > FONT_WIDTH_NORMAL {
+                if (a.font.width as i32 - request.width as i32).abs()
+                    < (b.font.width as i32 - request.width as i32).abs()
+                {
+                    return a;
+                } else {
+                    return b;
+                }
+            }
+            return b;
+        }
+    }
+
+    // Select based on slant, CSS3 Section 5.2, Item 4.b.
+    match (request.slant, a.font.slant, b.font.slant) {
+        // If both fonts have the same slant then fall through to select based
+        // on weight.
+        (_, a_s, b_s) if a_s == b_s => (),
+
+        // If we have a font that matches the request then use it.
+        (r_s, a_s, _) if r_s == a_s => return a,
+        (r_s, _, b_s) if r_s == b_s => return b,
+
+        // In case italic or oblique font is requested pick italic or
+        // oblique.
+        (fonts::Slant::Italic, fonts::Slant::Oblique, _) => return a,
+        (fonts::Slant::Italic, _, fonts::Slant::Oblique) => return b,
+
+        (fonts::Slant::Oblique, fonts::Slant::Italic, _) => return a,
+        (fonts::Slant::Oblique, _, fonts::Slant::Italic) => return b,
+
+        // In case upright font is requested, but we have only italic and
+        // oblique then fall through to select based on weight.
+        (fonts::Slant::Upright, _, _) => (),
+
+        // Patterns above cover all possible inputs, but exhaustiveness
+        // checker doesn't see it.
+        _ => (),
+    }
+
+    // Select based on weight, CSS3 Section 5.2, Item 4.c.
+    if a.font.weight != b.font.weight {
+        // Reorder a and b, so a has lower weight.
+        if a.font.weight > b.font.weight {
+            std::mem::swap(&mut a, &mut b)
+        }
+
+        if a.font.weight == request.weight {
+            return a;
+        }
+        if b.font.weight == request.weight {
+            return a;
+        }
+
+        if request.weight < 400 {
+            // If request.weight < 400, then fonts with
+            // weights <= request.weight are preferred.
+            if b.font.weight <= request.weight {
+                return b;
+            } else {
+                return a;
+            }
+        } else if request.weight > 500 {
+            // If request.weight > 500, then fonts with
+            // weights >= request.weight are preferred.
+            if a.font.weight >= request.weight {
+                return a;
+            } else {
+                return b;
+            }
+        } else {
+            // request.weight is 400 or 500.
+            if b.font.weight <= 500 {
+                if (a.font.weight as i32 - request.weight as i32).abs()
+                    < (b.font.weight as i32 - request.weight as i32).abs()
+                {
+                    return a;
+                } else {
+                    return b;
+                }
+            } else {
+                return a;
+            }
+        }
+    }
+
+    // If a and b are equivalent then give priority according to the order in
+    // the manifest.
+    a
 }
 
 struct FontCollection {
@@ -133,12 +331,39 @@ impl FontCollection {
         FontCollection { fonts: vec![] }
     }
 
-    fn match_request<'a>(&'a self, request: &fonts::Request) -> Option<&'a Font> {
+    fn match_request<'a>(&'a self, request: &'a fonts::Request) -> Option<&'a Font> {
+        if (request.flags & fonts::REQUEST_FLAG_EXACT_MATCH) > 0 {
+            return self
+                .fonts
+                .iter()
+                .find(|font| {
+                    (font.width == request.width)
+                        & (font.weight == request.weight)
+                        & (font.slant == request.slant)
+                        & (request.language.is_empty() || request
+                            .language
+                            .iter()
+                            .find(|lang| font.language.contains(*lang))
+                            .is_some())
+                        & ((request.character == 0) | font.info.charset.contains(request.character))
+                }).map(|f| f as &Font);
+        }
+
+        fn fold<'a>(
+            best: Option<FontAndLangScore<'a>>, x: &'a Font, request: &'a fonts::Request,
+        ) -> Option<FontAndLangScore<'a>> {
+            let x = FontAndLangScore::new(x, request);
+            match best {
+                Some(b) => Some(select_best_match(b, x, request)),
+                None => Some(x),
+            }
+        }
+
         self.fonts
             .iter()
             .filter(|f| (request.character == 0) | f.info.charset.contains(request.character))
-            .min_by_key(|f| compute_font_request_score(f, request))
-            .map(|a| a.as_ref())
+            .fold(None, |best, x| fold(best, x, request))
+            .map(|a| a.font)
     }
 
     fn is_empty(&self) -> bool {
@@ -162,36 +387,6 @@ impl FontFamily {
             fallback_group: fallback_group,
         }
     }
-}
-
-fn abs_diff(a: u32, b: u32) -> u32 {
-    a.max(b) - a.min(b)
-}
-
-// TODO(US-409): Implement a better font-matching algorithm which:
-//   - follows CSS3 font style matching rules,
-//   - prioritizes fonts according to the language order in the request,
-//   - allows partial language match
-fn compute_font_request_score(font: &Font, request: &fonts::Request) -> u32 {
-    let mut score = 0;
-
-    if (request.fallback_group != fonts::FallbackGroup::None)
-        & (request.fallback_group != font.fallback_group)
-    {
-        score += 4000;
-    }
-
-    let language_matches = request
-        .language
-        .iter()
-        .find(|lang| font.language.contains(*lang))
-        .is_some();
-    score += 2000 * (!language_matches) as u32;
-
-    score += (font.slant != request.slant) as u32 * 1000;
-    score += abs_diff(request.weight, font.weight);
-
-    score
 }
 
 pub struct FontService {
@@ -296,15 +491,27 @@ impl FontService {
     }
 
     fn match_request(&self, mut request: fonts::Request) -> Result<fonts::Response, Error> {
-        let mut font = self.families.get(&request.family).and_then(|family| {
-            if request.fallback_group == fonts::FallbackGroup::None {
-                request.fallback_group = family.fallback_group;
-            }
-            family.fonts.match_request(&request)
-        });
+        for lang in request.language.iter_mut() {
+            *lang = lang.to_ascii_lowercase();
+        }
 
-        if (request.flags & fonts::REQUEST_FLAG_NO_FALLBACK) == 0 {
-            font = font.or_else(|| self.fallback_collection.match_request(&request));
+        let matched_family = self.families.get(&request.family);
+
+        let mut font = None;
+
+        if let Some(family) = matched_family {
+            font = family.fonts.match_request(&request)
+        }
+
+        if font.is_none() & ((request.flags & fonts::REQUEST_FLAG_NO_FALLBACK) == 0) {
+            // If fallback_group is not specified by the client explicitly then copy it from
+            // the matched font family.
+            if request.fallback_group == fonts::FallbackGroup::None {
+                if let Some(family) = matched_family {
+                    request.fallback_group = family.fallback_group;
+                }
+            }
+            font = self.fallback_collection.match_request(&request);
         }
 
         let response = match font {
