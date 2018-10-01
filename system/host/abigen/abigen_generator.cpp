@@ -11,8 +11,8 @@
 
 #include "abigen_generator.h"
 
-using std::string;
 using std::map;
+using std::string;
 using std::vector;
 
 const map<string, string> user_attrs = {
@@ -59,13 +59,13 @@ static bool skip_vdso(const Syscall& sc) {
 }
 
 static HeaderGenerator user_header(
-    "extern ",                       // function prefix
+    "extern ", // function prefix
     {
         {"zx_", skip_internal},
         {"_zx_", skip_internal},
     },
-    "void",                          // no-args special type
-    false,                           // wrap pointers
+    "void", // no-args special type
+    false,  // wrap pointers
     user_attrs);
 
 static HeaderGenerator vdso_header(
@@ -74,7 +74,7 @@ static HeaderGenerator vdso_header(
         {"VDSO_zx_", skip_nothing},
         {"SYSCALL_zx_", skip_vdso},
     },
-    "void",                                            // no-args special type
+    "void", // no-args special type
     false,
     user_attrs);
 

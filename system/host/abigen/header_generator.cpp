@@ -18,10 +18,10 @@ static vector<int> collect_nonnull(const Syscall& sc) {
     vector<int> nonnull;
     int out_idx = static_cast<int>(sc.arg_spec.size());
     sc.for_each_return([&](const TypeSpec& type) {
-            ++out_idx;
-            if (!has_attribute("optional", type.attributes))
-                nonnull.push_back(out_idx);
-        });
+        ++out_idx;
+        if (!has_attribute("optional", type.attributes))
+            nonnull.push_back(out_idx);
+    });
     return nonnull;
 }
 

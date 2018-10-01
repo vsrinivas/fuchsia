@@ -59,8 +59,7 @@ void VdsoWrapperGenerator::pre_call(ofstream& os, const Syscall& sc) const {
 }
 
 void VdsoWrapperGenerator::post_call(ofstream& os, const Syscall& sc, string return_var) const {
-    std::for_each(wrappers_.rbegin(), wrappers_.rend(), [&os, &sc, &return_var](
-                                                            const CallWrapper* wrapper) {
+    std::for_each(wrappers_.rbegin(), wrappers_.rend(), [&os, &sc, &return_var](const CallWrapper* wrapper) {
         if (wrapper->applies(sc)) {
             wrapper->postCall(os, sc, return_var);
         }

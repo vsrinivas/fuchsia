@@ -234,19 +234,17 @@ bool Syscall::validate_array_spec(const TypeSpec& ts) const {
         return true;
     // find arguments that represent the array count.
     for (const string& multiplier : ts.arr_spec->multipliers) {
-        auto arg = std::find_if(arg_spec.begin(), arg_spec.end(), [&] (const TypeSpec& a) {
+        auto arg = std::find_if(arg_spec.begin(), arg_spec.end(), [&](const TypeSpec& a) {
             return a.name == multiplier;
         });
         if (arg == arg_spec.end()) {
-            std::string err = "invalid array spec for " + ts.name
-                + ": '" + multiplier + "' does not refer to an argument";
+            std::string err = "invalid array spec for " + ts.name + ": '" + multiplier + "' does not refer to an argument";
             print_error(err.c_str());
             return false;
         }
         // TODO:cpu also enforce INOUT here.
         if (arg->arr_spec && arg->arr_spec->count != 1u) {
-            std::string err = "invalid array spec for " + ts.name
-                + ": '" + multiplier + "' refers to an array of size != 1";
+            std::string err = "invalid array spec for " + ts.name + ": '" + multiplier + "' refers to an array of size != 1";
             return false;
         }
     }
