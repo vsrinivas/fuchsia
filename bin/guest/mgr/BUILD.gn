@@ -48,6 +48,12 @@ package("guestmgr") {
     ":bin",
   ]
   binary = "guestmgr"
+  meta = [
+    {
+      path = rebase_path("meta/guestmgr.cmx")
+      dest = "guestmgr.cmx"
+    },
+  ]
 }
 
 executable("guestmgr_unittests") {
