@@ -433,7 +433,7 @@ static int pwrbtn_monitor_starter(void* arg) {
     const char* nametable[2] = { };
     uint32_t count = 0;
     zx::channel fs_handle = fs_clone("dev/class/input");
-    if (!fs_handle.is_valid()) {
+    if (fs_handle.is_valid()) {
         nametable[count] = "/input";
         launchpad_add_handle(lp, fs_handle.release(), PA_HND(PA_NS_DIR, count++));
     } else {
@@ -443,7 +443,7 @@ static int pwrbtn_monitor_starter(void* arg) {
     // Ideally we'd only expose /dev/misc/dmctl, but we do not support exposing
     // single files
     fs_handle = fs_clone("dev/misc");
-    if (!fs_handle.is_valid()) {
+    if (fs_handle.is_valid()) {
         nametable[count] = "/misc";
         launchpad_add_handle(lp, fs_handle.release(), PA_HND(PA_NS_DIR, count++));
     } else {
