@@ -597,20 +597,22 @@ void Client::HandleSetLayerColorConfig(
 void Client::HandleSetLayerImage(const fuchsia_display_ControllerSetLayerImageRequest* req,
                                  fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto layer = layers_.find(req->layer_id);
-    if (!layer.IsValid() || layer->pending_layer_.type == LAYER_COLOR) {
+    if (!layer.IsValid()) {
         zxlogf(ERROR, "SetLayerImage ordinal with invalid layer\n");
+        TearDown();
+        return;
+    }
+    if (layer->pending_layer_.type != LAYER_PRIMARY && layer->pending_layer_.type != LAYER_CURSOR) {
+        zxlogf(ERROR, "SetLayerImage ordinal with bad layer type\n");
         TearDown();
         return;
     }
     auto image = images_.find(req->image_id);
     if (!image.IsValid() || !image->Acquire()) {
-        zxlogf(ERROR, "SetLayerImage ordinal with %s image\n", image.IsValid() ? "invl" : "busy");
+        zxlogf(ERROR, "SetLayerImage ordinal with %s image\n", !image.IsValid() ? "invl" : "busy");
         TearDown();
         return;
     }
-    // Only primary or cursor layers can have images
-    ZX_ASSERT(layer->pending_layer_.type == LAYER_PRIMARY
-            || layer->pending_layer_.type == LAYER_CURSOR);
     image_t* cur_image = layer->pending_layer_.type == LAYER_PRIMARY ?
             &layer->pending_layer_.cfg.primary.image : &layer->pending_layer_.cfg.cursor.image;
     if (!image->HasSameConfig(*cur_image)) {
@@ -620,6 +622,10 @@ void Client::HandleSetLayerImage(const fuchsia_display_ControllerSetLayerImageRe
         }
         TearDown();
         return;
+    }
+
+    if (layer->pending_image_) {
+        layer->pending_image_->DiscardAcquire();
     }
 
     layer->pending_image_ = image.CopyPointer();
