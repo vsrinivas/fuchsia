@@ -409,6 +409,6 @@ func (dns *dnsImpl) GetNameServers() ([]netstack.NetAddress, error) {
 	return out, nil
 }
 
-func (ns *netstackImpl) AddEthernetDevice(topo string, device ethernet.DeviceInterface) error {
-	return ns.ns.addEth(topo, device)
+func (ns *netstackImpl) AddEthernetDevice(topological_path string, interfaceConfig netstack.InterfaceConfig, device ethernet.DeviceInterface) error {
+	return ns.ns.addEth(topological_path, interfaceConfig, device)
 }

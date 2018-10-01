@@ -365,7 +365,7 @@ func (ns *Netstack) addLoopback() error {
 		},
 	}
 
-	setNICName(nic)
+	nic.Name = "lo"
 
 	ifs := &ifState{
 		ns:     ns,
@@ -427,16 +427,17 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) error {
 	})
 }
 
-func (ns *Netstack) addEth(topo string, device ethernet.DeviceInterface) error {
+func (ns *Netstack) addEth(topological_path string, interfaceConfig netstack.InterfaceConfig, device ethernet.DeviceInterface) error {
 	var client *eth.Client
 	return ns.addEndpoint(func(ifs *ifState) (stack.LinkEndpoint, error) {
 		var err error
-		client, err = eth.NewClient("netstack", topo, &device, ns.arena, ifs.stateChange)
+		client, err = eth.NewClient("netstack", topological_path, &device, ns.arena, ifs.stateChange)
 		if err != nil {
 			return nil, err
 		}
 		ifs.eth = client
 		ifs.nic.Features = client.Info.Features
+		ifs.nic.Name = interfaceConfig.Name
 		return eth.NewLinkEndpoint(client), nil
 	}, func(ifs *ifState) error {
 		// TODO(NET-298): Delete this condition after enabling multiple concurrent DHCP clients
@@ -498,8 +499,6 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 
 	nicid := ns.countNIC + 1
 	ifs.nic.ID = nicid
-	setNICName(ifs.nic)
-
 	ifs.nic.Routes = defaultRouteTable(nicid, "")
 	ns.ifStates[nicid] = ifs
 	ns.countNIC++
@@ -528,14 +527,4 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 	ns.mu.stack.SetRouteTable(ns.flattenRouteTables())
 
 	return finalize(ifs)
-}
-
-func setNICName(nic *netiface.NIC) {
-	if nic.Features&ethernet.InfoFeatureLoopback != 0 {
-		nic.Name = "lo"
-	} else if nic.Features&ethernet.InfoFeatureWlan != 0 {
-		nic.Name = fmt.Sprintf("wlan%d", nic.ID)
-	} else {
-		nic.Name = fmt.Sprintf("en%d", nic.ID)
-	}
 }

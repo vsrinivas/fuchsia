@@ -47,6 +47,7 @@
         "garnet/packages/tests/media",
         "garnet/packages/tests/mediaplayer",
         "garnet/packages/tests/mime_sniffer",
+        "garnet/packages/tests/netcfg_tests",
         "garnet/packages/tests/netstack",
         "garnet/packages/tests/network",
         "garnet/packages/tests/network_time",

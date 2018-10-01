@@ -20,9 +20,11 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:log",
     "//third_party/rust-crates/rustc_deps:serde",
     "//third_party/rust-crates/rustc_deps:serde_derive",
     "//third_party/rust-crates/rustc_deps:serde_json",
+    "//third_party/rust-crates/rustc_deps:tempdir",
     "//zircon/public/fidl/zircon-ethernet:zircon-ethernet-rustc",
   ]
 
@@ -58,6 +60,19 @@ package("config") {
     {
       dest = "sysmgr/netcfg.config"
       path = rebase_path("netcfg.config")
+    },
+  ]
+}
+
+package("netcfg_tests") {
+  testonly = true
+  deps = [
+    ":bin",
+  ]
+  tests = [
+    {
+      name = "netcfg_bin_test_rustc"
+      dest = "netcfg_bin_test_rustc"
     },
   ]
 }

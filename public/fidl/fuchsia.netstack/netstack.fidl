@@ -86,6 +86,10 @@ struct AggregateStats {
   UdpStats udp_stats;
 };
 
+struct InterfaceConfig{
+  string name;
+};
+
 // https://linux.die.net/man/7/netdevice
 struct NetInterface {
   uint32 id;
@@ -172,7 +176,7 @@ interface Netstack {
   // TODO(NET-1263): remove once we can use the ResolverAdmin interface
   16: SetNameServers(vector<NetAddress> servers);
 
-  17: AddEthernetDevice(string topological_path, zircon.ethernet.Device device);
+  17: AddEthernetDevice(string topological_path, InterfaceConfig interfaceConfig, zircon.ethernet.Device device);
 
   // Begin a route transaction for atomically getting and setting the route
   // table.  Returns true if a transaction can be started.

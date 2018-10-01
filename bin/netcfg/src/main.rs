@@ -16,19 +16,33 @@ use futures::{self, StreamExt, TryFutureExt, TryStreamExt};
 use serde_derive::Deserialize;
 
 use fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker;
-use fidl_fuchsia_netstack::{Ipv4Address, Ipv6Address, NetAddress, NetAddressFamily, NetInterface,
-                            NetstackEvent, NetstackMarker};
-use fidl_zircon_ethernet::{DeviceMarker, DeviceProxy, INFO_FEATURE_LOOPBACK, INFO_FEATURE_SYNTH};
+use fidl_fuchsia_netstack::{
+    InterfaceConfig, Ipv4Address, Ipv6Address, NetAddress, NetAddressFamily, NetInterface,
+    NetstackEvent, NetstackMarker,
+};
+use fidl_zircon_ethernet::{
+    DeviceMarker, DeviceProxy, INFO_FEATURE_LOOPBACK, INFO_FEATURE_SYNTH, INFO_FEATURE_WLAN,
+};
 
 mod device_id;
-
-const DEFAULT_CONFIG_FILE: &str = "/pkg/data/default.json";
-const ETHDIR: &str = "/dev/class/ethernet";
+mod interface;
 
 #[derive(Debug, Deserialize)]
 struct Config {
     pub device_name: Option<String>,
     pub dns_config: DnsConfig,
+}
+
+impl Config {
+    pub fn load<P: AsRef<path::Path>>(path: P) -> Result<Self, failure::Error> {
+        let path = path.as_ref();
+        let file = fs::File::open(path)
+            .with_context(|_| format!("could not open the config file {}", path.display()))?;
+        let config = serde_json::from_reader(file).with_context(|_| {
+            format!("could not deserialize the config file {}", path.display())
+        })?;
+        Ok(config)
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -38,6 +52,10 @@ struct DnsConfig {
 
 fn is_physical(features: u32) -> bool {
     (features & (INFO_FEATURE_SYNTH | INFO_FEATURE_LOOPBACK)) == 0
+}
+
+fn is_wlan(features: u32) -> bool {
+    features & INFO_FEATURE_WLAN == INFO_FEATURE_WLAN
 }
 
 fn derive_device_name(interfaces: Vec<NetInterface>) -> Option<String> {
@@ -52,20 +70,19 @@ static DEVICE_NAME_KEY: &str = "DeviceName";
 
 fn main() -> Result<(), failure::Error> {
     println!("netcfg: started");
-    let default_config_file = fs::File::open(DEFAULT_CONFIG_FILE)
-        .with_context(|_| format!("could not open config file {}", DEFAULT_CONFIG_FILE))?;
-    let default_config: Config = serde_json::from_reader(default_config_file)
-        .with_context(|_| format!("could not deserialize config file {}", DEFAULT_CONFIG_FILE))?;
+    let Config {
+        device_name,
+        dns_config: DnsConfig { servers },
+    } = Config::load("/pkg/data/default.json")?;
+    let mut interface_config = interface::FileBackedConfig::load(&"/data/net_interfaces.cfg.json")?;
     let mut executor = fuchsia_async::Executor::new().context("could not create executor")?;
     let netstack = fuchsia_app::client::connect_to_service::<NetstackMarker>()
         .context("could not connect to netstack")?;
-    let device_settings_manager = fuchsia_app::client::connect_to_service::<
-        DeviceSettingsManagerMarker,
-    >().context("could not connect to device settings manager")?;
+    let device_settings_manager =
+        fuchsia_app::client::connect_to_service::<DeviceSettingsManagerMarker>()
+            .context("could not connect to device settings manager")?;
 
-    let mut servers = default_config
-        .dns_config
-        .servers
+    let mut servers = servers
         .iter()
         .map(to_net_address)
         .collect::<Vec<NetAddress>>();
@@ -74,11 +91,7 @@ fn main() -> Result<(), failure::Error> {
         .set_name_servers(&mut servers.iter_mut())
         .context("could not set name servers")?;
 
-    let default_device_name = default_config
-        .device_name
-        .as_ref()
-        .map(Cow::Borrowed)
-        .map(Ok);
+    let default_device_name = device_name.as_ref().map(Cow::Borrowed).map(Ok);
 
     let mut device_name_stream = futures::stream::iter(default_device_name).chain(
         netstack.take_event_stream().try_filter_map(
@@ -102,6 +115,8 @@ fn main() -> Result<(), failure::Error> {
             )),
         }
     };
+
+    const ETHDIR: &str = "/dev/class/ethernet";
 
     let ethdir = fs::File::open(ETHDIR).with_context(|_| format!("could not open {}", ETHDIR))?;
     let mut watcher = fuchsia_vfs_watcher::Watcher::new(&ethdir)
@@ -129,7 +144,8 @@ fn main() -> Result<(), failure::Error> {
                     }) {
                         fuchsia_zircon::Status::OK => Ok(()),
                         status => Err(status.into_io_error()),
-                    }.with_context(|_| {
+                    }
+                    .with_context(|_| {
                         format!(
                             "fuchsia_zircon::sys::fdio_get_service_handle({})",
                             filename.display()
@@ -148,17 +164,31 @@ fn main() -> Result<(), failure::Error> {
                             .into_channel()
                             .map_err(|DeviceProxy { .. }| {
                                 failure::err_msg("failed to convert device proxy into channel")
-                            })?.into_zx_channel();
-                        let () = netstack
-                            .add_ethernet_device(
-                                &topological_path,
-                                fidl::endpoints::ClientEnd::<DeviceMarker>::new(client),
-                            ).with_context(|_| {
-                                format!(
-                                    "fidl_netstack::Netstack::add_ethernet_device({})",
-                                    filename.display()
+                            })?
+                            .into_zx_channel();
+                        {
+                            let name = interface_config.get_stable_name(
+                                topological_path.clone(), /* TODO(tamird): we can probably do
+                                                           * better with std::borrow::Cow. */
+                                interface::MacAddressDef::from_fidl(device_info.mac),
+                                is_wlan(device_info.features),
+                            )?;
+
+                            let () = netstack
+                                .add_ethernet_device(
+                                    &topological_path,
+                                    &mut InterfaceConfig {
+                                        name: name.to_string(),
+                                    },
+                                    fidl::endpoints::ClientEnd::<DeviceMarker>::new(client),
                                 )
-                            })?;
+                                .with_context(|_| {
+                                    format!(
+                                        "fidl_netstack::Netstack::add_ethernet_device({})",
+                                        filename.display()
+                                    )
+                                })?;
+                        }
                     }
                 }
                 fuchsia_vfs_watcher::WatchEvent::IDLE
