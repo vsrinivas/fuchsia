@@ -104,8 +104,7 @@ class Pipe : public VirtioWl::Vfd {
         remote_socket_(std::move(remote_socket)),
         rx_wait_(socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
                  std::move(rx_handler)),
-        tx_wait_(socket_.get(), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED,
-                 std::move(tx_handler)) {}
+        tx_wait_(socket_.get(), ZX_SOCKET_WRITABLE, std::move(tx_handler)) {}
   ~Pipe() override {
     rx_wait_.Cancel();
     tx_wait_.Cancel();
@@ -426,9 +425,8 @@ zx_status_t VirtioWl::HandleSend(const virtio_wl_ctrl_vfd_send_t* request,
         response->type = VIRTIO_WL_RESP_ERR;
         return ZX_OK;
       }
-      // Silently ignore error and mark connection as closed.
-      ready_vfds_[it->first] |= __ZX_OBJECT_PEER_CLOSED;
-      BeginWaitOnQueue();
+      // Silently ignore error and skip write.
+      break;
     }
   }
 
@@ -615,10 +613,6 @@ void VirtioWl::OnCanWrite(async_dispatcher_t* dispatcher, async::Wait* wait,
     return;
   }
 
-  if (signal->observed & __ZX_OBJECT_PEER_CLOSED) {
-    wait->set_trigger(wait->trigger() & ~__ZX_OBJECT_PEER_CLOSED);
-  }
-
   HandleCommand(out_queue_index_);
 }
 
@@ -679,7 +673,7 @@ void VirtioWl::OnQueueReady(zx_status_t status, uint16_t index) {
       header->vfd_id = it->first;
       in_queue()->Return(index, sizeof(*header));
       index_valid = false;
-      it = ready_vfds_.erase(it);
+      ready_vfds_.erase(it);
       continue;
     }
 
@@ -691,121 +685,127 @@ void VirtioWl::OnQueueReady(zx_status_t status, uint16_t index) {
     status = vfd_it->second->Read(nullptr, nullptr, 0, 0, &actual_bytes,
                                   &actual_handles);
     if (status != ZX_ERR_BUFFER_TOO_SMALL) {
-      // Mark connection as closed and continue.
-      if (status == ZX_ERR_PEER_CLOSED) {
-        it->second = __ZX_OBJECT_PEER_CLOSED;
-        continue;
+      if (status != ZX_ERR_PEER_CLOSED) {
+        FXL_LOG(ERROR) << "Failed to read size of message: " << status;
+        break;
       }
-      FXL_LOG(ERROR) << "Failed to read size of message: " << status;
-      break;
+
+      // Silently ignore error and skip read.
+      it->second &= ~__ZX_OBJECT_READABLE;
     }
 
-    // Total message size is NEW commands for each handle, the RECV header,
-    // the ID of each VFD and the data.
-    size_t message_size = sizeof(virtio_wl_ctrl_vfd_new_t) * actual_handles +
-                          sizeof(virtio_wl_ctrl_vfd_recv_t) +
-                          sizeof(uint32_t) * actual_handles + actual_bytes;
-    if (desc.len < message_size) {
-      FXL_LOG(ERROR) << "Descriptor is too small for message";
-      break;
-    }
-
-    // NEW commands first, followed by RECV header, then VFD IDs and data.
-    auto new_vfd_cmds = reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(desc.addr);
-    auto header = reinterpret_cast<virtio_wl_ctrl_vfd_recv_t*>(new_vfd_cmds +
-                                                               actual_handles);
-    header->hdr.type = VIRTIO_WL_CMD_VFD_RECV;
-    header->hdr.flags = 0;
-    header->vfd_id = it->first;
-    header->vfd_count = actual_handles;
-    auto vfd_ids = reinterpret_cast<uint32_t*>(header + 1);
-
-    // Retrieve handles and read data into queue.
-    zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
-    status = vfd_it->second->Read(vfd_ids + actual_handles, handle_infos,
-                                  actual_bytes, actual_handles, &actual_bytes,
-                                  &actual_handles);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to read message: " << status;
-      break;
-    }
-
-    // Consume handles by creating a VFD for each handle.
-    std::vector<std::unique_ptr<Vfd>> vfds;
-    for (uint32_t i = 0; i < actual_handles; ++i) {
-      // Allocate host side ID.
-      uint32_t vfd_id = next_vfd_id_++;
-      vfd_ids[i] = vfd_id;
-      new_vfd_cmds[i].vfd_id = vfd_id;
-
-      // Determine flags based on handle rights.
-      new_vfd_cmds[i].flags = 0;
-      if (handle_infos[i].rights & ZX_RIGHT_READ)
-        new_vfd_cmds[i].flags |= VIRTIO_WL_VFD_READ;
-      if (handle_infos[i].rights & ZX_RIGHT_WRITE)
-        new_vfd_cmds[i].flags |= VIRTIO_WL_VFD_WRITE;
-
-      switch (handle_infos[i].type) {
-        case ZX_OBJ_TYPE_VMO: {
-          std::unique_ptr<Memory> vfd =
-              Memory::Create(zx::vmo(handle_infos[i].handle), &vmar_);
-          if (!vfd) {
-            FXL_LOG(ERROR) << "Failed to create memory instance for VMO";
-            break;
-          }
-          new_vfd_cmds[i].hdr.type = VIRTIO_WL_CMD_VFD_NEW;
-          new_vfd_cmds[i].hdr.flags = 0;
-          new_vfd_cmds[i].pfn = vfd->addr() / PAGE_SIZE;
-          new_vfd_cmds[i].size = vfd->size();
-          vfds.emplace_back(std::move(vfd));
-        } break;
-        case ZX_OBJ_TYPE_SOCKET: {
-          auto vfd = std::make_unique<Pipe>(
-              zx::socket(handle_infos[i].handle), zx::socket(),
-              [this, vfd_id](async_dispatcher_t* dispatcher, async::Wait* wait,
-                             zx_status_t status,
-                             const zx_packet_signal_t* signal) {
-                OnDataAvailable(vfd_id, wait, status, signal);
-              },
-              fit::bind_member(this, &VirtioWl::OnCanWrite));
-          if (!vfd) {
-            FXL_LOG(ERROR) << "Failed to create pipe instance for socket";
-            break;
-          }
-          status = vfd->BeginWaitOnData(dispatcher_);
-          if (status != ZX_OK) {
-            FXL_LOG(ERROR) << "Failed to begin waiting on pipe: " << status;
-            break;
-          }
-          new_vfd_cmds[i].hdr.type = VIRTIO_WL_CMD_VFD_NEW_PIPE;
-          new_vfd_cmds[i].hdr.flags = 0;
-          vfds.emplace_back(std::move(vfd));
-        } break;
-        default:
-          FXL_LOG(ERROR) << "Invalid handle type";
-          zx_handle_close(handle_infos[i].handle);
-          break;
+    if (it->second & __ZX_OBJECT_READABLE) {
+      // Total message size is NEW commands for each handle, the RECV header,
+      // the ID of each VFD and the data.
+      size_t message_size = sizeof(virtio_wl_ctrl_vfd_new_t) * actual_handles +
+                            sizeof(virtio_wl_ctrl_vfd_recv_t) +
+                            sizeof(uint32_t) * actual_handles + actual_bytes;
+      if (desc.len < message_size) {
+        FXL_LOG(ERROR) << "Descriptor is too small for message";
+        break;
       }
+
+      // NEW commands first, followed by RECV header, then VFD IDs and data.
+      auto new_vfd_cmds =
+          reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(desc.addr);
+      auto header = reinterpret_cast<virtio_wl_ctrl_vfd_recv_t*>(
+          new_vfd_cmds + actual_handles);
+      header->hdr.type = VIRTIO_WL_CMD_VFD_RECV;
+      header->hdr.flags = 0;
+      header->vfd_id = it->first;
+      header->vfd_count = actual_handles;
+      auto vfd_ids = reinterpret_cast<uint32_t*>(header + 1);
+
+      // Retrieve handles and read data into queue.
+      zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
+      status = vfd_it->second->Read(vfd_ids + actual_handles, handle_infos,
+                                    actual_bytes, actual_handles, &actual_bytes,
+                                    &actual_handles);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to read message: " << status;
+        break;
+      }
+
+      // Consume handles by creating a VFD for each handle.
+      std::vector<std::unique_ptr<Vfd>> vfds;
+      for (uint32_t i = 0; i < actual_handles; ++i) {
+        // Allocate host side ID.
+        uint32_t vfd_id = next_vfd_id_++;
+        vfd_ids[i] = vfd_id;
+        new_vfd_cmds[i].vfd_id = vfd_id;
+
+        // Determine flags based on handle rights.
+        new_vfd_cmds[i].flags = 0;
+        if (handle_infos[i].rights & ZX_RIGHT_READ) {
+          new_vfd_cmds[i].flags |= VIRTIO_WL_VFD_READ;
+        }
+        if (handle_infos[i].rights & ZX_RIGHT_WRITE) {
+          new_vfd_cmds[i].flags |= VIRTIO_WL_VFD_WRITE;
+        }
+
+        switch (handle_infos[i].type) {
+          case ZX_OBJ_TYPE_VMO: {
+            std::unique_ptr<Memory> vfd =
+                Memory::Create(zx::vmo(handle_infos[i].handle), &vmar_);
+            if (!vfd) {
+              FXL_LOG(ERROR) << "Failed to create memory instance for VMO";
+              break;
+            }
+            new_vfd_cmds[i].hdr.type = VIRTIO_WL_CMD_VFD_NEW;
+            new_vfd_cmds[i].hdr.flags = 0;
+            new_vfd_cmds[i].pfn = vfd->addr() / PAGE_SIZE;
+            new_vfd_cmds[i].size = vfd->size();
+            vfds.emplace_back(std::move(vfd));
+          } break;
+          case ZX_OBJ_TYPE_SOCKET: {
+            auto vfd = std::make_unique<Pipe>(
+                zx::socket(handle_infos[i].handle), zx::socket(),
+                [this, vfd_id](async_dispatcher_t* dispatcher,
+                               async::Wait* wait, zx_status_t status,
+                               const zx_packet_signal_t* signal) {
+                  OnDataAvailable(vfd_id, wait, status, signal);
+                },
+                fit::bind_member(this, &VirtioWl::OnCanWrite));
+            if (!vfd) {
+              FXL_LOG(ERROR) << "Failed to create pipe instance for socket";
+              break;
+            }
+            status = vfd->BeginWaitOnData(dispatcher_);
+            if (status != ZX_OK) {
+              FXL_LOG(ERROR) << "Failed to begin waiting on pipe: " << status;
+              break;
+            }
+            new_vfd_cmds[i].hdr.type = VIRTIO_WL_CMD_VFD_NEW_PIPE;
+            new_vfd_cmds[i].hdr.flags = 0;
+            vfds.emplace_back(std::move(vfd));
+          } break;
+          default:
+            FXL_LOG(ERROR) << "Invalid handle type";
+            zx_handle_close(handle_infos[i].handle);
+            break;
+        }
+      }
+
+      // Abort if we failed to create all necessary VFDs.
+      if (vfds.size() < actual_handles) {
+        break;
+      }
+
+      // Store VFDs.
+      for (uint32_t i = 0; i < actual_handles; ++i) {
+        vfds_[vfd_ids[i]] = std::move(vfds[i]);
+      }
+
+      in_queue()->Return(index, message_size);
+      index_valid = false;
+
+      it->second &= ~__ZX_OBJECT_READABLE;
     }
 
-    // Abort if we failed to create all necessary VFDs.
-    if (vfds.size() < actual_handles) {
-      break;
-    }
-
-    // Store VFDs.
-    for (uint32_t i = 0; i < actual_handles; ++i) {
-      vfds_[vfd_ids[i]] = std::move(vfds[i]);
-    }
-
-    in_queue()->Return(index, message_size);
-    index_valid = false;
-
-    it->second &= ~__ZX_OBJECT_READABLE;
     // Remove VFD from ready set and begin another wait if all signals have
     // been handled.
     if (!it->second) {
-      it = ready_vfds_.erase(it);
+      ready_vfds_.erase(it);
       status = vfd_it->second->BeginWaitOnData(dispatcher_);
       if (status != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to begin waiting on VFD: " << status;
