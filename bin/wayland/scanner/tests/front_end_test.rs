@@ -44,7 +44,7 @@ mod test {
                 <arg name="uint_arg" type="uint"/>
                 <arg name="fixed_arg" type="fixed"/>
                 <arg name="object_arg" type="object"/>
-                <arg name="new_id_arg" type="new_id"/>
+                <arg name="new_id_arg" type="new_id" interface="my_interface"/>
                 <arg name="string_arg" type="string"/>
                 <arg name="array_arg" type="array"/>
                 <arg name="fd_arg" type="fd"/>
@@ -56,7 +56,7 @@ mod test {
                 <arg name="uint_arg" type="uint"/>
                 <arg name="fixed_arg" type="fixed"/>
                 <arg name="object_arg" type="object"/>
-                <arg name="new_id_arg" type="new_id"/>
+                <arg name="new_id_arg" type="new_id" interface="my_interface"/>
                 <arg name="string_arg" type="string"/>
                 <arg name="array_arg" type="array"/>
                 <arg name="fd_arg" type="fd"/>

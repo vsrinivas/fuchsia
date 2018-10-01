@@ -12,7 +12,7 @@ mod test {
     static SENDER_ID: u32 = 3;
 
     // Force a compile error if value does not have the AsBytes trait.
-    fn is_as_bytes<T: AsBytes>(_: &T) { }
+    fn is_as_bytes<T: AsBytes>(_: &T) {}
 
     macro_rules! message_bytes(
         ($sender:expr, $opcode:expr, $val:expr) => {
@@ -199,6 +199,52 @@ mod test {
         )).unwrap();
 
         assert_match!(request, TestInterfaceRequest::NewId{arg} => assert_eq!(arg, NEW_ID_VALUE));
+    }
+
+    static UNTYPED_NEW_ID_INTERFACE_NAME: &'static str = "test_interface";
+    static UNTYPED_NEW_ID_INTERFACE_VERSION: u32 = 4;
+    static UNTYPED_NEW_ID_VALUE: u32 = 8;
+    static UNTYPED_NEW_ID_MESSAGE_BYTES: &'static [u8] = &[
+        0x03, 0x00, 0x00, 0x00, // sender: 3
+        0x09, 0x00, // opcode: 9 (untyped_new_id)
+        0x24, 0x00, // length: 36
+        0x0f, 0x00, 0x00, 0x00, // string (len) = 15
+        0x74, 0x65, 0x73, 0x74, // 'test'
+        0x5f, 0x69, 0x6e, 0x74, // '_int'
+        0x65, 0x72, 0x66, 0x61, // 'erfa'
+        0x63, 0x65, 0x00, 0x00, // 'ce' NULL PAD
+        0x04, 0x00, 0x00, 0x00, // version: (4)
+        0x08, 0x00, 0x00, 0x00, // new_id(8)
+    ];
+
+    #[test]
+    fn test_serialize_untyped_new_id() {
+        let message = TestInterfaceEvent::UntypedNewId {
+            arg: UNTYPED_NEW_ID_VALUE,
+            arg_interface_name: UNTYPED_NEW_ID_INTERFACE_NAME.to_string(),
+            arg_interface_version: UNTYPED_NEW_ID_INTERFACE_VERSION,
+        };
+        let (bytes, handles) = message.into_message(SENDER_ID).unwrap().take();
+        assert!(handles.is_empty());
+        assert_eq!(UNTYPED_NEW_ID_MESSAGE_BYTES, bytes.as_slice());
+    }
+
+    #[test]
+    fn test_deserialize_untyped_new_id() {
+        let request = TestInterfaceRequest::from_message(Message::from_parts(
+            UNTYPED_NEW_ID_MESSAGE_BYTES.to_vec(),
+            Vec::new(),
+        )).unwrap();
+
+        assert_match!(request, TestInterfaceRequest::UntypedNewId{
+            arg,
+            arg_interface_name,
+            arg_interface_version,
+        } => {
+            assert_eq!(arg, UNTYPED_NEW_ID_VALUE);
+            assert_eq!(&arg_interface_name, UNTYPED_NEW_ID_INTERFACE_NAME);
+            assert_eq!(arg_interface_version, UNTYPED_NEW_ID_INTERFACE_VERSION);
+        });
     }
 
     static ARRAY_VALUE: &'static [u8] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10];

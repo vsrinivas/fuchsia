@@ -158,7 +158,7 @@ fn build_request(node: parser::ParseNode) -> AstResult<Message> {
                 parser::ParseElement::Description { .. } => {
                     description = Some(build_description(child)?)
                 }
-                parser::ParseElement::Arg { .. } => args.push(build_arg(child)?),
+                parser::ParseElement::Arg { .. } => args.append(&mut build_arg(child)?),
                 _ => return Err("Unsupported".to_owned()),
             }
         }
@@ -183,7 +183,7 @@ fn build_event(node: parser::ParseNode) -> AstResult<Message> {
                 parser::ParseElement::Description { .. } => {
                     description = Some(build_description(child)?)
                 }
-                parser::ParseElement::Arg { .. } => args.push(build_arg(child)?),
+                parser::ParseElement::Arg { .. } => args.append(&mut build_arg(child)?),
                 _ => return Err("Unsupported".to_owned()),
             }
         }
@@ -199,7 +199,7 @@ fn build_event(node: parser::ParseNode) -> AstResult<Message> {
     }
 }
 
-fn build_arg(node: parser::ParseNode) -> AstResult<Arg> {
+fn build_arg(node: parser::ParseNode) -> AstResult<Vec<Arg>> {
     if let parser::ParseElement::Arg {
         name,
         kind,
@@ -218,7 +218,7 @@ fn build_arg(node: parser::ParseNode) -> AstResult<Arg> {
                 _ => return Err("Unsupported".to_owned()),
             }
         }
-        Ok(Arg {
+        let arg = Arg {
             name,
             kind,
             summary,
@@ -226,7 +226,36 @@ fn build_arg(node: parser::ParseNode) -> AstResult<Arg> {
             nullable,
             enum_type,
             description,
-        })
+        };
+        // wayland has a slightly different serialization of untyped new_id
+        // arguments. Instead of just sending the object id, the interface name
+        // and version are sent first. This primarily impacts the
+        // wl_registry::bind request.
+        if arg.kind == ArgKind::NewId && arg.interface.is_none() {
+            Ok(vec![
+                Arg {
+                    name: format!("{}_interface_name", arg.name),
+                    kind: ArgKind::String,
+                    summary: None,
+                    interface: None,
+                    nullable: false,
+                    enum_type: None,
+                    description: None,
+                },
+                Arg {
+                    name: format!("{}_interface_version", arg.name),
+                    kind: ArgKind::Uint,
+                    summary: None,
+                    interface: None,
+                    nullable: false,
+                    enum_type: None,
+                    description: None,
+                },
+                arg,
+            ])
+        } else {
+            Ok(vec![arg])
+        }
     } else {
         Err("Invalid node".to_owned())
     }

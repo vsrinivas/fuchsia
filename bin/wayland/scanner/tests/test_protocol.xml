@@ -47,10 +47,10 @@
 
     <!-- Opcode 5: new_id request/event -->
     <request name="new_id">
-      <arg name="arg" type="new_id"/>
+      <arg name="arg" type="new_id" interface="test_interface"/>
     </request>
     <event name="new_id">
-      <arg name="arg" type="new_id"/>
+      <arg name="arg" type="new_id" interface="test_inteface"/>
     </event>
 
     <!-- Opcode 6: array request/event -->
@@ -61,7 +61,7 @@
       <arg name="arg" type="array"/>
     </event>
 
-    <!-- Opcode 7: new_id request/event -->
+    <!-- Opcode 7: handle request/event -->
     <request name="handle">
       <arg name="arg" type="fd"/>
     </request>
@@ -87,6 +87,14 @@
       <arg name="handle_arg2" type="fd" />
       <arg name="string_arg" type="string" />
       <arg name="array_arg" type="array" />
+    </event>
+
+    <!-- Opcode 9: new_id request/event with untyped interface -->
+    <request name="untyped_new_id">
+      <arg name="arg" type="new_id" />
+    </request>
+    <event name="untyped_new_id">
+      <arg name="arg" type="new_id" />
     </event>
   </interface>
 </protocol>
