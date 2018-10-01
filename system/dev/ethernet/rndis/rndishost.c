@@ -11,6 +11,7 @@
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
+#include <usb/usb-request.h>
 #include <zircon/hw/usb-cdc.h>
 #include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
@@ -120,7 +121,7 @@ static void rndis_read_complete(usb_request_t* request, void* cookie) {
     rndishost_t* eth = (rndishost_t*)cookie;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_req_release(&eth->usb, request);
+        usb_request_release(request);
         return;
     }
 
@@ -140,9 +141,9 @@ static void rndis_read_complete(usb_request_t* request, void* cookie) {
         size_t len = request->response.actual;
 
         uint8_t* read_data;
-        zx_status_t status = usb_req_mmap(&eth->usb, request, (void*)&read_data);
+        zx_status_t status = usb_request_mmap(request, (void*)&read_data);
         if (status != ZX_OK) {
-            printf("usb_req_mmap failed: %d\n", status);
+            printf("usb_request_mmap failed: %d\n", status);
             mtx_unlock(&eth->mutex);
             return;
         }
@@ -162,7 +163,7 @@ static void rndis_write_complete(usb_request_t* request, void* cookie) {
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
         zxlogf(ERROR, "rndis_write_complete zx_err_io_not_present\n");
-        usb_req_release(&eth->usb, request);
+        usb_request_release(request);
         return;
     }
 
@@ -186,13 +187,13 @@ static void rndis_write_complete(usb_request_t* request, void* cookie) {
 static void rndishost_free(rndishost_t* eth) {
     usb_request_t* txn;
     while ((txn = list_remove_head_type(&eth->free_read_reqs, usb_request_t, node)) != NULL) {
-        usb_req_release(&eth->usb, txn);
+        usb_request_release(txn);
     }
     while ((txn = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node)) != NULL) {
-        usb_req_release(&eth->usb, txn);
+        usb_request_release(txn);
     }
     while ((txn = list_remove_head_type(&eth->free_intr_reqs, usb_request_t, node)) != NULL) {
-        usb_req_release(&eth->usb, txn);
+        usb_request_release(txn);
     }
     free(eth);
 }
@@ -265,8 +266,8 @@ static zx_status_t rndishost_queue_tx(void* ctx, uint32_t options, ethmac_netbuf
     header.data_offset = sizeof(rndis_packet_header) - 8;
     header.data_length = length;
 
-    usb_req_copy_to(&eth->usb, req, header_data, sizeof(rndis_packet_header), 0);
-    ssize_t bytes_copied = usb_req_copy_to(&eth->usb, req, byte_data, length,
+    usb_request_copy_to(req, header_data, sizeof(rndis_packet_header), 0);
+    ssize_t bytes_copied = usb_request_copy_to(req, byte_data, length,
                                            sizeof(rndis_packet_header));
     req->header.length = sizeof(rndis_packet_header) + length;
     if (bytes_copied < 0) {
@@ -514,7 +515,7 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
 
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        zx_status_t alloc_result = usb_req_alloc(&eth->usb, &req, RNDIS_BUFFER_SIZE, bulk_in_addr);
+        zx_status_t alloc_result = usb_request_alloc(&req, RNDIS_BUFFER_SIZE, bulk_in_addr);
         if (alloc_result != ZX_OK) {
             status = alloc_result;
             goto fail;
@@ -526,7 +527,7 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
         // TODO: Allocate based on mtu.
-        zx_status_t alloc_result = usb_req_alloc(&eth->usb, &req, RNDIS_BUFFER_SIZE, bulk_out_addr);
+        zx_status_t alloc_result = usb_request_alloc(&req, RNDIS_BUFFER_SIZE, bulk_out_addr);
         if (alloc_result != ZX_OK) {
             status = alloc_result;
             goto fail;

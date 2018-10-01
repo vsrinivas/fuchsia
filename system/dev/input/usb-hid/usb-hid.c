@@ -9,6 +9,7 @@
 #include <ddk/protocol/hidbus.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
+#include <usb/usb-request.h>
 #include <zircon/hw/usb-hid.h>
 
 #include <zircon/status.h>
@@ -47,9 +48,9 @@ static void usb_interrupt_callback(usb_request_t* req, void* cookie) {
     usb_hid_device_t* hid = (usb_hid_device_t*)cookie;
     // TODO use usb request copyfrom instead of mmap
     void* buffer;
-    zx_status_t status = usb_req_mmap(&hid->usb, req, &buffer);
+    zx_status_t status = usb_request_mmap(req, &buffer);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "usb-hid: usb_req_mmap failed: %s\n", zx_status_get_string(status));
+        zxlogf(ERROR, "usb-hid: usb_request_mmap failed: %s\n", zx_status_get_string(status));
         return;
     }
     zxlogf(SPEW, "usb-hid: callback request status %d\n", req->response.status);
@@ -228,7 +229,7 @@ static void usb_hid_unbind(void* ctx) {
 
 static void usb_hid_release(void* ctx) {
     usb_hid_device_t* hid = ctx;
-    usb_req_release(&hid->usb, hid->req);
+    usb_request_release(hid->req);
     usb_desc_iter_release(&hid->desc_iter);
     free(hid);
 }
@@ -296,7 +297,7 @@ static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev) {
         usbhid->info.dev_class = HID_DEV_CLASS_POINTER;
     }
 
-    status = usb_req_alloc(&usbhid->usb, &usbhid->req, usb_ep_max_packet(endpt),
+    status = usb_request_alloc(&usbhid->req, usb_ep_max_packet(endpt),
                                endpt->bEndpointAddress);
     if (status != ZX_OK) {
         status = ZX_ERR_NO_MEMORY;
@@ -323,7 +324,7 @@ static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev) {
 
 fail:
     if (usbhid->req) {
-        usb_req_release(&usbhid->usb, usbhid->req);
+        usb_request_release(usbhid->req);
     }
     usb_desc_iter_release(&usbhid->desc_iter);
     free(usbhid);

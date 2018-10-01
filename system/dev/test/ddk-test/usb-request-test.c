@@ -4,7 +4,7 @@
 
 #include <limits.h>
 #include <ddk/protocol/usb.h>
-#include <ddk/usb-request/usb-request.h>
+#include <usb/usb-request.h>
 #include <unittest/unittest.h>
 #include <zircon/syscalls/iommu.h>
 
@@ -48,11 +48,11 @@ static bool test_alloc_vmo(void) {
 
     // Try copying some random data to and from the request.
     void* data = malloc(PAGE_SIZE * 4);
-    ASSERT_EQ(usb_request_copyto(req, data, PAGE_SIZE * 4, 0), PAGE_SIZE * 3,
+    ASSERT_EQ(usb_request_copy_to(req, data, PAGE_SIZE * 4, 0), PAGE_SIZE * 3,
               "only 3 pages should be copied as vmo_offset is 1 page");
 
     void* out_data = malloc(PAGE_SIZE * 4);
-    ASSERT_EQ(usb_request_copyfrom(req, out_data, PAGE_SIZE * 4, 0), PAGE_SIZE * 3,
+    ASSERT_EQ(usb_request_copy_from(req, out_data, PAGE_SIZE * 4, 0), PAGE_SIZE * 3,
               "only 3 pages should be copied as vmo_offset is 1 page");
 
     ASSERT_EQ(memcmp(data, out_data, PAGE_SIZE * 3), 0, "");

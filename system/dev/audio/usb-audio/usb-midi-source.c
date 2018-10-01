@@ -6,6 +6,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
+#include <usb/usb-request.h>
 #include <zircon/device/midi.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -55,7 +56,7 @@ static void usb_midi_source_read_complete(usb_request_t* req, void* cookie) {
     usb_midi_source_t* source = (usb_midi_source_t*)cookie;
 
     if (req->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_req_release(&source->usb, req);
+        usb_request_release(req);
         return;
     }
 
@@ -80,10 +81,10 @@ static void usb_midi_source_unbind(void* ctx) {
 static void usb_midi_source_free(usb_midi_source_t* source) {
     usb_request_t* req;
     while ((req = list_remove_head_type(&source->free_read_reqs, usb_request_t, node)) != NULL) {
-        usb_req_release(&source->usb, req);
+        usb_request_release(req);
     }
     while ((req = list_remove_head_type(&source->completed_reads, usb_request_t, node)) != NULL) {
-        usb_req_release(&source->usb, req);
+        usb_request_release(req);
     }
     free(source);
 }
@@ -149,7 +150,7 @@ static zx_status_t usb_midi_source_read(void* ctx, void* data, size_t len, zx_of
     usb_request_t* req = containerof(node, usb_request_t, node);
 
     // MIDI events are 4 bytes. We can ignore the zeroth byte
-    usb_req_copy_from(&source->usb, req, data, 3, 1);
+    usb_request_copy_from(req, data, 3, 1);
     *actual = get_midi_message_length(*((uint8_t *)data));
     list_remove_head(&source->completed_reads);
     list_add_head(&source->free_read_reqs, &req->node);
@@ -210,7 +211,7 @@ zx_status_t usb_midi_source_create(zx_device_t* device, usb_protocol_t* usb, int
     }
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        zx_status_t status = usb_req_alloc(usb, &req, packet_size, ep->bEndpointAddress);
+        zx_status_t status = usb_request_alloc(&req, packet_size, ep->bEndpointAddress);
         if (status != ZX_OK) {
             usb_midi_source_free(source);
             return ZX_ERR_NO_MEMORY;

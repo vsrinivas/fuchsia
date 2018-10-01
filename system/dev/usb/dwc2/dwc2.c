@@ -19,7 +19,7 @@
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb-hci.h>
 #include <ddk/protocol/usb.h>
-#include <ddk/usb-request/usb-request.h>
+#include <usb/usb-request.h>
 
 // Zircon USB includes
 #include <zircon/hw/usb-hub.h>
@@ -326,7 +326,7 @@ static void dwc_complete_root_port_status_req(dwc_usb_t* dwc) {
         if (dwc->rh_intr_req && dwc->rh_intr_req->usb_req) {
             usb_request_t* usb_req = dwc->rh_intr_req->usb_req;
             uint16_t val = 0x2;
-            usb_request_copyto(usb_req, (void*)&val, sizeof(val), 0);
+            usb_request_copy_to(usb_req, (void*)&val, sizeof(val), 0);
             complete_request(dwc->rh_intr_req, ZX_OK, sizeof(val), dwc);
             dwc->rh_intr_req = NULL;
         }
@@ -693,7 +693,7 @@ zx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
     usb_device_descriptor_t short_descriptor;
-    usb_request_copyfrom(get_desc, &short_descriptor, get_desc->response.actual, 0);
+    usb_request_copy_from(get_desc, &short_descriptor, get_desc->response.actual, 0);
 
     // Update the Max Packet Size of the control endpoint.
     ep0->desc.wMaxPacketSize = short_descriptor.bMaxPacketSize0;
@@ -910,7 +910,7 @@ static void dwc_root_hub_get_descriptor(dwc_usb_transfer_request_t* req,
     if (desc_type == USB_DT_DEVICE && index == 0) {
         if (length > sizeof(usb_device_descriptor_t))
             length = sizeof(usb_device_descriptor_t);
-        usb_request_copyto(usb_req, &dwc_rh_descriptor, length, 0);
+        usb_request_copy_to(usb_req, &dwc_rh_descriptor, length, 0);
         complete_request(req, ZX_OK, length, dwc);
     } else if (desc_type == USB_DT_CONFIG && index == 0) {
         usb_configuration_descriptor_t* config_desc =
@@ -918,7 +918,7 @@ static void dwc_root_hub_get_descriptor(dwc_usb_transfer_request_t* req,
         uint16_t desc_length = le16toh(config_desc->wTotalLength);
         if (length > desc_length)
             length = desc_length;
-        usb_request_copyto(usb_req, &dwc_rh_config_descriptor, length, 0);
+        usb_request_copy_to(usb_req, &dwc_rh_config_descriptor, length, 0);
         complete_request(req, ZX_OK, length, dwc);
     } else if (value >> 8 == USB_DT_STRING) {
         uint8_t string_index = value & 0xFF;
@@ -927,7 +927,7 @@ static void dwc_root_hub_get_descriptor(dwc_usb_transfer_request_t* req,
             if (length > string[0])
                 length = string[0];
 
-            usb_request_copyto(usb_req, string, length, 0);
+            usb_request_copy_to(usb_req, string, length, 0);
             complete_request(req, ZX_OK, length, dwc);
         } else {
             complete_request(req, ZX_ERR_NOT_SUPPORTED, 0, dwc);
@@ -974,7 +974,7 @@ static void dwc_process_root_hub_class_req(dwc_usb_transfer_request_t* req,
 
             if (length > sizeof(desc))
                 length = sizeof(desc);
-            usb_request_copyto(usb_req, &desc, length, 0);
+            usb_request_copy_to(usb_req, &desc, length, 0);
             complete_request(req, ZX_OK, length, dwc);
             return;
         }
@@ -1010,7 +1010,7 @@ static void dwc_process_root_hub_class_req(dwc_usb_transfer_request_t* req,
         }
 
         mtx_lock(&dwc->rh_status_mtx);
-        usb_request_copyto(usb_req, &dwc->root_port_status, length, 0);
+        usb_request_copy_to(usb_req, &dwc->root_port_status, length, 0);
         mtx_unlock(&dwc->rh_status_mtx);
 
         complete_request(req, ZX_OK, length, dwc);
@@ -1632,7 +1632,7 @@ static int endpoint_request_scheduler_thread(void* arg) {
 
                 usb_request_t* setup_req = req->setup_req;
                 // Copy the setup data into the setup usb request.
-                usb_request_copyto(setup_req, &setup_req->setup, sizeof(usb_setup_t), 0);
+                usb_request_copy_to(setup_req, &setup_req->setup, sizeof(usb_setup_t), 0);
                 usb_request_cache_flush(setup_req, 0, sizeof(usb_setup_t));
                 setup_req->header.length = sizeof(usb_setup_t);
 

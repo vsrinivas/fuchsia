@@ -17,7 +17,7 @@
 #include <ddk/protocol/usb-dci.h>
 #include <ddk/protocol/usb-function.h>
 #include <ddk/protocol/usb-mode-switch.h>
-#include <ddk/usb-request/usb-request.h>
+#include <usb/usb-request.h>
 #include <zircon/listnode.h>
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb-cdc.h>
@@ -252,12 +252,12 @@ static zx_status_t usb_func_req_init(void* ctx, usb_request_t* req, zx_handle_t 
 
 static ssize_t usb_func_req_copy_from(void* ctx, usb_request_t* req, void* data,
                                           size_t length, size_t offset) {
-    return usb_request_copyfrom(req, data, length, offset);
+    return usb_request_copy_from(req, data, length, offset);
 }
 
 static ssize_t usb_func_req_copy_to(void* ctx, usb_request_t* req, const void* data,
                                         size_t length, size_t offset) {
-    return usb_request_copyto(req, data, length, offset);
+    return usb_request_copy_to(req, data, length, offset);
 }
 
 static zx_status_t usb_func_req_mmap(void* ctx, usb_request_t* req, void** data) {

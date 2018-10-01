@@ -8,6 +8,7 @@
 #include <ddk/protocol/bt-hci.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
+#include <usb/usb-request.h>
 #include <zircon/device/bt-hci.h>
 #include <zircon/listnode.h>
 #include <zircon/status.h>
@@ -129,9 +130,9 @@ static void hci_event_complete(usb_request_t* req, void* cookie) {
 
     if (req->response.status == ZX_OK) {
         uint8_t* buffer;
-        zx_status_t status = usb_req_mmap(&hci->usb, req, (void*)&buffer);
+        zx_status_t status = usb_request_mmap(req, (void*)&buffer);
         if (status != ZX_OK) {
-            printf("bt-transport-usb: usb_req_mmap failed: %s\n", zx_status_get_string(status));
+            printf("bt-transport-usb: usb_request_mmap failed: %s\n", zx_status_get_string(status));
             goto out2;
         }
         size_t length = req->response.actual;
@@ -197,9 +198,9 @@ static void hci_acl_read_complete(usb_request_t* req, void* cookie) {
 
     if (req->response.status == ZX_OK) {
         void* buffer;
-        zx_status_t status = usb_req_mmap(&hci->usb, req, &buffer);
+        zx_status_t status = usb_request_mmap(req, &buffer);
         if (status != ZX_OK) {
-            printf("bt-transport-usb: usb_req_mmap failed: %s\n", zx_status_get_string(status));
+            printf("bt-transport-usb: usb_request_mmap failed: %s\n", zx_status_get_string(status));
             mtx_unlock(&hci->mutex);
             return;
         }
@@ -232,9 +233,9 @@ static void hci_acl_write_complete(usb_request_t* req, void* cookie) {
 
     if (hci->snoop_channel) {
         void* buffer;
-        zx_status_t status = usb_req_mmap(&hci->usb, req, &buffer);
+        zx_status_t status = usb_request_mmap(req, &buffer);
         if (status != ZX_OK) {
-            printf("bt-transport-usb: usb_req_mmap failed: %s\n", zx_status_get_string(status));
+            printf("bt-transport-usb: usb_request_mmap failed: %s\n", zx_status_get_string(status));
             mtx_unlock(&hci->mutex);
             return;
         }
@@ -342,7 +343,7 @@ static void hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* acl_item) {
             return;
 
         usb_request_t* req = containerof(node, usb_request_t, node);
-        usb_req_copy_to(&hci->usb, req, buf, length, 0);
+        usb_request_copy_to(req, buf, length, 0);
         req->header.length = length;
         usb_request_queue(&hci->usb, req);
     }
@@ -473,13 +474,13 @@ static void hci_release(void* ctx) {
 
     usb_request_t* req;
     while ((req = list_remove_head_type(&hci->free_event_reqs, usb_request_t, node)) != NULL) {
-        usb_req_release(&hci->usb, req);
+        usb_request_release(req);
     }
     while ((req = list_remove_head_type(&hci->free_acl_read_reqs, usb_request_t, node)) != NULL) {
-        usb_req_release(&hci->usb, req);
+        usb_request_release(req);
     }
     while ((req = list_remove_head_type(&hci->free_acl_write_reqs, usb_request_t, node)) != NULL) {
-        usb_req_release(&hci->usb, req);
+        usb_request_release(req);
     }
 
     mtx_unlock(&hci->mutex);
@@ -626,7 +627,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
 
     for (int i = 0; i < EVENT_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_req_alloc(&usb, &req, intr_max_packet, intr_addr);
+        status = usb_request_alloc(&req, intr_max_packet, intr_addr);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -636,7 +637,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < ACL_READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_req_alloc(&usb, &req, ACL_MAX_FRAME_SIZE, bulk_in_addr);
+        status = usb_request_alloc(&req, ACL_MAX_FRAME_SIZE, bulk_in_addr);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -646,7 +647,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < ACL_WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_req_alloc(&usb, &req, ACL_MAX_FRAME_SIZE, bulk_out_addr);
+        status = usb_request_alloc(&req, ACL_MAX_FRAME_SIZE, bulk_out_addr);
         if (status != ZX_OK) {
             goto fail;
         }

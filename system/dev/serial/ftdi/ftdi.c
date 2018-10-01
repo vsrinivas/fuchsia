@@ -9,6 +9,7 @@
 #include <ddk/protocol/serial-impl.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
+#include <usb/usb-request.h>
 #include <zircon/listnode.h>
 #include <zircon/hw/usb.h>
 
@@ -80,7 +81,7 @@ static void ftdi_read_complete(usb_request_t* request, void* cookie) {
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
         zxlogf(INFO,"FTDI: remote closed\n");
-        usb_req_release(&ftdi->usb, request);
+        usb_request_release(request);
         return;
     }
 
@@ -98,7 +99,7 @@ static void ftdi_write_complete(usb_request_t* request, void* cookie) {
     ftdi_t* ftdi = (ftdi_t*)cookie;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_req_release(&ftdi->usb, request);
+        usb_request_release(request);
         return;
     }
     mtx_lock(&ftdi->mutex);
@@ -151,7 +152,7 @@ static zx_status_t ftdi_write(void *ctx, const void* buf, size_t length, size_t*
         goto out;
     }
 
-    *actual = usb_req_copy_to(&ftdi->usb, req, buf, length, 0);
+    *actual = usb_request_copy_to(req, buf, length, 0);
     req->header.length = length;
 
     usb_request_queue(&ftdi->usb,req);
@@ -181,8 +182,8 @@ static zx_status_t ftdi_read(void* ctx, void* data, size_t len, size_t* actual) 
             to_copy = len - bytes_copied;
         }
 
-        usb_req_copy_from(&ftdi->usb, req, &buffer[bytes_copied],
-                          to_copy, offset + FTDI_STATUS_SIZE);
+        usb_request_copy_from(req, &buffer[bytes_copied], to_copy,
+                              offset + FTDI_STATUS_SIZE);
 
         bytes_copied = bytes_copied + to_copy;
 
@@ -309,13 +310,13 @@ static serial_impl_ops_t ftdi_serial_ops = {
 static void ftdi_free(ftdi_t* ftdi) {
     usb_request_t* req;
     while ((req = list_remove_head_type(&ftdi->free_read_reqs, usb_request_t, node)) != NULL) {
-        usb_req_release(&ftdi->usb, req);
+        usb_request_release(req);
     }
     while ((req = list_remove_head_type(&ftdi->free_write_reqs, usb_request_t, node)) != NULL) {
-        usb_req_release(&ftdi->usb, req);
+        usb_request_release(req);
     }
     while ((req = list_remove_head_type(&ftdi->completed_reads, usb_request_t, node)) != NULL) {
-        usb_req_release(&ftdi->usb, req);
+        usb_request_release(req);
     }
 
     free(ftdi);
@@ -401,7 +402,7 @@ static zx_status_t ftdi_bind(void* ctx, zx_device_t* device) {
 
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_req_alloc(&ftdi->usb, &req, USB_BUF_SIZE, bulk_in_addr);
+        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_in_addr);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -411,7 +412,7 @@ static zx_status_t ftdi_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_req_alloc(&ftdi->usb, &req, USB_BUF_SIZE, bulk_out_addr);
+        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_out_addr);
         if (status != ZX_OK) {
             goto fail;
         }

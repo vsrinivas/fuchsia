@@ -10,7 +10,7 @@
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb-hub.h>
 #include <ddk/usb/usb.h>
-#include <ddk/usb-request/usb-request.h>
+#include <usb/usb-request.h>
 #include <zircon/hw/usb-hub.h>
 #include <lib/sync/completion.h>
 #include <inttypes.h>
@@ -365,7 +365,7 @@ static int usb_hub_thread(void* arg) {
             break;
         }
 
-        usb_request_copyfrom(req, status_buf, req->response.actual, 0);
+        usb_request_copy_from(req, status_buf, req->response.actual, 0);
         uint8_t* bitmap = status_buf;
         uint8_t* bitmap_end = bitmap + req->response.actual;
 
@@ -463,7 +463,7 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
     memcpy(&hub->bus, &bus, sizeof(usb_bus_protocol_t));
 
     usb_request_t* req;
-    status = usb_req_alloc(&usb, &req, max_packet_size, ep_addr);
+    status = usb_request_alloc(&req, max_packet_size, ep_addr);
     if (status != ZX_OK) {
         usb_desc_iter_release(&iter);
         usb_hub_free(hub);

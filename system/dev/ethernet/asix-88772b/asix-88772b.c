@@ -11,6 +11,7 @@
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
+#include <usb/usb-request.h>
 #include <zircon/assert.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/listnode.h>
@@ -156,9 +157,9 @@ static void queue_interrupt_requests_locked(ax88772b_t* eth) {
 static void ax88772b_recv(ax88772b_t* eth, usb_request_t* request) {
     size_t len = request->response.actual;
     uint8_t* pkt;
-    zx_status_t status = usb_req_mmap(&eth->usb, request, (void*)&pkt);
+    zx_status_t status = usb_request_mmap(request, (void*)&pkt);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "ax88772b: usb_req_mmap failed: %d\n", status);
+        zxlogf(ERROR, "ax88772b: usb_request_mmap failed: %d\n", status);
         return;
     }
 
@@ -210,8 +211,8 @@ static zx_status_t ax88772b_send(ax88772b_t* eth, usb_request_t* request, ethmac
     header[2] = lo ^ 0xFF;
     header[3] = hi ^ 0xFF;
 
-    usb_req_copy_to(&eth->usb, request, header, ETH_HEADER_SIZE, 0);
-    usb_req_copy_to(&eth->usb, request, netbuf->data, length, ETH_HEADER_SIZE);
+    usb_request_copy_to(request, header, ETH_HEADER_SIZE, 0);
+    usb_request_copy_to(request, netbuf->data, length, ETH_HEADER_SIZE);
     request->header.length = length + ETH_HEADER_SIZE;
 
     zx_nanosleep(zx_deadline_after(ZX_USEC(eth->tx_endpoint_delay)));
@@ -223,7 +224,7 @@ static void ax88772b_read_complete(usb_request_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_req_release(&eth->usb, request);
+        usb_request_release(request);
         return;
     }
 
@@ -255,7 +256,7 @@ static void ax88772b_write_complete(usb_request_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_req_release(&eth->usb, request);
+        usb_request_release(request);
         return;
     }
 
@@ -291,7 +292,7 @@ static void ax88772b_interrupt_complete(usb_request_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_req_release(&eth->usb, request);
+        usb_request_release(request);
         return;
     }
 
@@ -299,7 +300,7 @@ static void ax88772b_interrupt_complete(usb_request_t* request, void* cookie) {
     if (request->response.status == ZX_OK && request->response.actual == sizeof(eth->status)) {
         uint8_t status[INTR_REQ_SIZE];
 
-        usb_req_copy_from(&eth->usb, request, status, sizeof(status), 0);
+        usb_request_copy_from(request, status, sizeof(status), 0);
         if (memcmp(eth->status, status, sizeof(eth->status))) {
             const uint8_t* b = status;
             zxlogf(TRACE, "ax88772b: status changed: %02X %02X %02X %02X %02X %02X %02X %02X\n",
@@ -375,13 +376,13 @@ static void ax88772b_unbind(void* ctx) {
 static void ax88772b_free(ax88772b_t* eth) {
     usb_request_t* req;
     while ((req = list_remove_head_type(&eth->free_read_reqs, usb_request_t, node)) != NULL) {
-        usb_req_release(&eth->usb, req);
+        usb_request_release(req);
     }
     while ((req = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node)) != NULL) {
-        usb_req_release(&eth->usb, req);
+        usb_request_release(req);
     }
     while ((req = list_remove_head_type(&eth->free_intr_reqs, usb_request_t, node)) != NULL) {
-        usb_req_release(&eth->usb, req);
+        usb_request_release(req);
     }
     free(eth);
 }
@@ -661,7 +662,7 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     zx_status_t status = ZX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_req_alloc(&eth->usb, &req, USB_BUF_IN_SIZE, bulk_in_addr);
+        status = usb_request_alloc(&req, USB_BUF_IN_SIZE, bulk_in_addr);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -671,7 +672,7 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_req_alloc(&eth->usb, &req, USB_BUF_OUT_SIZE, bulk_out_addr);
+        status = usb_request_alloc(&req, USB_BUF_OUT_SIZE, bulk_out_addr);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -681,7 +682,7 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < INTR_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_req_alloc(&eth->usb, &req, INTR_REQ_SIZE, intr_addr);
+        status = usb_request_alloc(&req, INTR_REQ_SIZE, intr_addr);
         if (status != ZX_OK) {
             goto fail;
         }

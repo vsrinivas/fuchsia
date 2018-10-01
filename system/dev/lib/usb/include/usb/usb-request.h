@@ -35,13 +35,13 @@ zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t vmo_handle, u
 zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle,
                              uint64_t vmo_offset, uint64_t length, uint8_t ep_address);
 
-// usb_request_copyfrom() copies data from the usb_request's vm object.
+// usb_request_copy_from() copies data from the usb_request's vm object.
 // Out of range operations are ignored.
-ssize_t usb_request_copyfrom(usb_request_t* req, void* data, size_t length, size_t offset);
+ssize_t usb_request_copy_from(usb_request_t* req, void* data, size_t length, size_t offset);
 
-// usb_request_copyto() copies data into a usb_request's vm object.
+// usb_request_copy_to() copies data into a usb_request's vm object.
 // Out of range operations are ignored.
-ssize_t usb_request_copyto(usb_request_t* req, const void* data, size_t length, size_t offset);
+ssize_t usb_request_copy_to(usb_request_t* req, const void* data, size_t length, size_t offset);
 
 // usb_request_mmap() maps the usb request's vm object. The 'data' field is set with the
 // mapped address if this function succeeds.

@@ -6,6 +6,7 @@
 #include <ddk/debug.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb-composite.h>
+#include <usb/usb-request.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -122,79 +123,67 @@ zx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint8_t int
 
 static zx_status_t usb_interface_req_alloc(void* ctx, usb_request_t** out, uint64_t data_size,
                                            uint8_t ep_address) {
-    usb_interface_t* intf = ctx;
-    return usb_req_alloc(&intf->comp->usb, out, data_size, ep_address);
+    return usb_request_alloc(out, data_size, ep_address);
 }
 
 static zx_status_t usb_interface_req_alloc_vmo(void* ctx, usb_request_t** out,
                                                zx_handle_t vmo_handle, uint64_t vmo_offset,
                                                uint64_t length, uint8_t ep_address) {
-    usb_interface_t* intf = ctx;
-    return usb_req_alloc_vmo(&intf->comp->usb, out, vmo_handle, vmo_offset, length, ep_address);
+    return usb_request_alloc_vmo(out, vmo_handle, vmo_offset, length, ep_address);
 }
 
 static zx_status_t usb_interface_req_init(void* ctx, usb_request_t* req, zx_handle_t vmo_handle,
                                           uint64_t vmo_offset, uint64_t length,
                                           uint8_t ep_address) {
-    usb_interface_t* intf = ctx;
-    return usb_req_init(&intf->comp->usb, req, vmo_handle, vmo_offset, length, ep_address);
+    return usb_request_init(req, vmo_handle, vmo_offset, length, ep_address);
 }
 
 static ssize_t usb_interface_req_copy_from(void* ctx, usb_request_t* req, void* data,
                                           size_t length, size_t offset) {
-    usb_interface_t* intf = ctx;
-    return usb_req_copy_from(&intf->comp->usb, req, data, length, offset);
+    return usb_request_copy_from(req, data, length, offset);
 }
 
 static ssize_t usb_interface_req_copy_to(void* ctx, usb_request_t* req, const void* data,
                                         size_t length, size_t offset) {
-    usb_interface_t* intf = ctx;
-    return usb_req_copy_to(&intf->comp->usb, req, data, length, offset);
+    return usb_request_copy_to(req, data, length, offset);
 }
 
 static zx_status_t usb_interface_req_mmap(void* ctx, usb_request_t* req, void** data) {
-    usb_interface_t* intf = ctx;
-    return usb_req_mmap(&intf->comp->usb, req, data);
+    return usb_request_mmap(req, data);
 }
 
 static zx_status_t usb_interface_req_cacheop(void* ctx, usb_request_t* req, uint32_t op,
                                              size_t offset, size_t length) {
-    usb_interface_t* intf = ctx;
-    return usb_req_cacheop(&intf->comp->usb, req, op, offset, length);
+    return usb_request_cacheop(req, op, offset, length);
 }
 
 static zx_status_t usb_interface_req_cache_flush(void* ctx, usb_request_t* req,
                                                  size_t offset, size_t length) {
-    usb_interface_t* intf = ctx;
-    return usb_req_cache_flush(&intf->comp->usb, req, offset, length);
+    return usb_request_cache_flush(req, offset, length);
 }
 
 static zx_status_t usb_interface_req_cache_flush_invalidate(void* ctx, usb_request_t* req,
                                                             zx_off_t offset, size_t length) {
-    usb_interface_t* intf = ctx;
-    return usb_req_cache_flush_invalidate(&intf->comp->usb, req, offset, length);
+    return usb_request_cache_flush_invalidate(req, offset, length);
 }
 
 static zx_status_t usb_interface_req_physmap(void* ctx, usb_request_t* req) {
-    usb_interface_t* intf = ctx;
-    return usb_req_physmap(&intf->comp->usb, req);
+    usb_interface_t *intf = ctx;
+    return usb_request_physmap(req, intf->comp->bti_handle);
 }
 
 static void usb_interface_req_release(void* ctx, usb_request_t* req) {
-    usb_interface_t* intf = ctx;
-    usb_req_release(&intf->comp->usb, req);
+    usb_request_release(req);
 }
 
 static void usb_interface_req_complete(void* ctx, usb_request_t* req,
                                        zx_status_t status, zx_off_t actual) {
-    usb_interface_t* intf = ctx;
-    usb_req_complete(&intf->comp->usb, req, status, actual);
+    usb_request_complete(req, status, actual);
 }
 
 static void usb_interface_req_phys_iter_init(void* ctx, phys_iter_t* iter, usb_request_t* req,
                                              size_t max_length) {
-    usb_interface_t* intf = ctx;
-    usb_req_phys_iter_init(&intf->comp->usb, iter, req, max_length);
+    usb_request_phys_iter_init(iter, req, max_length);
 }
 
 static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_t request,

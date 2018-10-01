@@ -18,7 +18,7 @@ MODULE_SRCS += \
 MODULE_STATIC_LIBS := system/ulib/ddk  	 \
                       system/ulib/sync   \
                       system/ulib/pretty \
-                      system/dev/lib/usb-request \
+                      system/dev/lib/usb \
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 

@@ -4,6 +4,7 @@
 
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/device.h>
+#include <usb/usb-request.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
@@ -55,8 +56,7 @@ UsbAudioStream::~UsbAudioStream() {
     ZX_DEBUG_ASSERT(allocated_req_cnt_ == free_req_cnt_);
 
     while (!list_is_empty(&free_req_)) {
-        usb_req_release(&parent_.usb_proto(), list_remove_head_type(&free_req_,
-                                                                    usb_request_t, node));
+        usb_request_release(list_remove_head_type(&free_req_, usb_request_t, node));
     }
 }
 
@@ -99,10 +99,8 @@ zx_status_t UsbAudioStream::Bind() {
 
         for (uint32_t i = 0; i < MAX_OUTSTANDING_REQ; ++i) {
             usb_request_t* req;
-            zx_status_t status = usb_req_alloc(&parent_.usb_proto(),
-                                               &req,
-                                               ifc_->max_req_size(),
-                                               ifc_->ep_addr());
+            zx_status_t status = usb_request_alloc(&req, ifc_->max_req_size(),
+                                                   ifc_->ep_addr());
             if (status != ZX_OK) {
                 LOG(ERROR, "Failed to allocate usb request %u/%u (size %u): %d\n",
                     i + 1, MAX_OUTSTANDING_REQ, ifc_->max_req_size(), status);
@@ -1110,12 +1108,11 @@ void UsbAudioStream::QueueRequestLocked() {
         uint32_t amt = fbl::min(avail, todo);
 
         const uint8_t* src = reinterpret_cast<uint8_t*>(ring_buffer_virt_) + ring_buffer_offset_;
-        usb_req_copy_to(&parent_.usb_proto(), req, src, amt, 0);
+        usb_request_copy_to(req, src, amt, 0);
         if (amt == avail) {
             ring_buffer_offset_ = todo - amt;
             if (ring_buffer_offset_ > 0) {
-                usb_req_copy_to(&parent_.usb_proto(), req, ring_buffer_virt_, ring_buffer_offset_,
-                                amt);
+                usb_request_copy_to(req, ring_buffer_virt_, ring_buffer_offset_, amt);
             }
         } else {
             ring_buffer_offset_ += amt;
@@ -1142,10 +1139,9 @@ void UsbAudioStream::CompleteRequestLocked(usb_request_t* req) {
         uint8_t* dst = reinterpret_cast<uint8_t*>(ring_buffer_virt_) + ring_buffer_offset_;
 
         if (req->response.status == ZX_OK) {
-            usb_req_copy_from(&parent_.usb_proto(), req, dst, amt, 0);
+            usb_request_copy_from(req, dst, amt, 0);
             if (amt < todo) {
-                usb_req_copy_from(&parent_.usb_proto(), req, ring_buffer_virt_, todo - amt,
-                                  amt);
+                usb_request_copy_from(req, ring_buffer_virt_, todo - amt, amt);
             }
         } else {
             // TODO(johngro): filling with zeros is only the proper thing to do

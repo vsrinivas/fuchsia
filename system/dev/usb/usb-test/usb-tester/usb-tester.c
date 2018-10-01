@@ -7,6 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/usb-composite.h>
 #include <ddk/usb/usb.h>
+#include <usb/usb-request.h>
 #include <lib/sync/completion.h>
 #include <zircon/device/usb-device.h>
 #include <zircon/device/usb-tester.h>
@@ -68,7 +69,7 @@ static zx_status_t test_req_alloc(usb_tester_t* usb_tester, size_t len, uint8_t 
     test_req->completion = SYNC_COMPLETION_INIT;
 
     usb_request_t* req;
-    zx_status_t status = usb_req_alloc(&usb_tester->usb, &req, len, ep_address);
+    zx_status_t status = usb_request_alloc(&req, len, ep_address);
     if (status != ZX_OK) {
         free(test_req);
         return status;
@@ -86,7 +87,7 @@ static void test_req_release(usb_tester_t* usb_tester, test_req_t* test_req) {
         return;
     }
     if (test_req->req) {
-        usb_req_release(&usb_tester->usb, test_req->req);
+        usb_request_release(test_req->req);
     }
     free(test_req);
 }
@@ -129,7 +130,7 @@ static zx_status_t test_req_wait_complete(usb_tester_t* usb_tester, test_req_t* 
 static zx_status_t test_req_fill_data(usb_tester_t* usb_tester, test_req_t* test_req,
                                       uint32_t data_pattern) {
     uint8_t* buf;
-    zx_status_t status = usb_req_mmap(&usb_tester->usb, test_req->req, (void**)&buf);
+    zx_status_t status = usb_request_mmap(test_req->req, (void**)&buf);
     if (status != ZX_OK) {
         return status;
     }
@@ -257,12 +258,12 @@ static zx_status_t usb_tester_bulk_loopback(usb_tester_t* usb_tester,
     }
 
     void* out_data;
-    status = usb_req_mmap(&usb_tester->usb, out_req->req, &out_data);
+    status = usb_request_mmap(out_req->req, &out_data);
     if (status != ZX_OK) {
         goto done;
     }
     void* in_data;
-    status = usb_req_mmap(&usb_tester->usb, in_req->req, &in_data);
+    status = usb_request_mmap(in_req->req, &in_data);
     if (status != ZX_OK) {
         goto done;
     }
@@ -290,7 +291,7 @@ static zx_status_t usb_tester_verify_loopback(usb_tester_t* usb_tester, list_nod
             continue;
         }
         void* in_data;
-        zx_status_t status = usb_req_mmap(&usb_tester->usb, in_req->req, &in_data);
+        zx_status_t status = usb_request_mmap(in_req->req, &in_data);
         if (status != ZX_OK) {
             return status;
         }
@@ -302,7 +303,7 @@ static zx_status_t usb_tester_verify_loopback(usb_tester_t* usb_tester, list_nod
             if (out_req->req->response.status == ZX_OK &&
                 out_req->req->response.actual == in_req->req->response.actual) {
                 void* out_data;
-                status = usb_req_mmap(&usb_tester->usb, out_req->req, &out_data);
+                status = usb_request_mmap(out_req->req, &out_data);
                 if (status != ZX_OK) {
                     return status;
                 }

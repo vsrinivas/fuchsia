@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/protocol/usb.h>
-#include <ddk/usb-request/usb-request.h>
+#include <usb/usb-request.h>
 #include <ddk/debug.h>
 
 #include <zircon/process.h>
@@ -56,8 +56,8 @@ static void usb_request_release_free(usb_request_t* req) {
     free(req);
 }
 
-zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size,
-                              uint8_t ep_address) {
+__EXPORT zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size,
+                                       uint8_t ep_address) {
     usb_request_t* req = calloc(1, sizeof(usb_request_t));
     if (!req) {
         return ZX_ERR_NO_MEMORY;
@@ -93,9 +93,9 @@ zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size,
 }
 
 // usb_request_alloc_vmo() creates a new usb request with the given VMO.
-zx_status_t usb_request_alloc_vmo(usb_request_t** out,
-                                  zx_handle_t vmo_handle, uint64_t vmo_offset, uint64_t length,
-                                  uint8_t ep_address) {
+__EXPORT zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t vmo_handle,
+                                           uint64_t vmo_offset, uint64_t length,
+                                           uint8_t ep_address) {
     usb_request_t* req = calloc(1, sizeof(usb_request_t));
     if (!req) {
         return ZX_ERR_NO_MEMORY;
@@ -142,8 +142,8 @@ zx_status_t usb_request_alloc_vmo(usb_request_t** out,
 
 // usb_request_init() initializes the statically allocated usb request with the given VMO.
 // This will free any resources allocated by the usb request but not the usb request itself.
-zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle,
-                             uint64_t vmo_offset, uint64_t length, uint8_t ep_address) {
+__EXPORT zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle,
+                                      uint64_t vmo_offset, uint64_t length, uint8_t ep_address) {
     memset(req, 0, sizeof(*req));
 
     zx_handle_t dup_handle;
@@ -183,25 +183,25 @@ zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle,
     return ZX_OK;
 }
 
-ssize_t usb_request_copyfrom(usb_request_t* req, void* data, size_t length, size_t offset) {
+__EXPORT ssize_t usb_request_copy_from(usb_request_t* req, void* data, size_t length, size_t offset) {
     length = MIN(req_buffer_size(req, offset), length);
     memcpy(data, req_buffer_virt(req) + offset, length);
     return length;
 }
 
-ssize_t usb_request_copyto(usb_request_t* req, const void* data, size_t length, size_t offset) {
+__EXPORT ssize_t usb_request_copy_to(usb_request_t* req, const void* data, size_t length, size_t offset) {
     length = MIN(req_buffer_size(req, offset), length);
     memcpy(req_buffer_virt(req) + offset, data, length);
     return length;
 }
 
-zx_status_t usb_request_mmap(usb_request_t* req, void** data) {
+__EXPORT zx_status_t usb_request_mmap(usb_request_t* req, void** data) {
     *data = req_buffer_virt(req);
     // TODO(jocelyndang): modify this once we start passing usb requests across process boundaries.
     return ZX_OK;
 }
 
-zx_status_t usb_request_cacheop(usb_request_t* req, uint32_t op, size_t offset, size_t length) {
+__EXPORT zx_status_t usb_request_cacheop(usb_request_t* req, uint32_t op, size_t offset, size_t length) {
     if (length > 0) {
         return zx_vmo_op_range(req->vmo_handle, op, req->offset + offset, length, NULL, 0);
     } else {
@@ -209,14 +209,14 @@ zx_status_t usb_request_cacheop(usb_request_t* req, uint32_t op, size_t offset, 
     }
 }
 
-zx_status_t usb_request_cache_flush(usb_request_t* req, zx_off_t offset, size_t length) {
+__EXPORT zx_status_t usb_request_cache_flush(usb_request_t* req, zx_off_t offset, size_t length) {
     if (offset + length < offset || offset + length > req->size) {
         return ZX_ERR_OUT_OF_RANGE;
     }
     return zx_cache_flush(req_buffer_virt(req) + offset, length, ZX_CACHE_FLUSH_DATA);
 }
 
-zx_status_t usb_request_cache_flush_invalidate(usb_request_t* req, zx_off_t offset, size_t length) {
+__EXPORT zx_status_t usb_request_cache_flush_invalidate(usb_request_t* req, zx_off_t offset, size_t length) {
     if (offset + length < offset || offset + length > req->size) {
         return ZX_ERR_OUT_OF_RANGE;
     }
@@ -265,13 +265,13 @@ zx_status_t usb_request_physmap(usb_request_t* req, zx_handle_t bti_handle) {
     return ZX_OK;
 }
 
-void usb_request_release(usb_request_t* req) {
+__EXPORT void usb_request_release(usb_request_t* req) {
     if (req->release_cb) {
         req->release_cb(req);
     }
 }
 
-void usb_request_complete(usb_request_t* req, zx_status_t status, zx_off_t actual) {
+__EXPORT void usb_request_complete(usb_request_t* req, zx_status_t status, zx_off_t actual) {
     req->response.status = status;
     req->response.actual = actual;
 
@@ -283,7 +283,7 @@ void usb_request_complete(usb_request_t* req, zx_status_t status, zx_off_t actua
     }
 }
 
-void usb_request_phys_iter_init(phys_iter_t* iter, usb_request_t* req, size_t max_length) {
+__EXPORT void usb_request_phys_iter_init(phys_iter_t* iter, usb_request_t* req, size_t max_length) {
     phys_iter_buffer_t buf = {
         .length = req->header.length,
         .vmo_offset = req->offset,
@@ -293,22 +293,22 @@ void usb_request_phys_iter_init(phys_iter_t* iter, usb_request_t* req, size_t ma
     phys_iter_init(iter, &buf, max_length);
 }
 
-size_t usb_request_phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr) {
+__EXPORT size_t usb_request_phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr) {
     return phys_iter_next(iter, out_paddr);
 }
 
-void usb_request_pool_init(usb_request_pool_t* pool) {
+__EXPORT void usb_request_pool_init(usb_request_pool_t* pool) {
     mtx_init(&pool->lock, mtx_plain);
     list_initialize(&pool->free_reqs);
 }
 
-void usb_request_pool_add(usb_request_pool_t* pool, usb_request_t* req) {
+__EXPORT void usb_request_pool_add(usb_request_pool_t* pool, usb_request_t* req) {
     mtx_lock(&pool->lock);
     list_add_tail(&pool->free_reqs, &req->node);
     mtx_unlock(&pool->lock);
 }
 
-usb_request_t* usb_request_pool_get(usb_request_pool_t* pool, size_t length) {
+__EXPORT usb_request_t* usb_request_pool_get(usb_request_pool_t* pool, size_t length) {
     usb_request_t* req = NULL;
     bool found = false;
 
@@ -327,7 +327,7 @@ usb_request_t* usb_request_pool_get(usb_request_pool_t* pool, size_t length) {
     return found ? req : NULL;
 }
 
-void usb_request_pool_release(usb_request_pool_t* pool) {
+__EXPORT void usb_request_pool_release(usb_request_pool_t* pool) {
     mtx_lock(&pool->lock);
 
     usb_request_t* req;

@@ -9,6 +9,7 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS := \
 	$(LOCAL_DIR)/usb.c \
+	$(LOCAL_DIR)/usb-request.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk
 MODULE_LIBS := system/ulib/c

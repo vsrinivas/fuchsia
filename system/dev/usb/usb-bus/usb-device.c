@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <ddk/metadata.h>
 #include <ddk/usb/usb.h>
 #include <zircon/device/usb-device.h>
 #include <stdint.h>
@@ -299,12 +300,12 @@ static zx_status_t usb_device_req_init(void* ctx, usb_request_t* req, zx_handle_
 
 static ssize_t usb_device_req_copy_from(void* ctx, usb_request_t* req, void* data,
                                           size_t length, size_t offset) {
-    return usb_request_copyfrom(req, data, length, offset);
+    return usb_request_copy_from(req, data, length, offset);
 }
 
 static ssize_t usb_device_req_copy_to(void* ctx, usb_request_t* req, const void* data,
                                         size_t length, size_t offset) {
-    return usb_request_copyto(req, data, length, offset);
+    return usb_request_copy_to(req, data, length, offset);
 }
 
 static zx_status_t usb_device_req_mmap(void* ctx, usb_request_t* req, void** data) {
@@ -377,7 +378,7 @@ static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t r
 
     bool out = !!((request_type & USB_DIR_MASK) == USB_DIR_OUT);
     if (length > 0 && out) {
-        usb_request_copyto(req, data, length, 0);
+        usb_request_copy_to(req, data, length, 0);
     }
 
     sync_completion_t completion = SYNC_COMPLETION_INIT;
@@ -408,7 +409,7 @@ static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t r
         }
 
         if (length > 0 && !out) {
-            usb_request_copyfrom(req, data, req->response.actual, 0);
+            usb_request_copy_from(req, data, req->response.actual, 0);
         }
     }
 
@@ -712,6 +713,13 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
     status = device_add(bus->zxdev, &args, &dev->zxdev);
     if (status == ZX_OK) {
         *out_device = dev;
+        zx_handle_t bti_handle = bus->bti_handle;
+        status = device_add_metadata(dev->zxdev, DEVICE_METADATA_PRIVATE, &bti_handle,
+                                     sizeof(bti_handle));
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "usb_device_add: device_add_metadata failed: %d\n", status);
+            return status;
+        }
         return ZX_OK;
     } else {
         stop_callback_thread(dev);

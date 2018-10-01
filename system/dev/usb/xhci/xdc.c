@@ -447,7 +447,7 @@ static zx_status_t xdc_read_instance(void* ctx, void* buf, size_t count,
         }
         size_t req_bytes_left = req->response.actual - inst->cur_req_read_offset;
         size_t to_copy = MIN(count - copied, req_bytes_left);
-        size_t bytes_copied = usb_request_copyfrom(req, buf + copied,
+        size_t bytes_copied = usb_request_copy_from(req, buf + copied,
                                                    to_copy, inst->cur_req_read_offset);
 
         copied += bytes_copied;
@@ -735,8 +735,8 @@ static zx_status_t xdc_write(xdc_t* xdc, uint32_t stream_id, const void* buf, si
         req->cookie = xdc;
     }
 
-    usb_request_copyto(req, &header, header_len, 0);
-    usb_request_copyto(req, buf, count, header_len /* offset */);
+    usb_request_copy_to(req, &header, header_len, 0);
+    usb_request_copy_to(req, buf, count, header_len /* offset */);
     req->header.length = header.total_length;
 
     status = xdc_queue_transfer(xdc, req, false /* in */, is_ctrl_msg);
@@ -854,7 +854,7 @@ static void xdc_read_complete(usb_request_t* req, void* cookie) {
             goto out;
         }
         xdc_msg_t msg;
-        usb_request_copyfrom(req, &msg, sizeof(xdc_msg_t), offset);
+        usb_request_copy_from(req, &msg, sizeof(xdc_msg_t), offset);
 
         // We should process the control message outside of the lock, so requeue the request now.
         xdc_queue_read_locked(xdc, req);

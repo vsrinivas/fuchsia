@@ -10,6 +10,7 @@
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb-composite.h>
 #include <ddk/usb/usb.h>
+#include <usb/usb-request.h>
 #include <zircon/hw/usb-cdc.h>
 #include <lib/sync/completion.h>
 
@@ -101,10 +102,10 @@ static void ecm_free(ecm_ctx_t* ctx) {
     }
     usb_request_t* txn;
     while ((txn = list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node)) != NULL) {
-        usb_req_release(&ctx->usb, txn);
+        usb_request_release(txn);
     }
     if (ctx->int_txn_buf) {
-        usb_req_release(&ctx->usb, ctx->int_txn_buf);
+        usb_request_release(ctx->int_txn_buf);
     }
     mtx_destroy(&ctx->ethmac_mutex);
     mtx_destroy(&ctx->tx_mutex);
@@ -194,7 +195,7 @@ static zx_status_t ethmac_start(void* ctx_cookie, ethmac_ifc_t* ifc, void* ethma
 
 static zx_status_t queue_request(ecm_ctx_t* ctx, uint8_t* data, size_t length, usb_request_t* req) {
     req->header.length = length;
-    ssize_t bytes_copied = usb_req_copy_to(&ctx->usb, req, data, length, 0);
+    ssize_t bytes_copied = usb_request_copy_to(req, data, length, 0);
     if (bytes_copied < 0) {
         zxlogf(ERROR, "%s: failed to copy data into send txn (error %zd)\n", module_name, bytes_copied);
         return ZX_ERR_IO;
@@ -227,7 +228,7 @@ static void usb_write_complete(usb_request_t* request, void* cookie) {
     ecm_ctx_t* ctx = cookie;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_req_release(&ctx->usb, request);
+        usb_request_release(request);
         return;
     }
 
@@ -280,9 +281,9 @@ static void usb_recv(ecm_ctx_t* ctx, usb_request_t* request) {
     size_t len = request->response.actual;
 
     uint8_t* read_data;
-    zx_status_t status = usb_req_mmap(&ctx->usb, request, (void*)&read_data);
+    zx_status_t status = usb_request_mmap(request, (void*)&read_data);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: usb_req_mmap failed with status %d\n",
+        zxlogf(ERROR, "%s: usb_request_mmap failed with status %d\n",
                 module_name, status);
         return;
     }
@@ -303,7 +304,7 @@ static void usb_read_complete(usb_request_t* request, void* cookie) {
     }
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_req_release(&ctx->usb, request);
+        usb_request_release(request);
         return;
     }
 
@@ -377,7 +378,7 @@ static void ecm_handle_interrupt(ecm_ctx_t* ctx, usb_request_t* request) {
     }
 
     usb_cdc_notification_t usb_req;
-    usb_req_copy_from(&ctx->usb, request, &usb_req, sizeof(usb_cdc_notification_t), 0);
+    usb_request_copy_from(request, &usb_req, sizeof(usb_cdc_notification_t), 0);
     if (usb_req.bmRequestType == (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) &&
         usb_req.bNotification == USB_CDC_NC_NETWORK_CONNECTION) {
         ecm_update_online_status(ctx, usb_req.wValue != 0);
@@ -392,8 +393,8 @@ static void ecm_handle_interrupt(ecm_ctx_t* ctx, usb_request_t* request) {
         }
         // Data immediately follows notification in packet
         uint32_t new_us_bps, new_ds_bps;
-        usb_req_copy_from(&ctx->usb, request, &new_us_bps, 4, sizeof(usb_cdc_notification_t));
-        usb_req_copy_from(&ctx->usb, request, &new_ds_bps, 4, sizeof(usb_cdc_notification_t) + 4);
+        usb_request_copy_from(request, &new_us_bps, 4, sizeof(usb_cdc_notification_t));
+        usb_request_copy_from(request, &new_ds_bps, 4, sizeof(usb_cdc_notification_t) + 4);
         if (new_us_bps != ctx->us_bps) {
             zxlogf(ERROR, "%s: connection speed change... upstream bits/s: %"PRIu32"\n",
                     module_name, new_us_bps);
@@ -661,7 +662,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
 
     // Allocate interrupt transaction buffer
     usb_request_t* int_buf;
-    zx_status_t alloc_result = usb_req_alloc(&usb, &int_buf,
+    zx_status_t alloc_result = usb_request_alloc(&int_buf,
                                              ecm_ctx->int_endpoint.max_packet_size,
                                              ecm_ctx->int_endpoint.addr);
     if (alloc_result != ZX_OK) {
@@ -684,7 +685,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
     size_t tx_buf_remain = MAX_TX_BUF_SZ;
     while (tx_buf_remain >= tx_buf_sz) {
         usb_request_t* tx_buf;
-        zx_status_t alloc_result = usb_req_alloc(&usb, &tx_buf, tx_buf_sz,
+        zx_status_t alloc_result = usb_request_alloc(&tx_buf, tx_buf_sz,
                                                  ecm_ctx->tx_endpoint.addr);
         if (alloc_result != ZX_OK) {
             result = alloc_result;
@@ -712,7 +713,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
     size_t rx_buf_remain = MAX_RX_BUF_SZ;
     while (rx_buf_remain >= rx_buf_sz) {
         usb_request_t* rx_buf;
-        zx_status_t alloc_result = usb_req_alloc(&usb, &rx_buf, rx_buf_sz,
+        zx_status_t alloc_result = usb_request_alloc(&rx_buf, rx_buf_sz,
                                                  ecm_ctx->rx_endpoint.addr);
         if (alloc_result != ZX_OK) {
             result = alloc_result;

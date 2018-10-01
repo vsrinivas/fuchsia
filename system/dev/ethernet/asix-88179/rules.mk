@@ -6,7 +6,8 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/dev/lib/usb system/ulib/pretty system/ulib/sync third_party/ulib/cksum
+MODULE_STATIC_LIBS := system/ulib/ddk system/dev/lib/usb \
+                      system/ulib/pretty system/ulib/sync third_party/ulib/cksum
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
@@ -15,4 +16,3 @@ MODULE := $(LOCAL_DIR)
 MODULE_SRCS := $(LOCAL_DIR)/asix-88179.c
 
 include make/module.mk
-

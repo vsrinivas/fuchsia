@@ -4,7 +4,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/protocol/usb.h>
-#include <ddk/usb-request/usb-request.h>
+#include <usb/usb-request.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -329,13 +329,13 @@ static zx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t*
         uint8_t desc_type = value >> 8;
         if (desc_type == USB_DT_DEVICE && index == 0) {
             if (length > sizeof(usb_device_descriptor_t)) length = sizeof(usb_device_descriptor_t);
-            usb_request_copyto(req, rh->device_desc, length, 0);
+            usb_request_copy_to(req, rh->device_desc, length, 0);
             usb_request_complete(req, ZX_OK, length);
             return ZX_OK;
         } else if (desc_type == USB_DT_CONFIG && index == 0) {
             uint16_t desc_length = le16toh(rh->config_desc->wTotalLength);
             if (length > desc_length) length = desc_length;
-            usb_request_copyto(req, rh->config_desc, length, 0);
+            usb_request_copy_to(req, rh->config_desc, length, 0);
             usb_request_complete(req, ZX_OK, length);
             return ZX_OK;
         } else if (value >> 8 == USB_DT_STRING) {
@@ -344,7 +344,7 @@ static zx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t*
                 const uint8_t* string = xhci_rh_string_table[string_index];
                 if (length > string[0]) length = string[0];
 
-                usb_request_copyto(req, string, length, 0);
+                usb_request_copy_to(req, string, length, 0);
                 usb_request_complete(req, ZX_OK, length);
                 return ZX_OK;
             }
@@ -362,7 +362,7 @@ static zx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t*
             // TODO - fill in other stuff. But usb-hub driver doesn't need anything else at this point.
 
             if (length > sizeof(desc)) length = sizeof(desc);
-            usb_request_copyto(req, &desc, length, 0);
+            usb_request_copy_to(req, &desc, length, 0);
             usb_request_complete(req, ZX_OK, length);
             return ZX_OK;
         }
@@ -433,7 +433,7 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
             usb_port_status_t* status = &rh->port_status[port_index];
             size_t length = req->header.length;
             if (length > sizeof(*status)) length = sizeof(*status);
-            usb_request_copyto(req, status, length, 0);
+            usb_request_copy_to(req, status, length, 0);
             usb_request_complete(req, ZX_OK, length);
             return ZX_OK;
         }
@@ -475,7 +475,7 @@ static void xhci_rh_handle_intr_req(xhci_root_hub_t* rh, usb_request_t* req) {
     if (have_status) {
         size_t length = req->header.length;
         if (length > sizeof(status_bits)) length = sizeof(status_bits);
-        usb_request_copyto(req, status_bits, length, 0);
+        usb_request_copy_to(req, status_bits, length, 0);
         usb_request_complete(req, ZX_OK, length);
     } else {
         // queue transaction until we have something to report

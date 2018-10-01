@@ -539,7 +539,7 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
 
     bool out = !!((request_type & USB_DIR_MASK) == USB_DIR_OUT);
     if (length > 0 && out) {
-        usb_request_copyto(req, data, length, 0);
+        usb_request_copy_to(req, data, length, 0);
     }
 
     sync_completion_t completion = SYNC_COMPLETION_INIT;
@@ -565,7 +565,7 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
         status = req->response.actual;
 
         if (length > 0 && !out) {
-            usb_request_copyfrom(req, data, req->response.actual, 0);
+            usb_request_copy_from(req, data, req->response.actual, 0);
         }
     }
 

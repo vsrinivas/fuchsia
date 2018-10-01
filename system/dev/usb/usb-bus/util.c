@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/protocol/usb.h>
-#include <ddk/usb-request/usb-request.h>
+#include <usb/usb-request.h>
 #include <endian.h>
 #include <lib/sync/completion.h>
 #include <stdio.h>
@@ -49,7 +49,7 @@ zx_status_t usb_util_control(usb_device_t* dev, uint8_t request_type, uint8_t re
 
     bool out = !!((request_type & USB_DIR_MASK) == USB_DIR_OUT);
     if (length > 0 && out) {
-        usb_request_copyto(req, data, length, 0);
+        usb_request_copy_to(req, data, length, 0);
     }
 
     sync_completion_t completion = SYNC_COMPLETION_INIT;
@@ -66,7 +66,7 @@ zx_status_t usb_util_control(usb_device_t* dev, uint8_t request_type, uint8_t re
         status = req->response.actual;
 
         if (length > 0 && !out) {
-            usb_request_copyfrom(req, data, req->response.actual, 0);
+            usb_request_copy_from(req, data, req->response.actual, 0);
         }
     }
     if (use_free_list) {
