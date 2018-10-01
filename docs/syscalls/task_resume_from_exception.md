@@ -35,14 +35,14 @@ for a description of exception processing.
 To resume a thread where it left off, pass 0 for the options:
 
 ```
-zx_status_t status = zx_task_resume_from_exception(thread, 0);
+zx_status_t status = zx_task_resume_from_exception(thread, port, 0);
 ```
 
 To pass the exception on to the next handler in the search order,
 pass **ZX_RESUME_TRY_NEXT** for the options.
 
 ```
-zx_status_t status = zx_task_resume_from_exception(thread, ZX_RESUME_TRY_NEXT);
+zx_status_t status = zx_task_resume_from_exception(thread, port, ZX_RESUME_TRY_NEXT);
 ```
 
 ## RIGHTS
