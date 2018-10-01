@@ -28,4 +28,7 @@ MODULE_LIBS := \
     system/ulib/fdio \
     system/ulib/c
 
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-input \
+
 include make/module.mk

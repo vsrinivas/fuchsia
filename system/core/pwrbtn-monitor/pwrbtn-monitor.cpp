@@ -16,13 +16,12 @@
 #include <hid-parser/usages.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fzl/fdio.h>
 #include <zircon/device/device.h>
-#include <zircon/device/input.h>
+#include <zircon/input/c/fidl.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-
-#define MAX_DESC_LEN 1024
 
 #define INPUT_PATH "/input"
 #define DMCTL_PATH "/misc/dmctl"
@@ -131,13 +130,15 @@ static zx_status_t InputDeviceAdded(int dirfd, int event, const char* name, void
         }
         fd.reset(raw_fd);
     }
+    fzl::FdioCaller caller(fbl::move(fd));
 
     // Retrieve and parse the report descriptor
-    size_t desc_len = 0;
-    if (ioctl_input_get_report_desc_size(fd.get(), &desc_len) < 0) {
+    uint16_t desc_len = 0;
+    zx_status_t status = zircon_input_DeviceGetReportDescSize(caller.borrow_channel(), &desc_len);
+    if (status != ZX_OK) {
         return ZX_OK;
     }
-    if (desc_len > MAX_DESC_LEN) {
+    if (desc_len > zircon_input_MAX_DESC_LEN) {
         return ZX_OK;
     }
 
@@ -146,7 +147,11 @@ static zx_status_t InputDeviceAdded(int dirfd, int event, const char* name, void
     if (!ac.check()) {
         return ZX_OK;
     }
-    if (ioctl_input_get_report_desc(fd.get(), raw_desc.get(), raw_desc.size()) < 0) {
+
+    size_t actual_size;
+    status = zircon_input_DeviceGetReportDesc(caller.borrow_channel(),
+                                              raw_desc.get(), raw_desc.size(), &actual_size);
+    if (status != ZX_OK || actual_size != raw_desc.size()) {
         return ZX_OK;
     }
 
@@ -158,13 +163,13 @@ static zx_status_t InputDeviceAdded(int dirfd, int event, const char* name, void
 
     uint8_t report_id;
     size_t bit_offset;
-    zx_status_t status = FindSystemPowerDown(desc, &report_id, &bit_offset);
+    status = FindSystemPowerDown(desc, &report_id, &bit_offset);
     if (status != ZX_OK) {
         return ZX_OK;
     }
 
     auto info = reinterpret_cast<PowerButtonInfo*>(cookie);
-    info->fd = fbl::move(fd);
+    info->fd = caller.release();
     info->report_id = report_id;
     info->bit_offset = bit_offset;
     info->has_report_id_byte = (desc->rep_count > 1 || desc->report[0].report_id != 0);
@@ -192,8 +197,9 @@ int main(int argc, char**argv) {
     }
     dirfd.reset();
 
-    input_report_size_t report_size = 0;
-    if (ioctl_input_get_max_reportsize(info.fd.get(), &report_size) < 0) {
+    fzl::FdioCaller caller(fbl::move(info.fd));
+    uint16_t report_size = 0;
+    if (zircon_input_DeviceGetMaxInputReportSize(caller.borrow_channel(), &report_size) != ZX_OK) {
         printf("pwrbtn-monitor: Failed to to get max report size\n");
         return 1;
     }
@@ -210,6 +216,8 @@ int main(int argc, char**argv) {
     if (!ac.check()) {
         return 1;
     }
+
+    info.fd = caller.release();
 
     // Watch the power button device for reports
     while (true) {

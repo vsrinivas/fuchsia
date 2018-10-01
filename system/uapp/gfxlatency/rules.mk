@@ -21,6 +21,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/async-loop \
     system/ulib/fbl \
     system/ulib/fidl \
+    system/ulib/fzl \
     system/ulib/gfx \
     system/ulib/hid \
     system/ulib/zx \
@@ -34,6 +35,8 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/trace-engine
 
-MODULE_FIDL_LIBS := system/fidl/fuchsia-display
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-display \
+    system/fidl/zircon-input \
 
 include make/module.mk

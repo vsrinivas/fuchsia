@@ -13,16 +13,16 @@
 #include <unistd.h>
 #include <limits.h>
 
+#include <fbl/algorithm.h>
+#include <fbl/unique_ptr.h>
+#include <lib/fdio/watcher.h>
+#include <lib/fzl/fdio.h>
 #include <zircon/assert.h>
+#include <zircon/device/input.h>
+#include <zircon/input/c/fidl.h>
 #include <zircon/listnode.h>
 #include <zircon/threads.h>
 #include <zircon/types.h>
-#include <zircon/device/input.h>
-
-#include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
-
-#include <lib/fdio/watcher.h>
 
 // defined in report.cpp
 void print_report_descriptor(const uint8_t* rpt_desc, size_t desc_len);
@@ -42,7 +42,7 @@ void usage(void) {
 }
 
 typedef struct input_args {
-    int fd;
+    fbl::unique_fd fd;
     char name[128];
     unsigned long int num_reads;
 } input_args_t;
@@ -83,18 +83,18 @@ static zx_status_t parse_uint_arg(const char* arg, uint32_t min, uint32_t max, u
     return ZX_OK;
 }
 
-static zx_status_t parse_input_report_type(const char* arg, input_report_type_t* out_type) {
+static zx_status_t parse_input_report_type(const char* arg, zircon_input_ReportType* out_type) {
     if ((arg == NULL) || (out_type == NULL)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     static const struct {
         const char* name;
-        input_report_type_t type;
+        zircon_input_ReportType type;
     } LUT[] = {
-        { .name = "in",      .type = INPUT_REPORT_INPUT },
-        { .name = "out",     .type = INPUT_REPORT_OUTPUT },
-        { .name = "feature", .type = INPUT_REPORT_FEATURE },
+        { .name = "in",      .type = zircon_input_ReportType_INPUT },
+        { .name = "out",     .type = zircon_input_ReportType_OUTPUT },
+        { .name = "feature", .type = zircon_input_ReportType_FEATURE },
     };
 
     for (size_t i = 0; i < fbl::count_of(LUT); ++i) {
@@ -109,8 +109,8 @@ static zx_status_t parse_input_report_type(const char* arg, input_report_type_t*
 
 static zx_status_t parse_set_get_report_args(int argc,
                                              const char** argv,
-                                             input_report_id_t* out_id,
-                                             input_report_type_t* out_type) {
+                                             uint8_t* out_id,
+                                             zircon_input_ReportType* out_type) {
     if ((argc < 3) || (argv == NULL) || (out_id == NULL) || (out_type == NULL)) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -122,40 +122,51 @@ static zx_status_t parse_set_get_report_args(int argc,
         return res;
     }
 
-    *out_id = static_cast<input_report_id_t>(tmp);
+    *out_id = static_cast<uint8_t>(tmp);
 
     return parse_input_report_type(argv[1], out_type);
 }
 
 
-static ssize_t get_hid_protocol(int fd, const char* name) {
-    int proto;
-    ssize_t rc = ioctl_input_get_protocol(fd, &proto);
-    if (rc < 0) {
-        lprintf("hid: could not get protocol from %s (status=%zd)\n", name, rc);
+static zx_status_t get_hid_protocol(const fzl::FdioCaller& caller, const char* name) {
+    uint32_t proto;
+    zx_status_t status = zircon_input_DeviceGetBootProtocol(caller.borrow_channel(), &proto);
+    if (status != ZX_OK) {
+        lprintf("hid: could not get protocol from %s (status=%d)\n", name, status);
     } else {
         lprintf("hid: %s proto=%d\n", name, proto);
     }
-    return rc;
+    return status;
 }
 
-static ssize_t get_report_desc_len(int fd, const char* name, size_t* report_desc_len) {
-    ssize_t rc = ioctl_input_get_report_desc_size(fd, report_desc_len);
-    if (rc < 0) {
-        lprintf("hid: could not get report descriptor length from %s (status=%zd)\n", name, rc);
+static zx_status_t get_report_desc_len(const fzl::FdioCaller& caller, const char* name,
+                                       size_t* report_desc_len) {
+    uint16_t len;
+    zx_status_t status = zircon_input_DeviceGetReportDescSize(caller.borrow_channel(), &len);
+    if (status != ZX_OK) {
+        lprintf("hid: could not get report descriptor length from %s (status=%d)\n", name, status);
     } else {
+        *report_desc_len = len;
         lprintf("hid: %s report descriptor len=%zu\n", name, *report_desc_len);
     }
-    return rc;
+    return status;
 }
 
-static ssize_t get_report_desc(int fd, const char* name, size_t report_desc_len) {
+static zx_status_t get_report_desc(const fzl::FdioCaller& caller, const char* name,
+                                   size_t report_desc_len) {
     fbl::unique_ptr<uint8_t[]> buf(new uint8_t[report_desc_len]);
 
-    ssize_t rc = ioctl_input_get_report_desc(fd, buf.get(), report_desc_len);
-    if (rc < 0) {
-        lprintf("hid: could not get report descriptor from %s (status=%zd)\n", name, rc);
-        return rc;
+    size_t actual;
+    zx_status_t status = zircon_input_DeviceGetReportDesc(caller.borrow_channel(), buf.get(),
+                                                          report_desc_len, &actual);
+    if (status != ZX_OK) {
+        lprintf("hid: could not get report descriptor from %s (status=%d)\n", name, status);
+        return status;
+    }
+    if (actual != report_desc_len) {
+        lprintf("hid: got unexpected length on report descriptor: %zu versus %zu\n", actual,
+                report_desc_len);
+        return ZX_ERR_BAD_STATE;
     }
     mtx_lock(&print_lock);
     printf("hid: %s report descriptor:\n", name);
@@ -164,51 +175,59 @@ static ssize_t get_report_desc(int fd, const char* name, size_t report_desc_len)
     }
     print_report_descriptor(buf.get(), report_desc_len);
     mtx_unlock(&print_lock);
-    return rc;
+    return status;
 }
 
-static ssize_t get_num_reports(int fd, const char* name, size_t* num_reports) {
-    ssize_t rc = ioctl_input_get_num_reports(fd, num_reports);
-    if (rc < 0) {
-        lprintf("hid: could not get number of reports from %s (status=%zd)\n", name, rc);
+static zx_status_t get_num_reports(const fzl::FdioCaller& caller, const char* name,
+                                   size_t* num_reports) {
+    uint16_t count;
+    zx_status_t status = zircon_input_DeviceGetNumReports(caller.borrow_channel(), &count);
+    if (status != ZX_OK) {
+        lprintf("hid: could not get number of reports from %s (status=%d)\n", name, status);
     } else {
+        *num_reports = count;
         lprintf("hid: %s num reports: %zu\n", name, *num_reports);
     }
-    return rc;
+    return status;
 }
 
-static ssize_t get_report_ids(int fd, const char* name, size_t num_reports) {
-    size_t out_len = num_reports * sizeof(input_report_id_t);
-    fbl::unique_ptr<input_report_id_t[]> ids(new input_report_id_t[num_reports]);
+static zx_status_t get_report_ids(const fzl::FdioCaller& caller, const char* name,
+                                  size_t num_reports) {
+    fbl::unique_ptr<uint8_t[]> ids(new uint8_t[num_reports]);
 
-    ssize_t rc = ioctl_input_get_report_ids(fd, ids.get(), out_len);
-    if (rc < 0) {
-        lprintf("hid: could not get report ids from %s (status=%zd)\n", name, rc);
-        return rc;
+    size_t actual;
+    zx_status_t status = zircon_input_DeviceGetReportIds(caller.borrow_channel(), ids.get(),
+                                                         num_reports, &actual);
+    if (status != ZX_OK) {
+        lprintf("hid: could not get report ids from %s (status=%d)\n", name, status);
+        return status;
+    }
+    if (actual != num_reports) {
+        lprintf("hid: got unexpected number of reports: %zu versus %zu\n", actual, num_reports);
+        return ZX_ERR_BAD_STATE;
     }
 
     mtx_lock(&print_lock);
     printf("hid: %s report ids...\n", name);
     for (size_t i = 0; i < num_reports; i++) {
         static const struct {
-            input_report_type_t type;
+            zircon_input_ReportType type;
             const char* tag;
         } TYPES[] = {
-            { .type = INPUT_REPORT_INPUT,   .tag = "Input" },
-            { .type = INPUT_REPORT_OUTPUT,  .tag = "Output" },
-            { .type = INPUT_REPORT_FEATURE, .tag = "Feature" },
+            { .type = zircon_input_ReportType_INPUT, .tag = "Input" },
+            { .type = zircon_input_ReportType_OUTPUT, .tag = "Output" },
+            { .type = zircon_input_ReportType_FEATURE, .tag = "Feature" },
         };
 
         bool found = false;
         for (size_t j = 0; j < fbl::count_of(TYPES); ++j) {
-            input_get_report_size_t arg = { .id = ids[i], .type = TYPES[j].type };
-            input_report_size_t size;
-            ssize_t size_rc;
+            uint16_t size;
 
-            size_rc = ioctl_input_get_report_size(fd, &arg, &size);
-            if (size_rc >= 0) {
-                printf("  ID 0x%02x : TYPE %7s : SIZE %u bytes\n",
-                        ids[i], TYPES[j].tag, size);
+            zx_status_t call_status;
+            status = zircon_input_DeviceGetReportSize(caller.borrow_channel(), TYPES[j].type, ids[i],
+                                                      &call_status, &size);
+            if (status == ZX_OK && call_status == ZX_OK) {
+                printf("  ID 0x%02x : TYPE %7s : SIZE %u bytes\n", ids[i], TYPES[j].tag, size);
                 found = true;
             }
         }
@@ -220,44 +239,47 @@ static ssize_t get_report_ids(int fd, const char* name, size_t num_reports) {
     }
 
     mtx_unlock(&print_lock);
-    return rc;
+    return status;
 }
 
-static ssize_t get_max_report_len(int fd, const char* name, input_report_size_t* max_report_len) {
-    input_report_size_t tmp;
+static zx_status_t get_max_report_len(const fzl::FdioCaller& caller, const char* name,
+                                      uint16_t* max_report_len) {
+    uint16_t tmp;
     if (max_report_len == NULL) {
         max_report_len = &tmp;
     }
-    ssize_t rc = ioctl_input_get_max_reportsize(fd, max_report_len);
-    if (rc < 0) {
-        lprintf("hid: could not get max report size from %s (status=%zd)\n", name, rc);
+    zx_status_t status = zircon_input_DeviceGetMaxInputReportSize(caller.borrow_channel(),
+                                                                  max_report_len);
+    if (status != ZX_OK) {
+        lprintf("hid: could not get max report size from %s (status=%d)\n", name, status);
     } else {
         lprintf("hid: %s maxreport=%u\n", name, *max_report_len);
     }
-    return rc;
+    return status;
 }
 
-#define TRY(fn)           \
-    do {                  \
-        ssize_t rc = fn;  \
-        if (rc < 0)       \
-            return rc;    \
+#define TRY(fn)                  \
+    do {                         \
+        zx_status_t status = fn; \
+        if (status != ZX_OK)     \
+            return status;       \
     } while (0)
 
-static ssize_t hid_status(int fd, const char* name, input_report_size_t* max_report_len) {
+static zx_status_t hid_status(const fzl::FdioCaller& caller, const char* name,
+                              uint16_t* max_report_len) {
     size_t num_reports;
 
-    TRY(get_hid_protocol(fd, name));
-    TRY(get_num_reports(fd, name, &num_reports));
-    TRY(get_report_ids(fd, name, num_reports));
-    TRY(get_max_report_len(fd, name, max_report_len));
+    TRY(get_hid_protocol(caller, name));
+    TRY(get_num_reports(caller, name, &num_reports));
+    TRY(get_report_ids(caller, name, num_reports));
+    TRY(get_max_report_len(caller, name, max_report_len));
     return ZX_OK;
 }
 
-static ssize_t parse_rpt_descriptor(int fd, const char* name) {
+static zx_status_t parse_rpt_descriptor(const fzl::FdioCaller& caller, const char* name) {
     size_t report_desc_len;
-    TRY(get_report_desc_len(fd, "", &report_desc_len));
-    TRY(get_report_desc(fd, "", report_desc_len));
+    TRY(get_report_desc_len(caller, "", &report_desc_len));
+    TRY(get_report_desc(caller, "", report_desc_len));
     return ZX_OK;
 }
 
@@ -267,8 +289,10 @@ static int hid_input_thread(void* arg) {
     input_args_t* args = (input_args_t*)arg;
     lprintf("hid: input thread started for %s\n", args->name);
 
-    input_report_size_t max_report_len = 0;
-    ssize_t rc = hid_status(args->fd, args->name, &max_report_len);
+    fzl::FdioCaller caller(fbl::move(args->fd));
+
+    uint16_t max_report_len = 0;
+    ssize_t rc = hid_status(caller, args->name, &max_report_len);
     if (rc < 0) {
         return static_cast<int>(rc);
     }
@@ -277,8 +301,9 @@ static int hid_input_thread(void* arg) {
     max_report_len++;
     fbl::unique_ptr<uint8_t[]> report(new uint8_t[max_report_len]);
 
+    args->fd = caller.release();
     for (uint32_t i = 0; i < args->num_reads; i++) {
-        ssize_t r = read(args->fd, report.get(), max_report_len);
+        ssize_t r = read(args->fd.get(), report.get(), max_report_len);
         mtx_lock(&print_lock);
         printf("read returned %ld\n", r);
         if (r < 0) {
@@ -292,7 +317,6 @@ static int hid_input_thread(void* arg) {
     }
 
     lprintf("hid: closing %s\n", args->name);
-    close(args->fd);
     delete args;
     return ZX_OK;
 }
@@ -308,7 +332,7 @@ static zx_status_t hid_input_device_added(int dirfd, int event, const char* fn, 
     }
 
     input_args_t* args = new input_args {};
-    args->fd = fd;
+    args->fd = fbl::unique_fd(fd);
     // TODO: support setting num_reads across all devices. requires a way to
     // signal shutdown to all input threads.
     args->num_reads = ULONG_MAX;
@@ -360,7 +384,7 @@ int read_reports(int argc, const char** argv) {
     }
 
     input_args_t* args = new input_args_t {};
-    args->fd = fd;
+    args->fd = fbl::unique_fd(fd);
     args->num_reads = tmp;
 
     strlcpy(args->name, argv[0], sizeof(args->name));
@@ -369,7 +393,6 @@ int read_reports(int argc, const char** argv) {
     if (ret != thrd_success) {
         printf("hid: input thread %s did not start (error=%d)\n", args->name, ret);
         delete args;
-        close(fd);
         return -1;
     }
     thrd_join(t, NULL);
@@ -410,21 +433,20 @@ int get_report(int argc, const char** argv) {
         printf("could not open %s: %d\n", argv[0], errno);
         return -1;
     }
+    fzl::FdioCaller caller(fbl::move(fbl::unique_fd(fd)));
 
     xprintf("hid: getting report size for id=0x%02x type=%u\n", size_arg.id, size_arg.type);
 
-    input_report_size_t size;
-    ssize_t rc = ioctl_input_get_report_size(fd, &size_arg, &size);
-    if (rc < 0) {
-        printf("hid: could not get report (id 0x%02x type %u) size from %s (status=%zd)\n",
-                size_arg.id, size_arg.type, argv[0], rc);
-        return static_cast<int>(rc);
+    uint16_t size;
+    zx_status_t call_status;
+    res = zircon_input_DeviceGetReportSize(caller.borrow_channel(), size_arg.type, size_arg.id,
+                                           &call_status, &size);
+    if (res != ZX_OK || call_status != ZX_OK) {
+        printf("hid: could not get report (id 0x%02x type %u) size from %s (status=%d, %d)\n",
+                size_arg.id, size_arg.type, argv[0], res, call_status);
+        return static_cast<int>(-1);
     }
     xprintf("hid: report size=%u\n", size);
-
-    input_get_report_t rpt_arg;
-    rpt_arg.id = size_arg.id;
-    rpt_arg.type = size_arg.type;
 
     // TODO(johngro) : Come up with a better policy than this...  While devices
     // are *supposed* to only deliver a report descriptor's computed size, in
@@ -447,15 +469,18 @@ int get_report(int argc, const char** argv) {
     // buffer to read into, and report the number of bytes which came back along
     // with the expected size of the raw report.
     size_t bufsz = 4u << 10;
+    size_t actual;
     fbl::unique_ptr<uint8_t[]> buf(new uint8_t[bufsz]);
-    rc = ioctl_input_get_report(fd, &rpt_arg, buf.get(), bufsz);
-    if (rc < 0) {
-        printf("hid: could not get report: %zd\n", rc);
-    } else {
-        printf("hid: got %zu bytes (raw report size %u)\n", rc, size);
-        print_hex(buf.get(), rc);
+    res = zircon_input_DeviceGetReport(caller.borrow_channel(), size_arg.type, size_arg.id,
+                                       &call_status, buf.get(), bufsz, &actual);
+    if (res != ZX_OK || call_status != ZX_OK) {
+        printf("hid: could not get report: %d, %d\n", res, call_status);
+        return -1;
     }
-    return static_cast<int>(rc);
+
+    printf("hid: got %zu bytes (raw report size %u)\n", actual, size);
+    print_hex(buf.get(), actual);
+    return 0;
 }
 
 int set_report(int argc, const char** argv) {
@@ -466,64 +491,61 @@ int set_report(int argc, const char** argv) {
         return 0;
     }
 
-    input_get_report_size_t size_arg;
-    zx_status_t res = parse_set_get_report_args(argc, argv, &size_arg.id, &size_arg.type);
+    uint8_t id;
+    zircon_input_ReportType type;
+    zx_status_t res = parse_set_get_report_args(argc, argv, &id, &type);
     if (res != ZX_OK) {
         printf("Failed to parse type/id for get report operation (res %d)\n", res);
         usage();
         return 0;
     }
 
-    xprintf("hid: getting report size for id=0x%02x type=%u\n", size_arg.id, size_arg.type);
+    xprintf("hid: setting report size for id=0x%02x type=%u\n", id, type);
 
-    input_set_report_t* arg = NULL;
     int fd = open(argv[0], O_RDWR);
     if (fd < 0) {
         printf("could not open %s: %d\n", argv[0], errno);
         return -1;
     }
+    fzl::FdioCaller caller(fbl::move(fbl::unique_fd(fd)));
 
     // If the set/get report args parsed, then we must have at least 3 arguments.
     ZX_DEBUG_ASSERT(argc >= 3);
-    input_report_size_t payload_size = static_cast<input_report_size_t>(argc - 3);
-    size_t in_len = sizeof(input_set_report_t) + payload_size;
+    uint16_t payload_size = static_cast<uint16_t>(argc - 3);
 
-    input_report_size_t size;
-    ssize_t rc = ioctl_input_get_report_size(fd, &size_arg, &size);
-    if (rc < 0) {
-        printf("hid: could not get report (id 0x%02x type %u) size from %s (status=%zd)\n",
-                size_arg.id, size_arg.type, argv[0], rc);
-        goto finished;
+    uint16_t size;
+    zx_status_t call_status;
+    res = zircon_input_DeviceGetReportSize(caller.borrow_channel(), type, id,
+                                           &call_status, &size);
+    if (res != ZX_OK || call_status != ZX_OK) {
+        printf("hid: could not get report (id 0x%02x type %u) size from %s (status=%d, %d)\n",
+                id, type, argv[0], res, call_status);
+        return -1;
     }
 
     xprintf("hid: report size=%u, tx payload size=%u\n", size, payload_size);
 
-    arg = reinterpret_cast<input_set_report_t*>(new char[in_len]);
-    arg->id = size_arg.id;
-    arg->type = size_arg.type;
+    fbl::unique_ptr<uint8_t[]> report(new uint8_t[payload_size]);
     for (int i = 0; i < payload_size; i++) {
         uint32_t tmp;
         zx_status_t res = parse_uint_arg(argv[i+3], 0, 255, &tmp);
         if (res != ZX_OK) {
             printf("Failed to parse payload byte \"%s\" (res = %d)\n", argv[i+3], res);
-            rc = res;
-            goto finished;
+            return res;
         }
 
-        arg->data[i] = static_cast<uint8_t>(tmp);
+        report[i] = static_cast<uint8_t>(tmp);
     }
 
-    rc = ioctl_input_set_report(fd, arg, in_len);
-    if (rc < 0) {
-        printf("hid: could not set report: %zd\n", rc);
-    } else {
-        printf("hid: success\n");
+    res = zircon_input_DeviceSetReport(caller.borrow_channel(), type, id, report.get(),
+                                       payload_size, &call_status);
+    if (res != ZX_OK || call_status != ZX_OK) {
+        printf("hid: could not set report: %d, %d\n", res, call_status);
+        return -1;
     }
 
-finished:
-    delete [] reinterpret_cast<char*>(arg);
-    close(fd);
-    return static_cast<int>(rc);
+    printf("hid: success\n");
+    return 0;
 }
 
 int parse(int argc, const char** argv) {
@@ -540,10 +562,9 @@ int parse(int argc, const char** argv) {
         return -1;
     }
 
-    ssize_t rc = parse_rpt_descriptor(fd, argv[0]);
-    close(fd);
-
-    return static_cast<int>(rc);
+    fzl::FdioCaller caller(fbl::move(fbl::unique_fd(fd)));
+    zx_status_t status = parse_rpt_descriptor(caller, argv[0]);
+    return static_cast<int>(status);
 }
 
 int main(int argc, const char** argv) {

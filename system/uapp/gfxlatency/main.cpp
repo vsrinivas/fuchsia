@@ -17,6 +17,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/coding.h>
+#include <lib/fzl/fdio.h>
 #include <limits.h>
 #include <math.h>
 #include <poll.h>
@@ -28,7 +29,7 @@
 #include <trace/event.h>
 #include <unistd.h>
 #include <zircon/device/display-controller.h>
-#include <zircon/device/input.h>
+#include <zircon/input/c/fidl.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -1050,7 +1051,6 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    ssize_t ret;
     TouchDevice touch_device;
     int touchfd = -1;
     int touchpadfd = -1;
@@ -1068,43 +1068,41 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        size_t rpt_desc_len = 0;
-        ret = ioctl_input_get_report_desc_size(fd, &rpt_desc_len);
-        if (ret < 0) {
-            fprintf(stderr,
-                    "failed to get report descriptor length for %s: %zd\n",
-                    devname, ret);
-            close(fd);
+        fzl::FdioCaller caller(fbl::move(fbl::unique_fd(fd)));
+
+        uint16_t rpt_desc_len;
+        status = zircon_input_DeviceGetReportDescSize(caller.borrow_channel(), &rpt_desc_len);
+        if (status != ZX_OK) {
+            fprintf(stderr, "failed to get report descriptor length for %s: %d\n", devname, status);
             continue;
         }
 
         uint8_t rpt_desc[rpt_desc_len];
-        ret = ioctl_input_get_report_desc(fd, rpt_desc, rpt_desc_len);
-        if (ret < 0) {
-            fprintf(stderr, "failed to get report descriptor for %s: %zd\n",
-                    devname, ret);
-            close(fd);
+        size_t actual_rpt_desc_len;
+        status = zircon_input_DeviceGetReportDesc(caller.borrow_channel(),
+                                                  rpt_desc, sizeof(rpt_desc),
+                                                  &actual_rpt_desc_len);
+        if (status != ZX_OK) {
+            fprintf(stderr, "failed to get report descriptor for %s: %d\n", devname, status);
             continue;
         }
 
-        if (is_paradise_touch_v2_report_desc(rpt_desc, rpt_desc_len)) {
+        if (is_paradise_touch_v2_report_desc(rpt_desc, actual_rpt_desc_len)) {
             touch_device = TouchDevice::PARADISE_V2;
-            touchfd = fd;
+            touchfd = caller.release().release();
             continue;
         }
 
-        if (is_paradise_touch_v3_report_desc(rpt_desc, rpt_desc_len)) {
+        if (is_paradise_touch_v3_report_desc(rpt_desc, actual_rpt_desc_len)) {
             touch_device = TouchDevice::PARADISE_V3;
-            touchfd = fd;
+            touchfd = caller.release().release();
             continue;
         }
 
-        if (is_paradise_touchpad_v2_report_desc(rpt_desc, rpt_desc_len)) {
-            touchpadfd = fd;
+        if (is_paradise_touchpad_v2_report_desc(rpt_desc, actual_rpt_desc_len)) {
+            touchpadfd = caller.release().release();
             continue;
         }
-
-        close(fd);
     }
     closedir(dir);
 
@@ -1113,15 +1111,21 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    input_report_size_t max_touch_rpt_sz = 0;
+    uint16_t max_touch_rpt_sz = 0;
+    uint16_t max_touchpad_rpt_sz = 0;
     if (touchfd >= 0) {
-        ret = ioctl_input_get_max_reportsize(touchfd, &max_touch_rpt_sz);
-        ZX_ASSERT(ret >= 0);
+        fzl::FdioCaller caller(fbl::move(fbl::unique_fd(touchfd)));
+        status = zircon_input_DeviceGetMaxInputReportSize(caller.borrow_channel(),
+                                                          &max_touch_rpt_sz);
+        touchfd = caller.release().release();
+        ZX_ASSERT(status == ZX_OK);
     }
-    input_report_size_t max_touchpad_rpt_sz = 0;
     if (touchpadfd >= 0) {
-        ret = ioctl_input_get_max_reportsize(touchpadfd, &max_touchpad_rpt_sz);
-        ZX_ASSERT(ret >= 0);
+        fzl::FdioCaller caller(fbl::move(fbl::unique_fd(touchpadfd)));
+        status = zircon_input_DeviceGetMaxInputReportSize(caller.borrow_channel(),
+                                                          &max_touchpad_rpt_sz);
+        touchpadfd = caller.release().release();
+        ZX_ASSERT(status == ZX_OK);
     }
 
     async::Loop update_loop(&kAsyncLoopConfigNoAttachToThread);

@@ -11,7 +11,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <zircon/device/input.h>
+#include <lib/fdio/unsafe.h>
+#include <zircon/input/c/fidl.h>
 #include <zircon/types.h>
 
 #define CLEAR_SCREEN printf("\033[2J")
@@ -45,6 +46,8 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+    void* buf = NULL;
+    uint8_t* rpt_desc = NULL;
     const char* devname = argv[1];
     int fd = open(devname, O_RDONLY);
     if (fd < 0) {
@@ -52,40 +55,54 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    size_t rpt_desc_len = 0;
-    uint8_t* rpt_desc = NULL;
-
-    ssize_t ret = ioctl_input_get_report_desc_size(fd, &rpt_desc_len);
-    if (ret < 0) {
-        printf("failed to get report descriptor length for %s: %zd\n", devname, ret);
+    fdio_t* io = fdio_unsafe_fd_to_io(fd);
+    if (io == NULL) {
+        printf("failed to convert fd\n");
         return -1;
+    }
+    zx_handle_t svc = fdio_unsafe_borrow_channel(io);
+
+    int ret;
+    uint16_t rpt_desc_len = 0;
+
+    zx_status_t status = zircon_input_DeviceGetReportDescSize(svc, &rpt_desc_len);
+    if (status != ZX_OK) {
+        printf("failed to get report descriptor length for %s: %d\n", devname, status);
+        ret = -1;
+        goto cleanup;
     }
 
     rpt_desc = malloc(rpt_desc_len);
     if (rpt_desc == NULL) {
         printf("no memory!\n");
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
 
-    ret = ioctl_input_get_report_desc(fd, rpt_desc, rpt_desc_len);
-    if (ret < 0) {
-        printf("failed to get report descriptor for %s: %zd\n", devname, ret);
-        return -1;
+    size_t actual = 0;
+    status = zircon_input_DeviceGetReportDesc(svc, rpt_desc, rpt_desc_len, &actual);
+    if (status != ZX_OK) {
+        printf("failed to get report descriptor for %s: %d\n", devname, status);
+        ret = -1;
+        goto cleanup;
     }
 
     assert(rpt_desc_len > 0);
+    assert(rpt_desc_len == actual);
     assert(rpt_desc);
 
-    input_report_size_t max_rpt_sz = 0;
-    ret = ioctl_input_get_max_reportsize(fd, &max_rpt_sz);
-    if (ret < 0) {
-        printf("failed to get max report size: %zd\n", ret);
-        return -1;
+    uint16_t max_rpt_sz = 0;
+    status = zircon_input_DeviceGetMaxInputReportSize(svc, &max_rpt_sz);
+    if (status != ZX_OK) {
+        printf("failed to get max report size: %d\n", status);
+        ret = -1;
+        goto cleanup;
     }
-    void* buf = malloc(max_rpt_sz);
+    buf = malloc(max_rpt_sz);
     if (buf == NULL) {
         printf("no memory!\n");
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
 
     CLEAR_SCREEN;
@@ -100,8 +117,11 @@ int main(int argc, char* argv[]) {
         process_sensor_input(buf, r);
     }
 
+    ret = 0;
+cleanup:
     free(buf);
     free(rpt_desc);
+    fdio_unsafe_release(io);
     close(fd);
-    return 0;
+    return ret;
 }

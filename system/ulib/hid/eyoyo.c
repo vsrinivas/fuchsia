@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 #include <hid/acer12.h>
-#include <zircon/device/input.h>
+#include <lib/fdio/unsafe.h>
 #include <zircon/errors.h>
+#include <zircon/input/c/fidl.h>
 #include <string.h>
 
 // Eyoyo 10 Inch IPS EDP 1920 x 1200 Touch Screen
@@ -423,15 +424,25 @@ zx_status_t setup_eyoyo_touch(int fd) {
     if (fd < 0)
         return ZX_ERR_INVALID_ARGS;
 
-    uint8_t buf[sizeof(input_set_report_t) + 3];
-    input_set_report_t* enable_multitouch = (input_set_report_t*)buf;
+    const uint8_t report_id = 67;
+    const uint8_t enable_multitouch[3] = { 67, 2, 0 };
 
-    enable_multitouch->id      = 67;
-    enable_multitouch->type    = INPUT_REPORT_FEATURE;
-    enable_multitouch->data[0] = 67;
-    enable_multitouch->data[1] = 2;
-    enable_multitouch->data[2] = 0;
+    fdio_t* io = fdio_unsafe_fd_to_io(fd);
+    if (io == NULL) {
+        return ZX_ERR_INVALID_ARGS;
+    }
 
-    ssize_t res = ioctl_input_set_report(fd, enable_multitouch, sizeof(buf));
-    return (res >= 0) ? ZX_OK : (zx_status_t)res;
+    zx_handle_t svc = fdio_unsafe_borrow_channel(io);
+    zx_status_t call_status;
+    zx_status_t status = zircon_input_DeviceSetReport(svc,
+                                                      zircon_input_ReportType_FEATURE, report_id,
+                                                      enable_multitouch, sizeof(enable_multitouch),
+                                                      &call_status);
+    fdio_unsafe_release(io);
+    if (status != ZX_OK) {
+        return status;
+    } else if (call_status != ZX_OK) {
+        return call_status;
+    }
+    return ZX_OK;
 }

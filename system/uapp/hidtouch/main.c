@@ -13,15 +13,14 @@
 #include <unistd.h>
 
 #include <hid/acer12.h>
-#include <hid/ft3x27.h>
 #include <hid/egalax.h>
 #include <hid/eyoyo.h>
+#include <hid/ft3x27.h>
 #include <hid/paradise.h>
 #include <hid/usages.h>
-
+#include <lib/fdio/unsafe.h>
 #include <lib/framebuffer/framebuffer.h>
-
-#include <zircon/device/input.h>
+#include <zircon/input/c/fidl.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -469,6 +468,13 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+    int ret;
+    void* buf = NULL;
+    uint8_t* rpt_desc = NULL;
+    int touchfd = -1;
+    zx_handle_t touchsvc = ZX_HANDLE_INVALID;
+    fdio_t* touchio = NULL;
+
     display_info_t info;
     fb_get_config(&info.width, &info.height, &info.stride, &info.format);
 
@@ -481,12 +487,13 @@ int main(int argc, char* argv[]) {
 
     size_t size = info.stride * ZX_PIXEL_FORMAT_BYTES(info.format) * info.height;
     uintptr_t fbo;
-    status = _zx_vmar_map(zx_vmar_root_self(),
-                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                          0, vmo, 0, size, &fbo);
-    if (status < 0) {
+    status = zx_vmar_map(zx_vmar_root_self(),
+                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                         0, vmo, 0, size, &fbo);
+    if (status != ZX_OK) {
         printf("couldn't map fb: %d\n", status);
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
 
     uint32_t* pixels32 = (uint32_t*)fbo;
@@ -499,13 +506,11 @@ int main(int argc, char* argv[]) {
     DIR* dir = opendir(DEV_INPUT);
     if (!dir) {
         printf("failed to open %s: %d\n", DEV_INPUT, errno);
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
 
-    ssize_t ret;
-    int touchfd = -1;
-    size_t rpt_desc_len = 0;
-    uint8_t* rpt_desc = NULL;
+    uint16_t rpt_desc_len = 0;
     enum touch_panel_type panel = TOUCH_PANEL_UNKNOWN;
     while ((de = readdir(dir)) != NULL) {
         char devname[128];
@@ -521,9 +526,18 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        ret = ioctl_input_get_report_desc_size(touchfd, &rpt_desc_len);
-        if (ret < 0) {
-            printf("failed to get report descriptor length for %s: %zd\n", devname, ret);
+        touchio = fdio_unsafe_fd_to_io(touchfd);
+        if (touchio == NULL) {
+            printf("failed to convert to io\n");
+            close(touchfd);
+            touchfd = -1;
+            continue;
+        }
+        touchsvc = fdio_unsafe_borrow_channel(touchio);
+
+        status = zircon_input_DeviceGetReportDescSize(touchsvc, &rpt_desc_len);
+        if (status != ZX_OK) {
+            printf("failed to get report descriptor length for %s: %d\n", devname, status);
             goto next_node;
         }
 
@@ -533,9 +547,14 @@ int main(int argc, char* argv[]) {
             exit(-1);
         }
 
-        ret = ioctl_input_get_report_desc(touchfd, rpt_desc, rpt_desc_len);
-        if (ret < 0) {
-            printf("failed to get report descriptor for %s: %zd\n", devname, ret);
+        size_t actual;
+        status = zircon_input_DeviceGetReportDesc(touchsvc, rpt_desc, rpt_desc_len, &actual);
+        if (status != ZX_OK) {
+            printf("failed to get report descriptor for %s: %d\n", devname, status);
+            goto next_node;
+        }
+        if (actual != rpt_desc_len) {
+            printf("mismatch in desc len: %u versus %zu\n", rpt_desc_len, actual);
             goto next_node;
         }
 
@@ -595,6 +614,8 @@ next_node:
         }
 
         if (touchfd >= 0) {
+            touchsvc = ZX_HANDLE_INVALID;
+            fdio_unsafe_release(touchio);
             close(touchfd);
             touchfd = -1;
         }
@@ -603,22 +624,25 @@ next_node:
 
     if (touchfd < 0) {
         printf("could not find a touchscreen!\n");
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
     assert(rpt_desc_len > 0);
     assert(rpt_desc);
 
-    input_report_size_t max_rpt_sz = 0;
-    ret = ioctl_input_get_max_reportsize(touchfd, &max_rpt_sz);
-    if (ret < 0) {
-        printf("failed to get max report size: %zd\n", ret);
-        return -1;
+    uint16_t max_rpt_sz = 0;
+    status = zircon_input_DeviceGetMaxInputReportSize(touchsvc, &max_rpt_sz);
+    if (status != ZX_OK) {
+        printf("failed to get max report size: %d\n", status);
+        ret = -1;
+        goto cleanup;
     }
-    printf("Max report size is %u\n",max_rpt_sz);
-    void* buf = malloc(max_rpt_sz);
+    printf("Max report size is %u\n", max_rpt_sz);
+    buf = malloc(max_rpt_sz);
     if (buf == NULL) {
         printf("no memory!\n");
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
 
     run = true;
@@ -664,10 +688,15 @@ next_node:
     memset(pixels32, 0x00, ZX_PIXEL_FORMAT_BYTES(info.format) * info.stride * info.height);
     zx_cache_flush(pixels32, size, ZX_CACHE_FLUSH_DATA);
 
+    ret = 0;
+cleanup:
     free(buf);
     free(rpt_desc);
+    if (touchio != NULL) {
+        fdio_unsafe_release(touchio);
+    }
     close(touchfd);
     _zx_vmar_unmap(zx_vmar_root_self(), fbo, size);
     fb_release();
-    return 0;
+    return ret;
 }

@@ -10,8 +10,8 @@
 
 #include <hid/hid.h>
 #include <hid/usages.h>
-
-#include <zircon/device/input.h>
+#include <lib/fzl/fdio.h>
+#include <zircon/input/c/fidl.h>
 #include <zircon/syscalls.h>
 
 #include <port/port.h>
@@ -45,18 +45,20 @@ static void set_caps_lock_led(int keyboard_fd, bool caps_lock) {
     // http://www.usb.org/developers/hidpage/HID1_11.pdf.  Zircon leaves
     // USB keyboards in boot mode, so the relevant section is Appendix B,
     // "Boot Interface Descriptors", "B.1 Protocol 1 (Keyboard)".
-    const int kUsbCapsLockBit = 1 << 1;
+    const uint8_t kUsbCapsLockBit = 1 << 1;
+    const uint8_t report_body[1] = { static_cast<uint8_t>(caps_lock ? kUsbCapsLockBit : 0) };
 
-    const int kNumBytes = 1;
-    uint8_t msg_buf[sizeof(input_set_report_t) + kNumBytes];
-    auto* msg = reinterpret_cast<input_set_report_t*>(msg_buf);
-    msg->id = 0;
-    msg->type = INPUT_REPORT_OUTPUT;
-    msg->data[0] = caps_lock ? kUsbCapsLockBit : 0;
-    ssize_t result = ioctl_input_set_report(keyboard_fd, msg, sizeof(msg_buf));
-    if (result != kNumBytes) {
+    // Temporarily wrap keyboard_fd, we will release it after the call so we don't close it.
+    fzl::FdioCaller caller(fbl::move(fbl::unique_fd(keyboard_fd)));
+    zx_status_t call_status;
+    zx_status_t status = zircon_input_DeviceSetReport(caller.borrow_channel(),
+                                                      zircon_input_ReportType_OUTPUT, 0,
+                                                      report_body, sizeof(report_body),
+                                                      &call_status);
+    caller.release().release();
+    if (status != ZX_OK || call_status != ZX_OK) {
 #if !BUILD_FOR_TEST
-        printf("ioctl_input_set_report() failed (returned %zd)\n", result);
+        printf("zircon.input.Device.SetReport() failed (returned %d, %d)\n", status, call_status);
 #endif
     }
 }
@@ -228,19 +230,22 @@ zx_status_t vc_input_create(vc_input_t** out, keypress_handler_t handler, int fd
 #if !BUILD_FOR_TEST
 zx_status_t new_input_device(int fd, keypress_handler_t handler) {
     // test to see if this is a device we can read
-    int proto = INPUT_PROTO_NONE;
-    ssize_t rc = ioctl_input_get_protocol(fd, &proto);
-    if ((rc < 0) || (proto != INPUT_PROTO_KBD)) {
+    uint32_t proto = zircon_input_BootProtocol_NONE;
+
+    // Temporarily wrap fd, we will release it after the call so we don't close it.
+    fzl::FdioCaller caller(fbl::move(fbl::unique_fd(fd)));
+    zx_status_t status = zircon_input_DeviceGetBootProtocol(caller.borrow_channel(), &proto);
+    caller.release().release();
+    if ((status != ZX_OK) || (proto != zircon_input_BootProtocol_KBD)) {
         // skip devices that aren't keyboards
         close(fd);
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    zx_status_t r;
     vc_input_t* vi;
-    if ((r = vc_input_create(&vi, handler, fd)) < 0) {
+    if ((status = vc_input_create(&vi, handler, fd)) < 0) {
         close(fd);
     }
-    return r;
+    return status;
 }
 #endif
