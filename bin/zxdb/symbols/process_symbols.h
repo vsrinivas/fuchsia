@@ -13,8 +13,10 @@
 
 namespace zxdb {
 
+struct InputLocation;
 class LineDetails;
 struct ModuleSymbolStatus;
+struct ResolveOptions;
 class TargetSymbols;
 
 class ProcessSymbols {
@@ -30,6 +32,15 @@ class ProcessSymbols {
   // Attempts to symbolize the given address. If not possible, the returned
   // location will be an address-only location.
   virtual Location LocationForAddress(uint64_t address) const = 0;
+
+  // Converts the given InputLocation into one or more locations. The input
+  // can match zero, one, or many locations.
+  //
+  // If symbolize is true, the results will be symbolized, otherwise the
+  // output locations will be regular addresses (this will be slightly faster).
+  virtual std::vector<Location> ResolveInputLocation(
+      const InputLocation& input_location,
+      const ResolveOptions& options) const = 0;
 
   // Computes the line that corresponds to the given address. Unlike
   // LocationForAddress (which just returns the current source line), this

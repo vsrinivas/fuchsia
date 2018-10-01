@@ -15,7 +15,9 @@
 namespace zxdb {
 
 class FileLine;
+struct InputLocation;
 class LineDetails;
+struct ResolveOptions;
 class SymbolContext;
 
 // Represents the symbols for a module (executable or shared library).
@@ -46,6 +48,18 @@ class ModuleSymbols {
   // The SymbolContext will be used to interpret the absolute input address.
   virtual Location LocationForAddress(const SymbolContext& symbol_context,
                                       uint64_t absolute_address) const = 0;
+
+  // Converts the given InputLocation into one or more locations. If the
+  // location is an address, it will be be returned whether or not the address
+  // is inside this module (it will be symbolzed if possible). If the input is
+  // a function or file/line, they could match more than one location and all
+  // locations will be returned.
+  //
+  // If symbolize is true, the results will be symbolized, otherwise the
+  // output locations will be regular addresses (this will be slightly faster).
+  virtual std::vector<Location> ResolveInputLocation(
+      const SymbolContext& symbol_context, const InputLocation& input_location,
+      const ResolveOptions& options) const = 0;
 
   // Computes the line that corresponds to the given address. Unlike
   // LocationForAddress (which just returns the current source line), this

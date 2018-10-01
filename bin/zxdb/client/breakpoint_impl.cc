@@ -19,6 +19,7 @@
 #include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
 #include "garnet/bin/zxdb/symbols/module_symbols.h"
 #include "garnet/bin/zxdb/symbols/process_symbols.h"
+#include "garnet/bin/zxdb/symbols/resolve_options.h"
 #include "garnet/bin/zxdb/symbols/target_symbols.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 
@@ -75,14 +76,15 @@ struct BreakpointImpl::ProcessRecord {
   }
 
   // Helper to add a list of locations to the locs array. Returns true if
-  // anything was added.
+  // anything was added (this makes the call site cleaner).
   bool AddLocations(BreakpointImpl* bp, Process* process,
-                    const std::vector<uint64_t>& addrs) {
-    for (uint64_t addr : addrs) {
-      locs.emplace(std::piecewise_construct, std::forward_as_tuple(addr),
-                   std::forward_as_tuple(bp, process, addr));
+                    const std::vector<Location>& locations) {
+    for (const auto& loc : locations) {
+      locs.emplace(std::piecewise_construct,
+                   std::forward_as_tuple(loc.address()),
+                   std::forward_as_tuple(bp, process, loc.address()));
     }
-    return !addrs.empty();
+    return !locations.empty();
   }
 
   // Set when we're registered as an observer for this process.
@@ -177,25 +179,12 @@ void BreakpointImpl::DidLoadModuleSymbols(Process* process,
   const ModuleSymbols* module_symbols = module->module_symbols();
 
   // Resolve addresses.
-  bool changed = false;
-  if (settings_.location.type == InputLocation::Type::kSymbol) {
-    changed = procs_[process].AddLocations(
-        this, process,
-        module_symbols->AddressesForFunction(module->symbol_context(),
-                                             settings_.location.symbol));
-  } else if (settings_.location.type == InputLocation::Type::kLine) {
-    // Need to resolve file names to pass canonical ones to AddressesForLine.
-    for (std::string& file :
-         module_symbols->FindFileMatches(settings_.location.line.file())) {
-      changed = procs_[process].AddLocations(
+  ResolveOptions options;
+  options.symbolize = false;  // Just want the addresses back.
+  if (procs_[process].AddLocations(
           this, process,
-          module_symbols->AddressesForLine(
-              module->symbol_context(),
-              FileLine(std::move(file), settings_.location.line.line())));
-    }
-  }
-
-  if (changed)
+          module_symbols->ResolveInputLocation(module->symbol_context(),
+                                               settings_.location, options)))
     SyncBackend();
 }
 
@@ -377,26 +366,11 @@ bool BreakpointImpl::RegisterProcess(Process* process) {
 
   // Resolve addresses.
   ProcessSymbols* symbols = process->GetSymbols();
-  if (settings_.location.type == InputLocation::Type::kSymbol) {
-    std::vector<uint64_t> new_addrs =
-        symbols->AddressesForFunction(settings_.location.symbol);
-    changed |= record.AddLocations(this, process, new_addrs);
-  } else if (settings_.location.type == InputLocation::Type::kLine) {
-    // Need to resolve file names to pass canonical ones to AddressesForLine.
-    for (std::string& file :
-         process->GetTarget()->GetSymbols()->FindFileMatches(
-             settings_.location.line.file())) {
-      changed |= record.AddLocations(
-          this, process, symbols->AddressesForLine(FileLine(
-                             std::move(file), settings_.location.line.line())));
-    }
-  } else if (settings_.location.type == InputLocation::Type::kAddress) {
-    changed = true;
-    record.AddLocations(this, process,
-                        std::vector<uint64_t>{settings_.location.address});
-  } else {
-    FXL_NOTREACHED();
-  }
+  ResolveOptions options;
+  options.symbolize = false;  // Only need addresses.
+  changed |= record.AddLocations(
+      this, process,
+      symbols->ResolveInputLocation(settings_.location, options));
   return changed;
 }
 

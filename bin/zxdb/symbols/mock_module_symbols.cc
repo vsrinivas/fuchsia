@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/symbols/mock_module_symbols.h"
 
+#include "garnet/bin/zxdb/symbols/input_location.h"
 #include "garnet/bin/zxdb/symbols/line_details.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 
@@ -34,6 +35,30 @@ Location MockModuleSymbols::LocationForAddress(
     const SymbolContext& symbol_context, uint64_t absolute_address) const {
   // Not yet supported by this mock.
   return Location(Location::State::kAddress, absolute_address);
+}
+
+std::vector<Location> MockModuleSymbols::ResolveInputLocation(
+    const SymbolContext& symbol_context, const InputLocation& input_location,
+    const ResolveOptions& options) const {
+  switch (input_location.type) {
+    case InputLocation::Type::kAddress:
+      // Always return identity for the address case.
+      return std::vector<Location>{
+          Location(Location::State::kAddress, input_location.address)};
+    case InputLocation::Type::kSymbol: {
+      auto found = symbols_.find(input_location.symbol);
+
+      std::vector<Location> result;
+      if (found == symbols_.end())
+        return result;
+      for (uint64_t address : found->second)
+        result.push_back(Location(Location::State::kSymbolized, address));
+      return result;
+    }
+    default:
+      // More complex stuff is not yet supported by this mock.
+      return std::vector<Location>();
+  }
 }
 
 LineDetails MockModuleSymbols::LineDetailsForAddress(

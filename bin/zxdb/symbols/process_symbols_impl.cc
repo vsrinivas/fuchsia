@@ -4,9 +4,11 @@
 
 #include "garnet/bin/zxdb/symbols/process_symbols_impl.h"
 
+#include "garnet/bin/zxdb/symbols/input_location.h"
 #include "garnet/bin/zxdb/symbols/line_details.h"
 #include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
 #include "garnet/bin/zxdb/symbols/module_symbols_impl.h"
+#include "garnet/bin/zxdb/symbols/resolve_options.h"
 #include "garnet/bin/zxdb/symbols/system_symbols.h"
 #include "garnet/bin/zxdb/symbols/target_symbols_impl.h"
 #include "garnet/lib/debug_ipc/records.h"
@@ -115,11 +117,47 @@ std::vector<ModuleSymbolStatus> ProcessSymbolsImpl::GetStatus() const {
 }
 
 Location ProcessSymbolsImpl::LocationForAddress(uint64_t address) const {
-  const ModuleInfo* info = InfoForAddress(address);
-  if (!info || !info->symbols)
-    return Location(Location::State::kSymbolized, address);  // Can't symbolize.
-  return info->symbols->module_symbols()->LocationForAddress(
-      info->symbols->symbol_context(), address);
+  // TODO(brettw) convert callers to ResolveInputLocation() and remove this.
+  auto results = ResolveInputLocation(InputLocation(address), ResolveOptions());
+  FXL_DCHECK(results.size() == 1u);
+  return results[0];
+}
+
+std::vector<Location> ProcessSymbolsImpl::ResolveInputLocation(
+    const InputLocation& input_location, const ResolveOptions& options) const {
+  FXL_DCHECK(input_location.type != InputLocation::Type::kNone);
+
+  // Address resolution.
+  if (input_location.type == InputLocation::Type::kAddress) {
+    if (options.symbolize) {
+      // Symbolize one address.
+      const ModuleInfo* info = InfoForAddress(input_location.address);
+      if (!info || !info->symbols) {
+        // Can't symbolize.
+        return std::vector<Location>{
+            Location(Location::State::kSymbolized, input_location.address)};
+      }
+      // Have the module the address.
+      return info->symbols->module_symbols()->ResolveInputLocation(
+          info->symbols->symbol_context(), input_location, options);
+    }
+
+    // No-op conversion of address -> address.
+    return std::vector<Location>{
+        Location(Location::State::kAddress, input_location.address)};
+  }
+
+  // Symbol and file/line resolution both requires iterating over all modules.
+  std::vector<Location> result;
+  for (const auto& pair : modules_) {
+    if (pair.second.symbols) {
+      const LoadedModuleSymbols* loaded = pair.second.symbols.get();
+      for (Location& location : loaded->module_symbols()->ResolveInputLocation(
+               loaded->symbol_context(), input_location, options))
+        result.push_back(std::move(location));
+    }
+  }
+  return result;
 }
 
 LineDetails ProcessSymbolsImpl::LineDetailsForAddress(uint64_t address) const {
@@ -132,6 +170,7 @@ LineDetails ProcessSymbolsImpl::LineDetailsForAddress(uint64_t address) const {
 
 std::vector<uint64_t> ProcessSymbolsImpl::AddressesForFunction(
     const std::string& name) const {
+  // Replace callers with LocationForAddress and remove this.
   std::vector<uint64_t> result;
   for (const auto& pair : modules_) {
     if (pair.second.symbols) {

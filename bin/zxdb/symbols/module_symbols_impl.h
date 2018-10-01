@@ -54,6 +54,9 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   ModuleSymbolStatus GetStatus() const override;
   Location LocationForAddress(const SymbolContext& symbol_context,
                               uint64_t absolute_address) const override;
+  std::vector<Location> ResolveInputLocation(
+      const SymbolContext& symbol_context, const InputLocation& input_location,
+      const ResolveOptions& options) const override;
   LineDetails LineDetailsForAddress(const SymbolContext& symbol_context,
                                     uint64_t absolute_address) const override;
   std::vector<uint64_t> AddressesForFunction(
@@ -67,6 +70,16 @@ class ModuleSymbolsImpl : public ModuleSymbols {
  private:
   llvm::DWARFUnit* CompileUnitForRelativeAddress(
       uint64_t relative_address) const;
+
+  std::vector<Location> ResolveLineInputLocation(
+      const SymbolContext& symbol_context, const InputLocation& input_location,
+      const ResolveOptions& options) const;
+  std::vector<Location> ResolveFunctionInputLocation(
+      const SymbolContext& symbol_context, const InputLocation& input_location,
+      const ResolveOptions& options) const;
+  std::vector<Location> ResolveAddressInputLocation(
+      const SymbolContext& symbol_context, const InputLocation& input_location,
+      const ResolveOptions& options) const;
 
   const std::string name_;
   const std::string build_id_;

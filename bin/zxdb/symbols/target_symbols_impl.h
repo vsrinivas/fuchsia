@@ -45,9 +45,10 @@ class TargetSymbolsImpl : public TargetSymbols {
   void RemoveAllModules();
 
   // TargetSymbols implementation.
+  std::vector<Location> ResolveInputLocation(
+      const InputLocation& input_location,
+      const ResolveOptions& options) const override;
   std::vector<std::string> FindFileMatches(
-      const std::string& name) const override;
-  std::vector<FileLine> FindLinesForSymbol(
       const std::string& name) const override;
 
  private:

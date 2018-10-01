@@ -19,7 +19,6 @@ static_library("client") {
     "finish_thread_controller.h",
     "frame.h",
     "frame_fingerprint.h",
-    "input_location.h",
     "memory_dump.h",
     "process.h",
     "process_observer.h",

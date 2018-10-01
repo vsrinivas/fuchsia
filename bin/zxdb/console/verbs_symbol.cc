@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <algorithm>
 #include <limits>
+#include <set>
 #include <vector>
 
 #include "garnet/bin/zxdb/client/frame.h"
@@ -20,14 +21,17 @@
 #include "garnet/bin/zxdb/console/format_context.h"
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/console/string_util.h"
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/module_symbol_status.h"
 #include "garnet/bin/zxdb/symbols/process_symbols.h"
+#include "garnet/bin/zxdb/symbols/resolve_options.h"
 #include "garnet/bin/zxdb/symbols/target_symbols.h"
 #include "garnet/bin/zxdb/symbols/type.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
-#include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -145,38 +149,6 @@ Err CanonicalizeFile(const TargetSymbols* target_symbols, const FileLine& input,
   return Err(msg);
 }
 
-Err ResolveSymbol(const TargetSymbols* target_symbols,
-                  const std::string& symbol, FileLine* output) {
-  auto matches = target_symbols->FindLinesForSymbol(symbol);
-  if (matches.empty()) {
-    // No match.
-    return Err("There are no symbols matching \"" + symbol +
-               "\" in this process.");
-  }
-
-  if (matches.size() == 1) {
-    // Unambiguous match.
-    *output = std::move(matches.front());
-    return Err();
-  }
-
-  // Ambiguous match, generate disambiguation error.
-  std::string msg("The symbol is ambiguous, it could be:\n");
-  for (const auto& match : matches)
-    msg.append("  " + DescribeFileLine(match, false) + "\n");
-  return Err(msg);
-}
-
-Err ResolveAddress(const ProcessSymbols* process_symbols, uint64_t address,
-                   FileLine* file_line) {
-  Location location = process_symbols->LocationForAddress(address);
-  if (!location.has_symbols())
-    return Err("There is no source information for this address.");
-
-  *file_line = location.file_line();
-  return Err();
-}
-
 // target_symbols is required but process_symbols may be null if the process
 // is not running. In that case, if a running process is required to resolve
 // the input, an error will be thrown.
@@ -189,19 +161,66 @@ Err ParseListLocation(const TargetSymbols* target_symbols,
   if (err.has_error())
     return err;
 
-  switch (input_location.type) {
-    case InputLocation::Type::kLine:
-      return CanonicalizeFile(target_symbols, input_location.line, file_line);
-    case InputLocation::Type::kSymbol:
-      return ResolveSymbol(target_symbols, input_location.symbol, file_line);
-    case InputLocation::Type::kAddress:
-      if (!process_symbols)
-        return Err("Looking up an address requires a running process.");
-      return ResolveAddress(process_symbols, input_location.address, file_line);
-    case InputLocation::Type::kNone:
-      break;
+  // When a file/line is given, we don't actually want to look up the symbol
+  // information, just match file names. Then we can find the requested line
+  // in the file regardless of whether there's a symbol for it.
+  if (input_location.type == InputLocation::Type::kLine)
+    return CanonicalizeFile(target_symbols, input_location.line, file_line);
+
+  // Address lookups require a running process, everything else can be done
+  // without a process as long as the symbols are loaded (the Target has them).
+  std::vector<Location> locations;
+  if (input_location.type == InputLocation::Type::kAddress) {
+    if (!process_symbols)
+      return Err("Looking up an address requires a running process.");
+    locations =
+        process_symbols->ResolveInputLocation(input_location, ResolveOptions());
+  } else {
+    locations =
+        target_symbols->ResolveInputLocation(input_location, ResolveOptions());
   }
-  return Err("Invalid input location.");
+
+  // Inlined functions might resolve to many locations, but only one file/line,
+  // or there could be multiple file name matches. Find the unique ones.
+  std::set<FileLine> matches;
+  for (const auto& location : locations) {
+    if (location.file_line().is_valid())
+      matches.insert(location.file_line());
+  }
+
+  // Check for no matches after extracting file/line info in case some matches
+  // lacked file/line information.
+  if (matches.empty()) {
+    if (!locations.empty())
+      return Err("The match(es) for this had no line information.");
+
+    switch (input_location.type) {
+      case InputLocation::Type::kLine:
+        return Err("There are no files matching \"%s\".",
+                   input_location.line.file().c_str());
+      case InputLocation::Type::kSymbol:
+        return Err("There are no symbols matching \"%s\".",
+                   input_location.symbol.c_str());
+      case InputLocation::Type::kAddress:
+      case InputLocation::Type::kNone:
+      default:
+        // Addresses will always be found.
+        FXL_NOTREACHED();
+        return Err("Internal error.");
+    }
+  }
+
+  if (matches.size() > 1) {
+    std::string msg = "There are multiple matches for this symbol:\n";
+    for (const auto& match : matches) {
+      msg += fxl::StringPrintf(" %s %s:%d\n", GetBullet().c_str(),
+                               match.file().c_str(), match.line());
+    }
+    return Err(msg);
+  }
+
+  *file_line = *matches.begin();
+  return Err();
 }
 
 Err DoList(ConsoleContext* context, const Command& cmd) {

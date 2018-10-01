@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/symbols/mock_process_symbols.h"
 
+#include "garnet/bin/zxdb/symbols/input_location.h"
 #include "garnet/bin/zxdb/symbols/line_details.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/module_symbol_status.h"
@@ -22,6 +23,17 @@ std::vector<ModuleSymbolStatus> MockProcessSymbols::GetStatus() const {
 
 Location MockProcessSymbols::LocationForAddress(uint64_t address) const {
   return Location(Location::State::kSymbolized, address);
+}
+
+std::vector<Location> MockProcessSymbols::ResolveInputLocation(
+    const InputLocation& input_location, const ResolveOptions& options) const {
+  if (input_location.type == InputLocation::Type::kAddress) {
+    // Always return identity for the address case.
+    return std::vector<Location>{
+        Location(Location::State::kAddress, input_location.address)};
+  }
+  // More complex stuff is not yet supported by this mock.
+  return std::vector<Location>();
 }
 
 LineDetails MockProcessSymbols::LineDetailsForAddress(uint64_t address) const {

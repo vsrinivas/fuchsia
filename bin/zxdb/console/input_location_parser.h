@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "garnet/bin/zxdb/client/input_location.h"
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/symbols/input_location.h"
 
 namespace zxdb {
 

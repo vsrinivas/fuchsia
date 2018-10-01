@@ -205,8 +205,15 @@ Err FormatSourceContext(const std::string& file_name_for_errors,
               opts.active_line <= opts.last_line));
 
   LineVector context = ExtractSourceContext(file_contents, opts);
-  if (context.empty() || (opts.active_line != 0 && opts.require_active_line &&
-                          context.back().first < opts.active_line)) {
+  if (context.empty()) {
+    // No source found for this location. If highlight_line exists, assume
+    // it's the one the user cares about.
+    int err_line = opts.highlight_line ? opts.highlight_line : opts.first_line;
+    return Err(fxl::StringPrintf("There is no line %d in the file %s", err_line,
+                                 file_name_for_errors.c_str()));
+  }
+  if (opts.active_line != 0 && opts.require_active_line &&
+      context.back().first < opts.active_line) {
     return Err(fxl::StringPrintf("There is no line %d in the file %s",
                                  opts.active_line,
                                  file_name_for_errors.c_str()));

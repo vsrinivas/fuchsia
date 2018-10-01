@@ -28,7 +28,7 @@ class Location {
 
   Location();
   Location(State state, uint64_t address);
-  Location(uint64_t address, FileLine&& file_line, int column,
+  Location(uint64_t address, FileLine file_line, int column,
            const SymbolContext& symbol_context,
            const LazySymbol& function = LazySymbol());
   ~Location();

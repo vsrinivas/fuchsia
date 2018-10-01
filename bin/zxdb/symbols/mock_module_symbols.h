@@ -27,6 +27,9 @@ class MockModuleSymbols : public ModuleSymbols {
   ModuleSymbolStatus GetStatus() const override;
   Location LocationForAddress(const SymbolContext& symbol_context,
                               uint64_t address) const override;
+  std::vector<Location> ResolveInputLocation(
+      const SymbolContext& symbol_context, const InputLocation& input_location,
+      const ResolveOptions& options) const override;
   LineDetails LineDetailsForAddress(const SymbolContext& symbol_context,
                                     uint64_t address) const override;
   std::vector<uint64_t> AddressesForFunction(

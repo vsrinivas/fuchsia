@@ -6,7 +6,10 @@
 
 #include <set>
 
+#include "garnet/bin/zxdb/symbols/input_location.h"
+#include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/module_symbols.h"
+#include "garnet/bin/zxdb/symbols/resolve_options.h"
 
 namespace zxdb {
 
@@ -46,6 +49,28 @@ void TargetSymbolsImpl::RemoveModule(
 
 void TargetSymbolsImpl::RemoveAllModules() { modules_.clear(); }
 
+std::vector<Location> TargetSymbolsImpl::ResolveInputLocation(
+    const InputLocation& input_location, const ResolveOptions& options) const {
+  FXL_DCHECK(input_location.type != InputLocation::Type::kNone);
+  FXL_DCHECK(input_location.type != InputLocation::Type::kAddress);
+
+  // This uses a null symbol context since this function doesn't depend on
+  // any actual locations of libraries in memory.
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+
+  std::vector<Location> result;
+  for (const auto& module : modules_) {
+    for (const Location& location :
+         module->module_symbols()->ResolveInputLocation(
+             symbol_context, input_location, ResolveOptions())) {
+      // Clear the location on the result to prevent confusion.
+      result.emplace_back(0, location.file_line(), location.column(),
+                          location.symbol_context(), location.function());
+    }
+  }
+  return result;
+}
+
 std::vector<std::string> TargetSymbolsImpl::FindFileMatches(
     const std::string& name) const {
   // Different modules can each use the same file, but we want to return each
@@ -57,36 +82,6 @@ std::vector<std::string> TargetSymbolsImpl::FindFileMatches(
   }
 
   std::vector<std::string> result;
-  for (auto& cur : result_set)
-    result.push_back(std::move(cur));
-  return result;
-}
-
-std::vector<FileLine> TargetSymbolsImpl::FindLinesForSymbol(
-    const std::string& name) const {
-  // Inline functions will have multiple locations but the same FileLine, which
-  // we only want to return once.
-  std::set<FileLine> result_set;
-
-  // This uses a null symbol context since this function doesn't depend on
-  // any actual locations of libraries in memory.
-  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
-
-  std::vector<uint64_t> addrs;
-  for (const auto& module : modules_) {
-    addrs =
-        module->module_symbols()->AddressesForFunction(symbol_context, name);
-
-    // Convert each address back into a location to get its file/line.
-    for (uint64_t addr : addrs) {
-      Location loc =
-          module->module_symbols()->LocationForAddress(symbol_context, addr);
-      if (loc.has_symbols())
-        result_set.insert(loc.file_line());
-    }
-  }
-
-  std::vector<FileLine> result;
   for (auto& cur : result_set)
     result.push_back(std::move(cur));
   return result;

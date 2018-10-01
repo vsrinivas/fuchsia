@@ -7,7 +7,9 @@
 #include <algorithm>
 
 #include "garnet/bin/zxdb/symbols/dwarf_symbol_factory.h"
+#include "garnet/bin/zxdb/symbols/input_location.h"
 #include "garnet/bin/zxdb/symbols/line_details.h"
+#include "garnet/bin/zxdb/symbols/resolve_options.h"
 #include "garnet/bin/zxdb/symbols/symbol_context.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -251,6 +253,23 @@ Location ModuleSymbolsImpl::LocationForAddress(
                   std::move(lazy_function));
 }
 
+std::vector<Location> ModuleSymbolsImpl::ResolveInputLocation(
+    const SymbolContext& symbol_context, const InputLocation& input_location,
+    const ResolveOptions& options) const {
+  switch (input_location.type) {
+    case InputLocation::Type::kNone:
+      return std::vector<Location>();
+    case InputLocation::Type::kLine:
+      return ResolveLineInputLocation(symbol_context, input_location, options);
+    case InputLocation::Type::kSymbol:
+      return ResolveFunctionInputLocation(symbol_context, input_location,
+                                          options);
+    case InputLocation::Type::kAddress:
+      return ResolveAddressInputLocation(symbol_context, input_location,
+                                         options);
+  }
+}
+
 LineDetails ModuleSymbolsImpl::LineDetailsForAddress(
     const SymbolContext& symbol_context, uint64_t absolute_address) const {
   uint64_t relative_address =
@@ -410,6 +429,56 @@ llvm::DWARFUnit* ModuleSymbolsImpl::CompileUnitForRelativeAddress(
     uint64_t relative_address) const {
   return compile_units_.getUnitForOffset(
       context_->getDebugAranges()->findAddress(relative_address));
+}
+
+std::vector<Location> ModuleSymbolsImpl::ResolveLineInputLocation(
+    const SymbolContext& symbol_context, const InputLocation& input_location,
+    const ResolveOptions& options) const {
+  // TODO(brettw) remove AddressesForLine() and move that code here instead
+  // (probably make the file match resolution optional).
+  std::vector<Location> result;
+  for (std::string& file : FindFileMatches(input_location.line.file())) {
+    for (uint64_t address : AddressesForLine(
+             symbol_context,
+             FileLine(std::move(file), input_location.line.line()))) {
+      if (options.symbolize)
+        result.push_back(LocationForAddress(symbol_context, address));
+      else
+        result.push_back(Location(Location::State::kAddress, address));
+    }
+  }
+  return result;
+}
+
+std::vector<Location> ModuleSymbolsImpl::ResolveFunctionInputLocation(
+    const SymbolContext& symbol_context, const InputLocation& input_location,
+    const ResolveOptions& options) const {
+  // TODO(brettw) remove AddressesForFunction() and move that code here
+  // instead.
+  std::vector<Location> result;
+  for (uint64_t address :
+       AddressesForFunction(symbol_context, input_location.symbol)) {
+    if (options.symbolize)
+      result.push_back(LocationForAddress(symbol_context, address));
+    else
+      result.push_back(Location(Location::State::kAddress, address));
+  }
+  return result;
+}
+
+std::vector<Location> ModuleSymbolsImpl::ResolveAddressInputLocation(
+    const SymbolContext& symbol_context, const InputLocation& input_location,
+    const ResolveOptions& options) const {
+  // TODO(brettw) remove LocationForAddress() and move that code here instead.
+  std::vector<Location> result;
+  if (options.symbolize) {
+    result.push_back(
+        LocationForAddress(symbol_context, input_location.address));
+  } else {
+    result.push_back(
+        Location(Location::State::kAddress, input_location.address));
+  }
+  return result;
 }
 
 }  // namespace zxdb

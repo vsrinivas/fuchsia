@@ -7,11 +7,11 @@
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/breakpoint_settings.h"
 #include "garnet/bin/zxdb/client/frame.h"
-#include "garnet/bin/zxdb/client/input_location.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/thread.h"
+#include "garnet/bin/zxdb/symbols/input_location.h"
 #include "lib/fxl/logging.h"
 
 namespace zxdb {
