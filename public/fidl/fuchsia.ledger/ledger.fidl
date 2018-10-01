@@ -47,13 +47,13 @@ interface Ledger {
   // |id| the identifier of the page, or |null| to create a new page with a random identifier.
   //
   // Returns OK and binds |page_request| to the page on success.
-  1: GetPage(PageId? id, request<Page> page_request) -> (Status @status);
+  1: GetPage(PageId? id, request<Page> page_request) -> (Status status);
 
   // Gets the page with identifier
   // [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].
   // This is a convenience method equivalent to:
   // GetPage([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], page_request).
-  2: GetRootPage(request<Page> page_request) -> (Status @status);
+  2: GetRootPage(request<Page> page_request) -> (Status status);
 
   // Sets the |ConflictResolverFactory| to use for resolving conflicts on pages.
   // If |factory| is NULL or this method is not called, a global last one wins
@@ -61,7 +61,7 @@ interface Ledger {
   // for which no conflict resolution is set up will not get their conflict
   // resolved until this method is called again.
   3: SetConflictResolverFactory(ConflictResolverFactory? factory)
-      -> (Status @status);
+      -> (Status status);
 };
 
 // A reference to a value.
@@ -98,7 +98,7 @@ interface Page {
   // Change notifications will only contain the entries matching |key_prefix|.
   // To receive all changes, use an empty |key_prefix|.
   2: GetSnapshot(request<PageSnapshot> snapshot_request,
-      vector<uint8>:256 key_prefix, PageWatcher? watcher) -> (Status @status);
+      vector<uint8>:256 key_prefix, PageWatcher? watcher) -> (Status status);
 
   // Mutation operations.
 
@@ -120,12 +120,12 @@ interface Page {
   // parameter managing the synchronization policy for this value. |Put()| uses
   // a default priority of |Priority.EAGER|. For the list of available
   // priorities and their definition, see |Priority|.
-  3: Put(vector<uint8>:256 key, vector<uint8> value) -> (Status @status);
+  3: Put(vector<uint8>:256 key, vector<uint8> value) -> (Status status);
   4: PutWithPriority(vector<uint8>:256 key, vector<uint8> value,
-      Priority priority) -> (Status @status);
+      Priority priority) -> (Status status);
   5: PutReference(vector<uint8>:256 key, Reference reference, Priority priority)
-      -> (Status @status);
-  6: Delete(vector<uint8>:256 key) -> (Status @status);
+      -> (Status status);
+  6: Delete(vector<uint8>:256 key) -> (Status status);
 
   // Page level operations.
 
@@ -135,7 +135,7 @@ interface Page {
   // In a transaction, this operation is equivalent to deleting every key
   // present in the page before the transaction, as well as any new key added
   // since the transaction started.
-  7: Clear() -> (Status @status);
+  7: Clear() -> (Status status);
 
   // References.
   // Creates a new reference. The object is not part of any commit. It must be
@@ -143,12 +143,12 @@ interface Page {
   // will be the content of the socket. The content size must be equal to
   // |size|, otherwise the call will fail.
   8: CreateReferenceFromSocket(uint64 size, handle<socket> data)
-      -> (Status @status, Reference? reference);
+      -> (Status status, Reference? reference);
   // Creates a new reference. The object is not part of any commit. It must be
   // associated with a key using |PutReference()|. The content of the reference
   // will be the content of the buffer.
   9: CreateReferenceFromBuffer(fuchsia.mem.Buffer buffer)
-      -> (Status @status, Reference? reference);
+      -> (Status status, Reference? reference);
 
   // Transactions.
   //
@@ -179,14 +179,14 @@ interface Page {
   // will be used as the base of the transaction. Put (with all its variants)
   // and Delete calls may be pipelined while StartTransaction() is pending and
   // will be taken into account in the transaction while it is pending.
-  10: StartTransaction() -> (Status @status);
-  11: Commit() -> (Status @status);
-  12: Rollback() -> (Status @status);
+  10: StartTransaction() -> (Status status);
+  11: Commit() -> (Status status);
+  12: Rollback() -> (Status status);
 
   // Sets a watcher to track the synchronisation state of this page. The
   // current state is immediately sent to the watcher when this method is
   // called.
-  13: SetSyncStateWatcher(SyncWatcher watcher) -> (Status @status);
+  13: SetSyncStateWatcher(SyncWatcher watcher) -> (Status status);
 
   // Conflict resolution.
   //
@@ -254,12 +254,12 @@ interface PageSnapshot {
   // Missing |LAZY| values can be retrieved over the network using Fetch().
   // The returned |entries| are sorted by |key|.
   1: GetEntries(vector<uint8>:256 key_start, Token? token)
-      -> (Status @status, vector<Entry> entries, Token? next_token);
+      -> (Status status, vector<Entry> entries, Token? next_token);
 
   // Same as |GetEntries()|. |VALUE_TOO_LARGE| is returned if a value does not
   // fit in a FIDL message.
   2: GetEntriesInline(vector<uint8>:256 key_start, Token? token)
-      -> (Status @status, vector<InlinedEntry> entries,
+      -> (Status status, vector<InlinedEntry> entries,
           Token? next_token);
 
   // Returns the keys of all entries in the page which are greater or equal to
@@ -273,24 +273,24 @@ interface PageSnapshot {
   // The returned |keys| are sorted. |status| will be |PARTIAL_RESULT| as long
   // as there are more results and |OK| once finished.
   3: GetKeys(vector<uint8>:256 key_start, Token? token)
-      -> (Status @status, vector<vector<uint8>:256> keys,
+      -> (Status status, vector<vector<uint8>:256> keys,
           Token? next_token);
 
   // Returns the value of a given key.
   // Only |EAGER| values are guaranteed to be returned. Calls when the value is
   // |LAZY| and not available will return a |NEEDS_FETCH| status. The value can
   // be retrieved over the network using a Fetch() call.
-  4: Get(vector<uint8>:256 key) -> (Status @status, fuchsia.mem.Buffer? buffer);
+  4: Get(vector<uint8>:256 key) -> (Status status, fuchsia.mem.Buffer? buffer);
 
   // Returns the value of a given key if it fits in a FIDL message.
   // |VALUE_TOO_LARGE| is returned if the value does not fit in a FIDL message.
   // See |Get()| for additional information.
-  5: GetInline(vector<uint8>:256 key) -> (Status @status, InlinedValue? value);
+  5: GetInline(vector<uint8>:256 key) -> (Status status, InlinedValue? value);
 
   // Fetches the value of a given key, over the network if not already present
   // locally. |NETWORK_ERROR| is returned if the download fails (e.g.: network
   // is not available).
-  6: Fetch(vector<uint8>:256 key) -> (Status @status, fuchsia.mem.Buffer? buffer);
+  6: Fetch(vector<uint8>:256 key) -> (Status status, fuchsia.mem.Buffer? buffer);
 
   // Fetches the value of a given key, over the network if not already present
   // locally, and returns a shared handle of a part of the value of a given
@@ -299,7 +299,7 @@ interface PageSnapshot {
   // Returns at most |max_size| bytes. If |max_size| is less than 0, returns
   // everything.
   7: FetchPartial(vector<uint8>:256 key, int64 offset, int64 max_size)
-      -> (Status @status, fuchsia.mem.Buffer? buffer);
+      -> (Status status, fuchsia.mem.Buffer? buffer);
 };
 
 enum ResultState {
@@ -451,7 +451,7 @@ interface MergeResultProvider {
   // be used to retrieve the rest of the results by calling |GetFullDiff()|
   // with that token.
   1: GetFullDiff(Token? token)
-      -> (Status @status, vector<DiffEntry> changes, Token? next_token);
+      -> (Status status, vector<DiffEntry> changes, Token? next_token);
 
   // |GetConflictingDiff| returns the set of all key/value pairs that were
   // modified on both sides to different values, or deleted on one side and
@@ -459,7 +459,7 @@ interface MergeResultProvider {
   //
   // It behaves like |GetFullDiff| otherwise.
   2: GetConflictingDiff(Token? token)
-      -> (Status @status, vector<DiffEntry> changes, Token? next_token);
+      -> (Status status, vector<DiffEntry> changes, Token? next_token);
 
   // Once the result of the merge has been computed |Merge()| can be called with
   // all changes that resolve this conflict. If the result does not fit in a
@@ -471,18 +471,18 @@ interface MergeResultProvider {
   // through |MergeNonConflictingEntries()| below), the left value will be
   // used. It is thus not necessary to send a MergedValue with a |LEFT| value
   // source, unless to overwrite a previous MergedValue.
-  3: Merge(vector<MergedValue> merge_changes) -> (Status @status);
+  3: Merge(vector<MergedValue> merge_changes) -> (Status status);
 
   // Automatically merges all non conflicting entries (entries that are
   // modified on one side only or identical on both sides). This is equivalent
   // to sending, through |Merge()|, a MergedValue with a |RIGHT| ValueSource
   // for all non-conflicting keys modified on the right side. Conflicting
   // entries can still be merged using the |Merge()| method.
-  4: MergeNonConflictingEntries() -> (Status @status);
+  4: MergeNonConflictingEntries() -> (Status status);
 
   // Marks the end of merge changes to resolve this conflict. After |Done()| is
   // called |MergeResultProvider| interface cannot be used any more.
-  5: Done() -> (Status @status);
+  5: Done() -> (Status status);
 };
 
 // Custom conflict resolver. If a |ConflictResolverFactory| is registered, and

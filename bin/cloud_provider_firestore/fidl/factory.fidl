@@ -28,5 +28,5 @@ interface Factory {
                 Config config,
                 fuchsia.modular.auth.TokenProvider token_provider,
                 request<fuchsia.ledger.cloud.CloudProvider> cloud_provider)
-      -> (fuchsia.ledger.cloud.Status @status);
+      -> (fuchsia.ledger.cloud.Status status);
 };

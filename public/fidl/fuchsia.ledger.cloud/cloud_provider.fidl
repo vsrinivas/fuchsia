@@ -30,11 +30,11 @@ enum Status : int32 {
 [Discoverable]
 interface CloudProvider {
   // Retrieves the controller for the user device set.
-  1: GetDeviceSet(request<DeviceSet> device_set) -> (Status @status);
+  1: GetDeviceSet(request<DeviceSet> device_set) -> (Status status);
 
   // Retrieves the controller for cloud sync of a particular page.
   2: GetPageCloud(vector<uint8> app_id, vector<uint8> page_id, request<PageCloud> page_cloud)
-      -> (Status @status);
+      -> (Status status);
 };
 
 // Cloud registry of devices participating in cloud sync.
@@ -44,10 +44,10 @@ interface CloudProvider {
 interface DeviceSet {
   // Verifies that the device fingerprint in the cloud is still in the list of
   // devices, ensuring that the cloud was not erased since the last sync.
-  1: CheckFingerprint(vector<uint8> fingerprint) -> (Status @status);
+  1: CheckFingerprint(vector<uint8> fingerprint) -> (Status status);
 
   // Adds the device fingerprint to the list of devices in the cloud.
-  2: SetFingerprint(vector<uint8> fingerprint) -> (Status @status);
+  2: SetFingerprint(vector<uint8> fingerprint) -> (Status status);
 
   // Watches the given |fingerprint| in the cloud so that |watcher| is notified
   // when the fingerprint is erased.
@@ -64,11 +64,11 @@ interface DeviceSet {
   // If the returned status is not OK, the corresponding error call is also made
   // on the watcher.
   3: SetWatcher(vector<uint8> fingerprint, DeviceSetWatcher watcher)
-      -> (Status @status);
+      -> (Status status);
 
   // Erases the entire registry of devices. This makes all devices detect that
   // cloud has been erased.
-  4: Erase() -> (Status @status);
+  4: Erase() -> (Status status);
 };
 
 // Watcher for push notifications from the cloud registry of devices
@@ -113,7 +113,7 @@ interface PageCloud {
   //
   // The commits are added in one batch, on the receiving side they are
   // delivered in the same order in a single OnNewCommits() call.
-  1: AddCommits(CommitPack commits) -> (Status @status);
+  1: AddCommits(CommitPack commits) -> (Status status);
 
   // Retrieves commits from the cloud.
   //
@@ -127,19 +127,19 @@ interface PageCloud {
   // most recent of the |commits| (equivalent to |min_position_token| if
   // |commits| is empty).
   2: GetCommits(Token? min_position_token)
-      -> (Status @status, CommitPack? commits, Token? position_token);
+      -> (Status status, CommitPack? commits, Token? position_token);
 
   // Uploads the given object to the cloud under the given id.
   //
   // If the object already exists in the cloud this method returns OK.
-  3: AddObject(vector<uint8> id, fuchsia.mem.Buffer buffer) -> (Status @status);
+  3: AddObject(vector<uint8> id, fuchsia.mem.Buffer buffer) -> (Status status);
 
   // Retrieves the object of the given id from the cloud.
   //
   // If the resulting |status| is |OK|, |buffer| will contain the object
   // content. If the resulting |status| is not |OK|, |buffer| will be null.
   4: GetObject(vector<uint8> id)
-      -> (Status @status, fuchsia.mem.Buffer? buffer);
+      -> (Status status, fuchsia.mem.Buffer? buffer);
 
   // Watches the cloud for push notifications.
   //
@@ -152,7 +152,7 @@ interface PageCloud {
   // may be delivered to. If |min_position_token| is null, notifications for
   // all commits are delivered.
   5: SetWatcher(Token? min_position_token, PageCloudWatcher watcher)
-      -> (Status @status);
+      -> (Status status);
 };
 
 // Watcher for push notifications from cloud sync of a single page.
@@ -184,5 +184,5 @@ interface PageCloudWatcher {
   //   - AUTH_ERROR, if the auth token needs a refresh
   //   - NETWORK_ERROR, if the connection was dropped
   //   - PARSE_ERROR, if an invalid server notification was received
-  3: OnError(Status @status);
+  3: OnError(Status status);
 };

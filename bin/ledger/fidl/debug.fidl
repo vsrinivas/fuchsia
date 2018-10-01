@@ -13,7 +13,7 @@ interface LedgerRepositoryDebug {
 
   // Returns the debugging interface for the given |ledger_name|.
   2: GetLedgerDebug(vector<uint8> ledger_name, request<LedgerDebug> ledger_debug)
-      -> (fuchsia.ledger.Status @status);
+      -> (fuchsia.ledger.Status status);
 };
 
 interface LedgerDebug {
@@ -23,20 +23,20 @@ interface LedgerDebug {
   // Returns OK and binds the |page_debug| for the given |page_id|.
   // Returns PAGE_NOT_FOUND if |page_id| isn't found.
   2: GetPageDebug(fuchsia.ledger.PageId page_id, request<PageDebug> page_debug)
-      -> (fuchsia.ledger.Status @status);
+      -> (fuchsia.ledger.Status status);
 };
 
 interface PageDebug {
   // Returns OK and a list of the head commits IDs.
-  1: GetHeadCommitsIds() -> (fuchsia.ledger.Status @status, vector<CommitId> result);
+  1: GetHeadCommitsIds() -> (fuchsia.ledger.Status status, vector<CommitId> result);
 
   // Returns OK and creates a snapshot of the page, allowing the client app to read a
   // consistent view of the content of the page.
   2: GetSnapshot(CommitId commit_id, request<fuchsia.ledger.PageSnapshot> snapshot_request)
-      -> (fuchsia.ledger.Status @status);
+      -> (fuchsia.ledger.Status status);
 
   // Returns OK and the Commit struct filled for the given |commit_id|.
-  3: GetCommit(CommitId commit_id) -> (fuchsia.ledger.Status @status, Commit? commit);
+  3: GetCommit(CommitId commit_id) -> (fuchsia.ledger.Status status, Commit? commit);
 };
 
 struct CommitId {
