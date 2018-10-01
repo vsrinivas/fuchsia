@@ -4,6 +4,7 @@
 
 #include "fidl/lexer.h"
 
+#include <assert.h>
 #include <ctype.h>
 
 namespace fidl {
@@ -84,11 +85,12 @@ StringView Lexer::Reset(Token::Kind kind) {
 }
 
 Token Lexer::Finish(Token::Kind kind) {
+    assert(kind != Token::Kind::kIdentifier);
     StringView previous(previous_end_, token_start_ - previous_end_);
     StringView current(token_start_, token_size_);
     SourceLocation previous_location(previous, source_file_);
     return Token(previous_location,
-                 SourceLocation(Reset(kind), source_file_), kind);
+                 SourceLocation(Reset(kind), source_file_), kind, Token::Subkind::kNone);
 }
 
 Token Lexer::LexEndOfStream() {

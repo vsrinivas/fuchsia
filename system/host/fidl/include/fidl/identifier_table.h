@@ -25,7 +25,7 @@ public:
                          bool escaped_identifier) const;
 
 private:
-    std::map<StringView, Token::Kind> keyword_table_;
+    std::map<StringView, Token::Subkind> keyword_table_;
 };
 
 } // namespace fidl

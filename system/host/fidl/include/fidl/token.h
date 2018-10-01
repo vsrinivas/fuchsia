@@ -24,18 +24,43 @@ public:
 #include "fidl/token_definitions.inc"
     };
 
-    Token(SourceLocation previous_end, SourceLocation location, Kind kind)
-        : previous_end_(previous_end), location_(location), kind_(kind) {}
+    enum Subkind : uint8_t {
+        kNone = 0,
+#define KEYWORD(Name, Spelling) k##Name,
+#include "fidl/token_definitions.inc"
+    };
+
+    class KindAndSubkind {
+    public:
+        constexpr KindAndSubkind(Kind kind, Subkind subkind)
+            : kind_(kind), subkind_(subkind) {}
+
+        constexpr Kind kind() const { return kind_; }
+        constexpr Subkind subkind() const { return subkind_; }
+        constexpr uint16_t combined() const { return uint16_t(kind_) | uint16_t(subkind_ << 8); }
+    private:
+        Kind kind_;
+        Subkind subkind_;
+    };
+
+    Token(SourceLocation previous_end, SourceLocation location, Kind kind, Subkind subkind)
+        : previous_end_(previous_end), location_(location), kind_and_subkind_(KindAndSubkind(kind, subkind)) {}
 
     Token()
-        : Token(SourceLocation(), SourceLocation(), Token::Kind::kNotAToken) {}
+        : Token(SourceLocation(), SourceLocation(), Token::Kind::kNotAToken, Token::Subkind::kNone) {}
 
-    static const char* Name(Kind kind) {
-        switch (kind) {
-#define TOKEN(Name)                  \
-    case fidl::Token::Kind::k##Name: \
+    static const char* Name(KindAndSubkind kind_and_subkind) {
+        switch (kind_and_subkind.combined()) {
+#define TOKEN(Name)            \
+    case Token::Kind::k##Name: \
         return #Name;
 #include "fidl/token_definitions.inc"
+#define KEYWORD(Name, Spelling)                                                               \
+    case Token::KindAndSubkind(Token::Kind::kIdentifier, Token::Subkind::k##Name).combined(): \
+        return #Spelling;
+#include "fidl/token_definitions.inc"
+        default:
+            return "<unknown token>";
         }
     }
 
@@ -43,7 +68,9 @@ public:
     SourceLocation location() const { return location_; }
     void set_previous_end(SourceLocation location) { previous_end_ = location; }
     SourceLocation previous_end() const { return previous_end_; }
-    Kind kind() const { return kind_; }
+    Kind kind() const { return kind_and_subkind_.kind(); }
+    Subkind subkind() const { return kind_and_subkind_.subkind(); }
+    KindAndSubkind kind_and_subkind() const { return kind_and_subkind_; }
 
 private:
     // The end of the previous token.  Everything between this and location_ is
@@ -51,7 +78,7 @@ private:
     // braces, etc).
     SourceLocation previous_end_;
     SourceLocation location_;
-    Kind kind_;
+    KindAndSubkind kind_and_subkind_;
 };
 
 } // namespace fidl

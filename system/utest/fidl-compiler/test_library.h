@@ -20,6 +20,9 @@ static fidl::SourceFile MakeSourceFile(const std::string& filename, const std::s
 
 class TestLibrary {
 public:
+    TestLibrary(const std::string& raw_source_code)
+        : TestLibrary("example.fidl", raw_source_code) {}
+
     TestLibrary(const std::string& filename, const std::string& raw_source_code)
         : source_file_(MakeSourceFile(filename, raw_source_code)),
           lexer_(source_file_, &identifier_table_),

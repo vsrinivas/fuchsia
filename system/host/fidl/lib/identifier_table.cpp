@@ -10,20 +10,20 @@ namespace fidl {
 
 IdentifierTable::IdentifierTable() {
     keyword_table_ = {
-#define KEYWORD(Name, Spelling) {Spelling, Token::k##Name},
+#define KEYWORD(Name, Spelling) {Spelling, Token::Subkind::k##Name},
 #include "fidl/token_definitions.inc"
     };
 }
 
 Token IdentifierTable::MakeIdentifier(SourceLocation previous_end, StringView source_data, const SourceFile& source_file,
                                       bool escaped_identifier) const {
-    auto kind = Token::Kind::kIdentifier;
+    auto subkind = Token::Subkind::kNone;
     if (!escaped_identifier) {
         auto lookup = keyword_table_.find(source_data);
         if (lookup != keyword_table_.end())
-            kind = lookup->second;
+            subkind = lookup->second;
     }
-    return Token(previous_end, SourceLocation(source_data, source_file), kind);
+    return Token(previous_end, SourceLocation(source_data, source_file), Token::Kind::kIdentifier, subkind);
 }
 
 } // namespace fidl

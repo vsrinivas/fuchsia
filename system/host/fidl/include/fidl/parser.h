@@ -24,7 +24,7 @@ public:
 private:
     Token Lex() { return lexer_->LexNoComments(); }
 
-    Token::Kind Peek() { return last_token_.kind(); }
+    Token::KindAndSubkind Peek() { return last_token_.kind_and_subkind(); }
 
     // Each AST node stores the beginning of the code it is associated with, the
     // end of that code, and the end of the previous AST node (so that it can
@@ -46,17 +46,17 @@ private:
         return Lex();
     }
 
-    // This consumes a token.  If it is not retained on return, is_discarded
-    // should be true.  That allows the parser to track its source location, in
-    // case it should become interesting to the AST.
-    Token ConsumeToken(Token::Kind kind, bool is_discarded = false) {
-        auto actual_kind = Peek();
-        if (actual_kind != kind) {
-            std::string message("unexpected token ");
-            message += Token::Name(actual_kind);
-            message += ", was expecting ";
-            message += Token::Name(kind);
-            Fail(message);
+    // ConsumeToken consumes a token, and matches using the predicate |p|.
+    // See #OfKind, and #IdentifierOfSubkind for the two expected predicates.
+    //
+    // If the token is not retained on return, is_discarded should be true.
+    // That allows the parser to track its source location, in case it should
+    // become interesting to the AST.
+    template <class Predicate>
+    Token ConsumeToken(Predicate p, bool is_discarded = false) {
+        std::unique_ptr<std::string> failure_message = p(Peek());
+        if (failure_message) {
+            Fail(*failure_message);
         }
         auto token = last_token_;
         last_token_ = LexAndSetPrevious(is_discarded, token);
@@ -64,26 +64,57 @@ private:
         return token;
     }
 
-    bool MaybeConsumeToken(Token::Kind kind) {
-        if (Peek() == kind) {
-            previous_token_ = last_token_;
-            last_token_ = LexAndSetPrevious(true, last_token_);
-            return true;
-        } else {
+    // MaybeConsumeToken consumes a token if-and-only-if it matches the given
+    // predicate |p|.
+    // See #OfKind, and #IdentifierOfSubkind for the two expected predicates.
+    template <class Predicate>
+    bool MaybeConsumeToken(Predicate p) {
+        std::unique_ptr<std::string> failure_message = p(Peek());
+        if (failure_message) {
             return false;
         }
+        previous_token_ = last_token_;
+        last_token_ = LexAndSetPrevious(true, last_token_);
+        return true;
+    }
+
+    static auto OfKind(Token::Kind expected_kind) {
+        return [expected_kind](Token::KindAndSubkind actual) -> std::unique_ptr<std::string> {
+            if (actual.kind() != expected_kind) {
+                auto message = std::make_unique<std::string>("unexpected token ");
+                message->append(Token::Name(actual));
+                message->append(", was expecting ");
+                message->append(Token::Name(Token::KindAndSubkind(expected_kind, Token::Subkind::kNone)));
+                return message;
+            }
+            return nullptr;
+        };
+    }
+
+    static auto IdentifierOfSubkind(Token::Subkind expected_subkind) {
+        return [expected_subkind](Token::KindAndSubkind actual) -> std::unique_ptr<std::string> {
+            auto expected = Token::KindAndSubkind(Token::Kind::kIdentifier, expected_subkind);
+            if (actual.combined() != expected.combined()) {
+                auto message = std::make_unique<std::string>("unexpected identifier ");
+                message->append(Token::Name(actual));
+                message->append(", was expecting ");
+                message->append(Token::Name(Token::KindAndSubkind(Token::Kind::kIdentifier, Token::Subkind::kNone)));
+                return message;
+            }
+            return nullptr;
+        };
     }
 
     // Helper function that figures the earliest token associated with something
     // that can have an attribute list: is it the attribute list, or is it the
     // declaration (struct, enum, etc...)?
-    Token ConsumeTokenReturnEarliest(Token::Kind kind,
+    Token ConsumeIdentifierReturnEarliest(Token::Subkind subkind,
                                      std::unique_ptr<raw::AttributeList> const& attributes) {
         if (attributes != nullptr && attributes->attributes_->attributes_.size() != 0) {
-            ConsumeToken(kind, true);
+            ConsumeToken(IdentifierOfSubkind(subkind), true);
             return attributes->start_;
         }
-        return ConsumeToken(kind);
+        return ConsumeToken(IdentifierOfSubkind(subkind));
     }
 
     bool LookupHandleSubtype(const raw::Identifier* identifier, types::HandleSubtype* subtype_out);

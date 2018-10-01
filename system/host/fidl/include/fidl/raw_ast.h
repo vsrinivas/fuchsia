@@ -76,7 +76,7 @@ public:
         : SourceElement(token, token) {}
 
     explicit Identifier(Token start_token, Token identifier_token)
-        : SourceElement(Token(start_token.previous_end(), identifier_token.location(), identifier_token.kind()), identifier_token) {}
+        : SourceElement(Token(start_token.previous_end(), identifier_token.location(), identifier_token.kind(), identifier_token.subkind()), identifier_token) {}
 
     virtual ~Identifier() {}
 

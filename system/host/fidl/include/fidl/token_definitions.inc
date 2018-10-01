@@ -10,7 +10,7 @@
 #endif
 
 #if !defined(KEYWORD)
-#define KEYWORD(Name, Spelling) TOKEN(Name)
+#define KEYWORD(Name, Spelling)
 #endif
 
 // Control and whitespace
