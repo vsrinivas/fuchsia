@@ -49,6 +49,13 @@ zx_status_t stub_unbind_exception_port(async_dispatcher_t* dispatcher,
     return static_cast<DispatcherStub*>(dispatcher)->UnbindExceptionPort(exception);
 }
 
+zx_status_t stub_resume_from_exception(async_dispatcher_t* dispatcher,
+                                       async_exception_t* exception,
+                                       zx_handle_t task,
+                                       uint32_t options) {
+    return static_cast<DispatcherStub*>(dispatcher)->ResumeFromException(exception, options);
+}
+
 const async_ops_t g_stub_ops = {
     .version = ASYNC_OPS_V2,
     .reserved = 0,
@@ -64,6 +71,7 @@ const async_ops_t g_stub_ops = {
     .v2 = {
         .bind_exception_port = stub_bind_exception_port,
         .unbind_exception_port = stub_unbind_exception_port,
+        .resume_from_exception = stub_resume_from_exception,
     },
 };
 
@@ -110,6 +118,11 @@ zx_status_t DispatcherStub::BindExceptionPort(async_exception_t* exception) {
 }
 
 zx_status_t DispatcherStub::UnbindExceptionPort(async_exception_t* exception) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t DispatcherStub::ResumeFromException(async_exception_t* exception,
+                                                uint32_t options) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

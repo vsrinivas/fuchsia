@@ -27,6 +27,8 @@ public:
                                          zx_vaddr_t addr, size_t length);
     virtual zx_status_t BindExceptionPort(async_exception_t* exception);
     virtual zx_status_t UnbindExceptionPort(async_exception_t* exception);
+    virtual zx_status_t ResumeFromException(async_exception_t* exception,
+                                            uint32_t options);
 };
 
 } // namespace async

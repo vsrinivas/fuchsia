@@ -15,6 +15,7 @@ The async package consists of three libraries:
 - `libasync.a` provides the C client API which includes all of the function
 and structures declared in the following headers:
     - [async/dispatcher.h](include/lib/async/dispatcher.h)
+    - [async/exception.h](include/lib/async/exception.h)
     - [async/receiver.h](include/lib/async/receiver.h)
     - [async/task.h](include/lib/async/task.h)
     - [async/time.h](include/lib/async/time.h)
@@ -22,6 +23,7 @@ and structures declared in the following headers:
     - [async/wait.h](include/lib/async/wait.h)
 
 - `libasync-cpp.a` provides C++ wrappers:
+    - [async/cpp/exception.h](include/lib/async/cpp/exception.h)
     - [async/cpp/receiver.h](include/lib/async/cpp/receiver.h)
     - [async/cpp/task.h](include/lib/async/cpp/task.h)
     - [async/cpp/time.h](include/lib/async/cpp/time.h)
@@ -82,8 +84,8 @@ The client can register handlers from any thread but dispatch will occur
 on a thread of the dispatcher's choosing depending on its implementation.
 
 The client is responsible for ensuring that the exception structure remains in
-memory until the port is successfully unbound using
-`async_unbind_exception_port()`.
+memory, and the task handle contained therein remains valid, until the port is
+successfully unbound using `async_unbind_exception_port()`.
 
 See [async/exception.h](include/lib/async/exception.h) for details.
 
@@ -92,11 +94,17 @@ See [async/exception.h](include/lib/async/exception.h) for details.
 #include <lib/async/default.h>  // for async_get_default_dispatcher()
 
 void handler(async_dispatcher_t* async, async_exception_t* exception,
-             zx_status_t status, const zx_port_packet_t* exception) {
+             zx_status_t status, const zx_port_packet_t* exception_packet) {
     printf("signal received: status=%d, kind=0x%x",
            status, exception ? exception->type : 0);
     if (status == ZX_OK) {
         // ... process exception ...
+		// N.B. If the port is attached to a process or job then we will
+        // get exceptions for more than just |exception->task|.
+        zx_handle_t task = handle_of(exception_packet->exception.tid);
+        uint32_t options = exception_handled ? 0u : ZX_RESUME_TRY_NEXT;
+        status = async_resume_from_exception(async, exception, task, options);
+        // ... examine status ...
     }
 }
 

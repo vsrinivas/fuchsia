@@ -51,3 +51,12 @@ zx_status_t async_unbind_exception_port(async_dispatcher_t* dispatcher,
         return ZX_ERR_NOT_SUPPORTED;
     return dispatcher->ops->v2.unbind_exception_port(dispatcher, exception);
 }
+
+zx_status_t async_resume_from_exception(async_dispatcher_t* dispatcher,
+                                        async_exception_t* exception,
+                                        zx_handle_t task,
+                                        uint32_t options) {
+    if (dispatcher->ops->version < ASYNC_OPS_V2)
+        return ZX_ERR_NOT_SUPPORTED;
+    return dispatcher->ops->v2.resume_from_exception(dispatcher, exception, task, options);
+}

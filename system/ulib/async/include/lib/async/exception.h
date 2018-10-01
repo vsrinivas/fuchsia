@@ -64,6 +64,21 @@ zx_status_t async_bind_exception_port(async_dispatcher_t* dispatcher,
 zx_status_t async_unbind_exception_port(async_dispatcher_t* dispatcher,
                                         async_exception_t* exception);
 
+// Resume |task| after having processed an exception for it.
+// |options| is passed to |zx_task_resume_from_exception()|.
+//
+// Returns |ZX_OK| if the task was resumed.
+// Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
+// Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
+// Other error values are possible. See the documentation for
+// |zx_task_resume_from_exception()|.
+//
+// This operation is thread-safe.
+zx_status_t async_resume_from_exception(async_dispatcher_t* dispatcher,
+                                        async_exception_t* exception,
+                                        zx_handle_t task,
+                                        uint32_t options);
+
 __END_CDECLS
 
 #endif  // LIB_ASYNC_EXCEPTION_H_

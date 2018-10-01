@@ -40,6 +40,10 @@ static zx_status_t async_loop_bind_exception_port(async_dispatcher_t* async,
                                                   async_exception_t* exception);
 static zx_status_t async_loop_unbind_exception_port(async_dispatcher_t* async,
                                                     async_exception_t* exception);
+static zx_status_t async_loop_resume_from_exception(async_dispatcher_t* async,
+                                                    async_exception_t* exception,
+                                                    zx_handle_t task,
+                                                    uint32_t options);
 
 static const async_ops_t async_loop_ops = {
     .version = ASYNC_OPS_V2,
@@ -56,6 +60,7 @@ static const async_ops_t async_loop_ops = {
     .v2 = {
         .bind_exception_port = async_loop_bind_exception_port,
         .unbind_exception_port = async_loop_unbind_exception_port,
+        .resume_from_exception = async_loop_resume_from_exception,
     },
 };
 
@@ -680,6 +685,20 @@ static zx_status_t async_loop_unbind_exception_port(async_dispatcher_t* async,
 
     mtx_unlock(&loop->lock);
     return status;
+}
+
+static zx_status_t async_loop_resume_from_exception(async_dispatcher_t* async,
+                                                    async_exception_t* exception,
+                                                    zx_handle_t task,
+                                                    uint32_t options) {
+    async_loop_t* loop = (async_loop_t*)async;
+    ZX_DEBUG_ASSERT(loop);
+    ZX_DEBUG_ASSERT(exception);
+
+    if (atomic_load_explicit(&loop->state, memory_order_acquire) == ASYNC_LOOP_SHUTDOWN)
+        return ZX_ERR_BAD_STATE;
+
+    return zx_task_resume_from_exception(task, loop->port, options);
 }
 
 static void async_loop_insert_task_locked(async_loop_t* loop, async_task_t* task) {

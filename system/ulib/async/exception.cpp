@@ -48,6 +48,13 @@ zx_status_t ExceptionBase::Unbind() {
     return status;
 }
 
+zx_status_t ExceptionBase::Resume(zx_handle_t task, uint32_t options) {
+    if (!dispatcher_)
+        return ZX_ERR_NOT_FOUND;
+
+    return async_resume_from_exception(dispatcher_, &exception_, task, options);
+}
+
 Exception::Exception(zx_handle_t task, uint32_t options,
                      Handler handler)
     : ExceptionBase(task, options, &Exception::CallHandler),

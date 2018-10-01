@@ -108,6 +108,11 @@ typedef struct async_ops {
         // See |async_unbind_exception_port()| for details.
         zx_status_t (*unbind_exception_port)(async_dispatcher_t* dispatcher,
                                              async_exception_t* exception);
+        // See |async_resume_from_exception()| for details.
+        zx_status_t (*resume_from_exception)(async_dispatcher_t* dispatcher,
+                                             async_exception_t* exception,
+                                             zx_handle_t task,
+                                             uint32_t options);
     } v2;
 } async_ops_t;
 

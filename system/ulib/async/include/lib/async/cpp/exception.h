@@ -44,6 +44,7 @@ public:
     // Bind the async port to the task's exception port.
     //
     // Returns |ZX_OK| if the task's exception port is successfully bound to.
+    // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
     // Returns |ZX_ERR_ALREADY_EXISTS| if port is already bound.
     // See |zx_task_bind_exception_port()| for other possible errors.
     zx_status_t Bind(async_dispatcher_t* dispatcher);
@@ -54,6 +55,16 @@ public:
     // Returns ZX_ERR_NOT_FOUND if the port is not bound.
     // See |zx_task_bind_exception_port()| for other possible errors.
     zx_status_t Unbind();
+
+    // Resume |task| after having processed an exception for it.
+    // |options| is passed to |zx_task_resume_from_exception()|.
+    //
+    // Returns |ZX_OK| if the task was resumed.
+    // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
+    // Returns ZX_ERR_NOT_FOUND if the port is not bound.
+    // Other error values are possible. See the documentation for
+    // |zx_task_resume_from_exception()|.
+    zx_status_t Resume(zx_handle_t task, uint32_t options);
 
 private:
     async_exception_t exception_;

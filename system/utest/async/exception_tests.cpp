@@ -246,6 +246,19 @@ bool unsupported_unbind_test() {
     END_TEST;
 }
 
+bool unsupported_resume_test() {
+    BEGIN_TEST;
+
+    async::DispatcherStub dispatcher;
+    async_exception_t exception{};
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED,
+              async_resume_from_exception(&dispatcher, &exception,
+                                          ZX_HANDLE_INVALID, 0u),
+              "valid args");
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(exception_tests)
@@ -259,4 +272,5 @@ RUN_TEST((exception_run_handler_test<LambdaHarness>))
 RUN_TEST((exception_run_handler_test<MethodHarness>))
 RUN_TEST(unsupported_bind_test)
 RUN_TEST(unsupported_unbind_test)
+RUN_TEST(unsupported_resume_test)
 END_TEST_CASE(exception_tests)
