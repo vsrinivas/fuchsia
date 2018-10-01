@@ -103,7 +103,7 @@ public:
 
     template <typename T>
     T Read(zx_off_t offs) const {
-        ZX_DEBUG_ASSERT(offs + sizeof(T) < mmio_.size);
+        ZX_DEBUG_ASSERT(offs + sizeof(T) <= mmio_.size);
         ZX_DEBUG_ASSERT(ptr_);
         return *reinterpret_cast<volatile T*>(ptr_ + offs);
     }
@@ -115,7 +115,7 @@ public:
 
     template <typename T>
     void Write(T val, zx_off_t offs) const {
-        ZX_DEBUG_ASSERT(offs + sizeof(T) < mmio_.size);
+        ZX_DEBUG_ASSERT(offs + sizeof(T) <= mmio_.size);
         ZX_DEBUG_ASSERT(ptr_);
         *reinterpret_cast<volatile T*>(ptr_ + offs) = val;
         hw_mb();
