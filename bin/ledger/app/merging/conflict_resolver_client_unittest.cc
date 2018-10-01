@@ -115,7 +115,7 @@ class ConflictResolverImpl : public ConflictResolver {
     }
   };
 
-  std::vector<ResolveRequest> requests;
+  std::vector<std::unique_ptr<ResolveRequest>> requests;
   bool disconnected = false;
 
  private:
@@ -125,9 +125,9 @@ class ConflictResolverImpl : public ConflictResolver {
       fidl::InterfaceHandle<PageSnapshot> right_version,
       fidl::InterfaceHandle<PageSnapshot> common_version,
       fidl::InterfaceHandle<MergeResultProvider> result_provider) override {
-    requests.emplace_back(std::move(left_version), std::move(right_version),
-                          std::move(common_version),
-                          std::move(result_provider));
+    requests.push_back(std::make_unique<ResolveRequest>(
+        std::move(left_version), std::move(right_version),
+        std::move(common_version), std::move(result_provider)));
     quit_callback_();
   }
 
@@ -180,14 +180,14 @@ TEST_F(ConflictResolverClientTest, Error) {
   }
 
   Status merge_status;
-  conflict_resolver_impl.requests[0].result_provider_ptr->Merge(
+  conflict_resolver_impl.requests[0]->result_provider_ptr->Merge(
       std::move(merged_values),
       callback::Capture(callback::SetWhenCalled(&called), &merge_status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::KEY_NOT_FOUND, merge_status);
 
-  EXPECT_TRUE(conflict_resolver_impl.requests[0].result_provider_disconnected);
+  EXPECT_TRUE(conflict_resolver_impl.requests[0]->result_provider_disconnected);
   EXPECT_EQ(2u, conflict_resolver_impl.requests.size());
 }
 
@@ -215,13 +215,13 @@ TEST_F(ConflictResolverClientTest, MergeNonConflicting) {
   bool called;
   Status status;
   conflict_resolver_impl.requests[0]
-      .result_provider_ptr->MergeNonConflictingEntries(
+      ->result_provider_ptr->MergeNonConflictingEntries(
           callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
-  conflict_resolver_impl.requests[0].result_provider_ptr->Done(
+  conflict_resolver_impl.requests[0]->result_provider_ptr->Done(
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
@@ -302,7 +302,7 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
   }
 
   bool called;
-  conflict_resolver_impl.requests[0].result_provider_ptr->Merge(
+  conflict_resolver_impl.requests[0]->result_provider_ptr->Merge(
       std::move(merged_values),
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
@@ -310,13 +310,13 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
   EXPECT_EQ(Status::OK, status);
 
   conflict_resolver_impl.requests[0]
-      .result_provider_ptr->MergeNonConflictingEntries(
+      ->result_provider_ptr->MergeNonConflictingEntries(
           callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
-  conflict_resolver_impl.requests[0].result_provider_ptr->Done(
+  conflict_resolver_impl.requests[0]->result_provider_ptr->Done(
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
