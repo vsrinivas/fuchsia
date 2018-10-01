@@ -9,6 +9,8 @@
 
 #include "lib/escher/forward_declarations.h"
 
+#include "lib/escher/renderer/render_queue_item.h"
+
 namespace escher {
 
 // Helper functions and structs used by e.g. PaperRenderQueue to produce
@@ -18,8 +20,8 @@ class PaperRenderFuncs {
   // Matches signature of |RenderQueueItem::RenderFunc|.  Expects the items'
   // |object_data| and |instance_data| to be of type |MeshObjectData| and
   // |MeshInstanceData|, respectively; these types are defined below.
-  static void RenderMesh(CommandBuffer* cb, const RenderQueueItem* items,
-                         uint32_t instance_count);
+  static void RenderMesh(CommandBuffer* cb, const RenderQueueContext* context,
+                         const RenderQueueItem* items, uint32_t instance_count);
 
   // Struct referenced by |MeshObjectData|, see below.
   // TODO(ES-133):  Why not store a vk::Buffer instead of a Buffer*?

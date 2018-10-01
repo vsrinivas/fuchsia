@@ -387,4 +387,61 @@ TEST(plane3, Translation) {
   }
 }
 
+// Test that we get the same behavior when transforming a plane into
+// object-space via a uniform scale factor, as with an equivalent matrix.
+TEST(plane3, UniformScale) {
+  std::vector<plane3> planes({
+      plane3(glm::normalize(vec3(1, 0, 0)), 5.f),
+      plane3(glm::normalize(vec3(1, 1, 1)), -5.f),
+      plane3(glm::normalize(vec3(1, 1, 1)), 5.f),
+      plane3(glm::normalize(vec3(-1, 10, 100)), -15.f),
+      plane3(glm::normalize(vec3(1, -10, -100)), -15.f),
+  });
+
+  std::vector<float> scales({0.3f, 0.8f, 1.4f, 8.7f});
+
+  for (auto& scale : scales) {
+    mat4 scale_matrix = glm::scale(mat4(), vec3(scale, scale, scale));
+
+    for (size_t i = 0; i < planes.size(); ++i) {
+      plane3& world_space_plane = planes[i];
+      plane3 scaled_object_space_plane = ScalePlane(scale, planes[i]);
+      plane3 transformed_object_space_plane =
+          TransformPlane(scale_matrix, planes[i]);
+
+      // Compute a 3D grid of object-space points, in order to compare them
+      // against the world-space and object-space planes.
+      for (float pt_x = 35.f; pt_x < 40.f; pt_x += 10.f) {
+        for (float pt_y = 35.f; pt_y < 40.f; pt_y += 10.f) {
+          for (float pt_z = 35.f; pt_z < 40.f; pt_z += 10.f) {
+            vec3 object_space_point(pt_x, pt_y, pt_z);
+            vec3 world_space_point = scale * object_space_point;
+
+            // Verify that the world-space point/plane distance matches the
+            // object-space distances, regardless of whether the scale was
+            // specified by a scalar or a matrix.
+            const float world_space_distance =
+                PlaneDistanceToPoint(world_space_plane, world_space_point);
+            const float object_space_distance_1 = PlaneDistanceToPoint(
+                scaled_object_space_plane, object_space_point);
+            const float object_space_distance_2 = PlaneDistanceToPoint(
+                transformed_object_space_plane, object_space_point);
+
+            // In many cases kEpsilon is sufficient, but in others there is
+            // less precision.
+            const float kFudgedEpsilon = kEpsilon * 100;
+
+            // We first need to scale the object-space distances in order to
+            // compare them to the world-space distance.
+            EXPECT_NEAR(world_space_distance, object_space_distance_1 * scale,
+                        kFudgedEpsilon);
+            EXPECT_NEAR(world_space_distance, object_space_distance_2 * scale,
+                        kFudgedEpsilon);
+          }
+        }
+      }
+    }
+  }
+}
+
 }  // namespace

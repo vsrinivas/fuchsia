@@ -16,6 +16,7 @@ namespace escher {
 class ViewingVolume {
  public:
   ViewingVolume();
+  explicit ViewingVolume(const BoundingBox& box);
   ViewingVolume(float width, float height, float top, float bottom);
   ~ViewingVolume();
 

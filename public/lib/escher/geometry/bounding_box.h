@@ -37,6 +37,10 @@ class BoundingBox {
   // boxes do not intersect, this box becomes empty.  Return this box.
   BoundingBox& Intersect(const BoundingBox& box);
 
+  float width() const { return max_.x - min_.x; }
+  float height() const { return max_.y - min_.y; }
+  float depth() const { return max_.z - min_.z; }
+
   // Return true if the other box is completely contained by this one.
   bool Contains(const BoundingBox& box) const {
     // We don't need to check if this box is empty, because the way we define

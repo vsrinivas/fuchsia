@@ -107,6 +107,18 @@ class CommandBuffer : public Reffable {
                     vk::PipelineStageFlags dst_stages,
                     vk::AccessFlags dst_access);
 
+  // Defers call to vkCmdPushConstants() via kDirtyPushConstantsBit.
+  void PushConstants(const void* data, vk::DeviceSize offset,
+                     vk::DeviceSize range);
+  template <typename StructT>
+  void PushConstants(const StructT* data, vk::DeviceSize offset = 0U) {
+    PushConstants(data, offset, sizeof(StructT));
+  }
+  template <typename StructT>
+  void PushConstants(const StructT& data, vk::DeviceSize offset = 0U) {
+    PushConstants(&data, offset, sizeof(StructT));
+  }
+
   // Set/dirty a uniform buffer binding that will later be flushed, causing
   // descriptor sets to be written/bound as necessary.  Keeps |buffer| alive
   // while command buffer is pending.
@@ -172,8 +184,20 @@ class CommandBuffer : public Reffable {
   // Wraps vkCmdClearAttachments().  Clears the specified rectangle of the
   // specified attachment (see RenderPassInfo), filling it with the specified
   // values.
-  void ClearQuad(uint32_t attachment, const vk::ClearRect& rect,
-                 const vk::ClearValue& value, vk::ImageAspectFlags aspect);
+  void ClearAttachmentRect(uint32_t subpass_color_attachment_index,
+                           const vk::ClearRect& rect,
+                           const vk::ClearValue& value,
+                           vk::ImageAspectFlags aspect);
+  // Convenient version of ClearAttachmentRect() for color attachments.
+  // NOTE: uses baseArrayLayer == 0 and layerCount == 1.
+  void ClearColorAttachmentRect(uint32_t subpass_color_attachment_index,
+                                vk::Offset2D offset, vk::Extent2D extent,
+                                const vk::ClearColorValue& value);
+  // Convenient version of ClearAttachmentRect() for depth/stencil attachments.
+  // NOTE: uses baseArrayLayer == 0 and layerCount == 1.
+  void ClearDepthStencilAttachmentRect(vk::Offset2D offset, vk::Extent2D extent,
+                                       const vk::ClearDepthStencilValue& value,
+                                       vk::ImageAspectFlags aspect);
 
   // Convenient way to bring CommandBuffer to a known default state.  See the
   // implementation of SetToDefaultState() for more details; it's basically a

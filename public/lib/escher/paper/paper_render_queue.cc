@@ -218,11 +218,11 @@ void PaperRenderQueue::PushObject(const Object& obj) {
 
   if (material->opaque()) {
     opaque_.Push(SortKey::NewOpaque(pipeline_hash, object_hash, depth).key(),
-                 obj_data, inst_data, PaperRenderFuncs::RenderMesh);
+                 obj_data, inst_data, {PaperRenderFuncs::RenderMesh});
   } else {
     translucent_.Push(
         SortKey::NewTranslucent(pipeline_hash, object_hash, depth).key(),
-        obj_data, inst_data, PaperRenderFuncs::RenderMesh);
+        obj_data, inst_data, {PaperRenderFuncs::RenderMesh});
   }
 }
 

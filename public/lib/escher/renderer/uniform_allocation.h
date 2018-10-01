@@ -27,6 +27,12 @@ struct UniformAllocation {
     FXL_DCHECK(size >= sizeof(T));
     return *static_cast<T*>(host_ptr);
   }
+  // Convenient way to refer to the host-accessible memory as a typed pointer.
+  template <typename T>
+  T* as_ptr() {
+    FXL_DCHECK(size >= sizeof(T));
+    return static_cast<T*>(host_ptr);
+  }
 };
 
 }  // namespace escher

@@ -235,6 +235,13 @@ void CommandBuffer::ImageBarrier(const ImagePtr& image,
                        &barrier);
 }
 
+void CommandBuffer::PushConstants(const void* data, vk::DeviceSize offset,
+                                  vk::DeviceSize range) {
+  FXL_DCHECK(offset + range <= VulkanLimits::kPushConstantSize);
+  memcpy(bindings_.push_constant_data + offset, data, range);
+  SetDirty(kDirtyPushConstantsBit);
+}
+
 void CommandBuffer::BindUniformBuffer(uint32_t set, uint32_t binding,
                                       const BufferPtr& buffer) {
   BindUniformBuffer(set, binding, buffer.get(), 0, buffer->size());
@@ -343,6 +350,7 @@ void CommandBuffer::BindIndices(const BufferPtr& buffer, vk::DeviceSize offset,
 void CommandBuffer::DrawIndexed(uint32_t index_count, uint32_t instance_count,
                                 uint32_t first_index, int32_t vertex_offset,
                                 uint32_t first_instance) {
+  TRACE_DURATION("gfx", "escher::CommandBuffer::DrawIndexed");
   FXL_DCHECK(current_program_);
   FXL_DCHECK(!is_compute_);
   FXL_DCHECK(index_binding_.buffer);
@@ -729,15 +737,34 @@ void CommandBuffer::RestoreState(const CommandBuffer::SavedState& state) {
   }
 }
 
-void CommandBuffer::ClearQuad(uint32_t attachment, const vk::ClearRect& rect,
-                              const vk::ClearValue& value,
-                              vk::ImageAspectFlags aspect) {
+void CommandBuffer::ClearAttachmentRect(uint32_t attachment,
+                                        const vk::ClearRect& rect,
+                                        const vk::ClearValue& value,
+                                        vk::ImageAspectFlags aspect) {
   FXL_DCHECK(IsInRenderPass());
   vk::ClearAttachment att = {};
   att.clearValue = value;
   att.colorAttachment = attachment;
   att.aspectMask = aspect;
   vk().clearAttachments(1, &att, 1, &rect);
+}
+
+void CommandBuffer::ClearColorAttachmentRect(
+    uint32_t subpass_color_attachment_index, vk::Offset2D offset,
+    vk::Extent2D extent, const vk::ClearColorValue& value) {
+  ClearAttachmentRect(subpass_color_attachment_index,
+                      vk::ClearRect(vk::Rect2D(offset, extent),
+                                    0 /*baseArrayLayer*/, 1 /*layerCount*/),
+                      value, vk::ImageAspectFlagBits::eColor);
+}
+
+void CommandBuffer::ClearDepthStencilAttachmentRect(
+    vk::Offset2D offset, vk::Extent2D extent,
+    const vk::ClearDepthStencilValue& value, vk::ImageAspectFlags aspect) {
+  ClearAttachmentRect(0,
+                      vk::ClearRect(vk::Rect2D(offset, extent),
+                                    0 /*baseArrayLayer*/, 1 /*layerCount*/),
+                      value, aspect);
 }
 
 void CommandBuffer::SetShaderProgram(ShaderProgram* program) {

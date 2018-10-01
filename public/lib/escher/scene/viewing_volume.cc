@@ -13,6 +13,14 @@ namespace escher {
 
 ViewingVolume::ViewingVolume() {}
 
+ViewingVolume::ViewingVolume(const BoundingBox& box)
+    : width_(box.width()),
+      height_(box.height()),
+      top_(box.max().z),
+      bottom_(box.min().z) {
+  FXL_DCHECK(box.min().x == 0.f && box.min().y == 0.f);
+}
+
 ViewingVolume::ViewingVolume(float width, float height, float top, float bottom)
     : width_(width), height_(height), top_(top), bottom_(bottom) {
   FXL_DCHECK(width >= 0 && height >= 0 && top >= bottom);

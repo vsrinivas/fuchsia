@@ -49,6 +49,15 @@ PlaneT TranslatePlane(const typename PlaneT::VectorType& model_to_world_vec,
                 glm::dot(-model_to_world_vec, plane.dir()) + plane.dist());
 }
 
+// Transform the world-space plane into object space.  This is an optimization
+// of TransformPlane(): it computes the same result without needing a matrix
+// multiplication.
+template <typename PlaneT>
+PlaneT ScalePlane(float model_to_world_scale, const PlaneT& plane) {
+  FXL_DCHECK(model_to_world_scale > kEpsilon);
+  return PlaneT(plane.dir(), plane.dist() / model_to_world_scale);
+}
+
 // Return the distance from the point to the plane.  This distance is oriented:
 // it can be positive or negative (or zero, if the point is on the plane).  A
 // positive value means that the point is inside the half-space defined by the

@@ -25,6 +25,7 @@ constexpr uint32_t kMeshUniformBindingIndices_ViewProjectionMatrix[] = {0, 0};
 namespace escher {
 
 void PaperRenderFuncs::RenderMesh(CommandBuffer* cb,
+                                  const RenderQueueContext* context,
                                   const RenderQueueItem* items,
                                   uint32_t instance_count) {
   FXL_DCHECK(cb && items && instance_count > 0);
