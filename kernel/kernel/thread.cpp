@@ -155,8 +155,9 @@ thread_t* thread_create_etc(
 
     if (!t) {
         t = static_cast<thread_t*>(malloc(sizeof(thread_t)));
-        if (!t)
+        if (!t) {
             return NULL;
+        }
         flags |= THREAD_FLAG_FREE_STRUCT;
     }
 
@@ -241,8 +242,9 @@ static void free_thread_resources(thread_t* t) {
  * @return ZX_OK on success
  */
 zx_status_t thread_set_real_time(thread_t* t) {
-    if (!t)
+    if (!t) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
 
@@ -272,8 +274,9 @@ void thread_resume(thread_t* t) {
 
     bool ints_disabled = arch_ints_disabled();
     bool resched = false;
-    if (!ints_disabled) // HACK, don't resced into bootstrap thread before idle thread is set up
+    if (!ints_disabled) { // HACK, don't resced into bootstrap thread before idle thread is set up
         resched = true;
+    }
 
     {
         Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
@@ -290,10 +293,10 @@ void thread_resume(thread_t* t) {
             // wake up the new thread, putting it in a run queue on a cpu. reschedule if the local
             // cpu run queue was modified
             bool local_resched = sched_unblock(t);
-            if (resched && local_resched)
+            if (resched && local_resched) {
                 sched_reschedule();
+            }
         }
-
     }
 
     kcounter_add(thread_resume_count, 1);
@@ -302,8 +305,9 @@ void thread_resume(thread_t* t) {
 zx_status_t thread_detach_and_resume(thread_t* t) {
     zx_status_t err;
     err = thread_detach(t);
-    if (err < 0)
+    if (err < 0) {
         return err;
+    }
     thread_resume(t);
     return ZX_OK;
 }
@@ -350,8 +354,9 @@ zx_status_t thread_suspend(thread_t* t) {
         break;
     case THREAD_BLOCKED:
         // thread is blocked on something and marked interruptable
-        if (t->interruptable)
+        if (t->interruptable) {
             wait_queue_unblock_thread(t, ZX_ERR_INTERNAL_INTR_RETRY);
+        }
         break;
     case THREAD_SLEEPING:
         // thread is sleeping
@@ -364,8 +369,9 @@ zx_status_t thread_suspend(thread_t* t) {
     }
 
     // reschedule if the local cpu run queue was modified
-    if (local_resched)
+    if (local_resched) {
         sched_reschedule();
+    }
 
     kcounter_add(thread_suspend_count, 1);
     return ZX_OK;
@@ -408,15 +414,15 @@ zx_status_t thread_join(thread_t* t, int* retcode, zx_time_t deadline) {
         DEBUG_ASSERT(!list_in_list(&t->queue_node));
 
         // save the return code
-        if (retcode)
+        if (retcode) {
             *retcode = t->retcode;
+        }
 
         // remove it from the master thread list
         list_delete(&t->thread_list_node);
 
         // clear the structure's magic
         t->magic = 0;
-
     }
 
     free_thread_resources(t);
@@ -558,8 +564,9 @@ void thread_kill(thread_t* t) {
     bool local_resched = false;
 
     // we are killing ourself
-    if (t == get_current_thread())
+    if (t == get_current_thread()) {
         return;
+    }
 
     // general logic is to wake up the thread so it notices it had a signal delivered to it
 
@@ -587,8 +594,9 @@ void thread_kill(thread_t* t) {
         break;
     case THREAD_BLOCKED:
         // thread is blocked on something and marked interruptable
-        if (t->interruptable)
+        if (t->interruptable) {
             wait_queue_unblock_thread(t, ZX_ERR_INTERNAL_INTR_KILLED);
+        }
         break;
     case THREAD_SLEEPING:
         // thread is sleeping
@@ -682,7 +690,6 @@ static void thread_do_suspend(void) {
                 thread_exit(0);
             }
         }
-
     }
 
     invoke_user_callback(current_thread, THREAD_USER_STATE_RESUME);
@@ -691,8 +698,9 @@ static void thread_do_suspend(void) {
 // check for any pending signals and handle them
 void thread_process_pending_signals(void) {
     thread_t* current_thread = get_current_thread();
-    if (likely(current_thread->signals == 0))
+    if (likely(current_thread->signals == 0)) {
         return;
+    }
 
     // grab the thread lock so we can safely look at the signal mask
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
@@ -814,8 +822,9 @@ static void thread_sleep_handler(timer_t* timer, zx_time_t now, void* arg) {
     // spin trylocking on the thread lock since the routine that set up the callback,
     // thread_sleep_etc, may be trying to simultaneously cancel this timer while holding the
     // thread_lock.
-    if (timer_trylock_or_cancel(timer, &thread_lock))
+    if (timer_trylock_or_cancel(timer, &thread_lock)) {
         return;
+    }
 
     if (t->state != THREAD_SLEEPING) {
         spin_unlock(&thread_lock);
@@ -825,8 +834,9 @@ static void thread_sleep_handler(timer_t* timer, zx_time_t now, void* arg) {
     t->blocked_status = ZX_OK;
 
     // unblock the thread
-    if (sched_unblock(t))
+    if (sched_unblock(t)) {
         sched_reschedule();
+    }
 
     spin_unlock(&thread_lock);
 }
@@ -837,8 +847,9 @@ static void thread_sleep_handler(timer_t* timer, zx_time_t now, void* arg) {
 
 // computes the amount of slack the thread_sleep timer will use
 static uint64_t sleep_slack(zx_time_t deadline, zx_time_t now) {
-    if (deadline < now)
+    if (deadline < now) {
         return MIN_SLEEP_SLACK;
+    }
     zx_duration_t slack = zx_time_sub_time(deadline, now) / DIV_SLEEP_SLACK;
     return MAX(MIN_SLEEP_SLACK, MIN(slack, MAX_SLEEP_SLACK));
 }
@@ -1002,10 +1013,12 @@ void thread_set_priority(thread_t* t, int priority) {
 
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-    if (priority <= IDLE_PRIORITY)
+    if (priority <= IDLE_PRIORITY) {
         priority = IDLE_PRIORITY + 1;
-    if (priority > HIGHEST_PRIORITY)
+    }
+    if (priority > HIGHEST_PRIORITY) {
         priority = HIGHEST_PRIORITY;
+    }
 
     sched_change_priority(t, priority);
 }
@@ -1294,8 +1307,9 @@ static zx_status_t thread_read_stack(thread_t* t, void* ptr, void* out, size_t s
 static size_t thread_get_backtrace(thread_t* t, void* fp, thread_backtrace_t* tb) {
     // without frame pointers, dont even try
     // the compiler should optimize out the body of all the callers if it's not present
-    if (!WITH_FRAME_POINTERS)
+    if (!WITH_FRAME_POINTERS) {
         return 0;
+    }
 
     void* pc;
     if (t == NULL) {

@@ -139,8 +139,9 @@ static inline void mutex_release_internal(mutex_t* m, bool reschedule, bool thre
         // if we had inherited any priorities, undo it if we are no longer holding any mutexes
         if (unlikely(ct->inherited_priority >= 0) && ct->mutexes_held == 0) {
             spin_lock_saved_state_t state;
-            if (!thread_lock_held)
+            if (!thread_lock_held) {
                 spin_lock_irqsave(&thread_lock, state);
+            }
 
             bool local_resched = false;
             sched_inherit_priority(ct, -1, &local_resched);
@@ -148,8 +149,9 @@ static inline void mutex_release_internal(mutex_t* m, bool reschedule, bool thre
                 sched_reschedule();
             }
 
-            if (!thread_lock_held)
+            if (!thread_lock_held) {
                 spin_unlock_irqrestore(&thread_lock, state);
+            }
         }
         return;
     }
@@ -170,8 +172,9 @@ static inline void mutex_release_internal(mutex_t* m, bool reschedule, bool thre
     // NOTE: using the manual spinlock grab/release instead of THREAD_LOCK because
     // the state variable needs to exit in either path.
     spin_lock_saved_state_t state;
-    if (!thread_lock_held)
+    if (!thread_lock_held) {
         spin_lock_irqsave(&thread_lock, state);
+    }
 
     // release a thread in the wait queue
     thread_t* t = wait_queue_dequeue_one(&m->wait, ZX_OK);
@@ -197,18 +200,21 @@ static inline void mutex_release_internal(mutex_t* m, bool reschedule, bool thre
     }
 
     // deboost ourself if this is the last mutex we held
-    if (ct->inherited_priority >= 0 && ct->mutexes_held == 0)
+    if (ct->inherited_priority >= 0 && ct->mutexes_held == 0) {
         sched_inherit_priority(ct, -1, &local_resched);
+    }
 
     // wake up the new thread, putting it in a run queue on a cpu. reschedule if the local
     // cpu run queue was modified
     local_resched |= sched_unblock(t);
-    if (reschedule && local_resched)
+    if (reschedule && local_resched) {
         sched_reschedule();
+    }
 
     // conditionally THREAD_UNLOCK
-    if (!thread_lock_held)
+    if (!thread_lock_held) {
         spin_unlock_irqrestore(&thread_lock, state);
+    }
 }
 
 void mutex_release(mutex_t* m) TA_NO_THREAD_SAFETY_ANALYSIS {

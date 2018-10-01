@@ -21,10 +21,10 @@ struct cpu_stats {
     ulong yields;
 
     // cpu level interrupts and exceptions
-    ulong interrupts;  // hardware interrupts, minus timer interrupts or inter-processor interrupts
-    ulong timer_ints;  // timer interrupts
-    ulong timers;      // timer callbacks
-    ulong perf_ints;   // performance monitor interrupts
+    ulong interrupts; // hardware interrupts, minus timer interrupts or inter-processor interrupts
+    ulong timer_ints; // timer interrupts
+    ulong timers;     // timer callbacks
+    ulong perf_ints;  // performance monitor interrupts
     ulong syscalls;
     ulong page_faults;
 

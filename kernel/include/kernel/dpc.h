@@ -5,9 +5,9 @@
 // https://opensource.org/licenses/MIT
 #pragma once
 
+#include <kernel/thread.h>
 #include <list.h>
 #include <sys/types.h>
-#include <kernel/thread.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 

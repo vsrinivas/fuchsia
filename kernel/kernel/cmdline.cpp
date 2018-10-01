@@ -30,7 +30,7 @@ void cmdline_append(const char* data) {
 
     // if there is a double-null terminator at i, then step back
     if (i > 1) {
-        if (__kernel_cmdline[i] == 0 && __kernel_cmdline[i-1] == 0) {
+        if (__kernel_cmdline[i] == 0 && __kernel_cmdline[i - 1] == 0) {
             i--;
         }
     }
@@ -89,8 +89,9 @@ void cmdline_append(const char* data) {
 }
 
 const char* cmdline_get(const char* key) {
-    if (!key)
+    if (!key) {
         return __kernel_cmdline;
+    }
     size_t sz = strlen(key);
     const char* ptr = __kernel_cmdline;
     for (;;) {
@@ -130,7 +131,7 @@ uint32_t cmdline_get_uint32(const char* key, uint32_t _default) {
 
     char* end;
     auto res = strtol(value_str, &end, 0);
-    uint32_t value =  (res < 0) ? _default : static_cast<uint32_t>(res);
+    uint32_t value = (res < 0) ? _default : static_cast<uint32_t>(res);
     if (*end != '\0') {
         return _default;
     }

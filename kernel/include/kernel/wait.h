@@ -10,8 +10,8 @@
 #include <arch/defines.h>
 #include <arch/ops.h>
 #include <arch/thread.h>
-#include <list.h>
 #include <kernel/spinlock.h>
+#include <list.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>

@@ -19,16 +19,19 @@ static inline bool InRange(O offset, L len, O trim_to_len) {
     static_assert(fbl::numeric_limits<L>::is_signed == false, "InRange requires unsigned type L");
 
     // trim offset/len to the range
-    if (offset + len < offset)
+    if (offset + len < offset) {
         return false; // offset + len wrapped
+    }
 
     // we started off the end of the range
-    if (offset > trim_to_len)
+    if (offset > trim_to_len) {
         return false;
+    }
 
     // does the end exceed the range?
-    if (offset + len > trim_to_len)
+    if (offset + len > trim_to_len) {
         return false;
+    }
 
     return true;
 }
@@ -47,16 +50,19 @@ static inline bool TrimRange(O offset, L len, O trim_to_len, L* len_out) {
     *len_out = len;
 
     // trim offset/len to the range
-    if (offset + len < offset)
+    if (offset + len < offset) {
         return false; // offset + len wrapped
+    }
 
     // we started off the end of the range
-    if (offset > trim_to_len)
+    if (offset > trim_to_len) {
         return false;
+    }
 
     // trim to the range
-    if (offset + len > trim_to_len)
+    if (offset + len > trim_to_len) {
         *len_out = static_cast<L>(trim_to_len - offset);
+    }
 
     return true;
 }
@@ -74,8 +80,9 @@ static inline bool Intersects(O offset1, L len1, O offset2, L len2) {
 
     if (offset1 <= offset2) {
         // doesn't intersect, 1 is completely below 2
-        if (offset1 + len1 <= offset2)
+        if (offset1 + len1 <= offset2) {
             return false;
+        }
     } else if (offset1 >= offset2 + len2) {
         // 1 is completely above 2
         return false;
@@ -92,8 +99,9 @@ static inline bool GetIntersect(O offset1, L len1, O offset2, L len2, O* offset_
     static_assert(fbl::numeric_limits<L>::is_signed == false, "GetIntersect requires unsigned type L");
 
     // see if they intersect at all
-    if (!Intersects(offset1, len1, offset2, len2))
+    if (!Intersects(offset1, len1, offset2, len2)) {
         return false;
+    }
 
     // they intersect in some way, 2 cases
     if (offset1 < offset2) {

@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include <kernel/range_check.h>
 #include <kernel/mutex.h>
+#include <kernel/range_check.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <vm/vm.h>

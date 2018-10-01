@@ -155,8 +155,9 @@ static bool vmm_alloc_smoke_test() {
     ASSERT_NE(nullptr, ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
-    if (!fill_and_test(ptr, alloc_size))
+    if (!fill_and_test(ptr, alloc_size)) {
         all_ok = false;
+    }
 
     // free the region
     err = kaspace->FreeRegion(reinterpret_cast<vaddr_t>(ptr));
@@ -180,8 +181,9 @@ static bool vmm_alloc_contiguous_smoke_test() {
     ASSERT_NE(nullptr, ptr, "VmAspace::AllocContiguous region of memory");
 
     // fill with known pattern and test
-    if (!fill_and_test(ptr, alloc_size))
+    if (!fill_and_test(ptr, alloc_size)) {
         all_ok = false;
+    }
 
     // test that it is indeed contiguous
     unittest_printf("testing that region is contiguous\n");
@@ -220,8 +222,9 @@ static bool multiple_regions_test() {
     ASSERT_NE(nullptr, ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
-    if (!fill_and_test(ptr, alloc_size))
+    if (!fill_and_test(ptr, alloc_size)) {
         all_ok = false;
+    }
 
     // allocate region 1
     err = aspace->Alloc("test1", 16384, &ptr, 0, 0, kArchRwFlags);
@@ -229,8 +232,9 @@ static bool multiple_regions_test() {
     ASSERT_NE(nullptr, ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
-    if (!fill_and_test(ptr, alloc_size))
+    if (!fill_and_test(ptr, alloc_size)) {
         all_ok = false;
+    }
 
     // allocate region 2
     err = aspace->Alloc("test2", 16384, &ptr, 0, 0, kArchRwFlags);
@@ -238,8 +242,9 @@ static bool multiple_regions_test() {
     ASSERT_NE(nullptr, ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
-    if (!fill_and_test(ptr, alloc_size))
+    if (!fill_and_test(ptr, alloc_size)) {
         all_ok = false;
+    }
 
     vmm_set_active_aspace(old_aspace);
 
@@ -587,8 +592,9 @@ static bool vmo_precommitted_map_test() {
     ASSERT_EQ(ZX_OK, ret, "mapping object");
 
     // fill with known pattern and test
-    if (!fill_and_test(ptr, alloc_size))
+    if (!fill_and_test(ptr, alloc_size)) {
         all_ok = false;
+    }
 
     auto err = ka->FreeRegion((vaddr_t)ptr);
     EXPECT_EQ(ZX_OK, err, "unmapping object");
@@ -611,8 +617,9 @@ static bool vmo_demand_paged_map_test() {
     ASSERT_EQ(ret, ZX_OK, "mapping object");
 
     // fill with known pattern and test
-    if (!fill_and_test(ptr, alloc_size))
+    if (!fill_and_test(ptr, alloc_size)) {
         all_ok = false;
+    }
 
     auto err = ka->FreeRegion((vaddr_t)ptr);
     EXPECT_EQ(ZX_OK, err, "unmapping object");
@@ -637,8 +644,9 @@ static bool vmo_dropped_ref_test() {
     EXPECT_NULL(vmo, "dropped ref to object");
 
     // fill with known pattern and test
-    if (!fill_and_test(ptr, alloc_size))
+    if (!fill_and_test(ptr, alloc_size)) {
         all_ok = false;
+    }
 
     auto err = ka->FreeRegion((vaddr_t)ptr);
     EXPECT_EQ(ZX_OK, err, "unmapping object");
@@ -662,8 +670,9 @@ static bool vmo_remap_test() {
     ASSERT_EQ(ZX_OK, ret, "mapping object");
 
     // fill with known pattern and test
-    if (!fill_and_test(ptr, alloc_size))
+    if (!fill_and_test(ptr, alloc_size)) {
         all_ok = false;
+    }
 
     auto err = ka->FreeRegion((vaddr_t)ptr);
     EXPECT_EQ(ZX_OK, err, "unmapping object");
@@ -699,8 +708,9 @@ static bool vmo_double_remap_test() {
     ASSERT_EQ(ZX_OK, ret, "mapping object");
 
     // fill with known pattern and test
-    if (!fill_and_test(ptr, alloc_size))
+    if (!fill_and_test(ptr, alloc_size)) {
         all_ok = false;
+    }
 
     // map it again
     void* ptr2;

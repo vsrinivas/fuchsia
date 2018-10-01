@@ -43,8 +43,9 @@ vm_page* VmPageListNode::RemovePage(size_t index) {
     DEBUG_ASSERT(index < kPageFanOut);
 
     auto p = pages_[index];
-    if (!p)
+    if (!p) {
         return nullptr;
+    }
 
     pages_[index] = nullptr;
 
@@ -54,8 +55,9 @@ vm_page* VmPageListNode::RemovePage(size_t index) {
 zx_status_t VmPageListNode::AddPage(vm_page* p, size_t index) {
     canary_.Assert();
     DEBUG_ASSERT(index < kPageFanOut);
-    if (pages_[index])
+    if (pages_[index]) {
         return ZX_ERR_ALREADY_EXISTS;
+    }
     pages_[index] = p;
     return ZX_OK;
 }
@@ -82,8 +84,9 @@ zx_status_t VmPageList::AddPage(vm_page* p, uint64_t offset) {
         fbl::AllocChecker ac;
         fbl::unique_ptr<VmPageListNode> pl =
             fbl::unique_ptr<VmPageListNode>(new (&ac) VmPageListNode(node_offset));
-        if (!ac.check())
+        if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
+        }
 
         LTRACEF("allocating new inner node %p\n", pl.get());
         __UNUSED auto status = pl->AddPage(p, index);

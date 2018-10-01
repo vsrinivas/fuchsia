@@ -83,8 +83,9 @@ zx_status_t PmmArena::Init(const pmm_arena_info_t* info, PmmNode* node) {
 }
 
 vm_page_t* PmmArena::FindSpecific(paddr_t pa) {
-    if (!address_in_arena(pa))
+    if (!address_in_arena(pa)) {
         return nullptr;
+    }
 
     size_t index = (pa - base()) / PAGE_SIZE;
 
@@ -99,8 +100,9 @@ vm_page_t* PmmArena::FindFreeContiguous(size_t count, uint8_t alignment_log2) {
     // base address of the arena to handle the case where the arena
     // is not aligned on the same boundary requested.
     paddr_t rounded_base = ROUNDUP(base(), 1UL << alignment_log2);
-    if (rounded_base < base() || rounded_base > base() + size() - 1)
+    if (rounded_base < base() || rounded_base > base() + size() - 1) {
         return 0;
+    }
 
     paddr_t aligned_offset = (rounded_base - base()) / PAGE_SIZE;
     paddr_t start = aligned_offset;

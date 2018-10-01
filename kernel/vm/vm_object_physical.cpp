@@ -34,8 +34,9 @@ VmObjectPhysical::~VmObjectPhysical() {
 }
 
 zx_status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, fbl::RefPtr<VmObject>* obj) {
-    if (!IS_PAGE_ALIGNED(base) || !IS_PAGE_ALIGNED(size) || size == 0)
+    if (!IS_PAGE_ALIGNED(base) || !IS_PAGE_ALIGNED(size) || size == 0) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
     // check that base + size is a valid range
     paddr_t safe_base;
@@ -45,8 +46,9 @@ zx_status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, fbl::RefPtr<Vm
 
     fbl::AllocChecker ac;
     auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPhysical(base, size));
-    if (!ac.check())
+    if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
+    }
 
     // Physical VMOs should default to uncached access.
     vmo->SetMappingCachePolicy(ARCH_MMU_FLAG_UNCACHED);
@@ -71,15 +73,18 @@ zx_status_t VmObjectPhysical::GetPageLocked(uint64_t offset, uint pf_flags, list
                                             vm_page_t** _page, paddr_t* _pa) {
     canary_.Assert();
 
-    if (_page)
+    if (_page) {
         *_page = nullptr;
+    }
 
-    if (offset >= size_)
+    if (offset >= size_) {
         return ZX_ERR_OUT_OF_RANGE;
+    }
 
     uint64_t pa = base_ + ROUNDDOWN(offset, PAGE_SIZE);
-    if (pa > UINTPTR_MAX)
+    if (pa > UINTPTR_MAX) {
         return ZX_ERR_OUT_OF_RANGE;
+    }
 
     *_pa = (paddr_t)pa;
 
@@ -90,14 +95,16 @@ zx_status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ino
                                          size_t buffer_size) {
     canary_.Assert();
 
-    if (unlikely(len == 0))
+    if (unlikely(len == 0)) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
     Guard<fbl::Mutex> guard{&lock_};
 
     // verify that the range is within the object
-    if (unlikely(!InRange(offset, len, size_)))
+    if (unlikely(!InRange(offset, len, size_))) {
         return ZX_ERR_OUT_OF_RANGE;
+    }
 
     uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
     uint64_t end = offset + len;
@@ -105,15 +112,17 @@ zx_status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ino
 
     // compute the size of the table we'll need and make sure it fits in the user buffer
     uint64_t table_size = ((end_page_offset - start_page_offset) / PAGE_SIZE) * sizeof(paddr_t);
-    if (unlikely(table_size > buffer_size))
+    if (unlikely(table_size > buffer_size)) {
         return ZX_ERR_BUFFER_TOO_SMALL;
+    }
 
     size_t index = 0;
     for (uint64_t off = start_page_offset; off != end_page_offset; off += PAGE_SIZE, index++) {
         // find the physical address
         uint64_t tmp = base_ + off;
-        if (tmp > UINTPTR_MAX)
+        if (tmp > UINTPTR_MAX) {
             return ZX_ERR_OUT_OF_RANGE;
+        }
 
         paddr_t pa = (paddr_t)tmp;
 
@@ -122,8 +131,9 @@ zx_status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ino
 
         // copy it out into user space
         auto status = buffer.element_offset(index).copy_to_user(pa);
-        if (unlikely(status != ZX_OK))
+        if (unlikely(status != ZX_OK)) {
             return status;
+        }
     }
 
     return ZX_OK;
@@ -133,12 +143,14 @@ zx_status_t VmObjectPhysical::Lookup(uint64_t offset, uint64_t len, uint pf_flag
                                      vmo_lookup_fn_t lookup_fn, void* context) {
     canary_.Assert();
 
-    if (unlikely(len == 0))
+    if (unlikely(len == 0)) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
     Guard<fbl::Mutex> guard{&lock_};
-    if (unlikely(!InRange(offset, len, size_)))
+    if (unlikely(!InRange(offset, len, size_))) {
         return ZX_ERR_OUT_OF_RANGE;
+    }
 
     uint64_t cur_offset = ROUNDDOWN(offset, PAGE_SIZE);
     uint64_t end = offset + len;

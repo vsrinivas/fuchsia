@@ -226,8 +226,9 @@ void timer_set(timer_t* timer, zx_time_t deadline,
     bool currently_active = (timer->active_cpu == (int)cpu);
     if (unlikely(currently_active)) {
         // the timer is active on our own cpu, we must be inside the callback
-        if (timer->cancel)
+        if (timer->cancel) {
             return;
+        }
     } else if (unlikely(timer->active_cpu >= 0)) {
         panic("timer %p currently active on a different cpu %d\n", timer, timer->active_cpu);
     }
@@ -367,12 +368,14 @@ void timer_tick(zx_time_t now) {
     for (;;) {
         // see if there's an event to process
         timer = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
-        if (likely(timer == 0))
+        if (likely(timer == 0)) {
             break;
+        }
         LTRACEF("next item on timer queue %p at %" PRIi64 " now %" PRIi64 " (%p, arg %p)\n",
                 timer, timer->scheduled_time, now, timer->callback, timer->arg);
-        if (likely(now < timer->scheduled_time))
+        if (likely(now < timer->scheduled_time)) {
             break;
+        }
 
         // process it
         LTRACEF("timer %p\n", timer);
@@ -397,8 +400,7 @@ void timer_tick(zx_time_t now) {
                 timer->callback(timer, now, timer->arg);
 
                 DEBUG_ASSERT(arch_ints_disabled());
-            }
-        );
+            });
 
         // mark it not busy
         timer->active_cpu = -1;
@@ -531,8 +533,9 @@ static int cmd_timers(int argc, const cmd_args* argv, uint32_t flags) {
     // allocate a buffer to dump the timer queue into to avoid reentrancy issues with the
     // timer spinlock
     char* buf = static_cast<char*>(malloc(timer_buffer_size));
-    if (!buf)
+    if (!buf) {
         return ZX_ERR_NO_MEMORY;
+    }
 
     dump_timer_queues(buf, timer_buffer_size);
 

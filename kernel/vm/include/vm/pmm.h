@@ -38,9 +38,9 @@ zx_status_t pmm_add_arena(const pmm_arena_info_t* arena) __NONNULL((1));
 zx_status_t pmm_alloc_pages(size_t count, uint alloc_flags, list_node* list) __NONNULL((3));
 
 // Allocate a single page of physical memory.
-zx_status_t pmm_alloc_page(uint alloc_flags, vm_page **p) __NONNULL((2));
-zx_status_t pmm_alloc_page(uint alloc_flags, paddr_t *pa) __NONNULL((2));
-zx_status_t pmm_alloc_page(uint alloc_flags, vm_page **p, paddr_t *pa) __NONNULL((2, 3));
+zx_status_t pmm_alloc_page(uint alloc_flags, vm_page** p) __NONNULL((2));
+zx_status_t pmm_alloc_page(uint alloc_flags, paddr_t* pa) __NONNULL((2));
+zx_status_t pmm_alloc_page(uint alloc_flags, vm_page** p, paddr_t* pa) __NONNULL((2, 3));
 
 // Allocate a specific range of physical pages, adding to the tail of the passed list.
 zx_status_t pmm_alloc_range(paddr_t address, size_t count, list_node* list) __NONNULL((3));

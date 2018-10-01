@@ -67,25 +67,25 @@ void wait_queue_validate_queue(wait_queue_t* wait) {
     // validate that the queue is sorted properly
     thread_t* last = NULL;
     thread_t* temp;
-    list_for_every_entry(&wait->heads, temp, thread_t, wait_queue_heads_node) {
+    list_for_every_entry (&wait->heads, temp, thread_t, wait_queue_heads_node) {
         DEBUG_ASSERT(temp->magic == THREAD_MAGIC);
 
         // validate that the queue is sorted high to low priority
         if (last) {
             DEBUG_ASSERT_MSG(last->effec_priority > temp->effec_priority,
-                    "%p:%d  %p:%d",
-                    last, last->effec_priority,
-                    temp, temp->effec_priority);
+                             "%p:%d  %p:%d",
+                             last, last->effec_priority,
+                             temp, temp->effec_priority);
         }
 
         // walk any threads linked to this head, validating that they're the same priority
         thread_t* temp2;
-        list_for_every_entry(&temp->queue_node, temp2, thread_t, queue_node) {
+        list_for_every_entry (&temp->queue_node, temp2, thread_t, queue_node) {
             DEBUG_ASSERT(temp2->magic == THREAD_MAGIC);
             DEBUG_ASSERT_MSG(temp->effec_priority == temp2->effec_priority,
-                    "%p:%d  %p:%d",
-                    temp, temp->effec_priority,
-                    temp2, temp2->effec_priority);
+                             "%p:%d  %p:%d",
+                             temp, temp->effec_priority,
+                             temp2, temp2->effec_priority);
         }
 
         last = temp;
@@ -103,7 +103,7 @@ static void wait_queue_insert(wait_queue_t* wait, thread_t* t) {
 
         // walk through the sorted list of wait queue heads
         thread_t* temp;
-        list_for_every_entry(&wait->heads, temp, thread_t, wait_queue_heads_node) {
+        list_for_every_entry (&wait->heads, temp, thread_t, wait_queue_heads_node) {
             if (pri > temp->effec_priority) {
                 // insert ourself here as a new queue head
                 list_initialize(&t->queue_node);
@@ -146,8 +146,9 @@ static thread_t* wait_queue_pop_head(wait_queue_t* wait) {
     thread_t* t = NULL;
 
     t = list_peek_head_type(&wait->heads, thread_t, wait_queue_heads_node);
-    if (!t)
+    if (!t) {
         return NULL;
+    }
 
     remove_queue_head(t);
 
@@ -168,8 +169,9 @@ static void wait_queue_remove_thread(thread_t* t) {
 // return the numeric priority of the highest priority thread queued
 int wait_queue_blocked_priority(wait_queue_t* wait) {
     thread_t* t = list_peek_head_type(&wait->heads, thread_t, wait_queue_heads_node);
-    if (!t)
+    if (!t) {
         return -1;
+    }
 
     return t->effec_priority;
 }
@@ -183,8 +185,9 @@ static void wait_queue_timeout_handler(timer_t* timer, zx_time_t now,
     // spin trylocking on the thread lock since the routine that set up the callback,
     // wait_queue_block, may be trying to simultaneously cancel this timer while holding the
     // thread_lock.
-    if (timer_trylock_or_cancel(timer, &thread_lock))
+    if (timer_trylock_or_cancel(timer, &thread_lock)) {
         return;
+    }
 
     wait_queue_unblock_thread(thread, ZX_ERR_TIMED_OUT);
 
@@ -330,8 +333,9 @@ int wait_queue_wake_one(wait_queue_t* wait, bool reschedule, zx_status_t wait_qu
         // wake up the new thread, putting it in a run queue on a cpu. reschedule if the local
         // cpu run queue was modified
         bool local_resched = sched_unblock(t);
-        if (reschedule && local_resched)
+        if (reschedule && local_resched) {
             sched_reschedule();
+        }
 
         ret = 1;
     }
@@ -387,8 +391,9 @@ int wait_queue_wake_all(wait_queue_t* wait, bool reschedule, zx_status_t wait_qu
         wait_queue_validate_queue(wait);
     }
 
-    if (wait->count == 0)
+    if (wait->count == 0) {
         return 0;
+    }
 
     struct list_node list = LIST_INITIAL_VALUE(list);
 
@@ -414,8 +419,9 @@ int wait_queue_wake_all(wait_queue_t* wait, bool reschedule, zx_status_t wait_qu
     // wake up the new thread(s), putting it in a run queue on a cpu. reschedule if the local
     // cpu run queue was modified
     bool local_resched = sched_unblock_list(&list);
-    if (reschedule && local_resched)
+    if (reschedule && local_resched) {
         sched_reschedule();
+    }
 
     return ret;
 }
@@ -464,8 +470,9 @@ zx_status_t wait_queue_unblock_thread(thread_t* t, zx_status_t wait_queue_error)
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-    if (t->state != THREAD_BLOCKED)
+    if (t->state != THREAD_BLOCKED) {
         return ZX_ERR_BAD_STATE;
+    }
 
     DEBUG_ASSERT(t->blocking_wait_queue != NULL);
     DEBUG_ASSERT(t->blocking_wait_queue->magic == WAIT_QUEUE_MAGIC);
@@ -480,8 +487,9 @@ zx_status_t wait_queue_unblock_thread(thread_t* t, zx_status_t wait_queue_error)
     t->blocking_wait_queue = NULL;
     t->blocked_status = wait_queue_error;
 
-    if (sched_unblock(t))
+    if (sched_unblock(t)) {
         sched_reschedule();
+    }
 
     return ZX_OK;
 }
@@ -511,4 +519,3 @@ void wait_queue_priority_changed(struct thread* t, int old_prio) {
         wait_queue_validate_queue(t->blocking_wait_queue);
     }
 }
-

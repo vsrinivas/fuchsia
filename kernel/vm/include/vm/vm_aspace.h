@@ -24,7 +24,7 @@
 #include <zircon/types.h>
 
 namespace hypervisor {
-    class GuestPhysicalAddressSpace;
+class GuestPhysicalAddressSpace;
 } // namespace hypervisor
 
 class VmObject;

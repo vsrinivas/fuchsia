@@ -67,8 +67,9 @@ void VmMapping::Dump(uint depth, bool verbose) const {
            // lock.
            object_->AllocatedPagesInRange(object_offset_, size_),
            ref_count_debug(), vmo_name);
-    if (verbose)
+    if (verbose) {
         object_->Dump(depth + 1, false);
+    }
 }
 
 zx_status_t VmMapping::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) {
@@ -347,15 +348,17 @@ zx_status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const 
         return ZX_OK;
     }
 
-    if (len == 0)
+    if (len == 0) {
         return ZX_OK;
+    }
 
     // compute the intersection of the passed in vmo range and our mapping
     uint64_t offset_new;
     uint64_t len_new;
     if (!GetIntersect(object_offset_, static_cast<uint64_t>(size_), offset, len,
-                      &offset_new, &len_new))
+                      &offset_new, &len_new)) {
         return ZX_OK;
+    }
 
     DEBUG_ASSERT(len_new > 0 && len_new <= SIZE_MAX);
     DEBUG_ASSERT(offset_new >= object_offset_);
@@ -377,8 +380,9 @@ zx_status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const 
 
     zx_status_t status = aspace_->arch_aspace().Unmap(unmap_base,
                                                       static_cast<size_t>(len_new) / PAGE_SIZE, nullptr);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
 
     return ZX_OK;
 }
@@ -482,8 +486,9 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
     // precompute the flags we'll pass GetPageLocked
     // if committing, then tell it to soft fault in a page
     uint pf_flags = VMM_PF_FLAG_WRITE;
-    if (commit)
+    if (commit) {
         pf_flags |= VMM_PF_FLAG_SW_FAULT;
+    }
 
     // grab the lock for the vmo
     Guard<fbl::Mutex> object_guard{object_->lock()};
@@ -558,8 +563,9 @@ zx_status_t VmMapping::DestroyLocked() {
     // TODO(mcgrathr): Turn this into a policy-driven process-fatal case
     // at some point.  teisenbe@ wants to eventually make zx_vmar_destroy
     // never fail.
-    if (aspace_->vdso_code_mapping_ == self)
+    if (aspace_->vdso_code_mapping_ == self) {
         return ZX_ERR_ACCESS_DENIED;
+    }
 
     // unmap our entire range
     zx_status_t status = UnmapLocked(base_, size_);
@@ -671,8 +677,9 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
             // page was already mapped, are the permissions compatible?
             // test that the page is already mapped with either the region's mmu flags
             // or the flags that we're about to try to switch it to, which may be read-only
-            if (page_flags == arch_mmu_flags_ || page_flags == mmu_flags)
+            if (page_flags == arch_mmu_flags_ || page_flags == mmu_flags) {
                 return ZX_OK;
+            }
 
             // assert that we're not accidentally marking the zero page writable
             DEBUG_ASSERT((pa != vm_get_zero_page_paddr()) || !(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE));

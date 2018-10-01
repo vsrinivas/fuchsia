@@ -61,12 +61,13 @@ static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
     }
 
     if (!strcmp(argv[1].str, "bt")) {
-        if (argc < 3)
+        if (argc < 3) {
             goto notenoughargs;
+        }
 
         thread_t* t = NULL;
         if (is_kernel_address(argv[2].u)) {
-            t = (thread_t *)argv[2].u;
+            t = (thread_t*)argv[2].u;
         } else {
             t = thread_id_to_thread_slow(argv[2].u);
         }
@@ -74,12 +75,13 @@ static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
             thread_print_backtrace(t);
         }
     } else if (!strcmp(argv[1].str, "dump")) {
-        if (argc < 3)
+        if (argc < 3) {
             goto notenoughargs;
+        }
 
         thread_t* t = NULL;
         if (is_kernel_address(argv[2].u)) {
-            t = (thread_t *)argv[2].u;
+            t = (thread_t*)argv[2].u;
             dump_thread(t, true);
         } else {
             if (flags & CMD_FLAG_PANIC) {
@@ -108,8 +110,9 @@ static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
     }
 
     // reschedule to let debuglog potentially run
-    if (!(flags & CMD_FLAG_PANIC))
+    if (!(flags & CMD_FLAG_PANIC)) {
         thread_reschedule();
+    }
 
     return 0;
 }
@@ -117,8 +120,9 @@ static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
 
 static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags) {
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {
-        if (!mp_is_cpu_active(i))
+        if (!mp_is_cpu_active(i)) {
             continue;
+        }
 
         printf("thread stats (cpu %u):\n", i);
         printf("\ttotal idle time: %" PRIi64 "\n", percpu[i].stats.idle_time);
@@ -142,7 +146,8 @@ class RecurringCallback {
 public:
     typedef void (*CallbackFunc)();
 
-    RecurringCallback(CallbackFunc callback) : func_(callback) {}
+    RecurringCallback(CallbackFunc callback)
+        : func_(callback) {}
 
     void Toggle();
 
@@ -157,7 +162,7 @@ private:
     CallbackFunc func_ = nullptr;
 };
 
-void RecurringCallback::CallbackWrapper(timer_t* t, zx_time_t now, void *arg) {
+void RecurringCallback::CallbackWrapper(timer_t* t, zx_time_t now, void* arg) {
     auto cb = static_cast<RecurringCallback*>(arg);
     cb->func_();
 
@@ -204,8 +209,9 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
             Guard<spin_lock_t, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
 
             // dont display time for inactive cpus
-            if (!mp_is_cpu_active(i))
+            if (!mp_is_cpu_active(i)) {
                 continue;
+            }
 
             zx_duration_t idle_time = percpu[i].stats.idle_time;
 
@@ -262,8 +268,9 @@ static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
             Guard<spin_lock_t, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
 
             // dont display time for inactive cpus
-            if (!mp_is_cpu_active(i))
+            if (!mp_is_cpu_active(i)) {
                 continue;
+            }
 
             const struct percpu* cpu = &percpu[i];
 

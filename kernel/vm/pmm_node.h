@@ -53,7 +53,7 @@ public:
     zx_status_t AddArena(const pmm_arena_info_t* info);
 
     // add new pages to the free queue. used when boostrapping a PmmArena
-    void AddFreePages(list_node *list);
+    void AddFreePages(list_node* list);
 
 private:
     void FreePageLocked(vm_page* page) TA_REQ(lock_);
@@ -81,7 +81,6 @@ private:
 
     bool enforce_fill_ = false;
 #endif
-
 };
 
 // We don't need to hold the arena lock while executing this, since it is

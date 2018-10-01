@@ -29,8 +29,8 @@
 class VmObjectPaged final : public VmObject {
 public:
     // |options_| is a bitmask of:
-    static constexpr uint32_t kResizable    = (1u << 0);
-    static constexpr uint32_t kContiguous   = (1u << 1);
+    static constexpr uint32_t kResizable = (1u << 0);
+    static constexpr uint32_t kContiguous = (1u << 1);
 
     static zx_status_t Create(uint32_t pmm_alloc_flags,
                               uint32_t options,
@@ -52,7 +52,7 @@ public:
         // any deadlocks.
         TA_NO_THREAD_SAFETY_ANALYSIS { return size_; }
     bool is_paged() const override { return true; }
-    bool is_contiguous() const override {return (options_ & kContiguous); }
+    bool is_contiguous() const override { return (options_ & kContiguous); }
     bool is_resizable() const override { return (options_ & kResizable); }
 
     size_t AllocatedPagesInRange(uint64_t offset, uint64_t len) const override;
@@ -116,7 +116,8 @@ private:
     enum class CacheOpType { Invalidate,
                              Clean,
                              CleanInvalidate,
-                             Sync };
+                             Sync
+    };
     zx_status_t CacheOp(const uint64_t offset, const uint64_t len, const CacheOpType type);
 
     // add a page to the object

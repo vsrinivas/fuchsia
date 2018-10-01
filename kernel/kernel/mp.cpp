@@ -73,8 +73,9 @@ void mp_reschedule(cpu_mask_t mask, uint flags) {
     LTRACEF("local %u, post mask target now 0x%x\n", local_cpu, mask);
 
     // if we have no work to do, return
-    if (mask == 0)
+    if (mask == 0) {
         return;
+    }
 
     arch_mp_reschedule(mask);
 }
@@ -350,9 +351,9 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id) {
         return status;
     }
 
-    // Fall through.  Since the thread is scheduled, it should not be in any
-    // queues.  Since the CPU running this thread is now shutdown, we can just
-    // erase the thread's existence.
+// Fall through.  Since the thread is scheduled, it should not be in any
+// queues.  Since the CPU running this thread is now shutdown, we can just
+// erase the thread's existence.
 cleanup_thread:
     thread_forget(t);
     return status;
@@ -416,8 +417,9 @@ void mp_mbx_reschedule_irq(void*) {
 
     CPU_STATS_INC(reschedule_ipis);
 
-    if (mp.active_cpus & cpu_num_to_mask(cpu))
+    if (mp.active_cpus & cpu_num_to_mask(cpu)) {
         thread_preempt_set_pending();
+    }
 }
 
 void mp_mbx_interrupt_irq(void*) {

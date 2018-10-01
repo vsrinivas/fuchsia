@@ -49,7 +49,9 @@ void boot_alloc_init() {
     // space from normal kernel code.  For now, this asm generates no
     // additional code but tells the compiler that it has no idea what value
     // boot_alloc_start might take, so it has to compute the `&_end` value now.
-    __asm__("" : "=g"(boot_alloc_start) : "0"(boot_alloc_start));
+    __asm__(""
+            : "=g"(boot_alloc_start)
+            : "0"(boot_alloc_start));
     boot_alloc_end = reinterpret_cast<paddr_t>(_end);
 }
 

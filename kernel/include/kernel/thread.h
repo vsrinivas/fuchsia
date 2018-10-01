@@ -257,8 +257,7 @@ zx_status_t thread_set_real_time(thread_t* t);
 // scheduler routines to be used by regular kernel code
 void thread_yield(void);      // give up the cpu and time slice voluntarily
 void thread_preempt(void);    // get preempted at irq time
-void thread_reschedule(void); // revaluate the run queue on the current cpu,
-                              // can be used after waking up threads
+void thread_reschedule(void); // revaluate the run queue on the current cpu
 
 void thread_owner_name(thread_t* t, char out_name[THREAD_NAME_LENGTH]);
 
@@ -405,8 +404,9 @@ static inline void thread_preempt_reenable(void) {
     uint32_t new_count = --current_thread->disable_counts;
     atomic_signal_fence();
 
-    if (new_count == 0)
+    if (new_count == 0) {
         thread_check_preempt_pending();
+    }
 }
 
 // This is the same as thread_preempt_reenable(), except that it does not
@@ -455,8 +455,9 @@ static inline void thread_resched_reenable(void) {
     current_thread->disable_counts = new_count;
     atomic_signal_fence();
 
-    if (new_count == 0)
+    if (new_count == 0) {
         thread_check_preempt_pending();
+    }
 }
 
 // thread_preempt_set_pending() marks a preemption as pending for the

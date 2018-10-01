@@ -56,15 +56,17 @@ static int cmd_vm_page(int argc, const cmd_args* argv, uint32_t flags) {
     }
 
     if (!strcmp(argv[1].str, "dump")) {
-        if (argc < 2)
+        if (argc < 2) {
             goto notenoughargs;
+        }
 
         vm_page* page = reinterpret_cast<vm_page*>(argv[2].u);
 
         page->dump();
     } else if (!strcmp(argv[1].str, "hexdump")) {
-        if (argc < 2)
+        if (argc < 2) {
             goto notenoughargs;
+        }
 
         vm_page* page = reinterpret_cast<vm_page*>(argv[2].u);
 

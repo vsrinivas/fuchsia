@@ -57,8 +57,9 @@ static zx_status_t allocate_vmar(bool unsafe,
             VMAR_FLAG_CAN_MAP_WRITE,
         unsafe ? "unsafe_kstack_vmar" : "kstack_vmar",
         &kstack_vmar);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
 
     // destroy the vmar if we early abort
     // this will also clean up any mappings that may get placed on the vmar
@@ -78,16 +79,18 @@ static zx_status_t allocate_vmar(bool unsafe,
                                               ARCH_MMU_FLAG_PERM_WRITE,
                                           unsafe ? "unsafe_kstack" : "kstack",
                                           &kstack_mapping);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
 
     LTRACEF("%s stack mapping at %#" PRIxPTR "\n",
             unsafe ? "unsafe" : "safe", kstack_mapping->base());
 
     // fault in all the pages so we dont demand fault in the stack
     status = kstack_mapping->MapRange(0, DEFAULT_STACK_SIZE, true);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
 
     // Cancel the cleanup handler on the vmar since we're about to save a
     // reference to it.

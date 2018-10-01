@@ -87,8 +87,9 @@ public:
 
     bool IsEmpty() const {
         for (const auto p : pages_) {
-            if (p)
+            if (p) {
                 return false;
+            }
         }
         return true;
     }

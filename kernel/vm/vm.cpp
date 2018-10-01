@@ -62,12 +62,14 @@ void MarkPagesInUsePhys(paddr_t pa, size_t len) {
 
 zx_status_t ProtectRegion(VmAspace* aspace, vaddr_t va, uint arch_mmu_flags) {
     auto r = aspace->FindRegion(va);
-    if (!r)
+    if (!r) {
         return ZX_ERR_NOT_FOUND;
+    }
 
     auto vm_mapping = r->as_vm_mapping();
-    if (!vm_mapping)
+    if (!vm_mapping) {
         return ZX_ERR_NOT_FOUND;
+    }
 
     return vm_mapping->Protect(vm_mapping->base(), vm_mapping->size(), arch_mmu_flags);
 }
@@ -182,17 +184,20 @@ void vm_init() {
 }
 
 paddr_t vaddr_to_paddr(const void* ptr) {
-    if (is_physmap_addr(ptr))
+    if (is_physmap_addr(ptr)) {
         return physmap_to_paddr(ptr);
+    }
 
     auto aspace = VmAspace::vaddr_to_aspace(reinterpret_cast<uintptr_t>(ptr));
-    if (!aspace)
+    if (!aspace) {
         return (paddr_t) nullptr;
+    }
 
     paddr_t pa;
     zx_status_t rc = aspace->arch_aspace().Query((vaddr_t)ptr, &pa, nullptr);
-    if (rc)
+    if (rc) {
         return (paddr_t) nullptr;
+    }
 
     return pa;
 }
@@ -211,8 +216,9 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
     }
 
     if (!strcmp(argv[1].str, "phys2virt")) {
-        if (argc < 3)
+        if (argc < 3) {
             goto notenoughargs;
+        }
 
         if (!is_physmap_phys_addr(argv[2].u)) {
             printf("address isn't in physmap\n");
@@ -222,8 +228,9 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
         void* ptr = paddr_to_physmap((paddr_t)argv[2].u);
         printf("paddr_to_physmap returns %p\n", ptr);
     } else if (!strcmp(argv[1].str, "virt2phys")) {
-        if (argc < 3)
+        if (argc < 3) {
             goto notenoughargs;
+        }
 
         VmAspace* aspace = VmAspace::vaddr_to_aspace(argv[2].u);
         if (!aspace) {
@@ -239,8 +246,9 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
             printf("\tpa %#" PRIxPTR ", flags %#x\n", pa, flags);
         }
     } else if (!strcmp(argv[1].str, "map")) {
-        if (argc < 6)
+        if (argc < 6) {
             goto notenoughargs;
+        }
 
         VmAspace* aspace = VmAspace::vaddr_to_aspace(argv[2].u);
         if (!aspace) {
@@ -254,8 +262,9 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
                                                 (uint)argv[5].u, &mapped);
         printf("arch_mmu_map returns %d, mapped %zu\n", err, mapped);
     } else if (!strcmp(argv[1].str, "unmap")) {
-        if (argc < 4)
+        if (argc < 4) {
             goto notenoughargs;
+        }
 
         VmAspace* aspace = VmAspace::vaddr_to_aspace(argv[2].u);
         if (!aspace) {

@@ -170,8 +170,9 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
     DEBUG_ASSERT(list);
 
     size_t allocated = 0;
-    if (count == 0)
+    if (count == 0) {
         return ZX_OK;
+    }
 
     address = ROUNDDOWN(address, PAGE_SIZE);
 
@@ -181,11 +182,13 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
     for (auto& a : arena_list_) {
         while (allocated < count && a.address_in_arena(address)) {
             vm_page_t* page = a.FindSpecific(address);
-            if (!page)
+            if (!page) {
                 break;
+            }
 
-            if (!page->is_free())
+            if (!page->is_free()) {
                 break;
+            }
 
             list_delete(&page->queue_node);
 
@@ -198,8 +201,9 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
             free_count_--;
         }
 
-        if (allocated == count)
+        if (allocated == count) {
             break;
+        }
     }
 
     if (allocated != count) {
@@ -212,13 +216,15 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
 }
 
 zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8_t alignment_log2,
-                                paddr_t* pa, list_node* list) {
+                                     paddr_t* pa, list_node* list) {
     LTRACEF("count %zu, align %u\n", count, alignment_log2);
 
-    if (count == 0)
+    if (count == 0) {
         return ZX_OK;
-    if (alignment_log2 < PAGE_SIZE_SHIFT)
+    }
+    if (alignment_log2 < PAGE_SIZE_SHIFT) {
         alignment_log2 = PAGE_SIZE_SHIFT;
+    }
 
     // pa and list must be valid pointers
     DEBUG_ASSERT(pa);
@@ -228,8 +234,9 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
 
     for (auto& a : arena_list_) {
         vm_page_t* p = a.FindFreeContiguous(count, alignment_log2);
-        if (!p)
+        if (!p) {
             continue;
+        }
 
         *pa = p->paddr();
 
@@ -270,8 +277,9 @@ void PmmNode::FreePageLocked(vm_page* page) {
 #endif
 
     // remove it from its old queue
-    if (list_in_list(&page->queue_node))
+    if (list_in_list(&page->queue_node)) {
         list_delete(&page->queue_node);
+    }
 
     // mark it free
     page->state = VM_PAGE_STATE_FREE;
@@ -331,7 +339,7 @@ void PmmNode::Dump(bool is_panic) const {
     // No lock analysis here, as we want to just go for it in the panic case without the lock.
     auto dump = [this]() TA_NO_THREAD_SAFETY_ANALYSIS {
         printf("pmm node %p: free_count %zu (%zu bytes), total size %zu\n",
-                this, free_count_, free_count_ * PAGE_SIZE, arena_cumulative_size_);
+               this, free_count_, free_count_ * PAGE_SIZE, arena_cumulative_size_);
         for (auto& a : arena_list_) {
             a.Dump(false, false);
         }

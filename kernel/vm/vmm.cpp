@@ -54,8 +54,9 @@ zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
 
     // get the address space object this pointer is in
     VmAspace* aspace = VmAspace::vaddr_to_aspace(addr);
-    if (!aspace)
+    if (!aspace) {
         return ZX_ERR_NOT_FOUND;
+    }
 
     // page fault it
     zx_status_t status = aspace->PageFault(addr, flags);
@@ -80,8 +81,9 @@ void vmm_set_active_aspace(vmm_aspace_t* aspace) {
     thread_t* t = get_current_thread();
     DEBUG_ASSERT(t);
 
-    if (aspace == t->aspace)
+    if (aspace == t->aspace) {
         return;
+    }
 
     // grab the thread lock and switch to the new address space
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
@@ -114,24 +116,27 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
     }
 
     static fbl::RefPtr<VmAspace> test_aspace;
-    if (!test_aspace)
+    if (!test_aspace) {
         test_aspace = fbl::WrapRefPtr(VmAspace::kernel_aspace());
+    }
 
     if (!strcmp(argv[1].str, "aspaces")) {
         DumpAllAspaces(true);
     } else if (!strcmp(argv[1].str, "kaspace")) {
         VmAspace::kernel_aspace()->Dump(true);
     } else if (!strcmp(argv[1].str, "alloc")) {
-        if (argc < 3)
+        if (argc < 3) {
             goto notenoughargs;
+        }
 
         void* ptr = (void*)0x99;
         uint8_t align = (argc >= 4) ? (uint8_t)argv[3].u : 0u;
         zx_status_t err = test_aspace->Alloc("alloc test", argv[2].u, &ptr, align, 0, 0);
         printf("VmAspace::Alloc returns %d, ptr %p\n", err, ptr);
     } else if (!strcmp(argv[1].str, "alloc_physical")) {
-        if (argc < 4)
+        if (argc < 4) {
             goto notenoughargs;
+        }
 
         void* ptr = (void*)0x99;
         uint8_t align = (argc >= 5) ? (uint8_t)argv[4].u : 0u;
@@ -140,8 +145,9 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
                                                             ARCH_MMU_FLAG_PERM_WRITE);
         printf("VmAspace::AllocPhysical returns %d, ptr %p\n", err, ptr);
     } else if (!strcmp(argv[1].str, "alloc_contig")) {
-        if (argc < 3)
+        if (argc < 3) {
             goto notenoughargs;
+        }
 
         void* ptr = (void*)0x99;
         uint8_t align = (argc >= 4) ? (uint8_t)argv[3].u : 0u;
@@ -149,8 +155,9 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
                                                        ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
         printf("VmAspace::AllocContiguous returns %d, ptr %p\n", err, ptr);
     } else if (!strcmp(argv[1].str, "free_region")) {
-        if (argc < 2)
+        if (argc < 2) {
             goto notenoughargs;
+        }
 
         zx_status_t err = test_aspace->FreeRegion(reinterpret_cast<vaddr_t>(argv[2].u));
         printf("VmAspace::FreeRegion returns %d\n", err);
@@ -165,12 +172,14 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
         get_current_thread()->aspace = reinterpret_cast<vmm_aspace_t*>(aspace.get());
         thread_sleep(1); // XXX hack to force it to reschedule and thus load the aspace
     } else if (!strcmp(argv[1].str, "free_aspace")) {
-        if (argc < 2)
+        if (argc < 2) {
             goto notenoughargs;
+        }
 
         fbl::RefPtr<VmAspace> aspace = fbl::WrapRefPtr((VmAspace*)(void*)argv[2].u);
-        if (test_aspace == aspace)
+        if (test_aspace == aspace) {
             test_aspace = nullptr;
+        }
 
         if (get_current_thread()->aspace == reinterpret_cast<vmm_aspace_t*>(aspace.get())) {
             get_current_thread()->aspace = nullptr;
@@ -180,8 +189,9 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
         zx_status_t err = aspace->Destroy();
         printf("VmAspace::Destroy() returns %d\n", err);
     } else if (!strcmp(argv[1].str, "set_test_aspace")) {
-        if (argc < 2)
+        if (argc < 2) {
             goto notenoughargs;
+        }
 
         test_aspace = fbl::WrapRefPtr((VmAspace*)(void*)argv[2].u);
         get_current_thread()->aspace = reinterpret_cast<vmm_aspace_t*>(test_aspace.get());

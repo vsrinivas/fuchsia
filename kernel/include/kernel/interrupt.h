@@ -38,8 +38,9 @@ static inline bool int_handler_finish(int_handler_saved_state_t* state) {
         // A preemption became pending during the interrupt handler.  If
         // preemption is now enabled, indicate that the caller should now
         // do the preemption.
-        if (thread_preempt_disable_count() == 0)
+        if (thread_preempt_disable_count() == 0) {
             do_preempt = true;
+        }
     } else {
         // No preemption became pending during the interrupt handler.
         //

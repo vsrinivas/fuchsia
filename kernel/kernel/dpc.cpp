@@ -153,14 +153,15 @@ static int dpc_thread(void* arg) {
             event_unsignal(event);
             dpc_local.func = NULL;
         } else {
-           dpc_local = *dpc;
+            dpc_local = *dpc;
         }
 
         spin_unlock_irqrestore(&dpc_lock, state);
 
         // call the dpc
-        if (dpc_local.func)
+        if (dpc_local.func) {
             dpc_local.func(&dpc_local);
+        }
     }
 
     return 0;

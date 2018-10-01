@@ -22,7 +22,7 @@ public:
         spin_lock(spinlock_);
     }
     explicit AutoSpinLockNoIrqSave(SpinLock* lock) TA_ACQ(lock)
-        : AutoSpinLockNoIrqSave(lock->GetInternal()) { }
+        : AutoSpinLockNoIrqSave(lock->GetInternal()) {}
     ~AutoSpinLockNoIrqSave() TA_REL() { release(); }
 
     void release() TA_REL() {
@@ -47,7 +47,7 @@ public:
         spin_lock_irqsave(spinlock_, state_);
     }
     explicit AutoSpinLock(SpinLock* lock) TA_ACQ(lock)
-        : AutoSpinLock(lock->GetInternal()) { }
+        : AutoSpinLock(lock->GetInternal()) {}
     ~AutoSpinLock() TA_REL() { release(); }
 
     void release() TA_REL() {

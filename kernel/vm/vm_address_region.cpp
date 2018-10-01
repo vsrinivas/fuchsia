@@ -457,8 +457,9 @@ bool VmAddressRegion::CheckGapLocked(const ChildList::iterator& prev,
 
     // compute the ending address of the gap
     if (next.IsValid()) {
-        if (gap_beg == next->base())
+        if (gap_beg == next->base()) {
             goto next_gap; // no gap between regions
+        }
         if (sub_overflow(next->base(), 1, &gap_end) ||
             sub_overflow(gap_end, min_gap, &gap_end)) {
             goto not_found;
@@ -475,10 +476,12 @@ bool VmAddressRegion::CheckGapLocked(const ChildList::iterator& prev,
     DEBUG_ASSERT(gap_end > gap_beg);
 
     // trim it to the search range
-    if (gap_end <= search_base)
+    if (gap_end <= search_base) {
         return false;
-    if (gap_beg < search_base)
+    }
+    if (gap_beg < search_base) {
         gap_beg = search_base;
+    }
 
     DEBUG_ASSERT(gap_end > gap_beg);
 
@@ -495,8 +498,9 @@ bool VmAddressRegion::CheckGapLocked(const ChildList::iterator& prev,
 
     *pva = aspace_->arch_aspace().PickSpot(gap_beg, prev_arch_mmu_flags, gap_end,
                                            next_arch_mmu_flags, align, region_size, arch_mmu_flags);
-    if (*pva < gap_beg)
+    if (*pva < gap_beg) {
         goto not_found; // address wrapped around
+    }
 
     if (*pva < gap_end && ((gap_end - *pva + 1) >= region_size)) {
         // we have enough room
@@ -854,8 +858,9 @@ zx_status_t VmAddressRegion::LinearRegionAllocatorLocked(size_t size, uint8_t al
 
     const vaddr_t base = 0;
 
-    if (align_pow2 < PAGE_SIZE_SHIFT)
+    if (align_pow2 < PAGE_SIZE_SHIFT) {
         align_pow2 = PAGE_SIZE_SHIFT;
+    }
     const vaddr_t align = 1UL << align_pow2;
 
     // Find the first gap in the address space which can contain a region of the

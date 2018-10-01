@@ -47,7 +47,7 @@ void mp_prepare_current_cpu_idle_state(bool idle);
 
 // Trigger a reschedule on another cpu. Used mostly by inner threading
 // and scheduler logic. Must be holding the thread lock.
-void mp_reschedule(cpu_mask_t mask, uint flags)  TA_REQ(thread_lock);
+void mp_reschedule(cpu_mask_t mask, uint flags) TA_REQ(thread_lock);
 
 // Trigger an interrupt on another cpu without a corresponding reschedule.
 // Used by the hypervisor to trigger a vmexit.
@@ -147,7 +147,7 @@ static inline void mp_set_curr_cpu_online(bool online) {
 }
 
 static inline cpu_mask_t mp_get_online_mask(void) {
-    return atomic_load((volatile int *)&mp.online_cpus);
+    return atomic_load((volatile int*)&mp.online_cpus);
 }
 
 static inline int mp_is_cpu_online(cpu_num_t cpu) {

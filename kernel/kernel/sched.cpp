@@ -58,8 +58,9 @@ static bool local_migrate_if_needed(thread_t* curr_thread);
 // compute the effective priority of a thread
 static void compute_effec_priority(thread_t* t) {
     int ep = t->base_priority + t->priority_boost;
-    if (t->inherited_priority > ep)
+    if (t->inherited_priority > ep) {
         ep = t->inherited_priority;
+    }
 
     DEBUG_ASSERT(ep >= LOWEST_PRIORITY && ep <= HIGHEST_PRIORITY);
 
@@ -68,11 +69,13 @@ static void compute_effec_priority(thread_t* t) {
 
 // boost the priority of the thread by +1
 static void boost_thread(thread_t* t) {
-    if (NO_BOOST)
+    if (NO_BOOST) {
         return;
+    }
 
-    if (unlikely(thread_is_real_time_or_idle(t)))
+    if (unlikely(thread_is_real_time_or_idle(t))) {
         return;
+    }
 
     if (t->priority_boost < MAX_PRIORITY_ADJ &&
         likely((t->base_priority + t->priority_boost) < HIGHEST_PRIORITY)) {
@@ -85,11 +88,13 @@ static void boost_thread(thread_t* t) {
 // If deboosting because the thread is using up all of its time slice,
 // then allow the boost to go negative, otherwise only deboost to 0.
 static void deboost_thread(thread_t* t, bool quantum_expiration) {
-    if (NO_BOOST)
+    if (NO_BOOST) {
         return;
+    }
 
-    if (unlikely(thread_is_real_time_or_idle(t)))
+    if (unlikely(thread_is_real_time_or_idle(t))) {
         return;
+    }
 
     int boost_floor;
     if (quantum_expiration) {
@@ -97,8 +102,9 @@ static void deboost_thread(thread_t* t, bool quantum_expiration) {
         boost_floor = -MAX_PRIORITY_ADJ;
 
         // make sure we dont deboost a thread too far
-        if (unlikely(t->base_priority + boost_floor < LOWEST_PRIORITY))
+        if (unlikely(t->base_priority + boost_floor < LOWEST_PRIORITY)) {
             boost_floor = t->base_priority - LOWEST_PRIORITY;
+        }
 
     } else {
         // otherwise only deboost to 0
@@ -106,8 +112,9 @@ static void deboost_thread(thread_t* t, bool quantum_expiration) {
     }
 
     // if we're already bottomed out or below bottomed out, leave it alone
-    if (t->priority_boost <= boost_floor)
+    if (t->priority_boost <= boost_floor) {
         return;
+    }
 
     // drop a level
     t->priority_boost--;
@@ -116,14 +123,16 @@ static void deboost_thread(thread_t* t, bool quantum_expiration) {
 
 // pick a 'random' cpu out of the passed in mask of cpus
 static cpu_mask_t rand_cpu(cpu_mask_t mask) {
-    if (unlikely(mask == 0))
+    if (unlikely(mask == 0)) {
         return 0;
+    }
 
     // check that the mask passed in has at least one bit set in the active mask
     cpu_mask_t active = mp_get_active_mask();
     mask &= active;
-    if (unlikely(mask == 0))
+    if (unlikely(mask == 0)) {
         return 0;
+    }
 
     // compute the highest cpu in the mask
     cpu_num_t highest_cpu = highest_cpu_set(mask);
@@ -133,11 +142,13 @@ static cpu_mask_t rand_cpu(cpu_mask_t mask) {
         // protected by THREAD_LOCK, safe to use non atomically
         static uint rot = 0;
 
-        if (++rot > highest_cpu)
+        if (++rot > highest_cpu) {
             rot = 0;
+        }
 
-        if ((1u << rot) & mask)
+        if ((1u << rot) & mask) {
             return (1u << rot);
+        }
     }
 }
 
@@ -189,12 +200,14 @@ static cpu_mask_t find_cpu_mask(thread_t* t) TA_REQ(thread_lock) {
     // the affinity mask hard pins the thread to the cpus in the mask, so it's not possible
     // to pick a cpu outside of that list.
     cpu_mask_t mask = cpu_affinity & ~(curr_cpu_mask);
-    if (mask == 0)
+    if (mask == 0) {
         return curr_cpu_mask; // local cpu is the only choice
+    }
 
     mask = rand_cpu(mask);
-    if (mask == 0)
+    if (mask == 0) {
         return curr_cpu_mask; // local cpu is the only choice
+    }
     DEBUG_ASSERT((mask & mp_get_active_mask()) == mask);
     return mask;
 }
@@ -256,8 +269,9 @@ static thread_t* sched_get_top_thread(cpu_num_t cpu) TA_REQ(thread_lock) {
                          newthread->cpu_affinity, cpu);
         DEBUG_ASSERT(newthread->curr_cpu == cpu);
 
-        if (list_is_empty(&c->run_queue[highest_queue]))
+        if (list_is_empty(&c->run_queue[highest_queue])) {
             c->run_queue_bitmap &= ~(1u << highest_queue);
+        }
 
         LOCAL_KTRACE2("sched_get_top", newthread->priority_boost, newthread->base_priority);
 
@@ -331,8 +345,9 @@ bool sched_unblock(thread_t* t) {
     cpu_mask_t mask = 0;
     find_cpu_and_insert(t, &local_resched, &mask);
 
-    if (mask)
+    if (mask) {
         mp_reschedule(mask, 0);
+    }
     return local_resched;
 }
 
@@ -358,8 +373,9 @@ bool sched_unblock_list(struct list_node* list) {
         find_cpu_and_insert(t, &local_resched, &accum_cpu_mask);
     }
 
-    if (accum_cpu_mask)
+    if (accum_cpu_mask) {
         mp_reschedule(accum_cpu_mask, 0);
+    }
 
     return local_resched;
 }
@@ -394,8 +410,9 @@ void sched_yield() {
 
     current_thread->state = THREAD_READY;
 
-    if (local_migrate_if_needed(current_thread))
+    if (local_migrate_if_needed(current_thread)) {
         return;
+    }
 
     insert_in_run_queue_tail(arch_curr_cpu_num(), current_thread);
     sched_resched_internal();
@@ -421,8 +438,9 @@ void sched_preempt() {
             deboost_thread(current_thread, true);
         }
 
-        if (local_migrate_if_needed(current_thread))
+        if (local_migrate_if_needed(current_thread)) {
             return;
+        }
 
         if (current_thread->remaining_time_slice > 0) {
             insert_in_run_queue_head(curr_cpu, current_thread);
@@ -458,8 +476,9 @@ void sched_reschedule() {
         // deboost the current thread
         deboost_thread(current_thread, false);
 
-        if (local_migrate_if_needed(current_thread))
+        if (local_migrate_if_needed(current_thread)) {
             return;
+        }
 
         if (current_thread->remaining_time_slice > 0) {
             insert_in_run_queue_head(curr_cpu, current_thread);
@@ -479,8 +498,9 @@ static void migrate_current_thread(thread_t* current_thread) TA_REQ(thread_lock)
     // current thread, so just shove ourself into another cpu's queue and reschedule locally
     current_thread->state = THREAD_READY;
     find_cpu_and_insert(current_thread, &local_resched, &accum_cpu_mask);
-    if (accum_cpu_mask)
+    if (accum_cpu_mask) {
         mp_reschedule(accum_cpu_mask, 0);
+    }
     sched_resched_internal();
 }
 
@@ -644,12 +664,14 @@ static void sched_priority_changed(thread_t* t, int old_prio,
 void sched_inherit_priority(thread_t* t, int pri, bool* local_resched) {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-    if (pri > HIGHEST_PRIORITY)
+    if (pri > HIGHEST_PRIORITY) {
         pri = HIGHEST_PRIORITY;
+    }
 
     // if we're setting it to something real and it's less than the current, skip
-    if (pri >= 0 && pri <= t->inherited_priority)
+    if (pri >= 0 && pri <= t->inherited_priority) {
         return;
+    }
 
     // adjust the priority and remember the old value
     t->inherited_priority = pri;
@@ -676,11 +698,13 @@ void sched_inherit_priority(thread_t* t, int pri, bool* local_resched) {
 void sched_change_priority(thread_t* t, int pri) {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-    if (unlikely(t->state == THREAD_DEATH))
+    if (unlikely(t->state == THREAD_DEATH)) {
         return;
+    }
 
-    if (pri > HIGHEST_PRIORITY)
+    if (pri > HIGHEST_PRIORITY) {
         pri = HIGHEST_PRIORITY;
+    }
 
     int old_ep = t->effec_priority;
     t->base_priority = pri;
@@ -711,8 +735,9 @@ void sched_change_priority(thread_t* t, int pri) {
 void sched_preempt_timer_tick(zx_time_t now) {
     // if the preemption timer went off on the idle or a real time thread, ignore it
     thread_t* current_thread = get_current_thread();
-    if (unlikely(thread_is_real_time_or_idle(current_thread)))
+    if (unlikely(thread_is_real_time_or_idle(current_thread))) {
         return;
+    }
 
     LOCAL_KTRACE2("sched_preempt_timer_tick", (uint32_t)current_thread->user_tid,
                   current_thread->remaining_time_slice);
@@ -780,8 +805,9 @@ void sched_resched_internal() {
     mp_prepare_current_cpu_idle_state(thread_is_idle(newthread));
 
     // if it's the same thread as we're already running, exit
-    if (newthread == oldthread)
+    if (newthread == oldthread) {
         return;
+    }
 
     zx_time_t now = current_time();
 
@@ -800,8 +826,9 @@ void sched_resched_internal() {
     newthread->last_started_running = now;
 
     // mark the cpu ownership of the threads
-    if (oldthread->state != THREAD_READY)
+    if (oldthread->state != THREAD_READY) {
         oldthread->curr_cpu = INVALID_CPU;
+    }
     newthread->last_cpu = cpu;
     newthread->curr_cpu = cpu;
 
@@ -874,6 +901,7 @@ void sched_resched_internal() {
 void sched_init_early() {
     // initialize the run queues
     for (unsigned int cpu = 0; cpu < SMP_MAX_CPUS; cpu++)
-        for (unsigned int i = 0; i < NUM_PRIORITIES; i++)
+        for (unsigned int i = 0; i < NUM_PRIORITIES; i++) {
             list_initialize(&percpu[cpu].run_queue[i]);
+        }
 }

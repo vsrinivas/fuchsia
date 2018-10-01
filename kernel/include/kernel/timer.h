@@ -34,7 +34,7 @@ typedef struct timer {
 
     zx_time_t scheduled_time;
     zx_duration_t slack; // Stores the applied slack adjustment from
-                         // the ideal scheduled_time.
+    //                      the ideal scheduled_time.
     timer_callback callback;
     void* arg;
 
@@ -105,7 +105,6 @@ static inline void timer_set_oneshot(
     return timer_set(timer, deadline, TIMER_SLACK_CENTER, 0ull, callback, arg);
 }
 
-
 // Preemption Timers
 //
 // Each CPU has a dedicated preemption timer that's managed using specialized functions (prefixed
@@ -128,7 +127,6 @@ void timer_preempt_reset(zx_time_t deadline);
 //
 // Cancel the current CPU's preemption timer.
 void timer_preempt_cancel(void);
-
 
 // Internal routines used when bringing cpus online/offline
 
