@@ -8,10 +8,12 @@
 #include <getopt.h>
 
 #include <fs-management/ram-nand.h>
+#include <lib/fzl/fdio.h>
 #include <unittest/unittest.h>
 #include <zircon/assert.h>
 #include <zircon/device/device.h>
 #include <zircon/device/nand-broker.h>
+#include <zircon/nand/c/fidl.h>
 
 constexpr char kUsageMessage[] = R"""(
 Basic functionality test for a nand device.
@@ -76,7 +78,9 @@ ParentDevice::ParentDevice(const TestConfig& config) : config_(config) {
 
 ParentDevice::~ParentDevice() {
     if (ram_nand_) {
-        ioctl_ram_nand_unlink(ram_nand_.get());
+        fzl::FdioCaller caller(fbl::move(ram_nand_));
+        zx_status_t status;
+        zircon_nand_RamNandUnlink(caller.borrow_channel(), &status);
     }
 }
 

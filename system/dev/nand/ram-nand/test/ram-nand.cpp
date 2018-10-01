@@ -9,6 +9,7 @@
 #include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 #include <zircon/device/ram-nand.h>
+#include <zircon/nand/c/fidl.h>
 #include <zircon/process.h>
 
 #include "fake-ddk.h"
@@ -101,8 +102,7 @@ bool BasicDeviceProtocolTest() {
 
     device.DdkUnbind();
 
-    ASSERT_EQ(ZX_ERR_BAD_STATE,
-              device.DdkIoctl(IOCTL_RAM_NAND_UNLINK, nullptr, 0, nullptr, 0, nullptr));
+    ASSERT_EQ(ZX_ERR_BAD_STATE, device.DdkMessage(nullptr, nullptr));
     END_TEST;
 }
 
@@ -111,11 +111,10 @@ bool UnlinkTest() {
     fbl::unique_ptr<NandDevice> device = CreateDevice(nullptr);
     ASSERT_TRUE(device);
 
-    ASSERT_EQ(ZX_OK, device->DdkIoctl(IOCTL_RAM_NAND_UNLINK, nullptr, 0, nullptr, 0, nullptr));
+    ASSERT_EQ(ZX_OK, device->Unlink());
 
     // The device is "dead" now.
-    ASSERT_EQ(ZX_ERR_BAD_STATE,
-              device->DdkIoctl(IOCTL_RAM_NAND_UNLINK, nullptr, 0, nullptr, 0, nullptr));
+    ASSERT_EQ(ZX_ERR_BAD_STATE, device->DdkMessage(nullptr, nullptr));
     END_TEST;
 }
 
@@ -129,24 +128,6 @@ bool QueryTest() {
     device.Query(&info, &operation_size);
     ASSERT_EQ(0, memcmp(&info, &params, sizeof(info)));
     ASSERT_GT(operation_size, sizeof(nand_op_t));
-    END_TEST;
-}
-
-// Tests setting and getting bad blocks.
-bool FactoryBadBlockListTest() {
-    BEGIN_TEST;
-    fbl::unique_ptr<NandDevice> device = CreateDevice(nullptr);
-    ASSERT_TRUE(device);
-
-    uint32_t bad_blocks[] = {1, 3, 5};
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
-              device->DdkIoctl(IOCTL_RAM_NAND_SET_BAD_BLOCKS, bad_blocks, sizeof(bad_blocks),
-                               nullptr, 0, nullptr));
-
-    uint32_t result[4];
-    uint32_t num_bad_blocks;
-    device->GetFactoryBadBlockList(result, sizeof(result), &num_bad_blocks);
-    ASSERT_EQ(0, num_bad_blocks);
     END_TEST;
 }
 
@@ -706,7 +687,6 @@ RUN_TEST_SMALL(DdkLifetimeTest)
 RUN_TEST_SMALL(BasicDeviceProtocolTest)
 RUN_TEST_SMALL(UnlinkTest)
 RUN_TEST_SMALL(QueryTest)
-RUN_TEST_SMALL(FactoryBadBlockListTest)
 RUN_TEST_SMALL(QueueOneTest)
 RUN_TEST_SMALL(ReadWriteTest)
 RUN_TEST_SMALL(QueueMultipleTest)

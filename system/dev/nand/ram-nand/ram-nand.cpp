@@ -17,6 +17,7 @@
 #include <zircon/assert.h>
 #include <zircon/device/ram-nand.h>
 #include <zircon/driver/binding.h>
+#include <zircon/nand/c/fidl.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
@@ -25,6 +26,16 @@ namespace {
 struct RamNandOp {
     nand_op_t op;
     list_node_t node;
+};
+
+zx_status_t Unlink(void* ctx, fidl_txn_t* txn)  {
+    NandDevice* device = reinterpret_cast<NandDevice*>(ctx);
+    zx_status_t status = device->Unlink();
+    return zircon_nand_RamNandUnlink_reply(txn, status);
+}
+
+zircon_nand_RamNand_ops_t fidl_ops = {
+    .Unlink = Unlink
 };
 
 }  // namespace
@@ -159,23 +170,19 @@ void NandDevice::DdkUnbind() {
     DdkRemove();
 }
 
-zx_status_t NandDevice::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                                 void* out_buf, size_t out_len, size_t* out_actual) {
+zx_status_t NandDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     {
         fbl::AutoLock lock(&lock_);
         if (dead_) {
             return ZX_ERR_BAD_STATE;
         }
     }
+    return zircon_nand_RamNand_dispatch(this, txn, msg, &fidl_ops);
+}
 
-    switch (op) {
-    case IOCTL_RAM_NAND_UNLINK:
-        DdkUnbind();
-        return ZX_OK;
-
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+zx_status_t NandDevice::Unlink()  {
+    DdkUnbind();
+    return ZX_OK;
 }
 
 void NandDevice::Query(nand_info_t* info_out, size_t* nand_op_size_out) {

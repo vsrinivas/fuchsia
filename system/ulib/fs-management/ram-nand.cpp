@@ -10,17 +10,19 @@
 #include <string.h>
 
 #include <fbl/unique_fd.h>
+#include <lib/fzl/fdio.h>
 #include <zircon/device/ram-nand.h>
 #include <zircon/types.h>
+#include <zircon/nand/c/fidl.h>
 
 namespace {
 
-constexpr char base_path[] = "/dev/misc/nand-ctl";
+constexpr char kBasePath[] = "/dev/misc/nand-ctl";
 
 } // namespace
 
 int create_ram_nand(const ram_nand_info_t* config, char* out_path) {
-    fbl::unique_fd control(open(base_path, O_RDWR));
+    fbl::unique_fd control(open(kBasePath, O_RDWR));
     if (!control) {
         fprintf(stderr, "Could not open nand-ctl\n");
         return -1;
@@ -35,9 +37,9 @@ int create_ram_nand(const ram_nand_info_t* config, char* out_path) {
         return -1;
     }
 
-    strcpy(out_path, base_path);
-    out_path[sizeof(base_path) - 1] = '/';
-    strcpy(out_path + sizeof(base_path), response.name);
+    strcpy(out_path, kBasePath);
+    out_path[sizeof(kBasePath) - 1] = '/';
+    strcpy(out_path + sizeof(kBasePath), response.name);
     return 0;
 }
 
@@ -47,8 +49,10 @@ int destroy_ram_nand(const char* ram_nand_path) {
         fprintf(stderr, "Could not open ram_nand\n");
         return -1;
     }
+    fzl::FdioCaller caller(fbl::move(ram_nand));
 
-    if (ioctl_ram_nand_unlink(ram_nand.get()) != ZX_OK) {
+    zx_status_t status;
+    if (zircon_nand_RamNandUnlink(caller.borrow_channel(), &status) != ZX_OK || status != ZX_OK) {
         fprintf(stderr, "Could not shut off ram_nand\n");
         return -1;
     }

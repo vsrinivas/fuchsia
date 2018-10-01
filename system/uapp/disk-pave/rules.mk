@@ -91,4 +91,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/zxcrypt \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-nand \
+
 include make/module.mk

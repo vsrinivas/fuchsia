@@ -44,7 +44,7 @@ struct NandParams : public nand_info_t {
 };
 
 class NandDevice;
-using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::Unbindable, ddk::Ioctlable>;
+using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::Unbindable, ddk::Messageable>;
 
 // Provides the bulk of the functionality for a ram-backed NAND device.
 class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice> {
@@ -63,8 +63,10 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice> {
     // Device protocol implementation.
     zx_off_t DdkGetSize() { return params_.GetSize(); }
     void DdkUnbind();
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* out_actual);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+
+    // Fidl RamNand implementation.
+    zx_status_t Unlink();
 
     // NAND protocol implementation.
     void Query(nand_info_t* info_out, size_t* nand_op_size_out);

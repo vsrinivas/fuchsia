@@ -36,7 +36,8 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
-    system/fidl/fuchsia-io
+    system/fidl/fuchsia-io \
+    system/fidl/zircon-nand \
 
 MODULE_EXPORT := so
 MODULE_SO_NAME := fs-management

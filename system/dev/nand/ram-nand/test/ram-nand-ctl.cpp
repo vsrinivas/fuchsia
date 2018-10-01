@@ -8,50 +8,48 @@
 
 #include <fbl/unique_fd.h>
 #include <fs-management/ram-nand.h>
+#include <lib/fzl/fdio.h>
 #include <unittest/unittest.h>
 #include <zircon/device/ram-nand.h>
+#include <zircon/nand/c/fidl.h>
 
 namespace {
 
 ram_nand_info_t BuildConfig() {
-    return ram_nand_info_t{
-        .vmo = ZX_HANDLE_INVALID,
-        .nand_info = {4096, 4, 5, 6, 0, NAND_CLASS_FTL, {}},
-        .export_nand_config = false,
-        .export_partition_map = false,
-        .bad_block_config = {},
-        .extra_partition_config_count = 0,
-        .extra_partition_config = {},
-        .partition_map = {},
-    };
+    ram_nand_info_t config = {};
+    config.vmo = ZX_HANDLE_INVALID;
+    config.nand_info = {4096, 4, 5, 6, 0, NAND_CLASS_DUMMY, {}};
+    return config;
 }
 
 class NandDevice {
   public:
     NandDevice() {
         const ram_nand_info_t config = BuildConfig();
-        if (!create_ram_nand(&config, path_)) {
-            device_.reset(open(path_, O_RDWR));
+        if (create_ram_nand(&config, path_) == 0) {
+            fbl::unique_fd device(open(path_, O_RDWR));
+            caller_.reset(fbl::move(device));
         }
     }
 
     ~NandDevice() { Unlink(); }
 
-    bool IsValid() const { return device_ ? true : false; }
-
-    int get() const { return device_.get(); }
+    bool IsValid() const { return caller_ ? true : false; }
 
     const char* path() const { return path_; }
 
     bool Unlink() {
-        if (device_ && ioctl_ram_nand_unlink(device_.get()) != ZX_OK) {
+        if (!caller_) {
             return false;
         }
-        return true;
+        zx_status_t status;
+        return zircon_nand_RamNandUnlink(caller_.borrow_channel(), &status) == ZX_OK &&
+               status == ZX_OK;
     }
 
   private:
-    fbl::unique_fd device_;
+
+    fzl::FdioCaller caller_;
     char path_[PATH_MAX];
     DISALLOW_COPY_ASSIGN_AND_MOVE(NandDevice);
 };
@@ -67,18 +65,8 @@ bool TrivialLifetimeTest() {
     END_TEST;
 }
 
-bool SetBadBlocksTest() {
-    BEGIN_TEST;
-    NandDevice device;
-    uint32_t bad_blocks[] = {1, 3, 5};
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
-              ioctl_ram_nand_set_bad_blocks(device.get(), bad_blocks, sizeof(bad_blocks)));
-    END_TEST;
-}
-
 }  // namespace
 
 BEGIN_TEST_CASE(RamNandCtlTests)
 RUN_TEST_SMALL(TrivialLifetimeTest)
-RUN_TEST_SMALL(SetBadBlocksTest)
 END_TEST_CASE(RamNandCtlTests)

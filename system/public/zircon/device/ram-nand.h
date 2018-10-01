@@ -17,10 +17,6 @@
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 1)
 #define IOCTL_RAM_NAND_CREATE_VMO \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_RAMDISK, 4)
-#define IOCTL_RAM_NAND_UNLINK \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 2)
-#define IOCTL_RAM_NAND_SET_BAD_BLOCKS \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 3)
 
 #define RAM_NAND_PARTITION_MAX          5
 
@@ -84,11 +80,3 @@ IOCTL_WRAPPER_INOUT(ioctl_ram_nand_create, IOCTL_RAM_NAND_CREATE, ram_nand_info_
 // Must be issued to the control device.
 IOCTL_WRAPPER_INOUT(ioctl_ram_nand_create_vmo, IOCTL_RAM_NAND_CREATE_VMO, ram_nand_info_t,
                     ram_nand_name_t);
-
-// ssize_t ioctl_ram_nand_unlink(int fd);
-IOCTL_WRAPPER(ioctl_ram_nand_unlink, IOCTL_RAM_NAND_UNLINK);
-
-// ssize_t ioctl_ram_nand_set_bad_blocks(int fd, const uint32_t* bad_block_entries,
-//                                       size_t table_size);
-IOCTL_WRAPPER_VARIN(ioctl_ram_nand_set_bad_blocks, IOCTL_RAM_NAND_SET_BAD_BLOCKS,
-                    uint32_t);
