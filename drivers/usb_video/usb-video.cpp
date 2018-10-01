@@ -278,6 +278,36 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device,
                desc->wMaxTransferSize);
         break;
       }
+      case USB_DT_SS_EP_COMPANION: {
+        if (streaming_settings.is_empty()) {
+          status = ZX_ERR_BAD_STATE;
+          goto error_return;
+        }
+        auto& settings = streaming_settings[streaming_settings.size() - 1];
+
+        if (settings.ep_type == USB_ENDPOINT_ISOCHRONOUS) {
+          usb_ss_ep_comp_descriptor_t* desc =
+              (usb_ss_ep_comp_descriptor_t*)header;
+          if (usb_ss_ep_comp_isoc_comp(desc)) {
+            auto next = usb_desc_iter_next(&iter);
+            if (next == nullptr ||
+                next->bDescriptorType != USB_DT_SS_ISOCH_EP_COMPANION) {
+              status = ZX_ERR_BAD_STATE;
+              goto error_return;
+            }
+            usb_ss_isoch_ep_comp_descriptor_t* next_desc =
+                (usb_ss_isoch_ep_comp_descriptor_t*)next;
+            uint32_t denom = (desc->bMaxBurst + 1) * settings.max_packet_size;
+            settings.transactions_per_microframe =
+                (uint8_t)((next_desc->dwBytesPerInterval + denom - 1) / denom);
+          } else {
+            settings.transactions_per_microframe = (uint8_t)(
+                (desc->bMaxBurst + 1) * (usb_ss_ep_comp_isoc_mult(desc) + 1));
+          }
+          break;
+        }
+        // fall through for unhandled superspeed bulk endpoint
+      }
       default:
         zxlogf(TRACE, "unknown DT %d\n", header->bDescriptorType);
         break;
