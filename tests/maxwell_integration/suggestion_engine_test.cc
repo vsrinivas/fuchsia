@@ -10,7 +10,6 @@
 #include <lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
 
-#include "peridot/bin/acquirers/mock/mock_gps.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/story_provider_mock.h"
 #include "peridot/lib/testing/wait_until_idle.h"

@@ -44,7 +44,6 @@ executable("suggestion_engine_test") {
     ":test_suggestion_listener",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//peridot/bin/acquirers/mock:gps",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:story_provider_mock",
     "//peridot/lib/testing:wait_until_idle",

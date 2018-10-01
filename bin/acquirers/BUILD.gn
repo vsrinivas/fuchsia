@@ -7,11 +7,3 @@ group("acquirers") {
     "story_info",
   ]
 }
-
-source_set("gps") {
-  testonly = true
-
-  sources = [
-    "gps.h",
-  ]
-}
