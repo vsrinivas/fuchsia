@@ -119,6 +119,8 @@ impl Authenticator {
         Ok(Authenticator{ esssa })
     }
 
+    pub fn get_negotiated_rsne(&self) -> &NegotiatedRsne { &self.esssa.negotiated_rsne }
+
     /// Resets all established Security Associations and invalidates all derived keys.
     /// The Authenticator must be reset or destroyed when the underlying 802.11 association
     /// terminates.

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use bytes::Bytes;
-use failure::{bail, format_err};
+use failure::bail;
 use wlan_rsn::{akm, cipher, rsna::NegotiatedRsne, rsne::{Rsne, RsnCapabilities}, suite_selector::OUI};
 
 fn make_cipher(suite_type: u8) -> cipher::Cipher {
@@ -24,10 +24,7 @@ fn make_rsne(data: Option<u8>, pairwise: Vec<u8>, akms: Vec<u8>) -> Rsne {
 }
 
 /// Verify that supplicant RSNE is a valid NegotiatedRsne, and is a subset of authenticator RSNE
-pub fn is_valid_rsne_subset(s_rsne_bytes: &[u8], a_rsne: &Rsne) -> Result<bool, failure::Error> {
-    let s_rsne = wlan_rsn::rsne::from_bytes(s_rsne_bytes).to_full_result()
-        .map_err(|e| format_err!("failed to deserialize RSNE: {:?}", e))?;
-
+pub fn is_valid_rsne_subset(s_rsne: &Rsne, a_rsne: &Rsne) -> Result<bool, failure::Error> {
     let s_caps = s_rsne.rsn_capabilities.as_ref().unwrap_or(&RsnCapabilities(0));
     let s_mgmt_req = s_caps.mgmt_frame_protection_req();
     let s_mgmt_cap = s_caps.mgmt_frame_protection_cap();
@@ -66,32 +63,6 @@ pub fn create_wpa2_psk_rsne() -> Rsne {
 mod tests {
     use super::*;
 
-    const S_RSNE: &'static [u8] = &[
-        0x30, // element id
-        0x14, // length
-        0x01, 0x00, // version
-        0x00, 0x0f, 0xac, 0x04, // group data cipher suite -- CCMP-128
-        0x01, 0x00, // pairwise cipher suite count
-        0x00, 0x0f, 0xac, 0x04, // pairwise cipher suite list -- CCMP-128
-        0x01, 0x00, // akm suite count
-        0x00, 0x0f, 0xac, 0x02, // akm suite list -- PSK
-        0x00, 0x00, // rsn capabilities
-    ];
-
-    // Invalid supplicant RSNE because it specifies more than one AKM suite
-    const S_RSNE_TOO_MANY_SUITES: &'static [u8] = &[
-        0x30, // element id
-        0x14, // length
-        0x01, 0x00, // version
-        0x00, 0x0f, 0xac, 0x04, // group data cipher suite -- CCMP-128
-        0x01, 0x00, // pairwise cipher suite count
-        0x00, 0x0f, 0xac, 0x04, // pairwise cipher suite list -- CCMP-128
-        0x02, 0x00, // akm suite count
-        0x00, 0x0f, 0xac, 0x01, // akm suite -- EAP
-        0x00, 0x0f, 0xac, 0x02, // akm suite -- PSK
-        0x00, 0x00, // rsn capabilities
-    ];
-
     #[test]
     fn test_wpa2_psk_rsne_bytes() {
         // Compliant with IEEE Std 802.11-2016, 9.4.2.25.
@@ -108,51 +79,50 @@ mod tests {
 
     #[test]
     fn test_valid_rsne() {
+        let s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
         let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
-        assert!(is_valid_rsne_subset(S_RSNE, &a_rsne).expect("expect Ok result"));
-    }
-
-    #[test]
-    fn test_supplicant_rsne_invalid_length() {
-        let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
-        let mut s_rsne = S_RSNE.to_vec();
-        s_rsne.extend_from_slice(&[0x01, 0x00]); // add pmk id count without including pmk id list
-
-        let result = is_valid_rsne_subset(s_rsne.as_slice(), &a_rsne);
-        assert!(result.is_err());
-        assert!(format!("{:?}", result.unwrap_err()).contains("failed to deserialize RSNE"));
+        assert!(is_valid_rsne_subset(&s_rsne, &a_rsne).expect("expect Ok result"));
     }
 
     #[test]
     fn test_supplicant_rsne_has_too_many_suites() {
+        let s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::EAP, akm::PSK]);
         let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::EAP, akm::PSK]);
-        let result = is_valid_rsne_subset(&S_RSNE_TOO_MANY_SUITES, &a_rsne);
+        let result = is_valid_rsne_subset(&s_rsne, &a_rsne);
         assert!(result.is_err());
         assert!(format!("{:?}", result.unwrap_err()).contains("InvalidNegotiatedRsne"));
     }
 
     #[test]
     fn test_supplicant_missing_required_mpfc() {
+        let mut s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
+        s_rsne.rsn_capabilities = Some(RsnCapabilities(0));
         let mut a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
         let mut rsn_cap = RsnCapabilities(0);
         rsn_cap.set_mgmt_frame_protection_req(true);
         rsn_cap.set_mgmt_frame_protection_cap(true);
         a_rsne.rsn_capabilities = Some(rsn_cap);
-        assert!(!is_valid_rsne_subset(S_RSNE, &a_rsne).expect("expect Ok result"));
+        assert!(!is_valid_rsne_subset(&s_rsne, &a_rsne).expect("expect Ok result"));
     }
 
     #[test]
     fn test_authenticator_missing_required_mpfc() {
+        let mut s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
+        let mut rsn_cap = RsnCapabilities(0);
+        rsn_cap.set_mgmt_frame_protection_req(true);
+        rsn_cap.set_mgmt_frame_protection_cap(true);
+        s_rsne.rsn_capabilities = Some(rsn_cap);
         let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
-        let mut s_rsne = S_RSNE.to_vec();
-        s_rsne[20] = (1 << 7) + (1 << 6); // set mgmt frame protected required and capable fields
-        assert!(!is_valid_rsne_subset(s_rsne.as_slice(), &a_rsne).expect("expect Ok result"));
+        assert!(!is_valid_rsne_subset(&s_rsne, &a_rsne).expect("expect Ok result"));
     }
 
     #[test]
     fn test_supplicant_has_invalid_mgmt_frame_protection_fields() {
-        let mut s_rsne = S_RSNE.to_vec();
-        s_rsne[20] = 1 << 6; // set mgmt frame protected required field but not the capable one
+        let mut s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
+        let mut rsn_cap = RsnCapabilities(0);
+        rsn_cap.set_mgmt_frame_protection_req(true);
+        rsn_cap.set_mgmt_frame_protection_cap(false);
+        s_rsne.rsn_capabilities = Some(rsn_cap);
 
         // AP only cares about client's invalid setting if AP is mgmt frame protection capable
         let mut a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
@@ -160,7 +130,7 @@ mod tests {
         rsn_cap.set_mgmt_frame_protection_cap(true);
         a_rsne.rsn_capabilities = Some(rsn_cap);
 
-        let result = is_valid_rsne_subset(s_rsne.as_slice(), &a_rsne);
+        let result = is_valid_rsne_subset(&s_rsne, &a_rsne);
         assert!(result.is_err());
         assert_eq!(format!("{}", result.unwrap_err()),
                    "supplicant RSNE has invalid mgmt frame protection")
@@ -168,17 +138,19 @@ mod tests {
 
     #[test]
     fn test_authenticator_has_invalid_mgmt_frame_protection_fields() {
+        // client only cares about AP's invalid setting if client is mgmt frame protection capable
+        let mut s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
+        let mut rsn_cap = RsnCapabilities(0);
+        rsn_cap.set_mgmt_frame_protection_cap(true);
+        s_rsne.rsn_capabilities = Some(rsn_cap);
+
         let mut a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
         let mut rsn_cap = RsnCapabilities(0);
         rsn_cap.set_mgmt_frame_protection_req(true);
         rsn_cap.set_mgmt_frame_protection_cap(false);
         a_rsne.rsn_capabilities = Some(rsn_cap);
 
-        // client only cares about AP's invalid setting if client is mgmt frame protection capable
-        let mut s_rsne = S_RSNE.to_vec();
-        s_rsne[20] = 1 << 7;
-
-        let result = is_valid_rsne_subset(s_rsne.as_slice(), &a_rsne);
+        let result = is_valid_rsne_subset(&s_rsne, &a_rsne);
         assert!(result.is_err());
         assert_eq!(format!("{}", result.unwrap_err()),
                    "authenticator RSNE has invalid mgmt frame protection")
@@ -186,19 +158,22 @@ mod tests {
 
     #[test]
     fn test_rsne_unsupported_group_data_cipher() {
+        let mut s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
         let a_rsne = make_rsne(Some(cipher::GCMP_256), vec![cipher::CCMP_128], vec![akm::PSK]);
-        assert!(!is_valid_rsne_subset(S_RSNE, &a_rsne).expect("expect Ok result"));
+        assert!(!is_valid_rsne_subset(&s_rsne, &a_rsne).expect("expect Ok result"));
     }
 
     #[test]
     fn test_rsne_unsupported_pairwise_cipher() {
+        let mut s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
         let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::BIP_CMAC_256], vec![akm::PSK]);
-        assert!(!is_valid_rsne_subset(S_RSNE, &a_rsne).expect("expect Ok result"));
+        assert!(!is_valid_rsne_subset(&s_rsne, &a_rsne).expect("expect Ok result"));
     }
 
     #[test]
     fn test_rsne_unsupported_akm() {
+        let mut s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
         let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::EAP]);
-        assert!(!is_valid_rsne_subset(S_RSNE, &a_rsne).expect("expect Ok result"));
+        assert!(!is_valid_rsne_subset(&s_rsne, &a_rsne).expect("expect Ok result"));
     }
 }

@@ -1,5 +1,6 @@
 use failure::{bail, ensure};
 use std::collections::HashMap;
+use wlan_rsn::Authenticator;
 
 use crate::ap::aid::{self, AssociationId};
 use crate::MacAddr;
@@ -9,16 +10,16 @@ pub struct RemoteClient {
     pub addr: MacAddr,
     pub aid: AssociationId,
     // TODO: change this to Authenticator type when cl/202680 lands
-    pub authenticator: Option<()>,
+    pub authenticator: Option<Authenticator>,
     _inner: (),
 }
 
 impl RemoteClient {
-    fn new(addr: MacAddr, aid: AssociationId) -> Self {
+    fn new(addr: MacAddr, aid: AssociationId, authenticator: Option<Authenticator>) -> Self {
         RemoteClient {
             addr,
             aid,
-            authenticator: None,
+            authenticator,
             _inner: (),
         }
     }
@@ -31,19 +32,24 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn add_client(&mut self, addr: MacAddr) -> Result<AssociationId, failure::Error> {
+    pub fn add_client(&mut self, addr: MacAddr, authenticator: Option<Authenticator>)
+                      -> Result<AssociationId, failure::Error> {
         // just make this case an error for now; can tweak this behavior once we have a better
         // understanding of how this case can happen
         ensure!(self.get_client(&addr).is_none(), "client already exists in map");
 
         let aid = self.aid_map.assign_aid()?;
-        let remote_client = RemoteClient::new(addr, aid);
+        let remote_client = RemoteClient::new(addr, aid, authenticator);
         self.clients.insert(addr, remote_client);
         Ok(aid)
     }
 
     pub fn get_client(&self, addr: &MacAddr) -> Option<&RemoteClient> {
         self.clients.get(addr)
+    }
+
+    pub fn get_mut_client(&mut self, addr: &MacAddr) -> Option<&mut RemoteClient> {
+        self.clients.get_mut(addr)
     }
 
     // currently unused outside of tests, can remove attribute once used in actual code
@@ -83,7 +89,7 @@ mod tests {
 
     fn add_client(client_map: &mut Map, addr: MacAddr)
                   -> Result<AssociationId, failure::Error> {
-        client_map.add_client(addr)
+        client_map.add_client(addr, None)
     }
 
     fn addr(id: u32) -> MacAddr {

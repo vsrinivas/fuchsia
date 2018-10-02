@@ -6,12 +6,16 @@ mod aid;
 mod remote_client;
 mod rsn;
 
+use failure::{bail, ensure};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent};
 use futures::channel::mpsc;
-use log::{debug, warn};
-use wlan_rsn::rsne::Rsne;
+use log::{debug, info, error, warn};
+use wlan_rsn::{Authenticator, rsna::{UpdateSink, SecAssocUpdate}, rsne::Rsne};
 
-use crate::ap::rsn::{create_wpa2_psk_rsne, is_valid_rsne_subset};
+use crate::ap::{
+    aid::AssociationId,
+    rsn::{create_wpa2_psk_rsne, is_valid_rsne_subset},
+};
 use crate::{DeviceInfo, MacAddr, MlmeRequest, Ssid};
 use crate::sink::MlmeSink;
 
@@ -40,21 +44,34 @@ use self::internal::*;
 
 pub type UserStream<T> = mpsc::UnboundedReceiver<UserEvent<T>>;
 
-enum State {
-    Idle,
+enum State<T: Tokens> {
+    Idle {
+        device_info: DeviceInfo,
+        mlme_sink: MlmeSink,
+        user_sink: UserSink<T>,
+    },
     Started {
-        ssid: Ssid,
-        rsne: Option<Rsne>,
-        client_map: remote_client::Map,
+        bss: InfraBss<T>,
     }
 }
 
-pub struct ApSme<T: Tokens> {
-    state: State,
-    #[allow(dead_code)]
+#[derive(Clone)]
+struct RsnCfg {
+    password: Vec<u8>,
+    rsne: Rsne,
+}
+
+struct InfraBss<T: Tokens> {
+    ssid: Ssid,
+    rsn_cfg: Option<RsnCfg>,
+    client_map: remote_client::Map,
     device_info: DeviceInfo,
     mlme_sink: MlmeSink,
     user_sink: UserSink<T>,
+}
+
+pub struct ApSme<T: Tokens> {
+    state: Option<State<T>>,
 }
 
 #[derive(Debug)]
@@ -81,134 +98,234 @@ impl<T: Tokens> ApSme<T> {
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (user_sink, user_stream) = mpsc::unbounded();
         let sme = ApSme {
-            state: State::Idle,
-            device_info,
-            mlme_sink: MlmeSink::new(mlme_sink),
-            user_sink: UserSink::new(user_sink),
+            state: Some(State::Idle {
+                device_info,
+                mlme_sink: MlmeSink::new(mlme_sink),
+                user_sink: UserSink::new(user_sink),
+            })
         };
         (sme, mlme_stream, user_stream)
     }
 
     pub fn on_start_command(&mut self, config: Config, token: T::StartToken) {
-        match self.state {
-            State::Idle => {
-                let rsne = if config.password.is_empty() { None }
-                           else { Some(create_wpa2_psk_rsne()) };
-                let req = create_start_request(&config, rsne.as_ref());
-                self.mlme_sink.send(MlmeRequest::StartAp(req));
+        self.state = self.state.take().map(|mut state| match state {
+            State::Idle { device_info, mlme_sink, user_sink } => {
+                let rsn_cfg = create_rsn_cfg(config.password.clone());
+                let req = create_start_request(&config, rsn_cfg.as_ref());
+                mlme_sink.send(MlmeRequest::StartAp(req));
                 // Currently, MLME doesn't send any response back. We simply assume
                 // that the start request succeeded immediately
-                self.user_sink.send(UserEvent::StartComplete {
+                user_sink.send(UserEvent::StartComplete {
                     token,
                     result: StartResult::Success,
                 });
-                self.state = State::Started {
-                    ssid: config.ssid,
-                    rsne,
-                    client_map: Default::default(),
-                };
-            },
-            State::Started { .. } => {
-                let result = StartResult::AlreadyStarted;
-                self.user_sink.send(UserEvent::StartComplete { token, result });
+                State::Started {
+                    bss: InfraBss {
+                        ssid: config.ssid,
+                        rsn_cfg,
+                        client_map: Default::default(),
+                        device_info,
+                        mlme_sink,
+                        user_sink,
+                    }
+                }
             }
-        }
+            State::Started { bss: InfraBss { ref mut user_sink, .. } } => {
+                let result = StartResult::AlreadyStarted;
+                user_sink.send(UserEvent::StartComplete { token, result });
+                state
+            }
+        });
     }
 
     pub fn on_stop_command(&mut self, token: T::StopToken) {
-        match &self.state {
-            State::Idle => {
-                self.user_sink.send(UserEvent::StopComplete { token });
+        self.state = self.state.take().map(|mut state| match state {
+            State::Idle { ref mut user_sink, .. } => {
+                user_sink.send(UserEvent::StopComplete { token });
+                state
             },
-            State::Started { ssid, .. } => {
-                let req = fidl_mlme::StopRequest { ssid: ssid.clone() };
-                self.mlme_sink.send(MlmeRequest::StopAp(req));
+            State::Started { bss } => {
+                let req = fidl_mlme::StopRequest { ssid: bss.ssid.clone() };
+                bss.mlme_sink.send(MlmeRequest::StopAp(req));
                 // Currently, MLME doesn't send any response back. We simply assume
                 // that the stop request succeeded immediately
-                self.user_sink.send(UserEvent::StopComplete { token });
-                self.state = State::Idle;
+                bss.user_sink.send(UserEvent::StopComplete { token });
+                State::Idle {
+                    device_info: bss.device_info,
+                    mlme_sink: bss.mlme_sink,
+                    user_sink: bss.user_sink,
+                }
             }
-        }
+        });
     }
 }
 
 impl<T: Tokens> super::Station for ApSme<T> {
     fn on_mlme_event(&mut self, event: MlmeEvent) {
         debug!("received MLME event: {:?}", event);
-        match self.state {
-            State::Idle => warn!("received MlmeEvent while ApSme is idle {:?}", event),
-            State::Started { rsne: ref a_rsne, ref mut client_map, .. } => match event {
-                MlmeEvent::AuthenticateInd { ind } => {
-                    let result_code = if ind.auth_type == fidl_mlme::AuthenticationTypes::OpenSystem {
-                        fidl_mlme::AuthenticateResultCodes::Success
-                    } else {
-                        warn!("unsupported authentication type {:?}", ind.auth_type);
-                        fidl_mlme::AuthenticateResultCodes::Refused
-                    };
-                    let resp = fidl_mlme::AuthenticateResponse {
-                        peer_sta_address: ind.peer_sta_address,
-                        result_code,
-                    };
-                    self.mlme_sink.send(MlmeRequest::AuthResponse(resp));
+        self.state.as_mut().map(|state| match state {
+            State::Idle { .. } => warn!("received MlmeEvent while ApSme is idle {:?}", event),
+            State::Started { ref mut bss } => match event {
+                MlmeEvent::AuthenticateInd { ind } => bss.handle_auth_ind(ind),
+                MlmeEvent::AssociateInd { ind } => bss.handle_assoc_ind(ind),
+                MlmeEvent::EapolInd { ind } => {
+                    let _ = bss.handle_eapol_ind(ind).map_err(|e| warn!("{}", e));
                 }
-                MlmeEvent::AssociateInd { ind } => {
-                    let resp = handle_assoc_ind(client_map, ind.peer_sta_address,
-                                                &ind.rsn, a_rsne);
-                    self.mlme_sink.send(MlmeRequest::AssocResponse(resp));
+                MlmeEvent::EapolConf { resp } => {
+                    if resp.result_code != fidl_mlme::EapolResultCodes::Success {
+                        // TODO(NET-1634) - Handle unsuccessful EAPoL confirmation. It doesn't
+                        //                  include client address, though. Maybe we can just ignore
+                        //                  these messages and just set a handshake timeout instead
+                        info!("Received unsuccessful EapolConf");
+                    }
                 }
                 _ => warn!("unsupported MlmeEvent type {:?}; ignoring", event),
             }
-        }
+        });
     }
 }
 
-fn handle_assoc_ind(client_map: &mut remote_client::Map,
-                    client_addr: MacAddr,
-                    s_rsne_bytes: &Option<Vec<u8>>,
-                    a_rsne: &Option<Rsne>)
-                    -> fidl_mlme::AssociateResponse {
-    use fidl_fuchsia_wlan_mlme::AssociateResultCodes::{Success, RefusedReasonUnspecified};
-    let (aid, result_code) = match evaluate_s_rsne(s_rsne_bytes, a_rsne) {
-        Success => match client_map.add_client(client_addr.clone()) {
-            Ok(aid) => (aid, Success),
-            Err(e) => {
-                warn!("unable to add user to client map: {}", e);
-                (0, RefusedReasonUnspecified)
-            }
-        },
-        other => (0, other)
-    };
-    fidl_mlme::AssociateResponse {
-        peer_sta_address: client_addr,
-        result_code,
-        association_id: aid,
+impl<T: Tokens> InfraBss<T> {
+    fn handle_auth_ind(&self, ind: fidl_mlme::AuthenticateIndication) {
+        let result_code = if ind.auth_type == fidl_mlme::AuthenticationTypes::OpenSystem {
+            fidl_mlme::AuthenticateResultCodes::Success
+        } else {
+            warn!("unsupported authentication type {:?}", ind.auth_type);
+            fidl_mlme::AuthenticateResultCodes::Refused
+        };
+        let resp = fidl_mlme::AuthenticateResponse {
+            peer_sta_address: ind.peer_sta_address,
+            result_code,
+        };
+        self.mlme_sink.send(MlmeRequest::AuthResponse(resp));
     }
-}
 
-fn evaluate_s_rsne(s_rsne_bytes: &Option<Vec<u8>>, a_rsne: &Option<Rsne>)
-    -> fidl_mlme::AssociateResultCodes {
-
-    match (s_rsne_bytes, a_rsne) {
-        (Some(s_rsne), Some(ref a_rsne)) => match is_valid_rsne_subset(s_rsne.as_slice(), a_rsne) {
-            Ok(true) => fidl_mlme::AssociateResultCodes::Success,
-            Ok(false) => fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch,
-            Err(e) => {
-                warn!("error validating supplicant RSNE: {}", e);
-                fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
+    fn handle_assoc_ind(&mut self, ind: fidl_mlme::AssociateIndication) {
+        let result = match (ind.rsn.as_ref(), self.rsn_cfg.clone()) {
+            (Some(s_rsne_bytes), Some(a_rsn)) =>
+                self.handle_rsn_assoc_ind(s_rsne_bytes, a_rsn, &ind.peer_sta_address),
+            (None, None) => self.add_client(ind.peer_sta_address.clone(), None),
+            _ => {
+                warn!("unexpected RSN element from client: {:?}", ind.rsn);
+                Err(fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch)
             }
+        };
+        let (aid, result_code) = match result {
+            Ok(aid) => (aid, fidl_mlme::AssociateResultCodes::Success),
+            Err(result_code) => (0, result_code),
+        };
+        let resp = fidl_mlme::AssociateResponse {
+            peer_sta_address: ind.peer_sta_address.clone(),
+            result_code,
+            association_id: aid,
+        };
+
+        self.mlme_sink.send(MlmeRequest::AssocResponse(resp));
+        if result_code == fidl_mlme::AssociateResultCodes::Success && self.rsn_cfg.is_some() {
+            self.initiate_key_exchange(&ind.peer_sta_address);
         }
-        (None, None) => fidl_mlme::AssociateResultCodes::Success,
-        _ => {
-            warn!("unexpected RSN element from supplicant: {:?}", s_rsne_bytes);
+    }
+
+    fn handle_rsn_assoc_ind(&mut self, s_rsne_bytes: &Vec<u8>, a_rsn: RsnCfg, client_addr: &MacAddr)
+                            -> Result<AssociationId, fidl_mlme::AssociateResultCodes> {
+        let s_rsne = wlan_rsn::rsne::from_bytes(s_rsne_bytes).to_full_result().map_err(|e| {
+            warn!("failed to deserialize RSNE: {:?}", e);
             fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
+        })?;
+        validate_s_rsne(&s_rsne, &a_rsn.rsne).map_err(|_| {
+            warn!("incompatible client RSNE");
+            fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
+        })?;
+        let authenticator =
+            Authenticator::new_wpa2psk_ccmp128(&self.ssid, &a_rsn.password, client_addr.clone(),
+                                               s_rsne, self.device_info.addr, a_rsn.rsne)
+                .map_err(|e| {
+                    warn!("failed to create authenticator: {}", e);
+                    fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
+                })?;
+        self.add_client(client_addr.clone(), Some(authenticator))
+    }
+
+    fn add_client(&mut self, addr: MacAddr, auth: Option<Authenticator>)
+                  -> Result<AssociationId, fidl_mlme::AssociateResultCodes> {
+        self.client_map.add_client(addr, auth).map_err(|e| {
+            warn!("unable to add user to client map: {}", e);
+            fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified
+        })
+    }
+
+    fn handle_eapol_ind(&mut self, ind: fidl_mlme::EapolIndication) -> Result<(), failure::Error> {
+        let client_addr = &ind.src_addr;
+        let authenticator = match self.client_map.get_mut_client(client_addr)
+                                                 .and_then(|c| c.authenticator.as_mut()) {
+            Some(authenticator) => authenticator,
+            None => bail!("authenticator not found for {:?}; ignoring EapolInd msg", client_addr),
+        };
+        let mic_size = authenticator.get_negotiated_rsne().mic_size;
+        match eapol::key_frame_from_bytes(&ind.data, mic_size).to_full_result() {
+            Ok(key_frame) => {
+                let frame = eapol::Frame::Key(key_frame);
+                let mut update_sink = UpdateSink::default();
+                match authenticator.on_eapol_frame(&mut update_sink, &frame) {
+                    Ok(()) => self.process_authenticator_updates(&update_sink,client_addr),
+                    Err(e) => bail!("failed processing EAPoL key frame: {}", e),
+                }
+            },
+            Err(_) => bail!("error parsing EAPoL key frame"),
+        }
+        Ok(())
+    }
+
+    fn initiate_key_exchange(&mut self, client_addr: &MacAddr) {
+        match self.client_map.get_mut_client(client_addr).and_then(|c| c.authenticator.as_mut()) {
+            Some(authenticator) => {
+                let mut update_sink = UpdateSink::default();
+                match authenticator.initiate(&mut update_sink) {
+                    Ok(()) => self.process_authenticator_updates(&update_sink, client_addr),
+                    Err(e) => error!("error initiating key exchange: {}", e),
+                }
+            }
+            None => error!("authenticator not found for {:?}", client_addr),
+        }
+    }
+
+    fn process_authenticator_updates(&mut self, update_sink: &UpdateSink, s_addr: &MacAddr) {
+        for update in update_sink {
+            match update {
+                SecAssocUpdate::TxEapolKeyFrame(frame) => {
+                    let mut buf = Vec::with_capacity(frame.len());
+                    frame.as_bytes(false, &mut buf);
+                    self.mlme_sink.send(MlmeRequest::Eapol(
+                        fidl_mlme::EapolRequest {
+                            src_addr: self.device_info.addr.clone(),
+                            dst_addr: s_addr.clone(),
+                            data: buf,
+                        }
+                    ));
+                }
+                _ => {}
+            }
         }
     }
 }
 
-fn create_start_request(config: &Config, rsne: Option<&Rsne>) -> fidl_mlme::StartRequest {
-    let rsne_bytes = rsne.as_ref().map(|r| {
-        let mut buf = Vec::with_capacity(r.len());
-        r.as_bytes(&mut buf);
+fn validate_s_rsne(s_rsne: &Rsne, a_rsne: &Rsne) -> Result<(), failure::Error> {
+    ensure!(is_valid_rsne_subset(s_rsne, a_rsne)?, "incompatible client RSNE");
+    Ok(())
+}
+
+fn create_rsn_cfg(password: Vec<u8>) -> Option<RsnCfg> {
+    if password.is_empty() {
+        None
+    } else {
+        Some(RsnCfg { password, rsne: create_wpa2_psk_rsne() })
+    }
+}
+
+fn create_start_request(config: &Config, ap_rsn: Option<&RsnCfg>) -> fidl_mlme::StartRequest {
+    let rsne_bytes = ap_rsn.as_ref().map(|RsnCfg { rsne, .. }| {
+        let mut buf = Vec::with_capacity(rsne.len());
+        rsne.as_bytes(&mut buf);
         buf
     });
     fidl_mlme::StartRequest {
@@ -259,7 +376,7 @@ mod tests {
     fn protected_config() -> Config {
         Config {
             ssid: SSID.to_vec(),
-            password: vec![0x61, 0x61, 0x61, 0x61, 0x61, 0x61],
+            password: vec![0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68],
             channel: 11,
         }
     }
@@ -359,6 +476,15 @@ mod tests {
             assert_eq!(assoc_resp.association_id, 1);
         } else {
             panic!("expect assoc response to MLME");
+        }
+
+        let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
+        if let MlmeRequest::Eapol(eapol_req) = msg {
+            assert_eq!(eapol_req.src_addr, AP_ADDR);
+            assert_eq!(eapol_req.dst_addr, CLIENT_ADDR);
+            assert!(eapol_req.data.len() > 0);
+        } else {
+            panic!("expect eapol request to MLME");
         }
     }
 

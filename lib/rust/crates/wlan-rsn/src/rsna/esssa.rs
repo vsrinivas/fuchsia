@@ -150,7 +150,7 @@ impl Gtksa {
 pub(crate) struct EssSa {
     // Configuration.
     role: Role,
-    negotiated_rsne: NegotiatedRsne,
+    pub negotiated_rsne: NegotiatedRsne,
     key_replay_counter: u64,
 
     // Security associations.
