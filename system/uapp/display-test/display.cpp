@@ -23,10 +23,17 @@ Display::Display(fuchsia_display_Info* info) {
     for (unsigned i = 0; i < info->cursor_configs.count; i++) {
         cursors_.push_back(cursors[i]);
     }
+
+    manufacturer_name_ = fbl::String(info->manufacturer_name.data);
+    monitor_name_ = fbl::String(info->monitor_name.data);
+    monitor_serial_ = fbl::String(info->monitor_serial.data);
 }
 
 void Display::Dump() {
     printf("Display id = %ld\n", id_);
+    printf("\tManufacturer name = \"%s\"\n", manufacturer_name_.c_str());
+    printf("\tMonitor name = \"%s\"\n", monitor_name_.c_str());
+    printf("\tMonitor serial = \"%s\"\n", monitor_serial_.c_str());
 
     printf("\tSupported pixel formats:\n");
     for (unsigned i = 0; i < pixel_formats_.size(); i++) {

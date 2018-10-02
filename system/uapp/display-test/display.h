@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fbl/string.h>
 #include <fbl/vector.h>
 #include <zircon/pixelformat.h>
 
@@ -45,4 +46,8 @@ private:
     fbl::Vector<zx_pixel_format_t> pixel_formats_;
     fbl::Vector<fuchsia_display_Mode> modes_;
     fbl::Vector<fuchsia_display_CursorInfo> cursors_;
+
+    fbl::String manufacturer_name_;
+    fbl::String monitor_name_;
+    fbl::String monitor_serial_;
 };

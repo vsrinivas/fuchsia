@@ -108,6 +108,14 @@ static void populate_image(const fuchsia_display_ImageConfig& image, image_t* im
     memcpy(image_out, &image, sizeof(fuchsia_display_ImageConfig));
 }
 
+static void populate_fidl_string(fidl_string_t* dest, fidl::Builder* dest_builder,
+                                 const char* src, uint32_t n) {
+    dest->data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
+    dest->size = strnlen(src, n - 1) + 1;
+    char* ptr = dest_builder->NewArray<char>(static_cast<uint32_t>(dest->size));
+    snprintf(ptr, dest->size, "%s", src);
+}
+
 } // namespace
 
 namespace display {
@@ -1256,6 +1264,22 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, uint32_t added_co
         for (unsigned i = 0; i < config->cursor_infos_.size(); i++) {
             memcpy(&coded_cursor_configs[i], &config->cursor_infos_[i], sizeof(cursor_info_t));
         }
+
+        const char* manufacturer_name = "";
+        const char* monitor_name = "";
+        const char* monitor_serial = "";
+        if (!controller_->GetDisplayIdentifiers(displays_added[i], &manufacturer_name,
+                                                &monitor_name, &monitor_serial)) {
+            zxlogf(ERROR, "Failed to get display identifiers\n");
+            ZX_DEBUG_ASSERT(false);
+        }
+
+        populate_fidl_string(&coded_configs[i].manufacturer_name,
+                              &builder, manufacturer_name, fuchsia_display_identifierMaxLen);
+        populate_fidl_string(&coded_configs[i].monitor_name,
+                              &builder, monitor_name, fuchsia_display_identifierMaxLen);
+        populate_fidl_string(&coded_configs[i].monitor_serial,
+                              &builder, monitor_serial, fuchsia_display_identifierMaxLen);
     }
 
     if (req->removed.count > 0) {

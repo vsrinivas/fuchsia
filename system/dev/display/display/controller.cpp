@@ -729,6 +729,27 @@ bool Controller::FN_NAME(uint64_t display_id, fbl::Array<TYPE>* data_out) { \
 GET_DISPLAY_INFO(GetCursorInfo,  cursor_infos_, cursor_info_t)
 GET_DISPLAY_INFO(GetSupportedPixelFormats, pixel_formats_, zx_pixel_format_t);
 
+bool Controller::GetDisplayIdentifiers(uint64_t display_id, const char** manufacturer_name,
+                                       const char** monitor_name, const char** monitor_serial) {
+    ZX_DEBUG_ASSERT(mtx_trylock(&mtx_) == thrd_busy);
+    for (auto& display : displays_) {
+        if (display.id == display_id) {
+            if (display.has_edid) {
+                *manufacturer_name = display.edid.manufacturer_name();
+                if (!strcmp("", *manufacturer_name)) {
+                    *manufacturer_name = display.edid.manufacturer_id();
+                }
+                *monitor_name = display.edid.monitor_name();
+                *monitor_serial = display.edid.monitor_serial();
+            } else {
+                *manufacturer_name = *monitor_name = *monitor_serial = "";
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
 zx_status_t Controller::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
     return DdkOpenAt(dev_out, "", flags);
 }

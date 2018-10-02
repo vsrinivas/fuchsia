@@ -104,6 +104,10 @@ public:
     // Calling GetCursorInfo requires holding |mtx()|
     bool GetCursorInfo(uint64_t display_id, fbl::Array<cursor_info_t>* cursor_info_out)
                        __TA_NO_THREAD_SAFETY_ANALYSIS;
+    // Calling GetDisplayIdentifiers requires holding |mtx()|
+    bool GetDisplayIdentifiers(uint64_t display_id, const char** manufacturer_name,
+                               const char** monitor_name, const char** monitor_serial)
+                               __TA_NO_THREAD_SAFETY_ANALYSIS;
 
     display_controller_protocol_ops_t* ops() { return ops_.ops; }
     void* ops_ctx() { return ops_.ctx; }

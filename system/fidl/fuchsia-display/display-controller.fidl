@@ -45,6 +45,8 @@ struct CursorInfo {
     uint32 unused;
 };
 
+const uint32 identifierMaxLen = 128;
+
 // Info contains the information about a particular attached display.
 struct Info {
     uint64 id;
@@ -63,6 +65,10 @@ struct Info {
     // circumstances, and it may accept other configurations, but at least
     // one of these configurations should be valid at most times.
     vector<CursorInfo> cursor_configs;
+
+    string:identifierMaxLen manufacturer_name;
+    string:identifierMaxLen monitor_name;
+    string:identifierMaxLen monitor_serial;
 };
 
 struct ImagePlane {
