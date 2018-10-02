@@ -48,8 +48,6 @@ struct guid {
     uint8_t data4[8];
 };
 
-static zx_status_t gpt_flush(const gptpart_device_t* gpt);
-
 static void uint8_to_guid_string(char* dst, uint8_t* src) {
     struct guid* guid = (struct guid*)src;
     sprintf(dst, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", guid->data1, guid->data2,
@@ -135,7 +133,8 @@ static zx_status_t gpt_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmd
         return ZX_OK;
     }
     case IOCTL_DEVICE_SYNC: {
-        return gpt_flush(device);
+        // Propagate sync to parent device
+        return device_ioctl(device->parent, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0, NULL);
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -208,36 +207,11 @@ static block_protocol_ops_t block_ops = {
     .queue = gpt_queue,
 };
 
-static void gpt_sync_complete(block_op_t* bop, zx_status_t status) {
+static void gpt_read_sync_complete(block_op_t* bop, zx_status_t status) {
     // Pass 32bit status back to caller via 32bit command field
     // Saves from needing custom structs, etc.
     bop->command = status;
     sync_completion_signal((sync_completion_t*)bop->cookie);
-}
-
-static zx_status_t gpt_flush(const gptpart_device_t* gpt) {
-    // TODO: Maybe reuse a single allocation rather than allocating each time we
-    // need to flush.
-    block_op_t* bop = calloc(1, gpt->block_op_size);
-    if (bop == NULL) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    sync_completion_t completion = SYNC_COMPLETION_INIT;
-
-    bop->command = BLOCK_OP_FLUSH;
-    bop->completion_cb = gpt_sync_complete;
-    bop->cookie = &completion;
-
-    gpt->bp.ops->queue(gpt->bp.ctx, bop);
-    sync_completion_wait(&completion, ZX_TIME_INFINITE);
-    zx_status_t status = bop->command;
-    free(bop);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "gpt: error %d flushing\n", status);
-        return status;
-    }
-    return ZX_OK;
 }
 
 static zx_status_t vmo_read(zx_handle_t vmo, void* data, uint64_t off, size_t len) {
@@ -285,7 +259,7 @@ static int gpt_bind_thread(void* arg) {
     bop->rw.offset_dev = 1;
     bop->rw.offset_vmo = 0;
     bop->rw.pages = NULL;
-    bop->completion_cb = gpt_sync_complete;
+    bop->completion_cb = gpt_read_sync_complete;
     bop->cookie = &completion;
 
     bp.ops->queue(bp.ctx, bop);
