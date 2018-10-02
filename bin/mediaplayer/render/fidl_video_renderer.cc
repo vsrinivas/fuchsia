@@ -178,7 +178,52 @@ void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
 }
 
 void FidlVideoRenderer::SetStreamType(const StreamType& stream_type) {
-  converter_.SetStreamType(stream_type.Clone());
+  FXL_DCHECK(stream_type.medium() == StreamType::Medium::kVideo);
+  FXL_DCHECK(stream_type.encoding() == StreamType::kVideoEncodingUncompressed);
+
+  const VideoStreamType& video_stream_type = *stream_type.video();
+
+  // Assume we're not going to use the converter. This may change.
+  use_converter_ = false;
+
+  // TODO(dalesat): Fix |FfmpegVideoDecoder| plane layout before scenic YV12.
+  // The fact that |VideoStreamType| has plane offsets is a artifact of the way
+  // the decoder adds padding for ffmpeg decoders. The plan is to adjust
+  // coded_height to make the planes contiguous. This has to happen before we
+  // start using scenic's YV12 support, which isn't there yet. For now,
+  // we convert from YV12 to ARGB in software, so we can accommodate the plane
+  // offsets.
+  scenic_line_stride_ = video_stream_type.line_stride().empty()
+                            ? 0
+                            : video_stream_type.line_stride()[0];
+
+  switch (video_stream_type.pixel_format()) {
+    case VideoStreamType::PixelFormat::kArgb:
+      // Supported by scenic.
+      scenic_pixel_format_ = fuchsia::images::PixelFormat::BGRA_8;
+      break;
+    case VideoStreamType::PixelFormat::kYuy2:
+      // Supported by scenic.
+      scenic_pixel_format_ = fuchsia::images::PixelFormat::YUY2;
+      break;
+    case VideoStreamType::PixelFormat::kNv12:
+      // Supported by scenic.
+      scenic_pixel_format_ = fuchsia::images::PixelFormat::NV12;
+      break;
+    case VideoStreamType::PixelFormat::kYv12:
+      // Not supported by scenic, but we have a converter.
+      converter_.SetStreamType(stream_type.Clone());
+      use_converter_ = true;
+      scenic_pixel_format_ = fuchsia::images::PixelFormat::BGRA_8;
+      scenic_line_stride_ = video_stream_type.coded_width() * 4u;
+      break;
+    default:
+      // Not supported.
+      // TODO(dalesat): Report the problem.
+      break;
+  }
+
+  stream_type_ = stream_type.Clone();
 }
 
 void FidlVideoRenderer::Prime(fit::closure callback) {
@@ -194,11 +239,35 @@ void FidlVideoRenderer::Prime(fit::closure callback) {
 }
 
 fuchsia::math::Size FidlVideoRenderer::video_size() const {
-  return converter_.GetSize();
+  fuchsia::math::Size size;
+
+  if (stream_type_) {
+    FXL_DCHECK(stream_type_->medium() == StreamType::Medium::kVideo);
+    const VideoStreamType& video_stream_type = *stream_type_->video();
+    size.width = video_stream_type.width();
+    size.height = video_stream_type.height();
+  } else {
+    size.width = 0;
+    size.height = 0;
+  }
+
+  return size;
 }
 
 fuchsia::math::Size FidlVideoRenderer::pixel_aspect_ratio() const {
-  return converter_.GetPixelAspectRatio();
+  fuchsia::math::Size pixel_aspect_ratio;
+
+  if (stream_type_) {
+    FXL_DCHECK(stream_type_->medium() == StreamType::Medium::kVideo);
+    const VideoStreamType& video_stream_type = *stream_type_->video();
+    pixel_aspect_ratio.width = video_stream_type.pixel_aspect_ratio_width();
+    pixel_aspect_ratio.height = video_stream_type.pixel_aspect_ratio_height();
+  } else {
+    pixel_aspect_ratio.width = 1;
+    pixel_aspect_ratio.height = 1;
+  }
+
+  return pixel_aspect_ratio;
 }
 
 void FidlVideoRenderer::SetGeometryUpdateCallback(fit::closure callback) {
@@ -227,19 +296,22 @@ void FidlVideoRenderer::AdvanceReferenceTime(int64_t reference_time) {
   DiscardOldPackets();
 }
 
-void FidlVideoRenderer::GetRgbaFrame(
-    uint8_t* rgba_buffer, const fuchsia::math::Size& rgba_buffer_size) {
-  if (held_packet_) {
-    converter_.ConvertFrame(rgba_buffer, rgba_buffer_size.width,
-                            rgba_buffer_size.height, held_packet_->payload(),
-                            held_packet_->size());
-  } else if (!packet_queue_.empty()) {
-    converter_.ConvertFrame(
-        rgba_buffer, rgba_buffer_size.width, rgba_buffer_size.height,
-        packet_queue_.front()->payload(), packet_queue_.front()->size());
+void FidlVideoRenderer::GetFrame(uint8_t* buffer,
+                                 const fuchsia::math::Size& buffer_size) {
+  if (!held_packet_ && packet_queue_.empty()) {
+    // No packet. Show black.
+    FillBlack(buffer, buffer_size);
+    return;
+  }
+
+  PacketPtr packet = held_packet_ ? held_packet_ : packet_queue_.front();
+
+  if (use_converter_) {
+    converter_.ConvertFrame(buffer, buffer_size.width, buffer_size.height,
+                            packet->payload(), packet->size());
   } else {
-    memset(rgba_buffer, 0,
-           rgba_buffer_size.width * rgba_buffer_size.height * 4);
+    // TODO(dalesat): This copy goes away when we use ImagePipe.
+    memcpy(buffer, packet->payload(), packet->size());
   }
 }
 
@@ -268,13 +340,17 @@ void FidlVideoRenderer::CheckForRevisedStreamType(const PacketPtr& packet) {
   const std::unique_ptr<StreamType>& revised_stream_type =
       packet->revised_stream_type();
 
-  if (revised_stream_type &&
-      revised_stream_type->medium() == StreamType::Medium::kVideo &&
-      revised_stream_type->video()) {
-    converter_.SetStreamType(revised_stream_type->Clone());
+  if (revised_stream_type) {
+    if (revised_stream_type->medium() == StreamType::Medium::kVideo) {
+      FXL_DCHECK(revised_stream_type->video());
 
-    if (geometry_update_callback_) {
-      geometry_update_callback_();
+      SetStreamType(*revised_stream_type);
+
+      if (geometry_update_callback_) {
+        geometry_update_callback_();
+      }
+    } else {
+      FXL_LOG(FATAL) << "Revised stream type was not video.";
     }
   }
 }
@@ -303,6 +379,36 @@ void FidlVideoRenderer::OnSceneInvalidated(int64_t reference_time) {
     stage()->RequestInputPacket();
   }
 }
+
+void FidlVideoRenderer::FillBlack(uint8_t* buffer,
+                                  const fuchsia::math::Size& buffer_size) {
+  FXL_DCHECK(buffer);
+
+  uint32_t plane_stride = scenic_line_stride_ * buffer_size.height;
+
+  // TODO(dalesat): Make sure these are correct.
+
+  switch (scenic_pixel_format_) {
+    case fuchsia::images::PixelFormat::BGRA_8:
+    case fuchsia::images::PixelFormat::YUY2:
+      // Interleaved, so just line stride times number of lines. In both cases,
+      // zeros map to black.
+      memset(buffer, 0, plane_stride);
+      break;
+    case fuchsia::images::PixelFormat::NV12:
+      // Two planes:
+      // 1) Y: one byte per pixel, so line stride times number of lines. Y must
+      //    be zero for black.
+      // 2) Interleaved UV: two bytes (U and V) for every 2x2 pixels, so half
+      //    the size of the first plane. U and V must be 128 for black.
+      memset(buffer, 0, plane_stride);
+      memset(buffer + plane_stride, 128, plane_stride / 2);
+      break;
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// FidlVideoRenderer::View implementation.
 
 FidlVideoRenderer::View::View(
     ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
@@ -333,11 +439,13 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
 
   // Update the image.
   const scenic::HostImage* image = image_cycler_.AcquireImage(
-      video_size.width, video_size.height, video_size.width * 4u,
-      fuchsia::images::PixelFormat::BGRA_8, fuchsia::images::ColorSpace::SRGB);
+      video_size.width, video_size.height, renderer_->scenic_line_stride(),
+      renderer_->scenic_pixel_format(), fuchsia::images::ColorSpace::SRGB);
   FXL_DCHECK(image);
-  renderer_->GetRgbaFrame(static_cast<uint8_t*>(image->image_ptr()),
-                          video_size);
+
+  // There's no way to find out how big the buffer is, so we have to assume
+  // |HostImageCycler| got it right.
+  renderer_->GetFrame(static_cast<uint8_t*>(image->image_ptr()), video_size);
   image_cycler_.ReleaseAndSwapImage();
 
   // Scale the video so it fills the view.

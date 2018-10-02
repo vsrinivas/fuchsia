@@ -54,6 +54,14 @@ class FidlVideoRenderer
 
   fuchsia::math::Size pixel_aspect_ratio() const override;
 
+  // Returns the pixel format to be used when creating |ImageInfo|s for scenic.
+  fuchsia::images::PixelFormat scenic_pixel_format() const {
+    return scenic_pixel_format_;
+  }
+
+  // Returns the line stride to be used when creating |ImageInfo|s for scenic.
+  uint32_t scenic_line_stride() const { return scenic_line_stride_; }
+
   // Registers a callback that's called when the values returned by |video_size|
   // or |pixel_aspect_ratio| change.
   void SetGeometryUpdateCallback(fit::closure callback);
@@ -91,12 +99,11 @@ class FidlVideoRenderer
   };
 
   // Advances reference time to the indicated value. This ensures that
-  // |GetSize| and |GetRgbaFrame| refer to the video frame appropriate to
+  // |GetSize| and |GetFrame| refer to the video frame appropriate to
   // the specified reference time and that obsolete packets are discarded.
   void AdvanceReferenceTime(int64_t reference_time);
 
-  void GetRgbaFrame(uint8_t* rgba_buffer,
-                    const fuchsia::math::Size& rgba_buffer_size);
+  void GetFrame(uint8_t* buffer, const fuchsia::math::Size& buffer_size);
 
   // Discards packets that are older than pts_ns_.
   void DiscardOldPackets();
@@ -116,7 +123,15 @@ class FidlVideoRenderer
            (packet_queue_.size() + (held_packet_ ? 1 : 0) < kPacketDemand);
   }
 
+  // Fill buffer with black based on |scenic_pixel_format_| and
+  // |scenic_line_stride_|.
+  void FillBlack(uint8_t* buffer, const fuchsia::math::Size& buffer_size);
+
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
+  bool use_converter_ = false;
+  std::unique_ptr<StreamType> stream_type_;
+  fuchsia::images::PixelFormat scenic_pixel_format_;
+  uint32_t scenic_line_stride_;
   std::deque<PacketPtr> packet_queue_;
   bool flushed_ = true;
   PacketPtr held_packet_;
