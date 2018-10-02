@@ -439,218 +439,117 @@ fn is_zero(slice: &[u8]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use {
-        crate::rsna::{
-            Role, test_util, UpdateSink, SecAssocUpdate, NegotiatedRsne, VerifiedKeyFrame
-        },
-        crate::key::{exchange::Key, gtk::Gtk, ptk::Ptk},
-    };
+    use crate::rsna::test_util;
 
     // Create an Authenticator and Supplicant and perfoms the entire 4-Way Handshake.
     #[test]
     fn test_supplicant_with_authenticator() {
-        let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne())
-            .expect("could not derive negotiated RSNE");
+        let mut env = test_util::FourwayTestEnv::new();
 
-        let mut supplicant = test_util::make_handshake(Role::Supplicant);
-        let mut authenticator = test_util::make_handshake(Role::Authenticator);
-
-        // Initiate 4-Way Handshake. The Authenticator will send message #1 of the handshake.
-        let mut a_update_sink = vec![];
-        let result = authenticator.initiate(&mut a_update_sink, 12);
-        assert!(result.is_ok(), "Authenticator failed initiating: {}", result.unwrap_err());
-        assert_eq!(a_update_sink.len(), 1);
-
-        // Verify message #1 was sent correctly.
-        let msg1 = extract_eapol_resp(&a_update_sink[..])
-            .expect("Authenticator did not send msg #1");
-        let result = VerifiedKeyFrame::from_key_frame(msg1, &Role::Supplicant, &rsne, 12);
-        assert!(result.is_ok(), "failed verifying msg #1 from Authenticator: {}", result.unwrap_err());
-
-        // Supplicant responds with message #2 of the handshake.
-        let mut s_update_sink = vec![];
-        let result = supplicant.on_eapol_key_frame(&mut s_update_sink, 0, result.unwrap());
-        assert!(result.is_ok(), "Supplicant failed processing msg #1: {}", result.unwrap_err());
-        assert_eq!(s_update_sink.len(), 2);
-        let msg2 = extract_eapol_resp(&s_update_sink[..])
-            .expect("Supplicant did not send msg #2");
-        let result = VerifiedKeyFrame::from_key_frame(msg2, &Role::Authenticator, &rsne, 12);
-        assert!(result.is_ok(), "failed verifying msg #2 from Supplicant: {}", result.unwrap_err());
-        let s_ptk = extract_reported_ptk(&s_update_sink[..])
-            .expect("Supplicant did not derive PTK").clone();
-
-        // Authenticator responds with message #3 of the handshake.
-        let mut a_update_sink = vec![];
-        let result = authenticator.on_eapol_key_frame(&mut a_update_sink, 13, result.unwrap());
-        assert!(result.is_ok(), "Authenticator failed processing msg #2: {}", result.unwrap_err());
-        assert_eq!(a_update_sink.len(), 2);
-        let msg3 = extract_eapol_resp(&a_update_sink[..])
-            .expect("Authenticator did not send msg #3");
-        let result = VerifiedKeyFrame::from_key_frame(msg3, &Role::Supplicant, &rsne, 13);
-        assert!(result.is_ok(), "failed verifying msg #3 from Authenticator: {}", result.unwrap_err());
-        let a_ptk = extract_reported_ptk(&a_update_sink[..])
-            .expect("Authenticator did not derive PTK").clone();
-
-        // Supplicant responds with message #4 of the handshake.
-        let mut s_update_sink = vec![];
-        let result = supplicant.on_eapol_key_frame(&mut s_update_sink, 0, result.unwrap());
-        assert!(result.is_ok(), "Supplicant failed processing msg #3: {}", result.unwrap_err());
-        assert_eq!(s_update_sink.len(), 2);
-        let msg4 = extract_eapol_resp(&s_update_sink[..])
-            .expect("Supplicant did not send msg #4");
-        let result = VerifiedKeyFrame::from_key_frame(msg4, &Role::Authenticator, &rsne, 13);
-        assert!(result.is_ok(), "failed verifying msg #4 from Supplicant: {}", result.unwrap_err());
-        let s_gtk = extract_reported_gtk(&s_update_sink[..])
-            .expect("Supplicant did not derive GTK").clone();
-
-        // Authenticator needs to process message #4 of the handshake.
-        let mut a_update_sink = vec![];
-        let result = authenticator.on_eapol_key_frame(&mut a_update_sink, 0, result.unwrap());
-        assert!(result.is_ok(), "Authenticator failed processing msg #4: {}", result.unwrap_err());
-        assert_eq!(a_update_sink.len(), 1);
-        let a_gtk = extract_reported_gtk(&a_update_sink[..])
-            .expect("Authenticator did not derive GTK").clone();
+        // Use arbitrarily chosen key_replay_counter.
+        let msg1 = env.initiate(12);
+        let (msg2, s_ptk) = env.send_msg1_to_supplicant(msg1, 12);
+        let (msg3, a_ptk) = env.send_msg2_to_authenticator(msg2, 12, 13);
+        let (msg4, s_gtk) = env.send_msg3_to_supplicant(msg3, 13);
+        let a_gtk = env.send_msg4_to_authenticator(msg4, 13);
 
         // Finally verify that Supplicant and Authenticator derived the same keys.
         assert_eq!(s_ptk, a_ptk);
         assert_eq!(s_gtk, a_gtk);
     }
 
-    fn extract_eapol_resp(updates: &[SecAssocUpdate]) -> Option<&eapol::KeyFrame> {
-        updates.iter().filter_map(|u| match u {
-            SecAssocUpdate::TxEapolKeyFrame(resp) => Some(resp),
-            _ => None,
-        }).next()
-    }
-
-    fn extract_reported_ptk(updates: &[SecAssocUpdate]) -> Option<&Ptk> {
-        updates.iter().filter_map(|u| match u {
-            SecAssocUpdate::Key(Key::Ptk(ptk)) => Some(ptk),
-            _ => None,
-        }).next()
-    }
-
-    fn extract_reported_gtk(updates: &[SecAssocUpdate]) -> Option<&Gtk> {
-        updates.iter().filter_map(|u| match u {
-            SecAssocUpdate::Key(Key::Gtk(gtk)) => Some(gtk),
-            _ => None,
-        }).next()
-    }
-
     // First messages of 4-Way Handshake must carry a zeroed IV in all protocol versions.
 
     #[test]
     fn test_random_iv_msg1_v1() {
-        let mut update_sink = UpdateSink::default();
-        let (_, msg1_result) = test_util::send_msg1(&mut update_sink, |msg1| {
-            msg1.version = 1;
-            msg1.key_iv = [0xFFu8; 16];
-        });
-        assert!(
-            msg1_result.is_err(),
-            "error, expected failure for first msg but result is: {:?}",
-            msg1_result
-        );
+        let mut env = test_util::FourwayTestEnv::new();
+
+        let mut msg1 = env.initiate(1);
+        msg1.version = 1;
+        msg1.key_iv = [0xFFu8; 16];
+        env.send_msg1_to_supplicant_expect_err(msg1, 1);
     }
 
     #[test]
     fn test_random_iv_msg1_v2() {
-        let mut update_sink = UpdateSink::default();
-        let (_, msg1_result) = test_util::send_msg1(&mut update_sink, |msg1| {
-            msg1.version = 2;
-            msg1.key_iv = [0xFFu8; 16];
-        });
-        assert!(
-            msg1_result.is_err(),
-            "error, expected failure for first msg but result is: {:?}",
-            msg1_result
-        );
+        let mut env = test_util::FourwayTestEnv::new();
+
+        let mut msg1 = env.initiate(1);
+        msg1.version = 2;
+        msg1.key_iv = [0xFFu8; 16];
+        env.send_msg1_to_supplicant_expect_err(msg1, 1);
     }
 
     // EAPOL Key frames can carry a random IV in the third message of the 4-Way Handshake if
     // protocol version 1, 802.1X-2001, is used. All other protocol versions require a zeroed IV
-    // for the third message of the handshake. Some APs violate this requirement, but for
-    // compatibility our implementation does in fact allow random IVs with 802.1X-2004.
+    // for the third message of the handshake. Some vendors violate this requirement. For
+    // compatibility, Fuchsia relaxes this requirement and allows random IVs with 802.1X-2004.
 
     #[test]
     fn test_random_iv_msg3_v1() {
-        let mut update_sink = UpdateSink::default();
-        let (mut env, msg1_result) = test_util::send_msg1(&mut update_sink, |_| {});
-        assert!(
-            msg1_result.is_ok(),
-            "error, expected success for processing first msg but result is: {:?}",
-            msg1_result
-        );
-        let msg3_result = env.send_msg3(&mut update_sink, vec![42u8; 16], |msg3| {
-            msg3.version = 1;
-            msg3.key_iv = [0xFFu8; 16];
-        });
-        assert!(
-            msg3_result.is_ok(),
-            "error, expected success for processing third msg but result is: {:?}",
-            msg3_result
-        );
+        let mut env = test_util::FourwayTestEnv::new();
+
+        let msg1 = env.initiate(12);
+        let (msg2, s_ptk) = env.send_msg1_to_supplicant(msg1, 12);
+        let (mut msg3, a_ptk) = env.send_msg2_to_authenticator(msg2, 12, 13);
+        msg3.version = 1;
+        msg3.key_iv = [0xFFu8; 16];
+        msg3 = test_util::finalize_key_frame(msg3, Some(a_ptk.kck()));
+
+        let (msg4, s_gtk) = env.send_msg3_to_supplicant(msg3, 13);
+        let a_gtk = env.send_msg4_to_authenticator(msg4, 13);
+
+        assert_eq!(s_ptk, a_ptk);
+        assert_eq!(s_gtk, a_gtk);
     }
 
     #[test]
     fn test_random_iv_msg3_v2() {
-        let mut update_sink = UpdateSink::default();
-        let (mut env, msg1_result) = test_util::send_msg1(&mut update_sink, |_| {});
-        assert!(
-            msg1_result.is_ok(),
-            "error, expected success for processing first msg but result is: {:?}",
-            msg1_result
-        );
-        let msg3_result = env.send_msg3(&mut update_sink, vec![42u8; 16], |msg3| {
-            msg3.version = 2;
-            msg3.key_iv = [0xFFu8; 16];
-        });
-        assert!(
-            msg3_result.is_ok(),
-            "error, expected success for processing third msg but result is: {:?}",
-            msg3_result
-        );
+        let mut env = test_util::FourwayTestEnv::new();
+
+        let msg1 = env.initiate(12);
+        let (msg2, s_ptk) = env.send_msg1_to_supplicant(msg1, 12);
+        let (mut msg3, a_ptk) = env.send_msg2_to_authenticator(msg2, 12, 13);
+        msg3.version = 2;
+        msg3.key_iv = [0xFFu8; 16];
+        msg3 = test_util::finalize_key_frame(msg3, Some(a_ptk.kck()));
+
+        let (msg4, s_gtk) = env.send_msg3_to_supplicant(msg3, 13);
+        let a_gtk = env.send_msg4_to_authenticator(msg4, 13);
+
+        assert_eq!(s_ptk, a_ptk);
+        assert_eq!(s_gtk, a_gtk);
     }
 
     #[test]
     fn test_zeroed_iv_msg3_v2() {
-        let mut update_sink = UpdateSink::default();
-        let (mut env, msg1_result) = test_util::send_msg1(&mut update_sink, |_| {});
-        assert!(
-            msg1_result.is_ok(),
-            "error, expected success for processing first msg but result is: {:?}",
-            msg1_result
-        );
-        let msg3_result = env.send_msg3(&mut update_sink, vec![42u8; 16], |msg3| {
-            msg3.version = 2;
-            msg3.key_iv = [0u8; 16];
-        });
-        assert!(
-            msg3_result.is_ok(),
-            "error, expected success for processing third msg but result is: {:?}",
-            msg3_result
-        );
+        let mut env = test_util::FourwayTestEnv::new();
+
+        let msg1 = env.initiate(12);
+        let (msg2, s_ptk) = env.send_msg1_to_supplicant(msg1, 12);
+        let (mut msg3, a_ptk) = env.send_msg2_to_authenticator(msg2, 12, 13);
+        msg3.version = 2;
+        msg3.key_iv = [0u8; 16];
+        msg3 = test_util::finalize_key_frame(msg3, Some(a_ptk.kck()));
+
+        let (msg4, s_gtk) = env.send_msg3_to_supplicant(msg3, 13);
+        let a_gtk = env.send_msg4_to_authenticator(msg4, 13);
+
+        assert_eq!(s_ptk, a_ptk);
+        assert_eq!(s_gtk, a_gtk);
     }
 
     #[test]
     fn test_random_iv_msg3_v3() {
-        let mut update_sink = UpdateSink::default();
-        let (mut env, msg1_result) = test_util::send_msg1(&mut update_sink, |_| {});
-        assert!(
-            msg1_result.is_ok(),
-            "error, expected success for processing first msg but result is: {:?}",
-            msg1_result
-        );
-        let msg3_result = env.send_msg3(&mut update_sink, vec![42u8; 16], |msg3| {
-            msg3.version = 3;
-            msg3.key_iv = [0xFFu8; 16];
-        });
-        // Random IVs are not allowed for v2 but because some APs violate this requirement, we have
-        // to allow such IVs.
-        assert!(
-            msg3_result.is_err(),
-            "error, expected failure for third msg but result is: {:?}",
-            msg3_result
-        );
+        let mut env = test_util::FourwayTestEnv::new();
+
+        let msg1 = env.initiate(12);
+        let (msg2, _) = env.send_msg1_to_supplicant(msg1, 12);
+        let (mut msg3, a_ptk) = env.send_msg2_to_authenticator(msg2, 12, 13);
+        msg3.version = 3;
+        msg3.key_iv = [0xFFu8; 16];
+        msg3 = test_util::finalize_key_frame(msg3, Some(a_ptk.kck()));
+
+        env.send_msg3_to_supplicant_expect_err(msg3, 13);
     }
 }

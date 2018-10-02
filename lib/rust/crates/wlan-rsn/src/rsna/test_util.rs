@@ -10,10 +10,13 @@ use crate::crypto_utils::nonce::NonceReader;
 use crate::key::exchange::{
     handshake::fourway::{self, Fourway},
 };
-use crate::key::ptk::Ptk;
+use crate::key::{ptk::Ptk, gtk::Gtk};
 use crate::key_data;
 use crate::key_data::kde;
 use crate::{Authenticator, Supplicant};
+use crate::rsna::{
+    SecAssocUpdate, NegotiatedRsne, VerifiedKeyFrame
+};
 use crate::rsne::Rsne;
 use crate::suite_selector::OUI;
 use hex::FromHex;
@@ -282,56 +285,148 @@ pub fn make_handshake(role: Role) -> Fourway {
     Fourway::new(make_fourway_cfg(role), pmk).expect("error while creating 4-Way Handshake")
 }
 
-fn compute_ptk(a_nonce: &[u8], supplicant_updates: &UpdateSink) -> Option<Ptk> {
-    for u in supplicant_updates {
-        match u {
-            SecAssocUpdate::TxEapolKeyFrame(msg2) => {
-                let snonce = msg2.key_nonce;
-                let derived_ptk = test_util::get_ptk(a_nonce, &snonce[..]);
-                return Some(derived_ptk);
-            }
-            _ => {}
+pub fn finalize_key_frame(mut frame: eapol::KeyFrame, kck: Option<&[u8]>) -> eapol::KeyFrame {
+    frame.update_packet_body_len();
+
+    if let Some(kck) = kck {
+        let mic = compute_mic(kck, &frame);
+        frame.key_mic = Bytes::from(mic);
+    }
+
+    frame
+}
+
+fn make_verified(frame: &eapol::KeyFrame, role: Role, key_replay_counter: u64)
+                 -> VerifiedKeyFrame
+{
+    let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne())
+        .expect("could not derive negotiated RSNE");
+
+    let result = VerifiedKeyFrame::from_key_frame(&frame, &role, &rsne, key_replay_counter);
+    assert!(result.is_ok(), "failed verifying message sent to {:?}: {}", role, result.unwrap_err());
+    result.unwrap()
+}
+
+fn extract_eapol_resp(updates: &[SecAssocUpdate]) -> eapol::KeyFrame {
+    updates.iter().filter_map(|u| match u {
+        SecAssocUpdate::TxEapolKeyFrame(resp) => Some(resp),
+        _ => None,
+    }).next().expect("updates do not contain EAPOL frame").clone()
+}
+
+fn extract_reported_ptk(updates: &[SecAssocUpdate]) -> Ptk {
+    updates.iter().filter_map(|u| match u {
+        SecAssocUpdate::Key(Key::Ptk(ptk)) => Some(ptk),
+        _ => None,
+    }).next().expect("updates do not contain PTK").clone()
+}
+
+fn extract_reported_gtk(updates: &[SecAssocUpdate]) -> Gtk {
+    updates.iter().filter_map(|u| match u {
+        SecAssocUpdate::Key(Key::Gtk(gtk)) => Some(gtk),
+        _ => None,
+    }).next().expect("updates do not contain GTK").clone()
+}
+
+pub struct FourwayTestEnv {
+    supplicant: Fourway,
+    authenticator: Fourway,
+}
+
+impl FourwayTestEnv {
+    pub fn new() -> FourwayTestEnv {
+        FourwayTestEnv {
+            supplicant: make_handshake(Role::Supplicant),
+            authenticator: make_handshake(Role::Authenticator),
         }
     }
-    None
-}
 
-pub struct FourwayHandshakeTestEnv {
-    handshake: Fourway,
-    a_nonce: Vec<u8>,
-    ptk: Option<Ptk>,
-}
+    pub fn initiate(&mut self, krc: u64) -> eapol::KeyFrame {
+        // Initiate 4-Way Handshake. The Authenticator will send message #1 of the handshake.
+        let mut a_update_sink = vec![];
+        let result = self.authenticator.initiate(&mut a_update_sink, krc);
+        assert!(result.is_ok(), "Authenticator failed initiating: {}", result.unwrap_err());
+        assert_eq!(a_update_sink.len(), 1);
 
-pub fn send_msg1<F>(update_sink: &mut UpdateSink, msg_modifier: F)
-    -> (FourwayHandshakeTestEnv, Result<(), failure::Error>) where F: Fn(&mut eapol::KeyFrame)
-{
-    let mut handshake = make_handshake(Role::Supplicant);
+        // Verify Authenticator sent message #1.
+        let msg1 = extract_eapol_resp(&a_update_sink[..]);
+        msg1
+    }
 
-    // Send first message of Handshake to Supplicant and verify result.
-    let a_nonce = get_nonce();
-    let frame = get_4whs_msg1(&a_nonce[..], msg_modifier);
-    let msg1 = VerifiedKeyFrame { frame: &frame };
-    let result = handshake.on_eapol_key_frame(update_sink, 0, msg1);
-
-    let ptk = compute_ptk(&a_nonce[..], update_sink);
-    (
-        FourwayHandshakeTestEnv {
-            handshake,
-            a_nonce,
-            ptk,
-        },
-        result,
-    )
-}
-
-impl FourwayHandshakeTestEnv {
-    pub fn send_msg3<F>(&mut self, update_sink: &mut UpdateSink, gtk: Vec<u8>, msg_modifier: F)
-        -> Result<(), failure::Error> where F: Fn(&mut eapol::KeyFrame)
+    pub fn send_msg1_to_supplicant(&mut self, msg1: eapol::KeyFrame, krc: u64)
+                               -> (eapol::KeyFrame, Ptk)
     {
-        // Send third message of 4-Way Handshake to Supplicant.
-        let ptk = self.ptk.as_ref().unwrap();
-        let frame = get_4whs_msg3(ptk, &self.a_nonce[..], &gtk[..], msg_modifier);
-        let msg3 = VerifiedKeyFrame { frame: &frame };
-        self.handshake.on_eapol_key_frame(update_sink, 0, msg3)
+        let verified_msg1 = make_verified(&msg1, Role::Supplicant, krc);
+
+        // Send message #1 to Supplicant and extract responses.
+        let mut s_update_sink = vec![];
+        let result = self.supplicant.on_eapol_key_frame(&mut s_update_sink, 0, verified_msg1);
+        assert!(result.is_ok(), "Supplicant failed processing msg #1: {}", result.unwrap_err());
+        let msg2 = extract_eapol_resp(&s_update_sink[..]);
+        let s_ptk = extract_reported_ptk(&s_update_sink[..]);
+
+        (msg2, s_ptk)
+    }
+
+    pub fn send_msg1_to_supplicant_expect_err(&mut self, msg1: eapol::KeyFrame, krc: u64) {
+        let verified_msg1 = make_verified(&msg1, Role::Supplicant, krc);
+
+        // Send message #1 to Supplicant and extract responses.
+        let mut s_update_sink = vec![];
+        let result = self.supplicant.on_eapol_key_frame(&mut s_update_sink, 0, verified_msg1);
+        assert!(result.is_err(), "Supplicant successfully processed illegal msg #1");
+    }
+
+    pub fn send_msg2_to_authenticator(&mut self, msg2: eapol::KeyFrame, expected_krc: u64, next_krc: u64)
+                                  -> (eapol::KeyFrame, Ptk)
+    {
+        let verified_msg2 = make_verified(&msg2, Role::Authenticator, expected_krc);
+
+        // Send message #1 to Supplicant and extract responses.
+        let mut a_update_sink = vec![];
+        let result = self.authenticator.on_eapol_key_frame(&mut a_update_sink, next_krc, verified_msg2);
+        assert!(result.is_ok(), "Authenticator failed processing msg #2: {}", result.unwrap_err());
+        let msg3 = extract_eapol_resp(&a_update_sink[..]);
+        let a_ptk = extract_reported_ptk(&a_update_sink[..]);
+
+        (msg3, a_ptk)
+    }
+
+    pub fn send_msg3_to_supplicant(&mut self, msg3: eapol::KeyFrame, krc: u64)
+                               -> (eapol::KeyFrame, Gtk)
+    {
+        let verified_msg3 = make_verified(&msg3, Role::Supplicant, krc);
+
+        // Send message #1 to Supplicant and extract responses.
+        let mut s_update_sink = vec![];
+        let result = self.supplicant.on_eapol_key_frame(&mut s_update_sink, 0, verified_msg3);
+        assert!(result.is_ok(), "Supplicant failed processing msg #3: {}", result.unwrap_err());
+        let msg4 = extract_eapol_resp(&s_update_sink[..]);
+        let s_gtk = extract_reported_gtk(&s_update_sink[..]);
+
+        (msg4, s_gtk)
+    }
+
+    pub fn send_msg3_to_supplicant_expect_err(&mut self, msg3: eapol::KeyFrame, krc: u64) {
+        let verified_msg3 = make_verified(&msg3, Role::Supplicant, krc);
+
+        // Send message #1 to Supplicant and extract responses.
+        let mut s_update_sink = vec![];
+        let result = self.supplicant.on_eapol_key_frame(&mut s_update_sink, 0, verified_msg3);
+        assert!(result.is_err(), "Supplicant successfully processed illegal msg #3");
+    }
+
+    pub fn send_msg4_to_authenticator(&mut self, msg4: eapol::KeyFrame, expected_krc: u64)
+                                  -> Gtk
+    {
+        let verified_msg4 = make_verified(&msg4, Role::Authenticator, expected_krc);
+
+        // Send message #1 to Supplicant and extract responses.
+        let mut a_update_sink = vec![];
+        let result = self.authenticator.on_eapol_key_frame(&mut a_update_sink, expected_krc, verified_msg4);
+        assert!(result.is_ok(), "Authenticator failed processing msg #4: {}", result.unwrap_err());
+        let a_gtk = extract_reported_gtk(&a_update_sink[..]);
+
+        a_gtk
     }
 }

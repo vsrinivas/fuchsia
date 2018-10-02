@@ -225,30 +225,34 @@ impl<'a> VerifiedKeyFrame<'a> {
         );
 
         // IEEE Std 802.11-2016, 12.7.2 c)
-        match sender {
-            // Supplicant always uses a key length of 0.
-            Role::Supplicant if frame.key_len != 0 => {
-                bail!(Error::InvalidKeyLength(frame.key_len, 0))
-            }
-            // Authenticator must use the pairwise cipher's key length.
-            Role::Authenticator => match frame.key_info.key_type() {
-                eapol::KEY_TYPE_PAIRWISE => {
-                    let tk_bits = rsne
-                        .pairwise
-                        .tk_bits()
-                        .ok_or(Error::UnsupportedCipherSuite)?;
-                    if frame.key_len != tk_bits / 8 {
-                        bail!(Error::InvalidKeyLength(frame.key_len, tk_bits / 8))
-                    }
-                }
-                // IEEE Std 802.11-2016, 12.7.2 c) conflicts with IEEE Std 802.11-2016, 12.7.7.2
-                // such that latter one requires the key length to be set to 0, while former is
-                // to vague to derive any key type specific requirements.
-                // Thus, leave it to the group key exchange method to enforce its requirements.
-                eapol::KEY_TYPE_GROUP_SMK => {}
-                _ => bail!(Error::UnsupportedKeyDerivation),
+        match frame.key_info.key_type() {
+            eapol::KEY_TYPE_PAIRWISE => match sender {
+                // IEEE is somewhat vague on what is expected from the frame's key_len field.
+                // IEEE Std 802.11-2016, 12.7.2 c) requires the key_len to match the PTK's
+                // length, while all handshakes defined in IEEE such as
+                // 4-Way Handshake (12.7.6.3) and Group Key Handshake (12.7.7.3) explicitly require
+                // a value of 0 for frames sent by the Supplicant.
+                // Not all vendors follow the latter requirement, such as Apple with iOS.
+                // To improve interoperability, a value of 0 or the pairwise temporal key length is
+                // allowed for frames sent by the Supplicant.
+                Role::Supplicant if frame.key_len != 0 => {
+                    let tk_bits = rsne.pairwise.tk_bits().ok_or(Error::UnsupportedCipherSuite)?;
+                    let tk_len = tk_bits / 8;
+                    ensure!(frame.key_len == tk_len, Error::InvalidKeyLength(frame.key_len, tk_len));
+                },
+                // Authenticator must use the pairwise cipher's key length.
+                Role::Authenticator => {
+                    let tk_bits = rsne.pairwise.tk_bits().ok_or(Error::UnsupportedCipherSuite)?;
+                    let tk_len = tk_bits / 8;
+                    ensure!(frame.key_len == tk_len, Error::InvalidKeyLength(frame.key_len, tk_len));
+                },
+                _ => {}
             },
-            _ => {}
+            // IEEE Std 802.11-2016, 12.7.2 c) does not specify the expected value for frames
+            // involved in exchanging the GTK. Thus, leave validation and enforcement of this
+            // requirement to the selected key exchange method.
+            eapol::KEY_TYPE_GROUP_SMK => {},
+            _ => bail!(Error::UnsupportedKeyDerivation),
         };
 
         // IEEE Std 802.11-2016, 12.7.2, d)
@@ -368,6 +372,7 @@ mod tests {
     use crate::cipher;
     use crate::rsne::Rsne;
     use crate::suite_selector::OUI;
+    use crate::rsna::{test_util, Role, NegotiatedRsne};
 
     #[test]
     fn test_negotiated_rsne_from_rsne() {
@@ -386,6 +391,50 @@ mod tests {
 
         let rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![]);
         NegotiatedRsne::from_rsne(&rsne).expect_err("error, created negotiated RSNE");
+    }
+
+    // IEEE requires the key length to be zeroed in the 4-Way Handshake but some vendors send the
+    // pairwise cipher's key length instead. The requirement was relaxed to improve
+    // interoperability,
+    #[test]
+    fn test_supplicant_sends_zeroed_and_non_zeroed_key_length() {
+        let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne())
+            .expect("could not derive negotiated RSNE");
+        let mut env = test_util::FourwayTestEnv::new();
+
+        // Use arbitrarily chosen key_replay_counter.
+        let msg1 = env.initiate(12);
+        let (mut msg2, s_ptk) = env.send_msg1_to_supplicant(msg1, 12);
+
+        // Use CCMP-128 key length.
+        msg2.key_len = 16;
+        msg2 = test_util::finalize_key_frame(msg2, Some(s_ptk.kck()));
+        let result = VerifiedKeyFrame::from_key_frame(&msg2, &Role::Authenticator, &rsne, 12);
+        assert!(result.is_ok(), "failed verifying message: {}", result.unwrap_err());
+
+
+        msg2.key_len = 0;
+        msg2 = test_util::finalize_key_frame(msg2, Some(s_ptk.kck()));
+        let result = VerifiedKeyFrame::from_key_frame(&msg2, &Role::Authenticator, &rsne, 12);
+        assert!(result.is_ok(), "failed verifying message: {}", result.unwrap_err());
+    }
+
+    // Fuchsia requires EAPOL frames sent from the Supplicant to contain a key length of either 0 or
+    // the PTK's length.
+    #[test]
+    fn test_supplicant_sends_random_key_length() {
+        let mut env = test_util::FourwayTestEnv::new();
+
+        // Use arbitrarily chosen key_replay_counter.
+        let msg1 = env.initiate(12);
+        let (mut msg2, s_ptk) = env.send_msg1_to_supplicant(msg1, 12);
+        msg2.key_len = 29;
+        msg2 = test_util::finalize_key_frame(msg2, Some(s_ptk.kck()));
+
+        let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne())
+            .expect("could not derive negotiated RSNE");
+        let result = VerifiedKeyFrame::from_key_frame(&msg2, &Role::Authenticator, &rsne, 12);
+        assert!(result.is_err(), "successfully verified illegal message");
     }
 
     #[test]
