@@ -226,7 +226,7 @@ class VirtioBalloonImpl : public fuchsia::guest::device::VirtioBalloon {
     }
 
     for (auto& callback : callbacks_) {
-      callback(status, std::move(mem_stats));
+      callback(status, mem_stats.Clone());
     }
     callbacks_.clear();
   }
