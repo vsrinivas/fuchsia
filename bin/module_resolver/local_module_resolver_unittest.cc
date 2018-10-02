@@ -45,7 +45,7 @@ class FindModulesTest : public gtest::TestLoopFixture {
   void ResetResolver() {
     // TODO: |impl_| will fail to resolve any queries whose parameters are
     // entity references.
-    impl_.reset(new LocalModuleResolver());
+    impl_ = std::make_unique<LocalModuleResolver>();
     for (auto entry : test_sources_) {
       impl_->AddSource(entry.first,
                        std::unique_ptr<ModuleManifestSource>(entry.second));
@@ -115,7 +115,7 @@ class FindModulesByTypesTest : public gtest::TestLoopFixture {
   void ResetResolver() {
     // TODO: |impl_| will fail to resolve any queries whose parameters are
     // entity references.
-    impl_.reset(new LocalModuleResolver());
+    impl_ = std::make_unique<LocalModuleResolver>();
     for (auto entry : test_sources_) {
       impl_->AddSource(entry.first,
                        std::unique_ptr<ModuleManifestSource>(entry.second));

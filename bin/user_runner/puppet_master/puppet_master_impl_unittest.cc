@@ -26,7 +26,7 @@ class PuppetMasterTest : public testing::TestWithSessionStorage {
   void SetUp() override {
     TestWithSessionStorage::SetUp();
     storage_ = MakeSessionStorage("page");
-    impl_.reset(new PuppetMasterImpl(storage_.get(), &executor_));
+    impl_ = std::make_unique<PuppetMasterImpl>(storage_.get(), &executor_);
     impl_->Connect(ptr_.NewRequest());
   }
 

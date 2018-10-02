@@ -21,7 +21,8 @@ class ContextEngineApp {
         context
             ->ConnectToEnvironmentService<fuchsia::modular::ComponentContext>();
     component_context->GetEntityResolver(entity_resolver_.NewRequest());
-    context_engine_impl_.reset(new ContextEngineImpl(entity_resolver_.get()));
+    context_engine_impl_ =
+        std::make_unique<ContextEngineImpl>(entity_resolver_.get());
 
     context->outgoing().AddPublicService<fuchsia::modular::ContextEngine>(
         [this](

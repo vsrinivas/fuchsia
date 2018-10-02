@@ -18,7 +18,7 @@ class ClipboardImplTest : public testing::TestWithLedger {
   void SetUp() override {
     TestWithLedger::SetUp();
 
-    clipboard_.reset(new ClipboardImpl(ledger_client()));
+    clipboard_ = std::make_unique<ClipboardImpl>(ledger_client());
   }
 
   void TearDown() override {

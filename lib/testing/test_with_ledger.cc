@@ -20,8 +20,8 @@ void TestWithLedger::SetUp() {
 
   ledger_app_ = std::make_unique<testing::LedgerRepositoryForTesting>();
 
-  ledger_client_.reset(new LedgerClient(ledger_app_->ledger_repository(),
-                                        __FILE__, [] { ASSERT_TRUE(false); }));
+  ledger_client_ = std::make_unique<LedgerClient>(
+      ledger_app_->ledger_repository(), __FILE__, [] { ASSERT_TRUE(false); });
 }
 
 void TestWithLedger::TearDown() {

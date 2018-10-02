@@ -95,8 +95,8 @@ class SuggestionEngineTest : public testing::TestWithSessionStorage {
     fuchsia::media::AudioPtr audio_ptr;
     audio_ptr.NewRequest();
 
-    suggestion_engine_impl_.reset(
-        new SuggestionEngineImpl(std::move(audio_ptr)));
+    suggestion_engine_impl_ =
+        std::make_unique<SuggestionEngineImpl>(std::move(audio_ptr));
     suggestion_engine_impl_->Connect(engine_ptr_.NewRequest());
     suggestion_engine_impl_->Connect(provider_ptr_.NewRequest());
     suggestion_engine_impl_->Connect(debug_ptr_.NewRequest());
@@ -108,12 +108,12 @@ class SuggestionEngineTest : public testing::TestWithSessionStorage {
     context_writer_handle.NewRequest();
     fidl::InterfaceHandle<fuchsia::modular::ContextReader>
         context_reader_handle;
-    context_reader_impl_.reset(
-        new TestContextReaderImpl(context_reader_handle.NewRequest()));
+    context_reader_impl_ = std::make_unique<TestContextReaderImpl>(
+        context_reader_handle.NewRequest());
 
     session_storage_ = MakeSessionStorage("page");
-    puppet_master_impl_.reset(
-        new PuppetMasterImpl(session_storage_.get(), &test_executor_));
+    puppet_master_impl_ = std::make_unique<PuppetMasterImpl>(
+        session_storage_.get(), &test_executor_);
     fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master;
     puppet_master_impl_->Connect(puppet_master.NewRequest());
 

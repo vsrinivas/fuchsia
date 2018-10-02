@@ -327,11 +327,11 @@ void UserRunnerImpl::InitializeLedger() {
   ledger_repository_.set_error_handler([this] { Logout(); });
   AtEnd(Reset(&ledger_repository_));
 
-  ledger_client_.reset(
-      new LedgerClient(ledger_repository_.get(), kAppId, [this] {
+  ledger_client_ =
+      std::make_unique<LedgerClient>(ledger_repository_.get(), kAppId, [this] {
         FXL_LOG(ERROR) << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
         Logout();
-      }));
+      });
   AtEnd(Reset(&ledger_client_));
 }
 
@@ -602,7 +602,8 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   auto focus_provider_request_story_provider =
       focus_provider_story_provider.NewRequest();
 
-  presentation_provider_impl_.reset(new PresentationProviderImpl(this));
+  presentation_provider_impl_ =
+      std::make_unique<PresentationProviderImpl>(this);
   AtEnd(Reset(&presentation_provider_impl_));
 
   // We create |story_provider_impl_| after |agent_runner_| so
@@ -610,8 +611,8 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   // all modules to be terminated before agents are terminated. Agents must
   // outlive the stories which contain modules that are connected to those
   // agents.
-  session_storage_.reset(
-      new SessionStorage(ledger_client_.get(), fuchsia::ledger::PageId()));
+  session_storage_ = std::make_unique<SessionStorage>(
+      ledger_client_.get(), fuchsia::ledger::PageId());
   AtEnd(Reset(&session_storage_));
   story_provider_impl_.reset(new StoryProviderImpl(
       user_environment_.get(), device_map_impl_->current_device_id(),
@@ -654,12 +655,13 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
       std::move(module_focuser));
   story_provider_impl_->Connect(
       std::move(story_provider_puppet_master_request));
-  puppet_master_impl_.reset(new PuppetMasterImpl(
-      session_storage_.get(), story_command_executor_.get()));
+  puppet_master_impl_ = std::make_unique<PuppetMasterImpl>(
+      session_storage_.get(), story_command_executor_.get());
   puppet_master_impl_->Connect(std::move(puppet_master_request));
 
-  session_ctl_.reset(new SessionCtl(startup_context_->outgoing().debug_dir(),
-                                    kSessionCtlDir, puppet_master_impl_.get()));
+  session_ctl_ =
+      std::make_unique<SessionCtl>(startup_context_->outgoing().debug_dir(),
+                                   kSessionCtlDir, puppet_master_impl_.get());
 
   AtEnd(Reset(&story_command_executor_));
   AtEnd(Reset(&puppet_master_impl_));

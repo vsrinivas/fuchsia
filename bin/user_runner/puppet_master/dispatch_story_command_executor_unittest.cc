@@ -59,12 +59,13 @@ class DispatchStoryCommandExecutorTest
  protected:
   void SetUp() override {
     TestWithLedger::SetUp();
-    session_storage_.reset(new SessionStorage(ledger_client(), {}));
+    session_storage_ =
+        std::make_unique<SessionStorage>(ledger_client(), LedgerPageId());
   }
 
   void Reset() {
-    executor_.reset(new DispatchStoryCommandExecutor(
-        session_storage_.get(), std::move(command_runners_)));
+    executor_ = std::make_unique<DispatchStoryCommandExecutor>(
+        session_storage_.get(), std::move(command_runners_));
   }
 
   fidl::StringPtr CreateStory() {
