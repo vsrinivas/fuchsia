@@ -6,7 +6,10 @@
 #include <string.h>
 
 #include <bitmap/raw-bitmap.h>
+
+#ifdef __Fuchsia__
 #include <lib/fzl/mapped-vmo.h>
+#endif
 
 #include <minfs/block-txn.h>
 #include <minfs/superblock.h>

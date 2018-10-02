@@ -220,8 +220,9 @@ zx_status_t MinfsCreator::ProcessCustom(int argc, char** argv, uint8_t* processe
     uint8_t required_args = 0;
 
     switch (GetCommand()) {
-    case Command::kLs: {
-    case Command::kMkdir:
+    case Command::kLs:
+        __FALLTHROUGH;
+    case Command::kMkdir: {
         required_args = 1;
         if (argc != required_args) {
             return ZX_ERR_INVALID_ARGS;
@@ -302,7 +303,8 @@ zx_status_t MinfsCreator::ProcessCustom(int argc, char** argv, uint8_t* processe
 }
 
 zx_status_t MinfsCreator::CalculateRequiredSize(off_t* out) {
-    uint32_t dir_count = dir_list_.size() + 1; // dir_list_ + root
+    uint32_t dir_count =
+        static_cast<uint32_t>(dir_list_.size() + 1); // dir_list_ + root
 
     // This is a rough estimate of how many directory data blocks will be needed.
     // This is not super robust and will not hold up if directories start requiring indirect blocks,

@@ -16,7 +16,6 @@
 #include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <lib/fdio/vfs.h>
 #include <fs/vfs.h>
 #include <minfs/format.h>
 #include <minfs/host.h>
@@ -341,7 +340,7 @@ off_t emu_lseek(int fd, off_t offset, int whence) {
             FAIL(EINVAL);
         }
         old = a.size;
-    // fall through
+        __FALLTHROUGH;
     case SEEK_CUR:
         n = old + offset;
         if (offset < 0) {

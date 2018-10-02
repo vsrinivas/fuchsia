@@ -7,12 +7,6 @@
 
 #pragma once
 
-#include <digest/digest.h>
-#include <fbl/algorithm.h>
-#include <fbl/macros.h>
-#include <fbl/ref_ptr.h>
-#include <fs/trace.h>
-
 #ifdef __Fuchsia__
 #include <blobfs/blobfs.h>
 #else

@@ -16,6 +16,7 @@
 #include <fs/watcher.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
+#include <lib/fzl/mapped-vmo.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #endif
@@ -33,7 +34,6 @@
 #include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
-#include <lib/fzl/mapped-vmo.h>
 #include <lib/zircon-internal/fnv1hash.h>
 #include <minfs/allocator.h>
 #include <minfs/format.h>

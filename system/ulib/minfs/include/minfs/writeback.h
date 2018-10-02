@@ -7,6 +7,7 @@
 #ifdef __Fuchsia__
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <lib/fzl/mapped-vmo.h>
 #include <lib/zx/vmo.h>
 #endif
 
@@ -19,7 +20,6 @@
 
 #include <fs/queue.h>
 #include <fs/vfs.h>
-#include <lib/fzl/mapped-vmo.h>
 
 #include <minfs/allocator.h>
 #include <minfs/bcache.h>

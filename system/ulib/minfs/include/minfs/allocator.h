@@ -11,7 +11,6 @@
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
-#include <lib/fzl/mapped-vmo.h>
 
 #include <minfs/block-txn.h>
 #include <minfs/format.h>

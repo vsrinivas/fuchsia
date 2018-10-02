@@ -8,6 +8,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
+#include <lib/fzl/mapped-vmo.h>
 #include <lib/zx/vmo.h>
 #endif
 
@@ -19,7 +20,6 @@
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
 #include <fs/vfs.h>
-#include <lib/fzl/mapped-vmo.h>
 
 #include "minfs-private.h"
 #include <minfs/writeback.h>

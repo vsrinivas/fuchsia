@@ -25,7 +25,6 @@
 #include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
-#include <lib/fzl/mapped-vmo.h>
 #include <minfs/format.h>
 
 namespace minfs {

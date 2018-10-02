@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <blobfs/fsck.h>
+#include <fs/trace.h>
 #include <inttypes.h>
 
 #ifdef __Fuchsia__

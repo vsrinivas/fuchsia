@@ -7,7 +7,10 @@
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
+
+#ifdef __Fuchsia__
 #include <lib/fzl/mapped-vmo.h>
+#endif
 
 #include <minfs/format.h>
 #include <minfs/fsck.h>
