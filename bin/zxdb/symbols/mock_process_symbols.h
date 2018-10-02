@@ -17,7 +17,6 @@ class MockProcessSymbols : public ProcessSymbols {
   // ProcessSymbols implementation.
   TargetSymbols* GetTargetSymbols() override;
   std::vector<ModuleSymbolStatus> GetStatus() const override;
-  Location LocationForAddress(uint64_t address) const override;
   std::vector<Location> ResolveInputLocation(
       const InputLocation& input_location,
       const ResolveOptions& options) const override;

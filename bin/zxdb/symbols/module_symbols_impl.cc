@@ -212,47 +212,6 @@ Err ModuleSymbolsImpl::Load() {
   return Err();
 }
 
-// This function is similar to llvm::DWARFContext::getLineInfoForAddress
-// but we can't use that because we want the actual DIE reference to the
-// function rather than its name.
-Location ModuleSymbolsImpl::LocationForAddress(
-    const SymbolContext& symbol_context, uint64_t absolute_address) const {
-  // TODO(brettw) handle addresses that aren't code (e.g. data).
-  uint64_t relative_address =
-      symbol_context.AbsoluteToRelative(absolute_address);
-  llvm::DWARFUnit* unit = CompileUnitForRelativeAddress(relative_address);
-  if (!unit)  // No symbol
-    return Location(Location::State::kSymbolized, absolute_address);
-
-  // Get the innermost subroutine or inlined function for the address. This
-  // may be empty, but still lookup the line info below in case its present.
-  llvm::DWARFDie subroutine = unit->getSubroutineForAddress(relative_address);
-  LazySymbol lazy_function;
-  if (subroutine)
-    lazy_function = symbol_factory_->MakeLazy(subroutine);
-
-  // Get the file/line location (may fail).
-  const llvm::DWARFDebugLine::LineTable* line_table =
-      context_->getLineTableForUnit(unit);
-  if (line_table) {
-    llvm::DILineInfo line_info;
-    if (line_table->getFileLineInfoForAddress(
-            relative_address, unit->getCompilationDir(),
-            llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-            line_info)) {
-      // Line info present.
-      return Location(absolute_address,
-                      FileLine(std::move(line_info.FileName), line_info.Line),
-                      line_info.Column, symbol_context,
-                      std::move(lazy_function));
-    }
-  }
-
-  // No line information.
-  return Location(absolute_address, FileLine(), 0, symbol_context,
-                  std::move(lazy_function));
-}
-
 std::vector<Location> ModuleSymbolsImpl::ResolveInputLocation(
     const SymbolContext& symbol_context, const InputLocation& input_location,
     const ResolveOptions& options) const {
@@ -396,7 +355,7 @@ std::vector<Location> ModuleSymbolsImpl::ResolveFunctionInputLocation(
     if (options.symbolize)
       result.push_back(LocationForAddress(symbol_context, address));
     else
-      result.push_back(Location(Location::State::kAddress, address));
+      result.emplace_back(Location::State::kAddress, address);
   }
   return result;
 }
@@ -404,16 +363,55 @@ std::vector<Location> ModuleSymbolsImpl::ResolveFunctionInputLocation(
 std::vector<Location> ModuleSymbolsImpl::ResolveAddressInputLocation(
     const SymbolContext& symbol_context, const InputLocation& input_location,
     const ResolveOptions& options) const {
-  // TODO(brettw) remove LocationForAddress() and move that code here instead.
   std::vector<Location> result;
   if (options.symbolize) {
     result.push_back(
         LocationForAddress(symbol_context, input_location.address));
   } else {
-    result.push_back(
-        Location(Location::State::kAddress, input_location.address));
+    result.emplace_back(Location::State::kAddress, input_location.address);
   }
   return result;
+}
+
+// This function is similar to llvm::DWARFContext::getLineInfoForAddress
+// but we can't use that because we want the actual DIE reference to the
+// function rather than its name.
+Location ModuleSymbolsImpl::LocationForAddress(
+    const SymbolContext& symbol_context, uint64_t absolute_address) const {
+  // TODO(brettw) handle addresses that aren't code (e.g. data).
+  uint64_t relative_address =
+      symbol_context.AbsoluteToRelative(absolute_address);
+  llvm::DWARFUnit* unit = CompileUnitForRelativeAddress(relative_address);
+  if (!unit)  // No symbol
+    return Location(Location::State::kSymbolized, absolute_address);
+
+  // Get the innermost subroutine or inlined function for the address. This
+  // may be empty, but still lookup the line info below in case its present.
+  llvm::DWARFDie subroutine = unit->getSubroutineForAddress(relative_address);
+  LazySymbol lazy_function;
+  if (subroutine)
+    lazy_function = symbol_factory_->MakeLazy(subroutine);
+
+  // Get the file/line location (may fail).
+  const llvm::DWARFDebugLine::LineTable* line_table =
+      context_->getLineTableForUnit(unit);
+  if (line_table) {
+    llvm::DILineInfo line_info;
+    if (line_table->getFileLineInfoForAddress(
+            relative_address, unit->getCompilationDir(),
+            llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+            line_info)) {
+      // Line info present.
+      return Location(absolute_address,
+                      FileLine(std::move(line_info.FileName), line_info.Line),
+                      line_info.Column, symbol_context,
+                      std::move(lazy_function));
+    }
+  }
+
+  // No line information.
+  return Location(absolute_address, FileLine(), 0, symbol_context,
+                  std::move(lazy_function));
 }
 
 // To a first approximation we just look up the line in the line table for

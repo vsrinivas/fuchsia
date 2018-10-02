@@ -17,6 +17,7 @@
 #include "garnet/bin/zxdb/console/format_register.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/symbols/input_location.h"
 #include "garnet/bin/zxdb/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/symbols/symbol_utils.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
@@ -316,8 +317,11 @@ std::string MemoryAnalysis::GetAnnotationsBetween(uint64_t address_begin,
 std::string MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
   if (!process_)
     return std::string();
-  Location loc = process_->GetSymbols()->LocationForAddress(data);
-  if (!loc.function()) {
+  auto locations = process_->GetSymbols()->ResolveInputLocation(
+      InputLocation(data));
+  FXL_DCHECK(locations.size() == 1);
+
+  if (!locations[0].function()) {
     // Check if this points into any relevant aspace entries. Want the deepest
     // one smaller than the max size threshold.
     int max_depth = -1;
@@ -339,7 +343,7 @@ std::string MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
   }
   // TODO(brettw) this should indicate the byte offset from the beginning of
   // the function, or maybe the file/line number.
-  return "▷ inside " + loc.function().Get()->GetFullName();
+  return "▷ inside " + locations[0].function().Get()->GetFullName();
 }
 
 }  // namespace internal

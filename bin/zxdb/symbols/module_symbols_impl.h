@@ -52,11 +52,9 @@ class ModuleSymbolsImpl : public ModuleSymbols {
 
   // ModuleSymbols implementation.
   ModuleSymbolStatus GetStatus() const override;
-  Location LocationForAddress(const SymbolContext& symbol_context,
-                              uint64_t absolute_address) const override;
   std::vector<Location> ResolveInputLocation(
       const SymbolContext& symbol_context, const InputLocation& input_location,
-      const ResolveOptions& options) const override;
+      const ResolveOptions& options = ResolveOptions()) const override;
   LineDetails LineDetailsForAddress(const SymbolContext& symbol_context,
                                     uint64_t absolute_address) const override;
   std::vector<uint64_t> AddressesForFunction(
@@ -79,6 +77,10 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   std::vector<Location> ResolveAddressInputLocation(
       const SymbolContext& symbol_context, const InputLocation& input_location,
       const ResolveOptions& options) const;
+
+  // Symbolizes the given address if possible.
+  Location LocationForAddress(const SymbolContext& symbol_context,
+                              uint64_t absolute_address) const;
 
   // Resolves the line number information for the given file, which must be an
   // exact match. This is a helper function for ResolveLineInputLocation().

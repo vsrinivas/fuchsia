@@ -21,10 +21,6 @@ std::vector<ModuleSymbolStatus> MockProcessSymbols::GetStatus() const {
   return std::vector<ModuleSymbolStatus>();
 }
 
-Location MockProcessSymbols::LocationForAddress(uint64_t address) const {
-  return Location(Location::State::kSymbolized, address);
-}
-
 std::vector<Location> MockProcessSymbols::ResolveInputLocation(
     const InputLocation& input_location, const ResolveOptions& options) const {
   if (input_location.type == InputLocation::Type::kAddress) {

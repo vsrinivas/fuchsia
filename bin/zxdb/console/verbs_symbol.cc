@@ -448,9 +448,10 @@ Err DoSymNear(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  Location loc =
-      cmd.target()->GetProcess()->GetSymbols()->LocationForAddress(address);
-  Console::get()->Output(DescribeLocation(loc, true));
+  auto locations = cmd.target()->GetProcess()->GetSymbols()->ResolveInputLocation(
+      InputLocation(address));
+  FXL_DCHECK(locations.size() == 1u);
+  Console::get()->Output(DescribeLocation(locations[0], true));
   return Err();
 }
 

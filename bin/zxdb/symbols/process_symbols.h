@@ -9,6 +9,7 @@
 #include <string>
 
 #include "garnet/bin/zxdb/symbols/location.h"
+#include "garnet/bin/zxdb/symbols/resolve_options.h"
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace zxdb {
@@ -29,10 +30,6 @@ class ProcessSymbols {
   // Returns statistics on the currently-loaded modules.
   virtual std::vector<ModuleSymbolStatus> GetStatus() const = 0;
 
-  // Attempts to symbolize the given address. If not possible, the returned
-  // location will be an address-only location.
-  virtual Location LocationForAddress(uint64_t address) const = 0;
-
   // Converts the given InputLocation into one or more locations. The input
   // can match zero, one, or many locations.
   //
@@ -40,10 +37,10 @@ class ProcessSymbols {
   // output locations will be regular addresses (this will be slightly faster).
   virtual std::vector<Location> ResolveInputLocation(
       const InputLocation& input_location,
-      const ResolveOptions& options) const = 0;
+      const ResolveOptions& options = ResolveOptions()) const = 0;
 
   // Computes the line that corresponds to the given address. Unlike
-  // LocationForAddress (which just returns the current source line), this
+  // ResolveInputLocation (which just returns the current source line), this
   // returns the entire set of contiguous line table entries with code ranges
   // with the same line as the given address.
   virtual LineDetails LineDetailsForAddress(uint64_t address) const = 0;

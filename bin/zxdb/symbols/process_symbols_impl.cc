@@ -116,13 +116,6 @@ std::vector<ModuleSymbolStatus> ProcessSymbolsImpl::GetStatus() const {
   return result;
 }
 
-Location ProcessSymbolsImpl::LocationForAddress(uint64_t address) const {
-  // TODO(brettw) convert callers to ResolveInputLocation() and remove this.
-  auto results = ResolveInputLocation(InputLocation(address), ResolveOptions());
-  FXL_DCHECK(results.size() == 1u);
-  return results[0];
-}
-
 std::vector<Location> ProcessSymbolsImpl::ResolveInputLocation(
     const InputLocation& input_location, const ResolveOptions& options) const {
   FXL_DCHECK(input_location.type != InputLocation::Type::kNone);
@@ -170,7 +163,7 @@ LineDetails ProcessSymbolsImpl::LineDetailsForAddress(uint64_t address) const {
 
 std::vector<uint64_t> ProcessSymbolsImpl::AddressesForFunction(
     const std::string& name) const {
-  // Replace callers with LocationForAddress and remove this.
+  // Replace callers with ResolveInputLocation() and remove this.
   std::vector<uint64_t> result;
   for (const auto& pair : modules_) {
     if (pair.second.symbols) {

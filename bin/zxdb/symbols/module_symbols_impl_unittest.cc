@@ -77,10 +77,12 @@ TEST(ModuleSymbols, Basic) {
   ASSERT_NE(0u, addrs[0]);
 
   // That address should resolve back to the function name.
-  Location loc = module.LocationForAddress(symbol_context, addrs[0]);
-  EXPECT_TRUE(loc.is_symbolized());
-  EXPECT_EQ("zxdb_symbol_test.cc", loc.file_line().GetFileNamePart());
-  EXPECT_EQ(TestSymbolModule::kMyFunctionLine, loc.file_line().line());
+  auto locations =
+      module.ResolveInputLocation(symbol_context, InputLocation(addrs[0]));
+  ASSERT_EQ(1u, locations.size());
+  EXPECT_TRUE(locations[0].is_symbolized());
+  EXPECT_EQ("zxdb_symbol_test.cc", locations[0].file_line().GetFileNamePart());
+  EXPECT_EQ(TestSymbolModule::kMyFunctionLine, locations[0].file_line().line());
 }
 
 TEST(ModuleSymbols, LineDetailsForAddress) {
@@ -106,10 +108,11 @@ TEST(ModuleSymbols, LineDetailsForAddress) {
       symbol_context, InputLocation(FileLine(file_name, kLineToQuery)),
       options);
   ASSERT_LE(1u, addrs.size());
-  Location location =
-      module.LocationForAddress(symbol_context, addrs[0].address());
-  EXPECT_EQ(kLineToQuery, location.file_line().line());
-  EXPECT_EQ(file_name, location.file_line().file());
+  auto locations = module.ResolveInputLocation(
+      symbol_context, InputLocation(addrs[0].address()));
+  ASSERT_EQ(1u, locations.size());
+  EXPECT_EQ(kLineToQuery, locations[0].file_line().line());
+  EXPECT_EQ(file_name, locations[0].file_line().file());
 
   // Lookup the line info. Normally we expect one line table entry for this but
   // don't want to assume that since the compiler could emit multiple entries
@@ -161,46 +164,56 @@ TEST(ModuleSymbols, ResolveLineInputLocation) {
   addrs = module.ResolveInputLocation(
       symbol_context, InputLocation(FileLine(file_name, 27)), options);
   ASSERT_LE(1u, addrs.size());
-  Location location =
-      module.LocationForAddress(symbol_context, addrs[0].address());
-  EXPECT_EQ(27, location.file_line().line());
-  EXPECT_EQ(file_name, location.file_line().file());
+  auto locations = module.ResolveInputLocation(
+      symbol_context, InputLocation(addrs[0].address()));
+  ASSERT_EQ(1u, locations.size());
+  EXPECT_EQ(27, locations[0].file_line().line());
+  EXPECT_EQ(file_name, locations[0].file_line().file());
 
   // Line 26 is a comment line, looking it up should get the following line.
   addrs = module.ResolveInputLocation(
       symbol_context, InputLocation(FileLine(file_name, 26)), options);
   ASSERT_LE(1u, addrs.size());
-  location = module.LocationForAddress(symbol_context, addrs[0].address());
-  EXPECT_EQ(27, location.file_line().line());
-  EXPECT_EQ(file_name, location.file_line().file());
+  locations = module.ResolveInputLocation(symbol_context,
+                                          InputLocation(addrs[0].address()));
+  ASSERT_EQ(1u, locations.size());
+  EXPECT_EQ(27, locations[0].file_line().line());
+  EXPECT_EQ(file_name, locations[0].file_line().file());
 
   // Line 15 is the beginning of the templatized function. There should be
   // two matches since its instantiated twice.
   addrs = module.ResolveInputLocation(
       symbol_context, InputLocation(FileLine(file_name, 15)), options);
   ASSERT_EQ(2u, addrs.size());
-  location = module.LocationForAddress(symbol_context, addrs[0].address());
-  EXPECT_EQ(15, location.file_line().line());
-  EXPECT_EQ(file_name, location.file_line().file());
-  location = module.LocationForAddress(symbol_context, addrs[1].address());
-  EXPECT_EQ(15, location.file_line().line());
-  EXPECT_EQ(file_name, location.file_line().file());
+  locations = module.ResolveInputLocation(symbol_context,
+                                          InputLocation(addrs[0].address()));
+  ASSERT_EQ(1u, locations.size());
+  EXPECT_EQ(15, locations[0].file_line().line());
+  EXPECT_EQ(file_name, locations[0].file_line().file());
+  locations = module.ResolveInputLocation(symbol_context,
+                                          InputLocation(addrs[1].address()));
+  ASSERT_EQ(1u, locations.size());
+  EXPECT_EQ(15, locations[0].file_line().line());
+  EXPECT_EQ(file_name, locations[0].file_line().file());
 
   // Line 17 is only present in one of the two template instantiations.
   // We should only find it once (see note below about case #2).
   addrs = module.ResolveInputLocation(
       symbol_context, InputLocation(FileLine(file_name, 17)), options);
   ASSERT_TRUE(addrs.size() == 1u || addrs.size() == 2u);
-  location = module.LocationForAddress(symbol_context, addrs[0].address());
-  EXPECT_EQ(17, location.file_line().line());
+  locations = module.ResolveInputLocation(symbol_context,
+                                          InputLocation(addrs[0].address()));
+  ASSERT_EQ(1u, locations.size());
+  EXPECT_EQ(17, locations[0].file_line().line());
   if (addrs.size() == 2u) {
     // MSVC in debug mode will emit the full code in both instantiations of the
     // template which is valid. To be more robust this test allows that form
     // even though Clang doesn't do this. The important thing is that looking
     // up line 17 never gives us line 19 (which is the other template
     // instantiation).
-    location = module.LocationForAddress(symbol_context, addrs[1].address());
-    EXPECT_EQ(17, location.file_line().line());
+    locations = module.ResolveInputLocation(symbol_context,
+                                            InputLocation(addrs[1].address()));
+    EXPECT_EQ(17, locations[0].file_line().line());
   }
 }
 

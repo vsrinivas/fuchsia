@@ -31,12 +31,6 @@ ModuleSymbolStatus MockModuleSymbols::GetStatus() const {
   return status;
 }
 
-Location MockModuleSymbols::LocationForAddress(
-    const SymbolContext& symbol_context, uint64_t absolute_address) const {
-  // Not yet supported by this mock.
-  return Location(Location::State::kAddress, absolute_address);
-}
-
 std::vector<Location> MockModuleSymbols::ResolveInputLocation(
     const SymbolContext& symbol_context, const InputLocation& input_location,
     const ResolveOptions& options) const {

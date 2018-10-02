@@ -10,6 +10,7 @@
 
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/module_symbol_status.h"
+#include "garnet/bin/zxdb/symbols/resolve_options.h"
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace zxdb {
@@ -40,14 +41,6 @@ class ModuleSymbols {
   // about. The base address will be 0 because this class doesn't know what the
   // base address is.
   virtual ModuleSymbolStatus GetStatus() const = 0;
-
-  // Returns a symbolized Location object for the given absolute location.
-  // The location will be of type kAddress if there is no symbol for this
-  // location.
-  //
-  // The SymbolContext will be used to interpret the absolute input address.
-  virtual Location LocationForAddress(const SymbolContext& symbol_context,
-                                      uint64_t absolute_address) const = 0;
 
   // Converts the given InputLocation into one or more locations. If the
   // location is an address, it will be be returned whether or not the address
@@ -80,10 +73,10 @@ class ModuleSymbols {
   // *something*.
   virtual std::vector<Location> ResolveInputLocation(
       const SymbolContext& symbol_context, const InputLocation& input_location,
-      const ResolveOptions& options) const = 0;
+      const ResolveOptions& options = ResolveOptions()) const = 0;
 
   // Computes the line that corresponds to the given address. Unlike
-  // LocationForAddress (which just returns the current source line), this
+  // ResolveInputLocation (which just returns the current source line), this
   // returns the entire set of contiguous line table entries with code ranges
   // with the same line as the given address.
   //

@@ -8,6 +8,7 @@
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
 #include "garnet/bin/zxdb/expr/symbol_eval_context.h"
+#include "garnet/bin/zxdb/symbols/input_location.h"
 
 namespace zxdb {
 
@@ -40,8 +41,11 @@ uint64_t FrameImpl::GetStackPointer() const { return stack_frame_.sp; }
 void FrameImpl::EnsureSymbolized() const {
   if (location_.is_symbolized())
     return;
-  location_ =
-      thread_->process()->GetSymbols()->LocationForAddress(location_.address());
+  auto vect = thread_->process()->GetSymbols()->ResolveInputLocation(
+      InputLocation(location_.address()));
+  // Should always return 1 result for symbolizing addresses.
+  FXL_DCHECK(vect.size() == 1);
+  location_ = std::move(vect[0]);
 }
 
 fxl::RefPtr<SymbolDataProvider> FrameImpl::GetSymbolDataProvider() const {
