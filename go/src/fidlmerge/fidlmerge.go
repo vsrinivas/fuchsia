@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"text/template"
+	"bytes"
 )
 
 func main() {
@@ -232,7 +233,7 @@ func (root Root) GetLibrary(name types.EncodedLibraryIdentifier) *types.Library 
 
 // Generates code using the specified template.
 func GenerateFidl(templatePath string, fidl types.Root, outputBase *string, options Options) error {
-	bytes, err := ioutil.ReadFile(templatePath)
+	returnBytes, err := ioutil.ReadFile(templatePath)
 	if err != nil {
 		log.Fatalf("Error reading from %s: %v", templatePath, err)
 	}
@@ -287,9 +288,15 @@ func GenerateFidl(templatePath string, fidl types.Root, outputBase *string, opti
 		"getOptionAsEncodedCompoundIdentifier": func(name string) types.EncodedCompoundIdentifier {
 			return types.EncodedCompoundIdentifier(root.options[name])
 		},
+		// Returns the template executed
+		"execTmpl": func(template string, data interface{}) (string, error) {
+			buffer := &bytes.Buffer{}
+			err = root.templates.ExecuteTemplate(buffer, template, data)
+			return buffer.String(), err
+		},
 	}
 
-	template.Must(tmpls.Funcs(funcMap).Parse(string(bytes[:])))
+	template.Must(tmpls.Funcs(funcMap).Parse(string(returnBytes[:])))
 
 	err = tmpls.ExecuteTemplate(os.Stdout, "Main", root)
 	if err != nil {
