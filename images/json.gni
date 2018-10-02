@@ -51,6 +51,9 @@
 #         that this image is needed for paving via Zedboot.  The value ""
 #         means this image is the primary ZBI, which is not preceded by a
 #         switch on the `bootserver` command line.
+#       archive (optional; default: false)
+#         [boolean] This image should be included in a build archive.
+#         Implied by the presence of `bootserver`.
 #
 #   sdk (optional)
 #     [string] Put this image into the SDK under this name.

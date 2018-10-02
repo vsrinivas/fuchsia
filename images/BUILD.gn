@@ -49,7 +49,41 @@ if (zircon_boot_groups == "all") {
 
 # This will collect a list of scopes describing each image exported.
 # See json.gni.
-images = []
+images = [
+  {
+    sources = [
+      "$root_build_dir/args.gn",
+    ]
+    json = {
+      name = "buildargs"
+      type = "gn"
+      archive = true
+    }
+    deps = []
+  },
+  {
+    sources = [
+      "//.jiri_root/update_history/latest",
+    ]
+    json = {
+      name = "jiri_snapshot"
+      type = "xml"
+      archive = true
+    }
+    deps = []
+  },
+  {
+    json = {
+      name = "bootserver"
+      type = "exe.$host_platform"
+      archive = true
+    }
+    sources = [
+      "$zircon_tools_dir/bootserver",
+    ]
+    deps = []
+  },
+]
 
 # Write a JSON metadata file about the packages in the build.
 _packages_json = {
@@ -896,8 +930,14 @@ group("images") {
   deps = [
     ":default-legacy-images",
     ":ids.txt",
+    ":paver-script",
     "zedboot",
   ]
+}
+
+group("default-images") {
+  testonly = true
+  deps = []
   foreach(image, images) {
     if (!defined(image.default) || image.default) {
       deps += image.deps
@@ -937,6 +977,74 @@ group("default-legacy-images") {
   visibility = [ ":images" ]
   testonly = true
   deps = default_legacy_images
+}
+
+###
+### Paver script and archives using those images and zedboot's images.
+###
+
+paver_targets = [
+  {
+    name = "paver-script"
+    outputs = [
+      "$root_build_dir/pave.sh",
+    ]
+    switch = "--pave="
+    json = {
+      name = "pave"
+      type = "sh"
+    }
+  },
+]
+foreach(format,
+        [
+          "tgz",
+          "zip",
+        ]) {
+  paver_targets += [
+    {
+      name = "archive-$format"
+      outputs = [
+        "$root_build_dir/build-archive.$format",
+      ]
+      switch = "--archive="
+      json = {
+        name = "archive"
+        type = "$format"
+      }
+    },
+  ]
+}
+
+foreach(target, paver_targets) {
+  images += [
+    {
+      path = rebase_path(target.outputs, root_build_dir)
+      path = path[0]
+      json = target.json
+      deps = [
+        ":${target.name}",
+      ]
+    },
+  ]
+  action(target.name) {
+    deps = [
+      ":default-images",
+    ]
+    testonly = true
+    sources = [
+      "$root_build_dir/images.json",
+      "$root_build_dir/zedboot_images.json",
+    ]
+    outputs = target.outputs
+    depfile = "${outputs[0]}.d"
+    script = "pack-images.py"
+    args = [
+      "--depfile=" + rebase_path(depfile, root_build_dir),
+      target.switch + rebase_path(outputs[0], root_build_dir),
+    ]
+    args += rebase_path(sources, root_build_dir)
+  }
 }
 
 write_images_manifest("images-manifest") {
