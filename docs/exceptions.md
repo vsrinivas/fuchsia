@@ -50,8 +50,7 @@ The main components of it are the call to the
 [**port_wait**() system call](syscalls/port_wait.md)
 to wait for an exception, or anything else that's interesting, to happen,
 and the call to the
-[**thread_resume_from_exception**() system call]
-(syscalls/thread_resume_from_exception.md)
+[**task_resume_from_exception**() system call](syscalls/task_resume_from_exception.md)
 to indicate the handler is finished processing the exception.
 
 ```cpp
@@ -106,8 +105,8 @@ the *zx_packet_exception_t* type defined in
 
 The exception handler is expected to read the message, decide how it
 wants to process the exception, and then resume the thread that got the
-exception with the [**task_resume_from_exception**() system call]
-(syscalls/task_resume_from_exception.md).
+exception with the
+[**task_resume_from_exception**() system call](syscalls/task_resume_from_exception.md).
 
 Resuming the thread can be done in either of two ways:
 
