@@ -7,6 +7,7 @@
 #include <ddk/protocol/ethernet.h>
 #include <net/ethernet.h>
 #include <wlan/protocol/info.h>
+#include <wlan/protocol/mac.h>
 #include <zircon/compiler.h>
 
 __BEGIN_CDECLS

@@ -56,11 +56,18 @@
 #define WPA_IE_MIN_OUI_LEN 4
 #define WPA_IE_SUITE_COUNT_LEN 2
 
-#define WPA_CIPHER_NONE 0    /* None */
-#define WPA_CIPHER_WEP_40 1  /* WEP (40-bit) */
-#define WPA_CIPHER_TKIP 2    /* TKIP: default for WPA */
-#define WPA_CIPHER_AES_CCM 4 /* AES (CCM) */
-#define WPA_CIPHER_WEP_104 5 /* WEP (104-bit) */
+// IEEE Std. 802.11-2016, 9.4.2.1, Table 9-77
+#define WLAN_IE_TYPE_SSID 0
+#define WLAN_IE_TYPE_RSNE 48
+
+/* IEEE Std. 802.11-2016, 9.4.2.25.2, Table 9-131 */
+#define WPA_CIPHER_NONE      0  /* None */
+#define WPA_CIPHER_WEP_40    1  /* WEP (40-bit) */
+#define WPA_CIPHER_TKIP      2  /* TKIP: default for WPA */
+/*      RESERVED             3  */
+#define WPA_CIPHER_CCMP_128  4  /* AES (CCM) */
+#define WPA_CIPHER_WEP_104   5  /* WEP (104-bit) */
+#define WPA_CIPHER_CMAC_128  6  /* BIP-CMAC-128 */
 
 #define RSN_AKM_NONE 0        /* None (IBSS) */
 #define RSN_AKM_UNSPECIFIED 1 /* Over 802.1x */
@@ -1351,13 +1358,17 @@ static zx_status_t brcmf_cfg80211_leave_ibss(struct wiphy* wiphy, struct net_dev
     return ZX_OK;
 }
 
-static zx_status_t brcmf_set_wpa_version_disabled(struct net_device* ndev) {
+static zx_status_t brcmf_set_wpa_version(struct net_device* ndev, bool is_protected_bss) {
     struct brcmf_cfg80211_profile* profile = ndev_to_prof(ndev);
     struct brcmf_cfg80211_security* sec;
     int32_t val = 0;
     zx_status_t err = ZX_OK;
 
-    val = WPA_AUTH_DISABLED;
+    if (is_protected_bss) {
+        val = WPA2_AUTH_PSK;// | WPA2_AUTH_UNSPECIFIED;
+    } else {
+        val = WPA_AUTH_DISABLED;
+    }
     brcmf_dbg(CONN, "setting wpa_auth to 0x%0x\n", val);
     err = brcmf_fil_bsscfg_int_set(ndev_to_if(ndev), "wpa_auth", val);
     if (err != ZX_OK) {
@@ -1365,6 +1376,7 @@ static zx_status_t brcmf_set_wpa_version_disabled(struct net_device* ndev) {
         return err;
     }
     sec = &profile->sec;
+    // TODO(cphoenix): wpa_versions seems to be used only for WEP in brcmf_set_sharedkey(). Delete.
     sec->wpa_versions = 0;
     return err;
 }
@@ -1385,13 +1397,17 @@ static zx_status_t brcmf_set_auth_type_open(struct net_device* ndev) {
     return err;
 }
 
-static zx_status_t brcmf_set_wsec_mode_zero(struct net_device* ndev) {
+static zx_status_t brcmf_set_wsec_mode(struct net_device* ndev, bool is_protected_bss) {
     struct brcmf_cfg80211_profile* profile = ndev_to_prof(ndev);
     struct brcmf_cfg80211_security* sec;
     int32_t wsec;
     zx_status_t err = ZX_OK;
 
-    wsec = 0;
+    if (is_protected_bss) {
+        wsec = AES_ENABLED;
+    } else {
+        wsec = 0;
+    }
     err = brcmf_fil_bsscfg_int_set(ndev_to_if(ndev), "wsec", wsec);
     if (err != ZX_OK) {
         brcmf_err("error (%d)\n", err);
@@ -1547,7 +1563,7 @@ static zx_status_t brcmf_set_sharedkey(struct net_device* ndev,
         return ZX_OK;
     }
 
-    if (!(sec->cipher_pairwise & (WLAN_CIPHER_SUITE_WEP40 | WLAN_CIPHER_SUITE_WEP104))) {
+    if (!(sec->cipher_pairwise & (WPA_CIPHER_WEP_40 | WPA_CIPHER_WEP_104))) {
         return ZX_OK;
     }
 
@@ -1561,10 +1577,10 @@ static zx_status_t brcmf_set_sharedkey(struct net_device* ndev,
     memcpy(key.data, sme->key, key.len);
     key.flags = BRCMF_PRIMARY_KEY;
     switch (sec->cipher_pairwise) {
-    case WLAN_CIPHER_SUITE_WEP40:
+    case WPA_CIPHER_WEP_40:
         key.algo = CRYPTO_ALGO_WEP1;
         break;
-    case WLAN_CIPHER_SUITE_WEP104:
+    case WPA_CIPHER_WEP_104:
         key.algo = CRYPTO_ALGO_WEP128;
         break;
     default:
@@ -1654,7 +1670,10 @@ zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
     chanspec = channel_to_chanspec(&cfg->d11inf, &req->selected_bss.chan);
     cfg->channel = chanspec;
 
-    err = brcmf_set_wpa_version_disabled(ndev); // wpa_auth
+    // TODO(NET-988): Currently fails if a network only supports TKIP for its pairwise cipher
+    bool using_wpa = req->selected_bss.rsne_len != 0;
+
+    err = brcmf_set_wpa_version(ndev, using_wpa); // wpa_auth
     if (err != ZX_OK) {
         brcmf_err("wl_set_wpa_version failed (%d)\n", err);
         goto done;
@@ -1666,7 +1685,7 @@ zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
         goto done;
     }
 
-    err = brcmf_set_wsec_mode_zero(ndev); // wsec
+    err = brcmf_set_wsec_mode(ndev, using_wpa); // wsec
     if (err != ZX_OK) {
         brcmf_err("wl_set_set_cipher failed (%d)\n", err);
         goto done;
@@ -1982,8 +2001,7 @@ static zx_status_t brcmf_cfg80211_del_key(struct wiphy* wiphy, struct net_device
 }
 
 static zx_status_t brcmf_cfg80211_add_key(struct wiphy* wiphy, struct net_device* ndev,
-                                          uint8_t key_idx, bool pairwise, const uint8_t* mac_addr,
-                                          struct key_params* params) {
+                                          set_key_descriptor_t* req) {
     struct brcmf_if* ifp = ndev_to_if(ndev);
     struct brcmf_wsec_key* key;
     int32_t val;
@@ -1991,6 +2009,9 @@ static zx_status_t brcmf_cfg80211_add_key(struct wiphy* wiphy, struct net_device
     zx_status_t err;
     uint8_t keybuf[8];
     bool ext_key;
+    uint8_t key_idx = req->key_id;
+    bool pairwise = (req->key_type == WLAN_KEY_TYPE_PAIRWISE);
+    const uint8_t* mac_addr = req->address;
 
     brcmf_dbg(TRACE, "Enter\n");
     brcmf_dbg(CONN, "key index (%d)\n", key_idx);
@@ -2004,19 +2025,19 @@ static zx_status_t brcmf_cfg80211_add_key(struct wiphy* wiphy, struct net_device
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (params->key_len == 0) {
+    if (req->length == 0) {
         return brcmf_cfg80211_del_key(wiphy, ndev, key_idx, pairwise, mac_addr);
     }
 
-    if (params->key_len > sizeof(key->data)) {
-        brcmf_err("Too long key length (%u)\n", params->key_len);
+    if (req->length > sizeof(key->data)) {
+        brcmf_err("Too long key length (%u)\n", req->length);
         return ZX_ERR_INVALID_ARGS;
     }
 
     ext_key = false;
-    if (mac_addr && (params->cipher != WLAN_CIPHER_SUITE_WEP40) &&
-            (params->cipher != WLAN_CIPHER_SUITE_WEP104)) {
-        brcmf_dbg(TRACE, "Ext key, mac %pM", mac_addr);
+    if (mac_addr && (req->cipher_suite_type != WPA_CIPHER_WEP_40) &&
+            (req->cipher_suite_type != WPA_CIPHER_WEP_104)) {
+        brcmf_dbg(TRACE, "Ext key, mac %ld", *(uint64_t*)mac_addr & 0xffffffffffff);
         ext_key = true;
     }
 
@@ -2025,25 +2046,25 @@ static zx_status_t brcmf_cfg80211_add_key(struct wiphy* wiphy, struct net_device
     if ((ext_key) && (!address_is_multicast(mac_addr))) {
         memcpy((char*)&key->ea, (void*)mac_addr, ETH_ALEN);
     }
-    key->len = params->key_len;
+    key->len = req->length;
     key->index = key_idx;
-    memcpy(key->data, params->key, key->len);
+    memcpy(key->data, req->key, key->len);
     if (!ext_key) {
         key->flags = BRCMF_PRIMARY_KEY;
     }
 
-    switch (params->cipher) {
-    case WLAN_CIPHER_SUITE_WEP40:
+    switch (req->cipher_suite_type) {
+    case WPA_CIPHER_WEP_40:
         key->algo = CRYPTO_ALGO_WEP1;
         val = WEP_ENABLED;
-        brcmf_dbg(CONN, "WLAN_CIPHER_SUITE_WEP40\n");
+        brcmf_dbg(CONN, "WPA_CIPHER_WEP_40\n");
         break;
-    case WLAN_CIPHER_SUITE_WEP104:
+    case WPA_CIPHER_WEP_104:
         key->algo = CRYPTO_ALGO_WEP128;
         val = WEP_ENABLED;
-        brcmf_dbg(CONN, "WLAN_CIPHER_SUITE_WEP104\n");
+        brcmf_dbg(CONN, "WPA_CIPHER_WEP_104\n");
         break;
-    case WLAN_CIPHER_SUITE_TKIP:
+    case WPA_CIPHER_TKIP:
         if (!brcmf_is_apmode(ifp->vif)) {
             brcmf_dbg(CONN, "Swapping RX/TX MIC key\n");
             memcpy(keybuf, &key->data[24], sizeof(keybuf));
@@ -2052,20 +2073,20 @@ static zx_status_t brcmf_cfg80211_add_key(struct wiphy* wiphy, struct net_device
         }
         key->algo = CRYPTO_ALGO_TKIP;
         val = TKIP_ENABLED;
-        brcmf_dbg(CONN, "WLAN_CIPHER_SUITE_TKIP\n");
+        brcmf_dbg(CONN, "WPA_CIPHER_TKIP\n");
         break;
-    case WLAN_CIPHER_SUITE_AES_CMAC:
+    case WPA_CIPHER_CMAC_128:
         key->algo = CRYPTO_ALGO_AES_CCM;
         val = AES_ENABLED;
-        brcmf_dbg(CONN, "WLAN_CIPHER_SUITE_AES_CMAC\n");
+        brcmf_dbg(CONN, "WPA_CIPHER_CMAC_128\n");
         break;
-    case WLAN_CIPHER_SUITE_CCMP:
+    case WPA_CIPHER_CCMP_128:
         key->algo = CRYPTO_ALGO_AES_CCM;
         val = AES_ENABLED;
-        brcmf_dbg(CONN, "WLAN_CIPHER_SUITE_CCMP\n");
+        brcmf_dbg(CONN, "WPA_CIPHER_CCMP_128\n");
         break;
     default:
-        brcmf_err("Invalid cipher (0x%x)\n", params->cipher);
+        brcmf_err("Unsupported cipher (0x%x)\n", req->cipher_suite_type);
         err = ZX_ERR_INVALID_ARGS;
         goto done;
     }
@@ -2121,19 +2142,19 @@ static zx_status_t brcmf_cfg80211_get_key(struct wiphy* wiphy, struct net_device
     }
     if (wsec & WEP_ENABLED) {
         sec = &profile->sec;
-        if (sec->cipher_pairwise & WLAN_CIPHER_SUITE_WEP40) {
-            params.cipher = WLAN_CIPHER_SUITE_WEP40;
-            brcmf_dbg(CONN, "WLAN_CIPHER_SUITE_WEP40\n");
-        } else if (sec->cipher_pairwise & WLAN_CIPHER_SUITE_WEP104) {
-            params.cipher = WLAN_CIPHER_SUITE_WEP104;
-            brcmf_dbg(CONN, "WLAN_CIPHER_SUITE_WEP104\n");
+        if (sec->cipher_pairwise & WPA_CIPHER_WEP_40) {
+            params.cipher = WPA_CIPHER_WEP_40;
+            brcmf_dbg(CONN, "WPA_CIPHER_WEP_40\n");
+        } else if (sec->cipher_pairwise & WPA_CIPHER_WEP_104) {
+            params.cipher = WPA_CIPHER_WEP_104;
+            brcmf_dbg(CONN, "WPA_CIPHER_WEP_104\n");
         }
     } else if (wsec & TKIP_ENABLED) {
-        params.cipher = WLAN_CIPHER_SUITE_TKIP;
-        brcmf_dbg(CONN, "WLAN_CIPHER_SUITE_TKIP\n");
+        params.cipher = WPA_CIPHER_TKIP;
+        brcmf_dbg(CONN, "WPA_CIPHER_TKIP\n");
     } else if (wsec & AES_ENABLED) {
-        params.cipher = WLAN_CIPHER_SUITE_AES_CMAC;
-        brcmf_dbg(CONN, "WLAN_CIPHER_SUITE_AES_CMAC\n");
+        params.cipher = WPA_CIPHER_CMAC_128;
+        brcmf_dbg(CONN, "WPA_CIPHER_CMAC_128\n");
     } else {
         brcmf_err("Invalid algo (0x%x)\n", wsec);
         err = ZX_ERR_INVALID_ARGS;
@@ -2426,12 +2447,29 @@ static void brcmf_ies_extract_name(uint8_t* ie, size_t ie_len, wlanif_ssid_t* ss
     while (offset < ie_len) {
         uint8_t type = ie[offset];
         uint8_t length = ie[offset + 1];
-        if (type == 0) {
+        if (type == WLAN_IE_TYPE_SSID) {
             uint8_t ssid_len = min(length, sizeof(ssid->data));
             memcpy(ssid->data, ie + offset + 2, ssid_len);
             ssid->len = ssid_len;
+            break;
         }
         offset += length + 2;
+    }
+}
+
+static void brcmf_ies_extract_rsne(uint8_t* ie_chain, size_t ie_chain_len, uint8_t* rsne_data,
+                                   size_t* rsne_len) {
+    size_t offset = 0;
+    *rsne_len = 0;
+    while (offset < ie_chain_len) {
+        uint8_t type = ie_chain[offset];
+        uint8_t ie_total_length = ie_chain[offset + 1] + 2;
+        if (type == WLAN_IE_TYPE_RSNE) {
+            memcpy(rsne_data, &ie_chain[offset], ie_total_length);
+            *rsne_len = ie_total_length;
+            break;
+        }
+        offset += ie_total_length;
     }
 }
 
@@ -2463,11 +2501,27 @@ static void brcmf_iedump(uint8_t* ie, size_t length) {
 }
 #endif // WANTED_FOR_DEBUG
 
+#define EAPOL_ETHERNET_TYPE_UINT16 0x8e88
+
 void brcmf_cfg80211_rx(struct brcmf_if* ifp, struct brcmf_netbuf* packet) {
     struct net_device* ndev = ifp->ndev;
-    //brcmf_dbg(TEMP, "Calling data_recv with data 0x%016lx %016lx len %d",
-    //          *(uint64_t*)packet->data, *(uint64_t*)(packet->data+8), packet->len);
-    ndev->if_callbacks->data_recv(ndev->if_callback_cookie, packet->data, packet->len, 0);
+    THROTTLE(10, brcmf_dbg(TEMP, "Calling data_recv with data 0x%016lx %016lx len %d",
+              *(uint64_t*)packet->data, *(uint64_t*)(packet->data+8), packet->len););
+    THROTTLE(10, brcmf_hexdump(packet->data, min(packet->len, 64)););
+    // IEEE Std. 802.3-2015, 3.1.1
+    uint16_t eth_type = ((uint16_t*)(packet->data))[6];
+    if (eth_type == EAPOL_ETHERNET_TYPE_UINT16) {
+        wlanif_eapol_indication_t eapol_ind;
+        // IEEE Std. 802.1X-2010, 11.3, Figure 11-1
+        memcpy(&eapol_ind.dst_addr, packet->data, ETH_ALEN);
+        memcpy(&eapol_ind.src_addr, packet->data + 6, ETH_ALEN);
+        eapol_ind.data_len = packet->len - 14;
+        eapol_ind.data = packet->data + 14;
+        brcmf_dbg(TEMP, "EAPOL received");
+        ndev->if_callbacks->eapol_ind(ndev->if_callback_cookie, &eapol_ind);
+    } else {
+        ndev->if_callbacks->data_recv(ndev->if_callback_cookie, packet->data, packet->len, 0);
+    }
     brcmu_pkt_buf_free_netbuf(packet);
 }
 
@@ -2483,12 +2537,12 @@ static void brcmf_return_scan_result(struct wiphy* wiphy, uint16_t channel, cons
     result.txn_id = ndev->scan_txn_id;
     memcpy(result.bss.bssid, bssid, ETH_ALEN);
     brcmf_ies_extract_name(ie, ie_len, &result.bss.ssid);
+    brcmf_ies_extract_rsne(ie, ie_len, result.bss.rsne, &result.bss.rsne_len);
     result.bss.bss_type = WLAN_BSS_TYPE_ANY_BSS;
     result.bss.beacon_period = 0;
     result.bss.dtim_period = 0;
     result.bss.timestamp = 0;
     result.bss.local_time = 0;
-    result.bss.rsne_len = 0;
     result.bss.chan.primary = (uint8_t)channel;
     result.bss.chan.cbw = CBW20; // TODO(cphoenix): Don't hard-code this.
     result.bss.rssi_dbm = (uint8_t)(min(0, max(-255, rssi_dbm)));
@@ -3520,7 +3574,7 @@ static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcm
     case WPA_CIPHER_TKIP:
         gval = TKIP_ENABLED;
         break;
-    case WPA_CIPHER_AES_CCM:
+    case WPA_CIPHER_CCMP_128:
         gval = AES_ENABLED;
         break;
     default:
@@ -3556,7 +3610,7 @@ static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcm
         case WPA_CIPHER_TKIP:
             pval |= TKIP_ENABLED;
             break;
-        case WPA_CIPHER_AES_CCM:
+        case WPA_CIPHER_CCMP_128:
             pval |= AES_ENABLED;
             break;
         default:
@@ -4887,7 +4941,16 @@ void brcmf_hook_stop_req(void* ctx, wlanif_stop_req_t* req) {
 
 void brcmf_hook_set_keys_req(void* ctx, wlanif_set_keys_req_t* req) {
     brcmf_dbg(TRACE, "Enter");
-    brcmf_err("Unimplemented\n");
+    struct net_device* ndev = ctx;
+    struct wiphy* wiphy = ndev_to_wiphy(ndev);
+    zx_status_t result;
+
+    // TODO(NET-988)
+    if (req->num_keys != 1) {
+        brcmf_err("Help! num_keys needs to be 1! But it's %ld.", req->num_keys);
+        return;
+    }
+    result = brcmf_cfg80211_add_key(wiphy, ndev, &req->keylist[0]);
 }
 
 void brcmf_hook_del_keys_req(void* ctx, wlanif_del_keys_req_t* req) {
@@ -4897,7 +4960,30 @@ void brcmf_hook_del_keys_req(void* ctx, wlanif_del_keys_req_t* req) {
 
 void brcmf_hook_eapol_req(void* ctx, wlanif_eapol_req_t* req) {
     brcmf_dbg(TRACE, "Enter");
-    brcmf_err("Unimplemented\n");
+    struct net_device* ndev = ctx;
+    wlanif_eapol_confirm_t confirm;
+    int packet_length;
+
+    // Ethernet header length + EAPOL PDU length
+    packet_length = 2 * ETH_ALEN + sizeof(uint16_t) + req->data_len;
+    uint8_t* packet = malloc(packet_length);
+    if (packet == NULL) {
+        confirm.result_code = WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE;
+    } else {
+        // IEEE Std. 802.3-2015, 3.1.1
+        memcpy(packet, req->dst_addr, ETH_ALEN);
+        memcpy(packet + ETH_ALEN, req->src_addr, ETH_ALEN);
+        *(uint16_t*)(packet + 2 * ETH_ALEN) = EAPOL_ETHERNET_TYPE_UINT16;
+        memcpy(packet + 2 * ETH_ALEN + sizeof(uint16_t), req->data, req->data_len);
+        ethmac_netbuf_t netbuf;
+        netbuf.data = packet;
+        netbuf.len = packet_length;
+        brcmf_netdev_start_xmit(ndev, &netbuf);
+        free(packet);
+        confirm.result_code = WLAN_EAPOL_RESULT_SUCCESS;
+    }
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
+    ndev->if_callbacks->eapol_conf(ndev->if_callback_cookie, &confirm);
 }
 
 void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
