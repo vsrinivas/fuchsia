@@ -18,9 +18,12 @@
 #define VIRTIO_BALLOON_S_MINFLT           3
 #define VIRTIO_BALLOON_S_MEMFREE          4
 #define VIRTIO_BALLOON_S_MEMTOT           5
-// This one isn't in the 1.0 Spec, but is defined by linux to be how big the
-// balloon can be inflated  without pushing the guest system to swap.
-#define VIRTIO_BALLOON_S_AVAIL            6
+// These are not in the 1.0 Spec, but are defined by Linux.
+#define VIRTIO_BALLOON_S_AVAIL            6 // Available memory as in /proc
+#define VIRTIO_BALLOON_S_CACHES           7 // Disk caches
+#define VIRTIO_BALLOON_S_HTLB_PGALLOC     8 // HugeTLB page allocations
+#define VIRTIO_BALLOON_S_HTLB_PGFAIL      9 // HugeTLB page allocation failures
+
 // clang-format on
 
 __BEGIN_CDECLS
