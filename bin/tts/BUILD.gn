@@ -31,4 +31,11 @@ package("tts_service") {
   ]
 
   binary = "tts_service"
+
+  meta = [
+    {
+      path = rebase_path("meta/tts_service.cmx")
+      dest = "tts_service.cmx"
+    },
+  ]
 }
