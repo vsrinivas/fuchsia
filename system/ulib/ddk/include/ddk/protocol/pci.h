@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #pragma once
 
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/auxdata.h>
 #include <hw/pci.h>
 #include <zircon/compiler.h>
@@ -169,6 +170,22 @@ static inline zx_status_t pci_get_auxdata(const pci_protocol_t* pci,
                                           const char* args, void* data,
                                           uint32_t bytes, uint32_t* actual) {
     return pci->ops->get_auxdata(pci->ctx, args, data, bytes, actual);
+}
+
+static inline zx_status_t pci_map_bar_buffer(const pci_protocol_t* pci, uint32_t bar_id,
+                                      uint32_t cache_policy, mmio_buffer_t* buffer) {
+
+    zx_pci_bar_t bar;
+
+    zx_status_t status = pci->ops->get_bar(pci->ctx, bar_id, &bar);
+    if (status != ZX_OK) {
+        return status;
+    }
+    // TODO(cja): PIO may be mappable on non-x86 architectures
+    if (bar.type == ZX_PCI_BAR_TYPE_PIO || bar.handle == ZX_HANDLE_INVALID) {
+        return ZX_ERR_WRONG_TYPE;
+    }
+    return mmio_buffer_init(buffer, 0, bar.size, bar.handle, cache_policy);
 }
 
 __END_CDECLS;
