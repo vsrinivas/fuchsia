@@ -128,11 +128,6 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   platform_device_protocol_t pdev_;
   canvas_protocol_t canvas_;
   DeviceType device_type_ = DeviceType::kUnknown;
-  io_buffer_t mmio_cbus_ = {};
-  io_buffer_t mmio_dosbus_ = {};
-  io_buffer_t mmio_hiubus_ = {};
-  io_buffer_t mmio_aobus_ = {};
-  io_buffer_t mmio_dmc_ = {};
   std::unique_ptr<CbusRegisterIo> cbus_;
   std::unique_ptr<DosRegisterIo> dosbus_;
   std::unique_ptr<HiuRegisterIo> hiubus_;

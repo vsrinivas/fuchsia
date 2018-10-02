@@ -76,11 +76,6 @@ AmlogicVideo::~AmlogicVideo() {
   decoder_instances_.clear();
   if (core_)
     core_->PowerOff();
-  io_buffer_release(&mmio_cbus_);
-  io_buffer_release(&mmio_dosbus_);
-  io_buffer_release(&mmio_hiubus_);
-  io_buffer_release(&mmio_aobus_);
-  io_buffer_release(&mmio_dmc_);
   io_buffer_release(&search_pattern_);
 }
 
@@ -527,36 +522,38 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
       return ZX_ERR_INVALID_ARGS;
   }
 
-  status = pdev_map_mmio_buffer(&pdev_, kCbus, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                &mmio_cbus_);
+  mmio_buffer_t cbus_mmio;
+  status = pdev_map_mmio_buffer2(&pdev_, kCbus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &cbus_mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map cbus");
     return ZX_ERR_NO_MEMORY;
   }
-  status = pdev_map_mmio_buffer(&pdev_, kDosbus,
-                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_dosbus_);
+  cbus_ = std::make_unique<CbusRegisterIo>(cbus_mmio);
+  mmio_buffer_t mmio;
+  status = pdev_map_mmio_buffer2(&pdev_, kDosbus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map dosbus");
     return ZX_ERR_NO_MEMORY;
   }
-  status = pdev_map_mmio_buffer(&pdev_, kHiubus,
-                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_hiubus_);
+  dosbus_ = std::make_unique<DosRegisterIo>(mmio);
+  status = pdev_map_mmio_buffer2(&pdev_, kHiubus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map hiubus");
     return ZX_ERR_NO_MEMORY;
   }
-  status = pdev_map_mmio_buffer(&pdev_, kAobus, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                &mmio_aobus_);
+  hiubus_ = std::make_unique<HiuRegisterIo>(mmio);
+  status = pdev_map_mmio_buffer2(&pdev_, kAobus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map aobus");
     return ZX_ERR_NO_MEMORY;
   }
-  status = pdev_map_mmio_buffer(&pdev_, kDmc, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                &mmio_dmc_);
+  aobus_ = std::make_unique<AoRegisterIo>(mmio);
+  status = pdev_map_mmio_buffer2(&pdev_, kDmc, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map dmc");
     return ZX_ERR_NO_MEMORY;
   }
+  dmc_ = std::make_unique<DmcRegisterIo>(mmio);
   status = pdev_map_interrupt(&pdev_, kParserIrq,
                               parser_interrupt_handle_.reset_and_get_address());
   if (status != ZX_OK) {
@@ -580,11 +577,6 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
     DECODE_ERROR("Failed get bti");
     return ZX_ERR_NO_MEMORY;
   }
-  cbus_ = std::make_unique<CbusRegisterIo>(io_buffer_virt(&mmio_cbus_));
-  dosbus_ = std::make_unique<DosRegisterIo>(io_buffer_virt(&mmio_dosbus_));
-  hiubus_ = std::make_unique<HiuRegisterIo>(io_buffer_virt(&mmio_hiubus_));
-  aobus_ = std::make_unique<AoRegisterIo>(io_buffer_virt(&mmio_aobus_));
-  dmc_ = std::make_unique<DmcRegisterIo>(io_buffer_virt(&mmio_dmc_));
 
   int64_t reset_register_offset = 0;
   int64_t parser_register_offset = 0;
@@ -595,11 +587,9 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
     parser_register_offset = 0x3800 - 0x2900;
     demux_register_offset = 0x1800 - 0x1600;
   }
-  auto cbus_base = static_cast<volatile uint32_t*>(io_buffer_virt(&mmio_cbus_));
-  reset_ = std::make_unique<ResetRegisterIo>(cbus_base + reset_register_offset);
-  parser_ =
-      std::make_unique<ParserRegisterIo>(cbus_base + parser_register_offset);
-  demux_ = std::make_unique<DemuxRegisterIo>(cbus_base + demux_register_offset);
+  reset_ = std::make_unique<ResetRegisterIo>(cbus_mmio, reset_register_offset);
+  parser_ = std::make_unique<ParserRegisterIo>(cbus_mmio, parser_register_offset);
+  demux_ = std::make_unique<DemuxRegisterIo>(cbus_mmio, demux_register_offset);
   registers_ = std::unique_ptr<MmioRegisters>(new MmioRegisters{
       dosbus_.get(), aobus_.get(), dmc_.get(), hiubus_.get(), reset_.get()});
 

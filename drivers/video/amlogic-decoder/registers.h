@@ -6,7 +6,8 @@
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_REGISTERS_H_
 
 #include <hwreg/bitfields.h>
-#include <hwreg/mmio.h>
+#include <ddk/mmio-buffer.h>
+#include <ddktl/mmio.h>
 
 template <class RegType>
 class TypedRegisterAddr;
@@ -23,11 +24,11 @@ class TypedRegisterBase
   using AddrType = TypedRegisterAddr<SelfType>;
   SelfType& ReadFrom(MmioType* reg_io) {
     return hwreg::RegisterBase<DerivedType, IntType, PrinterState>::ReadFrom(
-        static_cast<hwreg::RegisterIo*>(reg_io));
+        static_cast<ddk::MmioBuffer*>(reg_io));
   }
   SelfType& WriteTo(MmioType* reg_io) {
     return hwreg::RegisterBase<DerivedType, IntType, PrinterState>::WriteTo(
-        static_cast<hwreg::RegisterIo*>(reg_io));
+        static_cast<ddk::MmioBuffer*>(reg_io));
   }
 };
 
@@ -47,48 +48,48 @@ class TypedRegisterAddr : public hwreg::RegisterAddr<RegType> {
 
 // Cbus does a lot of things, but mainly seems to handle audio and video
 // processing.
-class CbusRegisterIo : public hwreg::RegisterIo {
+class CbusRegisterIo : public ddk::MmioBuffer {
  public:
-  CbusRegisterIo(volatile void* mmio) : hwreg::RegisterIo(mmio) {}
+  CbusRegisterIo(const mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
 };
 
 // The DOS bus mainly seems to handle video decoding.
-class DosRegisterIo : public hwreg::RegisterIo {
+class DosRegisterIo : public ddk::MmioBuffer {
  public:
-  DosRegisterIo(volatile void* mmio) : hwreg::RegisterIo(mmio) {}
+  DosRegisterIo(const mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
 };
 
 // Aobus communicates with the always-on power management processor.
-class AoRegisterIo : public hwreg::RegisterIo {
+class AoRegisterIo : public ddk::MmioBuffer {
  public:
-  AoRegisterIo(volatile void* mmio) : hwreg::RegisterIo(mmio) {}
+  AoRegisterIo(const mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
 };
 
 // Hiubus mainly seems to handle clock control and gating.
-class HiuRegisterIo : public hwreg::RegisterIo {
+class HiuRegisterIo : public ddk::MmioBuffer {
  public:
-  HiuRegisterIo(volatile void* mmio) : hwreg::RegisterIo(mmio) {}
+  HiuRegisterIo(const mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
 };
 
 // The DMC is the DDR memory controller.
-class DmcRegisterIo : public hwreg::RegisterIo {
+class DmcRegisterIo : public ddk::MmioBuffer {
  public:
-  DmcRegisterIo(volatile void* mmio) : hwreg::RegisterIo(mmio) {}
+  DmcRegisterIo(const mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
 };
 
-class ResetRegisterIo : public hwreg::RegisterIo {
+class ResetRegisterIo : public ddk::MmioView {
  public:
-  ResetRegisterIo(volatile void* mmio) : hwreg::RegisterIo(mmio) {}
+  ResetRegisterIo(const mmio_buffer_t& mmio, zx_off_t off) : ddk::MmioView(mmio, off) {}
 };
 
-class ParserRegisterIo : public hwreg::RegisterIo {
+class ParserRegisterIo : public ddk::MmioView {
  public:
-  ParserRegisterIo(volatile void* mmio) : hwreg::RegisterIo(mmio) {}
+  ParserRegisterIo(const mmio_buffer_t& mmio, zx_off_t off) : ddk::MmioView(mmio, off) {}
 };
 
-class DemuxRegisterIo : public hwreg::RegisterIo {
+class DemuxRegisterIo : public ddk::MmioView {
  public:
-  DemuxRegisterIo(volatile void* mmio) : hwreg::RegisterIo(mmio) {}
+  DemuxRegisterIo(const mmio_buffer_t& mmio, zx_off_t off) : ddk::MmioView(mmio, off) {}
 };
 
 #define DEFINE_REGISTER(name, type, address)                           \

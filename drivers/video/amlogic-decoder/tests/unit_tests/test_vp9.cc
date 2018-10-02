@@ -71,14 +71,18 @@ class FakeOwner : public VideoDecoder::Owner {
   FirmwareBlob blob_;
 };
 
-constexpr uint32_t kDosbusMemorySize = 0x4000;
+constexpr uint32_t kDosbusMemorySize = 0x10000;
 }  // namespace
 
 class Vp9UnitTest {
  public:
   static void LoopFilter() {
-    uint32_t dosbus_memory[kDosbusMemorySize] = {};
-    DosRegisterIo dosbus(dosbus_memory);
+    auto dosbus_memory = fbl::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
+    memset(dosbus_memory.get(), 0, kDosbusMemorySize);
+    mmio_buffer_t dosbus_mmio = {.vaddr = dosbus_memory.get(),
+                                 .size = kDosbusMemorySize,
+                                 .vmo = ZX_HANDLE_INVALID};
+    DosRegisterIo dosbus(dosbus_mmio);
     FakeOwner fake_owner(&dosbus);
     auto decoder = std::make_unique<Vp9Decoder>(
         &fake_owner, Vp9Decoder::InputType::kSingleStream);
@@ -89,26 +93,31 @@ class Vp9UnitTest {
   }
 
   static void InitializeMemory() {
-    uint32_t zeroed_memory[kDosbusMemorySize] = {};
-    uint32_t dosbus_memory[kDosbusMemorySize] = {};
-    DosRegisterIo dosbus(dosbus_memory);
+    auto zeroed_memory = fbl::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
+    auto dosbus_memory = fbl::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
+    memset(zeroed_memory.get(), 0, kDosbusMemorySize);
+    memset(dosbus_memory.get(), 0, kDosbusMemorySize);
+    mmio_buffer_t dosbus_mmio = {.vaddr = dosbus_memory.get(),
+                                 .size = kDosbusMemorySize,
+                                 .vmo = ZX_HANDLE_INVALID};
+    DosRegisterIo dosbus(dosbus_mmio);
     FakeOwner fake_owner(&dosbus);
     auto decoder = std::make_unique<Vp9Decoder>(
         &fake_owner, Vp9Decoder::InputType::kSingleStream);
     EXPECT_EQ(ZX_OK, decoder->InitializeBuffers());
-    EXPECT_EQ(0, memcmp(dosbus_memory, zeroed_memory, sizeof(zeroed_memory)));
+    EXPECT_EQ(0, memcmp(dosbus_memory.get(), zeroed_memory.get(), kDosbusMemorySize));
 
     EXPECT_EQ(ZX_OK, decoder->InitializeHardware());
-    EXPECT_NE(0, memcmp(dosbus_memory, zeroed_memory, sizeof(zeroed_memory)));
-    uint32_t dosbus_memory_copy[kDosbusMemorySize];
-    memcpy(dosbus_memory_copy, dosbus_memory, sizeof(dosbus_memory));
-    memset(dosbus_memory, 0, sizeof(dosbus_memory));
+    EXPECT_NE(0, memcmp(dosbus_memory.get(), zeroed_memory.get(), kDosbusMemorySize));
+    auto dosbus_memory_copy = fbl::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
+    memcpy(dosbus_memory_copy.get(), dosbus_memory.get(), kDosbusMemorySize);
+    memset(dosbus_memory.get(), 0, kDosbusMemorySize);
 
     decoder->state_ = Vp9Decoder::DecoderState::kSwappedOut;
 
     EXPECT_EQ(ZX_OK, decoder->InitializeHardware());
-    EXPECT_EQ(0, memcmp(dosbus_memory, dosbus_memory_copy,
-                        sizeof(dosbus_memory_copy)));
+    EXPECT_EQ(0, memcmp(dosbus_memory.get(), dosbus_memory_copy.get(),
+                        kDosbusMemorySize));
   }
 };
 
