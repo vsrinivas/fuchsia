@@ -116,8 +116,8 @@ uint32_t SimpleDisplay::ComputeLinearStride(uint32_t width, zx_pixel_format_t fo
 zx_status_t SimpleDisplay::AllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
     zx_info_handle_count handle_count;
     size_t actual, avail;
-    zx_status_t status = framebuffer_handle_.get_info(ZX_INFO_HANDLE_COUNT, &handle_count,
-                                                      sizeof(handle_count), &actual, &avail);
+    zx_status_t status = framebuffer_mmio_.get_vmo()->get_info(
+            ZX_INFO_HANDLE_COUNT, &handle_count, sizeof(handle_count), &actual, &avail);
     if (status != ZX_OK) {
         return status;
     }
@@ -127,7 +127,7 @@ zx_status_t SimpleDisplay::AllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
     if (size > height_ * stride_ * ZX_PIXEL_FORMAT_BYTES(format_)) {
         return ZX_ERR_OUT_OF_RANGE;
     }
-    return zx_handle_duplicate(framebuffer_handle_.get(), ZX_RIGHT_SAME_RIGHTS, vmo_out);
+    return zx_handle_duplicate(framebuffer_mmio_.get_vmo()->get(), ZX_RIGHT_SAME_RIGHTS, vmo_out);
 }
 
 // implement device protocol
@@ -145,7 +145,7 @@ void SimpleDisplay::DdkRelease() {
 zx_status_t SimpleDisplay::Bind(const char* name, fbl::unique_ptr<SimpleDisplay>* vbe_ptr) {
     zx_info_handle_basic_t framebuffer_info;
     size_t actual, avail;
-    zx_status_t status = framebuffer_handle_.get_info(
+    zx_status_t status = framebuffer_mmio_.get_vmo()->get_info(
             ZX_INFO_HANDLE_BASIC, &framebuffer_info, sizeof(framebuffer_info), &actual, &avail);
     if (status != ZX_OK) {
         printf("%s: failed to id framebuffer: %d\n", name, status);
@@ -167,17 +167,11 @@ zx_status_t SimpleDisplay::Bind(const char* name, fbl::unique_ptr<SimpleDisplay>
     return ZX_OK;
 }
 
-SimpleDisplay::SimpleDisplay(zx_device_t* parent, zx_handle_t vmo,
-                             uintptr_t framebuffer, uint64_t framebuffer_size,
+SimpleDisplay::SimpleDisplay(zx_device_t* parent, ddk::MmioBuffer framebuffer_mmio,
                              uint32_t width, uint32_t height,
                              uint32_t stride, zx_pixel_format_t format)
-        : DeviceType(parent), framebuffer_handle_(vmo),
-          framebuffer_(framebuffer), framebuffer_size_(framebuffer_size),
+        : DeviceType(parent), framebuffer_mmio_(fbl::move(framebuffer_mmio)),
           width_(width), height_(height), stride_(stride), format_(format) { }
-
-SimpleDisplay::~SimpleDisplay() {
-    zx_vmar_unmap(zx_vmar_root_self(), framebuffer_, framebuffer_size_);
-}
 
 zx_status_t bind_simple_pci_display_bootloader(zx_device_t* dev, const char* name, uint32_t bar) {
     uint32_t format, width, height, stride;
@@ -200,23 +194,19 @@ zx_status_t bind_simple_pci_display(zx_device_t* dev, const char* name, uint32_t
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    void* framebuffer;
-    uint64_t framebuffer_size;
-    zx_handle_t framebuffer_handle;
+    mmio_buffer_t mmio;
     // map framebuffer window
-    status = pci_map_bar(&pci, bar, ZX_CACHE_POLICY_WRITE_COMBINING,
-                         &framebuffer, &framebuffer_size, &framebuffer_handle);
+    status = pci_map_bar_buffer(&pci, bar, ZX_CACHE_POLICY_WRITE_COMBINING, &mmio);
     if (status != ZX_OK) {
         printf("%s: failed to map pci bar %d: %d\n", name, bar, status);
         return status;
     }
+    ddk::MmioBuffer framebuffer_mmio(mmio);
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<SimpleDisplay> display(new (&ac) SimpleDisplay(
-            dev, framebuffer_handle, (uintptr_t) framebuffer,
-            framebuffer_size, width, height, stride, format));
+            dev, fbl::move(framebuffer_mmio), width, height, stride, format));
     if (!ac.check()) {
-        zx_handle_close(framebuffer_handle);
         return ZX_ERR_NO_MEMORY;
     }
 

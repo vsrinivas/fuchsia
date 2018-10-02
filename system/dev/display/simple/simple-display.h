@@ -11,6 +11,7 @@
 #if __cplusplus
 
 #include <ddktl/device.h>
+#include <ddktl/mmio.h>
 #include <ddktl/protocol/display-controller.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/vmo.h>
@@ -21,11 +22,10 @@ using DeviceType = ddk::Device<SimpleDisplay, ddk::Unbindable>;
 class SimpleDisplay : public DeviceType,
                       public ddk::DisplayControllerProtocol<SimpleDisplay> {
 public:
-    SimpleDisplay(zx_device_t* parent, zx_handle_t vmo,
-                  uintptr_t framebuffer, uint64_t framebuffer_size,
+    SimpleDisplay(zx_device_t* parent, ddk::MmioBuffer framebuffer_mmio,
                   uint32_t width, uint32_t height,
                   uint32_t stride, zx_pixel_format_t format);
-    ~SimpleDisplay();
+    ~SimpleDisplay() = default;
 
     void DdkUnbind();
     void DdkRelease();
@@ -42,9 +42,7 @@ public:
     zx_status_t AllocateVmo(uint64_t size, zx_handle_t* vmo_out);
 
 private:
-    zx::vmo framebuffer_handle_;
-    uintptr_t framebuffer_;
-    uint64_t framebuffer_size_;
+    ddk::MmioBuffer framebuffer_mmio_;
     zx_koid_t framebuffer_koid_;
 
     uint32_t width_;
