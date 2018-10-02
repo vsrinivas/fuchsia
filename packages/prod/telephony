@@ -1,0 +1,5 @@
+{
+  "packages": [
+    "//garnet/drivers/telephony/qmi-usb-transport"
+  ]
+}
