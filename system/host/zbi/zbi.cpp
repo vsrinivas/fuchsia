@@ -201,7 +201,8 @@ private:
 
     IovecArray::iterator WriteBuffers(IovecArray::iterator read_pos) {
         assert(read_pos != write_pos_);
-        ssize_t wrote = writev(fd_.get(), &(*read_pos), write_pos_ - read_pos);
+        ssize_t wrote = writev(fd_.get(), &(*read_pos),
+                               static_cast<int>(write_pos_ - read_pos));
         if (wrote < 0) {
             perror("writev to output file");
             exit(1);
@@ -213,7 +214,7 @@ private:
         assert(static_cast<off_t>(flushed_) == pos ||
                (pos == -1 && errno == ESPIPE));
         // Skip all the buffers that were wholly written.
-        while (wrote >= read_pos->iov_len) {
+        while ((size_t)wrote >= read_pos->iov_len) {
             wrote -= read_pos->iov_len;
             ++read_pos;
             if (wrote == 0) {
@@ -970,7 +971,7 @@ public:
             name = buf;
             name += info.name;
             for (auto& c : name) {
-                c = std::tolower(c);
+                c = static_cast<unsigned char>(std::tolower(c));
             }
         } else {
             snprintf(buf, sizeof(buf), "%03u.%08x", n, zbi_type);
@@ -1103,7 +1104,7 @@ Extracted items use the file names shown below:\n\
 
     // Create from in-core data.
     static ItemPtr CreateFromBuffer(
-        uint32_t type, std::unique_ptr<std::byte[]> payload, size_t size) {
+        uint32_t type, std::unique_ptr<std::byte[]> payload, uint32_t size) {
         auto item = MakeItem(NewHeader(type, size));
         item->payload_.emplace_front(Iovec(payload.get(), size));
         item->OwnBuffer(std::move(payload));
@@ -1128,7 +1129,12 @@ Extracted items use the file names shown below:\n\
         compress = compress && TypeIsStorage(type);
 
         size_t size = file.exact_size() + (null_terminate ? 1 : 0);
-        auto item = MakeItem(NewHeader(type, size), compress);
+        if (size > UINT32_MAX) {
+            fprintf(stderr, "input file too large\n");
+            exit(1);
+        }
+        auto item = MakeItem(NewHeader(type, static_cast<uint32_t>(size)),
+                             compress);
 
         // If we need some zeros, see if they're already right there
         // in the last mapped page past the exact end of the file.
@@ -2082,10 +2088,15 @@ int main(int argc, char** argv) {
         }
         if (!cmdline.empty()) {
             size_t size = cmdline.size() + 1;
+            if (size > UINT32_MAX) {
+                fprintf(stderr, "command line too long\n");
+                exit(1);
+            }
             auto buffer = std::make_unique<std::byte[]>(size);
             memcpy(buffer.get(), cmdline.c_str(), size);
-            items.push_back(Item::CreateFromBuffer(ZBI_TYPE_CMDLINE,
-                                                   std::move(buffer), size));
+            items.push_back(
+                Item::CreateFromBuffer(ZBI_TYPE_CMDLINE, std::move(buffer),
+                                       static_cast<uint32_t>(size)));
         }
     }
 
