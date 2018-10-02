@@ -183,20 +183,6 @@ std::vector<uint64_t> ProcessSymbolsImpl::AddressesForFunction(
   return result;
 }
 
-std::vector<uint64_t> ProcessSymbolsImpl::AddressesForLine(
-    const FileLine& line) const {
-  std::vector<uint64_t> result;
-  for (const auto& pair : modules_) {
-    if (pair.second.symbols) {
-      const LoadedModuleSymbols* loaded = pair.second.symbols.get();
-      for (auto local_addr : loaded->module_symbols()->AddressesForLine(
-               loaded->symbol_context(), line))
-        result.push_back(local_addr);
-    }
-  }
-  return result;
-}
-
 bool ProcessSymbolsImpl::HaveSymbolsLoadedForModuleAt(uint64_t address) const {
   const ModuleInfo* info = InfoForAddress(address);
   return info && info->symbols;

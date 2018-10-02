@@ -57,6 +57,27 @@ class ModuleSymbols {
   //
   // If symbolize is true, the results will be symbolized, otherwise the
   // output locations will be regular addresses (this will be slightly faster).
+  //
+  // LINE LOOKUP
+  // -----------
+  // Finds the addresses for all instantiations of the given line. Often there
+  // will be one result, but inlining and templates could duplicate the code.
+  //
+  // It may not be possible to return the exact line. The line could have been
+  // optimized out, it could have been a continuation of an earlier line, or
+  // there could be no code at that line in the first place. This function will
+  // try its best to find the best line if an exact match isn't possible.
+  //
+  // This function will also match multiple different input files according to
+  // FindFileMatches() rules. If you don't want this, we can add a field to
+  // ResolveOptions to disable this and force exact matches.
+  //
+  // If you need to find out the exact actual location that this resolved to,
+  // look up the resulting address again.
+  //
+  // If the file wasn't found or contains no code, it will return an empty
+  // vector. If the file exists and contains code, it will always return
+  // *something*.
   virtual std::vector<Location> ResolveInputLocation(
       const SymbolContext& symbol_context, const InputLocation& input_location,
       const ResolveOptions& options) const = 0;
@@ -97,28 +118,6 @@ class ModuleSymbols {
   // unit for each of the files.
   virtual std::vector<std::string> FindFileMatches(
       const std::string& name) const = 0;
-
-  // Finds the addresses for all instantiations of the given line. Often there
-  // will be one result, but inlining and templates could duplicate the code.
-  //
-  // It may not be possible to return the exact line. The line could have been
-  // optimized out, it could have been a continuation of an earlier line, or
-  // there could be no code at that line in the first place. This function will
-  // try its best to find the best line if an exact match isn't possible.
-  //
-  // If you need to find out the exact actual location that this resolved to,
-  // look up the resulting address again.
-  //
-  // If the file wasn't found or contains no code, it will return an empty
-  // vector. If the file exists and contains code, it will always return
-  // *something*.
-  //
-  // The input file name must be a full path that matches exactly. Use
-  // FindFileMatches() to get these.
-  //
-  // The SymbolContext will be used to generate the absolute output addresses.
-  virtual std::vector<uint64_t> AddressesForLine(
-      const SymbolContext& symbol_context, const FileLine& line) const = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleSymbols);

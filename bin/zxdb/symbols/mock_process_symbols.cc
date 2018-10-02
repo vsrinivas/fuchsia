@@ -45,11 +45,6 @@ std::vector<uint64_t> MockProcessSymbols::AddressesForFunction(
   return std::vector<uint64_t>();
 }
 
-std::vector<uint64_t> MockProcessSymbols::AddressesForLine(
-    const FileLine& line) const {
-  return std::vector<uint64_t>();
-}
-
 bool MockProcessSymbols::HaveSymbolsLoadedForModuleAt(uint64_t address) const {
   return false;
 }

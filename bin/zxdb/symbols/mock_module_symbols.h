@@ -37,8 +37,6 @@ class MockModuleSymbols : public ModuleSymbols {
       const std::string& name) const override;
   std::vector<std::string> FindFileMatches(
       const std::string& name) const override;
-  std::vector<uint64_t> AddressesForLine(const SymbolContext& symbol_context,
-                                         const FileLine& line) const override;
 
  private:
   std::string local_file_name_;

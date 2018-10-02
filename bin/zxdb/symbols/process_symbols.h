@@ -55,11 +55,6 @@ class ProcessSymbols {
   virtual std::vector<uint64_t> AddressesForFunction(
       const std::string& name) const = 0;
 
-  // See ModuleSymbols::RelativeAddressesForLine(). This returns absolute
-  // addresses for all loaded modules.
-  virtual std::vector<uint64_t> AddressesForLine(
-      const FileLine& line) const = 0;
-
   // Returns true if the code location is inside a module where there are
   // symbols loaded. If we did something like index ELF exports, those wouldn't
   // count. "Symbols loaded" here means there is real DWARF debugging

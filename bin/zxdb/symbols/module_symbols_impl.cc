@@ -368,63 +368,6 @@ std::vector<std::string> ModuleSymbolsImpl::FindFileMatches(
   return index_.FindFileMatches(name);
 }
 
-// To a first approximation we just look up the line in the line table for
-// each compilation unit that references the file. Complications:
-//
-// 1. The line might not be an exact match (the user can specify a blank line
-//    or something optimized out). In this case, find the next valid line.
-//
-// 2. Inlining and templates can mean there are multiple matches per
-//    compilation unit, and a single line can have multiple line table entries
-//    even if the code isn't duplicated. Take the first match for each function
-//    implementation or inlined block.
-//
-// 3. The above step can find many different locations. Maybe some code from
-//    the file in question is inlined into the compilation unit, but not the
-//    function with the line in it. Or different template instantiations can
-//    mean that a line of code is in some instantiations but don't apply to
-//    others.
-//
-//    To solve this duplication problem, get the resolved line of each of the
-//    addresses found above and find the best one. Keep only those locations
-//    matching the best one (there can still be multiple).
-std::vector<uint64_t> ModuleSymbolsImpl::AddressesForLine(
-    const SymbolContext& symbol_context, const FileLine& line) const {
-  std::vector<uint64_t> result;
-  const std::vector<unsigned>* units = index_.FindFileUnitIndices(line.file());
-  if (!units)
-    return result;
-
-  std::vector<LineMatch> matches;
-  for (unsigned index : *units) {
-    llvm::DWARFUnit* unit = context_->getUnitAtIndex(index);
-
-    // Complication 1 above: find all matches for this line in the unit.
-    std::vector<LineMatch> unit_matches = GetBestLineTableMatchesInUnit(
-        context_.get(), unit, line.file(), line.line());
-
-    // Complication 2 above: Only want one entry for each function or inline.
-    std::vector<LineMatch> per_fn = GetFirstEntryForEachInline(unit_matches);
-
-    matches.insert(matches.end(), per_fn.begin(), per_fn.end());
-  }
-
-  if (matches.empty())
-    return result;
-
-  // Complication 3 above: Get all instances of the best match only. The best
-  // match is the one with the lowest line number (found matches should all be
-  // bigger than the input line, so this will be the closest).
-  auto min_elt_iter = std::min_element(
-      matches.begin(), matches.end(),
-      [](const LineMatch& a, const LineMatch& b) { return a.line < b.line; });
-  for (const LineMatch& match : matches) {
-    if (match.line == min_elt_iter->line)
-      result.push_back(symbol_context.RelativeToAbsolute(match.address));
-  }
-  return result;
-}
-
 llvm::DWARFUnit* ModuleSymbolsImpl::CompileUnitForRelativeAddress(
     uint64_t relative_address) const {
   return compile_units_.getUnitForOffset(
@@ -434,18 +377,10 @@ llvm::DWARFUnit* ModuleSymbolsImpl::CompileUnitForRelativeAddress(
 std::vector<Location> ModuleSymbolsImpl::ResolveLineInputLocation(
     const SymbolContext& symbol_context, const InputLocation& input_location,
     const ResolveOptions& options) const {
-  // TODO(brettw) remove AddressesForLine() and move that code here instead
-  // (probably make the file match resolution optional).
   std::vector<Location> result;
-  for (std::string& file : FindFileMatches(input_location.line.file())) {
-    for (uint64_t address : AddressesForLine(
-             symbol_context,
-             FileLine(std::move(file), input_location.line.line()))) {
-      if (options.symbolize)
-        result.push_back(LocationForAddress(symbol_context, address));
-      else
-        result.push_back(Location(Location::State::kAddress, address));
-    }
+  for (const std::string& file : FindFileMatches(input_location.line.file())) {
+    ResolveLineInputLocationForFile(
+        symbol_context, file, input_location.line.line(), options, &result);
   }
   return result;
 }
@@ -479,6 +414,70 @@ std::vector<Location> ModuleSymbolsImpl::ResolveAddressInputLocation(
         Location(Location::State::kAddress, input_location.address));
   }
   return result;
+}
+
+// To a first approximation we just look up the line in the line table for
+// each compilation unit that references the file. Complications:
+//
+// 1. The line might not be an exact match (the user can specify a blank line
+//    or something optimized out). In this case, find the next valid line.
+//
+// 2. Inlining and templates can mean there are multiple matches per
+//    compilation unit, and a single line can have multiple line table entries
+//    even if the code isn't duplicated. Take the first match for each function
+//    implementation or inlined block.
+//
+// 3. The above step can find many different locations. Maybe some code from
+//    the file in question is inlined into the compilation unit, but not the
+//    function with the line in it. Or different template instantiations can
+//    mean that a line of code is in some instantiations but don't apply to
+//    others.
+//
+//    To solve this duplication problem, get the resolved line of each of the
+//    addresses found above and find the best one. Keep only those locations
+//    matching the best one (there can still be multiple).
+void ModuleSymbolsImpl::ResolveLineInputLocationForFile(
+    const SymbolContext& symbol_context, const std::string& canonical_file,
+    int line_number, const ResolveOptions& options,
+    std::vector<Location>* output) const {
+  const std::vector<unsigned>* units =
+      index_.FindFileUnitIndices(canonical_file);
+  if (!units)
+    return;
+
+  std::vector<LineMatch> matches;
+  for (unsigned index : *units) {
+    llvm::DWARFUnit* unit = context_->getUnitAtIndex(index);
+
+    // Complication 1 above: find all matches for this line in the unit.
+    std::vector<LineMatch> unit_matches = GetBestLineTableMatchesInUnit(
+        context_.get(), unit, canonical_file, line_number);
+
+    // Complication 2 above: Only want one entry for each function or inline.
+    std::vector<LineMatch> per_fn = GetFirstEntryForEachInline(unit_matches);
+
+    matches.insert(matches.end(), per_fn.begin(), per_fn.end());
+  }
+
+  if (matches.empty())
+    return;
+
+  // Complication 3 above: Get all instances of the best match only. The best
+  // match is the one with the lowest line number (found matches should all be
+  // bigger than the input line, so this will be the closest).
+  auto min_elt_iter = std::min_element(
+      matches.begin(), matches.end(),
+      [](const LineMatch& a, const LineMatch& b) { return a.line < b.line; });
+  for (const LineMatch& match : matches) {
+    if (match.line == min_elt_iter->line) {
+      // Add this entry to the output.
+      uint64_t abs_addr = symbol_context.RelativeToAbsolute(match.address);
+      if (options.symbolize)
+        output->push_back(LocationForAddress(symbol_context, abs_addr));
+      else
+        output->push_back(Location(Location::State::kAddress, abs_addr));
+    }
+  }
 }
 
 }  // namespace zxdb

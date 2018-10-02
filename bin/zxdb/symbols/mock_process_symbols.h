@@ -24,7 +24,6 @@ class MockProcessSymbols : public ProcessSymbols {
   LineDetails LineDetailsForAddress(uint64_t address) const override;
   std::vector<uint64_t> AddressesForFunction(
       const std::string& name) const override;
-  std::vector<uint64_t> AddressesForLine(const FileLine& line) const override;
   bool HaveSymbolsLoadedForModuleAt(uint64_t address) const override;
 };
 

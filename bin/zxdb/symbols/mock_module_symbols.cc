@@ -84,9 +84,4 @@ std::vector<std::string> MockModuleSymbols::FindFileMatches(
   return std::vector<std::string>();
 }
 
-std::vector<uint64_t> MockModuleSymbols::AddressesForLine(
-    const SymbolContext& symbol_context, const FileLine& line) const {
-  return std::vector<uint64_t>();
-}
-
 }  // namespace zxdb
