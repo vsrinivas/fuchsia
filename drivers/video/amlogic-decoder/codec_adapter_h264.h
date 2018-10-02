@@ -65,7 +65,8 @@ class CodecAdapterH264 : public CodecAdapter {
   zx_status_t InitializeFramesHandler(::zx::bti bti, uint32_t frame_count,
                                       uint32_t width, uint32_t height,
                                       uint32_t stride, uint32_t display_width,
-                                      uint32_t display_height);
+                                      uint32_t display_height, bool has_sar,
+                                      uint32_t sar_width, uint32_t sar_height);
 
   void OnCoreCodecFailStream();
 
@@ -100,6 +101,9 @@ class CodecAdapterH264 : public CodecAdapter {
   uint32_t stride_ = 0;
   uint32_t display_width_ = 0;
   uint32_t display_height_ = 0;
+  bool has_sar_ = false;
+  uint32_t sar_width_ = 0;
+  uint32_t sar_height_ = 0;
 
   // Output frames get a PTS based on looking up the output frame's input stream
   // offset via the PtsManager.  For that to work we have to feed the input PTSs

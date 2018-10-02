@@ -470,6 +470,9 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   video_uncompressed.secondary_pixel_stride = 2;
   video_uncompressed.primary_display_width_pixels = display_width_;
   video_uncompressed.primary_display_height_pixels = display_height_;
+  video_uncompressed.has_pixel_aspect_ratio = has_sar_;
+  video_uncompressed.pixel_aspect_ratio_width = sar_width_;
+  video_uncompressed.pixel_aspect_ratio_height = sar_height_;
 
   // TODO(dustingreen): Switching to FIDL table should make this not be
   // required.
@@ -893,7 +896,8 @@ bool CodecAdapterH264::ParseVideoAnnexB(const uint8_t* data, uint32_t length) {
 
 zx_status_t CodecAdapterH264::InitializeFramesHandler(
     ::zx::bti bti, uint32_t frame_count, uint32_t width, uint32_t height,
-    uint32_t stride, uint32_t display_width, uint32_t display_height) {
+    uint32_t stride, uint32_t display_width, uint32_t display_height,
+    bool has_sar, uint32_t sar_width, uint32_t sar_height) {
   // First handle the special case of EndOfStream marker showing up at the
   // output.
   if (display_width == kEndOfStreamWidth &&
@@ -965,6 +969,9 @@ zx_status_t CodecAdapterH264::InitializeFramesHandler(
     stride_ = stride;
     display_width_ = display_width;
     display_height_ = display_height;
+    has_sar_ = has_sar;
+    sar_width_ = sar_width;
+    sar_height_ = sar_height;
   }  // ~lock
 
   // This will snap the current stream_lifetime_ordinal_, and call

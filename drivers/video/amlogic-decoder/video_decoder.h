@@ -64,7 +64,10 @@ class VideoDecoder {
                                 uint32_t,  // height
                                 uint32_t,  // stride
                                 uint32_t,  // display_width
-                                uint32_t   // display_height
+                                uint32_t,  // display_height
+                                bool,      // has_sar
+                                uint32_t,  // sar_width
+                                uint32_t   // sar_height
                                 )>;
   class Owner {
    public:

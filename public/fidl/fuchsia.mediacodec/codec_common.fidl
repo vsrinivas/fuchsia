@@ -364,6 +364,24 @@ struct VideoUncompressedFormat {
   // This value must be <= primary_height_pixels.
   uint32 primary_display_height_pixels;
 
+  // The pixel_aspect_ratio_width : pixel_aspect_ratio_height is the pixel
+  // aspect ratio (AKA sample aspect ratio aka SAR) for the luma (AKA Y)
+  // samples. A pixel_aspect_ratio of 1:1 mean square pixels. A
+  // pixel_aspect_ratio of 2:1 would mean pixels that are displayed twice as
+  // wide as they are tall. Codec implementation should ensure these two values
+  // are relatively prime by reducing the fraction (dividing both by GCF) if
+  // necessary.
+  //
+  // When has_pixel_aspect_ratio == false, pixel_aspect_ratio_width and
+  // pixel_aspect_ratio_height will both be 1, but in that case the
+  // pixel_aspect_ratio_width : pixel_aspect_ratio_height of 1:1 is just a very
+  // weak suggestion re. reasonable-ish handling, not in any way authoritative.
+  // In this case (or in any case really) the receiver of this message may have
+  // other OOB means to determine the actual pixel_aspect_ratio.
+  bool has_pixel_aspect_ratio = false;
+  uint32 pixel_aspect_ratio_width = 1;
+  uint32 pixel_aspect_ratio_height = 1;
+
   // TODO(dustingreen): Currently this assumes 8 bits per channel, but we'll
   // need fields to indicate more bits per pixel such as 10 or 12 bits per
   // pixel.  Also, potentially a way to indicate different number of bits per

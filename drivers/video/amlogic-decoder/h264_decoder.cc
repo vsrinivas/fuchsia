@@ -27,6 +27,34 @@ class StreamInfo
   static auto Get() { return AddrType(0x09c1 * 4); }
 };
 
+// AvScratch2
+class SequenceInfo
+    : public TypedRegisterBase<DosRegisterIo, SequenceInfo, uint32_t> {
+ public:
+  DEF_BIT(0, aspect_ratio_info_present_flag);
+  DEF_BIT(1, timing_info_present_flag);
+  DEF_BIT(4, pic_struct_present_flag);
+
+  // relatively lower-confidence vs. other bits - not confirmed
+  DEF_BIT(6, fixed_frame_rate_flag);
+
+  DEF_FIELD(14, 13, chroma_format_idc);
+  DEF_BIT(15, frame_mbs_only_flag);
+  DEF_FIELD(23, 16, aspect_ratio_idc);
+
+  static auto Get() { return AddrType(0x09c2 * 4); }
+};
+
+// AvScratch3
+class SampleAspectRatioInfo
+    : public TypedRegisterBase<DosRegisterIo, SampleAspectRatioInfo, uint32_t> {
+ public:
+  DEF_FIELD(15, 0, sar_width);
+  DEF_FIELD(31, 16, sar_height);
+
+  static auto Get() { return AddrType(0x09c3 * 4); }
+};
+
 // AvScratch6
 class CropInfo : public TypedRegisterBase<DosRegisterIo, CropInfo, uint32_t> {
  public:
@@ -63,6 +91,54 @@ class PicInfo : public TypedRegisterBase<DosRegisterIo, PicInfo, uint32_t> {
   DEF_FIELD(31, 16, stream_offset);
 
   static auto Get(uint32_t i) { return AddrType((0x09c1 + i) * 4); }
+};
+
+// 0 means "Unspecified"
+constexpr uint32_t kAspectRatioIdcExtendedSar = 255;
+
+// This struct type doesn't need a name, since we only read this one static
+// instance.
+struct {
+  const uint8_t sar_width;
+  const uint8_t sar_height;
+} kSarTable[] = {
+    // 0 - entry 0 in this table is never read, but it's only 2 bytes so we just
+    // let it exist since subtracting 1 from aspect_ratio_idc would probably
+    // take
+    // ~2 code bytes or more anyway.
+    {0, 0},
+    // 1
+    {1, 1},
+    // 2
+    {12, 11},
+    // 3
+    {10, 11},
+    // 4
+    {16, 11},
+    // 5
+    {40, 33},
+    // 6
+    {24, 11},
+    // 7
+    {20, 11},
+    // 8
+    {32, 11},
+    // 9
+    {80, 33},
+    // 10
+    {18, 11},
+    // 11
+    {15, 11},
+    // 12
+    {64, 33},
+    // 13
+    {160, 99},
+    // 14
+    {4, 3},
+    // 15
+    {3, 2},
+    // 16
+    {2, 1},
 };
 
 static uint32_t GetMaxDpbSize(uint32_t level_idc, uint32_t width_in_mbs,
@@ -379,7 +455,9 @@ void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames,
 zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
                                           uint32_t height,
                                           uint32_t display_width,
-                                          uint32_t display_height) {
+                                          uint32_t display_height, bool has_sar,
+                                          uint32_t sar_width,
+                                          uint32_t sar_height) {
   for (auto& frame : video_frames_) {
     owner_->FreeCanvas(std::move(frame.y_canvas));
     owner_->FreeCanvas(std::move(frame.uv_canvas));
@@ -407,7 +485,7 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
     }
     zx_status_t initialize_result = initialize_frames_handler_(
         std::move(duplicated_bti), frame_count, width, height, width,
-        display_width, display_height);
+        display_width, display_height, has_sar, sar_width, sar_height);
     if (initialize_result != ZX_OK) {
       if (initialize_result != ZX_ERR_STOP) {
         DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n",
@@ -487,7 +565,12 @@ zx_status_t H264Decoder::InitializeStream() {
   BarrierBeforeRelease();  // For reference_mv_buffer_
   if (io_buffer_is_valid(&reference_mv_buffer_))
     io_buffer_release(&reference_mv_buffer_);
+  // StreamInfo AKA AvScratch1.
   auto stream_info = StreamInfo::Get().ReadFrom(owner_->dosbus());
+  // SequenceInfo AKA AvScratch2.
+  auto sequence_info = SequenceInfo::Get().ReadFrom(owner_->dosbus());
+  // SampleAspectRatioInfo AKA AvScratch3
+  auto sar_info = SampleAspectRatioInfo::Get().ReadFrom(owner_->dosbus());
   uint32_t level_idc = AvScratchA::Get().ReadFrom(owner_->dosbus()).reg_value();
   uint32_t mb_mv_byte = stream_info.mv_size_flag() ? 24 : 96;
   uint32_t mb_width = stream_info.width_in_mbs();
@@ -549,6 +632,48 @@ zx_status_t H264Decoder::InitializeStream() {
   uint32_t frame_width = fbl::round_up(mb_width * 16, 32u);
   uint32_t frame_height = mb_height * 16;
 
+  // Sample aspect ratio - normalize as sar_width : sar_height.
+  //
+  // The has_sar will be true for any explicitly-specified SAR, and false for
+  // all other cases (both explicitly "Unspecified" and "Reserved" cases that we
+  // don't recognize).
+  bool has_sar = false;
+  uint32_t sar_width = 1;
+  uint32_t sar_height = 1;
+  if (sequence_info.aspect_ratio_info_present_flag()) {
+    uint32_t aspect_ratio_idc = sequence_info.aspect_ratio_idc();
+    if (aspect_ratio_idc == kAspectRatioIdcExtendedSar) {
+      sar_width = sar_info.sar_width();
+      sar_height = sar_info.sar_height();
+      has_sar = true;
+      if (sar_width == 0 || sar_height == 0) {
+        // spec says this condition means "considered unspecified"
+        sar_width = 1;
+        sar_height = 1;
+        has_sar = false;
+      }
+    } else {
+      ZX_DEBUG_ASSERT(aspect_ratio_idc != kAspectRatioIdcExtendedSar);
+      // aspect_ratio_idc == 0 and "Reserved" values are treated the same way as
+      // each other, and both cases don't run the body of the following "if". We
+      // treat "Reserved" the same as "Unspecified" instead of flagging an error
+      // because it seems extremely unlikely that any "Reserved" value in this
+      // context would have meaning beyond specifying sar_width and sar_height.
+      // So for "Reserved" values we just end up with has_sar false, which
+      // should allow _something_ to be displayed even if the displayed frames
+      // have the wrong SAR.
+      if (aspect_ratio_idc >= 1 && aspect_ratio_idc <= 16) {
+        sar_width = kSarTable[aspect_ratio_idc].sar_width;
+        sar_height = kSarTable[aspect_ratio_idc].sar_height;
+        has_sar = true;
+      }
+      ZX_DEBUG_ASSERT(aspect_ratio_idc != 0 ||
+                      (!has_sar && sar_width == 1 && sar_height == 1));
+      ZX_DEBUG_ASSERT(has_sar || (sar_width == 1 && sar_height == 1));
+      ZX_DEBUG_ASSERT(sar_width != 0 && sar_height != 0);
+    }
+  }
+
   next_av_scratch0_ =
       (max_reference_size << 24) | (kActualDPBSize << 16) | (max_dpb_size << 8);
 
@@ -557,8 +682,9 @@ zx_status_t H264Decoder::InitializeStream() {
   // decode to proceed without tending to leave the decoder idle for long if the
   // client immediately releases each frame (just barely enough to decode as
   // long as the client never camps on even one frame).
-  status = InitializeFrames(kActualDPBSize, frame_width, frame_height,
-                            display_width, display_height);
+  status =
+      InitializeFrames(kActualDPBSize, frame_width, frame_height, display_width,
+                       display_height, has_sar, sar_width, sar_height);
   if (status != ZX_OK) {
     if (status != ZX_ERR_STOP) {
       DECODE_ERROR("InitializeFrames() failed: status: %d\n", status);

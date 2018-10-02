@@ -49,7 +49,8 @@ class H264Decoder : public VideoDecoder {
                                     uint32_t firmware_size);
   zx_status_t InitializeFrames(uint32_t frame_count, uint32_t width,
                                uint32_t height, uint32_t display_width,
-                               uint32_t display_height);
+                               uint32_t display_height, bool has_sar,
+                               uint32_t sar_width, uint32_t sar_height);
   zx_status_t InitializeStream();
   void ReceivedFrames(uint32_t frame_count);
   void SwitchStreams();

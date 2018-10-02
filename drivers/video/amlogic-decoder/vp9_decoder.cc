@@ -948,9 +948,10 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
         DECODE_ERROR("Failed to duplicate BTI - status: %d\n", dup_result);
         return false;
       }
+      // TODO: Extract actual has_sar, sar_width, sar_height and pass in here.
       zx_status_t initialize_result = initialize_frames_handler_(
           std::move(duplicated_bti), frames_.size(), params->width,
-          params->height, stride, display_width, display_height);
+          params->height, stride, display_width, display_height, false, 1, 1);
       if (initialize_result != ZX_OK) {
         if (initialize_result != ZX_ERR_STOP) {
           DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n",
