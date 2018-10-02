@@ -15,7 +15,8 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/svc/cpp/services.h"
 
-const std::string kIsolateUrl = "mediaplayer";
+const std::string kIsolateUrl =
+    "fuchsia-pkg://fuchsia.com/mediaplayer#meta/mediaplayer.cmx";
 const std::string kIsolateArgument = "--transient";
 
 // Connects to the requested service in a mediaplayer isolate.

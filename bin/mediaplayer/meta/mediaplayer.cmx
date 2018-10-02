@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.sys.Environment",
+            "fuchsia.tracelink.Registry",
+            "fuchsia.net.oldhttp.HttpService"
+        ]
+    }
+}

@@ -10,6 +10,13 @@ package("mediaplayer") {
   ]
 
   binary = "mediaplayer"
+
+  meta = [
+    {
+      path = rebase_path("meta/mediaplayer.cmx")
+      dest = "mediaplayer.cmx"
+    },
+  ]
 }
 
 executable("mediaplayer_bin") {
