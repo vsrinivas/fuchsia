@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <trace-provider/provider.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
@@ -14,6 +15,8 @@ int main(int argc, char** argv) {
   auto request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
 
   auto environment_services = component::GetEnvironmentServices();
+
+  trace::TraceProvider trace_provider(loop.dispatcher());
 
   component::AppmgrArgs args{.pa_directory_request = std::move(request),
                              .environment_services = environment_services,

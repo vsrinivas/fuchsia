@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <trace/event.h>
+
 #include "garnet/lib/cmx/runtime.h"
 
 #include "garnet/lib/json/json_parser.h"
@@ -13,6 +15,7 @@ constexpr char kRunner[] = "runner";
 
 bool RuntimeMetadata::ParseFromFileAt(int dirfd, const std::string& file,
                                       json::JSONParser* json_parser) {
+  TRACE_DURATION("cmx", "RuntimeMetadata::ParseFromFileAt", "file", file);
   runner_.clear();
   null_ = true;
 

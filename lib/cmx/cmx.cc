@@ -4,6 +4,7 @@
 
 #include "garnet/lib/cmx/cmx.h"
 
+#include <trace/event.h>
 #include <algorithm>
 #include <regex>
 #include <sstream>
@@ -24,6 +25,7 @@ CmxMetadata::~CmxMetadata() = default;
 
 bool CmxMetadata::ParseFromFileAt(int dirfd, const std::string& file,
                                   json::JSONParser* json_parser) {
+  TRACE_DURATION("cmx", "CmxMetadata::ParseFromFileAt", "file", file);
   rapidjson::Document document = json_parser->ParseFromFileAt(dirfd, file);
   if (json_parser->HasError()) {
     return false;
@@ -55,6 +57,8 @@ bool CmxMetadata::ParseFromDeprecatedRuntimeFileAt(
 
 std::string CmxMetadata::GetDefaultComponentCmxPath(
     const std::string& package_resolved_url) {
+  TRACE_DURATION("cmx", "CmxMetadata::GetDefaultComponentCmxPath",
+                 "package_resolved_url", package_resolved_url);
   // Expect package resolved URL in the form of file:///pkgfs/packages/<FOO>/0.
   // Look for <FOO> as the package name.
   // Currently there is only one component per package. The default .cmx is

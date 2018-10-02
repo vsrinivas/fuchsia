@@ -10,6 +10,7 @@
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/process.h>
+#include <trace/event.h>
 #include <unistd.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -100,6 +101,8 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
                           fuchsia::sys::LaunchInfo launch_info,
                           zx::channel loader_service,
                           fdio_flat_namespace_t* flat) {
+  TRACE_DURATION("appmgr", "Realm::CreateProcess", "launch_info.url",
+                 launch_info.url.get());
   if (!data)
     return zx::process();
 
@@ -295,6 +298,9 @@ void Realm::CreateNestedEnvironment(
         controller_request,
     fidl::StringPtr label, fuchsia::sys::ServiceListPtr additional_services,
     bool inherit_parent_services, bool allow_parent_runners) {
+  TRACE_DURATION("appmgr", "Realm::CreateNestedEnvironment", "label",
+                 label.get());
+
   if (additional_services && !additional_services->host_directory) {
     FXL_LOG(ERROR) << label->c_str()
                    << ": |additional_services.provider| is not supported for "
@@ -348,6 +354,8 @@ void Realm::CreateComponent(
     fuchsia::sys::LaunchInfo launch_info,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
     ComponentObjectCreatedCallback callback) {
+  TRACE_DURATION("appmgr", "Realm::CreateComponent", "launch_info.url",
+                 launch_info.url.get());
   ComponentRequestWrapper component_request(
       std::move(controller), MakeForwardingTerminationCallback());
   if (launch_info.additional_services &&
@@ -416,6 +424,7 @@ void Realm::CreateComponent(
 }
 
 void Realm::CreateShell(const std::string& path, zx::channel svc) {
+  TRACE_DURATION("appmgr", "Realm::CreateShell", "path", path);
   if (!svc)
     return;
 
@@ -480,6 +489,9 @@ void Realm::CreateComponentWithProcess(
     fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
     ComponentRequestWrapper component_request,
     ComponentObjectCreatedCallback callback) {
+  TRACE_DURATION("appmgr", "Realm::CreateComponentWithProcess", "package",
+                 package->resolved_url.get(), "launch_info.url",
+                 launch_info.url.get());
   fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(
       default_namespace_, this, std::move(launch_info.additional_services),
       nullptr);
@@ -548,6 +560,9 @@ void Realm::CreateComponentWithRunnerForScheme(
     std::string runner_url, fuchsia::sys::LaunchInfo launch_info,
     ComponentRequestWrapper component_request,
     ComponentObjectCreatedCallback callback) {
+  TRACE_DURATION("appmgr", "Realm::CreateComponentWithRunnerForScheme",
+                 "runner_url", runner_url, "launch_info.url",
+                 launch_info.url.get());
   // Use "web_runner" if it is installed, otherwise fall back to using
   // "web_runner_prototype" instead.
   // TODO(CP-71): Remove web_runner_prototype scaffolding once there is a real
@@ -590,6 +605,9 @@ void Realm::CreateComponentFromPackage(
     fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
     ComponentRequestWrapper component_request,
     ComponentObjectCreatedCallback callback) {
+  TRACE_DURATION("appmgr", "Realm::CreateComponentFromPackage",
+                 "package.resolved_url", package->resolved_url.get(),
+                 "launch_info.url", launch_info.url.get());
   fxl::UniqueFD fd =
       fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
 
@@ -608,7 +626,10 @@ void Realm::CreateComponentFromPackage(
     cmx_path =
         CmxMetadata::GetDefaultComponentCmxPath(package->resolved_url.get());
   }
+  TRACE_DURATION_BEGIN("appmgr", "Realm::CreateComponentFromPackage:IsFileAt",
+                       "cmx_path", cmx_path);
   if (!cmx_path.empty() && files::IsFileAt(fd.get(), cmx_path)) {
+    TRACE_DURATION_END("appmgr", "Realm::CreateComponentFromPackage:IsFileAt");
     json::JSONParser json_parser;
     if (!cmx.ParseFromFileAt(fd.get(), cmx_path, &json_parser)) {
       FXL_LOG(ERROR) << "cmx file failed to parse: " << json_parser.error_str();
@@ -616,6 +637,8 @@ void Realm::CreateComponentFromPackage(
                                         TerminationReason::INTERNAL_ERROR);
       return;
     }
+  } else {
+    TRACE_DURATION_END("appmgr", "Realm::CreateComponentFromPackage:IsFileAt");
   }
 
   RuntimeMetadata runtime;
@@ -639,7 +662,12 @@ void Realm::CreateComponentFromPackage(
     const std::string bin_path =
         program.IsBinaryNull() ? kAppPath : program.binary();
     app_argv0 = fxl::Concatenate({kAppArgv0Prefix, bin_path});
+    TRACE_DURATION_BEGIN("appmgr",
+                         "Realm::CreateComponentFromPackage:VmoFromFilenameAt",
+                         "bin_path", bin_path);
     VmoFromFilenameAt(fd.get(), bin_path, &app_data);
+    TRACE_DURATION_END("appmgr",
+                       "Realm::CreateComponentFromPackage:VmoFromFilenameAt");
     if (!app_data) {
       FXL_LOG(ERROR) << "component has neither runner (error: '"
                      << runtime_parse_error << "') nor elf binary: '"
@@ -742,6 +770,9 @@ void Realm::CreateElfBinaryComponentFromPackage(
     zx::channel loader_service, fdio_flat_namespace_t* flat,
     ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
     ComponentObjectCreatedCallback callback) {
+  TRACE_DURATION("appmgr", "Realm::CreateElfBinaryComponentFromPackage",
+                 "launch_info.url", launch_info.url.get());
+
   zx::job child_job;
   zx_status_t status = zx::job::create(job_, 0u, &child_job);
   if (status != ZX_OK)
@@ -778,6 +809,10 @@ void Realm::CreateRunnerComponentFromPackage(
     RuntimeMetadata& runtime, fuchsia::sys::FlatNamespace flat,
     ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
     fidl::VectorPtr<fuchsia::sys::ProgramMetadata> program_metadata) {
+  TRACE_DURATION("appmgr", "Realm::CreateRunnerComponentFromPackage",
+                 "package.resolved_url", package->resolved_url.get(),
+                 "launch_info.url", launch_info.url.get());
+
   fuchsia::sys::Package inner_package;
   inner_package.resolved_url = package->resolved_url;
 

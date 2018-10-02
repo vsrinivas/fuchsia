@@ -5,6 +5,7 @@
 #include "garnet/bin/appmgr/root_loader.h"
 
 #include <fcntl.h>
+#include <trace/event.h>
 
 #include <utility>
 
@@ -26,6 +27,7 @@ RootLoader::~RootLoader() = default;
 
 void RootLoader::LoadComponent(fidl::StringPtr url,
                                LoadComponentCallback callback) {
+  TRACE_DURATION("appmgr", "RootLoader::LoadComponent", "url", url.get());
   // 1. If the URL is a fuchsia-pkg:// scheme, we are launching a .cmx.
   if (FuchsiaPkgUrl::IsFuchsiaPkgScheme(url)) {
     FuchsiaPkgUrl fp;
@@ -90,6 +92,8 @@ void RootLoader::LoadComponent(fidl::StringPtr url,
 
 bool RootLoader::LoadComponentFromPackage(const std::string& package_name,
                                           LoadComponentCallback callback) {
+  TRACE_DURATION("appmgr", "RootLoader::LoadComponentFromPackage",
+                 "package_name", package_name);
   // TODO(CP-105): We're currently hardcoding version 0 of the package,
   // but we'll eventually need to do something smarter.
   std::string pkg_path =
@@ -101,6 +105,8 @@ bool RootLoader::LoadComponentFromPackage(const std::string& package_name,
 bool RootLoader::LoadComponentFromPkgfs(const std::string& target_path,
                                         const std::string& pkg_path,
                                         LoadComponentCallback callback) {
+  TRACE_DURATION("appmgr", "RootLoader::LoadComponentFromPkgfs", "target_path",
+                 target_path, "pkg_path", pkg_path);
   fxl::UniqueFD fd(open(pkg_path.c_str(), O_DIRECTORY | O_RDONLY));
   if (fd.is_valid()) {
     zx::channel directory = fsl::CloneChannelFromFileDescriptor(fd.get());
@@ -118,6 +124,8 @@ bool RootLoader::LoadComponentFromPkgfs(const std::string& target_path,
 bool RootLoader::LoadComponentWithProcess(fxl::UniqueFD& fd,
                                           const std::string& path,
                                           LoadComponentCallback callback) {
+  TRACE_DURATION("appmgr", "RootLoader::LoadComponentWithProcess", "path",
+                 path);
   fsl::SizedVmo data;
   if (fsl::VmoFromFd(std::move(fd), &data)) {
     fuchsia::sys::Package package;

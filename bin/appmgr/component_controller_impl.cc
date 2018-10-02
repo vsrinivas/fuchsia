@@ -10,7 +10,7 @@
 #include <lib/async/default.h>
 #include <lib/fdio/util.h>
 #include <lib/fit/function.h>
-
+#include <trace/event.h>
 #include <cinttypes>
 #include <utility>
 
@@ -73,6 +73,7 @@ TerminationCallback MakeForwardingTerminationCallback() {
       [](int64_t return_code,
          fuchsia::sys::TerminationReason termination_reason,
          fuchsia::sys::ComponentController_EventSender* event) {
+        TRACE_DURATION("appmgr", "ComponentController::OnTerminated");
         if (event == nullptr) {
           FXL_LOG(DFATAL)
               << "Termination callback called with null event sender";
@@ -154,7 +155,9 @@ void ComponentControllerBase::OutputDirectoryHandler(
   // Vfs directories signal USER_SIGNAL_0 when mounted.
   if (signal->observed & ZX_USER_SIGNAL_0) {
     hub_.PublishOut(output_dir_);
+    TRACE_DURATION_BEGIN("appmgr", "ComponentController::OnDirectoryReady");
     binding_.events().OnDirectoryReady();
+    TRACE_DURATION_END("appmgr", "ComponentController::OnDirectoryReady");
   }
   out_wait_.reset();
 }
@@ -212,6 +215,7 @@ ComponentControllerImpl::~ComponentControllerImpl() {
 }
 
 void ComponentControllerImpl::Kill() {
+  TRACE_DURATION("appmgr", "ComponentController::Kill");
   if (job_) {
     job_.kill();
     job_.reset();
