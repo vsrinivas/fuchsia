@@ -7,6 +7,7 @@
 #include "ralink.h"
 
 #include <ddk/protocol/usb.h>
+#include <usb/usb-request.h>
 #include <fbl/algorithm.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
@@ -180,7 +181,7 @@ Device::Device(zx_device_t* device, usb_protocol_t usb, uint8_t bulk_in,
 Device::~Device() {
     debugfn();
     for (auto req : free_write_reqs_) {
-        usb_req_release(&usb_, req);
+        usb_request_release(req);
     }
 }
 
@@ -3059,7 +3060,7 @@ static void dump_rx(usb_request_t* request, RxInfo rx_info, RxDesc rx_desc, Rxwi
     }
 
     uint8_t* data;
-    usb_req_mmap(&usb_, request, reinterpret_cast<void**>(&data));
+    usb_request_mmap(request, reinterpret_cast<void**>(&data));
     debugf("# Rxed packet: rx_len=%" PRIu64 "\n", request->response.actual);
     debugf("  rxinfo: usb_dma_rx_pkt_len=%u\n", rx_info.usb_dma_rx_pkt_len());
     debugf("  rxdesc: ba=%u data=%u nulldata=%u frag=%u unicast_to_me=%u multicast=%u\n",
@@ -3292,7 +3293,7 @@ void Device::HandleRxComplete(usb_request_t* request) {
         }
 
         uint8_t* data;
-        usb_req_mmap(&usb_, request, reinterpret_cast<void**>(&data));
+        usb_request_mmap(request, reinterpret_cast<void**>(&data));
         uint32_t* data32 = reinterpret_cast<uint32_t*>(data);
         RxInfo rx_info(letoh32(data32[RxInfo::addr()]));
 
@@ -3638,7 +3639,7 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
     // Initialize queues
     for (size_t i = 0; i < kReadReqCount; i++) {
         usb_request_t* req;
-        zx_status_t status = usb_req_alloc(&usb_, &req, kReadBufSize, rx_endpt_);
+        zx_status_t status = usb_request_alloc(&req, kReadBufSize, rx_endpt_);
         if (status != ZX_OK) {
             errorf("failed to allocate rx usb request\n");
             return status;
@@ -3651,7 +3652,7 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
     auto tx_endpt = tx_endpts_.front();
     for (size_t i = 0; i < kWriteReqCount; i++) {
         usb_request_t* req;
-        zx_status_t status = usb_req_alloc(&usb_, &req, kWriteBufSize, tx_endpt);
+        zx_status_t status = usb_request_alloc(&req, kWriteBufSize, tx_endpt);
         if (status != ZX_OK) {
             errorf("failed to allocate tx usb request\n");
             return status;
@@ -4116,10 +4117,10 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* wlan_pkt)
     ZX_DEBUG_ASSERT(wlan_pkt != nullptr);
 
     auto aggr_payload_len = GetBulkoutAggrPayloadLen(*wlan_pkt);
-    size_t usb_req_len = sizeof(TxInfo) + aggr_payload_len + GetBulkoutAggrTailLen();
-    if (usb_req_len > kWriteBufSize) {
+    size_t usb_request_len = sizeof(TxInfo) + aggr_payload_len + GetBulkoutAggrTailLen();
+    if (usb_request_len > kWriteBufSize) {
         errorf("usb request buffer size insufficient for tx packet -- %zu bytes needed\n",
-               usb_req_len);
+               usb_request_len);
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
@@ -4139,7 +4140,7 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* wlan_pkt)
     ZX_DEBUG_ASSERT(req != nullptr);
 
     BulkoutAggregation* aggr;
-    auto status = usb_req_mmap(&usb_, req, reinterpret_cast<void**>(&aggr));
+    auto status = usb_request_mmap(req, reinterpret_cast<void**>(&aggr));
     if (status != ZX_OK) {
         errorf("could not map usb request: %d\n", status);
         std::lock_guard<std::mutex> guard(lock_);
@@ -4162,7 +4163,7 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* wlan_pkt)
     }
 
     // Send the whole thing
-    req->header.length = usb_req_len;
+    req->header.length = usb_request_len;
     usb_request_queue(&usb_, req);
 
 #if RALINK_DUMP_TX
@@ -4725,7 +4726,7 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
 void Device::ReadRequestComplete(usb_request_t* request, void* cookie) {
     auto dev = static_cast<Device*>(cookie);
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_req_release(&dev->usb_, request);
+        usb_request_release(request);
         return;
     }
 
@@ -4735,7 +4736,7 @@ void Device::ReadRequestComplete(usb_request_t* request, void* cookie) {
 void Device::WriteRequestComplete(usb_request_t* request, void* cookie) {
     auto dev = static_cast<Device*>(cookie);
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_req_release(&dev->usb_, request);
+        usb_request_release(request);
         return;
     }
 
@@ -4813,11 +4814,11 @@ size_t Device::GetUsbReqLen(const wlan_tx_packet_t& wlan_pkt) {
 void Device::DumpLengths(const wlan_tx_packet_t& wlan_pkt, BulkoutAggregation* usb_pkt,
                          usb_request_t* req) {
     {
-        size_t usb_req_hdr_len = req->header.length;
+        size_t usb_request_hdr_len = req->header.length;
         size_t aggr_payload_len = usb_pkt->tx_info.aggr_payload_len();
 
-        debugf("len:    usb_req_hdr:%zu usb_tx_pkt:%zu aggr_payload_len:%zu\n", usb_req_hdr_len,
-               GetUsbReqLen(wlan_pkt), aggr_payload_len);
+        debugf("len:    usb_request_hdr:%zu usb_tx_pkt:%zu aggr_payload_len:%zu\n",
+               usb_request_hdr_len, GetUsbReqLen(wlan_pkt), aggr_payload_len);
     }
 
     {  // wlan_pkt

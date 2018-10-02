@@ -6,6 +6,7 @@
 
 #include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
+#include <usb/usb-request.h>
 #include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>
 #include <lib/zx/vmo.h>
@@ -100,7 +101,7 @@ zx_status_t Device::UsbRequest(usb_request_t* req) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  result = usb_req_alloc(&usb_, &req, DFU_PACKET_LEN, bulk_out_addr);
+  result = usb_request_alloc(&req, DFU_PACKET_LEN, bulk_out_addr);
   req->complete_cb = interrupt_complete;
   req->cookie = &completion_;
   return result;
@@ -142,7 +143,7 @@ zx_status_t Device::LoadNVM(const qca_version& version) {
   while (count) {
     size = std::min(count, DFU_PACKET_LEN);
 
-    usb_req_copy_to(&usb_, &req, file.view(sent, size).data(), size, 0);
+    usb_request_copy_to(&req, file.view(sent, size).data(), size, 0);
     req.complete_cb = interrupt_complete;
     req.cookie = &completion_;
     sync_completion_reset(&completion_);
@@ -195,7 +196,7 @@ zx_status_t Device::LoadRAM(const qca_version& version) {
   while (count) {
     size = std::min(count, DFU_PACKET_LEN);
 
-    usb_req_copy_to(&usb_, &req, file.view(sent, size).data(), size, 0);
+    usb_request_copy_to(&req, file.view(sent, size).data(), size, 0);
     req.complete_cb = interrupt_complete;
     req.cookie = &completion_;
     sync_completion_reset(&completion_);

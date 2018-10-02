@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <usb/usb-request.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/limits.h>
@@ -53,8 +54,7 @@ UsbVideoStream::~UsbVideoStream() {
   // List may not have been initialized.
   if (free_reqs_.next) {
     while (!list_is_empty(&free_reqs_)) {
-      usb_req_release(&usb_,
-                      list_remove_head_type(&free_reqs_, usb_request_t, node));
+      usb_request_release(list_remove_head_type(&free_reqs_, usb_request_t, node));
     }
   }
 }
@@ -151,8 +151,7 @@ zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
   }
   // Need to allocate new usb requests, release any existing ones.
   while (!list_is_empty(&free_reqs_)) {
-    usb_req_release(&usb_,
-                    list_remove_head_type(&free_reqs_, usb_request_t, node));
+    usb_request_release(list_remove_head_type(&free_reqs_, usb_request_t, node));
   }
 
   zxlogf(TRACE, "allocating %d usb requests of size %lu\n",
@@ -160,9 +159,9 @@ zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
 
   for (uint32_t i = 0; i < MAX_OUTSTANDING_REQS; i++) {
     usb_request_t* req;
-    zx_status_t status = usb_req_alloc(&usb_, &req, size, usb_ep_addr_);
+    zx_status_t status = usb_request_alloc(&req, size, usb_ep_addr_);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "usb_req_alloc failed: %d\n", status);
+      zxlogf(ERROR, "usb_request_alloc failed: %d\n", status);
       return status;
     }
 
@@ -449,7 +448,7 @@ static inline double device_clock_to_ms(uint32_t clock_reading,
 void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
   // TODO(jocelyndang): handle other formats, the timestamp offset is variable.
   usb_video_vs_uncompressed_payload_header header = {};
-  usb_req_copy_from(&usb_, req, &header,
+  usb_request_copy_from(req, &header,
                     sizeof(usb_video_vs_uncompressed_payload_header), 0);
 
   // PTS should stay the same for payloads of the same frame,
@@ -598,7 +597,7 @@ zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(
   // Different payload types have different header types but always share
   // the same first two bytes.
   usb_video_vs_payload_header header;
-  size_t len = usb_req_copy_from(&usb_, req, &header,
+  size_t len = usb_request_copy_from(req, &header,
                                  sizeof(usb_video_vs_payload_header), 0);
 
   if (len != sizeof(usb_video_vs_payload_header) ||
@@ -724,7 +723,7 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
 
   uint8_t* dst = reinterpret_cast<uint8_t*>(buffers_.CurrentBufferAddress()) +
                  cur_frame_state_.bytes;
-  usb_req_copy_from(&usb_, req, dst, data_size, header_len);
+  usb_request_copy_from(req, dst, data_size, header_len);
 
   cur_frame_state_.bytes += data_size;
 

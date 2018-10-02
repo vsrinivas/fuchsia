@@ -18,6 +18,7 @@
 
 #include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
+#include <usb/usb-request.h>
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
 
@@ -189,7 +190,7 @@ struct brcmf_urb* brcmf_usb_allocate_urb(usb_protocol_t* usb) {
     if (urb == NULL) {
         return NULL;
     }
-    result = usb_req_alloc(usb, &urb->zxurb, USB_MAX_TRANSFER_SIZE, 0);
+    result = usb_request_alloc(&urb->zxurb, USB_MAX_TRANSFER_SIZE, 0);
     if (result != ZX_OK) {
         free(urb);
         return NULL;
@@ -208,7 +209,7 @@ void brcmf_usb_free_urb(struct brcmf_urb* urb) {
     if (urb->devinfo == NULL) {
         return;
     }
-    usb_req_release(&urb->devinfo->protocol, urb->zxurb);
+    usb_request_release(urb->zxurb);
     free(urb);
 }
 
@@ -236,7 +237,7 @@ static void brcmf_usb_init_urb(struct brcmf_urb* urb, struct brcmf_usbdev_info* 
     zxurb->header.send_zlp = zero_packet;
     if (out) {
         if (size > 0) {
-            usb_req_copy_to(&devinfo->protocol, zxurb, buf, size, 0);
+            usb_request_copy_to(zxurb, buf, size, 0);
         }
         urb->recv_buffer = 0;
         urb->desired_length = 0;
@@ -332,7 +333,7 @@ static void brcmf_usb_ctlread_complete(usb_request_t* zxurb, struct brcmf_urb* u
         }
         // TODO(cphoenix): At least some transfers malloc a buffer and copy to/from it, which
         // is unnecessary given we're in userspace and already copying here. Clean that up.
-        usb_req_copy_from(&devinfo->protocol, zxurb, urb->recv_buffer, urb->actual_length, 0);
+        usb_request_copy_from(zxurb, urb->recv_buffer, urb->actual_length, 0);
     }
 
     pthread_mutex_lock(&irq_callback_lock);
@@ -620,7 +621,7 @@ static void brcmf_usb_rx_complete(usb_request_t* zxurb, struct brcmf_urb* urb) {
                     urb->desired_length);
             urb->actual_length = urb->desired_length;
         }
-        usb_req_copy_from(&devinfo->protocol, zxurb, urb->recv_buffer, urb->actual_length, 0);
+        usb_request_copy_from(zxurb, urb->recv_buffer, urb->actual_length, 0);
     }
 
     /* zero length packets indicate usb "failure". Do not refill */
@@ -827,7 +828,7 @@ static void brcmf_usb_sync_complete(usb_request_t* zxurb, struct brcmf_urb* urb)
                     urb->desired_length);
             urb->actual_length = urb->desired_length;
         }
-        usb_req_copy_from(&devinfo->protocol, zxurb, urb->recv_buffer, urb->actual_length, 0);
+        usb_request_copy_from(zxurb, urb->recv_buffer, urb->actual_length, 0);
     }
 
     brcmf_usb_ioctl_resp_wake(devinfo);
