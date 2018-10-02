@@ -109,4 +109,11 @@ package("service") {
   binary = "mdns_service"
 
   package_name = "mdns_service"
+
+  meta = [
+    {
+      path = rebase_path("meta/mdns_service.cmx")
+      dest = "mdns_service.cmx"
+    },
+  ]
 }
