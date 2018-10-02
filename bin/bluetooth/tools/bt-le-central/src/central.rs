@@ -6,7 +6,7 @@
 #![allow(unreachable_code)]
 
 use {
-    crate::common::gatt::start_gatt_loop,
+    crate::gatt::repl::start_gatt_loop,
     failure::Error,
     fidl::endpoints,
     fidl_fuchsia_bluetooth_le::{CentralEvent, CentralProxy, RemoteDevice},

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::common::gatt_types::Service,
     failure::Error,
     fidl::endpoints,
     fidl_fuchsia_bluetooth_gatt::{
@@ -14,16 +13,21 @@ use {
     fuchsia_async as fasync,
     fuchsia_bluetooth::error::Error as BTError,
     futures::{
-        channel::mpsc::channel,
-        TryFutureExt, Stream, StreamExt, TryStreamExt,
+        TryFutureExt, TryStreamExt,
     },
     parking_lot::RwLock,
+    self::{
+        commands::Cmd,
+        types::Service,
+    },
     std::{
-        io::{self, Read, Write},
         sync::Arc,
-        thread,
     },
 };
+
+pub mod commands;
+pub mod repl;
+pub mod types;
 
 type GattClientPtr = Arc<RwLock<GattClient>>;
 
@@ -81,53 +85,8 @@ impl GattClient {
     }
 }
 
-// Starts the GATT REPL. This first requests a list of remote services and resolves the
-// returned future with an error if no services are found.
-pub async fn start_gatt_loop<'a>(proxy: ClientProxy) -> Result<(), Error> {
-    let client = GattClient::new(proxy);
-
-    println!("  discovering services...");
-    let list_services = client
-        .read()
-        .proxy
-        .list_services(None);
-
-    let (status, services) = await!(list_services)
-        .map_err(|e| {
-            let err = BTError::new(&format!("failed to list services: {}", e));
-            println!("{}", e);
-            err
-        })?;
-
-    match status.error {
-        None => client.write().set_services(services),
-        Some(e) => {
-            let err = BTError::from(*e).into();
-            println!("failed to list services: {}", err);
-            return Err(err)
-        }
-    }
-
-    let mut stdin_stream = stdin_stream();
-    while let Some(cmd) = await!(stdin_stream.next()) {
-        if cmd == "exit" {
-            return Err(BTError::new("exited").into());
-        } else {
-            await!(handle_cmd(cmd, &client))
-                .map_err(|e| {
-                    println!("Error: {}", e);
-                    e
-                })?;
-            print!("> ");
-            io::stdout().flush().unwrap();
-        }
-    }
-
-    Ok(())
-}
-
-// Discover the characteristics of |client|'s currently connected service and
-// cache them. |client.service_proxy| MUST be valid.
+// Discover the characteristics of `client`'s currently connected service and
+// cache them. `client.service_proxy` MUST be valid.
 async fn discover_characteristics(client: &GattClientPtr) -> Result<(), Error> {
     let discover_characteristics = client
         .read()
@@ -154,8 +113,11 @@ async fn discover_characteristics(client: &GattClientPtr) -> Result<(), Error> {
     fasync::spawn(async move {
         while let Some(evt) = await!(event_stream.try_next())? {
             match evt {
-                RemoteServiceEvent::OnCharacteristicValueUpdated { id, value }
-                    => println!("(id = {}) value updated: {:X?}", id, value),
+                RemoteServiceEvent::OnCharacteristicValueUpdated { id, value } => {
+                    print!("{}{}", repl::CLEAR_LINE, repl::CHA);
+                    println!("(id = {}) value updated: {:X?} {}", id, value,
+                        decoded_string_value(&value));
+                }
             }
         }
         Ok::<(), fidl::Error>(())
@@ -181,7 +143,7 @@ async fn read_characteristic(client: &GattClientPtr, id: u64)
 
     match status.error {
         Some(e) => println!("Failed to read characteristic: {}", BTError::from(*e)),
-        None => println!("(id = {}) value: {:X?}", id, value),
+        None => println!("(id = {}) value: {:X?} {}", id, value, decoded_string_value(&value)),
     }
 
     Ok(())
@@ -243,19 +205,6 @@ fn write_without_response(client: &GattClientPtr, id: u64, value: Vec<u8>)
 
 // ===== REPL =====
 
-fn do_help() {
-    println!("Commands:");
-    println!("    help                             Print this help message");
-    println!("    list                             List discovered services");
-    println!("    connect <index>                  Connect to a service");
-    println!("    read-chr <id>                    Read a characteristic");
-    println!("    read-long <id> <offset> <max>    Read a long characteristic");
-    println!("    write-chr <id> <value>           Write to a characteristic");
-    println!("    enable-notify <id>               Enable characteristic notifications");
-    println!("    disable-notify <id>              Disable characteristic notifications");
-    println!("    exit                             Quit and disconnect the peripheral");
-}
-
 fn do_list(args: &[&str], client: &GattClientPtr) {
     if !args.is_empty() {
         println!("list: expected 0 arguments");
@@ -268,7 +217,7 @@ async fn do_connect<'a>(args: &'a [&'a str], client: &'a GattClientPtr)
     -> Result<(), Error>
 {
     if args.len() != 1 {
-        println!("usage: connect <index>");
+        println!("usage: {}", Cmd::Connect.cmd_help());
         return Ok(());
     }
 
@@ -306,7 +255,7 @@ async fn do_read_chr<'a>(args: &'a [&'a str], client: &'a GattClientPtr)
     -> Result<(), Error>
 {
     if args.len() != 1 {
-        println!("usage: read-chr <id>");
+        println!("usage: {}", Cmd::ReadChr.cmd_help());
         return Ok(());
     }
 
@@ -330,7 +279,7 @@ async fn do_read_long<'a>(args: &'a [&'a str], client: &'a GattClientPtr)
     -> Result<(), Error>
 {
     if args.len() != 3 {
-        println!("usage: read-long <id> <offset> <max bytes>");
+        println!("usage: {}", Cmd::ReadLong.cmd_help());
         return Ok(());
     }
 
@@ -413,7 +362,7 @@ async fn do_enable_notify<'a>(
     args: &'a [&'a str], client: &'a GattClientPtr,
 ) -> Result<(), Error> {
     if args.len() != 1 {
-        println!("usage: enable-notify <id>");
+        println!("usage: {}", Cmd::EnableNotify.cmd_help());
         return Ok(());
     }
 
@@ -452,7 +401,7 @@ async fn do_disable_notify<'a>(
     args: &'a [&'a str], client: &'a GattClientPtr,
 ) -> Result<(), Error> {
     if args.len() != 1 {
-        println!("usage: disable-notify <id>");
+        println!("usage: {}", Cmd::DisableNotify.cmd_help());
         return Ok(());
     }
 
@@ -488,67 +437,13 @@ async fn do_disable_notify<'a>(
     Ok(())
 }
 
-// Processes |cmd| and returns its result.
-// TODO(armansito): Use clap for fancier command processing.
-async fn handle_cmd<'a>(line: String, client: &'a GattClientPtr)
-    -> Result<(), Error>
-{
-    let mut components = line.trim().split_whitespace();
-    let cmd = components.next();
-    let args: Vec<&str> = components.collect();
-
-    match cmd {
-        Some("help") => {
-            do_help();
-            Ok(())
-        },
-        Some("list") => {
-            do_list(&args, client);
-            Ok(())
-        },
-        Some("connect") => await!(do_connect(&args, client)),
-        Some("read-chr") => await!(do_read_chr(&args, client)),
-        Some("read-long") => await!(do_read_long(&args, client)),
-        Some("write-chr") => await!(do_write_chr(args, client)),
-        Some("enable-notify") => await!(do_enable_notify(&args, client)),
-        Some("disable-notify") => await!(do_disable_notify(&args, client)),
-        Some(cmd) => {
-            eprintln!("Unknown command: {}", cmd);
-            Ok(())
-        }
-        None => Ok(()),
+/// Attempt to decode the value as a utf-8 string, replacing any invalid byte sequences with '.'
+/// characters. Returns an empty string if there are not any valid utf-8 characters.
+fn decoded_string_value(value: &[u8]) -> String {
+    let decoded_value = String::from_utf8_lossy(value);
+    if decoded_value.chars().any(|c| c != '�') {
+        decoded_value.replace("�", ".")
+    } else {
+        String::new()
     }
-}
-
-fn stdin_stream() -> impl Stream<Item = String> {
-    let (mut sender, receiver) = channel(512);
-    thread::spawn(move || -> Result<(), Error> {
-        print!("> ");
-        io::stdout().flush()?;
-        let input = io::stdin();
-
-        // TODO(armansito): TODO: support UTF-8 chars.
-        let mut buf: Vec<u8> = vec![];
-        for b in input.bytes() {
-            if let Ok(byte) = b {
-                let c = byte as char;
-
-                // Display the typed character
-                print!("{}", c);
-                io::stdout().flush()?;
-
-                if c == '\n' {
-                    let line = String::from_utf8(buf).unwrap();
-                    buf = vec![];
-                    sender.try_send(line)?;
-                } else {
-                    buf.push(byte);
-                }
-            }
-            io::stdout().flush()?;
-        }
-
-        Ok(())
-    });
-    receiver
 }

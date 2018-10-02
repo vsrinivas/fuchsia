@@ -24,8 +24,10 @@ use {
     getopts::Options,
 };
 
-mod common;
-use self::common::central::{listen_central_events, CentralState};
+mod central;
+mod gatt;
+
+use crate::central::{listen_central_events, CentralState};
 
 fn do_scan(
     args: &[String], central: &CentralProxy,
