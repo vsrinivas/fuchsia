@@ -82,6 +82,30 @@ static fbl::StringBuffer<kTaPathLength> BuildTaPath(const fbl::StringPiece& uuid
 }; // namespace
 
 namespace optee {
+
+zircon_tee_Device_ops_t OpteeClient::kFidlOps = {
+    .GetOsInfo =
+        [](void* ctx, fidl_txn_t* txn) {
+            return reinterpret_cast<OpteeClient*>(ctx)->GetOsInfo(txn);
+        },
+    .OpenSession =
+        [](void* ctx, const zircon_tee_Uuid* trusted_app,
+           const zircon_tee_ParameterSet* parameter_set, fidl_txn_t* txn) {
+            return reinterpret_cast<OpteeClient*>(ctx)->OpenSession(trusted_app, parameter_set,
+                                                                    txn);
+        },
+    .InvokeCommand =
+        [](void* ctx, uint32_t session_id, uint32_t command_id,
+           const zircon_tee_ParameterSet* parameter_set, fidl_txn_t* txn) {
+            return reinterpret_cast<OpteeClient*>(ctx)->InvokeCommand(session_id, command_id,
+                                                                      parameter_set, txn);
+        },
+    .CloseSession =
+        [](void* ctx, uint32_t session_id, fidl_txn_t* txn) {
+            return reinterpret_cast<OpteeClient*>(ctx)->CloseSession(session_id, txn);
+        },
+};
+
 zx_status_t OpteeClient::DdkClose(uint32_t flags) {
     controller_->RemoveClient(this);
     return ZX_OK;
@@ -121,6 +145,39 @@ zx_status_t OpteeClient::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len
     }
     }
 
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t OpteeClient::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    if (needs_to_close_) {
+        // The underlying channel is owned by the devhost and thus we do not need to directly close
+        // it. This check exists for the scenario where we are in the process of unbinding the
+        // parent device and cannot fulfill any requests any more. The underlying channel will be
+        // closed by devhost once the unbind is complete.
+        return ZX_ERR_PEER_CLOSED;
+    }
+    return zircon_tee_Device_dispatch(this, txn, msg, &kFidlOps);
+}
+
+zx_status_t OpteeClient::GetOsInfo(fidl_txn_t* txn) const {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t OpteeClient::OpenSession(const zircon_tee_Uuid* trusted_app,
+                                     const zircon_tee_ParameterSet* parameter_set,
+                                     fidl_txn_t* txn) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t OpteeClient::InvokeCommand(uint32_t session_id,
+                                       uint32_t command_id,
+                                       const zircon_tee_ParameterSet* parameter_set,
+                                       fidl_txn_t* txn) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t OpteeClient::CloseSession(uint32_t session_id,
+                                      fidl_txn_t* txn) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

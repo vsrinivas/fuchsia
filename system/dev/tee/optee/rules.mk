@@ -16,10 +16,13 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/shared-memory.cpp \
     $(LOCAL_DIR)/util.cpp \
 
+MODULE_FIDL_LIBS := system/fidl/zircon-tee
+
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
+    system/ulib/fidl \
     system/ulib/region-alloc \
     system/ulib/tee-client-api \
     system/ulib/zx \

@@ -8,13 +8,14 @@
 #include <ddktl/protocol/tee.h>
 #include <fbl/intrusive_double_list.h>
 #include <zircon/device/tee.h>
+#include <zircon/tee/c/fidl.h>
 
 #include "optee-controller.h"
 
 namespace optee {
 
 class OpteeClient;
-using OpteeClientBase = ddk::Device<OpteeClient, ddk::Closable, ddk::Ioctlable>;
+using OpteeClientBase = ddk::Device<OpteeClient, ddk::Closable, ddk::Ioctlable, ddk::Messageable>;
 using OpteeClientProtocol = ddk::TeeProtocol<OpteeClient>;
 
 // The Optee driver allows for simultaneous access from different processes. The OpteeClient object
@@ -37,6 +38,7 @@ public:
     void DdkRelease();
     zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
                          void* out_buf, size_t out_len, size_t* out_actual);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
     // If the Controller is unbound, we need to notify all clients that the device is no longer
     // available. The Controller will invoke this function so that any subsequent calls on the
@@ -47,6 +49,17 @@ public:
     zx_status_t OpenSession(const tee_ioctl_session_request_t* session_request,
                             tee_ioctl_session_t* out_session,
                             size_t* out_actual);
+
+    // FIDL Handlers
+    zx_status_t GetOsInfo(fidl_txn_t* txn) const;
+    zx_status_t OpenSession(const zircon_tee_Uuid* trusted_app,
+                            const zircon_tee_ParameterSet* parameter_set,
+                            fidl_txn_t* txn);
+    zx_status_t InvokeCommand(uint32_t session_id,
+                              uint32_t command_id,
+                              const zircon_tee_ParameterSet* parameter_set,
+                              fidl_txn_t* txn);
+    zx_status_t CloseSession(uint32_t session_id, fidl_txn_t* txn);
 
 private:
     using SharedMemoryList = fbl::DoublyLinkedList<fbl::unique_ptr<SharedMemory>>;
@@ -128,6 +141,8 @@ private:
     zx_status_t HandleRpcCommandAllocateMemory(AllocateMemoryRpcMessage* message);
     zx_status_t HandleRpcCommandFreeMemory(FreeMemoryRpcMessage* message);
     zx_status_t HandleRpcCommandFileSystem(FileSystemRpcMessage* message);
+
+    static zircon_tee_Device_ops_t kFidlOps;
 
     OpteeController* controller_;
     bool needs_to_close_ = false;
