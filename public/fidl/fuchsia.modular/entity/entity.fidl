@@ -8,7 +8,7 @@ using fuchsia.mem;
 
 /// A multi-typed data entity.
 interface Entity {
-  /// Returns the types associated with this entity. Each entry in |type|
+  /// Returns the types associated with this entity. Each entry in |types|
   /// references a well-known content type.
   1: GetTypes() -> (vector<string> types);
 
