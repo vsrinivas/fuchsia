@@ -10,12 +10,11 @@
 
 use bitflags::{bitflags, __bitflags, __impl_bitflags};
 use fuchsia_async as fasync;
-use futures::{prelude::*, ready, try_ready};
+use futures::{Poll, FutureExt, Stream, task::LocalWaker, ready, try_ready};
 use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};
 
 use std::fs::File;
-use std::marker::Unpin;
-use std::pin::PinMut;
+use std::pin::{Pin, Unpin};
 use std::sync::{Arc, Mutex};
 
 mod buffer;
@@ -192,27 +191,27 @@ impl Client {
     }
 
     /// Poll the Ethernet client to see if the status has changed.
-    pub fn poll_status(&self, cx: &mut task::Context) -> Poll<Result<zx::Signals, zx::Status>> {
+    pub fn poll_status(&self, cx: &LocalWaker) -> Poll<Result<zx::Signals, zx::Status>> {
         self.inner.poll_status(cx)
     }
 
     /// Poll the Ethernet client to queue any pending packets for transmit.
-    pub fn poll_queue_tx(&self, cx: &mut task::Context) -> Poll<Result<usize, zx::Status>> {
+    pub fn poll_queue_tx(&self, cx: &LocalWaker) -> Poll<Result<usize, zx::Status>> {
         self.inner.poll_queue_tx(cx)
     }
 
     /// Poll the Ethernet client to complete any attempted packet transmissions.
-    pub fn poll_complete_tx(&self, cx: &mut task::Context) -> Poll<Result<EthernetQueueFlags, zx::Status>> {
+    pub fn poll_complete_tx(&self, cx: &LocalWaker) -> Poll<Result<EthernetQueueFlags, zx::Status>> {
         self.inner.poll_complete_tx(cx)
     }
 
     /// Poll the Ethernet client to queue a buffer for receiving packets from the Ethernet device.
-    pub fn poll_queue_rx(&self, cx: &mut task::Context) -> Poll<Result<(), zx::Status>> {
+    pub fn poll_queue_rx(&self, cx: &LocalWaker) -> Poll<Result<(), zx::Status>> {
         self.inner.poll_queue_rx(cx)
     }
 
     /// Poll the Ethernet client to receive a packet from the Ethernet device.
-    pub fn poll_complete_rx(&self, cx: &mut task::Context) -> Poll<Result<buffer::RxBuffer, zx::Status>> {
+    pub fn poll_complete_rx(&self, cx: &LocalWaker) -> Poll<Result<buffer::RxBuffer, zx::Status>> {
         self.inner.poll_complete_rx(cx)
     }
 }
@@ -238,9 +237,9 @@ pub enum Event {
 impl Stream for EventStream {
     type Item = Result<Event, zx::Status>;
 
-    fn poll_next(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
         Poll::Ready(
-            match ready!(self.poll_inner(cx)) {
+            match ready!(self.poll_inner(lw)) {
                 Ok(event) => Some(Ok(event)),
                 Err(zx::Status::PEER_CLOSED) => None,
                 Err(e) => Some(Err(e)),
@@ -250,29 +249,29 @@ impl Stream for EventStream {
 }
 
 impl EventStream {
-    fn poll_inner(&mut self, cx: &mut task::Context) -> Poll<Result<Event, zx::Status>> {
+    fn poll_inner(&mut self, lw: &LocalWaker) -> Poll<Result<Event, zx::Status>> {
         loop {
-            if let Poll::Ready(signals) = self.inner.poll_status(cx)? {
+            if let Poll::Ready(signals) = self.inner.poll_status(lw)? {
                 if signals.contains(zx::Signals::USER_0) {
                     return Poll::Ready(Ok(Event::StatusChanged));
                 }
             }
 
             let mut progress = false;
-            if self.inner.poll_queue_tx(cx)?.is_ready() {
+            if self.inner.poll_queue_tx(lw)?.is_ready() {
                 progress = true;
             }
 
-            if self.inner.poll_queue_rx(cx)?.is_ready() {
+            if self.inner.poll_queue_rx(lw)?.is_ready() {
                 progress = true;
             }
 
             // Drain the completed tx queue to make all the buffers available.
-            while self.inner.poll_complete_tx(cx)?.is_ready() {
+            while self.inner.poll_complete_tx(lw)?.is_ready() {
                 progress = true;
             }
 
-            if let Poll::Ready(buf) = self.inner.poll_complete_rx(cx)? {
+            if let Poll::Ready(buf) = self.inner.poll_complete_rx(lw)? {
                 return Poll::Ready(Ok(Event::Receive(buf)));
             }
 
@@ -327,17 +326,17 @@ impl ClientInner {
     /// Check for Ethernet device status changes.
     ///
     /// These changes are signaled on the rx fifo.
-    fn poll_status(&self, cx: &mut task::Context) -> Poll<Result<zx::Signals, zx::Status>> {
-        let signals = try_ready!(self.signals.lock().unwrap().poll_unpin(cx));
+    fn poll_status(&self, lw: &LocalWaker) -> Poll<Result<zx::Signals, zx::Status>> {
+        let signals = try_ready!(self.signals.lock().unwrap().poll_unpin(lw));
         self.register_signals();
         Poll::Ready(Ok(signals))
     }
 
     /// Write any pending transmits to the tx fifo.
-    fn poll_queue_tx(&self, cx: &mut task::Context) -> Poll<Result<usize, zx::Status>> {
+    fn poll_queue_tx(&self, lw: &LocalWaker) -> Poll<Result<usize, zx::Status>> {
         let mut tx_guard = self.tx_pending.lock().unwrap();
         if tx_guard.len() > 0 {
-            let result = self.tx_fifo.try_write(&tx_guard[..], cx)?;
+            let result = self.tx_fifo.try_write(&tx_guard[..], lw)?;
             // It's possible that only some of the entries were queued, so split those off the
             // pending queue and save the rest for later.
             if let Poll::Ready(n) = result {
@@ -351,8 +350,8 @@ impl ClientInner {
     /// Receive a tx completion entry from the Ethernet device.
     ///
     /// Returns the flags indicating success or failure.
-    fn poll_complete_tx(&self, cx: &mut task::Context) -> Poll<Result<EthernetQueueFlags, zx::Status>> {
-        match try_ready!(self.tx_fifo.try_read(cx)) {
+    fn poll_complete_tx(&self, lw: &LocalWaker) -> Poll<Result<EthernetQueueFlags, zx::Status>> {
+        match try_ready!(self.tx_fifo.try_read(lw)) {
             Some(entry) => {
                 self.pool
                     .lock()
@@ -367,13 +366,13 @@ impl ClientInner {
     }
 
     /// Queue an available receive buffer to the rx fifo.
-    fn poll_queue_rx(&self, cx: &mut task::Context) -> Poll<Result<(), zx::Status>> {
-        try_ready!(self.rx_fifo.poll_write(cx));
+    fn poll_queue_rx(&self, lw: &LocalWaker) -> Poll<Result<(), zx::Status>> {
+        try_ready!(self.rx_fifo.poll_write(lw));
         let mut pool_guard = self.pool.lock().unwrap();
         match pool_guard.alloc_rx_buffer() {
             None => Poll::Pending,
             Some(entry) => {
-                let result = self.rx_fifo.try_write(&[entry], cx)?;
+                let result = self.rx_fifo.try_write(&[entry], lw)?;
                 if let Poll::Pending = result {
                     // Map the buffer and drop it immediately, to return it to the set of available
                     // buffers.
@@ -385,9 +384,9 @@ impl ClientInner {
     }
 
     /// Receive a buffer from the Ethernet device representing a packet from the network.
-    fn poll_complete_rx(&self, cx: &mut task::Context) -> Poll<Result<buffer::RxBuffer, zx::Status>> {
+    fn poll_complete_rx(&self, lw: &LocalWaker) -> Poll<Result<buffer::RxBuffer, zx::Status>> {
         Poll::Ready(
-            match try_ready!(self.rx_fifo.try_read(cx)) {
+            match try_ready!(self.rx_fifo.try_read(lw)) {
                 Some(entry) => {
                     let mut pool_guard = self.pool.lock().unwrap();
                     let buf = pool_guard.map_rx_buffer(entry.offset as usize, entry.length as usize);

@@ -9,7 +9,7 @@ use futures::{Poll, Future, FutureExt, task};
 use futures::future::{self, FutureObj, LocalFutureObj};
 use futures::task::{
     AtomicWaker, local_waker_from_nonlocal, local_waker_ref_from_nonlocal,
-    Spawn, SpawnObjError,
+    Spawn, SpawnError,
 };
 use parking_lot::{Mutex, Condvar};
 use pin_utils::pin_mut;
@@ -160,19 +160,13 @@ impl Executor {
         where F: Future
     {
         pin_mut!(main_future);
-        let waker = local_waker_from_nonlocal(
+        let lw = local_waker_from_nonlocal(
             Arc::new(SingleThreadedMainTaskWake(self.inner.clone())));
 
-        let executor = EHandle { inner: self.inner.clone() };
-        let executor_one = &mut &executor;
-        let executor_two = &mut &executor;
-
-        let cx = &mut task::Context::new(&waker, executor_one);
-
-        let mut res = main_future.reborrow().poll(cx);
+        let mut res = main_future.as_mut().poll(&lw);
 
         loop {
-            if let Poll::Ready(res) =  res {
+            if let Poll::Ready(res) = res {
                 return res;
             }
 
@@ -197,14 +191,13 @@ impl Executor {
             if let Some(packet) = packet {
                 match packet.key() {
                     EMPTY_WAKEUP_ID => {
-                        res = main_future.reborrow().poll(cx);
+                        res = main_future.as_mut().poll(&lw);
                     }
                     TASK_READY_WAKEUP_ID => {
                         // TODO: loop but don't starve
                         if let Some(task) = self.inner.ready_tasks.try_pop() {
-                            let waker = local_waker_ref_from_nonlocal(&task);
-                            let cx = &mut task::Context::new(&waker, executor_two);
-                            task.future.try_poll(cx);
+                            let lw = local_waker_ref_from_nonlocal(&task);
+                            task.future.try_poll(&lw);
                         }
                     }
                     receiver_key => {
@@ -227,15 +220,10 @@ impl Executor {
     pub fn run_until_stalled<F>(&mut self, main_future: &mut F) -> Poll<F::Output>
         where F: Future + Unpin
     {
-        let waker = local_waker_from_nonlocal(
+        let lw = local_waker_from_nonlocal(
             Arc::new(SingleThreadedMainTaskWake(self.inner.clone())));
 
-        let executor = EHandle { inner: self.inner.clone() };
-        let executor_one = &mut &executor;
-        let executor_two = &mut &executor;
-
-        let cx = &mut task::Context::new(&waker, executor_one);
-        let mut res = main_future.poll_unpin(cx);
+        let mut res = main_future.poll_unpin(&lw);
 
         loop {
             if res.is_ready() {
@@ -250,13 +238,12 @@ impl Executor {
 
             match packet.key() {
                 EMPTY_WAKEUP_ID => {
-                    res = main_future.poll_unpin(cx);
+                    res = main_future.poll_unpin(&lw);
                 }
                 TASK_READY_WAKEUP_ID => {
                     if let Some(task) = self.inner.ready_tasks.try_pop() {
-                        let waker = local_waker_ref_from_nonlocal(&task);
-                        let cx = &mut task::Context::new(&waker, executor_two);
-                        task.future.try_poll(cx);
+                        let lw = local_waker_ref_from_nonlocal(&task);
+                        task.future.try_poll(&lw);
                     }
                 }
                 receiver_key => {
@@ -365,8 +352,8 @@ impl Executor {
     }
 
     fn worker_lifecycle(inner: Arc<Inner>, timers: Option<TimerHeap>) {
-        let mut executor: EHandle = EHandle { inner: inner.clone() };
-        executor.clone().set_local(timers.unwrap_or(TimerHeap::new()));
+        let executor: EHandle = EHandle { inner: inner.clone() };
+        executor.set_local(timers.unwrap_or(TimerHeap::new()));
         loop {
             if inner.done.load(Ordering::SeqCst) {
                 EHandle::rm_local();
@@ -395,9 +382,8 @@ impl Executor {
                     TASK_READY_WAKEUP_ID => {
                         // TODO: loop but don't starve
                         if let Some(task) = inner.ready_tasks.try_pop() {
-                            let waker = local_waker_ref_from_nonlocal(&task);
-                            let cx = &mut task::Context::new(&waker, &mut executor);
-                            task.future.try_poll(cx);
+                            let lw = local_waker_ref_from_nonlocal(&task);
+                            task.future.try_poll(&lw);
                         }
                     }
                     receiver_key => {
@@ -468,13 +454,13 @@ impl fmt::Debug for EHandle {
 }
 
 impl Spawn for EHandle {
-    fn spawn_obj(&mut self, f: FutureObj<'static, ()>) -> Result<(), SpawnObjError> {
+    fn spawn_obj(&mut self, f: FutureObj<'static, ()>) -> Result<(), SpawnError> {
         <&EHandle>::spawn_obj(&mut &*self, f)
     }
 }
 
 impl<'a> Spawn for &'a EHandle {
-    fn spawn_obj(&mut self, f: FutureObj<'static, ()>) -> Result<(), SpawnObjError> {
+    fn spawn_obj(&mut self, f: FutureObj<'static, ()>) -> Result<(), SpawnError> {
         Inner::spawn(&self.inner, f);
         Ok(())
     }

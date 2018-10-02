@@ -184,7 +184,7 @@ impl Future for Connection {
     type Item = ();
     type Error = io::Error;
 
-    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+    fn poll(&mut self, cx: &LocalWaker) -> Poll<Self::Item, Self::Error> {
         let mut buf = zx::MessageBuf::new();
         buf.ensure_capacity_bytes(fdio::fdio_sys::ZXRIO_MSG_SZ);
         loop {

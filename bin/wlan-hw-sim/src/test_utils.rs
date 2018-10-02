@@ -15,13 +15,12 @@ use {
     },
     futures::{
         channel::mpsc,
-        prelude::*,
+        Poll, Future, FutureExt, StreamExt,
         ready,
-        task::Context,
+        task::LocalWaker,
     },
     std::{
-        marker::Unpin,
-        pin::PinMut,
+        pin::{Pin, Unpin},
         sync::Arc,
     },
     wlantap_client::Wlantap,
@@ -58,15 +57,15 @@ where
 {
     type Output = Result<(T, EventStream), (E, EventStream)>;
 
-    fn poll(mut self: PinMut<Self>, cx: &mut Context) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         let this = &mut *self;
-        match this.main_future.poll_unpin(cx) {
+        match this.main_future.poll_unpin(lw) {
             Poll::Ready(Err(e)) => Poll::Ready(Err((e, this.event_stream.take().unwrap()))),
             Poll::Ready(Ok(item)) => Poll::Ready(Ok((item, this.event_stream.take().unwrap()))),
             Poll::Pending => {
                 let stream = this.event_stream.as_mut().unwrap();
                 loop {
-                    let event = ready!(stream.poll_next_unpin(cx))
+                    let event = ready!(stream.poll_next_unpin(lw))
                         .expect("Unexpected end of the WlantapPhy event stream")
                         .expect("WlantapPhy event stream returned an error");
                     (this.event_handler)(event);

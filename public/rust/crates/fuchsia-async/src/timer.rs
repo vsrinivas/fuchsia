@@ -7,18 +7,22 @@
 //! This module contains the `Timer` type which is a future that will resolve
 //! at a particular point in the future.
 
-use std::marker::Unpin;
-use std::pin::PinMut;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-
-use futures::{Future, FutureExt, Stream, Poll};
-use futures::task::{self, AtomicWaker};
-use pin_utils::{unsafe_pinned, unsafe_unpinned};
-
-use crate::executor::EHandle;
-
-use fuchsia_zircon as zx;
+use {
+    crate::executor::EHandle,
+    fuchsia_zircon as zx,
+    futures::{
+        Future, FutureExt, Stream, Poll,
+        task::{AtomicWaker, LocalWaker},
+    },
+    pin_utils::{unsafe_pinned, unsafe_unpinned},
+    std::{
+        pin::{Pin, Unpin},
+        sync::{
+            Arc,
+            atomic::{AtomicBool, Ordering},
+        },
+    },
+};
 
 /// A trait which allows futures to be easily wrapped in a timeout.
 pub trait TimeoutExt: Future + Sized {
@@ -63,13 +67,13 @@ impl<F: Future, OT> Future for OnTimeout<F, OT>
 {
     type Output = F::Output;
 
-    fn poll(mut self: PinMut<Self>, cx: &mut task::Context)
+    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker)
         -> Poll<Self::Output>
     {
-        if let Poll::Ready(item) = self.reborrow().future().poll(cx) {
+        if let Poll::Ready(item) = self.as_mut().future().poll(lw) {
             return Poll::Ready(item);
         }
-        if let Poll::Ready(()) = self.reborrow().timer().poll_unpin(cx) {
+        if let Poll::Ready(()) = self.as_mut().timer().poll_unpin(lw) {
             let ot = OnTimeout::on_timeout(&mut self).take()
                 .expect("polled withtimeout after completion");
             let item = (ot)();
@@ -108,18 +112,18 @@ impl Timer {
         self.waker_and_bool.1.load(Ordering::SeqCst)
     }
 
-    fn register_task(&self, cx: &mut task::Context) {
-        self.waker_and_bool.0.register(cx.waker());
+    fn register_task(&self, lw: &LocalWaker) {
+        self.waker_and_bool.0.register(lw);
     }
 }
 
 impl Future for Timer {
     type Output = ();
-    fn poll(self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         if self.did_fire() {
             Poll::Ready(())
         } else {
-            self.register_task(cx);
+            self.register_task(lw);
             Poll::Pending
         }
     }
@@ -151,19 +155,19 @@ impl Unpin for Interval {}
 
 impl Stream for Interval {
     type Item = ();
-    fn poll_next(mut self: PinMut<Self>, cx: &mut task::Context)
+    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker)
         -> Poll<Option<Self::Item>>
     {
         let this = &mut *self;
-        match this.timer.poll_unpin(cx) {
+        match this.timer.poll_unpin(lw) {
             Poll::Ready(()) => {
-                this.timer.register_task(cx);
+                this.timer.register_task(lw);
                 this.next += this.duration;
                 this.timer.reset(this.next);
                 Poll::Ready(Some(()))
             }
             Poll::Pending => {
-                this.timer.register_task(cx);
+                this.timer.register_task(lw);
                 Poll::Pending
             }
         }

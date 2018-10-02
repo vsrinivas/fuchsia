@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::pin::PinMut;
+use std::pin::{Pin, Unpin};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use byteorder::{BigEndian, WriteBytesExt};
-use futures::{task, Poll, Stream};
-use std::marker::Unpin;
+use futures::{task::LocalWaker, Poll, Stream};
 use fuchsia_zircon::{Channel, MessageBuf};
 
 const SNOOP_RECIEVED: u8 = 0x01;
@@ -154,9 +153,9 @@ impl Unpin for Snooper {}
 impl Stream for Snooper {
     type Item = SnooperPacket;
 
-    fn poll_next(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
         let mut buf = MessageBuf::new();
-        match self.chan.recv_from(&mut buf, cx) {
+        match self.chan.recv_from(&mut buf, lw) {
             Poll::Ready(_t) => Poll::Ready(Snooper::build_pkt(buf)),
             Poll::Pending => Poll::Pending,
         }

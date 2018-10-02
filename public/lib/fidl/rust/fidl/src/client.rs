@@ -27,7 +27,7 @@ use {
         future::{self, Future, Ready, AndThen, TryFutureExt},
         ready,
         stream::Stream,
-        task::{self, Poll, Waker},
+        task::{LocalWaker, Poll, Waker},
     },
     parking_lot::Mutex,
     slab::Slab,
@@ -36,7 +36,7 @@ use {
         marker::Unpin,
         mem,
         ops::Deref,
-        pin::PinMut,
+        pin::Pin,
         sync::Arc,
     },
 };
@@ -220,13 +220,12 @@ impl Unpin for MessageResponse {}
 
 impl Future for MessageResponse {
     type Output = Result<zx::MessageBuf, Error>;
-    fn poll(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         let this = &mut *self;
         let res;
         {
             let client = this.client.as_ref().ok_or(Error::PollAfterCompletion)?;
-
-            res = client.poll_recv_msg_response(this.id, cx);
+            res = client.poll_recv_msg_response(this.id, lw);
         }
 
         // Drop the client reference if the response has been received
@@ -295,8 +294,8 @@ impl Unpin for EventReceiver {}
 impl Stream for EventReceiver {
     type Item = Result<zx::MessageBuf, Error>;
 
-    fn poll_next(self: PinMut<Self>, cx: &mut task::Context) -> Poll<Option<Self::Item>> {
-        Poll::Ready(match ready!(self.inner.poll_recv_event(cx)) {
+    fn poll_next(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+        Poll::Ready(match ready!(self.inner.poll_recv_event(lw)) {
             Ok(x) => Some(Ok(x)),
             Err(Error::ClientRead(zx::Status::PEER_CLOSED)) => None,
             Err(e) => Some(Err(e)),
@@ -369,16 +368,16 @@ impl ClientInner {
 
     fn poll_recv_event(
         &self,
-        cx: &mut task::Context,
+        lw: &LocalWaker,
     ) -> Poll<Result<zx::MessageBuf, Error>> {
-        let is_closed = self.recv_all(cx)?;
+        let is_closed = self.recv_all(lw)?;
 
         let mut lock = self.event_channel.lock();
 
         if let Some(msg_buf) = lock.queue.pop_front() {
             Poll::Ready(Ok(msg_buf))
         } else {
-            lock.listener = EventListener::Some(cx.waker().clone());
+            lock.listener = EventListener::Some(lw.clone().into_waker());
             if is_closed {
                 Poll::Ready(Err(Error::ClientRead(zx::Status::PEER_CLOSED)))
             } else {
@@ -390,9 +389,9 @@ impl ClientInner {
     fn poll_recv_msg_response(
         &self,
         txid: Txid,
-        cx: &mut task::Context,
+        lw: &LocalWaker,
     ) -> Poll<Result<zx::MessageBuf, Error>> {
-        let is_closed = self.recv_all(cx)?;
+        let is_closed = self.recv_all(lw)?;
 
         let mut message_interests = self.message_interests.lock();
         let interest_id = InterestId::from_txid(txid);
@@ -408,7 +407,7 @@ impl ClientInner {
             // Set the current waker to be notified when a response arrives.
             *message_interests.get_mut(interest_id.as_raw_id())
                 .expect("Polled unregistered interest") =
-                    MessageInterest::Waiting(cx.waker().clone());
+                    MessageInterest::Waiting(lw.clone().into_waker());
 
             if is_closed {
                 Poll::Ready(Err(Error::ClientRead(zx::Status::PEER_CLOSED)))
@@ -423,14 +422,14 @@ impl ClientInner {
     /// Returns whether or not the channel is closed.
     fn recv_all(
         &self,
-        cx: &mut task::Context,
+        lw: &LocalWaker,
     ) -> Result<bool, Error> {
         // TODO(cramertj) return errors if one has occured _ever_ in recv_all, not just if
         // one happens on this call.
 
         loop {
             let mut buf = zx::MessageBuf::new();
-            match self.channel.recv_from(&mut buf, cx) {
+            match self.channel.recv_from(&mut buf, lw) {
                 Poll::Ready(Ok(())) => {}
                 Poll::Ready(Err(zx::Status::PEER_CLOSED)) => return Ok(true),
                 Poll::Ready(Err(e)) => return Err(Error::ClientRead(e)),

@@ -30,7 +30,7 @@ use fuchsia_zircon as zx;
 use fuchsia_zircon::Duration;
 use futures::future;
 use futures::TryStreamExt;
-use futures::{task, Future, Poll, TryFutureExt};
+use futures::{task::{LocalWaker, Waker}, Future, Poll, TryFutureExt};
 use parking_lot::RwLock;
 use slab::Slab;
 use std::collections::HashMap;
@@ -87,7 +87,7 @@ pub struct HostDispatcher {
     pub event_listeners: Vec<ControlControlHandle>,
 
     // Pending requests to obtain a Host.
-    host_requests: Slab<task::Waker>,
+    host_requests: Slab<Waker>,
 }
 
 impl HostDispatcher {
@@ -474,11 +474,11 @@ impl Unpin for OnAdaptersFound {}
 impl Future for OnAdaptersFound {
     type Output = fidl::Result<Arc<RwLock<HostDispatcher>>>;
 
-    fn poll(mut self: ::std::pin::PinMut<Self>, ctx: &mut task::Context) -> Poll<Self::Output> {
+    fn poll(mut self: ::std::pin::Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         if self.hd.read().host_devices.len() == 0 {
             let hd = self.hd.clone();
             if self.waker_key.is_none() {
-                self.waker_key = Some(hd.write().host_requests.insert(ctx.waker().clone()));
+                self.waker_key = Some(hd.write().host_requests.insert(lw.clone().into_waker()));
             }
             Poll::Pending
         } else {

@@ -4,20 +4,17 @@
 
 use failure::{format_err, Error, ResultExt};
 use fidl::endpoints;
-use fidl_fuchsia_wlan_device_service as wlan_service;
 use fidl_fuchsia_wlan_sme as fidl_sme;
-use fuchsia_async::{self as fasync, temp::TempStreamExt};
-use fuchsia_syslog::{self as syslog, fx_log, fx_log_err};
+use fuchsia_syslog::{fx_log, fx_log_err};
 use fuchsia_zircon as zx;
-use futures::future;
-use futures::prelude::*;
-use pin_utils::pin_mut;
+use futures::stream::TryStreamExt;
 use std::fmt;
 use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
 
 type WlanService = DeviceServiceProxy;
 
 // Helper object to formate BSSIDs
+#[allow(dead_code)]
 pub struct Bssid(pub [u8; 6]);
 
 impl fmt::Display for Bssid {
@@ -28,7 +25,6 @@ impl fmt::Display for Bssid {
 }
 
 // Helper methods for calling wlan_service fidl methods
-
 pub async fn get_iface_list(wlan_svc: &DeviceServiceProxy)
         -> Result<Vec<u16>, Error> {
     let response = await!(wlan_svc.list_ifaces()).context("Error getting iface list")?;
@@ -69,10 +65,11 @@ pub async fn connect_to_network(iface_sme_proxy: &fidl_sme::ClientSmeProxy,
         }
     };
 
-    let result = iface_sme_proxy.connect(&mut req, Some(connection_remote))?;
+    let _result = iface_sme_proxy.connect(&mut req, Some(connection_remote))?;
 
     let connection_code = await!(handle_connect_transaction(connection_proxy))?;
 
+    #[allow(unreachable_patterns)]
     let connected = match connection_code {
         fidl_sme::ConnectResultCode::Success => true,
         fidl_sme::ConnectResultCode::Canceled => {
@@ -119,23 +116,24 @@ async fn handle_connect_transaction(connect_transaction: fidl_sme::ConnectTransa
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
     use fidl::endpoints::RequestStream;
     use fidl_fuchsia_wlan_device_service as wlan_service;
     use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
     use fidl_fuchsia_wlan_device_service::{DeviceServiceRequest, DeviceServiceRequestStream};
     use fidl_fuchsia_wlan_device_service::{IfaceListItem, ListIfacesResponse};
-    use fidl_fuchsia_wlan_sme::{ClientSmeMarker, ClientSmeProxy};
+    use fidl_fuchsia_wlan_sme::ClientSmeMarker;
     use fidl_fuchsia_wlan_sme::{ClientSmeRequest, ClientSmeRequestStream};
     use fidl_fuchsia_wlan_sme::ConnectResultCode;
     use fuchsia_async as fasync;
-    use futures::stream::StreamFuture;
+    use futures::stream::{StreamFuture, StreamExt};
+    use futures::task::Poll;
+    use pin_utils::pin_mut;
 
     #[test]
     fn list_ifaces_returns_iface_id_vector() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (wlan_service, mut server) = create_wlan_service_util();
+        let (wlan_service, server) = create_wlan_service_util();
         let mut next_device_service_req = server.into_future();
 
         // create the data to use in the response
@@ -146,7 +144,7 @@ mod tests {
                                               "/foo/bar/".to_string()});
         }
 
-        let mut fut = get_iface_list(&wlan_service);
+        let fut = get_iface_list(&wlan_service);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -171,14 +169,14 @@ mod tests {
     #[test]
     fn list_ifaces_properly_handles_zero_ifaces() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (wlan_service, mut server) = create_wlan_service_util();
+        let (wlan_service, server) = create_wlan_service_util();
         let mut next_device_service_req = server.into_future();
 
         // create the data to use in the response
         let iface_id_list: Vec<u16> = vec![];
-        let mut iface_list_vec = vec![];
+        let iface_list_vec = vec![];
 
-        let mut fut = get_iface_list(&wlan_service);
+        let fut = get_iface_list(&wlan_service);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -222,7 +220,7 @@ mod tests {
         };
 
         // now send the response back
-        responder.send(&mut ListIfacesResponse{ifaces:iface_list_vec});
+        let _result = responder.send(&mut ListIfacesResponse{ifaces:iface_list_vec});
     }
 
     #[test]
@@ -254,13 +252,13 @@ mod tests {
                     password: &str,
                     result_code: ConnectResultCode) -> bool {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (client_sme, mut server) = create_client_sme_proxy();
+        let (client_sme, server) = create_client_sme_proxy();
         let mut next_client_sme_req = server.into_future();
 
         let target_ssid = ssid.as_bytes();
         let target_password = password.as_bytes();
 
-        let mut fut = connect_to_network(&client_sme,
+        let fut = connect_to_network(&client_sme,
                                             target_ssid.to_vec(),
                                             target_password.to_vec());
         pin_mut!(fut);
@@ -287,13 +285,13 @@ mod tests {
     #[test]
     fn connect_to_network_properly_passes_network_info_with_password() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (client_sme, mut server) = create_client_sme_proxy();
+        let (client_sme, server) = create_client_sme_proxy();
         let mut next_client_sme_req = server.into_future();
 
         let target_ssid = "TestAp".as_bytes();
         let target_password = "password".as_bytes();
 
-        let mut fut = connect_to_network(&client_sme,
+        let fut = connect_to_network(&client_sme,
                                             target_ssid.to_vec(),
                                             target_password.to_vec());
         pin_mut!(fut);
@@ -307,13 +305,13 @@ mod tests {
     #[test]
     fn connect_to_network_properly_passes_network_info_open() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (client_sme, mut server) = create_client_sme_proxy();
+        let (client_sme, server) = create_client_sme_proxy();
         let mut next_client_sme_req = server.into_future();
 
         let target_ssid = "TestAp".as_bytes();
         let target_password = "".as_bytes();
 
-        let mut fut = connect_to_network(&client_sme,
+        let fut = connect_to_network(&client_sme,
                                             target_ssid.to_vec(),
                                             target_password.to_vec());
         pin_mut!(fut);

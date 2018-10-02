@@ -6,14 +6,11 @@ use crate::Never;
 
 use {
     futures::{
-        future::FutureObj,
-        prelude::*,
+        future::{Future, FutureExt, FutureObj},
         ready,
+        task::{LocalWaker, Poll},
     },
-    std::{
-        marker::Unpin,
-        pin::PinMut,
-    },
+    std::pin::{Pin, Unpin},
 };
 
 pub struct State<E>(FutureObj<'static, Result<State<E>, E>>);
@@ -27,9 +24,9 @@ impl<E> Unpin for StateMachine<E> {}
 impl<E> Future for StateMachine<E> {
     type Output = Result<Never, E>;
 
-    fn poll(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         loop {
-            match ready!(self.cur_state.0.poll_unpin(cx)) {
+            match ready!(self.cur_state.0.poll_unpin(lw)) {
                 Ok(next) => self.cur_state = next,
                 Err(e) => return Poll::Ready(Err(e)),
             }
@@ -60,7 +57,10 @@ mod tests {
     use super::*;
     use {
         fuchsia_async as fasync,
-        futures::channel::mpsc,
+        futures::{
+            channel::mpsc,
+            stream::StreamExt,
+        },
         std::mem,
     };
 

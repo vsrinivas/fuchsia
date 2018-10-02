@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro, futures_api, pin, transpose_result)]
+#![deny(warnings)]
 
 // Explicitly added due to conflict using custom_attribute and async_await above.
 #[macro_use]
@@ -11,25 +12,23 @@ extern crate serde_derive;
 mod opts;
 mod wlan_service_util;
 
-use failure::{Error, ResultExt, bail, err_msg,};
+use failure::{Error, ResultExt, bail};
 use fidl_fuchsia_net_oldhttp::{self as http, HttpServiceProxy};
-use fidl_fuchsia_wlan_device_service as wlan_service;
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
 use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
-use fuchsia_syslog::{self as syslog, fx_log, fx_log_err, fx_log_info};
+use fuchsia_syslog::{self as syslog, fx_log, fx_log_info};
 use fuchsia_zircon as zx;
 use futures::io::{AllowStdIo, AsyncReadExt};
-use serde::ser::{Serialize, Serializer, SerializeMap, SerializeStruct};
-use std::fmt;
 use std::process;
 use std::{thread, time};
 use std::collections::HashMap;
 use structopt::StructOpt;
 use crate::opts::Opt;
 
+#[allow(dead_code)]
 type WlanService = DeviceServiceProxy;
 
 fn main() -> Result<(), Error> {
@@ -88,7 +87,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults)
                     wlan_service_util::get_iface_sme_proxy(&wlan_svc, iface))?;
             let status_response = match await!(sme_proxy.status()) {
                 Ok(status) => status,
-                Err(e) => {
+                Err(_) => {
                     test_results.interface_status = false;
                     continue;
                 }
@@ -126,10 +125,10 @@ fn run_test(opt: Opt, test_results: &mut TestResults)
 
             while dhcp_check_attempts < 3 && !wlan_iface.dhcp_success {
                 // check if there is a non-zero ip addr as a first check for dhcp success
-                let mut ip_addrs = match await!(
+                let ip_addrs = match await!(
                         get_ip_addrs_for_wlan_iface(&wlan_svc, &network_svc, *iface_id)) {
                     Ok(result) => result,
-                    Err(e) => continue
+                    Err(_) => continue
                 };
                 if check_dhcp_complete(ip_addrs) {
                     wlan_iface.dhcp_success = true;

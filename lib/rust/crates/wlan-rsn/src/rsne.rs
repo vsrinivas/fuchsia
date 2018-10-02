@@ -200,7 +200,8 @@ named!(pub from_bytes<&[u8], Rsne>,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test::Bencher;
+    extern crate test;
+    use self::test::Bencher;
 
     #[bench]
     fn bench_parse_with_nom(b: &mut Bencher) {

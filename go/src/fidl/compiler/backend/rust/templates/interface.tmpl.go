@@ -238,10 +238,10 @@ impl ::std::marker::Unpin for {{ $interface.Name }}EventStream {}
 impl Stream for {{ $interface.Name }}EventStream {
 	type Item = Result<{{ $interface.Name }}Event, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::PinMut<Self>, cx: &mut futures::task::Context)
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::LocalWaker)
 		-> futures::Poll<Option<Self::Item>>
 	{
-		let mut buf = match ready!(self.event_receiver.poll_next_unpin(cx)?) {
+		let mut buf = match ready!(self.event_receiver.poll_next_unpin(lw)?) {
 			Some(buf) => buf,
 			None => return futures::Poll::Ready(None),
 		};
@@ -370,23 +370,23 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 	type Output = Result<(), fidl::Error>;
 
 	fn poll(
-		mut self: ::std::pin::PinMut<Self>,
-		cx: &mut futures::task::Context,
+		mut self: ::std::pin::Pin<&mut Self>,
+		lw: &::futures::task::LocalWaker,
 	) -> futures::Poll<Self::Output> {
 		// safety: the only potentially !Unpin field is on_open_fut, which we make sure
 		// isn't moved below
-		let this = unsafe { ::std::pin::PinMut::get_mut_unchecked(self) };
+		let this = unsafe { ::std::pin::Pin::get_mut_unchecked(self) };
 		loop {
 		let mut made_progress_this_loop_iter = false;
 
-		if this.inner.poll_shutdown(cx) {
+		if this.inner.poll_shutdown(lw) {
 			return futures::Poll::Ready(Ok(()));
 		}
 
 		unsafe {
 			// Safety: ensure that on_open isn't moved
 			let completed_on_open = if let Some(on_open_fut) = &mut this.on_open_fut {
-				match ::std::pin::PinMut::new_unchecked(on_open_fut).poll(cx) {
+				match Future::poll(::std::pin::Pin::new_unchecked(on_open_fut), lw) {
 					futures::Poll::Ready(()) => true,
 					futures::Poll::Pending => false,
 				}
@@ -402,14 +402,14 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 
 		{{- range $method := $interface.Methods }}
 		{{- if $method.HasRequest -}}
-		match this.{{ $method.Name }}_futures.poll_next_unpin(cx) {
+		match this.{{ $method.Name }}_futures.poll_next_unpin(lw) {
 			futures::Poll::Ready(Some(())) => made_progress_this_loop_iter = true,
 			_ => {},
 		}
 		{{- end -}}
 		{{- end }}
 
-		match this.inner.channel().recv_from(&mut this.msg_buf, cx) {
+		match this.inner.channel().recv_from(&mut this.msg_buf, lw) {
 			futures::Poll::Ready(Ok(())) => {},
 			futures::Poll::Pending => {
 				if !made_progress_this_loop_iter {
@@ -507,14 +507,14 @@ impl fidl::endpoints::RequestStream for {{ $interface.Name }}RequestStream {
 impl Stream for {{ $interface.Name }}RequestStream {
 	type Item = Result<{{ $interface.Name }}Request, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::PinMut<Self>, cx: &mut futures::task::Context)
-		-> futures::Poll<Option<Self::Item>>
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &::futures::task::LocalWaker)
+		-> ::futures::Poll<Option<Self::Item>>
 	{
 		let this = &mut *self;
-		if this.inner.poll_shutdown(cx) {
+		if this.inner.poll_shutdown(lw) {
 			return futures::Poll::Ready(None);
 		}
-		match this.inner.channel().recv_from(&mut this.msg_buf, cx) {
+		match this.inner.channel().recv_from(&mut this.msg_buf, lw) {
 			futures::Poll::Ready(Ok(())) => {},
 			futures::Poll::Pending => return futures::Poll::Pending,
 			futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) =>

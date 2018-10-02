@@ -18,7 +18,7 @@ pub use self::error::{Error, Result};
 
 use {
     fuchsia_async as fasync,
-    futures::task::{self, AtomicWaker},
+    futures::task::{AtomicWaker, LocalWaker},
     std::sync::atomic::{self, AtomicBool},
 };
 
@@ -49,11 +49,11 @@ impl ServeInner {
     }
 
     /// Check if the server has been set to shutdown.
-    pub fn poll_shutdown(&self, cx: &mut task::Context) -> bool {
+    pub fn poll_shutdown(&self, lw: &LocalWaker) -> bool {
         if self.shutdown.load(atomic::Ordering::Relaxed) {
             return true;
         }
-        self.waker.register(cx.waker());
+        self.waker.register(lw);
         self.shutdown.load(atomic::Ordering::Relaxed)
     }
 }

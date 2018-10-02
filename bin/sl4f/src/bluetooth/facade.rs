@@ -16,13 +16,13 @@ use fuchsia_async::{self as fasync,
 use fuchsia_bluetooth::error::Error as BTError;
 use fuchsia_syslog::macros::*;
 use fuchsia_zircon as zx;
-use futures::future::ready as fready;
-use futures::prelude::*;
+use futures::future::{Future, TryFutureExt, ready as fready};
+use futures::stream::TryStreamExt;
+use futures::task::{Poll, Waker, LocalWaker};
 use parking_lot::RwLock;
 use slab::Slab;
 use std::collections::HashMap;
-use std::marker::Unpin;
-use std::pin::PinMut;
+use std::pin::{Pin, Unpin};
 use std::sync::Arc;
 
 // Sl4f-Constants and Bluetooth related functionality
@@ -55,7 +55,7 @@ pub struct BluetoothFacade {
     peripheral_ids: HashMap<String, ClientProxy>,
 
     // Pending requests to obtain a host
-    host_requests: Slab<task::Waker>,
+    host_requests: Slab<Waker>,
 
     // GATT related state
     // server_proxy: The proxy for Gatt server
@@ -500,12 +500,12 @@ impl OnDeviceFoundFuture {
 impl Future for OnDeviceFoundFuture {
     type Output = ();
 
-    fn poll(mut self: PinMut<Self>, ctx: &mut task::Context) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &LocalWaker) -> Poll<Self::Output> {
         // If the number of devices scanned is less than count, continue scanning
         if self.bt_facade.read().devices.len() < self.device_count {
             let bt_facade = self.bt_facade.clone();
             if self.waker_key.is_none() {
-                self.waker_key = Some(bt_facade.write().host_requests.insert(ctx.waker().clone()));
+                self.waker_key = Some(bt_facade.write().host_requests.insert(cx.clone().into_waker()));
             }
             Poll::Pending
         } else {

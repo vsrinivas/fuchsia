@@ -4,7 +4,7 @@
 
 use futures::{Poll, FutureExt};
 use futures::future::FutureObj;
-use futures::task;
+use futures::task::LocalWaker;
 use std::cell::UnsafeCell;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::{AcqRel, Relaxed};
@@ -81,7 +81,7 @@ impl AtomicFuture {
     ///
     /// `try_poll` ensures that the future is polled at least once more
     /// unless it has already finished.
-    pub fn try_poll(&self, cx: &mut task::Context) -> AttemptPollResult
+    pub fn try_poll(&self, lw: &LocalWaker) -> AttemptPollResult
     {
         // AcqRel is used instead of SeqCst in the following code.
         //
@@ -117,7 +117,7 @@ impl AtomicFuture {
                             // We know that the future is still there and hasn't completed
                             // because `state` != `DONE`
                             let future = opt.as_mut().expect("Missing future in AtomicFuture");
-                            future.poll_unpin(cx)
+                            future.poll_unpin(lw)
                         };
 
                         match poll_res {

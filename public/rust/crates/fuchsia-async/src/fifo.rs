@@ -2,14 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::RWHandle;
-
-use std::fmt;
-use std::marker::{Unpin, PhantomData, Sized};
-use std::pin::PinMut;
-
-use futures::{task, Poll, Future, ready};
-use fuchsia_zircon::{self as zx, AsHandleRef};
+use {
+    crate::RWHandle,
+    futures::{
+        Poll, Future, ready,
+        task::LocalWaker,
+    },
+    fuchsia_zircon::{self as zx, AsHandleRef},
+    std::{
+        fmt,
+        marker::PhantomData,
+        pin::{Pin, Unpin},
+    }
+};
 
 /// Marker trait for types that can be read/written with a `Fifo`.
 /// Unsafe because not all types may be represented by arbitrary bit patterns.
@@ -33,7 +38,7 @@ pub trait FifoWritable<W: FifoEntry> where Self: Sized {
     /// needing a write on receiving a `zx::Status::SHOULD_WAIT`.
     ///
     /// Returns the number of elements processed.
-    fn write(&self, entries: &[W], cx: &mut task::Context) -> Poll<Result<usize, zx::Status>>;
+    fn write(&self, entries: &[W], lw: &LocalWaker) -> Poll<Result<usize, zx::Status>>;
 }
 
 /// Identifies that the object may be used to read entries from a FIFO.
@@ -52,7 +57,7 @@ pub trait FifoReadable<R: FifoEntry> where Self: Sized {
 
     /// Reads an entry from the fifo and registers this `Fifo` as
     /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
-    fn read(&self, cx: &mut task::Context) -> Poll<Result<Option<R>, zx::Status>>;
+    fn read(&self, lw: &LocalWaker) -> Poll<Result<Option<R>, zx::Status>>;
 }
 
 /// An I/O object representing a `Fifo`.
@@ -96,18 +101,18 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
     /// get a notification when the fifo does become writable. That is, this
     /// is only suitable for calling in a `Future::poll` method and will
     /// automatically handle ensuring a retry once the fifo is writable again.
-    pub fn poll_write(&self, cx: &mut task::Context) -> Poll<Result<(), zx::Status>> {
-        self.handle.poll_write(cx)
+    pub fn poll_write(&self, lw: &LocalWaker) -> Poll<Result<(), zx::Status>> {
+        self.handle.poll_write(lw)
     }
 
     /// Writes entries to the fifo and registers this `Fifo` as
     /// needing a write on receiving a `zx::Status::SHOULD_WAIT`.
     ///
     /// Returns the number of elements processed.
-    pub fn try_write(&self, entries: &[W], cx: &mut task::Context)
+    pub fn try_write(&self, entries: &[W], lw: &LocalWaker)
         -> Poll<Result<usize, zx::Status>>
     {
-        ready!(self.poll_write(cx)?);
+        ready!(self.poll_write(lw)?);
         let elem_size = ::std::mem::size_of::<W>();
         let elembuf = unsafe {
             ::std::slice::from_raw_parts(entries.as_ptr() as *const u8, elem_size * entries.len())
@@ -115,7 +120,7 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
         match self.as_ref().write(elem_size, elembuf) {
             Err(e) => {
                 if e == zx::Status::SHOULD_WAIT {
-                    self.handle.need_write(cx)?;
+                    self.handle.need_write(lw)?;
                     Poll::Pending
                 } else {
                     Poll::Ready(Err(e))
@@ -133,16 +138,16 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
     /// get a notification when the fifo does become readable. That is, this
     /// is only suitable for calling in a `Future::poll` method and will
     /// automatically handle ensuring a retry once the fifo is readable again.
-    pub fn poll_read(&self, cx: &mut task::Context) -> Poll<Result<(), zx::Status>> {
-        self.handle.poll_read(cx)
+    pub fn poll_read(&self, lw: &LocalWaker) -> Poll<Result<(), zx::Status>> {
+        self.handle.poll_read(lw)
     }
 
     /// Reads an entry from the fifo and registers this `Fifo` as
     /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
-    pub fn try_read(&self, cx: &mut task::Context)
+    pub fn try_read(&self, lw: &LocalWaker)
         -> Poll<Result<Option<R>, zx::Status>>
     {
-        ready!(self.poll_read(cx)?);
+        ready!(self.poll_read(lw)?);
         let mut element = unsafe { ::std::mem::uninitialized() };
         let elembuf = unsafe {
             ::std::slice::from_raw_parts_mut(
@@ -156,7 +161,7 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
                 // Ensure `drop` isn't called on uninitialized memory.
                 ::std::mem::forget(element);
                 if e == zx::Status::SHOULD_WAIT {
-                    self.handle.need_read(cx)?;
+                    self.handle.need_read(lw)?;
                     return Poll::Pending;
                 }
                 if e == zx::Status::PEER_CLOSED {
@@ -173,14 +178,14 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
 }
 
 impl<R: FifoEntry, W: FifoEntry> FifoReadable<R> for Fifo<R, W> {
-    fn read(&self, cx: &mut task::Context) -> Poll<Result<Option<R>, zx::Status>> {
-        self.try_read(cx)
+    fn read(&self, lw: &LocalWaker) -> Poll<Result<Option<R>, zx::Status>> {
+        self.try_read(lw)
     }
 }
 
 impl<R: FifoEntry, W: FifoEntry> FifoWritable<W> for Fifo<R, W> {
-    fn write(&self, entries: &[W], cx: &mut task::Context) -> Poll<Result<usize, zx::Status>> {
-        self.try_write(entries, cx)
+    fn write(&self, entries: &[W], lw: &LocalWaker) -> Poll<Result<usize, zx::Status>> {
+        self.try_write(entries, lw)
     }
 }
 
@@ -209,10 +214,10 @@ impl<'a, F: FifoWritable<W>, W: FifoEntry> WriteEntry<'a, F, W> {
 impl<'a, F: FifoWritable<W>, W: FifoEntry> Future for WriteEntry<'a, F, W> {
     type Output = Result<(), zx::Status>;
 
-    fn poll(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         let this = &mut *self;
         while !this.entries.is_empty() {
-            let advance = ready!(this.fifo.write(this.entries, cx)?);
+            let advance = ready!(this.fifo.write(this.entries, lw)?);
             this.entries = &this.entries[advance..];
         }
         Poll::Ready(Ok(()))
@@ -241,8 +246,8 @@ impl<'a, F: FifoReadable<R>, R: FifoEntry> ReadEntry<'a, F, R> {
 impl<'a, F: FifoReadable<R>, R: FifoEntry> Future for ReadEntry<'a, F, R> {
     type Output = Result<Option<R>, zx::Status>;
 
-    fn poll(self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
-        self.fifo.read(cx)
+    fn poll(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+        self.fifo.read(lw)
     }
 }
 

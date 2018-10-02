@@ -63,7 +63,7 @@ where
 {
     type Item = ();
     type Error = T::Error;
-    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+    fn poll(&mut self, cx: &LocalWaker) -> Poll<Self::Item, Self::Error> {
         if self.inner.cancel.load(Ordering::Acquire) {
             Ok(Async::Ready(()))
         } else {

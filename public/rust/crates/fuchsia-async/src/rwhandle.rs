@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
-
-use futures::Poll;
-use futures::task::{self, AtomicWaker};
-
-use crate::executor::{PacketReceiver, ReceiverRegistration, EHandle};
-use fuchsia_zircon::{self as zx, AsHandleRef};
+use {
+    crate::executor::{PacketReceiver, ReceiverRegistration, EHandle},
+    futures::task::{AtomicWaker, LocalWaker, Poll},
+    fuchsia_zircon::{self as zx, AsHandleRef},
+    std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    },
+};
 
 const READABLE: usize = 0b001;
 const WRITABLE: usize = 0b010;
@@ -105,11 +106,11 @@ impl<T> RWHandle<T> where T: AsHandleRef {
     /// Tests to see if this resource is ready to be read from.
     /// If it is not, it arranges for the current task to receive a notification
     /// when a "readable" signal arrives.
-    pub fn poll_read(&self, cx: &mut task::Context) -> Poll<Result<(), zx::Status>> {
+    pub fn poll_read(&self, lw: &LocalWaker) -> Poll<Result<(), zx::Status>> {
         if (self.receiver().signals.load(Ordering::SeqCst) & (READABLE | CLOSED)) != 0 {
             Poll::Ready(Ok(()))
         } else {
-            self.need_read(cx)?;
+            self.need_read(lw)?;
             Poll::Pending
         }
     }
@@ -117,11 +118,11 @@ impl<T> RWHandle<T> where T: AsHandleRef {
     /// Tests to see if this resource is ready to be read from.
     /// If it is not, it arranges for the current task to receive a notification
     /// when a "writable" signal arrives.
-    pub fn poll_write(&self, cx: &mut task::Context) -> Poll<Result<(), zx::Status>> {
+    pub fn poll_write(&self, lw: &LocalWaker) -> Poll<Result<(), zx::Status>> {
         if (self.receiver().signals.load(Ordering::SeqCst) & (WRITABLE | CLOSED)) != 0 {
             Poll::Ready(Ok(()))
         } else {
-            self.need_write(cx)?;
+            self.need_write(lw)?;
             Poll::Pending
         }
     }
@@ -132,8 +133,8 @@ impl<T> RWHandle<T> where T: AsHandleRef {
 
     /// Arranges for the current task to receive a notification when a
     /// "readable" signal arrives.
-    pub fn need_read(&self, cx: &mut task::Context) -> Result<(), zx::Status> {
-        self.receiver().read_task.register(cx.waker());
+    pub fn need_read(&self, lw: &LocalWaker) -> Result<(), zx::Status> {
+        self.receiver().read_task.register(lw);
         let old = self.receiver().signals.fetch_and(!READABLE, Ordering::SeqCst);
         // We only need to schedule a new packet if one isn't already scheduled.
         // If READABLE was already false, a packet was already scheduled.
@@ -145,8 +146,8 @@ impl<T> RWHandle<T> where T: AsHandleRef {
 
     /// Arranges for the current task to receive a notification when a
     /// "writable" signal arrives.
-    pub fn need_write(&self, cx: &mut task::Context) -> Result<(), zx::Status> {
-        self.receiver().write_task.register(cx.waker());
+    pub fn need_write(&self, lw: &LocalWaker) -> Result<(), zx::Status> {
+        self.receiver().write_task.register(lw);
         let old = self.receiver().signals.fetch_and(!WRITABLE, Ordering::SeqCst);
         // We only need to schedule a new packet if one isn't already scheduled.
         // If WRITABLE was already false, a packet was already scheduled.

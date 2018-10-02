@@ -2,19 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use byteorder::{ByteOrder, LittleEndian};
-use fidl_fuchsia_logger::LogMessage;
-use fuchsia_async as fasync;
-use fuchsia_zircon as zx;
-use futures::io;
-use futures::prelude::*;
-use futures::ready;
-use libc::{c_char, c_int, uint32_t, uint64_t, uint8_t};
-use std::cell::RefCell;
-use std::marker::Unpin;
-use std::mem;
-use std::pin::PinMut;
-use std::str;
+use {
+    byteorder::{ByteOrder, LittleEndian},
+    fidl_fuchsia_logger::LogMessage,
+    fuchsia_async as fasync,
+    fuchsia_zircon as zx,
+    futures::{
+        io::{self, AsyncRead},
+        ready,
+        Stream,
+        task::{Poll, LocalWaker},
+    },
+    libc::{c_char, c_int, uint32_t, uint64_t, uint8_t},
+    std::{
+        cell::RefCell,
+        marker::Unpin,
+        mem,
+        pin::Pin,
+        str,
+    },
+};
 
 type FxLogSeverityT = c_int;
 type ZxKoid = uint64_t;
@@ -145,10 +152,10 @@ impl Stream for LoggerStream {
     /// LogMessage data structure.
     type Item = io::Result<(LogMessage, usize)>;
 
-    fn poll_next(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
         BUFFER.with(|b| {
             let mut b = b.borrow_mut();
-            let len = ready!(self.socket.poll_read(cx, &mut *b)?);
+            let len = ready!(self.socket.poll_read(lw, &mut *b)?);
             if len == 0 {
                 return Poll::Ready(None);
             }
@@ -165,6 +172,8 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use fuchsia_zircon::prelude::*;
+    use futures::future::TryFutureExt;
+    use futures::stream::TryStreamExt;
 
     #[repr(C, packed)]
     pub struct fx_log_metadata_t_packed {

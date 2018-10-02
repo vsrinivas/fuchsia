@@ -59,22 +59,28 @@ macro_rules! unsafe_many_futures {
             )*
         {
             type Output = $first::Output;
-            fn poll(self: ::std::pin::PinMut<Self>,
-                    cx: &mut $crate::futures::task::Context,
+            fn poll(self: ::std::pin::Pin<&mut Self>,
+                    lw: &$crate::futures::task::LocalWaker,
             ) -> $crate::futures::Poll<Self::Output> {
                 unsafe {
-                    match ::std::pin::PinMut::get_mut_unchecked(self) {
+                    match ::std::pin::Pin::get_mut_unchecked(self) {
                         $future::$first(x) =>
                             $crate::futures::Future::poll(
-                                ::std::pin::PinMut::new_unchecked(x), cx),
+                                ::std::pin::Pin::new_unchecked(x), lw),
                         $(
                             $future::$subfuture(x) =>
                                 $crate::futures::Future::poll(
-                                    ::std::pin::PinMut::new_unchecked(x), cx),
+                                    ::std::pin::Pin::new_unchecked(x), lw),
                         )*
                     }
                 }
             }
         }
     }
+}
+
+#[cfg(test)]
+mod unsafe_many_futures_test {
+    #![allow(unused)]
+    unsafe_many_futures!(Compiles, [First, Second, Third]);
 }

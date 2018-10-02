@@ -14,9 +14,9 @@ use {
     fuchsia_zircon::prelude::*,
     futures::{
         channel::{oneshot, mpsc},
-        prelude::*,
         select,
-        stream,
+        future::Future,
+        stream::{self, StreamExt, TryStreamExt},
     },
     pin_utils::pin_mut,
     std::sync::Arc,
@@ -90,7 +90,7 @@ async fn serve(iface_id: u16,
 {
     let mut state_machine = auto_connect_state(services, req_stream.into_future())
             .into_state_machine();
-    let removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>();
+    let mut removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>();
     select! {
         state_machine => match state_machine {
             Ok(never) => never.into_any(),
@@ -351,7 +351,10 @@ mod tests {
         fuchsia_async as fasync,
         fidl::endpoints::RequestStream,
         fidl_fuchsia_wlan_sme::{ClientSmeRequest, ClientSmeRequestStream},
-        futures::stream::StreamFuture,
+        futures::{
+            stream::StreamFuture,
+            task::Poll,
+        },
         std::path::Path,
         tempdir,
     };

@@ -8,15 +8,20 @@
 
 #![allow(missing_docs)]
 
-use std::marker::Unpin;
-use std::mem;
-use std::pin::PinMut;
-use futures::{ready, try_ready};
-use futures::task::{self, Poll};
-use futures::future::{Future, FutureExt};
-use futures::stream::{Stream, StreamExt};
-use futures::io::{self, AsyncRead, AsyncWrite};
-use pin_utils::unsafe_pinned;
+use {
+    futures::{
+        future::{Future, FutureExt},
+        stream::{Stream, StreamExt},
+        io::{self, AsyncRead, AsyncWrite},
+        task::{LocalWaker, Poll},
+        ready, try_ready,
+    },
+    std::{
+        mem,
+        pin::{Pin, Unpin},
+    },
+    pin_utils::unsafe_pinned,
+};
 
 pub trait TempStreamExt: Stream + Sized {
     fn first_elem(self) -> FirstElem<Self> {
@@ -41,10 +46,10 @@ impl<St> FirstElem<St> {
 impl<St: Stream> Future for FirstElem<St> {
     type Output = Option<St::Item>;
 
-    fn poll(mut self: PinMut<Self>, cx: &mut task::Context)
+    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker)
         -> Poll<Self::Output>
     {
-        self.stream().poll_next(cx)
+        self.stream().poll_next(lw)
     }
 }
 
@@ -57,10 +62,10 @@ impl<St> Unpin for TryIntoFuture<St> {}
 impl<T, E, St: Stream<Item = Result<T, E>> + Unpin> Future for TryIntoFuture<St> {
     type Output = Result<(Option<T>, St), E>;
 
-    fn poll(mut self: PinMut<Self>, cx: &mut task::Context)
+    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker)
         -> Poll<Self::Output>
     {
-        let res = ready!(self.stream.as_mut().unwrap().poll_next_unpin(cx));
+        let res = ready!(self.stream.as_mut().unwrap().poll_next_unpin(lw));
         Poll::Ready(match res {
             Some(Ok(elem)) =>
                 Ok((Some(elem), self.stream.take().unwrap())),
@@ -117,12 +122,12 @@ impl<A, T> Future for WriteAll<A, T>
 {
     type Output = io::Result<(A, T)>;
 
-    fn poll(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         match self.state {
             WriteState::Writing { ref mut a, ref buf, ref mut pos } => {
                 let buf = buf.as_ref();
                 while *pos < buf.len() {
-                    let n = try_ready!(a.poll_write(cx, &buf[*pos..]));
+                    let n = try_ready!(a.poll_write(lw, &buf[*pos..]));
                     *pos += n;
                     if n == 0 {
                         return Poll::Ready(Err(zero_write()))
@@ -189,7 +194,7 @@ impl<'a> Drop for Guard<'a> {
 //
 // Because we're extending the buffer with uninitialized data for trusted
 // readers, we need to make sure to truncate that if any of this panics.
-fn read_to_end_internal<R: AsyncRead>(r: &mut R, cx: &mut task::Context, buf: &mut Vec<u8>)
+fn read_to_end_internal<R: AsyncRead>(r: &mut R, lw: &LocalWaker, buf: &mut Vec<u8>)
     -> Poll<io::Result<usize>>
 {
     let start_len = buf.len();
@@ -205,7 +210,7 @@ fn read_to_end_internal<R: AsyncRead>(r: &mut R, cx: &mut task::Context, buf: &m
             }
         }
 
-        match ready!(r.poll_read(cx, &mut g.buf[g.len..])) {
+        match ready!(r.poll_read(lw, &mut g.buf[g.len..])) {
             Ok(0) => {
                 ret = Poll::Ready(Ok(g.len - start_len));
                 break;
@@ -226,14 +231,14 @@ impl<A> Future for ReadToEnd<A>
 {
     type Output = io::Result<(A, Vec<u8>)>;
 
-    fn poll(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
 		let this = &mut *self;
         match this.state {
             State::Reading { ref mut a, ref mut buf } => {
                 // If we get `Ok`, then we know the stream hit EOF and we're done. If we
                 // hit "would block" then all the read data so far is in our buffer, and
                 // otherwise we propagate errors
-                try_ready!(read_to_end_internal(a, cx, buf));
+                try_ready!(read_to_end_internal(a, lw, buf));
             },
             State::Empty => panic!("poll ReadToEnd after it's done"),
         }
@@ -289,12 +294,12 @@ impl<A, B> Either<A, B> {
 
 impl<A: Future, B: Future<Output = A::Output>> Future for Either<A, B> {
     type Output = A::Output;
-    fn poll(self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         unsafe {
             // Safety: neither child future is ever moved
-            match PinMut::get_mut_unchecked(self) {
-                Either::Left(a) => PinMut::new_unchecked(a).poll(cx),
-                Either::Right(b) => PinMut::new_unchecked(b).poll(cx),
+            match Pin::get_mut_unchecked(self) {
+                Either::Left(a) => Pin::new_unchecked(a).poll(lw),
+                Either::Right(b) => Pin::new_unchecked(b).poll(lw),
             }
         }
     }
@@ -312,11 +317,11 @@ impl<A, B> Select<A, B> {
 
 impl<A: Future, B: Future> Future for Select<A, B> {
     type Output = Either<A::Output, B::Output>;
-    fn poll(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
-        if let Poll::Ready(a) = self.a().poll(cx) {
+    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+        if let Poll::Ready(a) = self.a().poll(lw) {
             return Poll::Ready(Either::Left(a));
         }
-        if let Poll::Ready(b) = self.b().poll(cx) {
+        if let Poll::Ready(b) = self.b().poll(lw) {
             return Poll::Ready(Either::Right(b));
         }
         Poll::Pending
@@ -330,12 +335,12 @@ pub struct SelectUnpin<A, B> {
 
 impl<A: Future + Unpin, B: Future + Unpin> Future for SelectUnpin<A, B> {
     type Output = Either<(A::Output, B), (A, B::Output)>;
-    fn poll(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         let this = &mut *self;
-        if let Poll::Ready(a) = this.a.as_mut().unwrap().poll_unpin(cx) {
+        if let Poll::Ready(a) = this.a.as_mut().unwrap().poll_unpin(lw) {
             return Poll::Ready(Either::Left((a, this.b.take().unwrap())));
         }
-        if let Poll::Ready(b) = this.b.as_mut().unwrap().poll_unpin(cx) {
+        if let Poll::Ready(b) = this.b.as_mut().unwrap().poll_unpin(lw) {
             return Poll::Ready(Either::Right((this.a.take().unwrap(), b)));
         }
         Poll::Pending

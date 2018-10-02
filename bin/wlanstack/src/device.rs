@@ -2,30 +2,38 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{bail, Error, format_err, ResultExt};
-use fidl_fuchsia_wlan_device as fidl_wlan_dev;
-use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceQueryConfirm, MlmeEventStream};
-use fuchsia_async::Timer;
-use fuchsia_wlan_dev as wlan_dev;
-use fuchsia_zircon::prelude::*;
-use futures::prelude::*;
-use futures::channel::mpsc;
-use futures::select;
-use log::{error, info, warn};
-use pin_utils::pin_mut;
-use std::collections::HashSet;
-use std::future::FutureObj;
-use std::marker::Unpin;
-use std::sync::Arc;
-use wlan_sme;
+use {
+    failure::{bail, Error, format_err, ResultExt},
+    fidl_fuchsia_wlan_device as fidl_wlan_dev,
+    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceQueryConfirm, MlmeEventStream},
+    fuchsia_async::Timer,
+    fuchsia_wlan_dev as wlan_dev,
+    fuchsia_zircon::prelude::*,
+    futures::{
+        channel::mpsc,
+        future::{Future, FutureObj},
+        select,
+        stream::{Stream, StreamExt, TryStreamExt},
+    },
+    log::{error, info, warn},
+    pin_utils::pin_mut,
+    std::{
+        collections::HashSet,
+        marker::Unpin,
+        sync::Arc,
+    },
+    wlan_sme,
+};
 
-use crate::cobalt_reporter::CobaltSender;
-use crate::device_watch::{self, NewIfaceDevice};
-use crate::future_util::ConcurrentTasks;
-use crate::Never;
-use crate::station;
-use crate::stats_scheduler::{self, StatsScheduler};
-use crate::watchable_map::WatchableMap;
+use crate::{
+    cobalt_reporter::CobaltSender,
+    device_watch::{self, NewIfaceDevice},
+    future_util::ConcurrentTasks,
+    Never,
+    station,
+    stats_scheduler::{self, StatsScheduler},
+    watchable_map::WatchableMap,
+};
 
 pub struct PhyDevice {
     pub proxy: fidl_wlan_dev::PhyProxy,

@@ -261,6 +261,7 @@ mod tests {
     use fidl_fuchsia_wlan_sme as fidl_sme;
     use fuchsia_wlan_dev as wlan_dev;
     use futures::channel::mpsc;
+    use futures::task::Poll;
     use pin_utils::pin_mut;
 
     use crate::stats_scheduler::{self, StatsRequest};

@@ -17,7 +17,7 @@ use {
     futures::{
         Future, Poll,
         stream::{FuturesUnordered, StreamExt, StreamFuture},
-        task,
+        task::LocalWaker,
     },
     fidl::endpoints::{RequestStream, ServiceMarker, Proxy},
     fidl_fuchsia_io::{
@@ -38,8 +38,7 @@ use {
     std::{
         os::unix::io::IntoRawFd,
         fs::File,
-        marker::Unpin,
-        pin::PinMut,
+        pin::{Pin, Unpin},
     },
 };
 
@@ -398,9 +397,9 @@ pub mod server {
     impl Future for FdioServer {
         type Output = Result<(), Error>;
 
-        fn poll(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Self::Output> {
+        fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
             loop {
-                match self.connections.poll_next_unpin(cx) {
+                match self.connections.poll_next_unpin(lw) {
                     Poll::Ready(Some((maybe_request, stream))) => {
                         if let Some(Ok(request)) = maybe_request {
                             match self.handle_request(request) {

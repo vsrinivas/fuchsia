@@ -58,7 +58,7 @@ async fn serve_mlme_sme<STA, SRS>(proxy: MlmeProxy, mut event_stream: MlmeEventS
     }
 }
 
-fn forward_mlme_request(mut req: MlmeRequest, proxy: &MlmeProxy) -> Result<(), fidl::Error> {
+fn forward_mlme_request(req: MlmeRequest, proxy: &MlmeProxy) -> Result<(), fidl::Error> {
     match req {
         MlmeRequest::Scan(mut req) => proxy.start_scan(&mut req),
         MlmeRequest::Join(mut req) => proxy.join_req(&mut req),

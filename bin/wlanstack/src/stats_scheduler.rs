@@ -62,6 +62,7 @@ mod tests {
     use super::*;
     use fidl_fuchsia_wlan_stats::{Counter, DispatcherStats, IfaceStats, PacketCounter};
     use fuchsia_async as fasync;
+    use futures::task::Poll;
 
     #[test]
     fn schedule() {

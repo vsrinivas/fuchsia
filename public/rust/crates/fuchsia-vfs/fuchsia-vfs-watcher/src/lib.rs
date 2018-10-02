@@ -12,11 +12,11 @@ use fuchsia_zircon::{self as zx, assoc_values};
 
 use fdio::fdio_sys;
 use fidl_fuchsia_io::{WATCH_MASK_ALL};
-use futures::{Poll, Stream, task};
+use futures::{Poll, Stream, task::LocalWaker};
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io;
-use std::pin::PinMut;
+use std::pin::Pin;
 use std::marker::Unpin;
 use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
@@ -104,13 +104,13 @@ impl Watcher {
 impl Stream for Watcher {
     type Item = Result<WatchMessage, io::Error>;
 
-    fn poll_next(mut self: PinMut<Self>, cx: &mut task::Context) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
         let this = &mut *self;
         if this.idx >= this.buf.bytes().len() {
             this.reset_buf();
         }
         if this.idx == 0 {
-            match this.ch.recv_from(&mut this.buf, cx) {
+            match this.ch.recv_from(&mut this.buf, lw) {
                 Poll::Ready(Ok(())) => {},
                 Poll::Ready(Err(e)) => return Poll::Ready(Some(Err(e.into()))),
                 Poll::Pending => return Poll::Pending,
