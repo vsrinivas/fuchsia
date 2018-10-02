@@ -46,6 +46,8 @@
 #define BRCMF_ESCAN_BUF_SIZE   65000
 #define BRCMF_ESCAN_TIMER_INTERVAL_MS 10000 /* E-Scan timeout */
 
+#define BRCMF_DISCONNECT_TIMEOUT  ZX_MSEC(50) /* Wait for disconnect to complete */
+
 #define WL_ESCAN_ACTION_START      1
 #define WL_ESCAN_ACTION_CONTINUE   2
 #define WL_ESCAN_ACTION_ABORT      3
@@ -268,6 +270,11 @@ struct brcmf_cfg80211_wowl {
     bool nd_enabled;
 };
 
+enum brcmf_disconnect_mode {
+    BRCMF_DISCONNECT_DEAUTH,
+    BRCMF_DISCONNECT_DISASSOC
+};
+
 /**
  * struct brcmf_cfg80211_info - dongle private data of cfg80211 interface
  *
@@ -297,6 +304,9 @@ struct brcmf_cfg80211_wowl {
  * @escan_info: escan information.
  * @escan_timeout: Timer for catch scan timeout.
  * @escan_timeout_work: scan timeout worker.
+ * @disconnect_mode: indicates type of disconnect requested (BRCMF_DISCONNECT_*)
+ * @disconnect_timeout: timer for disconnection completion.
+ * @disconnect_timeout_work: associated work structure for disassociation timer.
  * @vif_list: linked list of vif instances.
  * @vif_cnt: number of vif instances.
  * @vif_event: vif event signalling.
@@ -329,6 +339,9 @@ struct brcmf_cfg80211_info {
     struct escan_info escan_info;
     brcmf_timer_info_t escan_timeout;
     struct work_struct escan_timeout_work;
+    uint8_t disconnect_mode;
+    brcmf_timer_info_t disconnect_timeout;
+    struct work_struct disconnect_timeout_work;
     struct list_node vif_list;
     struct brcmf_cfg80211_vif_event vif_event;
     uint8_t vif_event_pending_action;

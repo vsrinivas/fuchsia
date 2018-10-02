@@ -1125,6 +1125,15 @@ static zx_status_t brcmf_set_pmk(struct brcmf_if* ifp, const uint8_t* pmk_data, 
     return err;
 }
 
+static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t reason) {
+    struct net_device* ndev = vif->wdev.netdev;
+    wlanif_disassoc_indication_t ind;
+
+    memcpy(ind.peer_sta_address, vif->profile.bssid, ETH_ALEN);
+    ind.reason_code = reason;
+    ndev->if_callbacks->disassoc_ind(ndev->if_callback_cookie, &ind);
+}
+
 static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason) {
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(vif->wdev.wiphy);
     zx_status_t err = ZX_OK;
@@ -1138,7 +1147,7 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason) {
             brcmf_err("WLC_DISASSOC failed (%d)\n", err);
         }
         if (vif->wdev.iftype == WLAN_MAC_ROLE_CLIENT) {
-            cfg80211_disconnected(vif->wdev.netdev, reason, NULL, 0, true);
+            cfg80211_disconnected(vif, reason);
         }
     }
     brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state);
@@ -1756,31 +1765,101 @@ done:
     return err;
 }
 
-static zx_status_t brcmf_cfg80211_disconnect(struct wiphy* wiphy, struct net_device* ndev,
-                                             uint16_t reason_code) {
+static void brcmf_notify_deauth(struct net_device* ndev, uint8_t peer_sta_address[ETH_ALEN]) {
+    wlanif_deauth_confirm_t resp;
+    memcpy(resp.peer_sta_address, peer_sta_address, ETH_ALEN);
+    ndev->if_callbacks->deauth_conf(ndev->if_callback_cookie, &resp);
+}
+
+static void brcmf_notify_disassoc(struct net_device* ndev, zx_status_t status) {
+    wlanif_disassoc_confirm_t resp;
+    resp.status = status;
+    ndev->if_callbacks->disassoc_conf(ndev->if_callback_cookie, &resp);
+}
+
+static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
+    struct net_device* ndev = cfg_to_ndev(cfg);
     struct brcmf_if* ifp = ndev_to_if(ndev);
     struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
+
+    brcmf_dbg(TRACE, "Enter\n");
+
+    if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state)) {
+        brcmf_timer_stop(&cfg->disconnect_timeout);
+        if (cfg->disconnect_mode == BRCMF_DISCONNECT_DEAUTH) {
+            brcmf_notify_deauth(ndev, profile->bssid);
+        } else {
+            brcmf_notify_disassoc(ndev, ZX_OK);
+        }
+    }
+
+    brcmf_dbg(TRACE, "Exit\n");
+}
+
+static void brcmf_disconnect_timeout_worker(struct work_struct* work) {
+    struct brcmf_cfg80211_info* cfg = containerof(work, struct brcmf_cfg80211_info,
+                                                 disconnect_timeout_work);
+    brcmf_disconnect_done(cfg);
+}
+
+static void brcmf_disconnect_timeout(void* data) {
+    pthread_mutex_lock(&irq_callback_lock);
+
+    struct brcmf_cfg80211_info* cfg = data;
+    brcmf_dbg(TRACE, "Enter\n");
+    workqueue_schedule_default(&cfg->disconnect_timeout_work);
+
+    pthread_mutex_unlock(&irq_callback_lock);
+}
+
+static zx_status_t brcmf_cfg80211_disconnect(struct net_device* ndev,
+                                             uint8_t peer_sta_address[ETH_ALEN],
+                                             uint16_t reason_code,
+                                             bool deauthenticate) {
+    struct brcmf_if* ifp = ndev_to_if(ndev);
+    struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
+    struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
     struct brcmf_scb_val_le scbval;
-    zx_status_t err = ZX_OK;
+    zx_status_t status = ZX_OK;
 
     brcmf_dbg(TRACE, "Enter. Reason code = %d\n", reason_code);
     if (!check_vif_up(ifp->vif)) {
-        return ZX_ERR_IO;
+        status = ZX_ERR_IO;
+        goto done;
+    }
+
+    if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state) &&
+        !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
+        status = ZX_ERR_BAD_STATE;
+        goto done;
+    }
+
+    if (memcmp(peer_sta_address, profile->bssid, ETH_ALEN)) {
+        status = ZX_ERR_INVALID_ARGS;
+        goto done;
     }
 
     brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
     brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
-    cfg80211_disconnected(ndev, reason_code, NULL, 0, true);
 
-    memcpy(&scbval.ea, &profile->bssid, ETH_ALEN);
+    brcmf_dbg(CONN, "Disconnecting\n");
+
+    memcpy(&scbval.ea, peer_sta_address, ETH_ALEN);
     scbval.val = reason_code;
-    err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_DISASSOC, &scbval, sizeof(scbval));
-    if (err != ZX_OK) {
-        brcmf_err("error (%d)\n", err);
+    cfg->disconnect_mode = deauthenticate ? BRCMF_DISCONNECT_DEAUTH : BRCMF_DISCONNECT_DISASSOC;
+    brcmf_set_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state);
+    status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_DISASSOC, &scbval, sizeof(scbval));
+    if (status != ZX_OK) {
+        brcmf_err("Failed to disassociate: %s\n", zx_status_get_string(status));
+        goto done;
     }
 
+    brcmf_timer_init(&cfg->disconnect_timeout, brcmf_disconnect_timeout, cfg);
+    brcmf_timer_set(&cfg->disconnect_timeout, BRCMF_DISCONNECT_TIMEOUT);
+
+done:
     brcmf_dbg(TRACE, "Exit\n");
-    return err;
+    return status;
 }
 
 static zx_status_t brcmf_cfg80211_set_tx_power(struct wiphy* wiphy, struct wireless_dev* wdev,
@@ -4797,8 +4876,19 @@ void brcmf_hook_auth_resp(void* ctx, wlanif_auth_resp_t* ind) {
     brcmf_dbg(TEMP, "Called hook auth_resp");
 }
 
+// Respond to a MLME-DEAUTHENTICATE.request message. Note that we are required to respond with a
+// MLME-DEAUTHENTICATE.confirm on completion (or failure), even though there is no status
+// reported.
 void brcmf_hook_deauth_req(void* ctx, wlanif_deauth_req_t* req) {
-    brcmf_dbg(TEMP, "Called hook deauth_req");
+    brcmf_dbg(TEMP, "Enter");
+    struct net_device* ndev = ctx;
+    if (brcmf_cfg80211_disconnect(ndev, req->peer_sta_address, req->reason_code, true) != ZX_OK) {
+        // Request to disconnect failed, so respond immediately
+        brcmf_notify_deauth(ndev, req->peer_sta_address);
+    } // else wait for disconnect to complete before sending response
+
+    // Workaround for NET-1574: allow time for disconnect to complete
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 }
 
 void brcmf_hook_assoc_req(void* ctx, wlanif_assoc_req_t* req) {
@@ -4828,7 +4918,13 @@ void brcmf_hook_assoc_resp(void* ctx, wlanif_assoc_resp_t* ind) {
 }
 
 void brcmf_hook_disassoc_req(void* ctx, wlanif_disassoc_req_t* req) {
-    brcmf_dbg(TEMP, "Called hook disassoc_req");
+    brcmf_dbg(TEMP, "Enter");
+    struct net_device* ndev = ctx;
+    zx_status_t status = brcmf_cfg80211_disconnect(ndev, req->peer_sta_address, req->reason_code,
+                                                   false);
+    if (status != ZX_OK) {
+        brcmf_notify_disassoc(ndev, status);
+    } // else notification will happen asynchronously
 }
 
 void brcmf_hook_reset_req(void* ctx, wlanif_reset_req_t* req) {
@@ -5311,6 +5407,7 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
     } else if (brcmf_is_linkdown(e)) {
         brcmf_dbg(CONN, "Linkdown\n");
         brcmf_bss_connect_done(cfg, ndev, e, false);
+        brcmf_disconnect_done(cfg);
         brcmf_link_down(ifp->vif, brcmf_map_fw_linkdown_reason(e));
         brcmf_init_prof(ndev_to_prof(ndev));
         if (ndev != cfg_to_ndev(cfg)) {
@@ -5319,6 +5416,7 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
         brcmf_net_setcarrier(ifp, false);
     } else if (brcmf_is_nonetwork(cfg, e)) {
         brcmf_bss_connect_done(cfg, ndev, e, false);
+        brcmf_disconnect_done(cfg);
     }
 
     return err;
@@ -5502,6 +5600,7 @@ static zx_status_t wl_init_priv(struct brcmf_cfg80211_info* cfg) {
     mtx_init(&cfg->usr_sync, mtx_plain);
     brcmf_init_escan(cfg);
     brcmf_init_conf(cfg->conf);
+    workqueue_init_work(&cfg->disconnect_timeout_work, brcmf_disconnect_timeout_worker);
     cfg->vif_disabled = SYNC_COMPLETION_INIT;
     return err;
 }
