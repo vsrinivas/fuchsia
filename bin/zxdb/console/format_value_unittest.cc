@@ -231,14 +231,22 @@ TEST_F(FormatValueTest, Pointer) {
 
   std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
   ExprValue value(ptr_type, data);
+
+  // Print normally. Pointers always display their types.
+  EXPECT_EQ("(int*) 0x807060504030201", SyncFormatValue(value, opts));
+
+  // Print with type printing forced on. The result should be the same (the
+  // type shouldn't be duplicated).
+  opts.always_show_types = true;
   EXPECT_EQ("(int*) 0x807060504030201", SyncFormatValue(value, opts));
 
   // Test an invalid one with an incorrect size.
   data.resize(7);
+  opts.always_show_types = false;
   ExprValue bad_value(ptr_type, data);
   EXPECT_EQ(
-      "<The value of type 'int*' is the incorrect size (expecting 8, got 7). "
-      "Please file a bug.>",
+      "(int*) <The value of type 'int*' is the incorrect size (expecting 8, "
+      "got 7). Please file a bug.>",
       SyncFormatValue(bad_value, opts));
 }
 
@@ -260,10 +268,21 @@ TEST_F(FormatValueTest, GoodStrings) {
   EXPECT_EQ(kExpected,
             SyncFormatValue(ExprValue(ptr_type, address_data), opts));
 
+  // Force type info.
+  opts.always_show_types = true;
+  EXPECT_EQ(std::string("(char*) ") + kExpected,
+            SyncFormatValue(ExprValue(ptr_type, address_data), opts));
+
   // This string has the same data but is type encoded as char[12], it should
-  // give the same output.
+  // give the same output (except for type info).
+  opts.always_show_types = false;
   auto array_type = fxl::MakeRefCounted<ArrayType>(GetCharType(), 12);
   EXPECT_EQ(kExpected, SyncFormatValue(ExprValue(array_type, data), opts));
+
+  // Force type info.
+  opts.always_show_types = true;
+  EXPECT_EQ(std::string("(char[12]) ") + kExpected,
+            SyncFormatValue(ExprValue(array_type, data), opts));
 }
 
 TEST_F(FormatValueTest, BadStrings) {
@@ -337,12 +356,18 @@ TEST_F(FormatValueTest, TruncatedArray) {
   auto array_type = fxl::MakeRefCounted<ArrayType>(GetInt32Type(), 2);
 
   // This array has exactly the max size, we shouldn't mark it as truncated.
-  EXPECT_EQ(R"({1, 2})",
+  EXPECT_EQ("{1, 2}",
+            SyncFormatValue(ExprValue(array_type, data, source), opts));
+
+  // Try one with type info forced on. Only the root array type should have the
+  // type, not each individual element.
+  opts.always_show_types = true;
+  EXPECT_EQ("(int32_t[2]) {1, 2}",
             SyncFormatValue(ExprValue(array_type, data, source), opts));
 
   // This one is truncated.
   opts.max_array_size = 1;
-  EXPECT_EQ(R"({1, ...})",
+  EXPECT_EQ("(int32_t[2]) {1, ...}",
             SyncFormatValue(ExprValue(array_type, data, source), opts));
 }
 
@@ -361,7 +386,11 @@ TEST_F(FormatValueTest, Reference) {
   ExprValue value(ref_type, data);
   EXPECT_EQ("(int&) 0x1100 = 123", SyncFormatValue(value, opts));
 
-  // Test an invalid one with an invalud address.
+  // Forcing type info on shouldn't duplicate the type.
+  opts.always_show_types = true;
+  EXPECT_EQ("(int&) 0x1100 = 123", SyncFormatValue(value, opts));
+
+  // Test an invalid one with an invalid address.
   std::vector<uint8_t> bad_data = {0x00, 0x22, 0, 0, 0, 0, 0, 0};
   value = ExprValue(ref_type, bad_data);
   EXPECT_EQ("(int&) 0x2200 = <Invalid pointer 0x2200>",
@@ -374,15 +403,40 @@ TEST_F(FormatValueTest, Structs) {
 
   auto int32_type = MakeInt32Type();
 
-  // Struct with two values, and a pair of two of those structs.
-  auto foo = MakeStruct2Members("Foo", int32_type, "a", int32_type, "b");
+  // Make an int reference. Reference type printing combined with struct type
+  // printing can get complicated.
+  auto int_ref = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagReferenceType,
+                                                   LazySymbol(int32_type));
+
+  // The references point to this data.
+  constexpr uint64_t kAddress = 0x1100;
+  provider()->AddMemory(kAddress, {0x12, 0, 0, 0});
+
+  // Struct with two values, an int and a int&, and a pair of two of those
+  // structs.
+  auto foo = MakeStruct2Members("Foo", int32_type, "a", int_ref, "b");
   auto pair = MakeStruct2Members("Pair", foo, "first", foo, "second");
 
-  ExprValue pair_value(pair, {0x11, 0x00, 0x11, 0x00, 0x22, 0x00, 0x22, 0x00,
-                              0x33, 0x00, 0x33, 0x00, 0x44, 0x00, 0x44, 0x00});
+  ExprValue pair_value(
+      pair, {0x11, 0x00, 0x11, 0x00,                            // (int32) a
+             0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,    // (int32&) b
+             0x33, 0x00, 0x33, 0x00,                            // (int32) a
+             0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});  // (int32&) b
+
+  // The references when not printing all types are printed after the
+  // struct member name.
   EXPECT_EQ(
-      "{first = {a = 0x110011, b = 0x220022}, second = {a = 0x330033, b = "
-      "0x440044}}",
+      "{first = {a = 0x110011, b = (int32_t&) 0x1100 = 0x12}, "
+      "second = {a = 0x330033, b = (int32_t&) 0x1100 = 0x12}}",
+      SyncFormatValue(pair_value, opts));
+
+  // Force type info. Now the reference types move before the member names like
+  // the other types.
+  opts.always_show_types = true;
+  EXPECT_EQ(
+      "(Pair) {(Foo) first = {(int32_t) a = 0x110011, (int32_t&) b = 0x1100 = "
+      "0x12}, "
+      "(Foo) second = {(int32_t) a = 0x330033, (int32_t&) b = 0x1100 = 0x12}}",
       SyncFormatValue(pair_value, opts));
 }
 

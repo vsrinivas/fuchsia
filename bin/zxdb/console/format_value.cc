@@ -107,7 +107,7 @@ FormatValue::~FormatValue() = default;
 void FormatValue::AppendValue(fxl::RefPtr<SymbolDataProvider> data_provider,
                               const ExprValue value,
                               const FormatValueOptions& options) {
-  FormatExprValue(data_provider, value, options,
+  FormatExprValue(data_provider, value, options, false,
                   AsyncAppend(GetRootOutputKey()));
 }
 
@@ -125,7 +125,7 @@ void FormatValue::AppendVariable(const SymbolContext& symbol_context,
                                const Err& err, ExprValue val) {
         // The variable has been resolved, now we need to print it (which could
         // in itself be asynchronous).
-        FormatExprValue(data_provider, err, val, options, output_key);
+        FormatExprValue(data_provider, err, val, options, false, output_key);
       });
 
   // Keep in our class scope so the callbacks will be run.
@@ -161,13 +161,24 @@ void FormatValue::Complete(Callback callback) {
 void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
                                   const ExprValue& value,
                                   const FormatValueOptions& options,
+                                  bool suppress_type_printing,
                                   OutputKey output_key) {
   const Type* type = value.type();
   if (!type) {
     OutputKeyComplete(output_key, ErrStringToOutput("no type"));
     return;
   }
-  type = type->GetConcreteType();  // Trim "const", "volatile", etc.
+
+  // First output the type if required.
+  if (options.always_show_types && !suppress_type_printing) {
+    AppendToOutputKey(
+        output_key,
+        OutputBuffer(Syntax::kComment,
+                     fxl::StringPrintf("(%s) ", type->GetFullName().c_str())));
+  }
+
+  // Trim "const", "volatile", etc. for the type checking below.
+  type = type->GetConcreteType();
 
   // Structs and classes.
   if (const Collection* coll = type->AsCollection()) {
@@ -195,7 +206,7 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
     // Modified types (references were handled above).
     switch (modified_type->tag()) {
       case Symbol::kTagPointerType:
-        FormatPointer(value, &out);
+        FormatPointer(value, options, &out);
         break;
       default:
         out.Append(Syntax::kComment,
@@ -270,6 +281,7 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
 void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
                                   const Err& err, const ExprValue& value,
                                   const FormatValueOptions& options,
+                                  bool suppress_type_printing,
                                   OutputKey output_key) {
   if (err.has_error()) {
     // If the future we probably want to rewrite "optimized out" errors to
@@ -281,7 +293,8 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
     //      out->Append(ErrStringToOutput("optimized out"));
     OutputKeyComplete(output_key, ErrToOutput(err));
   } else {
-    FormatExprValue(std::move(data_provider), value, options, output_key);
+    FormatExprValue(std::move(data_provider), value, options,
+                    suppress_type_printing, output_key);
   }
 }
 
@@ -311,13 +324,29 @@ void FormatValue::FormatCollection(
     if (i > 0)
       AppendToOutputKey(output_key, OutputBuffer(", "));
 
+    ExprValue member_value;
+    Err err = ResolveMember(value, member, &member_value);
+
+    // Type info if requested.
+    if (options.always_show_types && member_value.type()) {
+      AppendToOutputKey(
+          output_key,
+          OutputBuffer(
+              Syntax::kComment,
+              fxl::StringPrintf("(%s) ",
+                                member_value.type()->GetFullName().c_str())));
+    }
+
     AppendToOutputKey(
         output_key, OutputBuffer(Syntax::kVariable, member->GetAssignedName()));
     AppendToOutputKey(output_key, OutputBuffer(" = "));
 
-    ExprValue member_value;
-    Err err = ResolveMember(value, member, &member_value);
-    FormatExprValue(data_provider, err, member_value, options,
+    // Force omitting the type info since we already handled that before
+    // showing the name. This is because:
+    //   (int) b = 12
+    // looks better than:
+    //   b = (int) 12
+    FormatExprValue(data_provider, err, member_value, options, true,
                     AsyncAppend(output_key));
   }
   AppendToOutputKey(output_key, OutputBuffer("}"));
@@ -463,7 +492,11 @@ void FormatValue::FormatArray(fxl::RefPtr<SymbolDataProvider> data_provider,
   for (size_t i = 0; i < items.size(); i++) {
     if (i > 0)
       AppendToOutputKey(output_key, OutputBuffer(", "));
-    FormatExprValue(data_provider, items[i], options, AsyncAppend(output_key));
+
+    // Avoid forcing type info for every array value. This will be encoded in
+    // the main array type.
+    FormatExprValue(data_provider, items[i], options, true,
+                    AsyncAppend(output_key));
   }
 
   AppendToOutputKey(
@@ -538,18 +571,23 @@ void FormatValue::FormatChar(const ExprValue& value, OutputBuffer* out) {
   out->Append(str);
 }
 
-void FormatValue::FormatPointer(const ExprValue& value, OutputBuffer* out) {
-  // Expect all pointers to be 8 bytes.
-  Err err = value.EnsureSizeIs(sizeof(uint64_t));
-  if (err.has_error()) {
-    out->Append(ErrToOutput(err));
-  } else {
-    uint64_t pointer_value = value.GetAs<uint64_t>();
+void FormatValue::FormatPointer(const ExprValue& value,
+                                const FormatValueOptions& options,
+                                OutputBuffer* out) {
+  // Always show types for pointers, so if type printing wasn't forced always
+  // on (in which case it was added by our caller), we need to output it now.
+  if (!options.always_show_types) {
     out->Append(
         Syntax::kComment,
         fxl::StringPrintf("(%s) ", value.type()->GetFullName().c_str()));
-    out->Append(fxl::StringPrintf("0x%" PRIx64, pointer_value));
   }
+
+  // Expect all pointers to be 8 bytes.
+  Err err = value.EnsureSizeIs(sizeof(uint64_t));
+  if (err.has_error())
+    out->Append(ErrToOutput(err));
+  else
+    out->Append(fxl::StringPrintf("0x%" PRIx64, value.GetAs<uint64_t>()));
 }
 
 void FormatValue::FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
@@ -563,11 +601,15 @@ void FormatValue::FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
     if (!weak_this)
       return;
 
-    // First show the type.
     OutputBuffer out;
-    out.Append(Syntax::kComment,
-               fxl::StringPrintf("(%s) ",
-                                 original_value.type()->GetFullName().c_str()));
+
+    // First show the type. As with pointers, only do this when type info is
+    // not forced on. When forced on, it will have already been printed.
+    if (!options.always_show_types) {
+      out.Append(Syntax::kComment,
+                 fxl::StringPrintf(
+                     "(%s) ", original_value.type()->GetFullName().c_str()));
+    }
 
     // Followed by the address.
     uint64_t address = 0;
@@ -587,9 +629,10 @@ void FormatValue::FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
       weak_this->OutputKeyComplete(output_key, std::move(out));
     } else {
       // FormatExprValue will mark the output key complete when it's done
-      // formatting.
+      // formatting. Pass true for suppress_type_printing since the type of
+      // the reference was printed above.
       weak_this->AppendToOutputKey(output_key, std::move(out));
-      weak_this->FormatExprValue(data_provider, resolved_value, options,
+      weak_this->FormatExprValue(data_provider, resolved_value, options, true,
                                  output_key);
     }
   });

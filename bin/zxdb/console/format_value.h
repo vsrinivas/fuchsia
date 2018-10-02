@@ -43,6 +43,9 @@ struct FormatValueOptions {
 
   // Format to apply to numeric types.
   NumFormat num_format = NumFormat::kDefault;
+
+  // Set to force printing type information for every value.
+  bool always_show_types = false;
 };
 
 // Manages formatting of variables and ExprValues (the results of expressions).
@@ -145,12 +148,19 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // output the appropriate error message instead if there is one. It will
   // modify the error messaage to be appropriate as a replacement for a value.
   // output the appropriate error message instead if there is one.
+  //
+  // When set, suppress_type_printing will suppress the use of
+  // options.always_show_types for this item only (but not nested items). This
+  // is designed to be used when called recursively and the type has already
+  // been printed.
   void FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
                        const ExprValue& value,
-                       const FormatValueOptions& options, OutputKey output_key);
+                       const FormatValueOptions& options,
+                       bool suppress_type_printing, OutputKey output_key);
   void FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
                        const Err& err, const ExprValue& value,
-                       const FormatValueOptions& options, OutputKey output_key);
+                       const FormatValueOptions& options,
+                       bool suppress_type_printing, OutputKey output_key);
 
   // Asynchronously formats the given type.
   //
@@ -190,7 +200,8 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   void FormatUnsignedInt(const ExprValue& value,
                          const FormatValueOptions& options, OutputBuffer* out);
   void FormatChar(const ExprValue& value, OutputBuffer* out);
-  void FormatPointer(const ExprValue& value, OutputBuffer* out);
+  void FormatPointer(const ExprValue& value, const FormatValueOptions& options,
+                     OutputBuffer* out);
   void FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
                        const ExprValue& value,
                        const FormatValueOptions& options, OutputKey output_key);

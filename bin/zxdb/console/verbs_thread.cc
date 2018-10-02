@@ -38,6 +38,7 @@ namespace zxdb {
 namespace {
 
 constexpr int kStepIntoUnsymbolized = 1;
+constexpr int kForceTypes = 2;
 
 // If the system has at least one running process, returns true. If not,
 // returns false and sets the err.
@@ -52,6 +53,13 @@ bool VerifySystemHasRunningProcess(System* system, Err* err) {
   }
   *err = Err("No processes are running.");
   return false;
+}
+
+// Populates the formatting options with the given command's switches.
+FormatValueOptions GetFormatValueOptions(const Command& cmd) {
+  FormatValueOptions options;
+  options.always_show_types = cmd.HasSwitch(kForceTypes);
+  return options;
 }
 
 // backtrace -------------------------------------------------------------------
@@ -214,6 +222,13 @@ const char kLocalsHelp[] =
   You can override the stack frame with the "frame" noun to get the locals
   for any specific stack frame of thread.
 
+Arguments
+
+  -t
+  --types
+      Force type printing on. The type of every value printed will be
+      explicitly shown.
+
 Examples
 
   locals
@@ -223,6 +238,9 @@ Examples
   frame 4 locals
   thread 2 frame 3 locals
       Prints locals for a specific stack frame.
+
+  f 4 locals -t
+      Prints locals with types.
 )";
 Err DoLocals(ConsoleContext* context, const Command& cmd) {
   Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
@@ -280,9 +298,7 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
     return Err();
   }
 
-  // TODO(brettw) hook this up with switches on the command.
-  FormatValueOptions options;
-
+  FormatValueOptions options = GetFormatValueOptions(cmd);
   auto helper = fxl::MakeRefCounted<FormatValue>();
   for (const auto& pair : vars) {
     helper->AppendVariableWithName(location.symbol_context(),
@@ -482,6 +498,13 @@ const char kPrintHelp[] =
   The expression is evaluated by default in the currently selected thread and
   stack frame. You can override this with "frame <x> print ...".
 
+Arguments
+
+  -t
+  --types
+      Force type printing on. The type of every value printed will be
+      explicitly shown.
+
 Expressions
 
   The expression evaluator understands the following C/C++ things:
@@ -508,10 +531,10 @@ Examples
   print &foo.bar[2]
       Deal with structs and arrays.
 
-  f 2 p foo
-  frame 2 print foo
-  thread 1 frame 2 print foo
-      Print a variable in the context of a specific stack frame.
+  f 2 p -t foo
+  frame 2 print -t foo
+  thread 1 frame 2 print -t foo
+      Print a variable with types in the context of a specific stack frame.
 )";
 Err DoPrint(ConsoleContext* context, const Command& cmd) {
   Err err = AssertStoppedThreadCommand(context, cmd, false, "print");
@@ -535,9 +558,7 @@ Err DoPrint(ConsoleContext* context, const Command& cmd) {
     expr += cur;
   }
 
-  // TODO(brettw) parse options.
-  FormatValueOptions options;
-
+  FormatValueOptions options = GetFormatValueOptions(cmd);
   auto data_provider = cmd.frame()->GetSymbolDataProvider();
 
   EvalExpression(expr, cmd.frame()->GetExprEvalContext(),
@@ -907,6 +928,9 @@ Err DoUntil(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
+  // Shared by several verbs.
+  SwitchRecord force_types(kForceTypes, false, "types", 't');
+
   (*verbs)[Verb::kBacktrace] =
       VerbRecord(&DoBacktrace, {"backtrace", "bt"}, kBacktraceShortHelp,
                  kBacktraceHelp, CommandGroup::kQuery);
@@ -916,8 +940,13 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kFinish] =
       VerbRecord(&DoFinish, {"finish", "fi"}, kFinishShortHelp, kFinishHelp,
                  CommandGroup::kStep);
-  (*verbs)[Verb::kLocals] = VerbRecord(&DoLocals, {"locals"}, kLocalsShortHelp,
-                                       kLocalsHelp, CommandGroup::kQuery);
+
+  // locals
+  VerbRecord locals(&DoLocals, {"locals"}, kLocalsShortHelp, kLocalsHelp,
+                    CommandGroup::kQuery);
+  locals.switches.push_back(force_types);
+  (*verbs)[Verb::kLocals] = std::move(locals);
+
   (*verbs)[Verb::kNext] =
       VerbRecord(&DoNext, {"next", "n"}, kNextShortHelp, kNextHelp,
                  CommandGroup::kStep, SourceAffinity::kSource);
@@ -927,8 +956,12 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kPause] =
       VerbRecord(&DoPause, {"pause", "pa"}, kPauseShortHelp, kPauseHelp,
                  CommandGroup::kProcess);
-  (*verbs)[Verb::kPrint] = VerbRecord(&DoPrint, {"print", "p"}, kPrintShortHelp,
-                                      kPrintHelp, CommandGroup::kQuery);
+
+  // print
+  VerbRecord print(&DoPrint, {"print", "p"}, kPrintShortHelp, kPrintHelp,
+                   CommandGroup::kQuery);
+  print.switches.push_back(force_types);
+  (*verbs)[Verb::kPrint] = std::move(print);
 
   // regs
   SwitchRecord regs_categories(kRegsCategoriesSwitch, true, "category", 'c');
