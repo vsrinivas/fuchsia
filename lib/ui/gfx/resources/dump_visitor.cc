@@ -367,7 +367,7 @@ void DumpVisitor::BeginItem(const char* type, Resource* r) {
     output_ << "> ";
   }
   output_ << type;
-  indentation_ += 2;
+  indentation_ += 1;
 }
 
 std::ostream& DumpVisitor::WriteProperty(const char* label) {
@@ -386,19 +386,17 @@ std::ostream& DumpVisitor::WriteProperty(const char* label) {
 
 void DumpVisitor::EndItem() {
   EndLine();
-  indentation_ -= 2;
+  indentation_ -= 1;
 }
 
 void DumpVisitor::BeginSection(const char* label) {
   BeginLine();
-  output_ << label << "...";
+  output_ << label << ":";
   EndLine();
-  indentation_ += 2;
 }
 
 void DumpVisitor::EndSection() {
   FXL_DCHECK(!partial_line_);
-  indentation_ -= 2;
 }
 
 void DumpVisitor::BeginLine() {
