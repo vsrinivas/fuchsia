@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <ddk/mmio-buffer.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
@@ -182,23 +183,19 @@ zx_status_t PciModernBackend::MapBar(uint8_t bar) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (bar_[bar].mmio_handle != ZX_HANDLE_INVALID) {
+    if (bar_[bar]) {
         return ZX_OK;
     }
 
-    size_t size;
-    zx_handle_t handle;
-    void* base;
-    zx_status_t s = pci_map_bar(&pci_, bar, ZX_CACHE_POLICY_UNCACHED_DEVICE, &base, &size, &handle);
+    mmio_buffer_t mmio;
+    zx_status_t s = pci_map_bar_buffer(&pci_, bar, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (s != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to map bar %u: %d\n", tag(), bar, s);
         return s;
     }
 
-    // Store the base as a uintptr_t due to the amount of math done on it later
-    bar_[bar].mmio_base = reinterpret_cast<uintptr_t>(base);
-    bar_[bar].mmio_handle.reset(handle);
-    zxlogf(TRACE, "%s: bar %u mapped to %#" PRIxPTR "\n", tag(), bar, bar_[bar].mmio_base);
+    bar_[bar] = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    zxlogf(TRACE, "%s: bar %u mapped to %p\n", tag(), bar, bar_[bar]->get());
     return ZX_OK;
 }
 
@@ -210,7 +207,7 @@ void PciModernBackend::CommonCfgCallbackLocked(const virtio_pci_cap_t& cap) {
 
     // Common config is a structure of type virtio_pci_common_cfg_t located at an
     // the bar and offset specified by the capability.
-    auto addr = bar_[cap.bar].mmio_base + cap.offset;
+    auto addr = reinterpret_cast<uintptr_t>(bar_[cap.bar]->get()) + cap.offset;
     common_cfg_ = reinterpret_cast<volatile virtio_pci_common_cfg_t*>(addr);
 
     // Cache this when we find the config for kicking the queues later
@@ -222,7 +219,7 @@ void PciModernBackend::NotifyCfgCallbackLocked(const virtio_pci_cap_t& cap) {
         return;
     }
 
-    notify_base_ = bar_[cap.bar].mmio_base + cap.offset;
+    notify_base_ = reinterpret_cast<uintptr_t>(bar_[cap.bar]->get()) + cap.offset;
 }
 
 void PciModernBackend::IsrCfgCallbackLocked(const virtio_pci_cap_t& cap) {
@@ -232,7 +229,8 @@ void PciModernBackend::IsrCfgCallbackLocked(const virtio_pci_cap_t& cap) {
     }
 
     // interrupt status is directly read from the register at this address
-    isr_status_ = reinterpret_cast<volatile uint32_t*>(bar_[cap.bar].mmio_base + cap.offset);
+    isr_status_ = reinterpret_cast<volatile uint32_t*>(
+            reinterpret_cast<uintptr_t>(bar_[cap.bar]->get()) + cap.offset);
 }
 
 void PciModernBackend::DeviceCfgCallbackLocked(const virtio_pci_cap_t& cap) {
@@ -241,7 +239,7 @@ void PciModernBackend::DeviceCfgCallbackLocked(const virtio_pci_cap_t& cap) {
         return;
     }
 
-    device_cfg_ = bar_[cap.bar].mmio_base + cap.offset;
+    device_cfg_ = reinterpret_cast<uintptr_t>(bar_[cap.bar]->get()) + cap.offset;
 }
 
 void PciModernBackend::PciCfgCallbackLocked(const virtio_pci_cap_t& cap) {
