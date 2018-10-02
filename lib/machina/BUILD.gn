@@ -126,29 +126,29 @@ executable("machina_unittests") {
   testonly = true
 
   sources = [
-    "dev_mem-unittest.cc",
-    "hid_event_source-unittest.cc",
-    "input_dispatcher_impl-unittest.cc",
-    "pci-unittest.cc",
+    "dev_mem_unittest.cc",
+    "hid_event_source_unittest.cc",
+    "input_dispatcher_impl_unittest.cc",
+    "pci_unittest.cc",
     "phys_mem_fake.h",
-    "qcow-unittest.cc",
-    "virtio_block-unittest.cc",
+    "qcow_unittest.cc",
+    "virtio_block_unittest.cc",
     "virtio_device_fake.h",
-    "virtio_gpu-unittest.cc",
-    "virtio_net-unittest.cc",
-    "virtio_queue-unittest.cc",
+    "virtio_gpu_unittest.cc",
+    "virtio_net_unittest.cc",
+    "virtio_queue_unittest.cc",
     "virtio_queue_fake.cc",
     "virtio_queue_fake.h",
-    "virtio_queue_waiter-unittest.cc",
-    "virtio_vsock-unittest.cc",
-    "virtio_wl-unittest.cc",
-    "volatile_write_block_dispatcher-unittest.cc",
+    "virtio_queue_waiter_unittest.cc",
+    "virtio_vsock_unittest.cc",
+    "virtio_wl_unittest.cc",
+    "volatile_write_block_dispatcher_unittest.cc",
   ]
 
   if (current_cpu == "x64") {
     sources += [
-      "arch/x86/decode-unittest.cc",
-      "arch/x86/page_table-unittest.cc",
+      "arch/x86/decode_unittest.cc",
+      "arch/x86/page_table_unittest.cc",
     ]
   }
 

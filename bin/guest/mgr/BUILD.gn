@@ -61,7 +61,7 @@ executable("guestmgr_unittests") {
   testonly = true
 
   sources = [
-    "host_vsock_endpoint-unittest.cc",
+    "host_vsock_endpoint_unittest.cc",
   ]
 
   deps = [

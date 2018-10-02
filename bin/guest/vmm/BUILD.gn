@@ -91,7 +91,7 @@ executable("vmm_unittests") {
   testonly = true
 
   sources = [
-    "guest_config-unittest.cc",
+    "guest_config_unittest.cc",
   ]
 
   deps = [
