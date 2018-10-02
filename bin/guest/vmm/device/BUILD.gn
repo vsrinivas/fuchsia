@@ -58,15 +58,15 @@ package("virtio_console") {
   ]
 }
 
-executable("device_unittests") {
+executable("device_tests") {
   visibility = [ "//garnet/bin/guest/vmm:*" ]
   testonly = true
 
   sources = [
     "test_with_device.cc",
     "test_with_device.h",
-    "virtio_balloon-unittest.cc",
-    "virtio_console-unittest.cc",
+    "virtio_balloon_test.cc",
+    "virtio_console_test.cc",
     "virtio_queue_fake.cc",
     "virtio_queue_fake.h",
   ]

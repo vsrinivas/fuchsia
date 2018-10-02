@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/device_unittests"
+        "binary": "test/device_tests"
     },
     "sandbox": {
         "services": [
