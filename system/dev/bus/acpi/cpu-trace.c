@@ -35,8 +35,7 @@ static zx_status_t cpu_trace_get_device_info(void* ctx, pdev_device_info_t* out_
     return ZX_OK;
 }
 
-static zx_status_t cpu_trace_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy, void** out_vaddr,
-                                      size_t* out_size, zx_paddr_t* out_paddr, zx_handle_t* out_handle) {
+static zx_status_t cpu_trace_get_mmio(void* ctx, uint32_t index, pdev_mmio_t* mmio) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -45,7 +44,7 @@ static zx_status_t cpu_trace_map_interrupt(void* ctx, uint32_t index, uint32_t f
 }
 
 static platform_device_protocol_ops_t cpu_trace_proto_ops = {
-    .map_mmio = cpu_trace_map_mmio,
+    .get_mmio = cpu_trace_get_mmio,
     .map_interrupt = cpu_trace_map_interrupt,
     .get_bti = cpu_trace_get_bti,
     .get_device_info = cpu_trace_get_device_info,
