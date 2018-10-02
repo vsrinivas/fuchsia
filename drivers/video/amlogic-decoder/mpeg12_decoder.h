@@ -5,7 +5,7 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MPEG12_DECODER_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MPEG12_DECODER_H_
 
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 
 #include <thread>

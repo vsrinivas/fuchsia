@@ -4,7 +4,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <zircon/types.h>
 
 extern struct zx_driver_ops msd_driver_ops;
