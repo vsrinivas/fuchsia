@@ -173,7 +173,7 @@ private:
             address -= sig_.buildsig_address;
             address += pos_;
             return (fseek(input_, address, SEEK_SET) == 0 &&
-                    ftell(input_) == address);
+                    static_cast<uint64_t>(ftell(input_)) == address);
         }
         return false;
     }
