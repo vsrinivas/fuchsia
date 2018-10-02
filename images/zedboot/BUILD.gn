@@ -5,6 +5,7 @@
 import("//build/config/fuchsia/zbi.gni")
 import("//build/images/boot.gni")
 import("//build/images/custom_signing.gni")
+import("//build/images/json.gni")
 import("//build/images/manifest.gni")
 
 declare_args() {
@@ -20,17 +21,11 @@ declare_args() {
   zedboot_cmdline_files = []
 
   # List of arguments to populate /boot/config/devmgr in the Zedboot image.
-  zedboot_devmgr_config = [
-    "netsvc.netboot=true",
-  ]
+  zedboot_devmgr_config = [ "netsvc.netboot=true" ]
 }
 
-# zedboot_image_paths aggregates a list of environment variable style strings of the form:
-# IMAGE_{NAME}_{TYPE}=path
-# path is relative to $root_build_dir
-# This will be written out at generation time and is later consumed by
-# //scripts and various tools to find the relevant images.
-zedboot_image_paths = []
+# This parallels the `images` list in //build/images/BUILD.gn, which see.
+zedboot_images = []
 
 # Construct a minimal manifest containing only the few user binaries
 # that constitute zedboot, and the libraries they depend on.
@@ -116,26 +111,55 @@ zbi("zbi") {
   cmdline_inputs = zedboot_cmdline_files
 }
 
-zedboot_zbi_outputs = get_target_outputs(":zbi")
-zedboot_image_paths += [ "IMAGE_ZEDBOOT_ZBI=" +
-                         rebase_path(zedboot_zbi_outputs[0], root_build_dir) ]
-
-# TODO(mcgrathr): Unclear why this exists as a separate variable from
-# IMAGE_ZEDBOOT_ZBI.  Perhaps the recovery image actually ought to be
-# one that doesn't netboot (i.e. different /boot/config/devmgr)?
-zedboot_image_paths += [ "IMAGE_ZIRCONR_ZBI=" +
-                         rebase_path(zedboot_zbi_outputs[0], root_build_dir) ]
+zedboot_images += [
+  {
+    deps = [
+      ":zbi",
+    ]
+    public = [
+      "IMAGE_ZEDBOOT_ZBI",
+      "IMAGE_ZIRCONR_ZBI",
+    ]
+    json = {
+      name = "zircon-r"
+      type = "zbi"
+      if (custom_signing_script == "") {
+        bootserver = [ "--zirconr" ]
+      }
+    }
+  },
+]
 
 if (custom_signing_script != "") {
   custom_signed_zbi("signed") {
     output_name = "zedboot.zbi"
-    deps = [":zbi"]
+    deps = [
+      ":zbi",
+    ]
     zbi = get_target_outputs(":zbi")
   }
 
-  signed_zbi_outputs = get_target_outputs(":signed")
-  zedboot_image_paths += [ "IMAGE_ZIRCONR_SIGNEDZBI=" +
-                           rebase_path(signed_zbi_outputs[0], root_build_dir) ]
+  zedboot_images += [
+    {
+      deps = [
+        ":signed",
+      ]
+      public = [
+        "IMAGE_ZIRCONR_SIGNEDZBI",
+      ]
+      json = {
+        name = "zircon-r.signed"
+        type = "zbi.signed"
+        bootserver = [
+          "--zirconr",
+
+          # TODO(ZX-2625): `dm reboot-recovery` boots from
+          # zircon-b instead of zircon-r, so put it there too.
+          "--zirconb",
+        ]
+      }
+    },
+  ]
 }
 
 vboot("vboot") {
@@ -144,9 +168,21 @@ vboot("vboot") {
     ":zbi",
   ]
 }
-vboot_outputs = get_target_outputs(":vboot")
-zedboot_image_paths +=
-    [ "IMAGE_ZEDBOOT_VBOOT=" + rebase_path(vboot_outputs[0], root_build_dir) ]
+
+zedboot_images += [
+  {
+    deps = [
+      ":vboot",
+    ]
+    public = [
+      "IMAGE_ZEDBOOT_VBOOT",
+    ]
+    json = {
+      name = "zedboot"
+      type = "vboot"
+    }
+  },
+]
 
 if (target_cpu != "arm64") {
   esp("esp") {
@@ -155,11 +191,23 @@ if (target_cpu != "arm64") {
     deps = [
       ":zbi",
     ]
+    zedboot_zbi_outputs = get_target_outputs(":zbi")
     zedboot = zedboot_zbi_outputs[0]
   }
-  esp_outputs = get_target_outputs(":esp")
-  zedboot_image_paths +=
-      [ "IMAGE_ZEDBOOT_ESP=" + rebase_path(esp_outputs[0], root_build_dir) ]
+  zedboot_images += [
+    {
+      deps = [
+        ":esp",
+      ]
+      public = [
+        "IMAGE_ZEDBOOT_ESP",
+      ]
+      json = {
+        name = "zedboot-efi"
+        type = "blk"
+      }
+    },
+  ]
 }
 
 group("zedboot") {
@@ -171,9 +219,14 @@ group("zedboot") {
     deps += [ ":esp" ]
   }
   if (custom_signing_script != "") {
-    deps += [":signed"]
+    deps += [ ":signed" ]
   }
 }
 
-# See definition of zedboot_image_paths for purpose.
-write_file("$root_build_dir/zedboot_image_paths.sh", zedboot_image_paths)
+write_images_manifest("zedboot-manifest") {
+  images = zedboot_images
+  outputs = [
+    "$root_build_dir/zedboot_images.json",
+    "$root_build_dir/zedboot_image_paths.sh",
+  ]
+}
