@@ -60,13 +60,6 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
       EmbedModuleCallback callback) override;
 
   // |fuchsia::modular::ModuleContext|
-  void StartModule(fidl::StringPtr name, fuchsia::modular::Intent intent,
-                   fidl::InterfaceRequest<fuchsia::modular::ModuleController>
-                       module_controller,
-                   fuchsia::modular::SurfaceRelationPtr surface_relation,
-                   StartModuleCallback callback) override;
-
-  // |fuchsia::modular::ModuleContext|
   void AddModuleToStory(
       fidl::StringPtr name, fuchsia::modular::Intent intent,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController>
@@ -99,9 +92,6 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
 
   // |fuchsia::modular::ModuleContext|
   void Active() override;
-
-  // |fuchsia::modular::ModuleContext|
-  void Done() override;
 
   // |fuchsia::modular::ModuleContext|
   void RemoveSelfFromStory() override;

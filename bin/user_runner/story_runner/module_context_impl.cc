@@ -66,16 +66,6 @@ void ModuleContextImpl::EmbedModule(
       fuchsia::modular::ModuleSource::INTERNAL, callback);
 }
 
-void ModuleContextImpl::StartModule(
-    fidl::StringPtr name, fuchsia::modular::Intent intent,
-    fidl::InterfaceRequest<fuchsia::modular::ModuleController>
-        module_controller,
-    fuchsia::modular::SurfaceRelationPtr surface_relation,
-    StartModuleCallback callback) {
-  AddModuleToStory(name, std::move(intent), std::move(module_controller),
-                   std::move(surface_relation), callback);
-}
-
 void ModuleContextImpl::AddModuleToStory(
     fidl::StringPtr name, fuchsia::modular::Intent intent,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController>
@@ -133,8 +123,6 @@ void ModuleContextImpl::RequestFocus() {
 }
 
 void ModuleContextImpl::Active() {}
-
-void ModuleContextImpl::Done() { RemoveSelfFromStory(); }
 
 void ModuleContextImpl::RemoveSelfFromStory() {
   story_controller_impl_->RemoveModuleFromStory(module_data_->module_path);
