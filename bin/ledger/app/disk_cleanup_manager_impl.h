@@ -37,6 +37,7 @@ class DiskCleanupManagerImpl : public DiskCleanupManager {
 
  private:
   PageEvictionManagerImpl page_eviction_manager_;
+  std::unique_ptr<PageEvictionPolicy> policy_;
 
   // TODO(nellyv): Add OnLowResources and OnPeriodicCleanUp to handle cleanup
   // opeations on the corresponding cases.

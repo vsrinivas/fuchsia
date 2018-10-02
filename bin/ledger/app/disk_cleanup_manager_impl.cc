@@ -8,7 +8,9 @@ namespace ledger {
 
 DiskCleanupManagerImpl::DiskCleanupManagerImpl(ledger::Environment* environment,
                                                ledger::DetachedPath db_path)
-    : page_eviction_manager_(environment, std::move(db_path)) {}
+    : page_eviction_manager_(environment, std::move(db_path)),
+      policy_(NewLeastRecentyUsedPolicy(environment->coroutine_service(),
+                                        &page_eviction_manager_)) {}
 
 DiskCleanupManagerImpl::~DiskCleanupManagerImpl() {}
 
@@ -28,7 +30,7 @@ bool DiskCleanupManagerImpl::IsEmpty() {
 }
 
 void DiskCleanupManagerImpl::TryCleanUp(fit::function<void(Status)> callback) {
-  page_eviction_manager_.TryEvictPages(std::move(callback));
+  page_eviction_manager_.TryEvictPages(policy_.get(), std::move(callback));
 }
 
 void DiskCleanupManagerImpl::OnPageOpened(fxl::StringView ledger_name,

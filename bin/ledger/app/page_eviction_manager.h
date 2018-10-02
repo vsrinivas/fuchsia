@@ -12,6 +12,7 @@
 #include <lib/fxl/macros.h>
 #include <lib/fxl/strings/string_view.h>
 
+#include "peridot/bin/ledger/app/page_eviction_policies.h"
 #include "peridot/bin/ledger/app/page_usage_listener.h"
 #include "peridot/bin/ledger/app/types.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
@@ -21,9 +22,9 @@ namespace ledger {
 
 // Manages page eviction based on page usage information.
 //
-// |PageEvictionManager| provides methods to evict a given page (see
-// |TryEvictPage| and |TryEvictPageIfEmpty|), as well as one that selects and
-// evicts a set of pages, among those that are stored on the device.
+// |PageEvictionManager| provides the |TryEvictPage| method which evicts a given
+// page, as well as one that selects and evicts a set of pages, among those
+// that are stored on the device.
 //
 // Regardless of the method used, a page can only be evicted if it is closed,
 // i.e. is not currently opened by an external request, and either of the
@@ -35,7 +36,8 @@ namespace ledger {
 //
 // If neither of these conditions is fulfilled, the page will fail to be
 // evicted.
-class PageEvictionManager : public PageUsageListener {
+class PageEvictionManager : public PageUsageListener,
+                            public PageEvictionDelegate {
  public:
   // A Delegate, providing the necessary functionality to allow
   // PageEvictionManager to perform storage clean up operations.
@@ -63,8 +65,6 @@ class PageEvictionManager : public PageUsageListener {
                                    fit::function<void(Status)> callback) = 0;
   };
 
-  using PageWasEvicted = bool;
-
   PageEvictionManager() {}
   ~PageEvictionManager() override {}
 
@@ -80,24 +80,8 @@ class PageEvictionManager : public PageUsageListener {
   // through the callback in case of failure to retrieve data on page usage, or
   // when trying to evict a given page; |OK| otherwise. It is not an error if
   // there is no page fulfilling the requirements.
-  virtual void TryEvictPages(fit::function<void(Status)> callback) = 0;
-
-  // Checks whether the given page can be evicted and if it can, evicts it.
-  // Returns |IO_ERROR| through the callback in case of failure while retrieving
-  // information on the page, or when trying to evict it; |OK| otherwise. The
-  // boolean in the callback will indicate whether the page was evicted.
-  virtual void TryEvictPage(
-      fxl::StringView ledger_name, storage::PageIdView page_id,
-      fit::function<void(Status, PageWasEvicted)> callback) = 0;
-
-  // Checks whether the given page is closed, offline and empty, and if it is,
-  // evicts it. Returns |IO_ERROR| through the callback in case of failure while
-  // retrieving information on the page, or when trying to evict it; |OK|
-  // otherwise. The boolean in the callback will indicate whether the page was
-  // evicted.
-  virtual void TryEvictPageIfEmpty(
-      fxl::StringView ledger_name, storage::PageIdView page_id,
-      fit::function<void(Status, PageWasEvicted)> callback) = 0;
+  virtual void TryEvictPages(PageEvictionPolicy* policy,
+                             fit::function<void(Status)> callback) = 0;
 
   // PageUsageListener:
   void OnPageOpened(fxl::StringView ledger_name,
@@ -106,6 +90,12 @@ class PageEvictionManager : public PageUsageListener {
                     storage::PageIdView page_id) override = 0;
 
  private:
+  // PageEvictionDelegate:
+  void TryEvictPage(
+      fxl::StringView ledger_name, storage::PageIdView page_id,
+      PageEvictionCondition condition,
+      fit::function<void(Status, PageWasEvicted)> callback) override = 0;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(PageEvictionManager);
 };
 
