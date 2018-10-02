@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <lib/fdio/private.h>
 #include <lib/fdio/spawn.h>
+#include <lib/fdio/unsafe.h>
 #include <poll.h>
 #include <string.h>
 #include <unistd.h>
@@ -143,7 +143,7 @@ int process_launch(const char* const* argv, const char* path, int index,
 
 // TODO(ZX-972) When isatty correctly examines the fd, use that instead
 int isapty(int fd) {
-    fdio_t* io = __fdio_fd_to_io(fd);
+    fdio_t* io = fdio_unsafe_fd_to_io(fd);
     if (io == NULL) {
         errno = EBADF;
         return 0;
@@ -160,7 +160,7 @@ int isapty(int fd) {
         errno = ENOTTY;
     }
 
-    __fdio_release(io);
+    fdio_unsafe_release(io);
 
     return ret;
 }
@@ -171,7 +171,7 @@ int process_await_termination(zx_handle_t process, zx_handle_t job, bool blockin
     zx_time_t timeout = blocking ? ZX_TIME_INFINITE : 0;
     zx_status_t status;
     zx_wait_item_t wait_objects[2];
-    fdio_t* tty = (isapty(STDIN_FILENO) ? __fdio_fd_to_io(STDIN_FILENO) : NULL);
+    fdio_t* tty = (isapty(STDIN_FILENO) ? fdio_unsafe_fd_to_io(STDIN_FILENO) : NULL);
 
     bool running = true;
     while (running) {
@@ -184,7 +184,7 @@ int process_await_termination(zx_handle_t process, zx_handle_t job, bool blockin
 
         if (tty) {
             wait_objects[no_wait_obj].pending = 0;
-            __fdio_wait_begin(tty, POLLPRI, &wait_objects[no_wait_obj].handle, &wait_objects[no_wait_obj].waitfor);
+            fdio_unsafe_wait_begin(tty, POLLPRI, &wait_objects[no_wait_obj].handle, &wait_objects[no_wait_obj].waitfor);
             tty_wait_obj = no_wait_obj;
             no_wait_obj++;
         }
@@ -193,7 +193,7 @@ int process_await_termination(zx_handle_t process, zx_handle_t job, bool blockin
 
         uint32_t interrupt_event = 0;
         if (tty) {
-            __fdio_wait_end(tty, wait_objects[tty_wait_obj].pending, &interrupt_event);
+            fdio_unsafe_wait_end(tty, wait_objects[tty_wait_obj].pending, &interrupt_event);
         }
 
         if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
@@ -219,7 +219,7 @@ int process_await_termination(zx_handle_t process, zx_handle_t job, bool blockin
         }
     }
     if (tty)
-        __fdio_release(tty);
+        fdio_unsafe_release(tty);
 
     if (status != ZX_OK)
         return status;

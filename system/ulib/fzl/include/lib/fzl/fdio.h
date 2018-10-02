@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <lib/fdio/private.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/zx/channel.h>
 #include <fbl/auto_call.h>
 #include <fbl/type_support.h>
@@ -20,7 +20,7 @@ namespace fzl {
 class FdioCaller {
 public:
     explicit FdioCaller(fbl::unique_fd fd) :
-        fd_(fbl::move(fd)), io_(__fdio_fd_to_io(fd_.get())) {}
+        fd_(fbl::move(fd)), io_(fdio_unsafe_fd_to_io(fd_.get())) {}
 
     ~FdioCaller() {
         release();
@@ -29,12 +29,12 @@ public:
     void reset(fbl::unique_fd fd) {
         release();
         fd_ = fbl::move(fd);
-        io_ = __fdio_fd_to_io(fd_.get());
+        io_ = fdio_unsafe_fd_to_io(fd_.get());
     }
 
     fbl::unique_fd release() {
         if (io_ != nullptr) {
-            __fdio_release(io_);
+            fdio_unsafe_release(io_);
             io_ = nullptr;
         }
         return fbl::move(fd_);
@@ -51,7 +51,7 @@ public:
     // It should not be kept alive longer than the FdioCaller object, nor should
     // it be kept alive after FdioCaller.release() is called.
     zx_handle_t borrow_channel() const {
-        return __fdio_borrow_channel(io_);
+        return fdio_unsafe_borrow_channel(io_);
     }
 
     FdioCaller& operator=(FdioCaller&& o) = delete;

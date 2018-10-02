@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <lib/fdio/io.h>
+#include <lib/fdio/unsafe.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <sys/types.h>
@@ -13,9 +14,7 @@
 
 #include "private.h"
 
-fdio_t* __fdio_fd_to_io(int fd);
-
-#define fd_to_io(n) __fdio_fd_to_io(n)
+#define fd_to_io(n) fdio_unsafe_fd_to_io(n)
 
 zx_status_t __fdio_open_at(fdio_t** io, int dirfd, const char* path, int flags, uint32_t mode);
 zx_status_t __fdio_open(fdio_t** io, const char* path, int flags, uint32_t mode);

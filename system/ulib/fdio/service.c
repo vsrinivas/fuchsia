@@ -6,6 +6,7 @@
 #include <stdatomic.h>
 #include <stdlib.h>
 
+#include <lib/fdio/unsafe.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
@@ -117,7 +118,7 @@ zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
 }
 
 __EXPORT
-zx_handle_t __fdio_borrow_channel(fdio_t* io) {
+zx_handle_t fdio_unsafe_borrow_channel(fdio_t* io) {
     if (io == NULL) {
         return ZX_HANDLE_INVALID;
     }
@@ -130,4 +131,9 @@ zx_handle_t __fdio_borrow_channel(fdio_t* io) {
         return rio->h;
     }
     return ZX_HANDLE_INVALID;
+}
+
+__EXPORT
+zx_handle_t __fdio_borrow_channel(fdio_t* io) {
+    return fdio_unsafe_borrow_channel(io);
 }

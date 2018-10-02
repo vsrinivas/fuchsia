@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 #include <fuchsia/io/c/fidl.h>
-#include <lib/fdio/private.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -34,17 +34,17 @@ static zx_status_t fdio_watcher_create(int dirfd, fdio_watcher_t** out) {
         goto fail_allocated;
     }
 
-    fdio_t* io = __fdio_fd_to_io(dirfd);
-    zx_handle_t dir_channel = __fdio_borrow_channel(io);
+    fdio_t* io = fdio_unsafe_fd_to_io(dirfd);
+    zx_handle_t dir_channel = fdio_unsafe_borrow_channel(io);
     if (dir_channel == ZX_HANDLE_INVALID) {
-        __fdio_release(io);
+        fdio_unsafe_release(io);
         status = ZX_ERR_NOT_SUPPORTED;
         goto fail_two_channels;
     }
 
     io_status = fuchsia_io_DirectoryWatch(dir_channel, fuchsia_io_WATCH_MASK_ALL, 0,
                                           client, &status);
-    __fdio_release(io);
+    fdio_unsafe_release(io);
     if (io_status != ZX_OK) {
         status = io_status;
         goto fail_one_channel;

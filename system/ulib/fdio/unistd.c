@@ -37,6 +37,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/private.h>
 #include <lib/fdio/remoteio.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fdio/socket.h>
@@ -143,7 +144,7 @@ done:
 }
 
 __EXPORT
-fdio_t* __fdio_fd_to_io(int fd) {
+fdio_t* fdio_unsafe_fd_to_io(int fd) {
     if ((fd < 0) || (fd >= FDIO_MAX_FD)) {
         return NULL;
     }
@@ -154,6 +155,11 @@ fdio_t* __fdio_fd_to_io(int fd) {
     }
     mtx_unlock(&fdio_lock);
     return io;
+}
+
+__EXPORT
+fdio_t* __fdio_fd_to_io(int fd) {
+    return fdio_unsafe_fd_to_io(fd);
 }
 
 zx_status_t fdio_close(fdio_t* io) {
@@ -1963,22 +1969,38 @@ int fdio_handle_fd(zx_handle_t h, zx_signals_t signals_in, zx_signals_t signals_
     return fd;
 }
 
-// from fdio/private.h, to support message-loop integration
+// from fdio/unsafe.h, to support message-loop integration
 
 __EXPORT
-void __fdio_wait_begin(fdio_t* io, uint32_t events,
+void fdio_unsafe_wait_begin(fdio_t* io, uint32_t events,
                        zx_handle_t* handle_out, zx_signals_t* signals_out) {
     return io->ops->wait_begin(io, events, handle_out, signals_out);
 }
 
 __EXPORT
-void __fdio_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* events_out) {
+void __fdio_wait_begin(fdio_t* io, uint32_t events,
+                       zx_handle_t* handle_out, zx_signals_t* signals_out) {
+    return fdio_unsafe_wait_begin(io, events, handle_out, signals_out);
+}
+
+__EXPORT
+void fdio_unsafe_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* events_out) {
     return io->ops->wait_end(io, signals, events_out);
 }
 
 __EXPORT
-void __fdio_release(fdio_t* io) {
+void __fdio_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* events_out) {
+    return fdio_unsafe_wait_end(io, signals, events_out);
+}
+
+__EXPORT
+void fdio_unsafe_release(fdio_t* io) {
     fdio_release(io);
+}
+
+__EXPORT
+void __fdio_release(fdio_t* io) {
+    return fdio_unsafe_release(io);
 }
 
 
@@ -2289,7 +2311,7 @@ int fstatfs(int fd, struct statfs* buf) {
     if ((io = fd_to_io(fd)) == NULL) {
         return ERRNO(EBADF);
     }
-    zx_handle_t handle = __fdio_borrow_channel(io);
+    zx_handle_t handle = fdio_unsafe_borrow_channel(io);
     if (handle == ZX_HANDLE_INVALID) {
         fdio_release(io);
         return ERRNO(ENOTSUP);

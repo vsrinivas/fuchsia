@@ -10,7 +10,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
-#include <lib/fdio/private.h>
+#include <lib/fdio/unsafe.h>
 
 #include <port/port.h>
 
@@ -96,24 +96,24 @@ static zx_status_t port_fd_handler_func(port_handler_t* ph, zx_signals_t signals
         return fh->func(fh, 0, evt);
     } else {
         uint32_t pollevt;
-        __fdio_wait_end(fh->fdio_context, signals, &pollevt);
+        fdio_unsafe_wait_end(fh->fdio_context, signals, &pollevt);
         return fh->func(fh, pollevt, 0);
     }
 }
 
 zx_status_t port_fd_handler_init(port_fd_handler_t* fh, int fd, unsigned pollevt) {
-    fdio_t* io = __fdio_fd_to_io(fd);
+    fdio_t* io = fdio_unsafe_fd_to_io(fd);
     if (io == NULL) {
         return ZX_ERR_INVALID_ARGS;
     }
-    __fdio_wait_begin(io, pollevt, &fh->ph.handle, &fh->ph.waitfor);
+    fdio_unsafe_wait_begin(io, pollevt, &fh->ph.handle, &fh->ph.waitfor);
     fh->ph.func = port_fd_handler_func;
     fh->fdio_context = io;
     return ZX_OK;
 }
 
 void port_fd_handler_done(port_fd_handler_t* fh) {
-    __fdio_release(fh->fdio_context);
+    fdio_unsafe_release(fh->fdio_context);
     fh->fdio_context = NULL;
     fh->ph.handle = ZX_HANDLE_INVALID;
     fh->ph.waitfor = 0;
