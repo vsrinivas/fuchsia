@@ -9,15 +9,19 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/aml-gxl-gpio.c \
+    $(LOCAL_DIR)/aml-gxl-gpio.cpp \
+    $(LOCAL_DIR)/binding.c \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
-    system/ulib/sync \
+    system/ulib/ddktl \
+    system/ulib/fbl \
+    system/ulib/zx \
+    system/ulib/zxcpp \
 
 MODULE_LIBS := \
-    system/ulib/driver \
     system/ulib/c \
+    system/ulib/driver \
     system/ulib/zircon \
 
 MODULE_HEADER_DEPS := system/dev/lib/amlogic

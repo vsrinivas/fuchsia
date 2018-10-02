@@ -4,7 +4,11 @@
 
 #include <soc/aml-s912/s912-gpio.h>
 
-static aml_gpio_block_t s912_gpio_blocks[] = {
+#include "aml-gxl-gpio.h"
+
+namespace gpio {
+
+constexpr AmlGpioBlock s912_gpio_blocks[] = {
     // GPIOX Block
     {
         .pin_count = S912_GPIOX_PINS,
@@ -16,7 +20,6 @@ static aml_gpio_block_t s912_gpio_blocks[] = {
         .pull_offset = S912_PULL_UP_REG4,
         .pull_en_offset = S912_PULL_UP_EN_REG4,
         .pin_start = S912_GPIOX_PIN_START,
-        .lock = MTX_INIT,
     },
     // GPIODV Block
     {
@@ -29,7 +32,6 @@ static aml_gpio_block_t s912_gpio_blocks[] = {
         .pull_offset = S912_PULL_UP_REG0,
         .pull_en_offset = S912_PULL_UP_EN_REG0,
         .pin_start = S912_GPIODV_PIN_START,
-        .lock = MTX_INIT,
     },
     // GPIOH Block
     {
@@ -42,7 +44,6 @@ static aml_gpio_block_t s912_gpio_blocks[] = {
         .pull_offset = S912_PULL_UP_REG1,
         .pull_en_offset = S912_PULL_UP_EN_REG1,
         .pin_start = S912_GPIOH_PIN_START,
-        .lock = MTX_INIT,
     },
     // GPIOBOOT Block
     {
@@ -55,7 +56,6 @@ static aml_gpio_block_t s912_gpio_blocks[] = {
         .pull_offset = S912_PULL_UP_REG2,
         .pull_en_offset = S912_PULL_UP_EN_REG2,
         .pin_start = S912_GPIOBOOT_PIN_START,
-        .lock = MTX_INIT,
     },
     // GPIOCARD Block
     {
@@ -68,7 +68,6 @@ static aml_gpio_block_t s912_gpio_blocks[] = {
         .pull_offset = S912_PULL_UP_REG2,
         .pull_en_offset = S912_PULL_UP_EN_REG2,
         .pin_start = S912_GPIOCARD_PIN_START,
-        .lock = MTX_INIT,
     },
     // GPIOCLK Block
     {
@@ -81,7 +80,6 @@ static aml_gpio_block_t s912_gpio_blocks[] = {
         .pull_offset = S912_PULL_UP_REG3,
         .pull_en_offset = S912_PULL_UP_EN_REG3,
         .pin_start = S912_GPIOCLK_PIN_START,
-        .lock = MTX_INIT,
     },
     // GPIOZ Block
     {
@@ -94,7 +92,6 @@ static aml_gpio_block_t s912_gpio_blocks[] = {
         .pull_offset = S912_PULL_UP_REG3,
         .pull_en_offset = S912_PULL_UP_EN_REG3,
         .pin_start = S912_GPIOZ_PIN_START,
-        .lock = MTX_INIT,
     },
     // GPIOAO Block
     {
@@ -108,7 +105,6 @@ static aml_gpio_block_t s912_gpio_blocks[] = {
         .pull_offset = 0, // not supported
         .pull_en_offset = 0, // not supported
         .pin_start = S912_GPIOA0_PIN_START,
-        .lock = MTX_INIT,
     },
 };
 
@@ -125,7 +121,7 @@ static aml_gpio_block_t s912_gpio_blocks[] = {
 #define AO_REG S912_AO_RTI_PIN_MUX_REG
 #define AO_REG_2 S912_AO_RTI_PIN_MUX_REG2
 
-static aml_gpio_interrupt_t s912_interrupt_block = {
+constexpr AmlGpioInterrupt s912_interrupt_block = {
     .pin_0_3_select_offset =    S912_GPIO_0_3_PIN_SELECT,
     .pin_4_7_select_offset =    S912_GPIO_4_7_PIN_SELECT,
     .edge_polarity_offset =     S912_GPIO_INT_EDGE_POLARITY,
@@ -134,7 +130,7 @@ static aml_gpio_interrupt_t s912_interrupt_block = {
     .mask_offset =              S912_GPIO_INT_MASK,
 };
 
-static const aml_pinmux_block_t s912_pinmux_blocks[] = {
+constexpr AmlPinMuxBlock s912_pinmux_blocks[] = {
     // GPIOX Block
     {
         .mux = {
@@ -299,3 +295,5 @@ static_assert(countof(s912_gpio_blocks) == countof(s912_pinmux_blocks), "");
 #undef REG_9
 #undef AO_REG
 #undef AO_REG_2
+
+}  // namespace gpio
