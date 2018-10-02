@@ -129,6 +129,8 @@ wlan_mlme::BSSDescription CreateBssDescription() {
     bss_desc.dtim_period = kDtimPeriodTu;
     bss_desc.timestamp = 0;
     bss_desc.local_time = 0;
+    bss_desc.basic_rate_set.resize(0);
+    bss_desc.op_rate_set.resize(0);
 
     wlan_mlme::CapabilityInfo cap;
     cap.ess = true;

@@ -91,6 +91,44 @@ void CopyRSNE(const ::fidl::VectorPtr<uint8_t>& in_rsne, uint8_t* out_rsne, size
     std::memcpy(out_rsne, in_rsne->data(), *out_rsne_len);
 }
 
+void ConvertRateSets(wlanif_bss_description_t* wlanif_desc,
+                     const wlan_mlme::BSSDescription& fidl_desc) {
+    std::vector<uint8_t> basic_rates(fidl_desc.basic_rate_set);
+    std::vector<uint8_t> op_rates(fidl_desc.op_rate_set);
+
+    if (op_rates.size() >=
+        WLAN_MAC_SUPPORTED_RATES_MAX_LEN + WLAN_MAC_EXT_SUPPORTED_RATES_MAX_LEN) {
+        errorf("op_rates.size() is %lu > max allowed size: %d\n", op_rates.size(),
+               WLAN_MAC_SUPPORTED_RATES_MAX_LEN + WLAN_MAC_EXT_SUPPORTED_RATES_MAX_LEN);
+        ZX_DEBUG_ASSERT(false);
+    }
+
+    uint8_t num_supp_rates = WLAN_MAC_SUPPORTED_RATES_MAX_LEN;
+    if (op_rates.size() < WLAN_MAC_SUPPORTED_RATES_MAX_LEN) { num_supp_rates = op_rates.size(); }
+    uint8_t num_ext_supp_rates = (num_supp_rates < WLAN_MAC_SUPPORTED_RATES_MAX_LEN)
+                                     ? 0
+                                     : op_rates.size() - WLAN_MAC_SUPPORTED_RATES_MAX_LEN;
+    wlanif_desc->num_supp_rates = num_supp_rates;
+    wlanif_desc->num_ext_supp_rates = num_ext_supp_rates;
+
+    std::sort(basic_rates.begin(), basic_rates.end());
+    std::sort(op_rates.begin(), op_rates.end());
+    size_t idx = 0;
+    for (auto r : op_rates) {
+        ++idx;
+        if (idx == WLAN_MAC_SUPPORTED_RATES_MAX_LEN + WLAN_MAC_EXT_SUPPORTED_RATES_MAX_LEN) {
+            break;
+        }
+        bool is_basic = std::count(basic_rates.cbegin(), basic_rates.cend(), r) != 0;
+        auto mask = is_basic ? 0b10000000 : 0b00000000;
+        if (idx < num_supp_rates) {
+            wlanif_desc->supp_rates[idx] = (r | mask);
+        } else {
+            wlanif_desc->ext_supp_rates[idx - num_supp_rates] = (r | mask);
+        }
+    }
+}
+
 void ConvertBSSDescription(wlanif_bss_description_t* wlanif_desc,
                            const wlan_mlme::BSSDescription& fidl_desc) {
     // bssid
@@ -113,6 +151,9 @@ void ConvertBSSDescription(wlanif_bss_description_t* wlanif_desc,
 
     // local_time
     wlanif_desc->local_time = fidl_desc.local_time;
+
+    // basic_rate_set and op_rate_set
+    ConvertRateSets(wlanif_desc, fidl_desc);
 
     // rsne
     CopyRSNE(fidl_desc.rsn, wlanif_desc->rsne, &wlanif_desc->rsne_len);
@@ -184,6 +225,29 @@ static void ArrayToVector(::fidl::VectorPtr<T>* vecptr, const T* data, size_t le
     }
 }
 
+void ConvertRateSets(::fidl::VectorPtr<uint8_t>* basic, ::fidl::VectorPtr<uint8_t>* op,
+                     const wlanif_bss_description_t& wlanif_desc) {
+    (*basic).resize(0);
+    (*op).resize(0);
+
+    // TODO(eyw): Use WlanRate data structure when it is available.
+
+    constexpr uint8_t kBasicRateMask = 0b10000000;
+    constexpr uint8_t kHalfMbpsMask = 0b01111111;
+
+    for (uint8_t i = 0; i < wlanif_desc.num_supp_rates; ++i) {
+        uint8_t rate = wlanif_desc.supp_rates[i];
+        if ((rate & kBasicRateMask) > 0) { basic->push_back(rate & kHalfMbpsMask); }
+        op->push_back(rate & kHalfMbpsMask);
+    }
+
+    for (uint8_t i = 0; i < wlanif_desc.num_ext_supp_rates; ++i) {
+        uint8_t rate = wlanif_desc.ext_supp_rates[i];
+        if ((rate & kBasicRateMask) > 0) { basic->push_back(rate & kHalfMbpsMask); }
+        op->push_back(rate & kHalfMbpsMask);
+    }
+}
+
 void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
                            const wlanif_bss_description_t& wlanif_desc) {
     // bssid
@@ -208,6 +272,9 @@ void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
 
     // local_time
     fidl_desc->local_time = wlanif_desc.local_time;
+
+    // basic_rate_set and op_rate_set
+    ConvertRateSets(&fidl_desc->basic_rate_set, &fidl_desc->op_rate_set, wlanif_desc);
 
     // rsne
     ArrayToVector(&fidl_desc->rsn, wlanif_desc.rsne, wlanif_desc.rsne_len);

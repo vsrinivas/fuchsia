@@ -38,6 +38,10 @@ wlanif_bss_description_t scan_results[] = {
      .dtim_period = 1,
      .timestamp = 0,
      .local_time = 0,
+     .num_supp_rates = 8,
+     .supp_rates = {128 + 2, 128 + 4, 128 + 11, 128 + 22, 12, 18, 24, 36},
+     .num_ext_supp_rates = 4,
+     .ext_supp_rates = {48, 72, 96, 108},
      .rsne_len = 0,
      .chan = {.primary = 4, .cbw = CBW20, .secondary80 = 0}}};
 

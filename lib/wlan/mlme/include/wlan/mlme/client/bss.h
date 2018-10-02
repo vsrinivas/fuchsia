@@ -30,7 +30,7 @@ class Bss : public fbl::RefCounted<Bss> {
    public:
     Bss(const common::MacAddr& bssid) : bssid_(bssid) {
         supported_rates_.reserve(SupportedRatesElement::kMaxLen);
-        bss_desc_.ssid.resize(0); // Make sure SSID is not marked as null
+        bss_desc_.ssid.resize(0);  // Make sure SSID is not marked as null
     }
 
     zx_status_t ProcessBeacon(const Beacon& beacon, size_t len, const wlan_rx_info_t* rx_info);
@@ -95,5 +95,8 @@ bool ValidateBssDesc(const ::fuchsia::wlan::mlme::BSSDescription& bss_desc,
 wlan_channel_t DeriveChanFromBssDesc(const ::fuchsia::wlan::mlme::BSSDescription& bss_desc,
                                      uint8_t bcn_rx_chan_primary, bool has_dsss_param_set_chan,
                                      uint8_t dsss_param_set_chan = 0);
+void BuildMlmeRateSets(const std::vector<uint8_t>& supp_rates,
+                       const std::vector<uint8_t>& ext_supp_rates,
+                       ::fidl::VectorPtr<uint8_t>* basic, ::fidl::VectorPtr<uint8_t>* op);
 
 }  // namespace wlan

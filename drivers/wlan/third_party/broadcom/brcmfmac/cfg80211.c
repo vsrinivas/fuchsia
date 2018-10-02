@@ -58,7 +58,9 @@
 
 // IEEE Std. 802.11-2016, 9.4.2.1, Table 9-77
 #define WLAN_IE_TYPE_SSID 0
+#define WLAN_IE_TYPE_SUPP_RATES 1
 #define WLAN_IE_TYPE_RSNE 48
+#define WLAN_IE_TYPE_EXT_SUPP_RATES 50
 
 /* IEEE Std. 802.11-2016, 9.4.2.25.2, Table 9-131 */
 #define WPA_CIPHER_NONE      0  /* None */
@@ -2423,15 +2425,31 @@ done:
     return err;
 }
 
-static void brcmf_ies_extract_name(uint8_t* ie, size_t ie_len, wlanif_ssid_t* ssid) {
+static void brcmf_parse_ies(uint8_t* ie, size_t ie_len, wlanif_bss_description_t* bss) {
     size_t offset = 0;
     while (offset < ie_len) {
         uint8_t type = ie[offset];
         uint8_t length = ie[offset + 1];
-        if (type == WLAN_IE_TYPE_SSID) {
-            uint8_t ssid_len = min(length, sizeof(ssid->data));
-            memcpy(ssid->data, ie + offset + 2, ssid_len);
-            ssid->len = ssid_len;
+        switch (type) {
+        case WLAN_IE_TYPE_SSID: {
+            uint8_t ssid_len = min(length, sizeof(bss->ssid.data));
+            memcpy(bss->ssid.data, ie + offset + 2, ssid_len);
+            bss->ssid.len = ssid_len;
+            break;
+        }
+        case WLAN_IE_TYPE_SUPP_RATES: {
+            uint8_t num_supp_rates = min(length, WLAN_MAC_SUPPORTED_RATES_MAX_LEN);
+            memcpy(bss->supp_rates, ie + offset + 2, num_supp_rates);
+            bss->num_supp_rates = num_supp_rates;
+            break;
+        }
+        case WLAN_IE_TYPE_EXT_SUPP_RATES: {
+            uint8_t num_ext_supp_rates = min(length, WLAN_MAC_EXT_SUPPORTED_RATES_MAX_LEN);
+            memcpy(bss->ext_supp_rates, ie + offset + 2, num_ext_supp_rates);
+            bss->num_ext_supp_rates = num_ext_supp_rates;
+            break;
+        }
+        default:
             break;
         }
         offset += length + 2;
@@ -2517,7 +2535,7 @@ static void brcmf_return_scan_result(struct wiphy* wiphy, uint16_t channel, cons
     }
     result.txn_id = ndev->scan_txn_id;
     memcpy(result.bss.bssid, bssid, ETH_ALEN);
-    brcmf_ies_extract_name(ie, ie_len, &result.bss.ssid);
+    brcmf_parse_ies(ie, ie_len, &result.bss);
     brcmf_ies_extract_rsne(ie, ie_len, result.bss.rsne, &result.bss.rsne_len);
     result.bss.bss_type = WLAN_BSS_TYPE_ANY_BSS;
     result.bss.beacon_period = 0;

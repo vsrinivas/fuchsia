@@ -32,6 +32,8 @@ fn fake_bss_description(ssid: Ssid, rsn: Option<Vec<u8>>) -> fidl_mlme::BssDescr
             delayed_block_ack: false,
             immediate_block_ack: false,
         },
+        basic_rate_set: vec![],
+        op_rate_set: vec![],
         country: None,
         rsn,
 
