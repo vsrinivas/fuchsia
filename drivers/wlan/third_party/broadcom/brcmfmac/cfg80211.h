@@ -19,6 +19,7 @@
 
 #include <lib/sync/completion.h>
 #include <threads.h>
+#include <wlan/protocol/info.h>
 
 #include <zircon/listnode.h>
 
@@ -233,7 +234,7 @@ struct escan_info {
     struct wiphy* wiphy;
     struct brcmf_if* ifp;
     zx_status_t (*run)(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
-                       struct cfg80211_scan_request* request);
+                       wlanif_scan_req_t* request);
 };
 
 /**
@@ -320,7 +321,7 @@ struct brcmf_cfg80211_info {
     struct brcmf_cfg80211_conf* conf;
     struct brcmf_p2p_info p2p;
     struct brcmf_btcoex_info* btcoex;
-    struct cfg80211_scan_request* scan_request;
+    wlanif_scan_req_t* scan_request;
     mtx_t usr_sync;
     struct wl_cfg80211_bss_info* bss_info;
     struct brcmf_cfg80211_connect_info conn_info;
@@ -434,7 +435,7 @@ void brcmf_free_vif(struct brcmf_cfg80211_vif* vif);
 zx_status_t brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, int32_t pktflag,
                                   const uint8_t* vndr_ie_buf, uint32_t vndr_ie_len);
 zx_status_t brcmf_vif_clear_mgmt_ies(struct brcmf_cfg80211_vif* vif);
-uint16_t channel_to_chanspec(struct brcmu_d11inf* d11inf, struct ieee80211_channel* ch);
+uint16_t channel_to_chanspec(struct brcmu_d11inf* d11inf, wlan_channel_t* ch);
 bool brcmf_get_vif_state_any(struct brcmf_cfg80211_info* cfg, unsigned long state);
 void brcmf_cfg80211_arm_vif_event(struct brcmf_cfg80211_info* cfg, struct brcmf_cfg80211_vif* vif,
                                   uint8_t pending_action);

@@ -174,6 +174,8 @@ struct brcmf_firmware {
 struct net_device {
     struct wireless_dev* ieee80211_ptr;
     bool initialized_for_ap;
+    bool scan_busy;
+    uint64_t scan_txn_id;
     wlanif_impl_ifc_t* if_callbacks;
     void* if_callback_cookie;
     uint8_t dev_addr[ETH_ALEN];

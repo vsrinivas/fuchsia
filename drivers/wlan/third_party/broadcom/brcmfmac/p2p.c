@@ -729,7 +729,8 @@ exit:
  * validates the channels in the request.
  */
 static zx_status_t brcmf_p2p_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
-                                       struct cfg80211_scan_request* request) {
+                                       wlanif_scan_req_t* request) {
+#if 0
     struct brcmf_p2p_info* p2p = &cfg->p2p;
     zx_status_t err = ZX_OK;
     int32_t search_state = WL_P2P_DISC_ST_SCAN;
@@ -793,6 +794,8 @@ exit:
         brcmf_err("error (%d)\n", err);
     }
     return err;
+#endif
+return ZX_ERR_NOT_SUPPORTED;
 }
 
 /**

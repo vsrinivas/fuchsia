@@ -527,8 +527,6 @@ struct wiphy {
     int max_sched_scan_ie_len;
     int max_match_sets;
     int max_sched_scan_ssids;
-    bool scan_busy;
-    uint64_t scan_txn_id;
     uint32_t rts_threshold;
     uint32_t frag_threshold;
     uint32_t retry_long;
