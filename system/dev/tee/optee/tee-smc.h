@@ -63,7 +63,7 @@
                   "result_type must be the same size of zx_smc_result_t");                    \
     __CHECK_SMC_RESULT_OFFSETS_ARG_##num_members(result_type, __VA_ARGS__)
 
-namespace tee {
+namespace tee_smc {
 
 enum CallType : uint8_t {
     kYieldingCall = 0,
@@ -186,4 +186,4 @@ DEFINE_SMC_RESULT_STRUCT(TrustedOsCallRevisionResult, 2,
                          uint32_t, major,
                          uint32_t, minor);
 
-} // namespace tee
+} // namespace tee_smc

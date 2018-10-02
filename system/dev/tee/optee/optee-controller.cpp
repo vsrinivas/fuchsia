@@ -19,14 +19,14 @@
 
 namespace optee {
 
-static bool IsOpteeApi(const tee::TrustedOsCallUidResult& returned_uid) {
+static bool IsOpteeApi(const tee_smc::TrustedOsCallUidResult& returned_uid) {
     return returned_uid.uid_0_3 == kOpteeApiUid_0 &&
            returned_uid.uid_4_7 == kOpteeApiUid_1 &&
            returned_uid.uid_8_11 == kOpteeApiUid_2 &&
            returned_uid.uid_12_15 == kOpteeApiUid_3;
 }
 
-static bool IsOpteeApiRevisionSupported(const tee::TrustedOsCallRevisionResult& returned_rev) {
+static bool IsOpteeApiRevisionSupported(const tee_smc::TrustedOsCallRevisionResult& returned_rev) {
     // The cast is unfortunately necessary to mute a compiler warning about an unsigned expression
     // always being greater than 0.
     ZX_DEBUG_ASSERT(returned_rev.minor <= fbl::numeric_limits<int32_t>::max());
@@ -35,11 +35,11 @@ static bool IsOpteeApiRevisionSupported(const tee::TrustedOsCallRevisionResult& 
 }
 
 zx_status_t OpteeController::ValidateApiUid() const {
-    static const zx_smc_parameters_t kGetApiFuncCall = tee::CreateSmcFunctionCall(
-        tee::kTrustedOsCallUidFuncId);
+    static const zx_smc_parameters_t kGetApiFuncCall = tee_smc::CreateSmcFunctionCall(
+        tee_smc::kTrustedOsCallUidFuncId);
     union {
         zx_smc_result_t raw;
-        tee::TrustedOsCallUidResult uid;
+        tee_smc::TrustedOsCallUidResult uid;
     } result;
     zx_status_t status = zx_smc_call(secure_monitor_, &kGetApiFuncCall, &result.raw);
 
@@ -49,11 +49,11 @@ zx_status_t OpteeController::ValidateApiUid() const {
 }
 
 zx_status_t OpteeController::ValidateApiRevision() const {
-    static const zx_smc_parameters_t kGetApiRevisionFuncCall = tee::CreateSmcFunctionCall(
-        tee::kTrustedOsCallRevisionFuncId);
+    static const zx_smc_parameters_t kGetApiRevisionFuncCall = tee_smc::CreateSmcFunctionCall(
+        tee_smc::kTrustedOsCallRevisionFuncId);
     union {
         zx_smc_result_t raw;
-        tee::TrustedOsCallRevisionResult revision;
+        tee_smc::TrustedOsCallRevisionResult revision;
     } result;
     zx_status_t status = zx_smc_call(secure_monitor_, &kGetApiRevisionFuncCall, &result.raw);
 
@@ -63,7 +63,7 @@ zx_status_t OpteeController::ValidateApiRevision() const {
 }
 
 zx_status_t OpteeController::GetOsRevision() {
-    static const zx_smc_parameters_t kGetOsRevisionFuncCall = tee::CreateSmcFunctionCall(
+    static const zx_smc_parameters_t kGetOsRevisionFuncCall = tee_smc::CreateSmcFunctionCall(
         kGetOsRevisionFuncId);
     union {
         zx_smc_result_t raw;
@@ -87,8 +87,8 @@ zx_status_t OpteeController::ExchangeCapabilities() {
         nonsecure_world_capabilities |= kNonSecureCapUniprocessor;
     }
 
-    const zx_smc_parameters_t func_call = tee::CreateSmcFunctionCall(kExchangeCapabilitiesFuncId,
-                                                                     nonsecure_world_capabilities);
+    const zx_smc_parameters_t func_call =
+        tee_smc::CreateSmcFunctionCall(kExchangeCapabilitiesFuncId, nonsecure_world_capabilities);
     union {
         zx_smc_result_t raw;
         ExchangeCapabilitiesResult response;
@@ -154,7 +154,7 @@ zx_status_t OpteeController::InitializeSharedMemory() {
 zx_status_t OpteeController::DiscoverSharedMemoryConfig(zx_paddr_t* out_start_addr,
                                                         size_t* out_size) {
 
-    static const zx_smc_parameters_t func_call = tee::CreateSmcFunctionCall(
+    static const zx_smc_parameters_t func_call = tee_smc::CreateSmcFunctionCall(
         kGetSharedMemConfigFuncId);
 
     union {
@@ -299,12 +299,12 @@ void OpteeController::RemoveClient(OpteeClient* client) {
 
 uint32_t OpteeController::CallWithMessage(const Message& message,
                                           RpcHandler rpc_handler) {
-    uint32_t return_value = tee::kSmc32ReturnUnknownFunction;
+    uint32_t return_value = tee_smc::kSmc32ReturnUnknownFunction;
     union {
         zx_smc_parameters_t params;
         RpcFunctionResult rpc_result;
     } func_call;
-    func_call.params = tee::CreateSmcFunctionCall(
+    func_call.params = tee_smc::CreateSmcFunctionCall(
         optee::kCallWithArgFuncId,
         static_cast<uint32_t>(message.paddr() >> 32),
         static_cast<uint32_t>(message.paddr()));

@@ -115,7 +115,7 @@ constexpr uint32_t kReturnRpcFunctionMask = 0x0000FFFF;
 // must be taken to ensure that we don't misidentify an SMC Unknown Function return code as an RPC
 // return code, as the bits do overlap.
 static constexpr bool IsReturnRpc(uint32_t return_code) {
-    return (return_code != tee::kSmc32ReturnUnknownFunction) &&
+    return (return_code != tee_smc::kSmc32ReturnUnknownFunction) &&
            ((return_code & kReturnRpcPrefixMask) == kReturnRpcPrefix);
 }
 
@@ -134,17 +134,17 @@ static constexpr uint32_t GetRpcFunctionCode(uint32_t return_code) {
 // calling convention is always SMC32 and obviously it's always accessing the Trusted OS Service.
 // These wrapper functions eliminate the need to specify those each time.
 static constexpr uint32_t CreateFastOpteeFuncId(uint16_t func_num) {
-    return tee::CreateFunctionId(tee::kFastCall,
-                                 tee::kSmc32CallConv,
-                                 tee::kTrustedOsService,
-                                 func_num);
+    return tee_smc::CreateFunctionId(tee_smc::kFastCall,
+                                     tee_smc::kSmc32CallConv,
+                                     tee_smc::kTrustedOsService,
+                                     func_num);
 }
 
 static constexpr uint32_t CreateYieldOpteeFuncId(uint16_t func_num) {
-    return tee::CreateFunctionId(tee::kYieldingCall,
-                                 tee::kSmc32CallConv,
-                                 tee::kTrustedOsService,
-                                 func_num);
+    return tee_smc::CreateFunctionId(tee_smc::kYieldingCall,
+                                     tee_smc::kSmc32CallConv,
+                                     tee_smc::kTrustedOsService,
+                                     func_num);
 }
 
 //
