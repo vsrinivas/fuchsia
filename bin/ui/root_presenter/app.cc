@@ -31,6 +31,9 @@ App::App(const fxl::CommandLine& command_line)
       presenter2_bindings_.GetHandler(this));
   startup_context_->outgoing().AddPublicService(
       input_receiver_bindings_.GetHandler(this));
+
+  HACK_legacy_input_path_ =
+      command_line.GetOptionValueWithDefault("input_path", "old") != "new";
 }
 
 App::~App() {}
@@ -95,11 +98,14 @@ void App::Present(fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
   }
 
   auto presentation = std::make_unique<Presentation1>(
-      view_manager_.get(), scenic_.get(), session_.get(), renderer_params_,
-      display_startup_rotation_adjustment, startup_context_.get());
+      view_manager_.get(), scenic_.get(), session_.get(), compositor_->id(),
+      renderer_params_, display_startup_rotation_adjustment,
+      startup_context_.get());
   presentation->Present(view_owner_handle.Bind(),
                         std::move(presentation_request), GetYieldCallback(),
                         GetShutdownCallback(presentation.get()));
+
+  presentation->HACK_SetInputPath(HACK_legacy_input_path_);
 
   AddPresentation(std::move(presentation));
 }
@@ -166,6 +172,18 @@ void App::HACK_SetRendererParams(
   }
   for (const auto& presentation : presentations_) {
     presentation->OverrideRendererParams(renderer_params_);
+  }
+}
+
+void App::HACK_SetInputPath(bool use_legacy) {
+  for (const auto& presentation : presentations_) {
+    presentation->HACK_SetInputPath(use_legacy);
+  }
+}
+
+void App::HACK_QueryInputPath(HACK_QueryInputPathCallback callback) {
+  for (const auto& presentation : presentations_) {
+    presentation->HACK_QueryInputPath(std::move(callback));
   }
 }
 

@@ -8,6 +8,7 @@
 #include "fuchsia/ui/policy/cpp/fidl.h"
 #include "garnet/bin/developer/tiles/tiles.h"
 #include "lib/fxl/command_line.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 
 void Usage() {
@@ -19,7 +20,8 @@ void Usage() {
       "fuchsia.developer.tiles.Tiles FIDL API exposed by this program\n"
       "\n"
       "Options:\n"
-      "  --border=<integer>  Border (in pixels) around each tile\n");
+      "  --border=<integer>  Border (in pixels) around each tile\n"
+      "  --input_path=[old|new]\n");
 }
 
 int main(int argc, const char** argv) {
@@ -42,6 +44,15 @@ int main(int argc, const char** argv) {
   auto border_arg = command_line.GetOptionValueWithDefault("border", "10");
   int border = fxl::StringToNumber<int>(border_arg);
 
+  bool input_path = true;
+  {
+    auto input_path_arg =
+        command_line.GetOptionValueWithDefault("input_path", "old");
+    input_path = input_path_arg != "new";
+    FXL_LOG(INFO) << "Tiles requesting input delivery by: "
+                  << (input_path ? "ViewManager" : "Scenic");
+  }
+
   // Create tiles with a token for its root view.
   fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner;
   tiles::Tiles tiles(std::move(view_manager), view_owner.NewRequest(),
@@ -54,6 +65,7 @@ int main(int argc, const char** argv) {
       startup_context
           ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
   presenter->Present(std::move(view_owner), nullptr);
+  presenter->HACK_SetInputPath(input_path);
 
   loop.Run();
   return 0;

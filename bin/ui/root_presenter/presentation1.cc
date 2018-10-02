@@ -49,12 +49,14 @@ constexpr float kCursorElevation = 800;
 Presentation1::Presentation1(::fuchsia::ui::viewsv1::ViewManager* view_manager,
                              fuchsia::ui::scenic::Scenic* scenic,
                              scenic::Session* session,
+                             scenic::ResourceId compositor_id,
                              RendererParams renderer_params,
                              int32_t display_startup_rotation_adjustment,
                              component::StartupContext* startup_context)
     : view_manager_(view_manager),
       scenic_(scenic),
       session_(session),
+      compositor_id_(compositor_id),
       layer_(session_),
       renderer_(session_),
       scene_(session_),
@@ -75,7 +77,9 @@ Presentation1::Presentation1(::fuchsia::ui::viewsv1::ViewManager* view_manager,
       view_container_listener_binding_(this),
       view_listener_binding_(this),
       startup_context_(startup_context),
+      HACK_legacy_input_path_(true),
       weak_factory_(this) {
+  FXL_DCHECK(compositor_id != 0);
   renderer_.SetCamera(camera_);
   layer_.SetRenderer(renderer_);
   scene_.AddChild(root_view_host_node_);
@@ -728,7 +732,23 @@ void Presentation1::OnEvent(fuchsia::ui::input::InputEvent event) {
   }
 
   if (dispatch_event && input_dispatcher_) {
-    input_dispatcher_->DispatchEvent(std::move(event));
+    if (HACK_legacy_input_path_) {
+      input_dispatcher_->DispatchEvent(std::move(event));
+    } else {
+      fuchsia::ui::input::Command input_cmd;
+      if (event.is_pointer()) {
+        fuchsia::ui::input::SendPointerInputCmd pointer_cmd;
+        pointer_cmd.pointer_event = std::move(event.pointer());
+        pointer_cmd.compositor_id = compositor_id_;
+        input_cmd.set_send_pointer_input(std::move(pointer_cmd));
+      } else if (event.is_keyboard()) {
+        fuchsia::ui::input::SendKeyboardInputCmd keyboard_cmd;
+        keyboard_cmd.keyboard_event = std::move(event.keyboard());
+        keyboard_cmd.compositor_id = compositor_id_;
+        input_cmd.set_send_keyboard_input(std::move(keyboard_cmd));
+      }
+      session_->Enqueue(std::move(input_cmd));
+    }
   }
 }
 
