@@ -100,6 +100,13 @@ package("view_manager") {
   ]
 
   binary = "view_manager"
+
+  meta = [
+    {
+      path = rebase_path("view_manager/meta/view_manager.cmx")
+      dest = "view_manager.cmx"
+    },
+  ]
 }
 
 package("scenic") {
