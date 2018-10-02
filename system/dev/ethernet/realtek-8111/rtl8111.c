@@ -9,6 +9,7 @@
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/pci.h>
+#include <hw/reg.h>
 
 #include <zircon/types.h>
 
@@ -19,14 +20,12 @@
 
 #include "rtl8111.h"
 
-#define REG(addr, size) ((volatile uint##size##_t*)(uintptr_t)(addr))
-
-#define writel(a, v) (*REG(edev->iobase + (a), 32) = (v))
-#define readl(a) (*REG(edev->iobase + (a), 32))
-#define writew(a, v) (*REG(edev->iobase + (a), 16) = (v))
-#define readw(a) (*REG(edev->iobase + (a), 16))
-#define writeb(a, v) (*REG(edev->iobase + (a), 8) = (v))
-#define readb(a) (*REG(edev->iobase + (a), 8))
+#define WRITE32(a, v)  writel(v, edev->mmio.vaddr + (a))
+#define READ32(a)      readl(edev->mmio.vaddr + (a))
+#define WRITE16(a, v)  writew(v, edev->mmio.vaddr + (a))
+#define READ16(a)      readw(edev->mmio.vaddr + (a))
+#define WRITE8(a, v)   writeb(v, edev->mmio.vaddr + (a))
+#define READ8(a)       readb(edev->mmio.vaddr + (a))
 
 #define HI32(val) (((val) >> 32) & 0xffffffff)
 #define LO32(val) ((val) & 0xffffffff)
@@ -44,11 +43,10 @@ typedef struct ethernet_device {
     cnd_t tx_cond;
     pci_protocol_t pci;
     zx_handle_t irqh;
-    zx_handle_t ioh;
+    mmio_buffer_t mmio;
     thrd_t irq_thread;
     zx_handle_t btih;
     io_buffer_t buffer;
-    uintptr_t iobase;
 
     eth_desc_t* txd_ring;
     uint64_t txd_phys_addr;
@@ -100,52 +98,52 @@ static void rtl8111_init_regs(ethernet_device_t* edev) {
     zxlogf(TRACE, "rtl8111: Initializing registers\n");
 
     // C+CR needs to be configured first - enable rx VLAN detagging and checksum offload
-    writew(RTL_CPLUSCR, readw(RTL_CPLUSCR) | RTL_CPLUSCR_RXVLAN | RTL_CPLUSCR_RXCHKSUM);
+    WRITE16(RTL_CPLUSCR, READ16(RTL_CPLUSCR) | RTL_CPLUSCR_RXVLAN | RTL_CPLUSCR_RXCHKSUM);
 
     // Reset the controller and wait for the operation to finish
-    writeb(RTL_CR, readb(RTL_CR) | RTL_CR_RST);
-    while (readb(RTL_CR) & RTL_CR_RST) {
+    WRITE8(RTL_CR, READ8(RTL_CR) | RTL_CR_RST);
+    while (READ8(RTL_CR) & RTL_CR_RST) {
         zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
     }
 
     // Unlock the configuration registers
-    writeb(RTL_9436CR, (readb(RTL_9436CR) & RTL_9436CR_EEM_MASK) | RTL_9436CR_EEM_UNLOCK);
+    WRITE8(RTL_9436CR, (READ8(RTL_9436CR) & RTL_9436CR_EEM_MASK) | RTL_9436CR_EEM_UNLOCK);
 
     // Set the tx and rx maximum packet size
-    writeb(RTL_MTPS, (readb(RTL_MTPS) & RTL_MTPS_MTPS_MASK) | ROUNDUP(ETH_BUF_SIZE, 128) / 128);
-    writew(RTL_RMS, (readw(RTL_RMS) & RTL_RMS_RMS_MASK) | ETH_BUF_SIZE);
+    WRITE8(RTL_MTPS, (READ8(RTL_MTPS) & RTL_MTPS_MTPS_MASK) | ROUNDUP(ETH_BUF_SIZE, 128) / 128);
+    WRITE16(RTL_RMS, (READ16(RTL_RMS) & RTL_RMS_RMS_MASK) | ETH_BUF_SIZE);
 
     // Set the rx/tx descriptor ring addresses
-    writel(RTL_RDSAR_LOW, LO32(edev->rxd_phys_addr));
-    writel(RTL_RDSAR_HIGH, HI32(edev->rxd_phys_addr));
-    writel(RTL_TNPDS_LOW, LO32(edev->txd_phys_addr));
-    writel(RTL_TNPDS_HIGH, HI32(edev->txd_phys_addr));
+    WRITE32(RTL_RDSAR_LOW, LO32(edev->rxd_phys_addr));
+    WRITE32(RTL_RDSAR_HIGH, HI32(edev->rxd_phys_addr));
+    WRITE32(RTL_TNPDS_LOW, LO32(edev->txd_phys_addr));
+    WRITE32(RTL_TNPDS_HIGH, HI32(edev->txd_phys_addr));
 
     // Set the interframe gap and max DMA burst size in the tx config register
-    uint32_t tcr = readl(RTL_TCR) & ~(RTL_TCR_IFG_MASK | RTL_TCR_MXDMA_MASK);
-    writel(RTL_TCR, tcr | RTL_TCR_IFG96 | RTL_TCR_MXDMA_UNLIMITED);
+    uint32_t tcr = READ32(RTL_TCR) & ~(RTL_TCR_IFG_MASK | RTL_TCR_MXDMA_MASK);
+    WRITE32(RTL_TCR, tcr | RTL_TCR_IFG96 | RTL_TCR_MXDMA_UNLIMITED);
 
     // Disable interrupts except link change and rx-ok and then clear all interrupts
-    writew(RTL_IMR, (readw(RTL_IMR) & ~RTL_INT_MASK) | RTL_INT_LINKCHG | RTL_INT_ROK);
-    writew(RTL_ISR, 0xffff);
+    WRITE16(RTL_IMR, (READ16(RTL_IMR) & ~RTL_INT_MASK) | RTL_INT_LINKCHG | RTL_INT_ROK);
+    WRITE16(RTL_ISR, 0xffff);
 
     // Lock the configuration registers and enable rx/tx
-    writeb(RTL_9436CR, (readb(RTL_9436CR) & RTL_9436CR_EEM_MASK) | RTL_9436CR_EEM_LOCK);
-    writeb(RTL_CR, readb(RTL_CR) | RTL_CR_RE | RTL_CR_TE);
+    WRITE8(RTL_9436CR, (READ8(RTL_9436CR) & RTL_9436CR_EEM_MASK) | RTL_9436CR_EEM_LOCK);
+    WRITE8(RTL_CR, READ8(RTL_CR) | RTL_CR_RE | RTL_CR_TE);
 
     // Configure the max dma burst, what types of packets we accept, and the multicast filter
-    uint32_t rcr = readl(RTL_RCR) & ~(RTL_RCR_MXDMA_MASK | RTL_RCR_ACCEPT_MASK);
-    writel(RTL_RCR, rcr | RTL_RCR_MXDMA_UNLIMITED | RTL_RCR_AB | RTL_RCR_AM | RTL_RCR_APM);
-    writel(RTL_MAR7, 0xffffffff); // Accept all multicasts
-    writel(RTL_MAR3, 0xffffffff);
+    uint32_t rcr = READ32(RTL_RCR) & ~(RTL_RCR_MXDMA_MASK | RTL_RCR_ACCEPT_MASK);
+    WRITE32(RTL_RCR, rcr | RTL_RCR_MXDMA_UNLIMITED | RTL_RCR_AB | RTL_RCR_AM | RTL_RCR_APM);
+    WRITE32(RTL_MAR7, 0xffffffff); // Accept all multicasts
+    WRITE32(RTL_MAR3, 0xffffffff);
 
     // Read the MAC and link status
-    uint32_t n = readl(RTL_MAC0);
+    uint32_t n = READ32(RTL_MAC0);
     memcpy(edev->mac, &n, 4);
-    n = readl(RTL_MAC1);
+    n = READ32(RTL_MAC1);
     memcpy(edev->mac + 4, &n, 2);
 
-    edev->online = readb(RTL_PHYSTATUS) & RTL_PHYSTATUS_LINKSTS;
+    edev->online = READ8(RTL_PHYSTATUS) & RTL_PHYSTATUS_LINKSTS;
 
     zxlogf(INFO, "rtl111: mac address=%02x:%02x:%02x:%02x:%02x:%02x, link %s\n",
             edev->mac[0], edev->mac[1], edev->mac[2],
@@ -165,10 +163,10 @@ static int irq_thread(void* arg) {
 
         mtx_lock(&edev->lock);
 
-        uint16_t isr = readw(RTL_ISR);
+        uint16_t isr = READ16(RTL_ISR);
         if (isr & RTL_INT_LINKCHG) {
             bool was_online = edev->online;
-            bool online = readb(RTL_PHYSTATUS) & RTL_PHYSTATUS_LINKSTS;
+            bool online = READ8(RTL_PHYSTATUS) & RTL_PHYSTATUS_LINKSTS;
             if (online != was_online) {
                 zxlogf(INFO, "rtl8111: link %s\n", online ? "online" : "offline");
                 edev->online = online;
@@ -198,7 +196,7 @@ static int irq_thread(void* arg) {
             }
         }
 
-        writew(RTL_ISR, 0xffff);
+        WRITE16(RTL_ISR, 0xffff);
 
         mtx_unlock(&edev->lock);
     }
@@ -255,15 +253,15 @@ static zx_status_t rtl8111_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
 
     if (edev->txd_ring[edev->txd_idx].status1 & TX_DESC_OWN) {
         mtx_lock(&edev->lock);
-        writew(RTL_IMR, readw(RTL_IMR) | RTL_INT_TOK);
-        writew(RTL_ISR, RTL_INT_TOK);
+        WRITE16(RTL_IMR, READ16(RTL_IMR) | RTL_INT_TOK);
+        WRITE16(RTL_ISR, RTL_INT_TOK);
 
         while (edev->txd_ring[edev->txd_idx].status1 & TX_DESC_OWN) {
             zxlogf(TRACE, "rtl8111: Waiting for buffer\n");
             cnd_wait(&edev->tx_cond, &edev->lock);
         }
 
-        writew(RTL_IMR, readw(RTL_IMR) & ~RTL_INT_TOK);
+        WRITE16(RTL_IMR, READ16(RTL_IMR) & ~RTL_INT_TOK);
         mtx_unlock(&edev->lock);
     }
 
@@ -273,7 +271,7 @@ static zx_status_t rtl8111_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
     edev->txd_ring[edev->txd_idx].status1 =
         (is_end ? TX_DESC_EOR : 0) | length | TX_DESC_OWN | TX_DESC_FS | TX_DESC_LS;
 
-    writeb(RTL_TPPOLL, readb(RTL_TPPOLL) | RTL_TPPOLL_NPQ);
+    WRITE8(RTL_TPPOLL, READ8(RTL_TPPOLL) | RTL_TPPOLL_NPQ);
 
     edev->txd_idx = (edev->txd_idx + 1) % ETH_BUF_COUNT;
 
@@ -283,9 +281,9 @@ static zx_status_t rtl8111_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
 
 static zx_status_t rtl8111_set_promisc(ethernet_device_t* edev, bool on) {
     if (on) {
-        writew(RTL_RCR, readw(RTL_RCR | RTL_RCR_AAP));
+        WRITE16(RTL_RCR, READ16(RTL_RCR | RTL_RCR_AAP));
     } else {
-        writew(RTL_RCR, readw(RTL_RCR & ~RTL_RCR_AAP));
+        WRITE16(RTL_RCR, READ16(RTL_RCR & ~RTL_RCR_AAP));
     }
 
     return ZX_OK;
@@ -320,13 +318,13 @@ static ethmac_protocol_ops_t ethmac_ops = {
 static void rtl8111_release(void* ctx) {
     ethernet_device_t* edev = ctx;
 
-    writeb(RTL_CR, readb(RTL_CR) | RTL_CR_RST);
+    WRITE8(RTL_CR, READ8(RTL_CR) | RTL_CR_RST);
     pci_enable_bus_master(&edev->pci, false);
 
     zx_handle_close(edev->irqh);
     thrd_join(edev->irq_thread, NULL);
 
-    zx_handle_close(edev->ioh);
+    mmio_buffer_release(&edev->mmio);
 
     io_buffer_release(&edev->buffer);
     zx_handle_close(edev->btih);
@@ -375,15 +373,11 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
         goto fail;
     }
 
-    uint64_t sz;
-    void* io;
-    r = pci_map_bar(
-        &edev->pci, 2u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz, &edev->ioh);
+    r = pci_map_bar_buffer(&edev->pci, 2u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &edev->mmio);
     if (r != ZX_OK) {
         zxlogf(ERROR, "rtl8111: cannot map io %d\n", r);
         goto fail;
     }
-    edev->iobase = (uintptr_t)io;
 
     if ((r = pci_enable_bus_master(&edev->pci, true)) != ZX_OK) {
         zxlogf(ERROR, "rtl8111: cannot enable bus master %d\n", r);
@@ -395,7 +389,7 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
         goto fail;
     }
 
-    uint32_t mac_version = readl(RTL_TCR) & 0x7cf00000;
+    uint32_t mac_version = READ32(RTL_TCR) & 0x7cf00000;
     zxlogf(TRACE, "rtl8111: version 0x%08x\n", mac_version);
 
     // TODO(stevensd): Don't require a contiguous buffer
@@ -436,14 +430,12 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
 
 fail:
     io_buffer_release(&edev->buffer);
+    mmio_buffer_release(&edev->mmio);
     if (edev->btih) {
         zx_handle_close(edev->btih);
     }
     if (edev->irqh) {
         zx_handle_close(edev->irqh);
-    }
-    if (edev->ioh) {
-        zx_handle_close(edev->ioh);
     }
     free(edev);
     return r != ZX_OK ? r : ZX_ERR_INTERNAL;
