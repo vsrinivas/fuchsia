@@ -30,9 +30,6 @@ class MockModuleSymbols : public ModuleSymbols {
       const ResolveOptions& options) const override;
   LineDetails LineDetailsForAddress(const SymbolContext& symbol_context,
                                     uint64_t address) const override;
-  std::vector<uint64_t> AddressesForFunction(
-      const SymbolContext& symbol_context,
-      const std::string& name) const override;
   std::vector<std::string> FindFileMatches(
       const std::string& name) const override;
 

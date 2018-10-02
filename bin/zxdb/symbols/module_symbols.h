@@ -71,6 +71,13 @@ class ModuleSymbols {
   // If the file wasn't found or contains no code, it will return an empty
   // vector. If the file exists and contains code, it will always return
   // *something*.
+  //
+  // SYMBOL LOOKUP
+  // -------------
+  // Returns the addresses for the given function name. The function name must
+  // be an exact match. The addresses will indicate the start of the function.
+  // Since a function implementation can be duplicated more than once, there
+  // can be multiple results.
   virtual std::vector<Location> ResolveInputLocation(
       const SymbolContext& symbol_context, const InputLocation& input_location,
       const ResolveOptions& options = ResolveOptions()) const = 0;
@@ -91,15 +98,6 @@ class ModuleSymbols {
   // The SymbolContext will be used to interpret the absolute input address.
   virtual LineDetails LineDetailsForAddress(
       const SymbolContext& symbol_context, uint64_t absolute_address) const = 0;
-
-  // Returns the addresses for the given function name. The function name must
-  // be an exact match. The addresses will indicate the start of the function.
-  // Since a function implementation can be duplicated more than once, there
-  // can be multiple results.
-  //
-  // The SymbolContext will be used to generate the absolute output addresses.
-  virtual std::vector<uint64_t> AddressesForFunction(
-      const SymbolContext& symbol_context, const std::string& name) const = 0;
 
   // Returns a vector of full file names that match the input.
   //

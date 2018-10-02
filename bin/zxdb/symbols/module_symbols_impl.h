@@ -57,9 +57,6 @@ class ModuleSymbolsImpl : public ModuleSymbols {
       const ResolveOptions& options = ResolveOptions()) const override;
   LineDetails LineDetailsForAddress(const SymbolContext& symbol_context,
                                     uint64_t absolute_address) const override;
-  std::vector<uint64_t> AddressesForFunction(
-      const SymbolContext& symbol_context,
-      const std::string& name) const override;
   std::vector<std::string> FindFileMatches(
       const std::string& name) const override;
 

@@ -45,13 +45,6 @@ class ProcessSymbols {
   // with the same line as the given address.
   virtual LineDetails LineDetailsForAddress(uint64_t address) const = 0;
 
-  // Returns a vector of addresses correponding to the beginning of the
-  // implementation of a given function. Normally this will result in 0 (no
-  // match found) or 1 (normal function implementation), but can be more than
-  // one if the function is inlined in multiple places.
-  virtual std::vector<uint64_t> AddressesForFunction(
-      const std::string& name) const = 0;
-
   // Returns true if the code location is inside a module where there are
   // symbols loaded. If we did something like index ELF exports, those wouldn't
   // count. "Symbols loaded" here means there is real DWARF debugging

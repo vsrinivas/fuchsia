@@ -36,11 +36,6 @@ LineDetails MockProcessSymbols::LineDetailsForAddress(uint64_t address) const {
   return LineDetails();
 }
 
-std::vector<uint64_t> MockProcessSymbols::AddressesForFunction(
-    const std::string& name) const {
-  return std::vector<uint64_t>();
-}
-
 bool MockProcessSymbols::HaveSymbolsLoadedForModuleAt(uint64_t address) const {
   return false;
 }

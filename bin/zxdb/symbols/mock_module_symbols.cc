@@ -65,14 +65,6 @@ LineDetails MockModuleSymbols::LineDetailsForAddress(
   return found->second;
 }
 
-std::vector<uint64_t> MockModuleSymbols::AddressesForFunction(
-    const SymbolContext& symbol_context, const std::string& name) const {
-  auto found = symbols_.find(name);
-  if (found == symbols_.end())
-    return std::vector<uint64_t>();
-  return found->second;
-}
-
 std::vector<std::string> MockModuleSymbols::FindFileMatches(
     const std::string& name) const {
   return std::vector<std::string>();

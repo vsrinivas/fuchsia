@@ -298,30 +298,6 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(
   return result;
 }
 
-std::vector<uint64_t> ModuleSymbolsImpl::AddressesForFunction(
-    const SymbolContext& symbol_context, const std::string& name) const {
-  const std::vector<ModuleSymbolIndexNode::DieRef>& entries =
-      index_.FindFunctionExact(name);
-
-  std::vector<uint64_t> result;
-  for (const auto& cur : entries) {
-    llvm::DWARFDie die = cur.ToDie(context_.get());
-
-    auto ranges_or_error = die.getAddressRanges();
-    if (!ranges_or_error)
-      continue;
-
-    // Get the minimum address associated with this DIE.
-    auto min_iter = std::min_element(
-        ranges_or_error.get().begin(), ranges_or_error.get().end(),
-        [](const llvm::DWARFAddressRange& a, const llvm::DWARFAddressRange& b) {
-          return a.LowPC < b.LowPC;
-        });
-    result.push_back(symbol_context.RelativeToAbsolute(min_iter->LowPC));
-  }
-  return result;
-}
-
 std::vector<std::string> ModuleSymbolsImpl::FindFileMatches(
     const std::string& name) const {
   return index_.FindFileMatches(name);
@@ -347,15 +323,29 @@ std::vector<Location> ModuleSymbolsImpl::ResolveLineInputLocation(
 std::vector<Location> ModuleSymbolsImpl::ResolveFunctionInputLocation(
     const SymbolContext& symbol_context, const InputLocation& input_location,
     const ResolveOptions& options) const {
-  // TODO(brettw) remove AddressesForFunction() and move that code here
-  // instead.
+  const std::vector<ModuleSymbolIndexNode::DieRef>& entries =
+      index_.FindFunctionExact(input_location.symbol);
+
   std::vector<Location> result;
-  for (uint64_t address :
-       AddressesForFunction(symbol_context, input_location.symbol)) {
+  for (const auto& cur : entries) {
+    llvm::DWARFDie die = cur.ToDie(context_.get());
+
+    auto ranges_or_error = die.getAddressRanges();
+    if (!ranges_or_error)
+      continue;
+
+    // Get the minimum address associated with this DIE.
+    auto min_iter = std::min_element(
+        ranges_or_error.get().begin(), ranges_or_error.get().end(),
+        [](const llvm::DWARFAddressRange& a, const llvm::DWARFAddressRange& b) {
+          return a.LowPC < b.LowPC;
+        });
+
+    uint64_t abs_addr = symbol_context.RelativeToAbsolute(min_iter->LowPC);
     if (options.symbolize)
-      result.push_back(LocationForAddress(symbol_context, address));
+      result.push_back(LocationForAddress(symbol_context, abs_addr));
     else
-      result.emplace_back(Location::State::kAddress, address);
+      result.emplace_back(Location::State::kAddress, abs_addr);
   }
   return result;
 }

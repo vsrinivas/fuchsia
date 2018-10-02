@@ -55,8 +55,6 @@ class ProcessSymbolsImpl : public ProcessSymbols {
       const InputLocation& input_location,
       const ResolveOptions& options) const override;
   LineDetails LineDetailsForAddress(uint64_t address) const override;
-  std::vector<uint64_t> AddressesForFunction(
-      const std::string& name) const override;
   bool HaveSymbolsLoadedForModuleAt(uint64_t address) const override;
 
  private:

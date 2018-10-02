@@ -161,21 +161,6 @@ LineDetails ProcessSymbolsImpl::LineDetailsForAddress(uint64_t address) const {
       info->symbols->symbol_context(), address);
 }
 
-std::vector<uint64_t> ProcessSymbolsImpl::AddressesForFunction(
-    const std::string& name) const {
-  // Replace callers with ResolveInputLocation() and remove this.
-  std::vector<uint64_t> result;
-  for (const auto& pair : modules_) {
-    if (pair.second.symbols) {
-      const LoadedModuleSymbols* loaded = pair.second.symbols.get();
-      for (auto local_addr : loaded->module_symbols()->AddressesForFunction(
-               loaded->symbol_context(), name))
-        result.push_back(local_addr);
-    }
-  }
-  return result;
-}
-
 bool ProcessSymbolsImpl::HaveSymbolsLoadedForModuleAt(uint64_t address) const {
   const ModuleInfo* info = InfoForAddress(address);
   return info && info->symbols;

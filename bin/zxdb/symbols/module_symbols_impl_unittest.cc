@@ -63,8 +63,8 @@ TEST(ModuleSymbols, Basic) {
   SymbolContext symbol_context(0x18000);
 
   // MyFunction() should have one implementation.
-  std::vector<uint64_t> addrs = module.AddressesForFunction(
-      symbol_context, TestSymbolModule::kMyFunctionName);
+  std::vector<Location> addrs = module.ResolveInputLocation(
+      symbol_context, InputLocation(TestSymbolModule::kMyFunctionName));
   ASSERT_EQ(1u, addrs.size());
 
   // On one occasion Clang generated a symbol file that listed many functions
@@ -74,11 +74,11 @@ TEST(ModuleSymbols, Basic) {
   // intermittent Clang bug or some random corruption. If this assert hits,
   // check the function start addresses in the DWARF dump, there should be
   // no functions starting at offset 0 in the file.
-  ASSERT_NE(0u, addrs[0]);
+  ASSERT_NE(0u, addrs[0].address());
 
   // That address should resolve back to the function name.
-  auto locations =
-      module.ResolveInputLocation(symbol_context, InputLocation(addrs[0]));
+  auto locations = module.ResolveInputLocation(
+      symbol_context, InputLocation(addrs[0].address()));
   ASSERT_EQ(1u, locations.size());
   EXPECT_TRUE(locations[0].is_symbolized());
   EXPECT_EQ("zxdb_symbol_test.cc", locations[0].file_line().GetFileNamePart());
