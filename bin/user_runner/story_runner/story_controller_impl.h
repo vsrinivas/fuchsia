@@ -210,6 +210,10 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   bool IsExternalModule(const fidl::VectorPtr<fidl::StringPtr>& module_path);
 
+  // Handles UserShell OnModuleFocused event that indicates whether or not a
+  // view was focused.
+  void OnViewFocused(fidl::StringPtr view_id);
+
   // Initializes the Environment under which all new processes in the story are
   // launched. Use |story_environment_| to manipulate the environment's
   // services.

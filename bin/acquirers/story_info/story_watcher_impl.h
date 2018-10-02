@@ -37,16 +37,26 @@ class StoryWatcherImpl : fuchsia::modular::StoryWatcher,
   void OnFocusChange(bool focused);
 
  private:
+  struct ContextModuleMetadata {
+    fuchsia::modular::ContextMetadata metadata;
+    fuchsia::modular::ContextValueWriterPtr value_writer;
+  };
+
   // |fuchsia::modular::StoryWatcher|
   void OnStateChange(fuchsia::modular::StoryState new_state) override;
 
   // |fuchsia::modular::StoryWatcher|
   void OnModuleAdded(fuchsia::modular::ModuleData module_data) override;
 
+  // |fuchsia::modular::StoryWatcher|
+  void OnModuleFocused(fidl::VectorPtr<fidl::StringPtr> module_path) override;
+
   // |fuchsia::modular::StoryLinksWatcher|
   void OnNewLink(fuchsia::modular::LinkPath link_path) override;
 
   void WatchLink(fuchsia::modular::LinkPath link_path);
+
+  void UpdateModuleFocus(ContextModuleMetadata* data, bool focused);
 
   StoryInfoAcquirer* const owner_;
   fuchsia::modular::ContextWriter* const writer_;
@@ -61,7 +71,9 @@ class StoryWatcherImpl : fuchsia::modular::StoryWatcher,
 
   std::map<std::string, std::unique_ptr<LinkWatcherImpl>> links_;
   // serialized module path -> context value.
-  std::map<std::string, fuchsia::modular::ContextValueWriterPtr> module_values_;
+  std::map<std::string, ContextModuleMetadata> module_values_;
+
+  std::string last_module_focus_key_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };

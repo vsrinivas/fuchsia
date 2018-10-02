@@ -53,6 +53,12 @@ interface StoryShell {
                   vector<ContainerLayout> layout,
                   vector<ContainerRelationEntry> relationships,
                   vector<ContainerView> views);
+
+  // Notify when a view is focused in the story. The focus could be from a user
+  // interaction or requested by the framework through
+  // StoryController#FocusModule.
+  // EXPERIMENTAL
+  6: -> OnViewFocused(string view_id);
 };
 
 // Maps the node_name to the specific mozart view resulting from resolving and

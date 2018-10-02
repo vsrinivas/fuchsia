@@ -109,6 +109,10 @@ class StoryWatcherImpl : fuchsia::modular::StoryWatcher {
   // |fuchsia::modular::StoryWatcher|
   void OnModuleAdded(fuchsia::modular::ModuleData /*module_data*/) override {}
 
+  // |fuchsia::modular::StoryWatcher|
+  void OnModuleFocused(
+      fidl::VectorPtr<fidl::StringPtr> /*module_path*/) override {}
+
   fidl::Binding<fuchsia::modular::StoryWatcher> binding_;
   std::function<void()> continue_;
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);

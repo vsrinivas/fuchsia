@@ -84,6 +84,9 @@ class StoryWatcherImpl : fuchsia::modular::StoryWatcher {
   // |fuchsia::modular::StoryWatcher|
   void OnModuleAdded(fuchsia::modular::ModuleData module_data) override {}
 
+  // |fuchsia::modular::StoryWatcher|
+  void OnModuleFocused(fidl::VectorPtr<fidl::StringPtr> module_path) override {}
+
   fidl::Binding<fuchsia::modular::StoryWatcher> binding_;
 
   fuchsia::modular::StoryState continue_state_{

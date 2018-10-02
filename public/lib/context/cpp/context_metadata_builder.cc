@@ -18,6 +18,7 @@ ContextMetadataBuilder& ContextMetadataBuilder::SetStoryId(
   StoryMetadata()->id = story_id;
   return *this;
 }
+
 ContextMetadataBuilder& ContextMetadataBuilder::SetStoryFocused(bool focused) {
   auto& story_meta = StoryMetadata();
   story_meta->focused = fuchsia::modular::FocusedState::New();
@@ -35,6 +36,15 @@ ContextMetadataBuilder& ContextMetadataBuilder::SetModuleUrl(
 ContextMetadataBuilder& ContextMetadataBuilder::SetModulePath(
     const fidl::VectorPtr<fidl::StringPtr>& path) {
   fidl::Clone(path, &ModuleMetadata()->path);
+  return *this;
+}
+
+ContextMetadataBuilder& ContextMetadataBuilder::SetModuleFocused(bool focused) {
+  auto& module_meta = ModuleMetadata();
+  module_meta->focused = fuchsia::modular::FocusedState::New();
+  module_meta->focused->state =
+      focused ? fuchsia::modular::FocusedStateState::FOCUSED
+              : fuchsia::modular::FocusedStateState::NOT_FOCUSED;
   return *this;
 }
 

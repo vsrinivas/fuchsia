@@ -28,6 +28,7 @@
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/join_strings.h>
+#include <lib/fxl/strings/split_string.h>
 #include <lib/fxl/type_converter.h>
 
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
@@ -73,6 +74,12 @@ fidl::StringPtr PathString(
     const fidl::VectorPtr<fidl::StringPtr>& module_path) {
   auto path = fxl::To<std::vector<std::string>>(module_path);
   return fxl::JoinStrings(path, ":");
+}
+
+fidl::VectorPtr<fidl::StringPtr> StringToPath(const fidl::StringPtr& view_id) {
+  auto path = fxl::SplitStringCopy(fxl::StringView(view_id), ":",
+                                   fxl::kKeepWhitespace, fxl::kSplitWantAll);
+  return fxl::To<fidl::VectorPtr<fidl::StringPtr>>(path);
 }
 
 fidl::VectorPtr<fidl::StringPtr> ParentModulePath(
@@ -1487,6 +1494,8 @@ void StoryControllerImpl::StartStoryShell(
   fuchsia::modular::StoryShellContextPtr story_shell_context;
   story_shell_context_impl_.Connect(story_shell_context.NewRequest());
   story_shell_->Initialize(std::move(story_shell_context));
+  story_shell_.events().OnViewFocused =
+      fit::bind_member(this, &StoryControllerImpl::OnViewFocused);
 }
 
 void StoryControllerImpl::SetState(
@@ -1607,6 +1616,13 @@ void StoryControllerImpl::StartOngoingActivity(
   // initialized before added to the binding set, so we need to dispatch after
   // bind.
   dispatch_to_story_provider();
+}
+
+void StoryControllerImpl::OnViewFocused(fidl::StringPtr view_id) {
+  auto module_path = StringToPath(view_id);
+  for (auto& watcher : watchers_.ptrs()) {
+    (*watcher)->OnModuleFocused(std::move(module_path));
+  }
 }
 
 }  // namespace modular

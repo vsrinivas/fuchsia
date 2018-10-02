@@ -65,18 +65,35 @@ void StoryWatcherImpl::OnStateChange(fuchsia::modular::StoryState new_state) {
 }
 
 void StoryWatcherImpl::OnModuleAdded(fuchsia::modular::ModuleData module_data) {
-  fuchsia::modular::ContextValueWriterPtr module_value;
-  context_value_->CreateChildValue(module_value.NewRequest(),
+  ContextModuleMetadata data;
+  context_value_->CreateChildValue(data.value_writer.NewRequest(),
                                    fuchsia::modular::ContextValueType::MODULE);
-  module_value->Set(
-      nullptr /* content */,
-      fidl::MakeOptional(ContextMetadataBuilder()
-                             .SetModuleUrl(module_data.module_url)
-                             .SetModulePath(module_data.module_path)
-                             .Build()));
-
+  auto metadata = ContextMetadataBuilder()
+                      .SetModuleUrl(module_data.module_url)
+                      .SetModulePath(module_data.module_path)
+                      .Build();
+  fidl::Clone(metadata, &data.metadata);
+  data.value_writer->Set(nullptr /* content */,
+                         fidl::MakeOptional(std::move(metadata)));
   auto path = modular::EncodeModulePath(module_data.module_path);
-  module_values_.emplace(path, std::move(module_value));
+  module_values_.emplace(path, std::move(data));
+}
+
+void StoryWatcherImpl::OnModuleFocused(
+    fidl::VectorPtr<fidl::StringPtr> module_path) {
+  auto key = modular::EncodeModulePath(module_path);
+  auto it = module_values_.find(key);
+  if (it == module_values_.end()) {
+    return;
+  }
+  if (!last_module_focus_key_.empty()) {
+    auto it_last = module_values_.find(last_module_focus_key_);
+    if (it_last != module_values_.end()) {
+      UpdateModuleFocus(&it_last->second, false);
+    }
+  }
+  UpdateModuleFocus(&it->second, true);
+  last_module_focus_key_ = key;
 }
 
 void StoryWatcherImpl::OnNewLink(fuchsia::modular::LinkPath link_path) {
@@ -108,6 +125,16 @@ void StoryWatcherImpl::OnStoryStateChange(fuchsia::modular::StoryInfo info,
 
 void StoryWatcherImpl::DropLink(const std::string& link_key) {
   links_.erase(link_key);
+}
+
+void StoryWatcherImpl::UpdateModuleFocus(ContextModuleMetadata* data,
+                                         bool focused) {
+  auto metadata = ContextMetadataBuilder(std::move(data->metadata))
+                      .SetStoryFocused(true)
+                      .Build();
+  fidl::Clone(metadata, &data->metadata);
+  data->value_writer->Set(nullptr /* content */,
+                          fidl::MakeOptional(std::move(metadata)));
 }
 
 }  // namespace maxwell

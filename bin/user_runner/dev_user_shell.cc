@@ -204,6 +204,10 @@ class DevUserShellApp
   // |fuchsia::modular::StoryWatcher|
   void OnModuleAdded(fuchsia::modular::ModuleData /*module_data*/) override {}
 
+  // |fuchsia::modular::StoryWatcher|
+  void OnModuleFocused(
+      fidl::VectorPtr<fidl::StringPtr> /*module_path*/) override {}
+
   // |fuchsia::modular::NextListener|
   void OnNextResults(
       fidl::VectorPtr<fuchsia::modular::Suggestion> suggestions) override {

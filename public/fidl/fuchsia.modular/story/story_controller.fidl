@@ -91,6 +91,10 @@ interface StoryWatcher {
   //
   // TODO(mesch): Remove, use StoryModulesWatcher instead.
   2: OnModuleAdded(ModuleData module_data);
+
+  // Called when a module is focused in the story.
+  // EXPERIMENTAL
+  3: OnModuleFocused(vector<string> module_path);
 };
 
 // Implemented by the client calling StoryController.GetActiveModules().
