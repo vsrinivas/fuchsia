@@ -44,7 +44,7 @@ zx_status_t TestWithDevice::LaunchDevice(
 }
 
 zx_status_t TestWithDevice::WaitForInterrupt() {
-  zx::time deadline = zx::deadline_after(zx::sec(5));
+  zx::time deadline = zx::deadline_after(zx::sec(10));
   zx_signals_t pending;
   zx_status_t status = event_.wait_one(ZX_USER_SIGNAL_ALL, deadline, &pending);
   if (status != ZX_OK) {
