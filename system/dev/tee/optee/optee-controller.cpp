@@ -13,11 +13,15 @@
 #include <fbl/auto_lock.h>
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
+#include <tee-client-api/tee-client-types.h>
 
 #include "optee-client.h"
 #include "optee-controller.h"
 
 namespace optee {
+
+constexpr TEEC_UUID kOpteeOsUuid =
+    {0x486178E0, 0xE7F8, 0x11E3, {0xBC, 0x5E, 0x00, 0x02, 0xA5, 0xD5, 0xC5, 0x1B}};
 
 static bool IsOpteeApi(const tee_smc::TrustedOsCallUidResult& returned_uid) {
     return returned_uid.uid_0_3 == kOpteeApiUid_0 &&
@@ -119,7 +123,6 @@ zx_status_t OpteeController::InitializeSharedMemory() {
         return status;
     }
 
-
     static constexpr uint32_t kTeeBtiIndex = 0;
     zx::bti bti;
     status = pdev_get_bti(&pdev_proto_, kTeeBtiIndex, bti.reset_and_get_address());
@@ -136,7 +139,7 @@ zx_status_t OpteeController::InitializeSharedMemory() {
     static constexpr uint32_t kSecureWorldMemoryMmioIndex = 0;
     mmio_buffer_t mmio;
     status = pdev_map_mmio_buffer2(&pdev_proto_, kSecureWorldMemoryMmioIndex, ZX_CACHE_POLICY_CACHED,
-                                  &mmio);
+                                   &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "optee: Unable to map secure world memory\n");
         return status;
@@ -281,17 +284,21 @@ void OpteeController::DdkRelease() {
     delete this;
 }
 
-zx_status_t OpteeController::GetDescription(tee_ioctl_description_t* out_description,
-                                            size_t* out_size) const {
-    // The OP-TEE UUID does not vary and since we validated that the TEE is OP-TEE by checking
-    // the API UID, we can skip the OS UUID SMC call and just return the static UUID.
-    ::memcpy(out_description->os_uuid, &kOpteeOsUuid, TEE_IOCTL_UUID_SIZE);
-    out_description->os_revision = os_revision_;
-    out_description->is_global_platform_compliant = true;
+zx_status_t OpteeController::GetOsInfo(fidl_txn_t* txn) const {
+    zircon_tee_OsInfo os_info;
+    ::memset(&os_info, 0, sizeof(os_info));
 
-    *out_size = sizeof(*out_description);
+    os_info.uuid.time_low = kOpteeOsUuid.timeLow;
+    os_info.uuid.time_mid = kOpteeOsUuid.timeMid;
+    os_info.uuid.time_hi_and_version = kOpteeOsUuid.timeHiAndVersion;
+    ::memcpy(os_info.uuid.clock_seq_and_node,
+             kOpteeOsUuid.clockSeqAndNode,
+             sizeof(os_info.uuid.clock_seq_and_node));
 
-    return ZX_OK;
+    os_info.revision.major = os_revision_.major;
+    os_info.revision.minor = os_revision_.minor;
+    os_info.is_global_platform_compliant = true;
+    return zircon_tee_DeviceGetOsInfo_reply(txn, &os_info);
 }
 
 void OpteeController::RemoveClient(OpteeClient* client) {

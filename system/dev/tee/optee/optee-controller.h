@@ -42,8 +42,8 @@ public:
     void DdkUnbind();
     void DdkRelease();
 
-    // Client IOCTL commands
-    zx_status_t GetDescription(tee_ioctl_description_t* out_description, size_t* out_size) const;
+    // Client FIDL commands
+    zx_status_t GetOsInfo(fidl_txn_t* txn) const;
 
     void RemoveClient(OpteeClient* client);
 

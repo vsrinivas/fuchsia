@@ -191,9 +191,6 @@ DEFINE_SMC_RESULT_STRUCT(GetOsUuidResult, 4,
                          uint32_t, uuid_2,
                          uint32_t, uuid_3)
 
-constexpr uint8_t kOpteeOsUuid[] = {0x48, 0x61, 0x78, 0xE0, 0xE7, 0xF8, 0x11, 0xE3,
-                                    0xBC, 0x5E, 0x00, 0x02, 0xA5, 0xD5, 0xC5, 0x1B};
-
 //
 // Get Trusted OS Revision (0x0001)
 //

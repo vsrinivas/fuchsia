@@ -123,15 +123,6 @@ zx_status_t OpteeClient::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len
     }
 
     switch (op) {
-    case IOCTL_TEE_GET_DESCRIPTION: {
-        if ((out_buf == nullptr) || (out_len != sizeof(tee_ioctl_description_t)) ||
-            (out_actual == nullptr)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        return controller_->GetDescription(reinterpret_cast<tee_ioctl_description_t*>(out_buf),
-                                           out_actual);
-    }
     case IOCTL_TEE_OPEN_SESSION: {
         if ((in_buf == nullptr) || (in_len != sizeof(tee_ioctl_session_request_t)) ||
             (out_buf == nullptr) || (out_len != sizeof(tee_ioctl_session_t)) ||
@@ -160,7 +151,7 @@ zx_status_t OpteeClient::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 zx_status_t OpteeClient::GetOsInfo(fidl_txn_t* txn) const {
-    return ZX_ERR_NOT_SUPPORTED;
+    return controller_->GetOsInfo(txn);
 }
 
 zx_status_t OpteeClient::OpenSession(const zircon_tee_Uuid* trusted_app,

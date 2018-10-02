@@ -7,18 +7,22 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <zircon/syscalls.h>
+
+#include <lib/fdio/util.h>
+#include <zircon/tee/c/fidl.h>
+
 #include <zircon/device/tee.h>
 
 #include <tee-client-api/tee_client_api.h>
 
 #define DEFAULT_TEE "/dev/class/tee/000"
 
-static bool is_global_platform_compliant(int fd) {
-    tee_ioctl_description_t tee_description;
+static bool is_global_platform_compliant(zx_handle_t tee_channel) {
+    zircon_tee_OsInfo os_info;
+    zx_status_t status = zircon_tee_DeviceGetOsInfo(tee_channel, &os_info);
 
-    ssize_t ret = ioctl_tee_get_description(fd, &tee_description);
-
-    return ret == sizeof(tee_description) ? tee_description.is_global_platform_compliant : false;
+    return status == ZX_OK ? os_info.is_global_platform_compliant : false;
 }
 
 static void uuid_to_bytes(const TEEC_UUID* uuid, uint8_t out_bytes[TEE_IOCTL_UUID_SIZE]) {
@@ -57,19 +61,27 @@ TEEC_Result TEEC_InitializeContext(const char* name, TEEC_Context* context) {
         return TEEC_ERROR_ITEM_NOT_FOUND;
     }
 
-    if (!is_global_platform_compliant(fd)) {
+    zx_handle_t tee_channel;
+    zx_status_t status = fdio_get_service_handle(fd, &tee_channel);
+    // Irregardless of the success or failure of fdio_get_service_handle, the original file
+    // descriptor is effectively closed.
+    if (status != ZX_OK) {
+        return TEEC_ERROR_COMMUNICATION;
+    }
+
+    if (!is_global_platform_compliant(tee_channel)) {
         // This API is only designed to support TEEs that are Global Platform compliant.
-        close(fd);
+        zx_handle_close(tee_channel);
         return TEEC_ERROR_NOT_SUPPORTED;
     }
-    context->imp.fd = fd;
+    context->imp.tee_channel = tee_channel;
 
     return TEEC_SUCCESS;
 }
 
 void TEEC_FinalizeContext(TEEC_Context* context) {
     if (context) {
-        close(context->imp.fd);
+        zx_handle_close(context->imp.tee_channel);
     }
 }
 
