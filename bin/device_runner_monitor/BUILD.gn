@@ -10,6 +10,13 @@ executable_package("device_runner_monitor") {
     "device_runner_monitor.cc",
   ]
 
+  meta = [
+    {
+      path = rebase_path("meta/device_runner_monitor.cmx")
+      dest = "device_runner_monitor.cmx"
+    },
+  ]
+
   deps = [
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
