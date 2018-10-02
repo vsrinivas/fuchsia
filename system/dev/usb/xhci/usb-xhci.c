@@ -351,7 +351,7 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
         goto error_return;
     }
     ZX_ASSERT(bar.type == ZX_PCI_BAR_TYPE_MMIO);
-    status = mmio_buffer_init(&xhci->mmio, 0, bar.handle, bar.size, ZX_CACHE_POLICY_UNCACHED);
+    status = mmio_buffer_init(&xhci->mmio, 0, bar.size, bar.handle, ZX_CACHE_POLICY_UNCACHED);
     if (status != ZX_OK) {
         zxlogf(ERROR, "usb_xhci_bind could not map bar\n");
         goto error_return;
