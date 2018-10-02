@@ -30,6 +30,10 @@ static constexpr zx_signals_t kDeviceInterruptShift =
 //      cap.offset + 4n -> Notify Queue n
 static constexpr size_t kQueueNotifyMultiplier = 4;
 
+constexpr uint16_t queue_from(zx_gpaddr_t base, zx_gpaddr_t off) {
+  return (off - base) / kQueueNotifyMultiplier;
+}
+
 }  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_DEVICE_CONFIG_H_

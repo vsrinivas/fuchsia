@@ -11,62 +11,15 @@
 #include <trace-provider/provider.h>
 
 #include "garnet/lib/machina/device/config.h"
-#include "garnet/lib/machina/device/virtio_queue.h"
+#include "garnet/lib/machina/device/stream_base.h"
 
 class VirtioConsoleImpl;
 
-// Base class to abstracts out the queue handling logic for each stream.
-struct StreamBase {
-  machina::VirtioQueue queue;
-  machina::VirtioDescriptor desc;
-  uint16_t head;
-  uint32_t used;
-
-  StreamBase() { Reset(); }
-
-  // Fetches the next descriptor in a chain, otherwise returns false.
-  bool NextDescriptor() {
-    if (!desc.has_next) {
-      return false;
-    }
-    if (desc.addr == nullptr) {
-      zx_status_t status = queue.NextAvail(&head);
-      FXL_CHECK(status == ZX_OK)
-          << "Failed to find an available descriptor " << status;
-      desc.next = head;
-    }
-    zx_status_t status = queue.ReadDesc(desc.next, &desc);
-    FXL_CHECK(status == ZX_OK) << "Failed to read descriptor " << status;
-    return true;
-  }
-
-  // Returns the descriptor chain back to the queue.
-  void ReturnChain() {
-    zx_status_t status = queue.Return(head, used);
-    FXL_CHECK(status == ZX_OK)
-        << "Failed to return descriptor to queue " << status;
-    Reset();
-  }
-
-  // Returns whether we have a descriptor chain available to process.
-  bool HasChain() { return queue.HasAvail(); }
-  // Returns whether we are in the middle of processing a descriptor.
-  bool HasDescriptor() { return desc.addr != nullptr; }
-
- private:
-  void Reset() {
-    desc.addr = nullptr;
-    desc.has_next = true;
-    used = 0;
-  }
-};
-
-// Concrete class for managing a stream.
 template <zx_signals_t Trigger,
           void (VirtioConsoleImpl::*F)(
               async_dispatcher_t* dispatcher, async::WaitBase* wait,
               zx_status_t status, const zx_packet_signal_t* signal)>
-struct Stream : public StreamBase {
+struct Stream : public machina::StreamBase {
   async::WaitMethod<VirtioConsoleImpl, F> wait;
 
   Stream(VirtioConsoleImpl* impl) : wait(impl) {}
@@ -75,8 +28,7 @@ struct Stream : public StreamBase {
             machina::VirtioQueue::InterruptFn interrupt) {
     wait.set_object(socket.get());
     wait.set_trigger(Trigger);
-    queue.set_phys_mem(&phys_mem);
-    queue.set_interrupt(std::move(interrupt));
+    StreamBase::Init(phys_mem, std::move(interrupt));
   }
 };
 
@@ -88,18 +40,6 @@ class VirtioConsoleImpl : public fuchsia::guest::device::VirtioConsole {
   }
 
  private:
-  std::pair<StreamBase*, async::WaitBase*> StreamForQueue(uint16_t queue) {
-    switch (queue) {
-      case /* RX queue */ 0:
-        return std::make_pair(&rx_stream_, &rx_stream_.wait);
-      case /* TX queue */ 1:
-        return std::make_pair(&tx_stream_, &tx_stream_.wait);
-      default:
-        FXL_CHECK(false) << "Queue index " << queue << " out of range";
-        __UNREACHABLE;
-    }
-  }
-
   // |fuchsia::guest::device::VirtioConsole|
   void Start(fuchsia::guest::device::StartInfo start_info,
              zx::socket socket) override {
@@ -124,16 +64,29 @@ class VirtioConsoleImpl : public fuchsia::guest::device::VirtioConsole {
                     fit::bind_member(this, &VirtioConsoleImpl::Interrupt));
   }
 
+  std::pair<machina::StreamBase*, async::WaitBase*> StreamForQueue(
+      uint16_t queue) {
+    switch (queue) {
+      case /* RX queue */ 0:
+        return std::make_pair(&rx_stream_, &rx_stream_.wait);
+      case /* TX queue */ 1:
+        return std::make_pair(&tx_stream_, &tx_stream_.wait);
+      default:
+        FXL_CHECK(false) << "Queue index " << queue << " out of range";
+        __UNREACHABLE;
+    }
+  }
+
   // |fuchsia::guest::device::VirtioDevice|
   void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                       zx_gpaddr_t avail, zx_gpaddr_t used) override {
-    StreamBase* stream;
+    machina::StreamBase* stream;
     std::tie(stream, std::ignore) = StreamForQueue(queue);
     stream->queue.Configure(size, desc, avail, used);
   }
 
   void NotifyQueue(uint16_t queue, async_dispatcher_t* dispatcher) {
-    StreamBase* stream;
+    machina::StreamBase* stream;
     async::WaitBase* wait;
     std::tie(stream, wait) = StreamForQueue(queue);
     zx_status_t status = wait->Begin(dispatcher);
@@ -159,8 +112,7 @@ class VirtioConsoleImpl : public fuchsia::guest::device::VirtioConsole {
                      async::GuestBellTrapBase* trap, zx_status_t status,
                      const zx_packet_guest_bell_t* bell) {
     FXL_CHECK(status == ZX_OK) << "Device trap failed " << status;
-    const uint16_t queue =
-        (bell->addr - trap_addr_) / machina::kQueueNotifyMultiplier;
+    uint16_t queue = machina::queue_from(trap_addr_, bell->addr);
     NotifyQueue(queue, dispatcher);
   }
 
@@ -199,7 +151,7 @@ class VirtioConsoleImpl : public fuchsia::guest::device::VirtioConsole {
 
   template <typename F>
   void OnSocketReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                     StreamBase* stream, F process_descriptor) {
+                     machina::StreamBase* stream, F process_descriptor) {
     if (stream->HasDescriptor()) {
       goto process;
     }
@@ -221,7 +173,7 @@ class VirtioConsoleImpl : public fuchsia::guest::device::VirtioConsole {
     }
   }
 
-  fidl::BindingSet<fuchsia::guest::device::VirtioConsole> bindings_;
+  fidl::BindingSet<VirtioConsole> bindings_;
   zx_gpaddr_t trap_addr_;
   zx::event event_;
   machina::PhysMem phys_mem_;

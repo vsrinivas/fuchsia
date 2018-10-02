@@ -23,11 +23,6 @@ VirtioConsole::VirtioConsole(const PhysMem& phys_mem)
 zx_status_t VirtioConsole::Start(const zx::guest& guest, zx::socket socket,
                                  fuchsia::sys::Launcher* launcher,
                                  async_dispatcher_t* dispatcher) {
-  zx_status_t status = WaitForInterrupt(dispatcher);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info{
       .url = kVirtioConsoleUrl,
@@ -36,25 +31,8 @@ zx_status_t VirtioConsole::Start(const zx::guest& guest, zx::socket socket,
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
   services.ConnectToService(console_.NewRequest());
 
-  if (!pci_.is_bar_implemented(kVirtioPciNotifyBar)) {
-    return ZX_ERR_UNAVAILABLE;
-  }
-  const PciBar* bar = pci_.bar(kVirtioPciNotifyBar);
-  fuchsia::guest::device::StartInfo start_info{
-      .trap = {.addr = bar->addr, .size = align(bar->size, PAGE_SIZE)},
-  };
-  status =
-      guest.duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_WRITE, &start_info.guest);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status =
-      event().duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_SIGNAL, &start_info.event);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = phys_mem_.vmo().duplicate(
-      ZX_RIGHT_TRANSFER | ZX_RIGHTS_IO | ZX_RIGHT_MAP, &start_info.vmo);
+  fuchsia::guest::device::StartInfo start_info;
+  zx_status_t status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {
     return status;
   }

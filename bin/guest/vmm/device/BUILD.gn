@@ -36,6 +36,8 @@ executable("device_unittests") {
   testonly = true
 
   sources = [
+    "test_with_device.cc",
+    "test_with_device.h",
     "virtio_console-unittest.cc",
     "virtio_queue_fake.cc",
     "virtio_queue_fake.h",

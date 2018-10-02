@@ -7,6 +7,7 @@
 
 #include <atomic>
 
+#include <fuchsia/guest/device/cpp/fidl.h>
 #include <trace-engine/types.h>
 #include <trace/event.h>
 
@@ -205,8 +206,29 @@ class VirtioComponentDevice
     wait_.set_trigger(ZX_USER_SIGNAL_ALL);
   }
 
-  zx_status_t WaitForInterrupt(async_dispatcher_t* dispatcher) {
-    return wait_.Begin(dispatcher);
+  zx_status_t PrepStart(const zx::guest& guest, async_dispatcher_t* dispatcher,
+                        fuchsia::guest::device::StartInfo* start_info) {
+    zx_status_t status = wait_.Begin(dispatcher);
+    if (status != ZX_OK) {
+      return status;
+    }
+    if (!this->pci_.is_bar_implemented(kVirtioPciNotifyBar)) {
+      return ZX_ERR_UNAVAILABLE;
+    }
+    const PciBar* bar = this->pci_.bar(kVirtioPciNotifyBar);
+    start_info->trap = {.addr = bar->addr, .size = align(bar->size, PAGE_SIZE)};
+    status =
+        guest.duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_WRITE, &start_info->guest);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = event().duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_SIGNAL,
+                               &start_info->event);
+    if (status != ZX_OK) {
+      return status;
+    }
+    return this->phys_mem_.vmo().duplicate(
+        ZX_RIGHT_TRANSFER | ZX_RIGHTS_IO | ZX_RIGHT_MAP, &start_info->vmo);
   }
 
   const zx::event& event() const { return event_; }
