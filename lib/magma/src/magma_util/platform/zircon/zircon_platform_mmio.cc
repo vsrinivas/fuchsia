@@ -6,9 +6,6 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 
-#include <zircon/process.h> // for zx_vmar_root_self
-#include <zircon/syscalls.h>
-
 namespace magma {
 
 static_assert(ZX_CACHE_POLICY_CACHED == static_cast<int>(PlatformMmio::CACHE_POLICY_CACHED),
@@ -22,20 +19,15 @@ static_assert(ZX_CACHE_POLICY_WRITE_COMBINING ==
                   static_cast<int>(PlatformMmio::CACHE_POLICY_WRITE_COMBINING),
               "enum mismatch");
 
-ZirconPlatformMmio::ZirconPlatformMmio(void* addr, uint64_t size, zx_handle_t handle)
-    : PlatformMmio(addr, size), handle_(handle)
+ZirconPlatformMmio::ZirconPlatformMmio(mmio_buffer_t mmio)
+    : PlatformMmio(mmio.vaddr, mmio.size), mmio_(mmio)
 {
 }
 
 ZirconPlatformMmio::~ZirconPlatformMmio()
 {
-    // Clean up the MMIO mapping that was made in the ctor.
     DLOG("ZirconPlatformMmio dtor");
-    zx_status_t status =
-        zx_vmar_unmap(zx_vmar_root_self(), reinterpret_cast<uintptr_t>(addr()), size());
-    if (status != ZX_OK)
-        DLOG("error unmapping %p (len %zu): %d\n", addr(), size(), status);
-    zx_handle_close(handle_);
+    mmio_buffer_release(&mmio_);
 }
 
 } // namespace magma

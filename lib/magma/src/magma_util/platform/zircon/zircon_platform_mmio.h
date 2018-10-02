@@ -5,18 +5,18 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "platform_mmio.h"
-#include <zircon/types.h>
+#include <ddk/mmio-buffer.h>
 
 namespace magma {
 
 class ZirconPlatformMmio : public PlatformMmio {
 public:
-    ZirconPlatformMmio(void* addr, uint64_t size, zx_handle_t handle);
+    ZirconPlatformMmio(mmio_buffer_t mmio);
 
     ~ZirconPlatformMmio();
 
 private:
-    zx_handle_t handle_;
+    mmio_buffer_t mmio_;
 };
 
 } // namespace magma

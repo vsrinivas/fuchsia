@@ -23,20 +23,17 @@ ZirconPlatformDevice::CpuMapMmio(unsigned int index, PlatformMmio::CachePolicy c
     DLOG("CpuMapMmio index %d", index);
 
     zx_status_t status;
-    void* vaddr;
-    size_t size;
-    zx_paddr_t paddr;
-    zx_handle_t vmo_handle;
+    mmio_buffer_t mmio_buffer;
 
-    if ((status = pdev_map_mmio(&pdev_, index, ZX_CACHE_POLICY_UNCACHED_DEVICE, &vaddr, &size,
-                                &paddr, &vmo_handle)) != ZX_OK) {
+    status = pdev_map_mmio_buffer2(&pdev_, index, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_buffer);
+    if (status != ZX_OK) {
         DRETP(nullptr, "mapping resource failed");
     }
 
-    std::unique_ptr<ZirconPlatformMmio> mmio(new ZirconPlatformMmio(vaddr, size, vmo_handle));
+    std::unique_ptr<ZirconPlatformMmio> mmio(new ZirconPlatformMmio(mmio_buffer));
 
     DLOG("map_mmio index %d cache_policy %d returned: 0x%x", index, static_cast<int>(cache_policy),
-         vmo_handle);
+         mmio_buffer.vmo);
 
     return mmio;
 }

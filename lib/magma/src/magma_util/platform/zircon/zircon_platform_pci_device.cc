@@ -21,17 +21,19 @@ ZirconPlatformPciDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::Cache
 {
     DLOG("CpuMapPciMmio bar %d", pci_bar);
 
-    void* addr;
-    uint64_t size;
-    zx_handle_t handle;
-    zx_status_t status = pci_map_bar(&pci(), pci_bar, cache_policy, &addr, &size, &handle);
+    zx_pci_bar_t bar;
+    zx_status_t status = pci_get_bar(&pci(), pci_bar, &bar);
     if (status != ZX_OK)
         return DRETP(nullptr, "map_resource failed");
 
-    std::unique_ptr<ZirconPlatformMmio> mmio(new ZirconPlatformMmio(addr, size, handle));
+    DASSERT(bar.type == ZX_PCI_BAR_TYPE_MMIO);
+    mmio_buffer_t mmio_buffer;
+    mmio_buffer_init(&mmio_buffer, 0, bar.size, bar.handle, cache_policy);
+
+    std::unique_ptr<ZirconPlatformMmio> mmio(new ZirconPlatformMmio(mmio_buffer));
 
     DLOG("map_mmio bar %d cache_policy %d returned: 0x%x", pci_bar, static_cast<int>(cache_policy),
-         handle);
+         mmio_buffer.vmo);
 
     return mmio;
 }

@@ -79,6 +79,7 @@ source_set("mmio") {
 
   public_deps = [
     "$magma_build_root/src/magma_util",
+    "$zircon_build_root/public/lib/ddk",
     "$zircon_build_root/public/lib/zx",
     "..:mmio",
   ]
