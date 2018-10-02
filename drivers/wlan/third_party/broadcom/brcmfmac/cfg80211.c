@@ -1591,12 +1591,6 @@ static zx_status_t brcmf_set_sharedkey(struct net_device* ndev,
 }
 #endif // FIGURE_THIS_OUT_LATER
 
-static void brcmf_set_join_pref(struct brcmf_if* ifp, wlanif_join_req_t* req) {
-    // TODO(cphoenix): Do we ever want to do this?
-    brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_ASSOC_PREFER, WLC_BAND_AUTO);
-    brcmf_c_set_joinpref_default(ifp); // This sets "join_pref" iovar.
-}
-
 static void brcmf_return_join_result(struct net_device* ndev, uint8_t join_result_code) {
     wlanif_join_confirm_t result;
 
@@ -1609,10 +1603,10 @@ zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
     struct brcmf_if* ifp = ndev_to_if(ndev);
     struct brcmf_join_params join_params;
+    uint16_t chanspec;
     size_t join_params_size;
     const void* ie;
     uint32_t ie_len;
-    struct brcmf_ext_join_params_le* ext_join_params;
     zx_status_t err = ZX_OK;
     uint32_t ssid_len;
 
@@ -1657,8 +1651,8 @@ zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
     }
 
     brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
-
-    cfg->channel = 0;
+    chanspec = channel_to_chanspec(&cfg->d11inf, &req->selected_bss.chan);
+    cfg->channel = chanspec;
 
     err = brcmf_set_wpa_version_disabled(ndev); // wpa_auth
     if (err != ZX_OK) {
@@ -1716,48 +1710,8 @@ zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
         }
     }
 #endif // FIGURE_THIS_OUT_LATER
-    /* Join with specific BSSID and cached SSID
-     * If SSID is zero join based on BSSID only
-     */
-    join_params_size = offsetof(struct brcmf_ext_join_params_le, assoc_le) +
-                       offsetof(struct brcmf_assoc_params_le, chanspec_list);
-    ext_join_params = calloc(1, join_params_size);
-    if (ext_join_params == NULL) {
-        err = ZX_ERR_NO_MEMORY;
-        goto done;
-    }
+
     ssid_len = min_t(uint32_t, req->selected_bss.ssid.len, WLAN_MAX_SSID_LEN);
-    ext_join_params->ssid_le.SSID_len = ssid_len;
-    memcpy(&ext_join_params->ssid_le.SSID, req->selected_bss.ssid.data, ssid_len);
-    if (ssid_len < WLAN_MAX_SSID_LEN) {
-        ext_join_params->ssid_le.SSID[ssid_len] = '\0';
-        brcmf_dbg(CONN, "SSID \"%s\", len (%d)\n", ext_join_params->ssid_le.SSID, ssid_len);
-    }
-
-    /* Set up join scan parameters */
-    ext_join_params->scan_le.scan_type = -1;
-    ext_join_params->scan_le.home_time = -1;
-
-    memcpy(&ext_join_params->assoc_le.bssid, req->selected_bss.bssid, ETH_ALEN);
-
-    // TODO(cphoenix): Is this important?
-    //if (cfg->channel) {
-    //    ext_join_params->assoc_le.chanspec_num = 1;
-
-    ext_join_params->scan_le.active_time = -1;
-    ext_join_params->scan_le.passive_time = -1;
-    ext_join_params->scan_le.nprobes = -1;
-
-    brcmf_set_join_pref(ifp, req); // join_pref
-
-    err = brcmf_fil_bsscfg_data_set(ifp, "join", ext_join_params, join_params_size);
-    free(ext_join_params);
-    if (err == ZX_OK) { /* This is it. join command worked, we are done */
-        brcmf_dbg(TEMP, "Join succeeded early!");
-        goto done;
-    }
-
-    /* join command failed, fallback to set ssid */
     memset(&join_params, 0, sizeof(join_params));
     join_params_size = sizeof(join_params.ssid_le);
 
@@ -1765,19 +1719,19 @@ zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
     join_params.ssid_le.SSID_len = ssid_len;
 
     memcpy(join_params.params_le.bssid, req->selected_bss.bssid, ETH_ALEN);
+    join_params.params_le.chanspec_num = 1;
+    join_params.params_le.chanspec_list[0] = chanspec;
 
-    err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, join_params_size);
+    brcmf_dbg(CONN, "Sending SET_SSID request\n");
+    err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, sizeof(join_params));
     if (err != ZX_OK) {
         brcmf_err("BRCMF_C_SET_SSID failed (%d)\n", err);
     }
 
-    // TODO(cphoenix): Find where the delayed join is handled, and report result there.
-
 done:
     if (err != ZX_OK) {
         brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
-        brcmf_dbg(TEMP, "Doing early brcmf_return_join_result, err %d %s", err,
-                  zx_status_get_string(err));
+        brcmf_dbg(CONN, "Failed during join: %s", zx_status_get_string(err));
         brcmf_return_join_result(ndev, WLAN_JOIN_RESULT_FAILURE_TIMEOUT);
     }
     brcmf_dbg(TRACE, "Exit, err %s\n", zx_status_get_string(err));
