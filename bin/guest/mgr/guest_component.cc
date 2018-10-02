@@ -13,13 +13,16 @@ GuestComponent::GuestComponent(
     : label_(label),
       endpoint_(std::move(endpoint)),
       services_(std::move(services)),
-      component_controller_(std::move(component_controller)) {
-  services_.ConnectToService(instance_controller_.NewRequest());
+      component_controller_(std::move(component_controller)) {}
+
+void GuestComponent::ConnectToInstance(
+    fidl::InterfaceRequest<fuchsia::guest::InstanceController> request) {
+  services_.ConnectToService(std::move(request));
 }
 
-void GuestComponent::AddBinding(
-    fidl::InterfaceRequest<fuchsia::guest::InstanceController> request) {
-  bindings_.AddBinding(instance_controller_.get(), std::move(request));
+void GuestComponent::ConnectToBalloon(
+    fidl::InterfaceRequest<fuchsia::guest::BalloonController> request) {
+  services_.ConnectToService(std::move(request));
 }
 
 }  // namespace guestmgr

@@ -4,6 +4,33 @@
 
 import("//build/package.gni")
 
+executable("virtio_balloon_bin") {
+  visibility = [ ":*" ]
+
+  output_name = "virtio_balloon"
+
+  sources = [
+    "virtio_balloon.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/machina/device",
+    "//garnet/lib/machina/fidl:fuchsia.guest.device",
+    "//garnet/public/lib/component/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/trace-provider",
+  ]
+}
+
+package("virtio_balloon") {
+  binary = "virtio_balloon"
+
+  deps = [
+    ":virtio_balloon_bin",
+  ]
+}
+
 executable("virtio_console_bin") {
   visibility = [ ":*" ]
 
@@ -16,8 +43,8 @@ executable("virtio_console_bin") {
   deps = [
     "//garnet/lib/machina/device",
     "//garnet/lib/machina/fidl:fuchsia.guest.device",
-    "//zircon/public/lib/async-loop-cpp",
     "//garnet/public/lib/component/cpp",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/trace-provider",
   ]
@@ -38,6 +65,7 @@ executable("device_unittests") {
   sources = [
     "test_with_device.cc",
     "test_with_device.h",
+    "virtio_balloon-unittest.cc",
     "virtio_console-unittest.cc",
     "virtio_queue_fake.cc",
     "virtio_queue_fake.h",

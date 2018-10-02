@@ -9,7 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <ios>
 #include <vector>
 
 #include <fbl/unique_fd.h>
@@ -63,77 +62,6 @@ static constexpr size_t kInputQueueDepth = 64;
 // For devices that can have their addresses anywhere we run a dynamic
 // allocator that starts fairly high in the guest physical address space.
 static constexpr zx_gpaddr_t kFirstDynamicDeviceAddr = 0xc00000000;
-
-static void balloon_stats_handler(machina::VirtioBalloon* balloon,
-                                  uint32_t threshold,
-                                  const virtio_balloon_stat_t* stats,
-                                  size_t len) {
-  for (size_t i = 0; i < len; ++i) {
-    if (stats[i].tag != VIRTIO_BALLOON_S_AVAIL) {
-      continue;
-    }
-
-    uint32_t current_pages = balloon->num_pages();
-    uint32_t available_pages =
-        static_cast<uint32_t>(stats[i].val / machina::VirtioBalloon::kPageSize);
-    uint32_t target_pages = current_pages + (available_pages - threshold);
-    if (current_pages == target_pages) {
-      return;
-    }
-
-    FXL_LOG(INFO) << "adjusting target pages " << std::hex << current_pages
-                  << " -> " << std::hex << target_pages;
-    zx_status_t status = balloon->UpdateNumPages(target_pages);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Error " << status << " updating balloon size "
-                     << status;
-    }
-    return;
-  }
-}
-
-typedef struct balloon_task_args {
-  machina::VirtioBalloon* balloon;
-  const GuestConfig* cfg;
-} balloon_task_args_t;
-
-static int balloon_stats_task(void* ctx) {
-  std::unique_ptr<balloon_task_args_t> args(
-      static_cast<balloon_task_args_t*>(ctx));
-  machina::VirtioBalloon* balloon = args->balloon;
-  zx_duration_t interval = args->cfg->balloon_interval();
-  uint32_t threshold = args->cfg->balloon_pages_threshold();
-  while (true) {
-    zx_nanosleep(zx_deadline_after(interval));
-    args->balloon->RequestStats(
-        [balloon, threshold](const virtio_balloon_stat_t* stats, size_t len) {
-          balloon_stats_handler(balloon, threshold, stats, len);
-        });
-  }
-  return ZX_OK;
-}
-
-static zx_status_t poll_balloon_stats(machina::VirtioBalloon* balloon,
-                                      const GuestConfig* cfg) {
-  thrd_t thread;
-  auto args = new balloon_task_args_t{balloon, cfg};
-
-  int ret = thrd_create_with_name(&thread, balloon_stats_task, args,
-                                  "virtio-balloon");
-  if (ret != thrd_success) {
-    FXL_LOG(ERROR) << "Failed to create balloon thread " << ret;
-    delete args;
-    return ZX_ERR_INTERNAL;
-  }
-
-  ret = thrd_detach(thread);
-  if (ret != thrd_success) {
-    FXL_LOG(ERROR) << "Failed to detach balloon thread " << ret;
-    return ZX_ERR_INTERNAL;
-  }
-
-  return ZX_OK;
-}
 
 static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv,
                                   GuestConfig* cfg) {
@@ -240,13 +168,15 @@ int main(int argc, char** argv) {
 
   // Setup balloon device.
   machina::VirtioBalloon balloon(guest.phys_mem());
-  balloon.set_deflate_on_demand(cfg.balloon_demand_page());
-  status = bus.Connect(balloon.pci_device());
+  status = bus.Connect(balloon.pci_device(), true);
   if (status != ZX_OK) {
     return status;
   }
-  if (cfg.balloon_interval() > 0) {
-    poll_balloon_stats(&balloon, &cfg);
+  status = balloon.Start(*guest.object(), cfg.balloon_demand_page(),
+                         launcher.get(), guest.device_dispatcher());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to start console device " << status;
+    return status;
   }
 
   // Setup block device.
@@ -531,6 +461,11 @@ int main(int argc, char** argv) {
   }
 
   status = instance_controller.AddPublicService(context.get());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to add public service " << status;
+    loop.Quit();
+  }
+  status = balloon.AddPublicService(context.get());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to add public service " << status;
     loop.Quit();

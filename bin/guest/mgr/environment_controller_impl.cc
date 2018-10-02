@@ -64,7 +64,7 @@ void EnvironmentControllerImpl::LaunchInstance(
   auto component = std::make_unique<GuestComponent>(
       label, std::move(endpoint), std::move(services),
       std::move(component_controller));
-  component->AddBinding(std::move(controller));
+  component->ConnectToInstance(std::move(controller));
 
   bool inserted;
   std::tie(std::ignore, inserted) = guests_.insert({cid, std::move(component)});
@@ -107,7 +107,16 @@ void EnvironmentControllerImpl::ConnectToInstance(
     fidl::InterfaceRequest<fuchsia::guest::InstanceController> request) {
   const auto& it = guests_.find(id);
   if (it != guests_.end()) {
-    it->second->AddBinding(std::move(request));
+    it->second->ConnectToInstance(std::move(request));
+  }
+}
+
+void EnvironmentControllerImpl::ConnectToBalloon(
+    uint32_t id,
+    fidl::InterfaceRequest<fuchsia::guest::BalloonController> request) {
+  const auto& it = guests_.find(id);
+  if (it != guests_.end()) {
+    it->second->ConnectToBalloon(std::move(request));
   }
 }
 

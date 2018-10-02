@@ -33,8 +33,6 @@ TEST(GuestConfigParserTest, DefaultValues) {
   ASSERT_EQ(zx_system_get_num_cpus(), config.num_cpus());
   ASSERT_TRUE(config.block_devices().empty());
   ASSERT_TRUE(config.cmdline().empty());
-  ASSERT_EQ(0, config.balloon_interval());
-  ASSERT_EQ(0, config.balloon_pages_threshold());
   ASSERT_FALSE(config.balloon_demand_page());
   ASSERT_FALSE(config.block_wait());
 }
@@ -50,8 +48,6 @@ TEST(GuestConfigParserTest, ParseConfig) {
           "cpus": "4",
           "block": "/pkg/data/block_path",
           "cmdline": "kernel cmdline",
-          "balloon-interval": "1234",
-          "balloon-threshold": "5678",
           "balloon-demand-page": "true",
           "block-wait": "true"
         })JSON"));
@@ -62,8 +58,6 @@ TEST(GuestConfigParserTest, ParseConfig) {
   ASSERT_EQ(1, config.block_devices().size());
   ASSERT_EQ("/pkg/data/block_path", config.block_devices()[0].path);
   ASSERT_EQ("kernel cmdline", config.cmdline());
-  ASSERT_EQ(ZX_SEC(1234), config.balloon_interval());
-  ASSERT_EQ(5678, config.balloon_pages_threshold());
   ASSERT_TRUE(config.balloon_demand_page());
   ASSERT_TRUE(config.block_wait());
 }
@@ -78,8 +72,6 @@ TEST(GuestConfigParserTest, ParseArgs) {
                         "--cpus=4",
                         "--block=/pkg/data/block_path",
                         "--cmdline=kernel_cmdline",
-                        "--balloon-interval=1234",
-                        "--balloon-threshold=5678",
                         "--balloon-demand-page",
                         "--block-wait"};
   ASSERT_EQ(ZX_OK,
@@ -91,8 +83,6 @@ TEST(GuestConfigParserTest, ParseArgs) {
   ASSERT_EQ(1, config.block_devices().size());
   ASSERT_EQ("/pkg/data/block_path", config.block_devices()[0].path);
   ASSERT_EQ("kernel_cmdline", config.cmdline());
-  ASSERT_EQ(ZX_SEC(1234), config.balloon_interval());
-  ASSERT_EQ(5678, config.balloon_pages_threshold());
   ASSERT_TRUE(config.balloon_demand_page());
   ASSERT_TRUE(config.block_wait());
 }

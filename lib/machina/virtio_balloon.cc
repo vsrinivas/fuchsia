@@ -4,182 +4,78 @@
 
 #include "garnet/lib/machina/virtio_balloon.h"
 
-#include <zircon/syscalls.h>
+#include <lib/fxl/logging.h>
+#include <lib/svc/cpp/services.h>
 
 namespace machina {
 
-// Structure passed to the inflate/deflate queue handler.
-typedef struct queue_ctx {
-  // The VMO to invoke |op| on.
-  zx_handle_t vmo;
-  // Operation to perform on the queue (inflate or deflate).
-  uint32_t op;
-} queue_ctx_t;
-
-/* Handle balloon inflate/deflate requests.
- *
- * From VIRTIO 1.0 Section 5.5.6:
- *
- * To supply memory to the balloon (aka. inflate):
- *  (a) The driver constructs an array of addresses of unused memory pages.
- *      These addresses are divided by 4096 and the descriptor describing the
- *      resulting 32-bit array is added to the inflateq.
- *
- * To remove memory from the balloon (aka. deflate):
- *  (a) The driver constructs an array of addresses of memory pages it has
- *      previously given to the balloon, as described above. This descriptor is
- *      added to the deflateq.
- *  (b) If the VIRTIO_BALLOON_F_MUST_TELL_HOST feature is negotiated, the guest
- *      informs the device of pages before it uses them.
- *  (c) Otherwise, the guest is allowed to re-use pages previously given to the
- *      balloon before the device has acknowledged their withdrawal.
- */
-static zx_status_t queue_range_op(void* addr, uint32_t len, uint16_t flags,
-                                  uint32_t* used, void* ctx) {
-  queue_ctx_t* balloon_ctx = static_cast<queue_ctx_t*>(ctx);
-  uint32_t* pfns = static_cast<uint32_t*>(addr);
-  uint32_t pfn_count = len / 4;
-
-  // If the driver writes contiguous PFNs to the array we'll batch them up
-  // when invoking the inflate/deflate operation.
-  uint64_t region_base = 0;
-  uint64_t region_length = 0;
-  for (uint32_t i = 0; i < pfn_count; ++i) {
-    // If we have a contiguous page, increment the length & continue.
-    if (region_length > 0 && (region_base + region_length) == pfns[i]) {
-      region_length++;
-      continue;
-    }
-
-    // If we have an existing region; invoke the inflate/deflate op.
-    if (region_length > 0) {
-      zx_status_t status =
-          zx_vmo_op_range(balloon_ctx->vmo, balloon_ctx->op,
-                          region_base * VirtioBalloon::kPageSize,
-                          region_length * VirtioBalloon::kPageSize, nullptr, 0);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
-
-    // Create a new region.
-    region_base = pfns[i];
-    region_length = 1;
-  }
-
-  // Handle the last region.
-  if (region_length > 0) {
-    zx_status_t status =
-        zx_vmo_op_range(balloon_ctx->vmo, balloon_ctx->op,
-                        region_base * VirtioBalloon::kPageSize,
-                        region_length * VirtioBalloon::kPageSize, nullptr, 0);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
-  return ZX_OK;
-}
-
-zx_status_t VirtioBalloon::HandleDescriptor(uint16_t q) {
-  queue_ctx_t ctx;
-  switch (q) {
-    case VIRTIO_BALLOON_Q_STATSQ:
-      return ZX_OK;
-    case VIRTIO_BALLOON_Q_INFLATEQ:
-      ctx.op = ZX_VMO_OP_DECOMMIT;
-      break;
-    case VIRTIO_BALLOON_Q_DEFLATEQ:
-      if (deflate_on_demand_) {
-        return ZX_OK;
-      }
-      ctx.op = ZX_VMO_OP_COMMIT;
-      break;
-    default:
-      return ZX_ERR_INVALID_ARGS;
-  }
-  ctx.vmo = phys_mem_.vmo().get();
-  return queue(q)->HandleDescriptor(&queue_range_op, &ctx);
-}
-
-zx_status_t VirtioBalloon::HandleQueueNotify(uint16_t queue) {
-  zx_status_t status;
-  do {
-    status = HandleDescriptor(queue);
-  } while (status == ZX_ERR_NEXT);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return NotifyQueue(queue);
-}
+static constexpr char kVirtioBalloonUrl[] = "virtio_balloon";
 
 VirtioBalloon::VirtioBalloon(const PhysMem& phys_mem)
-    : VirtioInprocessDevice(
+    : VirtioComponentDevice(
           phys_mem, VIRTIO_BALLOON_F_STATS_VQ | VIRTIO_BALLOON_F_DEFLATE_ON_OOM,
-          fit::bind_member(this, &VirtioBalloon::HandleQueueNotify)) {}
+          fit::bind_member(this, &VirtioBalloon::ConfigureQueue),
+          fit::bind_member(this, &VirtioBalloon::Ready)) {}
 
-void VirtioBalloon::WaitForStatsBuffer(VirtioQueue* stats_queue) {
-  if (!stats_.has_buffer) {
-    stats_queue->Wait(&stats_.desc_index);
-    stats_.has_buffer = true;
-  }
+zx_status_t VirtioBalloon::AddPublicService(
+    component::StartupContext* context) {
+  return context->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
-zx_status_t VirtioBalloon::RequestStats(StatsHandler handler) {
-  VirtioQueue* stats_queue = queue(VIRTIO_BALLOON_Q_STATSQ);
+zx_status_t VirtioBalloon::Start(const zx::guest& guest, bool demand_page,
+                                 fuchsia::sys::Launcher* launcher,
+                                 async_dispatcher_t* dispatcher) {
+  component::Services services;
+  fuchsia::sys::LaunchInfo launch_info{
+      .url = kVirtioBalloonUrl,
+      .directory_request = services.NewRequest(),
+  };
+  launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
+  services.ConnectToService(balloon_.NewRequest());
+  services.ConnectToService(stats_.NewRequest());
 
-  // stats.mutex needs to be held during the entire time the guest is
-  // processing the buffer since we need to make sure no other threads
-  // can grab the returned stats buffer before we process it.
-  std::lock_guard<std::mutex> lock(stats_.mutex);
-
-  // We need an initial buffer we can return to return to the device to
-  // request stats from the device. This should be immediately available in
-  // the common case but we can race the driver for the initial buffer.
-  WaitForStatsBuffer(stats_queue);
-
-  // We have a buffer. We need to return it to the driver. It'll populate
-  // a new buffer with stats and then send it back to us.
-  stats_.has_buffer = false;
-  zx_status_t status = stats_queue->Return(stats_.desc_index, 0);
+  fuchsia::guest::device::StartInfo start_info;
+  zx_status_t status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {
     return status;
   }
-  WaitForStatsBuffer(stats_queue);
-
-  VirtioDescriptor desc;
-  status = stats_queue->ReadDesc(stats_.desc_index, &desc);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  if ((desc.len % sizeof(virtio_balloon_stat_t)) != 0) {
-    return ZX_ERR_IO_DATA_INTEGRITY;
-  }
-
-  // Invoke the handler on the stats.
-  auto stats = static_cast<const virtio_balloon_stat_t*>(desc.addr);
-  size_t stats_count = desc.len / sizeof(virtio_balloon_stat_t);
-  handler(stats, stats_count);
-
-  // Note we deliberately do not return the buffer here. This will be done to
-  // initiate the next stats request.
-  return ZX_OK;
+  return balloon_->Start(std::move(start_info), demand_page);
 }
 
-zx_status_t VirtioBalloon::UpdateNumPages(uint32_t num_pages) {
+zx_status_t VirtioBalloon::ConfigureQueue(uint16_t queue, uint16_t size,
+                                          zx_gpaddr_t desc, zx_gpaddr_t avail,
+                                          zx_gpaddr_t used) {
+  return balloon_->ConfigureQueue(queue, size, desc, avail, used);
+}
+
+zx_status_t VirtioBalloon::Ready(uint32_t negotiated_features) {
+  return balloon_->Ready(negotiated_features);
+}
+
+void VirtioBalloon::GetNumPages(GetNumPagesCallback callback) {
+  uint32_t actual;
+  {
+    std::lock_guard<std::mutex> lock(device_config_.mutex);
+    actual = config_.actual;
+  }
+  callback(actual);
+}
+
+void VirtioBalloon::RequestNumPages(uint32_t num_pages) {
   {
     std::lock_guard<std::mutex> lock(device_config_.mutex);
     config_.num_pages = num_pages;
   }
-
   // Send a config change interrupt to the guest.
-  return Interrupt(VirtioQueue::SET_CONFIG | VirtioQueue::TRY_INTERRUPT);
+  zx_status_t status =
+      Interrupt(VirtioQueue::SET_CONFIG | VirtioQueue::TRY_INTERRUPT);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to generate configuration interrupt " << status;
+  }
 }
 
-uint32_t VirtioBalloon::num_pages() {
-  std::lock_guard<std::mutex> lock(device_config_.mutex);
-  return config_.num_pages;
+void VirtioBalloon::GetMemStats(GetMemStatsCallback callback) {
+  stats_->GetMemStats(std::move(callback));
 }
 
 }  // namespace machina

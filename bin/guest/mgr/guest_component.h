@@ -9,7 +9,6 @@
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
 #include <lib/svc/cpp/services.h>
 
 namespace guestmgr {
@@ -26,16 +25,16 @@ class GuestComponent {
   const std::string& label() const { return label_; }
   GuestVsockEndpoint* endpoint() const { return endpoint_.get(); }
 
-  void AddBinding(
+  void ConnectToInstance(
       fidl::InterfaceRequest<fuchsia::guest::InstanceController> request);
+  void ConnectToBalloon(
+      fidl::InterfaceRequest<fuchsia::guest::BalloonController> request);
 
  private:
   const std::string label_;
   std::unique_ptr<GuestVsockEndpoint> endpoint_;
   component::Services services_;
   fuchsia::sys::ComponentControllerPtr component_controller_;
-  fuchsia::guest::InstanceControllerPtr instance_controller_;
-  fidl::BindingSet<fuchsia::guest::InstanceController> bindings_;
 };
 
 }  // namespace guestmgr

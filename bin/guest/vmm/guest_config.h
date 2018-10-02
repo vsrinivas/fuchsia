@@ -48,10 +48,6 @@ class GuestConfig {
   bool block_wait() const { return block_wait_; }
   uint8_t num_cpus() const { return num_cpus_; }
   size_t memory() const { return memory_; }
-  zx_duration_t balloon_interval() const {
-    return ZX_SEC(balloon_interval_seconds_);
-  }
-  uint32_t balloon_pages_threshold() const { return balloon_pages_threshold_; }
   bool balloon_demand_page() const { return balloon_demand_page_; }
   GuestDisplay display() const { return display_; }
   bool network() const { return network_; }
@@ -68,8 +64,6 @@ class GuestConfig {
   bool block_wait_ = false;
   uint8_t num_cpus_ = zx_system_get_num_cpus();
   size_t memory_ = 1 << 30;
-  uint32_t balloon_interval_seconds_ = 0;
-  uint32_t balloon_pages_threshold_ = 0;
   bool balloon_demand_page_ = false;
   GuestDisplay display_ = GuestDisplay::SCENIC;
   bool network_ = true;

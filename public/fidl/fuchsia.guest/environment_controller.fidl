@@ -26,15 +26,19 @@ struct LaunchInfo {
 interface EnvironmentController {
     // Launch a new guest instance into this environment.
     1: LaunchInstance(LaunchInfo launch_info,
-                   request<InstanceController>? controller) -> (InstanceInfo info);
+                      request<InstanceController>? controller) -> (InstanceInfo info);
 
     // Query for guests running in this environment.
     2: ListInstances() -> (vector<InstanceInfo> instances);
 
-    // Connect to a currently running guest instance identified via |id|. The
+    // Connect to a currently running guest instance identified by |id|. The
     // |id| can be found via a call to |ListInstances|.
     3: ConnectToInstance(uint32 id, request<InstanceController> controller);
 
+    // Connect to the memory balloon of a currently running guest instance
+    // identified by |id|.
+    4: ConnectToBalloon(uint32 id, request<BalloonController> controller);
+
     // Returns an interface that can be used to access the host vsock endpoint.
-    4: GetHostVsockEndpoint(request<HostVsockEndpoint> endpoint);
+    5: GetHostVsockEndpoint(request<HostVsockEndpoint> endpoint);
 };

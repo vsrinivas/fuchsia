@@ -48,6 +48,10 @@ class EnvironmentControllerImpl : public fuchsia::guest::EnvironmentController {
       uint32_t id,
       fidl::InterfaceRequest<fuchsia::guest::InstanceController> controller)
       override;
+  void ConnectToBalloon(
+      uint32_t id,
+      fidl::InterfaceRequest<fuchsia::guest::BalloonController> controller)
+      override;
   void GetHostVsockEndpoint(
       fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> endpoint)
       override;

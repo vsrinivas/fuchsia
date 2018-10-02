@@ -1,11 +1,12 @@
 {
-    "imports": [
+  "imports": [
         "garnet/packages/config/network",
         "garnet/packages/prod/pkgsvr",
         "garnet/packages/prod/runtime"
     ],
     "packages": [
         "//garnet/bin/guest/vmm",
+        "//garnet/bin/guest/vmm/device:virtio_balloon",
         "//garnet/bin/guest/vmm/device:virtio_console",
         "//garnet/bin/guest/runner:guest_runner",
         "//garnet/bin/guest/cli:guest",

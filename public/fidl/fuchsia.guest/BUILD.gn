@@ -6,9 +6,10 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.guest") {
   sources = [
-    "instance_controller.fidl",
+    "balloon_controller.fidl",
     "environment_controller.fidl",
     "environment_manager.fidl",
+    "instance_controller.fidl",
     "vsock.fidl",
     "wayland_dispatcher.fidl",
   ]

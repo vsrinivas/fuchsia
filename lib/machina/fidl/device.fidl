@@ -4,57 +4,62 @@
 
 library fuchsia.guest.device;
 
+using fuchsia.guest;
 using zx;
 
 // Contains the details of a device trap.
 struct Trap {
-  // The address of the device trap. This must be page-aligned.
-  zx.gpaddr addr;
+    // The address of the device trap. This must be page-aligned.
+    zx.gpaddr addr;
 
-  // The size of the device trap. This must be a multiple of the page size.
-  uint64 size;
+    // The size of the device trap. This must be a multiple of the page size.
+    uint64 size;
 };
 
 // Contains the basic information required to start execution of a device.
 struct StartInfo {
-  // The trap associated with a device. It is up to the device to set this trap
-  // during device setup.
-  Trap trap;
+    // The trap associated with a device. It is up to the device to set this trap
+    // during device setup.
+    Trap trap;
 
-  // The guest associated with a device. This handle should be used to setup
-  // device traps, and then be released before device operation begins.
-  handle<guest>? guest;
+    // The guest associated with a device. This handle should be used to setup
+    // device traps, and then be released before device operation begins.
+    handle<guest>? guest;
 
-  // The event associated with a device interrupt. This is how the device will
-  // notify the guest of events it should process.
-  handle<event> event;
+    // The event associated with a device interrupt. This is how the device will
+    // notify the guest of events it should process.
+    handle<event> event;
 
-  // The VMO used to represent guest physical memory.
-  handle<vmo> vmo;
+    // The VMO used to represent guest physical memory.
+    handle<vmo> vmo;
 };
 
 interface VirtioDevice {
-  // Configure a |queue| for the device. This specifies the |size| and the guest
-  // physical addresses of the queue: |desc|, |avail|, and |used|.
-  0x80000001: ConfigureQueue(uint16 queue, uint16 size, zx.gpaddr desc,
-                             zx.gpaddr avail, zx.gpaddr used);
+    // Configure a |queue| for the device. This specifies the |size| and the guest
+    // physical addresses of the queue: |desc|, |avail|, and |used|.
+    0x80000001: ConfigureQueue(uint16 queue, uint16 size, zx.gpaddr desc,
+                               zx.gpaddr avail, zx.gpaddr used);
 
-  // Notify a |queue| for the device. Primarily used for black-box testing.
-  0x80000002: NotifyQueue(uint16 queue);
+    // Notify a |queue| for the device. Primarily used for black-box testing.
+    0x80000002: NotifyQueue(uint16 queue);
 
-  // Ready a device. This provides the set of |negotiated_features| that the
-  // driver and device have agreed upon.
-  0x80000003: Ready(uint32 negotiated_features);
+    // Ready a device. This provides the set of |negotiated_features| that the
+    // driver and device have agreed upon.
+    0x80000003: Ready(uint32 negotiated_features);
 };
 
 [Discoverable]
 interface VirtioBalloon : VirtioDevice {
-  // Start the balloon device.
-  0x81000001: Start(StartInfo start_info);
+    // Start the balloon device.
+    0x81000001: Start(StartInfo start_info, bool demand_page);
+
+    // Get memory statistics from the balloon device.
+    0x81000002: GetMemStats()
+                    -> (zx.status status, vector<fuchsia.guest.MemStat>? mem_stats);
 };
 
 [Discoverable]
 interface VirtioConsole : VirtioDevice {
-  // Start the console device. This uses |socket| to handle input and output.
-  0x81000001: Start(StartInfo start_info, handle<socket> socket);
+    // Start the console device. This uses |socket| to handle input and output.
+    0x81000001: Start(StartInfo start_info, handle<socket> socket);
 };

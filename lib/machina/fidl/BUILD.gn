@@ -8,4 +8,8 @@ fidl("fuchsia.guest.device") {
   sources = [
     "device.fidl",
   ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.guest",
+  ]
 }
