@@ -146,8 +146,6 @@ zx_status_t CreateJoinRequest(MlmeMsg<wlan_mlme::JoinRequest>* out_msg) {
     bss_desc->dtim_period = kDtimPeriodTu;
     bss_desc->timestamp = 0;
     bss_desc->local_time = 0;
-    bss_desc->basic_rate_set.resize(0);
-    bss_desc->op_rate_set.resize(0);
 
     wlan_mlme::CapabilityInfo cap;
     cap.ess = true;
