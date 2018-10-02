@@ -6,6 +6,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/pci.h>
 #include <zircon/pixelformat.h>
 #include <zircon/process.h>
@@ -82,21 +83,17 @@ static zx_status_t bochs_vbe_bind(void* ctx, zx_device_t* dev) {
     if (device_get_protocol(dev, ZX_PROTOCOL_PCI, &pci))
         return ZX_ERR_NOT_SUPPORTED;
 
-    void* regs;
-    uint64_t regs_size;
-    zx_handle_t regs_handle;
+    mmio_buffer_t mmio;
     // map register window
-    status = pci_map_bar(&pci, 2u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                         &regs, &regs_size, &regs_handle);
+    status = pci_map_bar_buffer(&pci, 2u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (status != ZX_OK) {
         printf("bochs-vbe: failed to map pci config: %d\n", status);
         return status;
     }
 
-    set_hw_mode(regs, DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_FORMAT);
+    set_hw_mode(mmio.vaddr, DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_FORMAT);
 
-    zx_handle_close(regs_handle);
-    zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t) regs, regs_size);
+    mmio_buffer_release(&mmio);
 
     return bind_simple_pci_display(dev, "bochs_vbe", 0u,
                                    DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_WIDTH, DISPLAY_FORMAT);
