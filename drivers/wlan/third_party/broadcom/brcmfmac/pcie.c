@@ -241,9 +241,9 @@ struct brcmf_pciedev_info {
     char fw_name[BRCMF_FW_NAME_LEN];
     char nvram_name[BRCMF_FW_NAME_LEN];
     void __iomem* regs;
-    zx_handle_t regs_handle;
+    mmio_buffer_t regs_mmio;
     void __iomem* tcm;
-    zx_handle_t tcm_handle;
+    mmio_buffer_t tcm_mmio;
     uint32_t ram_base;
     uint32_t ram_size;
     struct brcmf_chip* ci;
@@ -1374,47 +1374,42 @@ static zx_status_t brcmf_pcie_get_resource(struct brcmf_pciedev_info* devinfo) {
         return ZX_ERR_NO_RESOURCES;
     }
 
-    size_t size;
-    err = pci_map_bar(&pdev->pci_proto, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &devinfo->regs, &size,
-                      &devinfo->regs_handle);
+    err = pci_map_bar_buffer(&pdev->pci_proto, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                             &devinfo->regs_mmio);
     if (err != ZX_OK) {
         return err;
     }
-    if (size != BRCMF_PCIE_REG_MAP_SIZE) {
-        brcmf_err("BAR 0 size was %ld - expected %d\n", size, BRCMF_PCIE_REG_MAP_SIZE);
+    devinfo->regs = devinfo->regs_mmio.vaddr;
+    if (devinfo->regs_mmio.size != BRCMF_PCIE_REG_MAP_SIZE) {
+        brcmf_err("BAR 0 size was %ld - expected %d\n", devinfo->regs_mmio.size,
+                  BRCMF_PCIE_REG_MAP_SIZE);
     }
     brcmf_dbg(TEMP, "About to map tcm (pre-map garbage): 0x%p", devinfo->tcm);
-    err = pci_map_bar(&pdev->pci_proto, 2, ZX_CACHE_POLICY_UNCACHED_DEVICE, &devinfo->tcm, &size,
-                      &devinfo->tcm_handle);
+    err = pci_map_bar_buffer(&pdev->pci_proto, 2, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                             &devinfo->tcm_mmio);
     if (err != ZX_OK) {
-        zx_handle_close(devinfo->regs_handle);
+        mmio_buffer_release(&devinfo->regs_mmio);
         return err;
     }
+    devinfo->tcm = devinfo->tcm_mmio.vaddr;
     brcmf_dbg(TEMP, "Mapped tcm: 0x%p", devinfo->tcm);
 
     if (!devinfo->regs || !devinfo->tcm) {
         brcmf_err("ioremap() failed (%p,%p)\n", devinfo->regs, devinfo->tcm);
-        if (devinfo->regs_handle) {
-            zx_handle_close(devinfo->regs_handle);
-        }
-        if (devinfo->tcm_handle) {
-            zx_handle_close(devinfo->tcm_handle);
-        }
+        mmio_buffer_release(&devinfo->regs_mmio);
+        mmio_buffer_release(&devinfo->tcm_mmio);
         return ZX_ERR_NO_RESOURCES;
     }
     brcmf_dbg(PCIE, "Phys addr : reg space = %p\n", devinfo->regs);
-    brcmf_dbg(PCIE, "Phys addr : mem space = %p size 0x%lx\n", devinfo->tcm, size);
+    brcmf_dbg(PCIE, "Phys addr : mem space = %p size 0x%lx\n", devinfo->tcm,
+              devinfo->tcm_mmio.size);
 
     return ZX_OK;
 }
 
 static void brcmf_pcie_release_resource(struct brcmf_pciedev_info* devinfo) {
-    if (devinfo->regs_handle) {
-        zx_handle_close(devinfo->regs_handle);
-    }
-    if (devinfo->tcm_handle) {
-        zx_handle_close(devinfo->tcm_handle);
-    }
+    mmio_buffer_release(&devinfo->regs_mmio);
+    mmio_buffer_release(&devinfo->tcm_mmio);
 
     pci_enable_bus_master(&devinfo->pdev->pci_proto, false);
 }

@@ -18,6 +18,7 @@
 #ifndef _PCI_H_
 #define _PCI_H_
 
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/pci.h>
 
 #include "ahb.h"
@@ -174,9 +175,7 @@ struct ath10k_pci {
     struct ath10k* ar;
 
     /* PCI BAR mapping */
-    void* mem;
-    uint64_t mem_len;
-    zx_handle_t mem_handle;
+    mmio_buffer_t mmio;
 
     /* Operating interrupt mode */
     enum ath10k_pci_irq_mode oper_irq_mode;

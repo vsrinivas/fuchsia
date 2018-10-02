@@ -418,7 +418,7 @@ static struct service_to_pipe target_service_to_ce_map_wlan[] = {
 
 static bool ath10k_pci_is_awake(struct ath10k* ar) {
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
-    uint32_t val = READ32(ar_pci->mem + PCIE_LOCAL_BASE_ADDRESS + RTC_STATE_ADDRESS);
+    uint32_t val = READ32(ar_pci->mmio.vaddr + PCIE_LOCAL_BASE_ADDRESS + RTC_STATE_ADDRESS);
 
     return RTC_STATE_V_GET(val) == RTC_STATE_V_ON;
 }
@@ -431,7 +431,8 @@ static zx_status_t __ath10k_pci_wake(struct ath10k* ar) {
     ath10k_dbg(ar, ATH10K_DBG_PCI_PS, "pci ps wake reg refcount %lu awake %d\n",
                ar_pci->ps_wake_refcount, ar_pci->ps_awake);
 
-    WRITE32(ar_pci->mem + PCIE_LOCAL_BASE_ADDRESS + PCIE_SOC_WAKE_ADDRESS, PCIE_SOC_WAKE_V_MASK);
+    WRITE32(ar_pci->mmio.vaddr + PCIE_LOCAL_BASE_ADDRESS + PCIE_SOC_WAKE_ADDRESS,
+            PCIE_SOC_WAKE_V_MASK);
     return ZX_OK;
 }
 
@@ -444,7 +445,7 @@ static void __ath10k_pci_sleep(struct ath10k* ar) {
     ath10k_dbg(ar, ATH10K_DBG_PCI_PS, "pci ps sleep reg refcount %lu awake %d\n",
                ar_pci->ps_wake_refcount, ar_pci->ps_awake);
 
-    WRITE32(ar_pci->mem + PCIE_LOCAL_BASE_ADDRESS + PCIE_SOC_WAKE_ADDRESS,
+    WRITE32(ar_pci->mmio.vaddr + PCIE_LOCAL_BASE_ADDRESS + PCIE_SOC_WAKE_ADDRESS,
             PCIE_SOC_WAKE_RESET);
     ar_pci->ps_awake = false;
 }
@@ -482,7 +483,7 @@ static zx_status_t ath10k_pci_force_wake(struct ath10k* ar) {
     mtx_lock(&ar_pci->ps_lock);
 
     if (!ar_pci->ps_awake) {
-        WRITE32(ar_pci->mem + PCIE_LOCAL_BASE_ADDRESS + PCIE_SOC_WAKE_ADDRESS,
+        WRITE32(ar_pci->mmio.vaddr + PCIE_LOCAL_BASE_ADDRESS + PCIE_SOC_WAKE_ADDRESS,
                 PCIE_SOC_WAKE_V_MASK);
 
         ret = ath10k_pci_wake_wait(ar);
@@ -500,7 +501,7 @@ static void ath10k_pci_force_sleep(struct ath10k* ar) {
 
     mtx_lock(&ar_pci->ps_lock);
 
-    WRITE32(ar_pci->mem + PCIE_LOCAL_BASE_ADDRESS + PCIE_SOC_WAKE_ADDRESS,
+    WRITE32(ar_pci->mmio.vaddr + PCIE_LOCAL_BASE_ADDRESS + PCIE_SOC_WAKE_ADDRESS,
             PCIE_SOC_WAKE_RESET);
     ar_pci->ps_awake = false;
 
@@ -603,9 +604,9 @@ static void ath10k_bus_pci_write32(struct ath10k* ar, uint32_t offset, uint32_t 
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
     zx_status_t ret;
 
-    if (unlikely(offset + sizeof(value) > ar_pci->mem_len)) {
+    if (unlikely(offset + sizeof(value) > ar_pci->mmio.size)) {
         ath10k_warn("refusing to write mmio out of bounds at 0x%08x - 0x%08zx (max 0x%08zx)\n",
-                    offset, offset + sizeof(value), ar_pci->mem_len);
+                    offset, offset + sizeof(value), ar_pci->mmio.size);
         return;
     }
 
@@ -616,7 +617,7 @@ static void ath10k_bus_pci_write32(struct ath10k* ar, uint32_t offset, uint32_t 
         return;
     }
 
-    WRITE32(ar_pci->mem + offset, value);
+    WRITE32(ar_pci->mmio.vaddr + offset, value);
     ath10k_pci_sleep(ar);
 }
 
@@ -625,9 +626,9 @@ static uint32_t ath10k_bus_pci_read32(struct ath10k* ar, uint32_t offset) {
     uint32_t val;
     zx_status_t ret;
 
-    if (unlikely(offset + sizeof(val) > ar_pci->mem_len)) {
+    if (unlikely(offset + sizeof(val) > ar_pci->mmio.size)) {
         ath10k_warn("refusing to read mmio out of bounds at 0x%08x - 0x%08zx (max 0x%08zx)\n",
-                    offset, offset + sizeof(val), ar_pci->mem_len);
+                    offset, offset + sizeof(val), ar_pci->mmio.size);
         return 0;
     }
 
@@ -638,7 +639,7 @@ static uint32_t ath10k_bus_pci_read32(struct ath10k* ar, uint32_t offset) {
         return 0xffffffff;
     }
 
-    val = READ32(ar_pci->mem + offset);
+    val = READ32(ar_pci->mmio.vaddr + offset);
     ath10k_pci_sleep(ar);
 
     return val;
@@ -2681,8 +2682,7 @@ static zx_status_t ath10k_pci_claim(struct ath10k* ar) {
     pci_protocol_t* pdev = &ar_pci->pdev;
     zx_status_t ret;
 
-    ret = pci_map_bar(pdev, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &ar_pci->mem, &ar_pci->mem_len,
-                      &ar_pci->mem_handle);
+    ret = pci_map_bar_buffer(pdev, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &ar_pci->mmio);
     if (ret != ZX_OK) {
         ath10k_err("failed to map resources for BAR 0: %s\n", zx_status_get_string(ret));
         goto err_device;
@@ -2691,13 +2691,13 @@ static zx_status_t ath10k_pci_claim(struct ath10k* ar) {
     // TODO: Verify that the requested addresses are in 32b range
 #if 0
     zx_paddr_t phys_addr;
-    ret = zx_vmo_op_range(ar_pci->mem_handle, ZX_VMO_OP_LOOKUP, 0, 8, &phys_addr,
+    ret = zx_vmo_op_range(ar_pci->mmio.vmo, ZX_VMO_OP_LOOKUP, 0, 8, &phys_addr,
                           sizeof(zx_paddr_t));
     if (ret != ZX_OK) {
         ath10k_err("failed to get physical address of PCI mem\n");
         goto err_region;
     }
-    if (phys_addr + ar_pci->mem_len > 0xffffffff) {
+    if (phys_addr + ar_pci->mmio.size > 0xffffffff) {
         ath10k_err("PCI mem allocated outside of 32-bit address space\n");
         ret = ZX_ERR_INTERNAL;
         goto err_region;
@@ -2709,11 +2709,11 @@ static zx_status_t ath10k_pci_claim(struct ath10k* ar) {
         goto err_region;
     }
 
-    ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot pci_mem 0x%p\n", ar_pci->mem);
+    ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot pci_mem 0x%p\n", ar_pci->mmio.vaddr);
     return ZX_OK;
 
 err_region:
-    zx_handle_close(ar_pci->mem_handle);
+    mmio_buffer_release(&ar_pci->mmio);
 
 err_device:
     return ret;
