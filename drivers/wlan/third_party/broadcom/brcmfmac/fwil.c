@@ -139,8 +139,8 @@ zx_status_t brcmf_fil_cmd_data_set(struct brcmf_if* ifp, uint32_t cmd, void* dat
 
     mtx_lock(&ifp->drvr->proto_block);
 
-    //brcmf_dbg(FIL, "ifidx=%d, cmd=%d, len=%d\n", ifp->ifidx, cmd, len);
-    //brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+    brcmf_dbg(FIL, "ifidx=%d, cmd=%d, len=%d\n", ifp->ifidx, cmd, len);
+    brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
 
     err = brcmf_fil_cmd_data(ifp, cmd, data, len, true);
     mtx_unlock(&ifp->drvr->proto_block);
@@ -154,8 +154,8 @@ zx_status_t brcmf_fil_cmd_data_get(struct brcmf_if* ifp, uint32_t cmd, void* dat
     mtx_lock(&ifp->drvr->proto_block);
     err = brcmf_fil_cmd_data(ifp, cmd, data, len, false);
 
-    //brcmf_dbg(FIL, "ifidx=%d, cmd=%d, len=%d\n", ifp->ifidx, cmd, len);
-    //brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+    brcmf_dbg(FIL, "ifidx=%d, cmd=%d, len=%d\n", ifp->ifidx, cmd, len);
+    brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
 
     mtx_unlock(&ifp->drvr->proto_block);
 
@@ -167,7 +167,7 @@ zx_status_t brcmf_fil_cmd_int_set(struct brcmf_if* ifp, uint32_t cmd, uint32_t d
     uint32_t data_le = data;
 
     mtx_lock(&ifp->drvr->proto_block);
-    //brcmf_dbg(FIL, "ifidx=%d, cmd=%d, value=%d\n", ifp->ifidx, cmd, data);
+    brcmf_dbg(FIL, "ifidx=%d, cmd=%d, value=%d\n", ifp->ifidx, cmd, data);
     err = brcmf_fil_cmd_data(ifp, cmd, &data_le, sizeof(data_le), true);
     mtx_unlock(&ifp->drvr->proto_block);
 
@@ -182,7 +182,7 @@ zx_status_t brcmf_fil_cmd_int_get(struct brcmf_if* ifp, uint32_t cmd, uint32_t* 
     err = brcmf_fil_cmd_data(ifp, cmd, &data_le, sizeof(data_le), false);
     mtx_unlock(&ifp->drvr->proto_block);
     *data = data_le;
-    //brcmf_dbg(FIL, "ifidx=%d, cmd=%d, value=%d\n", ifp->ifidx, cmd, *data);
+    brcmf_dbg(FIL, "ifidx=%d, cmd=%d, value=%d\n", ifp->ifidx, cmd, *data);
 
     return err;
 }
@@ -215,8 +215,8 @@ zx_status_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, char* name, const voi
 
     mtx_lock(&drvr->proto_block);
 
-    //brcmf_dbg(FIL, "ifidx=%d, name=%s, len=%d\n", ifp->ifidx, name, len);
-    //brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+    brcmf_dbg(FIL, "ifidx=%d, name=%s, len=%d\n", ifp->ifidx, name, len);
+    brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
 
     buflen = brcmf_create_iovar(name, data, len, (char*)drvr->proto_buf, sizeof(drvr->proto_buf));
     if (buflen) {
@@ -248,8 +248,8 @@ zx_status_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, char* name, void* dat
         brcmf_err("Creating iovar %s failed", name);
     }
 
-    //brcmf_dbg(FIL, "ifidx=%d, name=%s, len=%d\n", ifp->ifidx, name, len);
-    //brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+    brcmf_dbg(FIL, "ifidx=%d, name=%s, len=%d\n", ifp->ifidx, name, len);
+    brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
 
     mtx_unlock(&drvr->proto_block);
     return err;
@@ -324,9 +324,9 @@ zx_status_t brcmf_fil_bsscfg_data_set(struct brcmf_if* ifp, char* name, void* da
 
     mtx_lock(&drvr->proto_block);
 
-    //brcmf_dbg(FIL, "ifidx=%d, bsscfgidx=%d, name=%s, len=%d\n", ifp->ifidx, ifp->bsscfgidx, name,
-    //          len);
-    //brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+    brcmf_dbg(FIL, "ifidx=%d, bsscfgidx=%d, name=%s, len=%d\n", ifp->ifidx, ifp->bsscfgidx, name,
+              len);
+    brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
 
     buflen = brcmf_create_bsscfg(ifp->bsscfgidx, name, data, len, (char*)drvr->proto_buf,
                                  sizeof(drvr->proto_buf));
@@ -359,9 +359,9 @@ zx_status_t brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, char* name, void* da
         err = ZX_ERR_BUFFER_TOO_SMALL;
         brcmf_err("Creating bsscfg failed\n");
     }
-    //brcmf_dbg(FIL, "ifidx=%d, bsscfgidx=%d, name=%s, len=%d\n", ifp->ifidx, ifp->bsscfgidx, name,
-    //          len);
-    //brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+    brcmf_dbg(FIL, "ifidx=%d, bsscfgidx=%d, name=%s, len=%d\n", ifp->ifidx, ifp->bsscfgidx, name,
+              len);
+    brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
 
     mtx_unlock(&drvr->proto_block);
     return err;

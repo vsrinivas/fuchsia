@@ -593,7 +593,7 @@ zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
     uint32_t addr = sdiodev->cc_core->base;
     zx_status_t err;
 
-    //brcmf_dbg(SDIO, "addr = 0x%x, size = %d\n", addr, brcmf_netbuf_list_length(pktq));
+    brcmf_dbg(SDIO, "addr = 0x%x, size = %d\n", addr, brcmf_netbuf_list_length(pktq));
 
     err = brcmf_sdiod_set_backplane_window(sdiodev, addr);
     if (err != ZX_OK) {
@@ -916,12 +916,8 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, sdio_protocol_t* sdio_proto)
         goto fail;
     }
 
-    // We don't get "class" info in the current API.
-    //brcmf_dbg(SDIO, "Class=%x\n", func->class);
     brcmf_dbg(SDIO, "sdio vendor ID: 0x%04x\n", devinfo.funcs_hw_info[SDIO_FN_1].manufacturer_id);
     brcmf_dbg(SDIO, "sdio device ID: 0x%04x\n", devinfo.funcs_hw_info[SDIO_FN_1].product_id);
-    // Linux calls sdio_register once per SDIO function; we only get called once per chipset.
-    //brcmf_dbg(SDIO, "Function#: %d\n", func);
 
     // TODO(cphoenix): Reexamine this when SDIO is more mature - do we need to support "quirks" in
     // Fuchsia? (MMC_QUIRK_LENIENT_FN0 is defined outside this driver.)

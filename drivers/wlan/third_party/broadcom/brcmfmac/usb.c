@@ -294,7 +294,7 @@ static void brcmf_usb_ioctl_resp_wake(struct brcmf_usbdev_info* devinfo) {
 }
 
 static void brcmf_usb_ctl_complete(struct brcmf_usbdev_info* devinfo, int type, int status) {
-    //brcmf_dbg(USB, "Enter, status=%d\n", status);
+    brcmf_dbg(USB, "Enter, status=%d\n", status);
 
     if (unlikely(devinfo == NULL)) {
         return;
@@ -321,7 +321,7 @@ static void brcmf_usb_ctl_complete(struct brcmf_usbdev_info* devinfo, int type, 
 static void brcmf_usb_ctlread_complete(usb_request_t* zxurb, struct brcmf_urb* urb) {
     struct brcmf_usbdev_info* devinfo = (struct brcmf_usbdev_info*)urb->context;
 
-    //brcmf_dbg(USB, "Enter\n");
+    brcmf_dbg(USB, "Enter\n");
     assert(zxurb == urb->zxurb);
     urb->actual_length = zxurb->response.actual;
     urb->status = zxurb->response.status;
@@ -345,7 +345,7 @@ static void brcmf_usb_ctlread_complete(usb_request_t* zxurb, struct brcmf_urb* u
 static void brcmf_usb_ctlwrite_complete(usb_request_t* zxurb, struct brcmf_urb* urb) {
     struct brcmf_usbdev_info* devinfo = (struct brcmf_usbdev_info*)urb->context;
 
-    //brcmf_dbg(USB, "Enter\n");
+    brcmf_dbg(USB, "Enter\n");
     assert(zxurb == urb->zxurb);
     urb->actual_length = zxurb->response.actual;
     urb->status = zxurb->response.status;
@@ -359,7 +359,7 @@ static zx_status_t brcmf_usb_send_ctl(struct brcmf_usbdev_info* devinfo, uint8_t
     zx_status_t ret;
     uint16_t size;
 
-    //brcmf_dbg(USB, "Enter\n");
+    brcmf_dbg(USB, "Enter\n");
     if (devinfo == NULL || buf == NULL || len == 0 || devinfo->ctl_urb == NULL) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -384,7 +384,7 @@ static zx_status_t brcmf_usb_recv_ctl(struct brcmf_usbdev_info* devinfo, uint8_t
     zx_status_t ret;
     uint16_t size;
 
-    //brcmf_dbg(USB, "Enter\n");
+    brcmf_dbg(USB, "Enter\n");
     if ((devinfo == NULL) || (buf == NULL) || (len == 0) || (devinfo->ctl_urb == NULL)) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -410,7 +410,7 @@ static zx_status_t brcmf_usb_tx_ctlpkt(struct brcmf_device* dev, uint8_t* buf, u
     zx_status_t err = ZX_OK;
     struct brcmf_usbdev_info* devinfo = brcmf_usb_get_businfo(dev);
 
-    //brcmf_dbg(USB, "Enter");
+    brcmf_dbg(USB, "Enter");
     if (devinfo->bus_pub.state != BRCMFMAC_USB_STATE_UP) {
         return ZX_ERR_IO;
     }
@@ -441,7 +441,7 @@ static zx_status_t brcmf_usb_rx_ctlpkt(struct brcmf_device* dev, uint8_t* buf, u
     bool timeout;
     struct brcmf_usbdev_info* devinfo = brcmf_usb_get_businfo(dev);
 
-    //brcmf_dbg(USB, "Enter\n");
+    brcmf_dbg(USB, "Enter\n");
     if (devinfo->bus_pub.state != BRCMFMAC_USB_STATE_UP) {
         return ZX_ERR_IO;
     }

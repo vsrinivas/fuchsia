@@ -120,7 +120,7 @@ static zx_status_t brcmf_proto_bcdc_msg(struct brcmf_pub* drvr, int ifidx, uint 
     struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
     uint32_t flags;
 
-    //brcmf_dbg(BCDC, "Enter\n");
+    brcmf_dbg(BCDC, "Enter\n");
 
     memset(msg, 0, sizeof(struct brcmf_proto_bcdc_dcmd));
 
@@ -151,7 +151,7 @@ static zx_status_t brcmf_proto_bcdc_cmplt(struct brcmf_pub* drvr, uint32_t id, u
     zx_status_t ret;
     struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
 
-    //brcmf_dbg(BCDC, "Enter\n");
+    brcmf_dbg(BCDC, "Enter\n");
     len += sizeof(struct brcmf_proto_bcdc_dcmd);
     do {
         ret = brcmf_bus_rxctl(drvr->bus_if, (unsigned char*)&bcdc->msg, len, rxlen_out);
@@ -173,7 +173,7 @@ static zx_status_t brcmf_proto_bcdc_query_dcmd(struct brcmf_pub* drvr, int ifidx
     int rxlen;
     uint32_t id, flags;
 
-    //brcmf_dbg(BCDC, "Enter, cmd %d len %d\n", cmd, len);
+    brcmf_dbg(BCDC, "Enter, cmd %d len %d\n", cmd, len);
 
     *fwerr = ZX_OK;
     ret = brcmf_proto_bcdc_msg(drvr, ifidx, cmd, buf, len, false);
@@ -231,7 +231,7 @@ static zx_status_t brcmf_proto_bcdc_set_dcmd(struct brcmf_pub* drvr, int ifidx, 
     uint32_t flags, id;
     int rxlen_out;
 
-    //brcmf_dbg(BCDC, "Enter, cmd %d len %d\n", cmd, len);
+    brcmf_dbg(BCDC, "Enter, cmd %d len %d\n", cmd, len);
 
     *fwerr = ZX_OK;
     ret = brcmf_proto_bcdc_msg(drvr, ifidx, cmd, buf, len, true);
@@ -270,7 +270,7 @@ static void brcmf_proto_bcdc_hdrpush(struct brcmf_pub* drvr, int ifidx, uint8_t 
                                      struct brcmf_netbuf* pktbuf) {
     struct brcmf_proto_bcdc_header* h;
 
-    //brcmf_dbg(BCDC, "Enter\n");
+    brcmf_dbg(BCDC, "Enter\n");
 
     /* Push BDC header used to convey priority for buses that don't */
     brcmf_netbuf_grow_head(pktbuf, BCDC_HEADER_LEN);
@@ -295,7 +295,7 @@ static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
     struct brcmf_proto_bcdc_header* h;
     struct brcmf_if* tmp_if;
 
-    //brcmf_dbg(BCDC, "Enter\n");
+    brcmf_dbg(BCDC, "Enter\n");
 
     /* Pop BCDC header used to convey priority for buses that don't */
     if (pktbuf->len <= BCDC_HEADER_LEN) {

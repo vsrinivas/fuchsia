@@ -950,7 +950,7 @@ static zx_status_t brcmf_do_escan(struct brcmf_if* ifp, wlanif_scan_req_t* req) 
     struct brcmf_scan_results* results;
     struct escan_info* escan = &cfg->escan_info;
 
-    //brcmf_dbg(SCAN, "Enter\n");
+    brcmf_dbg(SCAN, "Enter\n");
     escan->ifp = ifp;
     escan->wiphy = cfg->wiphy;
     escan->escan_state = WL_ESCAN_STATE_SCANNING;
@@ -2590,11 +2590,11 @@ static zx_status_t brcmf_inform_single_bss(struct brcmf_cfg80211_info* cfg,
     notify_ielen = bi->ie_length;
     notify_rssi_dbm = (int16_t)bi->RSSI;
 
-    //brcmf_dbg(CONN, "bssid: %pM\n", bi->BSSID);
-    //brcmf_dbg(CONN, "Channel: %d\n", channel);
-    //brcmf_dbg(CONN, "Capability: %X\n", notify_capability);
-    //brcmf_dbg(CONN, "Beacon interval: %d\n", notify_interval);
-    //brcmf_dbg(CONN, "Signal: %d\n", notify_rssi_dbm);
+    brcmf_dbg(CONN, "bssid: %pM\n", bi->BSSID);
+    brcmf_dbg(CONN, "Channel: %d\n", channel);
+    brcmf_dbg(CONN, "Capability: %X\n", notify_capability);
+    brcmf_dbg(CONN, "Beacon interval: %d\n", notify_interval);
+    brcmf_dbg(CONN, "Signal: %d\n", notify_rssi_dbm);
 
     //brcmf_dbg(TEMP, " * * Got a scan result:");
     //brcmf_iedump(notify_ie, notify_ielen);
@@ -2779,7 +2779,7 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
     }
 
     if (status == BRCMF_E_STATUS_PARTIAL) {
-        //brcmf_dbg(SCAN, "ESCAN Partial result\n");
+        brcmf_dbg(SCAN, "ESCAN Partial result\n");
         if (e->datalen < sizeof(*escan_result_le)) {
             brcmf_err("invalid event data length\n");
             goto exit;
@@ -3846,7 +3846,7 @@ zx_status_t brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, int32_t pktfla
     ifp = vif->ifp;
     saved_ie = &vif->saved_ie;
 
-    //brcmf_dbg(TRACE, "bsscfgidx %d, pktflag : 0x%02X\n", ifp->bsscfgidx, pktflag);
+    brcmf_dbg(TRACE, "bsscfgidx %d, pktflag : 0x%02X\n", ifp->bsscfgidx, pktflag);
     iovar_ie_buf = calloc(1, WL_EXTRA_BUF_MAX);
     if (!iovar_ie_buf) {
         return ZX_ERR_NO_MEMORY;
@@ -5182,7 +5182,7 @@ static bool brcmf_is_linkup(struct brcmf_cfg80211_vif* vif, const struct brcmf_e
         brcmf_set_bit_in_array(BRCMF_VIF_STATUS_EAP_SUCCESS, &vif->sme_state);
     }
     if (event == BRCMF_E_SET_SSID && status == BRCMF_E_STATUS_SUCCESS) {
-        //brcmf_dbg(CONN, "Processing set ssid\n");
+        brcmf_dbg(CONN, "Processing set ssid\n");
         memcpy(vif->profile.bssid, e->addr, ETH_ALEN);
         if (vif->profile.use_fwsup != BRCMF_PROFILE_FWSUP_PSK) {
             //brcmf_dbg(TEMP, "Ret true");
