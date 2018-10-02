@@ -69,6 +69,12 @@ public:
     void* get() const {
         return mmio_.vaddr;
     }
+    size_t get_size() const {
+        return mmio_.size;
+    }
+    zx::unowned_vmo get_vmo() const {
+        return zx::unowned_vmo(mmio_.vmo);
+    }
 
     zx_status_t Pin(const zx::bti& bti, fbl::unique_ptr<MmioPinnedBuffer>* pinned_buffer) {
         mmio_pinned_buffer_t pinned;
