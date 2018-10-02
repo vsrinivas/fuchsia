@@ -211,6 +211,7 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
 
     fuchsia::modular::Proposal proposal;
     proposal.id = std::to_string(proposal_id);
+    proposal.affinity.resize(0);
     proposal.story_name = story_id;
     proposal.on_selected.push_back(std::move(action));
 

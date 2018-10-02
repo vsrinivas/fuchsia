@@ -21,9 +21,9 @@
 #include "peridot/bin/suggestion_engine/filters/ranked_active_filter.h"
 #include "peridot/bin/suggestion_engine/filters/ranked_passive_filter.h"
 #include "peridot/bin/suggestion_engine/rankers/linear_ranker.h"
+#include "peridot/bin/suggestion_engine/ranking_features/affinity_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/annoyance_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/dead_story_ranking_feature.h"
-#include "peridot/bin/suggestion_engine/ranking_features/focused_story_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/interrupting_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/mod_pair_ranking_feature.h"
@@ -284,8 +284,7 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
   ranking_features["mod_pairs_rf"] = std::make_shared<ModPairRankingFeature>();
   ranking_features["query_match_rf"] =
       std::make_shared<QueryMatchRankingFeature>();
-  ranking_features["focused_story_rf"] =
-      std::make_shared<FocusedStoryRankingFeature>();
+  ranking_features["affinity_rf"] = std::make_shared<AffinityRankingFeature>();
   ranking_features["annoyance_rf"] =
       std::make_shared<AnnoyanceRankingFeature>();
   ranking_features["dead_story_rf"] =
@@ -314,7 +313,7 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
   next_ranker->AddRankingFeature(1.0, ranking_features["proposal_hint_rf"]);
   next_ranker->AddRankingFeature(-0.1, ranking_features["kronk_rf"]);
   next_ranker->AddRankingFeature(0, ranking_features["mod_pairs_rf"]);
-  next_ranker->AddRankingFeature(1.0, ranking_features["focused_story_rf"]);
+  next_ranker->AddRankingFeature(1.0, ranking_features["affinity_rf"]);
   next_processor_.SetRanker(std::move(next_ranker));
 
   // Set up the query ranking features
@@ -335,7 +334,7 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
   // Set up passive filters
   std::vector<std::unique_ptr<SuggestionPassiveFilter>> passive_filters;
   passive_filters.push_back(std::make_unique<ConjugateRankedPassiveFilter>(
-      ranking_features["focused_story_rf"]));
+      ranking_features["affinity_rf"]));
   passive_filters.push_back(std::make_unique<RankedPassiveFilter>(
       ranking_features["is_interrupting_rf"]));
   next_processor_.SetPassiveFilters(std::move(passive_filters));

@@ -43,6 +43,7 @@ fuchsia::modular::Proposal CreateProposal(
   fuchsia::modular::Proposal p;
   p.id = id;
   p.on_selected = std::move(actions);
+  p.affinity.resize(0);
   fuchsia::modular::SuggestionDisplay d;
 
   d.headline = headline;

@@ -54,6 +54,8 @@ TEST(IndexTest, Encode_Differences) {
   meta1.mod->path = fidl::VectorPtr<fidl::StringPtr>::New(0);
   meta1.mod->path.push_back("1");
   meta1.mod->path.push_back("2");
+  meta1.mod->focused = fuchsia::modular::FocusedState::New();
+  meta1.mod->focused->state = fuchsia::modular::FocusedStateState::FOCUSED;
   meta1.entity = fuchsia::modular::EntityMetadata::New();
   meta1.entity->topic = "topic1";
   meta1.entity->type = fidl::VectorPtr<fidl::StringPtr>::New(0);
@@ -70,6 +72,8 @@ TEST(IndexTest, Encode_Differences) {
   meta2->mod->url = "url2";
   meta2->mod->path = fidl::VectorPtr<fidl::StringPtr>::New(0);
   meta2->mod->path.push_back("2");
+  meta2->mod->focused = fuchsia::modular::FocusedState::New();
+  meta2->mod->focused->state = fuchsia::modular::FocusedStateState::NOT_FOCUSED;
   meta2->entity = fuchsia::modular::EntityMetadata::New();
   meta2->entity->topic = "topic2";
   meta2->entity->type = fidl::VectorPtr<fidl::StringPtr>::New(0);
@@ -82,8 +86,8 @@ TEST(IndexTest, Encode_Differences) {
 
   // Every field we set has a value here. entity->type fields each get their
   // own.
-  EXPECT_EQ(8lu, encoded1.size());
-  EXPECT_EQ(9lu, encoded2.size());
+  EXPECT_EQ(9lu, encoded1.size());
+  EXPECT_EQ(10lu, encoded2.size());
 
   std::set<std::string> intersection;
   std::set_intersection(encoded1.begin(), encoded1.end(), encoded2.begin(),

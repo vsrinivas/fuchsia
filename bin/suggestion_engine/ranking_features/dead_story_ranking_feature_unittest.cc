@@ -26,10 +26,15 @@ void SetRunningStoryContextUpdate(
 }
 
 SuggestionPrototype BuildSuggestionPrototype(std::string story_name,
-                                             bool story_affinity) {
+                                             bool has_story_affinity) {
   fuchsia::modular::Proposal proposal;
-  proposal.story_affinity = story_affinity;
-  proposal.story_name = story_name;
+  if (has_story_affinity) {
+    fuchsia::modular::StoryAffinity story_affinity;
+    story_affinity.story_name = story_name;
+    fuchsia::modular::ProposalAffinity affinity;
+    affinity.set_story_affinity(std::move(story_affinity));
+    proposal.affinity.push_back(std::move(affinity));
+  }
   SuggestionPrototype prototype;
   prototype.source_url = "fake_url";
   prototype.proposal = std::move(proposal);

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_FOCUSED_STORY_RANKING_FEATURE_H_
-#define PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_FOCUSED_STORY_RANKING_FEATURE_H_
+#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_AFFINITY_RANKING_FEATURE_H_
+#define PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_AFFINITY_RANKING_FEATURE_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
 
@@ -11,10 +11,10 @@
 
 namespace modular {
 
-class FocusedStoryRankingFeature : public RankingFeature {
+class AffinityRankingFeature : public RankingFeature {
  public:
-  FocusedStoryRankingFeature();
-  ~FocusedStoryRankingFeature() override;
+  AffinityRankingFeature();
+  ~AffinityRankingFeature() override;
 
  private:
   double ComputeFeatureInternal(const fuchsia::modular::UserInput& query,
@@ -25,4 +25,4 @@ class FocusedStoryRankingFeature : public RankingFeature {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_FOCUSED_STORY_RANKING_FEATURE_H_
+#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_AFFINITY_RANKING_FEATURE_H_

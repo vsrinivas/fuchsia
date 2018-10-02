@@ -24,6 +24,7 @@ const char kStoryFocusedKey[] = "sf";
 // Keys for fields within fuchsia::modular::ContextMetadata.mod:
 const char kModPathKey[] = "mp";
 const char kModUrlKey[] = "mu";
+const char kModuleFocusedKey[] = "mf";
 
 // Keys for fields within fuchsia::modular::ContextMetadata.entity:
 const char kEntityTopicKey[] = "et";
@@ -42,6 +43,18 @@ std::set<std::string> EncodeMetadataAndType(
                                fidl::MakeOptional(std::move(meta_clone)));
 }
 
+std::string EncodeFocus(const std::string& key,
+                        fuchsia::modular::FocusedStateState focused_state) {
+  std::ostringstream str;
+  str << key;
+  if (focused_state == fuchsia::modular::FocusedStateState::FOCUSED) {
+    str << "1";
+  } else {
+    str << "0";
+  }
+  return str.str();
+}
+
 std::set<std::string> EncodeMetadataAndType(
     fuchsia::modular::ContextValueType node_type,
     const fuchsia::modular::ContextMetadataPtr& metadata) {
@@ -55,15 +68,8 @@ std::set<std::string> EncodeMetadataAndType(
         ret.insert(str.str());
       }
       if (metadata->story->focused) {
-        std::ostringstream str;
-        str << kStoryFocusedKey;
-        if (metadata->story->focused->state ==
-            fuchsia::modular::FocusedStateState::FOCUSED) {
-          str << "1";
-        } else {
-          str << "0";
-        }
-        ret.insert(str.str());
+        ret.insert(
+            EncodeFocus(kStoryFocusedKey, metadata->story->focused->state));
       }
     }
 
@@ -80,6 +86,10 @@ std::set<std::string> EncodeMetadataAndType(
           str << '\0' << part;
         }
         ret.insert(str.str());
+      }
+      if (metadata->mod->focused) {
+        ret.insert(
+            EncodeFocus(kModuleFocusedKey, metadata->mod->focused->state));
       }
     }
 

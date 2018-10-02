@@ -15,19 +15,32 @@ DeadStoryRankingFeature::~DeadStoryRankingFeature() = default;
 double DeadStoryRankingFeature::ComputeFeatureInternal(
     const fuchsia::modular::UserInput& query,
     const RankedSuggestion& ranked_suggestion) {
-  bool story_affinity = ranked_suggestion.prototype->proposal.story_affinity;
-  const auto& story_name = ranked_suggestion.prototype->proposal.story_name;
+  const auto& proposal = ranked_suggestion.prototype->proposal;
 
   // Proposal not tied to any story.
-  if (!(story_affinity && story_name)) {
+  if (proposal.affinity->empty()) {
     return kMinConfidence;
   }
 
   // TODO(miguelfrde): cache ids of stories in context in an unordered_set for
   // average O(1) lookup.
-  for (auto& context_value : *ContextValues()) {
-    if (story_name == context_value.meta.story->id) {
-      return kMinConfidence;
+  for (const auto& context_value : *ContextValues()) {
+    const auto& story_name = context_value.meta.story->id;
+    for (const auto& affinity : *proposal.affinity) {
+      switch (affinity.Which()) {
+        case fuchsia::modular::ProposalAffinity::Tag::kModuleAffinity:
+          if (story_name == affinity.module_affinity().story_name) {
+            return kMinConfidence;
+          }
+          break;
+        case fuchsia::modular::ProposalAffinity::Tag::kStoryAffinity:
+          if (story_name == affinity.story_affinity().story_name) {
+            return kMinConfidence;
+          }
+          break;
+        default:
+          break;
+      }
     }
   }
   return kMaxConfidence;

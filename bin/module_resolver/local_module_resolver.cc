@@ -482,6 +482,7 @@ void LocalModuleResolver::OnQuery(fuchsia::modular::UserInput query,
           StringStartsWith(last_part.ToString(), query.text)) {
         fuchsia::modular::Proposal proposal;
         proposal.id = manifest.binary;
+        proposal.affinity.resize(0);
 
         fuchsia::modular::AddModule add_module;
         add_module.intent.handler = manifest.binary;

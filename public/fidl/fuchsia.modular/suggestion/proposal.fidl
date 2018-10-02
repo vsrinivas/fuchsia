@@ -20,9 +20,9 @@ struct Proposal {
   // This name is namespaced to the agent that submitted the proposal.
   string? story_name;
 
-  // If set to true, this proposal will only show up when |story_id| is in the
-  // foreground.
-  bool story_affinity;
+  // Used to restrict the proposal potential appearance as a suggestion only
+  // when certain story or mod is focused.
+  vector<ProposalAffinity> affinity;
 
   // The list of actions to take when the user selects the associated
   // Suggestion.
@@ -43,10 +43,33 @@ struct Proposal {
   // A listener interface that is notified when the proposal is accepted by
   // the system.
   //
-  // The listener is currently notified once when a proposal is accepted. Thus the
-  // |story_id| provided will be of the first create story action in |on_selected|,
-  // and subsequent create story actions will not notify the listener.
+  // The listener is currently notified once when a proposal is accepted. Thus
+  // the |story_id| provided will be of the first create story action in
+  // |on_selected|, and subsequent create story actions will not notify the
+  // listener.
   ProposalListener? listener;
+};
+
+// Restricts the proposal potential apparance as a suggestion only when
+// a story or a mod within a story are focused.
+union ProposalAffinity {
+  StoryAffinity story_affinity;
+  ModuleAffinity module_affinity;
+};
+
+// Restricts the proposal to appear only when the story identified by
+// |story_name| is focused.
+// The name is namespace to the agent that submitted the proposal.
+struct StoryAffinity {
+  string story_name;
+};
+
+// Restricts the proposal to appear only when the module identified by
+// |module_name| within the story identified by |story_name| is focused.
+// The name is namespace to the agent that submitted the proposal.
+struct ModuleAffinity {
+  string story_name;
+  vector<string> module_name;
 };
 
 // An interface that allows Proposal creators to be notified when a proposal

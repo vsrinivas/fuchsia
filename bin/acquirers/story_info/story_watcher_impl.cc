@@ -130,7 +130,7 @@ void StoryWatcherImpl::DropLink(const std::string& link_key) {
 void StoryWatcherImpl::UpdateModuleFocus(ContextModuleMetadata* data,
                                          bool focused) {
   auto metadata = ContextMetadataBuilder(std::move(data->metadata))
-                      .SetStoryFocused(true)
+                      .SetModuleFocused(focused)
                       .Build();
   fidl::Clone(metadata, &data->metadata);
   data->value_writer->Set(nullptr /* content */,
