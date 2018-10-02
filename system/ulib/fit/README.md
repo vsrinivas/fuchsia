@@ -139,3 +139,14 @@ These sections explain why certain features are in FIT.
 - So we introduce fit::nullable to handle both cases systematically while
   still hewing close to the semantics of std::optional.
 
+### fit::promise, fit::future, fit::executor, etc.
+
+- When writing asynchronous event-driven programs, it's convenient to be able
+  to stage a sequence of asynchronous tasks.  This tends to be challenging
+  to implement in a callback-driven manner due to object lifetime issues,
+  so we would like an alternative pattern that is easier to apply correctly,
+  such as by expressing asynchronous logic as a compositions of futures.
+- The C++ 14 standard library offers `std::future` but it is tied to a
+  thread-based execution model.  Awaiting a future requires blocking, which
+  is bad for event loops.
+- So libfit offers a family of APIs that work better with event loops.

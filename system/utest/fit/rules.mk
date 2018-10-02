@@ -8,11 +8,21 @@ fit_tests := \
     $(LOCAL_DIR)/defer_tests.cpp \
     $(LOCAL_DIR)/examples/function_example1.cpp \
     $(LOCAL_DIR)/examples/function_example2.cpp \
+    $(LOCAL_DIR)/examples/promise_example1.cpp \
+    $(LOCAL_DIR)/examples/promise_example2.cpp \
+    $(LOCAL_DIR)/examples/utils.cpp \
     $(LOCAL_DIR)/function_tests.cpp \
-    $(LOCAL_DIR)/function_traits_tests.cpp \
+    $(LOCAL_DIR)/future_tests.cpp \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/nullable_tests.cpp \
     $(LOCAL_DIR)/optional_tests.cpp \
+    $(LOCAL_DIR)/pending_task_tests.cpp \
+    $(LOCAL_DIR)/promise_tests.cpp \
+    $(LOCAL_DIR)/result_tests.cpp \
+    $(LOCAL_DIR)/scheduler_tests.cpp \
+    $(LOCAL_DIR)/sequential_executor_tests.cpp \
+    $(LOCAL_DIR)/suspended_task_tests.cpp \
+    $(LOCAL_DIR)/traits_tests.cpp \
     $(LOCAL_DIR)/variant_tests.cpp \
 
 # Userspace tests.

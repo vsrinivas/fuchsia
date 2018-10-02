@@ -6,12 +6,18 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 fit_srcs := \
     $(LOCAL_DIR)/empty.c \
+    $(LOCAL_DIR)/promise.cpp \
+    $(LOCAL_DIR)/sequential_executor.cpp \
+    $(LOCAL_DIR)/scheduler.cpp \
 
 #
 # Userspace library.
 #
 
-MODULE_COMPILEFLAGS += -fvisibility=hidden
+# Disabled for now because libstdc++ isn't available for Zircon targets yet.
+# We need the target to exist for the SDK to pick it up though.
+MODULE_COMPILEFLAGS += -fvisibility=hidden \
+    -DFIT_NO_STD_FOR_ZIRCON_USERSPACE
 
 MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
