@@ -8,9 +8,10 @@
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/symbols/array_type.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
+#include "garnet/bin/zxdb/symbols/collection.h"
+#include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/mock_symbol_data_provider.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
-#include "garnet/bin/zxdb/symbols/struct_class.h"
 #include "garnet/bin/zxdb/symbols/type_test_support.h"
 #include "gtest/gtest.h"
 
@@ -367,10 +368,6 @@ TEST_F(FormatValueTest, Reference) {
             SyncFormatValue(value, opts));
 }
 
-// TODO(brettw) check nested arrays.
-// Pretty sure this ends up being wrong:
-//   int a[2][2] = { ... }
-
 TEST_F(FormatValueTest, Structs) {
   FormatValueOptions opts;
   opts.num_format = FormatValueOptions::NumFormat::kHex;
@@ -387,6 +384,38 @@ TEST_F(FormatValueTest, Structs) {
       "{first = {a = 0x110011, b = 0x220022}, second = {a = 0x330033, b = "
       "0x440044}}",
       SyncFormatValue(pair_value, opts));
+}
+
+// GDB and LLDB both print all members of a union and accept the possibility
+// that sometimes one of them might be garbage, we do the same.
+TEST_F(FormatValueTest, Union) {
+  FormatValueOptions opts;
+
+  // Define a union type with two int32 values.
+  auto int32_type = MakeInt32Type();
+
+  auto union_type = fxl::MakeRefCounted<Collection>(Symbol::kTagUnionType);
+  union_type->set_byte_size(int32_type->byte_size());
+  union_type->set_assigned_name("MyUnion");
+
+  std::vector<LazySymbol> data_members;
+
+  auto member_1 = fxl::MakeRefCounted<DataMember>();
+  member_1->set_assigned_name("a");
+  member_1->set_type(LazySymbol(int32_type));
+  member_1->set_member_location(0);
+  data_members.push_back(LazySymbol(member_1));
+
+  auto member_2 = fxl::MakeRefCounted<DataMember>();
+  member_2->set_assigned_name("b");
+  member_2->set_type(LazySymbol(int32_type));
+  member_2->set_member_location(0);
+  data_members.push_back(LazySymbol(member_2));
+
+  union_type->set_data_members(std::move(data_members));
+
+  ExprValue value(union_type, {42, 0, 0, 0});
+  EXPECT_EQ("{a = 42, b = 42}", SyncFormatValue(value, opts));
 }
 
 }  // namespace zxdb

@@ -15,11 +15,11 @@ namespace zxdb {
 class ArrayType;
 class BaseType;
 class CodeBlock;
+class Collection;
 class DataMember;
 class Function;
 class ModifiedType;
 class Namespace;
-class StructClass;
 class Type;
 class Value;
 class Variable;
@@ -247,7 +247,7 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   virtual const Function* AsFunction() const;
   virtual const ModifiedType* AsModifiedType() const;
   virtual const Namespace* AsNamespace() const;
-  virtual const StructClass* AsStructClass() const;
+  virtual const Collection* AsCollection() const;
   virtual const Type* AsType() const;
   virtual const Value* AsValue() const;
   virtual const Variable* AsVariable() const;
@@ -279,9 +279,9 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
     return const_cast<Namespace*>(
         const_cast<const Symbol*>(this)->AsNamespace());
   }
-  StructClass* AsStructClass() {
-    return const_cast<StructClass*>(
-        const_cast<const Symbol*>(this)->AsStructClass());
+  Collection* AsCollection() {
+    return const_cast<Collection*>(
+        const_cast<const Symbol*>(this)->AsCollection());
   }
   Type* AsType() {
     return const_cast<Type*>(const_cast<const Symbol*>(this)->AsType());

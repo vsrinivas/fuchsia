@@ -4,8 +4,8 @@
 
 #include "garnet/bin/zxdb/symbols/symbol_utils.h"
 
+#include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/namespace.h"
-#include "garnet/bin/zxdb/symbols/struct_class.h"
 #include "garnet/bin/zxdb/symbols/type.h"
 #include "lib/fxl/logging.h"
 
@@ -25,8 +25,7 @@ std::string GetSymbolScopePrefix(const Symbol* symbol) {
   if (parent->tag() == Symbol::kTagCompileUnit)
     return std::string();  // Don't go above compilation units.
 
-  if (parent->AsNamespace() || parent->AsStructClass() ||
-      parent->AsFunction()) {
+  if (parent->AsNamespace() || parent->AsCollection() || parent->AsFunction()) {
     // These are the types that get qualified.
     return parent->GetFullName() + kCppSeparator;
   }

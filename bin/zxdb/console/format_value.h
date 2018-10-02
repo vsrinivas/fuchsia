@@ -17,10 +17,10 @@
 
 namespace zxdb {
 
+class Collection;
 class Err;
 class ExprValue;
 class OutputBuffer;
-class StructClass;
 class SymbolContext;
 class SymbolDataProvider;
 class SymbolVariableResolver;
@@ -155,10 +155,10 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // Asynchronously formats the given type.
   //
   // The known_elt_count can be -1 if the array size is not statically known.
-  void FormatStructClass(fxl::RefPtr<SymbolDataProvider> data_provider,
-                         const StructClass* sc, const ExprValue& value,
-                         const FormatValueOptions& options,
-                         OutputKey output_key);
+  void FormatCollection(fxl::RefPtr<SymbolDataProvider> data_provider,
+                        const Collection* coll, const ExprValue& value,
+                        const FormatValueOptions& options,
+                        OutputKey output_key);
   void FormatString(fxl::RefPtr<SymbolDataProvider> data_provider,
                     const ExprValue& value, const Type* array_value_type,
                     int known_elt_count, const FormatValueOptions& options,

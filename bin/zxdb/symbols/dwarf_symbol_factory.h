@@ -38,11 +38,11 @@ class DwarfSymbolFactory : public SymbolFactory {
                                      bool is_specification = false);
   fxl::RefPtr<Symbol> DecodeArrayType(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeBaseType(const llvm::DWARFDie& die);
+  fxl::RefPtr<Symbol> DecodeCollection(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeDataMember(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeLexicalBlock(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeModifiedType(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeNamespace(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeStructClass(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeVariable(const llvm::DWARFDie& die);
 
   // This can be null if the module is unloaded but there are still some

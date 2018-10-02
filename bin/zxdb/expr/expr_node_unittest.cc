@@ -14,10 +14,10 @@
 #include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
 #include "garnet/bin/zxdb/symbols/code_block.h"
+#include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/mock_symbol_data_provider.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
-#include "garnet/bin/zxdb/symbols/struct_class.h"
 #include "garnet/bin/zxdb/symbols/type_test_support.h"
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "gtest/gtest.h"
@@ -358,14 +358,14 @@ TEST_F(ExprNodeTest, ArrayAccess) {
   constexpr uint64_t kRefAddress = 0x5000;
   constexpr uint8_t kIndex = 5;
   auto context = fxl::MakeRefCounted<TestEvalContext>();
-  context->data_provider()->AddMemory(kRefAddress, { kIndex, 0, 0, 0 });
+  context->data_provider()->AddMemory(kRefAddress, {kIndex, 0, 0, 0});
 
   // The index expression is a reference to the index we saved above, and the
   // reference data is the address.
   auto uint32_ref_type = fxl::MakeRefCounted<ModifiedType>(
       Symbol::kTagReferenceType, LazySymbol(uint32_type));
-  auto index = fxl::MakeRefCounted<TestExprNode>(false,
-      ExprValue(uint32_ref_type, {0, 0x50, 0, 0, 0, 0, 0, 0}));
+  auto index = fxl::MakeRefCounted<TestExprNode>(
+      false, ExprValue(uint32_ref_type, {0, 0x50, 0, 0, 0, 0, 0, 0}));
 
   // The node to evaluate the access. Note the pointer are index nodes are
   // moved here so the source reference is gone. This allows us to test that

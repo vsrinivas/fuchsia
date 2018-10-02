@@ -7,9 +7,9 @@
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/resolve_ptr_ref.h"
+#include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
-#include "garnet/bin/zxdb/symbols/struct_class.h"
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
 #include "garnet/bin/zxdb/symbols/type_utils.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -18,16 +18,16 @@ namespace zxdb {
 
 namespace {
 
-// Tries to interpret the type as a pointed to a StructClass. On success,
-// places the output into |*sc|.
-Err GetPointedToStructClass(const Type* type, const StructClass** sc) {
+// Tries to interpret the type as a pointed to a Collection. On success,
+// places the output into |*coll|.
+Err GetPointedToCollection(const Type* type, const Collection** coll) {
   const Type* pointed_to = nullptr;
   Err err = GetPointedToType(type, &pointed_to);
   if (err.has_error())
     return err;
 
-  *sc = pointed_to->GetConcreteType()->AsStructClass();
-  if (!sc) {
+  *coll = pointed_to->GetConcreteType()->AsCollection();
+  if (!coll) {
     return Err(
         fxl::StringPrintf("Attempting to dereference a pointer to '%s' which "
                           "is not a class or a struct.",
@@ -38,11 +38,12 @@ Err GetPointedToStructClass(const Type* type, const StructClass** sc) {
 
 // This can accept a null base pointer so the caller doesn't need to check.
 // On success, fills *out.
-Err FindMemberNamed(const StructClass* base, const std::string& member_name,
+Err FindMemberNamed(const Collection* base, const std::string& member_name,
                     const DataMember** out) {
   if (!base) {
-    return Err(fxl::StringPrintf(
-        "Can't resolve '%s' on non-struct/class value.", member_name.c_str()));
+    return Err(
+        fxl::StringPrintf("Can't resolve '%s' on non-struct/class/union value.",
+                          member_name.c_str()));
   }
 
   for (const auto& lazy : base->data_members()) {
@@ -52,26 +53,26 @@ Err FindMemberNamed(const StructClass* base, const std::string& member_name,
       return Err();
     }
   }
-  return Err(fxl::StringPrintf(
-      "No member '%s' in %s '%s'.", member_name.c_str(),
-      base->GetStructOrClassString(), base->GetFullName().c_str()));
+  return Err(fxl::StringPrintf("No member '%s' in %s '%s'.",
+                               member_name.c_str(), base->GetKindString(),
+                               base->GetFullName().c_str()));
 }
 
 // Validates the input member (it will null check) and extracts the type
 // for the member.
-Err GetMemberType(const StructClass* sc, const DataMember* member,
+Err GetMemberType(const Collection* coll, const DataMember* member,
                   fxl::RefPtr<Type>* member_type) {
   if (!member) {
     return Err(fxl::StringPrintf("Invalid data member for %s '%s'.",
-                                 sc->GetStructOrClassString(),
-                                 sc->GetFullName().c_str()));
+                                 coll->GetKindString(),
+                                 coll->GetFullName().c_str()));
   }
 
   *member_type =
       fxl::RefPtr<Type>(const_cast<Type*>(member->type().Get()->AsType()));
   if (!*member_type) {
     return Err(fxl::StringPrintf("Bad type information for '%s.%s'.",
-                                 sc->GetFullName().c_str(),
+                                 coll->GetFullName().c_str(),
                                  member->GetAssignedName().c_str()));
   }
   return Err();
@@ -79,7 +80,7 @@ Err GetMemberType(const StructClass* sc, const DataMember* member,
 
 void DoResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
                               const ExprValue& base_ptr,
-                              const StructClass* pointed_to_type,
+                              const Collection* pointed_to_type,
                               const DataMember* member,
                               std::function<void(const Err&, ExprValue)> cb) {
   Err err = base_ptr.EnsureSizeIs(sizeof(uint64_t));
@@ -105,12 +106,12 @@ void DoResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
 
 Err ResolveMember(const ExprValue& base, const DataMember* member,
                   ExprValue* out) {
-  const StructClass* sc = nullptr;
-  if (!base.type() || !(sc = base.type()->GetConcreteType()->AsStructClass()))
+  const Collection* coll = nullptr;
+  if (!base.type() || !(coll = base.type()->GetConcreteType()->AsCollection()))
     return Err("Can't resolve data member on non-struct/class value.");
 
   fxl::RefPtr<Type> member_type;
-  Err err = GetMemberType(sc, member, &member_type);
+  Err err = GetMemberType(coll, member, &member_type);
   if (err.has_error())
     return err;
 
@@ -121,7 +122,7 @@ Err ResolveMember(const ExprValue& base, const DataMember* member,
     return Err(fxl::StringPrintf(
         "Member value '%s' is outside of the data of base '%s'. Please file a "
         "bug with a repro.",
-        member->GetAssignedName().c_str(), sc->GetFullName().c_str()));
+        member->GetAssignedName().c_str(), coll->GetFullName().c_str()));
   }
   std::vector<uint8_t> member_data(base.data().begin() + offset,
                                    base.data().begin() + (offset + size));
@@ -137,7 +138,7 @@ Err ResolveMember(const ExprValue& base, const std::string& member_name,
     return Err("No type information.");
 
   const DataMember* member = nullptr;
-  Err err = FindMemberNamed(base.type()->GetConcreteType()->AsStructClass(),
+  Err err = FindMemberNamed(base.type()->GetConcreteType()->AsCollection(),
                             member_name, &member);
   if (err.has_error())
     return err;
@@ -147,35 +148,35 @@ Err ResolveMember(const ExprValue& base, const std::string& member_name,
 void ResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
                             const ExprValue& base_ptr, const DataMember* member,
                             std::function<void(const Err&, ExprValue)> cb) {
-  const StructClass* sc = nullptr;
-  Err err = GetPointedToStructClass(base_ptr.type(), &sc);
+  const Collection* coll = nullptr;
+  Err err = GetPointedToCollection(base_ptr.type(), &coll);
   if (err.has_error()) {
     cb(err, ExprValue());
     return;
   }
 
-  DoResolveMemberByPointer(context, base_ptr, sc, member, std::move(cb));
+  DoResolveMemberByPointer(context, base_ptr, coll, member, std::move(cb));
 }
 
 void ResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
                             const ExprValue& base_ptr,
                             const std::string& member_name,
                             std::function<void(const Err&, ExprValue)> cb) {
-  const StructClass* sc = nullptr;
-  Err err = GetPointedToStructClass(base_ptr.type(), &sc);
+  const Collection* coll = nullptr;
+  Err err = GetPointedToCollection(base_ptr.type(), &coll);
   if (err.has_error()) {
     cb(err, ExprValue());
     return;
   }
 
   const DataMember* member = nullptr;
-  err = FindMemberNamed(sc, member_name, &member);
+  err = FindMemberNamed(coll, member_name, &member);
   if (err.has_error()) {
     cb(err, ExprValue());
     return;
   }
 
-  DoResolveMemberByPointer(context, base_ptr, sc, member, std::move(cb));
+  DoResolveMemberByPointer(context, base_ptr, coll, member, std::move(cb));
 }
 
 }  // namespace zxdb

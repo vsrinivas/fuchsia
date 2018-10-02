@@ -9,13 +9,13 @@
 #include "garnet/bin/zxdb/symbols/array_type.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
 #include "garnet/bin/zxdb/symbols/code_block.h"
+#include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/dwarf_die_decoder.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/module_symbols_impl.h"
 #include "garnet/bin/zxdb/symbols/namespace.h"
-#include "garnet/bin/zxdb/symbols/struct_class.h"
 #include "garnet/bin/zxdb/symbols/symbol.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -199,7 +199,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(
       break;
     case llvm::dwarf::DW_TAG_structure_type:
     case llvm::dwarf::DW_TAG_class_type:
-      symbol = DecodeStructClass(die);
+    case llvm::dwarf::DW_TAG_union_type:
+      symbol = DecodeCollection(die);
       break;
     default:
       // All unhandled Tag types get a Symbol that has the correct tag, but
@@ -373,8 +374,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeArrayType(
   // definitions. The innermost definition refers to the contained type.
   fxl::RefPtr<Type> cur(contained_type);
   for (int i = static_cast<int>(subrange_sizes.size()) - 1; i >= 0; i--) {
-    auto new_array = fxl::MakeRefCounted<ArrayType>(
-        std::move(cur), subrange_sizes[i]);
+    auto new_array =
+        fxl::MakeRefCounted<ArrayType>(std::move(cur), subrange_sizes[i]);
     cur = std::move(new_array);
   }
   return cur;
@@ -416,6 +417,40 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeBaseType(
     base_type->set_bit_offset(static_cast<int>(*bit_offset));
 
   return base_type;
+}
+
+fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(
+    const llvm::DWARFDie& die) {
+  DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
+
+  llvm::Optional<const char*> name;
+  decoder.AddCString(llvm::dwarf::DW_AT_name, &name);
+
+  llvm::Optional<uint64_t> byte_size;
+  decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_byte_size, &byte_size);
+
+  if (!decoder.Decode(die))
+    return fxl::MakeRefCounted<Symbol>();
+
+  auto result = fxl::MakeRefCounted<Collection>(die.getTag());
+  if (name)
+    result->set_assigned_name(*name);
+  if (byte_size)
+    result->set_byte_size(static_cast<uint32_t>(*byte_size));
+
+  // Handle sub-DIEs: data members.
+  std::vector<LazySymbol> data;
+  for (const llvm::DWARFDie& child : die) {
+    switch (child.getTag()) {
+      case llvm::dwarf::DW_TAG_member:
+        data.push_back(MakeLazy(child));
+        break;
+      default:
+        break;  // Skip everything else.
+    }
+  }
+  result->set_data_members(std::move(data));
+  return result;
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(
@@ -518,40 +553,6 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeNamespace(
   auto result = fxl::MakeRefCounted<Namespace>();
   if (name)
     result->set_assigned_name(*name);
-  return result;
-}
-
-fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeStructClass(
-    const llvm::DWARFDie& die) {
-  DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
-
-  llvm::Optional<const char*> name;
-  decoder.AddCString(llvm::dwarf::DW_AT_name, &name);
-
-  llvm::Optional<uint64_t> byte_size;
-  decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_byte_size, &byte_size);
-
-  if (!decoder.Decode(die))
-    return fxl::MakeRefCounted<Symbol>();
-
-  auto result = fxl::MakeRefCounted<StructClass>(die.getTag());
-  if (name)
-    result->set_assigned_name(*name);
-  if (byte_size)
-    result->set_byte_size(static_cast<uint32_t>(*byte_size));
-
-  // Handle sub-DIEs: data members.
-  std::vector<LazySymbol> data;
-  for (const llvm::DWARFDie& child : die) {
-    switch (child.getTag()) {
-      case llvm::dwarf::DW_TAG_member:
-        data.push_back(MakeLazy(child));
-        break;
-      default:
-        break;  // Skip everything else.
-    }
-  }
-  result->set_data_members(std::move(data));
   return result;
 }
 

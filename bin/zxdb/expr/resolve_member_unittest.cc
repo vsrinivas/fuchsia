@@ -6,9 +6,9 @@
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
+#include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
-#include "garnet/bin/zxdb/symbols/struct_class.h"
 #include "garnet/bin/zxdb/symbols/type_test_support.h"
 #include "gtest/gtest.h"
 
@@ -18,8 +18,8 @@ namespace {
 
 // Defines a class with two member types "a" and "b". It puts the definitions
 // of "a" and "b' members into the two out params.
-fxl::RefPtr<StructClass> GetTestClassType(const DataMember** member_a,
-                                          const DataMember** member_b) {
+fxl::RefPtr<Collection> GetTestClassType(const DataMember** member_a,
+                                         const DataMember** member_b) {
   auto int32_type = MakeInt32Type();
   auto sc = MakeStruct2Members("Foo", int32_type, "a", int32_type, "b");
 

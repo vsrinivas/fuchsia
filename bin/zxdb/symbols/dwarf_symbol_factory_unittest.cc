@@ -6,12 +6,12 @@
 #include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/bin/zxdb/symbols/array_type.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
+#include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/dwarf_test_util.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/module_symbols_impl.h"
-#include "garnet/bin/zxdb/symbols/struct_class.h"
 #include "garnet/bin/zxdb/symbols/symbol.h"
 #include "garnet/bin/zxdb/symbols/test_symbol_module.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
@@ -195,7 +195,7 @@ TEST(DwarfSymbolFactory, Array2D) {
   EXPECT_EQ("int", elt_type->GetFullName());
 }
 
-TEST(DwarfSymbolFactory, StructClass) {
+TEST(DwarfSymbolFactory, Collection) {
   ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
@@ -207,7 +207,7 @@ TEST(DwarfSymbolFactory, StructClass) {
   ASSERT_TRUE(function);
 
   // The return type should be the struct.
-  auto* struct_type = function->return_type().Get()->AsStructClass();
+  auto* struct_type = function->return_type().Get()->AsCollection();
   ASSERT_TRUE(struct_type);
   EXPECT_EQ("my_ns::Struct", struct_type->GetFullName());
 

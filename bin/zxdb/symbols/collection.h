@@ -8,13 +8,13 @@
 
 namespace zxdb {
 
-// Represents a C++ class or a struct.
-class StructClass final : public Type {
+// Represents a C/C++ class, struct, or union.
+class Collection final : public Type {
  public:
   // Construct with fxl::MakeRefCounted().
 
   // Symbol overrides.
-  const StructClass* AsStructClass() const;
+  const Collection* AsCollection() const;
 
   // Data members. These should be of Value types.
   const std::vector<LazySymbol>& data_members() const { return data_members_; }
@@ -22,20 +22,20 @@ class StructClass final : public Type {
     data_members_ = std::move(d);
   }
 
-  // Returns a pointer to either "struct" or "class" depending on the type of
-  // this object. This is useful for error messages.
-  const char* GetStructOrClassString() const;
+  // Returns a pointer to either "struct", "class", or "union" depending on the
+  // type of this object. This is useful for error messages.
+  const char* GetKindString() const;
 
   // Currently we don't have any notion of member functions because there's
   // no need. That could be added here if necessary (generally the symbols
   // will contain this).
 
  private:
-  FRIEND_REF_COUNTED_THREAD_SAFE(StructClass);
-  FRIEND_MAKE_REF_COUNTED(StructClass);
+  FRIEND_REF_COUNTED_THREAD_SAFE(Collection);
+  FRIEND_MAKE_REF_COUNTED(Collection);
 
-  explicit StructClass(int kind);
-  virtual ~StructClass();
+  explicit Collection(int kind);
+  virtual ~Collection();
 
   std::vector<LazySymbol> data_members_;
 };

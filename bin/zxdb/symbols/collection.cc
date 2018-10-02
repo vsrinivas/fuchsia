@@ -2,21 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/symbols/struct_class.h"
+#include "garnet/bin/zxdb/symbols/collection.h"
 
 namespace zxdb {
 
-StructClass::StructClass(int tag) : Type(tag) {}
-StructClass::~StructClass() = default;
+Collection::Collection(int tag) : Type(tag) {}
+Collection::~Collection() = default;
 
-const StructClass* StructClass::AsStructClass() const { return this; }
+const Collection* Collection::AsCollection() const { return this; }
 
-const char* StructClass::GetStructOrClassString() const {
+const char* Collection::GetKindString() const {
   switch (tag()) {
     case kTagStructureType:
       return "struct";
     case kTagClassType:
       return "class";
+    case kTagUnionType:
+      return "union";
     default:
       return "unknown";
   }

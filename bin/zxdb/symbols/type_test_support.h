@@ -9,17 +9,17 @@
 namespace zxdb {
 
 class BaseType;
-class StructClass;
+class Collection;
 
 // Returns a type that can hold 4-byte signed integers.
 fxl::RefPtr<BaseType> MakeInt32Type();
 
 // Defines a structure with two members of the given name and type. The members
 // will immediately follow each other in memory.
-fxl::RefPtr<StructClass> MakeStruct2Members(const std::string& struct_name,
-                                            fxl::RefPtr<Type> member_1_type,
-                                            const std::string& member_1_name,
-                                            fxl::RefPtr<Type> member_2_type,
-                                            const std::string& member_2_name);
+fxl::RefPtr<Collection> MakeStruct2Members(const std::string& struct_name,
+                                           fxl::RefPtr<Type> member_1_type,
+                                           const std::string& member_1_name,
+                                           fxl::RefPtr<Type> member_2_type,
+                                           const std::string& member_2_name);
 
 }  // namespace zxdb

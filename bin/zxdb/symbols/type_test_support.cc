@@ -5,8 +5,8 @@
 #include "garnet/bin/zxdb/symbols/type_test_support.h"
 
 #include "garnet/bin/zxdb/symbols/base_type.h"
+#include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
-#include "garnet/bin/zxdb/symbols/struct_class.h"
 
 namespace zxdb {
 
@@ -16,12 +16,12 @@ fxl::RefPtr<BaseType> MakeInt32Type() {
 
 // Defines a structure with two members of the given name and type. The members
 // will immediately follow each other in memory.
-fxl::RefPtr<StructClass> MakeStruct2Members(const std::string& struct_name,
-                                            fxl::RefPtr<Type> member_1_type,
-                                            const std::string& member_1_name,
-                                            fxl::RefPtr<Type> member_2_type,
-                                            const std::string& member_2_name) {
-  auto sc = fxl::MakeRefCounted<StructClass>(Symbol::kTagStructureType);
+fxl::RefPtr<Collection> MakeStruct2Members(const std::string& struct_name,
+                                           fxl::RefPtr<Type> member_1_type,
+                                           const std::string& member_1_name,
+                                           fxl::RefPtr<Type> member_2_type,
+                                           const std::string& member_2_name) {
+  auto sc = fxl::MakeRefCounted<Collection>(Symbol::kTagStructureType);
   sc->set_byte_size(member_1_type->byte_size() + member_2_type->byte_size());
   sc->set_assigned_name(struct_name);
 

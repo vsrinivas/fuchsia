@@ -14,9 +14,9 @@
 #include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
 #include "garnet/bin/zxdb/symbols/array_type.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
+#include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
-#include "garnet/bin/zxdb/symbols/struct_class.h"
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
 #include "lib/fxl/logging.h"
@@ -170,8 +170,8 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
   type = type->GetConcreteType();  // Trim "const", "volatile", etc.
 
   // Structs and classes.
-  if (const StructClass* sc = type->AsStructClass()) {
-    FormatStructClass(data_provider, sc, value, options, output_key);
+  if (const Collection* coll = type->AsCollection()) {
+    FormatCollection(data_provider, coll, value, options, output_key);
     return;
   }
 
@@ -297,14 +297,14 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
 //       bar = 2
 //     }
 //   }
-void FormatValue::FormatStructClass(
-    fxl::RefPtr<SymbolDataProvider> data_provider, const StructClass* sc,
+void FormatValue::FormatCollection(
+    fxl::RefPtr<SymbolDataProvider> data_provider, const Collection* coll,
     const ExprValue& value, const FormatValueOptions& options,
     OutputKey output_key) {
   AppendToOutputKey(output_key, OutputBuffer("{"));
 
-  for (size_t i = 0; i < sc->data_members().size(); i++) {
-    const DataMember* member = sc->data_members()[i].Get()->AsDataMember();
+  for (size_t i = 0; i < coll->data_members().size(); i++) {
+    const DataMember* member = coll->data_members()[i].Get()->AsDataMember();
     if (!member)
       continue;
 

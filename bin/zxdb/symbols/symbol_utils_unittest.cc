@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/symbols/symbol_utils.h"
+#include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/namespace.h"
-#include "garnet/bin/zxdb/symbols/struct_class.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
 #include "gtest/gtest.h"
 
@@ -27,8 +27,8 @@ TEST(SymbolUtils, SymbolScope) {
   EXPECT_EQ("ns1::(anon)", ns2->GetFullName());
 
   // Struct inside anonymous namespace.
-  fxl::RefPtr<StructClass> st =
-      fxl::MakeRefCounted<StructClass>(Symbol::kTagStructureType);
+  fxl::RefPtr<Collection> st =
+      fxl::MakeRefCounted<Collection>(Symbol::kTagStructureType);
   st->set_parent(LazySymbol(ns2));
   st->set_assigned_name("Struct");
   EXPECT_EQ("ns1::(anon)::", GetSymbolScopePrefix(st.get()));
@@ -66,8 +66,8 @@ TEST(SymbolUtils, SymbolScopeFunctions) {
 
   // Type defined inside the function is qualified by the function name. This
   // format matches GDB and LLDB.
-  fxl::RefPtr<StructClass> sc =
-      fxl::MakeRefCounted<StructClass>(Symbol::kTagStructureType);
+  fxl::RefPtr<Collection> sc =
+      fxl::MakeRefCounted<Collection>(Symbol::kTagStructureType);
   sc->set_parent(LazySymbol(block));
   sc->set_assigned_name("Struct");
   EXPECT_EQ("ns::Function()::", GetSymbolScopePrefix(sc.get()));
