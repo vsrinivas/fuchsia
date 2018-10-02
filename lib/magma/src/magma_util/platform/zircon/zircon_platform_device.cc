@@ -25,7 +25,7 @@ ZirconPlatformDevice::CpuMapMmio(unsigned int index, PlatformMmio::CachePolicy c
     zx_status_t status;
     mmio_buffer_t mmio_buffer;
 
-    status = pdev_map_mmio_buffer2(&pdev_, index, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_buffer);
+    status = pdev_map_mmio_buffer(&pdev_, index, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_buffer);
     if (status != ZX_OK) {
         DRETP(nullptr, "mapping resource failed");
     }

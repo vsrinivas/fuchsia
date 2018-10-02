@@ -694,37 +694,32 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   }
 
   mmio_buffer_t cbus_mmio;
-  status = pdev_map_mmio_buffer2(&pdev_, kCbus, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                 &cbus_mmio);
+  status = pdev_map_mmio_buffer(&pdev_, kCbus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &cbus_mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map cbus");
     return ZX_ERR_NO_MEMORY;
   }
   cbus_ = std::make_unique<CbusRegisterIo>(cbus_mmio);
   mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer2(&pdev_, kDosbus,
-                                 ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_map_mmio_buffer(&pdev_, kDosbus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map dosbus");
     return ZX_ERR_NO_MEMORY;
   }
   dosbus_ = std::make_unique<DosRegisterIo>(mmio);
-  status = pdev_map_mmio_buffer2(&pdev_, kHiubus,
-                                 ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_map_mmio_buffer(&pdev_, kHiubus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map hiubus");
     return ZX_ERR_NO_MEMORY;
   }
   hiubus_ = std::make_unique<HiuRegisterIo>(mmio);
-  status = pdev_map_mmio_buffer2(&pdev_, kAobus,
-                                 ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_map_mmio_buffer(&pdev_, kAobus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map aobus");
     return ZX_ERR_NO_MEMORY;
   }
   aobus_ = std::make_unique<AoRegisterIo>(mmio);
-  status = pdev_map_mmio_buffer2(&pdev_, kDmc, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                 &mmio);
+  status = pdev_map_mmio_buffer(&pdev_, kDmc, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map dmc");
     return ZX_ERR_NO_MEMORY;
