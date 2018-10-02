@@ -396,17 +396,20 @@ void UserProviderImpl::RemoveUserV1(fuchsia::modular::auth::AccountPtr account,
   FXL_DCHECK(account);
   FXL_DCHECK(account_provider_);
 
+  FXL_LOG(INFO) << "Removing user account :" << account->id;
+
+  auto account_id = account->id;
   account_provider_->RemoveAccount(
       std::move(*account), false /* disable single logout*/,
-      [this, account = std::move(account),
-       callback](fuchsia::modular::auth::AuthErr auth_err) {
+      [this, account_id, callback](fuchsia::modular::auth::AuthErr auth_err) {
         if (auth_err.status != fuchsia::modular::auth::Status::OK) {
+          FXL_LOG(ERROR) << "Error from RemoveAccount(): " << auth_err.message;
           callback(auth_err.message);
           return;
         }
 
         std::string error;
-        if (!RemoveUserFromAccountsDB(fidl::Clone(account->id), &error)) {
+        if (!RemoveUserFromAccountsDB(account_id, &error)) {
           FXL_LOG(ERROR) << "Error in updating user database: " << error;
           callback(error);
           return;
@@ -446,7 +449,7 @@ void UserProviderImpl::RemoveUserV2(fuchsia::modular::auth::AccountPtr account,
         }
 
         std::string error;
-        if (!RemoveUserFromAccountsDB(fidl::Clone(account_id), &error)) {
+        if (!RemoveUserFromAccountsDB(account_id, &error)) {
           FXL_LOG(ERROR) << "Error in updating user database: " << error;
           callback(error);
           return;
