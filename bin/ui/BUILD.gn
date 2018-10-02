@@ -92,6 +92,13 @@ package("ime_service") {
   ]
 
   binary = "ime_service"
+
+  meta = [
+    {
+      path = rebase_path("ime/meta/ime_service.cmx")
+      dest = "ime_service.cmx"
+    },
+  ]
 }
 
 package("view_manager") {
