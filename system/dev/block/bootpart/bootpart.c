@@ -11,9 +11,8 @@
 
 #include <assert.h>
 #include <inttypes.h>
-#include <lib/sync/completion.h>
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
@@ -53,30 +52,6 @@ static uint64_t get_lba_count(bootpart_device_t* dev) {
     return dev->part.last_block - dev->part.first_block + 1;
 }
 
-static void bootpart_sync_complete(block_op_t* bop, zx_status_t status) {
-    bop->command = status;
-    sync_completion_signal((sync_completion_t*)bop->cookie);
-}
-
-static zx_status_t bootpart_flush(const bootpart_device_t* dev) {
-    block_op_t* bop = calloc(1, dev->block_op_size);
-    if (bop == NULL) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    sync_completion_t cplt = SYNC_COMPLETION_INIT;
-
-    bop->command = BLOCK_OP_FLUSH;
-    bop->completion_cb = bootpart_sync_complete;
-    bop->cookie = &cplt;
-
-    dev->bp.ops->queue(dev->bp.ctx, bop);
-    sync_completion_wait(&cplt, ZX_TIME_INFINITE);
-    zx_status_t status = bop->command;
-    free(bop);
-    return status;
-}
-
 // implement device protocol:
 
 static zx_status_t bootpart_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
@@ -112,7 +87,8 @@ static zx_status_t bootpart_ioctl(void* ctx, uint32_t op, const void* cmd, size_
         return ZX_OK;
     }
     case IOCTL_DEVICE_SYNC: {
-        return bootpart_flush(device);
+        // Propagate sync to parent device
+        return device_ioctl(device->parent, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0, NULL);
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;
