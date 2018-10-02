@@ -48,7 +48,7 @@ bool Aligned(uint32_t length) {
 constexpr size_t kLZ4FMaxHeaderFrameSize = 128;
 
 // iovec.iov_base is void* but we only use pointers to const.
-template<typename T>
+template <typename T>
 iovec Iovec(const T* buffer, size_t size = sizeof(T)) {
     assert(size > 0);
     return {const_cast<void*>(static_cast<const void*>(buffer)), size};
@@ -56,8 +56,8 @@ iovec Iovec(const T* buffer, size_t size = sizeof(T)) {
 
 class AppendBuffer {
 public:
-    explicit AppendBuffer(size_t size) :
-        buffer_(std::make_unique<std::byte[]>(size)), ptr_(buffer_.get()) {
+    explicit AppendBuffer(size_t size)
+        : buffer_(std::make_unique<std::byte[]>(size)), ptr_(buffer_.get()) {
     }
 
     size_t size() const {
@@ -73,16 +73,18 @@ public:
         return std::move(buffer_);
     }
 
-    template<typename T>
+    template <typename T>
     void Append(const T* data, size_t bytes = sizeof(T)) {
         ptr_ = static_cast<std::byte*>(memcpy(static_cast<void*>(ptr_),
                                               static_cast<const void*>(data),
-                                              bytes)) + bytes;
+                                              bytes)) +
+               bytes;
     }
 
     void Pad(size_t bytes) {
         ptr_ = static_cast<std::byte*>(memset(static_cast<void*>(ptr_), 0,
-                                              bytes)) + bytes;
+                                              bytes)) +
+               bytes;
     }
 
 private:
@@ -100,7 +102,8 @@ public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(OutputStream);
     OutputStream(OutputStream&&) = default;
 
-    explicit OutputStream(fbl::unique_fd fd) : fd_(std::move(fd)) {
+    explicit OutputStream(fbl::unique_fd fd)
+        : fd_(std::move(fd)) {
     }
 
     ~OutputStream() {
@@ -234,8 +237,8 @@ private:
 
 class FileWriter {
 public:
-    FileWriter(const char* outfile, std::string prefix) :
-        prefix_(std::move(prefix)), outfile_(outfile) {
+    FileWriter(const char* outfile, std::string prefix)
+        : prefix_(std::move(prefix)), outfile_(outfile) {
     }
 
     unsigned int NextFileNumber() const {
@@ -309,13 +312,13 @@ private:
 
 class NameMatcher {
 public:
-    NameMatcher(const char* const* patterns, int count) :
-        begin_(patterns), end_(&patterns[count]) {
+    NameMatcher(const char* const* patterns, int count)
+        : begin_(patterns), end_(&patterns[count]) {
         assert(count >= 0);
         assert(!patterns[count]);
     }
-    NameMatcher(char** argv, int argi, int argc) :
-        NameMatcher(&argv[argi], argc - argi) {
+    NameMatcher(char** argv, int argi, int argc)
+        : NameMatcher(&argv[argi], argc - argi) {
     }
 
     unsigned int names_checked() const { return names_checked_; }
@@ -363,7 +366,7 @@ private:
                 excludes = true;
             } else {
                 included = (included || fnmatch(
-                                ptn, name, casefold ? FNM_CASEFOLD : 0) == 0);
+                                            ptn, name, casefold ? FNM_CASEFOLD : 0) == 0);
             }
         }
         if (included && excludes) {
@@ -406,21 +409,21 @@ private:
 };
 
 // This tells LZ4f_compressUpdate it can keep a pointer to data.
-constexpr const LZ4F_compressOptions_t kCompressOpt  = { 1, {} };
+constexpr const LZ4F_compressOptions_t kCompressOpt = {1, {}};
 
 class Compressor {
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Compressor);
     Compressor() = default;
 
-#define LZ4F_CALL(func, ...)                                            \
-    [&](){                                                              \
-        auto result = func(__VA_ARGS__);                                \
-        if (LZ4F_isError(result)) {                                     \
+#define LZ4F_CALL(func, ...)                                               \
+    [&]() {                                                                \
+        auto result = func(__VA_ARGS__);                                   \
+        if (LZ4F_isError(result)) {                                        \
             fprintf(stderr, "%s: %s\n", #func, LZ4F_getErrorName(result)); \
-            exit(1);                                                    \
-        }                                                               \
-        return result;                                                  \
+            exit(1);                                                       \
+        }                                                                  \
+        return result;                                                     \
     }()
 
     void Init(OutputStream* out, const zbi_header_t& header) {
@@ -493,8 +496,8 @@ private:
     struct Buffer {
         // Move-only type: after moving, data is nullptr and size is 0.
         Buffer() = default;
-        Buffer(std::unique_ptr<std::byte[]> buffer, size_t max_size) :
-            data(std::move(buffer)), size(max_size) {
+        Buffer(std::unique_ptr<std::byte[]> buffer, size_t max_size)
+            : data(std::move(buffer)), size(max_size) {
         }
         Buffer(Buffer&& other) {
             *this = std::move(other);
@@ -599,19 +602,19 @@ public:
     // Get unowned file contents from a BOOTFS image.
     // The entry has been validated against the payload size.
     FileContents(const zbi_bootfs_dirent_t& entry,
-                 const std::byte* bootfs_payload) :
-        mapped_(const_cast<void*>(static_cast<const void*>(bootfs_payload +
-                                                           entry.data_off))),
-        mapped_size_(ZBI_BOOTFS_PAGE_ALIGN(entry.data_len)),
-        exact_size_(entry.data_len),
-        owned_(false) {
+                 const std::byte* bootfs_payload)
+        : mapped_(const_cast<void*>(static_cast<const void*>(bootfs_payload +
+                                                             entry.data_off))),
+          mapped_size_(ZBI_BOOTFS_PAGE_ALIGN(entry.data_len)),
+          exact_size_(entry.data_len),
+          owned_(false) {
     }
 
     // Get unowned file contents from a string.
     // This object won't support PageRoundedView.
-    FileContents(const char* buffer, bool null_terminate) :
-        mapped_(const_cast<char*>(buffer)), mapped_size_(strlen(buffer) + 1),
-        exact_size_(mapped_size_ - (null_terminate ? 0 : 1)), owned_(false) {
+    FileContents(const char* buffer, bool null_terminate)
+        : mapped_(const_cast<char*>(buffer)), mapped_size_(strlen(buffer) + 1),
+          exact_size_(mapped_size_ - (null_terminate ? 0 : 1)), owned_(false) {
     }
 
     FileContents(FileContents&& other) {
@@ -641,7 +644,8 @@ public:
         // st_size is off_t, everything else is size_t.
         const size_t size = st.st_size;
         static_assert(std::numeric_limits<decltype(st.st_size)>::max() <=
-                      std::numeric_limits<size_t>::max(), "size_t < off_t?");
+                          std::numeric_limits<size_t>::max(),
+                      "size_t < off_t?");
 
         static size_t pagesize = []() -> size_t {
             size_t pagesize = sysconf(_SC_PAGE_SIZE);
@@ -754,7 +758,7 @@ public:
                 ++groups;
             }
             groups_ = std::make_unique<std::set<std::string>>();
-            while (const char *p = strchr(groups, ',')) {
+            while (const char* p = strchr(groups, ',')) {
                 groups_->emplace(groups, p - groups);
                 groups = p + 1;
             }
@@ -792,8 +796,8 @@ using InputFileGeneratorList =
 class ManifestInputFileGenerator : public InputFileGenerator {
 public:
     ManifestInputFileGenerator(FileContents file, std::string prefix,
-                               const GroupFilter* filter) :
-        file_(std::move(file)), prefix_(std::move(prefix)), filter_(filter) {
+                               const GroupFilter* filter)
+        : file_(std::move(file)), prefix_(std::move(prefix)), filter_(filter) {
         read_ptr_ = static_cast<const char*>(
             file_.View(0, file_.exact_size()).iov_base);
         eof_ = read_ptr_ + file_.exact_size();
@@ -863,8 +867,8 @@ private:
 
 class DirectoryInputFileGenerator : public InputFileGenerator {
 public:
-    DirectoryInputFileGenerator(fbl::unique_fd fd, std::string prefix) :
-        source_prefix_(std::move(prefix)) {
+    DirectoryInputFileGenerator(fbl::unique_fd fd, std::string prefix)
+        : source_prefix_(std::move(prefix)) {
         walk_pos_.emplace_front(MakeUniqueDir(std::move(fd)), 0);
     }
 
@@ -915,8 +919,8 @@ private:
 
     // State of our depth-first directory tree walk.
     struct WalkState {
-        WalkState(UniqueDir d, size_t len) :
-            dir(std::move(d)), parent_prefix_len(len) {
+        WalkState(UniqueDir d, size_t len)
+            : dir(std::move(d)), parent_prefix_len(len) {
         }
         UniqueDir dir;
         size_t parent_prefix_len;
@@ -1115,7 +1119,7 @@ Extracted items use the file names shown below:\n\
     }
 
     // Create from local scratch data.
-    template<typename T>
+    template <typename T>
     static ItemPtr Create(uint32_t type, const T& payload) {
         auto buffer = std::make_unique<std::byte[]>(sizeof(payload));
         memcpy(buffer.get(), &payload, sizeof(payload));
@@ -1167,7 +1171,7 @@ Extracted items use the file names shown below:\n\
 
     // Create from an existing fully-baked item in an input file.
     static ItemPtr CreateFromItem(const FileContents& file,
-                                                uint32_t offset) {
+                                  uint32_t offset) {
         if (offset > file.exact_size() ||
             file.exact_size() - offset < sizeof(zbi_header_t)) {
             fprintf(stderr, "input file too short for next header\n");
@@ -1208,7 +1212,7 @@ Extracted items use the file names shown below:\n\
     }
 
     // Create a BOOTFS item.
-    template<typename Filter>
+    template <typename Filter>
     static ItemPtr CreateBootFS(FileOpener* opener,
                                 const InputFileGeneratorList& input,
                                 const Filter& include_file,
@@ -1321,7 +1325,7 @@ Extracted items use the file names shown below:\n\
                                                 type(), false);
         auto name = namestr.c_str();
         if (matcher->Matches(name, true)) {
-            WriteZBI(writer, name, (Item*const[]){this});
+            WriteZBI(writer, name, (Item* const[]){this});
         }
     }
 
@@ -1352,7 +1356,7 @@ Extracted items use the file names shown below:\n\
         }
     }
 
-    template<typename ItemList>
+    template <typename ItemList>
     static void WriteZBI(FileWriter* writer, const char* name,
                          const ItemList& items) {
         auto out = writer->RawFile(name);
@@ -1401,9 +1405,10 @@ private:
     };
     static constexpr const ItemTypeInfo kItemTypes_[] = {
 #define kITemTypes_Element(type, name, extension) {type, name, extension},
-    ZBI_ALL_TYPES(kITemTypes_Element)
+        ZBI_ALL_TYPES(kITemTypes_Element)
 #undef kitemtypes_element
-};;
+    };
+    ;
 
     static constexpr ItemTypeInfo ItemTypeInfo(uint32_t zbi_type) {
         for (const auto& t : kItemTypes_) {
@@ -1416,19 +1421,19 @@ private:
 
     static constexpr zbi_header_t NewHeader(uint32_t type, uint32_t size) {
         return {
-            type,                                   // type
-            size,                                   // length
-            0,                                      // extra
-            ZBI_FLAG_VERSION | ZBI_FLAG_CRC32,      // flags
-            0,                                      // reserved0
-            0,                                      // reserved1
-            ZBI_ITEM_MAGIC,                         // magic
-            0,                                      // crc32
+            type,                              // type
+            size,                              // length
+            0,                                 // extra
+            ZBI_FLAG_VERSION | ZBI_FLAG_CRC32, // flags
+            0,                                 // reserved0
+            0,                                 // reserved1
+            ZBI_ITEM_MAGIC,                    // magic
+            0,                                 // crc32
         };
     }
 
-    Item(const zbi_header_t& header, bool compress) :
-        header_(header), compress_(compress) {
+    Item(const zbi_header_t& header, bool compress)
+        : header_(header), compress_(compress) {
         if (compress_) {
             // We'll compress and checksum on the way out.
             header_.flags |= ZBI_FLAG_STORAGE_COMPRESSED;
@@ -1585,12 +1590,12 @@ private:
     bool CheckBootFSDirent(const zbi_bootfs_dirent_t& entry,
                            bool always_print) const {
         const char* align_check =
-            entry.data_off % ZBI_BOOTFS_PAGE_SIZE == 0 ? "" :
-            "[ERROR: misaligned offset] ";
+            entry.data_off % ZBI_BOOTFS_PAGE_SIZE == 0 ? "" : "[ERROR: misaligned offset] ";
         const char* size_check =
             (entry.data_off < header_.length &&
-             header_.length - entry.data_off >= entry.data_len) ? "" :
-            "[ERROR: offset+size too large] ";
+             header_.length - entry.data_off >= entry.data_len)
+                ? ""
+                : "[ERROR: offset+size too large] ";
         bool ok = align_check[0] == '\0' && size_check[0] == '\0';
         if (always_print || !ok) {
             fprintf(always_print ? stdout : stderr,
@@ -1616,8 +1621,8 @@ private:
 
     class BootFSInputFileGenerator : public InputFileGenerator {
     public:
-        explicit BootFSInputFileGenerator(ItemPtr item) :
-            item_(std::move(item)) {
+        explicit BootFSInputFileGenerator(ItemPtr item)
+            : item_(std::move(item)) {
             if (item_->AlreadyCompressed()) {
                 item_ = CreateFromCompressed(std::move(item_));
             }
@@ -1811,7 +1816,7 @@ void usage(const char* progname) {
     Item::PrintTypeUsage(stderr);
 }
 
-}  // anonymous namespace
+} // anonymous namespace
 
 int main(int argc, char** argv) {
     FileOpener opener;
@@ -1922,7 +1927,7 @@ int main(int argc, char** argv) {
                 complete_arch = ZBI_TYPE_KERNEL_ARM64;
             } else {
                 fprintf(stderr, "--complete architecture argument must be one"
-                        " of: x64, arm64\n");
+                                " of: x64, arm64\n");
                 exit(1);
             }
             continue;
@@ -2107,8 +2112,9 @@ int main(int argc, char** argv) {
         // Pack up the BOOTFS.
         items.push_back(
             Item::CreateBootFS(&opener, bootfs_input, [&](const char* name) {
-                    return extract_items || name_matcher.Matches(name);
-                }, sort, prefix, compressed));
+                return extract_items || name_matcher.Matches(name);
+            },
+                               sort, prefix, compressed));
     }
 
     if (items.empty()) {
@@ -2126,10 +2132,7 @@ int main(int argc, char** argv) {
             items.begin(), items.end(),
             [](const ItemPtr& a, const ItemPtr& b) {
                 auto item_rank = [](uint32_t type) {
-                    return (ZBI_IS_KERNEL_BOOTITEM(type) ? 0 :
-                            type == ZBI_TYPE_STORAGE_BOOTFS ? 1 :
-                            type == ZBI_TYPE_CMDLINE ? 9 :
-                            5);
+                    return (ZBI_IS_KERNEL_BOOTITEM(type) ? 0 : type == ZBI_TYPE_STORAGE_BOOTFS ? 1 : type == ZBI_TYPE_CMDLINE ? 9 : 5);
                 };
                 return item_rank(a->type()) < item_rank(b->type());
             });

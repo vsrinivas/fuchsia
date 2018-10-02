@@ -334,7 +334,6 @@ done:
     return r;
 }
 
-
 int main(int argc, char** argv) {
     unsigned verbose = false;
     while (argc > 1) {

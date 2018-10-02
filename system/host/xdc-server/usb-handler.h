@@ -7,15 +7,17 @@
 #include <xdc-server-utils/packet.h>
 #include <zircon/types.h>
 
-#include <set>
 #include <map>
+#include <set>
 #include <vector>
 
 namespace xdc {
 
 class UsbHandler {
     // This is required by the UsbHandler constructor, to stop clients calling it directly.
-    struct ConstructorTag { explicit ConstructorTag() = default; };
+    struct ConstructorTag {
+        explicit ConstructorTag() = default;
+    };
 
 public:
     class Transfer {
@@ -114,4 +116,4 @@ private:
     bool writable_;
 };
 
-}  // namespace xdc
+} // namespace xdc

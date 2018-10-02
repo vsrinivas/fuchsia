@@ -46,7 +46,7 @@ static struct timeval netboot_timeout_init(int msec) {
     return end_tv;
 }
 
-static int netboot_timeout_get_msec(const struct timeval *end_tv) {
+static int netboot_timeout_get_msec(const struct timeval* end_tv) {
     struct timeval wait_tv;
     struct timeval now_tv;
     gettimeofday(&now_tv, NULL);
@@ -68,7 +68,7 @@ static int netboot_bind_to_cmd_port(int socket) {
     return -1;
 }
 
-static int netboot_send_query(int socket, unsigned port, const char *ifname) {
+static int netboot_send_query(int socket, unsigned port, const char* ifname) {
     const char* hostname = "*";
     size_t hostname_len = strlen(hostname) + 1;
 
@@ -148,17 +148,17 @@ static bool netboot_receive_query(int socket, on_device_cb callback, void* data)
 }
 
 static struct option default_opts[] = {
-    {"help",        no_argument,       NULL, 'h'},
-    {"timeout",     required_argument, NULL, 't'},
-    {"nowait",      no_argument,       NULL, 'n'},
-    {"block-size",  required_argument, NULL, 'b'},
+    {"help", no_argument, NULL, 'h'},
+    {"timeout", required_argument, NULL, 't'},
+    {"nowait", no_argument, NULL, 'n'},
+    {"block-size", required_argument, NULL, 'b'},
     {"window-size", required_argument, NULL, 'w'},
-    {NULL,          0,                 NULL, 0},
+    {NULL, 0, NULL, 0},
 };
 
 static const struct option netboot_zero_opt = {NULL, 0, NULL, 0};
 
-static size_t netboot_count_opts(const struct option *opts) {
+static size_t netboot_count_opts(const struct option* opts) {
     if (!opts) {
         return 0;
     }
@@ -169,7 +169,7 @@ static size_t netboot_count_opts(const struct option *opts) {
     return count;
 }
 
-static void netboot_copy_opts(struct option *dst_opts, const struct option *src_opts) {
+static void netboot_copy_opts(struct option* dst_opts, const struct option* src_opts) {
     if (!src_opts) {
         return;
     }
@@ -179,16 +179,16 @@ static void netboot_copy_opts(struct option *dst_opts, const struct option *src_
     }
 }
 
-int netboot_handle_custom_getopt(int argc, char * const *argv,
-                                 const struct option *custom_opts,
+int netboot_handle_custom_getopt(int argc, char* const* argv,
+                                 const struct option* custom_opts,
                                  size_t num_custom_opts0,
-                                 bool (*opt_callback)(int ch, int argc, char * const *argv)) {
+                                 bool (*opt_callback)(int ch, int argc, char* const* argv)) {
     size_t num_default_opts = netboot_count_opts(default_opts);
     size_t num_custom_opts = netboot_count_opts(custom_opts);
 
-    struct option *combined_opts;
+    struct option* combined_opts;
     combined_opts = (struct option*)malloc(sizeof(struct option) *
-                                           (num_default_opts + num_custom_opts +1));
+                                           (num_default_opts + num_custom_opts + 1));
 
     netboot_copy_opts(combined_opts, default_opts);
     netboot_copy_opts(combined_opts + num_default_opts, custom_opts);
@@ -199,24 +199,24 @@ int netboot_handle_custom_getopt(int argc, char * const *argv,
     int ch;
     while ((ch = getopt_long_only(argc, argv, "t:", combined_opts, NULL)) != -1) {
         switch (ch) {
-            case 't':
-                netboot_timeout = atoi(optarg);
+        case 't':
+            netboot_timeout = atoi(optarg);
+            break;
+        case 'n':
+            netboot_wait = false;
+            break;
+        case 'b':
+            tftp_block_size = atoi(optarg);
+            break;
+        case 'w':
+            tftp_window_size = atoi(optarg);
+            break;
+        default:
+            if (opt_callback && opt_callback(ch, argc, argv)) {
                 break;
-            case 'n':
-                netboot_wait = false;
-                break;
-            case 'b':
-                tftp_block_size = atoi(optarg);
-                break;
-            case 'w':
-                tftp_window_size = atoi(optarg);
-                break;
-            default:
-                if (opt_callback && opt_callback(ch, argc, argv)) {
-                    break;
-                } else {
-                    goto err;
-                }
+            } else {
+                goto err;
+            }
         }
     }
     retval = optind;
@@ -225,7 +225,7 @@ err:
     return retval;
 }
 
-int netboot_handle_getopt(int argc, char * const *argv) {
+int netboot_handle_getopt(int argc, char* const* argv) {
     return netboot_handle_custom_getopt(argc, argv, NULL, 0, NULL);
 }
 
@@ -307,7 +307,7 @@ int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, v
 
 typedef struct netboot_open_cookie {
     struct sockaddr_in6 addr;
-    const char *hostname;
+    const char* hostname;
     uint32_t index;
 } netboot_open_cookie_t;
 

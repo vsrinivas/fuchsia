@@ -17,4 +17,3 @@ extern char* appname;
 extern int64_t us_between_packets;
 extern uint16_t* tftp_block_size;
 extern uint16_t* tftp_window_size;
-

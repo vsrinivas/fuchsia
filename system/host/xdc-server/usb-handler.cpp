@@ -70,4 +70,4 @@ std::unique_ptr<UsbHandler::Transfer> UsbHandler::QueueWriteTransfer(
     return transfer;
 }
 
-}  // namespace xdc
+} // namespace xdc

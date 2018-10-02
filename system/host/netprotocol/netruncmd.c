@@ -43,7 +43,6 @@ int main(int argc, char** argv) {
         hostname = "*";
     }
 
-
     char cmd[MAXSIZE];
     size_t cmd_len = 0;
     while (argc > 1) {

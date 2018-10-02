@@ -22,26 +22,29 @@ typedef struct {
 } msg;
 
 typedef enum device_state {
-  UNKNOWN, OFFLINE, DEVICE, BOOTLOADER,
+    UNKNOWN,
+    OFFLINE,
+    DEVICE,
+    BOOTLOADER,
 } device_state_t;
 
 typedef struct device_info {
-  char nodename[MAX_NODENAME_LENGTH];
-  char inet6_addr_s[INET6_ADDRSTRLEN];
-  struct sockaddr_in6 inet6_addr;
-  device_state_t state;
-  uint32_t bootloader_version;
-  uint16_t bootloader_port;
+    char nodename[MAX_NODENAME_LENGTH];
+    char inet6_addr_s[INET6_ADDRSTRLEN];
+    struct sockaddr_in6 inet6_addr;
+    device_state_t state;
+    uint32_t bootloader_version;
+    uint16_t bootloader_port;
 } device_info_t;
 
 extern uint16_t tftp_block_size, tftp_window_size;
 
 // Handle netboot command line options.
-int netboot_handle_getopt(int argc, char * const *argv);
-int netboot_handle_custom_getopt(int argc, char * const *argv,
-                                 const struct option *custom_opts,
+int netboot_handle_getopt(int argc, char* const* argv);
+int netboot_handle_custom_getopt(int argc, char* const* argv,
+                                 const struct option* custom_opts,
                                  size_t num_custom_opts,
-                                 bool (*opt_callback)(int ch, int argc, char * const *argv));
+                                 bool (*opt_callback)(int ch, int argc, char* const* argv));
 void netboot_usage(bool show_tftp_opts);
 
 // Returns whether discovery should continue or not.

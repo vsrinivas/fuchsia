@@ -5,13 +5,13 @@
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <string>
 #include <string.h>
+#include <string>
 
 namespace {
 
 #define BUILDSIG_START_MAGIC UINT64_C(0x5452545347495342) // BSIGSTRT
-#define BUILDSIG_END_MAGIC UINT64_C(0x53444e4547495342) // BSIGENDS
+#define BUILDSIG_END_MAGIC UINT64_C(0x53444e4547495342)   // BSIGENDS
 struct buildsig {
     uint64_t start_magic;
     uint64_t buildsig_address;
@@ -43,7 +43,8 @@ struct elf_buildid_note {
 
 class reader {
 public:
-    reader(FILE* input) : input_(input) {}
+    reader(FILE* input)
+        : input_(input) {}
 
     bool scan() {
         pos_ = 0;
@@ -66,7 +67,8 @@ private:
     static const int indent = 4;
     class extracted_item {
     public:
-        extracted_item(const char* name) : name_(name) {}
+        extracted_item(const char* name)
+            : name_(name) {}
 
         const char* name() const { return name_; }
         std::string* contents() { return &contents_; }

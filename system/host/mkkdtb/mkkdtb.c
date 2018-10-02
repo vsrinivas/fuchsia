@@ -18,23 +18,20 @@ typedef struct {
     uint32_t dtb_size;
 } kdtb_header_t;
 
-
-
 int print_usage(void) {
     printf("mkkdtb kernfile dtbfile outfile\n");
     return 0;
 }
 
-
 int main(int argc, char** argv) {
 
     int retval = 0;
 
-    uint8_t *kern_buffer = NULL;
-    uint8_t *dtb_buffer = NULL;
+    uint8_t* kern_buffer = NULL;
+    uint8_t* dtb_buffer = NULL;
 
-    FILE *dtb_fd = NULL;
-    FILE *out_fd = NULL;
+    FILE* dtb_fd = NULL;
+    FILE* out_fd = NULL;
 
     kdtb_header_t kheader = {"KDTB", 0, 0};
 
@@ -43,7 +40,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    FILE *kernel_fd = fopen(argv[1], "r");
+    FILE* kernel_fd = fopen(argv[1], "r");
     if (!kernel_fd) {
         fprintf(stderr, "Kernel file not found\n");
         retval = -1;
@@ -60,7 +57,7 @@ int main(int argc, char** argv) {
     out_fd = fopen(argv[3], "w");
     if (!out_fd) {
         fprintf(stderr, "Can't open output file\n");
-        retval=-1;
+        retval = -1;
         goto fail;
     }
 
@@ -88,7 +85,7 @@ int main(int argc, char** argv) {
         retval = -1;
         goto fail;
     }
-    if (fread(dtb_buffer,kheader.dtb_size, 1, dtb_fd) != 1) {
+    if (fread(dtb_buffer, kheader.dtb_size, 1, dtb_fd) != 1) {
         fprintf(stderr, "dtb read error\n");
         retval = -1;
         goto fail;
@@ -99,10 +96,15 @@ int main(int argc, char** argv) {
     fwrite(dtb_buffer, sizeof(uint8_t), kheader.dtb_size, out_fd);
 
 fail:
-    if (kernel_fd) fclose(kernel_fd);
-    if (dtb_fd) fclose(dtb_fd);
-    if (out_fd) fclose(out_fd);
-    if (kern_buffer) free(kern_buffer);
-    if (dtb_buffer) free(dtb_buffer);
+    if (kernel_fd)
+        fclose(kernel_fd);
+    if (dtb_fd)
+        fclose(dtb_fd);
+    if (out_fd)
+        fclose(out_fd);
+    if (kern_buffer)
+        free(kern_buffer);
+    if (dtb_buffer)
+        free(dtb_buffer);
     return retval;
 }

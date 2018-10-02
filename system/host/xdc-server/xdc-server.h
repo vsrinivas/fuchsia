@@ -16,7 +16,8 @@ namespace xdc {
 
 class Client {
 public:
-    explicit Client(int fd) : fd_(fd) {}
+    explicit Client(int fd)
+        : fd_(fd) {}
 
     void SetStreamId(uint32_t stream_id);
     void SetConnected(bool connected);
@@ -33,12 +34,12 @@ public:
     // Returns any unused transfers to the usb handler.
     void ReturnTransfers(const std::unique_ptr<UsbHandler>& usb_handler);
 
-    int fd()             const { return fd_.get(); }
+    int fd() const { return fd_.get(); }
     // Returns the set of client events we should poll for.
-    short events()       const { return events_; }
-    bool registered()    const { return registered_; }
+    short events() const { return events_; }
+    bool registered() const { return registered_; }
     uint32_t stream_id() const { return stream_id_; }
-    bool connected()     const { return connected_; }
+    bool connected() const { return connected_; }
     // Returns true if we have read data from the client not yet sent to the usb handler.
     bool has_write_data() const { return pending_write_ && pending_write_->request_length() > 0; }
 
@@ -48,11 +49,11 @@ private:
     short events_ = 0;
 
     // Whether the client has registered a stream id.
-    bool     registered_ = false;
-    uint32_t stream_id_  = 0;
+    bool registered_ = false;
+    uint32_t stream_id_ = 0;
     // True if the client has registered a stream id,
     // and that stream id is also registered on the xdc device side.
-    bool     connected_  = false;
+    bool connected_ = false;
 
     std::vector<std::unique_ptr<UsbHandler::Transfer>> completed_reads_;
     // Data read from the client, to be sent to the usb handler.
@@ -61,7 +62,9 @@ private:
 
 class XdcServer {
     // This is required by the XdcServer constructor, to stop clients calling it directly.
-    struct ConstructorTag { explicit ConstructorTag() = default; };
+    struct ConstructorTag {
+        explicit ConstructorTag() = default;
+    };
 
 public:
     // Create should be called instead. This is public for make_unique.
@@ -118,4 +121,4 @@ private:
     xdc_packet_state_t read_packet_state_;
 };
 
-}  // namespace xdc
+} // namespace xdc

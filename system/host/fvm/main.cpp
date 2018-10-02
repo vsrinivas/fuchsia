@@ -20,10 +20,10 @@ int usage(void) {
     fprintf(stderr, " add : Adds a Minfs or Blobfs partition to an FVM (input path is"
                     " required)\n");
     fprintf(stderr, " extend : Extends an FVM container to the specified size (length is"
-                        " required)\n");
+                    " required)\n");
     fprintf(stderr, " sparse : Creates a sparse file. One or more input paths are required.\n");
     fprintf(stderr, " verify : Report basic information about sparse/fvm files and run fsck on"
-                        " contained partitions\n");
+                    " contained partitions\n");
     fprintf(stderr, " decompress : Decompresses a compressed sparse file. --sparse input path is"
                     " required.\n");
     fprintf(stderr, "Flags (neither or both of offset/length must be specified):\n");
@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
     }
 
     unsigned i = 1;
-    const char* path = argv[i++]; // Output path
+    const char* path = argv[i++];    // Output path
     const char* command = argv[i++]; // Command
 
     size_t length = 0;
@@ -169,7 +169,7 @@ int main(int argc, char** argv) {
         // If length was specified, an offset was not, we were asked to create a
         // file, and the file does not exist, truncate it to the given length.
         if (length != 0 && offset == 0) {
-            fbl::unique_fd fd(open(path, O_CREAT|O_EXCL|O_WRONLY, 0644));
+            fbl::unique_fd fd(open(path, O_CREAT | O_EXCL | O_WRONLY, 0644));
 
             if (fd) {
                 ftruncate(fd.get(), length);

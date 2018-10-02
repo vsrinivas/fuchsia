@@ -7,6 +7,7 @@
 #include "netprotocol.h"
 
 #include <arpa/inet.h>
+#include <ifaddrs.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <sched.h>
@@ -14,7 +15,6 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <ifaddrs.h>
 
 #include <fcntl.h>
 #include <libgen.h>
@@ -27,8 +27,8 @@
 #include <errno.h>
 #include <stdint.h>
 
-#include <zircon/boot/netboot.h>
 #include <tftp/tftp.h>
+#include <zircon/boot/netboot.h>
 
 #define TFTP_BUF_SZ 2048
 
@@ -51,7 +51,7 @@ static ssize_t file_open_read(const char* filename, void* file_cookie) {
     if (fd < 0) {
         return TFTP_ERR_IO;
     }
-    file_info_t *file_info = file_cookie;
+    file_info_t* file_info = file_cookie;
     file_info->fd = fd;
     struct stat st;
     if (fstat(file_info->fd, &st) < 0) {
@@ -221,7 +221,7 @@ static int transfer_file(bool push, int s, struct sockaddr_in6* addr, const char
 
     // Prepare buffers
     char err_msg[128];
-    tftp_request_opts opts = { 0 };
+    tftp_request_opts opts = {0};
     opts.inbuf = malloc(TFTP_BUF_SZ);
     opts.inbuf_sz = TFTP_BUF_SZ;
     opts.outbuf = malloc(TFTP_BUF_SZ);
@@ -281,7 +281,7 @@ int main(int argc, char** argv) {
         push = 0;
         hostname = src;
         pos[0] = 0;
-        src = pos+1;
+        src = pos + 1;
     }
     if ((pos = strpbrk(dst, ":")) != 0) {
         if (push == 0) {
@@ -291,7 +291,7 @@ int main(int argc, char** argv) {
         push = 1;
         hostname = dst;
         pos[0] = 0;
-        dst = pos+1;
+        dst = pos + 1;
     }
     if (push == -1) {
         fprintf(stderr, "%s: either src or dst needs a hostname\n", appname);
@@ -308,7 +308,6 @@ int main(int argc, char** argv) {
         }
         return -1;
     }
-
 
     int ret = transfer_file(push, s, &server_addr, dst, src);
     close(s);

@@ -223,7 +223,7 @@ int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
         .socket = -1,
         .connected = false,
         .previous_timeout_ms = 0,
-        .target_addr = {0}
+        .target_addr = {0},
     };
     tftp_session* session = NULL;
     size_t session_data_sz = tftp_sizeof_session();

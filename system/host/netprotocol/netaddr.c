@@ -54,20 +54,20 @@ static void usage(void) {
 
 static struct option netaddr_opts[] = {
     {"fuchsia", no_argument, NULL, 'f'},
-    {"local",   no_argument, NULL, 'l'},
-    {NULL,      0,           NULL, 0},
+    {"local", no_argument, NULL, 'l'},
+    {NULL, 0, NULL, 0},
 };
 
-static bool netaddr_opt_callback(int ch, int argc, char * const *argv) {
+static bool netaddr_opt_callback(int ch, int argc, char* const* argv) {
     switch (ch) {
-        case 'f':
-            fuchsia_address = true;
-            break;
-        case 'l':
-            local_address = true;
-            break;
-        default:
-            return false;
+    case 'f':
+        fuchsia_address = true;
+        break;
+    case 'l':
+        local_address = true;
+        break;
+    default:
+        return false;
     }
     return true;
 }
@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
     }
 
     if (netboot_discover(NB_SERVER_PORT, NULL, on_device, NULL) || !found) {
-        fprintf(stderr, "Failed to discover %s\n", hostname?hostname:"");
+        fprintf(stderr, "Failed to discover %s\n", hostname ? hostname : "");
         return 1;
     }
 
@@ -106,12 +106,12 @@ int main(int argc, char** argv) {
             fprintf(stderr, "error: cannot create socket: %s\n", strerror(errno));
             return -1;
         }
-        if (connect(s, (const struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        if (connect(s, (const struct sockaddr*)&addr, sizeof(addr)) < 0) {
             fprintf(stderr, "error: cannot \"connect\" socket: %s\n", strerror(errno));
             return -1;
         }
         socklen_t addrlen = sizeof(addr);
-        if (getsockname(s, (struct sockaddr *)&addr, &addrlen) < 0) {
+        if (getsockname(s, (struct sockaddr*)&addr, &addrlen) < 0) {
             fprintf(stderr, "error: %s\n", strerror(errno));
             return -1;
         }

@@ -68,9 +68,10 @@ int main(int argc, char** argv) {
                 inet_ntop(AF_INET6, &addr.sin6_addr, tmp, sizeof(tmp)),
                 ntohs(addr.sin6_port), errno, strerror(errno));
         if (errno == 98) {
-          fprintf(stderr, "%s: another process is already using udp port %d. "
-                          "Try running `lsof -i udp:%d`.\n", appname,
-                  ntohs(addr.sin6_port), ntohs(addr.sin6_port));
+            fprintf(stderr, "%s: another process is already using udp port %d. "
+                            "Try running `lsof -i udp:%d`.\n",
+                    appname,
+                    ntohs(addr.sin6_port), ntohs(addr.sin6_port));
         }
         return -1;
     }

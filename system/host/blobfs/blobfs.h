@@ -76,4 +76,3 @@ private:
     // A list of Merkle Information for blobs in |blob_list_|.
     std::vector<MerkleInfo> merkle_list_;
 };
-

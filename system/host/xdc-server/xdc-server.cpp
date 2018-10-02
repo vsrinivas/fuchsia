@@ -108,7 +108,7 @@ zx_status_t Client::ProcessWrites(const std::unique_ptr<UsbHandler>& usb_handler
         if (!pending_write_) {
             pending_write_ = usb_handler->GetWriteTransfer();
             if (!pending_write_) {
-                return ZX_ERR_SHOULD_WAIT;  // No transfers currently available.
+                return ZX_ERR_SHOULD_WAIT; // No transfers currently available.
             }
         }
         // If there is no pending data to transfer, read more from the client.
@@ -119,7 +119,7 @@ zx_status_t Client::ProcessWrites(const std::unique_ptr<UsbHandler>& usb_handler
             int n = recv(fd(), buf, UsbHandler::Transfer::MAX_WRITE_DATA_SIZE, 0);
             if (n == 0) {
                 return ZX_ERR_PEER_CLOSED;
-             } else if (n == EAGAIN) {
+            } else if (n == EAGAIN) {
                 return ZX_ERR_SHOULD_WAIT;
             } else if (n < 0) {
                 fprintf(stderr, "recv got unhandled err: %s\n", strerror(errno));
@@ -134,7 +134,7 @@ zx_status_t Client::ProcessWrites(const std::unique_ptr<UsbHandler>& usb_handler
                 return ZX_ERR_SHOULD_WAIT;
             }
         } else {
-            break;  // Usb handler is busy, need to wait for some writes to complete.
+            break; // Usb handler is busy, need to wait for some writes to complete.
         }
     }
     return ZX_ERR_SHOULD_WAIT;
@@ -250,7 +250,7 @@ void XdcServer::UpdateUsbHandlerFds() {
 }
 
 void XdcServer::Run() {
-    signal(SIGPIPE, SIG_IGN);  // Prevent clients from causing SIGPIPE.
+    signal(SIGPIPE, SIG_IGN); // Prevent clients from causing SIGPIPE.
 
     printf("Waiting for connections on: %s\n", XDC_SOCKET_PATH);
 
@@ -507,7 +507,7 @@ bool XdcServer::SendCtrlMsg(xdc_msg_t& msg) {
     }
     zx_status_t res = transfer->FillData(DEBUG_STREAM_ID_RESERVED,
                                          reinterpret_cast<unsigned char*>(&msg), sizeof(msg));
-    assert(res == ZX_OK);  // Should not fail.
+    assert(res == ZX_OK); // Should not fail.
     transfer = usb_handler_->QueueWriteTransfer(std::move(transfer));
     bool queued = !transfer;
     if (!queued) {

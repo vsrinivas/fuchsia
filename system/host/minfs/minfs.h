@@ -12,7 +12,8 @@ class MinfsCreator : public FsCreator {
 public:
     // Pass a value of '2' for the initial data blocks:
     // 1 for the reserved block, and 1 for the root directory inode.
-    MinfsCreator() : FsCreator(2), dir_bytes_(0) {}
+    MinfsCreator()
+        : FsCreator(2), dir_bytes_(0) {}
 
 private:
     // Parent overrides:

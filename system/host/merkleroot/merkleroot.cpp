@@ -7,10 +7,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <string>
 #include <thread>
 #include <unistd.h>
 #include <vector>
@@ -70,7 +70,7 @@ int handle_argument(char** argv, const char* arg,
 
 void handle_entry(FileEntry* entry) {
     fbl::unique_fd fd{open(entry->filename.c_str(), O_RDONLY)};
-    if (!fd){
+    if (!fd) {
         perror(entry->filename.c_str());
         exit(1);
     }
@@ -121,7 +121,7 @@ void handle_entry(FileEntry* entry) {
     }
 }
 
-}  // namespace
+} // namespace
 
 int main(int argc, char** argv) {
     FILE* outf = stdout;
@@ -161,16 +161,16 @@ int main(int argc, char** argv) {
     }
     for (size_t i = n_threads; i > 0; --i) {
         threads.push_back(std::thread([&] {
-                    while (true) {
-                        mtx.lock();
-                        auto j = next_entry++;
-                        mtx.unlock();
-                        if (j >= entries.size()) {
-                            return;
-                        }
-                        handle_entry(&entries[j]);
-                    }
-                }));
+            while (true) {
+                mtx.lock();
+                auto j = next_entry++;
+                mtx.unlock();
+                if (j >= entries.size()) {
+                    return;
+                }
+                handle_entry(&entries[j]);
+            }
+        }));
     }
     for (unsigned i = 0; i < threads.size(); ++i) {
         threads[i].join();

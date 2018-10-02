@@ -215,7 +215,6 @@ zx_status_t MinfsCreator::ProcessManifestLine(FILE* manifest, const char* dir_pa
     return ProcessFile(src, emu_dst);
 }
 
-
 zx_status_t MinfsCreator::ProcessCustom(int argc, char** argv, uint8_t* processed) {
     uint8_t required_args = 0;
 
@@ -320,7 +319,8 @@ zx_status_t MinfsCreator::CalculateRequiredSize(off_t* out) {
     uint32_t abmblks = (blocks + minfs::kMinfsBlockBits - 1) / minfs::kMinfsBlockBits;
 
     *out = (8 + fbl::round_up(inoblks, 8u) + fbl::round_up(ibmblks, 8u) +
-            fbl::round_up(abmblks, 8u) + blocks) * minfs::kMinfsBlockSize;
+            fbl::round_up(abmblks, 8u) + blocks) *
+           minfs::kMinfsBlockSize;
     return ZX_OK;
 }
 
@@ -341,7 +341,7 @@ zx_status_t MinfsCreator::Mkfs() {
     // Add any directories/files that have been pre-processed.
     if ((status = Add()) != ZX_OK) {
         fprintf(stderr, "Warning: Adding files on create failed - required size may have been "
-                "miscalculated\n");
+                        "miscalculated\n");
     }
 
     return status;
@@ -375,8 +375,7 @@ zx_status_t MinfsCreator::Add() {
         if ((status = AppendDepfile(file_list_[n].first.c_str())) != ZX_OK) {
             return status;
         }
-        if ((status = CopyFile(file_list_[n].first.c_str(), file_list_[n].second.c_str()))
-            != ZX_OK) {
+        if ((status = CopyFile(file_list_[n].first.c_str(), file_list_[n].second.c_str())) != ZX_OK) {
             return status;
         }
     }
