@@ -101,7 +101,6 @@ static device_t root_device = []() {
     device.libname = "";
     device.args = "root,";
     device.children = LIST_INITIAL_VALUE(root_device.children);
-    device.pending = LIST_INITIAL_VALUE(root_device.pending);
     device.metadata = LIST_INITIAL_VALUE(root_device.metadata);
     device.refcount = 1;
     return device;
@@ -116,7 +115,6 @@ static device_t misc_device = []() {
     device.libname = "";
     device.args = "misc,";
     device.children = LIST_INITIAL_VALUE(misc_device.children);
-    device.pending = LIST_INITIAL_VALUE(misc_device.pending);
     device.metadata = LIST_INITIAL_VALUE(misc_device.metadata);
     device.refcount = 1;
     return device;
@@ -130,7 +128,6 @@ static device_t sys_device = []() {
     device.libname = "";
     device.args = "sys,";
     device.children = LIST_INITIAL_VALUE(sys_device.children);
-    device.pending = LIST_INITIAL_VALUE(sys_device.pending);
     device.metadata = LIST_INITIAL_VALUE(sys_device.metadata);
     device.refcount = 1;
     return device;
@@ -145,7 +142,6 @@ static device_t test_device = []() {
     device.libname = "";
     device.args = "test,";
     device.children = LIST_INITIAL_VALUE(test_device.children);
-    device.pending = LIST_INITIAL_VALUE(test_device.pending);
     device.metadata = LIST_INITIAL_VALUE(test_device.metadata);
     device.refcount = 1;
     return device;
@@ -409,7 +405,7 @@ static void dc_dump_device_props(device_t* dev) {
 
         dmprintf("%u Propert%s\n", dev->prop_count, dev->prop_count == 1 ? "y" : "ies");
         for (uint32_t i = 0; i < dev->prop_count; ++i) {
-            const zx_device_prop_t* p = dev->props + i;
+            const zx_device_prop_t* p = dev->Props() + i;
             const char* param_name = di_bind_param_name(p->id);
 
             if (param_name) {
@@ -563,7 +559,7 @@ static zx_status_t dc_notify(device_t* dev, uint32_t op) {
         char msg[len + DC_PATH_MAX];
         auto evt = reinterpret_cast<devmgr_event_t*>(msg);
         memset(evt, 0, sizeof(devmgr_event_t));
-        memcpy(msg + sizeof(devmgr_event_t), dev->props, propslen);
+        memcpy(msg + sizeof(devmgr_event_t), dev->Props(), propslen);
         if (dc_get_topo_path(dev, msg + len, DC_PATH_MAX) < 0) {
             return ZX_OK;
         }
@@ -786,13 +782,12 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
     }
     new (dev) device_t;
     list_initialize(&dev->children);
-    list_initialize(&dev->pending);
     list_initialize(&dev->metadata);
     dev->hrpc = hrpc;
     dev->prop_count = static_cast<uint32_t>(msg->datalen / sizeof(zx_device_prop_t));
     dev->protocol_id = msg->protocol_id;
 
-    char* text = (char*) (dev->props + dev->prop_count);
+    char* text = (char*) (dev->Props() + dev->prop_count);
     memcpy(text, args, msg->argslen + 1);
     dev->args = text;
 
@@ -809,7 +804,7 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
         dev->libname = "";
     }
 
-    memcpy(dev->props, data, msg->datalen);
+    memcpy(dev->Props(), data, msg->datalen);
 
     if (strlen(dev->name) > ZX_DEVICE_NAME_MAX) {
         free(dev);
@@ -1040,7 +1035,7 @@ static zx_status_t dc_bind_device(device_t* dev, const char* drvlibname) {
     list_for_every_entry(&list_drivers, drv, driver_t, node) {
         if (autobind || !strcmp(drv->libname, drvlibname)) {
             if (dc_is_bindable(drv, dev->protocol_id,
-                               dev->props, dev->prop_count, autobind)) {
+                               dev->Props(), dev->prop_count, autobind)) {
                 log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n",
                     drv->name, dev->name);
                 dc_attempt_bind(drv, dev);
@@ -1365,7 +1360,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         }
         // all of these return directly and do not write a
         // reply, since this message is a reply itself
-        pending_t* pending = list_remove_head_type(&dev->pending, pending_t, node);
+        pending_t* pending = dev->pending.pop_front();
         if (pending == nullptr) {
             log(ERROR, "devcoord: rpc: spurious status message\n");
             return ZX_OK;
@@ -1572,7 +1567,6 @@ static zx_status_t dc_create_proxy(device_t* parent) {
     dev->libname = text;
 
     list_initialize(&dev->children);
-    list_initialize(&dev->pending);
     list_initialize(&dev->metadata);
     dev->flags = DEV_CTX_PROXY;
     dev->protocol_id = parent->protocol_id;
@@ -1619,7 +1613,7 @@ static zx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     dev->flags |= DEV_CTX_BOUND;
     pending->op = dc_pending::Op::kBind;
     pending->ctx = nullptr;
-    list_add_tail(&dev->pending, &pending->node);
+    dev->pending.push_back(pending);
     return ZX_OK;
 }
 
@@ -1731,7 +1725,7 @@ static void dc_handle_new_device(device_t* dev) {
 
     list_for_every_entry(&list_drivers, drv, driver_t, node) {
         if (dc_is_bindable(drv, dev->protocol_id,
-                           dev->props, dev->prop_count, true)) {
+                           dev->Props(), dev->prop_count, true)) {
             log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n",
                 drv->name, dev->name);
 
@@ -1798,7 +1792,7 @@ static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
     dh->flags |= DEV_HOST_SUSPEND;
     pending->op = dc_pending::Op::kSuspend;
     pending->ctx = ctx;
-    list_add_tail(&dev->pending, &pending->node);
+    dev->pending.push_back(pending);
 
     ctx->count += 1;
 
@@ -1852,11 +1846,15 @@ static void process_suspend_list(suspend_context_t* ctx) {
 }
 
 static bool check_pending(device_t* dev) {
-    pending_t* pending;
+    pending_t* pending = nullptr;
     if (dev->proxy) {
-        pending = list_peek_tail_type(&dev->proxy->pending, pending_t, node);
+        if (!dev->proxy->pending.is_empty()) {
+            pending = &dev->proxy->pending.back();
+        }
     } else {
-        pending = list_peek_tail_type(&dev->pending, pending_t, node);
+        if (!dev->pending.is_empty()) {
+            pending = &dev->pending.back();
+        }
     }
     if ((pending == nullptr) || (pending->op != dc_pending::Op::kSuspend)) {
         return false;
@@ -2095,7 +2093,7 @@ void dc_bind_driver(driver_t* drv) {
                 continue;
             }
             if (dc_is_bindable(drv, dev->protocol_id,
-                               dev->props, dev->prop_count, true)) {
+                               dev->Props(), dev->prop_count, true)) {
                 log(INFO, "devcoord: drv='%s' bindable to dev='%s'\n",
                     drv->name, dev->name);
 

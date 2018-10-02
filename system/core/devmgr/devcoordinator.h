@@ -12,6 +12,7 @@
 #include <zircon/types.h>
 #include <zircon/listnode.h>
 
+#include <fbl/intrusive_double_list.h>
 #include <port/port.h>
 
 typedef struct dc_work work_t;
@@ -33,7 +34,14 @@ struct dc_work {
 };
 
 struct dc_pending {
-    list_node_t node;
+    fbl::DoublyLinkedListNodeState<dc_pending*> node;
+    struct Node {
+        static fbl::DoublyLinkedListNodeState<dc_pending*>& node_state(
+            dc_pending& obj) {
+            return obj.node;
+        }
+    };
+
     void* ctx;
     enum struct Op : uint32_t {
         kBind = 1,
@@ -101,7 +109,7 @@ struct dc_device {
 
     // list of outstanding requests from the devcoord
     // to this device's devhost, awaiting a response
-    list_node_t pending;
+    fbl::DoublyLinkedList<dc_pending*, dc_pending::Node> pending;
 
     // listnode for this device in the all devices list
     list_node_t anode;
@@ -109,7 +117,10 @@ struct dc_device {
     // listnode for this device's metadata (list of dc_metadata_t)
     list_node_t metadata;
 
-    zx_device_prop_t props[];
+    zx_device_prop_t* Props() {
+        dc_device* end = this + 1;
+        return reinterpret_cast<zx_device_prop_t*>(end);
+    }
 };
 
 // This device is never destroyed
