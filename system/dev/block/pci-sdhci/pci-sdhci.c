@@ -23,8 +23,7 @@ typedef struct pci_sdhci_device {
     pci_protocol_t pci;
 
     volatile sdhci_regs_t* regs;
-    uint64_t regs_size;
-    zx_handle_t regs_handle;
+    mmio_buffer_t mmio;
     zx_handle_t bti_handle;
 } pci_sdhci_device_t;
 
@@ -53,12 +52,13 @@ static zx_status_t pci_sdhci_get_interrupt(void* ctx, zx_handle_t* handle_out) {
 static zx_status_t pci_sdhci_get_mmio(void* ctx, volatile sdhci_regs_t** out) {
     pci_sdhci_device_t* dev = ctx;
     if (dev->regs == NULL) {
-        zx_status_t status = pci_map_bar(&dev->pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                (void**)&dev->regs, &dev->regs_size, &dev->regs_handle);
+        zx_status_t status = pci_map_bar_buffer(&dev->pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                                &dev->mmio);
         if (status != ZX_OK) {
             printf("pci-sdhci: error %d mapping register window\n", status);
             return status;
         }
+        dev->regs = dev->mmio.vaddr;
     }
     *out = dev->regs;
     return ZX_OK;
@@ -115,9 +115,7 @@ static void pci_sdhci_unbind(void* ctx) {
 
 static void pci_sdhci_release(void* ctx) {
     pci_sdhci_device_t* dev = ctx;
-    if (dev->regs != NULL) {
-        zx_handle_close(dev->regs_handle);
-    }
+    mmio_buffer_release(&dev->mmio);
     zx_handle_close(dev->bti_handle);
     free(dev);
 }
