@@ -17,6 +17,7 @@
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/usb-function.h>
 #include <inet6/inet6.h>
+#include <usb/usb-request.h>
 #include <zircon/listnode.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -221,7 +222,7 @@ static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethmac_netbuf_t* netbuf) {
 
     // Send data
     tx_req->header.length = length;
-    ssize_t bytes_copied = usb_function_req_copy_to(&cdc->function, tx_req, byte_data,
+    ssize_t bytes_copied = usb_request_copy_to(tx_req, byte_data,
                                                     tx_req->header.length, 0);
     if (bytes_copied < 0) {
         zxlogf(LERROR, "%s: failed to copy data into send req (error %zd)\n", __FUNCTION__,
@@ -274,17 +275,16 @@ static ethmac_protocol_ops_t ethmac_ops = {
 };
 
 static void cdc_intr_complete(usb_request_t* req, void* cookie) {
-    usb_cdc_t* cdc = cookie;
     zxlogf(TRACE, "%s %d %ld\n", __FUNCTION__, req->response.status, req->response.actual);
-    usb_function_req_release(&cdc->function, req);
+    usb_request_release(req);
 }
 
 static zx_status_t cdc_alloc_interrupt_req(usb_cdc_t* cdc, usb_request_t** out_req) {
     usb_request_t* req;
-    zx_status_t status = usb_function_req_alloc(&cdc->function, &req, INTR_MAX_PACKET,
+    zx_status_t status = usb_request_alloc(&req, INTR_MAX_PACKET,
                                                 cdc->intr_addr);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: usb_function_req_alloc failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: usb_request_alloc failed %d\n", __FUNCTION__, status);
         return status;
     }
     req->complete_cb = cdc_intr_complete;
@@ -322,14 +322,14 @@ static zx_status_t cdc_send_notifications(usb_cdc_t* cdc) {
 
     status = cdc_alloc_interrupt_req(cdc, &req);
     if (status != ZX_OK) return status;
-    usb_function_req_copy_to(&cdc->function, req, &network_notification,
+    usb_request_copy_to(req, &network_notification,
                              sizeof(network_notification), 0);
     req->header.length = sizeof(network_notification);
     usb_function_queue(&cdc->function, req);
 
     status = cdc_alloc_interrupt_req(cdc, &req);
     if (status != ZX_OK) return status;
-    usb_function_req_copy_to(&cdc->function, req, &speed_notification,
+    usb_request_copy_to(req, &speed_notification,
                              sizeof(speed_notification), 0);
     req->header.length = sizeof(speed_notification);
     usb_function_queue(&cdc->function, req);
@@ -357,7 +357,7 @@ static void cdc_rx_complete(usb_request_t* req, void* cookie) {
         mtx_lock(&cdc->ethmac_mutex);
         if (cdc->ethmac_ifc) {
             uint8_t* data = NULL;
-            usb_function_req_mmap(&cdc->function, req, (void*)&data);
+            usb_request_mmap(req, (void*)&data);
             cdc->ethmac_ifc->recv(cdc->ethmac_cookie, data, req->response.actual, 0);
         }
         mtx_unlock(&cdc->ethmac_mutex);
@@ -523,10 +523,10 @@ static void usb_cdc_release(void* ctx) {
     usb_request_t* req;
 
     while ((req = list_remove_head_type(&cdc->bulk_out_reqs, usb_request_t, node)) != NULL) {
-        usb_function_req_release(&cdc->function, req);
+        usb_request_release(req);
     }
     while ((req = list_remove_head_type(&cdc->bulk_in_reqs, usb_request_t, node)) != NULL) {
-        usb_function_req_release(&cdc->function, req);
+        usb_request_release(req);
     }
     mtx_destroy(&cdc->ethmac_mutex);
     mtx_destroy(&cdc->tx_mutex);
@@ -605,7 +605,7 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     // allocate bulk out usb requests
     usb_request_t* req;
     for (int i = 0; i < BULK_TX_COUNT; i++) {
-        status = usb_function_req_alloc(&cdc->function, &req, BULK_REQ_SIZE, cdc->bulk_out_addr);
+        status = usb_request_alloc(&req, BULK_REQ_SIZE, cdc->bulk_out_addr);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -615,7 +615,7 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     }
     // allocate bulk in usb requests
     for (int i = 0; i < BULK_RX_COUNT; i++) {
-        status = usb_function_req_alloc(&cdc->function, &req, BULK_REQ_SIZE, cdc->bulk_in_addr);
+        status = usb_request_alloc(&req, BULK_REQ_SIZE, cdc->bulk_in_addr);
         if (status != ZX_OK) {
             goto fail;
         }
