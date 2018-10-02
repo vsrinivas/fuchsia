@@ -7,6 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/phys-iter.h>
 #include <ddk/protocol/pci.h>
 
@@ -72,8 +73,7 @@ struct ahci_device {
     zx_device_t* zxdev;
 
     ahci_hba_t* regs;
-    uint64_t regs_size;
-    zx_handle_t regs_handle;
+    mmio_buffer_t mmio;
 
     pci_protocol_t pci;
 
@@ -498,6 +498,7 @@ void ahci_queue(ahci_device_t* device, int portnr, sata_txn_t* txn) {
 static void ahci_release(void* ctx) {
     // FIXME - join threads created by this driver
     ahci_device_t* device = ctx;
+    mmio_buffer_release(&device->mmio);
     zx_handle_close(device->irq_handle);
     zx_handle_close(device->bti_handle);
     free(device);
@@ -792,16 +793,15 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev) {
     }
 
     // map register window
-    zx_status_t status = pci_map_bar(&device->pci,
+    zx_status_t status = pci_map_bar_buffer(&device->pci,
                                           5u,
                                           ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                          (void**)&device->regs,
-                                          &device->regs_size,
-                                          &device->regs_handle);
+                                          &device->mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "ahci: error %d mapping register window\n", status);
         goto fail;
     }
+    device->regs = device->mmio.vaddr;
 
     zx_pcie_device_info_t config;
     status = pci_get_device_info(&device->pci, &config);
