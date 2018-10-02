@@ -67,7 +67,8 @@ err:
 tftp_status file_read(void* data, size_t* length, off_t offset, void* cookie) {
     xferdata* xd = cookie;
     if (xd->fd < 0) {
-        if ((offset > xd->datalen) || (offset + *length > xd->datalen)) {
+        if (((size_t)offset > xd->datalen) ||
+            (offset + *length > xd->datalen)) {
             return TFTP_ERR_IO;
         }
         memcpy(data, &xd->data[offset], *length);

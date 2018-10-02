@@ -285,8 +285,8 @@ int main(int argc, char** argv) {
     char cmdline[4096];
     char* cmdnext = cmdline;
     char* nodename = NULL;
-    int r, s = 1;
-    int num_fvms = 0;
+    int s = 1;
+    size_t num_fvms = 0;
     const char* bootloader_image = NULL;
     const char* efi_image = NULL;
     const char* kernc_image = NULL;
@@ -489,7 +489,7 @@ int main(int argc, char** argv) {
         log("cannot create socket %d", s);
         return -1;
     }
-    if ((r = bind(s, (void*)&addr, sizeof(addr))) < 0) {
+    if (bind(s, (void*)&addr, sizeof(addr)) < 0) {
         log("cannot bind to %s %d: %s\nthere may be another bootserver running\n",
             sockaddr_str(&addr),
             errno, strerror(errno));
@@ -505,13 +505,13 @@ int main(int argc, char** argv) {
         char buf[4096];
         nbmsg* msg = (void*)buf;
         rlen = sizeof(ra);
-        r = recvfrom(s, buf, sizeof(buf) - 1, 0, (void*)&ra, &rlen);
+        ssize_t r = recvfrom(s, buf, sizeof(buf) - 1, 0, (void*)&ra, &rlen);
         if (r < 0) {
-            log("socket read error %d", r);
+            log("socket read error %s", strerror(errno));
             close(s);
             return -1;
         }
-        if (r < sizeof(nbmsg))
+        if ((size_t)r < sizeof(nbmsg))
             continue;
         if (!IN6_IS_ADDR_LINKLOCAL(&ra.sin6_addr)) {
             log("ignoring non-link-local message");
@@ -546,7 +546,7 @@ int main(int argc, char** argv) {
 
         char* save = NULL;
         char* adv_nodename = NULL;
-        char* adv_version = "unknown";
+        const char* adv_version = "unknown";
         for (char* var = strtok_r((char*)msg->data, ";", &save);
              var;
              var = strtok_r(NULL, ";", &save)) {

@@ -34,7 +34,7 @@ static int io_rcv(int s, nbmsg* msg, nbmsg* ack) {
     for (int i = 0; i < MAX_READ_RETRIES; i++) {
         bool retry_allowed = i + 1 < MAX_READ_RETRIES;
 
-        int r = read(s, ack, 2048);
+        ssize_t r = read(s, ack, 2048);
         if (r < 0) {
             if (retry_allowed && errno == EAGAIN) {
                 continue;
@@ -42,7 +42,7 @@ static int io_rcv(int s, nbmsg* msg, nbmsg* ack) {
             fprintf(stderr, "\n%s: error: Socket read error %d\n", appname, errno);
             return -1;
         }
-        if (r < sizeof(nbmsg)) {
+        if ((size_t)r < sizeof(nbmsg)) {
             fprintf(stderr, "\n%s: error: Read too short\n", appname);
             return -1;
         }
@@ -208,7 +208,7 @@ static ssize_t xread(xferdata* xd, void* data, size_t len) {
     }
 }
 
-static int xseek(xferdata* xd, off_t off) {
+static int xseek(xferdata* xd, size_t off) {
     if (xd->fp == NULL) {
         if (off > xd->datalen) {
             return -1;
@@ -237,10 +237,10 @@ int netboot_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
     struct timeval tv;
     nbmsg* msg = (void*)msgbuf;
     nbmsg* ack = (void*)ackbuf;
-    int s, r;
+    int s;
     int status = -1;
     size_t current_pos = 0;
-    long sz = 0;
+    size_t sz = 0;
 
     if (!strcmp(fn, "(cmdline)")) {
         xd.fp = NULL;
@@ -300,7 +300,7 @@ int netboot_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
         struct timeval packet_start_time;
         gettimeofday(&packet_start_time, NULL);
 
-        r = xread(&xd, msg->data, PAYLOAD_SIZE);
+        ssize_t r = xread(&xd, msg->data, PAYLOAD_SIZE);
         if (r < 0) {
             fprintf(stderr, "\n%s: error: Reading '%s'\n", appname, fn);
             goto done;
@@ -315,7 +315,7 @@ int netboot_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
                 goto done;
             }
         } else {
-            if (current_pos + r >= sz) {
+            if (current_pos + (size_t)r >= sz) {
                 msg->cmd = NB_LAST_DATA;
             } else {
                 msg->cmd = NB_DATA;
