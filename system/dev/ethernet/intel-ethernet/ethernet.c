@@ -7,6 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
@@ -35,7 +36,7 @@ typedef struct ethernet_device {
     eth_state state;
     zx_device_t* zxdev;
     pci_protocol_t pci;
-    zx_handle_t ioh;
+    mmio_buffer_t mmio;
     zx_handle_t irqh;
     thrd_t thread;
     zx_handle_t btih;
@@ -210,10 +211,10 @@ static void eth_release(void* ctx) {
     pci_enable_bus_master(&edev->pci, false);
 
     io_buffer_release(&edev->buffer);
+    mmio_buffer_release(&edev->mmio);
 
     zx_handle_close(edev->btih);
     zx_handle_close(edev->irqh);
-    zx_handle_close(edev->ioh);
     free(edev);
 }
 
@@ -262,16 +263,12 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
     }
 
     // map iomem
-    uint64_t sz;
-    zx_handle_t h;
-    void* io;
-    r = pci_map_bar(&edev->pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz, &h);
+    r = pci_map_bar_buffer(&edev->pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &edev->mmio);
     if (r != ZX_OK) {
-        printf("eth: cannot map io %d\n", h);
+        printf("eth: cannot map io %d\n", edev->mmio.vmo);
         goto fail;
     }
-    edev->eth.iobase = (uintptr_t)io;
-    edev->ioh = h;
+    edev->eth.iobase = (uintptr_t)edev->mmio.vaddr;
 
     zx_pcie_device_info_t pci_info;
     status = pci_get_device_info(&edev->pci, &pci_info);
@@ -328,10 +325,10 @@ fail:
     if (edev->btih) {
         zx_handle_close(edev->btih);
     }
-    if (edev->ioh) {
+    if (edev->mmio.vmo) {
         pci_enable_bus_master(&edev->pci, false);
         zx_handle_close(edev->irqh);
-        zx_handle_close(edev->ioh);
+        mmio_buffer_release(&edev->mmio);
     }
     free(edev);
     return ZX_ERR_NOT_SUPPORTED;
