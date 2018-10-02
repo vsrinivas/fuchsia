@@ -38,19 +38,16 @@ class HostImage : public Image {
   // the caller.
   //
   // Returns the created Image, or nullptr if there was an error.
-  static ImagePtr New(Session* session, ResourceId id,
-                      HostMemoryPtr memory,
+  static ImagePtr New(Session* session, ResourceId id, HostMemoryPtr memory,
                       const fuchsia::images::ImageInfo& host_image_info,
                       uint64_t memory_offset, ErrorReporter* error_reporter);
-
-  static ImagePtr NewForTesting(Session* session, ResourceId id,
-                                escher::ResourceManager* image_owner,
-                                HostMemoryPtr host_memory);
 
   void Accept(class ResourceVisitor* visitor) override;
 
   // Re-upload host memory contents to GPU memory. Returns true if contents were
   // updated.
+
+ protected:
   bool UpdatePixels() override;
 
  private:

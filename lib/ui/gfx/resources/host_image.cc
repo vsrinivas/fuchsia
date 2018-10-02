@@ -4,6 +4,8 @@
 
 #include "garnet/lib/ui/gfx/resources/host_image.h"
 
+#include <trace/event.h>
+
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/gpu_memory.h"
 #include "garnet/lib/ui/gfx/resources/host_memory.h"
@@ -17,9 +19,8 @@ const ResourceTypeInfo HostImage::kTypeInfo = {
     ResourceType::kHostImage | ResourceType::kImage | ResourceType::kImageBase,
     "HostImage"};
 
-HostImage::HostImage(Session* session, ResourceId id,
-                     HostMemoryPtr memory, escher::ImagePtr image,
-                     uint64_t host_memory_offset,
+HostImage::HostImage(Session* session, ResourceId id, HostMemoryPtr memory,
+                     escher::ImagePtr image, uint64_t host_memory_offset,
                      fuchsia::images::ImageInfo host_image_format)
     : Image(session, id, HostImage::kTypeInfo),
       memory_(std::move(memory)),
@@ -117,31 +118,19 @@ ImagePtr HostImage::New(Session* session, ResourceId id,
   auto host_image = fxl::AdoptRef(
       new HostImage(session, id, std::move(host_memory),
                     std::move(escher_image), memory_offset, host_image_info));
-  host_image->UpdatePixels();
   return host_image;
 }
 
 bool HostImage::UpdatePixels() {
+  TRACE_DURATION("gfx", "UpdatePixels");
   if (session()->engine()->escher_gpu_uploader()) {
     escher::image_utils::WritePixelsToImage(
         session()->engine()->escher_gpu_uploader(),
         static_cast<uint8_t*>(memory_->memory_base()) + memory_offset_, image_,
         image_conversion_function_);
-    return true;
+    return false;
   }
-  return false;
-}
-
-ImagePtr HostImage::NewForTesting(Session* session, ResourceId id,
-                                  escher::ResourceManager* image_owner,
-                                  HostMemoryPtr host_memory) {
-  escher::ImagePtr escher_image = escher::Image::New(
-      image_owner, escher::ImageInfo(), vk::Image(), nullptr);
-  FXL_CHECK(escher_image);
-  fuchsia::images::ImageInfo host_image_format;
-  host_image_format.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
-  return fxl::AdoptRef(new HostImage(session, id, host_memory, escher_image, 0,
-                                     host_image_format));
+  return true;
 }
 
 }  // namespace gfx

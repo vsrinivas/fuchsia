@@ -151,10 +151,12 @@ bool ImagePipe::Update(uint64_t presentation_time,
   ResourceId next_image_id = current_image_id_;
   ::fidl::VectorPtr<zx::event> next_release_fences;
 
+  ImagePtr next_image = nullptr;
   while (!frames_.empty() &&
          frames_.front().presentation_time <= presentation_time &&
          frames_.front().acquire_fences->ready()) {
     next_image_id = frames_.front().image_id;
+
     if (!next_release_fences->empty()) {
       // We're skipping a frame, so we can immediately signal its release
       // fences.
@@ -162,6 +164,15 @@ bool ImagePipe::Update(uint64_t presentation_time,
         fence.signal(0u, escher::kFenceSignalled);
       }
     }
+
+    if (next_image) {
+      // We're skipping a frame, so we should also mark the image as dirty, in
+      // case the producer updates the pixels in the buffer between now and a
+      // future present call.
+      next_image->MarkAsDirty();
+    }
+
+    next_image = images_.FindResource<Image>(next_image_id);
     next_release_fences = std::move(frames_.front().release_fences);
 
     auto info = fuchsia::images::PresentationInfo();
@@ -177,8 +188,6 @@ bool ImagePipe::Update(uint64_t presentation_time,
   if (!present_next_image)
     return false;
 
-  auto next_image = images_.FindResource<Image>(next_image_id);
-
   if (!next_image) {
     session()->error_reporter()->ERROR()
         << "ImagePipe::Update() could not find Image with ID: "
@@ -190,9 +199,11 @@ bool ImagePipe::Update(uint64_t presentation_time,
     return true;
   }
 
-  bool image_updated = next_image->UpdatePixels();
-
-  if (!image_updated && next_image_id == current_image_id_) {
+  // TODO(MZ-151): This code, and the code below that marks an image as dirty,
+  // assumes that the same image cannot be presented twice in a row on the same
+  // image pipe, while also requiring a call to UpdatePixels(). If not, this
+  // needs a new test.
+  if (next_image_id == current_image_id_) {
     // This ImagePipe did not change since the last frame was rendered.
     return false;
   }
@@ -206,6 +217,12 @@ bool ImagePipe::Update(uint64_t presentation_time,
   }
   current_release_fences_ = std::move(next_release_fences);
   current_image_id_ = next_image_id;
+  // TODO(SCN-1010): Determine proper signalling for marking images as dirty.
+  // For now, mark all released images as dirty, with the assumption that the
+  // client will likely write into the buffer before submitting it again.
+  if (current_image_) {
+    current_image_->MarkAsDirty();
+  }
   current_image_ = std::move(next_image);
 
   return true;

@@ -17,8 +17,7 @@ namespace gfx {
 const ResourceTypeInfo Image::kTypeInfo = {
     ResourceType::kImage | ResourceType::kImageBase, "Image"};
 
-Image::Image(Session* session, ResourceId id,
-             const ResourceTypeInfo& type_info)
+Image::Image(Session* session, ResourceId id, const ResourceTypeInfo& type_info)
     : ImageBase(session, id, Image::kTypeInfo) {
   FXL_DCHECK(type_info.IsKindOf(Image::kTypeInfo));
 }
@@ -39,6 +38,13 @@ ImagePtr Image::New(Session* session, ResourceId id, MemoryPtr memory,
     FXL_CHECK(false);
     return nullptr;
   }
+}
+
+const escher::ImagePtr& Image::GetEscherImage() {
+  if (dirty_)
+    dirty_ = UpdatePixels();
+  static const escher::ImagePtr kNullEscherImage;
+  return dirty_ ? kNullEscherImage : image_;
 }
 
 }  // namespace gfx

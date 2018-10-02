@@ -35,13 +35,13 @@ class GpuImage : public Image {
   // the caller.
   //
   // Returns the created Image, or nullptr if there was an error.
-  static GpuImagePtr New(Session* session, ResourceId id,
-                         GpuMemoryPtr memory,
+  static GpuImagePtr New(Session* session, ResourceId id, GpuMemoryPtr memory,
                          const fuchsia::images::ImageInfo& image_info,
                          uint64_t memory_offset, ErrorReporter* error_reporter);
 
   void Accept(class ResourceVisitor* visitor) override;
 
+ protected:
   // No-op for images backed by GPU memory.
   bool UpdatePixels() override;
 

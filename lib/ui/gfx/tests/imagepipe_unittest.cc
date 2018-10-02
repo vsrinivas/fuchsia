@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/ui/gfx/resources/host_image.h"
 #include "garnet/lib/ui/gfx/resources/image_pipe.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 #include "garnet/lib/ui/gfx/tests/session_test.h"
@@ -15,6 +14,26 @@
 namespace scenic_impl {
 namespace gfx {
 namespace test {
+
+class DummyImage : public Image {
+ public:
+  DummyImage(Session* session, escher::ImagePtr image)
+      : Image(session, 0u, Image::kTypeInfo) {
+    image_ = std::move(image);
+  }
+
+  void Accept(class ResourceVisitor*) override {}
+
+  uint32_t update_count_ = 0;
+
+ protected:
+  bool UpdatePixels() override {
+    ++update_count_;
+    // Update pixels returns the new dirty state. False will stop additional
+    // calls to UpdatePixels() until the image is marked dirty.
+    return false;
+  }
+};  // namespace test
 
 class ImagePipeTest : public SessionTest, public escher::ResourceManager {
  public:
@@ -74,20 +93,30 @@ class ImagePipeThatCreatesDummyImages : public ImagePipe {
       : ImagePipe(session, 0u),
         dummy_resource_manager_(dummy_resource_manager) {}
 
+  std::vector<fxl::RefPtr<DummyImage>> dummy_images_;
+
  private:
   // Override to create an Image without a backing escher::Image.
   ImagePtr CreateImage(Session* session, MemoryPtr memory,
                        const fuchsia::images::ImageInfo& image_info,
                        uint64_t memory_offset,
                        ErrorReporter* error_reporter) override {
-    return HostImage::NewForTesting(session, 0u, dummy_resource_manager_,
-                                    memory->As<HostMemory>());
+    escher::ImageInfo escher_info;
+    escher_info.width = image_info.width;
+    escher_info.height = image_info.height;
+    escher::ImagePtr escher_image = escher::Image::New(
+        dummy_resource_manager_, escher_info, vk::Image(), nullptr);
+    FXL_CHECK(escher_image);
+    auto image = fxl::AdoptRef(new DummyImage(session, escher_image));
+
+    dummy_images_.push_back(image);
+    return image;
   }
+
   escher::ResourceManager* dummy_resource_manager_;
 };
 
-// Present two frames on the ImagePipe, making sure that acquire fence is being
-// listened to and release fences are signalled.
+// Present an image with an Id of zero, and expect an error.
 TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {
   ImagePipePtr image_pipe =
       fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
@@ -259,6 +288,59 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
             1u);
   ASSERT_TRUE(IsEventSignalled(release_fence1, escher::kFenceSignalled));
   ASSERT_FALSE(IsEventSignalled(release_fence2, escher::kFenceSignalled));
+}
+
+// Present two frames on the ImagePipe, making sure that UpdatePixels is only
+// called on images that are acquired and used.
+TEST_F(ImagePipeTest, ImagePipeUpdateTwoFrames) {
+  auto image_pipe = fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
+      session_.get(), this);
+
+  // Image A is a 2x2 image with id=2.
+  // Image B is a 4x4 image with id=4.
+  uint32_t imageIdA = 2;
+  uint32_t imageIdB = 4;
+  auto image_info_a = CreateImageInfoForBgra8Image(imageIdA, imageIdA);
+  auto image_info_b = CreateImageInfoForBgra8Image(imageIdB, imageIdB);
+  auto gradient_a = CreateVmoWithGradientPixels(imageIdA, imageIdA);
+  auto gradient_b = CreateVmoWithGradientPixels(imageIdB, imageIdB);
+  image_pipe->AddImage(imageIdA, std::move(image_info_a),
+                       CopyVmo(gradient_a->vmo()),
+                       fuchsia::images::MemoryType::HOST_MEMORY, 0);
+  image_pipe->AddImage(imageIdB, std::move(image_info_b),
+                       CopyVmo(gradient_b->vmo()),
+                       fuchsia::images::MemoryType::HOST_MEMORY, 0);
+
+  image_pipe->PresentImage(imageIdA, 0, nullptr, nullptr, nullptr);
+  image_pipe->PresentImage(imageIdB, 0, nullptr, nullptr, nullptr);
+
+  RunLoopUntilIdle();
+
+  auto image_out = image_pipe->GetEscherImage();
+  // We should get the second image in the queue, since both should have been
+  // ready.
+  ASSERT_EQ(image_out->width(), imageIdB);
+  ASSERT_EQ(image_pipe->dummy_images_.size(), 2u);
+  ASSERT_EQ(image_pipe->dummy_images_[0]->update_count_, 0u);
+  ASSERT_EQ(image_pipe->dummy_images_[1]->update_count_, 1u);
+
+  // Do it again, to make sure that update is called a second time (since
+  // released images could be edited by the client before presentation).
+  //
+  // In this case, we need to run to idle after presenting image A, so that
+  // image B is returned by the pool, marked dirty, and is free to be acquired
+  // again.
+  image_pipe->PresentImage(imageIdA, 0, nullptr, nullptr, nullptr);
+  RunLoopUntilIdle();
+  image_pipe->PresentImage(imageIdB, 0, nullptr, nullptr, nullptr);
+  RunLoopUntilIdle();
+
+  image_out = image_pipe->GetEscherImage();
+  ASSERT_EQ(image_pipe->dummy_images_.size(), 2u);
+  // Because we never called GetEscherImage() on the ImagePool while image A was
+  // presented, we should still have zero calls to UpdatePixels for that image.
+  ASSERT_EQ(image_pipe->dummy_images_[0]->update_count_, 0u);
+  ASSERT_EQ(image_pipe->dummy_images_[1]->update_count_, 2u);
 }
 
 // TODO(MZ-151): More tests.

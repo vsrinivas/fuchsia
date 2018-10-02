@@ -36,17 +36,22 @@ class Image : public ImageBase {
                       const fuchsia::images::ImageInfo& image_info,
                       uint64_t memory_offset, ErrorReporter* error_reporter);
 
-  // Updates pixels before rendering, if needed. Returns true if contents were
-  // updated.
-  virtual bool UpdatePixels() = 0;
+  const escher::ImagePtr& GetEscherImage() override;
 
-  const escher::ImagePtr& GetEscherImage() override { return image_; }
+  // TODO(SCN-1010): Determine proper signalling for marking images as dirty.
+  void MarkAsDirty() { dirty_ = true; }
 
  protected:
   Image(Session* session, ResourceId id, const ResourceTypeInfo& type_info);
 
+  // Updates pixels before rendering, if needed. Returns the new dirty status
+  // (i.e. false, if all bits have been updated appropriately, true if the image
+  // is still dirty).
+  virtual bool UpdatePixels() = 0;
+
   // GPU memory-backed image.
   escher::ImagePtr image_;
+  bool dirty_ = true;
 };
 
 }  // namespace gfx
