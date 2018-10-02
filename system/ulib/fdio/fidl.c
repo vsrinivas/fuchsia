@@ -163,9 +163,6 @@ zx_status_t fidl_read(zxrio_t* rio, void* data, uint64_t length, uint64_t* actua
                                          data, length, actual)) != ZX_OK) {
         return io_status;
     }
-    if (*actual > length) {
-        return ZX_ERR_IO;
-    }
     return status;
 }
 
@@ -175,9 +172,6 @@ zx_status_t fidl_readat(zxrio_t* rio, void* data, uint64_t length, off_t offset,
     if ((io_status = fuchsia_io_FileReadAt(zxrio_handle(rio), length, offset, &status,
                                            data, length, actual)) != ZX_OK) {
         return io_status;
-    }
-    if (*actual > length) {
-        return ZX_ERR_IO;
     }
     return status;
 }
