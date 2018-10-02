@@ -1,0 +1,9 @@
+{
+    "imports": [
+        "garnet/packages/prod/amber"
+    ],
+    "packages": [
+        "//garnet/go/src/amber/tests/ota:ota-test-package",
+        "//garnet/go/src/amber/tests/ota:ota-test-system"
+    ]
+}
