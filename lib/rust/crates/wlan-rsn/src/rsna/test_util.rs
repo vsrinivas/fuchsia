@@ -96,7 +96,8 @@ pub fn get_ptk(anonce: &[u8], snonce: &[u8]) -> Ptk {
         .get(0)
         .expect("Supplicant's RSNE holds no Pairwise Cipher suite");
     let pmk = get_pmk();
-    Ptk::new(&pmk[..], &A_ADDR, &S_ADDR, anonce, snonce, &akm, &cipher).expect("error deriving PTK")
+    Ptk::new(&pmk[..], &A_ADDR, &S_ADDR, anonce, snonce, &akm, cipher.clone())
+        .expect("error deriving PTK")
 }
 
 pub fn get_pmk() -> Vec<u8> {

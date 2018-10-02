@@ -129,7 +129,8 @@ fn process_message_2(
     let ptk = handle_message_2(&pmk[..], &cfg, &anonce[..], last_krc, frame)?;
 
     // TODO(hahnr): Actually compute GTK.
-    let gtk = Gtk::from_gtk(vec![42; 32], 1);
+    let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
+    let gtk = Gtk::from_gtk(vec![42; 32], 1, rsne.group_data);
     let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
     let msg3 = create_message_3(&cfg, ptk.kck(), ptk.kek(), &gtk, &anonce[..], &rsne, next_krc)?;
 
@@ -207,7 +208,7 @@ pub fn handle_message_2(
         anonce,
         snonce,
         &rsne.akm,
-        &rsne.pairwise,
+        rsne.pairwise,
     )?;
 
     // PTK was computed, verify the frame's MIC.
@@ -242,7 +243,7 @@ fn create_message_3(
     cfg.a_rsne.as_bytes(&mut key_data);
 
     // Write GTK KDE to key data.
-    let gtk_kde = kde::Gtk::new(gtk.key_id(), kde::GtkInfoTx::BothRxTx, gtk.gtk());
+    let gtk_kde = kde::Gtk::new(gtk.key_id(), kde::GtkInfoTx::BothRxTx, &gtk.gtk[..]);
     gtk_kde.as_bytes(&mut key_data);
 
     // Add optional padding and encrypt the key data.

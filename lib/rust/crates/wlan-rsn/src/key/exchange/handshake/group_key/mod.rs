@@ -4,6 +4,7 @@
 
 use bytes::Bytes;
 use crate::akm::Akm;
+use crate::cipher::Cipher;
 use crate::key::exchange::{self, handshake::group_key::supplicant::Supplicant};
 use crate::rsna::{Role, UpdateSink, VerifiedKeyFrame, KeyFrameState, KeyFrameKeyDataState};
 use eapol;
@@ -128,6 +129,7 @@ impl<'a> GroupKeyHandshakeFrame<'a> {
 pub struct Config {
     pub role: Role,
     pub akm: Akm,
+    pub cipher: Cipher,
 }
 
 #[derive(Debug, PartialEq)]

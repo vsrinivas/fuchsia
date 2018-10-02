@@ -49,6 +49,7 @@ impl Supplicant {
     ) -> Result<Supplicant, failure::Error> {
         let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;
         let akm = negotiated_rsne.akm.clone();
+        let group_data = negotiated_rsne.group_data.clone();
 
         let mut esssa = EssSa::new(
             Role::Supplicant,
@@ -58,7 +59,7 @@ impl Supplicant {
                 Role::Supplicant, s_addr, s_rsne, a_addr, a_rsne
             )?),
             Some(exchange::Config::GroupKeyHandshake(group_key::Config {
-                role: Role::Supplicant, akm
+                role: Role::Supplicant, akm, cipher: group_data
             })),
         )?;
 

@@ -14,10 +14,11 @@ use std::cmp::{max, min};
 /// respectively.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ptk {
-    ptk: Vec<u8>,
+    pub ptk: Vec<u8>,
     kck_len: usize,
     kek_len: usize,
     tk_len: usize,
+    pub cipher: Cipher,
     // TODO(hahnr): Add TKIP Tx/Rx MIC support (IEEE 802.11-2016, 12.8.1).
 }
 
@@ -30,7 +31,7 @@ impl Ptk {
         anonce: &[u8],
         snonce: &[u8],
         akm: &Akm,
-        cipher: &Cipher,
+        cipher: Cipher,
     ) -> Result<Ptk, failure::Error> {
         ensure!(
             anonce.len() == 32 && snonce.len() == 32,
@@ -68,6 +69,7 @@ impl Ptk {
             kck_len: (kck_bits / 8) as usize,
             kek_len: (kek_bits / 8) as usize,
             tk_len: (tk_bits / 8) as usize,
+            cipher,
         };
         Ok(ptk)
     }
@@ -84,10 +86,6 @@ impl Ptk {
     pub fn tk(&self) -> &[u8] {
         let start = self.kck_len + self.kek_len;
         &self.ptk[start..start + self.tk_len]
-    }
-
-    pub fn ptk(&self) -> &[u8] {
-        &self.ptk[..]
     }
 }
 
@@ -139,7 +137,7 @@ mod tests {
             &data.anonce,
             &data.snonce,
             &akm,
-            &cipher,
+            cipher,
         )
     }
 

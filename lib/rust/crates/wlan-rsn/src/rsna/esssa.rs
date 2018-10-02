@@ -616,12 +616,12 @@ mod tests {
         // Verify PTK was reported.
         let reported_ptk =
             extract_reported_ptk(&updates[..]).expect("Supplicant did not report PTK");
-        assert_eq!(ptk.ptk(), reported_ptk.ptk());
+        assert_eq!(ptk.ptk, reported_ptk.ptk);
 
         // Verify GTK was reported.
         let reported_gtk =
             extract_reported_gtk(&updates[..]).expect("Supplicant did not report GTK");
-        assert_eq!(&GTK[..], reported_gtk.gtk());
+        assert_eq!(&GTK[..], &reported_gtk.gtk[..]);
 
         // Verify ESS was reported to be established.
         let reported_status =
@@ -660,7 +660,7 @@ mod tests {
         // Verify GTK was reported.
         let reported_gtk =
             extract_reported_gtk(&updates[..]).expect("Supplicant did not report re-key'ed GTK");
-        assert_eq!(&GTK_REKEY[..], reported_gtk.gtk());
+        assert_eq!(&GTK_REKEY[..], &reported_gtk.gtk[..]);
     }
 
     // TODO(hahnr): Add additional tests to validate replay attacks,

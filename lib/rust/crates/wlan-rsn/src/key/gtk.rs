@@ -9,18 +9,20 @@ use failure;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Gtk {
-    gtk: Vec<u8>,
+    pub gtk: Vec<u8>,
     key_id: u8,
     tk_len: usize,
+    pub cipher: Cipher,
     // TODO(hahnr): Add TKIP Tx/Rx MIC support (IEEE 802.11-2016, 12.8.2).
 }
 
 impl Gtk {
-    pub fn from_gtk(gtk: Vec<u8>, key_id: u8) -> Gtk {
+    pub fn from_gtk(gtk: Vec<u8>, key_id: u8, cipher: Cipher) -> Gtk {
         Gtk {
             tk_len: gtk.len(),
             gtk: gtk,
             key_id,
+            cipher,
         }
     }
 
@@ -30,10 +32,9 @@ impl Gtk {
         key_id: u8,
         aa: &[u8; 6],
         gnonce: &[u8; 32],
-        cipher: &Cipher,
+        cipher: Cipher,
     ) -> Result<Gtk, failure::Error> {
-        let tk_bits = cipher
-            .tk_bits()
+        let tk_bits = cipher.tk_bits()
             .ok_or(Error::GtkHierarchyUnsupportedCipherError)?;
 
         // data length = 6 (aa) + 32 (gnonce)
@@ -46,15 +47,12 @@ impl Gtk {
             gtk: gtk_bytes,
             key_id,
             tk_len: (tk_bits / 8) as usize,
+            cipher,
         })
     }
 
     pub fn tk(&self) -> &[u8] {
         &self.gtk[0..self.tk_len]
-    }
-
-    pub fn gtk(&self) -> &[u8] {
-        &self.gtk[..]
     }
 
     pub fn key_id(&self) -> u8 {

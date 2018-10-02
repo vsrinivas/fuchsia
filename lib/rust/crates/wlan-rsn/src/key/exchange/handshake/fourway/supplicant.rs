@@ -33,7 +33,8 @@ fn handle_message_1(
     let anonce = frame.key_nonce;
     let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
 
-    let ptk = Ptk::new(pmk, &cfg.a_addr, &cfg.s_addr, &anonce[..], snonce, &rsne.akm, &rsne.pairwise)?;
+    let pairwise = rsne.pairwise.clone();
+    let ptk = Ptk::new(pmk, &cfg.a_addr, &cfg.s_addr, &anonce[..], snonce, &rsne.akm, pairwise)?;
     let msg2 = create_message_2(cfg, ptk.kck(), &rsne, frame, &snonce[..])?;
 
     Ok((msg2, ptk, anonce.to_vec()))
@@ -120,7 +121,7 @@ fn handle_message_3(
         (Some(gtk), Some(rsne)) => {
             ensure!(&rsne == &cfg.a_rsne, Error::InvalidKeyDataRsne);
             let msg4 = create_message_4(&negotiated_rsne, kck, frame)?;
-            Ok((msg4, Gtk::from_gtk(gtk.gtk, gtk.info.key_id())))
+            Ok((msg4, Gtk::from_gtk(gtk.gtk, gtk.info.key_id(), negotiated_rsne.group_data)))
         }
         _ => bail!(Error::InvalidKeyDataContent),
     }

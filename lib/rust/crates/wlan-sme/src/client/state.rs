@@ -5,7 +5,7 @@
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent};
 use log::{error, warn};
 use wlan_rsn::key::exchange::Key;
-use wlan_rsn::rsna::{self, NegotiatedRsne, SecAssocUpdate, SecAssocStatus};
+use wlan_rsn::rsna::{self, SecAssocUpdate, SecAssocStatus};
 
 use super::bss::convert_bss_description;
 use super::phy_selection::{derive_phy_cbw};
@@ -326,7 +326,7 @@ fn process_eapol_ind(mlme_sink: &MlmeSink, rsna: &mut Rsna, ind: &fidl_mlme::Eap
             // ESS Security Association derived a new key.
             // Configure key in MLME.
             SecAssocUpdate::Key(key) => {
-                send_keys(mlme_sink, bssid, &rsna.negotiated_rsne, key)
+                send_keys(mlme_sink, bssid, key)
             },
             // Received a status update.
             // TODO(hahnr): Rework this part.
@@ -363,7 +363,7 @@ fn send_eapol_frame(mlme_sink: &MlmeSink, bssid: [u8; 6], sta_addr: [u8; 6], fra
     ));
 }
 
-fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], s_rsne: &NegotiatedRsne, key: Key)
+fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], key: Key)
 {
     match key {
         Key::Ptk(ptk) => {
@@ -374,8 +374,8 @@ fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], s_rsne: &NegotiatedRsne, key:
                         key: ptk.tk().to_vec(),
                         key_id: 0,
                         address: bssid,
-                        cipher_suite_oui: eapol::to_array(&s_rsne.pairwise.oui[..]),
-                        cipher_suite_type: s_rsne.pairwise.suite_type,
+                        cipher_suite_oui: eapol::to_array(&ptk.cipher.oui[..]),
+                        cipher_suite_type: ptk.cipher.suite_type,
                         rsc: [0u8; 8],
                     }]
                 }
@@ -389,8 +389,8 @@ fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], s_rsne: &NegotiatedRsne, key:
                         key: gtk.tk().to_vec(),
                         key_id: gtk.key_id() as u16,
                         address: [0xFFu8; 6],
-                        cipher_suite_oui: eapol::to_array(&s_rsne.group_data.oui[..]),
-                        cipher_suite_type: s_rsne.group_data.suite_type,
+                        cipher_suite_oui: eapol::to_array(&gtk.cipher.oui[..]),
+                        cipher_suite_type: gtk.cipher.suite_type,
                         rsc: [0u8; 8],
                     }]
                 }
