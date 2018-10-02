@@ -47,6 +47,13 @@ package("trace_manager") {
 
   binary = "trace_manager"
 
+  meta = [
+    {
+      path = rebase_path("meta/trace_manager.cmx")
+      dest = "trace_manager.cmx"
+    },
+  ]
+
   resources = [ {
         path = rebase_path("tracing.config")
         dest = "tracing.config"
