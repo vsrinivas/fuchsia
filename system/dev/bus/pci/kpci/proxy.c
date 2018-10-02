@@ -195,53 +195,6 @@ static zx_status_t pci_op_get_bar(void* ctx, uint32_t bar_id, zx_pci_bar_t* out_
     return st;
 }
 
-// Map a pci device's bar into the process's address space
-static zx_status_t pci_op_map_bar(void* ctx,
-                                  uint32_t bar_id,
-                                  uint32_t cache_policy,
-                                  void** vaddr,
-                                  size_t* size,
-                                  zx_handle_t* out_handle) {
-    if (!vaddr || !size || !out_handle || bar_id >= PCI_MAX_BAR_COUNT) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    zx_pci_bar_t bar;
-    zx_status_t status = pci_op_get_bar(ctx, bar_id, &bar);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    // TODO(cja): PIO may be mappable on non-x86 architectures
-    if (bar.type == ZX_PCI_BAR_TYPE_PIO || bar.handle == ZX_HANDLE_INVALID) {
-        return ZX_ERR_WRONG_TYPE;
-    }
-
-    status = zx_vmo_set_cache_policy(bar.handle, cache_policy);
-    if (status != ZX_OK) {
-        zx_handle_close(bar.handle);
-        return status;
-    }
-
-    // Map the config/bar passed in. Mappings require PAGE_SIZE alignment for
-    // both base and size
-    void* vaddr_tmp;
-    zx_vm_option_t map_options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE;
-    status = zx_vmar_map(zx_vmar_root_self(), map_options, 0, bar.handle, 0,
-                         ROUNDUP(bar.size, PAGE_SIZE),
-                         (uintptr_t*)&vaddr_tmp);
-    if (status != ZX_OK) {
-        zx_handle_close(bar.handle);
-        return status;
-    }
-
-    *size = bar.size;
-    *out_handle = bar.handle;
-    *vaddr = vaddr_tmp;
-
-    return status;
-}
-
 static zx_status_t pci_op_map_interrupt(void* ctx, int32_t which_irq, zx_handle_t* out_handle) {
     if (!out_handle) {
         return ZX_ERR_INVALID_ARGS;
@@ -346,7 +299,6 @@ static pci_protocol_ops_t _pci_protocol = {
     .enable_bus_master = pci_op_enable_bus_master,
     .reset_device = pci_op_reset_device,
     .get_bar = pci_op_get_bar,
-    .map_bar = pci_op_map_bar,
     .map_interrupt = pci_op_map_interrupt,
     .query_irq_mode = pci_op_query_irq_mode,
     .set_irq_mode = pci_op_set_irq_mode,

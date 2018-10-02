@@ -42,8 +42,6 @@ enum PciCapId : uint8 {
 [Layout = "ddk-protocol"]
 interface Pci {
     GetBar(uint32 bar_id) -> (zx.status s, zircon.syscalls.pci.ZxPciBar res);
-    MapBar(uint32 bar_id, uint32 cache_policy) -> (zx.status s, vector<voidptr>? vaddr,
-                                                   handle<vmo> @handle);
     EnableBusMaster(bool enable) -> (zx.status s);
     ResetDevice() -> (zx.status s);
     MapInterrupt(int32 which_irq) -> (zx.status s, handle<interrupt> @handle);
