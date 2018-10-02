@@ -168,6 +168,7 @@ pub const IOCTL_FAMILY_BT_HOST: raw::c_int = 51;
 pub const IOCTL_FAMILY_WLANPHY: raw::c_int = 52;
 pub const IOCTL_FAMILY_WLANTAP: raw::c_int = 0x36;
 pub const IOCTL_FAMILY_DISPLAY_CONTROLLER: raw::c_int = 0x37;
+pub const IOCTL_FAMILY_QMI: raw::c_int = 0x41;
 pub const ZXRIO_SOCKET_DIR_NONE: &'static [u8; 5usize] = b"none\x00";
 pub const ZXRIO_SOCKET_DIR_SOCKET: &'static [u8; 7usize] = b"socket\x00";
 pub const ZXRIO_SOCKET_DIR_ACCEPT: &'static [u8; 7usize] = b"accept\x00";
