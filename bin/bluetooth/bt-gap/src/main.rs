@@ -5,6 +5,9 @@
 #![deny(warnings)]
 #![feature(async_await, await_macro, futures_api, pin, arbitrary_self_types)]
 
+// Macros used to serialize bonding data FIDL types for persistent storage.
+#[macro_use] extern crate serde_derive;
+
 use failure::{Error, ResultExt};
 use fidl::endpoints::{ServerEnd, ServiceMarker};
 use fidl_fuchsia_bluetooth_bredr::{ProfileMarker};
@@ -20,6 +23,7 @@ use futures::{future, TryFutureExt};
 use parking_lot::RwLock;
 use std::sync::Arc;
 
+mod bonding;
 mod services;
 
 mod host_device;

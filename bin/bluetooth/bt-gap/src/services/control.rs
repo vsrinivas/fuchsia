@@ -118,7 +118,7 @@ pub fn start_control_service(
                 responder,
             } => {
                 let mut status = false;
-                let mut wstate = state.write();
+                let wstate = state.write();
                 if let Some(delegate) = delegate {
                     if let Ok(proxy) = delegate.into_proxy() {
                         status = wstate.host.write().set_pairing_delegate(Some(proxy));
