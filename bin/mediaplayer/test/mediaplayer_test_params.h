@@ -22,11 +22,13 @@ class MediaPlayerTestParams {
 
   bool unattended() const { return urls_.empty(); }
 
+  bool play() const { return play_; }
+
   bool loop() const { return loop_; }
 
   bool test_seek() const { return test_seek_; }
 
-  bool auto_play() const { return loop_ || test_seek_; }
+  bool auto_play() const { return play_ || loop_ || test_seek_; }
 
   const std::vector<std::string>& urls() const { return urls_; }
 
@@ -36,6 +38,7 @@ class MediaPlayerTestParams {
   bool is_valid_;
 
   std::vector<std::string> urls_;
+  bool play_ = false;
   bool loop_ = false;
   bool test_seek_ = false;
 

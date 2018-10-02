@@ -15,6 +15,7 @@ MediaPlayerTestParams::MediaPlayerTestParams(
     const fxl::CommandLine& command_line) {
   is_valid_ = false;
 
+  play_ = command_line.HasOption("play");
   loop_ = command_line.HasOption("loop");
   test_seek_ = command_line.HasOption("test-seek");
 
@@ -35,9 +36,10 @@ MediaPlayerTestParams::MediaPlayerTestParams(
     }
   }
 
-  if (urls_.empty() && (loop_ || test_seek_)) {
+  if (urls_.empty() && (play_ || loop_ || test_seek_)) {
     Usage();
-    std::cerr << "Urls/paths required for --loop and --test-seek options\n";
+    std::cerr
+        << "Urls/paths required for --play, --loop and --test-seek options\n";
     return;
   }
 
@@ -58,8 +60,9 @@ void MediaPlayerTestParams::Usage() {
   std::cerr << "mediaplayer_tests usage:\n";
   std::cerr << "    set_root_view mediaplayer_tests [ options ] url-or-path*\n";
   std::cerr << "options:\n";
-  std::cerr << "    --loop       play the files in a loop\n";
-  std::cerr << "    --test-seek  play random segments of one file\n";
+  std::cerr << "    --play       play on startup\n";
+  std::cerr << "    --loop       play the files in a loop on startup\n";
+  std::cerr << "    --test-seek  play random segments of one file on startup\n";
   std::cerr << "For CQ test, run with no arguments\n";
 }
 

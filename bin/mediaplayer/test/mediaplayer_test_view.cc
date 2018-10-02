@@ -112,12 +112,6 @@ MediaPlayerTestView::MediaPlayerTestView(
                                std::move(video_host_import_token));
 
   SetUrl(params_.urls().front());
-
-  if (params_.auto_play()) {
-    media_player_->Play();
-  } else {
-    media_player_->Pause();
-  }
 }
 
 MediaPlayerTestView::~MediaPlayerTestView() {}
@@ -181,6 +175,15 @@ void MediaPlayerTestView::SetUrl(const std::string url_as_string) {
 void MediaPlayerTestView::Layout() {
   if (!has_logical_size())
     return;
+
+  if (!scenic_ready_) {
+    scenic_ready_ = true;
+    if (params_.auto_play()) {
+      media_player_->Play();
+    } else {
+      media_player_->Pause();
+    }
+  }
 
   // Make the background fill the space.
   scenic::Rectangle background_shape(session(), logical_size().width,
