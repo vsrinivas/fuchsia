@@ -13,9 +13,10 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/block.h>
 #include <ddk/protocol/pci.h>
-#include <ddk/io-buffer.h>
 
 #include <hw/reg.h>
 #include <hw/pci.h>
@@ -79,8 +80,7 @@ static_assert(PAGE_SIZE == (1ULL << PAGE_SHIFT), "");
 #define FLAG_HAS_VWC             0x0100
 
 typedef struct {
-    void* io;
-    zx_handle_t ioh;
+    mmio_buffer_t mmio;
     zx_handle_t irqh;
     zx_handle_t bti;
     uint32_t flags;
@@ -678,10 +678,10 @@ static void nvme_release(void* ctx) {
 
     zxlogf(INFO, "nvme: release\n");
     nvme->flags |= FLAG_SHUTDOWN;
-    if (nvme->ioh != ZX_HANDLE_INVALID) {
+    if (nvme->mmio.vmo != ZX_HANDLE_INVALID) {
         pci_enable_bus_master(&nvme->pci, false);
         zx_handle_close(nvme->bti);
-        zx_handle_close(nvme->ioh);
+        mmio_buffer_release(&nvme->mmio);
         // TODO: risks a handle use-after-close, will be resolved by IRQ api
         // changes coming soon
         zx_handle_close(nvme->irqh);
@@ -746,10 +746,10 @@ static void infostring(const char* prefix, uint8_t* str, size_t len) {
 }
 
 // Convenience accessors for BAR0 registers
-#define rd32(r) readl(nvme->io + NVME_REG_##r)
-#define rd64(r) readll(nvme->io + NVME_REG_##r)
-#define wr32(v,r) writel(v, nvme->io + NVME_REG_##r)
-#define wr64(v,r) writell(v, nvme->io + NVME_REG_##r)
+#define rd32(r) readl(nvme->mmio.vaddr + NVME_REG_##r)
+#define rd64(r) readll(nvme->mmio.vaddr + NVME_REG_##r)
+#define wr32(v,r) writel(v, nvme->mmio.vaddr + NVME_REG_##r)
+#define wr64(v,r) writell(v, nvme->mmio.vaddr + NVME_REG_##r)
 
 // dedicated pages from the page pool
 #define IDX_ADMIN_SQ   0
@@ -849,8 +849,8 @@ static zx_status_t nvme_init(nvme_device_t* nvme) {
     zxlogf(INFO, "nvme: controller ready. (after %u ms)\n", WAIT_MS - ms_remain);
 
     // registers and buffers for admin queues
-    nvme->io_admin_sq_tail_db = nvme->io + NVME_REG_SQnTDBL(0, cap);
-    nvme->io_admin_cq_head_db = nvme->io + NVME_REG_CQnHDBL(0, cap);
+    nvme->io_admin_sq_tail_db = nvme->mmio.vaddr + NVME_REG_SQnTDBL(0, cap);
+    nvme->io_admin_cq_head_db = nvme->mmio.vaddr + NVME_REG_CQnHDBL(0, cap);
 
     nvme->admin_sq = nvme->iob.virt + PAGE_SIZE * IDX_ADMIN_SQ;
     nvme->admin_sq_head = 0;
@@ -861,8 +861,8 @@ static zx_status_t nvme_init(nvme_device_t* nvme) {
     nvme->admin_cq_toggle = 1;
 
     // registers and buffers for IO queues
-    nvme->io_sq_tail_db = nvme->io + NVME_REG_SQnTDBL(1, cap);
-    nvme->io_cq_head_db = nvme->io + NVME_REG_CQnHDBL(1, cap);
+    nvme->io_sq_tail_db = nvme->mmio.vaddr + NVME_REG_SQnTDBL(1, cap);
+    nvme->io_cq_head_db = nvme->mmio.vaddr + NVME_REG_CQnHDBL(1, cap);
 
     nvme->io_sq = nvme->iob.virt + PAGE_SIZE * IDX_IO_SQ;
     nvme->io_sq_head = 0;
@@ -1090,8 +1090,7 @@ static zx_status_t nvme_bind(void* ctx, zx_device_t* dev) {
         goto fail;
     }
 
-    if (pci_map_bar(&nvme->pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                    &nvme->io, &nvme->iosz, &nvme->ioh)) {
+    if (pci_map_bar_buffer(&nvme->pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &nvme->mmio)) {
         zxlogf(ERROR, "nvme: cannot map registers\n");
         goto fail;
     }
