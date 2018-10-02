@@ -7,6 +7,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/zx/handle.h>
+#include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <zircon/syscalls/exception.h>
 
@@ -44,10 +45,10 @@ struct MessageLoopZircon::WatchInfo {
   SocketWatcher* socket_watcher = nullptr;
   zx_handle_t socket_handle = ZX_HANDLE_INVALID;
 
-  // Process-exception-specific parameters.
+  // Task-exception-specific parameters, can be of job or process type.
   ZirconExceptionWatcher* exception_watcher = nullptr;
-  zx_koid_t process_koid = 0;
-  zx_handle_t process_handle = ZX_HANDLE_INVALID;
+  zx_koid_t task_koid = 0;
+  zx_handle_t task_handle = ZX_HANDLE_INVALID;
 };
 
 MessageLoopZircon::MessageLoopZircon() {
@@ -166,8 +167,8 @@ MessageLoop::WatchHandle MessageLoopZircon::WatchProcessExceptions(
   WatchInfo info;
   info.type = WatchType::kProcessExceptions;
   info.exception_watcher = watcher;
-  info.process_koid = process_koid;
-  info.process_handle = process_handle;
+  info.task_koid = process_koid;
+  info.task_handle = process_handle;
 
   int watch_id;
   {
@@ -194,9 +195,90 @@ MessageLoop::WatchHandle MessageLoopZircon::WatchProcessExceptions(
   return WatchHandle(this, watch_id);
 }
 
+MessageLoop::WatchHandle MessageLoopZircon::WatchJobExceptions(
+    zx_handle_t job_handle, zx_koid_t job_koid,
+    ZirconExceptionWatcher* watcher) {
+  WatchInfo info;
+  info.type = WatchType::kJobExceptions;
+  info.exception_watcher = watcher;
+  info.task_koid = job_koid;
+  info.task_handle = job_handle;
+
+  int watch_id;
+  {
+    std::lock_guard<std::mutex> guard(mutex_);
+
+    watch_id = next_watch_id_;
+    next_watch_id_++;
+
+    // Bind to the exception port.
+    zx_status_t status = zx_task_bind_exception_port(
+        job_handle, port_.get(), watch_id, ZX_EXCEPTION_PORT_DEBUGGER);
+    if (status != ZX_OK)
+      return WatchHandle();
+
+    watches_[watch_id] = info;
+  }
+  return WatchHandle(this, watch_id);
+}
+
 zx_status_t MessageLoopZircon::ResumeFromException(zx::thread& thread,
                                                    uint32_t options) {
   return thread.resume_from_exception(port_, options);
+}
+
+void MessageLoopZircon::DoWork(zx_port_packet_t packet) {
+  WatchInfo* watch_info = nullptr;
+  {
+    std::lock_guard<std::mutex> guard(mutex_);
+    if (packet.key == kTaskSignalKey) {
+      // Do a C++ task.
+      if (ProcessPendingTask())
+        SetHasTasks();  // Enqueue another task signal.
+      return;
+    }
+
+    // Some event being watched.
+    auto found = watches_.find(packet.key);
+    if (found == watches_.end()) {
+      FXL_NOTREACHED();
+      return;
+    }
+    watch_info = &found->second;
+  }
+
+  // Dispatch the watch callback outside of the lock. This depends on the
+  // stability of the WatchInfo pointer in the map (std::map is stable across
+  // updates) and the watch not getting unregistered from another thread
+  // asynchronously (which the API requires and is enforced by a DCHECK in
+  // the StopWatching impl).
+  switch (watch_info->type) {
+    case WatchType::kFdio:
+      OnFdioSignal(packet.key, *watch_info, packet);
+      break;
+    case WatchType::kProcessExceptions:
+      OnProcessException(*watch_info, packet);
+      break;
+    case WatchType::kJobExceptions:
+      OnJobException(*watch_info, packet);
+      break;
+    case WatchType::kSocket:
+      OnSocketSignal(packet.key, *watch_info, packet);
+      break;
+    default:
+      FXL_NOTREACHED();
+  }
+}
+
+void MessageLoopZircon::RunUntilTimeout(zx::duration timeout) {
+  // Init should have been called.
+  FXL_DCHECK(Current() == this);
+  zx_port_packet_t packet;
+  zx_status_t status = port_.wait(zx::deadline_after(timeout), &packet);
+  FXL_DCHECK(status == ZX_OK || status == ZX_ERR_TIMED_OUT);
+  if (status == ZX_OK) {
+    DoWork(packet);
+  }
 }
 
 void MessageLoopZircon::RunImpl() {
@@ -205,43 +287,7 @@ void MessageLoopZircon::RunImpl() {
 
   zx_port_packet_t packet;
   while (!should_quit() && port_.wait(zx::time::infinite(), &packet) == ZX_OK) {
-    WatchInfo* watch_info = nullptr;
-    {
-      std::lock_guard<std::mutex> guard(mutex_);
-      if (packet.key == kTaskSignalKey) {
-        // Do a C++ task.
-        if (ProcessPendingTask())
-          SetHasTasks();  // Enqueue another task signal.
-        continue;
-      }
-
-      // Some event being watched.
-      auto found = watches_.find(packet.key);
-      if (found == watches_.end()) {
-        FXL_NOTREACHED();
-        continue;
-      }
-      watch_info = &found->second;
-    }
-
-    // Dispatch the watch callback outside of the lock. This depends on the
-    // stability of the WatchInfo pointer in the map (std::map is stable across
-    // updates) and the watch not getting unregistered from another thread
-    // asynchronously (which the API requires and is enforced by a DCHECK in
-    // the StopWatching impl).
-    switch (watch_info->type) {
-      case WatchType::kFdio:
-        OnFdioSignal(packet.key, *watch_info, packet);
-        break;
-      case WatchType::kProcessExceptions:
-        OnProcessException(*watch_info, packet);
-        break;
-      case WatchType::kSocket:
-        OnSocketSignal(packet.key, *watch_info, packet);
-        break;
-      default:
-        FXL_NOTREACHED();
-    }
+    DoWork(packet);
   }
 }
 
@@ -265,11 +311,19 @@ void MessageLoopZircon::StopWatching(int id) {
                    static_cast<uint64_t>(id));
       break;
     case WatchType::kProcessExceptions: {
-      zx::unowned_process process(info.process_handle);
+      zx::unowned_process process(info.task_handle);
       // Binding an invalid port will detach from the exception port.
       process->bind_exception_port(zx::port(), 0, ZX_EXCEPTION_PORT_DEBUGGER);
-      // Stop watching for process termination.
+      // Stop watching for process events.
       port_.cancel(*process, id);
+      break;
+    }
+    case WatchType::kJobExceptions: {
+      zx::unowned_job job(info.task_handle);
+      // Binding an invalid port will detach from the exception port.
+      job->bind_exception_port(zx::port(), 0, ZX_EXCEPTION_PORT_DEBUGGER);
+      // Stop watching for job events.
+      port_.cancel(*job, id);
       break;
     }
     case WatchType::kSocket:
@@ -326,11 +380,11 @@ void MessageLoopZircon::OnProcessException(const WatchInfo& info,
     // All debug exceptions.
     switch (packet.type) {
       case ZX_EXCP_THREAD_STARTING:
-        info.exception_watcher->OnThreadStarting(info.process_koid,
+        info.exception_watcher->OnThreadStarting(info.task_koid,
                                                  packet.exception.tid);
         break;
       case ZX_EXCP_THREAD_EXITING:
-        info.exception_watcher->OnThreadExiting(info.process_koid,
+        info.exception_watcher->OnThreadExiting(info.task_koid,
                                                 packet.exception.tid);
         break;
       case ZX_EXCP_GENERAL:
@@ -340,7 +394,7 @@ void MessageLoopZircon::OnProcessException(const WatchInfo& info,
       case ZX_EXCP_HW_BREAKPOINT:
       case ZX_EXCP_UNALIGNED_ACCESS:
       case ZX_EXCP_POLICY_ERROR:
-        info.exception_watcher->OnException(info.process_koid,
+        info.exception_watcher->OnException(info.task_koid,
                                             packet.exception.tid, packet.type);
         break;
       default:
@@ -349,7 +403,24 @@ void MessageLoopZircon::OnProcessException(const WatchInfo& info,
   } else if (ZX_PKT_IS_SIGNAL_REP(packet.type) &&
              packet.signal.observed & ZX_PROCESS_TERMINATED) {
     // This type of watcher also gets process terminated signals.
-    info.exception_watcher->OnProcessTerminated(info.process_koid);
+    info.exception_watcher->OnProcessTerminated(info.task_koid);
+  } else {
+    FXL_NOTREACHED();
+  }
+}
+
+void MessageLoopZircon::OnJobException(const WatchInfo& info,
+                                       const zx_port_packet_t& packet) {
+  if (ZX_PKT_IS_EXCEPTION(packet.type)) {
+    // All debug exceptions.
+    switch (packet.type) {
+      case ZX_EXCP_PROCESS_STARTING:
+        info.exception_watcher->OnProcessStarting(
+            info.task_koid, packet.exception.pid, packet.exception.tid);
+        break;
+      default:
+        FXL_NOTREACHED();
+    }
   } else {
     FXL_NOTREACHED();
   }

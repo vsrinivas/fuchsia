@@ -16,6 +16,8 @@ static_library("lib") {
     "breakpoint.h",
     "debug_agent.cc",
     "debug_agent.h",
+    "debugged_job.cc",
+    "debugged_job.h",
     "debugged_process.cc",
     "debugged_process.h",
     "debugged_thread.cc",
@@ -110,6 +112,7 @@ executable("unittests") {
 
   sources = [
     "breakpoint_unittest.cc",
+    "debugged_job_unittest.cc",
     "process_breakpoint_unittest.cc",
     "process_info_unittests.cc",
     "system_info_unittests.cc",

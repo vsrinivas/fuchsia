@@ -21,6 +21,9 @@ class MessageLoopZircon : public MessageLoop {
   void Init() override;
   void Cleanup() override;
 
+  // Runs until timeout. Mostly used in tests.
+  void RunUntilTimeout(zx::duration timeout);
+
   // Returns the current message loop or null if there isn't one.
   static MessageLoopZircon* Current();
 
@@ -44,13 +47,19 @@ class MessageLoopZircon : public MessageLoop {
                                      zx_koid_t process_koid,
                                      ZirconExceptionWatcher* watcher);
 
+  // Attaches to the exception port of the given job and issues callbacks
+  // on the given watcher. The watcher must outlive the returned WatchHandle.
+  // Must only be called on the message loop thread.
+  WatchHandle WatchJobExceptions(zx_handle_t job_handle, zx_koid_t job_koid,
+                                 ZirconExceptionWatcher* watcher);
+
   // When this class issues an exception notification, the code should call
   // this function to resume the thread from the exception. This is a wrapper
   // for zx_task_resume_from_exception.
   zx_status_t ResumeFromException(zx::thread& thread, uint32_t options);
 
  private:
-  enum class WatchType { kFdio, kProcessExceptions, kSocket };
+  enum class WatchType { kFdio, kProcessExceptions, kJobExceptions, kSocket };
   struct WatchInfo;
 
   // MessageLoop protected implementation.
@@ -58,11 +67,14 @@ class MessageLoopZircon : public MessageLoop {
   void StopWatching(int id) override;
   void SetHasTasks() override;
 
+  void DoWork(zx_port_packet_t packet);
+
   // Handle an event of the given type.
   void OnFdioSignal(int watch_id, const WatchInfo& info,
                     const zx_port_packet_t& packet);
   void OnProcessException(const WatchInfo& info,
                           const zx_port_packet_t& packet);
+  void OnJobException(const WatchInfo& info, const zx_port_packet_t& packet);
   void OnSocketSignal(int watch_id, const WatchInfo& info,
                       const zx_port_packet_t& packet);
 
