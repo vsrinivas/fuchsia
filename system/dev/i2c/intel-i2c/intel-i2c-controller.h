@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/mmio-buffer.h>
 #include <zircon/types.h>
 #include <stdint.h>
 #include <zircon/listnode.h>
@@ -131,8 +132,7 @@ typedef struct intel_serialio_i2c_device {
     intel_serialio_i2c_regs* regs;
     volatile uint32_t* soft_reset;
 
-    uint64_t regs_size;
-    zx_handle_t regs_handle;
+    mmio_buffer_t mmio;
 
     thrd_t irq_thread;
     zx_handle_t irq_handle;

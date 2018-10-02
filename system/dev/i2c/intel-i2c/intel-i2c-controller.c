@@ -620,7 +620,7 @@ static void intel_serialio_i2c_unbind(void* ctx) {
 static void intel_serialio_i2c_release(void* ctx) {
     intel_serialio_i2c_device_t* dev = ctx;
     if (dev) {
-        zx_handle_close(dev->regs_handle);
+        mmio_buffer_release(&dev->mmio);
         zx_handle_close(dev->irq_handle);
         zx_handle_close(dev->event_handle);
     }
@@ -835,12 +835,13 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
     pci_config_read16(&pci, PCI_CONFIG_VENDOR_ID, &vendor_id);
     pci_config_read16(&pci, PCI_CONFIG_DEVICE_ID, &device_id);
 
-    zx_status_t status = pci_map_bar(&pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                   (void**)&device->regs, &device->regs_size, &device->regs_handle);
+    zx_status_t status = pci_map_bar_buffer(&pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                            &device->mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR,"i2c: failed to mape pci bar 0: %d\n", status);
         goto fail;
     }
+    device->regs = device->mmio.vaddr;
 
     // set msi irq mode
     status = pci_set_irq_mode(&pci, ZX_PCIE_IRQ_MODE_LEGACY, 1);
@@ -938,7 +939,7 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
     zxlogf(INFO,
         "initialized intel serialio i2c driver, "
         "reg=%p regsize=%ld\n",
-        device->regs, device->regs_size);
+        device->regs, device->mmio.size);
 
     intel_serialio_add_devices(device, &pci);
     return ZX_OK;
