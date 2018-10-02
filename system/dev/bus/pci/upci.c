@@ -6,8 +6,8 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/pci.h>
-#include <ddk/protocol/platform-defs.h>
 
 static zx_status_t pci_drv_bind(void* ctx, zx_device_t* parent) {
     zxlogf(INFO, "userspace pci bound to pciroot.\n");

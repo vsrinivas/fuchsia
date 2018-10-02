@@ -12,8 +12,8 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/i2c.h>
-#include <ddk/protocol/platform-defs.h>
 
 #include <zircon/types.h>
 
