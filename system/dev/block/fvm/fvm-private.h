@@ -97,9 +97,6 @@ public:
     size_t BlockOpSize() const { return block_op_size_; }
     void Queue(block_op_t* txn) const { bp_.ops->queue(bp_.ctx, txn); }
 
-    // Queue a BLOCK_OP_FLUSH request and wait for it to complete
-    zx_status_t Flush() const;
-
     // Acquire access to a VPart Entry which has already been modified (and
     // will, as a consequence, not be de-allocated underneath us).
     vpart_entry_t* GetAllocatedVPartEntry(size_t index) const TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -276,6 +273,8 @@ public:
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VPartition);
+
+    zx_device_t* GetParent() const { return mgr_->parent(); }
 
     VPartitionManager* mgr_;
     size_t entry_index_;

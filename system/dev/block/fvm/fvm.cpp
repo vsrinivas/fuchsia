@@ -146,27 +146,6 @@ static void IoCallback(block_op_t* op, zx_status_t status) {
     }
 }
 
-zx_status_t VPartitionManager::Flush() const {
-    VpmIoCookie cookie;
-    cookie.num_txns.store(1);
-    cookie.status.store(ZX_OK);
-
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<uint8_t[]> op(new (&ac) uint8_t[block_op_size_]());
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    block_op_t* bop = reinterpret_cast<block_op_t*>(op.get());
-    bop->command = BLOCKIO_FLUSH;
-    bop->completion_cb = IoCallback;
-    bop->cookie = &cookie;
-    Queue(bop);
-
-    sync_completion_wait(&cookie.signal, ZX_TIME_INFINITE);
-    return static_cast<zx_status_t>(cookie.status.load());
-}
-
 zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off,
                                           size_t len, uint32_t command) {
     const size_t block_size = info_.block_size;
@@ -212,7 +191,7 @@ zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off,
         vmo_offset += length;
         dev_offset += length;
 
-        Queue(bop);
+        bp_.ops->queue(bp_.ctx, bop);
     }
 
     if (flushing) {
@@ -222,7 +201,7 @@ zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off,
         bop->command = BLOCKIO_FLUSH;
         bop->completion_cb = IoCallback;
         bop->cookie = &cookie;
-        Queue(bop);
+        bp_.ops->queue(bp_.ctx, bop);
     }
 
     ZX_DEBUG_ASSERT(len_remaining == 0);
@@ -546,9 +525,11 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, size_t vslice_st
         if (vp->IsKilledLocked())
             return ZX_ERR_BAD_STATE;
 
+        //TODO: use block protocol
         // Sync first, before removing slices, so iotxns in-flight cannot
         // operate on 'unowned' slices.
-        zx_status_t status = Flush();
+        zx_status_t status;
+        status = device_ioctl(parent(), IOCTL_DEVICE_SYNC, nullptr, 0, nullptr, 0, nullptr);
         if (status != ZX_OK) {
             return status;
         }
@@ -965,7 +946,7 @@ zx_status_t VPartition::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
     }
     case IOCTL_DEVICE_SYNC: {
         // Propagate sync to parent device
-        return mgr_->Flush();
+        return device_ioctl(GetParent(), IOCTL_DEVICE_SYNC, nullptr, 0, nullptr, 0, nullptr);
     }
     case IOCTL_BLOCK_FVM_EXTEND: {
         if (cmdlen < sizeof(extend_request_t))
