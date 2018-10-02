@@ -88,7 +88,6 @@ std::vector<Result> ComputeResults(
     uint64_t ticks_per_second) {
   std::vector<Result> results;
   const std::vector<uint64_t> no_recorded_values;
-  const std::vector<size_t> no_split;
 
   for (auto& measure_spec : measurements.duration) {
     auto duration_values = ticks_to_ms(
