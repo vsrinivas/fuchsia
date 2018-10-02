@@ -16,7 +16,7 @@
 #include <thread>
 
 #include <lib/fdio/io.h>
-#include <lib/fdio/private.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fdio/util.h>
 
 #include <zircon/syscalls.h>
@@ -143,10 +143,10 @@ void NoClose(int fd) {
   EXPECT_GE(status, 0);
   zx_handle_t h;
   zx_signals_t sigs;
-  __fdio_wait_begin(io, 0, &h, &sigs);
+  fdio_unsafe_wait_begin(io, 0, &h, &sigs);
   EXPECT_NE(NULL, h);
   zx_handle_close(h);
-  __fdio_release(io);
+  fdio_unsafe_release(io);
 }
 
 void BlockingAcceptWriteNoClose() {

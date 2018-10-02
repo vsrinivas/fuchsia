@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/io.h>
-#include <lib/fdio/private.h>
 #include <lib/fdio/spawn.h>
 #include <poll.h>
 #include <stdio.h>

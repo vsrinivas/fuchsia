@@ -111,10 +111,10 @@ pub fn clone_channel(file: &std::fs::File) -> Result<zx::Channel, zx::Status> {
     unsafe {
         // First, we must open a new connection to the handle, since
         // we must return a newly owned copy.
-        let fdio = fdio_sys::__fdio_fd_to_io(file.as_raw_fd());
-        let unowned_handle = fdio_sys::__fdio_borrow_channel(fdio);
+        let fdio = fdio_sys::fdio_unsafe_fd_to_io(file.as_raw_fd());
+        let unowned_handle = fdio_sys::fdio_unsafe_borrow_channel(fdio);
         let handle = fdio_sys::fdio_service_clone(unowned_handle);
-        fdio_sys::__fdio_release(fdio);
+        fdio_sys::fdio_unsafe_release(fdio);
 
         match handle {
             zx::sys::ZX_HANDLE_INVALID => Err(zx::Status::NOT_SUPPORTED),

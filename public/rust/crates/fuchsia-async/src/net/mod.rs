@@ -42,7 +42,7 @@ pub(crate) struct EventedFdPacketReceiver {
 // Needed because of the fdio pointer.
 // It is safe to send because the `EventedFdPacketReceiver` must be
 // deregistered (and therefore `receive_packet` never called again)
-// before `__fdio_release` is called.
+// before `fdio_unsafe_release` is called.
 unsafe impl Send for EventedFdPacketReceiver {}
 unsafe impl Sync for EventedFdPacketReceiver {}
 
@@ -56,7 +56,7 @@ impl PacketReceiver for EventedFdPacketReceiver {
 
         let mut events: u32 = 0;
         unsafe {
-            syscall::__fdio_wait_end(self.fdio, observed_signals.bits(), &mut events);
+            syscall::fdio_unsafe_wait_end(self.fdio, observed_signals.bits(), &mut events);
         }
         let events = events as usize;
 
@@ -77,9 +77,9 @@ impl PacketReceiver for EventedFdPacketReceiver {
 /// A type which can be used for receiving IO events for a file descriptor.
 pub struct EventedFd<T> {
     inner: T,
-    // Must be valid, acquired from `__fdio_to_io`
+    // Must be valid, acquired from `fdio_unsafe_fd_to_io`
     fdio: *const syscall::fdio_t,
-    // Must be dropped before `__fdio_release` is called
+    // Must be dropped before `fdio_unsafe_release` is called
     signal_receiver: mem::ManuallyDrop<ReceiverRegistration<EventedFdPacketReceiver>>,
 }
 
@@ -103,7 +103,7 @@ impl<T> Drop for EventedFd<T> {
             mem::ManuallyDrop::drop(&mut self.signal_receiver);
 
             // Release the fdio
-            syscall::__fdio_release(self.fdio);
+            syscall::fdio_unsafe_release(self.fdio);
         }
 
         // Then `inner` gets dropped
@@ -120,7 +120,7 @@ where
     /// must be a valid file descriptor which remains valid for the duration of `T`'s
     /// lifetime.
     pub unsafe fn new(inner: T) -> io::Result<Self> {
-        let fdio = syscall::__fdio_fd_to_io(inner.as_raw_fd());
+        let fdio = syscall::fdio_unsafe_fd_to_io(inner.as_raw_fd());
         let signal_receiver =
             EHandle::local().register_receiver(Arc::new(EventedFdPacketReceiver {
                 fdio,
@@ -216,7 +216,7 @@ where
     fn schedule_packet(&self, signals: usize) {
         unsafe {
             let (mut raw_handle, mut raw_signals) = mem::uninitialized();
-            syscall::__fdio_wait_begin(
+            syscall::fdio_unsafe_wait_begin(
                 self.fdio,
                 signals as u32,
                 &mut raw_handle,
@@ -368,15 +368,15 @@ mod syscall {
 
     #[link(name = "fdio")]
     extern "C" {
-        pub fn __fdio_fd_to_io(fd: RawFd) -> *const fdio_t;
-        pub fn __fdio_release(io: *const fdio_t);
+        pub fn fdio_unsafe_fd_to_io(fd: RawFd) -> *const fdio_t;
+        pub fn fdio_unsafe_release(io: *const fdio_t);
 
-        pub fn __fdio_wait_begin(
+        pub fn fdio_unsafe_wait_begin(
             io: *const fdio_t, events: u32, handle_out: &mut zx_handle_t,
             signals_out: &mut zx_signals_t,
         );
 
-        pub fn __fdio_wait_end(io: *const fdio_t, signals: zx_signals_t, events_out: &mut u32);
+        pub fn fdio_unsafe_wait_end(io: *const fdio_t, signals: zx_signals_t, events_out: &mut u32);
     }
 }
 

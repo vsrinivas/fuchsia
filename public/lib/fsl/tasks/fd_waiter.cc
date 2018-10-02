@@ -26,14 +26,14 @@ FDWaiter::~FDWaiter() {
 bool FDWaiter::Wait(Callback callback, int fd, uint32_t events) {
   FXL_DCHECK(!io_);
 
-  io_ = __fdio_fd_to_io(fd);
+  io_ = fdio_unsafe_fd_to_io(fd);
   if (!io_) {
     return false;
   }
 
   zx_handle_t handle = ZX_HANDLE_INVALID;
   zx_signals_t signals = ZX_SIGNAL_NONE;
-  __fdio_wait_begin(io_, events, &handle, &signals);
+  fdio_unsafe_wait_begin(io_, events, &handle, &signals);
 
   if (handle == ZX_HANDLE_INVALID) {
     Release();
@@ -56,7 +56,7 @@ bool FDWaiter::Wait(Callback callback, int fd, uint32_t events) {
 
 void FDWaiter::Release() {
   FXL_DCHECK(io_);
-  __fdio_release(io_);
+  fdio_unsafe_release(io_);
   io_ = nullptr;
 }
 
@@ -76,7 +76,7 @@ void FDWaiter::Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
 
   uint32_t events = 0;
   if (status == ZX_OK) {
-    __fdio_wait_end(io_, signal->observed, &events);
+    fdio_unsafe_wait_end(io_, signal->observed, &events);
   }
 
   Callback callback = std::move(callback_);

@@ -5,7 +5,7 @@
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
 
 #include <lib/fdio/io.h>
-#include <lib/fdio/private.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/process.h>
 #include <zircon/syscalls/exception.h>
@@ -87,7 +87,7 @@ MessageLoop::WatchHandle MessageLoopZircon::WatchFD(WatchMode mode, int fd,
   info.type = WatchType::kFdio;
   info.fd_watcher = watcher;
   info.fd = fd;
-  info.fdio = __fdio_fd_to_io(fd);
+  info.fdio = fdio_unsafe_fd_to_io(fd);
   if (!info.fdio)
     return WatchHandle();
 
@@ -105,7 +105,7 @@ MessageLoop::WatchHandle MessageLoopZircon::WatchFD(WatchMode mode, int fd,
   }
 
   zx_signals_t signals = ZX_SIGNAL_NONE;
-  __fdio_wait_begin(info.fdio, events, &info.fd_handle, &signals);
+  fdio_unsafe_wait_begin(info.fdio, events, &info.fd_handle, &signals);
   if (info.fd_handle == ZX_HANDLE_INVALID)
     return WatchHandle();
 
@@ -287,7 +287,7 @@ void MessageLoopZircon::SetHasTasks() { task_event_.signal(0, kTaskSignal); }
 void MessageLoopZircon::OnFdioSignal(int watch_id, const WatchInfo& info,
                                      const zx_port_packet_t& packet) {
   uint32_t events = 0;
-  __fdio_wait_end(info.fdio, packet.signal.observed, &events);
+  fdio_unsafe_wait_end(info.fdio, packet.signal.observed, &events);
 
   if ((events & POLLERR) || (events & POLLHUP) || (events & POLLNVAL) ||
       (events & POLLRDHUP)) {
