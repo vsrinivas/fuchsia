@@ -47,7 +47,6 @@ struct LEData {
   // The identity address of the peer. If |resolvable| is true, then this is the
   // resolved private address (and the |irk| is present).
   string address;
-
   AddressType address_type;
 
   // The peer’s preferred connection parameters, if known.
@@ -67,11 +66,20 @@ struct LEData {
 };
 
 struct BondingData {
+  // The identifier that uniquely identifies this device.
   string identifier;
 
+  // The local Bluetooth identity address that this bond is associated with.
+  string local_address;
+
+  // The name of the device, if any.
+  string? name;
+
+  // Bonding data that is present when this device is paired on the LE transport.
   LEData? le;
 
-  // TODO Add BR/EDR data
+  // Bonding data that is present when this device is paired on the BR/EDR transport.
+  // TODO(armansito): Add BR/EDR data.
 };
 
 interface Bonding {

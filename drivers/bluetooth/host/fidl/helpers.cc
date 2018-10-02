@@ -290,9 +290,15 @@ ctrl::RemoteDevicePtr NewRemoteDevicePtr(
   return fidl_device;
 }
 
-ctrl::BondingData NewBondingData(const ::btlib::gap::RemoteDevice& device) {
+ctrl::BondingData NewBondingData(const ::btlib::gap::Adapter& adapter,
+                                 const ::btlib::gap::RemoteDevice& device) {
   ctrl::BondingData out_data;
   out_data.identifier = device.identifier();
+  out_data.local_address = adapter.state().controller_address().ToString();
+
+  if (device.name()) {
+    out_data.name = *device.name();
+  }
 
   // Store LE data.
   if (device.le() && device.le()->bond_data()) {

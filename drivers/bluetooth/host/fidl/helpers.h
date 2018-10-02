@@ -73,9 +73,8 @@ fuchsia::bluetooth::control::RemoteDevice NewRemoteDevice(
     const ::btlib::gap::RemoteDevice& device);
 fuchsia::bluetooth::control::RemoteDevicePtr NewRemoteDevicePtr(
     const ::btlib::gap::RemoteDevice& device);
-
-// TODO(armansito): Incorporate BR/EDR bonding data here.
 fuchsia::bluetooth::control::BondingData NewBondingData(
+    const ::btlib::gap::Adapter& adapter,
     const ::btlib::gap::RemoteDevice& device);
 
 // Functions to construct FIDL LE library objects from library objects.

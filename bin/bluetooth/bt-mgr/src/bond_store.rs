@@ -36,7 +36,10 @@ impl BondStore {
             .expect("The bond storage file is corrupted");
         let bonds: BondMap = match serde_json::from_str(contents.as_str()) {
             Ok(parsed) => parsed,
-            Err(_) => BondMap::new(),
+            Err(e) =>  {
+                fx_log_info!("Could not parse contents of bond file {:?}", e);
+                BondMap::new()
+            }
         };
 
         Ok(BondStore { bonds, bond_store })

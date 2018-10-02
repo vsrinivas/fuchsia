@@ -93,6 +93,8 @@ pub struct LeDataDef {
 #[serde(remote = "BondingData")]
 pub struct BondingDataDef {
     pub identifier: String,
+    pub local_address: String,
+    pub name: Option<String>,
     #[serde(with = "LeDataWrapper")]
     pub le: Option<Box<LeData>>,
 }

@@ -293,7 +293,7 @@ void HostServer::OnRemoteDeviceBonded(
     const ::btlib::gap::RemoteDevice& remote_device) {
   bt_log(TRACE, "bt-host", "OnRemoteDeviceBonded()");
   binding()->events().OnNewBondingData(
-      fidl_helpers::NewBondingData(remote_device));
+      fidl_helpers::NewBondingData(*adapter(), remote_device));
 }
 
 void HostServer::SetDiscoverable(bool discoverable,
