@@ -1734,7 +1734,7 @@ done:
         brcmf_dbg(CONN, "Failed during join: %s", zx_status_get_string(err));
         brcmf_return_join_result(ndev, WLAN_JOIN_RESULT_FAILURE_TIMEOUT);
     }
-    brcmf_dbg(TRACE, "Exit, err %s\n", zx_status_get_string(err));
+    brcmf_dbg(TRACE, "Exit\n");
     return err;
 }
 
@@ -4743,7 +4743,7 @@ static void brcmf_cfg80211_set_country(struct wiphy* wiphy, char code[3]) {
 static zx_status_t brcmf_if_start(void* ctx, wlanif_impl_ifc_t* ifc, void* cookie) {
     struct net_device* ndev = ctx;
 
-    brcmf_dbg(TEMP, "Enter");
+    brcmf_dbg(TRACE, "Enter");
     ndev->if_callbacks = malloc(sizeof(*ifc));
     memcpy(ndev->if_callbacks, ifc, sizeof(*ifc));
     ndev->if_callback_cookie = cookie;
@@ -4756,7 +4756,7 @@ static zx_status_t brcmf_if_start(void* ctx, wlanif_impl_ifc_t* ifc, void* cooki
 static void brcmf_if_stop(void* ctx) {
     struct net_device* ndev = ctx;
 
-    brcmf_dbg(TEMP, "Enter");
+    brcmf_dbg(TRACE, "Enter");
     free(ndev->if_callbacks);
     ndev->if_callbacks = NULL;
 }
@@ -4765,7 +4765,7 @@ void brcmf_hook_start_scan(void* ctx, wlanif_scan_req_t* req) {
     struct net_device* ndev = ctx;
     zx_status_t result;
 
-    brcmf_dbg(WLANIF, "Enter");
+    brcmf_dbg(TRACE, "Enter");
     if (ndev->scan_busy) {
         brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_INTERNAL_ERROR);
         return;
@@ -4787,7 +4787,8 @@ void brcmf_hook_join_req(void* ctx, wlanif_join_req_t* req) {
     struct net_device* ndev = ctx;
     struct wiphy* wiphy = ndev_to_wiphy(ndev);
 
-    brcmf_dbg(TEMP, "Enter, ssid %.*s, bssid %lx", req->selected_bss.ssid.len,
+    brcmf_dbg(TRACE, "Enter\n");
+    brcmf_dbg(CONN, "Join requested: ssid %.*s, bssid %lx", req->selected_bss.ssid.len,
               req->selected_bss.ssid.data, *(uint64_t*)(req->selected_bss.bssid) & 0xffffffffffff);
     brcmf_cfg80211_connect(wiphy, ndev, req);
 }
@@ -4798,7 +4799,7 @@ void brcmf_hook_auth_req(void* ctx, wlanif_auth_req_t* req) {
     struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
     wlanif_auth_confirm_t response;
 
-    brcmf_dbg(TEMP, "Enter");
+    brcmf_dbg(TRACE, "Enter");
     response.result_code = WLAN_AUTH_RESULT_SUCCESS;
     response.auth_type = req->auth_type;
     // At this point, the firmware should already have fully connected, and filled in
@@ -4813,14 +4814,15 @@ void brcmf_hook_auth_req(void* ctx, wlanif_auth_req_t* req) {
 }
 
 void brcmf_hook_auth_resp(void* ctx, wlanif_auth_resp_t* ind) {
-    brcmf_dbg(TEMP, "Called hook auth_resp");
+    brcmf_dbg(TRACE, "Enter");
+    brcmf_err("Unimplemented\n");
 }
 
 // Respond to a MLME-DEAUTHENTICATE.request message. Note that we are required to respond with a
 // MLME-DEAUTHENTICATE.confirm on completion (or failure), even though there is no status
 // reported.
 void brcmf_hook_deauth_req(void* ctx, wlanif_deauth_req_t* req) {
-    brcmf_dbg(TEMP, "Enter");
+    brcmf_dbg(TRACE, "Enter");
     struct net_device* ndev = ctx;
     if (brcmf_cfg80211_disconnect(ndev, req->peer_sta_address, req->reason_code, true) != ZX_OK) {
         // Request to disconnect failed, so respond immediately
@@ -4837,7 +4839,7 @@ void brcmf_hook_assoc_req(void* ctx, wlanif_assoc_req_t* req) {
     struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
     wlanif_assoc_confirm_t response;
 
-    brcmf_dbg(TEMP, "Enter");
+    brcmf_dbg(TRACE, "Enter");
     if (req->rsne_len != 0) {
         brcmf_dbg(TEMP, " * * RSNE non-zero! %ld", req->rsne_len);
         brcmf_hexdump(req->rsne, req->rsne_len);
@@ -4854,11 +4856,12 @@ void brcmf_hook_assoc_req(void* ctx, wlanif_assoc_req_t* req) {
 }
 
 void brcmf_hook_assoc_resp(void* ctx, wlanif_assoc_resp_t* ind) {
-    brcmf_dbg(TEMP, "Called hook assoc_resp");
+    brcmf_dbg(TRACE, "Enter");
+    brcmf_err("Unimplemented\n");
 }
 
 void brcmf_hook_disassoc_req(void* ctx, wlanif_disassoc_req_t* req) {
-    brcmf_dbg(TEMP, "Enter");
+    brcmf_dbg(TRACE, "Enter");
     struct net_device* ndev = ctx;
     zx_status_t status = brcmf_cfg80211_disconnect(ndev, req->peer_sta_address, req->reason_code,
                                                    false);
@@ -4868,27 +4871,33 @@ void brcmf_hook_disassoc_req(void* ctx, wlanif_disassoc_req_t* req) {
 }
 
 void brcmf_hook_reset_req(void* ctx, wlanif_reset_req_t* req) {
-    brcmf_dbg(TEMP, "Called hook reset_req");
+    brcmf_dbg(TRACE, "Enter");
+    brcmf_err("Unimplemented\n");
 }
 
 void brcmf_hook_start_req(void* ctx, wlanif_start_req_t* req) {
-    brcmf_dbg(TEMP, "Called hook start_req");
+    brcmf_dbg(TRACE, "Enter");
+    brcmf_err("Unimplemented\n");
 }
 
 void brcmf_hook_stop_req(void* ctx, wlanif_stop_req_t* req) {
-    brcmf_dbg(TEMP, "Called hook stop_req");
+    brcmf_dbg(TRACE, "Enter");
+    brcmf_err("Unimplemented\n");
 }
 
 void brcmf_hook_set_keys_req(void* ctx, wlanif_set_keys_req_t* req) {
-    brcmf_dbg(TEMP, "Called hook set_keys_req");
+    brcmf_dbg(TRACE, "Enter");
+    brcmf_err("Unimplemented\n");
 }
 
 void brcmf_hook_del_keys_req(void* ctx, wlanif_del_keys_req_t* req) {
-    brcmf_dbg(TEMP, "Called hook del_keys_req");
+    brcmf_dbg(TRACE, "Enter");
+    brcmf_err("Unimplemented\n");
 }
 
 void brcmf_hook_eapol_req(void* ctx, wlanif_eapol_req_t* req) {
-    brcmf_dbg(TEMP, "Called hook eapol_req");
+    brcmf_dbg(TRACE, "Enter");
+    brcmf_err("Unimplemented\n");
 }
 
 void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
@@ -4896,7 +4905,7 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
     struct brcmf_if* ifp = ndev_to_if(ndev);
     struct wireless_dev* wdev = ndev_to_wdev(ndev);
 
-    brcmf_dbg(TEMP, "Enter");
+    brcmf_dbg(TRACE, "Enter");
 
     memset(info, 0, sizeof(*info));
 
@@ -4932,7 +4941,7 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
 void brcmf_hook_stats_query_req(void* ctx) {
     struct net_device* ndev = ctx;
 
-    brcmf_dbg(TEMP, "Enter");
+    brcmf_dbg(TRACE, "Enter");
     wlanif_stats_query_response_t response = {};
     wlanif_mlme_stats_t mlme_stats = {};
     response.stats.mlme_stats = &mlme_stats;
@@ -5233,6 +5242,7 @@ static zx_status_t brcmf_bss_roaming_done(struct brcmf_cfg80211_info* cfg, struc
     err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BSS_INFO, buf, WL_BSS_INFO_MAX);
 
     if (err != ZX_OK) {
+        brcmf_err("GET_BSS_INFO failed: %s\n", zx_status_get_string(err));
         goto done;
     }
 
@@ -5331,7 +5341,8 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
     struct net_device* ndev = ifp->ndev;
     zx_status_t err = ZX_OK;
 
-    brcmf_dbg(TEMP, "Enter, event code %d", e->event_code);
+    brcmf_dbg(TRACE, "Enter\n");
+    brcmf_dbg(CONN, "Event code %d, status %d", e->event_code, e->status);
     if ((e->event_code == BRCMF_E_DEAUTH) || (e->event_code == BRCMF_E_DEAUTH_IND) ||
             (e->event_code == BRCMF_E_DISASSOC_IND) ||
             ((e->event_code == BRCMF_E_LINK) && (!e->flags))) {
@@ -5359,6 +5370,7 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
         brcmf_disconnect_done(cfg);
     }
 
+    brcmf_dbg(TRACE, "Exit\n");
     return err;
 }
 
