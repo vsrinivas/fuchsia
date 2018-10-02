@@ -13,6 +13,8 @@
 #
 #   path
 #     Required: Full path to the the test.
+#   output_dir
+#     Required: Where to write the test spec.
 #   environments
 #     Optional: Target device environments in which the test should run. This is
 #       a list of scopes that mirror the Environment go struct found in the
@@ -21,6 +23,7 @@
 #
 template("test_spec") {
   assert(defined(invoker.path), "path must be defined.")
+  assert(defined(invoker.output_dir), "output_dir must be defined.")
 
   test_spec = {
     test = {
@@ -40,5 +43,5 @@ template("test_spec") {
     }
   }
 
-  write_file("$target_out_dir/$target_name.spec.json", test_spec, "json")
+  write_file("${invoker.output_dir}/$target_name.spec.json", test_spec, "json")
 }

@@ -407,6 +407,11 @@ template("package") {
               } else {
                 path = "/pkgfs/packages/${pkg.package_name}/${pkg.package_version}/$dest"
               }
+              # Encode the package name in the output directory to disambiguate
+              # during post-processing - cross-referencing with packages.json -
+              # whether a given test spec came from a package that was actually
+              # included in the build.
+              output_dir = "$target_out_dir/${pkg.package_name}"
               if (defined(test.environments)) {
                 environments = test.environments
               }
