@@ -5,7 +5,6 @@
 #include "garnet/bin/debug_agent/breakpoint.h"
 
 #include "garnet/bin/debug_agent/process_breakpoint.h"
-#include "lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
 

@@ -45,6 +45,7 @@ class DebuggedThread {
   virtual ~DebuggedThread();
 
   zx::thread& thread() { return thread_; }
+  const zx::thread& thread() const { return thread_; }
   zx_koid_t koid() const { return koid_; }
 
   void OnException(uint32_t type);
@@ -84,13 +85,18 @@ class DebuggedThread {
       zx_thread_state_general_regs* regs,
       std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
 
-  // Handles a software exception corresponding to a ProcessBreakpoint. All
+  OnStop UpdateForHardwareBreakpoint(
+      zx_thread_state_general_regs* regs,
+      std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
+
+  // Handles an exception corresponding to a ProcessBreakpoint. All
   // Breakpoints affected will have their updated stats added to
   // *hit_breakpoints.
   //
   // WARNING: The ProcessBreakpoint argument could be deleted in this call
   // if it was a one-shot breakpoint.
   void UpdateForHitProcessBreakpoint(
+      debug_ipc::BreakpointType exception_type,
       ProcessBreakpoint* process_breakpoint, zx_thread_state_general_regs* regs,
       std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
 

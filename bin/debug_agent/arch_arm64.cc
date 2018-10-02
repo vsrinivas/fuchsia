@@ -3,8 +3,12 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/debug_agent/arch.h"
+
+#include <zircon/syscalls/exception.h>
+
 #include "garnet/lib/debug_ipc/register_desc.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
 
 namespace debug_agent {
 namespace arch {
@@ -16,7 +20,7 @@ namespace arch {
 //   zero).
 const BreakInstructionType kBreakInstruction = 0xd4200000;
 
-uint64_t ArchProvider::BreakpointInstructionForExceptionAddress(
+uint64_t ArchProvider::BreakpointInstructionForSoftwareExceptionAddress(
     uint64_t exception_addr) {
   // ARM reports the exception for the exception instruction itself.
   return exception_addr;
@@ -146,7 +150,46 @@ bool ArchProvider::GetRegisterStateFromCPU(
   return true;
 }
 
+debug_ipc::NotifyException::Type HardwareNotificationType(const zx::thread&) {
+  // TODO: For now zxdb only supports single step.
+  return debug_ipc::NotifyException::Type::kSingleStep;
+}
+
+debug_ipc::NotifyException::Type ArchProvider::DecodeExceptionType(
+    const DebuggedThread& thread, uint32_t exception_type) {
+  switch (exception_type) {
+    case ZX_EXCP_SW_BREAKPOINT:
+      return debug_ipc::NotifyException::Type::kSoftware;
+    case ZX_EXCP_HW_BREAKPOINT:
+      return debug_ipc::NotifyException::Type::kHardware;
+    default:
+      return debug_ipc::NotifyException::Type::kGeneral;
+  }
+
+  FXL_NOTREACHED();
+  return debug_ipc::NotifyException::Type::kLast;
+}
+
 // HW Breakpoints --------------------------------------------------------------
+
+uint64_t ArchProvider::BreakpointInstructionForHardwareExceptionAddress(
+    uint64_t exception_addr) {
+  FXL_NOTREACHED() << "NOT IMPLEMENTED";
+  return exception_addr;
+}
+
+uint64_t ArchProvider::NextInstructionForHardwareExceptionAddress(
+    uint64_t exception_addr) {
+  FXL_NOTREACHED() << "NOT IMPLEMENTED";
+  return exception_addr;
+}
+
+debug_ipc::NotifyException::Type HardwareNotificationType(
+    const DebuggedThread& thread) {
+  // TODO(donosoc): Implement hw exception detection logic.
+    return debug_ipc::NotifyException::Type::kSingleStep;
+}
+
 
 zx_status_t ArchProvider::InstallHWBreakpoint(zx::thread*, uint64_t address) {
   return ZX_ERR_NOT_SUPPORTED;

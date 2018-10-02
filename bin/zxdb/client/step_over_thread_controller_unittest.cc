@@ -30,7 +30,7 @@ TEST_F(StepOverThreadControllerTest, InOutFinish) {
   // Set up the thread to be stopped at the beginning of our range.
   debug_ipc::NotifyException exception;
   exception.process_koid = process()->GetKoid();
-  exception.type = debug_ipc::NotifyException::Type::kHardware;
+  exception.type = debug_ipc::NotifyException::Type::kSingleStep;
   exception.thread.koid = thread()->GetKoid();
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   exception.frames.resize(2);

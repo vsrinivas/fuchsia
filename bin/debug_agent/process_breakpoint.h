@@ -58,13 +58,16 @@ class ProcessBreakpoint {
   void FixupMemoryBlock(debug_ipc::MemoryBlock* block);
 
   // Notification that this breakpoint was just hit. All affected Breakpoints
-  // will have their stats updated and placed in the *stats param.
+  // will have their stats updated and placed in the *stats param. This makes
+  // a difference whether the exceptions was software or hardware (debug
+  // registers) triggered.
   //
   // IMPORTANT: The caller should check the stats and for any breakpoint
   // with "should_delete" set, remove the breakpoints. This can't conveniently
   // be done within this call because it will cause this ProcessBreakpoint
   // object to be deleted from within itself.
-  void OnHit(std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
+  void OnHit(debug_ipc::BreakpointType exception_type,
+             std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
 
   // Call before single-stepping over a breakpoint. This will remove the
   // breakpoint such that it will be put back when the exception is hit and
@@ -84,8 +87,8 @@ class ProcessBreakpoint {
   // (the one with the breakpoint) caused an exception itself (say, an access
   // violation). In either case, the breakpoint will clean up after itself from
   // a single-step.
-  bool BreakpointStepHasException(zx_koid_t thread_koid,
-                                  uint32_t exception_type);
+  bool BreakpointStepHasException(
+      zx_koid_t thread_koid, debug_ipc::NotifyException::Type exception_type);
 
   bool SoftwareBreakpointInstalled() const;
   bool HardwareBreakpointInstalled() const;

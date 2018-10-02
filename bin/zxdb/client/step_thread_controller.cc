@@ -78,7 +78,7 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
     //
     // This must happen only when there's no "finish" controller since a
     // successful "finish" hit will have a software breakpoint.
-    if (stop_type != debug_ipc::NotifyException::Type::kHardware)
+    if (stop_type != debug_ipc::NotifyException::Type::kSingleStep)
       return kStop;
   }
 

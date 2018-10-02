@@ -274,6 +274,8 @@ std::string ExceptionTypeToString(debug_ipc::NotifyException::Type type) {
       return "General";
     case debug_ipc::NotifyException::Type::kHardware:
       return "Hardware";
+    case debug_ipc::NotifyException::Type::kSingleStep:
+      return "Single Step";
     case debug_ipc::NotifyException::Type::kSoftware:
       return "Software";
     case debug_ipc::NotifyException::Type::kLast:

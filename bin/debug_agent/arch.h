@@ -19,6 +19,9 @@
 #endif
 
 namespace debug_agent {
+
+class DebuggedThread;
+
 namespace arch {
 
 extern const BreakInstructionType kBreakInstruction;
@@ -33,9 +36,20 @@ class ArchProvider {
 
   virtual ~ArchProvider();
 
+  ::debug_ipc::Arch GetArch();
+
+  // Returns the address of the instruction pointer/stack pointer/base pointer
+  // in the given reg structure.
+  uint64_t* IPInRegs(zx_thread_state_general_regs* regs);
+  uint64_t* SPInRegs(zx_thread_state_general_regs* regs);
+  uint64_t* BPInRegs(zx_thread_state_general_regs* regs);
+
+  // Software Exceptions -------------------------------------------------------
+
   // Returns the address of the breakpoint instruction given the address of
   // a software breakpoint exception.
-  uint64_t BreakpointInstructionForExceptionAddress(uint64_t exception_addr);
+  uint64_t BreakpointInstructionForSoftwareExceptionAddress(
+      uint64_t exception_addr);
 
   // Returns the instruction following the one causing the given software
   // exception.
@@ -52,15 +66,24 @@ class ArchProvider {
   bool GetRegisterStateFromCPU(const zx::thread&,
                                std::vector<debug_ipc::RegisterCategory>*);
 
-  // Returns the address of the instruction pointer/stack pointer/base pointer
-  // in the given reg structure.
-  uint64_t* IPInRegs(zx_thread_state_general_regs* regs);
-  uint64_t* SPInRegs(zx_thread_state_general_regs* regs);
-  uint64_t* BPInRegs(zx_thread_state_general_regs* regs);
+  // Hardware Exceptions -------------------------------------------------------
 
-  ::debug_ipc::Arch GetArch();
+  // Returns the address of the instruction that hit the exception from the
+  // address reported by the exception.
+  uint64_t BreakpointInstructionForHardwareExceptionAddress(
+      uint64_t exception_addr);
 
-  // TODO: Support different modes.
+  // Returns the instruction address to be executed after continuing from the
+  // hardware debug exception.
+  uint64_t NextInstructionForHardwareExceptionAddress(uint64_t exception_addr);
+
+  // Currently HW notifications can mean both a single step or a hardware debug
+  // register exception. We need platform-specific queries to figure which one
+  // is it.
+  debug_ipc::NotifyException::Type DecodeExceptionType(const DebuggedThread&,
+                                                       uint32_t exception_type);
+
+  // TODO: Support watchpoints.
   virtual zx_status_t InstallHWBreakpoint(zx::thread*, uint64_t address);
   virtual zx_status_t UninstallHWBreakpoint(zx::thread*, uint64_t address);
 };

@@ -39,6 +39,9 @@ DebuggedThread::~DebuggedThread() {}
 void DebuggedThread::OnException(uint32_t type) {
   suspend_reason_ = SuspendReason::kException;
 
+  debug_ipc::NotifyException notify;
+  notify.type = arch::ArchProvider::Get().DecodeExceptionType(*this, type);
+
   if (current_breakpoint_) {
     // The current breakpoint is set only when stopped at a breakpoint or when
     // single-stepping over one. We're not going to get an exception for a
@@ -47,7 +50,7 @@ void DebuggedThread::OnException(uint32_t type) {
     // was from a normal completion of the breakpoing step, or whether
     // something else went wrong while stepping.
     bool completes_bp_step =
-        current_breakpoint_->BreakpointStepHasException(koid_, type);
+        current_breakpoint_->BreakpointStepHasException(koid_, notify.type);
     current_breakpoint_ = nullptr;
     if (completes_bp_step &&
         run_mode_ == debug_ipc::ResumeRequest::How::kContinue) {
@@ -64,7 +67,6 @@ void DebuggedThread::OnException(uint32_t type) {
     current_breakpoint_ = nullptr;
   }
 
-  debug_ipc::NotifyException notify;
   zx_thread_state_general_regs regs;
   thread_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
 
@@ -75,34 +77,37 @@ void DebuggedThread::OnException(uint32_t type) {
           OnStop::kIgnore)
         return;
       break;
-    case ZX_EXCP_HW_BREAKPOINT:
-      if (run_mode_ == debug_ipc::ResumeRequest::How::kContinue) {
-        // This hardware breakpoint has no known source. There's no breakpoint
-        // that corresponds to it and we're not trying to single step. The
-        // CPU doesn't create hardware debug breakpoints without being asked
-        // so something weird is going on.
-        //
-        // This could be due to a race where the user was previously single
-        // stepping and then requested a continue before the single stepping
-        // completed. It could also be a breakpoint that was deleted while in
-        // the process of single-stepping over it. In both cases, the least
-        // confusing thing is to resume automatically.
-        ResumeForRunMode();
-        return;
-      }
+    case ZX_EXCP_HW_BREAKPOINT: {
+      if (notify.type == debug_ipc::NotifyException::Type::kSingleStep) {
+        if (run_mode_ == debug_ipc::ResumeRequest::How::kContinue) {
+          // This could be due to a race where the user was previously single
+          // stepping and then requested a continue before the single stepping
+          // completed. It could also be a breakpoint that was deleted while in
+          // the process of single-stepping over it. In both cases, the least
+          // confusing thing is to resume automatically.
+          ResumeForRunMode();
+          return;
+        }
 
-      // When stepping in a range, automatically continue as long as we're
-      // still in range.
-      if (run_mode_ == debug_ipc::ResumeRequest::How::kStepInRange &&
-          *arch::ArchProvider::Get().IPInRegs(&regs) >= step_in_range_begin_ &&
-          *arch::ArchProvider::Get().IPInRegs(&regs) < step_in_range_end_) {
-        ResumeForRunMode();
-        return;
+        // When stepping in a range, automatically continue as long as we're
+        // still in range.
+        if (run_mode_ == debug_ipc::ResumeRequest::How::kStepInRange &&
+            *arch::ArchProvider::Get().IPInRegs(&regs) >=
+                step_in_range_begin_ &&
+            *arch::ArchProvider::Get().IPInRegs(&regs) < step_in_range_end_) {
+          ResumeForRunMode();
+          return;
+        }
+      } else if (notify.type == debug_ipc::NotifyException::Type::kHardware) {
+        if (UpdateForHardwareBreakpoint(&regs, &notify.hit_breakpoints) ==
+            OnStop::kIgnore)
+          return;
+      } else {
+        FXL_NOTREACHED() << "Unexpected hw exception type: "
+                         << static_cast<uint32_t>(notify.type);
       }
-
-      // Non-internal single-step, notify client.
-      notify.type = debug_ipc::NotifyException::Type::kHardware;
       break;
+    }
     default:
       notify.type = debug_ipc::NotifyException::Type::kGeneral;
       break;
@@ -192,14 +197,16 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
     zx_thread_state_general_regs* regs,
     std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
   uint64_t breakpoint_address =
-      arch::ArchProvider::Get().BreakpointInstructionForExceptionAddress(
-          *arch::ArchProvider::Get().IPInRegs(regs));
+      arch::ArchProvider::Get()
+          .BreakpointInstructionForSoftwareExceptionAddress(
+              *arch::ArchProvider::Get().IPInRegs(regs));
 
   ProcessBreakpoint* found_bp =
       process_->FindProcessBreakpointForAddr(breakpoint_address);
   if (found_bp) {
     // Our software breakpoint.
-    UpdateForHitProcessBreakpoint(found_bp, regs, hit_breakpoints);
+    UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kSoftware,
+                                  found_bp, regs, hit_breakpoints);
 
     // The found_bp could have been deleted if it was a one-shot, so must
     // not be dereferenced below this.
@@ -250,12 +257,40 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
   return OnStop::kSendNotification;
 }
 
+DebuggedThread::OnStop DebuggedThread::UpdateForHardwareBreakpoint(
+    zx_thread_state_general_regs* regs,
+    std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
+  uint64_t breakpoint_address =
+      arch::ArchProvider::Get()
+          .BreakpointInstructionForHardwareExceptionAddress(
+              *arch::ArchProvider::Get().IPInRegs(regs));
+  ProcessBreakpoint* found_bp =
+      process_->FindProcessBreakpointForAddr(breakpoint_address);
+  if (!found_bp) {
+    // Hit a hw debug exception that doesn't belong to any ProcessBreakpoint.
+    // This is probably a race between the removal and the exception handler.
+
+    // Send a notification.
+    *arch::ArchProvider::Get().IPInRegs(regs) = breakpoint_address;
+    return OnStop::kSendNotification;
+  }
+
+  UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kHardware, found_bp,
+                                regs, hit_breakpoints);
+
+  // The ProcessBreakpoint could've been deleted if it was a one-shot, so must
+  // not be derefereced below this.
+  found_bp = nullptr;
+  return OnStop::kSendNotification;
+}
+
 void DebuggedThread::UpdateForHitProcessBreakpoint(
+    debug_ipc::BreakpointType exception_type,
     ProcessBreakpoint* process_breakpoint, zx_thread_state_general_regs* regs,
     std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
   current_breakpoint_ = process_breakpoint;
 
-  process_breakpoint->OnHit(hit_breakpoints);
+  process_breakpoint->OnHit(exception_type, hit_breakpoints);
 
   // When the program hits one of our breakpoints, set the IP back to
   // the exact address that triggered the breakpoint. When the thread

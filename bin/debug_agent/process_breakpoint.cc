@@ -10,6 +10,7 @@
 #include "garnet/bin/debug_agent/debugged_thread.h"
 #include "garnet/bin/debug_agent/process_breakpoint.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
 
@@ -144,11 +145,16 @@ void ProcessBreakpoint::FixupMemoryBlock(debug_ipc::MemoryBlock* block) {
 }
 
 void ProcessBreakpoint::OnHit(
+    debug_ipc::BreakpointType exception_type,
     std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
-  hit_breakpoints->resize(breakpoints_.size());
-  for (size_t i = 0; i < breakpoints_.size(); i++) {
-    breakpoints_[i]->OnHit();
-    (*hit_breakpoints)[i] = breakpoints_[i]->stats();
+  hit_breakpoints->clear();
+  for (Breakpoint* breakpoint : breakpoints_) {
+    // Only care for breakpoints that match the exception type.
+    if (breakpoint->settings().type != exception_type)
+      continue;
+
+    breakpoint->OnHit();
+    hit_breakpoints->push_back(breakpoint->stats());
   }
 }
 
@@ -164,8 +170,8 @@ void ProcessBreakpoint::BeginStepOver(zx_koid_t thread_koid) {
   thread_step_over_[thread_koid] = StepStatus::kCurrent;
 }
 
-bool ProcessBreakpoint::BreakpointStepHasException(zx_koid_t thread_koid,
-                                                   uint32_t exception_type) {
+bool ProcessBreakpoint::BreakpointStepHasException(
+    zx_koid_t thread_koid, debug_ipc::NotifyException::Type exception_type) {
   auto found_thread = thread_step_over_.find(thread_koid);
   if (found_thread == thread_step_over_.end()) {
     // Shouldn't be getting these notifications from a thread not currently
@@ -176,14 +182,15 @@ bool ProcessBreakpoint::BreakpointStepHasException(zx_koid_t thread_koid,
   StepStatus step_status = found_thread->second;
   thread_step_over_.erase(found_thread);
 
-  // When the last thread is done stepping over, put the breakpoing back.
+  // When the last thread is done stepping over, put the breakpoint back.
   if (step_status == StepStatus::kCurrent && !CurrentlySteppingOver())
     Update();
 
   // Now check if this exception was likely caused by successfully stepping
-  // over the breakpoint (hardware breakpoint), or something else (the stepped
+  // over the breakpoint, or something else (the stepped
   // instruction crashed or something).
-  return exception_type == ZX_EXCP_HW_BREAKPOINT;
+  // TODO(donosoc): Handle HW breakpoint case.
+  return exception_type == debug_ipc::NotifyException::Type::kSingleStep;
 }
 
 bool ProcessBreakpoint::CurrentlySteppingOver() const {
@@ -339,7 +346,9 @@ ProcessBreakpoint::HardwareBreakpoint::HardwareBreakpoint(
     ProcessBreakpoint* process_bp)
     : process_bp_(process_bp) {}
 
-ProcessBreakpoint::HardwareBreakpoint::~HardwareBreakpoint() { Uninstall(); }
+ProcessBreakpoint::HardwareBreakpoint::~HardwareBreakpoint() {
+  Uninstall();
+}
 
 zx_status_t ProcessBreakpoint::HardwareBreakpoint::Update(
     const std::set<zx_koid_t>& thread_ids) {
@@ -381,10 +390,10 @@ zx_status_t ProcessBreakpoint::HardwareBreakpoint::Install(
   // We need to install this new thread.
   DebuggedThread* thread = process_bp_->process()->GetThread(thread_id);
   if (!thread) {
-    fprintf(stderr,
-            "Warning: installing HW breakpoint for unexistent thread %u at "
-            "%" PRIX64 "\n",
-            static_cast<uint32_t>(thread_id), address);
+    FXL_LOG(WARNING) << fxl::StringPrintf(
+        "Warning: installing HW breakpoint for unexistent thread %u at "
+        "%" PRIX64 "\n",
+        static_cast<uint32_t>(thread_id), address);
     return ZX_OK;
   }
 
@@ -392,39 +401,21 @@ zx_status_t ProcessBreakpoint::HardwareBreakpoint::Install(
       arch::ArchProvider::Get().InstallHWBreakpoint(&thread->thread(), address);
   // TODO: Do we want to remove all other locations when one fails?
   if (res != ZX_OK) {
-    fprintf(
-        stderr,
-        "Warning: Error installing HW breakpoint for unexistent thread %u at "
-        "%" PRIX64 ": %u\n",
+    FXL_LOG(WARNING) << fxl::StringPrintf(
+        "Warning: Error installing HW breakpoint for thread %u at "
+        "%" PRIX64 ": %d\n",
         static_cast<uint32_t>(thread_id), address, res);
     return res;
   }
+
   return ZX_OK;
 }
 
 zx_status_t ProcessBreakpoint::HardwareBreakpoint::Uninstall() {
-  uint64_t address = process_bp_->address();
   for (zx_koid_t thread_id : installed_threads_) {
-    DebuggedThread* thread = process_bp_->process()->GetThread(thread_id);
-    if (!thread) {
-      fprintf(
-          stderr,
-          "Warning: removed HW breakpoint for unexistent thread %u at %" PRIX64
-          "\n",
-          static_cast<uint32_t>(thread_id), address);
-      // TODO: What to do in this case?
-      continue;
-    }
-
-    zx_status_t res = arch::ArchProvider::Get().UninstallHWBreakpoint(
-        &thread->thread(), address);
-    if (res != ZX_OK) {
-      fprintf(stderr,
-              "Warning: Error removing HW breakpoint for thread %u at %" PRIX64
-              ": %u\n",
-              static_cast<uint32_t>(thread_id), address, res);
+    zx_status_t res = Uninstall(thread_id);
+    if (res != ZX_OK)
       return res;
-    }
   }
 
   return ZX_OK;
@@ -435,8 +426,7 @@ zx_status_t ProcessBreakpoint::HardwareBreakpoint::Uninstall(
   uint64_t address = process_bp_->address();
   DebuggedThread* thread = process_bp_->process()->GetThread(thread_id);
   if (!thread) {
-    fprintf(
-        stderr,
+    FXL_LOG(WARNING) << fxl::StringPrintf(
         "Warning: removed HW breakpoint for unexistent thread %u at %" PRIX64
         "\n",
         static_cast<uint32_t>(thread_id), address);
@@ -447,10 +437,10 @@ zx_status_t ProcessBreakpoint::HardwareBreakpoint::Uninstall(
   zx_status_t res = arch::ArchProvider::Get().UninstallHWBreakpoint(
       &thread->thread(), address);
   if (res != ZX_OK) {
-    fprintf(stderr,
-            "Warning: Error removing HW breakpoint for thread %u at %" PRIX64
-            ": %u\n",
-            static_cast<uint32_t>(thread_id), address, res);
+    FXL_LOG(WARNING) << fxl::StringPrintf(
+        "Warning: Error removing HW breakpoint for thread %u at %" PRIX64
+        ": %d\n",
+        static_cast<uint32_t>(thread_id), address, res);
     return res;
   }
 

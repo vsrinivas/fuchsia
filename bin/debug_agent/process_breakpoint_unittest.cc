@@ -304,16 +304,16 @@ TEST(ProcessBreakpoint, StepMultiple) {
   // In real life, the thread would now single-step over the breakpoint. It
   // would trigger a hardware breakpoint at the next instruction.
 
-  EXPECT_TRUE(
-      bp.BreakpointStepHasException(kThread1Koid, ZX_EXCP_HW_BREAKPOINT));
+  EXPECT_TRUE(bp.BreakpointStepHasException(
+      kThread1Koid, debug_ipc::NotifyException::Type::kSingleStep));
 
   // Since one thread is still stepping, the memory should still be original.
   EXPECT_TRUE(process_delegate.mem().IsOriginal());
 
   // As soon as the second breakpoint is resolved, the breakpoint instruction
   // should be put back.
-  EXPECT_TRUE(
-      bp.BreakpointStepHasException(kThread2Koid, ZX_EXCP_HW_BREAKPOINT));
+  EXPECT_TRUE(bp.BreakpointStepHasException(
+      kThread2Koid, debug_ipc::NotifyException::Type::kSingleStep));
   EXPECT_TRUE(process_delegate.mem().StartsWithBreak());
 }
 
@@ -355,7 +355,8 @@ TEST(ProcessBreakpoint, HitCount) {
 
   // Hitting the ProcessBreakpoint should update both Breakpoints.
   std::vector<debug_ipc::BreakpointStats> stats;
-  process_delegate.bps().begin()->second->OnHit(&stats);
+  process_delegate.bps().begin()->second->OnHit(
+      debug_ipc::BreakpointType::kSoftware, &stats);
   ASSERT_EQ(2u, stats.size());
 
   // Order of the vector is not defined so allow either.
