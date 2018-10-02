@@ -7,7 +7,7 @@
 #include "devicetree.h"
 #include "util.h"
 
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <libzbi/zbi.h>
 #include <limits.h>
 #include <stdbool.h>

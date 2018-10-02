@@ -7,8 +7,8 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/ethernet_mac.h>
-#include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>

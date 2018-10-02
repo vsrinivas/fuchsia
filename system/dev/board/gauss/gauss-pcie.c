@@ -7,7 +7,7 @@
 #include <hw/reg.h>
 
 #include <ddk/debug.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 
 #include <dev/pci/designware/atu-cfg.h>
 #include <soc/aml-a113/a113-gpio.h>

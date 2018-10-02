@@ -10,9 +10,9 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio-impl.h>
 #include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 #include <zircon/syscalls/port.h>
 

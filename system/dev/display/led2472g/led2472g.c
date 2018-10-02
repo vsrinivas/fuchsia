@@ -10,8 +10,8 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/i2c.h>
-#include <ddk/protocol/platform-defs.h>
 
 static void i2c_complete(zx_status_t status, i2c_op_t* ops, size_t cnt, void* cookie) {
     if (status != ZX_OK) {

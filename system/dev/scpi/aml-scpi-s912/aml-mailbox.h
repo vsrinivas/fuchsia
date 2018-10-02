@@ -8,9 +8,9 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/mmio-buffer.h>
+#include <ddk/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/mailbox.h>
-#include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 #include <hw/reg.h>
 #include <lib/sync/completion.h>

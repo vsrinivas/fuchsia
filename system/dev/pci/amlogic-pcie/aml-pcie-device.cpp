@@ -6,7 +6,7 @@
 #include "aml-pcie-device.h"
 
 #include <ddk/debug.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <zircon/driver/binding.h>
 

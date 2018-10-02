@@ -4,7 +4,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>

@@ -15,7 +15,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <hw/reg.h>
 
 #include <soc/imx8m/imx8m-hw.h>

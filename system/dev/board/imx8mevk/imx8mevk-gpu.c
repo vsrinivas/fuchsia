@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/imx8m/imx8m-hw.h>
 #include <soc/imx8m/imx8m-sip.h>

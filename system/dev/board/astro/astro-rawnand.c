@@ -7,9 +7,9 @@
 #include <ddk/io-buffer.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/nand.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>

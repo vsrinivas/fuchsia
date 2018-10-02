@@ -4,7 +4,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <soc/hi3660/hi3660-hw.h>
 
 #include <stdio.h>

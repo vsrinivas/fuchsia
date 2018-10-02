@@ -4,7 +4,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <ddktl/pdev.h>
 #include <math.h>
 

@@ -4,7 +4,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <soc/aml-a113/a113-hw.h>
 
 #include <limits.h>

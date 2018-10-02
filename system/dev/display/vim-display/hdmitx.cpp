@@ -13,7 +13,7 @@
 #include <ddk/debug.h>
 #include <ddk/binding.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 
 #include <zircon/syscalls.h>

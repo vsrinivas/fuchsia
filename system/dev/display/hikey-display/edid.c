@@ -6,7 +6,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 #include <stdlib.h>
 #include <stdio.h>

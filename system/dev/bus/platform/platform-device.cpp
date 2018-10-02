@@ -14,7 +14,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <fbl/function.h>
 #include <zircon/syscalls/resource.h>
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-bus.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <hw/reg.h>

@@ -4,8 +4,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/platform-defs.h>
 #include <soc/aml-s912/s912-hw.h>
 #include "vim.h"
 

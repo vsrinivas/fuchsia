@@ -14,9 +14,9 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/iommu.h>
-#include <ddk/protocol/platform-defs.h>
 
 #include <zircon/assert.h>
 #include <zircon/process.h>

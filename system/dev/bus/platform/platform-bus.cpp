@@ -15,7 +15,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>

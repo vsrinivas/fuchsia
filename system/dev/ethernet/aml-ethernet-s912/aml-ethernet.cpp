@@ -8,8 +8,8 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

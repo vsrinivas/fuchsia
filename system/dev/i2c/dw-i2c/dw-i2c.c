@@ -6,8 +6,8 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/i2c-impl.h>
-#include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
 #include <hw/reg.h>

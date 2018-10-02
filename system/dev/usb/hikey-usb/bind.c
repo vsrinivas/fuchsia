@@ -4,7 +4,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 
 extern zx_status_t hikey_usb_bind(void* ctx, zx_device_t* parent);
 

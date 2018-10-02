@@ -4,8 +4,8 @@
 
 #include <ddk/driver.h>
 #include <ddk/debug.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/hi3660/hi3660.h>
 #include <soc/hi3660/hi3660-regs.h>

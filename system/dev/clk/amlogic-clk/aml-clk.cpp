@@ -7,8 +7,8 @@
 #include "aml-g12a-blocks.h"
 #include "aml-gxl-blocks.h"
 #include <ddk/debug.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/platform-defs.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <string.h>

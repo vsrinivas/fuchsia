@@ -14,7 +14,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <gpio/pl061/pl061.h>
 
 #include <zircon/process.h>

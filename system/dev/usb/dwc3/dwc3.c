@@ -4,7 +4,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/usb-function.h>
 #include <usb/usb-request.h>
 #include <hw/reg.h>

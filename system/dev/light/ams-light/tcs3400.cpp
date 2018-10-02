@@ -6,8 +6,8 @@
 #include <unistd.h>
 
 #include <ddk/debug.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/platform-defs.h>
 
 #include <hid/descriptor.h>
 

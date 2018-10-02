@@ -11,7 +11,7 @@ __BEGIN_CDECLS;
 
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 
 #include "a113-audio-regs.h"

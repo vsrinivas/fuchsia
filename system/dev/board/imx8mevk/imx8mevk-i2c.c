@@ -4,8 +4,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/platform-defs.h>
 
 #include <soc/imx8m/imx8m-hw.h>
 #include <soc/imx8m/imx8m-iomux.h>

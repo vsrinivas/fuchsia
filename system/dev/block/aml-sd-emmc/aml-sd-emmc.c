@@ -14,9 +14,9 @@
 #include <ddk/io-buffer.h>
 #include <ddk/metadata.h>
 #include <ddk/phys-iter.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/sdmmc.h>
 #include <hw/reg.h>

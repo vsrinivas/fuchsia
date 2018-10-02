@@ -11,9 +11,9 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/display-controller.h>
 #include <ddk/protocol/i2c-impl.h>
-#include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

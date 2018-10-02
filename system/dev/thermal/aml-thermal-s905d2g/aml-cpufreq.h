@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/protocol/clk.h>
 #include <fbl/unique_ptr.h>

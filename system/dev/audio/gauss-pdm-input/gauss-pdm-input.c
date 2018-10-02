@@ -4,7 +4,8 @@
 
 #include <ddk/binding.h>
 
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
+
 
 #include <stdlib.h>
 #include <string.h>

@@ -5,7 +5,7 @@
 #include "rtl8211f.h"
 #include "mdio-regs.h"
 #include <ddk/debug.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 #include <stdio.h>

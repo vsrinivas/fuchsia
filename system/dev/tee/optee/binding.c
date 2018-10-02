@@ -5,7 +5,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 
 extern zx_status_t optee_bind(void*, zx_device_t*);
 

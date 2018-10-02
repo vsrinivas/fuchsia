@@ -19,7 +19,7 @@
 #include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/phys-iter.h>
-#include <ddk/protocol/platform-defs.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/platform-bus.h>

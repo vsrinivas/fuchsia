@@ -6,9 +6,9 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddk/metadata.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/serial.h>
 #include <hw/reg.h>
 #include <soc/aml-s912/s912-gpio.h>
