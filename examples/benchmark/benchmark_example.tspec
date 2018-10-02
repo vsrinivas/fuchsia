@@ -7,8 +7,9 @@
     {
       "type": "duration",
       "expected_sample_count": 1000,
-      "event_name": "example",
-      "event_category": "benchmark"
+      "event_name": "example_event",
+      "event_category": "benchmark",
+      "output_test_name": "example (benchmark)"
     },
     {
       "type": "time_between",

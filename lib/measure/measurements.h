@@ -21,6 +21,10 @@ struct Measurements {
   std::vector<measure::ArgumentValueSpec> argument_value;
   std::vector<measure::TimeBetweenSpec> time_between;
 
+  // Maps measurement ids to the test name/label to use in the output perf
+  // results JSON file.
+  std::unordered_map<uint64_t, std::string> output_test_name;
+
   // Maps measurement ids to flags indicating whether or not the first run must
   // be recorded separately.
   std::unordered_map<uint64_t, bool> split_first;

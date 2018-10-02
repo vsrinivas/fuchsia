@@ -45,9 +45,14 @@ std::string GetUnit(const measure::TimeBetweenSpec& spec) { return "ms"; }
 
 template <typename Spec, typename T>
 Result ComputeSingle(Spec spec, const std::vector<T>& recorded_values,
+                     const std::string& output_test_name,
                      size_t expected_sample_count, bool split_first) {
   Result result;
-  result.label = GetLabel(spec);
+  if (output_test_name.empty()) {
+    result.label = GetLabel(spec);
+  } else {
+    result.label = output_test_name;
+  }
   result.unit = GetUnit(spec);
   result.split_first = split_first;
 
@@ -88,6 +93,7 @@ std::vector<Result> ComputeResults(
     uint64_t ticks_per_second) {
   std::vector<Result> results;
   const std::vector<uint64_t> no_recorded_values;
+  std::string empty_string;
 
   for (auto& measure_spec : measurements.duration) {
     auto duration_values = ticks_to_ms(
@@ -95,6 +101,8 @@ std::vector<Result> ComputeResults(
         ticks_per_second);
     results.push_back(ComputeSingle(
         measure_spec, duration_values,
+        get_or_default(measurements.output_test_name, measure_spec.id,
+                       empty_string),
         get_or_default(measurements.expected_sample_count, measure_spec.id,
                        0uL),
         get_or_default(measurements.split_first, measure_spec.id, false)));
@@ -104,6 +112,8 @@ std::vector<Result> ComputeResults(
         get_or_default(recorded_values, measure_spec.id, no_recorded_values);
     results.push_back(ComputeSingle(
         measure_spec, argument_values,
+        get_or_default(measurements.output_test_name, measure_spec.id,
+                       empty_string),
         get_or_default(measurements.expected_sample_count, measure_spec.id,
                        0uL),
         get_or_default(measurements.split_first, measure_spec.id, false)));
@@ -114,6 +124,8 @@ std::vector<Result> ComputeResults(
         ticks_per_second);
     results.push_back(ComputeSingle(
         measure_spec, time_between_values,
+        get_or_default(measurements.output_test_name, measure_spec.id,
+                       empty_string),
         get_or_default(measurements.expected_sample_count, measure_spec.id,
                        0uL),
         get_or_default(measurements.split_first, measure_spec.id, false)));

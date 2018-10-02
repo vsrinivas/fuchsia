@@ -33,12 +33,13 @@ int main(int argc, char** argv) {
 
   async::TaskClosure task([&loop, &task, &iteration] {
     // `task_start` and `task_end` are used to measure the time between
-    // `example` benchmarks.  This is measured with a `time_between`
+    // `example_event` benchmarks.  This is measured with a `time_between`
     // measurement type.
     TRACE_INSTANT("benchmark", "task_start", TRACE_SCOPE_PROCESS);
 
-    // An `example` benchmark measured with a `duration` measurement type.
-    TRACE_DURATION("benchmark", "example");
+    // An `example_event` benchmark measured with a `duration` measurement
+    // type.
+    TRACE_DURATION("benchmark", "example_event");
 
     // Simulate some kind of workload.
     zx::nanosleep(zx::deadline_after(zx::usec(1500)));

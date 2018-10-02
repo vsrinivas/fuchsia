@@ -61,6 +61,9 @@ const char kRootSchema[] = R"({
           "type": {
             "type": "string"
           },
+          "output_test_name": {
+            "type": "string"
+          },
           "split_first": {
             "type": "boolean"
           },
@@ -88,6 +91,7 @@ const char kBufferingModeKey[] = "buffering_mode";
 const char kBufferSizeInMbKey[] = "buffer_size_in_mb";
 const char kMeasurementsKey[] = "measure";
 const char kTypeKey[] = "type";
+const char kOutputTestName[] = "output_test_name";
 const char kSplitFirstKey[] = "split_first";
 const char kExpectedSampleCountKey[] = "expected_sample_count";
 const char kTestSuiteNameKey[] = "test_suite_name";
@@ -357,6 +361,11 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
     } else {
       FXL_LOG(ERROR) << "Unrecognized measurement type: " << type;
       return false;
+    }
+
+    if (measurement.HasMember(kOutputTestName)) {
+      result.measurements->output_test_name[counter] =
+          measurement[kOutputTestName].GetString();
     }
 
     if (measurement.HasMember(kSplitFirstKey)) {

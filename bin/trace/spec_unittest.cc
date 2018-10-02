@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/trace/spec.h"
+#include "garnet/lib/measure/results.h"
 
 #include "gtest/gtest.h"
 
@@ -344,6 +345,50 @@ TEST(Spec, DecodeMeasurementSplitFirst) {
   EXPECT_EQ(2u, measurements.duration.size());
   auto expected = std::unordered_map<uint64_t, bool>{{0u, {true}}};
   EXPECT_EQ(expected, measurements.split_first);
+}
+
+// Test the test case name that gets generated from event_name and
+// event_category.
+TEST(Spec, OutputNameDefault) {
+  std::string json = R"({
+    "measure": [
+      {
+        "type": "duration",
+        "event_name": "test_event",
+        "event_category": "test_category"
+      }
+    ]
+  })";
+
+  Spec spec;
+  ASSERT_TRUE(DecodeSpec(json, &spec));
+  auto measurements = std::move(*spec.measurements);
+  std::unordered_map<uint64_t, std::vector<trace_ticks_t>> ticks;
+  auto results = tracing::measure::ComputeResults(measurements, ticks, 1000.0);
+  EXPECT_EQ(results.size(), 1u);
+  EXPECT_EQ(results[0].label, "test_event (test_category)");
+}
+
+// Test overriding the test case name using the "output_test_name" field.
+TEST(Spec, OutputNameOverride) {
+  std::string json = R"({
+    "measure": [
+      {
+        "type": "duration",
+        "event_name": "test_event",
+        "event_category": "test_category",
+        "output_test_name": "my_test_name"
+      }
+    ]
+  })";
+
+  Spec spec;
+  ASSERT_TRUE(DecodeSpec(json, &spec));
+  auto measurements = std::move(*spec.measurements);
+  std::unordered_map<uint64_t, std::vector<trace_ticks_t>> ticks;
+  auto results = tracing::measure::ComputeResults(measurements, ticks, 1000.0);
+  EXPECT_EQ(results.size(), 1u);
+  EXPECT_EQ(results[0].label, "my_test_name");
 }
 
 }  // namespace
