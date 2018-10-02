@@ -21,14 +21,14 @@ public:
     bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size);
     bool DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size);
 
-    void set_mmio_space(hwreg::RegisterIo* mmio_space) {
+    void set_mmio_space(ddk::MmioBuffer* mmio_space) {
         fbl::AutoLock lock(&lock_);
         mmio_space_ = mmio_space;
     };
 private:
     const registers::Ddi ddi_;
     // The lock protects the registers this class writes to, not the whole register io space.
-    hwreg::RegisterIo* mmio_space_ __TA_GUARDED(lock_);
+    ddk::MmioBuffer* mmio_space_ __TA_GUARDED(lock_);
     mtx_t lock_;
 
     zx_status_t DpAuxRead(uint32_t dp_cmd, uint32_t addr,

@@ -64,7 +64,7 @@ int ddi_to_pin(registers::Ddi ddi) {
     return -1;
 }
 
-void write_gmbus3(hwreg::RegisterIo* mmio_space, const uint8_t* buf, uint32_t size, uint32_t idx) {
+void write_gmbus3(ddk::MmioBuffer* mmio_space, const uint8_t* buf, uint32_t size, uint32_t idx) {
     int cur_byte = 0;
     uint32_t val = 0;
     while (idx < size && cur_byte < 4) {
@@ -73,7 +73,7 @@ void write_gmbus3(hwreg::RegisterIo* mmio_space, const uint8_t* buf, uint32_t si
     registers::GMBus3::Get().FromValue(val).WriteTo(mmio_space);
 }
 
-void read_gmbus3(hwreg::RegisterIo* mmio_space, uint8_t* buf, uint32_t size, uint32_t idx) {
+void read_gmbus3(ddk::MmioBuffer* mmio_space, uint8_t* buf, uint32_t size, uint32_t idx) {
     int cur_byte = 0;
     uint32_t val = registers::GMBus3::Get().ReadFrom(mmio_space).reg_value();
     while (idx < size && cur_byte++ < 4) {
@@ -87,7 +87,7 @@ static constexpr uint8_t kDdcDataAddress = 0x50;
 static constexpr uint8_t kI2cClockUs = 10; // 100 kHz
 
 // For bit banging i2c over the gpio pins
-bool i2c_scl(hwreg::RegisterIo* mmio_space, registers::Ddi ddi, bool hi) {
+bool i2c_scl(ddk::MmioBuffer* mmio_space, registers::Ddi ddi, bool hi) {
     auto gpio = registers::GpioCtl::Get(ddi).FromValue(0);
 
     if (!hi) {
@@ -118,7 +118,7 @@ bool i2c_scl(hwreg::RegisterIo* mmio_space, registers::Ddi ddi, bool hi) {
 }
 
 // For bit banging i2c over the gpio pins
-void i2c_sda(hwreg::RegisterIo* mmio_space, registers::Ddi ddi, bool hi) {
+void i2c_sda(ddk::MmioBuffer* mmio_space, registers::Ddi ddi, bool hi) {
     auto gpio = registers::GpioCtl::Get(ddi).FromValue(0);
 
     if (!hi) {
@@ -134,7 +134,7 @@ void i2c_sda(hwreg::RegisterIo* mmio_space, registers::Ddi ddi, bool hi) {
 }
 
 // For bit banging i2c over the gpio pins
-bool i2c_send_byte(hwreg::RegisterIo* mmio_space, registers::Ddi ddi, uint8_t byte) {
+bool i2c_send_byte(ddk::MmioBuffer* mmio_space, registers::Ddi ddi, uint8_t byte) {
     // Set the bits from MSB to LSB
     for (int i = 7; i >= 0; i--) {
         i2c_sda(mmio_space, ddi, (byte >> i) & 0x1);

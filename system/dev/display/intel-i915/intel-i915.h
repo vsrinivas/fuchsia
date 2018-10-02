@@ -6,14 +6,15 @@
 
 #if __cplusplus
 
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/intel-gpu-core.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/i2c-impl.h>
+#include <ddktl/mmio.h>
 #include <ddktl/protocol/display-controller.h>
 
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <hwreg/mmio.h>
 #include <threads.h>
 
 #include "display-device.h"
@@ -109,7 +110,7 @@ public:
     bool DpcdWrite(registers::Ddi ddi, uint32_t addr, const uint8_t* buf, size_t size);
 
     pci_protocol_t* pci() { return &pci_; }
-    hwreg::RegisterIo* mmio_space() { return mmio_space_.get(); }
+    ddk::MmioBuffer* mmio_space() { return mmio_space_.get(); }
     Gtt* gtt() { return &gtt_; }
     Interrupts* interrupts() { return &interrupts_; }
     uint16_t device_id() const { return device_id_; }
@@ -200,15 +201,13 @@ private:
 
     pci_protocol_t pci_;
     struct {
-        void* base;
-        uint64_t size;
-        zx_handle_t vmo;
+        mmio_buffer_t mmio;
         int32_t count = 0;
     } mapped_bars_[PCI_MAX_BAR_COUNT] __TA_GUARDED(bar_lock_);
     mtx_t bar_lock_;
-    // The mmio_space_ unique_ptr is read only. The internal registers are
-    // guarded by various locks where appropriate.
-    fbl::unique_ptr<hwreg::RegisterIo> mmio_space_;
+    // The mmio_space_ is read only. The internal registers are guarded by various locks where
+    // appropriate.
+    fbl::unique_ptr<ddk::MmioBuffer> mmio_space_;
 
     // References to displays. References are owned by devmgr, but will always
     // be valid while they are in this vector.

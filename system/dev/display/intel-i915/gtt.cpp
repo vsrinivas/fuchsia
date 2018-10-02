@@ -92,7 +92,7 @@ zx_status_t Gtt::Init(Controller* controller) {
     uint64_t pte = gen_pte_encode(scratch_buffer_paddr_);
     unsigned i;
     for (i = 0; i < gtt_size / sizeof(uint64_t); i++) {
-        controller_->mmio_space()->Write<uint64_t>(get_pte_offset(i), pte);
+        controller_->mmio_space()->Write<uint64_t>(pte, get_pte_offset(i));
     }
     controller_->mmio_space()->Read<uint32_t>(get_pte_offset(i - i)); // Posting read
 
@@ -120,7 +120,7 @@ void Gtt::SetupForMexec(uintptr_t stolen_fb, uint32_t length) {
     unsigned pte_idx = 0;
     for (unsigned i = 0; i < ROUNDUP(length, PAGE_SIZE) / PAGE_SIZE; i++, stolen_fb += PAGE_SIZE) {
         uint64_t pte = gen_pte_encode(stolen_fb);
-        controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), pte);
+        controller_->mmio_space()->Write<uint64_t>(pte, get_pte_offset(pte_idx++));
     }
     controller_->mmio_space()->Read<uint32_t>(get_pte_offset(pte_idx - 1)); // Posting read
 }
@@ -179,7 +179,7 @@ zx_status_t GttRegion::PopulateRegion(zx_handle_t vmo, uint64_t page_offset,
             for (unsigned j = 0;
                     j < gtt_->min_contiguity_ / PAGE_SIZE && pte_idx < pte_idx_end; j++) {
                 uint64_t pte = gen_pte_encode(paddrs[i] + j * PAGE_SIZE);
-                gtt_->controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), pte);
+                gtt_->controller_->mmio_space()->Write<uint64_t>(pte, get_pte_offset(pte_idx++));
             }
         }
     }
@@ -199,7 +199,7 @@ void GttRegion::ClearRegion(bool close_vmo) {
 
     for (unsigned i = 0; i < mapped_end_ / PAGE_SIZE; i++) {
         uint32_t pte_offset = get_pte_offset(pte_idx++);
-        mmio_space->Write<uint64_t>(pte_offset, pte);
+        mmio_space->Write<uint64_t>(pte, pte_offset);
     }
 
     mmio_space->Read<uint32_t>(get_pte_offset(pte_idx - 1)); // Posting read
@@ -255,7 +255,7 @@ void GttRegion::SetRotation(uint32_t rotation, const image_t& image) {
             uint32_t dest_offset = get_pte_offset(position + pte_offset);
 
             uint64_t next_entry = mmio_space->Read<uint64_t>(dest_offset);
-            mmio_space->Write<uint64_t>(dest_offset, entry ^ kRotatedFlag);
+            mmio_space->Write<uint64_t>(entry ^ kRotatedFlag, dest_offset);
             entry = next_entry;
         }
     }

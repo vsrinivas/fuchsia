@@ -128,7 +128,7 @@ DisplayDevice::~DisplayDevice() {
     }
 }
 
-hwreg::RegisterIo* DisplayDevice::mmio_space() const {
+ddk::MmioBuffer* DisplayDevice::mmio_space() const {
     return controller_->mmio_space();
 }
 

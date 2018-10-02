@@ -264,7 +264,7 @@ zx_status_t DpAux::SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply
     for (uint32_t offset = 0; offset < request.size; offset += 4) {
         // For some reason intel made these data registers big endian...
         const uint32_t* data = reinterpret_cast<const uint32_t*>(request.data + offset);
-        mmio_space_->Write<uint32_t>(data_reg + offset, htobe32(*data));
+        mmio_space_->Write<uint32_t>(htobe32(*data), data_reg + offset);
     }
 
     auto status = ddi_regs.DdiAuxControl().ReadFrom(mmio_space_);
@@ -306,7 +306,7 @@ zx_status_t DpAux::SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply
             for (uint32_t offset = 0; offset < reply->size; offset += 4) {
                 // For some reason intel made these data registers big endian...
                 *reinterpret_cast<uint32_t*>(reply->data + offset) =
-                        be32toh(mmio_space_->Read<uint32_t>(data_reg + offset));
+                        be32toh(mmio_space_->Read32(data_reg + offset));
             }
             return ZX_OK;
         }

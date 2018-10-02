@@ -6,7 +6,7 @@
 
 #include <ddk/protocol/display-controller.h>
 #include <ddktl/device.h>
-#include <hwreg/mmio.h>
+#include <ddktl/mmio.h>
 #include <region-alloc/region-alloc.h>
 #include <lib/zx/vmo.h>
 
@@ -92,7 +92,7 @@ protected:
     virtual bool PipeConfigEpilogue(const display_mode_t& mode,
                                     registers::Pipe pipe, registers::Trans trans) = 0;
 
-    hwreg::RegisterIo* mmio_space() const;
+    ddk::MmioBuffer* mmio_space() const;
 
 private:
     bool CheckNeedsModeset(const display_mode_t* mode);

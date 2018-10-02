@@ -149,7 +149,7 @@ zx_status_t Interrupts::SetInterruptCallback(zx_intel_gpu_core_interrupt_callbac
 
 zx_status_t Interrupts::Init(Controller* controller) {
     controller_ = controller;
-    hwreg::RegisterIo* mmio_space = controller_->mmio_space();
+    ddk::MmioBuffer* mmio_space = controller_->mmio_space();
 
     mtx_init(&lock_, mtx_plain);
 

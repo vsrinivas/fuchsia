@@ -14,14 +14,14 @@ public:
     GMBusI2c(registers::Ddi ddi);
     zx_status_t I2cTransact(i2c_impl_op_t* ops, size_t count);
 
-    void set_mmio_space(hwreg::RegisterIo* mmio_space) {
+    void set_mmio_space(ddk::MmioBuffer* mmio_space) {
         fbl::AutoLock lock(&lock_);
         mmio_space_ = mmio_space;
     };
 private:
     const registers::Ddi ddi_;
     // The lock protects the registers this class writes to, not the whole register io space.
-    hwreg::RegisterIo* mmio_space_ __TA_GUARDED(lock_);
+    ddk::MmioBuffer* mmio_space_ __TA_GUARDED(lock_);
     mtx_t lock_;
 
     bool I2cFinish() __TA_REQUIRES(lock_);

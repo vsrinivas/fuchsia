@@ -6,7 +6,7 @@
 
 #include <ddk/protocol/display-controller.h>
 #include <ddktl/device.h>
-#include <hwreg/mmio.h>
+#include <ddktl/mmio.h>
 #include <lib/edid/edid.h>
 #include <region-alloc/region-alloc.h>
 #include <lib/zx/vmo.h>
@@ -49,7 +49,7 @@ public:
     bool in_use() const { return attached_display_ != INVALID_DISPLAY_ID; }
 
 private:
-    hwreg::RegisterIo* mmio_space() const;
+    ddk::MmioBuffer* mmio_space() const;
 
     void ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* primary,
                                bool enable_csc, bool* scaler_1_claimed,

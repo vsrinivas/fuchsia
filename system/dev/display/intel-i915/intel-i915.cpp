@@ -198,7 +198,7 @@ bool Controller::CompareDpllStates(const dpll_state_t& a, const dpll_state_t& b)
 
 void Controller::EnableBacklight(bool enable) {
     if (flags_ & FLAGS_BACKLIGHT) {
-        uint32_t tmp = mmio_space_->Read<uint32_t>(BACKLIGHT_CTRL_OFFSET);
+        uint32_t tmp = mmio_space()->Read32(BACKLIGHT_CTRL_OFFSET);
 
         if (enable) {
             tmp |= BACKLIGHT_CTRL_BIT;
@@ -206,7 +206,7 @@ void Controller::EnableBacklight(bool enable) {
             tmp &= ~BACKLIGHT_CTRL_BIT;
         }
 
-        mmio_space_->Write<uint32_t>(BACKLIGHT_CTRL_OFFSET, tmp);
+        mmio_space()->Write32(BACKLIGHT_CTRL_OFFSET, tmp);
     }
 }
 
@@ -299,12 +299,12 @@ DisplayDevice* Controller::FindDevice(uint64_t display_id) {
 
 bool Controller::BringUpDisplayEngine(bool resume) {
     // Enable PCH Reset Handshake
-    auto nde_rstwrn_opt = registers::NorthDERestetWarning::Get().ReadFrom(mmio_space_.get());
+    auto nde_rstwrn_opt = registers::NorthDERestetWarning::Get().ReadFrom(mmio_space());
     nde_rstwrn_opt.set_rst_pch_handshake_enable(1);
-    nde_rstwrn_opt.WriteTo(mmio_space_.get());
+    nde_rstwrn_opt.WriteTo(mmio_space());
 
     // Wait for Power Well 0 distribution
-    if (!WAIT_ON_US(registers::FuseStatus::Get().ReadFrom(mmio_space_.get()).pg0_dist_status(), 5)) {
+    if (!WAIT_ON_US(registers::FuseStatus::Get().ReadFrom(mmio_space()).pg0_dist_status(), 5)) {
         LOG_ERROR("Power Well 0 distribution failed\n");
         return false;
     }
@@ -317,26 +317,26 @@ bool Controller::BringUpDisplayEngine(bool resume) {
 
     // Enable CDCLK PLL to 337.5mhz if the BIOS didn't already enable it. If it needs to be
     // something special (i.e. for eDP), assume that the BIOS already enabled it.
-    auto dpll_enable = registers::DpllEnable::Get(registers::DPLL_0).ReadFrom(mmio_space_.get());
+    auto dpll_enable = registers::DpllEnable::Get(registers::DPLL_0).ReadFrom(mmio_space());
     if (!dpll_enable.enable_dpll()) {
         // Set the cd_clk frequency to the minimum
-        auto cd_clk = registers::CdClockCtl::Get().ReadFrom(mmio_space_.get());
+        auto cd_clk = registers::CdClockCtl::Get().ReadFrom(mmio_space());
         cd_clk.set_cd_freq_select(cd_clk.kFreqSelect3XX);
         cd_clk.set_cd_freq_decimal(cd_clk.kFreqDecimal3375);
-        cd_clk.WriteTo(mmio_space_.get());
+        cd_clk.WriteTo(mmio_space());
 
         // Configure DPLL0
-        auto dpll_ctl1 = registers::DpllControl1::Get().ReadFrom(mmio_space_.get());
+        auto dpll_ctl1 = registers::DpllControl1::Get().ReadFrom(mmio_space());
         dpll_ctl1.dpll_link_rate(registers::DPLL_0).set(dpll_ctl1.kLinkRate810Mhz);
         dpll_ctl1.dpll_override(registers::DPLL_0).set(1);
         dpll_ctl1.dpll_hdmi_mode(registers::DPLL_0).set(0);
         dpll_ctl1.dpll_ssc_enable(registers::DPLL_0).set(0);
-        dpll_ctl1.WriteTo(mmio_space_.get());
+        dpll_ctl1.WriteTo(mmio_space());
 
         // Enable DPLL0 and wait for it
         dpll_enable.set_enable_dpll(1);
-        dpll_enable.WriteTo(mmio_space_.get());
-        if (!WAIT_ON_MS(registers::Lcpll1Control::Get().ReadFrom(mmio_space_.get()).pll_lock(), 5)) {
+        dpll_enable.WriteTo(mmio_space());
+        if (!WAIT_ON_MS(registers::Lcpll1Control::Get().ReadFrom(mmio_space()).pll_lock(), 5)) {
             LOG_ERROR("Failed to configure dpll0\n");
             return false;
         }
@@ -346,20 +346,17 @@ bool Controller::BringUpDisplayEngine(bool resume) {
         constexpr uint32_t kGtDriverMailboxInterface = 0x138124;
         constexpr uint32_t kGtDriverMailboxData0 = 0x138128;
         constexpr uint32_t kGtDriverMailboxData1 = 0x13812c;
-        mmio_space_.get()->Write<uint32_t>(kGtDriverMailboxData0, 0x3);
-        mmio_space_.get()->Write<uint32_t>(kGtDriverMailboxData1, 0x0);
-        mmio_space_.get()->Write<uint32_t>(kGtDriverMailboxInterface, 0x80000007);
+        mmio_space()->Write32(kGtDriverMailboxData0, 0x3);
+        mmio_space()->Write32(kGtDriverMailboxData1, 0x0);
+        mmio_space()->Write32(kGtDriverMailboxInterface, 0x80000007);
 
         int count = 0;
         for (;;) {
-            if (!WAIT_ON_US(mmio_space_.get()
-                                    ->Read<uint32_t>(kGtDriverMailboxInterface) &
-                                0x80000000,
-                            150)) {
+            if (!WAIT_ON_US(mmio_space()->Read32(kGtDriverMailboxInterface) & 0x80000000, 150)) {
                 LOG_ERROR("GT Driver Mailbox driver busy\n");
                 return false;
             }
-            if (mmio_space_.get()->Read<uint32_t>(kGtDriverMailboxData0) & 0x1) {
+            if (mmio_space()->Read32(kGtDriverMailboxData0) & 0x1) {
                 break;
             }
             if (count++ == 3) {
@@ -369,19 +366,19 @@ bool Controller::BringUpDisplayEngine(bool resume) {
             zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
         }
 
-        cd_clk.WriteTo(mmio_space_.get());
+        cd_clk.WriteTo(mmio_space());
 
-        mmio_space_.get()->Write<uint32_t>(kGtDriverMailboxData0, 0x3);
-        mmio_space_.get()->Write<uint32_t>(kGtDriverMailboxData1, 0x0);
-        mmio_space_.get()->Write<uint32_t>(kGtDriverMailboxInterface, 0x80000007);
+        mmio_space()->Write32(kGtDriverMailboxData0, 0x3);
+        mmio_space()->Write32(kGtDriverMailboxData1, 0x0);
+        mmio_space()->Write32(kGtDriverMailboxInterface, 0x80000007);
     }
 
     // Enable and wait for DBUF
-    auto dbuf_ctl = registers::DbufCtl::Get().ReadFrom(mmio_space_.get());
+    auto dbuf_ctl = registers::DbufCtl::Get().ReadFrom(mmio_space());
     dbuf_ctl.set_power_request(1);
-    dbuf_ctl.WriteTo(mmio_space_.get());
+    dbuf_ctl.WriteTo(mmio_space());
 
-    if (!WAIT_ON_US(registers::DbufCtl::Get().ReadFrom(mmio_space_.get()).power_state(), 10)) {
+    if (!WAIT_ON_US(registers::DbufCtl::Get().ReadFrom(mmio_space()).power_state(), 10)) {
         LOG_ERROR("Failed to enable DBUF\n");
         return false;
     }
@@ -1634,16 +1631,14 @@ zx_status_t Controller::MapPciMmio(uint32_t pci_bar, void** addr_out, uint64_t* 
     }
     fbl::AutoLock lock(&bar_lock_);
     if (mapped_bars_[pci_bar].count == 0) {
-        zx_status_t status = pci_map_bar(&pci_, pci_bar, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                         &mapped_bars_[pci_bar].base,
-                                         &mapped_bars_[pci_bar].size,
-                                         &mapped_bars_[pci_bar].vmo);
+        zx_status_t status = pci_map_bar_buffer(&pci_, pci_bar, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                                &mapped_bars_[pci_bar].mmio);
         if (status != ZX_OK) {
             return status;
         }
     }
-    *addr_out = mapped_bars_[pci_bar].base;
-    *size_out = mapped_bars_[pci_bar].size;
+    *addr_out = mapped_bars_[pci_bar].mmio.vaddr;
+    *size_out = mapped_bars_[pci_bar].mmio.size;
     mapped_bars_[pci_bar].count++;
     return ZX_OK;
 }
@@ -1657,10 +1652,7 @@ zx_status_t Controller::UnmapPciMmio(uint32_t pci_bar) {
         return ZX_OK;
     }
     if (--mapped_bars_[pci_bar].count == 0) {
-        zx_vmar_unmap(zx_vmar_root_self(),
-                      reinterpret_cast<uintptr_t>(mapped_bars_[pci_bar].base),
-                      mapped_bars_[pci_bar].size);
-        zx_handle_close(mapped_bars_[pci_bar].vmo);
+        mmio_buffer_release(&mapped_bars_[pci_bar].mmio);
     }
     return ZX_OK;
 }
@@ -1852,13 +1844,10 @@ zx_status_t Controller::DdkSuspend(uint32_t hint) {
         }
 
         // Try to map the framebuffer and clear it. If not, oh well.
-        void* gmadr;
-        uint64_t gmadr_size;
-        zx_handle_t gmadr_handle;
-        if (pci_map_bar(&pci_, 2, ZX_CACHE_POLICY_WRITE_COMBINING,
-                        &gmadr, &gmadr_size, &gmadr_handle) == ZX_OK) {
-            memset(reinterpret_cast<void*>(gmadr), 0, fb_size);
-            zx_handle_close(gmadr_handle);
+        mmio_buffer_t mmio;
+        if (pci_map_bar_buffer(&pci_, 2, ZX_CACHE_POLICY_WRITE_COMBINING, &mmio) == ZX_OK) {
+            memset(mmio.vaddr, 0, fb_size);
+            mmio_buffer_release(&mmio);
         }
 
         {
@@ -1870,13 +1859,13 @@ zx_status_t Controller::DdkSuspend(uint32_t hint) {
                 // TODO(ZX-1413): Reset/scale the display to ensure the buffer displays properly
                 registers::PipeRegs pipe_regs(display->pipe()->pipe());
 
-                auto plane_stride = pipe_regs.PlaneSurfaceStride(0).ReadFrom(mmio_space_.get());
+                auto plane_stride = pipe_regs.PlaneSurfaceStride(0).ReadFrom(mmio_space());
                 plane_stride.set_stride(width_in_tiles(IMAGE_TYPE_SIMPLE, width, format));
-                plane_stride.WriteTo(mmio_space_.get());
+                plane_stride.WriteTo(mmio_space());
 
-                auto plane_surface = pipe_regs.PlaneSurface(0).ReadFrom(mmio_space_.get());
+                auto plane_surface = pipe_regs.PlaneSurface(0).ReadFrom(mmio_space());
                 plane_surface.set_surface_base_addr(0);
-                plane_surface.WriteTo(mmio_space_.get());
+                plane_surface.WriteTo(mmio_space());
             }
         }
     }
@@ -1887,17 +1876,17 @@ zx_status_t Controller::DdkResume(uint32_t hint) {
     fbl::AutoLock lock(&display_lock_);
     BringUpDisplayEngine(true);
 
-    registers::PanelPowerDivisor::Get().FromValue(pp_divisor_val_).WriteTo(mmio_space_.get());
-    registers::PanelPowerOffDelay::Get().FromValue(pp_off_delay_val_).WriteTo(mmio_space_.get());
-    registers::PanelPowerOnDelay::Get().FromValue(pp_on_delay_val_).WriteTo(mmio_space_.get());
+    registers::PanelPowerDivisor::Get().FromValue(pp_divisor_val_).WriteTo(mmio_space());
+    registers::PanelPowerOffDelay::Get().FromValue(pp_off_delay_val_).WriteTo(mmio_space());
+    registers::PanelPowerOnDelay::Get().FromValue(pp_on_delay_val_).WriteTo(mmio_space());
     registers::SouthBacklightCtl1::Get().FromValue(0)
-            .set_polarity(sblc_polarity_).WriteTo(mmio_space_.get());
-    registers::SouthBacklightCtl2::Get().FromValue(sblc_ctrl2_val_).WriteTo(mmio_space_.get());
-    registers::SChicken1::Get().FromValue(schicken1_val_).WriteTo(mmio_space_.get());
+            .set_polarity(sblc_polarity_).WriteTo(mmio_space());
+    registers::SouthBacklightCtl2::Get().FromValue(sblc_ctrl2_val_).WriteTo(mmio_space());
+    registers::SChicken1::Get().FromValue(schicken1_val_).WriteTo(mmio_space());
 
-    registers::DdiRegs(registers::DDI_A).DdiBufControl().ReadFrom(mmio_space_.get())
+    registers::DdiRegs(registers::DDI_A).DdiBufControl().ReadFrom(mmio_space())
             .set_ddi_a_lane_capability_control(ddi_a_lane_capability_control_)
-            .WriteTo(mmio_space_.get());
+            .WriteTo(mmio_space());
 
     for (auto& disp : display_devices_) {
         if (!disp->Resume()) {
@@ -1973,29 +1962,32 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
         return status;
     }
 
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<hwreg::RegisterIo> mmio_space(
-            new (&ac) hwreg::RegisterIo(reinterpret_cast<volatile void*>(regs)));
-    if (!ac.check()) {
-        LOG_ERROR("Failed to alloc RegisterIo\n");
-        return ZX_ERR_NO_MEMORY;
+    {
+        fbl::AutoLock lock(&bar_lock_);
+        fbl::AllocChecker ac;
+        auto mmio_space = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mapped_bars_[0].mmio);
+        if (!ac.check()) {
+            LOG_ERROR("Failed to alloc RegisterIo\n");
+            return ZX_ERR_NO_MEMORY;
+        }
+        mmio_space_ = fbl::move(mmio_space);
     }
-    mmio_space_ = fbl::move(mmio_space);
+
     for (unsigned i = 0; i < registers::kDdiCount; i++) {
-        gmbus_i2cs_[i].set_mmio_space(mmio_space_.get());
-        dp_auxs_[i].set_mmio_space(mmio_space_.get());
+        gmbus_i2cs_[i].set_mmio_space(mmio_space());
+        dp_auxs_[i].set_mmio_space(mmio_space());
     }
 
-    pp_divisor_val_ = registers::PanelPowerDivisor::Get().ReadFrom(mmio_space_.get()).reg_value();
+    pp_divisor_val_ = registers::PanelPowerDivisor::Get().ReadFrom(mmio_space()).reg_value();
     pp_off_delay_val_ =
-            registers::PanelPowerOffDelay::Get().ReadFrom(mmio_space_.get()).reg_value();
-    pp_on_delay_val_  = registers::PanelPowerOnDelay::Get().ReadFrom(mmio_space_.get()).reg_value();
-    sblc_ctrl2_val_ = registers::SouthBacklightCtl2::Get().ReadFrom(mmio_space_.get()).reg_value();
-    schicken1_val_ = registers::SChicken1::Get().ReadFrom(mmio_space_.get()).reg_value();
+            registers::PanelPowerOffDelay::Get().ReadFrom(mmio_space()).reg_value();
+    pp_on_delay_val_  = registers::PanelPowerOnDelay::Get().ReadFrom(mmio_space()).reg_value();
+    sblc_ctrl2_val_ = registers::SouthBacklightCtl2::Get().ReadFrom(mmio_space()).reg_value();
+    schicken1_val_ = registers::SChicken1::Get().ReadFrom(mmio_space()).reg_value();
 
-    sblc_polarity_ = registers::SouthBacklightCtl1::Get().ReadFrom(mmio_space_.get()).polarity();
+    sblc_polarity_ = registers::SouthBacklightCtl1::Get().ReadFrom(mmio_space()).polarity();
     ddi_a_lane_capability_control_ = registers::DdiRegs(registers::DDI_A).DdiBufControl()
-            .ReadFrom(mmio_space_.get()).ddi_a_lane_capability_control();
+            .ReadFrom(mmio_space()).ddi_a_lane_capability_control();
 
     LOG_TRACE("Initialzing hotplug\n");
     status = interrupts_.Init(this);
@@ -2068,7 +2060,7 @@ Controller::~Controller() {
     }
 
     interrupts_.Destroy();
-    if (mmio_space_) {
+    if (mmio_space()) {
         EnableBacklight(false);
 
         for (unsigned i = 0; i < registers::kPipeCount; i++) {
@@ -2077,6 +2069,7 @@ Controller::~Controller() {
         }
     }
     // Drop our own reference to bar 0. No-op if we failed before we mapped it.
+    mmio_space_->reset();
     UnmapPciMmio(0u);
     // Release anything leaked by the gpu-core client.
     fbl::AutoLock lock(&bar_lock_);
