@@ -51,7 +51,7 @@ Collector::~Collector() {
     }
 };
 
-Histogram Collector::AddHistogram(uint64_t metric_id, uint32_t event_type_index,
+Histogram Collector::AddHistogram(uint32_t metric_id, uint32_t event_type_index,
                                   const HistogramOptions& options) {
     ZX_DEBUG_ASSERT_MSG(remote_histograms_.size() < remote_histograms_.capacity(),
                         "Exceeded pre-allocated histogram capacity.");
@@ -62,7 +62,7 @@ Histogram Collector::AddHistogram(uint64_t metric_id, uint32_t event_type_index,
     return Histogram(&histogram_options_[index], &remote_histograms_[index]);
 }
 
-Counter Collector::AddCounter(uint64_t metric_id, uint32_t event_type_index) {
+Counter Collector::AddCounter(uint32_t metric_id, uint32_t event_type_index) {
     ZX_DEBUG_ASSERT_MSG(remote_counters_.size() < remote_counters_.capacity(),
                         "Exceeded pre-allocated counter capacity.");
     remote_counters_.push_back(RemoteCounter(metric_id, {MakeMetadata(event_type_index)}));
@@ -90,7 +90,7 @@ void Collector::Flush() {
 }
 
 void Collector::LogHistogram(RemoteHistogram* histogram) {
-    histogram->Flush([this, histogram](uint64_t metric_id,
+    histogram->Flush([this, histogram](uint32_t metric_id,
                                        const RemoteHistogram::EventBuffer& buffer,
                                        RemoteHistogram::FlushCompleteFn complete_fn) {
         if (!logger_->Log(metric_id, buffer)) {
@@ -110,7 +110,7 @@ void Collector::LogHistogram(RemoteHistogram* histogram) {
 }
 
 void Collector::LogCounter(RemoteCounter* counter) {
-    counter->Flush([this, counter](uint64_t metric_id, const RemoteCounter::EventBuffer& buffer,
+    counter->Flush([this, counter](uint32_t metric_id, const RemoteCounter::EventBuffer& buffer,
                                    RemoteCounter::FlushCompleteFn complete_fn) {
         // Attempt to log data, if we fail, we increase the in process counter by the amount
         // flushed.

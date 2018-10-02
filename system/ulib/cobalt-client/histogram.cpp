@@ -95,7 +95,7 @@ BaseHistogram::BaseHistogram(uint32_t num_buckets) {
 
 BaseHistogram::BaseHistogram(BaseHistogram&& other) = default;
 
-RemoteHistogram::RemoteHistogram(uint32_t num_buckets, uint64_t metric_id,
+RemoteHistogram::RemoteHistogram(uint32_t num_buckets, uint32_t metric_id,
                                  const fbl::Vector<Metadata>& metadata)
     : BaseHistogram(num_buckets), buffer_(metadata), metric_id_(metric_id) {
     bucket_buffer_.reserve(num_buckets);

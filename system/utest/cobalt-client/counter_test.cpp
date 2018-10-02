@@ -235,7 +235,7 @@ bool TestFlush() {
     RemoteCounter counter = MakeRemoteCounter();
     RemoteCounter::FlushCompleteFn mark_complete;
     counter.Increment(20);
-    uint64_t actual_metric_id;
+    uint32_t actual_metric_id;
     const fbl::Vector<Metadata>* actual_metadata;
     uint32_t actual_count;
 
@@ -243,7 +243,7 @@ bool TestFlush() {
     // that metadata is first in the flushed values, and the last element is the event_data we
     // are measuring, which adds some restrictions to the internal implementation, but makes the
     // test cleaner and readable.
-    ASSERT_TRUE(counter.Flush([&](uint64_t metric_id, const EventBuffer<uint32_t>& buffer,
+    ASSERT_TRUE(counter.Flush([&](uint32_t metric_id, const EventBuffer<uint32_t>& buffer,
                                   RemoteCounter::FlushCompleteFn complete_fn) {
         actual_metric_id = metric_id;
         actual_metadata = &buffer.metadata();
@@ -262,7 +262,7 @@ bool TestFlush() {
     ASSERT_FALSE(counter.Flush(RemoteCounter::FlushFn()));
     mark_complete();
     ASSERT_EQ(counter.Load(), 0);
-    ASSERT_TRUE(counter.Flush([](uint64_t metric_id, const EventBuffer<uint32_t>& val,
+    ASSERT_TRUE(counter.Flush([](uint32_t metric_id, const EventBuffer<uint32_t>& val,
                                  RemoteCounter::FlushCompleteFn flush) {}));
     END_TEST;
 }
@@ -289,7 +289,7 @@ int FlushFn(void* args) {
     sync_completion_wait(flush_args->start, zx::sec(20).get());
     for (size_t i = 0; i < flush_args->operation_count; ++i) {
         if (flush_args->flush) {
-            flush_args->counter->Flush([&flush_args](uint64_t metric_id,
+            flush_args->counter->Flush([&flush_args](uint32_t metric_id,
                                                      const EventBuffer<uint32_t>& buffer,
                                                      RemoteCounter::FlushCompleteFn complete_fn) {
                 flush_args->accumulated->fetch_add(buffer.event_data(), fbl::memory_order_relaxed);

@@ -21,10 +21,10 @@ public:
     virtual ~Logger() = default;
 
     // Returns true if the histogram was persisted.
-    virtual bool Log(uint64_t metric_id, const RemoteHistogram::EventBuffer& histogram) = 0;
+    virtual bool Log(uint32_t metric_id, const RemoteHistogram::EventBuffer& histogram) = 0;
 
     // Returns true if the counter was persisted.
-    virtual bool Log(uint64_t metric_id, const RemoteCounter::EventBuffer& counter) = 0;
+    virtual bool Log(uint32_t metric_id, const RemoteCounter::EventBuffer& counter) = 0;
 
 protected:
     Logger() = default;

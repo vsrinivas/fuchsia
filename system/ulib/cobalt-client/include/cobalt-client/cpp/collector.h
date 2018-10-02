@@ -66,12 +66,12 @@ public:
 
     // Returns a histogram to log events for a given |metric_id|, |event_type_index|
     // on a histogram described by |options|.
-    Histogram AddHistogram(uint64_t metric_id, uint32_t event_type_index,
+    Histogram AddHistogram(uint32_t metric_id, uint32_t event_type_index,
                            const HistogramOptions& options);
 
     // Returns a counter to log events for a given |metric_id| and |event_type_index|
     // as a raw counter.
-    Counter AddCounter(uint64_t metric_id, uint32_t event_type_index);
+    Counter AddCounter(uint32_t metric_id, uint32_t event_type_index);
 
     // Flushes the content of all flushable metrics into |sink_|. The |sink_| is
     // in charge of persisting the data.

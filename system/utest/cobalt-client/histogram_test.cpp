@@ -197,7 +197,7 @@ bool TestFlush() {
     BEGIN_TEST;
     RemoteHistogram histogram = MakeRemoteHistogram();
     fidl::VectorView<HistogramBucket> flushed_event_data;
-    uint64_t flushed_metric_id;
+    uint32_t flushed_metric_id;
     RemoteHistogram::FlushCompleteFn complete_fn;
     const fbl::Vector<Metadata>* flushed_metadata;
 
@@ -210,7 +210,7 @@ bool TestFlush() {
 
     ASSERT_TRUE(histogram.Flush(
         [&flushed_event_data, &flushed_metadata, &flushed_metric_id, &complete_fn](
-            uint64_t metric_id, const EventBuffer<fidl::VectorView<HistogramBucket>>& buffer,
+            uint32_t metric_id, const EventBuffer<fidl::VectorView<HistogramBucket>>& buffer,
             RemoteHistogram::FlushCompleteFn comp_fn) {
             flushed_event_data = buffer.event_data();
             flushed_metadata = &buffer.metadata();
@@ -248,7 +248,7 @@ bool TestFlush() {
     }
 
     // Check that after calling complete_fn we can call flush again.
-    ASSERT_TRUE(histogram.Flush([](uint64_t metric_id,
+    ASSERT_TRUE(histogram.Flush([](uint32_t metric_id,
                                    const EventBuffer<fidl::VectorView<HistogramBucket>>& values,
                                    RemoteHistogram::FlushCompleteFn comp_fn) {}));
 
@@ -281,7 +281,7 @@ int FlushFn(void* args) {
     for (size_t i = 0; i < flush_args->operations; ++i) {
         if (flush_args->flush) {
             flush_args->histogram->Flush(
-                [&flush_args](uint64_t metric_id,
+                [&flush_args](uint32_t metric_id,
                               const EventBuffer<fidl::VectorView<HistogramBucket>>& buffer,
                               RemoteHistogram::FlushCompleteFn complete_fn) {
                     uint64_t count = buffer.event_data().count();
@@ -431,7 +431,7 @@ bool TestAddAfterFlush() {
 
     histogram.Add(25, 4);
     ASSERT_EQ(histogram.GetRemoteCount(25), 4);
-    remote_histogram.Flush([](uint64_t metric_id,
+    remote_histogram.Flush([](uint32_t metric_id,
                               const EventBuffer<fidl::VectorView<HistogramBucket>>&,
                               RemoteHistogram::FlushCompleteFn complete) { complete(); });
     histogram.Add(25, 4);

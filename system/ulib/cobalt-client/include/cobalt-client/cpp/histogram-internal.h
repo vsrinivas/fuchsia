@@ -74,10 +74,10 @@ public:
 
     // Function in charge persisting or processing the EventValue buffer.
     using FlushFn =
-        fbl::Function<void(uint64_t metric_id, const EventBuffer&, FlushCompleteFn complete)>;
+        fbl::Function<void(uint32_t metric_id, const EventBuffer&, FlushCompleteFn complete)>;
 
     RemoteHistogram() = delete;
-    RemoteHistogram(uint32_t num_buckets, uint64_t metric_id,
+    RemoteHistogram(uint32_t num_buckets, uint32_t metric_id,
                     const fbl::Vector<Metadata>& metadata);
     RemoteHistogram(const RemoteHistogram&) = delete;
     RemoteHistogram(RemoteHistogram&&);
@@ -102,7 +102,7 @@ private:
     fbl::Vector<HistogramBucket> bucket_buffer_;
 
     // Id for the cobalt metric backed by this histogram.
-    uint64_t metric_id_;
+    uint32_t metric_id_;
 };
 
 } // namespace internal

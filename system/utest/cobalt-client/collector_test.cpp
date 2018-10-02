@@ -29,7 +29,7 @@ constexpr size_t kOperations = 50;
 template <typename T>
 class FakeStorage {
 public:
-    T* GetOrNull(uint64_t metric_id, uint32_t event_type, uint32_t event_type_index) {
+    T* GetOrNull(uint32_t metric_id, uint32_t event_type, uint32_t event_type_index) {
         size_t index = 0;
         if (!Find(metric_id, event_type, event_type_index, &index)) {
             return nullptr;
@@ -37,7 +37,7 @@ public:
         return entries_[index].data.get();
     };
 
-    void InsertOrUpdateEntry(uint64_t metric_id, uint32_t event_type, uint32_t event_type_index,
+    void InsertOrUpdateEntry(uint32_t metric_id, uint32_t event_type, uint32_t event_type_index,
                              const fbl::Function<void(fbl::unique_ptr<T>*)>& update) {
         size_t index = 0;
         if (!Find(metric_id, event_type, event_type_index, &index)) {
@@ -51,7 +51,7 @@ public:
     }
 
 private:
-    bool Find(uint64_t metric_id, uint32_t event_type, uint32_t event_type_index,
+    bool Find(uint32_t metric_id, uint32_t event_type, uint32_t event_type_index,
               size_t* index) const {
         *index = 0;
         for (auto& entry : entries_) {
@@ -66,7 +66,7 @@ private:
 
     // Help to identify event data logged.
     struct Entry {
-        uint64_t metric_id;
+        uint32_t metric_id;
         uint32_t event_type;
         uint32_t event_type_index;
         fbl::unique_ptr<T> data;
@@ -86,7 +86,7 @@ public:
     ~TestLogger() override = default;
 
     // Returns true if the histogram was persisted.
-    bool Log(uint64_t metric_id, const RemoteHistogram::EventBuffer& histogram) override {
+    bool Log(uint32_t metric_id, const RemoteHistogram::EventBuffer& histogram) override {
         if (!fail_.load()) {
             histograms_->InsertOrUpdateEntry(
                 metric_id, histogram.metadata()[0].event_type,
@@ -105,7 +105,7 @@ public:
     }
 
     // Returns true if the counter was persisted.
-    bool Log(uint64_t metric_id, const RemoteCounter::EventBuffer& counter) override {
+    bool Log(uint32_t metric_id, const RemoteCounter::EventBuffer& counter) override {
         if (!fail_.load()) {
             counters_->InsertOrUpdateEntry(metric_id, counter.metadata()[0].event_type,
                                            counter.metadata()[0].event_type_index,
@@ -387,7 +387,7 @@ bool FlushMultithreadTest() {
     Collector collector =
         MakeCollector(/*max_histograms=*/9, /*max_counters=*/9, &histograms, &counters, &logger);
 
-    for (uint64_t metric_id = 0; metric_id < 3; ++metric_id) {
+    for (uint32_t metric_id = 0; metric_id < 3; ++metric_id) {
         for (uint32_t event_type_index = 0; event_type_index < 3; ++event_type_index) {
             observe_args.histograms.push_back(
                 collector.AddHistogram(2 * metric_id, event_type_index, options));
@@ -428,7 +428,7 @@ bool FlushMultithreadTest() {
     // Verify that all histograms buckets and counters have exactly |kOperations| * |kThreads| /
     // 2 count.
     constexpr size_t target_count = kThreads * kOperations / 2;
-    for (uint64_t metric_id = 0; metric_id < 3; ++metric_id) {
+    for (uint32_t metric_id = 0; metric_id < 3; ++metric_id) {
         for (uint32_t event_type_index = 0; event_type_index < 3; ++event_type_index) {
             size_t index = 3 * metric_id + event_type_index;
             auto* tmp_hist = histograms.GetOrNull(2 * metric_id, 0, event_type_index);
