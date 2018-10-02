@@ -20,8 +20,9 @@
 #include "sdmmc.h"
 #include "sdio.h"
 
-static zx_status_t sdio_rw_byte(sdmmc_device_t *dev, bool write, uint8_t fn_idx, uint32_t addr,
-                                uint8_t write_byte, uint8_t *read_byte) {
+zx_status_t sdio_rw_byte(void *ctx, bool write, uint8_t fn_idx, uint32_t addr,
+                         uint8_t write_byte, uint8_t *read_byte) {
+    sdmmc_device_t *dev = ctx;
     if (!sdio_fn_idx_valid(fn_idx)) {
         return ZX_ERR_INVALID_ARGS;
     }

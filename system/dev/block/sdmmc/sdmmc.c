@@ -285,6 +285,7 @@ static sdio_protocol_ops_t sdio_proto = {
     .update_block_size = sdio_modify_block_size,
     .get_block_size = sdio_get_cur_block_size,
     .do_rw_txn = sdio_rw_data,
+    .do_rw_byte = sdio_rw_byte,
     .get_dev_hw_info = sdio_get_device_hw_info,
 };
 

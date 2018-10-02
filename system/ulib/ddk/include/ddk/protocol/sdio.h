@@ -72,6 +72,8 @@ typedef struct sdio_protocol_ops {
     zx_status_t (*update_block_size)(void *ctx, uint8_t fn_idx, uint16_t blk_sz, bool deflt);
     zx_status_t (*get_block_size)(void *ctx, uint8_t fn_idx, uint16_t *cur_blk_size);
     zx_status_t (*do_rw_txn)(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn);
+    zx_status_t (*do_rw_byte)(void *ctx, bool write, uint8_t fn_idx, uint32_t addr,
+                              uint8_t write_byte, uint8_t *read_byte);
 } sdio_protocol_ops_t;
 
 typedef struct sdio_protocol {
@@ -112,6 +114,11 @@ static inline zx_status_t sdio_get_block_size(sdio_protocol_t* sdio, uint8_t fn_
 static inline zx_status_t sdio_do_rw_txn(sdio_protocol_t* sdio, uint8_t fn_idx,
                                          sdio_rw_txn_t *txn) {
     return sdio->ops->do_rw_txn(sdio->ctx, fn_idx, txn);
+}
+
+static inline zx_status_t sdio_do_rw_byte(sdio_protocol_t* sdio, bool write, uint8_t fn_idx,
+                                          uint32_t addr, uint8_t write_byte, uint8_t *read_byte) {
+    return sdio->ops->do_rw_byte(sdio->ctx, write, fn_idx, addr, write_byte, read_byte);
 }
 
 static inline zx_status_t sdio_get_dev_hw_info(sdio_protocol_t* sdio,
