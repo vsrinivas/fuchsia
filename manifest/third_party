@@ -259,16 +259,6 @@
              remote="https://fuchsia.googlesource.com/third_party/cargo-vendor"
              gerrithost="https://fuchsia-review.googlesource.com"
              revision="8ca927be7c2b12b0d3e288183493c1079ccad1d4"/>
-    <project name="third_party/mio"
-             path="third_party/rust-mirrors/mio"
-             remote="https://fuchsia.googlesource.com/third_party/mio"
-             gerrithost="https://fuchsia-review.googlesource.com"
-             revision="5cea7de103fa23cdc4cb627f38fcc468650c4086"/>
-    <project name="third_party/tokio-core"
-             path="third_party/rust-mirrors/tokio-core"
-             remote="https://fuchsia.googlesource.com/third_party/tokio-core"
-             gerrithost="https://fuchsia-review.googlesource.com"
-             revision="868360fdc047561881d4979dbfbfadcdd70c9fe1"/>
     <project name="third_party/xi-editor"
              path="third_party/rust-mirrors/xi-editor"
              remote="https://fuchsia.googlesource.com/third_party/xi-editor"
