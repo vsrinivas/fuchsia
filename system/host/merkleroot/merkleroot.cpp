@@ -152,19 +152,18 @@ int main(int argc, char** argv) {
     std::vector<std::thread> threads;
     std::mutex mtx;
     size_t next_entry = 0;
-    unsigned n_threads = std::thread::hardware_concurrency();
+    size_t n_threads = std::thread::hardware_concurrency();
     if (!n_threads) {
         n_threads = 4;
     }
     if (n_threads > entries.size()) {
         n_threads = entries.size();
     }
-    for (unsigned i = n_threads; i > 0; --i) {
+    for (size_t i = n_threads; i > 0; --i) {
         threads.push_back(std::thread([&] {
                     while (true) {
-                        unsigned int j;
                         mtx.lock();
-                        j = next_entry++;
+                        auto j = next_entry++;
                         mtx.unlock();
                         if (j >= entries.size()) {
                             return;
