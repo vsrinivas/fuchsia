@@ -7,8 +7,8 @@
 #include <lib/context/cpp/context_helper.h>
 #include <lib/fxl/logging.h>
 
-#include "third_party/rapidjson/rapidjson/document.h"
-#include "third_party/rapidjson/rapidjson/schema.h"
+#include "rapidjson/document.h"
+#include "rapidjson/schema.h"
 
 namespace modular {
 

@@ -15,8 +15,8 @@
 #include "peridot/lib/testing/wait_until_idle.h"
 #include "peridot/tests/maxwell_integration/context_engine_test_base.h"
 #include "peridot/tests/maxwell_integration/test_suggestion_listener.h"
-#include "third_party/rapidjson/rapidjson/document.h"
-#include "third_party/rapidjson/rapidjson/pointer.h"
+#include "rapidjson/document.h"
+#include "rapidjson/pointer.h"
 
 namespace maxwell {
 namespace {

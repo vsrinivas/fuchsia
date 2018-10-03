@@ -7,7 +7,7 @@
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/module_manifest/module_manifest_xdr.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "third_party/rapidjson/rapidjson/document.h"
+#include "rapidjson/document.h"
 
 namespace modular {
 

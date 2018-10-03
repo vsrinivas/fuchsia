@@ -9,7 +9,7 @@
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/logging.h>
 
-#include "third_party/rapidjson/rapidjson/document.h"
+#include "rapidjson/document.h"
 
 namespace modular {
 

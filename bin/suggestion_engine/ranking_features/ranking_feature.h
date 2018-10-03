@@ -8,7 +8,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
-#include "third_party/rapidjson/rapidjson/document.h"
+#include "rapidjson/document.h"
 
 namespace modular {
 

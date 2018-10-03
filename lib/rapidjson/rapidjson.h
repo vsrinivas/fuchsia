@@ -9,11 +9,11 @@
 #include <string>
 #include <vector>
 
-#include "third_party/rapidjson/rapidjson/document.h"
-#include "third_party/rapidjson/rapidjson/pointer.h"
-#include "third_party/rapidjson/rapidjson/prettywriter.h"
-#include "third_party/rapidjson/rapidjson/stringbuffer.h"
-#include "third_party/rapidjson/rapidjson/writer.h"
+#include "rapidjson/document.h"
+#include "rapidjson/pointer.h"
+#include "rapidjson/prettywriter.h"
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/writer.h"
 
 namespace modular {
 

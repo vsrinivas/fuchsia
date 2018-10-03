@@ -12,7 +12,6 @@
 #include "rapidjson/error/en.h"
 #include "rapidjson/schema.h"
 #include "rapidjson/stringbuffer.h"
-#include "third_party/rapidjson/rapidjson/document.h"
 
 namespace modular {
 
