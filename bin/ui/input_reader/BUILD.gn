@@ -15,6 +15,7 @@ source_set("input_reader") {
   deps = [
     "//garnet/public/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/ui/input/cpp",
+    "//zircon/public/fidl/zircon-input:zircon-input_c",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/trace",
@@ -26,6 +27,7 @@ source_set("input_reader") {
     "//garnet/public/fidl/fuchsia.ui.input",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fzl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/zx",

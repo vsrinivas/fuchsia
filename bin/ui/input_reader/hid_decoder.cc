@@ -5,23 +5,20 @@
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
 
 #include <fcntl.h>
+#include <unistd.h>
 
 #include <hid/acer12.h>
 #include <hid/egalax.h>
 #include <hid/eyoyo.h>
 #include <hid/ft3x27.h>
 #include <hid/paradise.h>
-#include <hid/samsung.h>
-
-#include <unistd.h>
-
-#include <zircon/device/device.h>
-#include <zircon/device/input.h>
-
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
-
-#include "lib/fxl/logging.h"
+#include <hid/samsung.h>
+#include <lib/fxl/logging.h>
+#include <lib/fzl/fdio.h>
+#include <zircon/device/device.h>
+#include <zircon/input/c/fidl.h>
 
 namespace {
 bool log_err(ssize_t rc, const std::string& what, const std::string& name) {
@@ -74,11 +71,23 @@ HidDecoder::HidDecoder(const std::string& name, int fd)
     : fd_(fd), name_(name), protocol_(Protocol::Other) {}
 
 bool HidDecoder::Init() {
-  if (!ParseProtocol(&protocol_))
-    return false;
+  fzl::FdioCaller caller(fbl::move(fbl::unique_fd(fd_)));
 
-  input_report_size_t max_len = 0;
-  ioctl_input_get_max_reportsize(fd_, &max_len);
+  bool success = ParseProtocol(caller, &protocol_);
+  if (!success) {
+    // Do not close the fd we were given
+    caller.release().release();
+    return false;
+  }
+
+  uint16_t max_len = 0;
+  zx_status_t status = zircon_input_DeviceGetMaxInputReportSize(
+      caller.borrow_channel(), &max_len);
+  caller.release().release();
+  if (status != ZX_OK) {
+    return false;
+  }
+
   report_.resize(max_len);
   return true;
 }
@@ -107,37 +116,42 @@ HidDecoder::Protocol ExtractProtocol(hid::Usage input) {
   return HidDecoder::Protocol::Other;
 }
 
-bool HidDecoder::ParseProtocol(Protocol* protocol) {
-  int coarse_protocol;
-  ssize_t rc = ioctl_input_get_protocol(fd_, &coarse_protocol);
-  if (rc < 0)
-    return log_err(rc, "ioctl protocol", name_);
+bool HidDecoder::ParseProtocol(const fzl::FdioCaller& caller, Protocol* protocol) {
+  zx_handle_t svc = caller.borrow_channel();
+
+  zircon_input_BootProtocol boot_protocol;
+  zx_status_t status = zircon_input_DeviceGetBootProtocol(svc , &boot_protocol);
+  if (status != ZX_OK)
+    return log_err(status, "ioctl protocol", name_);
 
   // For most keyboards and mouses Zircon requests the boot protocol
   // which has a fixed layout. This covers the following two cases:
 
-  if (coarse_protocol == INPUT_PROTO_KBD) {
+  if (boot_protocol == zircon_input_BootProtocol_KBD) {
     *protocol = Protocol::Keyboard;
     return true;
   }
-  if (coarse_protocol == INPUT_PROTO_MOUSE) {
+  if (boot_protocol == zircon_input_BootProtocol_MOUSE) {
     *protocol = Protocol::Mouse;
     return true;
   }
 
-  // For the rest of devices (INPUT_PROTO_NONE) we need to parse the
+  // For the rest of devices (zircon_input_BootProtocol_NONE) we need to parse the
   // report descriptor. The legacy method involves memcmp() of known
   // descriptors which cover the next 8 devices:
 
-  size_t report_desc_len;
-  rc = ioctl_input_get_report_desc_size(fd_, &report_desc_len);
-  if (rc < 0)
-    return log_err(rc, "report descriptor length", name_);
+  uint16_t report_desc_len;
+  status = zircon_input_DeviceGetReportDescSize(svc, &report_desc_len);
+  if (status != ZX_OK)
+    return log_err(status, "report descriptor length", name_);
 
   std::vector<uint8_t> desc(report_desc_len);
-  rc = ioctl_input_get_report_desc(fd_, desc.data(), desc.size());
-  if (rc < 0)
-    return log_err(rc, "report descriptor", name_);
+  size_t actual;
+  status = zircon_input_DeviceGetReportDesc(svc, desc.data(), desc.size(),
+                                            &actual);
+  if (status != ZX_OK)
+    return log_err(status, "report descriptor", name_);
+  desc.resize(actual);
 
   if (is_acer12_touch_report_desc(desc.data(), desc.size())) {
     *protocol = Protocol::Acer12Touch;

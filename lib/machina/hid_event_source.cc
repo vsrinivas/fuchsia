@@ -11,10 +11,10 @@
 #include <fbl/unique_fd.h>
 #include <hid/hid.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fxl/logging.h>
+#include <lib/fzl/fdio.h>
 #include <zircon/compiler.h>
-#include <zircon/device/input.h>
-
-#include "lib/fxl/logging.h"
+#include <zircon/input/c/fidl.h>
 
 namespace machina {
 
@@ -126,15 +126,21 @@ zx_status_t HidEventSource::AddInputDevice(int dirfd, int event,
   }
   fd.reset(raw_fd);
 
-  int proto = INPUT_PROTO_NONE;
-  if (ioctl_input_get_protocol(fd.get(), &proto) < 0) {
-    FXL_LOG(ERROR) << "Failed to get input device protocol";
-    return ZX_ERR_INVALID_ARGS;
-  }
+  {
+    fzl::FdioCaller caller(fbl::move(fd));
+    zircon_input_BootProtocol proto = zircon_input_BootProtocol_NONE;
 
-  // If the device isn't a keyboard, just continue.
-  if (proto != INPUT_PROTO_KBD) {
-    return ZX_OK;
+    if (zircon_input_DeviceGetBootProtocol(caller.borrow_channel(), &proto) != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to get input device protocol";
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    // If the device isn't a keyboard, just continue.
+    if (proto != zircon_input_BootProtocol_KBD) {
+      return ZX_OK;
+    }
+
+    fd = caller.release();
   }
 
   std::lock_guard<std::mutex> lock(mutex_);

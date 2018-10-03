@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include <lib/fzl/fdio.h>
 #include <zircon/types.h>
 
 namespace hid {
@@ -90,7 +91,7 @@ class HidDecoder {
     uint32_t match;
   };
 
-  bool ParseProtocol(Protocol* protocol);
+  bool ParseProtocol(const fzl::FdioCaller& caller, Protocol* protocol);
   bool ParseGamepadDescriptor(const hid::ReportField* fields, size_t count);
   bool ParseAmbientLightDescriptor(const hid::ReportField* fields,
                                    size_t count);
