@@ -13,6 +13,7 @@ fidl("fuchsia.ui.viewsv1") {
     "view_manager.fidl",
     "view_properties.fidl",
     "view_provider.fidl",
+    "view_snapshot.fidl",
     "view_tree_token.fidl",
     "view_trees.fidl",
     "views.fidl",
