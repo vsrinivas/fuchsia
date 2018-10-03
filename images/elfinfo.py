@@ -290,6 +290,8 @@ class elf_info(
         raise Exception("uninitialized elf_info object!")
 
     def strip(self, stripped_filename):
+        """Write stripped output to the given file unless it already exists
+with identical contents.  Returns True iff the file was changed."""
         with mmapper(self.filename) as mapped:
             fd, file = mapped
             ehdr = self.elf.Ehdr.read(file)
@@ -301,6 +303,27 @@ class elf_info(
             assert ehdr.e_phoff + (ehdr.e_phnum *
                                    ehdr.e_phentsize) <= stripped_size
 
+            def gen_stripped_contents():
+                yield self.elf.Ehdr.pack(stripped_ehdr)
+                yield file[self.elf.Ehdr.size:stripped_size]
+
+            def old_file_matches():
+                old_size = os.path.getsize(stripped_filename)
+                new_size = sum(len(x) for x in gen_stripped_contents())
+                if old_size != new_size:
+                    return False
+                with open(stripped_filename, 'rb') as f:
+                    for chunk in gen_stripped_contents():
+                        if f.read(len(chunk)) != chunk:
+                            return False
+                return True
+
+            if os.path.exists(stripped_filename):
+                if old_file_matches():
+                    return False
+                else:
+                    os.remove(stripped_filename)
+
             # Create the new file with the same mode as the original.
             with os.fdopen(os.open(stripped_filename,
                                    os.O_WRONLY | os.O_CREAT | os.O_EXCL,
@@ -308,6 +331,7 @@ class elf_info(
                            'wb') as stripped_file:
                 stripped_file.write(self.elf.Ehdr.pack(stripped_ehdr))
                 stripped_file.write(file[self.elf.Ehdr.size:stripped_size])
+            return True
 
 def get_elf_info(filename, match_notes=False):
     file = None

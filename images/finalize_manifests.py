@@ -251,8 +251,11 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
 
 
 # Take an iterable of binary_entry, and return list of binary_entry (all
-# stripped files) and a list of binary_info (all debug files).
+# stripped files), a list of binary_info (all debug files), and a boolean
+# saying whether any new stripped output files were written in the process.
 def strip_binary_manifest(manifest, stripped_dir, examined):
+    new_output = False
+
     def find_debug_file(filename):
         # In the Zircon makefile build, the file to be installed is called
         # foo.strip and the unstripped file is called foo.  In the GN build,
@@ -294,9 +297,8 @@ def strip_binary_manifest(manifest, stripped_dir, examined):
         dir = os.path.dirname(stripped)
         if not os.path.isdir(dir):
             os.makedirs(dir)
-        if os.path.exists(stripped):
-          os.remove(stripped)
-        info.strip(stripped)
+        if info.strip(stripped):
+            new_output = True
         info = binary_info(stripped)
         assert info, ("Stripped file '%s' for '%s' is invalid" %
                       (stripped, debug.filename))
@@ -322,12 +324,14 @@ def strip_binary_manifest(manifest, stripped_dir, examined):
             "Debug file mismatch: %r vs %r" % (info, debug))
         debug_list.append(debug)
 
-    return stripped_manifest, debug_list
+    return stripped_manifest, debug_list, new_output
 
 
 def emit_manifests(args, selected, unselected, input_binaries):
-    def update_file(file, contents):
-        if os.path.exists(file) and os.path.getsize(file) == len(contents):
+    def update_file(file, contents, force=False):
+        if (not force and
+            os.path.exists(file) and
+            os.path.getsize(file) == len(contents)):
             with open(file, 'r') as f:
                 if f.read() == contents:
                     return
@@ -345,10 +349,14 @@ def emit_manifests(args, selected, unselected, input_binaries):
     # Prepare to collate groups.
     outputs = [output_manifest(file, []) for file in args.output]
 
-    # Finalize the output binaries.
-    binaries, debug_files = strip_binary_manifest(binaries,
-                                                  args.stripped_dir,
-                                                  examined)
+    # Finalize the output binaries.  If stripping wrote any new/changed files,
+    # then force an update of the manifest file even if it's identical.  The
+    # manifest file's timestamp is what GN/Ninja sees as running this script
+    # having touched any of its outputs, and GN/Ninja doesn't know that the
+    # stripped files are implicit outputs (there's no such thing as a depfile
+    # for outputs, only for inputs).
+    binaries, debug_files, force_update = strip_binary_manifest(
+        binaries, args.stripped_dir, examined)
 
     # Collate groups.
     for entry in itertools.chain((binary.entry for binary in binaries),
@@ -365,7 +373,8 @@ def emit_manifests(args, selected, unselected, input_binaries):
         # identical.
         output.manifest.sort(key=lambda entry: entry.target)
         update_file(output.file,
-                    manifest.format_manifest_file(output.manifest))
+                    manifest.format_manifest_file(output.manifest),
+                    force_update)
 
     # Emit the build ID list.
     # Sort so that functionally identical output is textually identical.
