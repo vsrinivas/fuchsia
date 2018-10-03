@@ -129,10 +129,6 @@ fbl::RefPtr<memfs::VnodeDir> BootfsRoot() {
     return memfs::bootfs_root;
 }
 
-zx_status_t devfs_mount(zx_handle_t h) {
-    return DevfsRoot()->AttachRemote(fs::MountChannel(h));
-}
-
 VnodeDir* systemfs_get_root() {
     return SystemfsRoot().get();
 }

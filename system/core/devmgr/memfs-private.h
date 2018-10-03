@@ -32,9 +32,6 @@ zx_status_t vfs_connect_root_handle(VnodeMemfs* vn, zx_handle_t h);
 
 zx_status_t vfs_install_fs(const char* path, zx_handle_t h);
 
-// device fs
-zx_status_t devfs_mount(zx_handle_t h);
-
 // boot fs
 zx_status_t bootfs_add_file(const char* path, zx_handle_t vmo, zx_off_t off, size_t len);
 
