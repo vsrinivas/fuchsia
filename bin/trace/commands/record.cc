@@ -15,6 +15,8 @@
 #include <string>
 #include <unordered_set>
 
+#include <third_party/zlib/contrib/iostream3/zfstream.h>
+
 #include "garnet/bin/trace/commands/record.h"
 #include "garnet/bin/trace/results_export.h"
 #include "garnet/bin/trace/results_output.h"
@@ -38,6 +40,7 @@ const char kSpecFile[] = "spec-file";
 const char kCategories[] = "categories";
 const char kAppendArgs[] = "append-args";
 const char kOutputFile[] = "output-file";
+const char kCompress[] = "compress";
 const char kDuration[] = "duration";
 const char kDetach[] = "detach";
 const char kDecouple[] = "decouple";
@@ -156,6 +159,7 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
                                                          kCategories,
                                                          kAppendArgs,
                                                          kOutputFile,
+                                                         kCompress,
                                                          kDuration,
                                                          kDetach,
                                                          kDecouple,
@@ -251,6 +255,14 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   // --output-file=<file>
   if (command_line.HasOption(kOutputFile, &index)) {
     output_file_name = command_line.options()[index].value;
+  }
+
+  // --compress
+  if (command_line.HasOption(kCompress, nullptr)) {
+    compress = true;
+    if (!command_line.HasOption(kOutputFile, nullptr)) {
+      output_file_name += ".gz";
+    }
   }
 
   // --duration=<seconds>
@@ -362,7 +374,11 @@ Command::Info Record::Describe() {
       "record",
       "starts tracing and records data",
       {{"spec-file=[none]", "Tracing specification file"},
-       {"output-file=[/data/trace.json]", "Trace data is stored in this file"},
+       {"output-file=[/data/trace.json]", "Trace data is stored in this file. "
+        "If the output file is \"tcp:TCP-ADDRESS\" then the output is streamed "
+        "to that address. This option is generally only used by traceutil."},
+       {"compress=[false]", "Compress trace output. This option is ignored "
+        "when streaming over a TCP socket."},
        {"duration=[10s]",
         "Trace will be active for this long after the session has been "
         "started"},
@@ -462,6 +478,29 @@ static std::unique_ptr<std::ostream> ConnectToTraceSaver(fxl::StringView address
   return ofstream;
 }
 
+static std::unique_ptr<std::ostream> OpenOutputStream(
+    const std::string& output_file_name, bool compress) {
+  std::unique_ptr<std::ostream> out_stream;
+  fxl::StringView address;
+  if (BeginsWith(output_file_name, kTcpPrefix, &address)) {
+    out_stream = ConnectToTraceSaver(address);
+  } else if (compress) {
+    // TODO(dje): Compressing a network stream is not supported.
+    auto gzstream = std::make_unique<gzofstream>(
+      output_file_name.c_str(), std::ios_base::out | std::ios_base::trunc);
+    if (gzstream->is_open()) {
+      out_stream = std::move(gzstream);
+    }
+  } else {
+    auto ofstream = std::make_unique<std::ofstream>(
+        output_file_name, std::ios_base::out | std::ios_base::trunc);
+    if (ofstream->is_open()) {
+      out_stream = std::move(ofstream);
+    }
+  }
+  return out_stream;
+}
+
 void Record::Start(const fxl::CommandLine& command_line) {
   if (!options_.Setup(command_line)) {
     FXL_LOG(ERROR) << "Error parsing options from command line - aborting";
@@ -469,18 +508,8 @@ void Record::Start(const fxl::CommandLine& command_line) {
     return;
   }
 
-  std::unique_ptr<std::ostream> out_stream;
-  fxl::StringView address;
-  if (BeginsWith(options_.output_file_name, kTcpPrefix, &address)) {
-    out_stream = ConnectToTraceSaver(address);
-  } else {
-    auto ofstream = std::make_unique<std::ofstream>(
-        options_.output_file_name, std::ios_base::out | std::ios_base::trunc);
-    if (ofstream->is_open()) {
-      out_stream = std::move(ofstream);
-    }
-  }
-
+  std::unique_ptr<std::ostream> out_stream =
+    OpenOutputStream(options_.output_file_name, options_.compress);
   if (!out_stream) {
     FXL_LOG(ERROR) << "Failed to open " << options_.output_file_name
                    << " for writing";

@@ -59,6 +59,12 @@ Some additional command line arguments to `fx traceutil record` include:
    Stream the trace output straight from the target to the host without
    saving the file on the target first.
 
+ * `-compress`
+
+   Compress the output stream. This is useful when saving to a small or slow
+   local disk. If both `-stream` and `-compress` are provided, `-compress`
+   is ignored.
+
 For a complete list of command line arguments run `fx traceutil record --help`.
 
 ## Capturing Traces From a Fuchsia Target

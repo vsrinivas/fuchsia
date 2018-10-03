@@ -23,6 +23,7 @@ type captureTraceConfig struct {
 	BenchmarkResultsFile string
 	SpecFile             string
 	Stream               bool
+	Compress             bool
 }
 
 func newCaptureTraceConfig(f *flag.FlagSet) *captureTraceConfig {
@@ -48,6 +49,8 @@ func newCaptureTraceConfig(f *flag.FlagSet) *captureTraceConfig {
 	)
 	f.BoolVar(&config.Stream, "stream", false,
 		"Stream trace output to a local file, instead of saving to target disk and then copying it.")
+	f.BoolVar(&config.Compress, "compress", false,
+		"Compress the trace output before writing to disk. This option is currently ignored if --stream is specified.")
 
 	return config
 }
@@ -103,6 +106,9 @@ func captureTrace(config *captureTraceConfig, conn *TargetConnection, traceOutpu
 	if config.Duration != 0 {
 		cmd = append(cmd, "--duration="+
 			strconv.FormatUint(uint64(config.Duration.Seconds()), 10))
+	}
+	if config.Compress {
+		cmd = append(cmd, "--compress")
 	}
 
 	var listener net.Listener

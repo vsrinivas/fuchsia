@@ -111,6 +111,9 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 				jsonFilename, err.Error())
 			return subcommands.ExitFailure
 		}
+	} else if cmd.captureConfig.Compress {
+		jsonFilename += ".gz"
+		remoteFilename += ".gz"
 	}
 
 	err = captureTrace(cmd.captureConfig, conn, jsonFile)
