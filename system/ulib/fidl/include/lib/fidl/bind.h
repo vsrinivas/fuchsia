@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FIDL_BIND_H_
+#define LIB_FIDL_BIND_H_
 
 #include <lib/async/dispatcher.h>
 #include <zircon/fidl.h>
@@ -49,3 +50,5 @@ zx_status_t fidl_bind(async_dispatcher_t* dispatcher, zx_handle_t channel,
                       fidl_dispatch_t* dispatch, void* ctx, const void* ops);
 
 __END_CDECLS
+
+#endif // LIB_FIDL_BIND_H_

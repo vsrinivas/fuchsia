@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FIDL_INTERNAL_H_
+#define LIB_FIDL_INTERNAL_H_
 
 #include <assert.h>
 #include <stdint.h>
@@ -202,3 +203,5 @@ struct fidl_type {
     constexpr fidl_type(fidl::FidlCodedVector coded_vector)
         : type_tag(fidl::kFidlTypeVector), coded_vector(coded_vector) {}
 };
+
+#endif // LIB_FIDL_INTERNAL_H_

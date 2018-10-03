@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FIDL_CPP_MESSAGE_BUILDER_H_
+#define LIB_FIDL_CPP_MESSAGE_BUILDER_H_
 
 #include <stdint.h>
 
@@ -71,3 +72,5 @@ private:
 };
 
 } // namespace fidl
+
+#endif // LIB_FIDL_CPP_MESSAGE_BUILDER_H_

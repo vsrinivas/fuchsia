@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FIDL_CODING_H_
+#define LIB_FIDL_CODING_H_
 
 #include <zircon/compiler.h>
 #include <zircon/fidl.h>
@@ -51,3 +52,5 @@ zx_status_t fidl_epitaph_write(zx_handle_t channel, zx_status_t sys_error,
                                int32_t app_error);
 
 __END_CDECLS
+
+#endif // LIB_FIDL_CODING_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FIDL_CPP_STRING_VIEW_H_
+#define LIB_FIDL_CPP_STRING_VIEW_H_
 
 #include <zircon/fidl.h>
 
@@ -41,3 +42,5 @@ public:
 };
 
 } // namespace fidl
+
+#endif // LIB_FIDL_CPP_STRING_VIEW_H_
