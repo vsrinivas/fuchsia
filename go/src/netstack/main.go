@@ -53,6 +53,10 @@ func main() {
 		tcp.ProtocolName,
 		udp.ProtocolName,
 	}, tcpipstack.Options{})
+	if err := stk.SetTransportProtocolOption(tcp.ProtocolNumber, tcp.SACKEnabled(true)); err != nil {
+		log.Fatalf("method SetTransportProtocolOption(%v, tcp.SACKEnabled(true)) failed: %v", tcp.ProtocolNumber, err)
+	}
+
 	s, err := newSocketServer(stk, ctx)
 	if err != nil {
 		log.Fatal(err)
