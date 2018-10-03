@@ -64,6 +64,12 @@ Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd,
   return Err();
 }
 
+size_t CheckHexPrefix(const std::string& s) {
+  if (s.size() >= 2u && s[0] == '0' && (s[1] == 'x' || s[1] == 'X'))
+    return 2u;
+  return 0u;
+}
+
 Err StringToInt(const std::string& s, int* out) {
   if (s.empty())
     return Err(ErrType::kInput, "The empty string is not a number.");
@@ -111,20 +117,22 @@ Err StringToUint64(const std::string& s, uint64_t* out) {
   if (s.empty())
     return Err(ErrType::kInput, "The empty string is not a number.");
 
-  bool is_hex = s.size() > 2u && s[0] == '0' && (s[1] == 'x' || s[1] == 'X');
-  if (is_hex) {
-    for (size_t i = 2; i < s.size(); i++) {
+  if (size_t hex_after_prefix = CheckHexPrefix(s)) {
+    if (hex_after_prefix == s.size())
+      return Err(ErrType::kInput, "Expecting number after \"0x\".");
+    for (size_t i = hex_after_prefix; i < s.size(); i++) {
       if (!isxdigit(s[i]))
         return Err(ErrType::kInput, "Invalid hex number: + \"" + s + "\".");
     }
+    *out = strtoull(s.c_str(), nullptr, 16);
   } else {
     for (size_t i = 0; i < s.size(); i++) {
       if (!isdigit(s[i]))
         return Err(ErrType::kInput, "Invalid number: \"" + s + "\".");
     }
+    *out = strtoull(s.c_str(), nullptr, 10);
   }
 
-  *out = strtoull(s.c_str(), nullptr, is_hex ? 16 : 10);
   return Err();
 }
 

@@ -33,12 +33,26 @@ TEST(InputLocationParser, Parse) {
   err = ParseInputLocation(nullptr, "foo/bar.cc:123x", &location);
   EXPECT_TRUE(err.has_error());
 
-  // Valid address.
+  // Valid hex address with *.
   location = InputLocation();
   err = ParseInputLocation(nullptr, "*0x12345f", &location);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(InputLocation::Type::kAddress, location.type);
   EXPECT_EQ(0x12345fu, location.address);
+
+  // Valid hex address without a *.
+  location = InputLocation();
+  err = ParseInputLocation(nullptr, "0x12345f", &location);
+  EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(InputLocation::Type::kAddress, location.type);
+  EXPECT_EQ(0x12345fu, location.address);
+
+  // Decimal number with "*" override should be an address.
+  location = InputLocation();
+  err = ParseInputLocation(nullptr, "*21", &location);
+  EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(InputLocation::Type::kAddress, location.type);
+  EXPECT_EQ(21u, location.address);
 
   // Invalid address.
   location = InputLocation();

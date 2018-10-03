@@ -40,7 +40,14 @@ Err ParseInputLocation(const Frame* frame, const std::string& input,
   "    " cmd                                                              \
   " 123\n"                                                                \
   "\n"                                                                    \
+  "    ▷ All decimal integers are considered line numbers.\n"           \
+  "\n"                                                                    \
+  "  0x<address>\n"                                                       \
   "  *<address>\n"                                                        \
-  "    " cmd " *0x7d12362f0\n"
+  "    " cmd                                                              \
+  " 0x7d12362f0\n"                                                        \
+  "\n"                                                                    \
+  "    ▷ All hexadecimal numbers are considered addresses. Precede\n"   \
+  "      decimal numbers with * to force interpretation as an address.\n"
 
 }  // namespace zxdb

@@ -42,6 +42,12 @@ Err AssertRunningTarget(ConsoleContext* context, const char* command_name,
 Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd,
                                bool validate_nouns, const char* command_name);
 
+// Checks if the given string starts with a hexadecimal prefix ("0x" or "0X").
+// If it does, returns the first index into the array of the string FOLLOWING
+// the prefix. If there is no prefix, returns 0. If there is only the prefix
+// and nothing following the returned value will be s.size().
+size_t CheckHexPrefix(const std::string& s);
+
 [[nodiscard]] Err StringToInt(const std::string& s, int* out);
 [[nodiscard]] Err StringToUint32(const std::string& s, uint32_t* out);
 [[nodiscard]] Err StringToUint64(const std::string& s, uint64_t* out);

@@ -91,6 +91,9 @@ TEST(CommandUtils, StringToUint64) {
   EXPECT_FALSE(StringToUint64("0x1A2a34", &result).has_error());
   EXPECT_EQ(0x1a2a34u, result);
 
+  // Isolated hex prefix.
+  EXPECT_TRUE(StringToUint64("0x", &result).has_error());
+
   // Valid hex number with capital X prefix at the max of a 64-bit int.
   EXPECT_FALSE(StringToUint64("0XffffFFFFffffFFFF", &result).has_error());
   EXPECT_EQ(0xffffFFFFffffFFFFu, result);

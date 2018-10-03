@@ -32,9 +32,20 @@ Err ParseInputLocation(const Frame* frame, const std::string& input,
     return Err();
   }
 
+  // Check for memory addresses.
+  bool is_address = false;
+  size_t address_begin = 0;  // Index of address number when is_address.
   if (input[0] == '*') {
     // *<address> format
-    std::string addr_str = input.substr(1);
+    is_address = true;
+    address_begin = 1;  // Skip "*".
+  } else if (CheckHexPrefix(input)) {
+    // Hex numbers are addresses.
+    is_address = true;
+    address_begin = 0;
+  }
+  if (is_address) {
+    std::string addr_str = input.substr(address_begin);
     Err err = StringToUint64(addr_str, &location->address);
     if (err.has_error())
       return err;
