@@ -1581,16 +1581,6 @@ extern "C" {
         outlen: *mut usize,
         is_dir: *mut bool,
     ) -> zx_status_t;
-    pub fn __fdio_fd_to_io(fd: raw::c_int) -> *mut fdio_t;
-    pub fn __fdio_borrow_channel(io: *mut fdio) -> zx_handle_t;
-    pub fn __fdio_release(io: *mut fdio_t);
-    pub fn __fdio_wait_begin(
-        io: *mut fdio_t,
-        events: u32,
-        handle_out: *mut zx_handle_t,
-        signals_out: *mut zx_signals_t,
-    );
-    pub fn __fdio_wait_end(io: *mut fdio_t, signals: zx_signals_t, events_out: *mut u32);
     pub fn fdio_unsafe_fd_to_io(fd: raw::c_int) -> *mut fdio_t;
     pub fn fdio_unsafe_borrow_channel(io: *mut fdio) -> zx_handle_t;
     pub fn fdio_unsafe_release(io: *mut fdio_t);
