@@ -30,6 +30,23 @@ The debugger runs remotely only (you can't do self-hosted debug).
 
   * [Report a new zxdb bug](https://fuchsia.atlassian.net/secure/CreateIssueDetails!init.jspa?pid=11718&issuetype=10006&priority=3&components=11886)
 
+## Compiling
+
+When you do a local Fuchsia build at the Garnet layer the debugger should
+always be built by default. We try to keep it enabled at Peridot and Topaz
+as well for developers, but changes to the build and your local build
+configuration can affect this.
+
+If you're working in a vendor layer or aren't getting the debugger when
+building, you need to add `garnet/packages/products/devtools` to the list of
+packages to build. This example shows how to add this onto the default peridot
+packages (replace with your build's default or whatever you're using):
+
+```sh
+fx set x64 --packages="peridot/packages/default,garnet/packages/products/devtools"
+fx build
+```
+
 ## Running
 
 ### 1. Boot with networking
