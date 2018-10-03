@@ -722,11 +722,17 @@ size_t LZ4F_compressEnd(LZ4F_compressionContext_t compressionContext, void* dstB
     if (LZ4F_isError(errorCode)) return errorCode;
     dstPtr += errorCode;
 
+    if ((size_t)((dstPtr+4) - dstStart) > dstMaxSize) {
+        return (size_t)-LZ4F_ERROR_dstMaxSize_tooSmall;
+    }
     LZ4F_writeLE32(dstPtr, 0);
     dstPtr+=4;   /* endMark */
 
     if (cctxPtr->prefs.frameInfo.contentChecksumFlag == LZ4F_contentChecksumEnabled)
     {
+        if ((size_t)((dstPtr+4) - dstStart) > dstMaxSize) {
+            return (size_t)-LZ4F_ERROR_dstMaxSize_tooSmall;
+        }
         U32 xxh = XXH32_digest(&(cctxPtr->xxh));
         LZ4F_writeLE32(dstPtr, xxh);
         dstPtr+=4;   /* content Checksum */
