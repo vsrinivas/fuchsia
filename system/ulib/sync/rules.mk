@@ -11,10 +11,8 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/completion.c \
-    $(LOCAL_DIR)/mtx.c \
 
 MODULE_LIBS := \
-    system/ulib/runtime \
     system/ulib/zircon \
 
 MODULE_EXPORT := a
