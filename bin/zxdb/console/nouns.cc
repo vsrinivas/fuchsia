@@ -234,6 +234,68 @@ bool HandleThreadNoun(ConsoleContext* context, const Command& cmd, Err* err) {
 
 // Processes -------------------------------------------------------------------
 
+const char kJobShortHelp[] = "job / j: Select or list job contexts.";
+const char kJobHelp[] =
+    R"(job [ <id> [ <command> ... ] ]
+
+  Alias: "j"
+
+  (Work in progress, will not work)
+
+  Selects or lists job contexts.
+
+  By itself, "job" will list available job contexts with their IDs. New
+  job contexts can be created with the "new" command. This list of debugger
+  contexts is different than the list of jobs on the target system (use
+  "ps" to list all running jobs, and "attach" to attach a context to a
+  running job).
+
+  With an ID following it ("job 3"), selects that job context as the
+  current active job context. This context will apply by default for subsequent
+  commands (like "job attach").
+
+  With an ID and another command following it ("job 3 attach"), modifies the
+  job context for that command only. This allows attaching, filtering, etc.
+  regardless of which is the active one.
+
+Examples
+
+  j
+  job
+      Lists all job contexts.
+
+  j 2
+  job 2
+      Sets job context 2 as the active one.
+
+  j 2 r
+  job 2 attach
+      Attach to job context 2, regardless of the active one.
+)";
+
+void ListJobs(ConsoleContext* context) {
+  OutputBuffer out("Coming soon!");
+  Console::get()->Output(std::move(out));
+}
+
+// Returns true if processing should stop (either a thread command or an error),
+// false to continue processing to the nex noun type.
+bool HandleJobNoun(ConsoleContext* context, const Command& cmd, Err* err) {
+  if (!cmd.HasNoun(Noun::kJob))
+    return false;
+
+  if (cmd.GetNounIndex(Noun::kJob) == Command::kNoIndex) {
+    // Just "job", this lists available job.
+    ListJobs(context);
+    return true;
+  }
+
+  // TODO: Explicit index provided.
+  return true;
+}
+
+// Processes -------------------------------------------------------------------
+
 const char kProcessShortHelp[] =
     "process / pr: Select or list process contexts.";
 const char kProcessHelp[] =
@@ -467,6 +529,8 @@ Err ExecuteNoun(ConsoleContext* context, const Command& cmd) {
     return result;
   if (HandleProcessNoun(context, cmd, &result))
     return result;
+  if (HandleJobNoun(context, cmd, &result))
+    return result;
 
   return result;
 }
@@ -483,6 +547,8 @@ void AppendNouns(std::map<Noun, NounRecord>* nouns) {
                                        kThreadHelp, CommandGroup::kProcess);
   (*nouns)[Noun::kProcess] = NounRecord({"process", "pr"}, kProcessShortHelp,
                                         kProcessHelp, CommandGroup::kProcess);
+  (*nouns)[Noun::kJob] =
+      NounRecord({"job", "j"}, kJobShortHelp, kJobHelp, CommandGroup::kJob);
 }
 
 const std::vector<SwitchRecord>& GetNounSwitches() {

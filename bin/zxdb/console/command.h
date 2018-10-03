@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_ZXDB_CONSOLE_COMMAND_H_
+#define GARNET_BIN_ZXDB_CONSOLE_COMMAND_H_
 
 #include <initializer_list>
 #include <map>
@@ -26,6 +27,7 @@ enum class Noun {
   kFrame,
   kThread,
   kProcess,
+  kJob,
 
   kBreakpoint,
 
@@ -109,6 +111,7 @@ enum class CommandGroup {
   kBreakpoint,
   kGeneral,
   kProcess,
+  kJob,
   kQuery,
   kStep,
 };
@@ -294,3 +297,5 @@ Err DispatchCommand(ConsoleContext* context, const Command& cmd,
                     CommandCallback callback = nullptr);
 
 }  // namespace zxdb
+
+#endif  // GARNET_BIN_ZXDB_CONSOLE_COMMAND_H_
