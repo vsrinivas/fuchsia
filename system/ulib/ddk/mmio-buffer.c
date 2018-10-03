@@ -51,7 +51,7 @@ void mmio_buffer_release(mmio_buffer_t* buffer) {
 zx_status_t mmio_buffer_pin(mmio_buffer_t* buffer, zx_handle_t bti, mmio_pinned_buffer_t* out) {
     zx_paddr_t paddr;
     zx_handle_t pmt;
-    const uint32_t options = ZX_BTI_PERM_WRITE | ZX_BTI_PERM_READ;
+    const uint32_t options = ZX_BTI_PERM_WRITE | ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS;
     const size_t vmo_offset = ROUNDDOWN(buffer->offset, ZX_PAGE_SIZE);
     const size_t page_offset = buffer->offset - vmo_offset;
     const size_t vmo_size = ROUNDUP(buffer->size + page_offset, ZX_PAGE_SIZE);
