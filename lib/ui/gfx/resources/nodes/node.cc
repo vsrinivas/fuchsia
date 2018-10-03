@@ -110,6 +110,9 @@ bool Node::AddPart(NodePtr part_node) {
 
 void Node::SetParent(Node* parent, ParentRelation relation) {
   FXL_DCHECK(parent_ == nullptr);
+  // A Scene node should always be a root node, and never a child.
+  FXL_DCHECK(!(type_flags() & ResourceType::kScene)) << "A Scene node cannot"
+                                                     << " have a parent";
 
   parent_ = parent;
   parent_relation_ = relation;
@@ -422,14 +425,17 @@ void Node::DetachInternal() {
 }
 
 void Node::RefreshScene(Scene* new_scene) {
-  if (new_scene != scene_) {
-    scene_ = new_scene;
-    ForEachDirectDescendantFrontToBack(
-        *this, [this](Node* node) { node->RefreshScene(scene_); });
-    for (auto& view_holder : view_holders_) {
-      view_holder->RefreshScene();
-    }
+  if (new_scene == scene_) {
+    // Scene is already set on this node and all its children.
+    return;
   }
+
+  scene_ = new_scene;
+  for (auto& view_holder : view_holders_) {
+    view_holder->RefreshScene();
+  }
+  ForEachDirectDescendantFrontToBack(
+      *this, [this](Node* node) { node->RefreshScene(scene_); });
 }
 
 ResourcePtr Node::FindOwningView() const {

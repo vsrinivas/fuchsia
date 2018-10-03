@@ -53,7 +53,8 @@ void ViewHolder::SetParent(Node* parent) {
   }
 
   parent_ = parent;
-  RefreshScene();  // The parent has changed, so the Scene might have as well.
+  // The parent has changed, so the Scene might have as well.
+  RefreshScene();
 }
 
 void ViewHolder::Connect() {
@@ -87,7 +88,6 @@ void ViewHolder::RefreshScene() {
   } else {
     // View is no longer part of a scene and therefore cannot render to one.
     SetIsViewRendering(false);
-
     SendViewDetachedFromSceneEvent();
   }
 }
@@ -99,6 +99,12 @@ void ViewHolder::LinkResolved(View* view) {
   view_ = view;
 
   SendViewConnectedEvent();
+
+  // If the ViewHolder is already attached to a scene, the linked view is now
+  // also attached to the scene. Emit event.
+  if (scene_) {
+    SendViewAttachedToSceneEvent();
+  }
 
   // This guarantees that the View is notified of any previously-set
   // ViewProperties.  Otherwise, e.g. if the ViewHolder properties were set

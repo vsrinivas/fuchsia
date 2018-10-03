@@ -122,6 +122,8 @@ class Node : public Resource {
 
  protected:
   Node(Session* session, ResourceId node_id, const ResourceTypeInfo& type_info);
+  // Protected so that Scene Node can set itself as a Scene.
+  Scene* scene_ = nullptr;
 
  private:
   // Describes the manner in which a node is related to its parent.
@@ -154,7 +156,6 @@ class Node : public Resource {
   uint32_t tag_value_ = 0u;
 
   Node* parent_ = nullptr;
-  Scene* scene_ = nullptr;
   View* view_ = nullptr;
   ParentRelation parent_relation_ = ParentRelation::kNone;
 

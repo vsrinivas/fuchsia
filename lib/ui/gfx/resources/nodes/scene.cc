@@ -14,7 +14,9 @@ const ResourceTypeInfo Scene::kTypeInfo = {
     ResourceType::kNode | ResourceType::kScene, "Scene"};
 
 Scene::Scene(Session* session, ResourceId node_id)
-    : Node(session, node_id, Scene::kTypeInfo) {}
+    : Node(session, node_id, Scene::kTypeInfo) {
+  scene_ = this;
+}
 
 Scene::~Scene() = default;
 

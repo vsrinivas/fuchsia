@@ -73,9 +73,8 @@ class ViewHolder final : public Resource {
     return view_properties_;
   }
 
-  // Refresh the cached scene by reading it from our parent.
-  // Used when the parent is changed via SetParent but also called externally
-  // e.g. when the parent of our parent has changed.
+  // Called when the scene that this ViewHolder is attached to changes. The
+  // ViewHolder's scene is determined from the ViewHolder's parent node.
   void RefreshScene();
 
   // Called when the corresponding View is traversed for rendering.
@@ -95,9 +94,14 @@ class ViewHolder final : public Resource {
   void SendViewStateChangedEvent();
 
   ViewLinker::ExportLink link_;
-  Scene* scene_ = nullptr;
   View* view_ = nullptr;
+  // The parent's scene. Cached here to detect when the scene the changes so
+  // the ViewHolder can emit scene attached/detached events.
+  Scene* scene_ = nullptr;
+  // The parent Node of this ViewHolder. This node is inserted into the scene
+  // graph.
   Node* parent_ = nullptr;
+
   fuchsia::ui::gfx::ViewProperties view_properties_;
   fuchsia::ui::gfx::ViewState view_state_;
 };
