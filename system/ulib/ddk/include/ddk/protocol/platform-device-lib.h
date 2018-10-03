@@ -20,18 +20,6 @@ static inline zx_status_t pdev_map_interrupt(const pdev_protocol_t* pdev, uint32
 }
 
 // MMIO mapping helper.
-static inline zx_status_t pdev_map_mmio_buffer2(const pdev_protocol_t* pdev,
-                                                uint32_t index, uint32_t cache_policy,
-                                                mmio_buffer_t* buffer) {
-    pdev_mmio_t mmio;
-
-    zx_status_t status = pdev_get_mmio(pdev, index, &mmio);
-    if (status != ZX_OK) {
-        return status;
-    }
-    return mmio_buffer_init(buffer, mmio.offset, mmio.size, mmio.vmo, cache_policy);
-}
-
 static inline zx_status_t pdev_map_mmio_buffer(const pdev_protocol_t* pdev,
                                                uint32_t index, uint32_t cache_policy,
                                                mmio_buffer_t* buffer) {
