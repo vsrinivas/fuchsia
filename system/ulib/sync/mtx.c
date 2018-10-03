@@ -1,8 +1,8 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <runtime/mutex.h>
+#include <lib/sync/mtx.h>
 
 #include <zircon/syscalls.h>
 #include <stdatomic.h>
@@ -11,9 +11,9 @@
 // Are Tricky" (dated November 5, 2011; see
 // http://www.akkadia.org/drepper/futex.pdf).  We use the approach from
 // "Mutex, Take 2", with one modification: We use an atomic swap in
-// zxr_mutex_unlock() rather than an atomic decrement.
+// sunc_mtx_unlock() rather than an atomic decrement.
 
-// The value of UNLOCKED must be 0 to match mutex.h and so that mutexes can
+// The value of UNLOCKED must be 0 to match mtx.h and so that mutexes can
 // be allocated in BSS segments (zero-initialized data).
 enum {
     UNLOCKED = 0,
@@ -22,7 +22,7 @@ enum {
 };
 
 // On success, this will leave the mutex in the LOCKED_WITH_WAITERS state.
-static zx_status_t lock_slow_path(zxr_mutex_t* mutex, zx_time_t abstime,
+static zx_status_t lock_slow_path(sync_mtx_t* mutex, zx_time_t deadline,
                                   int old_state) {
     for (;;) {
         // If the state shows there are already waiters, or we can update
@@ -31,9 +31,8 @@ static zx_status_t lock_slow_path(zxr_mutex_t* mutex, zx_time_t abstime,
             (old_state == LOCKED_WITHOUT_WAITERS &&
              atomic_compare_exchange_strong(&mutex->futex, &old_state,
                                             LOCKED_WITH_WAITERS))) {
-            // TODO(kulakowski) Use ZX_CLOCK_UTC when available.
             zx_status_t status = _zx_futex_wait(
-                    &mutex->futex, LOCKED_WITH_WAITERS, abstime);
+                    &mutex->futex, LOCKED_WITH_WAITERS, deadline);
             if (status == ZX_ERR_TIMED_OUT)
                 return ZX_ERR_TIMED_OUT;
         }
@@ -50,7 +49,7 @@ static zx_status_t lock_slow_path(zxr_mutex_t* mutex, zx_time_t abstime,
     }
 }
 
-zx_status_t zxr_mutex_trylock(zxr_mutex_t* mutex) {
+zx_status_t sync_mtx_trylock(sync_mtx_t* mutex) {
     int old_state = UNLOCKED;
     if (atomic_compare_exchange_strong(&mutex->futex, &old_state,
                                        LOCKED_WITHOUT_WAITERS)) {
@@ -59,7 +58,7 @@ zx_status_t zxr_mutex_trylock(zxr_mutex_t* mutex) {
     return ZX_ERR_BAD_STATE;
 }
 
-zx_status_t __zxr_mutex_timedlock(zxr_mutex_t* mutex, zx_time_t abstime) {
+zx_status_t sync_mtx_timedlock(sync_mtx_t* mutex, zx_time_t deadline) {
     // Try to claim the mutex.  This compare-and-swap executes the full
     // memory barrier that locking a mutex is required to execute.
     int old_state = UNLOCKED;
@@ -67,27 +66,29 @@ zx_status_t __zxr_mutex_timedlock(zxr_mutex_t* mutex, zx_time_t abstime) {
                                        LOCKED_WITHOUT_WAITERS)) {
         return ZX_OK;
     }
-    return lock_slow_path(mutex, abstime, old_state);
+    return lock_slow_path(mutex, deadline, old_state);
 }
 
-void zxr_mutex_lock(zxr_mutex_t* mutex) {
-    zx_status_t status = __zxr_mutex_timedlock(mutex, ZX_TIME_INFINITE);
-    if (status != ZX_OK)
+void sync_mtx_lock(sync_mtx_t* mutex) __TA_NO_THREAD_SAFETY_ANALYSIS {
+    zx_status_t status = sync_mtx_timedlock(mutex, ZX_TIME_INFINITE);
+    if (status != ZX_OK) {
         __builtin_trap();
+    }
 }
 
-void zxr_mutex_lock_with_waiter(zxr_mutex_t* mutex) {
+void sync_mtx_lock_with_waiter(sync_mtx_t* mutex) __TA_NO_THREAD_SAFETY_ANALYSIS {
     int old_state = UNLOCKED;
     if (atomic_compare_exchange_strong(&mutex->futex, &old_state,
                                        LOCKED_WITH_WAITERS)) {
         return;
     }
     zx_status_t status = lock_slow_path(mutex, ZX_TIME_INFINITE, old_state);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         __builtin_trap();
+    }
 }
 
-void zxr_mutex_unlock(zxr_mutex_t* mutex) {
+void sync_mtx_unlock(sync_mtx_t* mutex) __TA_NO_THREAD_SAFETY_ANALYSIS {
     // Attempt to release the mutex.  This atomic swap executes the full
     // memory barrier that unlocking a mutex is required to execute.
     int old_state = atomic_exchange(&mutex->futex, UNLOCKED);
@@ -98,8 +99,9 @@ void zxr_mutex_unlock(zxr_mutex_t* mutex) {
 
         case LOCKED_WITH_WAITERS: {
             zx_status_t status = _zx_futex_wake(&mutex->futex, 1);
-            if (status != ZX_OK)
+            if (status != ZX_OK) {
                 __builtin_trap();
+            }
             break;
         }
 

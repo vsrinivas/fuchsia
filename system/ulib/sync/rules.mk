@@ -11,10 +11,14 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/completion.c \
+    $(LOCAL_DIR)/mtx.c \
 
 MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_EXPORT := a
+
+# This code is used in early startup, where safe-stack setup is not ready yet.
+MODULE_COMPILEFLAGS += $(NO_SAFESTACK) $(NO_SANITIZERS)
 
 include make/module.mk

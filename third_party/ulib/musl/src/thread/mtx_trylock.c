@@ -1,8 +1,8 @@
-#include <runtime/mutex.h>
+#include <lib/sync/mtx.h>
 #include <threads.h>
 
 int mtx_trylock(mtx_t* m) {
-    zx_status_t status = zxr_mutex_trylock((zxr_mutex_t*)&m->__i);
+    zx_status_t status = sync_mtx_trylock((sync_mtx_t*)&m->__i);
     switch (status) {
     default:
         return thrd_error;

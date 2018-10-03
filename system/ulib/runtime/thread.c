@@ -6,7 +6,6 @@
 
 #include <zircon/stack.h>
 #include <zircon/syscalls.h>
-#include <runtime/mutex.h>
 #include <stddef.h>
 #include <stdint.h>
 

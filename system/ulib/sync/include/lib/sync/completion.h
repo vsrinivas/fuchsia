@@ -8,7 +8,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 typedef struct sync_completion {
     zx_futex_t futex;
@@ -41,6 +41,6 @@ void sync_completion_signal(sync_completion_t* completion);
 // Resets the completion's signaled state to unsignaled.
 void sync_completion_reset(sync_completion_t* completion);
 
-__END_CDECLS;
+__END_CDECLS
 
 #endif // LIB_SYNC_COMPLETION_H_
