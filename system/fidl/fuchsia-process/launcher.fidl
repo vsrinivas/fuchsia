@@ -9,7 +9,7 @@ using zx;
 
 struct HandleInfo {
     // The handle to use for this argument.
-    handle @handle;
+    handle handle;
 
     // Process argument identifier, from <zircon/processargs.h>.
     uint32 id;

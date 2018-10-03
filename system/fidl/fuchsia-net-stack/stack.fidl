@@ -162,7 +162,7 @@ interface Stack {
     0x105: DelInterfaceAddress(uint64 id, fuchsia.net.IpAddress addr) -> (Error? err);
 
     // List all the entries in the forwarding table for the network stack.
-    0x200: GetForwardingTable() -> (vector<ForwardingEntry> @table);
+    0x200: GetForwardingTable() -> (vector<ForwardingEntry> table);
 
     // Add a new entry to the forwarding table. If the table already contains an entry with the same
     // subnet, an error is returned. The entry may be deleted using DelForwardingEntry first.
