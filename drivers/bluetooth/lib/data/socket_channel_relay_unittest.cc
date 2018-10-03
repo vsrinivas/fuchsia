@@ -424,21 +424,19 @@ TEST_F(DATA_SocketChannelRelayRxTest,
   ASSERT_TRUE(relay()->Activate());
   channel()->Receive(hello_sdu);
   channel()->Receive(goodbye_sdu);
-  // TODO(NET-1446): Replace all of the RunLoopOnce() calls below with
-  // RunLoopUntilIdle().
-  RunLoopOnce();
+  RunLoopUntilIdle();
 
   // Free up space for just the first SDU.
   ASSERT_TRUE(common::ContainersEqual(spam_sdu,
                                       ReadDatagramFromSocket(spam_sdu.size())));
   n_junk_datagrams -= 1;
-  RunLoopOnce();
+  RunLoopUntilIdle();
 
   // Free up space for just the second SDU.
   ASSERT_TRUE(common::ContainersEqual(spam_sdu,
                                       ReadDatagramFromSocket(spam_sdu.size())));
   n_junk_datagrams -= 1;
-  RunLoopOnce();
+  RunLoopUntilIdle();
 
   // Discard spam.
   while (n_junk_datagrams) {

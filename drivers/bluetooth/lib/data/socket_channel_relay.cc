@@ -32,7 +32,8 @@ SocketChannelRelay::SocketChannelRelay(zx::socket socket,
   // of a lambda which verifies that |this| hasn't been destroyed.
   BindWait(ZX_SOCKET_READABLE, "socket read waiter", &sock_read_waiter_,
            fit::bind_member(this, &SocketChannelRelay::OnSocketReadable));
-  BindWait(ZX_SOCKET_WRITABLE, "socket write waiter", &sock_write_waiter_,
+  BindWait(ZX_SOCKET_WRITE_THRESHOLD, "socket write waiter",
+           &sock_write_waiter_,
            fit::bind_member(this, &SocketChannelRelay::OnSocketWritable));
   BindWait(ZX_SOCKET_PEER_CLOSED, "socket close waiter", &sock_close_waiter_,
            fit::bind_member(this, &SocketChannelRelay::OnSocketClosed));
@@ -283,9 +284,32 @@ void SocketChannelRelay::ServiceSocketWriteQueue() {
     }
   } while (write_res == ZX_OK && !socket_write_queue_.empty());
 
-  if (!socket_write_queue_.empty() &&
-      !BeginWait("socket write waiter", &sock_write_waiter_)) {
-    DeactivateAndRequestDestruction();
+  if (!socket_write_queue_.empty() && write_res == ZX_ERR_SHOULD_WAIT) {
+    // Since we hava data to write, we want to be woken when the socket has free
+    // space in its buffer. And, to avoid spinning, we want to be woken only
+    // when the free space is large enough for our first pending SDU.
+    //
+    // Note: it is safe to leave TX_THRESHOLD set, even when our queue is empty,
+    // because we will only be woken if we also have an active Wait for
+    // ZX_SOCKET_WRITE_THRESHOLD, and Waits are one-shot.
+    const size_t sdu_len = socket_write_queue_.front().length();
+    const auto prop_set_res = socket_.set_property(ZX_PROP_SOCKET_TX_THRESHOLD,
+                                                   &sdu_len, sizeof(sdu_len));
+    switch (prop_set_res) {
+      case ZX_OK:
+        if (!BeginWait("socket write waiter", &sock_write_waiter_)) {
+          DeactivateAndRequestDestruction();
+        }
+        break;
+      case ZX_ERR_PEER_CLOSED:
+        // Peer closed the socket after the while loop above. Nothing to do
+        // here, as closure event will be handled by OnSocketClosed().
+        break;
+      default:
+        ZX_PANIC("Unexpected zx_object_set_property() result: %s",
+                 zx_status_get_string(prop_set_res));
+        break;
+    }
   }
 }
 
