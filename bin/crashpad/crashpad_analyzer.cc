@@ -123,7 +123,8 @@ std::string GetPackageName(const zx::process& process) {
 
 }  // namespace
 
-int HandleException(zx::process process, zx::thread thread) {
+int HandleException(zx::process process, zx::thread thread,
+                    zx::port exception_port) {
   // On Fuchsia, the crash reporter does not stay resident, so we don't run
   // crashpad_handler here. Instead, directly use CrashReportExceptionHandler
   // and terminate when it has completed.
@@ -159,6 +160,9 @@ int HandleException(zx::process process, zx::thread thread) {
   if (temp_log_file.is_valid()) {
     attachments["log"] = base::FilePath(temp_log_file.get());
   }
+
+  // TODO: Use exception_port here with a roll of Crashpad that uses
+  // zx_task_resume_from_exception instead of zx_task_resume.
 
   crashpad::CrashReportExceptionHandler exception_handler(
       database.get(),
@@ -271,9 +275,10 @@ class AnalyzerImpl : public fuchsia::crash::Analyzer {
  public:
   // fuchsia::crash::Analyzer:
   void Analyze(::zx::process process, ::zx::thread thread,
-               AnalyzeCallback callback) override {
+               ::zx::port exception_port, AnalyzeCallback callback) override {
     callback();
-    HandleException(std::move(process), std::move(thread));
+    HandleException(std::move(process), std::move(thread),
+                    std::move(exception_port));
   }
 
   void Process(fuchsia::mem::Buffer crashlog,
