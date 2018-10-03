@@ -30,7 +30,7 @@ static inline void arch_spinloop_pause(void) {
                               :        \
                               :        \
                               : "memory")
-#define smp_mb() __asm__ volatile("dmb ish" \
+#define smp_mb() __asm__ volatile("dmb sy" \
                                   :         \
                                   :         \
                                   : "memory")

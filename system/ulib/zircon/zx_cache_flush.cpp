@@ -84,7 +84,7 @@ zx_status_t _zx_cache_flush(const void* addr, size_t len, uint32_t flags) {
                 });
         }
         // Ensure the cache flush has completed with regards to point of coherency
-        __asm__ volatile("dsb ish");
+        __asm__ volatile("dsb sy" : : : "memory");
     }
 
     if (flags & ZX_CACHE_FLUSH_INSN) {
@@ -98,7 +98,7 @@ zx_status_t _zx_cache_flush(const void* addr, size_t len, uint32_t flags) {
                     __asm__ volatile("dc cvau, %0" :: "r"(p));
                 });
             // Synchronize the dcache flush to before the icache flush.
-            __asm__ volatile("dsb ish");
+            __asm__ volatile("dsb sy" : : : "memory");
         }
 
         for_each_icache_line(addr, len, [](uintptr_t p) {
