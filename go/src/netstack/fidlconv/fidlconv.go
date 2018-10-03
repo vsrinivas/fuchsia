@@ -10,8 +10,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"netstack/util"
-
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
@@ -93,7 +91,7 @@ func ToNetSubnets(addrs []tcpip.Address) ([]net.Subnet, error) {
 func ToTCPIPSubnet(sn net.Subnet) (tcpip.Subnet, error) {
 	// Use ToTCPIPAddress to abstract the IPv4 vs IPv6 behavior.
 	a := []byte(ToTCPIPAddress(sn.Addr))
-	m := util.CIDRMask(int(sn.PrefixLen), int(len(a)*8))
+	m := tcpip.CIDRMask(int(sn.PrefixLen), int(len(a)*8))
 	for i := range a {
 		a[i] = a[i] & m[i]
 	}
@@ -159,7 +157,7 @@ func ForwardingEntryToTcpipRoute(forwardingEntry stack.ForwardingEntry) tcpip.Ro
 	dest := ToTCPIPAddress(forwardingEntry.Subnet.Addr)
 	tcpipRoute := tcpip.Route{
 		Destination: dest,
-		Mask:        tcpip.Address(util.CIDRMask(int(forwardingEntry.Subnet.PrefixLen), len(dest)*8)),
+		Mask:        tcpip.Address(tcpip.CIDRMask(int(forwardingEntry.Subnet.PrefixLen), len(dest)*8)),
 	}
 	switch forwardingEntry.Destination.Which() {
 	case stack.ForwardingDestinationDeviceId:

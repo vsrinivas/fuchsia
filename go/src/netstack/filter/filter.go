@@ -53,14 +53,17 @@ func (f *Filter) IsEnabled() bool {
 // Run is the entry point to the packet filter. It should be called from
 // two hook locations in the network stack: one for incoming packets, another
 // for outgoing packets.
-func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr buffer.Prependable, vv buffer.VectorisedView) Action {
+func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, vv *buffer.VectorisedView) Action {
 	if f.enabled.Load().(bool) == false {
 		// The filter is disabled.
 		return Pass
 	}
 
-	b := hdr.View()
-	plb := vv.First()
+	b := vv.First()
+	var plb []byte
+	if len(vv.Views()) >= 2 {
+		plb = (vv.Views())[1]
+	}
 
 	// Lock the state maps.
 	// TODO: Improve concurrency with more granular locking.
@@ -195,7 +198,7 @@ func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, pay
 	if rm != nil {
 		if rm.log {
 			// TODO: Improve the log format.
-			log.Printf("packet filter: Rule matched: %+v", rm)
+			log.Printf("packet filter: Rule matched: %v", rm)
 		}
 		if rm.action == DropReset {
 			if nat != nil {
@@ -326,7 +329,7 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 	if rm != nil {
 		if rm.log {
 			// TODO: Improve the log format.
-			log.Printf("packet filter: Rule matched: %+v", rm)
+			log.Printf("packet filter: Rule matched: %v", rm)
 		}
 		if rm.action == DropReset {
 			if nat != nil {
@@ -460,7 +463,7 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 	if rm != nil {
 		if rm.log {
 			// TODO: Improve the log format.
-			log.Printf("packet filter: Rule matched: %+v", rm)
+			log.Printf("packet filter: Rule matched: %v", rm)
 		}
 		if rm.action == DropReset {
 			if nat != nil {

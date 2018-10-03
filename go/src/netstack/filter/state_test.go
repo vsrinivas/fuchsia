@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/header"
 )
 
@@ -25,7 +24,7 @@ const (
 type stateTest struct {
 	dir         Direction
 	netProto    tcpip.NetworkProtocolNumber
-	packet      func() (buffer.Prependable, buffer.VectorisedView)
+	packet      func() []byte
 	localState  EndpointState
 	remoteState EndpointState
 }
@@ -35,7 +34,7 @@ func TestFindStateICMPv4(t *testing.T) {
 		{
 			Outgoing,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return icmpV4Packet([]byte("payload"), &icmpV4Params{
 					srcAddr:    testStateLocalAddrV4,
 					dstAddr:    testStateRemoteAddrV4,
@@ -56,10 +55,9 @@ func TestFindStateICMPv4(t *testing.T) {
 		ss := NewStates()
 
 		for _, test := range seq {
-			hdr, payload := test.packet()
-			b := hdr.View()
+			b := test.packet()
 			ipv4 := header.IPv4(b)
-			if !ipv4.IsValid(len(b) + payload.Size()) {
+			if !ipv4.IsValid(len(b)) {
 				t.Fatalf("ipv4 packet is not valid: %v", b)
 			}
 			th := b[ipv4.HeaderLength():]
@@ -119,7 +117,7 @@ func TestFindStateUDP(t *testing.T) {
 		{
 			Outgoing,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return udpV4Packet([]byte("payload"), &udpParams{
 					srcAddr: testStateLocalAddrV4,
 					srcPort: testStateLocalPort,
@@ -133,7 +131,7 @@ func TestFindStateUDP(t *testing.T) {
 		{
 			Incoming,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return udpV4Packet([]byte("payload"), &udpParams{
 					srcAddr: testStateRemoteAddrV4,
 					srcPort: testStateRemotePort,
@@ -147,7 +145,7 @@ func TestFindStateUDP(t *testing.T) {
 		{
 			Outgoing,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return udpV4Packet([]byte("payload"), &udpParams{
 					srcAddr: testStateLocalAddrV4,
 					srcPort: testStateLocalPort,
@@ -168,10 +166,9 @@ func TestFindStateUDP(t *testing.T) {
 		ss := NewStates()
 
 		for _, test := range seq {
-			hdr, payload := test.packet()
-			b := hdr.View()
+			b := test.packet()
 			ipv4 := header.IPv4(b)
-			if !ipv4.IsValid(len(b) + payload.Size()) {
+			if !ipv4.IsValid(len(b)) {
 				t.Fatalf("ipv4 packet is not valid: %v", b)
 			}
 			th := b[ipv4.HeaderLength():]
@@ -235,7 +232,7 @@ func TestFindStateTCPv4(t *testing.T) {
 		{
 			Outgoing,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return tcpV4Packet(nil, &tcpParams{
 					srcAddr: testStateLocalAddrV4,
 					srcPort: testStateLocalPort,
@@ -253,7 +250,7 @@ func TestFindStateTCPv4(t *testing.T) {
 		{
 			Incoming,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return tcpV4Packet(nil, &tcpParams{
 					srcAddr: testStateRemoteAddrV4,
 					srcPort: testStateRemotePort,
@@ -271,7 +268,7 @@ func TestFindStateTCPv4(t *testing.T) {
 		{
 			Outgoing,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return tcpV4Packet(nil, &tcpParams{
 					srcAddr: testStateLocalAddrV4,
 					srcPort: testStateLocalPort,
@@ -289,7 +286,7 @@ func TestFindStateTCPv4(t *testing.T) {
 		{
 			Outgoing,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return tcpV4Packet([]byte("payload"), &tcpParams{
 					srcAddr: testStateLocalAddrV4,
 					srcPort: testStateLocalPort,
@@ -307,7 +304,7 @@ func TestFindStateTCPv4(t *testing.T) {
 		{
 			Incoming,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return tcpV4Packet(nil, &tcpParams{
 					srcAddr: testStateRemoteAddrV4,
 					srcPort: testStateRemotePort,
@@ -325,7 +322,7 @@ func TestFindStateTCPv4(t *testing.T) {
 		{
 			Incoming,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return tcpV4Packet(nil, &tcpParams{
 					srcAddr: testStateRemoteAddrV4,
 					srcPort: testStateRemotePort,
@@ -343,7 +340,7 @@ func TestFindStateTCPv4(t *testing.T) {
 		{
 			Outgoing,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return tcpV4Packet(nil, &tcpParams{
 					srcAddr: testStateLocalAddrV4,
 					srcPort: testStateLocalPort,
@@ -361,7 +358,7 @@ func TestFindStateTCPv4(t *testing.T) {
 		{
 			Outgoing,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return tcpV4Packet(nil, &tcpParams{
 					srcAddr: testStateLocalAddrV4,
 					srcPort: testStateLocalPort,
@@ -379,7 +376,7 @@ func TestFindStateTCPv4(t *testing.T) {
 		{
 			Incoming,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return tcpV4Packet(nil, &tcpParams{
 					srcAddr: testStateRemoteAddrV4,
 					srcPort: testStateRemotePort,
@@ -400,7 +397,7 @@ func TestFindStateTCPv4(t *testing.T) {
 		{
 			Outgoing,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return tcpV4Packet(nil, &tcpParams{
 					srcAddr: testStateLocalAddrV4,
 					srcPort: testStateLocalPort,
@@ -421,7 +418,7 @@ func TestFindStateTCPv4(t *testing.T) {
 		{
 			Incoming,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return tcpV4Packet(nil, &tcpParams{
 					srcAddr: testStateRemoteAddrV4,
 					srcPort: testStateRemotePort,
@@ -442,7 +439,7 @@ func TestFindStateTCPv4(t *testing.T) {
 		{
 			Outgoing,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return tcpV4Packet(nil, &tcpParams{
 					srcAddr: testStateLocalAddrV4,
 					srcPort: testStateLocalPort,
@@ -460,7 +457,7 @@ func TestFindStateTCPv4(t *testing.T) {
 		{
 			Outgoing,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return tcpV4Packet([]byte("payload"), &tcpParams{
 					srcAddr: testStateLocalAddrV4,
 					srcPort: testStateLocalPort,
@@ -478,7 +475,7 @@ func TestFindStateTCPv4(t *testing.T) {
 		{
 			Incoming,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() []byte {
 				return tcpV4Packet(nil, &tcpParams{
 					srcAddr: testStateRemoteAddrV4,
 					srcPort: testStateRemotePort,
@@ -504,10 +501,9 @@ func TestFindStateTCPv4(t *testing.T) {
 		ss := NewStates()
 
 		for _, test := range seq {
-			hdr, payload := test.packet()
-			b := hdr.View()
+			b := test.packet()
 			ipv4 := header.IPv4(b)
-			if !ipv4.IsValid(len(b) + payload.Size()) {
+			if !ipv4.IsValid(len(b)) {
 				t.Fatalf("ipv4 packet is not valid: %v", b)
 			}
 			th := b[ipv4.HeaderLength():]

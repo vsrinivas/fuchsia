@@ -7,8 +7,6 @@ package fidlconv
 import (
 	"testing"
 
-	"netstack/util"
-
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
 
@@ -22,7 +20,7 @@ func TestNetIPtoTCPIPAddressIPv4(t *testing.T) {
 	from := net.IpAddress{}
 	from.SetIpv4(net.IPv4Address{Addr: [4]uint8{127, 0, 0, 1}})
 	to := ToTCPIPAddress(from)
-	expected := util.Parse("127.0.0.1")
+	expected := tcpip.Parse("127.0.0.1")
 	if to != expected {
 		t.Fatalf("Expected:\n %v\nActual:\n %v", expected, to)
 	}
@@ -32,14 +30,14 @@ func TestNetIPtoTCPIPAddressIPv6(t *testing.T) {
 	from := net.IpAddress{}
 	from.SetIpv6(net.IPv6Address{Addr: [16]uint8{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}})
 	to := ToTCPIPAddress(from)
-	expected := util.Parse("fe80::1")
+	expected := tcpip.Parse("fe80::1")
 	if to != expected {
 		t.Fatalf("Expected:\n %v\nActual:\n %v", expected, to)
 	}
 }
 
 func TestToFIDLIPAddressIPv4(t *testing.T) {
-	from := util.Parse("127.0.0.1")
+	from := tcpip.Parse("127.0.0.1")
 	to := ToNetIpAddress(from)
 	expected := net.IpAddress{}
 	expected.SetIpv4(net.IPv4Address{Addr: [4]uint8{127, 0, 0, 1}})
@@ -49,7 +47,7 @@ func TestToFIDLIPAddressIPv4(t *testing.T) {
 }
 
 func TestToFIDLIPAddressIPv6(t *testing.T) {
-	from := util.Parse("fe80::1")
+	from := tcpip.Parse("fe80::1")
 	to := ToNetIpAddress(from)
 	expected := net.IpAddress{}
 	expected.SetIpv6(net.IPv6Address{Addr: [16]uint8{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}})
@@ -84,8 +82,8 @@ func TestToFIDLIPAddressInvalidLength(t *testing.T) {
 
 func TestToSubnets(t *testing.T) {
 	from := []tcpip.Address{
-		util.Parse("255.255.255.0"),
-		util.Parse("ffff:ffff:ffff:ffff::"),
+		tcpip.Parse("255.255.255.0"),
+		tcpip.Parse("ffff:ffff:ffff:ffff::"),
 	}
 	to, err := ToNetSubnets(from)
 	if err != nil {
@@ -114,7 +112,7 @@ func TestToSubnets(t *testing.T) {
 
 func TestToSubnetsInvalid(t *testing.T) {
 	from := []tcpip.Address{
-		util.Parse("255.255.255.0"),
+		tcpip.Parse("255.255.255.0"),
 		tcpip.Address(""),
 	}
 	to, err := ToNetSubnets(from)
@@ -146,7 +144,7 @@ func TestToTCPIPSubnet(t *testing.T) {
 			t.Errorf("Error generating tcpip.Subnet: %v", err)
 			continue
 		}
-		_, expected, err := util.ParseCIDR(testCase.expected)
+		_, expected, err := tcpip.ParseCIDR(testCase.expected)
 		if err != nil {
 			t.Fatalf("Error creating tcpip.Subnet: %v", err)
 		}
@@ -163,13 +161,13 @@ func TestPrefixLenIPv4(t *testing.T) {
 		mask   tcpip.Address
 		prefix uint8
 	}{
-		{util.Parse("255.255.255.255"), 32},
-		{util.Parse("255.255.255.254"), 31},
-		{util.Parse("255.255.255.128"), 25},
-		{util.Parse("255.255.255.0"), 24},
-		{util.Parse("255.0.0.0"), 8},
-		{util.Parse("128.0.0.0"), 1},
-		{util.Parse("0.0.0.0"), 0},
+		{tcpip.Parse("255.255.255.255"), 32},
+		{tcpip.Parse("255.255.255.254"), 31},
+		{tcpip.Parse("255.255.255.128"), 25},
+		{tcpip.Parse("255.255.255.0"), 24},
+		{tcpip.Parse("255.0.0.0"), 8},
+		{tcpip.Parse("128.0.0.0"), 1},
+		{tcpip.Parse("0.0.0.0"), 0},
 	}
 	for _, testCase := range cases {
 		prefixLen := GetPrefixLen(testCase.mask)
@@ -184,12 +182,12 @@ func TestPrefixLenIPv6(t *testing.T) {
 		mask   tcpip.Address
 		prefix uint8
 	}{
-		{util.Parse("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"), 128},
-		{util.Parse("ffff:ffff:ffff:ffff:ffff:ffff:ffff:8000"), 113},
-		{util.Parse("ffff:ffff:ffff:ffff:ffff:ffff:ffff::"), 112},
-		{util.Parse("ffff:ffff:ffff:ffff:ffff:ffff:fffe::"), 111},
-		{util.Parse("8000::"), 1},
-		{util.Parse("::"), 0},
+		{tcpip.Parse("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"), 128},
+		{tcpip.Parse("ffff:ffff:ffff:ffff:ffff:ffff:ffff:8000"), 113},
+		{tcpip.Parse("ffff:ffff:ffff:ffff:ffff:ffff:ffff::"), 112},
+		{tcpip.Parse("ffff:ffff:ffff:ffff:ffff:ffff:fffe::"), 111},
+		{tcpip.Parse("8000::"), 1},
+		{tcpip.Parse("::"), 0},
 	}
 	for _, testCase := range cases {
 		prefixLen := GetPrefixLen(testCase.mask)

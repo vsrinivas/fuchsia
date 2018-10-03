@@ -61,7 +61,6 @@ package("netstack_gotests") {
   testonly = true
 
   deps = [
-    ":netstack_bridge_test",
     ":netstack_connectivity_test",
     ":netstack_dns_test",
     ":netstack_fidlconv_test",
@@ -81,9 +80,6 @@ package("netstack_gotests") {
   ]
 
   tests = [
-    {
-      name = "netstack_bridge_test"
-    },
     {
       name = "netstack_connectivity_test"
     },
@@ -134,13 +130,6 @@ go_binary("netstack_bin") {
   output_name = "netstack"
 
   gopackage = "netstack"
-  deps = [
-    ":netstack_lib",
-  ]
-}
-
-go_test("netstack_bridge_test") {
-  gopackage = "netstack/link/bridge"
   deps = [
     ":netstack_lib",
   ]
