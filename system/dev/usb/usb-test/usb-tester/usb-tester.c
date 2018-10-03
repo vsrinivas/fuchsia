@@ -474,7 +474,7 @@ static zx_status_t usb_tester_bind(void* ctx, zx_device_t* device) {
     }
 
     usb_composite_protocol_t usb_composite;
-    status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb_composite);
+    status = device_get_protocol(device, ZX_PROTOCOL_USB_COMPOSITE, &usb_composite);
     if (status != ZX_OK) {
         goto error_return;
     }
