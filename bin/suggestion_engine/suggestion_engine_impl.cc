@@ -34,10 +34,10 @@
 
 namespace modular {
 
-SuggestionEngineImpl::SuggestionEngineImpl(fuchsia::media::AudioPtr audio)
+SuggestionEngineImpl::SuggestionEngineImpl()
     : debug_(std::make_shared<SuggestionDebugImpl>()),
       next_processor_(debug_),
-      query_processor_(std::move(audio), debug_),
+      query_processor_(debug_),
       context_listener_binding_(this) {}
 
 SuggestionEngineImpl::~SuggestionEngineImpl() = default;
@@ -166,12 +166,6 @@ void SuggestionEngineImpl::SubscribeToNavigation(
 void SuggestionEngineImpl::SubscribeToNext(
     fidl::InterfaceHandle<fuchsia::modular::NextListener> listener, int count) {
   next_processor_.RegisterListener(std::move(listener), count);
-}
-
-// |fuchsia::modular::SuggestionProvider|
-void SuggestionEngineImpl::RegisterFeedbackListener(
-    fidl::InterfaceHandle<fuchsia::modular::FeedbackListener> speech_listener) {
-  query_processor_.RegisterFeedbackListener(std::move(speech_listener));
 }
 
 // |fuchsia::modular::SuggestionProvider|

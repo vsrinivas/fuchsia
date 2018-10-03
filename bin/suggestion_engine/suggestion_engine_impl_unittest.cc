@@ -91,12 +91,7 @@ class SuggestionEngineTest : public testing::TestWithSessionStorage {
   void SetUp() override {
     TestWithSessionStorage::SetUp();
 
-    // Hack to get an unbound fuchsia::media::AudioPtr.
-    fuchsia::media::AudioPtr audio_ptr;
-    audio_ptr.NewRequest();
-
-    suggestion_engine_impl_ =
-        std::make_unique<SuggestionEngineImpl>(std::move(audio_ptr));
+    suggestion_engine_impl_ = std::make_unique<SuggestionEngineImpl>();
     suggestion_engine_impl_->Connect(engine_ptr_.NewRequest());
     suggestion_engine_impl_->Connect(provider_ptr_.NewRequest());
     suggestion_engine_impl_->Connect(debug_ptr_.NewRequest());

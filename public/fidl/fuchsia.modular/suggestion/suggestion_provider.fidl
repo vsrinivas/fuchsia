@@ -40,14 +40,6 @@ interface SuggestionProvider {
   // Suggestion in the manner described in |interaction|.
   4: NotifyInteraction(string suggestion_uuid, Interaction interaction);
 
-  // *** Speech Section ***
-  // TODO(jwnichols): Move these into a separate speech service.  It is
-  // convenient to have them here now, but this is not a good long term
-  // solution.
-
-  // TODO(rosswang): remove this if/when FeedbackListener is merged into Ask.
-  5: RegisterFeedbackListener(FeedbackListener speech_listener);
-
   // Creates a subscription to a "navigation" suggestion.
   // Like an interruption, the navigation based suggestion will be provided as
   // soon as it's available.

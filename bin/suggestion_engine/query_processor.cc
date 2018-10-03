@@ -18,16 +18,8 @@ constexpr char kQueryContextKey[] = "/suggestion_engine/current_query";
 
 }  // namespace
 
-QueryProcessor::QueryProcessor(fuchsia::media::AudioPtr audio,
-                               std::shared_ptr<SuggestionDebugImpl> debug)
-    : debug_(debug),
-      media_player_(std::move(audio), debug),
-      has_audio_response_(false) {
-  media_player_.SetSpeechStatusCallback(
-      [this](fuchsia::modular::SpeechStatus status) {
-        NotifySpeechListeners(status);
-      });
-}
+QueryProcessor::QueryProcessor(std::shared_ptr<SuggestionDebugImpl> debug)
+    : debug_(debug) {}
 
 QueryProcessor::~QueryProcessor() = default;
 
@@ -39,9 +31,6 @@ void QueryProcessor::Initialize(
 void QueryProcessor::ExecuteQuery(
     fuchsia::modular::UserInput input, int count,
     fidl::InterfaceHandle<fuchsia::modular::QueryListener> listener) {
-  // TODO(jwnichols): I'm not sure this is correct or should be here
-  NotifySpeechListeners(fuchsia::modular::SpeechStatus::PROCESSING);
-
   // Process:
   //   1. Close out and clean up any existing query process
   //   2. Update the context engine with the new query
@@ -85,11 +74,6 @@ void QueryProcessor::ExecuteQuery(
   active_query_->Run(query_handlers_);
 }
 
-void QueryProcessor::RegisterFeedbackListener(
-    fidl::InterfaceHandle<fuchsia::modular::FeedbackListener> speech_listener) {
-  speech_listeners_.AddInterfacePtr(speech_listener.Bind());
-}
-
 void QueryProcessor::RegisterQueryHandler(
     fidl::StringPtr url, fidl::InterfaceHandle<fuchsia::modular::QueryHandler>
                              query_handler_handle) {
@@ -127,7 +111,6 @@ RankedSuggestion* QueryProcessor::GetSuggestion(
 }
 
 void QueryProcessor::CleanUpPreviousQuery() {
-  has_audio_response_ = false;
   active_query_.reset();
   suggestions_.RemoveAllSuggestions();
 }
@@ -142,39 +125,9 @@ void QueryProcessor::AddProposal(const std::string& source_url,
   suggestions_.AddSuggestion(suggestion);
 }
 
-void QueryProcessor::NotifySpeechListeners(
-    fuchsia::modular::SpeechStatus status) {
-  for (auto& speech_listener : speech_listeners_.ptrs()) {
-    (*speech_listener)
-        ->OnStatusChanged(fuchsia::modular::SpeechStatus::PROCESSING);
-  }
-}
-
 void QueryProcessor::OnQueryResponse(fuchsia::modular::UserInput input,
                                      const std::string& handler_url,
                                      fuchsia::modular::QueryResponse response) {
-  // TODO(rosswang): defer selection of "I don't know" responses
-  if (!has_audio_response_ && response.audio_response) {
-    has_audio_response_ = true;
-
-    // TODO(rosswang): Wait for other potential voice responses so that we
-    // choose the best one. We don't have criteria for "best" yet, and we only
-    // have one agent (Kronk) with voice responses now, so play immediately.
-
-    // TODO(rosswang): allow falling back on natural language text response
-    // without a spoken response
-    fidl::StringPtr text_response =
-        std::move(response.natural_language_response);
-    if (!text_response) {
-      text_response = "";
-    }
-    for (auto& listener : speech_listeners_.ptrs()) {
-      (*listener)->OnTextResponse(text_response);
-    }
-
-    media_player_.PlayAudioResponse(std::move(response.audio_response));
-  }
-
   // Ranking currently happens as each set of proposals are added.
   for (size_t i = 0; i < response.proposals->size(); ++i) {
     AddProposal(handler_url, std::move(response.proposals->at(i)));
@@ -190,10 +143,7 @@ void QueryProcessor::OnQueryResponse(fuchsia::modular::UserInput input,
 
 void QueryProcessor::OnQueryEndRequest(fuchsia::modular::UserInput input) {
   debug_->OnAskStart(input.text, &suggestions_);
-  if (!has_audio_response_) {
-    // there was no media response for this query, so idle immediately
-    NotifySpeechListeners(fuchsia::modular::SpeechStatus::IDLE);
-  }
+  // Idle immediately, we no longer handle audio responses here.
   activity_ = nullptr;
 }
 

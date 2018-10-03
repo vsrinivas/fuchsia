@@ -60,7 +60,7 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
                              public fuchsia::modular::SuggestionEngine,
                              public fuchsia::modular::SuggestionProvider {
  public:
-  SuggestionEngineImpl(fuchsia::media::AudioPtr audio);
+  SuggestionEngineImpl();
   ~SuggestionEngineImpl() override;
 
   fxl::WeakPtr<SuggestionDebugImpl> debug();
@@ -111,11 +111,6 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   // |fuchsia::modular::SuggestionProvider|
   void Query(fidl::InterfaceHandle<fuchsia::modular::QueryListener> listener,
              fuchsia::modular::UserInput input, int count) override;
-
-  // |fuchsia::modular::SuggestionProvider|
-  void RegisterFeedbackListener(
-      fidl::InterfaceHandle<fuchsia::modular::FeedbackListener> speech_listener)
-      override;
 
   // When a user interacts with a fuchsia::modular::Suggestion, the suggestion
   // engine will be notified of consumed suggestion's ID. With this, we will do

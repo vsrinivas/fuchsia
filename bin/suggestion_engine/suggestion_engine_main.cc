@@ -16,11 +16,7 @@ namespace modular {
 class SuggestionEngineApp {
  public:
   SuggestionEngineApp(component::StartupContext* const context) {
-    fuchsia::media::AudioPtr audio;
-    context->ConnectToEnvironmentService(audio.NewRequest());
-
-    engine_impl_ =
-        std::make_unique<modular::SuggestionEngineImpl>(std::move(audio));
+    engine_impl_ = std::make_unique<modular::SuggestionEngineImpl>();
 
     context->outgoing().AddPublicService<fuchsia::modular::SuggestionEngine>(
         [this](fidl::InterfaceRequest<fuchsia::modular::SuggestionEngine>

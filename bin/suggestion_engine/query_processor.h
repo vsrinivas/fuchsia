@@ -26,8 +26,7 @@ class SuggestionEngineImpl;
 // ranking those suggestions, and then providing them to the user.
 class QueryProcessor {
  public:
-  QueryProcessor(fuchsia::media::AudioPtr audio,
-                 std::shared_ptr<SuggestionDebugImpl> debug);
+  QueryProcessor(std::shared_ptr<SuggestionDebugImpl> debug);
   ~QueryProcessor();
 
   void Initialize(
@@ -41,11 +40,6 @@ class QueryProcessor {
   void ExecuteQuery(
       fuchsia::modular::UserInput input, int count,
       fidl::InterfaceHandle<fuchsia::modular::QueryListener> listener);
-
-  // Registers a feedback listener for speech status updates.
-  void RegisterFeedbackListener(
-      fidl::InterfaceHandle<fuchsia::modular::FeedbackListener>
-          speech_listener);
 
   // Registers a handler that will be notified when a new query comes for its
   // fullfillment.
@@ -79,8 +73,6 @@ class QueryProcessor {
   void AddProposal(const std::string& source_url,
                    fuchsia::modular::Proposal proposal);
 
-  void NotifySpeechListeners(fuchsia::modular::SpeechStatus status);
-
   void OnQueryResponse(fuchsia::modular::UserInput input,
                        const std::string& handler_url,
                        fuchsia::modular::QueryResponse response);
@@ -90,10 +82,8 @@ class QueryProcessor {
   void NotifyOfResults();
 
   std::shared_ptr<SuggestionDebugImpl> debug_;
-  MediaPlayer media_player_;
   RankedSuggestionsList suggestions_;
   SuggestionPrototypeMap query_prototypes_;
-  fidl::InterfacePtrSet<fuchsia::modular::FeedbackListener> speech_listeners_;
 
   // Unique ptr for the query runner executing the query being processed.
   std::unique_ptr<QueryRunner> active_query_;
@@ -105,11 +95,6 @@ class QueryProcessor {
   // The set of all QueryHandlers that have been registered mapped to their
   // URLs (stored as strings).
   std::vector<QueryHandlerRecord> query_handlers_;
-
-  // When multiple handlers want to play media as part of their responses, we
-  // only want to allow one of them to do so. For lack of a better policy, we
-  // play the first one we encounter.
-  bool has_audio_response_;
 
   util::IdleWaiter::ActivityToken activity_;
 };
