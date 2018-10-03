@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.media.Audio",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.sys.Environment",
             "fuchsia.tracelink.Registry",
