@@ -203,10 +203,8 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
 
   // Used to preload story shell before it is requested.
   fuchsia::modular::AppConfig story_shell_;
-  struct StoryShellConnection {
-    std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> story_shell_app;
-  };
-  std::unique_ptr<StoryShellConnection> preloaded_story_shell_;
+  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>>
+      preloaded_story_shell_app_;
 
   // When running in a test, we don't preload story shells, because then the
   // preloaded next instance of the story doesn't pass its test points.

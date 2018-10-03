@@ -299,12 +299,12 @@ class StoryProviderImpl::StopStoryShellCall : public Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    if (story_provider_impl_->preloaded_story_shell_) {
+    if (story_provider_impl_->preloaded_story_shell_app_) {
       // Calling Teardown() below will branch |flow| into normal and timeout
       // paths. |flow| must go out of scope when either of the paths
       // finishes.
       FlowTokenHolder branch{flow};
-      story_provider_impl_->preloaded_story_shell_->story_shell_app->Teardown(
+      story_provider_impl_->preloaded_story_shell_app_->Teardown(
           kBasicTimeout,
           [branch] { std::unique_ptr<FlowToken> flow = branch.Continue(); });
     }
@@ -421,12 +421,10 @@ StoryProviderImpl::StartStoryShell(
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request) {
   MaybeLoadStoryShell();
 
-  auto preloaded_story_shell = std::move(preloaded_story_shell_);
-  auto app_client = std::move(preloaded_story_shell->story_shell_app);
+  auto app_client = std::move(preloaded_story_shell_app_);
 
   fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
   app_client->services().ConnectToService(view_provider.NewRequest());
-
   view_provider->CreateView(std::move(request), nullptr);
 
   // Kickoff another fuchsia::modular::StoryShell, to make it faster for next
@@ -457,16 +455,13 @@ void StoryProviderImpl::MaybeLoadStoryShellDelayed() {
 }
 
 void StoryProviderImpl::MaybeLoadStoryShell() {
-  if (preloaded_story_shell_) {
+  if (preloaded_story_shell_app_) {
     return;
   }
 
-  auto story_shell_app =
+  preloaded_story_shell_app_ =
       std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
           user_environment_->GetLauncher(), CloneStruct(story_shell_));
-
-  preloaded_story_shell_ = std::make_unique<StoryShellConnection>(
-      StoryShellConnection{std::move(story_shell_app)});
 }
 
 // |fuchsia::modular::StoryProvider|
