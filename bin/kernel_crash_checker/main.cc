@@ -76,11 +76,7 @@ int main(int argc, char** argv) {
       return;
     }
     CrashpadAnalyzer crashpad_analyzer;
-    // Switch to crashlog.ToTransport() once we use fuchsia::mem::Buffer.
-    fuchsia::crash::Buffer buf;
-    buf.vmo = fbl::move(crashlog_vmo.vmo());
-    buf.size = crashlog_vmo.size();
-    crashpad_analyzer.Process(fbl::move(buf));
+    crashpad_analyzer.Process(std::move(crashlog_vmo).ToTransport());
   };
   loop.Run();
 #endif  // USE_CRASHPAD
