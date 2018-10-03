@@ -35,6 +35,29 @@ zx_status_t Mt8167::GpioInit() {
         zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __FUNCTION__, status);
         return status;
     }
+//#define GPIO_TEST
+#ifdef GPIO_TEST
+    const pbus_gpio_t gpio_test_gpios[] = {
+        {
+            .gpio = 60, // SDA2, to test gpio_write()
+        },
+        {
+            .gpio = 9, // EINT1, to test gpio_get_interrupt()
+        },
+    };
+
+    pbus_dev_t gpio_test_dev = {};
+    gpio_test_dev.name = "imx8mevk-gpio-test";
+    gpio_test_dev.vid = PDEV_VID_GENERIC;
+    gpio_test_dev.pid = PDEV_PID_GENERIC;
+    gpio_test_dev.did = PDEV_DID_GPIO_TEST;
+    gpio_test_dev.gpios = gpio_test_gpios;
+    gpio_test_dev.gpio_count = countof(gpio_test_gpios);
+    if ((status = pbus_.DeviceAdd(&gpio_test_dev)) != ZX_OK) {
+        zxlogf(ERROR, "%s: Could not add gpio_test_dev %d\n", __FUNCTION__, status);
+        return status;
+    }
+#endif
 
     return ZX_OK;
 }
