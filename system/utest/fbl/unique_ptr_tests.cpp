@@ -589,6 +589,25 @@ static bool uptr_test_make_unique() {
     END_TEST;
 }
 
+static bool uptr_test_make_unique_array() {
+    BEGIN_TEST;
+
+    constexpr size_t array_size = 4;
+
+    // no alloc checker
+    destroy_count = 0;
+    {
+        CountingArrPtr ptr = fbl::make_unique<DeleteCounter[]>(array_size);
+        EXPECT_NONNULL(ptr);
+        for (size_t i = 0; i < array_size; ++i) {
+            EXPECT_EQ(0, ptr[i].value);
+        }
+    }
+    EXPECT_EQ(1, destroy_count);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(unique_ptr)
 RUN_NAMED_TEST("Scoped Destruction",               uptr_test_scoped_destruction)
 RUN_NAMED_TEST("Move",                             uptr_test_move)
@@ -604,4 +623,5 @@ RUN_NAMED_TEST("Array operator bool",              uptr_test_array_bool_op)
 RUN_NAMED_TEST("Array comparison operators",       uptr_test_array_comparison)
 RUN_NAMED_TEST("Upcast tests",                     upcasting::uptr_upcasting)
 RUN_NAMED_TEST("Make unique",                      uptr_test_make_unique)
+RUN_NAMED_TEST("Make unique array",                uptr_test_make_unique_array)
 END_TEST_CASE(unique_ptr);

@@ -143,6 +143,25 @@ struct remove_cv {
     typedef typename remove_volatile<typename remove_const<T>::type>::type type;
 };
 
+// remove_extent:
+
+template <typename T>
+struct remove_extent {
+    using type = T;
+};
+
+template <typename T>
+struct remove_extent<T[]> {
+    using type = T;
+};
+
+// Avoid having to pull in a header to name size_t; just use sizeof to
+// get at it.
+template <typename T, decltype(sizeof(nullptr)) N>
+struct remove_extent<T[N]> {
+    using type = T;
+};
+
 // move
 
 template <typename T>
