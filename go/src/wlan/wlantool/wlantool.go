@@ -57,7 +57,7 @@ func ChanToStr(ch mlme.WlanChan) string {
 
 // LINT.ThenChange(//garnet/lib/wlan/common/channel.cpp)
 
-func (a *ToolApp) Scan(seconds uint8) {
+func (a *ToolApp) Scan(seconds uint8) wlan_service.ErrCode {
 	expiry := 25 * time.Second
 	if seconds > 0 {
 		expiry = time.Duration(seconds) * time.Second
@@ -94,14 +94,16 @@ func (a *ToolApp) Scan(seconds uint8) {
 		// Received scan results.
 	case <-t.C:
 		fmt.Printf("Scan timed out; aborting.\n")
+		return wlan_service.ErrCodeInternal
 	}
-
+	return wlan_service.ErrCodeOk
 }
 
-func (a *ToolApp) Connect(ssid string, bssid string, passPhrase string, seconds uint8) {
+func (a *ToolApp) Connect(ssid string, bssid string, passPhrase string,
+	seconds uint8) wlan_service.ErrCode {
 	if len(ssid) > 32 {
 		fmt.Println("ssid is too long")
-		return
+		return wlan_service.ErrCodeInvalidArgs
 	}
 	werr, err := a.wlan.Connect(wlan_service.ConnectConfig{
 		Ssid:         ssid,
@@ -111,28 +113,35 @@ func (a *ToolApp) Connect(ssid string, bssid string, passPhrase string, seconds 
 	})
 	if err != nil {
 		fmt.Println("Error:", err)
+		return wlan_service.ErrCodeInternal
 	} else if werr.Code != wlan_service.ErrCodeOk {
 		fmt.Println("Error:", werr.Description)
+		return werr.Code
 	}
+	return wlan_service.ErrCodeOk
 }
 
-func (a *ToolApp) Disconnect() {
+func (a *ToolApp) Disconnect() wlan_service.ErrCode {
 	werr, err := a.wlan.Disconnect()
 	if err != nil {
 		fmt.Println("Error:", err)
+		return wlan_service.ErrCodeInternal
 	} else if werr.Code != wlan_service.ErrCodeOk {
 		fmt.Println("Error:", werr.Description)
+		return werr.Code
 	}
+	return wlan_service.ErrCodeOk
 }
 
-func (a *ToolApp) StartBSS(ssid string, beaconPeriod int32, dtimPeriod int32, channel uint8) {
+func (a *ToolApp) StartBSS(ssid string, beaconPeriod int32, dtimPeriod int32,
+	channel uint8) wlan_service.ErrCode {
 	if len(ssid) > 32 {
 		fmt.Println("ssid is too long")
-		return
+		return wlan_service.ErrCodeInvalidArgs
 	}
 	if len(ssid) == 0 {
 		fmt.Println("ssid is too short")
-		return
+		return wlan_service.ErrCodeInvalidArgs
 	}
 	werr, err := a.wlan.StartBss(wlan_service.BssConfig{
 		Ssid:         ssid,
@@ -142,26 +151,34 @@ func (a *ToolApp) StartBSS(ssid string, beaconPeriod int32, dtimPeriod int32, ch
 	})
 	if err != nil {
 		fmt.Println("Error:", err)
+		return wlan_service.ErrCodeInternal
 	} else if werr.Code != wlan_service.ErrCodeOk {
 		fmt.Println("Error:", werr.Description)
+		return werr.Code
 	}
+	return wlan_service.ErrCodeOk
 }
 
-func (a *ToolApp) StopBSS() {
+func (a *ToolApp) StopBSS() wlan_service.ErrCode {
 	werr, err := a.wlan.StopBss()
 	if err != nil {
 		fmt.Println("Error:", err)
+		return wlan_service.ErrCodeInternal
 	} else if werr.Code != wlan_service.ErrCodeOk {
 		fmt.Println("Error:", werr.Description)
+		return werr.Code
 	}
+	return wlan_service.ErrCodeOk
 }
 
-func (a *ToolApp) Status() {
+func (a *ToolApp) Status() wlan_service.ErrCode {
 	res, err := a.wlan.Status()
 	if err != nil {
 		fmt.Println("Error:", err)
+		return wlan_service.ErrCodeInternal
 	} else if res.Error.Code != wlan_service.ErrCodeOk {
 		fmt.Println("Error:", res.Error.Description)
+		return res.Error.Code
 	} else {
 		state := "unknown"
 		switch res.State {
@@ -199,19 +216,21 @@ func (a *ToolApp) Status() {
 				compatStr, ap.Bssid, ap.RssiDbm, ChanToStr(ap.Chan), prot, ap.Ssid)
 		}
 	}
+	return wlan_service.ErrCodeOk
 }
 
-func (a *ToolApp) ShowStats() {
+func (a *ToolApp) ShowStats() wlan_service.ErrCode {
 	result, err := a.wlan.Stats()
 	if err != nil {
 		fmt.Printf("Cannot get stats. Error: %+v\n", err)
-		return
+		return wlan_service.ErrCodeInternal
 	}
 	stats := result.Stats
 	fmt.Printf("Dispatcher stats:\n%+v\n", stats.DispatcherStats)
 	if stats.MlmeStats != nil {
 		fmt.Printf("\nMLME stats:\n%+v\n", stats.MlmeStats)
 	}
+	return wlan_service.ErrCodeOk
 }
 
 var Usage = func() {
@@ -224,7 +243,7 @@ var Usage = func() {
 	fmt.Printf("       %v %v\n", os.Args[0], cmdStats)
 }
 
-func main() {
+func mainFunc() wlan_service.ErrCode {
 	scanFlagSet := flag.NewFlagSet(cmdScan, flag.ExitOnError)
 	scanTimeout := scanFlagSet.Int("t", 0, "scan timeout (1 - 255 seconds)")
 
@@ -244,7 +263,7 @@ func main() {
 
 	if len(os.Args) < 2 {
 		Usage()
-		return
+		return wlan_service.ErrCodeInvalidArgs
 	}
 
 	cmd := os.Args[1]
@@ -253,49 +272,49 @@ func main() {
 		scanFlagSet.Parse(os.Args[2:])
 		if *scanTimeout != 0 && !IsValidTimeout(*scanTimeout) {
 			scanFlagSet.PrintDefaults()
-			return
+			return wlan_service.ErrCodeInvalidArgs
 		}
 		if scanFlagSet.NArg() != 0 {
 			Usage()
-			return
+			return wlan_service.ErrCodeInvalidArgs
 		}
-		a.Scan(uint8(*scanTimeout))
+		return a.Scan(uint8(*scanTimeout))
 	case cmdConnect:
 		connectFlagSet.Parse(os.Args[2:])
 		if *connectScanTimeout != 0 && !IsValidTimeout(*connectScanTimeout) {
 			connectFlagSet.PrintDefaults()
-			return
+			return wlan_service.ErrCodeInvalidArgs
 		}
 		if *connectPassPhrase != "" && !IsValidPSKPassPhrase(*connectPassPhrase) {
 			connectFlagSet.PrintDefaults()
-			return
+			return wlan_service.ErrCodeInvalidArgs
 		}
 		if *connectBSSID != "" && !IsValidBSSID(*connectBSSID) {
 			connectFlagSet.PrintDefaults()
-			return
+			return wlan_service.ErrCodeInvalidArgs
 		}
 		if connectFlagSet.NArg() != 1 {
 			Usage()
-			return
+			return wlan_service.ErrCodeInvalidArgs
 		}
 		ssid := connectFlagSet.Arg(0)
-		a.Connect(ssid, *connectBSSID, *connectPassPhrase, uint8(*connectScanTimeout))
+		return a.Connect(ssid, *connectBSSID, *connectPassPhrase, uint8(*connectScanTimeout))
 	case cmdDisconnect:
 		disconnectFlagSet := flag.NewFlagSet(cmdDisconnect, flag.ExitOnError)
 		disconnectFlagSet.Parse(os.Args[2:])
 		if disconnectFlagSet.NArg() != 0 {
 			Usage()
-			return
+			return wlan_service.ErrCodeInvalidArgs
 		}
-		a.Disconnect()
+		return a.Disconnect()
 	case cmdStatus:
 		statusFlagSet := flag.NewFlagSet(cmdStatus, flag.ExitOnError)
 		statusFlagSet.Parse(os.Args[2:])
 		if statusFlagSet.NArg() != 0 {
 			Usage()
-			return
+			return wlan_service.ErrCodeInvalidArgs
 		}
-		a.Status()
+		return a.Status()
 	case cmdStartBSS:
 		startBSSFlagSet := flag.NewFlagSet(cmdStartBSS, flag.ExitOnError)
 		startBSSBeaconPeriod := startBSSFlagSet.Int("b", 100, "Beacon period")
@@ -304,29 +323,34 @@ func main() {
 		startBSSFlagSet.Parse(os.Args[2:])
 		if startBSSFlagSet.NArg() != 1 {
 			Usage()
-			return
+			return wlan_service.ErrCodeInvalidArgs
 		}
 		ssid := startBSSFlagSet.Arg(0)
-		a.StartBSS(ssid, int32(*startBSSBeaconPeriod), int32(*startBSSDTIMPeriod), uint8(*startBSSChannel))
+		return a.StartBSS(ssid, int32(*startBSSBeaconPeriod), int32(*startBSSDTIMPeriod), uint8(*startBSSChannel))
 	case cmdStopBSS:
 		stopBSSFlagSet := flag.NewFlagSet(cmdStartBSS, flag.ExitOnError)
 		stopBSSFlagSet.Parse(os.Args[2:])
 		if stopBSSFlagSet.NArg() != 0 {
 			Usage()
-			return
+			return wlan_service.ErrCodeInvalidArgs
 		}
-		a.StopBSS()
+		return a.StopBSS()
 	case cmdStats:
 		statusFlagSet := flag.NewFlagSet(cmdStatus, flag.ExitOnError)
 		statusFlagSet.Parse(os.Args[2:])
 		if statusFlagSet.NArg() != 0 {
 			Usage()
-			return
+			return wlan_service.ErrCodeInvalidArgs
 		}
-		a.ShowStats()
+		return a.ShowStats()
 	default:
 		Usage()
 	}
+	return wlan_service.ErrCodeOk
+}
+
+func main() {
+	os.Exit(int(mainFunc()))
 }
 
 func IsValidTimeout(timeout int) bool {
