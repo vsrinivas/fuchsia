@@ -4,7 +4,7 @@
 
 #include "garnet/bin/mediaplayer/render/fidl_video_renderer.h"
 
-#include <trace/event.h>
+#include <lib/ui/scenic/cpp/commands.h>
 #include <limits>
 #include "garnet/bin/mediaplayer/fidl/fidl_type_conversions.h"
 #include "garnet/bin/mediaplayer/graph/formatting.h"
@@ -18,7 +18,7 @@ std::shared_ptr<FidlVideoRenderer> FidlVideoRenderer::Create() {
   return std::make_shared<FidlVideoRenderer>();
 }
 
-FidlVideoRenderer::FidlVideoRenderer() : arrivals_(true), draws_(true) {
+FidlVideoRenderer::FidlVideoRenderer() : arrivals_(true) {
   supported_stream_types_.push_back(VideoStreamTypeSet::Create(
       {StreamType::kVideoEncodingUncompressed},
       Range<uint32_t>(0, std::numeric_limits<uint32_t>::max()),
@@ -27,7 +27,7 @@ FidlVideoRenderer::FidlVideoRenderer() : arrivals_(true), draws_(true) {
 
 FidlVideoRenderer::~FidlVideoRenderer() {}
 
-const char* FidlVideoRenderer::label() const { return "video_renderer"; }
+const char* FidlVideoRenderer::label() const { return "video renderer"; }
 
 void FidlVideoRenderer::Dump(std::ostream& os) const {
   Renderer::Dump(os);
@@ -35,55 +35,39 @@ void FidlVideoRenderer::Dump(std::ostream& os) const {
   os << fostr::Indent;
   os << fostr::NewLine << "priming:               " << !!prime_callback_;
   os << fostr::NewLine << "flushed:               " << flushed_;
-  os << fostr::NewLine << "presentation time:     " << AsNs(pts_ns_);
+  os << fostr::NewLine << "presentation time:     "
+     << AsNs(current_timeline_function()(media::Timeline::local_now()));
   os << fostr::NewLine << "video size:            " << video_size().width << "x"
      << video_size().height;
   os << fostr::NewLine
      << "pixel aspect ratio:    " << pixel_aspect_ratio().width << "x"
      << pixel_aspect_ratio().height;
 
-  if (held_packet_) {
-    os << fostr::NewLine << "held packet:           " << held_packet_;
-  }
-
-  if (!packet_queue_.empty()) {
-    os << fostr::NewLine << "queued packets:" << fostr::Indent;
-
-    for (auto& packet : packet_queue_) {
-      os << fostr::NewLine << packet;
-    }
-
-    os << fostr::Outdent;
-  }
-
   if (arrivals_.count() != 0) {
     os << fostr::NewLine << "video packet arrivals: " << fostr::Indent
        << arrivals_ << fostr::Outdent;
-  }
-
-  if (scenic_lead_.count() != 0) {
-    os << fostr::NewLine << "packet availability on draw: " << fostr::Indent
-       << draws_ << fostr::Outdent;
-    os << fostr::NewLine << "scenic lead times:";
-    os << fostr::NewLine << "    minimum           "
-       << AsNs(scenic_lead_.min());
-    os << fostr::NewLine << "    average           "
-       << AsNs(scenic_lead_.average());
-    os << fostr::NewLine << "    maximum           "
-       << AsNs(scenic_lead_.max());
-  }
-
-  if (frame_rate_.progress_interval_count()) {
-    os << fostr::NewLine << "scenic frame rate: " << fostr::Indent
-       << frame_rate_ << fostr::Outdent;
   }
 
   os << fostr::Outdent;
 }
 
 void FidlVideoRenderer::ConfigureConnectors() {
-  // TODO: Use ImagePipe and send the VMOs down the pipe.
-  stage()->ConfigureInputToUseLocalMemory(0, kPacketDemand);
+  // The decoder knows |max_payload_size|, so this is enough information to
+  // configure the allocator(s).
+  stage()->ConfigureInputToUseVmos(0,              // max_aggregate_payload_size
+                                   kPacketDemand,  // max_payload_count
+                                   0,              // max_payload_size
+                                   VmoAllocation::kVmoPerBuffer, false);
+}
+
+void FidlVideoRenderer::OnInputConnectionReady(size_t input_index) {
+  FXL_DCHECK(input_index == 0);
+
+  input_connection_ready_ = true;
+
+  if (have_valid_image_info()) {
+    UpdateImages();
+  }
 }
 
 void FidlVideoRenderer::FlushInput(bool hold_frame, size_t input_index,
@@ -93,30 +77,25 @@ void FidlVideoRenderer::FlushInput(bool hold_frame, size_t input_index,
 
   flushed_ = true;
 
-  if (!packet_queue_.empty()) {
-    if (hold_frame) {
-      held_packet_ = std::move(packet_queue_.front());
-    }
-
-    while (!packet_queue_.empty()) {
-      packet_queue_.pop_front();
-    }
-  }
-
-  if (!hold_frame) {
-    held_packet_.reset();
-  }
+  // TODO(dalesat): Cancel presentations on flush when that's supported.
+  // TODO(dalesat): For |!hold_frame|, present a black image.
 
   SetEndOfStreamPts(fuchsia::media::NO_TIMESTAMP);
 
-  InvalidateViews();
+  if (presented_packets_not_released_ <= hold_frame ? 1 : 0) {
+    callback();
+    return;
+  }
 
-  callback();
+  flush_callback_ = std::move(callback);
+  flush_hold_frame_ = hold_frame;
 }
 
 void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
   FXL_DCHECK(packet);
   FXL_DCHECK(input_index == 0);
+
+  CheckForRevisedStreamType(packet);
 
   int64_t packet_pts_ns = packet->GetPts(media::TimelineRate::NsPerSecond);
 
@@ -131,13 +110,6 @@ void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
     }
   }
 
-  bool packet_queue_was_empty = packet_queue_.empty();
-  if (packet_queue_was_empty) {
-    // Make sure the front of the queue has been checked for revised media
-    // type.
-    CheckForRevisedStreamType(packet);
-  }
-
   // Discard empty packets so they don't confuse the selection logic.
   // Discard packets that fall outside the program range.
   if (flushed_ || packet->payload() == nullptr || packet_pts_ns < min_pts(0) ||
@@ -149,20 +121,27 @@ void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
     return;
   }
 
-  held_packet_.reset();
-
-  packet_queue_.push_back(std::move(packet));
-
   int64_t now = media::Timeline::local_now();
-  AdvanceReferenceTime(now);
 
   arrivals_.AddSample(now, current_timeline_function()(now), packet_pts_ns,
                       Progressing());
 
-  // If this is the first packet to arrive, invalidate the views so the
-  // first frame can be displayed.
-  if (packet_queue_was_empty) {
-    InvalidateViews();
+  if (current_timeline_function().invertable()) {
+    // We have a non-zero rate, so we can translate the packet PTS to system
+    // time.
+    PresentPacket(packet,
+                  current_timeline_function().ApplyInverse(packet_pts_ns));
+  } else {
+    // The rate is zero, so we can't translate the packet's PTS to system time.
+    if (!initial_packet_presented_) {
+      // No packet is currently being presented. We present this packet now,
+      // so there's something to look at while we wait to progress.
+      initial_packet_presented_ = true;
+      PresentPacket(packet, now);
+    } else {
+      // Queue up the packet to be presented when we have a non-zero rate.
+      packets_awaiting_presentation_.push(packet);
+    }
   }
 
   if (need_more_packets()) {
@@ -177,59 +156,98 @@ void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
   }
 }
 
+void FidlVideoRenderer::PresentPacket(PacketPtr packet,
+                                      int64_t scenic_presentation_time) {
+  // fbl::MakeRefCounted doesn't seem to forward these parameters properly, so
+  // do it the old-fashioned way.
+  auto release_tracker =
+      fbl::AdoptRef(new ReleaseTracker(packet, shared_from_this()));
+
+  FXL_DCHECK(packet->payload_buffer()->vmo());
+  uint32_t buffer_index = packet->payload_buffer()->vmo()->index();
+
+  for (auto& [view_raw_ptr, view_unique_ptr] : views_) {
+    // |PresentImage| will keep its reference to |release_tracker| until the
+    // release fence is signalled or the |ImagePipe| connection closes.
+    view_raw_ptr->PresentImage(buffer_index, scenic_presentation_time,
+                               release_tracker, dispatcher());
+  }
+
+  ++presented_packets_not_released_;
+}
+
 void FidlVideoRenderer::SetStreamType(const StreamType& stream_type) {
   FXL_DCHECK(stream_type.medium() == StreamType::Medium::kVideo);
   FXL_DCHECK(stream_type.encoding() == StreamType::kVideoEncodingUncompressed);
 
   const VideoStreamType& video_stream_type = *stream_type.video();
 
-  // Assume we're not going to use the converter. This may change.
-  use_converter_ = false;
+  if (video_stream_type.pixel_format() ==
+          VideoStreamType::PixelFormat::kUnknown ||
+      video_stream_type.width() == 0 || video_stream_type.height() == 0) {
+    // The decoder hasn't reported a real stream type yet.
+    return;
+  }
 
-  // TODO(dalesat): Fix |FfmpegVideoDecoder| plane layout before scenic YV12.
-  // The fact that |VideoStreamType| has plane offsets is a artifact of the way
-  // the decoder adds padding for ffmpeg decoders. The plan is to adjust
-  // coded_height to make the planes contiguous. This has to happen before we
-  // start using scenic's YV12 support, which isn't there yet. For now,
-  // we convert from YV12 to ARGB in software, so we can accommodate the plane
-  // offsets.
-  scenic_line_stride_ = video_stream_type.line_stride().empty()
-                            ? 0
-                            : video_stream_type.line_stride()[0];
+  bool had_valid_image_info = have_valid_image_info();
+
+  // This really should be using |video_stream_type.width()| and
+  // video_stream_type.height(). See the comment in |View::OnSceneInvalidated|
+  // for more information.
+  // TODO(dalesat): Change this once SCN-862 and SCN-141 are fixed.
+  image_info_.width = video_stream_type.coded_width();
+  image_info_.height = video_stream_type.coded_height();
+
+  display_width_ = video_stream_type.width();
+  display_height_ = video_stream_type.height();
+
+  // TODO(dalesat): Stash these in image_info_ if/when those fields are added.
+  pixel_aspect_ratio_.width = video_stream_type.pixel_aspect_ratio_width();
+  pixel_aspect_ratio_.height = video_stream_type.pixel_aspect_ratio_height();
+
+  image_info_.stride = video_stream_type.line_stride().empty()
+                           ? 0
+                           : video_stream_type.line_stride()[0];
 
   switch (video_stream_type.pixel_format()) {
     case VideoStreamType::PixelFormat::kArgb:
-      // Supported by scenic.
-      scenic_pixel_format_ = fuchsia::images::PixelFormat::BGRA_8;
+      image_info_.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
       break;
     case VideoStreamType::PixelFormat::kYuy2:
-      // Supported by scenic.
-      scenic_pixel_format_ = fuchsia::images::PixelFormat::YUY2;
+      image_info_.pixel_format = fuchsia::images::PixelFormat::YUY2;
       break;
     case VideoStreamType::PixelFormat::kNv12:
-      // Supported by scenic.
-      scenic_pixel_format_ = fuchsia::images::PixelFormat::NV12;
+      image_info_.pixel_format = fuchsia::images::PixelFormat::NV12;
       break;
     case VideoStreamType::PixelFormat::kYv12:
-      // Not supported by scenic, but we have a converter.
-      converter_.SetStreamType(stream_type.Clone());
-      use_converter_ = true;
-      scenic_pixel_format_ = fuchsia::images::PixelFormat::BGRA_8;
-      scenic_line_stride_ = video_stream_type.coded_width() * 4u;
+      image_info_.pixel_format = fuchsia::images::PixelFormat::YV12;
       break;
     default:
       // Not supported.
       // TODO(dalesat): Report the problem.
+      FXL_LOG(FATAL) << "Unsupported pixel format.";
       break;
   }
 
-  stream_type_ = stream_type.Clone();
+  FXL_DCHECK(have_valid_image_info());
+
+  if (!had_valid_image_info && input_connection_ready_) {
+    // Updating images was deferred when |OnInputConnectionReady| was called,
+    // because we didn't have a valid |ImageInfo|. Now we do, so...
+    UpdateImages();
+  }
+
+  // We probably have new geometry, so invalidate the views.
+  for (auto& [view_raw_ptr, view_unique_ptr] : views_) {
+    view_raw_ptr->InvalidateScene();
+  }
 }
 
 void FidlVideoRenderer::Prime(fit::closure callback) {
   flushed_ = false;
 
-  if (packet_queue_.size() >= kPacketDemand || end_of_stream_pending()) {
+  if (presented_packets_not_released_ >= kPacketDemand ||
+      end_of_stream_pending()) {
     callback();
     return;
   }
@@ -239,35 +257,12 @@ void FidlVideoRenderer::Prime(fit::closure callback) {
 }
 
 fuchsia::math::Size FidlVideoRenderer::video_size() const {
-  fuchsia::math::Size size;
-
-  if (stream_type_) {
-    FXL_DCHECK(stream_type_->medium() == StreamType::Medium::kVideo);
-    const VideoStreamType& video_stream_type = *stream_type_->video();
-    size.width = video_stream_type.width();
-    size.height = video_stream_type.height();
-  } else {
-    size.width = 0;
-    size.height = 0;
-  }
-
-  return size;
+  return fuchsia::math::Size{.width = static_cast<int32_t>(display_width_),
+                             .height = static_cast<int32_t>(display_height_)};
 }
 
 fuchsia::math::Size FidlVideoRenderer::pixel_aspect_ratio() const {
-  fuchsia::math::Size pixel_aspect_ratio;
-
-  if (stream_type_) {
-    FXL_DCHECK(stream_type_->medium() == StreamType::Medium::kVideo);
-    const VideoStreamType& video_stream_type = *stream_type_->video();
-    pixel_aspect_ratio.width = video_stream_type.pixel_aspect_ratio_width();
-    pixel_aspect_ratio.height = video_stream_type.pixel_aspect_ratio_height();
-  } else {
-    pixel_aspect_ratio.width = 1;
-    pixel_aspect_ratio.height = 1;
-  }
-
-  return pixel_aspect_ratio;
+  return pixel_aspect_ratio_;
 }
 
 void FidlVideoRenderer::SetGeometryUpdateCallback(fit::closure callback) {
@@ -286,51 +281,61 @@ void FidlVideoRenderer::CreateView(
 
   view_raw_ptr->SetReleaseHandler(
       [this, view_raw_ptr]() { views_.erase(view_raw_ptr); });
+
+  if (have_valid_image_info() && input_connection_ready_) {
+    // We're ready to add images to the new view, so do so.
+    std::vector<fbl::RefPtr<PayloadVmo>> vmos =
+        stage()->UseInputVmos().GetVmos();
+    FXL_DCHECK(!vmos.empty());
+    view_raw_ptr->UpdateImages(image_id_base_, image_info_, display_width_,
+                               display_height_, vmos);
+  }
 }
 
-void FidlVideoRenderer::AdvanceReferenceTime(int64_t reference_time) {
-  UpdateTimeline(reference_time);
+void FidlVideoRenderer::UpdateImages() {
+  std::vector<fbl::RefPtr<PayloadVmo>> vmos = stage()->UseInputVmos().GetVmos();
+  FXL_DCHECK(!vmos.empty());
 
-  pts_ns_ = current_timeline_function()(reference_time);
+  image_id_base_ = next_image_id_base_;
+  next_image_id_base_ = image_id_base_ + vmos.size();
 
-  DiscardOldPackets();
+  for (auto& [view_raw_ptr, view_unique_ptr] : views_) {
+    view_raw_ptr->UpdateImages(image_id_base_, image_info_, display_width_,
+                               display_height_, vmos);
+  }
 }
 
-void FidlVideoRenderer::GetFrame(uint8_t* buffer,
-                                 const fuchsia::math::Size& buffer_size) {
-  if (!held_packet_ && packet_queue_.empty()) {
-    // No packet. Show black.
-    FillBlack(buffer, buffer_size);
+void FidlVideoRenderer::PacketReleased(PacketPtr packet) {
+  --presented_packets_not_released_;
+
+  if (flush_callback_ &&
+      (presented_packets_not_released_ <= flush_hold_frame_ ? 1 : 0)) {
+    flush_callback_();
+    flush_callback_ = nullptr;
+  }
+
+  if (need_more_packets()) {
+    stage()->RequestInputPacket();
+  }
+}
+
+void FidlVideoRenderer::OnTimelineTransition() {
+  if (!current_timeline_function().invertable()) {
+    // The rate is zero, so we still can't present any images other than
+    // the initial one.
     return;
   }
 
-  PacketPtr packet = held_packet_ ? held_packet_ : packet_queue_.front();
-
-  if (use_converter_) {
-    converter_.ConvertFrame(buffer, buffer_size.width, buffer_size.height,
-                            packet->payload(), packet->size());
-  } else {
-    // TODO(dalesat): This copy goes away when we use ImagePipe.
-    memcpy(buffer, packet->payload(), packet->size());
+  while (!packets_awaiting_presentation_.empty()) {
+    auto packet = packets_awaiting_presentation_.front();
+    packets_awaiting_presentation_.pop();
+    int64_t packet_pts_ns = packet->GetPts(media::TimelineRate::NsPerSecond);
+    PresentPacket(packet,
+                  current_timeline_function().ApplyInverse(packet_pts_ns));
   }
-}
 
-void FidlVideoRenderer::OnProgressStarted() {
-  held_packet_.reset();
-  InvalidateViews();
-}
-
-void FidlVideoRenderer::DiscardOldPackets() {
-  // We keep at least one packet around even if it's old, so we can show an
-  // old frame rather than no frame when we starve.
-  while (packet_queue_.size() > 1 &&
-         packet_queue_.front()->GetPts(media::TimelineRate::NsPerSecond) <
-             pts_ns_) {
-    // TODO(dalesat): Add hysteresis.
-    packet_queue_.pop_front();
-    // Make sure the front of the queue has been checked for revised media
-    // type.
-    CheckForRevisedStreamType(packet_queue_.front());
+  if (need_more_packets()) {
+    stage()->RequestInputPacket();
   }
 }
 
@@ -340,75 +345,55 @@ void FidlVideoRenderer::CheckForRevisedStreamType(const PacketPtr& packet) {
   const std::unique_ptr<StreamType>& revised_stream_type =
       packet->revised_stream_type();
 
-  if (revised_stream_type) {
-    if (revised_stream_type->medium() == StreamType::Medium::kVideo) {
-      FXL_DCHECK(revised_stream_type->video());
+  if (!revised_stream_type) {
+    return;
+  }
 
-      SetStreamType(*revised_stream_type);
+  if (revised_stream_type->medium() != StreamType::Medium::kVideo) {
+    FXL_LOG(FATAL) << "Revised stream type was not video.";
+  }
 
-      if (geometry_update_callback_) {
-        geometry_update_callback_();
-      }
-    } else {
-      FXL_LOG(FATAL) << "Revised stream type was not video.";
-    }
+  FXL_DCHECK(revised_stream_type->video());
+
+  SetStreamType(*revised_stream_type);
+
+  if (geometry_update_callback_) {
+    // Notify the player that geometry has changed. This eventually reaches the
+    // parent view.
+    geometry_update_callback_();
   }
 }
 
-void FidlVideoRenderer::InvalidateViews() {
-  for (auto& pair : views_) {
-    pair.second->InvalidateScene();
-  }
+////////////////////////////////////////////////////////////////////////////////
+// FidlVideoRenderer::ReleaseTracker implementation.
+
+FidlVideoRenderer::ReleaseTracker::ReleaseTracker(
+    PacketPtr packet, std::shared_ptr<FidlVideoRenderer> renderer)
+    : packet_(packet), renderer_(renderer) {
+  FXL_DCHECK(packet_);
+  FXL_DCHECK(renderer_);
 }
 
-void FidlVideoRenderer::OnSceneInvalidated(int64_t reference_time) {
-  AdvanceReferenceTime(reference_time);
-
-  // Update trackers.
-  int64_t now = media::Timeline::local_now();
-  draws_.AddSample(
-      now, current_timeline_function()(now),
-      packet_queue_.empty()
-          ? Packet::kUnknownPts
-          : packet_queue_.front()->GetPts(media::TimelineRate::NsPerSecond),
-      Progressing());
-  scenic_lead_.AddSample(reference_time - now);
-  frame_rate_.AddSample(now, Progressing());
-
-  if (need_more_packets()) {
-    stage()->RequestInputPacket();
-  }
+FidlVideoRenderer::ReleaseTracker::~ReleaseTracker() {
+  renderer_->PacketReleased(packet_);
 }
 
-void FidlVideoRenderer::FillBlack(uint8_t* buffer,
-                                  const fuchsia::math::Size& buffer_size) {
-  FXL_DCHECK(buffer);
+////////////////////////////////////////////////////////////////////////////////
+// FidlVideoRenderer::Image implementation.
 
-  uint32_t plane_stride = scenic_line_stride_ * buffer_size.height;
+FidlVideoRenderer::Image::Image()
+    : wait_(this, ZX_HANDLE_INVALID, ZX_EVENT_SIGNALED) {}
 
-  // TODO(dalesat): Make sure these are correct.
+void FidlVideoRenderer::Image::WaitHandler(async_dispatcher_t* dispatcher,
+                                           async::WaitBase* wait,
+                                           zx_status_t status,
+                                           const zx_packet_signal_t* signal) {
+  wait_.set_object(ZX_HANDLE_INVALID);
+  release_fence_ = zx::event();
 
-  switch (scenic_pixel_format_) {
-    case fuchsia::images::PixelFormat::BGRA_8:
-    case fuchsia::images::PixelFormat::YUY2:
-      // Interleaved, so just line stride times number of lines. In both cases,
-      // zeros map to black.
-      memset(buffer, 0, plane_stride);
-      break;
-    case fuchsia::images::PixelFormat::NV12:
-      // Two planes:
-      // 1) Y: one byte per pixel, so line stride times number of lines. Y must
-      //    be zero for black.
-      // 2) Interleaved UV: two bytes (U and V) for every 2x2 pixels, so half
-      //    the size of the first plane. U and V must be 128 for black.
-      memset(buffer, 0, plane_stride);
-      memset(buffer + plane_stride, 128, plane_stride / 2);
-      break;
-    case fuchsia::images::PixelFormat::YV12:
-      memset(buffer, 0, plane_stride);
-      memset(buffer + plane_stride, 128, plane_stride / 2);
-      break;
-  }
+  // When this tracker is deleted, the renderer is informed that the image has
+  // been released by all the image pipes that held it.
+  release_tracker_ = nullptr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -422,48 +407,194 @@ FidlVideoRenderer::View::View(
     : mozart::BaseView(std::move(view_manager), std::move(view_owner_request),
                        "Video Renderer"),
       renderer_(renderer),
-      image_cycler_(session()) {
+      entity_node_(session()),
+      clip_node_(session()),
+      image_pipe_node_(session()),
+      image_pipe_material_(session()) {
   FXL_DCHECK(renderer_);
 
-  parent_node().AddChild(image_cycler_);
+  // Create an |ImagePipe|.
+  uint32_t image_pipe_id = session()->AllocResourceId();
+  session()->Enqueue(scenic::NewCreateImagePipeCmd(
+      image_pipe_id, image_pipe_.NewRequest(renderer_->dispatcher())));
+
+  image_pipe_.set_error_handler([this]() {
+    images_.reset();
+    image_pipe_ = nullptr;
+  });
+
+  // Initialize |image_pipe_material_| so the image pipe is its texture.
+  image_pipe_material_.SetTexture(image_pipe_id);
+  session()->ReleaseResource(image_pipe_id);
+
+  // |image_pipe_node_| will eventually be a rectangle that covers the entire
+  // view, and will use |image_pipe_material_|. Unfortunately, an |ImagePipe|
+  // texture that has no images is white, so in order to prevent a white
+  // rectangle from flashing up during startup, we use a black material for now.
+  scenic::Material material(session());
+  material.SetColor(0x00, 0x00, 0x00, 0xff);
+  image_pipe_node_.SetMaterial(material);
+
+  // Initialize |clip_node_|, which provides the geometry for |entity_node_|'s
+  // clipping of |image_pipe_material_|. See the comment in |OnSceneInvalidate|
+  // for why that's needed.
+  scenic::Material clip_material(session());
+  clip_material.SetColor(0x00, 0x00, 0x00, 0xff);
+  clip_node_.SetMaterial(clip_material);
+
+  // Connect the nodes up.
+  entity_node_.AddPart(clip_node_);
+  entity_node_.AddChild(image_pipe_node_);
+  parent_node().AddChild(entity_node_);
+
+  // Turn clipping on. We specify clip-to-self here, which really means, clip-
+  // to-part (|clip_node_|, in this case), evidently.
+  entity_node_.SetClip(0, true);
 }
 
 FidlVideoRenderer::View::~View() {}
 
-void FidlVideoRenderer::View::OnSceneInvalidated(
-    fuchsia::images::PresentationInfo presentation_info) {
-  TRACE_DURATION("motown", "OnSceneInvalidated");
+void FidlVideoRenderer::View::UpdateImages(
+    uint32_t image_id_base, fuchsia::images::ImageInfo image_info,
+    uint32_t display_width, uint32_t display_height,
+    const std::vector<fbl::RefPtr<PayloadVmo>>& vmos) {
+  FXL_DCHECK(!vmos.empty());
 
-  renderer_->OnSceneInvalidated(presentation_info.presentation_time);
-
-  fuchsia::math::Size video_size = renderer_->video_size();
-  if (!has_logical_size() || video_size.width == 0 || video_size.height == 0) {
+  if (!image_pipe_) {
+    FXL_LOG(WARNING) << "View::UpdateImages called with no ImagePipe.";
     return;
   }
 
-  // Update the image.
-  const scenic::HostImage* image = image_cycler_.AcquireImage(
-      video_size.width, video_size.height, renderer_->scenic_line_stride(),
-      renderer_->scenic_pixel_format(), fuchsia::images::ColorSpace::SRGB);
-  FXL_DCHECK(image);
+  image_width_ = image_info.width;
+  image_height_ = image_info.height;
+  display_width_ = display_width;
+  display_height_ = display_height;
 
-  // There's no way to find out how big the buffer is, so we have to assume
-  // |HostImageCycler| got it right.
-  renderer_->GetFrame(static_cast<uint8_t*>(image->image_ptr()), video_size);
-  image_cycler_.ReleaseAndSwapImage();
-
-  // Scale the video so it fills the view.
-  float width_scale = static_cast<float>(logical_size().width) /
-                      static_cast<float>(video_size.width);
-  float height_scale = static_cast<float>(logical_size().height) /
-                       static_cast<float>(video_size.height);
-  image_cycler_.SetScale(width_scale, height_scale, 1.f);
-  image_cycler_.SetTranslation(logical_size().width * .5f,
-                               logical_size().height * .5f, 0.f);
-
-  if (renderer_->Progressing()) {
-    InvalidateScene();
+  // Remove the current set of images.
+  for (auto& image : images_) {
+    image_pipe_->RemoveImage(image.image_id_);
   }
+
+  images_.reset(new Image[vmos.size()], vmos.size());
+
+  uint32_t index = 0;
+  for (auto vmo : vmos) {
+    auto& image = images_[index];
+
+    image.vmo_ = vmo;
+    image.image_id_ = index + image_id_base;
+    ++index;
+
+    // For now, we don't support non-zero memory offsets.
+    // TODO(dalesat): |ZX_RIGHT_WRITE| shouldn't be required, but it is.
+    image_pipe_->AddImage(
+        image.image_id_, image_info,
+        image.vmo_->Duplicate(ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER |
+                              ZX_RIGHT_DUPLICATE | ZX_RIGHT_WRITE),
+        fuchsia::images::MemoryType::HOST_MEMORY,
+        0);  // memory_offset
+  }
+}
+
+void FidlVideoRenderer::View::PresentImage(
+    uint32_t buffer_index, uint64_t presentation_time,
+    fbl::RefPtr<ReleaseTracker> release_tracker,
+    async_dispatcher_t* dispatcher) {
+  FXL_DCHECK(dispatcher);
+
+  if (!image_pipe_) {
+    FXL_LOG(WARNING) << "View::PresentImage called with no ImagePipe.";
+    return;
+  }
+
+  FXL_DCHECK(buffer_index < images_.size());
+
+  auto& image = images_[buffer_index];
+
+  zx_status_t status = zx::event::create(0, &image.release_fence_);
+  if (status != ZX_OK) {
+    // The image won't get presented, but this is otherwise unharmful.
+    // TODO(dalesat): Shut down playback and report the problem to the client.
+    FXL_LOG(ERROR) << "Failed to create event in PresentImage.";
+    return;
+  }
+
+  zx::event release_fence;
+  status = image.release_fence_.duplicate(ZX_RIGHT_SIGNAL | ZX_RIGHTS_BASIC,
+                                          &release_fence);
+  if (status != ZX_OK) {
+    // The image won't get presented, but this is otherwise unharmful.
+    // TODO(dalesat): Shut down playback and report the problem to the client.
+    FXL_LOG(ERROR) << "Failed to duplicate event in PresentImage.";
+    image.release_fence_ = zx::event();
+    return;
+  }
+
+  image.release_tracker_ = release_tracker;
+
+  auto acquire_fences = fidl::VectorPtr<zx::event>::New(0);
+  auto release_fences = fidl::VectorPtr<zx::event>::New(0);
+  release_fences.push_back(std::move(release_fence));
+
+  image.wait_.set_object(image.release_fence_.get());
+  image.wait_.Begin(dispatcher);
+
+  image_pipe_->PresentImage(
+      image.image_id_, presentation_time, std::move(acquire_fences),
+      std::move(release_fences),
+      [](fuchsia::images::PresentationInfo presentation_info) {});
+}
+
+void FidlVideoRenderer::View::OnSceneInvalidated(
+    fuchsia::images::PresentationInfo presentation_info) {
+  if (!has_logical_size()) {
+    return;
+  }
+
+  // Because scenic doesn't handle display height being different than image
+  // height (SCN-862) or non-minimal stride (SCN-141), we have to position
+  // |image_pipe_node_| so it extends beyond the view to the right and at the
+  // bottom by |image_width_ - display_width_| and |image_height_ -
+  // display_height_|, respectively, and clip off the pixels we don't want to
+  // display. |entity_node_| does the clipping based on the geometry of
+  // |clip_node_|.
+  // TODO(dalesat): Remove this once SCN-862 and SCN-141 are fixed.
+  image_pipe_node_.SetMaterial(image_pipe_material_);
+
+  // Configure |clip_node_| to express the geometry of the clipping region.
+  clip_node_.SetShape(
+      scenic::Rectangle(session(), display_width_, display_height_));
+
+  // Position |image_pipe_node_| so it overlaps the edge of |clip_node_| by
+  // just enough to remove the parts we don't want to see.
+  image_pipe_node_.SetShape(
+      scenic::Rectangle(session(), image_width_, image_height_));
+  image_pipe_node_.SetTranslation((image_width_ - display_width_) / 2.0f,
+                                  (image_height_ - display_height_) / 2.0f,
+                                  0.0f);
+
+  // Scale |entity_node_| to fill the view.
+  float width_scale = logical_size().width / display_width_;
+  float height_scale = logical_size().height / display_height_;
+  entity_node_.SetScale(width_scale, height_scale, 1.0f);
+
+  // This |SetTranslation| shouldn't be necessary, but the flutter ChildView
+  // widget doesn't take into account that scenic 0,0 is at center. As a
+  // consequence, C++ parent views need to do this:
+  //
+  //    video_child_view->SetTranslation(video_rect.x, video_rect.y,
+  //                                     kVideoElevation);
+  //
+  // instead of the normal thing, which would be this:
+  //
+  //    video_child_view->SetTranslation(
+  //        video_rect.x + video_rect.width * 0.5f,
+  //        video_rect.y + video_rect.height * 0.5f, kVideoElevation);
+  //
+  // TODO(dalesat): Remove this and update C++ parent views when SCN-1041 is
+  // fixed.
+  entity_node_.SetTranslation(logical_size().width * .5f,
+                              logical_size().height * .5f, 0.f);
 }
 
 }  // namespace media_player

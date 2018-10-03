@@ -31,10 +31,12 @@ const VideoStreamType::PixelFormatInfo& VideoStreamType::InfoForPixelFormat(
   };
   // TODO(dalesat): Provide the plane_indices_ fields.
   static const std::unordered_map<PixelFormat, PixelFormatInfo, Hash> table = {
-      {PixelFormat::kUnknown,
-       {0, {}, {}, {}}},
+      {PixelFormat::kUnknown, {0, {}, {}, {}}},
       {PixelFormat::kI420,
-       {3, {}, {1, 1, 1}, {Extent(1, 1), Extent(2, 2), Extent(2, 2)}}},
+       {3,
+        {.y_ = 0, .u_ = 1, .v_ = 2},
+        {1, 1, 1},
+        {Extent(1, 1), Extent(2, 2), Extent(2, 2)}}},
       {PixelFormat::kYv12,
        {3,
         {.y_ = 0, .u_ = 2, .v_ = 1},
@@ -49,11 +51,12 @@ const VideoStreamType::PixelFormatInfo& VideoStreamType::InfoForPixelFormat(
         {Extent(1, 1), Extent(2, 2), Extent(2, 2), Extent(1, 1)}}},
       {PixelFormat::kYv24,
        {3, {}, {1, 1, 1}, {Extent(1, 1), Extent(1, 1), Extent(1, 1)}}},
-      {PixelFormat::kNv12, {2, {}, {1, 2}, {Extent(1, 1), Extent(2, 2)}}},
+      {PixelFormat::kNv12,
+       {2, {.y_ = 0, .uv_ = 1}, {1, 2}, {Extent(1, 1), Extent(2, 2)}}},
       {PixelFormat::kNv21, {2, {}, {1, 2}, {Extent(1, 1), Extent(2, 2)}}},
       {PixelFormat::kUyvy, {1, {}, {2}, {Extent(1, 1)}}},
       {PixelFormat::kYuy2, {1, {}, {2}, {Extent(1, 1)}}},
-      {PixelFormat::kArgb, {1, {}, {4}, {Extent(1, 1)}}},
+      {PixelFormat::kArgb, {1, {.argb_ = 0}, {4}, {Extent(1, 1)}}},
       {PixelFormat::kXrgb, {1, {}, {4}, {Extent(1, 1)}}},
       {PixelFormat::kRgb24, {1, {}, {3}, {Extent(1, 1)}}},
       {PixelFormat::kRgb32, {1, {}, {4}, {Extent(1, 1)}}},
@@ -82,6 +85,32 @@ uint32_t VideoStreamType::PixelFormatInfo::BytesPerRow(uint32_t plane,
                                                        uint32_t width) const {
   FXL_DCHECK(plane < plane_count_);
   return bytes_per_element_for_plane(plane) * ColumnCount(plane, width);
+}
+
+uint32_t VideoStreamType::PixelFormatInfo::LayoutPlaneIndexToYuv(
+    uint32_t layout_index) const {
+  if (layout_index == plane_indices_.y_) {
+    return 0;
+  }
+  if (layout_index == plane_indices_.u_) {
+    return 1;
+  }
+  if (layout_index == plane_indices_.v_) {
+    return 2;
+  }
+  if (layout_index == plane_indices_.uv_) {
+    return 1;
+  }
+  if (layout_index == plane_indices_.argb_) {
+    return 0;
+  }
+  if (layout_index == plane_indices_.a_) {
+    return 3;
+  }
+
+  FXL_DCHECK(false) << "PlaneIndexLayoutToYuv called with invalid layout index "
+                    << layout_index << ".";
+  return 0;
 }
 
 VideoStreamType::VideoStreamType(

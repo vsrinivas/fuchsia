@@ -264,6 +264,10 @@ void MediaPlayerTestView::OnSceneInvalidated(
 
   // Position the video.
   if (video_host_node_) {
+    // TODO(dalesat): Fix this when SCN-1041 is fixed. Should be:
+    // video_host_node_->SetTranslation(
+    //     content_rect_.x + content_rect_.width * 0.5f,
+    //     content_rect_.y + content_rect_.height * 0.5f, kVideoElevation);
     video_host_node_->SetTranslation(content_rect_.x, content_rect_.y,
                                      kVideoElevation);
   }

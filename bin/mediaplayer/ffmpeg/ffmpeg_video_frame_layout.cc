@@ -52,9 +52,12 @@ size_t FfmpegVideoFrameLayout::LayoutFrame(
     VideoStreamType::PixelFormat pixel_format,
     const VideoStreamType::Extent& coded_size,
     std::vector<uint32_t>* line_stride_out,
-    std::vector<uint32_t>* plane_offset_out) {
+    std::vector<uint32_t>* plane_offset_out, uint32_t* coded_width_out,
+    uint32_t* coded_height_out) {
   FXL_DCHECK(line_stride_out != nullptr);
   FXL_DCHECK(plane_offset_out != nullptr);
+  FXL_DCHECK(coded_width_out != nullptr);
+  FXL_DCHECK(coded_height_out != nullptr);
 
   const VideoStreamType::PixelFormatInfo& info =
       VideoStreamType::InfoForPixelFormat(pixel_format);
@@ -62,20 +65,46 @@ size_t FfmpegVideoFrameLayout::LayoutFrame(
   line_stride_out->resize(info.plane_count_);
   plane_offset_out->resize(info.plane_count_);
 
-  uint32_t plane_offset = 0;
   VideoStreamType::Extent aligned_size = FfmpegAlignedSize(coded_size, info);
 
-  for (uint32_t plane = 0; plane < info.plane_count_; ++plane) {
-    // The *2 in alignment for height is because some formats (e.g. h264)
-    // allow interlaced coding, and then the size needs to be a multiple of two
-    // macroblocks (vertically). See avcodec_align_dimensions2.
-    const uint32_t height = RoundUpToAlign(
-        info.RowCount(plane, aligned_size.height()), kFrameSizeAlignment * 2);
-    (*line_stride_out)[plane] = RoundUpToAlign(
-        info.BytesPerRow(plane, aligned_size.width()), kFrameSizeAlignment);
-    (*plane_offset_out)[plane] = plane_offset;
-    plane_offset += height * (*line_stride_out)[plane];
+  // TODO(dalesat): Redo the alignment to just obey avcodec_align_dimensions2.
+  // TODO(dalesat): Get rid of superfluous stuff in VideoStreamType.
+
+  // Because we're aligning Y, U and V the same amount, we need to double the
+  // alignment to satisfy U and V, which have half as many bytes per line. This
+  // isn't necessarily true of all formats, but YV12 is the only one we care
+  // about. When we switch to using avcodec_align_dimensions2, this nonsense
+  // will go away.
+  const uint32_t new_coded_width =
+      RoundUpToAlign(aligned_size.width(), kFrameSizeAlignment * 2);
+
+  // The *4 in alignment for height is because of the YUV thing mentioned above
+  // and because some formats (e.g. h264) allow interlaced coding, and then the
+  // size needs to be a multiple of two macroblocks (vertically). See
+  // avcodec_align_dimensions2.
+  const uint32_t new_coded_height = RoundUpToAlign(
+      info.RowCount(0, aligned_size.height()), kFrameSizeAlignment * 4);
+
+  // We need to use |LayoutPlaneIndexToYuv| here, because the we want the
+  // strides and offsets in YUV order, but we calculate them in layout order.
+  // There's a lengthy explanation of these terms above the declaration of
+  // |VideoStreamType::PixelFormatInfo::LayoutPlaneIndexToYuv|.
+  uint32_t plane_offset = 0;
+  for (uint32_t layout_plane_index = 0; layout_plane_index < info.plane_count_;
+       ++layout_plane_index) {
+    uint32_t yuv_plane_index = info.LayoutPlaneIndexToYuv(layout_plane_index);
+    uint32_t line_stride =
+        info.BytesPerRow(layout_plane_index, new_coded_width);
+
+    (*line_stride_out)[yuv_plane_index] = line_stride;
+    (*plane_offset_out)[yuv_plane_index] = plane_offset;
+
+    plane_offset +=
+        info.RowCount(layout_plane_index, new_coded_height) * line_stride;
   }
+
+  *coded_width_out = new_coded_width;
+  *coded_height_out = new_coded_height;
 
   // The extra line of UV being allocated is because h264 chroma MC overreads
   // by one line in some cases, see avcodec_align_dimensions2() and
@@ -100,10 +129,13 @@ bool FfmpegVideoFrameLayout::Update(const AVCodecContext& context) {
   coded_height_ = context.coded_height;
   pixel_format_ = context.pix_fmt;
 
+  uint32_t adjusted_coded_width_not_used;
+  uint32_t adjusted_coded_height_not_used;
   buffer_size_ =
       LayoutFrame(PixelFormatFromAVPixelFormat(pixel_format_),
                   VideoStreamType::Extent(coded_width_, coded_height_),
-                  &line_stride_, &plane_offset_);
+                  &line_stride_, &plane_offset_, &adjusted_coded_width_not_used,
+                  &adjusted_coded_height_not_used);
 
   return true;
 }

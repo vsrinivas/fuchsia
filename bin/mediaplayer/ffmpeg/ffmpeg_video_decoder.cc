@@ -15,6 +15,11 @@ extern "C" {
 }
 
 namespace media_player {
+namespace {
+
+constexpr uint32_t kOutputMaxPayloadCount = 6;
+
+}  // namespace
 
 // static
 std::shared_ptr<Decoder> FfmpegVideoDecoder::Create(
@@ -47,7 +52,7 @@ void FfmpegVideoDecoder::ConfigureConnectors() {
 
   if (has_size()) {
     configured_output_buffer_size_ = frame_layout_.buffer_size();
-    stage()->ConfigureOutputToUseLocalMemory(0, 3,
+    stage()->ConfigureOutputToUseLocalMemory(0, kOutputMaxPayloadCount,
                                              configured_output_buffer_size_);
   } else {
     stage()->ConfigureOutputDeferred();
@@ -129,9 +134,9 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
     sync_completion completion;
     stage()->PostTask([this, buffer_size, &completion]() {
       stage()->ConfigureOutputToUseLocalMemory(
-          0,             // max_aggregate_payload_size
-          3,             // max_payload_count
-          buffer_size);  // max_payload_size
+          0,                       // max_aggregate_payload_size
+          kOutputMaxPayloadCount,  // max_payload_count
+          buffer_size);            // max_payload_size
       sync_completion_signal(&completion);
     });
 

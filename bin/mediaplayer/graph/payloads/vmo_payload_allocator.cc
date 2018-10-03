@@ -80,6 +80,8 @@ void VmoPayloadAllocator::AddVmo(fbl::RefPtr<PayloadVmo> payload_vmo) {
              vmo_allocation_ != VmoAllocation::kSingleVmo)
       << "Attempt to add more than one VMO to single-vmo allocator.";
 
+  payload_vmo->SetIndex(payload_vmos_.size());
+  
   payload_vmos_.push_back(payload_vmo);
   if (vmo_allocation_ != VmoAllocation::kVmoPerBuffer) {
     payload_vmo->allocator_ =

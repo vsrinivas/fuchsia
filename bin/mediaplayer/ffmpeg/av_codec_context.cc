@@ -197,10 +197,12 @@ std::unique_ptr<StreamType> StreamTypeFromVideoCodecContext(
 
   std::vector<uint32_t> line_stride;
   std::vector<uint32_t> plane_offset;
+  uint32_t coded_width;
+  uint32_t coded_height;
   FfmpegVideoFrameLayout::LayoutFrame(
       pixel_format,
       VideoStreamType::Extent(from.coded_width, from.coded_height),
-      &line_stride, &plane_offset);
+      &line_stride, &plane_offset, &coded_width, &coded_height);
 
   uint32_t aspect_ratio_width = from.sample_aspect_ratio.num;
   uint32_t aspect_ratio_height = from.sample_aspect_ratio.den;
@@ -217,7 +219,7 @@ std::unique_ptr<StreamType> StreamTypeFromVideoCodecContext(
           : Bytes::Create(from.extradata, from.extradata_size),
       VideoStreamType::VideoProfile::kNotApplicable, pixel_format,
       ColorSpaceFromAVColorSpaceAndRange(from.colorspace, from.color_range),
-      from.width, from.height, from.coded_width, from.coded_height,
+      from.width, from.height, coded_width, coded_height,
       aspect_ratio_width, aspect_ratio_height, line_stride, plane_offset);
 }
 

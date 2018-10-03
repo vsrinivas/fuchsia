@@ -23,7 +23,9 @@ class FfmpegVideoFrameLayout {
   static size_t LayoutFrame(VideoStreamType::PixelFormat pixel_format,
                             const VideoStreamType::Extent& coded_size,
                             std::vector<uint32_t>* line_stride_out,
-                            std::vector<uint32_t>* plane_offset_out);
+                            std::vector<uint32_t>* plane_offset_out,
+                            uint32_t* coded_width_out,
+                            uint32_t* coded_height_out);
 
   // Updates the layout as required to conform to the supplied context. Returns
   // true if the layout has changed.

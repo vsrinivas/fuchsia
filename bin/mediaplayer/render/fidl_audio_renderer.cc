@@ -168,10 +168,6 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
 
   if (packet->end_of_stream()) {
     SetEndOfStreamPts(start_pts_ns);
-    if (current_timeline_function().invertable()) {
-      // Make sure we wake up to signal end-of-stream when the time comes.
-      UpdateTimelineAt(current_timeline_function().ApplyInverse(start_pts_ns));
-    }
 
     if (prime_callback_) {
       // We won't get any more packets, so we're as primed as we're going to

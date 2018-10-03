@@ -41,6 +41,14 @@ class PayloadVmo : public fbl::RefCounted<PayloadVmo> {
   // it is mapped, nullptr otherwise.
   void* start() const { return vmo_mapper_.start(); }
 
+  // The index of this VMO in the allocator's vector of VMOs.
+  uint32_t index() { return index_; }
+
+  // Sets the index of this VMO in the allocator's vector of VMOs.
+  void SetIndex(uint32_t index) {
+    index_ = index;
+  }
+
   // Returns |start()| offset by |offset| if the VMO is mapped, nullptr
   // otherwise.
   void* at_offset(uint64_t offset) {
@@ -63,6 +71,7 @@ class PayloadVmo : public fbl::RefCounted<PayloadVmo> {
  private:
   zx::vmo vmo_;
   uint64_t size_;
+  uint32_t index_;
 
   fzl::VmoMapper vmo_mapper_;
 

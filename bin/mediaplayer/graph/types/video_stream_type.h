@@ -75,7 +75,7 @@ class VideoStreamType : public StreamType {
     uint32_t height_;
   };
 
-  // Specifies indices for each video plane.
+  // Specifies an index for each video plane as it is laid out in memory.
   struct PlaneIndices {
     static const uint32_t kNone = kMaxPlaneIndex + 1;
     uint32_t argb_ = kNone;
@@ -88,26 +88,40 @@ class VideoStreamType : public StreamType {
 
   // Information regarding a pixel format.
   struct PixelFormatInfo {
-    // Returns the number of bytes per element for the specified plane.
+    // Returns the number of bytes per element for the specified plane. |plane|
+    // here refers to the index of the plane in the order it's laid out in
+    // memory.
     uint32_t bytes_per_element_for_plane(uint32_t plane) const {
       FXL_DCHECK(plane < plane_count_);
       return bytes_per_element_[plane];
     }
 
-    // Returns the sample size of the specified plane.
+    // Returns the sample size of the specified plane. |plane| here refers to
+    // the index of the plane in the order it's laid out in memory.
     const Extent& sample_size_for_plane(uint32_t plane) const {
       FXL_DCHECK(plane < plane_count_);
       return sample_size_[plane];
     }
 
-    // Returns the row count for the specified plane.
+    // Returns the row count for the specified plane. |plane| here refers to
+    // the index of the plane in the order it's laid out in memory.
     uint32_t RowCount(uint32_t plane, uint32_t height) const;
 
-    // Returns the column count for the specified plane.
+    // Returns the column count for the specified plane. |plane| here refers
+    // to the index of the plane in the order it's laid out in memory.
     uint32_t ColumnCount(uint32_t plane, uint32_t width) const;
 
-    // Returns the number of bytes per row for the specified plane.
+    // Returns the number of bytes per row for the specified plane. |plane|
+    // here refers to the index of the plane in the order it's laid out in
+    // memory.
     uint32_t BytesPerRow(uint32_t plane, uint32_t width) const;
+
+    // Translates a layout-order plane index into a YUV-order plane index. A
+    // layout-order plane index refers to the order in which planes are laid
+    // out in memory. For YV12, which is laid out in YVU order, a layout-order
+    // plane index of 0 refers to the Y plane, 1 to the V plane and 2 to the U
+    // plane. YUV-order is 0 for Y, 1 for U and 2 for V.
+    uint32_t LayoutPlaneIndexToYuv(uint32_t layout_index) const;
 
     const uint32_t plane_count_;
     const PlaneIndices plane_indices_;

@@ -123,6 +123,13 @@ class Renderer : public AsyncNode {
   // given reference time.
   void ApplyPendingChanges(int64_t reference_time);
 
+  // If we need to signal end-of-stream in the future, and we know when that is
+  // (because we have a timeline with a non-zero rate), call |UpdateTimelineAt|
+  // so we wake up to do that. It's harmless to call |UpdateTimeline| when
+  // there's nothing to do, so there's no need to cancel this if conditions
+  // change.
+  void MaybeScheduleEndOfStreamPublication();
+
   // Clears the pending timeline function and calls its associated callback.
   void ClearPendingTimelineFunction();
 

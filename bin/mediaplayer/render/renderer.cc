@@ -30,7 +30,7 @@ void Renderer::Dump(std::ostream& os) const {
   os << label() << fostr::Indent;
   stage()->Dump(os);
   os << fostr::NewLine
-     << "timeline:              " << current_timeline_function();
+     << "timeline:              " << current_timeline_function_;
   os << fostr::NewLine << "end of stream:         " << end_of_stream();
   os << fostr::NewLine
      << "end of stream pts:     " << AsNs(end_of_stream_pts());
@@ -96,6 +96,8 @@ void Renderer::SetEndOfStreamPts(int64_t end_of_stream_pts) {
   if (end_of_stream_pts_ != end_of_stream_pts) {
     end_of_stream_pts_ = end_of_stream_pts;
     end_of_stream_published_ = false;
+
+    MaybeScheduleEndOfStreamPublication();
   }
 }
 
@@ -109,6 +111,7 @@ void Renderer::UpdateTimeline(int64_t reference_time) {
 }
 
 void Renderer::UpdateTimelineAt(int64_t reference_time) {
+  // TODO(dalesat): Make sure we don't call into a deleted |this|.
   async::PostTaskForTime(
       dispatcher_, [this, reference_time]() { UpdateTimeline(reference_time); },
       zx::time(reference_time));
@@ -122,9 +125,25 @@ void Renderer::ApplyPendingChanges(int64_t reference_time) {
     return;
   }
 
+  bool was_paused = !current_timeline_function_.invertable();
+
   current_timeline_function_ = pending_timeline_function_;
   ClearPendingTimelineFunction();
   OnTimelineTransition();
+
+  if (was_paused) {
+    MaybeScheduleEndOfStreamPublication();
+  }
+}
+
+void Renderer::MaybeScheduleEndOfStreamPublication() {
+  if (!end_of_stream_published_ &&
+      end_of_stream_pts_ != fuchsia::media::NO_TIMESTAMP &&
+      current_timeline_function_.invertable()) {
+    // Make sure we wake up to signal end-of-stream when the time comes.
+    UpdateTimelineAt(
+        current_timeline_function_.ApplyInverse(end_of_stream_pts_));
+  }
 }
 
 void Renderer::ClearPendingTimelineFunction() {

@@ -5,16 +5,15 @@
 #ifndef GARNET_BIN_MEDIAPLAYER_RENDER_FIDL_VIDEO_RENDERER_H_
 #define GARNET_BIN_MEDIAPLAYER_RENDER_FIDL_VIDEO_RENDERER_H_
 
+#include <fbl/array.h>
 #include <fuchsia/media/cpp/fidl.h>
-#include <deque>
+#include <lib/async/cpp/wait.h>
+#include <lib/ui/scenic/cpp/resources.h>
+#include <lib/ui/view_framework/base_view.h>
+#include <queue>
 #include <unordered_map>
 #include "garnet/bin/mediaplayer/metrics/packet_timing_tracker.h"
-#include "garnet/bin/mediaplayer/metrics/rate_tracker.h"
-#include "garnet/bin/mediaplayer/metrics/value_tracker.h"
-#include "garnet/bin/mediaplayer/render/video_converter.h"
 #include "garnet/bin/mediaplayer/render/video_renderer.h"
-#include "lib/ui/scenic/cpp/host_image_cycler.h"
-#include "lib/ui/view_framework/base_view.h"
 
 namespace media_player {
 
@@ -36,6 +35,8 @@ class FidlVideoRenderer
 
   void ConfigureConnectors() override;
 
+  void OnInputConnectionReady(size_t input_index) override;
+
   void FlushInput(bool hold_frame, size_t input_index,
                   fit::closure callback) override;
 
@@ -54,14 +55,6 @@ class FidlVideoRenderer
 
   fuchsia::math::Size pixel_aspect_ratio() const override;
 
-  // Returns the pixel format to be used when creating |ImageInfo|s for scenic.
-  fuchsia::images::PixelFormat scenic_pixel_format() const {
-    return scenic_pixel_format_;
-  }
-
-  // Returns the line stride to be used when creating |ImageInfo|s for scenic.
-  uint32_t scenic_line_stride() const { return scenic_line_stride_; }
-
   // Registers a callback that's called when the values returned by |video_size|
   // or |pixel_aspect_ratio| change.
   void SetGeometryUpdateCallback(fit::closure callback);
@@ -73,10 +66,48 @@ class FidlVideoRenderer
           view_owner_request);
 
  protected:
-  void OnProgressStarted() override;
+  // Renderer overrides.
+  void OnTimelineTransition() override;
 
  private:
   static constexpr uint32_t kPacketDemand = 3;
+
+  // Used to determine when all the |ImagePipe|s have released a buffer.
+  class ReleaseTracker : public fbl::RefCounted<ReleaseTracker> {
+   public:
+    // Constructs a |ReleaseTracker|. |packet| and |renderer| are both required.
+    ReleaseTracker(PacketPtr packet,
+                   std::shared_ptr<FidlVideoRenderer> renderer);
+
+    ~ReleaseTracker();
+
+   private:
+    PacketPtr packet_;
+    std::shared_ptr<FidlVideoRenderer> renderer_;
+  };
+
+  struct Image {
+    Image();
+
+    ~Image() = default;
+
+    // Called when |release_fence_| is released.
+    void WaitHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                     zx_status_t status, const zx_packet_signal_t* signal);
+
+    fbl::RefPtr<PayloadVmo> vmo_;
+    uint32_t image_id_;
+    // If the |ImagePipe| channel closes unexpectedly, all the |Images|
+    // associated with the view are deleted, so this |release_tracker_| no
+    // longer prevents the renderer from releaseing the packet.
+    fbl::RefPtr<ReleaseTracker> release_tracker_;
+    zx::event release_fence_;
+    // |release_fence_| owns the handle that |wait_| references so it's
+    // important that |wait_| be destroyed first when the destructor runs.
+    // Members are destroyed bottom to top, so |wait_| must be below
+    // |release_fence_|.
+    async::WaitMethod<Image, &Image::WaitHandler> wait_;
+  };
 
   class View : public mozart::BaseView {
    public:
@@ -87,64 +118,85 @@ class FidlVideoRenderer
 
     ~View() override;
 
+    // Removes the old images from the image pipe, if images were added
+    // previously, and adds new images. An image is added for each VMO in
+    // |vmos|, and they are numbered starting with |image_id_base|.
+    void UpdateImages(uint32_t image_id_base,
+                      fuchsia::images::ImageInfo image_info,
+                      uint32_t display_width, uint32_t display_height,
+                      const std::vector<fbl::RefPtr<PayloadVmo>>& vmos);
+
+    // Present an image using the |ImagePipe|.
+    void PresentImage(uint32_t buffer_index, uint64_t presentation_time,
+                      fbl::RefPtr<ReleaseTracker> release_tracker,
+                      async_dispatcher_t* dispatcher);
+
    private:
     // |BaseView|:
     void OnSceneInvalidated(
         fuchsia::images::PresentationInfo presentation_info) override;
 
     std::shared_ptr<FidlVideoRenderer> renderer_;
-    scenic::HostImageCycler image_cycler_;
+
+    scenic::EntityNode entity_node_;
+    scenic::ShapeNode clip_node_;
+    scenic::ShapeNode image_pipe_node_;
+    scenic::Material image_pipe_material_;
+
+    fuchsia::images::ImagePipePtr image_pipe_;
+
+    uint32_t image_width_;
+    uint32_t image_height_;
+    uint32_t display_width_;
+    uint32_t display_height_;
+    fbl::Array<Image> images_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(View);
   };
 
-  // Advances reference time to the indicated value. This ensures that
-  // |GetSize| and |GetFrame| refer to the video frame appropriate to
-  // the specified reference time and that obsolete packets are discarded.
-  void AdvanceReferenceTime(int64_t reference_time);
+  // Updates the images added to the image pipes associated with the views.
+  void UpdateImages();
 
-  void GetFrame(uint8_t* buffer, const fuchsia::math::Size& buffer_size);
+  // Present |packet| at |scenic_presentation_time|.
+  void PresentPacket(PacketPtr packet, int64_t scenic_presentation_time);
 
-  // Discards packets that are older than pts_ns_.
-  void DiscardOldPackets();
+  // Called when all image pipes have released an image that was submitted for
+  // presentation.
+  void PacketReleased(PacketPtr packet);
 
   // Checks |packet| for a revised stream type and updates state accordingly.
   void CheckForRevisedStreamType(const PacketPtr& packet);
 
-  // Calls Invalidate on all registered views.
-  void InvalidateViews();
-
-  // Called when a view's |OnSceneInvalidated| is called.
-  void OnSceneInvalidated(int64_t reference_time);
-
   // Determines whether we need more packets.
   bool need_more_packets() const {
     return !flushed_ && !end_of_stream_pending() &&
-           (packet_queue_.size() + (held_packet_ ? 1 : 0) < kPacketDemand);
+           (presented_packets_not_released_ +
+            packets_awaiting_presentation_.size()) < kPacketDemand;
   }
 
-  // Fill buffer with black based on |scenic_pixel_format_| and
-  // |scenic_line_stride_|.
-  void FillBlack(uint8_t* buffer, const fuchsia::math::Size& buffer_size);
+  bool have_valid_image_info() {
+    return image_info_.width != 0 && image_info_.height != 0;
+  }
 
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
-  bool use_converter_ = false;
-  std::unique_ptr<StreamType> stream_type_;
-  fuchsia::images::PixelFormat scenic_pixel_format_;
-  uint32_t scenic_line_stride_;
-  std::deque<PacketPtr> packet_queue_;
+  bool input_connection_ready_ = false;
+  fuchsia::images::ImageInfo image_info_{};
+  uint32_t display_width_{};
+  uint32_t display_height_{};
+  fuchsia::math::Size pixel_aspect_ratio_{.width = 1, .height = 1};
+  uint32_t presented_packets_not_released_ = 0;
   bool flushed_ = true;
-  PacketPtr held_packet_;
-  int64_t pts_ns_ = Packet::kUnknownPts;
-  VideoConverter converter_;
+  fit::closure flush_callback_;
+  bool flush_hold_frame_;
+  bool initial_packet_presented_ = false;
+  std::queue<PacketPtr> packets_awaiting_presentation_;
   std::unordered_map<View*, std::unique_ptr<View>> views_;
   fit::closure prime_callback_;
   fit::closure geometry_update_callback_;
+  uint32_t image_id_base_ = 1;
+  uint32_t next_image_id_base_ = 1;
 
   PacketTimingTracker arrivals_;
-  PacketTimingTracker draws_;
-  RateTracker frame_rate_;
-  ValueTracker<int64_t> scenic_lead_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FidlVideoRenderer);
 };
