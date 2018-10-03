@@ -69,163 +69,46 @@ void LedgerManager::PageAvailabilityManager::OnPageAvailable(
 class LedgerManager::PageManagerContainer {
  public:
   PageManagerContainer(std::string ledger_name, storage::PageId page_id,
-                       PageUsageListener* page_usage_listener)
-      : ledger_name_(std::move(ledger_name)),
-        page_id_(std::move(page_id)),
-        page_usage_listener_(page_usage_listener),
-        weak_factory_(this) {}
+                       PageUsageListener* page_usage_listener);
+  ~PageManagerContainer();
 
-  ~PageManagerContainer() {
-    for (const auto& request : requests_) {
-      request.second(Status::INTERNAL_ERROR);
-    }
-    for (const auto& request : debug_requests_) {
-      request.second(Status::INTERNAL_ERROR);
-    }
-    if (page_opened_notification_sent_) {
-      page_usage_listener_->OnPageClosed(ledger_name_, page_id_);
-    }
-  }
-
-  void set_on_empty(fit::closure on_empty_callback) {
-    on_empty_callback_ = std::move(on_empty_callback);
-    if (page_manager_) {
-      page_manager_->set_on_empty([this] { CheckEmpty(); });
-    }
-  };
+  void set_on_empty(fit::closure on_empty_callback);
 
   // Keeps track of |page| and |callback|. Binds |page| and fires |callback|
   // when a PageManager is available or an error occurs.
   void BindPage(fidl::InterfaceRequest<Page> page_request,
-                fit::function<void(Status)> callback) {
-    MaybeNotifyUsageListener();
-
-    if (status_ != Status::OK) {
-      callback(status_);
-      return;
-    }
-    auto delaying_facade =
-        std::make_unique<PageDelayingFacade>(page_id_, std::move(page_request));
-    if (page_manager_) {
-      page_manager_->AddPageDelayingFacade(std::move(delaying_facade),
-                                           std::move(callback));
-      return;
-    }
-    requests_.emplace_back(std::move(delaying_facade), std::move(callback));
-  }
+                fit::function<void(Status)> callback);
 
   // Keeps track of |page_debug| and |callback|. Binds |page_debug| and fires
   // |callback| when a PageManager is available or an error occurs.
   void BindPageDebug(
       fidl::InterfaceRequest<ledger_internal::PageDebug> page_debug,
-      fit::function<void(Status)> callback) {
-    MaybeNotifyUsageListener();
-
-    if (status_ != Status::OK) {
-      callback(status_);
-      return;
-    }
-    if (page_manager_) {
-      page_manager_->BindPageDebug(std::move(page_debug), std::move(callback));
-      return;
-    }
-    debug_requests_.emplace_back(std::move(page_debug), std::move(callback));
-  }
+      fit::function<void(Status)> callback);
 
   // Registers a new internal request for PageStorage.
   void NewInternalRequest(
-      fit::function<void(Status, ExpiringToken, PageManager*)> callback) {
-    if (status_ != Status::OK) {
-      callback(status_, fit::defer<fit::closure>([] {}), nullptr);
-      return;
-    }
-
-    if (page_manager_) {
-      callback(status_, NewExpiringToken(), page_manager_.get());
-      return;
-    }
-
-    internal_request_callbacks_.push_back(std::move(callback));
-  }
+      fit::function<void(Status, ExpiringToken, PageManager*)> callback);
 
   // Sets the PageManager or the error status for the container. This notifies
   // all awaiting callbacks and binds all pages in case of success.
-  void SetPageManager(Status status,
-                      std::unique_ptr<PageManager> page_manager) {
-    TRACE_DURATION("ledger", "ledger_manager_set_page_manager");
+  void SetPageManager(Status status, std::unique_ptr<PageManager> page_manager);
 
-    FXL_DCHECK(!page_manager_);
-    FXL_DCHECK((status != Status::OK) == !page_manager);
-    status_ = status;
-    page_manager_ = std::move(page_manager);
-    page_manager_is_set_ = true;
-
-    for (auto& request : requests_) {
-      if (page_manager_) {
-        page_manager_->AddPageDelayingFacade(std::move(request.first),
-                                             std::move(request.second));
-      } else {
-        request.second(status_);
-      }
-    }
-    requests_.clear();
-
-    for (auto& request : debug_requests_) {
-      if (page_manager_) {
-        page_manager_->BindPageDebug(std::move(request.first),
-                                     std::move(request.second));
-      } else {
-        request.second(status_);
-      }
-    }
-    debug_requests_.clear();
-
-    for (auto& callback : internal_request_callbacks_) {
-      if (!page_manager_) {
-        callback(status_, fit::defer<fit::closure>([] {}), nullptr);
-        continue;
-      }
-      callback(status_, NewExpiringToken(), page_manager_.get());
-    }
-
-    if (page_manager_) {
-      page_manager_->set_on_empty([this] { CheckEmpty(); });
-    } else {
-      CheckEmpty();
-    }
-  }
-
-  bool PageConnectionIsOpen() {
-    return (page_manager_is_set_ && !page_manager_->IsEmpty()) ||
-           !requests_.empty() || !debug_requests_.empty();
-  }
+  // Returns true if there is at least one active external page connection.
+  bool PageConnectionIsOpen();
 
  private:
   // Notifies the PageUsageListener on the page being opened the first time it
   // is called. |MaybeNotifyUsageListener| should only be called after external
   // requests for the PageManager.
-  void MaybeNotifyUsageListener() {
-    if (!page_opened_notification_sent_) {
-      page_usage_listener_->OnPageOpened(ledger_name_, page_id_);
-      page_opened_notification_sent_ = true;
-    }
-  }
+  void MaybeNotifyUsageListener();
 
-  ExpiringToken NewExpiringToken() {
-    ++internal_request_count_;
-    return ExpiringToken(
-        callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
-          --internal_request_count_;
-          CheckEmpty();
-        }));
-  }
+  // Creates a new ExpiringToken to be used while internal requests for the
+  // |PageManager| remain active.
+  ExpiringToken NewExpiringToken();
 
-  void CheckEmpty() {
-    if (on_empty_callback_ && internal_request_count_ == 0 &&
-        page_manager_is_set_ && (!page_manager_ || page_manager_->IsEmpty())) {
-      on_empty_callback_();
-    }
-  }
+  // Checks whether this container is empty, and calls the |on_empty_callback_|
+  // if it is.
+  void CheckEmpty();
 
   const std::string ledger_name_;
   const storage::PageId page_id_;
@@ -251,6 +134,156 @@ class LedgerManager::PageManagerContainer {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageManagerContainer);
 };
+
+LedgerManager::PageManagerContainer::PageManagerContainer(
+    std::string ledger_name, storage::PageId page_id,
+    PageUsageListener* page_usage_listener)
+    : ledger_name_(std::move(ledger_name)),
+      page_id_(std::move(page_id)),
+      page_usage_listener_(page_usage_listener),
+      weak_factory_(this) {}
+
+LedgerManager::PageManagerContainer::~PageManagerContainer() {
+  for (const auto& request : requests_) {
+    request.second(Status::INTERNAL_ERROR);
+  }
+  for (const auto& request : debug_requests_) {
+    request.second(Status::INTERNAL_ERROR);
+  }
+  if (page_opened_notification_sent_) {
+    page_usage_listener_->OnPageClosed(ledger_name_, page_id_);
+  }
+}
+
+void LedgerManager::PageManagerContainer::set_on_empty(
+    fit::closure on_empty_callback) {
+  on_empty_callback_ = std::move(on_empty_callback);
+  if (page_manager_) {
+    page_manager_->set_on_empty([this] { CheckEmpty(); });
+  }
+}
+
+void LedgerManager::PageManagerContainer::BindPage(
+    fidl::InterfaceRequest<Page> page_request,
+    fit::function<void(Status)> callback) {
+  MaybeNotifyUsageListener();
+
+  if (status_ != Status::OK) {
+    callback(status_);
+    return;
+  }
+  auto delaying_facade =
+      std::make_unique<PageDelayingFacade>(page_id_, std::move(page_request));
+  if (page_manager_) {
+    page_manager_->AddPageDelayingFacade(std::move(delaying_facade),
+                                         std::move(callback));
+    return;
+  }
+  requests_.emplace_back(std::move(delaying_facade), std::move(callback));
+}
+
+void LedgerManager::PageManagerContainer::BindPageDebug(
+    fidl::InterfaceRequest<ledger_internal::PageDebug> page_debug,
+    fit::function<void(Status)> callback) {
+  MaybeNotifyUsageListener();
+
+  if (status_ != Status::OK) {
+    callback(status_);
+    return;
+  }
+  if (page_manager_) {
+    page_manager_->BindPageDebug(std::move(page_debug), std::move(callback));
+    return;
+  }
+  debug_requests_.emplace_back(std::move(page_debug), std::move(callback));
+}
+
+void LedgerManager::PageManagerContainer::NewInternalRequest(
+    fit::function<void(Status, ExpiringToken, PageManager*)> callback) {
+  if (status_ != Status::OK) {
+    callback(status_, fit::defer<fit::closure>([] {}), nullptr);
+    return;
+  }
+
+  if (page_manager_) {
+    callback(status_, NewExpiringToken(), page_manager_.get());
+    return;
+  }
+
+  internal_request_callbacks_.push_back(std::move(callback));
+}
+
+void LedgerManager::PageManagerContainer::SetPageManager(
+    Status status, std::unique_ptr<PageManager> page_manager) {
+  TRACE_DURATION("ledger", "ledger_manager_set_page_manager");
+
+  FXL_DCHECK(!page_manager_);
+  FXL_DCHECK((status != Status::OK) == !page_manager);
+  status_ = status;
+  page_manager_ = std::move(page_manager);
+  page_manager_is_set_ = true;
+
+  for (auto& request : requests_) {
+    if (page_manager_) {
+      page_manager_->AddPageDelayingFacade(std::move(request.first),
+                                           std::move(request.second));
+    } else {
+      request.second(status_);
+    }
+  }
+  requests_.clear();
+
+  for (auto& request : debug_requests_) {
+    if (page_manager_) {
+      page_manager_->BindPageDebug(std::move(request.first),
+                                   std::move(request.second));
+    } else {
+      request.second(status_);
+    }
+  }
+  debug_requests_.clear();
+
+  for (auto& callback : internal_request_callbacks_) {
+    if (!page_manager_) {
+      callback(status_, fit::defer<fit::closure>([] {}), nullptr);
+      continue;
+    }
+    callback(status_, NewExpiringToken(), page_manager_.get());
+  }
+
+  if (page_manager_) {
+    page_manager_->set_on_empty([this] { CheckEmpty(); });
+  } else {
+    CheckEmpty();
+  }
+}
+
+bool LedgerManager::PageManagerContainer::PageConnectionIsOpen() {
+  return (page_manager_is_set_ && !page_manager_->IsEmpty()) ||
+         !requests_.empty() || !debug_requests_.empty();
+}
+
+void LedgerManager::PageManagerContainer::MaybeNotifyUsageListener() {
+  if (!page_opened_notification_sent_) {
+    page_usage_listener_->OnPageOpened(ledger_name_, page_id_);
+    page_opened_notification_sent_ = true;
+  }
+}
+
+ExpiringToken LedgerManager::PageManagerContainer::NewExpiringToken() {
+  ++internal_request_count_;
+  return ExpiringToken(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
+    --internal_request_count_;
+    CheckEmpty();
+  }));
+}
+
+void LedgerManager::PageManagerContainer::CheckEmpty() {
+  if (on_empty_callback_ && internal_request_count_ == 0 &&
+      page_manager_is_set_ && (!page_manager_ || page_manager_->IsEmpty())) {
+    on_empty_callback_();
+  }
+}
 
 LedgerManager::LedgerManager(
     Environment* environment, std::string ledger_name,
