@@ -57,60 +57,76 @@ SHARED_SRCS += \
 SHARED_SRCS += \
     $(LOCAL_DIR)/err_data.c \
 
-ifeq ($(ARCH),arm64)
-# TODO(aarongreen): Workaround for the non-hidden OPENSSL_armcap_P symbol, which causes arm/clang to
-# fail to link.  Remove when resolved upstream.
-SHARED_COMPILEFLAGS += -DOPENSSL_NO_ASM
+ARM_64_ASMSRCS := \
+    chacha/chacha-armv8.S \
+    fipsmodule/sha512-armv8.S \
+    fipsmodule/ghashv8-armx64.S \
+    fipsmodule/sha1-armv8.S \
+    fipsmodule/sha256-armv8.S \
+    fipsmodule/aesv8-armx64.S
+LINUX_ARM64_ASMSRCS := $(patsubst %,$(LOCAL_DIR)/linux-aarch64/crypto/%,$(ARM_64_ASMSRCS))
 
-ASM_DIR = $(LOCAL_DIR)/linux-aarch64/crypto
-SHARED_SRCS += \
-    $(ASM_DIR)/chacha/chacha-armv8.S \
-    $(ASM_DIR)/fipsmodule/sha512-armv8.S \
-    $(ASM_DIR)/fipsmodule/ghashv8-armx64.S \
-    $(ASM_DIR)/fipsmodule/sha1-armv8.S \
-    $(ASM_DIR)/fipsmodule/sha256-armv8.S \
-    $(ASM_DIR)/fipsmodule/aesv8-armx64.S \
-
-else ifeq ($(ARCH),x86)
-
-ASM_DIR = $(LOCAL_DIR)/linux-x86_64/crypto
-SHARED_SRCS += \
-    $(ASM_DIR)/cipher_extra/aes128gcmsiv-x86_64.S \
-    $(ASM_DIR)/chacha/chacha-x86_64.S \
-    $(ASM_DIR)/fipsmodule/sha256-x86_64.S \
-    $(ASM_DIR)/fipsmodule/ghash-x86_64.S \
-    $(ASM_DIR)/fipsmodule/bsaes-x86_64.S \
-    $(ASM_DIR)/fipsmodule/aesni-x86_64.S \
-    $(ASM_DIR)/fipsmodule/sha1-x86_64.S \
-    $(ASM_DIR)/fipsmodule/vpaes-x86_64.S \
-    $(ASM_DIR)/fipsmodule/md5-x86_64.S \
-    $(ASM_DIR)/fipsmodule/aes-x86_64.S \
-    $(ASM_DIR)/fipsmodule/sha512-x86_64.S \
-    $(ASM_DIR)/fipsmodule/aesni-gcm-x86_64.S \
-    $(ASM_DIR)/fipsmodule/rdrand-x86_64.S \
-
-else
-$(error Unsupported architecture)
-
-endif
+X86_64_ASMSRCS := \
+    cipher_extra/aes128gcmsiv-x86_64.S \
+    chacha/chacha-x86_64.S \
+    fipsmodule/sha256-x86_64.S \
+    fipsmodule/ghash-x86_64.S \
+    fipsmodule/bsaes-x86_64.S \
+    fipsmodule/aesni-x86_64.S \
+    fipsmodule/sha1-x86_64.S \
+    fipsmodule/vpaes-x86_64.S \
+    fipsmodule/md5-x86_64.S \
+    fipsmodule/aes-x86_64.S \
+    fipsmodule/sha512-x86_64.S \
+    fipsmodule/aesni-gcm-x86_64.S \
+    fipsmodule/rdrand-x86_64.S
+DARWIN_X86_64_ASMSRCS := $(patsubst %,$(LOCAL_DIR)/mac-x86_64/crypto/%,$(X86_64_ASMSRCS))
+LINUX_X86_64_ASMSRCS := $(patsubst %,$(LOCAL_DIR)/linux-x86_64/crypto/%,$(X86_64_ASMSRCS))
 
 # userlib
+ifeq ($(ARCH),arm64)
+# TODO(aarongreen): ZX-2715.  Enable after rolling.
+# TARGET_ASMSRCS=$(LINUX_ARM64_ASMSRCS)
+MODULE_DEFINES := OPENSSL_NO_ASM
+else ifeq ($(ARCH),x86)
+TARGET_ASMSRCS=$(LINUX_X86_64_ASMSRCS)
+else
+$(error Unsupported target architecture)
+endif
+
 MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
-MODULE_SRCS := $(SHARED_SRCS)
-MODULE_COMPILEFLAGS += $(SHARED_COMPILEFLAGS)
+MODULE_SRCS := $(SHARED_SRCS) $(TARGET_ASMSRCS)
+MODULE_COMPILEFLAGS := $(SHARED_COMPILEFLAGS)
 MODULE_LIBS := \
     system/ulib/fdio \
     system/ulib/c \
 
 include make/module.mk
 
-
 # hostlib
+ifeq ($(HOST_PLATFORM),linux)
+ifeq ($(HOST_ARCH),aarch64)
+HOST_ASMSRCS := $(LINUX_ARM64_ASMSRCS)
+else ifeq ($(HOST_ARCH),x86_64)
+HOST_ASMSRCS := $(LINUX_X86_64_ASMSRCS)
+else
+MODULE_DEFINES := OPENSSL_NO_ASM
+endif
+else ifeq ($(HOST_PLATFORM),darwin)
+ifeq ($(HOST_ARCH),x86_64)
+HOST_ASMSRCS := $(DARWIN_X86_64_ASMSRCS)
+else
+MODULE_DEFINES := OPENSSL_NO_ASM
+endif
+else
+MODULE_DEFINES := OPENSSL_NO_ASM
+endif
+
 MODULE := $(LOCAL_DIR).hostlib
 MODULE_TYPE := hostlib
-MODULE_SRCS := $(SHARED_SRCS)
-MODULE_DEFINES := _XOPEN_SOURCE=700 # Required for pthread_rwlock_t
-MODULE_COMPILEFLAGS := $(SHARED_COMPILEFLAGS) -DOPENSSL_NO_ASM
+MODULE_SRCS := $(SHARED_SRCS) $(HOST_ASMSRCS)
+MODULE_DEFINES += _XOPEN_SOURCE=700 # Required for pthread_rwlock_t
+MODULE_COMPILEFLAGS := $(SHARED_COMPILEFLAGS)
 
 include make/module.mk
