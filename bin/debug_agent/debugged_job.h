@@ -33,6 +33,8 @@ class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
   zx_koid_t koid() const { return koid_; }
   zx::job& job() { return job_; }
 
+  void AddFilter(std::string filter) { filters_.push_back(std::move(filter)); }
+
   // Returns true on success. On failure, the object may not be used further.
   bool Init();
 
@@ -47,6 +49,7 @@ class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
 
   // Handle for watching the process exceptions.
   debug_ipc::MessageLoop::WatchHandle job_watch_handle_;
+  std::vector<std::string> filters_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebuggedJob);
 };

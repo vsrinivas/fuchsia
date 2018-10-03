@@ -10,7 +10,15 @@
 #include "lib/fxl/logging.h"
 
 namespace debug_agent {
+namespace {
 
+bool StartsWithCaseInsensitive(std::string mainStr, std::string toMatch) {
+  std::transform(mainStr.begin(), mainStr.end(), mainStr.begin(), ::tolower);
+  std::transform(toMatch.begin(), toMatch.end(), toMatch.begin(), ::tolower);
+  return mainStr.find(toMatch) == 0;
+}
+
+}  // namespace
 DebuggedJob::DebuggedJob(ProcessStartHandler* handler, zx_koid_t job_koid,
                          zx::job job)
     : handler_(handler), koid_(job_koid), job_(std::move(job)) {}
@@ -31,10 +39,16 @@ void DebuggedJob::OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
   FXL_DCHECK(job_koid == koid_);
 
   zx::process process = GetProcessFromKoid(process_koid);
+  auto proc_name = NameForObject(process).c_str();
   zx::thread thread = ThreadForKoid(process.get(), thread_koid);
 
-  // TODO(anmittal): Add filter and then only call OnProcessStart.
-  handler_->OnProcessStart(std::move(process));
+  // TODO: use some data structure(trie) to make it efficient.
+  for (auto& filter : filters_) {
+    if (StartsWithCaseInsensitive(proc_name, filter)) {
+      handler_->OnProcessStart(std::move(process));
+      break;
+    }
+  }
 
   debug_ipc::MessageLoopZircon::Current()->ResumeFromException(thread, 0);
 }

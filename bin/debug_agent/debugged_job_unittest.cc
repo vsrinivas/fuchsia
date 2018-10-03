@@ -34,8 +34,8 @@ class JobDebuggerTest : public ::testing::Test, public ProcessStartHandler {
   ~JobDebuggerTest() { message_loop_.Cleanup(); }
 
   static void LaunchProcess(const zx::job& job,
-                            const std::vector<const char*>& argv, int outfd,
-                            zx_handle_t* proc) {
+                            const std::vector<const char*>& argv,
+                            const char* name, int outfd, zx_handle_t* proc) {
     std::vector<const char*> normalized_argv = argv;
     normalized_argv.push_back(nullptr);
 
@@ -46,7 +46,8 @@ class JobDebuggerTest : public ::testing::Test, public ProcessStartHandler {
         {.action = FDIO_SPAWN_ACTION_CLONE_FD,
          .fd = {.local_fd = STDIN_FILENO, .target_fd = STDIN_FILENO}},
         {.action = FDIO_SPAWN_ACTION_CLONE_FD,
-         .fd = {.local_fd = STDERR_FILENO, .target_fd = STDERR_FILENO}}};
+         .fd = {.local_fd = STDERR_FILENO, .target_fd = STDERR_FILENO}},
+        {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = name}}};
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
     zx_status_t status = fdio_spawn_etc(
         job.get(), FDIO_SPAWN_CLONE_ALL, argv[0], normalized_argv.data(),
@@ -91,12 +92,13 @@ TEST_F(JobDebuggerTest, OneProcess) {
   DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
                            std::move(duplicate_job));
   ASSERT_TRUE(debugged_job.Init());
+  debugged_job.AddFilter("t");
   ASSERT_EQ(0u, processes_.size());
   zx_handle_t proc = ZX_HANDLE_INVALID;
   int pipefd[2];
   ASSERT_EQ(0, pipe(pipefd));
   const std::vector<const char*> args = {"/system/bin/true"};
-  LaunchProcess(job_, args, pipefd[0], &proc);
+  LaunchProcess(job_, args, "true", pipefd[0], &proc);
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this] {
     return processes_.size() == 1;
   })) << "Expected processes size 1, got: "
@@ -115,12 +117,13 @@ TEST_F(JobDebuggerTest, DebuggedJobKilled) {
     DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
                              std::move(duplicate_job));
     ASSERT_TRUE(debugged_job.Init());
+    debugged_job.AddFilter("t");
     ASSERT_EQ(0u, processes_.size());
     zx_handle_t proc = ZX_HANDLE_INVALID;
     int pipefd[2];
     ASSERT_EQ(0, pipe(pipefd));
     const std::vector<const char*> args = {"/system/bin/true"};
-    LaunchProcess(job_, args, pipefd[0], &proc);
+    LaunchProcess(job_, args, "true", pipefd[0], &proc);
     ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this] {
       return processes_.size() == 1;
     })) << "Expected processes size 1, got: "
@@ -135,7 +138,7 @@ TEST_F(JobDebuggerTest, DebuggedJobKilled) {
   int pipefd[2];
   ASSERT_EQ(0, pipe(pipefd));
   const std::vector<const char*> args = {"/system/bin/true"};
-  LaunchProcess(job_, args, pipefd[0], &proc);
+  LaunchProcess(job_, args, "true", pipefd[0], &proc);
   WaitForProcToExit(proc, 0);
   ASSERT_EQ(0u, processes_.size());
 }
@@ -146,6 +149,7 @@ TEST_F(JobDebuggerTest, MultipleProcesses) {
   DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
                            std::move(duplicate_job));
   ASSERT_TRUE(debugged_job.Init());
+  debugged_job.AddFilter("t");
   ASSERT_EQ(0u, processes_.size());
 
   int pipefd[2];
@@ -154,11 +158,11 @@ TEST_F(JobDebuggerTest, MultipleProcesses) {
   zx_handle_t proc1 = ZX_HANDLE_INVALID;
   zx_handle_t proc2 = ZX_HANDLE_INVALID;
 
-  LaunchProcess(job_, args, pipefd[0], &proc1);
+  LaunchProcess(job_, args, "true", pipefd[0], &proc1);
   zx::process process1 = zx::process(proc1);
   auto pid1 = KoidForObject(process1);
 
-  LaunchProcess(job_, args, pipefd[0], &proc2);
+  LaunchProcess(job_, args, "true", pipefd[0], &proc2);
   zx::process process2 = zx::process(proc2);
   auto pid2 = KoidForObject(process2);
 
@@ -180,12 +184,13 @@ TEST_F(JobDebuggerTest, ProcessInNestedJob) {
   DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
                            std::move(duplicate_job));
   ASSERT_TRUE(debugged_job.Init());
+  debugged_job.AddFilter("t");
   ASSERT_EQ(0u, processes_.size());
   zx_handle_t proc = ZX_HANDLE_INVALID;
   int pipefd[2];
   ASSERT_EQ(0, pipe(pipefd));
   const std::vector<const char*> args = {"/system/bin/true"};
-  LaunchProcess(child_job, args, pipefd[0], &proc);
+  LaunchProcess(child_job, args, "true", pipefd[0], &proc);
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this] {
     return processes_.size() == 1;
   })) << "Expected processes size 1, got: "
@@ -193,6 +198,93 @@ TEST_F(JobDebuggerTest, ProcessInNestedJob) {
   zx::process process = zx::process(proc);
   ASSERT_EQ(KoidForObject(processes_[0]), KoidForObject(process));
   WaitForProcToExit(proc, 0);
+}
+
+TEST_F(JobDebuggerTest, FilterFullName) {
+  zx::job duplicate_job;
+  ASSERT_EQ(ZX_OK, job_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job));
+  DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
+                           std::move(duplicate_job));
+  ASSERT_TRUE(debugged_job.Init());
+  constexpr char name[] = "true";
+  debugged_job.AddFilter(name);
+  ASSERT_EQ(0u, processes_.size());
+  zx_handle_t proc = ZX_HANDLE_INVALID;
+  int pipefd[2];
+  ASSERT_EQ(0, pipe(pipefd));
+  const std::vector<const char*> args = {"/system/bin/true"};
+  LaunchProcess(job_, args, name, pipefd[0], &proc);
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this] {
+    return processes_.size() == 1;
+  })) << "Expected processes size 1, got: "
+      << processes_.size();
+  zx::process process = zx::process(proc);
+  ASSERT_EQ(KoidForObject(processes_[0]), KoidForObject(process));
+  WaitForProcToExit(proc, 0);
+}
+
+TEST_F(JobDebuggerTest, FilterMultipleProcess) {
+  zx::job duplicate_job;
+  ASSERT_EQ(ZX_OK, job_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job));
+  DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
+                           std::move(duplicate_job));
+  ASSERT_TRUE(debugged_job.Init());
+  debugged_job.AddFilter("t");
+  ASSERT_EQ(0u, processes_.size());
+
+  int pipefd[2];
+  ASSERT_EQ(0, pipe(pipefd));
+  const std::vector<const char*> args = {"/system/bin/true"};
+  zx_handle_t proc1 = ZX_HANDLE_INVALID;
+  zx_handle_t proc2 = ZX_HANDLE_INVALID;
+
+  LaunchProcess(job_, args, "false", pipefd[0], &proc1);
+
+  LaunchProcess(job_, args, "true", pipefd[0], &proc2);
+  zx::process process = zx::process(proc2);
+  auto pid = KoidForObject(process);
+
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this] {
+    return processes_.size() == 1;
+  })) << "Expected processes size 1, got: "
+      << processes_.size();
+  ASSERT_EQ(KoidForObject(processes_[0]), pid);
+  WaitForProcToExit(proc1, 0);
+  WaitForProcToExit(proc2, 0);
+}
+
+TEST_F(JobDebuggerTest, MultipleFilters) {
+  zx::job duplicate_job;
+  ASSERT_EQ(ZX_OK, job_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job));
+  DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
+                           std::move(duplicate_job));
+  ASSERT_TRUE(debugged_job.Init());
+  debugged_job.AddFilter("t");
+  debugged_job.AddFilter("f");
+  ASSERT_EQ(0u, processes_.size());
+
+  int pipefd[2];
+  ASSERT_EQ(0, pipe(pipefd));
+  const std::vector<const char*> args = {"/system/bin/true"};
+  zx_handle_t proc1 = ZX_HANDLE_INVALID;
+  zx_handle_t proc2 = ZX_HANDLE_INVALID;
+
+  LaunchProcess(job_, args, "false", pipefd[0], &proc1);
+  zx::process process1 = zx::process(proc1);
+  auto pid1 = KoidForObject(process1);
+
+  LaunchProcess(job_, args, "true", pipefd[0], &proc2);
+  zx::process process2 = zx::process(proc2);
+  auto pid2 = KoidForObject(process2);
+
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this] {
+    return processes_.size() == 2;
+  })) << "Expected processes size 2, got: "
+      << processes_.size();
+  ASSERT_EQ(KoidForObject(processes_[0]), pid1);
+  ASSERT_EQ(KoidForObject(processes_[1]), pid2);
+  WaitForProcToExit(proc1, 0);
+  WaitForProcToExit(proc2, 0);
 }
 
 }  // namespace
