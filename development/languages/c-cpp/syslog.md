@@ -48,6 +48,7 @@ FX_LOGF(INFO, NULL, "my msg: %d", 10);
 ```
 
 ### Reference
+
 [C APIs](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/syslog/include/syslog/global.h)
 
 ## In C++
@@ -58,6 +59,18 @@ From garnet and above layers.
 
 ```gn
 //garnet/public/lib/syslog/cpp
+```
+
+### sandboxing dependency
+
+```
+{
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
 ```
 
 ### Initialization
@@ -104,6 +117,7 @@ FX_LOGST(INFO, "tag") << "my message";
 ```
 
 ### Reference
+
 [C++ APIs](https://fuchsia.googlesource.com/garnet/+/master/public/lib/syslog/cpp/logger.h)
 <br/>
 [FSL initialization API](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fsl/syslogger/init.h)
