@@ -246,6 +246,7 @@ fn handle_info_event(e: InfoEvent,
                 let connection_finished_time = zx::Time::get(zx::ClockId::Monotonic);
                 telemetry::report_connection_delay(cobalt_sender, connect_started_time,
                                               connection_finished_time, &result, &failure);
+                connection_times.connect_started_time = None;
             }
         },
         InfoEvent::MlmeScanStart { txn_id } => {
@@ -260,6 +261,7 @@ fn handle_info_event(e: InfoEvent,
                 let scan_finished_time = zx::Time::get(zx::ClockId::Monotonic);
                 telemetry::report_scan_delay(cobalt_sender, scan_started_time,
                                              scan_finished_time);
+                connection_times.scan_started_time = None;
             }
         },
         InfoEvent::ScanDiscoveryFinished { bss_count, ess_count } => {
@@ -277,6 +279,7 @@ fn handle_info_event(e: InfoEvent,
                 let assoc_finished_time = zx::Time::get(zx::ClockId::Monotonic);
                 telemetry::report_assoc_success_delay(cobalt_sender, assoc_started_time,
                                              assoc_finished_time);
+                connection_times.assoc_started_time = None;
             }
         },
         InfoEvent::RsnaStarted { att_id } => {
@@ -293,6 +296,7 @@ fn handle_info_event(e: InfoEvent,
                     let rsna_finished_time = zx::Time::get(zx::ClockId::Monotonic);
                     telemetry::report_rsna_established_delay(cobalt_sender, rsna_started_time,
                                                             rsna_finished_time);
+                    connection_times.rsna_started_time = None;
                 }
             }
         },
