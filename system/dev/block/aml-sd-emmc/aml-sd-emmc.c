@@ -48,7 +48,8 @@ typedef struct aml_sd_emmc_t {
     zx_device_t* zxdev;
     gpio_protocol_t gpio;
     uint32_t gpio_count;
-    io_buffer_t mmio;
+    mmio_buffer_t mmio;
+    mmio_pinned_buffer_t pinned_mmio;
     // virt address of mmio
     aml_sd_emmc_regs_t* regs;
     zx_handle_t irq_handle;
@@ -196,7 +197,8 @@ static void aml_sd_emmc_release(void* ctx) {
         zx_interrupt_destroy(dev->irq_handle);
     if (dev->irq_thread)
         thrd_join(dev->irq_thread, NULL);
-    io_buffer_release(&dev->mmio);
+    mmio_buffer_unpin(&dev->pinned_mmio);
+    mmio_buffer_release(&dev->mmio);
     io_buffer_release(&dev->descs_buffer);
     zx_handle_close(dev->irq_handle);
     zx_handle_close(dev->bti);
@@ -615,7 +617,7 @@ static int aml_sd_emmc_irq_thread(void* ctx) {
             }
             uint32_t data_copied = 0;
             uint32_t* dest = (uint32_t*)req->virt;
-            volatile uint32_t* src = (volatile uint32_t*)(io_buffer_virt(&dev->mmio) +
+            volatile uint32_t* src = (volatile uint32_t*)((uintptr_t)dev->mmio.vaddr +
                                                           AML_SD_EMMC_PING_BUFFER_BASE);
             while (length) {
                 *dest++ = *src++;
@@ -642,7 +644,7 @@ static void aml_sd_emmc_setup_cmd_desc(aml_sd_emmc_t* dev, sdmmc_req_t* req,
         desc = (aml_sd_emmc_desc_t*)io_buffer_virt(&dev->descs_buffer);
         memset(desc, 0, dev->descs_buffer.size);
     } else {
-        desc = (aml_sd_emmc_desc_t*)(io_buffer_virt(&dev->mmio) + AML_SD_EMMC_SRAM_MEMORY_BASE);
+        desc = (aml_sd_emmc_desc_t*)((uintptr_t)dev->mmio.vaddr + AML_SD_EMMC_SRAM_MEMORY_BASE);
     }
     uint32_t cmd_info = 0;
     if (req->cmd_flags == 0) {
@@ -805,7 +807,7 @@ static zx_status_t aml_sd_emmc_setup_data_descs_pio(aml_sd_emmc_t* dev, sdmmc_re
         uint32_t data_copied = 0;
         uint32_t data_remaining = length;
         uint32_t* src = (uint32_t*)req->virt;
-        volatile uint32_t* dest = (volatile uint32_t*)(io_buffer_virt(&dev->mmio) +
+        volatile uint32_t* dest = (volatile uint32_t*)((uintptr_t)dev->mmio.vaddr +
                                                        AML_SD_EMMC_PING_BUFFER_BASE);
         while (data_remaining) {
             *dest++ = *src++;
@@ -824,7 +826,8 @@ static zx_status_t aml_sd_emmc_setup_data_descs_pio(aml_sd_emmc_t* dev, sdmmc_re
     }
 
     // data_addr[0] = 0 for DDR. data_addr[0] = 1 if address is from SRAM
-    zx_paddr_t buffer_phys = io_buffer_phys(&dev->mmio) + AML_SD_EMMC_PING_BUFFER_BASE;
+
+    zx_paddr_t buffer_phys = dev->pinned_mmio.paddr + AML_SD_EMMC_PING_BUFFER_BASE;
     desc->data_addr = (uint32_t)buffer_phys | 1;
     *last_desc = desc;
     return status;
@@ -887,6 +890,7 @@ static zx_status_t aml_sd_emmc_finish_req(aml_sd_emmc_t* dev, sdmmc_req_t* req) 
         }
         req->pmt = ZX_HANDLE_INVALID;
     }
+
     return st;
 }
 
@@ -929,7 +933,7 @@ zx_status_t aml_sd_emmc_request(void* ctx, sdmmc_req_t* req) {
         //Read desc from external DDR
         start_reg &= ~AML_SD_EMMC_START_DESC_INT;
     } else {
-        desc_phys = (io_buffer_phys(&dev->mmio)) + AML_SD_EMMC_SRAM_MEMORY_BASE;
+        desc_phys = dev->pinned_mmio.paddr + AML_SD_EMMC_SRAM_MEMORY_BASE;
         start_reg |= AML_SD_EMMC_START_DESC_INT;
     }
 
@@ -1001,9 +1005,14 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    status = pdev_map_mmio_buffer(&dev->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &dev->mmio);
+    status = pdev_map_mmio_buffer2(&dev->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &dev->mmio);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_sd_emmc_bind: pdev_map_mmio_buffer failed %d\n", status);
+        zxlogf(ERROR, "aml_sd_emmc_bind: pdev_map_mmio_buffer2 failed %d\n", status);
+        goto fail;
+    }
+    status = mmio_buffer_pin(&dev->mmio, dev->bti, &dev->pinned_mmio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml_sd_emmc_bind: mmio_buffer_pin failed %d\n", status);
         goto fail;
     }
 
@@ -1036,7 +1045,7 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
         dev->info.caps |= SDMMC_HOST_CAP_ADMA2;
     }
 
-    dev->regs = (aml_sd_emmc_regs_t*)io_buffer_virt(&dev->mmio);
+    dev->regs = (aml_sd_emmc_regs_t*)dev->mmio.vaddr;
 
     if (dev->info.caps & SDMMC_HOST_CAP_ADMA2) {
         status = io_buffer_init(&dev->descs_buffer, dev->bti,
