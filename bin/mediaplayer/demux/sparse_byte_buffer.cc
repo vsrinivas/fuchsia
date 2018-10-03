@@ -173,6 +173,40 @@ SparseByteBuffer::Hole SparseByteBuffer::Fill(Hole hole,
   return Hole(holes_iter);
 }
 
+SparseByteBuffer::Hole SparseByteBuffer::Free(Region region) {
+  FXL_DCHECK(region != null_region());
+
+  Hole hole_before = null_hole();
+  if (region.position() > 0) {
+    hole_before = FindHoleContaining(region.position() - 1);
+  }
+  
+  Hole hole_after = FindHoleContaining(region.position() + region.size());
+
+  Hole new_hole = null_hole();
+  size_t hole_position = region.position();
+  size_t hole_size = region.size();
+
+  regions_.erase(region.iter_);
+
+  if (hole_after != null_hole()) {
+    hole_size += hole_after.size();
+    holes_.erase(hole_after.iter_);
+  }
+
+  if (hole_before != null_hole()) {
+    hole_size += hole_before.size();
+    new_hole = hole_before;
+    new_hole.iter_->second = hole_size;
+  } else {
+    auto result = holes_.emplace(hole_position, hole_size);
+    FXL_DCHECK(result.second);
+    new_hole = Hole(result.first);
+  }
+
+  return new_hole;
+}
+
 bool operator==(const SparseByteBuffer::Hole& a,
                 const SparseByteBuffer::Hole& b) {
   return a.iter_ == b.iter_;

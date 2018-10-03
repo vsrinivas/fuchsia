@@ -79,6 +79,9 @@ class SparseByteBuffer {
   // return null_hole().
   Hole Fill(Hole hole, std::vector<uint8_t>&& buffer);
 
+  // Drops a region and coalesces (may modify) any adjacent holes.
+  Hole Free(Region region);
+
  private:
   using HolesIter = std::map<size_t, size_t>::iterator;
   using RegionsIter = std::map<size_t, std::vector<uint8_t>>::iterator;

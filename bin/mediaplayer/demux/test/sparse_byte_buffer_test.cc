@@ -39,6 +39,7 @@ void ExpectNullHole(SparseByteBuffer* under_test, SparseByteBuffer::Hole hole) {
 
 void ExpectHole(SparseByteBuffer* under_test, size_t position, size_t size,
                 SparseByteBuffer::Hole hole) {
+  EXPECT_NE(SparseByteBuffer::Hole(), hole);
   EXPECT_NE(under_test->null_hole(), hole);
   EXPECT_EQ(position, hole.position());
   EXPECT_EQ(size, hole.size());
@@ -50,6 +51,28 @@ std::vector<uint8_t> CreateBuffer(size_t position, size_t size) {
     buffer[i] = ByteForPosition(i + position);
   }
   return buffer;
+}
+
+void FillRegion(SparseByteBuffer* under_test, size_t start, size_t size) {
+  SparseByteBuffer::Hole hole_to_fill =
+      under_test->FindOrCreateHole(start, under_test->null_hole());
+  if (hole_to_fill == under_test->null_hole()) {
+    return;
+  }
+
+  under_test->Fill(hole_to_fill, CreateBuffer(10, size));
+}
+
+SparseByteBuffer BufferWithRegions(
+    std::vector<std::pair<size_t, size_t>> regions) {
+  SparseByteBuffer under_test;
+  under_test.Initialize(kSize);
+
+  for (const auto& region_spec : regions) {
+    FillRegion(&under_test, region_spec.first, region_spec.second);
+  }
+
+  return under_test;
 }
 
 // See HoleHints test.
@@ -278,5 +301,38 @@ TEST(SparseByteBufferTest, HoleHints) {
   }
 }
 
+TEST(SparseByteBufferTest, FreeRegion) {
+  {
+    // Free a region with a hole before and after it.
+    SparseByteBuffer under_test = BufferWithRegions({{40, 50}});
+    SparseByteBuffer::Region region_to_free =
+        under_test.FindRegionContaining(40, under_test.null_region());
+    SparseByteBuffer::Hole enclosing_hole = under_test.Free(region_to_free);
+
+    ExpectHole(&under_test, 0, kSize, enclosing_hole);
+  }
+
+  {
+    // Free a region at the buffer beginning.
+    SparseByteBuffer under_test = BufferWithRegions({{0, 20}});
+    SparseByteBuffer::Region region_to_free =
+        under_test.FindRegionContaining(0, under_test.null_region());
+    SparseByteBuffer::Hole enclosing_hole = under_test.Free(region_to_free);
+
+    ExpectHole(&under_test, 0, kSize, enclosing_hole);
+  }
+
+  {
+    // Free a sandwiched Region.
+    SparseByteBuffer under_test =
+        BufferWithRegions({{10, 10}, {20, 10}, {30, 10}});
+
+    SparseByteBuffer::Region region_to_free =
+        under_test.FindRegionContaining(20, under_test.null_region());
+    SparseByteBuffer::Hole enclosing_hole = under_test.Free(region_to_free);
+
+    ExpectHole(&under_test, 20, 10, enclosing_hole);
+  }
+}
 }  // namespace
 }  // namespace media_player
