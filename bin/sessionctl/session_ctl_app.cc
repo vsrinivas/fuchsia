@@ -21,19 +21,19 @@ std::string SessionCtlApp::ExecuteAddModCommand() {
   if (command_line_.HasOption("mod_url")) {
     command_line_.GetOptionValue("mod_url", &mod_url);
   } else {
-    missing_flags.push_back("mod_url");
+    missing_flags.emplace_back("mod_url");
   }
 
   if (command_line_.HasOption("story_name")) {
     command_line_.GetOptionValue("story_name", &story_name);
   } else {
-    missing_flags.push_back("story_name");
+    missing_flags.emplace_back("story_name");
   }
 
   if (command_line_.HasOption("mod_name")) {
     command_line_.GetOptionValue("mod_name", &mod_name);
   } else {
-    missing_flags.push_back("mod_name");
+    missing_flags.emplace_back("mod_name");
   }
 
   std::string error = GenerateMissingFlagString(missing_flags);

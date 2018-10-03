@@ -55,7 +55,7 @@ TEST(Xdr, Struct) {
   t0.s = "2";
   t0.b = true;
   t0.vi.push_back(3);
-  t0.vs.push_back("4");
+  t0.vs.emplace_back("4");
   t0.vb.push_back(true);
   t0.mi[5] = 6;
   t0.ms["7"] = 8;
@@ -101,7 +101,7 @@ TEST(Xdr, StructVersions) {
   t0.s = "2";
   t0.b = true;
   t0.vi.push_back(3);
-  t0.vs.push_back("4");
+  t0.vs.emplace_back("4");
   t0.vb.push_back(true);
   t0.mi[5] = 6;
   t0.ms["7"] = 8;
@@ -156,7 +156,7 @@ TEST(Xdr, StructVersionsExplicitFallback) {
   t0.s = "2";
   t0.b = true;
   t0.vi.push_back(3);
-  t0.vs.push_back("4");
+  t0.vs.emplace_back("4");
   t0.vb.push_back(true);
   t0.mi[5] = 6;
   t0.ms["7"] = 8;
@@ -215,7 +215,7 @@ TEST(Xdr, StructVersionsExplicit) {
   t0.s = "2";
   t0.b = true;
   t0.vi.push_back(3);
-  t0.vs.push_back("4");
+  t0.vs.emplace_back("4");
   t0.vb.push_back(true);
   t0.mi[5] = 6;
   t0.ms["7"] = 8;

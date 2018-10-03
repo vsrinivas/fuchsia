@@ -78,16 +78,16 @@ bool ExtractEntityTypesFromJson(const rapidjson::Value& value,
   std::vector<std::string> entity_types;
 
   if (value.IsString()) {
-    entity_types.push_back(kEntityTypeString);
+    entity_types.emplace_back(kEntityTypeString);
   } else if (value.IsObject() && value.HasMember(kEntityTypeProperty)) {
     const auto& types = value[kEntityTypeProperty];
     if (types.IsString()) {
-      entity_types.push_back(types.GetString());
+      entity_types.emplace_back(types.GetString());
     } else if (types.IsArray()) {
       for (uint32_t i = 0; i < types.Size(); ++i) {
         if (!types[i].IsString())
           return false;
-        entity_types.push_back(types[i].GetString());
+        entity_types.emplace_back(types[i].GetString());
       }
     } else {
       return false;
