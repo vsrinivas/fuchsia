@@ -156,11 +156,11 @@ static void dump_memory(zx_handle_t proc, uintptr_t start, size_t len) {
     }
 }
 
-static void resume_thread(zx_handle_t thread, bool handled) {
-    uint32_t options = ZX_RESUME_EXCEPTION;
+static void resume_thread(zx_handle_t thread, zx_handle_t exception_port, bool handled) {
+    uint32_t options = 0;
     if (!handled)
         options |= ZX_RESUME_TRY_NEXT;
-    auto status = zx_task_resume(thread, options);
+    auto status = zx_task_resume_from_exception(thread, exception_port, options);
     if (status != ZX_OK) {
         PRINT_ZX_ERROR("unable to \"resume\" thread", status);
         // This shouldn't happen (unless someone killed it already).
@@ -169,7 +169,7 @@ static void resume_thread(zx_handle_t thread, bool handled) {
     }
 }
 
-static void resume_thread_from_exception(zx_handle_t thread,
+static void resume_thread_from_exception(zx_handle_t thread, zx_handle_t exception_port,
                                          uint32_t excp_type,
                                          const zx_thread_state_general_regs_t* gregs) {
     if (is_resumable_swbreak(excp_type) &&
@@ -186,7 +186,7 @@ static void resume_thread_from_exception(zx_handle_t thread,
 #else
         goto Fail;
 #endif
-        resume_thread(thread, true);
+        resume_thread(thread, exception_port, true);
         return;
     }
 
@@ -196,7 +196,7 @@ static void resume_thread_from_exception(zx_handle_t thread,
     // received some amount of testing with ZX_POL_BAD_HANDLE enabled as a
     // warning.
     if (excp_type == ZX_EXCP_POLICY_ERROR) {
-        resume_thread(thread, true);
+        resume_thread(thread, exception_port, true);
         return;
     }
 
@@ -205,7 +205,7 @@ Fail:
 #endif
     // Tell the o/s to "resume" the thread by killing the process, the
     // exception has not been handled.
-    resume_thread(thread, false);
+    resume_thread(thread, exception_port, false);
 }
 
 static zx_koid_t get_koid(zx_handle_t handle) {
@@ -218,7 +218,8 @@ static zx_koid_t get_koid(zx_handle_t handle) {
     return info.koid;
 }
 
-static void process_report(zx_handle_t process, zx_handle_t thread, bool use_libunwind) {
+static void process_report(zx_handle_t process, zx_handle_t thread, zx_handle_t exception_port,
+                           bool use_libunwind) {
     zx_koid_t pid = get_koid(process);
     zx_koid_t tid = get_koid(thread);
 
@@ -333,12 +334,13 @@ Fail:
 
     // allow the thread (and then process) to die, unless the exception is
     // to just trigger a backtrace (if enabled)
-    resume_thread_from_exception(thread, type, regs);
+    resume_thread_from_exception(thread, exception_port, type, regs);
     crashed_thread = ZX_HANDLE_INVALID;
     crashed_thread_excp_type = 0u;
 
     zx_handle_close(thread);
     zx_handle_close(process);
+    zx_handle_close(exception_port);
 }
 
 static zx_status_t handle_message(zx_handle_t channel, fidl::MessageBuffer* buffer) {
@@ -369,7 +371,7 @@ static zx_status_t handle_message(zx_handle_t channel, fidl::MessageBuffer* buff
         response.hdr.ordinal = request->hdr.ordinal;
         status = zx_channel_write(channel, 0, &response, sizeof(response), nullptr, 0);
 
-        process_report(request->process, request->thread, use_libunwind);
+        process_report(request->process, request->thread, request->exception_port, use_libunwind);
 
         return status;
     }

@@ -30,7 +30,7 @@ static int crash_server(void* ctx) {
                                      &actual_bytes, &actual_handles);
             ASSERT_EQ(ZX_OK, status, "");
             ASSERT_GE(actual_bytes, sizeof(fidl_message_header_t), "");
-            ASSERT_EQ(actual_handles, 2u, "");
+            ASSERT_EQ(actual_handles, 3u, "");
             zx_handle_close_many(handles, actual_handles);
             fidl_message_header_t* req = (fidl_message_header_t*)msg;
             fidl_message_header_t hdr;
@@ -63,7 +63,10 @@ static bool crash_analyzer_test(void) {
     status = zx_eventpair_create(0, &h0, &h1);
     ASSERT_EQ(ZX_OK, status, "");
 
-    status = fuchsia_crash_AnalyzerAnalyze(client, h0, h1);
+    zx_handle_t port;
+    ASSERT_EQ(ZX_OK, zx_port_create(0, &port), "");
+
+    status = fuchsia_crash_AnalyzerAnalyze(client, h0, h1, port);
     ASSERT_EQ(ZX_OK, status, "");
 
     status = zx_handle_close(client);

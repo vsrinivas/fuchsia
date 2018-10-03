@@ -170,7 +170,7 @@ int crash_analyzer_listener(void* arg) {
         }
 
         uint32_t exception_type;
-        zx_handle_t handles[2];
+        zx_handle_t handles[3];
         uint32_t actual_bytes, actual_handles;
         status =
             zx_channel_read(exception_channel, 0, &exception_type, handles, sizeof(exception_type),
@@ -192,9 +192,9 @@ int crash_analyzer_listener(void* arg) {
         status = zx_handle_duplicate(handles[1], ZX_RIGHT_SAME_RIGHTS, &thread_handle);
         if (status != ZX_OK) {
             printf("devmgr: crash_analyzer_listener: thread handle duplicate failed: %d\n", status);
-            zx_handle_close(handles[0]);
-            zx_handle_close(handles[1]);
-            // Shouldn't we resume handles[1] in this case?
+            // If thread handle duplication failed, try to resume and bail.
+            zx_task_resume_from_exception(handles[1], handles[2], ZX_RESUME_TRY_NEXT);
+            zx_handle_close_many(handles, countof(handles));
             continue;
         }
 
@@ -229,7 +229,7 @@ int crash_analyzer_listener(void* arg) {
         analyzer_request = ZX_HANDLE_INVALID;
         if (status != ZX_OK)
             goto cleanup;
-        status = fuchsia_crash_AnalyzerAnalyze(analyzer, handles[0], handles[1]);
+        status = fuchsia_crash_AnalyzerAnalyze(analyzer, handles[0], handles[1], handles[2]);
         // fuchsia_crash_AnalyzerAnalyze always consumes the handles.
         memset(handles, 0, sizeof(handles));
 
@@ -242,6 +242,8 @@ int crash_analyzer_listener(void* arg) {
             zx_handle_close(handles[0]);
         if (handles[1])
             zx_handle_close(handles[1]);
+        if (handles[2])
+            zx_handle_close(handles[2]);
         if (status != ZX_OK) {
             printf("devmgr: crash_analyzer_listener: failed to analyze crash: %d (%s)\n",
                    status, zx_status_get_string(status));

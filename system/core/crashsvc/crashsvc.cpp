@@ -84,8 +84,8 @@ static bool FindProcess(const zx::job& job, zx_koid_t process_koid, zx::process*
     return false;
 }
 
-static void HandOffException(const zx::job& root_job, const zx::channel& channel,
-                             const zx_port_packet_t& packet) {
+static void HandOffException(const zx::job& root_job, const zx::port& exception_port,
+                             const zx::channel& channel, const zx_port_packet_t& packet) {
     zx::process exception_process;
     if (!FindProcess(root_job, packet.exception.pid, &exception_process)) {
         fprintf(stderr, "crashsvc: failed to find process for pid=%zu\n", packet.exception.pid);
@@ -99,15 +99,32 @@ static void HandOffException(const zx::job& root_job, const zx::channel& channel
         return;
     }
 
-    zx_handle_t handles[] = {exception_process.release(), exception_thread.release()};
+    // Make a duplicate of the exception thread so that it can be resumed in
+    // case of failure.
+    zx::thread exception_thread_copy;
+    if (exception_thread.duplicate(ZX_RIGHT_SAME_RIGHTS, &exception_thread_copy) != ZX_OK) {
+        fprintf(stderr, "crashsvc: failed to duplicate exception thread\n");
+        return;
+    }
+
+    // Make a duplicate of the port to pass to the handler.
+    zx::port exception_port_copy;
+    if (exception_port.duplicate(ZX_RIGHT_SAME_RIGHTS, &exception_port_copy) != ZX_OK) {
+        fprintf(stderr, "crashsvc: failed to duplicate exception port\n");
+        return;
+    }
+
+    zx_handle_t handles[] = {exception_process.release(), exception_thread_copy.release(),
+                             exception_port_copy.release()};
     zx_status_t status =
         channel.write(0, &packet.type, sizeof(packet.type), handles, fbl::count_of(handles));
     if (status != ZX_OK) {
         // If the channel write failed, things are going badly, attempt to
-        // resume the excepted  thread which will typically result in the
-        // process being terminated by the kernel.
+        // resume the excepted thread which will typically result in the process
+        // being terminated by the kernel.
         fprintf(stderr, "crashsvc: channel write failed: %d\n", status);
-        status = zx_task_resume(handles[1], ZX_RESUME_EXCEPTION | ZX_RESUME_TRY_NEXT);
+        status = zx_task_resume_from_exception(exception_thread.get(), exception_port.get(),
+                                               ZX_RESUME_TRY_NEXT);
         if (status != ZX_OK) {
             fprintf(stderr, "crashsvc: zx_task_resume failed: %d\n", status);
         }
@@ -147,6 +164,6 @@ int main(int argc, char** argv) {
             continue;
         }
 
-        HandOffException(root_job, channel, packet);
+        HandOffException(root_job, exception_port, channel, packet);
     }
 }
