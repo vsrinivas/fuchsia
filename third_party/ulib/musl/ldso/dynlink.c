@@ -54,6 +54,8 @@ static void loader_svc_config(const char* config);
 #define VMO_NAME_PREFIX_BSS "bss:"
 #define VMO_NAME_PREFIX_DATA "data:"
 
+#define KEEP_DSO_VMAR __has_feature(xray_instrument)
+
 struct dso {
     // Must be first.
     struct link_map l_map;
@@ -85,6 +87,7 @@ struct dso {
     struct dso **deps, *needed_by;
     struct tls_module tls;
     size_t tls_id;
+    size_t code_start, code_end;
     size_t relro_start, relro_end;
     void** new_dtv;
     unsigned char* new_tls;
@@ -906,6 +909,10 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo,
             if (ph->p_vaddr + ph->p_memsz > addr_max) {
                 addr_max = ph->p_vaddr + ph->p_memsz;
             }
+            if (ph->p_flags & PF_X) {
+                dso->code_start = addr_min;
+                dso->code_end = addr_max;
+            }
             break;
         case PT_DYNAMIC:
             dyn = ph->p_vaddr;
@@ -1073,8 +1080,9 @@ noexec:
 error:
     if (map != MAP_FAILED)
         unmap_library(dso);
-    if (dso->vmar != ZX_HANDLE_INVALID)
+    if (dso->vmar != ZX_HANDLE_INVALID && !KEEP_DSO_VMAR)
         _zx_handle_close(dso->vmar);
+    dso->vmar = ZX_HANDLE_INVALID;
     return status;
 }
 
@@ -1484,7 +1492,7 @@ __NO_SAFESTACK NO_ASAN static void reloc_all(struct dso* p) {
         // Hold the VMAR handle only long enough to apply RELRO.
         // Now it's no longer needed and the mappings cannot be
         // changed any more (only unmapped).
-        if (p->vmar != ZX_HANDLE_INVALID) {
+        if (p->vmar != ZX_HANDLE_INVALID && !KEEP_DSO_VMAR) {
             _zx_handle_close(p->vmar);
             p->vmar = ZX_HANDLE_INVALID;
         }
@@ -2645,6 +2653,39 @@ zx_status_t __sanitizer_get_configuration(const char* name,
                  name, _zx_status_get_string(status), dlerror());
     }
     pthread_rwlock_unlock(&lock);
+    return status;
+}
+
+zx_status_t __sanitizer_change_code_protection(uintptr_t addr, size_t len,
+                                               bool writable) {
+    static const char kBadDepsMessage[] =
+        "module compiled with -fxray-instrument loaded in process without it";
+
+    if (!KEEP_DSO_VMAR) {
+        __sanitizer_log_write(kBadDepsMessage, sizeof(kBadDepsMessage) - 1);
+        __builtin_trap();
+    }
+
+    struct dso* p;
+    pthread_rwlock_rdlock(&lock);
+    p = addr2dso((size_t)__builtin_return_address(0));
+    pthread_rwlock_unlock(&lock);
+
+    if (!p) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    if (addr < saddr(p, p->code_start) || len > saddr(p, p->code_end) - addr) {
+        debugmsg("Cannot change protection outside of the code range\n");
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    uint32_t options = ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE | (writable ? ZX_VM_PERM_WRITE : 0);
+    zx_status_t status = _zx_vmar_protect(p->vmar, options, (zx_vaddr_t)addr, len);
+    if (status != ZX_OK) {
+        debugmsg("Failed to change protection of [%p, %p): %s\n",
+                 addr, addr + len, _zx_status_get_string(status));
+    }
     return status;
 }
 

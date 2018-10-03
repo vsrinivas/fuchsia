@@ -83,6 +83,14 @@ void __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo);
 zx_status_t __sanitizer_get_configuration(const char* config_name,
                                           zx_handle_t* out_vmo);
 
+// Changes protection of the code in the range of len bytes starting
+// from addr. The writable argument specifies whether the code should
+// be made writable or not. This function is only valid on ranges within
+// the caller's own code segment.
+// TODO(phosek) removes this when the proper debugging interface exists.
+zx_status_t __sanitizer_change_code_protection(uintptr_t addr, size_t len,
+                                               bool writable);
+
 // The "hook" interfaces are functions that the sanitizer runtime library
 // can define and libc will call.  There are default definitions in libc
 // which do nothing, but any other definitions will override those.  These
