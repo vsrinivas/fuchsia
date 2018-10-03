@@ -373,22 +373,54 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
         FXL_LOG(INFO) << "No ModuleController for Module"
                       << " " << PathString(module_data_.module_path) << ". "
                       << "Was ModuleController.Stop() called twice?";
-        done_();
+        InvokeDone();
         return;
       }
 
-      // done_() must be called BEFORE the Teardown() done callback returns. See
-      // comment in StopModuleCall::Kill() before making changes here. Be aware
-      // that done_ is NOT the Done() callback of the Operation.
+      // The result callback |done_| must be invoked BEFORE the Teardown()
+      // callback returns, just in case it is, or it invokes, a callback of a
+      // FIDL method on ModuleController (happens in the case that this
+      // Operation instance executes a ModuleController.Stop() FIDL method
+      // invocation).
+      //
+      // After the Teardown() callback returns, the ModuleControllerImpl is
+      // deleted, and any FIDL connections that have invoked methods on it are
+      // closed.
+      //
+      // See comment in StopModuleCall before making changes here. Be aware that
+      // done_ is NOT the Done() callback of the Operation.
       running_mod_info->module_controller_impl->Teardown([this, flow] {
         for (auto& i : story_controller_impl_->modules_watchers_.ptrs()) {
           fuchsia::modular::ModuleData module_data;
           module_data_.Clone(&module_data);
           (*i)->OnStopModule(std::move(module_data));
         }
-        done_();
+        InvokeDone();
       });
     });
+  }
+
+  void InvokeDone() {
+    // Whatever the done_ callback captures (specifically, a flow token) must be
+    // released after the done_ callback has returned. Otherwise, the calling
+    // operation will not call Done() and does not get deleted until this
+    // Operation instance gets deleted. This is probably fine, but it's
+    // different from calling operations without flow tokens, which call their
+    // own Done() directly.
+    //
+    // Notice the StopCall doesn't use a flow token, but just calls Done()
+    // directly from within done_, but the OnModuleDataUpadatedCall has a flow
+    // token.
+
+    // We must guard against the possibility that done_() causes this to be
+    // deleted (happens when called from StopCall).
+    auto weak_this = GetWeakPtr();
+
+    done_();
+
+    if (weak_this) {
+      done_ = nullptr;
+    }
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
