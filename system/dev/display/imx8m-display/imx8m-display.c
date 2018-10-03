@@ -289,7 +289,7 @@ zx_status_t imx8m_display_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Map all the various MMIOs
-    status = pdev_map_mmio_buffer2(&display->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&display->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &display->mmio_dc);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO DC\n");

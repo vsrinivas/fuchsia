@@ -326,7 +326,7 @@ zx_status_t dsi_init(display_t* display) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = pdev_map_mmio_buffer2(&display->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    zx_status_t status = pdev_map_mmio_buffer(&display->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &dsi->mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "dsi_bind: pdev_map_mmio_buffer failed\n");

@@ -99,55 +99,6 @@ zx_status_t ProtocolDevice::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
     return ZX_OK;
 }
 
-// TODO(surajmalhotra): Remove after migrating all clients off.
-zx_status_t ProtocolDevice::PDevMapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
-                                        size_t* out_size, zx_paddr_t* out_paddr,
-                                        zx::vmo* out_vmo) {
-    if (index >= resources_.mmio_count()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    const pbus_mmio_t& mmio = resources_.mmio(index);
-    const zx_paddr_t vmo_base = ROUNDDOWN(mmio.base, ZX_PAGE_SIZE);
-    const size_t vmo_size = ROUNDUP(mmio.base + mmio.length - vmo_base, ZX_PAGE_SIZE);
-    zx::vmo vmo;
-    zx_status_t status = zx::vmo::create_physical(*bus_->GetResource(), vmo_base, vmo_size, &vmo);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_map_mmio: zx_vmo_create_physical failed %d\n", status);
-        return status;
-    }
-
-    char name[32];
-    snprintf(name, sizeof(name), "mmio %u", index);
-    status = vmo.set_property(ZX_PROP_NAME, name, sizeof(name));
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: setting vmo name failed %d\n", __FUNCTION__, status);
-        return status;
-    }
-
-    status = vmo.set_cache_policy(cache_policy);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_map_mmio: zx_vmo_set_cache_policy failed %d\n", status);
-        return status;
-    }
-
-    uintptr_t virt;
-    status = zx::vmar::root_self()->map(0, vmo, 0, vmo_size, ZX_VM_PERM_READ |
-                                        ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE, &virt);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_map_mmio: zx_vmar_map failed %d\n", status);
-        return status;
-    }
-
-    *out_size = mmio.length;
-    *out_vmo = std::move(vmo);
-    if (out_paddr) {
-        *out_paddr = vmo_base;
-    }
-    *out_vaddr = reinterpret_cast<void*>(virt + (mmio.base - vmo_base));
-    return ZX_OK;
-}
-
 zx_status_t ProtocolDevice::PDevGetInterrupt(uint32_t index, uint32_t flags,
                                              zx::interrupt* out_irq) {
     if (index >= resources_.irq_count()) {

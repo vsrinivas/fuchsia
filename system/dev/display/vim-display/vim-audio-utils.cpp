@@ -17,7 +17,7 @@ fbl::RefPtr<Registers> Registers::Create(const pdev_protocol_t* pdev,
     ZX_DEBUG_ASSERT(pdev != nullptr);
 
     mmio_buffer_t mmio;
-    *out_res = pdev_map_mmio_buffer2(pdev, which_mmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    *out_res = pdev_map_mmio_buffer(pdev, which_mmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (*out_res != ZX_OK) {
         return nullptr;
     }

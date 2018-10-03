@@ -249,7 +249,7 @@ zx_status_t ImxI2cDevice::Bind(int id) {
     }
 
     mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer2(&pdev, id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    status = pdev_map_mmio_buffer(&pdev, id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "ImxI2cDevice::Bind: pdev_map_mmio_buffer failed: %d\n", status);
         return status;

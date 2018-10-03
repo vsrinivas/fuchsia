@@ -1032,7 +1032,7 @@ static zx_status_t aml_raw_nand_bind(void* ctx, zx_device_t* parent) {
     for (raw_nand_addr_window_t wnd = 0;
          wnd < ADDR_WINDOW_COUNT;
          wnd++) {
-        status = pdev_map_mmio_buffer2(&raw_nand->pdev,
+        status = pdev_map_mmio_buffer(&raw_nand->pdev,
                                        wnd,
                                        ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                        &raw_nand->mmio[wnd]);

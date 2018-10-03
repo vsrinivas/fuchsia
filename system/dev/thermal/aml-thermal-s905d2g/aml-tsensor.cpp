@@ -243,7 +243,7 @@ zx_status_t AmlTSensor::InitPdev(zx_device_t* parent) {
 
     // Map amlogic temperature sensopr peripheral control registers.
     mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer2(&pdev_, kPllMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&pdev_, kPllMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d\n", status);
@@ -251,7 +251,7 @@ zx_status_t AmlTSensor::InitPdev(zx_device_t* parent) {
     }
     pll_mmio_ = ddk::MmioBuffer(mmio);
 
-    status = pdev_map_mmio_buffer2(&pdev_, kAoMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&pdev_, kAoMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d\n", status);
@@ -259,7 +259,7 @@ zx_status_t AmlTSensor::InitPdev(zx_device_t* parent) {
     }
     ao_mmio_ = ddk::MmioBuffer(mmio);
 
-    status = pdev_map_mmio_buffer2(&pdev_, kHiuMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&pdev_, kHiuMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d\n", status);

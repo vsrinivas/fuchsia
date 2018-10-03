@@ -466,21 +466,21 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    status = pdev_map_mmio_buffer2(&gpio->pdev, MMIO_GPIO, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&gpio->pdev, MMIO_GPIO, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                    &gpio->mmios[MMIO_GPIO]);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_gpio_bind: pdev_map_mmio_buffer failed\n");
         goto fail;
     }
 
-    status = pdev_map_mmio_buffer2(&gpio->pdev, MMIO_GPIO_A0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&gpio->pdev, MMIO_GPIO_A0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                    &gpio->mmios[MMIO_GPIO_A0]);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_gpio_bind: pdev_map_mmio_buffer failed\n");
         goto fail;
     }
 
-    status = pdev_map_mmio_buffer2(&gpio->pdev, MMIO_GPIO_INTERRUPTS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&gpio->pdev, MMIO_GPIO_INTERRUPTS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                    &gpio->mmio_interrupt);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_gpio_bind: pdev_map_mmio_buffer failed\n");

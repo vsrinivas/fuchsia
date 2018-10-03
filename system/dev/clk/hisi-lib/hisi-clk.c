@@ -191,7 +191,7 @@ zx_status_t hisi_clk_init(const char* name, hisi_clk_gate_t* gates,
     }
 
     // Map in MMIO for separated clock gates.
-    st = pdev_map_mmio_buffer2(&hisi_clk->pdev, 0,
+    st = pdev_map_mmio_buffer(&hisi_clk->pdev, 0,
                               ZX_CACHE_POLICY_UNCACHED_DEVICE,
                               &hisi_clk->peri_crg_mmio);
     if (st != ZX_OK) {
@@ -201,7 +201,7 @@ zx_status_t hisi_clk_init(const char* name, hisi_clk_gate_t* gates,
 
 
     // Map in MMIO for regular clock gates.
-    st = pdev_map_mmio_buffer2(&hisi_clk->pdev, 1,
+    st = pdev_map_mmio_buffer(&hisi_clk->pdev, 1,
                               ZX_CACHE_POLICY_UNCACHED_DEVICE,
                               &hisi_clk->sctrl_mmio);
     if (st != ZX_OK) {

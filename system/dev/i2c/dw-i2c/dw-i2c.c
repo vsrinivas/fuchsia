@@ -385,7 +385,7 @@ static zx_status_t i2c_dw_init(i2c_dw_t* i2c, uint32_t index) {
 
     device->timeout = ZX_SEC(10);
 
-    status = pdev_map_mmio_buffer2(&i2c->pdev, index, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&i2c->pdev, index, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                    &device->regs_iobuff);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_map_mmio_buffer failed %d\n", __FUNCTION__, status);

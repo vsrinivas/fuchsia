@@ -310,30 +310,23 @@ zx_status_t Mt8167GpioDevice::Create(zx_device_t* parent) {
     }
 
     mmio_buffer_t gpio_mmio;
-    status = pdev_map_mmio_buffer2(&pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &gpio_mmio);
+    status = pdev_map_mmio_buffer(&pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &gpio_mmio);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s gpio pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s gpio pdev_map_mmio_buffer failed %d\n", __FUNCTION__, status);
         return status;
     }
 
     mmio_buffer_t iocfg_mmio;
-    status = pdev_map_mmio_buffer2(&pdev, 1, ZX_CACHE_POLICY_UNCACHED_DEVICE, &iocfg_mmio);
+    status = pdev_map_mmio_buffer(&pdev, 1, ZX_CACHE_POLICY_UNCACHED_DEVICE, &iocfg_mmio);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s iocfg pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s iocfg pdev_map_mmio_buffer failed %d\n", __FUNCTION__, status);
         return status;
     }
 
     mmio_buffer_t eint_mmio;
-    status = pdev_map_mmio_buffer2(&pdev, 2, ZX_CACHE_POLICY_UNCACHED_DEVICE, &eint_mmio);
+    status = pdev_map_mmio_buffer(&pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &eint_mmio);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s eint pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
-        return status;
-    }
-
-    pdev_device_info_t info;
-    status = pdev_get_device_info(&pdev, &info);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s pdev_get_device_info failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: pdev_map_mmio_buffer gpio failed %d\n", __FUNCTION__, status);
         return status;
     }
 

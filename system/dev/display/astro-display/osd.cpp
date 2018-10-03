@@ -72,7 +72,7 @@ zx_status_t Osd::Init(zx_device_t* parent) {
 
     // Map vpu mmio used by the OSD object
     mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer2(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("osd: Could not map VPU mmio\n");

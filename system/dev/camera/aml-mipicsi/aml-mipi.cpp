@@ -88,63 +88,63 @@ zx_status_t AmlMipiDevice::InitPdev(zx_device_t* parent) {
 
     zx_status_t status = pdev_.MapMmio(kCsiPhy0, &csi_phy0_mmio_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
         return status;
     }
 
     status = pdev_.MapMmio(kAphy0, &aphy0_mmio_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
         return status;
     }
 
     status = pdev_.MapMmio(kCsiHost0, &csi_host0_mmio_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
         return status;
     }
 
     status = pdev_.MapMmio(kMipiAdap, &mipi_adap_mmio_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
         return status;
     }
 
     status = pdev_.MapMmio(kHiu, &hiu_mmio_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
         return status;
     }
 
     status = pdev_.MapMmio(kPowerDomain, &power_mmio_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
         return status;
     }
 
     status = pdev_.MapMmio(kMemoryDomain, &memory_pd_mmio_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
         return status;
     }
 
     status = pdev_.MapMmio(kReset, &reset_mmio_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
         return status;
     }
 
     // Get our bti.
     status = pdev_.GetBti(0, &bti_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: could not obtain bti: %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: could not obtain bti: %d\n", __func__, status);
         return status;
     }
 
     // Get adapter interrupt.
     status = pdev_.GetInterrupt(0, &adap_irq_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: could not obtain adapter interrupt %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: could not obtain adapter interrupt %d\n", __func__, status);
         return status;
     }
 
@@ -245,7 +245,7 @@ zx_status_t AmlMipiDevice::MipiCsiInit(const mipi_info_t* mipi_info,
     // Initialize the MIPI Adapter.
     zx_status_t status = MipiAdapInit(adap_info);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: MipiAdapInit failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: MipiAdapInit failed %d\n", __func__, status);
         return status;
     }
 

@@ -126,8 +126,6 @@ public:
 
     // Platform device protocol implementation.
     zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio);
-    zx_status_t PDevMapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
-                            size_t* out_size, zx_paddr_t* out_paddr, zx::vmo* out_vmo);
     zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq);
     zx_status_t PDevGetBti(uint32_t index, zx::bti* out_bti);
     zx_status_t PDevGetSmc(uint32_t index, zx::resource* out_resource);

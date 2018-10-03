@@ -27,8 +27,8 @@ static constexpr uint32_t kMsrClk = 1;
 zx_status_t AmlClock::InitHiuRegs(pdev_device_info_t* info) {
     // Map the HIU registers.
     mmio_buffer_t mmio;
-    zx_status_t status = pdev_map_mmio_buffer2(&pdev_, kHiuMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                               &mmio);
+    zx_status_t status = pdev_map_mmio_buffer(&pdev_, kHiuMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                              &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-clk: could not map periph mmio: %d\n", status);
         return status;
@@ -41,8 +41,8 @@ zx_status_t AmlClock::InitHiuRegs(pdev_device_info_t* info) {
 zx_status_t AmlClock::InitMsrRegs(pdev_device_info_t* info) {
     // Map the MSR registers.
     mmio_buffer_t mmio;
-    zx_status_t status = pdev_map_mmio_buffer2(&pdev_, kMsrClk, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                               &mmio);
+    zx_status_t status = pdev_map_mmio_buffer(&pdev_, kMsrClk, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                              &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-clk: could not map periph mmio: %d\n", status);
         return status;

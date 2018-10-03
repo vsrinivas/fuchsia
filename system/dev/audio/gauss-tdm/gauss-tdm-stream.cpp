@@ -43,7 +43,7 @@ zx_status_t TdmOutputStream::Create(zx_device_t* parent) {
     }
 
     mmio_buffer_t mmio;
-    res = pdev_map_mmio_buffer2(&stream->pdev_, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    res = pdev_map_mmio_buffer(&stream->pdev_, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
 
     if (res != ZX_OK) {
         zxlogf(ERROR, "tdm-output-driver: failed to map mmio.\n");

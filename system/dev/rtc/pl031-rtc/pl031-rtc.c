@@ -110,7 +110,7 @@ static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Carve out some address space for this device.
-    st = pdev_map_mmio_buffer2(&proto, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &pl031->mmio);
+    st = pdev_map_mmio_buffer(&proto, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &pl031->mmio);
     if (st != ZX_OK) {
         zxlogf(ERROR, "pl031_rtc: bind failed to pdev_map_mmio.\n");
         goto error_return;

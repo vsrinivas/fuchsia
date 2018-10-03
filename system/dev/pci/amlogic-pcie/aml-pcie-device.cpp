@@ -69,8 +69,8 @@ zx_status_t AmlPcieDevice::InitMmios() {
     pdev_get_bti(&pdev_, 0, pin_bti.reset_and_get_address());
 
     mmio_buffer_t mmio;
-    st = pdev_map_mmio_buffer2(&pdev_, kElbMmio,
-                               ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    st = pdev_map_mmio_buffer(&pdev_, kElbMmio,
+                              ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to map dbi mmio, st = %d\n", st);
         return st;
@@ -85,15 +85,15 @@ zx_status_t AmlPcieDevice::InitMmios() {
     }
     dbi_pinned_ = std::move(*mmio_pinned);
 
-    st = pdev_map_mmio_buffer2(&pdev_, kCfgMmio,
-                               ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    st = pdev_map_mmio_buffer(&pdev_, kCfgMmio,
+                              ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to map cfg mmio, st = %d\n", st);
         return st;
     }
     cfg_ = ddk::MmioBuffer(mmio);
 
-    st = pdev_map_mmio_buffer2(&pdev_, kRstMmio,
+    st = pdev_map_mmio_buffer(&pdev_, kRstMmio,
                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to map rst mmio, st = %d\n", st);
@@ -101,7 +101,7 @@ zx_status_t AmlPcieDevice::InitMmios() {
     }
     rst_ = ddk::MmioBuffer(mmio);
 
-    st = pdev_map_mmio_buffer2(&pdev_, kPllMmio,
+    st = pdev_map_mmio_buffer(&pdev_, kPllMmio,
                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to map pll mmio, st = %d\n", st);

@@ -487,8 +487,8 @@ zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
     dwc->usb_mode = USB_MODE_NONE;
 
     mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer2(&dwc->pdev, MMIO_USB3OTG, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                   &mmio);
+    status = pdev_map_mmio_buffer(&dwc->pdev, MMIO_USB3OTG, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "dwc3_bind: pdev_map_mmio_buffer failed\n");
         goto fail;

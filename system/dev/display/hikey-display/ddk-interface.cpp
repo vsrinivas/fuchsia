@@ -238,7 +238,7 @@ static zx_status_t hikey_display_bind(void* ctx, zx_device_t* parent) {
     }
     display->parent = parent;
 
-    status = pdev_map_mmio_buffer2(&display->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&display->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &display->mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "display_bind: pdev_map_mmio_buffer failed\n");

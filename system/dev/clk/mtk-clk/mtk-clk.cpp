@@ -133,7 +133,7 @@ zx_status_t MtkClk::Create(zx_device_t* parent) {
     ddk::PDev pdev(&pdev_proto);
     std::optional<ddk::MmioBuffer> mmio;
     if ((status = pdev.MapMmio(0, &mmio)) != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 failed\n", __FILE__);
+        zxlogf(ERROR, "%s: pdev_map_mmio_buffer failed\n", __FILE__);
         return status;
     }
 

@@ -117,7 +117,7 @@ static zx_status_t imx8m_gpio_bind(void* ctx, zx_device_t* parent) {
     }
 
     for (i = 0; i < IMX_GPIO_BLOCKS; i++) {
-        status = pdev_map_mmio_buffer2(&gpio->pdev, i, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        status = pdev_map_mmio_buffer(&gpio->pdev, i, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                        &gpio->mmios[i]);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s: pdev_map_mmio_buffer gpio failed %d\n", __FUNCTION__, status);
@@ -127,7 +127,7 @@ static zx_status_t imx8m_gpio_bind(void* ctx, zx_device_t* parent) {
         mtx_init(&gpio->lock[i], mtx_plain);
     }
 
-    status = pdev_map_mmio_buffer2(&gpio->pdev, IMX_GPIO_BLOCKS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&gpio->pdev, IMX_GPIO_BLOCKS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                    &gpio->mmio_iomux);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_map_mmio_buffer iomux failed %d\n", __FUNCTION__, status);

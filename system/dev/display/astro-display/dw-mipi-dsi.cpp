@@ -459,7 +459,7 @@ zx_status_t DwMipiDsi::Init(zx_device_t* parent) {
 
     // Map Mipi Dsi registers
     mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer2(&pdev_, MMIO_MPI_DSI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&pdev_, MMIO_MPI_DSI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("DwMipiDsi: Could not map MIPI DSI mmio\n");

@@ -1028,9 +1028,9 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    status = pdev_map_mmio_buffer2(&dev->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &dev->mmio);
+    status = pdev_map_mmio_buffer(&dev->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &dev->mmio);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_sd_emmc_bind: pdev_map_mmio_buffer2 failed %d\n", status);
+        zxlogf(ERROR, "aml_sd_emmc_bind: pdev_map_mmio_buffer failed %d\n", status);
         goto fail;
     }
     status = mmio_buffer_pin(&dev->mmio, dev->bti, &dev->pinned_mmio);

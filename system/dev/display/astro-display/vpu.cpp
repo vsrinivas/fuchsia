@@ -71,7 +71,7 @@ zx_status_t Vpu::Init(zx_device_t* parent) {
 
     // Map VPU registers
     mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer2(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("vpu: Could not map VPU mmio\n");
@@ -80,7 +80,7 @@ zx_status_t Vpu::Init(zx_device_t* parent) {
     vpu_mmio_ = ddk::MmioBuffer(mmio);
 
     // Map HHI registers
-    status = pdev_map_mmio_buffer2(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("vpu: Could not map HHI mmio\n");
@@ -89,7 +89,7 @@ zx_status_t Vpu::Init(zx_device_t* parent) {
     hhi_mmio_ = ddk::MmioBuffer(mmio);
 
     // Map AOBUS registers
-    status = pdev_map_mmio_buffer2(&pdev_, MMIO_AOBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&pdev_, MMIO_AOBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("vpu: Could not map AOBUS mmio\n");
@@ -98,7 +98,7 @@ zx_status_t Vpu::Init(zx_device_t* parent) {
     aobus_mmio_ = ddk::MmioBuffer(mmio);
 
     // Map CBUS registers
-    status = pdev_map_mmio_buffer2(&pdev_, MMIO_CBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&pdev_, MMIO_CBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("vpu: Could not map CBUS mmio\n");

@@ -225,11 +225,11 @@ static zx_status_t hisi_ufs_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    status = pdev_map_mmio_buffer2(&dev->pdev, MMIO_UFSHC,
-                                   ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                   &dev->ufshc_mmio);
+    status = pdev_map_mmio_buffer(&dev->pdev, MMIO_UFSHC,
+                                  ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &dev->ufshc_mmio);
     if (status != ZX_OK) {
-        UFS_ERROR("pdev_map_mmio_buffer2 ufshc mmio failed!:%d\n", status);
+        UFS_ERROR("pdev_map_mmio_buffer ufshc mmio failed!:%d\n", status);
         goto fail;
     }
 

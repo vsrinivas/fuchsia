@@ -461,7 +461,7 @@ static zx_status_t usb_xhci_bind_pdev(zx_device_t* parent, pdev_protocol_t* pdev
         goto error_return;
     }
 
-    status = pdev_map_mmio_buffer2(pdev, PDEV_MMIO_INDEX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(pdev, PDEV_MMIO_INDEX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &xhci->mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "usb_xhci_bind_pdev: pdev_map_mmio failed\n");

@@ -45,8 +45,6 @@ struct PdevMmio {
 [Layout = "ddk-protocol"]
 interface PDev {
     GetMmio(uint32 index) -> (zx.status s, PdevMmio mmio);
-    MapMmio(uint32 index, uint32 cache_policy) -> (zx.status s, vector<voidptr>? vaddr,
-                                                   zx.paddr paddr, handle<vmo> @handle);
     GetInterrupt(uint32 index, uint32 flags) -> (zx.status s, handle<interrupt> irq);
     GetBti(uint32 index) -> (zx.status s, handle<bti> bti);
     GetSmc(uint32 index) -> (zx.status s, handle<resource> smc);

@@ -237,7 +237,7 @@ static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Map all MMIOs
-    status = pdev_map_mmio_buffer2(&canvas->pdev, 0,
+    status = pdev_map_mmio_buffer(&canvas->pdev, 0,
                                   ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &canvas->dmc_regs);
     if (status != ZX_OK) {

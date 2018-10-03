@@ -689,7 +689,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
 
     // Map all the various MMIOs
     mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer2(&display->pdev, MMIO_PRESET, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_PRESET, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO PRESET\n");
@@ -697,7 +697,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     }
     display->mmio_preset = ddk::MmioBuffer(mmio);
 
-    status = pdev_map_mmio_buffer2(&display->pdev, MMIO_HDMITX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_HDMITX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO HDMITX\n");
@@ -705,7 +705,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     }
     display->mmio_hdmitx = ddk::MmioBuffer(mmio);
 
-    status = pdev_map_mmio_buffer2(&display->pdev, MMIO_HIU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_HIU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO HIU\n");
@@ -713,7 +713,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     }
     display->mmio_hiu = ddk::MmioBuffer(mmio);
 
-    status = pdev_map_mmio_buffer2(&display->pdev, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO VPU\n");
@@ -721,7 +721,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     }
     display->mmio_vpu = ddk::MmioBuffer(mmio);
 
-    status = pdev_map_mmio_buffer2(&display->pdev, MMIO_HDMTX_SEC, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_HDMTX_SEC, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO HDMITX SEC\n");
@@ -729,7 +729,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     }
     display->mmio_hdmitx_sec = ddk::MmioBuffer(mmio);
 
-    status = pdev_map_mmio_buffer2(&display->pdev, MMIO_CBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_CBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO CBUS\n");

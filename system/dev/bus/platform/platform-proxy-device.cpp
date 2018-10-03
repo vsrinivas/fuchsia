@@ -281,58 +281,6 @@ zx_status_t ProxyDevice::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
     return ZX_OK;
 }
 
-// TODO(surajmalhotra): Remove after migrating all clients off.
-zx_status_t ProxyDevice::PDevMapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
-                                 size_t* out_size, zx_paddr_t* out_paddr,
-                                 zx::vmo* out_handle) {
-    if (index >= mmios_.size()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    const Mmio& mmio = mmios_[index];
-    const zx_paddr_t vmo_base = ROUNDDOWN(mmio.base, ZX_PAGE_SIZE);
-    const size_t vmo_size = ROUNDUP(mmio.base + mmio.length - vmo_base, ZX_PAGE_SIZE);
-    zx::vmo vmo;
-
-    zx_status_t status = zx_vmo_create_physical(mmio.resource.get(), vmo_base, vmo_size,
-                                                vmo.reset_and_get_address());
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s %s: creating vmo failed %d\n", name_, __FUNCTION__, status);
-        return status;
-    }
-
-    char name[32];
-    snprintf(name, sizeof(name), "%s mmio %u", name_, index);
-    status = vmo.set_property(ZX_PROP_NAME, name, sizeof(name));
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s %s: setting vmo name failed %d\n", name_, __FUNCTION__, status);
-        return status;
-    }
-
-    status = vmo.set_cache_policy(cache_policy);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s %s: setting cache policy failed %d\n", name_, __FUNCTION__, status);
-        return status;
-    }
-
-    uintptr_t virt;
-    status = zx::vmar::root_self()->map(0, vmo, 0, vmo_size, ZX_VM_PERM_READ |
-                                        ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE, &virt);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s %s: mapping vmar failed %d\n", name_, __FUNCTION__, status);
-        return status;
-    }
-
-    *out_size = mmio.length;
-    if (out_paddr) {
-        *out_paddr = mmio.base;
-    }
-    *out_vaddr = reinterpret_cast<void*>(virt + (mmio.base - vmo_base));
-    *out_handle = std::move(vmo);
-    return ZX_OK;
-
-}
-
 zx_status_t ProxyDevice::PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq) {
     if (index >= irqs_.size()) {
         return ZX_ERR_OUT_OF_RANGE;

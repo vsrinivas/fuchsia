@@ -1135,7 +1135,7 @@ static zx_status_t imx_sdhci_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    status = pdev_map_mmio_buffer2(&dev->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&dev->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                     &dev->mmios);
     if (status != ZX_OK) {
         SDHCI_ERROR("pdev_map_mmio_buffer failed %d\n", status);

@@ -62,7 +62,7 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
     }
 
     mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer2(&pdev, MMIO_GPIO, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    status = pdev_map_mmio_buffer(&pdev, MMIO_GPIO, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "AmlGxlGpio::Create: pdev_map_mmio_buffer failed\n");
         return status;
@@ -70,7 +70,7 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
 
     ddk::MmioBuffer mmio_gpio(mmio);
 
-    status = pdev_map_mmio_buffer2(&pdev, MMIO_GPIO_A0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    status = pdev_map_mmio_buffer(&pdev, MMIO_GPIO_A0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "AmlGxlGpio::Create: pdev_map_mmio_buffer failed\n");
         return status;
@@ -78,8 +78,8 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
 
     ddk::MmioBuffer mmio_gpio_a0(mmio);
 
-    status = pdev_map_mmio_buffer2(&pdev, MMIO_GPIO_INTERRUPTS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                   &mmio);
+    status = pdev_map_mmio_buffer(&pdev, MMIO_GPIO_INTERRUPTS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "AmlGxlGpio::Create: pdev_map_mmio_buffer failed\n");
         return status;

@@ -222,17 +222,17 @@ zx_status_t Mt8167I2c::Bind() {
     }
 
     mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer2(&pdev, bus_count_, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    status = pdev_map_mmio_buffer(&pdev, bus_count_, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s pdev_map_mmio_buffer failed %d\n", __FUNCTION__, status);
         return status;
     }
     xo_regs_ = XoRegs(mmio); // Last MMIO is for XO clock.
 
     for (uint32_t id = 0; id < bus_count_; id++) {
-        status = pdev_map_mmio_buffer2(&pdev, id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+        status = pdev_map_mmio_buffer(&pdev, id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "%s pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
+            zxlogf(ERROR, "%s pdev_map_mmio_buffer failed %d\n", __FUNCTION__, status);
             return status;
         }
 
