@@ -1061,7 +1061,7 @@ static zx_status_t dc_load_firmware(device_t* dev, const char* path,
     };
 
     int fd, fwfd;
-    for (unsigned n = 0; n < countof(fwdirs); n++) {
+    for (unsigned n = 0; n < fbl::count_of(fwdirs); n++) {
         if ((fd = open(fwdirs[n], O_RDONLY, O_DIRECTORY)) < 0) {
             continue;
         }
@@ -2060,7 +2060,7 @@ device_t* coordinator_init(zx_handle_t root_job) {
         { ZX_POL_BAD_HANDLE, ZX_POL_ACTION_EXCEPTION },
     };
     status = zx_job_set_policy(devhost_job, ZX_JOB_POL_RELATIVE,
-                               ZX_JOB_POL_BASIC, &policy, countof(policy));
+                               ZX_JOB_POL_BASIC, &policy, fbl::count_of(policy));
     if (status < 0) {
         log(ERROR, "devcoord: zx_job_set_policy() failed\n");
     }

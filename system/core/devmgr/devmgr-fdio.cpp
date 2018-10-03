@@ -7,6 +7,7 @@
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 
+#include <fbl/algorithm.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/vmo.h>
@@ -96,10 +97,10 @@ zx_status_t devmgr_launch(
     launchpad_set_environ(lp, envp);
 
     // create namespace based on FS_* flags
-    const char* nametable[countof(FSTAB)] = { };
+    const char* nametable[fbl::count_of(FSTAB)] = { };
     uint32_t count = 0;
     zx_handle_t h;
-    for (unsigned n = 0; n < countof(FSTAB); n++) {
+    for (unsigned n = 0; n < fbl::count_of(FSTAB); n++) {
         if (!(FSTAB[n].flags & flags)) {
             continue;
         }

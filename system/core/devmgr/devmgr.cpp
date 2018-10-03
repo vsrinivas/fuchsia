@@ -132,7 +132,7 @@ static int fuchsia_starter(void* arg) {
             zx_handle_t appmgr_hnds[2] = {};
             uint32_t appmgr_ids[2] = {};
             if (appmgr_req_srv) {
-                assert(appmgr_hnd_count < countof(appmgr_hnds));
+                assert(appmgr_hnd_count < fbl::count_of(appmgr_hnds));
                 appmgr_hnds[appmgr_hnd_count] = appmgr_req_srv;
                 appmgr_ids[appmgr_hnd_count] = PA_DIRECTORY_REQUEST;
                 appmgr_hnd_count++;
@@ -140,7 +140,7 @@ static int fuchsia_starter(void* arg) {
             }
             devmgr_launch(fuchsia_job_handle, "appmgr",
                           &devmgr_launch_load, nullptr,
-                          countof(argv_appmgr), argv_appmgr, nullptr, -1,
+                          fbl::count_of(argv_appmgr), argv_appmgr, nullptr, -1,
                           appmgr_hnds, appmgr_ids, appmgr_hnd_count,
                           nullptr, FS_FOR_APPMGR);
             appmgr_started = true;
@@ -174,12 +174,12 @@ int crash_analyzer_listener(void* arg) {
         uint32_t actual_bytes, actual_handles;
         status =
             zx_channel_read(exception_channel, 0, &exception_type, handles, sizeof(exception_type),
-                            countof(handles), &actual_bytes, &actual_handles);
+                            fbl::count_of(handles), &actual_bytes, &actual_handles);
         if (status != ZX_OK) {
             printf("devmgr: zx_channel_read failed: %d\n", status);
             continue;
         }
-        if (actual_bytes != sizeof(exception_type) || actual_handles != countof(handles)) {
+        if (actual_bytes != sizeof(exception_type) || actual_handles != fbl::count_of(handles)) {
             printf("devmgr: zx_channel_read unexpected read size: %d\n", status);
             zx_handle_close_many(handles, actual_handles);
             continue;
@@ -288,8 +288,8 @@ int service_starter(void* arg) {
         static const char* argv_crashsvc[] = {"/boot/bin/crashsvc"};
         devmgr_launch(svcs_job_handle, "crashsvc",
                       &devmgr_launch_load, nullptr,
-                      countof(argv_crashsvc), argv_crashsvc, nullptr, -1,
-                      handles, handle_types, countof(handles), nullptr, 0);
+                      fbl::count_of(argv_crashsvc), argv_crashsvc, nullptr, -1,
+                      handles, handle_types, fbl::count_of(handles), nullptr, 0);
     }
 
     char vcmd[64];
@@ -341,7 +341,7 @@ int service_starter(void* arg) {
         const char* envp[16];
         unsigned envc = 0;
         char** e = environ;
-        while (*e && (envc < countof(envp))) {
+        while (*e && (envc < fbl::count_of(envp))) {
             if (!strncmp(*e, "virtcon.", 8)) {
                 envp[envc++] = *e;
             }
@@ -403,7 +403,7 @@ static int console_starter(void* arg) {
         if ((fd = open(device, O_RDWR)) >= 0) {
             devmgr_launch(svcs_job_handle, "sh:console",
                           &devmgr_launch_load, nullptr,
-                          countof(argv_sh), argv_sh, envp, fd, nullptr, nullptr, 0, nullptr, FS_ALL);
+                          fbl::count_of(argv_sh), argv_sh, envp, fd, nullptr, nullptr, 0, nullptr, FS_ALL);
             break;
         }
         zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
@@ -555,7 +555,7 @@ static zx_status_t fuchsia_create_job() {
         {.condition = ZX_POL_NEW_PROCESS, .policy = ZX_POL_ACTION_DENY}};
 
     status = zx_job_set_policy(fuchsia_job_handle, ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC,
-                               fuchsia_job_policy, countof(fuchsia_job_policy));
+                               fuchsia_job_policy, fbl::count_of(fuchsia_job_policy));
     if (status != ZX_OK) {
         printf("devmgr: unable to set policy fuchsia job: %d (%s)\n", status,
                zx_status_get_string(status));
@@ -774,7 +774,7 @@ void fshost_start() {
     const char* envp[16];
     unsigned envc = 0;
     char** e = environ;
-    while (*e && (envc < countof(envp))) {
+    while (*e && (envc < fbl::count_of(envp))) {
         if (!strncmp(*e, "zircon.system", strlen("zircon.system"))) {
             envp[envc++] = *e;
         }
