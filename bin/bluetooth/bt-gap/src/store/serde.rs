@@ -97,8 +97,6 @@ pub struct BondingDataSerializer<'a>(#[serde(with = "BondingDataDef")] pub &'a B
 pub struct BondingDataDeserializer(#[serde(with = "BondingDataDef")] BondingData);
 
 impl BondingDataDeserializer {
-    // TODO(armansito): Remove attribute when this is used (in upcoming CL).
-    #[allow(dead_code)]
     pub fn contents(self) -> BondingData {
         self.0
     }

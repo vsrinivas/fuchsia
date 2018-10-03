@@ -23,8 +23,8 @@ use futures::{future, TryFutureExt};
 use parking_lot::RwLock;
 use std::sync::Arc;
 
-mod bonding;
 mod services;
+mod store;
 
 mod host_device;
 mod host_dispatcher;
