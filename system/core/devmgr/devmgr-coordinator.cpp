@@ -691,7 +691,7 @@ static zx_status_t dc_new_devhost(const char* name, devhost_t* parent,
 
     if (parent) {
         dh->parent = parent;
-        dh->parent->refcount++;
+        dh->parent->AddRef();
         list_add_tail(&dh->parent->children, &dh->node);
     }
     list_add_tail(&list_devhosts, &dh->anode);
@@ -703,8 +703,7 @@ static zx_status_t dc_new_devhost(const char* name, devhost_t* parent,
 }
 
 static void dc_release_devhost(devhost_t* dh) {
-    dh->refcount--;
-    if (dh->refcount > 0) {
+    if (!dh->Release()) {
         return;
     }
     log(INFO, "devcoord: destroy host %p\n", dh);
@@ -851,7 +850,7 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
 
     if (dev->host) {
         //TODO host == nullptr should be impossible
-        dev->host->refcount++;
+        dev->host->AddRef();
         list_add_tail(&dev->host->devices, &dev->dhnode);
     }
     dev->refcount = 1;
@@ -1519,7 +1518,7 @@ static zx_status_t dh_create_device(device_t* dev, devhost_t* dh,
         goto fail_after_write;
     }
     dev->host = dh;
-    dh->refcount++;
+    dh->AddRef();
     list_add_tail(&dh->devices, &dev->dhnode);
     return ZX_OK;
 

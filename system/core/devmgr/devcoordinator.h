@@ -54,7 +54,7 @@ struct dc_devhost {
     zx_handle_t hrpc;
     zx_handle_t proc;
     zx_koid_t koid;
-    int32_t refcount;
+    mutable int32_t refcount_;
     uint32_t flags;
     devhost_t* parent;
 
@@ -72,6 +72,18 @@ struct dc_devhost {
 
     // list of all child devhosts of this devhost
     list_node_t children;
+
+    // The AddRef and Release functions follow the contract for fbl::RefPtr.
+    void AddRef() const {
+        ++refcount_;
+    }
+
+    // Returns true when the last reference has been released.
+    bool Release() const {
+        const int32_t rc = refcount_;
+        --refcount_;
+        return rc == 1;
+    }
 };
 
 #define DEV_HOST_DYING 1
