@@ -23,6 +23,7 @@ executable("converter_bin") {
   ]
   deps = [
     ":converter",
+    "//third_party/rapidjson",
   ]
 }
 

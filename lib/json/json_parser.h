@@ -11,7 +11,7 @@
 
 #include <lib/fit/function.h>
 #include "lib/fxl/macros.h"
-#include "third_party/rapidjson/rapidjson/document.h"
+#include "rapidjson/document.h"
 
 namespace json {
 

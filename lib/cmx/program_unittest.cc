@@ -9,7 +9,7 @@
 #include "garnet/lib/json/json_parser.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "third_party/rapidjson/rapidjson/document.h"
+#include "rapidjson/document.h"
 
 namespace component {
 namespace {
@@ -80,12 +80,10 @@ TEST_F(ProgramMetadataTest, ParseBinaryAndData) {
 }
 
 TEST_F(ProgramMetadataTest, ParseWithErrors) {
-  ExpectFailedParse(
-      R"JSON({})JSON",
-      "Both 'binary' and 'data' in program are missing.");
-  ExpectFailedParse(
-      R"JSON({ "binary": 3 })JSON",
-      "'binary' in program is not a string.");
+  ExpectFailedParse(R"JSON({})JSON",
+                    "Both 'binary' and 'data' in program are missing.");
+  ExpectFailedParse(R"JSON({ "binary": 3 })JSON",
+                    "'binary' in program is not a string.");
   ExpectFailedParse(R"JSON({ "data": 3 })JSON",
                     "'data' in program is not a string.");
 }

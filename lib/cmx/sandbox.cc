@@ -9,7 +9,7 @@
 
 #include "garnet/lib/json/json_parser.h"
 #include "lib/fxl/strings/substitute.h"
-#include "third_party/rapidjson/rapidjson/document.h"
+#include "rapidjson/document.h"
 
 namespace component {
 namespace {
@@ -31,8 +31,8 @@ void CopyArrayToVector(const std::string& name, const Value& value,
   }
   for (const auto& entry : value.GetArray()) {
     if (!entry.IsString()) {
-      json_parser->ReportError(fxl::Substitute(
-          "Entry for '$0' in sandbox is not a string.", name));
+      json_parser->ReportError(
+          fxl::Substitute("Entry for '$0' in sandbox is not a string.", name));
       return;
     }
     vec->push_back(entry.GetString());
@@ -90,7 +90,8 @@ bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
   if (!has_all_services_ && !has_services_member) {
     json_parser->ReportError(fxl::Substitute(
         "Sandbox must include either 'services' or 'deprecated-all-services'.\n"
-        "Refer to $0 for more information.", kCmxDocUrl));
+        "Refer to $0 for more information.",
+        kCmxDocUrl));
   }
 
   if (!json_parser->HasError()) {

@@ -14,11 +14,11 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/uuid.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "third_party/rapidjson/rapidjson/document.h"
-#include "third_party/rapidjson/rapidjson/error/en.h"
-#include "third_party/rapidjson/rapidjson/filereadstream.h"
-#include "third_party/rapidjson/rapidjson/filewritestream.h"
-#include "third_party/rapidjson/rapidjson/prettywriter.h"
+#include "rapidjson/document.h"
+#include "rapidjson/error/en.h"
+#include "rapidjson/filereadstream.h"
+#include "rapidjson/filewritestream.h"
+#include "rapidjson/prettywriter.h"
 
 namespace {
 
@@ -309,8 +309,7 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
       std::string h1_name = name + "_samples_0_to_0";
       std::vector<double> h1_vals(vals.begin(), vals.begin() + 1);
       AddHistogram(output, &alloc, h1_name, element["unit"].GetString(),
-                   std::move(h1_vals), helper.Copy(diagnostic_map),
-                   MakeUuid());
+                   std::move(h1_vals), helper.Copy(diagnostic_map), MakeUuid());
 
       // Create a histogram for the remaining sample values, if any.
       if (vals.size() > 1) {
@@ -318,9 +317,9 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
         h2_name << name << "_samples_1_to_" << vals.size() - 1;
 
         std::vector<double> h2_vals(vals.begin() + 1, vals.end());
-        AddHistogram(output, &alloc, h2_name.str(),
-                     element["unit"].GetString(), std::move(h2_vals),
-                     helper.Copy(diagnostic_map), MakeUuid());
+        AddHistogram(output, &alloc, h2_name.str(), element["unit"].GetString(),
+                     std::move(h2_vals), helper.Copy(diagnostic_map),
+                     MakeUuid());
       }
     } else {
       // Create a histogram for all |vals|.

@@ -13,7 +13,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "third_party/rapidjson/rapidjson/document.h"
+#include "rapidjson/document.h"
 
 // 32 hex characters + 4 hyphens.
 constexpr size_t kGuidStringLen = 36;

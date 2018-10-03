@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "garnet/lib/json/json_parser.h"
-#include "third_party/rapidjson/rapidjson/document.h"
+#include "rapidjson/document.h"
 
 namespace run {
 
@@ -21,9 +21,7 @@ class EnvironmentConfig {
   bool ParseFromFile(const std::string& file_path);
 
   bool HasError() const { return json_parser_.HasError(); }
-  std::string error_str() const {
-    return json_parser_.error_str();
-  }
+  std::string error_str() const { return json_parser_.error_str(); }
 
   const std::unordered_map<std::string, EnvironmentType>& url_map() const {
     return url_map_;

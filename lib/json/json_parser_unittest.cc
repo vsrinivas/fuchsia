@@ -15,7 +15,7 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/substitute.h"
-#include "third_party/rapidjson/rapidjson/document.h"
+#include "rapidjson/document.h"
 
 namespace json {
 namespace {

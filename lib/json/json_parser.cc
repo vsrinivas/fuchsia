@@ -16,8 +16,8 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "third_party/rapidjson/rapidjson/document.h"
-#include "third_party/rapidjson/rapidjson/error/en.h"
+#include "rapidjson/document.h"
+#include "rapidjson/error/en.h"
 
 namespace json {
 namespace {

@@ -6,10 +6,10 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/split_string.h"
-#include "third_party/rapidjson/rapidjson/error/en.h"
-#include "third_party/rapidjson/rapidjson/filereadstream.h"
-#include "third_party/rapidjson/rapidjson/filewritestream.h"
-#include "third_party/rapidjson/rapidjson/prettywriter.h"
+#include "rapidjson/error/en.h"
+#include "rapidjson/filereadstream.h"
+#include "rapidjson/filewritestream.h"
+#include "rapidjson/prettywriter.h"
 
 #include "converter.h"
 

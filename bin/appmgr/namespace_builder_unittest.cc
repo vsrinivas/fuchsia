@@ -11,7 +11,7 @@
 
 #include "garnet/lib/json/json_parser.h"
 #include "gtest/gtest.h"
-#include "third_party/rapidjson/rapidjson/document.h"
+#include "rapidjson/document.h"
 
 namespace component {
 namespace {

@@ -12,8 +12,8 @@
 
 #include <trace-reader/reader.h>
 
-#include "third_party/rapidjson/rapidjson/ostreamwrapper.h"
-#include "third_party/rapidjson/rapidjson/writer.h"
+#include "rapidjson/ostreamwrapper.h"
+#include "rapidjson/writer.h"
 
 namespace tracing {
 

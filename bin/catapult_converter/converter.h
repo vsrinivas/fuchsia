@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "third_party/rapidjson/rapidjson/document.h"
+#include "rapidjson/document.h"
 
 struct ConverterArgs {
   // These parameters are copied into the Catapult histogram file.  See the

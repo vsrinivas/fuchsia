@@ -46,9 +46,9 @@
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/fxl/type_converter.h"
-#include "third_party/rapidjson/rapidjson/document.h"
-#include "third_party/rapidjson/rapidjson/stringbuffer.h"
-#include "third_party/rapidjson/rapidjson/writer.h"
+#include "rapidjson/document.h"
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/writer.h"
 
 namespace test_runner {
 
@@ -172,9 +172,8 @@ TestRunContext::TestRunContext(
       });
 
   // 1.2 Make a child environment to run the command.
-  child_env_scope_ =
-      std::make_unique<Scope>(app_context->environment(), "test_runner_env",
-                              std::move(services));
+  child_env_scope_ = std::make_unique<Scope>(
+      app_context->environment(), "test_runner_env", std::move(services));
 
   // 2. Launch the test command.
   fuchsia::sys::LauncherPtr launcher;

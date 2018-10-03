@@ -12,7 +12,7 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "third_party/rapidjson/rapidjson/document.h"
+#include "rapidjson/document.h"
 
 namespace component {
 namespace {
@@ -138,15 +138,13 @@ TEST_F(CmxMetadataTest, ParseFromDeprecatedRuntime) {
 TEST_F(CmxMetadataTest, ParseWithErrors) {
   rapidjson::Value sandbox;
   std::string error;
-  ExpectFailedParse(R"JSON({ ,,, })JSON",
-                    "Missing a name for object member.");
+  ExpectFailedParse(R"JSON({ ,,, })JSON", "Missing a name for object member.");
   ExpectFailedParse(R"JSON(3)JSON", "File is not a JSON object.");
   ExpectFailedParse(R"JSON({ "sandbox" : 3})JSON",
                     "'sandbox' is not an object.");
   ExpectFailedParse(R"JSON({ "sandbox" : {"dev": "notarray"} })JSON",
                     "'dev' in sandbox is not an array.");
-  ExpectFailedParse(R"JSON({ "runner" : 3 })JSON",
-                    "'runner' is not a string.");
+  ExpectFailedParse(R"JSON({ "runner" : 3 })JSON", "'runner' is not a string.");
   ExpectFailedParse(R"JSON({ "program" : { "binary": 3 } })JSON",
                     "'binary' in program is not a string.");
 }

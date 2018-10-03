@@ -9,7 +9,7 @@
 #include "garnet/lib/json/json_parser.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "third_party/rapidjson/rapidjson/document.h"
+#include "rapidjson/document.h"
 
 namespace component {
 namespace {
@@ -143,10 +143,10 @@ TEST_F(SandboxMetadataTest, Parse) {
   }
 }
 
-#define SERVICES_INFO \
-    "\nRefer to " \
-    "https://fuchsia.googlesource.com/docs/+/master/the-book/" \
-    "package_metadata.md#sandbox for more information."
+#define SERVICES_INFO                                        \
+  "\nRefer to "                                              \
+  "https://fuchsia.googlesource.com/docs/+/master/the-book/" \
+  "package_metadata.md#sandbox for more information."
 
 TEST_F(SandboxMetadataTest, ParseWithErrors) {
   ExpectFailedParse(

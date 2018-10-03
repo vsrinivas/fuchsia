@@ -6,7 +6,7 @@
 
 #include "garnet/lib/json/json_parser.h"
 #include "lib/fxl/strings/substitute.h"
-#include "third_party/rapidjson/rapidjson/document.h"
+#include "rapidjson/document.h"
 
 namespace run {
 namespace {
@@ -25,8 +25,8 @@ void EnvironmentConfig::CreateMap(const std::string& environment_name,
   }
   const rapidjson::Value& urls = document[environment_name];
   if (!urls.IsArray()) {
-    json_parser_.ReportError(Substitute("'$0' section should be an array.",
-                                        environment_name));
+    json_parser_.ReportError(
+        Substitute("'$0' section should be an array.", environment_name));
     return;
   }
   for (const auto& url : urls.GetArray()) {

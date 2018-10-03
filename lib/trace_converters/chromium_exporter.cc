@@ -13,7 +13,7 @@
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "third_party/rapidjson/rapidjson/writer.h"
+#include "rapidjson/writer.h"
 
 namespace tracing {
 namespace {

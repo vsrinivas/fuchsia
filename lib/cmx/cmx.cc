@@ -9,7 +9,7 @@
 #include <sstream>
 #include <string>
 
-#include "third_party/rapidjson/rapidjson/document.h"
+#include "rapidjson/document.h"
 
 namespace component {
 

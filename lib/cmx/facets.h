@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 #include "garnet/lib/json/json_parser.h"
-#include "third_party/rapidjson/rapidjson/allocators.h"
+#include "rapidjson/allocators.h"
 
 namespace component {
 
