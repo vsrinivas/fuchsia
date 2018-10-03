@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"time"
 
 	"github.com/google/subcommands"
@@ -107,10 +108,7 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	outputFilename := prefix + "." + outputFileSuffix
 
 	if len(cmd.captureConfig.BenchmarkResultsFile) > 0 {
-		fmt.Printf(
-			"Downloading %v... ",
-			cmd.captureConfig.BenchmarkResultsFile)
-		err = conn.GetFile(
+		err = cmd.downloadFile(conn, cmd.captureConfig.BenchmarkResultsFile,
 			cmd.captureConfig.BenchmarkResultsFile,
 			cmd.captureConfig.BenchmarkResultsFile)
 		if err != nil {
@@ -120,14 +118,11 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 		fmt.Println("done")
 	}
 
-	fmt.Print("Downloading trace... ")
 	// Should we use prefix on the remote file name as well?
-	err = conn.GetFile("/data/trace.json", jsonFilename)
+	err = cmd.downloadFile(conn, "trace", "/data/trace.json", jsonFilename)
 	if err != nil {
-		fmt.Println(err.Error())
 		return subcommands.ExitFailure
 	}
-	fmt.Println("done")
 
 	// TODO(TO-403): Remove remote file.  Add command line option to leave it.
 
@@ -153,6 +148,32 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	}
 
 	return subcommands.ExitSuccess
+}
+
+func (cmd *cmdRecord) downloadFile(conn *TargetConnection, name string, remotePath string, localPath string) error {
+	now := time.Now()
+
+	fmt.Printf("Downloading %s ... ", name)
+	err := conn.GetFile(remotePath, localPath)
+	if err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
+	fmt.Println("done")
+
+	elapsed := time.Since(now)
+	fileInfo, err2 := os.Stat(localPath)
+	fmt.Printf("Downloaded %s in %0.3f seconds",
+		path.Base(localPath), elapsed.Seconds())
+	if err2 == nil {
+		fmt.Printf(" (%0.3f KB/sec)",
+			float64((fileInfo.Size()+1023)/1024)/elapsed.Seconds())
+	} else {
+		fmt.Printf(" (unable to determine download speed: %s)", err2.Error())
+	}
+	fmt.Printf("\n")
+
+	return nil
 }
 
 func (cmd *cmdRecord) getFilenamePrefix() string {
