@@ -31,6 +31,13 @@ int main(int argc, const char** argv) {
   modular::UserRunnerImpl::Options opts;
   opts.test = command_line.HasOption("test");
   opts.use_memfs_for_ledger = command_line.HasOption("use_memfs_for_ledger");
+  opts.no_cloud_provider_for_ledger =
+      command_line.HasOption("no_cloud_provider_for_ledger");
+
+  opts.startup_agents =
+      command_line.GetOptionValueWithDefault("startup_agents", "");
+  opts.session_agents =
+      command_line.GetOptionValueWithDefault("session_agents", "");
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
@@ -39,11 +46,6 @@ int main(int argc, const char** argv) {
 
   auto cobalt_cleanup =
       SetupCobalt(opts.test, std::move(loop.dispatcher()), context.get());
-
-  opts.startup_agents =
-      command_line.GetOptionValueWithDefault("startup_agents", "");
-  opts.session_agents =
-      command_line.GetOptionValueWithDefault("session_agents", "");
 
   modular::AppDriver<modular::UserRunnerImpl> driver(
       context->outgoing().deprecated_services(),

@@ -292,7 +292,7 @@ void UserRunnerImpl::InitializeLedger(
   AtEnd(Teardown(kBasicTimeout, "Ledger", ledger_app_.get()));
 
   fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
-  if (account_) {
+  if (account_ && !options_.no_cloud_provider_for_ledger) {
     // If not running in Guest mode, spin up a cloud provider for Ledger to use
     // for syncing.
     fuchsia::modular::AppConfig cloud_provider_config;

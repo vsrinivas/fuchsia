@@ -64,6 +64,9 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
     // /data/LEDGER.
     bool use_memfs_for_ledger;
 
+    // If set, DO NOT pass a cloud provider to the ledger.
+    bool no_cloud_provider_for_ledger;
+
     // User runner passes args startup agents and session agent to maxwell.
     std::string startup_agents;
     std::string session_agents;
