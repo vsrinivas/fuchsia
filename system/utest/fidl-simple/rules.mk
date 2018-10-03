@@ -32,6 +32,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/server_tests.c \
     $(LOCAL_DIR)/spaceship_tests.c \
+    $(LOCAL_DIR)/spaceship_tests.cpp \
 
 MODULE_NAME := fidl-simple-test
 
@@ -44,6 +45,7 @@ MODULE_FIDL_LIBS := \
 MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/async-loop \
+    system/ulib/fbl \
     system/ulib/fidl \
     system/ulib/zx \
     system/ulib/zxcpp \

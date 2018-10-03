@@ -67,8 +67,8 @@ static bool spaceship_test(void) {
     ASSERT_EQ(ZX_OK, async_loop_create(&kAsyncLoopConfigNoAttachToThread, &loop), "");
     ASSERT_EQ(ZX_OK, async_loop_start_thread(loop, "spaceship-dispatcher", NULL), "");
 
-    async_dispatcher_t* dispacher = async_loop_get_dispatcher(loop);
-    fidl_bind(dispacher, server, (fidl_dispatch_t*)fidl_test_spaceship_SpaceShip_dispatch, NULL, &kOps);
+    async_dispatcher_t* dispatcher = async_loop_get_dispatcher(loop);
+    fidl_bind(dispatcher, server, (fidl_dispatch_t*)fidl_test_spaceship_SpaceShip_dispatch, NULL, &kOps);
 
     {
         const uint32_t stars[3] = {11u, 0u, UINT32_MAX};
