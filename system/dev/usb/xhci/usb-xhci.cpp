@@ -7,6 +7,7 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/usb/hci.h>
+#include <ddk/protocol/pci-lib.h>
 
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
@@ -368,14 +369,7 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
      * eXtensible Host Controller Interface revision 1.1, section 5, xhci
      * should only use BARs 0 and 1. 0 for 32 bit addressing, and 0+1 for 64 bit addressing.
      */
-    zx_pci_bar_t bar;
-    status = pci_get_bar(pci, 0u, &bar);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "usb_xhci_bind could not find bar\n");
-        goto error_return;
-    }
-    ZX_ASSERT(bar.type == ZX_PCI_BAR_TYPE_MMIO);
-    status = mmio_buffer_init(&xhci->mmio, 0, bar.size, bar.handle, ZX_CACHE_POLICY_UNCACHED);
+    status = pci_map_bar_buffer(pci, 0u, ZX_CACHE_POLICY_UNCACHED, &xhci->mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "usb_xhci_bind could not map bar\n");
         goto error_return;
