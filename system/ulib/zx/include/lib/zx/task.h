@@ -23,12 +23,20 @@ public:
 
     task(task&& other) : object<T>(other.release()) {}
 
+    // Deprecated: use resume_from_exception or close the suspend token.
+    zx_status_t resume(uint32_t options) const {
+        return zx_task_resume(object<T>::get(), options);
+    }
+
     zx_status_t bind_exception_port(
             const object<port>& port, uint64_t key, uint32_t options) const {
         return zx_task_bind_exception_port(object<T>::get(), port.get(), key, options);
     }
 
     zx_status_t kill() const { return zx_task_kill(object<T>::get()); }
+
+    // Deprecated: Use the variant that takes a suspend_token.
+    zx_status_t suspend() const { return zx_task_suspend(object<T>::get()); }
 
     zx_status_t suspend(suspend_token* result) const {
         // Assume |result| must refer to a different container than |this|, due
