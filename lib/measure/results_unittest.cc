@@ -72,7 +72,7 @@ TEST(Results, TimeBetween) {
 TEST(Results, SplitFirst) {
   Measurements measurements;
   measurements.duration = {{42u, {"foo", "bar"}}};
-  measurements.split_first[42u] = true;
+  measurements.duration[0].common.split_first = true;
 
   std::unordered_map<uint64_t, std::vector<trace_ticks_t>> ticks;
   ticks[42u] = {1u, 2u, 3u};
@@ -86,7 +86,7 @@ TEST(Results, SplitFirst) {
 TEST(Results, ExpectedSampleCount) {
   Measurements measurements;
   measurements.duration = {{42u, {"foo", "bar"}}};
-  measurements.expected_sample_count[42u] = 3;
+  measurements.duration[0].common.expected_sample_count = 3;
 
   std::unordered_map<uint64_t, std::vector<trace_ticks_t>> ticks;
   ticks[42u] = {1u, 2u, 3u};
@@ -100,7 +100,7 @@ TEST(Results, ExpectedSampleCount) {
 TEST(Results, ExpectedSampleCountMismatch) {
   Measurements measurements;
   measurements.duration = {{42u, {"foo", "bar"}}};
-  measurements.expected_sample_count[42u] = 5;
+  measurements.duration[0].common.expected_sample_count = 5;
 
   std::unordered_map<uint64_t, std::vector<trace_ticks_t>> ticks;
   ticks[42u] = {1u, 2u, 3u};

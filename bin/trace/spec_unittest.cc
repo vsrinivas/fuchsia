@@ -318,8 +318,8 @@ TEST(Spec, DecodeMeasurementExpectedSampleCount) {
   ASSERT_TRUE(DecodeSpec(json, &spec));
   auto measurements = std::move(*spec.measurements);
   EXPECT_EQ(2u, measurements.duration.size());
-  auto expected = std::unordered_map<uint64_t, size_t>{{0u, {10u}}};
-  EXPECT_EQ(expected, measurements.expected_sample_count);
+  EXPECT_EQ(10u, measurements.duration[0].common.expected_sample_count);
+  EXPECT_EQ(0u, measurements.duration[1].common.expected_sample_count);
 }
 
 TEST(Spec, DecodeMeasurementSplitFirst) {
@@ -343,8 +343,8 @@ TEST(Spec, DecodeMeasurementSplitFirst) {
   ASSERT_TRUE(DecodeSpec(json, &spec));
   auto measurements = std::move(*spec.measurements);
   EXPECT_EQ(2u, measurements.duration.size());
-  auto expected = std::unordered_map<uint64_t, bool>{{0u, {true}}};
-  EXPECT_EQ(expected, measurements.split_first);
+  EXPECT_EQ(true, measurements.duration[0].common.split_first);
+  EXPECT_EQ(false, measurements.duration[1].common.split_first);
 }
 
 // Test the test case name that gets generated from event_name and

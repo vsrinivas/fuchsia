@@ -44,23 +44,21 @@ std::string GetUnit(const measure::DurationSpec& spec) { return "ms"; }
 std::string GetUnit(const measure::TimeBetweenSpec& spec) { return "ms"; }
 
 template <typename Spec, typename T>
-Result ComputeSingle(Spec spec, const std::vector<T>& recorded_values,
-                     const std::string& output_test_name,
-                     size_t expected_sample_count, bool split_first) {
+Result ComputeSingle(Spec spec, const std::vector<T>& recorded_values) {
   Result result;
-  if (output_test_name.empty()) {
+  if (spec.common.output_test_name.empty()) {
     result.label = GetLabel(spec);
   } else {
-    result.label = output_test_name;
+    result.label = spec.common.output_test_name;
   }
   result.unit = GetUnit(spec);
-  result.split_first = split_first;
+  result.split_first = spec.common.split_first;
 
-  if ((expected_sample_count > 0) &&
-      (expected_sample_count != recorded_values.size())) {
+  if ((spec.common.expected_sample_count > 0) &&
+      (spec.common.expected_sample_count != recorded_values.size())) {
     FXL_LOG(ERROR) << "Number of recorded samples for an event " << result.label
                    << " does not match the expected number (expected "
-                   << expected_sample_count << ", got "
+                   << spec.common.expected_sample_count << ", got "
                    << recorded_values.size() << ").";
     return result;
   }
@@ -99,36 +97,18 @@ std::vector<Result> ComputeResults(
     auto duration_values = ticks_to_ms(
         get_or_default(recorded_values, measure_spec.id, no_recorded_values),
         ticks_per_second);
-    results.push_back(ComputeSingle(
-        measure_spec, duration_values,
-        get_or_default(measurements.output_test_name, measure_spec.id,
-                       empty_string),
-        get_or_default(measurements.expected_sample_count, measure_spec.id,
-                       0uL),
-        get_or_default(measurements.split_first, measure_spec.id, false)));
+    results.push_back(ComputeSingle(measure_spec, duration_values));
   }
   for (auto& measure_spec : measurements.argument_value) {
     auto argument_values =
         get_or_default(recorded_values, measure_spec.id, no_recorded_values);
-    results.push_back(ComputeSingle(
-        measure_spec, argument_values,
-        get_or_default(measurements.output_test_name, measure_spec.id,
-                       empty_string),
-        get_or_default(measurements.expected_sample_count, measure_spec.id,
-                       0uL),
-        get_or_default(measurements.split_first, measure_spec.id, false)));
+    results.push_back(ComputeSingle(measure_spec, argument_values));
   }
   for (auto& measure_spec : measurements.time_between) {
     auto time_between_values = ticks_to_ms(
         get_or_default(recorded_values, measure_spec.id, no_recorded_values),
         ticks_per_second);
-    results.push_back(ComputeSingle(
-        measure_spec, time_between_values,
-        get_or_default(measurements.output_test_name, measure_spec.id,
-                       empty_string),
-        get_or_default(measurements.expected_sample_count, measure_spec.id,
-                       0uL),
-        get_or_default(measurements.split_first, measure_spec.id, false)));
+    results.push_back(ComputeSingle(measure_spec, time_between_values));
   }
 
   return results;

@@ -25,6 +25,8 @@ struct ArgumentValueSpec {
 
   std::string argument_name;
   std::string argument_unit;  // TODO(mariagl): use that for reporting.
+
+  MeasurementSpecCommon common = {};
 };
 
 class MeasureArgumentValue {

@@ -333,10 +333,25 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   uint64_t counter = 0u;
   for (auto& measurement : document[kMeasurementsKey].GetArray()) {
     std::string type = measurement[kTypeKey].GetString();
+    measure::MeasurementSpecCommon common;
+
+    if (measurement.HasMember(kOutputTestName)) {
+      common.output_test_name = measurement[kOutputTestName].GetString();
+    }
+
+    if (measurement.HasMember(kSplitFirstKey)) {
+      common.split_first = measurement[kSplitFirstKey].GetBool();
+    }
+
+    if (measurement.HasMember(kExpectedSampleCountKey)) {
+      common.expected_sample_count =
+          measurement[kExpectedSampleCountKey].GetUint();
+    }
 
     if (type == kMeasureDurationType) {
       measure::DurationSpec spec;
       spec.id = counter;
+      spec.common = std::move(common);
       if (!ValidateSchema(measurement, *duration_schema) ||
           !DecodeMeasureDuration(measurement, &spec)) {
         return false;
@@ -345,6 +360,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
     } else if (type == kMeasureTimeBetweenType) {
       measure::TimeBetweenSpec spec;
       spec.id = counter;
+      spec.common = std::move(common);
       if (!ValidateSchema(measurement, *time_between_schema) ||
           !DecodeMeasureTimeBetween(measurement, &spec)) {
         return false;
@@ -353,6 +369,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
     } else if (type == kMeasureArgumentValueType) {
       measure::ArgumentValueSpec spec;
       spec.id = counter;
+      spec.common = std::move(common);
       if (!ValidateSchema(measurement, *argument_value_schema) ||
           !DecodeMeasureArgumentValue(measurement, &spec)) {
         return false;
@@ -361,21 +378,6 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
     } else {
       FXL_LOG(ERROR) << "Unrecognized measurement type: " << type;
       return false;
-    }
-
-    if (measurement.HasMember(kOutputTestName)) {
-      result.measurements->output_test_name[counter] =
-          measurement[kOutputTestName].GetString();
-    }
-
-    if (measurement.HasMember(kSplitFirstKey)) {
-      result.measurements->split_first[counter] =
-          measurement[kSplitFirstKey].GetBool();
-    }
-
-    if (measurement.HasMember(kExpectedSampleCountKey)) {
-      result.measurements->expected_sample_count[counter] =
-          measurement[kExpectedSampleCountKey].GetUint();
     }
 
     counter++;

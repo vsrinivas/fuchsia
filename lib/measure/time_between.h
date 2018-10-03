@@ -29,6 +29,7 @@ struct TimeBetweenSpec {
   Anchor first_anchor;
   EventSpec second_event;
   Anchor second_anchor;
+  MeasurementSpecCommon common = {};
 };
 
 class MeasureTimeBetween {

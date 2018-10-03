@@ -23,6 +23,7 @@ namespace measure {
 struct DurationSpec {
   uint64_t id;
   EventSpec event;
+  MeasurementSpecCommon common = {};
 };
 
 class MeasureDuration {
