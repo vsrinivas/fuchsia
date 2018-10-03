@@ -33,6 +33,22 @@ struct InputLocation {
   explicit InputLocation(uint64_t address)
       : type(Type::kAddress), address(address) {}
 
+  // Converts the input location type to a string. This is intended to be used
+  // in error messages.
+  static const char* TypeToString(Type type) {
+    switch (type) {
+      case Type::kLine:
+        return "file/line";
+      case Type::kSymbol:
+        return "symbol";
+      case Type::kAddress:
+        return "address";
+      case Type::kNone:
+      default:
+        return "<no location type>";
+    }
+  }
+
   Type type = Type::kNone;
 
   FileLine line;       // Valid when type == kLine;

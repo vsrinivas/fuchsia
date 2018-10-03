@@ -5,8 +5,12 @@
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 
 #include "garnet/bin/zxdb/client/frame.h"
+#include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
+#include "garnet/bin/zxdb/console/string_util.h"
 #include "garnet/bin/zxdb/symbols/location.h"
+#include "garnet/bin/zxdb/symbols/process_symbols.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -67,18 +71,103 @@ Err ParseInputLocation(const Frame* frame, const std::string& input,
   if (!frame) {
     return Err(
         "There is no current frame to get a file name, you'll have to "
-        "specify one.");
+        "specify an explicit frame or file name.");
   }
   const Location& frame_location = frame->GetLocation();
   if (frame_location.file_line().file().empty()) {
     return Err(
         "The current frame doesn't have a file name to use, you'll "
-        "have to specify one.");
+        "have to specify a file.");
   }
   location->type = InputLocation::Type::kLine;
   location->line =
       FileLine(frame_location.file_line().file(), static_cast<int>(line));
   return Err();
+}
+
+Err ResolveInputLocations(const ProcessSymbols* process_symbols,
+                          const InputLocation& input_location, bool symbolize,
+                          std::vector<Location>* locations) {
+  ResolveOptions options;
+  options.symbolize = symbolize;
+  *locations = process_symbols->ResolveInputLocation(input_location, options);
+
+  if (locations->empty()) {
+    return Err("Nothing matching this %s was found.",
+               InputLocation::TypeToString(input_location.type));
+  }
+  return Err();
+}
+
+Err ResolveInputLocations(const ProcessSymbols* process_symbols,
+                          const Frame* optional_frame, const std::string& input,
+                          bool symbolize, std::vector<Location>* locations) {
+  InputLocation input_location;
+  Err err = ParseInputLocation(optional_frame, input, &input_location);
+  if (err.has_error())
+    return err;
+  return ResolveInputLocations(process_symbols, input_location, symbolize,
+                               locations);
+}
+
+Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
+                               const InputLocation& input_location,
+                               bool symbolize, Location* location) {
+  std::vector<Location> locations;
+  Err err = ResolveInputLocations(process_symbols, input_location, symbolize,
+                                  &locations);
+  if (err.has_error())
+    return err;
+
+  FXL_DCHECK(!locations.empty());  // Non-empty on success should be guaranteed.
+
+  if (locations.size() == 1u) {
+    // Success, got a unique location.
+    *location = locations[0];
+    return Err();
+  }
+
+  // When there is more than one, generate an error that lists the
+  // possibilities for disambiguation.
+  std::string err_str = "This resolves to more than one location. Could be:\n";
+  constexpr size_t kMaxSuggestions = 10u;
+
+  if (!symbolize) {
+    // The original call did not request symbolization which will produce very
+    // non-helpful suggestions. We're not concerned about performance in this
+    // error case so re-query to get the full symbols.
+    locations.clear();
+    ResolveInputLocations(process_symbols, input_location, true, &locations);
+  }
+
+  for (size_t i = 0; i < locations.size() && i < kMaxSuggestions; i++) {
+    // Always show the full path since we're doing disambiguation and the
+    // problem could have been two files with the same name but different
+    // paths.
+    err_str += fxl::StringPrintf(" %s ", GetBullet().c_str());
+    if (locations[i].file_line().is_valid())
+      err_str += DescribeFileLine(locations[i].file_line(), true);
+    else
+      err_str += DescribeLocation(locations[i], true);
+    err_str += "\n";
+  }
+  if (locations.size() > kMaxSuggestions) {
+    err_str += fxl::StringPrintf("...%zu more omitted...\n",
+                                 locations.size() - kMaxSuggestions);
+  }
+  return Err(err_str);
+}
+
+Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
+                               const Frame* optional_frame,
+                               const std::string& input, bool symbolize,
+                               Location* location) {
+  InputLocation input_location;
+  Err err = ParseInputLocation(optional_frame, input, &input_location);
+  if (err.has_error())
+    return err;
+  return ResolveUniqueInputLocation(process_symbols, input_location, symbolize,
+                                    location);
 }
 
 }  // namespace zxdb

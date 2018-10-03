@@ -382,10 +382,14 @@ std::string DescribeLocation(const Location& loc, bool always_show_address) {
       if (loc.file_line().is_valid()) {
         // Separator between function and file/line.
         result += " " + GetBullet() + " ";
-      } else if (func->GetFirstAddress() <= loc.address()) {
-        // Inside a function but no file/line known. Show the offset.
-        result += fxl::StringPrintf(" + 0x%" PRIx64 " (no line info)",
-                                    loc.address() - func->GetFirstAddress());
+      } else {
+        // Check if the address is inside a function and show the offset.
+        AddressRange function_range = func->GetFullRange(loc.symbol_context());
+        if (function_range.InRange(loc.address())) {
+          // Inside a function but no file/line known. Show the offset.
+          result += fxl::StringPrintf(" + 0x%" PRIx64 " (no line info)",
+                                      loc.address() - function_range.begin());
+        }
       }
     }
   }

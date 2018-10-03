@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <map>
+#include <vector>
+
+#include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/process_symbols.h"
 
 namespace zxdb {
@@ -14,6 +18,9 @@ class MockProcessSymbols : public ProcessSymbols {
   MockProcessSymbols();
   ~MockProcessSymbols() override;
 
+  // Sets a response for a symbol query of the given symbol.
+  void AddSymbol(const std::string& name, std::vector<Location> locations);
+
   // ProcessSymbols implementation.
   TargetSymbols* GetTargetSymbols() override;
   std::vector<ModuleSymbolStatus> GetStatus() const override;
@@ -22,6 +29,9 @@ class MockProcessSymbols : public ProcessSymbols {
       const ResolveOptions& options) const override;
   LineDetails LineDetailsForAddress(uint64_t address) const override;
   bool HaveSymbolsLoadedForModuleAt(uint64_t address) const override;
+
+ private:
+  std::map<std::string, std::vector<Location>> symbols_;
 };
 
 }  // namespace zxdb

@@ -39,11 +39,16 @@ class CodeBlock : public Symbol {
   // arent't strictly "code blocks" but many functions won't have a
   // declaration/implementation split and there's so much overlap it's more
   // convenient to just have one type representing both.
+  //
+  // These ranges will be RELATIVE to the module.
   const CodeRanges& code_ranges() const { return code_ranges_; }
   void set_code_ranges(CodeRanges r) { code_ranges_ = std::move(r); }
 
-  // The beginning of the first code range, if any. Otherwise 0.
-  uint64_t GetFirstAddress() const;
+  // Computes the full code range covering all sub-ranges. There can be
+  // multiple code ranges that can be discontiguous so not everything in this
+  // range is guaranteed to be inside the code block. Returns empty
+  // AddressRange if there are no code ranges.
+  AddressRange GetFullRange(const SymbolContext& symbol_context) const;
 
   // The lexical blocks that are children of this one.
   const std::vector<LazySymbol>& inner_blocks() const { return inner_blocks_; }

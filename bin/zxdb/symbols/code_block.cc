@@ -14,10 +14,11 @@ CodeBlock::~CodeBlock() = default;
 
 const CodeBlock* CodeBlock::AsCodeBlock() const { return this; }
 
-uint64_t CodeBlock::GetFirstAddress() const {
+AddressRange CodeBlock::GetFullRange(const SymbolContext& symbol_context) const {
   if (code_ranges_.empty())
-    return 0;
-  return code_ranges_[0].begin();
+    return AddressRange();
+  return AddressRange(symbol_context.RelativeToAbsolute(code_ranges_.front().begin()),
+                      symbol_context.RelativeToAbsolute(code_ranges_.back().end()));
 }
 
 bool CodeBlock::ContainsAddress(const SymbolContext& symbol_context,

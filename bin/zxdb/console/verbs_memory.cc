@@ -23,7 +23,9 @@
 #include "garnet/bin/zxdb/console/format_context.h"
 #include "garnet/bin/zxdb/console/format_memory.h"
 #include "garnet/bin/zxdb/console/format_table.h"
+#include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/symbols/code_block.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -60,6 +62,43 @@ Err ReadNumAndSize(const Command& cmd, uint32_t default_size,
     *out_size *= sizeof(uint64_t);  // Convert pointer count to size.
   } else {
     *out_size = default_size;
+  }
+  return Err();
+}
+
+// Converts argument 0 (required or it will produce an error) and converts it
+// to a unique location (or error). If the input indicates a thing that has
+// an intrinsic size like a function name, the size will be placed in
+// *location_size. Otherwise, *location_size will be 0.
+//
+// The command_name is used for writing the current command to error messages.
+Err ReadLocation(const Command& cmd, const char* command_name,
+                 Location* location, uint64_t* location_size) {
+  *location_size = 0;
+  if (cmd.args().size() != 1) {
+    return Err("%s requires exactly one argument specifying a location.",
+               command_name);
+  }
+
+  // We need to check the type of the parsed input location so parse and
+  // resolve in two steps.
+  InputLocation input_location;
+  Err err = ParseInputLocation(cmd.frame(), cmd.args()[0], &input_location);
+  if (err.has_error())
+    return err;
+
+  err = ResolveUniqueInputLocation(cmd.target()->GetProcess()->GetSymbols(),
+                                   input_location, true, location);
+  if (err.has_error())
+    return err;
+
+  // Some symbols can give us sizes.
+  if (input_location.type == InputLocation::Type::kSymbol) {
+    if (location->function()) {
+      if (const CodeBlock* block = location->function().Get()->AsCodeBlock()) {
+        *location_size = block->GetFullRange(location->symbol_context()).size();
+      }
+    }
   }
   return Err();
 }
@@ -161,7 +200,7 @@ Err DoStack(ConsoleContext* context, const Command& cmd) {
 const char kMemAnalyzeShortHelp[] =
     "mem-analyze / ma: Analyze a memory region.";
 const char kMemAnalyzeHelp[] =
-    R"(mem-analyze [ --num=<lines> ] [ --size=<size> ] <address>
+    R"(mem-analyze [ --num=<lines> ] [ --size=<size> ] <location>
 
   Alias: "ma"
 
@@ -171,6 +210,10 @@ const char kMemAnalyzeHelp[] =
   See also "stack" which is specialized more for stacks (it includes the
   current thread's registers), and "mem-read" to display a simple hex dump.
 
+Location arguments
+
+)" LOCATION_ARG_HELP("mem-analyze")
+        R"(
 Arguments
 
   --num=<lines> | -n <lines>
@@ -258,7 +301,7 @@ void MemoryReadComplete(const Err& err, MemoryDump dump) {
 const char kMemReadShortHelp[] =
     R"(mem-read / x: Read memory from debugged process.)";
 const char kMemReadHelp[] =
-    R"(mem-read [ --size=<bytes> ] <address>
+    R"(mem-read [ --size=<bytes> ] <location>
 
   Alias: "x"
 
@@ -268,16 +311,22 @@ const char kMemReadHelp[] =
   See also "a-mem" to print a memory analysis and "a-stack" to print a more
   useful dump of the raw stack.
 
+Location arguments
+
+)" LOCATION_ARG_HELP("mem-analyze")
+        R"(
 Arguments
 
   --size=<bytes> | -s <bytes>
-    Bytes to read. This defaults to 64 if unspecified.
+      Bytes to read. This defaults to the size of the function if a function
+      name is given as the location, or 64 otherwise.
 
 Examples
 
   x --size=128 0x75f19ba
   mem-read --size=16 0x8f1763a7
   process 3 mem-read 83242384560
+  process 3 mem-read main
 )";
 Err DoMemRead(ConsoleContext* context, const Command& cmd) {
   // Only a process can have its memory read.
@@ -290,13 +339,9 @@ Err DoMemRead(ConsoleContext* context, const Command& cmd) {
     return err;
 
   // Address (required).
-  uint64_t address = 0;
-  if (cmd.args().size() != 1) {
-    return Err(ErrType::kInput,
-               "mem-read requires exactly one argument that "
-               "is the address to read.");
-  }
-  err = StringToUint64(cmd.args()[0], &address);
+  Location location;
+  uint64_t location_size = 0;
+  err = ReadLocation(cmd, "mem-read", &location, &location_size);
   if (err.has_error())
     return err;
 
@@ -306,9 +351,13 @@ Err DoMemRead(ConsoleContext* context, const Command& cmd) {
     err = StringToUint64(cmd.GetSwitchValue(kSizeSwitch), &size);
     if (err.has_error())
       return err;
+  } else if (location_size) {
+    // Default to the size of the symbol.
+    size = static_cast<uint32_t>(location_size);
   }
 
-  cmd.target()->GetProcess()->ReadMemory(address, size, &MemoryReadComplete);
+  cmd.target()->GetProcess()->ReadMemory(location.address(), size,
+                                         &MemoryReadComplete);
   return Err();
 }
 
@@ -341,18 +390,24 @@ void CompleteDisassemble(const Err& err, MemoryDump dump,
 const char kDisassembleShortHelp[] =
     "disassemble / di: Disassemble machine instructions.";
 const char kDisassembleHelp[] =
-    R"(disassemble [ --num=<lines> ] [ --raw ] [ <start_address> ]
+    R"(disassemble [ --num=<lines> ] [ --raw ] [ <location> ]
 
   Alias: "di"
 
-  Disassembles machine instructions at the given address. If no address is
+  Disassembles machine instructions at the given location. If no location is
   given, the instruction pointer of the thread/frame will be used. If the
   thread is not stopped, you must specify a start address.
 
+Location arguments
+
+)" LOCATION_ARG_HELP("mem-analyze")
+        R"(
 Arguments
 
   --num=<lines> | -n <lines>
-      The number of lines/instructions to emit. Defaults to 16.
+      The number of lines/instructions to emit. Defaults to the instructions
+      in the given function (if the location is a function name), or 16
+      otherwise.
 
   --raw | -r
       Output raw bytes in addition to the decoded instructions.
@@ -366,6 +421,9 @@ Examples
   thread 3 disassemble -n 128
       Disassembles 128 instructions starting at thread 3's instruction
       pointer.
+
+  di MyClass::MyFunc
+      Disassembles the given function.
 
   frame 3 disassemble
   thread 2 frame 3 disassemble
@@ -387,10 +445,8 @@ Err DoDisassemble(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  // TODO(brettw) This should take any kind of location like symbols and
-  // line numbers. The breakpoint location code should be factored out into
-  // something more general and shared here.
-  uint64_t address = 0;
+  Location location;
+  uint64_t location_size = 0;
   if (cmd.args().empty()) {
     // No args: implicitly read the frame's instruction pointer.
     //
@@ -405,15 +461,11 @@ Err DoDisassemble(ConsoleContext* context, const Command& cmd) {
           "must be stopped to use the implicit current address. Otherwise,\n"
           "you must supply an explicit address to disassemble.");
     }
-    address = frame->GetLocation().address();
-  } else if (cmd.args().size() == 1) {
-    // One argument is the address to read.
-    err = StringToUint64(cmd.args()[0], &address);
+    location = frame->GetLocation();
+  } else {
+    err = ReadLocation(cmd, "disassemble", &location, &location_size);
     if (err.has_error())
       return err;
-  } else {
-    // More arguments are errors.
-    return Err(ErrType::kInput, "\"disassemble\" takes at most one argument.");
   }
 
   FormatAsmOpts options;
@@ -423,30 +475,38 @@ Err DoDisassemble(ConsoleContext* context, const Command& cmd) {
     options.active_address = cmd.frame()->GetAddress();
 
   // Num argument (optional).
+  //
+  // When there is no known byte size, compute the max bytes requires to get
+  // the requested instructions. It doesn't matter if we request more memory
+  // than necessary so use a high bound.
+  size_t size = 0;
   if (cmd.HasSwitch(kNumSwitch)) {
+    // Num lines explicitly given.
     uint64_t num_instr = 0;
     err = StringToUint64(cmd.GetSwitchValue(kNumSwitch), &num_instr);
     if (err.has_error())
       return err;
     options.max_instructions = num_instr;
+    size = options.max_instructions *
+           context->session()->arch_info()->max_instr_len();
+  } else if (location_size > 0) {
+    // Byte size is known.
+    size = location_size;
   } else {
+    // Default instruction count when no symbol and no explicit size is given.
     options.max_instructions = 16;
+    size = options.max_instructions *
+           context->session()->arch_info()->max_instr_len();
   }
 
   // Show bytes.
   options.emit_bytes = cmd.HasSwitch(kRawSwitch);
 
-  // Compute the max bytes requires to get the requested instructions.
-  // It doesn't matter if we request more memory than necessary so use a
-  // high bound.
-  size_t size = options.max_instructions *
-                context->session()->arch_info()->max_instr_len();
-
   // Schedule memory request.
   Process* process = cmd.target()->GetProcess();
   process->ReadMemory(
-      address, size, [ options, process = process->GetWeakPtr() ](
-                         const Err& err, MemoryDump dump) {
+      location.address(), size, [ options, process = process->GetWeakPtr() ](
+                                    const Err& err, MemoryDump dump) {
         CompleteDisassemble(err, std::move(dump), std::move(process), options);
       });
   return Err();

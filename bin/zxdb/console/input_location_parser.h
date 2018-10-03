@@ -4,21 +4,56 @@
 
 #pragma once
 
+#include <vector>
+
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/symbols/input_location.h"
+#include "garnet/bin/zxdb/symbols/location.h"
 
 namespace zxdb {
 
 class Command;
 class Frame;
+class ProcessSymbols;
 
-// Parses a given input from the user as a location. The frame is used for
-// context if the user specifies a line number with no file name. This does
-// not handle the case where no location is specified (some commands, like
-// "break", might use this to indicate the current location, but many other
-// commands don't support this format).
-Err ParseInputLocation(const Frame* frame, const std::string& input,
+// Parses a given input from the user to an InputLocation.
+//
+// The optional frame is used for context if the user specifies a line number
+// with no file name. If the frame is null, the line-number-only format will
+// generate an error.
+//
+// This does not handle the case where no location is specified (some commands,
+// like "break", might use this to indicate the current location, but many
+// other commands don't support this format).
+Err ParseInputLocation(const Frame* optional_frame, const std::string& input,
                        InputLocation* location);
+
+// Parses the input and generates a list of matches. No matches will generate
+// an error. This can take either a pre-parsed InputLocation, or can parse
+// the input itself.
+//
+// Set |symbolize| to make the output locations symbolized. This will be
+// slightly slower. If you just need the addresses, pass false.
+Err ResolveInputLocations(const ProcessSymbols* process_symbols,
+                          const InputLocation& input_location, bool symbolize,
+                          std::vector<Location>* locations);
+Err ResolveInputLocations(const ProcessSymbols* process_symbols,
+                          const Frame* optional_frame, const std::string& input,
+                          bool symbolize, std::vector<Location>* locations);
+
+// Resolves the given input string to a Location object. Returns an error
+// parsing or if the location can not be resolved or resolves to more than one
+// address.
+//
+// Set |symbolize| to make the output |*location| symbolized. This will be
+// slightly slower. If you just need the address, pass false.
+Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
+                               const InputLocation& input_location,
+                               bool symbolize, Location* location);
+Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
+                               const Frame* optional_frame,
+                               const std::string& input, bool symbolize,
+                               Location* location);
 
 // Generates help for a command describing the parsing of locations. The
 // parameter is a string containing the name of the command.

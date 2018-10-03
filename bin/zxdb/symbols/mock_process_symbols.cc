@@ -14,7 +14,11 @@ namespace zxdb {
 MockProcessSymbols::MockProcessSymbols() = default;
 MockProcessSymbols::~MockProcessSymbols() = default;
 
-// ProcessSymbols implementation.
+void MockProcessSymbols::AddSymbol(const std::string& name,
+                                   std::vector<Location> locations) {
+  symbols_[name] = std::move(locations);
+}
+
 TargetSymbols* MockProcessSymbols::GetTargetSymbols() { return nullptr; }
 
 std::vector<ModuleSymbolStatus> MockProcessSymbols::GetStatus() const {
@@ -23,13 +27,25 @@ std::vector<ModuleSymbolStatus> MockProcessSymbols::GetStatus() const {
 
 std::vector<Location> MockProcessSymbols::ResolveInputLocation(
     const InputLocation& input_location, const ResolveOptions& options) const {
+  std::vector<Location> result;
   if (input_location.type == InputLocation::Type::kAddress) {
-    // Always return identity for the address case.
-    return std::vector<Location>{
-        Location(Location::State::kAddress, input_location.address)};
+    // Always return identity for the address case. Mark symbolized (this
+    // will be stripped if necessary below).
+    result.emplace_back(Location::State::kSymbolized, input_location.address);
+  } else if (input_location.type == InputLocation::Type::kSymbol) {
+    auto found = symbols_.find(input_location.symbol);
+    if (found != symbols_.end())
+      result = found->second;
   }
-  // More complex stuff is not yet supported by this mock.
-  return std::vector<Location>();
+
+  if (!options.symbolize) {
+    // The caller did not request symbols so convert each result to an
+    // unsymbolized answer. This will match the type of output from the
+    // non-mock version.
+    for (size_t i = 0; i < result.size(); i++)
+      result[i] = Location(Location::State::kAddress, result[i].address());
+  }
+  return result;
 }
 
 LineDetails MockProcessSymbols::LineDetailsForAddress(uint64_t address) const {
