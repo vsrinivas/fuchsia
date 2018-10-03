@@ -34,4 +34,11 @@ package("overnetstack") {
   ]
 
   binary = "overnetstack"
+
+  meta = [
+    {
+      path = rebase_path("meta/overnetstack.cmx")
+      dest = "overnetstack.cmx"
+    },
+  ]
 }
