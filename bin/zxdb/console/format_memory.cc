@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/console/memory_format.h"
+#include "garnet/bin/zxdb/console/format_memory.h"
 
 #include <inttypes.h>
 
@@ -23,7 +23,8 @@ bool IsPrintableAscii(uint8_t c) { return c >= ' ' && c < 0x7f; }
 
 }  // namespace
 
-// Optimized for simplicity over speed.
+// Optimized for simplicity over speed. But this does not use the table output
+// to avoid having giant table computations for large memory dumps.
 std::string FormatMemory(const MemoryDump& dump, uint64_t begin, uint32_t size,
                          const MemoryFormatOptions& opts) {
   std::string out;
@@ -37,7 +38,7 @@ std::string FormatMemory(const MemoryDump& dump, uint64_t begin, uint32_t size,
   int addr_width = 0;
   if (opts.show_addrs) {
     addr_width =
-        static_cast<int>(fxl::StringPrintf("%" PRIX64, max_addr).size());
+        static_cast<int>(fxl::StringPrintf("%" PRIx64, max_addr).size());
   }
 
   uint64_t cur = begin;  // Current address being printed.
@@ -50,7 +51,7 @@ std::string FormatMemory(const MemoryDump& dump, uint64_t begin, uint32_t size,
   while (!done) {  // Line loop
     // Compute address at beginning of line.
     if (opts.show_addrs) {
-      address = fxl::StringPrintf("%0*" PRIX64, addr_width, cur);
+      address = fxl::StringPrintf("0x%0*" PRIx64, addr_width, cur);
       address.append(":  ");
     }
 
@@ -70,7 +71,7 @@ std::string FormatMemory(const MemoryDump& dump, uint64_t begin, uint32_t size,
       if (!done) {
         uint8_t byte;
         if (dump.GetByte(cur, &byte)) {
-          values += fxl::StringPrintf("%02X", static_cast<int>(byte));
+          values += fxl::StringPrintf("%02x", static_cast<int>(byte));
           if (IsPrintableAscii(byte)) {
             ascii.push_back(static_cast<char>(byte));
           } else {
