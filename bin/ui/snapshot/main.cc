@@ -22,7 +22,8 @@ int main(int argc, const char** argv) {
     return std::make_unique<snapshot::View>(
         &loop, view_context.startup_context,
         std::move(view_context.view_manager),
-        std::move(view_context.view_owner_request));
+        std::move(view_context.view_owner_request),
+        std::move(view_context.outgoing_services));
   });
 
   loop.Run();

@@ -1051,6 +1051,27 @@ void ViewRegistry::OnInputDispatcherDied(InputDispatcherImpl* dispatcher) {
   input_dispatchers_by_view_tree_token_.erase(it);
 }
 
+// SNAPSHOT
+void ViewRegistry::TakeSnapshot(
+    uint64_t view_koid, fit::function<void(::fuchsia::mem::Buffer)> callback) {
+  auto view_state = static_cast<ViewState*>(view_linker_.GetImport(view_koid));
+  if (view_state) {
+    fuchsia::ui::gfx::SnapshotCallbackHACKPtr snapshot_callback;
+    auto snapshot_callback_impl = std::make_shared<SnapshotCallbackImpl>(
+        snapshot_callback.NewRequest(), std::move(callback));
+    snapshot_callback_impl->SetClear([this, snapshot_callback_impl]() {
+      snapshot_bindings_.remove(snapshot_callback_impl);
+    });
+    snapshot_bindings_.push_back(std::move(snapshot_callback_impl));
+
+    // Snapshot the child.
+    view_state->top_node().Snapshot(std::move(snapshot_callback));
+    SchedulePresentSession();
+  } else {
+    callback(fuchsia::mem::Buffer{});
+  }
+}
+
 // LOOKUP
 
 ViewState* ViewRegistry::FindView(uint32_t view_token) {

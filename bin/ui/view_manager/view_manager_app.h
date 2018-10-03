@@ -17,6 +17,7 @@
 namespace view_manager {
 
 class ViewManagerImpl;
+class ViewSnapshotImpl;
 
 // View manager application entry point.
 class ViewManagerApp {
@@ -31,6 +32,9 @@ class ViewManagerApp {
   fidl::BindingSet<::fuchsia::ui::viewsv1::ViewManager,
                    std::unique_ptr<ViewManagerImpl>>
       view_manager_bindings_;
+  fidl::BindingSet<::fuchsia::ui::viewsv1::ViewSnapshot,
+                   std::unique_ptr<ViewSnapshotImpl>>
+      view_snapshot_bindings_;
 
   // Binding to expose view hit-test service to the a11y manager.
   fidl::BindingSet<fuchsia::ui::viewsv1::AccessibilityViewInspector>

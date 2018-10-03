@@ -11,14 +11,16 @@
 
 namespace snapshot {
 
-View::View(async::Loop* loop, component::StartupContext* startup_context,
-           ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-           fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-               view_owner_request)
+View::View(
+    async::Loop* loop, component::StartupContext* startup_context,
+    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request,
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services)
     : BaseView(std::move(view_manager), std::move(view_owner_request),
                "Snapshot View") {
-  startup_context->outgoing().AddPublicService(
-      loader_bindings_.GetHandler(this));
+  service_namespace_.AddService(loader_bindings_.GetHandler(this));
+  service_namespace_.AddBinding(std::move(outgoing_services));
 }
 
 void View::Load(::fuchsia::mem::Buffer payload) {
