@@ -237,13 +237,19 @@ class ConvergenceTest
       pages_.emplace_back();
       LedgerPtr ledger_ptr = ledger_instances_[i]->GetTestLedger();
       Status status = Status::UNKNOWN_ERROR;
+      auto loop_waiter = NewWaiter();
       GetPageEnsureInitialized(
           &ledger_ptr,
           // The first ledger gets a random page id, the others use the
           // same id for their pages.
-          i == 0 ? nullptr : fidl::MakeOptional(page_id), QuitLoopClosure(),
-          callback::Capture(QuitLoopClosure(), &status, &pages_[i], &page_id));
-      RunLoop();
+          i == 0 ? nullptr : fidl::MakeOptional(page_id),
+          [&] {
+            ADD_FAILURE() << "Page should not be disconnected.";
+            StopLoop();
+          },
+          callback::Capture(loop_waiter->GetCallback(), &status, &pages_[i],
+                            &page_id));
+      ASSERT_TRUE(loop_waiter->RunUntilCalled());
       ASSERT_EQ(Status::OK, status);
     }
   }
@@ -258,10 +264,12 @@ class ConvergenceTest
         std::make_unique<PageWatcherImpl>(page_watcher.NewRequest(),
                                           std::move(page_snapshot));
     Status status = Status::UNKNOWN_ERROR;
+    auto loop_waiter = NewWaiter();
     (*page)->GetSnapshot(
         std::move(page_snapshot_request), fidl::VectorPtr<uint8_t>::New(0),
-        std::move(page_watcher), callback::Capture(QuitLoopClosure(), &status));
-    RunLoop();
+        std::move(page_watcher),
+        callback::Capture(loop_waiter->GetCallback(), &status));
+    EXPECT_TRUE(loop_waiter->RunUntilCalled());
     EXPECT_EQ(Status::OK, status);
     return watcher;
   }
@@ -270,9 +278,11 @@ class ConvergenceTest
     std::unique_ptr<SyncWatcherImpl> watcher =
         std::make_unique<SyncWatcherImpl>();
     Status status = Status::UNKNOWN_ERROR;
-    (*page)->SetSyncStateWatcher(watcher->NewBinding(),
-                                 callback::Capture(QuitLoopClosure(), &status));
-    RunLoop();
+    auto loop_waiter = NewWaiter();
+    (*page)->SetSyncStateWatcher(
+        watcher->NewBinding(),
+        callback::Capture(loop_waiter->GetCallback(), &status));
+    EXPECT_TRUE(loop_waiter->RunUntilCalled());
     EXPECT_EQ(Status::OK, status);
     return watcher;
   }
@@ -285,10 +295,11 @@ class ConvergenceTest
     for (int i = 0; i < num_ledgers_; i++) {
       values.emplace_back();
       Status status = Status::UNKNOWN_ERROR;
+      auto loop_waiter = NewWaiter();
       watchers[i]->GetInlineOnLatestSnapshot(
           convert::ToArray(key),
-          callback::Capture(QuitLoopClosure(), &status, &values[i]));
-      RunLoop();
+          callback::Capture(loop_waiter->GetCallback(), &status, &values[i]));
+      EXPECT_TRUE(loop_waiter->RunUntilCalled());
       EXPECT_EQ(Status::OK, status);
     }
 
@@ -328,29 +339,33 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
           std::make_unique<TestConflictResolverFactory>(
               resolver_factory_ptr.NewRequest()));
       LedgerPtr ledger = ledger_instances_[i]->GetTestLedger();
+      auto loop_waiter = NewWaiter();
       ledger->SetConflictResolverFactory(
           std::move(resolver_factory_ptr),
-          callback::Capture(QuitLoopClosure(), &status));
-      RunLoop();
+          callback::Capture(loop_waiter->GetCallback(), &status));
+      ASSERT_TRUE(loop_waiter->RunUntilCalled());
       EXPECT_EQ(Status::OK, status);
     }
 
     watchers.push_back(WatchPageContents(&pages_[i]));
     sync_watchers.push_back(WatchPageSyncState(&pages_[i]));
 
-    pages_[i]->StartTransaction(callback::Capture(QuitLoopClosure(), &status));
-    RunLoop();
+    auto loop_waiter = NewWaiter();
+    pages_[i]->StartTransaction(
+        callback::Capture(loop_waiter->GetCallback(), &status));
+    ASSERT_TRUE(loop_waiter->RunUntilCalled());
     EXPECT_EQ(Status::OK, status);
 
+    loop_waiter = NewWaiter();
     if (merge_function_type_ == MergeType::NON_ASSOCIATIVE_CUSTOM) {
       pages_[i]->Put(convert::ToArray("value"),
                      DoubleToArray(distribution(generator)),
-                     callback::Capture(QuitLoopClosure(), &status));
+                     callback::Capture(loop_waiter->GetCallback(), &status));
     } else {
       pages_[i]->Put(convert::ToArray("value"), data_generator_->MakeValue(50),
-                     callback::Capture(QuitLoopClosure(), &status));
+                     callback::Capture(loop_waiter->GetCallback(), &status));
     }
-    RunLoop();
+    ASSERT_TRUE(loop_waiter->RunUntilCalled());
     EXPECT_EQ(Status::OK, status);
   }
 
@@ -360,8 +375,10 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
   for (int i = 0; i < num_ledgers_; i++) {
     pages_[i]->Commit(commit_waiter->NewCallback());
   }
-  commit_waiter->Finalize(callback::Capture(QuitLoopClosure(), &status));
-  RunLoop();
+  auto loop_waiter = NewWaiter();
+  commit_waiter->Finalize(
+      callback::Capture(loop_waiter->GetCallback(), &status));
+  ASSERT_TRUE(loop_waiter->RunUntilCalled());
 
   // Function to verify if the visible Ledger state has not changed since last
   // call and all values are identical.
