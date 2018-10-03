@@ -1497,7 +1497,7 @@ static zx_status_t brcmf_set_key_mgmt(struct net_device* ndev,
     /* The MFP mode (1 or 2) needs to be determined, parse IEs. The
      * IE will not be verified, just a quick search for MFP config
      */
-    rsn_ie = brcmf_parse_tlvs((const uint8_t*)sme->ie, sme->ie_len, WLAN_EID_RSN);
+    rsn_ie = brcmf_parse_tlvs((const uint8_t*)sme->ie, sme->ie_len, WLAN_IE_TYPE_RSNE);
     if (!rsn_ie) {
         goto skip_mfp_config;
     }
@@ -1607,17 +1607,19 @@ static zx_status_t brcmf_set_sharedkey(struct net_device* ndev,
 }
 #endif // FIGURE_THIS_OUT_LATER
 
-static void brcmf_return_join_result(struct net_device* ndev, uint8_t join_result_code) {
-    wlanif_join_confirm_t result;
+void brcmf_return_assoc_result(struct net_device* ndev, uint8_t result_code) {
+    wlanif_assoc_confirm_t conf;
 
-    result.result_code = join_result_code;
-    ndev->if_callbacks->join_conf(ndev->if_callback_cookie, &result);
+    conf.result_code = result_code;
+    brcmf_dbg(TEMP, " * Hard-coding association_id to 42; this will likely break something!");
+    conf.association_id = 42; // TODO: Use brcmf_cfg80211_get_station() to get aid
+
+    ndev->if_callbacks->assoc_conf(ndev->if_callback_cookie, &conf);
 }
 
-zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
-                                   wlanif_join_req_t* req) {
-    struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
+zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, wlanif_assoc_req_t* req) {
     struct brcmf_if* ifp = ndev_to_if(ndev);
+    struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
     struct brcmf_join_params join_params;
     uint16_t chanspec;
     size_t join_params_size;
@@ -1633,29 +1635,8 @@ zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
 
     if (ifp->vif == cfg->p2p.bss_idx[P2PAPI_BSSCFG_PRIMARY].vif) {
         /* A normal (non P2P) connection request setup. */
-        ie = NULL;
-        ie_len = 0;
-#ifdef TODO_LATER
-        // TODO(cphoenix): WPA info used to arrive in IEs in the sme data structure.
-        // When we start connecting to secured networks, we'll need to extract it at the
-        // proper time -- and maybe that means giving the join command later on in the
-        // call sequence. I'm leaving this section in for now, for reference, to show that
-        // the "wpaie" fil_iovar really was an IE. (For unprotected networks, there was no
-        // IE, so setting NULL/0 is the correct behavior for now.)
-        /* find the WPA_IE */
-        wpa_ie = brcmf_find_wpaie((uint8_t*)sme->ie, sme->ie_len);
-        if (wpa_ie) {
-            ie = wpa_ie;
-            ie_len = wpa_ie->len + TLV_HDR_LEN;
-        } else {
-            /* find the RSN_IE */
-            rsn_ie = brcmf_parse_tlvs((const uint8_t*)sme->ie, sme->ie_len, WLAN_EID_RSN);
-            if (rsn_ie) {
-                ie = rsn_ie;
-                ie_len = rsn_ie->len + TLV_HDR_LEN;
-            }
-        }
-#endif // TODO_LATER
+        ie_len = req->rsne_len;
+        ie = (req->rsne_len > 0) ? req->rsne : NULL;
         brcmf_fil_iovar_data_set(ifp, "wpaie", ie, ie_len);
     }
 
@@ -1667,11 +1648,11 @@ zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
     }
 
     brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
-    chanspec = channel_to_chanspec(&cfg->d11inf, &req->selected_bss.chan);
+    chanspec = channel_to_chanspec(&cfg->d11inf, &ifp->bss.chan);
     cfg->channel = chanspec;
 
     // TODO(NET-988): Currently fails if a network only supports TKIP for its pairwise cipher
-    bool using_wpa = req->selected_bss.rsne_len != 0;
+    bool using_wpa = req->rsne_len != 0;
 
     err = brcmf_set_wpa_version(ndev, using_wpa); // wpa_auth
     if (err != ZX_OK) {
@@ -1730,14 +1711,14 @@ zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
     }
 #endif // FIGURE_THIS_OUT_LATER
 
-    ssid_len = min_t(uint32_t, req->selected_bss.ssid.len, WLAN_MAX_SSID_LEN);
+    ssid_len = min_t(uint32_t, ifp->bss.ssid.len, WLAN_MAX_SSID_LEN);
     memset(&join_params, 0, sizeof(join_params));
     join_params_size = sizeof(join_params.ssid_le);
 
-    memcpy(&join_params.ssid_le.SSID, req->selected_bss.ssid.data, ssid_len);
+    memcpy(&join_params.ssid_le.SSID, ifp->bss.ssid.data, ssid_len);
     join_params.ssid_le.SSID_len = ssid_len;
 
-    memcpy(join_params.params_le.bssid, req->selected_bss.bssid, ETH_ALEN);
+    memcpy(join_params.params_le.bssid, ifp->bss.bssid, ETH_ALEN);
     join_params.params_le.chanspec_num = 1;
     join_params.params_le.chanspec_list[0] = chanspec;
 
@@ -1751,7 +1732,7 @@ done:
     if (err != ZX_OK) {
         brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
         brcmf_dbg(CONN, "Failed during join: %s", zx_status_get_string(err));
-        brcmf_return_join_result(ndev, WLAN_JOIN_RESULT_FAILURE_TIMEOUT);
+        brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
     }
     brcmf_dbg(TRACE, "Exit\n");
     return err;
@@ -4066,7 +4047,7 @@ static zx_status_t brcmf_cfg80211_start_ap(struct wiphy* wiphy, struct net_devic
 
     /* find the RSN_IE */
     rsn_ie = brcmf_parse_tlvs((uint8_t*)settings->beacon.tail, settings->beacon.tail_len,
-                              WLAN_EID_RSN);
+                              WLAN_IE_TYPE_RSNE);
 
     /* find the WPA_IE */
     wpa_ie = brcmf_find_wpaie((uint8_t*)settings->beacon.tail, settings->beacon.tail_len);
@@ -4837,14 +4818,21 @@ void brcmf_hook_start_scan(void* ctx, wlanif_scan_req_t* req) {
     }
 }
 
+// Because brcm's join/assoc is handled in a single operation (BRCMF_C_SET_SSID), we save off the
+// bss information, but otherwise wait until an ASSOCIATE.request is received to join so that we
+// have the negotiated RSNE.
 void brcmf_hook_join_req(void* ctx, wlanif_join_req_t* req) {
     struct net_device* ndev = ctx;
-    struct wiphy* wiphy = ndev_to_wiphy(ndev);
+    struct brcmf_if* ifp = ndev_to_if(ndev);
 
     brcmf_dbg(TRACE, "Enter\n");
     brcmf_dbg(CONN, "Join requested: ssid %.*s, bssid %lx", req->selected_bss.ssid.len,
               req->selected_bss.ssid.data, *(uint64_t*)(req->selected_bss.bssid) & 0xffffffffffff);
-    brcmf_cfg80211_connect(wiphy, ndev, req);
+    memcpy(&ifp->bss, &req->selected_bss, sizeof(ifp->bss));
+
+    wlanif_join_confirm_t result;
+    result.result_code = WLAN_JOIN_RESULT_SUCCESS;
+    ndev->if_callbacks->join_conf(ndev->if_callback_cookie, &result);
 }
 
 void brcmf_hook_auth_req(void* ctx, wlanif_auth_req_t* req) {
@@ -4890,23 +4878,20 @@ void brcmf_hook_deauth_req(void* ctx, wlanif_deauth_req_t* req) {
 void brcmf_hook_assoc_req(void* ctx, wlanif_assoc_req_t* req) {
     struct net_device* ndev = ctx;
     struct brcmf_if* ifp = ndev_to_if(ndev);
-    struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
-    wlanif_assoc_confirm_t response;
 
     brcmf_dbg(TRACE, "Enter");
     if (req->rsne_len != 0) {
         brcmf_dbg(TEMP, " * * RSNE non-zero! %ld", req->rsne_len);
         brcmf_hexdump(req->rsne, req->rsne_len);
     }
-    if (memcmp(req->peer_sta_address, profile->bssid, ETH_ALEN)) {
+    if (memcmp(req->peer_sta_address, ifp->bss.bssid, ETH_ALEN)) {
         brcmf_dbg(TEMP, " * * ERROR * * Requested MAC %lx !=  connected MAC %lx",
                   *(uint64_t*)req->peer_sta_address & 0xffffffffffff,
-                  *(uint64_t*)profile->bssid & 0xffffffffffff);
+                  *(uint64_t*)ifp->bss.bssid & 0xffffffffffff);
+        brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+    } else {
+        brcmf_cfg80211_connect(ndev, req);
     }
-    response.result_code = WLAN_ASSOC_RESULT_SUCCESS;
-    brcmf_dbg(TEMP, " * Hard-coding association_id to 42; this will likely break something!");
-    response.association_id = 42; // TODO(cphoenix): Don't hard-code this!!!
-    ndev->if_callbacks->assoc_conf(ndev->if_callback_cookie, &response);
 }
 
 void brcmf_hook_assoc_resp(void* ctx, wlanif_assoc_resp_t* ind) {
@@ -5379,8 +5364,8 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
         // connection IEs are in conn_info->req_ie, req_ie_len, resp_ie, resp_ie_len.
         brcmf_dbg(CONN, "Report connect result - connection %s\n",
                   completed ? "succeeded" : "timed out");
-        brcmf_return_join_result(ndev, completed ? WLAN_JOIN_RESULT_SUCCESS :
-                                                  WLAN_JOIN_RESULT_FAILURE_TIMEOUT);
+        brcmf_return_assoc_result(ndev, completed ? WLAN_ASSOC_RESULT_SUCCESS :
+                                        WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
     }
     brcmf_dbg(TRACE, "Exit\n");
     return ZX_OK;

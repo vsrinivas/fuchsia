@@ -24,6 +24,7 @@
 #include <ddk/protocol/ethernet.h>
 #include <netinet/if_ether.h>
 #include <lib/sync/completion.h>
+#include <wlan/protocol/if-impl.h>
 
 #include <stdatomic.h>
 #include <threads.h>
@@ -188,6 +189,7 @@ enum brcmf_netif_stop_reason {
  * @netif_stop: bitmap indicates reason why netif queues are stopped.
  * //@netif_stop_lock: spinlock for update netif_stop from multiple sources.
  *  (replaced by irq_callback_lock)
+ * @bss: information on current bss.
  * @pend_8021x_cnt: tracks outstanding number of 802.1x frames.
  * @pend_8021x_wait: used for signalling change in count.
  */
@@ -202,6 +204,7 @@ struct brcmf_if {
     int32_t bsscfgidx;
     uint8_t mac_addr[ETH_ALEN];
     uint8_t netif_stop;
+    struct wlanif_bss_description bss;
     //spinlock_t netif_stop_lock;
     atomic_int pend_8021x_cnt;
     sync_completion_t pend_8021x_wait;
