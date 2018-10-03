@@ -5,6 +5,7 @@
     "sandbox": {
         "services": [
             "fuchsia.tracelink.Registry",
+            "fuchsia.ui.input.ImeService",
             "fuchsia.ui.scenic.Scenic"
         ]
     }
