@@ -20,11 +20,11 @@ namespace time_server {
 
 bool Timezone::Run() {
   FX_LOGS(INFO) << "started";
-  UpdateSystemTime(3);
+  UpdateSystemTime(255);
   return true;
 }
 
-bool Timezone::UpdateSystemTime(uint8_t tries) {
+bool Timezone::UpdateSystemTime(int tries) {
   TimeServerConfig config;
   if (!config.Parse(server_config_file_)) {
     FX_LOGS(ERROR) << "Failed to parse config file";
@@ -46,14 +46,14 @@ bool Timezone::UpdateSystemTime(uint8_t tries) {
     return false;
   }
 
-  for (uint8_t i = 0; i < tries; i++) {
+  for (int i = 0; i < tries; i++) {
     FX_VLOGS(1) << "Updating system time, attempt: " << i + 1;
     roughtime::rough_time_t timestamp;
     Status ret = server->GetTimeFromServer(&timestamp);
     if (ret == NETWORK_ERROR) {
       if (i != tries - 1) {
-        FX_VLOGS(1) << "Can't get time, sleeping for 10 sec";
-        sleep(10);
+        FX_VLOGS(1) << "Can't get time, sleeping for 1 sec";
+        sleep(1);
       }
       continue;
     } else if (ret != OK) {

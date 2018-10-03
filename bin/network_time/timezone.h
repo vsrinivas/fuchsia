@@ -13,7 +13,7 @@ namespace time_server {
 class Timezone {
  public:
   bool Run();
-  bool UpdateSystemTime(uint8_t tries);
+  bool UpdateSystemTime(int tries);
   Timezone(std::string server_config_file)
       : server_config_file_(std::move(server_config_file)) {}
   ~Timezone() = default;
