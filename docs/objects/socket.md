@@ -36,13 +36,13 @@ maximum due to overheads.
 **ZX_PROP_SOCKET_TX_BUF_SIZE** size of the transmit buffer of a socket, in
 bytes.
 
-**ZX_PROP_SOCKET_READ_THRESHOLD** size of the read threshold of a socket, in
+**ZX_PROP_SOCKET_RX_THRESHOLD** size of the read threshold of a socket, in
 bytes. When the bytes queued on the socket (available for reading) is equal to
 or greater than this value, the ZX_SOCKET_READ_THRESHOLD signal is asserted.
 Read threshold signalling is disabled by default (and when set, writing
 a value of 0 for this property disables it).
 
-**ZX_PROP_SOCKET_WRITE_THRESHOLD** size of the write threshold of a socket,
+**ZX_PROP_SOCKET_TX_THRESHOLD** size of the write threshold of a socket,
 in bytes. When the space available for writing on the socket is equal to or
 greater than this value, the ZX_SOCKET_WRITE_THRESHOLD signal is asserted.
 Write threshold signalling is disabled by default (and when set, writing a

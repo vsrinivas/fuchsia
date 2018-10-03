@@ -271,6 +271,62 @@ static bool socket_signals2(void) {
     EXPECT_EQ(signals1_clone, ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_THRESHOLD, "");
 
     /*
+     * Bump up the read threshold and make sure the READ THRESHOLD signal gets
+     * deasserted (and then restore the read threshold back).
+     */
+    count = SOCKET2_SIGNALTEST_RX_THRESHOLD + 50;
+    status = zx_object_set_property(h0, ZX_PROP_SOCKET_RX_THRESHOLD,
+                                    &count, sizeof(size_t));
+    ASSERT_EQ(status, ZX_OK, "object_set_property");
+    signals0 = get_satisfied_signals(h0);
+    signals0_clone = get_satisfied_signals(h0_clone);
+    EXPECT_EQ(signals0,
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE,
+              "");
+    EXPECT_EQ(signals0_clone,
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE,
+              "");
+    count = SOCKET2_SIGNALTEST_RX_THRESHOLD;
+    status = zx_object_set_property(h0, ZX_PROP_SOCKET_RX_THRESHOLD,
+                                    &count, sizeof(size_t));
+    signals0 = get_satisfied_signals(h0);
+    signals0_clone = get_satisfied_signals(h0_clone);
+    EXPECT_EQ(signals0,
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_READ_THRESHOLD,
+              "");
+    EXPECT_EQ(signals0_clone,
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_READ_THRESHOLD,
+              "");
+
+    /*
+     * Bump the write threshold way up and make sure the WRITE THRESHOLD signal gets
+     * deasserted (and then restore the write threshold back).
+     */
+    count = txbufmax - 10;
+    status = zx_object_set_property(h1, ZX_PROP_SOCKET_TX_THRESHOLD,
+                                    &count, sizeof(size_t));
+    ASSERT_EQ(status, ZX_OK, "object_set_property");
+    signals1 = get_satisfied_signals(h1);
+    signals1_clone = get_satisfied_signals(h1_clone);
+    EXPECT_EQ(signals1,
+              ZX_SOCKET_WRITABLE,
+              "");
+    EXPECT_EQ(signals1_clone,
+              ZX_SOCKET_WRITABLE,
+              "");
+    count = write_threshold;
+    status = zx_object_set_property(h1, ZX_PROP_SOCKET_TX_THRESHOLD,
+                                    &count, sizeof(size_t));
+    signals1 = get_satisfied_signals(h1);
+    signals1_clone = get_satisfied_signals(h1_clone);
+    EXPECT_EQ(signals1,
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_THRESHOLD,
+              "");
+    EXPECT_EQ(signals1_clone,
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_THRESHOLD,
+              "");
+
+    /*
      * Next write enough data to de-assert WRITE Threshold
      */
     bufsize = write_threshold - (SOCKET2_SIGNALTEST_RX_THRESHOLD + 1);

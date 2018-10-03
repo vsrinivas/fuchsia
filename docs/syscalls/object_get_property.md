@@ -151,7 +151,7 @@ Allowed operations: **get**
 
 The size of the transmit buffer of a socket, in bytes.
 
-### ZX_PROP_SOCKET_READ_THRESHOLD
+### ZX_PROP_SOCKET_RX_THRESHOLD
 
 *handle* type: **Socket**
 
@@ -164,7 +164,7 @@ assert ZX_SOCKET_READ_THRESHOLD if the amount of data that can be read
 is greater than or equal to the threshold. Setting this property to zero
 will result in the deasserting of ZX_SOCKET_READ_THRESHOLD.
 
-### ZX_PROP_SOCKET_WRITE_THRESHOLD
+### ZX_PROP_SOCKET_TX_THRESHOLD
 
 *handle* type: **Socket**
 
@@ -175,7 +175,9 @@ Allowed operations: **get**, **set**
 The size of the write threshold of a socket, in bytes. Setting this will
 assert ZX_SOCKET_WRITE_THRESHOLD if the amount of space available for writing
 is greater than or equal to the threshold. Setting this property to zero
-will result in the deasserting of ZX_SOCKET_WRITE_THRESHOLD.
+will result in the deasserting of ZX_SOCKET_WRITE_THRESHOLD. Setting the
+write threshold after the peer has closed is an error, and results in a
+ZX_SOCKET_PEER_CLOSED error being returned.
 
 ### ZX_PROP_CHANNEL_TX_MSG_MAX
 

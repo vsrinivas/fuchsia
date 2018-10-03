@@ -515,9 +515,13 @@ zx_status_t SocketDispatcher::SetReadThreshold(size_t value) TA_NO_THREAD_SAFETY
     if (value == 0) {
         UpdateStateLocked(ZX_SOCKET_READ_THRESHOLD, 0u);
     } else {
-        // Assert signal if we have queued data above the read threshold
-        if (data_.size() >= read_threshold_)
+        if (data_.size() >= read_threshold_) {
+            // Assert signal if we have queued data above the read threshold
             UpdateStateLocked(0u, ZX_SOCKET_READ_THRESHOLD);
+        } else {
+            // De-assert signal if we upped threshold and queued data drops below
+            UpdateStateLocked(ZX_SOCKET_READ_THRESHOLD, 0u);
+        }
     }
     return ZX_OK;
 }
@@ -525,9 +529,9 @@ zx_status_t SocketDispatcher::SetReadThreshold(size_t value) TA_NO_THREAD_SAFETY
 zx_status_t SocketDispatcher::SetWriteThreshold(size_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
     Guard<fbl::Mutex> guard{get_lock()};
-    size_t tx_buffer_max;
-    tx_buffer_max = peer_ ? peer_->data_.max_size() : 0;
-    if (value > tx_buffer_max)
+    if (peer_ == NULL)
+        return ZX_SOCKET_PEER_CLOSED;
+    if (value > peer_->data_.max_size())
         return ZX_ERR_INVALID_ARGS;
     write_threshold_ = value;
     // Setting 0 disables thresholding. Deassert signal unconditionally.
@@ -535,9 +539,13 @@ zx_status_t SocketDispatcher::SetWriteThreshold(size_t value) TA_NO_THREAD_SAFET
         UpdateStateLocked(ZX_SOCKET_WRITE_THRESHOLD, 0u);
     } else {
         // Assert signal if we have available space above the write threshold
-        if (peer_ &&
-            (peer_->data_.max_size() - peer_->data_.size()) >= write_threshold_)
+        if ((peer_->data_.max_size() - peer_->data_.size()) >= write_threshold_) {
+            // Assert signal if we have available space above the write threshold
             UpdateStateLocked(0u, ZX_SOCKET_WRITE_THRESHOLD);
+        } else {
+            // De-assert signal if we upped threshold and available space drops below
+            UpdateStateLocked(ZX_SOCKET_WRITE_THRESHOLD, 0u);
+        }
     }
     return ZX_OK;
 }
