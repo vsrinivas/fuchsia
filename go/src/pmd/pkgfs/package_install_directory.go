@@ -341,6 +341,10 @@ func (f *installFile) importPackage() error {
 
 	needBlobs := map[string]struct{}{}
 	for i := range files {
+		// Silence apparent errors from last line in file/empty lines.
+		if len(files[i]) == 0 {
+			continue
+		}
 		parts := bytes.SplitN(files[i], []byte{'='}, 2)
 		if len(parts) != 2 {
 			log.Printf("pkgfs: skipping bad package entry: %q", files[i])
@@ -350,7 +354,7 @@ func (f *installFile) importPackage() error {
 
 		// XXX(raggi): this can race, which can deadlock package installs
 		if mayHaveBlob(root) && f.fs.blobfs.HasBlob(root) {
-			log.Printf("pkgfs: blob already present for %s: %q", p, root)
+			// DEBUG: log.Printf("pkgfs: blob already present for %s: %q", p, root)
 			continue
 		}
 
@@ -369,8 +373,8 @@ func (f *installFile) importPackage() error {
 	for blob := range needBlobs {
 		needList = append(needList, blob)
 	}
+	log.Printf("pkgfs: asking amber to fetch %d blobs for %s", len(needList), p)
 	go func() {
-		log.Printf("pkgfs: asking amber to fetch %d blobs for %s", len(needList), p)
 		for _, root := range needList {
 			f.fs.amberPxy.GetBlob(root)
 		}
