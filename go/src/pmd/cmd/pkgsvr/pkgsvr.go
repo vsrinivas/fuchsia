@@ -21,6 +21,7 @@ var (
 
 func main() {
 	log.SetPrefix("pkgsvr: ")
+	log.SetFlags(0) // no time required
 	flag.Parse()
 
 	sysPkg := flag.Arg(0)
