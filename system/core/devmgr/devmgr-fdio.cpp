@@ -37,7 +37,6 @@ void devmgr_io_init() {
     fdio_bind_to_fd(logger, 1, 0);
 }
 
-#define USER_MAX_HANDLES 4
 #define MAX_ENVP 16
 #define CHILD_JOB_RIGHTS (ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE)
 
