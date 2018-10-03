@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 #include "garnet/drivers/bluetooth/lib/sdp/service_record.h"
-#include "garnet/drivers/bluetooth/lib/common/log.h"
+
+#include <endian.h>
 
 #include <set>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/public/lib/fxl/random/uuid.h"
 
 namespace btlib {
@@ -195,7 +197,13 @@ bool ServiceRecord::AddInfo(const std::string& language_code,
     }
   }
 
-  uint16_t lang_encoded = *((uint16_t*)(language_code.data()));
+  // Core Spec v5.0, Vol 3, Part B, Sect 5.1.8: "The LanguageBaseAttributeIDList
+  // attribute consists of a data element sequence in which each element is a
+  // 16-bit unsigned integer."
+  // The language code consists of two byte characters in left-to-right order,
+  // so it may be considered a 16-bit big-endian integer that can be converted
+  // to host byte order.
+  uint16_t lang_encoded = betoh16(*((uint16_t*)(language_code.data())));
   base_attr_list.emplace_back(DataElement(lang_encoded));
   base_attr_list.emplace_back(DataElement(uint16_t(106)));  // UTF-8
   base_attr_list.emplace_back(DataElement(base_attrid));

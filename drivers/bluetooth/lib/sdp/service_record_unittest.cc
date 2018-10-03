@@ -283,7 +283,7 @@ TEST_F(SDP_ServiceRecordTest, AddInfo) {
   EXPECT_EQ(DataElement::Type::kUnsignedInt, triplets->at(2).type());
   auto lang = triplets->at(0).Get<uint16_t>();
   EXPECT_TRUE(lang);
-  EXPECT_EQ(0x6e65, *lang);  // should be 'en' in ascii (but little-endian)
+  EXPECT_EQ(0x656e, *lang);  // should be 'en' in ascii (but big-endian)
 
   auto encoding = triplets->at(1).Get<uint16_t>();
   EXPECT_TRUE(encoding);
