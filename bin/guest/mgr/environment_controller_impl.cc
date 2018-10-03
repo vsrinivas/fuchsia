@@ -13,17 +13,16 @@ EnvironmentControllerImpl::EnvironmentControllerImpl(
     fidl::InterfaceRequest<fuchsia::guest::EnvironmentController> request)
     : id_(id),
       label_(label),
-      context_(context),
       host_vsock_endpoint_(
           fit::bind_member(this, &EnvironmentControllerImpl::GetAcceptor)) {
   // Create environment.
-  context_->environment()->CreateNestedEnvironment(
+  context->environment()->CreateNestedEnvironment(
       env_.NewRequest(), env_controller_.NewRequest(), label,
       /*additional_services=*/nullptr, {.inherit_parent_services = true});
   env_->GetLauncher(launcher_.NewRequest());
   zx::channel h1, h2;
   FXL_CHECK(zx::channel::create(0, &h1, &h2) == ZX_OK);
-  context_->environment()->GetDirectory(std::move(h1));
+  context->environment()->GetDirectory(std::move(h1));
 
   AddBinding(std::move(request));
 }

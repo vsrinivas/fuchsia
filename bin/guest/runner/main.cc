@@ -4,11 +4,11 @@
 
 #include <lib/async-loop/cpp/loop.h>
 
-#include "garnet/bin/guest/runner/guest_runner.h"
+#include "garnet/bin/guest/runner/runner_impl.h"
 #include "lib/fxl/logging.h"
 
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  guest_runner::GuestRunner runner;
+  guest_runner::RunnerImpl runner;
   loop.Run();
 }

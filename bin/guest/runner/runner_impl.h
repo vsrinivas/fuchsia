@@ -2,21 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_RUNNER_GUEST_RUNNER_H_
-#define GARNET_BIN_GUEST_RUNNER_GUEST_RUNNER_H_
+#ifndef GARNET_BIN_GUEST_RUNNER_RUNNER_IMPL_H_
+#define GARNET_BIN_GUEST_RUNNER_RUNNER_IMPL_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 
 #include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
+#include "lib/fidl/cpp/binding_set.h"
 
 namespace guest_runner {
 
-class GuestRunner : public fuchsia::sys::Runner {
+class RunnerImpl : public fuchsia::sys::Runner {
  public:
-  explicit GuestRunner();
-  ~GuestRunner() override;
+  RunnerImpl();
+
+  RunnerImpl(const RunnerImpl&) = delete;
+  RunnerImpl& operator=(const RunnerImpl&) = delete;
 
  private:
   // |fuchsia::sys::Runner|
@@ -25,13 +26,11 @@ class GuestRunner : public fuchsia::sys::Runner {
       ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller)
       override;
 
-  fuchsia::sys::LauncherPtr launcher_;
   std::unique_ptr<component::StartupContext> context_;
+  fuchsia::sys::LauncherPtr launcher_;
   fidl::BindingSet<fuchsia::sys::Runner> bindings_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(GuestRunner);
 };
 
 }  // namespace guest_runner
 
-#endif  // GARNET_BIN_GUEST_RUNNER_GUEST_RUNNER_H_
+#endif  // GARNET_BIN_GUEST_RUNNER_RUNNER_IMPL_H_

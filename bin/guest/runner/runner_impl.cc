@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/runner/guest_runner.h"
+#include "garnet/bin/guest/runner/runner_impl.h"
 
 #include <memory>
 
@@ -10,15 +10,13 @@
 
 namespace guest_runner {
 
-GuestRunner::GuestRunner()
+RunnerImpl::RunnerImpl()
     : context_(component::StartupContext::CreateFromStartupInfo()) {
   context_->environment()->GetLauncher(launcher_.NewRequest());
   context_->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
-GuestRunner::~GuestRunner() = default;
-
-void GuestRunner::StartComponent(
+void RunnerImpl::StartComponent(
     fuchsia::sys::Package application, fuchsia::sys::StartupInfo startup_info,
     ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
   fuchsia::sys::LaunchInfo launch_info;

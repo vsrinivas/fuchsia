@@ -11,7 +11,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fxl/macros.h>
 #include "garnet/bin/guest/mgr/guest_component.h"
 #include "garnet/bin/guest/mgr/host_vsock_endpoint.h"
 
@@ -27,6 +26,10 @@ class EnvironmentControllerImpl : public fuchsia::guest::EnvironmentController {
   EnvironmentControllerImpl(
       uint32_t id, const std::string& label, component::StartupContext* context,
       fidl::InterfaceRequest<fuchsia::guest::EnvironmentController> request);
+
+  EnvironmentControllerImpl(const EnvironmentControllerImpl&) = delete;
+  EnvironmentControllerImpl& operator=(const EnvironmentControllerImpl&) =
+      delete;
 
   uint32_t id() const { return id_; }
   const std::string& label() const { return label_; }
@@ -61,9 +64,6 @@ class EnvironmentControllerImpl : public fuchsia::guest::EnvironmentController {
   const uint32_t id_;
   const std::string label_;
 
-  component::StartupContext* context_;
-  fidl::BindingSet<fuchsia::guest::EnvironmentController> bindings_;
-
   fuchsia::sys::EnvironmentPtr env_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
   fuchsia::sys::LauncherPtr launcher_;
@@ -71,8 +71,7 @@ class EnvironmentControllerImpl : public fuchsia::guest::EnvironmentController {
   HostVsockEndpoint host_vsock_endpoint_;
   uint32_t next_guest_cid_ = kFirstGuestCid;
   std::unordered_map<uint32_t, std::unique_ptr<GuestComponent>> guests_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(EnvironmentControllerImpl);
+  fidl::BindingSet<fuchsia::guest::EnvironmentController> bindings_;
 };
 
 }  // namespace guestmgr

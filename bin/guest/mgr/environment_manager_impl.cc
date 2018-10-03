@@ -15,8 +15,6 @@ EnvironmentManagerImpl::EnvironmentManagerImpl()
   context_->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
-EnvironmentManagerImpl::~EnvironmentManagerImpl() = default;
-
 void EnvironmentManagerImpl::Create(
     fidl::StringPtr label,
     fidl::InterfaceRequest<fuchsia::guest::EnvironmentController> request) {

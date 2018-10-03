@@ -11,15 +11,16 @@
 
 #include "garnet/bin/guest/mgr/environment_controller_impl.h"
 #include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
+#include "lib/fidl/cpp/binding_set.h"
 
 namespace guestmgr {
 
 class EnvironmentManagerImpl : public fuchsia::guest::EnvironmentManager {
  public:
   EnvironmentManagerImpl();
-  ~EnvironmentManagerImpl() override;
+
+  EnvironmentManagerImpl(const EnvironmentManagerImpl&) = delete;
+  EnvironmentManagerImpl& operator=(const EnvironmentManagerImpl&) = delete;
 
  private:
   // |fuchsia::guest::EnvironmentManager|
@@ -32,11 +33,9 @@ class EnvironmentManagerImpl : public fuchsia::guest::EnvironmentManager {
                    env) override;
 
   std::unique_ptr<component::StartupContext> context_;
-  fidl::BindingSet<fuchsia::guest::EnvironmentManager> bindings_;
   std::unordered_map<uint32_t, std::unique_ptr<EnvironmentControllerImpl>>
       environments_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(EnvironmentManagerImpl);
+  fidl::BindingSet<fuchsia::guest::EnvironmentManager> bindings_;
 };
 
 }  // namespace guestmgr
