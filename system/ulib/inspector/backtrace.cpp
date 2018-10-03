@@ -219,10 +219,10 @@ btprint_callback(void* vdata, uintptr_t pc, const char* filename, int lineno,
 }
 
 static void btprint(FILE* f, DebugInfoCache* di_cache,
-                    int n, uintptr_t pc, uintptr_t sp,
+                    uint32_t n, uintptr_t pc, uintptr_t sp,
                     bool use_new_format) {
     if (use_new_format) {
-        fprintf(f, "{{{bt: %#" PRIxPTR "}}}\n", pc);
+        fprintf(f, "{{{bt:%u:%#" PRIxPTR "}}}\n", n, pc);
         return;
     }
 
@@ -232,7 +232,7 @@ static void btprint(FILE* f, DebugInfoCache* di_cache,
 
     if (status != ZX_OK) {
         // The pc is not in any DSO.
-        fprintf(f, "bt#%02d: pc %p sp %p\n",
+        fprintf(f, "bt#%02u: pc %p sp %p\n",
                 n, (void*) pc, (void*) sp);
         return;
     }
@@ -253,7 +253,7 @@ static void btprint(FILE* f, DebugInfoCache* di_cache,
         }
     }
 
-    fprintf(f, "bt#%02d: pc %p sp %p (%s,%p)",
+    fprintf(f, "bt#%02u: pc %p sp %p (%s,%p)",
             n, (void*) pc, (void*) sp, dso->name, (void*) (pc - dso->base));
     if (pcinfo_data.filename != nullptr && pcinfo_data.lineno > 0) {
         const char* base = path_basename(pcinfo_data.filename);
@@ -343,7 +343,7 @@ void inspector_print_backtrace_impl(FILE* f,
 
     // On with the show.
 
-    int n = 1;
+    uint32_t n = 1;
     btprint(f, &di_cache, n++, pc, sp, use_new_format);
     while ((sp >= 0x1000000) && (n < 50)) {
         if (libunwind_ok) {
