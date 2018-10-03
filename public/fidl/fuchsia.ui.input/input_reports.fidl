@@ -209,7 +209,7 @@ struct SensorDescriptor {
 
 // |SensorReport| describes the sensor event delivered from the event stream.
 union SensorReport {
-  array<int16>:3 @vector;
+  array<int16>:3 vector;
   uint16 scalar;
 };
 

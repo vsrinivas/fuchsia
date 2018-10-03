@@ -67,7 +67,7 @@ interface Control {
   5: SetActiveAdapter(string identifier) -> (fuchsia.bluetooth.Status status);
 
   /// Returns information on the current active adapter, if it exists.
-  6: GetActiveAdapterInfo() -> (AdapterInfo? @adapter);
+  6: GetActiveAdapterInfo() -> (AdapterInfo? adapter);
 
   /// If |discovery| is true, active discovery is requested.
   /// When requesting discovery, general discovery for BR/EDR and LE will be

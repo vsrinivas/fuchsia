@@ -176,7 +176,7 @@ interface Netstack {
 
   // Begin a route transaction for atomically getting and setting the route
   // table.  Returns true if a transaction can be started.
-  18: StartRouteTableTransaction(request<RouteTableTransaction> routeTableTransaction) -> (zx.status @status);
+  18: StartRouteTableTransaction(request<RouteTableTransaction> routeTableTransaction) -> (zx.status status);
 
   0x1000: -> OnInterfacesChanged(vector<NetInterface> interfaces);
 };
@@ -189,5 +189,5 @@ interface RouteTableTransaction {
 
   2: SetRouteTable(vector<RouteTableEntry> rt);
 
-  3: Commit() -> (zx.status @status);
+  3: Commit() -> (zx.status status);
 };

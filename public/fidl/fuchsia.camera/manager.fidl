@@ -52,13 +52,13 @@ interface Manager {
   // Create a Stream with the specified access rights.  This may not succeed.
   // If it does succeed, the Stream will have the rights indicated.
   // |buffer_info| contains a set of buffers to be used with the Stream.
-  3: CreateStream(CameraAccessRequest @request,
+  3: CreateStream(CameraAccessRequest request,
                fuchsia.sysmem.BufferCollectionInfo buffer_info,
                request<Stream> stream);
 
   // Get a camera stream, and have the camera manager allocate the buffers,
   // assuming no special memory requirements.
-  4: GetStreamAndBufferCollection(CameraAccessRequest @request,
+  4: GetStreamAndBufferCollection(CameraAccessRequest request,
                request<Stream> stream) ->
                (fuchsia.sysmem.BufferCollectionInfo buffer_info);
 };

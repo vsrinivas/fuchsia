@@ -22,7 +22,7 @@ interface URLLoader {
   // Loads the given |request|, asynchronously producing |response|. Consult
   // |response| to determine if the request resulted in an error, was
   // redirected, or has a response body to be consumed.
-  1: Start(URLRequest @request) -> (URLResponse response);
+  1: Start(URLRequest request) -> (URLResponse response);
 
   // If the request passed to |Start| had |auto_follow_redirects| set to false,
   // then upon receiving an URLResponse with a non-NULL |redirect_url| field,

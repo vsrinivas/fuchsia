@@ -91,7 +91,7 @@ struct AppConfig {
 // interface are used to display OAuth login and permission screens to the end
 // user.
 interface AuthenticationContextProvider {
-  1: GetAuthenticationUIContext(request<AuthenticationUIContext> @request);
+  1: GetAuthenticationUIContext(request<AuthenticationUIContext> request);
 };
 
 // TokenManagerFactory creates an OAuth TokenManager for a particular user and
@@ -143,7 +143,7 @@ interface TokenManager {
   // provider backend system.
   1: Authorize(AppConfig app_config, vector<string> app_scopes,
       string? user_profile_id, string? auth_code)
-      -> (Status @status, UserProfileInfo? user_profile_info);
+      -> (Status status, UserProfileInfo? user_profile_info);
 
   // Returns a downscoped access token from an auth provider for the given user
   // |user_profile_id| and |scopes| to a Fuchsia component. The component's

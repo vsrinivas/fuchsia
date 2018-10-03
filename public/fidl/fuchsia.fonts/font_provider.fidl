@@ -71,5 +71,5 @@ struct Response {
 
 [Discoverable]
 interface Provider {
-    1: GetFont(Request @request) -> (Response? response);
+    1: GetFont(Request request) -> (Response? response);
 };

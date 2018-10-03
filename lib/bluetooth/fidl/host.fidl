@@ -35,7 +35,7 @@ interface Host {
   5: Close();
 
   // Returns information about the Bluetooth adapter managed by this host.
-  6: GetInfo() -> (fuchsia.bluetooth.control.AdapterInfo @info);
+  6: GetInfo() -> (fuchsia.bluetooth.control.AdapterInfo info);
 
   // Returns a list of all known connectable devices, included those that are
   // currently connected and/or bonded. This list does not include
