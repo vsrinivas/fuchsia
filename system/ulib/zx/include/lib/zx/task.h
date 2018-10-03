@@ -45,7 +45,7 @@ public:
             object<T>::get(), result->reset_and_get_address());
     }
 
-    zx_status_t resume_from_exception(const object<port>& port, uint32_t options) {
+    zx_status_t resume_from_exception(const object<port>& port, uint32_t options) const {
         return zx_task_resume_from_exception(object<T>::get(), port.get(), options);
     }
 };
