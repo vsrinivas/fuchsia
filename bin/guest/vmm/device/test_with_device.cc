@@ -43,7 +43,7 @@ zx_status_t TestWithDevice::LaunchDevice(
       ZX_RIGHT_TRANSFER | ZX_RIGHTS_IO | ZX_RIGHT_MAP, &start_info->vmo);
 }
 
-zx_status_t TestWithDevice::WaitForInterrupt() {
+zx_status_t TestWithDevice::WaitOnInterrupt() {
   zx::time deadline = zx::deadline_after(zx::sec(10));
   zx_signals_t pending;
   zx_status_t status = event_.wait_one(ZX_USER_SIGNAL_ALL, deadline, &pending);

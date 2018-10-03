@@ -66,7 +66,7 @@ TEST_F(VirtioConsoleTest, Receive) {
 
   status = console_->NotifyQueue(0);
   ASSERT_EQ(ZX_OK, status);
-  status = WaitForInterrupt();
+  status = WaitOnInterrupt();
   ASSERT_EQ(ZX_OK, status);
 
   EXPECT_STREQ("hello", static_cast<char*>(data_1));
@@ -83,7 +83,7 @@ TEST_F(VirtioConsoleTest, Transmit) {
 
   status = console_->NotifyQueue(1);
   ASSERT_EQ(ZX_OK, status);
-  status = WaitForInterrupt();
+  status = WaitOnInterrupt();
   ASSERT_EQ(ZX_OK, status);
 
   char buf[16] = {};

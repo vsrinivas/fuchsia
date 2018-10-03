@@ -59,7 +59,7 @@ TEST_F(VirtioBalloonTest, Inflate) {
 
   status = balloon_->NotifyQueue(0);
   ASSERT_EQ(ZX_OK, status);
-  status = WaitForInterrupt();
+  status = WaitOnInterrupt();
   ASSERT_EQ(ZX_OK, status);
 }
 
@@ -72,7 +72,7 @@ TEST_F(VirtioBalloonTest, Deflate) {
 
   status = balloon_->NotifyQueue(1);
   ASSERT_EQ(ZX_OK, status);
-  status = WaitForInterrupt();
+  status = WaitOnInterrupt();
   ASSERT_EQ(ZX_OK, status);
 }
 

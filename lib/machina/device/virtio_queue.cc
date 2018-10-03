@@ -11,6 +11,37 @@
 
 namespace machina {
 
+VirtioChain::VirtioChain(VirtioQueue* queue, uint16_t head)
+    : queue_(queue), head_(head), next_(head), has_next_(true) {}
+
+bool VirtioChain::IsValid() const { return queue_ != nullptr; }
+
+bool VirtioChain::HasDescriptor() const { return has_next_; }
+
+bool VirtioChain::NextDescriptor(VirtioDescriptor* desc) {
+  if (!HasDescriptor()) {
+    return false;
+  }
+  zx_status_t status = queue_->ReadDesc(next_, desc);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to read queue " << status;
+    return false;
+  }
+  next_ = desc->next;
+  has_next_ = desc->has_next;
+  return true;
+}
+
+uint32_t* VirtioChain::Used() { return &used_; }
+
+void VirtioChain::Return() {
+  zx_status_t status = queue_->Return(head_, used_);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to return descriptor chain to queue " << status;
+  }
+  has_next_ = false;
+}
+
 VirtioQueue::VirtioQueue() {
   FXL_CHECK(zx::event::create(0, &event_) == ZX_OK);
 }
@@ -41,6 +72,19 @@ void VirtioQueue::Configure(uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
 
   const uintptr_t avail_event_addr = used + used_size;
   ring_.avail_event = phys_mem_->as<uint16_t>(avail_event_addr);
+}
+
+bool VirtioQueue::NextChain(VirtioChain* chain) {
+  uint16_t head;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!HasAvailLocked()) {
+      return false;
+    }
+    head = ring_.avail->ring[RingIndexLocked(ring_.index++)];
+  }
+  *chain = VirtioChain(this, head);
+  return true;
 }
 
 zx_status_t VirtioQueue::NextAvailLocked(uint16_t* index) {
@@ -192,9 +236,9 @@ zx_status_t VirtioQueue::ReadDesc(uint16_t desc_index, VirtioDescriptor* out) {
 
   out->addr = phys_mem_->as<void>(desc.addr, desc.len);
   out->len = desc.len;
+  out->next = desc.next;
   out->has_next = desc.flags & VRING_DESC_F_NEXT;
   out->writable = desc.flags & VRING_DESC_F_WRITE;
-  out->next = desc.next;
   return ZX_OK;
 }
 

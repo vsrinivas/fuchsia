@@ -21,6 +21,8 @@ struct vring_used;
 
 namespace machina {
 
+class VirtioQueue;
+
 // Stores the Virtio queue based on the ring provided by the guest.
 //
 // NOTE(abdulla): This structure points to guest-controlled memory.
@@ -44,13 +46,34 @@ struct VirtioDescriptor {
   void* addr;
   // Number of bytes at addr.
   uint32_t len;
-  // Is there another buffer after this one?
-  bool has_next;
   // Only valid if has_next is true.
+  // TODO(abdulla): Remove this.
   uint16_t next;
+  // Is there another buffer after this one?
+  // TODO(abdulla): Remove this.
+  bool has_next;
   // If true, this buffer must only be written to (no reads). Otherwise this
   // buffer must only be read from (no writes).
   bool writable;
+};
+
+class FXL_EXPORT VirtioChain {
+ public:
+  VirtioChain() = default;
+  VirtioChain(VirtioQueue* queue, uint16_t head);
+
+  bool IsValid() const;
+  bool HasDescriptor() const;
+  bool NextDescriptor(VirtioDescriptor* desc);
+  uint32_t* Used();
+  void Return();
+
+ private:
+  VirtioQueue* queue_ = nullptr;
+  uint32_t used_ = 0;
+  uint16_t head_ = 0;
+  uint16_t next_ = 0;
+  bool has_next_ = false;
 };
 
 class FXL_EXPORT VirtioQueue {
@@ -112,6 +135,8 @@ class FXL_EXPORT VirtioQueue {
   void Configure(uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
                  zx_gpaddr_t used);
 
+  bool NextChain(VirtioChain* chain);
+
   // Get the index of the next descriptor in the available ring.
   //
   // If a buffer is a available, the descriptor index is written to |index|, the
@@ -155,7 +180,7 @@ class FXL_EXPORT VirtioQueue {
   // This method should only be called using descriptor indices acquired with
   // virtio_queue_next_avail (including any chained descriptors) and before
   // they've been released with virtio_queue_return.
-  zx_status_t __WARN_UNUSED_RESULT ReadDesc(uint16_t index,
+  __WARN_UNUSED_RESULT zx_status_t ReadDesc(uint16_t index,
                                             VirtioDescriptor* desc);
 
   // Callback for |Poll| and |PollAsync|.

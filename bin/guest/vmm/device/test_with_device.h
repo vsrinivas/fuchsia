@@ -14,7 +14,7 @@ class TestWithDevice : public component::testing::TestWithEnvironment {
  protected:
   zx_status_t LaunchDevice(const std::string& url, size_t phys_mem_size,
                            fuchsia::guest::device::StartInfo* start_info);
-  zx_status_t WaitForInterrupt();
+  zx_status_t WaitOnInterrupt();
 
   std::unique_ptr<component::testing::EnclosingEnvironment>
       enclosing_environment_;

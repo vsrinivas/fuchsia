@@ -15,21 +15,62 @@
 
 class VirtioConsoleImpl;
 
+enum class Queue : uint16_t {
+  RECEIVE = 0,
+  TRANSMIT = 1,
+};
+
+// Stream for receive and transmit queues.
 template <zx_signals_t Trigger,
-          void (VirtioConsoleImpl::*F)(
+          void (VirtioConsoleImpl::*M)(
               async_dispatcher_t* dispatcher, async::WaitBase* wait,
               zx_status_t status, const zx_packet_signal_t* signal)>
-struct Stream : public machina::StreamBase {
-  async::WaitMethod<VirtioConsoleImpl, F> wait;
-
-  Stream(VirtioConsoleImpl* impl) : wait(impl) {}
+class ConsoleStream : public machina::StreamBase {
+ public:
+  ConsoleStream(VirtioConsoleImpl* impl) : wait_(impl) {}
 
   void Init(const zx::socket& socket, const machina::PhysMem& phys_mem,
             machina::VirtioQueue::InterruptFn interrupt) {
-    wait.set_object(socket.get());
-    wait.set_trigger(Trigger);
+    wait_.set_object(socket.get());
+    wait_.set_trigger(Trigger);
     StreamBase::Init(phys_mem, std::move(interrupt));
   }
+
+  void WaitOnSocket(async_dispatcher_t* dispatcher) {
+    zx_status_t status = wait_.Begin(dispatcher);
+    FXL_CHECK(status == ZX_OK || status == ZX_ERR_ALREADY_EXISTS)
+        << "Failed to wait on socket " << status;
+  }
+
+  template <typename F>
+  void OnSocketReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                     F process_descriptor) {
+    // If |process_descriptor| return ZX_ERR_SHOULD_WAIT, we may be in the
+    // middle of processing a descriptor chain, therefore we should continue
+    // where we left off.
+    if (chain_.HasDescriptor()) {
+      goto process;
+    }
+    for (; queue_.NextChain(&chain_); chain_.Return()) {
+      while (chain_.NextDescriptor(&desc_)) {
+      process:
+        zx_status_t status = process_descriptor(&desc_);
+        if (status == ZX_ERR_SHOULD_WAIT) {
+          // If we have written to the descriptor chain, return it.
+          if (*chain_.Used() > 0) {
+            chain_.Return();
+          }
+          status = wait->Begin(dispatcher);
+          FXL_CHECK(status == ZX_OK) << "Failed to wait on socket " << status;
+          return;
+        }
+        FXL_CHECK(status == ZX_OK) << "Failed to operate on socket " << status;
+      }
+    }
+  }
+
+ private:
+  async::WaitMethod<VirtioConsoleImpl, M> wait_;
 };
 
 // Implementation of a virtio-console device.
@@ -64,34 +105,34 @@ class VirtioConsoleImpl : public fuchsia::guest::device::VirtioConsole {
                     fit::bind_member(this, &VirtioConsoleImpl::Interrupt));
   }
 
-  std::pair<machina::StreamBase*, async::WaitBase*> StreamForQueue(
-      uint16_t queue) {
-    switch (queue) {
-      case /* RX queue */ 0:
-        return std::make_pair(&rx_stream_, &rx_stream_.wait);
-      case /* TX queue */ 1:
-        return std::make_pair(&tx_stream_, &tx_stream_.wait);
+  // |fuchsia::guest::device::VirtioDevice|
+  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                      zx_gpaddr_t avail, zx_gpaddr_t used) override {
+    switch (static_cast<Queue>(queue)) {
+      case Queue::RECEIVE:
+        rx_stream_.Configure(size, desc, avail, used);
+        break;
+      case Queue::TRANSMIT:
+        tx_stream_.Configure(size, desc, avail, used);
+        break;
       default:
         FXL_CHECK(false) << "Queue index " << queue << " out of range";
         __UNREACHABLE;
     }
   }
 
-  // |fuchsia::guest::device::VirtioDevice|
-  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                      zx_gpaddr_t avail, zx_gpaddr_t used) override {
-    machina::StreamBase* stream;
-    std::tie(stream, std::ignore) = StreamForQueue(queue);
-    stream->queue.Configure(size, desc, avail, used);
-  }
-
   void NotifyQueue(uint16_t queue, async_dispatcher_t* dispatcher) {
-    machina::StreamBase* stream;
-    async::WaitBase* wait;
-    std::tie(stream, wait) = StreamForQueue(queue);
-    zx_status_t status = wait->Begin(dispatcher);
-    FXL_CHECK(status == ZX_OK || status == ZX_ERR_ALREADY_EXISTS)
-        << "Failed to wait on socket " << status;
+    switch (static_cast<Queue>(queue)) {
+      case Queue::RECEIVE:
+        rx_stream_.WaitOnSocket(dispatcher);
+        break;
+      case Queue::TRANSMIT:
+        tx_stream_.WaitOnSocket(dispatcher);
+        break;
+      default:
+        FXL_CHECK(false) << "Queue index " << queue << " out of range";
+        __UNREACHABLE;
+    }
   }
 
   // |fuchsia::guest::device::VirtioDevice|
@@ -119,12 +160,11 @@ class VirtioConsoleImpl : public fuchsia::guest::device::VirtioConsole {
   void OnSocketReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                         zx_status_t status, const zx_packet_signal_t* signal) {
     FXL_CHECK(status == ZX_OK) << "Wait for socket readable failed " << status;
-    OnSocketReady(dispatcher, wait, &rx_stream_, [this] {
-      machina::VirtioDescriptor* desc = &rx_stream_.desc;
+    rx_stream_.OnSocketReady(dispatcher, wait, [this](auto desc) {
       FXL_CHECK(desc->writable) << "Descriptor is not writable";
       size_t actual = 0;
       zx_status_t status = socket_.read(0, desc->addr, desc->len, &actual);
-      rx_stream_.used += actual;
+      *rx_stream_.Used() += actual;
       return status;
     });
   }
@@ -132,8 +172,7 @@ class VirtioConsoleImpl : public fuchsia::guest::device::VirtioConsole {
   void OnSocketWritable(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                         zx_status_t status, const zx_packet_signal_t* signal) {
     FXL_CHECK(status == ZX_OK) << "Wait for socket writable failed " << status;
-    OnSocketReady(dispatcher, wait, &tx_stream_, [this] {
-      machina::VirtioDescriptor* desc = &tx_stream_.desc;
+    tx_stream_.OnSocketReady(dispatcher, wait, [this](auto desc) {
       FXL_CHECK(!desc->writable) << "Descriptor is not readable";
       size_t actual = 0;
       zx_status_t status = socket_.write(0, desc->addr, desc->len, &actual);
@@ -149,30 +188,6 @@ class VirtioConsoleImpl : public fuchsia::guest::device::VirtioConsole {
     });
   }
 
-  template <typename F>
-  void OnSocketReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                     machina::StreamBase* stream, F process_descriptor) {
-    if (stream->HasDescriptor()) {
-      goto process;
-    }
-    for (; stream->HasChain(); stream->ReturnChain()) {
-      while (stream->NextDescriptor()) {
-      process:
-        zx_status_t status = process_descriptor();
-        if (status == ZX_ERR_SHOULD_WAIT) {
-          // If we have written to the descriptor chain, return it.
-          if (stream->used > 0) {
-            stream->ReturnChain();
-          }
-          status = wait->Begin(dispatcher);
-          FXL_CHECK(status == ZX_OK) << "Failed to wait on socket " << status;
-          return;
-        }
-        FXL_CHECK(status == ZX_OK) << "Failed to operate on socket " << status;
-      }
-    }
-  }
-
   fidl::BindingSet<VirtioConsole> bindings_;
   zx_gpaddr_t trap_addr_;
   zx::event event_;
@@ -182,10 +197,10 @@ class VirtioConsoleImpl : public fuchsia::guest::device::VirtioConsole {
   async::GuestBellTrapMethod<VirtioConsoleImpl,
                              &VirtioConsoleImpl::OnQueueNotify>
       trap_{this};
-  Stream<ZX_SOCKET_READABLE, &VirtioConsoleImpl::OnSocketReadable> rx_stream_{
-      this};
-  Stream<ZX_SOCKET_WRITABLE, &VirtioConsoleImpl::OnSocketWritable> tx_stream_{
-      this};
+  ConsoleStream<ZX_SOCKET_READABLE, &VirtioConsoleImpl::OnSocketReadable>
+      rx_stream_{this};
+  ConsoleStream<ZX_SOCKET_WRITABLE, &VirtioConsoleImpl::OnSocketWritable>
+      tx_stream_{this};
 };
 
 int main(int argc, char** argv) {

@@ -66,6 +66,10 @@ void handle_balloon_stats(uint32_t env_id, uint32_t cid,
   zx_status_t status;
   fidl::VectorPtr<fuchsia::guest::MemStat> mem_stats;
   balloon_controller->GetMemStats(&status, &mem_stats);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to get memory statistics " << status;
+    return;
+  }
   for (auto& mem_stat : *mem_stats) {
     std::cout << tag_name(mem_stat.tag) << mem_stat.val << '\n';
   }
