@@ -184,9 +184,6 @@ bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
   if (document.HasParseError()) {
     std::cerr << "Cannot parse sync parameters at " << credentials_path
               << std::endl;
-    // TODO(qsr): Log the credentials for debugging the infra workflow.
-    // THIS MUST BE REMOVED WHEN THE ERROR IS FOUND.
-    FXL_LOG(ERROR) << credentials;
     return false;
   }
   auto sync_params_schema = json_schema::InitSchema(kSyncParamsSchema);
