@@ -4,4 +4,8 @@
 
 #pragma once
 
+namespace devmgr {
+
 void fuchsia_start();
+
+} // namespace devmgr

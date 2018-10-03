@@ -9,7 +9,7 @@
 __BEGIN_CDECLS
 
 int main(int argc, char** argv) {
-    device_host_main(argc, argv);
+    devmgr::device_host_main(argc, argv);
 }
 
 // All drivers have a pure C ABI.  But each individual driver might statically

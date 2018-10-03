@@ -32,6 +32,8 @@
 #include "block-watcher.h"
 #include "bootfs.h"
 
+namespace devmgr {
+
 // When adding VMOs to the boot filesystem, add them under the directory
 // /boot/VMO_SUBDIR. This constant must end, but not start, with a slash.
 #define VMO_SUBDIR "kernel/"
@@ -355,9 +357,13 @@ void fuchsia_start() {
     zx_object_signal(fshost_event, 0, FSHOST_SIGNAL_READY);
 }
 
-static loader_service_t* loader_service;
+static loader_service_t* g_loader_service;
+
+} // namespace devmgr
 
 int main(int argc, char** argv) {
+    using namespace devmgr;
+
     printf("fshost: started.\n");
 
     bool netboot = false;
@@ -404,12 +410,12 @@ int main(int argc, char** argv) {
         printf("fshost: cannot install namespace: %d\n", r);
     }
 
-    if ((r = loader_service_create_fs(nullptr, &loader_service)) != ZX_OK) {
+    if ((r = loader_service_create_fs(nullptr, &g_loader_service)) != ZX_OK) {
         printf("fshost: failed to create loader service: %d\n", r);
     } else {
-        loader_service_attach(loader_service, devmgr_loader);
+        loader_service_attach(g_loader_service, devmgr_loader);
         zx_handle_t svc;
-        if ((r = loader_service_connect(loader_service, &svc)) != ZX_OK) {
+        if ((r = loader_service_connect(g_loader_service, &svc)) != ZX_OK) {
             printf("fshost: failed to connect to loader service: %d\n", r);
         } else {
             // switch from bootfs-loader to system-loader

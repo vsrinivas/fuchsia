@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+namespace devmgr {
+
 typedef struct dc_watcher watcher_t;
 typedef struct dc_iostate iostate_t;
 
@@ -799,3 +801,4 @@ void devfs_init(zx_handle_t root_job) {
     devfs_root = h1;
 }
 
+} // namespace devmgr

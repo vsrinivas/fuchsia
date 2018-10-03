@@ -12,6 +12,8 @@
 #include <launchpad/launchpad.h>
 #include <lib/zx/channel.h>
 
+namespace devmgr {
+
 void coordinator();
 
 void devfs_init(zx_handle_t root_job);
@@ -93,3 +95,5 @@ bool getenv_bool(const char* key, bool _default);
 // Global flag tracking if devmgr believes this is a full Fuchsia build
 // (requiring /system, etc) or not.
 extern bool require_system;
+
+} // namespace devmgr

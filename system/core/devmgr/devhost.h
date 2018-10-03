@@ -41,6 +41,8 @@ typedef struct zx_driver : fbl::DoublyLinkedListable<zx_driver*> {
     zx_status_t status;
 } zx_driver_t;
 
+namespace devmgr {
+
 extern zx_protocol_device_t device_default_ops;
 
 // locking and lock debugging
@@ -148,3 +150,5 @@ static inline void DM_UNLOCK() __TA_RELEASE(&__devhost_api_lock) {
     mtx_unlock(&__devhost_api_lock);
 }
 #endif
+
+} // namespace devmgr

@@ -30,6 +30,8 @@
 #include "log.h"
 #include "memfs-private.h"
 
+namespace devmgr {
+
 static void dc_driver_added(driver_t* drv, const char* version);
 static void dc_driver_added_init(driver_t* drv, const char* version);
 
@@ -2262,3 +2264,5 @@ void coordinator() {
         }
     }
 }
+
+} // namespace devmgr

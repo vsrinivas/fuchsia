@@ -15,6 +15,8 @@
 #include <fbl/intrusive_double_list.h>
 #include <port/port.h>
 
+namespace devmgr {
+
 typedef struct dc_work work_t;
 typedef struct dc_pending pending_t;
 typedef struct dc_devhost devhost_t;
@@ -283,3 +285,5 @@ zx_status_t dc_msg_rpc(zx_handle_t h, dc_msg_t* msg, size_t msglen,
 
 extern bool dc_asan_drivers;
 extern bool dc_launched_first_devhost;
+
+} // namespace devmgr

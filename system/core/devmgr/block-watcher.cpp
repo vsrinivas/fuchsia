@@ -26,6 +26,8 @@
 #include "devmgr.h"
 #include "memfs-private.h"
 
+namespace devmgr {
+
 static zx_handle_t job;
 static bool netboot;
 
@@ -522,3 +524,5 @@ void block_device_watcher(zx_handle_t _job, bool _netboot) {
     }
     close(dirfd);
 }
+
+} // namespace devmgr

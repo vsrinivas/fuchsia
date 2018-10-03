@@ -14,6 +14,8 @@
 
 #include <zircon/device/dmctl.h>
 
+namespace devmgr {
+
 static zx_device_t* dmctl_dev;
 
 static zx_status_t dmctl_cmd(dc_msg_t::Op op, const char* cmd, size_t cmdlen,
@@ -106,6 +108,8 @@ static zx_driver_ops_t dmctl_driver_ops = []() {
     return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(dmctl, dmctl_driver_ops, "zircon", "0.1", 1)
+} // namespace devmgr
+
+ZIRCON_DRIVER_BEGIN(dmctl, devmgr::dmctl_driver_ops, "zircon", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
 ZIRCON_DRIVER_END(dmctl)

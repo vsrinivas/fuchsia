@@ -7,7 +7,11 @@
 #include <ddk/device.h>
 #include <zircon/compiler.h>
 
+namespace devmgr {
+
 typedef struct proxy_iostate proxy_iostate_t;
+
+} // namespace devmgr
 
 struct zx_device {
     zx_device() = default;
@@ -106,7 +110,7 @@ struct zx_device {
 
     // iostate
     void* ios;
-    proxy_iostate_t* proxy_ios;
+    devmgr::proxy_iostate_t* proxy_ios;
 
     char name[ZX_DEVICE_NAME_MAX + 1];
 };

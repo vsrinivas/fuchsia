@@ -25,6 +25,8 @@
 #include <lib/fdio/remoteio.h>
 #include <zxcpp/new.h>
 
+namespace devmgr {
+
 #define TRACE 0
 
 #if TRACE
@@ -685,3 +687,5 @@ zx_status_t devhost_device_suspend(zx_device_t* dev, uint32_t flags) REQ_DM_LOCK
     enum_lock_release();
     return r;
 }
+
+} // namespace devmgr

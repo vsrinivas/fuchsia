@@ -16,6 +16,8 @@
 
 #include "bootfs.h"
 
+namespace devmgr {
+
 Bootfs::~Bootfs() = default;
 
 zx_status_t Bootfs::Create(zx::vmo vmo, Bootfs* bfs_out) {
@@ -130,3 +132,5 @@ zx::vmo Bootfs::DuplicateVmo() {
     vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate);
     return duplicate;
 }
+
+} // namespace devmgr

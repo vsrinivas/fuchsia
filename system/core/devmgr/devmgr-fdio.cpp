@@ -23,6 +23,8 @@
 #include <string.h>
 #include <unistd.h>
 
+namespace devmgr {
+
 void devmgr_io_init() {
     // setup stdout
     zx_handle_t h;
@@ -198,3 +200,5 @@ zx_status_t copy_vmo(zx_handle_t src, zx_off_t offset, size_t length, zx_handle_
     *out_dest = dest.release();
     return ZX_OK;
 }
+
+} // namespace

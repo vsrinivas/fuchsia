@@ -32,6 +32,8 @@
 #include "devhost-main.h"
 #include "log.h"
 
+namespace devmgr {
+
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 struct proxy_iostate {
@@ -667,6 +669,8 @@ flush_ctx:
     return r;
 }
 
+} // namespace devmgr
+
 __EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) {
     char buffer[512];
     va_list ap;
@@ -678,8 +682,10 @@ __EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) {
         r = sizeof(buffer);
     }
 
-    _devhost_log_write(flags, buffer, r);
+    devmgr::_devhost_log_write(flags, buffer, r);
 }
+
+namespace devmgr {
 
 static ssize_t devhost_log_write(void* cookie, const void* data, size_t len) {
     return _devhost_log_write(0, data, len);
@@ -996,3 +1002,5 @@ __EXPORT int device_host_main(int argc, char** argv) {
 
     return 0;
 }
+
+} // namespace devmgr

@@ -82,8 +82,7 @@ zx_status_t add_vmofile(fbl::RefPtr<VnodeDir> vnb, const char* path, zx_handle_t
 
 } // namespace memfs
 
-// The following functions exist outside the memfs namespace so they
-// can be exposed to C:
+namespace devmgr {
 
 fbl::RefPtr<memfs::VnodeDir> SystemfsRoot() {
     if (memfs::systemfs_root == nullptr) {
@@ -249,3 +248,5 @@ zx_status_t vfs_create_global_root_handle(zx_handle_t* out) {
 zx_status_t vfs_connect_global_root_handle(zx_handle_t h) {
     return vfs_connect_root_handle(memfs::global_vfs_root, h);
 }
+
+} // namespace devmgr

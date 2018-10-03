@@ -18,6 +18,8 @@
 #include <zircon/driver/binding.h>
 #include <zxcpp/new.h>
 
+namespace devmgr {
+
 typedef struct {
     const char* libname;
     void (*func)(driver_t* drv, const char* version);
@@ -157,3 +159,5 @@ void load_driver(const char* path,
         }
     }
 }
+
+} // namespace devmgr

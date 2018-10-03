@@ -32,6 +32,8 @@
 #include <lib/zx/channel.h>
 #include <zxcpp/new.h>
 
+namespace devmgr {
+
 #define ZXDEBUG 0
 
 #define CAN_WRITE(ios) (ios->flags & ZX_FS_RIGHT_WRITABLE)
@@ -666,3 +668,5 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
         return ios->dev->Message(msg, txn);
     }
 }
+
+} // namespace devmgr

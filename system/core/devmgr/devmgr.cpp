@@ -32,6 +32,8 @@
 #include "devmgr.h"
 #include "memfs-private.h"
 
+namespace devmgr {
+
 // Global flag tracking if devmgr believes this is a full Fuchsia build
 // (requiring /system, etc) or not.
 bool require_system;
@@ -567,7 +569,11 @@ static zx_status_t fuchsia_create_job() {
     return ZX_OK;
 }
 
+} // namespace devmgr
+
 int main(int argc, char** argv) {
+    using namespace devmgr;
+
     // Close the loader-service channel so the service can go away.
     // We won't use it any more (no dlopen calls in this process).
     zx_handle_close(dl_set_loader_service(ZX_HANDLE_INVALID));
@@ -624,7 +630,8 @@ int main(int argc, char** argv) {
 
     start_console_shell();
 
-    if ((thrd_create_with_name(&t, service_starter, nullptr, "service-starter")) == thrd_success) {
+    if ((thrd_create_with_name(&t, service_starter, nullptr, "service-starter")) ==
+        thrd_success) {
         thrd_detach(t);
     }
 
@@ -632,6 +639,8 @@ int main(int argc, char** argv) {
     printf("devmgr: coordinator exited?!\n");
     return 0;
 }
+
+namespace devmgr {
 
 static zx_handle_t fs_root;
 
@@ -967,3 +976,5 @@ void devmgr_svc_init() {
 
     svchost_start();
 }
+
+} // namespace devmgr

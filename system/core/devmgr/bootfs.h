@@ -11,6 +11,8 @@
 #include <fbl/algorithm.h>
 #include <lib/zx/vmo.h>
 
+namespace devmgr {
+
 typedef struct bootfs_entry bootfs_entry_t;
 
 class Bootfs {
@@ -65,3 +67,5 @@ private:
     uint32_t dirsize_;
     void* dir_;
 };
+
+} // namespace devmgr

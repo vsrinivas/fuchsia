@@ -14,6 +14,8 @@
 
 #include "devcoordinator.h"
 
+namespace devmgr {
+
 zx_status_t dc_msg_pack(dc_msg_t* msg, uint32_t* len_out,
                         const void* data, size_t datalen,
                         const char* name, const char* args) {
@@ -134,3 +136,5 @@ zx_status_t dc_msg_rpc(zx_handle_t h, dc_msg_t* msg, size_t msglen,
 
     return rsp->status;
 }
+
+} // namespace devmgr

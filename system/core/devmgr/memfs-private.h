@@ -13,6 +13,8 @@
 
 #include <lib/memfs/cpp/vnode.h>
 
+namespace devmgr {
+
 using VnodeMemfs = memfs::VnodeMemfs;
 using VnodeDir = memfs::VnodeDir;
 
@@ -46,3 +48,5 @@ VnodeDir* vfs_create_global_root() TA_NO_THREAD_SAFETY_ANALYSIS;
 zx_status_t memfs_mount(VnodeDir* parent, const char* name, VnodeDir* subtree);
 
 void devmgr_vfs_exit();
+
+} // namespace devmgr

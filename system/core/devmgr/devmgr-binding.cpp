@@ -10,6 +10,8 @@
 
 #include "devcoordinator.h"
 
+namespace devmgr {
+
 typedef struct {
     const zx_device_prop_t* props;
     const zx_device_prop_t* end;
@@ -154,3 +156,5 @@ bool dc_is_bindable(driver_t* drv, uint32_t protocol_id,
     ctx.autobind = autobind ? 1 : 0;
     return is_bindable(&ctx);
 }
+
+} // namespace devmgr
