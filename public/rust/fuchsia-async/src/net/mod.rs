@@ -5,7 +5,7 @@
 #![allow(missing_docs)]
 
 mod tcp;
-pub use self::tcp::{TcpListener, TcpStream};
+pub use self::tcp::{Connector as TcpConnector, TcpListener, TcpStream};
 
 mod udp;
 pub use self::udp::UdpSocket;
