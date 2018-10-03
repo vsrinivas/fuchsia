@@ -23,8 +23,14 @@ using DeviceType = ddk::Device<Mt8167GpioDevice, ddk::Unbindable>;
 class Mt8167GpioDevice : public DeviceType,
                          public ddk::GpioImplProtocol<Mt8167GpioDevice> {
 public:
-    Mt8167GpioDevice(zx_device_t* parent)
-        : DeviceType(parent) {}
+    static zx_status_t Create(zx_device_t* parent);
+
+    Mt8167GpioDevice(zx_device_t* parent, mmio_buffer_t mmio)
+        : DeviceType(parent),
+          mmio_(mmio),
+          dir_(mmio),
+          out_(mmio),
+          in_(mmio) {}
 
     zx_status_t Bind();
 
@@ -42,9 +48,10 @@ public:
     zx_status_t GpioImplSetPolarity(uint32_t index, uint32_t polarity);
 
 private:
-    platform_device_protocol_t pdev_;
-    platform_bus_protocol_t pbus_;
-    mmio_buffer_t mmio_;
+    ddk::MmioBuffer mmio_;
+    const GpioDirReg dir_;
+    const GpioOutReg out_;
+    const GpioInReg in_;
 
     void ShutDown();
 };

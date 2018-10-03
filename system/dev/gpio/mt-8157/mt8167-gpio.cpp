@@ -28,30 +28,30 @@ namespace gpio {
 // TODO(andresoportus): pull-up/down (EN, SEL) registers
 
 zx_status_t Mt8167GpioDevice::GpioImplConfigIn(uint32_t index, uint32_t flags) {
-    GpioDirReg::SetDir(mmio_.vaddr, index, false);
+    dir_.SetDir(index, false);
     return ZX_OK;
 }
 
 zx_status_t Mt8167GpioDevice::GpioImplConfigOut(uint32_t index, uint8_t initial_value) {
-    GpioDirReg::SetDir(mmio_.vaddr, index, true);
+    dir_.SetDir(index, true);
     return ZX_OK;
 }
 
 zx_status_t Mt8167GpioDevice::GpioImplSetAltFunction(uint32_t index, uint64_t function) {
-    if (function >= GpioModeReg::GetModeMax()) {
+    if (function >= GpioModeReg::kModeMax) {
         return ZX_ERR_OUT_OF_RANGE;
     }
-    GpioModeReg::SetMode(mmio_.vaddr, index, static_cast<uint16_t>(function));
+    GpioModeReg::SetMode(&mmio_, index, static_cast<uint16_t>(function));
     return ZX_OK;
 }
 
 zx_status_t Mt8167GpioDevice::GpioImplRead(uint32_t index, uint8_t* out_value) {
-    *out_value = GpioInReg::GetVal(mmio_.vaddr, index);
+    *out_value = static_cast<uint8_t>(in_.GetVal(index));
     return ZX_OK;
 }
 
 zx_status_t Mt8167GpioDevice::GpioImplWrite(uint32_t index, uint8_t value) {
-    GpioOutReg::SetVal(mmio_.vaddr, index, static_cast<bool>(value));
+    out_.SetVal(index, value);
     return ZX_OK;
 }
 
@@ -71,7 +71,6 @@ zx_status_t Mt8167GpioDevice::GpioImplSetPolarity(uint32_t index, uint32_t polar
 }
 
 void Mt8167GpioDevice::ShutDown() {
-    mmio_buffer_release(&mmio_);
 }
 
 void Mt8167GpioDevice::DdkUnbind() {
@@ -84,34 +83,22 @@ void Mt8167GpioDevice::DdkRelease() {
 }
 
 zx_status_t Mt8167GpioDevice::Bind() {
-    zx_status_t status;
-
-    status = device_get_protocol(parent(), ZX_PROTOCOL_PLATFORM_DEV, &pdev_);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ZX_PROTOCOL_PLATFORM_DEV not available %d \n", __FUNCTION__, status);
-        return status;
-    }
-
-    status = device_get_protocol(parent(), ZX_PROTOCOL_PLATFORM_BUS, &pbus_);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ZX_PROTOCOL_PLATFORM_BUS not available %d\n", __FUNCTION__, status);
-        return status;
-    }
-
-    status = pdev_map_mmio_buffer2(&pdev_, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                   &mmio_);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 gpio failed %d\n", __FUNCTION__, status);
-        return status;
-    }
-
     auto cleanup = fbl::MakeAutoCall([&]() { ShutDown(); });
 
     gpio_impl_protocol_t gpio_proto = {
         .ops = &ops_,
         .ctx = this,
     };
-    status = pbus_register_protocol(&pbus_, ZX_PROTOCOL_GPIO_IMPL, &gpio_proto, NULL, NULL);
+
+    platform_bus_protocol_t pbus;
+    zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_PLATFORM_BUS, &pbus);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: ZX_PROTOCOL_PLATFORM_BUS not available %d\n", __FUNCTION__, status);
+        return status;
+    }
+
+    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio_proto, NULL,
+                                                NULL);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pbus_register_protocol failed %d\n", __FUNCTION__, status);
         return status;
@@ -126,19 +113,37 @@ zx_status_t Mt8167GpioDevice::Bind() {
     return ZX_OK;
 }
 
-} // namespace gpio
+zx_status_t Mt8167GpioDevice::Create(zx_device_t* parent) {
+    platform_device_protocol_t pdev;
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: ZX_PROTOCOL_PLATFORM_DEV not available %d \n", __FUNCTION__, status);
+        return status;
+    }
 
-extern "C" zx_status_t mt8167_gpio_bind(void* ctx, zx_device_t* parent) {
+    mmio_buffer_t mmio;
+    status = pdev_map_mmio_buffer2(&pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 gpio failed %d\n", __FUNCTION__, status);
+        return status;
+    }
+
     fbl::AllocChecker ac;
-    auto dev = fbl::make_unique_checked<gpio::Mt8167GpioDevice>(&ac, parent);
+    auto dev = fbl::make_unique_checked<gpio::Mt8167GpioDevice>(&ac, parent, mmio);
     if (!ac.check()) {
         zxlogf(ERROR, "mt8167_gpio_bind: ZX_ERR_NO_MEMORY\n");
         return ZX_ERR_NO_MEMORY;
     }
-    zx_status_t status = dev->Bind();
+    status = dev->Bind();
     if (status == ZX_OK) {
         // devmgr is now in charge of the memory for dev
         __UNUSED auto ptr = dev.release();
     }
     return status;
+}
+
+} // namespace gpio
+
+extern "C" zx_status_t mt8167_gpio_bind(void* ctx, zx_device_t* parent) {
+    return gpio::Mt8167GpioDevice::Create(parent);
 }
