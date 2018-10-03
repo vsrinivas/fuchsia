@@ -102,7 +102,7 @@ static device_t root_device = []() {
     device.args = "root,";
     device.children = LIST_INITIAL_VALUE(root_device.children);
     device.metadata = LIST_INITIAL_VALUE(root_device.metadata);
-    device.refcount = 1;
+    device.AddRef();
     return device;
 }();
 
@@ -116,7 +116,7 @@ static device_t misc_device = []() {
     device.args = "misc,";
     device.children = LIST_INITIAL_VALUE(misc_device.children);
     device.metadata = LIST_INITIAL_VALUE(misc_device.metadata);
-    device.refcount = 1;
+    device.AddRef();
     return device;
 }();
 
@@ -129,7 +129,7 @@ static device_t sys_device = []() {
     device.args = "sys,";
     device.children = LIST_INITIAL_VALUE(sys_device.children);
     device.metadata = LIST_INITIAL_VALUE(sys_device.metadata);
-    device.refcount = 1;
+    device.AddRef();
     return device;
 }();
 
@@ -143,7 +143,7 @@ static device_t test_device = []() {
     device.args = "test,";
     device.children = LIST_INITIAL_VALUE(test_device.children);
     device.metadata = LIST_INITIAL_VALUE(test_device.metadata);
-    device.refcount = 1;
+    device.AddRef();
     return device;
 }();
 
@@ -343,7 +343,7 @@ static void dc_dump_device(device_t* dev, size_t indent) {
     zx_koid_t pid = dev->host ? dev->host->koid : 0;
     char extra[256];
     if (log_flags & LOG_DEVLC) {
-        snprintf(extra, sizeof(extra), " dev=%p ref=%d", dev, dev->refcount);
+        snprintf(extra, sizeof(extra), " dev=%p ref=%d", dev, dev->refcount_);
     } else {
         extra[0] = 0;
     }
@@ -722,10 +722,9 @@ static void dc_release_devhost(devhost_t* dh) {
 
 // called when device children or proxys are removed
 static void dc_release_device(device_t* dev) {
-    log(DEVLC, "devcoord: release dev %p name='%s' ref=%d\n", dev, dev->name, dev->refcount);
+    log(DEVLC, "devcoord: release dev %p name='%s' ref=%d\n", dev, dev->name, dev->refcount_);
 
-    dev->refcount--;
-    if (dev->refcount > 0) {
+    if (!dev->Release()) {
         return;
     }
 
@@ -853,14 +852,14 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
         dev->host->AddRef();
         list_add_tail(&dev->host->devices, &dev->dhnode);
     }
-    dev->refcount = 1;
+    dev->AddRef();
     list_add_tail(&parent->children, &dev->node);
-    parent->refcount++;
+    parent->AddRef();
 
     list_add_tail(&list_devices, &dev->anode);
 
     log(DEVLC, "devcoord: dev %p name='%s' ++ref=%d (child)\n",
-        parent, parent->name, parent->refcount);
+        parent, parent->name, parent->refcount_);
 
     log(DEVLC, "devcoord: publish %p '%s' props=%u args='%s' parent=%p\n",
         dev, dev->name, dev->prop_count, dev->args, dev->parent);
@@ -1570,11 +1569,11 @@ static zx_status_t dc_create_proxy(device_t* parent) {
     dev->flags = DEV_CTX_PROXY;
     dev->protocol_id = parent->protocol_id;
     dev->parent = parent;
-    dev->refcount = 1;
+    dev->AddRef();
     parent->proxy = dev;
-    parent->refcount++;
+    parent->AddRef();
     log(DEVLC, "devcoord: dev %p name='%s' ++ref=%d (proxy)\n",
-        parent, parent->name, parent->refcount);
+        parent, parent->name, parent->refcount_);
     return ZX_OK;
 }
 

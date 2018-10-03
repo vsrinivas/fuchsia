@@ -100,7 +100,7 @@ struct dc_device {
     const char* libname;
     const char* args;
     work_t work;
-    int32_t refcount;
+    mutable int32_t refcount_;
     uint32_t protocol_id;
     uint32_t prop_count;
     devnode_t* self;
@@ -132,6 +132,18 @@ struct dc_device {
     zx_device_prop_t* Props() {
         dc_device* end = this + 1;
         return reinterpret_cast<zx_device_prop_t*>(end);
+    }
+
+    // The AddRef and Release functions follow the contract for fbl::RefPtr.
+    void AddRef() const {
+        ++refcount_;
+    }
+
+    // Returns true when the last reference has been released.
+    bool Release() const {
+        const int32_t rc = refcount_;
+        --refcount_;
+        return rc == 1;
     }
 };
 
