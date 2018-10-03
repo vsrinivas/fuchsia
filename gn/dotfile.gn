@@ -25,10 +25,13 @@ script_executable = "/usr/bin/env"
 default_args = {
   # Disable Skia settings not needed for host builds.
   skia_enable_flutter_defines = true
+  skia_enable_pdf = false
   skia_use_dng_sdk = false
+  skia_use_expat = false
   skia_use_fontconfig = false
   skia_use_libwebp = false
   skia_use_sfntly = false
+  skia_use_x11 = false
 }
 
 # Enable checking for the layers.
