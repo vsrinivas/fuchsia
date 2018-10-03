@@ -11,12 +11,12 @@
 #include <string.h>
 #include <sys/ioctl.h>
 
-#include <zircon/processargs.h>
-#include <zircon/syscalls.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/vfs.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
 
 #include "private.h"
 
@@ -92,7 +92,6 @@ static ssize_t zx_pipe_write_internal(zx_handle_t h, const void* data, size_t le
         return r;
     }
 }
-
 
 static ssize_t zx_pipe_write(fdio_t* io, const void* data, size_t len) {
     zx_pipe_t* p = (zx_pipe_t*)io;
@@ -200,7 +199,7 @@ static ssize_t zx_pipe_sendto(fdio_t* io, const void* data, size_t len, int flag
         return ZX_ERR_INVALID_ARGS;
     }
     if (addr != NULL) {
-        return ZX_ERR_INVALID_ARGS;  // should set errno to EISCONN
+        return ZX_ERR_INVALID_ARGS; // should set errno to EISCONN
     }
     zx_pipe_t* p = (zx_pipe_t*)io;
     int nonblock = (io->ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
@@ -222,6 +221,56 @@ static zx_status_t zx_pipe_shutdown(fdio_t* io, int how) {
     }
     zx_pipe_t* p = (zx_pipe_t*)io;
     return zx_socket_write(p->h, options, NULL, 0, NULL);
+}
+
+static ssize_t zx_pipe_recvmsg(fdio_t* io, struct msghdr* msg, int flags) {
+    // we ignore msg_name and msg_namelen members.
+    // (this is a consistent behavior with other OS implementations for TCP protocol)
+    zx_pipe_t* p = (void*)io;
+    ssize_t total = 0;
+    ssize_t n = 0;
+    int nonblock = (io->ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
+    for (int i = 0; i < msg->msg_iovlen; i++) {
+        struct iovec* iov = &msg->msg_iov[i];
+        n = zx_pipe_read_internal(p->h, iov->iov_base, iov->iov_len, nonblock);
+        if (n > 0) {
+            total += n;
+        }
+        if ((size_t)n != iov->iov_len) {
+            break;
+        }
+    }
+    return total > 0 ? total : n;
+}
+
+static ssize_t zx_pipe_sendmsg(fdio_t* io, const struct msghdr* msg, int flags) {
+    // Note: flags typically are used to express intent _not_ to issue SIGPIPE
+    // via MSG_NOSIGNAL. Applications use this frequently to avoid having to
+    // install additional signal handlers to handle cases where connection has
+    // been closed by remote end.
+
+    // Note: when installing a check to confirm recipient of the message, make
+    // sure to discard only messages that actually don't match the recipient.
+    // This facility is used by libraries (eg. gRPC) to explicitly address
+    // recipient.
+    zx_pipe_t* p = (void*)io;
+    ssize_t total = 0;
+    ssize_t n = 0;
+    int nonblock = (io->ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
+    for (int i = 0; i < msg->msg_iovlen; i++) {
+        struct iovec* iov = &msg->msg_iov[i];
+        if (iov->iov_len <= 0) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        n = zx_pipe_write_internal(p->h, iov->iov_base, iov->iov_len, nonblock);
+        if (n > 0) {
+            total += n;
+        }
+        if ((size_t)n != iov->iov_len) {
+            break;
+        }
+    }
+    return total > 0 ? total : n;
 }
 
 static fdio_ops_t zx_pipe_ops = {
@@ -254,8 +303,8 @@ static fdio_ops_t zx_pipe_ops = {
     .set_flags = fdio_default_set_flags,
     .recvfrom = zx_pipe_recvfrom,
     .sendto = zx_pipe_sendto,
-    .recvmsg = fdio_default_recvmsg,
-    .sendmsg = fdio_default_sendmsg,
+    .recvmsg = zx_pipe_recvmsg,
+    .sendmsg = zx_pipe_sendmsg,
     .shutdown = zx_pipe_shutdown,
 };
 

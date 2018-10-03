@@ -85,6 +85,59 @@ bool socket_recvmsg_nonblock_boundary_test(void) {
     END_TEST;
 }
 
+// Verify scenario, where multi-segment sendmsg is requested, but the socket has
+// just enough spare buffer to *completely* read one segment.
+// In this scenario, an attempt to send second segment should immediately fail
+// with ZX_ERR_SHOULD_WAIT, but the sendmsg should report first segment length
+// rather than failing with EAGAIN.
+bool socket_sendmsg_nonblock_boundary_test(void) {
+    BEGIN_TEST;
+
+    const size_t memlength = 65536;
+    void* memchunk = malloc(memlength);
+
+    struct iovec iov[2];
+    iov[0].iov_base = memchunk;
+    iov[0].iov_len = memlength;
+    iov[1].iov_base = memchunk;
+    iov[1].iov_len = memlength;
+
+    zx_handle_t s;
+    int fd;
+
+    if (!create_socket_fdio_pair(&s, &fd) || !set_nonblocking_io(fd)) {
+        return false;
+    }
+
+    struct msghdr msg;
+    msg.msg_name = NULL;
+    msg.msg_namelen = 0;
+    msg.msg_iov = iov;
+    msg.msg_iovlen = sizeof(iov) / sizeof(*iov);
+    msg.msg_control = NULL;
+    msg.msg_controllen = 0;
+    msg.msg_flags = 0;
+
+    // 1. Keep sending data until socket can take no more.
+    while (sendmsg(fd, &msg, 0) > 0)
+        ;
+
+    // 2. Consume one segment of the data
+    size_t actual = 0;
+    zx_socket_read(s, 0, memchunk, memlength, &actual);
+    EXPECT_EQ(memlength, actual, "Failed to read from a full socket");
+
+    // 3. Push again 2 packets of <memlength> bytes, observe only one sent.
+    EXPECT_EQ((ssize_t)memlength, sendmsg(fd, &msg, 0),
+              "Partial sendmsg failed; is the socket buffer varying?");
+
+    zx_handle_close(s);
+    close(fd);
+    free(memchunk);
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(newsocket_tests)
 RUN_TEST(socket_recvmsg_nonblock_boundary_test)
+RUN_TEST(socket_sendmsg_nonblock_boundary_test)
 END_TEST_CASE(newsocket_tests)

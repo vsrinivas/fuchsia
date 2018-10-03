@@ -4,8 +4,8 @@
 
 #include <poll.h>
 #include <stddef.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
 
@@ -142,7 +142,7 @@ static ssize_t zxsio_write_stream(fdio_t* io, const void* data, size_t len) {
     for (;;) {
         ssize_t r;
         if ((r = zx_socket_write(sio->s, 0, data, len, &len)) == ZX_OK) {
-            return (ssize_t) len;
+            return (ssize_t)len;
         }
         if (r == ZX_ERR_SHOULD_WAIT && !nonblock) {
             zx_signals_t pending;
@@ -182,7 +182,6 @@ static ssize_t zxsio_sendto(fdio_t* io, const void* data, size_t len, int flags,
     return io->ops->sendmsg(io, &msg, flags);
 }
 
-
 static ssize_t zxsio_recvmsg_stream(fdio_t* io, struct msghdr* msg, int flags) {
     if (flags != 0) {
         // TODO: support MSG_OOB
@@ -194,31 +193,29 @@ static ssize_t zxsio_recvmsg_stream(fdio_t* io, struct msghdr* msg, int flags) {
     // we ignore msg_name and msg_namelen members.
     // (this is a consistent behavior with other OS implementations for TCP protocol)
     ssize_t total = 0;
+    ssize_t n = 0;
     for (int i = 0; i < msg->msg_iovlen; i++) {
-        struct iovec *iov = &msg->msg_iov[i];
-        ssize_t n = zxsio_read_stream(io, iov->iov_base, iov->iov_len);
-        if (n < 0) {
-            if (total == 0) {
-                return n;
-            }
-            return total;
+        struct iovec* iov = &msg->msg_iov[i];
+        n = zxsio_read_stream(io, iov->iov_base, iov->iov_len);
+        if (n > 0) {
+            total += n;
         }
-        total += n;
         if ((size_t)n != iov->iov_len) {
             break;
         }
     }
-    return total;
+    return total > 0 ? total : n;
 }
 
 static ssize_t zxsio_sendmsg_stream(fdio_t* io, const struct msghdr* msg, int flags) {
     if (flags != 0) {
+        // TODO: support MSG_NOSIGNAL
         // TODO: support MSG_OOB
         return ZX_ERR_NOT_SUPPORTED;
     }
     // TODO: support flags and control messages
     if (io->ioflag & IOFLAG_SOCKET_CONNECTED) {
-        // if connected, can't specify address
+        // if connected, can't specify address different than remote endpoint.
         if (msg->msg_name != NULL || msg->msg_namelen != 0) {
             return ZX_ERR_ALREADY_EXISTS;
         }
@@ -226,21 +223,21 @@ static ssize_t zxsio_sendmsg_stream(fdio_t* io, const struct msghdr* msg, int fl
         return ZX_ERR_BAD_STATE;
     }
     ssize_t total = 0;
+    ssize_t n = 0;
     for (int i = 0; i < msg->msg_iovlen; i++) {
-        struct iovec *iov = &msg->msg_iov[i];
+        struct iovec* iov = &msg->msg_iov[i];
         if (iov->iov_len <= 0) {
             return ZX_ERR_INVALID_ARGS;
         }
-        ssize_t n = zxsio_write_stream(io, iov->iov_base, iov->iov_len);
-        if (n < 0) {
-            return n;
+        n = zxsio_write_stream(io, iov->iov_base, iov->iov_len);
+        if (n > 0) {
+            total += n;
         }
-        total += n;
         if ((size_t)n != iov->iov_len) {
             break;
         }
     }
-    return total;
+    return total > 0 ? total : n;
 }
 
 static zx_status_t zxsio_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
@@ -302,7 +299,7 @@ static void zxsio_wait_begin_stream(fdio_t* io, uint32_t events, zx_handle_t* ha
             // signal when a listening socket gets an incoming connection
             // or a connecting socket gets connected and receives data
             signals |= ZX_SOCKET_ACCEPT |
-                ZX_SOCKET_READABLE | ZX_SOCKET_READ_DISABLED | ZX_SOCKET_PEER_CLOSED;
+                       ZX_SOCKET_READABLE | ZX_SOCKET_READ_DISABLED | ZX_SOCKET_PEER_CLOSED;
         }
         if (events & POLLOUT) {
             // signal when connect() operation is finished
@@ -424,7 +421,7 @@ static ssize_t zxsio_recvmsg_dgram(fdio_t* io, struct msghdr* msg, int flags) {
     // packet, so we can set MSG_TRUNC flag if necessary.
     size_t mlen = FDIO_SOCKET_MSG_HEADER_SIZE + 1;
     for (int i = 0; i < msg->msg_iovlen; i++) {
-        struct iovec *iov = &msg->msg_iov[i];
+        struct iovec* iov = &msg->msg_iov[i];
         if (iov->iov_len <= 0) {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -452,7 +449,7 @@ static ssize_t zxsio_recvmsg_dgram(fdio_t* io, struct msghdr* msg, int flags) {
     char* data = m->data;
     size_t resid = n;
     for (int i = 0; i < msg->msg_iovlen; i++) {
-        struct iovec *iov = &msg->msg_iov[i];
+        struct iovec* iov = &msg->msg_iov[i];
         if (resid == 0) {
             iov->iov_len = 0;
         } else {
@@ -487,7 +484,7 @@ static ssize_t zxsio_sendmsg_dgram(fdio_t* io, const struct msghdr* msg, int fla
     }
     ssize_t n = 0;
     for (int i = 0; i < msg->msg_iovlen; i++) {
-        struct iovec *iov = &msg->msg_iov[i];
+        struct iovec* iov = &msg->msg_iov[i];
         if (iov->iov_len <= 0) {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -504,7 +501,7 @@ static ssize_t zxsio_sendmsg_dgram(fdio_t* io, const struct msghdr* msg, int fla
     m->flags = flags;
     char* data = m->data;
     for (int i = 0; i < msg->msg_iovlen; i++) {
-        struct iovec *iov = &msg->msg_iov[i];
+        struct iovec* iov = &msg->msg_iov[i];
         memcpy(data, iov->iov_base, iov->iov_len);
         data += iov->iov_len;
     }
@@ -524,7 +521,7 @@ static void zxsio_wait_begin_dgram(fdio_t* io, uint32_t events, zx_handle_t* han
         signals |= ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED;
     }
     if (events & POLLRDHUP) {
-        signals |=  ZX_SOCKET_READ_DISABLED | ZX_SOCKET_PEER_CLOSED;
+        signals |= ZX_SOCKET_READ_DISABLED | ZX_SOCKET_PEER_CLOSED;
     }
     *_signals = signals;
 }
@@ -551,7 +548,7 @@ static zx_status_t zxsio_write_control(zxsio_t* sio, zxsio_msg_t* msg) {
         ssize_t r;
         size_t len = ZXSIO_HDR_SZ + msg->datalen;
         if ((r = zx_socket_write(sio->s, ZX_SOCKET_CONTROL, msg, len, &len)) == ZX_OK) {
-            return (ssize_t) len;
+            return (ssize_t)len;
         }
         // If the socket has no control plane then control messages are not
         // supported.
