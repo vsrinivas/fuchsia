@@ -28,8 +28,9 @@ class PageIntegrationTest : public IntegrationTest {
   // Returns the id of the given page.
   PageId PageGetId(PagePtr* page) {
     PageId id;
-    (*page)->GetId(callback::Capture(QuitLoopClosure(), &id));
-    RunLoop();
+    auto loop_waiter = NewWaiter();
+    (*page)->GetId(callback::Capture(loop_waiter->GetCallback(), &id));
+    EXPECT_TRUE(loop_waiter->RunUntilCalled());
     return id;
   }
 
@@ -44,11 +45,11 @@ TEST_P(PageIntegrationTest, LedgerRepositoryDuplicate) {
       instance->GetTestLedgerRepository();
 
   ledger_internal::LedgerRepositoryPtr duplicated_repository;
-  auto waiter = NewWaiter();
+  auto loop_waiter = NewWaiter();
   Status status;
   repository->Duplicate(duplicated_repository.NewRequest(),
-                        callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
+                        callback::Capture(loop_waiter->GetCallback(), &status));
+  ASSERT_TRUE(loop_waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
 }
 
@@ -62,9 +63,10 @@ TEST_P(PageIntegrationTest, GetRootPage) {
   LedgerPtr ledger = instance->GetTestLedger();
   Status status;
   PagePtr page;
+  auto loop_waiter = NewWaiter();
   ledger->GetRootPage(page.NewRequest(),
-                      callback::Capture(QuitLoopClosure(), &status));
-  RunLoop();
+                      callback::Capture(loop_waiter->GetCallback(), &status));
+  ASSERT_TRUE(loop_waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
 }
 

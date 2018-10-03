@@ -20,9 +20,11 @@ class SyncIntegrationTest : public IntegrationTest {
     auto watcher = std::make_unique<TestSyncStateWatcher>();
 
     Status status = Status::INTERNAL_ERROR;
-    (*page)->SetSyncStateWatcher(watcher->NewBinding(),
-                                 callback::Capture(QuitLoopClosure(), &status));
-    RunLoop();
+    auto loop_waiter = NewWaiter();
+    (*page)->SetSyncStateWatcher(
+        watcher->NewBinding(),
+        callback::Capture(loop_waiter->GetCallback(), &status));
+    EXPECT_TRUE(loop_waiter->RunUntilCalled());
     EXPECT_EQ(Status::OK, status);
 
     return watcher;
@@ -49,15 +51,17 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
   auto instance1 = NewLedgerAppInstance();
   auto page1 = instance1->GetTestPage();
   auto page1_state_watcher = WatchPageSyncState(&page1);
+  auto loop_waiter = NewWaiter();
   page1->Put(convert::ToArray("Hello"), convert::ToArray("World"),
-             callback::Capture(QuitLoopClosure(), &status));
-  RunLoop();
+             callback::Capture(loop_waiter->GetCallback(), &status));
+  ASSERT_TRUE(loop_waiter->RunUntilCalled());
 
   // Retrieve the page ID so that we can later connect to the same page from
   // another app instance.
   ASSERT_EQ(Status::OK, status);
-  page1->GetId(callback::Capture(QuitLoopClosure(), &page_id));
-  RunLoop();
+  loop_waiter = NewWaiter();
+  page1->GetId(callback::Capture(loop_waiter->GetCallback(), &page_id));
+  ASSERT_TRUE(loop_waiter->RunUntilCalled());
 
   // Wait until the sync state becomes idle.
   EXPECT_TRUE(WaitUntilSyncIsIdle(page1_state_watcher.get()));
@@ -70,16 +74,19 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 
   PageSnapshotPtr snapshot;
+  loop_waiter = NewWaiter();
   page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     nullptr, callback::Capture(QuitLoopClosure(), &status));
-  RunLoop();
+                     nullptr,
+                     callback::Capture(loop_waiter->GetCallback(), &status));
+  ASSERT_TRUE(loop_waiter->RunUntilCalled());
   ASSERT_EQ(Status::OK, status);
   std::unique_ptr<InlinedValue> inlined_value;
 
+  loop_waiter = NewWaiter();
   snapshot->GetInline(
       convert::ToArray("Hello"),
-      callback::Capture(QuitLoopClosure(), &status, &inlined_value));
-  RunLoop();
+      callback::Capture(loop_waiter->GetCallback(), &status, &inlined_value));
+  ASSERT_TRUE(loop_waiter->RunUntilCalled());
   ASSERT_EQ(Status::OK, status);
   ASSERT_TRUE(inlined_value);
   ASSERT_EQ("World", convert::ToString(inlined_value->value));
@@ -101,8 +108,9 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   auto page1 = instance1->GetTestPage();
   auto page1_state_watcher = WatchPageSyncState(&page1);
   PageId page_id;
-  page1->GetId(callback::Capture(QuitLoopClosure(), &page_id));
-  RunLoop();
+  auto loop_waiter = NewWaiter();
+  page1->GetId(callback::Capture(loop_waiter->GetCallback(), &page_id));
+  ASSERT_TRUE(loop_waiter->RunUntilCalled());
   auto page2 = instance2->GetPage(fidl::MakeOptional(page_id), Status::OK);
   auto page2_state_watcher = WatchPageSyncState(&page2);
   // Wait until the sync on the second device is idle and record the number of
@@ -112,9 +120,10 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
       page2_state_watcher->state_change_count;
 
   Status status;
+  loop_waiter = NewWaiter();
   page1->Put(convert::ToArray("Hello"), convert::ToArray("World"),
-             callback::Capture(QuitLoopClosure(), &status));
-  RunLoop();
+             callback::Capture(loop_waiter->GetCallback(), &status));
+  ASSERT_TRUE(loop_waiter->RunUntilCalled());
   ASSERT_EQ(Status::OK, status);
 
   // Wait until page1 finishes uploading the changes.
@@ -132,15 +141,18 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
       }));
 
   PageSnapshotPtr snapshot;
+  loop_waiter = NewWaiter();
   page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     nullptr, callback::Capture(QuitLoopClosure(), &status));
-  RunLoop();
+                     nullptr,
+                     callback::Capture(loop_waiter->GetCallback(), &status));
+  ASSERT_TRUE(loop_waiter->RunUntilCalled());
   ASSERT_EQ(Status::OK, status);
   std::unique_ptr<InlinedValue> inlined_value;
+  loop_waiter = NewWaiter();
   snapshot->GetInline(
       convert::ToArray("Hello"),
-      callback::Capture(QuitLoopClosure(), &status, &inlined_value));
-  RunLoop();
+      callback::Capture(loop_waiter->GetCallback(), &status, &inlined_value));
+  ASSERT_TRUE(loop_waiter->RunUntilCalled());
   ASSERT_EQ(Status::OK, status);
   ASSERT_TRUE(inlined_value);
   ASSERT_EQ("World", convert::ToString(inlined_value->value));
