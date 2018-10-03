@@ -30,7 +30,9 @@ public:
           mmio_(mmio),
           dir_(mmio),
           out_(mmio),
-          in_(mmio) {}
+          in_(mmio),
+          pull_en_(mmio),
+          pull_sel_(mmio) {}
 
     zx_status_t Bind();
 
@@ -52,6 +54,8 @@ private:
     const GpioDirReg dir_;
     const GpioOutReg out_;
     const GpioInReg in_;
+    const GpioPullEnReg pull_en_;
+    const GpioPullSelReg pull_sel_;
 
     void ShutDown();
 };

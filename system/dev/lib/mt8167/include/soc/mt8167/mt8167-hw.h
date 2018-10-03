@@ -6,4 +6,4 @@
 
 /* Peripheral Memory */
 #define MT8167_GPIO_BASE                                    0x10005000
-#define MT8167_GPIO_SIZE                                    0x500
+#define MT8167_GPIO_SIZE                                    0x700

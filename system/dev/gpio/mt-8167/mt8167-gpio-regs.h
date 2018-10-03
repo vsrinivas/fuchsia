@@ -14,6 +14,7 @@ namespace gpio {
 // GPIO MODE defines PINMUX for this device
 class GpioModeReg : public hwreg::RegisterBase<GpioModeReg, uint16_t> {
 public:
+    static constexpr uint16_t kModeGpio = 0; // GPIO mode is always 0
     static constexpr uint64_t kModeMax = 8; // 3 bits per mode
 
     static uint16_t GetMode(ddk::MmioBuffer* mmio, size_t idx) {
@@ -25,7 +26,7 @@ public:
     }
 
 private:
-    static constexpr uint32_t kItemsPerReg = 5;
+    static constexpr size_t kItemsPerReg = 5;
 
     // Registers are 16 bits, separated by 0x10 bytes, with kItemsPerReg values per register.
     static uint32_t Idx2Offset(size_t idx) {
@@ -109,4 +110,33 @@ public:
     uint16_t GetVal(size_t idx) const { return GetBit(idx); }
 };
 
+class GpioPullEnReg : public GpioBitFieldView {
+public:
+    explicit GpioPullEnReg(mmio_buffer_t& mmio)
+        : GpioBitFieldView(mmio, 0x500, 0x100) {}
+    bool Enable(size_t idx, bool val) const {
+        static const bool valid[][16] = {
+            {1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 0, 0},
+            {0, 0, 1, 1, 1, 0, 0, 0,  1, 1, 1, 1, 1, 1, 1, 1},
+            {1, 1, 1, 1, 1, 1, 1, 1,  0, 0, 0, 0, 1, 1, 1, 1},
+            {1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1},
+            {1, 1, 1, 1, 0, 0, 0, 0,  0, 0, 1, 1, 1, 1, 1, 1},
+            {1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1},
+            {1, 1, 1, 1, 1, 1, 1, 1,  0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0,  0, 1, 1, 1, 1, 0, 0, 0},
+        };
+        if (idx >= sizeof(valid) / sizeof(bool) || !valid[idx / 16][idx % 16]) {
+            return false;
+        }
+        ModifyBit(idx, val);
+        return true;
+    }
+};
+
+class GpioPullSelReg : public GpioBitFieldView {
+public:
+    explicit GpioPullSelReg(mmio_buffer_t& mmio)
+        : GpioBitFieldView(mmio, 0x600, 0x100) {}
+    void SetUp(size_t idx, bool up) const { ModifyBit(idx, up); }
+};
 } // namespace gpio

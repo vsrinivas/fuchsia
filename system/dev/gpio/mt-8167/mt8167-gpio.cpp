@@ -25,14 +25,38 @@
 
 namespace gpio {
 
-// TODO(andresoportus): pull-up/down (EN, SEL) registers
-
 zx_status_t Mt8167GpioDevice::GpioImplConfigIn(uint32_t index, uint32_t flags) {
+    GpioModeReg::SetMode(&mmio_, index, GpioModeReg::kModeGpio);
+    const uint32_t pull_mode = flags & GPIO_PULL_MASK;
+    zx_status_t status;
+    switch(pull_mode) {
+    case GPIO_NO_PULL:
+        status = pull_en_.Enable(index, false);
+        if (status != ZX_OK) {
+            return status;
+        }
+        break;
+    case GPIO_PULL_UP:
+        status = pull_en_.Enable(index, true);
+        if (status != ZX_OK) {
+            return status;
+        }
+        pull_sel_.SetUp(index, true);
+        break;
+    case GPIO_PULL_DOWN:
+        status = pull_en_.Enable(index, true);
+        if (status != ZX_OK) {
+            return status;
+        }
+        pull_sel_.SetUp(index, false);
+        break;
+    }
     dir_.SetDir(index, false);
     return ZX_OK;
 }
 
 zx_status_t Mt8167GpioDevice::GpioImplConfigOut(uint32_t index, uint8_t initial_value) {
+    GpioModeReg::SetMode(&mmio_, index, GpioModeReg::kModeGpio);
     dir_.SetDir(index, true);
     return ZX_OK;
 }
