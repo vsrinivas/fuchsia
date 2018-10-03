@@ -27,7 +27,7 @@
     <project name="third_party/rapidjson"
              path="third_party/rapidjson"
              remote="https://fuchsia.googlesource.com/third_party/rapidjson"
-             revision="fc692eaf62dfed2764f2e320591884dd55ca9d5f"
+             revision="32d07c55db1bb6c2ae17cba4033491a667647753"
              gerrithost="https://fuchsia-review.googlesource.com"/>
   </projects>
 </manifest>

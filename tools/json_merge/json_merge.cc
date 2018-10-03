@@ -4,13 +4,13 @@
 
 #include "build/tools/json_merge/json_merge.h"
 
-#include "third_party/rapidjson/rapidjson/document.h"
-#include "third_party/rapidjson/rapidjson/error/en.h"
-#include "third_party/rapidjson/rapidjson/filewritestream.h"
-#include "third_party/rapidjson/rapidjson/istreamwrapper.h"
-#include "third_party/rapidjson/rapidjson/ostreamwrapper.h"
-#include "third_party/rapidjson/rapidjson/prettywriter.h"
-#include "third_party/rapidjson/rapidjson/writer.h"
+#include "rapidjson/document.h"
+#include "rapidjson/error/en.h"
+#include "rapidjson/filewritestream.h"
+#include "rapidjson/istreamwrapper.h"
+#include "rapidjson/ostreamwrapper.h"
+#include "rapidjson/prettywriter.h"
+#include "rapidjson/writer.h"
 
 int JSONMerge(const std::vector<struct input_file>& inputs,
               std::ostream& output, std::ostream& errors, bool minify) {
