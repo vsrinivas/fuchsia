@@ -37,7 +37,7 @@ interface ModuleContext {
   15: AddModuleToStory(string name, Intent intent,
                        request<ModuleController> module_controller,
                        SurfaceRelation? surface_relation)
-                       -> (StartModuleStatus @status);
+                       -> (StartModuleStatus status);
 
   /// Like AddModuleToStory(), but requests a [view_owner] explicitly to embed the
   /// view of the requested Module instance in the view of the requesting Module
@@ -47,7 +47,7 @@ interface ModuleContext {
   3: EmbedModule(string name, Intent intent,
                  request<ModuleController> module_controller,
                  request<fuchsia.ui.viewsv1token.ViewOwner> view_owner)
-                 -> (StartModuleStatus @status);
+                 -> (StartModuleStatus status);
 
   /// Like StartModule(), but starts multiple modules simultaneously and
   /// specifies a custom layout for them (aka container).
@@ -62,11 +62,11 @@ interface ModuleContext {
   /// Gets the ComponentContext instance associated with this Module instance.
   /// This ComponentContext instance is unique to this particular Module
   /// instance.
-  7: GetComponentContext(request<ComponentContext> @request);
+  7: GetComponentContext(request<ComponentContext> request);
 
   /// Gets the IntelligenceServices service vendor associated with this Module
   /// instance.
-  8: GetIntelligenceServices(request<IntelligenceServices> @request);
+  8: GetIntelligenceServices(request<IntelligenceServices> request);
 
   /// Gets the id for this story which may be used to create a suggestion
   /// proposal to resume this story, especially by agents.
@@ -119,7 +119,7 @@ interface ModuleContext {
   /// Modules must request a connection per ongoing activity; a single connection
   /// may not be re-used for multiple ongoing activities.
   14: StartOngoingActivity(OngoingActivityType type,
-                           request<OngoingActivity> @request);
+                           request<OngoingActivity> request);
 };
 
 /// Communicates the status of an Intent to a Module.

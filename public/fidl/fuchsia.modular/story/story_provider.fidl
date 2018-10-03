@@ -43,7 +43,7 @@ interface StoryProvider {
   // Obtains a controller for a previously created story identified by its story
   // ID. Obtaining the controller doesn't run it yet. If the story doesn't
   // exist, the interface request is closed.
-  5: GetController(string story_id, request<StoryController> @request);
+  5: GetController(string story_id, request<StoryController> request);
 
   // Returns info of known stories.
   6: PreviousStories() -> (vector<StoryInfo> story_infos);
@@ -63,7 +63,7 @@ interface StoryProvider {
 
   // Creates a duplicate connection to this StoryProvider.
   // DEPRECATED: Please do not use this method as it is going away.
-  11: Duplicate(request<StoryProvider> @request);
+  11: Duplicate(request<StoryProvider> request);
 
   // Creates a story and sets the options it will have.
   // EXPERIMENTAL

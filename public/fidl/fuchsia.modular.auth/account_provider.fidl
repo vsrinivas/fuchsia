@@ -37,13 +37,13 @@ interface AccountProvider {
   // firebase tokens and the locally persisted refresh token. By default,
   // |revoke_all| is set to false and deletes account only from that given
   // device.
-  3: RemoveAccount(Account account, bool revoke_all) -> (AuthErr @status);
+  3: RemoveAccount(Account account, bool revoke_all) -> (AuthErr status);
 
   // Get a |TokenProviderFactory| associated with an |account_id|. It is used by
   // the Framework to provide instances of |TokenProvider| to third party
   // Agents.
   4: GetTokenProviderFactory(string account_id,
-                            request<TokenProviderFactory> @request);
+                            request<TokenProviderFactory> request);
 
   // This signals |AccountProvider| to teardown itself. After the
   // AccountProvider responds by closing its handle, the caller may terminate
@@ -52,14 +52,14 @@ interface AccountProvider {
 };
 
 interface TokenProviderFactory {
-  1: GetTokenProvider(string application_url, request<TokenProvider> @request);
+  1: GetTokenProvider(string application_url, request<TokenProvider> request);
 };
 
 // Implemented by device runner and provided to AccountProvider.Initialize().
 interface AccountProviderContext {
-  // Used by the token mangager application to @request the Framework to display
+  // Used by the token mangager application to request the Framework to display
   // a view to the user.
-  1: GetAuthenticationContext(string account_id, request<AuthenticationContext> @request);
+  1: GetAuthenticationContext(string account_id, request<AuthenticationContext> request);
 };
 
 // This interface is implemented by device shell. It is used to notify the

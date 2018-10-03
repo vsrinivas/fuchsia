@@ -31,18 +31,18 @@ interface UserShellContext {
   // The account associated with the currently logged-in user. It's NULL if
   // logged into GUEST mode.
   1: GetAccount() -> (fuchsia.modular.auth.Account? account);
-  2: GetAgentProvider(request<AgentProvider> @request);
-  3: GetComponentContext(request<ComponentContext> @request);
+  2: GetAgentProvider(request<AgentProvider> request);
+  3: GetComponentContext(request<ComponentContext> request);
   4: GetDeviceName() -> (string device_name);
-  5: GetFocusController(request<FocusController> @request);
-  6: GetFocusProvider(request<FocusProvider> @request);
-  7: GetIntelligenceServices(request<IntelligenceServices> @request);
-  8: GetLink(request<Link> @request);
-  9: GetPresentation(request<fuchsia.ui.policy.Presentation> @request);
-  10: GetSpeechToText(request<fuchsia.speech.SpeechToText> @request);
-  11: GetStoryProvider(request<StoryProvider> @request);
-  12: GetSuggestionProvider(request<SuggestionProvider> @request);
-  13: GetVisibleStoriesController(request<VisibleStoriesController> @request);
+  5: GetFocusController(request<FocusController> request);
+  6: GetFocusProvider(request<FocusProvider> request);
+  7: GetIntelligenceServices(request<IntelligenceServices> request);
+  8: GetLink(request<Link> request);
+  9: GetPresentation(request<fuchsia.ui.policy.Presentation> request);
+  10: GetSpeechToText(request<fuchsia.speech.SpeechToText> request);
+  11: GetStoryProvider(request<StoryProvider> request);
+  12: GetSuggestionProvider(request<SuggestionProvider> request);
+  13: GetVisibleStoriesController(request<VisibleStoriesController> request);
 
   // Requests logout of the user. This causes the device runner to tear down the
   // |UserRunner| instance of the user.
@@ -60,7 +60,7 @@ interface UserShellContext {
 interface UserShellPresentationProvider {
   // When a StoryShell calls StoryShellContext.GetPresentation(), this request
   // arrives here.
-  1: GetPresentation(string story_id, request<fuchsia.ui.policy.Presentation> @request);
+  1: GetPresentation(string story_id, request<fuchsia.ui.policy.Presentation> request);
 
   // When a StoryShell calls StoryShellContext.WatchVisualState(), this request
   // arrives here.

@@ -78,13 +78,13 @@ struct ContainerView {
 interface StoryShellContext {
   // Requests a Presentation connection from the UserShell. See
   // UserShellPresenationProvider in user_shell.fidl.
-  1: GetPresentation(request<fuchsia.ui.policy.Presentation> @request);
+  1: GetPresentation(request<fuchsia.ui.policy.Presentation> request);
 
   // Starts watching Story shell's visual state.
   2: WatchVisualState(StoryVisualStateWatcher watcher);
 
   // Gets a Link instance that the story shell can use for persisting metadata.
-  3: GetLink(request<Link> @request);
+  3: GetLink(request<Link> request);
 };
 
 // Implemented by StoryShell to get notified about visual state changes.

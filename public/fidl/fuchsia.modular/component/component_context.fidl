@@ -14,8 +14,8 @@ using fuchsia.sys;
 interface ComponentContext {
   // Gets the Ledger associated with this component. This ledger instance is
   // unique to this component (nb. not the component instance) under this user.
-  1: GetLedger(request<fuchsia.ledger.Ledger> @request)
-      -> (fuchsia.ledger.Status @status);
+  1: GetLedger(request<fuchsia.ledger.Ledger> request)
+      -> (fuchsia.ledger.Status status);
 
   // Used to start an agent in the user scope if it isn't already running, and
   // connect to it.
@@ -37,7 +37,7 @@ interface ComponentContext {
 
   // Gets the EntityResolver service, which can be used to resolve an entity
   // reference to an Entity interface.
-  6: GetEntityResolver(request<EntityResolver> @request);
+  6: GetEntityResolver(request<EntityResolver> request);
 
   // Creates a new entity from |type_to_data| such that duplicate types are
   // overriden by subsequent entries.

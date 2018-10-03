@@ -13,18 +13,18 @@ using fuchsia.modular.auth;
 [Discoverable]
 interface AgentContext {
   // Connects to the ComponentContext which this AgentContext is a part of.
-  1: GetComponentContext(request<ComponentContext> @request);
+  1: GetComponentContext(request<ComponentContext> request);
 
   // The auth token provider this Agent may use for accessing external services.
-  2: GetTokenProvider(request<fuchsia.modular.auth.TokenProvider> @request);
+  2: GetTokenProvider(request<fuchsia.modular.auth.TokenProvider> request);
 
   // Connects to the IntelligenceServices for this Agent.
-  3: GetIntelligenceServices(request<IntelligenceServices> @request);
+  3: GetIntelligenceServices(request<IntelligenceServices> request);
 
   // Connects to an EntityReferenceFactory for this Agent. Entity references
   // obtained from this EntityReferenceFactory will be resolved back to this
   // Agent.
-  4: GetEntityReferenceFactory(request<EntityReferenceFactory> @request);
+  4: GetEntityReferenceFactory(request<EntityReferenceFactory> request);
 
   // Schedules a task described in |task_info|. When this task is scheduled to
   // run, Agent.RunTask() is called.

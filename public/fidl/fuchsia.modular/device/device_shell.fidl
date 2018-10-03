@@ -31,22 +31,22 @@ interface DeviceShell {
   //
   // A |request| is tied to a |username| because the device runner allows
   // multiple users to be logged in at the same time.
-  // @Deprecated
+  // Deprecated
   2: GetAuthenticationContext(string username,
-                              request<fuchsia.modular.auth.AuthenticationContext> @request);
+                              request<fuchsia.modular.auth.AuthenticationContext> request);
 
   // This method may be invoked by the device runner to request an
   // AuthenticationUIContext. |request| will then be used to request the device
   // shell to show login screen during a UserProvider.AddUser() or if a token
   // needs to be refreshed.
-  3: GetAuthenticationUIContext(request<fuchsia.auth.AuthenticationUIContext> @request);
+  3: GetAuthenticationUIContext(request<fuchsia.auth.AuthenticationUIContext> request);
 };
 
 // This interface allows the |DeviceShell| to request capabilities from the
 // |DeviceRunner| in a way that is more explicit about the services that are
 // offered than a generic |ServiceProvider|.
 interface DeviceShellContext {
-  1: GetUserProvider(request<UserProvider> @request);
+  1: GetUserProvider(request<UserProvider> request);
 
   // This requests the shutdown of the device runner.
   2: Shutdown();

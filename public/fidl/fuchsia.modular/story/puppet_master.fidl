@@ -30,7 +30,7 @@ enum ExecuteStatus {
 };
 
 struct ExecuteResult {
-  ExecuteStatus @status;
+  ExecuteStatus status;
   string? story_id;
   string? error_message;
 };
@@ -55,7 +55,7 @@ interface PuppetMaster {
   // |request| is closed if control cannot be granted.
   //
   // TODO(thatguy): We want story names to be scoped to the client's namespace.
-  1: ControlStory(string story_name, request<StoryPuppetMaster> @request);
+  1: ControlStory(string story_name, request<StoryPuppetMaster> request);
 
   // Events on the session will be sent to |watcher| as long as |watcher| is
   // alive. |options| specifies filters and policy about which events are sent
@@ -66,7 +66,7 @@ interface PuppetMaster {
   // TODO(miguelfrde): framework should create new handles, we shouldn't
   // duplicate. This is only needed right now because "maxwell" is starting
   // kronk when it should be the framework.
-  3: Duplicate(request<PuppetMaster> @request);
+  3: Duplicate(request<PuppetMaster> request);
 
   // Deletes a story associated to |story_name|.
   4: DeleteStory(string story_name) -> ();

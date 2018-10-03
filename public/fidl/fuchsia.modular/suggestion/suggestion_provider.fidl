@@ -173,7 +173,7 @@ enum SpeechStatus {
 // be part of the callback on |Query|.
 interface FeedbackListener {
   // Called every time the internal |SpeechStatus| changes.
-  1: OnStatusChanged(SpeechStatus @status);
+  1: OnStatusChanged(SpeechStatus status);
 
   // TODO(rosswang): OnAudioResponse method (or fold it into OnTextResponse),
   // once it becomes trivial for SysUI to implement it. This would allow SysUI

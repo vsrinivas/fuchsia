@@ -37,7 +37,7 @@ interface TokenProvider {
 // Authentication errors returned by Token Manager. It contains error status
 // code along with a detailed error message.
 struct AuthErr {
-  Status @status;
+  Status status;
   string message;
 };
 

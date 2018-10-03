@@ -70,7 +70,7 @@ interface StoryController {
   // TODO(mesch): This is EXPERIMENTAL. We want something like this for story
   // crafting, but giving the same module controller to the story crafting
   // client as to the parent module or story runner might not be right yet.
-  9: GetModuleController(vector<string> module_path, request<ModuleController> @request);
+  9: GetModuleController(vector<string> module_path, request<ModuleController> request);
 
   // Deprecated: MI4-1084
   10: GetActiveLinks(StoryLinksWatcher? watcher) -> (vector<LinkPath> link_data);
