@@ -6,6 +6,7 @@
 #define GARNET_LIB_UI_GFX_ENGINE_ENGINE_H_
 
 #include <fbl/ref_ptr.h>
+#include <lib/fit/function.h>
 #include <set>
 #include <vector>
 
@@ -33,6 +34,7 @@ namespace scenic_impl {
 namespace gfx {
 
 class Compositor;
+class EngineRenderer;
 class Session;
 class SessionHandler;
 class View;
@@ -42,21 +44,20 @@ class Swapchain;
 using ViewLinker = ObjectLinker<ViewHolder, View>;
 
 // Graphical context for a set of session updates.
-struct CommandContext {
-  escher::BatchGpuUploader* batch_gpu_uploader = nullptr;
+class CommandContext {
+ public:
+  CommandContext(escher::BatchGpuUploaderPtr uploader);
 
-  void Invalidate() {
-    batch_gpu_uploader = nullptr;
-    is_valid = false;
+  escher::BatchGpuUploader* batch_gpu_uploader() const {
+    FXL_DCHECK(batch_gpu_uploader_.get());
+    return batch_gpu_uploader_.get();
   }
+
+  // Flush any work accumulated during command processing.
+  void Flush();
 
  private:
-  friend class Engine;
-  void MakeValid() {
-    is_valid = batch_gpu_uploader != nullptr;
-  }
-
-  bool is_valid = false;
+  escher::BatchGpuUploaderPtr batch_gpu_uploader_;
 };
 
 // Owns a group of sessions which can share resources with one another
@@ -69,11 +70,6 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
 
   ~Engine() override;
 
-  escher::PaperRenderer* paper_renderer() { return paper_renderer_.get(); }
-  escher::ShadowMapRenderer* shadow_renderer() {
-    return shadow_renderer_.get();
-  }
-
   DisplayManager* display_manager() const { return display_manager_; }
   escher::Escher* escher() const { return escher_.get(); }
   escher::EscherWeakPtr GetEscherWeakPtr() const { return escher_; }
@@ -81,6 +77,8 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   vk::Device vk_device() {
     return escher_ ? escher_->vulkan_context().device : vk::Device();
   }
+
+  bool has_vulkan() const { return has_vulkan_; }
 
   escher::ResourceRecycler* escher_resource_recycler() {
     return escher_ ? escher_->resource_recycler() : nullptr;
@@ -109,6 +107,8 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
 
   FrameScheduler* frame_scheduler() { return frame_scheduler_.get(); }
 
+  EngineRenderer* renderer() { return engine_renderer_.get(); }
+
   // |UpdateScheduler|
   //
   // Tell the FrameScheduler to schedule a frame. This is also used for updates
@@ -135,11 +135,11 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
     return imported_memory_type_index_;
   }
 
-  CommandContext* GetCommandContext() {
-    // The CommandContext is only valid during RenderFrame() and should not be
-    // accessed outside of that.
-    FXL_DCHECK(command_context_.is_valid);
-    return &command_context_;
+  // The CommandContext is only valid during RenderFrame() and should not be
+  // accessed outside of that.
+  const CommandContext* GetCommandContext() {
+    FXL_DCHECK(command_context_);
+    return command_context_.get();
   }
 
   // Invoke Escher::Cleanup().  If more work remains afterward, post a delayed
@@ -168,6 +168,12 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   void InitializeFrameScheduler();
   void InitializeShaderFs();
 
+  // Apply updates to all sessions who have updates and have acquired all
+  // fences.  Return true if there were any updates applied.
+  bool UpdateSessions(uint64_t presentation_time,
+                      uint64_t presentation_interval,
+                      uint64_t frame_number_for_tracing);
+
   // Update and deliver metrics for all nodes which subscribe to metrics events.
   void UpdateAndDeliverMetrics(uint64_t presentation_time);
 
@@ -177,10 +183,14 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
                      const ::fuchsia::ui::gfx::Metrics& parent_metrics,
                      std::vector<Node*>* updated_nodes);
 
+  // Set up and tear down a CommandContext for use in UpdateSessions().
+  void InitializeCommandContext(uint64_t frame_number_for_tracing);
+  void FlushAndInvalidateCommandContext();
+
   DisplayManager* const display_manager_;
   const escher::EscherWeakPtr escher_;
-  escher::PaperRendererPtr paper_renderer_;
-  escher::ShadowMapRendererPtr shadow_renderer_;
+
+  std::unique_ptr<EngineRenderer> engine_renderer_;
 
   ResourceLinker resource_linker_;
   ViewLinker view_linker_;
@@ -193,13 +203,14 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   std::unique_ptr<FrameScheduler> frame_scheduler_;
   std::set<Compositor*> compositors_;
 
-  CommandContext command_context_;
+  std::unique_ptr<CommandContext> command_context_;
 
   bool escher_cleanup_scheduled_ = false;
 
   uint32_t imported_memory_type_index_ = 0;
 
   bool render_continuously_ = false;
+  bool has_vulkan_ = false;
 
   fxl::WeakPtrFactory<Engine> weak_factory_;  // must be last
 

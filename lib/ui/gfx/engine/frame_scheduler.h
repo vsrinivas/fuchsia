@@ -31,6 +31,13 @@ class FrameSchedulerDelegate {
   // a new frame.  The FrameTimings object is used to accumulate timing
   // for all swapchains that are used as render targets in that frame.
   //
+  // If RenderFrame() returns true, the delegate is responsible for calling
+  // FrameTimings::OnFrameRendered/Presented/Dropped().  Otherwise, rendering
+  // did not occur for some reason, and the FrameScheduler should not expect to
+  // receive any timing information for that frame.
+  // TODO(SCN-1089): these return value semantics are not ideal.  See comments
+  // in Engine::RenderFrame() regarding this same issue.
+  //
   // TODO(MZ-225): We need to track backpressure so that the frame scheduler
   // doesn't get too far ahead. With that in mind, Renderer::DrawFrame should
   // have a callback which is invoked when the frame is fully flushed through
