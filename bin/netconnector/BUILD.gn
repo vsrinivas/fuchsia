@@ -60,6 +60,13 @@ package("netconnector") {
 
   binary = "netconnector"
 
+  meta = [
+    {
+      path = rebase_path("meta/netconnector.cmx")
+      dest = "netconnector.cmx"
+    },
+  ]
+
   resources = [
     {
       path = rebase_path("netconnector.config")

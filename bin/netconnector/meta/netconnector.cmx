@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.mdns.MdnsService",
+            "fuchsia.net.LegacySocketProvider",
+            "fuchsia.netconnector.NetConnector",
+            "fuchsia.netstack.Netstack",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}
