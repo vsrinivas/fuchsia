@@ -23,6 +23,9 @@ GfxSystem::GfxSystem(SystemContext context,
                      std::unique_ptr<DisplayManager> display_manager)
     : TempSystemDelegate(std::move(context), false),
       display_manager_(std::move(display_manager)) {
+  // TODO(SCN-1111): what are the intended implications of there being a test
+  // display?  In this case, could we make DisplayManager signal that the
+  // display is ready, even though it it is a test display?
   if (display_manager_->default_display() &&
       display_manager_->default_display()->is_test_display()) {
     async::PostTask(async_get_default_dispatcher(), DelayedInitClosure());
@@ -155,7 +158,9 @@ void GfxSystem::Initialize() {
     return;
   }
 
-  if (!escher::VulkanIsSupported()) {
+  // This is virtual, allowing tests to avoid instantiating an Escher.
+  escher_ = InitializeEscher();
+  if (!escher_ || !escher_->device()) {
     if (display->is_test_display()) {
       FXL_LOG(INFO) << "No Vulkan found, but using a test-only \"display\".";
     } else {
@@ -164,8 +169,6 @@ void GfxSystem::Initialize() {
       return;
     }
   }
-
-  escher_ = InitializeEscher();
 
   // Initialize the Scenic engine.
   engine_ = InitializeEngine();
@@ -217,6 +220,7 @@ void GfxSystem::GetDisplayOwnershipEventImmediately(
   FXL_DCHECK(initialized_);
   Display* display = engine_->display_manager()->default_display();
 
+  // TODO(SCN-1109):VulkanIsSupported() should not be called by production code.
   if (escher::VulkanIsSupported()) {
     FXL_CHECK(display) << "There must be a default display.";
   }

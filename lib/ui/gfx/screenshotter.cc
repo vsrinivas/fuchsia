@@ -10,8 +10,10 @@
 
 #include <lib/zx/time.h>
 
+#include "garnet/lib/ui/gfx/engine/engine_renderer.h"
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer.h"
+#include "garnet/lib/ui/gfx/util/time.h"
 #include "garnet/lib/ui/scenic/scenic.h"
 #include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/impl/command_buffer_pool.h"
@@ -93,11 +95,22 @@ void Screenshotter::TakeScreenshot(
   image_info.memory_flags = vk::MemoryPropertyFlagBits::eHostVisible;
   image_info.tiling = vk::ImageTiling::eLinear;
 
+  // TODO(ES-7): cache is never trimmed.
   escher::ImagePtr image = escher->image_cache()->NewImage(image_info);
-  auto frame_done_semaphore = escher::Semaphore::New(escher->vk_device());
-  compositor->DrawToImage(engine->paper_renderer(), engine->shadow_renderer(),
-                          image, frame_done_semaphore);
+  escher::FramePtr frame = escher->NewFrame("Scenic Compositor", 0);
 
+  std::vector<Layer*> drawable_layers = compositor->GetDrawableLayers();
+  engine->renderer()->RenderLayers(frame, dispatcher_clock_now(), image,
+                                   drawable_layers);
+
+  // TODO(SCN-1096): Nobody signals this semaphore, so there's no point.  One
+  // way that it could be used is export it as a zx::event and watch for that to
+  // be signaled instead of adding a completion-callback to the command-buffer.
+  auto frame_done_semaphore = escher::Semaphore::New(escher->vk_device());
+  frame->EndFrame(frame_done_semaphore, nullptr);
+
+  // TODO(SCN-1096): instead of submitting another command buffer, this could be
+  // done as part of the same Frame above.
   vk::Queue queue = escher->command_buffer_pool()->queue();
   auto* command_buffer = escher->command_buffer_pool()->GetCommandBuffer();
 
@@ -109,7 +122,8 @@ void Screenshotter::TakeScreenshot(
                             std::move(done_callback));
       }));
 
-  // Force the command buffer to retire so that the submitted commands will run.
+  // Force the command buffer to retire to guarantee that |done_callback| will
+  // be called in a timely fashion.
   engine->CleanupEscher();
 }
 

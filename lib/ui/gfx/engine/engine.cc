@@ -13,6 +13,7 @@
 #include <trace/event.h>
 #include <zx/time.h>
 
+#include "garnet/lib/ui/gfx/engine/engine_renderer.h"
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
@@ -25,8 +26,6 @@
 #include "garnet/lib/ui/scenic/session.h"
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/renderer/batch_gpu_uploader.h"
-#include "lib/escher/renderer/paper_renderer.h"
-#include "lib/escher/renderer/shadow_map_renderer.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -58,14 +57,23 @@ static uint32_t GetImportedMemoryTypeIndex(vk::PhysicalDevice physical_device,
       vk::MemoryPropertyFlagBits::eDeviceLocal);
 }
 
+CommandContext::CommandContext(escher::BatchGpuUploaderPtr uploader)
+    : batch_gpu_uploader_(std::move(uploader)) {}
+
+void CommandContext::Flush() {
+  if (batch_gpu_uploader_) {
+    // Submit regardless of whether or not there are updates to release the
+    // underlying CommandBuffer so the pool and sequencer don't stall out.
+    // TODO(ES-115) to remove this restriction.
+    batch_gpu_uploader_->Submit(escher::SemaphorePtr());
+  }
+}
+
 Engine::Engine(DisplayManager* display_manager,
                escher::EscherWeakPtr weak_escher)
     : display_manager_(display_manager),
       escher_(std::move(weak_escher)),
-      paper_renderer_(escher::PaperRenderer::New(escher_)),
-      shadow_renderer_(
-          escher::ShadowMapRenderer::New(escher_, paper_renderer_->model_data(),
-                                         paper_renderer_->model_renderer())),
+      engine_renderer_(std::make_unique<EngineRenderer>(escher_)),
       image_factory_(std::make_unique<escher::SimpleImageFactory>(
           escher()->resource_recycler(), escher()->gpu_allocator())),
       rounded_rect_factory_(
@@ -75,13 +83,12 @@ Engine::Engine(DisplayManager* display_manager,
       session_manager_(std::make_unique<SessionManager>()),
       imported_memory_type_index_(GetImportedMemoryTypeIndex(
           escher()->vk_physical_device(), escher()->vk_device())),
+      has_vulkan_(escher_ && escher_->vk_device()),
       weak_factory_(this) {
   FXL_DCHECK(display_manager_);
   FXL_DCHECK(escher_);
 
   InitializeFrameScheduler();
-
-  paper_renderer_->set_sort_by_pipeline(false);
 }
 
 Engine::Engine(
@@ -97,6 +104,7 @@ Engine::Engine(
           escher_ ? GetImportedMemoryTypeIndex(escher_->vk_physical_device(),
                                                escher_->vk_device())
                   : 0),
+      has_vulkan_(escher_ && escher_->vk_device()),
       weak_factory_(this) {
   FXL_DCHECK(display_manager_);
 
@@ -106,6 +114,8 @@ Engine::Engine(
 Engine::~Engine() = default;
 
 void Engine::InitializeFrameScheduler() {
+  // TODO(SCN-1092): make |frame_scheduler_| non-nullable.  For testing, this
+  // might entail plugging in a dummy Display.  Relates to SCN-452.
   if (display_manager_->default_display()) {
     frame_scheduler_ =
         std::make_unique<FrameScheduler>(display_manager_->default_display());
@@ -114,6 +124,9 @@ void Engine::InitializeFrameScheduler() {
 }
 
 void Engine::ScheduleUpdate(uint64_t presentation_time) {
+  // TODO(SCN-1092): make |frame_scheduler_| non-nullable.  This is feasible now
+  // that we can use TestLoopFixture::RunLoopFor() to cause the scheduler to
+  // render.
   if (frame_scheduler_) {
     frame_scheduler_->RequestFrame(presentation_time);
   } else {
@@ -135,52 +148,140 @@ std::unique_ptr<Swapchain> Engine::CreateDisplaySwapchain(Display* display) {
 #endif
 }
 
+void Engine::InitializeCommandContext(uint64_t frame_number_for_tracing) {
+  FXL_DCHECK(!command_context_) << "CommandContext already exists.";
+  command_context_ = std::make_unique<CommandContext>(
+      has_vulkan()
+          ? escher::BatchGpuUploader::New(escher_, frame_number_for_tracing)
+          : escher::BatchGpuUploaderPtr());
+}
+
+void Engine::FlushAndInvalidateCommandContext() {
+  FXL_DCHECK(command_context_) << "CommandContext does not exist.";
+  command_context_->Flush();
+  command_context_ = nullptr;
+}
+
+bool Engine::UpdateSessions(uint64_t presentation_time,
+                            uint64_t presentation_interval,
+                            uint64_t frame_number_for_tracing) {
+  InitializeCommandContext(frame_number_for_tracing);
+  bool any_updates_were_applied =
+      session_manager_->ApplyScheduledSessionUpdates(presentation_time,
+                                                     presentation_interval);
+  FlushAndInvalidateCommandContext();
+  return any_updates_were_applied;
+}
+
+// Helper for RenderFrame().  Generate a mapping between a Compositor's Layer
+// resources and the hardware layers they should be displayed on.
+// TODO(SCN-1088): there should be a separate mechanism that is responsible
+// for inspecting the compositor's resource tree and optimizing the assignment
+// of rendered content to hardware display layers.
+HardwareLayerAssignment GetHardwareLayerAssignment(
+    const Compositor& compositor) {
+  // TODO(SCN-1098): this is a placeholder; currently only a single hardware
+  // layer is supported, and we don't know its ID (it is hidden within the
+  // DisplayManager implementation), so we just say 0.
+  return HardwareLayerAssignment{
+      .items = {{
+          .hardware_layer_id = 0,
+          .layers = compositor.GetDrawableLayers(),
+      }},
+      .swapchain = compositor.swapchain(),
+  };
+}
+
 bool Engine::RenderFrame(const FrameTimingsPtr& timings,
                          uint64_t presentation_time,
                          uint64_t presentation_interval, bool force_render) {
   TRACE_DURATION("gfx", "RenderFrame", "frame_number", timings->frame_number(),
                  "time", presentation_time, "interval", presentation_interval);
 
-  uint64_t trace_number = timings.get() ? timings->frame_number() : 0;
-  bool has_updates = false;
-  if (display_manager_->default_display() &&
-      display_manager_->default_display()->is_test_display()) {
-    has_updates = session_manager_->ApplyScheduledSessionUpdates(
-        presentation_time, presentation_interval);
-  } else {
-    auto gpu_uploader = escher::BatchGpuUploader::New(escher_, trace_number);
-    command_context_.batch_gpu_uploader = gpu_uploader.get();
-    command_context_.MakeValid();
+  // TODO(SCN-1092): make |timings| non-nullable, and unconditionally use
+  // timings->frame_number() below.  When this is done, uncomment the following
+  // line:
+  // FXL_DCHECK(timings);
 
-    has_updates = session_manager_->ApplyScheduledSessionUpdates(
-        presentation_time, presentation_interval);
-
-    // Submit regardless of whether or not there are updates to release the
-    // underlying CommandBuffer so the pool and sequencer don't stall out.
-    // TODO(ES-115) to remove this restriction.
-    command_context_.batch_gpu_uploader->Submit(escher::SemaphorePtr());
-
-    // Invalidate the commands' context.
-    command_context_.Invalidate();
+  // TODO(SCN-1108): consider applying updates as each fence is signalled.
+  if (!UpdateSessions(presentation_time, presentation_interval,
+                      timings ? timings->frame_number() : 0) &&
+      !force_render) {
+    return false;
   }
+  UpdateAndDeliverMetrics(presentation_time);
 
-  if (!has_updates && !force_render) {
+  // Some updates were applied; we interpret this to mean that the scene may
+  // have changed, and therefore needs to be rendered.
+  // TODO(SCN-1091): this is a very conservative approach that may result in
+  // excessive rendering.
+
+  // TODO(SCN-1089): the FrameTimings are passed to the Compositor's swapchain
+  // to notify when the frame is finished rendering, presented, dropped, etc.
+  // This doesn't make any sense if there are multiple compositors.
+  FXL_DCHECK(compositors_.size() <= 1);
+
+  std::vector<HardwareLayerAssignment> hlas;
+  for (auto& compositor : compositors_) {
+    // TODO(SCN-1088): compositor shouldn't be responsible for generating
+    // hardware layer assignments.
+    if (auto hla = GetHardwareLayerAssignment(*compositor)) {
+      hlas.push_back(std::move(hla));
+
+      // Verbose logging of the entire Compositor resource tree.
+      if (FXL_VLOG_IS_ON(3)) {
+        std::ostringstream output;
+        DumpVisitor visitor(output);
+        compositor->Accept(&visitor);
+        FXL_VLOG(3) << "Compositor dump\n" << output.str();
+      }
+    } else {
+      // Nothing to be drawn; either the Compositor has no layers to draw or
+      // it has no valid Swapchain.  The latter will be true if Escher/Vulkan
+      // is unavailable for whatever reason.
+    }
+  }
+  if (hlas.empty()) {
+    // No compositor has any renderable content.
     return false;
   }
 
-  UpdateAndDeliverMetrics(presentation_time);
+  escher::FramePtr frame =
+      escher()->NewFrame("Scenic Compositor", timings->frame_number());
 
-  bool frame_drawn = false;
-  for (auto& compositor : compositors_) {
-    frame_drawn |= compositor->DrawFrame(timings, paper_renderer_.get(),
-                                         shadow_renderer_.get());
+  bool success = true;
+  for (size_t i = 0; i < hlas.size(); ++i) {
+    const bool is_last_hla = (i == hlas.size() - 1);
+    HardwareLayerAssignment& hla = hlas[i];
+
+    success &= hla.swapchain->DrawAndPresentFrame(
+        timings, hla,
+        [is_last_hla, &frame, engine_renderer{engine_renderer_.get()}](
+            zx_time_t target_presentation_time,
+            const escher::ImagePtr& output_image,
+            const HardwareLayerAssignment::Item hla_item,
+            const escher::SemaphorePtr& acquire_semaphore,
+            const escher::SemaphorePtr& frame_done_semaphore) {
+          output_image->SetWaitSemaphore(acquire_semaphore);
+          engine_renderer->RenderLayers(frame, target_presentation_time,
+                                        output_image, hla_item.layers);
+          if (!is_last_hla) {
+            frame->SubmitPartialFrame(frame_done_semaphore);
+          } else {
+            frame->EndFrame(frame_done_semaphore, nullptr);
+          }
+        });
+  }
+  if (!success) {
+    // TODO(SCN-1089): what is the proper behavior when some swapchains
+    // are displayed and others aren't?  This isn't currently an issue because
+    // there is only one Compositor; see above.
+    FXL_DCHECK(hlas.size() == 1);
+    return false;
   }
 
-  // Technically, we should be able to do this only when frame_drawn == true.
-  // But the cost is negligible, so do it always.
   CleanupEscher();
-
-  return frame_drawn;
+  return true;
 }
 
 void Engine::AddCompositor(Compositor* compositor) {
@@ -290,16 +391,17 @@ void Engine::CleanupEscher() {
     // Wait long enough to give GPU work a chance to finish.
     const zx::duration kCleanupDelay = zx::msec(1);
     escher_cleanup_scheduled_ = true;
-    async::PostDelayedTask(async_get_default_dispatcher(),
-                           [weak = weak_factory_.GetWeakPtr()] {
-                             if (weak) {
-                               // Recursively reschedule if cleanup is
-                               // incomplete.
-                               weak->escher_cleanup_scheduled_ = false;
-                               weak->CleanupEscher();
-                             }
-                           },
-                           kCleanupDelay);
+    async::PostDelayedTask(
+        async_get_default_dispatcher(),
+        [weak = weak_factory_.GetWeakPtr()] {
+          if (weak) {
+            // Recursively reschedule if cleanup is
+            // incomplete.
+            weak->escher_cleanup_scheduled_ = false;
+            weak->CleanupEscher();
+          }
+        },
+        kCleanupDelay);
   }
 }
 
