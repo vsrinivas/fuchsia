@@ -4,6 +4,7 @@
 
 #![feature(futures_api)]
 
+mod collection;
 mod font_info;
 mod font_service;
 mod freetype_ffi;

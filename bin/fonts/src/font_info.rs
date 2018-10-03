@@ -69,7 +69,7 @@ pub struct CharSet {
 }
 
 impl CharSet {
-    fn new(mut codepoints: Vec<u32>) -> CharSet {
+    pub fn new(mut codepoints: Vec<u32>) -> CharSet {
         codepoints.sort_unstable();
 
         let mut ranges = vec![];
