@@ -165,6 +165,15 @@ std::string GetSyncParamsUsage() {
   return result.str();
 }
 
+std::string ExtractJsonObject(const std::string& content) {
+  auto start = content.find('{');
+  auto end = content.rfind('}');
+  if (start != std::string::npos && end != std::string::npos && start < end) {
+    return content.substr(start, end + 1 - start);
+  }
+  return "";
+}
+
 bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
                                     component::StartupContext* startup_context,
                                     SyncParams* sync_params) {
@@ -184,7 +193,19 @@ bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
   if (document.HasParseError()) {
     std::cerr << "Cannot parse sync parameters at " << credentials_path
               << std::endl;
-    return false;
+    // TODO(qsr): NET-1636 Remove this code once the network service handles
+    // chunked encoding. Extract the content of credentials from the first '{'
+    // to the last '}' to work around the network service not handling chunked
+    // encoding.
+    std::cerr << "Trying to extract a JSON object." << std::endl;
+    credentials = ExtractJsonObject(credentials);
+    if (credentials.empty()) {
+      return false;
+    }
+    document.Parse(credentials);
+    if (document.HasParseError()) {
+      return false;
+    }
   }
   auto sync_params_schema = json_schema::InitSchema(kSyncParamsSchema);
   if (!json_schema::ValidateSchema(document, *sync_params_schema)) {
