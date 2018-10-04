@@ -29,7 +29,7 @@ endif
 
 # include all uapp, udev, ulib and utest from third_party/...
 MODULES += $(patsubst %/rules.mk,%,$(wildcard third_party/uapp/*/rules.mk))
-MODULES += $(patsubst %/rules.mk,%,$(wildcard third_party/udev/*/rules.mk))
+MODULES += $(patsubst %/rules.mk,%,$(wildcard third_party/dev/*/*/rules.mk))
 MODULES += $(patsubst %/rules.mk,%,$(wildcard third_party/ulib/*/rules.mk))
 ifeq ($(call TOBOOL,$(DISABLE_UTEST)),false)
 MODULES += $(patsubst %/rules.mk,%,$(wildcard third_party/utest/*/rules.mk))
