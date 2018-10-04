@@ -74,19 +74,20 @@ public:
     }
 
     zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel) {
+        using Binder = fidl::Binder<FakeSimpleLogger>;
         static constexpr fuchsia_cobalt_LoggerSimple_ops_t kOps = {
             .LogEvent = nullptr,
-            .LogEventCount = fidl::BindMember<&FakeSimpleLogger::LogCounter>,
+            .LogEventCount = Binder::BindMember<&FakeSimpleLogger::LogCounter>,
             .LogElapsedTime = nullptr,
             .LogFrameRate = nullptr,
             .LogMemoryUsage = nullptr,
             .LogString = nullptr,
             .StartTimer = nullptr,
             .EndTimer = nullptr,
-            .LogIntHistogram = fidl::BindMember<&FakeSimpleLogger::LogIntHistogram>,
+            .LogIntHistogram = Binder::BindMember<&FakeSimpleLogger::LogIntHistogram>,
         };
-        return fidl::BindOps<fuchsia_cobalt_LoggerSimple_dispatch>(dispatcher, fbl::move(channel),
-                                                                   this, &kOps);
+        return Binder::BindOps<fuchsia_cobalt_LoggerSimple_dispatch>(dispatcher, fbl::move(channel),
+                                                                     this, &kOps);
     }
 
     void set_response_status(fuchsia_cobalt_Status status) { response_status_ = status; }
@@ -125,12 +126,14 @@ public:
     }
 
     zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel) {
+        using Binder = fidl::Binder<FakeLoggerFactory>;
         static constexpr fuchsia_cobalt_LoggerFactory_ops_t kOps = {
-            .CreateLogger = fidl::BindMember<&FakeLoggerFactory::CreateLogger>,
-            .CreateLoggerSimple = fidl::BindMember<&FakeLoggerFactory::CreateLoggerSimple>,
+            .CreateLogger = Binder::BindMember<&FakeLoggerFactory::CreateLogger>,
+            .CreateLoggerSimple = Binder::BindMember<&FakeLoggerFactory::CreateLoggerSimple>,
         };
-        return fidl::BindOps<fuchsia_cobalt_LoggerFactory_dispatch>(dispatcher, fbl::move(channel),
-                                                                    this, &kOps);
+        return Binder::BindOps<fuchsia_cobalt_LoggerFactory_dispatch>(dispatcher,
+                                                                      fbl::move(channel),
+                                                                      this, &kOps);
     }
 
     void set_logger_create_status(fuchsia_cobalt_Status status) { logger_create_status = status; }

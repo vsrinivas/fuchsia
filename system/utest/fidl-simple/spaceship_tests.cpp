@@ -13,9 +13,16 @@
 
 #include <unittest/unittest.h>
 
+namespace {
+
 class SpaceShip {
 public:
-    zx_status_t AdjustHeading(const uint32_t* stars_data, size_t stars_count, fidl_txn_t* txn) {
+    using SpaceShipBinder = fidl::Binder<SpaceShip>;
+
+    virtual ~SpaceShip() {};
+
+    virtual zx_status_t AdjustHeading(const uint32_t* stars_data,
+                                      size_t stars_count, fidl_txn_t* txn) {
         EXPECT_EQ(3u, stars_count, "");
         EXPECT_EQ(11u, stars_data[0], "");
         EXPECT_EQ(0u, stars_data[1], "");
@@ -23,23 +30,23 @@ public:
         return fidl_test_spaceship_SpaceShipAdjustHeading_reply(txn, -12);
     }
 
-    zx_status_t ScanForLifeforms(fidl_txn_t* txn) {
+    virtual zx_status_t ScanForLifeforms(fidl_txn_t* txn) {
         const uint32_t lifesigns[5] = {42u, 43u, UINT32_MAX, 0u, 9u};
         return fidl_test_spaceship_SpaceShipScanForLifeforms_reply(txn, lifesigns, 5);
     }
 
-    zx_status_t SetAstrometricsListener(zx_handle_t listener) {
+    virtual zx_status_t SetAstrometricsListener(zx_handle_t listener) {
         EXPECT_EQ(ZX_OK, fidl_test_spaceship_AstrometricsListenerOnNova(listener), "");
         EXPECT_EQ(ZX_OK, zx_handle_close(listener), "");
         return ZX_OK;
     }
 
-    zx_status_t SetDefenseCondition(fidl_test_spaceship_Alert alert) {
+    virtual zx_status_t SetDefenseCondition(fidl_test_spaceship_Alert alert) {
         EXPECT_EQ(fidl_test_spaceship_Alert_RED, alert, "");
         return ZX_OK;
     }
 
-    zx_status_t GetFuelRemaining(zx_handle_t cancel, fidl_txn_t* txn) {
+    virtual zx_status_t GetFuelRemaining(zx_handle_t cancel, fidl_txn_t* txn) {
         EXPECT_EQ(ZX_HANDLE_INVALID, cancel, "");
         const fidl_test_spaceship_FuelLevel level = {
             .reaction_mass = 1641u,
@@ -47,22 +54,23 @@ public:
         return fidl_test_spaceship_SpaceShipGetFuelRemaining_reply(txn, ZX_OK, &level);
     }
 
-    zx_status_t AddFuelTank(const fidl_test_spaceship_FuelLevel* level, fidl_txn_t* txn) {
+    virtual zx_status_t AddFuelTank(const fidl_test_spaceship_FuelLevel* level, fidl_txn_t* txn) {
         return fidl_test_spaceship_SpaceShipAddFuelTank_reply(txn, level->reaction_mass / 2);
     }
 
 
-    zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel) {
+    virtual zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel) {
         static constexpr fidl_test_spaceship_SpaceShip_ops_t kOps = {
-            .AdjustHeading = fidl::BindMember<&SpaceShip::AdjustHeading>,
-            .ScanForLifeforms = fidl::BindMember<&SpaceShip::ScanForLifeforms>,
-            .SetAstrometricsListener = fidl::BindMember<&SpaceShip::SetAstrometricsListener>,
-            .SetDefenseCondition = fidl::BindMember<&SpaceShip::SetDefenseCondition>,
-            .GetFuelRemaining = fidl::BindMember<&SpaceShip::GetFuelRemaining>,
-            .AddFuelTank = fidl::BindMember<&SpaceShip::AddFuelTank>,
+            .AdjustHeading = SpaceShipBinder::BindMember<&SpaceShip::AdjustHeading>,
+            .ScanForLifeforms = SpaceShipBinder::BindMember<&SpaceShip::ScanForLifeforms>,
+            .SetAstrometricsListener =
+                    SpaceShipBinder::BindMember<&SpaceShip::SetAstrometricsListener>,
+            .SetDefenseCondition = SpaceShipBinder::BindMember<&SpaceShip::SetDefenseCondition>,
+            .GetFuelRemaining = SpaceShipBinder::BindMember<&SpaceShip::GetFuelRemaining>,
+            .AddFuelTank = SpaceShipBinder::BindMember<&SpaceShip::AddFuelTank>,
         };
 
-        return fidl::BindOps<fidl_test_spaceship_SpaceShip_dispatch>(
+        return SpaceShipBinder::BindOps<fidl_test_spaceship_SpaceShip_dispatch>(
             dispatcher, fbl::move(channel), this, &kOps);
     }
 };
@@ -145,6 +153,61 @@ static bool spaceship_test(void) {
 
     END_TEST;
 }
+
+// These classes represents a compile-time check:
+//
+// We should be able to bind a derived class to its own methods,
+// but also to methods of the base class.
+//
+// However, we should not be able to bind to an unrelated class.
+class NotDerived {
+public:
+    zx_status_t AdjustHeading(const uint32_t* stars_data, size_t stars_count, fidl_txn_t* txn) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+};
+
+class Derived : public SpaceShip {
+public:
+    using DerivedBinder = fidl::Binder<Derived>;
+
+    zx_status_t ScanForLifeforms(fidl_txn_t* txn) override {
+        return ZX_OK;
+    }
+
+    zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel) override {
+        static constexpr fidl_test_spaceship_SpaceShip_ops_t kOps = {
+            // (Under the failure case) Tries to bind to a member, such that the
+            // context object passed to BindOps does not match the BindMember
+            // callback. This should fail at compile time.
+#if TEST_WILL_NOT_COMPILE || 0
+            .AdjustHeading = DerivedBinder::BindMember<&NotDerived::AdjustHeading>,
+#else
+            .AdjustHeading = DerivedBinder::BindMember<&SpaceShip::AdjustHeading>,
+#endif
+            // Binds a member of the derived class to the derived method:
+            // This is the typical use case of the Binder object.
+            .ScanForLifeforms = DerivedBinder::BindMember<&Derived::ScanForLifeforms>,
+
+            // Binds a member of the derived class to the base method:
+            // The compile time check should allow this, because the "Derived"
+            // class should be castable to a "SpaceShip" class.
+            .SetAstrometricsListener =
+                    DerivedBinder::BindMember<&SpaceShip::SetAstrometricsListener>,
+
+            // The remaining functions cover already tested behavior, but just
+            // fill the ops table.
+            .SetDefenseCondition = DerivedBinder::BindMember<&SpaceShip::SetDefenseCondition>,
+            .GetFuelRemaining = DerivedBinder::BindMember<&SpaceShip::GetFuelRemaining>,
+            .AddFuelTank = DerivedBinder::BindMember<&SpaceShip::AddFuelTank>,
+        };
+
+        return SpaceShipBinder::BindOps<fidl_test_spaceship_SpaceShip_dispatch>(
+            dispatcher, fbl::move(channel), this, &kOps);
+    }
+};
+
+} // namespace
 
 BEGIN_TEST_CASE(spaceship_tests_cpp)
 RUN_NAMED_TEST("fidl.test.spaceship.SpaceShip test", spaceship_test)

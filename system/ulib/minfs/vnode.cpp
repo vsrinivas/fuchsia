@@ -75,6 +75,52 @@ zx_status_t NextDirent(Dirent* de, DirectoryOffset* offs) {
     return kDirIteratorNext;
 }
 
+#ifdef __Fuchsia__
+
+// MinfsConnection overrides the base Connection class to allow Minfs to
+// dispatch its own ordinals.
+class MinfsConnection : public fs::Connection {
+public:
+    using MinfsConnectionBinder = fidl::Binder<MinfsConnection>;
+
+    MinfsConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
+                    uint32_t flags)
+            : Connection(vfs, fbl::move(vnode), fbl::move(channel), flags) {}
+
+private:
+    VnodeMinfs& GetVnodeMinfs() const {
+        return reinterpret_cast<VnodeMinfs&>(GetVnode());
+    }
+
+    zx_status_t GetMetrics(fidl_txn_t* txn) {
+        return GetVnodeMinfs().GetMetrics(txn);
+    }
+
+    zx_status_t ToggleMetrics(bool enable, fidl_txn_t* txn) {
+        return GetVnodeMinfs().ToggleMetrics(enable, txn);
+    }
+
+    static const fuchsia_minfs_Minfs_ops* Ops() {
+        static const fuchsia_minfs_Minfs_ops kMinfsOps = {
+            .GetMetrics = MinfsConnectionBinder::BindMember<&MinfsConnection::GetMetrics>,
+            .ToggleMetrics = MinfsConnectionBinder::BindMember<&MinfsConnection::ToggleMetrics>,
+        };
+        return &kMinfsOps;
+    }
+
+    zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) final {
+        fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+        if (hdr->ordinal >= fuchsia_minfs_MinfsGetMetricsOrdinal &&
+            hdr->ordinal <= fuchsia_minfs_MinfsToggleMetricsOrdinal) {
+            return fuchsia_minfs_Minfs_dispatch(this, txn, msg, Ops());
+        }
+        zx_handle_close_many(msg->handles, msg->num_handles);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+};
+
+#endif
+
 } // namespace anonymous
 
 void VnodeMinfs::SetIno(ino_t ino) {
@@ -1106,47 +1152,6 @@ zx_status_t VnodeMinfs::ValidateFlags(uint32_t flags) {
 }
 
 #ifdef __Fuchsia__
-
-// MinfsConnection overrides the base Connection class to allow Minfs to
-// dispatch its own ordinals.
-class MinfsConnection : public fs::Connection {
-public:
-    MinfsConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
-                    uint32_t flags)
-            : Connection(vfs, fbl::move(vnode), fbl::move(channel), flags) {}
-
-private:
-    VnodeMinfs& GetVnodeMinfs() const {
-        return reinterpret_cast<VnodeMinfs&>(GetVnode());
-    }
-
-    zx_status_t GetMetrics(fidl_txn_t* txn) {
-        return GetVnodeMinfs().GetMetrics(txn);
-    }
-
-    zx_status_t ToggleMetrics(bool enable, fidl_txn_t* txn) {
-        return GetVnodeMinfs().ToggleMetrics(enable, txn);
-    }
-
-    static const fuchsia_minfs_Minfs_ops* Ops() {
-        static const fuchsia_minfs_Minfs_ops kMinfsOps = {
-            .GetMetrics = fidl::BindMember<&MinfsConnection::GetMetrics>,
-            .ToggleMetrics = fidl::BindMember<&MinfsConnection::ToggleMetrics>,
-        };
-        return &kMinfsOps;
-    }
-
-    zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) final {
-        fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-        if (hdr->ordinal >= fuchsia_minfs_MinfsGetMetricsOrdinal &&
-            hdr->ordinal <= fuchsia_minfs_MinfsToggleMetricsOrdinal) {
-            return fuchsia_minfs_Minfs_dispatch(this, txn, msg, Ops());
-        }
-        zx_handle_close_many(msg->handles, msg->num_handles);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-};
-
 zx_status_t VnodeMinfs::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
     return vfs->ServeConnection(fbl::make_unique<MinfsConnection>(
         vfs, fbl::WrapRefPtr(this), fbl::move(channel), flags));
