@@ -6,6 +6,7 @@ $VerifiedPlatform linux-amd64
 $VerifiedPlatform mac-amd64
 
 $ParanoidMode CheckPresence
+$ResolvedVersions fuchsia.versions
 
 # GN
 gn/gn/${platform} git_revision:106b823805adcc043b2bfe5bc21d58f160a28a7b
