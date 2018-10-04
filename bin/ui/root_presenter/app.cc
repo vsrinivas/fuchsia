@@ -148,20 +148,20 @@ void App::AddPresentation(std::unique_ptr<Presentation> presentation) {
 void App::HACK_SetRendererParams(
     bool enable_clipping,
     ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) {
-  renderer_params_.clipping_enabled.set_value(enable_clipping);
+  renderer_params_.clipping_enabled = enable_clipping;
   FXL_LOG(INFO)
       << "Presenter::HACK_SetRendererParams: Setting clipping enabled to "
       << (enable_clipping ? "true" : "false");
   for (auto& param : *params) {
     switch (param.Which()) {
       case ::fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique:
-        renderer_params_.shadow_technique.set_value(param.shadow_technique());
+        renderer_params_.shadow_technique = param.shadow_technique();
         FXL_LOG(INFO)
             << "Presenter::HACK_SetRendererParams: Setting shadow technique to "
             << fidl::ToUnderlying(param.shadow_technique());
         continue;
       case fuchsia::ui::gfx::RendererParam::Tag::kRenderFrequency:
-        renderer_params_.render_frequency.set_value(param.render_frequency());
+        renderer_params_.render_frequency = param.render_frequency();
         FXL_LOG(INFO)
             << "Presenter::HACK_SetRendererParams: Setting render frequency to "
             << fidl::ToUnderlying(param.render_frequency());
