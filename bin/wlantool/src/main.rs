@@ -5,7 +5,7 @@
 #![feature(async_await, await_macro, futures_api, arbitrary_self_types, pin)]
 #![deny(warnings)]
 
-use failure::{format_err, Error, ResultExt};
+use failure::{bail, format_err, Error, ResultExt};
 use fidl::endpoints;
 use fidl_fuchsia_wlan_device_service::{self as wlan_service, DeviceServiceMarker,
                                        DeviceServiceProxy};
@@ -16,6 +16,7 @@ use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use std::fmt;
+use std::str::FromStr;
 use structopt::StructOpt;
 
 mod opts;
@@ -149,7 +150,7 @@ async fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> Result<(), Error>
             match st.connected_to {
                 Some(bss) => {
                     println!("Connected to '{}' (bssid {})",
-                    String::from_utf8_lossy(&bss.ssid), Bssid(bss.bssid));
+                    String::from_utf8_lossy(&bss.ssid), MacAddr(bss.bssid));
                 },
                 None => println!("Not connected to a network"),
             }
@@ -181,12 +182,33 @@ async fn do_ap(cmd: opts::ApCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     Ok(())
 }
 
-struct Bssid([u8; 6]);
+#[derive(Debug, PartialEq)]
+struct MacAddr([u8; 6]);
 
-impl fmt::Display for Bssid {
+impl fmt::Display for MacAddr {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
                self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5])
+    }
+}
+
+impl FromStr for MacAddr {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut bytes = [0; 6];
+        let mut index = 0;
+
+        for octet in s.split(|c| c == ':' || c == '-') {
+            if index == 6 {
+                bail!("Too many octets");
+            }
+            bytes[index] = u8::from_str_radix(octet, 16)?;
+            index += 1;
+        }
+
+        if index != 6 { bail!("Too few octets"); }
+        Ok(MacAddr(bytes))
     }
 }
 
@@ -246,7 +268,7 @@ fn print_scan_result(ess: fidl_sme::EssInfo) {
     }
 
     println!("{} {:4} {:8} {:9} {}",
-        Bssid(ess.best_bss.bssid),
+        MacAddr(ess.best_bss.bssid),
         ess.best_bss.rx_dbm,
         ess.best_bss.channel,
         if ess.best_bss.protected { "Y" } else { "N" },
@@ -306,6 +328,17 @@ mod tests {
     #[test]
     fn format_bssid() {
         assert_eq!("01:02:03:ab:cd:ef",
-               format!("{}", Bssid([ 0x01, 0x02, 0x03, 0xab, 0xcd, 0xef])));
+               format!("{}", MacAddr([ 0x01, 0x02, 0x03, 0xab, 0xcd, 0xef])));
+    }
+
+    #[test]
+    fn mac_addr_from_str() {
+        assert_eq!(MacAddr::from_str("01:02:03:ab:cd:ef").unwrap(),
+            MacAddr([0x01, 0x02, 0x03, 0xab, 0xcd, 0xef]));
+        assert_eq!(MacAddr::from_str("01:02-03:ab-cd:ef").unwrap(),
+            MacAddr([0x01, 0x02, 0x03, 0xab, 0xcd, 0xef]));
+        assert!(MacAddr::from_str("01:02:03:ab:cd").is_err());
+        assert!(MacAddr::from_str("01:02:03:04:05:06:07").is_err());
+        assert!(MacAddr::from_str("01:02:gg:gg:gg:gg").is_err());
     }
 }
