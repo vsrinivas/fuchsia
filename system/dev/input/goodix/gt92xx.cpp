@@ -72,9 +72,10 @@ int Gt92xxDevice::Thread() {
                 // We are reusing same HID report as ft3x77 to simplify astro integration
                 // so we need to copy from device format to HID structure format
                 for (uint32_t i = 0; i < kMaxPoints; i++) {
-                    gt_rpt_.fingers[i].finger_id = reports[i].id;
-                    gt_rpt_.fingers[i].x = reports[i].x;
-                    gt_rpt_.fingers[i].y = reports[i].y;
+                    gt_rpt_.fingers[i].finger_id = static_cast<uint8_t>((reports[i].id << 2) |
+                        ((i < num_reports) ? 1 : 0));
+                    gt_rpt_.fingers[i].y = reports[i].x;
+                    gt_rpt_.fingers[i].x = reports[i].y;
                 }
                 if (proxy_.is_valid()) {
                     proxy_.IoQueue(reinterpret_cast<uint8_t*>(&gt_rpt_), sizeof(gt92xx_touch_t));
