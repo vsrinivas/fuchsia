@@ -2,17 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/guest/device/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/async/cpp/trap.h>
-#include <lib/component/cpp/startup_context.h>
-#include <lib/fidl/cpp/binding_set.h>
-#include <lib/fxl/logging.h>
 #include <trace-provider/provider.h>
 #include <virtio/balloon.h>
 
-#include "garnet/lib/machina/device/config.h"
-#include "garnet/lib/machina/device/stream_base.h"
+#include "garnet/bin/guest/vmm/device/device_base.h"
+#include "garnet/bin/guest/vmm/device/stream_base.h"
 
 // Per Virtio 1.0 Section 5.5.6, This value is historical, and independent
 // of the guest page size.
@@ -32,7 +27,7 @@ enum class Queue : uint16_t {
 };
 
 // Stream for inflate and deflate queues.
-class BalloonStream : public machina::StreamBase {
+class BalloonStream : public StreamBase {
  public:
   void DoBalloon(const zx::vmo& vmo, uint32_t op) {
     for (; queue_.NextChain(&chain_); chain_.Return()) {
@@ -93,7 +88,7 @@ class BalloonStream : public machina::StreamBase {
 };
 
 // Stream for stats queue.
-class StatsStream : public machina::StreamBase {
+class StatsStream : public StreamBase {
  public:
   void GetMemStats(GetMemStatsCallback callback) {
     if (callbacks_.size() >= kCallbackLimit) {
@@ -145,37 +140,45 @@ class StatsStream : public machina::StreamBase {
 };
 
 // Implementation of a virtio-balloon device.
-class VirtioBalloonImpl : public fuchsia::guest::device::VirtioBalloon {
+class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
+                          public fuchsia::guest::device::VirtioBalloon {
  public:
-  VirtioBalloonImpl(component::StartupContext* context) {
-    context->outgoing().AddPublicService(bindings_.GetHandler(this));
+  VirtioBalloonImpl(component::StartupContext* context) : DeviceBase(context) {}
+
+  // |fuchsia::guest::device::VirtioDevice|
+  void NotifyQueue(uint16_t queue) override {
+    switch (static_cast<Queue>(queue)) {
+      case Queue::INFLATE:
+        inflate_stream_.DoBalloon(phys_mem_.vmo(), ZX_VMO_OP_DECOMMIT);
+        break;
+      case Queue::DEFLATE:
+        // If demand paging is preferred, ignore the deflate queue when
+        // processing notifications.
+        if (!demand_page_) {
+          deflate_stream_.DoBalloon(phys_mem_.vmo(), ZX_VMO_OP_COMMIT);
+        }
+        break;
+      case Queue::STATS:
+        stats_stream_.DoStats();
+        break;
+      default:
+        FXL_CHECK(false) << "Queue index " << queue << " out of range";
+        __UNREACHABLE;
+    }
   }
 
  private:
   // |fuchsia::guest::device::VirtioBalloon|
   void Start(fuchsia::guest::device::StartInfo start_info,
              bool demand_page) override {
-    FXL_CHECK(!event_) << "Device has already been started";
-
-    event_ = std::move(start_info.event);
-    zx_status_t status = phys_mem_.Init(std::move(start_info.vmo));
-    FXL_CHECK(status == ZX_OK)
-        << "Failed to init guest physical memory " << status;
-
-    if (start_info.guest) {
-      trap_addr_ = start_info.trap.addr;
-      status = trap_.SetTrap(async_get_default_dispatcher(), start_info.guest,
-                             start_info.trap.addr, start_info.trap.size);
-      FXL_CHECK(status == ZX_OK) << "Failed to set trap " << status;
-    }
-
+    PrepStart(std::move(start_info));
     demand_page_ = demand_page;
-    inflate_stream_.Init(phys_mem_,
-                         fit::bind_member(this, &VirtioBalloonImpl::Interrupt));
-    deflate_stream_.Init(phys_mem_,
-                         fit::bind_member(this, &VirtioBalloonImpl::Interrupt));
-    stats_stream_.Init(phys_mem_,
-                       fit::bind_member(this, &VirtioBalloonImpl::Interrupt));
+    inflate_stream_.Init(phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(
+                                        this, &VirtioBalloonImpl::Interrupt));
+    deflate_stream_.Init(phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(
+                                        this, &VirtioBalloonImpl::Interrupt));
+    stats_stream_.Init(phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(
+                                      this, &VirtioBalloonImpl::Interrupt));
   }
 
   // |fuchsia::guest::device::VirtioBalloon|
@@ -208,56 +211,12 @@ class VirtioBalloonImpl : public fuchsia::guest::device::VirtioBalloon {
   }
 
   // |fuchsia::guest::device::VirtioDevice|
-  void NotifyQueue(uint16_t queue) override {
-    switch (static_cast<Queue>(queue)) {
-      case Queue::INFLATE:
-        inflate_stream_.DoBalloon(phys_mem_.vmo(), ZX_VMO_OP_DECOMMIT);
-        break;
-      case Queue::DEFLATE:
-        // If demand paging is preferred, ignore the deflate queue when
-        // processing notifications.
-        if (!demand_page_) {
-          deflate_stream_.DoBalloon(phys_mem_.vmo(), ZX_VMO_OP_COMMIT);
-        }
-        break;
-      case Queue::STATS:
-        stats_stream_.DoStats();
-        break;
-      default:
-        FXL_CHECK(false) << "Queue index " << queue << " out of range";
-        __UNREACHABLE;
-    }
-  }
-
-  // |fuchsia::guest::device::VirtioDevice|
   void Ready(uint32_t negotiated_features) override {
     negotiated_features_ = negotiated_features;
   }
 
-  // Signals an interrupt for the device.
-  zx_status_t Interrupt(uint8_t actions) {
-    return event_.signal(0, static_cast<zx_signals_t>(actions)
-                                << machina::kDeviceInterruptShift);
-  }
-
-  void OnQueueNotify(async_dispatcher_t* dispatcher,
-                     async::GuestBellTrapBase* trap, zx_status_t status,
-                     const zx_packet_guest_bell_t* bell) {
-    FXL_CHECK(status == ZX_OK) << "Device trap failed " << status;
-    uint16_t queue = machina::queue_from(trap_addr_, bell->addr);
-    NotifyQueue(queue);
-  }
-
-  fidl::BindingSet<VirtioBalloon> bindings_;
-  zx_gpaddr_t trap_addr_;
-  zx::event event_;
-  machina::PhysMem phys_mem_;
   bool demand_page_;
   uint32_t negotiated_features_;
-
-  async::GuestBellTrapMethod<VirtioBalloonImpl,
-                             &VirtioBalloonImpl::OnQueueNotify>
-      trap_{this};
   BalloonStream inflate_stream_;
   BalloonStream deflate_stream_;
   StatsStream stats_stream_;

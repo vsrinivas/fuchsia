@@ -4,16 +4,13 @@
 
 import("//build/package.gni")
 
-executable("virtio_balloon_bin") {
-  visibility = [ ":*" ]
-
-  output_name = "virtio_balloon"
-
+source_set("lib") {
   sources = [
-    "virtio_balloon.cc",
+    "device_base.h",
+    "stream_base.h",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/lib/machina/device",
     "//garnet/lib/machina/fidl:fuchsia.guest.device",
     "//garnet/public/lib/component/cpp",
@@ -23,39 +20,30 @@ executable("virtio_balloon_bin") {
   ]
 }
 
+executable("virtio_balloon_bin") {
+  visibility = [ ":*" ]
+
+  output_name = "virtio_balloon"
+  sources = [ "virtio_balloon.cc" ]
+  deps = [ ":lib" ]
+}
+
 package("virtio_balloon") {
   binary = "virtio_balloon"
-
-  deps = [
-    ":virtio_balloon_bin",
-  ]
+  deps = [ ":virtio_balloon_bin" ]
 }
 
 executable("virtio_console_bin") {
   visibility = [ ":*" ]
 
   output_name = "virtio_console"
-
-  sources = [
-    "virtio_console.cc",
-  ]
-
-  deps = [
-    "//garnet/lib/machina/device",
-    "//garnet/lib/machina/fidl:fuchsia.guest.device",
-    "//garnet/public/lib/component/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/fs",
-    "//zircon/public/lib/trace-provider",
-  ]
+  sources = [ "virtio_console.cc" ]
+  deps = [ ":lib" ]
 }
 
 package("virtio_console") {
   binary = "virtio_console"
-
-  deps = [
-    ":virtio_console_bin",
-  ]
+  deps = [ ":virtio_console_bin" ]
 }
 
 executable("device_tests") {

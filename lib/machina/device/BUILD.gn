@@ -9,7 +9,6 @@ source_set("device") {
     "config.h",
     "phys_mem.cc",
     "phys_mem.h",
-    "stream_base.h",
     "virtio_queue.cc",
     "virtio_queue.h",
   ]

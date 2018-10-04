@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_DEVICE_STREAM_BASE_H_
-#define GARNET_LIB_MACHINA_DEVICE_STREAM_BASE_H_
+#ifndef GARNET_BIN_GUEST_VMM_DEVICE_STREAM_BASE_H_
+#define GARNET_BIN_GUEST_VMM_DEVICE_STREAM_BASE_H_
 
 #include "garnet/lib/machina/device/virtio_queue.h"
-
-namespace machina {
 
 // Abstracts out the queue handling logic into a stream.
 class StreamBase {
@@ -31,6 +29,4 @@ class StreamBase {
   machina::VirtioDescriptor desc_;
 };
 
-}  // namespace machina
-
-#endif  // GARNET_LIB_MACHINA_DEVICE_STREAM_BASE_H_
+#endif  // GARNET_BIN_GUEST_VMM_DEVICE_STREAM_BASE_H_
