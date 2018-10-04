@@ -181,8 +181,8 @@ static bool channel_rw_etc_test() {
     ASSERT_EQ(channel[1].read_etc(0u, nullptr, 0u, nullptr, recv, 2, &h_count), ZX_OK);
 
     ASSERT_EQ(h_count, 2u);
-    ASSERT_EQ(recv[0].type, ZX_OBJ_TYPE_EVENTPAIR, ZX_OK);
-    ASSERT_EQ(recv[1].type, ZX_OBJ_TYPE_EVENTPAIR, ZX_OK);
+    ASSERT_EQ(recv[0].type, ZX_OBJ_TYPE_EVENTPAIR);
+    ASSERT_EQ(recv[1].type, ZX_OBJ_TYPE_EVENTPAIR);
 
     ASSERT_EQ(zx_handle_close(recv[0].handle), ZX_OK);
     ASSERT_EQ(zx_handle_close(recv[1].handle), ZX_OK);
