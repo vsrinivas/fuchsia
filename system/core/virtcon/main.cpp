@@ -251,19 +251,20 @@ static zx_status_t new_vc_cb(port_handler_t* ph, zx_signals_t signals, uint32_t 
     return ZX_OK;
 }
 
-static void input_dir_event(unsigned evt, const char* name) {
+static zx_status_t input_dir_event(unsigned evt, const char* name) {
     if ((evt != fuchsia_io_WATCH_EVENT_EXISTING) && (evt != fuchsia_io_WATCH_EVENT_ADDED)) {
-        return;
+        return ZX_OK;
     }
 
     printf("vc: new input device /dev/class/input/%s\n", name);
 
     int fd;
     if ((fd = openat(input_dir_fd, name, O_RDONLY)) < 0) {
-        return;
+        return ZX_OK;
     }
 
     new_input_device(fd, handle_key_press);
+    return ZX_OK;
 }
 
 static void setup_dir_watcher(const char* dir,
@@ -297,10 +298,11 @@ static void setup_dir_watcher(const char* dir,
     port_wait(&port, ph);
 }
 
-static bool handle_dir_event(port_handler_t* ph, zx_signals_t signals,
-                             void (*event_handler)(unsigned event, const char* msg)) {
+zx_status_t handle_device_dir_event(port_handler_t* ph, zx_signals_t signals,
+                                    zx_status_t (*event_handler)(unsigned event, const char* msg)) {
     if (!(signals & ZX_CHANNEL_READABLE)) {
-        return false;
+        printf("vc: device directory died\n");
+        return ZX_ERR_STOP;
     }
 
     // Buffer contains events { Opcode, Len, Name[Len] }
@@ -309,7 +311,8 @@ static bool handle_dir_event(port_handler_t* ph, zx_signals_t signals,
     uint8_t buf[fuchsia_io_MAX_BUF + 1];
     uint32_t len;
     if (zx_channel_read(ph->handle, 0, buf, NULL, sizeof(buf) - 1, 0, &len, NULL) < 0) {
-        return false;
+        printf("vc: failed to read from device directory\n");
+        return ZX_ERR_STOP;
     }
 
     uint8_t* msg = buf;
@@ -317,24 +320,25 @@ static bool handle_dir_event(port_handler_t* ph, zx_signals_t signals,
         uint8_t event = *msg++;
         uint8_t namelen = *msg++;
         if (len < (namelen + 2u)) {
-            return false;
+            printf("vc: malformed device directory message\n");
+            return ZX_ERR_STOP;
         }
         // add temporary nul
         uint8_t tmp = msg[namelen];
         msg[namelen] = 0;
-        event_handler(event, (char*)msg);
+        zx_status_t status = event_handler(event, (char*)msg);
+        if (status != ZX_OK) {
+            return status;
+        }
         msg[namelen] = tmp;
         msg += namelen;
         len -= (namelen + 2u);
     }
-    return true;
+    return ZX_OK;
 }
 
 static zx_status_t input_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    if (!handle_dir_event(ph, signals, input_dir_event)) {
-        return ZX_ERR_STOP;
-    }
-    return ZX_OK;
+    return handle_device_dir_event(ph, signals, input_dir_event);
 }
 
 void set_log_listener_active(bool active) {

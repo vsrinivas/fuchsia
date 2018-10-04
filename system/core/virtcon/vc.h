@@ -171,3 +171,5 @@ void vc_show_active();
 bool vc_display_init(void);
 
 void set_log_listener_active(bool active);
+zx_status_t handle_device_dir_event(port_handler_t* ph, zx_signals_t signals,
+                                    zx_status_t (*event_handler)(unsigned event, const char* msg));

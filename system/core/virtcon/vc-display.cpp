@@ -4,8 +4,13 @@
 
 #include <string.h>
 #include <port/port.h>
+#include <fbl/unique_fd.h>
 #include <fcntl.h>
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fdio/io.h>
 #include <lib/fidl/coding.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/channel.h>
 #include <zircon/assert.h>
 #include <zircon/device/display-controller.h>
 #include <zircon/process.h>
@@ -16,8 +21,15 @@
 #include "fuchsia/display/c/fidl.h"
 #include "vc.h"
 
-static port_handler_t dc_ph;
+static constexpr const char* kDisplayControllerDir = "/dev/class/display-controller";
+
+static int dc_dir_fd;
 static int dc_fd;
+
+// At any point, |dc_ph| will either be waiting on the display controller device directory
+// for a display controller instance or it will be waiting on a display controller interface
+// for messages.
+static port_handler_t dc_ph;
 
 typedef struct display_info {
     uint64_t id;
@@ -41,6 +53,8 @@ static fuchsia_display_ImageConfig image_config;
 
 // remember whether the virtual console controls the display
 bool g_vc_owns_display = false;
+
+static void vc_find_display_controller();
 
 static zx_status_t vc_set_mode(uint8_t mode) {
     fuchsia_display_ControllerSetVirtconModeRequest request;
@@ -509,6 +523,9 @@ static zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals,
 
         close(dc_fd);
         zx_handle_close(dc_ph.handle);
+
+        vc_find_display_controller();
+
         return ZX_ERR_STOP;
     }
     ZX_DEBUG_ASSERT(signals & ZX_CHANNEL_READABLE);
@@ -548,32 +565,86 @@ static zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals,
     return ZX_OK;
 }
 
-bool vc_display_init() {
-    for (;;) {
-        if ((dc_fd= open("/dev/class/display-controller/000/virtcon", O_RDWR)) >= 0) {
-            break;
-        }
-        usleep(100000);
+static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
+    if ((evt != fuchsia_io_WATCH_EVENT_EXISTING) && (evt != fuchsia_io_WATCH_EVENT_ADDED)) {
+        return ZX_OK;
     }
 
-    if (ioctl_display_controller_get_handle(dc_fd, &dc_ph.handle) != sizeof(zx_handle_t)) {
+    printf("vc: new display device %s/%s\n", kDisplayControllerDir, name);
+
+    fbl::unique_fd fd(openat(dc_dir_fd, name, O_RDONLY));
+    if (!fd) {
+        printf("vc: failed to open display controller device\n");
+        return ZX_OK;
+    }
+
+    zx::channel dc_channel;
+    if (ioctl_display_controller_get_handle(fd.get(), dc_channel.reset_and_get_address())
+            != sizeof(zx_handle_t)) {
         printf("vc: failed to get display controller handle\n");
-        return false;
+        return ZX_OK;
     }
 
     zx_status_t status = vc_set_mode(getenv("virtcon.hide-on-boot") == nullptr ?
             fuchsia_display_VirtconMode_FALLBACK : fuchsia_display_VirtconMode_INACTIVE);
     if (status != ZX_OK) {
         printf("vc: Failed to set initial ownership %d\n", status);
-        return false;
+        return ZX_OK;
     }
+
+    zx_handle_close(dc_ph.handle);
+    dc_fd = fd.release();
+    dc_ph.handle = dc_channel.release();
 
     dc_ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     dc_ph.func = dc_callback_handler;
     if ((status = port_wait(&port, &dc_ph)) != ZX_OK) {
         printf("vc: Failed to set port waiter %d\n", status);
+        vc_find_display_controller();
+    }
+    return ZX_ERR_STOP;
+}
+
+static zx_status_t vc_dc_dir_event_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+    return handle_device_dir_event(ph, signals, vc_dc_event);
+}
+
+static void vc_find_display_controller() {
+    zx::channel client, server;
+    if (zx::channel::create(0, &client, &server) != ZX_OK) {
+        printf("vc: Failed to create dc watcher channel\n");
+        return;
+    }
+
+    fdio_t* fdio = fdio_unsafe_fd_to_io(dc_dir_fd);
+    zx_status_t status;
+    zx_status_t io_status = fuchsia_io_DirectoryWatch(fdio_unsafe_borrow_channel(fdio),
+                                                      fuchsia_io_WATCH_MASK_ALL, 0,
+                                                      server.release(),
+                                                      &status);
+    fdio_unsafe_release(fdio);
+
+    if (io_status != ZX_OK || status != ZX_OK) {
+        printf("vc: Failed to watch dc directory\n");
+        return;
+    }
+
+    dc_ph.handle = client.release();
+    dc_ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    dc_ph.func = vc_dc_dir_event_cb;
+    if (port_wait(&port, &dc_ph) != ZX_OK) {
+        printf("vc: Failed to wait on dc directory\n");
+    }
+}
+
+bool vc_display_init() {
+    fbl::unique_fd fd(open(kDisplayControllerDir, O_DIRECTORY | O_RDONLY));
+    if (!fd) {
         return false;
     }
+    dc_dir_fd = fd.release();
+
+    vc_find_display_controller();
 
     return true;
 }
