@@ -608,6 +608,7 @@ fvm_sparse_args = [
                     "sparse",
                     "--compress",
                     "lz4",
+                    "--zxcrypt",
                   ] + fvm_slice_args
 
 # fvm.blk creates a non-sparse FVM partition image containing the blob
