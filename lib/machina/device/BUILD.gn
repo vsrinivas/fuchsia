@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 
-shared_library("device") {
+source_set("device") {
   sources = [
     "config.h",
     "phys_mem.cc",

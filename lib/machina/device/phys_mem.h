@@ -10,7 +10,7 @@
 
 namespace machina {
 
-class FXL_EXPORT PhysMem {
+class PhysMem {
  public:
   zx_status_t Init(zx::vmo vmo);
   zx_status_t Init(size_t mem_size);

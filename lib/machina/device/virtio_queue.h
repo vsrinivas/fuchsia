@@ -57,7 +57,7 @@ struct VirtioDescriptor {
   bool writable;
 };
 
-class FXL_EXPORT VirtioChain {
+class VirtioChain {
  public:
   VirtioChain() = default;
   VirtioChain(VirtioQueue* queue, uint16_t head);
@@ -76,7 +76,7 @@ class FXL_EXPORT VirtioChain {
   bool has_next_ = false;
 };
 
-class FXL_EXPORT VirtioQueue {
+class VirtioQueue {
  public:
   // The signal asserted when there are available descriptors in the queue.
   static constexpr zx_signals_t SIGNAL_QUEUE_AVAIL = ZX_USER_SIGNAL_0;
