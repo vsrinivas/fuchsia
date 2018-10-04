@@ -24,14 +24,20 @@ namespace sherlock {
 
 zx_status_t Sherlock::Create(zx_device_t* parent) {
     platform_bus_protocol_t pbus;
+    iommu_protocol_t iommu;
 
     auto status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &pbus);
     if (status != ZX_OK) {
         return status;
     }
 
+    status = device_get_protocol(parent, ZX_PROTOCOL_IOMMU, &iommu);
+    if (status != ZX_OK) {
+        return status;
+    }
+
     fbl::AllocChecker ac;
-    auto board = fbl::make_unique_checked<Sherlock>(&ac, parent, &pbus);
+    auto board = fbl::make_unique_checked<Sherlock>(&ac, parent, &pbus, &iommu);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -51,10 +57,18 @@ zx_status_t Sherlock::Create(zx_device_t* parent) {
 }
 
 int Sherlock::Thread() {
+    // Load protocol implementation drivers first.
     if (GpioInit() != ZX_OK) {
         zxlogf(ERROR, "GpioInit() failed\n");
         return -1;
     }
+
+    // Then the platform device drivers.
+    if (UsbInit() != ZX_OK) {
+        zxlogf(ERROR, "UsbInit() failed\n");
+        return -1;
+    }
+
     return 0;
 }
 

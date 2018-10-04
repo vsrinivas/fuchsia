@@ -80,7 +80,7 @@ static pbus_dev_t gpio_dev = [](){
 zx_status_t Sherlock::GpioInit() {
     zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __func__, status);
         return status;
     }
 

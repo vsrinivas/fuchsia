@@ -11,6 +11,13 @@
 #define T931_GPIO_INTERRUPT_BASE        0xffd00000
 #define T931_GPIO_INTERRUPT_LENGTH      0x10000
 
+#define T931_USB0_BASE                  0xff500000
+#define T931_USB0_LENGTH                0x100000
+
+#define T931_USBPHY21_BASE              0xff63a000
+#define T931_USBPHY21_LENGTH            0x2000
+
+#define T931_USB0_IRQ                   62
 #define T931_GPIO_IRQ_0                 96
 #define T931_GPIO_IRQ_1                 97
 #define T931_GPIO_IRQ_2                 98

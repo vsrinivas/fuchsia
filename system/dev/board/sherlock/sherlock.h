@@ -8,10 +8,17 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/iommu.h>
 #include <ddktl/protocol/platform-bus.h>
 #include <fbl/macros.h>
 
 namespace sherlock {
+
+// BTI IDs for our devices
+enum {
+    BTI_BOARD,
+    BTI_USB_XHCI,
+};
 
 class Sherlock;
 using SherlockType = ddk::Device<Sherlock>;
@@ -19,8 +26,8 @@ using SherlockType = ddk::Device<Sherlock>;
 // This is the main class for the platform bus driver.
 class Sherlock : public SherlockType {
 public:
-    explicit Sherlock(zx_device_t* parent, platform_bus_protocol_t* pbus)
-        : SherlockType(parent), pbus_(pbus) {}
+    explicit Sherlock(zx_device_t* parent, platform_bus_protocol_t* pbus, iommu_protocol_t* iommu)
+        : SherlockType(parent), pbus_(pbus), iommu_(iommu) {}
 
     static zx_status_t Create(zx_device_t* parent);
 
@@ -32,9 +39,11 @@ private:
 
     zx_status_t Start();
     zx_status_t GpioInit();
+    zx_status_t UsbInit();
     int Thread();
 
     ddk::PlatformBusProtocolProxy pbus_;
+    ddk::IommuProtocolProxy iommu_;
     thrd_t thread_;
 };
 
