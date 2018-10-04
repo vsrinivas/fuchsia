@@ -51,7 +51,7 @@ fx build
 
 ### 1. Boot with networking
 
-Boot the target system with networing support. For
+Boot the target system with networking support. For
 [QEMU support](https://fuchsia.googlesource.com/docs/+/HEAD/getting_started.md)
 you may get some prompts for extra steps required:
 
@@ -201,7 +201,7 @@ manual; steps.
 
 Be aware that we aren't yet treating the protocol as frozen. Ideally the
 debugger will be from the same build as the operating system itself (more
-precicely, it needs to match the debug\_agent).
+precisely, it needs to match the debug\_agent).
 
 The main thing will be finding symbols for your binary as we have not designed
 the system for registering new symbols with the debugger.
@@ -230,7 +230,7 @@ The best way to debug issues around finding symbols is the `sym-stat` command.
 
 ## Running the tests
 
-There are tests for the debugger that run on the host. These are relavant
+There are tests for the debugger that run on the host. These are relevant
 if you're working on the debugger client.
 
 ```sh
