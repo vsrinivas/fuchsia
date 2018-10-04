@@ -6,13 +6,14 @@ package main
 
 import (
 	"net"
-	"reflect"
 	"syscall/zx"
 	"syscall/zx/fidl"
 	"testing"
 
 	"fidl/fuchsia/netstack"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/netstack/tcpip/stack"
 )
 
@@ -86,8 +87,8 @@ func TestRouteTableTransactions(t *testing.T) {
 
 		actual, err := netstackServiceImpl.GetRouteTable()
 		AssertNoError(t, err)
-		if !reflect.DeepEqual(actual, newRouteTable) {
-			t.Errorf("expected %+v, actual %+v", newRouteTable, actual)
+		if diff := cmp.Diff(actual, newRouteTable, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+			t.Errorf("(-want +got)\n%s", diff)
 		}
 	})
 
