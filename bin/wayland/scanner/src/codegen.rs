@@ -23,11 +23,16 @@ impl<W: io::Write> Codegen<W> {
     }
 
     fn codegen_protocol(&mut self, protocol: ast::Protocol) -> Result {
+        writeln!(self.w, "// GENERATED FILE -- DO NOT EDIT")?;
+        if let Some(ref c) = protocol.copyright {
+            writeln!(self.w, "//")?;
+            for line in c.trim().lines() {
+                writeln!(self.w, "// {}", line.trim())?;
+            }
+        }
         writeln!(
             self.w,
-            "\
-// GENERATED FILE -- DO NOT EDIT
-
+            "
 use bitflags::*;
 use failure;
 use \
@@ -92,29 +97,32 @@ use \
     ///    Request1 { arg1: u32 },
     ///    Request2 { name: String},
     ///  }
-    fn codegen_message_enum<F: FnMut(&ast::Arg) -> String>(
+    fn codegen_message_enum<F: Fn(&ast::Arg) -> String>(
         &mut self, name: &str, messages: &Vec<ast::Message>, arg_formatter: F,
     ) -> Result {
         writeln!(self.w, "#[derive(Debug)]");
         writeln!(self.w, "pub enum {enum_name} {{", enum_name = name)?;
         for message in messages.iter() {
-            let fields = message
-                .args
-                .iter()
-                .map(|arg| {
-                    format!(
-                        "{arg_name}: {arg_type}",
-                        arg_name = arg.name,
-                        arg_type = arg_formatter(&arg)
-                    )
-                }).collect::<Vec<String>>()
-                .join(", ");
+            if let Some(ref d) = message.description {
+                self.codegen_description(d, "    ")?;
+            }
             writeln!(
                 self.w,
-                "    {enum_variant} {{ {enum_fields} }},",
-                enum_variant = to_camel_case(&message.name),
-                enum_fields = fields
+                "    {enum_variant} {{",
+                enum_variant = to_camel_case(&message.name)
             )?;
+            for arg in message.args.iter() {
+                if let Some(ref summary) = arg.summary {
+                    writeln!(self.w, "        /// {}", summary.trim())?;
+                }
+                writeln!(
+                    self.w,
+                    "        {arg_name}: {arg_type},",
+                    arg_name = arg.name,
+                    arg_type = arg_formatter(&arg)
+                )?;
+            }
+            writeln!(self.w, "    }},")?;
         }
         writeln!(self.w, "}}")?;
         Ok(())
@@ -265,6 +273,10 @@ impl FromArgs for Request {{
     ///   }
     fn codegen_interface_trait(&mut self, interface: &ast::Interface) -> Result {
         let camel_name = to_camel_case(&interface.name);
+        if let Some(ref d) = interface.description {
+            self.codegen_description(d, "")?;
+        }
+        writeln!(self.w, "#[derive(Debug)]")?;
         writeln!(self.w, "pub struct {};", camel_name)?;
         writeln!(self.w, "")?;
         writeln!(self.w, "impl Interface for {} {{", camel_name)?;
@@ -311,11 +323,17 @@ impl FromArgs for Request {{
     }
 
     fn codegen_value_enum(&mut self, e: &ast::Enum) -> Result {
+        if let Some(ref d) = e.description {
+            self.codegen_description(d, "")?;
+        }
         writeln!(self.w, "#[derive(Copy, Clone, Debug, Eq, PartialEq)]")?;
         writeln!(self.w, "#[repr(u32)]")?;
         writeln!(self.w, "pub enum {} {{", e.rust_name())?;
         for entry in e.entries.iter() {
-            writeln!(self.w, "    {} = {},", entry.rust_name(), entry.value)?;
+            if let Some(ref s) = entry.summary {
+                writeln!(self.w, "    /// {},", s.trim())?;
+            }
+            writeln!(self.w, "    {},", entry.rust_name())?;
         }
         writeln!(self.w, "}}")?;
         writeln!(self.w, "")?;
@@ -344,8 +362,14 @@ impl FromArgs for Request {{
 
     fn codegen_bitflags_enum(&mut self, e: &ast::Enum) -> Result {
         writeln!(self.w, "::bitflags::bitflags! {{")?;
+        if let Some(ref d) = e.description {
+            self.codegen_description(d, "    ")?;
+        }
         writeln!(self.w, "    pub struct {}: u32 {{", e.rust_name())?;
         for entry in e.entries.iter() {
+            if let Some(ref s) = entry.summary {
+                writeln!(self.w, "        /// {},", s.trim())?;
+            }
             writeln!(
                 self.w,
                 "        const {} = {};",
@@ -355,6 +379,16 @@ impl FromArgs for Request {{
         }
         writeln!(self.w, "    }}")?;
         writeln!(self.w, "}}")?;
+        Ok(())
+    }
+
+    fn codegen_description(&mut self, d: &ast::Description, prefix: &str) -> Result {
+        writeln!(self.w, "");
+        writeln!(self.w, "{}/// {}", prefix, d.summary.as_str().trim())?;
+        writeln!(self.w, "{}///", prefix)?;
+        for s in d.description.trim().lines() {
+            writeln!(self.w, "{}/// {}", prefix, s.trim())?;
+        }
         Ok(())
     }
 }
