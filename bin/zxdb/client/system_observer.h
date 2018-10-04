@@ -28,11 +28,9 @@ class SystemObserver {
   virtual void DidCreateBreakpoint(Breakpoint* breakpoint) {}
   virtual void WillDestroyBreakpoint(Breakpoint* breakpoint) {}
 
-  // Notification that the symbol mapping file was tried to load. The success
-  // of this will be in "ids_loaded", and a message (either good or bad)
-  // about the operation will be in "msg".
-  virtual void DidTryToLoadSymbolMapping(bool ids_loaded,
-                                         const std::string& msg) {}
+  // Indicates an informational message from the symbol indexing system.
+  // This will be things like "X" symbols loaded from "Y".
+  virtual void OnSymbolIndexingInformation(const std::string& msg) {}
 };
 
 }  // namespace zxdb

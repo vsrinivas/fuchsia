@@ -17,6 +17,14 @@ namespace zxdb {
 SystemImpl::SystemImpl(Session* session)
     : System(session), weak_factory_(this) {
   AddNewTarget(std::make_unique<TargetImpl>(this));
+
+  // Forward all messages from the symbol index to our observers. It's OK to
+  // bind |this| because the symbol index is owned by |this|.
+  symbols_.build_id_index().set_information_callback(
+      [this](const std::string& msg) {
+    for (auto& observer : observers())
+      observer.OnSymbolIndexingInformation(msg);
+  });
 }
 
 SystemImpl::~SystemImpl() {
@@ -154,13 +162,10 @@ void SystemImpl::Continue() {
 }
 
 void SystemImpl::DidConnect() {
-  // (Re)load the build ID file after connection. This needs to be done for
-  // every connection since a new image could have been compiled and launched
-  // which will have a different build ID file.
-  std::string symbol_msg;
-  bool ids_loaded = symbols_.LoadBuildIDFile(&symbol_msg);
-  for (auto& observer : observers())
-    observer.DidTryToLoadSymbolMapping(ids_loaded, symbol_msg);
+  // Force reload the symbol mappings after connection. This needs to be done
+  // for every connection since a new image could have been compiled and
+  // launched which will have a different build ID file.
+  symbols_.build_id_index().ClearCache();
 }
 
 void SystemImpl::DidDisconnect() {

@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/symbols/build_id_index.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/ref_counted.h"
 
@@ -56,15 +57,7 @@ class SystemSymbols {
   // Returns the directory to which paths are relative.
   const std::string& build_dir() const { return build_dir_; }
 
-  // Loads the build ID file, clearing existing state (it can be called more
-  // than once to reload). Returns true if the load succeeded. In both success
-  // and failure case, *msg will be filled with an informational message. See
-  // also AddBuildIDToFileMapping().
-  bool LoadBuildIDFile(std::string* msg);
-
-  // Explicitly inserts an ID mapping. Used for unit tests.
-  void AddBuildIDToFileMapping(const std::string& build_id,
-                               const std::string& file);
+  BuildIDIndex& build_id_index() { return build_id_index_; }
 
   // Injects a ModuleSymbols object for the given build ID. Used for testing.
   // Normally the test would provide a dummy implementation for ModuleSymbols.
@@ -83,10 +76,6 @@ class SystemSymbols {
   Err GetModule(const std::string& name_for_msg, const std::string& build_id,
                 fxl::RefPtr<ModuleRef>* module);
 
-  // Parses the BuildID-to-path mapping file contents. Returns a map from
-  // build ID to local file.
-  static std::map<std::string, std::string> ParseIds(const std::string& input);
-
  private:
   friend ModuleRef;
 
@@ -97,8 +86,7 @@ class SystemSymbols {
   // The directory to which paths are relative.
   std::string build_dir_;
 
-  // Generated from the ids.txt file, this maps a build ID to a local file.
-  std::map<std::string, std::string> build_id_to_file_;
+  BuildIDIndex build_id_index_;
 
   // Index from module build ID to a non-owning ModuleRef pointer. The
   // ModuleRef will notify us when it's being deleted so the pointers stay

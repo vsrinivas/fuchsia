@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/clang/clang.gni")
+
 static_library("symbols") {
   # The client library one directory up instantiates the "Impl" classes using
   # the non-public headers.
@@ -47,6 +49,8 @@ static_library("symbols") {
   sources = [
     "array_type.cc",
     "base_type.cc",
+    "build_id_index.cc",
+    "build_id_index.h",
     "code_block.cc",
     "collection.cc",
     "data_member.cc",
@@ -98,6 +102,18 @@ static_library("symbols") {
   deps = [
     "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
   ]
+
+  if (is_mac) {
+    # This is necessary to find "c++fs" on Mac.
+    # See https://reviews.llvm.org/D45639
+    lib_dirs = [ rebase_path("${clang_prefix}/../lib", ".", root_build_dir) ]
+  }
+
+  libs = [
+    # For the C++17 filesystem API. Currently this isn't in libc++ by
+    # default. If it gets added in the future, we can remove this.
+    "c++fs",
+  ]
 }
 
 static_library("test_support") {
@@ -125,6 +141,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "build_id_index_unittest.cc",
     "code_block_unittest.cc",
     "dwarf_expr_eval_unittest.cc",
     "dwarf_symbol_factory_unittest.cc",
@@ -136,7 +153,6 @@ source_set("tests") {
     "module_symbols_impl_unittest.cc",
     "process_symbols_impl_unittest.cc",
     "symbol_utils_unittest.cc",
-    "system_symbols_unittest.cc",
     "test_symbol_module.cc",
     "type_utils_unittest.cc",
     "variable_location_unittest.cc",

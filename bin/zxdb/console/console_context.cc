@@ -301,10 +301,9 @@ void ConsoleContext::WillDestroyBreakpoint(Breakpoint* breakpoint) {
   breakpoint_to_id_.erase(found_breakpoint);
 }
 
-void ConsoleContext::DidTryToLoadSymbolMapping(bool ids_loaded,
-                                               const std::string& msg) {
+void ConsoleContext::OnSymbolIndexingInformation(const std::string& msg) {
   Console* console = Console::get();
-  console->Output(msg);
+  console->Output(OutputBuffer(Syntax::kComment, msg));
 }
 
 void ConsoleContext::DidCreateProcess(Target* target, Process* process) {

@@ -4,7 +4,6 @@
 
 #include "garnet/bin/debug_agent/process_info.h"
 
-#include <elf.h>
 #include <inttypes.h>
 #include <lib/zx/thread.h>
 #include <link.h>

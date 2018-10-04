@@ -8,8 +8,6 @@
 #include "garnet/bin/zxdb/common/host_util.h"
 #include "garnet/bin/zxdb/symbols/module_symbols_impl.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
-#include "garnet/public/lib/fxl/strings/string_view.h"
-#include "garnet/public/lib/fxl/strings/trim.h"
 
 namespace zxdb {
 
@@ -57,51 +55,18 @@ void SystemSymbols::ModuleRef::SystemSymbolsDeleting() {
 
 // SystemSymbols ---------------------------------------------------------------
 
-SystemSymbols::SystemSymbols() : build_dir_(GetBuildDir()) {}
+SystemSymbols::SystemSymbols() : build_dir_(GetBuildDir()) {
+  // Add the system build ID file to the index. This will only exist in this
+  // location when running in-tree.
+  build_id_index_.AddBuildIDMappingFile(
+      CatPathComponents(build_dir_, "ids.txt"));
+}
 
 SystemSymbols::~SystemSymbols() {
   // Disown any remaining ModuleRefs so they don't call us back.
   for (auto& pair : modules_)
     pair.second->SystemSymbolsDeleting();
   modules_.clear();
-}
-
-bool SystemSymbols::LoadBuildIDFile(std::string* msg) {
-  std::string file_name = CatPathComponents(build_dir_, "ids.txt");
-  FILE* id_file = fopen(file_name.c_str(), "r");
-  if (!id_file) {
-    *msg = "Build ID file not found: " + file_name;
-    return false;
-  }
-
-  fseek(id_file, 0, SEEK_END);
-  long length = ftell(id_file);
-  if (length <= 0) {
-    *msg = "Could not load build ID file: " + file_name;
-    return false;
-  }
-
-  std::string contents;
-  contents.resize(length);
-
-  fseek(id_file, 0, SEEK_SET);
-  if (fread(&contents[0], 1, contents.size(), id_file) !=
-      static_cast<size_t>(length)) {
-    *msg = "Could not load build ID file: " + file_name;
-    return false;
-  }
-
-  fclose(id_file);
-  build_id_to_file_ = ParseIds(contents);
-
-  *msg = fxl::StringPrintf("Loaded %zu system symbol mappings from:\n  %s",
-                           build_id_to_file_.size(), file_name.c_str());
-  return true;
-}
-
-void SystemSymbols::AddBuildIDToFileMapping(const std::string& build_id,
-                                            const std::string& file) {
-  build_id_to_file_[build_id] = file;
 }
 
 fxl::RefPtr<SystemSymbols::ModuleRef> SystemSymbols::InjectModuleForTesting(
@@ -124,8 +89,8 @@ Err SystemSymbols::GetModule(const std::string& name_for_msg,
     return Err();
   }
 
-  auto found_id = build_id_to_file_.find(build_id);
-  if (found_id == build_id_to_file_.end()) {
+  std::string file_name = build_id_index_.FileForBuildID(build_id);
+  if (file_name.empty()) {
     return Err(fxl::StringPrintf(
         "Could not load symbols for \"%s\" because there was no mapping for "
         "build ID \"%s\".",
@@ -133,7 +98,7 @@ Err SystemSymbols::GetModule(const std::string& name_for_msg,
   }
 
   auto module_symbols =
-      std::make_unique<ModuleSymbolsImpl>(found_id->second, build_id);
+      std::make_unique<ModuleSymbolsImpl>(file_name, build_id);
   Err err = module_symbols->Load();
   if (err.has_error())
     return err;
@@ -141,41 +106,6 @@ Err SystemSymbols::GetModule(const std::string& name_for_msg,
   *module = fxl::MakeRefCounted<ModuleRef>(this, std::move(module_symbols));
   modules_[build_id] = module->get();
   return Err();
-}
-
-// static
-std::map<std::string, std::string> SystemSymbols::ParseIds(
-    const std::string& input) {
-  std::map<std::string, std::string> result;
-
-  for (size_t line_begin = 0; line_begin < input.size(); line_begin++) {
-    size_t newline = input.find('\n', line_begin);
-    if (newline == std::string::npos)
-      newline = input.size();
-
-    fxl::StringView line(&input[line_begin], newline - line_begin);
-    if (!line.empty()) {
-      // Format is <buildid> <space> <filename>
-      size_t first_space = line.find(' ');
-      if (first_space != std::string::npos && first_space > 0 &&
-          first_space + 1 < line.size()) {
-        // There is a space and it separates two nonempty things.
-        fxl::StringView to_trim(" \t\r\n");
-        fxl::StringView build_id =
-            fxl::TrimString(line.substr(0, first_space), to_trim);
-        fxl::StringView path = fxl::TrimString(
-            line.substr(first_space + 1, line.size() - first_space - 1),
-            to_trim);
-
-        result.emplace(std::piecewise_construct,
-                       std::forward_as_tuple(build_id.data(), build_id.size()),
-                       std::forward_as_tuple(path.data(), path.size()));
-      }
-    }
-
-    line_begin = newline;  // The for loop will advance past this.
-  }
-  return result;
 }
 
 void SystemSymbols::WillDeleteModule(ModuleRef* module) {
