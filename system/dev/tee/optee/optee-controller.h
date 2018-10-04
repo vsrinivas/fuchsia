@@ -12,8 +12,8 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/device/tee.h>
 #include <zircon/thread_annotations.h>
+#include <zircon/tee/c/fidl.h>
 
 #include "optee-message.h"
 #include "optee-smc.h"
@@ -75,7 +75,7 @@ private:
     // craft a resource object dedicated only to secure monitor calls targetting the Trusted OS.
     zx_handle_t secure_monitor_ = ZX_HANDLE_INVALID;
     uint32_t secure_world_capabilities_ = 0;
-    tee_revision_t os_revision_ = {};
+    zircon_tee_OsRevision os_revision_ = {};
     fbl::Mutex clients_lock_;
     fbl::DoublyLinkedList<OpteeClient*> clients_ TA_GUARDED(clients_lock_);
     fbl::unique_ptr<SharedMemoryManager> shared_memory_manager_;

@@ -116,29 +116,6 @@ void OpteeClient::DdkRelease() {
     delete this;
 }
 
-zx_status_t OpteeClient::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                                  size_t out_len, size_t* out_actual) {
-    if (needs_to_close_) {
-        return ZX_ERR_PEER_CLOSED;
-    }
-
-    switch (op) {
-    case IOCTL_TEE_OPEN_SESSION: {
-        if ((in_buf == nullptr) || (in_len != sizeof(tee_ioctl_session_request_t)) ||
-            (out_buf == nullptr) || (out_len != sizeof(tee_ioctl_session_t)) ||
-            (out_actual == nullptr)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        return OpenSession(reinterpret_cast<const tee_ioctl_session_request_t*>(in_buf),
-                           reinterpret_cast<tee_ioctl_session_t*>(out_buf),
-                           out_actual);
-    }
-    }
-
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t OpteeClient::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     if (needs_to_close_) {
         // The underlying channel is owned by the devhost and thus we do not need to directly close
@@ -157,7 +134,36 @@ zx_status_t OpteeClient::GetOsInfo(fidl_txn_t* txn) const {
 zx_status_t OpteeClient::OpenSession(const zircon_tee_Uuid* trusted_app,
                                      const zircon_tee_ParameterSet* parameter_set,
                                      fidl_txn_t* txn) {
-    return ZX_ERR_NOT_SUPPORTED;
+    constexpr uint32_t kInvalidSession = 0;
+
+    ZX_DEBUG_ASSERT(trusted_app != nullptr);
+    ZX_DEBUG_ASSERT(parameter_set != nullptr);
+
+    zircon_tee_Result result = {};
+
+    Uuid ta_uuid{*trusted_app};
+
+    OpenSessionMessage message{controller_->driver_pool(),
+                               ta_uuid,
+                               *parameter_set};
+
+    if (!message.is_valid()) {
+        result.return_code = TEEC_ERROR_COMMUNICATION;
+        result.return_origin = zircon_tee_ReturnOrigin_COMMUNICATION;
+        return zircon_tee_DeviceOpenSession_reply(txn, kInvalidSession, &result);
+    }
+
+    uint32_t call_code = controller_->CallWithMessage(
+        message, fbl::BindMember(this, &OpteeClient::HandleRpc));
+    if (call_code != kReturnOk) {
+        result.return_code = TEEC_ERROR_COMMUNICATION;
+        result.return_origin = zircon_tee_ReturnOrigin_COMMUNICATION;
+        return zircon_tee_DeviceOpenSession_reply(txn, kInvalidSession, &result);
+    }
+
+    result.return_code = message.return_code();
+    result.return_origin = message.return_origin();
+    return zircon_tee_DeviceOpenSession_reply(txn, message.session_id(), &result);
 }
 
 zx_status_t OpteeClient::InvokeCommand(uint32_t session_id,
@@ -170,111 +176,6 @@ zx_status_t OpteeClient::InvokeCommand(uint32_t session_id,
 zx_status_t OpteeClient::CloseSession(uint32_t session_id,
                                       fidl_txn_t* txn) {
     return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t OpteeClient::OpenSession(const tee_ioctl_session_request_t* session_request,
-                                     tee_ioctl_session_t* out_session,
-                                     size_t* out_actual) {
-    ZX_DEBUG_ASSERT(session_request != nullptr);
-    ZX_DEBUG_ASSERT(out_session != nullptr);
-    ZX_DEBUG_ASSERT(out_actual != nullptr);
-    *out_actual = 0;
-
-    UuidView trusted_app{session_request->trusted_app, TEE_IOCTL_UUID_SIZE};
-    UuidView client_app{session_request->client_app, TEE_IOCTL_UUID_SIZE};
-
-    fbl::Array<MessageParam> params;
-    zx_status_t status = ConvertIoctlParamsToOpteeParams(session_request->params,
-                                                         session_request->num_params,
-                                                         &params);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "optee: invalid ioctl parameters\n");
-        out_session->return_code = TEEC_ERROR_BAD_PARAMETERS;
-        out_session->return_origin = TEEC_ORIGIN_COMMS;
-        return status;
-    }
-
-    OpenSessionMessage message(controller_->driver_pool(),
-                               trusted_app,
-                               client_app,
-                               session_request->client_login,
-                               session_request->cancel_id,
-                               params);
-
-    *out_actual = sizeof(*out_session);
-    uint32_t call_code =
-        controller_->CallWithMessage(message, fbl::BindMember(this, &OpteeClient::HandleRpc));
-    if (call_code != kReturnOk) {
-        out_session->return_code = TEEC_ERROR_COMMUNICATION;
-        out_session->return_origin = TEEC_ORIGIN_COMMS;
-        return status;
-    }
-
-    // TODO(rjascani): Create session object from session id
-    out_session->session_id = message.session_id();
-    out_session->return_code = message.return_code();
-    out_session->return_origin = message.return_origin();
-    // TODO(godtamit): Remove this when all of RPC is implemented
-    zxlogf(INFO,
-           "session ID is 0x%x, return code is 0x%x, return origin is 0x%x\n",
-           out_session->session_id,
-           out_session->return_code,
-           out_session->return_origin);
-
-    return ZX_OK;
-}
-
-zx_status_t OpteeClient::ConvertIoctlParamsToOpteeParams(
-    const tee_ioctl_param_t* params,
-    size_t num_params,
-    fbl::Array<MessageParam>* out_optee_params) {
-    ZX_DEBUG_ASSERT(params != nullptr);
-    ZX_DEBUG_ASSERT(out_optee_params != nullptr);
-
-    fbl::Array<MessageParam> optee_params(new MessageParam[num_params], num_params);
-
-    for (size_t i = 0; i < num_params; ++i) {
-        const tee_ioctl_param_t& ioctl_param = params[i];
-        MessageParam& optee_param = optee_params[i];
-
-        switch (ioctl_param.type) {
-        case TEE_PARAM_TYPE_NONE:
-            optee_param.attribute = MessageParam::kAttributeTypeNone;
-            optee_param.payload.value.generic.a = 0;
-            optee_param.payload.value.generic.b = 0;
-            optee_param.payload.value.generic.c = 0;
-            break;
-        case TEE_PARAM_TYPE_VALUE_INPUT:
-            optee_param.attribute = MessageParam::kAttributeTypeValueInput;
-            optee_param.payload.value.generic.a = ioctl_param.a;
-            optee_param.payload.value.generic.b = ioctl_param.b;
-            optee_param.payload.value.generic.c = ioctl_param.c;
-            break;
-        case TEE_PARAM_TYPE_VALUE_OUTPUT:
-            optee_param.attribute = MessageParam::kAttributeTypeValueOutput;
-            optee_param.payload.value.generic.a = ioctl_param.a;
-            optee_param.payload.value.generic.b = ioctl_param.b;
-            optee_param.payload.value.generic.c = ioctl_param.c;
-            break;
-        case TEE_PARAM_TYPE_VALUE_INOUT:
-            optee_param.attribute = MessageParam::kAttributeTypeValueInOut;
-            optee_param.payload.value.generic.a = ioctl_param.a;
-            optee_param.payload.value.generic.b = ioctl_param.b;
-            optee_param.payload.value.generic.c = ioctl_param.c;
-            break;
-        case TEE_PARAM_TYPE_MEMREF_INPUT:
-        case TEE_PARAM_TYPE_MEMREF_OUTPUT:
-        case TEE_PARAM_TYPE_MEMREF_INOUT:
-            // TODO(rjascani): Add support for memory references
-            return ZX_ERR_NOT_SUPPORTED;
-            break;
-        default:
-            return ZX_ERR_INVALID_ARGS;
-        }
-    }
-
-    *out_optee_params = fbl::move(optee_params);
-    return ZX_OK;
 }
 
 template <typename SharedMemoryPoolTraits>

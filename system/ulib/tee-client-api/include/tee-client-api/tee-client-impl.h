@@ -14,8 +14,6 @@
  */
 
 typedef struct teec_context_impl {
-    // TODO(rjascani): Remove FD once last ioctl removed
-    int fd;
     zx_handle_t tee_channel;
 } teec_context_impl_t;
 

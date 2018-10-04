@@ -30,44 +30,39 @@ void ConvertMessageParamToUuid(const optee::MessageParam::Value& src, TEEC_UUID*
 
 namespace optee {
 
-OpenSessionMessage::OpenSessionMessage(SharedMemoryManager::DriverMemoryPool* pool,
-                                       const UuidView& trusted_app,
-                                       const UuidView& client_app,
-                                       uint32_t client_login,
-                                       uint32_t cancel_id,
-                                       const fbl::Array<MessageParam>& msg_params) {
-    const size_t num_params = msg_params.size() + kNumFixedOpenSessionParams;
+OpenSessionMessage::OpenSessionMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
+                                       const Uuid& trusted_app,
+                                       const zircon_tee_ParameterSet& parameter_set) {
+    ZX_DEBUG_ASSERT(message_pool != nullptr);
+
+    const size_t num_params = parameter_set.count + kNumFixedOpenSessionParams;
     ZX_DEBUG_ASSERT(num_params <= fbl::numeric_limits<uint32_t>::max());
 
-    // Allocate from pool
-    pool->Allocate(CalculateSize(num_params), &memory_);
+    zx_status_t status = message_pool->Allocate(CalculateSize(num_params), &memory_);
+
+    if (status != ZX_OK) {
+        memory_ = nullptr;
+        return;
+    }
 
     header()->command = Command::kOpenSession;
-    header()->cancel_id = cancel_id;
+    header()->cancel_id = 0;
     header()->num_params = static_cast<uint32_t>(num_params);
 
-    auto current_param = params().begin();
+    MessageParam& trusted_app_param = params()[kTrustedAppParamIndex];
+    MessageParam& client_app_param = params()[kClientAppParamIndex];
 
-    // Param 0 is the trusted app UUID
-    current_param->attribute = MessageParam::kAttributeTypeMeta |
-                               MessageParam::kAttributeTypeValueInput;
-    trusted_app.ToUint64Pair(&current_param->payload.value.generic.a,
-                             &current_param->payload.value.generic.b);
-    current_param++;
+    trusted_app_param.attribute = MessageParam::kAttributeTypeMeta |
+                                  MessageParam::kAttributeTypeValueInput;
+    trusted_app.ToUint64Pair(&trusted_app_param.payload.value.generic.a,
+                             &trusted_app_param.payload.value.generic.b);
 
-    // Param 1 is the client app UUID and login
-    current_param->attribute = MessageParam::kAttributeTypeMeta |
-                               MessageParam::kAttributeTypeValueInput;
-    client_app.ToUint64Pair(&current_param->payload.value.generic.a,
-                            &current_param->payload.value.generic.b);
-    current_param->payload.value.generic.c = client_login;
-    current_param++;
-
-    // Copy input params in
-    for (const auto& param : msg_params) {
-        *current_param = param;
-        current_param++;
-    }
+    client_app_param.attribute = MessageParam::kAttributeTypeMeta |
+                                 MessageParam::kAttributeTypeValueInput;
+    // Not really any need to provide client app uuid, so just fill in with 0s
+    client_app_param.payload.value.generic.a = 0;
+    client_app_param.payload.value.generic.b = 0;
+    client_app_param.payload.value.generic.c = TEEC_LOGIN_PUBLIC;
 }
 
 bool RpcMessage::TryInitializeMembers() {

@@ -217,12 +217,9 @@ protected:
 // This OP-TEE message is used to start a session between a client app and trusted app.
 class OpenSessionMessage : public Message {
 public:
-    explicit OpenSessionMessage(SharedMemoryManager::DriverMemoryPool* pool,
-                                const UuidView& trusted_app,
-                                const UuidView& client_app,
-                                uint32_t client_login,
-                                uint32_t cancel_id,
-                                const fbl::Array<MessageParam>& params);
+    explicit OpenSessionMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
+                                const Uuid& trusted_app,
+                                const zircon_tee_ParameterSet& parameter_set);
 
     // Outputs
     uint32_t session_id() const { return header()->session_id; }
@@ -233,6 +230,8 @@ protected:
     using Message::header; // make header() protected
 
     static constexpr size_t kNumFixedOpenSessionParams = 2;
+    static constexpr size_t kTrustedAppParamIndex = 0;
+    static constexpr size_t kClientAppParamIndex = 1;
 };
 
 // RpcMessage

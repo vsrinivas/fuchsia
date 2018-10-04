@@ -7,7 +7,6 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/tee.h>
 #include <fbl/intrusive_double_list.h>
-#include <zircon/device/tee.h>
 #include <zircon/tee/c/fidl.h>
 
 #include "optee-controller.h"
@@ -15,7 +14,7 @@
 namespace optee {
 
 class OpteeClient;
-using OpteeClientBase = ddk::Device<OpteeClient, ddk::Closable, ddk::Ioctlable, ddk::Messageable>;
+using OpteeClientBase = ddk::Device<OpteeClient, ddk::Closable, ddk::Messageable>;
 using OpteeClientProtocol = ddk::TeeProtocol<OpteeClient>;
 
 // The Optee driver allows for simultaneous access from different processes. The OpteeClient object
@@ -36,19 +35,12 @@ public:
 
     zx_status_t DdkClose(uint32_t flags);
     void DdkRelease();
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* out_actual);
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
     // If the Controller is unbound, we need to notify all clients that the device is no longer
     // available. The Controller will invoke this function so that any subsequent calls on the
     // client will notify the caller that the peer has closed.
     void MarkForClosing() { needs_to_close_ = true; }
-
-    // IOCTLs
-    zx_status_t OpenSession(const tee_ioctl_session_request_t* session_request,
-                            tee_ioctl_session_t* out_session,
-                            size_t* out_actual);
 
     // FIDL Handlers
     zx_status_t GetOsInfo(fidl_txn_t* txn) const;
@@ -63,10 +55,6 @@ public:
 
 private:
     using SharedMemoryList = fbl::DoublyLinkedList<fbl::unique_ptr<SharedMemory>>;
-
-    zx_status_t ConvertIoctlParamsToOpteeParams(const tee_ioctl_param_t* params,
-                                                size_t num_params,
-                                                fbl::Array<MessageParam>* out_optee_params);
 
     // Attempts to allocate a block of SharedMemory from a designated memory pool.
     //

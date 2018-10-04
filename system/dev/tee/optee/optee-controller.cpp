@@ -295,8 +295,7 @@ zx_status_t OpteeController::GetOsInfo(fidl_txn_t* txn) const {
              kOpteeOsUuid.clockSeqAndNode,
              sizeof(os_info.uuid.clock_seq_and_node));
 
-    os_info.revision.major = os_revision_.major;
-    os_info.revision.minor = os_revision_.minor;
+    os_info.revision = os_revision_;
     os_info.is_global_platform_compliant = true;
     return zircon_tee_DeviceGetOsInfo_reply(txn, &os_info);
 }
