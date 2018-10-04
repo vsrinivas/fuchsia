@@ -52,6 +52,7 @@ zx_status_t Mt8167::Create(zx_device_t* parent) {
 
 int Mt8167::Thread() {
     if (GpioInit() != ZX_OK) {
+        zxlogf(ERROR, "GpioInit() failed\n");
         return -1;
     }
     return 0;

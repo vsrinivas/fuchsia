@@ -11,8 +11,10 @@ MODULE_TYPE := driver
 MODULE_SRCS := \
     $(LOCAL_DIR)/bind.c \
     $(LOCAL_DIR)/sherlock.cpp \
+    $(LOCAL_DIR)/sherlock-gpio.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/amlogic \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \

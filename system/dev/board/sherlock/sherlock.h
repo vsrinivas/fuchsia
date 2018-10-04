@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <threads.h>
+
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform-bus.h>
@@ -28,9 +30,12 @@ public:
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Sherlock);
 
-    void Start();
+    zx_status_t Start();
+    zx_status_t GpioInit();
+    int Thread();
 
     ddk::PlatformBusProtocolProxy pbus_;
+    thrd_t thread_;
 };
 
 } // namespace sherlock

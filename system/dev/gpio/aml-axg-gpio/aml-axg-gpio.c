@@ -500,6 +500,8 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
         gpio->gpio_interrupt = &a113_interrupt_block;
         break;
     case PDEV_PID_AMLOGIC_S905D2:
+    case PDEV_PID_AMLOGIC_T931:
+        // S905D2 and T931 are identical.
         gpio->gpio_blocks = s905d2_gpio_blocks;
         gpio->block_count = countof(s905d2_gpio_blocks);
         gpio->gpio_interrupt = &s905d2_interrupt_block;
@@ -548,11 +550,12 @@ static zx_driver_ops_t aml_gpio_driver_ops = {
     .bind = aml_gpio_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(aml_gpio, aml_gpio_driver_ops, "zircon", "0.1", 5)
+ZIRCON_DRIVER_BEGIN(aml_gpio, aml_gpio_driver_ops, "zircon", "0.1", 6)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_GPIO),
     // we support multiple SOC variants
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_A113),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
 ZIRCON_DRIVER_END(aml_gpio)
