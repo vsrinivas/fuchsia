@@ -169,25 +169,14 @@ impl FontService {
                     )
                 })?;
 
-                // Unsafe because in VMOs may be resized while being mapped and
-                // load_font_info_from_vmo() doesn't handle this case.
-                // fidl::get_vmo_copy_from_file() allocates a new VMO or gets it
-                // from the file system. pkgfs won't resize the VMO, so this can
-                // be unsafe only if font_server is started with a custom
-                // manifest file that refers to files that are not on pkgs.
-                let info = unsafe {
-                    font_info_loader
-                        .load_font_info_from_vmo(
-                            &buffer.vmo,
-                            buffer.size as usize,
-                            font_manifest.index,
-                        ).with_context(|_| {
-                            format!(
-                                "Failed to load font info from {}",
-                                font_manifest.asset.to_string_lossy()
-                            )
-                        })?
-                };
+                let info = font_info_loader
+                    .load_font_info(buffer.vmo, buffer.size as usize, font_manifest.index)
+                    .with_context(|_| {
+                        format!(
+                            "Failed to load font info from {}",
+                            font_manifest.asset.to_string_lossy()
+                        )
+                    })?;
                 let font = Arc::new(Font::new(
                     asset_id,
                     font_manifest,

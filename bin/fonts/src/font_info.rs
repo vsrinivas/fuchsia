@@ -5,6 +5,7 @@
 use super::freetype_ffi as freetype;
 use failure::{format_err, Error};
 use fuchsia_zircon as zx;
+use libc::{c_uchar, c_ulong, c_void};
 use std::cmp::Ordering;
 
 type BitmapElement = u64;
@@ -103,6 +104,86 @@ impl CharSet {
     }
 }
 
+struct VmoStreamInternal {
+    vmo: zx::Vmo,
+    stream_rec: freetype::FT_StreamRec,
+}
+
+impl VmoStreamInternal {
+    // Caller must ensure that the returned FT_Stream is not used after
+    // VmoStream is dropped.
+    unsafe fn ft_stream(&self) -> freetype::FT_Stream {
+        &self.stream_rec as freetype::FT_Stream
+    }
+
+    fn read(&mut self, mut offset: u64, mut read_buffer: &mut [u8]) -> u64 {
+        if read_buffer.len() == 0 || offset >= self.stream_rec.size as u64 {
+            return 0;
+        }
+        let read_size = std::cmp::min(read_buffer.len(), (self.stream_rec.size - offset) as usize);
+        match self.vmo.read(&mut read_buffer[..read_size], offset) {
+            Ok(n) => read_size as u64,
+            Err(err) => {
+                println!("Error when reading from font VMO: {:?}", err);
+                0
+            }
+        }
+    }
+
+    // Unsafe callback called by freetype to read from the stream.
+    unsafe extern "C" fn read_func(
+        stream: freetype::FT_Stream, offset: c_ulong, buffer: *mut c_uchar, count: c_ulong,
+    ) -> c_ulong {
+        let wrapper = &mut *((*stream).descriptor as *mut VmoStreamInternal);
+        let buffer_slice = std::slice::from_raw_parts_mut(buffer as *mut u8, count as usize);
+        wrapper.read(offset as u64, buffer_slice) as c_ulong
+    }
+
+    extern "C" fn close_func(_stream: freetype::FT_Stream) {
+        // No-op. Stream will be closed when the VmoStream is dropped.
+    }
+}
+
+// Implements FT_Stream for a VMO.
+struct VmoStream {
+    // VmoStreamInternal needs to be boxed to ensure that it's not moved. This
+    // allows to set stream_rec.descriptor to point to the containing
+    // VmoStreamInternal instance.
+    internal: Box<VmoStreamInternal>,
+}
+
+impl VmoStream {
+    fn new(vmo: zx::Vmo, vmo_size: usize) -> Result<VmoStream, Error> {
+        let mut internal = Box::new(VmoStreamInternal {
+            vmo,
+            stream_rec: freetype::FT_StreamRec {
+                base: std::ptr::null(),
+                size: vmo_size as c_ulong,
+                pos: 0,
+
+                descriptor: std::ptr::null_mut(),
+                pathname: std::ptr::null_mut(),
+                read: VmoStreamInternal::read_func,
+                close: VmoStreamInternal::close_func,
+
+                memory: std::ptr::null_mut(),
+                cursor: std::ptr::null_mut(),
+                limit: std::ptr::null_mut(),
+            },
+        });
+
+        internal.stream_rec.descriptor = &mut *internal as *mut VmoStreamInternal as *mut c_void;
+
+        Ok(VmoStream { internal })
+    }
+
+    // Caller must ensure that the returned FT_Stream is not used after
+    // VmoStream is dropped.
+    unsafe fn ft_stream(&self) -> freetype::FT_Stream {
+        self.internal.ft_stream()
+    }
+}
+
 pub struct FontInfo {
     pub charset: CharSet,
 }
@@ -134,19 +215,32 @@ impl FontInfoLoader {
         }
     }
 
-    pub fn load_font_info(&self, data: &[u8], index: u32) -> Result<FontInfo, Error> {
+    pub fn load_font_info(
+        &self, vmo: zx::Vmo, vmo_size: usize, index: u32,
+    ) -> Result<FontInfo, Error> {
         let mut codepoints: Vec<u32> = Vec::new();
 
-        // Unsafe to call freetype FFI. Call FT_New_Memory_Face() to load a
-        // typeface. If it succeeds then enumerate character map with
-        // FT_Get_First_Char() and FT_Get_Next_Char(). FT_Done_Face() must be
-        // called if the typeface was initialized successfully.
+        // Unsafe to call freetype FFI. Call FT_Open_Face() to load a typeface.
+        // If it succeeds then enumerate character map with FT_Get_First_Char()
+        // and FT_Get_Next_Char(). FT_Done_Face() must be called if the typeface
+        // was initialized successfully.
         unsafe {
+            let stream = VmoStream::new(vmo, vmo_size)?;
+            let open_args = freetype::FT_Open_Args {
+                flags: freetype::FT_OPEN_STREAM,
+                memory_base: std::ptr::null(),
+                memory_size: 0,
+                pathname: std::ptr::null(),
+                stream: stream.ft_stream(),
+                driver: std::ptr::null_mut(),
+                num_params: 0,
+                params: std::ptr::null_mut(),
+            };
+
             let mut ft_face = std::ptr::null_mut();
-            let err = freetype::FT_New_Memory_Face(
+            let err = freetype::FT_Open_Face(
                 self.ft_library,
-                data.as_ptr(),
-                data.len() as libc::c_long,
+                &open_args,
                 index as libc::c_long,
                 &mut ft_face,
             );
@@ -168,20 +262,6 @@ impl FontInfoLoader {
         Ok(FontInfo {
             charset: CharSet::new(codepoints),
         })
-    }
-
-    // Unsafe to map vmo because vmo size may change, while it's mapped.
-    // Potentially this function can be implemented as safe: it would need to
-    // use FT_OpenFace with a FT_Stream implementation that calls zx_vmo_read().
-    pub unsafe fn load_font_info_from_vmo(
-        &self, vmo: &zx::Vmo, vmo_size: usize, index: u32,
-    ) -> Result<FontInfo, Error> {
-        let mapped = zx::Vmar::root_self().map(0, &vmo, 0, vmo_size, zx::VmarFlags::PERM_READ)?;
-        let mapped_ptr = mapped as *const u8;
-        let result = self.load_font_info(std::slice::from_raw_parts(mapped_ptr, vmo_size), index);
-        zx::Vmar::root_self().unmap(mapped, vmo_size).unwrap();
-
-        result
     }
 }
 
