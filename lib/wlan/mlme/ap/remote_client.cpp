@@ -328,12 +328,16 @@ void AssociatedState::HandleEthFrame(EthFrame&& eth_frame) {
 
     // If the client is awake and not in power saving mode, convert and send frame
     // immediately.
-    auto data_frame = client_->bss()->EthToDataFrame(eth_frame);
+    auto data_frame = EthToDataFrame(eth_frame);
     if (!data_frame) {
         errorf("[client] couldn't convert ethernet frame\n");
         return;
     }
     client_->bss()->SendDataFrame(data_frame->Generalize());
+}
+
+void AssociatedState::OpenControlledPort() {
+    eapol_controlled_port_ = eapol::PortState::kOpen;
 }
 
 void AssociatedState::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame) {
@@ -382,6 +386,12 @@ void AssociatedState::HandlePsPollFrame(CtrlFrame<PsPollFrame>&& frame) {
             "%d\n",
             client_->addr().ToString().c_str(), status);
     }
+}
+
+std::optional<DataFrame<LlcHeader>> AssociatedState::EthToDataFrame(const EthFrame& eth_frame) {
+    bool needs_protection =
+        client_->bss()->IsRsn() && eapol_controlled_port_ == eapol::PortState::kOpen;
+    return client_->bss()->EthToDataFrame(eth_frame, needs_protection);
 }
 
 void AssociatedState::OnExit() {
@@ -490,6 +500,8 @@ void AssociatedState::HandleTimeout() {
 }
 
 void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
+    if (eapol_controlled_port_ == eapol::PortState::kBlocked) { return; }
+
     active_ = true;
 
     if (fc.pwr_mgmt() != dozing_) {
@@ -583,7 +595,7 @@ zx_status_t AssociatedState::SendNextBu() {
         return ZX_ERR_BAD_STATE;
     }
 
-    auto data_frame = client_->bss()->EthToDataFrame(eth_frame.value());
+    auto data_frame = EthToDataFrame(eth_frame.value());
     if (!data_frame) {
         errorf("[client] [%s] couldn't convert ethernet frame\n",
                client_->addr().ToString().c_str());
@@ -705,6 +717,10 @@ void RemoteClient::HandleAnyCtrlFrame(CtrlFrame<>&& frame) {
 
 zx_status_t RemoteClient::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     return state_->HandleMlmeMsg(msg);
+}
+
+void RemoteClient::OpenControlledPort() {
+    state_->OpenControlledPort();
 }
 
 zx_status_t RemoteClient::StartTimer(zx::time deadline) {

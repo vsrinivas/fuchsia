@@ -11,6 +11,7 @@
 #include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/device_interface.h>
+#include <wlan/mlme/key.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/sequence.h>
@@ -1151,36 +1152,10 @@ zx_status_t Station::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysReques
     debugfn();
 
     for (auto& keyDesc : *req.body()->keylist) {
-        if (keyDesc.key.is_null()) { return ZX_ERR_NOT_SUPPORTED; }
+        auto key_config = key::ToKeyConfig(keyDesc);
+        if (!key_config.has_value()) { return ZX_ERR_NOT_SUPPORTED; }
 
-        uint8_t key_type;
-        switch (keyDesc.key_type) {
-        case wlan_mlme::KeyType::PAIRWISE:
-            key_type = WLAN_KEY_TYPE_PAIRWISE;
-            break;
-        case wlan_mlme::KeyType::PEER_KEY:
-            key_type = WLAN_KEY_TYPE_PEER;
-            break;
-        case wlan_mlme::KeyType::IGTK:
-            key_type = WLAN_KEY_TYPE_IGTK;
-            break;
-        default:
-            key_type = WLAN_KEY_TYPE_GROUP;
-            break;
-        }
-
-        wlan_key_config_t key_config = {};
-        memcpy(key_config.key, keyDesc.key->data(), keyDesc.key->size());
-        key_config.key_type = key_type;
-        key_config.key_len = static_cast<uint8_t>(keyDesc.key->size());
-        key_config.key_idx = keyDesc.key_id;
-        key_config.protection = WLAN_PROTECTION_RX_TX;
-        key_config.cipher_type = keyDesc.cipher_suite_type;
-        memcpy(key_config.cipher_oui, keyDesc.cipher_suite_oui.data(),
-               sizeof(key_config.cipher_oui));
-        memcpy(key_config.peer_addr, keyDesc.address.data(), sizeof(key_config.peer_addr));
-
-        auto status = device_->SetKey(&key_config);
+        auto status = device_->SetKey(&key_config.value());
         if (status != ZX_OK) {
             errorf("Could not configure keys in hardware: %d\n", status);
             return status;

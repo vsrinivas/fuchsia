@@ -10,7 +10,13 @@ use failure::{bail, ensure};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent};
 use futures::channel::mpsc;
 use log::{debug, info, error, warn};
-use wlan_rsn::{Authenticator, rsna::{UpdateSink, SecAssocUpdate}, rsne::Rsne, nonce::NonceReader};
+use wlan_rsn::{
+    Authenticator,
+    key::exchange::Key,
+    nonce::NonceReader,
+    rsna::{UpdateSink, SecAssocUpdate},
+    rsne::Rsne
+};
 
 use crate::ap::{
     aid::AssociationId,
@@ -311,9 +317,46 @@ impl<T: Tokens> InfraBss<T> {
                         }
                     ));
                 }
+                SecAssocUpdate::Key(key) => self.send_key(key, s_addr),
                 _ => {}
             }
         }
+    }
+
+    fn send_key(&mut self, key: &Key, s_addr: &MacAddr) {
+        let set_key_descriptor = match key {
+            Key::Ptk(ptk) => {
+                fidl_mlme::SetKeyDescriptor {
+                    key: ptk.tk().to_vec(),
+                    key_id: 0,
+                    key_type: fidl_mlme::KeyType::Pairwise,
+                    address: s_addr.clone(),
+                    rsc: [0u8; 8],
+                    cipher_suite_oui: eapol::to_array(&ptk.cipher.oui[..]),
+                    cipher_suite_type: ptk.cipher.suite_type,
+                }
+            }
+            Key::Gtk(gtk) => {
+                fidl_mlme::SetKeyDescriptor {
+                    key: gtk.tk().to_vec(),
+                    key_id: gtk.key_id() as u16,
+                    key_type: fidl_mlme::KeyType::Group,
+                    address: [0xFFu8; 6],
+                    rsc: [0u8; 8],
+                    cipher_suite_oui: eapol::to_array(&gtk.cipher.oui[..]),
+                    cipher_suite_type: gtk.cipher.suite_type,
+                }
+            }
+            _ => {
+                error!("unsupported key type in UpdateSink");
+                return;
+            }
+        };
+        self.mlme_sink.send(MlmeRequest::SetKeys(
+            fidl_mlme::SetKeysRequest {
+                keylist: vec![set_key_descriptor]
+            }
+        ));
     }
 }
 

@@ -32,7 +32,8 @@ class BssInterface {
     virtual seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) = 0;
     virtual seq_t NextSeq(const DataFrameHeader& hdr) = 0;
 
-    virtual std::optional<DataFrame<LlcHeader>> EthToDataFrame(const EthFrame& eth_frame) = 0;
+    virtual std::optional<DataFrame<LlcHeader>> EthToDataFrame(const EthFrame& eth_frame,
+                                                               bool needs_protection) = 0;
 
     virtual bool IsRsn() const = 0;
     virtual HtConfig Ht() const = 0;

@@ -38,6 +38,7 @@ static constexpr wlan_channel_t kBssChannel = {
 };
 static constexpr uint8_t kSsid[] = {'F', 'u', 'c', 'h', 's', 'i', 'a', '-', 'A', 'P'};
 static constexpr uint8_t kEapolPdu[] = {'E', 'A', 'P', 'O', 'L'};
+static constexpr uint8_t kKeyData[] = {0x40, 0x41, 0x42, 0x43, 0x44};
 static constexpr SupportedRate kSupportedRates[] = {
     SupportedRate(2),  SupportedRate(12), SupportedRate(24), SupportedRate(48),
     SupportedRate(54), SupportedRate(96), SupportedRate(108)};
@@ -53,8 +54,10 @@ static constexpr uint8_t kRsne[] = {
     0x00, 0x0f, 0xac, 0x02,  // akm suite list
     0xa8, 0x04,              // rsn capabilities
 };
+static constexpr uint8_t kCipherOui[3] = {0x96, 0x85, 0x74};
+static constexpr uint8_t kCipherSuiteType = 0x11;
 
-zx_status_t CreateStartRequest(MlmeMsg<wlan_mlme::StartRequest>*);
+zx_status_t CreateStartRequest(MlmeMsg<wlan_mlme::StartRequest>*, bool protected_ap);
 zx_status_t CreateJoinRequest(MlmeMsg<wlan_mlme::JoinRequest>*);
 zx_status_t CreateAuthRequest(MlmeMsg<wlan_mlme::AuthenticateRequest>*);
 zx_status_t CreateAuthResponse(MlmeMsg<wlan_mlme::AuthenticateResponse>*,
@@ -63,14 +66,15 @@ zx_status_t CreateAssocRequest(MlmeMsg<wlan_mlme::AssociateRequest>* out_msg);
 zx_status_t CreateAssocResponse(MlmeMsg<wlan_mlme::AssociateResponse>*,
                                 wlan_mlme::AssociateResultCodes result_code);
 zx_status_t CreateEapolRequest(MlmeMsg<wlan_mlme::EapolRequest>*);
+zx_status_t CreateSetKeysRequest(MlmeMsg<wlan_mlme::SetKeysRequest>*, std::vector<uint8_t> key_data,
+                                 wlan_mlme::KeyType);
 zx_status_t CreateAuthReqFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateAuthRespFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateBeaconFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>*, common::MacAddr);
 zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateAssocRespFrame(fbl::unique_ptr<Packet>*);
-zx_status_t CreateDataFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* payload,
-                            size_t len);
+DataFrame<LlcHeader> CreateDataFrame(const uint8_t* payload, size_t len);
 DataFrame<> CreateNullDataFrame();
 EthFrame CreateEthFrame(const uint8_t* payload, size_t len);
 

@@ -117,7 +117,7 @@ zx_status_t WriteHtOperation(ElementWriter* w, const HtOperation& hto) {
     return ZX_OK;
 }
 
-zx_status_t CreateStartRequest(MlmeMsg<wlan_mlme::StartRequest>* out_msg) {
+zx_status_t CreateStartRequest(MlmeMsg<wlan_mlme::StartRequest>* out_msg, bool protected_ap) {
     auto req = wlan_mlme::StartRequest::New();
     std::vector<uint8_t> ssid(kSsid, kSsid + sizeof(kSsid));
     req->ssid.reset(std::move(ssid));
@@ -125,6 +125,7 @@ zx_status_t CreateStartRequest(MlmeMsg<wlan_mlme::StartRequest>* out_msg) {
     req->beacon_period = kBeaconPeriodTu;
     req->dtim_period = kDtimPeriodTu;
     req->channel = kBssChannel.primary;
+    if (protected_ap) { req->rsne.reset(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne))); }
 
     return WriteServiceMessage(req.get(), fuchsia_wlan_mlme_MLMEStartReqOrdinal, out_msg);
 }
@@ -225,6 +226,24 @@ zx_status_t CreateEapolRequest(MlmeMsg<wlan_mlme::EapolRequest>* out_msg) {
     req->data.reset(std::move(eapol_pdu));
 
     return WriteServiceMessage(req.get(), fuchsia_wlan_mlme_MLMEEapolReqOrdinal, out_msg);
+}
+
+zx_status_t CreateSetKeysRequest(MlmeMsg<wlan_mlme::SetKeysRequest>* out_msg,
+                                 std::vector<uint8_t> key_data, wlan_mlme::KeyType key_type) {
+    wlan_mlme::SetKeyDescriptor key;
+    key.key.reset(key_data);
+    key.key_id = 1;
+    key.key_type = key_type;
+    std::memcpy(key.address.mutable_data(), kClientAddress, sizeof(kClientAddress));
+    std::memcpy(key.cipher_suite_oui.mutable_data(), kCipherOui, sizeof(kCipherOui));
+    key.cipher_suite_type = kCipherSuiteType;
+
+    std::vector<wlan_mlme::SetKeyDescriptor> keylist;
+    keylist.emplace_back(std::move(key));
+    auto req = wlan_mlme::SetKeysRequest::New();
+    req->keylist.reset(std::move(keylist));
+
+    return WriteServiceMessage(req.get(), fuchsia_wlan_mlme_MLMESetKeysReqOrdinal, out_msg);
 }
 
 zx_status_t CreateBeaconFrame(fbl::unique_ptr<Packet>* out_packet) {
@@ -401,21 +420,23 @@ zx_status_t CreateAssocRespFrame(fbl::unique_ptr<Packet>* out_packet) {
     return ZX_OK;
 }
 
-zx_status_t CreateDataFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* payload,
-                            size_t len) {
+DataFrame<LlcHeader> CreateDataFrame(const uint8_t* payload, size_t len) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
     const size_t buf_len = DataFrameHeader::max_len() + LlcHeader::max_len() + len;
     auto packet = GetWlanPacket(buf_len);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    if (packet == nullptr) { return {}; }
+
+    wlan_rx_info_t rx_info{.rx_flags = 0};
+    packet->CopyCtrlFrom(rx_info);
 
     DataFrame<LlcHeader> data_frame(fbl::move(packet));
     auto data_hdr = data_frame.hdr();
     std::memset(data_hdr, 0, DataFrameHeader::max_len());
     data_hdr->fc.set_type(FrameType::kData);
     data_hdr->fc.set_subtype(DataSubtype::kDataSubtype);
-    data_hdr->fc.set_to_ds(1);
+    data_hdr->fc.set_from_ds(1);
     data_hdr->addr1 = bssid;
     data_hdr->addr2 = bssid;
     data_hdr->addr3 = client;
@@ -431,15 +452,9 @@ zx_status_t CreateDataFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* 
 
     size_t actual_body_len = llc_hdr->len() + len;
     auto status = data_frame.set_body_len(actual_body_len);
-    if (status != ZX_OK) { return status; }
+    if (status != ZX_OK) { return {}; }
 
-    auto pkt = data_frame.Take();
-    wlan_rx_info_t rx_info{.rx_flags = 0};
-    pkt->CopyCtrlFrom(rx_info);
-
-    *out_packet = fbl::move(pkt);
-
-    return ZX_OK;
+    return data_frame;
 }
 
 DataFrame<> CreateNullDataFrame() {

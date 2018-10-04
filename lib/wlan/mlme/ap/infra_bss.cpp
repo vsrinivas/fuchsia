@@ -6,6 +6,7 @@
 
 #include <wlan/common/channel.h>
 #include <wlan/mlme/debug.h>
+#include <wlan/mlme/key.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>
@@ -202,7 +203,7 @@ void InfraBss::HandleEthFrame(EthFrame&& eth_frame) {
         if (client != nullptr) { client->HandleAnyEthFrame(fbl::move(eth_frame)); }
     } else {
         // Process multicast frames ourselves.
-        if (auto data_frame = EthToDataFrame(eth_frame)) {
+        if (auto data_frame = EthToDataFrame(eth_frame, false)) {
             SendDataFrame(data_frame->Generalize());
         } else {
             errorf("[infra-bss] [%s] couldn't convert ethernet frame\n", bssid_.ToString().c_str());
@@ -218,6 +219,8 @@ zx_status_t InfraBss::HandleMlmeMsg(const BaseMlmeMsg& msg) {
         peer_addr = common::MacAddr(assoc_resp->body()->peer_sta_address.data());
     } else if (auto eapol_req = msg.As<wlan_mlme::EapolRequest>()) {
         peer_addr = common::MacAddr(eapol_req->body()->dst_addr.data());
+    } else if (auto set_keys_req = msg.As<wlan_mlme::SetKeysRequest>()) {
+        return HandleMlmeSetKeysReq(*set_keys_req);
     } else {
         warnf("[infra-bss] received unsupported MLME msg; ordinal: %u\n", msg.ordinal());
         return ZX_ERR_INVALID_ARGS;
@@ -255,6 +258,39 @@ void InfraBss::HandleNewClientAuthAttempt(const MgmtFrameView<Authentication>& f
         errorf("[infra-bss] [%s] could not create client timer: %d\n", bssid_.ToString().c_str(),
                status);
     }
+}
+
+zx_status_t InfraBss::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysRequest>& req) {
+    debugfn();
+
+    if (!IsRsn()) {
+        warnf("[infra-bss] ignoring SetKeysRequest since AP is unprotected\n");
+        return ZX_ERR_BAD_STATE;
+    }
+
+    for (auto& key_desc : *req.body()->keylist) {
+        auto key_config = key::ToKeyConfig(key_desc);
+        if (!key_config.has_value()) { return ZX_ERR_NOT_SUPPORTED; }
+
+        auto status = device_->SetKey(&key_config.value());
+        if (status != ZX_OK) {
+            errorf("Could not configure keys in hardware: %d\n", status);
+            return status;
+        }
+
+        common::MacAddr client_addr(key_desc.address.data());
+        if (client_addr.IsUcast()) {
+            auto client = GetClient(client_addr);
+            // TODO: We should only open controlled port when RSNA has been established, not as soon
+            //       as one key has. Going with simple logic for now to get things working, but this
+            //       should be revisited later. Specifically, we should have an MLME primitive to
+            //       open a controlled port since the SME has all the information about when all
+            //       the keys finish deriving.
+            if (client != nullptr) { client->OpenControlledPort(); }
+        }
+    }
+
+    return ZX_OK;
 }
 
 zx_status_t InfraBss::HandleClientDeauth(const common::MacAddr& client_addr) {
@@ -381,7 +417,8 @@ zx_status_t InfraBss::SendNextBu() {
     }
 }
 
-std::optional<DataFrame<LlcHeader>> InfraBss::EthToDataFrame(const EthFrame& eth_frame) {
+std::optional<DataFrame<LlcHeader>> InfraBss::EthToDataFrame(const EthFrame& eth_frame,
+                                                             bool needs_protection) {
     size_t payload_len = eth_frame.body_len();
     size_t max_frame_len = DataFrameHeader::max_len() + LlcHeader::max_len() + payload_len;
     auto packet = GetWlanPacket(max_frame_len);
@@ -397,7 +434,7 @@ std::optional<DataFrame<LlcHeader>> InfraBss::EthToDataFrame(const EthFrame& eth
     data_hdr->fc.set_type(FrameType::kData);
     data_hdr->fc.set_subtype(DataSubtype::kDataSubtype);
     data_hdr->fc.set_from_ds(1);
-    // TODO(hahnr): Protect outgoing frames when RSNA is established.
+    data_hdr->fc.set_protected_frame(needs_protection ? 1 : 0);
     data_hdr->addr1 = eth_frame.hdr()->dest;
     data_hdr->addr2 = bssid_;
     data_hdr->addr3 = eth_frame.hdr()->src;

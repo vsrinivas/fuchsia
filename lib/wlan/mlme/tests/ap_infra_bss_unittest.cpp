@@ -56,17 +56,11 @@ struct ApInfraBssTest : public ::testing::Test {
         return frame;
     }
 
-    void SetUp() override {
-        StartAp();
-        ASSERT_TRUE(device.svc_queue.empty());
-        ASSERT_TRUE(device.wlan_queue.empty());
-    }
-
     void TearDown() override { bss.Stop(); }
 
-    zx_status_t SendStartReqMsg() {
+    zx_status_t SendStartReqMsg(bool protected_ap) {
         MlmeMsg<wlan_mlme::StartRequest> start_req;
-        auto status = CreateStartRequest(&start_req);
+        auto status = CreateStartRequest(&start_req, protected_ap);
         if (status != ZX_OK) { return status; }
         bss.Start(fbl::move(start_req));
         return ZX_OK;
@@ -89,6 +83,22 @@ struct ApInfraBssTest : public ::testing::Test {
             frame.hdr()->fc.set_from_ds(0);
             frame.hdr()->fc.set_to_ds(1);
             frame.hdr()->fc.set_pwr_mgmt(pwr_mgmt ? 1 : 0);
+            frame.hdr()->addr1 = bssid;
+            frame.hdr()->addr2 = common::MacAddr(kClientAddress);
+            frame.hdr()->addr3 = bssid;
+            *pkt = frame.Take();
+            return ZX_OK;
+        });
+    }
+
+    zx_status_t SendDataFrame() {
+        return HandleFrame([](auto pkt) {
+            auto frame = CreateDataFrame(kTestPayload.data(), kTestPayload.size());
+            if (frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
+
+            common::MacAddr bssid(kBssid1);
+            frame.hdr()->fc.set_from_ds(0);
+            frame.hdr()->fc.set_to_ds(1);
             frame.hdr()->addr1 = bssid;
             frame.hdr()->addr2 = common::MacAddr(kClientAddress);
             frame.hdr()->addr3 = bssid;
@@ -123,8 +133,15 @@ struct ApInfraBssTest : public ::testing::Test {
             [=](auto msg) { return CreateEapolRequest(msg); });
     }
 
-    void StartAp() {
-        SendStartReqMsg();
+    zx_status_t SendSetKeysRequestMsg() {
+        return HandleMlmeMsg<wlan_mlme::SetKeysRequest>([](auto msg) {
+            auto key_data = std::vector(kKeyData, kKeyData + sizeof(kKeyData));
+            return CreateSetKeysRequest(msg, key_data, wlan_mlme::KeyType::PAIRWISE);
+        });
+    }
+
+    void StartAp(bool protected_ap = true) {
+        SendStartReqMsg(protected_ap);
         device.svc_queue.clear();
         device.wlan_queue.clear();
     }
@@ -137,12 +154,20 @@ struct ApInfraBssTest : public ::testing::Test {
     }
 
     void AssociateClient() {
-        AuthenticateClient();
-
         SendClientAssocReqFrame();
         SendAssocResponseMsg(wlan_mlme::AssociateResultCodes::SUCCESS);
         device.svc_queue.clear();
         device.wlan_queue.clear();
+    }
+
+    void AuthenticateAndAssociateClient() {
+        AuthenticateClient();
+        AssociateClient();
+    }
+
+    void EstablishRsna() {
+        // current implementation naively assumes that RSNA is established as soon as one key is set
+        SendSetKeysRequestMsg();
     }
 
     void AssertAuthInd(fbl::unique_ptr<Packet> pkt) {
@@ -167,19 +192,37 @@ struct ApInfraBssTest : public ::testing::Test {
         EXPECT_EQ(std::memcmp(msg.body()->rsn->data(), kRsne, sizeof(kRsne)), 0);
     }
 
+    struct DataFrameAssert {
+        unsigned char protected_frame = 0;
+        unsigned char more_data = 0;
+    };
+
     void AssertDataFrameSentToClient(fbl::unique_ptr<Packet> pkt,
                                      std::vector<uint8_t> expected_payload,
-                                     bool more_data = false) {
+                                     DataFrameAssert asserts = {.protected_frame = 0,
+                                                                .more_data = 0}) {
         auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.get());
         ASSERT_TRUE(frame);
-        EXPECT_EQ(frame.hdr()->fc.more_data(), more_data ? 1 : 0);
+        EXPECT_EQ(frame.hdr()->fc.more_data(), asserts.more_data);
         EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kClientAddress, 6), 0);
         EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
         EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+        EXPECT_EQ(frame.hdr()->fc.protected_frame(), asserts.protected_frame);
 
         auto llc_hdr = frame.body();
         EXPECT_EQ(frame.body_len() - llc_hdr->len(), expected_payload.size());
         EXPECT_EQ(std::memcmp(llc_hdr->payload, expected_payload.data(), expected_payload.size()),
+                  0);
+    }
+
+    void AssertEthFrame(fbl::unique_ptr<Packet> pkt, std::vector<uint8_t> expected_payload) {
+        ASSERT_EQ(pkt->peer(), Packet::Peer::kEthernet);
+        EthFrameView frame(pkt.get());
+        EXPECT_EQ(std::memcmp(frame.hdr()->src.byte, kClientAddress, 6), 0);
+        EXPECT_EQ(std::memcmp(frame.hdr()->dest.byte, kBssid1, 6), 0);
+        EXPECT_EQ(frame.hdr()->ether_type, 42);
+        EXPECT_EQ(frame.body_len(), expected_payload.size());
+        EXPECT_EQ(std::memcmp(frame.body()->data, expected_payload.data(), expected_payload.size()),
                   0);
     }
 
@@ -188,11 +231,13 @@ struct ApInfraBssTest : public ::testing::Test {
 };
 
 TEST_F(ApInfraBssTest, StartAp) {
-    // AP started in `SetUp`
+    StartAp();
     ASSERT_TRUE(bss.IsStarted());
 }
 
 TEST_F(ApInfraBssTest, Authenticate_Success) {
+    StartAp();
+
     // Send authentication request frame
     SendClientAuthReqFrame();
 
@@ -220,6 +265,8 @@ TEST_F(ApInfraBssTest, Authenticate_Success) {
 }
 
 TEST_F(ApInfraBssTest, Authenticate_SmeRefuses) {
+    StartAp();
+
     // Send authentication request frame
     SendClientAuthReqFrame();
     device.svc_queue.empty();
@@ -240,6 +287,7 @@ TEST_F(ApInfraBssTest, Authenticate_SmeRefuses) {
 }
 
 TEST_F(ApInfraBssTest, Associate_Success) {
+    StartAp();
     AuthenticateClient();
 
     // Send association request frame
@@ -273,6 +321,7 @@ TEST_F(ApInfraBssTest, Associate_Success) {
 }
 
 TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
+    StartAp();
     AuthenticateClient();
 
     // Send association request frame
@@ -298,7 +347,8 @@ TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
 }
 
 TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {
-    AssociateClient();
+    StartAp();
+    AuthenticateAndAssociateClient();
 
     // Send MLME-EAPOL.request.
     SendEapolRequestMsg();
@@ -331,9 +381,10 @@ TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {
 }
 
 TEST_F(ApInfraBssTest, SendFrameAfterAssociation) {
-    AssociateClient();
+    StartAp();
+    AuthenticateAndAssociateClient();
 
-    // Have BSS processes Eth frame.
+    // Have BSS process Eth frame.
     SendEthFrame(kTestPayload);
 
     // Verify a data WLAN frame was sent.
@@ -342,8 +393,81 @@ TEST_F(ApInfraBssTest, SendFrameAfterAssociation) {
     AssertDataFrameSentToClient(fbl::move(pkt), kTestPayload);
 }
 
-TEST_F(ApInfraBssTest, PowerSaving) {
+TEST_F(ApInfraBssTest, UnprotectedApReceiveFramesAfterAssociation) {
+    StartAp(false);
+
+    // Simulate unauthenticated client sending data frames, which should be ignored
+    SendDataFrame();
+    ASSERT_TRUE(device.eth_queue.empty());
+    ASSERT_TRUE(device.wlan_queue.empty());
+    ASSERT_TRUE(device.svc_queue.empty());
+
+    AuthenticateClient();
+    SendDataFrame();
+    ASSERT_TRUE(device.eth_queue.empty());
+    ASSERT_TRUE(device.wlan_queue.empty());
+    ASSERT_TRUE(device.svc_queue.empty());
+
     AssociateClient();
+    SendDataFrame();
+    ASSERT_TRUE(device.wlan_queue.empty());
+    ASSERT_TRUE(device.svc_queue.empty());
+
+    // Verify ethernet frame is sent out and is correct
+    auto eth_frames = device.GetEthPackets();
+    ASSERT_EQ(eth_frames.size(), static_cast<size_t>(1));
+    AssertEthFrame(std::move(*eth_frames.begin()), kTestPayload);
+}
+
+TEST_F(ApInfraBssTest, SetKeys) {
+    StartAp();
+    AuthenticateAndAssociateClient();
+
+    // Send MLME-SETKEYS.request
+    SendSetKeysRequestMsg();
+
+    ASSERT_EQ(device.GetKeys().size(), static_cast<size_t>(1));
+    auto key_config = fbl::move(device.GetKeys()[0]);
+    EXPECT_EQ(std::memcmp(key_config.key, kKeyData, sizeof(kKeyData)), 0);
+    EXPECT_EQ(key_config.key_idx, 1);
+    EXPECT_EQ(key_config.key_type, WLAN_KEY_TYPE_PAIRWISE);
+    EXPECT_EQ(std::memcmp(key_config.peer_addr, kClientAddress, sizeof(kClientAddress)), 0);
+    EXPECT_EQ(std::memcmp(key_config.cipher_oui, kCipherOui, sizeof(kCipherOui)), 0);
+    EXPECT_EQ(key_config.cipher_type, kCipherSuiteType);
+}
+
+TEST_F(ApInfraBssTest, SetKeys_IgnoredForUnprotectedAp) {
+    StartAp(false);
+    AuthenticateAndAssociateClient();
+
+    // Send MLME-SETKEYS.request
+    SendSetKeysRequestMsg();
+
+    EXPECT_TRUE(device.GetKeys().empty());
+}
+
+TEST_F(ApInfraBssTest, PowerSaving_IgnoredBeforeControlledPortOpens) {
+    StartAp();
+    AuthenticateAndAssociateClient();
+
+    // Simulate client sending null data frame with power saving.
+    auto pwr_mgmt = true;
+    SendNullDataFrame(pwr_mgmt);
+    EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(0));
+
+    // Two Ethernet frames arrive. WLAN frame is sent out since we ignored previous frame and did
+    // not change client's status to dozing
+    std::vector<uint8_t> payload2 = {'m', 's', 'g', '2'};
+    SendEthFrame(kTestPayload);
+    EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
+    auto pkt = std::move(*device.wlan_queue.begin());
+    AssertDataFrameSentToClient(fbl::move(pkt), kTestPayload);
+}
+
+TEST_F(ApInfraBssTest, PowerSaving_AfterControlledPortOpens) {
+    StartAp();
+    AuthenticateAndAssociateClient();
+    EstablishRsna();
 
     // Simulate client sending null data frame with power saving.
     auto pwr_mgmt = true;
@@ -360,9 +484,77 @@ TEST_F(ApInfraBssTest, PowerSaving) {
     SendNullDataFrame(!pwr_mgmt);
     EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(2));
     auto pkt = std::move(*device.wlan_queue.begin());
-    AssertDataFrameSentToClient(fbl::move(pkt), kTestPayload, true);
+    AssertDataFrameSentToClient(fbl::move(pkt), kTestPayload,
+                                {.more_data = 1, .protected_frame = 1});
+    pkt = std::move(*(device.wlan_queue.begin() + 1));
+    AssertDataFrameSentToClient(fbl::move(pkt), payload2, {.protected_frame = 1});
+}
+
+TEST_F(ApInfraBssTest, PowerSaving_UnprotectedAp) {
+    // For unprotected AP, power saving should work as soon as client is associated
+    StartAp(false);
+    AuthenticateAndAssociateClient();
+
+    // Simulate client sending null data frame with power saving.
+    auto pwr_mgmt = true;
+    SendNullDataFrame(pwr_mgmt);
+    EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(0));
+
+    // Two Ethernet frames arrive. Verify no WLAN frame is sent out yet.
+    std::vector<uint8_t> payload2 = {'m', 's', 'g', '2'};
+    SendEthFrame(kTestPayload);
+    SendEthFrame(payload2);
+    EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(0));
+
+    // Client notifies that it wakes up. Buffered frames should be sent out now
+    SendNullDataFrame(!pwr_mgmt);
+    EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(2));
+    auto pkt = std::move(*device.wlan_queue.begin());
+    AssertDataFrameSentToClient(fbl::move(pkt), kTestPayload, {.more_data = 1});
     pkt = std::move(*(device.wlan_queue.begin() + 1));
     AssertDataFrameSentToClient(fbl::move(pkt), payload2);
+}
+
+TEST_F(ApInfraBssTest, OutboundFramesAreProtectedAfterControlledPortOpens) {
+    StartAp();
+    AuthenticateAndAssociateClient();
+    EstablishRsna();
+
+    // Have BSS process Eth frame.
+    SendEthFrame(kTestPayload);
+
+    // Verify a data WLAN frame was sent with protected frame flag set
+    EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
+    auto pkt = std::move(*device.wlan_queue.begin());
+    AssertDataFrameSentToClient(fbl::move(pkt), kTestPayload, {.protected_frame = 1});
+}
+
+TEST_F(ApInfraBssTest, ReceiveFrames_BeforeControlledPortOpens) {
+    StartAp();
+    AuthenticateAndAssociateClient();
+
+    // Simulate client sending data frame to AP
+    ASSERT_TRUE(device.eth_queue.empty());
+    SendDataFrame();
+
+    // For protected AP, controlled port is not opened until RSNA is established, so data frame
+    // should be ignored
+    EXPECT_TRUE(device.eth_queue.empty());
+}
+
+TEST_F(ApInfraBssTest, ReceiveFrames_AfterControlledPortOpens) {
+    StartAp();
+    AuthenticateAndAssociateClient();
+    EstablishRsna();
+
+    // Simulate client sending data frame to AP
+    ASSERT_TRUE(device.eth_queue.empty());
+    SendDataFrame();
+
+    // Verify ethernet frame is sent out and is correct
+    auto eth_frames = device.GetEthPackets();
+    ASSERT_EQ(eth_frames.size(), static_cast<size_t>(1));
+    AssertEthFrame(std::move(*eth_frames.begin()), kTestPayload);
 }
 
 }  // namespace

@@ -62,18 +62,16 @@ struct ClientTest : public ::testing::Test {
     }
 
     zx_status_t SendDataFrame() {
-        fbl::unique_ptr<Packet> pkt;
-        auto status = CreateDataFrame(&pkt, kTestPayload, sizeof(kTestPayload));
-        if (status != ZX_OK) { return status; }
-        station.HandleAnyWlanFrame(fbl::move(pkt));
+        auto frame = CreateDataFrame(kTestPayload, sizeof(kTestPayload));
+        if (frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
+        station.HandleAnyWlanFrame(frame.Take());
         return ZX_OK;
     }
 
     zx_status_t SendEmptyDataFrame() {
-        fbl::unique_ptr<Packet> pkt;
-        auto status = CreateDataFrame(&pkt, nullptr, 0);
-        if (status != ZX_OK) { return status; }
-        station.HandleAnyWlanFrame(fbl::move(pkt));
+        auto frame = CreateDataFrame(nullptr, 0);
+        if (frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }
+        station.HandleAnyWlanFrame(frame.Take());
         return ZX_OK;
     }
 

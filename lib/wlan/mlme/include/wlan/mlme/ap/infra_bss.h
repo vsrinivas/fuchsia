@@ -57,7 +57,8 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
     seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) override;
     seq_t NextSeq(const DataFrameHeader& hdr) override;
 
-    std::optional<DataFrame<LlcHeader>> EthToDataFrame(const EthFrame& eth_frame) override;
+    std::optional<DataFrame<LlcHeader>> EthToDataFrame(const EthFrame& eth_frame,
+                                                       bool needs_protection) override;
     void OnPreTbtt() override;
     void OnBcnTxComplete() override;
 
@@ -76,6 +77,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
     void HandleAnyDataFrame(DataFrame<>&&);
     void HandleAnyCtrlFrame(CtrlFrame<>&&);
     void HandleNewClientAuthAttempt(const MgmtFrameView<Authentication>&);
+    zx_status_t HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysRequest>&);
 
     bool HasClient(const common::MacAddr& client);
     RemoteClientInterface* GetClient(const common::MacAddr& addr);

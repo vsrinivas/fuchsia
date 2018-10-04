@@ -38,6 +38,7 @@ namespace {
 struct MockDevice : public DeviceInterface {
    public:
     using PacketList = std::vector<fbl::unique_ptr<Packet>>;
+    using KeyList = std::vector<wlan_key_config_t>;
     typedef bool (*PacketPredicate)(const Packet*);
 
     MockDevice() {
@@ -121,13 +122,7 @@ struct MockDevice : public DeviceInterface {
     }
 
     zx_status_t SetKey(wlan_key_config_t* cfg) override final {
-        if (!cfg) {
-            key_cfg.reset();
-        } else {
-            // Copy config which might get freed by the MLME before the result was verified.
-            key_cfg.reset(new wlan_key_config_t);
-            memcpy(key_cfg.get(), cfg, sizeof(wlan_key_config_t));
-        }
+        keys.push_back(*cfg);
         return ZX_OK;
     }
 
@@ -183,13 +178,15 @@ struct MockDevice : public DeviceInterface {
         return GetPackets(&wlan_queue, predicate ? predicate : [](auto pkt) { return true; });
     }
 
+    KeyList GetKeys() { return keys; }
+
     fbl::RefPtr<DeviceState> state;
     wlanmac_info_t wlanmac_info;
     PacketList wlan_queue;
     PacketList svc_queue;
     PacketList eth_queue;
     fbl::unique_ptr<wlan_bss_config_t> bss_cfg;
-    fbl::unique_ptr<wlan_key_config_t> key_cfg;
+    KeyList keys;
     fbl::unique_ptr<Packet> beacon;
     bool beaconing_enabled;
 
