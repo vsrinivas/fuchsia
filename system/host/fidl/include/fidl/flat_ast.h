@@ -143,9 +143,6 @@ struct Decl {
     Decl(Kind kind, std::unique_ptr<raw::AttributeList> attributes, Name name)
         : kind(kind), attributes(std::move(attributes)), name(std::move(name)) {}
 
-    Decl(Decl&&) = default;
-    Decl& operator=(Decl&&) = default;
-
     const Kind kind;
 
     std::unique_ptr<raw::AttributeList> attributes;
