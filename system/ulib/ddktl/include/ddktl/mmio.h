@@ -188,6 +188,9 @@ public:
         ModifyBit(false, shift, offs);
     }
 
+protected:
+    mmio_buffer_t mmio_;
+
 private:
     void transfer(MmioBase&& other) {
         mmio_ = other.mmio_;
@@ -195,7 +198,6 @@ private:
         other.reset();
     }
 
-    mmio_buffer_t mmio_;
     uintptr_t ptr_;
 };
 
@@ -226,8 +228,10 @@ public:
         ZX_ASSERT(size + offset <= mmio.size);
     }
 
-    // Note: the destructor is overriden here to avoid unmapping the buffer.
-    virtual ~MmioView() override {}
+    virtual ~MmioView() override {
+        // Prevent unmap operation from occurring.
+        mmio_.vmo = ZX_HANDLE_INVALID;
+    }
 };
 
 // MmioPinnedBuffer is wrapper around mmio_pinned_buffer_t.
