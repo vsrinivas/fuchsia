@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#define HAS_DEVICE_TREE 1
+
 static const zbi_cpu_config_t cpu_config = {
 // TODO(voydanoff) enable second cluster
 #if 0
@@ -36,12 +38,14 @@ static const zbi_mem_range_t mem_config[] = {
         .paddr = 0x05000000,
         .length = 0x2400000,
     },
+/* Linux device tree already excludes this region
     // linux,meson-fb
     {
         .type = ZBI_MEM_RANGE_RESERVED,
         .paddr = 0x7f800000,
         .length = 0x800000,
     },
+*/
 };
 
 static const dcfg_simple_t uart_driver = {
