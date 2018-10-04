@@ -108,9 +108,12 @@ static int netboot_send_query(int socket, unsigned port, const char* ifname) {
         size_t sz = sizeof(nbmsg) + hostname_len;
         addr.sin6_scope_id = in6->sin6_scope_id;
 
-        int r;
-        if ((r = sendto(socket, &m, sz, 0, (struct sockaddr*)&addr, sizeof(addr))) != sz) {
-            fprintf(stderr, "error: cannot send %d %s\n", errno, strerror(errno));
+        ssize_t r = sendto(socket, &m, sz, 0,
+                           (struct sockaddr*)&addr, sizeof(addr));
+        if (r < 0) {
+            fprintf(stderr, "error: sendto: %s\n", strerror(errno));
+        } else if ((size_t)r != sz) {
+            fprintf(stderr, "error: sendto: short count %zu != %zu\n", r, sz);
         }
     }
 
@@ -122,8 +125,10 @@ static bool netboot_receive_query(int socket, on_device_cb callback, void* data)
     socklen_t rlen = sizeof(ra);
     memset(&ra, 0, sizeof(ra));
     msg m;
-    int r = recvfrom(socket, &m, sizeof(m), 0, (void*)&ra, &rlen);
-    if (r > sizeof(nbmsg)) {
+    ssize_t r = recvfrom(socket, &m, sizeof(m), 0, (void*)&ra, &rlen);
+    if (r < 0) {
+        fprintf(stderr, "error: recvfrom: %s\n", strerror(errno));
+    } else if ((size_t)r > sizeof(nbmsg)) {
         r -= sizeof(nbmsg);
         m.data[r] = 0;
         if ((m.hdr.magic == NB_MAGIC) &&
