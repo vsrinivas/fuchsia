@@ -290,7 +290,8 @@ zx_status_t PlatformBus::ReadZbi(zx::vmo zbi) {
             zxlogf(ERROR, "zbi.read() failed: %d\n", status);
             return status;
         }
-        size_t itemlen = ZBI_ALIGN(sizeof(zbi_header_t) + header.length);
+        size_t itemlen = ZBI_ALIGN(
+            static_cast<uint32_t>(sizeof(zbi_header_t)) + header.length);
         if (itemlen > len) {
             zxlogf(ERROR, "platform_bus: ZBI item too large (%zd > %zd)\n", itemlen, len);
             break;
@@ -323,7 +324,8 @@ zx_status_t PlatformBus::ReadZbi(zx::vmo zbi) {
         if (status < 0) {
             break;
         }
-        const size_t itemlen = ZBI_ALIGN(sizeof(zbi_header_t) + header.length);
+        const size_t itemlen = ZBI_ALIGN(
+            static_cast<uint32_t>(sizeof(zbi_header_t)) + header.length);
         if (itemlen > len) {
             zxlogf(ERROR, "platform_bus: ZBI item too large (%zd > %zd)\n", itemlen, len);
             break;
@@ -393,7 +395,8 @@ zx_status_t PlatformBus::GetZbiMetadata(uint32_t type, uint32_t extra, const voi
 
     while (offset + sizeof(zbi_header_t) < metadata_size) {
         const auto header = reinterpret_cast<const zbi_header_t*>(metadata);
-        const size_t length = ZBI_ALIGN(sizeof(zbi_header_t) + header->length);
+        const size_t length = ZBI_ALIGN(
+            static_cast<uint32_t>(sizeof(zbi_header_t)) + header->length);
         if (offset + length > metadata_size) {
             break;
         }

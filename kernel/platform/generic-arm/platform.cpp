@@ -190,7 +190,8 @@ static inline bool is_zbi_container(void* addr) {
 }
 
 static void save_mexec_zbi(zbi_header_t* item) {
-    size_t length = ZBI_ALIGN(item->length + sizeof(zbi_header_t));
+    size_t length = ZBI_ALIGN(
+        static_cast<uint32_t>(sizeof(zbi_header_t) + item->length));
     ASSERT(sizeof(mexec_zbi) - mexec_zbi_length >= length);
 
     memcpy(&mexec_zbi[mexec_zbi_length], item, length);
@@ -562,7 +563,8 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* zbi, const size_t len) {
         if (status != ZBI_RESULT_OK)
             return ZX_ERR_INTERNAL;
 
-        offset += ZBI_ALIGN(sizeof(zbi_header_t) + item->length);
+        offset += ZBI_ALIGN(
+            static_cast<uint32_t>(sizeof(zbi_header_t)) + item->length);
     }
 
     return ZX_OK;

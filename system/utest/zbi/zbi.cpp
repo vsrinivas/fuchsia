@@ -16,13 +16,16 @@
 #include <libzbi/zbi-cpp.h>
 
 const char kTestCmdline[] = "0123";
-constexpr size_t kCmdlinePayloadLen = ZBI_ALIGN(sizeof(kTestCmdline));
+constexpr size_t kCmdlinePayloadLen =
+    ZBI_ALIGN(static_cast<uint32_t>(sizeof(kTestCmdline)));
 
 const char kTestRD[] = "0123456789";
-constexpr size_t kRdPayloadLen = ZBI_ALIGN(sizeof(kTestRD));
+constexpr size_t kRdPayloadLen =
+    ZBI_ALIGN(static_cast<uint32_t>(sizeof(kTestRD)));
 
 const char kTestBootfs[] = "abcdefghijklmnopqrs";
-constexpr size_t kBootfsPayloadLen = ZBI_ALIGN(sizeof(kTestBootfs));
+constexpr size_t kBootfsPayloadLen =
+    ZBI_ALIGN(static_cast<uint32_t>(sizeof(kTestBootfs)));
 
 const char kAppendRD[] = "ABCDEFG";
 
