@@ -14,7 +14,6 @@ SHARED_COMPILEFLAGS := \
 
 CRYPTO_DIR=$(LOCAL_DIR)/crypto
 SHARED_SRCS := \
-    $(CRYPTO_DIR)/chacha/chacha.c \
     $(CRYPTO_DIR)/cipher_extra/e_aesgcmsiv.c \
     $(CRYPTO_DIR)/cpu-aarch64-fuchsia.c \
     $(CRYPTO_DIR)/cpu-arm.c \
@@ -29,24 +28,13 @@ SHARED_SRCS := \
     $(CRYPTO_DIR)/fipsmodule/digest/digest.c \
     $(CRYPTO_DIR)/fipsmodule/digest/digests.c \
     $(CRYPTO_DIR)/fipsmodule/hmac/hmac.c \
-    $(CRYPTO_DIR)/fipsmodule/md4/md4.c \
-    $(CRYPTO_DIR)/fipsmodule/md5/md5.c \
-    $(CRYPTO_DIR)/fipsmodule/modes/cbc.c \
-    $(CRYPTO_DIR)/fipsmodule/modes/cfb.c \
-    $(CRYPTO_DIR)/fipsmodule/modes/ctr.c \
     $(CRYPTO_DIR)/fipsmodule/modes/gcm.c \
-    $(CRYPTO_DIR)/fipsmodule/modes/ofb.c \
     $(CRYPTO_DIR)/fipsmodule/modes/polyval.c \
-    $(CRYPTO_DIR)/fipsmodule/rand/ctrdrbg.c \
-    $(CRYPTO_DIR)/fipsmodule/rand/rand.c \
-    $(CRYPTO_DIR)/fipsmodule/sha/sha1.c \
     $(CRYPTO_DIR)/fipsmodule/sha/sha256.c \
-    $(CRYPTO_DIR)/fipsmodule/sha/sha512.c \
     $(CRYPTO_DIR)/hkdf/hkdf.c \
     $(CRYPTO_DIR)/mem.c \
-    $(CRYPTO_DIR)/rand_extra/forkunsafe.c \
-    $(CRYPTO_DIR)/rand_extra/fuchsia.c \
     $(CRYPTO_DIR)/thread_pthread.c \
+    $(LOCAL_DIR)/unused.c
 
 # TODO(aarongreen): Replace or get upstream to support more fully.
 DECREPIT_DIR=$(LOCAL_DIR)/decrepit
@@ -58,28 +46,20 @@ SHARED_SRCS += \
     $(LOCAL_DIR)/err_data.c \
 
 ARM_64_ASMSRCS := \
-    chacha/chacha-armv8.S \
-    fipsmodule/sha512-armv8.S \
-    fipsmodule/ghashv8-armx64.S \
-    fipsmodule/sha1-armv8.S \
     fipsmodule/sha256-armv8.S \
+    fipsmodule/ghashv8-armx64.S \
     fipsmodule/aesv8-armx64.S
 LINUX_ARM64_ASMSRCS := $(patsubst %,$(LOCAL_DIR)/linux-aarch64/crypto/%,$(ARM_64_ASMSRCS))
 
 X86_64_ASMSRCS := \
     cipher_extra/aes128gcmsiv-x86_64.S \
-    chacha/chacha-x86_64.S \
-    fipsmodule/sha256-x86_64.S \
-    fipsmodule/ghash-x86_64.S \
-    fipsmodule/bsaes-x86_64.S \
-    fipsmodule/aesni-x86_64.S \
-    fipsmodule/sha1-x86_64.S \
-    fipsmodule/vpaes-x86_64.S \
-    fipsmodule/md5-x86_64.S \
-    fipsmodule/aes-x86_64.S \
-    fipsmodule/sha512-x86_64.S \
     fipsmodule/aesni-gcm-x86_64.S \
-    fipsmodule/rdrand-x86_64.S
+    fipsmodule/aesni-x86_64.S \
+    fipsmodule/aes-x86_64.S \
+    fipsmodule/bsaes-x86_64.S \
+    fipsmodule/ghash-x86_64.S \
+    fipsmodule/sha256-x86_64.S \
+    fipsmodule/vpaes-x86_64.S
 DARWIN_X86_64_ASMSRCS := $(patsubst %,$(LOCAL_DIR)/mac-x86_64/crypto/%,$(X86_64_ASMSRCS))
 LINUX_X86_64_ASMSRCS := $(patsubst %,$(LOCAL_DIR)/linux-x86_64/crypto/%,$(X86_64_ASMSRCS))
 

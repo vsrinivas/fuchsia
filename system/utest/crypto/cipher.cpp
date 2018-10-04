@@ -20,7 +20,6 @@ namespace {
 
 // See utils.h; the following macros allow reusing tests for each of the supported Ciphers.
 #define EACH_PARAM(OP, Test)                                                                       \
-    OP(Test, Cipher, AES128_CTR)                                                                   \
     OP(Test, Cipher, AES256_XTS)
 
 bool TestGetLengths_Uninitialized(void) {
@@ -31,26 +30,6 @@ bool TestGetLengths_Uninitialized(void) {
     EXPECT_ZX(Cipher::GetIVLen(Cipher::kUninitialized, &len), ZX_ERR_INVALID_ARGS);
     END_TEST;
 }
-
-bool TestGetLengths_AES128_CTR(void) {
-    BEGIN_TEST;
-    size_t key_len;
-    EXPECT_ZX(Cipher::GetKeyLen(Cipher::kAES128_CTR, nullptr), ZX_ERR_INVALID_ARGS);
-    EXPECT_OK(Cipher::GetKeyLen(Cipher::kAES128_CTR, &key_len));
-    EXPECT_EQ(key_len, 16U);
-
-    size_t iv_len;
-    EXPECT_ZX(Cipher::GetIVLen(Cipher::kAES128_CTR, nullptr), ZX_ERR_INVALID_ARGS);
-    EXPECT_OK(Cipher::GetIVLen(Cipher::kAES128_CTR, &iv_len));
-    EXPECT_EQ(iv_len, 16U);
-
-    size_t block_size;
-    EXPECT_ZX(Cipher::GetIVLen(Cipher::kAES128_CTR, nullptr), ZX_ERR_INVALID_ARGS);
-    EXPECT_OK(Cipher::GetIVLen(Cipher::kAES128_CTR, &block_size));
-    EXPECT_EQ(block_size, 16U);
-    END_TEST;
-}
-
 
 bool TestGetLengths_AES256_XTS(void) {
     BEGIN_TEST;
@@ -377,19 +356,6 @@ bool TestSP800_TC(Cipher::Algorithm cipher, const char* xkey, const char* xiv, c
 
 // clang-format off
 
-// See https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
-bool TestSP800_38A_F5(void) {
-    return TestSP800_TC(Cipher::kAES128_CTR,
-        // key
-        "2b7e151628aed2a6abf7158809cf4f3c",
-        // iv
-        "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
-        // ptext
-        "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
-        // ctext
-        "874d6191b620e3261bef6864990db6ce9806f66b7970fdff8617187bb9fffdff5ae4df3edbd5d35e5b4f09020db03eab1e031dda2fbe03d1792170a0f3009cee");
-}
-
 // See https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/XTSTestVectors.zip
 bool TestSP800_38E_TC010(void) {
     return TestSP800_TC(Cipher::kAES256_XTS,
@@ -643,7 +609,6 @@ RUN_EACH(TestEncryptStream)
 RUN_EACH(TestEncryptRandomAccess)
 RUN_EACH(TestDecryptStream)
 RUN_EACH(TestDecryptRandomAccess)
-RUN_TEST(TestSP800_38A_F5)
 RUN_TEST(TestSP800_38E_TC010)
 RUN_TEST(TestSP800_38E_TC020)
 RUN_TEST(TestSP800_38E_TC030)
