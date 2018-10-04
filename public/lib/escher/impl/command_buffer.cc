@@ -379,6 +379,7 @@ bool CommandBuffer::Retire() {
   used_resources_.clear();
 
   if (callback_) {
+    TRACE_DURATION("gfx", "escher::CommandBuffer::Retire::callback");
     callback_();
     callback_ = nullptr;
   }

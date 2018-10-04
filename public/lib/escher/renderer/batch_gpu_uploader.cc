@@ -94,6 +94,7 @@ BatchGpuUploader::Reader::~Reader() {
 void BatchGpuUploader::Reader::ReadBuffer(const BufferPtr& source,
                                           vk::BufferCopy region,
                                           SemaphorePtr semaphore) {
+  TRACE_DURATION("gfx", "escher::BatchGpuUploader::Reader::ReadBuffer");
   if (semaphore) {
     command_buffer_->impl()->TakeWaitSemaphore(
         source, vk::PipelineStageFlagBits::eTransfer);
@@ -107,6 +108,7 @@ void BatchGpuUploader::Reader::ReadBuffer(const BufferPtr& source,
 void BatchGpuUploader::Reader::ReadImage(const ImagePtr& source,
                                          vk::BufferImageCopy region,
                                          SemaphorePtr semaphore) {
+  TRACE_DURATION("gfx", "escher::BatchGpuUploader::Reader::ReadImage");
   command_buffer_->impl()->TransitionImageLayout(
       source, vk::ImageLayout::eShaderReadOnlyOptimal,
       vk::ImageLayout::eTransferSrcOptimal);
@@ -170,11 +172,12 @@ std::unique_ptr<BatchGpuUploader::Writer> BatchGpuUploader::AcquireWriter(
   }
   FXL_DCHECK(frame_);
   FXL_DCHECK(size);
-
   // TODO(SCN-846) Relax this check once Writers are backed by secondary
   // buffers, and the frame's primary command buffer is not moved into the
   // Writer.
   FXL_DCHECK(writer_count_ == 0);
+
+  TRACE_DURATION("gfx", "escher::BatchGpuUploader::AcquireWriter");
 
   vk::DeviceSize vk_size = size;
   BufferPtr buffer = buffer_cache_->NewHostBuffer(vk_size);
@@ -199,6 +202,8 @@ std::unique_ptr<BatchGpuUploader::Reader> BatchGpuUploader::AcquireReader(
   // buffers, and the frame's primary command buffer is not moved into the
   // Reader.
   FXL_DCHECK(reader_count_ == 0);
+
+  TRACE_DURATION("gfx", "escher::BatchGpuUploader::AcquireReader");
 
   vk::DeviceSize vk_size = size;
   BufferPtr buffer = buffer_cache_->NewHostBuffer(vk_size);
