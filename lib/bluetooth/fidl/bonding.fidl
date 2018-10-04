@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.bluetooth.control;
-
-using fuchsia.bluetooth;
+library fuchsia.bluetooth.host;
 
 struct SecurityProperties {
   bool authenticated;
@@ -30,7 +28,6 @@ struct LTK {
 };
 
 // The preferred LE connection parameters of the peer.
-// TODO(bwb): to move LEConnectionParameters to BLE library.
 struct LEConnectionParameters {
   uint16 connection_interval;
   uint16 connection_latency;
@@ -80,19 +77,4 @@ struct BondingData {
 
   // Bonding data that is present when this device is paired on the BR/EDR transport.
   // TODO(armansito): Add BR/EDR data.
-};
-
-interface Bonding {
-  // Initializes bonded devices for the local host identified by |local_id|. This is the same
-  // as the ID provided in OnDeviceBonded().
-  1: AddBondedDevices(string local_id, vector<BondingData> bonds) -> (fuchsia.bluetooth.Status status);
-
-  // TODO(NET-1156) Make an interface to bootstrap bt-gap with the BondingData
-
-  // Called when the pairing procedure with a new peer has completed or when new data for an
-  // existing bond is available.
-  101: -> OnNewBondingData(string local_id, BondingData data);
-
-  // Called when the bonding data for an existing peer should be removed
-  102: -> OnDeleteBond(string local_id);
 };

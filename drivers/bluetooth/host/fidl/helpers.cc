@@ -19,31 +19,32 @@ using fuchsia::bluetooth::ErrorCode;
 using fuchsia::bluetooth::Int8;
 using fuchsia::bluetooth::Status;
 
-namespace ctrl = fuchsia::bluetooth::control;
-namespace ble = fuchsia::bluetooth::le;
+namespace fble = fuchsia::bluetooth::le;
+namespace fctrl = fuchsia::bluetooth::control;
+namespace fhost = fuchsia::bluetooth::host;
 
 namespace bthost {
 namespace fidl_helpers {
 namespace {
 
-ctrl::TechnologyType TechnologyTypeToFidl(::btlib::gap::TechnologyType type) {
+fctrl::TechnologyType TechnologyTypeToFidl(::btlib::gap::TechnologyType type) {
   switch (type) {
     case ::btlib::gap::TechnologyType::kLowEnergy:
-      return ctrl::TechnologyType::LOW_ENERGY;
+      return fctrl::TechnologyType::LOW_ENERGY;
     case ::btlib::gap::TechnologyType::kClassic:
-      return ctrl::TechnologyType::CLASSIC;
+      return fctrl::TechnologyType::CLASSIC;
     case ::btlib::gap::TechnologyType::kDualMode:
-      return ctrl::TechnologyType::DUAL_MODE;
+      return fctrl::TechnologyType::DUAL_MODE;
     default:
       ZX_PANIC("invalid technology type: %u", static_cast<unsigned int>(type));
       break;
   }
 
   // This should never execute.
-  return ctrl::TechnologyType::DUAL_MODE;
+  return fctrl::TechnologyType::DUAL_MODE;
 }
 
-btlib::common::UInt128 KeyDataFromFidl(const ctrl::Key& key) {
+btlib::common::UInt128 KeyDataFromFidl(const fhost::Key& key) {
   btlib::common::UInt128 result;
   static_assert(sizeof(key.value) == result.size(),
                 "keys must have the same size");
@@ -59,7 +60,7 @@ btlib::common::UInt128 KeyDataFromFidl(const ctrl::Key& key) {
 }
 
 btlib::sm::SecurityProperties SecurityPropsFromFidl(
-    const ctrl::SecurityProperties& sec_prop) {
+    const fhost::SecurityProperties& sec_prop) {
   auto level = btlib::sm::SecurityLevel::kEncrypted;
   if (sec_prop.authenticated) {
     level = btlib::sm::SecurityLevel::kAuthenticated;
@@ -68,9 +69,9 @@ btlib::sm::SecurityProperties SecurityPropsFromFidl(
                                        sec_prop.secure_connections);
 }
 
-ctrl::SecurityProperties SecurityPropsToFidl(
+fhost::SecurityProperties SecurityPropsToFidl(
     const btlib::sm::SecurityProperties& sec_prop) {
-  ctrl::SecurityProperties result;
+  fhost::SecurityProperties result;
   result.authenticated = sec_prop.authenticated();
   result.secure_connections = sec_prop.secure_connections();
   result.encryption_key_size = sec_prop.enc_key_size();
@@ -78,13 +79,13 @@ ctrl::SecurityProperties SecurityPropsToFidl(
 }
 
 btlib::common::DeviceAddress::Type BondingAddrTypeFromFidl(
-    const fuchsia::bluetooth::control::AddressType& type) {
+    const fhost::AddressType& type) {
   switch (type) {
-    case ctrl::AddressType::LE_RANDOM:
+    case fhost::AddressType::LE_RANDOM:
       return btlib::common::DeviceAddress::Type::kLERandom;
-    case ctrl::AddressType::LE_PUBLIC:
+    case fhost::AddressType::LE_PUBLIC:
       return btlib::common::DeviceAddress::Type::kLEPublic;
-    case ctrl::AddressType::BREDR:
+    case fhost::AddressType::BREDR:
       return btlib::common::DeviceAddress::Type::kBREDR;
     default:
       ZX_PANIC("invalid address type: %u", static_cast<unsigned int>(type));
@@ -93,15 +94,15 @@ btlib::common::DeviceAddress::Type BondingAddrTypeFromFidl(
   return btlib::common::DeviceAddress::Type::kBREDR;
 }
 
-fuchsia::bluetooth::control::AddressType BondingAddrTypeToFidl(
+fhost::AddressType BondingAddrTypeToFidl(
     btlib::common::DeviceAddress::Type type) {
   switch (type) {
     case btlib::common::DeviceAddress::Type::kLERandom:
-      return ctrl::AddressType::LE_RANDOM;
+      return fhost::AddressType::LE_RANDOM;
     case btlib::common::DeviceAddress::Type::kLEPublic:
-      return ctrl::AddressType::LE_PUBLIC;
+      return fhost::AddressType::LE_PUBLIC;
     case btlib::common::DeviceAddress::Type::kBREDR:
-      return ctrl::AddressType::BREDR;
+      return fhost::AddressType::BREDR;
     default:
       // Anonymous is not a valid address type to use for bonding, so we treat
       // that as a programming error.
@@ -109,17 +110,17 @@ fuchsia::bluetooth::control::AddressType BondingAddrTypeToFidl(
                static_cast<unsigned int>(type));
       break;
   }
-  return ctrl::AddressType::BREDR;
+  return fhost::AddressType::BREDR;
 }
 
-btlib::sm::LTK LtkFromFidl(const ctrl::LTK& ltk) {
+btlib::sm::LTK LtkFromFidl(const fhost::LTK& ltk) {
   return btlib::sm::LTK(
       SecurityPropsFromFidl(ltk.key.security_properties),
       btlib::hci::LinkKey(KeyDataFromFidl(ltk.key), ltk.rand, ltk.ediv));
 }
 
-ctrl::LTK LtkToFidl(const btlib::sm::LTK& ltk) {
-  ctrl::LTK result;
+fhost::LTK LtkToFidl(const btlib::sm::LTK& ltk) {
+  fhost::LTK result;
   result.key.security_properties = SecurityPropsToFidl(ltk.security());
   result.key.value = KeyDataToFidl(ltk.key().value());
 
@@ -131,13 +132,13 @@ ctrl::LTK LtkToFidl(const btlib::sm::LTK& ltk) {
   return result;
 }
 
-btlib::sm::Key KeyFromFidl(const ctrl::Key& key) {
+btlib::sm::Key KeyFromFidl(const fhost::Key& key) {
   return btlib::sm::Key(SecurityPropsFromFidl(key.security_properties),
                         KeyDataFromFidl(key));
 }
 
-ctrl::Key KeyToFidl(const btlib::sm::Key& key) {
-  ctrl::Key result;
+fhost::Key KeyToFidl(const btlib::sm::Key& key) {
+  fhost::Key result;
   result.security_properties = SecurityPropsToFidl(key.security());
   result.value = KeyDataToFidl(key.value());
   return result;
@@ -179,28 +180,27 @@ Status NewFidlError(ErrorCode error_code, std::string description) {
 }
 
 btlib::sm::IOCapability IoCapabilityFromFidl(
-    ctrl::InputCapabilityType input, ctrl::OutputCapabilityType output) {
-  if (input == ctrl::InputCapabilityType::NONE &&
-      output == ctrl::OutputCapabilityType::NONE) {
+    fctrl::InputCapabilityType input, fctrl::OutputCapabilityType output) {
+  if (input == fctrl::InputCapabilityType::NONE &&
+      output == fctrl::OutputCapabilityType::NONE) {
     return btlib::sm::IOCapability::kNoInputNoOutput;
-  } else if (input == ctrl::InputCapabilityType::KEYBOARD &&
-             output == ctrl::OutputCapabilityType::DISPLAY) {
+  } else if (input == fctrl::InputCapabilityType::KEYBOARD &&
+             output == fctrl::OutputCapabilityType::DISPLAY) {
     return btlib::sm::IOCapability::kKeyboardDisplay;
-  } else if (input == ctrl::InputCapabilityType::KEYBOARD &&
-             output == ctrl::OutputCapabilityType::NONE) {
+  } else if (input == fctrl::InputCapabilityType::KEYBOARD &&
+             output == fctrl::OutputCapabilityType::NONE) {
     return btlib::sm::IOCapability::kKeyboardOnly;
-  } else if (input == ctrl::InputCapabilityType::NONE &&
-             output == ctrl::OutputCapabilityType::DISPLAY) {
+  } else if (input == fctrl::InputCapabilityType::NONE &&
+             output == fctrl::OutputCapabilityType::DISPLAY) {
     return btlib::sm::IOCapability::kDisplayOnly;
-  } else if (input == ctrl::InputCapabilityType::CONFIRMATION &&
-             output == ctrl::OutputCapabilityType::DISPLAY) {
+  } else if (input == fctrl::InputCapabilityType::CONFIRMATION &&
+             output == fctrl::OutputCapabilityType::DISPLAY) {
     return btlib::sm::IOCapability::kDisplayYesNo;
   }
   return btlib::sm::IOCapability::kNoInputNoOutput;
 }
 
-btlib::sm::PairingData PairingDataFromFidl(
-    const fuchsia::bluetooth::control::LEData& data) {
+btlib::sm::PairingData PairingDataFromFidl(const fhost::LEData& data) {
   btlib::sm::PairingData result;
   result.identity_address = btlib::common::DeviceAddress(
       BondingAddrTypeFromFidl(data.address_type), data.address);
@@ -216,13 +216,13 @@ btlib::sm::PairingData PairingDataFromFidl(
   return result;
 }
 
-ctrl::AdapterInfo NewAdapterInfo(const ::btlib::gap::Adapter& adapter) {
-  ctrl::AdapterInfo adapter_info;
+fctrl::AdapterInfo NewAdapterInfo(const ::btlib::gap::Adapter& adapter) {
+  fctrl::AdapterInfo adapter_info;
   adapter_info.identifier = adapter.identifier();
   adapter_info.technology = TechnologyTypeToFidl(adapter.state().type());
   adapter_info.address = adapter.state().controller_address().ToString();
 
-  adapter_info.state = ctrl::AdapterState::New();
+  adapter_info.state = fctrl::AdapterState::New();
   adapter_info.state->local_name = adapter.state().local_name();
   adapter_info.state->discoverable = Bool::New();
   adapter_info.state->discoverable->value = false;
@@ -234,8 +234,8 @@ ctrl::AdapterInfo NewAdapterInfo(const ::btlib::gap::Adapter& adapter) {
   return adapter_info;
 }
 
-ctrl::RemoteDevice NewRemoteDevice(const ::btlib::gap::RemoteDevice& device) {
-  ctrl::RemoteDevice fidl_device;
+fctrl::RemoteDevice NewRemoteDevice(const ::btlib::gap::RemoteDevice& device) {
+  fctrl::RemoteDevice fidl_device;
   fidl_device.identifier = device.identifier();
   fidl_device.address = device.address().value().ToString();
   fidl_device.technology = TechnologyTypeToFidl(device.technology());
@@ -243,7 +243,7 @@ ctrl::RemoteDevice NewRemoteDevice(const ::btlib::gap::RemoteDevice& device) {
   fidl_device.bonded = device.bonded();
 
   // Set default value for device appearance.
-  fidl_device.appearance = ctrl::Appearance::UNKNOWN;
+  fidl_device.appearance = fctrl::Appearance::UNKNOWN;
 
   // |service_uuids| is not a nullable field, so we need to assign something
   // to it.
@@ -271,7 +271,7 @@ ctrl::RemoteDevice NewRemoteDevice(const ::btlib::gap::RemoteDevice& device) {
     }
     if (adv_data.appearance()) {
       fidl_device.appearance =
-          static_cast<ctrl::Appearance>(le16toh(*adv_data.appearance()));
+          static_cast<fctrl::Appearance>(le16toh(*adv_data.appearance()));
     }
     if (adv_data.tx_power()) {
       auto fidl_tx_power = Int8::New();
@@ -283,16 +283,16 @@ ctrl::RemoteDevice NewRemoteDevice(const ::btlib::gap::RemoteDevice& device) {
   return fidl_device;
 }
 
-ctrl::RemoteDevicePtr NewRemoteDevicePtr(
+fctrl::RemoteDevicePtr NewRemoteDevicePtr(
     const ::btlib::gap::RemoteDevice& device) {
-  auto fidl_device = ctrl::RemoteDevice::New();
+  auto fidl_device = fctrl::RemoteDevice::New();
   *fidl_device = NewRemoteDevice(device);
   return fidl_device;
 }
 
-ctrl::BondingData NewBondingData(const ::btlib::gap::Adapter& adapter,
-                                 const ::btlib::gap::RemoteDevice& device) {
-  ctrl::BondingData out_data;
+fhost::BondingData NewBondingData(const ::btlib::gap::Adapter& adapter,
+                                  const ::btlib::gap::RemoteDevice& device) {
+  fhost::BondingData out_data;
   out_data.identifier = device.identifier();
   out_data.local_address = adapter.state().controller_address().ToString();
 
@@ -302,7 +302,7 @@ ctrl::BondingData NewBondingData(const ::btlib::gap::Adapter& adapter,
 
   // Store LE data.
   if (device.le() && device.le()->bond_data()) {
-    out_data.le = ctrl::LEData::New();
+    out_data.le = fhost::LEData::New();
 
     const auto& le_data = *device.le()->bond_data();
     const auto& identity =
@@ -317,15 +317,15 @@ ctrl::BondingData NewBondingData(const ::btlib::gap::Adapter& adapter,
     out_data.le->services.resize(0);
 
     if (le_data.ltk) {
-      out_data.le->ltk = ctrl::LTK::New();
+      out_data.le->ltk = fhost::LTK::New();
       *out_data.le->ltk = LtkToFidl(*le_data.ltk);
     }
     if (le_data.irk) {
-      out_data.le->irk = ctrl::Key::New();
+      out_data.le->irk = fhost::Key::New();
       *out_data.le->irk = KeyToFidl(*le_data.irk);
     }
     if (le_data.csrk) {
-      out_data.le->csrk = ctrl::Key::New();
+      out_data.le->csrk = fhost::Key::New();
       *out_data.le->csrk = KeyToFidl(*le_data.csrk);
     }
   }
@@ -334,7 +334,7 @@ ctrl::BondingData NewBondingData(const ::btlib::gap::Adapter& adapter,
   return out_data;
 }
 
-ble::RemoteDevicePtr NewLERemoteDevice(
+fble::RemoteDevicePtr NewLERemoteDevice(
     const ::btlib::gap::RemoteDevice& device) {
   ::btlib::gap::AdvertisingData ad;
   if (!device.le()) {
@@ -342,7 +342,7 @@ ble::RemoteDevicePtr NewLERemoteDevice(
   }
 
   const auto& le = *device.le();
-  auto fidl_device = ble::RemoteDevice::New();
+  auto fidl_device = fble::RemoteDevice::New();
   fidl_device->identifier = device.identifier();
   fidl_device->connectable = device.connectable();
 
@@ -363,7 +363,7 @@ ble::RemoteDevicePtr NewLERemoteDevice(
   return fidl_device;
 }
 
-bool IsScanFilterValid(const ble::ScanFilter& fidl_filter) {
+bool IsScanFilterValid(const fble::ScanFilter& fidl_filter) {
   // |service_uuids| is the only field that can potentially contain invalid
   // data, since they are represented as strings.
   if (!fidl_filter.service_uuids)
@@ -377,7 +377,7 @@ bool IsScanFilterValid(const ble::ScanFilter& fidl_filter) {
   return true;
 }
 
-bool PopulateDiscoveryFilter(const ble::ScanFilter& fidl_filter,
+bool PopulateDiscoveryFilter(const fble::ScanFilter& fidl_filter,
                              ::btlib::gap::DiscoveryFilter* out_filter) {
   ZX_DEBUG_ASSERT(out_filter);
 

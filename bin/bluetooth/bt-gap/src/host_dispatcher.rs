@@ -4,13 +4,16 @@
 
 use crate::host_device::{self, HostDevice};
 use crate::services;
+use crate::store::stash::Stash;
 use crate::util;
 use failure::Error;
 use fidl;
 use fidl::encoding::OutOfLine;
 use fidl_fuchsia_bluetooth;
 use fidl_fuchsia_bluetooth_control::{
-    AdapterInfo, BondingControlHandle, ControlControlHandle, PairingDelegateMarker,
+    AdapterInfo,
+    ControlControlHandle,
+    PairingDelegateMarker,
     PairingDelegateProxy,
 };
 use fidl_fuchsia_bluetooth_control::{InputCapabilityType, OutputCapabilityType};
@@ -75,6 +78,9 @@ pub struct HostDispatcher {
     host_devices: HashMap<String, Arc<RwLock<HostDevice>>>,
     active_id: Option<String>,
 
+    // Component storage.
+    pub stash: Stash,
+
     // GAP state
     name: String,
     discovery: Option<Weak<DiscoveryRequestToken>>,
@@ -83,7 +89,6 @@ pub struct HostDispatcher {
     pub output: OutputCapabilityType,
 
     pub pairing_delegate: Option<PairingDelegateProxy>,
-    pub bonding_events: Option<BondingControlHandle>,
     pub event_listeners: Vec<ControlControlHandle>,
 
     // Pending requests to obtain a Host.
@@ -91,9 +96,10 @@ pub struct HostDispatcher {
 }
 
 impl HostDispatcher {
-    pub fn new() -> HostDispatcher {
+    pub fn new(stash: Stash) -> HostDispatcher {
         HostDispatcher {
             active_id: None,
+            stash: stash,
             host_devices: HashMap::new(),
             name: DEFAULT_NAME.to_string(),
             input: InputCapabilityType::None,
@@ -101,7 +107,6 @@ impl HostDispatcher {
             discovery: None,
             discoverable: None,
             pairing_delegate: None,
-            bonding_events: None,
             event_listeners: vec![],
             host_requests: Slab::new(),
         }
@@ -336,33 +341,16 @@ impl HostDispatcher {
     }
 
     pub fn forget(
-        hd: Arc<RwLock<HostDispatcher>>,
-        device_id: String,
+        _hd: Arc<RwLock<HostDispatcher>>,
+        _device_id: String,
     ) -> impl Future<Output = fidl::Result<fidl_fuchsia_bluetooth::Status>> {
-        let id = device_id.clone();
-        HostDispatcher::get_active_adapter(hd.clone())
-            .and_then(move |adapter| {
-                future::ready(Ok(match adapter {
-                    Some(adapter) => {
-                        adapter.write().rm_gatt(device_id);
-                        bt_fidl_status!()
-                    }
-                    None => bt_fidl_status!(BluetoothNotAvailable, "Adapter went away"),
-                }))
-            }).and_then(move |status| {
-                let event = &hd.read().bonding_events;
-                future::ready(Ok(match event {
-                    Some(events) => {
-                        let _res = events.send_on_delete_bond(id.as_str()).map_err(|e| {
-                            fx_log_err!("Failed to send device updated event: {:?}", e)
-                        });
-
-                        status
-                    }
-                    None => bt_fidl_status!(BluetoothNotAvailable, "Adapter went away"),
-                }))
-            })
+        // TODO(NET-1148): This function should perform the following:
+        // 1. Remove the device from bt-gap's in-memory list of devices, once it exists.
+        // 2. Remove bonding data from store::Stash.
+        // 3. Call Host.Forget(), once it exists.
+        future::ready(Ok(bt_fidl_status!(NotSupported, "Operation not supported")))
     }
+
     pub fn disconnect(
         hd: Arc<RwLock<HostDispatcher>>,
         device_id: String,
@@ -500,16 +488,33 @@ async fn add_adapter(hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf) -> Res
     let handle = fasync::Channel::from_channel(handle.into())?;
     let host = HostProxy::new(handle);
 
-    // TODO(NET-1445): Only the active host should be made connectable and scanning in the
-    // background.
-    await!(host.set_connectable(true)).map_err(|_| BTError::new("failed to set connectable"))?;
-    host.enable_background_scan(true).map_err(|_| BTError::new("failed to enable background scan"))?;
-
     // Obtain basic information and create and entry in the disptacher's map.
     let adapter_info = await!(host.get_info())
         .map_err(|_| BTError::new("failed to obtain bt-host information"))?;
     let id = adapter_info.identifier.clone();
+    let address = adapter_info.address.clone();
     let host_device = Arc::new(RwLock::new(HostDevice::new(host_path, host, adapter_info)));
+
+    // Load bonding data that use this host's `address` as their "local identity address".
+    if let Some(iter) = hd.read().stash.list_bonds(&address) {
+        if let Err(e) = await!(
+            host_device
+                .read()
+                .restore_bonds(iter.map(|bd| util::clone_bonding_data(&bd)).collect())
+        ) {
+            fx_log_err!("failed to restore bonding data for host: {}", e);
+            return Err(e.into());
+        }
+    }
+
+    // TODO(NET-1445): Only the active host should be made connectable and scanning in the
+    // background.
+    await!(host_device.read().set_connectable(true))
+        .map_err(|_| BTError::new("failed to set connectable"))?;
+    host_device
+        .read()
+        .enable_background_scan(true)
+        .map_err(|_| BTError::new("failed to enable background scan"))?;
 
     // Initialize bt-gap as this host's pairing delegate.
     // TODO(NET-1445): Do this only for the active host. This will make sure that non-active hosts
@@ -553,7 +558,7 @@ pub fn rm_adapter(
     let mut hd = hd.write();
     let active_id = hd.active_id.clone();
 
-    // Get the host IDs that match |host_path|.
+    // Get the host IDs that match `host_path`.
     let ids: Vec<String> = hd
         .host_devices
         .iter()

@@ -11,7 +11,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/lib/bluetooth/fidl:bluetooth_host-rustc",
+    "//garnet/lib/bluetooth/fidl:fuchsia.bluetooth.host-rustc",
     "//garnet/lib/rust/crates/fuchsia-bluetooth",
     "//garnet/public/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//garnet/public/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",

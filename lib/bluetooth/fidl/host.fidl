@@ -99,21 +99,26 @@ interface Host {
           fuchsia.bluetooth.control.OutputCapabilityType output,
           fuchsia.bluetooth.control.PairingDelegate? delegate);
 
-  // TODO(NET-1148): add Forget() & -> OnDeleteBond
+  // TODO(NET-1148): Add Forget() method to remove a device from the cache.
 
   // Adds existing bonded devices to the host. The host will be configured to automatically connect
   // to these devices when they are in range and connectable. Future connections will be encrypted
   // using the provided bonding data.
-  110: AddBondedDevices(vector<fuchsia.bluetooth.control.BondingData> bonds) -> (fuchsia.bluetooth.Status status);
+  110: AddBondedDevices(vector<BondingData> bonds) -> (fuchsia.bluetooth.Status status);
 
-  // Events
+  // ===== Events =====
 
   // Notifies when the adapter state changes.
   101: -> OnAdapterStateChanged(fuchsia.bluetooth.control.AdapterState state);
 
-  // Notifies when a connectable device is added or modified using one of the
-  // connection and discovery procedures.
+  // Events that are sent when a connectable device is added, updated, or
+  // removed as a result of connection and discovery procedures.
   102: -> OnDeviceUpdated(fuchsia.bluetooth.control.RemoteDevice device);
   103: -> OnDeviceRemoved(string identifier);
-  104: -> OnNewBondingData(fuchsia.bluetooth.control.BondingData data);
+
+  // Notifies when bonding data for a device has been updated.
+  104: -> OnNewBondingData(BondingData data);
+
+  // TODO(NET-1148): Introduce a "OnBondRemoved()" event to notify when existing
+  // keys become stale.
 };

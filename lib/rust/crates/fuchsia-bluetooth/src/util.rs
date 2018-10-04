@@ -3,7 +3,18 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_bluetooth;
-use fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState};
+use fidl_fuchsia_bluetooth_control::{
+    AdapterInfo,
+    AdapterState,
+};
+use fidl_fuchsia_bluetooth_host::{
+    BondingData,
+    Key,
+    LeConnectionParameters,
+    LeData,
+    Ltk,
+    SecurityProperties,
+};
 
 /// Macro to help make cloning host dispatchers nicer
 #[macro_export]
@@ -44,8 +55,10 @@ macro_rules! bt_fidl_status {
     };
 }
 
+// The following functions allow FIDL types to be cloned. These are currently necessary as the
+// auto-generated binding types do not derive `Clone`.
+
 /// Clone Adapter Info
-/// Only here until Rust bindings can derive `Clone`
 pub fn clone_host_info(a: &AdapterInfo) -> AdapterInfo {
     let state = match a.state {
         Some(ref s) => Some(Box::new(clone_host_state(&**s))),
@@ -60,13 +73,11 @@ pub fn clone_host_info(a: &AdapterInfo) -> AdapterInfo {
 }
 
 /// Clone Bluetooth Fidl bool type
-/// Only here until Rust bindings can derive `Clone`
 pub fn clone_bt_fidl_bool(a: &fidl_fuchsia_bluetooth::Bool) -> fidl_fuchsia_bluetooth::Bool {
     fidl_fuchsia_bluetooth::Bool { value: a.value }
 }
 
 /// Clone Adapter State
-/// Only here until Rust bindings can derive `Clone`
 pub fn clone_host_state(a: &AdapterState) -> AdapterState {
     let discoverable = match a.discoverable {
         Some(ref disc) => Some(Box::new(clone_bt_fidl_bool(disc))),
@@ -83,5 +94,53 @@ pub fn clone_host_state(a: &AdapterState) -> AdapterState {
         discovering: discovering,
         discoverable: discoverable,
         local_service_uuids: a.local_service_uuids.clone(),
+    }
+}
+
+/// Clone BondingData
+pub fn clone_bonding_data(bd: &BondingData) -> BondingData {
+    BondingData {
+        identifier: bd.identifier.clone(),
+        local_address: bd.local_address.clone(),
+        name: bd.name.clone(),
+        le: bd.le.as_ref().map(|v| Box::new(clone_le_data(&v))),
+    }
+}
+
+fn clone_le_conn_params(cp: &LeConnectionParameters) -> LeConnectionParameters {
+    LeConnectionParameters {
+        ..*cp
+    }
+}
+
+fn clone_security_props(sp: &SecurityProperties) -> SecurityProperties {
+    SecurityProperties {
+        ..*sp
+    }
+}
+
+fn clone_key(key: &Key) -> Key {
+    Key {
+        security_properties: clone_security_props(&key.security_properties),
+        ..*key
+    }
+}
+
+fn clone_ltk(ltk: &Ltk) -> Ltk {
+    Ltk {
+        key: clone_key(&ltk.key),
+        ..*ltk
+    }
+}
+
+fn clone_le_data(le: &LeData) -> LeData {
+    LeData {
+        address: le.address.clone(),
+        connection_parameters: le.connection_parameters.as_ref().map(|v| Box::new(clone_le_conn_params(&v))),
+        services: le.services.clone(),
+        ltk: le.ltk.as_ref().map(|v| Box::new(clone_ltk(&v))),
+        irk: le.irk.as_ref().map(|v| Box::new(clone_key(&v))),
+        csrk: le.csrk.as_ref().map(|v| Box::new(clone_key(&v))),
+        ..*le
     }
 }

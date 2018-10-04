@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 /// These modules provide access to the component storage.
+pub mod stash;
 
 mod keys;
 mod serde;
-mod stash;

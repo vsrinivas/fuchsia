@@ -15,7 +15,7 @@ group("integration") {
 rustc_binary("bt_lifecycle_integration_test") {
   edition = "2015"
   deps = [
-    "//garnet/lib/bluetooth/fidl:bluetooth_host-rustc",
+    "//garnet/lib/bluetooth/fidl:fuchsia.bluetooth.host-rustc",
     "//garnet/lib/rust/crates/fuchsia-bluetooth",
     "//garnet/public/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
     "//garnet/public/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",

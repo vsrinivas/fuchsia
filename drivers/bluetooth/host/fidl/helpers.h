@@ -8,6 +8,7 @@
 #include <fuchsia/bluetooth/control/cpp/fidl.h>
 #include <fuchsia/bluetooth/cpp/fidl.h>
 #include <fuchsia/bluetooth/gatt/cpp/fidl.h>
+#include <fuchsia/bluetooth/host/cpp/fidl.h>
 #include <fuchsia/bluetooth/le/cpp/fidl.h>
 
 #include "lib/fidl/cpp/vector.h"
@@ -63,8 +64,6 @@ fuchsia::bluetooth::Status StatusToFidl(
 btlib::sm::IOCapability IoCapabilityFromFidl(
     const fuchsia::bluetooth::control::InputCapabilityType,
     const fuchsia::bluetooth::control::OutputCapabilityType);
-btlib::sm::PairingData PairingDataFromFidl(
-    const fuchsia::bluetooth::control::LEData& data);
 
 // Functions to construct FIDL control library objects from library objects.
 fuchsia::bluetooth::control::AdapterInfo NewAdapterInfo(
@@ -73,7 +72,11 @@ fuchsia::bluetooth::control::RemoteDevice NewRemoteDevice(
     const ::btlib::gap::RemoteDevice& device);
 fuchsia::bluetooth::control::RemoteDevicePtr NewRemoteDevicePtr(
     const ::btlib::gap::RemoteDevice& device);
-fuchsia::bluetooth::control::BondingData NewBondingData(
+
+// Functions to convert Host FIDL library objects.
+btlib::sm::PairingData PairingDataFromFidl(
+    const fuchsia::bluetooth::host::LEData& data);
+fuchsia::bluetooth::host::BondingData NewBondingData(
     const ::btlib::gap::Adapter& adapter,
     const ::btlib::gap::RemoteDevice& device);
 

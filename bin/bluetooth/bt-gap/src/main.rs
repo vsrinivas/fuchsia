@@ -11,7 +11,6 @@
 use failure::{Error, ResultExt};
 use fidl::endpoints::{ServerEnd, ServiceMarker};
 use fidl_fuchsia_bluetooth_bredr::{ProfileMarker};
-use fidl_fuchsia_bluetooth_control::BondingMarker;
 use fidl_fuchsia_bluetooth_control::ControlMarker;
 use fidl_fuchsia_bluetooth_gatt::Server_Marker;
 use fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker};
@@ -31,14 +30,18 @@ mod host_dispatcher;
 
 use crate::host_dispatcher::*;
 
+const BT_GAP_COMPONENT_ID: &'static str = "bt-gap";
+
 fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["bt-gap"]).expect("Can't init logger");
     fx_log_info!("Starting bt-gap...");
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
-    let hd = Arc::new(RwLock::new(HostDispatcher::new()));
+    let stash = executor.run_singlethreaded(store::stash::init_stash(BT_GAP_COMPONENT_ID))?;
 
-    make_clones!(hd => host_hd, control_hd, central_hd, peripheral_hd, gatt_hd, bonding_hd, profile_hd);
+    let hd = Arc::new(RwLock::new(HostDispatcher::new(stash)));
+
+    make_clones!(hd => host_hd, control_hd, central_hd, peripheral_hd, gatt_hd, profile_hd);
 
     let host_watcher = watch_hosts(host_hd);
 
@@ -47,12 +50,6 @@ fn main() -> Result<(), Error> {
             fx_log_info!("Spawning Control Service");
             fasync::spawn(
                 services::start_control_service(control_hd.clone(), chan)
-                    .unwrap_or_else(|e| eprintln!("Failed to spawn {:?}", e)),
-            )
-        })).add_service((BondingMarker::NAME, move |chan: fasync::Channel| {
-            fx_log_info!("Spawning Bonding Service");
-            fasync::spawn(
-                services::start_bonding_service(bonding_hd.clone(), chan)
                     .unwrap_or_else(|e| eprintln!("Failed to spawn {:?}", e)),
             )
         })).add_service((CentralMarker::NAME, move |chan: fasync::Channel| {

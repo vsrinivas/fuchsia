@@ -30,11 +30,8 @@ using fuchsia::bluetooth::Bool;
 using fuchsia::bluetooth::ErrorCode;
 using fuchsia::bluetooth::Status;
 using fuchsia::bluetooth::control::AdapterState;
-using fuchsia::bluetooth::control::BondingData;
-using fuchsia::bluetooth::control::Key;
-using fuchsia::bluetooth::control::LEData;
-using fuchsia::bluetooth::control::LTK;
 using fuchsia::bluetooth::control::RemoteDevice;
+using fuchsia::bluetooth::host::BondingData;
 
 HostServer::HostServer(zx::channel channel,
                        fxl::WeakPtr<::btlib::gap::Adapter> adapter,
@@ -246,9 +243,8 @@ void HostServer::SetConnectable(bool connectable,
       });
 }
 
-void HostServer::AddBondedDevices(
-    ::fidl::VectorPtr<fuchsia::bluetooth::control::BondingData> bonds,
-    AddBondedDevicesCallback callback) {
+void HostServer::AddBondedDevices(::fidl::VectorPtr<BondingData> bonds,
+                                  AddBondedDevicesCallback callback) {
   bt_log(TRACE, "bt-host", "AddBondedDevices");
   if (!bonds) {
     callback(fidl_helpers::NewFidlError(ErrorCode::NOT_SUPPORTED,

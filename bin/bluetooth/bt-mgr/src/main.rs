@@ -13,22 +13,19 @@ use fuchsia_app::{server::ServicesServer, client::Launcher};
 use failure::{Error, ResultExt};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_bluetooth_bredr::ProfileMarker;
-use fidl_fuchsia_bluetooth_control::BondingMarker;
 use fidl_fuchsia_bluetooth_control::ControlMarker;
 use fidl_fuchsia_bluetooth_gatt::Server_Marker;
 use fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker};
-use futures::{TryStreamExt, TryFutureExt};
-use parking_lot::{Mutex, RwLock};
-use fuchsia_syslog::macros::*;
+use futures::TryFutureExt;
+use parking_lot::Mutex;
+use fuchsia_syslog::{self as syslog, fx_log, fx_log_info};
 use std::sync::Arc;
-use crate::bond_store::BondStore;
 
-mod bond_defs;
-mod bond_store;
 mod config;
 
 fn main() -> Result<(), Error> {
-    eprintln!("Starting bt-mgr...");
+    syslog::init_with_tags(&["bt-mgr"]).expect("Can't init logger");
+    fx_log_info!("Starting bt-mgr...");
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
     let launcher = Launcher::new()
@@ -41,23 +38,7 @@ fn main() -> Result<(), Error> {
             .unwrap(),
     ));
 
-    make_clones!(btgap => btgap_control, btgap_central, btgap_peripheral, btgap_profile, btgap_server);
-
-    let app = btgap.lock().connect_to_service(BondingMarker).unwrap();
-    let bond_store = Arc::new(RwLock::new(BondStore::load_store()?));
-    let bs = bond_store.clone();
-    let bond_app = app.clone();
-
-    let bond_fut = async {
-        await!(config::set_capabilities())?;
-        await!(bond_store::restore_bonded_devices(bs.clone(), bond_app.clone()))?;
-        let mut stream = app.take_event_stream();
-        while let Some(evt) = await!(stream.try_next())? {
-            bond_store::bond_event(bond_store.clone(), evt)?
-        }
-        Ok(())
-    };
-
+    make_clones!(btgap => btgap_control, btgap_central, btgap_peripheral, btgap_profile, btgap_gatt_server);
     let server = ServicesServer::new()
         .add_service((ControlMarker::NAME, move |chan: fasync::Channel| {
             fx_log_info!("Passing Control Handle to bt-gap");
@@ -85,15 +66,16 @@ fn main() -> Result<(), Error> {
         }))
         .add_service((Server_Marker::NAME, move |chan: fasync::Channel| {
             fx_log_info!("Passing GATT Handle to bt-gap");
-            let _ = btgap_server
+            let _ = btgap_gatt_server
                 .lock()
                 .pass_to_service(Server_Marker, chan.into());
         }))
         .start()
         .map_err(|e| e.context("error starting service server"))?;
 
+        let io_config_fut = config::set_capabilities();
         executor
-            .run_singlethreaded(server.try_join(bond_fut))
+            .run_singlethreaded(server.try_join(io_config_fut))
             .context("bt-mgr failed to execute future")
             .map_err(|e| e.into())
             .map(|_| ())

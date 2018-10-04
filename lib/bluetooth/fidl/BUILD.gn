@@ -4,9 +4,9 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("bluetooth_host") {
-  name = "fuchsia.bluetooth.host"
+fidl("fuchsia.bluetooth.host") {
   sources = [
+    "bonding.fidl",
     "host.fidl",
   ]
   public_deps = [

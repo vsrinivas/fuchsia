@@ -7,7 +7,6 @@ use fidl_fuchsia_bluetooth_control::InputCapabilityType;
 use fidl_fuchsia_bluetooth_control::OutputCapabilityType;
 use fuchsia_app::client::connect_to_service;
 use std::fs::OpenOptions;
-use crate::bond_defs::*;
 use std::io::Read;
 use serde_json;
 use failure::Error;
@@ -27,6 +26,23 @@ struct IoConfig {
     input: InputCapabilityType,
     #[serde(with = "OutputCapabilityTypeDef")]
     output: OutputCapabilityType,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "InputCapabilityType")]
+#[allow(dead_code)]
+pub enum InputCapabilityTypeDef {
+    None = 0,
+    Confirmation = 1,
+    Keyboard = 2,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "OutputCapabilityType")]
+#[allow(dead_code)]
+pub enum OutputCapabilityTypeDef {
+    None = 0,
+    Display = 1,
 }
 
 pub async fn set_capabilities() -> Result<(), Error> {

@@ -2,21 +2,37 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::store::{keys::{bonding_data_key, BONDING_DATA_PREFIX},
-                   serde::{BondingDataDeserializer, BondingDataSerializer}};
+use crate::store::{
+    keys::{
+        BONDING_DATA_PREFIX,
+        bonding_data_key,
+    },
+    serde::{
+        BondingDataDeserializer,
+        BondingDataSerializer,
+    }
+};
 
-use {failure::Error,
-     // FIDL services
-     fidl::endpoints::create_proxy,
-     fidl_fuchsia_bluetooth_control::BondingData,
-     fidl_fuchsia_stash::{GetIteratorMarker, StoreAccessorMarker, StoreAccessorProxy,
-                          StoreMarker, Value},
-     // Fuchsia libraries
-     fuchsia_bluetooth::error::Error as BtError,
-     fuchsia_syslog::{fx_log, fx_log_err},
+use {
+    failure::Error,
+    serde_json,
+    std::collections::HashMap,
 
-     serde_json,
-     std::collections::HashMap};
+    // Fuchsia libraries
+    fuchsia_bluetooth::error::Error as BtError,
+    fuchsia_syslog::{fx_log, fx_log_info, fx_log_err},
+
+    // FIDL services
+    fidl::endpoints::create_proxy,
+    fidl_fuchsia_bluetooth_host::BondingData,
+    fidl_fuchsia_stash::{
+        GetIteratorMarker,
+        StoreAccessorMarker,
+        StoreAccessorProxy,
+        StoreMarker,
+        Value,
+    }
+};
 
 /// Stash manages persistent data that is stored in bt-gap's component-specific storage.
 #[derive(Debug)]
@@ -34,6 +50,8 @@ impl Stash {
     /// Updates the bonding data for a given device. Creates a new entry if one matching this
     /// device does not exist.
     pub fn store_bond(&mut self, data: BondingData) -> Result<(), Error> {
+        fx_log_info!("store_bond (id: {})", data.identifier);
+
         // Persist the serialized blob.
         let serialized = serde_json::to_string(&BondingDataSerializer(&data))?;
         self.proxy.set_value(

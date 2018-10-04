@@ -9,10 +9,10 @@ use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_bluetooth;
 use fidl_fuchsia_bluetooth::Status;
 use fidl_fuchsia_bluetooth_control::AdapterInfo;
-use fidl_fuchsia_bluetooth_control::{BondingData, PairingDelegateMarker};
+use fidl_fuchsia_bluetooth_control::PairingDelegateMarker;
 use fidl_fuchsia_bluetooth_control::{InputCapabilityType, OutputCapabilityType};
 use fidl_fuchsia_bluetooth_gatt::ClientProxy;
-use fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy};
+use fidl_fuchsia_bluetooth_host::{BondingData, HostEvent, HostProxy};
 use fidl_fuchsia_bluetooth_le::{CentralMarker, CentralProxy};
 use fuchsia_async::{self as fasync,
                     temp::Either::{Left, Right}};
@@ -109,14 +109,22 @@ impl HostDevice {
         self.host.add_bonded_devices(&mut bonds.iter_mut())
     }
 
+    pub fn set_connectable(&self, value: bool) -> impl Future<Output = Result<Status, fidl::Error>> {
+        self.host.set_connectable(value)
+    }
+
     pub fn stop_discovery(&self) -> impl Future<Output = Result<Status, fidl::Error>> {
         self.host.stop_discovery()
     }
 
     pub fn set_discoverable(
-        &mut self, discoverable: bool,
+        &self, discoverable: bool,
     ) -> impl Future<Output = Result<Status, fidl::Error>> {
         self.host.set_discoverable(discoverable)
+    }
+
+    pub fn enable_background_scan(&self, enable: bool) -> Result<(), fidl::Error> {
+        self.host.enable_background_scan(enable)
     }
 }
 
@@ -147,13 +155,10 @@ pub fn run(
                         .map_err(|e| fx_log_err!("Failed to send device removed event: {:?}", e));
                 }
             }
-            HostEvent::OnNewBondingData { mut data } => {
-                fx_log_info!("Received Bonding Data: {:#?}", data);
-                let id = host.read().get_info().identifier.clone();
-                if let Some(ref bond_events) = hd.read().bonding_events {
-                    let _res = bond_events
-                        .send_on_new_bonding_data(id.as_str(), &mut data)
-                        .map_err(|e| fx_log_err!("Failed to send device bonded event: {:?}", e));
+            HostEvent::OnNewBondingData { data } => {
+                fx_log_info!("Received bonding data");
+                if let Err(e) = hd.write().stash.store_bond(data) {
+                    fx_log_err!("Failed to persist bonding data: {:#?}", e);
                 }
             }
         };
