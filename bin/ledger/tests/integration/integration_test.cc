@@ -50,9 +50,6 @@ async_dispatcher_t* BaseIntegrationTest::dispatcher() {
   return GetLoopController()->dispatcher();
 }
 
-fit::closure BaseIntegrationTest::QuitLoopClosure() {
-  return GetLoopController()->QuitLoopClosure();
-}
 bool BaseIntegrationTest::RunLoopUntil(fit::function<bool()> condition) {
   return GetLoopController()->RunLoopUntil(std::move(condition));
 }

@@ -39,11 +39,6 @@ class FakeLoopController : public LoopController {
     return nullptr;
   }
 
-  fit::closure QuitLoopClosure() override {
-    FXL_NOTREACHED();
-    return []() {};
-  }
-
   bool RunLoopUntil(fit::function<bool()> /* condition */) override {
     FXL_NOTREACHED();
     return false;

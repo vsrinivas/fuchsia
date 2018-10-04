@@ -61,10 +61,6 @@ async_dispatcher_t* LoopControllerRealLoop::dispatcher() {
   return loop_.dispatcher();
 }
 
-fit::closure LoopControllerRealLoop::QuitLoopClosure() {
-  return [this] { loop_.Quit(); };
-}
-
 bool LoopControllerRealLoop::RunLoopUntil(fit::function<bool()> condition) {
   while (true) {
     if (condition()) {

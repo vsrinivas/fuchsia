@@ -31,8 +31,6 @@ class LoopControllerTestLoop : public LoopController {
 
   async_dispatcher_t* dispatcher() override;
 
-  fit::closure QuitLoopClosure() override;
-
   bool RunLoopUntil(fit::function<bool()> condition) override;
 
   void RunLoopFor(zx::duration duration) override;

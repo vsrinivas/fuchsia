@@ -93,10 +93,6 @@ async_dispatcher_t* LoopControllerTestLoop::dispatcher() {
   return loop_.dispatcher();
 }
 
-fit::closure LoopControllerTestLoop::QuitLoopClosure() {
-  return [this] { loop_.Quit(); };
-}
-
 bool LoopControllerTestLoop::RunLoopUntil(fit::function<bool()> condition) {
   if (condition()) {
     return true;

@@ -68,8 +68,6 @@ class LoopController {
   virtual std::unique_ptr<CallbackWaiter> NewWaiter() = 0;
   // Returns the dispatcher.
   virtual async_dispatcher_t* dispatcher() = 0;
-  // Returns a closure that triggers the closing of the loop.
-  virtual fit::closure QuitLoopClosure() = 0;
   // Runs the loop until |condition| returns true.
   virtual bool RunLoopUntil(fit::function<bool()> condition) = 0;
   // Runs the loop until |duration| as passed.
