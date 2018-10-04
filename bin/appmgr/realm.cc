@@ -169,26 +169,28 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
 RealmArgs RealmArgs::Make(
     Realm* parent, fidl::StringPtr label,
     const std::shared_ptr<component::Services>& env_services,
-    bool run_virtual_console, bool inherit_parent_services) {
+    bool run_virtual_console, bool inherit_parent_services, bool kill_on_oom) {
   return {.parent = parent,
           .label = label,
           .environment_services = env_services,
           .run_virtual_console = run_virtual_console,
           .additional_services = nullptr,
-          .inherit_parent_services = inherit_parent_services};
+          .inherit_parent_services = inherit_parent_services,
+          .kill_on_oom = kill_on_oom};
 }
 
 RealmArgs RealmArgs::MakeWithAdditionalServices(
     Realm* parent, fidl::StringPtr label,
     const std::shared_ptr<component::Services>& env_services,
     bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
-    bool inherit_parent_services) {
+    bool inherit_parent_services, bool kill_on_oom) {
   return {.parent = parent,
           .label = label,
           .environment_services = env_services,
           .run_virtual_console = run_virtual_console,
           .additional_services = std::move(additional_services),
-          .inherit_parent_services = inherit_parent_services};
+          .inherit_parent_services = inherit_parent_services,
+          .kill_on_oom = kill_on_oom};
 }
 
 uint32_t Realm::next_numbered_label_ = 1u;
@@ -221,6 +223,12 @@ Realm::Realm(RealmArgs args)
     label_ = fxl::StringPrintf(kNumberedLabelFormat, next_numbered_label_++);
   } else {
     label_ = args.label.get().substr(0, fuchsia::sys::kLabelMaxLength);
+  }
+
+  if (args.kill_on_oom) {
+    size_t property_value = 1;
+    job_.set_property(ZX_PROP_JOB_KILL_ON_OOM, &property_value,
+                      sizeof(property_value));
   }
 
   if (args.inherit_parent_services) {
@@ -296,10 +304,9 @@ void Realm::CreateNestedEnvironment(
     fidl::InterfaceRequest<fuchsia::sys::EnvironmentController>
         controller_request,
     fidl::StringPtr label, fuchsia::sys::ServiceListPtr additional_services,
-    bool inherit_parent_services, bool allow_parent_runners) {
+    fuchsia::sys::EnvironmentOptions options) {
   TRACE_DURATION("appmgr", "Realm::CreateNestedEnvironment", "label",
                  label.get());
-
   if (additional_services && !additional_services->host_directory) {
     FXL_LOG(ERROR) << label->c_str()
                    << ": |additional_services.provider| is not supported for "
@@ -312,13 +319,15 @@ void Realm::CreateNestedEnvironment(
   if (additional_services) {
     args = RealmArgs::MakeWithAdditionalServices(
         this, label, environment_services_, /*run_virtual_console=*/false,
-        std::move(additional_services), inherit_parent_services);
+        std::move(additional_services), options.inherit_parent_services,
+        options.kill_on_oom);
   } else {
     args =
         RealmArgs::Make(this, label, environment_services_,
-                        /*run_virtual_console=*/false, inherit_parent_services);
+                        /*run_virtual_console=*/false,
+                        options.inherit_parent_services, options.kill_on_oom);
   }
-  args.allow_parent_runners = allow_parent_runners;
+  args.allow_parent_runners = options.allow_parent_runners;
   auto controller = std::make_unique<EnvironmentControllerImpl>(
       std::move(controller_request), std::make_unique<Realm>(std::move(args)));
   Realm* child = controller->realm();

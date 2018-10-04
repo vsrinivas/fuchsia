@@ -39,14 +39,14 @@ struct RealmArgs {
   static RealmArgs Make(
       Realm* parent, fidl::StringPtr label,
       const std::shared_ptr<component::Services>& env_services,
-      bool run_virtual_console, bool inherit_parent_services);
+      bool run_virtual_console, bool inherit_parent_services, bool kill_on_oom);
 
- static RealmArgs MakeWithAdditionalServices(
+  static RealmArgs MakeWithAdditionalServices(
       Realm* parent, fidl::StringPtr label,
       const std::shared_ptr<component::Services>& env_services,
       bool run_virtual_console,
       fuchsia::sys::ServiceListPtr additional_services,
-      bool inherit_parent_services);
+      bool inherit_parent_services, bool kill_on_oom);
 
   Realm* parent;
   fidl::StringPtr label;
@@ -55,6 +55,7 @@ struct RealmArgs {
   fuchsia::sys::ServiceListPtr additional_services;
   bool inherit_parent_services;
   bool allow_parent_runners;
+  bool kill_on_oom;
 };
 
 class Realm : public ComponentContainer<ComponentControllerImpl> {
@@ -81,7 +82,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
       fidl::InterfaceRequest<fuchsia::sys::EnvironmentController>
           controller_request,
       fidl::StringPtr label, fuchsia::sys::ServiceListPtr additional_services,
-      bool inherit_parent_services, bool allow_parent_runners);
+      fuchsia::sys::EnvironmentOptions options);
 
   using ComponentObjectCreatedCallback =
       fit::function<void(ComponentControllerImpl* component)>;
