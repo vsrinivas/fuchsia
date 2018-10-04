@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
+#include <iterator>
+
 #include "garnet/bin/mediaplayer/demux/sparse_byte_buffer.h"
 
 #include "lib/fxl/logging.h"
@@ -248,6 +251,125 @@ SparseByteBuffer::Hole SparseByteBuffer::Fill(Hole hole,
   }
 
   return Hole(holes_iter);
+}
+
+size_t SparseByteBuffer::CleanUpExcept(size_t goal, size_t protected_start,
+                                       size_t protected_size) {
+  FXL_DCHECK(protected_start < size_);
+  FXL_DCHECK(protected_start + protected_size < size_);
+
+  if (regions_.empty()) {
+    return 0;
+  }
+
+  size_t to_free = goal;
+  size_t protected_end = protected_start + protected_size;
+
+  // First we clean up regions before the protected range, prioritizing clean up
+  // of regions farther from the range.
+  RegionsIter iter = regions_.begin();
+  while (to_free > 0 && iter != regions_.end() &&
+         iter->first < protected_start) {
+    Region candidate = Region(iter);
+    iter++;
+
+    size_t excess_before = candidate.position() < protected_start
+                               ? protected_start - candidate.position()
+                               : 0;
+    size_t shrink_amount = std::min({to_free, candidate.size(), excess_before});
+    ShrinkRegionFront(candidate, shrink_amount);
+    to_free -= shrink_amount;
+  }
+
+  if (regions_.empty()) {
+    FXL_DCHECK(goal >= to_free);
+    return goal - to_free;
+  }
+
+  // Second and lastly we clean up regions after the protected range,
+  // prioritizing clean up of regions farther from the range.
+  iter = --regions_.end();
+  while (to_free > 0 && iter->first >= protected_start) {
+    Region candidate = Region(iter);
+    size_t candidate_end = candidate.position() + candidate.size();
+    size_t excess_after =
+        protected_end < candidate_end ? candidate_end - protected_end : 0;
+    size_t shrink_amount = std::min({to_free, candidate.size(), excess_after});
+    ShrinkRegionBack(candidate, shrink_amount);
+    to_free -= shrink_amount;
+
+    if (iter == regions_.begin()) {
+      break;
+    };
+
+    --iter;
+  }
+
+  FXL_DCHECK(goal >= to_free);
+  return goal - to_free;
+}
+
+SparseByteBuffer::Region SparseByteBuffer::ShrinkRegionFront(
+    Region region, size_t shrink_amount) {
+  FXL_DCHECK(region != null_region());
+
+  if (shrink_amount >= region.size()) {
+    Free(region);
+    return null_region();
+  }
+
+  if (shrink_amount == 0) {
+    return region;
+  }
+
+  Hole hole_before = null_hole();
+  if (region.position() > 0) {
+    hole_before = FindHoleContaining(region.position() - 1);
+  }
+
+  if (hole_before != null_hole()) {
+    hole_before.iter_->second += shrink_amount;
+  } else {
+    holes_.emplace(region.position(), shrink_amount);
+  }
+
+  size_t region_pos = region.position() + shrink_amount;
+  std::vector<uint8_t> buffer;
+  std::copy_n(region.iter_->second.begin() + shrink_amount,
+              region.size() - shrink_amount, std::back_inserter(buffer));
+  regions_.erase(region.iter_);
+  auto result = regions_.emplace(region_pos, buffer);
+  FXL_DCHECK(result.second);
+  return Region(result.first);
+
+  return region;
+}
+
+SparseByteBuffer::Region SparseByteBuffer::ShrinkRegionBack(
+    Region region, size_t shrink_amount) {
+  FXL_DCHECK(region != null_region());
+
+  if (shrink_amount >= region.size()) {
+    Free(region);
+    return null_region();
+  }
+
+  if (shrink_amount == 0) {
+    return region;
+  }
+
+  size_t hole_addendum = 0;
+  Hole hole_after = FindHoleContaining(region.position() + region.size());
+  if (hole_after != null_hole()) {
+    hole_addendum = hole_after.size();
+    holes_.erase(hole_after.iter_);
+  }
+
+  holes_.emplace(region.position() + region.size() - shrink_amount,
+                 shrink_amount + hole_addendum);
+  region.iter_->second.resize(region.size() - shrink_amount);
+
+  return region;
 }
 
 SparseByteBuffer::Hole SparseByteBuffer::Free(Region region) {

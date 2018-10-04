@@ -94,6 +94,29 @@ class SparseByteBuffer {
   // return null_hole().
   Hole Fill(Hole hole, std::vector<uint8_t>&& buffer);
 
+  // Frees and shrinks regions outside the protected range until |goal| bytes
+  // have been freed from the buffer or nothing remains to free. Returns the
+  // bytes actually freed.
+  //
+  // Frees and shrinks regions outside the protected range as they are found,
+  // first cleaning up regions before the protected range, and then regions after
+  // after the protected range. In both traversals regions farther from the
+  // protected range are cleaned up first.
+  size_t CleanUpExcept(size_t goal, size_t protected_start,
+                       size_t protected_size);
+
+  // Shrinks the front of a region (e.g. shrinking [{1, 2, 3}] by 1 yields
+  // [hole, {2, 3}]). This may require a copy. Returns an updated Region handle.
+  // The handle is equal to null_region() if the region was shrunk by its whole
+  // size and therefore freed.
+  Region ShrinkRegionFront(Region region, size_t shrink_amount);
+
+  // Shrinks the back of a region (e.g. shrinking [{1, 2, 3}] by 1 yields
+  // [{1, 2}, hole]). Returns an updated Region handle. The handle is equal to
+  // null_region() if the region was shrunk by its whole size and therefore
+  // freed.
+  Region ShrinkRegionBack(Region region, size_t shrink_amount);
+
   // Drops a region and coalesces (may modify) any adjacent holes.
   Hole Free(Region region);
 

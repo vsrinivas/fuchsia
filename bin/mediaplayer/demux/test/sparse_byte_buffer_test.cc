@@ -422,5 +422,116 @@ TEST(SparseByteBufferTest, FreeRegion) {
     ExpectHole(&under_test, 20, 10, enclosing_hole);
   }
 }
+
+TEST(SparseByteBufferTest, CleanUpExcept) {
+  {
+    // Flagship usecase.
+    // Clean up except a space with regions on the border.
+    // Visually:
+    //      | Protected Range |
+    // [  ====   ====    ========  ==== ...]
+    //
+    // Regions (corresponding to diagram):
+    SparseByteBuffer under_test =
+        BufferWithRegions({{2, 4}, {9, 4}, {17, 8}, {27, 4}});
+    // Protected range:
+    size_t protected_start = 4;
+    size_t protected_size = 19;
+
+    size_t freed = under_test.CleanUpExcept(
+        /* >= the buffer size so it cleans the most it can */ kSize,
+        protected_start, protected_size);
+
+    // Full expectation layout corresponding to diagram.
+    EXPECT_EQ(freed, 8u);
+    ExpectHole(&under_test, 0, 4, under_test.FindHoleContaining(0));
+    ExpectRegion(&under_test, 4, 2,
+                 under_test.FindRegionContaining(4, under_test.null_region()));
+    ExpectHole(&under_test, 6, 3, under_test.FindHoleContaining(6));
+    ExpectRegion(&under_test, 9, 4,
+                 under_test.FindRegionContaining(9, under_test.null_region()));
+    ExpectHole(&under_test, 13, 4, under_test.FindHoleContaining(13));
+    ExpectRegion(&under_test, 17, 6,
+                 under_test.FindRegionContaining(17, under_test.null_region()));
+    ExpectHole(&under_test, 23, kSize - 23, under_test.FindHoleContaining(23));
+  }
+
+  {
+    // Clean up less than available excess; should truncate excess region after
+    // protected range.
+    SparseByteBuffer under_test = BufferWithRegions({{0, 100}, {900, 100}});
+    size_t freed = under_test.CleanUpExcept(50, 0, 100);
+
+    EXPECT_EQ(freed, 50u);
+    ExpectRegion(
+        &under_test, 900, 50,
+        under_test.FindRegionContaining(900, under_test.null_region()));
+    ExpectHole(&under_test, 950, 50, under_test.FindHoleContaining(950));
+  }
+
+  {
+    // Clean up a buffer with no regions; ensure graceful return.
+    SparseByteBuffer under_test;
+    under_test.Initialize(100);
+    EXPECT_EQ(under_test.CleanUpExcept(100, 0, 10), 0u);
+  }
+}
+
+TEST(SparseByteBufferTest, ShrinkRegionFront) {
+  {
+    // Shrink a region with a hole before it.
+    SparseByteBuffer under_test = BufferWithRegions({{1, 4}});
+    SparseByteBuffer::Region result = under_test.ShrinkRegionFront(
+        under_test.FindRegionContaining(1, under_test.null_region()), 1);
+    ExpectRegion(&under_test, 2, 3, result);
+    ExpectHole(&under_test, 0, 2, under_test.FindHoleContaining(0));
+  }
+
+  {
+    // Shrink a region with a region before it.
+    SparseByteBuffer under_test = BufferWithRegions({{2, 4}, {6, 4}});
+    SparseByteBuffer::Region result = under_test.ShrinkRegionFront(
+        under_test.FindRegionContaining(6, under_test.null_region()), 2);
+    ExpectRegion(&under_test, 8, 2, result);
+    ExpectHole(&under_test, 6, 2, under_test.FindHoleContaining(6));
+  }
+
+  {
+    // Shrink a region totally (free it).
+    SparseByteBuffer under_test = BufferWithRegions({{2, 4}, {6, 4}, {10, 2}});
+    under_test.ShrinkRegionFront(
+        under_test.FindRegionContaining(6, under_test.null_region()), 4);
+    ExpectHole(&under_test, 6, 4, under_test.FindHoleContaining(6));
+  }
+}
+
+TEST(SparseByteBufferTest, ShrinkRegionBack) {
+  {
+    // Shrink a region with a hole after it.
+    SparseByteBuffer under_test = BufferWithRegions({{0, 4}});
+    SparseByteBuffer::Region result = under_test.ShrinkRegionBack(
+        under_test.FindRegionContaining(0, under_test.null_region()), 1);
+    ExpectRegion(&under_test, 0, 3, result);
+    ExpectHole(&under_test, 3, kSize - 3, under_test.FindHoleContaining(0));
+  }
+
+  {
+    // Shrink a region with a region after it.
+    SparseByteBuffer under_test = BufferWithRegions({{2, 4}, {6, 4}});
+    SparseByteBuffer::Region result = under_test.ShrinkRegionBack(
+        under_test.FindRegionContaining(2, under_test.null_region()), 2);
+    ExpectRegion(&under_test, 2, 2, result);
+    ExpectHole(&under_test, 4, 2, under_test.FindHoleContaining(4));
+  }
+
+  {
+    // Shrink a region totally (free it).
+    SparseByteBuffer under_test = BufferWithRegions({{2, 4}, {6, 4}, {10, 2}});
+    under_test.ShrinkRegionBack(
+        under_test.FindRegionContaining(6, under_test.null_region()), 4);
+    ExpectHole(&under_test, 6, 4, under_test.FindHoleContaining(6));
+  }
+}
+
 }  // namespace
 }  // namespace media_player
