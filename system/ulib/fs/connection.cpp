@@ -18,7 +18,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/vfs.h>
-#include <lib/fidl/cpp/bind.h>
+#include <lib/fidl-utils/bind.h>
 #include <lib/zx/handle.h>
 #include <zircon/assert.h>
 

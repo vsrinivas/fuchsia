@@ -5,7 +5,7 @@
 #include <fbl/type_support.h>
 #include <fidl/test/spaceship/c/fidl.h>
 #include <lib/async-loop/loop.h>
-#include <lib/fidl/cpp/bind.h>
+#include <lib/fidl-utils/bind.h>
 #include <lib/zx/channel.h>
 #include <string.h>
 #include <zircon/fidl.h>

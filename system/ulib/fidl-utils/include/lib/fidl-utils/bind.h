@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_CPP_BIND_H_
-#define LIB_FIDL_CPP_BIND_H_
+#pragma once
 
+#include <fbl/type_support.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/bind.h>
 #include <lib/zx/channel.h>
@@ -82,14 +82,11 @@ static zx_status_t BindMember(void* ctx, Args... args) {
 //   instance.Bind(dispatcher, channel);
 template <auto Dispatch, typename Ops, typename T>
 zx_status_t BindOps(async_dispatcher_t* dispatcher, zx::channel channel, T* ctx, const Ops* ops) {
-    // TODO(smklein): Re-enable this check when std is available in Zircon.
-    // static_assert(std::is_same<decltype(Dispatch),
-    //                            zx_status_t (*)(void*, fidl_txn_t*, fidl_msg_t*, const Ops* ops)
-    //                           >::value, "Invalid dispatch function");
+    static_assert(fbl::is_same<decltype(Dispatch),
+                               zx_status_t (*)(void*, fidl_txn_t*, fidl_msg_t*, const Ops* ops)
+                              >::value, "Invalid dispatch function");
     return fidl_bind(dispatcher, channel.release(),
                      reinterpret_cast<fidl_dispatch_t*>(Dispatch), ctx, ops);
 }
 
 } // namespace fidl
-
-#endif // LIB_FIDL_CPP_BIND_H_

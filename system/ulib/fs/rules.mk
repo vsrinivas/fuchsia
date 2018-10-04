@@ -48,6 +48,7 @@ MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fdio \
     system/ulib/fidl \
+    system/ulib/fidl-utils \
     system/ulib/trace-engine \
     system/ulib/zircon \
 

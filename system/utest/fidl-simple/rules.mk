@@ -47,6 +47,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/async-loop \
     system/ulib/fbl \
     system/ulib/fidl \
+    system/ulib/fidl-utils \
     system/ulib/zx \
     system/ulib/zxcpp \
 

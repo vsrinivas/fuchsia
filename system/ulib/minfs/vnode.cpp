@@ -19,7 +19,7 @@
 
 #ifdef __Fuchsia__
 #include <lib/fdio/vfs.h>
-#include <lib/fidl/cpp/bind.h>
+#include <lib/fidl-utils/bind.h>
 #include <fbl/auto_lock.h>
 #include <zircon/syscalls.h>
 #endif
