@@ -617,16 +617,15 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
 
 // Verifies that two successive calls to GetPage do not create 2 storages.
 TEST_F(LedgerManagerTest, CallGetPageTwice) {
-  PagePtr page;
   ledger::PageId id = RandomId();
 
   uint8_t calls = 0;
-  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest(),
+  PagePtr page1;
+  ledger_->GetPage(fidl::MakeOptional(id), page1.NewRequest(),
                    [&calls](Status) { calls++; });
-  page.Unbind();
-  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest(),
+  PagePtr page2;
+  ledger_->GetPage(fidl::MakeOptional(id), page2.NewRequest(),
                    [&calls](Status) { calls++; });
-  page.Unbind();
   RunLoopUntilIdle();
   EXPECT_EQ(2u, calls);
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
@@ -644,7 +643,6 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   bool called;
   // Get the root page.
   storage_ptr->ClearCalls();
-  page.Unbind();
   ledger_->GetRootPage(
       page.NewRequest(),
       callback::Capture(callback::SetWhenCalled(&called), &status));
