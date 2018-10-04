@@ -29,6 +29,104 @@ namespace {
 // PageManagerContainer that the requested PageManager is no longer used.
 using ExpiringToken = fit::deferred_action<fit::closure>;
 
+// A notifier for |PageUsageListener|.
+//
+// Given information about when internal and external page connections open and
+// close, |PageConnectionNotifier| calls the corresponding methods from
+// |PageUsageListener|. The |PageUsageListener| given in the constructor should
+// outlive this object.
+class PageConnectionNotifier {
+ public:
+  PageConnectionNotifier(std::string ledger_name, storage::PageId page_id,
+                         PageUsageListener* page_usage_listener);
+  ~PageConnectionNotifier();
+
+  // Registers a new external page request.
+  void RegisterExternalRequest();
+
+  // Unregisters all active external page requests. This can be because all
+  // active connections were closed, or because of failure to bind the requests.
+  void UnregisterExternalRequests();
+
+  // Registers a new internal page request.
+  void RegisterInternalRequest();
+
+  // Unregisters one active internal page request. This can be because the
+  // active connection was closed, or because of failure to fulfill the request.
+  void UnregisterInternalRequest();
+
+  // Sets the on_empty callaback, to be called every time this object becomes
+  // empty.
+  void set_on_empty(fit::closure on_empty_callback);
+
+  // Checks and returns whether there are no active external or internal
+  // requests.
+  bool IsEmpty();
+
+ private:
+  // Checks whether this object is empty, and if it is and the on_empty callback
+  // is set, calls it.
+  void CheckEmpty();
+
+  const std::string ledger_name_;
+  const storage::PageId page_id_;
+  PageUsageListener* page_usage_listener_;
+
+  bool has_external_requests_ = false;
+  ssize_t internal_request_count_ = 0;
+
+  fit::closure on_empty_callback_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageConnectionNotifier);
+};
+
+PageConnectionNotifier::PageConnectionNotifier(
+    std::string ledger_name, storage::PageId page_id,
+    PageUsageListener* page_usage_listener)
+    : ledger_name_(std::move(ledger_name)),
+      page_id_(std::move(page_id)),
+      page_usage_listener_(page_usage_listener) {}
+
+PageConnectionNotifier::~PageConnectionNotifier() {}
+
+void PageConnectionNotifier::RegisterExternalRequest() {
+  if (has_external_requests_) {
+    return;
+  }
+  has_external_requests_ = true;
+  page_usage_listener_->OnPageOpened(ledger_name_, page_id_);
+}
+
+void PageConnectionNotifier::UnregisterExternalRequests() {
+  page_usage_listener_->OnPageClosed(ledger_name_, page_id_);
+  has_external_requests_ = false;
+  CheckEmpty();
+}
+
+void PageConnectionNotifier::RegisterInternalRequest() {
+  ++internal_request_count_;
+}
+
+void PageConnectionNotifier::UnregisterInternalRequest() {
+  FXL_DCHECK(internal_request_count_ > 0);
+  --internal_request_count_;
+  CheckEmpty();
+}
+
+void PageConnectionNotifier::set_on_empty(fit::closure on_empty_callback) {
+  on_empty_callback_ = std::move(on_empty_callback);
+}
+
+bool PageConnectionNotifier::IsEmpty() {
+  return internal_request_count_ == 0 && !has_external_requests_;
+}
+
+void PageConnectionNotifier::CheckEmpty() {
+  if (on_empty_callback_ && IsEmpty()) {
+    on_empty_callback_();
+  }
+}
+
 }  // namespace
 
 void LedgerManager::PageAvailabilityManager::MarkPageBusy(
@@ -97,11 +195,6 @@ class LedgerManager::PageManagerContainer {
   bool PageConnectionIsOpen();
 
  private:
-  // Notifies the PageUsageListener on the page being opened the first time it
-  // is called. |MaybeNotifyUsageListener| should only be called after external
-  // requests for the PageManager.
-  void MaybeNotifyUsageListener();
-
   // Creates a new ExpiringToken to be used while internal requests for the
   // |PageManager| remain active.
   ExpiringToken NewExpiringToken();
@@ -110,10 +203,9 @@ class LedgerManager::PageManagerContainer {
   // if it is.
   void CheckEmpty();
 
-  const std::string ledger_name_;
   const storage::PageId page_id_;
   std::unique_ptr<PageManager> page_manager_;
-  PageUsageListener* page_usage_listener_;
+  PageConnectionNotifier connection_notifier_;
   Status status_ = Status::OK;
   std::vector<std::pair<std::unique_ptr<PageDelayingFacade>,
                         fit::function<void(Status)>>>
@@ -121,11 +213,8 @@ class LedgerManager::PageManagerContainer {
   std::vector<std::pair<fidl::InterfaceRequest<ledger_internal::PageDebug>,
                         fit::function<void(Status)>>>
       debug_requests_;
-  ssize_t internal_request_count_ = 0;
   std::vector<fit::function<void(Status, ExpiringToken, PageManager*)>>
       internal_request_callbacks_;
-  // Stores whether PageUsageListener was notified about the page being opened.
-  bool page_opened_notification_sent_ = false;
   bool page_manager_is_set_ = false;
   fit::closure on_empty_callback_;
 
@@ -138,9 +227,9 @@ class LedgerManager::PageManagerContainer {
 LedgerManager::PageManagerContainer::PageManagerContainer(
     std::string ledger_name, storage::PageId page_id,
     PageUsageListener* page_usage_listener)
-    : ledger_name_(std::move(ledger_name)),
-      page_id_(std::move(page_id)),
-      page_usage_listener_(page_usage_listener),
+    : page_id_(page_id),
+      connection_notifier_(std::move(ledger_name), std::move(page_id),
+                           page_usage_listener),
       weak_factory_(this) {}
 
 LedgerManager::PageManagerContainer::~PageManagerContainer() {
@@ -150,23 +239,22 @@ LedgerManager::PageManagerContainer::~PageManagerContainer() {
   for (const auto& request : debug_requests_) {
     request.second(Status::INTERNAL_ERROR);
   }
-  if (page_opened_notification_sent_) {
-    page_usage_listener_->OnPageClosed(ledger_name_, page_id_);
-  }
 }
 
 void LedgerManager::PageManagerContainer::set_on_empty(
     fit::closure on_empty_callback) {
   on_empty_callback_ = std::move(on_empty_callback);
+  connection_notifier_.set_on_empty([this] { CheckEmpty(); });
   if (page_manager_) {
-    page_manager_->set_on_empty([this] { CheckEmpty(); });
+    page_manager_->set_on_empty(
+        [this] { connection_notifier_.UnregisterExternalRequests(); });
   }
 }
 
 void LedgerManager::PageManagerContainer::BindPage(
     fidl::InterfaceRequest<Page> page_request,
     fit::function<void(Status)> callback) {
-  MaybeNotifyUsageListener();
+  connection_notifier_.RegisterExternalRequest();
 
   if (status_ != Status::OK) {
     callback(status_);
@@ -185,7 +273,7 @@ void LedgerManager::PageManagerContainer::BindPage(
 void LedgerManager::PageManagerContainer::BindPageDebug(
     fidl::InterfaceRequest<ledger_internal::PageDebug> page_debug,
     fit::function<void(Status)> callback) {
-  MaybeNotifyUsageListener();
+  connection_notifier_.RegisterExternalRequest();
 
   if (status_ != Status::OK) {
     callback(status_);
@@ -252,7 +340,8 @@ void LedgerManager::PageManagerContainer::SetPageManager(
   }
 
   if (page_manager_) {
-    page_manager_->set_on_empty([this] { CheckEmpty(); });
+    page_manager_->set_on_empty(
+        [this] { connection_notifier_.UnregisterExternalRequests(); });
   } else {
     CheckEmpty();
   }
@@ -263,23 +352,15 @@ bool LedgerManager::PageManagerContainer::PageConnectionIsOpen() {
          !requests_.empty() || !debug_requests_.empty();
 }
 
-void LedgerManager::PageManagerContainer::MaybeNotifyUsageListener() {
-  if (!page_opened_notification_sent_) {
-    page_usage_listener_->OnPageOpened(ledger_name_, page_id_);
-    page_opened_notification_sent_ = true;
-  }
-}
-
 ExpiringToken LedgerManager::PageManagerContainer::NewExpiringToken() {
-  ++internal_request_count_;
+  connection_notifier_.RegisterInternalRequest();
   return ExpiringToken(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
-    --internal_request_count_;
-    CheckEmpty();
+    connection_notifier_.UnregisterInternalRequest();
   }));
 }
 
 void LedgerManager::PageManagerContainer::CheckEmpty() {
-  if (on_empty_callback_ && internal_request_count_ == 0 &&
+  if (on_empty_callback_ && connection_notifier_.IsEmpty() &&
       page_manager_is_set_ && (!page_manager_ || page_manager_->IsEmpty())) {
     on_empty_callback_();
   }
