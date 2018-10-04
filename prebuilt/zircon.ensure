@@ -33,7 +33,7 @@ $ParanoidMode CheckPresence
 
 # Clang
 @Subdir clang
-fuchsia/clang/${platform} git_revision:70a812b6f9a686e288468cc448144f910e361939
+fuchsia/clang/${platform} git_revision:a84692c158dfc3baa5d98273b881d5860bb33791
 
 # GCC
 @Subdir gcc
