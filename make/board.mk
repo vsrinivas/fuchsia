@@ -149,6 +149,7 @@ endif # PLATFORM_USE_AVB
 
 # clear variables that were passed in to us
 PLATFORM_USE_SHIM :=
+PLATFORM_USE_MKKDTB :=
 PLATFORM_USE_MKBOOTIMG :=
 PLATFORM_USE_AVB :=
 PLATFORM_BOARD_NAME :=
