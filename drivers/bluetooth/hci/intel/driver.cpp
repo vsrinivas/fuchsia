@@ -20,6 +20,8 @@
 constexpr uint16_t sfi_product_ids[] = {0x0025, 0x0a2b, 0x0aaa};
 
 extern "C" zx_status_t btintel_bind(void* ctx, zx_device_t* device) {
+  tracef("bind\n");
+
   usb_protocol_t usb;
   zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
   if (result != ZX_OK) {

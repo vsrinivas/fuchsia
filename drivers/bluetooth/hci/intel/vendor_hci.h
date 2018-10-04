@@ -94,13 +94,19 @@ struct BootloaderVendorEventParams {
 
 class VendorHci {
  public:
-  VendorHci(zx::channel* channel);
+  explicit VendorHci(zx::channel* ctrl);
+
+  // When |acl| is not nullptr, WaitForEventPacket will wait on both control and ACL
+  // channels.
+  void enable_events_on_bulk(zx::channel* acl) { acl_ = acl; }
 
   ReadVersionReturnParams SendReadVersion() const;
 
   ReadBootParamsReturnParams SendReadBootParams() const;
 
-  void SendReset() const;
+  btlib::hci::StatusCode SendHciReset() const;
+
+  void SendVendorReset() const;
 
   bool SendSecureSend(uint8_t type,
                       const btlib::common::BufferView& bytes) const;
@@ -114,15 +120,22 @@ class VendorHci {
   bool ExitManufacturerMode(MfgDisableMode mode);
 
  private:
-  // The channel to communicate on.
-  zx::channel* channel_;
+  // The control and ACL (interrupt and bulk on USB) endpoints of the
+  // controller. Intel controllers that support the "secure send" can send
+  // vendor events over the bulk endpoint while in bootloader mode. We listen on
+  // incoming events on both channels, if provided.
+  zx::channel* ctrl_;
+  zx::channel* acl_;
 
   // True when we are in Manufacturer Mode
   bool manufacturer_;
 
   void SendCommand(const btlib::common::PacketView<btlib::hci::CommandHeader>&
                        command) const;
-  std::unique_ptr<btlib::hci::EventPacket> ReadEventPacket() const;
+
+  std::unique_ptr<btlib::hci::EventPacket> WaitForEventPacket(
+      zx::duration timeout = zx::sec(5),
+      const btlib::hci::EventCode* expected_event = nullptr) const;
 };
 
 }  // namespace btintel

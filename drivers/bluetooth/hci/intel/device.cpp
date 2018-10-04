@@ -9,6 +9,7 @@
 #include <zircon/device/bt-hci.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
+#include <zircon/syscalls.h>
 
 #include "firmware_loader.h"
 #include "logging.h"
@@ -21,6 +22,10 @@ Device::Device(zx_device_t* device, bt_hci_protocol_t* hci)
 zx_status_t Device::Bind() { return DdkAdd("btintel", DEVICE_ADD_INVISIBLE); }
 
 zx_status_t Device::LoadFirmware(bool secure) {
+  tracef("LoadFirmware(secure: %s)\n", (secure ? "yes" : "no"));
+
+  // TODO(armansito): Track metrics for initialization failures.
+
   zx_status_t status;
   zx::channel acl_channel, cmd_channel;
 
@@ -31,10 +36,39 @@ zx_status_t Device::LoadFirmware(bool secure) {
     return Remove(status, "couldn't open command channel");
   }
 
+  status =
+      bt_hci_open_acl_data_channel(&hci_, acl_channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    return Remove(status, "couldn't open ACL channel");
+  }
+
   // Find the version and boot params.
   VendorHci cmd_hci(&cmd_channel);
 
+  // Send an initial reset. If the controller sends a "command not supported"
+  // event on newer models, this likely means that the controller is in
+  // bootloader mode and we can ignore the error.
+  auto hci_status = cmd_hci.SendHciReset();
+  if (hci_status != btlib::hci::StatusCode::kSuccess) {
+    if (!secure || hci_status != btlib::hci::StatusCode::kUnknownCommand) {
+      errorf("HCI_Reset failed (status: 0x%02x)", hci_status);
+      return Remove(ZX_ERR_BAD_STATE,
+                    "failed to reset controller during initialization");
+    }
+    tracef("Ignoring \"Unknown Command\" error while in bootloader mode\n");
+  }
+
+  // Newer Intel controllers that use the "secure send" method can send HCI
+  // events over the bulk endpoint. Enable this before sending the initial
+  // ReadVersion command.
+  if (secure) {
+    cmd_hci.enable_events_on_bulk(&acl_channel);
+  }
+
   ReadVersionReturnParams version = cmd_hci.SendReadVersion();
+  if (version.status != btlib::hci::StatusCode::kSuccess) {
+    return Remove(ZX_ERR_BAD_STATE, "failed to obtain version information");
+  }
 
   zx::vmo fw_vmo;
   uintptr_t fw_addr;
@@ -55,6 +89,9 @@ zx_status_t Device::LoadFirmware(bool secure) {
     }
 
     ReadBootParamsReturnParams boot_params = cmd_hci.SendReadBootParams();
+    if (boot_params.status != btlib::hci::StatusCode::kSuccess) {
+      return Remove(ZX_ERR_BAD_STATE, "failed to read boot parameters");
+    }
 
     fw_filename = fbl::StringPrintf("ibt-%d-%d.sfi", version.hw_variant,
                                     boot_params.dev_revid);
@@ -83,12 +120,6 @@ zx_status_t Device::LoadFirmware(bool secure) {
     return Remove(ZX_ERR_NOT_SUPPORTED, "can't load firmware");
   }
 
-  status =
-      bt_hci_open_acl_data_channel(&hci_, acl_channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    return Remove(status, "couldn't open ACL channel");
-  }
-
   FirmwareLoader loader(&cmd_channel, &acl_channel);
 
   FirmwareLoader::LoadStatus result;
@@ -108,7 +139,11 @@ zx_status_t Device::LoadFirmware(bool secure) {
     return Remove(ZX_ERR_BAD_STATE, "firmware loading failed");
   }
 
-  cmd_hci.SendReset();
+  if (secure) {
+    // If the controller was in bootloader mode, switch the controller into
+    // firmware mode by sending a reset.
+    cmd_hci.SendVendorReset();
+  }
 
   // TODO(jamuraa): other systems receive a post-boot event here, should we?
   // TODO(jamuraa): ddc file loading (NET-381)
@@ -119,8 +154,8 @@ zx_status_t Device::LoadFirmware(bool secure) {
 }
 
 zx_status_t Device::Remove(zx_status_t status, const char* note) {
-  DdkRemove();
   errorf("%s: %s", note, zx_status_get_string(status));
+  DdkRemove();
   return status;
 }
 
@@ -151,7 +186,10 @@ zx_handle_t Device::MapFirmware(const char* name, uintptr_t* fw_addr,
   return vmo;
 }
 
-void Device::DdkUnbind() { device_remove(zxdev()); }
+void Device::DdkUnbind() {
+  tracef("unbind\n");
+  device_remove(zxdev());
+}
 
 void Device::DdkRelease() { delete this; }
 
