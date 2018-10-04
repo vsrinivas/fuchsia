@@ -1762,20 +1762,18 @@ static void ath10k_control_beaconing(struct ath10k_vif* arvif) {
 zx_status_t ath10k_mac_start_ap(struct ath10k_vif* arvif) {
     struct ath10k* ar = arvif->ar;
     zx_status_t ret;
-    uint32_t vdev_param;
 
     mtx_lock(&ar->conf_mutex);
 
-    vdev_param = ar->wmi.vdev_param->beacon_interval;
-    ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, vdev_param, arvif->beacon_interval);
+    ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id,
+                                    ar->wmi.vdev_param->beacon_interval, arvif->beacon_interval);
     if (ret != ZX_OK) {
         ath10k_err("Setting beacon interval failed: %s\n", zx_status_get_string(ret));
         return ret;
     }
 
-    vdev_param = WMI_TLV_PDEV_PARAM_BEACON_TX_MODE;
-    ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id,
-                                    vdev_param, WMI_BEACON_STAGGERED_MODE);
+    ret = ath10k_wmi_pdev_set_param(ar, ar->wmi.pdev_param->beacon_tx_mode,
+                                    WMI_BEACON_STAGGERED_MODE);
     if (ret != ZX_OK) {
         ath10k_err("Setting beacon Tx mode failed: %s\n", zx_status_get_string(ret));
         return ret;
@@ -1788,8 +1786,8 @@ zx_status_t ath10k_mac_start_ap(struct ath10k_vif* arvif) {
         return ret;
     }
 
-    vdev_param = WMI_TLV_VDEV_PARAM_DTIM_PERIOD;
-    ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, vdev_param, arvif->dtim_period);
+    ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, ar->wmi.vdev_param->dtim_period,
+                                    arvif->dtim_period);
     if (ret != ZX_OK) {
         ath10k_err("Setting DTIM period failed: %s\n", zx_status_get_string(ret));
         return ret;
