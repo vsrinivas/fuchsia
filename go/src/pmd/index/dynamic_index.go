@@ -14,13 +14,10 @@ import (
 	"sort"
 	"sync"
 
+	"fuchsia.googlesource.com/pmd/amberer"
+
 	"fuchsia.googlesource.com/pm/pkg"
 )
-
-// PackageActivationNotifer is a slice of the Amber interface that notifies Amber of package activations.
-type PackageActivationNotifier interface {
-	PackagesActivated([]string) error
-}
 
 // DynamicIndex provides concurrency safe access to a dynamic index of packages and package metadata
 type DynamicIndex struct {
@@ -40,9 +37,6 @@ type DynamicIndex struct {
 
 	// waiting is a map of package merkleroot -> set[blob merkleroots]
 	waiting map[string]map[string]struct{}
-
-	// Notifier is used to send activation notifications to Amber, if set.
-	Notifier PackageActivationNotifier
 
 	// installingCounts tracks the number of packages being installed which
 	// have a dependecy on the given content id
@@ -83,17 +77,37 @@ func (idx *DynamicIndex) List() ([]pkg.Package, error) {
 	return pkgs, nil
 }
 
+// Get looks up a package in the dynamic index, returning it if found.
+func (idx *DynamicIndex) Get(p pkg.Package) (string, bool) {
+	bmerkle, err := ioutil.ReadFile(idx.PackageVersionPath(p.Name, p.Version))
+	return string(bmerkle), err == nil
+}
+
 // Add adds a package to the index
 func (idx *DynamicIndex) Add(p pkg.Package, root string) error {
+	if _, found := idx.static.GetRoot(root); found {
+		return os.ErrExist
+	}
+
+	if _, found := idx.static.Get(p); found {
+		// TODO(PKG-19): this needs to be removed as the static package set should not
+		// be updated dynamically in future.
+		idx.static.Set(p, root)
+
+		idx.Notify(root)
+		return nil
+	}
+
 	if err := os.MkdirAll(idx.PackagePath(p.Name), os.ModePerm); err != nil {
 		return err
 	}
 
-	// TODO(PKG-19): this needs to be removed as the static package set should not
-	// be updated dynamically in future.
-	idx.static.Set(p, root)
+	path := idx.PackageVersionPath(p.Name, p.Version)
+	if bmerkle, err := ioutil.ReadFile(path); err == nil && string(bmerkle) == root {
+		return os.ErrExist
+	}
 
-	if err := ioutil.WriteFile(idx.PackagePath(filepath.Join(p.Name, p.Version)), []byte(root), os.ModePerm); err != nil {
+	if err := ioutil.WriteFile(path, []byte(root), os.ModePerm); err != nil {
 		return err
 	}
 	idx.Notify(root)
@@ -110,7 +124,8 @@ func (idx *DynamicIndex) PackageVersionPath(name, version string) string {
 
 func (idx *DynamicIndex) PackagesDir() string {
 	dir := filepath.Join(idx.root, "packages")
-	// TODO(PKG-14): refactor out the initialization logic so that we can do this once, at an appropriate point in the runtime.
+	// TODO(PKG-14): refactor out the initialization logic so that we can do this
+	// once, at an appropriate point in the runtime.
 	_ = os.MkdirAll(dir, os.ModePerm)
 	return dir
 }
@@ -231,13 +246,7 @@ func (idx *DynamicIndex) Notify(roots ...string) {
 		return
 	}
 
-	if idx.Notifier != nil {
-		go func() {
-			if err := idx.Notifier.PackagesActivated(roots); err != nil {
-				log.Printf("pkgfs: index: Amber notification error: %s", err)
-			}
-		}()
-	}
+	go amberer.PackagesActivated(roots)
 }
 
 // PackageBlobs returns the list of blobs which are meta FARs backing packages in the index.

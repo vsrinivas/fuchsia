@@ -51,6 +51,51 @@ func (mf *metaFar) list() ([]string, error) {
 	return fr.List(), nil
 }
 
+// metaFile is the package dir "meta" opened as a file, which on read returns
+// the merkleroot.
+type metaFile struct {
+	unsupportedFile
+
+	*metaFar
+
+	off   int64
+	flags fs.OpenFlags
+}
+
+func newMetaFile(name, version, blob string, fs *Filesystem, flags fs.OpenFlags) *metaFile {
+	return &metaFile{
+		unsupportedFile(fmt.Sprintf("pkgfs:meta:%s/%s@%s", name, version, blob)),
+		newMetaFar(name, version, blob, fs),
+		0,
+		flags,
+	}
+}
+
+func (f *metaFile) Close() error {
+	return nil
+}
+
+func (f *metaFile) GetOpenFlags() fs.OpenFlags {
+	return f.flags
+}
+
+func (f *metaFile) Stat() (int64, time.Time, time.Time, error) {
+	return int64(len(f.blob)), time.Time{}, time.Time{}, nil
+}
+
+func (f *metaFile) Read(p []byte, off int64, whence int) (int, error) {
+	if whence != fs.WhenceFromCurrent {
+		return 0, fs.ErrNotSupported
+	}
+	if f.off+off >= int64(len(f.blob)) {
+		return 0, fs.ErrEOF
+	}
+
+	n := copy(p, f.blob[f.off+off:])
+	f.off += off + int64(n)
+	return n, nil
+}
+
 type metaFarDir struct {
 	unsupportedDirectory
 
@@ -91,6 +136,9 @@ func (d *metaFarDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 	debugLog("pkgfs:metaFarDir:open %q", name)
 
 	if name == "" {
+		if flags.File() || (!flags.Directory() && !flags.Path()) {
+			return newMetaFile(d.name, d.version, d.blob, d.fs, flags), nil, nil, nil
+		}
 		return nil, d, nil, nil
 	}
 

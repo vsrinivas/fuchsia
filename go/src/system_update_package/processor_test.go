@@ -39,7 +39,7 @@ func TestParseRequirements(t *testing.T) {
 	}
 
 	for _, p := range pkgs {
-		exp, ok := expectedPkgs[p.name]
+		exp, ok := expectedPkgs[p.namever]
 		if !ok {
 			t.Fail()
 			t.Logf("Package %s was found, but not expected", p)
@@ -49,12 +49,12 @@ func TestParseRequirements(t *testing.T) {
 			t.Fail()
 			t.Logf("Merkle does not match, expected %q, found %q", exp, p.merkle)
 		}
-		delete(expectedPkgs, p.name)
+		delete(expectedPkgs, p.namever)
 	}
 
 	if len(expectedPkgs) != 0 {
 		for k, v := range expectedPkgs {
-			t.Logf("Package [name: %q, merkle: %q] was expected, but not found",
+			t.Logf("Package [namever: %q, merkle: %q] was expected, but not found",
 				k, v)
 		}
 		t.Fail()

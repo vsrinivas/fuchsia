@@ -19,8 +19,9 @@ import (
 // use during early / verified boot stages to present a unified set of packages
 // from a pre-computed and verifiable index file.
 type StaticIndex struct {
-	mu    sync.RWMutex
-	roots map[pkg.Package]string
+	mu      sync.RWMutex
+	roots   map[pkg.Package]string
+	updates map[pkg.Package]string
 }
 
 // NewStatic initializes an empty StaticIndex
@@ -74,6 +75,7 @@ func (idx *StaticIndex) LoadFrom(f io.Reader) error {
 
 	idx.mu.Lock()
 	idx.roots = roots
+	idx.updates = make(map[pkg.Package]string)
 	idx.mu.Unlock()
 
 	return nil
@@ -83,6 +85,12 @@ func (idx *StaticIndex) LoadFrom(f io.Reader) error {
 func (idx *StaticIndex) HasName(name string) bool {
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()
+
+	for k := range idx.updates {
+		if k.Name == name {
+			return true
+		}
+	}
 
 	for k := range idx.roots {
 		if k.Name == name {
@@ -97,13 +105,25 @@ func (idx *StaticIndex) ListVersions(name string) []string {
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()
 
-	var versions []string
-	for k := range idx.roots {
+	versions := map[string]struct{}{}
+
+	for k := range idx.updates {
 		if k.Name == name {
-			versions = append(versions, k.Version)
+			versions[k.Version] = struct{}{}
 		}
 	}
-	return versions
+	for k := range idx.roots {
+		if k.Name == name {
+			versions[k.Version] = struct{}{}
+		}
+	}
+
+	verList := make([]string, 0, len(versions))
+	for v := range versions {
+		verList = append(verList, v)
+	}
+
+	return verList
 }
 
 // Get looks up the given package, returning (merkleroot, true) if found, or ("", false) otherwise.
@@ -111,8 +131,32 @@ func (idx *StaticIndex) Get(p pkg.Package) (string, bool) {
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()
 
-	s, ok := idx.roots[p]
+	s, ok := idx.updates[p]
+	if ok {
+		return s, ok
+	}
+	s, ok = idx.roots[p]
 	return s, ok
+}
+
+// GetRoot looks for a package by merkleroot, returning the matching package and
+// true, if found, an empty package and false otherwise.
+func (idx *StaticIndex) GetRoot(root string) (pkg.Package, bool) {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+
+	for p, rt := range idx.updates {
+		if root == rt {
+			return p, true
+		}
+	}
+
+	for p, rt := range idx.roots {
+		if root == rt {
+			return p, true
+		}
+	}
+	return pkg.Package{}, false
 }
 
 // Set sets the given package to the given root. TODO(PKG-16) This method should
@@ -122,7 +166,7 @@ func (idx *StaticIndex) Set(p pkg.Package, root string) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
-	idx.roots[p] = root
+	idx.updates[p] = root
 }
 
 // List returns the list of packages in byte-lexical order
@@ -130,8 +174,17 @@ func (idx *StaticIndex) List() ([]pkg.Package, error) {
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()
 
-	packages := make([]pkg.Package, 0, len(idx.roots))
+	var pkgs = make(map[pkg.Package]struct{})
+
+	for k := range idx.updates {
+		pkgs[k] = struct{}{}
+	}
 	for k := range idx.roots {
+		pkgs[k] = struct{}{}
+	}
+
+	packages := make([]pkg.Package, 0, len(pkgs))
+	for k := range pkgs {
 		packages = append(packages, k)
 	}
 	sort.Sort(pkg.ByNameVersion(packages))
@@ -140,8 +193,18 @@ func (idx *StaticIndex) List() ([]pkg.Package, error) {
 
 // PackageBlobs returns the list of blobs which are meta FARs backing packages in the index.
 func (idx *StaticIndex) PackageBlobs() []string {
-	blobs := make([]string, 0, len(idx.roots))
+
+	var blbs = make(map[string]struct{})
+
+	for _, m := range idx.updates {
+		blbs[m] = struct{}{}
+	}
 	for _, m := range idx.roots {
+		blbs[m] = struct{}{}
+	}
+
+	blobs := make([]string, 0, len(blbs))
+	for m := range blbs {
 		blobs = append(blobs, m)
 	}
 	return blobs

@@ -5,8 +5,6 @@
 package pkgfs
 
 import (
-	"fmt"
-	"path/filepath"
 	"strings"
 	"thinfs/fs"
 	"time"
@@ -42,14 +40,8 @@ func (d *needsRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory
 		}
 		return nil, nbd, nil, nil
 	default:
-		if len(parts) != 1 {
+		if len(parts) != 1 || flags.Create() {
 			return nil, nil, nil, fs.ErrNotSupported
-		}
-
-		if flags.Create() {
-			// TODO(jmatt) PKG-57 support version properly rather than hard-coding
-			go d.fs.amberPxy.GetUpdate(fmt.Sprintf("%s/0", parts[0]), nil, nil)
-			return &needsFile{unsupportedFile: unsupportedFile(filepath.Join("/needs", name)), fs: d.fs}, nil, nil, nil
 		}
 
 		return nil, nil, nil, fs.ErrNotFound

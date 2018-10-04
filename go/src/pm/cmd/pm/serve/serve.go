@@ -7,20 +7,23 @@ package serve
 import (
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"fuchsia.googlesource.com/pm/build"
 )
 
-const (
-	usage      = "usage: %s serve -d=<directory_path>"
-	serverBase = "amber-files"
-	maxLen     = 50
-	trailLen   = 20
-)
+type loggingWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (lw *loggingWriter) WriteHeader(status int) {
+	lw.status = status
+	lw.ResponseWriter.WriteHeader(status)
+}
 
 func Run(cfg *build.Config, args []string) error {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
@@ -29,7 +32,7 @@ func Run(cfg *build.Config, args []string) error {
 	quiet := fs.Bool("q", false, "Don't print out information about requests")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, usage, filepath.Base(os.Args[0]))
+		fmt.Fprintf(os.Stderr, "usage: %s serve -d=<directory_path>", filepath.Base(os.Args[0]))
 		fmt.Fprintln(os.Stderr)
 		fs.PrintDefaults()
 	}
@@ -40,7 +43,7 @@ func Run(cfg *build.Config, args []string) error {
 
 	if *repoDir == "" {
 		if buildDir, ok := os.LookupEnv("FUCHSIA_BUILD_DIR"); ok {
-			*repoDir = filepath.Join(buildDir, serverBase, "repository")
+			*repoDir = filepath.Join(buildDir, "amber-files", "repository")
 		} else {
 			return fmt.Errorf("the FUCHSIA_BUILD_DIR environment variable should be set or supply a path with -d")
 		}
@@ -55,20 +58,19 @@ func Run(cfg *build.Config, args []string) error {
 		return fmt.Errorf("repository path %q is not a directory", *repoDir)
 	}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if !*quiet {
-			rStr := r.RequestURI
-			if len(rStr) > maxLen {
-				rStr = fmt.Sprintf("%s...%s", rStr[0:maxLen-trailLen-3], rStr[len(rStr)-trailLen:])
-			}
-			log.Printf("serving %q", rStr)
-		}
-		http.ServeFile(w, r, filepath.Join(*repoDir, r.URL.Path))
-	})
+	http.Handle("/", http.FileServer(http.Dir(*repoDir)))
 
 	if !*quiet {
-		log.Printf("starting server on %s", *listen)
+		fmt.Printf("%s [pm serve] serving %s at http://%s\n",
+			time.Now().Format("2006-01-02 15:04:05"), *repoDir, *listen)
 	}
 
-	return http.ListenAndServe(*listen, nil)
+	return http.ListenAndServe(*listen, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		lw := &loggingWriter{w, 0}
+		http.DefaultServeMux.ServeHTTP(lw, r)
+		if !*quiet {
+			fmt.Printf("%s [pm serve] %d %s\n",
+				time.Now().Format("2006-01-02 15:04:05"), lw.status, r.RequestURI)
+		}
+	}))
 }

@@ -23,11 +23,10 @@ import (
 	zxio "syscall/zx/io"
 	"time"
 
-	"app/context"
-	"fidl/fuchsia/amber"
 	"thinfs/fs"
 	"thinfs/zircon/rpc"
 
+	"fuchsia.googlesource.com/pm/pkg"
 	"fuchsia.googlesource.com/pmd/blobfs"
 	"fuchsia.googlesource.com/pmd/index"
 )
@@ -36,12 +35,10 @@ import (
 type Filesystem struct {
 	root      *rootDirectory
 	static    *index.StaticIndex
-	gc        *collector
 	index     *index.DynamicIndex
 	blobfs    *blobfs.Manager
 	mountInfo mountInfo
 	mountTime time.Time
-	amberPxy  *amber.ControlInterface
 }
 
 // New initializes a new pkgfs filesystem server
@@ -78,25 +75,8 @@ func New(indexDir, blobDir string) (*Filesystem, error) {
 				unsupportedDirectory: unsupportedDirectory("/packages"),
 				fs:                   f,
 			},
-			"system":   unsupportedDirectory("/system"),
-			"metadata": unsupportedDirectory("/metadata"),
+			"system": unsupportedDirectory("/system"),
 		},
-	}
-
-	req, pxy, err := amber.NewControlInterfaceRequest()
-	if err != nil {
-		panic(err.Error())
-	}
-	context.CreateFromStartupInfo().ConnectToEnvService(req)
-	f.amberPxy = pxy
-
-	f.index.Notifier = pxy
-
-	f.gc = &collector{
-		fs:       f,
-		dynIndex: f.index,
-		blobfs:   bm,
-		root:     f.root,
 	}
 
 	return f, nil
@@ -157,11 +137,15 @@ func (f *Filesystem) SetSystemRoot(merkleroot string) error {
 
 	err = loadStaticIndex(f.static, f.blobfs, blob)
 
-	if err == nil {
-		f.gc.staticIdx = blob
-	} else {
-		f.gc.staticIdx = ""
-	}
+	// Ensure that the "system_image" package is also indexed
+	f.static.Set(
+		pkg.Package{
+			Name:    pd.name,
+			Version: pd.version,
+		},
+		merkleroot,
+	)
+
 	return err
 }
 
@@ -221,7 +205,7 @@ func (f *Filesystem) Serve(c zx.Channel) error {
 	// amount of I/O required, further investigation is clearly indicated.
 	go func() {
 		time.Sleep(15 * time.Second)
-		if err := f.gc.GC(); err != nil {
+		if err := f.GC(); err != nil {
 			log.Printf("pkgfs: GC error: %s", err)
 		}
 	}()
@@ -337,22 +321,19 @@ func goErrToFSErr(err error) error {
 	}
 }
 
-type collector struct {
-	staticIdx string
-	fs        *Filesystem
-	dynIndex  *index.DynamicIndex
-	blobfs    *blobfs.Manager
-	root      *rootDirectory
-}
-
 // GC examines the static and dynamic indexes, collects all the blobs that
 // belong to packages in these indexes. It then reads blobfs for its entire
 // list of blobs. Anything in blobfs that does not appear in the indexes is
 // removed.
-func (c *collector) GC() error {
-	log.Println("pkgfs: running GC")
-	c.root.Lock()
-	defer c.root.Unlock()
+func (fs *Filesystem) GC() error {
+	log.Println("pkgfs: GC start")
+	start := time.Now()
+	defer func() {
+		// this process produces a lot of garbage, so try to free that up (removes
+		// ~1.5mb of heap from a common (small) build target).
+		runtime.GC()
+		log.Printf("pkgfs: GC completed in %.3fs", time.Since(start).Seconds())
+	}()
 
 	// First find everything used by the dynamic index
 	// Next find everything used by packages being installed
@@ -360,7 +341,7 @@ func (c *collector) GC() error {
 	// Finally find everything the system package needs
 
 	// get all the meta FAR blobs from the dynamic index
-	dPkgs, err := c.dynIndex.PackageBlobs()
+	dPkgs, err := fs.index.PackageBlobs()
 	if err != nil {
 		log.Printf("pkgfs: error getting package blobs from dynamic index: %s", err)
 		dPkgs = []string{}
@@ -370,39 +351,28 @@ func (c *collector) GC() error {
 	// their blobs, which include the meta FAR itself
 	dynamicBlobs := make(map[string]struct{})
 	for _, pkg := range dPkgs {
-		pDir, err := newPackageDirFromBlob(pkg, c.fs)
+		pDir, err := newPackageDirFromBlob(pkg, fs)
 		if err != nil {
-			log.Printf("pkgfs: failed getting package from blob %s:  %s", pkg, err)
+			log.Printf("pkgfs: failed getting package from blob %s: %s", pkg, err)
 			continue
 		}
 
 		for _, p := range pDir.Blobs() {
 			dynamicBlobs[p] = struct{}{}
 		}
+		pDir.Close()
 	}
 
 	// find all the blobs belong to packages being installed
-	reserved := c.dynIndex.InstallingBlobs()
+	reserved := fs.index.InstallingBlobs()
 
 	// get all the meta FAR blobs from the static index
-	// the index is created from the on-disk rather than using the instance in
-	// memory because the in-memory one is actually mutable, and therefore can
-	// be "wrong"
-	if c.staticIdx == "" {
-		return fmt.Errorf("pkgfs: static index not set, aborting GC")
-	}
-	staticIndex := index.NewStatic()
-	err = loadStaticIndex(staticIndex, c.blobfs, c.staticIdx)
-	if err != nil {
-		return fmt.Errorf("pkgfs: static index failed to load: %s", err)
-	}
-
-	sPkgs := staticIndex.PackageBlobs()
+	sPkgs := fs.static.PackageBlobs()
 
 	// get all the blobs for the package
 	staticBlobs := make(map[string]struct{})
 	for _, pkg := range sPkgs {
-		pDir, err := newPackageDirFromBlob(pkg, c.fs)
+		pDir, err := newPackageDirFromBlob(pkg, fs)
 		if err != nil {
 			return fmt.Errorf("pkgfs: failed reading package for static index entry %s: %s",
 				pkg, err)
@@ -411,11 +381,12 @@ func (c *collector) GC() error {
 		for _, p := range pDir.Blobs() {
 			staticBlobs[p] = struct{}{}
 		}
+		pDir.Close()
 	}
 
 	// get the system directory and its blobs
 	sysBlobs := []string{}
-	sd := c.root.dirLocked("system")
+	sd := fs.root.dir("system")
 	if sysDir, ok := sd.(*packageDir); ok && sysDir != nil {
 		sysBlobs = sysDir.Blobs()
 	} else {
@@ -440,10 +411,10 @@ func (c *collector) GC() error {
 
 	log.Printf("pkgfs: %d blobs in dynamic index are not in static index", len(dUnique))
 	log.Printf("pkgfs: system package backed by %d blobs", len(sysBlobs))
-	log.Printf("pkgfs: %d blobs in verified software set", len(staticBlobs))
+	log.Printf("pkgfs: %d blobs in system software set", len(staticBlobs))
 
 	// get the set of blobs currently in blobfs
-	installedBlobs, err := readBlobfs(c.blobfs)
+	installedBlobs, err := readBlobfs(fs.blobfs)
 	if err != nil {
 		return fmt.Errorf("pkgfs: unable to list blobfs: %s", err)
 	}

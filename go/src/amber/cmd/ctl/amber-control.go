@@ -5,13 +5,10 @@
 package main
 
 import (
-	"amber/ipcclient"
-	"app/context"
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fidl/fuchsia/amber"
 	"flag"
 	"fmt"
 	"io"
@@ -20,8 +17,14 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
+	"syscall/zx"
+	"syscall/zx/zxwait"
 	"time"
+
+	"app/context"
+	"fidl/fuchsia/amber"
 )
 
 const usage = `usage: amber_ctl <command> [opts]
@@ -65,19 +68,19 @@ Commands
 `
 
 var (
-	fs         = flag.NewFlagSet("default", flag.ExitOnError)
-	pkgFile    = fs.String("f", "", "Path to a source config file")
-	hash       = fs.String("h", "", "SHA256 hash of source config file (required if -f is a URL, ignored otherwise)")
-	name       = fs.String("n", "", "Name of a source or package")
-	pkgVersion = fs.String("v", "", "Version of a package")
-	srcUrl     = fs.String("s", "", "The location of a package source")
-	blobUrl    = fs.String("b", "", "The location of the blob source")
-	rateLimit  = fs.Uint64("l", 0, "Maximum number of requests allowable in a time period.")
-	srcKey     = fs.String("k", "", "Root key for the source, this can be either the key itself or a http[s]:// or file:// URL to the key")
-	blobID     = fs.String("i", "", "Content ID of the blob")
-	noWait     = fs.Bool("nowait", false, "Return once installation has started, package will not yet be available.")
-	merkle     = fs.String("m", "", "Merkle root of the desired update.")
-	period     = fs.Uint("p", 0, "Duration in milliseconds over which the request limit applies.")
+	fs        = flag.NewFlagSet("default", flag.ExitOnError)
+	pkgFile   = fs.String("f", "", "Path to a source config file")
+	hash      = fs.String("h", "", "SHA256 hash of source config file (required if -f is a URL, ignored otherwise)")
+	name      = fs.String("n", "", "Name of a source or package")
+	version   = fs.String("v", "", "Version of a package")
+	srcUrl    = fs.String("s", "", "The location of a package source")
+	blobUrl   = fs.String("b", "", "The location of the blob source")
+	rateLimit = fs.Uint64("l", 0, "Maximum number of requests allowable in a time period.")
+	srcKey    = fs.String("k", "", "Root key for the source, this can be either the key itself or a http[s]:// or file:// URL to the key")
+	blobID    = fs.String("i", "", "Content ID of the blob")
+	noWait    = fs.Bool("nowait", false, "Return once installation has started, package will not yet be available.")
+	merkle    = fs.String("m", "", "Merkle root of the desired update.")
+	period    = fs.Uint("p", 0, "Duration in milliseconds over which the request limit applies.")
 )
 
 type ErrGetFile string
@@ -242,42 +245,27 @@ func rmSource(a *amber.ControlInterface) error {
 }
 
 func getUp(a *amber.ControlInterface) error {
-	// the amber daemon wants package names that start with "/", if not present
-	// add this as a prefix
-	if strings.Index(*name, "/") != 0 {
-		*name = fmt.Sprintf("/%s", *name)
-	}
-	if *pkgVersion == "" {
-		*pkgVersion = "0"
-	}
-	// combine name and 'version' here, because the FIDL interface is talking
-	// about an amber version as opposed to human version. the human version is
-	// part of the package name
-	*name = fmt.Sprintf("%s/%s", *name, *pkgVersion)
 	if *noWait {
-		blobID, err := a.GetUpdate(*name, nil, merkle)
+		c, err := a.GetUpdateComplete(*name, version, merkle)
 		if err != nil {
-			fmt.Printf("Error getting update %s\n", err)
-			return err
+			return fmt.Errorf("Error getting update %s\n", err)
 		}
+		c.Close()
 
-		fmt.Printf("Wrote update to blob %s\n", *blobID)
-	} else {
-		var err error
-		for i := 0; i < 3; i++ {
-			err = ipcclient.GetUpdateComplete(a, *name, merkle)
-			if err == nil {
-				break
-			}
-			fmt.Printf("Update failed with error %s, retrying...\n", err)
-			time.Sleep(2 * time.Second)
-		}
-		if err != nil {
-			return err
-		}
+		fmt.Printf("Update requested %s\n", *name)
+		return nil
 	}
 
-	return nil
+	var err error
+	for i := 0; i < 3; i++ {
+		err = getUpdateComplete(a, *name, version, merkle)
+		if err == nil {
+			break
+		}
+		fmt.Printf("Update failed with error %s, retrying...\n", err)
+		time.Sleep(2 * time.Second)
+	}
+	return err
 }
 
 func listSources(a *amber.ControlInterface) error {
@@ -310,59 +298,50 @@ func setSourceEnablement(a *amber.ControlInterface, id string, enabled bool) err
 	return nil
 }
 
-func main() {
-	if len(os.Args) < 2 {
-		fmt.Printf("Error: no command provided\n%s", usage)
-		os.Exit(-1)
-	}
-
-	fs.Parse(os.Args[2:])
-
-	proxy, _ := connect(context.CreateFromStartupInfo())
-
+func do(proxy *amber.ControlInterface) int {
 	switch os.Args[1] {
 	case "get_up":
 		if err := getUp(proxy); err != nil {
 			log.Printf("error getting an update: %s", err)
-			os.Exit(1)
+			return 1
 		}
 	case "get_blob":
 		if err := proxy.GetBlob(*blobID); err != nil {
-			log.Printf("error getting content blob: %s", err)
-			os.Exit(1)
+			log.Printf("error requesting blob fetch: %s", err)
+			return 1
 		}
 	case "add_src":
 		if err := addSource(proxy); err != nil {
 			log.Printf("error adding source: %s", err)
 			if _, ok := err.(ErrGetFile); ok {
-				os.Exit(2)
+				return 2
 			} else {
-				os.Exit(1)
+				return 1
 			}
 		}
 	case "rm_src":
 		if err := rmSource(proxy); err != nil {
 			log.Printf("error removing source: %s", err)
-			os.Exit(1)
+			return 1
 		}
 	case "list_srcs":
 		if err := listSources(proxy); err != nil {
 			log.Printf("error listing sources: %s", err)
-			os.Exit(1)
+			return 1
 		}
 	case "check":
 		log.Printf("%q not yet supported\n", os.Args[1])
-		os.Exit(1)
+		return 1
 	case "test":
 		if err := doTest(proxy); err != nil {
 			log.Printf("error testing connection to amber: %s", err)
-			os.Exit(1)
+			return 1
 		}
 	case "system_update":
 		configured, err := proxy.CheckForSystemUpdate()
 		if err != nil {
 			log.Printf("error checking for system update: %s", err)
-			os.Exit(1)
+			return 1
 		}
 
 		if configured {
@@ -374,28 +353,102 @@ func main() {
 		device, err := proxy.Login(*name)
 		if err != nil {
 			log.Printf("failed to login: %s", err)
-			os.Exit(1)
+			return 1
 		}
 		fmt.Printf("On your computer go to:\n\n\t%v\n\nand enter\n\n\t%v\n\n", device.VerificationUrl, device.UserCode)
 	case "enable_src":
 		err := setSourceEnablement(proxy, *name, true)
 		if err != nil {
 			fmt.Printf("Error enabling source: %s", err)
-			os.Exit(1)
+			return 1
 		}
 		fmt.Printf("Source %q enabled\n", *name)
 	case "disable_src":
 		err := setSourceEnablement(proxy, *name, false)
 		if err != nil {
 			fmt.Printf("Error disabling source: %s", err)
-			os.Exit(1)
+			return 1
 		}
 		fmt.Printf("Source %q disabled\n", *name)
 	default:
 		log.Printf("Error, %q is not a recognized command\n%s",
 			os.Args[1], usage)
+		return -1
+	}
+
+	return 0
+}
+
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Printf("Error: no command provided\n%s", usage)
 		os.Exit(-1)
 	}
 
-	proxy.Close()
+	fs.Parse(os.Args[2:])
+
+	proxy, _ := connect(context.CreateFromStartupInfo())
+	defer proxy.Close()
+
+	os.Exit(do(proxy))
+}
+
+type ErrDaemon string
+
+func NewErrDaemon(str string) ErrDaemon {
+	return ErrDaemon(fmt.Sprintf("amber_ctl: daemon error: %s", str))
+}
+
+func (e ErrDaemon) Error() string {
+	return string(e)
+}
+
+func getUpdateComplete(proxy *amber.ControlInterface, name string, version *string, merkle *string) error {
+	c, err := proxy.GetUpdateComplete(name, version, merkle)
+	if err != nil {
+		return NewErrDaemon(fmt.Sprintf("error making FIDL request: %s", err))
+	}
+
+	defer c.Close()
+	b := make([]byte, 64*1024)
+	for {
+		sigs, err := zxwait.Wait(*c.Handle(),
+			zx.SignalChannelPeerClosed|zx.SignalChannelReadable,
+			zx.Sys_deadline_after(zx.Duration((3 * time.Second).Nanoseconds())))
+
+		if err != nil {
+			if zerr, ok := err.(zx.Error); ok && zerr.Status == zx.ErrTimedOut {
+				log.Println("Awaiting response...")
+				continue
+			}
+			return NewErrDaemon(
+				fmt.Sprintf("unknown error while waiting for response from channel: %s", err))
+		}
+
+		if sigs&zx.SignalChannelReadable != 0 {
+			bs, _, err := c.Read(b, []zx.Handle{}, 0)
+			if err != nil {
+				return NewErrDaemon(
+					fmt.Sprintf("error reading response from channel: %s", err))
+			}
+
+			if sigs&zx.SignalUser0 != 0 {
+				return NewErrDaemon(string(b[:bs]))
+			}
+
+			pkgname := name
+			if version != nil {
+				pkgname = filepath.Join(pkgname, *version)
+			}
+			if merkle != nil {
+				pkgname = filepath.Join(pkgname, *merkle)
+			}
+			log.Printf("Success %s: %s", pkgname, string(b[:bs]))
+			return nil
+		}
+
+		if sigs&zx.SignalChannelPeerClosed != 0 {
+			return NewErrDaemon("response channel closed unexpectedly.")
+		}
+	}
 }

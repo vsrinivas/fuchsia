@@ -7,7 +7,6 @@ package pkgfs
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"path/filepath"
 	"strings"
@@ -31,16 +30,17 @@ type packageDir struct {
 func newPackageDir(name, version string, filesystem *Filesystem) (*packageDir, error) {
 	var merkleroot string
 	var foundInStatic bool
+	p := pkg.Package{Name: name, Version: version}
 	if filesystem.static != nil {
-		merkleroot, foundInStatic = filesystem.static.Get(pkg.Package{Name: name, Version: version})
+		merkleroot, foundInStatic = filesystem.static.Get(p)
 	}
 
 	if !foundInStatic {
-		bmerkle, err := ioutil.ReadFile(filesystem.index.PackageVersionPath(name, version))
-		if err != nil {
-			return nil, goErrToFSErr(err)
+		var found bool
+		merkleroot, found = filesystem.index.Get(p)
+		if !found {
+			return nil, fs.ErrNotFound
 		}
-		merkleroot = string(bmerkle)
 	}
 
 	return newPackageDirFromBlob(merkleroot, filesystem)
@@ -152,6 +152,10 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 	}
 
 	if name == "meta" {
+		if flags.File() || (!flags.Directory() && !flags.Path()) {
+			mff := newMetaFile(d.name, d.version, d.contents[name], d.fs, flags)
+			return mff, nil, nil, nil
+		}
 		mfd := newMetaFarDir(d.name, d.version, d.contents[name], d.fs)
 		return nil, mfd, nil, nil
 	}

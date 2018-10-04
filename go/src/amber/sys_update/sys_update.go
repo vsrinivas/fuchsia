@@ -8,44 +8,45 @@
 package sys_update
 
 import (
-	"amber/daemon"
-	"amber/ipcclient"
-	"amber/pkg"
 	"bufio"
-	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
-	"sync/atomic"
+	"sync"
 	"time"
 
-	"app/context"
-	"fidl/fuchsia/amber"
-	"fidl/fuchsia/sys"
+	"amber/atonce"
+	"amber/daemon"
 
-	"fuchsia.googlesource.com/merkle"
+	"app/context"
+	"fidl/fuchsia/sys"
 )
 
-var devmgrConfigPath = "/boot/config/devmgr"
-var devmgrConfigPkgfsCmd = "zircon.system.pkgfs.cmd"
-var packagesDir = filepath.Join("/pkgfs", "packages")
-var pkgsvrCmdRegex = regexp.MustCompile("^bin/pkgsvr\\+([0-9a-f]{64})$")
+const (
+	devmgrConfigPath     = "/boot/config/devmgr"
+	devmgrConfigPkgfsCmd = "zircon.system.pkgfs.cmd"
+	packagesDir          = "/pkgfs/packages"
+
+	// TODO: support configuration of update target
+	updateName    = "update"
+	updateVersion = "0"
+)
+
+var (
+	timerDur       = time.Hour
+	pkgsvrCmdRegex = regexp.MustCompile("^bin/pkgsvr\\+([0-9a-f]{64})$")
+)
 
 type SystemUpdateMonitor struct {
-	halt              uint32
-	daemon            *daemon.Daemon
-	checkNow          chan struct{}
-	amber             *amber.ControlInterface
+	d                 *daemon.Daemon
 	updateMerkle      string
 	systemImageMerkle string
-
-	// if auto is allowed to be reset after instantiation, changes must be made
-	// in the run loop to avoid a panic
-	auto bool
+	auto              bool
+	ticker            *time.Ticker
 }
 
 type ErrNoPackage struct {
@@ -53,66 +54,27 @@ type ErrNoPackage struct {
 }
 
 func (e ErrNoPackage) Error() string {
-	return fmt.Sprintf("no package named %s is available on the system", e.name)
+	return fmt.Sprintf("no package named %q is available on the system", e.name)
 }
 
 func NewErrNoPackage(name string) ErrNoPackage {
 	return ErrNoPackage{name: name}
 }
 
-func NewSystemUpdateMonitor(d *daemon.Daemon, a bool) (*SystemUpdateMonitor, error) {
-	amber, err := connectToUpdateSrvc()
-	if err != nil {
-		log.Printf("sys_upd_mon: binding to update service failed: %s", err)
-		return nil, err
-	}
-
+func NewSystemUpdateMonitor(a bool, d *daemon.Daemon) *SystemUpdateMonitor {
 	return &SystemUpdateMonitor{
-		daemon:   d,
-		halt:     0,
-		checkNow: make(chan struct{}),
-		auto:     a,
-		amber:    amber,
-	}, nil
-}
-
-func (upMon *SystemUpdateMonitor) Stop() {
-	atomic.StoreUint32(&upMon.halt, 1)
-}
-
-func (upMon *SystemUpdateMonitor) Check() {
-	if atomic.LoadUint32(&upMon.halt) == 1 {
-		return
+		auto:   a,
+		d:      d,
+		ticker: time.NewTicker(timerDur),
 	}
-	upMon.checkNow <- struct{}{}
 }
 
-func (upMon *SystemUpdateMonitor) Start() {
-	timerDur := time.Hour
-	var timer *time.Timer
-	if upMon.auto {
-		timer = time.NewTimer(timerDur)
-	}
-
-	for {
-		if upMon.auto {
-			select {
-			case <-timer.C:
-				timer.Reset(timerDur)
-			case <-upMon.checkNow:
-			}
-		} else {
-			<-upMon.checkNow
-		}
-
-		if atomic.LoadUint32(&upMon.halt) == 1 {
-			return
-		}
-
+func (upMon *SystemUpdateMonitor) Check() error {
+	return atonce.Do("system-update-monitor", "", func() error {
 		// If we haven't computed the initial "update" package's
 		// "meta/contents" merkle, do it now.
 		if upMon.updateMerkle == "" {
-			updateMerkle, err := updatePackageContentMerkle()
+			updateMerkle, err := getUpdateMerkle()
 			if err == nil {
 				upMon.updateMerkle = updateMerkle
 			} else {
@@ -138,28 +100,43 @@ func (upMon *SystemUpdateMonitor) Start() {
 			}
 		}
 
-		// FIXME: we need to handle the case where the version number is not 0.
-		updatePkg := &pkg.Package{Name: fmt.Sprintf("/update/%d", 0)}
+		// Update all sources
+		upMon.d.Update()
 
-		if err := ipcclient.GetUpdateComplete(upMon.amber, updatePkg.Name, &updatePkg.Merkle); err != nil {
+		// Get the latest merkle root for the update package
+		root, length, err := upMon.d.MerkleFor(updateName, updateVersion, "")
+		if err != nil {
+			log.Printf("sys_upd_mon: unable to resolve new update package: %s", err)
+			return err
+		}
+
+		var w sync.WaitGroup
+		w.Add(1)
+		upMon.d.AddWatch(root, func(root string, e error) {
+			err = e
+			w.Done()
+		})
+		upMon.d.GetPkg(root, length)
+		w.Wait()
+		if err != nil {
 			log.Printf("sys_upd_mon: unable to fetch package update: %s", err)
-			continue
+			return err
 		}
 
 		// Now that we've fetched the "update" package, extract out
 		// it's "meta/contents" merkle.
-		latestUpdateMerkle, err := updatePackageContentMerkle()
+		latestUpdateMerkle, err := getUpdateMerkle()
 		if err != nil {
 			log.Printf("sys_upd_mon: error computing \"update\" package's "+
 				"\"meta/contents\" merkle: %s", err)
-			continue
+			return err
 		}
 
 		if upMon.needsUpdate(latestUpdateMerkle) {
 			log.Println("System update starting...")
 
 			launchDesc := sys.LaunchInfo{Url: "system_updater"}
-			if err := runProgram(&launchDesc); err != nil {
+			if err := runProgram(launchDesc); err != nil {
 				log.Printf("sys_upd_mon: updater failed to start: %s", err)
 			}
 		} else {
@@ -167,7 +144,25 @@ func (upMon *SystemUpdateMonitor) Start() {
 		}
 
 		upMon.updateMerkle = latestUpdateMerkle
+		return nil
+	})
+}
+
+func (upMon *SystemUpdateMonitor) Start() {
+	if !upMon.auto {
+		return
 	}
+
+	log.Printf("sys_upd_mon: monitoring for updates every %s", timerDur)
+	go func() {
+		for range upMon.ticker.C {
+			upMon.Check()
+		}
+	}()
+}
+
+func (upMon *SystemUpdateMonitor) Stop() {
+	upMon.ticker.Stop()
 }
 
 // Check if we need to do an update.
@@ -246,23 +241,22 @@ func (upMon *SystemUpdateMonitor) needsUpdate(latestUpdateMerkle string) bool {
 	return false
 }
 
-func runProgram(info *sys.LaunchInfo) error {
+// XXX(raggi): this should be blocking - there's no safe way to do this concurrently.
+func runProgram(info sys.LaunchInfo) error {
 	context := context.CreateFromStartupInfo()
 	req, pxy, err := sys.NewLauncherInterfaceRequest()
 	if err != nil {
 		return fmt.Errorf("could not make launcher request object: %s", err)
 	}
 	context.ConnectToEnvService(req)
-	defer func() {
-		c := req.ToChannel()
-		(&c).Close()
-	}()
+	ch := req.ToChannel()
+	defer ch.Close()
 	contReq, _, err := sys.NewComponentControllerInterfaceRequest()
 	if err != nil {
 		return fmt.Errorf("error creating component controller request: %s", err)
 	}
 
-	err = pxy.CreateComponent(*info, contReq)
+	err = pxy.CreateComponent(info, contReq)
 	if err != nil {
 		return fmt.Errorf("error starting system updater: %s", err)
 	}
@@ -313,11 +307,6 @@ func currentSystemImageMerkle() (string, error) {
 }
 
 func latestSystemImageMerkle() (string, error) {
-	updateVersion, err := latestPackageVersion("update")
-	if err != nil {
-		return "", err
-	}
-
 	path := filepath.Join(packageDir("update", updateVersion), "packages")
 
 	m, err := readManifest(path)
@@ -325,133 +314,18 @@ func latestSystemImageMerkle() (string, error) {
 		return "", err
 	}
 
-	systemImageVersion, err := latestPackageVersion("system_image")
-	if err != nil {
-		return "", err
-	}
-
-	if merkle, ok := m[fmt.Sprintf("system_image/%s", systemImageVersion)]; ok {
+	if merkle, ok := m[fmt.Sprintf("system_image/%s", updateVersion)]; ok {
 		return merkle, nil
 	} else {
 		return "", fmt.Errorf("system_image package not in %q", path)
 	}
 }
 
-func connectToUpdateSrvc() (*amber.ControlInterface, error) {
-	context := context.CreateFromStartupInfo()
-	req, pxy, err := amber.NewControlInterfaceRequest()
-
-	if err != nil {
-		return nil, fmt.Errorf("error getting control interface: %s", err)
-	}
-
-	context.ConnectToEnvService(req)
-	return pxy, nil
-}
-
-func statMerkle(path string) ([]byte, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return []byte{}, err
-	}
-	defer f.Close()
-
-	m := &merkle.Tree{}
-
-	if _, err = m.ReadFrom(f); err == nil {
-		return m.Root(), nil
-	}
-
-	return []byte{}, err
-}
-
-func latestPackageVersion(name string) (string, error) {
-	path := filepath.Join(packagesDir, name)
-	dir, err := os.Open(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return "", NewErrNoPackage(name)
-		}
-		return "", err
-	}
-	defer dir.Close()
-
-	ents, err := dir.Readdirnames(0)
-	if len(ents) == 0 {
-		return "", NewErrNoPackage(name)
-	}
-
-	_, version, err := GreatestIntStr(ents)
-	if err != nil {
-		if err == ErrNoInput {
-			return "", fmt.Errorf("package has no versions")
-		}
-		return "", err
-	}
-
-	return version, nil
-}
-
 func packageDir(name, version string) string {
 	return filepath.Join(packagesDir, name, version)
 }
 
-func latestPackageDir(name string) (string, error) {
-	version, err := latestPackageVersion(name)
-	if err != nil {
-		return "", err
-	}
-
-	return packageDir(name, version), nil
-}
-
-func updatePackageContentMerkle() (string, error) {
-	path, err := latestPackageDir("update")
-	if err != nil {
-		return "", err
-	}
-
-	merkleBytes, err := statMerkle(filepath.Join(path, "meta", "contents"))
-	if err != nil {
-		log.Printf("sys_upd_mon: merkle computation of \"update\" package's \"meta/contents\" file failed. " +
-			"treating \"update\" package as nonexistent")
-		return "", NewErrNoPackage("update")
-	}
-
-	merkle := hex.EncodeToString(merkleBytes)
-	log.Printf("sys_upd_mon: \"update\" package's \"meta/contents\" merkle: %q", merkle)
-
-	return merkle, nil
-}
-
-var ErrNoInput = fmt.Errorf("no inputs supplied")
-
-type ErrNan string
-
-func (e ErrNan) Error() string {
-	return string(e)
-}
-
-func GreatestIntStr(s []string) (int, string, error) {
-	i := -1
-	var str string
-
-	if len(s) == 0 {
-		return i, str, ErrNoInput
-	}
-
-	for _, s := range s {
-		cand, err := strconv.ParseInt(s, 10, 0)
-		if err != nil {
-			return -1, "", ErrNan(
-				fmt.Sprintf("string %q could not be parsed as a number, error: %s", s, err))
-		}
-
-		if int(cand) > i {
-			i = int(cand)
-			str = s
-		}
-	}
-
-	return i, str, nil
+func getUpdateMerkle() (string, error) {
+	b, err := ioutil.ReadFile(filepath.Join(packageDir(updateName, updateVersion), "meta"))
+	return string(b), err
 }

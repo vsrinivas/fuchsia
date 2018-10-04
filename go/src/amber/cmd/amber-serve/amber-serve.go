@@ -15,8 +15,6 @@ import (
 )
 
 const serverBase = "amber-files"
-const maxLen = 50
-const trailLen = 20
 
 var (
 	usage  = "usage: amber-serve -d=<directory_path>"
@@ -24,6 +22,16 @@ var (
 	listen = flag.String("l", ":8083", "HTTP listen address")
 	quiet  = flag.Bool("q", false, "Don't print out information about requests")
 )
+
+type loggingWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (lw *loggingWriter) WriteHeader(status int) {
+	lw.status = status
+	lw.ResponseWriter.WriteHeader(status)
+}
 
 func main() {
 	flag.CommandLine.Usage = func() {
@@ -44,16 +52,13 @@ func main() {
 	repoDir := filepath.Join(*srcDir, serverBase, "repository")
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		lw := &loggingWriter{w, 0}
+		http.ServeFile(lw, r, filepath.Join(repoDir, r.URL.Path))
 		if !*quiet {
-			rStr := r.RequestURI
-			if len(rStr) > maxLen {
-				rStr = fmt.Sprintf("%s...%s", rStr[0:maxLen-trailLen-3], rStr[len(rStr)-trailLen:])
-			}
 			currentTime := time.Now()
-			fmt.Printf("%s [serve-updates]: Serving %q\n",
-				currentTime.Format("2006-01-02 15:04:05"), rStr)
+			fmt.Printf("%s [amber-srv] %d %s\n",
+				currentTime.Format("2006-01-02 15:04:05"), lw.status, r.RequestURI)
 		}
-		http.ServeFile(w, r, filepath.Join(repoDir, r.URL.Path))
 	})
 
 	log.Fatal(http.ListenAndServe(*listen, nil))

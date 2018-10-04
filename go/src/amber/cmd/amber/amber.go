@@ -8,24 +8,23 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"hash"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
-	"time"
+	"syscall/zx"
+	"syscall/zx/fidl"
 
+	"amber/control_server"
 	"amber/daemon"
-	"amber/ipcserver"
-	"amber/pkg"
 	"amber/source"
 	"amber/sys_update"
 
-	amber_fidl "fidl/fuchsia/amber"
+	"fidl/fuchsia/amber"
 
 	"app/context"
-	"syscall/zx"
 	"syslog/logger"
 )
 
@@ -37,10 +36,7 @@ var (
 	// TODO(jmatt) replace hard-coded values with something better/more flexible
 	usage      = "usage: amber [-k=<path>] [-s=<path>] [-u=<url>]"
 	store      = flag.String("s", "/data/amber/store", "The path to the local file store")
-	delay      = flag.Duration("d", 0*time.Second, "Set a delay before Amber does its work")
 	autoUpdate = flag.Bool("a", false, "Automatically update and restart the system as updates become available")
-
-	needsPath = "/pkgfs/needs"
 )
 
 func main() {
@@ -55,7 +51,6 @@ func main() {
 	readExtraFlags()
 
 	flag.Parse()
-	time.Sleep(*delay)
 
 	// The source dir is where we store our database of sources. Because we
 	// don't currently have a mechanism to run "post-install" scripts,
@@ -66,11 +61,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	d, err := startupDaemon(*store)
+	d, err := daemon.NewDaemon(*store, "", "")
 	if err != nil {
 		log.Fatalf("failed to start daemon: %s", err)
 	}
-	defer d.CancelAll()
 
 	// Now that the daemon is up and running, we can register all of the
 	// system configured sources, if they exist.
@@ -92,25 +86,33 @@ func main() {
 		}
 	}
 
-	supMon, err := sys_update.NewSystemUpdateMonitor(d, *autoUpdate)
-	if err != nil {
-		log.Fatalf("failed to start system update monitor: %s", err)
-	}
+	supMon := sys_update.NewSystemUpdateMonitor(*autoUpdate, d)
+	ctlSvr := control_server.NewControlServer(d, supMon)
+	var bs fidl.BindingSet
+	ctx.OutgoingService.AddService(amber.ControlName, func(c zx.Channel) error {
+		_, err := bs.Add(&amber.ControlStub{Impl: ctlSvr}, c, nil)
+		return err
+	})
+	// note: not blocking
+	ctx.Serve()
 
-	go func(s *sys_update.SystemUpdateMonitor) {
-		s.Start()
+	go func() {
+		log.Printf("monitoring for updates")
+		supMon.Start()
 		log.Println("system update monitor exited")
-	}(supMon)
+	}()
 
-	startFIDLSvr(ctx, d, supMon)
-
-	//block forever
-	select {}
+	for i := 1; i < runtime.NumCPU(); i++ {
+		go fidl.Serve()
+	}
+	fidl.Serve()
 }
 
 type logWriter struct{}
 
 func (l *logWriter) Write(data []byte) (n int, err error) {
+	origLen := len(data)
+
 	// Strip out the trailing newline the `log` library adds because the
 	// logging service also adds a trailing newline.
 	if len(data) > 0 && data[len(data)-1] == '\n' {
@@ -121,7 +123,7 @@ func (l *logWriter) Write(data []byte) (n int, err error) {
 		return 0, err
 	}
 
-	return len(data), nil
+	return origLen, nil
 }
 
 func registerLogger(ctx *context.Context) {
@@ -129,6 +131,7 @@ func registerLogger(ctx *context.Context) {
 		log.Printf("error initializing syslog interface: %s", err)
 	}
 	log.SetOutput(&logWriter{})
+	log.SetFlags(0)
 }
 
 // addDefaultSourceConfigs installs source configs from a directory.
@@ -143,47 +146,17 @@ func addDefaultSourceConfigs(d *daemon.Daemon, dir string) error {
 		return err
 	}
 
+	var errs []string
 	for _, cfg := range configs {
-		if err := d.AddTUFSource(cfg); err != nil {
-			return err
+		if err := d.AddSource(cfg); err != nil {
+			errs = append(errs, err.Error())
 		}
 	}
 
-	return nil
-}
-
-func startFIDLSvr(ctx *context.Context, d *daemon.Daemon, s *sys_update.SystemUpdateMonitor) {
-	apiSrvr := ipcserver.NewControlSrvr(d, s)
-	ctx.OutgoingService.AddService(amber_fidl.ControlName, func(c zx.Channel) error {
-		return apiSrvr.Bind(c)
-	})
-	ctx.Serve()
-}
-
-func startupDaemon(store string) (*daemon.Daemon, error) {
-	d, err := daemon.NewDaemon(store, pkg.NewPackageSet(), daemon.ProcessPackage, []source.Source{})
-	if err != nil {
-		return nil, err
+	if len(errs) == 0 {
+		return nil
 	}
-
-	log.Println("monitoring for updates")
-
-	return d, err
-}
-
-func digest(name string, hash hash.Hash) ([]byte, error) {
-	f, e := os.Open(name)
-	if e != nil {
-		fmt.Printf("couldn't open file to fingerprint %s\n", e)
-		return nil, e
-	}
-	defer f.Close()
-
-	if _, err := io.Copy(hash, f); err != nil {
-		fmt.Printf("file digest failed %s\n", err)
-		return nil, e
-	}
-	return hash.Sum(nil), nil
+	return fmt.Errorf("error adding default configs: %s", strings.Join(errs, ", "))
 }
 
 var flagsDir = filepath.Join("/system", "data", "amber", "flags")

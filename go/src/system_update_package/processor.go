@@ -8,24 +8,22 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
-	"sync"
-	"time"
+	"syscall/zx"
+	"syscall/zx/zxwait"
 
 	"app/context"
 	"fidl/fuchsia/amber"
-	"syscall/zx"
-	"syscall/zx/zxwait"
 	"syslog/logger"
 )
 
 type Package struct {
-	name   string
-	merkle string
+	namever string
+	merkle  string
 }
 
 func ConnectToUpdateSrvc() (*amber.ControlInterface, error) {
@@ -54,7 +52,7 @@ func ParseRequirements(pkgSrc io.ReadCloser, imgSrc io.ReadCloser) ([]*Package, 
 			if len(entry) != 2 {
 				return nil, nil, fmt.Errorf("parser: entry format %q", s)
 			} else {
-				pkgs = append(pkgs, &Package{name: entry[0], merkle: entry[1]})
+				pkgs = append(pkgs, &Package{namever: entry[0], merkle: entry[1]})
 			}
 		}
 
@@ -87,120 +85,62 @@ func ParseRequirements(pkgSrc io.ReadCloser, imgSrc io.ReadCloser) ([]*Package, 
 }
 
 func FetchPackages(pkgs []*Package, amber *amber.ControlInterface) error {
-	workerWg := &sync.WaitGroup{}
-	workerCount := runtime.NumCPU()
-	workerWg.Add(workerCount)
-
-	pkgChan := make(chan *Package, len(pkgs))
-	errChan := make(chan error, len(pkgs))
-
-	for i := 0; i < workerCount; i++ {
-		go fetchWorker(pkgChan, amber, workerWg, errChan)
-	}
-
+	var errCount int
 	for _, pkg := range pkgs {
-		pkgChan <- pkg
+		if err := fetchPackage(pkg, amber); err != nil {
+			logger.Errorf("fetch error: %s", err)
+			errCount++
+		}
 	}
 
-	// stuffed in all the packages, close the channel
-	close(pkgChan)
-
-	// wait for the workers to finish
-	workerWg.Wait()
-	close(errChan)
-
-	var errs []string
-
-	for err := range errChan {
-		errs = append(errs, err.Error())
-	}
-
-	if len(errs) > 0 {
-		return fmt.Errorf("%d packages had errors: %s", len(errs), strings.Join(errs, ","))
+	if errCount > 0 {
+		return fmt.Errorf("system update failed, %d packages had errors", errCount)
 	}
 
 	return nil
-}
-
-func fetchWorker(c <-chan *Package, amber *amber.ControlInterface, done *sync.WaitGroup,
-	e chan<- error) {
-	defer done.Done()
-	for p := range c {
-		if err := fetchPackage(p, amber); err != nil {
-			e <- err
-		}
-	}
 }
 
 func fetchPackage(p *Package, amber *amber.ControlInterface) error {
-	logger.Infof("requesting %s/%s from update system", p.name, p.merkle)
-	h, err := amber.GetUpdateComplete(p.name, nil, &p.merkle)
-	if err != nil {
-		return fmt.Errorf("fetch: failed submitting update request: %s", err)
-	}
-	defer h.Close()
+	parts := strings.SplitN(p.namever, "/", 2)
+	name, version := parts[0], parts[1]
 
-	signals, err := zxwait.Wait(*h.Handle(),
-		zx.SignalChannelPeerClosed|zx.SignalChannelReadable|zx.SignalUser0,
+	b, err := ioutil.ReadFile(filepath.Join("/pkgfs/packages", name, version, "meta"))
+	if err == nil {
+		// package is already installed, skip
+		if string(b) == p.merkle {
+			logger.Infof("%s/%s up to date", p.namever, p.merkle)
+			return nil
+		}
+	}
+
+	logger.Infof("requesting %s/%s from update system", p.namever, p.merkle)
+	ch, err := amber.GetUpdateComplete(name, &version, &p.merkle)
+	if err != nil {
+		return fmt.Errorf("fetch: GetUpdateComplete error: %s", err)
+	}
+
+	signals, err := zxwait.Wait(*ch.Handle(),
+		zx.SignalChannelPeerClosed|zx.SignalChannelReadable,
 		zx.TimensecInfinite)
 	if err != nil {
-		return fmt.Errorf("fetch: error waiting on result channel: %s", err)
+		return fmt.Errorf("fetch: wait failure: %s", err)
 	}
 
-	// we encountered a failure
-	if signals&zx.SignalUser0 == zx.SignalUser0 {
-		logger.Errorf("fetch: update service signaled failure getting %q, reading error", p.name)
-
-		// if the channel isn't readable, do a bounded wait to try to get an error message from it
-		if signals&zx.SignalChannelReadable != zx.SignalChannelReadable {
-			signals, err = zxwait.Wait(*h.Handle(),
-				zx.SignalChannelPeerClosed|zx.SignalChannelReadable,
-				zx.Sys_deadline_after(zx.Duration((3 * time.Second).Nanoseconds())))
-		}
-
-		// if we can read, try it
-		if err == nil && signals&zx.SignalChannelReadable == zx.SignalChannelReadable {
-			buf := make([]byte, 1024)
-			buf, err = readBytesFromHandle(&h, buf)
-			if err == nil {
-				return fmt.Errorf("fetch: update service failed getting %q: %s", p.name,
-					string(buf))
-			}
-		}
-
-		return fmt.Errorf("fetch: update service failed getting %q: %s", p.name, err)
-	}
-
-	if signals&zx.SignalChannelReadable == zx.SignalChannelReadable {
-		buf := make([]byte, 128)
-		buf, err := readBytesFromHandle(&h, buf)
+	if signals&zx.SignalChannelReadable != 0 {
+		var buf [64 * 1024]byte
+		n, _, err := ch.Read(buf[:], []zx.Handle{}, 0)
 		if err != nil {
 			return fmt.Errorf("fetch: error reading channel %s", err)
 		}
-		logger.Infof("package %q installed at %q", p.name, string(buf))
-	} else {
-		return fmt.Errorf("fetch: reply channel was not readable")
-	}
-	return nil
-}
-
-// readBytesFromHandle attempts to read any available bytes from the channel. A buffer may be
-// passed in to hold the bytes. If the buffer is too small or if the passed buffer is nil, an
-// appropriately sized buffer will be allocated to hold the message. The function makes no attempt
-// to validate the channel it is passed is actually readable.
-func readBytesFromHandle(h *zx.Channel, buf []byte) ([]byte, error) {
-	if buf == nil {
-		buf = make([]byte, 1024)
-	}
-	i, _, err := h.Read(buf, []zx.Handle{}, 0)
-	// possible retry if we need a larger buffer
-	if err != nil {
-		if zxErr, ok := err.(zx.Error); ok && zxErr.Status == zx.ErrBufferTooSmall {
-			buf = make([]byte, i)
-			i, _, err = h.Read(buf, []zx.Handle{}, 0)
+		if signals&zx.SignalUser0 != 0 {
+			return fmt.Errorf("fetch: error from daemon: %s", buf[:n])
 		}
+		logger.Infof("package %q installed at %q", p.namever, string(buf[:n]))
+	} else {
+		return fmt.Errorf("fetch: channel closed prematurely")
 	}
-	return buf[:i], err
+
+	return nil
 }
 
 var diskImagerPath = filepath.Join("/boot", "bin", "install-disk-image")

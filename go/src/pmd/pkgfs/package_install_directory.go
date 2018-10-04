@@ -17,6 +17,7 @@ import (
 
 	"fuchsia.googlesource.com/far"
 	"fuchsia.googlesource.com/pm/pkg"
+	"fuchsia.googlesource.com/pmd/amberer"
 )
 
 const (
@@ -152,7 +153,10 @@ func (d *installBlobDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Dire
 	}
 
 	f := &installFile{fs: d.fs, name: name, isPkg: false}
-	err := f.open()
+	var err error
+	if !flags.Path() {
+		err = f.open()
+	}
 	return f, nil, nil, err
 }
 
@@ -187,17 +191,18 @@ func (f *installFile) open() error {
 	f.blob, err = os.OpenFile(f.fs.blobfs.PathOf(f.name), os.O_WRONLY|os.O_CREATE, os.ModePerm)
 	// permission errors from blobfs are returned when the blob already exists and
 	// is no longer writable
-	if os.IsPermission(err) {
+	if os.IsPermission(err) || os.IsExist(err) {
 		f.blob.Close()
 
 		// "Fulfill" any needs against the blob that was attempted to be written.
 		f.fs.index.Fulfill(f.name)
 
 		if f.isPkg {
-			// A package is being written for which we already have an open blob in blobfs.
-			// The error returned to the user is still ErrAlreadyExists, as the package
-			// blob already exists, but we attempt to import it anyway.
-			f.importPackage()
+			// A package is being written for which we already have a blob in blobfs. The
+			// error returned to the user is still ErrAlreadyExists if the package is
+			// complete, otherwise it may be nil if the package requires repair/futher
+			// blobs.
+			return f.importPackage()
 		}
 
 		return fs.ErrAlreadyExists
@@ -263,24 +268,22 @@ func (f *installFile) Truncate(sz uint64) error {
 // importPackage uses f.blob to import the package that was just written. It
 // returns an fs.Error to report back to the user at write time.
 func (f *installFile) importPackage() error {
-	log.Printf("pkgfs: importing package from %q", f.name)
-
 	b, err := f.fs.blobfs.Open(f.name)
 	if err != nil {
-		log.Printf("pkgfs: error opening package blob after writing: %s: %s", f.name, err)
+		log.Printf("error opening package blob after writing: %s: %s", f.name, err)
 		return fs.ErrFailedPrecondition
 	}
 
 	r, err := far.NewReader(b)
 	if err != nil {
-		log.Printf("pkgfs: error reading package archive: %s", err)
+		log.Printf("error reading package archive: %s", err)
 		// Note: translates to zx.ErrBadState
 		return fs.ErrFailedPrecondition
 	}
 
 	pf, err := r.ReadFile("meta/package")
 	if err != nil {
-		log.Printf("pkgfs: error reading package metadata: %s", err)
+		log.Printf("error reading package metadata: %s", err)
 		// Note: translates to zx.ErrBadState
 		return fs.ErrFailedPrecondition
 	}
@@ -288,20 +291,20 @@ func (f *installFile) importPackage() error {
 	var p pkg.Package
 	err = json.Unmarshal(pf, &p)
 	if err != nil {
-		log.Printf("pkgfs: error parsing package metadata: %s", err)
+		log.Printf("error parsing package metadata: %s", err)
 		// Note: translates to zx.ErrBadState
 		return fs.ErrFailedPrecondition
 	}
 
 	if err := p.Validate(); err != nil {
-		log.Printf("pkgfs: package is invalid: %s", err)
+		log.Printf("package is invalid: %s", err)
 		// Note: translates to zx.ErrBadState
 		return fs.ErrFailedPrecondition
 	}
 
 	contents, err := r.ReadFile("meta/contents")
 	if err != nil {
-		log.Printf("pkgfs: error parsing package contents file for %s: %s", p, err)
+		log.Printf("error parsing package contents file for %s: %s", p, err)
 		// Note: translates to zx.ErrBadState
 		return fs.ErrFailedPrecondition
 	}
@@ -318,14 +321,14 @@ func (f *installFile) importPackage() error {
 	if len(files) > 20 {
 		d, err := os.Open(f.fs.blobfs.Root)
 		if err != nil {
-			log.Printf("pkgfs: error open(%q): %s", f.fs.blobfs.Root, err)
+			log.Printf("error open(%q): %s", f.fs.blobfs.Root, err)
 			// Note: translates to zx.ErrBadState
 			return fs.ErrFailedPrecondition
 		}
 		dnames, err := d.Readdirnames(-1)
 		d.Close()
 		if err != nil {
-			log.Printf("pkgfs: error readdir(%q): %s", f.fs.blobfs.Root, err)
+			log.Printf("error readdir(%q): %s", f.fs.blobfs.Root, err)
 			// Note: translates to zx.ErrBadState
 			return fs.ErrFailedPrecondition
 		}
@@ -349,20 +352,34 @@ func (f *installFile) importPackage() error {
 		}
 		parts := bytes.SplitN(files[i], []byte{'='}, 2)
 		if len(parts) != 2 {
-			log.Printf("pkgfs: skipping bad package entry: %q", files[i])
+			log.Printf("skipping bad package entry: %q", files[i])
 			continue
 		}
 		root := string(parts[1])
 
 		// XXX(raggi): this can race, which can deadlock package installs
 		if mayHaveBlob(root) && f.fs.blobfs.HasBlob(root) {
-			// DEBUG: log.Printf("pkgfs: blob already present for %s: %q", p, root)
+			// DEBUG: log.Printf("blob already present for %s: %q", p, root)
 			pkgBlobs[root] = true
 			continue
 		}
 
 		pkgBlobs[root] = false
 		needCount++
+	}
+
+	if needCount == 0 {
+		if err := f.fs.index.Add(p, f.name); err != nil {
+			if os.IsExist(err) {
+				log.Printf("package already present: %q %s", f.name, p)
+				return fs.ErrAlreadyExists
+			}
+
+			log.Printf("unhandled error adding package %q: %s", f.name, err)
+			return fs.ErrFailedPrecondition
+		}
+		log.Printf("package activated %q %s", f.name, p)
+		return nil
 	}
 
 	// in order to background the amber calls, we have to make a new copy of the
@@ -375,16 +392,12 @@ func (f *installFile) importPackage() error {
 		needList = append(needList, blob)
 	}
 
-	if needCount == 0 {
-		f.fs.index.Add(p, f.name)
-	} else {
-		f.fs.index.TrackPkg(f.name, p, pkgBlobs)
-	}
+	f.fs.index.TrackPkg(f.name, p, pkgBlobs)
 
 	log.Printf("pkgfs: asking amber to fetch %d blobs for %s", len(needList), p)
 	go func() {
 		for _, root := range needList {
-			f.fs.amberPxy.GetBlob(root)
+			amberer.GetBlob(root)
 		}
 	}()
 

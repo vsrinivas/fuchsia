@@ -136,10 +136,6 @@ test_targets = [
     gopkg = "amber/cmd/publish"
   },
   {
-    name = "amber_fidl_test"
-    gopkg = "amber/ipcserver"
-  },
-  {
     name = "amber_source_test"
     gopkg = "amber/source"
   }
