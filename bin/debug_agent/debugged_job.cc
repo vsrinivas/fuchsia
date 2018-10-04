@@ -39,10 +39,10 @@ void DebuggedJob::OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
   FXL_DCHECK(job_koid == koid_);
 
   zx::process process = GetProcessFromKoid(process_koid);
-  auto proc_name = NameForObject(process).c_str();
+  auto proc_name = NameForObject(process);
   zx::thread thread = ThreadForKoid(process.get(), thread_koid);
 
-  // TODO: use some data structure(trie) to make it efficient.
+  // TODO(anmittal): use some data structure(trie) to make it efficient.
   for (auto& filter : filters_) {
     if (StartsWithCaseInsensitive(proc_name, filter)) {
       handler_->OnProcessStart(std::move(process));
