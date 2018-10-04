@@ -141,7 +141,7 @@ public:
     template <typename T>
     void ModifyBits(T bits, T mask, zx_off_t offs) const {
         T val = Read<T>(offs);
-        Write<T>((val & ~mask) | (bits & mask), offs);
+        Write<T>(static_cast<T>((val & ~mask) | (bits & mask)), offs);
     }
 
     template <typename T>
@@ -152,6 +152,40 @@ public:
     template <typename T>
     void ClearBits(T bits, zx_off_t offs) const {
         ModifyBits<T>(0, bits, offs);
+    }
+
+    template <typename T>
+    T GetBits(size_t shift, size_t count, zx_off_t offs) const {
+        T mask = static_cast<T>(((static_cast<T>(1) << count) - 1) << shift);
+        T val = Read<T>(offs);
+        return static_cast<T>((val & mask) >> shift);
+    }
+
+    template <typename T>
+    T GetBit(size_t shift, zx_off_t offs) const {
+        return GetBits<T>(shift, 1, offs);
+    }
+
+    template <typename T>
+    void ModifyBits(T bits, size_t shift, size_t count, zx_off_t offs) const {
+        T mask = static_cast<T>(((static_cast<T>(1) << count) - 1) << shift);
+        T val = Read<T>(offs);
+        Write<T>(static_cast<T>((val & ~mask) | ((bits << shift) & mask)), offs);
+    }
+
+    template <typename T>
+    void ModifyBit(bool val, size_t shift, zx_off_t offs) const {
+        ModifyBits<T>(val, shift, 1, offs);
+    }
+
+    template <typename T>
+    void SetBit(size_t shift, zx_off_t offs) const {
+        ModifyBit(true, shift, offs);
+    }
+
+    template <typename T>
+    void ClearBit(size_t shift, zx_off_t offs) const {
+        ModifyBit(false, shift, offs);
     }
 
 private:
