@@ -94,6 +94,18 @@ bool Deserialize(MessageReader* reader, BreakpointStats* stats) {
   return reader->ReadBool(&stats->should_delete);
 }
 
+bool Deserialize(MessageReader* reader, AddressRegion* region) {
+  if (!reader->ReadString(&region->name))
+    return false;
+  if (!reader->ReadUint64(&region->base))
+    return false;
+  if (!reader->ReadUint64(&region->size))
+    return false;
+  if (!reader->ReadUint64(&region->depth))
+    return false;
+  return true;
+}
+
 // Record serializers ----------------------------------------------------------
 
 void Serialize(const ProcessBreakpointSettings& settings,
@@ -111,16 +123,8 @@ void Serialize(const BreakpointSettings& settings, MessageWriter* writer) {
   Serialize(settings.locations, writer);
 }
 
-bool Deserialize(MessageReader* reader, AddressRegion* region) {
-  if (!reader->ReadString(&region->name))
-    return false;
-  if (!reader->ReadUint64(&region->base))
-    return false;
-  if (!reader->ReadUint64(&region->size))
-    return false;
-  if (!reader->ReadUint64(&region->depth))
-    return false;
-  return true;
+void Serialize(const RegisterCategory::Type& type, MessageWriter* writer) {
+  writer->WriteUint32(static_cast<uint32_t>(type));
 }
 
 // Hello -----------------------------------------------------------------------
@@ -322,7 +326,10 @@ bool ReadReply(MessageReader* reader, ReadMemoryReply* reply,
 void WriteRequest(const RegistersRequest& request, uint32_t transaction_id,
                   MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kRegisters, transaction_id);
-  writer->WriteBytes(&request, sizeof(RegistersRequest));
+
+  writer->WriteUint64(request.process_koid);
+  writer->WriteUint32(request.thread_koid);
+  Serialize(request.categories, writer);
 }
 
 bool ReadReply(MessageReader* reader, RegistersReply* reply,

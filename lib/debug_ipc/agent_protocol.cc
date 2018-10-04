@@ -39,6 +39,10 @@ bool Deserialize(MessageReader* reader, BreakpointSettings* settings) {
   return Deserialize(reader, &settings->locations);
 }
 
+bool Deserialize(MessageReader* reader, RegisterCategory::Type* type) {
+  return reader->ReadUint32(reinterpret_cast<uint32_t*>(type));
+}
+
 // Record serializers ----------------------------------------------------------
 
 void Serialize(const ProcessTreeRecord& record, MessageWriter* writer) {
@@ -365,7 +369,12 @@ bool ReadRequest(MessageReader* reader, RegistersRequest* request,
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
-  return reader->ReadBytes(sizeof(RegistersRequest), request);
+
+  if (!reader->ReadUint64(&request->process_koid) ||
+      !reader->ReadUint32(&request->thread_koid))
+      return false;
+
+  return Deserialize(reader, &request->categories);
 }
 
 void WriteReply(const RegistersReply& reply, uint32_t transaction_id,

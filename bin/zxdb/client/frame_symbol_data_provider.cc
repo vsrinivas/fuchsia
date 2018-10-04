@@ -66,20 +66,24 @@ void FrameSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
     return;
   }
 
-  frame_->GetThread()->GetRegisters([
-    dwarf_register_number, cb = std::move(callback)
-  ](const Err& err, const RegisterSet& regs) {
-    uint64_t value = 0;
-    if (err.has_error()) {
-      cb(err, 0);
-    } else if (regs.GetRegisterValueFromDWARF(dwarf_register_number, &value)) {
-      cb(Err(), value);  // Success.
-    } else {
-      cb(Err(fxl::StringPrintf("Register %d unavailable.",
-                               dwarf_register_number)),
-         0);
-    }
-  });
+  // We only need the general registers.
+  // TODO: Other categories will need to be supported here (eg. floating point).
+  frame_->GetThread()->GetRegisters(
+      {debug_ipc::RegisterCategory::Type::kGeneral},
+      [dwarf_register_number, cb = std::move(callback)](
+          const Err& err, const RegisterSet& regs) {
+        uint64_t value = 0;
+        if (err.has_error()) {
+          cb(err, 0);
+        } else if (regs.GetRegisterValueFromDWARF(dwarf_register_number,
+                                                  &value)) {
+          cb(Err(), value);  // Success.
+        } else {
+          cb(Err(fxl::StringPrintf("Register %d unavailable.",
+                                   dwarf_register_number)),
+             0);
+        }
+      });
 }
 
 void FrameSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,

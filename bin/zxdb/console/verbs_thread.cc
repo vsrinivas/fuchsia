@@ -773,11 +773,12 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
   if (cmd.HasSwitch(kRegsCategoriesSwitch)) {
     auto option = cmd.GetSwitchValue(kRegsCategoriesSwitch);
     if (option == "all") {
-      cats_to_show = {debug_ipc::RegisterCategory::Type::kGeneral,
-                      debug_ipc::RegisterCategory::Type::kFloatingPoint,
-                      debug_ipc::RegisterCategory::Type::kVector,
-                      debug_ipc::RegisterCategory::Type::kDebug,
-                      debug_ipc::RegisterCategory::Type::kMisc};
+      cats_to_show = {
+          debug_ipc::RegisterCategory::Type::kGeneral,
+          debug_ipc::RegisterCategory::Type::kFloatingPoint,
+          debug_ipc::RegisterCategory::Type::kVector,
+          debug_ipc::RegisterCategory::Type::kDebug,
+      };
     } else if (option == "general") {
       cats_to_show = {RegisterCategory::Type::kGeneral};
     } else if (option == "fp") {
@@ -792,12 +793,12 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
   }
 
   // We pass the given register name to the callback
-  auto regs_cb = [ reg_name, cats = std::move(cats_to_show) ](
+  auto regs_cb = [ reg_name, cats = cats_to_show ](
       const Err& err, const RegisterSet& registers) {
     OnRegsComplete(err, registers, reg_name, std::move(cats));
   };
 
-  cmd.thread()->GetRegisters(regs_cb);
+  cmd.thread()->GetRegisters(std::move(cats_to_show), regs_cb);
   return Err();
 }
 

@@ -200,8 +200,11 @@ void DebugAgent::OnRegisters(const debug_ipc::RegistersRequest& request,
                              debug_ipc::RegistersReply* reply) {
   DebuggedThread* thread =
       GetDebuggedThread(request.process_koid, request.thread_koid);
-  if (thread)
-    thread->GetRegisters(&reply->categories);
+  if (thread) {
+    thread->GetRegisters(request.categories, &reply->categories);
+  } else {
+    FXL_LOG(ERROR) << "Cannot find thread with koid: " << request.thread_koid;
+  }
 }
 
 void DebugAgent::OnAddOrChangeBreakpoint(

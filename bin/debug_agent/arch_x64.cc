@@ -105,14 +105,14 @@ inline debug_ipc::Register CreateRegister(RegisterID id, uint32_t length,
   return reg;
 }
 
-inline zx_status_t ReadGeneralRegs(const zx::thread& thread,
+inline bool ReadGeneralRegs(const zx::thread& thread,
                                    std::vector<debug_ipc::Register>* out) {
   // We get the general state registers.
   zx_thread_state_general_regs gen_regs;
   zx_status_t status = thread.read_state(ZX_THREAD_STATE_GENERAL_REGS,
                                          &gen_regs, sizeof(gen_regs));
   if (status != ZX_OK)
-    return status;
+    return false;
 
   out->push_back(CreateRegister(RegisterID::kX64_rax, 8u, &gen_regs.rax));
   out->push_back(CreateRegister(RegisterID::kX64_rbx, 8u, &gen_regs.rbx));
@@ -133,16 +133,16 @@ inline zx_status_t ReadGeneralRegs(const zx::thread& thread,
   out->push_back(CreateRegister(RegisterID::kX64_rip, 8u, &gen_regs.rip));
   out->push_back(CreateRegister(RegisterID::kX64_rflags, 8u, &gen_regs.rflags));
 
-  return ZX_OK;
+  return true;
 }
 
-inline zx_status_t ReadFPRegs(const zx::thread& thread,
+inline bool ReadFPRegs(const zx::thread& thread,
                               std::vector<debug_ipc::Register>* out) {
   zx_thread_state_fp_regs fp_regs;
   zx_status_t status =
       thread.read_state(ZX_THREAD_STATE_FP_REGS, &fp_regs, sizeof(fp_regs));
   if (status != ZX_OK)
-    return status;
+    return false;
 
   out->push_back(CreateRegister(RegisterID::kX64_fcw, 2u, &fp_regs.fcw));
   out->push_back(CreateRegister(RegisterID::kX64_fsw, 2u, &fp_regs.fsw));
@@ -161,16 +161,16 @@ inline zx_status_t ReadFPRegs(const zx::thread& thread,
   out->push_back(CreateRegister(RegisterID::kX64_st6, 16u, &fp_regs.st[6]));
   out->push_back(CreateRegister(RegisterID::kX64_st7, 16u, &fp_regs.st[7]));
 
-  return ZX_OK;
+  return true;
 }
 
-inline zx_status_t ReadVectorRegs(const zx::thread& thread,
+inline bool ReadVectorRegs(const zx::thread& thread,
                                   std::vector<debug_ipc::Register>* out) {
   zx_thread_state_vector_regs vec_regs;
   zx_status_t status = thread.read_state(ZX_THREAD_STATE_VECTOR_REGS, &vec_regs,
                                          sizeof(vec_regs));
   if (status != ZX_OK)
-    return status;
+    return false;
 
   out->push_back(CreateRegister(RegisterID::kX64_mxcsr, 4u, &vec_regs.mxcsr));
 
@@ -183,18 +183,18 @@ inline zx_status_t ReadVectorRegs(const zx::thread& thread,
     out->push_back(CreateRegister(reg_id, 32u, &vec_regs.zmm[i]));
   }
 
-  return ZX_OK;
+  return true;
 }
 
 // TODO: Enable this when the zircon patch for debug registers lands.
 
-inline zx_status_t ReadDebugRegs(const zx::thread& thread,
+inline bool ReadDebugRegs(const zx::thread& thread,
                                  std::vector<debug_ipc::Register>* out) {
   zx_thread_state_debug_regs_t debug_regs;
   zx_status_t status = thread.read_state(ZX_THREAD_STATE_DEBUG_REGS,
                                          &debug_regs, sizeof(debug_regs));
   if (status != ZX_OK)
-    return status;
+    return false;
 
   out->push_back(CreateRegister(RegisterID::kX64_dr0, 8u, &debug_regs.dr[0]));
   out->push_back(CreateRegister(RegisterID::kX64_dr1, 8u, &debug_regs.dr[1]));
@@ -209,34 +209,27 @@ inline zx_status_t ReadDebugRegs(const zx::thread& thread,
   out->push_back(
       CreateRegister(RegisterID::kX64_dr7, 8u, &debug_regs.dr7_control));
 #endif
-  return ZX_OK;
+  return true;
 }
 
 }  // namespace
 
-void ArchProvider::GetRegisterStateFromCPU(
-    const zx::thread& thread, std::vector<debug_ipc::RegisterCategory>* cats) {
-  cats->clear();
-
-  cats->push_back({debug_ipc::RegisterCategory::Type::kGeneral, {}});
-  auto& general_category = cats->back();
-  if (ReadGeneralRegs(thread, &general_category.registers) != ZX_OK)
-    cats->pop_back();
-
-  cats->push_back({debug_ipc::RegisterCategory::Type::kFloatingPoint, {}});
-  auto& fp_category = cats->back();
-  if (ReadFPRegs(thread, &fp_category.registers) != ZX_OK)
-    cats->pop_back();
-
-  cats->push_back({debug_ipc::RegisterCategory::Type::kVector, {}});
-  auto& vec_category = cats->back();
-  if (ReadVectorRegs(thread, &vec_category.registers) != ZX_OK)
-    cats->pop_back();
-
-  cats->push_back({debug_ipc::RegisterCategory::Type::kDebug, {}});
-  auto& debug_category = cats->back();
-  if (ReadDebugRegs(thread, &debug_category.registers) != ZX_OK)
-    cats->pop_back();
+bool ArchProvider::GetRegisters(
+    const debug_ipc::RegisterCategory::Type& cat, const zx::thread& thread,
+    std::vector<debug_ipc::Register>* out) {
+  switch (cat) {
+    case debug_ipc::RegisterCategory::Type::kGeneral:
+      return ReadGeneralRegs(thread, out);
+    case debug_ipc::RegisterCategory::Type::kFloatingPoint:
+      return ReadFPRegs(thread, out);
+    case debug_ipc::RegisterCategory::Type::kVector:
+      return ReadVectorRegs(thread, out);
+    case debug_ipc::RegisterCategory::Type::kDebug:
+      return ReadDebugRegs(thread, out);
+    default:
+    FXL_LOG(ERROR) << "Invalid category: " << static_cast<uint32_t>(cat);
+    return false;
+  }
 }
 
 // Hardware Exceptions ---------------------------------------------------------

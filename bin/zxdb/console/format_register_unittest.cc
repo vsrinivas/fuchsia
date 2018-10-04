@@ -159,7 +159,7 @@ TEST(FormatRegisters, AllRegisters) {
 
   std::vector<RegisterCategory::Type> cats_to_show = {
       {RegisterCategory::Type::kGeneral, RegisterCategory::Type::kFloatingPoint,
-       RegisterCategory::Type::kVector, RegisterCategory::Type::kMisc}};
+       RegisterCategory::Type::kVector}};
   FilteredRegisterSet filtered_set;
   Err err = FilterRegisters(registers, &filtered_set, cats_to_show);
   ASSERT_FALSE(err.has_error()) << err.msg();
@@ -197,7 +197,7 @@ TEST(FormatRegisters, OneRegister) {
 
   std::vector<RegisterCategory::Type> cats_to_show = {
       {RegisterCategory::Type::kGeneral, RegisterCategory::Type::kFloatingPoint,
-       RegisterCategory::Type::kVector, RegisterCategory::Type::kMisc}};
+       RegisterCategory::Type::kVector}};
   FilteredRegisterSet filtered_set;
   Err err = FilterRegisters(registers, &filtered_set, cats_to_show, "xmm3");
   ASSERT_FALSE(err.has_error()) << err.msg();
@@ -243,7 +243,7 @@ TEST(FormatRegisters, CannotFindRegister) {
 
   std::vector<RegisterCategory::Type> cats_to_show = {
       {RegisterCategory::Type::kGeneral, RegisterCategory::Type::kFloatingPoint,
-       RegisterCategory::Type::kVector, RegisterCategory::Type::kMisc}};
+       RegisterCategory::Type::kVector}};
   FilteredRegisterSet filtered_set;
   Err err = FilterRegisters(registers, &filtered_set, cats_to_show, "W0");
   EXPECT_TRUE(err.has_error());

@@ -113,6 +113,7 @@ executable("unittests") {
   sources = [
     "breakpoint_unittest.cc",
     "debugged_job_unittest.cc",
+    "debugged_thread_unittest.cc",
     "process_breakpoint_unittest.cc",
     "process_info_unittests.cc",
     "system_info_unittests.cc",

@@ -63,9 +63,10 @@ void MemoryAnalysis::Schedule(const AnalyzeMemoryOptions& opts) {
   fxl::RefPtr<MemoryAnalysis> this_ref(this);
 
   if (opts.thread) {
-    // Request registers.
+    // Request registers. Only need the general registers.
     if (!have_registers_) {
       opts.thread->GetRegisters(
+          {debug_ipc::RegisterCategory::Type::kGeneral},
           [this_ref](const Err& err, const RegisterSet& registers) {
             this_ref->OnRegisters(err, registers);
           });

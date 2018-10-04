@@ -170,8 +170,19 @@ void DebuggedThread::GetBacktrace(
 }
 
 void DebuggedThread::GetRegisters(
-    std::vector<debug_ipc::RegisterCategory>* categories) const {
-  arch::ArchProvider::Get().GetRegisterStateFromCPU(thread_, categories);
+    const std::vector<debug_ipc::RegisterCategory::Type>& cats_to_get,
+    std::vector<debug_ipc::RegisterCategory>* out) const {
+  out->clear();
+  for (const auto& cat_type : cats_to_get) {
+    auto& cat = out->emplace_back();
+    cat.type = cat_type;
+    if (!arch::ArchProvider::Get().GetRegisters(cat_type, thread_,
+                                                &cat.registers)) {
+      out->pop_back();
+      FXL_LOG(ERROR) << "Could not get register state for category: "
+                     << static_cast<uint32_t>(cat_type);
+    }
+  }
 }
 
 void DebuggedThread::SendThreadNotification() const {

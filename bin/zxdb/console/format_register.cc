@@ -225,8 +225,9 @@ const char* RegisterCategoryTypeToString(RegisterCategory::Type type) {
       return "Vector";
     case RegisterCategory::Type::kDebug:
       return "Debug";
-    case RegisterCategory::Type::kMisc:
-      return "Miscellaneous";
+    case RegisterCategory::Type::kNone:
+      FXL_NOTREACHED() << "Should not be asking for type kNone";
+      return nullptr;
   }
 }
 

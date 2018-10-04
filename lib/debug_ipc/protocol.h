@@ -222,7 +222,10 @@ struct ModulesReply {
 struct RegistersRequest {
   uint64_t process_koid = 0;
   uint32_t thread_koid = 0;
+  // What categories do we want to receive data from.
+  std::vector<RegisterCategory::Type> categories;
 };
+
 struct RegistersReply {
   std::vector<RegisterCategory> categories;
 };

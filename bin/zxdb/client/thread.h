@@ -123,6 +123,7 @@ class Thread : public ClientObject {
   // The returned structures are architecture independent, but the contents
   // will be dependent on the architecture the target is running on.
   virtual void GetRegisters(
+      std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
       std::function<void(const Err&, const RegisterSet&)>) = 0;
 
  protected:

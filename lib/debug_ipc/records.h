@@ -170,9 +170,10 @@ struct RegisterCategory {
     kFloatingPoint,
     kVector,
     kDebug,
-    kMisc,  // Grabbing bag for other vectors
+
+    kNone,
   };
-  Type type = Type::kMisc;
+  Type type = Type::kNone;
   std::vector<Register> registers;
 };
 

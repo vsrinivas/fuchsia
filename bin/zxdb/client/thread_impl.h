@@ -37,6 +37,7 @@ class ThreadImpl : public Thread {
   void SyncFrames(std::function<void()> callback) override;
   FrameFingerprint GetFrameFingerprint(size_t frame_index) const override;
   void GetRegisters(
+      std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
       std::function<void(const Err&, const RegisterSet&)>) override;
 
   // NOTE: If the registers are not up to date, the set can be null.
@@ -70,6 +71,11 @@ class ThreadImpl : public Thread {
 
   ProcessImpl* const process_;
   uint64_t koid_;
+
+  // Register state queried from the DebugAgent.
+  // NOTE: Depending on the request, it could be that the register set does
+  //       not hold the complete register state from the CPU (eg. it could be
+  //       missing the vector or debug registers).
   std::unique_ptr<RegisterSet> registers_;
   std::string name_;
   debug_ipc::ThreadRecord::State state_;

@@ -61,10 +61,9 @@ class ArchProvider {
   // have been written into the program.
   bool IsBreakpointInstruction(zx::process& process, uint64_t address);
 
-  // TODO(donosoc): Do we want something like Err here, to communicate what kind
-  //                of problems we stumped while doing this?
-  void GetRegisterStateFromCPU(const zx::thread&,
-                               std::vector<debug_ipc::RegisterCategory>*);
+  virtual bool GetRegisters(const debug_ipc::RegisterCategory::Type& cat,
+                            const zx::thread&,
+                            std::vector<debug_ipc::Register>* out);
 
   // Hardware Exceptions -------------------------------------------------------
 
