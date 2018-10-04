@@ -63,7 +63,7 @@ class ArchProvider {
 
   // TODO(donosoc): Do we want something like Err here, to communicate what kind
   //                of problems we stumped while doing this?
-  bool GetRegisterStateFromCPU(const zx::thread&,
+  void GetRegisterStateFromCPU(const zx::thread&,
                                std::vector<debug_ipc::RegisterCategory>*);
 
   // Hardware Exceptions -------------------------------------------------------

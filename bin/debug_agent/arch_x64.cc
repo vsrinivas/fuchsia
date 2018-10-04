@@ -214,39 +214,29 @@ inline zx_status_t ReadDebugRegs(const zx::thread& thread,
 
 }  // namespace
 
-bool ArchProvider::GetRegisterStateFromCPU(
+void ArchProvider::GetRegisterStateFromCPU(
     const zx::thread& thread, std::vector<debug_ipc::RegisterCategory>* cats) {
   cats->clear();
 
   cats->push_back({debug_ipc::RegisterCategory::Type::kGeneral, {}});
   auto& general_category = cats->back();
-  if (ReadGeneralRegs(thread, &general_category.registers) != ZX_OK) {
-    cats->clear();
-    return false;
-  }
+  if (ReadGeneralRegs(thread, &general_category.registers) != ZX_OK)
+    cats->pop_back();
 
   cats->push_back({debug_ipc::RegisterCategory::Type::kFloatingPoint, {}});
   auto& fp_category = cats->back();
-  if (ReadFPRegs(thread, &fp_category.registers) != ZX_OK) {
-    cats->clear();
-    return false;
-  }
+  if (ReadFPRegs(thread, &fp_category.registers) != ZX_OK)
+    cats->pop_back();
 
   cats->push_back({debug_ipc::RegisterCategory::Type::kVector, {}});
   auto& vec_category = cats->back();
-  if (ReadVectorRegs(thread, &vec_category.registers) != ZX_OK) {
-    cats->clear();
-    return false;
-  }
+  if (ReadVectorRegs(thread, &vec_category.registers) != ZX_OK)
+    cats->pop_back();
 
   cats->push_back({debug_ipc::RegisterCategory::Type::kDebug, {}});
   auto& debug_category = cats->back();
-  if (ReadDebugRegs(thread, &debug_category.registers) != ZX_OK) {
-    cats->clear();
-    return false;
-  }
-
-  return true;
+  if (ReadDebugRegs(thread, &debug_category.registers) != ZX_OK)
+    cats->pop_back();
 }
 
 // Hardware Exceptions ---------------------------------------------------------

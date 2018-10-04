@@ -126,28 +126,22 @@ inline zx_status_t ReadVectorRegs(const zx::thread& thread,
 
 }  // namespace
 
-bool ArchProvider::GetRegisterStateFromCPU(
+void ArchProvider::GetRegisterStateFromCPU(
     const zx::thread& thread,
     std::vector<debug_ipc::RegisterCategory>* categories) {
   categories->clear();
 
   categories->push_back({debug_ipc::RegisterCategory::Type::kGeneral, {}});
   auto& general_category = categories->back();
-  if (ReadGeneralRegs(thread, &general_category.registers) != ZX_OK) {
-    categories->clear();
-    return false;
-  }
+  if (ReadGeneralRegs(thread, &general_category.registers) != ZX_OK)
+    categories->pop_back();
 
   // There are no FP registers defined for ARM64
 
   categories->push_back({debug_ipc::RegisterCategory::Type::kVector, {}});
   auto& vec_category = categories->back();
-  if (ReadVectorRegs(thread, &vec_category.registers) != ZX_OK) {
-    categories->clear();
-    return false;
-  }
-
-  return true;
+  if (ReadVectorRegs(thread, &vec_category.registers) != ZX_OK)
+    categories->pop_back();
 }
 
 debug_ipc::NotifyException::Type HardwareNotificationType(const zx::thread&) {
