@@ -10,12 +10,12 @@
 
 #include <stdint.h>
 
-#include <lib/async/cpp/wait.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <fuchsia/io/c/fidl.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/zx/event.h>
 #include <zircon/fidl.h>
 
@@ -122,6 +122,10 @@ protected:
     // This implementation may be overriden to support additional non-VFS
     // FIDL protocols.
     virtual zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+
+    // Acquires the vnode so subclasses of Connection can cast and dispatch
+    // the Vnode to more specific subclasses.
+    fs::Vnode& GetVnode() const { return *vnode_.get(); }
 
 private:
     void HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,

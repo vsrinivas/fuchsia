@@ -18,9 +18,10 @@
 #include <zircon/time.h>
 
 #ifdef __Fuchsia__
-#include <zircon/syscalls.h>
 #include <lib/fdio/vfs.h>
+#include <lib/fidl/cpp/bind.h>
 #include <fbl/auto_lock.h>
+#include <zircon/syscalls.h>
 #endif
 
 #include "minfs-private.h"
@@ -1106,22 +1107,6 @@ zx_status_t VnodeMinfs::ValidateFlags(uint32_t flags) {
 
 #ifdef __Fuchsia__
 
-#define ZXFIDL_OPERATION(Method)                                  \
-template <typename... Args>                                       \
-zx_status_t Method ## Op(void* ctx, Args... args) {               \
-    TRACE_DURATION("vfs", #Method);                               \
-    auto vn = reinterpret_cast<VnodeMinfs*>(ctx);                 \
-    return (vn->VnodeMinfs::Method)(fbl::forward<Args>(args)...); \
-}
-
-ZXFIDL_OPERATION(GetMetrics)
-ZXFIDL_OPERATION(ToggleMetrics)
-
-const fuchsia_minfs_Minfs_ops kMinfsOps = {
-    .GetMetrics = GetMetricsOp,
-    .ToggleMetrics = ToggleMetricsOp,
-};
-
 // MinfsConnection overrides the base Connection class to allow Minfs to
 // dispatch its own ordinals.
 class MinfsConnection : public fs::Connection {
@@ -1131,11 +1116,31 @@ public:
             : Connection(vfs, fbl::move(vnode), fbl::move(channel), flags) {}
 
 private:
+    VnodeMinfs& GetVnodeMinfs() const {
+        return reinterpret_cast<VnodeMinfs&>(GetVnode());
+    }
+
+    zx_status_t GetMetrics(fidl_txn_t* txn) {
+        return GetVnodeMinfs().GetMetrics(txn);
+    }
+
+    zx_status_t ToggleMetrics(bool enable, fidl_txn_t* txn) {
+        return GetVnodeMinfs().ToggleMetrics(enable, txn);
+    }
+
+    static const fuchsia_minfs_Minfs_ops* Ops() {
+        static const fuchsia_minfs_Minfs_ops kMinfsOps = {
+            .GetMetrics = fidl::BindMember<&MinfsConnection::GetMetrics>,
+            .ToggleMetrics = fidl::BindMember<&MinfsConnection::ToggleMetrics>,
+        };
+        return &kMinfsOps;
+    }
+
     zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) final {
         fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
         if (hdr->ordinal >= fuchsia_minfs_MinfsGetMetricsOrdinal &&
             hdr->ordinal <= fuchsia_minfs_MinfsToggleMetricsOrdinal) {
-            return fuchsia_minfs_Minfs_dispatch(this, txn, msg, &kMinfsOps);
+            return fuchsia_minfs_Minfs_dispatch(this, txn, msg, Ops());
         }
         zx_handle_close_many(msg->handles, msg->num_handles);
         return ZX_ERR_NOT_SUPPORTED;

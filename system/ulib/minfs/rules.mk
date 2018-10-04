@@ -32,6 +32,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/bitmap \
     system/ulib/block-client \
     system/ulib/fbl \
+    system/ulib/fidl \
     system/ulib/fs \
     system/ulib/fzl \
     system/ulib/sync \
