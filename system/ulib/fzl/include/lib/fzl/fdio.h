@@ -19,6 +19,8 @@ namespace fzl {
 // calling "release()" on the FdioCaller object.
 class FdioCaller {
 public:
+    FdioCaller() : io_(nullptr) {}
+
     explicit FdioCaller(fbl::unique_fd fd) :
         fd_(fbl::move(fd)), io_(fdio_unsafe_fd_to_io(fd_.get())) {}
 
