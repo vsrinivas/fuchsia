@@ -112,6 +112,10 @@ OPENSSL_EXPORT const EVP_AEAD *EVP_aead_aes_256_gcm(void);
 // Poly1305 as described in RFC 7539.
 OPENSSL_EXPORT const EVP_AEAD *EVP_aead_chacha20_poly1305(void);
 
+// EVP_aead_xchacha20_poly1305 is ChaCha20-Poly1305 with an extended nonce that
+// makes random generation of nonces safe.
+OPENSSL_EXPORT const EVP_AEAD *EVP_aead_xchacha20_poly1305(void);
+
 // EVP_aead_aes_128_ctr_hmac_sha256 is AES-128 in CTR mode with HMAC-SHA256 for
 // authentication. The nonce is 12 bytes; the bottom 32-bits are used as the
 // block counter, thus the maximum plaintext size is 64GB.
@@ -184,7 +188,7 @@ typedef struct evp_aead_ctx_st {
 
 // EVP_AEAD_MAX_NONCE_LENGTH contains the maximum nonce length used by
 // any AEAD defined in this header.
-#define EVP_AEAD_MAX_NONCE_LENGTH 16
+#define EVP_AEAD_MAX_NONCE_LENGTH 24
 
 // EVP_AEAD_MAX_OVERHEAD contains the maximum overhead used by any AEAD
 // defined in this header.
@@ -399,7 +403,7 @@ OPENSSL_EXPORT int EVP_AEAD_CTX_init_with_direction(
 
 // EVP_AEAD_CTX_get_iv sets |*out_len| to the length of the IV for |ctx| and
 // sets |*out_iv| to point to that many bytes of the current IV. This is only
-// meaningful for AEADs with implicit IVs (i.e. CBC mode in SSLv3 and TLS 1.0).
+// meaningful for AEADs with implicit IVs (i.e. CBC mode in TLS 1.0).
 //
 // It returns one on success or zero on error.
 OPENSSL_EXPORT int EVP_AEAD_CTX_get_iv(const EVP_AEAD_CTX *ctx,
@@ -421,7 +425,7 @@ OPENSSL_EXPORT int EVP_AEAD_CTX_tag_len(const EVP_AEAD_CTX *ctx,
 #if !defined(BORINGSSL_NO_CXX)
 extern "C++" {
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 using ScopedEVP_AEAD_CTX =
     internal::StackAllocated<EVP_AEAD_CTX, void, EVP_AEAD_CTX_zero,
@@ -429,7 +433,7 @@ using ScopedEVP_AEAD_CTX =
 
 BORINGSSL_MAKE_DELETER(EVP_AEAD_CTX, EVP_AEAD_CTX_free)
 
-}  // namespace bssl
+BSSL_NAMESPACE_END
 
 }  // extern C++
 #endif
