@@ -7,6 +7,7 @@
 #include <threads.h>
 
 #include <ddk/device.h>
+#include <ddk/protocol/gpio-impl.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/iommu.h>
 #include <ddktl/protocol/platform-bus.h>
@@ -39,11 +40,13 @@ private:
 
     zx_status_t Start();
     zx_status_t GpioInit();
+    zx_status_t I2cInit();
     zx_status_t UsbInit();
     int Thread();
 
     ddk::PlatformBusProtocolProxy pbus_;
     ddk::IommuProtocolProxy iommu_;
+    gpio_impl_protocol_t gpio_impl_;
     thrd_t thread_;
 };
 
