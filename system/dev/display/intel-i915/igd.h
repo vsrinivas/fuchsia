@@ -258,10 +258,10 @@ private:
     igd_opregion_t* igd_opregion_;
     bios_data_blocks_header_t* bdb_;
 
-    bool ddi_supports_hdmi_[registers::kDdiCount];
-    bool ddi_supports_dvi_[registers::kDdiCount];
-    bool ddi_supports_dp_[registers::kDdiCount];
-    bool ddi_is_edp_[registers::kDdiCount];
+    bool ddi_supports_hdmi_[registers::kDdiCount] = {};
+    bool ddi_supports_dvi_[registers::kDdiCount] = {};
+    bool ddi_supports_dp_[registers::kDdiCount] = {};
+    bool ddi_is_edp_[registers::kDdiCount] = {};
 
     bool edp_is_low_voltage_;
     uint8_t panel_type_;
