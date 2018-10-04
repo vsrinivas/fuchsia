@@ -106,7 +106,7 @@ PoseBufferLatchingShader::PoseBufferLatchingShader(EscherWeakPtr escher)
 BufferPtr PoseBufferLatchingShader::LatchPose(const FramePtr& frame,
                                               const Camera& camera,
                                               PoseBuffer pose_buffer,
-                                              uint64_t latch_time,
+                                              int64_t latch_time,
                                               bool host_accessible_output) {
   return LatchStereoPose(frame, camera, camera, pose_buffer, latch_time,
                          host_accessible_output);
@@ -114,7 +114,7 @@ BufferPtr PoseBufferLatchingShader::LatchPose(const FramePtr& frame,
 
 BufferPtr PoseBufferLatchingShader::LatchStereoPose(
     const FramePtr& frame, const Camera& left_camera,
-    const Camera& right_camera, PoseBuffer pose_buffer, uint64_t latch_time,
+    const Camera& right_camera, PoseBuffer pose_buffer, int64_t latch_time,
     bool host_accessible_output) {
   vk::DeviceSize buffer_size = 2 * k4x4MatrixSize + sizeof(Pose);
 
@@ -141,6 +141,10 @@ BufferPtr PoseBufferLatchingShader::LatchStereoPose(
       kVpBufferUsageFlags, kVpMemoryPropertyFlags);
 
   auto command_buffer = frame->command_buffer();
+
+  // This should be guaranteed by checks at a higher layer.  For example,
+  // Scenic checks this in Session::ApplySetCamerPoseBufferCmd().
+  FXL_DCHECK(latch_time >= pose_buffer.base_time);
 
   uint32_t latch_index =
       ((latch_time - pose_buffer.base_time) / pose_buffer.time_interval) %

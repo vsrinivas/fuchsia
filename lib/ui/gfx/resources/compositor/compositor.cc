@@ -27,6 +27,14 @@
 #include "garnet/lib/ui/gfx/resources/renderers/renderer.h"
 #include "garnet/lib/ui/gfx/resources/stereo_camera.h"
 #include "garnet/lib/ui/gfx/swapchain/swapchain.h"
+#include "garnet/lib/ui/gfx/util/time.h"
+
+// For lack of a better place.  PoseBufferLatchingShader assumes this.
+// TODO: move this someplace.
+#include <type_traits>
+static_assert(
+    std::is_same<zx_time_t, int64_t>::value,
+    "PoseBufferLatchingShader incorrectly assumes that zx_time_t is int64_t");
 
 namespace scenic_impl {
 namespace gfx {
@@ -145,8 +153,7 @@ std::vector<Layer*> Compositor::GetDrawableLayers() const {
 
 std::unique_ptr<escher::Model> Compositor::DrawOverlaysToModel(
     const std::vector<Layer*>& drawable_layers, const escher::FramePtr& frame,
-    const FrameTimingsPtr& frame_timings,
-    escher::PaperRenderer* escher_renderer,
+    zx_time_t target_presentation_time, escher::PaperRenderer* escher_renderer,
     escher::ShadowMapRenderer* shadow_renderer) {
   TRACE_DURATION("gfx", "Compositor::DrawOverlaysToModel");
 
@@ -166,7 +173,7 @@ std::unique_ptr<escher::Model> Compositor::DrawOverlaysToModel(
         recycler, GetLayerFramebufferImage(layer->width(), layer->height()),
         vk::Filter::eLinear);
 
-    DrawLayer(frame, frame_timings, escher_renderer, shadow_renderer,
+    DrawLayer(frame, target_presentation_time, escher_renderer, shadow_renderer,
               drawable_layers[i], texture->image(), nullptr);
     auto semaphore = escher::Semaphore::New(escher()->vk_device());
     frame->SubmitPartialFrame(semaphore);
@@ -184,7 +191,7 @@ std::unique_ptr<escher::Model> Compositor::DrawOverlaysToModel(
 }
 
 void Compositor::DrawLayer(const escher::FramePtr& frame,
-                           const FrameTimingsPtr& frame_timings,
+                           zx_time_t target_presentation_time,
                            escher::PaperRenderer* escher_renderer,
                            escher::ShadowMapRenderer* shadow_map_renderer,
                            Layer* layer, const escher::ImagePtr& output_image,
@@ -238,17 +245,16 @@ void Compositor::DrawLayer(const escher::FramePtr& frame,
       break;
   }
 
-  auto draw_frame_lambda = [this, escher_renderer, frame, frame_timings, &stage,
-                            &model, &output_image, &shadow_map,
-                            &overlay_model](escher::Camera camera) {
-    if (camera.pose_buffer()) {
-      camera.SetLatchedPoseBuffer(pose_buffer_latching_shader_->LatchPose(
-          frame, camera, camera.pose_buffer(),
-          frame_timings->target_presentation_time()));
-    }
-    escher_renderer->DrawFrame(frame, stage, model, camera, output_image,
-                               shadow_map, overlay_model);
-  };
+  auto draw_frame_lambda =
+      [this, escher_renderer, frame, target_presentation_time, &stage, &model,
+       &output_image, &shadow_map, &overlay_model](escher::Camera camera) {
+        if (camera.pose_buffer()) {
+          camera.SetLatchedPoseBuffer(pose_buffer_latching_shader_->LatchPose(
+              frame, camera, camera.pose_buffer(), target_presentation_time));
+        }
+        escher_renderer->DrawFrame(frame, stage, model, camera, output_image,
+                                   shadow_map, overlay_model);
+      };
 
   if (renderer->camera()->IsKindOf<StereoCamera>()) {
     auto stereo_camera = renderer->camera()->As<StereoCamera>();
@@ -279,7 +285,8 @@ bool Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
       escher()->NewFrame("Scenic Compositor", frame_timings->frame_number());
 
   auto overlay_model = DrawOverlaysToModel(
-      drawable_layers, frame, frame_timings, escher_renderer, shadow_renderer);
+      drawable_layers, frame, frame_timings->target_presentation_time(),
+      escher_renderer, shadow_renderer);
   if (overlay_model == nullptr)
     return false;
 
@@ -292,8 +299,9 @@ bool Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
           const escher::SemaphorePtr& acquire_semaphore,
           const escher::SemaphorePtr& frame_done_semaphore) {
         output_image->SetWaitSemaphore(acquire_semaphore);
-        DrawLayer(frame, frame_timings, escher_renderer, shadow_renderer,
-                  bottom_layer, output_image, overlay);
+        DrawLayer(frame, frame_timings->target_presentation_time(),
+                  escher_renderer, shadow_renderer, bottom_layer, output_image,
+                  overlay);
         frame->EndFrame(frame_done_semaphore, nullptr);
       });
 
@@ -318,17 +326,16 @@ void Compositor::DrawToImage(escher::PaperRenderer* escher_renderer,
     return;
   }
 
-  auto frame_timings = fxl::MakeRefCounted<FrameTimings>();
-  escher::FramePtr frame =
-      escher()->NewFrame("Scenic Compositor", frame_timings->frame_number());
-  auto overlay_model = DrawOverlaysToModel(
-      drawable_layers, frame, frame_timings, escher_renderer, shadow_renderer);
+  const zx_time_t now = dispatcher_clock_now();
+  escher::FramePtr frame = escher()->NewFrame("Scenic Compositor", 0);
+  auto overlay_model = DrawOverlaysToModel(drawable_layers, frame, now,
+                                           escher_renderer, shadow_renderer);
   if (overlay_model == nullptr) {
     FXL_LOG(FATAL) << "Failed to generate overlay model";
   }
   const auto& bottom_layer = drawable_layers[0];
-  DrawLayer(frame, frame_timings, escher_renderer, shadow_renderer,
-            bottom_layer, output_image, overlay_model.get());
+  DrawLayer(frame, now, escher_renderer, shadow_renderer, bottom_layer,
+            output_image, overlay_model.get());
   frame->EndFrame(frame_done_semaphore, nullptr);
 }
 

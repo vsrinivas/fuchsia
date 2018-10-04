@@ -63,16 +63,16 @@ static_assert(sizeof(Pose) == 32, "Pose structure is not 32 bytes");
 
 struct PoseBuffer {
   PoseBuffer() {}
-  PoseBuffer(BufferPtr buffer, uint32_t num_entries, uint64_t base_time,
-             uint64_t time_interval)
+  PoseBuffer(BufferPtr buffer, uint32_t num_entries, int64_t base_time,
+             int64_t time_interval)
       : buffer(buffer),
         num_entries(num_entries),
         base_time(base_time),
         time_interval(time_interval) {}
   BufferPtr buffer;
   uint32_t num_entries = 0;
-  uint64_t base_time = 0;
-  uint64_t time_interval = 0;
+  int64_t base_time = 0;
+  int64_t time_interval = 0;
 
   operator bool() const { return !!buffer; }
 };

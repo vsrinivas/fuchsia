@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_COMPOSITOR_COMPOSITOR_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_COMPOSITOR_COMPOSITOR_H_
 
+#include <lib/zx/time.h>
 #include <set>
 #include <utility>
 
@@ -91,8 +92,7 @@ class Compositor : public Resource {
 
   escher::Escher* escher() const { return escher_.get(); }
 
-  Compositor(Session* session, ResourceId id,
-             const ResourceTypeInfo& type_info,
+  Compositor(Session* session, ResourceId id, const ResourceTypeInfo& type_info,
              std::unique_ptr<Swapchain> swapchain);
 
  private:
@@ -100,13 +100,13 @@ class Compositor : public Resource {
   // returned model. "Overlays" are all the layers except the bottom one.
   std::unique_ptr<escher::Model> DrawOverlaysToModel(
       const std::vector<Layer*>& drawable_layers, const escher::FramePtr& frame,
-      const FrameTimingsPtr& frame_timings,
+      zx_time_t target_presentation_time,
       escher::PaperRenderer* escher_renderer,
       escher::ShadowMapRenderer* shadow_renderer);
   escher::ImagePtr GetLayerFramebufferImage(uint32_t width, uint32_t height);
 
   void DrawLayer(const escher::FramePtr& frame,
-                 const FrameTimingsPtr& frame_timings,
+                 zx_time_t target_presentation_time,
                  escher::PaperRenderer* escher_renderer,
                  escher::ShadowMapRenderer* shadow_renderer, Layer* layer,
                  const escher::ImagePtr& output_image,

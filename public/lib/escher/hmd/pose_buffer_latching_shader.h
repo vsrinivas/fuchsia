@@ -34,7 +34,7 @@ class PoseBufferLatchingShader {
   // For details on pose buffers and the layout of the Pose struct see
   // //garnet/public/fidl/fuchsia.ui.gfx/commands.fidl
   BufferPtr LatchPose(const FramePtr& frame, const Camera& camera,
-                      PoseBuffer pose_buffer, uint64_t latch_time,
+                      PoseBuffer pose_buffer, int64_t latch_time,
                       bool host_accessible_output = false);
 
   // The same as LatchPose but takes two cameras and computes a ViewProjection
@@ -48,7 +48,7 @@ class PoseBufferLatchingShader {
   // }
   BufferPtr LatchStereoPose(const FramePtr& frame, const Camera& left_camera,
                             const Camera& right_camera, PoseBuffer pose_buffer,
-                            uint64_t latch_time,
+                            int64_t latch_time,
                             bool host_accessible_output = false);
 
  private:
