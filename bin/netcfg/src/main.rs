@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![feature(async_await, await_macro, futures_api, try_from)]
+#![feature(async_await, await_macro, futures_api, pin, try_from)]
 
 use std::borrow::Cow;
 use std::fs;
@@ -13,10 +13,14 @@ use std::path;
 use failure::{self, ResultExt};
 use futures::{self, StreamExt, TryFutureExt, TryStreamExt};
 use serde_derive::Deserialize;
+use fuchsia_app::server::ServicesServer;
+use fidl_fuchsia_net_policy::PolicyMarker;
+use fidl::endpoints::ServiceMarker;
 
 mod device_id;
 mod interface;
 mod matchers;
+mod policy_service;
 
 #[derive(Debug, Deserialize)]
 pub struct DnsConfig {
@@ -203,6 +207,15 @@ fn main() -> Result<(), failure::Error> {
         Ok(())
     };
 
-    let (_success, ()) = executor.run_singlethreaded(device_name.try_join(ethernet_device))?;
+    let netstack_service = netstack.clone();
+
+    let fidl_service_fut = ServicesServer::new()
+        .add_service((PolicyMarker::NAME, move |channel| {
+            policy_service::spawn_netpolicy_fidl_server(netstack_service.clone(), channel);
+        }))
+        .start()?;
+
+    let (_success, (), ()) =
+        executor.run_singlethreaded(device_name.try_join3(ethernet_device, fidl_service_fut))?;
     Ok(())
 }

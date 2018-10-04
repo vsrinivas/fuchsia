@@ -1,0 +1,37 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.policy;
+
+using fuchsia.net;
+
+enum Status {
+  OK = 0;
+  UNKNOWN_ERROR = 1;
+  PARSE_ERROR = 2;
+};
+
+struct NetError {
+  Status status;
+};
+
+// Settings for the system-wide DNS behavior.
+struct DNSConfig {
+  vector<fuchsia.net.IpAddress> dns_servers;
+};
+
+// This interface is used to interact with the policy layer of the fuchsia
+// netstack implementation that is hosted in netcfg.  This interface is
+// for use solely by privileged system components such as a 'system setting'
+// user interface, and can be used to change system-wide network policy
+// settings.
+[Discoverable]
+interface Policy {
+
+  // Set the IP address of the DNS server to use for IP resolution.
+  1: SetDNSConfig(DNSConfig config) -> (NetError result);
+
+  // Get the current IP address of the DNS server.
+  2: GetDNSConfig() -> (DNSConfig current);
+};

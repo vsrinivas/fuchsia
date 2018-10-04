@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   with_unit_tests = true
@@ -14,6 +14,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/fidl_zircon_ethernet_ext",
     "//garnet/public/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
     "//garnet/public/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "//garnet/public/fidl/fuchsia.net.policy:netpolicy-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
@@ -23,10 +24,13 @@ rustc_binary("bin") {
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:log",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:pin-utils",
     "//third_party/rust-crates/rustc_deps:serde",
     "//third_party/rust-crates/rustc_deps:serde_derive",
     "//third_party/rust-crates/rustc_deps:serde_json",
     "//third_party/rust-crates/rustc_deps:tempfile",
+    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/public/fidl/zircon-ethernet:zircon-ethernet-rustc",
   ]
 

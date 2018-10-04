@@ -2,11 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_net;
 use fidl_fuchsia_netstack as fidl;
+use std::net::IpAddr;
 
 use serde_derive::{Deserialize, Serialize};
 
 pub struct NetAddress(pub std::net::IpAddr);
+
+impl From<fidl_fuchsia_net::IpAddress> for NetAddress {
+    fn from(addr: fidl_fuchsia_net::IpAddress) -> NetAddress {
+        NetAddress(
+            match addr {
+                fidl_fuchsia_net::IpAddress::Ipv4(addr) =>  {
+                    IpAddr::from(addr.addr)
+                }
+                fidl_fuchsia_net::IpAddress::Ipv6(addr) =>  {
+                    IpAddr::from(addr.addr)
+                }
+            }
+        )
+    }
+}
 
 impl Into<fidl::NetAddress> for NetAddress {
     fn into(self) -> fidl::NetAddress {
