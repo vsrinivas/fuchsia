@@ -38,4 +38,7 @@ clk:
 gpio:
 	$(run-banjo)
 
+gpio-impl: $(LOCAL_DIR)/gpio.banjo
+	$(run-banjo)
+
 all: acpi amlogic-canvas bad-block clk gpio

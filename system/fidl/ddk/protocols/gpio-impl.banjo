@@ -1,0 +1,29 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.gpio_impl;
+
+using ddk.protocol.gpio;
+using zx;
+
+[Layout="ddk-protocol", DefaultProtocol]
+interface GpioImpl {
+    /// Configures a GPIO for input.
+    1: ConfigIn(uint32 index, uint32 flags) -> (zx.status s);
+    /// Configures a GPIO for output.
+    2: ConfigOut(uint32 index, uint8 initial_value) -> (zx.status s);
+    /// Configures the GPIO pin for an alternate function (I2C, SPI, etc)
+    /// the interpretation of "function" is platform dependent.
+    3: SetAltFunction(uint32 index, uint64 function) -> (zx.status s);
+    /// Reads the current value of a GPIO (0 or 1).
+    4: Read(uint32 index) -> (zx.status s, uint8 value);
+    /// Sets the current value of the GPIO (any non-zero value maps to 1).
+    5: Write(uint32 index, uint8 value) -> (zx.status s);
+    /// Gets an interrupt object pertaining to a particular GPIO pin.
+    6: GetInterrupt(uint32 index, uint32 flags) -> (zx.status s, handle<interrupt> irq);
+    /// Release the interrupt.
+    7: ReleaseInterrupt(uint32 index) -> (zx.status s);
+    /// Set GPIO polarity.
+    8: SetPolarity(uint32 index, ddk.protocol.gpio.GpioPolarity polarity) -> (zx.status s);
+};
