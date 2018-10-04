@@ -89,7 +89,7 @@ func (v *c_mxrio_sockopt_req_reply) Unpack() interface{} {
 		case TCP_NODELAY:
 			return tcpip.NoDelayOption(v.intValue())
 		case TCP_INFO:
-			return tcpip.InfoOption{}
+			return tcpip.TCPInfoOption{}
 		case TCP_MAXSEG:
 		case TCP_CORK:
 		case TCP_KEEPIDLE:

@@ -6,15 +6,17 @@ package main
 
 import (
 	"log"
-
 	"syscall/zx"
 	"syscall/zx/mxerror"
+
+	"netstack/util"
 
 	"fidl/fuchsia/net"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
+	"github.com/google/netstack/tcpip/transport/ping"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 )
@@ -37,7 +39,7 @@ func sockProto(typ net.SocketType, protocol net.SocketProtocol) (tcpip.Transport
 		case net.SocketProtocolIp, net.SocketProtocolUdp:
 			return udp.ProtocolNumber, nil
 		case net.SocketProtocolIcmp:
-			return ipv4.PingProtocolNumber, nil
+			return ping.ProtocolNumber4, nil
 		default:
 			return 0, mxerror.Errorf(zx.ErrNotSupported, "unsupported SOCK_DGRAM protocol: %d", protocol)
 		}
@@ -136,7 +138,7 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *n
 			if *node == "localhost" {
 				addrs = append(addrs, "\x7f\x00\x00\x01")
 			} else {
-				addrs = append(addrs, tcpip.Parse(*node))
+				addrs = append(addrs, util.Parse(*node))
 				if debug {
 					log.Printf("getaddrinfo: addr=%v, err=%v", addrs, err)
 				}

@@ -4,10 +4,11 @@ import (
 	"testing"
 	"time"
 
+	"netstack/util"
+
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/header"
-	"github.com/google/netstack/tcpip/link/bufwritingchannel"
 	"github.com/google/netstack/tcpip/link/channel"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/stack"
@@ -19,16 +20,16 @@ import (
 // TODO: make these tests table-driven.
 
 var (
-	testLanNet     = tcpip.Parse("192.168.42.0")
-	testLanNetMask = tcpip.Parse("255.255.255.0")
+	testLanNet     = util.Parse("192.168.42.0")
+	testLanNetMask = util.Parse("255.255.255.0")
 
-	testWanNet     = tcpip.Parse("10.0.0.0")
-	testWanNetMask = tcpip.Parse("255.0.0.0")
+	testWanNet     = util.Parse("10.0.0.0")
+	testWanNetMask = util.Parse("255.0.0.0")
 
-	testLanNICAddr     = tcpip.Parse("192.168.42.10")
-	testRouterNICAddr1 = tcpip.Parse("192.168.42.1")
-	testRouterNICAddr2 = tcpip.Parse("10.0.0.1")
-	testWanNICAddr     = tcpip.Parse("10.0.0.2")
+	testLanNICAddr     = util.Parse("192.168.42.10")
+	testRouterNICAddr1 = util.Parse("192.168.42.1")
+	testRouterNICAddr2 = util.Parse("10.0.0.1")
+	testWanNICAddr     = util.Parse("10.0.0.2")
 
 	testLanPort    = uint16(10000)
 	testRouterPort = uint16(8080)
@@ -45,9 +46,9 @@ var (
 	testWanLinkAddress     = tcpip.LinkAddress("\x00\x00\x00\x00\x00\x04")
 )
 
-func createTestStackLan(t *testing.T) (*stack.Stack, stack.LinkEndpoint) {
-	s := stack.New([]string{ipv4.ProtocolName}, []string{udp.ProtocolName, tcp.ProtocolName})
-	id, linkEP := bufwritingchannel.New(1, 100, testLanLinkAddress)
+func createTestStackLan(t *testing.T) (*stack.Stack, *channel.Endpoint) {
+	s := stack.New([]string{ipv4.ProtocolName}, []string{udp.ProtocolName, tcp.ProtocolName}, stack.Options{})
+	id, linkEP := channel.New(1, 100, testLanLinkAddress)
 	nic := tcpip.NICID(testLanNICID)
 	if err := s.CreateDisabledNIC(nic, id); err != nil {
 		t.Fatalf("CreateDisableNIC error: %s", err)
@@ -69,9 +70,9 @@ func createTestStackLan(t *testing.T) (*stack.Stack, stack.LinkEndpoint) {
 	return s, linkEP
 }
 
-func createTestStackWan(t *testing.T) (*stack.Stack, stack.LinkEndpoint) {
-	s := stack.New([]string{ipv4.ProtocolName}, []string{udp.ProtocolName, tcp.ProtocolName})
-	id, linkEP := bufwritingchannel.New(1, 100, testWanLinkAddress)
+func createTestStackWan(t *testing.T) (*stack.Stack, *channel.Endpoint) {
+	s := stack.New([]string{ipv4.ProtocolName}, []string{udp.ProtocolName, tcp.ProtocolName}, stack.Options{})
+	id, linkEP := channel.New(1, 100, testWanLinkAddress)
 	nic := tcpip.NICID(testWanNICID)
 	if err := s.CreateDisabledNIC(nic, id); err != nil {
 		t.Fatalf("CreateDisableNIC error: %s", err)
@@ -88,8 +89,8 @@ func createTestStackWan(t *testing.T) (*stack.Stack, stack.LinkEndpoint) {
 	return s, linkEP
 }
 
-func createTestStackRouterNAT(t *testing.T) (*stack.Stack, stack.LinkEndpoint, stack.LinkEndpoint) {
-	s := stack.New([]string{ipv4.ProtocolName}, []string{udp.ProtocolName, tcp.ProtocolName})
+func createTestStackRouterNAT(t *testing.T) (*stack.Stack, *channel.Endpoint, *channel.Endpoint) {
+	s := stack.New([]string{ipv4.ProtocolName}, []string{udp.ProtocolName, tcp.ProtocolName}, stack.Options{})
 
 	f := New(s.PortManager)
 	srcNet, terr := tcpip.NewSubnet(testLanNet, tcpip.AddressMask(testLanNetMask))
@@ -111,7 +112,7 @@ func createTestStackRouterNAT(t *testing.T) (*stack.Stack, stack.LinkEndpoint, s
 	}
 	f.rulesetNAT.Unlock()
 
-	id1, linkEP1 := bufwritingchannel.New(1, 100, testRouterLinkAddress1)
+	id1, linkEP1 := channel.New(1, 100, testRouterLinkAddress1)
 	nic1 := tcpip.NICID(testRouterNICID1)
 	if err := s.CreateDisabledNIC(nic1, NewEndpoint(f, id1)); err != nil {
 		t.Fatalf("CreateDisableNIC error: %s", err)
@@ -119,7 +120,7 @@ func createTestStackRouterNAT(t *testing.T) (*stack.Stack, stack.LinkEndpoint, s
 	s.EnableNIC(nic1)
 	s.AddAddress(nic1, header.IPv4ProtocolNumber, testRouterNICAddr1)
 
-	id2, linkEP2 := bufwritingchannel.New(1, 100, testRouterLinkAddress2)
+	id2, linkEP2 := channel.New(1, 100, testRouterLinkAddress2)
 	nic2 := tcpip.NICID(testRouterNICID2)
 	if err := s.CreateDisabledNIC(nic2, NewEndpoint(f, id2)); err != nil {
 		t.Fatalf("CreateDisableNIC error: %s", err)
@@ -171,7 +172,7 @@ func TestNATOneWayLanToWanUDP(t *testing.T) {
 	waitEntryWan, chWan := waiter.NewChannelEntry(nil)
 	wqWan.EventRegister(&waitEntryWan, waiter.EventIn)
 
-	if _, err := epLanUDP.Write(buffer.View("hello"), &receiverWan); err != nil {
+	if _, err := epLanUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverWan}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -183,7 +184,7 @@ func TestNATOneWayLanToWanUDP(t *testing.T) {
 	wqWan.EventUnregister(&waitEntryWan)
 
 	var sender tcpip.FullAddress
-	recvd, err := epWanUDP.Read(&sender)
+	recvd, _, err := epWanUDP.Read(&sender)
 	if err != nil {
 		t.Fatalf("Read error: %s", err)
 	}
@@ -231,7 +232,7 @@ func TestNATRoundtripLanToWanUDP(t *testing.T) {
 	waitEntryWan, chWan := waiter.NewChannelEntry(nil)
 	wqWan.EventRegister(&waitEntryWan, waiter.EventIn)
 
-	if _, err := epLanUDP.Write(buffer.View("hello"), &receiverWan); err != nil {
+	if _, err := epLanUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverWan}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -243,7 +244,7 @@ func TestNATRoundtripLanToWanUDP(t *testing.T) {
 	wqWan.EventUnregister(&waitEntryWan)
 
 	var sender tcpip.FullAddress
-	recvd, err := epWanUDP.Read(&sender)
+	recvd, _, err := epWanUDP.Read(&sender)
 	if err != nil {
 		t.Fatalf("Read error: %s", err)
 	}
@@ -258,8 +259,7 @@ func TestNATRoundtripLanToWanUDP(t *testing.T) {
 	waitEntryLan, chLan := waiter.NewChannelEntry(nil)
 	wqLan.EventRegister(&waitEntryLan, waiter.EventIn)
 
-	_, err = epWanUDP.Write(buffer.View("hi"), &sender)
-	if err != nil {
+	if _, err := epWanUDP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{To: &sender}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -271,7 +271,7 @@ func TestNATRoundtripLanToWanUDP(t *testing.T) {
 	wqLan.EventUnregister(&waitEntryLan)
 
 	var sender2 tcpip.FullAddress
-	recvd2, err := epLanUDP.Read(&sender2)
+	recvd2, _, err := epLanUDP.Read(&sender2)
 	if err != nil {
 		t.Fatalf("Read error: %s", err)
 	}
@@ -357,7 +357,7 @@ func TestNATLanToWanTCP(t *testing.T) {
 	waitEntryWan, chWan := waiter.NewChannelEntry(nil)
 	wqWan.EventRegister(&waitEntryWan, waiter.EventIn)
 
-	if _, err := epLanTCP.Write(buffer.View("hello"), nil); err != nil {
+	if _, err := epLanTCP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -368,7 +368,7 @@ func TestNATLanToWanTCP(t *testing.T) {
 	}
 	wqWan.EventUnregister(&waitEntryWan)
 
-	recvd, err := epWanTCP.Read(nil)
+	recvd, _, err := epWanTCP.Read(nil)
 	if err != nil {
 		t.Fatalf("Read error: %s", err)
 	}
@@ -378,8 +378,7 @@ func TestNATLanToWanTCP(t *testing.T) {
 
 	wqLan.EventRegister(&waitEntryLan, waiter.EventIn)
 
-	_, err = epWanTCP.Write(buffer.View("hi"), nil)
-	if err != nil {
+	if _, err := epWanTCP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -390,7 +389,7 @@ func TestNATLanToWanTCP(t *testing.T) {
 	}
 	wqLan.EventUnregister(&waitEntryLan)
 
-	recvd2, err := epLanTCP.Read(nil)
+	recvd2, _, err := epLanTCP.Read(nil)
 	if err != nil {
 		t.Fatalf("Read error: %s", err)
 	}
@@ -399,21 +398,20 @@ func TestNATLanToWanTCP(t *testing.T) {
 	}
 }
 
-func link(a, b stack.LinkEndpoint) {
-	a2 := a.(*bufwritingchannel.Endpoint)
-	b2 := b.(*bufwritingchannel.Endpoint)
-	for x := range a2.C {
-		b2.Inject(unpacketInfo(x))
+func link(a, b *channel.Endpoint) {
+	for x := range a.C {
+		b.Inject(unpacketInfo(x))
 	}
 }
 
-func unpacketInfo(p channel.PacketInfo) (tcpip.NetworkProtocolNumber, *buffer.VectorisedView) {
-	n := p.Proto
-	var vv buffer.VectorisedView
-	if p.Header != nil {
-		vv = buffer.NewVectorisedView(len(p.Header)+len(p.Payload), []buffer.View{p.Header, p.Payload})
-	} else {
-		vv = buffer.NewVectorisedView(len(p.Payload), []buffer.View{p.Payload})
+func unpacketInfo(p channel.PacketInfo) (tcpip.NetworkProtocolNumber, buffer.VectorisedView) {
+	var size int
+	var views []buffer.View
+	if header := p.Header; header != nil {
+		size += len(header)
+		views = append(views, header)
 	}
-	return n, &vv
+	size += len(p.Payload)
+	views = append(views, p.Payload)
+	return p.Proto, buffer.NewVectorisedView(size, views)
 }

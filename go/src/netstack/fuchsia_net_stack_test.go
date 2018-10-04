@@ -21,7 +21,7 @@ func MakeFuchsiaNetstackService() stackImpl {
 	ret := stackImpl{
 		ns: &Netstack{},
 	}
-	ret.ns.mu.stack = tcpipstack.New(nil, nil)
+	ret.ns.mu.stack = tcpipstack.New(nil, nil, tcpipstack.Options{})
 	return ret
 }
 

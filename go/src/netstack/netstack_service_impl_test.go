@@ -45,11 +45,11 @@ func toNetAddress(addr net.IP) netstack.NetAddress {
 // ifconfig route add 1.2.3.4/14 gateway 9.8.7.6 iface lo
 
 func MakeNetstackService() netstackImpl {
-	ret := netstackImpl{
-		ns: &Netstack{},
+	var ns Netstack
+	ns.mu.stack = stack.New(nil, nil, stack.Options{})
+	return netstackImpl{
+		ns: &ns,
 	}
-	ret.ns.mu.stack = stack.New([]string{}, []string{})
-	return ret
 }
 
 func TestRouteTableTransactions(t *testing.T) {

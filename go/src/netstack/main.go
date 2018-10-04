@@ -27,6 +27,7 @@ import (
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
 	tcpipstack "github.com/google/netstack/tcpip/stack"
+	"github.com/google/netstack/tcpip/transport/ping"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 )
@@ -48,10 +49,14 @@ func main() {
 		ipv6.ProtocolName,
 		arp.ProtocolName,
 	}, []string{
-		ipv4.PingProtocolName,
+		ping.ProtocolName4,
 		tcp.ProtocolName,
 		udp.ProtocolName,
-	})
+	}, tcpipstack.Options{})
+	if err := stk.SetTransportProtocolOption(tcp.ProtocolNumber, tcp.SACKEnabled(true)); err != nil {
+		log.Fatalf("method SetTransportProtocolOption(%v, tcp.SACKEnabled(true)) failed: %v", tcp.ProtocolNumber, err)
+	}
+
 	s, err := newSocketServer(stk, ctx)
 	if err != nil {
 		log.Fatal(err)

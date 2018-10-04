@@ -9,6 +9,7 @@
         "//garnet/go/src/netstack/tests/integration:netstack_integration"
     ],
     "host_tests": [
-        "//garnet/go/src/netstack/dns/dnsmessage:netstack_dnsmessage_test"
+        "//garnet/go/src/netstack/dns/dnsmessage:netstack_dnsmessage_test",
+        "//garnet/go/src/netstack/util:netstack_util_test"
     ]
 }

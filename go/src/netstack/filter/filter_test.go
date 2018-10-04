@@ -57,14 +57,14 @@ func TestRun(t *testing.T) {
 		ruleset  func() ([]*Rule, error)
 		dir      Direction
 		netProto tcpip.NetworkProtocolNumber
-		packet   func() []byte
+		packet   func() (buffer.Prependable, buffer.VectorisedView)
 		want     Action
 	}{
 		{
 			ruleset1,
 			Incoming,
 			header.IPv4ProtocolNumber,
-			func() []byte {
+			func() (buffer.Prependable, buffer.VectorisedView) {
 				return tcpV4Packet([]byte("payload"), &tcpParams{
 					srcAddr: "\x0a\x00\x00\x00",
 					srcPort: 100,
@@ -78,7 +78,7 @@ func TestRun(t *testing.T) {
 			ruleset2,
 			Incoming,
 			header.IPv4ProtocolNumber,
-			func() []byte {
+			func() (buffer.Prependable, buffer.VectorisedView) {
 				return udpV4Packet([]byte("payload"), &udpParams{
 					srcAddr: "\x0a\x00\x00\x00",
 					srcPort: 100,
@@ -100,11 +100,9 @@ func TestRun(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to generate a ruleset: %v", err)
 		}
-		b := test.packet()
-		vv := buffer.NewVectorisedView(len(b), []buffer.View{b})
-		a := f.Run(test.dir, test.netProto, &vv)
-		if a != test.want {
-			t.Fatalf("wrong action, want %v, got %v", test.want, a)
+		hdr, payload := test.packet()
+		if got := f.Run(test.dir, test.netProto, hdr, payload); got != test.want {
+			t.Fatalf("wrong action, want %v, got %v", test.want, got)
 		}
 	}
 }

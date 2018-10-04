@@ -9,7 +9,9 @@ import("//build/go/toolchain.gni")
 go_binary("netfilter") {
   gopackage = "netstack/filter/netfilter"
 
-  deps = [ ":netfilter_lib" ]
+  deps = [
+    ":netfilter_lib",
+  ]
 }
 
 go_library("netfilter_lib") {
@@ -17,9 +19,8 @@ go_library("netfilter_lib") {
 
   deps = [
     "//garnet/go/src/netstack:netstack_lib",
-    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/lib/component/go/src/app",
   ]
-
 }

@@ -5,9 +5,8 @@ import (
 	"time"
 
 	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/header"
-	"github.com/google/netstack/tcpip/link/bufwritingchannel"
+	"github.com/google/netstack/tcpip/link/channel"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/stack"
 	"github.com/google/netstack/tcpip/transport/tcp"
@@ -15,8 +14,8 @@ import (
 	"github.com/google/netstack/waiter"
 )
 
-func createTestStackRouterRDR(t *testing.T) (*stack.Stack, stack.LinkEndpoint, stack.LinkEndpoint) {
-	s := stack.New([]string{ipv4.ProtocolName}, []string{udp.ProtocolName})
+func createTestStackRouterRDR(t *testing.T) (*stack.Stack, *channel.Endpoint, *channel.Endpoint) {
+	s := stack.New([]string{ipv4.ProtocolName}, []string{udp.ProtocolName}, stack.Options{})
 
 	f := New(s.PortManager)
 	f.rulesetRDR.Lock()
@@ -38,7 +37,7 @@ func createTestStackRouterRDR(t *testing.T) (*stack.Stack, stack.LinkEndpoint, s
 	}
 	f.rulesetRDR.Unlock()
 
-	id1, linkEP1 := bufwritingchannel.New(1, 100, testRouterLinkAddress1)
+	id1, linkEP1 := channel.New(1, 100, testRouterLinkAddress1)
 	nic1 := tcpip.NICID(testRouterNICID1)
 	err := s.CreateDisabledNIC(nic1, NewEndpoint(f, id1))
 	if err != nil {
@@ -47,7 +46,7 @@ func createTestStackRouterRDR(t *testing.T) (*stack.Stack, stack.LinkEndpoint, s
 	s.EnableNIC(nic1)
 	s.AddAddress(nic1, header.IPv4ProtocolNumber, testRouterNICAddr1)
 
-	id2, linkEP2 := bufwritingchannel.New(1, 100, testRouterLinkAddress2)
+	id2, linkEP2 := channel.New(1, 100, testRouterLinkAddress2)
 	nic2 := tcpip.NICID(testRouterNICID2)
 	err = s.CreateDisabledNIC(nic2, NewEndpoint(f, id2))
 	if err != nil {
@@ -101,7 +100,7 @@ func TestRDROneWayWanToLanUDP(t *testing.T) {
 	waitEntryLan, chLan := waiter.NewChannelEntry(nil)
 	wqLan.EventRegister(&waitEntryLan, waiter.EventIn)
 
-	if _, err := epWanUDP.Write(buffer.View("hello"), &receiverRouter); err != nil {
+	if _, err := epWanUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverRouter}); err != nil {
 		t.Fatalf("failed to write: %s", err)
 	}
 
@@ -113,7 +112,7 @@ func TestRDROneWayWanToLanUDP(t *testing.T) {
 	wqLan.EventUnregister(&waitEntryLan)
 
 	var sender tcpip.FullAddress
-	recvd, err := epLanUDP.Read(&sender)
+	recvd, _, err := epLanUDP.Read(&sender)
 	if err != nil {
 		t.Fatalf("failed to read: %s", err)
 	}
@@ -162,7 +161,7 @@ func TestRDRRoundtripWanToLanUDP(t *testing.T) {
 	waitEntryLan, chLan := waiter.NewChannelEntry(nil)
 	wqLan.EventRegister(&waitEntryLan, waiter.EventIn)
 
-	if _, err := epWanUDP.Write(buffer.View("hello"), &receiverRouter); err != nil {
+	if _, err := epWanUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverRouter}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -174,7 +173,7 @@ func TestRDRRoundtripWanToLanUDP(t *testing.T) {
 	wqLan.EventUnregister(&waitEntryLan)
 
 	var sender tcpip.FullAddress
-	recvd, err := epLanUDP.Read(&sender)
+	recvd, _, err := epLanUDP.Read(&sender)
 	if err != nil {
 		t.Fatalf("Read error: %s", err)
 	}
@@ -191,8 +190,7 @@ func TestRDRRoundtripWanToLanUDP(t *testing.T) {
 	waitEntryWan, chWan := waiter.NewChannelEntry(nil)
 	wqWan.EventRegister(&waitEntryWan, waiter.EventIn)
 
-	_, err = epLanUDP.Write(buffer.View("hi"), &sender)
-	if err != nil {
+	if _, err := epLanUDP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{To: &sender}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -204,7 +202,7 @@ func TestRDRRoundtripWanToLanUDP(t *testing.T) {
 	wqWan.EventUnregister(&waitEntryWan)
 
 	var sender2 tcpip.FullAddress
-	recvd2, err := epWanUDP.Read(&sender2)
+	recvd2, _, err := epWanUDP.Read(&sender2)
 	if err != nil {
 		t.Fatalf("Read error: %s", err)
 	}
@@ -291,7 +289,7 @@ func TestRDRWanToLanTCP(t *testing.T) {
 	waitEntryLan, chLan := waiter.NewChannelEntry(nil)
 	wqLan.EventRegister(&waitEntryLan, waiter.EventIn)
 
-	if _, err := epWanTCP.Write(buffer.View("hello"), nil); err != nil {
+	if _, err := epWanTCP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -302,7 +300,7 @@ func TestRDRWanToLanTCP(t *testing.T) {
 	}
 	wqLan.EventUnregister(&waitEntryLan)
 
-	recvd, err := epLanTCP.Read(nil)
+	recvd, _, err := epLanTCP.Read(nil)
 	if err != nil {
 		t.Fatalf("Read error: %s", err)
 	}
@@ -312,8 +310,7 @@ func TestRDRWanToLanTCP(t *testing.T) {
 
 	wqWan.EventRegister(&waitEntryWan, waiter.EventIn)
 
-	_, err = epLanTCP.Write(buffer.View("hi"), nil)
-	if err != nil {
+	if _, err := epLanTCP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -324,7 +321,7 @@ func TestRDRWanToLanTCP(t *testing.T) {
 	}
 	wqWan.EventUnregister(&waitEntryWan)
 
-	recvd2, err := epWanTCP.Read(nil)
+	recvd2, _, err := epWanTCP.Read(nil)
 	if err != nil {
 		t.Fatalf("Read error: %s", err)
 	}

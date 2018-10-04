@@ -21,10 +21,10 @@ import (
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
-	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
 	"github.com/google/netstack/tcpip/stack"
+	"github.com/google/netstack/tcpip/transport/ping"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 	"github.com/google/netstack/waiter"
@@ -201,8 +201,11 @@ func (ios *iostate) loopStreamWrite(stk *stack.Stack) {
 			log.Printf("loopStreamWrite: sending packet n=%d, v=%q", n, v[:n])
 		}
 		ios.wq.EventRegister(&waitEntry, waiter.EventOut)
+
+		v = v[:n]
 		for {
-			_, err := ios.ep.Write(v[:n], nil)
+			n, err := ios.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{})
+			v = v[n:]
 			if err == tcpip.ErrWouldBlock {
 				// Note that Close should not interrupt this wait.
 				<-notifyCh
@@ -267,7 +270,7 @@ func (ios *iostate) loopStreamRead(stk *stack.Stack) {
 		var v buffer.View
 		var err *tcpip.Error
 		for {
-			v, err = ios.ep.Read(nil)
+			v, _, err = ios.ep.Read(nil)
 			if err == nil {
 				break
 			} else if err == tcpip.ErrWouldBlock || err == tcpip.ErrInvalidEndpointState || err == tcpip.ErrNotConnected {
@@ -364,7 +367,7 @@ func (ios *iostate) loopDgramRead(stk *stack.Stack) {
 		var v buffer.View
 		var err *tcpip.Error
 		for {
-			v, err = ios.ep.Read(&sender)
+			v, _, err = ios.ep.Read(&sender)
 			if err == nil {
 				break
 			} else if err == tcpip.ErrWouldBlock {
@@ -461,8 +464,11 @@ func (ios *iostate) loopDgramWrite(stk *stack.Stack) {
 		}
 
 		ios.wq.EventRegister(&waitEntry, waiter.EventOut)
+
+		v = v[c_fdio_socket_msg_hdr_len:]
 		for {
-			_, err := ios.ep.Write(v[c_fdio_socket_msg_hdr_len:], receiver)
+			n, err := ios.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{To: receiver})
+			v = v[n:]
 			if err == tcpip.ErrWouldBlock {
 				// Note that Close should not interrupt this wait.
 				<-notifyCh
@@ -543,7 +549,7 @@ func (s *socketServer) newIostate(netProto tcpip.NetworkProtocolNumber, transPro
 		loopReadClosing: make(chan struct{}, 1),
 	}
 	switch transProto {
-	case tcp.ProtocolNumber, udp.ProtocolNumber, ipv4.PingProtocolNumber:
+	case tcp.ProtocolNumber, udp.ProtocolNumber, ping.ProtocolNumber4:
 		var t uint32
 		switch transProto {
 		case tcp.ProtocolNumber:
@@ -591,7 +597,7 @@ func (s *socketServer) newIostate(netProto tcpip.NetworkProtocolNumber, transPro
 	case tcp.ProtocolNumber:
 		go ios.loopStreamRead(s.stack)
 		go ios.loopStreamWrite(s.stack)
-	case udp.ProtocolNumber, ipv4.PingProtocolNumber:
+	case udp.ProtocolNumber, ping.ProtocolNumber4:
 		go ios.loopDgramRead(s.stack)
 		go ios.loopDgramWrite(s.stack)
 	}
@@ -758,12 +764,12 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 			ios.ep.GetSockOpt(&o)
 			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
 			val.optlen = c_socklen(4)
-		case tcpip.InfoOption:
+		case tcpip.TCPInfoOption:
 			ios.ep.GetSockOpt(&o)
 			info := c_mxrio_sockopt_tcp_info{
 				// Microseconds.
-				rtt:    uint32(o.Rtt.Nanoseconds() / 1000),
-				rttvar: uint32(o.Rttvar.Nanoseconds() / 1000),
+				rtt:    uint32(o.RTT.Nanoseconds() / 1000),
+				rttvar: uint32(o.RTTVar.Nanoseconds() / 1000),
 			}
 			info.Encode(&val)
 		default:
@@ -831,7 +837,7 @@ func (s *socketServer) buildIfInfos() *c_netc_get_if_info {
 	defer s.ns.mu.Unlock()
 	index := uint32(0)
 	for nicid, ifs := range s.ns.ifStates {
-		if ifs.nic.Addr == header.IPv4Loopback {
+		if ifs.nic.Addr == ipv4Loopback {
 			continue
 		}
 		rep.info[index].index = uint16(index + 1)
@@ -1101,9 +1107,9 @@ func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Sta
 		// connect to. Until that exists, we assume localhost.
 		switch ios.netProto {
 		case ipv4.ProtocolNumber:
-			addr.Addr = header.IPv4Loopback
+			addr.Addr = ipv4Loopback
 		case ipv6.ProtocolNumber:
-			addr.Addr = header.IPv6Loopback
+			addr.Addr = ipv6Loopback
 		}
 	}
 
