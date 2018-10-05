@@ -172,12 +172,12 @@ zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& re
 
     if (!common::IsValidChan(chan)) {
         // If what SME instructs seems invalid, treat it as an error.
-        // Shout out, and auto-correct
-        wlan_channel_t chan_sanitized = chan;
-        chan_sanitized.cbw = common::GetValidCbw(chan);
+        // Shout out, and fallback to CBW20
+        wlan_channel_t chan_fallback = chan;
+        chan_fallback.cbw = CBW20;
         errorf("Wlanstack attempts to configure an invalid channel: %s. Falling back to %s\n",
-               common::ChanStr(chan).c_str(), common::ChanStr(chan_sanitized).c_str());
-        chan = chan_sanitized;
+               common::ChanStr(chan).c_str(), common::ChanStr(chan_fallback).c_str());
+        chan = chan_fallback;
     }
 
     debugjoin("setting channel to %s\n", common::ChanStr(chan).c_str());
@@ -1379,6 +1379,10 @@ zx::duration Station::FullAutoDeauthDuration() {
 }
 
 bool Station::IsCbw40Rx() const {
+    // Station can receive CBW40 data frames only when
+    // the AP is capable of transmitting CBW40,
+    // the client is capable of receiving CBW40,
+    // and the association is to configured to use CBW40.
     ZX_DEBUG_ASSERT(bss_ != nullptr);
     if (bss_ == nullptr) { return false; }
 
@@ -1413,6 +1417,10 @@ bool Station::IsCbw40Rx() const {
         return false;
     } else if (client_assoc.ht_cap->ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_ONLY) {
         debugjoin("Disable CBW40: no CBW40 support in the this device\n");
+        return false;
+    }
+    if (join_chan_.cbw == CBW20) {
+        debugjoin("Disable CBW40: configured to use less CBW than capability\n");
         return false;
     }
 
