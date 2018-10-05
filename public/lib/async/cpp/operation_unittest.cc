@@ -338,6 +338,83 @@ TEST_F(OperationTest, OperationCollection) {
   EXPECT_FALSE(op2_done);
 }
 
+class TestOperationNotNullPtr : public Operation<> {
+ public:
+  TestOperationNotNullPtr(const FlowToken& parent_flow_token)
+      : Operation("Test Operation on container is not nullptr", [] {}),
+        parent_flow_token_(parent_flow_token) {}
+
+ private:
+  void Run() override { FlowToken flow{this}; }
+
+  FlowToken parent_flow_token_;
+};
+
+class TestQueueNotNullPtr : public Operation<> {
+ public:
+  TestQueueNotNullPtr(ResultCall done)
+      : Operation("TestQueueNotNullPtr", std::move(done)) {}
+
+ private:
+  void Run() override {
+    // When |flow| goes out of scope, it will call Done() for us.
+    FlowToken flow{this};
+    operation_queue_.Add(new TestOperationNotNullPtr(flow));
+  }
+
+  OperationQueue operation_queue_;
+};
+
+class TestCollectionNotNullPtr : public Operation<> {
+ public:
+  TestCollectionNotNullPtr(ResultCall done)
+      : Operation("TestCollectionNotNullPtr", std::move(done)) {}
+
+ private:
+  void Run() override {
+    // When |flow| goes out of scope, it will call Done() for us.
+    FlowToken flow{this};
+    operation_collection_.Add(new TestOperationNotNullPtr(flow));
+  }
+
+  OperationCollection operation_collection_;
+};
+
+// See comments on OperationQueue::Drop.
+TEST_F(OperationTest, TestQueueNotNullPtr) {
+  OperationQueue container;
+
+  bool done_called{false};
+  auto op = new TestQueueNotNullPtr([&done_called] { done_called = true; });
+
+  container.Add(op);
+
+  // Nothing has run yet because we haven't run the async loop.
+  EXPECT_FALSE(done_called);
+
+  // Running the loop we expect done_called to be set to true
+  RunLoopUntilIdle();
+  EXPECT_TRUE(done_called);
+}
+
+// See comments on OperationCollection::Drop.
+TEST_F(OperationTest, TestCollectionNotNullPtr) {
+  OperationQueue container;
+
+  bool done_called{false};
+  auto op =
+      new TestCollectionNotNullPtr([&done_called] { done_called = true; });
+
+  container.Add(op);
+
+  // Nothing has run yet because we haven't run the async loop.
+  EXPECT_FALSE(done_called);
+
+  // Running the loop we expect done_called to be set to true
+  RunLoopUntilIdle();
+  EXPECT_TRUE(done_called);
+}
+
 TEST_F(OperationTest, WrapFutureAsOperation_WithResult) {
   // Show that when we wrap a Future<> as an operation on a queue, it runs.
   bool op_did_start{};

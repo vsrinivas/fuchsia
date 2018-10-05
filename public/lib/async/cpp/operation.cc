@@ -40,6 +40,7 @@ OperationCollection::~OperationCollection() {
   // that an outstanding FlowToken<> that gets destroyed in the process doesn't
   // erroneously call Operation<>::Done.
   for (auto& operation : operations_) {
+    FXL_DCHECK(operation.get() != nullptr);
     InvalidateWeakPtrs(operation.get());
   }
 }
@@ -54,11 +55,33 @@ void OperationCollection::Hold(OperationBase* const o) {
 }
 
 void OperationCollection::Drop(OperationBase* const o) {
-  auto it = std::remove_if(
+  auto it = std::find_if(
       operations_.begin(), operations_.end(),
       [o](const std::unique_ptr<OperationBase>& p) { return p.get() == o; });
   FXL_DCHECK(it != operations_.end());
-  operations_.erase(it, operations_.end());
+
+  // Ensures we erase the operation off our container first.
+  // By keeping a reference to the operation its destructor is only triggered
+  // after the scope of this method. Otherwise, we would trigger the
+  // operation's destructor first before we actually removed the operation from
+  // the container. To prevent reentry in case, an operation might have a
+  // member variable to someone who has the parent container containing our
+  // operation.
+  //
+  // Example:
+  // operations.erase(operation) calls operation's destructor ~KillModuleCall()
+  //   ~KillModuleCall() [has member variable FlowToken of OnModuleUpdatedCall]
+  //    ~OnModuleUpdatedCall() [holding container containing KillModuleCall]
+  //      ~OperationQueue() [triggered by ~OnModuleUpdatedCall()]
+  //      [ERROR KillModuleCall in operation_ is nullptr at this point]
+  // operations_.erase() actually erases the operation from the container
+  //
+  // See operation_unittest.cc for testcase. TestCollectionNotNullPtr
+  std::unique_ptr<OperationBase> operation = std::move(*it);
+  FXL_DCHECK(it->get() == nullptr);
+  FXL_DCHECK(operation.get() == o);
+  InvalidateWeakPtrs(operation.get());
+  operations_.erase(it);
 }
 
 void OperationCollection::Cont() {
@@ -72,6 +95,7 @@ OperationQueue::~OperationQueue() {
   // that an outstanding FlowToken<> that gets destroyed in the process doesn't
   // erroneously call Operation<>::Done.
   while (!operations_.empty()) {
+    FXL_DCHECK(operations_.front().get() != nullptr);
     InvalidateWeakPtrs(operations_.front().get());
     operations_.pop();
   }
@@ -93,6 +117,12 @@ void OperationQueue::Hold(OperationBase* const o) {
 void OperationQueue::Drop(OperationBase* const o) {
   FXL_DCHECK(!operations_.empty());
   FXL_DCHECK(operations_.front().get() == o);
+
+  // See comment in OperationCollection::Drop() for why this move is important.
+  std::unique_ptr<OperationBase> operation = std::move(operations_.front());
+  FXL_DCHECK(operations_.front().get() == nullptr);
+  FXL_DCHECK(operation.get() == o);
+  InvalidateWeakPtrs(operation.get());
   operations_.pop();
 }
 
