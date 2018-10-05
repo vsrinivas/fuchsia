@@ -278,14 +278,16 @@ class AnalyzerImpl : public fuchsia::crash::Analyzer {
   void Analyze(::zx::process process, ::zx::thread thread,
                ::zx::port exception_port, AnalyzeCallback callback) override {
     callback();
-    HandleException(std::move(process), std::move(thread),
-                    std::move(exception_port));
+    if (HandleException(std::move(process), std::move(thread),
+                        std::move(exception_port)) != EXIT_SUCCESS) {
+      FX_LOGS(ERROR) << "Failed to handle exception. Won't retry.";
+    }
   }
 
   void Process(fuchsia::mem::Buffer crashlog,
                ProcessCallback callback) override {
     callback();
-    if (::Process(fbl::move(crashlog)) == EXIT_FAILURE) {
+    if (::Process(fbl::move(crashlog)) != EXIT_SUCCESS) {
       FX_LOGS(ERROR) << "Failed to process VMO crashlog. Won't retry.";
     }
   }
