@@ -98,6 +98,8 @@ typedef struct usb_device {
     usb_dci_protocol_t usb_dci;
     // our parent's USB switch protocol
     usb_mode_switch_protocol_t usb_mode_switch;
+    // true if our parent implements usb_mode_switch_protocol_t
+    bool has_usb_mode_switch;
     // USB device descriptor set via ioctl_usb_peripheral_set_device_desc()
     usb_device_descriptor_t device_desc;
     // USB configuration descriptor, synthesized from our functions' descriptors
@@ -782,10 +784,12 @@ static zx_status_t usb_dev_state_changed_locked(usb_device_t* dev) {
 
     if (dev->dci_usb_mode != new_dci_usb_mode) {
         zxlogf(TRACE, "usb_dev_state_changed_locked set DCI mode %d\n", new_dci_usb_mode);
-        status = usb_mode_switch_set_mode(&dev->usb_mode_switch, new_dci_usb_mode);
-        if (status != ZX_OK) {
-            usb_mode_switch_set_mode(&dev->usb_mode_switch, USB_MODE_NONE);
-            new_dci_usb_mode = USB_MODE_NONE;
+        if (dev->has_usb_mode_switch) {
+            status = usb_mode_switch_set_mode(&dev->usb_mode_switch, new_dci_usb_mode);
+            if (status != ZX_OK) {
+                usb_mode_switch_set_mode(&dev->usb_mode_switch, USB_MODE_NONE);
+                new_dci_usb_mode = USB_MODE_NONE;
+            }
         }
         dev->dci_usb_mode = new_dci_usb_mode;
     }
@@ -1008,9 +1012,8 @@ zx_status_t usb_dev_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    if (device_get_protocol(parent, ZX_PROTOCOL_USB_MODE_SWITCH, &dev->usb_mode_switch)) {
-        free(dev);
-        return ZX_ERR_NOT_SUPPORTED;
+    if (device_get_protocol(parent, ZX_PROTOCOL_USB_MODE_SWITCH, &dev->usb_mode_switch) == ZX_OK) {
+        dev->has_usb_mode_switch = true;
     }
 
     // Starting USB mode is determined from device metadata.
@@ -1019,13 +1022,18 @@ zx_status_t usb_dev_bind(void* ctx, zx_device_t* parent) {
     size_t actual;
     status = device_get_metadata(parent, DEVICE_METADATA_USB_MODE,
                                  &dev->usb_mode, sizeof(dev->usb_mode), &actual);
-    if (status != ZX_OK || actual != sizeof(dev->usb_mode)) {
+    if (status == ZX_ERR_NOT_FOUND) {
+        // Assume peripheral mode by default.
+        dev->usb_mode = USB_MODE_PERIPHERAL;
+    } else if (status != ZX_OK || actual != sizeof(dev->usb_mode)) {
         zxlogf(ERROR, "usb_dev_bind: DEVICE_METADATA_USB_MODE not found\n");
         free(dev);
         return status;
     }
     // Set DCI mode to USB_MODE_NONE until we are ready
-    usb_mode_switch_set_mode(&dev->usb_mode_switch, USB_MODE_NONE);
+    if (dev->has_usb_mode_switch) {
+        usb_mode_switch_set_mode(&dev->usb_mode_switch, USB_MODE_NONE);
+    }
     dev->dci_usb_mode = USB_MODE_NONE;
     dev->parent_request_size = usb_dci_get_request_size(&dev->usb_dci);
 
