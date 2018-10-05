@@ -5,6 +5,7 @@
 #pragma once
 
 #include <wlan/mlme/client/channel_scheduler.h>
+#include <wlan/mlme/client/join_context.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/eapol.h>
 #include <wlan/mlme/mac_frame.h>
@@ -71,11 +72,11 @@ struct AssocContext {
 
 class Station {
    public:
-    Station(DeviceInterface* device, TimerManager&& timer_mgr, ChannelScheduler* chan_sched);
+    Station(DeviceInterface* device, TimerManager&& timer_mgr, ChannelScheduler* chan_sched,
+            JoinContext* join_ctx);
 
     enum class WlanState {
-        kUnjoined,
-        kJoined,
+        kIdle,
         kAuthenticating,
         kAuthenticated,
         kAssociated,
@@ -83,37 +84,6 @@ class Station {
     };
 
     void Reset();
-
-    const common::MacAddr* bssid() const {
-        // TODO(porce): Distinguish cases
-        // (1) if no Bss Descriptor came down from SME.
-        // (2) if bssid_ is uninitlized.
-        // (3) if bssid_ is kZeroMac.
-        if (!bss_) { return nullptr; }
-        return &bssid_;
-    }
-
-    bool IsHtOrLater() const {
-        return (join_phy_ == ::fuchsia::wlan::mlme::PHY::HT ||
-                join_phy_ == ::fuchsia::wlan::mlme::PHY::VHT);
-    }
-
-    wlan_channel_t GetBssChan() const {
-        ZX_DEBUG_ASSERT(bss_ != nullptr);
-
-        return wlan_channel_t{
-            .primary = bss_->chan.primary,
-            .cbw = static_cast<uint8_t>(bss_->chan.cbw),
-        };
-    }
-
-    wlan_channel_t GetJoinChan() const { return join_chan_; }
-
-    wlan_channel_t GetDeviceChan() const {
-        ZX_DEBUG_ASSERT(device_ != nullptr);
-        ZX_DEBUG_ASSERT(device_->GetState());
-        return device_->GetState()->channel();
-    }
 
     zx_status_t SendKeepAliveResponse();
 
@@ -193,11 +163,10 @@ class Station {
     DeviceInterface* device_;
     TimerManager timer_mgr_;
     ChannelScheduler* chan_sched_;
-    ::fuchsia::wlan::mlme::BSSDescriptionPtr bss_;
-    common::MacAddr bssid_;
     Sequence seq_;
+    JoinContext* join_ctx_;
 
-    WlanState state_ = WlanState::kUnjoined;
+    WlanState state_ = WlanState::kIdle;
     TimedEvent auth_timeout_;
     TimedEvent assoc_timeout_;
     TimedEvent signal_report_timeout_;
@@ -214,8 +183,6 @@ class Station {
     AuthAlgorithm auth_alg_ = AuthAlgorithm::kOpenSystem;
     eapol::PortState controlled_port_ = eapol::PortState::kBlocked;
 
-    wlan_channel_t join_chan_;
-    ::fuchsia::wlan::mlme::PHY join_phy_;
     common::WlanStats<common::ClientMlmeStats, ::fuchsia::wlan::stats::ClientMlmeStats> stats_;
     AssocContext assoc_ctx_{};
 

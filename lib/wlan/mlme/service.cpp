@@ -11,6 +11,24 @@ namespace service {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
+std::optional<common::MacAddr> GetPeerAddr(const BaseMlmeMsg& msg) {
+    if (auto auth_req = msg.As<wlan_mlme::AuthenticateRequest>()) {
+        return std::make_optional<common::MacAddr>(auth_req->body()->peer_sta_address.data());
+    } else if (auto assoc_req = msg.As<wlan_mlme::AssociateRequest>()) {
+        return std::make_optional<common::MacAddr>(assoc_req->body()->peer_sta_address.data());
+    } else if (auto deauth_req = msg.As<wlan_mlme::DeauthenticateRequest>()) {
+        return std::make_optional<common::MacAddr>(deauth_req->body()->peer_sta_address.data());
+    } else if (auto eapol_req = msg.As<wlan_mlme::EapolRequest>()) {
+        return std::make_optional<common::MacAddr>(eapol_req->body()->dst_addr.data());
+    } else if (auto auth_resp = msg.As<wlan_mlme::AuthenticateResponse>()) {
+        return std::make_optional<common::MacAddr>(auth_resp->body()->peer_sta_address.data());
+    } else if (auto assoc_resp = msg.As<wlan_mlme::AssociateResponse>()) {
+        return std::make_optional<common::MacAddr>(assoc_resp->body()->peer_sta_address.data());
+    } else {
+        return std::nullopt;
+    }
+}
+
 zx_status_t SendJoinConfirm(DeviceInterface* device, wlan_mlme::JoinResultCodes result_code) {
     debugfn();
     wlan_mlme::JoinConfirm conf;

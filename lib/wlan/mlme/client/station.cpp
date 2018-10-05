@@ -9,6 +9,7 @@
 #include <wlan/common/logging.h>
 #include <wlan/common/stats.h>
 #include <wlan/mlme/client/bss.h>
+#include <wlan/mlme/client/client_mlme.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/key.h>
@@ -33,32 +34,26 @@ using common::dBm;
 
 // TODO(hahnr): Revisit frame construction to reduce boilerplate code.
 
-Station::Station(DeviceInterface* device, TimerManager&& timer_mgr, ChannelScheduler* chan_sched)
-    : device_(device), timer_mgr_(std::move(timer_mgr)), chan_sched_(chan_sched) {
-    bssid_.Reset();
+Station::Station(DeviceInterface* device, TimerManager&& timer_mgr, ChannelScheduler* chan_sched,
+                 JoinContext* join_ctx)
+    : device_(device),
+      timer_mgr_(std::move(timer_mgr)),
+      chan_sched_(chan_sched),
+      join_ctx_(join_ctx) {
+    Reset();
 }
 
 void Station::Reset() {
     debugfn();
 
-    state_ = WlanState::kUnjoined;
-    bss_.reset();
+    state_ = WlanState::kIdle;
     auth_timeout_.Cancel();
     assoc_timeout_.Cancel();
     signal_report_timeout_.Cancel();
-    bssid_.Reset();
     bu_queue_.clear();
 }
 zx_status_t Station::HandleAnyMlmeMsg(const BaseMlmeMsg& mlme_msg) {
     WLAN_STATS_INC(svc_msg.in);
-
-    // Always process MLME-JOIN.requests.
-    if (auto join_req = mlme_msg.As<wlan_mlme::JoinRequest>()) {
-        return HandleMlmeJoinReq(*join_req);
-    }
-
-    // Drop other MLME requests if there is no BSSID set yet.
-    if (bssid() == nullptr) { return ZX_OK; }
 
     if (auto auth_req = mlme_msg.As<wlan_mlme::AuthenticateRequest>()) {
         return HandleMlmeAuthReq(*auth_req);
@@ -154,86 +149,22 @@ zx_status_t Station::HandleAnyDataFrame(DataFrame<>&& frame) {
     return ZX_OK;
 }
 
-zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& req) {
-    debugfn();
-
-    if (state_ != WlanState::kUnjoined) {
-        warnf("already joined; resetting station\n");
-        Reset();
-    }
-
-    // Clone request to take ownership of the BSS.
-    bss_ = wlan_mlme::BSSDescription::New();
-    req.body()->selected_bss.Clone(bss_.get());
-    bssid_.Set(bss_->bssid.data());
-
-    auto chan = GetBssChan();
-    infof("JoinReq BSSID %s Chan %u CBW %u Sec80 %u Phy %u\n",
-          common::MacAddr(bssid_).ToString().c_str(), chan.primary, chan.cbw, chan.secondary80,
-          req.body()->phy);
-
-    if (!common::IsValidChan(chan)) {
-        // If what SME instructs seems invalid, treat it as an error.
-        // Shout out, and fallback to CBW20
-        wlan_channel_t chan_fallback = chan;
-        chan_fallback.cbw = CBW20;
-        errorf("Wlanstack attempts to configure an invalid channel: %s. Falling back to %s\n",
-               common::ChanStr(chan).c_str(), common::ChanStr(chan_fallback).c_str());
-        chan = chan_fallback;
-    }
-
-    debugjoin("setting channel to %s\n", common::ChanStr(chan).c_str());
-    zx_status_t status = chan_sched_->SetChannel(chan);
-
-    if (status != ZX_OK) {
-        errorf("could not set wlan channel to %s (status %d)\n", common::ChanStr(chan).c_str(),
-               status);
-        Reset();
-        service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
-        return status;
-    }
-
-    join_chan_ = chan;
-    join_phy_ = req.body()->phy;
-
-    // TODO(hahnr): Update when other BSS types are supported.
-    wlan_bss_config_t cfg{
-        .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
-        .remote = true,
-    };
-    bssid_.CopyTo(cfg.bssid);
-    device_->ConfigureBss(&cfg);
-
-    state_ = WlanState::kJoined;
-    return service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::SUCCESS);
-}
-
 zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequest>& req) {
     debugfn();
 
-    if (bss_ == nullptr) { return ZX_ERR_BAD_STATE; }
-    if (state_ != WlanState::kJoined) {
-        errorf("received AUTHENTICATE.request in wrong state: %u\n", state_);
-        return service::SendAuthConfirm(device_, bssid_,
-                                        wlan_mlme::AuthenticateResultCodes::REFUSED);
-    }
-
-    // TODO(tkilbourn): better result codes
-    common::MacAddr peer_sta_addr(req.body()->peer_sta_address.data());
-    if (bssid_ != peer_sta_addr) {
-        errorf("received authentication request for unknown BSS: %s, expected BSS: %s\n",
-               peer_sta_addr.ToString().c_str(), bssid_.ToString().c_str());
-        return service::SendAuthConfirm(device_, bssid_,
+    if (state_ != WlanState::kIdle) {
+        errorf("received AUTHENTICATE.request in unexpected state: %u\n", state_);
+        return service::SendAuthConfirm(device_, join_ctx_->bssid(),
                                         wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
 
     if (req.body()->auth_type != wlan_mlme::AuthenticationTypes::OPEN_SYSTEM) {
         errorf("only OpenSystem authentication is supported\n");
-        return service::SendAuthConfirm(device_, bssid_,
+        return service::SendAuthConfirm(device_, join_ctx_->bssid(),
                                         wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
 
-    debugjoin("authenticating to %s\n", bssid_.ToString().c_str());
+    debugjoin("authenticating to %s\n", join_ctx_->bssid().ToString().c_str());
 
     MgmtFrame<Authentication> frame;
     auto status = CreateMgmtFrame(&frame);
@@ -244,9 +175,9 @@ zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequ
     }
 
     auto hdr = frame.hdr();
-    hdr->addr1 = bssid_;
+    hdr->addr1 = join_ctx_->bssid();
     hdr->addr2 = self_addr();
-    hdr->addr3 = bssid_;
+    hdr->addr3 = join_ctx_->bssid();
     SetSeqNo(hdr, &seq_);
     frame.FillTxInfo();
 
@@ -261,7 +192,8 @@ zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequ
     if (status != ZX_OK) {
         errorf("could not set authentication timeout event: %s\n", zx_status_get_string(status));
         // This is the wrong result code, but we need to define our own codes at some later time.
-        service::SendAuthConfirm(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
+        service::SendAuthConfirm(device_, join_ctx_->bssid(),
+                                 wlan_mlme::AuthenticateResultCodes::REFUSED);
         return status;
     }
 
@@ -269,7 +201,8 @@ zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequ
     status = SendNonData(frame.Take());
     if (status != ZX_OK) {
         errorf("could not send authentication frame: %d\n", status);
-        service::SendAuthConfirm(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
+        service::SendAuthConfirm(device_, join_ctx_->bssid(),
+                                 wlan_mlme::AuthenticateResultCodes::REFUSED);
         return status;
     }
 
@@ -285,12 +218,6 @@ zx_status_t Station::HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::Deauthenticate
         return ZX_OK;
     }
 
-    if (bss_ == nullptr) { return ZX_ERR_BAD_STATE; }
-
-    // Check whether the request wants to deauthenticate from this STA's BSS.
-    common::MacAddr peer_sta_addr(req.body()->peer_sta_address.data());
-    if (bssid_ != peer_sta_addr) { return ZX_OK; }
-
     auto status = SendDeauthFrame(req.body()->reason_code);
     if (status != ZX_OK) {
         errorf("could not send deauth packet: %d\n", status);
@@ -298,14 +225,14 @@ zx_status_t Station::HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::Deauthenticate
     }
 
     infof("deauthenticating from \"%s\" (%s), reason=%hu\n",
-          debug::ToAsciiOrHexStr(*bss_->ssid).c_str(), bssid_.ToString().c_str(),
-          req.body()->reason_code);
+          debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str(),
+          join_ctx_->bssid().ToString().c_str(), req.body()->reason_code);
 
-    state_ = WlanState::kJoined;
+    state_ = WlanState::kIdle;
     device_->SetStatus(0);
     controlled_port_ = eapol::PortState::kBlocked;
     bu_queue_.clear();
-    service::SendDeauthConfirm(device_, bssid_);
+    service::SendDeauthConfirm(device_, join_ctx_->bssid());
 
     return ZX_OK;
 }
@@ -313,25 +240,18 @@ zx_status_t Station::HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::Deauthenticate
 zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateRequest>& req) {
     debugfn();
 
-    if (bss_ == nullptr) { return ZX_ERR_BAD_STATE; }
-
-    // TODO(tkilbourn): better result codes
-    common::MacAddr peer_sta_addr(req.body()->peer_sta_address.data());
-    if (bssid_ != peer_sta_addr) {
-        errorf("bad peer STA address for association\n");
-        return service::SendAuthConfirm(device_, bssid_,
-                                        wlan_mlme::AuthenticateResultCodes::REFUSED);
-    }
-    if (state_ == WlanState::kUnjoined || state_ == WlanState::kJoined) {
-        errorf("must authenticate before associating\n");
-        return service::SendAuthConfirm(device_, bssid_,
-                                        wlan_mlme::AuthenticateResultCodes::REFUSED);
-    }
-    if (state_ == WlanState::kAssociated) {
-        warnf("already authenticated; sending request anyway\n");
+    if (state_ != WlanState::kAuthenticated) {
+        if (state_ == WlanState::kAssociated) {
+            warnf("already associated; sending request anyway\n");
+        } else {
+            // TODO(tkilbourn): better result codes
+            errorf("must authenticate before associating\n");
+            return service::SendAuthConfirm(device_, join_ctx_->bssid(),
+                                            wlan_mlme::AuthenticateResultCodes::REFUSED);
+        }
     }
 
-    debugjoin("associating to %s\n", MACSTR(bssid_));
+    debugjoin("associating to %s\n", join_ctx_->bssid().ToString().c_str());
 
     size_t reserved_ie_len = 128;
     MgmtFrame<AssociationRequest> frame;
@@ -339,24 +259,24 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
-    hdr->addr1 = bssid_;
+    hdr->addr1 = join_ctx_->bssid();
     hdr->addr2 = self_addr();
-    hdr->addr3 = bssid_;
+    hdr->addr3 = join_ctx_->bssid();
     SetSeqNo(hdr, &seq_);
     frame.FillTxInfo();
 
     auto assoc = frame.body();
 
     auto ifc_info = device_->GetWlanInfo().ifc_info;
-    auto client_capability = ToAssocContext(ifc_info, join_chan_);
+    auto client_capability = ToAssocContext(ifc_info, join_ctx_->channel());
 
     assoc->cap = OverrideCapability(client_capability.cap);
     assoc->listen_interval = 0;
 
     ElementWriter w(assoc->elements, reserved_ie_len);
-    if (!w.write<SsidElement>(bss_->ssid->data(), bss_->ssid->size())) {
+    if (!w.write<SsidElement>(join_ctx_->bss()->ssid->data(), join_ctx_->bss()->ssid->size())) {
         errorf("could not write ssid \"%s\" to association request\n",
-               debug::ToAsciiOrHexStr(*bss_->ssid).c_str());
+               debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str());
         service::SendAssocConfirm(device_,
                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return ZX_ERR_IO;
@@ -385,10 +305,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
         }
     }
 
-    // Error-prone as IsHtOrLater can be out of sync with client_capability's ht_cap.
-    // We should instead check the client capabilities for a presence of ht_caps.
-    // For now, fall back to a default value for ht_cap.
-    if (IsHtOrLater()) {
+    if (join_ctx_->IsHtOrLater()) {
         auto ht_cap = client_capability.ht_cap.value_or(HtCapabilities{});
         debugf("HT cap(hardware reports): %s\n", debug::Describe(ht_cap).c_str());
 
@@ -448,18 +365,16 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
 bool Station::ShouldDropMgmtFrame(const MgmtFrameView<>& frame) {
     // Drop management frames if either, there is no BSSID set yet,
     // or the frame is not from the BSS.
-    return bssid() == nullptr || *bssid() != frame.hdr()->addr3;
+    return join_ctx_->bssid() != frame.hdr()->addr3;
 }
 
 // TODO(NET-500): Using a single method for joining and associated state is not ideal.
 // The logic should be split up and decided on a higher level based on the current state.
 zx_status_t Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
     debugfn();
-    ZX_DEBUG_ASSERT(bss_ != nullptr);
 
     auto rssi_dbm = frame.View().rx_info()->rssi_dbm;
     avg_rssi_dbm_.add(dBm(rssi_dbm));
-
     WLAN_RSSI_HIST_INC(beacon_rssi, rssi_dbm);
 
     if (state_ != WlanState::kAssociated) { return ZX_OK; }
@@ -505,8 +420,8 @@ zx_status_t Station::HandleAuthentication(MgmtFrame<Authentication>&& frame) {
     if (auth->auth_algorithm_number != auth_alg_) {
         errorf("mismatched authentication algorithm (expected %u, got %u)\n", auth_alg_,
                auth->auth_algorithm_number);
-        state_ = WlanState::kJoined;
-        service::SendAuthConfirm(device_, bssid_,
+        state_ = WlanState::kIdle;
+        service::SendAuthConfirm(device_, join_ctx_->bssid(),
                                  wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
         return ZX_ERR_INVALID_ARGS;
     }
@@ -515,23 +430,24 @@ zx_status_t Station::HandleAuthentication(MgmtFrame<Authentication>&& frame) {
     if (auth->auth_txn_seq_number != 2) {
         errorf("unexpected auth txn sequence number (expected 2, got %u)\n",
                auth->auth_txn_seq_number);
-        state_ = WlanState::kJoined;
-        service::SendAuthConfirm(device_, bssid_,
+        state_ = WlanState::kIdle;
+        service::SendAuthConfirm(device_, join_ctx_->bssid(),
                                  wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
         return ZX_ERR_INVALID_ARGS;
     }
 
     if (auth->status_code != status_code::kSuccess) {
         errorf("authentication failed (status code=%u)\n", auth->status_code);
-        state_ = WlanState::kJoined;
-        service::SendAuthConfirm(device_, bssid_,
+        state_ = WlanState::kIdle;
+        service::SendAuthConfirm(device_, join_ctx_->bssid(),
                                  wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
         return ZX_ERR_BAD_STATE;
     }
 
     state_ = WlanState::kAuthenticated;
-    debugjoin("authenticated to %s\n", bssid_.ToString().c_str());
-    service::SendAuthConfirm(device_, bssid_, wlan_mlme::AuthenticateResultCodes::SUCCESS);
+    debugjoin("authenticated to %s\n", join_ctx_->bssid().ToString().c_str());
+    service::SendAuthConfirm(device_, join_ctx_->bssid(),
+                             wlan_mlme::AuthenticateResultCodes::SUCCESS);
     return ZX_OK;
 }
 
@@ -545,15 +461,15 @@ zx_status_t Station::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame)
 
     auto deauth = frame.body();
     infof("deauthenticating from \"%s\" (%s), reason=%hu\n",
-          debug::ToAsciiOrHexStr(*bss_->ssid).c_str(), bssid_.ToString().c_str(),
-          deauth->reason_code);
+          debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str(),
+          join_ctx_->bssid().ToString().c_str(), deauth->reason_code);
 
-    state_ = WlanState::kJoined;
+    state_ = WlanState::kIdle;
     device_->SetStatus(0);
     controlled_port_ = eapol::PortState::kBlocked;
     bu_queue_.clear();
 
-    return service::SendDeauthIndication(device_, bssid_,
+    return service::SendDeauthIndication(device_, join_ctx_->bssid(),
                                          static_cast<wlan_mlme::ReasonCode>(deauth->reason_code));
 }
 
@@ -588,7 +504,7 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
     }
 
     // TODO(porce): Move into |assoc_ctx_|
-    common::MacAddr bssid(bss_->bssid.data());
+    common::MacAddr bssid(join_ctx_->bss()->bssid.data());
     state_ = WlanState::kAssociated;
     assoc_ctx_.set_aid(assoc->aid);
 
@@ -610,23 +526,23 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
     if (status != ZX_OK) { warnf("could not set auto-deauthentication timeout event\n"); }
 
     // Open port if user connected to an open network.
-    if (bss_->rsn.is_null()) {
+    if (join_ctx_->bss()->rsn.is_null()) {
         debugjoin("802.1X controlled port is now open\n");
         controlled_port_ = eapol::PortState::kOpen;
         device_->SetStatus(ETHMAC_STATUS_ONLINE);
     }
 
     infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n",
-          self_addr().ToString().c_str(), debug::ToAsciiOrHexStr(*bss_->ssid).c_str(),
-          bssid.ToString().c_str(), common::ChanStr(GetJoinChan()).c_str(),
-          common::BandStr(GetJoinChan()).c_str(), GetPhyStr().c_str());
+          self_addr().ToString().c_str(), debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str(),
+          bssid.ToString().c_str(), common::ChanStr(join_ctx_->channel()).c_str(),
+          common::BandStr(join_ctx_->channel()).c_str(), GetPhyStr().c_str());
 
     // TODO(porce): Time when to establish BlockAck session
     // Handle MLME-level retry, if MAC-level retry ultimately fails
     // Wrap this as EstablishBlockAckSession(peer_mac_addr)
     // Signal to lower MAC for proper session handling
 
-    if (IsHtOrLater()) { SendAddBaRequestFrame(); }
+    if (join_ctx_->IsHtOrLater()) { SendAddBaRequestFrame(); }
     return ZX_OK;
 }
 
@@ -639,9 +555,10 @@ zx_status_t Station::HandleDisassociation(MgmtFrame<Disassociation>&& frame) {
     }
 
     auto disassoc = frame.body();
-    common::MacAddr bssid(bss_->bssid.data());
+    common::MacAddr bssid(join_ctx_->bss()->bssid.data());
     infof("disassociating from \"%s\"(%s), reason=%u\n",
-          debug::ToAsciiOrHexStr(*bss_->ssid).c_str(), MACSTR(bssid), disassoc->reason_code);
+          debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str(), MACSTR(bssid),
+          disassoc->reason_code);
 
     state_ = WlanState::kAuthenticated;
     device_->SetStatus(0);
@@ -685,9 +602,9 @@ zx_status_t Station::HandleAddBaRequest(const AddBaRequestFrame& addbareq) {
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
-    hdr->addr1 = bssid_;
+    hdr->addr1 = join_ctx_->bssid();
     hdr->addr2 = self_addr();
-    hdr->addr3 = bssid_;
+    hdr->addr3 = join_ctx_->bssid();
     SetSeqNo(hdr, &seq_);
     frame.FillTxInfo();
 
@@ -734,12 +651,11 @@ zx_status_t Station::HandleAddBaRequest(const AddBaRequestFrame& addbareq) {
 bool Station::ShouldDropDataFrame(const DataFrameView<>& frame) {
     if (state_ != WlanState::kAssociated) { return true; }
 
-    return bssid() == nullptr || *bssid() != frame.hdr()->addr2;
+    return join_ctx_->bssid() != frame.hdr()->addr2;
 }
 
 zx_status_t Station::HandleNullDataFrame(DataFrame<NullDataHdr>&& frame) {
     debugfn();
-    ZX_DEBUG_ASSERT(bssid() != nullptr);
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
     // Take signal strength into account.
@@ -754,7 +670,6 @@ zx_status_t Station::HandleNullDataFrame(DataFrame<NullDataHdr>&& frame) {
 
 zx_status_t Station::HandleDataFrame(DataFrame<LlcHeader>&& frame) {
     debugfn();
-    ZX_DEBUG_ASSERT(bssid() != nullptr);
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
     auto data_llc_frame = frame.View();
@@ -839,12 +754,10 @@ zx_status_t Station::HandleAmsduFrame(DataFrame<AmsduSubframeHeader>&& frame) {
 
 zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
     debugfn();
-
-    // Drop Ethernet frames when not associated.
-    auto bss_setup = (bssid() != nullptr);
-    auto associated = (state_ == WlanState::kAssociated);
-    if (!associated) { debugf("dropping eth packet while not associated\n"); }
-    if (!bss_setup || !associated) { return ZX_OK; }
+    if (state_ != WlanState::kAssociated) {
+        debugf("dropping eth packet while not associated\n");
+        return ZX_ERR_BAD_STATE;
+    }
 
     // If off channel, buffer Ethernet frame
     if (!chan_sched_->OnChannel()) {
@@ -863,7 +776,8 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
     auto packet = GetWlanPacket(frame_len);
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    bool needs_protection = !bss_->rsn.is_null() && controlled_port_ == eapol::PortState::kOpen;
+    bool needs_protection =
+        !join_ctx_->bss()->rsn.is_null() && controlled_port_ == eapol::PortState::kOpen;
     DataFrame<LlcHeader> data_frame(fbl::move(packet));
     auto data_hdr = data_frame.hdr();
 
@@ -875,7 +789,7 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
     data_hdr->fc.set_to_ds(1);
     data_hdr->fc.set_from_ds(0);
     data_hdr->fc.set_htc_order(has_ht_ctrl ? 1 : 0);
-    data_hdr->addr1 = common::MacAddr(bss_->bssid.data());
+    data_hdr->addr1 = common::MacAddr(join_ctx_->bss()->bssid.data());
     data_hdr->addr2 = eth_hdr->src;
     data_hdr->addr3 = eth_hdr->dest;
     data_hdr->fc.set_protected_frame(needs_protection);
@@ -945,10 +859,10 @@ zx_status_t Station::HandleTimeout() {
     zx::time now = timer_mgr_.HandleTimeout();
 
     if (auth_timeout_.Triggered(now)) {
-        debugjoin("auth timed out; moving back to joined state\n");
+        debugjoin("auth timed out; moving back to idle state\n");
         auth_timeout_.Cancel();
-        state_ = WlanState::kJoined;
-        service::SendAuthConfirm(device_, bssid_,
+        state_ = WlanState::kIdle;
+        service::SendAuthConfirm(device_, join_ctx_->bssid(),
                                  wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
     } else if (assoc_timeout_.Triggered(now)) {
         debugjoin("assoc timed out; moving back to authenticated\n");
@@ -984,12 +898,12 @@ zx_status_t Station::HandleTimeout() {
             timer_mgr_.Schedule(now + remaining_auto_deauth_timeout_, &auto_deauth_timeout_);
         } else if (state_ == WlanState::kAssociated) {
             infof("lost BSS; deauthenticating...\n");
-            state_ = WlanState::kUnjoined;
+            state_ = WlanState::kIdle;
             device_->SetStatus(0);
             controlled_port_ = eapol::PortState::kBlocked;
 
             auto reason_code = wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH;
-            service::SendDeauthIndication(device_, bssid_, reason_code);
+            service::SendDeauthIndication(device_, join_ctx_->bssid(), reason_code);
             auto status = SendDeauthFrame(reason_code);
             if (status != ZX_OK) { errorf("could not send deauth packet: %d\n", status); }
         }
@@ -1013,9 +927,9 @@ zx_status_t Station::SendKeepAliveResponse() {
     data_hdr->fc.set_type(FrameType::kData);
     data_hdr->fc.set_subtype(DataSubtype::kNull);
     data_hdr->fc.set_to_ds(1);
-    data_hdr->addr1 = bssid_;
+    data_hdr->addr1 = join_ctx_->bssid();
     data_hdr->addr2 = self_addr();
-    data_hdr->addr3 = bssid_;
+    data_hdr->addr3 = join_ctx_->bssid();
     SetSeqNo(data_hdr, &seq_);
 
     // Ralink appears to setup BlockAck session AND AMPDU handling
@@ -1060,9 +974,9 @@ zx_status_t Station::SendAddBaRequestFrame() {
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
-    hdr->addr1 = bssid_;
+    hdr->addr1 = join_ctx_->bssid();
     hdr->addr2 = self_addr();
-    hdr->addr3 = bssid_;
+    hdr->addr3 = join_ctx_->bssid();
     SetSeqNo(hdr, &seq_);
     frame.FillTxInfo();
 
@@ -1102,7 +1016,6 @@ zx_status_t Station::SendAddBaRequestFrame() {
 zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& req) {
     debugfn();
 
-    if (!bss_) { return ZX_ERR_BAD_STATE; }
     if (state_ != WlanState::kAssociated) {
         debugf("dropping MLME-EAPOL.request while not being associated. STA in state %d\n", state_);
         return ZX_OK;
@@ -1114,7 +1027,8 @@ zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& 
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
     packet->clear();
 
-    bool needs_protection = !bss_->rsn.is_null() && controlled_port_ == eapol::PortState::kOpen;
+    bool needs_protection =
+        !join_ctx_->bss()->rsn.is_null() && controlled_port_ == eapol::PortState::kOpen;
     DataFrame<LlcHeader> data_frame(fbl::move(packet));
     auto data_hdr = data_frame.hdr();
     data_hdr->fc.set_type(FrameType::kData);
@@ -1214,16 +1128,14 @@ void Station::DumpDataFrame(const DataFrameView<>& frame) {
     // TODO(porce): Should change the API signature to MSDU
     auto hdr = frame.hdr();
 
-    auto is_ucast_to_self = self_addr() == hdr->addr1;
-    auto is_mcast = hdr->addr1.IsBcast();
-    auto is_bcast = hdr->addr1.IsMcast();
-    auto is_interesting = is_ucast_to_self || is_mcast || is_bcast;
-
-    auto associated = (state_ == WlanState::kAssociated);
-    auto from_bss = (bssid() != nullptr && *bssid() == hdr->addr2);
-    if (associated) { is_interesting = is_interesting && from_bss; }
-
+    bool is_ucast_to_self = self_addr() == hdr->addr1;
+    bool is_mcast = hdr->addr1.IsBcast();
+    bool is_bcast = hdr->addr1.IsMcast();
+    bool is_interesting = is_ucast_to_self || is_mcast || is_bcast;
     if (!is_interesting) { return; }
+
+    bool from_bss = (join_ctx_->bssid() == hdr->addr2);
+    if (state_ == WlanState::kAssociated && !from_bss) { return; }
 
     auto msdu = frame.body()->data;
     finspect("Inbound data frame: len %zu\n", frame.len());
@@ -1252,9 +1164,9 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
     data_hdr->fc.set_subtype(DataSubtype::kNull);
     data_hdr->fc.set_pwr_mgmt(ps_mode);
     data_hdr->fc.set_to_ds(1);
-    data_hdr->addr1 = bssid_;
+    data_hdr->addr1 = join_ctx_->bssid();
     data_hdr->addr2 = self_addr();
-    data_hdr->addr3 = bssid_;
+    data_hdr->addr3 = join_ctx_->bssid();
     SetSeqNo(data_hdr, &seq_);
 
     // Ralink appears to setup BlockAck session AND AMPDU handling
@@ -1302,7 +1214,7 @@ zx_status_t Station::SendPsPoll() {
     frame.hdr()->fc.set_type(FrameType::kControl);
     frame.hdr()->fc.set_subtype(ControlSubtype::kPsPoll);
     frame.body()->aid = assoc_ctx_.aid;
-    frame.body()->bssid = common::MacAddr(bss_->bssid.data());
+    frame.body()->bssid = common::MacAddr(join_ctx_->bss()->bssid.data());
     frame.body()->ta = self_addr();
 
     zx_status_t status = SendNonData(frame.Take());
@@ -1321,9 +1233,9 @@ zx_status_t Station::SendDeauthFrame(wlan_mlme::ReasonCode reason_code) {
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
-    hdr->addr1 = bssid_;
+    hdr->addr1 = join_ctx_->bssid();
     hdr->addr2 = self_addr();
-    hdr->addr3 = bssid_;
+    hdr->addr3 = join_ctx_->bssid();
     SetSeqNo(hdr, &seq_);
     frame.FillTxInfo();
 
@@ -1345,13 +1257,11 @@ zx_status_t Station::SendWlan(fbl::unique_ptr<Packet> packet) {
 }
 
 zx::time Station::deadline_after_bcn_period(size_t bcn_count) {
-    ZX_DEBUG_ASSERT(bss_ != nullptr);
-    return timer_mgr_.Now() + WLAN_TU(bss_->beacon_period * bcn_count);
+    return timer_mgr_.Now() + WLAN_TU(join_ctx_->bss()->beacon_period * bcn_count);
 }
 
 zx::duration Station::FullAutoDeauthDuration() {
-    ZX_DEBUG_ASSERT(bss_ != nullptr);
-    return WLAN_TU(bss_->beacon_period * kAutoDeauthBcnCountTimeout);
+    return WLAN_TU(join_ctx_->bss()->beacon_period * kAutoDeauthBcnCountTimeout);
 }
 
 bool Station::IsCbw40Rx() const {
@@ -1359,30 +1269,29 @@ bool Station::IsCbw40Rx() const {
     // the AP is capable of transmitting CBW40,
     // the client is capable of receiving CBW40,
     // and the association is to configured to use CBW40.
-    ZX_DEBUG_ASSERT(bss_ != nullptr);
-    if (bss_ == nullptr) { return false; }
 
-    auto chan = GetBssChan();
+    const auto& join_chan = join_ctx_->channel();
     auto ifc_info = device_->GetWlanInfo().ifc_info;
-    auto client_assoc = ToAssocContext(ifc_info, chan);
+    auto client_assoc = ToAssocContext(ifc_info, join_chan);
 
     debugf(
         "IsCbw40Rx: bss.ht_cap:%s, bss.chan_width_set:%s client_assoc.has_ht_cap:%s "
         "client_assoc.chan_width_set:%u\n",
-        (bss_->ht_cap != nullptr) ? "yes" : "no",
-        (bss_->ht_cap == nullptr) ? "invalid"
-                                  : (bss_->ht_cap->ht_cap_info.chan_width_set ==
-                                     to_enum_type(wlan_mlme::ChanWidthSet::TWENTY_ONLY))
-                                        ? "20"
-                                        : "40",
-        client_assoc.ht_cap ? "yes" : "no",
+        (join_ctx_->bss()->ht_cap != nullptr) ? "yes" : "no",
+        (join_ctx_->bss()->ht_cap == nullptr)
+            ? "invalid"
+            : (join_ctx_->bss()->ht_cap->ht_cap_info.chan_width_set ==
+               to_enum_type(wlan_mlme::ChanWidthSet::TWENTY_ONLY))
+                  ? "20"
+                  : "40",
+        client_assoc.ht_cap.has_value() ? "yes" : "no",
         static_cast<uint8_t>(client_assoc.ht_cap->ht_cap_info.chan_width_set()));
 
-    if (bss_->ht_cap == nullptr) {
+    if (join_ctx_->bss()->ht_cap == nullptr) {
         debugjoin("Disable CBW40: no HT support in target BSS\n");
         return false;
     }
-    if (bss_->ht_cap->ht_cap_info.chan_width_set ==
+    if (join_ctx_->bss()->ht_cap->ht_cap_info.chan_width_set ==
         to_enum_type(wlan_mlme::ChanWidthSet::TWENTY_ONLY)) {
         debugjoin("Disable CBW40: no CBW40 support in target BSS\n");
         return false;
@@ -1395,7 +1304,7 @@ bool Station::IsCbw40Rx() const {
         debugjoin("Disable CBW40: no CBW40 support in the this device\n");
         return false;
     }
-    if (join_chan_.cbw == CBW20) {
+    if (join_chan.cbw == CBW20) {
         debugjoin("Disable CBW40: configured to use less CBW than capability\n");
         return false;
     }
@@ -1461,7 +1370,7 @@ uint8_t Station::GetTid(const EthFrame& frame) {
 zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& frame) {
     assoc_ctx_ = AssocContext{};
     assoc_ctx_.ts_start = timer_mgr_.Now();
-    assoc_ctx_.bssid = common::MacAddr(bss_->bssid.data());
+    assoc_ctx_.bssid = common::MacAddr(join_ctx_->bss()->bssid.data());
     assoc_ctx_.aid = frame.body()->aid & kAidMask;
 
     AssocContext ap{};
@@ -1477,7 +1386,7 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
     debugjoin("rxed AssocResp:[%s]\n", debug::Describe(ap).c_str());
 
     auto ifc_info = device_->GetWlanInfo().ifc_info;
-    auto client = ToAssocContext(ifc_info, join_chan_);
+    auto client = ToAssocContext(ifc_info, join_ctx_->channel());
     debugjoin("from WlanInfo: [%s]\n", debug::Describe(client).c_str());
 
     assoc_ctx_.cap = IntersectCapInfo(ap.cap, client.cap);
@@ -1698,7 +1607,7 @@ std::string Station::GetPhyStr() const {
         return "802.11ac VHT";
     } else if (assoc_ctx_.is_ht) {
         return "802.11n HT";
-    } else if (common::Is5Ghz(join_chan_)) {
+    } else if (common::Is5Ghz(join_ctx_->channel())) {
         return "802.11a";
     } else {
         return "802.11g";

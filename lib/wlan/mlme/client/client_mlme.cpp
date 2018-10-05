@@ -5,9 +5,11 @@
 #include <wlan/mlme/client/client_mlme.h>
 
 #include <wlan/common/bitfield.h>
+#include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
 #include <wlan/mlme/client/scanner.h>
 #include <wlan/mlme/client/station.h>
+#include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
@@ -34,7 +36,7 @@ ClientMlme::ClientMlme(DeviceInterface* device) : device_(device), on_channel_ha
     debugfn();
 }
 
-ClientMlme::~ClientMlme() {}
+ClientMlme::~ClientMlme() = default;
 
 zx_status_t ClientMlme::Init() {
     debugfn();
@@ -60,16 +62,14 @@ zx_status_t ClientMlme::HandleTimeout(const ObjectId id) {
         chan_sched_->HandleTimeout();
         break;
     case to_enum_type(ObjectTarget::kStation):
-        // TODO(porce): Fix this crash point. bssid() can be nullptr.
-        if (id.mac() != sta_->bssid()->ToU64()) {
-            warnf("timeout for unknown bssid: %s (%" PRIu64 ")\n", MACSTR(*(sta_->bssid())),
-                  id.mac());
-            break;
+        if (sta_ != nullptr) {
+            sta_->HandleTimeout();
+        } else {
+            warnf("timeout for unknown STA: %zu\n", id.mac());
         }
-        sta_->HandleTimeout();
         break;
     default:
-        ZX_DEBUG_ASSERT(false);
+        ZX_DEBUG_ASSERT(0);
         return ZX_ERR_NOT_SUPPORTED;
     }
     return ZX_OK;
@@ -84,17 +84,65 @@ void ClientMlme::HwScanComplete(uint8_t result_code) {
 }
 
 zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
-    // Let the Scanner handle all MLME-SCAN.requests.
     if (auto scan_req = msg.As<wlan_mlme::ScanRequest>()) {
+        // Let the Scanner handle all MLME-SCAN.requests.
         return scanner_->HandleMlmeScanReq(*scan_req);
+    } else if (auto join_req = msg.As<wlan_mlme::JoinRequest>()) {
+        // An MLME-JOIN-request will synchronize the MLME with the request's BSS.
+        // Synchronization is mandatory for spawning a client and starting its association flow.
+
+        Unjoin();
+        return HandleMlmeJoinReq(*join_req);
+    } else if (!join_ctx_.has_value()) {
+        warnf("rx'ed MLME message (ordinal: %u) before synchronizing with a BSS\n", msg.ordinal());
+        return ZX_ERR_BAD_STATE;
     }
 
-    // MLME-JOIN.request will reset the STA.
-    if (auto join_req = msg.As<wlan_mlme::JoinRequest>()) { HandleMlmeJoinReq(*join_req); }
+    // TODO(hahnr): Keys should not be handled in the STA and instead in the MLME.
+    // For now, shortcut into the STA and leave this change as a follow-up.
+    if (msg.As<wlan_mlme::SetKeysRequest>()) {
+        if (sta_ != nullptr) {
+            return sta_->HandleAnyMlmeMsg(msg);
+        } else {
+            warnf("rx'ed MLME message (ordinal: %u) before authenticating with a BSS\n",
+                  msg.ordinal());
+            return ZX_ERR_BAD_STATE;
+        }
+    }
 
-    // Once the STA was spawned, let it handle all incoming MLME messages.
-    if (sta_ != nullptr) { sta_->HandleAnyMlmeMsg(msg); }
-    return ZX_OK;
+    // All remaining message must use the same BSS this MLME synchronized to before.
+    auto peer_addr = service::GetPeerAddr(msg);
+    if (!peer_addr.has_value()) {
+        warnf("rx'ed unsupported MLME msg (ordinal: %u)\n", msg.ordinal());
+        return ZX_ERR_INVALID_ARGS;
+    } else if (peer_addr.value() != join_ctx_->bssid()) {
+        warnf("rx'ed MLME msg (ordinal: %u) with unexpected peer addr; expected: %s ; actual: %s\n",
+              msg.ordinal(), join_ctx_->bssid().ToString().c_str(), peer_addr->ToString().c_str());
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // This will spawn a new client instance and start association flow.
+    if (auto auth_req = msg.As<wlan_mlme::AuthenticateRequest>()) {
+        auto status = SpawnStation();
+        if (status != ZX_OK) {
+            errorf("error spawning STA: %d\n", status);
+            return service::SendAuthConfirm(device_, join_ctx_->bssid(),
+                                            wlan_mlme::AuthenticateResultCodes::REFUSED);
+        }
+
+        // Let station handle the request itself.
+        sta_->HandleAnyMlmeMsg(*auth_req);
+        return ZX_OK;
+    }
+
+    // If the STA exists, forward all incoming MLME messages.
+    if (sta_ != nullptr) {
+        sta_->HandleAnyMlmeMsg(msg);
+        return ZX_OK;
+    } else {
+        warnf("rx'ed MLME message (ordinal: %u) before authenticating with a BSS\n", msg.ordinal());
+        return ZX_ERR_BAD_STATE;
+    }
 }
 
 zx_status_t ClientMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
@@ -121,29 +169,84 @@ zx_status_t ClientMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
 
 zx_status_t ClientMlme::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& req) {
     debugfn();
+
+    wlan_mlme::BSSDescription bss;
+    auto status = req.body()->selected_bss.Clone(&bss);
+    if (status != ZX_OK) {
+        errorf("error cloning MLME-JOIN.request: %d\n", status);
+        return status;
+    }
+
+    common::MacAddr bssid(bss.bssid.data());
+    wlan_channel_t bss_chan{
+        .primary = bss.chan.primary,
+        .cbw = static_cast<uint8_t>(bss.chan.cbw),
+    };
+
+    infof("JoinReq BSSID %s, chan %s, PHY %u\n", bssid.ToString().c_str(),
+          common::ChanStrLong(bss_chan).c_str(), req.body()->phy);
+
+    wlan_channel_t join_chan = bss_chan;
+    if (!common::IsValidChan(join_chan)) {
+        // If what SME instructs seems invalid, treat it as an error.
+        // Shout out, and auto-correct
+        wlan_channel_t chan_sanitized = join_chan;
+        chan_sanitized.cbw = common::GetValidCbw(join_chan);
+        errorf("SME tried to configure an invalid channel: %s; falling back to %s\n",
+               common::ChanStrLong(join_chan).c_str(), common::ChanStrLong(chan_sanitized).c_str());
+        join_chan = chan_sanitized;
+    }
+
+    debugjoin("setting channel to %s\n", common::ChanStrLong(join_chan).c_str());
+    status = chan_sched_->SetChannel(join_chan);
+    if (status != ZX_OK) {
+        errorf("could not set WLAN channel to %s: %d\n", common::ChanStrLong(join_chan).c_str(),
+               status);
+        service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
+        return status;
+    }
+
+    join_ctx_ = std::make_optional<JoinContext>(std::move(bss), join_chan, req.body()->phy);
+
+    // Notify driver about BSS.
+    wlan_bss_config_t cfg{
+        .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+        .remote = true,
+    };
+    bssid.CopyTo(cfg.bssid);
+    status = device_->ConfigureBss(&cfg);
+    if (status != ZX_OK) {
+        errorf("error configuring BSS in driver; aborting: %d\n", status);
+        // TODO(hahnr): JoinResultCodes needs to define better result codes.
+        return service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
+    }
+
+    // Send confirmation for successful synchronization to SME.
+    return service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::SUCCESS);
+}
+
+zx_status_t ClientMlme::SpawnStation() {
+    if (!join_ctx_.has_value()) { return ZX_ERR_BAD_STATE; }
+
     fbl::unique_ptr<Timer> timer;
     ObjectId timer_id;
     timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
     timer_id.set_target(to_enum_type(ObjectTarget::kStation));
-    timer_id.set_mac(common::MacAddr(req.body()->selected_bss.bssid.data()).ToU64());
+    timer_id.set_mac(join_ctx_->bssid().ToU64());
     auto status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
     if (status != ZX_OK) {
-        errorf("could not create station timer: %d\n", status);
+        errorf("could not create STA timer: %d\n", status);
         return status;
     }
 
-    sta_.reset(new Station(device_, TimerManager(std::move(timer)), chan_sched_.get()));
+    sta_.reset(new Station(device_, TimerManager(std::move(timer)), chan_sched_.get(),
+                           &join_ctx_.value()));
     return ZX_OK;
-}
-
-bool ClientMlme::IsStaValid() const {
-    // TODO(porce): Redefine the notion of the station validity.
-    return sta_ != nullptr && sta_->bssid() != nullptr;
 }
 
 void ClientMlme::OnChannelHandlerImpl::PreSwitchOffChannel() {
     debugfn();
-    if (mlme_->IsStaValid()) { mlme_->sta_->PreSwitchOffChannel(); }
+    if (mlme_->sta_ != nullptr) { mlme_->sta_->PreSwitchOffChannel(); }
 }
 
 void ClientMlme::OnChannelHandlerImpl::HandleOnChannelFrame(fbl::unique_ptr<Packet> packet) {
@@ -158,24 +261,27 @@ void ClientMlme::OnChannelHandlerImpl::HandleOnChannelFrame(fbl::unique_ptr<Pack
         }
     }
 
-    if (mlme_->IsStaValid()) {
-        mlme_->sta_->HandleAnyWlanFrame(fbl::move(packet));
-    }
+    if (mlme_->sta_ != nullptr) { mlme_->sta_->HandleAnyWlanFrame(fbl::move(packet)); }
 }
 
 void ClientMlme::OnChannelHandlerImpl::ReturnedOnChannel() {
     debugfn();
-    if (mlme_->IsStaValid()) { mlme_->sta_->BackToMainChannel(); }
+    if (mlme_->sta_ != nullptr) { mlme_->sta_->BackToMainChannel(); }
 }
 
 wlan_stats::MlmeStats ClientMlme::GetMlmeStats() const {
     wlan_stats::MlmeStats mlme_stats{};
-    if (sta_) { mlme_stats.set_client_mlme_stats(sta_->stats()); }
+    if (sta_ != nullptr) { mlme_stats.set_client_mlme_stats(sta_->stats()); }
     return mlme_stats;
 }
 
 void ClientMlme::ResetMlmeStats() {
-    if (sta_) { sta_->ResetStats(); }
+    if (sta_ != nullptr) { sta_->ResetStats(); }
+}
+
+void ClientMlme::Unjoin() {
+    join_ctx_.reset();
+    sta_.reset();
 }
 
 }  // namespace wlan

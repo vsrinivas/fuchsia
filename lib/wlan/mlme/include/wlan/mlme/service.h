@@ -156,6 +156,8 @@ template <typename T> const uint8_t MlmeMsg<T>::kTypeId;
 
 namespace service {
 
+// Returns the peer MAC address for messages which carry one, none otherwise.
+std::optional<common::MacAddr> GetPeerAddr(const BaseMlmeMsg& msg);
 zx_status_t SendJoinConfirm(DeviceInterface* device,
                             ::fuchsia::wlan::mlme::JoinResultCodes result_code);
 zx_status_t SendAuthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta,

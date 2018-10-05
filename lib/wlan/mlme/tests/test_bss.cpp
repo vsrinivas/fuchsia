@@ -117,6 +117,42 @@ zx_status_t WriteHtOperation(ElementWriter* w, const HtOperation& hto) {
     return ZX_OK;
 }
 
+wlan_mlme::BSSDescription CreateBssDescription() {
+    common::MacAddr bssid(kBssid1);
+
+    wlan_mlme::BSSDescription bss_desc;
+    std::memcpy(bss_desc.bssid.mutable_data(), bssid.byte, common::kMacAddrLen);
+    std::vector<uint8_t> ssid(kSsid, kSsid + sizeof(kSsid));
+    bss_desc.ssid.reset(std::move(ssid));
+    bss_desc.bss_type = wlan_mlme::BSSTypes::INFRASTRUCTURE;
+    bss_desc.beacon_period = kBeaconPeriodTu;
+    bss_desc.dtim_period = kDtimPeriodTu;
+    bss_desc.timestamp = 0;
+    bss_desc.local_time = 0;
+
+    wlan_mlme::CapabilityInfo cap;
+    cap.ess = true;
+    cap.short_preamble = true;
+    bss_desc.cap = cap;
+
+    bss_desc.rsn.reset();
+    bss_desc.rcpi_dbmh = 0;
+    bss_desc.rsni_dbh = 0;
+
+    bss_desc.ht_cap.reset();
+    bss_desc.ht_op.reset();
+
+    bss_desc.vht_cap.reset();
+    bss_desc.vht_op.reset();
+
+    bss_desc.chan.cbw = static_cast<wlan_mlme::CBW>(kBssChannel.cbw);
+    bss_desc.chan.primary = kBssChannel.primary;
+
+    bss_desc.rssi_dbm = -35;
+
+    return fbl::move(bss_desc);
+}
+
 zx_status_t CreateStartRequest(MlmeMsg<wlan_mlme::StartRequest>* out_msg, bool protected_ap) {
     auto req = wlan_mlme::StartRequest::New();
     std::vector<uint8_t> ssid(kSsid, kSsid + sizeof(kSsid));
@@ -137,36 +173,7 @@ zx_status_t CreateJoinRequest(MlmeMsg<wlan_mlme::JoinRequest>* out_msg) {
     req->join_failure_timeout = kJoinTimeout;
     req->nav_sync_delay = 20;
     req->op_rate_set.reset({10, 22, 34});
-
-    auto bss_desc = &req->selected_bss;
-    std::memcpy(bss_desc->bssid.mutable_data(), bssid.byte, common::kMacAddrLen);
-    std::vector<uint8_t> ssid(kSsid, kSsid + sizeof(kSsid));
-    bss_desc->ssid.reset(std::move(ssid));
-    bss_desc->bss_type = wlan_mlme::BSSTypes::INFRASTRUCTURE;
-    bss_desc->beacon_period = kBeaconPeriodTu;
-    bss_desc->dtim_period = kDtimPeriodTu;
-    bss_desc->timestamp = 0;
-    bss_desc->local_time = 0;
-
-    wlan_mlme::CapabilityInfo cap;
-    cap.ess = true;
-    cap.short_preamble = true;
-    bss_desc->cap = cap;
-
-    bss_desc->rsn.reset();
-    bss_desc->rcpi_dbmh = 0;
-    bss_desc->rsni_dbh = 0;
-
-    bss_desc->ht_cap.reset();
-    bss_desc->ht_op.reset();
-
-    bss_desc->vht_cap.reset();
-    bss_desc->vht_op.reset();
-
-    bss_desc->chan.cbw = static_cast<wlan_mlme::CBW>(kBssChannel.cbw);
-    bss_desc->chan.primary = kBssChannel.primary;
-
-    bss_desc->rssi_dbm = -35;
+    req->selected_bss = CreateBssDescription();
 
     return WriteServiceMessage(req.get(), fuchsia_wlan_mlme_MLMEJoinReqOrdinal, out_msg);
 }

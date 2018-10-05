@@ -41,9 +41,15 @@ struct MockOffChannelHandler : OffChannelHandler {
 
 struct ClientTest : public ::testing::Test {
     ClientTest()
-        : chan_sched(ChannelScheduler(&on_channel_handler, &device, device.CreateTimer(0))),
-          station(&device, device.CreateTimer(1), &chan_sched),
-          off_channel_handler(MockOffChannelHandler()) {}
+        : device(),
+          chan_sched(ChannelScheduler(&on_channel_handler, &device, device.CreateTimer(0))),
+          join_ctx(CreateBssDescription(), kBssChannel, wlan_mlme::PHY::HR),
+          station(&device, device.CreateTimer(1), &chan_sched, &join_ctx),
+          off_channel_handler(MockOffChannelHandler()) {
+        device.SetTime(zx::time(0));
+        station.HandleTimeout();
+        chan_sched.HandleTimeout();
+    }
 
     template <typename M> zx_status_t SendMlmeMsg() {
         MlmeMsg<M> msg;
@@ -97,15 +103,6 @@ struct ClientTest : public ::testing::Test {
         return ZX_OK;
     }
 
-    void Join() {
-        device.SetTime(zx::time(0));
-        SendMlmeMsg<wlan_mlme::JoinRequest>();
-        SendFrame<Beacon>();
-        device.svc_queue.clear();
-        station.HandleTimeout();
-        chan_sched.HandleTimeout();  // this is just to reset channel scheduler's state
-    }
-
     void Authenticate() {
         SendMlmeMsg<wlan_mlme::AuthenticateRequest>();
         SendFrame<Authentication>();
@@ -125,7 +122,6 @@ struct ClientTest : public ::testing::Test {
     }
 
     void Connect() {
-        Join();
         Authenticate();
         Associate();
         station.HandleTimeout();
@@ -164,15 +160,6 @@ struct ClientTest : public ::testing::Test {
         ASSERT_TRUE(chan_sched.OnChannel());                 // sanity check
     }
 
-    void AssertJoinConfirm(fbl::unique_ptr<Packet> pkt, wlan_mlme::JoinResultCodes result_code) {
-        ASSERT_EQ(pkt->peer(), Packet::Peer::kService);
-
-        MlmeMsg<wlan_mlme::JoinConfirm> msg;
-        auto status = MlmeMsg<wlan_mlme::JoinConfirm>::FromPacket(fbl::move(pkt), &msg);
-        ASSERT_EQ(status, ZX_OK);
-        ASSERT_EQ(msg.body()->result_code, result_code);
-    }
-
     void AssertAuthConfirm(fbl::unique_ptr<Packet> pkt,
                            wlan_mlme::AuthenticateResultCodes result_code) {
         ASSERT_EQ(pkt->peer(), Packet::Peer::kService);
@@ -208,38 +195,14 @@ struct ClientTest : public ::testing::Test {
 
     MockDevice device;
     ChannelScheduler chan_sched;
+    JoinContext join_ctx;
     Station station;
 
     MockOnChannelHandler on_channel_handler;
     MockOffChannelHandler off_channel_handler;
 };
 
-TEST_F(ClientTest, Join) {
-    device.SetTime(zx::time(0));
-    ASSERT_TRUE(device.svc_queue.empty());
-
-    // Send JOIN.request
-    ASSERT_EQ(SendMlmeMsg<wlan_mlme::JoinRequest>(), ZX_OK);
-
-    // Ensure station moved onto the BSS channel.
-    ASSERT_EQ(device.state->channel().primary, kBssChannel.primary);
-
-    // Verify a JOIN.confirm message was sent.
-    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-    auto joins = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEJoinConfOrdinal>);
-    ASSERT_FALSE(joins.empty());
-    AssertJoinConfirm(fbl::move(*joins.begin()), wlan_mlme::JoinResultCodes::SUCCESS);
-
-    // Verify a delayed timeout won't cause another confirmation.
-    device.svc_queue.clear();
-    SetTimeInBeaconPeriods(100);
-    station.HandleTimeout();
-    ASSERT_TRUE(device.svc_queue.empty());
-}
-
 TEST_F(ClientTest, Authenticate) {
-    Join();
-
     // Send AUTHENTICATION.request. Verify that no confirmation was sent yet.
     ASSERT_EQ(SendMlmeMsg<wlan_mlme::AuthenticateRequest>(), ZX_OK);
     ASSERT_TRUE(device.svc_queue.empty());
@@ -274,7 +237,6 @@ TEST_F(ClientTest, Authenticate) {
 }
 
 TEST_F(ClientTest, Associate) {
-    Join();
     Authenticate();
 
     // Send ASSOCIATE.request. Verify that no confirmation was sent yet.
@@ -311,8 +273,6 @@ TEST_F(ClientTest, Associate) {
 }
 
 TEST_F(ClientTest, AuthTimeout) {
-    Join();
-
     // Send AUTHENTICATE.request. Verify that no confirmation was sent yet.
     ASSERT_EQ(SendMlmeMsg<wlan_mlme::AuthenticateRequest>(), ZX_OK);
     ASSERT_TRUE(device.svc_queue.empty());
@@ -333,7 +293,6 @@ TEST_F(ClientTest, AuthTimeout) {
 }
 
 TEST_F(ClientTest, AssocTimeout) {
-    Join();
     Authenticate();
 
     // Send ASSOCIATE.request. Verify that no confirmation was sent yet.
@@ -358,13 +317,6 @@ TEST_F(ClientTest, AssocTimeout) {
 TEST_F(ClientTest, ExchangeDataAfterAssociation) {
     // Verify no data frame is exchanged before being associated.
     device.eth_queue.clear();
-    SendDataFrame();
-    SendNullDataFrame();
-    ASSERT_TRUE(device.eth_queue.empty());
-    ASSERT_TRUE(device.wlan_queue.empty());
-    ASSERT_TRUE(device.svc_queue.empty());
-
-    Join();
     SendDataFrame();
     SendNullDataFrame();
     ASSERT_TRUE(device.eth_queue.empty());
@@ -448,27 +400,6 @@ TEST_F(ClientTest, DropManagementFrames) {
     // Verify data frames can still be send and the clientis presumably associated.
     SendDataFrame();
     ASSERT_EQ(device.eth_queue.size(), static_cast<size_t>(1));
-}
-
-TEST_F(ClientTest, SuccessiveJoin) {
-    // Connect to a network
-    Connect();
-
-    // Issue a new MLME-JOIN.request which should reset the STA and restart the association flow.
-    // Verify data frame exchange is not operational any longer.
-    ASSERT_EQ(SendMlmeMsg<wlan_mlme::JoinRequest>(), ZX_OK);
-    SendDataFrame();
-    ASSERT_TRUE(device.eth_queue.empty());
-
-    // Verify BSS was notified about deauthentication.
-    // TODO(hahnr): This is currently not supported by the client.
-
-    // Respond with a Beacon frame and verify a JOIN.confirm message was sent.
-    ASSERT_EQ(SendFrame<Beacon>(), ZX_OK);
-
-    auto joins = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEJoinConfOrdinal>);
-    ASSERT_EQ(joins.size(), static_cast<size_t>(1));
-    AssertJoinConfirm(fbl::move(*joins.begin()), wlan_mlme::JoinResultCodes::SUCCESS);
 }
 
 TEST_F(ClientTest, AutoDeauth_NoBeaconReceived) {
@@ -676,8 +607,6 @@ TEST_F(ClientTest, BufferFramesWhileOffChannelAndSendWhenOnChannel) {
 }
 
 TEST_F(ClientTest, InvalidAuthenticationResponse) {
-    Join();
-
     // Send AUTHENTICATION.request. Verify that no confirmation was sent yet.
     ASSERT_EQ(SendMlmeMsg<wlan_mlme::AuthenticateRequest>(), ZX_OK);
     ASSERT_TRUE(device.svc_queue.empty());
@@ -711,7 +640,7 @@ TEST_F(ClientTest, InvalidAuthenticationResponse) {
 
     // Fast forward in time far beyond an authentication timeout.
     // There should not be any AUTHENTICATION.confirm sent as the client
-    // is expected to have been reset into a |joined| state after failing
+    // is expected to have been reset into |idle| state after failing
     // to authenticate.
     SetTimeInBeaconPeriods(1000);
     station.HandleTimeout();

@@ -5,14 +5,15 @@
 #pragma once
 
 #include <wlan/mlme/client/channel_scheduler.h>
+#include <wlan/mlme/client/join_context.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/service.h>
-
-#include <fbl/ref_ptr.h>
 
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
+
+#include <optional>
 
 namespace wlan {
 
@@ -37,8 +38,6 @@ class ClientMlme : public Mlme {
     ::fuchsia::wlan::stats::MlmeStats GetMlmeStats() const override final;
     void ResetMlmeStats() override final;
 
-    bool IsStaValid() const;
-
    private:
     struct OnChannelHandlerImpl : OnChannelHandler {
         ClientMlme* mlme_;
@@ -50,8 +49,10 @@ class ClientMlme : public Mlme {
         virtual void ReturnedOnChannel() override;
     };
 
-    // MLME-JOIN.request will initialize a Station and starts the association flow.
     zx_status_t HandleMlmeJoinReq(const MlmeMsg<::fuchsia::wlan::mlme::JoinRequest>& msg);
+    zx_status_t SpawnStation();
+
+    void Unjoin();
 
     DeviceInterface* const device_;
     OnChannelHandlerImpl on_channel_handler_;
@@ -59,6 +60,9 @@ class ClientMlme : public Mlme {
     fbl::unique_ptr<Scanner> scanner_;
     // TODO(tkilbourn): track other STAs
     fbl::unique_ptr<Station> sta_;
+    // The BSS the MLME synchronized with.
+    // The MLME must synchronize to a BSS before it can start the association flow.
+    std::optional<JoinContext> join_ctx_;
 };
 
 }  // namespace wlan

@@ -5,7 +5,6 @@
 #include <wlan/mlme/ap/ap_mlme.h>
 #include <wlan/mlme/service.h>
 
-#include <fbl/ref_ptr.h>
 #include <wlan/common/logging.h>
 #include <wlan/protocol/mac.h>
 

@@ -5,7 +5,6 @@
 #pragma once
 
 #include <fbl/macros.h>
-#include <fbl/ref_ptr.h>
 #include <wlan/common/logging.h>
 #include <wlan/common/macaddr.h>
 #include <zircon/types.h>

@@ -36,6 +36,7 @@ static constexpr wlan_channel_t kBssChannel = {
     .cbw = CBW20,
     .primary = 11,
 };
+static constexpr PHY kBssPhy = PHY::WLAN_PHY_OFDM;
 static constexpr uint8_t kSsid[] = {'F', 'u', 'c', 'h', 's', 'i', 'a', '-', 'A', 'P'};
 static constexpr uint8_t kEapolPdu[] = {'E', 'A', 'P', 'O', 'L'};
 static constexpr uint8_t kKeyData[] = {0x40, 0x41, 0x42, 0x43, 0x44};
@@ -57,6 +58,7 @@ static constexpr uint8_t kRsne[] = {
 static constexpr uint8_t kCipherOui[3] = {0x96, 0x85, 0x74};
 static constexpr uint8_t kCipherSuiteType = 0x11;
 
+::fuchsia::wlan::mlme::BSSDescription CreateBssDescription();
 zx_status_t CreateStartRequest(MlmeMsg<::fuchsia::wlan::mlme::StartRequest>*, bool protected_ap);
 zx_status_t CreateJoinRequest(MlmeMsg<::fuchsia::wlan::mlme::JoinRequest>*);
 zx_status_t CreateAuthRequest(MlmeMsg<::fuchsia::wlan::mlme::AuthenticateRequest>*);

@@ -212,27 +212,21 @@ void InfraBss::HandleEthFrame(EthFrame&& eth_frame) {
 }
 
 zx_status_t InfraBss::HandleMlmeMsg(const BaseMlmeMsg& msg) {
-    common::MacAddr peer_addr;
-    if (auto auth_resp = msg.As<wlan_mlme::AuthenticateResponse>()) {
-        peer_addr = common::MacAddr(auth_resp->body()->peer_sta_address.data());
-    } else if (auto assoc_resp = msg.As<wlan_mlme::AssociateResponse>()) {
-        peer_addr = common::MacAddr(assoc_resp->body()->peer_sta_address.data());
-    } else if (auto eapol_req = msg.As<wlan_mlme::EapolRequest>()) {
-        peer_addr = common::MacAddr(eapol_req->body()->dst_addr.data());
-    } else if (auto set_keys_req = msg.As<wlan_mlme::SetKeysRequest>()) {
+    if (auto set_keys_req = msg.As<wlan_mlme::SetKeysRequest>()) {
         return HandleMlmeSetKeysReq(*set_keys_req);
-    } else {
+    }
+
+    auto peer_addr = service::GetPeerAddr(msg);
+    if (!peer_addr.has_value()) {
         warnf("[infra-bss] received unsupported MLME msg; ordinal: %u\n", msg.ordinal());
         return ZX_ERR_INVALID_ARGS;
     }
 
-    auto client = GetClient(peer_addr);
-    ZX_DEBUG_ASSERT(client != nullptr);
-    if (client != nullptr) {
+    if (auto client = GetClient(peer_addr.value())) {
         return client->HandleMlmeMsg(msg);
     } else {
         warnf("[infra-bss] unrecognized peer address in MlmeMsg: %s -- ordinal: %u\n",
-              peer_addr.ToString().c_str(), msg.ordinal());
+              peer_addr.value().ToString().c_str(), msg.ordinal());
     }
 
     return ZX_OK;
