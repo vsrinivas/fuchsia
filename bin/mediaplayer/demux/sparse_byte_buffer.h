@@ -60,6 +60,17 @@ class SparseByteBuffer {
   // Initialized the buffer.
   void Initialize(size_t size);
 
+  // Reads a range of data from the SparseBuffer, which may span multiple
+  // regions. Reading will begin at |start| in the SparseBuffer and stop when
+  // |size| bytes have been copied into |dest_buffer| or a hole in the
+  // SparseBuffer is encountered.
+  //
+  // For example, when reading the range [0, 100) in a Sparsebuffer with regions
+  // [0, 50) and [50, 100), ReadRange will read across them both and read the
+  // regions' content into the first and second half of the destination buffer
+  // respectively.
+  size_t ReadRange(size_t start, size_t size, uint8_t* dest_buffer);
+
   // Finds a region containing the specified position. This method will check
   // hint and its successor, if they're valid, before doing a search.
   Region FindRegionContaining(size_t position, Region hint);

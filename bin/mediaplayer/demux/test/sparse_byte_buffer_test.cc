@@ -60,7 +60,7 @@ void FillRegion(SparseByteBuffer* under_test, size_t start, size_t size) {
     return;
   }
 
-  under_test->Fill(hole_to_fill, CreateBuffer(10, size));
+  under_test->Fill(hole_to_fill, CreateBuffer(start, size));
 }
 
 SparseByteBuffer BufferWithRegions(
@@ -128,6 +128,44 @@ TEST(SparseByteBufferTest, InitialState) {
   // FindOrCreateHole finds the hole.
   ExpectHole(&under_test, 0, kSize,
              under_test.FindOrCreateHole(0, under_test.null_hole()));
+}
+
+TEST(SparseByteBufferTest, ReadRange) {
+  {
+    // Read range filled with regions.
+    SparseByteBuffer under_test = BufferWithRegions({{0, 100}, {100, 200}});
+    std::vector<uint8_t> dest_buffer(200, 0);
+    size_t copied = under_test.ReadRange(0, 200, dest_buffer.data());
+    EXPECT_EQ(copied, 200u);
+    EXPECT_EQ(dest_buffer, CreateBuffer(0, 200));
+  }
+
+  {
+    // Read range from region stretching beyond it.
+    SparseByteBuffer under_test = BufferWithRegions({{0, 1000}});
+    std::vector<uint8_t> dest_buffer(50, 0);
+    size_t copied = under_test.ReadRange(100, 50, dest_buffer.data());
+    EXPECT_EQ(copied, 50u);
+    EXPECT_EQ(dest_buffer, CreateBuffer(100, 50));
+  }
+
+  {
+    // Read range with only partial coverage.
+    SparseByteBuffer under_test = BufferWithRegions({{0, 50}});
+    std::vector<uint8_t> dest_buffer(25);
+    size_t copied = under_test.ReadRange(25, 50, dest_buffer.data());
+    EXPECT_EQ(copied, 25u);
+    EXPECT_EQ(dest_buffer, CreateBuffer(25, 25));
+  }
+
+  {
+    // Read range with only partial coverage that should bail early.
+    SparseByteBuffer under_test = BufferWithRegions({{0, 50}, {100, 50}});
+    std::vector<uint8_t> dest_buffer(25);
+    size_t copied = under_test.ReadRange(25, 500, dest_buffer.data());
+    EXPECT_EQ(copied, 25u);
+    EXPECT_EQ(dest_buffer, CreateBuffer(25, 25));
+  }
 }
 
 // Creates a second hole.

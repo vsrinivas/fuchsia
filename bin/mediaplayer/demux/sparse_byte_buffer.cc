@@ -39,6 +39,43 @@ void SparseByteBuffer::Initialize(size_t size) {
   holes_[0] = size_;
 }
 
+size_t SparseByteBuffer::ReadRange(size_t start, size_t size,
+                                   uint8_t* dest_buffer) {
+  FXL_DCHECK(start < size_);
+  FXL_DCHECK(start + size < size_);
+  FXL_DCHECK(dest_buffer != nullptr);
+
+  size_t copied = 0;
+  size_t end = start + size;
+
+  RegionsIter iter = regions_.lower_bound(start);
+  if (iter != regions_.begin()) {
+    --iter;
+  }
+
+  size_t last_region_end = iter->first;
+  while (iter != regions_.end() && iter->first == last_region_end &&
+         iter->first < end) {
+    size_t region_start = iter->first;
+    size_t region_end = iter->first + iter->second.size();
+
+    if (region_end > start) {
+      size_t offset_in_dest = region_start > start ? region_start - start : 0;
+      size_t offset_in_source = region_start < start ? start - region_start : 0;
+      size_t bytes_to_copy =
+          std::min(region_end, end) - region_start - offset_in_source;
+      std::memcpy(dest_buffer + offset_in_dest,
+                  iter->second.data() + offset_in_source, bytes_to_copy);
+      copied += bytes_to_copy;
+    }
+
+    last_region_end = region_end;
+    ++iter;
+  }
+
+  return copied;
+}
+
 SparseByteBuffer::Region SparseByteBuffer::FindRegionContaining(size_t position,
                                                                 Region hint) {
   FXL_DCHECK(size_ > 0u);
@@ -138,6 +175,7 @@ std::vector<SparseByteBuffer::Hole> SparseByteBuffer::FindOrCreateHolesInRange(
   if (iter != holes_.begin()) {
     --iter;
   }
+
   while (iter != holes_.end() && iter->first < end) {
     size_t hole_start = iter->first;
     size_t hole_end = iter->first + iter->second;
