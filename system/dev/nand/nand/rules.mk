@@ -13,9 +13,6 @@ MODULE_NAME := nand
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/nand.c \
-    $(LOCAL_DIR)/nand_driver_test.c \
-
-MODULE_COMPILEFLAGS := -I$(LOCAL_DIR)/tests
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

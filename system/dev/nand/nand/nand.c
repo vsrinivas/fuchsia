@@ -411,13 +411,9 @@ static void nand_release(void* ctx) {
     free(dev);
 }
 
-extern zx_status_t nand_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen, void* reply,
-                              size_t max_reply_sz, size_t* out_actual);
-
 // Device protocol.
 static zx_protocol_device_t nand_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .ioctl = nand_ioctl,
     .unbind = nand_unbind,
     .release = nand_release,
 };
