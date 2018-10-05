@@ -31,10 +31,10 @@ int usage(void) {
     fprintf(stderr, " --offset [bytes] - offset at which container begins (fvm only)\n");
     fprintf(stderr, " --length [bytes] - length of container within file (fvm only)\n");
     fprintf(stderr, " --compress - specify that file should be compressed (sparse only)\n");
-    fprintf(stderr, " --zxcrypt - specify that data be placed in zxcrypt volume (sparse only)\n");
     fprintf(stderr, "Input options:\n");
     fprintf(stderr, " --blob [path] - Add path as blob type (must be blobfs)\n");
-    fprintf(stderr, " --data [path] - Add path as data type (must be minfs)\n");
+    fprintf(stderr, " --data [path] - Add path as encrypted data type (must be minfs)\n");
+    fprintf(stderr, " --data-unsafe [path] - Add path as unencrypted data type (must be minfs)\n");
     fprintf(stderr, " --system [path] - Add path as system type (must be minfs)\n");
     fprintf(stderr, " --default [path] - Add generic path\n");
     fprintf(stderr, " --sparse [path] - Path to compressed sparse file\n");
@@ -147,8 +147,6 @@ int main(int argc, char** argv) {
                 fprintf(stderr, "Invalid compression type\n");
                 return -1;
             }
-        } else if (!strcmp(argv[i], "--zxcrypt")) {
-            flags |= fvm::kSparseFlagZxcrypt;
         } else {
             break;
         }

@@ -502,7 +502,7 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name) 
     format->Type(type);
     format->Name(name);
     uint32_t vpart_index;
-    uint32_t flags = flags_ & format->FlagMask();
+    uint32_t flags = format->Flags();
     if ((status = AllocatePartition(type, guid, name, 1, flags, &vpart_index)) != ZX_OK) {
         return status;
     }

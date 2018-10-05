@@ -12,9 +12,9 @@
 
 #define DEFAULT_SLICE_SIZE (64lu * (1 << 20)) // 64 mb
 #define PARTITION_SIZE     (1lu * (1 << 29))  // 512 mb
-#define CONTAINER_SIZE     (4lu * (1 << 30))  // 4 gb
+#define CONTAINER_SIZE     (5lu * (1 << 30))  // 5 gb
 
-#define MAX_PARTITIONS 5
+#define MAX_PARTITIONS 6
 
 static char test_dir[PATH_MAX];
 static char sparse_path[PATH_MAX];
@@ -30,6 +30,7 @@ typedef enum {
 
 typedef enum {
     DATA,
+    DATA_UNSAFE,
     SYSTEM,
     BLOBSTORE,
     DEFAULT,
@@ -65,6 +66,8 @@ typedef struct {
         switch (guid_type) {
         case DATA:
             return kDataTypeName;
+        case DATA_UNSAFE:
+            return kDataUnsafeTypeName;
         case SYSTEM:
             return kSystemTypeName;
         case BLOBSTORE:
@@ -510,6 +513,8 @@ bool TestCompressorBufferTooSmall() {
 
 bool GeneratePartitionPath(fs_type_t fs_type, guid_type_t guid_type) {
     BEGIN_HELPER;
+    ASSERT_LT(partition_count, MAX_PARTITIONS);
+
     // Make sure we have not already created a partition with the same fs/guid type combo.
     for (unsigned i = 0; i < partition_count; i++) {
         partition_t* part = &partitions[i];
@@ -538,10 +543,12 @@ bool Setup() {
     // Generate partition paths
     partition_count = 0;
     ASSERT_TRUE(GeneratePartitionPath(MINFS, DATA));
+    ASSERT_TRUE(GeneratePartitionPath(MINFS, DATA_UNSAFE));
     ASSERT_TRUE(GeneratePartitionPath(MINFS, SYSTEM));
     ASSERT_TRUE(GeneratePartitionPath(MINFS, DEFAULT));
     ASSERT_TRUE(GeneratePartitionPath(BLOBFS, BLOBSTORE));
     ASSERT_TRUE(GeneratePartitionPath(BLOBFS, DEFAULT));
+    ASSERT_EQ(partition_count, MAX_PARTITIONS);
 
     // Generate container paths
     sprintf(sparse_path, "%ssparse.bin", test_dir);

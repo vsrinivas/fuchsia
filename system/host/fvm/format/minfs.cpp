@@ -10,10 +10,17 @@ MinfsFormat::MinfsFormat(fbl::unique_fd fd, const char* type)
     : Format() {
     if (!strcmp(type, kDataTypeName)) {
         memcpy(type_, kDataType, sizeof(kDataType));
+        flags_ |= fvm::kSparseFlagZxcrypt;
+
+    } else if (!strcmp(type, kDataUnsafeTypeName)) {
+        memcpy(type_, kDataType, sizeof(kDataType));
+
     } else if (!strcmp(type, kSystemTypeName)) {
         memcpy(type_, kSystemType, sizeof(kSystemType));
+
     } else if (!strcmp(type, kDefaultTypeName)) {
         memcpy(type_, kDefaultType, sizeof(kDefaultType));
+
     } else {
         fprintf(stderr, "Unrecognized type for minfs: %s\n", type);
         exit(-1);
@@ -186,8 +193,4 @@ uint32_t MinfsFormat::BlockSize() const {
 uint32_t MinfsFormat::BlocksPerSlice() const {
     CheckFvmReady();
     return fvm_info_.slice_size / BlockSize();
-}
-
-uint32_t MinfsFormat::FlagMask() const {
-    return fvm::kSparseFlagZxcrypt;
 }

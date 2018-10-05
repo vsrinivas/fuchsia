@@ -35,6 +35,7 @@ static constexpr char kBlobfsName[] = "blobfs";
 // Guid type names
 static constexpr char kDefaultTypeName[] = "default";
 static constexpr char kDataTypeName[] = "data";
+static constexpr char kDataUnsafeTypeName[] = "data-unsafe";
 static constexpr char kSystemTypeName[] = "system";
 static constexpr char kBlobTypeName[] = "blob";
 
@@ -88,7 +89,8 @@ public:
     virtual void Name(char* name) const = 0;
     virtual uint32_t BlockSize() const = 0;
     virtual uint32_t BlocksPerSlice() const = 0;
-    virtual uint32_t FlagMask() const = 0;
+
+    uint32_t Flags() const { return flags_; }
 
     uint32_t VpartIndex() const {
         CheckFvmReady();
@@ -100,6 +102,9 @@ protected:
     uint32_t vpart_index_;
     uint8_t guid_[FVM_GUID_LEN];
     uint8_t type_[GPT_GUID_LEN];
+    uint32_t flags_;
+
+    Format();
 
     void CheckFvmReady() const {
         if (!fvm_ready_) {
@@ -128,7 +133,6 @@ public:
     void Name(char* name) const final;
     uint32_t BlockSize() const final;
     uint32_t BlocksPerSlice() const final;
-    uint32_t FlagMask() const final;
     uint8_t datablk[minfs::kMinfsBlockSize];
 
 private:
@@ -160,7 +164,6 @@ public:
     void Name(char* name) const final;
     uint32_t BlockSize() const final;
     uint32_t BlocksPerSlice() const final;
-    uint32_t FlagMask() const final;
     uint8_t datablk[blobfs::kBlobfsBlockSize];
 
 private:

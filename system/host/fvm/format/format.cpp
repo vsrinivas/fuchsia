@@ -4,6 +4,8 @@
 
 #include "fvm/format.h"
 
+Format::Format() : fvm_ready_(false), vpart_index_(0),  flags_(0) {}
+
 zx_status_t Format::Detect(int fd, off_t offset, disk_format_t* out) {
     uint8_t data[HEADER_SIZE];
     if (lseek(fd, offset, SEEK_SET) < 0) {
