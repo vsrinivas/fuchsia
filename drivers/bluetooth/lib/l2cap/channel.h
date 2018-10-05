@@ -110,7 +110,7 @@ class Channel : public fbl::RefCounted<Channel> {
   // Sends the given SDU payload over this channel. This takes ownership of
   // |sdu|. Returns false if the SDU is rejected, for example because it exceeds
   // the channel's MTU or because the link has been closed.
-  virtual bool Send(std::unique_ptr<const common::ByteBuffer> sdu) = 0;
+  virtual bool Send(common::ByteBufferPtr sdu) = 0;
 
   // The type of the logical link this channel operates on.
   hci::Connection::LinkType link_type() const { return link_type_; }
@@ -152,7 +152,7 @@ class ChannelImpl : public Channel {
                 async_dispatcher_t* dispatcher) override;
   void Deactivate() override;
   void SignalLinkError() override;
-  bool Send(std::unique_ptr<const common::ByteBuffer> sdu) override;
+  bool Send(common::ByteBufferPtr sdu) override;
 
  private:
   friend class fbl::RefPtr<ChannelImpl>;

@@ -34,8 +34,7 @@ class FakeChannel : public Channel {
   void Receive(const common::ByteBuffer& data);
 
   // Sets a delegate to notify when a frame was sent over the channel.
-  using SendCallback =
-      fit::function<void(std::unique_ptr<const common::ByteBuffer>)>;
+  using SendCallback = fit::function<void(common::ByteBufferPtr)>;
   void SetSendCallback(SendCallback callback, async_dispatcher_t* dispatcher);
 
   // Sets a callback to emulate the result of "SignalLinkError()". In
@@ -68,7 +67,7 @@ class FakeChannel : public Channel {
                 async_dispatcher_t* dispatcher) override;
   void Deactivate() override;
   void SignalLinkError() override;
-  bool Send(std::unique_ptr<const common::ByteBuffer> sdu) override;
+  bool Send(common::ByteBufferPtr sdu) override;
 
  private:
   hci::ConnectionHandle handle_;

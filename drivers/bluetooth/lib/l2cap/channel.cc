@@ -129,7 +129,7 @@ void ChannelImpl::SignalLinkError() {
   async::PostTask(link_->dispatcher(), [link = link_] { link->SignalError(); });
 }
 
-bool ChannelImpl::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
+bool ChannelImpl::Send(common::ByteBufferPtr sdu) {
   ZX_DEBUG_ASSERT(sdu);
 
   if (sdu->size() > tx_mtu()) {

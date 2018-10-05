@@ -172,12 +172,12 @@ class SignalingChannel : public SignalingChannelInterface {
   //
   // TODO(armansito): This should be generalized for ACL-U to allow multiple
   // signaling commands in a single C-frame.
-  bool Send(std::unique_ptr<const common::ByteBuffer> packet);
+  bool Send(common::ByteBufferPtr packet);
 
   // Builds a signaling packet with the given parameters and payload. The
   // backing buffer is slab allocated.
-  std::unique_ptr<common::ByteBuffer> BuildPacket(
-      CommandCode code, uint8_t identifier, const common::ByteBuffer& data);
+  common::ByteBufferPtr BuildPacket(CommandCode code, uint8_t identifier,
+                                    const common::ByteBuffer& data);
 
   // Channel callbacks:
   void OnChannelClosed();

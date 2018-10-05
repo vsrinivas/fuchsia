@@ -78,7 +78,7 @@ bool SignalingChannel::SendPacket(CommandCode code, uint8_t identifier,
   return Send(BuildPacket(code, identifier, data));
 }
 
-bool SignalingChannel::Send(std::unique_ptr<const common::ByteBuffer> packet) {
+bool SignalingChannel::Send(common::ByteBufferPtr packet) {
   ZX_DEBUG_ASSERT(IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(packet);
   ZX_DEBUG_ASSERT(packet->size() >= sizeof(CommandHeader));
@@ -99,7 +99,7 @@ bool SignalingChannel::Send(std::unique_ptr<const common::ByteBuffer> packet) {
   return chan_->Send(std::move(packet));
 }
 
-std::unique_ptr<common::ByteBuffer> SignalingChannel::BuildPacket(
+common::ByteBufferPtr SignalingChannel::BuildPacket(
     CommandCode code, uint8_t identifier, const common::ByteBuffer& data) {
   ZX_DEBUG_ASSERT(data.size() <= std::numeric_limits<uint16_t>::max());
 

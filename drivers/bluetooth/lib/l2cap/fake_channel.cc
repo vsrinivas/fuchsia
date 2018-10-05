@@ -99,7 +99,7 @@ void FakeChannel::SignalLinkError() {
   }
 }
 
-bool FakeChannel::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
+bool FakeChannel::Send(common::ByteBufferPtr sdu) {
   ZX_DEBUG_ASSERT(sdu);
 
   if (!send_cb_)

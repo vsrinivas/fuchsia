@@ -292,7 +292,7 @@ class L2CAP_SocketChannelRelayDataPathTest
 
  private:
   internal::SocketChannelRelay relay_;
-  std::vector<std::unique_ptr<const common::ByteBuffer>> sent_to_channel_;
+  std::vector<common::ByteBufferPtr> sent_to_channel_;
 };
 
 // Fixture for tests which exercise the datapath from the controller.
