@@ -92,12 +92,21 @@ void sync_mtx_unlock(sync_mtx_t* mutex) __TA_NO_THREAD_SAFETY_ANALYSIS {
     // Attempt to release the mutex.  This atomic swap executes the full
     // memory barrier that unlocking a mutex is required to execute.
     int old_state = atomic_exchange(&mutex->futex, UNLOCKED);
+
+    // At this point, the mutex was unlocked.  In some usage patterns
+    // (e.g. for reference counting), another thread might now acquire the
+    // mutex and free the memory containing it.  This means we must not
+    // dereference |mutex| from this point onwards.
+
     switch (old_state) {
         case LOCKED_WITHOUT_WAITERS:
             // There were no waiters, so there is nothing more to do.
             break;
 
         case LOCKED_WITH_WAITERS: {
+            // Note that the mutex's memory could have been freed and
+            // reused by this point, so this could cause a spurious futex
+            // wakeup for a unrelated user of the memory location.
             zx_status_t status = _zx_futex_wake(&mutex->futex, 1);
             if (status != ZX_OK) {
                 __builtin_trap();
