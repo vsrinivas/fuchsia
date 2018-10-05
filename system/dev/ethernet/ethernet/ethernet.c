@@ -339,9 +339,10 @@ static void eth0_status(void* cookie, uint32_t status) {
     static_assert(ETHMAC_STATUS_ONLINE == ETH_STATUS_ONLINE, "");
     edev0->status = status;
 
+    static_assert(zircon_ethernet_SIGNAL_STATUS == ZX_USER_SIGNAL_0, "");
     ethdev_t* edev;
     list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
-        zx_object_signal_peer(edev->rx_fifo, 0, ETH_SIGNAL_STATUS);
+        zx_object_signal_peer(edev->rx_fifo, 0, zircon_ethernet_SIGNAL_STATUS);
     }
     mtx_unlock(&edev0->lock);
 }
@@ -762,7 +763,7 @@ static zx_status_t eth_get_status_locked(ethdev_t* edev, void* out_buf, size_t o
     if (edev->rx_fifo == ZX_HANDLE_INVALID) {
         return ZX_ERR_BAD_STATE;
     }
-    if (zx_object_signal_peer(edev->rx_fifo, ETH_SIGNAL_STATUS, 0) != ZX_OK) {
+    if (zx_object_signal_peer(edev->rx_fifo, zircon_ethernet_SIGNAL_STATUS, 0) != ZX_OK) {
         return ZX_ERR_INTERNAL;
     }
 
@@ -918,7 +919,7 @@ static zx_status_t fidl_SetClientName_locked(void* ctx, const char* buf, size_t 
 
 static zx_status_t fidl_GetStatus_locked(void* ctx, fidl_txn_t* txn) {
     ethdev_t* edev = ctx;
-    if (zx_object_signal_peer(edev->rx_fifo, ETH_SIGNAL_STATUS, 0) != ZX_OK) {
+    if (zx_object_signal_peer(edev->rx_fifo, zircon_ethernet_SIGNAL_STATUS, 0) != ZX_OK) {
         return ZX_ERR_INTERNAL;
     }
     return REPLY(GetStatus)(txn, edev->edev0->status);
