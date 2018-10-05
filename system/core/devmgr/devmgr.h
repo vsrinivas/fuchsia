@@ -6,11 +6,12 @@
 
 #include <sys/types.h>
 
+#include <fbl/function.h>
+#include <launchpad/launchpad.h>
+#include <lib/zx/channel.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <zircon/device/vfs.h>
-#include <launchpad/launchpad.h>
-#include <lib/zx/channel.h>
 
 namespace devmgr {
 
@@ -85,7 +86,9 @@ void devmgr_disable_appmgr_services();
 zx_handle_t devfs_root_clone();
 zx::channel fs_clone(const char* path);
 
-void block_device_watcher(zx_handle_t job, bool netboot);
+// Function which mounts a handle on behalf of the block watcher.
+using FsInstallerFn = fbl::Function<zx_status_t(const char* path, zx_handle_t h)>;
+void block_device_watcher(FsInstallerFn install_callback, zx_handle_t job, bool netboot);
 
 // getenv_bool looks in the environment for name. If not found, it returns
 // default. If found, it returns false if the found value matches "0", "off", or

@@ -28,6 +28,7 @@
 
 namespace devmgr {
 
+static FsInstallerFn g_installer;
 static zx_handle_t job;
 static bool netboot;
 
@@ -50,7 +51,7 @@ static void pkgfs_finish(zx::process proc, zx::channel pkgfs_root) {
         printf("fshost: pkgfs terminated prematurely\n");
         return;
     }
-    if (vfs_install_fs("/pkgfs", pkgfs_root.get()) != ZX_OK) {
+    if (g_installer("/pkgfs", pkgfs_root.get()) != ZX_OK) {
         printf("fshost: failed to install /pkgfs\n");
         return;
     }
@@ -63,7 +64,7 @@ static void pkgfs_finish(zx::process proc, zx::channel pkgfs_root) {
     if (fdio_open_at(pkgfs_root.release(), "system", FS_DIR_FLAGS, h1.release()) != ZX_OK) {
         return;
     }
-    if (vfs_install_fs("/system", h0.release()) != ZX_OK) {
+    if (g_installer("/system", h0.release()) != ZX_OK) {
         printf("fshost: failed to install /system\n");
         return;
     }
@@ -514,9 +515,10 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
     }
 }
 
-void block_device_watcher(zx_handle_t _job, bool _netboot) {
+void block_device_watcher(FsInstallerFn installer, zx_handle_t _job, bool _netboot) {
     job = _job;
     netboot = _netboot;
+    g_installer = fbl::move(installer);
 
     int dirfd;
     if ((dirfd = open("/dev/class/block", O_DIRECTORY | O_RDONLY)) >= 0) {
