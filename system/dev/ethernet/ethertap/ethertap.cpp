@@ -131,7 +131,7 @@ zx_status_t TapDevice::EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
         return ZX_ERR_ALREADY_BOUND;
     } else {
         ethmac_proxy_.swap(proxy);
-        ethmac_proxy_->Status(online_ ? ETH_STATUS_ONLINE : 0u);
+        ethmac_proxy_->Status(online_ ? ETHMAC_STATUS_ONLINE : 0u);
     }
     return ZX_OK;
 }
@@ -290,7 +290,7 @@ zx_status_t TapDevice::UpdateLinkStatus(zx_signals_t observed) {
     if (was_online != online_) {
         fbl::AutoLock lock(&lock_);
         if (ethmac_proxy_ != nullptr) {
-            ethmac_proxy_->Status(online_ ? ETH_STATUS_ONLINE : 0u);
+            ethmac_proxy_->Status(online_ ? ETHMAC_STATUS_ONLINE : 0u);
         }
         ethertap_trace("device '%s' is now %s\n", name(), online_ ? "online" : "offline");
     }

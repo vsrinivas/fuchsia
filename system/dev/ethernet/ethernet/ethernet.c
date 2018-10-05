@@ -335,6 +335,8 @@ static void eth0_status(void* cookie, uint32_t status) {
 
     ethdev0_t* edev0 = cookie;
     mtx_lock(&edev0->lock);
+
+    static_assert(ETHMAC_STATUS_ONLINE == ETH_STATUS_ONLINE, "");
     edev0->status = status;
 
     ethdev_t* edev;

@@ -444,7 +444,7 @@ static void ax88179_handle_interrupt(ax88179_t* eth, usb_request_t* request) {
                 }
                 zxlogf(TRACE, "ax88179 now online\n");
                 if (eth->ifc) {
-                    eth->ifc->status(eth->cookie, ETH_STATUS_ONLINE);
+                    eth->ifc->status(eth->cookie, ETHMAC_STATUS_ONLINE);
                 }
             } else if (!online && was_online) {
                 zxlogf(TRACE, "ax88179 now offline\n");
@@ -604,7 +604,7 @@ static zx_status_t ax88179_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     } else {
         eth->ifc = ifc;
         eth->cookie = cookie;
-        eth->ifc->status(eth->cookie, eth->online ? ETH_STATUS_ONLINE : 0);
+        eth->ifc->status(eth->cookie, eth->online ? ETHMAC_STATUS_ONLINE : 0);
     }
     mtx_unlock(&eth->mutex);
 

@@ -105,7 +105,7 @@ void DWMacDevice::UpdateLinkStatus() {
     if (temp != online_) {
         online_ = temp;
         if (ethmac_proxy_ != nullptr) {
-            ethmac_proxy_->Status(online_ ? ETH_STATUS_ONLINE : 0u);
+            ethmac_proxy_->Status(online_ ? ETHMAC_STATUS_ONLINE : 0u);
         } else {
             zxlogf(ERROR, "dwmac: System not ready\n");
         }

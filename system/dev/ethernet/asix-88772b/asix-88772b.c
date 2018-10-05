@@ -312,7 +312,7 @@ static void ax88772b_interrupt_complete(usb_request_t* request, void* cookie) {
             eth->online = online;
             if (online && !was_online) {
                 if (eth->ifc) {
-                    eth->ifc->status(eth->cookie, ETH_STATUS_ONLINE);
+                    eth->ifc->status(eth->cookie, ETHMAC_STATUS_ONLINE);
                 }
 
                 // Now that we are online, queue all our read requests
@@ -430,7 +430,7 @@ static zx_status_t ax88772b_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     } else {
         eth->ifc = ifc;
         eth->cookie = cookie;
-        eth->ifc->status(eth->cookie, eth->online ? ETH_STATUS_ONLINE : 0);
+        eth->ifc->status(eth->cookie, eth->online ? ETHMAC_STATUS_ONLINE : 0);
     }
     mtx_unlock(&eth->mutex);
 

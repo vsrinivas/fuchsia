@@ -34,6 +34,8 @@ __BEGIN_CDECLS;
 #define ETHMAC_FEATURE_SYNTH    (2u)
 #define ETHMAC_FEATURE_DMA      (4u)
 
+#define ETHMAC_STATUS_ONLINE    (1u)
+
 typedef struct ethmac_info {
     uint32_t features;
     uint32_t mtu;
@@ -61,6 +63,7 @@ typedef struct ethmac_netbuf {
 } ethmac_netbuf_t;
 
 typedef struct ethmac_ifc_virt {
+    // Value with bits set from the ETHMAC_STATUS_* flags
     void (*status)(void* cookie, uint32_t status);
 
     void (*recv)(void* cookie, void* data, size_t length, uint32_t flags);

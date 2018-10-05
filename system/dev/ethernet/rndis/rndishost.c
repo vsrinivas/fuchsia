@@ -231,8 +231,8 @@ static zx_status_t rndishost_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     } else {
         eth->ifc = ifc;
         eth->cookie = cookie;
-        // TODO: Check that the device is online before sending ETH_STATUS_ONLINE.
-        eth->ifc->status(eth->cookie, ETH_STATUS_ONLINE);
+        // TODO: Check that the device is online before sending ETHMAC_STATUS_ONLINE.
+        eth->ifc->status(eth->cookie, ETHMAC_STATUS_ONLINE);
     }
     mtx_unlock(&eth->mutex);
 

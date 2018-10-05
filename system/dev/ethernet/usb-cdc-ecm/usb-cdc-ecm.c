@@ -133,7 +133,7 @@ static void ecm_update_online_status(ecm_ctx_t* ctx, bool is_online) {
         zxlogf(INFO, "%s: connected to network\n", module_name);
         ctx->online = true;
         if (ctx->ethmac_ifc) {
-            ctx->ethmac_ifc->status(ctx->ethmac_cookie, ETH_STATUS_ONLINE);
+            ctx->ethmac_ifc->status(ctx->ethmac_cookie, ETHMAC_STATUS_ONLINE);
         } else {
             zxlogf(ERROR, "%s: not connected to ethermac interface\n", module_name);
         }
@@ -186,7 +186,7 @@ static zx_status_t ethmac_start(void* ctx_cookie, ethmac_ifc_t* ifc, void* ethma
     } else {
         ctx->ethmac_ifc = ifc;
         ctx->ethmac_cookie = ethmac_cookie;
-        ctx->ethmac_ifc->status(ethmac_cookie, ctx->online ? ETH_STATUS_ONLINE : 0);
+        ctx->ethmac_ifc->status(ethmac_cookie, ctx->online ? ETHMAC_STATUS_ONLINE : 0);
     }
     mtx_unlock(&ctx->ethmac_mutex);
 

@@ -358,7 +358,7 @@ void EthernetDevice::IrqConfigChange() {
 
     // Re-read our configuration
     CopyDeviceConfig(&config_, sizeof(config_));
-    ifc_->status(cookie_, (config_.status & VIRTIO_NET_S_LINK_UP) ? ETH_STATUS_ONLINE : 0);
+    ifc_->status(cookie_, (config_.status & VIRTIO_NET_S_LINK_UP) ? ETHMAC_STATUS_ONLINE : 0);
 }
 
 zx_status_t EthernetDevice::Query(uint32_t options, ethmac_info_t* info) {
@@ -392,7 +392,7 @@ zx_status_t EthernetDevice::Start(ethmac_ifc_t* ifc, void* cookie) {
     }
     ifc_ = ifc;
     cookie_ = cookie;
-    ifc_->status(cookie_, (config_.status & VIRTIO_NET_S_LINK_UP) ? ETH_STATUS_ONLINE : 0);
+    ifc_->status(cookie_, (config_.status & VIRTIO_NET_S_LINK_UP) ? ETHMAC_STATUS_ONLINE : 0);
     return ZX_OK;
 }
 

@@ -203,7 +203,7 @@ static zx_status_t cdc_ethmac_start(void* ctx_cookie, ethmac_ifc_t* ifc, void* e
     } else {
         cdc->ethmac_ifc = ifc;
         cdc->ethmac_cookie = ethmac_cookie;
-        cdc->ethmac_ifc->status(ethmac_cookie, cdc->online ? ETH_STATUS_ONLINE : 0);
+        cdc->ethmac_ifc->status(ethmac_cookie, cdc->online ? ETHMAC_STATUS_ONLINE : 0);
     }
     mtx_unlock(&cdc->ethmac_mutex);
 
@@ -485,7 +485,7 @@ static zx_status_t cdc_set_interface(void* ctx, unsigned interface, unsigned alt
     mtx_lock(&cdc->ethmac_mutex);
     cdc->online = online;
     if (cdc->ethmac_ifc) {
-        cdc->ethmac_ifc->status(cdc->ethmac_cookie, online ? ETH_STATUS_ONLINE : 0);
+        cdc->ethmac_ifc->status(cdc->ethmac_cookie, online ? ETHMAC_STATUS_ONLINE : 0);
     }
     mtx_unlock(&cdc->ethmac_mutex);
 

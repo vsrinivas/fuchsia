@@ -171,7 +171,7 @@ static int irq_thread(void* arg) {
                 zxlogf(INFO, "rtl8111: link %s\n", online ? "online" : "offline");
                 edev->online = online;
                 if (edev->ifc) {
-                    edev->ifc->status(edev->cookie, online ? ETH_STATUS_ONLINE : 0);
+                    edev->ifc->status(edev->cookie, online ? ETHMAC_STATUS_ONLINE : 0);
                 }
             }
         }
@@ -234,7 +234,7 @@ static zx_status_t rtl8111_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     } else {
         edev->ifc = ifc;
         edev->cookie = cookie;
-        edev->ifc->status(edev->cookie, edev->online ? ETH_STATUS_ONLINE : 0);
+        edev->ifc->status(edev->cookie, edev->online ? ETHMAC_STATUS_ONLINE : 0);
     }
     mtx_unlock(&edev->lock);
 
