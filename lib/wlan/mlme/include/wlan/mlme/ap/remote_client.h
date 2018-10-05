@@ -68,7 +68,7 @@ class RemoteClient : public RemoteClientInterface {
     const common::MacAddr& addr() { return addr_; }
 
    private:
-    zx_status_t WriteHtCapabilities(ElementWriter* w);
+    zx_status_t WriteHtCapabilities(ElementWriter* w, const HtConfig& ht);
     zx_status_t WriteHtOperation(ElementWriter* w);
 
     Listener* const listener_;

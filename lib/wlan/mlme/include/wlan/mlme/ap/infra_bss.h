@@ -62,11 +62,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
     void OnBcnTxComplete() override;
 
     bool IsRsn() const override;
-    bool IsHTReady() const override;
-    bool IsCbw40RxReady() const override;
-    bool IsCbw40TxReady() const override;
-    HtCapabilities BuildHtCapabilities() const override;
-    HtOperation BuildHtOperation(const wlan_channel_t& chan) const override;
+    HtConfig Ht() const override;
 
     wlan_channel_t Chan() const override { return chan_; }
 

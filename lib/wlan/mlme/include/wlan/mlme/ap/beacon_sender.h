@@ -33,23 +33,11 @@ class BeaconSender {
 
     zx_status_t BuildBeacon(const PsCfg& ps_cfg, MgmtFrame<Beacon>* frame, size_t* tim_ele_offset);
 
-    zx_status_t WriteSsid(ElementWriter* w);
-    zx_status_t WriteSupportedRates(ElementWriter* w);
-    zx_status_t WriteDsssParamSet(ElementWriter* w);
-    zx_status_t WriteTim(ElementWriter* w, const PsCfg& ps_cfg);
-    zx_status_t WriteCountry(ElementWriter* w);
-    zx_status_t WriteExtendedSupportedRates(ElementWriter* w);
-    zx_status_t WriteHtCapabilities(ElementWriter* w);
-    zx_status_t WriteHtOperation(ElementWriter* w);
-    zx_status_t WriteRsne(ElementWriter* w);
     bool IsStarted();
 
     DeviceInterface* const device_;
     ::fuchsia::wlan::mlme::StartRequest req_;
     BssInterface* bss_ = nullptr;
-    // Buffer to write the Partial Virtual Bitmap to which was derived from a
-    // Traffic Indication Map.
-    uint8_t pvb_[TimElement::kMaxLenBmp];
 };
 
 }  // namespace wlan

@@ -791,8 +791,9 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
 
     // TODO(NET-567): Write negotiated SupportedRates, ExtendedSupportedRates IEs
 
-    if (bss_->IsHTReady()) {
-        auto status = WriteHtCapabilities(&w);
+    auto ht = bss_->Ht();
+    if (ht.ready) {
+        auto status = WriteHtCapabilities(&w, ht);
         if (status != ZX_OK) { return status; }
 
         status = WriteHtOperation(&w);
@@ -855,8 +856,8 @@ void RemoteClient::ReportDisassociation(aid_t aid) {
     if (listener_ != nullptr) { listener_->HandleClientDisassociation(aid); }
 }
 
-zx_status_t RemoteClient::WriteHtCapabilities(ElementWriter* w) {
-    HtCapabilities htc = bss_->BuildHtCapabilities();
+zx_status_t RemoteClient::WriteHtCapabilities(ElementWriter* w, const HtConfig& c) {
+    HtCapabilities htc = BuildHtCapabilities(c);
     if (!w->write<HtCapabilities>(htc.ht_cap_info, htc.ampdu_params, htc.mcs_set, htc.ht_ext_cap,
                                   htc.txbf_cap, htc.asel_cap)) {
         errorf("[client] [%s] could not write HtCapabilities\n", addr_.ToString().c_str());
@@ -868,7 +869,7 @@ zx_status_t RemoteClient::WriteHtCapabilities(ElementWriter* w) {
 
 zx_status_t RemoteClient::WriteHtOperation(ElementWriter* w) {
     auto chan = bss_->Chan();
-    HtOperation hto = bss_->BuildHtOperation(chan);
+    HtOperation hto = BuildHtOperation(chan);
     if (!w->write<HtOperation>(hto.primary_chan, hto.head, hto.tail, hto.basic_mcs_set)) {
         errorf("[client] [%s] could not write HtOperation\n", addr_.ToString().c_str());
         return ZX_ERR_IO;
@@ -883,7 +884,7 @@ uint8_t RemoteClient::GetTid() {
 
 zx_status_t RemoteClient::SendAddBaRequest() {
     debugfn();
-    if (!bss_->IsHTReady()) { return ZX_OK; }
+    if (!bss_->Ht().ready) { return ZX_OK; }
 
     debugbss("[client] [%s] sending AddBaRequest\n", addr_.ToString().c_str());
 
