@@ -18,7 +18,6 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/vfs.h>
-#include <lib/fidl-utils/bind.h>
 #include <lib/zx/handle.h>
 #include <zircon/assert.h>
 
@@ -123,75 +122,134 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel,
     VnodeServe(vfs, fbl::move(vnode), fbl::move(channel), open_flags);
 }
 
+// This template defines a mechanism to transform a member of Connection
+// into a FIDL-dispatch operation compatible format, independent of
+// FIDL arguments.
+//
+// For example:
+//
+//      ZXFIDL_OPERATION(Foo)
+//
+// Defines the following method:
+//
+//      zx_status_t FooOp(void* ctx, Args... args);
+//
+// That invokes:
+//
+//      zx_status_t Connection::Foo(Args... args);
+//
+// Such that FooOp may be used in the fuchsia_io_* ops table.
+#define ZXFIDL_OPERATION(Method)                                          \
+template <typename... Args>                                               \
+zx_status_t Method ## Op(void* ctx, Args... args) {                       \
+    TRACE_DURATION("vfs", #Method);                                       \
+    auto connection = reinterpret_cast<Connection*>(ctx);                 \
+    return (connection->Connection::Method)(fbl::forward<Args>(args)...); \
+}
+
+ZXFIDL_OPERATION(NodeClone)
+ZXFIDL_OPERATION(NodeClose)
+ZXFIDL_OPERATION(NodeDescribe)
+ZXFIDL_OPERATION(NodeSync)
+ZXFIDL_OPERATION(NodeGetAttr)
+ZXFIDL_OPERATION(NodeSetAttr)
+ZXFIDL_OPERATION(NodeIoctl)
+
 const fuchsia_io_Node_ops kNodeOps = {
-    .Clone = fidl::BindMember<&Connection::NodeClone>,
-    .Close = fidl::BindMember<&Connection::NodeClose>,
-    .Describe = fidl::BindMember<&Connection::NodeDescribe>,
-    .Sync = fidl::BindMember<&Connection::NodeSync>,
-    .GetAttr = fidl::BindMember<&Connection::NodeGetAttr>,
-    .SetAttr = fidl::BindMember<&Connection::NodeSetAttr>,
-    .Ioctl = fidl::BindMember<&Connection::NodeIoctl>,
+    .Clone = NodeCloneOp,
+    .Close = NodeCloseOp,
+    .Describe = NodeDescribeOp,
+    .Sync = NodeSyncOp,
+    .GetAttr = NodeGetAttrOp,
+    .SetAttr = NodeSetAttrOp,
+    .Ioctl = NodeIoctlOp,
 };
+
+ZXFIDL_OPERATION(FileRead)
+ZXFIDL_OPERATION(FileReadAt)
+ZXFIDL_OPERATION(FileWrite)
+ZXFIDL_OPERATION(FileWriteAt)
+ZXFIDL_OPERATION(FileSeek)
+ZXFIDL_OPERATION(FileTruncate)
+ZXFIDL_OPERATION(FileGetFlags)
+ZXFIDL_OPERATION(FileSetFlags)
+ZXFIDL_OPERATION(FileGetVmo)
 
 const fuchsia_io_File_ops kFileOps = {
-    .Clone = fidl::BindMember<&Connection::NodeClone>,
-    .Close = fidl::BindMember<&Connection::NodeClose>,
-    .Describe = fidl::BindMember<&Connection::NodeDescribe>,
-    .Sync = fidl::BindMember<&Connection::NodeSync>,
-    .GetAttr = fidl::BindMember<&Connection::NodeGetAttr>,
-    .SetAttr = fidl::BindMember<&Connection::NodeSetAttr>,
-    .Ioctl = fidl::BindMember<&Connection::NodeIoctl>,
-    .Read = fidl::BindMember<&Connection::FileRead>,
-    .ReadAt = fidl::BindMember<&Connection::FileReadAt>,
-    .Write = fidl::BindMember<&Connection::FileWrite>,
-    .WriteAt = fidl::BindMember<&Connection::FileWriteAt>,
-    .Seek = fidl::BindMember<&Connection::FileSeek>,
-    .Truncate = fidl::BindMember<&Connection::FileTruncate>,
-    .GetFlags = fidl::BindMember<&Connection::FileGetFlags>,
-    .SetFlags = fidl::BindMember<&Connection::FileSetFlags>,
-    .GetVmo = fidl::BindMember<&Connection::FileGetVmo>,
+    .Clone = NodeCloneOp,
+    .Close = NodeCloseOp,
+    .Describe = NodeDescribeOp,
+    .Sync = NodeSyncOp,
+    .GetAttr = NodeGetAttrOp,
+    .SetAttr = NodeSetAttrOp,
+    .Ioctl = NodeIoctlOp,
+    .Read = FileReadOp,
+    .ReadAt = FileReadAtOp,
+    .Write = FileWriteOp,
+    .WriteAt = FileWriteAtOp,
+    .Seek = FileSeekOp,
+    .Truncate = FileTruncateOp,
+    .GetFlags = FileGetFlagsOp,
+    .SetFlags = FileSetFlagsOp,
+    .GetVmo = FileGetVmoOp,
 };
+
+ZXFIDL_OPERATION(DirectoryOpen)
+ZXFIDL_OPERATION(DirectoryUnlink)
+ZXFIDL_OPERATION(DirectoryReadDirents)
+ZXFIDL_OPERATION(DirectoryRewind)
+ZXFIDL_OPERATION(DirectoryGetToken)
+ZXFIDL_OPERATION(DirectoryRename)
+ZXFIDL_OPERATION(DirectoryLink)
+ZXFIDL_OPERATION(DirectoryWatch)
 
 const fuchsia_io_Directory_ops kDirectoryOps {
-    .Clone = fidl::BindMember<&Connection::NodeClone>,
-    .Close = fidl::BindMember<&Connection::NodeClose>,
-    .Describe = fidl::BindMember<&Connection::NodeDescribe>,
-    .Sync = fidl::BindMember<&Connection::NodeSync>,
-    .GetAttr = fidl::BindMember<&Connection::NodeGetAttr>,
-    .SetAttr = fidl::BindMember<&Connection::NodeSetAttr>,
-    .Ioctl = fidl::BindMember<&Connection::NodeIoctl>,
-    .Open = fidl::BindMember<&Connection::DirectoryOpen>,
-    .Unlink = fidl::BindMember<&Connection::DirectoryUnlink>,
-    .ReadDirents = fidl::BindMember<&Connection::DirectoryReadDirents>,
-    .Rewind = fidl::BindMember<&Connection::DirectoryRewind>,
-    .GetToken = fidl::BindMember<&Connection::DirectoryGetToken>,
-    .Rename = fidl::BindMember<&Connection::DirectoryRename>,
-    .Link = fidl::BindMember<&Connection::DirectoryLink>,
-    .Watch = fidl::BindMember<&Connection::DirectoryWatch>,
+    .Clone = NodeCloneOp,
+    .Close = NodeCloseOp,
+    .Describe = NodeDescribeOp,
+    .Sync = NodeSyncOp,
+    .GetAttr = NodeGetAttrOp,
+    .SetAttr = NodeSetAttrOp,
+    .Ioctl = NodeIoctlOp,
+    .Open = DirectoryOpenOp,
+    .Unlink = DirectoryUnlinkOp,
+    .ReadDirents = DirectoryReadDirentsOp,
+    .Rewind = DirectoryRewindOp,
+    .GetToken = DirectoryGetTokenOp,
+    .Rename = DirectoryRenameOp,
+    .Link = DirectoryLinkOp,
+    .Watch = DirectoryWatchOp,
 };
 
+ZXFIDL_OPERATION(DirectoryAdminMount)
+ZXFIDL_OPERATION(DirectoryAdminMountAndCreate)
+ZXFIDL_OPERATION(DirectoryAdminUnmount)
+ZXFIDL_OPERATION(DirectoryAdminUnmountNode)
+ZXFIDL_OPERATION(DirectoryAdminQueryFilesystem)
+ZXFIDL_OPERATION(DirectoryAdminGetDevicePath)
+
 const fuchsia_io_DirectoryAdmin_ops kDirectoryAdminOps {
-    .Clone = fidl::BindMember<&Connection::NodeClone>,
-    .Close = fidl::BindMember<&Connection::NodeClose>,
-    .Describe = fidl::BindMember<&Connection::NodeDescribe>,
-    .Sync = fidl::BindMember<&Connection::NodeSync>,
-    .GetAttr = fidl::BindMember<&Connection::NodeGetAttr>,
-    .SetAttr = fidl::BindMember<&Connection::NodeSetAttr>,
-    .Ioctl = fidl::BindMember<&Connection::NodeIoctl>,
-    .Open = fidl::BindMember<&Connection::DirectoryOpen>,
-    .Unlink = fidl::BindMember<&Connection::DirectoryUnlink>,
-    .ReadDirents = fidl::BindMember<&Connection::DirectoryReadDirents>,
-    .Rewind = fidl::BindMember<&Connection::DirectoryRewind>,
-    .GetToken = fidl::BindMember<&Connection::DirectoryGetToken>,
-    .Rename = fidl::BindMember<&Connection::DirectoryRename>,
-    .Link = fidl::BindMember<&Connection::DirectoryLink>,
-    .Watch = fidl::BindMember<&Connection::DirectoryWatch>,
-    .Mount = fidl::BindMember<&Connection::DirectoryAdminMount>,
-    .MountAndCreate = fidl::BindMember<&Connection::DirectoryAdminMountAndCreate>,
-    .Unmount = fidl::BindMember<&Connection::DirectoryAdminUnmount>,
-    .UnmountNode = fidl::BindMember<&Connection::DirectoryAdminUnmountNode>,
-    .QueryFilesystem = fidl::BindMember<&Connection::DirectoryAdminQueryFilesystem>,
-    .GetDevicePath = fidl::BindMember<&Connection::DirectoryAdminGetDevicePath>,
+    .Clone = NodeCloneOp,
+    .Close = NodeCloseOp,
+    .Describe = NodeDescribeOp,
+    .Sync = NodeSyncOp,
+    .GetAttr = NodeGetAttrOp,
+    .SetAttr = NodeSetAttrOp,
+    .Ioctl = NodeIoctlOp,
+    .Open = DirectoryOpenOp,
+    .Unlink = DirectoryUnlinkOp,
+    .ReadDirents = DirectoryReadDirentsOp,
+    .Rewind = DirectoryRewindOp,
+    .GetToken = DirectoryGetTokenOp,
+    .Rename = DirectoryRenameOp,
+    .Link = DirectoryLinkOp,
+    .Watch = DirectoryWatchOp,
+    .Mount = DirectoryAdminMountOp,
+    .MountAndCreate = DirectoryAdminMountAndCreateOp,
+    .Unmount = DirectoryAdminUnmountOp,
+    .UnmountNode = DirectoryAdminUnmountNodeOp,
+    .QueryFilesystem = DirectoryAdminQueryFilesystemOp,
+    .GetDevicePath = DirectoryAdminGetDevicePathOp,
 };
 
 } // namespace
