@@ -3,7 +3,12 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services", "shell" ],
-        "pkgfs": [ "packages" ]
+        "features": [ "shell" ],
+        "pkgfs": [ "packages" ],
+        "services": [
+            "fuchsia.amber.Control",
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ]
     }
 }

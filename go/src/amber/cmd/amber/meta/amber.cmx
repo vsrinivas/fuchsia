@@ -3,6 +3,12 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services", "shell", "persistent-storage" ]
+        "features": [ "shell", "persistent-storage", "system-temp" ],
+        "services": [
+            "fuchsia.amber.Control",
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.LegacySocketProvider",
+            "fuchsia.sys.Launcher"
+        ]
     }
 }
