@@ -19,7 +19,6 @@
 #include <ddk/debug.h>
 
 #include <chromiumos-platform-ec/ec_commands.h>
-#include <zircon/device/input.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 #include <hid/descriptor.h>

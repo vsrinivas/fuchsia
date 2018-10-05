@@ -16,7 +16,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 
-#include <zircon/device/input.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 

@@ -15,7 +15,6 @@
 #include <hid/descriptor.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <zircon/device/input.h>
 #include <zircon/syscalls.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>

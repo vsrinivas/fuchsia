@@ -7,8 +7,8 @@
 
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/hidbus.h>
+#include <hid/boot.h>
 #include <virtio/input.h>
-#include <zircon/device/input.h>
 
 #include "device.h"
 #include "ring.h"
@@ -68,7 +68,7 @@ private:
     hidbus_ifc_t* hidbus_ifc_;
     void* hidbus_cookie_;
 
-    boot_kbd_report_t report_;
+    hid_boot_kbd_report_t report_;
 
     Ring vring_ = {this};
 };

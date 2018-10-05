@@ -27,13 +27,14 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
+    system/ulib/fbl \
+    system/ulib/hid \
+    system/ulib/hwreg \
     system/ulib/pretty \
+    system/ulib/sync \
+    system/ulib/virtio \
     system/ulib/zx \
     system/ulib/zxcpp \
-    system/ulib/fbl \
-    system/ulib/virtio \
-    system/ulib/sync \
-    system/ulib/hwreg \
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 

@@ -13,7 +13,6 @@
 #include <fbl/auto_lock.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
-#include <zircon/device/input.h>
 #include <zircon/status.h>
 
 #include "trace.h"

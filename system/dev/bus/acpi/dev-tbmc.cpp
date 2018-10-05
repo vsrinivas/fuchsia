@@ -10,7 +10,6 @@
 
 #include <zircon/types.h>
 #include <zircon/syscalls.h>
-#include <zircon/device/input.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>

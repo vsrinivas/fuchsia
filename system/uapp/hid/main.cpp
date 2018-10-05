@@ -18,7 +18,6 @@
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
 #include <zircon/assert.h>
-#include <zircon/device/input.h>
 #include <zircon/input/c/fidl.h>
 #include <zircon/listnode.h>
 #include <zircon/threads.h>
@@ -420,8 +419,9 @@ int get_report(int argc, const char** argv) {
         return 0;
     }
 
-    input_get_report_size_t size_arg;
-    zx_status_t res = parse_set_get_report_args(argc, argv, &size_arg.id, &size_arg.type);
+    uint8_t id;
+    zircon_input_ReportType type;
+    zx_status_t res = parse_set_get_report_args(argc, argv, &id, &type);
     if (res != ZX_OK) {
         printf("Failed to parse type/id for get report operation (res %d)\n", res);
         usage();
@@ -435,15 +435,15 @@ int get_report(int argc, const char** argv) {
     }
     fzl::FdioCaller caller(fbl::move(fbl::unique_fd(fd)));
 
-    xprintf("hid: getting report size for id=0x%02x type=%u\n", size_arg.id, size_arg.type);
+    xprintf("hid: getting report size for id=0x%02x type=%u\n", id, type);
 
     uint16_t size;
     zx_status_t call_status;
-    res = zircon_input_DeviceGetReportSize(caller.borrow_channel(), size_arg.type, size_arg.id,
+    res = zircon_input_DeviceGetReportSize(caller.borrow_channel(), type, id,
                                            &call_status, &size);
     if (res != ZX_OK || call_status != ZX_OK) {
         printf("hid: could not get report (id 0x%02x type %u) size from %s (status=%d, %d)\n",
-                size_arg.id, size_arg.type, argv[0], res, call_status);
+                id, type, argv[0], res, call_status);
         return static_cast<int>(-1);
     }
     xprintf("hid: report size=%u\n", size);
@@ -471,7 +471,7 @@ int get_report(int argc, const char** argv) {
     size_t bufsz = 4u << 10;
     size_t actual;
     fbl::unique_ptr<uint8_t[]> buf(new uint8_t[bufsz]);
-    res = zircon_input_DeviceGetReport(caller.borrow_channel(), size_arg.type, size_arg.id,
+    res = zircon_input_DeviceGetReport(caller.borrow_channel(), type, id,
                                        &call_status, buf.get(), bufsz, &actual);
     if (res != ZX_OK || call_status != ZX_OK) {
         printf("hid: could not get report: %d, %d\n", res, call_status);
