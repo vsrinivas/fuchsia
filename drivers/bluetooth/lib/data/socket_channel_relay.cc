@@ -273,15 +273,9 @@ void SocketChannelRelay::ServiceSocketWriteQueue() {
           ZX_DEBUG_ASSERT_MSG(n_bytes_written == pdu.size(),
                               "(n_bytes_written=%zu, pdu.size()=%zu)",
                               n_bytes_written, pdu.size());
+          socket_write_queue_.pop_front();
         });
     ZX_DEBUG_ASSERT(read_success);
-    if (write_res == ZX_OK) {
-      // Subtle: We can't do this inside the lambda, because ReadNext requires
-      // the callback to maintain the validity of the PDU.
-      // TODO(NET-1483): Improve the interface with PDU::Reader, and update this
-      // code.
-      socket_write_queue_.pop_front();
-    }
   } while (write_res == ZX_OK && !socket_write_queue_.empty());
 
   if (!socket_write_queue_.empty() && write_res == ZX_ERR_SHOULD_WAIT) {

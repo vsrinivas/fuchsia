@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "pdu.h"
+#include "fragmenter.h"
 #include "recombiner.h"
 
 #include "gtest/gtest.h"
@@ -15,9 +16,14 @@ namespace btlib {
 namespace l2cap {
 namespace {
 
+using common::CreateStaticByteBuffer;
+
+constexpr hci::ConnectionHandle kConnectionHandle = 0x0001;
+constexpr ChannelId kChannelId = 0x0001;
+
 template <typename... T>
 hci::ACLDataPacketPtr PacketFromBytes(T... data) {
-  auto bytes = common::CreateStaticByteBuffer(std::forward<T>(data)...);
+  auto bytes = CreateStaticByteBuffer(std::forward<T>(data)...);
   ZX_DEBUG_ASSERT(bytes.size() >= sizeof(hci::ACLDataHeader));
 
   auto packet =
@@ -26,6 +32,14 @@ hci::ACLDataPacketPtr PacketFromBytes(T... data) {
   packet->InitializeFromBuffer();
 
   return packet;
+}
+
+std::unique_ptr<PDU> PduFromByteBuffer(const common::ByteBuffer& buf,
+                                       size_t first_fragment_payload_size) {
+  return std::make_unique<PDU>(
+      Fragmenter(kConnectionHandle,
+                 sizeof(BasicHeader) + first_fragment_payload_size)
+          .BuildBasicFrame(kChannelId, buf));
 }
 
 TEST(L2CAP_PduTest, Move) {
@@ -364,6 +378,60 @@ TEST(L2CAP_PduTest, Reader) {
   // Read all of the last fragment (no-copy).
   EXPECT_TRUE(reader.ReadNext(
       4, [](const auto& data) { EXPECT_EQ("kets", data.AsString()); }));
+}
+
+TEST(L2CAP_PduTest,
+     DestroyingPduInReaderCallbackWithUnfragmentedPduDoesNotCrash) {
+  auto payload = CreateStaticByteBuffer('T', 'e', 's', 't');
+  std::unique_ptr<PDU> pdu = PduFromByteBuffer(payload, payload.size());
+  ASSERT_TRUE(pdu->is_valid());
+  ASSERT_EQ(1u, pdu->fragment_count());
+
+  size_t call_count = 0;
+  PDU::Reader(pdu.get()).ReadNext(payload.size(), [&](const auto& buf) {
+    ++call_count;
+    EXPECT_EQ(payload.size(), buf.size());
+    pdu.reset();
+  });
+  EXPECT_EQ(1u, call_count);
+}
+
+TEST(L2CAP_PduTest,
+     DestroyingPduInReaderCallbackWithFullReadOfFragmentedPduDoesNotCrash) {
+  const auto kFirstFragmentPayloadSize = 1u;
+  auto payload = common::CreateStaticByteBuffer('a', 'b');
+  std::unique_ptr<PDU> pdu =
+      PduFromByteBuffer(payload, kFirstFragmentPayloadSize);
+  ASSERT_TRUE(pdu->is_valid());
+  ASSERT_EQ(2u, pdu->fragment_count());
+
+  size_t call_count = 0;
+  PDU::Reader(pdu.get()).ReadNext(payload.size(), [&](const auto& buf) {
+    ++call_count;
+    EXPECT_EQ(payload.size(), buf.size());
+    pdu.reset();
+  });
+  EXPECT_EQ(1u, call_count);
+}
+
+TEST(L2CAP_PduTest,
+     DestroyingPduInReaderCallbackWithPartialReadOfFragmentedPduDoesNotCrash) {
+  const auto kFirstFragmentPayloadSize = 1u;
+  auto payload = CreateStaticByteBuffer('a', 'b', 'c');
+  std::unique_ptr<PDU> pdu =
+      PduFromByteBuffer(payload, kFirstFragmentPayloadSize);
+  ASSERT_TRUE(pdu->is_valid());
+  ASSERT_EQ(2u, pdu->fragment_count());  // Second fragment contains 'b', 'c'.
+
+  // Read across fragments, but without consuming the whole PDU.
+  size_t call_count = 0;
+  PDU::Reader(pdu.get()).ReadNext(kFirstFragmentPayloadSize + 1,
+                                  [&](const auto& buf) {
+                                    ++call_count;
+                                    EXPECT_EQ(payload.size() - 1, buf.size());
+                                    pdu.reset();
+                                  });
+  EXPECT_EQ(1u, call_count);
 }
 
 }  // namespace

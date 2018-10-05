@@ -35,7 +35,8 @@ bool PDU::Reader::ReadNext(size_t size, const ReadFunc& func) {
   // crossed.
   size_t frag_size = cur_fragment_->view().payload_size();
   if (frag_offset_ + size <= frag_size) {
-    func(cur_fragment_->view().payload_data().view(frag_offset_, size));
+    auto data_view =
+        cur_fragment_->view().payload_data().view(frag_offset_, size);
 
     offset_ += size;
     frag_offset_ += size;
@@ -43,6 +44,8 @@ bool PDU::Reader::ReadNext(size_t size, const ReadFunc& func) {
       frag_offset_ = 0u;
       ++cur_fragment_;
     }
+
+    func(data_view);
     return true;
   }
 
@@ -97,8 +100,7 @@ PDU& PDU::operator=(PDU&& other) {
   return *this;
 }
 
-size_t PDU::Copy(common::MutableByteBuffer* out_buffer,
-                 size_t pos,
+size_t PDU::Copy(common::MutableByteBuffer* out_buffer, size_t pos,
                  size_t size) const {
   ZX_DEBUG_ASSERT(out_buffer);
   ZX_DEBUG_ASSERT(pos < length());
