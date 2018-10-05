@@ -22,11 +22,16 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     system/ulib/inet6 \
-    system/ulib/tftp \
-    system/ulib/sync \
     system/ulib/libzbi \
+    system/ulib/sync \
+    system/ulib/tftp \
     system/ulib/zx \
 
-MODULE_LIBS := system/ulib/fdio system/ulib/zircon system/ulib/c
+MODULE_LIBS := \
+    system/ulib/c \
+    system/ulib/fdio \
+    system/ulib/zircon \
+
+MODULE_FIDL_LIBS := system/fidl/zircon-ethernet
 
 include make/module.mk

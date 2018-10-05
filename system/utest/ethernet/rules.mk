@@ -26,4 +26,6 @@ MODULE_LIBS := \
     system/ulib/unittest \
     system/ulib/c \
 
+MODULE_FIDL_LIBS := system/fidl/zircon-ethernet
+
 include make/module.mk

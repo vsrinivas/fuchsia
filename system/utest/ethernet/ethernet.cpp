@@ -4,19 +4,23 @@
 
 #include <ddk/protocol/ethernet.h>
 #include <fbl/auto_call.h>
+#include <fbl/algorithm.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
 #include <unittest/unittest.h>
 #include <zircon/compiler.h>
 #include <zircon/device/device.h>
-#include <zircon/device/ethernet.h>
 #include <zircon/device/ethertap.h>
+#include <zircon/ethernet/c/fidl.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
+#include <lib/fzl/fdio.h>
 #include <lib/fzl/fifo.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
@@ -61,12 +65,11 @@ zx_status_t CreateEthertapWithOption(uint32_t mtu, const char* name, zx::socket*
         return ZX_ERR_INVALID_ARGS;
     }
 
-    int ctlfd = open(kTapctl, O_RDONLY);
-    if (ctlfd < 0) {
+    fbl::unique_fd ctlfd(open(kTapctl, O_RDONLY));
+    if (!ctlfd.is_valid()) {
         fprintf(stderr, "could not open %s: %s\n", kTapctl, strerror(errno));
         return ZX_ERR_IO;
     }
-    auto closer = fbl::MakeAutoCall([ctlfd]() { close(ctlfd); });
 
     ethertap_ioctl_config_t config = {};
     strlcpy(config.name, name, ETHERTAP_MAX_NAME_LEN);
@@ -75,7 +78,7 @@ zx_status_t CreateEthertapWithOption(uint32_t mtu, const char* name, zx::socket*
     //config.options |= ETHERTAP_OPT_TRACE;
     config.mtu = mtu;
     memcpy(config.mac, kTapMac, 6);
-    ssize_t rc = ioctl_ethertap_config(ctlfd, &config, sock->reset_and_get_address());
+    ssize_t rc = ioctl_ethertap_config(ctlfd.get(), &config, sock->reset_and_get_address());
     if (rc < 0) {
         zx_status_t status = static_cast<zx_status_t>(rc);
         fprintf(stderr, "could not configure ethertap device: %s\n", mxstrerror(status));
@@ -92,23 +95,29 @@ zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) return ZX_OK;
     if (!strcmp(fn, ".") || !strcmp(fn, "..")) return ZX_OK;
 
-    int devfd = openat(dirfd, fn, O_RDONLY);
-    if (devfd < 0) {
-        return ZX_OK;
+    zx::channel svc;
+    {
+        int devfd = openat(dirfd, fn, O_RDONLY);
+        if (devfd < 0) {
+            return ZX_OK;
+        }
+
+        zx_status_t status = fdio_get_service_handle(devfd, svc.reset_and_get_address());
+        if (status != ZX_OK) {
+            return status;
+        }
     }
-    auto closer = fbl::MakeAutoCall([devfd]() { close(devfd); });
 
     // See if this device is our ethertap device
-    eth_info_t info;
-    ssize_t rc = ioctl_ethernet_get_info(devfd, &info);
-    if (rc < 0) {
-        zx_status_t status = static_cast<zx_status_t>(rc);
+    zircon_ethernet_Info info;
+    zx_status_t status = zircon_ethernet_DeviceGetInfo(svc.get(), &info);
+    if (status != ZX_OK) {
         fprintf(stderr, "could not get ethernet info for %s/%s: %s\n", kEthernetDir, fn,
                 mxstrerror(status));
         // Return ZX_OK to keep watching for devices.
         return ZX_OK;
     }
-    if (!(info.features & ETH_FEATURE_SYNTH)) {
+    if (!(info.features & zircon_ethernet_INFO_FEATURE_SYNTH)) {
         // Not a match, keep looking.
         return ZX_OK;
     }
@@ -117,14 +126,13 @@ zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
     // TODO(tkilbourn): this might not be the test device we created; need a robust way of getting
     // the name of the tap device to check. Note that ioctl_device_get_device_name just returns
     // "ethernet" since that's the child of the tap device that we've opened here.
-    auto fd = reinterpret_cast<int*>(cookie);
-    *fd = devfd;
-    closer.cancel();
+    auto svcp = reinterpret_cast<zx_handle_t*>(cookie);
+    *svcp = svc.release();
     return ZX_ERR_STOP;
 }
 
-zx_status_t OpenEthertapDev(int* fd) {
-    if (fd == nullptr) {
+zx_status_t OpenEthertapDev(zx::channel* svc) {
+    if (svc == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -134,8 +142,9 @@ zx_status_t OpenEthertapDev(int* fd) {
         return ZX_ERR_IO;
     }
 
-    zx_status_t status = fdio_watch_directory(ethdir, WatchCb, zx_deadline_after(ZX_SEC(2)),
-                                              reinterpret_cast<void*>(fd));
+    zx_status_t status;
+    status = fdio_watch_directory(ethdir, WatchCb, zx_deadline_after(ZX_SEC(2)),
+                                  reinterpret_cast<void*>(svc->reset_and_get_address()));
     if (status == ZX_ERR_STOP) {
         return ZX_OK;
     } else {
@@ -144,7 +153,7 @@ zx_status_t OpenEthertapDev(int* fd) {
 }
 
 struct FifoEntry : public fbl::SinglyLinkedListable<fbl::unique_ptr<FifoEntry>> {
-    eth_fifo_entry_t e;
+    zircon_ethernet_FifoEntry e;
 };
 
 struct EthernetOpenInfo {
@@ -158,8 +167,7 @@ struct EthernetOpenInfo {
 
 class EthernetClient {
 public:
-    EthernetClient()
-        : fd_(-1) {}
+    EthernetClient() {}
     ~EthernetClient() {
         Cleanup();
     }
@@ -168,28 +176,29 @@ public:
         if (mapped_ > 0) {
             zx::vmar::root_self()->unmap(mapped_, vmo_size_);
         }
-        if (fd_ >= 0) {
-            close(fd_);
-        }
+        svc_.reset();
     }
 
-    zx_status_t Register(int fd, const char* name, uint32_t nbufs, uint16_t bufsize) {
-        fd_ = fd;
-        ssize_t rc = ioctl_ethernet_set_client_name(fd_, name, strlen(name) + 1);
-        if (rc < 0) {
-            fprintf(stderr, "could not set client name to %s: %zd\n", name, rc);
-            return static_cast<zx_status_t>(rc);
+    zx_status_t Register(zx::channel svc, const char* name, uint32_t nbufs, uint16_t bufsize) {
+        svc_ = fbl::move(svc);
+        zx_status_t call_status = ZX_OK;
+        size_t name_len = fbl::min<size_t>(strlen(name), zircon_ethernet_MAX_CLIENT_NAME_LEN);
+        zx_status_t status = zircon_ethernet_DeviceSetClientName(svc_.get(), name,
+                                                                 name_len, &call_status);
+        if (status != ZX_OK || call_status != ZX_OK) {
+            fprintf(stderr, "could not set client name to %s: %d, %d\n", name, status, call_status);
+            return status == ZX_OK ? call_status : status;
         }
 
-        eth_fifos_t fifos;
-        rc = ioctl_ethernet_get_fifos(fd_, &fifos);
-        if (rc < 0) {
-            fprintf(stderr, "could not get fifos: %zd\n", rc);
-            return static_cast<zx_status_t>(rc);
+        zircon_ethernet_Fifos fifos;
+        status = zircon_ethernet_DeviceGetFifos(svc_.get(), &call_status, &fifos);
+        if (status != ZX_OK || call_status != ZX_OK) {
+            fprintf(stderr, "could not get fifos: %d, %d\n", status, call_status);
+            return status == ZX_OK ? call_status : status;
         }
 
-        tx_.reset(fifos.tx_fifo);
-        rx_.reset(fifos.rx_fifo);
+        tx_.reset(fifos.tx);
+        rx_.reset(fifos.rx);
         tx_depth_ = fifos.tx_depth;
         rx_depth_ = fifos.rx_depth;
 
@@ -197,7 +206,7 @@ public:
         bufsize_ = bufsize;
 
         vmo_size_ = 2 * nbufs_ * bufsize_;
-        zx_status_t status = zx::vmo::create(vmo_size_, ZX_VMO_NON_RESIZABLE, &buf_);
+        status = zx::vmo::create(vmo_size_, ZX_VMO_NON_RESIZABLE, &buf_);
         if (status != ZX_OK) {
             fprintf(stderr, "could not create a vmo of size %" PRIu64 ": %s\n", vmo_size_,
                     mxstrerror(status));
@@ -220,19 +229,19 @@ public:
         }
 
         zx_handle_t bufh = buf_copy.release();
-        rc = ioctl_ethernet_set_iobuf(fd_, &bufh);
-        if (rc < 0) {
-            fprintf(stderr, "failed to set eth iobuf: %zd\n", rc);
-            return static_cast<zx_status_t>(rc);
+        status = zircon_ethernet_DeviceSetIOBuffer(svc_.get(), bufh, &call_status);
+        if (status != ZX_OK || call_status != ZX_OK) {
+            fprintf(stderr, "failed to set eth iobuf: %d, %d\n", status, call_status);
+            return status == ZX_OK ? call_status : status;
         }
 
         uint32_t idx = 0;
         for (; idx < nbufs; idx++) {
-            eth_fifo_entry_t entry = {
+            zircon_ethernet_FifoEntry entry = {
                 .offset = idx * bufsize_,
                 .length = bufsize_,
                 .flags = 0,
-                .cookie = nullptr,
+                .cookie = 0,
             };
             status = rx_.write_one(entry);
             if (status != ZX_OK) {
@@ -246,7 +255,7 @@ public:
             entry->e.offset = idx * bufsize_;
             entry->e.length = bufsize_;
             entry->e.flags = 0;
-            entry->e.cookie = reinterpret_cast<uint8_t*>(mapped_) + entry->e.offset;
+            entry->e.cookie = reinterpret_cast<uintptr_t>(mapped_) + entry->e.offset;
             tx_available_.push_front(fbl::move(entry));
         }
 
@@ -254,59 +263,78 @@ public:
     }
 
     zx_status_t Start() {
-        ssize_t rc = ioctl_ethernet_start(fd_);
-        return rc < 0 ? static_cast<zx_status_t>(rc) : ZX_OK;
+        zx_status_t call_status = ZX_OK;
+        zx_status_t status = zircon_ethernet_DeviceStart(svc_.get(), &call_status);
+        if (status != ZX_OK) {
+            return status;
+        }
+        return call_status;
     }
 
     zx_status_t Stop() {
-        ssize_t rc = ioctl_ethernet_stop(fd_);
-        return rc < 0 ? static_cast<zx_status_t>(rc) : ZX_OK;
+        return zircon_ethernet_DeviceStop(svc_.get());
     }
 
     zx_status_t GetStatus(uint32_t* eth_status) {
-        ssize_t rc = ioctl_ethernet_get_status(fd_, eth_status);
-        return rc < 0 ? static_cast<zx_status_t>(rc) : ZX_OK;
+        return zircon_ethernet_DeviceGetStatus(svc_.get(), eth_status);
     }
 
     zx_status_t SetPromisc(bool on) {
-        ssize_t rc = ioctl_ethernet_set_promisc(fd_, &on);
-        return rc < 0 ? static_cast<zx_status_t>(rc) : ZX_OK;
+        zx_status_t call_status = ZX_OK;
+        zx_status_t status = zircon_ethernet_DeviceSetPromiscuousMode(svc_.get(), on, &call_status);
+        if (status != ZX_OK) {
+            return status;
+        }
+        return call_status;
     }
 
     zx_status_t SetMulticastPromisc(bool on) {
-        eth_multicast_config_t config = {};
-        config.op = on ? ETH_MULTICAST_RECV_ALL : ETH_MULTICAST_RECV_FILTER;
-        ssize_t rc = ioctl_ethernet_config_multicast(fd_, &config);
-        return rc < 0 ? static_cast<zx_status_t>(rc) : ZX_OK;
+        zx_status_t call_status, status;
+        status = zircon_ethernet_DeviceConfigMulticastSetPromiscuousMode(svc_.get(), on,
+                                                                         &call_status);
+        if (status != ZX_OK) {
+            return status;
+        }
+        return call_status;
     }
 
-    zx_status_t MulticastAddressAdd(uint8_t* mac) {
-        eth_multicast_config_t config = {};
-        config.op = ETH_MULTICAST_ADD_MAC;
-        memcpy(config.mac, mac, 6);
-        ssize_t rc = ioctl_ethernet_config_multicast(fd_, &config);
-        return rc < 0 ? static_cast<zx_status_t>(rc) : ZX_OK;
+    zx_status_t MulticastAddressAdd(uint8_t* mac_addr) {
+        zircon_ethernet_MacAddress mac;
+        memcpy(mac.octets, mac_addr, 6);
+
+        zx_status_t call_status, status;
+        status = zircon_ethernet_DeviceConfigMulticastAddMac(svc_.get(), &mac, &call_status);
+        if (status != ZX_OK) {
+            return status;
+        }
+        return call_status;
     }
 
-    zx_status_t MulticastAddressDel(uint8_t* mac) {
-        eth_multicast_config_t config = {};
-        config.op = ETH_MULTICAST_DEL_MAC;
-        memcpy(config.mac, mac, 6);
-        ssize_t rc = ioctl_ethernet_config_multicast(fd_, &config);
-        return rc < 0 ? static_cast<zx_status_t>(rc) : ZX_OK;
+    zx_status_t MulticastAddressDel(uint8_t* mac_addr) {
+        zircon_ethernet_MacAddress mac;
+        memcpy(mac.octets, mac_addr, 6);
+
+        zx_status_t call_status, status;
+        status = zircon_ethernet_DeviceConfigMulticastDeleteMac(svc_.get(), &mac, &call_status);
+        if (status != ZX_OK) {
+            return status;
+        }
+        return call_status;
     }
 
     // Delete this along with other "multicast_" related code once we have IGMP.
     // This tells the driver to turn off the on-by-default multicast-promisc.
     zx_status_t MulticastInitForTest() {
-        eth_multicast_config_t config = {};
-        config.op = ETH_MULTICAST_TEST_FILTER;
-        ssize_t rc = ioctl_ethernet_config_multicast(fd_, &config);
-        return rc < 0 ? static_cast<zx_status_t>(rc) : ZX_OK;
+        zx_status_t call_status, status;
+        status = zircon_ethernet_DeviceConfigMulticastTestFilter(svc_.get(), &call_status);
+        if (status != ZX_OK) {
+            return status;
+        }
+        return call_status;
     }
 
-    fzl::fifo<eth_fifo_entry_t>* tx_fifo() { return &tx_; }
-    fzl::fifo<eth_fifo_entry_t>* rx_fifo() { return &rx_; }
+    fzl::fifo<zircon_ethernet_FifoEntry>* tx_fifo() { return &tx_; }
+    fzl::fifo<zircon_ethernet_FifoEntry>* rx_fifo() { return &rx_; }
     uint32_t tx_depth() { return tx_depth_; }
     uint32_t rx_depth() { return rx_depth_; }
 
@@ -314,9 +342,9 @@ public:
         return reinterpret_cast<uint8_t*>(mapped_) + offset;
     }
 
-    eth_fifo_entry_t* GetTxBuffer() {
+    zircon_ethernet_FifoEntry* GetTxBuffer() {
         auto entry_ptr = tx_available_.pop_front();
-        eth_fifo_entry_t* entry = nullptr;
+        zircon_ethernet_FifoEntry* entry = nullptr;
         if (entry_ptr != nullptr) {
             entry = &entry_ptr->e;
             tx_pending_.push_front(fbl::move(entry_ptr));
@@ -324,7 +352,7 @@ public:
         return entry;
     }
 
-    void ReturnTxBuffer(eth_fifo_entry_t* entry) {
+    void ReturnTxBuffer(zircon_ethernet_FifoEntry* entry) {
         auto entry_ptr = tx_pending_.erase_if(
                 [entry](const FifoEntry& tx_entry) { return tx_entry.e.cookie == entry->cookie; });
         if (entry_ptr != nullptr) {
@@ -333,7 +361,7 @@ public:
     }
 
   private:
-    int fd_;
+    zx::channel svc_;
 
     uint64_t vmo_size_ = 0;
     zx::vmo buf_;
@@ -341,8 +369,8 @@ public:
     uint32_t nbufs_ = 0;
     uint16_t bufsize_ = 0;
 
-    fzl::fifo<eth_fifo_entry_t> tx_;
-    fzl::fifo<eth_fifo_entry_t> rx_;
+    fzl::fifo<zircon_ethernet_FifoEntry> tx_;
+    fzl::fifo<zircon_ethernet_FifoEntry> rx_;
     uint32_t tx_depth_ = 0;
     uint32_t rx_depth_ = 0;
 
@@ -424,12 +452,12 @@ static bool AddClientHelper(zx::socket* sock,
                             EthernetClient* client,
                             const EthernetOpenInfo& openInfo) {
     // Open the ethernet device
-    int devfd = -1;
-    ASSERT_EQ(ZX_OK, OpenEthertapDev(&devfd));
-    ASSERT_GE(devfd, 0);
+    zx::channel svc;
+    ASSERT_EQ(ZX_OK, OpenEthertapDev(&svc));
+    ASSERT_TRUE(svc.is_valid());
 
     // Initialize the ethernet client
-    ASSERT_EQ(ZX_OK, client->Register(devfd, openInfo.name, 32, 2048));
+    ASSERT_EQ(ZX_OK, client->Register(fbl::move(svc), openInfo.name, 32, 2048));
     if (openInfo.online) {
         // Start the ethernet client
         ASSERT_EQ(ZX_OK, client->Start());
@@ -489,8 +517,8 @@ static bool EthernetStartTest() {
 
     // Verify no signals asserted on the rx fifo
     zx_signals_t obs;
-    client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, zx::time(), &obs);
-    EXPECT_FALSE(obs & ETH_SIGNAL_STATUS);
+    client.rx_fifo()->wait_one(zircon_ethernet_SIGNAL_STATUS, zx::time(), &obs);
+    EXPECT_FALSE(obs & zircon_ethernet_SIGNAL_STATUS);
 
     // Start the ethernet client
     EXPECT_EQ(ZX_OK, client.Start());
@@ -503,11 +531,11 @@ static bool EthernetStartTest() {
     // Set the link status to online and verify
     sock.signal_peer(0, ETHERTAP_SIGNAL_ONLINE);
 
-    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, FAIL_TIMEOUT, &obs));
-    EXPECT_TRUE(obs & ETH_SIGNAL_STATUS);
+    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(zircon_ethernet_SIGNAL_STATUS, FAIL_TIMEOUT, &obs));
+    EXPECT_TRUE(obs & zircon_ethernet_SIGNAL_STATUS);
 
     EXPECT_EQ(ZX_OK, client.GetStatus(&eth_status));
-    EXPECT_EQ(ETH_STATUS_ONLINE, eth_status);
+    EXPECT_EQ(zircon_ethernet_DEVICE_STATUS_ONLINE, eth_status);
 
     ASSERT_TRUE(EthernetCleanupHelper(&sock, &client));
     END_TEST;
@@ -524,15 +552,15 @@ static bool EthernetLinkStatusTest() {
     // Link status should be ONLINE since it's set in OpenFirstClientHelper
     uint32_t eth_status = 0;
     EXPECT_EQ(ZX_OK, client.GetStatus(&eth_status));
-    EXPECT_EQ(ETH_STATUS_ONLINE, eth_status);
+    EXPECT_EQ(zircon_ethernet_DEVICE_STATUS_ONLINE, eth_status);
 
     // Now the device goes offline
     sock.signal_peer(0, ETHERTAP_SIGNAL_OFFLINE);
 
     // Verify the link status
     zx_signals_t obs;
-    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, FAIL_TIMEOUT, &obs));
-    EXPECT_TRUE(obs & ETH_SIGNAL_STATUS);
+    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(zircon_ethernet_SIGNAL_STATUS, FAIL_TIMEOUT, &obs));
+    EXPECT_TRUE(obs & zircon_ethernet_SIGNAL_STATUS);
 
     EXPECT_EQ(ZX_OK, client.GetStatus(&eth_status));
     EXPECT_EQ(0, eth_status);
@@ -784,7 +812,7 @@ static bool EthernetDataTest_Send() {
     ASSERT_TRUE(entry != nullptr);
 
     // Populate some data
-    uint8_t* buf = static_cast<uint8_t*>(entry->cookie);
+    uint8_t* buf = reinterpret_cast<uint8_t*>(entry->cookie);
     for (int i = 0; i < 32; i++) {
         buf[i] = static_cast<uint8_t>(i & 0xff);
     }
@@ -799,17 +827,17 @@ static bool EthernetDataTest_Send() {
     EXPECT_EQ(ZX_OK, client.tx_fifo()->wait_one(ZX_FIFO_READABLE, FAIL_TIMEOUT, &obs));
     ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
-    eth_fifo_entry_t return_entry;
+    zircon_ethernet_FifoEntry return_entry;
     ASSERT_EQ(ZX_OK, client.tx_fifo()->read_one(&return_entry));
 
     // Check the flags on the returned entry
-    EXPECT_TRUE(return_entry.flags & ETH_FIFO_TX_OK);
+    EXPECT_TRUE(return_entry.flags & zircon_ethernet_FIFO_TX_OK);
     return_entry.flags = 0;
 
     // Verify the bytes from the rest of the entry match what we wrote
     auto expected_entry = reinterpret_cast<uint8_t*>(entry);
     auto actual_entry = reinterpret_cast<uint8_t*>(&return_entry);
-    EXPECT_BYTES_EQ(expected_entry, actual_entry, sizeof(eth_fifo_entry_t), "");
+    EXPECT_BYTES_EQ(expected_entry, actual_entry, sizeof(zircon_ethernet_FifoEntry), "");
 
     // Return the buffer to our client; the client destructor will make sure no TXs are still
     // pending at the end of te test.
@@ -845,7 +873,7 @@ static bool EthernetDataTest_Recv() {
     ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
     // Read the RX fifo
-    eth_fifo_entry_t entry;
+    zircon_ethernet_FifoEntry entry;
     EXPECT_EQ(ZX_OK, client.rx_fifo()->read_one(&entry));
 
     // Check the bytes in the VMO compared to what we sent through the socket

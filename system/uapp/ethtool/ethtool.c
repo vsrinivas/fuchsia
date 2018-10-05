@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 #include <inet6/inet6.h>
+#include <lib/fdio/util.h>
 #include <zircon/assert.h>
 #include <zircon/boot/netboot.h>
-#include <zircon/device/ethernet.h>
+#include <zircon/ethernet/c/fidl.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
@@ -137,44 +138,54 @@ int parse_args(int argc, const char** argv, ethtool_options_t* options) {
     return 0;
 }
 
-int initialize_ethernet(ethtool_options_t* options) {
+zx_handle_t initialize_ethernet(ethtool_options_t* options) {
     int fd;
     if ((fd = open(options->device, O_RDWR)) < 0) {
         fprintf(stderr, "ethtool: cannot open '%s': %d\n", options->device, fd);
-        return -1;
+        return ZX_HANDLE_INVALID;
     }
 
-    eth_fifos_t fifos;
-    zx_status_t status;
+    zx_handle_t svc;
+    zx_status_t status = fdio_get_service_handle(fd, &svc);
+    if (status != ZX_OK) {
+        fprintf(stderr, "ethtool: failed to get service handle\n");
+        return ZX_HANDLE_INVALID;
+    }
 
-    ssize_t r;
-    if ((r = ioctl_ethernet_get_fifos(fd, &fifos)) < 0) {
-        fprintf(stderr, "ethtool: failed to get fifos: %zd\n", r);
-        return r;
+    zircon_ethernet_Fifos fifos;
+
+    zx_status_t call_status = ZX_OK;
+    status = zircon_ethernet_DeviceGetFifos(svc, &call_status, &fifos);
+    if (status != ZX_OK || call_status != ZX_OK) {
+        fprintf(stderr, "ethtool: failed to get fifos: %d, %d\n", status, call_status);
+        return ZX_HANDLE_INVALID;
     }
 
     unsigned count = fifos.rx_depth / 2;
     zx_handle_t iovmo;
     // allocate shareable ethernet buffer data heap
     if ((status = zx_vmo_create(count * BUFSIZE, ZX_VMO_NON_RESIZABLE, &iovmo)) < 0) {
-        return -1;
+        return ZX_HANDLE_INVALID;
     }
 
-    if ((r = ioctl_ethernet_set_iobuf(fd, &iovmo)) < 0) {
-        fprintf(stderr, "ethtool: failed to set iobuf: %zd\n", r);
-        return -1;
+    status = zircon_ethernet_DeviceSetIOBuffer(svc, iovmo, &call_status);
+    if (status != ZX_OK || call_status != ZX_OK) {
+        fprintf(stderr, "ethtool: failed to set iobuf: %d, %d\n", status, call_status);
+        return ZX_HANDLE_INVALID;
     }
 
-    if ((r = ioctl_ethernet_set_client_name(fd, "ethtool", 7)) < 0) {
-        fprintf(stderr, "ethtool: failed to set client name %zd\n", r);
+    status = zircon_ethernet_DeviceSetClientName(svc, "ethtool", 7, &call_status);
+    if (status != ZX_OK || call_status != ZX_OK) {
+        fprintf(stderr, "ethtool: failed to set client name %d, %d\n", status, call_status);
     }
 
-    if (ioctl_ethernet_start(fd) < 0) {
+    status = zircon_ethernet_DeviceStart(svc, &call_status);
+    if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "ethtool: failed to start network interface\n");
-        return -1;
+        return ZX_HANDLE_INVALID;
     }
 
-    return fd;
+    return svc;
 }
 
 int main(int argc, const char** argv) {
@@ -184,12 +195,16 @@ int main(int argc, const char** argv) {
         return -1;
     }
 
-    int fd = initialize_ethernet(&options);
-    ssize_t r;
+    zx_handle_t svc = initialize_ethernet(&options);
+    if (svc == ZX_HANDLE_INVALID) {
+        return -1;
+    }
+    zx_status_t status, call_status;
     if (options.setting_promisc) {
-        if ((r = ioctl_ethernet_set_promisc(fd, &options.promisc_on)) < 0) {
-            fprintf(stderr, "ethtool: failed to set promiscuous mode to %s: %zd\n",
-                    options.promisc_on ? "on" : "off", r);
+        status = zircon_ethernet_DeviceSetPromiscuousMode(svc, options.promisc_on, &call_status);
+        if (status != ZX_OK || call_status != ZX_OK) {
+            fprintf(stderr, "ethtool: failed to set promiscuous mode to %s: %d, %d\n",
+                    options.promisc_on ? "on" : "off", status, call_status);
             return -1;
         } else {
             fprintf(stderr, "ethtool: set %s promiscuous mode to %s\n",
@@ -197,29 +212,26 @@ int main(int argc, const char** argv) {
         }
     }
     if (options.filter_macs) {
-        eth_multicast_config_t config;
-        memset(&config, 0, sizeof(config));
-        config.op = ETH_MULTICAST_TEST_FILTER;
-        if ((r = ioctl_ethernet_config_multicast(fd, &config)) < 0) {
+        status = zircon_ethernet_DeviceConfigMulticastTestFilter(svc, &call_status);
+        if (status != ZX_OK || call_status != ZX_OK) {
             fprintf(stderr, "ethtool: failed to config multicast test\n");
             return -1;
         }
-        config.op = ETH_MULTICAST_ADD_MAC;
         for (int i = 0; i < options.n_filter_macs; i++) {
-            memcpy(config.mac, options.filter_macs + i * ETH_MAC_SIZE, ETH_MAC_SIZE);
-            printf("Sending addr %d %d %d %d %d %d\n", config.mac[0], config.mac[1],
-                   config.mac[2], config.mac[3], config.mac[4], config.mac[5]);
-            if ((r = ioctl_ethernet_config_multicast(fd, &config)) < 0) {
+            zircon_ethernet_MacAddress addr;
+            memcpy(&addr.octets, options.filter_macs + i * ETH_MAC_SIZE, ETH_MAC_SIZE);
+            printf("Sending addr %d %d %d %d %d %d\n", addr.octets[0], addr.octets[1],
+                   addr.octets[2], addr.octets[3], addr.octets[4], addr.octets[5]);
+            status = zircon_ethernet_DeviceConfigMulticastAddMac(svc, &addr, &call_status);
+            if (status != ZX_OK || call_status != ZX_OK) {
                 fprintf(stderr, "ethtool: failed to add multicast addr\n");
                 return -1;
             }
         }
     }
     if (options.dump_regs) {
-        eth_multicast_config_t config;
-        memset(&config, 0, sizeof(config));
-        config.op = ETH_MULTICAST_DUMP_REGS;
-        if ((r = ioctl_ethernet_config_multicast(fd, &config)) < 0) {
+        status = zircon_ethernet_DeviceDumpRegisters(svc, &call_status);
+        if (status != ZX_OK || call_status != ZX_OK) {
             fprintf(stderr, "ethtool: failed to request reg dump\n");
             return -1;
         }

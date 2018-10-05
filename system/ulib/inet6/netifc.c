@@ -17,7 +17,7 @@
 #include "eth-client.h"
 
 #include <zircon/device/device.h>
-#include <zircon/device/ethernet.h>
+#include <zircon/ethernet/c/fidl.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
@@ -27,6 +27,7 @@
 #include <inet6/netifc.h>
 
 #include <lib/fdio/io.h>
+#include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
 
 #define ALIGN(n, a) (((n) + ((a) - 1)) & ~((a) - 1))
@@ -58,7 +59,7 @@ static int rxc;
 #endif
 
 static mtx_t eth_lock = MTX_INIT;
-static int netfd = -1;
+static zx_handle_t netsvc = ZX_HANDLE_INVALID;
 static eth_client_t* eth;
 static uint8_t netmac[6];
 static size_t netmtu;
@@ -257,9 +258,9 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
     printf("netifc: ? /dev/class/ethernet/%s\n", fn);
 
     mtx_lock(&eth_lock);
-    if ((netfd = openat(dirfd, fn, O_RDWR)) < 0) {
-        mtx_unlock(&eth_lock);
-        return ZX_OK;
+    int fd;
+    if ((fd = openat(dirfd, fn, O_RDWR)) < 0) {
+        goto finish;
     }
 
     // If an interface was specified, check the topological path of this device and reject it if it
@@ -267,8 +268,9 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
     if (cookie != NULL) {
         const char* interface = cookie;
         char buf[1024];
-        if (ioctl_device_get_topo_path(netfd, buf, sizeof(buf)) < 0) {
-            goto fail_close_fd;
+        if (ioctl_device_get_topo_path(fd, buf, sizeof(buf)) < 0) {
+            close(fd);
+            goto finish;
         }
         const char* topo_path = buf;
         // Skip the instance sigil if it's present in either the topological path or the given
@@ -277,28 +279,32 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
         if (interface[0] == '@') interface++;
 
         if (strncmp(topo_path, interface, sizeof(buf))) {
-            goto fail_close_fd;
+            close(fd);
+            goto finish;
         }
     }
 
-    eth_info_t info;
-    if (ioctl_ethernet_get_info(netfd, &info) < 0) {
-        goto fail_close_fd;
+    zx_status_t status = fdio_get_service_handle(fd, &netsvc);
+    if (status != ZX_OK) {
+        goto finish;
     }
-    if (info.features & (ETH_FEATURE_WLAN | ETH_FEATURE_SYNTH)) {
-        // Don't run netsvc for wireless or synthetic network devices
-        goto fail_close_fd;
-    }
-    memcpy(netmac, info.mac, sizeof(netmac));
-    netmtu = info.mtu;
 
-    zx_status_t status;
+    zircon_ethernet_Info info;
+    if (zircon_ethernet_DeviceGetInfo(netsvc, &info) != ZX_OK) {
+        goto fail_close_svc;
+    }
+    if (info.features & (zircon_ethernet_INFO_FEATURE_WLAN | zircon_ethernet_INFO_FEATURE_SYNTH)) {
+        // Don't run netsvc for wireless or synthetic network devices
+        goto fail_close_svc;
+    }
+    memcpy(netmac, info.mac.octets, sizeof(netmac));
+    netmtu = info.mtu;
 
     // we only do this the very first time
     if (eth_buffer_base == NULL) {
         eth_buffer_base = memalign(sizeof(eth_buffer_t), 2 * NET_BUFFERS * sizeof(eth_buffer_t));
         if (eth_buffer_base == NULL) {
-            goto fail_close_fd;
+            goto fail_close_svc;
         }
         eth_buffer_count = 2 * NET_BUFFERS;
     }
@@ -308,7 +314,7 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
         // allocate shareable ethernet buffer data heap
         size_t iosize = 2 * NET_BUFFERS * NET_BUFFERSZ;
         if ((status = zx_vmo_create(iosize, ZX_VMO_NON_RESIZABLE, &iovmo)) < 0) {
-            goto fail_close_fd;
+            goto fail_close_svc;
         }
         zx_object_set_property(iovmo, ZX_PROP_NAME, "eth-buffers", 11);
         if ((status = zx_vmar_map(zx_vmar_root_self(),
@@ -316,7 +322,7 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
                                   0, iovmo, 0, iosize, (uintptr_t*)&iobuf)) < 0) {
             zx_handle_close(iovmo);
             iovmo = ZX_HANDLE_INVALID;
-            goto fail_close_fd;
+            goto fail_close_svc;
         }
         printf("netifc: create %zu eth buffers\n", eth_buffer_count);
         // assign data chunks to ethbufs
@@ -329,14 +335,16 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
         }
     }
 
-    status = eth_create(netfd, iovmo, iobuf, &eth);
+    status = eth_create(netsvc, iovmo, iobuf, &eth);
     if (status < 0) {
         printf("eth_create() failed: %d\n", status);
-        goto fail_close_fd;
+        goto fail_close_svc;
     }
 
-    if ((status = ioctl_ethernet_start(netfd)) < 0) {
-        printf("netifc: ethernet_start(): %d\n", status);
+    zx_status_t call_status = ZX_OK;
+    status = zircon_ethernet_DeviceStart(netsvc, &call_status);
+    if (status != ZX_OK || call_status != ZX_OK) {
+        printf("netifc: ethernet_start(): %d, %d\n", status, call_status);
         goto fail_destroy_client;
     }
 
@@ -362,9 +370,10 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
 fail_destroy_client:
     eth_destroy(eth);
     eth = NULL;
-fail_close_fd:
-    close(netfd);
-    netfd = -1;
+fail_close_svc:
+    zx_handle_close(netsvc);
+    netsvc = ZX_HANDLE_INVALID;
+finish:
     mtx_unlock(&eth_lock);
     return ZX_OK;
 }
@@ -386,9 +395,9 @@ int netifc_open(const char* interface) {
 
 void netifc_close(void) {
     mtx_lock(&eth_lock);
-    if (netfd != -1) {
-        close(netfd);
-        netfd = -1;
+    if (netsvc != ZX_HANDLE_INVALID) {
+        zx_handle_close(netsvc);
+        netsvc = ZX_HANDLE_INVALID;
     }
     if (eth != NULL) {
         eth_destroy(eth);

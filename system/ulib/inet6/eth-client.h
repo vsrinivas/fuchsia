@@ -5,7 +5,6 @@
 #pragma once
 
 #include <zircon/compiler.h>
-#include <zircon/device/ethernet.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS;
@@ -18,7 +17,7 @@ typedef struct eth_client {
     void* iobuf;
 } eth_client_t;
 
-zx_status_t eth_create(int fd, zx_handle_t io_vmo, void* io_mem, eth_client_t** out);
+zx_status_t eth_create(zx_handle_t svc, zx_handle_t io_vmo, void* io_mem, eth_client_t** out);
 
 void eth_destroy(eth_client_t* eth);
 
