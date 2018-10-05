@@ -29,8 +29,8 @@ class InputDispatcherVerifier {
 
   void Reset(InputDispatcherImpl* dispatcher) {
     queued_events_.clear();
-    while (dispatcher->Keyboard()->size() > 0) {
-      auto event = dispatcher->Keyboard()->Wait();
+    while (dispatcher->queue()->size() > 0) {
+      auto event = dispatcher->queue()->Wait();
       queued_events_.push_back(std::move(event));
     }
   }

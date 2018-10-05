@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -10,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <atomic>
 #include <unordered_map>
 #include <vector>
 
@@ -243,15 +243,7 @@ int main(int argc, char** argv) {
 
   machina::InputDispatcherImpl input_dispatcher_impl(kInputQueueDepth);
   machina::HidEventSource hid_event_source(&input_dispatcher_impl);
-  machina::VirtioKeyboard keyboard(input_dispatcher_impl.Keyboard(),
-                                   guest.phys_mem(), "machina-keyboard",
-                                   "serial-number");
-  machina::VirtioRelativePointer mouse(input_dispatcher_impl.Mouse(),
-                                       guest.phys_mem(), "machina-mouse",
-                                       "serial-number");
-  machina::VirtioAbsolutePointer touch(input_dispatcher_impl.Touch(),
-                                       guest.phys_mem(), "machina-touch",
-                                       "serial-number");
+  machina::VirtioInput input(input_dispatcher_impl.queue(), guest.phys_mem());
   instance_controller.SetInputDispatcher(&input_dispatcher_impl);
 
   machina::VirtioGpu gpu(guest.phys_mem(), guest.device_dispatcher());
@@ -260,34 +252,12 @@ int main(int argc, char** argv) {
   std::unique_ptr<ScenicScanout> scenic_scanout;
 
   if (cfg.display() != GuestDisplay::NONE) {
-    // Setup keyboard device.
-    status = keyboard.Start();
+    // Setup input device.
+    status = input.Start();
     if (status != ZX_OK) {
       return status;
     }
-    status = bus.Connect(keyboard.pci_device());
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    // Setup mouse device.
-    status = mouse.Start();
-    if (status != ZX_OK) {
-      return status;
-    }
-    status = bus.Connect(mouse.pci_device());
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    // Setup touch device. Note that this device is used for all pointer events
-    // when using a scenic framebuffer because the pointer positions are
-    // absolute even when using a mouse.
-    status = touch.Start();
-    if (status != ZX_OK) {
-      return status;
-    }
-    status = bus.Connect(touch.pci_device());
+    status = bus.Connect(input.pci_device());
     if (status != ZX_OK) {
       return status;
     }
@@ -365,7 +335,8 @@ int main(int argc, char** argv) {
     return status;
   }
   std::atomic<uint32_t> wl_connection_id = 0;
-  std::unordered_map<uint32_t, fuchsia::sys::ComponentControllerPtr> wl_dispatchers;
+  std::unordered_map<uint32_t, fuchsia::sys::ComponentControllerPtr>
+      wl_dispatchers;
   machina::VirtioWl wl(
       guest.phys_mem(), std::move(wl_vmar), guest.device_dispatcher(),
       [&launcher, &wl_dispatchers, &wl_connection_id](zx::channel channel) {

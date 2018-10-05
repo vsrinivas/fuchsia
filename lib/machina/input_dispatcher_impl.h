@@ -43,20 +43,15 @@ class InputEventQueue {
 // events, and devices that consume them.
 class InputDispatcherImpl : public fuchsia::ui::input::InputDispatcher {
  public:
-  InputDispatcherImpl(size_t queue_depth)
-      : keyboard_(queue_depth), mouse_(queue_depth), touch_(queue_depth) {}
+  InputDispatcherImpl(size_t queue_depth);
 
-  InputEventQueue* Keyboard() { return &keyboard_; }
-  InputEventQueue* Mouse() { return &mouse_; }
-  InputEventQueue* Touch() { return &touch_; }
+  InputEventQueue* queue() { return &queue_; }
 
   // |InputDispatcher|
   void DispatchEvent(fuchsia::ui::input::InputEvent event) override;
 
  private:
-  InputEventQueue keyboard_;
-  InputEventQueue mouse_;
-  InputEventQueue touch_;
+  InputEventQueue queue_;
 };
 
 }  // namespace machina

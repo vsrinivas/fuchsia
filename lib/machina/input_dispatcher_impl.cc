@@ -46,27 +46,15 @@ void InputEventQueue::DropOldestLocked() {
   index_ = (index_ + 1) % pending_.size();
 }
 
+InputDispatcherImpl::InputDispatcherImpl(size_t queue_depth)
+      : queue_(queue_depth) {}
+
 void InputDispatcherImpl::DispatchEvent(fuchsia::ui::input::InputEvent event) {
   switch (event.Which()) {
-    case fuchsia::ui::input::InputEvent::Tag::kKeyboard: {
-      keyboard_.PostEvent(std::move(event));
+    case fuchsia::ui::input::InputEvent::Tag::kKeyboard:
+    case fuchsia::ui::input::InputEvent::Tag::kPointer:
+      queue_.PostEvent(std::move(event));
       break;
-    }
-    case fuchsia::ui::input::InputEvent::Tag::kPointer: {
-      switch (event.pointer().type) {
-        case fuchsia::ui::input::PointerEventType::MOUSE: {
-          mouse_.PostEvent(std::move(event));
-          break;
-        }
-        case fuchsia::ui::input::PointerEventType::TOUCH:
-        case fuchsia::ui::input::PointerEventType::STYLUS: {
-          touch_.PostEvent(std::move(event));
-          break;
-        }
-        default:
-          break;
-      }
-    }
     default:
       break;
   }

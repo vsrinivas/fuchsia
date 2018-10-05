@@ -21,36 +21,29 @@ static fuchsia::ui::input::InputEvent MakeKeyboardPressedEvent(
 TEST(InputDispatcherTest, EmptyQueue) {
   InputDispatcherImpl dispatcher(1);
 
-  EXPECT_EQ(0u, dispatcher.Keyboard()->size());
-  EXPECT_EQ(0u, dispatcher.Mouse()->size());
-  EXPECT_EQ(0u, dispatcher.Touch()->size());
+  EXPECT_EQ(0u, dispatcher.queue()->size());
 }
 
 TEST(InputDispatcherTest, AddToQueue) {
   InputDispatcherImpl dispatcher(1);
 
-  dispatcher.Keyboard()->PostEvent(fuchsia::ui::input::InputEvent{});
-  dispatcher.Mouse()->PostEvent(fuchsia::ui::input::InputEvent{});
-  dispatcher.Touch()->PostEvent(fuchsia::ui::input::InputEvent{});
-
-  EXPECT_EQ(1u, dispatcher.Keyboard()->size());
-  EXPECT_EQ(1u, dispatcher.Mouse()->size());
-  EXPECT_EQ(1u, dispatcher.Touch()->size());
+  dispatcher.queue()->PostEvent(fuchsia::ui::input::InputEvent{});
+  EXPECT_EQ(1u, dispatcher.queue()->size());
 }
 
 TEST(InputDispatcherTest, Overflow) {
   InputDispatcherImpl dispatcher(1);
 
   // Post 3 events with different HID codes. The oldest 2 will be dropped.
-  dispatcher.Keyboard()->PostEvent(MakeKeyboardPressedEvent(1));
-  dispatcher.Keyboard()->PostEvent(MakeKeyboardPressedEvent(2));
-  dispatcher.Keyboard()->PostEvent(MakeKeyboardPressedEvent(3));
+  dispatcher.queue()->PostEvent(MakeKeyboardPressedEvent(1));
+  dispatcher.queue()->PostEvent(MakeKeyboardPressedEvent(2));
+  dispatcher.queue()->PostEvent(MakeKeyboardPressedEvent(3));
 
   // Verify event corresponds to the most recent one added.
-  ASSERT_EQ(1u, dispatcher.Keyboard()->size());
-  auto event = dispatcher.Keyboard()->Wait();
+  ASSERT_EQ(1u, dispatcher.queue()->size());
+  auto event = dispatcher.queue()->Wait();
   EXPECT_EQ(3u, event.keyboard().hid_usage);
-  EXPECT_EQ(0u, dispatcher.Keyboard()->size());
+  EXPECT_EQ(0u, dispatcher.queue()->size());
 }
 
 }  // namespace
