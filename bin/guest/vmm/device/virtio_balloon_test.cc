@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <threads.h>
 #include <virtio/balloon.h>
 
 #include "garnet/bin/guest/vmm/device/test_with_device.h"
@@ -16,7 +17,7 @@ class VirtioBalloonTest : public TestWithDevice {
   VirtioBalloonTest()
       : inflate_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
         deflate_queue_(phys_mem_, inflate_queue_.end(), kQueueSize),
-        stats_queue_(phys_mem_, deflate_queue_.end(), kQueueSize) {}
+        stats_queue_(phys_mem_, deflate_queue_.end(), 1) {}
 
   void SetUp() override {
     // Launch device process.
@@ -44,10 +45,12 @@ class VirtioBalloonTest : public TestWithDevice {
     }
   }
 
+ public:
   fuchsia::guest::device::VirtioBalloonSyncPtr balloon_;
   VirtioQueueFake inflate_queue_;
   VirtioQueueFake deflate_queue_;
   VirtioQueueFake stats_queue_;
+  using TestWithDevice::WaitOnInterrupt;
 };
 
 TEST_F(VirtioBalloonTest, Inflate) {
@@ -73,6 +76,46 @@ TEST_F(VirtioBalloonTest, Deflate) {
   status = balloon_->NotifyQueue(1);
   ASSERT_EQ(ZX_OK, status);
   status = WaitOnInterrupt();
+  ASSERT_EQ(ZX_OK, status);
+}
+
+TEST_F(VirtioBalloonTest, Stats) {
+  zx_status_t status = DescriptorChainBuilder(stats_queue_)
+                           .AppendReadableDescriptor(nullptr, 0)
+                           .Build();
+  ASSERT_EQ(ZX_OK, status);
+
+  auto entry = [](void* arg) {
+    auto test = static_cast<VirtioBalloonTest*>(arg);
+    zx_status_t status = test->WaitOnInterrupt();
+    if (status != ZX_OK) {
+      return status;
+    }
+    virtio_balloon_stat_t stat = {.tag = 2301, .val = 1985};
+    status = DescriptorChainBuilder(test->stats_queue_)
+                 .AppendReadableDescriptor(&stat, sizeof(stat))
+                 .Build();
+    if (status != ZX_OK) {
+      return status;
+    }
+    return test->balloon_->NotifyQueue(2);
+  };
+  thrd_t thread;
+  int ret = thrd_create_with_name(&thread, entry, this, "balloon-stats");
+  ASSERT_EQ(thrd_success, ret);
+
+  zx_status_t stats_status;
+  fidl::VectorPtr<fuchsia::guest::MemStat> mem_stats;
+  status = balloon_->GetMemStats(&stats_status, &mem_stats);
+  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, stats_status);
+
+  ASSERT_EQ(1u, mem_stats->size());
+  EXPECT_EQ(2301u, (*mem_stats)[0].tag);
+  EXPECT_EQ(1985u, (*mem_stats)[0].val);
+
+  ret = thrd_join(thread, &status);
+  ASSERT_EQ(thrd_success, ret);
   ASSERT_EQ(ZX_OK, status);
 }
 

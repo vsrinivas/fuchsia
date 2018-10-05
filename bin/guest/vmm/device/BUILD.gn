@@ -66,4 +66,6 @@ executable("device_tests") {
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/virtio",
   ]
+
+  defines = [ "_ALL_SOURCE=1" ]
 }

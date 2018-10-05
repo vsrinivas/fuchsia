@@ -53,8 +53,8 @@ void VirtioQueueFake::Configure(zx_gpaddr_t data_addr, size_t data_len) {
 
 zx_status_t VirtioQueueFake::WriteDesc(void** buf, uint32_t len, uint16_t flags,
                                        uint16_t* desc_idx) {
-  *desc_idx = next_desc_++;
-  if (*desc_idx >= ring_.size || data_begin_ + len >= data_end_) {
+  *desc_idx = next_desc_++ % ring_.size;
+  if (data_begin_ + len >= data_end_) {
     return ZX_ERR_NO_MEMORY;
   }
 
