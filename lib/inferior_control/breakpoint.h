@@ -53,8 +53,6 @@ class ProcessBreakpoint : public Breakpoint {
   ProcessBreakpointSet* owner() const { return owner_; }
 
  private:
-  ProcessBreakpoint() = default;
-
   ProcessBreakpointSet* owner_;  // weak
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ProcessBreakpoint);
@@ -73,8 +71,6 @@ class SoftwareBreakpoint final : public ProcessBreakpoint {
   bool IsInserted() const override;
 
  private:
-  SoftwareBreakpoint() = default;
-
   // Contains the bytes of the original instructions that were overriden while
   // inserting this breakpoint. We keep a copy of these here to restore the
   // original bytes while removing this breakpoint.
@@ -119,8 +115,6 @@ class ThreadBreakpoint : public Breakpoint {
   ThreadBreakpointSet* owner() const { return owner_; }
 
  private:
-  ThreadBreakpoint() = default;
-
   ThreadBreakpointSet* owner_;  // weak
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ThreadBreakpoint);
@@ -139,8 +133,6 @@ class SingleStepBreakpoint final : public ThreadBreakpoint {
   bool IsInserted() const override;
 
  private:
-  SingleStepBreakpoint() = default;
-
   bool inserted_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SingleStepBreakpoint);

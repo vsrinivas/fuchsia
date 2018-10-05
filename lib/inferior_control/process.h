@@ -212,8 +212,6 @@ class Process final {
   const debugger_utils::dsoinfo_t* GetExecDso();
 
  private:
-  Process() = default;
-
   // The exception handler invoked by ExceptionPort.
   void OnExceptionOrSignal(const zx_port_packet_t& packet,
                            const zx_exception_context_t& context);

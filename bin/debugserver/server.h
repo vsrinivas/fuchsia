@@ -85,8 +85,6 @@ class RspServer final : public inferior_control::ServerWithIO {
     fxl::TimeDelta timeout;
   };
 
-  RspServer() = default;
-
   // Listens for incoming connections on port |port_|. Once a connection is
   // accepted, returns true and stores the client socket in |client_sock_|,
   // and the server socket in |server_sock_|. Returns false if an error occurs.

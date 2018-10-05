@@ -25,7 +25,6 @@ class SymbolEvalContext : public ExprEvalContext {
  public:
   using ValueCallback = std::function<void(const Err&, ExprValue)>;
 
-  explicit SymbolEvalContext(const SymbolEvalContext&) = default;
   SymbolEvalContext(const SymbolContext& symbol_context,
                     fxl::RefPtr<SymbolDataProvider> data_provider,
                     fxl::RefPtr<CodeBlock> code_block);

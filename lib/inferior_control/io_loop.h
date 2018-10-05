@@ -88,8 +88,6 @@ class IOLoop {
   void ReportDisconnected();
 
  private:
-  IOLoop() = default;
-
   // True if Quit() was called. This tells the |read_thread| to terminate its
   // loop as soon as any blocking call to read returns.
   std::atomic_bool quit_called_;
