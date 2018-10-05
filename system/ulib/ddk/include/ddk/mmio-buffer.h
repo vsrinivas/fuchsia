@@ -30,6 +30,13 @@ typedef struct {
 // Always consumes |vmo|, including in error cases.
 zx_status_t mmio_buffer_init(mmio_buffer_t* buffer, zx_off_t offset, size_t size,
                              zx_handle_t vmo, uint32_t cache_policy);
+
+// Takes a physical region, and maps it into address space. |base| and |size|
+// must be page aligned.
+// Callee retains ownership of |resource|.
+zx_status_t mmio_buffer_init_physical(mmio_buffer_t* buffer, zx_paddr_t base, size_t size,
+                                      zx_handle_t resource, uint32_t cache_policy);
+
 // Unmaps the mmio region.
 void mmio_buffer_release(mmio_buffer_t* buffer);
 
@@ -37,6 +44,7 @@ void mmio_buffer_release(mmio_buffer_t* buffer);
 //
 // Example usage: A device needs access to another device's MMIO space.
 zx_status_t mmio_buffer_pin(mmio_buffer_t* buffer, zx_handle_t bti, mmio_pinned_buffer_t* out);
+
 // Unpins the buffer.
 void mmio_buffer_unpin(mmio_pinned_buffer_t* buffer);
 

@@ -40,6 +40,18 @@ zx_status_t mmio_buffer_init(mmio_buffer_t* buffer, zx_off_t offset, size_t size
     return ZX_OK;
 }
 
+zx_status_t mmio_buffer_init_physical(mmio_buffer_t* buffer, zx_paddr_t base, size_t size,
+                                      zx_handle_t resource, uint32_t cache_policy) {
+    zx_handle_t vmo;
+    zx_status_t status = zx_vmo_create_physical(resource, base, size, &vmo);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // |base| is guaranteed to be page aligned.
+    return mmio_buffer_init(buffer, 0, size, vmo, cache_policy);
+}
+
 void mmio_buffer_release(mmio_buffer_t* buffer) {
     if (buffer->vmo != ZX_HANDLE_INVALID) {
         zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)buffer->vaddr, buffer->size);
