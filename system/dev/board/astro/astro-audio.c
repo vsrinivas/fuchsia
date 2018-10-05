@@ -97,14 +97,7 @@ static const pbus_dev_t aml_pdm_dev = {
 zx_status_t astro_tdm_init(aml_bus_t* bus) {
 
     aml_hiu_dev_t hiu;
-    zx_handle_t bti;
-    zx_status_t status = iommu_get_bti(&bus->iommu, 0, 0, &bti);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "audio_bus_bind: iommu_get_bti failed: %d\n", status);
-        return status;
-    }
-
-    status = s905d2_hiu_init(bti, &hiu);
+    zx_status_t status = s905d2_hiu_init(&hiu);
     if (status != ZX_OK) {
         zxlogf(ERROR, "hiu_init: failed: %d\n", status);
         return status;

@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio-impl.h>
@@ -73,15 +73,15 @@ static zx_status_t aml_enable_wifi_32K(aml_bus_t* bus) {
         zxlogf(ERROR, "aml_enable_wifi_32K: iommu_get_bti failed: %d\n", status);
         return status;
     }
-    io_buffer_t buffer;
-    status = io_buffer_init_physical(&buffer, bti, S905D2_PWM_BASE, 0x1a000, get_root_resource(),
-                                     ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    mmio_buffer_t buffer;
+    status = mmio_buffer_init_physical(&buffer, S905D2_PWM_BASE, 0x1a000, get_root_resource(),
+                                       ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_enable_wifi_32K: io_buffer_init_physical failed: %d\n", status);
+        zxlogf(ERROR, "aml_enable_wifi_32K: mmio_buffer_init_physical failed: %d\n", status);
         zx_handle_close(bti);
         return status;
     }
-    uint32_t* regs = io_buffer_virt(&buffer);
+    uint32_t* regs = buffer.vaddr;
 
     // these magic numbers were gleaned by instrumenting drivers/amlogic/pwm/pwm_meson.c
     // TODO(voydanoff) write a proper PWM driver
@@ -90,7 +90,7 @@ static zx_status_t aml_enable_wifi_32K(aml_bus_t* bus) {
     writel(0x0a0a0609, regs + S905D2_PWM_TIME_EF);
     writel(0x02808003, regs + S905D2_PWM_MISC_REG_EF);
 
-    io_buffer_release(&buffer);
+    mmio_buffer_release(&buffer);
     zx_handle_close(bti);
 
     return ZX_OK;

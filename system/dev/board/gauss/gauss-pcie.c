@@ -33,7 +33,7 @@ static const pbus_mmio_t dw_pcie_mmios[] = {
     },
     {   // clock/plls
         .base = 0xff63c000,
-        .length = PAGE_SIZE,
+        .length = ZX_PAGE_SIZE,
     },
 };
 

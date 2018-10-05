@@ -5,6 +5,7 @@
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <hw/reg.h>
+#include <zircon/syscalls.h>
 
 #include <soc/aml-common/aml-usb-phy.h>
 #include <soc/aml-a113/a113-hw.h>
@@ -51,7 +52,7 @@ static const pbus_dev_t xhci_dev = {
 };
 
 zx_status_t gauss_usb_init(gauss_bus_t* bus) {
-    zx_status_t status = io_buffer_init_physical(&bus->usb_phy, bus->bti_handle, 0xffe09000, 4096,
+    zx_status_t status = mmio_buffer_init_physical(&bus->usb_phy, 0xffe09000, 4096,
                                                  get_root_resource(),
                                                  ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
@@ -63,11 +64,11 @@ zx_status_t gauss_usb_init(gauss_bus_t* bus) {
                     ZX_INTERRUPT_MODE_DEFAULT, &bus->usb_phy_irq_handle);
     if (status != ZX_OK) {
         zxlogf(ERROR, "gauss_usb_init zx_interrupt_create failed %d\n", status);
-        io_buffer_release(&bus->usb_phy);
+        mmio_buffer_release(&bus->usb_phy);
         return status;
     }
 
-    volatile void* regs = io_buffer_virt(&bus->usb_phy);
+    volatile void* regs = bus->usb_phy.vaddr;
 
     // amlogic_new_usb2_init
     for (int i = 0; i < 4; i++) {

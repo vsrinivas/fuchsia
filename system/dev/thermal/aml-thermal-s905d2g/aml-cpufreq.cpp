@@ -76,7 +76,7 @@ zx_status_t AmlCpuFrequency::Init(zx_device_t* parent) {
     }
 
     // HIU Init.
-    status = s905d2_hiu_init(bti_.get(), &hiu_);
+    status = s905d2_hiu_init(&hiu_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-cpufreq: hiu_init failed: %d\n", status);
         return status;

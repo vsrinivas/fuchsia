@@ -4,7 +4,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
@@ -117,21 +117,14 @@ static zx_status_t vim_enable_wifi_32K(vim_bus_t* bus) {
     zx_status_t status = gpio_impl_set_alt_function(&bus->gpio, WIFI_32K, 1);
     if (status != ZX_OK) return status;
 
-    zx_handle_t bti;
-    status = iommu_get_bti(&bus->iommu, 0, BTI_BOARD, &bti);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "vim_bus_bind: iommu_get_bti failed: %d\n", status);
-        return status;
-    }
-    io_buffer_t buffer;
-    status = io_buffer_init_physical(&buffer, bti, S912_PWM_BASE, 0x10000, get_root_resource(),
-                                     ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    mmio_buffer_t buffer;
+    status = mmio_buffer_init_physical(&buffer, S912_PWM_BASE, 0x10000, get_root_resource(),
+                                       ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim_enable_wifi_32K: io_buffer_init_physical failed: %d\n", status);
-        zx_handle_close(bti);
         return status;
     }
-    uint32_t* regs = io_buffer_virt(&buffer);
+    uint32_t* regs = buffer.vaddr;
 
     // these magic numbers were gleaned by instrumenting drivers/amlogic/pwm/pwm_meson.c
     // TODO(voydanoff) write a proper PWM driver
@@ -140,8 +133,7 @@ static zx_status_t vim_enable_wifi_32K(vim_bus_t* bus) {
     writel(0x0a0a0609, regs + S912_PWM_TIME_EF);
     writel(0x02808003, regs + S912_PWM_MISC_REG_EF);
 
-    io_buffer_release(&buffer);
-    zx_handle_close(bti);
+    mmio_buffer_release(&buffer);
 
     return ZX_OK;
 }

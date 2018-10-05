@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-bus.h>
 #include <hw/reg.h>
@@ -196,29 +197,18 @@ zx_status_t imx_gpu_init(imx8mevk_bus_t* bus) {
         return status;
     }
 
-    zx_handle_t bti;
-    status = iommu_get_bti(&bus->iommu, 0, BTI_BOARD, &bti);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: iommu_get_bti failed: %d\n", __FUNCTION__, status);
-        return status;
-    }
-
     // Map Clock Control Module.
-    io_buffer_t ccm_buffer;
-    status = io_buffer_init_physical(&ccm_buffer, bti, IMX8M_AIPS_CCM_BASE, IMX8M_AIPS_LENGTH,
-                                     get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    mmio_buffer_t ccm_buffer;
+    status = mmio_buffer_init_physical(&ccm_buffer, IMX8M_AIPS_CCM_BASE, IMX8M_AIPS_LENGTH,
+                                       get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: failed to init ccm buffer: %d\n", __FUNCTION__, status);
-        zx_handle_close(bti);
         return status;
     }
 
-    volatile uint8_t* ccm_regs = io_buffer_virt(&ccm_buffer);
+    status = clock_init(bus, ccm_buffer.vaddr);
 
-    status = clock_init(bus, ccm_regs);
-
-    io_buffer_release(&ccm_buffer);
-    zx_handle_close(bti);
+    mmio_buffer_release(&ccm_buffer);
 
     if (status != ZX_OK) {
         return status;

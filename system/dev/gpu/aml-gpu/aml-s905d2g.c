@@ -11,7 +11,7 @@ zx_status_t aml_gp0_init(aml_gpu_t* gpu) {
     gpu->hiu_dev = calloc(1, sizeof(*gpu->hiu_dev));
     gpu->gp0_pll_dev = calloc(1, sizeof(*gpu->gp0_pll_dev));
     // HIU Init.
-    zx_status_t status = s905d2_hiu_init(gpu->bti, gpu->hiu_dev);
+    zx_status_t status = s905d2_hiu_init(gpu->hiu_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_gp0_init: hiu_init failed: %d\n", status);
         return status;

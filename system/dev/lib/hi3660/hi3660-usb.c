@@ -8,13 +8,14 @@
 #include <hw/reg.h>
 #include <soc/hi3660/hi3660.h>
 #include <soc/hi3660/hi3660-regs.h>
+#include <zircon/syscalls.h>
 
 #include <stdio.h>
 
 zx_status_t hi3660_usb_init(hi3660_t* hi3660) {
-    volatile void* usb3otg_bc = io_buffer_virt(&hi3660->usb3otg_bc);
-    volatile void* peri_crg = io_buffer_virt(&hi3660->peri_crg);
-    volatile void* pctrl = io_buffer_virt(&hi3660->pctrl);
+    volatile void* usb3otg_bc = hi3660->usb3otg_bc.vaddr;
+    volatile void* peri_crg = hi3660->peri_crg.vaddr;
+    volatile void* pctrl = hi3660->pctrl.vaddr;
     uint32_t temp;
 
     writel(PERI_CRG_ISODIS_REFCLK_ISO_EN, peri_crg + PERI_CRG_ISODIS);

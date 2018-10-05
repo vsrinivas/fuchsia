@@ -4,8 +4,9 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/io-buffer.h>
+#include <ddktl/mmio.h>
 #include <ddk/platform-defs.h>
+#include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 #include <lib/zx/handle.h>
 #include <soc/aml-common/aml-usb-phy-v2.h>
@@ -17,21 +18,23 @@
 
 namespace sherlock {
 
-static const pbus_mmio_t xhci_mmios[] = {
+namespace {
+
+constexpr pbus_mmio_t xhci_mmios[] = {
     {
         .base = T931_USB0_BASE,
         .length = T931_USB0_LENGTH,
     },
 };
 
-static const pbus_irq_t xhci_irqs[] = {
+constexpr pbus_irq_t xhci_irqs[] = {
     {
         .irq = T931_USB0_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
 
-static const pbus_bti_t xhci_btis[] = {
+constexpr pbus_bti_t xhci_btis[] = {
     {
         .iommu_index = 0,
         .bti_id = BTI_USB_XHCI,
@@ -54,44 +57,41 @@ static pbus_dev_t xhci_dev = [](){
 }();
 
 // magic numbers for USB PHY tuning
-#define PLL_SETTING_3   0xfe18
-#define PLL_SETTING_4   0xfff
-#define PLL_SETTING_5   0xc8000
-#define PLL_SETTING_6   0xe0004
-#define PLL_SETTING_7   0xe000c
+constexpr uint32_t PLL_SETTING_3 = 0xfe18;
+constexpr uint32_t PLL_SETTING_4 = 0xfff;
+constexpr uint32_t PLL_SETTING_5 = 0xc8000;
+constexpr uint32_t PLL_SETTING_6 = 0xe0004;
+constexpr uint32_t PLL_SETTING_7 = 0xe000c;
 
-#define PHY_WRITE(value, base, offset) writel((value), \
-                reinterpret_cast<volatile uint32_t*>(static_cast<uint8_t*>(base) + offset))
-
-static zx_status_t perform_usb_tuning(zx_handle_t bti, bool host, bool default_val) {
-    io_buffer_t buf;
+zx_status_t PerformUsbTuning(bool host, bool default_val) {
+    fbl::unique_ptr<ddk::MmioBuffer> buf;
     zx_status_t status;
 
-    status = io_buffer_init_physical(&buf, bti, T931_USBPHY21_BASE, T931_USBPHY21_LENGTH,
-                                     get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    zx::unowned_resource resource(get_root_resource());
+    status = ddk::MmioBuffer::Create(T931_USBPHY21_BASE, T931_USBPHY21_LENGTH, fbl::move(resource),
+                                     ZX_CACHE_POLICY_UNCACHED_DEVICE, &buf);
     if (status != ZX_OK) {
         return status;
     }
 
-    auto* base = io_buffer_virt(&buf);
-
     if (default_val) {
-        PHY_WRITE(0, base, 0x38);
-        PHY_WRITE(PLL_SETTING_5, base, 0x34);
+        buf->Write32(0x38, 0);
+        buf->Write32(0x34, PLL_SETTING_5);
     } else {
-        PHY_WRITE(PLL_SETTING_3, base, 0x50);
-        PHY_WRITE(PLL_SETTING_4, base, 0x10);
+        buf->Write32(0x50, PLL_SETTING_3);
+        buf->Write32(0x10, PLL_SETTING_4);
         if (host) {
-            PHY_WRITE(PLL_SETTING_6, base, 0x38);
+            buf->Write32(0x38, PLL_SETTING_6);
         } else {
-            PHY_WRITE(PLL_SETTING_7, base, 0x38);
+            buf->Write32(0x38, PLL_SETTING_7);
         }
-        PHY_WRITE(PLL_SETTING_5, base, 0x34);
+        buf->Write32(0x34, PLL_SETTING_5);
     }
 
-    io_buffer_release(&buf);
     return ZX_OK;
 }
+
+} // namespace
 
 zx_status_t Sherlock::UsbInit() {
     zx::handle bti;
@@ -107,7 +107,7 @@ zx_status_t Sherlock::UsbInit() {
         return status;
     }
 
-    status = perform_usb_tuning(bti.get(), true, false);
+    status = PerformUsbTuning(true, false);
     if (status != ZX_OK) {
         return status;
     }

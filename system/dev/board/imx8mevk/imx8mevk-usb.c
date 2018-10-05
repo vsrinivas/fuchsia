@@ -6,6 +6,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/usb-mode-switch.h>
@@ -107,17 +108,18 @@ static const pbus_dev_t usb2_dev = {
     .metadata_count = countof(usb2_metadata),
 };
 
-zx_status_t imx_usb_phy_init(zx_paddr_t usb_base, size_t usb_length, zx_handle_t bti) {
+zx_status_t imx_usb_phy_init(zx_paddr_t usb_base, size_t usb_length) {
     uint32_t reg;
-    io_buffer_t usb_buf;
-    zx_status_t status = io_buffer_init_physical(&usb_buf, bti, usb_base, usb_length,
-                                                 get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    mmio_buffer_t usb_buf;
+    zx_status_t status = mmio_buffer_init_physical(&usb_buf, usb_base, usb_length,
+                                                   get_root_resource(),
+                                                   ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s io_buffer_init_physical failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s mmio_buffer_init_physical failed %d\n", __FUNCTION__, status);
         return status;
     }
 
-    volatile void* regs = io_buffer_virt(&usb_buf);
+    volatile void* regs = usb_buf.vaddr;
     //TODO: More stuff might be needed if we were to boot from our own bootloader.
     reg = readl(regs + USB_PHY_CTRL1);
     reg &= ~(PHY_CTRL1_VDATSRCENB0 | PHY_CTRL1_VDATDETENB0);
@@ -136,13 +138,12 @@ zx_status_t imx_usb_phy_init(zx_paddr_t usb_base, size_t usb_length, zx_handle_t
     reg &= ~(PHY_CTRL1_RESET | PHY_CTRL1_ATERESET);
     writel(reg, regs + USB_PHY_CTRL1);
 
-    io_buffer_release(&usb_buf);
+    mmio_buffer_release(&usb_buf);
     return ZX_OK;
 }
 
 zx_status_t imx_usb_init(imx8mevk_bus_t* bus) {
     zx_status_t status;
-    zx_handle_t bti;
 
     // turn on usb via smc calls
     zx_smc_parameters_t otg1_en_params = {.func_id = IMX8M_SIP_GPC,
@@ -166,25 +167,16 @@ zx_status_t imx_usb_init(imx8mevk_bus_t* bus) {
         return status;
     }
 
-    status = iommu_get_bti(&bus->iommu, 0, BTI_BOARD, &bti);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: iommu_get_bti failed %d\n", __FUNCTION__, status);
-        return status;
-    }
-
-    status = imx_usb_phy_init(IMX8M_USB1_BASE, IMX8M_USB1_LENGTH, bti);
+    status = imx_usb_phy_init(IMX8M_USB1_BASE, IMX8M_USB1_LENGTH);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: imx_usb_phy_init failed %d\n", __FUNCTION__, status);
-        zx_handle_close(bti);
         return status;
     }
-    status = imx_usb_phy_init(IMX8M_USB2_BASE, IMX8M_USB2_LENGTH, bti);
+    status = imx_usb_phy_init(IMX8M_USB2_BASE, IMX8M_USB2_LENGTH);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: imx_usb_phy_init failed %d\n", __FUNCTION__, status);
-        zx_handle_close(bti);
         return status;
     }
-    zx_handle_close(bti);
 
     if ((status = pbus_device_add(&bus->pbus, &usb1_dev)) != ZX_OK) {
         zxlogf(ERROR, "imx_usb_init could not add usb1_dev: %d\n", status);

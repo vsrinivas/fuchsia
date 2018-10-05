@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/gpio-impl.h>
 #include <ddk/protocol/iommu.h>
 #include <ddk/protocol/platform-bus.h>
@@ -34,7 +34,7 @@ typedef struct {
     gpio_impl_protocol_t gpio;
     iommu_protocol_t iommu;
     zx_handle_t bti_handle;
-    io_buffer_t usb_phy;
+    mmio_buffer_t usb_phy;
     zx_handle_t usb_phy_irq_handle;
     thrd_t phy_irq_thread;
     a113_clk_dev_t *clocks;

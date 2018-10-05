@@ -106,7 +106,7 @@ static zx_status_t hikey960_bind(void* ctx, zx_device_t* parent) {
 
     // TODO(voydanoff) get from platform bus driver somehow
     zx_handle_t resource = get_root_resource();
-    status = hi3660_init(resource, hikey->bti_handle, &hikey->hi3660);
+    status = hi3660_init(resource, &hikey->hi3660);
     if (status != ZX_OK) {
         zxlogf(ERROR, "hikey960_bind: hi3660_init failed %d\n", status);
         goto fail;

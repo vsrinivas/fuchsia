@@ -77,7 +77,7 @@ static const pbus_dev_t led_dev = {
 
 static void gauss_bus_release(void* ctx) {
     gauss_bus_t* bus = ctx;
-    io_buffer_release(&bus->usb_phy);
+    mmio_buffer_release(&bus->usb_phy);
     zx_handle_close(bus->bti_handle);
     free(bus);
 }
@@ -139,7 +139,7 @@ static int gauss_start_thread(void* arg) {
         goto fail;
     }
 
-    status = a113_clk_init(bus->bti_handle, &bus->clocks);
+    status = a113_clk_init(&bus->clocks);
     if (status != ZX_OK) {
         zxlogf(ERROR, "a113_clk_init failed: %d\n",status);
         goto fail;

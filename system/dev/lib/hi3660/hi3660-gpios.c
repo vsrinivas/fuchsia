@@ -172,7 +172,7 @@ static const gpio_block_t gpio_blocks[] = {
     },
 };
 
-zx_status_t hi3660_gpio_init(hi3660_t* hi3660, zx_handle_t bti) {
+zx_status_t hi3660_gpio_init(hi3660_t* hi3660) {
     zx_status_t status;
     zx_handle_t resource = get_root_resource();
 
@@ -184,10 +184,10 @@ zx_status_t hi3660_gpio_init(hi3660_t* hi3660, zx_handle_t bti) {
             return ZX_ERR_NO_MEMORY;
         }
 
-        status = io_buffer_init_physical(&gpios->buffer, bti, block->base, block->length,
-                                         resource, ZX_CACHE_POLICY_UNCACHED_DEVICE);
+        status = mmio_buffer_init_physical(&gpios->buffer, block->base, block->length,
+                                           resource, ZX_CACHE_POLICY_UNCACHED_DEVICE);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "hi3660_gpio_init: io_buffer_init_physical failed %d\n", status);
+            zxlogf(ERROR, "hi3660_gpio_init: mmio_buffer_init_physical failed %d\n", status);
             free(gpios);
             return status;
         }
@@ -210,7 +210,7 @@ void hi3660_gpio_release(hi3660_t* hi3660) {
     pl061_gpios_t* gpios;
 
     while ((gpios = list_remove_head_type(&hi3660->gpios, pl061_gpios_t, node)) != NULL) {
-        io_buffer_release(&gpios->buffer);
+        mmio_buffer_release(&gpios->buffer);
         free(gpios);
     }
 }

@@ -6,25 +6,24 @@
 #include <hw/reg.h>
 
 #include <zircon/assert.h>
+#include <zircon/syscalls.h>
 #include <zircon/types.h>
 
 #include <soc/aml-s905d2/s905d2-hiu.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
-zx_status_t s905d2_hiu_init(zx_handle_t bti, aml_hiu_dev_t* device) {
+zx_status_t s905d2_hiu_init(aml_hiu_dev_t* device) {
 
     zx_handle_t resource = get_root_resource();
     zx_status_t status;
 
-    status = io_buffer_init_physical(&device->regs_iobuff, bti, S905D2_HIU_BASE,
-                                     S905D2_HIU_LENGTH, resource,
-                                     ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    status = mmio_buffer_init_physical(&device->mmio, S905D2_HIU_BASE, S905D2_HIU_LENGTH,
+                                       resource, ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: io_buffer_init_physical failed %d\n", __func__, status);
+        zxlogf(ERROR, "%s: mmio_buffer_init_physical failed %d\n", __func__, status);
         return status;
     }
-
-    device->virt_regs = (zx_vaddr_t)(io_buffer_virt(&device->regs_iobuff));
+    device->regs_vaddr = device->mmio.vaddr;
 
     return ZX_OK;
 }

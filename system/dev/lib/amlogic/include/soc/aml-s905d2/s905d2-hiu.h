@@ -4,9 +4,12 @@
 
 #pragma once
 
-#include <ddk/io-buffer.h>
 #include <stdint.h>
 #include <unistd.h>
+
+#include <ddk/mmio-buffer.h>
+#include <hw/reg.h>
+#include <zircon/assert.h>
 
 // clang-format off
 #define SDM_FRACTIONALITY         ((uint32_t)16384)
@@ -119,8 +122,8 @@ typedef struct {
 } hhi_pll_rate_t;
 
 typedef struct aml_hiu_dev {
-    io_buffer_t regs_iobuff;
-    zx_vaddr_t virt_regs;
+    mmio_buffer_t mmio;
+    uint8_t* regs_vaddr;
 } aml_hiu_dev_t;
 
 typedef struct aml_pll_dev {
@@ -133,11 +136,11 @@ typedef struct aml_pll_dev {
 } aml_pll_dev_t;
 
 static inline uint32_t hiu_clk_get_reg(aml_hiu_dev_t* dev, uint32_t offset) {
-    return *(volatile uint32_t*)((uintptr_t)dev->virt_regs + offset);
+    return readl(dev->regs_vaddr + offset);
 }
 
 static inline uint32_t hiu_clk_set_reg(aml_hiu_dev_t* dev, uint32_t offset, uint32_t value) {
-    *(volatile uint32_t*)((uintptr_t)dev->virt_regs + offset) = value;
+    writel(value, dev->regs_vaddr + offset);
     return hiu_clk_get_reg(dev, offset);
 }
 
@@ -162,7 +165,7 @@ __BEGIN_CDECLS;
 /*
     Maps the hiu register block (containing all the pll controls).
 */
-zx_status_t s905d2_hiu_init(zx_handle_t bti, aml_hiu_dev_t* device);
+zx_status_t s905d2_hiu_init(aml_hiu_dev_t* device);
 
 /*
     Initializes the selected pll. This resetting the pll and writing initial

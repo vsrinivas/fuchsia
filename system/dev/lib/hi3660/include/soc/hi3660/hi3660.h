@@ -4,28 +4,28 @@
 
 #pragma once
 
-#include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/gpio-impl.h>
 #include <zircon/listnode.h>
 
 typedef struct {
     list_node_t gpios;
     gpio_impl_protocol_t gpio;
-    io_buffer_t usb3otg_bc;
-    io_buffer_t peri_crg;
-    io_buffer_t iomcu;
-    io_buffer_t pctrl;
-    io_buffer_t iomg_pmx4;
-    io_buffer_t iocfg_pmx9;
-    io_buffer_t pmu_ssio;
+    mmio_buffer_t usb3otg_bc;
+    mmio_buffer_t peri_crg;
+    mmio_buffer_t iomcu;
+    mmio_buffer_t pctrl;
+    mmio_buffer_t iomg_pmx4;
+    mmio_buffer_t iocfg_pmx9;
+    mmio_buffer_t pmu_ssio;
 } hi3660_t;
 
-zx_status_t hi3660_init(zx_handle_t resource, zx_handle_t bti, hi3660_t** out);
+zx_status_t hi3660_init(zx_handle_t resource, hi3660_t** out);
 zx_status_t hi3660_get_protocol(hi3660_t* hi3660, uint32_t proto_id, void* out);
 void hi3660_release(hi3660_t* hi3660);
 
 // hi3660-gpios.c
-zx_status_t hi3660_gpio_init(hi3660_t* hi3660, zx_handle_t bti);
+zx_status_t hi3660_gpio_init(hi3660_t* hi3660);
 void hi3660_gpio_release(hi3660_t* hi3660);
 
 // hi3660-usb.c

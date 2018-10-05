@@ -18,7 +18,7 @@
 #define MMIO_IOCFG_PMX9_OFFSET          0x800
 
 zx_status_t hi3660_i2c1_init(hi3660_t* hi3660) {
-    volatile void* iomcu = io_buffer_virt(&hi3660->iomcu) + I2C1_ENABLE_REG_OFFSET;
+    volatile void* iomcu = hi3660->iomcu.vaddr + I2C1_ENABLE_REG_OFFSET;
     uint32_t temp;
 
     temp = readl(iomcu + CLKGATE_SEPERATED_ENABLE);
@@ -31,7 +31,7 @@ zx_status_t hi3660_i2c1_init(hi3660_t* hi3660) {
 
 zx_status_t hi3660_i2c_pinmux(hi3660_t* hi3660) {
     // setup i2c0 and i2c1 pin control first
-    volatile void* iomg_pmx4 = io_buffer_virt(&hi3660->iomg_pmx4);
+    volatile void* iomg_pmx4 = hi3660->iomg_pmx4.vaddr;
     volatile void* iocfg_pmx9 = iomg_pmx4 + MMIO_IOCFG_PMX9_OFFSET;
 
     writel(MUX_M1, iomg_pmx4 + I2C0_SCL_MUX_OFFSET); // I2C0_SCL

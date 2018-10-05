@@ -5,7 +5,6 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <ddk/io-buffer.h>
 #include <ddk/protocol/gpio-impl.h>
 #include <ddk/protocol/iommu.h>
 #include <ddk/protocol/platform-bus.h>

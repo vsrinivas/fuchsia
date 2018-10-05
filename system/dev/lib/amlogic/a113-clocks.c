@@ -6,10 +6,8 @@
 #include <threads.h>
 #include <unistd.h>
 
-
 #include <bits/limits.h>
 #include <ddk/debug.h>
-#include <hw/reg.h>
 
 #include <zircon/assert.h>
 #include <zircon/types.h>
@@ -20,7 +18,7 @@
 
 /* create instance of a113_clock_t and do basic initialization.
 */
-zx_status_t a113_clk_init(zx_handle_t bti, a113_clk_dev_t **device) {
+zx_status_t a113_clk_init(a113_clk_dev_t **device) {
 
     *device = calloc(1, sizeof(a113_clk_dev_t));
     if (!(*device)) {
@@ -30,23 +28,20 @@ zx_status_t a113_clk_init(zx_handle_t bti, a113_clk_dev_t **device) {
     zx_handle_t resource = get_root_resource();
     zx_status_t status;
 
-    status = io_buffer_init_physical(&(*device)->regs_iobuff, bti, A113_CLOCKS_BASE_PHYS,PAGE_SIZE,
-                                     resource, ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    status = mmio_buffer_init_physical(&(*device)->mmio, A113_CLOCKS_BASE_PHYS,PAGE_SIZE,
+                                       resource, ZX_CACHE_POLICY_UNCACHED_DEVICE);
 
     if (status != ZX_OK) {
-        zxlogf(ERROR, "a113_clk_init: io_buffer_init_physical failed %d\n", status);
+        zxlogf(ERROR, "a113_clk_init: mmio_buffer_init_physical failed %d\n", status);
         goto init_fail;
     }
-
-    (*device)->virt_regs = (zx_vaddr_t)(io_buffer_virt(&(*device)->regs_iobuff));
+    (*device)->regs_vaddr = (*device)->mmio.vaddr;
 
     return ZX_OK;
 
 init_fail:
-    if (*device) {
-        io_buffer_release(&(*device)->regs_iobuff);
-        free(*device);
-     };
+    mmio_buffer_release(&(*device)->mmio);
+    free(*device);
     return status;
 }
 
@@ -54,10 +49,10 @@ static void a113_clk_update_reg(a113_clk_dev_t *dev, uint32_t offset,
                                                      uint32_t pos,
                                                      uint32_t bits,
                                                      uint32_t value) {
-    uint32_t reg = a113_clk_get_reg(dev,offset);
+    uint32_t reg = a113_clk_get_reg(dev, offset);
     reg &= ~(((1 << bits) - 1) << pos);
     reg |=  (value & ((1 << bits) - 1)) << pos;
-    a113_clk_set_reg(dev,offset,reg);
+    a113_clk_set_reg(dev, offset, reg);
 }
 
 zx_status_t a113_clk_set_mpll2(a113_clk_dev_t *device, uint64_t rate, uint64_t *actual) {

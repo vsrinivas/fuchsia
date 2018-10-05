@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/aml-common/aml-usb-phy-v2.h>
@@ -51,17 +52,17 @@ static const pbus_dev_t xhci_dev = {
 #define PLL_SETTING_6   0xe0004
 #define PLL_SETTING_7   0xe000c
 
-static zx_status_t astro_usb_tuning(zx_handle_t bti, bool host, bool default_val) {
-    io_buffer_t buf;
+static zx_status_t astro_usb_tuning(bool host, bool default_val) {
+    mmio_buffer_t buf;
     zx_status_t status;
 
-    status = io_buffer_init_physical(&buf, bti, S905D2_USBPHY21_BASE, S905D2_USBPHY21_LENGTH,
-                                     get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    status = mmio_buffer_init_physical(&buf, S905D2_USBPHY21_BASE, S905D2_USBPHY21_LENGTH,
+                                       get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
         return status;
     }
 
-    volatile void* base = io_buffer_virt(&buf);
+    volatile void* base = buf.vaddr;
 
     if (default_val) {
         writel(0, base + 0x38);
@@ -77,7 +78,7 @@ static zx_status_t astro_usb_tuning(zx_handle_t bti, bool host, bool default_val
         writel(PLL_SETTING_5, base + 0x34);
     }
 
-    io_buffer_release(&buf);
+    mmio_buffer_release(&buf);
     return ZX_OK;
 }
 
@@ -95,7 +96,7 @@ zx_status_t aml_usb_init(aml_bus_t* bus) {
         return status;
     }
 
-    status = astro_usb_tuning(bti, true, false);
+    status = astro_usb_tuning(true, false);
     zx_handle_close(bti);
     if (status != ZX_OK) {
         return status;
