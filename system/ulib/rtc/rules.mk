@@ -11,7 +11,6 @@ MODULE_NAME := rtc
 MODULE_TYPE := userlib
 
 MODULE_EXPORT := so
-MODULE_SO_NAME := rtc
 
 MODULE_COMPILEFLAGS := -fvisibility=hidden
 

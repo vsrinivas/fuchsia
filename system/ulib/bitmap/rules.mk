@@ -14,8 +14,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/raw-bitmap.cpp \
     $(LOCAL_DIR)/rle-bitmap.cpp \
 
-MODULE_SO_NAME := bitmap
-
 MODULE_STATIC_LIBS := \
     system/ulib/zx \
     system/ulib/zxcpp \
