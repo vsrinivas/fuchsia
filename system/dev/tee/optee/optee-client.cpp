@@ -390,6 +390,9 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
         return ZX_ERR_INVALID_ARGS;
     }
 
+    // Mark that the return code will originate from driver
+    message.set_return_origin(TEEC_ORIGIN_COMMS);
+
     switch (message.command()) {
     case RpcMessage::Command::kLoadTa: {
         LoadTaRpcMessage load_ta_msg(fbl::move(message));
@@ -430,31 +433,26 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
     }
     case RpcMessage::Command::kPerformSocketIo:
         zxlogf(ERROR, "optee: RPC command to perform socket IO recognized but not implemented\n");
-        message.set_return_origin(TEEC_ORIGIN_COMMS);
         message.set_return_code(TEEC_ERROR_NOT_SUPPORTED);
         return ZX_OK;
     case RpcMessage::Command::kAccessReplayProtectedMemoryBlock:
     case RpcMessage::Command::kAccessSqlFileSystem:
     case RpcMessage::Command::kLoadGprof:
         zxlogf(INFO, "optee: received unsupported RPC command\n");
-        message.set_return_origin(TEEC_ORIGIN_COMMS);
         message.set_return_code(TEEC_ERROR_NOT_SUPPORTED);
         return ZX_OK;
     default:
         zxlogf(ERROR,
                "optee: unrecognized command passed to RPC 0x%" PRIu32 "\n",
                message.command());
-        message.set_return_origin(TEEC_ORIGIN_COMMS);
         message.set_return_code(TEEC_ERROR_NOT_SUPPORTED);
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
 zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
+    ZX_DEBUG_ASSERT(message != nullptr);
     ZX_DEBUG_ASSERT(message->is_valid());
-
-    // Mark that the return code will originate from driver
-    message->set_return_origin(TEEC_ORIGIN_COMMS);
 
     // The amount of memory available for loading the TA
     uint64_t mem_usable_size = message->memory_reference_size() -
@@ -550,10 +548,8 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
 }
 
 zx_status_t OpteeClient::HandleRpcCommandAllocateMemory(AllocateMemoryRpcMessage* message) {
+    ZX_DEBUG_ASSERT(message != nullptr);
     ZX_DEBUG_ASSERT(message->is_valid());
-
-    // Mark that the return code will originate from driver
-    message->set_return_origin(TEEC_ORIGIN_COMMS);
 
     if (message->memory_type() == SharedMemoryType::kGlobal) {
         zxlogf(ERROR, "optee: implementation currently does not support global shared memory!\n");
@@ -585,10 +581,8 @@ zx_status_t OpteeClient::HandleRpcCommandAllocateMemory(AllocateMemoryRpcMessage
 }
 
 zx_status_t OpteeClient::HandleRpcCommandFreeMemory(FreeMemoryRpcMessage* message) {
+    ZX_DEBUG_ASSERT(message != nullptr);
     ZX_DEBUG_ASSERT(message->is_valid());
-
-    // Mark that the return code will originate from driver
-    message->set_return_origin(TEEC_ORIGIN_COMMS);
 
     if (message->memory_type() == SharedMemoryType::kGlobal) {
         zxlogf(ERROR, "optee: implementation currently does not support global shared memory!\n");
@@ -612,10 +606,8 @@ zx_status_t OpteeClient::HandleRpcCommandFreeMemory(FreeMemoryRpcMessage* messag
 }
 
 zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage* message) {
+    ZX_DEBUG_ASSERT(message != nullptr);
     ZX_DEBUG_ASSERT(message->is_valid());
-
-    // Mark that the return code will originate from driver
-    message->set_return_origin(TEEC_ORIGIN_COMMS);
 
     switch (message->command()) {
     case FileSystemRpcMessage::FileSystemCommand::kOpenFile:
