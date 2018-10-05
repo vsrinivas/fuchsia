@@ -71,6 +71,10 @@ class SparseByteBuffer {
   // Finds a hole containing the specified position.
   Hole FindHoleContaining(size_t position);
 
+  // Finds or creates holes which fully describe the buffer's gaps in the given
+  // range.
+  std::vector<Hole> FindOrCreateHolesInRange(size_t start, size_t size);
+
   // Creates a region that starts at hole.position(). The new region must not
   // overlap other existing regions and cannot extend beyond the size of this
   // sparse buffer. Holes are updated to accommodate the region. Fill returns

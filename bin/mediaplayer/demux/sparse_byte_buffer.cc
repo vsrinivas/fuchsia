@@ -126,6 +126,45 @@ SparseByteBuffer::Hole SparseByteBuffer::FindHoleContaining(size_t position) {
   return Hole(iter);
 }
 
+std::vector<SparseByteBuffer::Hole> SparseByteBuffer::FindOrCreateHolesInRange(
+    size_t start, size_t size) {
+  FXL_DCHECK(start < size_);
+  FXL_DCHECK(start + size < size_);
+
+  std::vector<Hole> holes_in_range;
+
+  size_t end = start + size;
+  HolesIter iter = holes_.lower_bound(start);
+  if (iter != holes_.begin()) {
+    --iter;
+  }
+  while (iter != holes_.end() && iter->first < end) {
+    size_t hole_start = iter->first;
+    size_t hole_end = iter->first + iter->second;
+    if (hole_end > start) {
+      if (hole_end > end) {
+        size_t trailing = hole_end - end;
+        holes_.emplace(end, trailing);
+        iter->second -= trailing;
+      }
+
+      if (hole_start < start) {
+        // Truncate this hole and add a new one with
+        // only the subset inside our range, which we will
+        // evaluate on the next loop iteration.
+        size_t preceding = start - hole_start;
+        holes_.emplace(start, iter->second - preceding);
+        iter->second = preceding;
+      } else {
+        holes_in_range.push_back(Hole(iter));
+      }
+    }
+    ++iter;
+  }
+
+  return holes_in_range;
+}
+
 SparseByteBuffer::Hole SparseByteBuffer::Fill(Hole hole,
                                               std::vector<uint8_t>&& buffer) {
   FXL_DCHECK(size_ > 0u);
@@ -180,7 +219,7 @@ SparseByteBuffer::Hole SparseByteBuffer::Free(Region region) {
   if (region.position() > 0) {
     hole_before = FindHoleContaining(region.position() - 1);
   }
-  
+
   Hole hole_after = FindHoleContaining(region.position() + region.size());
 
   Hole new_hole = null_hole();

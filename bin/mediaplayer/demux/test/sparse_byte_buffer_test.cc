@@ -301,6 +301,56 @@ TEST(SparseByteBufferTest, HoleHints) {
   }
 }
 
+TEST(SparseByteBufferTest, FindOrCreateHolesInRange) {
+  {
+    // Test buffer diagram:
+    //       | Selected Range |
+    // [   =   ==== ===      ==== ....]
+    // Regions (corresponding to diagram):
+    SparseByteBuffer under_test =
+        BufferWithRegions({{3, 1}, {7, 4}, {12, 3}, {21, 4}});
+
+    std::vector<SparseByteBuffer::Hole> holes =
+        under_test.FindOrCreateHolesInRange(5, 17);
+
+    // Expected holes in range (corresponding to diagram):
+    EXPECT_EQ(holes.size(), 3u) << "Number of holes vs Expected";
+    ExpectHole(&under_test, 5, 2, holes[0]);
+    ExpectHole(&under_test, 11, 1, holes[1]);
+    ExpectHole(&under_test, 15, 6, holes[2]);
+
+    // Expected holes outside of range (corresponding to diagram):
+    ExpectHole(&under_test, 0, 3, under_test.FindHoleContaining(0));
+    ExpectHole(&under_test, 4, 1, under_test.FindHoleContaining(4));
+    ExpectHole(&under_test, 25, kSize - 25, under_test.FindHoleContaining(25));
+  }
+
+  {
+    // Find hole on end of range.
+    SparseByteBuffer under_test = BufferWithRegions({{0, 100}});
+    std::vector<SparseByteBuffer::Hole> holes =
+        under_test.FindOrCreateHolesInRange(50, 100);
+
+    EXPECT_EQ(holes.size(), 1u);
+    ExpectHole(&under_test, 100, 50, holes[0]);
+    ExpectHole(&under_test, 150, kSize - 150,
+               under_test.FindHoleContaining(150));
+  }
+
+  {
+    // Find hole in empty buffer.
+    SparseByteBuffer under_test = BufferWithRegions({});
+    std::vector<SparseByteBuffer::Hole> holes =
+        under_test.FindOrCreateHolesInRange(100, 100);
+
+    EXPECT_EQ(holes.size(), 1u);
+    ExpectHole(&under_test, 100, 100, holes[0]);
+    ExpectHole(&under_test, 0, 100, under_test.FindHoleContaining(0));
+    ExpectHole(&under_test, 200, kSize - 200,
+               under_test.FindHoleContaining(200));
+  }
+}
+
 TEST(SparseByteBufferTest, FreeRegion) {
   {
     // Free a region with a hole before and after it.
