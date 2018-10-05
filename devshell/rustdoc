@@ -38,6 +38,9 @@ def main():
     parser.add_argument("--target",
                         help="Target triple for which this crate is being compiled",
                         default="x86_64-fuchsia")
+    parser.add_argument("--out-dir",
+                        help="Path to the Fuchsia output directory",
+                        required=False)
     parser.add_argument("--no-deps",
                         action="store_true",
                         help="Disable building of docs for dependencies")
@@ -50,7 +53,10 @@ def main():
 
     args = parser.parse_args()
 
-    out_dir = lib.rust.find_out_dir()
+    if args.out_dir:
+        out_dir = args.out_dir
+    else:
+        out_dir = lib.rust.find_out_dir()
 
     env = os.environ.copy()
 
