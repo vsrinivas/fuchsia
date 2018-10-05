@@ -245,6 +245,9 @@ func GenerateFidl(templatePath string, fidl types.Root, outputBase *string, opti
 	funcMap := template.FuncMap{
 		// Gets the decltype for an EncodedCompoundIdentifier.
 		"declType": func(eci types.EncodedCompoundIdentifier) types.DeclType {
+			if  root.Name == eci.LibraryName() {
+				return root.Decls[eci]
+			}
 			library := root.GetLibrary(eci.LibraryName())
 			return library.Decls[eci]
 		},
