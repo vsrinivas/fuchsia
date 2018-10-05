@@ -46,8 +46,12 @@ layout(set = 1, binding = 1) uniform sampler2D material_tex;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-  vec4 light = texture(light_tex, gl_FragCoord.xy * frag_coord_to_uv_multiplier);
-  outColor = light.r * color * texture(material_tex, inUV);
+  float light = texture(light_tex, gl_FragCoord.xy * frag_coord_to_uv_multiplier).r;
+  // Hacked in ambient (maybe the ambient_light_intensity above works, maybe it
+  // doesn't, who knows?)
+  const float ambient = 0.7;
+  light = ambient + (1 - ambient) * light;
+  outColor = light * color * texture(material_tex, inUV);
 }
 )GLSL";
 
