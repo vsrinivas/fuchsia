@@ -924,9 +924,25 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
                 };
                 invalid = (!frame_contains(image_frame, layer->src_frame)
                         || !frame_contains(display_frame, layer->dest_frame));
+
+                if (!invalid) {
+                    invalid = true;
+                    for (auto fmt : display_config.pixel_formats_) {
+                        if (fmt == layer->image.pixel_format) {
+                            invalid = false;
+                            break;
+                        }
+                    }
+                }
             } else if (layer_node.layer->pending_layer_.type == LAYER_CURSOR) {
-                // The image is already set, so nothing to do here, and there's
-                // nothing that could make this invald.
+                invalid = true;
+                auto& cursor_cfg = layer_node.layer->pending_layer_.cfg.cursor;
+                for (auto& cursor_info : display_config.cursor_infos_) {
+                    if (cursor_info.format == cursor_cfg.image.pixel_format) {
+                        invalid = false;
+                        break;
+                    }
+                }
             } else if (layer_node.layer->pending_layer_.type == LAYER_COLOR) {
                 // There aren't any API constraints on valid colors.
                 layer_node.layer->pending_layer_.cfg.color.color =
