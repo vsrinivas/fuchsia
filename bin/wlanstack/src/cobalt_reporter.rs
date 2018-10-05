@@ -10,9 +10,11 @@ use fidl_fuchsia_mem as fuchsia_mem;
 use futures::channel::mpsc;
 use futures::prelude::*;
 use futures::StreamExt;
-use log::error;
+use log::{error, info};
 use std::fs::File;
 use std::io::Seek;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 const COBALT_CONFIG_PATH: &'static str = "/pkg/data/cobalt_config.binproto";
 
@@ -40,6 +42,7 @@ struct Event {
 #[derive(Clone)]
 pub struct CobaltSender {
     sender: mpsc::Sender<Event>,
+    is_blocked: Arc<AtomicBool>,
 }
 
 impl CobaltSender {
@@ -67,14 +70,23 @@ impl CobaltSender {
     fn log_event(&mut self, metric_id: u32, value: EventValue) {
         let event = Event { metric_id, value };
         if self.sender.try_send(event).is_err() {
-            error!("Dropping a Cobalt event because the buffer is full");
+            let was_blocked = self.is_blocked.compare_and_swap(false, true, Ordering::SeqCst);
+            if !was_blocked {
+                error!("cobalt sender drops a event/events: either buffer is full or no receiver is waiting");
+            }
+        } else {
+            let was_blocked = self.is_blocked.compare_and_swap(true, false, Ordering::SeqCst);
+            if was_blocked {
+                info!("cobalt sender recovers and resumes sending")
+            }
+
         }
     }
 }
 
 pub fn serve() -> (CobaltSender, impl Future<Output = ()>) {
     let (sender, receiver) = mpsc::channel(COBALT_BUFFER_SIZE);
-    let sender = CobaltSender { sender };
+    let sender = CobaltSender { sender, is_blocked: Arc::new(AtomicBool::new(false)) };
     let fut = send_cobalt_events(receiver);
     (sender, fut)
 }
