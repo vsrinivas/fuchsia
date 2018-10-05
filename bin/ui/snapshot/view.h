@@ -24,8 +24,7 @@ class View final : public mozart::BaseView,
   View(async::Loop* loop, component::StartupContext* startup_context,
        ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
        fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-           view_owner_request,
-       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services);
+           view_owner_request);
 
   ~View() override = default;
 
@@ -34,7 +33,6 @@ class View final : public mozart::BaseView,
 
  private:
   fidl::BindingSet<fuchsia::scenic::snapshot::Loader> loader_bindings_;
-  component::ServiceNamespace service_namespace_;
 
   void LoadNode(scenic::ContainerNode& parent_node,
                 const snapshot::Node* flat_node);

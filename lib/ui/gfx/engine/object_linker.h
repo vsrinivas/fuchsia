@@ -27,11 +27,6 @@ class ObjectLinkerBase {
  public:
   ~ObjectLinkerBase() = default;
 
-  // Returns the corresponding import's client object.
-  void* GetImport(zx_koid_t endpoint_id) {
-    auto it = imports_.find(endpoint_id);
-    return it != imports_.end() ? it->second.object : nullptr;
-  }
   size_t ExportCount() { return exports_.size(); }
   size_t UnresolvedExportCount() { return unresolved_exports_.size(); }
   size_t ImportCount() { return imports_.size(); }

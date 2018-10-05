@@ -153,10 +153,6 @@ class ViewRegistry : public ViewInspector,
   // INPUT DISPATCHER CALLBACKS
   void OnInputDispatcherDied(InputDispatcherImpl* dispatcher) override;
 
-  // SNAPSHOT
-  void TakeSnapshot(uint64_t view_koid,
-                    fit::function<void(::fuchsia::mem::Buffer)> callback);
-
  private:
   // LIFETIME
 

@@ -5,7 +5,6 @@
 #include "garnet/bin/ui/view_manager/view_manager_app.h"
 
 #include "garnet/bin/ui/view_manager/view_manager_impl.h"
-#include "garnet/bin/ui/view_manager/view_snapshot_impl.h"
 #include "lib/fxl/logging.h"
 
 namespace view_manager {
@@ -22,14 +21,6 @@ ViewManagerApp::ViewManagerApp()
                      request) {
             view_manager_bindings_.AddBinding(
                 std::make_unique<ViewManagerImpl>(registry_.get()),
-                std::move(request));
-          });
-  startup_context_->outgoing()
-      .AddPublicService<::fuchsia::ui::viewsv1::ViewSnapshot>(
-          [this](fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewSnapshot>
-                     request) {
-            view_snapshot_bindings_.AddBinding(
-                std::make_unique<ViewSnapshotImpl>(registry_.get()),
                 std::move(request));
           });
   startup_context_->outgoing()
