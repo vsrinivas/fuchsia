@@ -17,10 +17,10 @@ interface and the WavWriter class to record a waveform audio file.
     --loopback            : Capture final-mix-output from preferred output device
 
       Default is to use the device's preferred frame rate
-    --frame-rate=<rate>   : Specify the capture frame rate (range [1000, 192000])
+    --rate=<rate>         : Specify the capture frame rate (range [1000, 192000])
 
       Default is to use the device's preferred number of channels
-    --channels=<count>    : Specify the number of channels captured (range [1, 8])
+    --chans=<count>       : Specify the number of channels captured (range [1, 8])
 
       Default is to record and save as 16-bit integer
     --float               : Record and save as 32-bit float

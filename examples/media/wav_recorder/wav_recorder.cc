@@ -27,8 +27,8 @@ static const std::string kAsyncModeOption = "async";
 static const std::string kFloatFormatOption = "float";
 static const std::string k24In32FormatOption = "int24";
 static const std::string kPacked24FormatOption = "packed24";
-static const std::string kFrameRateOption = "frame-rate";
-static const std::string kChannelsOption = "channels";
+static const std::string kFrameRateOption = "rate";
+static const std::string kChannelsOption = "chans";
 
 WavRecorder::~WavRecorder() {
   if (payload_buf_virt_ != nullptr) {
