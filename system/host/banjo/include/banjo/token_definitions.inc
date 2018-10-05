@@ -73,6 +73,10 @@ KEYWORD(Uint32, "uint32")
 KEYWORD(Uint64, "uint64")
 KEYWORD(Float32, "float32")
 KEYWORD(Float64, "float64")
+KEYWORD(USize, "usize")
+KEYWORD(ISize, "isize")
+// TODO(surajmalhtora): rename this to voidptr.
+KEYWORD(VoidPtr, "void")
 
 KEYWORD(True, "true")
 KEYWORD(False, "false")

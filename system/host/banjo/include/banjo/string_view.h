@@ -28,6 +28,9 @@ public:
 
     constexpr const char* data() const { return data_; }
     constexpr size_t size() const { return size_; }
+    constexpr bool empty() const { return size_ == 0; }
+    const char* begin() const { return &data_[0]; }
+    const char* end() const { return &data_[size_]; }
 
     bool operator==(StringView other) const {
         if (size() != other.size())

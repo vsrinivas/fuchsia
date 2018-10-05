@@ -430,6 +430,9 @@ void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
     case types::PrimitiveSubtype::kBool:
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
+    case types::PrimitiveSubtype::kUSize:
+    case types::PrimitiveSubtype::kISize:
+    case types::PrimitiveSubtype::kVoidPtr:
         assert(false && "bad primitive type for an enum");
         break;
     }

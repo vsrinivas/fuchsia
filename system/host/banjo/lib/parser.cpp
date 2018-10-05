@@ -25,7 +25,11 @@ namespace banjo {
     case CASE_IDENTIFIER(Token::Subkind::kUint32):  \
     case CASE_IDENTIFIER(Token::Subkind::kUint64):  \
     case CASE_IDENTIFIER(Token::Subkind::kFloat32): \
-    case CASE_IDENTIFIER(Token::Subkind::kFloat64)
+    case CASE_IDENTIFIER(Token::Subkind::kFloat64): \
+    case CASE_IDENTIFIER(Token::Subkind::kUSize):   \
+    case CASE_IDENTIFIER(Token::Subkind::kISize):   \
+    case CASE_IDENTIFIER(Token::Subkind::kVoidPtr)
+
 
 #define TOKEN_TYPE_CASES                           \
     TOKEN_PRIMITIVE_TYPE_CASES:                    \
@@ -72,6 +76,7 @@ Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter)
         {"fifo", types::HandleSubtype::kFifo},
         {"guest", types::HandleSubtype::kGuest},
         {"timer", types::HandleSubtype::kTimer},
+        {"bti", types::HandleSubtype::kBti},
     };
 
     last_token_ = Lex();
@@ -269,7 +274,7 @@ std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
         str_value += std::string(doc_line.location().data().data() + 3, doc_line.location().data().size() - 2);
         assert(Ok());
     }
-    return std::make_unique<raw::Attribute>(scope.GetSourceElement(), "Doc", str_value);
+    return std::make_unique<raw::Attribute>(scope.GetSourceElement(), "Doc", std::move(str_value));
 }
 
 std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList() {
@@ -486,6 +491,15 @@ std::unique_ptr<raw::PrimitiveType> Parser::ParsePrimitiveType() {
     case CASE_IDENTIFIER(Token::Subkind::kFloat64):
         subtype = types::PrimitiveSubtype::kFloat64;
         break;
+    case CASE_IDENTIFIER(Token::Subkind::kUSize):
+        subtype = types::PrimitiveSubtype::kUSize;
+        break;
+    case CASE_IDENTIFIER(Token::Subkind::kISize):
+        subtype = types::PrimitiveSubtype::kISize;
+        break;
+    case CASE_IDENTIFIER(Token::Subkind::kVoidPtr):
+        subtype = types::PrimitiveSubtype::kVoidPtr;
+        break;
     default:
         return Fail();
     }
@@ -671,8 +685,11 @@ Parser::ParseEnumDeclaration(std::unique_ptr<raw::AttributeList> attributes, AST
     if (!Ok())
         Fail();
 
+    // TODO(surajmalhotra): REMOVE THIS HACK.
+#if 0
     if (members.empty())
         return Fail();
+#endif
 
     return std::make_unique<raw::EnumDeclaration>(scope.GetSourceElement(),
                                                   std::move(attributes), std::move(identifier),
@@ -903,8 +920,11 @@ Parser::ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes, A
     if (!Ok())
         Fail();
 
+    // TODO(surajmalhotra): REMOVE THIS HACK.
+#if 0
     if (members.empty())
         return Fail();
+#endif
 
     return std::make_unique<raw::StructDeclaration>(scope.GetSourceElement(),
                                                     std::move(attributes), std::move(identifier),

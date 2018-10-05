@@ -12,7 +12,7 @@ namespace banjo {
 namespace {
 
 bool IsIdentifierBody(char c) {
-    return isalnum(c) || c == '_';
+    return isalnum(c) || c == '_' || c == '*';
 }
 
 // IsIdentifierValid disallows identifiers (escaped, and unescaped) from

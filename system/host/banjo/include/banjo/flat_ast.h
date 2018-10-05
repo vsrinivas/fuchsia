@@ -313,6 +313,9 @@ struct PrimitiveType : public Type {
         case types::PrimitiveSubtype::kFloat64:
         case types::PrimitiveSubtype::kInt64:
         case types::PrimitiveSubtype::kUint64:
+        case types::PrimitiveSubtype::kUSize:
+        case types::PrimitiveSubtype::kISize:
+        case types::PrimitiveSubtype::kVoidPtr:
             return 8u;
         }
     }
@@ -364,6 +367,10 @@ struct Enum : public Decl {
     struct Member {
         Member(SourceLocation name, std::unique_ptr<Constant> value, std::unique_ptr<raw::AttributeList> attributes)
             : name(name), value(std::move(value)), attributes(std::move(attributes)) {}
+
+        bool HasAttribute(banjo::StringView name) const;
+        banjo::StringView GetAttribute(banjo::StringView name) const;
+
         SourceLocation name;
         std::unique_ptr<Constant> value;
         std::unique_ptr<raw::AttributeList> attributes;
@@ -388,6 +395,9 @@ struct Interface : public Decl {
             SourceLocation name;
             FieldShape fieldshape;
 
+            bool HasAttribute(banjo::StringView name) const { return false; }
+            banjo::StringView GetAttribute(banjo::StringView name) const { return ""; }
+
             // A simple parameter is one that is easily represented in C.
             // Specifically, the parameter is either a string with a max length
             // or does not reference any secondary objects,
@@ -409,6 +419,9 @@ struct Interface : public Decl {
               maybe_request(std::move(maybe_request)), maybe_response(std::move(maybe_response)) {
             assert(this->maybe_request != nullptr || this->maybe_response != nullptr);
         }
+
+        bool HasAttribute(banjo::StringView name) const;
+        banjo::StringView GetAttribute(banjo::StringView name) const;
 
         std::unique_ptr<raw::AttributeList> attributes;
         Ordinal ordinal;
@@ -437,11 +450,16 @@ struct Struct : public Decl {
             : type(std::move(type)), name(std::move(name)),
               maybe_default_value(std::move(maybe_default_value)),
               attributes(std::move(attributes)) {}
+
+        bool HasAttribute(banjo::StringView name) const;
+        banjo::StringView GetAttribute(banjo::StringView name) const;
+
         std::unique_ptr<Type> type;
         SourceLocation name;
         std::unique_ptr<Constant> maybe_default_value;
         std::unique_ptr<raw::AttributeList> attributes;
         FieldShape fieldshape;
+
     };
 
     Struct(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
@@ -494,6 +512,10 @@ struct Union : public Decl {
     struct Member {
         Member(std::unique_ptr<Type> type, SourceLocation name, std::unique_ptr<raw::AttributeList> attributes)
             : type(std::move(type)), name(std::move(name)), attributes(std::move(attributes)) {}
+
+        bool HasAttribute(banjo::StringView name) const;
+        banjo::StringView GetAttribute(banjo::StringView name) const;
+
         std::unique_ptr<Type> type;
         SourceLocation name;
         std::unique_ptr<raw::AttributeList> attributes;

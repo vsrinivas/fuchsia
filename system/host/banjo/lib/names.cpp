@@ -64,6 +64,12 @@ std::string NamePrimitiveCType(types::PrimitiveSubtype subtype) {
         return "float";
     case types::PrimitiveSubtype::kFloat64:
         return "double";
+    case types::PrimitiveSubtype::kISize:
+        return "ssize_t";
+    case types::PrimitiveSubtype::kUSize:
+        return "size_t";
+    case types::PrimitiveSubtype::kVoidPtr:
+        return "void";
     }
 }
 
@@ -91,6 +97,12 @@ std::string NamePrimitiveSubtype(types::PrimitiveSubtype subtype) {
         return "float32";
     case types::PrimitiveSubtype::kFloat64:
         return "float64";
+    case types::PrimitiveSubtype::kISize:
+        return "ssize_t";
+    case types::PrimitiveSubtype::kUSize:
+        return "size_t";
+    case types::PrimitiveSubtype::kVoidPtr:
+        return "void";
     }
 }
 
@@ -118,6 +130,15 @@ std::string NamePrimitiveIntegerCConstantMacro(types::PrimitiveSubtype subtype) 
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
         assert(false && "Tried to generate an integer constant for a float");
+        return "";
+    case types::PrimitiveSubtype::kUSize:
+        assert(false && "Tried to generate an integer constant for a usize");
+        return "";
+    case types::PrimitiveSubtype::kISize:
+        assert(false && "Tried to generate an integer constant for an isize");
+        return "";
+    case types::PrimitiveSubtype::kVoidPtr:
+        assert(false && "Tried to generate an integer constant for a void pointer");
         return "";
     }
 }
@@ -158,6 +179,8 @@ std::string NameHandleSubtype(types::HandleSubtype subtype) {
         return "guest";
     case types::HandleSubtype::kTimer:
         return "timer";
+    case types::HandleSubtype::kBti:
+        return "bti";
     }
 }
 
@@ -238,6 +261,8 @@ std::string NameHandleZXObjType(types::HandleSubtype subtype) {
         return "ZX_OBJ_TYPE_GUEST";
     case types::HandleSubtype::kTimer:
         return "ZX_OBJ_TYPE_TIMER";
+    case types::HandleSubtype::kBti:
+        return "ZX_OBJ_TYPE_BTI";
     }
 }
 
