@@ -51,7 +51,7 @@ Fragmenter::Fragmenter(hci::ConnectionHandle connection_handle,
 PDU Fragmenter::BuildBasicFrame(ChannelId channel_id,
                                 const common::ByteBuffer& data,
                                 bool flushable) {
-  ZX_DEBUG_ASSERT(data.size() < kMaxBasicFramePayloadSize);
+  ZX_DEBUG_ASSERT(data.size() <= kMaxBasicFramePayloadSize);
   ZX_DEBUG_ASSERT(channel_id);
 
   const size_t frame_size = data.size() + sizeof(BasicHeader);

@@ -206,6 +206,14 @@ TEST(L2CAP_FragmenterTest, ManyFragmentsOffByOne) {
   EXPECT_TRUE(common::ContainersEqual(expected_fragment3, iter->view().data()));
 }
 
+TEST(L2CAP_FragmenterTest, MaximalSizedPayload) {
+  common::DynamicByteBuffer payload(65535);
+  Fragmenter fragmenter(kTestHandle, 1024);
+  PDU pdu = fragmenter.BuildBasicFrame(kTestChannelId, payload);
+  ASSERT_TRUE(pdu.is_valid());
+  EXPECT_LT(64u, pdu.fragment_count());
+}
+
 }  // namespace
 }  // namespace l2cap
 }  // namespace btlib
