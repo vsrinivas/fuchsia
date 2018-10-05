@@ -127,9 +127,8 @@ class FindModulesCall
       case fuchsia::modular::IntentParameterData::Tag::kJson: {
         std::string json_string;
         FXL_CHECK(fsl::StringFromVmo(input.json(), &json_string));
-        auto result = GetTypesFromJson(json_string);
-        if (result.first) {
-          fut->Complete(std::move(result.second));
+        if (auto result = GetTypesFromJson(json_string)) {
+          fut->Complete(std::move(*result));
         } else {
           std::ostringstream stream;
           stream << "Mal-formed JSON in parameter: " << param_name;
@@ -179,14 +178,13 @@ class FindModulesCall
     return fut;
   }
 
-  std::pair<bool, std::vector<std::string>> GetTypesFromJson(
+  std::optional<std::vector<std::string>> GetTypesFromJson(
       const fidl::StringPtr& input) {
     std::vector<std::string> types;
-    if (!ExtractEntityTypesFromJson(input, &types)) {
-      return {false, {}};
-    } else {
-      return {true, types};
+    if (ExtractEntityTypesFromJson(input, &types)) {
+      return types;
     }
+    return std::nullopt;
   }
 
   void GetTypesFromLink(fuchsia::modular::LinkPathPtr link_path,
@@ -204,15 +202,16 @@ class FindModulesCall
             done({});
             return;
           }
-          auto result = GetTypesFromJson(v);
-          if (!result.first) {
-            std::ostringstream stream;
-            stream << "Mal-formed JSON read from link for parameter: "
-                   << param_name;
-            result_.error_message = stream.str();
-            result_.status = fuchsia::modular::ExecuteStatus::INTERNAL_ERROR;
+          if (auto result = GetTypesFromJson(v)) {
+            done(*result);
+            return;
           }
-          done(result.second);
+          std::ostringstream stream;
+          stream << "Mal-formed JSON read from link for parameter: "
+                 << param_name;
+          result_.error_message = stream.str();
+          result_.status = fuchsia::modular::ExecuteStatus::INTERNAL_ERROR;
+          done({});
         });
   }
 

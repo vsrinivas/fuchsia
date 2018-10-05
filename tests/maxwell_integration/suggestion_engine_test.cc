@@ -173,16 +173,22 @@ class NProposals : public Proposinator,
   }
 
   void OnContextUpdate(fuchsia::modular::ContextUpdate update) override {
-    auto r = modular::TakeContextValue(&update, "n");
-    ASSERT_TRUE(r.first) << "Expect an update key for every query key.";
-    if (r.second->empty())
+    auto maybe_result = modular::TakeContextValue(&update, "n");
+    if (!maybe_result) {
+      FXL_LOG(INFO) << "Expect an update key for every query key.";
+    }
+    auto& r = maybe_result.value();
+    if (r->empty()) {
       return;
-    int n = std::stoi(r.second->at(0).content);
+    }
+    int n = std::stoi(r->at(0).content);
 
-    for (int i = n_; i < n; i++)
+    for (int i = n_; i < n; i++) {
       Propose(std::to_string(i));
-    for (int i = n; i < n_; i++)
+    }
+    for (int i = n; i < n_; i++) {
       Remove(std::to_string(i));
+    }
 
     n_ = n;
   }

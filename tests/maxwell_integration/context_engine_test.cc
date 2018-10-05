@@ -119,13 +119,14 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   modular::AddToContextQuery(&query, "a", std::move(selector));
 
   TestListener listener;
-  std::vector<fuchsia::modular::ContextValue> results;
   reader_->Subscribe(std::move(query), listener.GetHandle());
 
   WaitUntilIdle();
   ASSERT_TRUE(listener.last_update);
-  results =
-      modular::TakeContextValue(listener.last_update.get(), "a").second.take();
+  auto maybe_results =
+      modular::TakeContextValue(listener.last_update.get(), "a");
+  ASSERT_TRUE(maybe_results.has_value());
+  auto results = maybe_results.value().take();
   ASSERT_EQ(3u, results.size());
   EXPECT_EQ(std::set<std::string>({"topic", "frob", "borf"}),
             GetTopicSet(results));
@@ -138,8 +139,9 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
 
   WaitUntilIdle();
   ASSERT_TRUE(listener.last_update);
-  results =
-      modular::TakeContextValue(listener.last_update.get(), "a").second.take();
+  maybe_results = modular::TakeContextValue(listener.last_update.get(), "a");
+  ASSERT_TRUE(maybe_results.has_value());
+  results = maybe_results.value().take();
   ASSERT_EQ(1u, results.size());
   EXPECT_EQ("frob", results[0].meta.entity->topic);
 
@@ -161,9 +163,9 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
                   ContextMetadataBuilder().AddEntityType("someType").Build()));
 
   WaitUntilIdle();
-  ASSERT_TRUE(listener.last_update);
-  results =
-      modular::TakeContextValue(listener.last_update.get(), "a").second.take();
+  maybe_results = modular::TakeContextValue(listener.last_update.get(), "a");
+  ASSERT_TRUE(maybe_results.has_value());
+  results = maybe_results.value().take();
   ASSERT_EQ(2u, results.size());
 
   fuchsia::modular::ContextValue entity_result, story_result;
@@ -185,8 +187,9 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
 
   WaitUntilIdle();
   ASSERT_TRUE(listener.last_update);
-  results =
-      modular::TakeContextValue(listener.last_update.get(), "a").second.take();
+  maybe_results = modular::TakeContextValue(listener.last_update.get(), "a");
+  ASSERT_TRUE(maybe_results.has_value());
+  results = maybe_results.value().take();
   ASSERT_EQ(1u, results.size());
   EXPECT_EQ("frob", results[0].meta.entity->topic);
 }
@@ -208,7 +211,6 @@ TEST_F(ContextEngineTest, WriteNullEntity) {
   const std::string value1 = R"({ "@type": "someType", "foo": "frob" })";
   const std::string value2 = R"({ "@type": "someType", "foo": "borf" })";
 
-  std::vector<fuchsia::modular::ContextValue> result;
   value->Set(value1, fidl::MakeOptional(fidl::Clone(meta)));
 
   TestListener listener;
@@ -217,8 +219,10 @@ TEST_F(ContextEngineTest, WriteNullEntity) {
   WaitUntilIdle();
 
   ASSERT_TRUE(listener.last_update);
-  result =
-      modular::TakeContextValue(listener.last_update.get(), "a").second.take();
+  auto maybe_result =
+      modular::TakeContextValue(listener.last_update.get(), "a");
+  ASSERT_TRUE(maybe_result.has_value());
+  auto result = maybe_result.value().take();
   ASSERT_EQ(1u, result.size());
   EXPECT_EQ(value1, result[0].content);
 
@@ -234,8 +238,9 @@ TEST_F(ContextEngineTest, WriteNullEntity) {
   WaitUntilIdle();
   ASSERT_TRUE(listener.last_update);
 
-  result =
-      modular::TakeContextValue(listener.last_update.get(), "a").second.take();
+  maybe_result = modular::TakeContextValue(listener.last_update.get(), "a");
+  ASSERT_TRUE(maybe_result.has_value());
+  result = maybe_result.value().take();
   ASSERT_EQ(1u, result.size());
   EXPECT_EQ(value2, result[0].content);
 }
@@ -320,12 +325,11 @@ TEST_F(ContextEngineTest, GetContext) {
                                      fuchsia::modular::ContextUpdate update) {
     callback_called = true;
 
-    std::pair<bool, fidl::VectorPtr<fuchsia::modular::ContextValue>> results =
-        modular::TakeContextValue(&update, "a");
-    EXPECT_TRUE(results.first);
-    ASSERT_EQ(2u, results.second->size());
-    EXPECT_EQ(std::set<std::string>({"topic", "frob"}),
-              GetTopicSet(*results.second));
+    auto maybe_results = modular::TakeContextValue(&update, "a");
+    ASSERT_TRUE(maybe_results.has_value());
+    auto results = maybe_results.value().take();
+    ASSERT_EQ(2u, results.size());
+    EXPECT_EQ(std::set<std::string>({"topic", "frob"}), GetTopicSet(results));
   });
 
   WaitUntilIdle();

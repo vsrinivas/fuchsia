@@ -46,7 +46,7 @@ class RankingFeature {
 
   // Loads a json file into the second value of the pair. The first value
   // indicates if the file could be loaded and parsed.
-  std::pair<bool, rapidjson::Document> FetchJsonObject(const std::string& path);
+  std::optional<rapidjson::Document> FetchJsonObject(const std::string& path);
 
   // Returns current context values the ranking feature has.
   fidl::VectorPtr<fuchsia::modular::ContextValue>& ContextValues();

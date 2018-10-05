@@ -52,27 +52,26 @@ RankingFeature::ContextValues() {
   return context_values_;
 }
 
-std::pair<bool, rapidjson::Document> RankingFeature::FetchJsonObject(
+std::optional<rapidjson::Document> RankingFeature::FetchJsonObject(
     const std::string& path) {
   // Load data file to string.
   std::string data;
-  rapidjson::Document data_doc;
   if (!files::ReadFileToString(path, &data)) {
     FXL_LOG(WARNING) << "Missing ranking feature data file: " << path;
-    return std::make_pair(false, std::move(data_doc));
+    return std::nullopt;
   }
 
   // Parse json data string.
+  rapidjson::Document data_doc;
   data_doc.Parse(data);
   if (data_doc.HasParseError()) {
-    std::string error;
     FXL_LOG(WARNING) << "Invalid JSON (" << path << " at "
                      << data_doc.GetErrorOffset() << "): "
                      << rapidjson::GetParseError_En(data_doc.GetParseError());
-    return std::make_pair(false, std::move(data_doc));
+    return std::nullopt;
   }
 
-  return std::make_pair(true, std::move(data_doc));
+  return std::move(data_doc);
 }
 
 }  // namespace modular

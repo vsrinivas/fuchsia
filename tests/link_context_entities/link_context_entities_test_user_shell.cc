@@ -64,11 +64,12 @@ class ContextListenerImpl : fuchsia::modular::ContextListener {
   // |fuchsia::modular::ContextListener|
   void OnContextUpdate(fuchsia::modular::ContextUpdate update) override {
     FXL_LOG(INFO) << "ContextListenerImpl::OnUpdate()";
-    const auto& values = modular::TakeContextValue(&update, "all");
-    for (const auto& value : *values.second) {
-      FXL_LOG(INFO) << "ContextListenerImpl::OnUpdate() " << value;
-      handler_(value);
-    }
+    if (auto values = modular::TakeContextValue(&update, "all")) {
+      for (const auto& value : **values) {
+        FXL_LOG(INFO) << "ContextListenerImpl::OnUpdate() " << value;
+        handler_(value);
+      }
+    };
   }
 
   fidl::Binding<fuchsia::modular::ContextListener> binding_;

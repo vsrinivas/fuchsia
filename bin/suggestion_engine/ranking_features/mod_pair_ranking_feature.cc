@@ -26,16 +26,17 @@ ModPairRankingFeature::ModPairRankingFeature(const bool init_data) {
 ModPairRankingFeature::~ModPairRankingFeature() = default;
 
 void ModPairRankingFeature::LoadDataFromFile(const std::string& filepath) {
-  std::pair<bool, rapidjson::Document> result = FetchJsonObject(filepath);
-  if (!result.first) {
+  auto maybe_result = FetchJsonObject(filepath);
+  if (!maybe_result.has_value()) {
     FXL_LOG(WARNING) << "Failed to fetch mod pairs ranking feature data.";
     return;
   }
+  auto& result = maybe_result.value();
   module_pairs_.clear();
-  for (rapidjson::Value::ConstMemberIterator iter = result.second.MemberBegin();
-       iter != result.second.MemberEnd(); ++iter) {
+  for (rapidjson::Value::ConstMemberIterator iter = result.MemberBegin();
+       iter != result.MemberEnd(); ++iter) {
     const std::string existing_mod_url = iter->name.GetString();
-    rapidjson::Value& other_mods = result.second[existing_mod_url.c_str()];
+    rapidjson::Value& other_mods = result[existing_mod_url.c_str()];
     for (rapidjson::Value::ConstMemberIterator iter2 = other_mods.MemberBegin();
          iter2 != other_mods.MemberEnd(); ++iter2) {
       const std::string added_mod_url = iter2->name.GetString();

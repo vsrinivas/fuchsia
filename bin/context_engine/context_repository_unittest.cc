@@ -212,8 +212,9 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   TestListener listener;
   repository_.AddSubscription(std::move(query), &listener,
                               fuchsia::modular::SubscriptionDebugInfo());
-  EXPECT_EQ(0lu,
-            TakeContextValue(listener.last_update.get(), "a").second->size());
+  auto maybe_result = TakeContextValue(listener.last_update.get(), "a");
+  ASSERT_TRUE(maybe_result.has_value());
+  EXPECT_TRUE(maybe_result.value()->empty());
   listener.reset();
 
   // (a)
@@ -242,9 +243,13 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   value.content = "match";
   value.meta = ContextMetadataBuilder().SetEntityTopic("topic").Build();
   repository_.Add(std::move(value));
-  auto result = TakeContextValue(listener.last_update.get(), "a").second;
-  EXPECT_EQ(1lu, result->size());
-  EXPECT_EQ("match", result->at(0).content);
+  maybe_result = TakeContextValue(listener.last_update.get(), "a");
+  ASSERT_TRUE(maybe_result.has_value());
+  {
+    auto& result = maybe_result.value();
+    EXPECT_EQ(1lu, result->size());
+    EXPECT_EQ("match", result->at(0).content);
+  }
   listener.reset();
 
   // (3)
@@ -260,18 +265,26 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
                    .Build();
   repository_.Update(id, std::move(value));
   ASSERT_TRUE(listener.last_update);
-  result = TakeContextValue(listener.last_update.get(), "a").second;
-  EXPECT_EQ(2lu, result->size());
-  EXPECT_EQ("now it matches", result->at(0).content);
-  EXPECT_EQ("match", result->at(1).content);
+  maybe_result = TakeContextValue(listener.last_update.get(), "a");
+  ASSERT_TRUE(maybe_result.has_value());
+  {
+    auto& result = maybe_result.value();
+    EXPECT_EQ(2lu, result->size());
+    EXPECT_EQ("now it matches", result->at(0).content);
+    EXPECT_EQ("match", result->at(1).content);
+  }
   listener.reset();
 
   // (4)
   repository_.Remove(id);
   ASSERT_TRUE(listener.last_update);
-  result = TakeContextValue(listener.last_update.get(), "a").second;
-  EXPECT_EQ(1lu, result->size());
-  EXPECT_EQ("match", result->at(0).content);
+  maybe_result = TakeContextValue(listener.last_update.get(), "a");
+  ASSERT_TRUE(maybe_result.has_value());
+  {
+    auto& result = maybe_result.value();
+    EXPECT_EQ(1lu, result->size());
+    EXPECT_EQ("match", result->at(0).content);
+  }
   listener.reset();
 }
 
@@ -288,9 +301,13 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
   repository_.AddSubscription(std::move(query), &listener,
                               fuchsia::modular::SubscriptionDebugInfo());
   ASSERT_TRUE(listener.last_update);
-  auto result = TakeContextValue(listener.last_update.get(), "a").second;
-  EXPECT_EQ(0lu, result->size());
-  listener.reset();
+  auto maybe_result = TakeContextValue(listener.last_update.get(), "a");
+  ASSERT_TRUE(maybe_result.has_value());
+  {
+    auto& result = maybe_result.value();
+    EXPECT_EQ(0lu, result->size());
+    listener.reset();
+  }
 
   // Add a Story value.
   fuchsia::modular::ContextValue story_value;
@@ -322,34 +339,41 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
   repository_.Update(story_value_id, std::move(story_value));
 
   ASSERT_TRUE(listener.last_update);
-  result = TakeContextValue(listener.last_update.get(), "a").second;
-  EXPECT_EQ(1lu, result->size());
-  EXPECT_EQ("content", result->at(0).content);
-  // Make sure we adopted the parent metadata from the story node.
-  ASSERT_TRUE(result->at(0).meta.story);
-  EXPECT_EQ("match", result->at(0).meta.story->id);
+  maybe_result = TakeContextValue(listener.last_update.get(), "a");
+  ASSERT_TRUE(maybe_result.has_value());
+  {
+    auto& result = maybe_result.value();
+    EXPECT_EQ(1lu, result->size());
+    EXPECT_EQ("content", result->at(0).content);
+    // Make sure we adopted the parent metadata from the story node.
+    ASSERT_TRUE(result->at(0).meta.story);
+    EXPECT_EQ("match", result->at(0).meta.story->id);
+  }
   listener.reset();
 
   // Set the value back to something that doesn't match, and we should get an
   // empty update.
   repository_.Update(story_value_id, std::move(first_story_value));
   ASSERT_TRUE(listener.last_update);
-  result = TakeContextValue(listener.last_update.get(), "a").second;
-  EXPECT_EQ(0lu, result->size());
+  maybe_result = TakeContextValue(listener.last_update.get(), "a");
+  ASSERT_TRUE(maybe_result.has_value());
+  EXPECT_EQ(0lu, maybe_result.value()->size());
   listener.reset();
 
   // Set it back to something that matched, and this time remove the value
   // entirely. We should observe it go away.
   repository_.Update(story_value_id, std::move(matching_story_value));
   ASSERT_TRUE(listener.last_update);
-  result = TakeContextValue(listener.last_update.get(), "a").second;
-  EXPECT_EQ(1lu, result->size());
+  maybe_result = TakeContextValue(listener.last_update.get(), "a");
+  ASSERT_TRUE(maybe_result.has_value());
+  EXPECT_EQ(1lu, maybe_result.value()->size());
   listener.reset();
 
   repository_.Remove(story_value_id);
   ASSERT_TRUE(listener.last_update);
-  result = TakeContextValue(listener.last_update.get(), "a").second;
-  EXPECT_EQ(0lu, result->size());
+  maybe_result = TakeContextValue(listener.last_update.get(), "a");
+  ASSERT_TRUE(maybe_result.has_value());
+  EXPECT_TRUE(maybe_result.value()->empty());
   listener.reset();
 }
 
