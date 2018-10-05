@@ -8,8 +8,6 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_NAME := demo-fifo
 
-MODULE_GROUP := ddk-sample
-
 MODULE_TYPE := driver
 
 MODULE_SRCS := $(LOCAL_DIR)/demo-fifo.c
