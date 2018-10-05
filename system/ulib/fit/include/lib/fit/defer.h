@@ -106,7 +106,7 @@ private:
 };
 
 // Defers execution of a function-like callable target with no arguments
-// unless the value returned by this function goes out of scope unless canceled,
+// until the value returned by this function goes out of scope unless canceled,
 // called, or moved to a wrapper in a different scope.
 //
 // // This example prints "Hello..." then "Goodbye!".
