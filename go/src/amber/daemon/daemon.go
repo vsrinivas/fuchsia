@@ -568,7 +568,7 @@ func (d *Daemon) GetUpdates(pkgs *pkg.PackageSet) map[pkg.Package]*GetResult {
 
 // detectExisting checks to see if packages in the `pkgs` list already exist on
 // the device. If they do exist an entry is inserted into resultSet with the
-// Orig and Update set to the packge value in the `pkgs` list, with the Err
+// Orig and Update set to the package value in the `pkgs` list, with the Err
 // value set to one that passes os.IsExist(). The list returned is any pkgs
 // that do not exist already on the system. The expectation is that the
 // synthesized GetResults will get passed through the rest of the pipeline

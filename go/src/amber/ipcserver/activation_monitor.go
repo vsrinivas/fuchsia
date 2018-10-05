@@ -84,7 +84,7 @@ func (am *ActivationMonitor) Do() {
 			if !ok {
 				am.Acts = nil
 			}
-			lg.Log.Printf("Getting availablility for %q", pkg)
+			lg.Log.Printf("Getting availability for %q", pkg)
 			if l, ok := am.waitList[pkg]; ok {
 				for _, wtrChan := range l {
 					wtrChan.Write([]byte(pkg), []zx.Handle{}, 0)
@@ -132,7 +132,7 @@ func (am *ActivationMonitor) writeMetaFAR(pkgData *daemon.GetResult) error {
 }
 
 // sendError sends an error back through the client handle. This method will
-// return an error if it is unable to send an error throug the client handle.
+// return an error if it is unable to send an error through the client handle.
 func sendError(replyChan *zx.Channel, msg string) error {
 	lg.Log.Println(msg)
 	signalErr := replyChan.Handle().SignalPeer(0, zx.SignalUser0)

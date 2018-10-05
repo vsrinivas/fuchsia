@@ -29,7 +29,7 @@ var ErrNoUpdateContent = errors.New("amber/source: update content not available"
 // Source provides a way to get information about a package update and a way
 // to get that update.
 type Source interface {
-	// A unique identifier that distinquishes this source from others.
+	// A unique identifier that distinguishes this source from others.
 	GetId() string
 
 	// The config definition for this source.
@@ -49,11 +49,11 @@ type Source interface {
 	FetchPkg(pkg *pkg.Package) (*os.File, error)
 
 	// CheckInterval is the time window during which at most CheckLimit() calls
-	// are allowed
+	// are allowed.
 	CheckInterval() time.Duration
 
 	// CheckLimit is the number of calls allowed per the unit of time specified in
-	// CheckInterval
+	// CheckInterval.
 	CheckLimit() uint64
 
 	// Equals should return true if the provide Source is the same as the receiver.

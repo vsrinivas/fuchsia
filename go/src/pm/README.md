@@ -113,7 +113,7 @@ Data dependencies and optional dependencies may be additional packages, but due
 to the explicit lack of a mechanism to manage specific versions of such things,
 it is expected that those cases will not be shared library objects. Instead they
 should be limited to progressive enhancement and safely loaded things that do
-not have strict version requirements. An exmaple might be fonts, where
+not have strict version requirements. An example might be fonts, where
 additional font packages may be found and utilized by a font server. The
 discovery of additional fonts.
 

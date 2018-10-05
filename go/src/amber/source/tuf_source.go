@@ -542,7 +542,7 @@ func (f *TUFSource) waitForDeviceAuthorization(config *oauth2device.Config, code
 }
 
 // AvailableUpdates takes a list of Packages and returns a map from those Packages
-// to any available update Package
+// to any available update Package.
 func (f *TUFSource) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.Package, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -568,7 +568,7 @@ func (f *TUFSource) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.P
 	}
 
 	// TODO(jmatt) seems like 'm' should be the same as returned from
-	// Client.Update, but empirically this seems untrue, investigate
+	// Client.Update, but empirically this seems untrue, investigate.
 	m, err := f.tufClient.Targets()
 
 	if err != nil {
@@ -608,12 +608,13 @@ func (f *TUFSource) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.P
 	return updates, nil
 }
 
-// create a wrapper for File so it conforms to interface Client.Download expects
+// Create a wrapper for File so it conforms to interface Client.Download
+// expects.
 type delFile struct {
 	*os.File
 }
 
-// Delete removes the file from the filesystem
+// Delete removes the file from the filesystem.
 func (f *delFile) Delete() error {
 	f.Close()
 	return os.Remove(f.Name())

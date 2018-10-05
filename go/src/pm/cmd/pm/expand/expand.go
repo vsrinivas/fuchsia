@@ -212,7 +212,7 @@ func writeEntries(p *far.Reader, outputDir string, names []string) error {
 	return nil
 }
 
-// Extract out a sepcified file from the .far and write it to the outputDir.
+// Extract out a specified file from the .far and write it to the outputDir.
 func writeEntry(p *far.Reader, outputDir string, name string) error {
 	dst := filepath.Join(outputDir, name)
 	log.Printf("writing %s to %s", name, dst)

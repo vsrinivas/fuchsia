@@ -83,7 +83,7 @@ func FetchBlob(repos []BlobRepo, blob string, outputDir string) error {
 }
 
 // FetchBlobFromRepo starts an IO request to the given repository and returns
-// the io.ReadCloser, size and any error enountered.
+// the io.ReadCloser, size and any error encountered.
 func FetchBlobFromRepo(r BlobRepo, blob string) (io.ReadCloser, int64, error) {
 	var client *http.Client
 	var err error
