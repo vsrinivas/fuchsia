@@ -192,15 +192,13 @@ int HandleException(zx::process process, zx::thread thread,
     attachments["log"] = base::FilePath(temp_log_file.get());
   }
 
-  // TODO: Use exception_port here with a roll of Crashpad that uses
-  // zx_task_resume_from_exception instead of zx_task_resume.
-
   crashpad::CrashReportExceptionHandler exception_handler(
       database.get(),
       static_cast<crashpad::CrashReportUploadThread*>(upload_thread.Get()),
       &annotations, &attachments, nullptr);
 
-  return exception_handler.HandleExceptionHandles(process, thread)
+  return exception_handler.HandleExceptionHandles(
+             process, thread, zx::unowned_port(exception_port))
              ? EXIT_SUCCESS
              : EXIT_FAILURE;
 }
