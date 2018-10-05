@@ -8,6 +8,8 @@
 #include <bootdata/decompress.h>
 
 #include <fbl/function.h>
+#include <fbl/intrusive_single_list.h>
+#include <fbl/unique_fd.h>
 #include <fs-management/ramdisk.h>
 #include <launchpad/launchpad.h>
 #include <lib/fdio/namespace.h>
@@ -36,6 +38,7 @@
 #include "bootfs.h"
 
 namespace devmgr {
+namespace {
 
 // When adding VMOs to the boot filesystem, add them under the directory
 // /boot/VMO_SUBDIR. This constant must end, but not start, with a slash.
@@ -112,6 +115,23 @@ private:
     zx::channel fs_root_;
 };
 
+struct BootdataRamdisk : public fbl::SinglyLinkedListable<fbl::unique_ptr<BootdataRamdisk>> {
+public:
+    explicit BootdataRamdisk(zx::vmo vmo) : vmo_(fbl::move(vmo)) {}
+
+    zx::vmo TakeRamdisk() {
+        return fbl::move(vmo_);
+    }
+private:
+    zx::vmo vmo_;
+};
+
+using RamdiskList = fbl::SinglyLinkedList<fbl::unique_ptr<BootdataRamdisk>>;
+
+bool has_secondary_bootfs = false;
+fbl::unique_ptr<FshostConnections> fshost;
+zx_handle_t fshost_event;
+
 using AddFileFn = fbl::Function<zx_status_t(const char* path, zx_handle_t vmo,
                                             zx_off_t off, size_t len)>;
 
@@ -121,7 +141,7 @@ struct callback_data {
     AddFileFn add_file;
 };
 
-static zx_status_t callback(void* arg, const bootfs_entry_t* entry) {
+zx_status_t callback(void* arg, const bootfs_entry_t* entry) {
     auto cd = static_cast<callback_data*>(arg);
     //printf("bootfs: %s @%zd (%zd bytes)\n", path, off, len);
     cd->add_file(entry->name, cd->vmo, entry->data_off, entry->data_len);
@@ -129,13 +149,8 @@ static zx_status_t callback(void* arg, const bootfs_entry_t* entry) {
     return ZX_OK;
 }
 
-static bool has_secondary_bootfs = false;
-
-bool secondary_bootfs_ready() {
-    return has_secondary_bootfs;
-}
-
-static zx_status_t setup_bootfs_vmo(FsManager* root, uint32_t n, uint32_t type, zx_handle_t vmo) {
+zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n,
+                           uint32_t type, zx_handle_t vmo) {
     uint64_t size;
     zx_status_t status = zx_vmo_get_size(vmo, &size);
     if (status != ZX_OK) {
@@ -155,8 +170,8 @@ static zx_status_t setup_bootfs_vmo(FsManager* root, uint32_t n, uint32_t type, 
         .vmo = vmo,
         .file_count = 0u,
         .add_file = (type == BOOTDATA_BOOTFS_SYSTEM) ?
-                fbl::BindMember(root, &FsManager::SystemfsAddFile) :
-                fbl::BindMember(root, &FsManager::BootfsAddFile),
+                fbl::BindMember(root.get(), &FsManager::SystemfsAddFile) :
+                fbl::BindMember(root.get(), &FsManager::BootfsAddFile),
     };
     if ((type == BOOTDATA_BOOTFS_SYSTEM) && !has_secondary_bootfs) {
         has_secondary_bootfs = true;
@@ -186,7 +201,8 @@ static zx_status_t setup_bootfs_vmo(FsManager* root, uint32_t n, uint32_t type, 
     return ZX_OK;
 }
 
-static void setup_last_crashlog(FsManager* root, zx_handle_t vmo_in, uint64_t off_in, size_t sz) {
+void SetupLastCrashlog(const fbl::unique_ptr<FsManager>& root, zx_handle_t vmo_in,
+                       uint64_t off_in, size_t sz) {
     printf("devmgr: last crashlog is %zu bytes\n", sz);
     zx_handle_t vmo;
     if (copy_vmo(vmo_in, off_in, sz, &vmo) != ZX_OK) {
@@ -195,29 +211,23 @@ static void setup_last_crashlog(FsManager* root, zx_handle_t vmo_in, uint64_t of
     root->BootfsAddFile(LAST_PANIC_FILEPATH, vmo, 0, sz);
 }
 
-struct bootdata_ramdisk {
-    struct bootdata_ramdisk* next;
-    zx_handle_t vmo;
-};
-static struct bootdata_ramdisk* bootdata_ramdisk_list;
-
-static zx_status_t misc_device_added(int dirfd, int event, const char* fn,
-                                     void* cookie) {
+zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) {
+    auto bootdata_ramdisk_list = static_cast<RamdiskList*>(cookie);
     if (event != WATCH_EVENT_ADD_FILE || strcmp(fn, "ramctl") != 0) {
         return ZX_OK;
     }
 
-    while (bootdata_ramdisk_list != nullptr) {
-        struct bootdata_ramdisk* br = bootdata_ramdisk_list;
-        bootdata_ramdisk_list = br->next;
-        zx_handle_t ramdisk_vmo = br->vmo;
-        free(br);
-
+    while (!bootdata_ramdisk_list->is_empty()) {
+        zx::vmo ramdisk_vmo = bootdata_ramdisk_list->pop_front()->TakeRamdisk();
         uint64_t size;
-        zx_vmo_get_size(ramdisk_vmo, &size);
+        zx_status_t status = ramdisk_vmo.get_size(&size);
+        if (status != ZX_OK) {
+            printf("fshost: cannot get size of ramdisk_vmo: %d\n", status);
+            return status;
+        }
 
         char path[PATH_MAX + 1];
-        if (create_ramdisk_from_vmo(ramdisk_vmo, path) < 0) {
+        if (create_ramdisk_from_vmo(ramdisk_vmo.release(), path) < 0) {
             printf("fshost: failed to create ramdisk from BOOTDATA_RAMDISK\n");
         } else {
             printf("fshost: BOOTDATA_RAMDISK attached as %s\n", path);
@@ -227,26 +237,27 @@ static zx_status_t misc_device_added(int dirfd, int event, const char* fn,
     return ZX_ERR_STOP;
 }
 
-static int ramctl_watcher(void* arg) {
-    int dirfd = open("/dev/misc", O_DIRECTORY | O_RDONLY);
-    if (dirfd < 0) {
+int RamctlWatcher(void* arg) {
+    fbl::unique_ptr<RamdiskList> ramdisk_list(static_cast<RamdiskList*>(arg));
+    fbl::unique_fd dirfd(open("/dev/misc", O_DIRECTORY | O_RDONLY));
+    if (!dirfd) {
         printf("fshost: failed to open /dev/misc: %s\n", strerror(errno));
         return -1;
     }
-    fdio_watch_directory(dirfd, &misc_device_added, ZX_TIME_INFINITE, nullptr);
-    close(dirfd);
+    fdio_watch_directory(dirfd.get(), &MiscDeviceAdded, ZX_TIME_INFINITE, ramdisk_list.get());
     return 0;
 }
 
 #define HND_BOOTFS(n) PA_HND(PA_VMO_BOOTFS, n)
 #define HND_BOOTDATA(n) PA_HND(PA_VMO_BOOTDATA, n)
 
-static void setup_bootfs(FsManager* root) {
+void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
+                 const fbl::unique_ptr<RamdiskList>& ramdisk_list) {
     unsigned idx = 0;
 
     zx::vmo vmo(zx_take_startup_handle(HND_BOOTFS(0)));
     if (vmo.is_valid()) {
-        setup_bootfs_vmo(root, idx++, BOOTDATA_BOOTFS_BOOT, vmo.release());
+        SetupBootfsVmo(root, idx++, BOOTDATA_BOOTFS_BOOT, vmo.release());
     } else {
         printf("devmgr: missing primary bootfs?!\n");
     }
@@ -296,7 +307,7 @@ static void setup_bootfs(FsManager* root) {
                 if (status < 0) {
                     printf("devmgr: failed to decompress bootdata: %s\n", errmsg);
                 } else {
-                    setup_bootfs_vmo(root, idx++, bootdata.type, bootfs_vmo);
+                    SetupBootfsVmo(root, idx++, bootdata.type, bootfs_vmo);
                 }
                 break;
             }
@@ -311,16 +322,13 @@ static void setup_bootfs(FsManager* root) {
                     printf("fshost: failed to decompress bootdata: %s\n",
                            errmsg);
                 } else {
-                    bootdata_ramdisk* br = static_cast<bootdata_ramdisk*>(malloc(sizeof(*br)));
-                    new (br) bootdata_ramdisk;
-                    br->vmo = ramdisk_vmo;
-                    br->next = bootdata_ramdisk_list;
-                    bootdata_ramdisk_list = br;
+                    auto ramdisk = fbl::make_unique<BootdataRamdisk>(zx::vmo(ramdisk_vmo));
+                    ramdisk_list->push_front(fbl::move(ramdisk));
                 }
                 break;
             }
             case BOOTDATA_LAST_CRASHLOG:
-                setup_last_crashlog(root, vmo.release(), off + sizeof(bootdata_t), bootdata.length);
+                SetupLastCrashlog(root, vmo.release(), off + sizeof(bootdata_t), bootdata.length);
                 break;
             default:
                 break;
@@ -333,7 +341,8 @@ static void setup_bootfs(FsManager* root) {
 
 // Look for VMOs passed as startup handles of PA_HND_TYPE type, and add them to
 // the filesystem under the path /boot/VMO_SUBDIR_LEN/<vmo-name>.
-static void fetch_vmos(FsManager* root, uint_fast8_t type, const char* debug_type_name) {
+void FetchVmos(const fbl::unique_ptr<FsManager>& root, uint_fast8_t type,
+               const char* debug_type_name) {
     for (uint_fast16_t i = 0; true; ++i) {
         zx_handle_t vmo = zx_take_startup_handle(PA_HND(type, i));
         if (vmo == ZX_HANDLE_INVALID)
@@ -381,8 +390,10 @@ static void fetch_vmos(FsManager* root, uint_fast8_t type, const char* debug_typ
     }
 }
 
-static fbl::unique_ptr<FshostConnections> fshost;
-static zx_handle_t fshost_event;
+} // namespace
+
+// TODO: The following functions must be supplied to link against the
+// block-watcher; this restriction should be removed / made more explicit.
 
 zx::channel fs_clone(const char* path) {
     return fshost->Open(path);
@@ -390,6 +401,10 @@ zx::channel fs_clone(const char* path) {
 
 void fuchsia_start() {
     zx_object_signal(fshost_event, 0, FSHOST_SIGNAL_READY);
+}
+
+bool secondary_bootfs_ready() {
+    return has_secondary_bootfs;
 }
 
 } // namespace devmgr
@@ -417,15 +432,18 @@ int main(int argc, char** argv) {
     fshost_event = zx_take_startup_handle(PA_HND(PA_USER1, 0));
 
     // First, initialize the local filesystem in isolation.
-    FsManager root;
+    fbl::unique_ptr<FsManager> root = fbl::make_unique<FsManager>();
 
+    fbl::unique_ptr<RamdiskList> bootdata_ramdisk_list = fbl::make_unique<RamdiskList>();
     {
-        setup_bootfs(&root);
+        // Populate the FsManager and RamdiskList with data supplied from
+        // startup handles passed to fshost.
+        SetupBootfs(root, bootdata_ramdisk_list);
 
-        root.WatchExit(fshost_event);
+        root->WatchExit(fshost_event);
 
-        fetch_vmos(&root, PA_VMO_VDSO, "PA_VMO_VDSO");
-        fetch_vmos(&root, PA_VMO_KERNEL_FILE, "PA_VMO_KERNEL_FILE");
+        FetchVmos(root, PA_VMO_VDSO, "PA_VMO_VDSO");
+        FetchVmos(root, PA_VMO_KERNEL_FILE, "PA_VMO_KERNEL_FILE");
 
         // if we have a /system ramdisk, start higher level services
         if (has_secondary_bootfs) {
@@ -434,18 +452,19 @@ int main(int argc, char** argv) {
     }
 
     // Serve devmgr's root handle using our own root directory.
-    zx_status_t status = root.ConnectRoot(fbl::move(_fs_root));
+    zx_status_t status = root->ConnectRoot(fbl::move(_fs_root));
     if (status != ZX_OK) {
         printf("fshost: Cannot connect to fshost root: %d\n", status);
     }
 
     zx::channel fs_root;
-    if ((status = root.ServeRoot(&fs_root)) != ZX_OK) {
+    if ((status = root->ServeRoot(&fs_root)) != ZX_OK) {
         printf("fshost: cannot create global root\n");
     }
 
-    fshost = fbl::make_unique<FshostConnections>(fbl::move(devfs_root), fbl::move(svc_root),
-                                      fbl::move(fs_root));
+    fshost = fbl::make_unique<FshostConnections>(fbl::move(devfs_root),
+                                                 fbl::move(svc_root),
+                                                 fbl::move(fs_root));
     fshost->CreateNamespace();
 
     {
@@ -464,24 +483,20 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (bootdata_ramdisk_list != nullptr) {
+    if (!bootdata_ramdisk_list->is_empty()) {
         thrd_t th;
-        int err = thrd_create_with_name(&th, &ramctl_watcher, nullptr,
-                                        "ramctl-watcher");
+        RamdiskList* ramdisk_list = bootdata_ramdisk_list.release();
+        int err = thrd_create_with_name(&th, &RamctlWatcher, ramdisk_list, "ramctl-watcher");
         if (err != thrd_success) {
             printf("fshost: failed to start ramctl-watcher: %d\n", err);
-            while (bootdata_ramdisk_list != nullptr) {
-                struct bootdata_ramdisk* br = bootdata_ramdisk_list;
-                bootdata_ramdisk_list = br->next;
-                zx_handle_close(br->vmo);
-                free(br);
-            }
+            delete ramdisk_list;
         } else {
             thrd_detach(th);
         }
     }
 
-    block_device_watcher(fbl::BindMember(&root, &FsManager::InstallFs), zx_job_default(), netboot);
+    block_device_watcher(fbl::BindMember(root.get(), &FsManager::InstallFs), zx_job_default(),
+                         netboot);
 
     printf("fshost: terminating (block device watcher finished?)\n");
     return 0;
