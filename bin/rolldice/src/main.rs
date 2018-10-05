@@ -4,7 +4,7 @@
 
 use rand::{thread_rng, Rng};
 use structopt::StructOpt;
-use rolldice::*;
+use rolldice_lib::*;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name="rolldice", bin_name="rolldice", about="Rolls some number of 6 sided dice.")]
