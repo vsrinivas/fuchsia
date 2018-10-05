@@ -482,7 +482,7 @@ zx_status_t Device::SetStatus(uint32_t status) {
 }
 
 void Device::SetStatusLocked(uint32_t status) {
-    state_->set_online(status == ETH_STATUS_ONLINE);
+    state_->set_online(status == ETHMAC_STATUS_ONLINE);
     if (ethmac_proxy_ != nullptr) { ethmac_proxy_->Status(status); }
 }
 

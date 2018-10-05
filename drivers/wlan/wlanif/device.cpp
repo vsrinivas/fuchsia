@@ -950,7 +950,7 @@ zx_status_t Device::EthSetParam(uint32_t param, int32_t value, void* data) {
 
 void Device::SetDataStateLocked(data_states new_state) {
     if (((new_state == ONLINE) != (data_state_ == ONLINE)) && eth_started_) {
-        ethmac_ifc_.status(ethmac_cookie_, new_state == ONLINE ? ETH_STATUS_ONLINE : 0);
+        ethmac_ifc_.status(ethmac_cookie_, new_state == ONLINE ? ETHMAC_STATUS_ONLINE : 0);
     }
     data_state_ = new_state;
 }

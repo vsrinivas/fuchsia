@@ -611,7 +611,7 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
     if (bss_->rsn.is_null()) {
         debugjoin("802.1X controlled port is now open\n");
         controlled_port_ = eapol::PortState::kOpen;
-        device_->SetStatus(ETH_STATUS_ONLINE);
+        device_->SetStatus(ETHMAC_STATUS_ONLINE);
     }
 
     infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n",
@@ -1192,7 +1192,7 @@ zx_status_t Station::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysReques
     // TODO(hahnr): This is a very simplified assumption and we might need a little more logic to
     // correctly track the port's state.
     controlled_port_ = eapol::PortState::kOpen;
-    device_->SetStatus(ETH_STATUS_ONLINE);
+    device_->SetStatus(ETHMAC_STATUS_ONLINE);
     return ZX_OK;
 }
 
