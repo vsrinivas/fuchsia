@@ -26,6 +26,13 @@ typedef struct {
     uint32_t irq;
 } dcfg_simple_t;
 
+// for KDRV_MT8167_UART
+typedef struct {
+    uint64_t soc_mmio_phys;
+    uint64_t uart_mmio_phys;
+    uint32_t irq;
+} dcfg_soc_uart_t;
+
 // for KDRV_ARM_PSCI
 typedef struct {
     bool use_hvc;

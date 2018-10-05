@@ -69,8 +69,9 @@ static const zbi_mem_range_t mem_config[] = {
     },
 };
 
-static const dcfg_simple_t uart_driver = {
-    .mmio_phys = 0x11005000,
+static const dcfg_soc_uart_t uart_driver = {
+    .soc_mmio_phys = 0x10200000,
+    .uart_mmio_phys = 0x11005000,
     .irq = 84 + 32,
 };
 

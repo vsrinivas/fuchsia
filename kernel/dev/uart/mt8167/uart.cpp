@@ -19,7 +19,7 @@
 
 // clang-format off
 
-// Registers
+// UART Registers
 
 #define UART_RBR                    (0x0)   // RX Buffer Register (read-only)
 #define UART_THR                    (0x0)   // TX Buffer Register (write-only)
@@ -83,6 +83,11 @@
 #define UART_LSR_TEMT               (1 << 6)
 #define UART_LSR_FIFOERR            (1 << 7)
 
+
+// SOC Registers
+
+#define SOC_INT_POL                 (0x620) // SOC Interrupt polarity registers start
+
 // clang-format on
 
 #define RXBUF_SIZE 32
@@ -90,6 +95,7 @@
 // values read from zbi
 static bool initialized = false;
 static vaddr_t uart_base = 0;
+static vaddr_t soc_base = 0;
 static uint32_t uart_irq = 0;
 static cbuf_t uart_rx_buf;
 
@@ -101,6 +107,7 @@ static event_t uart_dputc_event = EVENT_INITIAL_VALUE(uart_dputc_event,
 static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
 #define UARTREG(reg) (*(volatile uint32_t*)((uart_base) + (reg)))
+#define SOCREG(reg) (*(volatile uint32_t*)((soc_base) + (reg)))
 
 static void uart_irq_handler(void* arg) {
     // read interrupt status and mask
@@ -114,7 +121,11 @@ static void uart_irq_handler(void* arg) {
 
     // Signal if anyone is waiting to TX
     if (UARTREG(UART_LSR) & UART_LSR_THRE) {
+        UARTREG(UART_IER) &= ~UART_IER_ETBEI;  // Disable TX interrupt
         spin_lock(&uart_spinlock);
+        // TODO(andresoportus): Revisit all UART drivers usage of events, from event.h:
+        // 1. The reschedule flag is not supposed to be true in interrupt context.
+        // 2. FLAG_AUTOUNSIGNAL only wakes up one thread.
         event_signal(&uart_dputc_event, true);
         spin_unlock(&uart_spinlock);
     }
@@ -180,6 +191,7 @@ static void mt8167_dputs(const char* str, size_t len,
         while (!(UARTREG(UART_LSR) & UART_LSR_THRE)) {
             spin_unlock_irqrestore(&uart_spinlock, state);
             if (block) {
+                UARTREG(UART_IER) |= UART_IER_ETBEI; // Enable TX interrupt.
                 event_wait(&uart_dputc_event);
             } else {
                 arch_spinloop_pause();
@@ -214,36 +226,52 @@ static void mt8167_uart_init(const void* driver_data, uint32_t length) {
     // create circular buffer to hold received data
     cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
 
-    // register uart irq
-    register_int_handler(uart_irq, &uart_irq_handler, NULL);
-
-// TODO: Configure UART interrupt support here
-
-// TODO: Enable interrupt support after we have a way to set the interrupt to active-low
-#if 0
-    if (dlog_bypass() == true)
+    if (dlog_bypass() == true) {
         uart_tx_irq_enabled = false;
-    else {
-        // start up tx driven output
-        printf("UART: started IRQ driven TX\n");
-        uart_tx_irq_enabled = true;
+        return;
     }
 
+    zx_status_t status =
+        configure_interrupt(uart_irq, IRQ_TRIGGER_MODE_LEVEL, IRQ_POLARITY_ACTIVE_HIGH);
+    if (status != ZX_OK) {
+        printf("UART: configure_interrupt failed %d\n", status);
+        return;
+    }
+
+    status = register_int_handler(uart_irq, &uart_irq_handler, NULL);
+    if (status != ZX_OK) {
+        printf("UART: register_int_handler failed %d\n", status);
+        return;
+    }
+
+    status = unmask_interrupt(uart_irq);
+    if (status != ZX_OK) {
+        printf("UART: unmask_interrupt failed %d\n", status);
+        return;
+    }
+
+    UARTREG(UART_IER) |= UART_IER_ERBFI; // Enable RX interrupt.
     initialized = true;
 
-    // TODO we will need to talk to the pinmux controller to set the interrupt to active low.
-    // configure_interrupt() doesn't actually support that.
-    configure_interrupt(uart_irq, IRQ_TRIGGER_MODE_LEVEL, IRQ_POLARITY_ACTIVE_LOW);
-    unmask_interrupt(uart_irq);
-#endif
+    // Start up tx driven output.
+    printf("UART: starting IRQ driven TX\n");
+    uart_tx_irq_enabled = true;
 }
 
 static void mt8167_uart_init_early(const void* driver_data, uint32_t length) {
-    ASSERT(length >= sizeof(dcfg_simple_t));
-    auto driver = static_cast<const dcfg_simple_t*>(driver_data);
-    ASSERT(driver->mmio_phys && driver->irq);
+    ASSERT(length >= sizeof(dcfg_soc_uart_t));
+    auto driver = static_cast<const dcfg_soc_uart_t*>(driver_data);
+    ASSERT(driver->soc_mmio_phys && driver->uart_mmio_phys && driver->irq);
 
-    uart_base = periph_paddr_to_vaddr(driver->mmio_phys);
+    soc_base = periph_paddr_to_vaddr(driver->soc_mmio_phys);
+    ASSERT(soc_base);
+
+    // Convert Level interrupt polarity in SOC from Low to High as needed by gicv2.
+    auto index = (driver->irq - 32); // index IRQ as SPI (-32 PPIs).
+    // 32 interrupts per register, one register every 4 bytes.
+    SOCREG(SOC_INT_POL + index / 32 * 4) = static_cast<uint32_t>(1) << (index % 32);
+
+    uart_base = periph_paddr_to_vaddr(driver->uart_mmio_phys);
     ASSERT(uart_base);
     uart_irq = driver->irq;
 
