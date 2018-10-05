@@ -60,9 +60,18 @@ zx_status_t usb_util_control(usb_device_t* dev, uint8_t request_type, uint8_t re
     req->cookie = &completion;
 
     usb_hci_request_queue(&dev->hci, req);
-    sync_completion_wait(&completion, ZX_TIME_INFINITE);
+    zx_status_t status = sync_completion_wait(&completion, ZX_SEC(1));
+    if (status == ZX_OK) {
+        status = req->response.status;
+    } else if (status == ZX_ERR_TIMED_OUT) {
+        sync_completion_reset(&completion);
+        status = usb_hci_cancel_all(&dev->hci, dev->device_id, 0);
+        if (status == ZX_OK) {
+            sync_completion_wait(&completion, ZX_TIME_INFINITE);
+            status = ZX_ERR_TIMED_OUT;
+        }
+    }
 
-    zx_status_t status = req->response.status;
     if (status == ZX_OK) {
         status = req->response.actual;
 
