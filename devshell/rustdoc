@@ -81,6 +81,13 @@ def main():
         }[platform.machine()],
     )
 
+    target_cpu = {
+        "x86_64-fuchsia": "x64",
+        "aarch64-fuchsia": "aarch64",
+        "x86_64-unknown-linux-gnu": "x64",
+        "aarch64-unknown-linux-gnu": "aarch64",
+    }[args.target]
+
     # run cargo from third_party/rust-crtaes/rustc_deps which has an appropriate .cargo/config
     cwd = os.path.join(ROOT_PATH, "third_party", "rust-crates", "rustc_deps")
     buildtools_dir = os.path.join(ROOT_PATH, "buildtools", host_platform)
@@ -91,7 +98,8 @@ def main():
     rustdoc = os.path.join(ROOT_PATH, "scripts", "rust", "rustdoc_no_ld_library_path.sh")
 
     shared_libs_root = os.path.join(ROOT_PATH, out_dir)
-    sysroot = os.path.join(ROOT_PATH, out_dir, "sdks", "zircon_sysroot", "sysroot")
+    sysroot = os.path.join(ROOT_PATH, out_dir, "sdk", "exported", "zircon_sysroot", \
+            "arch", target_cpu, "sysroot")
 
     clang_c_compiler = os.path.join(clang_prefix, "clang")
 
