@@ -71,8 +71,13 @@ interface Device {
 
     10: SetPromiscuousMode(bool enabled) -> (zx.status status);
 
-    // TODO(tamird): do we need to support this?
-    // 11: ConfigMulticast(eth_multicast_config_t) -> (zx.status status);
+    11: ConfigMulticastAddMac(MacAddress addr) -> (zx.status status);
+    12: ConfigMulticastDeleteMac(MacAddress addr) -> (zx.status status);
+    13: ConfigMulticastSetPromiscuousMode(bool enabled) -> (zx.status status);
+
+    // TODO(teisenbe): We should probably remove these?  They are only used for testing.
+    14: ConfigMulticastTestFilter() -> (zx.status status);
+    15: DumpRegisters() -> (zx.status status);
 };
 
 // Operation

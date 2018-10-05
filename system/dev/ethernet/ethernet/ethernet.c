@@ -206,7 +206,7 @@ static ssize_t eth_rebuild_multicast_filter_locked(ethdev_t* edev) {
                                      n_multicast, multicast);
 }
 
-static int eth_multicast_addr_index(ethdev_t* edev, uint8_t* mac) {
+static int eth_multicast_addr_index(ethdev_t* edev, const uint8_t* mac) {
     for (uint32_t i = 0; i < edev->n_multicast; i++) {
         if (!memcmp(edev->multicast[i], mac, ETH_MAC_SIZE)) {
             return i;
@@ -215,7 +215,7 @@ static int eth_multicast_addr_index(ethdev_t* edev, uint8_t* mac) {
     return -1;
 }
 
-static ssize_t eth_add_multicast_address_locked(ethdev_t* edev, uint8_t* mac) {
+static ssize_t eth_add_multicast_address_locked(ethdev_t* edev, const uint8_t* mac) {
     if (!(mac[0] & 1)) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -234,7 +234,7 @@ static ssize_t eth_add_multicast_address_locked(ethdev_t* edev, uint8_t* mac) {
     return ZX_OK;
 }
 
-static ssize_t eth_del_multicast_address_locked(ethdev_t* edev, uint8_t* mac) {
+static ssize_t eth_del_multicast_address_locked(ethdev_t* edev, const uint8_t* mac) {
     int ix = eth_multicast_addr_index(edev, mac);
     if (ix == -1) {
         // We may have overflowed the list and not remember an address. Nothing will go wrong if
@@ -927,6 +927,44 @@ static zx_status_t fidl_SetPromisc_locked(void* ctx, bool enabled, fidl_txn_t* t
     return REPLY(SetPromiscuousMode)(txn, eth_set_promisc_locked(edev, enabled));
 }
 
+static zx_status_t fidl_ConfigMulticastAddMac_locked(void* ctx,
+                                                     const zircon_ethernet_MacAddress* mac,
+                                                     fidl_txn_t* txn) {
+    ethdev_t* edev = ctx;
+    zx_status_t status = eth_add_multicast_address_locked(edev, mac->octets);
+    return REPLY(ConfigMulticastAddMac)(txn, status);
+}
+
+static zx_status_t fidl_ConfigMulticastDeleteMac_locked(void* ctx,
+                                                        const zircon_ethernet_MacAddress* mac,
+                                                        fidl_txn_t* txn) {
+    ethdev_t* edev = ctx;
+    zx_status_t status = eth_del_multicast_address_locked(edev, mac->octets);
+    return REPLY(ConfigMulticastDeleteMac)(txn, status);
+}
+
+static zx_status_t fidl_ConfigMulticastSetPromiscuousMode_locked(void* ctx, bool enabled,
+                                                                 fidl_txn_t* txn) {
+    ethdev_t* edev = ctx;
+    zx_status_t status = eth_set_multicast_promisc_locked(edev, enabled);
+    return REPLY(ConfigMulticastSetPromiscuousMode)(txn, status);
+}
+
+static zx_status_t fidl_ConfigMulticastTestFilter_locked(void* ctx, fidl_txn_t* txn) {
+    ethdev_t* edev = ctx;
+    zxlogf(INFO,
+           "MULTICAST_TEST_FILTER invoked. Turning multicast-promisc off unconditionally.\n");
+    zx_status_t status = eth_test_clear_multicast_promisc_locked(edev);
+    return REPLY(ConfigMulticastTestFilter)(txn, status);
+}
+
+static zx_status_t fidl_DumpRegisters_locked(void* ctx, fidl_txn_t* txn) {
+    ethdev_t* edev = ctx;
+    zx_status_t status = edev->edev0->mac.ops->set_param(edev->edev0->mac.ctx,
+                                                         ETHMAC_SETPARAM_DUMP_REGS, 0, NULL);
+    return REPLY(DumpRegisters)(txn, status);
+}
+
 #undef REPLY
 
 zircon_ethernet_Device_ops_t fidl_ops = {
@@ -940,6 +978,11 @@ zircon_ethernet_Device_ops_t fidl_ops = {
     .SetClientName = fidl_SetClientName_locked,
     .GetStatus = fidl_GetStatus_locked,
     .SetPromiscuousMode = fidl_SetPromisc_locked,
+    .ConfigMulticastAddMac = fidl_ConfigMulticastAddMac_locked,
+    .ConfigMulticastDeleteMac = fidl_ConfigMulticastDeleteMac_locked,
+    .ConfigMulticastSetPromiscuousMode = fidl_ConfigMulticastSetPromiscuousMode_locked,
+    .ConfigMulticastTestFilter = fidl_ConfigMulticastTestFilter_locked,
+    .DumpRegisters = fidl_DumpRegisters_locked,
 };
 
 static zx_status_t eth_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
