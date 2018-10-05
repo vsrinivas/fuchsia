@@ -73,16 +73,17 @@ class CallbackWaiterImpl : public CallbackWaiter {
 
 }  // namespace
 
-LoopControllerTestLoop::LoopControllerTestLoop() {}
+LoopControllerTestLoop::LoopControllerTestLoop(async::TestLoop* loop)
+    : loop_(loop) {}
 
 LoopControllerTestLoop::~LoopControllerTestLoop() {}
 
-void LoopControllerTestLoop::RunLoop() { loop_.RunUntilIdle(); }
+void LoopControllerTestLoop::RunLoop() { loop_->RunUntilIdle(); }
 
-void LoopControllerTestLoop::StopLoop() { loop_.Quit(); }
+void LoopControllerTestLoop::StopLoop() { loop_->Quit(); }
 
 std::unique_ptr<SubLoop> LoopControllerTestLoop::StartNewLoop() {
-  return std::make_unique<SubLoopTestLoop>(this, loop_.StartNewLoop());
+  return std::make_unique<SubLoopTestLoop>(this, loop_->StartNewLoop());
 }
 
 std::unique_ptr<CallbackWaiter> LoopControllerTestLoop::NewWaiter() {
@@ -90,7 +91,7 @@ std::unique_ptr<CallbackWaiter> LoopControllerTestLoop::NewWaiter() {
 }
 
 async_dispatcher_t* LoopControllerTestLoop::dispatcher() {
-  return loop_.dispatcher();
+  return loop_->dispatcher();
 }
 
 bool LoopControllerTestLoop::RunLoopUntil(fit::function<bool()> condition) {
@@ -103,7 +104,7 @@ bool LoopControllerTestLoop::RunLoopUntil(fit::function<bool()> condition) {
   // as if something doesn't happen in 100 simulated s, then it will almost
   // certainly be a problem for tests using a real loop.
   for (size_t i : {0, 1, 10, 100}) {
-    loop_.RunFor(zx::sec(i));
+    loop_->RunFor(zx::sec(i));
     if (condition()) {
       return true;
     }
@@ -112,7 +113,7 @@ bool LoopControllerTestLoop::RunLoopUntil(fit::function<bool()> condition) {
 }
 
 void LoopControllerTestLoop::RunLoopFor(zx::duration duration) {
-  loop_.RunFor(duration);
+  loop_->RunFor(duration);
 }
 
 }  // namespace ledger

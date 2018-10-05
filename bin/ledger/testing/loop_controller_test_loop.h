@@ -18,7 +18,7 @@ namespace ledger {
 // (physical) clock.
 class LoopControllerTestLoop : public LoopController {
  public:
-  LoopControllerTestLoop();
+  LoopControllerTestLoop(async::TestLoop* loop);
   ~LoopControllerTestLoop() override;
 
   void RunLoop() override;
@@ -35,10 +35,10 @@ class LoopControllerTestLoop : public LoopController {
 
   void RunLoopFor(zx::duration duration) override;
 
-  async::TestLoop& test_loop() { return loop_; }
+  async::TestLoop& test_loop() { return *loop_; }
 
  private:
-  async::TestLoop loop_;
+  async::TestLoop* const loop_;
 };
 
 }  // namespace ledger
