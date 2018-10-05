@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <hid/acer12.h>
 #include <hid/ambient-light.h>
+#include <hid/boot.h>
 #include <hid/egalax.h>
 #include <hid/eyoyo.h>
 #include <hid/ft3x27.h>
@@ -20,7 +21,6 @@
 #include <unistd.h>
 #include <zircon/assert.h>
 #include <zircon/device/device.h>
-#include <zircon/device/input.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -695,7 +695,7 @@ void InputInterpreter::ParseKeyboardReport(uint8_t* report, size_t len) {
 }
 
 void InputInterpreter::ParseMouseReport(uint8_t* r, size_t len) {
-  auto report = reinterpret_cast<boot_mouse_report_t*>(r);
+  auto report = reinterpret_cast<hid_boot_mouse_report_t*>(r);
   mouse_report_->event_time = InputEventTimestampNow();
 
   mouse_report_->mouse->rel_x = report->rel_x;

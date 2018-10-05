@@ -7,7 +7,6 @@
 
 #include <hid/acer12.h>
 #include <lib/zx/event.h>
-#include <zircon/device/input.h>
 #include <zircon/types.h>
 
 #include <array>
