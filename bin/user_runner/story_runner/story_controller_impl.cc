@@ -1085,9 +1085,7 @@ class StoryControllerImpl::StartCall : public Operation<> {
           story_controller_impl_->InitStoryEnvironment();
 
           for (auto& module_data : *data) {
-            if (module_data.module_source !=
-                    fuchsia::modular::ModuleSource::EXTERNAL ||
-                module_data.module_stopped) {
+            if (module_data.module_stopped) {
               continue;
             }
             FXL_CHECK(module_data.intent);
