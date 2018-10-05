@@ -33,7 +33,7 @@ int pthread_barrier_wait(pthread_barrier_t* b) {
         b->_b_inst = inst = &new_inst;
         atomic_store(&b->_b_lock, 0);
         if (atomic_load(&b->_b_waiters))
-            __wake(&b->_b_lock, 1);
+            _zx_futex_wake(&b->_b_lock, 1);
         while (spins-- && !atomic_load(&inst->finished))
             a_spin();
         atomic_fetch_add(&inst->finished, 1);
@@ -50,20 +50,20 @@ int pthread_barrier_wait(pthread_barrier_t* b) {
         b->_b_inst = 0;
         atomic_store(&b->_b_lock, 0);
         if (atomic_load(&b->_b_waiters))
-            __wake(&b->_b_lock, 1);
+            _zx_futex_wake(&b->_b_lock, 1);
         atomic_store(&inst->last, 1);
         if (inst->waiters)
-            __wake(&inst->last, -1);
+            _zx_futex_wake(&inst->last, UINT32_MAX);
     } else {
         atomic_store(&b->_b_lock, 0);
         if (atomic_load(&b->_b_waiters))
-            __wake(&b->_b_lock, 1);
+            _zx_futex_wake(&b->_b_lock, 1);
         __wait(&inst->last, &inst->waiters, 0);
     }
 
     /* Last thread to exit the barrier wakes the instance owner */
     if (atomic_fetch_add(&inst->count, -1) == 1 && atomic_fetch_add(&inst->finished, 1))
-        __wake(&inst->finished, 1);
+        _zx_futex_wake(&inst->finished, 1);
 
     return 0;
 }

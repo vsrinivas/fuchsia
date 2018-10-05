@@ -26,7 +26,7 @@ int pthread_mutex_unlock(pthread_mutex_t* m) {
         // Note that the mutex's memory could have been freed and reused by
         // this point, so this could cause a spurious futex wakeup for a
         // unrelated user of the memory location.
-        __wake(&m->_m_lock, 1);
+        _zx_futex_wake(&m->_m_lock, 1);
     }
     return 0;
 }

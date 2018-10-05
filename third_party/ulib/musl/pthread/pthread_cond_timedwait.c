@@ -116,7 +116,7 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
          * (since it contends _c_lock and involves more atomic ops). */
         if (node.notify) {
             if (atomic_fetch_add(node.notify, -1) == 1)
-                __wake(node.notify, 1);
+                _zx_futex_wake(node.notify, 1);
         }
     } else {
         /* This thread was at least partially signaled by

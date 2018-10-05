@@ -7,11 +7,6 @@
 #include <stdatomic.h>
 
 void __wait(atomic_int* futex, atomic_int* waiters, int current_value);
-static inline void __wake(atomic_int* futex, int cnt) {
-    if (cnt < 0)
-        cnt = INT_MAX;
-    _zx_futex_wake(futex, cnt);
-}
 
 /* Self-synchronized-destruction-safe lock functions */
 #define UNLOCKED 0
@@ -29,7 +24,7 @@ static inline void lock(atomic_int* l) {
 
 static inline void unlock(atomic_int* l) {
     if (atomic_exchange(l, UNLOCKED) == LOCKED_MAYBE_WAITERS)
-        __wake(l, 1);
+        _zx_futex_wake(l, 1);
 }
 
 static inline void unlock_requeue(atomic_int* l, zx_futex_t* r) {

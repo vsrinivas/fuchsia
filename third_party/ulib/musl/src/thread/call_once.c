@@ -20,7 +20,7 @@ static void once_full(once_flag* control, void (*init)(void)) {
             init();
 
             if (atomic_exchange(control, STATE_DONE) == STATE_WAKE)
-                __wake(control, -1);
+                _zx_futex_wake(control, UINT32_MAX);
             return;
         case STATE_WAIT:
             /* If this fails, so will __wait. */

@@ -102,7 +102,7 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
          * (since it contends _c_lock and involves more atomic ops). */
         if (node.notify) {
             if (atomic_fetch_add(node.notify, -1) == 1)
-                __wake(node.notify, 1);
+                _zx_futex_wake(node.notify, 1);
         }
     } else {
         /* Lock barrier first to control wake order. */

@@ -12,7 +12,7 @@ int pthread_rwlock_unlock(pthread_rwlock_t* rw) {
     } while (a_cas_shim(&rw->_rw_lock, val, new) != val);
 
     if (!new && (waiters || val < 0))
-        __wake(&rw->_rw_lock, cnt);
+        _zx_futex_wake(&rw->_rw_lock, cnt);
 
     return 0;
 }

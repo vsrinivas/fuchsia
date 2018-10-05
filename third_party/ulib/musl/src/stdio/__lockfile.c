@@ -24,5 +24,5 @@ void __unlockfile(FILE* f) {
      * malloc changes, this assumption needs revisiting. */
 
     if (atomic_load(&f->waiters))
-        __wake(&f->lock, 1);
+        _zx_futex_wake(&f->lock, 1);
 }
