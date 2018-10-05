@@ -9,7 +9,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/hidbus.h>
-#include <zircon/device/input.h>
 #include <zircon/input/c/fidl.h>
 
 #include <zircon/assert.h>
@@ -33,12 +32,15 @@
 
 // Until we do full HID parsing, we put mouse and keyboard devices into boot
 // protocol mode. In particular, a mouse will always send 3 byte reports (see
-// ddk/protocol/input.h for the format). This macro sets ioctl return values for
+// ddk/protocol/input.h for the format). This macro sets FIDL return values for
 // boot mouse devices to reflect the boot protocol, rather than what the device
 // itself reports.
 // TODO: update this to include keyboards if we find a keyboard in the wild that
 // needs a hack as well.
 #define BOOT_MOUSE_HACK 1
+
+typedef uint8_t input_report_id_t;
+typedef uint16_t input_report_size_t;
 
 typedef struct hid_report_size {
     uint8_t id;
@@ -133,15 +135,15 @@ static inline zx_status_t hid_op_set_protocol(hid_device_t* hid, uint8_t protoco
 
 static input_report_size_t hid_get_report_size_by_id(hid_device_t* hid,
                                                      input_report_id_t id,
-                                                     input_report_type_t type) {
+                                                     zircon_input_ReportType type) {
     for (size_t i = 0; i < hid->num_reports; i++) {
         if ((hid->sizes[i].id == id) || (hid->num_reports == 1)) {
             switch (type) {
-            case INPUT_REPORT_INPUT:
+            case zircon_input_ReportType_INPUT:
                 return bits_to_bytes(hid->sizes[i].in_size);
-            case INPUT_REPORT_OUTPUT:
+            case zircon_input_ReportType_OUTPUT:
                 return bits_to_bytes(hid->sizes[i].out_size);
-            case INPUT_REPORT_FEATURE:
+            case zircon_input_ReportType_FEATURE:
                 return bits_to_bytes(hid->sizes[i].feat_size);
             }
         }
@@ -159,76 +161,7 @@ static zircon_input_BootProtocol get_boot_protocol(hid_device_t* hid) {
     return zircon_input_BootProtocol_NONE;
 }
 
-static zx_status_t hid_get_protocol(hid_device_t* hid, void* out_buf, size_t out_len,
-                                    size_t* out_actual) {
-    if (out_len < sizeof(int)) return ZX_ERR_INVALID_ARGS;
-
-    int* reply = out_buf;
-    *reply = get_boot_protocol(hid);
-    *out_actual = sizeof(*reply);
-    return ZX_OK;
-}
-
-static zx_status_t hid_get_hid_desc_size(hid_device_t* hid, void* out_buf, size_t out_len,
-                                         size_t* out_actual) {
-    if (out_len < sizeof(size_t)) return ZX_ERR_INVALID_ARGS;
-
-    size_t* reply = out_buf;
-    *reply = hid->hid_report_desc_len;
-    *out_actual = sizeof(*reply);
-    return ZX_OK;
-}
-
-static zx_status_t hid_get_hid_desc(hid_device_t* hid, void* out_buf, size_t out_len,
-                                    size_t* out_actual) {
-    if (out_len < hid->hid_report_desc_len) return ZX_ERR_INVALID_ARGS;
-
-    memcpy(out_buf, hid->hid_report_desc, hid->hid_report_desc_len);
-    *out_actual = hid->hid_report_desc_len;
-    return ZX_OK;
-}
-
-static zx_status_t hid_get_num_reports(hid_device_t* hid, void* out_buf, size_t out_len,
-                                       size_t* out_actual) {
-    if (out_len < sizeof(size_t)) return ZX_ERR_INVALID_ARGS;
-
-    size_t* reply = out_buf;
-    *reply = hid->num_reports;
-    *out_actual = sizeof(*reply);
-    return ZX_OK;
-}
-
-static zx_status_t hid_get_report_ids(hid_device_t* hid, void* out_buf, size_t out_len,
-                                      size_t* out_actual) {
-    if (out_len < hid->num_reports * sizeof(input_report_id_t))
-        return ZX_ERR_INVALID_ARGS;
-
-    input_report_id_t* reply = out_buf;
-    for (size_t i = 0; i < hid->num_reports; i++) {
-        *reply++ = (input_report_id_t)hid->sizes[i].id;
-    }
-    *out_actual =  hid->num_reports * sizeof(input_report_id_t);
-    return ZX_OK;
-}
-
-static zx_status_t hid_get_report_size(hid_device_t* hid, const void* in_buf, size_t in_len,
-                                       void* out_buf, size_t out_len, size_t* out_actual) {
-    if (in_len < sizeof(input_get_report_size_t)) return ZX_ERR_INVALID_ARGS;
-    if (out_len < sizeof(input_report_size_t)) return ZX_ERR_INVALID_ARGS;
-
-    const input_get_report_size_t* inp = in_buf;
-
-    input_report_size_t* reply = out_buf;
-    *reply = hid_get_report_size_by_id(hid, inp->id, inp->type);
-    if (*reply == 0) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    *out_actual = sizeof(*reply);
-    return ZX_OK;
-}
-
-static uint16_t get_max_input_reportsize(hid_device_t* hid) {
+static input_report_size_t get_max_input_reportsize(hid_device_t* hid) {
     size_t size = 0;
     for (size_t i = 0; i < hid->num_reports; i++) {
         if (hid->sizes[i].in_size > size)
@@ -237,42 +170,6 @@ static uint16_t get_max_input_reportsize(hid_device_t* hid) {
 
     return bits_to_bytes(size);
 }
-
-static ssize_t hid_get_max_input_reportsize(hid_device_t* hid, void* out_buf, size_t out_len,
-                                            size_t* out_actual) {
-    if (out_len < sizeof(input_report_size_t)) return ZX_ERR_INVALID_ARGS;
-
-    input_report_size_t* reply = out_buf;
-    *reply = get_max_input_reportsize(hid);
-    *out_actual = sizeof(*reply);
-    return ZX_OK;
-}
-
-static zx_status_t hid_get_report(hid_device_t* hid, const void* in_buf, size_t in_len,
-                                  void* out_buf, size_t out_len, size_t* out_actual) {
-    if (in_len < sizeof(input_get_report_t)) return ZX_ERR_INVALID_ARGS;
-    const input_get_report_t* inp = in_buf;
-
-    input_report_size_t needed = hid_get_report_size_by_id(hid, inp->id, inp->type);
-    if (needed == 0) return ZX_ERR_INVALID_ARGS;
-    if (out_len < (size_t)needed) return ZX_ERR_BUFFER_TOO_SMALL;
-
-    return hid_op_get_report(hid, inp->type, inp->id, out_buf, out_len, out_actual);
-}
-
-static zx_status_t hid_set_report(hid_device_t* hid, const void* in_buf, size_t in_len) {
-
-    if (in_len < sizeof(input_set_report_t)) return ZX_ERR_INVALID_ARGS;
-    const input_set_report_t* inp = in_buf;
-
-    input_report_size_t needed = hid_get_report_size_by_id(hid, inp->id, inp->type);
-    if (needed == 0) return ZX_ERR_INVALID_ARGS;
-    if (in_len - sizeof(input_set_report_t) < (size_t)needed) return ZX_ERR_INVALID_ARGS;
-
-    return hid_op_set_report(hid, inp->type, inp->id, (void*)inp->data,
-                             in_len - sizeof(input_set_report_t));
-}
-
 
 static zx_status_t hid_read_instance(void* ctx, void* buf, size_t count, zx_off_t off,
                                      size_t* actual) {
@@ -293,7 +190,7 @@ static zx_status_t hid_read_instance(void* ctx, void* buf, size_t count, zx_off_
         return ZX_ERR_SHOULD_WAIT;
     }
 
-    xfer = hid_get_report_size_by_id(hid->base, rpt_id, INPUT_REPORT_INPUT);
+    xfer = hid_get_report_size_by_id(hid->base, rpt_id, zircon_input_ReportType_INPUT);
     if (xfer == 0) {
         zxlogf(ERROR, "error reading hid device: unknown report id (%u)!\n", rpt_id);
         mtx_unlock(&hid->fifo.lock);
@@ -319,34 +216,6 @@ static zx_status_t hid_read_instance(void* ctx, void* buf, size_t count, zx_off_
         r = ZX_ERR_SHOULD_WAIT;
     }
     return r;
-}
-
-static zx_status_t hid_ioctl_instance(void* ctx, uint32_t op,
-        const void* in_buf, size_t in_len, void* out_buf, size_t out_len, size_t* out_actual) {
-    hid_instance_t* hid = ctx;
-    if (hid->flags & HID_FLAGS_DEAD) return ZX_ERR_PEER_CLOSED;
-
-    switch (op) {
-    case IOCTL_INPUT_GET_PROTOCOL:
-        return hid_get_protocol(hid->base, out_buf, out_len, out_actual);
-    case IOCTL_INPUT_GET_REPORT_DESC_SIZE:
-        return hid_get_hid_desc_size(hid->base, out_buf, out_len, out_actual);
-    case IOCTL_INPUT_GET_REPORT_DESC:
-        return hid_get_hid_desc(hid->base, out_buf, out_len, out_actual);
-    case IOCTL_INPUT_GET_NUM_REPORTS:
-        return hid_get_num_reports(hid->base, out_buf, out_len, out_actual);
-    case IOCTL_INPUT_GET_REPORT_IDS:
-        return hid_get_report_ids(hid->base, out_buf, out_len, out_actual);
-    case IOCTL_INPUT_GET_REPORT_SIZE:
-        return hid_get_report_size(hid->base, in_buf, in_len, out_buf, out_len, out_actual);
-    case IOCTL_INPUT_GET_MAX_REPORTSIZE:
-        return hid_get_max_input_reportsize(hid->base, out_buf, out_len, out_actual);
-    case IOCTL_INPUT_GET_REPORT:
-        return hid_get_report(hid->base, in_buf, in_len, out_buf, out_len, out_actual);
-    case IOCTL_INPUT_SET_REPORT:
-        return hid_set_report(hid->base, in_buf, in_len);
-    }
-    return ZX_ERR_NOT_SUPPORTED;
 }
 
 static zx_status_t hid_close_instance(void* ctx, uint32_t flags) {
@@ -399,7 +268,7 @@ static zx_status_t fidl_GetReportIds(void* ctx, fidl_txn_t* txn) {
 static zx_status_t fidl_GetReportSize(void* ctx, zircon_input_ReportType type, uint8_t id,
                                       fidl_txn_t* txn) {
     hid_instance_t* hid = ctx;
-    uint16_t size = hid_get_report_size_by_id(hid->base, id, type);
+    input_report_size_t size = hid_get_report_size_by_id(hid->base, id, type);
     return zircon_input_DeviceGetReportSize_reply(txn, size == 0 ? ZX_ERR_NOT_FOUND : ZX_OK, size);
 }
 
@@ -457,7 +326,6 @@ static zx_status_t hid_message_instance(void* ctx, fidl_msg_t* msg, fidl_txn_t* 
 zx_protocol_device_t hid_instance_proto = {
     .version = DEVICE_OPS_VERSION,
     .read = hid_read_instance,
-    .ioctl = hid_ioctl_instance,
     .close = hid_close_instance,
     .message = hid_message_instance,
     .release = hid_release_instance,
@@ -742,16 +610,7 @@ static zx_status_t hid_init_reassembly_buffer(hid_device_t* dev) {
     // full speed, we can expect it to deliver up to 64 bytes at a time.  If the
     // maximum HID input report size is only 60 bytes, we should not need a
     // reassembly buffer.
-    input_report_size_t max_report_size = 0;
-    size_t actual = 0;
-    zx_status_t res = hid_get_max_input_reportsize(dev, &max_report_size, sizeof(max_report_size),
-                                                   &actual);
-    if (res < 0) {
-        return res;
-    } else if (!max_report_size || actual != sizeof(max_report_size)) {
-        return ZX_ERR_INTERNAL;
-    }
-
+    input_report_size_t max_report_size = get_max_input_reportsize(dev);
     dev->rbuf = malloc(max_report_size);
     if (dev->rbuf == NULL) {
         return ZX_ERR_NO_MEMORY;
@@ -864,7 +723,7 @@ void hid_io_queue(void* cookie, const uint8_t* buf, size_t len) {
         } else {
             // No reassembly is in progress.  Start by identifying this report's
             // size.
-            size_t  rpt_sz = hid_get_report_size_by_id(hid, buf[0], INPUT_REPORT_INPUT);
+            size_t rpt_sz = hid_get_report_size_by_id(hid, buf[0], zircon_input_ReportType_INPUT);
 
             // If we don't recognize this report ID, we are in trouble.  Drop
             // the rest of this payload and hope that the next one gets us back
