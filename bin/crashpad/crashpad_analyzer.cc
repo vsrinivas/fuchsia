@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <string>
 #include <utility>
 
 #include <fuchsia/crash/cpp/fidl.h>
@@ -9,10 +10,8 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/io.h>
 #include <lib/fxl/files/file.h>
-#include <lib/fxl/logging.h>
 #include <lib/fxl/strings/trim.h>
 #include <lib/syslog/cpp/logger.h>
-#include <lib/zx/handle.h>
 #include <lib/zx/log.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
@@ -20,6 +19,7 @@
 #include <third_party/crashpad/client/settings.h>
 #include <third_party/crashpad/handler/fuchsia/crash_report_exception_handler.h>
 #include <third_party/crashpad/minidump/minidump_file_writer.h>
+#include <third_party/crashpad/third_party/mini_chromium/mini_chromium/base/files/file_path.h>
 #include <third_party/crashpad/third_party/mini_chromium/mini_chromium/base/files/scoped_file.h>
 #include <third_party/crashpad/util/misc/metrics.h>
 #include <third_party/crashpad/util/misc/uuid.h>
@@ -29,7 +29,6 @@
 #include <third_party/crashpad/util/net/http_transport.h>
 #include <third_party/crashpad/util/net/url.h>
 #include <zircon/process.h>
-#include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
