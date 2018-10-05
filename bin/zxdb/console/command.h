@@ -18,6 +18,7 @@ class Breakpoint;
 class ConsoleContext;
 class Frame;
 class Target;
+class JobContext;
 class Thread;
 
 // Noun ------------------------------------------------------------------------
@@ -173,6 +174,8 @@ class Command {
   void set_frame(Frame* f) { frame_ = f; }
   Target* target() const { return target_; }
   void set_target(Target* t) { target_ = t; }
+  JobContext* job_context() const { return job_context_; }
+  void set_job_context(JobContext* t) { job_context_ = t; }
   Thread* thread() const { return thread_; }
   void set_thread(Thread* t) { thread_ = t; }
   Breakpoint* breakpoint() const { return breakpoint_; }
@@ -189,6 +192,8 @@ class Command {
   // thread/etc. will be reflected here, and anything that wasn't explicit
   // will inherit the default.
   Target* target_ = nullptr;  // Guaranteed non-null for valid commands.
+  // Guaranteed non-null for valid commands.
+  JobContext* job_context_ = nullptr;
   Thread* thread_ = nullptr;  // Will be null if not running.
   Frame* frame_ = nullptr;    // Will be null if no valid thread stopped.
   Breakpoint* breakpoint_ = nullptr;  // May be null.

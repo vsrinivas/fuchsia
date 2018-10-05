@@ -105,18 +105,28 @@ Example
   [zxdb] attach 1239
   Process 2 Running 1239
 )";
+// TODO(anmittal): move out of this file as this is no longer process specific
+// verb. Also fix help. Currently verbs are matched by aliases and not by noun
+// context.
 Err DoNew(ConsoleContext* context, const Command& cmd) {
-  Err err = cmd.ValidateNouns({Noun::kProcess});
+  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kJob});
   if (err.has_error())
     return err;
 
-  if (!cmd.HasNoun(Noun::kProcess))
-    return Err("Use \"process new\" to create a new process context.");
+  if (!cmd.HasNoun(Noun::kProcess) && !cmd.HasNoun(Noun::kJob))
+    return Err("Use \"process new\" or \"job new\" to create a new context.");
 
-  Target* new_target =
-      context->session()->system().CreateNewTarget(cmd.target());
-  context->SetActiveTarget(new_target);
-  Console::get()->Output(DescribeTarget(context, new_target));
+  if (cmd.HasNoun(Noun::kJob)) {
+    JobContext* new_job_context =
+        context->session()->system().CreateNewJobContext(cmd.job_context());
+    context->SetActiveJobContext(new_job_context);
+    Console::get()->Output(DescribeJobContext(context, new_job_context));
+  } else {
+    Target* new_target =
+        context->session()->system().CreateNewTarget(cmd.target());
+    context->SetActiveTarget(new_target);
+    Console::get()->Output(DescribeTarget(context, new_target));
+  }
   return Err();
 }
 
@@ -457,6 +467,7 @@ Err DoAspace(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs) {
+  // TODO(anmittal): Add one for job when we fix verbs.
   (*verbs)[Verb::kNew] = VerbRecord(&DoNew, {"new"}, kNewShortHelp, kNewHelp,
                                     CommandGroup::kProcess);
   (*verbs)[Verb::kRun] = VerbRecord(&DoRun, {"run", "r"}, kRunShortHelp,

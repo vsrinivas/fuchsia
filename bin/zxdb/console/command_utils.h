@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_ZXDB_CONSOLE_COMMAND_UTILS_H_
+#define GARNET_BIN_ZXDB_CONSOLE_COMMAND_UTILS_H_
 
 #include <initializer_list>
 #include <string>
 
 #include "garnet/bin/zxdb/client/breakpoint_settings.h"
+#include "garnet/bin/zxdb/client/job_context.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/lib/debug_ipc/protocol.h"
@@ -68,6 +70,7 @@ Err ParseHostPort(const std::string& input, std::string* out_host,
                   uint16_t* out_port);
 
 std::string TargetStateToString(Target::State state);
+std::string JobContextStateToString(JobContext::State state);
 std::string ThreadStateToString(debug_ipc::ThreadRecord::State state);
 
 std::string BreakpointScopeToString(const ConsoleContext* context,
@@ -79,9 +82,15 @@ std::string ExceptionTypeToString(debug_ipc::NotifyException::Type type);
 
 std::string DescribeTarget(const ConsoleContext* context, const Target* target);
 
+std::string DescribeJobContext(const ConsoleContext* context,
+                               const JobContext* job_context);
+
 // Returns the process name of the given target, depending on the running
 // process or the current app name, as applicable.
 std::string DescribeTargetName(const Target* target);
+
+// Returns the job name of the given job context.
+std::string DescribeJobContextName(const JobContext* job_context);
 
 std::string DescribeThread(const ConsoleContext* context, const Thread* thread);
 
@@ -96,3 +105,5 @@ std::string DescribeLocation(const Location& loc, bool always_show_address);
 std::string DescribeFileLine(const FileLine& file_line, bool show_path = false);
 
 }  // namespace zxdb
+
+#endif  // GARNET_BIN_ZXDB_CONSOLE_COMMAND_UTILS_H_

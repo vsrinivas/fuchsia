@@ -10,6 +10,8 @@
 
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/frame.h"
+#include "garnet/bin/zxdb/client/job.h"
+#include "garnet/bin/zxdb/client/job_context.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
@@ -218,6 +220,21 @@ std::string TargetStateToString(Target::State state) {
   return std::string();
 }
 
+std::string JobContextStateToString(JobContext::State state) {
+  switch (state) {
+    case JobContext::State::kNone:
+      return "Not running";
+    case JobContext::State::kStarting:
+      return "Starting";
+    case JobContext::State::kAttaching:
+      return "Attaching";
+    case JobContext::State::kRunning:
+      return "Running";
+  }
+  FXL_NOTREACHED();
+  return std::string();
+}
+
 std::string ThreadStateToString(debug_ipc::ThreadRecord::State state) {
   switch (state) {
     case debug_ipc::ThreadRecord::State::kNew:
@@ -294,6 +311,25 @@ std::string ExceptionTypeToString(debug_ipc::NotifyException::Type type) {
   return std::string();
 }
 
+std::string DescribeJobContext(const ConsoleContext* context,
+                               const JobContext* job_context) {
+  int id = context->IdForJobContext(job_context);
+  std::string state = JobContextStateToString(job_context->GetState());
+
+  // Koid string. This includes a trailing space when present so it can be
+  // concat'd even when not present and things look nice.
+  std::string koid_str;
+  if (job_context->GetState() == JobContext::State::kRunning) {
+    koid_str = fxl::StringPrintf("koid=%" PRIu64 " ",
+                                 job_context->GetJob()->GetKoid());
+  }
+
+  std::string result =
+      fxl::StringPrintf("Job %d %s %s", id, state.c_str(), koid_str.c_str());
+  result += DescribeJobContextName(job_context);
+  return result;
+}
+
 std::string DescribeTarget(const ConsoleContext* context,
                            const Target* target) {
   int id = context->IdForTarget(target);
@@ -325,6 +361,15 @@ std::string DescribeTargetName(const Target* target) {
     if (!args.empty())
       name += args[0];
   }
+  return name;
+}
+
+std::string DescribeJobContextName(const JobContext* job_context) {
+  // When running, use the object name if any.
+  std::string name;
+  if (job_context->GetState() == JobContext::State::kRunning)
+    name = job_context->GetJob()->GetName();
+
   return name;
 }
 

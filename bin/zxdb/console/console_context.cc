@@ -29,6 +29,9 @@ ConsoleContext::ConsoleContext(Session* session) : session_(session) {
   // default one.
   for (Target* target : session->system().GetTargets())
     DidCreateTarget(target);
+
+  for (JobContext* job_context : session->system().GetJobContexts())
+    DidCreateJobContext(job_context);
 }
 
 ConsoleContext::~ConsoleContext() {
@@ -50,6 +53,15 @@ ConsoleContext::~ConsoleContext() {
 int ConsoleContext::IdForTarget(const Target* target) const {
   const auto& found = target_to_id_.find(target);
   if (found == target_to_id_.end()) {
+    FXL_NOTREACHED();
+    return 0;
+  }
+  return found->second;
+}
+
+int ConsoleContext::IdForJobContext(const JobContext* job_context) const {
+  const auto& found = job_context_to_id_.find(job_context);
+  if (found == job_context_to_id_.end()) {
     FXL_NOTREACHED();
     return 0;
   }
@@ -96,6 +108,26 @@ int ConsoleContext::IdForBreakpoint(const Breakpoint* breakpoint) const {
     return 0;
   }
   return found->second;
+}
+
+void ConsoleContext::SetActiveJobContext(const JobContext* job_context) {
+  auto found = job_context_to_id_.find(job_context);
+  if (found == job_context_to_id_.end()) {
+    FXL_NOTREACHED();
+    return;
+  }
+  active_job_context_id_ = found->second;
+}
+
+int ConsoleContext::GetActiveJobContextId() const {
+  return active_job_context_id_;
+}
+
+JobContext* ConsoleContext::GetActiveJobContext() const {
+  auto found = id_to_job_context_.find(active_job_context_id_);
+  if (found == id_to_job_context_.end())
+    return nullptr;
+  return found->second.job_context;
 }
 
 void ConsoleContext::SetActiveTarget(const Target* target) {
@@ -203,9 +235,14 @@ void ConsoleContext::SetSourceAffinityForThread(
 }
 
 Err ConsoleContext::FillOutCommand(Command* cmd) const {
+  // JobContext.
+  Err result = FillOutJobContext(cmd);
+  if (result.has_error())
+    return result;
+
   // Target.
   const TargetRecord* target_record = nullptr;
-  Err result = FillOutTarget(cmd, &target_record);
+  result = FillOutTarget(cmd, &target_record);
   if (result.has_error())
     return result;
 
@@ -244,6 +281,23 @@ void ConsoleContext::DidCreateTarget(Target* target) {
   // Set the active target only if there's none already.
   if (active_target_id_ == 0)
     active_target_id_ = new_id;
+}
+
+void ConsoleContext::DidCreateJobContext(JobContext* job_context) {
+  // TODO(anmittal): Add observer if required.
+  int new_id = next_job_context_id_;
+  next_job_context_id_++;
+
+  JobContextRecord record;
+  record.job_context_id = new_id;
+  record.job_context = job_context;
+
+  id_to_job_context_[new_id] = std::move(record);
+  job_context_to_id_[job_context] = new_id;
+
+  // Set the active job_context only if there's none already.
+  if (active_job_context_id_ == 0)
+    active_job_context_id_ = new_id;
 }
 
 void ConsoleContext::WillDestroyTarget(Target* target) {
@@ -541,6 +595,29 @@ const ConsoleContext::ThreadRecord* ConsoleContext::GetThreadRecord(
     return nullptr;
   }
   return &found_id_to_thread->second;
+}
+
+Err ConsoleContext::FillOutJobContext(Command* cmd) const {
+  int job_context_id = cmd->GetNounIndex(Noun::kJob);
+  if (job_context_id == Command::kNoIndex) {
+    // No index: use the active one (which should always exist).
+    job_context_id = active_job_context_id_;
+    auto found_job_context = id_to_job_context_.find(job_context_id);
+    FXL_DCHECK(found_job_context != id_to_job_context_.end());
+    cmd->set_job_context(found_job_context->second.job_context);
+
+    FXL_DCHECK(cmd->job_context());  // Default job_context should always exist.
+    return Err();
+  }
+
+  // Explicit index given, look it up.
+  auto found_job_context = id_to_job_context_.find(job_context_id);
+  if (found_job_context == id_to_job_context_.end()) {
+    return Err(ErrType::kInput,
+               fxl::StringPrintf("There is no job %d.", job_context_id));
+  }
+  cmd->set_job_context(found_job_context->second.job_context);
+  return Err();
 }
 
 Err ConsoleContext::FillOutTarget(

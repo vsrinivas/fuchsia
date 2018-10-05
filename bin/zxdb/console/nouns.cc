@@ -10,6 +10,7 @@
 
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/frame.h"
+#include "garnet/bin/zxdb/client/job.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system.h"
@@ -232,7 +233,7 @@ bool HandleThreadNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   return true;
 }
 
-// Processes -------------------------------------------------------------------
+// Jobs -------------------------------------------------------------------
 
 const char kJobShortHelp[] = "job / j: Select or list job contexts.";
 const char kJobHelp[] =
@@ -274,7 +275,50 @@ Examples
 )";
 
 void ListJobs(ConsoleContext* context) {
-  OutputBuffer out("Coming soon!");
+  auto job_contexts = context->session()->system().GetJobContexts();
+
+  int active_job_context_id = context->GetActiveJobContextId();
+
+  // Sort by ID.
+  std::vector<std::pair<int, JobContext*>> id_job_contexts;
+  for (auto& job_context : job_contexts)
+    id_job_contexts.push_back(
+        std::make_pair(context->IdForJobContext(job_context), job_context));
+  std::sort(id_job_contexts.begin(), id_job_contexts.end());
+
+  std::vector<std::vector<std::string>> rows;
+  for (const auto& pair : id_job_contexts) {
+    rows.emplace_back();
+    std::vector<std::string>& row = rows.back();
+
+    // "Current process" marker (or nothing).
+    if (pair.first == active_job_context_id)
+      row.emplace_back(GetRightArrow());
+    else
+      row.emplace_back();
+
+    // ID.
+    row.push_back(fxl::StringPrintf("%d", pair.first));
+
+    // State and koid (if running).
+    row.push_back(JobContextStateToString(pair.second->GetState()));
+    if (pair.second->GetState() == JobContext::State::kRunning) {
+      row.push_back(
+          fxl::StringPrintf("%" PRIu64, pair.second->GetJob()->GetKoid()));
+    } else {
+      row.emplace_back();
+    }
+
+    row.push_back(DescribeJobContextName(pair.second));
+  }
+
+  OutputBuffer out;
+  FormatTable(
+      {ColSpec(Align::kLeft),
+       ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
+       ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
+       ColSpec(Align::kLeft, 0, "Name")},
+      rows, &out);
   Console::get()->Output(std::move(out));
 }
 
@@ -290,7 +334,9 @@ bool HandleJobNoun(ConsoleContext* context, const Command& cmd, Err* err) {
     return true;
   }
 
-  // TODO: Explicit index provided.
+  FXL_DCHECK(cmd.job_context());
+  context->SetActiveJobContext(cmd.job_context());
+  Console::get()->Output(DescribeJobContext(context, cmd.job_context()));
   return true;
 }
 

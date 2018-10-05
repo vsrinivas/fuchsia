@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/client/system_impl.h"
 
 #include "garnet/bin/zxdb/client/breakpoint_impl.h"
+#include "garnet/bin/zxdb/client/job_context_impl.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
@@ -17,6 +18,7 @@ namespace zxdb {
 SystemImpl::SystemImpl(Session* session)
     : System(session), weak_factory_(this) {
   AddNewTarget(std::make_unique<TargetImpl>(this));
+  AddNewJobContext(std::make_unique<JobContextImpl>(this));
 
   // Forward all messages from the symbol index to our observers. It's OK to
   // bind |this| because the symbol index is owned by |this|.
@@ -78,6 +80,14 @@ std::vector<Target*> SystemImpl::GetTargets() const {
   return result;
 }
 
+std::vector<JobContext*> SystemImpl::GetJobContexts() const {
+  std::vector<JobContext*> result;
+  result.reserve(job_contexts_.size());
+  for (const auto& t : job_contexts_)
+    result.push_back(t.get());
+  return result;
+}
+
 std::vector<Breakpoint*> SystemImpl::GetBreakpoints() const {
   std::vector<Breakpoint*> result;
   result.reserve(breakpoints_.size());
@@ -102,6 +112,14 @@ Target* SystemImpl::CreateNewTarget(Target* clone) {
                       : std::make_unique<TargetImpl>(this);
   Target* to_return = target.get();
   AddNewTarget(std::move(target));
+  return to_return;
+}
+
+JobContext* SystemImpl::CreateNewJobContext(JobContext* clone) {
+  auto job_context = clone ? static_cast<JobContextImpl*>(clone)->Clone(this)
+                           : std::make_unique<JobContextImpl>(this);
+  JobContext* to_return = job_context.get();
+  AddNewJobContext(std::move(job_context));
   return to_return;
 }
 
@@ -186,6 +204,14 @@ void SystemImpl::AddNewTarget(std::unique_ptr<TargetImpl> target) {
   targets_.push_back(std::move(target));
   for (auto& observer : observers())
     observer.DidCreateTarget(for_observers);
+}
+
+void SystemImpl::AddNewJobContext(std::unique_ptr<JobContextImpl> job_context) {
+  JobContext* for_observers = job_context.get();
+
+  job_contexts_.push_back(std::move(job_context));
+  for (auto& observer : observers())
+    observer.DidCreateJobContext(for_observers);
 }
 
 }  // namespace zxdb

@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_ZXDB_CLIENT_SYSTEM_H_
+#define GARNET_BIN_ZXDB_CLIENT_SYSTEM_H_
 
 #include <functional>
 #include <vector>
 
 #include "garnet/bin/zxdb/client/client_object.h"
+#include "garnet/bin/zxdb/client/job_context.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/public/lib/fxl/macros.h"
@@ -40,6 +42,11 @@ class System : public ClientObject {
   // the message loop.
   virtual std::vector<Target*> GetTargets() const = 0;
 
+  // Returns all job contexts currently in the System. The returned pointers are
+  // managed by the System object and should not be cached once you return to
+  // the message loop.
+  virtual std::vector<JobContext*> GetJobContexts() const = 0;
+
   // Returns all non-internal breakpoints currently in the system. The returned
   // pointers are managed by the System object and should not be cached once
   // you return to the message loop.
@@ -56,6 +63,11 @@ class System : public ClientObject {
   // from that target will be cloned into the new one. If clone is null,
   // an empty Target will be allocated.
   virtual Target* CreateNewTarget(Target* clone) = 0;
+
+  // Creates a new job context  in the system. If "clone" is given, the
+  // settings from that target will be cloned into the new one. If clone is
+  // null, an empty Target will be allocated.
+  virtual JobContext* CreateNewJobContext(JobContext* clone) = 0;
 
   // Creates a new breakpoint. It will have no associated process or location
   // and will be disabled.
@@ -83,3 +95,5 @@ class System : public ClientObject {
 };
 
 }  // namespace zxdb
+
+#endif  // GARNET_BIN_ZXDB_CLIENT_SYSTEM_H_
