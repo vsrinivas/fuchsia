@@ -41,6 +41,9 @@ def main():
     parser.add_argument("--no-deps",
                         action="store_true",
                         help="Disable building of docs for dependencies")
+    parser.add_argument("--doc-private",
+                        action="store_true",
+                        help="Document private items")
     parser.add_argument("--open",
                         action="store_true",
                         help="Open the generated documentation")
@@ -118,6 +121,9 @@ def main():
 
     if args.open:
         call_args.append("--open")
+
+    if args.doc_private:
+        call_args.append("--document-private-items")
 
     return subprocess.call(call_args, env=env, cwd=cwd)
 
