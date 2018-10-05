@@ -17,7 +17,6 @@
 #include <fbl/unique_ptr.h>
 #include <virtio/net.h>
 #include <zircon/compiler.h>
-#include <zircon/device/ethernet.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 

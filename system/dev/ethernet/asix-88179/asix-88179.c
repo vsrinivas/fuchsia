@@ -14,7 +14,6 @@
 #include <pretty/hexdump.h>
 #include <lib/sync/completion.h>
 #include <zircon/assert.h>
-#include <zircon/device/ethernet.h>
 #include <zircon/listnode.h>
 
 #include <inttypes.h>

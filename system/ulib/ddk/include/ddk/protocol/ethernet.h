@@ -5,7 +5,6 @@
 #pragma once
 
 #include <zircon/compiler.h>
-#include <zircon/device/ethernet.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 

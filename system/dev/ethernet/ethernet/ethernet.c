@@ -25,7 +25,7 @@
 #include <threads.h>
 
 #define FIFO_DEPTH 256
-#define FIFO_ESIZE sizeof(eth_fifo_entry_t)
+#define FIFO_ESIZE sizeof(zircon_ethernet_FifoEntry)
 #define DEVICE_NAME_LEN 16
 
 #define PAGE_MASK (PAGE_SIZE - 1)
@@ -59,7 +59,7 @@ typedef struct ethdev0 {
 
 typedef struct tx_info {
     struct ethdev* edev;
-    void* fifo_cookie;
+    uint64_t fifo_cookie;
     ethmac_netbuf_t netbuf;
 } tx_info_t;
 
@@ -112,7 +112,7 @@ typedef struct ethdev {
     uint32_t tx_depth;
     zx_handle_t rx_fifo;
     uint32_t rx_depth;
-    eth_fifo_entry_t rx_entries[FIFO_BATCH_SZ];
+    zircon_ethernet_FifoEntry rx_entries[FIFO_BATCH_SZ];
     size_t rx_entry_count;
 
     // io buffer
@@ -301,7 +301,7 @@ static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t
         edev->rx_entry_count = count;
     }
 
-    eth_fifo_entry_t* e = &edev->rx_entries[--edev->rx_entry_count];
+    zircon_ethernet_FifoEntry* e = &edev->rx_entries[--edev->rx_entry_count];
     if ((e->offset >= edev->io_size) || ((e->length > (edev->io_size - e->offset)))) {
         // invalid offset/length. report error. drop packet
         e->length = 0;
@@ -346,11 +346,11 @@ static void eth0_status(void* cookie, uint32_t status) {
     mtx_unlock(&edev0->lock);
 }
 
-static int tx_fifo_write(ethdev_t* edev, eth_fifo_entry_t* entries, size_t count) {
+static int tx_fifo_write(ethdev_t* edev, zircon_ethernet_FifoEntry* entries, size_t count) {
     zx_status_t status;
     size_t actual;
     // Writing should never fail, or fail to write all entries
-    status = zx_fifo_write(edev->tx_fifo, sizeof(eth_fifo_entry_t), entries, count, &actual);
+    status = zx_fifo_write(edev->tx_fifo, sizeof(zircon_ethernet_FifoEntry), entries, count, &actual);
     if (status < 0) {
         zxlogf(ERROR, "eth [%s]: tx_fifo write failed %d\n", edev->name, status);
         return -1;
@@ -396,7 +396,7 @@ static void eth_put_tx_info(ethdev_t* edev, tx_info_t* tx_info) {
 static void eth0_complete_tx(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t status) {
     tx_info_t* tx_info = containerof(netbuf, tx_info_t, netbuf);
     ethdev_t* edev = tx_info->edev;
-    eth_fifo_entry_t entry = {.offset = netbuf->data - edev->io_buf,
+    zircon_ethernet_FifoEntry entry = {.offset = netbuf->data - edev->io_buf,
                               .length = netbuf->len,
                               .flags = status == ZX_OK ? ETH_FIFO_TX_OK : 0,
                               .cookie = tx_info->fifo_cookie};
@@ -457,7 +457,7 @@ static zx_status_t eth_tx_listen_locked(ethdev_t* edev, bool yes) {
 }
 
 // The array of entries is invalidated after the call
-static int eth_send(ethdev_t* edev, eth_fifo_entry_t* entries, uint32_t count) {
+static int eth_send(ethdev_t* edev, zircon_ethernet_FifoEntry* entries, uint32_t count) {
     tx_info_t* tx_info = NULL;
     ethdev0_t* edev0 = edev->edev0;
     // The entries that we can't send back to the fifo immediately are filtered
@@ -466,7 +466,7 @@ static int eth_send(ethdev_t* edev, eth_fifo_entry_t* entries, uint32_t count) {
     // will be written back to the fifo. The rest will be written later by
     // the eth0_complete_tx callback.
     uint32_t to_write = 0;
-    for (eth_fifo_entry_t* e = entries; count > 0; e++) {
+    for (zircon_ethernet_FifoEntry* e = entries; count > 0; e++) {
         if ((e->offset > edev->io_size) || ((e->length > (edev->io_size - e->offset)))) {
             e->flags = ETH_FIFO_INVALID;
             entries[to_write++] = *e;
@@ -518,7 +518,7 @@ static int eth_send(ethdev_t* edev, eth_fifo_entry_t* entries, uint32_t count) {
 
 static int eth_tx_thread(void* arg) {
     ethdev_t* edev = (ethdev_t*)arg;
-    eth_fifo_entry_t entries[FIFO_DEPTH / 2];
+    zircon_ethernet_FifoEntry entries[FIFO_DEPTH / 2];
     zx_status_t status;
     size_t count;
 
@@ -800,10 +800,10 @@ static zx_status_t eth_ioctl(void* ctx, uint32_t op,
             memset(info, 0, sizeof(*info));
             memcpy(info->mac, edev->edev0->info.mac, ETH_MAC_SIZE);
             if (edev->edev0->info.features & ETHMAC_FEATURE_WLAN) {
-                info->features |= ETH_FEATURE_WLAN;
+                info->features |= zircon_ethernet_INFO_FEATURE_WLAN;
             }
             if (edev->edev0->info.features & ETHMAC_FEATURE_SYNTH) {
-                info->features |= ETH_FEATURE_SYNTH;
+                info->features |= zircon_ethernet_INFO_FEATURE_SYNTH;
             }
             info->mtu = edev->edev0->info.mtu;
             *out_actual = sizeof(*info);
@@ -868,10 +868,10 @@ static zx_status_t fidl_GetInfo_locked(void* ctx, fidl_txn_t* txn) {
     memset(&info, 0, sizeof(info));
     memcpy(info.mac.octets, edev->edev0->info.mac, ETH_MAC_SIZE);
     if (edev->edev0->info.features & ETHMAC_FEATURE_WLAN) {
-        info.features |= ETH_FEATURE_WLAN;
+        info.features |= zircon_ethernet_INFO_FEATURE_WLAN;
     }
     if (edev->edev0->info.features & ETHMAC_FEATURE_SYNTH) {
-        info.features |= ETH_FEATURE_SYNTH;
+        info.features |= zircon_ethernet_INFO_FEATURE_SYNTH;
     }
     info.mtu = edev->edev0->info.mtu;
     return REPLY(GetInfo)(txn, &info);
