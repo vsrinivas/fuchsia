@@ -30,7 +30,6 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
 
 declare -a disks=()
 fuchsia_dir="${FUCHSIA_BUILD_DIR}"
-zircon_dir="${ZIRCON_BUILD_DIR}"
 zircon_tools="${ZIRCON_TOOLS_DIR}"
 force_pave=false
 
@@ -70,8 +69,7 @@ while [[ $# -gt 0 ]]; do
   --artifacts)
     shift
     fuchsia_dir="${1}"
-    zircon_dir="${1}"
-    zircon_tools="${zircon_dir}/tools"
+    zircon_tools="${1}/tools"
 
     # Source the image paths from the artifacts directory, so we can find them.
     source "${fuchsia_dir}"/zedboot_image_paths.sh
@@ -208,6 +206,5 @@ fi
 exec "${zircon_tools}/bootserver" \
   "${ip_targ[@]}" \
   "${disks[@]}" \
-  "${zircon_dir}/zircon.bin" \
   "${ramdisk}" \
   "${bootserver_extra[@]}"
