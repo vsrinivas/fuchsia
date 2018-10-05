@@ -89,7 +89,7 @@ void PaperRenderer::DrawDepthPrePass(const FramePtr& frame,
                                      const ImagePtr& dummy_color_image,
                                      float scale, const Stage& stage,
                                      const Model& model, const Camera& camera) {
-  TRACE_DURATION("gfx", "escher::PaperRenderer::DrawDepthPrePass", "width",
+  TRACE_DURATION("gfx", "PaperRenderer::DrawDepthPrePass", "width",
                  depth_image->width(), "height", depth_image->height());
 
   auto command_buffer = frame->command_buffer();
@@ -124,7 +124,7 @@ void PaperRenderer::DrawSsdoPasses(const FramePtr& frame,
                                    const ImagePtr& color_aux,
                                    const TexturePtr& accelerator_texture,
                                    const Stage& stage) {
-  TRACE_DURATION("gfx", "escher::PaperRenderer::DrawSsdoPasses");
+  TRACE_DURATION("gfx", "PaperRenderer::DrawSsdoPasses");
 
   FXL_DCHECK(color_out->width() == color_aux->width() &&
              color_out->height() == color_aux->height());
@@ -258,7 +258,7 @@ void PaperRenderer::DrawLightingPass(
     const vec3& direct_light_color, const impl::ModelRenderPassPtr& render_pass,
     const Stage& stage, const Model& model, const Camera& camera,
     const Model* overlay_model) {
-  TRACE_DURATION("gfx", "escher::PaperRenderer::DrawLightingPass", "width",
+  TRACE_DURATION("gfx", "PaperRenderer::DrawLightingPass", "width",
                  framebuffer->width(), "height", framebuffer->height());
 
   auto command_buffer = frame->command_buffer();
@@ -392,7 +392,7 @@ void PaperRenderer::DrawFrame(const FramePtr& frame, const Stage& stage,
                               const ImagePtr& color_image_out,
                               const ShadowMapPtr& shadow_map,
                               const Model* overlay_model) {
-  TRACE_DURATION("gfx", "escher::PaperRenderer::DrawFrame");
+  TRACE_DURATION("gfx", "PaperRenderer::DrawFrame");
 
   UpdateRenderPasses(color_image_out->format(), color_image_out->format());
 
@@ -413,6 +413,15 @@ void PaperRenderer::DrawFrame(const FramePtr& frame, const Stage& stage,
       DrawFrameWithMomentShadowMapShadows(frame, stage, model, camera,
                                           color_image_out, shadow_map,
                                           overlay_model);
+      break;
+    case PaperRendererShadowType::kShadowVolume:
+      FXL_LOG(ERROR) << "kShadowVolume not supported.";
+      shadow_type_ = PaperRendererShadowType::kNone;
+      DrawFrameWithNoShadows(frame, stage, model, camera, color_image_out,
+                             overlay_model);
+      break;
+    case PaperRendererShadowType::kEnumCount:
+      FXL_DCHECK(false) << "invalid value: kEnumCount";
       break;
   }
 

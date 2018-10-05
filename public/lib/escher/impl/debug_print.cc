@@ -9,6 +9,7 @@
 #include "lib/escher/geometry/bounding_box.h"
 #include "lib/escher/geometry/transform.h"
 #include "lib/escher/impl/model_pipeline_spec.h"
+#include "lib/escher/paper/paper_renderer_config.h"
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/scene/viewing_volume.h"
 #include "lib/escher/third_party/granite/vk/descriptor_set_layout.h"
@@ -263,7 +264,7 @@ std::ostream& operator<<(std::ostream& str, const ShaderStage& stage) {
     case ShaderStage::kCompute:
       return str << "ShaderStage::kCompute";
     case ShaderStage::kEnumCount:
-      return str << "ShaderStage::kEnumCount (INVALID)";
+      return str << "ShaderStage::kEnumCount(INVALID)";
   }
 }
 
@@ -280,6 +281,35 @@ std::ostream& operator<<(std::ostream& str,
   });
 
   return str << "\n]";
+}
+
+static const char* PaperRendererShadowTypeString(
+    const PaperRendererShadowType& shadow_type) {
+  switch (shadow_type) {
+    case PaperRendererShadowType::kNone:
+      return "kNone";
+    case PaperRendererShadowType::kSsdo:
+      return "kSsdo";
+    case PaperRendererShadowType::kShadowMap:
+      return "kShadowMap";
+    case PaperRendererShadowType::kMomentShadowMap:
+      return "kMomentShadowMap";
+    case PaperRendererShadowType::kShadowVolume:
+      return "kShadowVolume";
+    case PaperRendererShadowType::kEnumCount:
+      return "kEnumCount(INVALID)";
+  }
+}
+
+std::ostream& operator<<(std::ostream& str,
+                         const PaperRendererShadowType& shadow_type) {
+  return str << "PaperRendererShadowType::"
+             << PaperRendererShadowTypeString(shadow_type);
+}
+
+std::ostream& operator<<(std::ostream& str, const PaperRendererConfig& config) {
+  return str << "PaperRendererConfig[shadow_type:"
+             << PaperRendererShadowTypeString(config.shadow_type) << "]";
 }
 
 }  // namespace escher

@@ -6,15 +6,19 @@
 #define LIB_ESCHER_PAPER_PAPER_TRANSFORM_STACK_H_
 
 #include <stack>
-#include <utility>
 #include <vector>
 
 #include "lib/escher/geometry/types.h"
 
 namespace escher {
 
-// Helper class to be used along with PaperRenderer when rendering hierarchical
-// scenes.
+// PaperTransformStack is a helper class to be used along with PaperRenderer
+// when rendering hierarchical scenes.  It maintains a stack where each item has
+// two fields:
+//   - a 4x4 model-to-world transform matrix
+//   - a list of model-space clip planes
+// When a new transform is pushed on the stack, existing clip planes are
+// transformed into the new model-space coordinate system.
 class PaperTransformStack final {
  public:
   PaperTransformStack();
@@ -50,7 +54,7 @@ class PaperTransformStack final {
 
   // Add the clip planes to the stack.  They are not transformed by the current
   // transform, but will be transformed by subsequent transforms that are pushed
-  // onto the stack.
+  // onto the stack.  NOTE: stack's size must be > 0 when this is called.
   const Item& AddClipPlanes(const plane3* clip_planes, size_t num_clip_planes);
   const Item& AddClipPlanes(const std::vector<plane3>& clip_planes) {
     return AddClipPlanes(clip_planes.data(), clip_planes.size());
@@ -63,9 +67,14 @@ class PaperTransformStack final {
     return stack_.empty() ? kTopItem : stack_.top();
   }
 
+  // Pop the top entry from the stack, unless only the default identity matrix
+  // remains.
   PaperTransformStack& Pop();
 
-  // Pop the top entry from the stack.
+  // Pop entries off the stack until only the specified number remain (zero by
+  // default).  Then, trim trailing clip-planes until only the specified number
+  // remain (zero by default).  In both cases, the specified number must not
+  // exceed the number of stack-entries/clip-planes that currently exist.
   PaperTransformStack& Clear(
       std::pair<size_t, size_t> stack_size_and_num_clip_planes = {0, 0});
 

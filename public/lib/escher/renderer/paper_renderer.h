@@ -7,18 +7,12 @@
 
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/geometry/types.h"
+#include "lib/escher/paper/paper_renderer_config.h"
 #include "lib/escher/renderer/renderer.h"
 
 namespace escher {
 
 class DepthToColor;
-
-enum class PaperRendererShadowType {
-  kNone,
-  kSsdo,
-  kShadowMap,
-  kMomentShadowMap,
-};
 
 class PaperRenderer : public Renderer {
  public:
@@ -32,6 +26,7 @@ class PaperRenderer : public Renderer {
   void set_show_debug_info(bool b) { show_debug_info_ = b; }
 
   void set_shadow_type(PaperRendererShadowType shadow_type) {
+    FXL_DCHECK(shadow_type != PaperRendererShadowType::kEnumCount);
     shadow_type_ = shadow_type;
   }
 
