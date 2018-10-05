@@ -76,28 +76,38 @@ FuturePtr<> StoryStorage::UpdateModuleData(
                 "StoryStorage.UpdateModuleData.did_mutate");
           }
 
+          auto module_data_copy = CloneOptional(new_module_data);
+          std::string expected_value;
+          XdrWrite(&expected_value, &module_data_copy, XdrModuleData);
+
           if (current_module_data) {
             FXL_DCHECK(new_module_data)
                 << "StoryStorage::UpdateModuleData(): mutate_fn() must not "
                    "set to null an existing ModuleData record.";
+
+            // We complete this Future chain when the Ledger gives us the
+            // notification that |module_data| has been written. The Ledger
+            // won't do that if the current value for |key| won't change, so
+            // we have to short-circuit here.
+            // ModuleData contains VMOs, so doing a comparison
+            // *new_module_data == *current_module_data won't be true even if
+            // the data in the VMOs under the hood is the same. When this
+            // happens the ledger won't notify us of any change, since the data
+            // was actually the same. To overcome this we compare the raw
+            // strings.
+            auto current_data_copy = CloneOptional(current_module_data);
+            std::string current_value;
+            XdrWrite(&current_value, &current_data_copy, XdrModuleData);
+            if (current_value == expected_value) {
+              return Future<>::CreateCompleted(
+                  "StoryStorage.UpdateModuleData.did_mutate");
+            }
           }
+
           FXL_DCHECK(new_module_data->module_path == op_state->module_path)
               << "StorageStorage::UpdateModuleData(path, ...): mutate_fn() "
                  "must set "
                  "ModuleData.module_path to |path|.";
-
-          // We complete this Future chain when the Ledger gives us the
-          // notification that |module_data| has been written. The Ledger
-          // won't do that if the current value for |key| won't change, so
-          // we have to short-circuit here.
-          if (current_module_data && *current_module_data == *new_module_data) {
-            return Future<>::CreateCompleted(
-                "StoryStorage.UpdateModuleData.did_mutate");
-          }
-
-          auto module_data_copy = CloneOptional(new_module_data);
-          std::string expected_value;
-          XdrWrite(&expected_value, &module_data_copy, XdrModuleData);
 
           op_state->sub_operations.Add(new WriteDataCall<ModuleData>(
               page(), key, XdrModuleData, std::move(module_data_copy), [] {}));
