@@ -180,12 +180,12 @@ public:
 
     template <typename T>
     void SetBit(size_t shift, zx_off_t offs) const {
-        ModifyBit(true, shift, offs);
+        ModifyBit<T>(true, shift, offs);
     }
 
     template <typename T>
     void ClearBit(size_t shift, zx_off_t offs) const {
-        ModifyBit(false, shift, offs);
+        ModifyBit<T>(false, shift, offs);
     }
 
 protected:
