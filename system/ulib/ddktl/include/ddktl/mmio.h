@@ -14,6 +14,7 @@
 #include <hw/arch_ops.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
+#include <lib/zx/resource.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
 
@@ -51,6 +52,17 @@ public:
                               fbl::unique_ptr<MmioBase>* mmio_buffer) {
         mmio_buffer_t mmio;
         zx_status_t status = mmio_buffer_init(&mmio, offset, size, vmo.release(), cache_policy);
+        if (status == ZX_OK) {
+            *mmio_buffer = fbl::make_unique<MmioBase>(mmio);
+        }
+        return status;
+    }
+
+    static zx_status_t Create(zx_paddr_t base, size_t size, zx::unowned_resource resource,
+                              uint32_t cache_policy, fbl::unique_ptr<MmioBase>* mmio_buffer) {
+        mmio_buffer_t mmio;
+        zx_status_t status = mmio_buffer_init_physical(&mmio, base, size, resource->get(),
+                                                       cache_policy);
         if (status == ZX_OK) {
             *mmio_buffer = fbl::make_unique<MmioBase>(mmio);
         }
