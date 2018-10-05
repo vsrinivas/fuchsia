@@ -18,4 +18,4 @@ else
 fi
 
 unset LD_LIBRARY_PATH
-$ROOT_DIR/buildtools/$PLATFORM/rust/bin/rustdoc "$@"
+$ROOT_DIR/buildtools/$PLATFORM/rust/bin/rustdoc --cap-lints=allow "$@"
