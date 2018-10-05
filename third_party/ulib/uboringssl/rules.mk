@@ -85,9 +85,7 @@ LINUX_X86_64_ASMSRCS := $(patsubst %,$(LOCAL_DIR)/linux-x86_64/crypto/%,$(X86_64
 
 # userlib
 ifeq ($(ARCH),arm64)
-# TODO(aarongreen): ZX-2715.  Enable after rolling.
-# TARGET_ASMSRCS=$(LINUX_ARM64_ASMSRCS)
-MODULE_DEFINES := OPENSSL_NO_ASM
+TARGET_ASMSRCS=$(LINUX_ARM64_ASMSRCS)
 else ifeq ($(ARCH),x86)
 TARGET_ASMSRCS=$(LINUX_X86_64_ASMSRCS)
 else
