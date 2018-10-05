@@ -54,7 +54,10 @@ toolchain {
   compiler_flag: "--target=${arch.long_name}-fuchsia"
   linker_flag: "--target=${arch.long_name}-fuchsia"
 
+  # Enforce C++14 compatiblity for the SDK.
   cxx_flag: "-std=c++14"
+  cxx_flag: "-Wc++14-compat"
+
   cxx_flag: "-xc++"
 
   linker_flag: "--driver-mode=g++"
