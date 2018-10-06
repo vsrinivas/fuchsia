@@ -13,6 +13,7 @@
 #include <trace-engine/types.h>
 #include <virtio/net.h>
 #include <virtio/virtio_ids.h>
+#include <zircon/device/ethernet.h>
 
 #include "garnet/lib/machina/virtio_device.h"
 #include "garnet/lib/machina/virtio_queue_waiter.h"
