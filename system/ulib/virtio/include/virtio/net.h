@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <ddk/protocol/ethernet.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 
@@ -47,8 +46,10 @@
 
 __BEGIN_CDECLS
 
+#define VIRTIO_ETH_MAC_SIZE 6
+
 typedef struct virtio_net_config {
-    uint8_t mac[ETH_MAC_SIZE];
+    uint8_t mac[VIRTIO_ETH_MAC_SIZE];
     uint16_t status;
     uint16_t max_virtqueue_pairs;
 } __PACKED virtio_net_config_t;
