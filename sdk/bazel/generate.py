@@ -155,6 +155,10 @@ class BazelBuilder(Frontend):
         for dep in atom['deps']:
             library.deps.append('//dart/' + sanitize(dep))
 
+        for dep in atom['fidl_deps']:
+            san_dep = sanitize(dep)
+            library.deps.append('//fidl/%s:%s_dart' % (san_dep, san_dep))
+
         for dep in atom['third_party_deps']:
             name = dep['name']
             library.deps.append('@vendor_%s//:%s' % (name, name))
