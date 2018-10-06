@@ -62,6 +62,7 @@ source_set("gfx") {
     "engine/update_scheduler.h",
     "gfx_system.cc",
     "gfx_system.h",
+    "id.cc",
     "id.h",
     "resources/buffer.cc",
     "resources/buffer.h",
@@ -188,6 +189,7 @@ source_set("gfx") {
 
   deps = [
     ":object_linker",
+    "//garnet/lib/ui/scenic/util",
     "//garnet/lib/ui/yuv",
     "//garnet/public/lib/escher/util:check_vulkan_support",
     "//garnet/public/lib/images/cpp",

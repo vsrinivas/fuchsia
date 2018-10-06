@@ -77,6 +77,9 @@ std::ostream& operator<<(std::ostream& os,
                          const fuchsia::ui::input::SendKeyboardInputCmd& value);
 std::ostream& operator<<(std::ostream& os,
                          const fuchsia::ui::input::SendPointerInputCmd& value);
+std::ostream& operator<<(
+    std::ostream& os,
+    const fuchsia::ui::input::SetHardKeyboardDeliveryCmd& value);
 
 }  // namespace input
 }  // namespace ui

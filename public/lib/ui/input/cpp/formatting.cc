@@ -407,6 +407,8 @@ std::ostream& operator<<(std::ostream& os,
       return os << value.send_keyboard_input();
     case Command::Tag::kSendPointerInput:
       return os << value.send_pointer_input();
+    case Command::Tag::kSetHardKeyboardDelivery:
+      return os << value.set_hard_keyboard_delivery();
     case Command::Tag::Invalid:
       return os << "Invalid";
   }
@@ -422,6 +424,13 @@ std::ostream& operator<<(std::ostream& os,
                          const fuchsia::ui::input::SendPointerInputCmd& value) {
   return os << "{SendPointerInputCmd: compositor_id=" << value.compositor_id
             << ", pointer_event=" << value.pointer_event << "}";
+}
+
+std::ostream& operator<<(
+    std::ostream& os,
+    const fuchsia::ui::input::SetHardKeyboardDeliveryCmd& value) {
+  return os << "{SetHardKeyboardDeliveryCmd: delivery_request="
+            << (value.delivery_request ? "on" : "off") << "}";
 }
 
 }  // namespace input

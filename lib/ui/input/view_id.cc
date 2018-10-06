@@ -9,29 +9,8 @@ namespace input {
 
 using escher::operator<<;
 
-ViewId::operator bool() {
-  static const ViewId kNoView;
-  return *this != kNoView;
-}
-
-bool operator==(const ViewId& lhs, const ViewId& rhs) {
-  return lhs.session_id == rhs.session_id && lhs.resource_id == rhs.resource_id;
-}
-
-bool operator!=(const ViewId& lhs, const ViewId& rhs) { return !(lhs == rhs); }
-
-std::ostream& operator<<(std::ostream& os, const ViewId& value) {
-  os << "ViewId: [";
-  if (value.session_id == 0u && value.resource_id == 0u) {
-    os << "no-view";
-  } else {
-    os << value.session_id << ", " << value.resource_id;
-  }
-  return os << "]";
-}
-
 std::ostream& operator<<(std::ostream& os, const ViewStack::Entry& value) {
-  return os << "Entry: [" << value.id << ", GlobalTransform=\n"
+  return os << "Entry: [" << value.view_id << ", GlobalTransform=\n"
             << value.global_transform << "\n]";
 }
 

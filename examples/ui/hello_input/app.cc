@@ -73,16 +73,27 @@ App::App(async::Loop* loop)
     UpdateScene(zx_clock_get(ZX_CLOCK_MONOTONIC));
   });
 
-  component::Services child_services;
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.out = CloneFileDescriptor(STDOUT_FILENO);
-  launch_info.err = CloneFileDescriptor(STDERR_FILENO);
-  launch_info.url = "hello_input_child";
-  launch_info.directory_request = child_services.NewRequest();
-  startup_context_->launcher()->CreateComponent(std::move(launch_info),
-                                                child_controller_.NewRequest());
-  child_services.ConnectToService(child_view_provider_.NewRequest(),
-                                  "view_provider");
+  {
+    component::Services child_services;
+    fuchsia::sys::LaunchInfo launch_info;
+    launch_info.out = CloneFileDescriptor(STDOUT_FILENO);
+    launch_info.err = CloneFileDescriptor(STDERR_FILENO);
+    launch_info.url = "hello_input_child";
+    launch_info.directory_request = child_services.NewRequest();
+    startup_context_->launcher()->CreateComponent(
+        std::move(launch_info), child_controller_.NewRequest());
+    child_services.ConnectToService(child_view_provider_.NewRequest(),
+                                    "view_provider");
+  }
+
+  {
+    fuchsia::ui::input::SetHardKeyboardDeliveryCmd cmd;
+    cmd.delivery_request = true;
+    fuchsia::ui::input::Command input_cmd;
+    input_cmd.set_set_hard_keyboard_delivery(std::move(cmd));
+    session_->Enqueue(std::move(input_cmd));
+  }
+
   FXL_LOG(INFO) << "HelloInput - child set up";
 }
 
@@ -220,10 +231,6 @@ void App::OnPointerEvent(const fuchsia::ui::input::PointerEvent& event) {
   using Phase = fuchsia::ui::input::PointerEventPhase;
 
   if (event.type == Type::TOUCH) {
-    // Pointer's (x,y) are in Display coordinates; adjust to View coordinates.
-    float x_adjusted = event.x - width_in_px_ * 0.5f;
-    float y_adjusted = event.y - height_in_px_ * 0.5f;
-
     // TODO(SCN-920): Reduce the very noticeable tracking lag.
     if (focused_ && event.phase == Phase::DOWN) {
       // Nice to meet you. Add to known-fingers list.
@@ -232,13 +239,13 @@ void App::OnPointerEvent(const fuchsia::ui::input::PointerEvent& event) {
           << "Pointer index full: " << contents(pointer_id_);
       pointer_id_[idx] = event.pointer_id;
       view_->AddChild(*pointer_tracker_[idx]);
-      pointer_tracker_[idx]->SetTranslation(x_adjusted, y_adjusted, 400.f);
+      pointer_tracker_[idx]->SetTranslation(event.x, event.y, 400.f);
 
     } else if (event.phase == Phase::MOVE) {
       size_t idx = find_idx(pointer_id_, event.pointer_id);
       if (idx != kNoFinger) {
         // It's a finger we know, keep moving.
-        pointer_tracker_[idx]->SetTranslation(x_adjusted, y_adjusted, 400.f);
+        pointer_tracker_[idx]->SetTranslation(event.x, event.y, 400.f);
       }
 
     } else if (event.phase == Phase::UP || event.phase == Phase::CANCEL) {

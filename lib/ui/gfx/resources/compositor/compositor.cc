@@ -34,12 +34,12 @@ namespace gfx {
 const ResourceTypeInfo Compositor::kTypeInfo = {ResourceType::kCompositor,
                                                 "Compositor"};
 
-CompositorPtr Compositor::New(Session* session, scenic::ResourceId id) {
+CompositorPtr Compositor::New(Session* session, ResourceId id) {
   return fxl::AdoptRef(
       new Compositor(session, id, Compositor::kTypeInfo, nullptr));
 }
 
-Compositor::Compositor(Session* session, scenic::ResourceId id,
+Compositor::Compositor(Session* session, ResourceId id,
                        const ResourceTypeInfo& type_info,
                        std::unique_ptr<Swapchain> swapchain)
     : Resource(session, id, type_info),

@@ -7,10 +7,12 @@
 
 #include <vector>
 
+#include <fuchsia/ui/gfx/cpp/fidl.h>
+
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/resource_map.h"
+#include "garnet/lib/ui/gfx/id.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
-//#include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "garnet/lib/ui/scenic/util/print_command.h"
 #include "lib/escher/flib/fence_set_listener.h"
@@ -19,8 +21,6 @@
 
 namespace scenic_impl {
 namespace gfx {
-
-using SessionId = ::scenic_impl::SessionId;
 
 class Image;
 using ImagePtr = ::fxl::RefPtr<Image>;
@@ -215,7 +215,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
                               ::fuchsia::ui::gfx::OpacityNodeArgs args);
   bool ApplyCreateShapeNode(ResourceId id,
                             ::fuchsia::ui::gfx::ShapeNodeArgs args);
-  bool ApplyCreateCompositor(scenic::ResourceId id,
+  bool ApplyCreateCompositor(ResourceId id,
                              ::fuchsia::ui::gfx::CompositorArgs args);
   bool ApplyCreateDisplayCompositor(
       ResourceId id, ::fuchsia::ui::gfx::DisplayCompositorArgs args);
@@ -258,7 +258,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   ResourcePtr CreateShapeNode(ResourceId id,
                               ::fuchsia::ui::gfx::ShapeNodeArgs args);
 
-  ResourcePtr CreateCompositor(scenic::ResourceId id,
+  ResourcePtr CreateCompositor(ResourceId id,
                                ::fuchsia::ui::gfx::CompositorArgs args);
   ResourcePtr CreateDisplayCompositor(
       ResourceId id, ::fuchsia::ui::gfx::DisplayCompositorArgs args);

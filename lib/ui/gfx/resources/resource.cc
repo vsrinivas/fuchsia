@@ -33,6 +33,8 @@ Resource::~Resource() {
   session_->DecrementResourceCount();
 }
 
+GlobalId Resource::global_id() const { return {session_->id(), id()}; }
+
 ErrorReporter* Resource::error_reporter() const {
   return session_->error_reporter();
 }

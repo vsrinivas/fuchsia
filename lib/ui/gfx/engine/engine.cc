@@ -203,7 +203,7 @@ Compositor* Engine::GetFirstCompositor() const {
   return compositors_.empty() ? nullptr : *compositors_.begin();
 }
 
-Compositor* Engine::GetCompositor(scenic::ResourceId compositor_id) const {
+Compositor* Engine::GetCompositor(scenic_impl::ResourceId compositor_id) const {
   for (Compositor* compositor : compositors_) {
     if (compositor->id() == compositor_id) {
       return compositor;

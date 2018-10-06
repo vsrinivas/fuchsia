@@ -147,8 +147,8 @@ TEST_F(ImportNodeTest, ImportNodeEventDelivery) {
   // Scene is now set up, send in the input.
   presenter.RunNow([this, compositor_id](scenic::Session* session,
                                          scenic::EntityNode* root_node) {
-    PointerEventGenerator pointer(compositor_id, /*device id*/ 1,
-                                  /*pointer id*/ 1, PointerEventType::TOUCH);
+    PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
+                                    /*pointer id*/ 1, PointerEventType::TOUCH);
     // A touch sequence that starts at the (4,4) location of the 7x7 display.
     // The sequence ends 2x2 diagonally away (north-east) from the touch down.
     session->Enqueue(pointer.Add(4, 4));

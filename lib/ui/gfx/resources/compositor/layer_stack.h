@@ -24,7 +24,7 @@ class LayerStack : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  LayerStack(Session* session, scenic::ResourceId id);
+  LayerStack(Session* session, ResourceId id);
 
   ~LayerStack() override;
 

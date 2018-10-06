@@ -1,5 +1,5 @@
 {
-  "exclusions": [
+  "exclusions" : [
     "fuchsia.ui.input/InputEvent",
     "fuchsia.ui.input/PointerEvent",
     "fuchsia.ui.input/Point3F",
@@ -25,6 +25,7 @@
     "fuchsia.ui.input/TextInputState",
     "fuchsia.ui.input/Command",
     "fuchsia.ui.input/SendKeyboardInputCmd",
-    "fuchsia.ui.input/SendPointerInputCmd"
+    "fuchsia.ui.input/SendPointerInputCmd",
+    "fuchsia.ui.input/SetHardKeyboardDeliveryCmd"
   ]
 }

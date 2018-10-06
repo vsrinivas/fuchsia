@@ -6,12 +6,28 @@
 #define GARNET_LIB_UI_GFX_ID_H_
 
 #include <cstdint>
+#include <ostream>
 
-namespace scenic {
+namespace scenic_impl {
 
 using SessionId = uint64_t;
 using ResourceId = uint32_t;
 
-}  // namespace scenic
+struct GlobalId {
+  GlobalId() : session_id(0), resource_id(0) {}
+  GlobalId(SessionId s, ResourceId r) : session_id(s), resource_id(r) {}
+
+  explicit operator bool();
+
+  SessionId session_id;
+  ResourceId resource_id;
+};
+
+bool operator==(const GlobalId& lhs, const GlobalId& rhs);
+bool operator!=(const GlobalId& lhs, const GlobalId& rhs);
+
+std::ostream& operator<<(std::ostream& os, const GlobalId& value);
+
+}  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_ID_H_

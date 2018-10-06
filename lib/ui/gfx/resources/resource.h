@@ -9,16 +9,16 @@
 #include <type_traits>
 #include <vector>
 
+#include "garnet/lib/ui/gfx/id.h"
 #include "garnet/lib/ui/gfx/resources/resource_type_info.h"
 #include "lib/fxl/memory/ref_counted.h"
 
 namespace scenic_impl {
 class ErrorReporter;
+class EventReporter;
 }
 
 namespace scenic_impl {
-using ResourceId = uint32_t;
-
 namespace gfx {
 
 class Import;
@@ -42,6 +42,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   // The session this Resource lives in and the id it was created with there.
   Session* session() const { return session_; }
   ResourceId id() const { return id_; }
+  GlobalId global_id() const;
 
   // An error reporter associated with the Resource's session. When operating
   // on this resource, always log errors to the ErrorReporter before failing.

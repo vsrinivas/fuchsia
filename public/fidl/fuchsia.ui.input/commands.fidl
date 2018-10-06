@@ -4,11 +4,14 @@
 
 library fuchsia.ui.input;
 
-// Commands for conveying input events to a |Session|.
 union Command {
+  // Commands for conveying input events to a |Session|.
   // Structs defined in input_events.fidl.
   SendKeyboardInputCmd send_keyboard_input;
   SendPointerInputCmd send_pointer_input;
+
+  // Command to enable/disable delivery of hard keyboard events.
+  SetHardKeyboardDeliveryCmd set_hard_keyboard_delivery;
 };
 
 struct SendKeyboardInputCmd {
@@ -19,4 +22,14 @@ struct SendKeyboardInputCmd {
 struct SendPointerInputCmd {
   uint32 compositor_id;
   PointerEvent pointer_event;  // Defined in input_events.fidl
+};
+
+// Typically, clients should receive text inputs from an IME.
+//
+// For cases where no IME mediation is desired (such as a game application),
+// this command requests Scenic to deliver hard keyboard events to the client.
+//
+// By default, Scenic will *not* deliver hard keyboard events to a client.
+struct SetHardKeyboardDeliveryCmd {
+  bool delivery_request;
 };

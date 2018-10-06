@@ -4,6 +4,8 @@
 
 #include "garnet/lib/ui/input/tests/util.h"
 
+#include <hid/hid.h>
+
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
@@ -11,16 +13,19 @@
 
 namespace lib_ui_input_tests {
 
+using InputCommand = fuchsia::ui::input::Command;
 using ScenicEvent = fuchsia::ui::scenic::Event;
 using escher::impl::CommandBufferSequencer;
-using fuchsia::ui::input::Command;
 using fuchsia::ui::input::InputEvent;
+using fuchsia::ui::input::KeyboardEvent;
+using fuchsia::ui::input::KeyboardEventPhase;
 using fuchsia::ui::input::PointerEvent;
 using fuchsia::ui::input::PointerEventPhase;
 using fuchsia::ui::input::PointerEventType;
+using fuchsia::ui::input::SendKeyboardInputCmd;
 using fuchsia::ui::input::SendPointerInputCmd;
 using fuchsia::ui::scenic::SessionListener;
-using scenic::ResourceId;
+using scenic_impl::ResourceId;
 using scenic_impl::Scenic;
 using scenic_impl::gfx::DisplayManager;
 using scenic_impl::gfx::test::GfxSystemForTest;
@@ -102,17 +107,17 @@ void SessionWrapper::ExamineEvents(
   examine_events_callback(events_);
 }
 
-PointerEventGenerator::PointerEventGenerator(ResourceId compositor_id,
-                                             uint32_t device_id,
-                                             uint32_t pointer_id,
-                                             PointerEventType type) {
-  compositor_id_ = compositor_id;
+PointerCommandGenerator::PointerCommandGenerator(ResourceId compositor_id,
+                                                 uint32_t device_id,
+                                                 uint32_t pointer_id,
+                                                 PointerEventType type)
+    : compositor_id_(compositor_id) {
   blank_.device_id = device_id;
   blank_.pointer_id = pointer_id;
   blank_.type = type;
 }
 
-fuchsia::ui::input::Command PointerEventGenerator::Add(float x, float y) {
+InputCommand PointerCommandGenerator::Add(float x, float y) {
   PointerEvent event;
   fidl::Clone(blank_, &event);
   event.phase = PointerEventPhase::ADD;
@@ -121,7 +126,7 @@ fuchsia::ui::input::Command PointerEventGenerator::Add(float x, float y) {
   return MakeInputCommand(event);
 }
 
-fuchsia::ui::input::Command PointerEventGenerator::Down(float x, float y) {
+InputCommand PointerCommandGenerator::Down(float x, float y) {
   PointerEvent event;
   fidl::Clone(blank_, &event);
   event.phase = PointerEventPhase::DOWN;
@@ -130,7 +135,7 @@ fuchsia::ui::input::Command PointerEventGenerator::Down(float x, float y) {
   return MakeInputCommand(event);
 }
 
-fuchsia::ui::input::Command PointerEventGenerator::Move(float x, float y) {
+InputCommand PointerCommandGenerator::Move(float x, float y) {
   PointerEvent event;
   fidl::Clone(blank_, &event);
   event.phase = PointerEventPhase::MOVE;
@@ -139,7 +144,7 @@ fuchsia::ui::input::Command PointerEventGenerator::Move(float x, float y) {
   return MakeInputCommand(event);
 }
 
-fuchsia::ui::input::Command PointerEventGenerator::Up(float x, float y) {
+InputCommand PointerCommandGenerator::Up(float x, float y) {
   PointerEvent event;
   fidl::Clone(blank_, &event);
   event.phase = PointerEventPhase::UP;
@@ -148,7 +153,7 @@ fuchsia::ui::input::Command PointerEventGenerator::Up(float x, float y) {
   return MakeInputCommand(event);
 }
 
-fuchsia::ui::input::Command PointerEventGenerator::Remove(float x, float y) {
+InputCommand PointerCommandGenerator::Remove(float x, float y) {
   PointerEvent event;
   fidl::Clone(blank_, &event);
   event.phase = PointerEventPhase::REMOVE;
@@ -157,14 +162,77 @@ fuchsia::ui::input::Command PointerEventGenerator::Remove(float x, float y) {
   return MakeInputCommand(event);
 }
 
-fuchsia::ui::input::Command PointerEventGenerator::MakeInputCommand(
-    PointerEvent event) {
+InputCommand PointerCommandGenerator::MakeInputCommand(PointerEvent event) {
   SendPointerInputCmd pointer_cmd;
   pointer_cmd.compositor_id = compositor_id_;
   pointer_cmd.pointer_event = std::move(event);
 
-  Command input_cmd;
+  InputCommand input_cmd;
   input_cmd.set_send_pointer_input(std::move(pointer_cmd));
+
+  return input_cmd;
+}
+
+KeyboardCommandGenerator::KeyboardCommandGenerator(ResourceId compositor_id,
+                                                   uint32_t device_id)
+    : compositor_id_(compositor_id) {
+  blank_.device_id = device_id;
+}
+
+InputCommand KeyboardCommandGenerator::Pressed(uint32_t hid_usage,
+                                               uint32_t modifiers) {
+  KeyboardEvent event;
+  fidl::Clone(blank_, &event);
+  event.phase = KeyboardEventPhase::PRESSED;
+  event.hid_usage = hid_usage;
+  event.modifiers = modifiers;
+  return MakeInputCommand(event);
+}
+
+InputCommand KeyboardCommandGenerator::Released(uint32_t hid_usage,
+                                                uint32_t modifiers) {
+  KeyboardEvent event;
+  fidl::Clone(blank_, &event);
+  event.phase = KeyboardEventPhase::RELEASED;
+  event.hid_usage = hid_usage;
+  event.modifiers = modifiers;
+  return MakeInputCommand(event);
+}
+
+InputCommand KeyboardCommandGenerator::Cancelled(uint32_t hid_usage,
+                                                 uint32_t modifiers) {
+  KeyboardEvent event;
+  fidl::Clone(blank_, &event);
+  event.phase = KeyboardEventPhase::CANCELLED;
+  event.hid_usage = hid_usage;
+  event.modifiers = modifiers;
+  return MakeInputCommand(event);
+}
+
+InputCommand KeyboardCommandGenerator::Repeat(uint32_t hid_usage,
+                                              uint32_t modifiers) {
+  KeyboardEvent event;
+  fidl::Clone(blank_, &event);
+  event.phase = KeyboardEventPhase::REPEAT;
+  event.hid_usage = hid_usage;
+  event.modifiers = modifiers;
+  return MakeInputCommand(event);
+}
+
+InputCommand KeyboardCommandGenerator::MakeInputCommand(KeyboardEvent event) {
+  // Typically code point is inferred this same way by DeviceState.
+  event.code_point =
+      hid_map_key(event.hid_usage,
+                  event.modifiers & (fuchsia::ui::input::kModifierShift |
+                                     fuchsia::ui::input::kModifierCapsLock),
+                  qwerty_map);
+
+  SendKeyboardInputCmd keyboard_cmd;
+  keyboard_cmd.compositor_id = compositor_id_;
+  keyboard_cmd.keyboard_event = std::move(event);
+
+  InputCommand input_cmd;
+  input_cmd.set_send_keyboard_input(std::move(keyboard_cmd));
 
   return input_cmd;
 }

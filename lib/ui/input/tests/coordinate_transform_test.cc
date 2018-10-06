@@ -166,8 +166,8 @@ TEST_F(CoordinateTransformTest, CoordinateTransform) {
   // Multi-agent scene is now set up, send in the input.
   presenter.RunNow([this, compositor_id](scenic::Session* session,
                                          scenic::EntityNode* root_node) {
-    PointerEventGenerator pointer(compositor_id, /*device id*/ 1,
-                                  /*pointer id*/ 1, PointerEventType::TOUCH);
+    PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
+                                    /*pointer id*/ 1, PointerEventType::TOUCH);
     // A touch sequence that starts in the direct center of the 9x9 display.
     // The sequence ends 2x2 diagonally away (north-east) from the touch down.
     session->Enqueue(pointer.Add(4, 4));

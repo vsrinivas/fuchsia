@@ -37,7 +37,7 @@ struct KeyboardEvent {
   KeyboardEventPhase phase;
 
   // Keyboard HID Usage
-  // See http://www.usb.org/developers/hidpage/Hut1_12v2.pdf
+  // See https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf
   uint32 hid_usage;
 
   // The unicode code point represented by this key event, if any.

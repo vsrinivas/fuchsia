@@ -93,21 +93,27 @@ void DumpVisitor::Visit(ImagePipe* r) {
 }
 
 void DumpVisitor::Visit(View* r) {
-  // TODO(SCN-793): improve DumpVisitor to display View/ViewHolder during
-  // traversal.
-  BeginItem("View", r);
-  EndItem();
+  ViewHolder* vh = r->view_holder();
+  WriteProperty("view") << r->global_id() << "->"
+                        << (vh ? vh->global_id() : GlobalId());
 }
 
 void DumpVisitor::Visit(ViewHolder* r) {
-  // TODO(SCN-793): improve DumpVisitor to display View/ViewHolder during
-  // traversal.
-  BeginItem("ViewHolder", r);
-  EndItem();
+  View* v = r->view();
+  WriteProperty("view_holder")
+      << r->global_id() << "->" << (v ? v->global_id() : GlobalId());
 }
 
 void DumpVisitor::Visit(EntityNode* r) {
   BeginItem("EntityNode", r);
+  if (r->view()) {
+    Visit(r->view());
+  }
+  if (!r->view_holders().empty()) {
+    for (ViewHolderPtr vh : r->view_holders()) {
+      Visit(vh.get());
+    }
+  }
   VisitNode(r);
   EndItem();
 }
@@ -361,7 +367,7 @@ void DumpVisitor::VisitResource(Resource* r) {
 void DumpVisitor::BeginItem(const char* type, Resource* r) {
   BeginLine();
   if (r) {
-    output_ << r->session()->id() << "-" << r->id();
+    output_ << r->global_id();
     if (!r->label().empty())
       output_ << ":\"" << r->label() << "\"";
     output_ << "> ";

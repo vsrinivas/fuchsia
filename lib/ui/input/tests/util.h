@@ -86,26 +86,28 @@ class SessionWrapper {
           void(const std::vector<fuchsia::ui::input::InputEvent>& events)>
           examine_events_callback);
 
+ protected:
+  // Collects input events conveyed to this session.
+  std::vector<fuchsia::ui::input::InputEvent> events_;
+
  private:
   // Client-side session object.
   std::unique_ptr<scenic::Session> session_;
   // Clients attach their nodes here to participate in the global scene graph.
   std::unique_ptr<scenic::EntityNode> root_node_;
-  // Collects input events conveyed to this session.
-  std::vector<fuchsia::ui::input::InputEvent> events_;
 };
 
-// Creates pointer events for one finger, where the pointer "device" is tied to
-// one compositor. Helps remove boilerplate clutter.
+// Creates pointer event commands for one finger, where the pointer "device" is
+// tied to one compositor. Helps remove boilerplate clutter.
 //
-// N.B. It's easy to create an event stream with inconsistent state, e.g.,
+// NOTE: It's easy to create an event stream with inconsistent state, e.g.,
 // sending ADD ADD.  Client is responsible for ensuring desired usage.
-class PointerEventGenerator {
+class PointerCommandGenerator {
  public:
-  PointerEventGenerator(scenic::ResourceId compositor_id, uint32_t device_id,
-                        uint32_t pointer_id,
-                        fuchsia::ui::input::PointerEventType type);
-  ~PointerEventGenerator() = default;
+  PointerCommandGenerator(scenic_impl::ResourceId compositor_id,
+                          uint32_t device_id, uint32_t pointer_id,
+                          fuchsia::ui::input::PointerEventType type);
+  ~PointerCommandGenerator() = default;
 
   fuchsia::ui::input::Command Add(float x, float y);
   fuchsia::ui::input::Command Down(float x, float y);
@@ -117,8 +119,31 @@ class PointerEventGenerator {
   fuchsia::ui::input::Command MakeInputCommand(
       fuchsia::ui::input::PointerEvent event);
 
-  scenic::ResourceId compositor_id_;
+  scenic_impl::ResourceId compositor_id_;
   fuchsia::ui::input::PointerEvent blank_;
+};
+
+// Creates keyboard event commands. Helps remove boilerplate clutter.
+//
+// NOTE: Just like PointerCommandGenerator, it's easy to create an event with
+// inconsistent state. Client is responsible for ensuring desired usage.
+class KeyboardCommandGenerator {
+ public:
+  KeyboardCommandGenerator(scenic_impl::ResourceId compositor_id,
+                           uint32_t device_id);
+  ~KeyboardCommandGenerator() = default;
+
+  fuchsia::ui::input::Command Pressed(uint32_t hid_usage, uint32_t modifiers);
+  fuchsia::ui::input::Command Released(uint32_t hid_usage, uint32_t modifiers);
+  fuchsia::ui::input::Command Cancelled(uint32_t hid_usage, uint32_t modifiers);
+  fuchsia::ui::input::Command Repeat(uint32_t hid_usage, uint32_t modifiers);
+
+ private:
+  fuchsia::ui::input::Command MakeInputCommand(
+      fuchsia::ui::input::KeyboardEvent event);
+
+  scenic_impl::ResourceId compositor_id_;
+  fuchsia::ui::input::KeyboardEvent blank_;
 };
 
 }  // namespace lib_ui_input_tests

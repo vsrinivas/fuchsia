@@ -5,10 +5,14 @@
 #ifndef GARNET_LIB_UI_INPUT_INPUT_SYSTEM_H_
 #define GARNET_LIB_UI_INPUT_INPUT_SYSTEM_H_
 
+#include <fuchsia/ui/input/cpp/fidl.h>
+
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "garnet/lib/ui/gfx/gfx_system.h"
+#include "garnet/lib/ui/gfx/id.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
 #include "garnet/lib/ui/input/view_id.h"
 #include "garnet/lib/ui/scenic/system.h"
@@ -18,6 +22,9 @@ namespace input {
 
 // Routes input events from a root presenter to Scenic clients.
 // Manages input-related state, such as focus.
+//
+// The general flow of events is:
+// DispatchCommand --[decide what/where]--> EnqueueEvent
 class InputSystem : public System {
  public:
   static constexpr TypeId kTypeId = kInput;
@@ -28,38 +35,71 @@ class InputSystem : public System {
   virtual std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
       CommandDispatcherContext context) override;
 
+  fuchsia::ui::input::ImeServicePtr& text_sync_service() {
+    return text_sync_service_;
+  }
+
+  std::unordered_set<SessionId>& hard_keyboard_requested() {
+    return hard_keyboard_requested_;
+  }
+
  private:
   gfx::GfxSystem* const gfx_system_;
+
+  // Send hard keyboard events to Text Sync for dispatch via IME; this is the
+  // intended flow for clients to receive *mediated* keyboard events.
+  // The connection to Text Sync is shared between all dispatchers.
+  fuchsia::ui::input::ImeServicePtr text_sync_service_;
+
+  // By default, clients don't get hard keyboard events directly from Scenic.
+  // Clients may request these events via the SetHardKeyboardDeliveryCmd;
+  // this set remembers which sessions have opted in.  We need this map because
+  // each InputCommandDispatcher works independently.
+  std::unordered_set<SessionId> hard_keyboard_requested_;
 };
 
+// Per-session treatment of input commands.
 class InputCommandDispatcher : public CommandDispatcher {
  public:
   InputCommandDispatcher(CommandDispatcherContext context,
-                         gfx::GfxSystem* scenic_system);
+                         gfx::GfxSystem* gfx_system, InputSystem* input_system);
   ~InputCommandDispatcher() override = default;
 
   // |CommandDispatcher|
   void DispatchCommand(const fuchsia::ui::scenic::Command command) override;
 
  private:
-  // Enqueue the focus event into the view's SessionListener.
-  void EnqueueEventToView(ViewId view_id, fuchsia::ui::input::FocusEvent focus);
+  // Per-command dispatch logic.
+  void DispatchCommand(const fuchsia::ui::input::SendPointerInputCmd command);
+  void DispatchCommand(const fuchsia::ui::input::SendKeyboardInputCmd command);
+  void DispatchCommand(
+      const fuchsia::ui::input::SetHardKeyboardDeliveryCmd command);
 
-  // Enqueue the keyboard event into the view's SessionListener.
-  void EnqueueEventToView(ViewId view_id,
-                          fuchsia::ui::input::KeyboardEvent keyboard);
+  // Enqueue the focus event into the view's SessionListener.
+  void EnqueueEventToView(GlobalId view_id, fuchsia::ui::input::FocusEvent focus);
 
   // Enqueue the pointer event into the view's SessionListener.
-  void EnqueueEventToView(ViewId view_id,
+  void EnqueueEventToView(GlobalId view_id,
                           fuchsia::ui::input::PointerEvent pointer);
 
+  // Enqueue the keyboard event into the view's SessionListener.
+  void EnqueueEventToView(GlobalId view_id,
+                          fuchsia::ui::input::KeyboardEvent keyboard);
+
+  // Enqueue the keyboard event to the Text Sync service.
+  void EnqueueEventToTextSync(GlobalId view_id,
+                              fuchsia::ui::input::KeyboardEvent keyboard);
+
+  // FIELDS
+
   gfx::GfxSystem* const gfx_system_ = nullptr;
+  InputSystem* const input_system_ = nullptr;
 
   // Tracks which View has focus.
-  ViewId focus_;
+  GlobalId focus_;
 
   // Tracks the set of Views each pointer is delivered to; a map from pointer ID
-  // to a stack of ViewIds. This is used to ensure consistent delivery of
+  // to a stack of GlobalIds. This is used to ensure consistent delivery of
   // pointer events for a given finger to its original destination targets on
   // their respective DOWN event. In particular, changes in focus from a new
   // finger should *not* affect delivery of events for existing fingers.

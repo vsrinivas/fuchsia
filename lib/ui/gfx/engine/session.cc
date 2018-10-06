@@ -7,7 +7,6 @@
 #include <memory>
 #include <utility>
 
-#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <trace/event.h>
@@ -44,6 +43,7 @@
 #include "garnet/lib/ui/gfx/util/time.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/lib/ui/gfx/util/wrap.h"
+#include "garnet/lib/ui/scenic/util/print_command.h"
 #include "lib/escher/hmd/pose_buffer.h"
 #include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/shape/mesh.h"
@@ -1068,7 +1068,7 @@ bool Session::ApplyCreateShapeNode(ResourceId id,
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
-bool Session::ApplyCreateCompositor(scenic::ResourceId id,
+bool Session::ApplyCreateCompositor(ResourceId id,
                                     ::fuchsia::ui::gfx::CompositorArgs args) {
   auto compositor = CreateCompositor(id, std::move(args));
   return compositor ? resources_.AddResource(id, std::move(compositor)) : false;
@@ -1229,7 +1229,7 @@ ResourcePtr Session::CreateShapeNode(ResourceId id,
   return fxl::MakeRefCounted<ShapeNode>(this, id);
 }
 
-ResourcePtr Session::CreateCompositor(scenic::ResourceId id,
+ResourcePtr Session::CreateCompositor(ResourceId id,
                                       ::fuchsia::ui::gfx::CompositorArgs args) {
   return Compositor::New(this, id);
 }
@@ -1412,6 +1412,7 @@ EventReporter* Session::event_reporter() const { return event_reporter_; }
 bool Session::AssertValueIsOfType(const ::fuchsia::ui::gfx::Value& value,
                                   const ::fuchsia::ui::gfx::Value::Tag* tags,
                                   size_t tag_count) {
+  using ::operator<<;  // From print_commands.h
   FXL_DCHECK(tag_count > 0);
   for (size_t i = 0; i < tag_count; ++i) {
     if (value.Which() == tags[i]) {
