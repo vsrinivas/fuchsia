@@ -111,9 +111,19 @@ list_package() {
 verify_file() {
   local -r file="$1"
   local -r sum="$2"
-  shasum --binary --check --status <<EOF
+  if [[ "${#sum}" = "40" ]]; then
+    shasum --binary --check --status <<EOF
 $sum *$file
 EOF
+  elif [[ "${#sum}" = "44" ]]; then
+    digest="$(echo $sum | tr '_-' '/+' | base64 -d | xxd -p -c 64)"
+    shasum -a 256 --binary --check --status <<EOF
+${digest:0:64} *$file
+EOF
+  else
+    echo >&2 "$0: unknown digest type for file ${file}: ${sum}"
+    return 1
+  fi
 }
 
 download_package() {
