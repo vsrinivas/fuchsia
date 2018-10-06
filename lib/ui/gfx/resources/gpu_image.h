@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_GPU_IMAGE_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_GPU_IMAGE_H_
 
+#include "garnet/lib/ui/gfx/resources/gpu_memory.h"
+#include "garnet/lib/ui/gfx/resources/host_memory.h"
 #include "garnet/lib/ui/gfx/resources/image.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
@@ -33,7 +35,7 @@ class GpuImage : public Image {
   // the caller.
   //
   // Returns the created Image, or nullptr if there was an error.
-  static GpuImagePtr New(Session* session, ResourceId id, MemoryPtr memory,
+  static GpuImagePtr New(Session* session, ResourceId id, GpuMemoryPtr memory,
                          const fuchsia::images::ImageInfo& image_info,
                          uint64_t memory_offset, ErrorReporter* error_reporter);
 
@@ -52,11 +54,11 @@ class GpuImage : public Image {
   // |memory| is the GPU memory that is associated with this image.
   // |memory_offset| is the offset in bytes into the memory where the image is
   // stored.
-  GpuImage(Session* session, ResourceId id, MemoryPtr memory,
+  GpuImage(Session* session, ResourceId id, GpuMemoryPtr memory,
            uint64_t memory_offset, escher::ImageInfo image_info,
            vk::Image vk_image_);
 
-  MemoryPtr memory_;
+  GpuMemoryPtr memory_;
 };
 
 }  // namespace gfx

@@ -25,7 +25,8 @@ class DumpVisitor : public ResourceVisitor {
   DumpVisitor(std::ostream& output);
   ~DumpVisitor();
 
-  void Visit(Memory* r) override;
+  void Visit(GpuMemory* r) override;
+  void Visit(HostMemory* r) override;
   void Visit(Image* r) override;
   void Visit(ImagePipe* r) override;
   void Visit(Buffer* r) override;

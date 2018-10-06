@@ -6,8 +6,9 @@
 
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/gpu_image.h"
+#include "garnet/lib/ui/gfx/resources/gpu_memory.h"
 #include "garnet/lib/ui/gfx/resources/host_image.h"
-#include "garnet/lib/ui/gfx/resources/memory.h"
+#include "garnet/lib/ui/gfx/resources/host_memory.h"
 #include "lib/escher/util/image_utils.h"
 
 namespace scenic_impl {
@@ -25,14 +26,17 @@ ImagePtr Image::New(Session* session, ResourceId id, MemoryPtr memory,
                     const fuchsia::images::ImageInfo& image_info,
                     uint64_t memory_offset, ErrorReporter* error_reporter) {
   // Create from host memory.
-  if (memory->is_host()) {
-    return HostImage::New(session, id, memory, image_info,
+  if (memory->IsKindOf<HostMemory>()) {
+    return HostImage::New(session, id, memory->As<HostMemory>(), image_info,
                           memory_offset, error_reporter);
 
     // Create from GPU memory.
-  } else {
-    return GpuImage::New(session, id, memory, image_info,
+  } else if (memory->IsKindOf<GpuMemory>()) {
+    return GpuImage::New(session, id, memory->As<GpuMemory>(), image_info,
                          memory_offset, error_reporter);
+  } else {
+    FXL_CHECK(false);
+    return nullptr;
   }
 }
 
