@@ -4,7 +4,7 @@
 
 #include "devcoordinator.h"
 #include "devmgr.h"
-#include "memfs-private.h"
+#include "fshost.h"
 
 #include <zircon/fidl.h>
 #include <zircon/listnode.h>

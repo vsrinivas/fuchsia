@@ -31,7 +31,7 @@
 #include "devhost.h"
 #include "devmgr.h"
 #include "log.h"
-#include "memfs-private.h"
+#include "fshost.h"
 
 namespace devmgr {
 

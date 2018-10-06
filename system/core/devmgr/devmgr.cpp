@@ -33,7 +33,7 @@
 #include "bootfs.h"
 #include "devhost.h"
 #include "devmgr.h"
-#include "memfs-private.h"
+#include "fshost.h"
 
 namespace devmgr {
 

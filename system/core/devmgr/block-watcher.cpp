@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <gpt/gpt.h>
 #include <lib/fdio/util.h>
@@ -23,22 +24,72 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
-#include "block-watcher.h"
 #include "devmgr.h"
-#include "memfs-private.h"
+#include "fshost.h"
 
 namespace devmgr {
+namespace {
 
-static FsInstallerFn g_installer;
-static zx::unowned_job job;
-static bool netboot;
+class BlockWatcher {
+public:
+    BlockWatcher(fbl::unique_ptr<FsManager> fshost, zx::unowned_job job, bool netboot)
+        : fshost_(fbl::move(fshost)), job_(job), netboot_(netboot) {}
 
-static zx_status_t fshost_launch_load(void* ctx, launchpad_t* lp,
-                                      const char* file) {
+    void FuchsiaStart() const {
+        fshost_->FuchsiaStart();
+    }
+
+    bool IsSystemMounted() const {
+        return fshost_->IsSystemMounted();
+    }
+
+    zx_status_t InstallFs(const char* path, zx::channel h) {
+        return fshost_->InstallFs(path, fbl::move(h));
+    }
+
+    const zx::unowned_job& Job() const {
+        return job_;
+    }
+
+    bool Netbooting() const {
+        return netboot_;
+    }
+
+    // Optionally checks the filesystem stored on the device at |device_path|,
+    // if "zircon.system.filesystem-check" is set.
+    zx_status_t CheckFilesystem(const char* device_path, disk_format_t df) const;
+
+    // Attempts to mount a block device backed by |fd| to "/data".
+    // Fails if already mounted.
+    zx_status_t MountData(fbl::unique_fd fd, mount_options_t* options);
+
+    // Attempts to mount a block device backed by |fd| to "/install".
+    // Fails if already mounted.
+    zx_status_t MountInstall(fbl::unique_fd fd, mount_options_t* options);
+
+    // Attempts to mount a block device backed by |fd| to "/blob".
+    // Fails if already mounted.
+    zx_status_t MountBlob(fbl::unique_fd fd, mount_options_t* options);
+
+
+private:
+    fbl::unique_ptr<FsManager> fshost_;
+    zx::unowned_job job_;
+    bool netboot_ = false;
+    bool data_mounted_ = false;
+    bool install_mounted_ = false;
+    bool blob_mounted_ = false;
+};
+
+// TODO(smklein): When launching filesystems can pass a cookie representing a unique
+// BlockWatcher instance, this global should be removed.
+zx::unowned_job g_job;
+
+zx_status_t fshost_launch_load(void* ctx, launchpad_t* lp, const char* file) {
     return launchpad_load_from_file(lp, file);
 }
 
-static void pkgfs_finish(zx::process proc, zx::channel pkgfs_root) {
+void pkgfs_finish(BlockWatcher* watcher, zx::process proc, zx::channel pkgfs_root) {
     auto deadline = zx::deadline_after(zx::sec(5));
     zx_signals_t observed;
     zx_status_t status = proc.wait_one(ZX_USER_SIGNAL_0 | ZX_PROCESS_TERMINATED,
@@ -52,37 +103,38 @@ static void pkgfs_finish(zx::process proc, zx::channel pkgfs_root) {
         printf("fshost: pkgfs terminated prematurely\n");
         return;
     }
-    if (g_installer("/pkgfs", pkgfs_root.get()) != ZX_OK) {
-        printf("fshost: failed to install /pkgfs\n");
-        return;
-    }
-
     // re-export /pkgfs/system as /system
     zx::channel h0, h1;
     if (zx::channel::create(0, &h0, &h1) != ZX_OK) {
         return;
     }
-    if (fdio_open_at(pkgfs_root.release(), "system", FS_DIR_FLAGS, h1.release()) != ZX_OK) {
+    if (fdio_open_at(pkgfs_root.get(), "system", FS_DIR_FLAGS, h1.release()) != ZX_OK) {
         return;
     }
-    if (g_installer("/system", h0.release()) != ZX_OK) {
+
+    if (watcher->InstallFs("/pkgfs", fbl::move(pkgfs_root)) != ZX_OK) {
+        printf("fshost: failed to install /pkgfs\n");
+        return;
+    }
+
+    if (watcher->InstallFs("/system", fbl::move(h0)) != ZX_OK) {
         printf("fshost: failed to install /system\n");
         return;
     }
 
     // start the appmgr
-    fuchsia_start();
+    watcher->FuchsiaStart();
 }
 
 // TODO(mcgrathr): Remove this fallback path when the old args
 // are no longer used.
-static void old_launch_blob_init() {
+void old_launch_blob_init(BlockWatcher* watcher) {
     const char* blob_init = getenv("zircon.system.blob-init");
     if (blob_init == nullptr) {
         return;
     }
-    if (secondary_bootfs_ready()) {
-        printf("fshost: zircon.system.blob-init ignored due to secondary bootfs\n");
+    if (watcher->IsSystemMounted()) {
+        printf("fshost: zircon.system.blob-init ignored since system already mounted\n");
         return;
     }
 
@@ -108,7 +160,7 @@ static void old_launch_blob_init() {
 
     const zx_handle_t raw_handle = handle.release();
     zx_status_t status = devmgr_launch(
-        *job, "pkgfs", &fshost_launch_load, nullptr, argc, &argv[0], nullptr, -1,
+        *watcher->Job(), "pkgfs", &fshost_launch_load, nullptr, argc, &argv[0], nullptr, -1,
         &raw_handle, &type, 1, proc.reset_and_get_address(), FS_DATA | FS_BLOB | FS_SVC);
 
     if (status != ZX_OK) {
@@ -116,15 +168,15 @@ static void old_launch_blob_init() {
         return;
     }
 
-    pkgfs_finish(fbl::move(proc), fbl::move(pkgfs_root));
+    pkgfs_finish(watcher, fbl::move(proc), fbl::move(pkgfs_root));
 }
 
 // Launching pkgfs uses its own loader service and command lookup to run out of
 // the blobfs without any real filesystem.  Files are found by
 // getenv("zircon.system.pkgfs.file.PATH") returning a blob content ID.
 // That is, a manifest of name->blob is embedded in /boot/config/devmgr.
-static zx_status_t pkgfs_ldsvc_load_blob(void* ctx, const char* prefix,
-                                         const char* name, zx_handle_t* vmo) {
+zx_status_t pkgfs_ldsvc_load_blob(void* ctx, const char* prefix,
+                                  const char* name, zx_handle_t* vmo) {
     const int fs_blob_fd = static_cast<int>(reinterpret_cast<intptr_t>(ctx));
     char key[256];
     if (snprintf(key, sizeof(key), "zircon.system.pkgfs.file.%s%s",
@@ -147,27 +199,24 @@ static zx_status_t pkgfs_ldsvc_load_blob(void* ctx, const char* prefix,
     return status;
 }
 
-static zx_status_t pkgfs_ldsvc_load_object(void* ctx, const char* name,
-                                           zx_handle_t* vmo) {
+zx_status_t pkgfs_ldsvc_load_object(void* ctx, const char* name, zx_handle_t* vmo) {
     return pkgfs_ldsvc_load_blob(ctx, "lib/", name, vmo);
 }
 
-static zx_status_t pkgfs_ldsvc_load_abspath(void* ctx, const char* name,
-                                            zx_handle_t* vmo) {
+zx_status_t pkgfs_ldsvc_load_abspath(void* ctx, const char* name, zx_handle_t* vmo) {
     return pkgfs_ldsvc_load_blob(ctx, "", name + 1, vmo);
 }
 
-static zx_status_t pkgfs_ldsvc_publish_data_sink(void* ctx, const char* name,
-                                                 zx_handle_t vmo) {
+zx_status_t pkgfs_ldsvc_publish_data_sink(void* ctx, const char* name, zx_handle_t vmo) {
     zx_handle_close(vmo);
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static void pkgfs_ldsvc_finalizer(void* ctx) {
+void pkgfs_ldsvc_finalizer(void* ctx) {
     close(static_cast<int>(reinterpret_cast<intptr_t>(ctx)));
 }
 
-static const loader_service_ops_t pkgfs_ldsvc_ops = {
+const loader_service_ops_t pkgfs_ldsvc_ops = {
     .load_object = pkgfs_ldsvc_load_object,
     .load_abspath = pkgfs_ldsvc_load_abspath,
     .publish_data_sink = pkgfs_ldsvc_publish_data_sink,
@@ -176,7 +225,7 @@ static const loader_service_ops_t pkgfs_ldsvc_ops = {
 
 // Create a local loader service with a fixed mapping of names to blobs.
 // Always consumes fs_blob_fd.
-static zx_status_t pkgfs_ldsvc_start(int fs_blob_fd, zx_handle_t* ldsvc) {
+zx_status_t pkgfs_ldsvc_start(int fs_blob_fd, zx_handle_t* ldsvc) {
     loader_service_t* service;
     zx_status_t status = loader_service_create(nullptr, &pkgfs_ldsvc_ops,
                                                (void*)(intptr_t)fs_blob_fd,
@@ -199,8 +248,7 @@ static zx_status_t pkgfs_ldsvc_start(int fs_blob_fd, zx_handle_t* ldsvc) {
 // This is the callback to load the file via launchpad.  First look up the
 // file itself.  Then get the loader service started so it can service
 // launchpad's request for the PT_INTERP file.  Then load it up.
-static zx_status_t pkgfs_launch_load(void* ctx, launchpad_t* lp,
-                                     const char* file) {
+zx_status_t pkgfs_launch_load(void* ctx, launchpad_t* lp, const char* file) {
     while (file[0] == '/') {
         ++file;
     }
@@ -223,14 +271,14 @@ static zx_status_t pkgfs_launch_load(void* ctx, launchpad_t* lp,
     return status;
 }
 
-static bool pkgfs_launch() {
+bool pkgfs_launch(BlockWatcher* watcher) {
     const char* cmd = getenv("zircon.system.pkgfs.cmd");
     if (cmd == nullptr) {
         return false;
     }
 
-    int fs_blob_fd = open("/fs/blob", O_RDONLY | O_DIRECTORY);
-    if (fs_blob_fd < 0) {
+    fbl::unique_fd fs_blob_fd(open("/fs/blob", O_RDONLY | O_DIRECTORY));
+    if (!fs_blob_fd) {
         printf("fshost: open(/fs/blob): %m\n");
         return false;
     }
@@ -240,15 +288,14 @@ static bool pkgfs_launch() {
     if (status != ZX_OK) {
         printf("fshost: cannot create pkgfs root channel: %d (%s)\n",
                status, zx_status_get_string(status));
-        close(fs_blob_fd);
         return false;
     }
 
     const zx_handle_t raw_h1 = h1.release();
     zx::process proc;
     status = devmgr_launch_cmdline(
-        "fshost", *job, "pkgfs",
-        &pkgfs_launch_load, (void*)(intptr_t)fs_blob_fd, cmd,
+        "fshost", *watcher->Job(), "pkgfs",
+        &pkgfs_launch_load, (void*)(intptr_t)fs_blob_fd.release(), cmd,
         &raw_h1, (const uint32_t[]){ PA_HND(PA_USER0, 0) }, 1,
         proc.reset_and_get_address(), FS_DATA | FS_BLOB | FS_SVC);
     if (status != ZX_OK) {
@@ -257,43 +304,84 @@ static bool pkgfs_launch() {
         return false;
     }
 
-    pkgfs_finish(fbl::move(proc), fbl::move(h0));
+    pkgfs_finish(watcher, fbl::move(proc), fbl::move(h0));
     return true;
 }
 
-static void launch_blob_init() {
-    if (!pkgfs_launch()) {
+void launch_blob_init(BlockWatcher* watcher) {
+    if (!pkgfs_launch(watcher)) {
         // TODO(mcgrathr): Remove when the old args are no longer used.
-        old_launch_blob_init();
+        old_launch_blob_init(watcher);
     }
 }
 
-static zx_status_t launch_blobfs(int argc, const char** argv, zx_handle_t* hnd,
-                                 uint32_t* ids, size_t len) {
-    return devmgr_launch(*job, "blobfs:/blob",
+zx_status_t launch_blobfs(int argc, const char** argv, zx_handle_t* hnd,
+                          uint32_t* ids, size_t len) {
+    return devmgr_launch(*g_job, "blobfs:/blob",
                          &fshost_launch_load, nullptr, argc, argv, nullptr, -1,
                          hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
 
-static zx_status_t launch_minfs(int argc, const char** argv, zx_handle_t* hnd,
-                                uint32_t* ids, size_t len) {
-    return devmgr_launch(*job, "minfs:/data",
+zx_status_t launch_minfs(int argc, const char** argv, zx_handle_t* hnd,
+                         uint32_t* ids, size_t len) {
+    return devmgr_launch(*g_job, "minfs:/data",
                          &fshost_launch_load, nullptr, argc, argv, nullptr, -1,
                          hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
 
-static zx_status_t launch_fat(int argc, const char** argv, zx_handle_t* hnd,
-                              uint32_t* ids, size_t len) {
-    return devmgr_launch(*job, "fatfs:/volume",
+zx_status_t launch_fat(int argc, const char** argv, zx_handle_t* hnd,
+                       uint32_t* ids, size_t len) {
+    return devmgr_launch(*g_job, "fatfs:/volume",
                          &fshost_launch_load, nullptr, argc, argv, nullptr, -1,
                          hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
 
-static bool data_mounted = false;
-static bool install_mounted = false;
-static bool blob_mounted = false;
+zx_status_t BlockWatcher::MountData(fbl::unique_fd fd, mount_options_t* options) {
+    if (data_mounted_) {
+        return ZX_ERR_ALREADY_BOUND;
+    }
+    options->wait_until_ready = true;
 
-static zx_status_t fshost_fsck(const char* device_path, disk_format_t df) {
+    zx_status_t status = mount(fd.release(), "/fs" PATH_DATA, DISK_FORMAT_MINFS,
+                               options, launch_minfs);
+    if (status != ZX_OK) {
+        printf("devmgr: failed to mount %s: %s.\n", PATH_DATA, zx_status_get_string(status));
+    } else {
+        data_mounted_ = true;
+    }
+    return status;
+}
+
+zx_status_t BlockWatcher::MountInstall(fbl::unique_fd fd, mount_options_t* options) {
+    if (install_mounted_) {
+        return ZX_ERR_ALREADY_BOUND;
+    }
+    options->readonly = true;
+    zx_status_t status = mount(fd.release(), "/fs" PATH_INSTALL, DISK_FORMAT_MINFS,
+                               options, launch_minfs);
+    if (status != ZX_OK) {
+        printf("devmgr: failed to mount %s: %s.\n", PATH_INSTALL, zx_status_get_string(status));
+    } else {
+        install_mounted_ = true;
+    }
+    return status;
+}
+
+zx_status_t BlockWatcher::MountBlob(fbl::unique_fd fd, mount_options_t* options) {
+    if (blob_mounted_) {
+        return ZX_ERR_ALREADY_BOUND;
+    }
+    zx_status_t status = mount(fd.release(), "/fs" PATH_BLOB, DISK_FORMAT_BLOBFS,
+                               options, launch_blobfs);
+    if (status != ZX_OK) {
+        printf("devmgr: failed to mount %s: %s.\n", PATH_BLOB, zx_status_get_string(status));
+    } else {
+        blob_mounted_ = true;
+    }
+    return status;
+}
+
+zx_status_t BlockWatcher::CheckFilesystem(const char* device_path, disk_format_t df) const {
     if (!getenv_bool("zircon.system.filesystem-check", false)) {
         return ZX_OK;
     }
@@ -304,9 +392,9 @@ static zx_status_t fshost_fsck(const char* device_path, disk_format_t df) {
     auto launch_fsck = [](int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
                           size_t len) {
         zx::process proc;
-        zx_status_t status = devmgr_launch(*job, "fsck", &fshost_launch_load, nullptr, argc, argv,
-                                           nullptr, -1, hnd, ids, len, proc.reset_and_get_address(),
-                                           FS_FOR_FSPROC);
+        zx_status_t status = devmgr_launch(*g_job, "fsck", &fshost_launch_load, nullptr,
+                                           argc, argv, nullptr, -1, hnd, ids, len,
+                                           proc.reset_and_get_address(), FS_FOR_FSPROC);
         if (status != ZX_OK) {
             fprintf(stderr, "fshost: Couldn't launch fsck\n");
             return status;
@@ -355,19 +443,19 @@ static zx_status_t fshost_fsck(const char* device_path, disk_format_t df) {
  * GUID of the device does not match a known valid one. Returns ZX_OK if an
  * attempt to mount is made, without checking mount success.
  */
-static zx_status_t mount_minfs(int fd, mount_options_t* options) {
+zx_status_t mount_minfs(BlockWatcher* watcher, fbl::unique_fd fd, mount_options_t* options) {
     uint8_t type_guid[GPT_GUID_LEN];
 
     // initialize our data for this run
-    ssize_t read_sz = ioctl_block_get_type_guid(fd, type_guid,
-                                                sizeof(type_guid));
+    ssize_t read_sz = ioctl_block_get_type_guid(fd.get(), type_guid, sizeof(type_guid));
+
     if (read_sz != GPT_GUID_LEN) {
         printf("fshost: cannot read GUID from minfs-formatted device\n");
         return ZX_ERR_INVALID_ARGS;
     }
 
     if (gpt_is_sys_guid(type_guid, read_sz)) {
-        if (secondary_bootfs_ready()) {
+        if (watcher->IsSystemMounted()) {
             return ZX_ERR_ALREADY_BOUND;
         }
         if (getenv("zircon.system.blob-init") != nullptr) {
@@ -381,7 +469,7 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
             // Fall-through only if we can guarantee the partition
             // is not removable.
             block_info_t info;
-            if ((ioctl_block_get_info(fd, &info) < 0) ||
+            if ((ioctl_block_get_info(fd.get(), &info) < 0) ||
                 (info.flags & BLOCK_FLAG_REMOVABLE)) {
                 return ZX_ERR_BAD_STATE;
             }
@@ -393,41 +481,19 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
         options->readonly = getenv("zircon.system.writable") == nullptr;
         options->wait_until_ready = true;
 
-        zx_status_t st = mount(fd, "/fs" PATH_SYSTEM, DISK_FORMAT_MINFS, options, launch_minfs);
+        zx_status_t st = mount(fd.release(), "/fs" PATH_SYSTEM, DISK_FORMAT_MINFS,
+                               options, launch_minfs);
         if (st != ZX_OK) {
             printf("devmgr: failed to mount %s: %s.\n", PATH_SYSTEM, zx_status_get_string(st));
         } else {
-            fuchsia_start();
+            watcher->FuchsiaStart();
         }
 
         return st;
     } else if (gpt_is_data_guid(type_guid, read_sz)) {
-        if (data_mounted) {
-            return ZX_ERR_ALREADY_BOUND;
-        }
-        data_mounted = true;
-        options->wait_until_ready = true;
-
-        zx_status_t st = mount(fd, "/fs" PATH_DATA, DISK_FORMAT_MINFS, options, launch_minfs);
-        if (st != ZX_OK) {
-            printf("devmgr: failed to mount %s: %s.\n", PATH_DATA, zx_status_get_string(st));
-        }
-
-        return st;
+        return watcher->MountData(fbl::move(fd), options);
     } else if (gpt_is_install_guid(type_guid, read_sz)) {
-        if (install_mounted) {
-            return ZX_ERR_ALREADY_BOUND;
-        }
-        install_mounted = true;
-        options->readonly = true;
-        options->wait_until_ready = true;
-
-        zx_status_t st = mount(fd, "/fs" PATH_INSTALL, DISK_FORMAT_MINFS, options, launch_minfs);
-        if (st != ZX_OK) {
-            printf("devmgr: failed to mount %s: %s.\n", PATH_INSTALL, zx_status_get_string(st));
-        }
-
-        return st;
+        return watcher->MountInstall(fbl::move(fd), options);
     }
     printf("fshost: Unrecognized partition GUID for minfs; not mounting\n");
     return ZX_ERR_INVALID_ARGS;
@@ -440,7 +506,9 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
 #define ZXCRYPT_DRIVER_LIB "/boot/driver/zxcrypt.so"
 #define STRLEN(s) sizeof(s) / sizeof((s)[0])
 
-static zx_status_t block_device_added(int dirfd, int event, const char* name, void* cookie) {
+zx_status_t block_device_added(int dirfd, int event, const char* name, void* cookie) {
+    auto watcher = static_cast<BlockWatcher*>(cookie);
+
     if (event != WATCH_EVENT_ADD_FILE) {
         return ZX_OK;
     }
@@ -448,48 +516,43 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
     char device_path[PATH_MAX];
     sprintf(device_path, "%s/%s", PATH_DEV_BLOCK, name);
 
-    int fd;
-    if ((fd = openat(dirfd, name, O_RDWR)) < 0) {
+    fbl::unique_fd fd(openat(dirfd, name, O_RDWR));
+    if (!fd) {
         return ZX_OK;
     }
 
     block_info_t info;
-    if (ioctl_block_get_info(fd, &info) >= 0 && info.flags & BLOCK_FLAG_BOOTPART) {
-        ioctl_device_bind(fd, BOOTPART_DRIVER_LIB, STRLEN(BOOTPART_DRIVER_LIB));
-        close(fd);
+    if (ioctl_block_get_info(fd.get(), &info) >= 0 && info.flags & BLOCK_FLAG_BOOTPART) {
+        ioctl_device_bind(fd.get(), BOOTPART_DRIVER_LIB, STRLEN(BOOTPART_DRIVER_LIB));
         return ZX_OK;
     }
 
-    disk_format_t df = detect_disk_format(fd);
+    disk_format_t df = detect_disk_format(fd.get());
 
     switch (df) {
     case DISK_FORMAT_GPT: {
         printf("devmgr: %s: GPT?\n", device_path);
         // probe for partition table
-        ioctl_device_bind(fd, GPT_DRIVER_LIB, STRLEN(GPT_DRIVER_LIB));
-        close(fd);
+        ioctl_device_bind(fd.get(), GPT_DRIVER_LIB, STRLEN(GPT_DRIVER_LIB));
         return ZX_OK;
     }
     case DISK_FORMAT_FVM: {
         printf("devmgr: /dev/class/block/%s: FVM?\n", name);
         // probe for partition table
-        ioctl_device_bind(fd, FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB));
-        close(fd);
+        ioctl_device_bind(fd.get(), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB));
         return ZX_OK;
     }
     case DISK_FORMAT_MBR: {
         printf("devmgr: %s: MBR?\n", device_path);
         // probe for partition table
-        ioctl_device_bind(fd, MBR_DRIVER_LIB, STRLEN(MBR_DRIVER_LIB));
-        close(fd);
+        ioctl_device_bind(fd.get(), MBR_DRIVER_LIB, STRLEN(MBR_DRIVER_LIB));
         return ZX_OK;
     }
     case DISK_FORMAT_ZXCRYPT: {
         printf("devmgr: %s: zxcrypt?\n", device_path);
         // TODO(security): ZX-1130. We need to bind with channel in order to pass a key here.
         // Where does the key come from?  We need to determine if this is unattended.
-        ioctl_device_bind(fd, ZXCRYPT_DRIVER_LIB, STRLEN(ZXCRYPT_DRIVER_LIB));
-        close(fd);
+        ioctl_device_bind(fd.get(), ZXCRYPT_DRIVER_LIB, STRLEN(ZXCRYPT_DRIVER_LIB));
         return ZX_OK;
     }
     default:
@@ -497,21 +560,19 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
     }
 
     uint8_t guid[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
-    ioctl_block_get_type_guid(fd, guid, sizeof(guid));
+    ioctl_block_get_type_guid(fd.get(), guid, sizeof(guid));
 
     // If we're in netbooting mode, then only bind drivers for partition
     // containers and the install partition, not regular filesystems.
-    if (netboot) {
+    if (watcher->Netbooting()) {
         const uint8_t expected_guid[GPT_GUID_LEN] = GUID_INSTALL_VALUE;
         if (memcmp(guid, expected_guid, sizeof(guid)) == 0) {
             printf("devmgr: mounting install partition\n");
             mount_options_t options = default_mount_options;
-            options.wait_until_ready = false;
-            mount_minfs(fd, &options);
+            mount_minfs(watcher, fbl::move(fd), &options);
             return ZX_OK;
         }
 
-        close(fd);
         return ZX_OK;
     }
 
@@ -520,48 +581,38 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
         const uint8_t expected_guid[GPT_GUID_LEN] = GUID_BLOB_VALUE;
 
         if (memcmp(guid, expected_guid, sizeof(guid))) {
-            close(fd);
             return ZX_OK;
         }
-        if (fshost_fsck(device_path, DISK_FORMAT_BLOBFS) != ZX_OK) {
-            close(fd);
+        if (watcher->CheckFilesystem(device_path, DISK_FORMAT_BLOBFS) != ZX_OK) {
             return ZX_OK;
         }
 
-        if (!blob_mounted) {
-            mount_options_t options = default_mount_options;
-            options.enable_journal = true;
-            zx_status_t status = mount(fd, "/fs" PATH_BLOB, DISK_FORMAT_BLOBFS,
-                                       &options, launch_blobfs);
-            if (status != ZX_OK) {
-                printf("devmgr: Failed to mount blobfs partition %s at %s: %s.\n",
-                       device_path, PATH_BLOB, zx_status_get_string(status));
-            } else {
-                blob_mounted = true;
-                launch_blob_init();
-            }
+        mount_options_t options = default_mount_options;
+        options.enable_journal = true;
+        zx_status_t status = watcher->MountBlob(fbl::move(fd), &options);
+        if (status != ZX_OK) {
+            printf("devmgr: Failed to mount blobfs partition %s at %s: %s.\n",
+                   device_path, PATH_BLOB, zx_status_get_string(status));
+        } else {
+            launch_blob_init(watcher);
         }
-
         return ZX_OK;
     }
     case DISK_FORMAT_MINFS: {
         printf("devmgr: mounting minfs\n");
-        if (fshost_fsck(device_path, DISK_FORMAT_MINFS) != ZX_OK) {
-            close(fd);
+        if (watcher->CheckFilesystem(device_path, DISK_FORMAT_MINFS) != ZX_OK) {
             return ZX_OK;
         }
         mount_options_t options = default_mount_options;
-        options.wait_until_ready = false;
-        mount_minfs(fd, &options);
+        mount_minfs(watcher, fbl::move(fd), &options);
         return ZX_OK;
     }
     case DISK_FORMAT_FAT: {
         // Use the GUID to avoid auto-mounting the EFI partition
         uint8_t guid[GPT_GUID_LEN];
-        ssize_t r = ioctl_block_get_type_guid(fd, guid, sizeof(guid));
+        ssize_t r = ioctl_block_get_type_guid(fd.get(), guid, sizeof(guid));
         bool efi = gpt_is_efi_guid(guid, r);
         if (efi) {
-            close(fd);
             printf("devmgr: not automounting efi\n");
             return ZX_OK;
         }
@@ -572,25 +623,24 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
         snprintf(mountpath, sizeof(mountpath), "%s/fat-%d", "/fs" PATH_VOLUME, fat_counter++);
         options.wait_until_ready = false;
         printf("devmgr: mounting fatfs\n");
-        mount(fd, mountpath, df, &options, launch_fat);
+        mount(fd.release(), mountpath, df, &options, launch_fat);
         return ZX_OK;
     }
     default:
-        close(fd);
         return ZX_OK;
     }
 }
 
-void block_device_watcher(FsInstallerFn installer, zx::unowned_job _job, bool _netboot) {
-    job = _job;
-    netboot = _netboot;
-    g_installer = fbl::move(installer);
+} // namespace
 
-    int dirfd;
-    if ((dirfd = open("/dev/class/block", O_DIRECTORY | O_RDONLY)) >= 0) {
-        fdio_watch_directory(dirfd, block_device_added, ZX_TIME_INFINITE, &job);
+void block_device_watcher(fbl::unique_ptr<FsManager> fshost, zx::unowned_job job, bool netboot) {
+    g_job = job;
+    BlockWatcher watcher(fbl::move(fshost), fbl::move(job), netboot);
+
+    fbl::unique_fd dirfd(open("/dev/class/block", O_DIRECTORY | O_RDONLY));
+    if (dirfd) {
+        fdio_watch_directory(dirfd.get(), block_device_added, ZX_TIME_INFINITE, &watcher);
     }
-    close(dirfd);
 }
 
 } // namespace devmgr

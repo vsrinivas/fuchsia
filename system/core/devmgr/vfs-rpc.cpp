@@ -26,7 +26,7 @@
 #include <fbl/unique_ptr.h>
 
 #include "devmgr.h"
-#include "memfs-private.h"
+#include "fshost.h"
 
 #define ZXDEBUG 0
 
@@ -120,14 +120,36 @@ void FsManager::SystemfsSetReadonly(bool value) {
     systemfs_root_->vfs()->SetReadonly(value);
 }
 
-zx_status_t FsManager::InstallFs(const char* path, zx_handle_t h) {
+zx_status_t FsManager::InstallFs(const char* path, zx::channel h) {
     for (unsigned n = 0; n < fbl::count_of(kMountPoints); n++) {
         if (!strcmp(path, kMountPoints[n])) {
-            return root_vfs_.InstallRemote(mount_nodes[n], fs::MountChannel(h));
+            return root_vfs_.InstallRemote(mount_nodes[n], fs::MountChannel(fbl::move(h)));
         }
     }
-    zx_handle_close(h);
     return ZX_ERR_NOT_FOUND;
+}
+
+zx_status_t FsManager::InitializeConnections(zx::channel root, zx::channel devfs_root,
+                                             zx::channel svc_root, zx::event fshost_event) {
+    // Serve devmgr's root handle using our own root directory.
+    zx_status_t status = ConnectRoot(fbl::move(root));
+    if (status != ZX_OK) {
+        printf("fshost: Cannot connect to fshost root: %d\n", status);
+    }
+
+    zx::channel fs_root;
+    if ((status = ServeRoot(&fs_root)) != ZX_OK) {
+        printf("fshost: cannot create global root\n");
+    }
+
+    connections_ = fbl::make_unique<FshostConnections>(fbl::move(devfs_root),
+                                                       fbl::move(svc_root),
+                                                       fbl::move(fs_root),
+                                                       fbl::move(fshost_event));
+    // Now that we've initialized our connection to the outside world,
+    // monitor for external shutdown events.
+    WatchExit();
+    return connections_->CreateNamespace();
 }
 
 zx_status_t FsManager::ConnectRoot(zx::channel server) {
@@ -147,17 +169,17 @@ zx_status_t FsManager::ServeRoot(zx::channel* out) {
     return ZX_OK;
 }
 
-void FsManager::WatchExit(const zx::event& event) {
-    global_shutdown_.set_handler([this, &event](async_dispatcher_t* dispatcher,
-                                                async::Wait* wait,
-                                                zx_status_t status,
-                                                const zx_packet_signal_t* signal) {
+void FsManager::WatchExit() {
+    global_shutdown_.set_handler([this](async_dispatcher_t* dispatcher,
+                                        async::Wait* wait,
+                                        zx_status_t status,
+                                        const zx_packet_signal_t* signal) {
         root_vfs_.UninstallAll(ZX_TIME_INFINITE);
         system_vfs_.UninstallAll(ZX_TIME_INFINITE);
-        event.signal(0, FSHOST_SIGNAL_EXIT_DONE);
+        connections_->Event().signal(0, FSHOST_SIGNAL_EXIT_DONE);
     });
 
-    global_shutdown_.set_object(event.get());
+    global_shutdown_.set_object(connections_->Event().get());
     global_shutdown_.set_trigger(FSHOST_SIGNAL_EXIT);
     global_shutdown_.Begin(global_loop_->dispatcher());
 }

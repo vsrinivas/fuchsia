@@ -87,10 +87,6 @@ void devmgr_disable_appmgr_services();
 zx_handle_t devfs_root_clone();
 zx::channel fs_clone(const char* path);
 
-// Function which mounts a handle on behalf of the block watcher.
-using FsInstallerFn = fbl::Function<zx_status_t(const char* path, zx_handle_t h)>;
-void block_device_watcher(FsInstallerFn install_callback, zx::unowned_job job, bool netboot);
-
 // getenv_bool looks in the environment for name. If not found, it returns
 // default. If found, it returns false if the found value matches "0", "off", or
 // "false", otherwise it returns true.

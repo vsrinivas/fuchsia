@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "devmgr.h"
-#include "memfs-private.h"
+#include "fshost.h"
 
 #include <bootdata/decompress.h>
 
@@ -16,6 +16,7 @@
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
 #include <loader-service/loader-service.h>
 
@@ -34,8 +35,8 @@
 #include <string.h>
 #include <threads.h>
 
-#include "block-watcher.h"
 #include "bootfs.h"
+#include "fshost.h"
 
 namespace devmgr {
 namespace {
@@ -50,71 +51,6 @@ namespace {
 constexpr uint32_t kFsDirFlags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN |
                                  ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE;
 
-class FshostConnections {
-public:
-    FshostConnections(zx::channel devfs_root, zx::channel svc_root, zx::channel fs_root)
-            : devfs_root_(fbl::move(devfs_root)), svc_root_(fbl::move(svc_root)),
-              fs_root_(fbl::move(fs_root)) {}
-
-    // Synchronously opens a connection on the requested path.
-    //
-    // TODO: Return an error code, instead of "invalid handle", on error.
-    zx::channel Open(const char* path) const {
-        if (!strcmp(path, "svc")) {
-            return zx::channel(fdio_service_clone(svc_root_.get()));
-        }
-        if (!strcmp(path, "dev")) {
-            return zx::channel(fdio_service_clone(devfs_root_.get()));
-        }
-        zx::channel client, server;
-        if (zx::channel::create(0, &client, &server) != ZX_OK) {
-            return zx::channel();
-        }
-        if (fdio_open_at(fs_root_.get(), path, kFsDirFlags, server.release()) != ZX_OK) {
-            return zx::channel();
-        }
-        return client;
-    }
-
-    // Create and install the namespace for the current process, using
-    // the owned channels as connections.
-    zx_status_t CreateNamespace() {
-        fdio_ns_t* ns;
-        zx_status_t status;
-        if ((status = fdio_ns_create(&ns)) != ZX_OK) {
-            printf("fshost: cannot create namespace: %d\n", status);
-            return status;
-        }
-
-        if ((status = fdio_ns_bind(ns, "/fs", fs_root_.get())) != ZX_OK) {
-            printf("fshost: cannot bind /fs to namespace: %d\n", status);
-            return status;
-        }
-        if ((status = fdio_ns_bind(ns, "/dev", Open("dev").release())) != ZX_OK) {
-            printf("fshost: cannot bind /dev to namespace: %d\n", status);
-            return status;
-        }
-        if ((status = fdio_ns_bind(ns, "/boot", Open("boot").release())) != ZX_OK) {
-            printf("devmgr: cannot bind /boot to namespace: %d\n", status);
-            return status;
-        }
-        if ((status = fdio_ns_bind(ns, "/system", Open("system").release())) != ZX_OK) {
-            printf("devmgr: cannot bind /system to namespace: %d\n", status);
-            return status;
-        }
-        if ((status = fdio_ns_install(ns)) != ZX_OK) {
-            printf("fshost: cannot install namespace: %d\n", status);
-            return status;
-        }
-        return ZX_OK;
-    }
-
-private:
-    zx::channel devfs_root_;
-    zx::channel svc_root_;
-    zx::channel fs_root_;
-};
-
 struct BootdataRamdisk : public fbl::SinglyLinkedListable<fbl::unique_ptr<BootdataRamdisk>> {
 public:
     explicit BootdataRamdisk(zx::vmo vmo) : vmo_(fbl::move(vmo)) {}
@@ -128,9 +64,11 @@ private:
 
 using RamdiskList = fbl::SinglyLinkedList<fbl::unique_ptr<BootdataRamdisk>>;
 
-bool has_secondary_bootfs = false;
-fbl::unique_ptr<FshostConnections> fshost;
-zx::event fshost_event;
+// TODO: When the dependencies surrounding fs_clone are simplified, this global
+// should be removed. fshost and devmgr each supply their own version of
+// |fs_clone|, and devmgr-fdio relies on this function being present to
+// implement |devmgr_launch|.
+const FsManager* g_fshost = nullptr;
 
 using AddFileFn = fbl::Function<zx_status_t(const char* path, zx_handle_t vmo,
                                             zx_off_t off, size_t len)>;
@@ -173,8 +111,7 @@ zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n,
                 fbl::BindMember(root.get(), &FsManager::SystemfsAddFile) :
                 fbl::BindMember(root.get(), &FsManager::BootfsAddFile),
     };
-    if ((type == BOOTDATA_BOOTFS_SYSTEM) && !has_secondary_bootfs) {
-        has_secondary_bootfs = true;
+    if ((type == BOOTDATA_BOOTFS_SYSTEM) && !root->IsSystemMounted()) {
         status = root->MountSystem();
         if (status != ZX_OK) {
             printf("devmgr: failed to mount /system (%d)\n", status);
@@ -395,19 +332,61 @@ void FetchVmos(const fbl::unique_ptr<FsManager>& root, uint_fast8_t type,
 
 } // namespace
 
-// TODO: The following functions must be supplied to link against the
-// block-watcher; this restriction should be removed / made more explicit.
+FshostConnections::FshostConnections(zx::channel devfs_root, zx::channel svc_root,
+                                     zx::channel fs_root, zx::event event)
+    : devfs_root_(fbl::move(devfs_root)), svc_root_(fbl::move(svc_root)),
+      fs_root_(fbl::move(fs_root)), event_(fbl::move(event)) {}
+
+zx::channel FshostConnections::Open(const char* path) const {
+    if (!strcmp(path, "svc")) {
+        return zx::channel(fdio_service_clone(svc_root_.get()));
+    }
+    if (!strcmp(path, "dev")) {
+        return zx::channel(fdio_service_clone(devfs_root_.get()));
+    }
+    zx::channel client, server;
+    if (zx::channel::create(0, &client, &server) != ZX_OK) {
+        return zx::channel();
+    }
+    if (fdio_open_at(fs_root_.get(), path, kFsDirFlags, server.release()) != ZX_OK) {
+        return zx::channel();
+    }
+    return client;
+}
+
+zx_status_t FshostConnections::CreateNamespace() {
+    fdio_ns_t* ns;
+    zx_status_t status;
+    if ((status = fdio_ns_create(&ns)) != ZX_OK) {
+        printf("fshost: cannot create namespace: %d\n", status);
+        return status;
+    }
+
+    if ((status = fdio_ns_bind(ns, "/fs", fs_root_.get())) != ZX_OK) {
+        printf("fshost: cannot bind /fs to namespace: %d\n", status);
+        return status;
+    }
+    if ((status = fdio_ns_bind(ns, "/dev", Open("dev").release())) != ZX_OK) {
+        printf("fshost: cannot bind /dev to namespace: %d\n", status);
+        return status;
+    }
+    if ((status = fdio_ns_bind(ns, "/boot", Open("boot").release())) != ZX_OK) {
+        printf("devmgr: cannot bind /boot to namespace: %d\n", status);
+        return status;
+    }
+    if ((status = fdio_ns_bind(ns, "/system", Open("system").release())) != ZX_OK) {
+        printf("devmgr: cannot bind /system to namespace: %d\n", status);
+        return status;
+    }
+    if ((status = fdio_ns_install(ns)) != ZX_OK) {
+        printf("fshost: cannot install namespace: %d\n", status);
+        return status;
+    }
+    return ZX_OK;
+}
 
 zx::channel fs_clone(const char* path) {
-    return fshost->Open(path);
-}
-
-void fuchsia_start() {
-    fshost_event.signal(0, FSHOST_SIGNAL_READY);
-}
-
-bool secondary_bootfs_ready() {
-    return has_secondary_bootfs;
+    return g_fshost->GetConnections().Open(path);
 }
 
 } // namespace devmgr
@@ -432,47 +411,33 @@ int main(int argc, char** argv) {
     zx::channel devfs_root = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 1)));
     zx::channel svc_root = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 2)));
     zx_handle_t devmgr_loader = zx_take_startup_handle(PA_HND(PA_USER0, 3));
-    fshost_event.reset(zx_take_startup_handle(PA_HND(PA_USER1, 0)));
+    zx::event fshost_event = zx::event(zx_take_startup_handle(PA_HND(PA_USER1, 0)));
 
     // First, initialize the local filesystem in isolation.
     fbl::unique_ptr<FsManager> root = fbl::make_unique<FsManager>();
 
+    // Populate the FsManager and RamdiskList with data supplied from
+    // startup handles passed to fshost.
     fbl::unique_ptr<RamdiskList> bootdata_ramdisk_list = fbl::make_unique<RamdiskList>();
-    {
-        // Populate the FsManager and RamdiskList with data supplied from
-        // startup handles passed to fshost.
-        SetupBootfs(root, bootdata_ramdisk_list);
+    SetupBootfs(root, bootdata_ramdisk_list);
+    FetchVmos(root, PA_VMO_VDSO, "PA_VMO_VDSO");
+    FetchVmos(root, PA_VMO_KERNEL_FILE, "PA_VMO_KERNEL_FILE");
 
-        root->WatchExit(fshost_event);
+    // Initialize connections to external service managers, and begin
+    // monitoring the |fshost_event| for a termination event.
+    root->InitializeConnections(fbl::move(_fs_root), fbl::move(devfs_root),
+                                fbl::move(svc_root), fbl::move(fshost_event));
+    g_fshost = root.get();
 
-        FetchVmos(root, PA_VMO_VDSO, "PA_VMO_VDSO");
-        FetchVmos(root, PA_VMO_KERNEL_FILE, "PA_VMO_KERNEL_FILE");
-
-        // if we have a /system ramdisk, start higher level services
-        if (has_secondary_bootfs) {
-            fuchsia_start();
-        }
+    // If we have a "/system" ramdisk, start higher level services.
+    if (root->IsSystemMounted()) {
+        root->FuchsiaStart();
     }
-
-    // Serve devmgr's root handle using our own root directory.
-    zx_status_t status = root->ConnectRoot(fbl::move(_fs_root));
-    if (status != ZX_OK) {
-        printf("fshost: Cannot connect to fshost root: %d\n", status);
-    }
-
-    zx::channel fs_root;
-    if ((status = root->ServeRoot(&fs_root)) != ZX_OK) {
-        printf("fshost: cannot create global root\n");
-    }
-
-    fshost = fbl::make_unique<FshostConnections>(fbl::move(devfs_root),
-                                                 fbl::move(svc_root),
-                                                 fbl::move(fs_root));
-    fshost->CreateNamespace();
 
     {
         loader_service_t* loader_service;
-        if ((status = loader_service_create_fs(nullptr, &loader_service)) != ZX_OK) {
+        zx_status_t status = loader_service_create_fs(nullptr, &loader_service);
+        if (status != ZX_OK) {
             printf("fshost: failed to create loader service: %d\n", status);
         } else {
             loader_service_attach(loader_service, devmgr_loader);
@@ -498,8 +463,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    block_device_watcher(fbl::BindMember(root.get(), &FsManager::InstallFs), zx::job::default_job(),
-                         netboot);
+    block_device_watcher(fbl::move(root), zx::job::default_job(), netboot);
 
     printf("fshost: terminating (block device watcher finished?)\n");
     return 0;
