@@ -5,7 +5,7 @@
 
 ### start the update server and attach to a running fuchsia device
 ## usage: fx serve-updates [-v] [-d <device>] [--direct]
-##   -v verbose (do not suppress amber-srv output)
+##   -v verbose (do not suppress `pm serve` output)
 ##   -d <device> to specify a specific target device
 ##   --no-direct configure target to use an SSH tunnel as transport (deprecated)
 
@@ -57,13 +57,12 @@ while (($#)); do
   shift
 done
 
-# Recover from present situation by finding any already-running amber-srv
-amber_srv_pid=$(pgrep amber-srv)
+pm_srv_pid=
 cleanup() {
-  if [[ -n "${amber_srv_pid}" ]]; then
-    if kill -0 "${amber_srv_pid}" 2> /dev/null; then
-      kill -TERM "${amber_srv_pid}" 2> /dev/null
-      wait "${amber_srv_pid}" 2> /dev/null
+  if [[ -n "${pm_srv_pid}" ]]; then
+    if kill -0 "${pm_srv_pid}" 2> /dev/null; then
+      kill -TERM "${pm_srv_pid}" 2> /dev/null
+      wait "${pm_srv_pid}" 2> /dev/null
     fi
   fi
 }
@@ -80,19 +79,19 @@ log_verbose() {
   fi
 }
 
-if [[ -z "${amber_srv_pid}" ]]; then
-  if [[ "${verbose}" = true ]]; then
-    ${FUCHSIA_BUILD_DIR}/host_x64/amber-srv -d ${FUCHSIA_BUILD_DIR} &
-  else
-    ${FUCHSIA_BUILD_DIR}/host_x64/amber-srv -d ${FUCHSIA_BUILD_DIR} > /dev/null &
+if [[ -z "${pm_srv_pid}" ]]; then
+  serve_flags=()
+  if [[ "${verbose}" != true ]]; then
+    serve_flags+=("-q")
   fi
-  amber_srv_pid=$!
+  ${FUCHSIA_BUILD_DIR}/host_x64/pm serve -d ${FUCHSIA_BUILD_DIR}/amber-files/repository ${serve_flags[@]} &
+  pm_srv_pid=$!
 fi
 
-# Allow a little slack for amber-srv to startup, that way the first kill -0 will catch a dead amber-srv.
+# Allow a little slack for pm serve to startup, that way the first kill -0 will catch a dead server
 sleep 0.1
-if ! kill -0 "${amber_srv_pid}" 2> /dev/null; then
-  log "Amber Server died, exiting"
+if ! kill -0 "${pm_srv_pid}" 2> /dev/null; then
+  log "Server died, exiting"
   wait
   exit $?
 fi
@@ -117,9 +116,9 @@ fi
 # State is used to prevent too much output
 state="discover"
 while true; do
-  if ! kill -0 "${amber_srv_pid}" 2> /dev/null; then
-    log "Amber Server died, exiting"
-    amber_srv_pid=
+  if ! kill -0 "${pm_srv_pid}" 2> /dev/null; then
+    log "Server died, exiting"
+    pm_srv_pid=
     exit 1
   fi
 

@@ -25,8 +25,8 @@ function main {
   fx-standard-switches "$@"
   set -- "${FX_ARGV[@]}"
 
-  if [[ -z "$(pgrep amber-srv)" ]]; then
-    echo "WARNING: It looks like amber-srv is not running."
+  if [[ -z "$(pgrep -f "amber-files/repository")" ]]; then
+    echo "WARNING: It looks like serve-updates is not running."
     echo "WARNING: You probably need to start \"fx serve\""
     return -1
   fi
