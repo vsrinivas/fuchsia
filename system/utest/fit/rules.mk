@@ -9,6 +9,8 @@ fit_tests := \
     $(LOCAL_DIR)/function_tests.cpp \
     $(LOCAL_DIR)/function_traits_tests.cpp \
     $(LOCAL_DIR)/main.c \
+    $(LOCAL_DIR)/nullable_tests.cpp \
+    $(LOCAL_DIR)/optional_tests.cpp \
 
 # Userspace tests.
 # Disabled for now because libstdc++ isn't available for Zircon targets yet.
@@ -47,6 +49,11 @@ MODULE_SRCS := $(fit_tests)
 MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fit/include \
     -Isystem/ulib/unittest/include \
+
+# Suppress warnings about self-move and self-assignment since we have
+# tests that intentionally verify these behaviors.
+MODULE_COMPILEFLAGS += \
+    -Wno-self-move -Wno-self-assign-overloaded \
 
 MODULE_HOST_LIBS := \
     system/ulib/fit.hostlib \

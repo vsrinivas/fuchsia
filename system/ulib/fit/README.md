@@ -106,3 +106,36 @@ These sections explain why certain features are in FIT.
 - We have observed several re-implementations of the same idea throughout the
   system.
 - So we should create a simple way to invoke a function on scope exit.
+
+### fit::optional
+
+- std::optional is very useful but it requires C++ 17.
+- We have observed several re-implementations of the same idea throughout the
+  system and it's also a building block for other features such as
+  fit::nullable.
+- So we should create a poly-fill for std::optional on C++ 14.
+- TODO(US-90): The initial implementation only covers a minimal subset of the
+  std::optional API.  Flesh this out more fully.
+
+### fit::nullable
+
+- Case study: fit::defer has a need to store a closure that may be nullable.
+  We were able to replace its hand-rolled lifetime management code with
+  fit::nullable thereby vastly simplifying its implementation.
+- Case study: fit::future has a need to track its own validity along with
+  a continuation that may or not be present.
+- Case study: We have previously observed bugs where developers were
+  surprised when assigning a null closure to wrappers such as fit::function
+  fit::defer, or fit::future left these objects in a supposedly "valid"
+  but uninvocable state.  These objects therefore take care to detect
+  null closures and enter an "invalid" state.  Using fit::is_null and
+  fit::nullable makes it easier to eliminate this redundant state and
+  simplifies the API for clients of these wrappers.
+- std::optional can be effective here but it doesn't directly handle nullity
+  so it takes more care to coalesce the null and "not present" states.
+  std::optional also increases the size of the object to carry an extra
+  bool and passing, whereas fit::nullable eliminates this overhead by
+  taking advantage of the underlying value's null state (if there is one).
+- So we introduce fit::nullable to handle both cases systematically while
+  still hewing close to the semantics of std::optional.
+

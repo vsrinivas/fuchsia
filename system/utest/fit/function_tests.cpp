@@ -73,6 +73,8 @@ private:
 
 template <typename ClosureFunction>
 bool closure() {
+    static_assert(fit::is_nullable<ClosureFunction>::value, "");
+
     BEGIN_TEST;
 
     // default initialization
@@ -166,6 +168,12 @@ bool closure() {
     fnew();
     EXPECT_EQ(6, finline_value);
 
+    // move assignment of self
+    fnew = std::move(fnew);
+    EXPECT_TRUE(!!fnew);
+    fnew();
+    EXPECT_EQ(7, finline_value);
+
     // move assignment of null
     fnew = std::move(fnull);
     EXPECT_FALSE(!!fnew);
@@ -184,7 +192,7 @@ bool closure() {
     EXPECT_FALSE(!!fnew);
 
     // swap (currently null)
-    fnew.swap(fheap2);
+    swap(fnew, fheap2);
     EXPECT_TRUE(!!fnew);
     EXPECT_FALSE(!!fheap);
     fnew();
@@ -193,7 +201,7 @@ bool closure() {
     EXPECT_EQ(6, fheap_value);
 
     // swap with self
-    fnew.swap(fnew);
+    swap(fnew, fnew);
     EXPECT_TRUE(!!fnew);
     fnew();
     EXPECT_EQ(7, fheap_value);
@@ -201,7 +209,7 @@ bool closure() {
     EXPECT_EQ(8, fheap_value);
 
     // swap with non-null
-    fnew.swap(fmutinline);
+    swap(fnew, fmutinline);
     EXPECT_TRUE(!!fmutinline);
     EXPECT_TRUE(!!fnew);
     fmutinline();
@@ -249,6 +257,8 @@ bool closure() {
 
 template <typename BinaryOpFunction>
 bool binary_op() {
+    static_assert(fit::is_nullable<BinaryOpFunction>::value, "");
+
     BEGIN_TEST;
 
     // default initialization
@@ -350,8 +360,18 @@ bool binary_op() {
     EXPECT_EQ(10, fnew(3, 7));
     EXPECT_EQ(6, finline_value);
 
+    // self-assignment of non-null
+    fnew = std::move(fnew);
+    EXPECT_TRUE(!!fnew);
+    EXPECT_EQ(10, fnew(3, 7));
+    EXPECT_EQ(7, finline_value);
+
     // move assignment of null
     fnew = std::move(fnull);
+    EXPECT_FALSE(!!fnew);
+
+    // self-assignment of non-null
+    fnew = std::move(fnew);
     EXPECT_FALSE(!!fnew);
 
     // callable assignment with operator=
@@ -371,7 +391,7 @@ bool binary_op() {
     EXPECT_FALSE(!!fnew);
 
     // swap (currently null)
-    fnew.swap(fheap2);
+    swap(fnew, fheap2);
     EXPECT_TRUE(!!fnew);
     EXPECT_FALSE(!!fheap);
     EXPECT_EQ(10, fnew(3, 7));
@@ -380,7 +400,7 @@ bool binary_op() {
     EXPECT_EQ(6, fheap_value);
 
     // swap with self
-    fnew.swap(fnew);
+    swap(fnew, fnew);
     EXPECT_TRUE(!!fnew);
     EXPECT_EQ(10, fnew(3, 7));
     EXPECT_EQ(7, fheap_value);
@@ -388,7 +408,7 @@ bool binary_op() {
     EXPECT_EQ(8, fheap_value);
 
     // swap with non-null
-    fnew.swap(fmutinline);
+    swap(fnew, fmutinline);
     EXPECT_TRUE(!!fmutinline);
     EXPECT_TRUE(!!fnew);
     EXPECT_EQ(10, fmutinline(3, 7));
@@ -683,38 +703,6 @@ bool bind_member() {
     END_TEST;
 }
 
-// Test the internal IsNull mechanism.
-struct Nullable {
-    bool is_null;
-    bool operator==(decltype(nullptr)) const { return is_null; }
-};
-
-struct NotNullable {};
-
-struct NonBoolNull {
-    void operator==(decltype(nullptr)) const {}
-};
-
-bool null_check() {
-    BEGIN_TEST;
-
-    EXPECT_TRUE(fit::internal::is_null(nullptr));
-
-    Nullable nf = {false};
-    EXPECT_FALSE(fit::internal::is_null(nf));
-
-    Nullable nt = {true};
-    EXPECT_TRUE(fit::internal::is_null(nt));
-
-    NotNullable nn;
-    EXPECT_FALSE(fit::internal::is_null(nn));
-
-    NonBoolNull nbn;
-    EXPECT_FALSE(fit::internal::is_null(nbn));
-
-    END_TEST;
-}
-
 // This is the code which is included in <function.h>.
 namespace example1 {
 using fold_function = fit::function<int(int value, int item)>;
@@ -810,7 +798,6 @@ RUN_TEST(implicit_construction);
 RUN_TEST(overload_resolution);
 RUN_TEST(sharing)
 RUN_TEST(bind_member);
-RUN_TEST(null_check);
 RUN_TEST(example1::test);
 RUN_TEST(example2::test);
 END_TEST_CASE(function_tests)

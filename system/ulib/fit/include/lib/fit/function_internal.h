@@ -13,7 +13,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "traits_internal.h"
+#include "nullable.h"
 
 namespace fit {
 namespace internal {
@@ -191,12 +191,16 @@ public:
     function& operator=(const function& other) = delete;
 
     function& operator=(function&& other) {
+        if (&other == this)
+            return *this;
         destroy_target();
         move_target_from(std::move(other));
         return *this;
     }
 
     void swap(function& other) {
+        if (&other == this)
+            return;
         ops_type temp_ops = ops_;
         storage_type temp_bits;
         ops_->move(&bits_, &temp_bits);
@@ -255,7 +259,7 @@ private:
     void initialize_target(Callable target) {
         static_assert(!require_inline || sizeof(Callable) <= inline_target_size,
                       "Callable too large to store inline as requested.");
-        if (is_null(target)) {
+        if (::fit::is_null(target)) {
             initialize_null_target();
         } else {
             ops_ = &target_type<Callable>::ops;
@@ -284,6 +288,12 @@ private:
     ops_type ops_;
     mutable storage_type bits_;
 };
+
+template <size_t inline_target_size, bool require_inline, typename Result, typename... Args>
+void swap(function<inline_target_size, require_inline, Result, Args...>& a,
+          function<inline_target_size, require_inline, Result, Args...>& b) {
+    a.swap(b);
+}
 
 template <size_t inline_target_size, bool require_inline, typename Result, typename... Args>
 bool operator==(const function<inline_target_size, require_inline, Result, Args...>& f,

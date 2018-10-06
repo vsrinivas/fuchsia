@@ -7,6 +7,7 @@
 
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
+#include <lib/fit/nullable.h>
 #include <unittest/unittest.h>
 
 namespace {
@@ -51,7 +52,19 @@ bool default_construction() {
 }
 
 template <typename T>
+bool null_construction() {
+    BEGIN_TEST;
+
+    fit::deferred_action<T> d(nullptr);
+    EXPECT_FALSE(d);
+
+    END_TEST;
+}
+
+template <typename T>
 bool basic() {
+    static_assert(fit::is_nullable<fit::deferred_action<T>>::value, "");
+
     BEGIN_TEST;
 
     int var = 0;
@@ -59,6 +72,10 @@ bool basic() {
         auto do_incr = fit::defer<T>([&var]() { incr_arg(&var); });
         EXPECT_TRUE(do_incr);
         EXPECT_EQ(var, 0);
+        EXPECT_FALSE(do_incr == nullptr);
+        EXPECT_FALSE(nullptr == do_incr);
+        EXPECT_TRUE(do_incr != nullptr);
+        EXPECT_TRUE(nullptr != do_incr);
     }
     EXPECT_EQ(var, 1);
 
@@ -78,6 +95,10 @@ bool cancel() {
         do_incr.cancel();
         EXPECT_FALSE(do_incr);
         EXPECT_EQ(var, 0);
+        EXPECT_TRUE(do_incr == nullptr);
+        EXPECT_TRUE(nullptr == do_incr);
+        EXPECT_FALSE(do_incr != nullptr);
+        EXPECT_FALSE(nullptr != do_incr);
 
         // Once cancelled, call has no effect.
         do_incr.call();
@@ -85,6 +106,50 @@ bool cancel() {
         EXPECT_EQ(var, 0);
     }
     EXPECT_EQ(var, 0);
+
+    END_TEST;
+}
+
+template <typename T>
+bool null_assignment() {
+    BEGIN_TEST;
+
+    int var = 0;
+    {
+        auto do_incr = fit::defer<T>([&var]() { incr_arg(&var); });
+        EXPECT_TRUE(do_incr);
+        EXPECT_EQ(var, 0);
+
+        do_incr = nullptr;
+        EXPECT_FALSE(do_incr);
+        EXPECT_EQ(var, 0);
+
+        // Once cancelled, call has no effect.
+        do_incr.call();
+        EXPECT_FALSE(do_incr);
+        EXPECT_EQ(var, 0);
+    }
+    EXPECT_EQ(var, 0);
+
+    END_TEST;
+}
+
+template <typename T>
+bool target_reassignment() {
+    BEGIN_TEST;
+
+    int var = 0;
+    {
+        fit::deferred_action<T> do_incr;
+        do_incr = []() { assert(false); };
+        EXPECT_TRUE(do_incr);
+        EXPECT_EQ(var, 0);
+
+        do_incr = [&var]() { incr_arg(&var); };
+        EXPECT_TRUE(do_incr);
+        EXPECT_EQ(var, 0);
+    }
+    EXPECT_EQ(var, 1);
 
     END_TEST;
 }
@@ -218,6 +283,13 @@ bool move_assign_basic() {
         // do_incr2 is moved-to, so its associated function is called.
         do_incr2 = std::move(do_incr);
         EXPECT_FALSE(do_incr);
+        EXPECT_TRUE(do_incr2);
+        EXPECT_EQ(var1, 0);
+        EXPECT_EQ(var2, 1);
+
+        // self-assignment does nothing
+        do_incr = std::move(do_incr);
+        do_incr2 = std::move(do_incr2);
         EXPECT_TRUE(do_incr2);
         EXPECT_EQ(var1, 0);
         EXPECT_EQ(var2, 1);
@@ -485,10 +557,16 @@ bool target_destroyed_when_move_assigned() {
 BEGIN_TEST_CASE(defer_tests)
 RUN_TEST(default_construction<fit::closure>)
 RUN_TEST(default_construction<std::function<void()>>)
+RUN_TEST(null_construction<fit::closure>)
+RUN_TEST(null_construction<std::function<void()>>)
 RUN_TEST(basic<fit::closure>)
 RUN_TEST(basic<std::function<void()>>)
 RUN_TEST(cancel<fit::closure>)
 RUN_TEST(cancel<std::function<void()>>)
+RUN_TEST(null_assignment<fit::closure>)
+RUN_TEST(null_assignment<std::function<void()>>)
+RUN_TEST(target_reassignment<fit::closure>)
+RUN_TEST(target_reassignment<std::function<void()>>)
 RUN_TEST(call<fit::closure>)
 RUN_TEST(call<std::function<void()>>)
 RUN_TEST(recursive_call<fit::closure>)

@@ -5,10 +5,9 @@
 #ifndef LIB_FIT_DEFER_H_
 #define LIB_FIT_DEFER_H_
 
-#include <new>
 #include <utility>
 
-#include "traits_internal.h"
+#include "nullable.h"
 
 namespace fit {
 
@@ -24,24 +23,16 @@ template <typename T>
 class deferred_action {
 public:
     // Creates a deferred action without a pending target.
-    deferred_action()
-        : pending_(false) {}
+    deferred_action() = default;
+    explicit deferred_action(decltype(nullptr)) {}
 
     // Creates a deferred action with a pending target.
-    explicit deferred_action(T target) {
-        if (fit::internal::is_null(target)) {
-            pending_ = false;
-        } else {
-            pending_ = true;
-            new (&target_) T(std::move(target));
-        }
-    }
+    explicit deferred_action(T target)
+        : target_(std::move(target)) {}
 
     // Creates a deferred action with a pending target moved from another
     // deferred action, leaving the other one without a pending target.
-    deferred_action(deferred_action&& other) {
-        move_from(std::move(other));
-    }
+    deferred_action(deferred_action&& other) = default;
 
     // Invokes and releases the deferred action's pending target (if any).
     ~deferred_action() {
@@ -50,25 +41,26 @@ public:
 
     // Returns true if the deferred action has a pending target.
     explicit operator bool() const {
-        return pending_;
+        return !!target_;
     }
 
     // Invokes and releases the deferred action's pending target (if any),
     // then move-assigns it from another deferred action, leaving the latter
     // one without a pending target.
     deferred_action& operator=(deferred_action&& other) {
+        if (&other == this)
+            return *this;
         call();
-        move_from(std::move(other));
+        target_ = std::move(other.target_);
         return *this;
     }
 
     // Invokes and releases the deferred action's pending target (if any).
     void call() {
-        if (pending_) {
+        if (target_) {
             // Move to a local to guard against re-entrance.
-            T local_target = std::move(target_);
-            pending_ = false;
-            target_.~T();
+            T local_target = std::move(*target_);
+            target_.reset();
             local_target();
         }
     }
@@ -76,35 +68,42 @@ public:
     // Releases the deferred action's pending target (if any) without
     // invoking it.
     void cancel() {
-        if (pending_) {
-            pending_ = false;
-            target_.~T();
-        }
+        target_.reset();
+    }
+    deferred_action& operator=(decltype(nullptr)) {
+        cancel();
+        return *this;
+    }
+
+    // Assigns a new target to the deferred action.
+    deferred_action& operator=(T target) {
+        target_ = std::move(target);
+        return *this;
     }
 
     deferred_action(const deferred_action& other) = delete;
     deferred_action& operator=(const deferred_action& other) = delete;
 
 private:
-    void move_from(deferred_action&& other) {
-        if (this == &other)
-            return;
-        pending_ = other.pending_;
-        if (pending_) {
-            new (&target_) T(std::move(other.target_));
-            other.target_.~T();
-            other.pending_ = false;
-        }
-    }
-
-    bool pending_;
-
-    // Storage for the target.
-    // The target is only initialized when the call is pending.
-    union {
-        T target_;
-    };
+    nullable<T> target_;
 };
+
+template <typename T>
+bool operator==(const deferred_action<T>& action, decltype(nullptr)) {
+    return !action;
+}
+template <typename T>
+bool operator==(decltype(nullptr), const deferred_action<T>& action) {
+    return !action;
+}
+template <typename T>
+bool operator!=(const deferred_action<T>& action, decltype(nullptr)) {
+    return !!action;
+}
+template <typename T>
+bool operator!=(decltype(nullptr), const deferred_action<T>& action) {
+    return !!action;
+}
 
 // Defers execution of a function-like callable target with no arguments
 // until the value returned by this function goes out of scope unless canceled,
