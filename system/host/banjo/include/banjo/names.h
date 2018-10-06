@@ -5,9 +5,9 @@
 #ifndef ZIRCON_SYSTEM_HOST_BANJO_INCLUDE_BANJO_C_NAMES_H_
 #define ZIRCON_SYSTEM_HOST_BANJO_INCLUDE_BANJO_C_NAMES_H_
 
+#include <sstream>
 #include <string>
 
-#include "c_generator.h"
 #include "flat_ast.h"
 #include "raw_ast.h"
 #include "string_view.h"

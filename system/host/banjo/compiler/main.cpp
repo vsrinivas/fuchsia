@@ -15,7 +15,6 @@
 #include <utility>
 #include <vector>
 
-#include <banjo/c_generator.h>
 #include <banjo/ddk_generator.h>
 #include <banjo/flat_ast.h>
 #include <banjo/identifier_table.h>
@@ -31,33 +30,12 @@ namespace {
 
 void Usage() {
     std::cout
-        << "usage: banjoc [--c-header HEADER_PATH]\n"
-           "             [--c-client CLIENT_PATH]\n"
-           "             [--c-server SERVER_PATH]\n"
-           "             [--tables TABLES_PATH]\n"
-           "             [--header-includes HEADER_FILE]\n"
-           "             [--ddk-header HEADER_PATH]\n"
-           "             [--ddktl-header HEADER_PATH]\n"
-           "             [--json JSON_PATH]\n"
-           "             [--name LIBRARY_NAME]\n"
-           "             [--files [BANJO_FILE...]...]\n"
-           "             [--help]\n"
-           "\n"
-           " * `--c-header HEADER_PATH`. If present, this flag instructs `banjoc` to output\n"
-           "   a C header at the given path.\n"
-           "\n"
-           " * `--c-client CLIENT_PATH`. If present, this flag instructs `banjoc` to output\n"
-           "   the simple C client implementation at the given path.\n"
-           "\n"
-           " * `--c-server SERVER_PATH`. If present, this flag instructs `banjoc` to output\n"
-           "   the simple C server implementation at the given path.\n"
-           "\n"
-           " * `--tables TABLES_PATH`. If present, this flag instructs `banjoc` to output\n"
-           "   coding tables at the given path. The coding tables are required to encode and\n"
-           "   decode messages from the C and C++ bindings.\n"
-           "\n"
-           " * `--header-includes [HEADER_FILE...]...`. Each `--header-include [HEADER_FILE...]\n"
-           "   chunk of arguments describes a C/C++ header to include in the generated ddktl file.\n"
+        << "usage: banjoc [--ddk-header HEADER_PATH]\n"
+           "              [--ddktl-header HEADER_PATH]\n"
+           "              [--json JSON_PATH]\n"
+           "              [--name LIBRARY_NAME]\n"
+           "              [--files [BANJO_FILE...]...]\n"
+           "              [--help]\n"
            "\n"
            " * `--ddk-header HEADER_PATH`. If present, this flag instructs `banjoc` to output\n"
            "   a C ddk header at the given path.\n"
@@ -225,10 +203,6 @@ private:
 };
 
 enum struct Behavior {
-    kCHeader,
-    kCClient,
-    kCServer,
-    kTables,
     kDdkHeader,
     kDdktlHeader,
     kDdktlInternalHeader,
@@ -293,14 +267,6 @@ int main(int argc, char* argv[]) {
         if (behavior_argument == "--help") {
             Usage();
             exit(0);
-        } else if (behavior_argument == "--c-header") {
-            outputs.emplace(Behavior::kCHeader, Open(args->Claim(), std::ios::out));
-        } else if (behavior_argument == "--c-client") {
-            outputs.emplace(Behavior::kCClient, Open(args->Claim(), std::ios::out));
-        } else if (behavior_argument == "--c-server") {
-            outputs.emplace(Behavior::kCServer, Open(args->Claim(), std::ios::out));
-        } else if (behavior_argument == "--tables") {
-            outputs.emplace(Behavior::kTables, Open(args->Claim(), std::ios::out));
         } else if (behavior_argument == "--ddk-header") {
             outputs.emplace(Behavior::kDdkHeader, Open(args->Claim(), std::ios::out));
         } else if (behavior_argument == "--ddktl-header") {
@@ -388,26 +354,6 @@ int main(int argc, char* argv[]) {
         auto& output_file = output.second;
 
         switch (behavior) {
-        case Behavior::kCHeader: {
-            banjo::CGenerator generator(final_library);
-            Write(generator.ProduceHeader(), std::move(output_file));
-            break;
-        }
-        case Behavior::kCClient: {
-            banjo::CGenerator generator(final_library);
-            Write(generator.ProduceClient(), std::move(output_file));
-            break;
-        }
-        case Behavior::kCServer: {
-            banjo::CGenerator generator(final_library);
-            Write(generator.ProduceServer(), std::move(output_file));
-            break;
-        }
-        case Behavior::kTables: {
-            banjo::TablesGenerator generator(final_library);
-            Write(generator.Produce(), std::move(output_file));
-            break;
-        }
         case Behavior::kDdkHeader: {
             banjo::DdkGenerator generator(final_library);
             Write(generator.ProduceHeader(), std::move(output_file));
