@@ -27,6 +27,7 @@ KCOUNTER(profile_create, "kernel.profile.create");
 KCOUNTER(profile_set,    "kernel.profile.set");
 
 
+// zx_status_t zx_profile_create
 zx_status_t sys_profile_create(zx_handle_t resource,
                                user_in_ptr<const zx_profile_info_t> user_profile_info,
                                user_out_handle* out) {
@@ -50,6 +51,7 @@ zx_status_t sys_profile_create(zx_handle_t resource,
     return out->make(fbl::move(dispatcher), rights);
 }
 
+// zx_status_t zx_object_set_profile
 zx_status_t sys_object_set_profile(zx_handle_t handle,
                                    zx_handle_t profile_handle,
                                    uint32_t options) {

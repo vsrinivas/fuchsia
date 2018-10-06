@@ -140,6 +140,7 @@ zx_status_t validate_thread_state_input(uint32_t in_topic, size_t in_len, size_t
 
 } // namespace
 
+// zx_status_t zx_thread_create
 zx_status_t sys_thread_create(zx_handle_t process_handle,
                               user_in_ptr<const char> _name, size_t name_len,
                               uint32_t options, user_out_handle* out) {
@@ -186,6 +187,7 @@ zx_status_t sys_thread_create(zx_handle_t process_handle,
     return out->make(fbl::move(thread_dispatcher), thread_rights);
 }
 
+// zx_status_t zx_thread_start
 zx_status_t sys_thread_start(zx_handle_t thread_handle, zx_vaddr_t entry,
                              zx_vaddr_t stack, uintptr_t arg1, uintptr_t arg2) {
     LTRACEF("handle %x, entry %#" PRIxPTR ", sp %#" PRIxPTR
@@ -214,6 +216,7 @@ void sys_thread_exit() {
     ThreadDispatcher::GetCurrent()->Exit();
 }
 
+// zx_status_t zx_thread_read_state
 zx_status_t sys_thread_read_state(zx_handle_t handle, uint32_t state_kind,
                                   user_out_ptr<void> _buffer, size_t buffer_len) {
     LTRACEF("handle %x, state_kind %u\n", handle, state_kind);
@@ -242,6 +245,7 @@ zx_status_t sys_thread_read_state(zx_handle_t handle, uint32_t state_kind,
     return ZX_OK;
 }
 
+// zx_status_t zx_thread_write_state
 zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t state_kind,
                                    user_in_ptr<const void> _buffer, size_t buffer_len) {
     LTRACEF("handle %x, state_kind %u\n", handle, state_kind);
@@ -274,6 +278,7 @@ zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t state_kind,
 }
 
 // See ZX-940
+// zx_status_t zx_thread_set_priority
 zx_status_t sys_thread_set_priority(int32_t prio) {
 #if THREAD_SET_PRIORITY_EXPERIMENT
     // If the experimental zx_thread_set_priority has not been enabled using the
@@ -292,6 +297,7 @@ zx_status_t sys_thread_set_priority(int32_t prio) {
 #endif
 }
 
+// zx_status_t zx_task_suspend
 zx_status_t sys_task_suspend(zx_handle_t task_handle, user_out_handle* token) {
     LTRACE_ENTRY;
 
@@ -312,10 +318,12 @@ zx_status_t sys_task_suspend(zx_handle_t task_handle, user_out_handle* token) {
     return status;
 }
 
+// zx_status_t zx_task_suspend_token
 zx_status_t sys_task_suspend_token(zx_handle_t task_handle, user_out_handle* token) {
     return sys_task_suspend(task_handle, token);
 }
 
+// zx_status_t zx_process_create
 zx_status_t sys_process_create(zx_handle_t job_handle,
                                user_in_ptr<const char> _name, size_t name_len,
                                uint32_t options,
@@ -386,6 +394,7 @@ zx_status_t sys_process_create(zx_handle_t job_handle,
 // - maintains the state machine invariant that 'started' processes have one
 //   thread running
 
+// zx_status_t zx_process_start
 zx_status_t sys_process_start(zx_handle_t process_handle, zx_handle_t thread_handle,
                               zx_vaddr_t pc, zx_vaddr_t sp,
                               zx_handle_t arg_handle_value, uintptr_t arg2) {
@@ -443,6 +452,7 @@ void sys_process_exit(int64_t retcode) {
     ProcessDispatcher::GetCurrent()->Exit(retcode);
 }
 
+// zx_status_t zx_process_read_memory
 zx_status_t sys_process_read_memory(zx_handle_t proc, zx_vaddr_t vaddr,
                                     user_out_ptr<void> _buffer,
                                     size_t len, user_out_ptr<size_t> _actual) {
@@ -512,6 +522,7 @@ zx_status_t sys_process_read_memory(zx_handle_t proc, zx_vaddr_t vaddr,
     return st;
 }
 
+// zx_status_t zx_process_write_memory
 zx_status_t sys_process_write_memory(zx_handle_t proc, zx_vaddr_t vaddr,
                                      user_in_ptr<const void> _buffer,
                                      size_t len, user_out_ptr<size_t> _actual) {
@@ -591,6 +602,7 @@ static zx_status_t kill_task(fbl::RefPtr<Dispatcher> dispatcher) {
     return ZX_OK;
 }
 
+// zx_status_t zx_task_kill
 zx_status_t sys_task_kill(zx_handle_t task_handle) {
     LTRACEF("handle %x\n", task_handle);
 
@@ -614,6 +626,7 @@ zx_status_t sys_task_kill(zx_handle_t task_handle) {
     }
 }
 
+// zx_status_t zx_job_create
 zx_status_t sys_job_create(zx_handle_t parent_job, uint32_t options,
                            user_out_handle* out) {
     LTRACEF("parent: %x\n", parent_job);
@@ -642,6 +655,7 @@ zx_status_t sys_job_create(zx_handle_t parent_job, uint32_t options,
     return status;
 }
 
+// zx_status_t zx_job_set_policy
 zx_status_t sys_job_set_policy(zx_handle_t job_handle, uint32_t options,
                                uint32_t topic, user_in_ptr<const void> _policy,
                                uint32_t count) {

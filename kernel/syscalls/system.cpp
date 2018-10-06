@@ -219,6 +219,7 @@ void mexec_stash_crashlog(fbl::RefPtr<VmObject> vmo) {
     stashed_crashlog = fbl::move(vmo);
 }
 
+// zx_status_t zx_system_mexec
 zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo) {
     // TODO(ZX-971): finer grained validation
     zx_status_t result = validate_resource(resource, ZX_RSRC_KIND_ROOT);
@@ -367,6 +368,7 @@ static void platform_graceful_halt(platform_halt_action action) {
     panic("ERROR: failed to halt the platform\n");
 }
 
+// zx_status_t zx_system_powerctl
 zx_status_t sys_system_powerctl(zx_handle_t root_rsrc, uint32_t cmd,
                                 user_in_ptr<const zx_system_powerctl_arg_t> raw_arg) {
 

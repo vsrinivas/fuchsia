@@ -23,6 +23,7 @@
 
 #define LOCAL_TRACE 0
 
+// zx_status_t zx_port_create
 zx_status_t sys_port_create(uint32_t options, user_out_handle* out) {
     LTRACEF("options %u\n", options);
     auto up = ProcessDispatcher::GetCurrent();
@@ -45,6 +46,7 @@ zx_status_t sys_port_create(uint32_t options, user_out_handle* out) {
     return result;
 }
 
+// zx_status_t zx_port_queue
 zx_status_t sys_port_queue(zx_handle_t handle, user_in_ptr<const zx_port_packet_t> packet_in) {
     LTRACEF("handle %x\n", handle);
 
@@ -63,6 +65,7 @@ zx_status_t sys_port_queue(zx_handle_t handle, user_in_ptr<const zx_port_packet_
     return port->QueueUser(packet);
 }
 
+// zx_status_t zx_port_wait
 zx_status_t sys_port_wait(zx_handle_t handle, zx_time_t deadline,
                           user_out_ptr<zx_port_packet_t> packet_out) {
     LTRACEF("handle %x\n", handle);
@@ -91,6 +94,7 @@ zx_status_t sys_port_wait(zx_handle_t handle, zx_time_t deadline,
     return ZX_OK;
 }
 
+// zx_status_t zx_port_cancel
 zx_status_t sys_port_cancel(zx_handle_t handle, zx_handle_t source, uint64_t key) {
     auto up = ProcessDispatcher::GetCurrent();
 

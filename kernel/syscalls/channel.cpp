@@ -48,6 +48,7 @@ static void record_recv_msg_sz(uint32_t size) {
     }
 }
 
+// zx_status_t zx_channel_create
 zx_status_t sys_channel_create(uint32_t options,
                                user_out_handle* out0, user_out_handle* out1) {
     if (options != 0u)
@@ -168,6 +169,7 @@ static zx_status_t channel_read(zx_handle_t handle_value, uint32_t options,
     return result;
 }
 
+// zx_status_t zx_channel_read
 zx_status_t sys_channel_read(zx_handle_t handle_value, uint32_t options,
                              user_out_ptr<void> bytes,
                              user_out_ptr<zx_handle_t> handle_info,
@@ -178,6 +180,7 @@ zx_status_t sys_channel_read(zx_handle_t handle_value, uint32_t options,
         bytes, handle_info, num_bytes, num_handles, actual_bytes, actual_handles);
 }
 
+// zx_status_t zx_channel_read_etc
 zx_status_t sys_channel_read_etc(zx_handle_t handle_value, uint32_t options,
                              user_out_ptr<void> bytes,
                              user_out_ptr<zx_handle_info_t> handle_info,
@@ -271,6 +274,7 @@ static zx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg,
     return status;
 }
 
+// zx_status_t zx_channel_write
 zx_status_t sys_channel_write(zx_handle_t handle_value, uint32_t options,
                               user_in_ptr<const void> user_bytes, uint32_t num_bytes,
                               user_in_ptr<const zx_handle_t> user_handles, uint32_t num_handles) {
@@ -313,6 +317,7 @@ zx_status_t sys_channel_write(zx_handle_t handle_value, uint32_t options,
     return ZX_OK;
 }
 
+// zx_status_t zx_channel_call_noretry
 zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
                                      zx_time_t deadline,
                                      user_in_ptr<const zx_channel_call_args_t> user_args,
@@ -369,6 +374,7 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
     return channel_call_epilogue(up, fbl::move(reply), &args, actual_bytes, actual_handles);
 }
 
+// zx_status_t zx_channel_call_finish
 zx_status_t sys_channel_call_finish(zx_time_t deadline,
                                     user_in_ptr<const zx_channel_call_args_t> user_args,
                                     user_out_ptr<uint32_t> actual_bytes,

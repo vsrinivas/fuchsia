@@ -44,6 +44,7 @@
 
 #define LOCAL_TRACE 0
 
+// zx_status_t zx_vmo_create_contiguous
 zx_status_t sys_vmo_create_contiguous(zx_handle_t bti, size_t size, uint32_t alignment_log2,
                                       user_out_handle* out) {
     LTRACEF("size 0x%zu\n", size);
@@ -88,6 +89,7 @@ zx_status_t sys_vmo_create_contiguous(zx_handle_t bti, size_t size, uint32_t ali
     return out->make(fbl::move(dispatcher), rights);
 }
 
+// zx_status_t zx_vmo_create_physical
 zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, uintptr_t paddr, size_t size,
                                     user_out_handle* out) {
     LTRACEF("size 0x%zu\n", size);
@@ -121,6 +123,7 @@ zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, uintptr_t paddr, size_t s
     return out->make(fbl::move(dispatcher), rights);
 }
 
+// zx_status_t zx_framebuffer_get_info
 zx_status_t sys_framebuffer_get_info(zx_handle_t handle, user_out_ptr<uint32_t> format,
                                      user_out_ptr<uint32_t> width, user_out_ptr<uint32_t> height,
                                      user_out_ptr<uint32_t> stride) {
@@ -148,6 +151,7 @@ zx_status_t sys_framebuffer_get_info(zx_handle_t handle, user_out_ptr<uint32_t> 
 #endif
 }
 
+// zx_status_t zx_framebuffer_set_range
 zx_status_t sys_framebuffer_set_range(zx_handle_t hrsrc, zx_handle_t vmo_handle, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride) {
     zx_status_t status;
     if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0)
@@ -182,6 +186,7 @@ zx_status_t sys_framebuffer_set_range(zx_handle_t hrsrc, zx_handle_t vmo_handle,
     return ZX_OK;
 }
 
+// zx_status_t zx_iommu_create
 zx_status_t sys_iommu_create(zx_handle_t rsrc_handle, uint32_t type,
                              user_in_ptr<const void> desc, size_t desc_len,
                              user_out_handle* out) {
@@ -224,6 +229,7 @@ zx_status_t sys_iommu_create(zx_handle_t rsrc_handle, uint32_t type,
 #include <arch/x86/descriptor.h>
 #include <arch/x86/ioport.h>
 
+// zx_status_t zx_ioports_request
 zx_status_t sys_ioports_request(zx_handle_t hrsrc, uint16_t io_addr, uint32_t len) {
     zx_status_t status;
     if ((status = validate_resource_ioport(hrsrc, io_addr, len)) != ZX_OK) {
@@ -235,12 +241,14 @@ zx_status_t sys_ioports_request(zx_handle_t hrsrc, uint16_t io_addr, uint32_t le
     return IoBitmap::GetCurrent().SetIoBitmap(io_addr, len, 1);
 }
 #else
+// zx_status_t zx_ioports_request
 zx_status_t sys_ioports_request(zx_handle_t hrsrc, uint16_t io_addr, uint32_t len) {
     // doesn't make sense on non-x86
     return ZX_ERR_NOT_SUPPORTED;
 }
 #endif
 
+// zx_status_t zx_pc_firmware_tables
 zx_status_t sys_pc_firmware_tables(zx_handle_t hrsrc, user_out_ptr<zx_paddr_t> acpi_rsdp,
                                    user_out_ptr<zx_paddr_t> smbios) {
     // TODO(ZX-971): finer grained validation
@@ -261,6 +269,7 @@ zx_status_t sys_pc_firmware_tables(zx_handle_t hrsrc, user_out_ptr<zx_paddr_t> a
     return ZX_ERR_NOT_SUPPORTED;
 }
 
+// zx_status_t zx_bti_create
 zx_status_t sys_bti_create(zx_handle_t iommu, uint32_t options, uint64_t bti_id,
                            user_out_handle* out) {
     auto up = ProcessDispatcher::GetCurrent();
@@ -289,6 +298,7 @@ zx_status_t sys_bti_create(zx_handle_t iommu, uint32_t options, uint64_t bti_id,
     return out->make(fbl::move(dispatcher), rights);
 }
 
+// zx_status_t zx_bti_pin
 zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint64_t offset,
                         uint64_t size, user_out_ptr<zx_paddr_t> addrs, size_t addrs_count,
                         user_out_handle* pmt) {
@@ -385,6 +395,7 @@ zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint
     return pmt->make(fbl::move(new_pmt), new_pmt_rights);
 }
 
+// zx_status_t zx_bti_release_quarantine
 zx_status_t sys_bti_release_quarantine(zx_handle_t bti) {
     auto up = ProcessDispatcher::GetCurrent();
     fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher;
@@ -404,6 +415,7 @@ zx_status_t sys_bti_release_quarantine(zx_handle_t bti) {
 // particular, PMTs are the only objects in the system that track the lifetime
 // of something external to the process model (external hardware DMA
 // capabilities).
+// zx_status_t zx_pmt_unpin
 zx_status_t sys_pmt_unpin(zx_handle_t pmt) {
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -420,6 +432,7 @@ zx_status_t sys_pmt_unpin(zx_handle_t pmt) {
     return ZX_OK;
 }
 
+// zx_status_t zx_interrupt_create
 zx_status_t sys_interrupt_create(zx_handle_t src_obj, uint32_t src_num,
                                  uint32_t options, user_out_handle* out_handle) {
     LTRACEF("options 0x%x\n", options);
@@ -446,6 +459,7 @@ zx_status_t sys_interrupt_create(zx_handle_t src_obj, uint32_t src_num,
     return out_handle->make(fbl::move(dispatcher), rights);
 }
 
+// zx_status_t zx_interrupt_bind
 zx_status_t sys_interrupt_bind(zx_handle_t inth, zx_handle_t porth,
                                uint64_t key, uint32_t options) {
     LTRACEF("handle %x\n", inth);
@@ -472,6 +486,7 @@ zx_status_t sys_interrupt_bind(zx_handle_t inth, zx_handle_t porth,
     return interrupt->Bind(port, interrupt, key);
 }
 
+// zx_status_t zx_interrupt_ack
 zx_status_t sys_interrupt_ack(zx_handle_t inth) {
     LTRACEF("handle %x\n", inth);
 
@@ -484,6 +499,7 @@ zx_status_t sys_interrupt_ack(zx_handle_t inth) {
     return interrupt->Ack();
 }
 
+// zx_status_t zx_interrupt_wait
 zx_status_t sys_interrupt_wait(zx_handle_t handle, user_out_ptr<zx_time_t> out_timestamp) {
     LTRACEF("handle %x\n", handle);
 
@@ -501,6 +517,7 @@ zx_status_t sys_interrupt_wait(zx_handle_t handle, user_out_ptr<zx_time_t> out_t
     return status;
 }
 
+// zx_status_t zx_interrupt_destroy
 zx_status_t sys_interrupt_destroy(zx_handle_t handle) {
     LTRACEF("handle %x\n", handle);
 
@@ -513,6 +530,7 @@ zx_status_t sys_interrupt_destroy(zx_handle_t handle) {
     return interrupt->Destroy();
 }
 
+// zx_status_t zx_interrupt_trigger
 zx_status_t sys_interrupt_trigger(zx_handle_t handle,
                                   uint32_t options,
                                   zx_time_t timestamp) {
@@ -532,6 +550,7 @@ zx_status_t sys_interrupt_trigger(zx_handle_t handle,
     return interrupt->Trigger(timestamp);
 }
 
+// zx_status_t zx_smc_call
 zx_status_t sys_smc_call(zx_handle_t handle,
                          user_in_ptr<const zx_smc_parameters_t> parameters,
                          user_out_ptr<zx_smc_result_t> out_smc_result) {

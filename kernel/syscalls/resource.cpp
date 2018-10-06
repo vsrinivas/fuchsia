@@ -27,6 +27,7 @@
 // |parent_rsrc| must be a resource of kind ZX_RSRC_KIND_ROOT. |base|
 // and detail an inclusive range from |base| to |base| + |size| for
 // the child resource.
+// zx_status_t zx_resource_create
 zx_status_t sys_resource_create(zx_handle_t parent_rsrc,
                                 uint32_t options,
                                 uint64_t base,

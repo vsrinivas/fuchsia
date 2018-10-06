@@ -36,6 +36,7 @@ constexpr uint32_t kMaxWaitHandleCount = 16u;
 // ensure public headers agree
 static_assert(ZX_WAIT_MANY_MAX_ITEMS == kMaxWaitHandleCount, "");
 
+// zx_status_t zx_object_wait_one
 zx_status_t sys_object_wait_one(zx_handle_t handle_value,
                                 zx_signals_t signals,
                                 zx_time_t deadline,
@@ -91,6 +92,7 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value,
     return result;
 }
 
+// zx_status_t zx_object_wait_many
 zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size_t count, zx_time_t deadline) {
     LTRACEF("count %zu\n", count);
 
@@ -164,6 +166,7 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
     return result;
 }
 
+// zx_status_t zx_object_wait_async
 zx_status_t sys_object_wait_async(zx_handle_t handle_value, zx_handle_t port_handle,
                                   uint64_t key, zx_signals_t signals, uint32_t options) {
     LTRACEF("handle %x\n", handle_value);

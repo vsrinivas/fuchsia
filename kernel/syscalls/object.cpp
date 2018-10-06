@@ -121,6 +121,7 @@ zx_status_t single_record_result(user_out_ptr<void> _buffer, size_t buffer_size,
 // if there is not enough buffer space provided.
 // This allows for zx_object_get_info(handle, topic, &info, sizeof(info), NULL, NULL)
 
+// zx_status_t zx_object_get_info
 zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
                                 user_out_ptr<void> _buffer, size_t buffer_size,
                                 user_out_ptr<size_t> _actual, user_out_ptr<size_t> _avail) {
@@ -637,6 +638,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
     }
 }
 
+// zx_status_t zx_object_get_property
 zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
                                     user_out_ptr<void> _value, size_t size) {
     if (!_value)
@@ -756,6 +758,7 @@ static zx_status_t is_current_thread(fbl::RefPtr<Dispatcher>* dispatcher) {
     return ZX_OK;
 }
 
+// zx_status_t zx_object_set_property
 zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
                                     user_in_ptr<const void> _value, size_t size) {
     if (!_value)
@@ -854,6 +857,7 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
     return ZX_ERR_INVALID_ARGS;
 }
 
+// zx_status_t zx_object_signal
 zx_status_t sys_object_signal(zx_handle_t handle_value, uint32_t clear_mask, uint32_t set_mask) {
     LTRACEF("handle %x\n", handle_value);
 
@@ -867,6 +871,7 @@ zx_status_t sys_object_signal(zx_handle_t handle_value, uint32_t clear_mask, uin
     return dispatcher->user_signal(clear_mask, set_mask, false);
 }
 
+// zx_status_t zx_object_signal_peer
 zx_status_t sys_object_signal_peer(zx_handle_t handle_value, uint32_t clear_mask, uint32_t set_mask) {
     LTRACEF("handle %x\n", handle_value);
 
@@ -882,6 +887,7 @@ zx_status_t sys_object_signal_peer(zx_handle_t handle_value, uint32_t clear_mask
 
 // Given a kernel object with children objects, obtain a handle to the
 // child specified by the provided kernel object id.
+// zx_status_t zx_object_get_child
 zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid,
                                  zx_rights_t rights, user_out_handle* out) {
     auto up = ProcessDispatcher::GetCurrent();
@@ -923,6 +929,7 @@ zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid,
     return ZX_ERR_WRONG_TYPE;
 }
 
+// zx_status_t zx_object_set_cookie
 zx_status_t sys_object_set_cookie(zx_handle_t handle, zx_handle_t hscope, uint64_t cookie) {
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -941,6 +948,7 @@ zx_status_t sys_object_set_cookie(zx_handle_t handle, zx_handle_t hscope, uint64
     return dispatcher->SetCookie(dispatcher->get_cookie_jar(), scope, cookie);
 }
 
+// zx_status_t zx_object_get_cookie
 zx_status_t sys_object_get_cookie(zx_handle_t handle, zx_handle_t hscope, user_out_ptr<uint64_t> _cookie) {
     auto up = ProcessDispatcher::GetCurrent();
 

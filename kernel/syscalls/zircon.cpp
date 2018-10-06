@@ -41,6 +41,7 @@
 constexpr size_t kMaxCPRNGDraw = ZX_CPRNG_DRAW_MAX_LEN;
 constexpr size_t kMaxCPRNGSeed = ZX_CPRNG_ADD_ENTROPY_MAX_LEN;
 
+// zx_status_t zx_nanosleep
 zx_status_t sys_nanosleep(zx_time_t deadline) {
     LTRACEF("nseconds %" PRIi64 "\n", deadline);
 
@@ -76,6 +77,7 @@ zx_time_t sys_clock_get(zx_clock_t clock_id) {
     }
 }
 
+// zx_status_t zx_clock_get_new
 zx_status_t sys_clock_get_new(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_time) {
     zx_time_t time;
     switch (clock_id) {
@@ -99,6 +101,7 @@ zx_time_t sys_clock_get_monotonic() {
     return current_time();
 }
 
+// zx_status_t zx_clock_adjust
 zx_status_t sys_clock_adjust(zx_handle_t hrsrc, zx_clock_t clock_id, int64_t offset) {
     // TODO(ZX-971): finer grained validation
     zx_status_t status;
@@ -117,6 +120,7 @@ zx_status_t sys_clock_adjust(zx_handle_t hrsrc, zx_clock_t clock_id, int64_t off
     }
 }
 
+// zx_status_t zx_event_create
 zx_status_t sys_event_create(uint32_t options, user_out_handle* event_out) {
     LTRACEF("options 0x%x\n", options);
 
@@ -137,6 +141,7 @@ zx_status_t sys_event_create(uint32_t options, user_out_handle* event_out) {
     return result;
 }
 
+// zx_status_t zx_eventpair_create
 zx_status_t sys_eventpair_create(uint32_t options,
                                  user_out_handle* out0,
                                  user_out_handle* out1) {
@@ -160,6 +165,7 @@ zx_status_t sys_eventpair_create(uint32_t options,
     return result;
 }
 
+// zx_status_t zx_debuglog_create
 zx_status_t sys_debuglog_create(zx_handle_t rsrc, uint32_t options,
                                 user_out_handle* out) {
     LTRACEF("options 0x%x\n", options);
@@ -189,6 +195,7 @@ zx_status_t sys_debuglog_create(zx_handle_t rsrc, uint32_t options,
     return out->make(fbl::move(dispatcher), rights);
 }
 
+// zx_status_t zx_debuglog_write
 zx_status_t sys_debuglog_write(zx_handle_t log_handle, uint32_t options,
                                user_in_ptr<const void> ptr, size_t len) {
     LTRACEF("log handle %x, opt %x, ptr 0x%p, len %zu\n", log_handle, options, ptr.get(), len);
@@ -213,6 +220,7 @@ zx_status_t sys_debuglog_write(zx_handle_t log_handle, uint32_t options,
     return log->Write(options, buf, len);
 }
 
+// zx_status_t zx_debuglog_read
 zx_status_t sys_debuglog_read(zx_handle_t log_handle, uint32_t options,
                               user_out_ptr<void> ptr, size_t len) {
     LTRACEF("log handle %x, opt %x, ptr 0x%p, len %zu\n", log_handle, options, ptr.get(), len);
@@ -238,14 +246,17 @@ zx_status_t sys_debuglog_read(zx_handle_t log_handle, uint32_t options,
     return static_cast<zx_status_t>(actual);
 }
 
+// zx_status_t zx_log_write
 zx_status_t sys_log_write(zx_handle_t log_handle, uint32_t len, user_in_ptr<const void> ptr, uint32_t options) {
     return sys_debuglog_write(log_handle, options, ptr, len);
 }
 
+// zx_status_t zx_log_read
 zx_status_t sys_log_read(zx_handle_t log_handle, uint32_t len, user_out_ptr<void> ptr, uint32_t options) {
     return sys_debuglog_read(log_handle, options, ptr, len);
 }
 
+// zx_status_t zx_cprng_draw_once
 zx_status_t sys_cprng_draw_once(user_out_ptr<void> buffer, size_t len) {
     if (len > kMaxCPRNGDraw)
         return ZX_ERR_INVALID_ARGS;
@@ -263,6 +274,7 @@ zx_status_t sys_cprng_draw_once(user_out_ptr<void> buffer, size_t len) {
     return ZX_OK;
 }
 
+// zx_status_t zx_cprng_add_entropy
 zx_status_t sys_cprng_add_entropy(user_in_ptr<const void> buffer, size_t len) {
     if (len > kMaxCPRNGSeed)
         return ZX_ERR_INVALID_ARGS;

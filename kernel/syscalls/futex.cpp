@@ -15,6 +15,7 @@
 
 #define LOCAL_TRACE 0
 
+// zx_status_t zx_futex_wait
 zx_status_t sys_futex_wait(user_in_ptr<const zx_futex_t> value_ptr, int32_t current_value, zx_time_t deadline) {
     LTRACEF("futex %p current %d\n", value_ptr.get(), current_value);
 
@@ -22,6 +23,7 @@ zx_status_t sys_futex_wait(user_in_ptr<const zx_futex_t> value_ptr, int32_t curr
         value_ptr, current_value, deadline);
 }
 
+// zx_status_t zx_futex_wake
 zx_status_t sys_futex_wake(user_in_ptr<const zx_futex_t> value_ptr, uint32_t count) {
     LTRACEF("futex %p count %" PRIu32 "\n", value_ptr.get(), count);
 
@@ -29,6 +31,7 @@ zx_status_t sys_futex_wake(user_in_ptr<const zx_futex_t> value_ptr, uint32_t cou
         value_ptr, count);
 }
 
+// zx_status_t zx_futex_requeue
 zx_status_t sys_futex_requeue(user_in_ptr<const zx_futex_t> wake_ptr, uint32_t wake_count, int32_t current_value,
                               user_in_ptr<const zx_futex_t> requeue_ptr, uint32_t requeue_count) {
     LTRACEF("futex %p wake_count %" PRIu32 "current_value %d "

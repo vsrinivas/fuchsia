@@ -23,6 +23,7 @@
 
 #define LOCAL_TRACE 0
 
+// zx_status_t zx_fifo_create
 zx_status_t sys_fifo_create(size_t count, size_t elemsize, uint32_t options,
                             user_out_handle* out0, user_out_handle* out1) {
     auto up = ProcessDispatcher::GetCurrent();
@@ -43,6 +44,7 @@ zx_status_t sys_fifo_create(size_t count, size_t elemsize, uint32_t options,
     return result;
 }
 
+// zx_status_t zx_fifo_write
 zx_status_t sys_fifo_write(zx_handle_t handle, size_t elem_size, user_in_ptr<const void> entries,
                            size_t count, user_out_ptr<size_t> actual_out) {
     auto up = ProcessDispatcher::GetCurrent();
@@ -65,6 +67,7 @@ zx_status_t sys_fifo_write(zx_handle_t handle, size_t elem_size, user_in_ptr<con
     return ZX_OK;
 }
 
+// zx_status_t zx_fifo_read
 zx_status_t sys_fifo_read(zx_handle_t handle, size_t elem_size, user_out_ptr<void> entries,
                           size_t count, user_out_ptr<size_t> actual_out) {
     auto up = ProcessDispatcher::GetCurrent();

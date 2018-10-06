@@ -129,6 +129,7 @@ static zx_status_t task_bind_exception_port(zx_handle_t obj_handle, zx_handle_t 
     return ZX_ERR_WRONG_TYPE;
 }
 
+// zx_status_t zx_task_bind_exception_port
 zx_status_t sys_task_bind_exception_port(zx_handle_t obj_handle, zx_handle_t eport_handle,
                                            uint64_t key, uint32_t options) {
     LTRACE_ENTRY;
@@ -151,6 +152,7 @@ zx_status_t sys_task_bind_exception_port(zx_handle_t obj_handle, zx_handle_t epo
     }
 }
 
+// zx_status_t zx_task_resume
 zx_status_t sys_task_resume(zx_handle_t handle, uint32_t options) {
     LTRACE_ENTRY;
 
@@ -191,6 +193,7 @@ zx_status_t sys_task_resume(zx_handle_t handle, uint32_t options) {
     }
 }
 
+// zx_status_t zx_task_resume_from_exception
 zx_status_t sys_task_resume_from_exception(zx_handle_t task_handle, zx_handle_t eport_handle,
                                            uint32_t options) {
     LTRACE_ENTRY;

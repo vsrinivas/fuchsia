@@ -32,6 +32,7 @@
 
 constexpr uint32_t kMaxDebugWriteSize = 256u;
 
+// zx_status_t zx_debug_read
 zx_status_t sys_debug_read(zx_handle_t handle, user_out_ptr<char> ptr, user_inout_ptr<size_t> len) {
     LTRACEF("ptr %p\n", ptr.get());
 
@@ -69,6 +70,7 @@ zx_status_t sys_debug_read(zx_handle_t handle, user_out_ptr<char> ptr, user_inou
     return len.copy_to_user(idx);
 }
 
+// zx_status_t zx_debug_write
 zx_status_t sys_debug_write(user_in_ptr<const char> ptr, size_t len) {
     LTRACEF("ptr %p, len %zu\n", ptr.get(), len);
 
@@ -87,6 +89,7 @@ zx_status_t sys_debug_write(user_in_ptr<const char> ptr, size_t len) {
     return ZX_OK;
 }
 
+// zx_status_t zx_debug_send_command
 zx_status_t sys_debug_send_command(zx_handle_t handle, user_in_ptr<const char> ptr, size_t len) {
     LTRACEF("ptr %p, len %zu\n", ptr.get(), len);
 
@@ -108,6 +111,7 @@ zx_status_t sys_debug_send_command(zx_handle_t handle, user_in_ptr<const char> p
     return console_run_script(buf);
 }
 
+// zx_status_t zx_ktrace_read
 zx_status_t sys_ktrace_read(zx_handle_t handle, user_out_ptr<void> _data,
                             uint32_t offset, size_t len,
                             user_out_ptr<size_t> _actual) {
@@ -124,6 +128,7 @@ zx_status_t sys_ktrace_read(zx_handle_t handle, user_out_ptr<void> _data,
     return _actual.copy_to_user(static_cast<size_t>(result));
 }
 
+// zx_status_t zx_ktrace_control
 zx_status_t sys_ktrace_control(
     zx_handle_t handle, uint32_t action, uint32_t options, user_inout_ptr<void> _ptr) {
     // TODO(ZX-971): finer grained validation
@@ -145,6 +150,7 @@ zx_status_t sys_ktrace_control(
     }
 }
 
+// zx_status_t zx_ktrace_write
 zx_status_t sys_ktrace_write(zx_handle_t handle, uint32_t event_id, uint32_t arg0, uint32_t arg1) {
     // TODO(ZX-971): finer grained validation
     zx_status_t status;
@@ -167,6 +173,7 @@ zx_status_t sys_ktrace_write(zx_handle_t handle, uint32_t event_id, uint32_t arg
     return ZX_OK;
 }
 
+// zx_status_t zx_mtrace_control
 zx_status_t sys_mtrace_control(zx_handle_t handle,
                                uint32_t kind, uint32_t action, uint32_t options,
                                user_inout_ptr<void> ptr, size_t size) {

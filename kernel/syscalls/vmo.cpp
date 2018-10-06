@@ -37,6 +37,7 @@ static_assert(ZX_CACHE_POLICY_WRITE_COMBINING == ARCH_MMU_FLAG_WRITE_COMBINING,
 static_assert(ZX_CACHE_POLICY_MASK == ARCH_MMU_FLAG_CACHE_MASK,
               "Cache policy constant mismatch - CACHE_MASK");
 
+// zx_status_t zx_vmo_create
 zx_status_t sys_vmo_create(uint64_t size, uint32_t options,
                            user_out_handle* out) {
     LTRACEF("size %#" PRIx64 "\n", size);
@@ -69,6 +70,7 @@ zx_status_t sys_vmo_create(uint64_t size, uint32_t options,
     return out->make(fbl::move(dispatcher), rights);
 }
 
+// zx_status_t zx_vmo_read
 zx_status_t sys_vmo_read(zx_handle_t handle, user_out_ptr<void> _data,
                          uint64_t offset, size_t len) {
     LTRACEF("handle %x, data %p, offset %#" PRIx64 ", len %#zx\n",
@@ -105,6 +107,7 @@ zx_status_t sys_vmo_read(zx_handle_t handle, user_out_ptr<void> _data,
     return vmo->Read(_data, len, offset);
 }
 
+// zx_status_t zx_vmo_write
 zx_status_t sys_vmo_write(zx_handle_t handle, user_in_ptr<const void> _data,
                           uint64_t offset, size_t len) {
     LTRACEF("handle %x, data %p, offset %#" PRIx64 ", len %#zx\n",
@@ -141,6 +144,7 @@ zx_status_t sys_vmo_write(zx_handle_t handle, user_in_ptr<const void> _data,
     return vmo->Write(_data, len, offset);
 }
 
+// zx_status_t zx_vmo_get_size
 zx_status_t sys_vmo_get_size(zx_handle_t handle, user_out_ptr<uint64_t> _size) {
     LTRACEF("handle %x, sizep %p\n", handle, _size.get());
 
@@ -166,6 +170,7 @@ zx_status_t sys_vmo_get_size(zx_handle_t handle, user_out_ptr<uint64_t> _size) {
     return status;
 }
 
+// zx_status_t zx_vmo_set_size
 zx_status_t sys_vmo_set_size(zx_handle_t handle, uint64_t size) {
     LTRACEF("handle %x, size %#" PRIx64 "\n", handle, size);
 
@@ -181,6 +186,7 @@ zx_status_t sys_vmo_set_size(zx_handle_t handle, uint64_t size) {
     return vmo->SetSize(size);
 }
 
+// zx_status_t zx_vmo_op_range
 zx_status_t sys_vmo_op_range(zx_handle_t handle, uint32_t op, uint64_t offset, uint64_t size,
                              user_inout_ptr<void> _buffer, size_t buffer_size) {
     LTRACEF("handle %x op %u offset %#" PRIx64 " size %#" PRIx64
@@ -201,6 +207,7 @@ zx_status_t sys_vmo_op_range(zx_handle_t handle, uint32_t op, uint64_t offset, u
     return vmo->RangeOp(op, offset, size, _buffer, buffer_size, rights);
 }
 
+// zx_status_t zx_vmo_set_cache_policy
 zx_status_t sys_vmo_set_cache_policy(zx_handle_t handle, uint32_t cache_policy) {
     fbl::RefPtr<VmObjectDispatcher> vmo;
     zx_status_t status = ZX_OK;
@@ -220,6 +227,7 @@ zx_status_t sys_vmo_set_cache_policy(zx_handle_t handle, uint32_t cache_policy) 
     return vmo->SetMappingCachePolicy(cache_policy);
 }
 
+// zx_status_t zx_vmo_clone
 zx_status_t sys_vmo_clone(zx_handle_t handle, uint32_t options,
                           uint64_t offset, uint64_t size,
                           user_out_handle* out_handle) {
@@ -269,6 +277,7 @@ zx_status_t sys_vmo_clone(zx_handle_t handle, uint32_t options,
     return out_handle->make(fbl::move(dispatcher), rights);
 }
 
+// zx_status_t zx_vmo_replace_as_executable
 zx_status_t sys_vmo_replace_as_executable(
     zx_handle_t vmo, zx_handle_t vmex, user_out_handle* out) {
     LTRACEF("repexec %x %x\n", vmo, vmex);

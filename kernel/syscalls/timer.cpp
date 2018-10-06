@@ -21,6 +21,7 @@
 
 #include "priv.h"
 
+// zx_status_t zx_timer_create
 zx_status_t sys_timer_create(uint32_t options, zx_clock_t clock_id,
                              user_out_handle* out) {
     if (clock_id != ZX_CLOCK_MONOTONIC)
@@ -41,6 +42,7 @@ zx_status_t sys_timer_create(uint32_t options, zx_clock_t clock_id,
     return result;
 }
 
+// zx_status_t zx_timer_set
 zx_status_t sys_timer_set(
     zx_handle_t handle, zx_time_t deadline, zx_duration_t slack) {
     if (slack < 0) {
@@ -58,6 +60,7 @@ zx_status_t sys_timer_set(
 }
 
 
+// zx_status_t zx_timer_cancel
 zx_status_t sys_timer_cancel(zx_handle_t handle) {
     auto up = ProcessDispatcher::GetCurrent();
 
