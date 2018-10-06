@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![deny(warnings)]
+
 use failure::{format_err, Error, Fail};
 use std::borrow::Cow;
 use std::collections::HashMap;

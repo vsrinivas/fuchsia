@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![deny(warnings)]
 #![feature(futures_api)]
 
 mod dev_auth_provider_iotid;
@@ -24,7 +25,8 @@ fn main() -> Result<(), Error> {
     let fut = ServicesServer::new()
         .add_service((AuthProviderFactoryMarker::NAME, |chan| {
             AuthProviderFactory::spawn(chan)
-        })).start()
+        }))
+        .start()
         .context("Error starting dev auth provider server")?;
 
     executor

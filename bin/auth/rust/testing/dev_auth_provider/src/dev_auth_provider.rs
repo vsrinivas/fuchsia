@@ -14,7 +14,6 @@ use fidl_fuchsia_auth::{AuthProviderGetAppAccessTokenFromAssertionJwtResponder,
                         AuthProviderRequest, AuthProviderRevokeAppOrPersistentCredentialResponder,
                         AuthProviderStatus, UserProfileInfo};
 use fuchsia_async as fasync;
-use fuchsia_zircon as zx;
 use futures::future;
 use futures::prelude::*;
 use log::warn;
@@ -209,6 +208,7 @@ mod tests {
 
     use super::*;
     use fidl_fuchsia_auth::AuthProviderProxy;
+    use fuchsia_zircon as zx;
 
     fn set_up() -> Result<(fasync::Executor, AuthProviderProxy), failure::Error> {
         let exec = fasync::Executor::new()?;

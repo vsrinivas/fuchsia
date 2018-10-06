@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use fidl::encoding::OutOfLine;
-use fidl::endpoints::{ClientEnd, ServerEnd};
+use fidl::endpoints::ServerEnd;
 use fidl::Error;
 use fidl_fuchsia_auth::{AuthProviderGetAppAccessTokenFromAssertionJwtResponder,
                         AuthProviderGetAppAccessTokenResponder,
@@ -14,10 +14,9 @@ use fidl_fuchsia_auth::{AuthProviderGetAppAccessTokenFromAssertionJwtResponder,
                         AuthProviderRequest, AuthProviderRevokeAppOrPersistentCredentialResponder,
                         AuthProviderStatus, UserProfileInfo};
 use fuchsia_async as fasync;
-use fuchsia_zircon as zx;
 use futures::future;
 use futures::prelude::*;
-use log::{info, warn};
+use log::warn;
 use rand::{thread_rng, Rng};
 use std::time::Duration;
 
@@ -27,7 +26,6 @@ const USER_PROFILE_INFO_ID_DOMAIN: &str = "@example.com";
 const USER_PROFILE_INFO_DISPLAY_NAME: &str = "test_user_display_name";
 const USER_PROFILE_INFO_URL: &str = "http://test_user/profile/url";
 const USER_PROFILE_INFO_IMAGE_URL: &str = "http://test_user/profile/image/url";
-const FIREBASE_TOKEN_EMAIL_DOMAIN: &str = "@firebase.example.com";
 const RANDOM_STRING_LENGTH: usize = 10;
 
 /// Generate random alphanumeric string of fixed length RANDOM_STRING_LENGTH
@@ -106,50 +104,46 @@ impl AuthProvider {
         }
     }
 
-    /// Implementation of the `GetPersistenCredential` method for the
-    /// `AuthProvider` fidl interface. The field auth_ui_context is removed here
-    /// as we will never use it in the dev auth provider.
+    /// Implementation of the `GetPersistenCredential` method for the `AuthProvider` fidl
+    /// interface. The field auth_ui_context is removed here as we will never use it in the dev
+    /// auth provider.
     fn get_persistent_credential(
         responder: AuthProviderGetPersistentCredentialResponder,
     ) -> Result<(), Error> {
         responder.send(AuthProviderStatus::BadRequest, None, None)
     }
 
-    /// Implementation of the `GetAppAccessToken` method for the `AuthProvider`
-    /// fidl interface.
+    /// Implementation of the `GetAppAccessToken` method for the `AuthProvider` fidl interface.
     fn get_app_access_token(
-        credential: String, client_id: Option<String>,
-        responder: AuthProviderGetAppAccessTokenResponder,
+        _: String, _: Option<String>, responder: AuthProviderGetAppAccessTokenResponder,
     ) -> Result<(), Error> {
         responder.send(AuthProviderStatus::BadRequest, None)
     }
 
-    /// Implementation of the `GetAppIdToken` method for the `AuthProvider` fidl
-    /// interface.
+    /// Implementation of the `GetAppIdToken` method for the `AuthProvider` fidl interface.
     fn get_app_id_token(
-        credential: String, responder: AuthProviderGetAppIdTokenResponder,
+        _: String, responder: AuthProviderGetAppIdTokenResponder,
     ) -> Result<(), Error> {
         responder.send(AuthProviderStatus::BadRequest, None)
     }
 
-    /// Implementation of the `GetAppFirebaseToken` method for the `AuthProvider`
-    /// fidl interface.
+    /// Implementation of the `GetAppFirebaseToken` method for the `AuthProvider` fidl interface.
     fn get_app_firebase_token(
-        firebase_api_key: String, responder: AuthProviderGetAppFirebaseTokenResponder,
+        _: String, responder: AuthProviderGetAppFirebaseTokenResponder,
     ) -> Result<(), Error> {
         responder.send(AuthProviderStatus::BadRequest, None)
     }
 
-    /// Implementation of the `RevokeAppOrPersistentCredential` method for the
-    /// `AuthProvider` fidl interface.
+    /// Implementation of the `RevokeAppOrPersistentCredential` method for the `AuthProvider` fidl
+    /// interface.
     fn revoke_app_or_persistent_credential(
         responder: AuthProviderRevokeAppOrPersistentCredentialResponder,
     ) -> Result<(), Error> {
         responder.send(AuthProviderStatus::Ok)
     }
 
-    /// Implementation of the `GetPersistentCredentialFromAttestationJwt` method
-    /// for the `AuthProvider` fidl interface.
+    /// Implementation of the `GetPersistentCredentialFromAttestationJwt` method for the
+    /// `AuthProvider` fidl interface.
     fn get_persistent_credential_from_attestation_jwt(
         user_profile_id: Option<String>,
         responder: AuthProviderGetPersistentCredentialFromAttestationJwtResponder,
@@ -213,6 +207,7 @@ impl AuthProvider {
 mod tests {
 
     use super::*;
+    use fidl::endpoints::ClientEnd;
     use fidl_fuchsia_auth::AssertionJwtParams;
     use fidl_fuchsia_auth::AttestationJwtParams;
     use fidl_fuchsia_auth::AttestationSignerMarker;
@@ -220,6 +215,7 @@ mod tests {
     use fidl_fuchsia_auth::AuthProviderProxy;
     use fidl_fuchsia_auth::AuthToken;
     use fidl_fuchsia_auth::CredentialEcKey;
+    use fuchsia_zircon as zx;
 
     fn set_up() -> Result<(fasync::Executor, AuthProviderProxy), failure::Error> {
         let exec = fasync::Executor::new()?;
@@ -341,7 +337,8 @@ mod tests {
                     &mut jwt_params,
                     None,
                     None,
-                ).map_ok(move |response| {
+                )
+                .map_ok(move |response| {
                     let (status, credential, access_token, auth_challenge, user_profile_info) =
                         response;
                     assert_eq!(status, AuthProviderStatus::Ok);
@@ -364,10 +361,7 @@ mod tests {
                     assert!(challenge.contains("ch_"));
 
                     let UserProfileInfo {
-                        id,
-                        display_name,
-                        url,
-                        image_url,
+                        id, display_name, ..
                     } = *(user_profile_info.unwrap());
                     assert!(
                         display_name
@@ -383,7 +377,6 @@ mod tests {
     fn test_get_app_access_token_from_assertion_jwt() {
         async_test(|dev_auth_provider_iotid| {
             let attestation_signer = get_attestation_signer();
-            let mut certificate_chain: Vec<String> = Vec::new();
             let mut jwt_params = AssertionJwtParams {
                 credential_eckey: get_credential_key(),
                 challenge: Some("test_challenge".to_string()),
@@ -397,7 +390,8 @@ mod tests {
                     &mut jwt_params,
                     &credential,
                     &mut scopes,
-                ).map_ok(move |response| {
+                )
+                .map_ok(move |response| {
                     let (status, updated_credential, access_token, auth_challenge) = response;
                     assert_eq!(status, AuthProviderStatus::Ok);
                     assert!(updated_credential.unwrap().contains("up_cr_"));
