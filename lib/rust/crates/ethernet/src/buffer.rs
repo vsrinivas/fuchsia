@@ -148,7 +148,7 @@ impl BufferPool {
             data: unsafe {
                 SharedBuffer::new(self.base.offset(fifo_offset as isize), self.buffer_size)
             },
-            offset,
+            offset: fifo_offset,
             length: 0,
             marker: ::std::marker::PhantomData,
         })
