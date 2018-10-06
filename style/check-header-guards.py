@@ -24,6 +24,7 @@ import collections
 import fileinput
 import os.path
 import re
+import string
 import sys
 
 FUCHSIA_ROOT = os.path.dirname(  # $root
@@ -31,26 +32,22 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(             # style
     os.path.abspath(__file__))))
 
-LAYERS = [
-    'garnet',
-    'peridot',
-    'topaz',
+PUBLIC_PREFIXES = [
+    'ZIRCON_SYSTEM_ULIB_.*_INCLUDE',
+    'GARNET_PUBLIC',
+    'PERIDOT_PUBLIC',
+    'TOPAZ_PUBLIC',
 ]
-LAYER_PREFIXES = list(map(lambda l: '%s_PUBLIC_' % l.upper(), LAYERS))
+public_prefix = re.compile('^(' + string.join(PUBLIC_PREFIXES, '|') + ')_')
 
 all_header_guards = collections.defaultdict(list)
 
 pragma_once = re.compile('^#pragma once$')
 disallowed_header_characters = re.compile('[^a-zA-Z0-9_]')
 
-
 def adjust_for_layer(header_guard):
-    """Remove common layer prefix from header guard if applicable."""
-    for layer in LAYER_PREFIXES:
-        if header_guard.startswith(layer):
-            return header_guard[len(layer):]
-    return header_guard
-
+    """Remove internal layer prefix from public headers if applicable."""
+    return public_prefix.sub('', header_guard, 1)
 
 def check_file(path, fix_guards=False):
     """Check whether the file has a correct header guard.
