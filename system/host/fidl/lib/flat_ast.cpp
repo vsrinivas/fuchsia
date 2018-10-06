@@ -488,16 +488,6 @@ bool Library::ParseSize(std::unique_ptr<Constant> constant, Size* out_size) {
 void Library::RegisterConst(Const* decl) {
     const Name* name = &decl->name;
     constants_.emplace(name, decl);
-    switch (decl->type->kind) {
-    case Type::Kind::kString:
-        string_constants_.emplace(name, decl);
-        break;
-    case Type::Kind::kPrimitive:
-        primitive_constants_.emplace(name, decl);
-        break;
-    default:
-        break;
-    }
 }
 
 bool Library::RegisterDecl(Decl* decl) {
@@ -704,7 +694,19 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
 
     enum_declarations_.push_back(
         std::make_unique<Enum>(std::move(attributes), std::move(name), type, std::move(members)));
-    return RegisterDecl(enum_declarations_.back().get());
+    if (!RegisterDecl(enum_declarations_.back().get()))
+        return false;
+
+    // TODO(pascallouis): right now, members are not registered. Look into
+    // registering them, potentially under the enum name qualifier such as
+    // <name_of_enum>.<name_of_member>.
+    //
+    // When doing this, change type ownership to be at library level, rather
+    // than node level, and change references from std::unique_ptr<Type> to
+    // const Type* throughout raw and flat nodes. Otherwhise, it's that much
+    // harder to create inferred types, and share types, e.g. here between the
+    // enum decl and the multiple const decl for each member.
+    return true;
 }
 
 bool Library::ConsumeInterfaceDeclaration(
@@ -943,109 +945,14 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     return true;
 }
 
-// Library resolution is concerned with resolving identifiers to their
-// declarations, and with computing type sizes and alignments.
-
-bool Library::TypecheckString(const IdentifierConstant* identifier) {
-    auto iter = string_constants_.find(&identifier->name);
-    if (iter == string_constants_.end())
-        return Fail(identifier->name.name(), "Unable to find string constant");
-    // TODO(kulakowski) Check string bounds.
-    return true;
-}
-
-bool Library::TypecheckPrimitive(const IdentifierConstant* identifier) {
-    auto iter = primitive_constants_.find(&identifier->name);
-    if (iter == primitive_constants_.end())
-        return Fail(identifier->name.name(), "Unable to find primitive constant");
-    // TODO(kulakowski) Check numeric values.
-    return true;
-}
-
-bool Library::TypecheckConst(const Const* const_declaration) {
-    auto type = const_declaration->type.get();
-    auto constant = const_declaration->value.get();
+bool Library::TypeCanBeConst(const Type* type) {
     switch (type->kind) {
-    case Type::Kind::kArray:
-        return Fail("Tried to generate an array constant");
-    case Type::Kind::kVector:
-        return Fail("Tried to generate an vector constant");
-    case Type::Kind::kHandle:
-        return Fail("Tried to generate a handle constant");
-    case Type::Kind::kRequestHandle:
-        return Fail("Tried to generate a request handle constant");
-    case Type::Kind::kString: {
-        switch (constant->kind) {
-        case Constant::Kind::kIdentifier: {
-            auto identifier_constant = static_cast<const IdentifierConstant*>(constant);
-            return TypecheckString(identifier_constant);
-        }
-        case Constant::Kind::kLiteral: {
-            auto literal_constant = static_cast<const LiteralConstant*>(constant);
-            switch (literal_constant->literal->kind) {
-            case raw::Literal::Kind::kString:
-                return true;
-            case raw::Literal::Kind::kNumeric:
-                return Fail("Tried to assign a numeric literal into a string");
-            case raw::Literal::Kind::kTrue:
-            case raw::Literal::Kind::kFalse:
-                return Fail("Tried to assign a bool literal into a string");
-            }
-        }
-        }
-    }
-    case Type::Kind::kPrimitive: {
-        auto primitive_type = static_cast<const PrimitiveType*>(type);
-        switch (constant->kind) {
-        case Constant::Kind::kIdentifier: {
-            auto identifier_constant = static_cast<const IdentifierConstant*>(constant);
-            return TypecheckPrimitive(identifier_constant);
-        }
-        case Constant::Kind::kLiteral: {
-            auto literal_constant = static_cast<const LiteralConstant*>(constant);
-            switch (literal_constant->literal->kind) {
-            case raw::Literal::Kind::kString:
-                return Fail("Tried to assign a string literal to a numeric constant");
-            case raw::Literal::Kind::kNumeric:
-                // TODO(kulakowski) Check the constants of numbers.
-                switch (primitive_type->subtype) {
-                case types::PrimitiveSubtype::kUint8:
-                case types::PrimitiveSubtype::kUint16:
-                case types::PrimitiveSubtype::kUint32:
-                case types::PrimitiveSubtype::kUint64:
-                case types::PrimitiveSubtype::kInt8:
-                case types::PrimitiveSubtype::kInt16:
-                case types::PrimitiveSubtype::kInt32:
-                case types::PrimitiveSubtype::kInt64:
-                case types::PrimitiveSubtype::kFloat32:
-                case types::PrimitiveSubtype::kFloat64:
-                    return true;
-                case types::PrimitiveSubtype::kBool:
-                    return Fail("Tried to assign a numeric literal into a bool");
-                }
-            case raw::Literal::Kind::kTrue:
-            case raw::Literal::Kind::kFalse:
-                switch (primitive_type->subtype) {
-                case types::PrimitiveSubtype::kBool:
-                    return true;
-                case types::PrimitiveSubtype::kUint8:
-                case types::PrimitiveSubtype::kUint16:
-                case types::PrimitiveSubtype::kUint32:
-                case types::PrimitiveSubtype::kUint64:
-                case types::PrimitiveSubtype::kInt8:
-                case types::PrimitiveSubtype::kInt16:
-                case types::PrimitiveSubtype::kInt32:
-                case types::PrimitiveSubtype::kInt64:
-                case types::PrimitiveSubtype::kFloat32:
-                case types::PrimitiveSubtype::kFloat64:
-                    return Fail("Tried to assign a bool into a numeric type");
-                }
-            }
-        }
-        }
-    }
-    case Type::Kind::kIdentifier: {
-        auto identifier_type = static_cast<const IdentifierType*>(type);
+    case flat::Type::Kind::kString:
+        return type->nullability != types::Nullability::kNullable;
+    case flat::Type::Kind::kPrimitive:
+        return true;
+    case flat::Type::Kind::kIdentifier: {
+        auto identifier_type = static_cast<const flat::IdentifierType*>(type);
         auto decl = LookupDeclByType(identifier_type, LookupOption::kIgnoreNullable);
         switch (decl->kind) {
         case Decl::Kind::kConst:
@@ -1053,17 +960,161 @@ bool Library::TypecheckConst(const Const* const_declaration) {
             return false;
         case Decl::Kind::kEnum:
             return true;
-        case Decl::Kind::kInterface:
-            return Fail("Tried to create a const declaration of interface type");
-        case Decl::Kind::kStruct:
-            return Fail("Tried to create a const declaration of struct type");
-        case Decl::Kind::kTable:
-            return Fail("Tried to create a const declaration of table type");
-        case Decl::Kind::kUnion:
-            return Fail("Tried to create a const declaration of union type");
+        default:
+            return false;
         }
     }
+    default:
+        return false;
+    } // switch
+}
+
+bool Library::TypeInferConstantType(const Constant* constant,
+                                    std::unique_ptr<Type>* out_type) {
+    switch (constant->kind) {
+    case Constant::Kind::kLiteral: {
+        auto literal_constant = static_cast<const LiteralConstant*>(constant);
+        switch (literal_constant->literal->kind) {
+            case raw::Literal::Kind::kString: {
+                auto string_literal = static_cast<const raw::StringLiteral*>(literal_constant->literal.get());
+                auto max_size = Size(string_literal->location().data().size() - 2);
+                *out_type = std::make_unique<flat::StringType>(
+                    std::move(max_size),
+                    types::Nullability::kNonnullable);
+                return true;
+            }
+
+            case raw::Literal::Kind::kNumeric: {
+                // TODO(pascallouis): depending on the numeric literal, we
+                // should properly infer the most restrivice type fitting
+                // that value, e.g. 255 would be uint8, -128 would be int8.
+                // Then we can express conversion flexibility in
+                // TypeIsConvertibleTo, e.g. uint8 to uint16, uint32, etc.
+                *out_type = std::make_unique<flat::PrimitiveType>(types::PrimitiveSubtype::kInt64);
+                return true;
+            }
+
+            case raw::Literal::Kind::kTrue:
+                // fallthrough
+            case raw::Literal::Kind::kFalse:
+                *out_type = std::make_unique<flat::PrimitiveType>(types::PrimitiveSubtype::kBool);
+                return true;
+        }
     }
+    case Constant::Kind::kIdentifier: {
+        auto identifier_constant = static_cast<const IdentifierConstant*>(constant);
+        auto iter = constants_.find(&identifier_constant->name);
+        if (iter == constants_.end()) {
+            return false;
+        }
+        // TODO(pascallouis): this is not exactly correct, we should use the
+        // const declaration's type, rathe than infer from the constant. This
+        // could yield a less restrictive type, and we want to make sure
+        // this is honored. In practice though, for the use of inference we
+        // make today, this is not key, beyond getting precise error messages.
+        return TypeInferConstantType(iter->second->value.get(), out_type);
+    }
+    default:
+        return false;
+    } // switch
+}
+
+const Type* Library::TypeResolve(const Type* type) {
+    if (type->kind != flat::Type::Kind::kIdentifier) {
+        return type;
+    }
+    auto identifier_type = static_cast<const flat::IdentifierType*>(type);
+    auto decl = LookupDeclByType(identifier_type, LookupOption::kIgnoreNullable);
+    switch (decl->kind) {
+    case Decl::Kind::kEnum: {
+        // TODO(pascallouis): by circumventing enum types like this, we're
+        // preventing a more precise handling of enum types, and in particular
+        // forbidding that out-of-range values be assignable to this enum in
+        // const declarations.
+        auto enum_decl = static_cast<const flat::Enum*>(decl);
+        return enum_decl->type.get();
+    }
+    default:
+        return type;
+    } // switch
+}
+
+bool Library::TypeIsConvertibleTo(const Type* from_type, const Type* to_type) {
+    from_type = TypeResolve(from_type);
+    to_type = TypeResolve(to_type);
+
+    switch (to_type->kind) {
+    case flat::Type::Kind::kString: {
+        if (from_type->kind != flat::Type::Kind::kString) {
+            return false;
+        }
+
+        auto from_string_type = static_cast<const flat::StringType*>(from_type);
+        auto to_string_type = static_cast<const flat::StringType*>(to_type);
+
+        if (to_string_type->nullability == types::Nullability::kNonnullable) {
+            if (from_string_type->nullability != types::Nullability::kNonnullable) {
+                return false;
+            }
+        }
+
+        if (to_string_type->max_size.Value() < from_string_type->max_size.Value()) {
+            return false;
+        }
+
+        return true;
+    }
+    case flat::Type::Kind::kPrimitive: {
+        if (from_type->kind != flat::Type::Kind::kPrimitive) {
+            return false;
+        }
+
+        auto from_primitive_type = static_cast<const flat::PrimitiveType*>(from_type);
+        auto to_primitive_type = static_cast<const flat::PrimitiveType*>(to_type);
+
+        switch (to_primitive_type->subtype) {
+        case types::PrimitiveSubtype::kBool:
+            return from_primitive_type->subtype == types::PrimitiveSubtype::kBool;
+        default:
+            // TODO(pascallouis): be more precise about convertability, e.g. it
+            // should not be allowed to convert a float to an int.
+            return from_primitive_type->subtype != types::PrimitiveSubtype::kBool;
+        }
+    }
+    default:
+        return false;
+    } // switch
+}
+
+bool Library::TypecheckConst(const Const* const_declaration) {
+    auto type = const_declaration->type.get();
+    if (!TypeCanBeConst(type)) {
+        std::string msg("invalid constant type ");
+        msg.append(NameFlatType(type));
+        return Fail(msg);
+    }
+
+    auto constant = const_declaration->value.get();
+    std::unique_ptr<flat::Type> constant_type_ptr(nullptr);
+    if (!TypeInferConstantType(constant, &constant_type_ptr)) {
+        std::string msg("unable to infer type for ");
+        msg.append(NameFlatConstant(constant));
+        Fail(msg);
+        return false;
+    }
+
+    auto constant_type = constant_type_ptr.get();
+    if (!TypeIsConvertibleTo(constant_type, type)) {
+        std::string msg("cannot convert ");
+        msg.append(NameFlatConstant(constant));
+        msg.append(" (type ");
+        msg.append(NameFlatType(constant_type));
+        msg.append(") to type ");
+        msg.append(NameFlatType(type));
+        return Fail(msg);
+    }
+
+    return true;
 }
 
 Decl* Library::LookupConstant(const Type* type, const Name& name) {
@@ -1091,6 +1142,9 @@ Decl* Library::LookupConstant(const Type* type, const Name& name) {
     // The enum didn't have a member of that name!
     return nullptr;
 }
+
+// Library resolution is concerned with resolving identifiers to their
+// declarations, and with computing type sizes and alignments.
 
 PrimitiveType* Library::LookupTypeAlias(const Name& name) const {
     auto it = type_aliases_.find(&name);
@@ -1319,7 +1373,7 @@ bool Library::CompileConst(Const* const_declaration) {
 
 bool Library::CompileEnum(Enum* enum_declaration) {
     Compiling guard(enum_declaration);
-    switch (enum_declaration->type) {
+    switch (enum_declaration->type->subtype) {
     case types::PrimitiveSubtype::kInt8:
     case types::PrimitiveSubtype::kInt16:
     case types::PrimitiveSubtype::kInt32:
@@ -1329,7 +1383,7 @@ bool Library::CompileEnum(Enum* enum_declaration) {
     case types::PrimitiveSubtype::kUint32:
     case types::PrimitiveSubtype::kUint64:
         // These are allowed as enum subtypes. Compile the size and alignment.
-        enum_declaration->typeshape = PrimitiveTypeShape(enum_declaration->type);
+        enum_declaration->typeshape = PrimitiveTypeShape(enum_declaration->type->subtype);
         break;
 
     case types::PrimitiveSubtype::kBool:
