@@ -570,9 +570,11 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
         return ZX_OK;
     }
 
-    printf("vc: new display device %s/%s\n", kDisplayControllerDir, name);
+    printf("vc: new display device %s/%s/virtcon\n", kDisplayControllerDir, name);
 
-    fbl::unique_fd fd(openat(dc_dir_fd, name, O_RDONLY));
+    char buf[64];
+    snprintf(buf, 64, "%s/%s/virtcon", kDisplayControllerDir, name);
+    fbl::unique_fd fd(open(buf, O_RDWR));
     if (!fd) {
         printf("vc: failed to open display controller device\n");
         return ZX_OK;
@@ -585,16 +587,17 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
         return ZX_OK;
     }
 
+    zx_handle_close(dc_ph.handle);
+    dc_fd = fd.release();
+    dc_ph.handle = dc_channel.release();
+
     zx_status_t status = vc_set_mode(getenv("virtcon.hide-on-boot") == nullptr ?
             fuchsia_display_VirtconMode_FALLBACK : fuchsia_display_VirtconMode_INACTIVE);
     if (status != ZX_OK) {
         printf("vc: Failed to set initial ownership %d\n", status);
-        return ZX_OK;
+        vc_find_display_controller();
+        return ZX_ERR_STOP;
     }
-
-    zx_handle_close(dc_ph.handle);
-    dc_fd = fd.release();
-    dc_ph.handle = dc_channel.release();
 
     dc_ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     dc_ph.func = dc_callback_handler;
