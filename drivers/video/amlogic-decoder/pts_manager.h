@@ -27,7 +27,6 @@ class PtsManager {
    private:
     friend class PtsManager;
     LookupResult() = delete;
-    LookupResult& operator=(const LookupResult& from) = default;
 
     LookupResult(bool is_end_of_stream, bool has_pts, uint64_t pts)
         : is_end_of_stream_(is_end_of_stream), has_pts_(has_pts), pts_(pts) {
