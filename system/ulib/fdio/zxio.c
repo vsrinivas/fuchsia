@@ -199,6 +199,10 @@ static ssize_t fdio_zxio_write_at(fdio_t* io, const void* data, size_t len, off_
     return count;
 }
 
+static_assert(SEEK_SET == fuchsia_io_SeekOrigin_START, "");
+static_assert(SEEK_CUR == fuchsia_io_SeekOrigin_CURRENT, "");
+static_assert(SEEK_END == fuchsia_io_SeekOrigin_END, "");
+
 static off_t fdio_zxio_seek(fdio_t* io, off_t offset, int whence) {
     zxio_t* z = fdio_get_zxio(io);
     size_t result = 0u;

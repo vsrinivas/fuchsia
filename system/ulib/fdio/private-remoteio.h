@@ -8,18 +8,6 @@
 
 #include "private.h"
 
-typedef struct zxrio zxrio_t;
-struct zxrio {
-    // base fdio io object
-    fdio_t io;
-
-    // channel handle for rpc
-    zx_handle_t h;
-
-    // event handle for device state signals
-    zx_handle_t event;
-};
-
 // Implements the |fdio_t| contract using |zxio_remote_t|.
 //
 // Has an ops table that translates fdio ops into zxio ops. Some of the fdio ops
@@ -39,5 +27,4 @@ fdio_t* fdio_zxio_create_remote(zx_handle_t control, zx_handle_t event);
 zx_status_t zxrio_open_handle(zx_handle_t h, const char* path, uint32_t flags,
                               uint32_t mode, fdio_t** out);
 
-extern fdio_ops_t zx_remote_ops;
 extern fdio_ops_t fdio_zxio_remote_ops;

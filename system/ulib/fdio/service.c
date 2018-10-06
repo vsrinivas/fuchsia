@@ -100,14 +100,6 @@ zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
             *out = svc->h;
             svc->h = ZX_HANDLE_INVALID;
             r = ZX_OK;
-        } else if (io->ops == &zx_remote_ops) {
-            // is a fuchsia.io.* service, extract handle
-            zxrio_t* rio = (zxrio_t*) io;
-            *out = rio->h;
-            rio->h = ZX_HANDLE_INVALID;
-            zx_handle_close(rio->event);
-            rio->event = ZX_HANDLE_INVALID;
-            r = ZX_OK;
         } else if (io->ops == &fdio_zxio_remote_ops) {
             fdio_zxio_remote_t* rio = (fdio_zxio_remote_t*) io;
             r = zxio_release(&rio->remote.io, out);
@@ -129,9 +121,6 @@ zx_handle_t fdio_unsafe_borrow_channel(fdio_t* io) {
     if (io->ops == &zx_svc_ops) {
         zxsvc_t* svc = (zxsvc_t*) io;
         return svc->h;
-    } else if (io->ops == &zx_remote_ops) {
-        zxrio_t* rio = (zxrio_t*) io;
-        return rio->h;
     } else if (io->ops == &fdio_zxio_remote_ops) {
         fdio_zxio_remote_t* rio = (fdio_zxio_remote_t*) io;
         return rio->remote.control;

@@ -47,10 +47,6 @@ static_assert((POLLOUT << POLL_SHIFT) == DEVICE_SIGNAL_WRITABLE, "");
 static_assert((POLLERR << POLL_SHIFT) == DEVICE_SIGNAL_ERROR, "");
 static_assert((POLLHUP << POLL_SHIFT) == DEVICE_SIGNAL_HANGUP, "");
 
-zx_handle_t zxrio_handle(zxrio_t* rio) {
-    return rio->h;
-}
-
 // Acquire the additional handle from |info|.
 //
 // Returns |ZX_OK| if a handle was returned.
@@ -86,21 +82,6 @@ static zx_status_t zxrio_object_extract_handle(const zxrio_node_info_t* info,
     return ZX_ERR_NOT_FOUND;
 }
 
-static zx_status_t zxrio_close(fdio_t* io) {
-    zxrio_t* rio = (zxrio_t*)io;
-
-    zx_status_t r = fidl_close(rio);
-    zx_handle_t h = rio->h;
-    rio->h = ZX_HANDLE_INVALID;
-    zx_handle_close(h);
-    if (rio->event != ZX_HANDLE_INVALID) {
-        h = rio->event;
-        rio->event = ZX_HANDLE_INVALID;
-        zx_handle_close(h);
-    }
-    return r;
-}
-
 // Open an object without waiting for the response.
 // This function always consumes the cnxn handle
 // The svc handle is only used to send a message
@@ -130,132 +111,6 @@ static zx_status_t zxrio_connect(zx_handle_t svc, zx_handle_t cnxn,
         r = ZX_ERR_NOT_SUPPORTED;
     }
     return r;
-}
-
-static ssize_t zxrio_write(fdio_t* io, const void* data, size_t len) {
-    zxrio_t* rio = (zxrio_t*) io;
-    zx_status_t status = ZX_OK;
-    uint64_t count = 0;
-    uint64_t xfer;
-    while (len > 0) {
-        xfer = (len > FDIO_CHUNK_SIZE) ? FDIO_CHUNK_SIZE : len;
-        uint64_t actual = 0;
-        if ((status = fidl_write(rio, data, xfer, &actual)) != ZX_OK) {
-            return status;
-        }
-        count += actual;
-        data += actual;
-        len -= actual;
-        if (xfer != actual) {
-            break;
-        }
-    }
-    if (count == 0) {
-        return status;
-    }
-    return count;
-}
-
-static ssize_t zxrio_write_at(fdio_t* io, const void* data, size_t len, off_t offset) {
-    zxrio_t* rio = (zxrio_t*) io;
-    zx_status_t status = ZX_OK;
-    uint64_t count = 0;
-    uint64_t xfer;
-    while (len > 0) {
-        xfer = (len > FDIO_CHUNK_SIZE) ? FDIO_CHUNK_SIZE : len;
-        uint64_t actual = 0;
-        if ((status = fidl_writeat(rio, data, xfer, offset, &actual)) != ZX_OK) {
-            return status;
-        }
-        count += actual;
-        data += actual;
-        offset += actual;
-        len -= actual;
-        if (xfer != actual) {
-            break;
-        }
-    }
-    if (count == 0) {
-        return status;
-    }
-    return count;
-}
-
-static zx_status_t zxrio_get_attr(fdio_t* io, vnattr_t* out) {
-    zxrio_t* rio = (zxrio_t*)io;
-    return fidl_stat(rio, out);
-}
-
-static ssize_t zxrio_read(fdio_t* io, void* data, size_t len) {
-    zxrio_t* rio = (zxrio_t*) io;
-    zx_status_t status = ZX_OK;
-    uint64_t count = 0;
-    uint64_t xfer;
-    while (len > 0) {
-        xfer = (len > FDIO_CHUNK_SIZE) ? FDIO_CHUNK_SIZE : len;
-        uint64_t actual = 0;
-        if ((status = fidl_read(rio, data, xfer, &actual)) != ZX_OK) {
-            return status;
-        }
-        count += actual;
-        data += actual;
-        len -= actual;
-        if (xfer != actual) {
-            break;
-        }
-    }
-    if (count == 0) {
-        return status;
-    }
-    return count;
-}
-
-static ssize_t zxrio_read_at(fdio_t* io, void* data, size_t len, off_t offset) {
-    zxrio_t* rio = (zxrio_t*) io;
-    zx_status_t status = ZX_OK;
-    uint64_t count = 0;
-    uint64_t xfer;
-    while (len > 0) {
-        xfer = (len > FDIO_CHUNK_SIZE) ? FDIO_CHUNK_SIZE : len;
-        uint64_t actual = 0;
-        if ((status = fidl_readat(rio, data, xfer, offset, &actual)) != ZX_OK) {
-            return status;
-        }
-        offset += actual;
-        count += actual;
-        data += actual;
-        len -= actual;
-        if (xfer != actual) {
-            break;
-        }
-    }
-    if (count == 0) {
-        return status;
-    }
-    return count;
-}
-
-static off_t zxrio_seek(fdio_t* io, off_t offset, int whence) {
-    zxrio_t* rio = (zxrio_t*)io;
-    zx_status_t status = fidl_seek(rio, offset, whence, &offset);
-    if (status != ZX_OK) {
-        return status;
-    }
-    return offset;
-}
-
-static ssize_t zxrio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
-                    size_t in_len, void* out_buf, size_t out_len) {
-    zxrio_t* rio = (zxrio_t*)io;
-    if (in_len > FDIO_IOCTL_MAX_INPUT || out_len > FDIO_CHUNK_SIZE) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    size_t actual;
-    zx_status_t status = fidl_ioctl(rio->h, op, in_buf, in_len, out_buf, out_len, &actual);
-    if (status != ZX_OK) {
-        return status;
-    }
-    return actual;
 }
 
 // Takes ownership of the optional |extra_handle|.
@@ -705,7 +560,7 @@ static zx_status_t zxrio_getobject(zx_handle_t rio_h, uint32_t op, const char* n
 
 zx_status_t zxrio_open_handle(zx_handle_t h, const char* path, uint32_t flags,
                               uint32_t mode, fdio_t** out) {
-    zx_handle_t control_channel;
+    zx_handle_t control_channel = ZX_HANDLE_INVALID;
     zxrio_describe_t info;
     zx_status_t r = zxrio_getobject(h, fuchsia_io_DirectoryOpenOrdinal, path, flags, mode, &info, &control_channel);
     if (r < 0) {
@@ -714,180 +569,7 @@ zx_status_t zxrio_open_handle(zx_handle_t h, const char* path, uint32_t flags,
     return fdio_from_handles(control_channel, &info.extra, out);
 }
 
-static zx_status_t zxrio_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mode, fdio_t** out) {
-    zxrio_t* rio = (void*)io;
-    return zxrio_open_handle(rio->h, path, flags, mode, out);
-}
-
-static zx_status_t zxrio_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
-    zxrio_t* rio = (void*)io;
-    zx_handle_t h;
-    zxrio_describe_t info;
-    zx_status_t r = zxrio_getobject(rio->h, fuchsia_io_NodeCloneOrdinal, "", 0, 0, &info, &h);
-    if (r < 0) {
-        return r;
-    }
-    handles[0] = h;
-    types[0] = PA_FDIO_REMOTE;
-    return 1;
-}
-
-static zx_status_t zxrio_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
-    zxrio_t* rio = (void*)io;
-    LOG(1, "fdio: zxrio_unwrap(%p,...)\n");
-    handles[0] = rio->h;
-    types[0] = PA_FDIO_REMOTE;
-    if (rio->event != ZX_HANDLE_INVALID) {
-        zx_handle_close(rio->event);
-        rio->event = ZX_HANDLE_INVALID;
-    }
-    return 1;
-}
-
-static void zxrio_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* _signals) {
-    zxrio_t* rio = (void*)io;
-    *handle = rio->event;
-
-    zx_signals_t signals = 0;
-    // Manually add signals that don't fit within POLL_MASK
-    if (events & POLLRDHUP) {
-        signals |= ZX_CHANNEL_PEER_CLOSED;
-    }
-
-    // POLLERR is always detected
-    *_signals = (((POLLERR | events) & POLL_MASK) << POLL_SHIFT) | signals;
-}
-
-static void zxrio_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* _events) {
-    // Manually add events that don't fit within POLL_MASK
-    uint32_t events = 0;
-    if (signals & ZX_CHANNEL_PEER_CLOSED) {
-        events |= POLLRDHUP;
-    }
-    *_events = ((signals >> POLL_SHIFT) & POLL_MASK) | events;
-}
-
-static zx_status_t zxrio_get_vmo(fdio_t* io, int flags, zx_handle_t* out) {
-    zx_handle_t vmo;
-    zxrio_t* rio = (zxrio_t*)io;
-    zx_status_t r = fidl_getvmo(rio, flags, &vmo);
-    if (r != ZX_OK) {
-        return r;
-    }
-    *out = vmo;
-    return ZX_OK;
-}
-
-static zx_status_t zxrio_get_token(fdio_t* io, zx_handle_t* out) {
-    zxrio_t* rio = (zxrio_t*)io;
-    return fidl_gettoken(rio, out);
-}
-
-static zx_status_t zxrio_set_attr(fdio_t* io, const vnattr_t* attr) {
-    zxrio_t* rio = (zxrio_t*)io;
-    return fidl_setattr(rio, attr);
-}
-
-static zx_status_t zxrio_sync(fdio_t* io) {
-    zxrio_t* rio = (zxrio_t*)io;
-    return fidl_sync(rio);
-}
-
-static zx_status_t zxrio_readdir(fdio_t* io, void* ptr, size_t max, size_t* actual) {
-    zxrio_t* rio = (zxrio_t*)io;
-    return fidl_readdirents(rio, ptr, max, actual);
-}
-
-static zx_status_t zxrio_rewind(fdio_t* io) {
-    zxrio_t* rio = (zxrio_t*)io;
-    return fidl_rewind(rio);
-}
-
-static zx_status_t zxrio_unlink(fdio_t* io, const char* path, size_t len) {
-    zxrio_t* rio = (zxrio_t*)io;
-    return fidl_unlink(rio, path, len);
-}
-
-static zx_status_t zxrio_truncate(fdio_t* io, off_t off) {
-    zxrio_t* rio = (zxrio_t*)io;
-    return fidl_truncate(rio, off);
-}
-
-static zx_status_t zxrio_rename(fdio_t* io, const char* src, size_t srclen,
-                                zx_handle_t dst_token, const char* dst, size_t dstlen) {
-    zxrio_t* rio = (zxrio_t*)io;
-    return fidl_rename(rio, src, srclen, dst_token, dst, dstlen);
-}
-
-static zx_status_t zxrio_link(fdio_t* io, const char* src, size_t srclen,
-                              zx_handle_t dst_token, const char* dst, size_t dstlen) {
-    zxrio_t* rio = (zxrio_t*)io;
-    return fidl_link(rio, src, srclen, dst_token, dst, dstlen);
-}
-
-static zx_status_t zxrio_get_flags(fdio_t* io, uint32_t* out_flags) {
-    zxrio_t* rio = (zxrio_t*)io;
-    return fidl_getflags(rio, out_flags);
-}
-
-static zx_status_t zxrio_set_flags(fdio_t* io, uint32_t flags) {
-    zxrio_t* rio = (zxrio_t*)io;
-    return fidl_setflags(rio, flags);
-}
-
-fdio_ops_t zx_remote_ops = {
-    .read = zxrio_read,
-    .read_at = zxrio_read_at,
-    .write = zxrio_write,
-    .write_at = zxrio_write_at,
-    .seek = zxrio_seek,
-    .misc = fdio_default_misc,
-    .close = zxrio_close,
-    .open = zxrio_open,
-    .clone = zxrio_clone,
-    .ioctl = zxrio_ioctl,
-    .wait_begin = zxrio_wait_begin,
-    .wait_end = zxrio_wait_end,
-    .unwrap = zxrio_unwrap,
-    .posix_ioctl = fdio_default_posix_ioctl,
-    .get_vmo = zxrio_get_vmo,
-    .get_token = zxrio_get_token,
-    .get_attr = zxrio_get_attr,
-    .set_attr = zxrio_set_attr,
-    .sync = zxrio_sync,
-    .readdir = zxrio_readdir,
-    .rewind = zxrio_rewind,
-    .unlink = zxrio_unlink,
-    .truncate = zxrio_truncate,
-    .rename = zxrio_rename,
-    .link = zxrio_link,
-    .get_flags = zxrio_get_flags,
-    .set_flags = zxrio_set_flags,
-    .recvfrom = fdio_default_recvfrom,
-    .sendto = fdio_default_sendto,
-    .recvmsg = fdio_default_recvmsg,
-    .sendmsg = fdio_default_sendmsg,
-    .shutdown = fdio_default_shutdown,
-};
-
-#define FDIO_USE_ZXIO 1
-
 __EXPORT
 fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t event) {
-#if FDIO_USE_ZXIO
     return fdio_zxio_create_remote(h, event);
-#else
-    zxrio_t* rio = fdio_alloc(sizeof(*rio));
-    if (rio == NULL) {
-        zx_handle_close(h);
-        zx_handle_close(event);
-        return NULL;
-    }
-    rio->io.ops = &zx_remote_ops;
-    rio->io.magic = FDIO_MAGIC;
-    atomic_init(&rio->io.refcount, 1);
-    rio->h = h;
-    rio->event = event;
-    return &rio->io;
-#endif
 }
