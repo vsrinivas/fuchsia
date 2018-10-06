@@ -80,10 +80,18 @@ def main():
         action="store_true",
         default=False,
         help="format all files in the repo, not just the modified ones")
+    parser.add_argument(
+        "--files",
+        dest="files",
+        nargs="+",
+        action="store",
+        help="format just the specified files (supersedes --all)")
     args = parser.parse_args()
 
     # Find the files to be formatted.
-    if args.all:
+    if args.files:
+        files = args.files
+    elif args.all:
         files = git_utils.get_all_files()
     else:
         files = git_utils.get_diff_files()
