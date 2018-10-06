@@ -9,7 +9,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/io.h>
+#include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/file.h>
+#include <lib/fxl/files/path.h>
+#include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/trim.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/log.h>
@@ -36,6 +39,8 @@
 
 namespace {
 
+const char kLocalCrashDatabase[] = "/data/crashes";
+const char kLocalKernelCrashDatabase[] = "/data/kernel_crashes";
 const char kURL[] = "https://clients2.google.com/cr/report";
 
 class ScopedStoppable {
@@ -72,8 +77,9 @@ class ScopedUnlink {
 };
 
 std::string GetSystemLogToFile() {
-  char filename[] = "/data/crashes/log.XXXXXX";
-  base::ScopedFD fd(mkstemp(filename));
+  std::string filename = files::SimplifyPath(
+      fxl::Concatenate({kLocalCrashDatabase, "/log.XXXXXX"}));
+  base::ScopedFD fd(mkstemp(filename.data()));
   if (fd.get() < 0) {
     FX_LOGS(ERROR) << "could not create temp file";
     return std::string();
@@ -99,7 +105,7 @@ std::string GetSystemLogToFile() {
             (int)((rec->timestamp / 1000000ULL) % 1000ULL), rec->pid, rec->tid,
             rec->data);
   }
-  return std::string(filename);
+  return filename;
 }
 
 std::string GetVersion() {
@@ -129,9 +135,13 @@ int HandleException(zx::process process, zx::thread thread,
   // crashpad_handler here. Instead, directly use CrashReportExceptionHandler
   // and terminate when it has completed.
 
+  if (!files::IsDirectory(kLocalCrashDatabase)) {
+    files::CreateDirectory(kLocalCrashDatabase);
+  }
+
   std::unique_ptr<crashpad::CrashReportDatabase> database(
       crashpad::CrashReportDatabase::Initialize(
-          base::FilePath("/data/crashes")));
+          base::FilePath(kLocalCrashDatabase)));
   if (!database) {
     return EXIT_FAILURE;
   }
@@ -175,9 +185,13 @@ int HandleException(zx::process process, zx::thread thread,
 }
 
 int Process(fuchsia::mem::Buffer crashlog) {
+  if (!files::IsDirectory(kLocalKernelCrashDatabase)) {
+    files::CreateDirectory(kLocalKernelCrashDatabase);
+  }
+
   std::unique_ptr<crashpad::CrashReportDatabase> database(
       crashpad::CrashReportDatabase::Initialize(
-          base::FilePath("/data/kernel_crashes")));
+          base::FilePath(kLocalKernelCrashDatabase)));
   if (!database) {
     return EXIT_FAILURE;
   }
