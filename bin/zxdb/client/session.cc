@@ -16,6 +16,7 @@
 #include "garnet/bin/zxdb/client/arch_info.h"
 #include "garnet/bin/zxdb/client/breakpoint_action.h"
 #include "garnet/bin/zxdb/client/breakpoint_impl.h"
+#include "garnet/bin/zxdb/client/minidump_remote_api.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/remote_api_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
@@ -364,10 +365,9 @@ void Session::OnStreamError() {
   ClearConnectionData();
 }
 
-bool Session::IsConnected() const { return !!stream_; }
+bool Session::IsConnected() const { return !is_minidump_ && !!stream_; }
 
-void Session::Connect(const std::string& host, uint16_t port,
-                      std::function<void(const Err&)> callback) {
+bool Session::ConnectCanProceed(std::function<void(const Err&)> callback) {
   Err err;
   if (IsConnected()) {
     err = Err("Already connected.");
@@ -380,12 +380,34 @@ void Session::Connect(const std::string& host, uint16_t port,
       debug_ipc::MessageLoop::Current()->PostTask(
           [callback, err]() { callback(err); });
     }
+    return false;
+  }
+
+  return true;
+}
+
+void Session::Connect(const std::string& host, uint16_t port,
+                      std::function<void(const Err&)> callback) {
+  if (!ConnectCanProceed(callback)) {
     return;
   }
 
   pending_connection_ = fxl::MakeRefCounted<PendingConnection>(host, port);
   pending_connection_->Initiate(weak_factory_.GetWeakPtr(),
                                 std::move(callback));
+}
+
+void Session::OpenMinidump(const std::string& path,
+                           std::function<void(const Err&)> callback) {
+  if (!ConnectCanProceed(callback)) {
+    return;
+  }
+
+  is_minidump_ = true;
+  remote_api_ = std::make_unique<MinidumpRemoteAPI>(path);
+
+  debug_ipc::MessageLoop::Current()->PostTask(
+      [callback]() { callback(Err()); });
 }
 
 void Session::Disconnect(std::function<void(const Err&)> callback) {

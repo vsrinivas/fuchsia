@@ -65,6 +65,8 @@ static_library("client") {
     "job_impl.cc",
     "job_impl.h",
     "memory_dump.cc",
+    "minidump_remote_api.cc",
+    "minidump_remote_api.h",
     "process.cc",
     "process_impl.cc",
     "process_impl.h",

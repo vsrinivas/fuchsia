@@ -60,6 +60,12 @@ class Session {
   void Connect(const std::string& host, uint16_t port,
                std::function<void(const Err&)> callback);
 
+  // Open a minidump instead of connectiong to a running system. The callback
+  // will be issued with an error if the file cannot be opened or if there is
+  // already a connection.
+  void OpenMinidump(const std::string& path,
+                    std::function<void(const Err&)> callback);
+
   // Disconnects from the remote system. Calling when there is no connection
   // connection will issue the callback with an error.
   //
@@ -112,6 +118,10 @@ class Session {
   // be issued with the error instead of trying to deserialize.
   using Callback = std::function<void(const Err&, std::vector<char>)>;
 
+  // Checks whether it's safe to begin establishing a connection. If not, the
+  // callback is invoked with details.
+  bool ConnectCanProceed(std::function<void(const Err&)> callback);
+
   // Dispatches unsolicited notifications sent from the agent.
   void DispatchNotification(const debug_ipc::MsgHeader& header,
                             std::vector<char> data);
@@ -124,6 +134,10 @@ class Session {
                           const Err& err, const debug_ipc::HelloReply& reply,
                           std::unique_ptr<debug_ipc::BufferedFD> buffer,
                           std::function<void(const Err&)> callback);
+
+  // Whether we have opened a core dump. Makes much of the connection-related
+  // stuff obsolete.
+  bool is_minidump_ = false;
 
   // Non-owning pointer to the connected stream. If this is non-null and
   // connection_storage_ is null, the connection is persistent (made via the
