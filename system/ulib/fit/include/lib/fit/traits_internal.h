@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FIT_TRAITS_INTERNAL_H_
+#define LIB_FIT_TRAITS_INTERNAL_H_
 
 namespace fit {
 namespace internal {
@@ -27,3 +28,5 @@ constexpr bool is_null(const T& v) {
 
 } // namespace internal
 } // namespace fit
+
+#endif // LIB_FIT_TRAITS_INTERNAL_H_

@@ -104,7 +104,7 @@ bool closure() {
 
     // heap callable initialization
     int fheap_value = 0;
-    ClosureFunction fheap([&fheap_value, big = Big() ] { fheap_value++; });
+    ClosureFunction fheap([&fheap_value, big = Big()] { fheap_value++; });
     EXPECT_TRUE(!!fheap);
     fheap();
     EXPECT_EQ(1, fheap_value);
@@ -135,7 +135,7 @@ bool closure() {
 
     // inline mutable lambda
     int fmutinline_value = 0;
-    ClosureFunction fmutinline([&fmutinline_value, x = 1 ]() mutable {
+    ClosureFunction fmutinline([&fmutinline_value, x = 1]() mutable {
         x *= 2;
         fmutinline_value = x;
     });
@@ -147,7 +147,7 @@ bool closure() {
 
     // heap-allocated mutable lambda
     int fmutheap_value = 0;
-    ClosureFunction fmutheap([&fmutheap_value, big = Big(), x = 1 ]() mutable {
+    ClosureFunction fmutheap([&fmutheap_value, big = Big(), x = 1]() mutable {
         x *= 2;
         fmutheap_value = x;
     });
@@ -283,7 +283,7 @@ bool binary_op() {
 
     // heap callable initialization
     int fheap_value = 0;
-    BinaryOpFunction fheap([&fheap_value, big = Big() ](int a, int b) {
+    BinaryOpFunction fheap([&fheap_value, big = Big()](int a, int b) {
         fheap_value++;
         return a + b;
     });
@@ -317,7 +317,7 @@ bool binary_op() {
 
     // inline mutable lambda
     int fmutinline_value = 0;
-    BinaryOpFunction fmutinline([&fmutinline_value, x = 1 ](int a, int b) mutable {
+    BinaryOpFunction fmutinline([&fmutinline_value, x = 1](int a, int b) mutable {
         x *= 2;
         fmutinline_value = x;
         return a + b;
@@ -330,7 +330,7 @@ bool binary_op() {
 
     // heap-allocated mutable lambda
     int fmutheap_value = 0;
-    BinaryOpFunction fmutheap([&fmutheap_value, big = Big(), x = 1 ](int a, int b) mutable {
+    BinaryOpFunction fmutheap([&fmutheap_value, big = Big(), x = 1](int a, int b) mutable {
         x *= 2;
         fmutheap_value = x;
         return a + b;
@@ -441,7 +441,7 @@ bool sized_function_size_bounds() {
     fit::function<Closure, sizeof(empty)> fempty(std::move(empty));
     static_assert(sizeof(fempty) >= sizeof(empty), "size bounds");
 
-    auto small = [ x = 1, y = 2 ] {
+    auto small = [x = 1, y = 2] {
         (void)x; // suppress unused lambda capture warning
         (void)y;
     };
@@ -449,10 +449,10 @@ bool sized_function_size_bounds() {
     static_assert(sizeof(fsmall) >= sizeof(small), "size bounds");
     fsmall = [] {};
 
-    auto big = [ big = Big(), x = 1 ] { (void)x; };
+    auto big = [big = Big(), x = 1] { (void)x; };
     fit::function<Closure, sizeof(big)> fbig(std::move(big));
     static_assert(sizeof(fbig) >= sizeof(big), "size bounds");
-    fbig = [ x = 1, y = 2 ] {
+    fbig = [x = 1, y = 2] {
         (void)x;
         (void)y;
     };
@@ -460,12 +460,12 @@ bool sized_function_size_bounds() {
 
     // These statements do compile though the lambda will be copied to the heap
     // when they exceed the inline size.
-    fempty = [ x = 1, y = 2 ] {
+    fempty = [x = 1, y = 2] {
         (void)x;
         (void)y;
     };
-    fsmall = [ big = Big(), x = 1 ] { (void)x; };
-    fbig = [ big = Big(), x = 1, y = 2 ] {
+    fsmall = [big = Big(), x = 1] { (void)x; };
+    fbig = [big = Big(), x = 1, y = 2] {
         (void)x;
         (void)y;
     };
@@ -480,7 +480,7 @@ bool inline_function_size_bounds() {
     fit::inline_function<Closure, sizeof(empty)> fempty(std::move(empty));
     static_assert(sizeof(fempty) >= sizeof(empty), "size bounds");
 
-    auto small = [ x = 1, y = 2 ] {
+    auto small = [x = 1, y = 2] {
         (void)x; // suppress unused lambda capture warning
         (void)y;
     };
@@ -488,10 +488,10 @@ bool inline_function_size_bounds() {
     static_assert(sizeof(fsmall) >= sizeof(small), "size bounds");
     fsmall = [] {};
 
-    auto big = [ big = Big(), x = 1 ] { (void)x; };
+    auto big = [big = Big(), x = 1] { (void)x; };
     fit::inline_function<Closure, sizeof(big)> fbig(std::move(big));
     static_assert(sizeof(fbig) >= sizeof(big), "size bounds");
-    fbig = [ x = 1, y = 2 ] {
+    fbig = [x = 1, y = 2] {
         (void)x;
         (void)y;
     };
@@ -572,7 +572,7 @@ bool sharing() {
     int finlinevalue = 1;
     int finlinedestroy = 0;
     fit::function<Closure> finline =
-        [&finlinevalue, d = DestructionObserver(&finlinedestroy) ] { finlinevalue++; };
+        [&finlinevalue, d = DestructionObserver(&finlinedestroy)] { finlinevalue++; };
     fit::function<Closure> finlineshare1 = finline.share();
     fit::function<Closure> finlineshare2 = finline.share();
     fit::function<Closure> finlineshare3 = finlineshare1.share();
@@ -605,7 +605,7 @@ bool sharing() {
     int fheapvalue = 1;
     int fheapdestroy = 0;
     fit::function<Closure> fheap =
-        [&fheapvalue, big = Big(), d = DestructionObserver(&fheapdestroy) ] { fheapvalue++; };
+        [&fheapvalue, big = Big(), d = DestructionObserver(&fheapdestroy)] { fheapvalue++; };
     fit::function<Closure> fheapshare1 = fheap.share();
     fit::function<Closure> fheapshare2 = fheap.share();
     fit::function<Closure> fheapshare3 = fheapshare1.share();

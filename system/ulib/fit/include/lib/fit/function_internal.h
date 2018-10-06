@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FIT_FUNCTION_INTERNAL_H_
+#define LIB_FIT_FUNCTION_INTERNAL_H_
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -307,3 +308,5 @@ bool operator!=(decltype(nullptr),
 
 } // namespace internal
 } // namespace fit
+
+#endif // LIB_FIT_FUNCTION_INTERNAL_H_

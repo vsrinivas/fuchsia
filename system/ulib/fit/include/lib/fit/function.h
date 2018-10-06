@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FIT_FUNCTION_H_
+#define LIB_FIT_FUNCTION_H_
 
 #include "function_internal.h"
 
@@ -180,3 +181,5 @@ auto bind_member(T* instance, R (T::*fn)(Args...)) {
 }
 
 } // namespace fit
+
+#endif // LIB_FIT_FUNCTION_H_

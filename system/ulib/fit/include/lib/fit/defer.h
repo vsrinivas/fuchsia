@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FIT_DEFER_H_
+#define LIB_FIT_DEFER_H_
 
 #include <new>
 #include <utility>
@@ -134,3 +135,5 @@ inline deferred_action<T> defer(T target) {
 }
 
 } // namespace fit
+
+#endif // LIB_FIT_DEFER_H_

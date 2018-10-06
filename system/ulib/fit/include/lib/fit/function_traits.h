@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FIT_FUNCTION_TRAITS_H_
+#define LIB_FIT_FUNCTION_TRAITS_H_
 
 #include <tuple>
 
@@ -55,16 +56,16 @@ struct function_traits<ReturnType (FunctorType::*)(ArgTypes...)>
 
 // Common functor specialization.
 template <typename FunctorType, typename ReturnType, typename... ArgTypes>
-struct function_traits<ReturnType (FunctorType::*)(ArgTypes...) const> :
-    public function_traits<ReturnType (*)(ArgTypes...)> {
+struct function_traits<ReturnType (FunctorType::*)(ArgTypes...) const>
+    : public function_traits<ReturnType (*)(ArgTypes...)> {
 
     using type = FunctorType;
 };
 
 // Function pointer specialization.
 template <typename ReturnType, typename... ArgTypes>
-struct function_traits<ReturnType (*)(ArgTypes...)> :
-    public function_traits<ReturnType(ArgTypes...)> {
+struct function_traits<ReturnType (*)(ArgTypes...)>
+    : public function_traits<ReturnType(ArgTypes...)> {
 
     using type = ReturnType (*)(ArgTypes...);
 };
@@ -80,3 +81,5 @@ struct function_traits<ReturnType(ArgTypes...)> {
 };
 
 } // namespace fit
+
+#endif // LIB_FIT_FUNCTION_TRAITS_H_

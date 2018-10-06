@@ -46,19 +46,19 @@ struct TraitsTest {
 
 // compile-time test
 namespace signature_traits {
-    using Traits = TraitsTest<int(float, bool)>::Traits;
+using Traits = TraitsTest<int(float, bool)>::Traits;
 } // namespace signature_traits
 
 // compile-time test
 namespace function_pointer_traits {
-    using Traits = TraitsTest<int (*)(float, bool)>::Traits;
-    static_assert(std::is_same_v<int (*)(float, bool), Traits::type>);
+using Traits = TraitsTest<int (*)(float, bool)>::Traits;
+static_assert(std::is_same_v<int (*)(float, bool), Traits::type>);
 } // namespace function_pointer_traits
 
 // compile-time test
 namespace lambda_traits {
-    auto lambda = [](float, bool) { return 0; };
-    using Traits = TraitsTest<decltype(lambda)>::Traits;
+auto lambda = [](float, bool) { return 0; };
+using Traits = TraitsTest<decltype(lambda)>::Traits;
 } // namespace lambda_traits
 
 template <typename Functor>
@@ -69,20 +69,20 @@ struct FunctorTraitsTest {
 
 // compile-time test
 namespace mutable_functor_traits {
-    struct MutableFunctor {
-        int operator()(float, bool) { return 0; }
-    };
-    using Traits = FunctorTraitsTest<MutableFunctor>::Traits;
+struct MutableFunctor {
+    int operator()(float, bool) { return 0; }
+};
+using Traits = FunctorTraitsTest<MutableFunctor>::Traits;
 } //namespace mutable_functor_traits
 
 // compile-time test
 namespace fit_function_traits {
-    using Traits = FunctorTraitsTest<fit::function<int(float, bool)>>;
+using Traits = FunctorTraitsTest<fit::function<int(float, bool)>>;
 } // namespace fit_function_traits
 
 // compile-time test
 namespace std_function_traits {
-    using Traits = FunctorTraitsTest<std::function<int(float, bool)>>;
+using Traits = FunctorTraitsTest<std::function<int(float, bool)>>;
 } // namespace std_function_traits
 
 } // namespace
