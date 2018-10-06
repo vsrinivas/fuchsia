@@ -39,6 +39,52 @@ Err AssertRunnableTarget(Target* target) {
   return Err();
 }
 
+// Verifies that the given job_context can be run or attached.
+Err AssertRunnableJobContext(JobContext* job_context) {
+  JobContext::State state = job_context->GetState();
+  if (state == JobContext::State::kStarting ||
+      state == JobContext::State::kAttaching) {
+    return Err(
+        "The current job is in the job of starting or attaching.\n"
+        "Either \"kill\" it or create a \"new\" job context.");
+  }
+  if (state == JobContext::State::kRunning) {
+    return Err(
+        "The current job is already running.\n"
+        "Either \"kill\" it or create a \"new\" job context.");
+  }
+  return Err();
+}
+
+// Callback for "attach", "detach". The verb affects the
+// message printed to the screen.
+void JobCommandCallback(const char* verb, fxl::WeakPtr<JobContext> job_context,
+                        bool display_message_on_success, const Err& err,
+                        CommandCallback callback = nullptr) {
+  if (!display_message_on_success && !err.has_error())
+    return;
+
+  Console* console = Console::get();
+
+  OutputBuffer out;
+  if (err.has_error()) {
+    if (job_context) {
+      out.Append(fxl::StringPrintf(
+          "Job %d %s failed.\n",
+          console->context().IdForJobContext(job_context.get()), verb));
+    }
+    out.OutputErr(err);
+  } else if (job_context) {
+    out.Append(DescribeJobContext(&console->context(), job_context.get()));
+  }
+
+  console->Output(std::move(out));
+
+  if (callback) {
+    callback(err);
+  }
+}
+
 // Callback for "run", "attach", "detach" and "stop". The verb affects the
 // message printed to the screen.
 // Since now Verbs commands can take in a callback and Process commands call
@@ -244,24 +290,41 @@ Examples
 Err DoAttach(ConsoleContext* context, const Command& cmd,
              CommandCallback callback = nullptr) {
   // Only a process can be attached.
-  Err err = cmd.ValidateNouns({Noun::kProcess});
+  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kJob});
   if (err.has_error())
     return err;
 
-  err = AssertRunnableTarget(cmd.target());
-  if (err.has_error())
-    return err;
+  if (cmd.HasNoun(Noun::kJob)) {
+    err = AssertRunnableJobContext(cmd.job_context());
+    if (err.has_error())
+      return err;
 
-  // Should have one arg which is the koid.
-  uint64_t koid = 0;
-  err = ReadUint64Arg(cmd, 0, "process koid", &koid);
-  if (err.has_error())
-    return err;
+    // Should have one arg which is the koid.
+    uint64_t koid = 0;
+    err = ReadUint64Arg(cmd, 0, "job koid", &koid);
+    if (err.has_error())
+      return err;
 
-  cmd.target()->Attach(
-      koid, [callback](fxl::WeakPtr<Target> target, const Err& err) {
-        ProcessCommandCallback("attach", target, true, err, callback);
-      });
+    cmd.job_context()->Attach(
+        koid, [callback](fxl::WeakPtr<JobContext> job_context, const Err& err) {
+          JobCommandCallback("attach", job_context, true, err, callback);
+        });
+  } else {
+    err = AssertRunnableTarget(cmd.target());
+    if (err.has_error())
+      return err;
+
+    // Should have one arg which is the koid.
+    uint64_t koid = 0;
+    err = ReadUint64Arg(cmd, 0, "process koid", &koid);
+    if (err.has_error())
+      return err;
+
+    cmd.target()->Attach(
+        koid, [callback](fxl::WeakPtr<Target> target, const Err& err) {
+          ProcessCommandCallback("attach", target, true, err, callback);
+        });
+  }
   return Err();
 }
 

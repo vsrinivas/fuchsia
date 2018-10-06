@@ -40,15 +40,8 @@ JobContext::State JobContextImpl::GetState() const { return state_; }
 Job* JobContextImpl::GetJob() const { return job_.get(); }
 
 void JobContextImpl::Attach(uint64_t koid, Callback callback) {
-  if (state_ != State::kNone) {
-    // Avoid reentering caller to dispatch the error.
-    debug_ipc::MessageLoop::Current()->PostTask(
-        [callback, weak_ptr = GetWeakPtr()]() {
-          callback(std::move(weak_ptr),
-                   Err("Can't attach, job is already running or starting."));
-        });
-    return;
-  }
+  callback(GetWeakPtr(), Err("Can't attach, not implemented."));
+  return;
 
   // TODO(DX-322): attach
 }
