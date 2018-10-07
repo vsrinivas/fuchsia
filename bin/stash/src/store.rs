@@ -242,41 +242,25 @@ impl StoreManager {
 
     /// Sets a value in the store.
     pub fn set_value(&mut self, client_name: &str, key: String, field: Value) -> Result<(), Error> {
-        let should_save = {
-            let client_fields = self
-                .store
-                .data
-                .entry(client_name.to_string())
-                .or_insert(HashMap::new());
-            let should_save = client_fields.is_empty();
-            client_fields.insert(key, field);
-            should_save
-        };
-
-        if should_save {
-            self.save_store()?;
-        }
-        Ok(())
+        let client_fields = self
+            .store
+            .data
+            .entry(client_name.to_string())
+            .or_insert(HashMap::new());
+        client_fields.insert(key, field);
+        self.save_store()
     }
 
     /// Delete a value from the store. Will return Ok(true) for a successful deletion, Ok(false) if
     /// the field doesn't exist, and Err(e) on any unexpected errors.
     pub fn delete_value(&mut self, client_name: &str, key: &str) -> Result<(), Error> {
-        let should_save = {
-            let client_fields = self
-                .store
-                .data
-                .entry(client_name.to_string())
-                .or_insert(HashMap::new());
-            let should_save = client_fields.is_empty();
-            client_fields.remove(key);
-            should_save
-        };
-
-        if should_save {
-            self.save_store()?;
-        }
-        Ok(())
+        let client_fields = self
+            .store
+            .data
+            .entry(client_name.to_string())
+            .or_insert(HashMap::new());
+        client_fields.remove(key);
+        self.save_store()
     }
 
     /// Retrieves a list of key/type pairs for all keys containing the given prefix.
@@ -330,6 +314,7 @@ mod tests {
 
     use self::tempdir::TempDir;
     use crate::store::*;
+    use std::io;
 
     fn get_tmp_store_manager(tmp_dir: &TempDir) -> StoreManager {
         StoreManager::new(tmp_dir.path().join("stash.store")).unwrap()
@@ -590,5 +575,65 @@ mod tests {
             vec![] as Vec<KeyValue>,
             sm.get_prefix(&test_client_name, &"".to_string()).unwrap()
         );
+    }
+
+    #[test]
+    fn test_file_is_updated() {
+        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let mut sm = get_tmp_store_manager(&tmp_dir);
+
+        let test_client_name = "test_client".to_owned();
+        let file_path = sm.backing_file.clone();
+
+        let mut curr_file_size = 0;
+        let mut new_file_size = 0;
+
+        // File shouldn't exist when we start
+        assert_eq!(fs::metadata(&file_path).unwrap_err().kind(), io::ErrorKind::NotFound);
+
+        // Set a field, the file size should increase
+        sm.set_value(
+            &test_client_name,
+            "foo".to_string(),
+            Value::Boolval(true),
+        ).unwrap();
+        sm.save_store().unwrap();
+
+        new_file_size = fs::metadata(&file_path).unwrap().len();
+        assert!(curr_file_size < new_file_size);
+        curr_file_size = new_file_size;
+
+        // Set a different field, the file size should increase
+        sm.set_value(
+            &test_client_name,
+            "bar".to_string(),
+            Value::Boolval(true),
+        ).unwrap();
+        sm.save_store().unwrap();
+
+        new_file_size = fs::metadata(&file_path).unwrap().len();
+        assert!(curr_file_size < new_file_size);
+        curr_file_size = new_file_size;
+
+        // Delete a field, the file size should decrease
+        sm.delete_value(
+            &test_client_name,
+            "bar",
+        ).unwrap();
+        sm.save_store().unwrap();
+
+        new_file_size = fs::metadata(&file_path).unwrap().len();
+        assert!(curr_file_size > new_file_size);
+        curr_file_size = new_file_size;
+
+        // Delete a field, the file size should decrease
+        sm.delete_value(
+            &test_client_name,
+            "foo",
+        ).unwrap();
+        sm.save_store().unwrap();
+
+        new_file_size = fs::metadata(&file_path).unwrap().len();
+        assert!(curr_file_size > new_file_size);
     }
 }
