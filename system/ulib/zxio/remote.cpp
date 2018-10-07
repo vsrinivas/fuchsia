@@ -8,16 +8,18 @@
 #include <string.h>
 #include <zircon/syscalls.h>
 
-static zx_status_t zxio_remote_release(zxio_t* io, zx_handle_t* out_node) {
+#define ZXIO_REMOTE_CHUNK_SIZE 8192
+
+static zx_status_t zxio_remote_release(zxio_t* io, zx_handle_t* out_handle) {
     zxio_remote_t* rio = reinterpret_cast<zxio_remote_t*>(io);
-    zx_handle_t node = rio->control;
+    zx_handle_t control = rio->control;
     rio->control = ZX_HANDLE_INVALID;
     if (rio->event != ZX_HANDLE_INVALID) {
-        zx_handle_t h = rio->event;
+        zx_handle_t event = rio->event;
         rio->event = ZX_HANDLE_INVALID;
-        zx_handle_close(h);
+        zx_handle_close(event);
     }
-    *out_node = node;
+    *out_handle = control;
     return ZX_OK;
 }
 
@@ -25,13 +27,13 @@ static zx_status_t zxio_remote_close(zxio_t* io) {
     zxio_remote_t* rio = reinterpret_cast<zxio_remote_t*>(io);
     zx_status_t io_status, status;
     io_status = fuchsia_io_NodeClose(rio->control, &status);
-    zx_handle_t h = rio->control;
+    zx_handle_t control = rio->control;
     rio->control = ZX_HANDLE_INVALID;
-    zx_handle_close(h);
+    zx_handle_close(control);
     if (rio->event != ZX_HANDLE_INVALID) {
-        zx_handle_t h = rio->event;
+        zx_handle_t event = rio->event;
         rio->event = ZX_HANDLE_INVALID;
-        zx_handle_close(h);
+        zx_handle_close(event);
     }
     return io_status != ZX_OK ? io_status : status;
 }
@@ -62,13 +64,12 @@ static zx_status_t zxio_remote_attr_set(zxio_t* io, uint32_t flags, const zxio_n
     return io_status != ZX_OK ? io_status : status;
 }
 
-static zx_status_t zxio_remote_read(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual) {
-    zxio_remote_t* rio = reinterpret_cast<zxio_remote_t*>(io);
+static zx_status_t zxio_remote_read_once(zxio_remote_t* rio, uint8_t* buffer,
+                                         size_t capacity, size_t* out_actual) {
     size_t actual = 0u;
     zx_status_t io_status, status;
     io_status = fuchsia_io_FileRead(rio->control, capacity, &status,
-                                    static_cast<uint8_t*>(buffer), capacity,
-                                    &actual);
+                                    buffer, capacity, &actual);
     if (io_status != ZX_OK) {
         return io_status;
     }
@@ -82,13 +83,36 @@ static zx_status_t zxio_remote_read(zxio_t* io, void* buffer, size_t capacity, s
     return ZX_OK;
 }
 
-static zx_status_t zxio_remote_read_at(zxio_t* io, size_t offset, void* buffer, size_t capacity, size_t* out_actual) {
+static zx_status_t zxio_remote_read(zxio_t* io, void* data, size_t capacity,
+                                    size_t* out_actual) {
     zxio_remote_t* rio = reinterpret_cast<zxio_remote_t*>(io);
+    uint8_t* buffer = static_cast<uint8_t*>(data);
+    size_t received = 0;
+    while (capacity > 0) {
+        size_t chunk = (capacity > ZXIO_REMOTE_CHUNK_SIZE) ? ZXIO_REMOTE_CHUNK_SIZE : capacity;
+        size_t actual = 0;
+        zx_status_t status = zxio_remote_read_once(rio, buffer, chunk, &actual);
+        if (status != ZX_OK) {
+            return status;
+        }
+        received += actual;
+        buffer += actual;
+        capacity -= actual;
+        if (chunk != actual) {
+            break;
+        }
+    }
+    *out_actual = received;
+    return ZX_OK;
+}
+
+static zx_status_t zxio_remote_read_once_at(zxio_remote_t* rio, size_t offset,
+                                            uint8_t* buffer, size_t capacity,
+                                            size_t* out_actual) {
     size_t actual = 0u;
     zx_status_t io_status, status;
     io_status = fuchsia_io_FileReadAt(rio->control, capacity, offset, &status,
-                                      static_cast<uint8_t*>(buffer), capacity,
-                                      &actual);
+                                      buffer, capacity, &actual);
     if (io_status != ZX_OK) {
         return io_status;
     }
@@ -102,12 +126,37 @@ static zx_status_t zxio_remote_read_at(zxio_t* io, size_t offset, void* buffer, 
     return ZX_OK;
 }
 
-static zx_status_t zxio_remote_write(zxio_t* io, const void* buffer, size_t capacity, size_t* out_actual) {
+static zx_status_t zxio_remote_read_at(zxio_t* io, size_t offset, void* data,
+                                       size_t capacity, size_t* out_actual) {
     zxio_remote_t* rio = reinterpret_cast<zxio_remote_t*>(io);
+    uint8_t* buffer = static_cast<uint8_t*>(data);
+    size_t received = 0;
+    while (capacity > 0) {
+        size_t chunk = (capacity > ZXIO_REMOTE_CHUNK_SIZE) ? ZXIO_REMOTE_CHUNK_SIZE : capacity;
+        size_t actual = 0;
+        zx_status_t status = zxio_remote_read_once_at(rio, offset, buffer,
+                                                      chunk, &actual);
+        if (status != ZX_OK) {
+            return status;
+        }
+        offset += actual;
+        received += actual;
+        buffer += actual;
+        capacity -= actual;
+        if (chunk != actual) {
+            break;
+        }
+    }
+    *out_actual = received;
+    return ZX_OK;
+}
+
+static zx_status_t zxio_remote_write_once(zxio_remote_t* rio, const uint8_t* buffer,
+                                          size_t capacity, size_t* out_actual) {
     size_t actual = 0u;
     zx_status_t io_status, status;
-    io_status = fuchsia_io_FileWrite(rio->control, static_cast<const uint8_t*>(buffer),
-                                          capacity, &status, &actual);
+    io_status = fuchsia_io_FileWrite(rio->control, buffer, capacity, &status,
+                                     &actual);
     if (io_status != ZX_OK) {
         return io_status;
     }
@@ -121,12 +170,37 @@ static zx_status_t zxio_remote_write(zxio_t* io, const void* buffer, size_t capa
     return ZX_OK;
 }
 
-static zx_status_t zxio_remote_write_at(zxio_t* io, size_t offset, const void* buffer, size_t capacity, size_t* out_actual) {
+static zx_status_t zxio_remote_write(zxio_t* io, const void* data,
+                                     size_t capacity, size_t* out_actual) {
     zxio_remote_t* rio = reinterpret_cast<zxio_remote_t*>(io);
+    const uint8_t* buffer = static_cast<const uint8_t*>(data);
+    size_t sent = 0u;
+    while (capacity > 0) {
+        size_t chunk = (capacity > ZXIO_REMOTE_CHUNK_SIZE) ? ZXIO_REMOTE_CHUNK_SIZE : capacity;
+        size_t actual = 0u;
+        zx_status_t status = zxio_remote_write_once(rio, buffer, chunk,
+                                                    &actual);
+        if (status != ZX_OK) {
+            return status;
+        }
+        sent += actual;
+        buffer += actual;
+        capacity -= actual;
+        if (chunk != actual) {
+            break;
+        }
+    }
+    *out_actual = sent;
+    return ZX_OK;
+}
+
+static zx_status_t zxio_remote_write_once_at(zxio_remote_t* rio, size_t offset,
+                                             const uint8_t* buffer, size_t capacity,
+                                             size_t* out_actual) {
     size_t actual = 0u;
     zx_status_t io_status, status;
-    io_status = fuchsia_io_FileWriteAt(rio->control, static_cast<const uint8_t*>(buffer),
-                                       capacity, offset, &status, &actual);
+    io_status = fuchsia_io_FileWriteAt(rio->control, buffer, capacity, offset,
+                                       &status, &actual);
     if (io_status != ZX_OK) {
         return io_status;
     }
@@ -137,6 +211,32 @@ static zx_status_t zxio_remote_write_at(zxio_t* io, size_t offset, const void* b
         return ZX_ERR_IO;
     }
     *out_actual = actual;
+    return ZX_OK;
+}
+
+static zx_status_t zxio_remote_write_at(zxio_t* io, size_t offset,
+                                        const void* data, size_t capacity,
+                                        size_t* out_actual) {
+    zxio_remote_t* rio = reinterpret_cast<zxio_remote_t*>(io);
+    const uint8_t* buffer = static_cast<const uint8_t*>(data);
+    size_t sent = 0u;
+    while (capacity > 0) {
+        size_t chunk = (capacity > ZXIO_REMOTE_CHUNK_SIZE) ? ZXIO_REMOTE_CHUNK_SIZE : capacity;
+        size_t actual = 0u;
+        zx_status_t status = zxio_remote_write_once_at(rio, offset, buffer,
+                                                       chunk, &actual);
+        if (status != ZX_OK) {
+            return status;
+        }
+        sent += actual;
+        buffer += actual;
+        offset += actual;
+        capacity -= actual;
+        if (chunk != actual) {
+            break;
+        }
+    }
+    *out_actual = sent;
     return ZX_OK;
 }
 

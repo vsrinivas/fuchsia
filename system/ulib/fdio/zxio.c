@@ -39,36 +39,6 @@ static zx_status_t fdio_zxio_close(fdio_t* io) {
     return zxio_close(z);
 }
 
-static zx_status_t fdio_zxio_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
-    zxio_t* z = fdio_get_zxio(io);
-    zx_handle_t local, remote;
-    zx_status_t status = zx_channel_create(0, &local, &remote);
-    if (status != ZX_OK) {
-        return status;
-    }
-    uint32_t flags = fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_WRITABLE;
-    status = zxio_clone_async(z, flags, remote);
-    if (status != ZX_OK) {
-        zx_handle_close(local);
-        return status;
-    }
-    handles[0] = local;
-    types[0] = PA_FDIO_REMOTE;
-    return 1;
-}
-
-static zx_status_t fdio_zxio_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
-    zxio_t* z = fdio_get_zxio(io);
-    zx_handle_t handle = ZX_HANDLE_INVALID;
-    zx_status_t status = zxio_release(z, &handle);
-    if (status != ZX_OK) {
-        return status;
-    }
-    handles[0] = handle;
-    types[0] = PA_FDIO_REMOTE;
-    return 1;
-}
-
 static zx_status_t fdio_zxio_sync(fdio_t* io) {
     zxio_t* z = fdio_get_zxio(io);
     return zxio_sync(z);
@@ -107,96 +77,30 @@ static zx_status_t fdio_zxio_set_attr(fdio_t* io, const vnattr_t* vnattr) {
 
 static ssize_t fdio_zxio_read(fdio_t* io, void* data, size_t len) {
     zxio_t* z = fdio_get_zxio(io);
-    zx_status_t status = ZX_OK;
-    uint64_t received = 0;
-    while (len > 0) {
-        uint64_t chunk = (len > FDIO_CHUNK_SIZE) ? FDIO_CHUNK_SIZE : len;
-        uint64_t actual = 0;
-        if ((status = zxio_read(z, data, chunk, &actual)) != ZX_OK) {
-            return status;
-        }
-        received += actual;
-        data += actual;
-        len -= actual;
-        if (chunk != actual) {
-            break;
-        }
-    }
-    if (received == 0) {
-        return status;
-    }
-    return received;
+    size_t actual = 0;
+    zx_status_t status = zxio_read(z, data, len, &actual);
+    return status != ZX_OK ? status : (ssize_t)actual;
 }
 
 static ssize_t fdio_zxio_read_at(fdio_t* io, void* data, size_t len, off_t at) {
     zxio_t* z = fdio_get_zxio(io);
-    zx_status_t status = ZX_OK;
-    uint64_t received = 0;
-    while (len > 0) {
-        uint64_t chunk = (len > FDIO_CHUNK_SIZE) ? FDIO_CHUNK_SIZE : len;
-        uint64_t actual = 0;
-        if ((status = zxio_read_at(z, at, data, chunk, &actual)) != ZX_OK) {
-            return status;
-        }
-        at += actual;
-        received += actual;
-        data += actual;
-        len -= actual;
-        if (chunk != actual) {
-            break;
-        }
-    }
-    if (received == 0) {
-        return status;
-    }
-    return received;
+    size_t actual = 0;
+    zx_status_t status = zxio_read_at(z, at, data, len, &actual);
+    return status != ZX_OK ? status : (ssize_t)actual;
 }
 
 static ssize_t fdio_zxio_write(fdio_t* io, const void* data, size_t len) {
     zxio_t* z = fdio_get_zxio(io);
-    zx_status_t status = ZX_OK;
-    uint64_t sent = 0u;
-    while (len > 0) {
-        uint64_t chunk = (len > FDIO_CHUNK_SIZE) ? FDIO_CHUNK_SIZE : len;
-        uint64_t actual = 0u;
-        if ((status = zxio_write(z, data, chunk, &actual)) != ZX_OK) {
-            return status;
-        }
-        sent += actual;
-        data += actual;
-        len -= actual;
-        if (chunk != actual) {
-            break;
-        }
-    }
-    if (sent == 0) {
-        return status;
-    }
-    return sent;
+    size_t actual = 0;
+    zx_status_t status = zxio_write(z, data, len, &actual);
+    return status != ZX_OK ? status : (ssize_t)actual;
 }
 
 static ssize_t fdio_zxio_write_at(fdio_t* io, const void* data, size_t len, off_t at) {
     zxio_t* z = fdio_get_zxio(io);
-    zx_status_t status = ZX_OK;
-    uint64_t count = 0u;
-    while (len > 0) {
-        uint64_t chunk = (len > FDIO_CHUNK_SIZE) ? FDIO_CHUNK_SIZE : len;
-        uint64_t actual = 0u;
-        if ((status = zxio_write_at(z, at, data, chunk, &actual)) != ZX_OK) {
-            return status;
-        }
-        count += actual;
-        data += actual;
-        at += actual;
-        len -= actual;
-        if (chunk != actual) {
-            break;
-        }
-    }
-    if (count == 0) {
-        return status;
-    }
-    return count;
+    size_t actual = 0;
+    zx_status_t status = zxio_write_at(z, at, data, len, &actual);
+    return status != ZX_OK ? status : (ssize_t)actual;
 }
 
 static_assert(SEEK_SET == fuchsia_io_SeekOrigin_START, "");
@@ -248,6 +152,24 @@ static zx_status_t fdio_zxio_remote_open(fdio_t* io, const char* path,
     return zxrio_open_handle(rio->control, path, flags, mode, out);
 }
 
+static zx_status_t fdio_zxio_remote_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
+    zxio_t* z = fdio_get_zxio(io);
+    zx_handle_t local, remote;
+    zx_status_t status = zx_channel_create(0, &local, &remote);
+    if (status != ZX_OK) {
+        return status;
+    }
+    uint32_t flags = fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_WRITABLE;
+    status = zxio_clone_async(z, flags, remote);
+    if (status != ZX_OK) {
+        zx_handle_close(local);
+        return status;
+    }
+    handles[0] = local;
+    types[0] = PA_FDIO_REMOTE;
+    return 1;
+}
+
 static ssize_t fdio_zxio_remote_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
                                       size_t in_len, void* out_buf, size_t out_len) {
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
@@ -284,6 +206,18 @@ static void fdio_zxio_remote_wait_end(fdio_t* io, zx_signals_t signals, uint32_t
         events |= POLLRDHUP;
     }
     *_events = ((signals >> POLL_SHIFT) & POLL_MASK) | events;
+}
+
+static zx_status_t fdio_zxio_remote_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
+    zxio_t* z = fdio_get_zxio(io);
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    zx_status_t status = zxio_release(z, &handle);
+    if (status != ZX_OK) {
+        return status;
+    }
+    handles[0] = handle;
+    types[0] = PA_FDIO_REMOTE;
+    return 1;
 }
 
 static zx_status_t fdio_zxio_remote_get_vmo(fdio_t* io, int flags, zx_handle_t* out_vmo) {
@@ -371,11 +305,11 @@ fdio_ops_t fdio_zxio_remote_ops = {
     .misc = fdio_default_misc,
     .close = fdio_zxio_close,
     .open = fdio_zxio_remote_open,
-    .clone = fdio_zxio_clone,
+    .clone = fdio_zxio_remote_clone,
     .ioctl = fdio_zxio_remote_ioctl,
     .wait_begin = fdio_zxio_remote_wait_begin,
     .wait_end = fdio_zxio_remote_wait_end,
-    .unwrap = fdio_zxio_unwrap,
+    .unwrap = fdio_zxio_remote_unwrap,
     .posix_ioctl = fdio_default_posix_ioctl,
     .get_vmo = fdio_zxio_remote_get_vmo,
     .get_token = fdio_zxio_remote_get_token,
