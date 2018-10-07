@@ -10,6 +10,7 @@
 
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/geometry/types.h"
+#include "lib/escher/paper/paper_renderer_config.h"
 #include "lib/escher/util/hash_map.h"
 
 namespace escher {
@@ -17,28 +18,60 @@ namespace escher {
 class BoundingBox;
 struct RoundedRectSpec;
 
+// Stored internally by PaperShapeCache.  Exposed externally for convenience,
+// as a way to get access to both |num_indices| and |num_shadow_volume_indices|.
+// This allows us to use the same mesh for two different purposes ("regular"
+// geometry and extruded shadow volume geometry).
+// NOTE: messy-ish but OK for now because encapsulated in |PaperRenderer2|.
+struct PaperShapeCacheEntry {
+  uint64_t last_touched_frame = 0;
+  MeshPtr mesh;
+  uint32_t num_indices = 0;
+  uint32_t num_shadow_volume_indices = 0;
+
+  explicit operator bool() const { return mesh.get() != nullptr; }
+};
+
 // Generates and caches clipped triangle meshes that match the requested shape
 // specification.
 class PaperShapeCache {
  public:
   static constexpr size_t kNumFramesBeforeEviction = 3;
 
-  explicit PaperShapeCache(EscherWeakPtr escher);
+  explicit PaperShapeCache(EscherWeakPtr escher,
+                           const PaperRendererConfig& config);
   ~PaperShapeCache();
 
-  // Return a (possibly cached) mesh that matches the spec, clipped to the list
-  // of clip planes.
+  // Return a (possibly cached) mesh that matches the shape parameters.  To
+  // look up the mesh, a hash is computed from the shape parameters along with
+  // the list of clip planes.  If the mesh is not found, a new mesh is generated
+  // from the shape parameters, clipped by the list of planes, and
+  // post-processed in whatever way is required by the current |PaperRenderer2|
+  // configuration (e.g. perhaps adding a vertex attribute to allow
+  // shadow-volume extrusion in the vertex shader).
   Mesh* GetRoundedRectMesh(const RoundedRectSpec& spec,
                            const plane2* clip_planes, size_t num_clip_planes);
-  Mesh* GetRoundedRectMesh(const RoundedRectSpec& spec,
-                           const std::vector<plane2>& clip_planes);
+  Mesh* GetCircleMesh(float radius, const plane2* clip_planes,
+                      size_t num_clip_planes);
+  Mesh* GetRectMesh(vec2 min, vec2 max, const plane2* clip_planes,
+                    size_t num_clip_planes);
+  Mesh* GetRectMesh(float width, float height, const plane2* clip_planes,
+                    size_t num_clip_planes) {
+    vec2 half_extent(0.5f * width, 0.5f * height);
+    return GetRectMesh(-half_extent, half_extent, clip_planes, num_clip_planes);
+  }
 
   void BeginFrame(BatchGpuUploader* uploader, uint64_t frame_number);
   void EndFrame();
 
+  void SetConfig(const PaperRendererConfig& config);
+
  private:
+  enum class ShapeType { kRect, kRoundedRect, kCircle };
+
   // Args: array of planes to clip the generated mesh, and size of the array.
-  using CacheMissMeshGenerator = std::function<MeshPtr(const plane2*, size_t)>;
+  using CacheMissMeshGenerator = std::function<PaperShapeCacheEntry(
+      const plane2* planes, size_t num_planes)>;
 
   // Computes a lookup key by starting with |shape_hash| and then hashing the
   // list of |clip_planes|.  If no mesh is found with this key, a secondary key
@@ -78,20 +111,15 @@ class PaperShapeCache {
   // kNumFramesBeforeEviction.
   void TrimCache();
 
-  struct CacheEntry {
-    uint64_t last_touched_frame;
-    MeshPtr mesh;
-  };
-
-  // Return the CacheEntry corresponding to the hash, or nullptr if none such
-  // is present in the cache.
-  CacheEntry* FindEntry(const Hash& hash);
+  // Return the PaperShapeCacheEntry corresponding to the hash, or nullptr if
+  // none such is present in the cache.
+  PaperShapeCacheEntry* FindEntry(const Hash& hash);
 
   // Entry must not already exist.
-  void AddEntry(const Hash& hash, MeshPtr mesh);
+  void AddEntry(const Hash& hash, PaperShapeCacheEntry entry);
 
   const EscherWeakPtr escher_;
-  HashMap<Hash, CacheEntry> cache_;
+  HashMap<Hash, PaperShapeCacheEntry> cache_;
   BatchGpuUploader* uploader_ = nullptr;
   uint64_t frame_number_ = 0;
 
@@ -99,14 +127,9 @@ class PaperShapeCache {
   uint64_t cache_hit_count_ = 0;
   uint64_t cache_hit_after_plane_culling_count_ = 0;
   uint64_t cache_miss_count_ = 0;
+
+  PaperRendererShadowType shadow_type_ = PaperRendererShadowType::kNone;
 };
-
-// Inline function definitions.
-
-inline Mesh* PaperShapeCache::GetRoundedRectMesh(
-    const RoundedRectSpec& spec, const std::vector<plane2>& clip_planes) {
-  return GetRoundedRectMesh(spec, clip_planes.data(), clip_planes.size());
-}
 
 }  // namespace escher
 

@@ -5,6 +5,7 @@
 #include "lib/escher/paper/paper_renderer2.h"
 
 #include "lib/escher/escher.h"
+#include "lib/escher/paper/paper_renderer_config.h"
 #include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/command_buffer.h"
@@ -21,7 +22,9 @@ PaperRenderer2Ptr PaperRenderer2::New(EscherWeakPtr escher) {
 
 PaperRenderer2::PaperRenderer2(EscherWeakPtr weak_escher)
     : Renderer(weak_escher),
-      shape_cache_(weak_escher),
+      shape_cache_(
+          weak_escher,
+          PaperRendererConfig{.shadow_type = PaperRendererShadowType::kNone}),
       render_queue_(std::move(weak_escher)) {
   // Need at least one.
   SetNumDepthBuffers(1);
