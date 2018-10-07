@@ -7,8 +7,12 @@
 #include <lib/fdio/spawn.h>
 #include <zx/time.h>
 
+#include <errno.h>
+#include <netdb.h>
+#include <string.h>
+#include <sys/socket.h>
 #include <fstream>
-#include <iostream>
+#include <string>
 #include <unordered_set>
 
 #include "garnet/bin/trace/commands/record.h"
@@ -17,10 +21,13 @@
 #include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
+#include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_view.h"
+#include "lib/fxl/strings/trim.h"
 
 namespace tracing {
 
@@ -41,6 +48,8 @@ const char kBufferingMode[] = "buffering-mode";
 const char kBenchmarkResultsFile[] = "benchmark-results-file";
 const char kTestSuite[] = "test-suite";
 
+const char kTcpPrefix[] = "tcp:";
+
 const struct {
   const char* name;
   fuchsia::tracing::BufferingMode mode;
@@ -49,6 +58,17 @@ const struct {
     {"circular", fuchsia::tracing::BufferingMode::CIRCULAR},
     {"streaming", fuchsia::tracing::BufferingMode::STREAMING},
 };
+
+static bool BeginsWith(fxl::StringView str, fxl::StringView prefix,
+                       fxl::StringView* arg) {
+  size_t prefix_size = prefix.size();
+  if (str.size() < prefix_size)
+    return false;
+  if (str.substr(0, prefix_size) != prefix)
+    return false;
+  *arg = str.substr(prefix_size);
+  return true;
+}
 
 zx_handle_t Launch(const std::vector<std::string>& args) {
   zx_handle_t subprocess = ZX_HANDLE_INVALID;
@@ -376,6 +396,72 @@ Command::Info Record::Describe() {
 Record::Record(component::StartupContext* context)
     : CommandWithTraceController(context), weak_ptr_factory_(this) {}
 
+static bool TcpAddrFromString(fxl::StringView address, fxl::StringView port,
+                              addrinfo* out_addr) {
+  struct addrinfo hints;
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_protocol = IPPROTO_TCP;
+  hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
+
+  addrinfo* addrinfos;
+  int errcode = getaddrinfo(address.ToString().c_str(),
+                            port.ToString().c_str(),
+                            &hints, &addrinfos);
+  if (errcode != 0) {
+    FXL_LOG(ERROR) << "Failed to getaddrinfo for address " << address
+                   << ":" << port << ": " << gai_strerror(errcode);
+    return false;
+  }
+  if (addrinfos == nullptr) {
+    FXL_LOG(ERROR) << "No matching addresses found for " << address
+                   << ":" << port;
+    return false;
+  }
+
+  *out_addr = *addrinfos;
+  freeaddrinfo(addrinfos);
+  return true;
+}
+
+static std::unique_ptr<std::ostream> ConnectToTraceSaver(fxl::StringView address) {
+  FXL_LOG(INFO) << "Connecting to " << address;
+
+  size_t colon = address.rfind(':');
+  if (colon == address.npos) {
+    FXL_LOG(ERROR) << "TCP address is missing port: " << address;
+    return nullptr;
+  }
+
+  fxl::StringView ip_addr_str(address.substr(0, colon));
+  fxl::StringView port_str(address.substr(colon + 1));
+
+  // [::1] -> ::1
+  ip_addr_str = fxl::TrimString(ip_addr_str, "[]");
+
+  addrinfo tcp_addr;
+  if (!TcpAddrFromString(ip_addr_str, port_str, &tcp_addr)) {
+    return nullptr;
+  }
+
+  fxl::UniqueFD fd(socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
+  if (!fd.is_valid()) {
+    FXL_LOG(ERROR) << "Failed to create socket: " << strerror(errno);
+    return nullptr;
+  }
+
+  if (connect(fd.get(), tcp_addr.ai_addr, tcp_addr.ai_addrlen) < 0) {
+    FXL_LOG(ERROR) << "Failed to connect: " << strerror(errno);
+    return nullptr;
+  }
+
+  auto ofstream = std::make_unique<std::ofstream>();
+  ofstream->__open(fd.release(), std::ios_base::out);
+  FXL_DCHECK(ofstream->is_open());
+  return ofstream;
+}
+
 void Record::Start(const fxl::CommandLine& command_line) {
   if (!options_.Setup(command_line)) {
     FXL_LOG(ERROR) << "Error parsing options from command line - aborting";
@@ -383,16 +469,26 @@ void Record::Start(const fxl::CommandLine& command_line) {
     return;
   }
 
-  std::ofstream out_file(options_.output_file_name,
-                         std::ios_base::out | std::ios_base::trunc);
-  if (!out_file.is_open()) {
+  std::unique_ptr<std::ostream> out_stream;
+  fxl::StringView address;
+  if (BeginsWith(options_.output_file_name, kTcpPrefix, &address)) {
+    out_stream = ConnectToTraceSaver(address);
+  } else {
+    auto ofstream = std::make_unique<std::ofstream>(
+        options_.output_file_name, std::ios_base::out | std::ios_base::trunc);
+    if (ofstream->is_open()) {
+      out_stream = std::move(ofstream);
+    }
+  }
+
+  if (!out_stream) {
     FXL_LOG(ERROR) << "Failed to open " << options_.output_file_name
                    << " for writing";
     Done(1);
     return;
   }
 
-  exporter_.reset(new ChromiumExporter(std::move(out_file)));
+  exporter_.reset(new ChromiumExporter(std::move(out_stream)));
   tracer_.reset(new Tracer(trace_controller().get()));
   if (!options_.measurements.duration.empty()) {
     aggregate_events_ = true;

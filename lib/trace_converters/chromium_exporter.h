@@ -5,7 +5,8 @@
 #ifndef GARNET_LIB_TRACE_CONVERTERS_CHROMIUM_EXPORTER_H_
 #define GARNET_LIB_TRACE_CONVERTERS_CHROMIUM_EXPORTER_H_
 
-#include <fstream>
+#include <ostream>
+#include <memory>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
@@ -19,7 +20,7 @@ namespace tracing {
 
 class ChromiumExporter {
  public:
-  explicit ChromiumExporter(std::ofstream file_out);
+  explicit ChromiumExporter(std::unique_ptr<std::ostream> stream_out);
   explicit ChromiumExporter(std::ostream& out);
   ~ChromiumExporter();
 
@@ -34,7 +35,7 @@ class ChromiumExporter {
   void ExportMetadata(const trace::Record::Metadata& metadata);
   void ExportContextSwitch(const trace::Record::ContextSwitch& context_switch);
 
-  std::ofstream file_out_;
+  std::unique_ptr<std::ostream> stream_out_;
   rapidjson::OStreamWrapper wrapper_;
   rapidjson::Writer<rapidjson::OStreamWrapper> writer_;
 

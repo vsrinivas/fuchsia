@@ -97,15 +97,35 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	}
 	defer conn.Close()
 
-	err = captureTrace(cmd.captureConfig, conn)
+	prefix := cmd.getFilenamePrefix()
+	jsonFilename := prefix + ".json"
+	outputFilename := prefix + "." + outputFileSuffix
+	// TODO(dje): Should we use prefix on the remote file name as well?
+	remoteFilename := "/data/trace.json"
+
+	var jsonFile *os.File = nil
+	if cmd.captureConfig.Stream {
+		jsonFile, err = os.Create(jsonFilename)
+		if err != nil {
+			fmt.Printf("Error creating intermediate file %s: %s\n",
+				jsonFilename, err.Error())
+			return subcommands.ExitFailure
+		}
+	}
+
+	err = captureTrace(cmd.captureConfig, conn, jsonFile)
 	if err != nil {
 		fmt.Println(err.Error())
 		return subcommands.ExitFailure
 	}
 
-	prefix := cmd.getFilenamePrefix()
-	jsonFilename := prefix + ".json"
-	outputFilename := prefix + "." + outputFileSuffix
+	if !cmd.captureConfig.Stream {
+		err = cmd.downloadFile(conn, "trace", remoteFilename, jsonFilename)
+		if err != nil {
+			fmt.Println(err.Error())
+			return subcommands.ExitFailure
+		}
+	}
 
 	if len(cmd.captureConfig.BenchmarkResultsFile) > 0 {
 		err = cmd.downloadFile(conn, cmd.captureConfig.BenchmarkResultsFile,
@@ -116,12 +136,6 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 			return subcommands.ExitFailure
 		}
 		fmt.Println("done")
-	}
-
-	// Should we use prefix on the remote file name as well?
-	err = cmd.downloadFile(conn, "trace", "/data/trace.json", jsonFilename)
-	if err != nil {
-		return subcommands.ExitFailure
 	}
 
 	// TODO(TO-403): Remove remote file.  Add command line option to leave it.

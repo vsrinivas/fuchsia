@@ -52,8 +52,10 @@ const trace::ArgumentValue* GetArgumentValue(
 
 }  // namespace
 
-ChromiumExporter::ChromiumExporter(std::ofstream file_out)
-    : file_out_(std::move(file_out)), wrapper_(file_out_), writer_(wrapper_) {
+ChromiumExporter::ChromiumExporter(std::unique_ptr<std::ostream> stream_out)
+    : stream_out_(std::move(stream_out)),
+      wrapper_(*stream_out_),
+      writer_(wrapper_) {
   Start();
 }
 

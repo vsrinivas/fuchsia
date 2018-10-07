@@ -51,8 +51,13 @@ Some additional command line arguments to `fx traceutil record` include:
 
  * `-target <hostname or ip address>`
 
-   Specifies one which target to take a trace.  Useful if you have multiple
+   Specifies which target to take a trace.  Useful if you have multiple
    targets on the same network or network discovery is not working.
+
+ * `-stream`
+
+   Stream the trace output straight from the target to the host without
+   saving the file on the target first.
 
 For a complete list of command line arguments run `fx traceutil record --help`.
 

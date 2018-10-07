@@ -23,5 +23,9 @@ trace [options] command [command-specific options]
     --duration=[10s]: Trace will be active for this long after the session has
         been started
     --output-file=[/data/trace.json]: Trace data is stored in this file
+        The output file may be "tcp:IP-ADDRESS:PORT" in which case a stream
+        socket is connected to that address and trace data is streamed directly
+        to it instead of saving the output locally. Streaming via TCP is
+        generally only done when invoked by traceutil.
     --spec-file=[none]: Tracing specification file
 ```
