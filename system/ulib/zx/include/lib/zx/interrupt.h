@@ -42,6 +42,14 @@ public:
     zx_status_t trigger(uint32_t options, zx::time timestamp) {
         return zx_interrupt_trigger(get(), options, timestamp.get());
     }
+
+    zx_status_t bind(zx_handle_t porth, uint64_t key, uint32_t options) {
+        return zx_interrupt_bind(get(), porth, key, options);
+    }
+
+    zx_status_t ack() {
+        return zx_interrupt_ack(get());
+    }
 };
 
 using unowned_interrupt = unowned<interrupt>;
