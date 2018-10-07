@@ -22,12 +22,13 @@ namespace wlan {
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 template <typename T>
-static zx_status_t SendServiceMsg(DeviceInterface* device, T* message, uint32_t ordinal) {
+static zx_status_t SendServiceMsg(DeviceInterface* device, T* message, uint32_t ordinal,
+                                  zx_txid_t txid = 0) {
     // TODO(FIDL-2): replace this when we can get the size of the serialized response.
     auto packet = GetSvcPacket(kHugeBufferSize);
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    zx_status_t status = SerializeServiceMsg(packet.get(), ordinal, message);
+    zx_status_t status = SerializeServiceMsg(packet.get(), ordinal, message, txid);
     if (status != ZX_OK) {
         errorf("could not serialize FIDL message %d: %d\n", ordinal, status);
         return status;
@@ -61,7 +62,8 @@ zx_status_t DeserializeServiceMsg(const Packet& packet, uint32_t ordinal, T* out
     return ZX_OK;
 }
 
-template <typename T> zx_status_t SerializeServiceMsg(Packet* packet, uint32_t ordinal, T* msg) {
+template <typename T>
+zx_status_t SerializeServiceMsg(Packet* packet, uint32_t ordinal, T* msg, zx_txid_t txid = 0) {
     // Create an encoder that sets the ordinal to m.
     fidl::Encoder enc(ordinal);
 
@@ -73,6 +75,10 @@ template <typename T> zx_status_t SerializeServiceMsg(Packet* packet, uint32_t o
     // The coding tables for fidl structs do not include offsets for the message header, so we must
     // run validation starting after this header.
     auto encoded = enc.GetMessage();
+    if (txid != 0) {
+        ZX_DEBUG_ASSERT(encoded.has_header());
+        encoded.set_txid(txid);
+    }
     ZX_ASSERT(encoded.bytes().actual() >= sizeof(fidl_message_header_t));
     const void* msg_bytes = encoded.bytes().data() + sizeof(fidl_message_header_t);
     uint32_t msg_actual = encoded.bytes().actual() - sizeof(fidl_message_header_t);
@@ -105,11 +111,13 @@ class BaseMlmeMsg {
                                                       : nullptr;
     }
 
+    zx_txid_t txid() const { return txid_; }
     uint32_t ordinal() const { return ordinal_; }
 
    protected:
     virtual const void* get_type_id() const = 0;
 
+    zx_txid_t txid_ = 0;
     uint32_t ordinal_ = 0;
 
    private:
@@ -129,6 +137,7 @@ template <typename M> class MlmeMsg : public BaseMlmeMsg {
         if (hdr == nullptr) { return ZX_ERR_NOT_SUPPORTED; }
 
         out_msg->ordinal_ = hdr->ordinal;
+        out_msg->txid_ = hdr->txid;
 
         auto status = DeserializeServiceMsg(*pkt, hdr->ordinal, &out_msg->msg_);
         if (status != ZX_OK) { return status; }
