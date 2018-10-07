@@ -579,24 +579,24 @@ void Device::StatsQueryReq() {
     }
 }
 
-void Device::MinstrelListReq() {
+void Device::ListMinstrelPeers(ListMinstrelPeersCallback cb) {
     errorf("Minstrel peer list not available: FullMAC driver not supported.\n");
     ZX_DEBUG_ASSERT(false);
 
     std::lock_guard<std::mutex> lock(lock_);
     if (!binding_.is_bound()) { return; }
 
-    binding_.events().MinstrelListResp(wlan_mlme::MinstrelListResponse{});
+    cb(wlan_mlme::MinstrelListResponse{});
 }
 
-void Device::MinstrelStatsReq(wlan_mlme::MinstrelStatsRequest req) {
+void Device::GetMinstrelStats(wlan_mlme::MinstrelStatsRequest req, GetMinstrelStatsCallback cb) {
     errorf("Minstrel stats not available: FullMAC driver not supported.\n");
     ZX_DEBUG_ASSERT(false);
 
     std::lock_guard<std::mutex> lock(lock_);
     if (!binding_.is_bound()) { return; }
 
-    binding_.events().MinstrelStatsResp(wlan_mlme::MinstrelStatsResponse{});
+    cb(wlan_mlme::MinstrelStatsResponse{});
 }
 
 void Device::OnScanResult(wlanif_scan_result_t* result) {

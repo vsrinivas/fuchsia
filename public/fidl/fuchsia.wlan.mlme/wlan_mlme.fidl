@@ -875,8 +875,6 @@ interface MLME {
     0x1005: StatsQueryReq();
     0x1006: -> StatsQueryResp(StatsQueryResponse resp);
 
-    0x1007: MinstrelListReq();
-    0x1008: -> MinstrelListResp(MinstrelListResponse resp);
-    0x1009: MinstrelStatsReq(MinstrelStatsRequest req);
-    0x100A: -> MinstrelStatsResp(MinstrelStatsResponse resp);
+    0x1007: ListMinstrelPeers() -> (MinstrelListResponse resp);
+    0x1008 : GetMinstrelStats(MinstrelStatsRequest req) ->(MinstrelStatsResponse resp);
 };

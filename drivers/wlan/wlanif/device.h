@@ -51,8 +51,9 @@ class Device : public wlan_mlme::MLME {
     void EapolReq(wlan_mlme::EapolRequest req) override;
     void DeviceQueryReq(wlan_mlme::DeviceQueryRequest req) override;
     void StatsQueryReq() override;
-    void MinstrelListReq() override;
-    void MinstrelStatsReq(wlan_mlme::MinstrelStatsRequest req) override;
+    void ListMinstrelPeers(ListMinstrelPeersCallback cb) override;
+    void GetMinstrelStats(wlan_mlme::MinstrelStatsRequest req,
+                          GetMinstrelStatsCallback cb) override;
 
     // wlanif_impl_ifc (wlanif-impl -> ::fuchsia::wlan::mlme)
     void OnScanResult(wlanif_scan_result_t* result);

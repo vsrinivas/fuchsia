@@ -145,10 +145,10 @@ zx_status_t Dispatcher::HandleSvcPacket(fbl::unique_ptr<Packet> packet) {
     switch (hdr->ordinal) {
     case fuchsia_wlan_mlme_MLMEStatsQueryReqOrdinal:
         return HandleMlmeStats(hdr->ordinal);
-    case fuchsia_wlan_mlme_MLMEMinstrelListReqOrdinal:
-        return HandleMinstrelPeerList(hdr->ordinal);
-    case fuchsia_wlan_mlme_MLMEMinstrelStatsReqOrdinal:
-        return HandleMinstrelTxStats(fbl::move(packet), hdr->ordinal);
+    case fuchsia_wlan_mlme_MLMEListMinstrelPeersOrdinal:
+        return HandleMinstrelPeerList(hdr->ordinal, hdr->txid);
+    case fuchsia_wlan_mlme_MLMEGetMinstrelStatsOrdinal:
+        return HandleMinstrelTxStats(fbl::move(packet), hdr->ordinal, hdr->txid);
     }
 
     switch (hdr->ordinal) {
@@ -251,22 +251,22 @@ zx_status_t Dispatcher::HandleMlmeStats(uint32_t ordinal) const {
     return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEStatsQueryRespOrdinal);
 }
 
-zx_status_t Dispatcher::HandleMinstrelPeerList(uint32_t ordinal) const {
+zx_status_t Dispatcher::HandleMinstrelPeerList(uint32_t ordinal, zx_txid_t txid) const {
     debugfn();
-    ZX_DEBUG_ASSERT(ordinal == fuchsia_wlan_mlme_MLMEMinstrelListReqOrdinal);
+    ZX_DEBUG_ASSERT(ordinal == fuchsia_wlan_mlme_MLMEListMinstrelPeersOrdinal);
 
     wlan_mlme::MinstrelListResponse resp{};
     zx_status_t status = device_->GetMinstrelPeers(&resp.peers);
     if (status != ZX_OK) {
         errorf("cannot get minstrel peer list: %s\n", zx_status_get_string(status));
     }
-    return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEMinstrelListRespOrdinal);
+    return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEListMinstrelPeersOrdinal, txid);
 }
 
 zx_status_t Dispatcher::HandleMinstrelTxStats(fbl::unique_ptr<wlan::Packet> packet,
-                                              uint32_t ordinal) const {
+                                              uint32_t ordinal, zx_txid_t txid) const {
     debugfn();
-    ZX_DEBUG_ASSERT(ordinal == fuchsia_wlan_mlme_MLMEMinstrelStatsReqOrdinal);
+    ZX_DEBUG_ASSERT(ordinal == fuchsia_wlan_mlme_MLMEGetMinstrelStatsOrdinal);
 
     wlan_mlme::MinstrelStatsResponse resp{};
     MlmeMsg<wlan_mlme::MinstrelStatsRequest> req;
@@ -286,7 +286,7 @@ zx_status_t Dispatcher::HandleMinstrelTxStats(fbl::unique_ptr<wlan::Packet> pack
     } else {
         errorf("could not get peer stats: %s\n", zx_status_get_string(status));
     }
-    return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEMinstrelStatsRespOrdinal);
+    return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEGetMinstrelStatsOrdinal, txid);
 }
 
 void Dispatcher::HwIndication(uint32_t ind) {
