@@ -136,7 +136,7 @@ constexpr size_t default_inline_target_size = sizeof(void*) * 2;
 // }
 //
 template <typename T, size_t inline_target_size = default_inline_target_size>
-using function = ::fit::internal::function<inline_target_size, false, T>;
+using function = function_impl<inline_target_size, false, T>;
 
 // A move-only callable object wrapper which forces callables to be stored inline
 // and never performs heap allocation.
@@ -144,10 +144,10 @@ using function = ::fit::internal::function<inline_target_size, false, T>;
 // Behaves just like fit::function<T, inline_target_size> except that attempting
 // to store a target larger than |inline_target_size| will fail to compile.
 template <typename T, size_t inline_target_size = default_inline_target_size>
-using inline_function = ::fit::internal::function<inline_target_size, true, T>;
+using inline_function = function_impl<inline_target_size, true, T>;
 
 // Synonym for a function which takes no arguments and produces no result.
-using closure = ::fit::function<void()>;
+using closure = function<void()>;
 
 // Returns a Callable object which invokes a member function of an object.
 //

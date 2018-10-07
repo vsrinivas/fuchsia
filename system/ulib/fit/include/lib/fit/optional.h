@@ -30,7 +30,7 @@ static constexpr nullopt_t nullopt(0);
 // std::optional API.  Flesh this out more fully then define fit::optional
 // to be an alias for std::optional when compiling with C++ 17.
 template <typename T>
-class optional {
+class optional final {
 public:
     constexpr optional()
         : has_value_(false) {}

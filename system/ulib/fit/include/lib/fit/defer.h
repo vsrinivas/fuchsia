@@ -20,7 +20,7 @@ namespace fit {
 //
 // See |fit::defer()| for idiomatic usage.
 template <typename T>
-class deferred_action {
+class deferred_action final {
 public:
     // Creates a deferred action without a pending target.
     deferred_action() = default;

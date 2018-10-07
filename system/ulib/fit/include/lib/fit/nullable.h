@@ -59,7 +59,7 @@ struct is_nullable<void> : public std::false_type {};
 // - sizeof(std::nullable<void*>) == sizeof(struct { bool; void*; })
 // - sizeof(fit::nullable<int) == sizeof(struct { bool; int; })
 template <typename T, bool = is_nullable<T>::value>
-class nullable {
+class nullable final {
 public:
     constexpr nullable() = default;
     explicit constexpr nullable(decltype(nullptr)) {}
@@ -107,7 +107,7 @@ private:
 };
 
 template <typename T>
-class nullable<T, true> {
+class nullable<T, true> final {
 public:
     constexpr nullable()
         : value_(nullptr) {}
