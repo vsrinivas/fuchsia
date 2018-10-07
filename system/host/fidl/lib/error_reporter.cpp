@@ -23,7 +23,8 @@ std::string MakeSquiggle(const std::string& surrounding_line, int column) {
     return squiggle;
 }
 
-std::string FormatError(const SourceLocation& location, StringView message, size_t squiggle_size = 0u) {
+std::string Format(std::string qualifier, const SourceLocation& location,
+                   StringView message, size_t squiggle_size = 0u) {
     SourceFile::Position position;
     std::string surrounding_line = location.SourceLine(&position);
 
@@ -44,7 +45,9 @@ std::string FormatError(const SourceLocation& location, StringView message, size
     // Many editors and IDEs recognize errors in the form of
     // filename:linenumber:column: error: descriptive-test-here\n
     std::string error = location.position();
-    error.append(": error: ");
+    error.append(": ");
+    error.append(qualifier);
+    error.append(": ");
     error.append(message);
     error.push_back('\n');
     error.append(surrounding_line);
@@ -60,7 +63,7 @@ std::string FormatError(const SourceLocation& location, StringView message, size
 //     sourceline
 //        ^
 void ErrorReporter::ReportError(const SourceLocation& location, StringView message) {
-    auto error = FormatError(location, message);
+    auto error = Format("error", location, message);
     errors_.push_back(std::move(error));
 }
 
@@ -73,7 +76,7 @@ void ErrorReporter::ReportError(const SourceLocation& location, StringView messa
 void ErrorReporter::ReportError(const Token& token, StringView message) {
     auto token_location = token.location();
     auto token_data = token_location.data();
-    auto error = FormatError(token_location, message, token_data.size());
+    auto error = Format("error", token_location, message, token_data.size());
     errors_.push_back(std::move(error));
 }
 
@@ -84,9 +87,23 @@ void ErrorReporter::ReportError(StringView message) {
     errors_.push_back(std::move(error));
 }
 
+// ReportWarning records a warning with the location, message, source line, and
+// position indicator.
+//
+//     filename:line:col: warning: message
+//     sourceline
+//        ^
+void ErrorReporter::ReportWarning(const SourceLocation& location, StringView message) {
+    auto error = Format("warning", location, message);
+    warnings_.push_back(std::move(error));
+}
+
 void ErrorReporter::PrintReports() {
     for (const auto& error : errors_) {
         fprintf(stderr, "%s\n", error.data());
+    }
+    for (const auto& warning : warnings_) {
+        fprintf(stderr, "%s\n", warning.data());
     }
 }
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "fidl/parser.h"
+#include "fidl/attributes.h"
 
 namespace fidl {
 
@@ -92,9 +93,8 @@ decltype(nullptr) Parser::Fail() {
 }
 
 decltype(nullptr) Parser::Fail(StringView message) {
-    if (ok_) {
+    if (Ok()) {
         error_reporter_->ReportError(last_token_, std::move(message));
-        ok_ = false;
     }
     return nullptr;
 }
@@ -231,9 +231,10 @@ std::unique_ptr<raw::Attribute> Parser::ParseAttribute() {
 }
 
 std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList(std::unique_ptr<raw::Attribute>&& doc_comment, ASTScope& scope) {
-    auto attributes = std::make_unique<raw::Attributes>();
+    AttributesBuilder attributes_builder(error_reporter_);
     if (doc_comment) {
-        attributes->Insert(std::move(doc_comment));
+        if (!attributes_builder.Insert(std::move(doc_comment)))
+            return Fail();
     }
     ConsumeToken(OfKind(Token::Kind::kLeftSquare));
     if (!Ok())
@@ -242,20 +243,15 @@ std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList(std::unique_ptr<r
         auto attribute = ParseAttribute();
         if (!Ok())
             return Fail();
-        auto attribute_name = attribute->name;
-        if (!attributes->Insert(std::move(attribute))) {
-            std::string message("Duplicate attribute with name '");
-            message += attribute_name;
-            message += "'";
-            return Fail(message);
-        }
+        if (!attributes_builder.Insert(std::move(attribute)))
+            return Fail();
         if (!MaybeConsumeToken(OfKind(Token::Kind::kComma)))
             break;
     }
     ConsumeToken(OfKind(Token::Kind::kRightSquare));
     if (!Ok())
         return Fail();
-    auto attribute_list = std::make_unique<raw::AttributeList>(scope.GetSourceElement(), std::move(attributes));
+    auto attribute_list = std::make_unique<raw::AttributeList>(scope.GetSourceElement(), attributes_builder.Done());
     return attribute_list;
 }
 
@@ -284,9 +280,10 @@ std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList() {
     }
     // no generic attributes, start the attribute list
     if (doc_comment) {
-        auto attributes = std::make_unique<raw::Attributes>();
-        attributes->Insert(std::move(doc_comment));
-        return std::make_unique<raw::AttributeList>(scope.GetSourceElement(), std::move(attributes));
+        AttributesBuilder attributes_builder(error_reporter_);
+        if (!attributes_builder.Insert(std::move(doc_comment)))
+            return Fail();
+        return std::make_unique<raw::AttributeList>(scope.GetSourceElement(), attributes_builder.Done());
     }
     return nullptr;
 }

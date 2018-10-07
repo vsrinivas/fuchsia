@@ -65,7 +65,7 @@ void Attribute::Accept(TreeVisitor& visitor) {
 
 void AttributeList::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
-    for (auto i = attributes_->attributes_.begin(); i != attributes_->attributes_.end(); ++i) {
+    for (auto i = attributes.begin(); i != attributes.end(); ++i) {
         visitor.OnAttribute(*i);
     }
 }

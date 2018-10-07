@@ -29,7 +29,7 @@ interface A {
     EXPECT_FALSE(library.Compile());
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "Duplicate attribute with name 'dup'");
+    ASSERT_STR_STR(errors[0].c_str(), "duplicate attribute with name 'dup'");
 
     END_TEST;
 }
@@ -51,7 +51,7 @@ interface A {
     EXPECT_FALSE(library.Compile());
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "Duplicate attribute with name 'Doc'");
+    ASSERT_STR_STR(errors[0].c_str(), "duplicate attribute with name 'Doc'");
 
     END_TEST;
 }
@@ -74,11 +74,31 @@ library fidl.test.dupattributes;
 )FIDL"));
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "Duplicate attribute with name 'dup'");
+    ASSERT_STR_STR(errors[0].c_str(), "duplicate attribute with name 'dup'");
 
     END_TEST;
 }
 
+// Test that a close attribute is caught.
+bool warn_on_close_attribute_test() {
+    BEGIN_TEST;
+
+    TestLibrary library("dup_attributes.fidl", R"FIDL(
+library fidl.test.dupattributes;
+
+[Duc = "should be Doc"]
+interface A {
+    1: MethodA();
+};
+
+)FIDL");
+    EXPECT_TRUE(library.Compile());
+    auto warnings = library.warnings();
+    ASSERT_EQ(warnings.size(), 1);
+    ASSERT_STR_STR(warnings[0].c_str(), "suspect attribute with name 'Duc'; did you mean 'Doc'?");
+
+    END_TEST;
+}
 
 } // namespace
 
@@ -86,4 +106,5 @@ BEGIN_TEST_CASE(dup_attributes_tests);
 RUN_TEST(no_two_same_attribute_test);
 RUN_TEST(no_two_same_doc_attribute_test);
 RUN_TEST(no_two_same_attribute_on_library_test);
+RUN_TEST(warn_on_close_attribute_test);
 END_TEST_CASE(dup_attributes_tests);

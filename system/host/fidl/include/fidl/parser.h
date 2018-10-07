@@ -19,7 +19,7 @@ public:
 
     std::unique_ptr<raw::File> Parse() { return ParseFile(); }
 
-    bool Ok() const { return ok_; }
+    bool Ok() const { return error_reporter_->errors().size() == 0; }
 
 private:
     Token Lex() { return lexer_->LexNoComments(); }
@@ -250,7 +250,6 @@ private:
     Token previous_token_;
 
     Token last_token_;
-    bool ok_ = true;
 };
 
 } // namespace fidl

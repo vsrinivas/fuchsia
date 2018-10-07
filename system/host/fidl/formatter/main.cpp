@@ -104,6 +104,8 @@ int main(int argc, char* argv[]) {
     for (const auto& source_file : source_manager.sources()) {
         std::string output;
         if (!Format(*source_file, &identifier_table, &error_reporter, output)) {
+            // In the formattter, we do not print the report if there are only
+            // warnings.
             error_reporter.PrintReports();
             return 1;
         }

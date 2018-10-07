@@ -240,6 +240,13 @@ void Write(std::ostringstream output, std::fstream file) {
 
 } // namespace
 
+// TODO(pascallouis): remove forward declaration, this was only introduced to
+// reduce diff size while breaking things up.
+int compile(fidl::ErrorReporter* error_reporter,
+            std::string library_name,
+            std::map<Behavior, std::fstream> outputs,
+            std::vector<fidl::SourceManager> source_managers);
+
 int main(int argc, char* argv[]) {
     auto argv_args = std::make_unique<ArgvArguments>(argc, argv);
 
@@ -297,7 +304,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Parse libraries.
+    // Prepare source files.
     std::vector<fidl::SourceManager> source_managers;
     source_managers.push_back(fidl::SourceManager());
     std::string library_zx_data(fidl::LibraryZX::kData, strlen(fidl::LibraryZX::kData) + 1);
@@ -315,23 +322,34 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    fidl::IdentifierTable identifier_table;
+    // Ready. Set. Go.
     fidl::ErrorReporter error_reporter;
+    auto status = compile(&error_reporter,
+                          library_name,
+                          std::move(outputs),
+                          std::move(source_managers));
+    error_reporter.PrintReports();
+    return status;
+}
+
+int compile(fidl::ErrorReporter* error_reporter,
+            std::string library_name,
+            std::map<Behavior, std::fstream> outputs,
+            std::vector<fidl::SourceManager> source_managers) {
+    fidl::IdentifierTable identifier_table;
     fidl::flat::Libraries all_libraries;
     const fidl::flat::Library* final_library = nullptr;
     for (const auto& source_manager : source_managers) {
         if (source_manager.sources().empty()) {
             continue;
         }
-        auto library = std::make_unique<fidl::flat::Library>(&all_libraries, &error_reporter);
+        auto library = std::make_unique<fidl::flat::Library>(&all_libraries, error_reporter);
         for (const auto& source_file : source_manager.sources()) {
-            if (!Parse(*source_file, &identifier_table, &error_reporter, library.get())) {
-                error_reporter.PrintReports();
+            if (!Parse(*source_file, &identifier_table, error_reporter, library.get())) {
                 return 1;
             }
         }
         if (!library->Compile()) {
-            error_reporter.PrintReports();
             return 1;
         }
         final_library = library.get();
@@ -386,4 +404,5 @@ int main(int argc, char* argv[]) {
         }
         }
     }
+    return 0;
 }

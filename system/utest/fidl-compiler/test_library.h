@@ -115,6 +115,10 @@ public:
         return error_reporter_.errors();
     }
 
+    const std::vector<std::string>& warnings() const {
+        return error_reporter_.warnings();
+    }
+
 private:
     fidl::SourceFile source_file_;
     fidl::IdentifierTable identifier_table_;
