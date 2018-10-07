@@ -4,7 +4,7 @@
 
 #include "garnet/examples/escher/waterfall2/waterfall_demo.h"
 
-#include "garnet/examples/escher/waterfall/scenes/paper_scene.h"
+#include "garnet/examples/escher/waterfall/scenes/paper_demo_scene1.h"
 #include "garnet/examples/escher/waterfall/scenes/ring_tricks2.h"
 #include "lib/escher/defaults/default_shader_program_factory.h"
 #include "lib/escher/geometry/tessellation.h"
@@ -68,7 +68,7 @@ void WaterfallDemo::InitializeEscherStage(
 }
 
 void WaterfallDemo::InitializeDemoScenes() {
-  scenes_.emplace_back(new PaperScene(this));
+  scenes_.emplace_back(new PaperDemoScene1(this));
   scenes_.emplace_back(new RingTricks2(this));
   for (auto& scene : scenes_) {
     scene->Init(&stage_);

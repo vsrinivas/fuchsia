@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_PAPER_SCENE_H_
-#define GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_PAPER_SCENE_H_
+#ifndef GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_PAPER_DEMO_SCENE1_H_
+#define GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_PAPER_DEMO_SCENE1_H_
 
 #include "lib/escher/escher.h"
 #include "lib/escher/paper/paper_shape_cache.h"
@@ -13,10 +13,10 @@
 
 // Demo scene specifically designed to exercise the new PaperRenderer components
 // (e.g. PaperShapeCache and PaperRenderQueue).
-class PaperScene : public Scene {
+class PaperDemoScene1 : public Scene {
  public:
-  explicit PaperScene(Demo* demo);
-  ~PaperScene();
+  explicit PaperDemoScene1(Demo* demo);
+  ~PaperDemoScene1();
 
   void Init(escher::Stage* stage) override;
 
@@ -71,7 +71,7 @@ class PaperScene : public Scene {
   escher::MaterialPtr color1_;
   escher::MaterialPtr color2_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(PaperScene);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PaperDemoScene1);
 };
 
-#endif  // GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_PAPER_SCENE_H_
+#endif  // GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_PAPER_DEMO_SCENE1_H_

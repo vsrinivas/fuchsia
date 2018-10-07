@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/escher/waterfall/scenes/paper_scene.h"
+#include "garnet/examples/escher/waterfall/scenes/paper_demo_scene1.h"
 
 #include "lib/escher/geometry/clip_planes.h"
 #include "lib/escher/geometry/plane_ops.h"
@@ -30,9 +30,9 @@ using escher::plane2;
 using escher::vec2;
 using escher::vec3;
 
-PaperScene::PaperScene(Demo* demo) : Scene(demo) {}
+PaperDemoScene1::PaperDemoScene1(Demo* demo) : Scene(demo) {}
 
-void PaperScene::Init(escher::Stage* stage) {
+void PaperDemoScene1::Init(escher::Stage* stage) {
   red_ = fxl::MakeRefCounted<escher::Material>();
   bg_ = fxl::MakeRefCounted<escher::Material>();
   color1_ = fxl::MakeRefCounted<escher::Material>();
@@ -83,12 +83,14 @@ void PaperScene::Init(escher::Stage* stage) {
   });
 }
 
-PaperScene::~PaperScene() {}
+PaperDemoScene1::~PaperDemoScene1() {}
 
-escher::Model* PaperScene::Update(const escher::Stopwatch& stopwatch,
-                                  uint64_t frame_count, escher::Stage* stage,
-                                  escher::PaperRenderer2* renderer) {
-  FXL_CHECK(renderer) << "PaperScene can only be rendered via PaperRenderer2.";
+escher::Model* PaperDemoScene1::Update(const escher::Stopwatch& stopwatch,
+                                       uint64_t frame_count,
+                                       escher::Stage* stage,
+                                       escher::PaperRenderer2* renderer) {
+  FXL_CHECK(renderer)
+      << "PaperDemoScene1 can only be rendered via PaperRenderer2.";
   auto render_queue = renderer->render_queue();
   auto shape_cache = renderer->shape_cache();
 
@@ -172,7 +174,7 @@ escher::Model* PaperScene::Update(const escher::Stopwatch& stopwatch,
   return &model;
 }
 
-float PaperScene::AnimatedState::Update(float current_time_sec) {
+float PaperDemoScene1::AnimatedState::Update(float current_time_sec) {
   float t = 0.f;
 
   const float time_in_state = current_time_sec - state_start_time;
@@ -194,7 +196,7 @@ float PaperScene::AnimatedState::Update(float current_time_sec) {
   return t;
 }
 
-escher::plane2 PaperScene::ClipPlaneState::Update(float current_time_sec) {
+escher::plane2 PaperDemoScene1::ClipPlaneState::Update(float current_time_sec) {
   const float t = animation.Update(current_time_sec);
   const vec2 pos = escher::Lerp(pos1, pos2, t);
   const float radians = escher::Lerp(radians1, radians2, t);

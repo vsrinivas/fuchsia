@@ -25,8 +25,8 @@ source_set("scenes") {
   sources = [
     "scenes/demo_scene.cc",
     "scenes/demo_scene.h",
-    "scenes/paper_scene.cc",
-    "scenes/paper_scene.h",
+    "scenes/paper_demo_scene1.cc",
+    "scenes/paper_demo_scene1.h",
     "scenes/ring_tricks1.cc",
     "scenes/ring_tricks1.h",
     "scenes/ring_tricks2.cc",
