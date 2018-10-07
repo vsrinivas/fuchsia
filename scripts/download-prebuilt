@@ -116,7 +116,7 @@ verify_file() {
 $sum *$file
 EOF
   elif [[ "${#sum}" = "44" ]]; then
-    digest="$(echo $sum | tr '_-' '/+' | base64 -d | xxd -p -c 64)"
+    digest="$(echo $sum | tr '_-' '/+' | base64 --decode | xxd -p -c 64)"
     shasum -a 256 --binary --check --status <<EOF
 ${digest:0:64} *$file
 EOF
