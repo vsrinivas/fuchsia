@@ -63,6 +63,18 @@ impl Interface for TestInterface {
     type Event = TestMessage;
 }
 
+pub struct TestInterface2;
+
+impl Interface for TestInterface2 {
+    const NAME: &'static str = "test_interface2";
+    const VERSION: u32 = 0;
+    // |TestMessage| contains 2 operations; neither has arguments.
+    const REQUESTS: MessageGroupSpec = MessageGroupSpec(&[MessageSpec(&[]), MessageSpec(&[])]);
+    const EVENTS: MessageGroupSpec = MessageGroupSpec(&[MessageSpec(&[]), MessageSpec(&[])]);
+    type Request = TestMessage;
+    type Event = TestMessage;
+}
+
 pub struct TestReceiver {
     request_count: usize,
 }

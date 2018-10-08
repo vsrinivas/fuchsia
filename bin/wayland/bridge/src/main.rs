@@ -13,14 +13,18 @@ use fidl_fuchsia_guest::{WaylandDispatcherMarker, WaylandDispatcherRequest,
                          WaylandDispatcherRequestStream};
 use fuchsia_app::server::{ServiceFactory, ServicesServer};
 use fuchsia_async as fasync;
-use fuchsia_wayland_core::{self as wl, Interface};
+use fuchsia_wayland_core as wl;
 use futures::prelude::*;
 use parking_lot::Mutex;
-use wayland::WlCompositor;
+use wayland::{WlCompositor, WlShm};
 
 mod compositor;
+use crate::compositor::*;
 mod display;
 use crate::display::*;
+mod shm;
+use crate::shm::*;
+
 
 /// The main FIDL server that listens for incomming client connection
 /// requests.
@@ -33,12 +37,16 @@ struct WaylandDispatcher {
 impl WaylandDispatcher {
     pub fn new() -> Self {
         let registry = wl::RegistryBuilder::new()
-            // TODO(tjdetwiler): This is just a placeholder to verify that we
-            // can see globals in response to binding to 'wl_registry'. This
-            // can be removed once we have some real interfaces.
-            .add_global((WlCompositor::NAME, move || -> Box<wl::MessageReceiver> {
-                Box::new(wl::RequestDispatcher::new(compositor::Compositor::new()))
-            })).build();
+            .add_global(WlCompositor, move |_,_| {
+                Ok(Box::new(wl::RequestDispatcher::new(Compositor::new())))
+            })
+            .add_global(WlShm, move |id, client| {
+                let shm = Shm::new();
+                // announce the set of supported shm pixel formats.
+                shm.post_formats(id, client)?;
+                Ok(Box::new(wl::RequestDispatcher::new(shm)))
+            })
+        .build();
         WaylandDispatcher {
             display: Arc::new(Mutex::new(Display::new(registry))),
         }

@@ -9,7 +9,7 @@ use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use parking_lot::Mutex;
 
-use crate::{Message, ObjectMap, Registry};
+use crate::{IntoMessage, Message, ObjectId, ObjectMap, Registry};
 
 /// The state of a single client connection. Each client connection will have
 /// have its own zircon channel and its own set of protocol objects. The
@@ -94,4 +94,10 @@ impl Client {
         Ok(())
     }
 
+    pub fn post<E: IntoMessage>(&self, sender: ObjectId, event: E) -> Result<(), Error> {
+        let mut message = event.into_message(sender)?;
+        let (bytes, mut handles) = message.take();
+        self.chan.write(&bytes, &mut handles)?;
+        Ok(())
+    }
 }

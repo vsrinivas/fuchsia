@@ -123,7 +123,7 @@ impl RegistryReceiver {
                 WlRegistryEvent::Global {
                     name: name as u32,
                     interface: global.interface().into(),
-                    version: 0,
+                    version: global.version(),
                 },
             )?;
         }
@@ -133,10 +133,19 @@ impl RegistryReceiver {
 
 impl wl::RequestReceiver<WlRegistry> for RegistryReceiver {
     fn receive(
-        _this: wl::ObjectRef<Self>, request: WlRegistryRequest, _client: &mut wl::Client,
+        this: wl::ObjectRef<Self>, request: WlRegistryRequest, client: &mut wl::Client,
     ) -> Result<(), Error> {
         let WlRegistryRequest::Bind { name, id, .. } = request;
-        println!("binding({}, {})", name, id);
-        Err(format_err!("wl_registry::bind is not yet implemented"))
+        let registry = this.get(client.objects())?.registry.clone();
+        let (spec, receiver) = {
+            let mut lock = registry.lock();
+            if let Some(global) = lock.globals().get_mut(name as usize) {
+                (global.request_spec(), global.bind(id, client)?)
+            } else {
+                return Err(format_err!("Invalid global name {}", name));
+            }
+        };
+        client.objects().add_object_raw(id, receiver, spec)?;
+        Ok(())
     }
 }

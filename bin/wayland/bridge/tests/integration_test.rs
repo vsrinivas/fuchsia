@@ -14,7 +14,27 @@ mod test {
     use fuchsia_wayland_core::{self as wl, Interface};
     use fuchsia_zircon as zx;
     use fuchsia_zircon::prelude::*;
-    use wayland::WlCompositor;
+    use wayland::{WlCompositor, WlShm};
+
+    async fn expect_global_with_name<I: Interface>(expect_name: u32, client_channel: &fasync::Channel) {
+        let mut buffer = zx::MessageBuf::new();
+        await!(client_channel.recv_msg(&mut buffer))
+            .expect("Failed to receive message from the bridge");
+
+        let mut message: wl::Message = buffer.into();
+        let header = message.read_header().unwrap();
+        let name = message.read_arg(wl::ArgKind::Uint).unwrap().unwrap_uint();
+        let interface = message
+            .read_arg(wl::ArgKind::String)
+            .unwrap()
+            .unwrap_string();
+        let version = message.read_arg(wl::ArgKind::Uint).unwrap().unwrap_uint();
+        assert_eq!(0x10000, header.sender);
+        assert_eq!(0 /* wl_registry::global */, header.opcode);
+        assert_eq!(expect_name, name);
+        assert_eq!(I::NAME, interface);
+        assert_eq!(I::VERSION, version);
+    }
 
     #[test]
     fn list_registry() -> Result<(), Error> {
@@ -54,24 +74,8 @@ mod test {
         // Receive a message on the channel. We expect a single global to
         // be reported right now.
         let receiver = async move {
-            let mut buffer = zx::MessageBuf::new();
-            await!(client_channel.recv_msg(&mut buffer))
-                .expect("Failed to receive message from the bridge");
-
-            // Expect a global announce
-            let mut message: wl::Message = buffer.into();
-            let header = message.read_header().unwrap();
-            let name = message.read_arg(wl::ArgKind::Uint).unwrap().unwrap_uint();
-            let interface = message
-                .read_arg(wl::ArgKind::String)
-                .unwrap()
-                .unwrap_string();
-            let version = message.read_arg(wl::ArgKind::Uint).unwrap().unwrap_uint();
-            assert_eq!(0x10000, header.sender);
-            assert_eq!(0 /* wl_registry::global */, header.opcode);
-            assert_eq!(0, name);
-            assert_eq!(WlCompositor::NAME, interface);
-            assert_eq!(0, version);
+            await!(expect_global_with_name::<WlCompositor>(0, &client_channel));
+            await!(expect_global_with_name::<WlShm>(1, &client_channel));
 
             // Expect callback::done for the sync
             let mut buffer = zx::MessageBuf::new();
