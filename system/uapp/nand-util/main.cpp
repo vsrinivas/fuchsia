@@ -39,17 +39,20 @@ Options:
   --read (-r) --absolute xxx : Read the page number xxx (0-based).
   --erase (-e) --block xxx : Erase the block number xxx (0-based).
   --check (-c) : Looks for read errors on the device.
+  --save (-s) --block xxx --file path: Save the block xxx to path.
+  --file (-f) path:  Path to use when saving data.
   --absolute (-a) xxx : Use an absolute page number.
   --page (-p) xxx : Use the xxx page number (from within a block).
   --block (-b) xxx : Use the xxx block number.
   --count (-n) xxx : Limit the operation to xxx blocks.
-                     Only supported with --check.
+                     Only supported with --check and --save.
   --live-dangerously (-y) : Don't prompt for confirmation.
 )""";
 
 // Configuration info (what to do).
 struct Config {
     const char* path;
+    const char* file;
     uint32_t page_num;
     uint32_t block_num;
     uint32_t abs_page;
@@ -60,6 +63,7 @@ struct Config {
     bool read;
     bool erase;
     bool read_check;
+    bool save;
     bool skip_prompt;
 };
 
@@ -224,6 +228,8 @@ bool GetOptions(int argc, char** argv, Config* config) {
             {"read", no_argument, nullptr, 'r'},
             {"erase", no_argument, nullptr, 'e'},
             {"check", no_argument, nullptr, 'c'},
+            {"save", no_argument, nullptr, 's'},
+            {"file", required_argument, nullptr, 'f'},
             {"page", required_argument, nullptr, 'p'},
             {"block", required_argument, nullptr, 'b'},
             {"absolute", required_argument, nullptr, 'a'},
@@ -233,7 +239,7 @@ bool GetOptions(int argc, char** argv, Config* config) {
             {nullptr, 0, nullptr, 0},
         };
         int opt_index;
-        int c = getopt_long(argc, argv, "d:irtecp:b:a:n:h", options, &opt_index);
+        int c = getopt_long(argc, argv, "d:irtecsf:p:b:a:n:h", options, &opt_index);
         if (c < 0) {
             break;
         }
@@ -259,6 +265,13 @@ bool GetOptions(int argc, char** argv, Config* config) {
         case 'c':
             config->read_check = true;
             config->actions++;
+            break;
+        case 's':
+            config->save = true;
+            config->actions++;
+            break;
+        case 'f':
+            config->file = optarg;
             break;
         case 'p':
             config->page_num = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
@@ -300,8 +313,8 @@ bool ValidateOptions(const Config& config) {
         return false;
     }
 
-    if (config.erase && (config.page_num || config.abs_page)) {
-        printf("Erase works with blocks, not pages\n");
+    if ((config.erase || config.save) && (config.page_num || config.abs_page)) {
+        printf("The operation works with blocks, not pages\n");
         return false;
     }
 
@@ -310,8 +323,13 @@ bool ValidateOptions(const Config& config) {
         return false;
     }
 
-    if (config.count && !config.read_check) {
-        printf("Count only supported for --check\n");
+    if (config.save && !config.file) {
+        printf("Save requires a file\n");\
+        return false;
+    }
+
+    if (config.count && (!config.read_check && !config.save)) {
+        printf("Count only supported for check and save\n");
         return false;
     }
     return true;
@@ -393,6 +411,35 @@ bool ReadCheck(const NandBroker& nand, uint32_t first_block, uint32_t count) {
     return true;
 }
 
+// Saves data from a nand device to a file at |path|.
+bool Save(const NandBroker& nand, uint32_t first_block, uint32_t count, const char* path) {
+    fbl::unique_fd out(open(path, O_WRONLY | O_CREAT | O_TRUNC));
+    if (!out) {
+        printf("Unable to open destination\n");
+        return false;
+    }
+
+    // Attempt to save everything by default.
+    count = count ? count : nand.Info().num_blocks;
+
+    uint32_t num_blocks = fbl::min(nand.Info().num_blocks, first_block + count);
+    size_t size = (nand.Info().page_size + nand.Info().oob_size) * nand.Info().pages_per_block;
+    for (uint32_t block = first_block; block < num_blocks; block++) {
+        const uint32_t start = block * nand.Info().pages_per_block;
+        if (!nand.ReadPages(start, nand.Info().pages_per_block)) {
+            printf("\nRead failed for block %u\n", block);
+            return false;
+        }
+        if (write(out.get(), nand.data(), size) != static_cast<ssize_t>(size)) {
+            printf("\nFailed to write data for block %u\n", block);
+            return false;
+        }
+        printf("Block %u\r", block);
+    }
+    printf("\ndone\n");
+    return true;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -450,6 +497,11 @@ int main(int argc, char** argv) {
     if (config.read_check) {
         printf("Checking blocks...\n");
         return ReadCheck(nand, config.block_num, config.count) ? 0 : -1;
+    }
+
+    if (config.save) {
+        printf("Saving blocks...\n");
+        return Save(nand, config.block_num, config.count, config.file) ? 0 : -1;
     }
 
     return 0;
