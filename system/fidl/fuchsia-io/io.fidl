@@ -82,7 +82,7 @@ const uint32 OPEN_FLAG_DESCRIBE = 0x00800000;
 const uint32 OPEN_FLAG_STATUS = 0x01000000;
 
 // Node defines the minimal interface for entities which can be accessed in a filesystem.
-[Layout="Simple"]
+[Layout="Simple", FragileBase]
 interface Node {
     // Create another connection to the same remote object.
     0x80000001: Clone(uint32 flags, request<Node> object);
@@ -269,7 +269,7 @@ interface DirectoryWatcher {
 };
 
 // Directory defines a node which is capable of containing other Objects.
-[Layout = "Simple"]
+[Layout = "Simple", FragileBase]
 interface Directory : Node {
     // Open a new object relative to this directory object.
     0x83000001: Open(uint32 flags, uint32 mode, string:MAX_PATH path, request<Node> object);

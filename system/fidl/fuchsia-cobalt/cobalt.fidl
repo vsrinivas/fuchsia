@@ -131,7 +131,7 @@ interface LoggerFactory {
 // This interface conforms to the Simple layout so that Simple bindings
 // may be generated for it. For the full interfaces, see Logger and LoggerSimple
 // below.
-[Layout = "Simple"]
+[Layout = "Simple", FragileBase]
 interface LoggerBase {
     // Logs the fact that an event has occurred.
     //
@@ -497,7 +497,7 @@ struct Experiment {
 
 [Discoverable]
 // The SystemDataUpdater interface allows callers to update the state of
-// the System Data in Cobalt. This includes the SystemProfile and experiment 
+// the System Data in Cobalt. This includes the SystemProfile and experiment
 // state. The changes are global and affect all loggers running on the device.
 interface SystemDataUpdater {
     // Resets Cobalt's view of the system-wide experiment state and replaces it
