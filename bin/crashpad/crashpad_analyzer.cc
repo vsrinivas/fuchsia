@@ -31,6 +31,8 @@
 #include <third_party/crashpad/util/net/http_multipart_builder.h>
 #include <third_party/crashpad/util/net/http_transport.h>
 #include <third_party/crashpad/util/net/url.h>
+#include <zircon/boot/image.h>
+#include <zircon/device/sysinfo.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -127,6 +129,24 @@ std::string GetPackageName(const zx::process& process) {
   return std::string("unknown-package");
 }
 
+std::string GetBoardName() {
+  const char kSysInfoPath[] = "/dev/misc/sysinfo";
+  const int fd = open(kSysInfoPath, O_RDWR);
+  if (fd < 0) {
+    FX_LOGS(ERROR) << "failed to open " << kSysInfoPath;
+    return "unknown";
+  }
+
+  char board_name[ZBI_BOARD_NAME_LEN];
+  const ssize_t n =
+      ioctl_sysinfo_get_board_name(fd, board_name, sizeof(board_name));
+  if (n <= 0) {
+    FX_LOGS(ERROR) << "failed to get board name";
+    return "unknown";
+  }
+  return std::string(board_name);
+}
+
 }  // namespace
 
 int HandleException(zx::process process, zx::thread thread,
@@ -164,6 +184,7 @@ int HandleException(zx::process process, zx::thread thread,
   annotations["version"] = GetVersion();
   // We use ptype to benefit from Chrome's "Process type" handling in the UI.
   annotations["ptype"] = GetPackageName(process);
+  annotations["board_name"] = GetBoardName();
 
   std::map<std::string, base::FilePath> attachments;
   ScopedUnlink temp_log_file(GetSystemLogToFile());
@@ -214,6 +235,7 @@ int Process(fuchsia::mem::Buffer crashlog) {
       // We use ptype to benefit from Chrome's "Process type" handling in the
       // UI.
       {"ptype", "kernel"},
+      {"board_name", GetBoardName()},
   };
 
   // Add attachments.

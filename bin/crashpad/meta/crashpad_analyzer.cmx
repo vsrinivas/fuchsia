@@ -3,6 +3,7 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "dev": [ "misc/sysinfo" ],
         "features": [ "deprecated-all-services", "persistent-storage", "root-ssl-certificates" ],
         "system": [ "data/build" ]
     }
