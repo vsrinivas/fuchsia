@@ -9,6 +9,7 @@ use failure::{bail, format_err, Error, ResultExt};
 use fidl::endpoints;
 use fidl_fuchsia_wlan_device_service::{self as wlan_service, DeviceServiceMarker,
                                        DeviceServiceProxy};
+use fidl_fuchsia_wlan_minstrel::Peer;
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ConnectResultCode, ConnectTransactionEvent,
                             ScanTransactionEvent};
 use fuchsia_app::client::connect_to_service;
@@ -88,13 +89,7 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             println!("response: {:?}", response);
         },
         opts::IfaceCmd::Stats { iface_id } => {
-            let ids = match iface_id {
-                Some(id) => vec![id],
-                None => {
-                  let response = await!(wlan_svc.list_ifaces()).context("error listing ifaces")?;
-                  response.ifaces.into_iter().map(|iface| iface.iface_id).collect()
-                }
-            };
+            let ids = await!(get_iface_ids(wlan_svc.clone(), iface_id))?;
 
             for iface_id in ids {
                 let (status, resp) = await!(wlan_svc.get_iface_stats(iface_id))
@@ -109,6 +104,37 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
                     },
                     status => println!("error getting stats for Iface {}: {}", iface_id, status),
                 }
+            }
+        },
+        opts::IfaceCmd::Minstrel(cmd) => {
+            match cmd {
+                opts::MinstrelCmd::List{ iface_id } => {
+                    let ids = await!(get_iface_ids(wlan_svc.clone(), iface_id))?;
+                    for id in ids {
+                        if let Ok(peers) = await!(list_minstrel_peers(wlan_svc.clone(), id)) {
+                            if peers.is_empty() { continue; }
+                            println!("iface {} has {} peers:", id, peers.len());
+                            for peer in peers {
+                                println!("{}", peer);
+                            }
+                        }
+                    }
+                },
+                opts::MinstrelCmd::Show{ iface_id, peer_addr } => {
+                    let peer_addr = match peer_addr {
+                        Some(s) => Some(s.parse()?),
+                        None => None,
+                    };
+                    let ids = await!(get_iface_ids(wlan_svc.clone(), iface_id))?;
+                    for id in ids {
+                        if let Err(e) = await!(show_minstrel_peer_for_iface(
+                            wlan_svc.clone(), id, peer_addr))
+                        {
+                            println!("querying peer(s) {} on iface {} returned an error: {}",
+                                peer_addr.unwrap_or(MacAddr([0; 6])), id, e);
+                        }
+                    }
+                },
             }
         },
     }
@@ -198,7 +224,7 @@ async fn do_mesh(cmd: opts::MeshCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     Ok(())
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 struct MacAddr([u8; 6]);
 
 impl fmt::Display for MacAddr {
@@ -346,6 +372,75 @@ async fn get_mesh_sme(wlan_svc: WlanSvc, iface_id: u16)
         Ok(proxy)
     } else {
         Err(format_err!("Invalid interface id {}", iface_id))
+    }
+}
+
+async fn get_iface_ids(wlan_svc: WlanSvc, iface_id: Option<u16>) -> Result<Vec<u16>, Error> {
+    match iface_id {
+        Some(id) => Ok(vec![id]),
+        None => {
+            let response = await!(wlan_svc.list_ifaces()).context("error listing ifaces")?;
+            Ok(response.ifaces.into_iter().map(|iface| iface.iface_id).collect())
+        }
+    }
+}
+
+async fn list_minstrel_peers(wlan_svc: WlanSvc, iface_id: u16) -> Result<Vec<MacAddr>, Error> {
+    let (status, resp) = await!(wlan_svc.get_minstrel_list(iface_id))
+        .context(format!("Error getting minstrel peer list iface {}", iface_id))?;
+    if status == zx::sys::ZX_OK {
+        Ok(resp.peers.into_iter().map(MacAddr).collect())
+    } else {
+        println!("Error getting minstrel peer list from iface {}: {}", iface_id, status);
+        Ok(vec![])
+    }
+}
+
+async fn show_minstrel_peer_for_iface(wlan_svc: WlanSvc, id: u16, peer_addr: Option<MacAddr>)
+    -> Result<(), Error>
+{
+    let peer_addrs = await!(get_peer_addrs(wlan_svc.clone(), id, peer_addr))?;
+    let mut first_peer = true;
+    for mut peer_addr in peer_addrs {
+        let (status, resp) = await!(wlan_svc.get_minstrel_stats(id, &mut peer_addr.0))
+            .context(format!("Error getting minstrel stats from peer {}", peer_addr))?;
+        if status != zx::sys::ZX_OK {
+            println!("error getting minstrel stats for {} from iface {}: {}",
+                peer_addr, id, status);
+        } else if let Some(peer) = resp {
+            if first_peer {
+                println!("iface {}", id);
+                first_peer = false;
+            }
+            print_minstrel_stats(peer);
+        }
+    }
+    Ok(())
+}
+
+
+async fn get_peer_addrs(wlan_svc: WlanSvc, iface_id: u16, peer_addr: Option<MacAddr>)
+    -> Result<Vec<MacAddr>, Error> {
+    match peer_addr {
+        Some(addr) => Ok(vec![addr]),
+        None => await!(list_minstrel_peers(wlan_svc, iface_id)),
+    }
+}
+
+fn print_minstrel_stats(mut peer: Box<Peer>) {
+    println!("{}, max_tp: {}, max_probability: {}", MacAddr(peer.mac_addr),
+            peer.max_tp, peer.max_probability);
+    println!("     TxVector                          succ_c  att_c   succ_t  att_t   \
+       probability throughput");
+    peer.entries.sort_by(|l, r| l.tx_vector_idx.cmp(&r.tx_vector_idx));
+    for e in peer.entries {
+        println!("{}{} {:<36} {:<7} {:<7} {:<7} {:<7} {:>11.4} {:>10.3}",
+            if e.tx_vector_idx == peer.max_tp { "T" } else { " " },
+            if e.tx_vector_idx == peer.max_probability {"P"} else {" "},
+            e.tx_vec_desc, e.success_cur, e.attempts_cur,
+            e.success_total, e.attempts_total,
+            e.probability * 100.0, e.cur_tp,
+        );
     }
 }
 

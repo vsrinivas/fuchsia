@@ -101,7 +101,7 @@ pub enum PhyCmd {
     },
 }
 
-#[derive(StructOpt, Copy, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug)]
 pub enum IfaceCmd {
     #[structopt(name = "new")]
     /// creates a new iface device
@@ -133,6 +133,21 @@ pub enum IfaceCmd {
     #[structopt(name = "stats")]
     Stats {
         iface_id: Option<u16>,
+    },
+    #[structopt(name = "minstrel")]
+    Minstrel(MinstrelCmd),
+}
+
+#[derive(StructOpt, Clone, Debug)]
+pub enum MinstrelCmd {
+    #[structopt(name = "list")]
+    List {
+        iface_id: Option<u16>,
+    },
+    #[structopt(name = "show")]
+    Show {
+        iface_id: Option<u16>,
+        peer_addr: Option<String>,
     },
 }
 
