@@ -11,6 +11,7 @@ MODULE_TYPE := driver
 MODULE_SRCS := \
     $(LOCAL_DIR)/bind.c \
     $(LOCAL_DIR)/mt8167.cpp \
+    $(LOCAL_DIR)/mt8167-soc.cpp \
     $(LOCAL_DIR)/mt8167-gpio.cpp \
 
 MODULE_STATIC_LIBS := \

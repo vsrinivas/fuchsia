@@ -33,6 +33,7 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Mt8167);
 
     zx_status_t Start();
+    zx_status_t SocInit();
     zx_status_t GpioInit();
     int Thread();
 

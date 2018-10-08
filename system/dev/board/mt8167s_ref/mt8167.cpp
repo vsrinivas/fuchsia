@@ -17,6 +17,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-device.h>
+
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 
@@ -51,6 +52,10 @@ zx_status_t Mt8167::Create(zx_device_t* parent) {
 }
 
 int Mt8167::Thread() {
+    if (SocInit() != ZX_OK) {
+        zxlogf(ERROR, "SocInit() failed\n");
+        return -1;
+    }
     if (GpioInit() != ZX_OK) {
         zxlogf(ERROR, "GpioInit() failed\n");
         return -1;
