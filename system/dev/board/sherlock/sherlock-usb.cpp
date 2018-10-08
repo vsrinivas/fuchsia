@@ -75,17 +75,17 @@ zx_status_t PerformUsbTuning(bool host, bool default_val) {
     }
 
     if (default_val) {
-        buf->Write32(0x38, 0);
-        buf->Write32(0x34, PLL_SETTING_5);
+        buf->Write32(0, 0x38);
+        buf->Write32(PLL_SETTING_5, 0x34);
     } else {
-        buf->Write32(0x50, PLL_SETTING_3);
-        buf->Write32(0x10, PLL_SETTING_4);
+        buf->Write32(PLL_SETTING_3, 0x50);
+        buf->Write32(PLL_SETTING_4, 0x10);
         if (host) {
-            buf->Write32(0x38, PLL_SETTING_6);
+            buf->Write32(PLL_SETTING_6, 0x38);
         } else {
-            buf->Write32(0x38, PLL_SETTING_7);
+            buf->Write32(PLL_SETTING_7, 0x38);
         }
-        buf->Write32(0x34, PLL_SETTING_5);
+        buf->Write32(PLL_SETTING_5, 0x34);
     }
 
     return ZX_OK;
