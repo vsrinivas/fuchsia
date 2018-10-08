@@ -385,8 +385,8 @@ void Vim2SpdifAudioStream::Enable() {
     // SPDIF TX unit.
     regs.Write32(0x00, AIU_958_FORCE_LEFT);
 
-    regs.SetBits32(AIU_MEM_IEC958_CONTROL,
-                   AIU_958_MCTRL_FILL_ENB | AIU_958_MCTRL_EMPTY_ENB);   // Enable the DMA
+    regs.SetBits32(AIU_958_MCTRL_FILL_ENB | AIU_958_MCTRL_EMPTY_ENB,
+                   AIU_MEM_IEC958_CONTROL);   // Enable the DMA
     regs.SetBits32(AIU_958_DCU_FF_CTRL_ENB, AIU_958_DCU_FF_CTRL);       // Enable the fifo
 }
 
