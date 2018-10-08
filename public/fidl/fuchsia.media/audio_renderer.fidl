@@ -18,6 +18,7 @@ library fuchsia.media;
 //
 
 // Ordinal range: 0x0600-0x6ff
+[FragileBase]
 interface AudioRenderer : StreamBufferSet, StreamSink {
   // Sets the type of the stream to be delivered by the client. Using this
   // method implies that the stream encoding is AUDIO_ENCODING_LPCM.

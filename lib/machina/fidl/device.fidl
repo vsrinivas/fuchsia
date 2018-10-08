@@ -34,6 +34,7 @@ struct StartInfo {
     handle<vmo> vmo;
 };
 
+[FragileBase]
 interface VirtioDevice {
     // Configure a |queue| for the device. This specifies the |size| and the guest
     // physical addresses of the queue: |desc|, |avail|, and |used|.

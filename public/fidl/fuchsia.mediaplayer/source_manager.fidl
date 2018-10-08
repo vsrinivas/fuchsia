@@ -41,6 +41,7 @@ interface SourceManager {
 };
 
 // Ordinal range: 0x1201-12ff
+[FragileBase]
 interface Source {
   // Provides current status immediately after binding and whenever status
   // changes thereafter.

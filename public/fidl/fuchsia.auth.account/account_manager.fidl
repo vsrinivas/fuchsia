@@ -238,6 +238,7 @@ interface AuthListener {
 //
 // AuthTarget defines a set of methods to monitor the current authentication
 // state of an entity and to request changes in that authentication state.
+[FragileBase]
 interface AuthTarget {
     // Returns the current |AuthState| of the target.
     1000: GetAuthState()
