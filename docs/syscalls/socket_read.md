@@ -48,8 +48,9 @@ TODO(ZX-2399)
 
 **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ZX_ERR_BAD_STATE** *options* includes **ZX_SOCKET_CONTROL** and the
-socket was not created with **ZX_SOCKET_HAS_CONTROL**.
+**ZX_ERR_BAD_STATE** Either (a) *options* includes **ZX_SOCKET_CONTROL** and the
+socket was not created with **ZX_SOCKET_HAS_CONTROL**, or (b) reading has been
+disabled for this socket endpoint.
 
 **ZX_ERR_WRONG_TYPE**  *handle* is not a socket handle.
 
@@ -65,8 +66,6 @@ this case.)
 
 **ZX_ERR_PEER_CLOSED**  The other side of the socket is closed and no data is
 readable.
-
-**ZX_ERR_BAD_STATE**  Reading has been disabled for this socket endpoint.
 
 ## SEE ALSO
 

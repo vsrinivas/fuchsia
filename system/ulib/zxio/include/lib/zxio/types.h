@@ -21,6 +21,10 @@ typedef uint32_t zxio_signals_t;
 #define ZXIO_READ_THRESHOLD  ((zxio_signals_t)1u << 10)
 #define ZXIO_WRITE_THRESHOLD ((zxio_signals_t)1u << 11)
 
+#define ZXIO_SIGNAL_ALL \
+    (ZXIO_READABLE | ZXIO_WRITABLE | ZXIO_READ_DISABLED | ZXIO_WRITE_DISABLED \
+     | ZXIO_READ_THRESHOLD | ZXIO_WRITE_THRESHOLD)
+
 __END_CDECLS
 
 #endif // LIB_ZXIO_TYPES_H_

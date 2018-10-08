@@ -186,7 +186,7 @@ static ssize_t zx_pipe_posix_ioctl(fdio_t* io, int req, va_list va) {
 }
 
 static ssize_t zx_pipe_recvfrom(fdio_t* io, void* data, size_t len, int flags, struct sockaddr* restrict addr, socklen_t* restrict addrlen) {
-    if (flags != 0 && flags != MSG_DONTWAIT) {
+    if (flags & ~MSG_DONTWAIT) {
         return ZX_ERR_INVALID_ARGS;
     }
     zx_pipe_t* p = (zx_pipe_t*)io;
@@ -195,7 +195,7 @@ static ssize_t zx_pipe_recvfrom(fdio_t* io, void* data, size_t len, int flags, s
 }
 
 static ssize_t zx_pipe_sendto(fdio_t* io, const void* data, size_t len, int flags, const struct sockaddr* addr, socklen_t addrlen) {
-    if (flags != 0 && flags != MSG_DONTWAIT) {
+    if (flags & ~MSG_DONTWAIT) {
         return ZX_ERR_INVALID_ARGS;
     }
     if (addr != NULL) {
@@ -308,7 +308,13 @@ static fdio_ops_t zx_pipe_ops = {
     .shutdown = zx_pipe_shutdown,
 };
 
+#define FDIO_USE_ZXIO_PIPE 0
+
 fdio_t* fdio_pipe_create(zx_handle_t h) {
+#if FDIO_USE_ZXIO_PIPE
+    (void)zx_pipe_ops;
+    return fdio_zxio_create_pipe(h);
+#else
     zx_pipe_t* p = fdio_alloc(sizeof(*p));
     if (p == NULL) {
         zx_handle_close(h);
@@ -319,6 +325,7 @@ fdio_t* fdio_pipe_create(zx_handle_t h) {
     atomic_init(&p->io.refcount, 1);
     p->h = h;
     return &p->io;
+#endif
 }
 
 fdio_t* fdio_socketpair_create(zx_handle_t h) {

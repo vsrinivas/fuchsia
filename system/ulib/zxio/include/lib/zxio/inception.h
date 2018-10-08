@@ -48,10 +48,18 @@ typedef struct zxio_vmofile {
 
 // pipe ------------------------------------------------------------------------
 
+// A |zxio_t| backend that uses a Zircon socket object.
+//
+// The |socket| handle is a Zircon socket object.
+//
+// Will eventually be an implementation detail of zxio once fdio completes its
+// transition to the zxio backend.
 typedef struct zxio_pipe {
     zxio_t io;
     zx_handle_t socket;
 } zxio_pipe_t;
+
+zx_status_t zxio_pipe_init(zxio_pipe_t* pipe, zx_handle_t socket);
 
 __END_CDECLS
 
