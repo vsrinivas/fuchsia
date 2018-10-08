@@ -4,14 +4,20 @@
 
 //! The Internet Control Message Protocol (ICMP).
 
+use std::convert::TryInto;
 use std::mem;
+use std::ops::Range;
 
 use log::trace;
 
-use crate::ip::{send_ip_packet, IpAddr, IpProto, Ipv4};
-use crate::wire::icmp::{IcmpEchoReply, IcmpPacket, IcmpPacketSerializer, Icmpv4Packet};
+use crate::ip::{send_ip_packet, IpAddr, IpProto, Ipv4, Ipv6};
+use crate::wire::icmp::{
+    IcmpEchoReply, IcmpEchoRequest, IcmpIpExt, IcmpMessage, IcmpPacket, IcmpPacketSerializer,
+    Icmpv4Packet, Icmpv6Packet,
+};
 use crate::wire::{BufferAndRange, SerializationRequest};
 use crate::{Context, EventDispatcher};
+use zerocopy::ByteSlice;
 
 /// Receive an ICMP message in an IP packet.
 pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
@@ -42,13 +48,14 @@ pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: AsRef<[u8]> + AsMut
 
                 match packet {
                     Icmpv4Packet::EchoRequest(echo_request) => {
-                        increment_counter!(ctx, "receive_icmp_packet::echo_request");
                         let req = *echo_request.message();
                         let code = echo_request.code();
                         // drop packet so we can re-use the underlying buffer
                         mem::drop(echo_request);
                         // slice the buffer to be only the body range
                         buffer.slice(body_range);
+
+                        increment_counter!(ctx, "receive_icmp_packet::echo_request");
 
                         // we're responding to the sender, so these are flipped
                         let (src_ip, dst_ip) = (dst_ip, src_ip);
@@ -73,7 +80,49 @@ pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: AsRef<[u8]> + AsMut
                     ),
                 }
             }
-            Ipv6Addr => { log_unimplemented!(false, "ip::icmp::receive_icmp_packet: Not implemented for IPv6") }
+            Ipv6Addr => {
+                let mut buffer = buffer;
+                let (packet, body_range) = match Icmpv6Packet::parse(buffer.as_mut(), src_ip, dst_ip) {
+                    Ok(packet) => packet,
+                    Err(err) => {
+                        return false
+                    },
+                };
+
+                match packet {
+                    Icmpv6Packet::EchoRequest(echo_request) => {
+                        let req = *echo_request.message();
+                        let code = echo_request.code();
+                        // drop packet so we can re-use the underlying buffer
+                        mem::drop(echo_request);
+                        // slice the buffer to be only the body range
+                        buffer.slice(body_range);
+
+                        increment_counter!(ctx, "receive_icmp_packet::echo_request");
+
+                        // we're responding to the sender, so these are flipped
+                        let (src_ip, dst_ip) = (dst_ip, src_ip);
+                        send_ip_packet(ctx, dst_ip, IpProto::Icmp, |src_ip| {
+                            buffer.encapsulate(IcmpPacketSerializer::<Ipv6, _>::new(
+                                src_ip,
+                                dst_ip,
+                                code,
+                                req.reply(),
+                            ))
+                        });
+                        true
+                    }
+                    Icmpv6Packet::EchoReply(echo_reply) => {
+                        increment_counter!(ctx, "receive_icmp_packet::echo_reply");
+                        trace!("receive_icmp_packet: Received an EchoReply message");
+                        true
+                    }
+                    _ => log_unimplemented!(
+                        false,
+                        "ip::icmp::receive_icmp_packet: Not implemented for this packet type"
+                    )
+                }
+            }
         }
     );
 
@@ -83,13 +132,13 @@ pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: AsRef<[u8]> + AsMut
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ip::{Ip, Ipv4, Ipv4Addr};
+    use crate::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
     use crate::testutil::DummyEventDispatcher;
     use crate::{Context, StackState};
 
     #[test]
-    fn test_send_echo_request() {
-        use crate::ip::testdata::icmp_echo::*;
+    fn test_send_echo_request_v4() {
+        use crate::ip::testdata::icmp_echo_v4::*;
 
         let mut ctx = Context::new(Default::default(), DummyEventDispatcher::default());
         let src = <Ipv4 as Ip>::LOOPBACK_ADDRESS;
@@ -97,6 +146,43 @@ mod tests {
         let mut bytes = REQUEST_IP_PACKET_BYTES.to_owned();
         let len = bytes.len();
         let buf = BufferAndRange::new_from(&mut bytes, 20..len);
+
+        receive_icmp_packet(&mut ctx, src, dst, buf);
+        assert_eq!(
+            ctx.state()
+                .test_counters
+                .get("receive_icmp_packet::echo_request"),
+            &1
+        );
+
+        // Check that the echo request was replied to.
+        assert_eq!(ctx.state().test_counters.get("send_ip_packet"), &1);
+        assert_eq!(
+            ctx.state().test_counters.get("send_ip_packet::loopback"),
+            &1
+        );
+        assert_eq!(
+            ctx.state().test_counters.get("dispatch_receive_ip_packet"),
+            &1
+        );
+        assert_eq!(
+            ctx.state()
+                .test_counters
+                .get("receive_icmp_packet::echo_reply"),
+            &1
+        );
+    }
+
+    #[test]
+    fn test_send_echo_request_v6() {
+        use crate::ip::testdata::icmp_echo_v6::*;
+
+        let mut ctx = Context::new(Default::default(), DummyEventDispatcher::default());
+        let src = <Ipv6 as Ip>::LOOPBACK_ADDRESS;
+        let dst = Ipv6Addr::new([0xfe, 0xc0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let mut bytes = REQUEST_IP_PACKET_BYTES.to_owned();
+        let len = bytes.len();
+        let buf = BufferAndRange::new_from(&mut bytes, 40..len);
 
         receive_icmp_packet(&mut ctx, src, dst, buf);
         assert_eq!(
