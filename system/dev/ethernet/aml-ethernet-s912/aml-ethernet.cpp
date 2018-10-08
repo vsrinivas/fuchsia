@@ -60,7 +60,8 @@ zx_status_t AmlEthernet::InitPdev(zx_device_t* parent) {
         zxlogf(ERROR, "aml-dwmac: could not map periph mmio: %d\n", status);
         return status;
     }
-    periph_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    periph_mmio_ = ddk::MmioBuffer(mmio);
+
 
     // Map HHI regs (clocks and power domains).
     status = pdev_map_mmio_buffer2(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
@@ -69,7 +70,7 @@ zx_status_t AmlEthernet::InitPdev(zx_device_t* parent) {
         zxlogf(ERROR, "aml-dwmac: could not map hiu mmio: %d\n", status);
         return status;
     }
-    hhi_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    hhi_mmio_ = ddk::MmioBuffer(mmio);
 
     return status;
 }
@@ -130,7 +131,7 @@ zx_status_t AmlEthernet::Create(zx_device_t* device) {
     gpio_config_out(&eth_device->gpios_[PHY_RESET], 0);
 
     // Initialize AMLogic peripheral registers associated with dwmac.
-    auto* pregs = eth_device->periph_mmio_.get();
+    auto& pregs = eth_device->periph_mmio_;
     //Sorry about the magic...rtfm
     pregs->Write32(0x1621, PER_ETH_REG0);
     pregs->Write32(0x20000, PER_ETH_REG1);
@@ -143,7 +144,7 @@ zx_status_t AmlEthernet::Create(zx_device_t* device) {
                    PER_ETH_REG3);
 
     // Enable clocks and power domain for dwmac
-    auto* hregs = eth_device->hhi_mmio_.get();
+    auto& hregs = eth_device->hhi_mmio_;
     hregs->SetBits32(1 << 3, HHI_GCLK_MPEG1);
     hregs->ClearBits32((1 << 3) | (1 << 2), HHI_MEM_PD_REG0);
 
