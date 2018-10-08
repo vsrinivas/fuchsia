@@ -300,36 +300,36 @@ mod tests {
     use crate::wire::{BufferAndRange, InnerSerializationRequest};
     use crate::StackState;
 
-    const TEST_SENDER_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
-    const TEST_TARGET_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
-    const TEST_SENDER_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
-    const TEST_TARGET_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
+    const TEST_LOCAL_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
+    const TEST_REMOTE_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
+    const TEST_LOCAL_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
+    const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
 
     #[test]
     fn test_send_arp_request_on_cache_miss() {
         let mut state = StackState::default();
-        let dev_id = state.device.add_ethernet_device(TEST_SENDER_MAC);
+        let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC);
         let dispatcher = DummyEventDispatcher::default();
         let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
         set_ip_addr(
             &mut ctx,
             dev_id.id,
-            TEST_SENDER_IPV4,
-            Subnet::new(TEST_SENDER_IPV4, 24),
+            TEST_LOCAL_IPV4,
+            Subnet::new(TEST_LOCAL_IPV4, 24),
         );
 
         lookup::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
             &mut ctx,
             0,
-            TEST_SENDER_MAC,
-            TEST_TARGET_IPV4,
+            TEST_LOCAL_MAC,
+            TEST_REMOTE_IPV4,
         );
 
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
 
         let (frame, _) = EthernetFrame::parse(&ctx.dispatcher.frames_sent()[0].1[..]).unwrap();
         assert_eq!(frame.ethertype(), Some(Ok(EtherType::Arp)));
-        assert_eq!(frame.src_mac(), TEST_SENDER_MAC);
+        assert_eq!(frame.src_mac(), TEST_LOCAL_MAC);
         assert_eq!(EthernetArpDevice::BROADCAST, frame.dst_mac());
 
         let (hw, proto) = peek_arp_types(frame.body()).unwrap();
@@ -338,31 +338,31 @@ mod tests {
 
         let arp = ArpPacket::<_, Mac, Ipv4Addr>::parse(frame.body()).unwrap();
         assert_eq!(arp.operation(), ArpOp::Request);
-        assert_eq!(arp.sender_hardware_address(), TEST_SENDER_MAC);
+        assert_eq!(arp.sender_hardware_address(), TEST_LOCAL_MAC);
         assert_eq!(arp.target_hardware_address(), EthernetArpDevice::BROADCAST);
-        assert_eq!(arp.sender_protocol_address(), TEST_SENDER_IPV4);
-        assert_eq!(arp.target_protocol_address(), TEST_TARGET_IPV4);
+        assert_eq!(arp.sender_protocol_address(), TEST_LOCAL_IPV4);
+        assert_eq!(arp.target_protocol_address(), TEST_REMOTE_IPV4);
     }
 
     #[test]
     fn test_handle_arp_request() {
         let mut state = StackState::default();
-        let dev_id = state.device.add_ethernet_device(TEST_TARGET_MAC);
+        let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC);
         let dispatcher = DummyEventDispatcher::default();
         let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
         set_ip_addr(
             &mut ctx,
             dev_id.id,
-            TEST_TARGET_IPV4,
-            Subnet::new(TEST_TARGET_IPV4, 24),
+            TEST_LOCAL_IPV4,
+            Subnet::new(TEST_LOCAL_IPV4, 24),
         );
 
         let mut buf = InnerSerializationRequest::new(ArpPacketSerializer::new(
             ArpOp::Request,
-            TEST_SENDER_MAC,
-            TEST_SENDER_IPV4,
-            TEST_TARGET_MAC,
-            TEST_TARGET_IPV4,
+            TEST_REMOTE_MAC,
+            TEST_REMOTE_IPV4,
+            TEST_LOCAL_MAC,
+            TEST_LOCAL_IPV4,
         )).serialize_outer();
         let (hw, proto) = peek_arp_types(buf.as_ref()).unwrap();
         assert_eq!(hw, ArpHardwareType::Ethernet);
@@ -371,8 +371,8 @@ mod tests {
         receive_arp_packet::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice, _>(
             &mut ctx,
             0,
-            TEST_SENDER_MAC,
-            TEST_TARGET_MAC,
+            TEST_REMOTE_MAC,
+            TEST_LOCAL_MAC,
             BufferAndRange::new_from(&mut buf, ..),
         );
 
@@ -380,18 +380,18 @@ mod tests {
             lookup::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
                 &mut ctx,
                 0,
-                TEST_TARGET_MAC,
-                TEST_SENDER_IPV4
+                TEST_LOCAL_MAC,
+                TEST_REMOTE_IPV4
             ).unwrap(),
-            TEST_SENDER_MAC
+            TEST_REMOTE_MAC
         );
 
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
 
         let (frame, _) = EthernetFrame::parse(&ctx.dispatcher.frames_sent()[0].1[..]).unwrap();
         assert_eq!(frame.ethertype(), Some(Ok(EtherType::Arp)));
-        assert_eq!(frame.src_mac(), TEST_TARGET_MAC);
-        assert_eq!(frame.dst_mac(), TEST_SENDER_MAC);
+        assert_eq!(frame.src_mac(), TEST_LOCAL_MAC);
+        assert_eq!(frame.dst_mac(), TEST_REMOTE_MAC);
 
         let (hw, proto) = peek_arp_types(frame.body()).unwrap();
         assert_eq!(hw, ArpHardwareType::Ethernet);
@@ -399,10 +399,10 @@ mod tests {
 
         let arp = ArpPacket::<_, Mac, Ipv4Addr>::parse(frame.body()).unwrap();
         assert_eq!(arp.operation(), ArpOp::Response);
-        assert_eq!(arp.sender_hardware_address(), TEST_TARGET_MAC);
-        assert_eq!(arp.target_hardware_address(), TEST_SENDER_MAC);
-        assert_eq!(arp.sender_protocol_address(), TEST_TARGET_IPV4);
-        assert_eq!(arp.target_protocol_address(), TEST_SENDER_IPV4);
+        assert_eq!(arp.sender_hardware_address(), TEST_LOCAL_MAC);
+        assert_eq!(arp.target_hardware_address(), TEST_REMOTE_MAC);
+        assert_eq!(arp.sender_protocol_address(), TEST_LOCAL_IPV4);
+        assert_eq!(arp.target_protocol_address(), TEST_REMOTE_IPV4);
     }
 
     #[test]
