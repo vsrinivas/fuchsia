@@ -372,7 +372,8 @@ func (c *collector) GC() error {
 	for _, pkg := range dPkgs {
 		pDir, err := newPackageDirFromBlob(pkg, c.fs)
 		if err != nil {
-			log.Printf("pkgfs: failed getting package from blob %s: %s", pkg, err)
+			log.Printf("pkgfs: failed getting package from blob %s:  %s", pkg, err)
+			continue
 		}
 
 		for _, p := range pDir.Blobs() {
