@@ -144,8 +144,12 @@ void AddSupportedHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map, CBW
               debug::Describe(gi).c_str());
 }
 
-MinstrelRateSelector::MinstrelRateSelector(TimerManager&& timer_mgr)
-    : timer_mgr_(fbl::move(timer_mgr)) {}
+MinstrelRateSelector::MinstrelRateSelector(TimerManager&& timer_mgr,
+                                           ProbeSequence&& probe_sequence)
+    : timer_mgr_(fbl::move(timer_mgr)), probe_sequence_(std::move(probe_sequence)) {
+    // Temporarily suppress compiler complaint about unused variable
+    (void)probe_sequence_;
+}
 
 void AddErp(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
             const wlan_assoc_ctx_t& assoc_ctx) {
@@ -367,7 +371,6 @@ const Peer* MinstrelRateSelector::GetPeer(const common::MacAddr& addr) const {
     return nullptr;
 }
 
-
 zx_status_t MinstrelRateSelector::GetListToFidl(wlan_minstrel::Peers* peers_fidl) const {
     peers_fidl->peers.resize(peer_map_.size());
     size_t idx = 0;
@@ -411,6 +414,20 @@ zx_status_t MinstrelRateSelector::GetStatsToFidl(const common::MacAddr& peer_add
 
 bool MinstrelRateSelector::IsActive() const {
     return next_update_event_.IsActive();
+}
+
+ProbeSequence RandomProbeSequence() {
+    std::random_device rd;
+    std::mt19937 random_generator(rd());
+
+    ProbeSequence sequence_table;
+    for (uint8_t i = 0; i < kNumProbeSequece; ++i) {
+        for (tx_vec_idx_t j = kStartIdx; j <= kMaxValidIdx; ++j) {
+            sequence_table[i][j - kStartIdx] = j;
+        }
+        std::shuffle(sequence_table[i].begin(), sequence_table[i].end(), random_generator);
+    }
+    return sequence_table;
 }
 
 namespace debug {

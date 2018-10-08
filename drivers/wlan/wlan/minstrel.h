@@ -16,6 +16,7 @@
 
 #include <fuchsia/wlan/minstrel/cpp/fidl.h>
 
+#include <array>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -26,6 +27,8 @@ static constexpr zx::duration kMinstrelUpdateInterval = zx::msec(100);
 static constexpr float kMinstrelExpWeight = 0.75;  // Used to calculate moving average throughput
 static constexpr float kMinstrelProbabilityThreshold =
     0.9;  // If probability is past this level, only consider throughput
+static constexpr uint8_t kNumProbeSequece = 8;
+static constexpr tx_vec_idx_t kSequenceLength = 1 + kMaxValidIdx - kStartIdx;
 
 // LINT.IfChange
 struct TxStats {
@@ -55,9 +58,11 @@ struct Peer {
 };
 // LINT.ThenChange(//garnet/public/fidl/fuchsia.wlan.minstrel/wlan_minstrel.fidl)
 
+using ProbeSequence = std::array<std::array<tx_vec_idx_t, kSequenceLength>, kNumProbeSequece>;
+
 class MinstrelRateSelector {
    public:
-    MinstrelRateSelector(TimerManager&& timer_mgr);
+    MinstrelRateSelector(TimerManager&& timer_mgr, ProbeSequence&& probe_sequence);
     void AddPeer(const wlan_assoc_ctx_t& assoc_ctx);
     void RemovePeer(const common::MacAddr& addr);
     // Called after every tx packet.
@@ -69,7 +74,6 @@ class MinstrelRateSelector {
     bool IsActive() const;
 
    private:
-    void GenerateProbeSequence();
     void UpdateStats();
     Peer* GetPeer(const common::MacAddr& addr);
     const Peer* GetPeer(const common::MacAddr& addr) const;
@@ -79,7 +83,11 @@ class MinstrelRateSelector {
     std::unordered_map<common::MacAddr, Peer, common::MacAddrHasher> peer_map_;
     TimerManager timer_mgr_;
     TimedEvent next_update_event_;
+
+    const ProbeSequence probe_sequence_;
 };
+
+ProbeSequence RandomProbeSequence();
 
 namespace debug {
 std::string Describe(const TxStats& tx_stats);

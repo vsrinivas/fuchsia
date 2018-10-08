@@ -20,7 +20,8 @@ static const common::MacAddr kTestMacAddr({50, 53, 51, 56, 55, 52});
 
 struct MinstrelTest : public ::testing::Test {
     MinstrelTest()
-        : minstrel_(MinstrelRateSelector(TimerManager(fbl::make_unique<TestTimer>(0, &clock)))) {
+        : minstrel_(MinstrelRateSelector(TimerManager(fbl::make_unique<TestTimer>(0, &clock)),
+                                         RandomProbeSequence())) {
         kTestMacAddr.CopyTo(assoc_ctx_ht_.bssid);
     }
 
@@ -148,6 +149,22 @@ TEST_F(MinstrelTest, UpdateStats) {
     }
     EXPECT_EQ(ZX_OK, minstrel_.GetStatsToFidl(kTestMacAddr, &peer));
     EXPECT_EQ(41, peer.max_tp);
+}
+
+TEST(MinstrelFreeFunctions, RandomSequence) {
+    auto probe_sequence_table = RandomProbeSequence();
+    std::set<tx_vec_idx_t> seen{};
+    EXPECT_EQ(kNumProbeSequece, probe_sequence_table.size());
+    for (const auto& sequence : probe_sequence_table) {
+        EXPECT_EQ(kSequenceLength, sequence.size());
+        seen.clear();
+        for (tx_vec_idx_t i : sequence) {
+            seen.emplace(i);
+        }
+        EXPECT_EQ(kSequenceLength, seen.size());
+        EXPECT_EQ(kStartIdx, *seen.cbegin());
+        EXPECT_EQ(kMaxValidIdx, *(--seen.cend()));
+    }
 }
 
 }  // namespace

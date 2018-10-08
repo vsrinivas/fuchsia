@@ -24,17 +24,6 @@ namespace wlan {
 //
 // TODO(NET-1451) VHT will be inserted between HT and ERP.
 
-static constexpr uint8_t kHtNumGi = 2;
-static constexpr uint8_t kHtNumCbw = 2;
-static constexpr uint8_t kHtNumTxVector = kHtNumGi * kHtNumCbw * kHtNumMcs;
-
-static constexpr uint8_t kDsssCckNumTxVector = 4;
-
-static constexpr tx_vec_idx_t kStartIdx = 1 + kInvalidTxVectorIdx;
-static constexpr tx_vec_idx_t kHtStartIdx = kStartIdx;
-static constexpr tx_vec_idx_t kErpStartIdx = kHtStartIdx + kHtNumTxVector;
-static constexpr tx_vec_idx_t kDsssCckStartIdx = kErpStartIdx + kErpNumTxVector;
-static constexpr tx_vec_idx_t kMaxValidIdx = kDsssCckStartIdx + kDsssCckNumTxVector - 1;
 
 zx_status_t TxVector::FromSupportedRate(const SupportedRate& erp_rate, TxVector* tx_vec) {
     if (tx_vec == nullptr) {

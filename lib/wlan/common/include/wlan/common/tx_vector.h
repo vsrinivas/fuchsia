@@ -23,6 +23,18 @@ static constexpr uint8_t kErpNumTxVector = 8;
 
 static constexpr tx_vec_idx_t kInvalidTxVectorIdx = WLAN_TX_VECTOR_IDX_INVALID;
 
+static constexpr uint8_t kHtNumGi = 2;
+static constexpr uint8_t kHtNumCbw = 2;
+static constexpr uint8_t kHtNumTxVector = kHtNumGi * kHtNumCbw * kHtNumMcs;
+
+static constexpr uint8_t kDsssCckNumTxVector = 4;
+
+static constexpr tx_vec_idx_t kStartIdx = 1 + kInvalidTxVectorIdx;
+static constexpr tx_vec_idx_t kHtStartIdx = kStartIdx;
+static constexpr tx_vec_idx_t kErpStartIdx = kHtStartIdx + kHtNumTxVector;
+static constexpr tx_vec_idx_t kDsssCckStartIdx = kErpStartIdx + kErpNumTxVector;
+static constexpr tx_vec_idx_t kMaxValidIdx = kDsssCckStartIdx + kDsssCckNumTxVector - 1;
+
 // Extend the definition of MCS index for ERP
 // OFDM/ERP-OFDM, represented by WLAN_PHY_ERP:
 // 0: BPSK,   1/2 -> Data rate  6 Mbps

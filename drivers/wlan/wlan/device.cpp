@@ -784,7 +784,8 @@ zx_status_t Device::CreateMinstrel() {
         errorf("could not create minstrel timer: %d\n", status);
         return status;
     }
-    minstrel_.reset(new MinstrelRateSelector(TimerManager(fbl::move(timer))));
+    minstrel_.reset(
+        new MinstrelRateSelector(TimerManager(fbl::move(timer)), RandomProbeSequence()));
     return ZX_OK;
 }
 
