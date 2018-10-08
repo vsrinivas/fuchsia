@@ -9,6 +9,7 @@
 #include <mutex>
 
 #include "garnet/bin/mediaplayer/demux/reader.h"
+#include "lib/async/cpp/task.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 extern "C" {
@@ -27,7 +28,8 @@ class AvIoContext {
  public:
   // Creates an ffmpeg avio_context for a given reader.
   static Result Create(std::shared_ptr<Reader> reader,
-                       AvIoContextPtr* context_ptr_out);
+                       AvIoContextPtr* context_ptr_out,
+                       async_dispatcher_t* dispatcher);
 };
 
 // 'Opaque' context bound to ffmpeg AVIOContext.
@@ -55,7 +57,8 @@ class AvIoContextOpaque {
   ~AvIoContextOpaque();
 
  private:
-  AvIoContextOpaque(std::shared_ptr<Reader> reader);
+  AvIoContextOpaque(std::shared_ptr<Reader> reader,
+                    async_dispatcher_t* dispatcher);
 
   // Indicates whether the reader can seek
   bool can_seek() { return can_seek_; }
@@ -91,6 +94,9 @@ class AvIoContextOpaque {
   std::mutex mutex_;
   std::condition_variable condition_variable_;
   bool callback_happened_ FXL_GUARDED_BY(mutex_) = false;
+
+  // For posting calls to FIDL thread.
+  async_dispatcher_t* dispatcher_;
 
   friend class AvIoContext;
 };

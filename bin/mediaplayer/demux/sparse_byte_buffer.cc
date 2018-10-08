@@ -45,7 +45,6 @@ void SparseByteBuffer::Initialize(size_t size) {
 size_t SparseByteBuffer::ReadRange(size_t start, size_t size,
                                    uint8_t* dest_buffer) {
   FXL_DCHECK(start < size_);
-  FXL_DCHECK(start + size < size_);
   FXL_DCHECK(dest_buffer != nullptr);
 
   size_t copied = 0;
@@ -169,7 +168,6 @@ SparseByteBuffer::Hole SparseByteBuffer::FindHoleContaining(size_t position) {
 std::vector<SparseByteBuffer::Hole> SparseByteBuffer::FindOrCreateHolesInRange(
     size_t start, size_t size) {
   FXL_DCHECK(start < size_);
-  FXL_DCHECK(start + size < size_);
 
   std::vector<Hole> holes_in_range;
 
@@ -256,7 +254,6 @@ SparseByteBuffer::Hole SparseByteBuffer::Fill(Hole hole,
 size_t SparseByteBuffer::CleanUpExcept(size_t goal, size_t protected_start,
                                        size_t protected_size) {
   FXL_DCHECK(protected_start < size_);
-  FXL_DCHECK(protected_start + protected_size < size_);
 
   if (regions_.empty()) {
     return 0;
@@ -295,10 +292,11 @@ size_t SparseByteBuffer::CleanUpExcept(size_t goal, size_t protected_start,
     size_t excess_after =
         protected_end < candidate_end ? candidate_end - protected_end : 0;
     size_t shrink_amount = std::min({to_free, candidate.size(), excess_after});
+    bool last_region = iter == regions_.begin();
     ShrinkRegionBack(candidate, shrink_amount);
     to_free -= shrink_amount;
 
-    if (iter == regions_.begin()) {
+    if (last_region) {
       break;
     };
 
@@ -340,9 +338,8 @@ SparseByteBuffer::Region SparseByteBuffer::ShrinkRegionFront(
   regions_.erase(region.iter_);
   auto result = regions_.emplace(region_pos, buffer);
   FXL_DCHECK(result.second);
-  return Region(result.first);
 
-  return region;
+  return Region(result.first);
 }
 
 SparseByteBuffer::Region SparseByteBuffer::ShrinkRegionBack(
@@ -388,12 +385,13 @@ SparseByteBuffer::Hole SparseByteBuffer::Free(Region region) {
 
   regions_.erase(region.iter_);
 
-  if (hole_after != null_hole()) {
+  if (hole_after != null_hole() &&
+      hole_after.position() == hole_position + hole_size) {
     hole_size += hole_after.size();
     holes_.erase(hole_after.iter_);
   }
 
-  if (hole_before != null_hole()) {
+  if (hole_before != null_hole() && hole_before.position() <= hole_position) {
     hole_size += hole_before.size();
     new_hole = hole_before;
     new_hole.iter_->second = hole_size;

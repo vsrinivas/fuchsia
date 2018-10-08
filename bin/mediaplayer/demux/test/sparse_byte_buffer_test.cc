@@ -421,6 +421,18 @@ TEST(SparseByteBufferTest, FreeRegion) {
 
     ExpectHole(&under_test, 20, 10, enclosing_hole);
   }
+
+  {
+    // Free region with holes not adjacent.
+    SparseByteBuffer under_test =
+        BufferWithRegions({{10, 10}, {20, 10}, {30, 10}, {50, 10}, {90, 10}});
+
+    SparseByteBuffer::Region region_to_free =
+        under_test.FindRegionContaining(20, under_test.null_region());
+    SparseByteBuffer::Hole enclosing_hole = under_test.Free(region_to_free);
+
+    ExpectHole(&under_test, 20, 10, enclosing_hole);
+  }
 }
 
 TEST(SparseByteBufferTest, CleanUpExcept) {

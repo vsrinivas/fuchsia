@@ -29,7 +29,8 @@ void AVIOContextDeleter::operator()(AVIOContext* context) const {
 
 // static
 Result AvIoContext::Create(std::shared_ptr<Reader> reader,
-                           AvIoContextPtr* context_ptr_out) {
+                           AvIoContextPtr* context_ptr_out,
+                           async_dispatcher_t* dispatcher) {
   FXL_CHECK(context_ptr_out);
 
   // Internal buffer size used by AVIO for reading.
@@ -39,7 +40,8 @@ Result AvIoContext::Create(std::shared_ptr<Reader> reader,
 
   // Using a raw pointer here, because the io context doesn't understand smart
   // pointers.
-  AvIoContextOpaque* avIoContextOpaque = new AvIoContextOpaque(reader);
+  AvIoContextOpaque* avIoContextOpaque =
+      new AvIoContextOpaque(reader, dispatcher);
   Result result = avIoContextOpaque->describe_result_;
   if (result != Result::kOk) {
     *context_ptr_out = nullptr;
@@ -81,13 +83,16 @@ int64_t AvIoContextOpaque::Seek(void* opaque, int64_t offset, int whence) {
 
 AvIoContextOpaque::~AvIoContextOpaque() {}
 
-AvIoContextOpaque::AvIoContextOpaque(std::shared_ptr<Reader> reader)
-    : reader_(reader) {
-  reader->Describe([this](Result result, size_t size, bool can_seek) {
-    describe_result_ = result;
-    size_ = size == Reader::kUnknownSize ? -1 : static_cast<int64_t>(size);
-    can_seek_ = can_seek;
-    CallbackComplete();
+AvIoContextOpaque::AvIoContextOpaque(std::shared_ptr<Reader> reader,
+                                     async_dispatcher_t* dispatcher)
+    : reader_(reader), dispatcher_(dispatcher) {
+  async::PostTask(dispatcher_, [this]() {
+    reader_->Describe([this](Result result, size_t size, bool can_seek) {
+      describe_result_ = result;
+      size_ = size == Reader::kUnknownSize ? -1 : static_cast<int64_t>(size);
+      can_seek_ = can_seek;
+      CallbackComplete();
+    });
   });
 
   WaitForCallback();
@@ -105,13 +110,16 @@ int AvIoContextOpaque::Read(uint8_t* buffer, size_t bytes_to_read) {
 
   Result read_at_result;
   size_t read_at_bytes_read;
-  reader_->ReadAt(static_cast<size_t>(position_), buffer, bytes_to_read,
-                  [this, &read_at_result, &read_at_bytes_read](
-                      Result result, size_t bytes_read) {
-                    read_at_result = result;
-                    read_at_bytes_read = bytes_read;
-                    CallbackComplete();
-                  });
+  async::PostTask(dispatcher_, [this, &read_at_result, &read_at_bytes_read,
+                                buffer, bytes_to_read]() {
+    reader_->ReadAt(static_cast<size_t>(position_), buffer, bytes_to_read,
+                    [this, &read_at_result, &read_at_bytes_read](
+                        Result result, size_t bytes_read) {
+                      read_at_result = result;
+                      read_at_bytes_read = bytes_read;
+                      CallbackComplete();
+                    });
+  });
 
   WaitForCallback();
 
