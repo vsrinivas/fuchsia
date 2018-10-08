@@ -161,6 +161,9 @@ zx_status_t OpteeClient::OpenSession(const zircon_tee_Uuid* trusted_app,
         return zircon_tee_DeviceOpenSession_reply(txn, kInvalidSession, &result);
     }
 
+    zxlogf(SPEW, "optee: OpenSession returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 "\n",
+           call_code, message.return_code(), message.return_origin());
+    // TODO(rjascani): Add session id to tracking struct to ensure closure
     result.return_code = message.return_code();
     result.return_origin = message.return_origin();
     return zircon_tee_DeviceOpenSession_reply(txn, message.session_id(), &result);
@@ -175,7 +178,19 @@ zx_status_t OpteeClient::InvokeCommand(uint32_t session_id,
 
 zx_status_t OpteeClient::CloseSession(uint32_t session_id,
                                       fidl_txn_t* txn) {
-    return ZX_ERR_NOT_SUPPORTED;
+    CloseSessionMessage message{controller_->driver_pool(), session_id};
+
+    if (!message.is_valid()) {
+        return ZX_ERR_NO_RESOURCES;
+    }
+
+    uint32_t call_code = controller_->CallWithMessage(
+        message, fbl::BindMember(this, &OpteeClient::HandleRpc));
+
+    zxlogf(SPEW, "optee: CloseSession returned %" PRIx32 " %" PRIx32 " %" PRIx32 "\n",
+           call_code, message.return_code(), message.return_origin());
+
+    return zircon_tee_DeviceCloseSession_reply(txn);
 }
 
 template <typename SharedMemoryPoolTraits>

@@ -19,6 +19,7 @@ typedef struct teec_context_impl {
 
 typedef struct teec_session_impl {
     uint32_t session_id;
+    teec_context_impl_t* context_imp;
 } teec_session_impl_t;
 
 typedef struct teec_shared_memory_impl {

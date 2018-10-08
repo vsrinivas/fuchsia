@@ -65,6 +65,22 @@ OpenSessionMessage::OpenSessionMessage(SharedMemoryManager::DriverMemoryPool* me
     client_app_param.payload.value.generic.c = TEEC_LOGIN_PUBLIC;
 }
 
+CloseSessionMessage::CloseSessionMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
+                                         uint32_t session_id) {
+    ZX_DEBUG_ASSERT(message_pool != nullptr);
+
+    zx_status_t status = message_pool->Allocate(CalculateSize(kNumParams), &memory_);
+
+    if (status != ZX_OK) {
+        memory_ = nullptr;
+        return;
+    }
+
+    header()->command = Command::kCloseSession;
+    header()->num_params = static_cast<uint32_t>(kNumParams);
+    header()->session_id = session_id;
+}
+
 bool RpcMessage::TryInitializeMembers() {
     size_t memory_size = memory_->size();
     if (memory_size < sizeof(MessageHeader)) {

@@ -152,6 +152,7 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context,
 
     if (out_result.return_code == TEEC_SUCCESS) {
         session->imp.session_id = out_session_id;
+        session->imp.context_imp = &context->imp;
     }
 
     if (returnOrigin) {
@@ -161,7 +162,16 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context,
     return out_result.return_code;
 }
 
-void TEEC_CloseSession(TEEC_Session* session) {}
+void TEEC_CloseSession(TEEC_Session* session) {
+    if (!session || !session->imp.context_imp) {
+        return;
+    }
+
+    // TEEC_CloseSession simply swallows errors, so no need to check here.
+    zircon_tee_DeviceCloseSession(session->imp.context_imp->tee_channel,
+                                  session->imp.session_id);
+    session->imp.context_imp = NULL;
+}
 
 TEEC_Result TEEC_InvokeCommand(TEEC_Session* session,
                                uint32_t commandID,
