@@ -8,8 +8,9 @@ const Union = `
 {{- define "UnionDefinition" -}}
 type {{ .TagName }} uint32
 const (
+	_ {{ $.TagName }} = iota
 	{{- range .Members }}
-	{{ $.Name }}{{ .Name }} {{ $.TagName }} = iota
+	{{ $.Name }}{{ .Name }}
 	{{- end }}
 )
 
