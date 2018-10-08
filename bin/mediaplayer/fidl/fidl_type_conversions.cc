@@ -596,10 +596,7 @@ TypeConverter<std::unique_ptr<media_player::StreamType>,
       plane_offset.push_back(format.primary_start_offset);
       plane_offset.push_back(format.secondary_start_offset);
 
-      if (format.tertiary_start_offset != 0) {
-        // This path should not be taken, since we know we're looking at NV12.
-        // This code remains here, because it will be relevent
-        FXL_LOG(FATAL) << "NV12 format provided tertiary_start_offset.";
+      if (format.tertiary_start_offset != format.secondary_start_offset + 1) {
         // secondary_line_stride_bytes is resused here.
         line_stride.push_back(format.secondary_line_stride_bytes);
         plane_offset.push_back(format.tertiary_start_offset);
