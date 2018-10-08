@@ -44,7 +44,7 @@ import("//build/rust/rustc_artifact.gni")
 #
 #   rustc_library("foo") {
 #     deps = [
-#       "//garnet/public/rust/crates/bar",
+#       "//garnet/public/rust/bar",
 #       "//third_party/rust-crates/rustc_deps:clap",
 #       "//third_party/rust-crates/rustc_deps:serde",
 #       "//third_party/rust-crates/rustc_deps:slab",

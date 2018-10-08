@@ -33,8 +33,8 @@ template("fidl_rust_library") {
     forward_variables_from(invoker, [ "testonly" ])
     deps = [
       "//garnet/public/lib/fidl/rust/fidl",
-      "//garnet/public/rust/crates/fuchsia-async",
-      "//garnet/public/rust/crates/fuchsia-zircon",
+      "//garnet/public/rust/fuchsia-async",
+      "//garnet/public/rust/fuchsia-zircon",
       "//third_party/rust-crates/rustc_deps:futures-preview",
     ]
 
