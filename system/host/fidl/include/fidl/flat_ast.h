@@ -369,13 +369,12 @@ struct Enum : public Decl {
         std::unique_ptr<raw::AttributeList> attributes;
     };
 
-    Enum(std::unique_ptr<raw::AttributeList> attributes, Name name, types::PrimitiveSubtype subtype,
+    Enum(std::unique_ptr<raw::AttributeList> attributes, Name name, types::PrimitiveSubtype type,
          std::vector<Member> members)
-        : Decl(Kind::kEnum, std::move(attributes), std::move(name)),
-          type(std::make_unique<PrimitiveType>(subtype)),
+        : Decl(Kind::kEnum, std::move(attributes), std::move(name)), type(type),
           members(std::move(members)) {}
 
-    std::unique_ptr<PrimitiveType> type;
+    types::PrimitiveSubtype type;
     std::vector<Member> members;
     TypeShape typeshape;
 };
@@ -590,12 +589,8 @@ private:
     bool ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration);
     bool ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
 
-    bool TypeCanBeConst(const Type* type);
-    bool TypeInferConstantType(const Constant* constant,
-                               std::unique_ptr<Type>* out_type);
-    const Type* TypeResolve(const Type* type);
-    bool TypeIsConvertibleTo(const Type* from_type, const Type* to_type);
-
+    bool TypecheckString(const IdentifierConstant* identifier);
+    bool TypecheckPrimitive(const IdentifierConstant* identifier);
     bool TypecheckConst(const Const* const_declaration);
 
     // Given a const declaration of the form
@@ -775,6 +770,8 @@ private:
     // owned by the various foo_declarations_.
     std::map<const Name*, Using*, PtrCompare<Name>> type_aliases_;
     std::map<const Name*, Decl*, PtrCompare<Name>> declarations_;
+    std::map<const Name*, Const*, PtrCompare<Name>> string_constants_;
+    std::map<const Name*, Const*, PtrCompare<Name>> primitive_constants_;
     std::map<const Name*, Const*, PtrCompare<Name>> constants_;
 
     ErrorReporter* error_reporter_;

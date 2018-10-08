@@ -588,8 +588,8 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
         std::string enum_name = NameName(enum_decl->name, "_", "_");
         named_coded_types_.emplace(&enum_decl->name,
                                    std::make_unique<coded::PrimitiveType>(
-                                       std::move(enum_name), enum_decl->type->subtype,
-                                       flat::PrimitiveType::SubtypeSize(enum_decl->type->subtype)));
+                                       std::move(enum_name), enum_decl->type,
+                                       flat::PrimitiveType::SubtypeSize(enum_decl->type)));
         break;
     }
     case flat::Decl::Kind::kInterface: {

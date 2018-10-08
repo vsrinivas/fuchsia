@@ -102,7 +102,6 @@ public:
     enum struct Kind {
         kString,
         kNumeric,
-        // TODO(pascallouis): should have kBool instead.
         kTrue,
         kFalse,
     };
