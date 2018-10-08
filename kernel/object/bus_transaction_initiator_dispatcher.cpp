@@ -8,6 +8,7 @@
 
 #include <dev/iommu.h>
 #include <err.h>
+#include <vm/pinned_vm_object.h>
 #include <vm/vm_object.h>
 #include <zircon/rights.h>
 #include <zxcpp/new.h>
@@ -51,14 +52,19 @@ zx_status_t BusTransactionInitiatorDispatcher::Pin(fbl::RefPtr<VmObject> vmo, ui
         return ZX_ERR_INVALID_ARGS;
     }
 
-    Guard<fbl::Mutex> guard{get_lock()};
+    PinnedVmObject pinned_vmo;
+    zx_status_t status = PinnedVmObject::Create(vmo, offset, size, &pinned_vmo);
+    if (status != ZX_OK) {
+        return status;
+    }
 
+    Guard<fbl::Mutex> guard{get_lock()};
     if (zero_handles_) {
         return ZX_ERR_BAD_STATE;
     }
 
-    return PinnedMemoryTokenDispatcher::Create(fbl::WrapRefPtr(this), fbl::move(vmo),
-                                               offset, size, perms, pmt, pmt_rights);
+    return PinnedMemoryTokenDispatcher::Create(fbl::WrapRefPtr(this), fbl::move(pinned_vmo),
+                                               perms, pmt, pmt_rights);
 }
 
 void BusTransactionInitiatorDispatcher::ReleaseQuarantine() {

@@ -9,6 +9,7 @@
 
 #include <assert.h>
 #include <err.h>
+#include <vm/pinned_vm_object.h>
 #include <vm/vm.h>
 #include <vm/vm_object.h>
 #include <zxcpp/new.h>
@@ -21,59 +22,28 @@
 #define LOCAL_TRACE 0
 
 zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitiatorDispatcher> bti,
-                                                fbl::RefPtr<VmObject> vmo, size_t offset,
-                                                size_t size, uint32_t perms,
+                                                PinnedVmObject pinned_vmo, uint32_t perms,
                                                 fbl::RefPtr<Dispatcher>* dispatcher,
                                                 zx_rights_t* rights) {
     LTRACE_ENTRY;
-    DEBUG_ASSERT(IS_PAGE_ALIGNED(offset) && IS_PAGE_ALIGNED(size));
-
-    if (vmo->is_paged()) {
-        // Commit the VMO range, in case it's not already committed.
-        zx_status_t status = vmo->CommitRange(offset, size, nullptr);
-        if (status != ZX_OK) {
-            LTRACEF("vmo->CommitRange failed: %d\n", status);
-            return status;
-        }
-
-        // Pin the memory to make sure it doesn't change from underneath us for the
-        // lifetime of the created PMT.
-        status = vmo->Pin(offset, size);
-        if (status != ZX_OK) {
-            LTRACEF("vmo->Pin failed: %d\n", status);
-            return status;
-        }
-    }
-
-    // Set up a cleanup function to undo the pin if we need to fail this
-    // operation.
-    auto unpin_vmo = fbl::MakeAutoCall([vmo, offset, size]() {
-        if (vmo->is_paged()) {
-            vmo->Unpin(offset, size);
-        }
-    });
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(pinned_vmo.offset()) && IS_PAGE_ALIGNED(pinned_vmo.size()));
 
     const size_t min_contig = bti->minimum_contiguity();
     DEBUG_ASSERT(fbl::is_pow2(min_contig));
 
     fbl::AllocChecker ac;
-    const size_t num_addrs = ROUNDUP(size, min_contig) / min_contig;
+    const size_t num_addrs = ROUNDUP(pinned_vmo.size(), min_contig) / min_contig;
     fbl::Array<dev_vaddr_t> addr_array(new (&ac) dev_vaddr_t[num_addrs], num_addrs);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    bool is_contiguous = vmo->is_contiguous();
-    auto pmo = fbl::AdoptRef(new (&ac) PinnedMemoryTokenDispatcher(fbl::move(bti), fbl::move(vmo),
-                                                                   offset, size, is_contiguous,
+    auto pmo = fbl::AdoptRef(new (&ac) PinnedMemoryTokenDispatcher(fbl::move(bti),
+                                                                   fbl::move(pinned_vmo),
                                                                    fbl::move(addr_array)));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-
-    // Now that the pmt object has been created, it is responsible for
-    // unpinning.
-    unpin_vmo.cancel();
 
     zx_status_t status = pmo->MapIntoIommu(perms);
     if (status != ZX_OK) {
@@ -99,15 +69,16 @@ zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitia
 zx_status_t PinnedMemoryTokenDispatcher::MapIntoIommu(uint32_t perms) TA_NO_THREAD_SAFETY_ANALYSIS {
     const uint64_t bti_id = bti_->bti_id();
     const size_t min_contig = bti_->minimum_contiguity();
-    if (is_contiguous_) {
+    if (pinned_vmo_.vmo()->is_contiguous()) {
         dev_vaddr_t vaddr;
         size_t mapped_len;
 
         // Usermode drivers assume that if they requested a contiguous buffer in
         // memory, then the physical addresses will be contiguous.  Return an
         // error if we can't acutally map the address contiguously.
-        zx_status_t status = bti_->iommu()->MapContiguous(bti_id, vmo_, offset_, size_, perms,
-                                                          &vaddr, &mapped_len);
+        zx_status_t status = bti_->iommu()->MapContiguous(bti_id, pinned_vmo_.vmo(),
+                                                          pinned_vmo_.offset(), pinned_vmo_.size(),
+                                                          perms, &vaddr, &mapped_len);
         if (status != ZX_OK) {
             return status;
         }
@@ -120,14 +91,14 @@ zx_status_t PinnedMemoryTokenDispatcher::MapIntoIommu(uint32_t perms) TA_NO_THRE
         return ZX_OK;
     }
 
-    size_t remaining = size_;
-    uint64_t curr_offset = offset_;
+    size_t remaining = pinned_vmo_.size();
+    uint64_t curr_offset = pinned_vmo_.offset();
     size_t next_addr_idx = 0;
     while (remaining > 0) {
         dev_vaddr_t vaddr;
         size_t mapped_len;
-        zx_status_t status = bti_->iommu()->Map(bti_id, vmo_, curr_offset, remaining, perms,
-                                                &vaddr, &mapped_len);
+        zx_status_t status = bti_->iommu()->Map(bti_id, pinned_vmo_.vmo(), curr_offset, remaining,
+                                                perms, &vaddr, &mapped_len);
         if (status != ZX_OK) {
             zx_status_t err = UnmapFromIommuLocked();
             ASSERT(err == ZX_OK);
@@ -166,11 +137,11 @@ zx_status_t PinnedMemoryTokenDispatcher::UnmapFromIommuLocked() {
     }
 
     zx_status_t status = ZX_OK;
-    if (is_contiguous_) {
-        status = iommu->Unmap(bus_txn_id, mapped_addrs_[0], size_);
+    if (pinned_vmo_.vmo()->is_contiguous()) {
+        status = iommu->Unmap(bus_txn_id, mapped_addrs_[0], pinned_vmo_.size());
     } else {
         const size_t min_contig = bti_->minimum_contiguity();
-        size_t remaining = size_;
+        size_t remaining = pinned_vmo_.size();
         for (size_t i = 0; i < mapped_addrs_.size(); ++i) {
             dev_vaddr_t addr = mapped_addrs_[i];
             if (addr == UINT64_MAX) {
@@ -238,10 +209,6 @@ PinnedMemoryTokenDispatcher::~PinnedMemoryTokenDispatcher() {
     zx_status_t status = UnmapFromIommuLocked();
     ASSERT(status == ZX_OK);
 
-    if (vmo_->is_paged()) {
-        vmo_->Unpin(offset_, size_);
-    }
-
     // RemovePmo is the only method that will remove dll_pmt_ from a list, and
     // it's only called here.  dll_pmt_ is only added to a list at the end of
     // Create, before any reference to the pmt has been given out.
@@ -252,13 +219,12 @@ PinnedMemoryTokenDispatcher::~PinnedMemoryTokenDispatcher() {
 }
 
 PinnedMemoryTokenDispatcher::PinnedMemoryTokenDispatcher(
-        fbl::RefPtr<BusTransactionInitiatorDispatcher> bti,
-        fbl::RefPtr<VmObject> vmo, size_t offset, size_t size,
-        bool is_contiguous,
-        fbl::Array<dev_vaddr_t> mapped_addrs)
-    : vmo_(fbl::move(vmo)), offset_(offset), size_(size), is_contiguous_(is_contiguous),
+    fbl::RefPtr<BusTransactionInitiatorDispatcher> bti,
+    PinnedVmObject pinned_vmo,
+    fbl::Array<dev_vaddr_t> mapped_addrs)
+    : pinned_vmo_(fbl::move(pinned_vmo)),
       bti_(fbl::move(bti)), mapped_addrs_(fbl::move(mapped_addrs)) {
-
+    DEBUG_ASSERT(pinned_vmo_.vmo() != nullptr);
     InvalidateMappedAddrsLocked();
 }
 
@@ -276,12 +242,12 @@ zx_status_t PinnedMemoryTokenDispatcher::EncodeAddrs(bool compress_results,
         }
         memcpy(mapped_addrs, pmo_addrs.get(), found_addrs * sizeof(dev_vaddr_t));
     } else if (contiguous) {
-        if (mapped_addrs_count != 1 || !is_contiguous_) {
+        if (mapped_addrs_count != 1 || !pinned_vmo_.vmo()->is_contiguous()) {
             return ZX_ERR_INVALID_ARGS;
         }
         *mapped_addrs = pmo_addrs.get()[0];
     } else {
-        const size_t num_pages = size_ / PAGE_SIZE;
+        const size_t num_pages = pinned_vmo_.size() / PAGE_SIZE;
         if (num_pages != mapped_addrs_count) {
             return ZX_ERR_INVALID_ARGS;
         }

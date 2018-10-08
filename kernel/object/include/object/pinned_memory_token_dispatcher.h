@@ -16,6 +16,7 @@
 #include <zircon/rights.h>
 
 #include <sys/types.h>
+#include <vm/pinned_vm_object.h>
 
 class BusTransactionInitiatorDispatcher;
 class VmObject;
@@ -52,36 +53,34 @@ public:
     void MarkUnpinned();
 
     // |mapped_addrs_count| must be either
-    // 1) If |compress_results|, |size_|/|bti_.minimum_contiguity()|, rounded up, in which
-    // case each returned address represents a run of |bti_.minimum_contiguity()| bytes (with
+    // 1) If |compress_results|, |pinned_vmo_.size()|/|bti_.minimum_contiguity()|, rounded up, in
+    // which case each returned address represents a run of |bti_.minimum_contiguity()| bytes (with
     // the exception of the last which may be short)
     // 2) If |contiguous|, 1, in which case the returned address is the start of the
     // contiguous memory.
-    // 3) Otherwise, |size_|/|PAGE_SIZE|, in which case each returned address represents a
-    // single page.
+    // 3) Otherwise, |pinned_vmo_.size()|/|PAGE_SIZE|, in which case each returned address
+    // represents a single page.
     //
     // Returns ZX_ERR_INVALID_ARGS if |mapped_addrs_count| is not exactly the value described above.
     zx_status_t EncodeAddrs(bool compress_results, bool contiguous,
                             dev_vaddr_t* mapped_addrs, size_t mapped_addrs_count);
 
     // Returns the number of bytes pinned by the PMT.
-    uint64_t size() const { return size_; }
+    uint64_t size() const { return pinned_vmo_.size(); }
 protected:
     friend BusTransactionInitiatorDispatcher;
-    // Pin memory in |vmo|'s range [offset, offset+size) on behalf of |bti|,
-    // with permissions specified by |perms|.  |perms| should be flags suitable
-    // for the Iommu::Map() interface.  Must be created under the BTI
-    // dispatcher's lock.
+    // Set the the permissions of |pinned_vmo|'s pinned range to |perms| on
+    // behalf of |bti|. |perms| should be flags suitable for the Iommu::Map()
+    // interface.  Must be created under the BTI dispatcher's lock.
     static zx_status_t Create(fbl::RefPtr<BusTransactionInitiatorDispatcher> bti,
-                              fbl::RefPtr<VmObject> vmo, size_t offset,
-                              size_t size, uint32_t perms,
+                              PinnedVmObject pinned_vmo,
+                              uint32_t perms,
                               fbl::RefPtr<Dispatcher>* dispatcher,
                               zx_rights_t* rights);
 private:
     PinnedMemoryTokenDispatcher(fbl::RefPtr<BusTransactionInitiatorDispatcher> bti,
-                                 fbl::RefPtr<VmObject> vmo, size_t offset, size_t size,
-                                 bool is_contiguous,
-                                 fbl::Array<dev_vaddr_t> mapped_addrs);
+                                PinnedVmObject pinned_vmo,
+                                fbl::Array<dev_vaddr_t> mapped_addrs);
     DISALLOW_COPY_ASSIGN_AND_MOVE(PinnedMemoryTokenDispatcher);
 
     zx_status_t MapIntoIommu(uint32_t perms);
@@ -96,10 +95,7 @@ private:
     // The containing BTI holds a list of all its quarantined PMTs.
     QuarantineListNodeState dll_quarantine_;
 
-    const fbl::RefPtr<VmObject> vmo_;
-    const uint64_t offset_;
-    const uint64_t size_;
-    const bool is_contiguous_;
+    PinnedVmObject pinned_vmo_;
 
     // Set to true by MarkUnpinned()
     bool explicitly_unpinned_ TA_GUARDED(get_lock()) = false;
