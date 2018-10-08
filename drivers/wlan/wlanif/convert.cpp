@@ -59,15 +59,15 @@ uint8_t ConvertCBW(wlan_mlme::CBW cbw) {
     }
 }
 
-void ConvertWlanChan(wlan_channel_t* wlanif_chan, wlan_mlme::WlanChan* fidl_chan) {
+void ConvertWlanChan(wlan_channel_t* wlanif_chan, const wlan_mlme::WlanChan& fidl_chan) {
     // primary
-    wlanif_chan->primary = fidl_chan->primary;
+    wlanif_chan->primary = fidl_chan.primary;
 
     // CBW
-    wlanif_chan->cbw = ConvertCBW(fidl_chan->cbw);
+    wlanif_chan->cbw = ConvertCBW(fidl_chan.cbw);
 
     // secondary80
-    wlanif_chan->secondary80 = fidl_chan->secondary80;
+    wlanif_chan->secondary80 = fidl_chan.secondary80;
 }
 
 void CopySSID(const ::fidl::VectorPtr<uint8_t>& in_ssid, wlanif_ssid_t* out_ssid) {
@@ -92,42 +92,42 @@ void CopyRSNE(const ::fidl::VectorPtr<uint8_t>& in_rsne, uint8_t* out_rsne, size
 }
 
 void ConvertBSSDescription(wlanif_bss_description_t* wlanif_desc,
-                           wlan_mlme::BSSDescription* fidl_desc) {
+                           const wlan_mlme::BSSDescription& fidl_desc) {
     // bssid
-    std::memcpy(wlanif_desc->bssid, fidl_desc->bssid.data(), ETH_ALEN);
+    std::memcpy(wlanif_desc->bssid, fidl_desc.bssid.data(), ETH_ALEN);
 
     // ssid
-    CopySSID(fidl_desc->ssid, &wlanif_desc->ssid);
+    CopySSID(fidl_desc.ssid, &wlanif_desc->ssid);
 
     // bss_type
-    wlanif_desc->bss_type = ConvertBSSType(fidl_desc->bss_type);
+    wlanif_desc->bss_type = ConvertBSSType(fidl_desc.bss_type);
 
     // beacon_period
-    wlanif_desc->beacon_period = fidl_desc->beacon_period;
+    wlanif_desc->beacon_period = fidl_desc.beacon_period;
 
     // dtim_period
-    wlanif_desc->dtim_period = fidl_desc->dtim_period;
+    wlanif_desc->dtim_period = fidl_desc.dtim_period;
 
     // timestamp
-    wlanif_desc->timestamp = fidl_desc->timestamp;
+    wlanif_desc->timestamp = fidl_desc.timestamp;
 
     // local_time
-    wlanif_desc->local_time = fidl_desc->local_time;
+    wlanif_desc->local_time = fidl_desc.local_time;
 
     // rsne
-    CopyRSNE(fidl_desc->rsn, wlanif_desc->rsne, &wlanif_desc->rsne_len);
+    CopyRSNE(fidl_desc.rsn, wlanif_desc->rsne, &wlanif_desc->rsne_len);
 
     // chan
-    ConvertWlanChan(&wlanif_desc->chan, &fidl_desc->chan);
+    ConvertWlanChan(&wlanif_desc->chan, fidl_desc.chan);
 
     // rssi_dbm
-    wlanif_desc->rssi_dbm = fidl_desc->rssi_dbm;
+    wlanif_desc->rssi_dbm = fidl_desc.rssi_dbm;
 
     // rcpi_dbmh
-    wlanif_desc->rcpi_dbmh = fidl_desc->rcpi_dbmh;
+    wlanif_desc->rcpi_dbmh = fidl_desc.rcpi_dbmh;
 
     // rsni_dbh
-    wlanif_desc->rsni_dbh = fidl_desc->rsni_dbh;
+    wlanif_desc->rsni_dbh = fidl_desc.rsni_dbh;
 }
 
 wlan_mlme::BSSTypes ConvertBSSType(uint8_t bss_type) {
@@ -166,63 +166,63 @@ wlan_mlme::CBW ConvertCBW(uint8_t cbw) {
     }
 }
 
-void ConvertWlanChan(wlan_mlme::WlanChan* fidl_chan, wlan_channel_t* wlanif_chan) {
+void ConvertWlanChan(wlan_mlme::WlanChan* fidl_chan, const wlan_channel_t& wlanif_chan) {
     // primary
-    fidl_chan->primary = wlanif_chan->primary;
+    fidl_chan->primary = wlanif_chan.primary;
 
     // CBW
-    fidl_chan->cbw = ConvertCBW(wlanif_chan->cbw);
+    fidl_chan->cbw = ConvertCBW(wlanif_chan.cbw);
 
     // secondary80
-    fidl_chan->secondary80 = wlanif_chan->secondary80;
+    fidl_chan->secondary80 = wlanif_chan.secondary80;
 }
 
 template <typename T>
-static void ArrayToVector(::fidl::VectorPtr<T>* vecptr, T* data, size_t len) {
+static void ArrayToVector(::fidl::VectorPtr<T>* vecptr, const T* data, size_t len) {
     if (len > 0) {
         (*vecptr)->assign(data, data + len);
     }
 }
 
 void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
-                           wlanif_bss_description_t* wlanif_desc) {
+                           const wlanif_bss_description_t& wlanif_desc) {
     // bssid
-    std::memcpy(fidl_desc->bssid.mutable_data(), wlanif_desc->bssid, ETH_ALEN);
+    std::memcpy(fidl_desc->bssid.mutable_data(), wlanif_desc.bssid, ETH_ALEN);
 
     // ssid
-    auto in_ssid = &wlanif_desc->ssid;
+    auto in_ssid = &wlanif_desc.ssid;
     std::vector<uint8_t> ssid(in_ssid->data, in_ssid->data + in_ssid->len);
     fidl_desc->ssid.reset(std::move(ssid));
 
     // bss_type
-    fidl_desc->bss_type = ConvertBSSType(wlanif_desc->bss_type);
+    fidl_desc->bss_type = ConvertBSSType(wlanif_desc.bss_type);
 
     // beacon_period
-    fidl_desc->beacon_period = wlanif_desc->beacon_period;
+    fidl_desc->beacon_period = wlanif_desc.beacon_period;
 
     // dtim_period
-    fidl_desc->dtim_period = wlanif_desc->dtim_period;
+    fidl_desc->dtim_period = wlanif_desc.dtim_period;
 
     // timestamp
-    fidl_desc->timestamp = wlanif_desc->timestamp;
+    fidl_desc->timestamp = wlanif_desc.timestamp;
 
     // local_time
-    fidl_desc->local_time = wlanif_desc->local_time;
+    fidl_desc->local_time = wlanif_desc.local_time;
 
     // rsne
-    ArrayToVector(&fidl_desc->rsn, wlanif_desc->rsne, wlanif_desc->rsne_len);
+    ArrayToVector(&fidl_desc->rsn, wlanif_desc.rsne, wlanif_desc.rsne_len);
 
     // chan
-    ConvertWlanChan(&fidl_desc->chan, &wlanif_desc->chan);
+    ConvertWlanChan(&fidl_desc->chan, wlanif_desc.chan);
 
     // rssi_dbm
-    fidl_desc->rssi_dbm = wlanif_desc->rssi_dbm;
+    fidl_desc->rssi_dbm = wlanif_desc.rssi_dbm;
 
     // rcpi_dbmh
-    fidl_desc->rcpi_dbmh = wlanif_desc->rcpi_dbmh;
+    fidl_desc->rcpi_dbmh = wlanif_desc.rcpi_dbmh;
 
     // rsni_dbh
-    fidl_desc->rsni_dbh = wlanif_desc->rsni_dbh;
+    fidl_desc->rsni_dbh = wlanif_desc.rsni_dbh;
 }
 
 uint8_t ConvertAuthType(wlan_mlme::AuthenticationTypes auth_type) {
@@ -385,43 +385,43 @@ uint8_t ConvertKeyType(wlan_mlme::KeyType key_type) {
 }
 
 void ConvertSetKeyDescriptor(set_key_descriptor_t* key_desc,
-                             wlan_mlme::SetKeyDescriptor* fidl_key_desc) {
+                             const wlan_mlme::SetKeyDescriptor& fidl_key_desc) {
     // key
-    key_desc->key = fidl_key_desc->key->data();
+    key_desc->key = const_cast<uint8_t*>(fidl_key_desc.key->data());
 
     // length
-    key_desc->length = fidl_key_desc->key->size();
+    key_desc->length = fidl_key_desc.key->size();
 
     // key_id
-    key_desc->key_id = fidl_key_desc->key_id;
+    key_desc->key_id = fidl_key_desc.key_id;
 
     // key_type
-    key_desc->key_type = ConvertKeyType(fidl_key_desc->key_type);
+    key_desc->key_type = ConvertKeyType(fidl_key_desc.key_type);
 
     // address
-    std::memcpy(key_desc->address, fidl_key_desc->address.data(), ETH_ALEN);
+    std::memcpy(key_desc->address, fidl_key_desc.address.data(), ETH_ALEN);
 
     // rsc
-    std::memcpy(key_desc->rsc, fidl_key_desc->rsc.data(), sizeof(key_desc->rsc));
+    std::memcpy(key_desc->rsc, fidl_key_desc.rsc.data(), sizeof(key_desc->rsc));
 
     // cipher_suite_oui
-    std::memcpy(key_desc->cipher_suite_oui, fidl_key_desc->cipher_suite_oui.data(),
+    std::memcpy(key_desc->cipher_suite_oui, fidl_key_desc.cipher_suite_oui.data(),
                 sizeof(key_desc->cipher_suite_oui));
 
     // cipher_suite_type
-    key_desc->cipher_suite_type = fidl_key_desc->cipher_suite_type;
+    key_desc->cipher_suite_type = fidl_key_desc.cipher_suite_type;
 }
 
 void ConvertDeleteKeyDescriptor(delete_key_descriptor_t* key_desc,
-                                wlan_mlme::DeleteKeyDescriptor* fidl_key_desc) {
+                                const wlan_mlme::DeleteKeyDescriptor& fidl_key_desc) {
     // key_id
-    key_desc->key_id = fidl_key_desc->key_id;
+    key_desc->key_id = fidl_key_desc.key_id;
 
     // key_type
-    key_desc->key_type = ConvertKeyType(fidl_key_desc->key_type);
+    key_desc->key_type = ConvertKeyType(fidl_key_desc.key_type);
 
     // address
-    std::memcpy(key_desc->address, fidl_key_desc->address.data(), ETH_ALEN);
+    std::memcpy(key_desc->address, fidl_key_desc.address.data(), ETH_ALEN);
 }
 
 wlan_mlme::ScanResultCodes ConvertScanResultCode(uint8_t code) {
@@ -722,17 +722,17 @@ wlan_mlme::MacRole ConvertMacRole(uint8_t role) {
 }
 
 void ConvertBandCapabilities(wlan_mlme::BandCapabilities* fidl_band,
-                             wlanif_band_capabilities_t* band) {
+                             const wlanif_band_capabilities_t& band) {
     // basic_rates
-    fidl_band->basic_rates.resize(band->num_basic_rates);
-    fidl_band->basic_rates->assign(band->basic_rates, band->basic_rates + band->num_basic_rates);
+    fidl_band->basic_rates.resize(band.num_basic_rates);
+    fidl_band->basic_rates->assign(band.basic_rates, band.basic_rates + band.num_basic_rates);
 
     // base_frequency
-    fidl_band->base_frequency = band->base_frequency;
+    fidl_band->base_frequency = band.base_frequency;
 
     // channels
-    fidl_band->channels.resize(band->num_channels);
-    fidl_band->channels->assign(band->channels, band->channels + band->num_channels);
+    fidl_band->channels.resize(band.num_channels);
+    fidl_band->channels->assign(band.channels, band.channels + band.num_channels);
 }
 
 }  // namespace wlanif

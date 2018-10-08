@@ -311,7 +311,7 @@ void Device::JoinReq(wlan_mlme::JoinRequest req) {
     wlanif_join_req_t impl_req = {};
 
     // selected_bss
-    ConvertBSSDescription(&impl_req.selected_bss, &req.selected_bss);
+    ConvertBSSDescription(&impl_req.selected_bss, req.selected_bss);
 
     // join_failure_timeout
     impl_req.join_failure_timeout = req.join_failure_timeout;
@@ -487,7 +487,7 @@ void Device::SetKeysReq(wlan_mlme::SetKeysRequest req) {
         impl_req.num_keys = num_keys;
     }
     for (size_t desc_ndx = 0; desc_ndx < num_keys; desc_ndx++) {
-        ConvertSetKeyDescriptor(&impl_req.keylist[desc_ndx], &(*req.keylist)[desc_ndx]);
+        ConvertSetKeyDescriptor(&impl_req.keylist[desc_ndx], (*req.keylist)[desc_ndx]);
     }
 
     // TODO: Track keys more accurately (NET-1439)
@@ -514,7 +514,7 @@ void Device::DeleteKeysReq(wlan_mlme::DeleteKeysRequest req) {
         impl_req.num_keys = num_keys;
     }
     for (size_t desc_ndx = 0; desc_ndx < num_keys; desc_ndx++) {
-        ConvertDeleteKeyDescriptor(&impl_req.keylist[desc_ndx], &(*req.keylist)[desc_ndx]);
+        ConvertDeleteKeyDescriptor(&impl_req.keylist[desc_ndx], (*req.keylist)[desc_ndx]);
     }
 
     // TODO: Track keys more accurately (NET-1439)
@@ -567,7 +567,7 @@ void Device::DeviceQueryReq(wlan_mlme::DeviceQueryRequest req) {
     // bands
     fidl_resp.bands.resize(query_info_.num_bands);
     for (size_t ndx = 0; ndx < query_info_.num_bands; ndx++) {
-        ConvertBandCapabilities(&(*fidl_resp.bands)[ndx], &query_info_.bands[ndx]);
+        ConvertBandCapabilities(&(*fidl_resp.bands)[ndx], query_info_.bands[ndx]);
     }
 
     binding_.events().DeviceQueryConf(std::move(fidl_resp));
@@ -611,7 +611,7 @@ void Device::OnScanResult(wlanif_scan_result_t* result) {
     fidl_result.txn_id = result->txn_id;
 
     // bss
-    ConvertBSSDescription(&fidl_result.bss, &result->bss);
+    ConvertBSSDescription(&fidl_result.bss, result->bss);
 
     binding_.events().OnScanResult(std::move(fidl_result));
 }
