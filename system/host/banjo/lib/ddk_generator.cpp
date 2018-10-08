@@ -25,14 +25,6 @@ std::ostream& operator<<(std::ostream& stream, StringView view) {
     return stream;
 }
 
-std::string ToUpperCase(StringView input) {
-    const auto is_lower = [](char c) { return c >= 'a' && c <= 'z'; };
-    const auto to_upper = [&](char c) { return is_lower(c) ? c + ('A' - 'a') : c; };
-    std::string name(input);
-    std::transform(name.begin(), name.end(), name.begin(), to_upper);
-    return name;
-}
-
 std::string ToSnakeCase(StringView name, bool upper = false) {
     const auto is_upper = [](char c) { return c >= 'A' && c <= 'Z'; };
     const auto is_lower = [](char c) { return c >= 'a' && c <= 'z'; };
@@ -41,7 +33,7 @@ std::string ToSnakeCase(StringView name, bool upper = false) {
     std::string snake;
     snake += name[0];
     for (auto it = name.begin() + 1; it != name.end(); ++it) {
-        if (is_upper(*it) && *(it - 1) != '_' && is_lower(*(it - 1))) {
+        if (is_upper(*it) && *(it - 1) != '_' && !is_upper(*(it - 1))) {
             snake += '_';
         }
         snake += *it;
@@ -79,7 +71,7 @@ void EmitFileComment(std::ostream* file, banjo::StringView name) {
     *file << "// Use of this source code is governed by a BSD-style license that can be\n";
     *file << "// found in the LICENSE file.\n\n";
     *file << "// WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.\n";
-    *file << "//          MODIFY system/fidl/protocols/" << name << " INSTEAD.\n\n";
+    *file << "//          MODIFY system/fidl/protocols/" << name << ".fidl INSTEAD.\n\n";
 }
 
 void EmitHeaderGuard(std::ostream* file) {
@@ -1019,7 +1011,7 @@ std::map<const flat::Decl*, DdkGenerator::NamedEnum>
 DdkGenerator::NameEnums(const std::vector<std::unique_ptr<flat::Enum>>& enum_infos) {
     std::map<const flat::Decl*, NamedEnum> named_enums;
     for (const auto& enum_info : enum_infos) {
-        std::string enum_name = ToUpperCase(ToSnakeCase(enum_info->name.name().data()));
+        std::string enum_name = ToSnakeCase(enum_info->name.name().data(), true);
         std::string type_name = ToSnakeCase(enum_info->name.name().data()) + "_t";
         std::string doc = enum_info->GetAttribute("Doc");
         named_enums.emplace(enum_info.get(),
@@ -1804,5 +1796,4 @@ std::ostringstream DdktlGenerator::ProduceInternalHeader() {
 
     return std::move(file_);
 }
-
 } // namespace banjo
