@@ -8,8 +8,6 @@
 #include <wlan/mlme/debug.h>
 #include <wlan/protocol/mac.h>
 
-#include <random>
-
 namespace wlan {
 namespace wlan_minstrel = ::fuchsia::wlan::minstrel;
 
@@ -144,8 +142,7 @@ void AddSupportedHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map, CBW
               debug::Describe(gi).c_str());
 }
 
-MinstrelRateSelector::MinstrelRateSelector(TimerManager&& timer_mgr,
-                                           ProbeSequence&& probe_sequence)
+MinstrelRateSelector::MinstrelRateSelector(TimerManager&& timer_mgr, ProbeSequence&& probe_sequence)
     : timer_mgr_(fbl::move(timer_mgr)), probe_sequence_(std::move(probe_sequence)) {
     // Temporarily suppress compiler complaint about unused variable
     (void)probe_sequence_;
@@ -359,6 +356,15 @@ void MinstrelRateSelector::UpdateStats() {
     outdated_peers_.clear();
 }
 
+tx_vec_idx_t MinstrelRateSelector::GetNextProbe(Peer* peer) {
+    ZX_DEBUG_ASSERT(peer != nullptr);
+    tx_vec_idx_t idx;
+    do {
+        probe_sequence_.Next(&peer->probe_entry, &idx);
+    } while (peer->tx_stats_map.count(idx) == 0);  // peer does not support this idx, keep looking
+    return idx;
+}
+
 Peer* MinstrelRateSelector::GetPeer(const common::MacAddr& addr) {
     auto iter = peer_map_.find(addr);
     if (iter != peer_map_.end()) { return &(iter->second); }
@@ -414,20 +420,6 @@ zx_status_t MinstrelRateSelector::GetStatsToFidl(const common::MacAddr& peer_add
 
 bool MinstrelRateSelector::IsActive() const {
     return next_update_event_.IsActive();
-}
-
-ProbeSequence RandomProbeSequence() {
-    std::random_device rd;
-    std::mt19937 random_generator(rd());
-
-    ProbeSequence sequence_table;
-    for (uint8_t i = 0; i < kNumProbeSequece; ++i) {
-        for (tx_vec_idx_t j = kStartIdx; j <= kMaxValidIdx; ++j) {
-            sequence_table[i][j - kStartIdx] = j;
-        }
-        std::shuffle(sequence_table[i].begin(), sequence_table[i].end(), random_generator);
-    }
-    return sequence_table;
 }
 
 namespace debug {

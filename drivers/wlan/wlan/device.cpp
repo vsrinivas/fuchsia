@@ -4,6 +4,8 @@
 
 #include "device.h"
 
+#include "probe_sequence.h"
+
 #include <ddk/device.h>
 #include <fbl/limits.h>
 #include <lib/zx/thread.h>
@@ -785,7 +787,7 @@ zx_status_t Device::CreateMinstrel() {
         return status;
     }
     minstrel_.reset(
-        new MinstrelRateSelector(TimerManager(fbl::move(timer)), RandomProbeSequence()));
+        new MinstrelRateSelector(TimerManager(fbl::move(timer)), ProbeSequence::RandomSequence()));
     return ZX_OK;
 }
 

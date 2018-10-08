@@ -5,6 +5,8 @@
 #ifndef GARNET_DRIVERS_WLAN_WLAN_MINSTREL_H_
 #define GARNET_DRIVERS_WLAN_WLAN_MINSTREL_H_
 
+#include "probe_sequence.h"
+
 #include <wlan/common/macaddr.h>
 #include <wlan/common/tx_vector.h>
 #include <wlan/mlme/client/station.h>
@@ -27,8 +29,6 @@ static constexpr zx::duration kMinstrelUpdateInterval = zx::msec(100);
 static constexpr float kMinstrelExpWeight = 0.75;  // Used to calculate moving average throughput
 static constexpr float kMinstrelProbabilityThreshold =
     0.9;  // If probability is past this level, only consider throughput
-static constexpr uint8_t kNumProbeSequece = 8;
-static constexpr tx_vec_idx_t kSequenceLength = 1 + kMaxValidIdx - kStartIdx;
 
 // LINT.IfChange
 struct TxStats {
@@ -55,10 +55,10 @@ struct Peer {
     // Index of the optimal tx vector
     tx_vec_idx_t max_tp = 0;           // optimality based on expected throughput.
     tx_vec_idx_t max_probability = 0;  // optimality based on success probability.
+
+    ProbeSequence::Entry probe_entry;
 };
 // LINT.ThenChange(//garnet/public/fidl/fuchsia.wlan.minstrel/wlan_minstrel.fidl)
-
-using ProbeSequence = std::array<std::array<tx_vec_idx_t, kSequenceLength>, kNumProbeSequece>;
 
 class MinstrelRateSelector {
    public:
@@ -75,6 +75,7 @@ class MinstrelRateSelector {
 
    private:
     void UpdateStats();
+    tx_vec_idx_t GetNextProbe(Peer* peer);
     Peer* GetPeer(const common::MacAddr& addr);
     const Peer* GetPeer(const common::MacAddr& addr) const;
 

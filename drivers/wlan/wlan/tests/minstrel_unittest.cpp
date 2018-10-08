@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include "../minstrel.h"
+#include "../probe_sequence.h"
 
 #include <lib/timekeeper/test_clock.h>
 #include <test_timer.h>  // //garnet/lib/wlan/mlme/tests
@@ -21,7 +22,7 @@ static const common::MacAddr kTestMacAddr({50, 53, 51, 56, 55, 52});
 struct MinstrelTest : public ::testing::Test {
     MinstrelTest()
         : minstrel_(MinstrelRateSelector(TimerManager(fbl::make_unique<TestTimer>(0, &clock)),
-                                         RandomProbeSequence())) {
+                                         ProbeSequence::RandomSequence())) {
         kTestMacAddr.CopyTo(assoc_ctx_ht_.bssid);
     }
 
@@ -61,9 +62,9 @@ TEST_F(MinstrelTest, AddPeer) {
     status = minstrel_.GetStatsToFidl(kTestMacAddr, &peer);
     EXPECT_EQ(ZX_OK, status);
     EXPECT_EQ(kTestMacAddr, common::MacAddr(peer.mac_addr.data()));
-    // TODO(eyw): size would be 72 if SGI is supported.
-    EXPECT_EQ(40ULL, peer.entries->size());
-    EXPECT_EQ(48, peer.max_tp);
+    // TODO(eyw): size would be 40 if 40 MHz is supported, 72 if 40 MHz and SGI are both supported.
+    EXPECT_EQ(24ULL, peer.entries->size());
+    EXPECT_EQ(16, peer.max_tp);
     EXPECT_EQ((*peer.entries)[0].tx_vector_idx, peer.max_probability);
 }
 
@@ -109,10 +110,10 @@ TEST_F(MinstrelTest, UpdateStats) {
         .tx_status_entry =
             {
                 // HT, CBW20, GI 800 ns,
-                {48, 1},  // MCS 7, fail
-                {47, 1},  // MCS 6, fail
-                {46, 1},  // MCS 5, fail
-                {45, 1},  // MCS 4, succeed because |.success| is true
+                {16, 1},  // MCS 7, fail
+                {15, 1},  // MCS 6, fail
+                {14, 1},  // MCS 5, fail
+                {13, 1},  // MCS 4, succeed because |.success| is true
             },
     };
 
@@ -125,17 +126,17 @@ TEST_F(MinstrelTest, UpdateStats) {
     EXPECT_EQ(ZX_OK, minstrel_.GetStatsToFidl(kTestMacAddr, &peer));
     // tx_status collected but NOT been processed yet
     // it will be processed every 100 ms, when HandleTimeout() is called.
-    EXPECT_EQ(48, peer.max_tp);
+    EXPECT_EQ(16, peer.max_tp);
     EXPECT_EQ((*peer.entries)[0].tx_vector_idx, peer.max_probability);
 
     AdvanceTimeBy(zx::msec(100));
     EXPECT_TRUE(minstrel_.HandleTimeout());  // tx_status are processed at HandleTimeout()
     EXPECT_EQ(ZX_OK, minstrel_.GetStatsToFidl(kTestMacAddr, &peer));
-    EXPECT_EQ(45, peer.max_tp);           // Everything above 45 has 0 success, thus 0 throughput
-    EXPECT_EQ(45, peer.max_probability);  // 45 has 100% success rate
+    EXPECT_EQ(13, peer.max_tp);           // Everything above 45 has 0 success, thus 0 throughput
+    EXPECT_EQ(13, peer.max_probability);  // 45 has 100% success rate
 
     // 45 fails, but 41 (MCS 0) succeeds because |.success| is still true
-    wlan_tx_status_entry_t entries[WLAN_TX_STATUS_MAX_ENTRY]{{45, 1}, {41, 1}};
+    wlan_tx_status_entry_t entries[WLAN_TX_STATUS_MAX_ENTRY]{{13, 1}, {9, 1}};
     memcpy(tx_status.tx_status_entry, &entries, sizeof(tx_status.tx_status_entry));
     // after every cycle, success rate of 45 decrease to 75% of it previous value,
     // success rate of 41 stays at 100% because of continuous positive outcome
@@ -145,26 +146,10 @@ TEST_F(MinstrelTest, UpdateStats) {
         AdvanceTimeBy(zx::msec(100));
         EXPECT_TRUE(minstrel_.HandleTimeout());
         EXPECT_EQ(ZX_OK, minstrel_.GetStatsToFidl(kTestMacAddr, &peer));
-        EXPECT_EQ(41, peer.max_probability);
+        EXPECT_EQ(9, peer.max_probability);
     }
     EXPECT_EQ(ZX_OK, minstrel_.GetStatsToFidl(kTestMacAddr, &peer));
-    EXPECT_EQ(41, peer.max_tp);
-}
-
-TEST(MinstrelFreeFunctions, RandomSequence) {
-    auto probe_sequence_table = RandomProbeSequence();
-    std::set<tx_vec_idx_t> seen{};
-    EXPECT_EQ(kNumProbeSequece, probe_sequence_table.size());
-    for (const auto& sequence : probe_sequence_table) {
-        EXPECT_EQ(kSequenceLength, sequence.size());
-        seen.clear();
-        for (tx_vec_idx_t i : sequence) {
-            seen.emplace(i);
-        }
-        EXPECT_EQ(kSequenceLength, seen.size());
-        EXPECT_EQ(kStartIdx, *seen.cbegin());
-        EXPECT_EQ(kMaxValidIdx, *(--seen.cend()));
-    }
+    EXPECT_EQ(9, peer.max_tp);
 }
 
 }  // namespace

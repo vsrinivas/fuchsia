@@ -18,6 +18,8 @@ driver_module("wlan_driver") {
     "driver.cpp",
     "minstrel.cpp",
     "minstrel.h",
+    "probe_sequence.cpp",
+    "probe_sequence.h",
     "proxy_helpers.h",
   ]
 
@@ -42,9 +44,12 @@ driver_module("wlan_driver") {
 executable("wlan_minstrel_unittest") {
   testonly = true
   sources = [
-    "minstrel.h",
     "minstrel.cpp",
+    "minstrel.h",
+    "probe_sequence.cpp",
+    "probe_sequence.h",
     "tests/minstrel_unittest.cpp",
+    "tests/probe_sequence_unittest.cpp",
   ]
 
   deps = [
