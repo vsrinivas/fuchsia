@@ -18,9 +18,9 @@ use futures::prelude::*;
 use parking_lot::Mutex;
 use wayland::WlCompositor;
 
-mod client;
-use crate::client::*;
 mod compositor;
+mod display;
+use crate::display::*;
 
 /// The main FIDL server that listens for incomming client connection
 /// requests.
