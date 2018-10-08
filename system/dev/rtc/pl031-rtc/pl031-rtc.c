@@ -73,7 +73,7 @@ static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent) {
     // Allocate a new device object for the bus.
     pl031_t* pl031 = calloc(1, sizeof(*pl031));
     if (!pl031) {
-        zxlogf(ERROR, "pl031_rtc: bind failed to allocate usb_dwc struct\n");
+        zxlogf(ERROR, "pl031_rtc: bind failed to allocate pl031_t struct\n");
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -93,6 +93,7 @@ static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent) {
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "rtc",
+        .proto_id = ZX_PROTOCOL_RTC,
         .ops = &pl031_rtc_device_proto,
     };
 
