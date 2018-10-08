@@ -1353,6 +1353,14 @@ bool Library::CompileInterface(Interface* interface_declaration) {
                 return Fail(name, "There is no declaration with this name");
             if (decl->kind != Decl::Kind::kInterface)
                 return Fail(name, "This superinterface declaration is not an interface");
+            if (!decl->HasAttribute("FragileBase")) {
+                std::string message = "interface ";
+                message += NameName(name, ".", "/");
+                message += " is not marked by [FragileBase] attribute, disallowing interface ";
+                message += NameName(interface_declaration->name, ".", "/");
+                message += " from inheriting from it";
+                return Fail(name, message);
+            }
             auto superinterface = static_cast<const Interface*>(decl);
             if (method_scope.interfaces.Insert(superinterface, superinterface->name.name()).ok()) {
                 if (!Visitor(superinterface, Visitor))

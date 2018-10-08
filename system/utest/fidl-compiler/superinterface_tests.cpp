@@ -18,14 +18,17 @@ public:
     ValidSuperinterfaces() : TestLibrary("superinterfaces.fidl", R"FIDL(
 library fidl.test.superinterfaces;
 
+[FragileBase]
 interface A {
     1: MethodA();
 };
 
+[FragileBase]
 interface B : A {
     2: MethodB();
 };
 
+[FragileBase]
 interface C : A {
     3: MethodC();
 };
@@ -42,14 +45,17 @@ public:
     InvalidNameSuperinterfaces() : TestLibrary("superinterfaces.fidl", R"FIDL(
 library fidl.test.superinterfaces;
 
+[FragileBase]
 interface A {
     1: MethodA();
 };
 
+[FragileBase]
 interface B : A {
     2: MethodB();
 };
 
+[FragileBase]
 interface C : A {
     3: MethodC();
 };
@@ -67,14 +73,17 @@ public:
     InvalidOrdinalSuperinterfaces() : TestLibrary("superinterfaces.fidl", R"FIDL(
 library fidl.test.superinterfaces;
 
+[FragileBase]
 interface A {
     1: MethodA();
 };
 
+[FragileBase]
 interface B : A {
     2: MethodB();
 };
 
+[FragileBase]
 interface C : A {
     3: MethodC();
 };
@@ -92,14 +101,17 @@ public:
     InvalidSimpleSuperinterfaces() : TestLibrary("superinterfaces.fidl", R"FIDL(
 library fidl.test.superinterfaces;
 
+[FragileBase]
 interface A {
     1: MethodA(vector<uint64>);
 };
 
+[FragileBase]
 interface B : A {
     2: MethodB();
 };
 
+[FragileBase]
 interface C : A {
     3: MethodC();
 };
@@ -161,6 +173,32 @@ bool invalid_simple_superinterface_test() {
     END_TEST;
 }
 
+bool missing_fragile_base_test() {
+    BEGIN_TEST;
+
+    TestLibrary library("fragile_base.fidl", R"FIDL(
+library fidl.test.foo;
+
+interface A {
+    1: MethodA();
+};
+
+interface B : A {
+    2: MethodB();
+};
+
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(),
+                   "interface fidl.test.foo/A is not marked by [FragileBase] "
+                   "attribute, disallowing interface fidl.test.foo/B from "
+                   "inheriting from it");
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(superinterface_tests);
@@ -168,4 +206,5 @@ RUN_TEST(valid_superinterface_test);
 RUN_TEST(invalid_name_superinterface_test);
 RUN_TEST(invalid_ordinal_superinterface_test);
 RUN_TEST(invalid_simple_superinterface_test);
+RUN_TEST(missing_fragile_base_test);
 END_TEST_CASE(superinterface_tests);
