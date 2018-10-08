@@ -43,8 +43,7 @@ TEST_F(SandboxMetadataTest, Parse) {
   // dev
   {
     const std::string json = R"JSON({
-      "dev": [ "class/input" ],
-      "services": []
+      "dev": [ "class/input" ]
     })JSON";
     SandboxMetadata sandbox;
     std::string error;
@@ -57,8 +56,7 @@ TEST_F(SandboxMetadataTest, Parse) {
   // system
   {
     const std::string json = R"JSON({
-      "system": [ "data" ],
-      "services": []
+      "system": [ "data" ]
     })JSON";
     SandboxMetadata sandbox;
     std::string error;
@@ -100,8 +98,7 @@ TEST_F(SandboxMetadataTest, Parse) {
   // pkgfs
   {
     const std::string json = R"JSON({
-      "pkgfs": [ "packages" ],
-      "services": []
+      "pkgfs": [ "packages" ]
     })JSON";
     SandboxMetadata sandbox;
     std::string error;
@@ -114,8 +111,7 @@ TEST_F(SandboxMetadataTest, Parse) {
   // features
   {
     const std::string json = R"JSON({
-      "features": [ "vulkan", "shell" ],
-      "services": []
+      "features": [ "vulkan", "shell" ]
     })JSON";
     SandboxMetadata sandbox;
     std::string error;
@@ -131,8 +127,7 @@ TEST_F(SandboxMetadataTest, Parse) {
   // boot
   {
     const std::string json = R"JSON({
-      "boot": [ "log" ],
-      "services": []
+      "boot": [ "log" ]
     })JSON";
     SandboxMetadata sandbox;
     std::string error;
@@ -160,12 +155,6 @@ TEST_F(SandboxMetadataTest, ParseWithErrors) {
         "services": [ "fuchsia.sys.Launcher" ]
       })JSON",
       "Sandbox may not include both 'services' and "
-      "'deprecated-all-services'." SERVICES_INFO);
-  ExpectFailedParse(
-      R"JSON({
-        "features": [ "vulkan" ]
-      })JSON",
-      "Sandbox must include either 'services' or "
       "'deprecated-all-services'." SERVICES_INFO);
 }
 

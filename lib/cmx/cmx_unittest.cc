@@ -65,7 +65,7 @@ TEST_F(CmxMetadataTest, ParseMetadata) {
   "sandbox": {
       "dev": [ "class/input" ],
       "features": [ "feature_a" ],
-      "services": []
+      "services": [ "fuchsia.MyService" ]
   },
   "runner": "dart_runner",
   "facets": {
@@ -83,6 +83,7 @@ TEST_F(CmxMetadataTest, ParseMetadata) {
   EXPECT_THAT(sandbox.dev(), ::testing::ElementsAre("class/input"));
   EXPECT_TRUE(sandbox.HasFeature("feature_a"));
   EXPECT_FALSE(sandbox.HasFeature("feature_b"));
+  EXPECT_THAT(sandbox.services(), ::testing::ElementsAre("fuchsia.MyService"));
 
   EXPECT_FALSE(cmx.runtime_meta().IsNull());
   EXPECT_EQ(cmx.runtime_meta().runner(), "dart_runner");
@@ -101,8 +102,7 @@ TEST_F(CmxMetadataTest, ParseEmpty) {
   std::string error;
   const std::string json = R"JSON(
   {
-    "sandwich": { "ingredients": [ "bacon", "lettuce", "tomato" ] },
-    "sandbox": { "services": [] }
+    "sandwich": { "ingredients": [ "bacon", "lettuce", "tomato" ] }
   }
   )JSON";
   CmxMetadata cmx;

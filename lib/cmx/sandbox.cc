@@ -87,12 +87,6 @@ bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
         "'deprecated-all-services'.\nRefer to $0 for more information.",
         kCmxDocUrl));
   }
-  if (!has_all_services_ && !has_services_member) {
-    json_parser->ReportError(fxl::Substitute(
-        "Sandbox must include either 'services' or 'deprecated-all-services'.\n"
-        "Refer to $0 for more information.",
-        kCmxDocUrl));
-  }
 
   if (!json_parser->HasError()) {
     null_ = false;
