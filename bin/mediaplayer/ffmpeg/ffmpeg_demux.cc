@@ -228,7 +228,7 @@ void FfmpegDemuxImpl::RequestOutputPacket() {
 void FfmpegDemuxImpl::Worker() {
   static constexpr uint64_t kNanosecondsPerMicrosecond = 1000;
 
-  result_ = AvIoContext::Create(reader_, &io_context_);
+  result_ = AvIoContext::Create(reader_, &io_context_, dispatcher_);
   if (result_ != Result::kOk) {
     FXL_LOG(ERROR) << "AvIoContext::Create failed, result "
                    << static_cast<int>(result_);

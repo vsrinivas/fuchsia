@@ -99,9 +99,9 @@ class SparseByteBuffer {
   // bytes actually freed.
   //
   // Frees and shrinks regions outside the protected range as they are found,
-  // first cleaning up regions before the protected range, and then regions after
-  // after the protected range. In both traversals regions farther from the
-  // protected range are cleaned up first.
+  // first cleaning up regions before the protected range, and then regions
+  // after after the protected range. In both traversals regions farther from
+  // the protected range are cleaned up first.
   size_t CleanUpExcept(size_t goal, size_t protected_start,
                        size_t protected_size);
 
