@@ -3,10 +3,13 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
+#![feature(async_await, await_macro)]
 
 use failure::{Error, Fail};
 use std::io;
 
+mod client;
+pub use crate::client::*;
 mod message;
 pub use crate::message::*;
 mod object;

@@ -7,7 +7,6 @@ use std::sync::Arc;
 use failure::{format_err, Error};
 use fuchsia_async as fasync;
 use fuchsia_wayland_core as wl;
-use fuchsia_zircon as zx;
 use parking_lot::Mutex;
 use wayland::*;
 
@@ -32,67 +31,23 @@ impl Display {
     }
 
     pub fn spawn_new_client(&self, chan: fasync::Channel) {
-        let mut conn = ClientConnection {
-            chan: Arc::new(chan),
-            objects: wl::ObjectMap::new(),
-            registry: self.registry.clone(),
-        };
+        let mut client = wl::Client::new(chan, self.registry.clone());
 
         // Add the global wl_display object. We unwrap here since the object map
         // is empty so failure should not be possible.
         let display_recevier = DisplayReceiver {
-            registry: conn.registry.clone(),
+            registry: client.registry(),
             event_sender: EventSender {
-                chan: conn.chan.clone(),
+                chan: client.chan(),
             },
         };
-        conn.objects
+        client
+            .objects()
             .add_object(WlDisplay, DISPLAY_SINGLETON_OBJECT_ID, display_recevier)
             .unwrap();
 
         // Start polling the channel for messages.
-        conn.start();
-    }
-}
-
-/// The state of a single client connection. Each client connection will have
-/// have it's own zircon channel and it's own set of protocol objects. The
-/// |wl::Registry| is the only piece of global state that is shared between
-/// clients.
-pub struct ClientConnection {
-    /// The zircon channel used to communicate with this client.
-    chan: Arc<fasync::Channel>,
-
-    /// The set of objects for this client.
-    objects: wl::ObjectMap,
-
-    /// A pointer to the global registry.
-    registry: Arc<Mutex<wl::Registry>>,
-}
-
-impl ClientConnection {
-    /// Spawns an async task that waits for messages to be received on the
-    /// zircon channel, decodes the messages, and dispatches them to the
-    /// corresponding |MessageReceiver|s.
-    pub fn start(mut self) {
-        fasync::spawn_local(
-            async move {
-                loop {
-                    // Wait on a message.
-                    let mut buffer = zx::MessageBuf::new();
-                    if let Err(e) = await!(self.chan.recv_msg(&mut buffer)) {
-                        println!("Failed to receive message on the channel {}", e);
-                        return;
-                    }
-
-                    // Dispatch to the object map.
-                    if let Err(e) = self.objects.receive_message(buffer.into()) {
-                        println!("Failed to receive message on the channel {}", e);
-                        return;
-                    }
-                }
-            },
-        );
+        client.start();
     }
 }
 
