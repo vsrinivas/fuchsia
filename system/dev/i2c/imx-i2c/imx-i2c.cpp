@@ -45,9 +45,6 @@ zx_status_t ImxI2cDevice::I2cImplSetBitRate(uint32_t bus_id, uint32_t bitrate) {
 }
 
 zx_status_t ImxI2cDevice::I2cImplTransact(uint32_t bus_id, i2c_impl_op_t* ops, size_t count) {
-    if (!atomic_load(&ready_)) {
-        return ZX_ERR_SHOULD_WAIT;
-    }
     zx_status_t status = ZX_OK;
     for (size_t i = 0; i < count; ++i) {
         if (ops[i].address > 0xFF) {
@@ -111,7 +108,6 @@ void ImxI2cDevice::Reset() {
     ControlReg::Get().FromValue(0).WriteTo(mmio_.get()); // Implies set_enable(0).
     StatusReg::Get().FromValue(0).WriteTo(mmio_.get());
     ControlReg::Get().FromValue(0).set_enable(1).WriteTo(mmio_.get());
-    WaitFor(Wait::kIdle); // No check for error from it
 }
 
 zx_status_t ImxI2cDevice::RxData(uint8_t* buf, size_t length, bool stop) {
@@ -215,8 +211,6 @@ void ImxI2cDevice::DdkRelease() {
 }
 
 int ImxI2cDevice::Thread() {
-    Reset();
-    ready_.store(true);
 //#define TEST_USB_REGS_READ
 #ifdef TEST_USB_REGS_READ
     for (int i = 0; i < 0xC; i += 2) {
@@ -251,11 +245,6 @@ zx_status_t ImxI2cDevice::Bind(int id) {
         zxlogf(ERROR, "imx_i2c_bind: ZX_PROTOCOL_PLATFORM_BUS not available\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
-    i2c_impl_protocol_t i2c_proto = {
-        .ops = &ops_,
-        .ctx = this,
-    };
-    pbus_register_protocol(&pbus, ZX_PROTOCOL_I2C_IMPL, &i2c_proto, NULL, NULL);
 
     mmio_buffer_t mmio;
     status = pdev_map_mmio_buffer2(&pdev, id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
@@ -269,6 +258,12 @@ zx_status_t ImxI2cDevice::Bind(int id) {
     if (!ac.check()) {
         zxlogf(ERROR, "ImxI2cDevice::Bind: no memory for MmioBuffer\n");
         return ZX_ERR_NO_MEMORY;
+    }
+
+    Reset();
+    status = WaitFor(Wait::kIdle);
+    if (status != ZX_OK) {
+        return status;
     }
 
     int rc = thrd_create_with_name(&thread_,
@@ -288,6 +283,13 @@ zx_status_t ImxI2cDevice::Bind(int id) {
         zxlogf(ERROR, "ImxI2cDevice::Bind: DdkAdd failed: %d\n", status);
         return status;
     }
+
+    i2c_impl_protocol_t i2c_proto = {
+        .ops = &ops_,
+        .ctx = this,
+    };
+    pbus_register_protocol(&pbus, ZX_PROTOCOL_I2C_IMPL, &i2c_proto, NULL, NULL);
+
     cleanup.cancel();
     return ZX_OK;
 }

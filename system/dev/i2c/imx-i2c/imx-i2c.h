@@ -54,7 +54,6 @@ private:
     const uint32_t dev_cnt_;
     thrd_t thread_;
     fbl::unique_ptr<ddk::MmioBuffer> mmio_;
-    fbl::atomic<bool> ready_;
 
     void Reset();
     zx_status_t Read(uint8_t addr, void* buf, size_t len, bool stop);
