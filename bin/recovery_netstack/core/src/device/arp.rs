@@ -88,6 +88,8 @@ pub trait ArpDevice<P: PType + Eq + Hash>: Sized {
 
     /// Get the protocol address of this interface.
     fn get_protocol_addr<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) -> Option<P>;
+
+    fn get_hardware_addr<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) -> Self::HardwareAddr;
 }
 
 /// Receive an ARP packet from a device.
@@ -111,6 +113,7 @@ pub fn receive_arp_packet<
         let addressed_to_me =
             Some(packet.target_protocol_address()) == AD::get_protocol_addr(ctx, device_id);
         let table = &mut AD::get_arp_state(ctx, device_id).table;
+
         // The following logic is equivalent to the "Packet Reception" section of RFC 826.
         //
         // We statically know that the hardware type and protocol type are correct, so we do not
@@ -160,9 +163,18 @@ pub fn receive_arp_packet<
             );
         }
         if addressed_to_me && packet.operation() == ArpOp::Request {
-            log_unimplemented!(
-                (),
-                "device::arp::receive_arp_frame: Handling ARP requests not implemented"
+            let self_hw_addr = AD::get_hardware_addr(ctx, device_id);
+            AD::send_arp_frame(
+                ctx,
+                device_id,
+                packet.sender_hardware_address(),
+                ArpPacketSerializer::new(
+                    ArpOp::Response,
+                    self_hw_addr,
+                    packet.target_protocol_address(),
+                    packet.sender_hardware_address(),
+                    packet.sender_protocol_address(),
+                ).serialize_outer(),
             );
         }
     } else {
@@ -333,11 +345,9 @@ mod tests {
     }
 
     #[test]
-    fn test_recv_arp_response() {
+    fn test_handle_arp_request() {
         let mut state = StackState::default();
-        let dev_id = state
-            .device
-            .add_ethernet_device(Mac::new([4, 4, 4, 4, 4, 4]));
+        let dev_id = state.device.add_ethernet_device(TEST_TARGET_MAC);
         let dispatcher = DummyEventDispatcher::default();
         let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
         set_ip_addr(
@@ -375,6 +385,24 @@ mod tests {
             ).unwrap(),
             TEST_SENDER_MAC
         );
+
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
+
+        let (frame, _) = EthernetFrame::parse(&ctx.dispatcher.frames_sent()[0].1[..]).unwrap();
+        assert_eq!(frame.ethertype(), Some(Ok(EtherType::Arp)));
+        assert_eq!(frame.src_mac(), TEST_TARGET_MAC);
+        assert_eq!(frame.dst_mac(), TEST_SENDER_MAC);
+
+        let (hw, proto) = peek_arp_types(frame.body()).unwrap();
+        assert_eq!(hw, ArpHardwareType::Ethernet);
+        assert_eq!(proto, EtherType::Ipv4);
+
+        let arp = ArpPacket::<_, Mac, Ipv4Addr>::parse(frame.body()).unwrap();
+        assert_eq!(arp.operation(), ArpOp::Response);
+        assert_eq!(arp.sender_hardware_address(), TEST_TARGET_MAC);
+        assert_eq!(arp.target_hardware_address(), TEST_SENDER_MAC);
+        assert_eq!(arp.sender_protocol_address(), TEST_TARGET_IPV4);
+        assert_eq!(arp.target_protocol_address(), TEST_SENDER_IPV4);
     }
 
     #[test]

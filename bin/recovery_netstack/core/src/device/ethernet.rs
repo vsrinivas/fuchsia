@@ -301,4 +301,10 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
     ) -> Option<Ipv4Addr> {
         get_device_state(ctx, device_id).ipv4_addr.map(|x| x.0)
     }
+
+    fn get_hardware_addr<D: EventDispatcher>(
+        ctx: &mut Context<D>, device_id: u64,
+    ) -> Mac {
+        get_device_state(ctx, device_id).mac
+    }
 }
