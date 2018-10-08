@@ -65,11 +65,6 @@ pub fn receive_ip_packet<D: EventDispatcher, I: Ip>(
         };
     trace!("receive_ip_packet: parsed packet: {:?}", packet);
 
-    println!(
-        "received IP packet from={:?} to={:?}",
-        packet.src_ip(),
-        packet.dst_ip()
-    );
     if I::LOOPBACK_SUBNET.contains(packet.dst_ip()) {
         // A packet from outside this host was sent with the destination IP of
         // the loopback address, which is illegal. Loopback traffic is handled
