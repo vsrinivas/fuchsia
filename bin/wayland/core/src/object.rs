@@ -15,23 +15,14 @@
 ///! Consumers should mostly have to only concern themselves with the
 ///! |RequestReceiver<I:Interface>| trait, with the other types being mostly the
 ///! glue and dispatch logic.
-///!
-///! Ex:
-///!    let mut map = ObjectMap::new();
-///!    // Add the global wl_display object (object ID 0).
-///!    map.add_object(WlDisplay, 0, |request| {
-///!        match request {
-///!        WlDisplayRequest::GetRegistry {..} => { ... },
-///!        WlDispayRequest::Sync {..} => { ... },
-///!        }
-///!    });
+
 use std::any::Any;
 use std::collections::hash_map::{Entry, HashMap};
 use std::marker::PhantomData;
 
 use failure::{format_err, Error, Fail};
 
-use crate::{Arg, FromArgs, Interface, Message, MessageGroupSpec, ObjectId};
+use crate::{Arg, Client, FromArgs, Interface, MessageHeader, MessageSpec, MessageGroupSpec, ObjectId};
 
 /// The |ObjectMap| holds the state of active objects for a single connection.
 ///
@@ -136,37 +127,23 @@ impl ObjectMap {
         }
     }
 
-    /// Reads the message header to find the target for this message and then
-    /// forwards the message to the associated |MessageReceiver|.
-    ///
-    /// Returns Err if no object is associated with the sender field in the
-    /// message header, or if the objects receiver itself fails.
-    pub fn receive_message(&mut self, mut message: Message) -> Result<(), Error> {
-        while !message.is_empty() {
-            let header = message.read_header()?;
-            // Lookup the table entry for this object & fail if there is no entry
-            // found.
-            let (receiver, spec) = {
-                let ObjectMapEntry {
-                    request_spec,
-                    receiver,
-                } = self
-                    .objects
-                    .get(&header.sender)
-                    .ok_or(ObjectMapError::InvalidObjectId(header.sender))?;
-                let spec = request_spec
-                    .0
-                    .get(header.opcode as usize)
-                    .ok_or(ObjectMapError::InvalidOpcode(header.opcode))?;
+    /// Looks up the recevier function and the message structure from the map.
+    pub(crate) fn lookup_internal(
+        &self, header: &MessageHeader
+    ) -> Result<(MessageReceiverFn, &'static MessageSpec), Error> {
+        let ObjectMapEntry {
+            request_spec,
+            receiver,
+        } = self
+            .objects
+            .get(&header.sender)
+            .ok_or(ObjectMapError::InvalidObjectId(header.sender))?;
+        let spec = request_spec
+            .0
+            .get(header.opcode as usize)
+            .ok_or(ObjectMapError::InvalidOpcode(header.opcode))?;
 
-                (receiver.receiver(), spec)
-            };
-
-            // Decode the argument stream and invoke the |MessageReceiver|.
-            let args = message.read_args(spec.0)?;
-            receiver(header.sender, header.opcode, args, self)?;
-        }
-        Ok(())
+        Ok((receiver.receiver(), spec))
     }
 
     /// Adds a new object into the map that will handle messages with the sender
@@ -213,13 +190,13 @@ impl ObjectMap {
 ///
 /// The server will dispatch |Message|s to the appropriate |MessageReceiver|
 /// by reading the sender field in the message header.
+type MessageReceiverFn = fn(this: ObjectId, opcode: u16, args: Vec<Arg>, client: &mut Client) -> Result<(), Error>;
 pub trait MessageReceiver {
     /// Returns a function pointer that will be called to handle requests
     /// targeting this object.
     fn receiver(
         &self,
-    ) -> fn(this: ObjectId, opcode: u16, args: Vec<Arg>, object_map: &mut ObjectMap)
-        -> Result<(), Error>;
+    ) -> MessageReceiverFn;
 
     fn data(&self) -> &Any;
 
@@ -240,14 +217,14 @@ pub trait RequestReceiver<I: Interface>: Any + Sized {
     ///   impl RequestReceiver<MyInterface> for MyReceiver {
     ///       fn receive(mut this: ObjectRef<Self>,
     ///                  request: MyInterfaceRequest,
-    ///                  object_map: &mut ObjectMap
+    ///                  client: &mut Client
     ///       ) -> Result<(), Error> {
     ///           let this = self.get()?;
     ///           let this_mut = self.get_mut()?;
     ///       }
     ///   }
     fn receive(
-        this: ObjectRef<Self>, request: I::Request, object_map: &mut ObjectMap,
+        this: ObjectRef<Self>, request: I::Request, client: &mut Client,
     ) -> Result<(), Error>;
 }
 
@@ -274,10 +251,10 @@ impl<I: Interface, R: RequestReceiver<I>> RequestDispatcher<I, R> {
 }
 
 fn receive_message<I: Interface, R: RequestReceiver<I>>(
-    this: ObjectId, opcode: u16, args: Vec<Arg>, object_map: &mut ObjectMap,
+    this: ObjectId, opcode: u16, args: Vec<Arg>, client: &mut Client,
 ) -> Result<(), Error> {
     let request = I::Request::from_args(opcode, args)?;
-    R::receive(ObjectRef(PhantomData, this), request, object_map)?;
+    R::receive(ObjectRef(PhantomData, this), request, client)?;
     Ok(())
 }
 
@@ -285,10 +262,7 @@ fn receive_message<I: Interface, R: RequestReceiver<I>>(
 /// to the associated |Request| type of |Interface|, and then invoke the
 /// receiver.
 impl<I: Interface, R: RequestReceiver<I>> MessageReceiver for RequestDispatcher<I, R> {
-    fn receiver(
-        &self,
-    ) -> fn(this: ObjectId, opcode: u16, args: Vec<Arg>, object_map: &mut ObjectMap)
-        -> Result<(), Error> {
+    fn receiver(&self) -> MessageReceiverFn {
         receive_message::<I, R>
     }
 
@@ -305,23 +279,36 @@ impl<I: Interface, R: RequestReceiver<I>> MessageReceiver for RequestDispatcher<
 mod tests {
     use super::*;
 
+    use std::sync::Arc;
+    use fuchsia_async as fasync;
+    use fuchsia_zircon as zx;
+    use parking_lot::Mutex;
+
     use crate::test_protocol::*;
-    use crate::IntoMessage;
+    use crate::{IntoMessage, RegistryBuilder};
+
+    fn create_client() -> Result<Client, Error> {
+        let _executor = fasync::Executor::new();
+        let registry = Arc::new(Mutex::new(RegistryBuilder::new().build()));
+        let (c1, _c2) = zx::Channel::create()?;
+        Ok(Client::new(fasync::Channel::from_channel(c1)?, registry))
+    }
 
     #[test]
     fn dispatch_message_to_request_receiver() -> Result<(), Error> {
-        let mut objects = ObjectMap::new();
-        objects.add_object(TestInterface, 0, TestReceiver::new())?;
+        let mut client = create_client()?;
+        client.objects().add_object(TestInterface, 0, TestReceiver::new())?;
 
         // Send a sync message; verify it's received.
-        objects.receive_message(TestMessage::Message1.into_message(0)?)?;
-        assert_eq!(1, objects.get::<TestReceiver>(0)?.count());
+        client.receive_message(TestMessage::Message1.into_message(0)?)?;
+        assert_eq!(1, client.objects().get::<TestReceiver>(0)?.count());
         Ok(())
     }
 
     #[test]
     fn add_object_duplicate_id() -> Result<(), Error> {
-        let mut objects = ObjectMap::new();
+        let mut client = create_client()?;
+        let objects = client.objects();
         assert!(
             objects
                 .add_object(TestInterface, 0, TestReceiver::new())
@@ -338,10 +325,10 @@ mod tests {
     #[test]
     fn dispatch_message_to_invalid_id() -> Result<(), Error> {
         // Send a message to an empty map.
-        let mut objects = ObjectMap::new();
+        let mut client = create_client()?;
 
         assert!(
-            objects
+            client
                 .receive_message(TestMessage::Message1.into_message(0)?)
                 .is_err()
         );

@@ -98,10 +98,12 @@ mod tests {
     use std::sync::Arc;
 
     use failure::Error;
+    use fuchsia_async as fasync;
+    use fuchsia_zircon as zx;
     use parking_lot::Mutex;
 
     use crate::test_protocol::*;
-    use crate::{Interface, IntoMessage, ObjectMap, RequestDispatcher};
+    use crate::{Client, Interface, IntoMessage, RequestDispatcher};
 
     #[test]
     fn registry_bind() -> Result<(), Error> {
@@ -138,23 +140,25 @@ mod tests {
         // Bind to the globals.
         let mut receivers: Vec<Box<MessageReceiver>> =
             registry.globals.iter_mut().map(|g| g.bind()).collect();
-        let mut objects = ObjectMap::new();
+        let (c1, _c2) = zx::Channel::create()?;
+        let _executor = fasync::Executor::new();
+        let mut client = Client::new(fasync::Channel::from_channel(c1)?, Arc::new(Mutex::new(registry)));
         for (id, r) in receivers.into_iter().enumerate() {
-            objects.add_object_raw(id as u32, r, &TestInterface::REQUESTS)?;
+            client.objects().add_object_raw(id as u32, r, &TestInterface::REQUESTS)?;
         }
         assert_eq!(1, counts.lock().interface_1_bind_count);
         assert_eq!(1, counts.lock().interface_2_bind_count);
-        assert_eq!(0, objects.get::<TestReceiver>(0)?.count());
-        assert_eq!(0, objects.get::<TestReceiver>(1)?.count());
+        assert_eq!(0, client.objects().get::<TestReceiver>(0)?.count());
+        assert_eq!(0, client.objects().get::<TestReceiver>(1)?.count());
 
         // Dispatch a message to each receiver.
-        objects.receive_message(TestMessage::Message1.into_message(0)?)?;
-        objects.receive_message(TestMessage::Message1.into_message(1)?)?;
+        client.receive_message(TestMessage::Message1.into_message(0)?)?;
+        client.receive_message(TestMessage::Message1.into_message(1)?)?;
 
         assert_eq!(1, counts.lock().interface_1_bind_count);
         assert_eq!(1, counts.lock().interface_2_bind_count);
-        assert_eq!(1, objects.get::<TestReceiver>(0)?.count());
-        assert_eq!(1, objects.get::<TestReceiver>(1)?.count());
+        assert_eq!(1, client.objects().get::<TestReceiver>(0)?.count());
+        assert_eq!(1, client.objects().get::<TestReceiver>(1)?.count());
         Ok(())
     }
 }

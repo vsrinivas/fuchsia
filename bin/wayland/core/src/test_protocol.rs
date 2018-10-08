@@ -83,10 +83,10 @@ impl TestReceiver {
 
 impl RequestReceiver<TestInterface> for TestReceiver {
     fn receive(
-        this: ObjectRef<Self>, request: TestMessage, map: &mut ObjectMap,
+        this: ObjectRef<Self>, request: TestMessage, client: &mut Client,
     ) -> Result<(), Error> {
         if let TestMessage::Message1 = request {
-            this.get_mut(map)?.increment_count();
+            this.get_mut(client.objects())?.increment_count();
         }
         Ok(())
     }

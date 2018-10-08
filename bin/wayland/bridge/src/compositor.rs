@@ -17,7 +17,7 @@ impl Compositor {
 
 impl wl::RequestReceiver<WlCompositor> for Compositor {
     fn receive(
-        _this: wl::ObjectRef<Self>, _request: WlCompositorRequest, _objects: &mut wl::ObjectMap,
+        _this: wl::ObjectRef<Self>, _request: WlCompositorRequest, _client: &mut wl::Client,
     ) -> Result<(), Error> {
         Err(format_err!("wl_compositor is not implemented"))
     }

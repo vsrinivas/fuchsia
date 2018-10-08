@@ -4,11 +4,12 @@
 
 use std::sync::Arc;
 
+use failure::Error;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use parking_lot::Mutex;
 
-use crate::{ObjectMap, Registry};
+use crate::{Message, ObjectMap, Registry};
 
 /// The state of a single client connection. Each client connection will have
 /// have its own zircon channel and its own set of protocol objects. The
@@ -49,8 +50,8 @@ impl Client {
                         return;
                     }
 
-                    // Dispatch to the object map.
-                    if let Err(e) = self.objects.receive_message(buffer.into()) {
+                    // Dispatch the message.
+                    if let Err(e) = self.receive_message(buffer.into()) {
                         println!("Failed to receive message on the channel {}", e);
                         return;
                     }
@@ -73,4 +74,24 @@ impl Client {
     pub fn objects(&mut self) -> &mut ObjectMap {
         &mut self.objects
     }
+
+    /// Reads the message header to find the target for this message and then
+    /// forwards the message to the associated |MessageReceiver|.
+    ///
+    /// Returns Err if no object is associated with the sender field in the
+    /// message header, or if the objects receiver itself fails.
+    pub(crate) fn receive_message(&mut self, mut message: Message) -> Result<(), Error> {
+        while !message.is_empty() {
+            let header = message.read_header()?;
+            // Lookup the table entry for this object & fail if there is no entry
+            // found.
+            let (receiver, spec) = self.objects.lookup_internal(&header)?;
+
+            // Decode the argument stream and invoke the |MessageReceiver|.
+            let args = message.read_args(spec.0)?;
+            receiver(header.sender, header.opcode, args, self)?;
+        }
+        Ok(())
+    }
+
 }

@@ -79,8 +79,9 @@ struct DisplayReceiver {
 
 impl wl::RequestReceiver<WlDisplay> for DisplayReceiver {
     fn receive(
-        display: wl::ObjectRef<Self>, request: WlDisplayRequest, map: &mut wl::ObjectMap,
+        display: wl::ObjectRef<Self>, request: WlDisplayRequest, client: &mut wl::Client,
     ) -> Result<(), Error> {
+        let map = client.objects();
         let this = display.get(map)?;
         match request {
             WlDisplayRequest::GetRegistry { registry } => {
@@ -132,7 +133,7 @@ impl RegistryReceiver {
 
 impl wl::RequestReceiver<WlRegistry> for RegistryReceiver {
     fn receive(
-        _this: wl::ObjectRef<Self>, request: WlRegistryRequest, _objects: &mut wl::ObjectMap,
+        _this: wl::ObjectRef<Self>, request: WlRegistryRequest, _client: &mut wl::Client,
     ) -> Result<(), Error> {
         let WlRegistryRequest::Bind { name, id, .. } = request;
         println!("binding({}, {})", name, id);
