@@ -18,8 +18,8 @@ struct Trap {
 
 // Contains the basic information required to start execution of a device.
 struct StartInfo {
-    // The trap associated with a device. It is up to the device to set this trap
-    // during device setup.
+    // The trap associated with a device. It is up to the device to set this
+    // trap during device setup.
     Trap trap;
 
     // The guest associated with a device. This handle should be used to setup
@@ -36,8 +36,8 @@ struct StartInfo {
 
 [FragileBase]
 interface VirtioDevice {
-    // Configure a |queue| for the device. This specifies the |size| and the guest
-    // physical addresses of the queue: |desc|, |avail|, and |used|.
+    // Configure a |queue| for the device. This specifies the |size| and the
+    // guest physical addresses of the queue: |desc|, |avail|, and |used|.
     0x80000001: ConfigureQueue(uint16 queue, uint16 size, zx.gpaddr desc,
                                zx.gpaddr avail, zx.gpaddr used);
 
@@ -51,16 +51,24 @@ interface VirtioDevice {
 
 [Discoverable]
 interface VirtioBalloon : VirtioDevice {
-    // Start the balloon device.
+    // Start the balloon device. Set |demand_page| to true, if demand paging is
+    // preferred over the deflate queue.
     0x81000001: Start(StartInfo start_info, bool demand_page);
 
     // Get memory statistics from the balloon device.
     0x81000002: GetMemStats()
-                    -> (zx.status status, vector<fuchsia.guest.MemStat>? mem_stats);
+                    -> (zx.status status,
+                        vector<fuchsia.guest.MemStat>? mem_stats);
 };
 
 [Discoverable]
 interface VirtioConsole : VirtioDevice {
     // Start the console device. This uses |socket| to handle input and output.
     0x81000001: Start(StartInfo start_info, handle<socket> socket);
+};
+
+[Discoverable]
+interface VirtioInput : VirtioDevice {
+    // Start the input device.
+    0x81000001: Start(StartInfo start_info);
 };

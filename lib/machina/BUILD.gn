@@ -18,10 +18,6 @@ source_set("machina") {
     "gpu_scanout.h",
     "guest.cc",
     "guest.h",
-    "hid_event_source.cc",
-    "hid_event_source.h",
-    "input_dispatcher_impl.cc",
-    "input_dispatcher_impl.h",
     "io.cc",
     "io.h",
     "pci.cc",
@@ -129,8 +125,6 @@ executable("machina_unittests") {
 
   sources = [
     "dev_mem_unittest.cc",
-    "hid_event_source_unittest.cc",
-    "input_dispatcher_impl_unittest.cc",
     "pci_unittest.cc",
     "phys_mem_fake.h",
     "qcow_unittest.cc",

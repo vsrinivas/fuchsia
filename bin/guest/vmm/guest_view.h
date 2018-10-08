@@ -11,7 +11,6 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "garnet/lib/machina/gpu_scanout.h"
-#include "garnet/lib/machina/input_dispatcher_impl.h"
 #include "garnet/lib/machina/virtio_gpu.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"

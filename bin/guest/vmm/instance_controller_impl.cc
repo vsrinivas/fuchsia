@@ -16,6 +16,13 @@ zx_status_t InstanceControllerImpl::AddPublicService(
   return context->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
+zx::socket InstanceControllerImpl::TakeSocket() { return std::move(socket_); }
+
+void InstanceControllerImpl::SetViewProvider(
+    fuchsia::ui::viewsv1::ViewProvider* view_provider) {
+  view_provider_ = view_provider;
+}
+
 void InstanceControllerImpl::GetSerial(GetSerialCallback callback) {
   zx::socket dup;
   zx_status_t status = remote_socket_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
@@ -30,10 +37,4 @@ void InstanceControllerImpl::GetViewProvider(
     fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider> request) {
   FXL_DCHECK(view_provider_ != nullptr);
   view_provider_bindings_.AddBinding(view_provider_, std::move(request));
-}
-
-void InstanceControllerImpl::GetInputDispatcher(
-    fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher> request) {
-  FXL_DCHECK(input_dispatcher_ != nullptr);
-  input_dispatcher_bindings_.AddBinding(input_dispatcher_, std::move(request));
 }

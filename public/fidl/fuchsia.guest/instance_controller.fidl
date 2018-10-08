@@ -4,7 +4,6 @@
 
 library fuchsia.guest;
 
-using fuchsia.ui.input;
 using fuchsia.ui.viewsv1;
 
 // A |InstanceController| provides access to services of a guest instance.
@@ -17,7 +16,4 @@ interface InstanceController {
 
     // Get the guest display view provider.
     2: GetViewProvider(request<fuchsia.ui.viewsv1.ViewProvider> view_provider);
-
-    // Get the input dispatcher for this instance.
-    3: GetInputDispatcher(request<fuchsia.ui.input.InputDispatcher> input_dispatcher);
 };

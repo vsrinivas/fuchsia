@@ -11,37 +11,6 @@
 
 namespace machina {
 
-VirtioChain::VirtioChain(VirtioQueue* queue, uint16_t head)
-    : queue_(queue), head_(head), next_(head), has_next_(true) {}
-
-bool VirtioChain::IsValid() const { return queue_ != nullptr; }
-
-bool VirtioChain::HasDescriptor() const { return has_next_; }
-
-bool VirtioChain::NextDescriptor(VirtioDescriptor* desc) {
-  if (!HasDescriptor()) {
-    return false;
-  }
-  zx_status_t status = queue_->ReadDesc(next_, desc);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to read queue " << status;
-    return false;
-  }
-  next_ = desc->next;
-  has_next_ = desc->has_next;
-  return true;
-}
-
-uint32_t* VirtioChain::Used() { return &used_; }
-
-void VirtioChain::Return() {
-  zx_status_t status = queue_->Return(head_, used_);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to return descriptor chain to queue " << status;
-  }
-  has_next_ = false;
-}
-
 VirtioQueue::VirtioQueue() {
   FXL_CHECK(zx::event::create(0, &event_) == ZX_OK);
 }
@@ -322,6 +291,37 @@ zx_status_t VirtioQueue::HandleDescriptor(DescriptorFn handler, void* ctx) {
   }
   std::lock_guard<std::mutex> lock(mutex_);
   return HasAvailLocked() ? ZX_ERR_NEXT : ZX_OK;
+}
+
+VirtioChain::VirtioChain(VirtioQueue* queue, uint16_t head)
+    : queue_(queue), head_(head), next_(head), has_next_(true) {}
+
+bool VirtioChain::IsValid() const { return queue_ != nullptr; }
+
+bool VirtioChain::HasDescriptor() const { return has_next_; }
+
+bool VirtioChain::NextDescriptor(VirtioDescriptor* desc) {
+  if (!HasDescriptor()) {
+    return false;
+  }
+  zx_status_t status = queue_->ReadDesc(next_, desc);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to read queue " << status;
+    return false;
+  }
+  next_ = desc->next;
+  has_next_ = desc->has_next;
+  return true;
+}
+
+uint32_t* VirtioChain::Used() { return &used_; }
+
+void VirtioChain::Return(uint8_t actions) {
+  zx_status_t status = queue_->Return(head_, used_, actions);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to return descriptor chain to queue " << status;
+  }
+  has_next_ = false;
 }
 
 }  // namespace machina

@@ -46,6 +46,19 @@ package("virtio_console") {
   deps = [ ":virtio_console_bin" ]
 }
 
+executable("virtio_input_bin") {
+  visibility = [ ":*" ]
+
+  output_name = "virtio_input"
+  sources = [ "virtio_input.cc" ]
+  deps = [ ":lib" ]
+}
+
+package("virtio_input") {
+  binary = "virtio_input"
+  deps = [ ":virtio_input_bin" ]
+}
+
 executable("device_tests") {
   visibility = [ "//garnet/bin/guest/vmm:*" ]
   testonly = true
@@ -55,6 +68,7 @@ executable("device_tests") {
     "test_with_device.h",
     "virtio_balloon_test.cc",
     "virtio_console_test.cc",
+    "virtio_input_test.cc",
     "virtio_queue_fake.cc",
     "virtio_queue_fake.h",
   ]

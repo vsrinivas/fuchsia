@@ -196,15 +196,24 @@ class VirtioComponentDevice
  protected:
   VirtioComponentDevice(const PhysMem& phys_mem, uint32_t device_features,
                         VirtioDeviceConfig::ConfigQueueFn config_queue,
+                        VirtioDeviceConfig::ConfigDeviceFn config_device,
                         VirtioDeviceConfig::ReadyDeviceFn ready_device)
       : VirtioDevice<DeviceId, NumQueues, ConfigType>(
             phys_mem, device_features, std::move(config_queue),
-            noop_notify_queue, noop_config_device, std::move(ready_device)) {
+            noop_notify_queue, std::move(config_device),
+            std::move(ready_device)) {
     zx_status_t status = zx::event::create(0, &event_);
     FXL_CHECK(status == ZX_OK) << "Failed to create event";
     wait_.set_object(event_.get());
     wait_.set_trigger(ZX_USER_SIGNAL_ALL);
   }
+
+  VirtioComponentDevice(const PhysMem& phys_mem, uint32_t device_features,
+                        VirtioDeviceConfig::ConfigQueueFn config_queue,
+                        VirtioDeviceConfig::ReadyDeviceFn ready_device)
+      : VirtioComponentDevice(phys_mem, device_features,
+                              std::move(config_queue), noop_config_device,
+                              std::move(ready_device)) {}
 
   zx_status_t PrepStart(const zx::guest& guest, async_dispatcher_t* dispatcher,
                         fuchsia::guest::device::StartInfo* start_info) {

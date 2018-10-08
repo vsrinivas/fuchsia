@@ -21,7 +21,7 @@ struct vring_used;
 
 namespace machina {
 
-class VirtioQueue;
+class VirtioChain;
 
 // Stores the Virtio queue based on the ring provided by the guest.
 //
@@ -55,25 +55,6 @@ struct VirtioDescriptor {
   // If true, this buffer must only be written to (no reads). Otherwise this
   // buffer must only be read from (no writes).
   bool writable;
-};
-
-class VirtioChain {
- public:
-  VirtioChain() = default;
-  VirtioChain(VirtioQueue* queue, uint16_t head);
-
-  bool IsValid() const;
-  bool HasDescriptor() const;
-  bool NextDescriptor(VirtioDescriptor* desc);
-  uint32_t* Used();
-  void Return();
-
- private:
-  VirtioQueue* queue_ = nullptr;
-  uint32_t used_ = 0;
-  uint16_t head_ = 0;
-  uint16_t next_ = 0;
-  bool has_next_ = false;
 };
 
 class VirtioQueue {
@@ -251,6 +232,26 @@ class VirtioQueue {
   bool use_event_index_ __TA_GUARDED(mutex_) = false;
 
   friend class VirtioQueueFake;
+};
+
+class VirtioChain {
+ public:
+  VirtioChain() = default;
+  VirtioChain(VirtioQueue* queue, uint16_t head);
+
+  bool IsValid() const;
+  bool HasDescriptor() const;
+  bool NextDescriptor(VirtioDescriptor* desc);
+  uint32_t* Used();
+  void Return(uint8_t actions = VirtioQueue::InterruptAction::SET_QUEUE |
+                                VirtioQueue::InterruptAction::TRY_INTERRUPT);
+
+ private:
+  VirtioQueue* queue_ = nullptr;
+  uint32_t used_ = 0;
+  uint16_t head_ = 0;
+  uint16_t next_ = 0;
+  bool has_next_ = false;
 };
 
 }  // namespace machina

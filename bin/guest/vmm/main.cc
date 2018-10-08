@@ -30,8 +30,6 @@
 #include "garnet/bin/guest/vmm/zircon.h"
 #include "garnet/lib/machina/framebuffer_scanout.h"
 #include "garnet/lib/machina/guest.h"
-#include "garnet/lib/machina/hid_event_source.h"
-#include "garnet/lib/machina/input_dispatcher_impl.h"
 #include "garnet/lib/machina/interrupt_controller.h"
 #include "garnet/lib/machina/pci.h"
 #include "garnet/lib/machina/platform_device.h"
@@ -60,8 +58,6 @@ static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
 #endif
 
 static constexpr char kWaylandDispatcherPackage[] = "wayland_bridge";
-
-static constexpr size_t kInputQueueDepth = 64;
 
 // For devices that can have their addresses anywhere we run a dynamic
 // allocator that starts fairly high in the guest physical address space.
@@ -241,51 +237,39 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  machina::InputDispatcherImpl input_dispatcher_impl(kInputQueueDepth);
-  machina::HidEventSource hid_event_source(&input_dispatcher_impl);
-  machina::VirtioInput input(input_dispatcher_impl.queue(), guest.phys_mem());
-  instance_controller.SetInputDispatcher(&input_dispatcher_impl);
-
+  machina::VirtioInput input(guest.phys_mem());
   machina::VirtioGpu gpu(guest.phys_mem(), guest.device_dispatcher());
-
   std::unique_ptr<machina::FramebufferScanout> framebuffer_scanout;
   std::unique_ptr<ScenicScanout> scenic_scanout;
-
   if (cfg.display() != GuestDisplay::NONE) {
     // Setup input device.
-    status = input.Start();
+    status = bus.Connect(input.pci_device(), true);
     if (status != ZX_OK) {
       return status;
     }
-    status = bus.Connect(input.pci_device());
+    fuchsia::ui::input::InputDispatcherPtr input_dispatcher;
+    status = input.Start(*guest.object(), input_dispatcher.NewRequest(),
+                         launcher.get(), guest.device_dispatcher());
     if (status != ZX_OK) {
       return status;
     }
 
     if (cfg.display() == GuestDisplay::FRAMEBUFFER) {
-      // Setup GPU device.
       status = machina::FramebufferScanout::Create(gpu.scanout(),
                                                    &framebuffer_scanout);
       if (status != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to acquire framebuffer " << status;
         return status;
       }
-      // When displaying to the framebuffer, we should read input events
-      // directly from the input devics.
-      status = hid_event_source.Start();
-      if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to start the HID event source " << status;
-        return status;
-      }
     } else {
       // Expose a view that can be composited by mozart. Input events will be
       // injected by the view events.
-      fuchsia::ui::input::InputDispatcherPtr input_dispatcher;
-      instance_controller.GetInputDispatcher(input_dispatcher.NewRequest());
       scenic_scanout = std::make_unique<ScenicScanout>(
           context.get(), std::move(input_dispatcher), gpu.scanout());
       instance_controller.SetViewProvider(scenic_scanout.get());
     }
+
+    // Setup GPU device.
     status = gpu.Init();
     if (status != ZX_OK) {
       return status;
