@@ -12,6 +12,7 @@ MODULE_NAME := zxio-test
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/main.c \
+    $(LOCAL_DIR)/null-test.cpp \
     $(LOCAL_DIR)/zxio-test.cpp \
 
 MODULE_FIDL_LIBS := \
