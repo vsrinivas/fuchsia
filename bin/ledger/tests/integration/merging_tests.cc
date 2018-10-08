@@ -355,7 +355,7 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
   // ConflictResolverFactory:
   void GetPolicy(PageId /*page_id*/, GetPolicyCallback callback) override {
     get_policy_calls++;
-    async::PostDelayedTask(async_get_default_dispatcher(),
+    async::PostDelayedTask(loop_controller_->dispatcher(),
                            [this, callback = std::move(callback)] {
                              callback(policy_);
                              if (callback_) {
