@@ -6,7 +6,7 @@ This document explains how to use rust syslogger library.
 ## BUILD.gn dependency
 
 ```gn
-"//garnet/public/rust/crates/fuchsia-syslog"
+"//garnet/public/rust/fuchsia-syslog"
 ```
 
 ### Initialization
@@ -60,4 +60,4 @@ error!("my msg: {}", 10);
 
 
 ### Reference
-[Rust APIs](https://fuchsia.googlesource.com/garnet/+/master/public/rust/crates/fuchsia-syslog/src/lib.rs)
+[Rust APIs](https://fuchsia.googlesource.com/garnet/+/master/public/rust/fuchsia-syslog/src/lib.rs)
