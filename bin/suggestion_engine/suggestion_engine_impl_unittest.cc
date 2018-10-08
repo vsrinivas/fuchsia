@@ -379,6 +379,65 @@ TEST_F(SuggestionEngineTest, AddNextProposalRich) {
   RunLoopUntil([&] { return done; });
 }
 
+TEST_F(SuggestionEngineTest, AddNextProposalRichReusesStory) {
+  StartListeningForNext(10);
+  auto story_name = "rich_story";
+
+  // Add proposal.
+  {
+    auto proposal = MakeRichProposal("1", "foo_rich");
+    proposal.story_name = story_name;
+    AddAddModuleAction(&proposal, "mod_name", "mod_url", "parent_mod",
+                       fuchsia::modular::SurfaceArrangement::ONTOP);
+    proposal_publisher_->Propose(std::move(proposal));
+  }
+
+  RunLoopUntil([&] { return next_listener_.last_suggestions()->size() == 1; });
+
+  // Up to here we expect the same as in the previous test (AddNextProposalRich)
+  // Submitting a new proposal with the same story_name should result on its
+  // story being directly updated and no notifications of new suggestions.
+  next_listener_.Reset();
+  test_executor_.Reset();
+  {
+    auto proposal = MakeRichProposal("1", "foo_rich");
+    proposal.story_name = story_name;
+    AddAddModuleAction(&proposal, "mod_name", "mod_url", "parent_mod",
+                       fuchsia::modular::SurfaceArrangement::COPRESENT);
+    proposal_publisher_->Propose(std::move(proposal));
+  }
+
+  RunLoopUntil([&] { return test_executor_.execute_count() == 1; });
+  EXPECT_TRUE(next_listener_.last_suggestions()->empty());
+
+  // The executor should have been called with a command to add a mod and
+  // created a story.
+  EXPECT_EQ(1, test_executor_.execute_count());
+  EXPECT_FALSE(test_executor_.last_story_id()->empty());
+  auto& commands = test_executor_.last_commands();
+  ASSERT_EQ(1u, commands.size());
+  ASSERT_TRUE(commands.at(0).is_add_mod());
+
+  auto& command = commands.at(0).add_mod();
+  ASSERT_EQ(1u, command.mod_name->size());
+  EXPECT_EQ("mod_name", command.mod_name->at(0));
+  EXPECT_EQ("mod_url", command.intent.handler);
+  EXPECT_EQ(fuchsia::modular::SurfaceArrangement::COPRESENT,
+            command.surface_relation.arrangement);
+  ASSERT_EQ(1u, command.surface_parent_mod_name->size());
+  EXPECT_EQ("parent_mod", command.surface_parent_mod_name->at(0));
+
+  // Ensure the story is there.
+  bool done{};
+  session_storage_->GetStoryData(story_name)
+      ->Then([&](fuchsia::modular::internal::StoryDataPtr story_data) {
+        ASSERT_NE(nullptr, story_data);
+        EXPECT_TRUE(story_data->story_options.kind_of_proto_story);
+        done = true;
+      });
+  RunLoopUntil([&] { return done; });
+}
+
 TEST_F(SuggestionEngineTest, AddNextProposalRichRespectsStoryName) {
   StartListeningForNext(10);
 

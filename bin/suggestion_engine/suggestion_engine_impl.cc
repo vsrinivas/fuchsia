@@ -105,11 +105,10 @@ void SuggestionEngineImpl::AddProposalWithRichSuggestion(
         if (proposal.story_name->empty()) {
           proposal.story_name = result.story_id;
         }
-        next_processor_.AddProposal(source_url, result.story_id,
-                                    std::move(proposal));
 
-        if (!existing_story.empty()) {
-          puppet_master_->DeleteStory(existing_story, [] {});
+        if (existing_story.empty()) {
+          next_processor_.AddProposal(source_url, result.story_id,
+                                      std::move(proposal));
         }
       }));
 }
