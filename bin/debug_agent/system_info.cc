@@ -90,6 +90,22 @@ bool FindProcess(const zx::job& job, zx_koid_t search_for, zx::process* out) {
   return false;
 }
 
+// Searches root job for a job with the given
+// koid. If found, puts it in *out* and returns true.
+bool FindJob(zx::job root_job, zx_koid_t search_for, zx::job* out) {
+  if (KoidForObject(root_job) == search_for) {
+    out->reset(root_job.release());
+    return true;
+  }
+
+  auto child_jobs = GetChildJobs(root_job.get());
+  for (auto& child_job : child_jobs) {
+    if (FindJob(zx::job(child_job.release()), search_for, out))
+      return true;
+  }
+  return false;
+}
+
 }  // namespace
 
 zx_status_t GetProcessTree(debug_ipc::ProcessTreeRecord* root) {
@@ -101,6 +117,12 @@ zx_status_t GetProcessTree(debug_ipc::ProcessTreeRecord* root) {
 zx::process GetProcessFromKoid(zx_koid_t koid) {
   zx::process result;
   FindProcess(GetRootJob(), koid, &result);
+  return result;
+}
+
+zx::job GetJobFromKoid(zx_koid_t koid) {
+  zx::job result;
+  FindJob(GetRootJob(), koid, &result);
   return result;
 }
 

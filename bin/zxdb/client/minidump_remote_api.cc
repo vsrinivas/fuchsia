@@ -10,8 +10,8 @@
 #include "garnet/lib/debug_ipc/client_protocol.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
-#include "third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h"
 #include "third_party/crashpad/snapshot/memory_map_region_snapshot.h"
+#include "third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h"
 #include "third_party/crashpad/util/misc/uuid.h"
 
 namespace zxdb {
@@ -31,31 +31,30 @@ Err ErrNoArch() { return Err("Architecture not supported"); }
 template <typename ReplyType>
 void ErrNoLive(std::function<void(const Err&, ReplyType)> cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
-    [cb]() { cb(ErrNoLive(), ReplyType()); });
+      [cb]() { cb(ErrNoLive(), ReplyType()); });
 }
 
 template <typename ReplyType>
 void ErrNoImpl(std::function<void(const Err&, ReplyType)> cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
-    [cb]() { cb(ErrNoImpl(), ReplyType()); });
+      [cb]() { cb(ErrNoImpl(), ReplyType()); });
 }
 
 template <typename ReplyType>
 void ErrNoDump(std::function<void(const Err&, ReplyType)> cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
-    [cb]() { cb(ErrNoDump(), ReplyType()); });
+      [cb]() { cb(ErrNoDump(), ReplyType()); });
 }
 
 template <typename ReplyType>
 void ErrNoArch(std::function<void(const Err&, ReplyType)> cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
-    [cb]() { cb(ErrNoArch(), ReplyType()); });
+      [cb]() { cb(ErrNoArch(), ReplyType()); });
 }
 
 template <typename ReplyType>
 void Succeed(std::function<void(const Err&, ReplyType)> cb, ReplyType r) {
-  debug_ipc::MessageLoop::Current()->PostTask(
-    [cb, r]() { cb(Err(), r); });
+  debug_ipc::MessageLoop::Current()->PostTask([cb, r]() { cb(Err(), r); });
 }
 
 template <typename ValueType>
@@ -341,7 +340,7 @@ void MinidumpRemoteAPI::Attach(
   }
 
   debug_ipc::AttachReply reply;
-  reply.process_name = ProcessName();
+  reply.name = ProcessName();
 
   if (static_cast<pid_t>(request.koid) != minidump_->ProcessID()) {
     reply.status = kAttachNotFound;
@@ -365,14 +364,14 @@ void MinidumpRemoteAPI::Attach(
   Session* session = session_;
 
   std::function<void(const Err&, debug_ipc::AttachReply)> new_cb =
-    [cb, notifications, session](const Err& e, debug_ipc::AttachReply a) {
-      cb(e, a);
+      [cb, notifications, session](const Err& e, debug_ipc::AttachReply a) {
+        cb(e, a);
 
-      for (const auto& notification : notifications) {
-        session->DispatchNotifyThread(
-          debug_ipc::MsgHeader::Type::kNotifyThreadStarting, notification);
-      }
-    };
+        for (const auto& notification : notifications) {
+          session->DispatchNotifyThread(
+              debug_ipc::MsgHeader::Type::kNotifyThreadStarting, notification);
+        }
+      };
 
   Succeed(new_cb, reply);
 }
@@ -453,8 +452,8 @@ void MinidumpRemoteAPI::ProcessTree(
   record.name = ProcessName();
   record.koid = minidump_->ProcessID();
 
-  debug_ipc::ProcessTreeReply reply {
-    .root = record,
+  debug_ipc::ProcessTreeReply reply{
+      .root = record,
   };
 
   Succeed(cb, reply);

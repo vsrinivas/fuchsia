@@ -34,8 +34,7 @@ class Job : public ClientObject {
   // The Job koid is guaranteed non-null.
   virtual uint64_t GetKoid() const = 0;
 
-  // Returns the "name" of the job. This is the job object name which
-  // is normally based on the file name, but isn't the same as the file name.
+  // Returns the "name" of the job.
   virtual const std::string& GetName() const = 0;
 
   // Get all filters from this job.

@@ -42,38 +42,38 @@ MinidumpTest::MinidumpTest() {
 MinidumpTest::~MinidumpTest() { loop_.Cleanup(); }
 
 Err MinidumpTest::TryOpen(const std::string& filename) {
-  static auto data_dir = std::filesystem::path(GetSelfPath())
-    .parent_path().parent_path() / "test_data" / "zxdb";
+  static auto data_dir =
+      std::filesystem::path(GetSelfPath()).parent_path().parent_path() /
+      "test_data" / "zxdb";
 
   Err err;
   auto path = (data_dir / filename).string();
 
-  session().OpenMinidump(path,
-                         [&err](const Err& got) {
-                           err = got;
-                           debug_ipc::MessageLoop::Current()->QuitNow();
-                         });
+  session().OpenMinidump(path, [&err](const Err& got) {
+    err = got;
+    debug_ipc::MessageLoop::Current()->QuitNow();
+  });
 
   loop().Run();
 
   return err;
 }
 
-template<typename RequestType, typename ReplyType>
-void MinidumpTest::DoRequest(RequestType request, ReplyType& reply, Err& err,
-                             void (RemoteAPI::*handler)(
-                               const RequestType&,
+template <typename RequestType, typename ReplyType>
+void MinidumpTest::DoRequest(
+    RequestType request, ReplyType& reply, Err& err,
+    void (RemoteAPI::*handler)(const RequestType&,
                                std::function<void(const Err&, ReplyType)>)) {
-  (session().remote_api()->*handler)(request,
-    [&reply, &err](const Err& e, ReplyType r) {
-      err = e;
-      reply = r;
-      debug_ipc::MessageLoop::Current()->QuitNow();
-    });
+  (session().remote_api()->*handler)(
+      request, [&reply, &err](const Err& e, ReplyType r) {
+        err = e;
+        reply = r;
+        debug_ipc::MessageLoop::Current()->QuitNow();
+      });
   loop().Run();
 }
 
-template<typename Data>
+template <typename Data>
 std::vector<uint8_t> AsData(Data d) {
   std::vector<uint8_t> ret;
 
@@ -83,10 +83,16 @@ std::vector<uint8_t> AsData(Data d) {
   return ret;
 }
 
-#define EXPECT_ZXDB_SUCCESS(e_) \
-  ({ Err e = e_; EXPECT_FALSE(e.has_error()) << e.msg(); })
-#define ASSERT_ZXDB_SUCCESS(e_) \
-  ({ Err e = e_; ASSERT_FALSE(e.has_error()) << e.msg(); })
+#define EXPECT_ZXDB_SUCCESS(e_)             \
+  ({                                        \
+    Err e = e_;                             \
+    EXPECT_FALSE(e.has_error()) << e.msg(); \
+  })
+#define ASSERT_ZXDB_SUCCESS(e_)             \
+  ({                                        \
+    Err e = e_;                             \
+    ASSERT_FALSE(e.has_error()) << e.msg(); \
+  })
 
 constexpr uint32_t kTestExampleMinidumpKOID = 656254UL;
 constexpr uint32_t kTestExampleMinidumpThreadKOID = 671806UL;
@@ -123,7 +129,7 @@ TEST_F(MinidumpTest, AttachDetach) {
   ASSERT_ZXDB_SUCCESS(err);
 
   EXPECT_EQ(0UL, reply.status);
-  EXPECT_EQ("scenic", reply.process_name);
+  EXPECT_EQ("scenic", reply.name);
 
   debug_ipc::DetachRequest detach_request;
   debug_ipc::DetachReply detach_reply;
@@ -189,10 +195,10 @@ TEST_F(MinidumpTest, Registers) {
   request.process_koid = kTestExampleMinidumpKOID;
   request.thread_koid = kTestExampleMinidumpThreadKOID;
   request.categories = {
-    C::kGeneral,
-    C::kFloatingPoint,
-    C::kVector,
-    C::kDebug,
+      C::kGeneral,
+      C::kFloatingPoint,
+      C::kVector,
+      C::kDebug,
   };
   DoRequest(request, reply, err, &RemoteAPI::Registers);
   ASSERT_ZXDB_SUCCESS(err);
@@ -211,9 +217,9 @@ TEST_F(MinidumpTest, Registers) {
     }
   }
 
-  std::vector<uint8_t> zero_short = { 0, 0 };
-  std::vector<uint8_t> zero_128 = { 0, 0, 0, 0, 0, 0, 0, 0,
-                                    0, 0, 0, 0, 0, 0, 0, 0 };
+  std::vector<uint8_t> zero_short = {0, 0};
+  std::vector<uint8_t> zero_128 = {0, 0, 0, 0, 0, 0, 0, 0,
+                                   0, 0, 0, 0, 0, 0, 0, 0};
 
   EXPECT_EQ(AsData(0x83UL), got[std::pair(C::kGeneral, R::kX64_rax)]);
   EXPECT_EQ(AsData(0x2FE150062100UL), got[std::pair(C::kGeneral, R::kX64_rbx)]);

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_DEBUG_IPC_PROTOCOL_H_
+#define GARNET_LIB_DEBUG_IPC_PROTOCOL_H_
 
 #include "garnet/lib/debug_ipc/records.h"
 
@@ -97,11 +98,15 @@ struct KillReply {
 // The debug agent will follow a successful AttachReply with notifications for
 // all threads currently existing in the attached process.
 struct AttachRequest {
-  uint64_t koid;
+  enum class Type : uint32_t { kProcess = 0, kJob, kLast };
+
+  Type type = Type::kProcess;
+  uint64_t koid = 0;
 };
+
 struct AttachReply {
   uint32_t status = 0;  // zx_status_t value from attaching. ZX_OK on success.
-  std::string process_name;
+  std::string name;
 };
 
 struct DetachRequest {
@@ -297,3 +302,5 @@ struct NotifyModules {
 #pragma pack(pop)
 
 }  // namespace debug_ipc
+
+#endif  // GARNET_LIB_DEBUG_IPC_PROTOCOL_H_

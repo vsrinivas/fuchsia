@@ -99,33 +99,52 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
   // Don't return early since we must send the reply at the bottom.
   debug_ipc::AttachReply reply;
   reply.status = ZX_ERR_NOT_FOUND;
-  zx::process process = GetProcessFromKoid(request.koid);
-  DebuggedProcess* new_process = nullptr;
-  if (process.is_valid()) {
-    reply.process_name = NameForObject(process);
-    new_process = AddDebuggedProcess(request.koid, std::move(process));
-    if (new_process)
-      reply.status = ZX_OK;
-  }
-
-  // Send the reply.
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteReply(reply, transaction_id, &writer);
-  stream()->Write(writer.MessageComplete());
-
-  // For valid attaches, follow up with the current module and thread lists.
-  if (new_process) {
-    new_process->PopulateCurrentThreads();
-
-    if (new_process->RegisterDebugState()) {
-      // Suspend all threads while the module list is being sent. The client
-      // will resume the threads once it's loaded symbols and processed
-      // breakpoints (this may take a while and we'd like to get any
-      // breakpoints as early as possible).
-      std::vector<uint64_t> paused_thread_koids;
-      new_process->PauseAll(&paused_thread_koids);
-      new_process->SendModuleNotification(std::move(paused_thread_koids));
+  if (request.type == debug_ipc::AttachRequest::Type::kProcess) {
+    zx::process process = GetProcessFromKoid(request.koid);
+    DebuggedProcess* new_process = nullptr;
+    if (process.is_valid()) {
+      reply.name = NameForObject(process);
+      new_process = AddDebuggedProcess(request.koid, std::move(process));
+      if (new_process)
+        reply.status = ZX_OK;
     }
+
+    // Send the reply.
+    debug_ipc::MessageWriter writer;
+    debug_ipc::WriteReply(reply, transaction_id, &writer);
+    stream()->Write(writer.MessageComplete());
+
+    // For valid attaches, follow up with the current module and thread lists.
+    if (new_process) {
+      new_process->PopulateCurrentThreads();
+
+      if (new_process->RegisterDebugState()) {
+        // Suspend all threads while the module list is being sent. The client
+        // will resume the threads once it's loaded symbols and processed
+        // breakpoints (this may take a while and we'd like to get any
+        // breakpoints as early as possible).
+        std::vector<uint64_t> paused_thread_koids;
+        new_process->PauseAll(&paused_thread_koids);
+        new_process->SendModuleNotification(std::move(paused_thread_koids));
+      }
+    }
+  } else if (request.type == debug_ipc::AttachRequest::Type::kJob) {
+    zx::job job = GetJobFromKoid(request.koid);
+    if (job.is_valid()) {
+      reply.name = NameForObject(job);
+      auto new_job = AddDebuggedJob(request.koid, std::move(job));
+      if (new_job) {
+        reply.status = ZX_OK;
+      }
+    }
+
+    // Send the reply.
+    debug_ipc::MessageWriter writer;
+    debug_ipc::WriteReply(reply, transaction_id, &writer);
+    stream()->Write(writer.MessageComplete());
+  } else {
+    fprintf(stderr, "Got bad debugger attach request type, ignoring.\n");
+    return;
   }
 }
 
@@ -270,12 +289,29 @@ DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {
   return found->second.get();
 }
 
+DebuggedJob* DebugAgent::GetDebuggedJob(zx_koid_t koid) {
+  auto found = jobs_.find(koid);
+  if (found == jobs_.end())
+    return nullptr;
+  return found->second.get();
+}
+
 DebuggedThread* DebugAgent::GetDebuggedThread(zx_koid_t process_koid,
                                               zx_koid_t thread_koid) {
   DebuggedProcess* process = GetDebuggedProcess(process_koid);
   if (!process)
     return nullptr;
   return process->GetThread(thread_koid);
+}
+
+DebuggedJob* DebugAgent::AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job) {
+  auto job = std::make_unique<DebuggedJob>(this, job_koid, std::move(zx_job));
+  if (!job->Init())
+    return nullptr;
+
+  DebuggedJob* result = job.get();
+  jobs_[job_koid] = std::move(job);
+  return result;
 }
 
 DebuggedProcess* DebugAgent::AddDebuggedProcess(zx_koid_t process_koid,

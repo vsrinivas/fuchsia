@@ -135,7 +135,7 @@ void TargetImpl::Attach(uint64_t koid, Callback callback) {
       request, [koid, callback, weak_target = impl_weak_factory_.GetWeakPtr()](
                    const Err& err, debug_ipc::AttachReply reply) {
         OnLaunchOrAttachReplyThunk(std::move(weak_target), std::move(callback),
-                                   err, koid, reply.status, reply.process_name);
+                                   err, koid, reply.status, reply.name);
       });
 }
 

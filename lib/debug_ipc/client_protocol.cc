@@ -192,6 +192,7 @@ bool ReadReply(MessageReader* reader, KillReply* reply,
 void WriteRequest(const AttachRequest& request, uint32_t transaction_id,
                   MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kAttach, transaction_id);
+  writer->WriteUint32(static_cast<uint32_t>(request.type));
   writer->WriteUint64(request.koid);
 }
 
@@ -204,7 +205,7 @@ bool ReadReply(MessageReader* reader, AttachReply* reply,
 
   if (!reader->ReadUint32(&reply->status))
     return false;
-  if (!reader->ReadString(&reply->process_name))
+  if (!reader->ReadString(&reply->name))
     return false;
   return true;
 }

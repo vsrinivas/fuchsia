@@ -51,6 +51,13 @@ class JobContextImpl : public JobContext {
 
   fxl::WeakPtrFactory<JobContextImpl> impl_weak_factory_;
 
+  static void OnAttachReplyThunk(fxl::WeakPtr<JobContextImpl> job_context,
+                                 Callback callback, const Err& err,
+                                 uint64_t koid, uint32_t status,
+                                 const std::string& job_name);
+  void OnAttachReply(Callback callback, const Err& err, uint64_t koid,
+                     uint32_t status, const std::string& job_name);
+
   FXL_DISALLOW_COPY_AND_ASSIGN(JobContextImpl);
 };
 

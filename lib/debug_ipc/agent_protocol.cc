@@ -163,6 +163,12 @@ bool ReadRequest(MessageReader* reader, AttachRequest* request,
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
+  uint32_t type;
+  if (!reader->ReadUint32(&type))
+    return false;
+  if (type >= static_cast<uint32_t>(AttachRequest::Type::kLast))
+    return false;
+  request->type = static_cast<AttachRequest::Type>(type);
   return reader->ReadUint64(&request->koid);
 }
 
@@ -170,7 +176,7 @@ void WriteReply(const AttachReply& reply, uint32_t transaction_id,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kAttach, transaction_id);
   writer->WriteUint32(reply.status);
-  writer->WriteString(reply.process_name);
+  writer->WriteString(reply.name);
 }
 
 // Detach ----------------------------------------------------------------------
@@ -372,7 +378,7 @@ bool ReadRequest(MessageReader* reader, RegistersRequest* request,
 
   if (!reader->ReadUint64(&request->process_koid) ||
       !reader->ReadUint32(&request->thread_koid))
-      return false;
+    return false;
 
   return Deserialize(reader, &request->categories);
 }

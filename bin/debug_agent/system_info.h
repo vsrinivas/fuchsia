@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_DEBUG_AGENT_SYSTEM_INFO_H_
+#define GARNET_BIN_DEBUG_AGENT_SYSTEM_INFO_H_
 
 #include <lib/zx/process.h>
 #include <zircon/types.h>
@@ -19,4 +20,10 @@ zx_status_t GetProcessTree(debug_ipc::ProcessTreeRecord* root);
 // not is_valid() on failure.
 zx::process GetProcessFromKoid(zx_koid_t koid);
 
+// Returns a job handle for the given job koid. The job will be not is_valid()
+// on failure.
+zx::job GetJobFromKoid(zx_koid_t koid);
+
 }  // namespace debug_agent
+
+#endif  // GARNET_BIN_DEBUG_AGENT_SYSTEM_INFO_H_

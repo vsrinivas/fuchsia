@@ -9,6 +9,7 @@
 #include <map>
 #include <memory>
 #include "garnet/bin/debug_agent/breakpoint.h"
+#include "garnet/bin/debug_agent/debugged_job.h"
 #include "garnet/bin/debug_agent/debugged_process.h"
 #include "garnet/bin/debug_agent/remote_api.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
@@ -18,7 +19,9 @@
 namespace debug_agent {
 
 // Main state and control for the debug agent.
-class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate {
+class DebugAgent : public RemoteAPI,
+                   public Breakpoint::ProcessDelegate,
+                   public ProcessStartHandler {
  public:
   // A MessageLoopZircon should already be set up on the current thread.
   //
@@ -34,6 +37,10 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate {
   void RemoveDebuggedProcess(zx_koid_t process_koid);
 
   void RemoveBreakpoint(uint32_t breakpoint_id);
+
+  void OnProcessStart(zx::process process) override {
+    // TODO(anmmital): Implement
+  }
 
  private:
   // RemoteAPI implementation.
@@ -79,6 +86,7 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate {
   // Returns the debugged process/thread for the given koid(s) or null if not
   // found.
   DebuggedProcess* GetDebuggedProcess(zx_koid_t koid);
+  DebuggedJob* GetDebuggedJob(zx_koid_t koid);
   DebuggedThread* GetDebuggedThread(zx_koid_t process_koid,
                                     zx_koid_t thread_koid);
 
@@ -86,11 +94,15 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate {
   DebuggedProcess* AddDebuggedProcess(zx_koid_t process_koid,
                                       zx::process zx_proc);
 
+  DebuggedJob* AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job);
+
   debug_ipc::StreamBuffer* stream_;
 
   std::shared_ptr<component::Services> services_;
 
   std::map<zx_koid_t, std::unique_ptr<DebuggedProcess>> procs_;
+
+  std::map<zx_koid_t, std::unique_ptr<DebuggedJob>> jobs_;
 
   std::map<uint32_t, Breakpoint> breakpoints_;
 
