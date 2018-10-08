@@ -530,7 +530,7 @@ zx_status_t SocketDispatcher::SetWriteThreshold(size_t value) TA_NO_THREAD_SAFET
     canary_.Assert();
     Guard<fbl::Mutex> guard{get_lock()};
     if (peer_ == NULL)
-        return ZX_SOCKET_PEER_CLOSED;
+        return ZX_ERR_PEER_CLOSED;
     if (value > peer_->data_.max_size())
         return ZX_ERR_INVALID_ARGS;
     write_threshold_ = value;
