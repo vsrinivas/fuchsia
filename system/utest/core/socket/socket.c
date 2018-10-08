@@ -378,13 +378,29 @@ static bool socket_signals2(void) {
     END_TEST;
 }
 
-static bool socket_peer_closed(void) {
+static bool socket_peer_closed_signal(void) {
     BEGIN_TEST;
 
     zx_handle_t socket[2];
     ASSERT_EQ(zx_socket_create(0, &socket[0], &socket[1]), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(socket[1]), ZX_OK, "");
     ASSERT_EQ(zx_object_signal_peer(socket[0], 0u, ZX_USER_SIGNAL_0), ZX_ERR_PEER_CLOSED, "");
+    ASSERT_EQ(zx_handle_close(socket[0]), ZX_OK, "");
+
+    END_TEST;
+}
+
+static bool socket_peer_closed_set_property(void) {
+    BEGIN_TEST;
+
+    zx_handle_t socket[2];
+    ASSERT_EQ(zx_socket_create(0, &socket[0], &socket[1]), ZX_OK, "");
+    size_t t = 1;
+    ASSERT_EQ(zx_object_set_property(socket[0], ZX_PROP_SOCKET_TX_THRESHOLD, &t, sizeof(t)),
+              ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(socket[1]), ZX_OK, "");
+    ASSERT_EQ(zx_object_set_property(socket[0], ZX_PROP_SOCKET_TX_THRESHOLD, &t, sizeof(t)),
+              ZX_ERR_PEER_CLOSED, "");
     ASSERT_EQ(zx_handle_close(socket[0]), ZX_OK, "");
 
     END_TEST;
@@ -1137,7 +1153,8 @@ bool socket_share_consumes_on_failure(void) {
 BEGIN_TEST_CASE(socket_tests)
 RUN_TEST(socket_basic)
 RUN_TEST(socket_signals)
-RUN_TEST(socket_peer_closed)
+RUN_TEST(socket_peer_closed_signal)
+RUN_TEST(socket_peer_closed_set_property)
 RUN_TEST(socket_shutdown_write)
 RUN_TEST(socket_shutdown_read)
 RUN_TEST(socket_bytes_outstanding)
