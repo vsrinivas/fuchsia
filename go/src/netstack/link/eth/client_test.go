@@ -17,16 +17,21 @@ import (
 type device struct {
 	testing.TB
 
-	getInfo            func() (ethernet.Info, error)
-	getFifos           func() (int32, *ethernet.Fifos, error)
-	setIoBuffer        func(zx.VMO) (int32, error)
-	start              func() (int32, error)
-	stop               func() error
-	listenStart        func() (int32, error)
-	listenStop         func() error
-	setClientName      func(string) (int32, error)
-	getStatus          func() (uint32, error)
-	setPromiscuousMode func(bool) (int32, error)
+	getInfo                           func() (ethernet.Info, error)
+	getFifos                          func() (int32, *ethernet.Fifos, error)
+	setIoBuffer                       func(zx.VMO) (int32, error)
+	start                             func() (int32, error)
+	stop                              func() error
+	listenStart                       func() (int32, error)
+	listenStop                        func() error
+	setClientName                     func(string) (int32, error)
+	getStatus                         func() (uint32, error)
+	setPromiscuousMode                func(bool) (int32, error)
+	configMulticastAddMac             func(addr ethernet.MacAddress) (int32, error)
+	configMulticastDeleteMac          func(addr ethernet.MacAddress) (int32, error)
+	configMulticastSetPromiscuousMode func(enabled bool) (int32, error)
+	configMulticastTestFilter         func() (int32, error)
+	dumpRegisters                     func() (int32, error)
 }
 
 func (d *device) GetInfo() (ethernet.Info, error) {
@@ -117,6 +122,51 @@ func (d *device) SetPromiscuousMode(enabled bool) (int32, error) {
 		d.Fatal("unexpected call to SetPromiscuousMode")
 	}
 	return fn(enabled)
+}
+
+func (d *device) ConfigMulticastAddMac(addr ethernet.MacAddress) (int32, error) {
+	fn := d.configMulticastAddMac
+	if fn == nil {
+		d.Helper()
+		d.Fatal("unexpected call to ConfigMulticastAddMac")
+	}
+	return fn(addr)
+}
+
+func (d *device) ConfigMulticastDeleteMac(addr ethernet.MacAddress) (int32, error) {
+	fn := d.configMulticastDeleteMac
+	if fn == nil {
+		d.Helper()
+		d.Fatal("unexpected call to ConfigMulticastDeleteMac")
+	}
+	return fn(addr)
+}
+
+func (d *device) ConfigMulticastSetPromiscuousMode(enabled bool) (int32, error) {
+	fn := d.configMulticastSetPromiscuousMode
+	if fn == nil {
+		d.Helper()
+		d.Fatal("unexpected call to ConfigMulticastSetPromiscuousMode")
+	}
+	return fn(enabled)
+}
+
+func (d *device) ConfigMulticastTestFilter() (int32, error) {
+	fn := d.configMulticastTestFilter
+	if fn == nil {
+		d.Helper()
+		d.Fatal("unexpected call to ConfigMulticastTestFilter")
+	}
+	return fn()
+}
+
+func (d *device) DumpRegisters() (int32, error) {
+	fn := d.dumpRegisters
+	if fn == nil {
+		d.Helper()
+		d.Fatal("unexpected call to DumpRegisters")
+	}
+	return fn()
 }
 
 func TestClient_AllocForSend(t *testing.T) {
