@@ -173,7 +173,32 @@ zx_status_t OpteeClient::InvokeCommand(uint32_t session_id,
                                        uint32_t command_id,
                                        const zircon_tee_ParameterSet* parameter_set,
                                        fidl_txn_t* txn) {
-    return ZX_ERR_NOT_SUPPORTED;
+    ZX_DEBUG_ASSERT(parameter_set != nullptr);
+
+    zircon_tee_Result result = {};
+
+    InvokeCommandMessage message{controller_->driver_pool(), session_id,
+                                 command_id, *parameter_set};
+
+    if (!message.is_valid()) {
+        result.return_code = TEEC_ERROR_COMMUNICATION;
+        result.return_origin = zircon_tee_ReturnOrigin_COMMUNICATION;
+        return zircon_tee_DeviceInvokeCommand_reply(txn, &result);
+    }
+
+    uint32_t call_code = controller_->CallWithMessage(
+        message, fbl::BindMember(this, &OpteeClient::HandleRpc));
+    if (call_code != kReturnOk) {
+        result.return_code = TEEC_ERROR_COMMUNICATION;
+        result.return_origin = zircon_tee_ReturnOrigin_COMMUNICATION;
+        return zircon_tee_DeviceInvokeCommand_reply(txn, &result);
+    }
+
+    zxlogf(SPEW, "optee: InvokeCommand returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 "\n",
+           call_code, message.return_code(), message.return_origin());
+    result.return_code = message.return_code();
+    result.return_origin = message.return_origin();
+    return zircon_tee_DeviceInvokeCommand_reply(txn, &result);
 }
 
 zx_status_t OpteeClient::CloseSession(uint32_t session_id,

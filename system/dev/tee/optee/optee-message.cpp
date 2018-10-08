@@ -81,6 +81,26 @@ CloseSessionMessage::CloseSessionMessage(SharedMemoryManager::DriverMemoryPool* 
     header()->session_id = session_id;
 }
 
+InvokeCommandMessage::InvokeCommandMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
+                                           uint32_t session_id,
+                                           uint32_t command_id,
+                                           const zircon_tee_ParameterSet& parameter_set) {
+    ZX_DEBUG_ASSERT(message_pool != nullptr);
+
+    zx_status_t status = message_pool->Allocate(CalculateSize(parameter_set.count), &memory_);
+
+    if (status != ZX_OK) {
+        memory_ = nullptr;
+        return;
+    }
+
+    header()->command = Command::kInvokeCommand;
+    header()->session_id = session_id;
+    header()->app_function = command_id;
+    header()->cancel_id = 0;
+    header()->num_params = parameter_set.count;
+}
+
 bool RpcMessage::TryInitializeMembers() {
     size_t memory_size = memory_->size();
     if (memory_size < sizeof(MessageHeader)) {
