@@ -21,7 +21,6 @@ static const pbus_i2c_channel_t pcf8563_rtc_i2c[] = {
 static pbus_dev_t pcf8563_rtc_dev = {
     .name = "pcf8563-rtc",
     .vid = PDEV_VID_NXP,
-    .pid = PDEV_PID_PCF8563,
     .did = PDEV_DID_PCF8563_RTC,
     .i2c_channels = pcf8563_rtc_i2c,
     .i2c_channel_count = countof(pcf8563_rtc_i2c),
