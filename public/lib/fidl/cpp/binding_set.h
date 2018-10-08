@@ -50,9 +50,11 @@ class BindingSet {
   // |impl|. If |ImplPtr| is a |unique_ptr|, then running |~ImplPtr| when the
   // binding generates an error will delete |impl| because |~ImplPtr| is
   // |~unique_ptr|, which deletes |impl|.
-  void AddBinding(ImplPtr impl, InterfaceRequest<Interface> request) {
+  void AddBinding(
+      ImplPtr impl, InterfaceRequest<Interface> request,
+      async_dispatcher_t* dispatcher = nullptr) {
     bindings_.push_back(std::make_unique<Binding>(std::forward<ImplPtr>(impl),
-                                                  std::move(request)));
+                                                  std::move(request), dispatcher));
     auto* binding = bindings_.back().get();
     // Set the connection error handler for the newly added Binding to be a
     // function that will erase it from the vector.
@@ -76,20 +78,22 @@ class BindingSet {
   // |impl|. If |ImplPtr| is a |unique_ptr|, then running |~ImplPtr| when the
   // binding generates an error will delete |impl| because |~ImplPtr| is
   // |~unique_ptr|, which deletes |impl|.
-  InterfaceHandle<Interface> AddBinding(ImplPtr impl) {
+  InterfaceHandle<Interface> AddBinding(
+      ImplPtr impl, async_dispatcher_t* dispatcher = nullptr) {
     InterfaceHandle<Interface> handle;
     InterfaceRequest<Interface> request = handle.NewRequest();
     if (!request)
       return nullptr;
-    AddBinding(std::forward<ImplPtr>(impl), std::move(request));
+    AddBinding(std::forward<ImplPtr>(impl), std::move(request), dispatcher);
     return handle;
   }
 
   // Returns an InterfaceRequestHandler that binds the incoming
   // InterfaceRequests this object.
-  InterfaceRequestHandler<Interface> GetHandler(ImplPtr impl) {
-    return [this, impl](InterfaceRequest<Interface> request) {
-      AddBinding(impl, std::move(request));
+  InterfaceRequestHandler<Interface> GetHandler(
+      ImplPtr impl, async_dispatcher_t* dispatcher = nullptr) {
+    return [this, impl, dispatcher](InterfaceRequest<Interface> request) {
+      AddBinding(impl, std::move(request), dispatcher);
     };
   }
 
