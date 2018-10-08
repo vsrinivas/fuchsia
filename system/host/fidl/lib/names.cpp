@@ -245,6 +245,91 @@ std::string NameUnionTag(StringView union_name, const flat::Union::Member& membe
     return std::string(union_name) + "Tag_" + NameIdentifier(member.name);
 }
 
+std::string NameFlatConstant(const flat::Constant* constant) {
+    switch (constant->kind) {
+    case flat::Constant::Kind::kLiteral: {
+        auto literal_constant = static_cast<const flat::LiteralConstant*>(constant);
+        return literal_constant->literal->location().data();
+    }
+    case flat::Constant::Kind::kIdentifier: {
+        auto identifier_constant = static_cast<const flat::IdentifierConstant*>(constant);
+        return NameName(identifier_constant->name, ".", "/");
+    }
+    } // switch
+}
+
+void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
+    switch (type->kind) {
+    case flat::Type::Kind::kArray: {
+        auto array_type = static_cast<const flat::ArrayType*>(type);
+        buf << "array<";
+        NameFlatTypeHelper(buf, array_type->element_type.get());
+        buf << ">";
+        if (array_type->element_count.Value() != flat::Size::Max().Value()) {
+            buf << ":";
+            buf << array_type->element_count.Value();
+        }
+        break;
+    }
+    case flat::Type::Kind::kVector: {
+        auto vector_type = static_cast<const flat::VectorType*>(type);
+        buf << "vector<";
+        NameFlatTypeHelper(buf, vector_type->element_type.get());
+        buf << ">";
+        if (vector_type->element_count.Value() != flat::Size::Max().Value()) {
+            buf << ":";
+            buf << vector_type->element_count.Value();
+        }
+        break;
+    }
+    case flat::Type::Kind::kString: {
+        auto string_type = static_cast<const flat::StringType*>(type);
+        buf << "string";
+        if (string_type->max_size.Value() != flat::Size::Max().Value()) {
+            buf << ":";
+            buf << string_type->max_size.Value();
+        }
+        break;
+    }
+    case flat::Type::Kind::kHandle: {
+        auto handle_type = static_cast<const flat::HandleType*>(type);
+        buf << "handle";
+        if (handle_type->subtype != types::HandleSubtype::kHandle) {
+            buf << "<";
+            buf << NameHandleSubtype(handle_type->subtype);
+            buf << ">";
+        }
+        break;
+    }
+    case flat::Type::Kind::kRequestHandle: {
+        auto request_handle_type = static_cast<const flat::RequestHandleType*>(type);
+        buf << "request<";
+        buf << NameName(request_handle_type->name, ".", "/");
+        buf << ">";
+        break;
+    }
+    case flat::Type::Kind::kPrimitive: {
+        auto primitive_type = static_cast<const flat::PrimitiveType*>(type);
+        buf << NamePrimitiveSubtype(primitive_type->subtype);
+        break;
+    }
+    case flat::Type::Kind::kIdentifier: {
+        auto identifier_type = static_cast<const flat::IdentifierType*>(type);
+        buf << NameName(identifier_type->name, ".", "/");
+        break;
+    }
+    } // switch
+    if (type->nullability == types::Nullability::kNullable) {
+        buf << "?";
+    }
+}
+
+std::string NameFlatType(const flat::Type* type) {
+    std::ostringstream buf;
+    NameFlatTypeHelper(buf, type);
+    return buf.str();
+}
+
 std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
     for (;;) {
         switch (type->kind) {

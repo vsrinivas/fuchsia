@@ -350,7 +350,7 @@ void JSONGenerator::Generate(const flat::Enum& value) {
         GenerateObjectMember("name", value.name, Position::kFirst);
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
-        GenerateObjectMember("type", value.type);
+        GenerateObjectMember("type", value.type->subtype);
         GenerateObjectMember("members", value.members);
     });
 }

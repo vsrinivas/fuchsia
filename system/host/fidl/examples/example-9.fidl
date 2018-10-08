@@ -22,5 +22,3 @@ interface Echo {
     5: EchoChannel(handle<channel> req) -> (handle<channel> response);
     6: EchoStruct(EchoMore req) -> (EchoMore response);
 };
-
-const EchoMe favorite_echo = zero;
