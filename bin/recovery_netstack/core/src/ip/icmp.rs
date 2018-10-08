@@ -8,14 +8,17 @@ use std::mem;
 
 use log::trace;
 
-use crate::ip::{send_ip_packet, IpAddr, IpProto};
+use crate::ip::{send_ip_packet, IpAddr, IpProto, Ipv4};
 use crate::wire::icmp::{IcmpEchoReply, IcmpPacket, IcmpPacketSerializer, Icmpv4Packet};
 use crate::wire::{BufferAndRange, SerializationRequest};
 use crate::{Context, EventDispatcher};
 
 /// Receive an ICMP message in an IP packet.
 pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
-    ctx: &mut Context<D>, src_ip: A, dst_ip: A, buffer: BufferAndRange<B>,
+    ctx: &mut Context<D>,
+    src_ip: A,
+    dst_ip: A,
+    buffer: BufferAndRange<B>,
 ) -> bool {
     trace!("receive_icmp_packet({}, {})", src_ip, dst_ip);
 
@@ -49,12 +52,14 @@ pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: AsRef<[u8]> + AsMut
 
                         // we're responding to the sender, so these are flipped
                         let (src_ip, dst_ip) = (dst_ip, src_ip);
-                        send_ip_packet(
-                            ctx,
-                            dst_ip,
-                            IpProto::Icmp,
-                            |src_ip| buffer.encapsulate(IcmpPacketSerializer::new(src_ip, dst_ip, code, req.reply())),
-                        );
+                        send_ip_packet(ctx, dst_ip, IpProto::Icmp, |src_ip| {
+                            buffer.encapsulate(IcmpPacketSerializer::<Ipv4, _>::new(
+                                src_ip,
+                                dst_ip,
+                                code,
+                                req.reply(),
+                            ))
+                        });
                         true
                     }
                     Icmpv4Packet::EchoReply(echo_reply) => {

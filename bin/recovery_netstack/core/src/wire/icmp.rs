@@ -5,6 +5,7 @@
 //! Parsing and serialization of Internet Control Message Protocol (ICMP) packets.
 
 use std::cmp;
+use std::convert::TryFrom;
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::Range;
@@ -13,7 +14,7 @@ use byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::ParseError;
-use crate::ip::{Ip, IpAddr, IpProto, Ipv4, Ipv4Addr, Ipv6};
+use crate::ip::{Ip, IpAddr, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use crate::wire::ipv4;
 use crate::wire::util::fits_in_u32;
 use crate::wire::util::{BufferAndRange, Checksum, PacketSerializer};
@@ -79,15 +80,19 @@ impl Header {
 /// Note that `peek_message_type` only inspects certain fields in the header,
 /// and so `peek_message_type` succeeding does not guarantee that a subsequent
 /// call to `parse` will also succeed.
-pub fn peek_message_type(bytes: &[u8]) -> Result<Icmpv4MessageType, ParseError> {
+pub fn peek_message_type<MessageType: TryFrom<u8>>(
+    bytes: &[u8],
+) -> Result<MessageType, ParseError> {
     let (header, _) = LayoutVerified::<_, Header>::new_unaligned_from_prefix(bytes).ok_or_else(
         debug_err_fn!(ParseError::Format, "too few bytes for header"),
     )?;
-    Icmpv4MessageType::from_u8(header.msg_type).ok_or_else(debug_err_fn!(
-        ParseError::NotSupported,
-        "unrecognized message type: {:x}",
-        header.msg_type,
-    ))
+    MessageType::try_from(header.msg_type).or_else(|_| {
+        Err(debug_err!(
+            ParseError::NotSupported,
+            "unrecognized message type: {:x}",
+            header.msg_type,
+        ))
+    })
 }
 
 /// An ICMPv4 packet with a dynamic message type.
@@ -103,7 +108,7 @@ pub enum Icmpv4Packet<B> {
     DestUnreachable(IcmpPacket<Ipv4, B, IcmpDestUnreachable>),
     Redirect(IcmpPacket<Ipv4, B, Icmpv4Redirect>),
     EchoRequest(IcmpPacket<Ipv4, B, IcmpEchoRequest>),
-    TimeExceeded(IcmpPacket<Ipv4, B, Icmpv4TimeExceeded>),
+    TimeExceeded(IcmpPacket<Ipv4, B, IcmpTimeExceeded>),
     ParameterProblem(IcmpPacket<Ipv4, B, Icmpv4ParameterProblem>),
     TimestampRequest(IcmpPacket<Ipv4, B, Icmpv4TimestampRequest>),
     TimestampReply(IcmpPacket<Ipv4, B, Icmpv4TimestampReply>),
@@ -139,10 +144,67 @@ impl<B: ByteSlice> Icmpv4Packet<B> {
             DestUnreachable => IcmpDestUnreachable,
             Redirect => Icmpv4Redirect,
             EchoRequest => IcmpEchoRequest,
-            TimeExceeded => Icmpv4TimeExceeded,
+            TimeExceeded => IcmpTimeExceeded,
             ParameterProblem => Icmpv4ParameterProblem,
             TimestampRequest => Icmpv4TimestampRequest,
             TimestampReply  => Icmpv4TimestampReply,
+        ))
+    }
+}
+
+/// An ICMPv6 packet with a dynamic message type.
+///
+/// Unlike `IcmpPacket`, `Icmpv6Packet` only supports ICMPv6, and does not
+/// require a static message type. Each enum variant contains an `IcmpPacket` of
+/// the appropriate static type, making it easier to call `parse` without
+/// knowing the message type ahead of time while still getting the benefits of a
+/// statically-typed packet struct after parsing is complete.
+#[allow(missing_docs)]
+pub enum Icmpv6Packet<B> {
+    DestUnreachable(IcmpPacket<Ipv6, B, IcmpDestUnreachable>),
+    PacketTooBig(IcmpPacket<Ipv6, B, Icmpv6PacketTooBig>),
+    TimeExceeded(IcmpPacket<Ipv6, B, IcmpTimeExceeded>),
+    ParameterProblem(IcmpPacket<Ipv6, B, Icmpv6ParameterProblem>),
+    EchoRequest(IcmpPacket<Ipv6, B, IcmpEchoRequest>),
+    EchoReply(IcmpPacket<Ipv6, B, IcmpEchoReply>),
+    Redirect(IcmpPacket<Ipv6, B, Icmpv6Redirect>),
+}
+
+impl<B: ByteSlice> Icmpv6Packet<B> {
+    /// Parse an ICMP packet.
+    ///
+    /// `parse` parses `bytes` as an ICMP packet and validates the header fields
+    /// and checksum.  It returns the byte range corresponding to the message
+    /// body within `bytes`. This can be useful when extracting the encapsulated
+    /// body to send to another layer of the stack. If the message type has no
+    /// body, then the range is meaningless and should be ignored.
+    pub fn parse(
+        bytes: B,
+        src_ip: Ipv6Addr,
+        dst_ip: Ipv6Addr,
+    ) -> Result<(Icmpv6Packet<B>, Range<usize>), ParseError> {
+        macro_rules! mtch {
+            ($bytes:expr, $src_ip:expr, $dst_ip:expr, $($variant:ident => $type:ty,)*) => {
+                match peek_message_type(&$bytes)? {
+                    $(Icmpv6MessageType::$variant => {
+                        let (packet, range) = IcmpPacket::<Ipv6, B, $type>::parse($bytes, $src_ip, $dst_ip)?;
+                        (Icmpv6Packet::$variant(packet), range)
+                    })*
+                }
+            }
+        }
+
+        Ok(mtch!(
+            bytes,
+            src_ip,
+            dst_ip,
+            DestUnreachable => IcmpDestUnreachable,
+            PacketTooBig => Icmpv6PacketTooBig,
+            TimeExceeded => IcmpTimeExceeded,
+            ParameterProblem => Icmpv6ParameterProblem,
+            EchoRequest => IcmpEchoRequest,
+            EchoReply => IcmpEchoReply,
+            Redirect => Icmpv6Redirect,
         ))
     }
 }
@@ -497,6 +559,14 @@ macro_rules! create_net_enum {
               self as u8
           }
       }
+
+      impl TryFrom<u8> for $t {
+        type Error = ();
+
+        fn try_from(value: u8) -> Result<$t, ()> {
+          $t::from_u8(value).ok_or(())
+        }
+      }
     };
 }
 
@@ -654,7 +724,10 @@ impl_from_bytes_as_bytes_unaligned!(IcmpEchoRequest);
 impl_from_bytes_as_bytes_unaligned!(IcmpEchoReply);
 
 impl_icmp_message!(Ipv4, IcmpEchoRequest, EchoRequest, IcmpUnusedCode, true);
+impl_icmp_message!(Ipv6, IcmpEchoRequest, EchoRequest, IcmpUnusedCode, true);
+
 impl_icmp_message!(Ipv4, IcmpEchoReply, EchoReply, IcmpUnusedCode, true);
+impl_icmp_message!(Ipv6, IcmpEchoReply, EchoReply, IcmpUnusedCode, true);
 
 create_net_enum! {
   Icmpv4DestUnreachableCode,
@@ -717,6 +790,16 @@ impl_icmp_message!(
     true
 );
 
+#[derive(Copy, Clone)]
+#[repr(C, packed)]
+pub struct Icmpv6PacketTooBig {
+    MTU: [u8; 4],
+}
+
+impl HasOriginalPacket for Icmpv6PacketTooBig {}
+impl_from_bytes_as_bytes_unaligned!(Icmpv6PacketTooBig);
+impl_icmp_message!(Ipv6, Icmpv6PacketTooBig, PacketTooBig, IcmpUnusedCode, true);
+
 create_net_enum! {
   Icmpv4RedirectCode,
   RedirectForNetwork: REDIRECT_FOR_NETWORK = 0,
@@ -738,31 +821,58 @@ impl_from_bytes_as_bytes_unaligned!(Icmpv4Redirect);
 
 impl_icmp_message!(Ipv4, Icmpv4Redirect, Redirect, Icmpv4RedirectCode, true);
 
+/// An ICMPv6 Redirect Message.
+#[derive(Copy, Clone)]
+#[repr(C, packed)]
+pub struct Icmpv6Redirect {
+    _reserved: [u8; 4],
+    target_address: Ipv6Addr,
+    destination_address: Ipv6Addr,
+}
+
+impl_from_bytes_as_bytes_unaligned!(Icmpv6Redirect);
+
+impl_icmp_message!(Ipv6, Icmpv6Redirect, Redirect, IcmpUnusedCode, true);
+
 create_net_enum! {
   Icmpv4TimeExceededCode,
   TTLExpired: TTL_EXPIRED = 0,
   FragmentReassemblyTimeExceeded: FRAGMENT_REASSEMBLY_TIME_EXCEEDED = 1,
 }
 
+create_net_enum! {
+  Icmpv6TimeExceededCode,
+  HopLimitExceeded: HOP_LIMIT_EXCEEDED = 0,
+  FragmentReassemblyTimeExceeded: FRAGMENT_REASSEMBLY_TIME_EXCEEDED = 1,
+}
+
 /// An ICMPv4 Time Exceeded message.
 #[derive(Copy, Clone)]
 #[repr(C, packed)]
-pub struct Icmpv4TimeExceeded {
+pub struct IcmpTimeExceeded {
     // Rest of Header in ICMP, unused in ICMPv6
     _unused: [u8; 4],
-    /* Body of Icmpv4TimeExceeded is entirely variable-length, so is stored in
+    /* Body of IcmpTimeExceeded is entirely variable-length, so is stored in
      * the message_body field in IcmpPacket */
 }
 
-impl HasOriginalPacket for Icmpv4TimeExceeded {}
+impl HasOriginalPacket for IcmpTimeExceeded {}
 
-impl_from_bytes_as_bytes_unaligned!(Icmpv4TimeExceeded);
+impl_from_bytes_as_bytes_unaligned!(IcmpTimeExceeded);
 
 impl_icmp_message!(
     Ipv4,
-    Icmpv4TimeExceeded,
+    IcmpTimeExceeded,
     TimeExceeded,
     Icmpv4TimeExceededCode,
+    true
+);
+
+impl_icmp_message!(
+    Ipv6,
+    IcmpTimeExceeded,
+    TimeExceeded,
+    Icmpv6TimeExceededCode,
     true
 );
 
@@ -792,6 +902,32 @@ impl_icmp_message!(
     Icmpv4ParameterProblem,
     ParameterProblem,
     Icmpv4ParameterProblemCode,
+    true
+);
+
+create_net_enum! {
+  Icmpv6ParameterProblemCode,
+  ErroneousHeaderField: ERRONEOUS_HEADER_FIELD = 0,
+  UnrecognizedNextHeaderType: UNRECOGNIZED_NEXT_HEADER_TYPE = 1,
+  UnrecognizedIpv6Option: UNRECOGNIZED_IPV6_OPTION = 2,
+}
+
+/// An ICMPv6 Parameter Problem message.
+#[derive(Copy, Clone)]
+#[repr(C, packed)]
+pub struct Icmpv6ParameterProblem {
+    pointer: [u8; 4],
+}
+
+impl HasOriginalPacket for Icmpv6ParameterProblem {}
+
+impl_from_bytes_as_bytes_unaligned!(Icmpv6ParameterProblem);
+
+impl_icmp_message!(
+    Ipv6,
+    Icmpv6ParameterProblem,
+    ParameterProblem,
+    Icmpv6ParameterProblemCode,
     true
 );
 
@@ -870,11 +1006,30 @@ impl_icmp_message!(
 mod tests {
     use super::*;
     use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketSerializer};
+    use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketSerializer};
     use crate::wire::util::{InnerSerializationRequest, SerializationRequest};
 
     fn serialize_to_bytes<B: ByteSlice, M: IcmpMessage<Ipv4>>(
         src_ip: Ipv4Addr, dst_ip: Ipv4Addr, icmp: &IcmpPacket<Ipv4, B, M>,
         serializer: Ipv4PacketSerializer,
+    ) -> Vec<u8> {
+        let icmp_serializer = icmp.serializer(src_ip, dst_ip);
+        let mut data = vec![0; icmp_serializer.max_header_bytes() + icmp.message_body.len()];
+        let body_offset = data.len() - icmp.message_body.len();
+        (&mut data[body_offset..]).copy_from_slice(&icmp.message_body);
+        BufferAndRange::new_from(&mut data[..], body_offset..)
+            .encapsulate(icmp_serializer)
+            .encapsulate(serializer)
+            .serialize_outer()
+            .as_ref()
+            .to_vec()
+    }
+
+    fn serialize_v6_to_bytes<B: ByteSlice, M: IcmpMessage<Ipv6>>(
+        src_ip: Ipv6Addr,
+        dst_ip: Ipv6Addr,
+        icmp: &IcmpPacket<Ipv6, B, M>,
+        serializer: Ipv6PacketSerializer,
     ) -> Vec<u8> {
         let icmp_serializer = icmp.serializer(src_ip, dst_ip);
         let mut data = vec![0; icmp_serializer.max_header_bytes() + icmp.message_body.len()];
@@ -1002,11 +1157,27 @@ mod tests {
         let (src_ip, dst_ip, ttl) = (ip.src_ip(), ip.dst_ip(), ip.ttl());
         // TODO: Check range
         let (icmp, _) =
-            IcmpPacket::<_, _, Icmpv4TimeExceeded>::parse(ip.body(), src_ip, dst_ip).unwrap();
+            IcmpPacket::<_, _, IcmpTimeExceeded>::parse(ip.body(), src_ip, dst_ip).unwrap();
         assert_eq!(icmp.code(), Icmpv4TimeExceededCode::TTLExpired);
         assert_eq!(icmp.original_packet_body(), ORIGIN_DATA);
 
         let data = serialize_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());
         assert_eq!(&data[..], IP_PACKET_BYTES);
+    }
+
+    #[test]
+    fn test_parse_and_serialize_echo_request_ipv6() {
+        use crate::wire::testdata::icmp_echo_v6::*;
+        let (ip, _) = Ipv6Packet::parse(REQUEST_IP_PACKET_BYTES).unwrap();
+        let (src_ip, dst_ip, hop_limit) = (ip.src_ip(), ip.dst_ip(), ip.hop_limit());
+        // TODO: Check range
+        let (icmp, _) =
+            IcmpPacket::<_, _, IcmpEchoRequest>::parse(ip.body(), src_ip, dst_ip).unwrap();
+        assert_eq!(icmp.message_body(), ECHO_DATA);
+        assert_eq!(icmp.message().id_seq.id(), IDENTIFIER);
+        assert_eq!(icmp.message().id_seq.seq(), SEQUENCE_NUM);
+
+        let data = serialize_v6_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());
+        assert_eq!(&data[..], REQUEST_IP_PACKET_BYTES);
     }
 }
