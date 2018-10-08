@@ -29,6 +29,7 @@ use crate::{
     cobalt_reporter::CobaltSender,
     device_watch::{self, NewIfaceDevice},
     future_util::ConcurrentTasks,
+    mlme_query_proxy::MlmeQueryProxy,
     Never,
     station,
     stats_scheduler::{self, StatsScheduler},
@@ -54,6 +55,7 @@ pub struct IfaceDevice {
     pub sme_server: SmeServer,
     pub stats_sched: StatsScheduler,
     pub device: wlan_dev::Device,
+    pub mlme_query: MlmeQueryProxy,
 }
 
 pub type PhyMap = WatchableMap<u16, PhyDevice>;
@@ -124,6 +126,7 @@ async fn query_and_serve_iface(new_iface: NewIfaceDevice, ifaces: &IfaceMap, cob
         }
     };
     let (stats_sched, stats_reqs) = stats_scheduler::create_scheduler();
+    let mlme_query = MlmeQueryProxy::new(proxy.clone());
     let role = query_resp.role;
     let (sme, sme_fut) = match create_sme(proxy, event_stream, query_resp, stats_reqs, cobalt_sender) {
         Ok(x) => x,
@@ -139,6 +142,7 @@ async fn query_and_serve_iface(new_iface: NewIfaceDevice, ifaces: &IfaceMap, cob
         sme_server: sme,
         stats_sched,
         device,
+        mlme_query,
     });
 
     let r = await!(sme_fut);

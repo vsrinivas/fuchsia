@@ -14,6 +14,7 @@ mod device_watch;
 mod fidl_util;
 mod future_util;
 mod logger;
+mod mlme_query_proxy;
 mod service;
 mod station;
 mod stats_scheduler;

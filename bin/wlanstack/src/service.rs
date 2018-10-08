@@ -7,6 +7,7 @@ use fidl::encoding::OutOfLine;
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceServiceRequest};
 use fidl_fuchsia_wlan_device as fidl_wlan_dev;
+use fidl_fuchsia_wlan_mlme::{MinstrelStatsResponse};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::channel::mpsc::UnboundedReceiver;
@@ -111,6 +112,14 @@ async fn handle_fidl_request(request: fidl_svc::DeviceServiceRequest,
                 },
                 Err(status) => responder.send(status.into_raw(), None),
             }
+        },
+        DeviceServiceRequest::GetMinstrelList{ iface_id, responder } => {
+            let (status, mut peers) = await!(list_minstrel_peers(&ifaces, iface_id));
+            responder.send(status.into_raw(), &mut peers)
+        },
+        DeviceServiceRequest::GetMinstrelStats{ iface_id, peer_addr, responder } => {
+            let (status, mut peer) = await!(get_minstrel_stats(&ifaces, iface_id, peer_addr));
+            responder.send(status.into_raw(), peer.as_mut().map(|x| OutOfLine(x.as_mut())))
         },
         DeviceServiceRequest::WatchDevices{ watcher, control_handle: _ } => {
             watcher_service.add_watcher(watcher)
@@ -251,6 +260,31 @@ async fn get_iface_stats(ifaces: &IfaceMap, iface_id: u16)
     await!(iface.stats_sched.get_stats())
 }
 
+async fn list_minstrel_peers(ifaces: &IfaceMap, iface_id: u16)
+    -> (zx::Status, fidl_fuchsia_wlan_minstrel::Peers) {
+    let empty_peer_list = fidl_fuchsia_wlan_minstrel::Peers { peers: vec![] };
+    let iface = match ifaces.get(&iface_id) {
+        Some(iface) => iface,
+        None => return (zx::Status::NOT_FOUND, empty_peer_list),
+    };
+    match await!(iface.mlme_query.get_minstrel_list()) {
+        Ok(resp) => (zx::Status::OK, resp.peers),
+        Err(_) => (zx::Status::INTERNAL, empty_peer_list)
+    }
+}
+
+async fn get_minstrel_stats(ifaces: &IfaceMap, iface_id: u16, mac_addr: [u8; 6])
+    -> (zx::Status, Option<Box<fidl_fuchsia_wlan_minstrel::Peer>>) {
+    let iface = match ifaces.get(&iface_id) {
+        Some(iface) => iface,
+        None => return (zx::Status::NOT_FOUND, None),
+    };
+    match await!(iface.mlme_query.get_minstrel_peer(mac_addr)) {
+        Ok(MinstrelStatsResponse { peer }) => (zx::Status::OK, peer),
+        Err(_) => (zx::Status::INTERNAL, None),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -258,13 +292,17 @@ mod tests {
     use fidl::endpoints::create_proxy;
     use fidl_fuchsia_wlan_device::{PhyRequest, PhyRequestStream};
     use fidl_fuchsia_wlan_device_service::{IfaceListItem, PhyListItem};
+    use fidl_fuchsia_wlan_mlme::MlmeMarker;
     use fidl_fuchsia_wlan_sme as fidl_sme;
     use fuchsia_wlan_dev as wlan_dev;
     use futures::channel::mpsc;
     use futures::task::Poll;
     use pin_utils::pin_mut;
 
-    use crate::stats_scheduler::{self, StatsRequest};
+    use crate::{
+        mlme_query_proxy::MlmeQueryProxy,
+        stats_scheduler::{self, StatsRequest},
+    };
 
     #[test]
     fn list_two_phys() {
@@ -537,10 +575,13 @@ mod tests {
             .expect(&format!("fake_client_iface: failed to open {}", path));
         let (sme_sender, sme_receiver) = mpsc::unbounded();
         let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
+        let (proxy, _server) = create_proxy::<MlmeMarker>().expect("Error creating proxy");
+        let mlme_query = MlmeQueryProxy::new(proxy);
         let iface = IfaceDevice {
             sme_server: device::SmeServer::Client(sme_sender),
             stats_sched,
-            device
+            device,
+            mlme_query,
         };
         FakeClientIface {
             iface,
@@ -560,10 +601,13 @@ mod tests {
             .expect(&format!("fake_client_iface: failed to open {}", path));
         let (sme_sender, sme_receiver) = mpsc::unbounded();
         let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
+        let (proxy, _server) = create_proxy::<MlmeMarker>().expect("Error creating proxy");
+        let mlme_query = MlmeQueryProxy::new(proxy);
         let iface = IfaceDevice {
             sme_server: device::SmeServer::Ap(sme_sender),
             stats_sched,
-            device
+            device,
+            mlme_query,
         };
         FakeApIface {
             iface,
