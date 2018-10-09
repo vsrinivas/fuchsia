@@ -21,9 +21,13 @@
 #include <stdio.h>
 #include <third_party/crashpad/client/settings.h>
 #include <third_party/crashpad/handler/fuchsia/crash_report_exception_handler.h>
+#include <third_party/crashpad/handler/minidump_to_upload_parameters.h>
 #include <third_party/crashpad/minidump/minidump_file_writer.h>
+#include <third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h>
 #include <third_party/crashpad/third_party/mini_chromium/mini_chromium/base/files/file_path.h>
 #include <third_party/crashpad/third_party/mini_chromium/mini_chromium/base/files/scoped_file.h>
+#include <third_party/crashpad/util/file/file_io.h>
+#include <third_party/crashpad/util/file/file_reader.h>
 #include <third_party/crashpad/util/misc/metrics.h>
 #include <third_party/crashpad/util/misc/uuid.h>
 #include <third_party/crashpad/util/net/http_body.h>
@@ -182,14 +186,125 @@ std::map<std::string, std::string> GetAnnotations(
   };
 }
 
+int UploadReport(
+    const std::unique_ptr<crashpad::CrashReportDatabase>& database,
+    std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report,
+    const std::map<std::string, std::string>& annotations) {
+  // We have to build the MIME multipart message ourselves as all the public
+  // Crashpad helpers are asynchronous and we won't be able to know the upload
+  // status nor the server report ID.
+  crashpad::HTTPMultipartBuilder http_multipart_builder;
+  http_multipart_builder.SetGzipEnabled(true);
+  for (const auto& kv : annotations) {
+    http_multipart_builder.SetFormData(kv.first, kv.second);
+  }
+  for (const auto& kv : report->GetAttachments()) {
+    http_multipart_builder.SetFileAttachment(kv.first, kv.first, kv.second,
+                                             "application/octet-stream");
+  }
+  http_multipart_builder.SetFileAttachment(
+      "upload_file_minidump", report->uuid.ToString() + ".dmp",
+      report->Reader(), "application/octet-stream");
+
+  std::unique_ptr<crashpad::HTTPTransport> http_transport(
+      crashpad::HTTPTransport::Create());
+  crashpad::HTTPHeaders content_headers;
+  http_multipart_builder.PopulateContentHeaders(&content_headers);
+  for (const auto& content_header : content_headers) {
+    http_transport->SetHeader(content_header.first, content_header.second);
+  }
+  http_transport->SetBodyStream(http_multipart_builder.GetBodyStream());
+  http_transport->SetTimeout(60.0);  // 1 minute.
+  http_transport->SetURL(kURL);
+
+  std::string server_report_id;
+  if (!http_transport->ExecuteSynchronously(&server_report_id)) {
+    database->SkipReportUpload(
+        report->uuid,
+        crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
+    FX_LOGS(ERROR) << "error uploading local crash report, ID "
+                   << report->uuid.ToString();
+    return EXIT_FAILURE;
+  }
+  database->RecordUploadComplete(std::move(report), server_report_id);
+  FX_LOGS(INFO) << "successfully uploaded crash report at "
+                   "https://crash.corp.google.com/"
+                << server_report_id;
+
+  return EXIT_SUCCESS;
+}
+
+std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport>
+GetUploadReport(const std::unique_ptr<crashpad::CrashReportDatabase>& database,
+                const crashpad::UUID& local_report_id) {
+  std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report;
+  const crashpad::CrashReportDatabase::OperationStatus database_status =
+      database->GetReportForUploading(local_report_id, &report);
+  if (database_status != crashpad::CrashReportDatabase::kNoError) {
+    FX_LOGS(ERROR) << "error loading local crash report, ID "
+                   << local_report_id.ToString() << " (" << database_status
+                   << ")";
+    return nullptr;
+  }
+  return report;
+}
+
+int UploadReportForUserspace(
+    const std::unique_ptr<crashpad::CrashReportDatabase>& database,
+    const crashpad::UUID& local_report_id) {
+  // Retrieve local report as an "upload" report.
+  std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report =
+      GetUploadReport(database, local_report_id);
+  if (!report) {
+    return EXIT_FAILURE;
+  }
+
+  // For userspace, we read back the annotations from the minidump instead of
+  // passing them as argument like for kernel crashes because the Crashpad
+  // handler augmented them with the modules' annotations.
+  crashpad::FileReader* reader = report->Reader();
+  crashpad::FileOffset start_offset = reader->SeekGet();
+  crashpad::ProcessSnapshotMinidump minidump_process_snapshot;
+  if (!minidump_process_snapshot.Initialize(reader)) {
+    database->SkipReportUpload(
+        report->uuid,
+        crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
+    FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
+                   << local_report_id.ToString();
+    return EXIT_FAILURE;
+  }
+  const std::map<std::string, std::string> annotations =
+      crashpad::BreakpadHTTPFormParametersFromMinidump(
+          &minidump_process_snapshot);
+  if (!reader->SeekSet(start_offset)) {
+    database->SkipReportUpload(
+        report->uuid,
+        crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
+    FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
+                   << local_report_id.ToString();
+    return EXIT_FAILURE;
+  }
+
+  return UploadReport(database, std::move(report), annotations);
+}
+
+int UploadReportForKernel(
+    const std::unique_ptr<crashpad::CrashReportDatabase>& database,
+    const crashpad::UUID& local_report_id,
+    const std::map<std::string, std::string>& annotations) {
+  // Retrieve local report as an "upload" report.
+  std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report =
+      GetUploadReport(database, local_report_id);
+  if (!report) {
+    return EXIT_FAILURE;
+  }
+  return UploadReport(database, std::move(report), annotations);
+}
+
 }  // namespace
 
 int HandleException(zx::process process, zx::thread thread,
                     zx::port exception_port) {
-  // On Fuchsia, the crash reporter does not stay resident, so we don't run
-  // crashpad_handler here. Instead, directly use CrashReportExceptionHandler
-  // and terminate when it has completed.
-
   const std::string package_name = GetPackageName(process);
   FX_LOGS(INFO) << "generating crash report for exception thrown by "
                 << package_name;
@@ -198,17 +313,6 @@ int HandleException(zx::process process, zx::thread thread,
   if (!database) {
     return EXIT_FAILURE;
   }
-
-  ScopedStoppable upload_thread;
-  crashpad::CrashReportUploadThread::Options upload_thread_options;
-  upload_thread_options.identify_client_via_url = true;
-  upload_thread_options.rate_limit = false;
-  upload_thread_options.upload_gzip = true;
-  upload_thread_options.watch_pending_reports = true;
-
-  upload_thread.Reset(new crashpad::CrashReportUploadThread(
-      database.get(), kURL, upload_thread_options));
-  upload_thread.Get()->Start();
 
   // Prepare annotations and attachments.
   const std::map<std::string, std::string> annotations =
@@ -219,15 +323,28 @@ int HandleException(zx::process process, zx::thread thread,
     attachments["log"] = base::FilePath(temp_log_file.get());
   }
 
+  // Set minidump and create local crash report.
+  //   * The annotations will be stored in the minidump of the report and
+  //     augmented with modules' annotations.
+  //   * The attachments will be stored in the report.
+  // We don't pass an upload_thread so we can do the upload ourselves
+  // synchronously.
   crashpad::CrashReportExceptionHandler exception_handler(
-      database.get(),
-      static_cast<crashpad::CrashReportUploadThread*>(upload_thread.Get()),
-      &annotations, &attachments, nullptr);
+      database.get(), /*upload_thread=*/nullptr, &annotations, &attachments,
+      /*user_stream_data_sources=*/nullptr);
+  crashpad::UUID local_report_id;
+  if (!exception_handler.HandleExceptionHandles(
+          process, thread, zx::unowned_port(exception_port),
+          &local_report_id)) {
+    database->SkipReportUpload(
+        local_report_id,
+        crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
+    FX_LOGS(ERROR) << "error handling exception for local crash report, ID "
+                   << local_report_id.ToString();
+    return EXIT_FAILURE;
+  }
 
-  return exception_handler.HandleExceptionHandles(
-             process, thread, zx::unowned_port(exception_port))
-             ? EXIT_SUCCESS
-             : EXIT_FAILURE;
+  return UploadReportForUserspace(database, local_report_id);
 }
 
 int Process(fuchsia::mem::Buffer crashlog) {
@@ -276,55 +393,7 @@ int Process(fuchsia::mem::Buffer crashlog) {
     return EXIT_FAILURE;
   }
 
-  // Switch to an "upload" report.
-  std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport>
-      upload_report;
-  database_status =
-      database->GetReportForUploading(local_report_id, &upload_report);
-  if (database_status != crashpad::CrashReportDatabase::kNoError) {
-    FX_LOGS(ERROR) << "error loading local crash report, ID "
-                   << local_report_id.ToString() << " (" << database_status
-                   << ")";
-    return EXIT_FAILURE;
-  }
-
-  // Upload report.
-  // We have to build the MIME multipart message ourselves as all the Crashpad
-  // helpers expect some process to build a minidump from and we don't have one.
-  crashpad::HTTPMultipartBuilder http_multipart_builder;
-  http_multipart_builder.SetGzipEnabled(true);
-  for (const auto& kv : annotations) {
-    http_multipart_builder.SetFormData(kv.first, kv.second);
-  }
-  for (const auto& kv : upload_report->GetAttachments()) {
-    http_multipart_builder.SetFileAttachment(kv.first, kv.first, kv.second,
-                                             "application/octet-stream");
-  }
-  std::unique_ptr<crashpad::HTTPTransport> http_transport(
-      crashpad::HTTPTransport::Create());
-  crashpad::HTTPHeaders content_headers;
-  http_multipart_builder.PopulateContentHeaders(&content_headers);
-  for (const auto& content_header : content_headers) {
-    http_transport->SetHeader(content_header.first, content_header.second);
-  }
-  http_transport->SetBodyStream(http_multipart_builder.GetBodyStream());
-  http_transport->SetTimeout(60.0);  // 1 minute.
-  http_transport->SetURL(kURL);
-
-  std::string server_report_id;
-  if (!http_transport->ExecuteSynchronously(&server_report_id)) {
-    database->SkipReportUpload(
-        local_report_id, crashpad::Metrics::CrashSkippedReason::kUploadFailed);
-    FX_LOGS(ERROR) << "error uploading local crash report, ID "
-                   << local_report_id.ToString();
-    return EXIT_FAILURE;
-  }
-  database->RecordUploadComplete(std::move(upload_report), server_report_id);
-  FX_LOGS(INFO) << "successfully uploaded crash report at "
-                   "https://crash.corp.google.com/"
-                << server_report_id;
-
-  return EXIT_SUCCESS;
+  return UploadReportForKernel(database, local_report_id, annotations);
 }
 
 class AnalyzerImpl : public fuchsia::crash::Analyzer {
