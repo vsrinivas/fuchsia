@@ -7,9 +7,5 @@
 # https://opensource.org/licenses/MIT
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-BUILD_DIR="${DIR}/../build-arm64"
 
-BOOT_IMG=${BUILD_DIR}/mt8167s_ref-boot.img
-VBMETA_IMG=${BUILD_DIR}/mt8167s_ref-vbmeta.img
-
-fastboot flash boot_a ${BOOT_IMG} && fastboot flash vbmeta_a ${VBMETA_IMG} && fastboot reboot
+exec $DIR/flash-avb -b mt8167s_ref
