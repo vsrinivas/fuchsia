@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/device/ethernet.h>
+#include <zircon/ethernet/c/fidl.h>
 
 #include "garnet/lib/machina/phys_mem_fake.h"
 #include "garnet/lib/machina/virtio_net.h"
@@ -19,7 +19,7 @@ class VirtioNetFake : public VirtioNet {
   VirtioNetFake(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
       : VirtioNet(phys_mem, dispatcher) {}
 
-  void SetUp(const eth_fifos_t& fifos) {
+  void SetUp(const zircon_ethernet_Fifos& fifos) {
     ASSERT_EQ(InitIoBuffer(kVirtioNetQueueSize * 2, 2048), ZX_OK);
     ASSERT_EQ(WaitOnFifos(fifos), ZX_OK);
   }
@@ -32,11 +32,11 @@ class VirtioNetTest : public ::gtest::TestLoopFixture {
         queue_(net_.rx_queue(), kVirtioNetQueueSize) {}
 
   void SetUp() override {
-    ASSERT_EQ(zx_fifo_create(kVirtioNetQueueSize, sizeof(eth_fifo_entry_t), 0,
-                             &fifos_.rx_fifo, &fifo_[0]),
+    ASSERT_EQ(zx_fifo_create(kVirtioNetQueueSize, sizeof(zircon_ethernet_FifoEntry), 0,
+                             &fifos_.rx, &fifo_[0]),
               ZX_OK);
-    ASSERT_EQ(zx_fifo_create(kVirtioNetQueueSize, sizeof(eth_fifo_entry_t), 0,
-                             &fifos_.tx_fifo, &fifo_[1]),
+    ASSERT_EQ(zx_fifo_create(kVirtioNetQueueSize, sizeof(zircon_ethernet_FifoEntry), 0,
+                             &fifos_.tx, &fifo_[1]),
               ZX_OK);
     fifos_.rx_depth = kVirtioNetQueueSize;
     fifos_.tx_depth = kVirtioNetQueueSize;
@@ -48,7 +48,7 @@ class VirtioNetTest : public ::gtest::TestLoopFixture {
   VirtioNetFake net_;
   VirtioQueueFake queue_;
   // Fifo endpoints to provide to the net device.
-  eth_fifos_t fifos_;
+  zircon_ethernet_Fifos fifos_;
   // Fifo endpoints to simulate ethernet device activity.
   zx_handle_t fifo_[2];
 };
@@ -61,7 +61,7 @@ TEST_F(VirtioNetTest, DrainQueue) {
   // Drain the queue, this will pull a descriptor from the queue and deposit
   // an entry in the fifo.
   size_t count;
-  eth_fifo_entry_t entry[fifos_.rx_depth];
+  zircon_ethernet_FifoEntry entry[fifos_.rx_depth];
 
   // We should have no work at this point as all the buffers will be owned by
   // the ethernet device.
@@ -95,7 +95,7 @@ TEST_F(VirtioNetTest, HeaderOnDifferentBuffer) {
   RunLoopUntilIdle();
 
   size_t count;
-  eth_fifo_entry_t entry[fifos_.rx_depth];
+  zircon_ethernet_FifoEntry entry[fifos_.rx_depth];
 
   // Read the fifo entry.
   ASSERT_EQ(ZX_OK, zx_fifo_read(fifo_[0], sizeof(entry[0]), entry,
@@ -118,7 +118,7 @@ TEST_F(VirtioNetTest, InvalidDesc) {
 
   // Expect nothing is written to the FIFO.
   RunLoopUntilIdle();
-  eth_fifo_entry_t entry[fifos_.rx_depth];
+  zircon_ethernet_FifoEntry entry[fifos_.rx_depth];
   ASSERT_EQ(
       zx_fifo_read(fifo_[0], sizeof(entry[0]), entry, countof(entry), nullptr),
       ZX_ERR_SHOULD_WAIT);

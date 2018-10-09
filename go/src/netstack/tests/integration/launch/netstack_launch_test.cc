@@ -12,7 +12,6 @@
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/socket.h>
-#include <zircon/device/ethernet.h>
 #include <zircon/device/ethertap.h>
 #include <zircon/status.h>
 #include <zircon/types.h>

@@ -8,9 +8,11 @@
 #include <string.h>
 #include <atomic>
 
+#include <fbl/unique_fd.h>
+#include <lib/fdio/util.h>
 #include <trace-engine/types.h>
 #include <trace/event.h>
-#include <zircon/device/ethernet.h>
+#include <zircon/ethernet/c/fidl.h>
 #include <zx/fifo.h>
 
 #include "lib/fxl/logging.h"
@@ -157,7 +159,7 @@ void VirtioNet::Stream::OnQueueReady(zx_status_t status, uint16_t index) {
         .offset = static_cast<uint32_t>(io_offset),
         .length = static_cast<uint16_t>(packet_length),
         .flags = 0,
-        .cookie = reinterpret_cast<void*>(index),
+        .cookie = index,
     };
   } while (fifo_num_entries_ < fifo_entries_.size() &&
            queue_->NextAvail(&index) == ZX_OK);
@@ -235,7 +237,7 @@ void VirtioNet::Stream::OnFifoReadable(async_dispatcher_t* dispatcher,
 
   // Dequeue entries for the Ethernet device.
   size_t num_entries_read;
-  eth_fifo_entry_t entries[fifo_entries_.size()];
+  zircon_ethernet_FifoEntry entries[fifo_entries_.size()];
   status = zx_fifo_read(fifo_, sizeof(entries[0]), entries, countof(entries),
                         &num_entries_read);
   if (status == ZX_ERR_SHOULD_WAIT) {
@@ -325,7 +327,7 @@ void VirtioNet::IoBuffer::Free(uintptr_t offset) {
 }
 
 VirtioNet::VirtioNet(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
-    // TODO(abdulla): Support VIRTIO_NET_F_STATUS via IOCTL_ETHERNET_GET_STATUS.
+    // TODO(abdulla): Support VIRTIO_NET_F_STATUS via GetStatus.
     : VirtioInprocessDevice(phys_mem, VIRTIO_NET_F_MAC),
       rx_stream_(phys_mem, dispatcher, rx_queue(), rx_trace_flow_id(),
                  &io_buf_),
@@ -336,8 +338,8 @@ VirtioNet::VirtioNet(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
 }
 
 VirtioNet::~VirtioNet() {
-  zx_handle_close(fifos_.tx_fifo);
-  zx_handle_close(fifos_.rx_fifo);
+  zx_handle_close(fifos_.tx);
+  zx_handle_close(fifos_.rx);
 }
 
 zx_status_t VirtioNet::InitIoBuffer(size_t count, size_t elem_size) {
@@ -345,24 +347,35 @@ zx_status_t VirtioNet::InitIoBuffer(size_t count, size_t elem_size) {
 }
 
 zx_status_t VirtioNet::Start(const char* path) {
-  net_fd_.reset(open(path, O_RDONLY));
-  if (!net_fd_) {
-    return ZX_ERR_IO;
+  net_svc_.reset();
+
+  {
+    fbl::unique_fd fd(open(path, O_RDONLY));
+    if (!fd) {
+      return ZX_ERR_IO;
+    }
+
+    zx_status_t status = fdio_get_service_handle(fd.release(),
+                                                 net_svc_.reset_and_get_address());
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
-  eth_info_t info;
-  ssize_t ret = ioctl_ethernet_get_info(net_fd_.get(), &info);
-  if (ret < 0) {
+  zircon_ethernet_Info info;
+  zx_status_t status = zircon_ethernet_DeviceGetInfo(net_svc_.get(), &info);
+  if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get Ethernet device info";
-    return ret;
+    return status;
   }
   // TODO(abdulla): Use a different MAC address from the host.
-  memcpy(config_.mac, info.mac, sizeof(config_.mac));
+  memcpy(config_.mac, info.mac.octets, sizeof(config_.mac));
 
-  ret = ioctl_ethernet_get_fifos(net_fd_.get(), &fifos_);
-  if (ret < 0) {
+  zx_status_t call_status = ZX_OK;
+  status = zircon_ethernet_DeviceGetFifos(net_svc_.get(), &call_status, &fifos_);
+  if (status != ZX_OK || call_status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get FIFOs from Ethernet device";
-    return ret;
+    return status == ZX_OK ? call_status : status;
   }
 
   // We make some assumptions on sizing our IO buf based on how the ethernet
@@ -374,7 +387,7 @@ zx_status_t VirtioNet::Start(const char* path) {
   // the RX FIFO, tx_depth enqueued in the TX FIFO and tx_depth currently in
   // flight on the hardware. This yields the below calculation and with current
   // FIFO depths of 256 will yield a 1.5MiB vmo.
-  zx_status_t status = InitIoBuffer((fifos_.rx_depth + fifos_.tx_depth * 2), kMaxPacketSize);
+  status = InitIoBuffer((fifos_.rx_depth + fifos_.tx_depth * 2), kMaxPacketSize);
   if (status != ZX_OK) {
     return status;
   }
@@ -384,32 +397,31 @@ zx_status_t VirtioNet::Start(const char* path) {
     FXL_LOG(ERROR) << "Failed to duplicate VMO for ethernet";
     return status;
   }
-  zx_handle_t vmo = vmo_dup.release();
-  ret = ioctl_ethernet_set_iobuf(net_fd_.get(), &vmo);
-  if (ret < 0) {
+
+  status = zircon_ethernet_DeviceSetIOBuffer(net_svc_.get(), vmo_dup.release(), &call_status);
+  if (status != ZX_OK || call_status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to set VMO for Ethernet device";
-    zx_handle_close(vmo);
-    return ret;
+    return status == ZX_OK ? call_status : status;
   }
-  ret = ioctl_ethernet_set_client_name(net_fd_.get(), "machina", 7);
-  if (ret < 0) {
+  status = zircon_ethernet_DeviceSetClientName(net_svc_.get(), "machina", 7, &call_status);
+  if (status != ZX_OK || call_status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to set client name for Ethernet device";
-    return ret;
+    return status == ZX_OK ? call_status : status;
   }
-  ret = ioctl_ethernet_start(net_fd_.get());
-  if (ret < 0) {
+  status = zircon_ethernet_DeviceStart(net_svc_.get(), &call_status);
+  if (status != ZX_OK || call_status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to start communication with Ethernet device";
-    return ret;
+    return status == ZX_OK ? call_status : status;
   }
 
   FXL_LOG(INFO) << "Polling device " << path << " for Ethernet frames";
   return WaitOnFifos(fifos_);
 }
 
-zx_status_t VirtioNet::WaitOnFifos(const eth_fifos_t& fifos) {
-  zx_status_t status = rx_stream_.Start(fifos.rx_fifo, fifos.rx_depth, true);
+zx_status_t VirtioNet::WaitOnFifos(const zircon_ethernet_Fifos& fifos) {
+  zx_status_t status = rx_stream_.Start(fifos.rx, fifos.rx_depth, true);
   if (status == ZX_OK) {
-    status = tx_stream_.Start(fifos.tx_fifo, fifos.tx_depth, false);
+    status = tx_stream_.Start(fifos.tx, fifos.tx_depth, false);
   }
   return status;
 }

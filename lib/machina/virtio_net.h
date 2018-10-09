@@ -10,10 +10,11 @@
 
 #include <fbl/unique_fd.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/zx/channel.h>
 #include <trace-engine/types.h>
 #include <virtio/net.h>
 #include <virtio/virtio_ids.h>
-#include <zircon/device/ethernet.h>
+#include <zircon/ethernet/c/fidl.h>
 
 #include "garnet/lib/machina/virtio_device.h"
 #include "garnet/lib/machina/virtio_queue_waiter.h"
@@ -48,13 +49,13 @@ class VirtioNet
   // the ethdriver. This is protected to allow for a mock VirtioNet to be easily
   // constructed for testing without needing a fully mocked ethernet driver.
   zx_status_t InitIoBuffer(size_t count, size_t elem_size);
-  zx_status_t WaitOnFifos(const eth_fifos_t& fifos);
+  zx_status_t WaitOnFifos(const zircon_ethernet_Fifos& fifos);
 
  private:
   // Ethernet control plane.
-  eth_fifos_t fifos_ = {};
+  zircon_ethernet_Fifos fifos_ = {};
   // Connection to the Ethernet device.
-  fbl::unique_fd net_fd_;
+  zx::channel net_svc_;
 
   std::atomic<trace_async_id_t>* rx_trace_flow_id() {
     return trace_flow_id(kVirtioNetRxQueueIndex);
@@ -111,7 +112,7 @@ class VirtioNet
     bool rx_ = false;
     IoBuffer* io_buf_;
 
-    std::vector<eth_fifo_entry_t> fifo_entries_;
+    std::vector<zircon_ethernet_FifoEntry> fifo_entries_;
     // Number of entries in |fifo_entries_| that have not yet been written
     // to the fifo.
     size_t fifo_num_entries_ = 0;
