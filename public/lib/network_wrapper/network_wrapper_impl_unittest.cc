@@ -17,6 +17,7 @@
 #include "lib/backoff/testing/test_backoff.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/optional.h"
+#include "lib/fit/defer.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
@@ -90,22 +91,6 @@ class FakeNetworkWrapper : public http::HttpService {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeNetworkWrapper);
 };
 
-class DestroyWatcher : public fxl::RefCountedThreadSafe<DestroyWatcher> {
- public:
-  static fxl::RefPtr<DestroyWatcher> Create(fit::closure callback) {
-    return fxl::AdoptRef(new DestroyWatcher(std::move(callback)));
-  }
-
- private:
-  explicit DestroyWatcher(fit::closure callback)
-      : callback_(std::move(callback)) {}
-  ~DestroyWatcher() { callback_(); }
-
-  fit::closure callback_;
-
-  FRIEND_REF_COUNTED_THREAD_SAFE(DestroyWatcher);
-};
-
 class NetworkWrapperImplTest : public gtest::TestLoopFixture {
  public:
   NetworkWrapperImplTest()
@@ -165,7 +150,7 @@ TEST_F(NetworkWrapperImplTest, SimpleRequest) {
         SetStringResponse("Hello", 200);
         return NewRequest("GET", "http://example.com");
       },
-      [this, destroy_watcher = DestroyWatcher::Create([&callback_destroyed] {
+      [this, destroy_watcher = fit::defer([&callback_destroyed] {
                callback_destroyed = true;
              }),
        &response](http::URLResponse received_response) {
@@ -187,7 +172,7 @@ TEST_F(NetworkWrapperImplTest, CancelRequest) {
         return NewRequest("GET", "http://example.com");
       },
       [this, &received_response,
-       destroy_watcher = DestroyWatcher::Create([this, &callback_destroyed] {
+       destroy_watcher = fit::defer([this, &callback_destroyed] {
          callback_destroyed = true;
        })](http::URLResponse) { received_response = true; });
 
