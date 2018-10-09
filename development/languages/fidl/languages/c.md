@@ -1,3 +1,4 @@
+
 # FIDL: C Language Bindings
 
 This document is a description of the Fuchsia Interface Definition Language
@@ -256,7 +257,7 @@ Result is...
     *   a pointer reference in **bytes** does not have the expected value
         according to the traversal
     *   `FIDL_RECURSION_DEPTH` was exceeded (see
-        [wire format](https://fuchsia.googlesource.com/zircon/+/master/docs/fidl/wire-format/index.md))
+        [wire format](../reference/wire-format/index.md))
 
 This function is effectively a simple interpreter of the contents of the
 type. Unless the object encoding includes internal references which
@@ -318,7 +319,7 @@ Result is...
     *   a handle reference in **bytes** has a value other than
         `ZX_HANDLE_INVALID` or `FIDL_HANDLE_PRESENT`.
     *   `FIDL_RECURSION_DEPTH` was exceeded (see
-        [wire format](https://fuchsia.googlesource.com/zircon/+/master/docs/fidl/wire-format/index.md))
+        [wire format](../reference/wire-format/index.md))
 
 This function is effectively a simple interpreter of the contents of the
 type. Unless the object encoding includes internal references which
@@ -334,8 +335,9 @@ channel.
 *   Write the message header into the buffer, which includes the transaction id
     and method ordinal.
 *   Write the message body into the buffer, which includes the method arguments
-    and any secondary objects (see [wire format](https://fuchsia.googlesource.com/zircon/+/master/docs/fidl/wire-format/index.md) for a definition of secondary
-    objects).
+    and any secondary objects (see
+    [wire format](../reference/wire-format/index.md)
+    for a definition of secondary objects).
 *   Call **fidl_encode()** to encode the message and handles for
     transfer, taking care to pass a pointer to the **encoding table** of the
     message.
@@ -392,7 +394,7 @@ supported by FIDL.
 Specifically, every message in the interface (including both requests and
 response) must not have any secondary objects except strings and vectors of
 handles or primitives (see
-[wire format](https://fuchsia.googlesource.com/zircon/+/master/docs/fidl/wire-format/index.md)
+[wire format](../reference/wire-format/index.md)
 for a definition of secondary objects). This invariant simplifies the memory
 ownership semantics. Additionally, all strings and vectors must have explicit
 non-maximal length bounds. `vector<int64>:64` is a vector with such a bound, while

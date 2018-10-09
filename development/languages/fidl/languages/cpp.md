@@ -1,3 +1,4 @@
+
 # FIDL: C++ Language Bindings
 
 This document is a description of the Fuchsia Interface Definition Language
@@ -660,5 +661,4 @@ There are lots of options here...
 
 TBD (please feel free to amend / expand on this)
 
-
-[fidl-overview]: https://fuchsia.googlesource.com/zircon/+/master/docs/fidl/index.md
+[fidl-overview]: ../README.md

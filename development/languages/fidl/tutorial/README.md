@@ -1,3 +1,4 @@
+
 # FIDL tutorial
 
 _Audience: Beginning FIDL developers._
@@ -22,7 +23,7 @@ libraries enforce a set of semantic behavior and persistence formats on how that
 channel is used.
 
 For details on the design and implementation of FIDL, see
-[zircon/docs/fidl/](https://fuchsia.googlesource.com/zircon/+/master/docs/fidl/index.md).
+[zircon/docs/fidl/](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/README.md)
 
 ## Getting and building the FIDL source code
 

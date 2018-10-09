@@ -1,56 +1,21 @@
-# Fidl
+# FIDL
 
-Fidl is the IPC system for Fuchsia.
+FIDL (or "**F**uchsia **I**nterface **D**efinition **L**anguage) is the IPC system for Fuchsia.
 
-## Compiler
+The following topics are presented:
 
-## Language
+* [Introduction](intro/README.md) &mdash; a brief overview of what FIDL is; a quick start
+* [Guides](guides/README.md) &mdash; high-level use cases
+* [Tutorial](tutorial/README.md) &mdash; language-specific "how-to"s based on the Guides
+* [Effective FIDL] &mdash; specific advice about best practices
+* [Reference](reference/README.md) &mdash; a techincal deep dive for the interested developer,
+	featuring FIDL grammar, language features, on-wire format, building, and so on.
 
-### Readability rubric
+# Supported Languages
 
-Fuchsia has adopted a [readability rubric](../../api/fidl.md) for FIDL libraries.
+* [C](languages/c.md)
+* [C++](languages/cpp.md)
+* [Dart](languages/dart.md)
+* [Go](languages/go.md)
+* [Rust](languages/rust.md)
 
-## Bindings
-
-### C
-
-- [Documentation](c.md)
-- [Echo server example](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_server_c/)
-
-### C++
-
-- [Documentation](cpp.md)
-- [Echo server example](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_server_cpp/)
-- [Echo client example](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_client_cpp/)
-
-### Dart
-
-- [Echo server example](https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/echo_server_dart/)
-- [Echo client example](https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/echo_client_dart/)
-
-### Go
-
-- [Echo server example](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_server_go/)
-- [Echo client example](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_client_go/)
-
-### Rust
-
-- [Echo server example](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_server_rust/)
-- [Echo client example](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_client_rust/)
-
-## Learning
-
-See the [tutorial](tutorial.md) to learn about Fidl service development.
-
-FIDL Plugins exist for multiple editors and IDEs.  See the
-[editor page](editors.md) to learn more.
-
-## FIDL Tuning Proposals
-
-Substantial changes to FIDL (whether the language, the wire format, or
-language bindings) are described in [FIDL Tuning Proposals]. These
-decisions are recorded here for posterity. This includes both accepted
-and rejected designs. [FTP-001] describes the proposal process itself.
-
-[FIDL Tuning Proposals]: ./ftp/README.md
-[FTP-001]: ./ftp/ftp-001.md
