@@ -19,6 +19,25 @@ tmp             .req x16
 
 .section .text.boot0,"ax"
 FUNCTION(_start)
+    // magic instruction that gives us UEFI "MZ" signature
+    add x13, x18, #0x16
+    b header_end
+
+    .quad   0             // image offset from start of ram (unused)
+    .quad   0             // image size (unused)
+    .quad   0
+    .quad   0
+    .quad   0
+    .quad   0
+
+    // arm64 magic number
+    .byte   'A'
+    .byte   'R'
+    .byte   'M'
+    .byte   0x64
+    .align 3
+
+header_end:
     // x0 typically points to device tree at entry
 
    // what EL are we running at?
