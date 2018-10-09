@@ -43,7 +43,7 @@ startup. The list of components to run at startup is contained in the
 management.
 
 It first gets access to the root view of the system, starts up Device Shell and
-draws the Device Shell UI in the root view starting the interative flow. It also
+draws the Device Shell UI in the root view starting the interactive flow. It also
 manages a user database that is exposed to Device Shell via the User Provider
 FIDL API.
 
