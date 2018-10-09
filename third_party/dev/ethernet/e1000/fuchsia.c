@@ -410,7 +410,7 @@ static int e1000_irq_thread(void* arg) {
             if (online != was_online) {
                 adapter->online = online;
                 if (adapter->ifc) {
-                    adapter->ifc->status(adapter->cookie, online ? ETH_STATUS_ONLINE : 0);
+                    adapter->ifc->status(adapter->cookie, online ? ETHMAC_STATUS_ONLINE : 0);
                 }
             }
         }
@@ -450,7 +450,7 @@ static zx_status_t e1000_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     } else {
         adapter->ifc = ifc;
         adapter->cookie = cookie;
-        adapter->ifc->status(adapter->cookie, adapter->online ? ETH_STATUS_ONLINE : 0);
+        adapter->ifc->status(adapter->cookie, adapter->online ? ETHMAC_STATUS_ONLINE : 0);
     }
     mtx_unlock(&adapter->lock);
 

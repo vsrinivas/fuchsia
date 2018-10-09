@@ -54,7 +54,6 @@
 #include <hw/pci.h>
 #include <hw/reg.h>
 #include <zircon/assert.h>
-#include <zircon/device/ethernet.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
