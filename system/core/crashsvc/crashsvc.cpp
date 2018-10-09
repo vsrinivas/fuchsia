@@ -53,22 +53,15 @@ static bool GetChildKoids(const zx::job& job, zx_object_info_topic_t child_kind,
 
 static bool FindProcess(const zx::job& job, zx_koid_t process_koid, zx::process* out) {
     // Search this job for the process.
-    fbl::unique_ptr<zx_koid_t[]> child_koids;
-    size_t num_koids;
-    if (GetChildKoids(job, ZX_INFO_JOB_PROCESSES, &child_koids, &num_koids)) {
-        for (size_t i = 0; i < num_koids; ++i) {
-            if (child_koids[i] == process_koid) {
-                zx::process process;
-                if (job.get_child(child_koids[i], ZX_RIGHT_SAME_RIGHTS, &process) != ZX_OK) {
-                    return false;
-                }
-                *out = fbl::move(process);
-                return true;
-            }
-        }
+    zx::process process;
+    if (job.get_child(process_koid, ZX_RIGHT_SAME_RIGHTS, &process) == ZX_OK) {
+        *out = fbl::move(process);
+        return true;
     }
 
-    // Otherwise, search child jobs in the same way.
+    // Otherwise, enumerate and recurse into child jobs.
+    fbl::unique_ptr<zx_koid_t[]> child_koids;
+    size_t num_koids;
     if (GetChildKoids(job, ZX_INFO_JOB_CHILDREN, &child_koids, &num_koids)) {
         for (size_t i = 0; i < num_koids; ++i) {
             zx::job child_job;
