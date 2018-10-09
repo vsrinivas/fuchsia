@@ -151,11 +151,16 @@ def main():
         "-Clinker=%s" % os.path.join(args.clang_prefix, "clang"),
         "-Clink-arg=--target=%s" % args.target,
         "-Clink-arg=--sysroot=%s" % args.sysroot,
+        "-Clink-arg=-Wl,--threads",
         "-Copt-level=%s" % args.opt_level,
         "-Cdebuginfo=%s" % args.symbol_level,
         "-Lnative=%s" % args.shared_libs_root,
         "--color=always",
     ]
+    if args.target.startswith("aarch64"):
+        call_args += ["-Clink-arg=-Wl,--fix-cortex-a53-843419"]
+    if args.target.endswith("fuchsia"):
+        call_args += ["-Clink-arg=-Wl,--pack-dyn-relocs=relr"]
     if args.mmacosx_version_min:
         call_args += [
             "-Clink-arg=-mmacosx-version-min=%s" % args.mmacosx_version_min,

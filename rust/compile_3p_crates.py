@@ -99,26 +99,26 @@ def main():
     env["CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER"] = clang_c_compiler
     env["CARGO_TARGET_%s_LINKER" % args.target.replace("-", "_").upper()] = clang_c_compiler
 
-    mac_link_arg = ""
+    rustflags = [
+        "-Copt-level=" + args.opt_level,
+        "-Cdebuginfo=" + args.symbol_level,
+        "-Clink-arg=--target=" + args.target,
+        "-Clink-arg=-Wl,--threads",
+    ]
+    if args.target.startswith("aarch64"):
+        rustflags += ["-Clink-arg=-Wl,--fix-cortex-a53-843419"]
+    if args.target.endswith("fuchsia"):
+        rustflags += ["-Clink-arg=-Wl,--pack-dyn-relocs=relr"]
     if args.mmacosx_version_min:
-        mac_link_arg = " -Clink-arg=-mmacosx-version-min=%s" % args.mmacosx_version_min
-
+        rustflags += ["-Clink-arg=-mmacosx-version-min=%s" % args.mmacosx_version_min]
     if args.sysroot and args.shared_libs_root:
-        env["CARGO_TARGET_%s_RUSTFLAGS" % args.target.replace("-", "_").upper()] = (
-            "-Clink-arg=--target=" + args.target +
-            " -Copt-level=" + args.opt_level +
-            " -Cdebuginfo=" + args.symbol_level +
-            " -Clink-arg=--sysroot=" + args.sysroot +
-            " -Lnative=" + args.shared_libs_root +
-            mac_link_arg
-        )
-    else:
-        env["CARGO_TARGET_%s_RUSTFLAGS" % args.target.replace("-", "_").upper()] = (
-            "-Clink-arg=--target=" + args.target +
-            " -Copt-level=" + args.opt_level +
-            " -Cdebuginfo=" + args.debuginfo +
-            mac_link_arg
-        )
+        rustflags += [
+            "-Clink-arg=--sysroot=" + args.sysroot,
+            "-Lnative=" + args.shared_libs_root,
+        ]
+    env["CARGO_TARGET_%s_RUSTFLAGS" % args.target.replace("-", "_").upper()] = (
+        ' '.join(rustflags)
+    )
     env["CARGO_TARGET_DIR"] = args.out_dir
     env["CARGO_BUILD_DEP_INFO_BASEDIR"] = args.out_dir
     env["RUSTC"] = args.rustc
