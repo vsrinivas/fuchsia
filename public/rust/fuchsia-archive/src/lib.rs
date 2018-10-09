@@ -10,6 +10,7 @@
 //! ```
 //! extern crate failure;
 //! extern crate fuchsia_archive;
+//! extern crate tempfile;
 //!
 //! use failure::Error;
 //! use fuchsia_archive::write;
@@ -17,9 +18,10 @@
 //! use std::fs::create_dir_all;
 //! use std::fs::File;
 //! use std::io::{Cursor, Write};
+//! use tempfile::TempDir;
 //!
 //! fn create_test_files(file_names: &[&str]) -> Result<TempDir, Error> {
-//!     let tmp_dir = tempdir::Builder::new().prefix("fuchsia_archive_test").tempdir()?;
+//!     let tmp_dir = TempDir::new()?;
 //!     for file_name in file_names {
 //!         let file_path = tmp_dir.path().join(file_name);
 //!         let parent_dir = file_path.parent().unwrap();
