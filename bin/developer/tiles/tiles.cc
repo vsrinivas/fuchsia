@@ -110,8 +110,19 @@ void Tiles::AddTileFromURL(fidl::StringPtr url, bool allow_focus,
 void Tiles::AddTileFromViewProvider(
     fidl::StringPtr url, fidl::InterfaceHandle<ViewProvider> provider,
     AddTileFromViewProviderCallback callback) {
-  FXL_LOG(ERROR) << "Not implemented";
-  callback(0);
+  FXL_VLOG(2) << "AddTile " << url;
+  auto view_provider = provider.Bind();
+
+  fidl::InterfaceHandle<ViewOwner> child_view_owner;
+  view_provider->CreateView(child_view_owner.NewRequest(), nullptr);
+
+  uint32_t child_key = next_child_view_key_++;
+
+  AddChildView(child_key, std::move(child_view_owner), url,
+               nullptr /* controller */, true /* allow_focus */);
+
+  if (callback)
+    callback(child_key);
 }
 
 void Tiles::RemoveTile(uint32_t child_key) {
