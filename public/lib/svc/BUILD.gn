@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/cpp/prebuilt_shared_library.gni")
+import("//build/cpp/sdk_shared_library.gni")
 import("//build/package.gni")
 import("//build/test.gni")
 
-prebuilt_shared_library("svc") {
+sdk_shared_library("svc") {
   category = "partner"
 
   sources = [
