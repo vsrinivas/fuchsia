@@ -20,13 +20,12 @@ namespace measure {
 // An "argument value" measurement records the value of the specified argument
 // of a trace event. The argument must be of type uint64.
 struct ArgumentValueSpec {
-  uint64_t id;
+  MeasurementSpecCommon common;
+
   EventSpec event;
 
   std::string argument_name;
   std::string argument_unit;  // TODO(mariagl): use that for reporting.
-
-  MeasurementSpecCommon common = {};
 };
 
 class MeasureArgumentValue {

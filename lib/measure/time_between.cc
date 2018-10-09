@@ -50,12 +50,12 @@ bool MeasureTimeBetween::Process(const trace::Record::Event& event) {
   }
 
   for (const TimeBetweenSpec& spec : specs_) {
-    uint64_t key = spec.id;
+    uint64_t key = spec.common.id;
 
     if (EventMatchesSpecWithAnchor(event, spec.second_event,
                                    spec.second_anchor) &&
         pending_time_between_.count(key)) {
-      AddResult(spec.id, pending_time_between_[key], event.timestamp);
+      AddResult(spec.common.id, pending_time_between_[key], event.timestamp);
       pending_time_between_.erase(key);
     }
 

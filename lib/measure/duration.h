@@ -21,9 +21,8 @@ namespace measure {
 // A "duration" measurement specifies a single trace event. The target event can
 // be recorded as a "duration" or as an "async" event.
 struct DurationSpec {
-  uint64_t id;
+  MeasurementSpecCommon common;
   EventSpec event;
-  MeasurementSpecCommon common = {};
 };
 
 class MeasureDuration {

@@ -17,17 +17,17 @@ bool operator==(const measure::EventSpec& lhs, const measure::EventSpec& rhs) {
 
 bool operator==(const measure::DurationSpec& lhs,
                 const measure::DurationSpec& rhs) {
-  return lhs.id == rhs.id && lhs.event == rhs.event;
+  return lhs.common.id == rhs.common.id && lhs.event == rhs.event;
 }
 
 bool operator==(const measure::ArgumentValueSpec& lhs,
                 const measure::ArgumentValueSpec& rhs) {
-  return lhs.id == rhs.id && lhs.event == rhs.event;
+  return lhs.common.id == rhs.common.id && lhs.event == rhs.event;
 }
 
 bool operator==(const measure::TimeBetweenSpec& lhs,
                 const measure::TimeBetweenSpec& rhs) {
-  return lhs.id == rhs.id && lhs.first_event == rhs.first_event &&
+  return lhs.common.id == rhs.common.id && lhs.first_event == rhs.first_event &&
          lhs.first_anchor == rhs.first_anchor &&
          lhs.second_event == rhs.second_event &&
          lhs.second_anchor == rhs.second_anchor;

@@ -22,6 +22,10 @@ struct EventSpec {
 // Parameters for requested measurements that are common across all
 // measurement types.
 struct MeasurementSpecCommon {
+  MeasurementSpecCommon() : id(0) {}
+  MeasurementSpecCommon(uint64_t id) : id(id) {}
+
+  uint64_t id;
   // The test name/label to use in the output perf results JSON file.
   std::string output_test_name;
   // Whether the first run should be recorded separately.

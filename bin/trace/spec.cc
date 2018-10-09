@@ -334,6 +334,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   for (auto& measurement : document[kMeasurementsKey].GetArray()) {
     std::string type = measurement[kTypeKey].GetString();
     measure::MeasurementSpecCommon common;
+    common.id = counter;
 
     if (measurement.HasMember(kOutputTestName)) {
       common.output_test_name = measurement[kOutputTestName].GetString();
@@ -350,7 +351,6 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
 
     if (type == kMeasureDurationType) {
       measure::DurationSpec spec;
-      spec.id = counter;
       spec.common = std::move(common);
       if (!ValidateSchema(measurement, *duration_schema) ||
           !DecodeMeasureDuration(measurement, &spec)) {
@@ -359,7 +359,6 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
       result.measurements->duration.push_back(std::move(spec));
     } else if (type == kMeasureTimeBetweenType) {
       measure::TimeBetweenSpec spec;
-      spec.id = counter;
       spec.common = std::move(common);
       if (!ValidateSchema(measurement, *time_between_schema) ||
           !DecodeMeasureTimeBetween(measurement, &spec)) {
@@ -368,7 +367,6 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
       result.measurements->time_between.push_back(std::move(spec));
     } else if (type == kMeasureArgumentValueType) {
       measure::ArgumentValueSpec spec;
-      spec.id = counter;
       spec.common = std::move(common);
       if (!ValidateSchema(measurement, *argument_value_schema) ||
           !DecodeMeasureArgumentValue(measurement, &spec)) {

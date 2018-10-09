@@ -17,7 +17,7 @@ bool MeasureArgumentValue::RecordArgumentValue(
   for (const trace::Argument& argument : event.arguments) {
     if ((argument.name() == spec.argument_name) &&
         (argument.value().type() == trace::ArgumentType::kUint64)) {
-      AddResult(spec.id, argument.value().GetUint64());
+      AddResult(spec.common.id, argument.value().GetUint64());
       return true;
     }
   }

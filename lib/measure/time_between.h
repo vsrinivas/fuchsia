@@ -24,12 +24,11 @@ enum class Anchor { Begin, End };
 // A "time_between" measurement targets two events and measures time between
 // their consecutive occurences.
 struct TimeBetweenSpec {
-  uint64_t id;
+  MeasurementSpecCommon common;
   EventSpec first_event;
   Anchor first_anchor;
   EventSpec second_event;
   Anchor second_anchor;
-  MeasurementSpecCommon common = {};
 };
 
 class MeasureTimeBetween {

@@ -94,20 +94,22 @@ std::vector<Result> ComputeResults(
   std::string empty_string;
 
   for (auto& measure_spec : measurements.duration) {
-    auto duration_values = ticks_to_ms(
-        get_or_default(recorded_values, measure_spec.id, no_recorded_values),
-        ticks_per_second);
+    auto duration_values =
+        ticks_to_ms(get_or_default(recorded_values, measure_spec.common.id,
+                                   no_recorded_values),
+                    ticks_per_second);
     results.push_back(ComputeSingle(measure_spec, duration_values));
   }
   for (auto& measure_spec : measurements.argument_value) {
-    auto argument_values =
-        get_or_default(recorded_values, measure_spec.id, no_recorded_values);
+    auto argument_values = get_or_default(
+        recorded_values, measure_spec.common.id, no_recorded_values);
     results.push_back(ComputeSingle(measure_spec, argument_values));
   }
   for (auto& measure_spec : measurements.time_between) {
-    auto time_between_values = ticks_to_ms(
-        get_or_default(recorded_values, measure_spec.id, no_recorded_values),
-        ticks_per_second);
+    auto time_between_values =
+        ticks_to_ms(get_or_default(recorded_values, measure_spec.common.id,
+                                   no_recorded_values),
+                    ticks_per_second);
     results.push_back(ComputeSingle(measure_spec, time_between_values));
   }
 

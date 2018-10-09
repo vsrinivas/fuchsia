@@ -84,7 +84,7 @@ bool MeasureDuration::ProcessAsyncOrFlowEnd(const trace::Record::Event& event) {
       continue;
     }
 
-    AddResult(spec.id, begin_timestamp, event.timestamp);
+    AddResult(spec.common.id, begin_timestamp, event.timestamp);
   }
   return true;
 }
@@ -116,7 +116,7 @@ bool MeasureDuration::ProcessDurationEnd(const trace::Record::Event& event) {
     if (!EventMatchesSpec(event, spec.event)) {
       continue;
     }
-    AddResult(spec.id, begin_timestamp, event.timestamp);
+    AddResult(spec.common.id, begin_timestamp, event.timestamp);
   }
   return true;
 }
