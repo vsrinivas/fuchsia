@@ -3,19 +3,17 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/console/actions.h"
-#include "garnet/bin/zxdb/console/flags.h"
-#include "garnet/public/lib/fxl/strings/string_printf.h"
+
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/strings/split_string.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
 namespace {
 
 using Option = fxl::CommandLine::Option;
-
-void PrintCommandFeedback(size_t index, const char* name) {
-  printf("\nRunning command %lu: \"%s\"\n", index, name);
-  printf("---------------------------------------------------------------\n");
-}
 
 }  // namespace
 
@@ -58,7 +56,6 @@ void ActionFlow::ScheduleActions(std::vector<Action>&& actions,
   // We schedule the first action to run
   debug_ipc::MessageLoop::Current()->PostTask([&]() {
     const auto& action = flow_.front();
-    PrintCommandFeedback(1lu, action.name().c_str());
     action(*session_, console_);
   });
 }
@@ -92,11 +89,8 @@ void ActionFlow::PostActionCallback(Err err) {
 
   // Schedule the next action.
   const auto& next_action = flow.current_action();
-  debug_ipc::MessageLoop::Current()->PostTask([&]() {
-    PrintCommandFeedback(flow.current_action_index_ + 1,
-                         next_action.name().c_str());
-    next_action(*flow.session_, flow.console_);
-  });
+  debug_ipc::MessageLoop::Current()->PostTask(
+      [&]() { next_action(*flow.session_, flow.console_); });
 }
 
 void ActionFlow::Clear() {
@@ -106,6 +100,30 @@ void ActionFlow::Clear() {
   console_ = nullptr;
   callback_ = nullptr;
   callbacks_.clear();
+}
+
+std::vector<Action> CommandsToActions(const std::string& input) {
+  auto commands = fxl::SplitStringCopy(input, "\n", fxl::kTrimWhitespace,
+                                       fxl::kSplitWantNonEmpty);
+  std::vector<Action> result;
+  for (size_t i = 0; i < commands.size(); i++) {
+    result.push_back(Action(commands[i], [&, cmd = commands[i] ](
+                                             const Action& action,
+                                             const Session& session,
+                                             Console* console) {
+      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
+    }));
+  }
+  return result;
+}
+
+Err ScriptFileToActions(const std::string& path, std::vector<Action>* actions) {
+  std::string contents;
+  if (!files::ReadFileToString(files::AbsolutePath(path), &contents))
+    return Err(fxl::StringPrintf("Could not read file \"%s\"", path.c_str()));
+
+  *actions = CommandsToActions(contents);
+  return Err();
 }
 
 }  // namespace zxdb

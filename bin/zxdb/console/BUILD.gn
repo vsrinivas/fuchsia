@@ -10,6 +10,8 @@ static_library("console") {
     "analyze_memory.h",
     "command.cc",
     "command.h",
+    "command_line_options.cc",
+    "command_line_options.h",
     "command_parser.cc",
     "command_parser.h",
     "command_utils.cc",
@@ -18,9 +20,8 @@ static_library("console") {
     "console.h",
     "console_context.cc",
     "console_context.h",
-    "flags.cc",
-    "flags.h",
-    "flags_impl.cc",
+    "console_main.cc",
+    "console_main.h",
     "format_context.cc",
     "format_context.h",
     "format_frame.cc",
@@ -79,11 +80,10 @@ static_library("console") {
 source_set("tests") {
   testonly = true
   sources = [
+    "actions_unittest.cc",
     "analyze_memory_unittest.cc",
     "command_parser_unittest.cc",
     "command_utils_unittest.cc",
-    "flags_impl_unittest.cc",
-    "flags_unittest.cc",
     "format_context_unittest.cc",
     "format_frame_unittest.cc",
     "format_memory_unittest.cc",

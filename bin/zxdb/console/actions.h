@@ -100,4 +100,10 @@ class ActionFlow {
   FXL_DISALLOW_COPY_AND_ASSIGN(ActionFlow);
 };
 
+// Parses the given input as newline-separated commands.
+std::vector<Action> CommandsToActions(const std::string& input);
+
+// Loads the given script file and parses it as as a sequence of actions.
+Err ScriptFileToActions(const std::string& path, std::vector<Action>* actions);
+
 }  // namespace zxdb

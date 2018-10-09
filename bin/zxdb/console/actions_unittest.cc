@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/console/flags_impl.h"
-#include "garnet/bin/zxdb/console/flags.h"
+#include "garnet/bin/zxdb/console/actions.h"
+#include "garnet/bin/zxdb/client/session.h"
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {
+
+namespace {
 
 using debug_ipc::MessageLoop;
 
@@ -37,26 +39,25 @@ class ConsoleTest : public Console {
   size_t call_count = 0;
 };
 
-class FlagsImplTest : public testing::Test {
+class ActionsTest : public testing::Test {
  protected:
-  FlagsImplTest() {
+  ActionsTest() {
     loop.Init();
     session = std::make_unique<Session>();
     console = std::make_unique<ConsoleTest>(session.get());
-
-    // Reinstall the flags from the system in case other tests change them
-    OverrideFlags(InitializeFlags());
   }
-  ~FlagsImplTest() { loop.Cleanup(); }
+  ~ActionsTest() { loop.Cleanup(); }
 
   debug_ipc::PlatformMessageLoop loop;
   std::unique_ptr<Session> session;
   std::unique_ptr<ConsoleTest> console;
 };
 
-TEST_F(FlagsImplTest, ScriptFile) {
-  // SETUP
-  std::vector<Action> actions;
+}  // namespace
+
+using debug_ipc::MessageLoop;
+
+TEST_F(ActionsTest, ScriptFile) {
   // We expect 3 calls
   console->errors_to_run = {Err(), Err(), Err()};
   // Setup the mock contents
@@ -68,9 +69,8 @@ TEST_F(FlagsImplTest, ScriptFile) {
      << mock_commands[2];
   std::string mock_contents = ss.str();
 
-  Err err = ProcessScriptFile("", &actions, mock_contents);
+  auto actions = CommandsToActions(mock_contents);
 
-  ASSERT_FALSE(err.has_error());
   ASSERT_EQ(actions.size(), 3u);
   EXPECT_EQ(actions[0].name(), mock_commands[0]);
   EXPECT_EQ(actions[1].name(), mock_commands[1]);
@@ -100,9 +100,7 @@ TEST_F(FlagsImplTest, ScriptFile) {
   EXPECT_FALSE(flow.callbacks()[2].has_error());
 }
 
-TEST_F(FlagsImplTest, ScriptFileWithFailure) {
-  // SETUP
-  std::vector<Action> actions;
+TEST_F(ActionsTest, ScriptFileWithFailure) {
   // We expect an error
   console->errors_to_run = {Err(), Err("ERROR"), Err()};
   // Setup the mock contents
@@ -114,9 +112,8 @@ TEST_F(FlagsImplTest, ScriptFileWithFailure) {
      << mock_commands[2];
   std::string mock_contents = ss.str();
 
-  Err err = ProcessScriptFile("", &actions, mock_contents);
+  auto actions = CommandsToActions(mock_contents);
 
-  ASSERT_FALSE(err.has_error());
   ASSERT_EQ(actions.size(), 3u);
   EXPECT_EQ(actions[0].name(), mock_commands[0]);
   EXPECT_EQ(actions[1].name(), mock_commands[1]);
