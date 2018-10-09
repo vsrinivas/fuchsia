@@ -12,19 +12,20 @@ import sys
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def invoke_bazel(bazel, command, targets):
-    command = [bazel, command, '--config=fuchsia', '--keep_going'] + targets
+def invoke_bazel(bazel, command, targets, opt_flags=[]):
+    command = [bazel, command, '--config=fuchsia', '--keep_going']
+    command += opt_flags + targets
     job = Popen(command, cwd=SCRIPT_DIR)
     job.communicate()
     return job.returncode
 
 
-def build(bazel, targets):
-    return invoke_bazel(bazel, 'build', targets)
+def build(bazel, targets, opt_flags=[]):
+    return invoke_bazel(bazel, 'build', targets, opt_flags)
 
 
-def test(bazel, targets):
-    return invoke_bazel(bazel, 'test', targets)
+def test(bazel, targets, opt_flags=[]):
+    return invoke_bazel(bazel, 'test', targets, opt_flags)
 
 
 def query(bazel, query):
@@ -50,8 +51,13 @@ def main():
 
     if not args.no_sdk:
         # Build the SDK contents.
-        print('Building SDK contents')
+        print('Building SDK contents using default configs (C++14)')
         if build(bazel, ['@fuchsia_sdk//...']):
+            return 1
+        # Build the SDK contents using C++17.
+        print('Building SDK contents using C++17')
+        cpp17_flags = ['--cxxopt=-std=c++17', '--cxxopt=-Wc++17-compat']
+        if build(bazel, ['@fuchsia_sdk//...'], cpp17_flags):
             return 1
 
     targets = ['//...']
