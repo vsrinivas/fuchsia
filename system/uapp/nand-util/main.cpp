@@ -9,6 +9,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
 #include <lib/fzl/mapped-vmo.h>
 #include <lib/cksum.h>
 #include <pretty/hexdump.h>
@@ -422,20 +423,32 @@ bool Save(const NandBroker& nand, uint32_t first_block, uint32_t count, const ch
     // Attempt to save everything by default.
     count = count ? count : nand.Info().num_blocks;
 
+
+    uint32_t block_oob_size = nand.Info().pages_per_block * nand.Info().oob_size;
+    uint32_t oob_size = count * block_oob_size;
+    fbl::unique_ptr<uint8_t[]> oob(new uint8_t[oob_size]);
+
     uint32_t last_block = fbl::min(nand.Info().num_blocks, first_block + count);
-    size_t size = (nand.Info().page_size + nand.Info().oob_size) * nand.Info().pages_per_block;
+    size_t data_size = nand.Info().page_size * nand.Info().pages_per_block;
     for (uint32_t block = first_block; block < last_block; block++) {
         const uint32_t start = block * nand.Info().pages_per_block;
         if (!nand.ReadPages(start, nand.Info().pages_per_block)) {
             printf("\nRead failed for block %u\n", block);
             return false;
         }
-        if (write(out.get(), nand.data(), size) != static_cast<ssize_t>(size)) {
+        if (write(out.get(), nand.data(), data_size) != static_cast<ssize_t>(data_size)) {
             printf("\nFailed to write data for block %u\n", block);
             return false;
         }
+        memcpy(oob.get() + block_oob_size * block, nand.oob(), block_oob_size);
         printf("Block %u\r", block);
     }
+
+    if (write(out.get(), oob.get(), oob_size) != static_cast<ssize_t>(oob_size)) {
+        printf("\nFailed to write oob\n");
+        return false;
+    }
+
     printf("\ndone\n");
     return true;
 }
