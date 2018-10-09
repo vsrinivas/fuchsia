@@ -204,37 +204,6 @@ TypeShape PointerTypeShape(TypeShape element, uint32_t max_element_count = 1u) {
     return TypeShape(8u, 8u, depth, max_handles, max_out_of_line);
 }
 
-TypeShape CEnvelopeTypeShape(TypeShape contained_type) {
-    auto packed_sizes_field = FieldShape(kUint64TypeShape);
-    auto pointer_type = FieldShape(PointerTypeShape(contained_type));
-    std::vector<FieldShape*> header{&packed_sizes_field, &pointer_type};
-    return CStructTypeShape(&header);
-}
-
-TypeShape CTableTypeShape(std::vector<TypeShape*>* fields, uint32_t extra_handles = 0u) {
-    uint32_t element_depth = 0u;
-    uint32_t max_handles = 0u;
-    uint32_t max_out_of_line = 0u;
-    uint32_t array_size = 0u;
-    for (auto field : *fields) {
-        if (field == nullptr) {
-            continue;
-        }
-        auto envelope = CEnvelopeTypeShape(*field);
-        element_depth = std::max(element_depth, envelope.Depth());
-        array_size = ClampedAdd(array_size, envelope.Size());
-        max_handles = ClampedAdd(max_handles, envelope.MaxHandles());
-        max_out_of_line = ClampedAdd(max_out_of_line, envelope.MaxOutOfLine());
-        assert(envelope.Alignment() == 8u);
-    }
-    auto pointer_element = TypeShape(array_size, 8u, 1 + element_depth,
-                                     max_handles, max_out_of_line);
-    auto num_fields = FieldShape(kUint32TypeShape);
-    auto data_field = FieldShape(PointerTypeShape(pointer_element));
-    std::vector<FieldShape*> header{&num_fields, &data_field};
-    return CStructTypeShape(&header, extra_handles);
-}
-
 TypeShape ArrayTypeShape(TypeShape element, uint32_t count) {
     return TypeShape(element.Size() * count,
                      element.Alignment(),
