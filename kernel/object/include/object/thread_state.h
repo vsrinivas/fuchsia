@@ -207,6 +207,9 @@ public:
         case Lifecycle::DEAD:
             switch (value_) {
             case Value::DYING_IDLE:
+            case Value::DYING_UNPROCESSED:
+            case Value::DYING_TRY_NEXT:
+            case Value::DYING_RESUME:
                 value_ = Value::DEAD_IDLE;
                 return;
             default:
