@@ -188,44 +188,5 @@ TEST_F(UpdateModCommandRunnerTest, ExecuteNoModuleData) {
   RunLoopUntil([&] { return done; });
 }
 
-TEST_F(UpdateModCommandRunnerTest, ExecuteInvalidJson) {
-  bool done{};
-
-  fidl::VectorPtr<fidl::StringPtr> path;
-  path.push_back("mod");
-
-  // Create a module with base parameters that will be updated.
-  auto module_data = InitModuleData(path.Clone());
-  AddJsonParamAndCreateLink(&module_data, "param1", "link1", "10");
-  WriteModuleData(story_storage_.get(), std::move(module_data));
-
-  // Update module parameters.
-  fuchsia::modular::IntentParameter parameter1;
-  parameter1.name = "param1";
-  fsl::SizedVmo vmo;
-  FXL_CHECK(fsl::VmoFromString("x}", &vmo));
-  parameter1.data.set_json(std::move(vmo).ToTransport());
-
-  fuchsia::modular::UpdateMod update_mod;
-  update_mod.mod_name = path.Clone();
-  update_mod.parameters.push_back(std::move(parameter1));
-  fuchsia::modular::StoryCommand command;
-  command.set_update_mod(std::move(update_mod));
-
-  runner_->Execute(story_id_, story_storage_.get(), std::move(command),
-                   [&](fuchsia::modular::ExecuteResult result) {
-                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND,
-                               result.status);
-                     EXPECT_EQ("Attempted to update link with invalid JSON",
-                               result.error_message);
-                     done = true;
-                   });
-  RunLoopUntil([&] { return done; });
-
-  // Verify links were not updated.
-  auto link1_value = GetLinkValue(story_storage_.get(), "link1");
-  EXPECT_EQ(link1_value, "10");
-}
-
 }  // namespace
 }  // namespace modular

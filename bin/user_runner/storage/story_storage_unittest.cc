@@ -406,44 +406,5 @@ TEST_F(StoryStorageTest, WatchingOtherStorageInstance) {
   EXPECT_EQ(nullptr, notified_context);
 }
 
-TEST_F(StoryStorageTest, SetInvalidValue) {
-  // Try to set a value to null or invalid json.
-  auto storage = CreateStorage("page");
-
-  // We shouldn't see any notifications for errors.
-  int notified_count_foo{0};
-  auto watch_cancel = storage->WatchLink(
-      MakeLinkPath("foo"),
-      [&](const fidl::StringPtr& value, const void* /* context */) {
-        ++notified_count_foo;
-        return true;
-      });
-
-  int context;
-  bool mutate_done{};
-  storage
-      ->UpdateLinkValue(MakeLinkPath("foo"),
-                        [](fidl::StringPtr* value) { (*value).reset(); },
-                        &context)
-      ->Then([&](StoryStorage::Status status) {
-        EXPECT_EQ(StoryStorage::Status::LINK_INVALID_JSON, status);
-        mutate_done = true;
-      });
-  RunLoopUntil([&] { return mutate_done; });
-
-  mutate_done = false;
-  storage
-      ->UpdateLinkValue(MakeLinkPath("foo"),
-                        [](fidl::StringPtr* value) { *value = "not json"; },
-                        &context)
-      ->Then([&](StoryStorage::Status status) {
-        EXPECT_EQ(StoryStorage::Status::LINK_INVALID_JSON, status);
-        mutate_done = true;
-      });
-  RunLoopUntil([&] { return mutate_done; });
-
-  EXPECT_EQ(0, notified_count_foo);
-}
-
 }  // namespace
 }  // namespace modular

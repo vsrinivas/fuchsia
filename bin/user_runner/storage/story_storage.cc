@@ -313,9 +313,8 @@ class WriteVmoCall : public Operation<StoryStorage::Status> {
   FXL_DISALLOW_COPY_AND_ASSIGN(WriteVmoCall);
 };
 
-// Returns the status of the mutation and the new value. If no mutation
-// happened, returns Status::OK and a nullptr.
-class UpdateLinkCall : public Operation<StoryStorage::Status, fidl::StringPtr> {
+// Returns: 1) if a mutation happened, 2) the status and 3) the new value.
+class UpdateLinkCall : public Operation<bool, StoryStorage::Status, fidl::StringPtr> {
  public:
   UpdateLinkCall(
       PageClient* page_client, std::string key,
@@ -331,7 +330,7 @@ class UpdateLinkCall : public Operation<StoryStorage::Status, fidl::StringPtr> {
 
  private:
   void Run() override {
-    FlowToken flow{this, &status_, &new_value_};
+    FlowToken flow{this, &did_update_, &status_, &new_value_};
 
     operation_queue_.Add(
         new ReadVmoCall(page_client_, key_,
@@ -350,27 +349,15 @@ class UpdateLinkCall : public Operation<StoryStorage::Status, fidl::StringPtr> {
   void Mutate(FlowToken flow, fidl::StringPtr current_value) {
     new_value_ = current_value;
     mutate_fn_(&new_value_);
-    rapidjson::Document doc;
-    doc.Parse(new_value_);
-    if (new_value_.is_null() || doc.HasParseError()) {
-      if (!new_value_.is_null()) {
-        FXL_LOG(ERROR) << "StoryStorage.UpdateLinkCall.Mutate " << key_
-                       << " invalid json: " << doc.GetParseError() << " "
-                       << new_value_ << ";";
-      }
-      status_ = StoryStorage::Status::LINK_INVALID_JSON;
-      return;
-    }
 
+    did_update_ = true;
     if (new_value_ == current_value) {
-      // Set the returned new value to null so the caller knows we succeeded
-      // but didn't write anything.
-      new_value_ = nullptr;
+      did_update_ = false;
       return;
     }
 
     auto vmo = fuchsia::mem::Buffer::New();
-    if (fsl::VmoFromString(*new_value_, vmo.get())) {
+    if (!new_value_ || fsl::VmoFromString(*new_value_, vmo.get())) {
       operation_queue_.Add(new WriteVmoCall(
           page_client_, key_, std::move(vmo),
           [this, flow](StoryStorage::Status status) {
@@ -380,7 +367,7 @@ class UpdateLinkCall : public Operation<StoryStorage::Status, fidl::StringPtr> {
             // confirmation from the ledger.
             if (status == StoryStorage::Status::OK && new_value_) {
               wait_for_write_fn_(key_, new_value_)->Then([this, flow] {
-                Done(std::move(status_), std::move(new_value_));
+                Done(true, std::move(status_), std::move(new_value_));
               });
             }
           }));
@@ -401,6 +388,7 @@ class UpdateLinkCall : public Operation<StoryStorage::Status, fidl::StringPtr> {
   OperationQueue operation_queue_;
 
   // Return values.
+  bool did_update_;
   StoryStorage::Status status_;
   fidl::StringPtr new_value_;
 
@@ -418,7 +406,7 @@ FuturePtr<StoryStorage::Status> StoryStorage::UpdateLinkValue(
       << "StoryStorage::UpdateLinkValue(..., context) of nullptr is reserved.";
 
   auto key = MakeLinkKey(link_path);
-  auto did_update = Future<Status, fidl::StringPtr>::Create(
+  auto did_update = Future<bool, Status, fidl::StringPtr>::Create(
       "StoryStorage.UpdateLinkValue.did_update");
   operation_queue_.Add(new UpdateLinkCall(
       this, key, std::move(mutate_fn),
@@ -429,11 +417,12 @@ FuturePtr<StoryStorage::Status> StoryStorage::UpdateLinkValue(
   // We can't chain this call to the parent future chain because we do
   // not want it to happen at all in the case of errors.
   return did_update->WeakMap(
-      GetWeakPtr(), [this, key, context](StoryStorage::Status status,
+      GetWeakPtr(), [this, key, context](bool did_update,
+                                         StoryStorage::Status status,
                                          fidl::StringPtr new_value) {
         // if |new_value| is null, it means we didn't write any new data, even
         // if |status| == OK.
-        if (status == StoryStorage::Status::OK && !new_value.is_null()) {
+        if (status == StoryStorage::Status::OK && did_update) {
           NotifyLinkWatchers(key, new_value, context);
         }
 

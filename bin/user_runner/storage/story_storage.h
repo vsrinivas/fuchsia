@@ -44,7 +44,6 @@ class StoryStorage : public PageClient {
     OK = 0,
     LEDGER_ERROR = 1,
     VMO_COPY_ERROR = 2,
-    LINK_INVALID_JSON = 3,
   };
 
   // =========================================================================

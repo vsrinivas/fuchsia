@@ -80,39 +80,5 @@ TEST_F(SetLinkValueCommandRunnerTest, Execute) {
   EXPECT_EQ("20", GetLinkValue(story_storage_.get(), "link"));
 }
 
-TEST_F(SetLinkValueCommandRunnerTest, ExecuteInvalidJson) {
-  bool done{};
-
-  // Let's set a value.
-  auto command = MakeSetLinkValueCommand("link", "10");
-  runner_->Execute(story_id_, story_storage_.get(), std::move(command),
-                   [&](fuchsia::modular::ExecuteResult result) {
-                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
-                               result.status);
-                     done = true;
-                   });
-  RunLoopUntil([&] { return done; });
-  done = false;
-
-  // Let's get the value.
-  EXPECT_EQ("10", GetLinkValue(story_storage_.get(), "link"));
-
-  // Mutate with invalid JSON.
-  auto command2 = MakeSetLinkValueCommand("link", "x}");
-  runner_->Execute(story_id_, story_storage_.get(), std::move(command2),
-                   [&](fuchsia::modular::ExecuteResult result) {
-                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND,
-                               result.status);
-                     EXPECT_EQ("Attempted to update link with invalid JSON",
-                               result.error_message);
-                     done = true;
-                   });
-  RunLoopUntil([&] { return done; });
-  done = false;
-
-  // Let's get the value again, we should see the original one.
-  EXPECT_EQ("10", GetLinkValue(story_storage_.get(), "link"));
-}
-
 }  // namespace
 }  // namespace modular
