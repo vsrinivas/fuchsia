@@ -112,14 +112,22 @@ impl<T: Tokens> State<T> {
                         context.info_sink.send(
                             InfoEvent::AssociationSuccess { att_id: context.att_id });
                         match cmd.rsna {
-                            Some(rsna) => {
-                                context.info_sink.send(
-                                    InfoEvent::RsnaStarted { att_id: context.att_id });
-                                State::Associated {
-                                    bss: cmd.bss,
-                                    last_rssi: None,
-                                    link_state: LinkState::EstablishingRsna(cmd.token, rsna),
-                                    params: cmd.params,
+                            Some(mut rsna) => match rsna.supplicant.start() {
+                                Err(e) => {
+                                    handle_supplicant_start_failure(cmd.token, cmd.bss,
+                                                                    &context, e);
+                                    State::Idle
+                                },
+                                Ok(_) => {
+                                    context.info_sink.send(
+                                        InfoEvent::RsnaStarted { att_id: context.att_id });
+
+                                    State::Associated {
+                                        bss: cmd.bss,
+                                        last_rssi: None,
+                                        link_state: LinkState::EstablishingRsna(cmd.token, rsna),
+                                        params: cmd.params,
+                                    }
                                 }
                             },
                             None => {
@@ -428,6 +436,19 @@ fn to_associating_state<T>(cmd: ConnectCommand<T::ConnectToken>, mlme_sink: &Mlm
         }
     ));
     State::Associating { cmd }
+}
+
+fn handle_supplicant_start_failure<T>(token: Option<T::ConnectToken>, bss: Box<BssDescription>,
+                                      context: &Context<T>, e: failure::Error) where T: Tokens
+{
+    error!("deauthenticating; could not start Supplicant: {}", e);
+    send_deauthenticate_request(bss, &context.mlme_sink);
+
+    // TODO(hahnr): Report RSNA specific failure instead.
+    let reason = fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified;
+    report_connect_finished(token, &context,
+                            ConnectResult::Failed,
+                            Some(ConnectFailure::AssociationFailure(reason)));
 }
 
 #[cfg(test)]

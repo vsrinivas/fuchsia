@@ -70,12 +70,16 @@ impl Supplicant {
             })),
         )?;
 
+        Ok(Supplicant{ esssa })
+    }
+
+    /// Starts the Supplicant. A Supplicant must be started after its creation and everytime it was
+    /// reset.
+    pub fn start(&mut self) -> Result<(), failure::Error> {
         // The Supplicant always waits for Authenticator to initiate and does not yet support EAPOL
         // request frames. Thus, all updates can be ignored.
         let mut dead_update_sink = vec![];
-        esssa.initiate(&mut dead_update_sink)?;
-
-        Ok(Supplicant{ esssa })
+        self.esssa.initiate(&mut dead_update_sink)
     }
 
     /// Resets all established Security Associations and invalidates all derived keys.

@@ -417,6 +417,7 @@ mod tests {
     fn test_supplicant_with_authenticator() {
         let mut supplicant = test_util::get_supplicant();
         let mut authenticator = test_util::get_authenticator();
+        supplicant.start().expect("Failed starting Supplicant");
 
         // Initiate Authenticator.
         let mut a_updates = vec![];
@@ -471,6 +472,7 @@ mod tests {
     #[test]
     fn test_zero_key_replay_counter_msg1() {
         let mut supplicant = test_util::get_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
 
         let (result, updates) = send_msg1(&mut supplicant, |msg1| {
             msg1.key_replay_counter = 0;
@@ -487,6 +489,7 @@ mod tests {
     #[test]
     fn test_nonzero_key_replay_counter_msg1() {
         let mut supplicant = test_util::get_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
 
         let (result, _) = send_msg1(&mut supplicant, |msg1| {
             msg1.key_replay_counter = 1;
@@ -497,6 +500,7 @@ mod tests {
     #[test]
     fn test_zero_key_replay_counter_lower_msg3_counter() {
         let mut supplicant = test_util::get_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
 
         let (result, updates) = send_msg1(&mut supplicant, |msg1| {
             msg1.key_replay_counter = 1;
@@ -515,6 +519,7 @@ mod tests {
     #[test]
     fn test_zero_key_replay_counter_valid_msg3() {
         let mut supplicant = test_util::get_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
 
         let (result, updates) = send_msg1(&mut supplicant, |msg1| {
             msg1.key_replay_counter = 0;
@@ -533,6 +538,7 @@ mod tests {
     #[test]
     fn test_zero_key_replay_counter_replayed_msg3() {
         let mut supplicant = test_util::get_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
 
         let (result, updates) = send_msg1(&mut supplicant, |msg1| {
             msg1.key_replay_counter = 0;
@@ -568,6 +574,7 @@ mod tests {
     fn test_supplicant_wpa2_ccmp128_psk() {
         // Create ESS Security Association
         let mut supplicant = test_util::get_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
 
         // Send first message
         let (result, updates) = send_msg1(&mut supplicant, |_| {});
