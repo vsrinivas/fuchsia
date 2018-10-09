@@ -15,4 +15,8 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/dev/lib/usb
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
+ifeq ($(call TOBOOL,$(INTERNAL_ACCESS)),true)
+MODULE_FIRMWARE := usb-testing/fx3/fx3.img
+endif
+
 include make/module.mk
