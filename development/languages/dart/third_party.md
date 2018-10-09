@@ -26,6 +26,10 @@ dependencies:
 ```
 3. add a reference to the file in `//scripts/dart/update_3p_packages.py`
 4. run that script
+5. merge your changes to `dart_dependencies.yaml` to master 
+6. merge the files downloaded by running the 'update_3p_packages.py' script, and the script itself, to master.
+7. in the '//topaz/manifest/dart' manifest, update the project node 'third_part/dart-pkg' revision attribute with the SHA from your commit in step 6.
+8. merge your change to the '//topaz/mainfest/dart' manifest file to master. 
 
 
 [pub]: https://pub.dartlang.org/ "Pub"
