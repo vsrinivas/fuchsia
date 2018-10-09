@@ -311,6 +311,7 @@ zircon_tool_action("blob.blk") {
   tool = "blobfs"
   args = [
     "--depfile",
+    "--compress",
     rebase_path(blob_image_path, root_build_dir),
     "create",
     "--manifest",
