@@ -119,7 +119,7 @@ static void HandOffException(const zx::job& root_job, const zx::port& exception_
         status = zx_task_resume_from_exception(exception_thread.get(), exception_port.get(),
                                                ZX_RESUME_TRY_NEXT);
         if (status != ZX_OK) {
-            fprintf(stderr, "crashsvc: zx_task_resume failed: %d\n", status);
+            fprintf(stderr, "crashsvc: zx_task_resume_from_exception failed: %d\n", status);
         }
     }
 }
