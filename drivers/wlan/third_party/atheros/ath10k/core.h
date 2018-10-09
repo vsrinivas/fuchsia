@@ -345,9 +345,9 @@ struct ath10k_sta {
 #define ATH10K_VDEV_SETUP_TIMEOUT (ZX_SEC(5))
 
 enum ath10k_beacon_state {
-    ATH10K_BEACON_SCHEDULED = 0,
+    ATH10K_BEACON_SENT = 0,
+    ATH10K_BEACON_SCHEDULED,
     ATH10K_BEACON_SENDING,
-    ATH10K_BEACON_SENT,
 };
 
 struct ath10k_vif_iter {
@@ -688,7 +688,8 @@ struct ath10k_vif {
     enum wmi_vdev_subtype vdev_subtype;
     uint32_t beacon_interval;
     uint32_t dtim_period;
-    void* beacon_buf;
+    enum ath10k_beacon_state beacon_state;
+    struct ath10k_msg_buf* beacon_buf;
     unsigned long tx_paused; /* arbitrary values defined by target */
 
     struct ath10k* ar;
@@ -729,6 +730,7 @@ struct ath10k_vif {
     uint8_t bcn_tmpl_data[ATH10K_MAX_BCN_TMPL_SIZE];
     size_t bcn_tmpl_len;
     size_t tim_ie_offset;
+    bool bcn_tmpl_changed;
 };
 
 struct ath10k {
@@ -849,6 +851,7 @@ struct ath10k {
 #endif  // NEEDS PORTING
 
     unsigned long long free_vdev_map;
+    bool arvif_created;
     struct ath10k_vif arvif;
     struct ath10k_vif* monitor_arvif;
     bool monitor;

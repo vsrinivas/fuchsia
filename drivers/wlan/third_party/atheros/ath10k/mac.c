@@ -4969,6 +4969,10 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
+    if (ar->arvif_created) {
+        return ZX_ERR_NO_RESOURCES;
+    }
+
     memset(arvif, 0, sizeof(*arvif));
 
     arvif->ar = ar;
@@ -5066,6 +5070,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
     for (i = 0; i < countof(vif->hw_queue); i++) {
         vif->hw_queue[i] = arvif->vdev_id % (IEEE80211_MAX_QUEUES - 1);
     }
+#endif  // NEEDS PORTING
 
     /* Some firmware revisions don't wait for beacon tx completion before
      * sending another SWBA event. This could lead to hardware using old
@@ -5083,21 +5088,17 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
      * beacon tx commands. Worst case for this approach is some beacons may
      * become corrupted, e.g. have garbled IEs or out-of-date TIM bitmap.
      */
-    if (vif_type == NL80211_IFTYPE_ADHOC
-        || vif_type == NL80211_IFTYPE_MESH_POINT
-        || vif_type == NL80211_IFTYPE_AP) {
-        arvif->beacon_buf = dma_zalloc_coherent(ar->dev,
-                                                IEEE80211_MAX_FRAME_LEN,
-                                                &arvif->beacon_paddr,
-                                                GFP_ATOMIC);
-        if (!arvif->beacon_buf) {
-            ret = -ENOMEM;
-            ath10k_warn("failed to allocate beacon buffer: %d\n",
-                        ret);
+    if (/* vif_type == NL80211_IFTYPE_ADHOC || */
+        vif_role == WLAN_MAC_ROLE_MESH || vif_role == WLAN_MAC_ROLE_AP)
+    {
+        ret = ath10k_msg_buf_alloc(ar, &arvif->beacon_buf, ATH10K_MSG_TYPE_BASE,
+                                   ATH10K_MAX_BCN_TMPL_SIZE);
+        if (ret != ZX_OK) {
+            ath10k_warn("failed to allocate beacon buffer: %s\n", zx_status_get_string(ret));
             goto err;
         }
     }
-#endif  // NEEDS PORTING
+
     if (BITARR_TEST(ar->dev_flags, ATH10K_FLAG_HW_CRYPTO_DISABLED)) { arvif->nohwcrypt = true; }
 
     if (arvif->nohwcrypt && !BITARR_TEST(ar->dev_flags, ATH10K_FLAG_RAW_MODE)) {
@@ -5269,6 +5270,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
     mtx_unlock(&ar->htt.tx_lock);
 #endif  // NEEDS PORTING
 
+    ar->arvif_created = true;
     return ZX_OK;
 
 err_peer_delete:
@@ -7876,8 +7878,15 @@ static void ath10k_get_arvif_iter(void* data, uint8_t* mac,
         arvif_iter->arvif = arvif;
     }
 }
+#endif  // NEEDS PORTING
 
 struct ath10k_vif* ath10k_get_arvif(struct ath10k* ar, uint32_t vdev_id) {
+    if (ar->arvif.vdev_id == vdev_id) {
+        return &ar->arvif;
+    }
+    return NULL;
+
+#if 0   // NEEDS PORTING
     struct ath10k_vif_iter arvif_iter;
     uint32_t flags;
 
@@ -7895,7 +7904,10 @@ struct ath10k_vif* ath10k_get_arvif(struct ath10k* ar, uint32_t vdev_id) {
     }
 
     return arvif_iter.arvif;
+#endif  // NEEDS PORTING
 }
+
+#if 0   // NEEDS PORTING
 
 #define WRD_METHOD "WRDD"
 #define WRDD_WIFI (0x07)

@@ -3097,9 +3097,12 @@ static zx_status_t ath10k_pci_enable_beaconing(void* ctx, uint32_t options,
     }
 
     // Copy the beacon template content and ask the hardware to broadcast it.
+    mtx_lock(&ar->data_lock);
     arvif->bcn_tmpl_len = bcn_cfg->tmpl.packet_head.len;
     memcpy(arvif->bcn_tmpl_data, bcn_cfg->tmpl.packet_head.data, arvif->bcn_tmpl_len);
     arvif->tim_ie_offset = bcn_cfg->tim_ele_offset;
+    arvif->bcn_tmpl_changed = true;
+    mtx_unlock(&ar->data_lock);
     return ath10k_mac_start_ap(arvif);
 }
 

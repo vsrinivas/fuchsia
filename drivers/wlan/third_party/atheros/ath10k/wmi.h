@@ -6608,7 +6608,9 @@ struct wmi_pdev_chan_info_req_cmd {
         WMI_MSG(VDEV_START, wmi_vdev_start_request_cmd), WMI_MSG(VDEV_STOP, wmi_vdev_stop_cmd), \
         WMI_MSG(VDEV_UP, wmi_vdev_up_cmd),                                                      \
         WMI_MSG(BCN_TMPL, wmi_tlv_bcn_tmpl_cmd),                                                \
-        WMI_MSG(PRB_TMPL, wmi_tlv_prb_tmpl_cmd)
+        WMI_MSG(PRB_TMPL, wmi_tlv_prb_tmpl_cmd),                                                \
+        WMI_MSG(BCN_TX_REF, wmi_bcn_tx_ref_cmd)
+
 
 #define WMI_TX_CREDITS_AVAILABLE ZX_USER_SIGNAL_0
 

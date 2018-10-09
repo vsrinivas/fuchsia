@@ -1611,24 +1611,8 @@ zx_status_t ath10k_wmi_cmd_send_nowait(struct ath10k* ar, struct ath10k_msg_buf*
     return ath10k_htc_send(&ar->htc, ar->wmi.eid, buf);
 }
 
-#if 0   // NEEDS PORTING
 static void ath10k_wmi_tx_beacon_nowait(struct ath10k_vif* arvif) {
-    struct ath10k* ar = arvif->ar;
-    struct ath10k_skb_cb* cb;
-    struct sk_buff* bcn;
-    bool dtim_zero;
-    bool deliver_cab;
-    int ret;
-
-    mtx_lock(&ar->data_lock);
-
-    bcn = arvif->beacon;
-
-    if (!bcn) {
-        goto unlock;
-    }
-
-    cb = ATH10K_SKB_CB(bcn);
+    mtx_lock(&arvif->ar->data_lock);
 
     switch (arvif->beacon_state) {
     case ATH10K_BEACON_SENDING:
@@ -1636,45 +1620,38 @@ static void ath10k_wmi_tx_beacon_nowait(struct ath10k_vif* arvif) {
         break;
     case ATH10K_BEACON_SCHEDULED:
         arvif->beacon_state = ATH10K_BEACON_SENDING;
-        mtx_unlock(&ar->data_lock);
+        mtx_unlock(&arvif->ar->data_lock);
 
-        dtim_zero = !!(cb->flags & ATH10K_SKB_F_DTIM_ZERO);
-        deliver_cab = !!(cb->flags & ATH10K_SKB_F_DELIVER_CAB);
-        ret = ath10k_wmi_beacon_send_ref_nowait(arvif->ar,
+        // TODO(NET-1680): populate this from the corresponding flags calculated
+        // by ath10k_wmi_update_tim()
+        bool dtim_zero = false;
+        bool deliver_cab = false;
+
+        zx_status_t ret = ath10k_wmi_beacon_send_ref_nowait(arvif->ar,
                                                 arvif->vdev_id,
-                                                bcn->data, bcn->len,
-                                                cb->paddr,
+                                                arvif->beacon_buf->vaddr,
+                                                arvif->beacon_buf->used,
+                                                arvif->beacon_buf->paddr,
                                                 dtim_zero,
                                                 deliver_cab);
 
-        mtx_lock(&ar->data_lock);
+        mtx_lock(&arvif->ar->data_lock);
 
-        if (ret == 0) {
+        if (ret == ZX_OK) {
             arvif->beacon_state = ATH10K_BEACON_SENT;
         } else {
             arvif->beacon_state = ATH10K_BEACON_SCHEDULED;
         }
     }
 
-unlock:
-    mtx_unlock(&ar->data_lock);
+    mtx_unlock(&arvif->ar->data_lock);
 }
-
-static void ath10k_wmi_tx_beacons_iter(void* data, uint8_t* mac,
-                                       struct ieee80211_vif* vif) {
-    struct ath10k_vif* arvif = (void*)vif->drv_priv;
-
-    ath10k_wmi_tx_beacon_nowait(arvif);
-}
-#endif  // NEEDS PORTING
 
 static void ath10k_wmi_tx_beacons_nowait(struct ath10k* ar) {
-#if 0   // NEEDS PORTING
-    ieee80211_iterate_active_interfaces_atomic(ar->hw,
-            IEEE80211_IFACE_ITER_NORMAL,
-            ath10k_wmi_tx_beacons_iter,
-            NULL);
-#endif  // NEEDS PORTING
+    // TODO(NET-1681): iterate over all interfaces
+    if (ar->arvif_created) {
+        ath10k_wmi_tx_beacon_nowait(&ar->arvif);
+    }
 }
 
 static void ath10k_wmi_op_ep_tx_credits(struct ath10k* ar) {
@@ -3304,19 +3281,21 @@ static int ath10k_wmi_op_pull_swba_ev(struct ath10k* ar, struct sk_buff* skb,
 
     return 0;
 }
+#endif  // NEEDS PORTING
 
-static int ath10k_wmi_10_2_4_op_pull_swba_ev(struct ath10k* ar,
-        struct sk_buff* skb,
-        struct wmi_swba_ev_arg* arg) {
-    struct wmi_10_2_4_host_swba_event* ev = (void*)skb->data;
+static zx_status_t ath10k_wmi_10_2_4_op_pull_swba_ev(struct ath10k* ar,
+                                                     struct ath10k_msg_buf* msg_buf,
+                                                     struct wmi_swba_ev_arg* arg) {
+    struct wmi_10_2_4_host_swba_event* ev;
+    if (ath10k_msg_buf_get_payload_len(msg_buf, ATH10K_MSG_TYPE_WMI) < sizeof(*ev)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    ev = ath10k_msg_buf_get_payload(msg_buf);
+
     uint32_t map;
     size_t i;
 
-    if (skb->len < sizeof(*ev)) {
-        return -EPROTO;
-    }
-
-    skb_pull(skb, sizeof(*ev));
     arg->vdev_map = ev->vdev_map;
 
     for (i = 0, map = ev->vdev_map; map; map >>= 1) {
@@ -3334,7 +3313,7 @@ static int ath10k_wmi_10_2_4_op_pull_swba_ev(struct ath10k* ar,
         if (ev->bcn_info[i].tim_info.tim_len >
                 sizeof(ev->bcn_info[i].tim_info.tim_bitmap)) {
             ath10k_warn("refusing to parse invalid swba structure\n");
-            return -EPROTO;
+            return ZX_ERR_INVALID_ARGS;
         }
 
         arg->tim_info[i].tim_len = ev->bcn_info[i].tim_info.tim_len;
@@ -3348,9 +3327,10 @@ static int ath10k_wmi_10_2_4_op_pull_swba_ev(struct ath10k* ar,
         i++;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
+#if 0   // NEEDS PORTING
 static int ath10k_wmi_10_4_op_pull_swba_ev(struct ath10k* ar,
         struct sk_buff* skb,
         struct wmi_swba_ev_arg* arg) {
@@ -3413,21 +3393,21 @@ static int ath10k_wmi_10_4_op_pull_swba_ev(struct ath10k* ar,
 static enum wmi_txbf_conf ath10k_wmi_10_4_txbf_conf_scheme(struct ath10k* ar) {
     return WMI_TXBF_CONF_BEFORE_ASSOC;
 }
+#endif  // NEEDS PORTING
 
-void ath10k_wmi_event_host_swba(struct ath10k* ar, struct sk_buff* skb) {
+
+void ath10k_wmi_event_host_swba(struct ath10k* ar, struct ath10k_msg_buf* msg_buf) {
     struct wmi_swba_ev_arg arg = {};
     uint32_t map;
     int i = -1;
     const struct wmi_tim_info_arg* tim_info;
     const struct wmi_p2p_noa_info* noa_info;
     struct ath10k_vif* arvif;
-    struct sk_buff* bcn;
-    dma_addr_t paddr;
-    int ret, vdev_id = 0;
+    int vdev_id = 0;
 
-    ret = ath10k_wmi_pull_swba(ar, skb, &arg);
-    if (ret) {
-        ath10k_warn("failed to parse swba event: %d\n", ret);
+    zx_status_t ret = ath10k_wmi_pull_swba(ar, msg_buf, &arg);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to parse swba event: %s\n", zx_status_get_string(ret));
         return;
     }
 
@@ -3481,6 +3461,7 @@ void ath10k_wmi_event_host_swba(struct ath10k* ar, struct sk_buff* skb) {
             continue;
         }
 
+#if 0   // NEEDS PORTING
         /* There are no completions for beacons so wait for next SWBA
          * before telling mac80211 to decrement CSA counter
          *
@@ -3493,63 +3474,40 @@ void ath10k_wmi_event_host_swba(struct ath10k* ar, struct sk_buff* skb) {
             continue;
         }
 
-        bcn = ieee80211_beacon_get(ar->hw, arvif->vif);
-        if (!bcn) {
-            ath10k_warn("could not get mac80211 beacon\n");
-            continue;
-        }
-
         ath10k_tx_h_seq_no(arvif->vif, bcn);
         ath10k_wmi_update_tim(ar, arvif, bcn, tim_info);
         ath10k_wmi_update_noa(ar, arvif, bcn, noa_info);
+#endif  // NEEDS PORTING
 
         mtx_lock(&ar->data_lock);
 
-        if (arvif->beacon) {
-            switch (arvif->beacon_state) {
-            case ATH10K_BEACON_SENT:
-                break;
-            case ATH10K_BEACON_SCHEDULED:
-                ath10k_warn("SWBA overrun on vdev %d, skipped old beacon\n",
-                            arvif->vdev_id);
-                break;
-            case ATH10K_BEACON_SENDING:
-                ath10k_warn("SWBA overrun on vdev %d, skipped new beacon\n",
-                            arvif->vdev_id);
-                dev_kfree_skb(bcn);
-                goto skip;
-            }
-
-            ath10k_mac_vif_beacon_free(arvif);
+        switch (arvif->beacon_state) {
+        case ATH10K_BEACON_SENT:
+            break;
+        case ATH10K_BEACON_SCHEDULED:
+            ath10k_warn("SWBA overrun on vdev %d, skipped old beacon\n",
+                        arvif->vdev_id);
+            break;
+        case ATH10K_BEACON_SENDING:
+            ath10k_warn("SWBA overrun on vdev %d, skipped new beacon\n",
+                        arvif->vdev_id);
+            goto skip;
         }
 
-        if (!arvif->beacon_buf) {
-            paddr = dma_map_single(arvif->ar->dev, bcn->data,
-                                   bcn->len, DMA_TO_DEVICE);
-            ret = dma_mapping_error(arvif->ar->dev, paddr);
-            if (ret) {
-                ath10k_warn("failed to map beacon: %d\n",
-                            ret);
-                dev_kfree_skb_any(bcn);
-                goto skip;
-            }
-
-            ATH10K_SKB_CB(bcn)->paddr = paddr;
-        } else {
-            if (bcn->len > IEEE80211_MAX_FRAME_LEN) {
-                ath10k_warn("trimming beacon %d -> %d bytes!\n",
-                            bcn->len, IEEE80211_MAX_FRAME_LEN);
-                skb_trim(bcn, IEEE80211_MAX_FRAME_LEN);
-            }
-            memcpy(arvif->beacon_buf, bcn->data, bcn->len);
-            ATH10K_SKB_CB(bcn)->paddr = arvif->beacon_paddr;
+        /* If the beacon template was updated, copy it to the DMA buffer */
+        if (arvif->bcn_tmpl_changed) {
+            size_t len = MIN(arvif->bcn_tmpl_len, arvif->beacon_buf->capacity);
+            memcpy(arvif->beacon_buf->vaddr, arvif->bcn_tmpl_data, len);
+            arvif->beacon_buf->used = len;
+            arvif->bcn_tmpl_changed = false;
         }
 
-        arvif->beacon = bcn;
         arvif->beacon_state = ATH10K_BEACON_SCHEDULED;
 
+#if 0   // NEEDS PORTING
         trace_ath10k_tx_hdr(ar, bcn->data, bcn->len);
         trace_ath10k_tx_payload(ar, bcn->data, bcn->len);
+#endif  // NEEDS PORTING
 
 skip:
         mtx_unlock(&ar->data_lock);
@@ -3558,9 +3516,11 @@ skip:
     ath10k_wmi_tx_beacons_nowait(ar);
 }
 
-void ath10k_wmi_event_tbttoffset_update(struct ath10k* ar, struct sk_buff* skb) {
+void ath10k_wmi_event_tbttoffset_update(struct ath10k* ar, struct ath10k_msg_buf* msg_buf) {
     ath10k_dbg(ar, ATH10K_DBG_WMI, "WMI_TBTTOFFSET_UPDATE_EVENTID\n");
 }
+
+#if 0   // NEEDS PORTING
 
 static void ath10k_dfs_radar_report(struct ath10k* ar,
                                     struct wmi_phyerr_ev_arg* phyerr,
@@ -4906,12 +4866,14 @@ static void ath10k_wmi_op_rx(struct ath10k* ar, struct ath10k_msg_buf* buf) {
     case WMI_PEER_STA_KICKOUT_EVENTID:
         ath10k_wmi_event_peer_sta_kickout(ar, buf);
         break;
+#endif  // NEEDS PORTING
     case WMI_HOST_SWBA_EVENTID:
         ath10k_wmi_event_host_swba(ar, buf);
         break;
     case WMI_TBTTOFFSET_UPDATE_EVENTID:
         ath10k_wmi_event_tbttoffset_update(ar, buf);
         break;
+#if 0   // NEEDS PORTING
     case WMI_PHYERR_EVENTID:
         ath10k_wmi_event_phyerr(ar, buf);
         break;
@@ -5180,12 +5142,10 @@ static void ath10k_wmi_10_2_op_rx(struct ath10k* ar, struct ath10k_msg_buf* msg_
         // ath10k_wmi_event_peer_sta_kickout(ar, skb);
         break;
     case WMI_10_2_HOST_SWBA_EVENTID:
-        ath10k_err("WMI_10_2_HOST_SWBA_EVENTID unimplemented\n");
-        // ath10k_wmi_event_host_swba(ar, skb);
+        ath10k_wmi_event_host_swba(ar, msg_buf);
         break;
     case WMI_10_2_TBTTOFFSET_UPDATE_EVENTID:
-        ath10k_err("WMI_10_2_TBTTOFFSET_UPDATE_EVENTID unimplemented\n");
-        // ath10k_wmi_event_tbttoffset_update(ar, skb);
+        ath10k_wmi_event_tbttoffset_update(ar, msg_buf);
         break;
     case WMI_10_2_PHYERR_EVENTID:
         ath10k_err("WMI_10_2_PHYERR_EVENTID unimplemented\n");
@@ -6792,31 +6752,31 @@ ath10k_wmi_10_2_op_gen_pdev_bss_chan_info(struct ath10k* ar,
 
     return skb;
 }
+#endif  // NEEDS PORTING
 
 /* This function assumes the beacon is already DMA mapped */
-static struct sk_buff*
-ath10k_wmi_op_gen_beacon_dma(struct ath10k* ar, uint32_t vdev_id, const void* bcn,
-                             size_t bcn_len, uint32_t bcn_paddr, bool dtim_zero,
-                             bool deliver_cab) {
-    struct wmi_bcn_tx_ref_cmd* cmd;
-    struct sk_buff* skb;
-    struct ieee80211_hdr* hdr;
-    uint16_t fc;
-
-    skb = ath10k_wmi_alloc_skb(ar, sizeof(*cmd));
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+zx_status_t
+ath10k_wmi_op_gen_beacon_dma(struct ath10k* ar, struct ath10k_msg_buf** msg_buf_ptr,
+                             uint32_t vdev_id, const void* bcn, size_t bcn_len, uint32_t bcn_paddr,
+                             bool dtim_zero, bool deliver_cab) {
+    const struct ieee80211_frame_header* header = bcn;
+    if (bcn_len < sizeof(*header)) {
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    hdr = (struct ieee80211_hdr*)bcn;
-    fc = hdr->frame_control;
+    struct ath10k_msg_buf* msg_buf;
+    zx_status_t status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_BCN_TX_REF, 0);
+    if (status != ZX_OK) {
+        return status;
+    }
 
-    cmd = (struct wmi_bcn_tx_ref_cmd*)skb->data;
+    struct wmi_bcn_tx_ref_cmd* cmd = ath10k_msg_buf_get_header(
+            msg_buf, ATH10K_MSG_TYPE_WMI_BCN_TX_REF);
     cmd->vdev_id = vdev_id;
     cmd->data_len = bcn_len;
     cmd->data_ptr = bcn_paddr;
     cmd->msdu_id = 0;
-    cmd->frame_control = fc;
+    cmd->frame_control = header->frame_ctrl;
     cmd->flags = 0;
     cmd->antenna_mask = WMI_BCN_TX_REF_DEF_ANTENNA;
 
@@ -6828,9 +6788,9 @@ ath10k_wmi_op_gen_beacon_dma(struct ath10k* ar, uint32_t vdev_id, const void* bc
         cmd->flags |= WMI_BCN_TX_REF_FLAG_DELIVER_CAB;
     }
 
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
-#endif  // NEEDS PORTING
 
 void ath10k_wmi_set_wmm_param(struct wmi_wmm_params* params, const struct wmi_wmm_params_arg* arg) {
     params->cwmin = arg->cwmin;
@@ -7814,9 +7774,11 @@ static const struct wmi_ops wmi_ops = {
     .gen_set_psmode = ath10k_wmi_op_gen_set_psmode,
     .gen_set_sta_ps = ath10k_wmi_op_gen_set_sta_ps,
     .gen_set_ap_ps = ath10k_wmi_op_gen_set_ap_ps,
+#endif  // NEEDS PORTING
     .gen_scan_chan_list = ath10k_wmi_op_gen_scan_chan_list,
     .gen_beacon_dma = ath10k_wmi_op_gen_beacon_dma,
     .gen_pdev_set_wmm = ath10k_wmi_op_gen_pdev_set_wmm,
+#if 0   // NEEDS PORTING
     .gen_request_stats = ath10k_wmi_op_gen_request_stats,
     .gen_force_fw_hang = ath10k_wmi_op_gen_force_fw_hang,
     .gen_mgmt_tx = ath10k_wmi_op_gen_mgmt_tx,
@@ -7899,9 +7861,11 @@ static const struct wmi_ops wmi_10_1_ops = {
     .gen_set_psmode = ath10k_wmi_op_gen_set_psmode,
     .gen_set_sta_ps = ath10k_wmi_op_gen_set_sta_ps,
     .gen_set_ap_ps = ath10k_wmi_op_gen_set_ap_ps,
+#endif  // NEEDS PORTING
     .gen_scan_chan_list = ath10k_wmi_op_gen_scan_chan_list,
     .gen_beacon_dma = ath10k_wmi_op_gen_beacon_dma,
     .gen_pdev_set_wmm = ath10k_wmi_op_gen_pdev_set_wmm,
+#if 0   // NEEDS PORTING
     .gen_request_stats = ath10k_wmi_op_gen_request_stats,
     .gen_force_fw_hang = ath10k_wmi_op_gen_force_fw_hang,
     .gen_mgmt_tx = ath10k_wmi_op_gen_mgmt_tx,
@@ -7985,9 +7949,11 @@ static const struct wmi_ops wmi_10_2_ops = {
     .gen_set_psmode = ath10k_wmi_op_gen_set_psmode,
     .gen_set_sta_ps = ath10k_wmi_op_gen_set_sta_ps,
     .gen_set_ap_ps = ath10k_wmi_op_gen_set_ap_ps,
+#endif  // NEEDS PORTING
     .gen_scan_chan_list = ath10k_wmi_op_gen_scan_chan_list,
     .gen_beacon_dma = ath10k_wmi_op_gen_beacon_dma,
     .gen_pdev_set_wmm = ath10k_wmi_op_gen_pdev_set_wmm,
+#if 0   // NEEDS PORTING
     .gen_request_stats = ath10k_wmi_op_gen_request_stats,
     .gen_force_fw_hang = ath10k_wmi_op_gen_force_fw_hang,
     .gen_mgmt_tx = ath10k_wmi_op_gen_mgmt_tx,
@@ -8034,7 +8000,9 @@ static const struct wmi_ops wmi_10_2_4_ops = {
     .pull_vdev_start = ath10k_wmi_op_pull_vdev_start_ev,
 #if 0   // NEEDS PORTING
     .pull_peer_kick = ath10k_wmi_op_pull_peer_kick_ev,
+#endif  // NEEDS PORTING
     .pull_swba = ath10k_wmi_10_2_4_op_pull_swba_ev,
+#if 0   // NEEDS PORTING
     .pull_phyerr_hdr = ath10k_wmi_op_pull_phyerr_ev_hdr,
     .pull_phyerr = ath10k_wmi_op_pull_phyerr_ev,
 #endif  // NEEDS PORTING
@@ -8070,9 +8038,7 @@ static const struct wmi_ops wmi_10_2_4_ops = {
     .gen_set_ap_ps = ath10k_wmi_op_gen_set_ap_ps,
 #endif  // NEEDS PORTING
     .gen_scan_chan_list = ath10k_wmi_op_gen_scan_chan_list,
-#if 0   // NEEDS PORTING
     .gen_beacon_dma = ath10k_wmi_op_gen_beacon_dma,
-#endif  // NEEDS PORTING
     .gen_pdev_set_wmm = ath10k_wmi_op_gen_pdev_set_wmm,
 #if 0   // NEEDS PORTING
     .gen_request_stats = ath10k_wmi_op_gen_request_stats,
@@ -8155,9 +8121,11 @@ static const struct wmi_ops wmi_10_4_ops = {
     .gen_set_psmode = ath10k_wmi_op_gen_set_psmode,
     .gen_set_sta_ps = ath10k_wmi_op_gen_set_sta_ps,
     .gen_set_ap_ps = ath10k_wmi_op_gen_set_ap_ps,
+#endif  // NEEDS PORTING
     .gen_scan_chan_list = ath10k_wmi_op_gen_scan_chan_list,
     .gen_beacon_dma = ath10k_wmi_op_gen_beacon_dma,
     .gen_pdev_set_wmm = ath10k_wmi_op_gen_pdev_set_wmm,
+#if 0   // NEEDS PORTING
     .gen_force_fw_hang = ath10k_wmi_op_gen_force_fw_hang,
     .gen_mgmt_tx = ath10k_wmi_op_gen_mgmt_tx,
     .gen_dbglog_cfg = ath10k_wmi_10_4_op_gen_dbglog_cfg,
