@@ -5,15 +5,17 @@
 //! ICMPv6
 
 use std::fmt;
-use std::ops::Range;
 
+use packet::{BufferView, ParsablePacket, ParseMetadata};
 use zerocopy::ByteSlice;
 
 use crate::error::ParseError;
 use crate::ip::{Ipv6, Ipv6Addr};
 
 use super::common::{IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpTimeExceeded};
-use super::{ndp, peek_message_type, IcmpIpExt, IcmpPacket, IcmpUnusedCode, OriginalPacket};
+use super::{
+    ndp, peek_message_type, IcmpIpExt, IcmpPacket, IcmpParseArgs, IcmpUnusedCode, OriginalPacket,
+};
 
 /// An ICMPv6 packet with a dynamic message type.
 ///
@@ -23,7 +25,7 @@ use super::{ndp, peek_message_type, IcmpIpExt, IcmpPacket, IcmpUnusedCode, Origi
 /// knowing the message type ahead of time while still getting the benefits of a
 /// statically-typed packet struct after parsing is complete.
 #[allow(missing_docs)]
-pub enum Packet<B> {
+pub enum Icmpv6Packet<B> {
     DestUnreachable(IcmpPacket<Ipv6, B, IcmpDestUnreachable>),
     PacketTooBig(IcmpPacket<Ipv6, B, Icmpv6PacketTooBig>),
     TimeExceeded(IcmpPacket<Ipv6, B, IcmpTimeExceeded>),
@@ -37,9 +39,9 @@ pub enum Packet<B> {
     Redirect(IcmpPacket<Ipv6, B, ndp::Redirect>),
 }
 
-impl<B: ByteSlice + fmt::Debug> fmt::Debug for Packet<B> {
+impl<B: ByteSlice + fmt::Debug> fmt::Debug for Icmpv6Packet<B> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use self::Packet::*;
+        use self::Icmpv6Packet::*;
         match self {
             DestUnreachable(ref p) => f.debug_tuple("DestUnreachable").field(p).finish(),
             PacketTooBig(ref p) => f.debug_tuple("PacketTooBig").field(p).finish(),
@@ -56,32 +58,43 @@ impl<B: ByteSlice + fmt::Debug> fmt::Debug for Packet<B> {
     }
 }
 
-impl<B: ByteSlice> Packet<B> {
-    /// Parse an ICMP packet.
-    ///
-    /// `parse` parses `bytes` as an ICMP packet and validates the header fields
-    /// and checksum.  It returns the byte range corresponding to the message
-    /// body within `bytes`. This can be useful when extracting the encapsulated
-    /// body to send to another layer of the stack. If the message type has no
-    /// body, then the range is meaningless and should be ignored.
-    pub fn parse(
-        bytes: B, src_ip: Ipv6Addr, dst_ip: Ipv6Addr,
-    ) -> Result<(Packet<B>, Range<usize>), ParseError> {
+impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv6Addr>> for Icmpv6Packet<B> {
+    type Error = ParseError;
+
+    fn parse_metadata(&self) -> ParseMetadata {
+        use self::Icmpv6Packet::*;
+        match self {
+            DestUnreachable(p) => p.parse_metadata(),
+            PacketTooBig(p) => p.parse_metadata(),
+            TimeExceeded(p) => p.parse_metadata(),
+            ParameterProblem(p) => p.parse_metadata(),
+            EchoRequest(p) => p.parse_metadata(),
+            EchoReply(p) => p.parse_metadata(),
+            RouterSolicitation(p) => p.parse_metadata(),
+            RouterAdvertisment(p) => p.parse_metadata(),
+            NeighborSolicitation(p) => p.parse_metadata(),
+            NeighborAdvertisment(p) => p.parse_metadata(),
+            Redirect(p) => p.parse_metadata(),
+        }
+    }
+
+    fn parse<BV: BufferView<B>>(
+        mut buffer: BV, args: IcmpParseArgs<Ipv6Addr>,
+    ) -> Result<Self, ParseError> {
         macro_rules! mtch {
-            ($bytes:expr, $src_ip:expr, $dst_ip:expr, $($variant:ident => $type:ty,)*) => {
-                match peek_message_type(&$bytes)? {
+            ($buffer:expr, $args:expr, $($variant:ident => $type:ty,)*) => {
+                match peek_message_type($buffer.as_ref())? {
                     $(MessageType::$variant => {
-                        let (packet, range) = IcmpPacket::<Ipv6, B, $type>::parse($bytes, $src_ip, $dst_ip)?;
-                        (Packet::$variant(packet), range)
+                        let packet = <IcmpPacket<Ipv6, B, $type> as ParsablePacket<_, _>>::parse($buffer, $args)?;
+                        Icmpv6Packet::$variant(packet)
                     })*
                 }
             }
         }
 
         Ok(mtch!(
-            bytes,
-            src_ip,
-            dst_ip,
+            buffer,
+            args,
             DestUnreachable => IcmpDestUnreachable,
             PacketTooBig => Icmpv6PacketTooBig,
             TimeExceeded => IcmpTimeExceeded,
@@ -204,41 +217,51 @@ impl_icmp_message!(
 
 #[cfg(test)]
 mod tests {
+    use packet::{ParseBuffer, Serializer};
+
     use super::*;
     use crate::wire::icmp::{IcmpMessage, IcmpPacket, MessageBody};
-    use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketSerializer};
-    use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketSerializer};
-    use crate::wire::util::{BufferAndRange, PacketSerializer, SerializationRequest};
+    use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 
     fn serialize_to_bytes<B: ByteSlice, M: IcmpMessage<Ipv6, B>>(
         src_ip: Ipv6Addr, dst_ip: Ipv6Addr, icmp: &IcmpPacket<Ipv6, B, M>,
-        serializer: Ipv6PacketSerializer,
+        builder: Ipv6PacketBuilder,
     ) -> Vec<u8> {
-        let icmp_serializer = icmp.serializer(src_ip, dst_ip);
-        let mut data = vec![0; icmp_serializer.max_header_bytes() + icmp.message_body.len()];
-        let body_offset = data.len() - icmp.message_body.len();
-        (&mut data[body_offset..]).copy_from_slice(icmp.message_body.bytes());
-        BufferAndRange::new_from(&mut data[..], body_offset..)
-            .encapsulate(icmp_serializer)
-            .encapsulate(serializer)
+        icmp.message_body
+            .bytes()
+            .encapsulate(icmp.builder(src_ip, dst_ip))
+            .encapsulate(builder)
             .serialize_outer()
             .as_ref()
             .to_vec()
     }
 
-    #[test]
-    fn test_parse_and_serialize_echo_request_ipv6() {
-        use crate::wire::testdata::icmp_echo_v6::*;
-        let (ip, _) = Ipv6Packet::parse(REQUEST_IP_PACKET_BYTES).unwrap();
-        let (src_ip, dst_ip, hop_limit) = (ip.src_ip(), ip.dst_ip(), ip.hop_limit());
-        // TODO: Check range
-        let (icmp, _) =
-            IcmpPacket::<_, _, IcmpEchoRequest>::parse(ip.body(), src_ip, dst_ip).unwrap();
-        assert_eq!(icmp.original_packet().bytes(), ECHO_DATA);
-        assert_eq!(icmp.message().id_seq.id(), IDENTIFIER);
-        assert_eq!(icmp.message().id_seq.seq(), SEQUENCE_NUM);
+    fn test_parse_and_serialize<
+        M: for<'a> IcmpMessage<Ipv6, &'a [u8]>,
+        F: for<'a> FnOnce(&IcmpPacket<Ipv6, &'a [u8], M>),
+    >(
+        mut req: &[u8], check: F,
+    ) {
+        let orig_req = &req[..];
 
-        let data = serialize_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());
-        assert_eq!(&data[..], REQUEST_IP_PACKET_BYTES);
+        let ip = req.parse::<Ipv6Packet<_>>().unwrap();
+        let mut body = ip.body();
+        let icmp = body
+            .parse_with::<_, IcmpPacket<_, _, M>>(IcmpParseArgs::new(ip.src_ip(), ip.dst_ip()))
+            .unwrap();
+        check(&icmp);
+
+        let data = serialize_to_bytes(ip.src_ip(), ip.dst_ip(), &icmp, ip.builder());
+        assert_eq!(&data[..], orig_req);
+    }
+
+    #[test]
+    fn test_parse_and_serialize_echo_request() {
+        use crate::wire::testdata::icmp_echo_v6::*;
+        test_parse_and_serialize::<IcmpEchoRequest, _>(REQUEST_IP_PACKET_BYTES, |icmp| {
+            assert_eq!(icmp.message_body.bytes(), ECHO_DATA);
+            assert_eq!(icmp.message().id_seq.id(), IDENTIFIER);
+            assert_eq!(icmp.message().id_seq.seq(), SEQUENCE_NUM);
+        });
     }
 }

@@ -7,14 +7,14 @@
 use std::fmt::{self, Display, Formatter};
 
 use log::debug;
+use packet::{Buf, ParseBuffer, Serializer};
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::device::arp::{ArpDevice, ArpHardwareType, ArpState};
 use crate::device::DeviceId;
 use crate::ip::{Ip, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
 use crate::wire::arp::peek_arp_types;
-use crate::wire::ethernet::{EthernetFrame, EthernetFrameSerializer};
-use crate::wire::{BufferAndRange, SerializationRequest};
+use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
 use crate::{Context, EventDispatcher};
 
 /// A media access control (MAC) address.
@@ -189,7 +189,7 @@ pub fn send_ip_frame<D: EventDispatcher, A, S>(
     ctx: &mut Context<D>, device_id: u64, local_addr: A, body: S,
 ) where
     A: IpAddr,
-    S: SerializationRequest,
+    S: Serializer,
 {
     specialize_ip_addr!(
         fn lookup_dst_mac<D>(ctx: &mut Context<D>, device_id: u64, local_addr: Self) -> Option<Mac>
@@ -216,7 +216,7 @@ pub fn send_ip_frame<D: EventDispatcher, A, S>(
     if let Some(dst_mac) = A::lookup_dst_mac(ctx, device_id, local_addr) {
         let src_mac = get_device_state(ctx, device_id).mac;
         let buffer = body
-            .encapsulate(EthernetFrameSerializer::new(
+            .encapsulate(EthernetFrameBuilder::new(
                 src_mac,
                 dst_mac,
                 A::Version::ETHER_TYPE,
@@ -229,7 +229,8 @@ pub fn send_ip_frame<D: EventDispatcher, A, S>(
 
 /// Receive an Ethernet frame from the network.
 pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64, bytes: &mut [u8]) {
-    let (frame, body_range) = if let Ok(frame) = EthernetFrame::parse(&mut bytes[..]) {
+    let mut buffer = Buf::new(bytes, ..);
+    let frame = if let Ok(frame) = buffer.parse::<EthernetFrame<_>>() {
         frame
     } else {
         // TODO(joshlf): Do something else?
@@ -239,7 +240,6 @@ pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64, b
     if let Some(Ok(ethertype)) = frame.ethertype() {
         let (src, dst) = (frame.src_mac(), frame.dst_mac());
         let device = DeviceId::new_ethernet(device_id);
-        let buffer = BufferAndRange::new_from(bytes, body_range);
         match ethertype {
             EtherType::Arp => {
                 let types = if let Ok(types) = peek_arp_types(buffer.as_ref()) {
@@ -257,8 +257,8 @@ pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64, b
                     types => debug!("got ARP packet for unsupported types: {:?}", types),
                 }
             }
-            EtherType::Ipv4 => crate::ip::receive_ip_packet::<D, Ipv4>(ctx, device, buffer),
-            EtherType::Ipv6 => crate::ip::receive_ip_packet::<D, Ipv6>(ctx, device, buffer),
+            EtherType::Ipv4 => crate::ip::receive_ip_packet::<D, _, Ipv4>(ctx, device, buffer),
+            EtherType::Ipv6 => crate::ip::receive_ip_packet::<D, _, Ipv6>(ctx, device, buffer),
         }
     } else {
         // TODO(joshlf): Do something else?
@@ -310,12 +310,12 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
     type HardwareAddr = Mac;
     const BROADCAST: Mac = Mac::BROADCAST;
 
-    fn send_arp_frame<D: EventDispatcher, S: SerializationRequest>(
+    fn send_arp_frame<D: EventDispatcher, S: Serializer>(
         ctx: &mut Context<D>, device_id: u64, dst: Self::HardwareAddr, body: S,
     ) {
         let src = get_device_state(ctx, device_id).mac;
         let buffer = body
-            .encapsulate(EthernetFrameSerializer::new(src, dst, EtherType::Arp))
+            .encapsulate(EthernetFrameBuilder::new(src, dst, EtherType::Arp))
             .serialize_outer();
         ctx.dispatcher()
             .send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());

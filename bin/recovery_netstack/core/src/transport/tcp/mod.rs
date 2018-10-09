@@ -13,9 +13,10 @@ pub use self::types::*;
 use std::collections::HashMap;
 use std::num::NonZeroU16;
 
+use packet::BufferMut;
+
 use crate::ip::{Ip, IpAddr, Ipv4, Ipv6};
-use crate::wire::tcp::TcpSegment;
-use crate::wire::BufferAndRange;
+use crate::wire::tcp::{TcpParseArgs, TcpSegment};
 use crate::{Context, EventDispatcher};
 
 use self::conn::Conn;
@@ -55,17 +56,18 @@ struct FourTuple<A: IpAddr> {
 }
 
 /// Receive a TCP segment in an IP packet.
-pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: AsMut<[u8]>>(
-    ctx: &mut Context<D>, src_ip: A, dst_ip: A, mut buffer: BufferAndRange<B>,
+pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
+    ctx: &mut Context<D>, src_ip: A, dst_ip: A, mut buffer: B,
 ) {
     println!("received tcp packet: {:x?}", buffer.as_mut());
-    let (segment, body_range) =
-        if let Ok((segment, body_range)) = TcpSegment::parse(buffer.as_mut(), src_ip, dst_ip) {
-            (segment, body_range)
-        } else {
-            // TODO(joshlf): Do something with ICMP here?
-            return;
-        };
+    let segment = if let Ok(segment) =
+        buffer.parse_with::<_, TcpSegment<_>>(TcpParseArgs::new(src_ip, dst_ip))
+    {
+        segment
+    } else {
+        // TODO(joshlf): Do something with ICMP here?
+        return;
+    };
 
     if segment.syn() {
         let _key = TwoTuple {

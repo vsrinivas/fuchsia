@@ -15,14 +15,14 @@ pub use self::types::*;
 use log::{debug, trace};
 use std::fmt::Debug;
 use std::mem;
-use std::ops::Range;
+
+use packet::{BufferMut, BufferSerializer, ParsablePacket, ParseBufferMut, Serializer};
+use zerocopy::{ByteSlice, ByteSliceMut};
 
 use crate::device::DeviceId;
-use crate::error::ParseError;
 use crate::ip::forwarding::{Destination, ForwardingTable};
-use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketSerializer};
-use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketSerializer};
-use crate::wire::{BufferAndRange, SerializationRequest};
+use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
+use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 use crate::{Context, EventDispatcher};
 
 // default IPv4 TTL or IPv6 hops
@@ -41,28 +41,29 @@ struct IpLayerStateInner<I: Ip> {
     table: ForwardingTable<I>,
 }
 
-fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
-    ctx: &mut Context<D>, proto: IpProto, src_ip: I, dst_ip: I, mut buffer: BufferAndRange<B>,
+fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddr, B: BufferMut>(
+    ctx: &mut Context<D>, proto: IpProto, src_ip: I, dst_ip: I, mut buffer: B,
 ) -> bool {
     increment_counter!(ctx, "dispatch_receive_ip_packet");
     match proto {
         IpProto::Icmp | IpProto::Icmpv6 => icmp::receive_icmp_packet(ctx, src_ip, dst_ip, buffer),
-        IpProto::Tcp | IpProto::Udp => crate::transport::receive_ip_packet(ctx, src_ip, dst_ip, proto, buffer),
+        IpProto::Tcp | IpProto::Udp => {
+            crate::transport::receive_ip_packet(ctx, src_ip, dst_ip, proto, buffer)
+        }
     }
 }
 
 /// Receive an IP packet from a device.
-pub fn receive_ip_packet<D: EventDispatcher, I: Ip>(
-    ctx: &mut Context<D>, device: DeviceId, mut buffer: BufferAndRange<&mut [u8]>,
+pub fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
+    ctx: &mut Context<D>, device: DeviceId, mut buffer: B,
 ) {
     trace!("receive_ip_packet({})", device);
-    let (mut packet, body_range) =
-        if let Ok((packet, body_range)) = <I as IpExt>::Packet::parse(buffer.as_mut()) {
-            (packet, body_range)
-        } else {
-            // TODO(joshlf): Do something with ICMP here?
-            return;
-        };
+    let mut packet = if let Ok(packet) = buffer.parse_mut::<<I as IpExt<_>>::Packet>() {
+        packet
+    } else {
+        // TODO(joshlf): Do something with ICMP here?
+        return;
+    };
     trace!("receive_ip_packet: parsed packet: {:?}", packet);
 
     if I::LOOPBACK_SUBNET.contains(packet.dst_ip()) {
@@ -84,8 +85,6 @@ pub fn receive_ip_packet<D: EventDispatcher, I: Ip>(
             let dst_ip = packet.dst_ip();
             // drop packet so we can re-use the underlying buffer
             mem::drop(packet);
-            // slice the buffer to be only the body range
-            buffer.slice(body_range);
             dispatch_receive_ip_packet(ctx, proto, src_ip, dst_ip, buffer)
         } else {
             // TODO(joshlf): Log unrecognized protocol number
@@ -96,9 +95,18 @@ pub fn receive_ip_packet<D: EventDispatcher, I: Ip>(
         if ttl > 1 {
             trace!("receive_ip_packet: forwarding");
             packet.set_ttl(ttl - 1);
+            let meta = packet.parse_metadata();
             // drop packet so we can re-use the underlying buffer
             mem::drop(packet);
-            crate::device::send_ip_frame(ctx, dest.device, dest.next_hop, buffer);
+            // Undo the effects of parsing so that the body of the buffer
+            // contains the entire IP packet again (not just the body).
+            buffer.undo_parse(meta);
+            crate::device::send_ip_frame(
+                ctx,
+                dest.device,
+                dest.next_hop,
+                BufferSerializer::new_vec(buffer),
+            );
             return;
         } else {
             // TTL is 0 or would become 0 after decrement; see "TTL" section,
@@ -184,7 +192,9 @@ fn lookup_route<A: IpAddr>(state: &IpLayerState, dst_ip: A) -> Option<Destinatio
 }
 
 /// Add a route to the forwarding table.
-pub fn add_device_route<D: EventDispatcher, A: IpAddr>(ctx: &mut Context<D>, subnet: Subnet<A>, device: DeviceId) {
+pub fn add_device_route<D: EventDispatcher, A: IpAddr>(
+    ctx: &mut Context<D>, subnet: Subnet<A>, device: DeviceId,
+) {
     specialize_ip_addr!(
         fn generic_add_route(state: &mut IpLayerState, subnet: Subnet<Self>, device: DeviceId) {
             Ipv4Addr => { state.v4.table.add_device_route(subnet, device) }
@@ -212,18 +222,27 @@ pub fn send_ip_packet<D: EventDispatcher, A, S, F>(
     ctx: &mut Context<D>, dst_ip: A, proto: IpProto, get_body: F,
 ) where
     A: IpAddr,
-    S: SerializationRequest,
+    S: Serializer,
     F: FnOnce(A) -> S,
 {
     trace!("send_ip_packet({}, {})", dst_ip, proto);
     increment_counter!(ctx, "send_ip_packet");
     if A::Version::LOOPBACK_SUBNET.contains(dst_ip) {
         increment_counter!(ctx, "send_ip_packet::loopback");
-        let buffer = get_body(A::Version::LOOPBACK_ADDRESS).serialize(0, 0, 0);
+        // TODO(joshlf): Currently, we serialize using the normal Serializer
+        // functionality. I wonder if, in the case of delivering to loopback, we
+        // can do something more efficient?
+        let mut buffer = get_body(A::Version::LOOPBACK_ADDRESS).serialize_outer();
         // TODO(joshlf): Respond with some kind of error if we don't have a
         // handler for that protocol? Maybe simulate what would have happened
         // (w.r.t ICMP) if this were a remote host?
-        dispatch_receive_ip_packet(ctx, proto, A::Version::LOOPBACK_ADDRESS, dst_ip, buffer);
+        dispatch_receive_ip_packet(
+            ctx,
+            proto,
+            A::Version::LOOPBACK_ADDRESS,
+            dst_ip,
+            buffer.as_buf_mut(),
+        );
     } else if let Some(dest) = lookup_route(&ctx.state().ip, dst_ip) {
         let (src_ip, _) = crate::device::get_ip_addr(ctx, dest.device)
             .expect("IP device route set for device without IP address");
@@ -237,7 +256,7 @@ pub fn send_ip_packet<D: EventDispatcher, A, S, F>(
             get_body(src_ip),
         );
     } else {
-        println!("No route to host");
+        debug!("No route to host");
         // TODO(joshlf): No route to host
     }
 }
@@ -256,7 +275,7 @@ pub fn send_ip_packet_from<D: EventDispatcher, A, S>(
     ctx: &mut Context<D>, src_ip: A, dst_ip: A, proto: IpProto, body: S,
 ) where
     A: IpAddr,
-    S: SerializationRequest,
+    S: Serializer,
 {
     // TODO(joshlf): Figure out how to compute a route with the restrictions
     // mentioned in the doc comment.
@@ -280,7 +299,7 @@ pub fn send_ip_packet_from_device<D: EventDispatcher, A, S>(
     body: S,
 ) where
     A: IpAddr,
-    S: SerializationRequest,
+    S: Serializer,
 {
     assert!(!A::Version::LOOPBACK_SUBNET.contains(src_ip));
     assert!(!A::Version::LOOPBACK_SUBNET.contains(dst_ip));
@@ -291,14 +310,14 @@ pub fn send_ip_packet_from_device<D: EventDispatcher, A, S>(
         )
         where
             D: EventDispatcher,
-            S: SerializationRequest,
+            S: Serializer,
         {
             Ipv4Addr => {
-                let body = body.encapsulate(Ipv4PacketSerializer::new(src_ip, dst_ip, ttl, proto));
+                let body = body.encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, ttl, proto));
                 crate::device::send_ip_frame(ctx, device, next_hop, body);
             }
             Ipv6Addr => {
-                let body = body.encapsulate(Ipv6PacketSerializer::new(src_ip, dst_ip, ttl, proto));
+                let body = body.encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, ttl, proto));
                 crate::device::send_ip_frame(ctx, device, next_hop, body);
             }
         }
@@ -319,36 +338,34 @@ pub fn send_ip_packet_from_device<D: EventDispatcher, A, S>(
 //
 // This trait adds extra associated types that are useful for our implementation
 // here, but which consumers outside of the ip module do not need to see.
-trait IpExt<'a>: Ip {
-    type Packet: IpPacket<'a, Self>;
+trait IpExt<B: ByteSlice>: Ip {
+    type Packet: IpPacket<B, Self>;
 }
 
-impl<'a, I: Ip> IpExt<'a> for I {
+impl<B: ByteSlice, I: Ip> IpExt<B> for I {
     default type Packet = !;
 }
 
-impl<'a> IpExt<'a> for Ipv4 {
-    type Packet = Ipv4Packet<&'a mut [u8]>;
+impl<B: ByteSlice> IpExt<B> for Ipv4 {
+    type Packet = Ipv4Packet<B>;
 }
 
-impl<'a> IpExt<'a> for Ipv6 {
-    type Packet = Ipv6Packet<&'a mut [u8]>;
+impl<B: ByteSlice> IpExt<B> for Ipv6 {
+    type Packet = Ipv6Packet<B>;
 }
 
 // `Ipv4Packet` or `Ipv6Packet`
-trait IpPacket<'a, I: Ip>: Sized + Debug {
-    fn parse(bytes: &'a mut [u8]) -> Result<(Self, Range<usize>), ParseError>;
+trait IpPacket<B: ByteSlice, I: Ip>: Sized + Debug + ParsablePacket<B, ()> {
     fn src_ip(&self) -> I::Addr;
     fn dst_ip(&self) -> I::Addr;
     fn proto(&self) -> Result<IpProto, u8>;
     fn ttl(&self) -> u8;
-    fn set_ttl(&mut self, ttl: u8);
+    fn set_ttl(&mut self, ttl: u8)
+    where
+        B: ByteSliceMut;
 }
 
-impl<'a> IpPacket<'a, Ipv4> for Ipv4Packet<&'a mut [u8]> {
-    fn parse(bytes: &'a mut [u8]) -> Result<(Ipv4Packet<&'a mut [u8]>, Range<usize>), ParseError> {
-        Ipv4Packet::parse(bytes)
-    }
+impl<B: ByteSlice> IpPacket<B, Ipv4> for Ipv4Packet<B> {
     fn src_ip(&self) -> Ipv4Addr {
         Ipv4Packet::src_ip(self)
     }
@@ -361,15 +378,15 @@ impl<'a> IpPacket<'a, Ipv4> for Ipv4Packet<&'a mut [u8]> {
     fn ttl(&self) -> u8 {
         Ipv4Packet::ttl(self)
     }
-    fn set_ttl(&mut self, ttl: u8) {
+    fn set_ttl(&mut self, ttl: u8)
+    where
+        B: ByteSliceMut,
+    {
         Ipv4Packet::set_ttl(self, ttl)
     }
 }
 
-impl<'a> IpPacket<'a, Ipv6> for Ipv6Packet<&'a mut [u8]> {
-    fn parse(bytes: &'a mut [u8]) -> Result<(Ipv6Packet<&'a mut [u8]>, Range<usize>), ParseError> {
-        Ipv6Packet::parse(bytes)
-    }
+impl<B: ByteSlice> IpPacket<B, Ipv6> for Ipv6Packet<B> {
     fn src_ip(&self) -> Ipv6Addr {
         Ipv6Packet::src_ip(self)
     }
@@ -382,7 +399,10 @@ impl<'a> IpPacket<'a, Ipv6> for Ipv6Packet<&'a mut [u8]> {
     fn ttl(&self) -> u8 {
         Ipv6Packet::hop_limit(self)
     }
-    fn set_ttl(&mut self, ttl: u8) {
+    fn set_ttl(&mut self, ttl: u8)
+    where
+        B: ByteSliceMut,
+    {
         Ipv6Packet::set_hop_limit(self, ttl)
     }
 }

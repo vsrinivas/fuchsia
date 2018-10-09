@@ -21,6 +21,7 @@
 // TODO(joshlf): Remove this once all of the elements in the crate are actually
 // used.
 #![allow(unused)]
+#![deny(unused_imports)]
 
 #[macro_use]
 mod macros;
@@ -35,10 +36,7 @@ mod wire;
 
 pub mod types;
 
-use crate::device::{
-    ethernet::Mac, receive_frame, DeviceId, DeviceLayerEventDispatcher, DeviceLayerTimerId,
-};
-use crate::transport::udp::UdpEventDispatcher;
+use crate::device::{ethernet::Mac, DeviceId, DeviceLayerEventDispatcher, DeviceLayerTimerId};
 use crate::transport::{TransportLayerEventDispatcher, TransportLayerTimerId};
 
 use crate::device::DeviceLayerState;

@@ -47,7 +47,7 @@ pub struct IcmpEchoReply {
 impl_from_bytes_as_bytes_unaligned!(IcmpEchoRequest);
 impl_from_bytes_as_bytes_unaligned!(IcmpEchoReply);
 
-/// An ICMPv4 Time Exceeded message.
+/// An ICMP Time Exceeded message.
 #[derive(Copy, Clone, Debug)]
 #[repr(C, packed)]
 pub struct IcmpTimeExceeded {

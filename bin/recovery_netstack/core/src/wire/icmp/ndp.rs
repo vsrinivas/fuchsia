@@ -119,7 +119,7 @@ pub mod options {
     use crate::ip::Ipv6Addr;
     use crate::wire::util::{OptionImpl, OptionImplErr};
 
-    create_net_enum!{
+    create_net_enum! {
         NdpOptionType,
         SourceLinkLayerAddress: SOURCE_LINK_LAYER_ADDRESS = 1,
         TargetLinkLayerAddress: TARGET_LINK_LAYER_ADDRESS = 2,
@@ -214,19 +214,24 @@ pub mod options {
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
+mod tests {
+    use packet::{ParsablePacket, ParseBuffer};
 
-    use crate::wire::icmp::{IcmpMessage, IcmpPacket};
-    use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketSerializer};
+    use super::*;
+    use crate::wire::icmp::{IcmpMessage, IcmpPacket, IcmpParseArgs};
+    use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 
     #[test]
     fn parse_neighbor_solicitation() {
         use crate::wire::icmp::testdata::ndp_neighbor::*;
-        let (ip, _) = Ipv6Packet::parse(SOLICITATION_IP_PACKET_BYTES).unwrap();
+        let mut buf = &SOLICITATION_IP_PACKET_BYTES[..];
+        let ip = buf.parse::<Ipv6Packet<_>>().unwrap();
         let (src_ip, dst_ip, hop_limit) = (ip.src_ip(), ip.dst_ip(), ip.hop_limit());
-        let (icmp, _) =
-            IcmpPacket::<_, _, NeighborSolicitation>::parse(ip.body(), src_ip, dst_ip).unwrap();
+        let icmp = buf
+            .parse_with::<_, IcmpPacket<_, _, NeighborSolicitation>>(IcmpParseArgs::new(
+                src_ip, dst_ip,
+            ))
+            .unwrap();
 
         assert_eq!(icmp.message().target_address.ipv6_bytes(), TARGET_ADDRESS);
         for option in icmp.ndp_options().iter() {
@@ -242,10 +247,14 @@ mod test {
     #[test]
     fn parse_neighbor_advertisment() {
         use crate::wire::icmp::testdata::ndp_neighbor::*;
-        let (ip, _) = Ipv6Packet::parse(ADVERTISMENT_IP_PACKET_BYTES).unwrap();
+        let mut buf = &ADVERTISMENT_IP_PACKET_BYTES[..];
+        let ip = buf.parse::<Ipv6Packet<_>>().unwrap();
         let (src_ip, dst_ip, hop_limit) = (ip.src_ip(), ip.dst_ip(), ip.hop_limit());
-        let (icmp, _) =
-            IcmpPacket::<_, _, NeighborAdvertisment>::parse(ip.body(), src_ip, dst_ip).unwrap();
+        let icmp = buf
+            .parse_with::<_, IcmpPacket<_, _, NeighborAdvertisment>>(IcmpParseArgs::new(
+                src_ip, dst_ip,
+            ))
+            .unwrap();
         assert_eq!(icmp.message().target_address.ipv6_bytes(), TARGET_ADDRESS);
         assert_eq!(icmp.ndp_options().iter().count(), 0);
     }
@@ -253,10 +262,14 @@ mod test {
     #[test]
     fn parse_router_advertisment() {
         use crate::wire::icmp::testdata::ndp_router::*;
-        let (ip, _) = Ipv6Packet::parse(ADVERTISMENT_IP_PACKET_BYTES).unwrap();
+        let mut buf = &ADVERTISMENT_IP_PACKET_BYTES[..];
+        let ip = buf.parse::<Ipv6Packet<_>>().unwrap();
         let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
-        let (icmp, _) =
-            IcmpPacket::<_, _, RouterAdvertisment>::parse(ip.body(), src_ip, dst_ip).unwrap();
+        let icmp = buf
+            .parse_with::<_, IcmpPacket<_, _, RouterAdvertisment>>(IcmpParseArgs::new(
+                src_ip, dst_ip,
+            ))
+            .unwrap();
         assert_eq!(icmp.message().current_hop_limit, HOP_LIMIT);
         assert_eq!(icmp.message().router_lifetime(), LIFETIME);
         assert_eq!(icmp.message().reachable_time(), REACHABLE_TIME);

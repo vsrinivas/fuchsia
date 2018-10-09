@@ -61,9 +61,10 @@ pub mod udp;
 use std::collections::HashMap;
 use std::hash::Hash;
 
+use packet::BufferMut;
+
 use crate::ip::{IpAddr, IpProto};
 use crate::transport::udp::UdpEventDispatcher;
-use crate::wire::BufferAndRange;
 use crate::{Context, EventDispatcher};
 
 /// The state associated with the transport layer.
@@ -103,8 +104,8 @@ pub trait TransportLayerEventDispatcher: UdpEventDispatcher {}
 /// `receive_ip_packet` receives a transport layer packet. If the given protocol
 /// is supported, the packet is delivered to that protocol, and
 /// `receive_ip_packet` returns `true`. Otherwise, it returns `false`.
-pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: AsMut<[u8]>>(
-    ctx: &mut Context<D>, src_ip: A, dst_ip: A, proto: IpProto, buffer: BufferAndRange<B>,
+pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
+    ctx: &mut Context<D>, src_ip: A, dst_ip: A, proto: IpProto, buffer: B,
 ) -> bool {
     match proto {
         IpProto::Tcp => {

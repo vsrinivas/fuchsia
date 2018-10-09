@@ -14,24 +14,25 @@ mod ndp;
 #[cfg(test)]
 mod testdata;
 
-pub use self::icmpv4::Packet as Icmpv4Packet;
-pub use self::icmpv6::Packet as Icmpv6Packet;
+pub use self::common::*;
+pub use self::icmpv4::*;
+pub use self::icmpv6::*;
 
 use std::cmp;
 use std::convert::TryFrom;
 use std::fmt;
 use std::marker::PhantomData;
 use std::mem;
-use std::ops::{Deref, Range};
+use std::ops::Deref;
 
 use byteorder::{ByteOrder, NetworkEndian};
+use packet::{BufferView, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::ParseError;
 use crate::ip::{Ip, IpAddr, IpProto, Ipv4, Ipv6};
 use crate::wire::ipv4;
-use crate::wire::util::fits_in_u32;
-use crate::wire::util::{BufferAndRange, Checksum, OptionImpl, Options, PacketSerializer};
+use crate::wire::util::{fits_in_u32, Checksum, OptionImpl, Options};
 
 // Header has the same memory layout (thanks to repr(C, packed)) as an ICMP
 // header. Thus, we can simply reinterpret the bytes of the ICMP header as a
@@ -166,6 +167,11 @@ impl IcmpIpExt for Ipv6 {
     }
 }
 
+// TODO(joshlf): Once we have generic associated types, refactor this so that we
+// don't have to bind B ahead of time. Removing that requirement would make some
+// APIs (in particular, IcmpPacketBuilder) simpler by removing the B parameter
+// from them as well.
+
 /// `MessageBody` represents the parsed body of the ICMP packet.
 ///
 /// - For messages that expect no body, the `MessageBody` is of type `()`.
@@ -293,7 +299,7 @@ pub trait IcmpMessage<I: IcmpIpExt, B>: Sized + Copy + FromBytes + AsBytes + Una
     /// Parse a `Code` from the 8-bit "code" field in the ICMP header. Not all
     /// values for this field are valid. If an invalid value is passed,
     /// `code_from_u8` returns `None`.
-    fn code_from_u8(_: u8) -> Option<Self::Code>;
+    fn code_from_u8(code: u8) -> Option<Self::Code>;
 }
 
 /// An ICMP packet.
@@ -323,32 +329,44 @@ impl<
     }
 }
 
-impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
-    /// Parse an ICMP packet.
-    ///
-    /// `parse` parses `bytes` as an ICMP packet and validates the header fields
-    /// and checksum.  It returns the byte range corresponding to the message
-    /// body within `bytes`. This can be useful when extracting the encapsulated
-    /// body to send to another layer of the stack. If the message type has no
-    /// body, then the range is meaningless and should be ignored.
-    ///
-    /// If `bytes` are a valid ICMP packet, but do not match the message type
-    /// `M`, `parse` will return `Err(ParseError::NotExpected)`. If multiple
-    /// message types are valid in a given context, `peek_message_types` may be
-    /// used to peek at the header and determine what type is present so that
-    /// the correct type can then be used in a call to `parse`.
-    pub fn parse(
-        bytes: B, src_ip: I::Addr, dst_ip: I::Addr,
-    ) -> Result<(IcmpPacket<I, B, M>, Range<usize>), ParseError> {
-        let (header, rest) =
-            LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes).ok_or_else(
-                debug_err_fn!(ParseError::Format, "too few bytes for header"),
-            )?;
-        let (message, message_body) = LayoutVerified::<B, M>::new_unaligned_from_prefix(rest)
-            .ok_or_else(debug_err_fn!(
-                ParseError::Format,
-                "too few bytes for packet"
-            ))?;
+/// Arguments required to parse an ICMP packet.
+pub struct IcmpParseArgs<A: IpAddr> {
+    src_ip: A,
+    dst_ip: A,
+}
+
+impl<A: IpAddr> IcmpParseArgs<A> {
+    /// Construct a new `IcmpParseArgs`.
+    pub fn new(src_ip: A, dst_ip: A) -> IcmpParseArgs<A> {
+        IcmpParseArgs { src_ip, dst_ip }
+    }
+}
+
+impl<B: ByteSlice, I: IcmpIpExt, M: IcmpMessage<I, B>> ParsablePacket<B, IcmpParseArgs<I::Addr>>
+    for IcmpPacket<I, B, M>
+{
+    type Error = ParseError;
+
+    fn parse_metadata(&self) -> ParseMetadata {
+        let header_len = self.header.bytes().len() + self.message.bytes().len();
+        ParseMetadata::from_packet(header_len, self.message_body.len(), 0)
+    }
+
+    fn parse<BV: BufferView<B>>(
+        mut buffer: BV, args: IcmpParseArgs<I::Addr>,
+    ) -> Result<Self, ParseError> {
+        let header = buffer.take_obj_front::<Header>().ok_or_else(debug_err_fn!(
+            ParseError::Format,
+            "too few bytes for header"
+        ))?;
+        let message = buffer.take_obj_front::<M>().ok_or_else(debug_err_fn!(
+            ParseError::Format,
+            "too few bytes for packet"
+        ))?;
+        let message_body = buffer.into_rest();
+        if !M::Body::EXPECTS_BODY && !message_body.is_empty() {
+            return debug_err!(Err(ParseError::Format), "unexpected message body");
+        }
 
         if header.msg_type != M::TYPE.into() {
             return debug_err!(Err(ParseError::NotExpected), "unexpected message type");
@@ -359,25 +377,28 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
             header.code
         ))?;
         if header.checksum()
-            != Self::compute_checksum(&header, message.bytes(), &message_body, src_ip, dst_ip)
-                .ok_or_else(debug_err_fn!(ParseError::Format, "packet too large"))?
+            != Self::compute_checksum(
+                &header,
+                message.bytes(),
+                &message_body,
+                args.src_ip,
+                args.dst_ip,
+            )
+            .ok_or_else(debug_err_fn!(ParseError::Format, "packet too large"))?
         {
             return debug_err!(Err(ParseError::Checksum), "invalid checksum");
         }
-
         let message_body = M::Body::parse(message_body)?;
-
-        let pre_body_len = header.bytes().len() + message.bytes().len();
-        let total_len = pre_body_len + message_body.len();
-        let packet = IcmpPacket {
+        Ok(IcmpPacket {
             header,
             message,
             message_body,
             _marker: PhantomData,
-        };
-        Ok((packet, pre_body_len..total_len))
+        })
     }
+}
 
+impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
     /// Get the ICMP message.
     pub fn message(&self) -> &M {
         &self.message
@@ -392,9 +413,9 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
         M::code_from_u8(self.header.code).unwrap()
     }
 
-    /// Construct a serializer with the same contents as this packet.
-    pub fn serializer(&self, src_ip: I::Addr, dst_ip: I::Addr) -> IcmpPacketSerializer<I, B, M> {
-        IcmpPacketSerializer {
+    /// Construct a builder with the same contents as this packet.
+    pub fn builder(&self, src_ip: I::Addr, dst_ip: I::Addr) -> IcmpPacketBuilder<I, B, M> {
+        IcmpPacketBuilder {
             src_ip,
             dst_ip,
             code: self.code(),
@@ -459,20 +480,20 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B, Body = ndp::Options<B>>> I
     }
 }
 
-/// A serializer for ICMP packets.
-pub struct IcmpPacketSerializer<I: IcmpIpExt, B, M: IcmpMessage<I, B>> {
+/// A builder for ICMP packets.
+pub struct IcmpPacketBuilder<I: IcmpIpExt, B, M: IcmpMessage<I, B>> {
     src_ip: I::Addr,
     dst_ip: I::Addr,
     code: M::Code,
     msg: M,
 }
 
-impl<I: IcmpIpExt, B, M: IcmpMessage<I, B>> IcmpPacketSerializer<I, B, M> {
-    /// Construct a new `IcmpPacketSerializer`.
+impl<I: IcmpIpExt, B, M: IcmpMessage<I, B>> IcmpPacketBuilder<I, B, M> {
+    /// Construct a new `IcmpPacketBuilder`.
     pub fn new(
         src_ip: I::Addr, dst_ip: I::Addr, code: M::Code, msg: M,
-    ) -> IcmpPacketSerializer<I, B, M> {
-        IcmpPacketSerializer {
+    ) -> IcmpPacketBuilder<I, B, M> {
+        IcmpPacketBuilder {
             src_ip,
             dst_ip,
             code,
@@ -482,54 +503,57 @@ impl<I: IcmpIpExt, B, M: IcmpMessage<I, B>> IcmpPacketSerializer<I, B, M> {
 }
 
 // TODO(joshlf): Figure out a way to split body and non-body message types by
-// trait and implement PacketSerializer for some and InnerPacketSerializer for
-// others.
+// trait and implement PacketBuilder for some and InnerPacketBuilder for others.
 
-impl<I: IcmpIpExt, B, M: IcmpMessage<I, B>> PacketSerializer for IcmpPacketSerializer<I, B, M> {
-    fn max_header_bytes(&self) -> usize {
+impl<I: IcmpIpExt, B, M: IcmpMessage<I, B>> PacketBuilder for IcmpPacketBuilder<I, B, M> {
+    fn header_len(&self) -> usize {
         mem::size_of::<Header>() + mem::size_of::<M>()
     }
 
-    fn min_header_bytes(&self) -> usize {
-        self.max_header_bytes()
+    fn min_body_len(&self) -> usize {
+        0
     }
 
-    fn serialize<B2: AsRef<[u8]> + AsMut<[u8]>>(self, buffer: &mut BufferAndRange<B2>) {
-        let extend_backwards = {
-            let (prefix, message_body, _) = buffer.parts_mut();
-            assert!(
-                M::Body::EXPECTS_BODY || message_body.len() == 0,
-                "body provided for message that doesn't take a body"
-            );
-            // SECURITY: Use _zeroed constructors to ensure we zero memory to prevent
-            // leaking information from packets previously stored in this buffer.
-            let (prefix, mut message) =
-                LayoutVerified::<_, M>::new_unaligned_from_suffix_zeroed(prefix)
-                    .expect("too few bytes for ICMP message");
-            let (_, mut header) =
-                LayoutVerified::<_, Header>::new_unaligned_from_suffix_zeroed(prefix)
-                    .expect("too few bytes for ICMP message");
-            *message = self.msg;
-            header.set_msg_type(M::TYPE);
-            header.code = self.code.into();
-            let checksum = IcmpPacket::<I, B, M>::compute_checksum(
-                &header,
-                message.bytes(),
-                message_body,
-                self.src_ip,
-                self.dst_ip,
-            )
-            .unwrap_or_else(|| {
-                panic!(
-                    "total ICMP packet length of {} overflows 32-bit length field of pseudo-header",
-                    header.bytes().len() + message.bytes().len() + message_body.len(),
-                )
-            });
-            header.set_checksum(checksum);
-            header.bytes().len() + message.bytes().len()
-        };
+    fn footer_len(&self) -> usize {
+        0
+    }
 
-        buffer.extend_backwards(extend_backwards);
+    fn serialize<'a>(self, mut buffer: SerializeBuffer<'a>) {
+        use packet::BufferViewMut;
+
+        let (mut prefix, message_body, _) = buffer.parts();
+        // implements BufferViewMut, giving us take_obj_xxx_zero methods
+        let mut prefix = &mut prefix;
+
+        assert!(
+            M::Body::EXPECTS_BODY || message_body.len() == 0,
+            "body provided for message that doesn't take a body"
+        );
+        // SECURITY: Use _zero constructors to ensure we zero memory to prevent
+        // leaking information from packets previously stored in this buffer.
+        let mut header = prefix
+            .take_obj_front_zero::<Header>()
+            .expect("too few bytes for ICMP message");
+        let mut message = prefix
+            .take_obj_front_zero::<M>()
+            .expect("too few bytes for ICMP message");
+        *message = self.msg;
+        header.set_msg_type(M::TYPE);
+        header.code = self.code.into();
+        let checksum = IcmpPacket::<I, B, M>::compute_checksum(
+            &header,
+            message.bytes(),
+            message_body,
+            self.src_ip,
+            self.dst_ip,
+        )
+        .unwrap_or_else(|| {
+            panic!(
+                "total ICMP packet length of {} overflows 32-bit length field of pseudo-header",
+                header.bytes().len() + message.bytes().len() + message_body.len(),
+            )
+        });
+        header.set_checksum(checksum);
     }
 }
 

@@ -8,13 +8,12 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::time::Duration;
 
+use packet::{BufferMut, InnerSerializer, Serializer};
+
 use crate::device::ethernet::EthernetArpDevice;
 use crate::device::DeviceLayerTimerId;
 use crate::ip::Ipv4Addr;
-use crate::wire::{
-    arp::{ArpPacket, ArpPacketSerializer, HType, PType},
-    BufferAndRange, SerializationRequest,
-};
+use crate::wire::arp::{ArpPacket, ArpPacketBuilder, HType, PType};
 use crate::{Context, EventDispatcher, TimerId, TimerIdInner};
 use log::debug;
 
@@ -90,9 +89,9 @@ pub trait ArpDevice<P: PType + Eq + Hash>: Sized {
     /// Send an ARP packet in a device layer frame.
     ///
     /// `send_arp_frame` accepts a device ID, a destination hardware address,
-    /// and a `SerializationRequest`. It computes the routing information and
-    /// serializes the request in a device layer frame and sends it.
-    fn send_arp_frame<D: EventDispatcher, S: SerializationRequest>(
+    /// and a `Serializer`. It computes the routing information, serializes the
+    /// request in a device layer frame, and sends it.
+    fn send_arp_frame<D: EventDispatcher, S: Serializer>(
         ctx: &mut Context<D>, device_id: u64, dst: Self::HardwareAddr, body: S,
     );
 
@@ -135,13 +134,13 @@ pub fn receive_arp_packet<
     D: EventDispatcher,
     P: PType + Eq + Hash,
     AD: ArpDevice<P>,
-    B: AsRef<[u8]> + AsMut<[u8]>,
+    B: BufferMut,
 >(
     ctx: &mut Context<D>, device_id: u64, src_addr: AD::HardwareAddr, dst_addr: AD::HardwareAddr,
-    mut buffer: BufferAndRange<B>,
+    mut buffer: B,
 ) {
     // TODO(wesleyac) Add support for gratuitous ARP and probe/announce.
-    let packet = if let Ok(packet) = ArpPacket::<_, AD::HardwareAddr, P>::parse(buffer.as_mut()) {
+    let packet = if let Ok(packet) = buffer.parse::<ArpPacket<_, AD::HardwareAddr, P>>() {
         let addressed_to_me =
             Some(packet.target_protocol_address()) == AD::get_protocol_addr(ctx, device_id);
         let table = &mut AD::get_arp_state(ctx, device_id).table;
@@ -209,14 +208,16 @@ pub fn receive_arp_packet<
                 ctx,
                 device_id,
                 packet.sender_hardware_address(),
-                ArpPacketSerializer::new(
-                    ArpOp::Response,
-                    self_hw_addr,
-                    packet.target_protocol_address(),
-                    packet.sender_hardware_address(),
-                    packet.sender_protocol_address(),
-                )
-                .serialize_outer(),
+                InnerSerializer::new_vec(
+                    ArpPacketBuilder::new(
+                        ArpOp::Response,
+                        self_hw_addr,
+                        packet.target_protocol_address(),
+                        packet.sender_hardware_address(),
+                        packet.sender_protocol_address(),
+                    ),
+                    buffer,
+                ),
             );
         }
     } else {
@@ -256,7 +257,7 @@ fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
             ctx,
             device_id,
             AD::BROADCAST,
-            ArpPacketSerializer::new(
+            ArpPacketBuilder::new(
                 ArpOp::Request,
                 self_hw_addr,
                 sender_protocol_addr,
@@ -265,8 +266,7 @@ fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
                 // address we are sending the packet to.
                 AD::BROADCAST,
                 lookup_addr,
-            )
-            .serialize_outer(),
+            ),
         );
 
         // TODO(wesleyac): Configurable timeout.
@@ -356,14 +356,15 @@ impl<H, P: Hash + Eq> Default for ArpTable<H, P> {
 
 #[cfg(test)]
 mod tests {
+    use packet::ParseBuffer;
+
     use super::*;
     use crate::device::ethernet::{set_ip_addr, EtherType, Mac};
     use crate::ip::{Ipv4Addr, Subnet};
     use crate::testutil;
     use crate::testutil::DummyEventDispatcher;
-    use crate::wire::arp::{peek_arp_types, ArpPacketSerializer};
+    use crate::wire::arp::{peek_arp_types, ArpPacketBuilder};
     use crate::wire::ethernet::EthernetFrame;
-    use crate::wire::{BufferAndRange, InnerSerializationRequest};
     use crate::StackState;
 
     const TEST_LOCAL_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
@@ -396,8 +397,9 @@ mod tests {
         for packet_num in 0..3 {
             assert_eq!(ctx.dispatcher.frames_sent().len(), packet_num + 1);
 
-            let (frame, _) =
-                EthernetFrame::parse(&ctx.dispatcher.frames_sent()[packet_num].1[..]).unwrap();
+            let mut buf = &ctx.dispatcher.frames_sent()[packet_num].1[..];
+
+            let frame = buf.parse::<EthernetFrame<_>>().unwrap();
             assert_eq!(frame.ethertype(), Some(Ok(EtherType::Arp)));
             assert_eq!(frame.src_mac(), TEST_LOCAL_MAC);
             assert_eq!(EthernetArpDevice::BROADCAST, frame.dst_mac());
@@ -406,7 +408,7 @@ mod tests {
             assert_eq!(hw, ArpHardwareType::Ethernet);
             assert_eq!(proto, EtherType::Ipv4);
 
-            let arp = ArpPacket::<_, Mac, Ipv4Addr>::parse(frame.body()).unwrap();
+            let arp = buf.parse::<ArpPacket<_, Mac, Ipv4Addr>>().unwrap();
             assert_eq!(arp.operation(), ArpOp::Request);
             assert_eq!(arp.sender_hardware_address(), TEST_LOCAL_MAC);
             assert_eq!(arp.target_hardware_address(), EthernetArpDevice::BROADCAST);
@@ -432,13 +434,13 @@ mod tests {
             Subnet::new(TEST_LOCAL_IPV4, 24),
         );
 
-        let mut buf = InnerSerializationRequest::new(ArpPacketSerializer::new(
+        let mut buf = ArpPacketBuilder::new(
             ArpOp::Request,
             TEST_REMOTE_MAC,
             TEST_REMOTE_IPV4,
             TEST_LOCAL_MAC,
             TEST_LOCAL_IPV4,
-        ))
+        )
         .serialize_outer();
         let (hw, proto) = peek_arp_types(buf.as_ref()).unwrap();
         assert_eq!(hw, ArpHardwareType::Ethernet);
@@ -449,7 +451,7 @@ mod tests {
             1,
             TEST_REMOTE_MAC,
             TEST_LOCAL_MAC,
-            BufferAndRange::new_from(&mut buf, ..),
+            buf,
         );
 
         assert_eq!(
@@ -465,7 +467,9 @@ mod tests {
 
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
 
-        let (frame, _) = EthernetFrame::parse(&ctx.dispatcher.frames_sent()[0].1[..]).unwrap();
+        let mut buf = &ctx.dispatcher.frames_sent()[0].1[..];
+
+        let frame = buf.parse::<EthernetFrame<_>>().unwrap();
         assert_eq!(frame.ethertype(), Some(Ok(EtherType::Arp)));
         assert_eq!(frame.src_mac(), TEST_LOCAL_MAC);
         assert_eq!(frame.dst_mac(), TEST_REMOTE_MAC);
@@ -474,7 +478,7 @@ mod tests {
         assert_eq!(hw, ArpHardwareType::Ethernet);
         assert_eq!(proto, EtherType::Ipv4);
 
-        let arp = ArpPacket::<_, Mac, Ipv4Addr>::parse(frame.body()).unwrap();
+        let arp = buf.parse::<ArpPacket<_, Mac, Ipv4Addr>>().unwrap();
         assert_eq!(arp.operation(), ArpOp::Response);
         assert_eq!(arp.sender_hardware_address(), TEST_LOCAL_MAC);
         assert_eq!(arp.target_hardware_address(), TEST_REMOTE_MAC);

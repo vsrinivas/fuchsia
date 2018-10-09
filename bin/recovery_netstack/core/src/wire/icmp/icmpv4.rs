@@ -2,19 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! ICMP v4
+//! ICMPv4
 
 use std::fmt;
-use std::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
+use packet::{BufferView, ParsablePacket, ParseMetadata};
 use zerocopy::ByteSlice;
 
 use crate::error::ParseError;
 use crate::ip::{Ipv4, Ipv4Addr};
 
 use super::common::{IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpTimeExceeded};
-use super::{peek_message_type, IcmpIpExt, IcmpPacket, IcmpUnusedCode, IdAndSeq, OriginalPacket};
+use super::{
+    peek_message_type, IcmpIpExt, IcmpPacket, IcmpParseArgs, IcmpUnusedCode, IdAndSeq,
+    OriginalPacket,
+};
 
 /// An ICMPv4 packet with a dynamic message type.
 ///
@@ -24,7 +27,7 @@ use super::{peek_message_type, IcmpIpExt, IcmpPacket, IcmpUnusedCode, IdAndSeq, 
 /// knowing the message type ahead of time while still getting the benefits of a
 /// statically-typed packet struct after parsing is complete.
 #[allow(missing_docs)]
-pub enum Packet<B> {
+pub enum Icmpv4Packet<B> {
     EchoReply(IcmpPacket<Ipv4, B, IcmpEchoReply>),
     DestUnreachable(IcmpPacket<Ipv4, B, IcmpDestUnreachable>),
     Redirect(IcmpPacket<Ipv4, B, Icmpv4Redirect>),
@@ -35,9 +38,9 @@ pub enum Packet<B> {
     TimestampReply(IcmpPacket<Ipv4, B, Icmpv4TimestampReply>),
 }
 
-impl<B: ByteSlice + fmt::Debug> fmt::Debug for Packet<B> {
+impl<B: ByteSlice + fmt::Debug> fmt::Debug for Icmpv4Packet<B> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use self::Packet::*;
+        use self::Icmpv4Packet::*;
         match self {
             DestUnreachable(ref p) => f.debug_tuple("DestUnreachable").field(p).finish(),
             EchoReply(ref p) => f.debug_tuple("EchoReply").field(p).finish(),
@@ -51,44 +54,40 @@ impl<B: ByteSlice + fmt::Debug> fmt::Debug for Packet<B> {
     }
 }
 
-create_net_enum! {
-    MessageType,
-    EchoReply: ECHO_REPLY = 0,
-    DestUnreachable: DEST_UNREACHABLE = 3,
-    Redirect: REDIRECT = 5,
-    EchoRequest: ECHO_REQUEST = 8,
-    TimeExceeded: TIME_EXCEEDED = 11,
-    ParameterProblem: PARAMETER_PROBLEM = 12,
-    TimestampRequest: TIMESTAMP_REQUEST = 13,
-    TimestampReply: TIMESTAMP_REPLY = 14,
-}
+impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv4Addr>> for Icmpv4Packet<B> {
+    type Error = ParseError;
 
-impl<B: ByteSlice> Packet<B> {
-    /// Parse an ICMP packet.
-    ///
-    /// `parse` parses `bytes` as an ICMP packet and validates the header fields
-    /// and checksum.  It returns the byte range corresponding to the message
-    /// body within `bytes`. This can be useful when extracting the encapsulated
-    /// body to send to another layer of the stack. If the message type has no
-    /// body, then the range is meaningless and should be ignored.
-    pub fn parse(
-        bytes: B, src_ip: Ipv4Addr, dst_ip: Ipv4Addr,
-    ) -> Result<(Packet<B>, Range<usize>), ParseError> {
+    fn parse_metadata(&self) -> ParseMetadata {
+        use self::Icmpv4Packet::*;
+        match self {
+            EchoReply(p) => p.parse_metadata(),
+            DestUnreachable(p) => p.parse_metadata(),
+            Redirect(p) => p.parse_metadata(),
+            EchoRequest(p) => p.parse_metadata(),
+            TimeExceeded(p) => p.parse_metadata(),
+            ParameterProblem(p) => p.parse_metadata(),
+            TimestampRequest(p) => p.parse_metadata(),
+            TimestampReply(p) => p.parse_metadata(),
+        }
+    }
+
+    fn parse<BV: BufferView<B>>(
+        mut buffer: BV, args: IcmpParseArgs<Ipv4Addr>,
+    ) -> Result<Self, ParseError> {
         macro_rules! mtch {
-            ($bytes:expr, $src_ip:expr, $dst_ip:expr, $($variant:ident => $type:ty,)*) => {
-                match peek_message_type(&$bytes)? {
+            ($buffer:expr, $args:expr, $($variant:ident => $type:ty,)*) => {
+                match peek_message_type($buffer.as_ref())? {
                     $(MessageType::$variant => {
-                        let (packet, range) = IcmpPacket::<Ipv4, B, $type>::parse($bytes, $src_ip, $dst_ip)?;
-                        (Packet::$variant(packet), range)
+                        let packet = <IcmpPacket<Ipv4, B, $type> as ParsablePacket<_, _>>::parse($buffer, $args)?;
+                        Icmpv4Packet::$variant(packet)
                     })*
                 }
             }
         }
 
         Ok(mtch!(
-            bytes,
-            src_ip,
-            dst_ip,
+            buffer,
+            args,
             EchoReply => IcmpEchoReply,
             DestUnreachable => IcmpDestUnreachable,
             Redirect => Icmpv4Redirect,
@@ -99,6 +98,18 @@ impl<B: ByteSlice> Packet<B> {
             TimestampReply  => Icmpv4TimestampReply,
         ))
     }
+}
+
+create_net_enum! {
+    MessageType,
+    EchoReply: ECHO_REPLY = 0,
+    DestUnreachable: DEST_UNREACHABLE = 3,
+    Redirect: REDIRECT = 5,
+    EchoRequest: ECHO_REQUEST = 8,
+    TimeExceeded: TIME_EXCEEDED = 11,
+    ParameterProblem: PARAMETER_PROBLEM = 12,
+    TimestampRequest: TIMESTAMP_REQUEST = 13,
+    TimestampReply: TIMESTAMP_REPLY = 14,
 }
 
 create_net_enum! {
@@ -274,148 +285,119 @@ impl_icmp_message!(
 );
 
 #[cfg(test)]
-mod test {
+mod tests {
+    use packet::{ParseBuffer, Serializer};
+
     use super::*;
     use crate::wire::icmp::{IcmpMessage, MessageBody};
-    use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketSerializer};
-    use crate::wire::util::{BufferAndRange, PacketSerializer, SerializationRequest};
+    use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
 
     fn serialize_to_bytes<B: ByteSlice, M: IcmpMessage<Ipv4, B>>(
         src_ip: Ipv4Addr, dst_ip: Ipv4Addr, icmp: &IcmpPacket<Ipv4, B, M>,
-        serializer: Ipv4PacketSerializer,
+        builder: Ipv4PacketBuilder,
     ) -> Vec<u8> {
-        let icmp_serializer = icmp.serializer(src_ip, dst_ip);
-        let mut data = vec![0; icmp_serializer.max_header_bytes() + icmp.message_body.len()];
-        let body_offset = data.len() - icmp.message_body.len();
-        (&mut data[body_offset..]).copy_from_slice(icmp.message_body.bytes());
-        BufferAndRange::new_from(&mut data[..], body_offset..)
-            .encapsulate(icmp_serializer)
-            .encapsulate(serializer)
+        icmp.message_body
+            .bytes()
+            .encapsulate(icmp.builder(src_ip, dst_ip))
+            .encapsulate(builder)
             .serialize_outer()
             .as_ref()
             .to_vec()
     }
 
+    fn test_parse_and_serialize<
+        M: for<'a> IcmpMessage<Ipv4, &'a [u8]>,
+        F: for<'a> FnOnce(&IcmpPacket<Ipv4, &'a [u8], M>),
+    >(
+        mut req: &[u8], check: F,
+    ) {
+        let orig_req = &req[..];
+
+        let ip = req.parse::<Ipv4Packet<_>>().unwrap();
+        let mut body = ip.body();
+        let icmp = body
+            .parse_with::<_, IcmpPacket<_, _, M>>(IcmpParseArgs::new(ip.src_ip(), ip.dst_ip()))
+            .unwrap();
+        check(&icmp);
+
+        let data = serialize_to_bytes(ip.src_ip(), ip.dst_ip(), &icmp, ip.builder());
+        assert_eq!(&data[..], orig_req);
+    }
+
     #[test]
     fn test_parse_and_serialize_echo_request() {
         use crate::wire::testdata::icmp_echo::*;
-        let (ip, _) = Ipv4Packet::parse(REQUEST_IP_PACKET_BYTES).unwrap();
-        let (src_ip, dst_ip, ttl) = (ip.src_ip(), ip.dst_ip(), ip.ttl());
-        // TODO: Check range
-        let (icmp, _) =
-            IcmpPacket::<_, _, IcmpEchoRequest>::parse(ip.body(), src_ip, dst_ip).unwrap();
-        assert_eq!(icmp.original_packet().bytes(), ECHO_DATA);
-        assert_eq!(icmp.message().id_seq.id(), IDENTIFIER);
-        assert_eq!(icmp.message().id_seq.seq(), SEQUENCE_NUM);
-
-        let data = serialize_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());
-        assert_eq!(&data[..], REQUEST_IP_PACKET_BYTES);
+        test_parse_and_serialize::<IcmpEchoRequest, _>(REQUEST_IP_PACKET_BYTES, |icmp| {
+            assert_eq!(icmp.message_body.bytes(), ECHO_DATA);
+            assert_eq!(icmp.message().id_seq.id(), IDENTIFIER);
+            assert_eq!(icmp.message().id_seq.seq(), SEQUENCE_NUM);
+        });
     }
 
     #[test]
     fn test_parse_and_serialize_echo_response() {
         use crate::wire::testdata::icmp_echo::*;
-        let (ip, _) = Ipv4Packet::parse(RESPONSE_IP_PACKET_BYTES).unwrap();
-        let (src_ip, dst_ip, ttl) = (ip.src_ip(), ip.dst_ip(), ip.ttl());
-        // TODO: Check range
-        let (icmp, _) =
-            IcmpPacket::<_, _, IcmpEchoReply>::parse(ip.body(), src_ip, dst_ip).unwrap();
-        assert_eq!(icmp.original_packet().bytes(), ECHO_DATA);
-        assert_eq!(icmp.message().id_seq.id(), IDENTIFIER);
-        assert_eq!(icmp.message().id_seq.seq(), SEQUENCE_NUM);
-
-        let data = serialize_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());
-        assert_eq!(&data[..], RESPONSE_IP_PACKET_BYTES);
+        test_parse_and_serialize::<IcmpEchoReply, _>(RESPONSE_IP_PACKET_BYTES, |icmp| {
+            assert_eq!(icmp.message_body.bytes(), ECHO_DATA);
+            assert_eq!(icmp.message().id_seq.id(), IDENTIFIER);
+            assert_eq!(icmp.message().id_seq.seq(), SEQUENCE_NUM);
+        });
     }
 
     #[test]
     fn test_parse_and_serialize_timestamp_request() {
         use crate::wire::testdata::icmp_timestamp::*;
-        let (ip, _) = Ipv4Packet::parse(REQUEST_IP_PACKET_BYTES).unwrap();
-        let (src_ip, dst_ip, ttl) = (ip.src_ip(), ip.dst_ip(), ip.ttl());
-        // TODO: Check range
-        let (icmp, _) =
-            IcmpPacket::<_, _, Icmpv4TimestampRequest>::parse(ip.body(), src_ip, dst_ip).unwrap();
-        assert_eq!(
-            icmp.message().0.timestamps.origin_timestamp(),
-            ORIGIN_TIMESTAMP
-        );
-        assert_eq!(
-            icmp.message().0.timestamps.recv_timestamp(),
-            RX_TX_TIMESTAMP
-        );
-        assert_eq!(icmp.message().0.timestamps.tx_timestamp(), RX_TX_TIMESTAMP);
-        assert_eq!(icmp.message().0.id_seq.id(), IDENTIFIER);
-        assert_eq!(icmp.message().0.id_seq.seq(), SEQUENCE_NUM);
-
-        let data = serialize_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());
-        assert_eq!(&data[..], REQUEST_IP_PACKET_BYTES);
+        test_parse_and_serialize::<Icmpv4TimestampRequest, _>(REQUEST_IP_PACKET_BYTES, |icmp| {
+            assert_eq!(
+                icmp.message().0.timestamps.origin_timestamp(),
+                ORIGIN_TIMESTAMP
+            );
+            assert_eq!(icmp.message().0.timestamps.tx_timestamp(), RX_TX_TIMESTAMP);
+            assert_eq!(icmp.message().0.id_seq.id(), IDENTIFIER);
+            assert_eq!(icmp.message().0.id_seq.seq(), SEQUENCE_NUM);
+        });
     }
 
     #[test]
     fn test_parse_and_serialize_timestamp_reply() {
         use crate::wire::testdata::icmp_timestamp::*;
-        let (ip, _) = Ipv4Packet::parse(RESPONSE_IP_PACKET_BYTES).unwrap();
-        let (src_ip, dst_ip, ttl) = (ip.src_ip(), ip.dst_ip(), ip.ttl());
-        // TODO: Check range
-        let (icmp, _) =
-            IcmpPacket::<_, _, Icmpv4TimestampReply>::parse(ip.body(), src_ip, dst_ip).unwrap();
-        assert_eq!(
-            icmp.message().0.timestamps.origin_timestamp(),
-            ORIGIN_TIMESTAMP
-        );
-        // TODO: Assert other values here?
-        // TODO: Check value of recv_timestamp and tx_timestamp
-        assert_eq!(icmp.message().0.id_seq.id(), IDENTIFIER);
-        assert_eq!(icmp.message().0.id_seq.seq(), SEQUENCE_NUM);
-
-        let data = serialize_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());
-        assert_eq!(&data[..], RESPONSE_IP_PACKET_BYTES);
+        test_parse_and_serialize::<Icmpv4TimestampReply, _>(RESPONSE_IP_PACKET_BYTES, |icmp| {
+            assert_eq!(
+                icmp.message().0.timestamps.origin_timestamp(),
+                ORIGIN_TIMESTAMP
+            );
+            // TODO: Assert other values here?
+            // TODO: Check value of recv_timestamp and tx_timestamp
+            assert_eq!(icmp.message().0.id_seq.id(), IDENTIFIER);
+            assert_eq!(icmp.message().0.id_seq.seq(), SEQUENCE_NUM);
+        });
     }
 
     #[test]
     fn test_parse_and_serialize_dest_unreachable() {
         use crate::wire::testdata::icmp_dest_unreachable::*;
-        let (ip, _) = Ipv4Packet::parse(IP_PACKET_BYTES).unwrap();
-        let (src_ip, dst_ip, ttl) = (ip.src_ip(), ip.dst_ip(), ip.ttl());
-        // TODO: Check range
-        let (icmp, _) =
-            IcmpPacket::<Ipv4, _, IcmpDestUnreachable>::parse(ip.body(), src_ip, dst_ip).unwrap();
-        assert_eq!(icmp.code(), Icmpv4DestUnreachableCode::DestHostUnreachable);
-        assert_eq!(icmp.original_packet_body(), ORIGIN_DATA);
-
-        let data = serialize_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());
-        assert_eq!(&data[..], IP_PACKET_BYTES);
+        test_parse_and_serialize::<IcmpDestUnreachable, _>(IP_PACKET_BYTES, |icmp| {
+            assert_eq!(icmp.code(), Icmpv4DestUnreachableCode::DestHostUnreachable);
+            assert_eq!(icmp.original_packet_body(), ORIGIN_DATA);
+        });
     }
 
     #[test]
     fn test_parse_and_serialize_redirect() {
         use crate::wire::testdata::icmp_redirect::*;
-        let (ip, _) = Ipv4Packet::parse(IP_PACKET_BYTES).unwrap();
-        let (src_ip, dst_ip, ttl) = (ip.src_ip(), ip.dst_ip(), ip.ttl());
-        // TODO: Check range
-        let (icmp, _) =
-            IcmpPacket::<_, _, Icmpv4Redirect>::parse(ip.body(), src_ip, dst_ip).unwrap();
-        assert_eq!(icmp.code(), Icmpv4RedirectCode::RedirectForHost);
-        assert_eq!(icmp.message().gateway, GATEWAY_ADDR);
-
-        let data = serialize_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());
-        assert_eq!(&data[..], IP_PACKET_BYTES);
+        test_parse_and_serialize::<Icmpv4Redirect, _>(IP_PACKET_BYTES, |icmp| {
+            assert_eq!(icmp.code(), Icmpv4RedirectCode::RedirectForHost);
+            assert_eq!(icmp.message().gateway, GATEWAY_ADDR);
+        });
     }
 
     #[test]
     fn test_parse_and_serialize_time_exceeded() {
         use crate::wire::testdata::icmp_time_exceeded::*;
-        let (ip, _) = Ipv4Packet::parse(IP_PACKET_BYTES).unwrap();
-        let (src_ip, dst_ip, ttl) = (ip.src_ip(), ip.dst_ip(), ip.ttl());
-        // TODO: Check range
-        let (icmp, _) =
-            IcmpPacket::<_, _, IcmpTimeExceeded>::parse(ip.body(), src_ip, dst_ip).unwrap();
-        assert_eq!(icmp.code(), Icmpv4TimeExceededCode::TTLExpired);
-        assert_eq!(icmp.original_packet_body(), ORIGIN_DATA);
-
-        let data = serialize_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());
-        assert_eq!(&data[..], IP_PACKET_BYTES);
+        test_parse_and_serialize::<IcmpTimeExceeded, _>(IP_PACKET_BYTES, |icmp| {
+            assert_eq!(icmp.code(), Icmpv4TimeExceededCode::TTLExpired);
+            assert_eq!(icmp.original_packet_body(), ORIGIN_DATA);
+        });
     }
 
 }

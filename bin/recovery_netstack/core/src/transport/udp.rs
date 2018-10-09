@@ -7,12 +7,12 @@
 use std::hash::Hash;
 use std::num::NonZeroU16;
 
+use packet::{BufferMut, BufferSerializer, Serializer};
 use zerocopy::ByteSlice;
 
 use crate::ip::{Ip, IpAddr, IpProto, Ipv4Addr, Ipv6Addr};
 use crate::transport::{ConnAddrMap, ListenerAddrMap};
-use crate::wire::udp::{UdpPacket, UdpPacketSerializer};
-use crate::wire::{BufferAndRange, SerializationRequest};
+use crate::wire::udp::{UdpPacket, UdpPacketBuilder, UdpParseArgs};
 use crate::{Context, EventDispatcher, StackState};
 
 /// The state associated with the UDP protocol.
@@ -128,17 +128,18 @@ pub trait UdpEventDispatcher {
 }
 
 /// Receive a UDP packet in an IP packet.
-pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: AsMut<[u8]>>(
-    ctx: &mut Context<D>, src_ip: A, dst_ip: A, mut buffer: BufferAndRange<B>,
+pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
+    ctx: &mut Context<D>, src_ip: A, dst_ip: A, mut buffer: B,
 ) {
     println!("received udp packet: {:x?}", buffer.as_mut());
-    let (packet, body_range) =
-        if let Ok((packet, body_range)) = UdpPacket::parse(buffer.as_mut(), src_ip, dst_ip) {
-            (packet, body_range)
-        } else {
-            // TODO(joshlf): Do something with ICMP here?
-            return;
-        };
+    let packet = if let Ok(packet) =
+        buffer.parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(src_ip, dst_ip))
+    {
+        packet
+    } else {
+        // TODO(joshlf): Do something with ICMP here?
+        return;
+    };
 
     let (state, dispatcher) = ctx.state_and_dispatcher();
     let state = get_inner_state(state);
@@ -167,8 +168,8 @@ pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: AsMut<[u8]>>(
 /// # Panics
 ///
 /// `send_udp_conn` panics if `conn` is not associated with a connection for this IP version.
-pub fn send_udp_conn<D: EventDispatcher, I: Ip>(
-    ctx: &mut Context<D>, conn: &D::UdpConn, body: &[u8],
+pub fn send_udp_conn<D: EventDispatcher, I: Ip, B: BufferMut>(
+    ctx: &mut Context<D>, conn: &D::UdpConn, body: B,
 ) {
     let state = get_inner_state::<_, I::Addr>(ctx.state());
     let Conn {
@@ -187,7 +188,7 @@ pub fn send_udp_conn<D: EventDispatcher, I: Ip>(
         local_addr,
         remote_addr,
         IpProto::Udp,
-        body.encapsulate(UdpPacketSerializer::new(
+        BufferSerializer::new_vec(body).encapsulate(UdpPacketBuilder::new(
             local_addr,
             remote_addr,
             Some(local_port),
@@ -207,9 +208,9 @@ pub fn send_udp_conn<D: EventDispatcher, I: Ip>(
 ///
 /// `send_udp_listener` panics if `listener` is not associated with a listener
 /// for this IP version.
-pub fn send_udp_listener<D: EventDispatcher, A: IpAddr>(
+pub fn send_udp_listener<D: EventDispatcher, A: IpAddr, B: BufferMut>(
     ctx: &mut Context<D>, listener: &D::UdpListener, local_addr: A, remote_addr: A,
-    remote_port: NonZeroU16, body: &[u8],
+    remote_port: NonZeroU16, body: B,
 ) {
     if !crate::ip::is_local_addr(ctx, local_addr) {
         // TODO(joshlf): Return error.
@@ -261,7 +262,7 @@ pub fn send_udp_listener<D: EventDispatcher, A: IpAddr>(
         local_addr,
         remote_addr,
         IpProto::Udp,
-        body.encapsulate(UdpPacketSerializer::new(
+        BufferSerializer::new_vec(body).encapsulate(UdpPacketBuilder::new(
             local_addr,
             remote_addr,
             Some(local_port),

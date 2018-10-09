@@ -11,10 +11,10 @@ use std::collections::HashMap;
 use std::fmt::{self, Debug, Display, Formatter};
 
 use log::debug;
+use packet::Serializer;
 
 use crate::device::ethernet::{EthernetDeviceState, Mac};
 use crate::ip::{IpAddr, Ipv4Addr, Subnet};
-use crate::wire::SerializationRequest;
 use crate::{Context, EventDispatcher};
 
 /// An ID identifying a device.
@@ -134,7 +134,7 @@ pub fn send_ip_frame<D: EventDispatcher, A, S>(
     ctx: &mut Context<D>, device: DeviceId, local_addr: A, body: S,
 ) where
     A: IpAddr,
-    S: SerializationRequest,
+    S: Serializer,
 {
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::send_ip_frame(ctx, device.id, local_addr, body),
