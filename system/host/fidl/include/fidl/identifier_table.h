@@ -21,8 +21,7 @@ public:
     IdentifierTable();
 
     Token MakeIdentifier(SourceLocation previous_end,
-                         StringView source_data, const SourceFile& source_file,
-                         bool escaped_identifier) const;
+                         StringView source_data, const SourceFile& source_file) const;
 
 private:
     std::map<StringView, Token::Subkind> keyword_table_;

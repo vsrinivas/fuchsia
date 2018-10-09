@@ -66,6 +66,7 @@ private:
 
         ASTScope(const ASTScope&) = delete;
         ASTScope& operator=(const ASTScope&) = delete;
+
     private:
         Parser* parser_;
         bool suppress_;

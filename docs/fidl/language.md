@@ -40,9 +40,9 @@ files. Perhaps the compiler can emit document contents together with
 the declarations in a machine-readable FIDL IR format that could be
 consumed by other tools.
 
-#### Reserved Words
+#### Keywords
 
-The following keywords are reserved in FIDL.
+The following are keywords in FIDL.
 
 ```
 array, as, bool, const, enum, float32, float64, handle, int8, int16,
@@ -50,17 +50,11 @@ int32, int64, interface, library, request, string, struct, uint8, uint16,
 uint32, uint64, union, using, vector
 ```
 
-To use these words as identifiers, they must be escaped by prepending an "@".
-For example "interface" is a reserved word but "@interface" is an identifier
-whose name is "interface".
+Keywords can be used as identifiers (see below).
 
 #### Identifiers
 
-FIDL identifiers must match the regex "@?[a-zA-Z_][0-9a-zA-Z]\*". The "@" prefix,
-if present, serves to distinguish identifiers from reserved words in the FIDL
-language. The "@" prefix itself is ignored for the purposes of naming the
-identifier. This allows reserved words in the FIDL language to nevertheless be
-used as identifiers (when escaped with "@").
+FIDL identifiers must match the regex "[a-zA-Z_][0-9a-zA-Z]\*".
 
 Identifiers are case-sensitive.
 
@@ -72,7 +66,7 @@ library foo;
 struct Foo { };
 
 // a struct named "struct"
-struct @struct { };
+struct struct { };
 ```
 
 #### Qualified Identifiers

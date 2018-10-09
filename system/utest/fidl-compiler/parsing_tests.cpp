@@ -115,10 +115,30 @@ interface InInterface {
     END_TEST;
 }
 
+// Test that an @ prefix in an identifier emits an error message. Regression test for FIDL-303.
+bool detect_deprecated_at_sign_test() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library test;
+
+struct Test {
+    uint8 @uint8;
+}
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "unexpected token");
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(parser_tests);
 RUN_TEST(bad_compound_identifier_test);
 RUN_TEST(parsing_reserved_words_in_struct_test);
 RUN_TEST(parsing_reserved_words_in_interface_test);
+RUN_TEST(detect_deprecated_at_sign_test);
 END_TEST_CASE(parser_tests);

@@ -22,12 +22,14 @@ public:
     enum Kind : uint8_t {
 #define TOKEN(Name) k##Name,
 #include "fidl/token_definitions.inc"
+#undef TOKEN
     };
 
     enum Subkind : uint8_t {
         kNone = 0,
 #define KEYWORD(Name, Spelling) k##Name,
 #include "fidl/token_definitions.inc"
+#undef KEYWORD
     };
 
     class KindAndSubkind {
@@ -55,10 +57,12 @@ public:
     case Token::Kind::k##Name: \
         return #Name;
 #include "fidl/token_definitions.inc"
+#undef TOKEN
 #define KEYWORD(Name, Spelling)                                                               \
     case Token::KindAndSubkind(Token::Kind::kIdentifier, Token::Subkind::k##Name).combined(): \
         return #Spelling;
 #include "fidl/token_definitions.inc"
+#undef KEYWORD
         default:
             return "<unknown token>";
         }

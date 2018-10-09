@@ -13,7 +13,7 @@ const char kData[] = R"FIDL(
 [Internal]
 library zx;
 
-using @status = int32;
+using status = int32;
 using time = int64;
 using duration = int64;
 using koid = uint64;
