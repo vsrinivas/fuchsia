@@ -66,7 +66,7 @@ static int platform_serial_thread(void* arg) {
                 } else {
                     in_buffer_offset = 0;
                 }
-            } else if (status != ZX_ERR_SHOULD_WAIT && status != ZX_SOCKET_PEER_CLOSED) {
+            } else if (status != ZX_ERR_SHOULD_WAIT && status != ZX_ERR_PEER_CLOSED) {
                 zxlogf(ERROR, "platform_serial_thread: zx_socket_write returned %d\n", status);
                 break;
             }
@@ -85,7 +85,7 @@ static int platform_serial_thread(void* arg) {
                     // out_buffer empty now, reset to beginning
                     out_buffer_offset = 0;
                 }
-            } else if (status != ZX_ERR_SHOULD_WAIT && status != ZX_SOCKET_PEER_CLOSED) {
+            } else if (status != ZX_ERR_SHOULD_WAIT && status != ZX_ERR_PEER_CLOSED) {
                 zxlogf(ERROR, "platform_serial_thread: serial_impl_write returned %d\n", status);
                 break;
             }
