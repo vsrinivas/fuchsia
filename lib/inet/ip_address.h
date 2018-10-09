@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_NETCONNECTOR_IP_ADDRESS_H_
-#define GARNET_BIN_NETCONNECTOR_IP_ADDRESS_H_
+#ifndef GARNET_LIB_INET_IP_ADDRESS_H_
+#define GARNET_LIB_INET_IP_ADDRESS_H_
 
 #include <arpa/inet.h>
 
@@ -15,7 +15,7 @@ class NetAddress;
 }
 }  // namespace fuchsia
 
-namespace netconnector {
+namespace inet {
 
 // Represents a V4 or V6 IP address.
 class IpAddress {
@@ -113,6 +113,6 @@ class IpAddress {
 
 std::ostream& operator<<(std::ostream& os, const IpAddress& value);
 
-}  // namespace netconnector
+}  // namespace inet
 
-#endif  // GARNET_BIN_NETCONNECTOR_IP_ADDRESS_H_
+#endif  // GARNET_LIB_INET_IP_ADDRESS_H_

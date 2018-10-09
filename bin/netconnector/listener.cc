@@ -10,7 +10,7 @@
 #include <lib/async/default.h>
 #include <sys/socket.h>
 
-#include "garnet/bin/netconnector/ip_port.h"
+#include "garnet/lib/inet/ip_port.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
@@ -22,7 +22,8 @@ Listener::Listener() : dispatcher_(async_get_default_dispatcher()) {}
 Listener::~Listener() { Stop(); }
 
 void Listener::Start(
-    IpPort port, fit::function<void(fxl::UniqueFD)> new_connection_callback) {
+    inet::IpPort port,
+    fit::function<void(fxl::UniqueFD)> new_connection_callback) {
   FXL_DCHECK(!socket_fd_.is_valid()) << "Started when already listening";
 
   socket_fd_ = fxl::UniqueFD(socket(AF_INET, SOCK_STREAM, 0));

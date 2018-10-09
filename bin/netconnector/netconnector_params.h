@@ -10,7 +10,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include "garnet/bin/netconnector/ip_address.h"
+#include "garnet/lib/inet/ip_address.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 
@@ -31,11 +31,11 @@ class NetConnectorParams {
     return std::move(launch_infos_by_service_name_);
   }
 
-  const std::unordered_map<std::string, IpAddress>& devices() {
+  const std::unordered_map<std::string, inet::IpAddress>& devices() {
     return device_addresses_by_name_;
   }
 
-  void RegisterDevice(const std::string& name, const IpAddress& address);
+  void RegisterDevice(const std::string& name, const inet::IpAddress& address);
 
   void UnregisterDevice(const std::string& name);
 
@@ -55,7 +55,7 @@ class NetConnectorParams {
   bool mdns_verbose_ = false;
   std::unordered_map<std::string, fuchsia::sys::LaunchInfoPtr>
       launch_infos_by_service_name_;
-  std::unordered_map<std::string, IpAddress> device_addresses_by_name_;
+  std::unordered_map<std::string, inet::IpAddress> device_addresses_by_name_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(NetConnectorParams);
 };

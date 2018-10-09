@@ -8,7 +8,7 @@
 #include <limits.h>
 #include <unistd.h>
 
-#include "garnet/bin/netconnector/socket_address.h"
+#include "garnet/lib/inet/socket_address.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
@@ -47,8 +47,8 @@ class NetstackClient {
 // Returns a host address, preferably V4. Returns an invalid address if no
 // network interface could be found or if the interface hasn't obtained an
 // address.
-IpAddress GetHostAddress() {
-  static IpAddress ip_address;
+inet::IpAddress GetHostAddress() {
+  static inet::IpAddress ip_address;
   if (ip_address)
     return ip_address;
 
@@ -57,18 +57,18 @@ IpAddress GetHostAddress() {
         for (const auto& interface : *interfaces) {
           if (interface.addr.family ==
               fuchsia::netstack::NetAddressFamily::IPV4) {
-            ip_address = IpAddress(&interface.addr);
+            ip_address = inet::IpAddress(&interface.addr);
             break;
           }
           if (interface.addr.family ==
               fuchsia::netstack::NetAddressFamily::IPV6) {
-            ip_address = IpAddress(&interface.addr);
+            ip_address = inet::IpAddress(&interface.addr);
             // Keep looking...v4 is preferred.
           }
         }
       });
 
-  return IpAddress::kInvalid;
+  return inet::IpAddress::kInvalid;
 }
 
 }  // namespace
@@ -94,7 +94,7 @@ std::string GetHostName() {
   if (host_name == kFuchsia) {
     // Seems we have the hard-coded host name. Supplement it with part of the
     // IP address.
-    IpAddress address = GetHostAddress();
+    inet::IpAddress address = GetHostAddress();
     if (address) {
       uint16_t suffix = address.is_v4()
                             ? static_cast<uint16_t>(

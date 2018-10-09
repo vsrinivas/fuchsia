@@ -7,7 +7,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <rapidjson/document.h>
 
-#include "garnet/bin/netconnector/ip_address.h"
+#include "garnet/lib/inet/ip_address.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
@@ -75,7 +75,7 @@ void NetConnectorParams::RegisterService(
 }
 
 void NetConnectorParams::RegisterDevice(const std::string& name,
-                                        const IpAddress& address) {
+                                        const inet::IpAddress& address) {
   auto result = device_addresses_by_name_.emplace(name, address);
 
   if (!result.second) {
@@ -150,7 +150,8 @@ bool NetConnectorParams::ParseConfig(const std::string& string) {
         return false;
       }
 
-      IpAddress address = IpAddress::FromString(pair.value.GetString());
+      inet::IpAddress address =
+          inet::IpAddress::FromString(pair.value.GetString());
       if (!address.is_valid()) {
         FXL_LOG(ERROR) << "Config file contains invalid IP address "
                        << pair.value.GetString();

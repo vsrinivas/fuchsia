@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/netconnector/ip_address.h"
+#include "garnet/lib/inet/ip_address.h"
 
 #include <sstream>
 
@@ -12,7 +12,7 @@
 #include <netdb.h>
 #include <sys/socket.h>
 
-namespace netconnector {
+namespace inet {
 
 // static
 const IpAddress IpAddress::kInvalid;
@@ -218,4 +218,4 @@ std::ostream& operator<<(std::ostream& os, const IpAddress& value) {
   }
 }
 
-}  // namespace netconnector
+}  // namespace inet

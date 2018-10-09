@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_NETCONNECTOR_IP_PORT_H_
-#define GARNET_BIN_NETCONNECTOR_IP_PORT_H_
+#ifndef GARNET_LIB_INET_IP_PORT_H_
+#define GARNET_LIB_INET_IP_PORT_H_
 
 #include <ostream>
 
 #include <arpa/inet.h>
 #include <endian.h>
 
-namespace netconnector {
+namespace inet {
 
 // Represents an IP port number.
 //
@@ -80,6 +80,6 @@ class IpPort {
 
 std::ostream& operator<<(std::ostream& os, IpPort value);
 
-}  // namespace netconnector
+}  // namespace inet
 
-#endif  // GARNET_BIN_NETCONNECTOR_IP_PORT_H_
+#endif  // GARNET_LIB_INET_IP_PORT_H_

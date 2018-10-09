@@ -10,7 +10,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include "garnet/bin/netconnector/socket_address.h"
+#include "garnet/lib/inet/socket_address.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 
@@ -22,7 +22,7 @@ class NetConnectorImpl;
 class DeviceServiceProvider : public fuchsia::sys::ServiceProvider {
  public:
   static std::unique_ptr<DeviceServiceProvider> Create(
-      const std::string& device_name, const SocketAddress& address,
+      const std::string& device_name, const inet::SocketAddress& address,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request,
       NetConnectorImpl* owner);
 
@@ -33,12 +33,12 @@ class DeviceServiceProvider : public fuchsia::sys::ServiceProvider {
 
  private:
   DeviceServiceProvider(
-      const std::string& device_name, const SocketAddress& address,
+      const std::string& device_name, const inet::SocketAddress& address,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request,
       NetConnectorImpl* owner);
 
   std::string device_name_;
-  SocketAddress address_;
+  inet::SocketAddress address_;
   fidl::Binding<fuchsia::sys::ServiceProvider> binding_;
   NetConnectorImpl* owner_;
 

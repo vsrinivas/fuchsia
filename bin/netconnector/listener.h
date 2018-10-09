@@ -11,7 +11,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 
-#include "garnet/bin/netconnector/ip_port.h"
+#include "garnet/lib/inet/ip_port.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 
@@ -29,7 +29,7 @@ class Listener {
 
   // Starts listening on |port|. |new_connection_callback| is called when a new
   // connection is requested.
-  void Start(IpPort port,
+  void Start(inet::IpPort port,
              fit::function<void(fxl::UniqueFD)> new_connection_callback);
 
   // Stops the listener.

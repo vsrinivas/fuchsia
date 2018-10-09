@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_NETCONNECTOR_SOCKET_ADDRESS_H_
-#define GARNET_BIN_NETCONNECTOR_SOCKET_ADDRESS_H_
+#ifndef GARNET_LIB_INET_SOCKET_ADDRESS_H_
+#define GARNET_LIB_INET_SOCKET_ADDRESS_H_
 
 #include <ostream>
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
-#include "garnet/bin/netconnector/ip_address.h"
-#include "garnet/bin/netconnector/ip_port.h"
+#include "garnet/lib/inet/ip_address.h"
+#include "garnet/lib/inet/ip_port.h"
 #include "lib/fxl/logging.h"
 
 namespace fuchsia {
@@ -20,7 +20,7 @@ class SocketAddress;
 }
 }  // namespace fuchsia
 
-namespace netconnector {
+namespace inet {
 
 // Represents a V4 or V6 socket address.
 class SocketAddress {
@@ -113,6 +113,6 @@ class SocketAddress {
 
 std::ostream& operator<<(std::ostream& os, const SocketAddress& value);
 
-}  // namespace netconnector
+}  // namespace inet
 
-#endif  // GARNET_BIN_NETCONNECTOR_SOCKET_ADDRESS_H_
+#endif  // GARNET_LIB_INET_SOCKET_ADDRESS_H_

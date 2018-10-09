@@ -8,14 +8,14 @@
 
 #include "garnet/bin/netconnector/netconnector_impl.h"
 #include "garnet/bin/netconnector/requestor_agent.h"
-#include "garnet/bin/netconnector/socket_address.h"
+#include "garnet/lib/inet/socket_address.h"
 #include "lib/fxl/logging.h"
 
 namespace netconnector {
 
 // static
 std::unique_ptr<DeviceServiceProvider> DeviceServiceProvider::Create(
-    const std::string& device_name, const SocketAddress& address,
+    const std::string& device_name, const inet::SocketAddress& address,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request,
     NetConnectorImpl* owner) {
   return std::unique_ptr<DeviceServiceProvider>(new DeviceServiceProvider(
@@ -23,7 +23,7 @@ std::unique_ptr<DeviceServiceProvider> DeviceServiceProvider::Create(
 }
 
 DeviceServiceProvider::DeviceServiceProvider(
-    const std::string& device_name, const SocketAddress& address,
+    const std::string& device_name, const inet::SocketAddress& address,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request,
     NetConnectorImpl* owner)
     : device_name_(device_name),

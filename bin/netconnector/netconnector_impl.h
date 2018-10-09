@@ -17,12 +17,12 @@
 
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/netconnector/device_service_provider.h"
-#include "garnet/bin/netconnector/ip_port.h"
 #include "garnet/bin/netconnector/listener.h"
 #include "garnet/bin/netconnector/netconnector_params.h"
 #include "garnet/bin/netconnector/requestor_agent.h"
 #include "garnet/bin/netconnector/responding_service_host.h"
 #include "garnet/bin/netconnector/service_agent.h"
+#include "garnet/lib/inet/ip_port.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
@@ -70,7 +70,7 @@ class NetConnectorImpl : public fuchsia::netconnector::NetConnector {
                            GetKnownDeviceNamesCallback callback) override;
 
  private:
-  static const IpPort kPort;
+  static const inet::IpPort kPort;
   static const std::string kFuchsiaServiceName;
   static const std::string kLocalDeviceName;
 

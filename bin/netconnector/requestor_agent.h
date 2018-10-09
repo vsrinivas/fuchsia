@@ -10,7 +10,7 @@
 #include <memory>
 
 #include "garnet/bin/netconnector/message_transceiver.h"
-#include "garnet/bin/netconnector/socket_address.h"
+#include "garnet/lib/inet/socket_address.h"
 #include "lib/fxl/files/unique_fd.h"
 
 namespace netconnector {
@@ -19,10 +19,9 @@ class NetConnectorImpl;
 
 class RequestorAgent : public MessageTransceiver {
  public:
-  static std::unique_ptr<RequestorAgent> Create(const SocketAddress& address,
-                                                const std::string& service_name,
-                                                zx::channel local_channel,
-                                                NetConnectorImpl* owner);
+  static std::unique_ptr<RequestorAgent> Create(
+      const inet::SocketAddress& address, const std::string& service_name,
+      zx::channel local_channel, NetConnectorImpl* owner);
 
   ~RequestorAgent() override;
 

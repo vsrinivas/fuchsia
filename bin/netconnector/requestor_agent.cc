@@ -7,15 +7,15 @@
 #include <errno.h>
 #include <sys/socket.h>
 
-#include "garnet/bin/netconnector/ip_port.h"
 #include "garnet/bin/netconnector/netconnector_impl.h"
+#include "garnet/lib/inet/ip_port.h"
 #include "lib/fxl/logging.h"
 
 namespace netconnector {
 
 // static
 std::unique_ptr<RequestorAgent> RequestorAgent::Create(
-    const SocketAddress& address, const std::string& service_name,
+    const inet::SocketAddress& address, const std::string& service_name,
     zx::channel local_channel, NetConnectorImpl* owner) {
   FXL_DCHECK(address.is_valid());
   FXL_DCHECK(!service_name.empty());

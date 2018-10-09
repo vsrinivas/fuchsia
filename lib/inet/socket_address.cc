@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/netconnector/socket_address.h"
+#include "garnet/lib/inet/socket_address.h"
 
 #include <sstream>
 
 #include <endian.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 
-namespace netconnector {
+namespace inet {
 
 // static
 const SocketAddress SocketAddress::kInvalid;
@@ -125,4 +125,4 @@ std::ostream& operator<<(std::ostream& os, const SocketAddress& value) {
   return os << value.address() << ":" << value.port();
 }
 
-}  // namespace netconnector
+}  // namespace inet
