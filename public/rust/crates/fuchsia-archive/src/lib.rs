@@ -10,7 +10,6 @@
 //! ```
 //! extern crate failure;
 //! extern crate fuchsia_archive;
-//! extern crate tempdir;
 //!
 //! use failure::Error;
 //! use fuchsia_archive::write;
@@ -18,10 +17,9 @@
 //! use std::fs::create_dir_all;
 //! use std::fs::File;
 //! use std::io::{Cursor, Write};
-//! use tempdir::TempDir;
 //!
 //! fn create_test_files(file_names: &[&str]) -> Result<TempDir, Error> {
-//!     let tmp_dir = TempDir::new("fuchsia_archive_test")?;
+//!     let tmp_dir = tempdir::Builder::new().prefix("fuchsia_archive_test").tempdir()?;
 //!     for file_name in file_names {
 //!         let file_path = tmp_dir.path().join(file_name);
 //!         let parent_dir = file_path.parent().unwrap();
@@ -373,7 +371,6 @@ fn align(unrounded_value: u64, multiple: u64) -> u64 {
 
 #[cfg(test)]
 mod tests {
-
     use bincode::{deserialize_from, serialize_into, Infinite};
     use failure::Error;
     use itertools::assert_equal;
@@ -382,12 +379,12 @@ mod tests {
     use std::fs::File;
     use std::io::{Cursor, Seek, SeekFrom, Write};
     use std::str;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
     use {align, write, DirectoryEntry, Index, IndexEntry, Reader, DIRECTORY_ENTRY_LEN, DIR_CHUNK,
          INDEX_ENTRY_LEN, INDEX_LEN, MAGIC_INDEX_VALUE};
 
     fn create_test_files(file_names: &[&str]) -> Result<TempDir, Error> {
-        let tmp_dir = TempDir::new("fuchsia_archive_test")?;
+        let tmp_dir = TempDir::new()?;
         for file_name in file_names {
             let file_path = tmp_dir.path().join(file_name);
             let parent_dir = file_path.parent().unwrap();

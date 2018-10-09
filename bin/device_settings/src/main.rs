@@ -232,13 +232,11 @@ fn main_ds() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempdir;
-
-    use self::tempdir::TempDir;
     use super::*;
-    use futures::prelude::*;
 
     use fidl_fuchsia_devicesettings::DeviceSettingsManagerProxy;
+    use futures::prelude::*;
+    use tempfile::TempDir;
 
     fn async_test<F, Fut>(keys: &[&str], f: F)
     where
@@ -259,7 +257,7 @@ mod tests {
             setting_file_map: HashMap::new(),
             watchers: Arc::new(Mutex::new(HashMap::new())),
         };
-        let tmp_dir = TempDir::new("ds_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
 
         device_settings.initialize_keys(tmp_dir.path().to_str().unwrap(), keys);
 

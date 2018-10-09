@@ -310,11 +310,9 @@ impl StoreManager {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempdir;
-
-    use self::tempdir::TempDir;
     use crate::store::*;
     use std::io;
+    use tempfile::TempDir;
 
     fn get_tmp_store_manager(tmp_dir: &TempDir) -> StoreManager {
         StoreManager::new(tmp_dir.path().join("stash.store")).unwrap()
@@ -322,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_get_value() {
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let mut sm = get_tmp_store_manager(&tmp_dir);
 
         let test_client_name = "test_client".to_owned();
@@ -341,7 +339,7 @@ mod tests {
 
     #[test]
     fn test_get_nonexistent_value() {
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let sm = get_tmp_store_manager(&tmp_dir);
 
         let test_client_name = "test_client".to_owned();
@@ -353,7 +351,7 @@ mod tests {
 
     #[test]
     fn test_set_value() {
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let mut sm = get_tmp_store_manager(&tmp_dir);
 
         let test_client_name = "test_client".to_owned();
@@ -379,7 +377,7 @@ mod tests {
 
     #[test]
     fn test_delete_value() {
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let mut sm = get_tmp_store_manager(&tmp_dir);
 
         let test_client_name = "test_client".to_owned();
@@ -401,7 +399,7 @@ mod tests {
 
     #[test]
     fn test_list_prefix() {
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let mut sm = get_tmp_store_manager(&tmp_dir);
 
         let test_client_name = "test_client".to_owned();
@@ -435,7 +433,7 @@ mod tests {
 
     #[test]
     fn test_get_prefix() {
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let mut sm = get_tmp_store_manager(&tmp_dir);
 
         let test_client_name = "test_client".to_owned();
@@ -469,7 +467,7 @@ mod tests {
 
     #[test]
     fn test_serialize_deserialize() {
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let backing_file = tmp_dir.path().join("file.store");
         let test_client = "test_client";
 
@@ -532,7 +530,7 @@ mod tests {
 
     #[test]
     fn test_comprehensive() {
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let mut sm = get_tmp_store_manager(&tmp_dir);
 
         let test_client_name = "test_client".to_owned();
@@ -579,7 +577,7 @@ mod tests {
 
     #[test]
     fn test_file_is_updated() {
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let mut sm = get_tmp_store_manager(&tmp_dir);
 
         let test_client_name = "test_client".to_owned();

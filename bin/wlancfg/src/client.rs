@@ -356,13 +356,13 @@ mod tests {
             task::Poll,
         },
         std::path::Path,
-        tempdir,
+        tempfile,
     };
 
     #[test]
     fn scans_only_requested_with_saved_networks() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (_client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
@@ -390,7 +390,7 @@ mod tests {
     #[test]
     fn auto_connect_to_known_ess() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         // save the network to trigger a scan
         ess_store.store(b"bar".to_vec(), KnownEss { password: b"qwerty".to_vec() })
@@ -434,7 +434,7 @@ mod tests {
     #[test]
     fn manual_connect_cancels_auto_connect() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
@@ -467,7 +467,7 @@ mod tests {
     #[test]
     fn manual_connect_cancels_manual_connect() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
@@ -512,7 +512,7 @@ mod tests {
     #[test]
     fn manual_connect_when_already_connected() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         // save the network that will be autoconnected
         ess_store.store(b"foo".to_vec(), KnownEss { password: b"12345".to_vec() })
@@ -555,7 +555,7 @@ mod tests {
     #[test]
     fn manual_connect_failure_triggers_auto_connect() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
@@ -596,7 +596,7 @@ mod tests {
     #[test]
     fn manual_connect_after_sme_disconnected() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
@@ -624,7 +624,7 @@ mod tests {
     #[test]
     fn manual_connect_while_sme_is_disconnecting() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
@@ -661,7 +661,7 @@ mod tests {
     #[test]
     fn disconnect_request_when_already_disconnected() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
@@ -690,7 +690,7 @@ mod tests {
     #[test]
     fn disconnect_request_when_manually_connecting() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
@@ -724,7 +724,7 @@ mod tests {
     #[test]
     fn disconnect_when_connected() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();

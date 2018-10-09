@@ -157,14 +157,14 @@ mod tests {
     use super::*;
     use {
         std::io::Write,
-        tempdir,
+        tempfile,
     };
 
     const STORE_JSON_PATH: &str = "store.json";
 
     #[test]
     fn store_and_lookup() {
-        let temp_dir = tempdir::TempDir::new("ess_store_test").expect("failed to create temp dir");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
 
         // Expect the store to be constructed successfully even if the file doesn't exist yet
         let store = create_ess_store(temp_dir.path());
@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn unwrap_or_else_from_bad_file() {
-        let temp_dir = tempdir::TempDir::new("ess_store_test").expect("failed to create temp dir");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let path = temp_dir.path().join(STORE_JSON_PATH);
         let mut file = fs::File::create(&path)
             .expect("failed to open file for writing");

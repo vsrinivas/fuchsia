@@ -169,17 +169,15 @@ impl<'a> VfsWatchMsg<'a> {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempdir;
-
     use super::*;
 
     use fuchsia_async::{self as fasync, TimeoutExt};
+    use fuchsia_zircon::prelude::*;
     use futures::prelude::*;
     use pin_utils::pin_mut;
-    use self::tempdir::TempDir;
     use std::fmt::Debug;
     use std::path::Path;
-    use fuchsia_zircon::prelude::*;
+    use tempfile::TempDir;
 
     fn one_step<S, OK, ERR>(exec: &mut fasync::Executor, s: &mut S) -> OK
         where S: Stream<Item = Result<OK, ERR>> + Unpin,
@@ -199,7 +197,7 @@ mod tests {
 
     #[test]
     fn test_existing() {
-        let tmp_dir = TempDir::new("vfs-watcher-test-existing").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let _ = File::create(tmp_dir.path().join("file1")).unwrap();
 
         let exec = &mut fasync::Executor::new().unwrap();
@@ -223,7 +221,7 @@ mod tests {
 
     #[test]
     fn test_add() {
-        let tmp_dir = TempDir::new("vfs-watcher-test-add").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
 
         let exec = &mut fasync::Executor::new().unwrap();
         let dir = File::open(tmp_dir.path()).unwrap();
@@ -247,7 +245,8 @@ mod tests {
 
     #[test]
     fn test_remove() {
-        let tmp_dir = TempDir::new("vfs-watcher-test-remove").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
+
         let filename = "file1";
         let filepath = tmp_dir.path().join(filename);
         let _ = File::create(&filepath).unwrap();
@@ -275,7 +274,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_timeout() {
-        let tmp_dir = TempDir::new("vfs-watcher-test-timeout").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
 
         let exec = &mut fasync::Executor::new().unwrap();
         let dir = File::open(tmp_dir.path()).unwrap();

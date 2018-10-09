@@ -292,20 +292,18 @@ pub fn is_enabled(severity: levels::LogLevel) -> bool {
 
 #[cfg(test)]
 mod test {
-    extern crate tempdir;
-
     use super::*;
 
     use log::{trace, error, debug, info, warn};
-    use self::tempdir::TempDir;
     use std::fs::File;
     use std::ptr;
     use std::os::unix::io::AsRawFd;
     use std::io::Read;
+    use tempfile::TempDir;
 
     #[test]
     fn test() {
-        let tmp_dir = TempDir::new("test").expect("should have created tempdir");
+        let tmp_dir = TempDir::new().expect("should have created tempdir");
         let file_path = tmp_dir.path().join("tmp_file");
         let tmp_file = File::create(&file_path).expect("should have created file");
         let config = syslog::fx_logger_config_t {

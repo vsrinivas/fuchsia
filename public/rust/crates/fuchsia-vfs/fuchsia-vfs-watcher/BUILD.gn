@@ -17,7 +17,7 @@ rustc_library("fuchsia-vfs-watcher") {
     "//garnet/public/rust/crates/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:pin-utils",
     "//third_party/rust-crates/rustc_deps:futures-preview",
-    "//third_party/rust-crates/rustc_deps:tempdir",
+    "//third_party/rust-crates/rustc_deps:tempfile",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc"
   ]
 }

@@ -29,7 +29,7 @@ rustc_binary("bin") {
     "//third_party/rust-crates/rustc_deps:serde",
     "//third_party/rust-crates/rustc_deps:serde_derive",
     "//third_party/rust-crates/rustc_deps:serde_json",
-    "//third_party/rust-crates/rustc_deps:tempdir",
+    "//third_party/rust-crates/rustc_deps:tempfile",
   ]
 }
 

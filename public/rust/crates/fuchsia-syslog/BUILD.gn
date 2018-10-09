@@ -13,7 +13,7 @@ rustc_library("fuchsia-syslog") {
     "//garnet/public/rust/crates/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:lazy_static",
     "//third_party/rust-crates/rustc_deps:log",
-    "//third_party/rust-crates/rustc_deps:tempdir",
+    "//third_party/rust-crates/rustc_deps:tempfile",
   ]
   non_rust_deps = [
     "//zircon/public/lib/syslog",

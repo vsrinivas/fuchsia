@@ -133,7 +133,7 @@ impl<S: Serializer> AuthDb for AuthDbFile<S> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     struct TempLocation {
         // A fresh temp directory that will be deleted when this object is dropped.
@@ -152,7 +152,7 @@ mod test {
     }
 
     fn create_temp_location() -> TempLocation {
-        let dir = TempDir::new("AuthStoreUnitTest").unwrap();
+        let dir = TempDir::new().unwrap();
         let path = dir.path().join("authdb");
         TempLocation { _dir: dir, path }
     }

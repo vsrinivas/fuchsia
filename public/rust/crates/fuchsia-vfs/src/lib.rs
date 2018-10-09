@@ -47,8 +47,6 @@ mod test {
     use std::fs;
     use std::thread;
 
-    extern crate tempdir;
-
     struct BasicFS {}
 
     impl Vfs for BasicFS {}
@@ -64,7 +62,7 @@ mod test {
         let bfs = Arc::new(BasicFS {});
         let bvn = Arc::new(BasicVnode {});
 
-        let d = tempdir::TempDir::new("mount_basic").unwrap();
+        let d = tempfile::TempDir::new().unwrap();
 
         let m = mount(&d.path(), bfs, bvn).expect("mount");
 

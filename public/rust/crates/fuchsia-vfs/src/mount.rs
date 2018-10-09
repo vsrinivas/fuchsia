@@ -95,8 +95,6 @@ mod test {
     use super::*;
     use zx::AsHandleRef;
 
-    extern crate tempdir;
-
     #[test]
     fn test_mount_unmount() {
         let (c1, c2) = zx::Channel::create().unwrap();
@@ -114,7 +112,7 @@ mod test {
             zx::WaitAsyncOpts::Once,
         ).unwrap();
 
-        let td = tempdir::TempDir::new("test_mount_unmount").unwrap();
+        let td = tempfile::TempDir::new().unwrap();
 
         let m = mount(&td.path(), c1).unwrap();
 

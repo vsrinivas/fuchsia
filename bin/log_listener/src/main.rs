@@ -463,13 +463,11 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempdir;
-
-    use self::tempdir::TempDir;
     use super::*;
 
     use std::fs::File;
     use std::io::Read;
+    use tempfile::TempDir;
 
     fn copy_log_message(msg: &LogMessage) -> LogMessage {
         LogMessage {
@@ -486,7 +484,7 @@ mod tests {
     #[test]
     fn test_log_fn() {
         let _executor = fasync::Executor::new().expect("unable to create executor");
-        let tmp_dir = TempDir::new("test").expect("should have created tempdir");
+        let tmp_dir = TempDir::new().expect("should have created tempdir");
         let file_path = tmp_dir.path().join("tmp_file");
         let tmp_file = File::create(&file_path).expect("should have created file");
         let mut l = Listener {
@@ -626,7 +624,7 @@ mod tests {
         ];
 
         for tc in test_cases {
-            let tmp_dir = TempDir::new("log_listener_test").unwrap();
+            let tmp_dir = TempDir::new().unwrap();
             let tmp_file_path = tmp_dir.path().join("test.log");
             fs::OpenOptions::new().append(true).create(true)
                 .open(&tmp_file_path).unwrap()

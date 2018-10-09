@@ -271,14 +271,14 @@ impl Accessor {
 
 #[cfg(test)]
 mod tests {
-    use fuchsia_async as fasync;
-    use fidl::endpoints::create_proxy;
-    use fidl_fuchsia_stash::{ListItem, Value};
-    use parking_lot::Mutex;
-    use std::sync::Arc;
     use crate::accessor::*;
     use crate::store;
-    use tempdir::TempDir;
+    use fidl::endpoints::create_proxy;
+    use fidl_fuchsia_stash::{ListItem, Value};
+    use fuchsia_async as fasync;
+    use parking_lot::Mutex;
+    use std::sync::Arc;
+    use tempfile::TempDir;
 
     fn get_tmp_store_manager(tmp_dir: &TempDir) -> store::StoreManager {
         store::StoreManager::new(tmp_dir.path().join("stash.store")).unwrap()
@@ -289,7 +289,7 @@ mod tests {
         let test_client_name = "test_client".to_string();
         let test_key = "test_key".to_string();
 
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
         let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
@@ -307,7 +307,7 @@ mod tests {
         let test_client_name = "test_client".to_string();
         let test_key = "test_key".to_string();
 
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
         let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
@@ -336,7 +336,7 @@ mod tests {
     fn test_delete_value() {
         let test_client_name = "test_client".to_string();
 
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
         let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
@@ -373,7 +373,7 @@ mod tests {
     fn test_list_prefix() {
         let test_client_name = "test_client".to_string();
 
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
         let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
@@ -418,7 +418,7 @@ mod tests {
     fn test_list_prefix_paging() {
         let test_client_name = "test_client".to_string();
 
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
         let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
@@ -463,7 +463,7 @@ mod tests {
     fn test_get_prefix() {
         let test_client_name = "test_client".to_string();
 
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
         let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
@@ -549,7 +549,7 @@ mod tests {
     fn test_delete_prefix() {
         let test_client_name = "test_client".to_string();
 
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
         let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
@@ -593,7 +593,7 @@ mod tests {
         let test_client_name = "test_client".to_string();
         let test_key = "test_key".to_string();
 
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
         let mut acc1 = Accessor::new(sm.clone(), true, false, test_client_name.clone());
         let mut acc2 = Accessor::new(sm.clone(), true, false, test_client_name.clone());
@@ -639,7 +639,7 @@ mod tests {
         let test_client_name = "test_client".to_string();
         let test_key = "test_key".to_string();
 
-        let tmp_dir = TempDir::new("dss_test").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
         let mut acc1 = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
