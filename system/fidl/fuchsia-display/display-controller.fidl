@@ -365,7 +365,8 @@ interface Controller {
     // call it on a color layer, or to call it with an image and layer whose
     // ImageConfigs do not match. It is illegal to apply a configuration
     // with an image layer that has no image (note that is is not illegal to
-    // validate such a configuration).
+    // validate such a configuration). It is illegal to reuse a wait event which
+    // another layer that has not been presented is waiting on.
     17: SetLayerImage(uint64 layer_id, uint64 image_id, uint64 wait_event_id, uint64 signal_event_id);
 
     // Attempts to validate the current configuration.

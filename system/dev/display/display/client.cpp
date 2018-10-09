@@ -734,8 +734,14 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
             }
 
             if (layer->pending_image_) {
+                auto wait_fence = GetFence(layer->pending_wait_event_id_);
+                if (wait_fence && wait_fence->InContainer()) {
+                    zxlogf(ERROR, "Tried to wait with a busy event\n");
+                    TearDown();
+                    return;
+                }
                 layer_node.layer->pending_image_->PrepareFences(
-                        GetFence(layer->pending_wait_event_id_),
+                        fbl::move(wait_fence),
                         GetFence(layer->pending_signal_event_id_));
                 {
                     fbl::AutoLock lock(controller_->mtx());
