@@ -1544,8 +1544,7 @@ zx_status_t ath10k_mac_setup_bcn_tmpl(struct ath10k_vif* arvif) {
 #endif // NEEDS PORTING
 
     if (!BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_BEACON_OFFLOAD)) {
-        ath10k_err("The hardware doesn't support beacon offload.\n");
-        return ZX_ERR_NOT_SUPPORTED;
+        return ZX_OK;
     }
 
     if (arvif->vdev_type != WMI_VDEV_TYPE_AP && arvif->vdev_type != WMI_VDEV_TYPE_IBSS) {
