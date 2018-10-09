@@ -3,8 +3,11 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services" ],
         "pkgfs": [ "packages" ],
+        "services": [
+            "fuchsia.modular.ComponentContext",
+            "fuchsia.modular.IntelligenceServices"
+        ],
         "system": [ "data/initial_module_packages" ]
     }
 }

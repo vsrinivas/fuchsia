@@ -31,9 +31,9 @@ constexpr char kContextListenerEntitiesKey[] = "entities";
 class ModuleResolverApp : fuchsia::modular::ContextListener {
  public:
   ModuleResolverApp(component::StartupContext* const context, bool is_test)
-      : context_(context), context_listener_binding_(this) {
+      : context_listener_binding_(this) {
     fuchsia::modular::ComponentContextPtr component_context;
-    context_->ConnectToEnvironmentService<fuchsia::modular::ComponentContext>(
+    context->ConnectToEnvironmentService<fuchsia::modular::ComponentContext>(
         component_context.NewRequest());
     context->ConnectToEnvironmentService(intelligence_services_.NewRequest());
 
@@ -259,8 +259,6 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
   std::vector<fuchsia::modular::Intent> current_proposal_intents_;
 
   fuchsia::modular::IntelligenceServicesPtr intelligence_services_;
-
-  component::StartupContext* const context_;
 
   fuchsia::modular::ContextReaderPtr context_reader_;
   fidl::Binding<fuchsia::modular::ContextListener> context_listener_binding_;
