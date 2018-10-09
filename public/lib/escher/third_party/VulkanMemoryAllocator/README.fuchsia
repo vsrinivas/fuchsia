@@ -1,5 +1,5 @@
 Source: https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
-Git Commit: 4cefd614dc69fa4272ad3663d75f9d4f22c4f369
+Git Commit: b8d34d5e6a1c0f8be737cce5df5be413267c9ea5
 License: MIT
 
 Only src/vk_mem_alloc.h and LICENSE.txt files were imported.
