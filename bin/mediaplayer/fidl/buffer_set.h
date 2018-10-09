@@ -31,7 +31,7 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
   BufferSet(const fuchsia::mediacodec::CodecPortBufferSettings& settings,
             uint64_t lifetime_ordinal, bool single_vmo);
 
-  ~BufferSet() = default;
+  ~BufferSet();
 
   // Gets the settings for this buffer set. The |buffer_lifetime_ordinal| of
   // settings is set to the |lifetime_ordinal| value passed into the

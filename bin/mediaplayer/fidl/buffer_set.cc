@@ -27,6 +27,11 @@ BufferSet::BufferSet(
   settings_.buffer_lifetime_ordinal = buffer_lifetime_ordinal;
 }
 
+BufferSet::~BufferSet() {
+  // Release all the |PayloadBuffers| before |buffers_| is deleted.
+  ReleaseAllDecoderOwnedBuffers();
+}
+
 fuchsia::mediacodec::CodecBuffer BufferSet::GetBufferDescriptor(
     uint32_t buffer_index, bool writeable,
     const PayloadVmos& payload_vmos) const {
