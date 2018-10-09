@@ -26,7 +26,6 @@
 
 #define FIFO_DEPTH 256
 #define FIFO_ESIZE sizeof(zircon_ethernet_FifoEntry)
-#define DEVICE_NAME_LEN 16
 
 #define PAGE_MASK (PAGE_SIZE - 1)
 
@@ -103,7 +102,7 @@ typedef struct ethdev {
     ethdev0_t* edev0;
 
     uint32_t state;
-    char name[DEVICE_NAME_LEN];
+    char name[zircon_ethernet_MAX_CLIENT_NAME_LEN+1];
 
     // fifos are named from the perspective
     // of the packet from from the client
@@ -747,8 +746,8 @@ static zx_status_t eth_stop_locked(ethdev_t* edev) TA_NO_THREAD_SAFETY_ANALYSIS 
 }
 
 static ssize_t eth_set_client_name_locked(ethdev_t* edev, const void* in_buf, size_t in_len) {
-    if (in_len >= DEVICE_NAME_LEN) {
-        in_len = DEVICE_NAME_LEN - 1;
+    if (in_len >= sizeof(edev->name)) {
+        in_len = sizeof(edev->name) - 1;
     }
     memcpy(edev->name, in_buf, in_len);
     edev->name[in_len] = '\0';
