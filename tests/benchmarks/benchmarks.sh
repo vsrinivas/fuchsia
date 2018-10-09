@@ -44,25 +44,21 @@ runbench_exec "${OUT_DIR}/ledger.get_page_id.json" \
 runbench_exec "${OUT_DIR}/ledger.put.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/put.tspec \
-    --test-suite=fuchsia.ledger.put \
     --benchmark-results-file="${OUT_DIR}/ledger.put.json"
 
 runbench_exec "${OUT_DIR}/ledger.put_as_reference.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/put_as_reference.tspec \
-    --test-suite=fuchsia.ledger.put_as_reference \
     --benchmark-results-file="${OUT_DIR}/ledger.put_as_reference.json"
 
 runbench_exec "${OUT_DIR}/ledger.put_big_entry.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/put_big_entry.tspec \
-    --test-suite=fuchsia.ledger.put_big_entry \
     --benchmark-results-file="${OUT_DIR}/ledger.put_big_entry.json"
 
 runbench_exec "${OUT_DIR}/ledger.transaction.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/transaction.tspec \
-    --test-suite=fuchsia.ledger.transaction \
     --benchmark-results-file="${OUT_DIR}/ledger.transaction.json"
 
 runbench_exec "${OUT_DIR}/ledger.update_entry.json" \

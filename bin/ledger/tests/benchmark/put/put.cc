@@ -289,7 +289,7 @@ void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
   }
   fsl::SizedVmo vmo;
   FXL_CHECK(fsl::VmoFromString(convert::ToStringView(value), &vmo));
-  TRACE_ASYNC_BEGIN("benchmark", "create reference", trace_event_id);
+  TRACE_ASYNC_BEGIN("benchmark", "create_reference", trace_event_id);
   page_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       [this, trace_event_id, key = std::move(key),
@@ -299,8 +299,8 @@ void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
                         "Page::CreateReferenceFromBuffer")) {
           return;
         }
-        TRACE_ASYNC_END("benchmark", "create reference", trace_event_id);
-        TRACE_ASYNC_BEGIN("benchmark", "put reference", trace_event_id);
+        TRACE_ASYNC_END("benchmark", "create_reference", trace_event_id);
+        TRACE_ASYNC_BEGIN("benchmark", "put_reference", trace_event_id);
         page_->PutReference(
             std::move(key), std::move(*reference), Priority::EAGER,
             [this, trace_event_id,
@@ -309,7 +309,7 @@ void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
                               "Page::PutReference")) {
                 return;
               }
-              TRACE_ASYNC_END("benchmark", "put reference", trace_event_id);
+              TRACE_ASYNC_END("benchmark", "put_reference", trace_event_id);
               TRACE_ASYNC_END("benchmark", "put", trace_event_id);
               on_done();
             });
