@@ -6,6 +6,11 @@ import("//build/cpp/prebuilt_shared_library.gni")
 
 # An alias for "prebuilt_shared_library".
 
+# The defaults for a sdk_shared_library should match that of a shared_library.
+set_defaults("sdk_shared_library") {
+  configs = default_shared_library_configs
+}
+
 template("sdk_shared_library") {
   prebuilt_shared_library(target_name) {
     forward_variables_from(invoker, "*")
