@@ -54,6 +54,10 @@ def main():
                         help="Optimization level",
                         required=True,
                         choices=["0", "1", "2", "3", "s", "z"])
+    parser.add_argument("--symbol-level",
+                        help="Symbols to include (0=none, 1=minimal, 2=full)",
+                        choices=["0", "1", "2"],
+                        required=True)
     parser.add_argument("--out-dir",
                         help="Path at which the output libraries should be stored",
                         required=True)
@@ -103,6 +107,7 @@ def main():
         env["CARGO_TARGET_%s_RUSTFLAGS" % args.target.replace("-", "_").upper()] = (
             "-Clink-arg=--target=" + args.target +
             " -Copt-level=" + args.opt_level +
+            " -Cdebuginfo=" + args.symbol_level +
             " -Clink-arg=--sysroot=" + args.sysroot +
             " -Lnative=" + args.shared_libs_root +
             mac_link_arg
@@ -111,6 +116,7 @@ def main():
         env["CARGO_TARGET_%s_RUSTFLAGS" % args.target.replace("-", "_").upper()] = (
             "-Clink-arg=--target=" + args.target +
             " -Copt-level=" + args.opt_level +
+            " -Cdebuginfo=" + args.debuginfo +
             mac_link_arg
         )
     env["CARGO_TARGET_DIR"] = args.out_dir

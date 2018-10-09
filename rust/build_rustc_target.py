@@ -122,6 +122,10 @@ def main():
     parser.add_argument("--mmacosx-version-min",
                         help="Select macosx framework version",
                         required=False)
+    parser.add_argument("--symbol-level",
+                        help="Symbols to include (0=none, 1=minimal, 2=full)",
+                        choices=["0", "1", "2"],
+                        required=True)
 
     parser.add_argument
     args = parser.parse_args()
@@ -148,6 +152,7 @@ def main():
         "-Clink-arg=--target=%s" % args.target,
         "-Clink-arg=--sysroot=%s" % args.sysroot,
         "-Copt-level=%s" % args.opt_level,
+        "-Cdebuginfo=%s" % args.symbol_level,
         "-Lnative=%s" % args.shared_libs_root,
         "--color=always",
     ]
