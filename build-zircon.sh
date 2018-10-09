@@ -23,6 +23,7 @@ usage() {
   echo "  -A: Build with ASan"
   echo "  -H: Build host tools with ASan"
   echo "  -n: Just print make recipes to STDOUT."
+  echo "  -l: Only build tools; do not build zircon."
   echo "  -j N: Passed along to make (number of parallel jobs)"
   echo "  -t <target>: Architecture (GN style) to build, instead of all"
   echo "  -o <outdir>: Directory in which to put the build-zircon directory."
@@ -35,11 +36,12 @@ declare ASAN="false"
 declare CLEAN="false"
 declare DRY_RUN="false"
 declare HOST_ASAN="false"
+declare TOOLS_ONLY="false"
 declare OUTDIR="${ROOT_DIR}/out"
 declare VERBOSE="0"
 declare -a ARCHLIST=(arm64 x64)
 
-while getopts "AcHhnj:t:p:o:vV" opt; do
+while getopts "AcHhlnj:t:p:o:vV" opt; do
   case "${opt}" in
     A) ASAN="true" ;;
     c) CLEAN="true" ;;
@@ -47,6 +49,7 @@ while getopts "AcHhnj:t:p:o:vV" opt; do
     h) usage ; exit 0 ;;
     n) DRY_RUN="true" ;;
     j) JOBS="${OPTARG}" ;;
+    l) TOOLS_ONLY="true" ;;
     o) OUTDIR="${OPTARG}" ;;
     t) ARCHLIST=("${OPTARG}") ;;
     v) VERBOSE="1" ;;
@@ -91,6 +94,10 @@ make_zircon_common() {
 # Build host tools.
 make_zircon_common \
   BUILDDIR=${OUTDIR}/build-zircon HOST_USE_ASAN="${HOST_ASAN}" tools "$@"
+
+if [[ "${TOOLS_ONLY}" = "true" ]]; then
+  exit 0
+fi
 
 make_zircon_target() {
   make_zircon_common \

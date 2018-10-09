@@ -1,0 +1,21 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+## Runs source formatters on modified files using git-file-format
+
+# This tool exists because the FIDL formatter is built from head in zircon,
+# and git-file-format isn't smart enough to do that on its own.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+
+SCRIPTS_HOME="${FUCHSIA_DIR}/scripts"
+GIT_FMT_CMD="${SCRIPTS_HOME}"/git-file-format
+
+[[ -x "${ZIRCON_TOOLS_DIR}"/fidl-format ]] || fx-command-run build-zircon -l
+
+"${GIT_FMT_CMD}" "$@"
+

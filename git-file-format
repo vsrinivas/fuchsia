@@ -59,6 +59,14 @@ EXT_TO_COMMANDS = {
     ".ts": [CLANG_CMD],
 }
 
+# FIDL tools are not guaranteed to be present.
+try:
+    paths.ZIRCON_TOOLS_ROOT
+    FIDL_TOOL = os.path.join(paths.ZIRCON_TOOLS_ROOT, "tools/fidl-format")
+    FIDL_CMD = [FIDL_TOOL, "-i"]
+    EXT_TO_COMMANDS[".fidl"] = [FIDL_CMD]
+except NameError:
+    print "Warning: FIDL formatter not available (you may want to run fx format-code instead)"
 
 def main():
     parser = argparse.ArgumentParser(description="Format modified files.")
@@ -91,10 +99,15 @@ def main():
     # Find the files to be formatted.
     if args.files:
         files = args.files
-    elif args.all:
-        files = git_utils.get_all_files()
     else:
-        files = git_utils.get_diff_files()
+        try:
+            if args.all:
+                files = git_utils.get_all_files()
+            else:
+                files = git_utils.get_diff_files()
+        except subprocess.CalledProcessError:
+            print "Error: Current directory not a git repository, and no --files explicitly listed"
+            return
 
     if args.verbose:
         print
