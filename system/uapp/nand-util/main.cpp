@@ -36,16 +36,16 @@ Options:
   --device (-d) path : Specifies the broker device to use.
   --info (-i) : Show basic NAND information.
   --bbt (-t) : Display bad block info.
-  --read (-r) --absolute xxx : Read the page number xxx (0-based).
-  --erase (-e) --block xxx : Erase the block number xxx (0-based).
+  --read (-r) --absolute xxx : Read the page number xxx.
+  --erase (-e) --block xxx --count yyy: Erase yyy blocks starting at xxx.
   --check (-c) : Looks for read errors on the device.
   --save (-s) --block xxx --file path: Save the block xxx to path.
   --file (-f) path:  Path to use when saving data.
   --absolute (-a) xxx : Use an absolute page number.
   --page (-p) xxx : Use the xxx page number (from within a block).
-  --block (-b) xxx : Use the xxx block number.
+  --block (-b) xxx : Use the xxx block number (0-based).
   --count (-n) xxx : Limit the operation to xxx blocks.
-                     Only supported with --check and --save.
+                     Only supported with --check, --erase and --save.
   --live-dangerously (-y) : Don't prompt for confirmation.
 )""";
 
@@ -207,7 +207,7 @@ bool NandBroker::EraseBlock(uint32_t block) const {
     request.offset_nand = block;
 
     if (ioctl_nand_broker_erase(get(), &request, &response) != sizeof(response)) {
-        printf("Failed to issue command to driver\n");
+        printf("Failed to issue erase command for block %d\n", block);
         return false;
     }
 
@@ -328,8 +328,8 @@ bool ValidateOptions(const Config& config) {
         return false;
     }
 
-    if (config.count && (!config.read_check && !config.save)) {
-        printf("Count only supported for check and save\n");
+    if (config.count && (!config.read_check && !config.save && !config.erase)) {
+        printf("Count not supported for this operation\n");
         return false;
     }
     return true;
@@ -387,9 +387,9 @@ bool FindBadBlocks(const NandBroker& nand) {
 // Verifies that reads always return the same data.
 bool ReadCheck(const NandBroker& nand, uint32_t first_block, uint32_t count) {
     constexpr int kNumReads = 10;
-    uint32_t num_blocks = fbl::min(nand.Info().num_blocks, first_block + count);
+    uint32_t last_block = fbl::min(nand.Info().num_blocks, first_block + count);
     size_t size = (nand.Info().page_size + nand.Info().oob_size) * nand.Info().pages_per_block;
-    for (uint32_t block = first_block; block < num_blocks; block++) {
+    for (uint32_t block = first_block; block < last_block; block++) {
         uint32_t first_crc;
         for (int i = 0; i < kNumReads; i++) {
             const uint32_t start = block * nand.Info().pages_per_block;
@@ -422,9 +422,9 @@ bool Save(const NandBroker& nand, uint32_t first_block, uint32_t count, const ch
     // Attempt to save everything by default.
     count = count ? count : nand.Info().num_blocks;
 
-    uint32_t num_blocks = fbl::min(nand.Info().num_blocks, first_block + count);
+    uint32_t last_block = fbl::min(nand.Info().num_blocks, first_block + count);
     size_t size = (nand.Info().page_size + nand.Info().oob_size) * nand.Info().pages_per_block;
-    for (uint32_t block = first_block; block < num_blocks; block++) {
+    for (uint32_t block = first_block; block < last_block; block++) {
         const uint32_t start = block * nand.Info().pages_per_block;
         if (!nand.ReadPages(start, nand.Info().pages_per_block)) {
             printf("\nRead failed for block %u\n", block);
@@ -435,6 +435,17 @@ bool Save(const NandBroker& nand, uint32_t first_block, uint32_t count, const ch
             return false;
         }
         printf("Block %u\r", block);
+    }
+    printf("\ndone\n");
+    return true;
+}
+
+// Erases blocks from a nand device.
+bool Erase(const NandBroker& nand, uint32_t first_block, uint32_t count) {
+    uint32_t last_block = fbl::min(nand.Info().num_blocks, first_block + count);
+    for (uint32_t block = first_block; block < last_block; block++) {
+        // Ignore failures, move on to the next one.
+        nand.EraseBlock(block);
     }
     printf("\ndone\n");
     return true;
@@ -485,13 +496,16 @@ int main(int argc, char** argv) {
     }
 
     if (config.erase) {
+        // Erase a single block by default.
+        config.count = config.count ? config.count : 1;
         if (!config.skip_prompt) {
-            printf("About to erase block %d. Press y to confirm\n", config.block_num);
+            printf("About to erase %d block(s) starting at block %d. Press y to confirm\n",
+                   config.count, config.block_num);
             if (getchar() != 'y') {
                 return -1;
             }
         }
-        return nand.EraseBlock(config.block_num) ? 0 : -1;
+        return Erase(nand, config.block_num, config.count) ? 0 : -1;
     }
 
     if (config.read_check) {
