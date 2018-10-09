@@ -457,11 +457,11 @@ In a tradition POSIX environment, this is done with an **ioctl()** call on the c
 side, and an appropriate **ioctl()** handler on the driver side.
 
 Under Fuschia, this is done differently, by marshalling data through the Fuchsia Interface
-Definition Language (**FIDL**) abstraction.
+Definition Language
+([**FIDL**](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/README.md).
 
-There are other references for FIDL (namely
-[FIDL reference](../fidl/index.md), and
-[FIDL tutorial](../../docs/development/languages/fidl/tutorial.md)), but briefly, FIDL:
+For more details about FIDL itself, consult the reference above.
+For our purposes here, FIDL:
 
 *   is described by a C-like language,
 *   is used to define the input and output arguments for your control functions,
@@ -787,8 +787,8 @@ specification's prototype of the result portion of the interface definition.
 
 FIDL expressions can certainly be made more complex than what we've shown above.
 For exmaple, nested structures can be used, rather than the simple `uint32`.
-Multiple parameters are allowed for both inputs and outputs.
-See the [FIDL reference](../fidl/index.md) for details.
+Multiple parameters are allowed for both inputs and outputs. See the
+[FIDL reference](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/README.md).
 
 ## Registering multiple devices with `/dev/misc/demo-multi`
 
