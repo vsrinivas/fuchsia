@@ -454,6 +454,8 @@ void ViewRegistry::RequestSnapshotHACK(
                    << "container=" << container_state
                    << ", child_key=" << child_key;
     UnregisterViewContainer(container_state);
+    // TODO(SCN-978): Return an error to the caller for invalid data.
+    callback(fuchsia::mem::Buffer{});
     return;
   }
 
@@ -462,6 +464,8 @@ void ViewRegistry::RequestSnapshotHACK(
   if (child_stub->is_unavailable() || child_stub->is_pending()) {
     FXL_VLOG(1) << "RequestSnapshot called for view that is currently "
                 << (child_stub->is_unavailable() ? "unavailable" : "pending");
+    // TODO(SCN-978): Return an error to the caller for invalid data.
+    callback(fuchsia::mem::Buffer{});
     return;
   }
 
