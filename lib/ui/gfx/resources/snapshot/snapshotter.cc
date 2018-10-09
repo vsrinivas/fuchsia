@@ -31,6 +31,7 @@
 #include "garnet/lib/ui/gfx/resources/snapshot/version.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
+#include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/image.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/vector.h"
@@ -91,6 +92,7 @@ void Snapshotter::TakeSnapshot(Resource* resource,
       escher::SemaphorePtr(),
       fxl::MakeCopyable([node_serializer = current_node_serializer_,
                          callback = std::move(callback)]() {
+        TRACE_DURATION("gfx", "Snapshotter::Serialize");
         auto builder = std::make_shared<flatbuffers::FlatBufferBuilder>();
         builder->Finish(node_serializer->serialize(*builder));
 

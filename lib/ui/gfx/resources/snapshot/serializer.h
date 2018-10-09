@@ -91,8 +91,10 @@ class AttributeBufferSerializer : public Serializer<snapshot::AttributeBuffer> {
 
   virtual Offset<snapshot::AttributeBuffer> serialize(
       FlatBufferBuilder& builder) override {
-    auto fb_buffer = builder.CreateVector(buffer->host_ptr() + buffer->offset(),
-                                          buffer->size());
+    uint8_t* bytes = nullptr;
+    auto fb_buffer = builder.CreateUninitializedVector(buffer->size(), &bytes);
+    memcpy(bytes, buffer->host_ptr() + buffer->offset(), buffer->size());
+
     return snapshot::CreateAttributeBuffer(builder, fb_buffer, vertex_count,
                                            stride);
   }
@@ -105,8 +107,10 @@ class IndexBufferSerializer : public Serializer<snapshot::IndexBuffer> {
 
   virtual Offset<snapshot::IndexBuffer> serialize(
       FlatBufferBuilder& builder) override {
-    auto fb_buffer = builder.CreateVector(buffer->host_ptr() + buffer->offset(),
-                                          buffer->size());
+    uint8_t* bytes = nullptr;
+    auto fb_buffer = builder.CreateUninitializedVector(buffer->size(), &bytes);
+    memcpy(bytes, buffer->host_ptr() + buffer->offset(), buffer->size());
+
     return snapshot::CreateIndexBuffer(builder, fb_buffer, index_count);
   }
 };
@@ -158,7 +162,10 @@ class ImageSerializer : public MaterialSerializer {
     return snapshot::Material_Image;
   }
   virtual Offset<void> serialize(FlatBufferBuilder& builder) override {
-    auto data = builder.CreateVector(buffer->host_ptr(), buffer->size());
+    uint8_t* bytes = nullptr;
+    auto data = builder.CreateUninitializedVector(buffer->size(), &bytes);
+    memcpy(bytes, buffer->host_ptr() + buffer->offset(), buffer->size());
+
     return snapshot::CreateImage(builder, format, width, height, data).Union();
   }
 };
