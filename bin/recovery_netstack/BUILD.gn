@@ -12,10 +12,10 @@ rustc_binary("bin") {
 
   deps = [
     "core:netstack-core",
-    "//garnet/lib/rust/crates/ethernet",
-    "//garnet/public/rust/crates/fuchsia-async",
-    "//garnet/public/rust/crates/fuchsia-syslog",
-    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//garnet/lib/rust/ethernet",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:log",

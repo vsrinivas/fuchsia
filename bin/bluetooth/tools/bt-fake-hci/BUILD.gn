@@ -10,10 +10,10 @@ rustc_binary("bt-fake-hci") {
   edition= "2018"
 
   deps = [
-    "//garnet/lib/rust/crates/fuchsia-bluetooth",
-    "//garnet/public/rust/crates/fdio",
-    "//garnet/public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher",
-    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//garnet/lib/rust/fuchsia-bluetooth",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
+    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:parking_lot",
     "//third_party/rust-crates/rustc_deps:rand",

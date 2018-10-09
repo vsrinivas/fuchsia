@@ -38,7 +38,7 @@ template("wayland_protocol") {
     non_rust_deps = [ ":gen_${target_name}_source" ]
     deps = [
       "//garnet/bin/wayland/core",
-      "//garnet/public/rust/crates/fuchsia-zircon",
+      "//garnet/public/rust/fuchsia-zircon",
       "//third_party/rust-crates/rustc_deps:bitflags",
       "//third_party/rust-crates/rustc_deps:failure",
     ]

@@ -1,0 +1,24 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("fuchsia-async") {
+  name = "fuchsia_async"
+  edition = "2018"
+  version = "0.1.0"
+  with_unit_tests = true
+  deps = [
+    "//garnet/public/rust/fuchsia-zircon",
+    "//garnet/public/rust/fuchsia-system-alloc",
+    "//third_party/rust-crates/rustc_deps:bytes",
+    "//third_party/rust-crates/rustc_deps:crossbeam",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:libc",
+    "//third_party/rust-crates/rustc_deps:net2",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:pin-utils",
+    "//third_party/rust-crates/rustc_deps:slab",
+  ]
+}

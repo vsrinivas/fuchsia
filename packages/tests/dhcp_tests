@@ -1,5 +1,5 @@
 {
     "packages": [
-        "//garnet/lib/rust/crates/dhcp:dhcp_tests"
+        "//garnet/lib/rust/dhcp:dhcp_tests"
     ]
 }

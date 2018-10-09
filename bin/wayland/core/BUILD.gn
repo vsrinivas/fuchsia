@@ -11,8 +11,8 @@ rustc_library("core") {
   name = "fuchsia_wayland_core"
   with_unit_tests = true
   deps = [
-    "//garnet/public/rust/crates/fuchsia-async",
-    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:byteorder",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:parking_lot",

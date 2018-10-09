@@ -10,9 +10,9 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/crates/dhcp",
-    "//garnet/public/rust/crates/fuchsia-async",
-    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//garnet/lib/rust/dhcp",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:getopts",

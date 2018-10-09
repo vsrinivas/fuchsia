@@ -10,11 +10,11 @@ rustc_binary("bt-snoop") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/crates/fuchsia-bluetooth",
-    "//garnet/public/rust/crates/fdio",
-    "//garnet/public/rust/crates/fuchsia-async",
-    "//garnet/public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher",
-    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//garnet/lib/rust/fuchsia-bluetooth",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
+    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:byteorder",
     "//third_party/rust-crates/rustc_deps:clap",
     "//third_party/rust-crates/rustc_deps:failure",

@@ -1,7 +1,7 @@
 {
     "packages": [
-        "//garnet/lib/rust/crates/wlan-rsn:wlan-rsn-tests",
-        "//garnet/lib/rust/crates/wlan-sme:wlan-sme-tests",
+        "//garnet/lib/rust/wlan-rsn:wlan-rsn-tests",
+        "//garnet/lib/rust/wlan-sme:wlan-sme-tests",
         "//garnet/lib/wlan/mlme/tests:wlan_tests",
         "//garnet/bin/wlancfg:wlancfg-tests",
         "//garnet/bin/wlanstack:wlanstack2-tests",

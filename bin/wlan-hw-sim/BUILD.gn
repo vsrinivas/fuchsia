@@ -12,15 +12,15 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/crates/wlantap-client",
+    "//garnet/lib/rust/wlantap-client",
     "//garnet/lib/wlan/fidl:fidl-rustc",
     "//garnet/lib/wlan/fidl:wlantap-rustc",
     "//garnet/public/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//garnet/public/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/crates/fuchsia-app",
-    "//garnet/public/rust/crates/fuchsia-async",
-    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:bitfield",
     "//third_party/rust-crates/rustc_deps:byteorder",
     "//third_party/rust-crates/rustc_deps:failure",

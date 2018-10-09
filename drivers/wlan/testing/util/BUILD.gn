@@ -10,11 +10,11 @@ rustc_binary("util") {
 
   deps = [
     "//garnet/lib/wlan/fidl:fidl-rustc",
-    "//garnet/lib/rust/crates/fuchsia-wlan-dev",
+    "//garnet/lib/rust/fuchsia-wlan-dev",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/crates/fdio",
-    "//garnet/public/rust/crates/fuchsia-async",
-    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
 

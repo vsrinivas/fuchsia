@@ -9,8 +9,8 @@ rustc_binary("bin") {
   name = "dhcpd_test_client"
   edition = "2018"
   deps = [
-    "//garnet/lib/rust/crates/dhcp",
-    "//garnet/public/rust/crates/fuchsia-async",
+    "//garnet/lib/rust/dhcp",
+    "//garnet/public/rust/fuchsia-async",
     "//third_party/rust-crates/rustc_deps:failure",
   ]
 }

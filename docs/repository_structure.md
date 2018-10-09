@@ -11,9 +11,9 @@ Garnet follows the common aspects of layer repository structure defined in
 
 This file documents the Garnet-specific pieces.
 
-## public/rust/crates/
+## public/rust/
 
-The `public/rust/crates/` directory contains crates used by the Rust programming
+The `public/rust/` directory contains crates used by the Rust programming
 language. These libraries are separate from `public/lib` to conform with the
 norms of the Rust community.
 

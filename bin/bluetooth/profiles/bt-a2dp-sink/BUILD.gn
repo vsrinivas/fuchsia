@@ -10,14 +10,14 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/crates/fuchsia-bluetooth",
+    "//garnet/lib/rust/fuchsia-bluetooth",
     "//garnet/public/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//garnet/public/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/crates/fdio",
-    "//garnet/public/rust/crates/fuchsia-app",
-    "//garnet/public/rust/crates/fuchsia-async",
-    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:log",
