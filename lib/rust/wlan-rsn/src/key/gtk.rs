@@ -5,7 +5,7 @@
 use crate::cipher::Cipher;
 use crate::crypto_utils::prf;
 use crate::Error;
-use failure;
+use failure::{self, bail, ensure};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Gtk {
@@ -17,13 +17,13 @@ pub struct Gtk {
 }
 
 impl Gtk {
-    pub fn from_gtk(gtk: Vec<u8>, key_id: u8, cipher: Cipher) -> Gtk {
-        Gtk {
-            tk_len: gtk.len(),
-            gtk: gtk,
-            key_id,
-            cipher,
-        }
+    pub fn from_gtk(gtk: Vec<u8>, key_id: u8, cipher: Cipher) -> Result<Gtk, failure::Error> {
+        let tk_bits = cipher.tk_bits()
+            .ok_or(Error::GtkHierarchyUnsupportedCipherError)?;
+        let tk_len = (tk_bits / 8) as usize;
+        ensure!(gtk.len() >= tk_len, "GTK must be larger than the resulting TK");
+
+        Ok(Gtk { tk_len, gtk, key_id, cipher })
     }
 
     // IEEE 802.11-2016, 12.7.1.4

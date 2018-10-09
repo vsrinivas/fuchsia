@@ -54,7 +54,7 @@ impl Supplicant {
         }
         let gtk = match gtk {
             None => bail!("GTK KDE not present in key data of Group-Key Handshakes's 1st message"),
-            Some(gtk) => Gtk::from_gtk(gtk.gtk, gtk.info.key_id(), self.cfg.cipher.clone()),
+            Some(gtk) => Gtk::from_gtk(gtk.gtk, gtk.info.key_id(), self.cfg.cipher.clone())?,
         };
 
         // Construct second message of handshake.

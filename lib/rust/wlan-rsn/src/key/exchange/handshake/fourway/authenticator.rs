@@ -136,7 +136,7 @@ fn process_message_2(
 
     // TODO(hahnr): Actually compute GTK.
     let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
-    let gtk = Gtk::from_gtk(vec![42; 32], 1, rsne.group_data);
+    let gtk = Gtk::from_gtk(vec![42; 16], 1, rsne.group_data)?;
     let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
     let msg3 = create_message_3(&cfg, ptk.kck(), ptk.kek(), &gtk, &anonce[..], &rsne, next_krc)?;
 
@@ -249,7 +249,7 @@ fn create_message_3(
     cfg.a_rsne.as_bytes(&mut key_data);
 
     // Write GTK KDE to key data.
-    let gtk_kde = kde::Gtk::new(gtk.key_id(), kde::GtkInfoTx::BothRxTx, &gtk.gtk[..]);
+    let gtk_kde = kde::Gtk::new(gtk.key_id(), kde::GtkInfoTx::BothRxTx, gtk.tk());
     gtk_kde.as_bytes(&mut key_data);
 
     // Add optional padding and encrypt the key data.
