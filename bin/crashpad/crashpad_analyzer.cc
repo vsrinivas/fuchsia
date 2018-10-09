@@ -42,7 +42,6 @@
 namespace {
 
 const char kLocalCrashDatabase[] = "/data/crashes";
-const char kLocalKernelCrashDatabase[] = "/data/kernel_crashes";
 const char kURL[] = "https://clients2.google.com/cr/report";
 
 class ScopedStoppable {
@@ -77,6 +76,24 @@ class ScopedUnlink {
   std::string filename_;
   DISALLOW_COPY_AND_ASSIGN(ScopedUnlink);
 };
+
+std::unique_ptr<crashpad::CrashReportDatabase> GetReportDatabase() {
+  if (!files::IsDirectory(kLocalCrashDatabase)) {
+    files::CreateDirectory(kLocalCrashDatabase);
+  }
+
+  std::unique_ptr<crashpad::CrashReportDatabase> database(
+      crashpad::CrashReportDatabase::Initialize(
+          base::FilePath(kLocalCrashDatabase)));
+  if (!database) {
+    return nullptr;
+  }
+
+  // Today we enable uploads here. In the future, this will most likely be set
+  // in some external settings.
+  database->GetSettings()->SetUploadsEnabled(true);
+  return database;
+}
 
 std::string GetSystemLogToFile() {
   std::string filename = files::SimplifyPath(
@@ -155,18 +172,10 @@ int HandleException(zx::process process, zx::thread thread,
   // crashpad_handler here. Instead, directly use CrashReportExceptionHandler
   // and terminate when it has completed.
 
-  if (!files::IsDirectory(kLocalCrashDatabase)) {
-    files::CreateDirectory(kLocalCrashDatabase);
-  }
-
-  std::unique_ptr<crashpad::CrashReportDatabase> database(
-      crashpad::CrashReportDatabase::Initialize(
-          base::FilePath(kLocalCrashDatabase)));
+  std::unique_ptr<crashpad::CrashReportDatabase> database = GetReportDatabase();
   if (!database) {
     return EXIT_FAILURE;
   }
-
-  database->GetSettings()->SetUploadsEnabled(true);
 
   ScopedStoppable upload_thread;
   crashpad::CrashReportUploadThread::Options upload_thread_options;
@@ -204,17 +213,10 @@ int HandleException(zx::process process, zx::thread thread,
 }
 
 int Process(fuchsia::mem::Buffer crashlog) {
-  if (!files::IsDirectory(kLocalKernelCrashDatabase)) {
-    files::CreateDirectory(kLocalKernelCrashDatabase);
-  }
-
-  std::unique_ptr<crashpad::CrashReportDatabase> database(
-      crashpad::CrashReportDatabase::Initialize(
-          base::FilePath(kLocalKernelCrashDatabase)));
+  std::unique_ptr<crashpad::CrashReportDatabase> database = GetReportDatabase();
   if (!database) {
     return EXIT_FAILURE;
   }
-  database->GetSettings()->SetUploadsEnabled(true);
 
   crashpad::CrashReportDatabase::OperationStatus database_status;
 
