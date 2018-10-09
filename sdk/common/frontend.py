@@ -47,7 +47,7 @@ class Frontend(object):
           path = os.path.join(*args)
         else:
           path = os.path.join(self.output, *args)
-        return self.make_dir(path)
+        return self._make_dir(path)
 
     def prepare(self, arch):
         '''Called before elements are processed.'''
@@ -88,7 +88,7 @@ class Frontend(object):
         '''Default atom handler.'''
         print('Ignored %s (%s)' % (atom['name'], atom['type']))
 
-    def make_dir(self, file_path):
+    def _make_dir(self, file_path):
         '''Creates the directory hierarchy for the given file and returns the
         given path.
         '''
