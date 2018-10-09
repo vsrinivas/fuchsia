@@ -129,9 +129,12 @@ class Vp9Decoder : public VideoDecoder {
     DEF_BUFFER(ipp_line_buffer, 0x4000);
     DEF_BUFFER(sao_up, 0x2800);
     DEF_BUFFER(scale_lut, 0x8000);
-    DEF_BUFFER(deblock_data, 0x80000);
-    DEF_BUFFER(deblock_data2, 0x80000);
-    DEF_BUFFER(deblock_parameters, 0x80000);
+    // HW/firmware requires first parameters + deblock data to be adjacent in
+    // that order.
+    static constexpr uint32_t kDeblockParametersSize = 0x80000;
+    static constexpr uint32_t kDeblockDataSize = 0x80000;
+    DEF_BUFFER(deblock_parameters, kDeblockParametersSize + kDeblockDataSize);
+    DEF_BUFFER(deblock_parameters2, 0x80000);  // Only used on G12a.
     DEF_BUFFER(segment_map, 0xd800);
     DEF_BUFFER(probability_buffer, 0x1000 * 5);
     DEF_BUFFER(count_buffer, 0x300 * 4 * 4);

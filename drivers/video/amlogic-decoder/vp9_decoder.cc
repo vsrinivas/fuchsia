@@ -301,15 +301,21 @@ zx_status_t Vp9Decoder::InitializeHardware() {
 
   if (owner_->device_type() == DeviceType::kG12A) {
     HevcDblkCfgE::Get()
-        .FromValue(working_buffers_.deblock_data2.addr32())
+        .FromValue(working_buffers_.deblock_parameters2.addr32())
         .WriteTo(owner_->dosbus());
   }
+
+  // The linux driver doesn't write to this register on G12A, but that seems to
+  // cause the hardware to write some data to physical address 0 and corrupt
+  // memory.
   HevcDblkCfg4::Get()
       .FromValue(working_buffers_.deblock_parameters.addr32())
       .WriteTo(owner_->dosbus());
 
+  // The firmware expects the deblocking data to always follow the parameters.
   HevcDblkCfg5::Get()
-      .FromValue(working_buffers_.deblock_data.addr32())
+      .FromValue(working_buffers_.deblock_parameters.addr32() +
+                 WorkingBuffers::kDeblockParametersSize)
       .WriteTo(owner_->dosbus());
 
   HevcdMppDecompCtl1::Get().FromValue(0).set_paged_mode(1).WriteTo(
