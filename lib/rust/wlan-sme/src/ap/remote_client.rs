@@ -34,8 +34,6 @@ pub struct Map {
 impl Map {
     pub fn add_client(&mut self, addr: MacAddr, authenticator: Option<Authenticator>)
                       -> Result<AssociationId, failure::Error> {
-        // just make this case an error for now; can tweak this behavior once we have a better
-        // understanding of how this case can happen
         ensure!(self.get_client(&addr).is_none(), "client already exists in map");
 
         let aid = self.aid_map.assign_aid()?;
@@ -52,8 +50,6 @@ impl Map {
         self.clients.get_mut(addr)
     }
 
-    // currently unused outside of tests, can remove attribute once used in actual code
-    #[allow(dead_code)]
     pub fn remove_client(&mut self, addr: &MacAddr) -> Option<RemoteClient> {
         let remote_client = self.clients.remove(addr);
         remote_client.as_ref().map(|rc| self.aid_map.release_aid(rc.aid));

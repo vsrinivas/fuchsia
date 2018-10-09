@@ -72,10 +72,12 @@ zx_status_t CreateSetKeysRequest(MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest>*
                                  std::vector<uint8_t> key_data, ::fuchsia::wlan::mlme::KeyType);
 zx_status_t CreateAuthReqFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateAuthRespFrame(fbl::unique_ptr<Packet>*);
+zx_status_t CreateDeauthFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateBeaconFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>*, common::MacAddr);
 zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateAssocRespFrame(fbl::unique_ptr<Packet>*);
+zx_status_t CreateDisassocFrame(fbl::unique_ptr<Packet>*);
 DataFrame<LlcHeader> CreateDataFrame(const uint8_t* payload, size_t len);
 DataFrame<> CreateNullDataFrame();
 EthFrame CreateEthFrame(const uint8_t* payload, size_t len);

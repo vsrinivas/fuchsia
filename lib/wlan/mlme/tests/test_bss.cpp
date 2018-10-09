@@ -359,6 +359,32 @@ zx_status_t CreateAuthRespFrame(fbl::unique_ptr<Packet>* out_packet) {
     return ZX_OK;
 }
 
+zx_status_t CreateDeauthFrame(fbl::unique_ptr<Packet>* out_packet) {
+    common::MacAddr bssid(kBssid1);
+    common::MacAddr client(kClientAddress);
+
+    MgmtFrame<Deauthentication> frame;
+    auto status = CreateMgmtFrame(&frame);
+    if (status != ZX_OK) { return status; }
+
+    auto hdr = frame.hdr();
+    hdr->addr1 = bssid;
+    hdr->addr2 = client;
+    hdr->addr3 = bssid;
+    frame.FillTxInfo();
+
+    auto deauth = frame.body();
+    deauth->reason_code = reason_code::ReasonCode::kLeavingNetworkDeauth;
+
+    auto pkt = frame.Take();
+    wlan_rx_info_t rx_info{.rx_flags = 0};
+    pkt->CopyCtrlFrom(rx_info);
+
+    *out_packet = fbl::move(pkt);
+
+    return ZX_OK;
+}
+
 zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>* out_packet) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
@@ -418,6 +444,32 @@ zx_status_t CreateAssocRespFrame(fbl::unique_ptr<Packet>* out_packet) {
     cap.set_ess(1);
     assoc->cap = cap;
     assoc->status_code = status_code::kSuccess;
+
+    auto pkt = frame.Take();
+    wlan_rx_info_t rx_info{.rx_flags = 0};
+    pkt->CopyCtrlFrom(rx_info);
+
+    *out_packet = fbl::move(pkt);
+
+    return ZX_OK;
+}
+
+zx_status_t CreateDisassocFrame(fbl::unique_ptr<Packet>* out_packet) {
+    common::MacAddr bssid(kBssid1);
+    common::MacAddr client(kClientAddress);
+
+    MgmtFrame<Disassociation> frame;
+    auto status = CreateMgmtFrame(&frame);
+    if (status != ZX_OK) { return status; }
+
+    auto hdr = frame.hdr();
+    hdr->addr1 = bssid;
+    hdr->addr2 = client;
+    hdr->addr3 = bssid;
+    frame.FillTxInfo();
+
+    auto disassoc = frame.body();
+    disassoc->reason_code = reason_code::ReasonCode::kLeavingNetworkDisassoc;
 
     auto pkt = frame.Take();
     wlan_rx_info_t rx_info{.rx_flags = 0};

@@ -25,7 +25,8 @@ class BaseState;
 class RemoteClient : public RemoteClientInterface {
    public:
     struct Listener {
-        virtual zx_status_t HandleClientDeauth(const common::MacAddr& client) = 0;
+        virtual void HandleClientFailedAuth(const common::MacAddr& client) = 0;
+        virtual void HandleClientDeauth(const common::MacAddr& client) = 0;
         virtual void HandleClientDisassociation(aid_t aid) = 0;
         virtual void HandleClientBuChange(const common::MacAddr& client, aid_t aid,
                                           size_t bu_count) = 0;
@@ -45,7 +46,7 @@ class RemoteClient : public RemoteClientInterface {
     void OpenControlledPort() override;
     zx_status_t SendAuthentication(status_code::StatusCode result);
     zx_status_t SendAssociationResponse(aid_t aid, status_code::StatusCode result);
-    zx_status_t SendDeauthentication(reason_code::ReasonCode reason_code);
+    zx_status_t SendDeauthentication(::fuchsia::wlan::mlme::ReasonCode reason_code);
     zx_status_t SendAddBaRequest();
     zx_status_t SendAddBaResponse(const AddBaRequestFrame& rx_frame);
 
@@ -54,6 +55,7 @@ class RemoteClient : public RemoteClientInterface {
 
     void MoveToState(fbl::unique_ptr<BaseState> state);
     void ReportBuChange(aid_t aid, size_t bu_count);
+    void ReportFailedAuth();
     void ReportDeauthentication();
     void ReportDisassociation(aid_t aid);
 
@@ -107,7 +109,8 @@ class BaseState {
 
 class DeauthenticatingState : public BaseState {
    public:
-    DeauthenticatingState(RemoteClient* client);
+    DeauthenticatingState(RemoteClient* client, ::fuchsia::wlan::mlme::ReasonCode reason_code,
+                          bool send_deauth_frame);
 
     void OnEnter() override;
 
@@ -115,6 +118,9 @@ class DeauthenticatingState : public BaseState {
 
    private:
     static constexpr const char* kName = "Deauthenticating";
+
+    ::fuchsia::wlan::mlme::ReasonCode reason_code_;
+    bool send_deauth_frame_;
 };
 
 class DeauthenticatedState : public BaseState {
@@ -236,9 +242,6 @@ class AssociatedState : public BaseState {
     bool active_ = false;
     // `true` if the client entered Power Saving mode's doze state.
     bool dozing_ = false;
-    // `true` if a Deauthentication notification should be sent when leaving the
-    // state.
-    bool req_deauth_ = true;
     eapol::PortState eapol_controlled_port_ = eapol::PortState::kBlocked;
     // Queue which holds buffered ethernet frames while the client is dozing.
     std::queue<EthFrame> bu_queue_;

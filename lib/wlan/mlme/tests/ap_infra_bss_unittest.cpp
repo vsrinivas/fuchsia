@@ -70,8 +70,16 @@ struct ApInfraBssTest : public ::testing::Test {
         return HandleFrame([](auto pkt) { return CreateAuthReqFrame(pkt); });
     }
 
+    zx_status_t SendClientDeauthFrame() {
+        return HandleFrame([](auto pkt) { return CreateDeauthFrame(pkt); });
+    }
+
     zx_status_t SendClientAssocReqFrame() {
         return HandleFrame([](auto pkt) { return CreateAssocReqFrame(pkt); });
+    }
+
+    zx_status_t SendClientDisassocFrame() {
+        return HandleFrame([](auto pkt) { return CreateDisassocFrame(pkt); });
     }
 
     zx_status_t SendNullDataFrame(bool pwr_mgmt) {
@@ -180,6 +188,16 @@ struct ApInfraBssTest : public ::testing::Test {
         EXPECT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), kClientAddress, 6), 0);
     }
 
+    void AssertDeauthInd(fbl::unique_ptr<Packet> pkt) {
+        ASSERT_EQ(pkt->peer(), Packet::Peer::kService);
+        MlmeMsg<wlan_mlme::DeauthenticateIndication> msg;
+        auto status =
+            MlmeMsg<wlan_mlme::DeauthenticateIndication>::FromPacket(fbl::move(pkt), &msg);
+        ASSERT_EQ(status, ZX_OK);
+
+        EXPECT_EQ(msg.body()->reason_code, wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
+    }
+
     void AssertAssocInd(fbl::unique_ptr<Packet> pkt) {
         ASSERT_EQ(pkt->peer(), Packet::Peer::kService);
         MlmeMsg<wlan_mlme::AssociateIndication> msg;
@@ -190,6 +208,16 @@ struct ApInfraBssTest : public ::testing::Test {
         EXPECT_EQ(msg.body()->listen_interval, kListenInterval);
         EXPECT_EQ(std::memcmp(msg.body()->ssid->data(), kSsid, msg.body()->ssid->size()), 0);
         EXPECT_EQ(std::memcmp(msg.body()->rsn->data(), kRsne, sizeof(kRsne)), 0);
+    }
+
+    void AssertDisassocInd(fbl::unique_ptr<Packet> pkt) {
+        ASSERT_EQ(pkt->peer(), Packet::Peer::kService);
+        MlmeMsg<wlan_mlme::DisassociateIndication> msg;
+        auto status = MlmeMsg<wlan_mlme::DisassociateIndication>::FromPacket(fbl::move(pkt), &msg);
+        ASSERT_EQ(status, ZX_OK);
+
+        EXPECT_EQ(msg.body()->reason_code,
+                  static_cast<uint16_t>(wlan_mlme::ReasonCode::LEAVING_NETWORK_DISASSOC));
     }
 
     struct DataFrameAssert {
@@ -286,6 +314,20 @@ TEST_F(ApInfraBssTest, Authenticate_SmeRefuses) {
     EXPECT_EQ(frame.body()->status_code, status_code::kRefused);
 }
 
+TEST_F(ApInfraBssTest, DeauthenticateWhileAuthenticated) {
+    StartAp();
+    AuthenticateClient();
+
+    // Send deauthentication frame
+    SendClientDeauthFrame();
+
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
+    auto deauth_inds =
+        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
+    ASSERT_FALSE(deauth_inds.empty());
+    AssertDeauthInd(fbl::move(*deauth_inds.begin()));
+}
+
 TEST_F(ApInfraBssTest, Associate_Success) {
     StartAp();
     AuthenticateClient();
@@ -344,6 +386,34 @@ TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
     // Sending frame should be a no-op since association fails
     SendEthFrame(kTestPayload);
     EXPECT_TRUE(device.wlan_queue.empty());
+}
+
+TEST_F(ApInfraBssTest, DeauthenticateWhileAssociated) {
+    StartAp();
+    AuthenticateAndAssociateClient();
+
+    // Send deauthentication frame
+    SendClientDeauthFrame();
+
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
+    auto deauth_inds =
+        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
+    ASSERT_FALSE(deauth_inds.empty());
+    AssertDeauthInd(fbl::move(*deauth_inds.begin()));
+}
+
+TEST_F(ApInfraBssTest, Disassociate) {
+    StartAp();
+    AuthenticateAndAssociateClient();
+
+    // Send deauthentication frame
+    SendClientDisassocFrame();
+
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
+    auto disassoc_inds =
+        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDisassociateIndOrdinal>);
+    ASSERT_FALSE(disassoc_inds.empty());
+    AssertDisassocInd(fbl::move(*disassoc_inds.begin()));
 }
 
 TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {

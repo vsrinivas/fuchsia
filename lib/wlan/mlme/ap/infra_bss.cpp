@@ -287,20 +287,28 @@ zx_status_t InfraBss::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysReque
     return ZX_OK;
 }
 
-zx_status_t InfraBss::HandleClientDeauth(const common::MacAddr& client_addr) {
+void InfraBss::HandleClientFailedAuth(const common::MacAddr& client_addr) {
     debugfn();
+    StopTrackingClient(client_addr);
+}
+
+void InfraBss::HandleClientDeauth(const common::MacAddr& client_addr) {
+    debugfn();
+    StopTrackingClient(client_addr);
+}
+
+void InfraBss::StopTrackingClient(const wlan::common::MacAddr& client_addr) {
     auto iter = clients_.find(client_addr);
     ZX_DEBUG_ASSERT(iter != clients_.end());
     if (iter == clients_.end()) {
         errorf("[infra-bss] [%s] unknown client deauthenticated: %s\n", bssid_.ToString().c_str(),
                client_addr.ToString().c_str());
-        return ZX_ERR_BAD_STATE;
+        return;
     }
 
     debugbss("[infra-bss] [%s] removing client %s\n", bssid_.ToString().c_str(),
              client_addr.ToString().c_str());
     clients_.erase(iter);
-    return ZX_OK;
 }
 
 void InfraBss::HandleClientDisassociation(aid_t aid) {

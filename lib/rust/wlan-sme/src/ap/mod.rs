@@ -173,7 +173,9 @@ impl<T: Tokens> super::Station for ApSme<T> {
             State::Idle { .. } => warn!("received MlmeEvent while ApSme is idle {:?}", event),
             State::Started { ref mut bss } => match event {
                 MlmeEvent::AuthenticateInd { ind } => bss.handle_auth_ind(ind),
+                MlmeEvent::DeauthenticateInd { ind } => bss.handle_deauth_ind(ind),
                 MlmeEvent::AssociateInd { ind } => bss.handle_assoc_ind(ind),
+                MlmeEvent::DisassociateInd { ind } => bss.handle_disassoc_ind(ind),
                 MlmeEvent::EapolInd { ind } => {
                     let _ = bss.handle_eapol_ind(ind).map_err(|e| warn!("{}", e));
                 }
@@ -192,7 +194,12 @@ impl<T: Tokens> super::Station for ApSme<T> {
 }
 
 impl<T: Tokens> InfraBss<T> {
-    fn handle_auth_ind(&self, ind: fidl_mlme::AuthenticateIndication) {
+    fn handle_auth_ind(&mut self, ind: fidl_mlme::AuthenticateIndication) {
+        if self.client_map.remove_client(&ind.peer_sta_address).is_some() {
+            warn!("client {:?} authenticates while still associated; removed client from map",
+                  ind.peer_sta_address);
+        }
+
         let result_code = if ind.auth_type == fidl_mlme::AuthenticationTypes::OpenSystem {
             fidl_mlme::AuthenticateResultCodes::Success
         } else {
@@ -206,7 +213,16 @@ impl<T: Tokens> InfraBss<T> {
         self.mlme_sink.send(MlmeRequest::AuthResponse(resp));
     }
 
+    fn handle_deauth_ind(&mut self, ind: fidl_mlme::DeauthenticateIndication) {
+        let _ = self.client_map.remove_client(&ind.peer_sta_address);
+    }
+
     fn handle_assoc_ind(&mut self, ind: fidl_mlme::AssociateIndication) {
+        if self.client_map.remove_client(&ind.peer_sta_address).is_some() {
+            warn!("client {:?} associates while still associated; removed client from map",
+                  ind.peer_sta_address);
+        }
+
         let result = match (ind.rsn.as_ref(), self.rsn_cfg.clone()) {
             (Some(s_rsne_bytes), Some(a_rsn)) =>
                 self.handle_rsn_assoc_ind(s_rsne_bytes, a_rsn, &ind.peer_sta_address),
@@ -230,6 +246,10 @@ impl<T: Tokens> InfraBss<T> {
         if result_code == fidl_mlme::AssociateResultCodes::Success && self.rsn_cfg.is_some() {
             self.initiate_key_exchange(&ind.peer_sta_address);
         }
+    }
+
+    fn handle_disassoc_ind(&mut self, ind: fidl_mlme::DisassociateIndication) {
+        let _ = self.client_map.remove_client(&ind.peer_sta_address);
     }
 
     fn handle_rsn_assoc_ind(&mut self, s_rsne_bytes: &Vec<u8>, a_rsn: RsnCfg, client_addr: &MacAddr)
@@ -544,16 +564,40 @@ mod tests {
     fn client_associates_invalid_rsne() {
         let (mut sme, mut mlme_stream, _) = start_protected_ap();
         authenticate_and_drain_mlme(&mut sme, &mut mlme_stream);
-
-        let mut rsne = RSNE.to_vec();
-        rsne[13] = 0x02; // change last byte of pairwise cipher, changing it from CCMP-128 to TKIP
-        sme.on_mlme_event(create_assoc_ind(Some(rsne.to_vec())));
+        sme.on_mlme_event(create_assoc_ind(None));
 
         let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
         if let MlmeRequest::AssocResponse(assoc_resp) = msg {
             assert_eq!(assoc_resp.peer_sta_address, CLIENT_ADDR);
             assert_eq!(assoc_resp.result_code, fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch);
             assert_eq!(assoc_resp.association_id, 0);
+        } else {
+            panic!("expect assoc response to MLME");
+        }
+    }
+
+    #[test]
+    fn client_restarts_authentication_flow() {
+        let (mut sme, mut mlme_stream, _) = start_unprotected_ap();
+        authenticate_and_drain_mlme(&mut sme, &mut mlme_stream);
+        associate_and_drain_mlme(&mut sme, &mut mlme_stream, None);
+
+        sme.on_mlme_event(create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
+
+        let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
+        if let MlmeRequest::AuthResponse(..) = msg {
+            // expected path
+        } else {
+            panic!("expect auth response to MLME");
+        }
+
+        sme.on_mlme_event(create_assoc_ind(None));
+
+        let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
+        if let MlmeRequest::AssocResponse(assoc_resp) = msg {
+            assert_eq!(assoc_resp.peer_sta_address, CLIENT_ADDR);
+            assert_eq!(assoc_resp.result_code, fidl_mlme::AssociateResultCodes::Success);
+            assert_eq!(assoc_resp.association_id, 1);
         } else {
             panic!("expect assoc response to MLME");
         }
@@ -567,6 +611,19 @@ mod tests {
 
         let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
         if let MlmeRequest::AuthResponse(..) = msg {
+            // expected path
+        } else {
+            panic!("expect auth response to MLME");
+        }
+    }
+
+    fn associate_and_drain_mlme(sme: &mut ApSme<FakeTokens>,
+                                mlme_stream: &mut crate::MlmeStream,
+                                rsne: Option<Vec<u8>>) {
+        sme.on_mlme_event(create_assoc_ind(rsne));
+
+        let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
+        if let MlmeRequest::AssocResponse(..) = msg {
             // expected path
         } else {
             panic!("expect auth response to MLME");

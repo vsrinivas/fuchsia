@@ -88,10 +88,13 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
     static constexpr size_t kMaxGroupAddressedBu = 128;
 
     // RemoteClient::Listener implementation
-    zx_status_t HandleClientDeauth(const common::MacAddr& client_addr) override;
+    void HandleClientFailedAuth(const common::MacAddr& client_addr) override;
+    void HandleClientDeauth(const common::MacAddr& client_addr) override;
     void HandleClientDisassociation(aid_t aid) override;
     void HandleClientBuChange(const common::MacAddr& client_addr, aid_t aid,
                               size_t bu_count) override;
+
+    void StopTrackingClient(const common::MacAddr& client_addr);
 
     zx_status_t CreateClientTimer(const common::MacAddr& client_addr,
                                   fbl::unique_ptr<Timer>* out_timer);

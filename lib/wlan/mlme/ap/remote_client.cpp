@@ -22,12 +22,19 @@ template <typename S, typename... Args> void BaseState::MoveToState(Args&&... ar
 
 // Deauthenticating implementation.
 
-DeauthenticatingState::DeauthenticatingState(RemoteClient* client) : BaseState(client) {}
+DeauthenticatingState::DeauthenticatingState(RemoteClient* client,
+                                             wlan_mlme::ReasonCode reason_code,
+                                             bool send_deauth_frame)
+    : BaseState(client), reason_code_(reason_code), send_deauth_frame_(send_deauth_frame) {}
 
 void DeauthenticatingState::OnEnter() {
     debugfn();
-    MoveToState<DeauthenticatedState>();
     client_->ReportDeauthentication();
+    service::SendDeauthIndication(client_->device(), client_->addr(), reason_code_);
+    if (send_deauth_frame_) {
+        client_->SendDeauthentication(reason_code_);
+    }
+    MoveToState<DeauthenticatedState>();
 }
 
 // DeauthenticatedState implementation.
@@ -97,9 +104,8 @@ zx_status_t AuthenticatingState::FinalizeAuthenticationAttempt(
     if (auth_success && status == ZX_OK) {
         MoveToState<AuthenticatedState>();
     } else {
-        // note that in the case where SME sends a success AuthenticateResponse but device fails
-        // to transmit the frame, MLME's state would diverge from SME
-        MoveToState<DeauthenticatingState>();
+        client_->ReportFailedAuth();
+        MoveToState<DeauthenticatedState>();
     }
     return status;
 }
@@ -120,7 +126,11 @@ void AuthenticatedState::OnExit() {
 }
 
 void AuthenticatedState::HandleTimeout() {
-    if (client_->IsDeadlineExceeded(auth_timeout_)) { MoveToState<DeauthenticatingState>(); }
+    if (client_->IsDeadlineExceeded(auth_timeout_)) {
+        bool send_deauth_frame = true;
+        MoveToState<DeauthenticatingState>(wlan_mlme::ReasonCode::REASON_INACTIVITY,
+                                           send_deauth_frame);
+    }
 }
 
 void AuthenticatedState::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
@@ -144,7 +154,9 @@ void AuthenticatedState::HandleAuthentication(MgmtFrame<Authentication>&& frame)
 void AuthenticatedState::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame) {
     debugbss("[client] [%s] received Deauthentication: %hu\n", client_->addr().ToString().c_str(),
              frame.body()->reason_code);
-    MoveToState<DeauthenticatingState>();
+    bool send_deauth_frame = false;
+    MoveToState<DeauthenticatingState>(
+        static_cast<wlan_mlme::ReasonCode>(frame.body()->reason_code), send_deauth_frame);
 }
 
 void AuthenticatedState::HandleAssociationRequest(MgmtFrame<AssociationRequest>&& frame) {
@@ -221,9 +233,9 @@ zx_status_t AssociatingState::FinalizeAssociationAttempt(status_code::StatusCode
     if (assoc_success && status == ZX_OK) {
         MoveToState<AssociatedState>(aid_);
     } else {
-        // note that in the case where SME sends a success AssociateResponse but device fails
-        // to transmit the frame, MLME's state would diverge from SME
-        MoveToState<DeauthenticatingState>();
+        service::SendDisassociateIndication(client_->device(), client_->addr(),
+                                            reason_code::ReasonCode::kUnspecifiedReason);
+        MoveToState<AuthenticatedState>();
     }
     return status;
 }
@@ -273,8 +285,6 @@ void AssociatedState::HandleAuthentication(MgmtFrame<Authentication>&& frame) {
              client_->addr().ToString().c_str());
     // Client believes it is not yet authenticated. Thus, there is no need to send
     // an explicit Deauthentication.
-    req_deauth_ = false;
-
     MoveToState<AuthenticatingState>(fbl::move(frame));
 }
 
@@ -285,8 +295,6 @@ void AssociatedState::HandleAssociationRequest(MgmtFrame<AssociationRequest>&& f
              client_->addr().ToString().c_str());
     // Client believes it is not yet associated. Thus, there is no need to send an
     // explicit Deauthentication.
-    req_deauth_ = false;
-
     MoveToState<AssociatingState>(fbl::move(frame));
 }
 
@@ -343,13 +351,16 @@ void AssociatedState::OpenControlledPort() {
 void AssociatedState::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame) {
     debugbss("[client] [%s] received Deauthentication: %hu\n", client_->addr().ToString().c_str(),
              frame.body()->reason_code);
-    req_deauth_ = false;
-    MoveToState<DeauthenticatingState>();
+    bool send_deauth_frame = true;
+    MoveToState<DeauthenticatingState>(
+        static_cast<wlan_mlme::ReasonCode>(frame.body()->reason_code), send_deauth_frame);
 }
 
 void AssociatedState::HandleDisassociation(MgmtFrame<Disassociation>&& frame) {
     debugbss("[client] [%s] received Disassociation request: %u\n",
              client_->addr().ToString().c_str(), frame.body()->reason_code);
+    service::SendDisassociateIndication(client_->device(), client_->addr(),
+                                        frame.body()->reason_code);
     MoveToState<AuthenticatedState>();
 }
 
@@ -397,17 +408,6 @@ std::optional<DataFrame<LlcHeader>> AssociatedState::EthToDataFrame(const EthFra
 void AssociatedState::OnExit() {
     client_->CancelTimer();
     inactive_timeout_ = zx::time();
-
-    // Ensure Deauthentication is sent to the client if itself didn't send such
-    // notification or such notification wasn't already sent due to inactivity of
-    // the client. This Deauthentication is usually issued when the BSS stopped
-    // and its associated clients need to get notified.
-    if (req_deauth_) {
-        req_deauth_ = false;
-        debugbss("[client] [%s] ending association; deauthenticating client\n",
-                 client_->addr().ToString().c_str());
-        client_->SendDeauthentication(reason_code::ReasonCode::kLeavingNetworkDeauth);
-    }
 
     client_->ReportDisassociation(aid_);
     debugbss("[client] [%s] reported disassociation, AID: %u\n", client_->addr().ToString().c_str(),
@@ -487,15 +487,11 @@ void AssociatedState::HandleTimeout() {
     } else {
         active_ = false;
 
-        // The client timed-out, send Deauthentication. Ignore result, always leave
-        // associated state.
-        req_deauth_ = false;
-        client_->SendDeauthentication(reason_code::ReasonCode::kReasonInactivity);
-        debugbss(
-            "[client] [%s] client inactive for %lu seconds; deauthenticating "
-            "client\n",
-            client_->addr().ToString().c_str(), kInactivityTimeoutTu / 1000);
-        MoveToState<DeauthenticatedState>();
+        debugbss("[client] [%s] client inactive for %lu seconds; deauthenticating client\n",
+                 client_->addr().ToString().c_str(), kInactivityTimeoutTu / 1000);
+        bool send_deauth_frame = true;
+        MoveToState<DeauthenticatingState>(wlan_mlme::ReasonCode::REASON_INACTIVITY,
+                                           send_deauth_frame);
     }
 }
 
@@ -835,7 +831,7 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     return status;
 }
 
-zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_code) {
+zx_status_t RemoteClient::SendDeauthentication(wlan_mlme::ReasonCode reason_code) {
     debugfn();
     debugbss("[client] [%s] sending Deauthentication\n", addr_.ToString().c_str());
 
@@ -862,6 +858,10 @@ zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_co
 
 void RemoteClient::ReportBuChange(aid_t aid, size_t bu_count) {
     if (listener_ != nullptr) { listener_->HandleClientBuChange(addr_, aid, bu_count); }
+}
+
+void RemoteClient::ReportFailedAuth() {
+    if (listener_ != nullptr) { listener_->HandleClientFailedAuth(addr_); }
 }
 
 void RemoteClient::ReportDeauthentication() {
