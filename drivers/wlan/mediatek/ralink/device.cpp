@@ -176,6 +176,7 @@ Device::Device(zx_device_t* device, usb_protocol_t usb, uint8_t bulk_in,
                std::vector<uint8_t>&& bulk_out)
     : parent_(device), usb_(usb), rx_endpt_(bulk_in), tx_endpts_(std::move(bulk_out)) {
     debugf("Device dev=%p bulk_in=%u\n", parent_, rx_endpt_);
+    used_wcid_bitmap_.Reset(kMaxValidWcid);
 }
 
 Device::~Device() {
@@ -4274,9 +4275,23 @@ zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* 
     txwi0.set_stbc(0);  // TODO(porce): Define the value.
 
     // The frame header is always in the packet head.
-    auto bytes = static_cast<uint8_t*>(wlan_pkt->packet_head.data);
-    auto addr1_offset = bytes + kMacHdrAddr1Offset;
-    auto wcid = LookupTxWcid(addr1_offset, protected_frame);
+    // If the frame requires protection, lookup the matching WCID.
+    uint8_t wcid = kWcidUnknown;
+    if (protected_frame) {
+        if (wlan_pkt->packet_head.len >= kMacHdrAddr1Offset + ETH_MAC_SIZE) {
+            auto frame_data = static_cast<const uint8_t *>(wlan_pkt->packet_head.data);
+            auto addr1 = wlan::common::MacAddr(frame_data + kMacHdrAddr1Offset);
+
+            auto wcid_lookup = GetWcid(addr1);
+            if (wcid_lookup) {
+                wcid = wcid_lookup.value();
+            } else {
+                auto fc = reinterpret_cast<const wlan::FrameControl*>(frame_data);
+                warnf("no WCID found for protected frame: %u %u\n", fc->type(), fc->subtype());
+            }
+        }
+    }
+
     Txwi1& txwi1 = aggr->txwi1;
     txwi1.set_ack(GetRxAckPolicy(*wlan_pkt));
     txwi1.set_nseq(0);
@@ -4302,20 +4317,6 @@ zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* 
     WriteBulkout(aggr_payload, *wlan_pkt);
 
     return ZX_OK;
-}
-
-// Looks up the WCID for addr1 in the frame. If no WCID was found, 255 is returned.
-// Note: This method must be evolved once multiple BSS are supported or the STA runs in AP mode
-// and uses hardware encryption.
-uint8_t Device::LookupTxWcid(const uint8_t* addr1, bool protected_frame) {
-    if (protected_frame) {
-        if (memcmp(addr1, wlan::common::kBcastMac.byte, wlan::common::kMacAddrLen) == 0) {
-            return kWcidBcastAddr;
-        } else if (memcmp(addr1, bssid_, wlan::common::kMacAddrLen) == 0) {
-            return kWcidBssid;
-        }
-    }
-    return kWcidUnknown;
 }
 
 zx_status_t Device::EnableHwBcn(bool active) {
@@ -4510,18 +4511,29 @@ zx_status_t Device::WriteKey(const uint8_t key[], size_t key_len, uint16_t index
     KeyEntry keyEntry = {};
     switch (mode) {
     case KeyMode::kNone: {
-        if (key_len != kNoProtectionKeyLen || key != nullptr) { return ZX_ERR_INVALID_ARGS; }
+        if (key_len != kNoProtectionKeyLen || key != nullptr) {
+            errorf("invalid key length %zu; expected %hhu\n", key_len, kNoProtectionKeyLen);
+            return ZX_ERR_INVALID_ARGS;
+        }
         // No need for copying the key since the key should be zeroed in this KeyMode.
         break;
     }
     case KeyMode::kTkip: {
-        if (key_len != wlan::common::cipher::kTkipKeyLenBytes) { return ZX_ERR_INVALID_ARGS; }
+        if (key_len != wlan::common::cipher::kTkipKeyLenBytes) {
+            errorf("invalid TKIP key length %zu; expected %hhu\n", key_len,
+                    wlan::common::cipher::kTkipKeyLenBytes);
+            return ZX_ERR_INVALID_ARGS;
+        }
 
         memcpy(keyEntry.key, key, wlan::common::cipher::kTkipKeyLenBytes);
         break;
     }
     case KeyMode::kAes: {
-        if (key_len != wlan::common::cipher::kCcmp128KeyLenBytes) { return ZX_ERR_INVALID_ARGS; }
+        if (key_len != wlan::common::cipher::kCcmp128KeyLenBytes) {
+            errorf("invalid CCMP-128 key length %zu; expected %hhu\n", key_len,
+                    wlan::common::cipher::kCcmp128KeyLenBytes);
+            return ZX_ERR_INVALID_ARGS;
+        }
 
         memcpy(keyEntry.key, key, wlan::common::cipher::kCcmp128KeyLenBytes);
         break;
@@ -4585,9 +4597,7 @@ zx_status_t Device::WriteWcidAttribute(uint8_t bss_idx, uint8_t wcid, KeyMode mo
 }
 
 zx_status_t Device::ResetWcid(uint8_t wcid, uint8_t skey, uint8_t key_type) {
-    // TODO(hahnr): Use zero mac from MacAddr once it was moved to common/.
-    uint8_t zero_addr[6] = {};
-    WriteWcid(wcid, zero_addr);
+    WriteWcid(wcid, wlan::common::kZeroMac.byte);
     WriteWcidAttribute(0, wcid, KeyMode::kNone, KeyType::kSharedKey);
     ResetIvEiv(wcid, 0, KeyMode::kNone);
 
@@ -4601,7 +4611,7 @@ zx_status_t Device::ResetWcid(uint8_t wcid, uint8_t skey, uint8_t key_type) {
         WriteSharedKeyMode(skey, KeyMode::kNone);
         break;
     }
-    default: { break; }
+    default: break;
     }
     return ZX_OK;
 }
@@ -4653,24 +4663,72 @@ zx_status_t Device::WriteSharedKeyMode(uint8_t skey, KeyMode mode) {
     return ZX_OK;
 }
 
+std::optional<uint8_t> Device::GetWcid(const wlan::common::MacAddr& addr) {
+    auto iter = addr_wcid_map_.find(addr);
+    if (iter == addr_wcid_map_.end()) { return std::nullopt; }
+
+    return {iter->second};
+}
+
+zx_status_t Device::AddPeer(const wlan::common::MacAddr& addr, uint8_t* out_wcid) {
+    auto iter = addr_wcid_map_.find(addr);
+    if (iter != addr_wcid_map_.end()) {
+        *out_wcid = iter->second;
+        return ZX_OK;
+    }
+
+    size_t wcid;
+    bool no_wcid_available = used_wcid_bitmap_.Get(0, kMaxValidWcid + 1, &wcid);
+    if (no_wcid_available) { return ZX_ERR_NOT_SUPPORTED; }
+
+    auto status = used_wcid_bitmap_.SetOne(wcid);
+    if (status != ZX_OK) { return status; }
+
+    addr_wcid_map_.emplace(addr, static_cast<uint8_t>(wcid));
+    *out_wcid = wcid;
+
+    return ZX_OK;
+}
+
+zx_status_t Device::RemovePeer(const wlan::common::MacAddr& addr) {
+    auto iter = addr_wcid_map_.find(addr);
+    if (iter == addr_wcid_map_.end()) { return ZX_ERR_NOT_FOUND; }
+
+    uint8_t wcid = iter->second;
+    auto status = used_wcid_bitmap_.ClearOne(wcid);
+    if (status != ZX_OK) { return status; }
+
+    addr_wcid_map_.erase(iter);
+
+    return ZX_OK;
+}
+
 zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_config) {
     if (options != 0) { return ZX_ERR_INVALID_ARGS; }
 
     auto keyMode = MapIeeeCipherSuiteToKeyMode(key_config->cipher_oui, key_config->cipher_type);
-    if (keyMode == KeyMode::kUnsupported) { return ZX_ERR_NOT_SUPPORTED; }
+    if (keyMode == KeyMode::kUnsupported) {
+        errorf("unsupported cipher suite: %d\n", key_config->cipher_type);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
-    zx_status_t status = ZX_OK;
+    wlan::common::MacAddr peer_addr(key_config->peer_addr);
+    uint8_t wcid = 0;
+    auto status = AddPeer(peer_addr, &wcid);
+    if (status != ZX_OK) { return status; }
 
     switch (key_config->key_type) {
     case WLAN_KEY_TYPE_PAIRWISE: {
         // The driver doesn't support multiple BSS yet. Always use bss index 0.
         uint8_t bss_idx = 0;
-        uint8_t wcid = kWcidBssid;
 
         // Reset everything on failure.
-        auto reset = fit::defer([&]() { ResetWcid(wcid, 0, WLAN_KEY_TYPE_PAIRWISE); });
+        auto reset = fit::defer([&]() {
+            RemovePeer(peer_addr);
+            ResetWcid(wcid, 0, WLAN_KEY_TYPE_PAIRWISE);
+        });
 
-        auto status = WriteWcid(wcid, key_config->peer_addr);
+        status = WriteWcid(wcid, key_config->peer_addr);
         if (status != ZX_OK) { break; }
 
         status = WritePairwiseKey(wcid, key_config->key, key_config->key_len, keyMode);
@@ -4683,19 +4741,21 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
         if (status != ZX_OK) { break; }
 
         reset.cancel();
-        break;
+        return status;
     }
     case WLAN_KEY_TYPE_GROUP: {
         // The driver doesn't support multiple BSS yet. Always use bss index 0.
         uint8_t bss_idx = 0;
         uint8_t key_idx = key_config->key_idx;
         uint8_t skey = DeriveSharedKeyIndex(bss_idx, key_idx);
-        uint8_t wcid = kWcidBcastAddr;
 
         // Reset everything on failure.
-        auto reset = fit::defer([&]() { ResetWcid(wcid, skey, WLAN_KEY_TYPE_GROUP); });
+        auto reset = fit::defer([&]() {
+            RemovePeer(peer_addr);
+            ResetWcid(wcid, skey, WLAN_KEY_TYPE_GROUP);
+        });
 
-        auto status = WriteSharedKey(skey, key_config->key, key_config->key_len, keyMode);
+        status = WriteSharedKey(skey, key_config->key, key_config->key_len, keyMode);
         if (status != ZX_OK) { break; }
 
         status = WriteSharedKeyMode(skey, keyMode);
@@ -4711,12 +4771,11 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
         if (status != ZX_OK) { break; }
 
         reset.cancel();
-        break;
+        return status;
     }
     default: {
         errorf("unsupported key type: %d\n", key_config->key_type);
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     }
 

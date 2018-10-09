@@ -68,11 +68,6 @@ constexpr int8_t kMaxSharedKeys = 31;
 
 constexpr int8_t kNoProtectionKeyLen = 0;
 
-// WCID = 255 for addresses which are not known to the hardware.
-constexpr uint8_t kWcidUnknown = 255;
-constexpr uint8_t kWcidBcastAddr = 2;
-constexpr uint8_t kWcidBssid = 1;
-
 // Beacon offset's value is a multiple of 64 bytes.
 constexpr uint8_t kBeaconOffsetFactorByte = 64;
 constexpr size_t kMaxBeaconSizeByte = 512;

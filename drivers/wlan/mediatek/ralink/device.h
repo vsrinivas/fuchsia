@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
+#include <wlan/common/macaddr.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/usb.h>
@@ -22,10 +25,17 @@
 #include <cstdint>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 namespace ralink {
+
+// WCID 255 is reserved for no/unknown peer address.
+static constexpr size_t kMaxValidWcid = 254;
+// WCID = 255 for addresses which are not known to the hardware.
+constexpr uint8_t kWcidUnknown = 255;
 
 template <uint16_t A> class Register;
 template <uint8_t A> class BbpRegister;
@@ -180,6 +190,15 @@ class Device {
     zx_status_t WriteWcidAttribute(uint8_t bss_idx, uint8_t wcid, KeyMode mode, KeyType type);
     // resets all security aspects for a given WCID and shared key as well as their keys.
     zx_status_t ResetWcid(uint8_t wcid, uint8_t skey, uint8_t key_type);
+    // Returns the WCID associated with the given address or none, if the address is not yet
+    // registered.
+    std::optional<uint8_t> GetWcid(const wlan::common::MacAddr& addr);
+    // Returns ZX_OK if the peer was added or was already added.
+    zx_status_t AddPeer(const wlan::common::MacAddr& addr, uint8_t* out_wcid);
+    // Returns ZX_OK if the peer was removed.
+    // Returns ZX_ERR_NOT_FOUND if the peer was not found.
+    // Returns other error code otherwise.
+    zx_status_t RemovePeer(const wlan::common::MacAddr& addr);
 
     // interrupt routines
     zx_status_t OnTxReportInterruptTimer();
@@ -228,7 +247,6 @@ class Device {
 
     zx_status_t FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* wlan_pkt, int packet_id,
                                 size_t aggr_payload_len);
-    uint8_t LookupTxWcid(const uint8_t* addr1, bool protected_frame);
 
     zx::duration RemainingTbttTime();
     zx_status_t EnableHwBcn(bool active);
@@ -325,6 +343,12 @@ class Device {
 
     // Timer which handles TBTT interrupts for 802.11 beacon frames.
     zx::timer tbtt_interrupt_timer_;
+
+    // Bitmap indicating available WCID slots.
+    bitmap::RawBitmapGeneric<bitmap::FixedStorage<kMaxValidWcid>> used_wcid_bitmap_;
+    // Map from mac address to WCID.
+    std::unordered_map<wlan::common::MacAddr, uint8_t, wlan::common::MacAddrHasher> addr_wcid_map_;
+
 };
 
 }  // namespace ralink

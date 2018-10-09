@@ -25,6 +25,7 @@ driver_module("ralink_driver") {
     "//garnet/lib/wlan/protocol",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/bitmap",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
