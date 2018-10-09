@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use account_common::{FidlLocalAccountId, LocalAccountId};
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::{ClientEnd, RequestStream, ServerEnd};
 use fidl::Error;
@@ -14,28 +15,6 @@ use futures::future;
 use futures::prelude::*;
 use log::{error, info};
 use std::collections::BTreeSet;
-
-type FidlLocalAccountId = fidl_fuchsia_auth_account::LocalAccountId;
-
-// TODO(jsankey): There are going to be a few of these primitive wrapper types where
-// the autogenered FIDL type is difficult to deal with (e.g. no Clone). Use a common
-// crate to define more convenient native representations like this one and helper
-// functions.
-
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
-struct LocalAccountId(u64);
-
-impl From<&LocalAccountId> for FidlLocalAccountId {
-    fn from(native_type: &LocalAccountId) -> Self {
-        FidlLocalAccountId { id: native_type.0 }
-    }
-}
-
-impl From<&FidlLocalAccountId> for LocalAccountId {
-    fn from(fidl_type: &FidlLocalAccountId) -> Self {
-        LocalAccountId(fidl_type.id)
-    }
-}
 
 /// The core component of the account system for Fuchsia.
 ///
@@ -116,7 +95,7 @@ impl AccountManager {
     }
 
     fn get_account_ids(&mut self) -> Vec<FidlLocalAccountId> {
-        self.ids.iter().map(|ref x| (*x).into()).collect::<Vec<_>>()
+        self.ids.iter().map(|id| id.clone().into()).collect()
     }
 
     fn get_account_auth_states(&mut self) -> (Status, Vec<AccountAuthState>) {
@@ -126,10 +105,11 @@ impl AccountManager {
             Status::Ok,
             self.ids
                 .iter()
-                .map(|ref id| AccountAuthState {
-                    account_id: (*id).into(),
+                .map(|id| AccountAuthState {
+                    account_id: id.clone().into(),
                     auth_state: Self::DEFAULT_AUTH_STATE,
-                }).collect::<Vec<_>>(),
+                })
+                .collect(),
         )
     }
 
@@ -150,7 +130,7 @@ impl AccountManager {
     }
 
     fn remove_account(&mut self, id: FidlLocalAccountId) -> Status {
-        let local_id = (&id).into();
+        let local_id = id.into();
         if self.ids.contains(&local_id) {
             self.ids.remove(&local_id);
             info!("Removing account {:?}", local_id);
@@ -167,12 +147,12 @@ impl AccountManager {
     ) -> (Status, Option<FidlLocalAccountId>) {
         // TODO(jsankey): Use the specified account auth_provider_type to invoke an
         // AuthProvider rather than creating a local-only account.
-        let new_id = LocalAccountId(self.next_id);
+        let new_id = LocalAccountId::new(self.next_id);
         self.ids.insert(new_id.clone());
         self.next_id += 1;
         info!("Adding new local account {:?}", new_id);
         // TODO(jsankey): Persist the change in installed accounts.
-        (Status::Ok, Some((&new_id).into()))
+        (Status::Ok, Some(new_id.into()))
     }
 }
 
@@ -258,7 +238,8 @@ mod tests {
                 .map(|id| AccountAuthState {
                     account_id: FidlLocalAccountId { id },
                     auth_state: AccountManager::DEFAULT_AUTH_STATE,
-                }).collect();
+                })
+                .collect();
             assert_eq!(
                 await!(account_manager.get_account_auth_states())?,
                 (Status::Ok, expected_account_auth_states)
@@ -280,7 +261,7 @@ mod tests {
 
             // Try to delete a very different account from the one we added.
             assert_eq!(
-                await!(account_manager.remove_account(&mut (&LocalAccountId(42)).into()))?,
+                await!(account_manager.remove_account(LocalAccountId::new(42).as_mut()))?,
                 Status::NotFound
             );
             Ok(())
@@ -308,7 +289,7 @@ mod tests {
 
             // Try to remove the first one.
             assert_eq!(
-                await!(account_manager.remove_account(&mut (&LocalAccountId(1)).into()))?,
+                await!(account_manager.remove_account(LocalAccountId::new(1).as_mut()))?,
                 Status::Ok
             );
 

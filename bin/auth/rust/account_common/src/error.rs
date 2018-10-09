@@ -5,9 +5,9 @@
 use failure::{Error, Fail};
 use fidl_fuchsia_auth_account::Status;
 
-/// An Error type for problems encountered in the account manager. Each error
-/// contains the fuchsia.auth.account.Status that should be reported back to the
-/// client and an indication of whether it is fatal.
+/// An Error type for problems encountered in the account manager and account handler. Each error
+/// contains the fuchsia.auth.account.Status that should be reported back to the client and an
+/// indication of whether it is fatal.
 #[derive(Debug, Fail)]
 #[fail(
     display = "AccounManager error, returning {:?}. ({:?})",

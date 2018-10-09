@@ -6,7 +6,6 @@
 #![feature(async_await, await_macro, futures_api)]
 
 mod account_manager;
-mod error;
 
 use crate::account_manager::AccountManager;
 use failure::{Error, ResultExt};
@@ -24,7 +23,8 @@ fn main() -> Result<(), Error> {
     let fut = ServicesServer::new()
         .add_service((AccountManagerMarker::NAME, |chan| {
             AccountManager::spawn(chan)
-        })).start()
+        }))
+        .start()
         .context("Error starting Auth AccountManager server")?;
 
     executor
