@@ -8,11 +8,21 @@
 #include <zircon/device/ioctl-wrapper.h>
 #include <zircon/types.h>
 
+// Loads the prebuilt firmware onto the USB test device, and renumerates as the new device.
+//  in: zx_handle_t (vmo)
+//  out: none
+#define IOCTL_USB_TEST_FWLOADER_LOAD_PREBUILT_FIRMWARE \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB_TEST, 0)
+
 // Loads the firmware onto the USB test device, and renumerates as the new device.
 //  in: zx_handle_t (vmo)
 //  out: none
 #define IOCTL_USB_TEST_FWLOADER_LOAD_FIRMWARE \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_USB_TEST, 1)
+
+// ssize_t ioctl_usb_test_fwloader_load_prebuilt_firmware(int fd);
+IOCTL_WRAPPER(ioctl_usb_test_fwloader_load_prebuilt_firmware,
+              IOCTL_USB_TEST_FWLOADER_LOAD_PREBUILT_FIRMWARE);
 
 // ssize_t ioctl_usb_test_fwloader_load_firmware(int fd, zx_handle_t* firmware_vmo);
 IOCTL_WRAPPER_IN(ioctl_usb_test_fwloader_load_firmware,

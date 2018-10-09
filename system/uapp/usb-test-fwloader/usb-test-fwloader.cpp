@@ -127,24 +127,26 @@ static zx_status_t read_firmware(fbl::unique_fd& file_fd, zx::vmo& vmo) {
 }
 
 int main(int argc, char** argv) {
-    if (argc != 2) {
-        printf("Usage: %s <firmware_image_path>\n", argv[0]);
-        return -1;
-    }
-    const char* filename = argv[1];
-    fbl::unique_fd file_fd(open(filename, O_RDONLY));
-    if (!file_fd) {
-        fprintf(stderr, "Failed to open \"%s\", err: %s\n", filename, strerror(errno));
+    if (argc > 2) {
+        printf("Usage: %s [<firmware_image_path>]\n", argv[0]);
         return -1;
     }
     zx::vmo fw_vmo;
-    zx_status_t status = read_firmware(file_fd, fw_vmo);
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to read firmware file, err: %d\n", status);
-        return -1;
+    if (argc == 2) {
+        const char* filename = argv[1];
+        fbl::unique_fd file_fd(open(filename, O_RDONLY));
+        if (!file_fd) {
+            fprintf(stderr, "Failed to open \"%s\", err: %s\n", filename, strerror(errno));
+            return -1;
+        }
+        zx_status_t status = read_firmware(file_fd, fw_vmo);
+        if (status != ZX_OK) {
+            fprintf(stderr, "Failed to read firmware file, err: %d\n", status);
+            return -1;
+        }
     }
     fbl::unique_fd fd;
-    status = open_fwloader_dev(fd);
+    zx_status_t status = open_fwloader_dev(fd);
     if (status != ZX_OK) {
         // Check if there is a usb tester device we can switch to firmware loading mode.
         status = open_usb_tester_dev(fd);
@@ -164,11 +166,19 @@ int main(int argc, char** argv) {
             return -1;
         }
     }
-    zx_handle_t handle = fw_vmo.release();
-    ssize_t res = ioctl_usb_test_fwloader_load_firmware(fd.get(), &handle);
-    if (res < ZX_OK) {
-        fprintf(stderr, "Failed to load firmware, err: %zd\n", res);
-        return -1;
+    if (fw_vmo.is_valid()) {
+        zx_handle_t handle = fw_vmo.release();
+        ssize_t res = ioctl_usb_test_fwloader_load_firmware(fd.get(), &handle);
+        if (res < ZX_OK) {
+            fprintf(stderr, "Failed to load firmware, err: %zd\n", res);
+            return -1;
+        }
+    } else {
+        ssize_t res = ioctl_usb_test_fwloader_load_prebuilt_firmware(fd.get());
+        if (res < ZX_OK) {
+            fprintf(stderr, "Failed to load prebuilt firmware, err: %zd\n", res);
+            return -1;
+        }
     }
     status = wait_dev_enumerate(DEV_USB_TESTER_DIR, fd);
     if (status != ZX_OK) {
@@ -176,7 +186,7 @@ int main(int argc, char** argv) {
         return -1;
     }
     usb_device_descriptor_t device_desc;
-    res = ioctl_usb_get_device_desc(fd.get(), &device_desc);
+    ssize_t res = ioctl_usb_get_device_desc(fd.get(), &device_desc);
     if (res != sizeof(device_desc)) {
         printf("Failed to get updated usb tester device descriptor, err: %zd\n", res);
         return -1;

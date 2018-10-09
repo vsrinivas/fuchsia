@@ -15,6 +15,8 @@
 
 #include "fx3.h"
 
+#define FIRMWARE_PATH "/boot/lib/firmware/fx3.img"
+
 // The header contains the 2 byte "CY" signature, and 2 byte image metadata.
 #define IMAGE_HEADER_SIZE 4
 
@@ -172,6 +174,19 @@ static zx_status_t fx3_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t 
     fx3_t* fx3 = ctx;
 
     switch (op) {
+    case IOCTL_USB_TEST_FWLOADER_LOAD_PREBUILT_FIRMWARE: {
+        zx_handle_t fw_vmo;
+        size_t fw_size;
+        zx_status_t status = load_firmware(fx3->zxdev, FIRMWARE_PATH, &fw_vmo, &fw_size);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "failed to load firmware at path ""%s"", err: %d\n",
+                   FIRMWARE_PATH, status);
+            return status;
+        }
+        status = fx3_load_firmware(fx3, fw_vmo);
+        zx_handle_close(fw_vmo);
+        return status;
+    }
     case IOCTL_USB_TEST_FWLOADER_LOAD_FIRMWARE: {
         if (in_buf == NULL || in_len != sizeof(zx_handle_t)) {
             return ZX_ERR_INVALID_ARGS;
