@@ -2,32 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/client/setting.h"
+#include "garnet/bin/zxdb/client/setting_value.h"
+
 #include "gtest/gtest.h"
 
 namespace zxdb {
 
-TEST(Setting, Boolean) {
-  Setting setting(false);
+TEST(SettingValue, Boolean) {
+  SettingValue setting(false);
   ASSERT_TRUE(setting.valid());
   ASSERT_TRUE(setting.is_bool());
   EXPECT_FALSE(setting.GetBool());
 
-  setting = Setting(true);
+  setting = SettingValue(true);
   EXPECT_TRUE(setting.GetBool());
 
   setting.GetBool() = false;
   EXPECT_FALSE(setting.GetBool());
 }
 
-TEST(Setting, Int) {
-  Setting setting(0);
+TEST(SettingValue, Int) {
+  SettingValue setting(0);
   ASSERT_TRUE(setting.valid());
   ASSERT_TRUE(setting.is_int());
   EXPECT_EQ(setting.GetInt(), 0);
 
   constexpr int kTestInt = 43;
-  setting = Setting(kTestInt);
+  setting = SettingValue(kTestInt);
   EXPECT_EQ(setting.GetInt(), kTestInt);
 
   constexpr int kTestInt2 = 10;
@@ -44,16 +45,16 @@ const char kTestString[] = "test_string";
 const char kTestString2[] = "test_string2";
 const char kTestString3[] = "test_string3";
 
-TEST(Setting, String) {
-  Setting setting(std::string{});
+TEST(SettingValue, String) {
+  SettingValue setting(std::string{});
   ASSERT_TRUE(setting.valid());
   ASSERT_TRUE(setting.is_string());
   EXPECT_TRUE(setting.GetString().empty());
 
-  setting = Setting(kTestString);
+  setting = SettingValue(kTestString);
   EXPECT_EQ(setting.GetString(), kTestString);
 
-  setting = Setting(std::string(kTestString2));
+  setting = SettingValue(std::string(kTestString2));
   EXPECT_EQ(setting.GetString(), kTestString2);
 
   setting.GetString() = kTestString3;
@@ -63,30 +64,30 @@ TEST(Setting, String) {
   EXPECT_EQ(setting.GetString(), std::string(kTestString3) + kTestString3);
 }
 
-TEST(Setting, StringList) {
-  Setting setting(std::vector<std::string>{});
+TEST(SettingValue, List) {
+  SettingValue setting(std::vector<std::string>{});
   ASSERT_TRUE(setting.valid());
-  ASSERT_TRUE(setting.is_string_list());
-  EXPECT_TRUE(setting.GetStringList().empty());
+  ASSERT_TRUE(setting.is_list());
+  EXPECT_TRUE(setting.GetList().empty());
 
-  setting = Setting(std::vector<std::string>{kTestString});
-  ASSERT_EQ(setting.GetStringList().size(), 1u);
+  setting = SettingValue(std::vector<std::string>{kTestString});
+  ASSERT_EQ(setting.GetList().size(), 1u);
 
-  setting.GetStringList() = {kTestString, kTestString2};
-  ASSERT_EQ(setting.GetStringList().size(), 2u);
+  setting.GetList() = {kTestString, kTestString2};
+  ASSERT_EQ(setting.GetList().size(), 2u);
 
-  setting.GetStringList().pop_back();
-  setting.GetStringList().push_back(kTestString3);
-  setting.GetStringList().push_back(kTestString2);
-  ASSERT_EQ(setting.GetStringList().size(), 3u);
+  setting.GetList().pop_back();
+  setting.GetList().push_back(kTestString3);
+  setting.GetList().push_back(kTestString2);
+  ASSERT_EQ(setting.GetList().size(), 3u);
 
-  EXPECT_EQ(setting.GetStringList()[1], kTestString3);
+  EXPECT_EQ(setting.GetList()[1], kTestString3);
 
-  auto it = setting.GetStringList().begin();
+  auto it = setting.GetList().begin();
   EXPECT_EQ(*it++, kTestString);
   EXPECT_EQ(*it++, kTestString3);
   EXPECT_EQ(*it++, kTestString2);
-  EXPECT_EQ(it, setting.GetStringList().end());
+  EXPECT_EQ(it, setting.GetList().end());
 }
 
 }  // namespace zxdb
