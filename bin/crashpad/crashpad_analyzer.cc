@@ -164,6 +164,22 @@ std::string GetBoardName() {
   return std::string(board_name);
 }
 
+// Most annotations are shared between userspace and kernel crashes.
+// Add additional arguments to this function for values that differ between the
+// two, e.g., the package name can be extracted from the crashing process in
+// userspace, but it's just "kernel" in kernel space.
+std::map<std::string, std::string> GetAnnotations(
+    const std::string& package_name) {
+  return {
+      {"product", "Fuchsia"},
+      {"version", GetVersion()},
+      // We use ptype to benefit from Chrome's "Process type" handling in
+      // the UI.
+      {"ptype", package_name},
+      {"board_name", GetBoardName()},
+  };
+}
+
 }  // namespace
 
 int HandleException(zx::process process, zx::thread thread,
@@ -188,13 +204,9 @@ int HandleException(zx::process process, zx::thread thread,
       database.get(), kURL, upload_thread_options));
   upload_thread.Get()->Start();
 
-  std::map<std::string, std::string> annotations;
-  annotations["product"] = "Fuchsia";
-  annotations["version"] = GetVersion();
-  // We use ptype to benefit from Chrome's "Process type" handling in the UI.
-  annotations["ptype"] = GetPackageName(process);
-  annotations["board_name"] = GetBoardName();
-
+  // Prepare annotations and attachments.
+  const std::map<std::string, std::string> annotations =
+      GetAnnotations(/*package_name=*/GetPackageName(process));
   std::map<std::string, base::FilePath> attachments;
   ScopedUnlink temp_log_file(GetSystemLogToFile());
   if (temp_log_file.is_valid()) {
@@ -227,18 +239,9 @@ int Process(fuchsia::mem::Buffer crashlog) {
     return EXIT_FAILURE;
   }
 
-  // Add annotations.
-  std::map<std::string, std::string> annotations = {
-      {"product", "Fuchsia"},
-      // Technically the version after reboot, not when it crashed.
-      {"version", GetVersion()},
-      // We use ptype to benefit from Chrome's "Process type" handling in the
-      // UI.
-      {"ptype", "kernel"},
-      {"board_name", GetBoardName()},
-  };
-
-  // Add attachments.
+  // Prepare annotations and attachments.
+  const std::map<std::string, std::string> annotations =
+      GetAnnotations(/*package_name=*/"kernel");
   crashpad::FileWriter* writer = report->AddAttachment("log");
   if (!writer) {
     return EXIT_FAILURE;
