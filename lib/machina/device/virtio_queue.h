@@ -6,12 +6,10 @@
 #define GARNET_LIB_MACHINA_DEVICE_VIRTIO_QUEUE_H_
 
 #include <mutex>
-#include <string>
 
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
-#include <virtio/virtio.h>
 
 #include "garnet/lib/machina/device/phys_mem.h"
 
@@ -134,11 +132,6 @@ class VirtioQueue {
     return HasAvailLocked();
   }
 
-  // Blocking variant of virtio_queue_next_avail.
-  //
-  // TODO(PD-107): Allow this method to fail.
-  void Wait(uint16_t* index);
-
   // Notify waiting threads blocked on |virtio_queue_wait| that the avail ring
   // has descriptors available.
   zx_status_t Notify();
@@ -181,37 +174,10 @@ class VirtioQueue {
   using PollFn = fit::function<zx_status_t(VirtioQueue* queue, uint16_t head,
                                            uint32_t* used)>;
 
-  // Spawn a thread to wait for descriptors to be available and invoke the
-  // provided handler on each available buffer asynchronously.
-  //
-  // Returns |ZX_ERR_INVALID_ARGS| if |thread_name| is null.
-  zx_status_t Poll(std::string thread_name, PollFn handler);
-
   // Monitors the queue signal for available descriptors and run the callback
   // when one is available.
   zx_status_t PollAsync(async_dispatcher_t* dispatcher, async::Wait* wait,
                         PollFn handler);
-
-  // Callback function for virtio_queue_handler.
-  //
-  // For chained buffers using VRING_DESC_F_NEXT, this function will be called
-  // once for each buffer in the chain.
-  //
-  // addr     - Pointer to the descriptor buffer.
-  // len      - Length of the descriptor buffer.
-  // flags    - Flags from the vring descriptor.
-  // used     - To be incremented by the number of bytes used from addr.
-  // ctx      - The same pointer passed to virtio_queue_handler.
-  using DescriptorFn = zx_status_t (*)(void* addr, uint32_t len, uint16_t flags,
-                                       uint32_t* used, void* ctx);
-
-  // Handles the next available descriptor in a Virtio queue, calling handler to
-  // process individual payload buffers.
-  //
-  // On success the function either returns ZX_OK if there are no more
-  // descriptors available, or ZX_ERR_NEXT if there are more available
-  // descriptors to process.
-  zx_status_t HandleDescriptor(DescriptorFn handler, void* ctx);
 
  private:
   zx_status_t NextAvailLocked(uint16_t* index) __TA_REQUIRES(mutex_);

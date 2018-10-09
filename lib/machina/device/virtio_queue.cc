@@ -4,8 +4,6 @@
 
 #include "garnet/lib/machina/device/virtio_queue.h"
 
-#include <threads.h>
-
 #include <lib/fxl/logging.h>
 #include <virtio/virtio_ring.h>
 
@@ -86,75 +84,11 @@ uint32_t VirtioQueue::RingIndexLocked(uint32_t index) const {
   return index % ring_.size;
 }
 
-void VirtioQueue::Wait(uint16_t* index) {
-  zx_status_t status;
-  while ((status = NextAvail(index)) == ZX_ERR_SHOULD_WAIT) {
-    event_.wait_one(SIGNAL_QUEUE_AVAIL, zx::time::infinite(), nullptr);
-  }
-  FXL_CHECK(status == ZX_OK);
-}
-
 zx_status_t VirtioQueue::Notify() {
   std::lock_guard<std::mutex> lock(mutex_);
   if (HasAvailLocked()) {
     return event_.signal(0, SIGNAL_QUEUE_AVAIL);
   }
-  return ZX_OK;
-}
-
-struct poll_task_args_t {
-  VirtioQueue* queue;
-  std::string name;
-  VirtioQueue::PollFn handler;
-};
-
-static int virtio_queue_poll_task(void* ctx) {
-  zx_status_t result = ZX_OK;
-  std::unique_ptr<poll_task_args_t> args(static_cast<poll_task_args_t*>(ctx));
-  while (true) {
-    uint16_t descriptor;
-    args->queue->Wait(&descriptor);
-
-    uint32_t used = 0;
-    zx_status_t status = args->handler(args->queue, descriptor, &used);
-    result = args->queue->Return(descriptor, used);
-    if (result != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to return descriptor to queue " << result;
-      break;
-    }
-
-    if (status == ZX_ERR_STOP) {
-      break;
-    }
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Error " << status
-                     << " while handling queue buffer for queue " << args->name;
-      result = status;
-      break;
-    }
-  }
-
-  return result;
-}
-
-zx_status_t VirtioQueue::Poll(std::string name, PollFn handler) {
-  auto args = new poll_task_args_t{this, std::move(name), std::move(handler)};
-
-  thrd_t thread;
-  int ret = thrd_create_with_name(&thread, virtio_queue_poll_task, args,
-                                  args->name.c_str());
-  if (ret != thrd_success) {
-    delete args;
-    FXL_LOG(ERROR) << "Failed to create queue thread " << ret;
-    return ZX_ERR_INTERNAL;
-  }
-
-  ret = thrd_detach(thread);
-  if (ret != thrd_success) {
-    FXL_LOG(ERROR) << "Failed to detach queue thread " << ret;
-    return ZX_ERR_INTERNAL;
-  }
-
   return ZX_OK;
 }
 
@@ -247,50 +181,6 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len, uint8_t actions) {
     return interrupt_(actions);
   }
   return ZX_OK;
-}
-
-zx_status_t VirtioQueue::HandleDescriptor(DescriptorFn handler, void* ctx) {
-  uint16_t head;
-  uint32_t used_len = 0;
-
-  // Get the next descriptor from the available ring. If none are available
-  // we can just no-op.
-  zx_status_t status = NextAvail(&head);
-  if (status == ZX_ERR_SHOULD_WAIT) {
-    return ZX_OK;
-  }
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  status = ZX_OK;
-  uint16_t desc_index = head;
-  volatile const struct vring_desc* desc;
-  do {
-    if (desc_index >= size()) {
-      return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      desc = &ring_.desc[desc_index];
-    }
-
-    void* addr = phys_mem_->as<void>(desc->addr, desc->len);
-    status = handler(addr, desc->len, desc->flags, &used_len, ctx);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    desc_index = desc->next;
-  } while (desc->flags & VRING_DESC_F_NEXT);
-
-  status = Return(head, used_len);
-  if (status != ZX_OK) {
-    return status;
-  }
-  std::lock_guard<std::mutex> lock(mutex_);
-  return HasAvailLocked() ? ZX_ERR_NEXT : ZX_OK;
 }
 
 VirtioChain::VirtioChain(VirtioQueue* queue, uint16_t head)
