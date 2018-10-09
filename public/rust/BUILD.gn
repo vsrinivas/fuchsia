@@ -17,6 +17,7 @@ package("rust-crates-tests") {
     "fuchsia-zircon",
     "mapped-vmo",
     "mundane",
+    "packet",
     "shared-buffer",
     "zerocopy",
     "//garnet/public/lib/fidl/rust/fidl",
@@ -32,6 +33,7 @@ package("rust-crates-tests") {
     { name = "fuchsia_syslog_lib_test_rustc" },
     { name = "mapped_vmo_lib_test_rustc" },
     { name = "mundane_lib_test_rustc" },
+    { name = "packet_lib_test_rustc" },
     { name = "shared_buffer_lib_test_rustc" },
     { name = "zerocopy_lib_test_rustc" },
   ]
