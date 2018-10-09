@@ -24,6 +24,19 @@ typedef struct zxio_internal {
 static_assert(sizeof(zxio_t) == sizeof(zxio_internal_t),
               "zxio_t should match zxio_internal_t");
 
+static_assert(ZXIO_READABLE == __ZX_OBJECT_READABLE,
+              "ZXIO signal bits should match ZX");
+static_assert(ZXIO_WRITABLE == __ZX_OBJECT_WRITABLE,
+              "ZXIO signal bits should match ZX");
+static_assert(ZXIO_READ_DISABLED == ZX_SOCKET_READ_DISABLED,
+              "ZXIO signal bits should match ZX");
+static_assert(ZXIO_WRITE_DISABLED == ZX_SOCKET_WRITE_DISABLED,
+              "ZXIO signal bits should match ZX");
+static_assert(ZXIO_READ_THRESHOLD == ZX_SOCKET_READ_THRESHOLD,
+              "ZXIO signal bits should match ZX");
+static_assert(ZXIO_WRITE_THRESHOLD == ZX_SOCKET_WRITE_THRESHOLD,
+              "ZXIO signal bits should match ZX");
+
 void zxio_init(zxio_t* io, const zxio_ops_t* ops) {
     zxio_internal_t* zio = (zxio_internal_t*)io;
     memset(zio, 0, sizeof(*zio));
@@ -48,6 +61,36 @@ zx_status_t zxio_release(zxio_t* io, zx_handle_t* out_io) {
 zx_status_t zxio_close(zxio_t* io) {
     zxio_internal_t* zio = (zxio_internal_t*)io;
     return zio->ops->close(io);
+}
+
+zx_status_t zxio_wait_one(zxio_t* io, zxio_signals_t signals,
+                          zx_time_t deadline, zxio_signals_t* out_observed) {
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    zx_signals_t zx_signals = ZX_SIGNAL_NONE;
+    zxio_wait_begin(io, signals, &handle, &zx_signals);
+    if (handle == ZX_HANDLE_INVALID) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    zx_signals_t zx_observed = ZX_SIGNAL_NONE;
+    zx_status_t status = zx_object_wait_one(handle, zx_signals, deadline,
+                                            &zx_observed);
+    if (status != ZX_OK) {
+        return status;
+    }
+    zxio_wait_end(io, zx_signals, out_observed);
+    return ZX_OK;
+}
+
+void zxio_wait_begin(zxio_t* io, zxio_signals_t zxio_signals,
+                     zx_handle_t* out_handle, zx_signals_t* out_zx_signals) {
+    zxio_internal_t* zio = (zxio_internal_t*)io;
+    return zio->ops->wait_begin(io, zxio_signals, out_handle, out_zx_signals);
+}
+
+void zxio_wait_end(zxio_t* io, zx_signals_t zx_signals,
+                   zxio_signals_t* out_zxio_signals) {
+    zxio_internal_t* zio = (zxio_internal_t*)io;
+    return zio->ops->wait_end(io, zx_signals, out_zxio_signals);
 }
 
 zx_status_t zxio_clone(zxio_t* io, uint32_t flags, zxio_t** out_io) {

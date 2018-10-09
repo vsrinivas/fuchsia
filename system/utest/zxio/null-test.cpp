@@ -13,6 +13,10 @@ bool null_basic_test(void) {
     zxio_t io;
     zxio_null_init(&io);
 
+    zxio_signals_t observed = ZXIO_SIGNAL_NONE;
+    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_wait_one(&io, ZXIO_READABLE,
+                                                  ZX_TIME_INFINITE, &observed));
+
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_clone_async(&io, 0u, ZX_HANDLE_INVALID));
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_sync(&io));
 

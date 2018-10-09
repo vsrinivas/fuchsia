@@ -5,6 +5,7 @@
 #ifndef LIB_ZXIO_OPS_H_
 #define LIB_ZXIO_OPS_H_
 
+#include <lib/zxio/types.h>
 #include <lib/zxio/zxio.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
@@ -34,6 +35,10 @@ struct zxio_ops {
     // After |close| returns, no further ops will be called relative to |ctx|.
     zx_status_t (*close)(zxio_t* io);
 
+    void (*wait_begin)(zxio_t* io, zxio_signals_t zxio_signals,
+                       zx_handle_t* handle, zx_signals_t* zx_signals);
+    void (*wait_end)(zxio_t* io, zx_signals_t zx_signals,
+                     zxio_signals_t* zxio_signals);
     zx_status_t (*clone_async)(zxio_t* io, uint32_t flags, zx_handle_t request);
     zx_status_t (*sync)(zxio_t* io);
     zx_status_t (*attr_get)(zxio_t* io, zxio_node_attr_t* out_attr);

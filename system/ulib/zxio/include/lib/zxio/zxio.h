@@ -6,6 +6,7 @@
 #define LIB_ZXIO_ZXIO_H_
 
 #include <fuchsia/io/c/fidl.h>
+#include <lib/zxio/types.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -71,6 +72,31 @@ zx_status_t zxio_release(zxio_t* io, zx_handle_t* out_handle);
 //
 // Always consumes |io|.
 zx_status_t zxio_close(zxio_t* io);
+
+// Wait for |signals| to be asserted for |io|.
+//
+// Returns |ZX_ERR_TIMED_OUT| if |deadline| passes before any of the |signals|
+// are asserted for |io|. Returns the set of signals that were actually observed
+// via |observed|.
+zx_status_t zxio_wait_one(zxio_t* io, zxio_signals_t signals,
+                          zx_time_t deadline, zxio_signals_t* out_observed);
+
+// Translate |zxio_signals_t| into |zx_signals_t| for |io|.
+//
+// The client should wait on |handle| for |zx_signals| in order to observe the
+// given |zxio_signals|.
+//
+// Use |zxio_wait_end| to translate the observed |zx_signals_t| back into
+// |zxio_signals_t|.
+void zxio_wait_begin(zxio_t* io, zxio_signals_t zxio_signals,
+                     zx_handle_t* out_handle, zx_signals_t* out_zx_signals);
+
+// Translate |zx_signals_t| into |zxio_signals_t| for |io|.
+//
+// Typically used with |zxio_wait_begin| to wait asynchronously on a
+// |zx_handle_t| and to interpret the observed |zx_signals|.
+void zxio_wait_end(zxio_t* io, zx_signals_t zx_signals,
+                   zxio_signals_t* out_zxio_signals);
 
 // Creates another connection to the same remote object.
 //

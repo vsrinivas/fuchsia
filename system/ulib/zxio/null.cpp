@@ -14,6 +14,18 @@ zx_status_t zxio_null_close(zxio_t* io) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
+void zxio_null_wait_begin(zxio_t* io, zxio_signals_t zxio_signals,
+                          zx_handle_t* out_handle,
+                          zx_signals_t* out_zx_signals) {
+    *out_handle = ZX_HANDLE_INVALID;
+    *out_zx_signals = ZX_SIGNAL_NONE;
+}
+
+void zxio_null_wait_end(zxio_t* io, zx_signals_t zx_signals,
+                    zxio_signals_t* out_zxio_signals) {
+    *out_zxio_signals = ZXIO_SIGNAL_NONE;
+}
+
 zx_status_t zxio_null_clone_async(zxio_t* io, uint32_t flags,
                                   zx_handle_t request) {
     zx_handle_close(request);
@@ -118,6 +130,8 @@ zx_status_t zxio_null_rewind(zxio_t* io) {
 static const zxio_ops_t zxio_null_ops = {
     .release = zxio_null_release,
     .close = zxio_null_close,
+    .wait_begin = zxio_null_wait_begin,
+    .wait_end = zxio_null_wait_end,
     .clone_async = zxio_null_clone_async,
     .sync = zxio_null_sync,
     .attr_get = zxio_null_attr_get,

@@ -4,6 +4,7 @@
 
 #include <fuchsia/io/c/fidl.h>
 #include <lib/zxio/inception.h>
+#include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
 #include <string.h>
 #include <zircon/syscalls.h>
@@ -286,10 +287,6 @@ static zx_status_t zxio_remote_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* 
     return ZX_OK;
 }
 
-static zx_status_t zxio_remote_open(zxio_t* io, uint32_t flags, uint32_t mode, const char* path, zxio_t** out_io) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 static zx_status_t zxio_remote_open_async(zxio_t* io, uint32_t flags, uint32_t mode, const char* path, zx_handle_t request) {
     zxio_remote_t* rio = reinterpret_cast<zxio_remote_t*>(io);
     return fuchsia_io_DirectoryOpen(rio->control, flags, mode, path, strlen(path), request);
@@ -355,6 +352,8 @@ static zx_status_t zxio_remote_rewind(zxio_t* io) {
 static const zxio_ops_t zxio_remote_ops = {
     .release = zxio_remote_release,
     .close = zxio_remote_close,
+    .wait_begin = zxio_null_wait_begin,
+    .wait_end = zxio_null_wait_end,
     .clone_async = zxio_remote_clone_async,
     .sync = zxio_remote_sync,
     .attr_get = zxio_remote_attr_get,
@@ -368,7 +367,7 @@ static const zxio_ops_t zxio_remote_ops = {
     .flags_get = zxio_remote_flags_get,
     .flags_set = zxio_remote_flags_set,
     .vmo_get = zxio_remote_vmo_get,
-    .open = zxio_remote_open,
+    .open = zxio_null_open,
     .open_async = zxio_remote_open_async,
     .unlink = zxio_remote_unlink,
     .token_get = zxio_remote_token_get,
