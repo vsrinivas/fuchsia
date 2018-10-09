@@ -94,6 +94,7 @@ class Vp9Decoder : public VideoDecoder {
    public:
     void Register(WorkingBuffer* buffer);
     zx_status_t AllocateBuffers(VideoDecoder::Owner* decoder);
+    void CheckBuffers();
 
    private:
     std::vector<WorkingBuffer*> buffers_;

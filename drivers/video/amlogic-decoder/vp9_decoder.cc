@@ -71,6 +71,11 @@ union Vp9Decoder::HardwareRenderParams {
   };
 };
 
+// How much padding to put after buffers to validate their size  (in terms of
+// how much data the HW/firmware actually writes to them). If 0, validation is
+// skipped.
+constexpr uint32_t kBufferOverrunPaddingBytes = 0;
+
 void Vp9Decoder::BufferAllocator::Register(WorkingBuffer* buffer) {
   buffers_.push_back(buffer);
 }
@@ -79,14 +84,51 @@ zx_status_t Vp9Decoder::BufferAllocator::AllocateBuffers(
     VideoDecoder::Owner* owner) {
   for (auto* buffer : buffers_) {
     zx_status_t status = owner->AllocateIoBuffer(
-        &buffer->buffer(), buffer->size(), 0, IO_BUFFER_CONTIG | IO_BUFFER_RW);
+        &buffer->buffer(), buffer->size() + kBufferOverrunPaddingBytes, 0,
+        IO_BUFFER_CONTIG | IO_BUFFER_RW);
     if (status != ZX_OK) {
       DECODE_ERROR("VP9 working buffer allocation failed: %d\n", status);
       return status;
     }
-    io_buffer_cache_flush_invalidate(&buffer->buffer(), 0, buffer->size());
+    if (kBufferOverrunPaddingBytes) {
+      uint32_t real_buffer_size = io_buffer_size(&buffer->buffer(), 0);
+      for (uint32_t i = buffer->size(); i < real_buffer_size; i++) {
+        uint8_t* data =
+            static_cast<uint8_t*>(io_buffer_virt(&buffer->buffer()));
+        data[i] = i & 0xff;
+      }
+    }
+    io_buffer_cache_flush_invalidate(
+        &buffer->buffer(), 0, buffer->size() + kBufferOverrunPaddingBytes);
   }
   return ZX_OK;
+}
+
+// Check that the padding after every buffer hasn't been modified by hardware.
+// This helps validate that buffers are large enough to store all data the
+// hardware puts in them.
+void Vp9Decoder::BufferAllocator::CheckBuffers() {
+  if (kBufferOverrunPaddingBytes) {
+    for (uint32_t buf_number = 0; buf_number < buffers_.size(); buf_number++) {
+      auto* buffer = buffers_[buf_number];
+      if (!io_buffer_is_valid(&buffer->buffer()))
+        continue;
+      uint32_t offset = buffer->size();
+      uint8_t* data = static_cast<uint8_t*>(io_buffer_virt(&buffer->buffer()));
+      uint32_t buffer_size = io_buffer_size(&buffer->buffer(), 0);
+      io_buffer_cache_flush_invalidate(&buffer->buffer(), offset,
+                                       buffer_size - offset);
+      for (uint32_t i = offset; i < buffer_size; ++i) {
+        if (data[i] != (i & 0xff)) {
+          DECODE_ERROR("Data mismatch: %d != %d in buffer %d position %d\n",
+                       data[i], (i & 0xff), buf_number, i);
+        }
+        ZX_DEBUG_ASSERT(data[i] == (i & 0xff));
+      }
+      io_buffer_cache_flush_invalidate(&buffer->buffer(), offset,
+                                       buffer_size - offset);
+    }
+  }
 }
 
 Vp9Decoder::WorkingBuffer::WorkingBuffer(BufferAllocator* allocator,
@@ -113,6 +155,7 @@ Vp9Decoder::~Vp9Decoder() {
   }
 
   BarrierBeforeRelease();  // For all working buffers
+  working_buffers_.CheckBuffers();
 }
 
 void Vp9Decoder::UpdateLoopFilterThresholds() {
@@ -211,6 +254,7 @@ zx_status_t Vp9Decoder::InitializeBuffers() {
 zx_status_t Vp9Decoder::InitializeHardware() {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kSwappedOut);
   assert(owner_->IsDecoderCurrent(this));
+  working_buffers_.CheckBuffers();
   uint8_t* firmware;
   uint32_t firmware_size;
   FirmwareBlob::FirmwareType firmware_type =
