@@ -880,7 +880,7 @@ void Vp9Decoder::PrepareNewFrame() {
   ConfigureMotionPrediction();
   ConfigureMcrcc();
 
-  ConfigureFrameOutput(width, height, params.bit_depth == 0);
+  ConfigureFrameOutput(width, height, params.bit_depth == 8);
 
   UpdateLoopFilter(&params);
 
