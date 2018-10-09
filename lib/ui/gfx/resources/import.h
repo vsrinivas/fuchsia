@@ -65,10 +65,15 @@ class Import final : public Resource {
   /// Returns true if the imported resource has been bound.
   bool is_bound() const { return imported_resource_ != nullptr; }
 
+  bool focusable() const { return focusable_; }
+  void set_focusable(bool focusable) { focusable_ = focusable; }
+
  private:
   const ::fuchsia::ui::gfx::ImportSpec import_spec_;
   const ResourcePtr delegate_;
   Resource* imported_resource_ = nullptr;
+  // TODO(SCN-1026): Remove this.
+  bool focusable_ = true;
 
   // |Resource|.
   Resource* GetDelegate(const ResourceTypeInfo& type_info) override;

@@ -104,6 +104,8 @@ std::ostream& operator<<(std::ostream& stream,
       return stream << "SetLabel";
     case Command::Tag::kSetDisableClipping:
       return stream << "SetDisableClipping";
+    case Command::Tag::kSetImportFocus:
+      return stream << "SetImportFocus";
     case Command::Tag::Invalid:
       return stream << "Invalid";
   }

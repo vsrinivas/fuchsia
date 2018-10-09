@@ -76,6 +76,9 @@ union Command {
 
   // Debugging commands.
   SetDisableClippingCmd set_disable_clipping;
+
+  // TODO(SCN-1026): Remove this.
+  SetImportFocusCmd set_import_focus;
 };
 
 // Instructs the compositor to create the specified |Resource|, and to register
@@ -712,4 +715,10 @@ struct SetEventMaskCmd {
 struct SetDisableClippingCmd {
   uint32 renderer_id;
   bool disable_clipping;
+};
+
+// TODO(SCN-1026): Remove this.
+struct SetImportFocusCmd {
+  uint32 id;
+  bool focusable;
 };

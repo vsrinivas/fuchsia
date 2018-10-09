@@ -185,6 +185,16 @@ void ViewStub::ImportHostNode(scenic::Session* session) {
 
   host_node_.reset(new scenic::ImportNode(session));
   host_node_->Bind(std::move(host_import_token_));
+
+  // TODO(SCN-1026): Remove this.
+  if (properties_ && properties_->custom_focus_behavior) {
+    fuchsia::ui::gfx::SetImportFocusCmd import_focus;
+    import_focus.id = host_node_->id();
+    import_focus.focusable = properties_->custom_focus_behavior->allow_focus;
+    fuchsia::ui::gfx::Command cmd;
+    cmd.set_set_import_focus(std::move(import_focus));
+    session->Enqueue(std::move(cmd));
+  }
 }
 
 }  // namespace view_manager

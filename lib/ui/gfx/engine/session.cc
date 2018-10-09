@@ -106,6 +106,16 @@ bool Session::ApplyCommand(::fuchsia::ui::gfx::Command command) {
       return ApplyExportResourceCmd(std::move(command.export_resource()));
     case ::fuchsia::ui::gfx::Command::Tag::kImportResource:
       return ApplyImportResourceCmd(std::move(command.import_resource()));
+    case ::fuchsia::ui::gfx::Command::Tag::kSetImportFocus: {
+      // TODO(SCN-1026): Remove this.
+      if (auto import = resources_.FindResource<Import>(
+              command.set_import_focus().id,
+              ResourceMap::ErrorBehavior::kDontReportErrors)) {
+        import->set_focusable(command.set_import_focus().focusable);
+        return true;
+      }
+      return false;
+    }
     case ::fuchsia::ui::gfx::Command::Tag::kAddChild:
       return ApplyAddChildCmd(std::move(command.add_child()));
     case ::fuchsia::ui::gfx::Command::Tag::kAddPart:
