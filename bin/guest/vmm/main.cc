@@ -212,7 +212,7 @@ int main(int argc, char** argv) {
 
     auto block = std::make_unique<machina::VirtioBlock>(guest.phys_mem(),
                                                         std::move(dispatcher));
-    status = block->Start();
+    status = block->Start(guest.device_dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to start block device " << status;
       return status;

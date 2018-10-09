@@ -33,9 +33,10 @@ VirtioBlock::VirtioBlock(const PhysMem& phys_mem,
   config_.blk_size = kSectorSize;
 }
 
-zx_status_t VirtioBlock::Start() {
-  return request_queue()->Poll(
-      "virtio-block", fit::bind_member(this, &VirtioBlock::HandleBlockRequest));
+zx_status_t VirtioBlock::Start(async_dispatcher_t* dispatcher) {
+  return request_queue()->PollAsync(
+      dispatcher, &wait_,
+      fit::bind_member(this, &VirtioBlock::HandleBlockRequest));
 }
 
 zx_status_t VirtioBlock::HandleBlockRequest(VirtioQueue* queue, uint16_t head,

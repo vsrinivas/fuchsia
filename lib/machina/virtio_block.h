@@ -7,6 +7,7 @@
 
 #include <mutex>
 
+#include <lib/async/cpp/wait.h>
 #include <virtio/block.h>
 #include <virtio/virtio_ids.h>
 
@@ -25,7 +26,7 @@ class VirtioBlock
               std::unique_ptr<BlockDispatcher> dispatcher);
 
   // Starts a thread to monitor the queue for incoming block requests.
-  zx_status_t Start();
+  zx_status_t Start(async_dispatcher_t* dispatcher);
 
   zx_status_t HandleBlockRequest(VirtioQueue* queue, uint16_t head,
                                  uint32_t* used);
@@ -36,6 +37,7 @@ class VirtioBlock
   VirtioQueue* request_queue() { return queue(0); }
 
  private:
+  async::Wait wait_;
   std::unique_ptr<BlockDispatcher> dispatcher_;
 };
 
