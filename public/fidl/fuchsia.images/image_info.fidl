@@ -50,6 +50,24 @@ enum PixelFormat {
   // by any given convert path.  The precise relative phase of the UV data is
   // not presently conveyed.
   NV12 = 2;
+
+  // YV12
+  //
+  // Like I420, except with V and U swapped.
+  //
+  // 4:2:0 (2x down-sampled UV in both directions)
+  //
+  // Offset 0:
+  // 8 bit per pixel Y plane with bytes YYY.
+  // Offset height * stride:
+  // 8 bit V data with uv_stride = stride / 2
+  // Offset height * stride + uv_stride * height / 2:
+  // 8 bit U data with uv_stride = stride / 2
+  //
+  // Y plane has line stride >= width.
+  //
+  // Both width and height are required to be even.
+  YV12 = 3;
 };
 
 // Specifies how pixel color information should be interpreted.

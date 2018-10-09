@@ -116,6 +116,43 @@ void ConvertNv12ToBgra(uint8_t* out_ptr, uint8_t* in_ptr, uint32_t width,
   }
 }
 
+void ConvertYv12ToBgra(uint8_t* out_ptr, uint8_t* in_ptr, uint32_t width,
+                       uint32_t height, uint32_t in_stride) {
+  // Y plane, then V plane, then U plane.  The V and U planes will use
+  // in_stride / 2 (at least until we encounter any "YV12" where that doesn't
+  // work).
+  uint8_t* y_base = in_ptr;
+  uint8_t* u_base = in_ptr + height * in_stride + height / 2 * in_stride / 2;
+  uint8_t* v_base = in_ptr + height * in_stride;
+
+  for (uint32_t y = 0; y < height; y += 2) {
+    uint8_t* y1_sample_iter = y_base + y * in_stride;
+    uint8_t* y2_sample_iter = y_base + (y + 1) * in_stride;
+    uint8_t* u_sample_iter = u_base + y / 2 * in_stride / 2;
+    uint8_t* v_sample_iter = v_base + y / 2 * in_stride / 2;
+    uint8_t* bgra1_sample_iter = out_ptr + y * width * 4;
+    uint8_t* bgra2_sample_iter = out_ptr + (y + 1) * width * 4;
+
+    for (uint32_t x = 0; x < width; x += 2) {
+      uint8_t u = *u_sample_iter;
+      uint8_t v = *v_sample_iter;
+
+      for (uint32_t x_offset = 0; x_offset < 2; ++x_offset) {
+        // Unknown whether inlining each of these is better or worse.
+        yuv::YuvToBgra(*y1_sample_iter, u, v, bgra1_sample_iter);
+        yuv::YuvToBgra(*y2_sample_iter, u, v, bgra2_sample_iter);
+        y1_sample_iter += sizeof(uint8_t);
+        y2_sample_iter += sizeof(uint8_t);
+        bgra1_sample_iter += sizeof(uint32_t);
+        bgra2_sample_iter += sizeof(uint32_t);
+      }
+
+      u_sample_iter += sizeof(uint8_t);
+      v_sample_iter += sizeof(uint8_t);
+    }
+  }
+}
+
 }  // anonymous namespace
 
 escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
@@ -173,6 +210,24 @@ escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
                           reinterpret_cast<uint8_t*>(in), width, height,
                           captured_in_stride);
       };
+      break;
+    case fuchsia::images::PixelFormat::YV12:
+      FXL_DCHECK(image_info.transform == fuchsia::images::Transform::NORMAL)
+          << "YV12 transforms not yet implemented";
+      // At least for now, capture stride from the image_info. Assert that width
+      // and height could also be captured this way, but don't actually use
+      // their captured versions yet.
+      return [captured_in_stride = image_info.stride,
+              captured_width = image_info.width,
+              captured_height = image_info.height](
+                 void* out, void* in, uint32_t width, uint32_t height) {
+        FXL_DCHECK(captured_width == width);
+        FXL_DCHECK(captured_height == height);
+        ConvertYv12ToBgra(reinterpret_cast<uint8_t*>(out),
+                          reinterpret_cast<uint8_t*>(in), width, height,
+                          captured_in_stride);
+      };
+      break;
   }
   return nullptr;
 }

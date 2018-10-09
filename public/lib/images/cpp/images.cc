@@ -17,6 +17,8 @@ size_t BitsPerPixel(const fuchsia::images::PixelFormat& pixel_format) {
       return 2u * 8u;
     case fuchsia::images::PixelFormat::NV12:
       return 12;
+    case fuchsia::images::PixelFormat::YV12:
+      return 12;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format));
   return 0;
@@ -30,6 +32,8 @@ size_t StrideBytesPerWidthPixel(
     case fuchsia::images::PixelFormat::YUY2:
       return 2u;
     case fuchsia::images::PixelFormat::NV12:
+      return 1u;
+    case fuchsia::images::PixelFormat::YV12:
       return 1u;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format));
@@ -50,6 +54,12 @@ size_t MaxSampleAlignment(const fuchsia::images::PixelFormat& pixel_format) {
       // after the planar Y data is 2 bytes per sample, so we may as well
       // require UV samples to remain aligned UV line to UV line.
       return 2u;
+    case fuchsia::images::PixelFormat::YV12:
+      // In the sense that line stride "must preserve pixel alignment", which is
+      // what MaxSampleAlignment() is used for, YV12 ~~has (very roughly
+      // speaking) a pixel alignment of 2, ~~because the width of the Y plane in
+      // this implementation must be even.
+      return 2u;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format));
   return 0;
@@ -62,6 +72,8 @@ size_t ImageSize(const fuchsia::images::ImageInfo& image_info) {
     case fuchsia::images::PixelFormat::YUY2:
       return image_info.height * image_info.stride;
     case fuchsia::images::PixelFormat::NV12:
+      return image_info.height * image_info.stride * 3 / 2;
+    case fuchsia::images::PixelFormat::YV12:
       return image_info.height * image_info.stride * 3 / 2;
   }
   ZX_PANIC("Unknown Pixel Format: %d",

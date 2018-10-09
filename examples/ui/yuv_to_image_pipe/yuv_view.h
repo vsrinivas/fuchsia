@@ -36,6 +36,7 @@ class YuvView : public mozart::BaseView {
   void SetBgra8Pixels(uint8_t* vmo_base);
   void SetYuy2Pixels(uint8_t* vmo_base);
   void SetNv12Pixels(uint8_t* vmo_base);
+  void SetYv12Pixels(uint8_t* vmo_base);
 
   // The return value is double so we can potentially generate nice gradients
   // for bit depths higher than 8.

@@ -42,6 +42,7 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id,
       break;
     case fuchsia::images::PixelFormat::YUY2:
     case fuchsia::images::PixelFormat::NV12:
+    case fuchsia::images::PixelFormat::YV12:
       error_reporter->ERROR()
           << "GpuImage::CreateFromMemory(): PixelFormat must be BGRA_8.";
       return nullptr;

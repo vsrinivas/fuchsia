@@ -105,10 +105,9 @@ void YuvView::StartYuv() {
   }
 
   uint8_t* vmo_base;
-  status =
-      zx::vmar::root_self()->map(0, image_vmo, 0, image_vmo_bytes,
-                                 ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
-                                 reinterpret_cast<uintptr_t*>(&vmo_base));
+  status = zx::vmar::root_self()->map(0, image_vmo, 0, image_vmo_bytes,
+                                      ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+                                      reinterpret_cast<uintptr_t*>(&vmo_base));
 
   SetVmoPixels(vmo_base);
 
@@ -140,6 +139,9 @@ void YuvView::SetVmoPixels(uint8_t* vmo_base) {
       break;
     case fuchsia::images::PixelFormat::NV12:
       SetNv12Pixels(vmo_base);
+      break;
+    case fuchsia::images::PixelFormat::YV12:
+      SetYv12Pixels(vmo_base);
       break;
   }
 }
@@ -192,6 +194,30 @@ void YuvView::SetNv12Pixels(uint8_t* vmo_base) {
       double x = static_cast<double>(x_iter * 2) / kShapeWidth;
       uv_base[y_iter * stride_ + x_iter * 2] = GetUValue(x, y) * 255;
       uv_base[y_iter * stride_ + x_iter * 2 + 1] = GetVValue(x, y) * 255;
+    }
+  }
+}
+
+void YuvView::SetYv12Pixels(uint8_t* vmo_base) {
+  // Y plane
+  uint8_t* y_base = vmo_base;
+  for (uint32_t y_iter = 0; y_iter < kShapeHeight; y_iter++) {
+    double y = static_cast<double>(y_iter) / kShapeHeight;
+    for (uint32_t x_iter = 0; x_iter < kShapeWidth; x_iter++) {
+      double x = static_cast<double>(x_iter) / kShapeWidth;
+      y_base[y_iter * stride_ + x_iter] = GetYValue(x, y) * 255;
+    }
+  }
+  // U and V work the same as each other, so do them together
+  uint8_t* u_base =
+      y_base + kShapeHeight * stride_ + kShapeHeight / 2 * stride_ / 2;
+  uint8_t* v_base = y_base + kShapeHeight * stride_;
+  for (uint32_t y_iter = 0; y_iter < kShapeHeight / 2; y_iter++) {
+    double y = static_cast<double>(y_iter * 2) / kShapeHeight;
+    for (uint32_t x_iter = 0; x_iter < kShapeWidth / 2; x_iter++) {
+      double x = static_cast<double>(x_iter * 2) / kShapeWidth;
+      u_base[y_iter * stride_ / 2 + x_iter] = GetUValue(x, y) * 255;
+      v_base[y_iter * stride_ / 2 + x_iter] = GetVValue(x, y) * 255;
     }
   }
 }

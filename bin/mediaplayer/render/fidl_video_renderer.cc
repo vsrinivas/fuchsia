@@ -404,6 +404,10 @@ void FidlVideoRenderer::FillBlack(uint8_t* buffer,
       memset(buffer, 0, plane_stride);
       memset(buffer + plane_stride, 128, plane_stride / 2);
       break;
+    case fuchsia::images::PixelFormat::YV12:
+      memset(buffer, 0, plane_stride);
+      memset(buffer + plane_stride, 128, plane_stride / 2);
+      break;
   }
 }
 

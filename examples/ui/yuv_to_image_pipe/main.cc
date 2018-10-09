@@ -28,6 +28,7 @@ int main(int argc, const char** argv) {
       {"NV12", fuchsia::images::PixelFormat::NV12},
       {"YUY2", fuchsia::images::PixelFormat::YUY2},
       {"BGRA_8", fuchsia::images::PixelFormat::BGRA_8},
+      {"YV12", fuchsia::images::PixelFormat::YV12},
   };
 
   fuchsia::images::PixelFormat pixel_format;
