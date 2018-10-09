@@ -7,12 +7,14 @@
 #include <inttypes.h>
 #include <sys/types.h>
 
+#include <fbl/algorithm.h>
+#include <fbl/function.h>
+#include <trace.h>
 #include <vm/bootreserve.h>
+#include <vm/pmm.h>
 
 #include "vm_priv.h"
 
-#include <trace.h>
-#include <vm/pmm.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -121,3 +123,14 @@ retry:
     *alloc_range = {alloc_pa, alloc_len};
     return ZX_OK;
 }
+
+// Returns false and exits early if the callback returns false, true otherwise.
+bool boot_reserve_foreach(const fbl::Function<bool(const reserve_range_t)>& cb) {
+    for (size_t i = 0; i < res_idx; i++) {
+        if (!cb(res[i])) {
+            return false;
+        }
+    }
+
+    return true;
+};

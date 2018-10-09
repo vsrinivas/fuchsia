@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <fbl/function.h>
 #include <sys/types.h>
 #include <zircon/types.h>
 
@@ -37,3 +38,10 @@ typedef struct {
 // Used by the PMM arena initialization code to allocate memory for itself.
 zx_status_t boot_reserve_range_search(paddr_t range_pa, size_t range_len, size_t alloc_len,
                                       reserve_range_t* alloc_range);
+
+
+// Call |cb| for each reserve range registered. Exit if the callback returns false. This
+// function does not lock the region structure.
+//
+// Returns the same value the callback |cb| returns.
+bool boot_reserve_foreach(const fbl::Function<bool(reserve_range_t)>& cb);
