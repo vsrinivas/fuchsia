@@ -1,0 +1,126 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zircon.camera;
+
+using zx;
+
+// This structure represents image resolution.
+struct ImageResolution {
+    uint16 width;
+    uint16 height;
+};
+
+
+// A sensor can support several different predefined modes.
+struct SensorMode {
+    // Frames per milliseconds. NOTE: (Reference code has fps * 256)
+    uint32 fpms;
+    // Resolution of the mode.
+    ImageResolution resolution;
+    // How many exposures this mode supports.
+    uint8 exposures;
+    // The wdr mode.
+    uint8 wdr_mode;
+    // Bit depth of data from sensor.
+    uint8 bits;
+};
+
+struct SensorInfo {
+    // Total resolution of the image with blanking.
+    ImageResolution total;
+    // Active resolution without blanking.
+    ImageResolution active;
+    // Actual pixels per line after scaling/binning.
+    uint16 pixels_per_line;
+    // Maximum analog gain value in log2 format.
+    int32 again_log2_max;
+    // Maximum digital gain value in log2 format.
+    int32 dgain_log2_max;
+    // Precision of the gain - If required gain step
+    // is less then this do not try to allocate it.
+    int32 again_accuracy;
+    // Minimum integration time for the sensor in lines.
+    uint32 integration_time_min;
+    // Maximum integration time for the sensor in lines
+    // without dropping fps.
+    uint32 integration_time_max;
+    // Maximum integration time for long in lines.
+    uint32 integration_time_long_max;
+    // Maximum possible integration time for the sensor in lines.
+    uint32 integration_time_limit;
+    // Limit of integration time for non-flickering light source.
+    uint16 day_light_integration_time_max;
+    // Delay to apply integration time in frames.
+    uint8 integration_time_apply_delay;
+    // Select which WDR exposure channel gain
+    // is delayed 0-none, 1-long, 2-medium, 3-short
+    //  (only 0 and 1 implemented)
+    uint8 isp_exposure_channel_delay;
+    // Used for image stabilization.
+    int32 xoffset;
+    // Used for image stabilization.
+    int32 yoffset;
+    // Number of lines per second used for antiflicker.
+    uint32 lines_per_second;
+    // Number of different exposures supported by the sensor.
+    int32 sensor_exp_number;
+    // Table of predefined modes which are supported by the sensor.
+    vector<SensorMode> modes_table;
+    // The number of predefined modes.
+    uint32 modes_num;
+    // Current mode. This value is from the range [ 0 : modes_num - 1 ].
+    uint8 mode;
+    // sensor setting bayer pattern.
+    uint8 bayer;
+};
+
+
+[Layout = "Simple"]
+interface CameraSensor {
+  // Initializes the Camera Sensor.
+  1: Init() -> (zx.status s);
+
+  // De-Initializes the Camera Sensor.
+  2: DeInit();
+
+  // Sets the Camera Sensor Mode to one of the supported modes.
+  3: SetMode(uint8 mode);
+
+  // Stop sensor data output.
+  // This function is called from system to enable video stream from sensor.
+  4: StartStreaming();
+
+  // Stop sensor data output.
+  // This function is called from system to disable video stream from sensor.
+  5: StopStreaming();
+
+  // Allocate analog gain.
+  // This function sets the sensor digital gain.
+  // Gain should be just saved here for the future.
+  // The real sensor digital gain update must be implemented in
+  // Update() routine.
+  // @param gain - analog gain value in log2 format precision is defined by LOG2_GAIN_SHIFT
+  // @return the real digital gain which will be applied
+  6: AllocateAnalogGain(int32 gain) -> (int32 actual_gain);
+
+  // Allocate digital gain.
+  // This function sets the sensor digital gain.
+  // Gain should be just saved here for the future.
+  // The real sensor digital gain update must be implemented in
+  // Update() routine.
+  // @param gain - analog gain value in log2 format precision is defined by LOG2_GAIN_SHIFT
+  // @return the real digital gain which will be applied
+  7: AllocateDigitalGain(int32 gain) -> (int32 actual_gain);
+
+  // Update all sensor parameters
+  // The function is called from IRQ thread in vertical blanking.
+  // All sensor parameters must be updated here.
+  8: Update();
+
+  // Gets the Sensor Parameters.
+  // Note: This is not supported in Zircon yet under "Simple" layout.
+  // 9: GetInfo() -> (SensorInfo info);
+};
+

@@ -21,6 +21,13 @@ enum {
     BTI_USB_XHCI,
 };
 
+// These should match the mmio table defined in sherlock-i2c.c
+enum {
+    SHERLOCK_I2C_A0_0,
+    SHERLOCK_I2C_2,
+    SHERLOCK_I2C_3,
+};
+
 class Sherlock;
 using SherlockType = ddk::Device<Sherlock>;
 
@@ -43,6 +50,7 @@ private:
     zx_status_t I2cInit();
     zx_status_t UsbInit();
     zx_status_t ClkInit();
+    zx_status_t CameraInit();
     int Thread();
 
     ddk::PlatformBusProtocolProxy pbus_;

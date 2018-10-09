@@ -24,6 +24,16 @@
 #define T931_MSR_CLK_BASE               0xffd18000
 #define T931_MSR_CLK_LENGTH             0x1000
 
+// MIPI CSI & Adapter
+#define T931_CSI_PHY0_BASE              0xff650000
+#define T931_CSI_PHY0_LENGTH            0x2000
+#define T931_APHY_BASE                  0xff63c300
+#define T931_APHY_LENGTH                0x100
+#define T931_CSI_HOST0_BASE             0xff654000
+#define T931_CSI_HOST0_LENGTH           0x100
+#define T931_MIPI_ADAPTER_BASE          0xff650000
+#define T931_MIPI_ADAPTER_LENGTH        0x6000
+
 #define T931_USB0_BASE                  0xff500000
 #define T931_USB0_LENGTH                0x100000
 

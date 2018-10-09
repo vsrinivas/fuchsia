@@ -9,19 +9,18 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/bind.c \
-    $(LOCAL_DIR)/sherlock.cpp \
-    $(LOCAL_DIR)/sherlock-gpio.cpp \
-    $(LOCAL_DIR)/sherlock-usb.cpp \
-    $(LOCAL_DIR)/sherlock-i2c.cpp \
-    $(LOCAL_DIR)/sherlock-clk.cpp \
-    $(LOCAL_DIR)/sherlock-camera.cpp \
+    $(LOCAL_DIR)/binding.c \
+    $(LOCAL_DIR)/imx227.cpp \
+
+MODULE_HEADER_DEPS := \
+    system/dev/lib/amlogic
 
 MODULE_STATIC_LIBS := \
-    system/dev/lib/amlogic \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
+    system/ulib/fidl \
+    system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
 
@@ -30,4 +29,8 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/c \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-camera \
+
 include make/module.mk
+

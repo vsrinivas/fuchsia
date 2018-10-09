@@ -28,6 +28,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_RTC_FALLBACK       15  // Synthetic RTC device
 #define PDEV_DID_ETH_MAC            16  // Ethernet MAC
 #define PDEV_DID_ETH_PHY            17  // Ethernet PHY
+#define PDEV_DID_CAMERA_SENSOR      18  // Camera Sensor
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1
@@ -96,6 +97,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_AMLOGIC_TDM        16
 #define PDEV_DID_ASTRO_PDM          17
 #define PDEV_DID_AMLOGIC_G12B_CLK   18
+#define PDEV_DID_AMLOGIC_MIPI       19
 
 
 // Broadcom
@@ -140,5 +142,9 @@ __BEGIN_CDECLS;
 #define PDEV_DID_MEDIATEK_GPIO      1
 #define PDEV_DID_MEDIATEK_EMMC      2
 #define PDEV_DID_MEDIATEK_DISPLAY   3
+
+// Sony
+#define PDEV_VID_SONY               14
+#define PDEV_PID_SONY_IMX227        1
 
 __END_CDECLS;
