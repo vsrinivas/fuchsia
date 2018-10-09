@@ -578,14 +578,14 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  int64_t reset_register_offset = 0;
+  int64_t reset_register_offset = 0x1100 * 4;
   int64_t parser_register_offset = 0;
   int64_t demux_register_offset = 0;
   if (device_type_ == DeviceType::kG12A) {
     // Some portions of the cbus moved in newer versions (TXL and later).
-    reset_register_offset = (0x0401 - 0x1101);
-    parser_register_offset = 0x3800 - 0x2900;
-    demux_register_offset = 0x1800 - 0x1600;
+    reset_register_offset = 0x0400 * 4;
+    parser_register_offset = (0x3800 - 0x2900) * 4;
+    demux_register_offset = (0x1800 - 0x1600) * 4;
   }
   reset_ = std::make_unique<ResetRegisterIo>(cbus_mmio, reset_register_offset);
   parser_ = std::make_unique<ParserRegisterIo>(cbus_mmio, parser_register_offset);

@@ -95,13 +95,13 @@ class DemuxRegisterIo : public ddk::MmioView {
 #define DEFINE_REGISTER(name, type, address)                           \
   class name : public TypedRegisterBase<type, name, uint32_t> {        \
    public:                                                             \
-    static auto Get() { return TypedRegisterAddr<name>(address * 4); } \
+    static auto Get() { return TypedRegisterAddr<name>((address) * 4); } \
   };
 
 #define REGISTER_NAME(name, type, address)                      \
   class name : public TypedRegisterBase<type, name, uint32_t> { \
    public:                                                      \
-    static auto Get() { return AddrType(address * 4); }
+    static auto Get() { return AddrType((address) * 4); }
 
 // clang-format off
 DEFINE_REGISTER(Mpsr, DosRegisterIo, 0x301);
@@ -474,8 +474,8 @@ REGISTER_NAME(DmcReqCtrl, DmcRegisterIo, 0x0)
   DEF_BIT(13, vdec);
 };
 
-DEFINE_REGISTER(Reset0Register, ResetRegisterIo, 0x1101);
-REGISTER_NAME(Reset1Register, ResetRegisterIo, 0x1102)
+DEFINE_REGISTER(Reset0Register, ResetRegisterIo, 0x1101 - 0x1100);
+REGISTER_NAME(Reset1Register, ResetRegisterIo, 0x1102 - 0x1100)
   DEF_BIT(8, parser)
 };
 DEFINE_REGISTER(FecInputControl, DemuxRegisterIo, 0x1602)
