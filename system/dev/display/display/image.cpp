@@ -42,6 +42,8 @@ void Image::OnFenceReady(FenceReference* fence) {
 
 void Image::StartPresent() {
     ZX_DEBUG_ASSERT(wait_fence_ == nullptr);
+    ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
+
     presenting_ = true;
 }
 
@@ -55,6 +57,7 @@ void Image::EarlyRetire() {
 
 void Image::StartRetire() {
     ZX_DEBUG_ASSERT(wait_fence_ == nullptr);
+    ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
 
     if (!presenting_) {
         if (signal_fence_) {
@@ -69,6 +72,8 @@ void Image::StartRetire() {
 }
 
 void Image::OnRetire() {
+    ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
+
     presenting_ = false;
 
     if (retiring_) {

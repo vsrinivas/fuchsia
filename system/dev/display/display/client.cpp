@@ -737,8 +737,11 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
                 layer_node.layer->pending_image_->PrepareFences(
                         GetFence(layer->pending_wait_event_id_),
                         GetFence(layer->pending_signal_event_id_));
-                list_add_tail(&layer->waiting_images_, &layer->pending_image_->node.link);
-                layer->pending_image_->node.self = fbl::move(layer->pending_image_);
+                {
+                    fbl::AutoLock lock(controller_->mtx());
+                    list_add_tail(&layer->waiting_images_, &layer->pending_image_->node.link);
+                    layer->pending_image_->node.self = fbl::move(layer->pending_image_);
+                }
             }
         }
 

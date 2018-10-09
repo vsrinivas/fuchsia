@@ -71,10 +71,13 @@ public:
 
     const zx::vmo& vmo() { return vmo_; }
 
-    // The image z_index is set/read by Controller.cpp for layer tracking.
     void set_z_index(uint32_t z_index) { z_index_ = z_index; }
     uint32_t z_index() const { return z_index_; }
 
+    // The node alternates between a client's waiting image list and the controller's
+    // presented image list. The presented image list is protected with the controller mutex,
+    // and the waiting list is only accessed on the loop and thus is not generally
+    // protected. However, transfers between the lists are protected by the controller mutex.
     image_node_t node = {
         .link = LIST_INITIAL_CLEARED_VALUE,
         .self = nullptr,
@@ -82,21 +85,26 @@ public:
 
 private:
     image_t info_;
-    Controller* controller_;
+    Controller* const controller_;
+
+    // z_index is set/read by controller.cpp under its lock
     uint32_t z_index_;
 
+    // Only ever accessed on loop thread, so no synchronization
     fbl::RefPtr<FenceReference> wait_fence_ = nullptr;
+    // signal_fence_ is only accessed on the loop. armed_signal_fence_ is accessed
+    // under the controller mutex. See comment in ::OnRetire for more details.
     fbl::RefPtr<FenceReference> signal_fence_ = nullptr;
-    // See comment in ::OnRetire for why this is necessary
     fbl::RefPtr<FenceReference> armed_signal_fence_ = nullptr;
 
     // Flag which indicates that the image is currently in some display configuration.
     fbl::atomic_bool in_use_ = {};
-    // Flag indicating that the image is being managed by the display hardware.
+    // Flag indicating that the image is being managed by the display hardware. Only
+    // accessed under the controller mutex.
     bool presenting_ = false;
     // Flag indicating that the image has started the process of retiring and will be free after
     // the next vsync. This is distinct from presenting_ due to multiplexing the display between
-    // multiple clients.
+    // multiple clients. Only accessed under the controller mutex.
     bool retiring_ = false;
 
     const zx::vmo vmo_;
