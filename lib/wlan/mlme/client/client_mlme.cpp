@@ -183,18 +183,25 @@ zx_status_t ClientMlme::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>&
         .cbw = static_cast<uint8_t>(bss.chan.cbw),
     };
 
-    infof("JoinReq BSSID %s, chan %s, PHY %u\n", bssid.ToString().c_str(),
-          common::ChanStrLong(bss_chan).c_str(), req.body()->phy);
+    // Discern join configuration from BSS announcement
+    // Note primary channel can't be different.
+    auto join_phy = req.body()->phy;
+    // Construct join_chan
+    auto join_chan = bss_chan;
+    join_chan.cbw = static_cast<uint8_t>(req.body()->cbw);
 
-    wlan_channel_t join_chan = bss_chan;
+    infof("JoinReq [BSS] BSSID %s Chan %u CBW %u Sec80 %u [Config] Phy %u CBW %u\n",
+          bssid.ToString().c_str(), bss_chan.primary, bss_chan.cbw, bss_chan.secondary80, join_phy,
+          join_chan.cbw);
+
     if (!common::IsValidChan(join_chan)) {
         // If what SME instructs seems invalid, treat it as an error.
-        // Shout out, and auto-correct
-        wlan_channel_t chan_sanitized = join_chan;
-        chan_sanitized.cbw = common::GetValidCbw(join_chan);
+        // Shout out, and fallback to CBW20
+        wlan_channel_t chan_fallback = join_chan;
+        chan_fallback.cbw = CBW20;
         errorf("SME tried to configure an invalid channel: %s; falling back to %s\n",
-               common::ChanStrLong(join_chan).c_str(), common::ChanStrLong(chan_sanitized).c_str());
-        join_chan = chan_sanitized;
+               common::ChanStrLong(join_chan).c_str(), common::ChanStrLong(chan_fallback).c_str());
+        join_chan = chan_fallback;
     }
 
     debugjoin("setting channel to %s\n", common::ChanStrLong(join_chan).c_str());
@@ -206,7 +213,7 @@ zx_status_t ClientMlme::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>&
         return status;
     }
 
-    join_ctx_ = std::make_optional<JoinContext>(std::move(bss), join_chan, req.body()->phy);
+    join_ctx_ = std::make_optional<JoinContext>(std::move(bss), join_chan, join_phy);
 
     // Notify driver about BSS.
     wlan_bss_config_t cfg{

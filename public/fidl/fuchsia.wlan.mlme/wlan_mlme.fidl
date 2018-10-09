@@ -437,15 +437,16 @@ struct JoinRequest {
     uint32 nav_sync_delay;
     vector<uint16> op_rate_set;
 
-    // etc
-
-    // Together with selected_bss.chan,
-    //  phy overrides following information that MLME knows of.
+    // Combined with what MLME knows about the device capabilities,
+    // following parameters determine what to be advertised to the peer
+    // (in AssociationRequest). Effectively this way replaces the following
+    // fields originally defined in MLME-JOIN.request
     // - Capability Information
     // - HT Capabilities
     // - VHT Capabilities
     // - Extended Capabilities
     PHY phy;
+    CBW cbw;
 };
 
 // MLME-JOIN.confirm (IEEE Std 802.11-2016, 6.3.4.3)

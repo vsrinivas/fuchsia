@@ -1249,9 +1249,10 @@ bool Station::IsCbw40Rx() const {
     auto client_assoc = ToAssocContext(ifc_info, join_chan);
 
     debugf(
-        "IsCbw40Rx: bss.ht_cap:%s, bss.chan_width_set:%s client_assoc.has_ht_cap:%s "
+        "IsCbw40Rx: join_chan.cbw:%u, bss.ht_cap:%s, bss.chan_width_set:%s "
+        "client_assoc.has_ht_cap:%s "
         "client_assoc.chan_width_set:%u\n",
-        (join_ctx_->bss()->ht_cap != nullptr) ? "yes" : "no",
+        join_chan.cbw, (join_ctx_->bss()->ht_cap != nullptr) ? "yes" : "no",
         (join_ctx_->bss()->ht_cap == nullptr)
             ? "invalid"
             : (join_ctx_->bss()->ht_cap->ht_cap_info.chan_width_set ==
@@ -1261,6 +1262,10 @@ bool Station::IsCbw40Rx() const {
         client_assoc.ht_cap.has_value() ? "yes" : "no",
         static_cast<uint8_t>(client_assoc.ht_cap->ht_cap_info.chan_width_set()));
 
+    if (join_chan.cbw == CBW20) {
+        debugjoin("Disable CBW40: configured to use less CBW than capability\n");
+        return false;
+    }
     if (join_ctx_->bss()->ht_cap == nullptr) {
         debugjoin("Disable CBW40: no HT support in target BSS\n");
         return false;
@@ -1276,10 +1281,6 @@ bool Station::IsCbw40Rx() const {
         return false;
     } else if (client_assoc.ht_cap->ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_ONLY) {
         debugjoin("Disable CBW40: no CBW40 support in the this device\n");
-        return false;
-    }
-    if (join_chan.cbw == CBW20) {
-        debugjoin("Disable CBW40: configured to use less CBW than capability\n");
         return false;
     }
 

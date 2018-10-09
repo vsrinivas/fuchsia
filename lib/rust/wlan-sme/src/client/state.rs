@@ -230,16 +230,15 @@ impl<T: Tokens> State<T> {
         self.disconnect_internal(context);
 
         let (phy_to_use, cbw_to_use) = derive_phy_cbw(&cmd.bss, &cmd.params);
-        let mut selected_bss = clone_bss_desc(&cmd.bss);
-        selected_bss.chan.cbw = cbw_to_use;
 
         context.mlme_sink.send(MlmeRequest::Join(
             fidl_mlme::JoinRequest {
-                selected_bss,
+                selected_bss: clone_bss_desc(&cmd.bss),
                 join_failure_timeout: DEFAULT_JOIN_FAILURE_TIMEOUT,
                 nav_sync_delay: 0,
                 op_rate_set: vec![],
                 phy: phy_to_use,
+                cbw: cbw_to_use,
             }
         ));
         context.att_id += 1;
