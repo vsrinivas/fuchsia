@@ -10,12 +10,12 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/memory_limit.cpp \
-	$(LOCAL_DIR)/memory_limit_tests.cpp
 
 MODULE_INCLUDES += \
 	$(LOCAL_DIR)/include
 
 MODULE_DEPS += \
-	kernel/lib/fbl
+    kernel/lib/fbl \
+    kernel/lib/pretty \
 
 include make/module.mk

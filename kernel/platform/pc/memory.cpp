@@ -105,12 +105,7 @@ static void boot_addr_range_reset(boot_addr_range_t* range) {
  * array. it returns the total count of arenas which have been populated.
  */
 static zx_status_t mem_arena_init(boot_addr_range_t* range) {
-    mem_limit_ctx ctx;
-    ctx.kernel_base = reinterpret_cast<uintptr_t>(__code_start);
-    ctx.kernel_size = reinterpret_cast<uintptr_t>(_end) - ctx.kernel_base;
-    ctx.ramdisk_base = reinterpret_cast<uintptr_t>(platform_get_ramdisk(&ctx.ramdisk_size));
-
-    bool have_limit = (mem_limit_init(&ctx) == ZX_OK);
+    bool have_limit = (memory_limit_init() == ZX_OK);
     // Create the kernel's singleton for address space management
     // Set up a base arena template to use
     pmm_arena_info_t base_arena;
@@ -144,7 +139,7 @@ static zx_status_t mem_arena_init(boot_addr_range_t* range) {
 
         mark_mmio_region_to_reserve(base, static_cast<size_t>(size));
         if (have_limit) {
-            status = mem_limit_add_arenas_from_range(&ctx, base, size, base_arena);
+            status = memory_limit_add_range(base, size, base_arena);
         }
 
         // If there is no limit, or we failed to add arenas from processing
@@ -162,6 +157,10 @@ static zx_status_t mem_arena_init(boot_addr_range_t* range) {
                 printf("MEM: Failed to add pmm range at %#" PRIxPTR " size %#zx\n", arena.base, arena.size);
             }
         }
+    }
+
+    if (have_limit) {
+        memory_limit_add_arenas(base_arena);
     }
 
     return ZX_OK;

@@ -274,6 +274,8 @@ static zbi_result_t process_zbi_item(zbi_header_t* item, void* payload, void* co
     case ZBI_TYPE_NVRAM: {
         zbi_nvram_t* nvram = reinterpret_cast<zbi_nvram_t*>(payload);
         memcpy(&lastlog_nvram, nvram, sizeof(lastlog_nvram));
+        dprintf(INFO, "boot reserve nvram range: phys base %#" PRIx64 " length %#" PRIx64 "\n",
+                nvram->base, nvram->length);
         boot_reserve_add_range(nvram->base, nvram->length);
         save_mexec_zbi(item);
         break;
@@ -353,22 +355,18 @@ void platform_early_init(void) {
 
     // check if a memory limit was passed in via kernel.memory-limit-mb and
     // find memory ranges to use if one is found.
-    mem_limit_ctx_t ctx;
-    zx_status_t status = mem_limit_init(&ctx);
+    zx_status_t status = memory_limit_init();
     if (status == ZX_OK) {
-        // For these ranges we're using the base physical values
-        ctx.kernel_base = get_kernel_base_phys();
-        ctx.kernel_size = get_kernel_size();
-        ctx.ramdisk_base = ramdisk_start_phys;
-        ctx.ramdisk_size = ramdisk_end_phys - ramdisk_start_phys;
-
         // Figure out and add arenas based on the memory limit and our range of DRAM
-        status = mem_limit_add_arenas_from_range(&ctx, mem_arena.base, mem_arena.size, mem_arena);
+        memory_limit_add_range(mem_arena.base, mem_arena.size, mem_arena);
+        status = memory_limit_add_arenas(mem_arena);
     }
 
     // If no memory limit was found, or adding arenas from the range failed, then add
     // the existing global arena.
     if (status != ZX_OK) {
+        dprintf(INFO, "memory limit lib returned an error (%d), falling back to default arena\n",
+                status);
         pmm_add_arena(&mem_arena);
     }
 

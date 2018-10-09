@@ -184,6 +184,10 @@ jitterentropy, producing output data that looks closer to uniformly random. Note
 that even when set to false, the CPRNG will re-process the samples, so the
 processing inside of jitterentropy is somewhat redundant.
 
+## kernel.memory-limit-dbg=\<bool>
+
+This option enables verbose logging from the memory limit library.
+
 ## kernel.memory-limit-mb=\<num>
 
 This option tells the kernel to limit system memory to the MB value specified
