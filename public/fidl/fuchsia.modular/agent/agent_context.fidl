@@ -18,7 +18,7 @@ interface AgentContext {
 
   // The auth token provider this Agent may use for accessing external services.
   // @Deprecated
-  2: GetTokenProvider(request<fuchsia.modular.auth.TokenProvider> @request);
+  2: GetTokenProvider(request<fuchsia.modular.auth.TokenProvider> request);
 
   // Connects to the IntelligenceServices for this Agent.
   3: GetIntelligenceServices(request<IntelligenceServices> request);
@@ -38,7 +38,7 @@ interface AgentContext {
   6: DeleteTask(string task_id);
 
   // The auth token manager this Agent may use for accessing external services.
-  7: GetTokenManager(request<fuchsia.auth.TokenManager> @request);
+  7: GetTokenManager(request<fuchsia.auth.TokenManager> request);
 };
 
 // Used to describe a task to the framework.
