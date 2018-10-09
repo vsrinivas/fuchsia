@@ -29,6 +29,10 @@ def find_github_blob_path(path):
     s = path.split('/')
     if s[2] == 'github.com':
         s[2] = 'raw.githubusercontent.com'
+        # github redirects "github.com/$USER/$PROJECT.git" to
+        # "github.com/$USER/$PROJECT".
+        if s[4].endswith('.git'):
+          s[4] = s[4][:len('.git')]
     else:
         die('don\'t know raw content path for ' + path)
     if s[-1] == '':
