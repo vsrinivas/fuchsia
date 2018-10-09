@@ -348,15 +348,16 @@ if (current_toolchain == dart_toolchain) {
         ]
 
         args = [
-                 "--out",
-                 rebase_path(metadata_file),
-                 "--name",
-                 package_name,
-                 "--root",
-                 file_base,
-                 "--specs",
-               ] + sdk_metas + [ "--sources" ] + sdk_sources +
-               [ "--third-party-specs" ] + third_party_pubspecs
+          "--out",
+          rebase_path(metadata_file),
+          "--name",
+          package_name,
+          "--root",
+          file_base,
+        ]
+        args += [ "--specs" ] + sdk_metas
+        args += [ "--sources" ] + sdk_sources
+        args += [ "--third-party-specs" ] + third_party_pubspecs
 
         deps = sdk_deps
       }

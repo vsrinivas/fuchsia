@@ -128,17 +128,18 @@ template("sdk_source_set") {
     ]
 
     args = [
-             "--out",
-             rebase_path(metadata_file),
-             "--name",
-             invoker.sdk_name,
-             "--root",
-             file_base,
-             "--include-dir",
-             "$file_base/include",
-             "--deps",
-           ] + sdk_metas + [ "--sources" ] + sdk_sources + [ "--headers" ] +
-           sdk_headers
+      "--out",
+      rebase_path(metadata_file),
+      "--name",
+      invoker.sdk_name,
+      "--root",
+      file_base,
+      "--include-dir",
+      "$file_base/include",
+    ]
+    args += [ "--deps" ] + sdk_metas
+    args += [ "--sources" ] + sdk_sources
+    args += [ "--headers" ] + sdk_headers
 
     deps = sdk_deps
   }
