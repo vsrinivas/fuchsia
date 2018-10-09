@@ -56,7 +56,7 @@
     <project name="cobalt"
              path="third_party/cobalt"
              remote="https://fuchsia.googlesource.com/cobalt"
-             revision="4e6cde04f232ea16e2ef4dc4e839884d7476367e"
+             revision="66f94aece7803057268e3ace85da7ab275428c8f"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="cobalt_config"
              path="third_party/cobalt_config"
@@ -176,7 +176,7 @@
              path="third_party/golibs/github.com/golang/protobuf"
              remote="https://fuchsia.googlesource.com/third_party/github.com/golang/protobuf"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="a8c86c1ebfbf816a3a824ea4472ba69149e2efac"/>
+             revision="84e97db688c62c8d4ec565fd2c98141e119fc0f3"/>
     <project name="third_party/googletest"
              path="third_party/googletest"
              remote="https://fuchsia.googlesource.com/third_party/googletest"
