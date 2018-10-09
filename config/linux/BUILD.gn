@@ -7,10 +7,12 @@ import("//build/config/sysroot.gni")
 config("compiler") {
   ldflags = [
     "-static-libstdc++",
+
     # Set rpath to find dynamically linked libraries placed next to executables in the host
     # build directory.
     "-Wl,-rpath=\$ORIGIN/",
   ]
+
   # TODO(TC-74) The implicitly linked static libc++.a depends on these.
   libs = [
     "dl",

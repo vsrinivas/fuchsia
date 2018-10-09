@@ -78,16 +78,16 @@ template("dart_remote_test") {
     ]
 
     args = [
-      "--out",
-      rebase_path(invocation_file),
-      "--sources",
-    ] + rebase_path(invoker.sources, "", sources_dir) +
-    [
-      "--dot-packages",
-      rebase_path(dot_packages_file),
-      "--dart-binary",
-      rebase_path(prebuilt_dart),
-    ]
+             "--out",
+             rebase_path(invocation_file),
+             "--sources",
+           ] + rebase_path(invoker.sources, "", sources_dir) +
+           [
+             "--dot-packages",
+             rebase_path(dot_packages_file),
+             "--dart-binary",
+             rebase_path(prebuilt_dart),
+           ]
 
     deps = [
       ":$library_target_name",

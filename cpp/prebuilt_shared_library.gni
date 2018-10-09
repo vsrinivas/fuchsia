@@ -95,14 +95,17 @@ template("prebuilt_shared_library") {
   }
 
   no_headers = defined(invoker.no_headers) && invoker.no_headers
+
   # Base path for source files of this library in SDKs.
   file_base = "pkg/$atom_name"
+
   # Base path for binaries of this library in SDKs.
   prebuilt_base = "arch/$target_cpu"
 
   # Identify dependencies and their metadata files.
   sdk_deps = []
   sdk_metas = []
+
   # If a prebuilt library is only provided for packaging purposes (by not
   # exposing headers) then its dependencies need not be included in an SDK.
   if (defined(invoker.public_deps) && !no_headers) {
@@ -112,6 +115,7 @@ template("prebuilt_shared_library") {
       sdk_deps += [ sdk_dep ]
     }
   }
+
   # Runtime deps are already SDK targets.
   if (defined(invoker.runtime_deps)) {
     sdk_deps += invoker.runtime_deps
@@ -150,7 +154,7 @@ template("prebuilt_shared_library") {
       {
         source = header
         dest = header_dest
-      }
+      },
     ]
   }
 
@@ -183,30 +187,31 @@ template("prebuilt_shared_library") {
 
     inputs = sdk_metas
 
-    outputs = [ metadata_file ]
+    outputs = [
+      metadata_file,
+    ]
 
     args = [
-      "--out",
-      rebase_path(metadata_file),
-      "--name",
-      atom_name,
-      "--root",
-      file_base,
-      "--include-dir",
-      "$file_base/include",
-      "--deps",
-    ] + sdk_metas + [
-      "--headers",
-    ] + sdk_headers + [
-      "--arch",
-      target_cpu,
-      "--lib-link",
-      link_lib,
-      "--lib-dist",
-      dist_lib,
-      "--lib-debug",
-      debug_lib,
-    ]
+             "--out",
+             rebase_path(metadata_file),
+             "--name",
+             atom_name,
+             "--root",
+             file_base,
+             "--include-dir",
+             "$file_base/include",
+             "--deps",
+           ] + sdk_metas + [ "--headers" ] + sdk_headers +
+           [
+             "--arch",
+             target_cpu,
+             "--lib-link",
+             link_lib,
+             "--lib-dist",
+             dist_lib,
+             "--lib-debug",
+             debug_lib,
+           ]
 
     deps = sdk_deps
   }
@@ -283,8 +288,6 @@ template("prebuilt_shared_library") {
   sdk_atom_alias(sdk_target_name) {
     atom = ":$manifest_target_name"
 
-    non_sdk_deps = [
-      ":$verify_target_name",
-    ]
+    non_sdk_deps = [ ":$verify_target_name" ]
   }
 }

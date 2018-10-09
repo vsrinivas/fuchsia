@@ -174,11 +174,11 @@ template("generate_manifest") {
       build_id_file,
     ]
     args = extra_manifest_args + [
-      "--depfile=" + rebase_path(depfile, root_build_dir),
-      "--build-id-file=" + rebase_path(build_id_file, root_build_dir),
-      "--stripped-dir=" + rebase_path(stripped_dir, root_build_dir),
-      "@{{response_file_name}}",
-    ]
+             "--depfile=" + rebase_path(depfile, root_build_dir),
+             "--build-id-file=" + rebase_path(build_id_file, root_build_dir),
+             "--stripped-dir=" + rebase_path(stripped_dir, root_build_dir),
+             "@{{response_file_name}}",
+           ]
     response_file_contents = []
 
     # First the toolchain and Zircon manifests are pure auxiliaries:

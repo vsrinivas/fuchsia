@@ -135,6 +135,7 @@ template("sdk_atom") {
   } else {
     meta_copy_target_name = "${target_name}_meta_copy"
     assert(defined(meta_content.source), "Meta scope needs a source or value")
+
     # Copy the file to a canonical location for access by other rules.
     # TODO(DX-497): instead, make sure that all atoms generate their metadata
     # file in the right location.
@@ -181,9 +182,7 @@ template("sdk_atom") {
 
     script = "//build/sdk/create_atom_manifest.py"
 
-    public_deps = gn_deps + [
-      ":$meta_target_name",
-    ]
+    public_deps = gn_deps + [ ":$meta_target_name" ]
 
     inputs = dep_manifests + file_inputs + [
                # Imported by the action's script.

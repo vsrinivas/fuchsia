@@ -40,40 +40,40 @@ static_library("glslang") {
   sources = [
     "glslang/GenericCodeGen/CodeGen.cpp",
     "glslang/GenericCodeGen/Link.cpp",
-    "glslang/MachineIndependent/attribute.cpp",
     "glslang/MachineIndependent/Constant.cpp",
-    "glslang/MachineIndependent/glslang_tab.cpp",
     "glslang/MachineIndependent/InfoSink.cpp",
     "glslang/MachineIndependent/Initialize.cpp",
     "glslang/MachineIndependent/IntermTraverse.cpp",
     "glslang/MachineIndependent/Intermediate.cpp",
-    "glslang/MachineIndependent/intermOut.cpp",
-    "glslang/MachineIndependent/iomapper.cpp",
-    "glslang/MachineIndependent/limits.cpp",
-    "glslang/MachineIndependent/linkValidate.cpp",
-    "glslang/MachineIndependent/parseConst.cpp",
     "glslang/MachineIndependent/ParseContextBase.cpp",
     "glslang/MachineIndependent/ParseHelper.cpp",
     "glslang/MachineIndependent/PoolAlloc.cpp",
-    "glslang/MachineIndependent/propagateNoContraction.cpp",
-    "glslang/MachineIndependent/reflection.cpp",
     "glslang/MachineIndependent/RemoveTree.cpp",
     "glslang/MachineIndependent/Scan.cpp",
     "glslang/MachineIndependent/ShaderLang.cpp",
     "glslang/MachineIndependent/SymbolTable.cpp",
     "glslang/MachineIndependent/Versions.cpp",
+    "glslang/MachineIndependent/attribute.cpp",
+    "glslang/MachineIndependent/glslang_tab.cpp",
+    "glslang/MachineIndependent/intermOut.cpp",
+    "glslang/MachineIndependent/iomapper.cpp",
+    "glslang/MachineIndependent/limits.cpp",
+    "glslang/MachineIndependent/linkValidate.cpp",
+    "glslang/MachineIndependent/parseConst.cpp",
     "glslang/MachineIndependent/preprocessor/Pp.cpp",
     "glslang/MachineIndependent/preprocessor/PpAtom.cpp",
     "glslang/MachineIndependent/preprocessor/PpContext.cpp",
     "glslang/MachineIndependent/preprocessor/PpScanner.cpp",
     "glslang/MachineIndependent/preprocessor/PpTokens.cpp",
+    "glslang/MachineIndependent/propagateNoContraction.cpp",
+    "glslang/MachineIndependent/reflection.cpp",
   ]
   deps = [
     ":HLSL",
     ":OGLCompiler",
     ":OSDependent",
-    ":glslang-default-resource-limits",
     ":SPIRV",
+    ":glslang-default-resource-limits",
   ]
   public_configs = [ ":glslang_config" ]
   configs += [ ":glslang_internal_config" ]
@@ -86,9 +86,7 @@ static_library("OSDependent") {
   sources = [
     "glslang/OSDependent/Unix/ossource.cpp",
   ]
-  public_configs = [
-    "//third_party/shaderc/fake_sys:config",
-  ]
+  public_configs = [ "//third_party/shaderc/fake_sys:config" ]
 }
 static_library("OGLCompiler") {
   sources = [
@@ -96,9 +94,7 @@ static_library("OGLCompiler") {
   ]
 }
 config("HLSL_config") {
-  defines = [
-    "ENABLE_HLSL",
-  ]
+  defines = [ "ENABLE_HLSL" ]
 }
 static_library("HLSL") {
   cflags_cc = [
@@ -106,9 +102,7 @@ static_library("HLSL") {
     "-Wno-inconsistent-missing-override",
     "-Wno-missing-field-initializers",
   ]
-  public_configs = [
-    ":HLSL_config",
-  ]
+  public_configs = [ ":HLSL_config" ]
   sources = [
     "hlsl/hlslAttributes.cpp",
     "hlsl/hlslGrammar.cpp",
@@ -144,9 +138,9 @@ executable("spirv-remap") {
     "StandAlone/spirv-remap.cpp",
   ]
   deps = [
-    ":SPVRemapper",
     ":SPIRV",
-    ":glslang"
+    ":SPVRemapper",
+    ":glslang",
   ]
 }
 static_library("glslang-default-resource-limits") {

@@ -9,6 +9,7 @@ variant("profile") {
     "-fprofile-instr-generate",
     "-fcoverage-mapping",
   ]
+
   # The statically-linked profiling runtime depends on libzircon.
   libs = [ "zircon" ]
 }

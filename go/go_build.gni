@@ -59,7 +59,9 @@ template("go_build") {
     ]
 
     godepfile = "//buildtools/${host_platform}/godepfile"
-    inputs = [ godepfile ]
+    inputs = [
+      godepfile,
+    ]
 
     args = [
       "--godepfile",
@@ -94,7 +96,8 @@ template("go_build") {
       # GN provides no way to propagate include paths like this, so, this is brittle:
       fdio_include = rebase_path("//zircon/system/ulib/fdio/include")
 
-      zircon_sysroot = rebase_path("$root_out_dir/sdk/exported/zircon_sysroot/arch/$target_cpu/sysroot")
+      zircon_sysroot = rebase_path(
+              "$root_out_dir/sdk/exported/zircon_sysroot/arch/$target_cpu/sysroot")
 
       args += [
         "--zircon-sysroot",
@@ -104,13 +107,11 @@ template("go_build") {
         "--go-root",
         rebase_path("$host_tools_dir/goroot"),
       ]
-
     } else {
       args += [
         "--go-root",
         rebase_path("//buildtools/${host_platform}/go"),
       ]
-
     }
 
     if (use_strip) {
@@ -157,9 +158,7 @@ template("go_build") {
           type = "host_tool"
           name = output_name
           root = "tools"
-          files = [
-            file_base,
-          ]
+          files = [ file_base ]
         }
       }
 
@@ -167,7 +166,7 @@ template("go_build") {
         {
           source = output_path
           dest = file_base
-        }
+        },
       ]
 
       non_sdk_deps = [ ":$main_target_name" ]

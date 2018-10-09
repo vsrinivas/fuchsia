@@ -36,12 +36,21 @@ template("go_library") {
   assert(!(defined(invoker.name) && defined(invoker.name_file)),
          "Defining both name and name_file is not allowed")
   if (defined(invoker.name)) {
-    name_args = ["--name", invoker.name]
+    name_args = [
+      "--name",
+      invoker.name,
+    ]
   } else if (defined(invoker.name_file)) {
     # Make name_file a system-absolute path and add it to args.
-    name_args = ["--name-file", rebase_path(invoker.name_file, "")]
+    name_args = [
+      "--name-file",
+      rebase_path(invoker.name_file, ""),
+    ]
   } else {
-    name_args = ["--name", target_name]
+    name_args = [
+      "--name",
+      target_name,
+    ]
   }
 
   source_dir = "."
@@ -85,7 +94,8 @@ template("go_library") {
              "--source-dir",
              rebase_path(source_dir),
              "--sources",
-           ] + go_sources + [
+           ] + go_sources +
+           [
              "--output",
              rebase_path(library_file),
              "--deps",

@@ -91,6 +91,7 @@ if (current_toolchain == dart_toolchain) {
       package_name = full_dir
       package_name = string_replace(package_name, "//", "")
       package_name = string_replace(package_name, "/", ".")
+
       # If the last directory name does not match the target name, add the
       # target name to the resulting package name.
       name = get_label_info(":$target_name", "name")
@@ -192,9 +193,7 @@ if (current_toolchain == dart_toolchain) {
       action(invocation_target_name) {
         script = "//build/dart/gen_analyzer_invocation.py"
 
-        deps = dart_sdk_deps + [
-          ":$dot_packages_target_name",
-        ]
+        deps = dart_sdk_deps + [ ":$dot_packages_target_name" ]
 
         inputs = [
           dart_analyzer_binary,
@@ -239,11 +238,11 @@ if (current_toolchain == dart_toolchain) {
         pool = "//build/dart:dart_pool($dart_toolchain)"
 
         inputs = [
-          dart_analyzer_binary,
-          dot_packages_file,
-          options_file,
-          source_file,
-        ] + rebased_sources
+                   dart_analyzer_binary,
+                   dot_packages_file,
+                   options_file,
+                   source_file,
+                 ] + rebased_sources
 
         outputs = [
           output_file,
@@ -268,9 +267,7 @@ if (current_toolchain == dart_toolchain) {
           rebase_path(depfile),
         ]
 
-        deps = dart_sdk_deps + [
-          ":$dot_packages_target_name",
-        ]
+        deps = dart_sdk_deps + [ ":$dot_packages_target_name" ]
       }
     }
 
@@ -302,6 +299,7 @@ if (current_toolchain == dart_toolchain) {
 
       # Path to SDK metadata files for first-party dependencies.
       sdk_metas = []
+
       # Path to Dart manifest files for third-party dependencies.
       third_party_pubspecs = []
       if (defined(invoker.deps)) {
@@ -334,7 +332,7 @@ if (current_toolchain == dart_toolchain) {
           {
             source = source
             dest = dest
-          }
+          },
         ]
       }
 
@@ -350,18 +348,15 @@ if (current_toolchain == dart_toolchain) {
         ]
 
         args = [
-          "--out",
-          rebase_path(metadata_file),
-          "--name",
-          package_name,
-          "--root",
-          file_base,
-          "--specs",
-        ] + sdk_metas + [
-          "--sources",
-        ] + sdk_sources + [
-          "--third-party-specs",
-        ] + third_party_pubspecs
+                 "--out",
+                 rebase_path(metadata_file),
+                 "--name",
+                 package_name,
+                 "--root",
+                 file_base,
+                 "--specs",
+               ] + sdk_metas + [ "--sources" ] + sdk_sources +
+               [ "--third-party-specs" ] + third_party_pubspecs
 
         deps = sdk_deps
       }
@@ -372,16 +367,14 @@ if (current_toolchain == dart_toolchain) {
         category = invoker.sdk_category
 
         meta = {
-            source = metadata_file
-            dest = "$file_base/meta.json"
-            schema = "dart_library"
+          source = metadata_file
+          dest = "$file_base/meta.json"
+          schema = "dart_library"
         }
 
         deps = sdk_deps
 
-        non_sdk_deps = [
-          ":$metadata_target_name",
-        ]
+        non_sdk_deps = [ ":$metadata_target_name" ]
         if (defined(invoker.non_dart_deps)) {
           non_sdk_deps += invoker.non_dart_deps
         }

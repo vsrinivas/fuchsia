@@ -15,11 +15,9 @@ import("//build/go/toolchain.gni")
 
 template("fidl_go") {
   assert(current_toolchain == go_toolchain,
-      "This template can only be used in $go_toolchain.")
+         "This template can only be used in $go_toolchain.")
 
-  not_needed(invoker, [
-    "sources"
-  ])
+  not_needed(invoker, [ "sources" ])
 
   main_target_name = target_name
   generation_target_name = "${target_name}_go_generate"
@@ -29,14 +27,13 @@ template("fidl_go") {
     library_name = invoker.name
   }
 
-  fidl_target_gen_dir = get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
+  fidl_target_gen_dir =
+      get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
   file_stem = "$fidl_target_gen_dir/$library_name.fidl"
   json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
 
   compiled_action(generation_target_name) {
-    visibility = [
-      ":*",
-    ]
+    visibility = [ ":*" ]
 
     tool = "//garnet/go/src/fidl:fidlgen"
 
@@ -74,9 +71,7 @@ template("fidl_go") {
       "impl.go",
     ]
 
-    non_go_deps = [
-      ":$generation_target_name",
-    ]
+    non_go_deps = [ ":$generation_target_name" ]
 
     deps = []
     if (defined(invoker.deps)) {

@@ -54,16 +54,23 @@ template("custom_signed_zbi") {
     output_file += ".signed"
   }
 
-  forward_variables_from(invoker, ["testonly", "deps", "zbi"])
+  forward_variables_from(invoker,
+                         [
+                           "testonly",
+                           "deps",
+                           "zbi",
+                         ])
 
-  assert([zbi[0]] == zbi, "zbi parameter must contain a single entry")
+  assert([ zbi[0] ] == zbi, "zbi parameter must contain a single entry")
 
   output_file = "$root_out_dir/$output_file"
   action(target_name) {
     script = custom_signing_script
 
     inputs = zbi
-    outputs = [ output_file ]
+    outputs = [
+      output_file,
+    ]
 
     args = [
       "-z",

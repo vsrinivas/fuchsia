@@ -208,19 +208,19 @@ template("fidl_library") {
 
       inputs = sdk_metas
 
-      outputs = [ meta_file ]
+      outputs = [
+        meta_file,
+      ]
 
       args = [
-        "--out",
-        rebase_path(meta_file),
-        "--name",
-        library_name,
-        "--root",
-        file_base,
-        "--specs",
-      ] + sdk_metas + [
-        "--sources",
-      ] + sdk_sources
+               "--out",
+               rebase_path(meta_file),
+               "--name",
+               library_name,
+               "--root",
+               file_base,
+               "--specs",
+             ] + sdk_metas + [ "--sources" ] + sdk_sources
 
       deps = sdk_deps
     }
@@ -238,9 +238,7 @@ template("fidl_library") {
 
       files = all_files
 
-      non_sdk_deps = [
-        ":$meta_target_name",
-      ]
+      non_sdk_deps = [ ":$meta_target_name" ]
 
       deps = []
       foreach(dep, all_deps) {

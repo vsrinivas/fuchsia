@@ -73,7 +73,11 @@ template("fidl") {
     import("//build/c/fidl_c.gni")
 
     fidl_tables(target_name) {
-      forward_variables_from(invoker, [ "testonly", "visibility" ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
     }
 
     # TODO(cramertj): remove pending TC-81.
@@ -94,7 +98,11 @@ template("fidl") {
     }
 
     group("${target_name}_c") {
-      forward_variables_from(invoker, [ "testonly", "visibility" ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
 
       public_deps = [
         ":${target_name}_client",

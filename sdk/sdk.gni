@@ -66,11 +66,7 @@ template("sdk") {
 
   # Generates the manifest.
   sdk_molecule(generation_target_name) {
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "export",
-                           ])
+    forward_variables_from(invoker, "*", [ "export" ])
 
     category = invoker.category
   }
@@ -163,7 +159,7 @@ template("sdk") {
     {
       source = sdk_meta_file
       dest = "meta/manifest.json"
-    }
+    },
   ]
   schema_files = [
     "//build/sdk/meta/cc_prebuilt_library.json",
@@ -183,7 +179,7 @@ template("sdk") {
       {
         source = schema
         dest = "meta/schemas/$name"
-      }
+      },
     ]
   }
 
@@ -194,7 +190,9 @@ template("sdk") {
 
     script = "//build/sdk/generate_archive_manifest.py"
 
-    sources = [ "//build/sdk/sdk_common.py" ]
+    sources = [
+      "//build/sdk/sdk_common.py",
+    ]
 
     inputs = [
       final_manifest_file,
@@ -286,13 +284,13 @@ template("sdk") {
       ]
 
       args = [
-               "--out-dir",
-               rebase_path("$root_out_dir/sdk/exported/$sdk_name"),
-               "--stamp-file",
-               rebase_path(stamp_file),
-               "--manifest",
-               rebase_path(archive_manifest_file),
-             ]
+        "--out-dir",
+        rebase_path("$root_out_dir/sdk/exported/$sdk_name"),
+        "--stamp-file",
+        rebase_path(stamp_file),
+        "--manifest",
+        rebase_path(archive_manifest_file),
+      ]
 
       deps = [
         ":$archive_manifest_target_name",

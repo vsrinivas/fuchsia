@@ -14,11 +14,9 @@ import("//build/rust/toolchain.gni")
 
 template("fidl_rust") {
   assert(current_toolchain == rust_toolchain,
-      "This template can only be used in $rust_toolchain.")
+         "This template can only be used in $rust_toolchain.")
 
-  not_needed(invoker, [
-    "sources"
-  ])
+  not_needed(invoker, [ "sources" ])
 
   main_target_name = target_name
   generation_target_name = "${target_name}_rust_generate"
@@ -30,16 +28,15 @@ template("fidl_rust") {
 
   underscore_name = "fidl_" + string_replace(library_name, ".", "_")
 
-  fidl_target_gen_dir = get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
+  fidl_target_gen_dir =
+      get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
   file_stem = "$fidl_target_gen_dir/$underscore_name"
   json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
 
   compiled_action(generation_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
-    visibility = [
-      ":*",
-    ]
+    visibility = [ ":*" ]
 
     tool = "//garnet/go/src/fidl:fidlgen"
 
@@ -68,11 +65,12 @@ template("fidl_rust") {
   }
 
   group(main_target_name) {
-    forward_variables_from(invoker, [
-      "public_deps",
-      "testonly",
-      "visibility",
-    ])
+    forward_variables_from(invoker,
+                           [
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
 
     deps = [
       ":$generation_target_name",

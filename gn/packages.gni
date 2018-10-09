@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 declare_args() {
-
   # List of product definition files describing the packages to build, and
   # where they are to be installed in images and updates.
   #
@@ -74,7 +73,13 @@ _preprocessed_products = exec_script("preprocess_products.py",
 # Tell GN that the files preprocess_products.py ran are inputs to the
 # generation step, by declaring them as file inputs to a (silly) exec_script
 # invocation.
-exec_script("/bin/sh", ["-c", ":"], "", _preprocessed_products.files_read)
+exec_script("/bin/sh",
+            [
+              "-c",
+              ":",
+            ],
+            "",
+            _preprocessed_products.files_read)
 
 monolith_packages = []
 foreach(pkg, _preprocessed_products.monolith) {

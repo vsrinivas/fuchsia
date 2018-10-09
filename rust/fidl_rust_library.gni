@@ -10,9 +10,7 @@ import("//build/rust/rustc_library.gni")
 # Declares the rustc_library invocation for the generated FIDL bindings.
 
 template("fidl_rust_library") {
-  not_needed(invoker, [
-    "sources",
-  ])
+  not_needed(invoker, [ "sources" ])
 
   generation_target_name = "${target_name}_rust_generate"
   rustc_target_name = "${target_name}-rustc"
@@ -24,7 +22,8 @@ template("fidl_rust_library") {
 
   underscore_name = "fidl_" + string_replace(library_name, ".", "_")
 
-  fidl_target_gen_dir = get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
+  fidl_target_gen_dir =
+      get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
   file_stem = "$fidl_target_gen_dir/${underscore_name}"
 
   rustc_library(rustc_target_name) {
@@ -53,7 +52,7 @@ template("fidl_rust_library") {
       }
     }
 
-    non_rust_deps= [ ":$generation_target_name($rust_toolchain)" ]
+    non_rust_deps = [ ":$generation_target_name($rust_toolchain)" ]
     source_root = rebase_path("$file_stem.rs")
   }
 }

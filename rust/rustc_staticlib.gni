@@ -88,8 +88,8 @@ template("rustc_staticlib") {
   group(target_name) {
     public_configs = [ ":$config_target" ]
     public_deps = [
-      ":$rustc_target",
       ":$header_target",
+      ":$rustc_target",
     ]
   }
 }

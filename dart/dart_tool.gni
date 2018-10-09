@@ -100,9 +100,7 @@ template("dart_tool") {
       rebase_path(invoker.main_dart),
     ]
 
-    deps = dart_sdk_deps + [
-      ":$dart_library_target_name",
-    ]
+    deps = dart_sdk_deps + [ ":$dart_library_target_name" ]
   }
 
   if (defined(invoker.output_name)) {
@@ -134,9 +132,7 @@ template("dart_tool") {
       rebase_path(snapshot_path),
     ]
 
-    deps = dart_sdk_deps + [
-      ":$snapshot_target_name",
-    ]
+    deps = dart_sdk_deps + [ ":$snapshot_target_name" ]
     if (defined(invoker.non_dart_deps)) {
       deps += invoker.non_dart_deps
     }

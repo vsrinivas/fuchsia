@@ -17,11 +17,9 @@ import("//build/sdk/sdk_atom_alias.gni")
 
 template("fidl_dart") {
   assert(current_toolchain == dart_toolchain,
-      "This template can only be used in the $dart_toolchain toolchain.")
+         "This template can only be used in the $dart_toolchain toolchain.")
 
-  not_needed(invoker, [
-    "sources",
-  ])
+  not_needed(invoker, [ "sources" ])
 
   main_target_name = target_name
   generation_target_name = "${target_name}_dart_generate"
@@ -35,13 +33,12 @@ template("fidl_dart") {
   bindings_file = "$bindings_dir/fidl.dart"
   async_bindings_file = "$bindings_dir/fidl_async.dart"
 
-  fidl_target_gen_dir = get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
+  fidl_target_gen_dir =
+      get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
   json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
 
   compiled_action(generation_target_name) {
-    visibility = [
-      ":*",
-    ]
+    visibility = [ ":*" ]
 
     tool = "//topaz/bin/fidlgen_dart"
 
@@ -65,9 +62,7 @@ template("fidl_dart") {
       rebase_path("$dart_sdk/bin/dartfmt"),
     ]
 
-    deps = dart_sdk_deps + [
-      ":$main_target_name($fidl_toolchain)",
-    ]
+    deps = dart_sdk_deps + [ ":$main_target_name($fidl_toolchain)" ]
   }
 
   copy_pubspec_target_name = "${target_name}_dart_pubspec"
@@ -94,10 +89,11 @@ template("fidl_dart") {
   }
 
   dart_library(main_target_name) {
-    forward_variables_from(invoker, [
-      "testonly",
-      "visibility",
-    ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
 
     package_root = root_dir
 

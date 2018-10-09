@@ -5,7 +5,7 @@
 import("//build/package.gni")
 
 declare_args() {
-    persist_logs = is_debug
+  persist_logs = is_debug
 }
 
 # Adds a config to persist logs to disk
@@ -64,7 +64,9 @@ template("persist_logs") {
 
   action(logs_action_name) {
     script = "//build/gn/gen_persistent_log_config.py"
-    outputs = [ output_file ]
+    outputs = [
+      output_file,
+    ]
     args = [ name ] + rebase_path(outputs, root_build_dir)
     if (log_tags != []) {
       args += [ "--tags" ]
@@ -79,7 +81,10 @@ template("persist_logs") {
       }
     }
     if (defined(max_disk_usage)) {
-      args += [ "--file-capacity", max_disk_usage ]
+      args += [
+        "--file-capacity",
+        max_disk_usage,
+      ]
     }
   }
 

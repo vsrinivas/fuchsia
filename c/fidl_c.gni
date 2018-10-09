@@ -77,8 +77,8 @@ template("fidl_c_target") {
     public_configs = [ "//build/cpp:fidl_gen_config" ]
 
     deps = [
-      ":${main_target_name}_tables",
       ":${main_target_name}_compile($fidl_toolchain)",
+      ":${main_target_name}_tables",
     ]
     public_deps = [
       "//zircon/public/lib/fidl",
@@ -92,10 +92,11 @@ template("fidl_c_client") {
   if (defined(invoker.name)) {
     library_name = invoker.name
   }
-  forward_variables_from(invoker, [
-                             "testonly",
-                             "visibility",
-                             ])
+  forward_variables_from(invoker,
+                         [
+                           "testonly",
+                           "visibility",
+                         ])
 
   fidl_c_target(target_name) {
     name = library_name
@@ -109,10 +110,11 @@ template("fidl_c_server") {
     library_name = invoker.name
   }
 
-  forward_variables_from(invoker, [
-                             "testonly",
-                             "visibility",
-                             ])
+  forward_variables_from(invoker,
+                         [
+                           "testonly",
+                           "visibility",
+                         ])
   fidl_c_target(target_name) {
     name = library_name
     type = "server"

@@ -56,7 +56,10 @@ template("fidlmerge_cpp") {
   template_path = invoker.template_path
   source_base = invoker.generated_source_base
 
-  generated_source_extensions = [ ".cc", ".h" ]
+  generated_source_extensions = [
+    ".cc",
+    ".h",
+  ]
   if (defined(invoker.generated_source_extensions)) {
     generated_source_extensions = invoker.generated_source_extensions
   }
@@ -99,7 +102,10 @@ template("fidlmerge_cpp") {
     ]
 
     if (defined(invoker.options)) {
-      args += [ "--options", invoker.options ]
+      args += [
+        "--options",
+        invoker.options,
+      ]
     }
 
     if (defined(invoker.amendments_path)) {

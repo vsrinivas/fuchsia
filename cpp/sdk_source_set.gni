@@ -123,23 +123,22 @@ template("sdk_source_set") {
 
     inputs = sdk_metas
 
-    outputs = [ metadata_file ]
+    outputs = [
+      metadata_file,
+    ]
 
     args = [
-      "--out",
-      rebase_path(metadata_file),
-      "--name",
-      invoker.sdk_name,
-      "--root",
-      file_base,
-      "--include-dir",
-      "$file_base/include",
-      "--deps",
-    ] + sdk_metas + [
-      "--sources",
-    ] + sdk_sources + [
-      "--headers",
-    ] + sdk_headers
+             "--out",
+             rebase_path(metadata_file),
+             "--name",
+             invoker.sdk_name,
+             "--root",
+             file_base,
+             "--include-dir",
+             "$file_base/include",
+             "--deps",
+           ] + sdk_metas + [ "--sources" ] + sdk_sources + [ "--headers" ] +
+           sdk_headers
 
     deps = sdk_deps
   }

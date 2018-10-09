@@ -20,7 +20,7 @@ source_set("libshaderc") {
   sources = [
     "include/shaderc/shaderc.h",
     "include/shaderc/shaderc.hpp",
-    "src/shaderc_private.h",
     "src/shaderc.cc",
+    "src/shaderc_private.h",
   ]
 }

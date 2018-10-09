@@ -19,9 +19,7 @@ template("sdk_executable") {
   main_target_name = target_name
 
   executable(main_target_name) {
-    forward_variables_from(invoker, "*", [
-      "category",
-    ])
+    forward_variables_from(invoker, "*", [ "category" ])
   }
 
   output_name = target_name
@@ -44,9 +42,7 @@ template("sdk_executable") {
           type = "host_tool"
           name = output_name
           root = "tools"
-          files = [
-            file_base,
-          ]
+          files = [ file_base ]
         }
       }
 
@@ -54,7 +50,7 @@ template("sdk_executable") {
         {
           source = "$root_out_dir/$output_name"
           dest = file_base
-        }
+        },
       ]
 
       non_sdk_deps = [ ":$main_target_name" ]

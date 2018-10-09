@@ -4,7 +4,7 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/fidl/toolchain.gni")
-import("//build/rust/config.gni") # for rust_config
+import("//build/rust/config.gni")  # for rust_config
 
 template("rustc_third_party_artifact") {
   # Dummy build target to match the one in rustc_artifact
@@ -99,9 +99,8 @@ template("rustc_artifact") {
   } else {
     with_lto = "none"
   }
-  assert(
-      with_lto == "none" || with_lto == "thin" || with_lto == "fat",
-      "with_lto was neither none, thin, or fat")
+  assert(with_lto == "none" || with_lto == "thin" || with_lto == "fat",
+         "with_lto was neither none, thin, or fat")
 
   # Determine the prefix and extension for the output file based on the crate type
   if (type == "bin") {
@@ -219,7 +218,10 @@ template("rustc_artifact") {
     inputs += rust_build_inputs
 
     if (with_lto != "none") {
-      args += [ "--lto", with_lto ]
+      args += [
+        "--lto",
+        with_lto,
+      ]
     }
     if (with_unit_tests) {
       args += [ "--with-unit-tests" ]
@@ -290,7 +292,10 @@ template("rustc_artifact") {
     ]
 
     if (with_lto != "none") {
-      args += ["--lto", with_lto]
+      args += [
+        "--lto",
+        with_lto,
+      ]
     }
 
     # list of paths to info about crate dependencies
