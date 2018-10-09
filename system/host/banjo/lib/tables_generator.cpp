@@ -117,24 +117,6 @@ void TablesGenerator::Generate(const coded::StructType& struct_type) {
     Emit(&tables_file_, "\"));\n\n");
 }
 
-void TablesGenerator::Generate(const coded::TableType& table_type) {
-    Emit(&tables_file_, "static const ::banjo::BanjoTableField ");
-    Emit(&tables_file_, NameFields(table_type.coded_name));
-    Emit(&tables_file_, "[] = ");
-    GenerateArray(table_type.fields);
-    Emit(&tables_file_, ";\n");
-
-    Emit(&tables_file_, "const banjo_type_t ");
-    Emit(&tables_file_, NameTable(table_type.coded_name));
-    Emit(&tables_file_, " = banjo_type_t(::banjo::BanjoCodedTable(");
-    Emit(&tables_file_, NameFields(table_type.coded_name));
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, table_type.fields.size());
-    Emit(&tables_file_, ", \"");
-    Emit(&tables_file_, table_type.qname);
-    Emit(&tables_file_, "\"));\n\n");
-}
-
 void TablesGenerator::Generate(const coded::UnionType& union_type) {
     Emit(&tables_file_, "static const banjo_type_t* ");
     Emit(&tables_file_, NameMembers(union_type.coded_name));
@@ -269,14 +251,6 @@ void TablesGenerator::Generate(const coded::StructField& field) {
     Emit(&tables_file_, ")");
 }
 
-void TablesGenerator::Generate(const coded::TableField& field) {
-    Emit(&tables_file_, "::banjo::BanjoTableField(&");
-    Emit(&tables_file_, NameTable(field.type->coded_name));
-    Emit(&tables_file_, ",");
-    Emit(&tables_file_, field.ordinal);
-    Emit(&tables_file_, ")");
-}
-
 void TablesGenerator::GeneratePointerIfNeeded(const coded::StructType& struct_type) {
     if (struct_type.referenced_by_pointer) {
         Emit(&tables_file_, "static const banjo_type_t ");
@@ -284,16 +258,6 @@ void TablesGenerator::GeneratePointerIfNeeded(const coded::StructType& struct_ty
         Emit(&tables_file_, " = banjo_type_t(::banjo::BanjoCodedStructPointer(&");
         Emit(&tables_file_, NameTable(struct_type.coded_name));
         Emit(&tables_file_, ".coded_struct));\n");
-    }
-}
-
-void TablesGenerator::GeneratePointerIfNeeded(const coded::TableType& table_type) {
-    if (table_type.referenced_by_pointer) {
-        Emit(&tables_file_, "static const banjo_type_t ");
-        Emit(&tables_file_, NameTable(table_type.pointer_name));
-        Emit(&tables_file_, " = banjo_type_t(::banjo::BanjoCodedTablePointer(&");
-        Emit(&tables_file_, NameTable(table_type.coded_name));
-        Emit(&tables_file_, ".coded_table));\n");
     }
 }
 
@@ -310,12 +274,6 @@ void TablesGenerator::GeneratePointerIfNeeded(const coded::UnionType& union_type
 void TablesGenerator::GenerateForward(const coded::StructType& struct_type) {
     Emit(&tables_file_, "extern const banjo_type_t ");
     Emit(&tables_file_, NameTable(struct_type.coded_name));
-    Emit(&tables_file_, ";\n");
-}
-
-void TablesGenerator::GenerateForward(const coded::TableType& table_type) {
-    Emit(&tables_file_, "extern const banjo_type_t ");
-    Emit(&tables_file_, NameTable(table_type.coded_name));
     Emit(&tables_file_, ";\n");
 }
 
@@ -428,17 +386,6 @@ const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
                 coded_struct_type->pointer_name, coded_struct_type));
             return coded_types_.back().get();
         }
-        case coded::Type::Kind::kTable: {
-            // Tables were compiled as part of decl compilation,
-            // but we may now need to generate the TablePointer.
-            if (identifier_type->nullability != types::Nullability::kNullable)
-                break;
-            auto coded_table_type = static_cast<coded::TableType*>(coded_type);
-            coded_table_type->referenced_by_pointer = true;
-            coded_types_.push_back(std::make_unique<coded::TablePointerType>(
-                coded_table_type->pointer_name, coded_table_type));
-            return coded_types_.back().get();
-        }
         case coded::Type::Kind::kUnion: {
             // Unions were compiled as part of decl compilation,
             // but we may now need to generate the UnionPointer.
@@ -467,7 +414,6 @@ const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
             break;
         case coded::Type::Kind::kInterfaceHandle:
         case coded::Type::Kind::kStructPointer:
-        case coded::Type::Kind::kTablePointer:
         case coded::Type::Kind::kUnionPointer:
         case coded::Type::Kind::kMessage:
         case coded::Type::Kind::kRequestHandle:
@@ -551,29 +497,6 @@ void TablesGenerator::CompileFields(const flat::Decl* decl) {
         }
         break;
     }
-    case flat::Decl::Kind::kTable: {
-        auto table_decl = static_cast<const flat::Table*>(decl);
-        coded::TableType* coded_table =
-            static_cast<coded::TableType*>(named_coded_types_[&decl->name].get());
-        std::vector<coded::TableField>& table_fields = coded_table->fields;
-        std::map<uint32_t, const flat::Table::Member*> members;
-        for (const auto& member : table_decl->members) {
-            if (!members.emplace(member.ordinal->Value(), &member).second) {
-                assert(false && "Duplicate ordinal found in table generation");
-            }
-        }
-        for (const auto& member_pair : members) {
-            const auto& member = *member_pair.second;
-            if (!member.maybe_used)
-                continue;
-            std::string member_name =
-                coded_table->coded_name + "_" + std::string(member.maybe_used->name.data());
-            auto coded_member_type = CompileType(member.maybe_used->type.get());
-            if (coded_member_type->coding_needed == coded::CodingNeeded::kNeeded)
-                table_fields.emplace_back(coded_member_type, member.ordinal->Value());
-        }
-        break;
-    }
     default: { break; }
     }
 }
@@ -623,17 +546,6 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
             &decl->name, std::make_unique<coded::InterfaceType>(std::move(interface_messages)));
         break;
     }
-    case flat::Decl::Kind::kTable: {
-        auto table_decl = static_cast<const flat::Table*>(decl);
-        std::string table_name = NameCodedTable(table_decl);
-        std::string pointer_name = NamePointer(table_name);
-        named_coded_types_.emplace(
-            &decl->name,
-            std::make_unique<coded::TableType>(std::move(table_name), std::vector<coded::TableField>(),
-                                               table_decl->typeshape.Size(),
-                                               std::move(pointer_name), NameName(table_decl->name, ".", "/")));
-        break;
-    }
     case flat::Decl::Kind::kStruct: {
         auto struct_decl = static_cast<const flat::Struct*>(decl);
         std::string struct_name = NameCodedStruct(struct_decl);
@@ -680,9 +592,6 @@ std::ostringstream TablesGenerator::Produce() {
         case coded::Type::Kind::kStruct:
             GenerateForward(*static_cast<const coded::StructType*>(coded_type));
             break;
-        case coded::Type::Kind::kTable:
-            GenerateForward(*static_cast<const coded::TableType*>(coded_type));
-            break;
         case coded::Type::Kind::kUnion:
             GenerateForward(*static_cast<const coded::UnionType*>(coded_type));
             break;
@@ -701,9 +610,6 @@ std::ostringstream TablesGenerator::Produce() {
         case coded::Type::Kind::kStruct:
             GeneratePointerIfNeeded(*static_cast<const coded::StructType*>(coded_type));
             break;
-        case coded::Type::Kind::kTable:
-            GeneratePointerIfNeeded(*static_cast<const coded::TableType*>(coded_type));
-            break;
         case coded::Type::Kind::kUnion:
             GeneratePointerIfNeeded(*static_cast<const coded::UnionType*>(coded_type));
             break;
@@ -721,8 +627,6 @@ std::ostringstream TablesGenerator::Produce() {
         switch (coded_type->kind) {
         case coded::Type::Kind::kStruct:
         case coded::Type::Kind::kStructPointer:
-        case coded::Type::Kind::kTable:
-        case coded::Type::Kind::kTablePointer:
         case coded::Type::Kind::kUnion:
         case coded::Type::Kind::kUnionPointer:
             // These are generated in the next phase.
@@ -771,9 +675,6 @@ std::ostringstream TablesGenerator::Produce() {
         switch (coded_type->kind) {
         case coded::Type::Kind::kStruct:
             Generate(*static_cast<const coded::StructType*>(coded_type));
-            break;
-        case coded::Type::Kind::kTable:
-            Generate(*static_cast<const coded::TableType*>(coded_type));
             break;
         case coded::Type::Kind::kUnion:
             Generate(*static_cast<const coded::UnionType*>(coded_type));

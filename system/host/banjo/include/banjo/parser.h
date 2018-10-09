@@ -216,11 +216,6 @@ private:
     std::unique_ptr<raw::StructDeclaration>
     ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
 
-    std::unique_ptr<raw::TableMember>
-    ParseTableMember();
-    std::unique_ptr<raw::TableDeclaration>
-    ParseTableDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
-
     std::unique_ptr<raw::UnionMember> ParseUnionMember();
     std::unique_ptr<raw::UnionDeclaration>
     ParseUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);

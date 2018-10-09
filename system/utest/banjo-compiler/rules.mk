@@ -70,7 +70,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/max_handle_tests.cpp \
     $(LOCAL_DIR)/parsing_tests.cpp \
     $(LOCAL_DIR)/superinterface_tests.cpp \
-    $(LOCAL_DIR)/table_tests.cpp \
     $(LOCAL_DIR)/using_tests.cpp \
     $(LOCAL_DIR)/visitor_unittests.cpp \
     $(BUILDGEN_DIR)/examples.cpp \

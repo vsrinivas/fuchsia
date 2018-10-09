@@ -80,15 +80,6 @@ public:
         return nullptr;
     }
 
-    const banjo::flat::Table* LookupTable(const std::string& name) {
-        for (const auto& table_decl : library_->table_declarations_) {
-            if (table_decl->GetName() == name) {
-                return table_decl.get();
-            }
-        }
-        return nullptr;
-    }
-
     const banjo::flat::Union* LookupUnion(const std::string& name) {
         for (const auto& union_decl : library_->union_declarations_) {
             if (union_decl->GetName() == name) {

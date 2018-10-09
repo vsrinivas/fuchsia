@@ -931,91 +931,6 @@ Parser::ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes, A
                                                     std::move(members));
 }
 
-std::unique_ptr<raw::TableMember>
-Parser::ParseTableMember() {
-    ASTScope scope(this);
-    std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
-    if (!Ok())
-        return Fail();
-
-    auto ordinal = ParseOrdinal();
-    if (!Ok())
-        return Fail();
-
-    if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kReserved))) {
-        if (!Ok())
-            return Fail();
-        if (attributes != nullptr)
-            return Fail("Cannot attach attributes to reserved ordinals");
-        return std::make_unique<raw::TableMember>(scope.GetSourceElement(), std::move(ordinal));
-    }
-
-    auto type = ParseType();
-    if (!Ok())
-        return Fail();
-    auto identifier = ParseIdentifier();
-    if (!Ok())
-        return Fail();
-
-    std::unique_ptr<raw::Constant> maybe_default_value;
-    if (MaybeConsumeToken(OfKind(Token::Kind::kEqual))) {
-        if (!Ok())
-            return Fail();
-        maybe_default_value = ParseConstant();
-        if (!Ok())
-            return Fail();
-    }
-
-    return std::make_unique<raw::TableMember>(scope.GetSourceElement(), std::move(ordinal), std::move(type),
-                                              std::move(identifier),
-                                              std::move(maybe_default_value), std::move(attributes));
-}
-
-std::unique_ptr<raw::TableDeclaration>
-Parser::ParseTableDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
-    std::vector<std::unique_ptr<raw::TableMember>> members;
-
-    ConsumeToken(IdentifierOfSubkind(Token::Subkind::kTable));
-    if (!Ok())
-        return Fail();
-    auto identifier = ParseIdentifier();
-    if (!Ok())
-        return Fail();
-    ConsumeToken(OfKind(Token::Kind::kLeftCurly));
-    if (!Ok())
-        return Fail();
-
-    auto parse_member = [&members, this]() {
-        switch (Peek().combined()) {
-        default:
-            ConsumeToken(OfKind(Token::Kind::kRightCurly));
-            return Done;
-
-        case CASE_TOKEN(Token::Kind::kNumericLiteral):
-        TOKEN_ATTR_CASES:
-            members.emplace_back(ParseTableMember());
-            return More;
-        }
-    };
-
-    while (parse_member() == More) {
-        if (!Ok())
-            Fail();
-        ConsumeToken(OfKind(Token::Kind::kSemicolon));
-        if (!Ok())
-            return Fail();
-    }
-    if (!Ok())
-        Fail();
-
-    if (members.empty())
-        return Fail("Tables must have at least one member");
-
-    return std::make_unique<raw::TableDeclaration>(scope.GetSourceElement(),
-                                                   std::move(attributes), std::move(identifier),
-                                                   std::move(members));
-}
-
 std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
     ASTScope scope(this);
     auto attributes = MaybeParseAttributeList();
@@ -1084,7 +999,6 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     std::vector<std::unique_ptr<raw::EnumDeclaration>> enum_declaration_list;
     std::vector<std::unique_ptr<raw::InterfaceDeclaration>> interface_declaration_list;
     std::vector<std::unique_ptr<raw::StructDeclaration>> struct_declaration_list;
-    std::vector<std::unique_ptr<raw::TableDeclaration>> table_declaration_list;
     std::vector<std::unique_ptr<raw::UnionDeclaration>> union_declaration_list;
 
     auto attributes = MaybeParseAttributeList();
@@ -1121,7 +1035,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
     auto parse_declaration = [&const_declaration_list, &enum_declaration_list,
                               &interface_declaration_list, &struct_declaration_list,
-                              &table_declaration_list, &union_declaration_list, this]() {
+                              &union_declaration_list, this]() {
         ASTScope scope(this);
         std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
         if (!Ok())
@@ -1148,10 +1062,6 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
             struct_declaration_list.emplace_back(ParseStructDeclaration(std::move(attributes), scope));
             return More;
 
-        case CASE_IDENTIFIER(Token::Subkind::kTable):
-            table_declaration_list.emplace_back(ParseTableDeclaration(std::move(attributes), scope));
-            return More;
-
         case CASE_IDENTIFIER(Token::Subkind::kUnion):
             union_declaration_list.emplace_back(ParseUnionDeclaration(std::move(attributes), scope));
             return More;
@@ -1174,7 +1084,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         scope.GetSourceElement(), end,
         std::move(attributes), std::move(library_name), std::move(using_list), std::move(const_declaration_list),
         std::move(enum_declaration_list), std::move(interface_declaration_list),
-        std::move(struct_declaration_list), std::move(table_declaration_list), std::move(union_declaration_list));
+        std::move(struct_declaration_list), std::move(union_declaration_list));
 }
 
 } // namespace banjo

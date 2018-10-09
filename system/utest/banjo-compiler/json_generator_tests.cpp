@@ -114,88 +114,12 @@ struct Simple {
       "max_handles": 0
     }
   ],
-  "table_declarations": [],
   "union_declarations": [],
   "declaration_order": [
     "banjo.test.json/Simple"
   ],
   "declarations": {
     "banjo.test.json/Simple": "struct"
-  }
-}
-)JSON"));
-    }
-
-    END_TEST;
-}
-
-bool json_generator_test_table() {
-    BEGIN_TEST;
-
-    for (int i = 0; i < kRepeatTestCount; i++) {
-        EXPECT_TRUE(checkJSONGenerator(R"BANJO(
-library banjo.test.json;
-
-table Simple {
-    1: uint8 f1;
-    2: bool f2;
-    3: reserved;
-};
-
-)BANJO",
-                                       R"JSON(
-{
-  "version": "0.0.1",
-  "name": "banjo.test.json",
-  "library_dependencies": [],
-  "const_declarations": [],
-  "enum_declarations": [],
-  "interface_declarations": [],
-  "struct_declarations": [],
-  "table_declarations": [
-    {
-      "name": "banjo.test.json/Simple",
-      "members": [
-        {
-          "ordinal": 1,
-          "reserved": false,
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint8"
-          },
-          "name": "f1",
-          "size": 1,
-          "alignment": 1,
-          "max_handles": 0
-        },
-        {
-          "ordinal": 2,
-          "reserved": false,
-          "type": {
-            "kind": "primitive",
-            "subtype": "bool"
-          },
-          "name": "f2",
-          "size": 1,
-          "alignment": 1,
-          "max_handles": 0
-        },
-        {
-          "ordinal": 3,
-          "reserved": true
-        }
-      ],
-      "size": 16,
-      "alignment": 8,
-      "max_handles": 0
-    }
-  ],
-  "union_declarations": [],
-  "declaration_order": [
-    "banjo.test.json/Simple"
-  ],
-  "declarations": {
-    "banjo.test.json/Simple": "table"
   }
 }
 )JSON"));
@@ -279,7 +203,6 @@ union PizzaOrPasta {
       "max_handles": 0
     }
   ],
-  "table_declarations": [],
   "union_declarations": [
     {
       "name": "banjo.test.json/PizzaOrPasta",
@@ -333,6 +256,5 @@ union PizzaOrPasta {
 
 BEGIN_TEST_CASE(json_generator_tests);
 RUN_TEST(json_generator_test_struct);
-RUN_TEST(json_generator_test_table);
 RUN_TEST(json_generator_test_union);
 END_TEST_CASE(json_generator_tests);

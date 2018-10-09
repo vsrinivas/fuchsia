@@ -129,19 +129,6 @@ public:
         TreeVisitor::OnStructMember(element);
     }
 
-    virtual void OnTableDeclaration(std::unique_ptr<TableDeclaration> const& element) override {
-        OnBlankLineRequiringNode();
-        TreeVisitor::OnTableDeclaration(element);
-    }
-
-    virtual void OnTableMember(std::unique_ptr<TableMember> const& element) override {
-        OnBlankLineRespectingNode();
-        ScopedBool mem(is_member_decl_);
-        ScopedBool before_colon(blank_space_before_colon_, false);
-        ScopedBool after_colon(blank_space_after_colon_, true);
-        TreeVisitor::OnTableMember(element);
-    }
-
     virtual void OnUnionDeclaration(std::unique_ptr<UnionDeclaration> const& element) override {
         OnBlankLineRequiringNode();
         TreeVisitor::OnUnionDeclaration(element);

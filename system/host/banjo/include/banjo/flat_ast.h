@@ -136,7 +136,6 @@ struct Decl {
         kEnum,
         kInterface,
         kStruct,
-        kTable,
         kUnion,
     };
 
@@ -471,43 +470,6 @@ struct Struct : public Decl {
     bool recursive = false;
 };
 
-struct Table : public Decl {
-    struct Member {
-        Member(std::unique_ptr<Ordinal> ordinal, std::unique_ptr<Type> type, SourceLocation name,
-               std::unique_ptr<Constant> maybe_default_value,
-               std::unique_ptr<raw::AttributeList> attributes)
-            : ordinal(std::move(ordinal)),
-              maybe_used(std::make_unique<Used>(std::move(type), std::move(name),
-                                                std::move(maybe_default_value),
-                                                std::move(attributes))) {}
-        Member(std::unique_ptr<Ordinal> ordinal)
-            : ordinal(std::move(ordinal)) {}
-        std::unique_ptr<Ordinal> ordinal;
-        struct Used {
-            Used(std::unique_ptr<Type> type, SourceLocation name,
-                 std::unique_ptr<Constant> maybe_default_value,
-                 std::unique_ptr<raw::AttributeList> attributes)
-                : type(std::move(type)), name(std::move(name)),
-                  maybe_default_value(std::move(maybe_default_value)),
-                  attributes(std::move(attributes)) {}
-            std::unique_ptr<Type> type;
-            SourceLocation name;
-            std::unique_ptr<Constant> maybe_default_value;
-            std::unique_ptr<raw::AttributeList> attributes;
-            TypeShape typeshape;
-        };
-        std::unique_ptr<Used> maybe_used;
-    };
-
-    Table(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
-        : Decl(Kind::kTable, std::move(attributes), std::move(name)), members(std::move(members)) {
-    }
-
-    std::vector<Member> members;
-    TypeShape typeshape;
-    bool recursive = false;
-};
-
 struct Union : public Decl {
     struct Member {
         Member(std::unique_ptr<Type> type, SourceLocation name, std::unique_ptr<raw::AttributeList> attributes)
@@ -608,7 +570,6 @@ private:
     bool
     ConsumeInterfaceDeclaration(std::unique_ptr<raw::InterfaceDeclaration> interface_declaration);
     bool ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration);
-    bool ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration);
     bool ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
 
     bool TypecheckString(const IdentifierConstant* identifier);
@@ -644,7 +605,6 @@ private:
     bool CompileEnum(Enum* enum_declaration);
     bool CompileInterface(Interface* interface_declaration);
     bool CompileStruct(Struct* struct_declaration);
-    bool CompileTable(Table* table_declaration);
     bool CompileUnion(Union* union_declaration);
 
     // Compiling a type both validates the type, and computes shape
@@ -775,7 +735,6 @@ public:
     std::vector<std::unique_ptr<Enum>> enum_declarations_;
     std::vector<std::unique_ptr<Interface>> interface_declarations_;
     std::vector<std::unique_ptr<Struct>> struct_declarations_;
-    std::vector<std::unique_ptr<Table>> table_declarations_;
     std::vector<std::unique_ptr<Union>> union_declarations_;
 
     // All Decl pointers here are non-null and are owned by the

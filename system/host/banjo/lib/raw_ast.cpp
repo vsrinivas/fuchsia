@@ -232,34 +232,6 @@ void StructDeclaration::Accept(TreeVisitor& visitor) {
     }
 }
 
-void TableMember::Accept(TreeVisitor& visitor) {
-    SourceElementMark sem(visitor, *this);
-    visitor.OnOrdinal(*ordinal);
-    if (maybe_used != nullptr) {
-        if (maybe_used->attributes != nullptr) {
-            visitor.OnAttributeList(maybe_used->attributes);
-        }
-        visitor.OnType(maybe_used->type);
-        visitor.OnIdentifier(maybe_used->identifier);
-        if (maybe_used->maybe_default_value != nullptr) {
-            visitor.OnConstant(maybe_used->maybe_default_value);
-        }
-    }
-}
-
-void TableDeclaration::Accept(TreeVisitor& visitor) {
-    SourceElementMark sem(visitor, *this);
-    if (attributes != nullptr) {
-        visitor.OnAttributeList(attributes);
-    }
-    visitor.OnIdentifier(identifier);
-    for (auto member = members.begin();
-         member != members.end();
-         ++member) {
-        visitor.OnTableMember(*member);
-    }
-}
-
 void UnionMember::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
     if (attributes != nullptr) {
@@ -309,11 +281,6 @@ void File::Accept(TreeVisitor& visitor) {
          i != struct_declaration_list.end();
          ++i) {
         visitor.OnStructDeclaration(*i);
-    }
-    for (auto i = table_declaration_list.begin();
-         i != table_declaration_list.end();
-         ++i) {
-        visitor.OnTableDeclaration(*i);
     }
     for (auto i = union_declaration_list.begin();
          i != union_declaration_list.end();

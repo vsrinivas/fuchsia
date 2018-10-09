@@ -59,7 +59,6 @@ KEYWORD(Const, "const")
 KEYWORD(Enum, "enum")
 KEYWORD(Interface, "interface")
 KEYWORD(Struct, "struct")
-KEYWORD(Table, "table")
 KEYWORD(Union, "union")
 
 KEYWORD(Bool, "bool")

@@ -51,42 +51,6 @@ struct HandleStructVector {
   vector<OneHandle>:8 sv;
 };
 
-struct HandleTableVector {
-  vector<TableWithOneHandle>:8 sv;
-};
-
-table TableWithOneBool {
-  1: bool b;
-};
-
-table TableWithOneHandle {
-  1: handle h;
-};
-
-table TableWithHandleArray {
-  1: array<handle>:8 ha;
-};
-
-table TableWithNullableHandleArray {
-  1: array<handle?>:8 ha;
-};
-
-table TableWithHandleVector {
-  1: vector<handle>:8 hv;
-};
-
-table TableWithUnboundedHandleVector {
-  1: vector<handle> hv;
-};
-
-table TableWithHandleStructVector {
-  1: vector<OneHandle>:8 sv;
-};
-
-table TableWithHandleTableVector {
-  1: vector<OneHandle>:8 sv;
-};
-
 union NoHandleUnion {
   OneBool one_bool;
   uint32 integer;
@@ -124,23 +88,6 @@ static bool simple_structs(void) {
     END_TEST;
 }
 
-static bool simple_tables(void) {
-    BEGIN_TEST;
-
-    MaxHandlesLibrary test_library;
-    EXPECT_TRUE(test_library.Compile());
-
-    auto one_bool = test_library.LookupTable("TableWithOneBool");
-    EXPECT_NONNULL(one_bool);
-    EXPECT_EQ(one_bool->typeshape.MaxHandles(), 0);
-
-    auto one_handle = test_library.LookupTable("TableWithOneHandle");
-    EXPECT_NONNULL(one_handle);
-    EXPECT_EQ(one_handle->typeshape.MaxHandles(), 1);
-
-    END_TEST;
-}
-
 static bool arrays(void) {
     BEGIN_TEST;
 
@@ -151,17 +98,9 @@ static bool arrays(void) {
     EXPECT_NONNULL(handle_array);
     EXPECT_EQ(handle_array->typeshape.MaxHandles(), 8);
 
-    auto table_with_handle_array = test_library.LookupTable("TableWithHandleArray");
-    EXPECT_NONNULL(table_with_handle_array);
-    EXPECT_EQ(table_with_handle_array->typeshape.MaxHandles(), 8);
-
     auto nullable_handle_array = test_library.LookupStruct("NullableHandleArray");
     EXPECT_NONNULL(nullable_handle_array);
     EXPECT_EQ(nullable_handle_array->typeshape.MaxHandles(), 8);
-
-    auto table_with_nullable_handle_array = test_library.LookupTable("TableWithNullableHandleArray");
-    EXPECT_NONNULL(table_with_nullable_handle_array);
-    EXPECT_EQ(table_with_nullable_handle_array->typeshape.MaxHandles(), 8);
 
     END_TEST;
 }
@@ -176,10 +115,6 @@ static bool vectors(void) {
     EXPECT_NONNULL(handle_vector);
     EXPECT_EQ(handle_vector->typeshape.MaxHandles(), 8);
 
-    auto table_with_handle_vector = test_library.LookupTable("TableWithHandleVector");
-    EXPECT_NONNULL(table_with_handle_vector);
-    EXPECT_EQ(table_with_handle_vector->typeshape.MaxHandles(), 8);
-
     auto handle_nullable_vector = test_library.LookupStruct("HandleNullableVector");
     EXPECT_NONNULL(handle_nullable_vector);
     EXPECT_EQ(handle_nullable_vector->typeshape.MaxHandles(), 8);
@@ -188,21 +123,9 @@ static bool vectors(void) {
     EXPECT_NONNULL(unbounded_handle_vector);
     EXPECT_EQ(unbounded_handle_vector->typeshape.MaxHandles(), std::numeric_limits<uint32_t>::max());
 
-    auto table_with_unbounded_handle_vector = test_library.LookupTable("TableWithUnboundedHandleVector");
-    EXPECT_NONNULL(table_with_unbounded_handle_vector);
-    EXPECT_EQ(table_with_unbounded_handle_vector->typeshape.MaxHandles(), std::numeric_limits<uint32_t>::max());
-
     auto handle_struct_vector = test_library.LookupStruct("HandleStructVector");
     EXPECT_NONNULL(handle_struct_vector);
     EXPECT_EQ(handle_struct_vector->typeshape.MaxHandles(), 8);
-
-    auto handle_table_vector = test_library.LookupStruct("HandleTableVector");
-    EXPECT_NONNULL(handle_table_vector);
-    EXPECT_EQ(handle_table_vector->typeshape.MaxHandles(), 8);
-
-    auto table_with_handle_struct_vector = test_library.LookupTable("TableWithHandleStructVector");
-    EXPECT_NONNULL(table_with_handle_struct_vector);
-    EXPECT_EQ(table_with_handle_struct_vector->typeshape.MaxHandles(), 8);
 
     END_TEST;
 }
@@ -232,7 +155,6 @@ static bool unions(void) {
 
 BEGIN_TEST_CASE(max_handles_tests);
 RUN_TEST(simple_structs);
-RUN_TEST(simple_tables);
 RUN_TEST(arrays);
 RUN_TEST(vectors);
 RUN_TEST(unions);
