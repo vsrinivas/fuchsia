@@ -82,12 +82,12 @@ infra/ninja/mac-amd64
 	04d426fab9a5bd493dc03ce7274c30c4148a1cbe
 
 infra/tools/luci/led/linux-amd64
-	git_revision:41e714f4324dd5cf66e792b7c8a76051be705f7f
-	xp9pqnyN2JiBO7nQ48Ur8SXsJ7Zx0RTG9tReeWxFIW4C
+	git_revision:364409bad34a43aaaeab8d3d92d8f890fb96d572
+	02p7RByNE_k_6cS4iZ3fyHPU4SZYpNdUUbMCxHdDC_4C
 
 infra/tools/luci/led/mac-amd64
-	git_revision:41e714f4324dd5cf66e792b7c8a76051be705f7f
-	tJwS4VMPSS5c0X7OFj2yL4LsTAc5pj8FdXlycurjnyQC
+	git_revision:364409bad34a43aaaeab8d3d92d8f890fb96d572
+	ug6nsgyr6K_xlp4GZOOWqLgtw1zNQL2nwItkCsVOGbMC
 
 infra/tools/luci/logdog/logdog/linux-amd64
 	git_revision:cf9d281c2ff478928ff11dfa4995d09a97046990
