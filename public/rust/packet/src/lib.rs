@@ -121,7 +121,7 @@
 //!                          Ipv4Packet { header, body }
 //!
 //! |-------------------------------------|--------------------|-----|
-//!              Buffer prefix                    Buffer body    Buffer suffix
+//!              Buffer prefix                 Buffer body       Buffer suffix
 //! ```
 //!
 //! We can continue this process as long as we like, repeatedly parsing
@@ -134,6 +134,216 @@
 //! re-use the buffer for serializing new packets (see the "Serialization"
 //! section of this documentation), they are limited to doing so in a smaller
 //! buffer, making it more likely that a new buffer will need to be allocated.
+//!
+//! ## Serialization
+//!
+//! In this section, we will illustrate serialization using the same packet
+//! structure that was used to illustrate parsing - a TCP segment in an IPv4
+//! packet in an Ethernet frame.
+//!
+//! Serialization comprises two tasks:
+//! - First, given a buffer with sufficient capacity, and part of the packet
+//!   already serialized, serialize the next layer of the packet. For example,
+//!   given a buffer with a TCP segment already serialized in it, serialize the
+//!   IPv4 header, resulting in an IPv4 packet containing a TCP segment.
+//! - Second, given a description of a nested sequence of packets, figure out
+//!   the constraints that a buffer must satisfy in order to be able to fit the
+//!   entire sequence, and allocate a buffer which satisfies those constraints.
+//!   This buffer is then used to serialize one layer at a time, as described in
+//!   the previous bullet.
+//!
+//! ### Serializing into a buffer
+//!
+//! The `PacketBuilder` trait is implemented by types which are capable of
+//! serializing a new layer of a packet into an existing buffer. For example, we
+//! might define an `Ipv4PacketBuilder` type, which describes the source IP
+//! address, destination IP address, and any other metadata required to generate
+//! the header of an IPv4 packet. Importantly, a `PacketBuilder` does *not*
+//! define any encapsulated packets. In order to construct a TCP segment in an
+//! IPv4 packet, we would need a separate `TcpSegmentBuilder` to describe the
+//! TCP segment.
+//!
+//! A `PacketBuilder` exposes the number of bytes it requires for headers,
+//! footers, and minimum body lengths via the `header_len`, `footer_len`, and
+//! `min_body_len` methods. It serializes via the `serialize` method.
+//!
+//! In order to serialize a `PacketBuilder`, a `SerializeBuffer` must first be
+//! constructed. A `SerializeBuffer` is a view into a `Buffer` used for
+//! serialization, and it is initialized with the proper number of bytes for the
+//! header, footer, and body. The number of bytes required for these is
+//! discovered through calls to the `PacketBuilder`'s `header_len`,
+//! `footer_len`, and `min_body_len` methods.
+//!
+//! The `PacketBuilder`'s `serialize` method consumes the `PacketBuilder` itself
+//! and the `SerializeBuffer` by value, and serializes the headers and footers
+//! of the packet into the buffer. It expects that the `SerializeBuffer` is
+//! intialized with a body equal to the body which will be encapsulated. For
+//! example, imagine that we are trying to serialize a TCP segment in an IPv4
+//! packet in an Ethernet frame, and that, so far, we have only serialized the
+//! TCP segment:
+//!
+//! ```text
+//! |-------------------------------------|++++++++++++++++++++|-----| TCP segment
+//! |-----------------|++++++++++++++++++++++++++++++++++++++++|-----| IPv4 packet
+//! |++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++| Ethernet frame
+//!
+//! |-------------------------------------|--------------------|-----|
+//!                                             TCP segment
+//!
+//! |-------------------------------------|--------------------|-----|
+//!              Buffer prefix                 Buffer body       Buffer suffix
+//! ```
+//!
+//! Note that the buffer's body is currently equal to the TCP segment, and the
+//! contents of the body are already initialized to the segment's contents.
+//!
+//! Given an `Ipv4PacketBuilder`, we call the appropriate methods to discover
+//! that it requires 20 bytes for its header. Thus, we modify the buffer by
+//! extending the body by 20 bytes, and constructing a `SerializeBuffer` whose
+//! header references the newly-added 20 bytes, and whose body references the
+//! old contents of the body, corresponding to the TCP segment.
+//!
+//! ```text
+//! |-------------------------------------|++++++++++++++++++++|-----| TCP segment
+//! |-----------------|++++++++++++++++++++++++++++++++++++++++|-----| IPv4 packet
+//! |++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++| Ethernet frame
+//!
+//! |-----------------|-------------------|--------------------|-----|
+//!                        IPv4 header          IPv4 body
+//!                             |                   |
+//!                             +-----------+       |
+//!                                         |       |
+//!                      SerializeBuffer { header, body }
+//!
+//! |-----------------|----------------------------------------|-----|
+//!    Buffer prefix                 Buffer body                 Buffer suffix
+//! ```
+//!
+//! We then pass the `SerializeBuffer` to a call to the `Ipv4PacketBuilder`'s
+//! `serialize` method, and it serializes the IPv4 header in the space provided.
+//! When the call to `serialize` returns, the `SerializeBuffer` and
+//! `Ipv4PacketBuilder` have been discarded, and the buffer's body is now equal
+//! to the bytes of the IPv4 packet.
+//!
+//! ```text
+//! |-------------------------------------|++++++++++++++++++++|-----| TCP segment
+//! |-----------------|++++++++++++++++++++++++++++++++++++++++|-----| IPv4 packet
+//! |++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++| Ethernet frame
+//!
+//! |-----------------|----------------------------------------|-----|
+//!                                  IPv4 packet
+//!
+//! |-----------------|----------------------------------------|-----|
+//!    Buffer prefix                 Buffer body                 Buffer suffix
+//! ```
+//!
+//! Now, we area ready to repeat the same process with the Ethernet layer of the
+//! packet.
+//!
+//! ### Constructing a buffer for serialization
+//!
+//! Now that we know how, given a buffer with a subset of a packet serialized
+//! into it, we can serialize the next layer of the packet, we need to figure
+//! out how to construct such a buffer in the first place.
+//!
+//! The primary challenge here is that we need to be able to commit to what
+//! we're going to serialize before we actually serialize it. For example,
+//! consider sending a TCP segment to the network. From the perspective of the
+//! TCP module of our code, we don't know how large the buffer needs to be
+//! because don't know what packet layers our TCP segment will be encapsulated
+//! inside of. If the IP layer decides to route our segment over an Ethernet
+//! link, then we'll need to have a buffer large enough for a TCP segment in an
+//! IPv4 packet in an Ethernet segment. If, on the other hand, the IP layer
+//! decides to route our segment through a GRE tunnel, then we'll need to have a
+//! buffer large enough for a TCP segment in an IPv4 packet in a GRE packet in
+//! an IP packet in an Ethernet segment.
+//!
+//! We accomplish this commit-before-serializing via the `Serializer` trait. A
+//! `Serializer` describes a packet which can be serialized in the future, but
+//! which has not yet been serialized. Unlike a `PacketBuilder`, a `Serializer`
+//! describes all layers of a packet up to a certain point. For example, a
+//! `Serializer` might describe a TCP segment, or it might describe a TCP
+//! segment in an IP packet, or it might describe a TCP segment in an IP packet
+//! in an Ethernet frame, etc.
+//!
+//! #### Constructing a `Serializer`
+//!
+//! `Serializer`s are recursive - a `Serializer` combined with a `PacketBuilder`
+//! yields a new `Serializer` which describes encapsulating the original
+//! `Serializer` in a new packet layer. For example, a `Serializer` describing a
+//! TCP segment combined with an `Ipv4PacketBuilder` yields a `Serializer` which
+//! describes a TCP segment in an IPv4 packet. Concretely, given a `Serializer`,
+//! `s`, and a `PacketBuilder`, `b`, a new `Serializer` can be constructed by
+//! calling `s.encapsulate(b)`. The [`Serializer::encapsulate`] method consumes
+//! both the `Serializer` and the `PacketBuilder` by value, and returns a new
+//! `Serializer`.
+//!
+//! Note that, while `Serializer`s are passed around by value, they are only as
+//! large in memory as the `PacketBuilder`s they're constructed from, and those
+//! should, in most cases, be quite small. If size is a concern, the
+//! `PacketBuilder` trait can be implemented for a reference type (e.g.,
+//! `&Ipv4PacketBuilder`), and references passed around instead of values.
+//!
+//! #### Constructing a buffer from a `Serializer`
+//!
+//! If `Serializer`s are constructed by starting at the innermost packet layer
+//! and working outwards, adding packet layers, then in order to turn a
+//! `Serializer` into a buffer, they are consumed by starting at the outermost
+//! packet layer and working inwards.
+//!
+//! In order to construct a buffer, the [`Serializer::serialize`] method is
+//! provided. It takes a `Bar`, which describes the constraints built up by any
+//! encapsulating layers. For example, when serializing a TCP segment in an IP
+//! packet in an Ethernet frame, the `serialize` call on the IP packet
+//! `Serializer` would be given a `Bar` describing the Ethernet frame's
+//! requirement of 18 prefix bytes for its header. This call would then compute
+//! a new `Bar` describing the combined requirement of 38 prefix bytes for the
+//! IP and Ethernet headers combined, and would pass this to a call to
+//! `serialize` on the TCP segment `Serializer`.
+//!
+//! When the innermost call to `serialize` is reached, it is that call's
+//! responsibility to produce a buffer which satisfies the constraints passed to
+//! it, and to intialize that buffer's body with the contents of its packet. For
+//! example, the TCP segment `Serializer` from the preceding example would need
+//! to produce a buffer with 38 bytes of prefix, and whose body was initialized
+//! to the bytes of the TCP segment.
+//!
+//! We can now see how `Serializer`s and `PacketBuilder`s compose - the buffer
+//! returned from a call to `serialize` satisfies the requirements of the
+//! `PacketBuilder::serialize` method - its body is initialized to the packet to
+//! be encapsulated, and enough prefix and suffix space exist to serialize this
+//! layer's header and footer. For example, the call to `Serializer::serialize`
+//! on the TCP segment serializer would return a buffer with 38 bytes of prefix
+//! and a body initialized to the bytes of the TCP segment. The call to
+//! `Serializer::serialize` on the IP packet would then pass this buffer to a
+//! call to `PacketBuilder::serialize` on its `Ipv4PacketBuilder`, resulting in
+//! a buffer with 18 bytes of prefix and a body initialized to the bytes of the
+//! entire IP packet. This buffer would then be suitable to return from the call
+//! to `Serializer::serialize`, allowing the Ethernet layer to continue
+//! operating on the buffer, and so on.
+//!
+//! Note in particular that, throughout this entire process of constructing
+//! `Serializer`s and `PacketBuilder`s and then consuming them, a buffer is only
+//! allocated once, and each byte of the packet is only serialized once. No
+//! temporary buffers or copying between buffers is required.
+//!
+//! #### Reusing buffers
+//!
+//! Another important property of the `Serializer` trait is that it can be
+//! implemented by buffers. Since buffers contain prefixes, bodies, and
+//! suffixes, and since the `Serializer::serialize` method consumes the
+//! `Serializer` by value and returns a buffer by value, a buffer is itself a
+//! valid `Serializer`. When `serialize` is called, so long as it already
+//! satisfies the constraints requested, it can simply return itself by value.
+//! If the constraints are not satisfied, it may need to produce a different
+//! buffer through some user-defined mechanism. The [`BufferSerializer`] type
+//! wraps an existing buffer and implements the `Serializer` trait as described
+//! here.
+//!
+//! This allows existing buffers to be reused in many cases. For example,
+//! consider receiving a packet in a buffer, and then responding to that packet
+//! with a new packet. The buffer that the original packet was stored in can be
+//! used to serialize the new packet, avoiding any unnecessary allocation.
 //!
 //! # Monomorphization Overflow
 //!
@@ -323,7 +533,7 @@ pub trait ParseBuffer: AsRef<[u8]> {
 pub trait ParseBufferMut: ParseBuffer + AsMut<[u8]> {
     /// Parses a mutable packet from the body.
     ///
-    /// `parse_mut` is like [`Buffer::parse`], but instead of calling
+    /// `parse_mut` is like [`ParseBuffer::parse`], but instead of calling
     /// [`P::parse`] on a [`BufferView`], it calls [`P::parse_mut`] on a
     /// [`BufferViewMut`]. The effect is that the parsed packet can contain
     /// mutable references to the buffer. This can be useful if you want to
@@ -365,7 +575,7 @@ pub trait ParseBufferMut: ParseBuffer + AsMut<[u8]> {
 /// `AsRef<[u8]>` implementation provides acecss to the body.
 ///
 /// A `Buffer` guarantees never to discard bytes from the prefix or suffix,
-/// which is an important requirement for serialization. [1] For parsing, this
+/// which is an important requirement for serialization. \[1\] For parsing, this
 /// guarantee is not needed. The subset of methods which do not require this
 /// guarantee are defined in the `ParseBuffer` trait, which does not have this
 /// requirement. `Buffer` extends `ParseBuffer`.
@@ -500,6 +710,75 @@ pub trait BufferMut: Buffer + ParseBufferMut {
         let suffix = self.suffix_len();
         self.grow_front_zero(prefix);
         self.grow_back_zero(suffix);
+    }
+
+    /// Serializes a packet in the buffer.
+    ///
+    /// `serialize` serializes the packet described in `builder` into the
+    /// buffer. The body of the buffer is used as the body of the packet, and
+    /// the prefix and suffix of the buffer are used to serialize the packet's
+    /// header and footer. This is a low-level function: you probably want the
+    /// [`Serializer`] trait instead.
+    ///
+    /// If `builder` has a minimum body size which is larger than the current
+    /// body, the body is first grown to the right (towards the end of the
+    /// buffer) with padding bytes in order to meet the minimum body size. This
+    /// is transparent to the `builder` - it always just sees a body which meets
+    /// the minimum body size requirement.
+    ///
+    /// The added padding is zeroed in order to avoid leaking the contents of
+    /// packets previously stored in the buffer.
+    ///
+    /// # Panics
+    ///
+    /// `serialize` panics if there are not enough prefix or suffix bytes to
+    /// serialize the packet. In particular, `b.serialize(buffer)` panics if
+    /// either of the following hold:
+    /// - `b.prefix_len() < buffer.header_bytes()`
+    /// - `b.len() + b.suffix_len() < buffer.min_body_bytes() +
+    ///   buffer.footer_bytes()`
+    fn serialize<B: PacketBuilder>(&mut self, builder: B) {
+        if self.len() < builder.min_body_len() {
+            // The body isn't large enough to satisfy the minimum body length
+            // requirement, so we add padding.
+
+            // SECURITY: Use _zero to ensure we zero padding bytes to prevent
+            // leaking information from packets previously stored in this
+            // buffer.
+            let len = self.len();
+            self.grow_back_zero(builder.min_body_len() - len);
+        }
+
+        let body_len = self.len();
+        // These aren't necessary for correctness (grow_xxx_zero will panic
+        // under the same conditions that these assertions will fail), but they
+        // provide nicer error messages for debugging.
+        debug_assert!(
+            self.prefix_len() >= builder.header_len(),
+            "prefix ({} bytes) too small to serialize header ({} bytes)",
+            self.prefix_len(),
+            builder.header_len()
+        );
+        debug_assert!(
+            self.suffix_len() >= builder.footer_len(),
+            "suffix ({} bytes) too small to serialize footer ({} bytes)",
+            self.suffix_len(),
+            builder.footer_len()
+        );
+        // SECURITY: _zero here is technically unncessary since it's
+        // PacketBuilder::serialize's responsibility to zero/initialize the
+        // header and footer, but we do it anyway to hedge against non-compliant
+        // PacketBuilder::serialize implementations. If this becomes a
+        // performance issue, we can revisit it, but the optimizer will probably
+        // take care of it for us.
+        self.grow_front_zero(builder.header_len());
+        self.grow_back_zero(builder.footer_len());
+
+        let body = builder.header_len()..(builder.header_len() + body_len);
+        builder.serialize(SerializeBuffer {
+            buf: self.as_mut(),
+            body,
+        });
     }
 }
 
@@ -757,11 +1036,6 @@ impl ParseMetadata {
 /// buffer. It is recommended that as much of the packet object as possible be
 /// references into the buffer in order to avoid copying for performance
 /// reasons.
-///
-/// # Inner Packets
-///
-/// Inner packets - which do not encapsulate other packets - should implement
-/// [`ParsableInnerPacket`] instead.
 pub trait ParsablePacket<B: ByteSlice, ParseArgs>: Sized {
     /// The type of errors returned from `parse` and `parse_mut`.
     type Error;
@@ -811,6 +1085,84 @@ pub trait ParsablePacket<B: ByteSlice, ParseArgs>: Sized {
 
     /// Metadata about this packet required by [`Buffer::undo_parse`].
     fn parse_metadata(&self) -> ParseMetadata;
+}
+
+/// A view into a `BufferMut` used for serializing new packets.
+///
+/// A `SerializeBuffer` is a view into a `BufferMut` which is used by the
+/// [`PacketBuilder::serialize`] method to serialize a new packet. It is
+/// constructed by the [`BufferMut::serialize`] method.
+///
+/// A `SerializeBuffer` provides separate access to the bytes which will store
+/// the header, body, and footer of the new packet. The body is initialized to
+/// contain the bytes of the packet to be encapsulated (including any padding),
+/// and it is the caller's responsibility to serialize the header and footer.
+///
+/// `SerializeBuffer` implements `AsRef<[u8]>` and `AsMut<[u8]>`, providing a
+/// reference to the entire buffer (header, body, and footer) at once.
+pub struct SerializeBuffer<'a> {
+    buf: &'a mut [u8],
+    body: Range<usize>,
+}
+
+impl<'a> SerializeBuffer<'a> {
+    /// Constructs a new `SerializeBuffer`.
+    ///
+    /// `new` constructs a new `SerializeBuffer`. The entire buffer is
+    /// initialized to `buf`. The body is set to the subset of `buf` identified
+    /// by the range `body`. The header is set to the subset of `buf` preceding
+    /// the body, and the footer is set to the subset of `buf` following the
+    /// body.
+    ///
+    /// # Panics
+    ///
+    /// `new` panics if `body` is out of range of `buf`, or if the range is
+    /// nonsensical (the end precedes the start).
+    pub fn new<R: RangeBounds<usize>>(buf: &'a mut [u8], body: R) -> SerializeBuffer<'a> {
+        let body = canonicalize_range(buf.len(), &body);
+        SerializeBuffer { buf, body }
+    }
+
+    /// Gets the bytes of the header.
+    pub fn header(&mut self) -> &mut [u8] {
+        &mut self.buf[..self.body.start]
+    }
+
+    /// Gets the bytes of the body.
+    pub fn body(&mut self) -> &mut [u8] {
+        &mut self.buf[self.body.clone()]
+    }
+
+    /// Gets the bytes of the footer.
+    pub fn footer(&mut self) -> &mut [u8] {
+        &mut self.buf[self.body.end..]
+    }
+
+    /// Gets the bytes of the header, body, and footer.
+    ///
+    /// `parts` gets references to the header, body, and footer all at once.
+    /// Because of lifetime rules and the fact that the `header`, `body`, and
+    /// `footer` methods borrow this `SerializeBuffer`, this is the only way to
+    /// construct and operate on references to more than one section of the
+    /// buffer at a time.
+    pub fn parts(&mut self) -> (&mut [u8], &mut [u8], &mut [u8]) {
+        let buf = &mut self.buf;
+        let (prefix, rest) = buf.split_at_mut(self.body.start);
+        let (body, suffix) = rest.split_at_mut(self.body.end - self.body.start);
+        (prefix, body, suffix)
+    }
+}
+
+impl<'a> AsRef<[u8]> for SerializeBuffer<'a> {
+    fn as_ref(&self) -> &[u8] {
+        self.buf
+    }
+}
+
+impl<'a> AsMut<[u8]> for SerializeBuffer<'a> {
+    fn as_mut(&mut self) -> &mut [u8] {
+        self.buf
+    }
 }
 
 fn zero(bytes: &mut [u8]) {
@@ -1043,6 +1395,27 @@ mod tests {
     }
 
     #[test]
+    fn test_either_impl_buffer() {
+        macro_rules! test_either {
+            ($variant:ident) => {
+                test_buffer::<Either<Buf<Vec<u8>>, Buf<Vec<u8>>>, _>(|len| {
+                    Either::$variant(Buf::new(ascending(len), ..))
+                });
+                let mut buf: Either<Buf<Vec<u8>>, Buf<Vec<u8>>> =
+                    Either::$variant(Buf::new(ascending(10), ..));
+                test_buffer_view(match &mut buf {
+                    Either::$variant(buf) => buf.buffer_view(),
+                    _ => unreachable!(),
+                });
+                test_buffer_view_post(&buf, true);
+            };
+        }
+
+        test_either!(A);
+        test_either!(B);
+    }
+
+    #[test]
     fn test_buf_impl_buffer() {
         test_buffer(|len| Buf::new(ascending(len), ..));
         let mut buf = Buf::new(ascending(10), ..);
@@ -1193,7 +1566,7 @@ mod tests {
     // Each panic test case needs to be in its own function, which results in an
     // explosion of test functions. These macros generates the appropriate
     // function definitions automatically for a given type, reducing the amount
-    // of code by a factor of ~3.
+    // of code by a factor of ~4.
     macro_rules! make_parse_buffer_panic_tests {
         (
             $new_empty_buffer:expr,
@@ -1248,6 +1621,13 @@ mod tests {
         &mut [][..],
         test_byte_slice_mut_shrink_panics,
         test_byte_slice_mut_nonsense_shrink_panics,
+    );
+    make_panic_tests!(
+        Either::A::<Buf<&[u8]>, Buf<&[u8]>>(Buf::new(&[][..], ..)),
+        test_either_slice_panics,
+        test_either_nonsense_slice_panics,
+        test_either_grow_front_panics,
+        test_either_grow_back_panics,
     );
     make_panic_tests!(
         Buf::new(&[][..], ..),
