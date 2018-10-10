@@ -17,15 +17,16 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <lib/fzl/fdio.h>
 #include <lib/fzl/mapped-vmo.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/thread.h>
 
 #include <zircon/assert.h>
 #include <zircon/device/block.h>
-#include <zircon/device/skip-block.h>
 #include <lib/zircon-internal/xorshiftrand.h>
 #include <zircon/process.h>
+#include <zircon/skipblock/c/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 
@@ -57,9 +58,9 @@ uint64_t base_seed;
 // Not thread safe.
 class ProgressBar {
 public:
-    ProgressBar()
+    explicit ProgressBar()
         : total_work_(0) {}
-    ProgressBar(uint32_t block_count, size_t num_threads)
+    explicit ProgressBar(uint32_t block_count, size_t num_threads)
         : total_work_(static_cast<uint32_t>(static_cast<int>(block_count * log(block_count)) *
                                             num_threads)) {}
 
@@ -93,26 +94,28 @@ private:
 // Context for thread workers.
 class WorkContext {
 public:
-    WorkContext(fbl::unique_fd fd, ProgressBar progress)
-        : fd(fbl::move(fd)), progress(progress) {}
+    explicit WorkContext(ProgressBar progress, bool okay)
+        : progress(progress), okay_(okay) {}
     ~WorkContext() {}
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(WorkContext);
 
-    // File descriptor to device being tested.
-    fbl::unique_fd fd;
     // Implementation specific information.
     struct {
         block_client::Client client;
         block_info_t info = {};
+        // File descriptor to device being tested.
+        fbl::unique_fd fd;
     } block;
     struct {
-        skip_block_partition_info_t info = {};
+        zircon_skipblock_PartitionInfo info = {};
+        fzl::FdioCaller caller;
     } skip;
     // Protects |iochk_failure| and |progress|
     fbl::Mutex lock;
     bool iochk_failure = false;
     ProgressBar progress;
+    bool okay_;
 };
 
 // Interface to abstract over block/skip-block device interface differences.
@@ -293,7 +296,7 @@ fbl::atomic<uint16_t> BlockChecker::next_txid_;
 
 class SkipBlockChecker : public Checker {
 public:
-    static zx_status_t Initialize(fbl::unique_fd& fd, skip_block_partition_info_t info,
+    static zx_status_t Initialize(fzl::FdioCaller& caller, zircon_skipblock_PartitionInfo info,
                                   fbl::unique_ptr<Checker>* checker) {
         fbl::unique_ptr<fzl::MappedVmo> mapped_vmo;
         zx_status_t status = fzl::MappedVmo::Create(block_size, "", &mapped_vmo);
@@ -302,7 +305,7 @@ public:
             return status;
         }
 
-        checker->reset(new SkipBlockChecker(fbl::move(mapped_vmo), fd, info));
+        checker->reset(new SkipBlockChecker(fbl::move(mapped_vmo), caller, info));
         return ZX_OK;
     }
 
@@ -322,17 +325,18 @@ public:
             }
 
             GenerateBlockData(block_idx, block_size);
-            skip_block_rw_operation_t request = {
+            zircon_skipblock_ReadWriteOperation request = {
                 .vmo = dup,
                 .vmo_offset = 0,
                 .block = static_cast<uint32_t>((block_idx * block_size) / info_.block_size_bytes),
                 .block_count = static_cast<uint32_t>(length / info_.block_size_bytes),
             };
             bool bad_block_grown;
-            ssize_t s = ioctl_skip_block_write(fd_.get(), &request, &bad_block_grown);
-            if (s < static_cast<ssize_t>(sizeof(bad_block_grown))) {
-                printf("ioctl_skip_block_write error %zd\n", s);
-                return s < 0 ? static_cast<zx_status_t>(s) : ZX_ERR_IO;
+            zircon_skipblock_SkipBlockWrite(caller_.borrow_channel(), &request, &st,
+                                            &bad_block_grown);
+            if (st != ZX_OK) {
+                printf("SkipBlockWrite error %d\n", st);
+                return st;
             }
         }
         return ZX_OK;
@@ -353,15 +357,15 @@ public:
                 return st;
             }
 
-            skip_block_rw_operation_t request = {
+            zircon_skipblock_ReadWriteOperation request = {
                 .vmo = dup,
                 .vmo_offset = 0,
                 .block = static_cast<uint32_t>((block_idx * block_size) / info_.block_size_bytes),
                 .block_count = static_cast<uint32_t>(length / info_.block_size_bytes),
             };
-            st = static_cast<zx_status_t>(ioctl_skip_block_read(fd_.get(), &request));
+            zircon_skipblock_SkipBlockRead(caller_.borrow_channel(), &request, &st);
             if (st != ZX_OK) {
-                printf("read block_fifo_txn error %d\n", st);
+                printf("SkipBlockRead error %d\n", st);
                 return st;
             }
             if ((st = CheckBlockData(block_idx, length)) != ZX_OK) {
@@ -374,19 +378,20 @@ public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(SkipBlockChecker);
 
 private:
-    SkipBlockChecker(fbl::unique_ptr<fzl::MappedVmo> mapped_vmo, fbl::unique_fd& fd,
-                     skip_block_partition_info_t info)
-        : Checker(mapped_vmo->GetData()), mapped_vmo_(fbl::move(mapped_vmo)), fd_(fd), info_(info) {}
+    SkipBlockChecker(fbl::unique_ptr<fzl::MappedVmo> mapped_vmo, fzl::FdioCaller& caller,
+                     zircon_skipblock_PartitionInfo info)
+        : Checker(mapped_vmo->GetData()), mapped_vmo_(fbl::move(mapped_vmo)), caller_(caller),
+          info_(info) {}
     ~SkipBlockChecker() = default;
 
     fbl::unique_ptr<fzl::MappedVmo> mapped_vmo_;
-    fbl::unique_fd& fd_;
-    skip_block_partition_info_t info_;
+    fzl::FdioCaller& caller_;
+    zircon_skipblock_PartitionInfo info_;
 };
 
 zx_status_t InitializeChecker(WorkContext& ctx, fbl::unique_ptr<Checker>* checker) {
-    return skip ? SkipBlockChecker::Initialize(ctx.fd, ctx.skip.info, checker)
-                : BlockChecker::Initialize(ctx.fd, ctx.block.info, ctx.block.client, checker);
+    return skip ? SkipBlockChecker::Initialize(ctx.skip.caller, ctx.skip.info, checker)
+                : BlockChecker::Initialize(ctx.block.fd, ctx.block.info, ctx.block.client, checker);
 }
 
 zx_status_t InitializeDevice(WorkContext& ctx) {
@@ -561,18 +566,21 @@ int iochk(int argc, char** argv) {
     }
     printf("seed is %ld\n", base_seed);
 
-    WorkContext ctx(fbl::move(fd), ProgressBar());
+    WorkContext ctx(ProgressBar(), false);
 
     if (skip) {
+        ctx.skip.caller.reset(fbl::move(fd));
         // Skip Block Device Setup.
-        skip_block_partition_info_t info;
-        ssize_t s = ioctl_skip_block_get_partition_info(ctx.fd.get(), &info);
-        if (s != sizeof(info)) {
-            printf("unable to get skip-block partition info: %zd\n", s);
-            printf("fd: %d\n", ctx.fd.get());
+        zx_status_t status;
+        zircon_skipblock_PartitionInfo info;
+        zircon_skipblock_SkipBlockGetPartitionInfo(ctx.skip.caller.borrow_channel(), &status,
+                                                   &info);
+        if (status != ZX_OK) {
+            printf("unable to get skip-block partition info: %d\n", status);
+            printf("fd: %d\n", ctx.skip.caller.release().get());
             return -1;
         }
-        printf("opened %s - block_size_bytes=%zu, partition_block_count=%lu\n", device,
+        printf("opened %s - block_size_bytes=%lu, partition_block_count=%u\n", device,
                info.block_size_bytes, info.partition_block_count);
 
         ctx.skip.info = info;
@@ -601,9 +609,10 @@ int iochk(int argc, char** argv) {
             return -1;
         }
     } else {
+        ctx.block.fd = fbl::move(fd);
         // Block Device Setup.
         block_info_t info;
-        if (ioctl_block_get_info(ctx.fd.get(), &info) != sizeof(info)) {
+        if (ioctl_block_get_info(ctx.block.fd.get(), &info) != sizeof(info)) {
             printf("unable to get block info\n");
             return -1;
         }
@@ -641,7 +650,8 @@ int iochk(int argc, char** argv) {
         }
 
         zx::fifo fifo;
-        if (ioctl_block_get_fifos(ctx.fd.get(), fifo.reset_and_get_address()) != sizeof(fifo)) {
+        if (ioctl_block_get_fifos(ctx.block.fd.get(),
+                                  fifo.reset_and_get_address()) != sizeof(fifo)) {
             printf("cannot get fifo for device\n");
             return -1;
         }

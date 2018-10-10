@@ -12,6 +12,7 @@
 #include <ddk/protocol/nand.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/vmo.h>
@@ -23,7 +24,7 @@ namespace nand {
 namespace {
 
 struct BlockOperationContext {
-    skip_block_rw_operation_t op;
+    ReadWriteOperation op;
     nand_info_t* nand_info;
     LogicalToPhysicalMap* block_map;
     ddk::NandProtocolProxy* nand;
@@ -114,6 +115,33 @@ void EraseCompletionCallback(nand_op_t* op, zx_status_t status) {
     ctx->nand->Queue(op);
     return;
 }
+
+// FIDL Message -> SkipBlockDevice translators.
+zx_status_t GetPartitionInfo(void* ctx, fidl_txn_t* txn) {
+    auto* device = reinterpret_cast<SkipBlockDevice*>(ctx);
+    PartitionInfo info;
+    zx_status_t status = device->GetPartitionInfo(&info);
+    return zircon_skipblock_SkipBlockGetPartitionInfo_reply(txn, status, &info);
+}
+
+zx_status_t Read(void* ctx, const ReadWriteOperation* op, fidl_txn_t* txn) {
+    auto* device = reinterpret_cast<SkipBlockDevice*>(ctx);
+    zx_status_t status = device->Read(*op);
+    return zircon_skipblock_SkipBlockRead_reply(txn, status);
+}
+
+zx_status_t Write(void* ctx, const ReadWriteOperation* op, fidl_txn_t* txn) {
+    auto* device = reinterpret_cast<SkipBlockDevice*>(ctx);
+    bool bad_block_grown;
+    zx_status_t status = device->Write(*op, & bad_block_grown);
+    return zircon_skipblock_SkipBlockWrite_reply(txn, status, bad_block_grown);
+}
+
+zircon_skipblock_SkipBlock_ops fidl_ops = {
+    .GetPartitionInfo = GetPartitionInfo,
+    .Read = Read,
+    .Write = Write,
+};
 
 } // namespace
 
@@ -220,7 +248,9 @@ zx_status_t SkipBlockDevice::Bind() {
     return DdkAdd("skip-block");
 }
 
-zx_status_t SkipBlockDevice::GetPartitionInfo(skip_block_partition_info_t* info) const {
+zx_status_t SkipBlockDevice::GetPartitionInfo(PartitionInfo* info) {
+    fbl::AutoLock al(&lock_);
+
     info->block_size_bytes = GetBlockSize();
     uint32_t logical_block_count = UINT32_MAX;
     for (uint32_t copy = 0; copy < copy_count_; copy++) {
@@ -232,7 +262,7 @@ zx_status_t SkipBlockDevice::GetPartitionInfo(skip_block_partition_info_t* info)
     return ZX_OK;
 }
 
-zx_status_t SkipBlockDevice::ValidateVmo(const skip_block_rw_operation_t& op) const {
+zx_status_t SkipBlockDevice::ValidateVmo(const ReadWriteOperation& op) const {
     uint64_t vmo_size;
 
     zx_status_t status = zx_vmo_get_size(op.vmo, &vmo_size);
@@ -245,7 +275,9 @@ zx_status_t SkipBlockDevice::ValidateVmo(const skip_block_rw_operation_t& op) co
     return ZX_OK;
 }
 
-zx_status_t SkipBlockDevice::Read(const skip_block_rw_operation_t& op) {
+zx_status_t SkipBlockDevice::Read(const ReadWriteOperation& op) {
+    fbl::AutoLock al(&lock_);
+
     auto vmo = zx::vmo(op.vmo);
     zx_status_t status = ValidateVmo(op);
     if (status != ZX_OK) {
@@ -293,7 +325,9 @@ zx_status_t SkipBlockDevice::Read(const skip_block_rw_operation_t& op) {
     return op_context.status;
 }
 
-zx_status_t SkipBlockDevice::Write(const skip_block_rw_operation_t& op, bool* bad_block_grown) {
+zx_status_t SkipBlockDevice::Write(const ReadWriteOperation& op, bool* bad_block_grown) {
+    fbl::AutoLock al(&lock_);
+
     auto vmo = zx::vmo(op.vmo);
     zx_status_t status = ValidateVmo(op);
     if (status != ZX_OK) {
@@ -369,41 +403,8 @@ zx_off_t SkipBlockDevice::DdkGetSize() {
     return GetBlockSize() * logical_block_count;
 }
 
-zx_status_t SkipBlockDevice::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                                      void* out_buf, size_t out_len, size_t* out_actual) {
-    fbl::AutoLock lock(&lock_);
-
-    zxlogf(TRACE, "skip-block: IOCTL %x\n", op);
-
-    switch (op) {
-    case IOCTL_SKIP_BLOCK_GET_PARTITION_INFO:
-        if (!out_buf || out_len < sizeof(skip_block_partition_info_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        *out_actual = sizeof(skip_block_partition_info_t);
-        return GetPartitionInfo(static_cast<skip_block_partition_info_t*>(out_buf));
-
-    case IOCTL_SKIP_BLOCK_READ:
-        if (!in_buf || in_len < sizeof(skip_block_rw_operation_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        return Read(*static_cast<const skip_block_rw_operation_t*>(in_buf));
-
-    case IOCTL_SKIP_BLOCK_WRITE: {
-        if (!in_buf || in_len < sizeof(skip_block_rw_operation_t) ||
-            !out_buf || out_len < sizeof(bool)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        zx_status_t status = Write(*static_cast<const skip_block_rw_operation_t*>(in_buf),
-                                   static_cast<bool*>(out_buf));
-        if (status == ZX_OK) {
-            *out_actual = sizeof(bool);
-        }
-        return status;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+zx_status_t SkipBlockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return zircon_skipblock_SkipBlock_dispatch(this, txn, msg, &fidl_ops);
 }
 
 } // namespace nand

@@ -17,6 +17,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
+    system/ulib/fidl \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
@@ -28,6 +29,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/zircon-nand \
+    system/fidl/zircon-nand.skipblock
 
 include make/module.mk
 

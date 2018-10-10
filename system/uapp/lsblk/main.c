@@ -14,8 +14,9 @@
 #include <unistd.h>
 #include <limits.h>
 
+#include <lib/fdio/unsafe.h>
 #include <zircon/device/block.h>
-#include <zircon/device/skip-block.h>
+#include <zircon/skipblock/c/fidl.h>
 #include <zircon/device/device.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -142,8 +143,13 @@ static int cmd_list_skip_blk(void) {
             strcpy(info.topo, "UNKNOWN");
         }
 
-        skip_block_partition_info_t partition_info;
-        if (ioctl_skip_block_get_partition_info(fd, &partition_info) > 0) {
+        fdio_t* io = fdio_unsafe_fd_to_io(fd);
+        zx_handle_t channel = fdio_unsafe_borrow_channel(io);
+
+        zx_status_t status;
+        zircon_skipblock_PartitionInfo partition_info;
+        zircon_skipblock_SkipBlockGetPartitionInfo(channel, &status, &partition_info);
+        if (status == ZX_OK) {
             size_to_cstring(info.sizestr, sizeof(info.sizestr),
                             partition_info.block_size_bytes * partition_info.partition_block_count);
             uint8_to_guid_string(info.guid, partition_info.partition_guid);
@@ -160,12 +166,16 @@ devdone:
 }
 
 static int try_read_skip_blk(int fd, off_t offset, size_t count) {
+    fdio_t* io = fdio_unsafe_fd_to_io(fd);
+    zx_handle_t channel = fdio_unsafe_borrow_channel(io);
+
     // check that count and offset are aligned to block size
     uint64_t blksize;
-    skip_block_partition_info_t info;
-    ssize_t rc = ioctl_skip_block_get_partition_info(fd, &info);
-    if (rc < (ssize_t)sizeof(info)) {
-        return rc;
+    zx_status_t status;
+    zircon_skipblock_PartitionInfo info;
+    zircon_skipblock_SkipBlockGetPartitionInfo(channel, &status, &info);
+    if (status != ZX_OK) {
+        return status;
     }
     blksize = info.block_size_bytes;
     if (count % blksize) {
@@ -184,6 +194,7 @@ static int try_read_skip_blk(int fd, off_t offset, size_t count) {
         fprintf(stderr, "No memory\n");
         return -1;
     }
+    int rc = 0;
     if (zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                     0, vmo, 0, count, (uintptr_t*) &buf) != ZX_OK) {
         fprintf(stderr, "Failed to map vmo\n");
@@ -192,21 +203,22 @@ static int try_read_skip_blk(int fd, off_t offset, size_t count) {
     }
     if (zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
         fprintf(stderr, "Cannot duplicate handle\n");
+        rc = -1;
         goto out2;
     }
 
     // read the data
-    skip_block_rw_operation_t op = {
+    zircon_skipblock_ReadWriteOperation op = {
         .vmo = dup,
         .vmo_offset = 0,
         .block = offset / blksize,
         .block_count = count / blksize,
     };
 
-    ssize_t s = ioctl_skip_block_read(fd, &op);
-    if (s < 0) {
-        fprintf(stderr, "Error %zd in ioctl_skip_block_read()\n", s);
-        rc = s;
+    zircon_skipblock_SkipBlockRead(channel, &op, &status);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Error %d in SkipBlockRead()\n", status);
+        rc = status;
         goto out2;
     }
 

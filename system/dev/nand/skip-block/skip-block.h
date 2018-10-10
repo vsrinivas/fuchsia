@@ -16,7 +16,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
-#include <zircon/device/skip-block.h>
+#include <zircon/skipblock/c/fidl.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
@@ -24,8 +24,12 @@
 
 namespace nand {
 
+using PartitionInfo = zircon_skipblock_PartitionInfo;
+using ReadWriteOperation = zircon_skipblock_ReadWriteOperation;
+
 class SkipBlockDevice;
-using DeviceType = ddk::Device<SkipBlockDevice, ddk::GetSizable, ddk::Ioctlable, ddk::Unbindable>;
+using DeviceType = ddk::Device<SkipBlockDevice, ddk::GetSizable, ddk::Unbindable,
+                               ddk::Messageable>;
 
 class SkipBlockDevice : public DeviceType,
                         public ddk::SkipBlockProtocol {
@@ -37,10 +41,14 @@ public:
 
     // Device protocol implementation.
     zx_off_t DdkGetSize();
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* out_actual);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
     void DdkUnbind() { DdkRemove(); }
     void DdkRelease() { delete this; }
+
+    // skip-block fidl implementation.
+    zx_status_t GetPartitionInfo(PartitionInfo* info);
+    zx_status_t Read(const ReadWriteOperation& info);
+    zx_status_t Write(const ReadWriteOperation& info, bool* bad_block_grown);
 
 private:
     explicit SkipBlockDevice(zx_device_t* parent, nand_protocol_t nand_proto,
@@ -57,12 +65,7 @@ private:
     // Helper to get bad block list in a more idiomatic container.
     zx_status_t GetBadBlockList(fbl::Array<uint32_t>* bad_block_list) TA_REQ(lock_);
     // Helper to validate VMO received through IOCTL.
-    zx_status_t ValidateVmo(const skip_block_rw_operation_t& op) const;
-
-    // skip-block IOCTL implementation.
-    zx_status_t GetPartitionInfo(skip_block_partition_info_t* info) const TA_REQ(lock_);
-    zx_status_t Read(const skip_block_rw_operation_t& info) TA_REQ(lock_);
-    zx_status_t Write(const skip_block_rw_operation_t& info, bool* bad_block_grown) TA_REQ(lock_);
+    zx_status_t ValidateVmo(const ReadWriteOperation& op) const;
 
     nand_protocol_t nand_proto_;
     bad_block_protocol_t bad_block_proto_;

@@ -12,8 +12,9 @@
 #include <fs-management/fvm.h>
 #include <gpt/cros.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fzl/fdio.h>
 #include <zircon/device/device.h>
-#include <zircon/device/skip-block.h>
+#include <zircon/skipblock/c/fidl.h>
 #include <zircon/status.h>
 #include <zxcrypt/volume.h>
 
@@ -144,9 +145,14 @@ zx_status_t OpenSkipBlockPartition(const uint8_t* type_guid, zx_duration_t timeo
         if (TestSkipBlockFilter && TestSkipBlockFilter(fd)) {
             return true;
         }
-        skip_block_partition_info_t part_info;
-        if (ioctl_skip_block_get_partition_info(fd.get(), &part_info) < 0 ||
-            memcmp(part_info.partition_guid, type_guid, GUID_LEN) != 0) {
+
+        fzl::FdioCaller caller(fbl::unique_fd(fd.get()));
+
+        zx_status_t status;
+        zircon_skipblock_PartitionInfo info;
+        zircon_skipblock_SkipBlockGetPartitionInfo(caller.borrow_channel(), &status, &info);
+        caller.release().release();
+        if (status != ZX_OK || memcmp(info.partition_guid, type_guid, GUID_LEN) != 0) {
             return true;
         }
         return false;
@@ -1072,11 +1078,17 @@ zx_status_t SkipBlockDevicePartitioner::GetBlockSize(const fbl::unique_fd& devic
         return ZX_OK;
     }
 
-    skip_block_partition_info_t info;
-    if ((r = ioctl_skip_block_get_partition_info(device_fd.get(), &info) < 0)) {
-        return ZX_ERR_IO;
+    fzl::FdioCaller caller(fbl::unique_fd(device_fd.get()));
+
+    zx_status_t status;
+    zircon_skipblock_PartitionInfo part_info;
+    zircon_skipblock_SkipBlockGetPartitionInfo(caller.borrow_channel(), &status, &part_info);
+    caller.release().release();
+    if (status != ZX_OK) {
+        ERROR("Failed to get partition info with status: %d\n", status);
+        return status;
     }
-    *block_size = static_cast<uint32_t>(info.block_size_bytes);
+    *block_size = static_cast<uint32_t>(part_info.block_size_bytes);
 
     return ZX_OK;
 }

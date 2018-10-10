@@ -21,13 +21,14 @@
 #include <fvm/fvm-lz4.h>
 #include <fvm/fvm-sparse.h>
 #include <lib/cksum.h>
+#include <lib/fzl/fdio.h>
 #include <lib/fzl/mapped-vmo.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
 #include <zircon/device/device.h>
-#include <zircon/device/skip-block.h>
+#include <zircon/skipblock/c/fidl.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zxcrypt/volume.h>
@@ -252,7 +253,7 @@ zx_status_t WriteVmoToBlock(fzl::MappedVmo* mvmo, size_t vmo_size,
 
 // Writes a raw (non-FVM) partition to a skip-block device from a VMO.
 zx_status_t WriteVmoToSkipBlock(fzl::MappedVmo* mvmo, size_t vmo_size,
-                                const fbl::unique_fd& partition_fd, uint32_t block_size_bytes) {
+                                const fzl::FdioCaller& caller, uint32_t block_size_bytes) {
     ZX_ASSERT(vmo_size % block_size_bytes == 0);
 
     zx::vmo dup;
@@ -263,7 +264,7 @@ zx_status_t WriteVmoToSkipBlock(fzl::MappedVmo* mvmo, size_t vmo_size,
         return status;
     }
 
-    skip_block_rw_operation_t operation = {
+    zircon_skipblock_ReadWriteOperation operation = {
         .vmo = dup.release(),
         .vmo_offset = 0,
         .block = 0,
@@ -271,8 +272,8 @@ zx_status_t WriteVmoToSkipBlock(fzl::MappedVmo* mvmo, size_t vmo_size,
     };
     bool bad_block_grown;
 
-    if ((status = static_cast<zx_status_t>(ioctl_skip_block_write(
-             partition_fd.get(), &operation, &bad_block_grown))) < 0) {
+    zircon_skipblock_SkipBlockWrite(caller.borrow_channel(), &operation, &status, &bad_block_grown);
+    if (status != ZX_OK) {
         ERROR("Error writing partition data: %s\n", zx_status_get_string(status));
         return status;
     }
@@ -897,7 +898,9 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
         return status;
     }
     if (partitioner->UseSkipBlockInterface()) {
-        status = WriteVmoToSkipBlock(mvmo.get(), payload_size, partition_fd, block_size_bytes);
+        fzl::FdioCaller caller(fbl::move(partition_fd));
+        status = WriteVmoToSkipBlock(mvmo.get(), payload_size, caller, block_size_bytes);
+        partition_fd = caller.release();
     } else {
         status = WriteVmoToBlock(mvmo.get(), payload_size, partition_fd, block_size_bytes);
     }
