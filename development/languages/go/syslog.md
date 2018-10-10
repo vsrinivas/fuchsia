@@ -7,8 +7,8 @@ This document explains how to use golang syslogger library.
 
 ```
 deps = [
+    "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/syslog/go/src/syslog",
-    "//garnet/public/lib/app/go/src/app",
 ]
 ```
 
@@ -26,7 +26,7 @@ import (
 
 func main() {
     ctx := context.CreateFromStartupInfo()
-    err := logger.InitDefaultLogger(ctx.GetConnector())
+    err := logger.InitDefaultLogger(ctx.Connector())
 }
 ```
 
@@ -41,7 +41,7 @@ import (
 func main() {
     ctx := context.CreateFromStartupInfo()
     // Global tags, max 4 tags can be passed. Every log message would be tagged using these.
-    err := logger.InitDefaultLoggerWithTags(ctx.GetConnector(), tag1, tag2)
+    err := logger.InitDefaultLoggerWithTags(ctx.Connector(), tag1, tag2)
 }
 ```
 
