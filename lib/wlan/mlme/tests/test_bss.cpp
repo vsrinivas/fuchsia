@@ -20,7 +20,7 @@
 
 namespace wlan {
 
-namespace wlan_mlme = wlan_mlme;
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 zx_status_t WriteSsid(ElementWriter* w, const uint8_t* ssid, size_t ssid_len) {
     if (!w->write<SsidElement>(ssid, ssid_len)) {

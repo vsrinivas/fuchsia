@@ -57,17 +57,17 @@ static constexpr uint8_t kRsne[] = {
 static constexpr uint8_t kCipherOui[3] = {0x96, 0x85, 0x74};
 static constexpr uint8_t kCipherSuiteType = 0x11;
 
-zx_status_t CreateStartRequest(MlmeMsg<wlan_mlme::StartRequest>*, bool protected_ap);
-zx_status_t CreateJoinRequest(MlmeMsg<wlan_mlme::JoinRequest>*);
-zx_status_t CreateAuthRequest(MlmeMsg<wlan_mlme::AuthenticateRequest>*);
-zx_status_t CreateAuthResponse(MlmeMsg<wlan_mlme::AuthenticateResponse>*,
-                               wlan_mlme::AuthenticateResultCodes result_code);
-zx_status_t CreateAssocRequest(MlmeMsg<wlan_mlme::AssociateRequest>* out_msg);
-zx_status_t CreateAssocResponse(MlmeMsg<wlan_mlme::AssociateResponse>*,
-                                wlan_mlme::AssociateResultCodes result_code);
-zx_status_t CreateEapolRequest(MlmeMsg<wlan_mlme::EapolRequest>*);
-zx_status_t CreateSetKeysRequest(MlmeMsg<wlan_mlme::SetKeysRequest>*, std::vector<uint8_t> key_data,
-                                 wlan_mlme::KeyType);
+zx_status_t CreateStartRequest(MlmeMsg<::fuchsia::wlan::mlme::StartRequest>*, bool protected_ap);
+zx_status_t CreateJoinRequest(MlmeMsg<::fuchsia::wlan::mlme::JoinRequest>*);
+zx_status_t CreateAuthRequest(MlmeMsg<::fuchsia::wlan::mlme::AuthenticateRequest>*);
+zx_status_t CreateAuthResponse(MlmeMsg<::fuchsia::wlan::mlme::AuthenticateResponse>*,
+                               ::fuchsia::wlan::mlme::AuthenticateResultCodes result_code);
+zx_status_t CreateAssocRequest(MlmeMsg<::fuchsia::wlan::mlme::AssociateRequest>* out_msg);
+zx_status_t CreateAssocResponse(MlmeMsg<::fuchsia::wlan::mlme::AssociateResponse>*,
+                                ::fuchsia::wlan::mlme::AssociateResultCodes result_code);
+zx_status_t CreateEapolRequest(MlmeMsg<::fuchsia::wlan::mlme::EapolRequest>*);
+zx_status_t CreateSetKeysRequest(MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest>*,
+                                 std::vector<uint8_t> key_data, ::fuchsia::wlan::mlme::KeyType);
 zx_status_t CreateAuthReqFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateAuthRespFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateBeaconFrame(fbl::unique_ptr<Packet>*);
@@ -90,16 +90,17 @@ template <typename M, typename E>
 using enable_if_same = std::enable_if_t<std::is_same<M, E>::value, zx_status_t>;
 
 template <typename M>
-enable_if_same<M, wlan_mlme::AuthenticateRequest> CreateMlmeMsg(MlmeMsg<M>* msg) {
+enable_if_same<M, ::fuchsia::wlan::mlme::AuthenticateRequest> CreateMlmeMsg(MlmeMsg<M>* msg) {
     return CreateAuthRequest(msg);
 }
 
-template <typename M> enable_if_same<M, wlan_mlme::JoinRequest> CreateMlmeMsg(MlmeMsg<M>* msg) {
+template <typename M>
+enable_if_same<M, ::fuchsia::wlan::mlme::JoinRequest> CreateMlmeMsg(MlmeMsg<M>* msg) {
     return CreateJoinRequest(msg);
 }
 
 template <typename M>
-enable_if_same<M, wlan_mlme::AssociateRequest> CreateMlmeMsg(MlmeMsg<M>* msg) {
+enable_if_same<M, ::fuchsia::wlan::mlme::AssociateRequest> CreateMlmeMsg(MlmeMsg<M>* msg) {
     return CreateAssocRequest(msg);
 }
 

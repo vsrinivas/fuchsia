@@ -13,8 +13,6 @@ namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
-namespace key {
-
 std::optional<wlan_key_config_t> ToKeyConfig(const wlan_mlme::SetKeyDescriptor& key_descriptor) {
     if (key_descriptor.key.is_null()) { return std::nullopt; }
 
@@ -46,7 +44,5 @@ std::optional<wlan_key_config_t> ToKeyConfig(const wlan_mlme::SetKeyDescriptor& 
     memcpy(key_config.peer_addr, key_descriptor.address.data(), sizeof(key_config.peer_addr));
     return key_config;
 }
-
-} // namespace key
 
 } // namespace wlan

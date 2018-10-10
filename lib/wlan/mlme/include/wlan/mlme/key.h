@@ -11,12 +11,7 @@
 
 namespace wlan {
 
-namespace wlan_mlme = ::fuchsia::wlan::mlme;
-
-namespace key {
-
-std::optional<wlan_key_config_t> ToKeyConfig(const wlan_mlme::SetKeyDescriptor& key_descriptor);
-
-} // namespace key
+std::optional<wlan_key_config_t> ToKeyConfig(
+    const ::fuchsia::wlan::mlme::SetKeyDescriptor& key_descriptor);
 
 } // namespace wlan

@@ -28,8 +28,6 @@
 
 namespace wlan {
 
-namespace wlan_mlme = wlan_mlme;
-
 class Packet;
 
 // Information defined only within a context of association
@@ -96,7 +94,8 @@ class Station {
     }
 
     bool IsHtOrLater() const {
-        return (join_phy_ == wlan_mlme::PHY::HT || join_phy_ == wlan_mlme::PHY::VHT);
+        return (join_phy_ == ::fuchsia::wlan::mlme::PHY::HT ||
+                join_phy_ == ::fuchsia::wlan::mlme::PHY::VHT);
     }
 
     wlan_channel_t GetBssChan() const {
@@ -155,12 +154,13 @@ class Station {
     zx_status_t HandleAmsduFrame(DataFrame<AmsduSubframeHeader>&&);
     zx_status_t HandleAddBaRequest(const AddBaRequestFrame&);
 
-    zx_status_t HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& req);
-    zx_status_t HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequest>& req);
-    zx_status_t HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::DeauthenticateRequest>& req);
-    zx_status_t HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateRequest>& req);
-    zx_status_t HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& req);
-    zx_status_t HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysRequest>& req);
+    zx_status_t HandleMlmeJoinReq(const MlmeMsg<::fuchsia::wlan::mlme::JoinRequest>& req);
+    zx_status_t HandleMlmeAuthReq(const MlmeMsg<::fuchsia::wlan::mlme::AuthenticateRequest>& req);
+    zx_status_t HandleMlmeDeauthReq(
+        const MlmeMsg<::fuchsia::wlan::mlme::DeauthenticateRequest>& req);
+    zx_status_t HandleMlmeAssocReq(const MlmeMsg<::fuchsia::wlan::mlme::AssociateRequest>& req);
+    zx_status_t HandleMlmeEapolReq(const MlmeMsg<::fuchsia::wlan::mlme::EapolRequest>& req);
+    zx_status_t HandleMlmeSetKeysReq(const MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest>& req);
 
     zx_status_t SendAddBaRequestFrame();
 
@@ -168,7 +168,7 @@ class Station {
     zx_status_t SendNonData(fbl::unique_ptr<Packet> packet);
     zx_status_t SetPowerManagementMode(bool ps_mode);
     zx_status_t SendPsPoll();
-    zx_status_t SendDeauthFrame(wlan_mlme::ReasonCode reason_code);
+    zx_status_t SendDeauthFrame(::fuchsia::wlan::mlme::ReasonCode reason_code);
     void SendBufferedUnits();
     zx_status_t SendWlan(fbl::unique_ptr<Packet> packet);
     void DumpDataFrame(const DataFrameView<>&);
@@ -193,7 +193,7 @@ class Station {
     DeviceInterface* device_;
     TimerManager timer_mgr_;
     ChannelScheduler* chan_sched_;
-    wlan_mlme::BSSDescriptionPtr bss_;
+    ::fuchsia::wlan::mlme::BSSDescriptionPtr bss_;
     common::MacAddr bssid_;
     Sequence seq_;
 
@@ -215,7 +215,7 @@ class Station {
     eapol::PortState controlled_port_ = eapol::PortState::kBlocked;
 
     wlan_channel_t join_chan_;
-    wlan_mlme::PHY join_phy_;
+    ::fuchsia::wlan::mlme::PHY join_phy_;
     common::WlanStats<common::ClientMlmeStats, ::fuchsia::wlan::stats::ClientMlmeStats> stats_;
     AssocContext assoc_ctx_{};
 

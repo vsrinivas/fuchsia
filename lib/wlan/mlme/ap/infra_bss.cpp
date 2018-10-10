@@ -269,7 +269,7 @@ zx_status_t InfraBss::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysReque
     }
 
     for (auto& key_desc : *req.body()->keylist) {
-        auto key_config = key::ToKeyConfig(key_desc);
+        auto key_config = ToKeyConfig(key_desc);
         if (!key_config.has_value()) { return ZX_ERR_NOT_SUPPORTED; }
 
         auto status = device_->SetKey(&key_config.value());

@@ -27,6 +27,7 @@
 
 namespace wlan {
 
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 using common::dBm;
 
@@ -1152,7 +1153,7 @@ zx_status_t Station::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysReques
     debugfn();
 
     for (auto& keyDesc : *req.body()->keylist) {
-        auto key_config = key::ToKeyConfig(keyDesc);
+        auto key_config = ToKeyConfig(keyDesc);
         if (!key_config.has_value()) { return ZX_ERR_NOT_SUPPORTED; }
 
         auto status = device_->SetKey(&key_config.value());
