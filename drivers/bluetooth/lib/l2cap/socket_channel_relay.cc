@@ -254,7 +254,7 @@ void SocketChannelRelay::ServiceSocketWriteQueue() {
     ZX_DEBUG_ASSERT(socket_write_queue_.front().length());
 
     const SDU& sdu = socket_write_queue_.front();
-    PDU::Reader(&sdu).ReadNext(
+    const auto read_success = PDU::Reader(&sdu).ReadNext(
         sdu.length(), [&](const common::ByteBuffer& pdu) {
           size_t n_bytes_written = 0;
           write_res =
@@ -270,8 +270,11 @@ void SocketChannelRelay::ServiceSocketWriteQueue() {
                    pdu.size(), channel_->id(), zx_status_get_string(write_res));
             return;
           }
-          ZX_DEBUG_ASSERT(n_bytes_written == pdu.size());
+          ZX_DEBUG_ASSERT_MSG(n_bytes_written == pdu.size(),
+                              "(n_bytes_written=%zu, pdu.size()=%zu)",
+                              n_bytes_written, pdu.size());
         });
+    ZX_DEBUG_ASSERT(read_success);
     if (write_res == ZX_OK) {
       // Subtle: We can't do this inside the lambda, because ReadNext requires
       // the callback to maintain the validity of the PDU.
