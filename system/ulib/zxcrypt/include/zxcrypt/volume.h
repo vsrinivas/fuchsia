@@ -21,15 +21,13 @@
 #include <zircon/types.h>
 
 // |zxcrypt::Volume| manages the interactions of both driver and library code with the metadata
-// used to format and operate zxcrypt devices.  Driver code uses the public constructor and instance
-// methods, while library code can use the static methods with a file descriptor to the underlying
-// block device.  The superblock is saved multiple times on disk to provide redundancy.
+// used to format and operate zxcrypt devices.  The superblock is saved multiple times on disk to
+// provide redundancy.
 //
-// It manages four types of key material:
-//  - Root:, Provided by the consumers of this class.
+// It manages three types of key material:
+//  - Root: Provided by the consumers of this class.
 //  - Data: Randomly generated at volume creation and used to encrypt and decrypt the volumes data.
 //  - Wrap: Derived from the root keys and used to encrypt and decrypt the data key material.
-//  - HMAC: Derived from the root keys and used to verify the integrity of the superblock.
 namespace zxcrypt {
 
 // TODO(aarongreen): ZX-1130 workaround: Until we have a means to pass the root key on binding, we
@@ -54,15 +52,14 @@ public:
     // driver begins queuing transactions
     static const uint32_t kBufferSize;
 
+    explicit Volume(fbl::unique_fd&& fd);
+    explicit Volume(zx_device_t* dev);
     ~Volume();
 
     // Returns space reserved for metadata and keys
     size_t reserved_blocks() const { return reserved_blocks_; }
     size_t reserved_slices() const { return reserved_slices_; }
     size_t num_slots() const { return num_key_slots_; }
-
-    ////////////////
-    // Library methods
 
     // Returns a new volume object corresponding to the block device given by |fd| and populated
     // with the block and FVM information.
@@ -80,9 +77,22 @@ public:
     static zx_status_t Unlock(fbl::unique_fd fd, const crypto::Secret& key, key_slot_t slot,
                               fbl::unique_ptr<Volume>* out);
 
+    // Unlocks a zxcrypt volume on the block device described by |dev| using the |key| corresponding
+    // to given key |slot|.  The |dev| parameter means this method can be used from the driver.
+    static zx_status_t Unlock(zx_device_t* dev, const crypto::Secret& key, key_slot_t slot,
+                              fbl::unique_ptr<Volume>* out);
+
+    // Opens a zxcrypt volume on the block device described by |fd| using the |key| corresponding to
+    // given key |slot|.
+    zx_status_t Unlock(const crypto::Secret& key, key_slot_t slot = 0);
+
     // Opens the zxcrypt volume and returns a file descriptor to it via |out|, or fails if the
     // volume isn't available within |timeout|.
     zx_status_t Open(const zx::duration& timeout, fbl::unique_fd* out);
+
+    // Uses the data key material to initialize |cipher| for the given |direction|.  This method
+    // must only be called from the zxcrypt driver.
+    zx_status_t Bind(crypto::Cipher::Direction direction, crypto::Cipher* cipher) const;
 
     // Adds a given |key| to the given key |slot|.  This key can then be used to |Open| the
     // zxcrypt device.  This method can only be called if the volume belongs to libzxcrypt.
@@ -96,24 +106,8 @@ public:
     // call any method except the destructor on this instance after this methods returns.
     zx_status_t Shred();
 
-    ////////////////
-    // Driver methods
-
-    // Unlocks a zxcrypt volume on the block device described by |dev| using the |key| corresponding
-    // to given key |slot|.  The |dev| parameter means this method can be used from the driver.
-    static zx_status_t Unlock(zx_device_t* dev, const crypto::Secret& key, key_slot_t slot,
-                              fbl::unique_ptr<Volume>* out);
-
-    // Uses the data key material to initialize |cipher| for the given |direction|.  This method
-    // must only be called from the zxcrypt driver.
-    zx_status_t Bind(crypto::Cipher::Direction direction, crypto::Cipher* cipher) const;
-
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Volume);
-
-    // Use the static factory methods above instead of these constructors.
-    explicit Volume(fbl::unique_fd&& fd);
-    explicit Volume(zx_device_t* dev);
 
     ////////////////
     // Configuration methods
@@ -149,10 +143,6 @@ private:
 
     // Encrypts the current data key and IV to the given |slot| using the given |key|.
     zx_status_t SealBlock(const crypto::Secret& key, key_slot_t slot);
-
-    // Attempts to unseal the device using the given |key| corresponding to the given |slot| and any
-    // superblock from the disk.
-    zx_status_t Unseal(const crypto::Secret& key, key_slot_t slot);
 
     // Reads the block and parses and checks various fields before attempting to open it with the
     // given |key| corresponding to the given |slot|.
