@@ -85,7 +85,7 @@ static zx_duration_t iotime_posix(int is_read, int fd, size_t total, size_t bufs
 
 static int make_ramdisk(size_t blocks) {
     char ramdisk_path[PATH_MAX];
-    if (create_ramdisk(512, blocks / 512, ramdisk_path)) {
+    if (create_ramdisk(512, blocks / 512, ramdisk_path) != ZX_OK) {
         return -1;
     }
 

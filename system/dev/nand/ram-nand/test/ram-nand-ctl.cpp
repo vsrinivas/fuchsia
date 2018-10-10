@@ -26,7 +26,7 @@ class NandDevice {
   public:
     NandDevice() {
         const ram_nand_info_t config = BuildConfig();
-        if (create_ram_nand(&config, path_) == 0) {
+        if (create_ram_nand(&config, path_) == ZX_OK) {
             fbl::unique_fd device(open(path_, O_RDWR));
             caller_.reset(fbl::move(device));
         }

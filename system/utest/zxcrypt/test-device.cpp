@@ -280,7 +280,7 @@ bool TestDevice::CreateRamdisk(size_t device_size, size_t block_size) {
     ASSERT_TRUE(ac.check());
     memset(as_read_.get(), 0, block_size);
 
-    ASSERT_EQ(create_ramdisk(block_size, count, ramdisk_path_), 0);
+    ASSERT_EQ(create_ramdisk(block_size, count, ramdisk_path_), ZX_OK);
     ramdisk_.reset(open(ramdisk_path_, O_RDWR));
     ASSERT_TRUE(ramdisk_, Error("failed to open %s", ramdisk_path_));
 

@@ -106,10 +106,11 @@ static int open_ramctl(void) {
     return fd;
 }
 
-static int finish_create(ramdisk_ioctl_config_response_t* response, char* out_path, ssize_t r) {
+static zx_status_t finish_create(ramdisk_ioctl_config_response_t* response, char* out_path,
+                                 ssize_t r) {
     if (r < 0) {
         fprintf(stderr, "Could not configure ramdev\n");
-        return -1;
+        return ZX_ERR_INVALID_ARGS;
     }
     response->name[r] = 0;
 
@@ -122,21 +123,22 @@ static int finish_create(ramdisk_ioctl_config_response_t* response, char* out_pa
     // The ramdisk should have been created instantly, but it may take
     // a moment for the block device driver to bind to it.
     snprintf(path, sizeof(path), "%s/%s/%s", RAMCTL_PATH, response->name, BLOCK_EXTENSION);
-    if (wait_for_device(path, ZX_SEC(3)) != ZX_OK) {
+    zx_status_t status = wait_for_device(path, ZX_SEC(3));
+    if (status != ZX_OK) {
         fprintf(stderr, "Error waiting for driver\n");
-        return -1;
+        return status;
     }
 
     // TODO(security): SEC-70.  This may overflow |out_path|.
     strcpy(out_path, path);
     cleanup.cancel();
-    return 0;
+    return ZX_OK;
 }
 
-int create_ramdisk(uint64_t blk_size, uint64_t blk_count, char* out_path) {
+zx_status_t create_ramdisk(uint64_t blk_size, uint64_t blk_count, char* out_path) {
     fbl::unique_fd fd(open_ramctl());
     if (fd.get() < 0) {
-        return -1;
+        return ZX_ERR_BAD_STATE;
     }
     ramdisk_ioctl_config_t config = {};
     config.blk_size = blk_size;
@@ -147,14 +149,14 @@ int create_ramdisk(uint64_t blk_size, uint64_t blk_count, char* out_path) {
                          ioctl_ramdisk_config(fd.get(), &config, &response));
 }
 
-int create_ramdisk_with_guid(uint64_t blk_size, uint64_t blk_count, const uint8_t* type_guid,
-                             size_t guid_len, char* out_path) {
+zx_status_t create_ramdisk_with_guid(uint64_t blk_size, uint64_t blk_count,
+                                     const uint8_t* type_guid, size_t guid_len, char* out_path) {
     fbl::unique_fd fd(open_ramctl());
     if (fd.get() < 0) {
-        return -1;
+        return ZX_ERR_BAD_STATE;
     }
     if (type_guid == NULL || guid_len < ZBI_PARTITION_GUID_LEN) {
-        return -1;
+        return ZX_ERR_INVALID_ARGS;
     }
     ramdisk_ioctl_config_t config = {};
     config.blk_size = blk_size;
@@ -165,70 +167,71 @@ int create_ramdisk_with_guid(uint64_t blk_size, uint64_t blk_count, const uint8_
                          ioctl_ramdisk_config(fd.get(), &config, &response));
 }
 
-int create_ramdisk_from_vmo(zx_handle_t vmo, char* out_path) {
+zx_status_t create_ramdisk_from_vmo(zx_handle_t vmo, char* out_path) {
     fbl::unique_fd fd(open_ramctl());
     if (fd.get() < 0) {
-        return -1;
+        return ZX_ERR_BAD_STATE;
     }
     ramdisk_ioctl_config_response_t response;
     return finish_create(&response, out_path,
                          ioctl_ramdisk_config_vmo(fd.get(), &vmo, &response));
 }
 
-int sleep_ramdisk(const char* ramdisk_path, uint64_t block_count) {
+zx_status_t sleep_ramdisk(const char* ramdisk_path, uint64_t block_count) {
     fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
     if (fd.get() < 0) {
         fprintf(stderr, "Could not open ramdisk\n");
-        return -1;
+        return ZX_ERR_BAD_STATE;
     }
 
     ssize_t r = ioctl_ramdisk_sleep_after(fd.get(), &block_count);
     if (r != ZX_OK) {
         fprintf(stderr, "Could not set ramdisk interrupt on path %s: %ld\n", ramdisk_path, r);
-        return -1;
+        return static_cast<zx_status_t>(r);
     }
-    return 0;
+    return ZX_OK;
 }
 
-int wake_ramdisk(const char* ramdisk_path) {
+zx_status_t wake_ramdisk(const char* ramdisk_path) {
     fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
     if (fd.get() < 0) {
         fprintf(stderr, "Could not open ramdisk\n");
-        return -1;
+        return ZX_ERR_BAD_STATE;;
     }
 
     ssize_t r = ioctl_ramdisk_wake_up(fd.get());
     if (r != ZX_OK) {
         fprintf(stderr, "Could not wake ramdisk\n");
-        return -1;
+        return static_cast<zx_status_t>(r);
     }
 
-    return 0;
+    return ZX_OK;
 }
 
-int get_ramdisk_blocks(const char* ramdisk_path, ramdisk_blk_counts_t* counts) {
+zx_status_t get_ramdisk_blocks(const char* ramdisk_path, ramdisk_blk_counts_t* counts) {
     fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
     if (fd.get() < 0) {
         fprintf(stderr, "Could not open ramdisk\n");
-        return -1;
+        return ZX_ERR_BAD_STATE;
     }
-    if (ioctl_ramdisk_get_blk_counts(fd.get(), counts) < 0) {
+    ssize_t rc = ioctl_ramdisk_get_blk_counts(fd.get(), counts);
+    if (rc < 0) {
         fprintf(stderr, "Could not get blk counts\n");
-        return -1;
+        return static_cast<zx_status_t>(rc);
     }
-    return 0;
+    return ZX_OK;
 }
 
-int destroy_ramdisk(const char* ramdisk_path) {
+zx_status_t destroy_ramdisk(const char* ramdisk_path) {
     fbl::unique_fd ramdisk(open(ramdisk_path, O_RDWR));
     if (!ramdisk) {
         fprintf(stderr, "Could not open ramdisk\n");
-        return -1;
+        return ZX_ERR_BAD_STATE;
     }
     ssize_t r = ioctl_ramdisk_unlink(ramdisk.get());
     if (r != ZX_OK) {
         fprintf(stderr, "Could not shut off ramdisk\n");
-        return -1;
+        return static_cast<zx_status_t>(r);
     }
-    return 0;
+    return ZX_OK;
 }

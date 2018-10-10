@@ -158,7 +158,7 @@ public:
         fbl::String path(PATH_MAX, '\0');
         ASSERT_EQ(create_ramdisk_with_guid(kBlockSize, kBlockCount, guid, ZBI_PARTITION_GUID_LEN,
                                            const_cast<char*>(path.data())),
-                  0);
+                  ZX_OK);
         ASSERT_TRUE(InsertTestDevices(path.ToStringPiece(), false));
         device->reset(new BlockDevice(fbl::move(path)));
         END_HELPER;
@@ -215,7 +215,7 @@ public:
         fbl::String path(PATH_MAX, '\0');
         ram_nand_info_t info = kNandInfo;
         info.vmo = dup;
-        ASSERT_EQ(create_ram_nand(&info, const_cast<char*>(path.data())), 0);
+        ASSERT_EQ(create_ram_nand(&info, const_cast<char*>(path.data())), ZX_OK);
         ASSERT_TRUE(InsertTestDevices(path.ToStringPiece(), true));
         device->reset(new SkipBlockDevice(fbl::move(path), fbl::move(mapped_vmo)));
         END_HELPER;

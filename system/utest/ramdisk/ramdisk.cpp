@@ -41,9 +41,10 @@ namespace tests {
 static int get_ramdisk(uint64_t blk_size, uint64_t blk_count, const uint8_t* guid = nullptr,
                        size_t guid_len = 0) {
     char ramdisk_path[PATH_MAX];
-    int rc = guid ? create_ramdisk_with_guid(blk_size, blk_count, guid, guid_len, ramdisk_path)
-                  : create_ramdisk(blk_size, blk_count, ramdisk_path);
-    if (rc) {
+    zx_status_t rc = guid ? create_ramdisk_with_guid(blk_size, blk_count, guid,
+                                                     guid_len, ramdisk_path)
+                          : create_ramdisk(blk_size, blk_count, ramdisk_path);
+    if (rc != ZX_OK) {
       return -1;
     }
 
@@ -105,9 +106,7 @@ static bool ramdisk_test_wait_for_device(void) {
 
     char path[PATH_MAX];
     char mod[PATH_MAX];
-    if (create_ramdisk(512, 64, path)) {
-        return -1;
-    }
+    ASSERT_EQ(create_ramdisk(512, 64, path), ZX_OK);
 
     // Null path/zero timeout
     EXPECT_EQ(wait_for_device(path, 0), ZX_ERR_INVALID_ARGS);
@@ -177,7 +176,7 @@ static bool ramdisk_test_vmo(void) {
     ASSERT_EQ(zx::vmo::create(256 * PAGE_SIZE, 0, &vmo), ZX_OK);
 
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(create_ramdisk_from_vmo(vmo.release(), ramdisk_path), 0);
+    ASSERT_EQ(create_ramdisk_from_vmo(vmo.release(), ramdisk_path), ZX_OK);
 
     fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
     ASSERT_TRUE(fd);
@@ -208,9 +207,7 @@ static bool ramdisk_test_filesystem(void) {
 
     // Make a ramdisk
     char ramdisk_path[PATH_MAX];
-    if (create_ramdisk(PAGE_SIZE / 2, 512, ramdisk_path)) {
-        return -1;
-    }
+    ASSERT_EQ(create_ramdisk(PAGE_SIZE / 2, 512, ramdisk_path), ZX_OK);
 
     int fd = open(ramdisk_path, O_RDWR);
     ASSERT_GE(fd, 0, "Could not open ramdisk device");
@@ -294,9 +291,7 @@ static bool ramdisk_test_rebind(void) {
 
     // Make a ramdisk
     char ramdisk_path[PATH_MAX];
-    if (create_ramdisk(PAGE_SIZE / 2, 512, ramdisk_path)) {
-        return -1;
-    }
+    ASSERT_EQ(create_ramdisk(PAGE_SIZE / 2, 512, ramdisk_path), ZX_OK);
 
     int fd = open(ramdisk_path, O_RDWR);
     ASSERT_GE(fd, 0, "Could not open ramdisk device");

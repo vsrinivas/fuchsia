@@ -13,13 +13,9 @@ __BEGIN_CDECLS
 
 // Creates a ram_nand, returning the full path to the new device. The provided
 // buffer for the path should be at least PATH_MAX characters long.
-//
-// Returns 0 on success.
-int create_ram_nand(const ram_nand_info_t* config, char* out_path);
+zx_status_t create_ram_nand(const ram_nand_info_t* config, char* out_path);
 
 // Destroys a ram_nand, given the name returned from create_ram_nand().
-//
-// Returns 0 on success.
-int destroy_ram_nand(const char* ram_nand_path);
+zx_status_t destroy_ram_nand(const char* ram_nand_path);
 
 __END_CDECLS

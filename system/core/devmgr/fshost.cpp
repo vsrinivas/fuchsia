@@ -227,7 +227,7 @@ zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) 
         }
 
         char path[PATH_MAX + 1];
-        if (create_ramdisk_from_vmo(ramdisk_vmo.release(), path) < 0) {
+        if (create_ramdisk_from_vmo(ramdisk_vmo.release(), path) != ZX_OK) {
             printf("fshost: failed to create ramdisk from BOOTDATA_RAMDISK\n");
         } else {
             printf("fshost: BOOTDATA_RAMDISK attached as %s\n", path);

@@ -16,7 +16,7 @@ namespace {
 // returns a success status.
 bool run_biotime(fbl::Vector<const char*>&& args) {
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(create_ramdisk(1024, 100, ramdisk_path), 0);
+    ASSERT_EQ(create_ramdisk(1024, 100, ramdisk_path), ZX_OK);
     auto ac = fbl::MakeAutoCall([&] {
         EXPECT_EQ(destroy_ramdisk(ramdisk_path), 0);
     });

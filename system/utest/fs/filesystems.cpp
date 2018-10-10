@@ -70,7 +70,7 @@ void setup_fs_test(test_disk_t disk, fs_test_type_t test_class) {
     }
 
     if (!use_real_disk) {
-        if (create_ramdisk(disk.block_size, disk.block_count, test_disk_path)) {
+        if (create_ramdisk(disk.block_size, disk.block_count, test_disk_path) != ZX_OK) {
             fprintf(stderr, "[FAILED]: Could not create ramdisk for test\n");
             exit(-1);
         }

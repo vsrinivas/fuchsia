@@ -64,7 +64,7 @@ bool MountUnmountShared(size_t block_size) {
     char ramdisk_path[PATH_MAX];
     const char* mount_path = "/tmp/mount_unmount";
 
-    ASSERT_EQ(create_ramdisk(block_size, 1 << 16, ramdisk_path), 0);
+    ASSERT_EQ(create_ramdisk(block_size, 1 << 16, ramdisk_path), ZX_OK);
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
               ZX_OK);
     ASSERT_EQ(mkdir(mount_path, 0666), 0);
@@ -98,7 +98,7 @@ bool MountMkdirUnmount() {
     const char* mount_path = "/tmp/mount_mkdir_unmount";
 
     BEGIN_TEST;
-    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0);
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), ZX_OK);
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
               ZX_OK);
     int fd = open(ramdisk_path, O_RDWR);
@@ -119,7 +119,7 @@ bool FmountFunmount() {
     const char* mount_path = "/tmp/mount_unmount";
 
     BEGIN_TEST;
-    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0);
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), ZX_OK);
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
               ZX_OK);
     ASSERT_EQ(mkdir(mount_path, 0666), 0);
@@ -148,7 +148,7 @@ bool FmountFunmount() {
 bool DoMountEvil(const char* parentfs_name, const char* mount_path) {
     BEGIN_HELPER;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0);
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), ZX_OK);
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
               ZX_OK);
     ASSERT_EQ(mkdir(mount_path, 0666), 0);
@@ -255,7 +255,7 @@ bool MountEvilMinfs() {
     char ramdisk_path[PATH_MAX];
 
     BEGIN_TEST;
-    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0);
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), ZX_OK);
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
               ZX_OK);
     const char* parent_path = "/tmp/parent";
@@ -285,7 +285,7 @@ bool UmountTestEvil() {
     BEGIN_TEST;
 
     // Create a ramdisk, mount minfs
-    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0);
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), ZX_OK);
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
               ZX_OK);
     ASSERT_EQ(mkdir(mount_path, 0666), 0);
@@ -334,7 +334,7 @@ bool DoubleMountRoot() {
     BEGIN_TEST;
 
     // Create a ramdisk, mount minfs
-    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0);
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), ZX_OK);
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
               ZX_OK);
     ASSERT_EQ(mkdir(mount_path, 0666), 0);
@@ -348,7 +348,7 @@ bool DoubleMountRoot() {
     // Create ANOTHER ramdisk, ready to be mounted...
     // Try mounting again on top Minfs' remote root.
     char ramdisk_path2[PATH_MAX];
-    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path2), 0);
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path2), ZX_OK);
     ASSERT_EQ(mkfs(ramdisk_path2, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
               ZX_OK);
 
@@ -384,7 +384,7 @@ bool MountRemount() {
     const char* mount_path = "/tmp/mount_remount";
 
     BEGIN_TEST;
-    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0);
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), ZX_OK);
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
               ZX_OK);
     ASSERT_EQ(mkdir(mount_path, 0666), 0);
@@ -408,7 +408,7 @@ bool MountFsck() {
     const char* mount_path = "/tmp/mount_fsck";
 
     BEGIN_TEST;
-    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0);
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), ZX_OK);
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
               ZX_OK);
     ASSERT_EQ(mkdir(mount_path, 0666), 0);
@@ -430,7 +430,7 @@ bool MountGetDevice() {
     const char* mount_path = "/tmp/mount_get_device";
 
     BEGIN_TEST;
-    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0);
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), ZX_OK);
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
               ZX_OK);
     ASSERT_EQ(mkdir(mount_path, 0666), 0);
@@ -530,7 +530,7 @@ bool MountReadonly() {
     const char file_name[] = "some_file";
 
     BEGIN_TEST;
-    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0);
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), ZX_OK);
     ASSERT_TRUE(CreateTestFile(ramdisk_path, mount_path, file_name));
 
     int fd = open(ramdisk_path, O_RDWR);
@@ -575,7 +575,7 @@ bool MountBlockReadonly() {
 
     BEGIN_TEST;
 
-    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0);
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), ZX_OK);
     ASSERT_TRUE(CreateTestFile(ramdisk_path, mount_path, file_name));
 
     int fd = open(ramdisk_path, O_RDWR);
@@ -611,7 +611,7 @@ bool StatfsTest() {
     const char* mount_path = "/tmp/mount_unmount";
 
     BEGIN_TEST;
-    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0);
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), ZX_OK);
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
               ZX_OK);
     ASSERT_EQ(mkdir(mount_path, 0666), 0);

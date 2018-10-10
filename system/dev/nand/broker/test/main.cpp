@@ -69,7 +69,7 @@ ParentDevice::ParentDevice(const TestConfig& config) : config_(config) {
     } else {
         ram_nand_info_t ram_nand_config = {};
         ram_nand_config.nand_info = config_.info;
-        if (create_ram_nand(&ram_nand_config, path_) == 0) {
+        if (create_ram_nand(&ram_nand_config, path_) == ZX_OK) {
             ram_nand_.reset(open(path_, O_RDWR));
             config_.num_blocks = config.info.num_blocks;
         }

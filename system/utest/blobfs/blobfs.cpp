@@ -227,7 +227,7 @@ bool BlobfsTest::Init(FsTestState state) {
         blk_size_ = gRealDiskInfo.blk_size;
         blk_count_ = gRealDiskInfo.blk_count;
     } else {
-        ASSERT_EQ(create_ramdisk(blk_size_, blk_count_, ramdisk_path_), 0,
+        ASSERT_EQ(create_ramdisk(blk_size_, blk_count_, ramdisk_path_), ZX_OK,
                   "Blobfs: Could not create ramdisk");
     }
 
@@ -324,9 +324,9 @@ bool BlobfsTest::Teardown() {
         }
     } else {
         if (type_ == FsTestType::kFvm) {
-            ASSERT_EQ(destroy_ramdisk(fvm_path_), 0);
+            ASSERT_EQ(destroy_ramdisk(fvm_path_), ZX_OK);
         } else {
-            ASSERT_EQ(destroy_ramdisk(ramdisk_path_), 0);
+            ASSERT_EQ(destroy_ramdisk(ramdisk_path_), ZX_OK);
         }
     }
 
@@ -374,16 +374,16 @@ bool BlobfsTest::ToggleSleep(uint64_t blk_count) {
     if (asleep_) {
         // If the ramdisk is asleep, wake it up.
         if (type_ == FsTestType::kNormal) {
-            ASSERT_EQ(wake_ramdisk(ramdisk_path_), 0);
+            ASSERT_EQ(wake_ramdisk(ramdisk_path_), ZX_OK);
         } else {
-            ASSERT_EQ(wake_ramdisk(fvm_path_), 0);
+            ASSERT_EQ(wake_ramdisk(fvm_path_), ZX_OK);
         }
     } else {
         // If the ramdisk is active, put it to sleep after the specified block count.
         if (type_ == FsTestType::kNormal) {
-            ASSERT_EQ(sleep_ramdisk(ramdisk_path_, blk_count), 0);
+            ASSERT_EQ(sleep_ramdisk(ramdisk_path_, blk_count), ZX_OK);
         } else {
-            ASSERT_EQ(sleep_ramdisk(fvm_path_, blk_count), 0);
+            ASSERT_EQ(sleep_ramdisk(fvm_path_, blk_count), ZX_OK);
         }
     }
 
@@ -397,10 +397,10 @@ bool BlobfsTest::GetRamdiskCount(uint64_t* blk_count) const {
 
     switch (type_) {
     case FsTestType::kNormal:
-        ASSERT_EQ(get_ramdisk_blocks(ramdisk_path_, &counts), 0);
+        ASSERT_EQ(get_ramdisk_blocks(ramdisk_path_, &counts), ZX_OK);
         break;
     case FsTestType::kFvm:
-        ASSERT_EQ(get_ramdisk_blocks(fvm_path_, &counts), 0);
+        ASSERT_EQ(get_ramdisk_blocks(fvm_path_, &counts), ZX_OK);
         break;
     default:
         ASSERT_TRUE(false);
