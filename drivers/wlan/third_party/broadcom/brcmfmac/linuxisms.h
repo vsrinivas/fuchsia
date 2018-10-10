@@ -45,8 +45,6 @@ typedef uint64_t __be64;
 
 // FROM Josh's linuxisms.h
 
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
-
 #define BIT(pos) (1UL << (pos))
 
 #define DIV_ROUND_UP(n, m) (((n) + ((m)-1)) / (m))

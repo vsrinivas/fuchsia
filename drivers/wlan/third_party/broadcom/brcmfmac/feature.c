@@ -142,7 +142,7 @@ static void brcmf_feat_firmware_capabilities(struct brcmf_if* ifp) {
     caps[sizeof(caps)-1] = 0;
     brcmf_dbg(INFO, "[ %s]\n", caps);
 
-    for (i = 0; i < (int)ARRAY_SIZE(brcmf_fwcap_map); i++) {
+    for (i = 0; i < (int)countof(brcmf_fwcap_map); i++) {
         if (strstr(caps, brcmf_fwcap_map[i].fwcap_id)) {
             id = brcmf_fwcap_map[i].feature;
             brcmf_dbg(INFO, "enabling feature: %s\n", brcmf_feat_names[id]);

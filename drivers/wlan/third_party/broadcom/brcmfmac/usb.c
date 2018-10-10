@@ -1282,7 +1282,7 @@ static zx_status_t brcmf_usb_get_fwname(struct brcmf_device* dev, uint32_t chip,
         strlcpy((char*)fw_name, devinfo->fw_name, BRCMF_FW_NAME_LEN);
     } else
         ret = brcmf_fw_map_chip_to_name(chip, chiprev, brcmf_usb_fwnames,
-                                        ARRAY_SIZE(brcmf_usb_fwnames), (char*)fw_name, NULL);
+                                        countof(brcmf_usb_fwnames), (char*)fw_name, NULL);
 
     return ret;
 }
@@ -1410,7 +1410,7 @@ static zx_status_t brcmf_usb_probe_cb(struct brcmf_usbdev_info* devinfo) {
     bus->chiprev = bus_pub->chiprev;
 
     ret = brcmf_fw_map_chip_to_name(bus_pub->devid, bus_pub->chiprev, brcmf_usb_fwnames,
-                                    ARRAY_SIZE(brcmf_usb_fwnames), devinfo->fw_name, NULL);
+                                    countof(brcmf_usb_fwnames), devinfo->fw_name, NULL);
     if (ret != ZX_OK) {
         goto fail;
     }

@@ -520,7 +520,7 @@ static void brcmf_pcie_reset_device(struct brcmf_pciedev_info* devinfo) {
 
     core = brcmf_chip_get_core(devinfo->ci, CHIPSET_PCIE2_CORE);
     if (core->rev <= 13) {
-        for (i = 0; i < ARRAY_SIZE(cfg_offset); i++) {
+        for (i = 0; i < countof(cfg_offset); i++) {
             brcmf_pcie_write_reg32(devinfo, BRCMF_PCIE_PCIE2REG_CONFIGADDR, cfg_offset[i]);
             val = brcmf_pcie_read_reg32(devinfo, BRCMF_PCIE_PCIE2REG_CONFIGDATA);
             brcmf_dbg(PCIE, "config offset 0x%04x, value 0x%04x\n", cfg_offset[i], val);
@@ -1200,7 +1200,7 @@ static zx_status_t brcmf_pcie_get_fwname(struct brcmf_device* dev, uint32_t chip
         strlcpy((char*)fw_name, devinfo->fw_name, BRCMF_FW_NAME_LEN);
     } else
         ret = brcmf_fw_map_chip_to_name(chip, chiprev, brcmf_pcie_fwnames,
-                                        ARRAY_SIZE(brcmf_pcie_fwnames), (char*)fw_name, NULL);
+                                        countof(brcmf_pcie_fwnames), (char*)fw_name, NULL);
 
     return ret;
 }
@@ -1640,7 +1640,7 @@ static zx_status_t brcmf_pcie_probe(struct brcmf_pci_device* pdev) {
     pdev->dev.bus = bus;
 
     ret = brcmf_fw_map_chip_to_name(devinfo->ci->chip, devinfo->ci->chiprev, brcmf_pcie_fwnames,
-                                    ARRAY_SIZE(brcmf_pcie_fwnames), devinfo->fw_name,
+                                    countof(brcmf_pcie_fwnames), devinfo->fw_name,
                                     devinfo->nvram_name);
     if (ret != ZX_OK) {
         goto fail_bus;

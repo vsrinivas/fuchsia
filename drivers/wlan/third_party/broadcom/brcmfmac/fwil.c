@@ -90,7 +90,7 @@ static const char* const brcmf_fil_errstr[] = {
 };
 
 static const char* brcmf_fil_get_errstr(uint32_t err) {
-    if (err >= ARRAY_SIZE(brcmf_fil_errstr)) {
+    if (err >= countof(brcmf_fil_errstr)) {
         return "(unknown)";
     }
 

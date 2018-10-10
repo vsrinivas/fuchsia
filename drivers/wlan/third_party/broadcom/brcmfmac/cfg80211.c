@@ -130,7 +130,7 @@ static uint16_t __wl_rates[] = {
 };
 
 #define wl_g_rates (__wl_rates + 0)
-#define wl_g_rates_size ARRAY_SIZE(__wl_rates)
+#define wl_g_rates_size countof(__wl_rates)
 #define wl_a_rates (__wl_rates + 4)
 #define wl_a_rates_size (wl_g_rates_size - 4)
 
@@ -3955,7 +3955,7 @@ zx_status_t brcmf_vif_clear_mgmt_ies(struct brcmf_cfg80211_vif* vif) {
     };
     int i;
 
-    for (i = 0; i < (int)ARRAY_SIZE(pktflags); i++) {
+    for (i = 0; i < (int)countof(pktflags); i++) {
         brcmf_vif_set_mgmt_ie(vif, pktflags[i], NULL, 0);
     }
 
@@ -4996,7 +4996,7 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
     band->num_basic_rates = min(WLAN_BASIC_RATES_MAX_LEN, wl_g_rates_size);
     memcpy(band->basic_rates, wl_g_rates, band->num_basic_rates * sizeof(uint16_t));
     band->base_frequency = 2407;
-    band->num_channels = min(WLAN_CHANNELS_MAX_LEN, ARRAY_SIZE(__wl_2ghz_channels));
+    band->num_channels = min(WLAN_CHANNELS_MAX_LEN, countof(__wl_2ghz_channels));
     memcpy(band->channels, __wl_2ghz_channels, band->num_channels);
 
 
@@ -5005,7 +5005,7 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
     band->num_basic_rates = min(WLAN_BASIC_RATES_MAX_LEN, wl_a_rates_size);
     memcpy(band->basic_rates, wl_a_rates, band->num_basic_rates * sizeof(uint16_t));
     band->base_frequency = 5000;
-    band->num_channels = min(WLAN_CHANNELS_MAX_LEN, ARRAY_SIZE(__wl_5ghz_channels));
+    band->num_channels = min(WLAN_CHANNELS_MAX_LEN, countof(__wl_5ghz_channels));
     memcpy(band->channels, __wl_5ghz_channels, band->num_channels);
 }
 
@@ -6089,7 +6089,7 @@ static zx_status_t brcmf_setup_wiphybands(struct wiphy* wiphy) {
         (void)brcmf_fil_iovar_int_get(ifp, "txbf_bfr_cap", &txbf_bfr_cap);
     }
 
-    for (i = 0; i < (int32_t)ARRAY_SIZE(wiphy->bands); i++) {
+    for (i = 0; i < (int32_t)countof(wiphy->bands); i++) {
         band = wiphy->bands[i];
         if (band == NULL) {
             continue;

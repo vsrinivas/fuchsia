@@ -343,10 +343,10 @@ struct brcmf_flowring* brcmf_flowring_attach(struct brcmf_device* dev, uint16_t 
         flow->dev = dev;
         flow->nrofrings = nrofrings;
         //spin_lock_init(&flow->block_lock);
-        for (i = 0; i < ARRAY_SIZE(flow->addr_mode); i++) {
+        for (i = 0; i < countof(flow->addr_mode); i++) {
             flow->addr_mode[i] = ADDR_INDIRECT;
         }
-        for (i = 0; i < ARRAY_SIZE(flow->hash); i++) {
+        for (i = 0; i < countof(flow->hash); i++) {
             flow->hash[i].ifidx = BRCMF_FLOWRING_INVALID_IFIDX;
         }
         flow->rings = calloc(nrofrings, sizeof(*flow->rings));
@@ -390,7 +390,7 @@ void brcmf_flowring_configure_addr_mode(struct brcmf_flowring* flow, int ifidx,
     uint16_t flowid;
 
     if (flow->addr_mode[ifidx] != addr_mode) {
-        for (i = 0; i < ARRAY_SIZE(flow->hash); i++) {
+        for (i = 0; i < countof(flow->hash); i++) {
             if (flow->hash[i].ifidx == ifidx) {
                 flowid = flow->hash[i].flowid;
                 if (flow->rings[flowid]->status != RING_OPEN) {

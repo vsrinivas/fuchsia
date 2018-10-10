@@ -114,7 +114,7 @@ static struct {
 static const char* brcmf_fws_get_tlv_name(enum brcmf_fws_tlv_type id) {
     int i;
 
-    for (i = 0; i < (int)ARRAY_SIZE(brcmf_fws_tlv_names); i++)
+    for (i = 0; i < (int)countof(brcmf_fws_tlv_names); i++)
         if (brcmf_fws_tlv_names[i].id == id) {
             return brcmf_fws_tlv_names[i].name;
         }
@@ -580,7 +580,7 @@ static void brcmf_fws_hanger_init(struct brcmf_fws_hanger* hanger) {
     int i;
 
     memset(hanger, 0, sizeof(*hanger));
-    for (i = 0; i < (int)ARRAY_SIZE(hanger->items); i++) {
+    for (i = 0; i < (int)countof(hanger->items); i++) {
         hanger->items[i].state = BRCMF_FWS_HANGER_ITEM_STATE_FREE;
     }
 }
@@ -667,7 +667,7 @@ static void brcmf_fws_hanger_cleanup(struct brcmf_fws_info* fws,
     int i;
     enum brcmf_fws_hanger_item_state s;
 
-    for (i = 0; i < (int)ARRAY_SIZE(h->items); i++) {
+    for (i = 0; i < (int)countof(h->items); i++) {
         s = h->items[i].state;
         if (s == BRCMF_FWS_HANGER_ITEM_STATE_INUSE ||
                 s == BRCMF_FWS_HANGER_ITEM_STATE_INUSE_SUPPRESSED) {
@@ -732,7 +732,7 @@ static zx_status_t brcmf_fws_macdesc_lookup(struct brcmf_fws_info* fws, uint8_t*
     }
 
     entry = &fws->desc.nodes[0];
-    for (i = 0; i < (int)ARRAY_SIZE(fws->desc.nodes); i++) {
+    for (i = 0; i < (int)countof(fws->desc.nodes); i++) {
         if (entry->occupied && !memcmp(entry->ea, ea, ETH_ALEN)) {
             if (macdesc_out) {
                 *macdesc_out = entry;
@@ -850,7 +850,7 @@ static void brcmf_fws_cleanup(struct brcmf_fws_info* fws, int ifidx) {
 
     /* cleanup individual nodes */
     table = &fws->desc.nodes[0];
-    for (i = 0; i < (int)ARRAY_SIZE(fws->desc.nodes); i++) {
+    for (i = 0; i < (int)countof(fws->desc.nodes); i++) {
         brcmf_fws_macdesc_cleanup(fws, &table[i], ifidx);
     }
 
@@ -1567,7 +1567,7 @@ static zx_status_t brcmf_fws_notify_credit_map(struct brcmf_if* ifp,
 
     brcmf_dbg(TRACE, "enter: credits %pM\n", credits);
     brcmf_fws_lock(fws);
-    for (i = 0; i < (int)ARRAY_SIZE(fws->fifo_credit); i++) {
+    for (i = 0; i < (int)countof(fws->fifo_credit); i++) {
         if (*credits) {
             fws->fifo_credit_map |= 1 << i;
         } else {

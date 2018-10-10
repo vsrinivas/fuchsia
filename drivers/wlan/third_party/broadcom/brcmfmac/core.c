@@ -971,7 +971,7 @@ zx_status_t brcmf_attach(struct brcmf_device* dev, struct brcmf_mp_device* setti
         return ZX_ERR_NO_MEMORY;
     }
 
-    for (i = 0; i < (int)ARRAY_SIZE(drvr->if2bss); i++) {
+    for (i = 0; i < (int)countof(drvr->if2bss); i++) {
         drvr->if2bss[i] = BRCMF_BSSIDX_INVALID;
     }
 

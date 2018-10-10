@@ -3563,7 +3563,7 @@ static void brcmf_sdio_drivestrengthinit(struct brcmf_sdio_dev* sdiodev, struct 
         break;
     case SDIOD_DRVSTR_KEY(BRCM_CC_43143_CHIP_ID, 17):
         /* note: 43143 does not support tristate */
-        i = ARRAY_SIZE(sdiod_drvstr_tab2_3v3) - 1;
+        i = countof(sdiod_drvstr_tab2_3v3) - 1;
         if (drivestrength >= sdiod_drvstr_tab2_3v3[i].strength) {
             str_tab = sdiod_drvstr_tab2_3v3;
             str_mask = 0x00000007;
@@ -3922,7 +3922,7 @@ static zx_status_t brcmf_sdio_get_fwname(struct brcmf_device* dev, uint32_t chip
         strlcpy((char*)fw_name, sdiodev->fw_name, BRCMF_FW_NAME_LEN);
     } else {
         ret = brcmf_fw_map_chip_to_name(chip, chiprev, brcmf_sdio_fwnames,
-                                        ARRAY_SIZE(brcmf_sdio_fwnames), (char*)fw_name, NULL);
+                                        countof(brcmf_sdio_fwnames), (char*)fw_name, NULL);
     }
     return ret;
 }
@@ -4196,7 +4196,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     brcmf_dbg(INFO, "completed!!\n");
 
     ret = brcmf_fw_map_chip_to_name(bus->ci->chip, bus->ci->chiprev, brcmf_sdio_fwnames,
-                                    ARRAY_SIZE(brcmf_sdio_fwnames), sdiodev->fw_name,
+                                    countof(brcmf_sdio_fwnames), sdiodev->fw_name,
                                     sdiodev->nvram_name);
     if (ret != ZX_OK) {
         goto fail;
