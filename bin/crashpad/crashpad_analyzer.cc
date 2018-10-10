@@ -86,6 +86,8 @@ std::unique_ptr<crashpad::CrashReportDatabase> GetReportDatabase() {
       crashpad::CrashReportDatabase::Initialize(
           base::FilePath(kLocalCrashDatabase)));
   if (!database) {
+    FX_LOGS(ERROR) << "error initializing local crash report database at "
+                   << kLocalCrashDatabase;
     return nullptr;
   }
 
@@ -236,6 +238,8 @@ int Process(fuchsia::mem::Buffer crashlog) {
   std::unique_ptr<crashpad::CrashReportDatabase::NewReport> report;
   database_status = database->PrepareNewCrashReport(&report);
   if (database_status != crashpad::CrashReportDatabase::kNoError) {
+    FX_LOGS(ERROR) << "error creating local crash report (" << database_status
+                   << ")";
     return EXIT_FAILURE;
   }
 
@@ -261,6 +265,8 @@ int Process(fuchsia::mem::Buffer crashlog) {
   database_status =
       database->FinishedWritingCrashReport(std::move(report), &local_report_id);
   if (database_status != crashpad::CrashReportDatabase::kNoError) {
+    FX_LOGS(ERROR) << "error writing local crash report (" << database_status
+                   << ")";
     return EXIT_FAILURE;
   }
 
@@ -270,6 +276,9 @@ int Process(fuchsia::mem::Buffer crashlog) {
   database_status =
       database->GetReportForUploading(local_report_id, &upload_report);
   if (database_status != crashpad::CrashReportDatabase::kNoError) {
+    FX_LOGS(ERROR) << "error loading local crash report, ID "
+                   << local_report_id.ToString() << " (" << database_status
+                   << ")";
     return EXIT_FAILURE;
   }
 
@@ -300,6 +309,8 @@ int Process(fuchsia::mem::Buffer crashlog) {
   if (!http_transport->ExecuteSynchronously(&server_report_id)) {
     database->SkipReportUpload(
         local_report_id, crashpad::Metrics::CrashSkippedReason::kUploadFailed);
+    FX_LOGS(ERROR) << "error uploading local crash report, ID "
+                   << local_report_id.ToString();
     return EXIT_FAILURE;
   }
   database->RecordUploadComplete(std::move(upload_report), server_report_id);
