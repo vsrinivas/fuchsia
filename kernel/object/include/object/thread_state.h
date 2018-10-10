@@ -22,8 +22,7 @@
 class ThreadState {
 public:
     // The only legal transition that isn't from top-to-bottom occurs
-    // when an exception handler chooses to start running a suspended
-    // thread again.
+    // when a thread is resumed after being suspended.
     enum class Lifecycle {
         // The ThreadDispatcher has been allocated, but not yet
         // associated to a thread_t or an aspace.
@@ -37,8 +36,11 @@ public:
         // The thread is running.
         RUNNING,
 
-        // The thread is currently suspended to handle exceptions
-        // (including debugging).
+        // The thread is currently suspended.
+        // Note that suspension is orthogonal to being "in an exception".
+        // A thread may be both suspended and in an exception, and the thread
+        // does not "resume" execution until it is resumed from both the
+        // suspension and the exception.
         SUSPENDED,
 
         // The thread is going to die. It may still be interacting
