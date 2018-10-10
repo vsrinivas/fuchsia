@@ -20,6 +20,8 @@ Err ErrNoLive() {
 
 Err ErrNoImpl() { return Err("Feature not implemented for minidump"); }
 
+Err ErrNoDump() { return Err("Core dump failed to open"); }
+
 template <typename ReplyType>
 void ErrNoLive(std::function<void(const Err&, ReplyType)> cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
@@ -30,6 +32,12 @@ template <typename ReplyType>
 void ErrNoImpl(std::function<void(const Err&, ReplyType)> cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
     [cb]() { cb(ErrNoImpl(), ReplyType()); });
+}
+
+template <typename ReplyType>
+void ErrNoDump(std::function<void(const Err&, ReplyType)> cb) {
+  debug_ipc::MessageLoop::Current()->PostTask(
+    [cb]() { cb(ErrNoDump(), ReplyType()); });
 }
 
 template <typename ReplyType>
@@ -129,8 +137,22 @@ void MinidumpRemoteAPI::Resume(
 void MinidumpRemoteAPI::ProcessTree(
     const debug_ipc::ProcessTreeRequest& request,
     std::function<void(const Err&, debug_ipc::ProcessTreeReply)> cb) {
-  // TODO
-  ErrNoImpl(cb);
+  if (!minidump_) {
+    ErrNoDump(cb);
+    return;
+  }
+
+  debug_ipc::ProcessTreeRecord record;
+
+  record.type = debug_ipc::ProcessTreeRecord::Type::kProcess;
+  record.name = "<core dump>";
+  record.koid = minidump_->ProcessID();
+
+  debug_ipc::ProcessTreeReply reply {
+    .root = record,
+  };
+
+  Succeed(cb, reply);
 }
 
 void MinidumpRemoteAPI::Threads(

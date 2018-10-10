@@ -4,6 +4,7 @@
 
 #include <filesystem>
 
+#include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/common/host_util.h"
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
@@ -54,6 +55,27 @@ Err MinidumpTest::TryOpen(const std::string& filename) {
 TEST_F(MinidumpTest, Load) {
   Err err = TryOpen("test_example_minidump.dmp");
   EXPECT_FALSE(err.has_error()) << err.msg();
+}
+
+TEST_F(MinidumpTest, ProcessTreeRecord) {
+  Err err = TryOpen("test_example_minidump.dmp");
+  ASSERT_FALSE(err.has_error()) << err.msg();
+
+  debug_ipc::ProcessTreeRecord record;
+  session().remote_api()->ProcessTree(debug_ipc::ProcessTreeRequest(),
+    [&record, &err](const Err& e, debug_ipc::ProcessTreeReply r) {
+      err = e;
+      record = r.root;
+      debug_ipc::MessageLoop::Current()->QuitNow();
+    }
+  );
+
+  loop().Run();
+  ASSERT_FALSE(err.has_error()) << err.msg();
+
+  EXPECT_EQ(debug_ipc::ProcessTreeRecord::Type::kProcess, record.type);
+  EXPECT_EQ("<core dump>", record.name);
+  EXPECT_EQ(656254UL, record.koid);
 }
 
 }  // namespace zxdb
