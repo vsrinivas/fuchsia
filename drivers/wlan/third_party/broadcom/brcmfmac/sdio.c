@@ -3699,16 +3699,13 @@ static const struct brcmf_buscore_ops brcmf_sdio_buscore_ops = {
     .write32 = brcmf_sdio_buscore_write32,
 };
 
-// TODO(cphoenix): This thread seems to be magically necessary for the driver to work.
-// Figure out why, and get rid of it.
-// This will wait, then dump out all SDIO transactions to date (if psr() is uncommented).
-#define SDIO_PRINTER
+// This will wait, then dump out all SDIO transactions to date.
 #ifdef SDIO_PRINTER
 pthread_t sdio_thread;
 static void* sdio_printer(void* foo) {
     brcmf_dbg(TEMP, "SDIO printer started");
     zx_nanosleep(zx_deadline_after(ZX_SEC(10000000)));
-    //psr();
+    psr();
     return NULL;
 }
 #endif // SDIO_PRINTER
