@@ -332,9 +332,9 @@ static zx_status_t aml_gpio_get_interrupt(void *ctx, uint32_t pin,
     uint32_t pin_select_offset  = ((index>3)? interrupt->pin_4_7_select_offset: interrupt->pin_0_3_select_offset);
     // Select GPIO IRQ(index) and program it to
     // the requested GPIO PIN
-    uint32_t regval = READ32_GPIO_INTERRUPT_REG(pin_select_offset);
-    regval |= (((pin - block->pin_block) + block->pin_start) << (index * BITS_PER_GPIO_INTERRUPT));
-    WRITE32_GPIO_INTERRUPT_REG(pin_select_offset, regval);
+    RMWREG32((uint32_t*)gpio->mmio_interrupt.vaddr + pin_select_offset,
+             index * BITS_PER_GPIO_INTERRUPT, BITS_PER_GPIO_INTERRUPT,
+             (pin - block->pin_block) + block->pin_start);
     // Configure GPIO Interrupt EDGE and Polarity
     uint32_t mode_reg_val = READ32_GPIO_INTERRUPT_REG(interrupt->edge_polarity_offset);
 
@@ -362,7 +362,7 @@ static zx_status_t aml_gpio_get_interrupt(void *ctx, uint32_t pin,
     WRITE32_GPIO_INTERRUPT_REG(interrupt->edge_polarity_offset, mode_reg_val);
 
     // Configure Interrupt Select Filter
-    regval = READ32_GPIO_INTERRUPT_REG(interrupt->filter_select_offset);
+    uint32_t regval = READ32_GPIO_INTERRUPT_REG(interrupt->filter_select_offset);
     WRITE32_GPIO_INTERRUPT_REG(interrupt->filter_select_offset,
                                regval | (0x7 << (index * BITS_PER_FILTER_SELECT)));
     interrupt->irq_status |= 1 << index;

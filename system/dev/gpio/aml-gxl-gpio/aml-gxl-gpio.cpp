@@ -405,10 +405,9 @@ zx_status_t AmlGxlGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags,
 
     // Select GPIO IRQ(index) and program it to
     // the requested GPIO PIN
-    uint32_t regval = Read32GpioInterruptReg(pin_select_offset);
-    regval |= (((pin % kPinsPerBlock) + block->pin_start) << (index * kBitsPerGpioInterrupt));
-    Write32GpioInterruptReg(pin_select_offset, regval);
-
+    mmio_interrupt_.ModifyBits((pin % kPinsPerBlock) + block->pin_start,
+                               index * kBitsPerGpioInterrupt, kBitsPerGpioInterrupt,
+                               pin_select_offset << 2);
     // Configure GPIO Interrupt EDGE and Polarity
     uint32_t mode_reg_val = Read32GpioInterruptReg(gpio_interrupt_->edge_polarity_offset);
 
@@ -435,7 +434,7 @@ zx_status_t AmlGxlGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags,
     Write32GpioInterruptReg(gpio_interrupt_->edge_polarity_offset, mode_reg_val);
 
     // Configure Interrupt Select Filter
-    regval = Read32GpioInterruptReg(gpio_interrupt_->filter_select_offset);
+    uint32_t regval = Read32GpioInterruptReg(gpio_interrupt_->filter_select_offset);
     Write32GpioInterruptReg(gpio_interrupt_->filter_select_offset,
                             regval | (0x7 << (index * kBitsPerFilterSelect)));
     irq_status_ |= static_cast<uint8_t>(1 << index);
