@@ -10,6 +10,7 @@
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 #include "lib/gtest/test_loop_fixture.h"
+#include "lib/ui/input/cpp/formatting.h"
 
 namespace lib_ui_input_tests {
 
@@ -235,6 +236,30 @@ InputCommand KeyboardCommandGenerator::MakeInputCommand(KeyboardEvent event) {
   input_cmd.set_send_keyboard_input(std::move(keyboard_cmd));
 
   return input_cmd;
+}
+
+bool PointerMatches(const PointerEvent& event, uint32_t pointer_id,
+                    PointerEventPhase phase, float x, float y) {
+  using fuchsia::ui::input::operator<<;
+
+  if (event.pointer_id != pointer_id) {
+    FXL_LOG(ERROR) << "  Actual: " << event.pointer_id;
+    FXL_LOG(ERROR) << "Expected: " << pointer_id;
+    return false;
+  } else if (event.phase != phase) {
+    FXL_LOG(ERROR) << "  Actual: " << event.phase;
+    FXL_LOG(ERROR) << "Expected: " << phase;
+    return false;
+  } else if (event.x != x) {
+    FXL_LOG(ERROR) << "  Actual: " << event.x;
+    FXL_LOG(ERROR) << "Expected: " << x;
+    return false;
+  } else if (event.y != y) {
+    FXL_LOG(ERROR) << "  Actual: " << event.y;
+    FXL_LOG(ERROR) << "Expected: " << y;
+    return false;
+  }
+  return true;
 }
 
 }  // namespace lib_ui_input_tests

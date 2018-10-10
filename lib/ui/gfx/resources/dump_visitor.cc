@@ -93,6 +93,7 @@ void DumpVisitor::Visit(ViewHolder* r) {
   View* v = r->view();
   WriteProperty("view_holder")
       << r->global_id() << "->" << (v ? v->global_id() : GlobalId());
+  WriteProperty("focus_change") << r->view_properties().focus_change;
 }
 
 void DumpVisitor::Visit(EntityNode* r) {
@@ -335,6 +336,7 @@ void DumpVisitor::Visit(Import* r) {
   BeginItem("Import", r);
   WriteProperty("import_spec") << static_cast<uint32_t>(r->import_spec());
   WriteProperty("is_bound") << r->is_bound();
+  WriteProperty("focusable") << r->focusable();
   BeginSection("delegate");
   r->delegate()->Accept(this);
   EndSection();

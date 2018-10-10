@@ -27,54 +27,51 @@ std::ostream& operator<<(std::ostream& os,
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::ui::input::PointerEvent& value) {
-  os << "{PointerEvent:";
-
-  switch (value.phase) {
+                         const fuchsia::ui::input::PointerEventPhase& value) {
+  switch (value) {
     case fuchsia::ui::input::PointerEventPhase::ADD:
-      os << "ADD";
-      break;
+      return os << "ADD";
     case fuchsia::ui::input::PointerEventPhase::REMOVE:
-      os << "REMOVE";
-      break;
+      return os << "REMOVE";
     case fuchsia::ui::input::PointerEventPhase::CANCEL:
-      os << "CANCEL";
-      break;
+      return os << "CANCEL";
     case fuchsia::ui::input::PointerEventPhase::DOWN:
-      os << "DOWN";
-      break;
+      return os << "DOWN";
     case fuchsia::ui::input::PointerEventPhase::MOVE:
-      os << "MOVE";
-      break;
+      return os << "MOVE";
     case fuchsia::ui::input::PointerEventPhase::UP:
-      os << "UP";
-      break;
+      return os << "UP";
     case fuchsia::ui::input::PointerEventPhase::HOVER:
-      os << "HOVER";
-      break;
+      return os << "HOVER";
     default:
-      os << "UNDEFINED";
+      return os << "UNDEFINED";
   }
+}
 
-  os << ", device_id=" << value.device_id;
-  os << ", pointer_id=" << value.pointer_id << ", type=";
-  switch (value.type) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::PointerEventType& value) {
+  switch (value) {
     case fuchsia::ui::input::PointerEventType::TOUCH:
-      os << "TOUCH";
-      break;
+      return os << "TOUCH";
     case fuchsia::ui::input::PointerEventType::STYLUS:
-      os << "STYLUS";
-      break;
+      return os << "STYLUS";
     case fuchsia::ui::input::PointerEventType::INVERTED_STYLUS:
-      os << "INVERTED_STYLUS";
-      break;
+      return os << "INVERTED_STYLUS";
     case fuchsia::ui::input::PointerEventType::MOUSE:
-      os << "MOUSE";
-      break;
+      return os << "MOUSE";
     default:
-      os << "UNDEFINED";
+      return os << "UNDEFINED";
   }
-  os << ", x=" << value.x << ", y=" << value.y;
+}
+
+std::ostream&
+operator<<(std::ostream& os, const fuchsia::ui::input::PointerEvent& value) {
+  os << "{PointerEvent:" << value.phase;
+  os << ", device_id=" << value.device_id;
+  os << ", pointer_id=" << value.pointer_id;
+  os << ", type=" << value.type;
+  os << ", x=" << value.x;
+  os << ", y=" << value.y;
   os << ", buttons = " << fxl::StringPrintf("0x%08X", value.buttons);
   os << ", timestamp=" << value.event_time;
   return os << "}";

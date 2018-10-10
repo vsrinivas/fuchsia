@@ -38,8 +38,8 @@
 // (0,0) and (4,4)), in addition to aligning (translating) each View's Shape to
 // its owning View.
 //
-// Session 1 creates its rectangle in the upper left quadrant; the View's origin
-// is marked 'x'. Similarly, session 2 creates its rectangle in the bottom right
+// View 1 creates its rectangle in the upper left quadrant; the View's origin
+// is marked 'x'. Similarly, View 2 creates its rectangle in the bottom right
 // quadrant; the View's origin marked 'y'.
 //
 // The hit test occurs at the center of the screen (colocated with View 2's
@@ -53,8 +53,8 @@
 // UP     U     (6,2)   (6,2)   (2,-2)
 // REMOVE U     (6,2)   (6,2)   (2,-2)
 //
-// N.B. Session 1 sits *above* session 2 in elevation; hence, session 1 should
-// receive the focus event.
+// N.B. View 1 sits *above* View 2 in elevation; hence, View 1 should receive
+// the focus event.
 //
 // N.B. This test is carefully constructed to avoid Vulkan functionality.
 
@@ -62,6 +62,7 @@ namespace lib_ui_input_tests {
 
 using fuchsia::ui::input::InputEvent;
 using fuchsia::ui::input::PointerEvent;
+using fuchsia::ui::input::PointerEventPhase;
 using fuchsia::ui::input::PointerEventType;
 
 // Class fixture for TEST_F. Sets up a 9x9 "display" for GfxSystem.
@@ -186,85 +187,62 @@ TEST_F(CoordinateTransformTest, CoordinateTransform) {
     EXPECT_EQ(events.size(), 6u) << "Should receive exactly 6 input events.";
 
     // ADD
-    {
-      EXPECT_TRUE(events[0].is_pointer());
-      const PointerEvent& add = events[0].pointer();
-      EXPECT_EQ(add.x, 4);
-      EXPECT_EQ(add.y, 4);
-    }
+    EXPECT_TRUE(events[0].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 4, 4));
 
     // FOCUS
     EXPECT_TRUE(events[1].is_focus());
+    EXPECT_TRUE(events[1].focus().focused);
 
     // DOWN
-    {
-      EXPECT_TRUE(events[2].is_pointer());
-      const PointerEvent& down = events[2].pointer();
-      EXPECT_EQ(down.x, 4);
-      EXPECT_EQ(down.y, 4);
-    }
+    EXPECT_TRUE(events[2].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 4, 4));
+
     // MOVE
-    {
-      EXPECT_TRUE(events[3].is_pointer());
-      const PointerEvent& move = events[3].pointer();
-      EXPECT_EQ(move.x, 5);
-      EXPECT_EQ(move.y, 3);
-    }
+    EXPECT_TRUE(events[3].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[3].pointer(), 1u, PointerEventPhase::MOVE, 5, 3));
+
     // UP
-    {
-      EXPECT_TRUE(events[4].is_pointer());
-      const PointerEvent& up = events[4].pointer();
-      EXPECT_EQ(up.x, 6);
-      EXPECT_EQ(up.y, 2);
-    }
+    EXPECT_TRUE(events[4].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[4].pointer(), 1u, PointerEventPhase::UP, 6, 2));
+
     // REMOVE
-    {
-      EXPECT_TRUE(events[5].is_pointer());
-      const PointerEvent& remove = events[5].pointer();
-      EXPECT_EQ(remove.x, 6);
-      EXPECT_EQ(remove.y, 2);
-    }
+    EXPECT_TRUE(events[5].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u,
+                               PointerEventPhase::REMOVE, 6, 2));
   });
 
   client_2.ExamineEvents([this](const std::vector<InputEvent>& events) {
     EXPECT_EQ(events.size(), 5u) << "Should receive exactly 5 input events.";
 
     // ADD
-    {
-      const InputEvent& add = events[0];
-      EXPECT_TRUE(add.is_pointer());
-      EXPECT_EQ(add.pointer().x, 0);
-      EXPECT_EQ(add.pointer().y, 0);
-    }
+    EXPECT_TRUE(events[0].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 0, 0));
 
     // DOWN
-    {
-      EXPECT_TRUE(events[1].is_pointer());
-      const PointerEvent& down = events[1].pointer();
-      EXPECT_EQ(down.x, 0);
-      EXPECT_EQ(down.y, 0);
-    }
+    EXPECT_TRUE(events[1].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[1].pointer(), 1u, PointerEventPhase::DOWN, 0, 0));
+
     // MOVE
-    {
-      EXPECT_TRUE(events[2].is_pointer());
-      const PointerEvent& move = events[2].pointer();
-      EXPECT_EQ(move.x, 1);
-      EXPECT_EQ(move.y, -1);
-    }
+    EXPECT_TRUE(events[2].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 1, -1));
+
     // UP
-    {
-      EXPECT_TRUE(events[3].is_pointer());
-      const PointerEvent& up = events[3].pointer();
-      EXPECT_EQ(up.x, 2);
-      EXPECT_EQ(up.y, -2);
-    }
+    EXPECT_TRUE(events[3].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[3].pointer(), 1u, PointerEventPhase::UP, 2, -2));
+
     // REMOVE
-    {
-      EXPECT_TRUE(events[4].is_pointer());
-      const PointerEvent& remove = events[4].pointer();
-      EXPECT_EQ(remove.x, 2);
-      EXPECT_EQ(remove.y, -2);
-    }
+    EXPECT_TRUE(events[4].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u,
+                               PointerEventPhase::REMOVE, 2, -2));
 
 #if 0
     for (const auto& event : events)

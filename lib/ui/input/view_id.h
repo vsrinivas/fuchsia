@@ -24,6 +24,10 @@ struct ViewStack {
     glm::mat4 global_transform;  // The model-to-global transform for each View.
   };
   std::vector<Entry> stack;
+
+  // Whether the top-level View is focusable or not.
+  // We write this field in an ADD event and read it in a DOWN event.
+  bool focus_change = true;
 };
 
 std::ostream& operator<<(std::ostream& os, const ViewStack& value);

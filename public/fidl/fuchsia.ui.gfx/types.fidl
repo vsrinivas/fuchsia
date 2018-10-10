@@ -220,12 +220,12 @@ struct ViewProperties {
   // Whether the View can receive a focus event; default is true.  When
   // false, and this View is eligible to receive a focus event, no
   // focus/unfocus event is actually sent to any View.
-  bool focus_change;
+  bool focus_change = true;
 
   // Whether the View allows geometrically underlying Views to receive input;
   // default is true. When false, Scenic does not send input events to
   // underlying Views.
-  bool downward_input;
+  bool downward_input = true;
 };
 
 // Represents the state of a View in Scenic.

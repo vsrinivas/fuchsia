@@ -14,6 +14,7 @@
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer_stack.h"
+#include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
@@ -140,6 +141,39 @@ void RemoveHitsFromSameSession(SessionId session_id, size_t start_idx,
     }
   }
 }
+
+// Helper for DispatchCommand.
+bool IsFocusChange(gfx::ResourcePtr view) {
+  FXL_DCHECK(view);
+  if (view->IsKindOf<gfx::View>()) {
+    gfx::ViewPtr view_ptr = view->As<gfx::View>();
+    if (view_ptr->connected()) {
+      return view_ptr->view_holder()->view_properties().focus_change;
+    }
+  } else {
+    // TODO(SCN-1026): Convert to query v2 view properties.
+    // TODO(SCN-1006): After v2 transition, remove this clause.
+    // We traverse up the scene graph to find the closest "ancestor" Import
+    // starting from a given Import. We assume the scene graph is set up by
+    // ViewManager in a very particular configuration for this traversal.
+    FXL_DCHECK(view->IsKindOf<gfx::Import>());
+    if (gfx::ImportPtr import = view->As<gfx::Import>()) {
+      if (gfx::Resource* imported = import->imported_resource()) {
+        if (imported->IsKindOf<gfx::EntityNode>()) {
+          gfx::NodePtr attach_point = imported->As<gfx::EntityNode>();
+          if (gfx::Node* delegate = attach_point->parent()) {
+            if (gfx::Node* parent_node = delegate->parent()) {
+              if (parent_node->imports().size() > 0) {
+                return parent_node->imports()[0]->focusable();
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return true;  // Implicitly, all Views can receive focus.
+}
 }  // namespace
 
 InputSystem::InputSystem(SystemContext context, gfx::GfxSystem* gfx_system)
@@ -247,6 +281,11 @@ void InputCommandDispatcher::DispatchCommand(
           RemoveHitsFromSameSession(view->session()->id(), i + 1, &views);
         }
       }
+
+      // Determine focusability of top-level view.
+      if (views.size() > 0) {
+        hit_views.focus_change = IsFocusChange(views[0]);
+      }
     }
     FXL_VLOG(1) << "View stack of hits: " << hit_views;
 
@@ -258,8 +297,7 @@ void InputCommandDispatcher::DispatchCommand(
     // deliberately, or by the no-focus property), or (3) another view.
     GlobalId new_focus;
     if (!pointer_targets_[pointer_id].stack.empty()) {
-      // TODO(SCN-919): Honor the "focus_change" view property.
-      if (/*top view is focusable*/ true) {
+      if (pointer_targets_[pointer_id].focus_change) {
         new_focus = pointer_targets_[pointer_id].stack[0].view_id;
       } else {
         new_focus = focus_;  // No focus change.

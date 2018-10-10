@@ -69,6 +69,9 @@ class ViewHolder final : public Resource {
 
   // ViewProperties management.
   void SetViewProperties(fuchsia::ui::gfx::ViewProperties props);
+  const fuchsia::ui::gfx::ViewProperties& view_properties() {
+    return view_properties_;
+  }
 
   // Refresh the cached scene by reading it from our parent.
   // Used when the parent is changed via SetParent but also called externally

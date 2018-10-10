@@ -1,6 +1,8 @@
 {
   "exclusions" : [
     "fuchsia.ui.input/InputEvent",
+    "fuchsia.ui.input/PointerEventPhase",
+    "fuchsia.ui.input/PointerEventType",
     "fuchsia.ui.input/PointerEvent",
     "fuchsia.ui.input/Point3F",
     "fuchsia.ui.input/KeyboardEvent",

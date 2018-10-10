@@ -16,6 +16,7 @@ executable("unittests") {
   output_name = "input_unittests"
   sources = [
     "coordinate_transform_test.cc",
+    "focus_avoidance_test.cc",
     "hard_keyboard_delivery_test.cc",
     "import_node_test.cc",
     "util.cc",
@@ -31,6 +32,7 @@ executable("unittests") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
+    "//garnet/public/lib/ui/input/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/fidl/fuchsia-display",

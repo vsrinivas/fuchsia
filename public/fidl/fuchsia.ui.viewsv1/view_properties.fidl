@@ -16,7 +16,7 @@ struct ViewProperties {
 };
 
 struct CustomFocusBehavior {
-  bool allow_focus;
+  bool allow_focus = true;
 };
 
 // Provides layout constraints for a view.

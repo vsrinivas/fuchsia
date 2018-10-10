@@ -25,6 +25,10 @@ namespace input {
 std::ostream& operator<<(std::ostream& os,
                          const fuchsia::ui::input::InputEvent& value);
 std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::PointerEventPhase& value);
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::PointerEventType& value);
+std::ostream& operator<<(std::ostream& os,
                          const fuchsia::ui::input::PointerEvent& value);
 std::ostream& operator<<(std::ostream& os,
                          const fuchsia::ui::input::KeyboardEvent& value);

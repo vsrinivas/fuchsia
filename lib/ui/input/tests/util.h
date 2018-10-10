@@ -146,6 +146,11 @@ class KeyboardCommandGenerator {
   fuchsia::ui::input::KeyboardEvent blank_;
 };
 
+bool PointerMatches(const fuchsia::ui::input::PointerEvent& event,
+                    uint32_t pointer_id,
+                    fuchsia::ui::input::PointerEventPhase phase, float x,
+                    float y);
+
 }  // namespace lib_ui_input_tests
 
 #endif  // GARNET_LIB_UI_INPUT_TESTS_UTIL_H_

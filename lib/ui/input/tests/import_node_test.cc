@@ -58,6 +58,7 @@ using ScenicEvent = fuchsia::ui::scenic::Event;
 using escher::impl::CommandBufferSequencer;
 using fuchsia::ui::input::InputEvent;
 using fuchsia::ui::input::PointerEvent;
+using fuchsia::ui::input::PointerEventPhase;
 using fuchsia::ui::input::PointerEventType;
 using fuchsia::ui::scenic::SessionListener;
 using scenic_impl::Scenic;
@@ -164,44 +165,33 @@ TEST_F(ImportNodeTest, ImportNodeEventDelivery) {
     EXPECT_EQ(events.size(), 6u) << "Should receive exactly 6 input events.";
 
     // ADD
-    {
-      EXPECT_TRUE(events[0].is_pointer());
-      const PointerEvent& add = events[0].pointer();
-      EXPECT_EQ(add.x, 2);
-      EXPECT_EQ(add.y, 2);
-    }
+    EXPECT_TRUE(events[0].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 2, 2));
 
     // FOCUS
     EXPECT_TRUE(events[1].is_focus());
+    EXPECT_TRUE(events[1].focus().focused);
 
     // DOWN
-    {
-      EXPECT_TRUE(events[2].is_pointer());
-      const PointerEvent& down = events[2].pointer();
-      EXPECT_EQ(down.x, 2);
-      EXPECT_EQ(down.y, 2);
-    }
+    EXPECT_TRUE(events[2].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 2, 2));
+
     // MOVE
-    {
-      EXPECT_TRUE(events[3].is_pointer());
-      const PointerEvent& move = events[3].pointer();
-      EXPECT_EQ(move.x, 3);
-      EXPECT_EQ(move.y, 1);
-    }
+    EXPECT_TRUE(events[3].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[3].pointer(), 1u, PointerEventPhase::MOVE, 3, 1));
+
     // UP
-    {
-      EXPECT_TRUE(events[4].is_pointer());
-      const PointerEvent& up = events[4].pointer();
-      EXPECT_EQ(up.x, 4);
-      EXPECT_EQ(up.y, 0);
-    }
+    EXPECT_TRUE(events[4].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[4].pointer(), 1u, PointerEventPhase::UP, 4, 0));
+
     // REMOVE
-    {
-      EXPECT_TRUE(events[5].is_pointer());
-      const PointerEvent& remove = events[5].pointer();
-      EXPECT_EQ(remove.x, 4);
-      EXPECT_EQ(remove.y, 0);
-    }
+    EXPECT_TRUE(events[5].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u,
+                               PointerEventPhase::REMOVE, 4, 0));
   });
 }
 
