@@ -364,23 +364,30 @@ bool Session::ApplyTakeSnapshotCmdHACK(
           }
           return;
         }
+
         auto engine = weak->engine_;
+        Resource* resource = nullptr;
         if (auto node = weak->resources_.FindResource<Node>(command.node_id)) {
-          auto gpu_uploader =
-              escher::BatchGpuUploader::New(engine->GetEscherWeakPtr());
-          Snapshotter snapshotter(gpu_uploader);
-          // Take a snapshot and return the data in callback. The closure does
-          // not need the snapshotter instance and is invoked after the instance
-          // is destroyed.
-          snapshotter.TakeSnapshot(node.get(),
-                                   [callback = command.callback.Bind()](
-                                       fuchsia::mem::Buffer snapshot) {
-                                     callback->OnData(std::move(snapshot));
-                                   });
-        } else if (auto callback = command.callback.Bind()) {
-          // TODO(SCN-978): Return an error to the caller for invalid data.
-          callback->OnData(fuchsia::mem::Buffer{});
+          resource = node.get();
+        } else if (command.node_id == 0) {
+          resource = engine->GetFirstCompositor();
+        } else {
+          if (auto callback = command.callback.Bind()) {
+            callback->OnData(fuchsia::mem::Buffer{});
+          }
+          return;
         }
+
+        auto gpu_uploader =
+            escher::BatchGpuUploader::New(engine->GetEscherWeakPtr());
+        Snapshotter snapshotter(gpu_uploader);
+        // Take a snapshot and return the data in callback. The closure does
+        // not need the snapshotter instance and is invoked after the instance
+        // is destroyed.
+        snapshotter.TakeSnapshot(resource, [callback = command.callback.Bind()](
+                                               fuchsia::mem::Buffer snapshot) {
+          callback->OnData(std::move(snapshot));
+        });
       });
   return true;
 }

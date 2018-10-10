@@ -22,6 +22,7 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/ui/input/cpp/formatting.h"
+#include "lib/ui/scenic/cpp/commands.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/views/cpp/formatting.h"
 
@@ -1059,21 +1060,29 @@ void ViewRegistry::OnInputDispatcherDied(InputDispatcherImpl* dispatcher) {
 void ViewRegistry::TakeSnapshot(
     uint64_t view_koid, fit::function<void(::fuchsia::mem::Buffer)> callback) {
   auto view_state = static_cast<ViewState*>(view_linker_.GetImport(view_koid));
-  if (view_state) {
-    fuchsia::ui::gfx::SnapshotCallbackHACKPtr snapshot_callback;
-    auto snapshot_callback_impl = std::make_shared<SnapshotCallbackImpl>(
-        snapshot_callback.NewRequest(), std::move(callback));
-    snapshot_callback_impl->SetClear([this, snapshot_callback_impl]() {
-      snapshot_bindings_.remove(snapshot_callback_impl);
-    });
-    snapshot_bindings_.push_back(std::move(snapshot_callback_impl));
+  if (view_koid > 0 && !view_state) {
+    // TODO(SCN-978): Did not find the view for the view koid, return error.
+    callback(fuchsia::mem::Buffer{});
+    return;
+  }
 
+  fuchsia::ui::gfx::SnapshotCallbackHACKPtr snapshot_callback;
+  auto snapshot_callback_impl = std::make_shared<SnapshotCallbackImpl>(
+      snapshot_callback.NewRequest(), std::move(callback));
+  snapshot_callback_impl->SetClear([this, snapshot_callback_impl]() {
+    snapshot_bindings_.remove(snapshot_callback_impl);
+  });
+  snapshot_bindings_.push_back(std::move(snapshot_callback_impl));
+
+  if (view_state) {
     // Snapshot the child.
     view_state->top_node().Snapshot(std::move(snapshot_callback));
-    SchedulePresentSession();
   } else {
-    callback(fuchsia::mem::Buffer{});
+    // Snapshot the entire composition.
+    session_.Enqueue(
+        scenic::NewTakeSnapshotCmdHACK(0, std::move(snapshot_callback)));
   }
+  SchedulePresentSession();
 }
 
 // LOOKUP

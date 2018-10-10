@@ -162,10 +162,19 @@ package("snapshot") {
   binary = "snapshot"
 }
 
+package("gltf_export") {
+  deps = [
+    "gltf_export",
+  ]
+
+  binary = "gltf_export"
+}
+
 package("scenic_tools") {
   deprecated_system_image = true
 
   deps = [
+    "gltf_export",
     "input",
     "present_view",
     "print_input",
@@ -176,6 +185,9 @@ package("scenic_tools") {
   ]
 
   binaries = [
+    {
+      name = "gltf_export"
+    },
     {
       name = "input"
     },
