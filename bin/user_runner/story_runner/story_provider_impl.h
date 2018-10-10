@@ -139,11 +139,13 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   void TakeSnapshot(fidl::StringPtr story_id,
                     fit::function<void(fuchsia::mem::Buffer)> callback);
 
-  // Called by StoryControllerImpl. Creates a new view with the given |request|
-  // and loads the given |snapshot| into the view.
-  void LoadSnapshot(
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request,
-      fuchsia::mem::Buffer snapshot);
+  // Called by StoryControllerImpl. Creates a new view with the given
+  // |view_owner_request| and connects the snapshot loader with the given
+  // |loader_request|.
+  void StartSnapshotLoader(
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+          view_owner_request,
+      fidl::InterfaceRequest<fuchsia::scenic::snapshot::Loader> loader_request);
 
  private:
   // |fuchsia::modular::StoryProvider|

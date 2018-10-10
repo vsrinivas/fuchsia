@@ -730,9 +730,10 @@ void StoryProviderImpl::TakeSnapshot(
   }
 }
 
-void StoryProviderImpl::LoadSnapshot(
-    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request,
-    fuchsia::mem::Buffer snapshot) {
+void StoryProviderImpl::StartSnapshotLoader(
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request,
+    fidl::InterfaceRequest<fuchsia::scenic::snapshot::Loader> loader_request) {
   if (!snapshot_loader_app_) {
     fuchsia::modular::AppConfig snapshot_loader_config;
     snapshot_loader_config.url = kSnapshotLoaderUrl;
@@ -746,12 +747,11 @@ void StoryProviderImpl::LoadSnapshot(
   fuchsia::sys::ServiceProviderPtr service_provider;
   fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
   snapshot_loader_app_->services().ConnectToService(view_provider.NewRequest());
-  view_provider->CreateView(std::move(request), service_provider.NewRequest());
+  view_provider->CreateView(std::move(view_owner_request),
+                            service_provider.NewRequest());
 
-  fuchsia::scenic::snapshot::LoaderPtr loader;
   service_provider->ConnectToService(fuchsia::scenic::snapshot::Loader::Name_,
-                                     loader.NewRequest().TakeChannel());
-  loader->Load(std::move(snapshot));
+                                     loader_request.TakeChannel());
 }
 
 }  // namespace modular

@@ -474,7 +474,7 @@ FuturePtr<> SessionStorage::WriteSnapshot(fidl::StringPtr story_name,
                                           fuchsia::mem::Buffer snapshot) {
   auto ret = Future<>::Create("SessionStorage.WriteSnapshot.ret");
   operation_queue_.Add(new WriteSnapshotCall(
-      this, std::move(story_name), std::move(snapshot), ret->Completer()));
+      this, story_name, std::move(snapshot), ret->Completer()));
   return ret;
 }
 
@@ -483,7 +483,7 @@ FuturePtr<fuchsia::mem::BufferPtr> SessionStorage::ReadSnapshot(
   auto ret = Future<fuchsia::mem::BufferPtr>::Create(
       "SessionStorage.ReadSnapshot.ret");
   operation_queue_.Add(
-      new ReadSnapshotCall(this, std::move(story_name), ret->Completer()));
+      new ReadSnapshotCall(this, story_name, ret->Completer()));
   return ret;
 }
 

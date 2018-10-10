@@ -29,11 +29,11 @@ interface StoryController {
   // of the story will be taken and saved. Returns when the story is stopped.
   4: Stop() -> ();
 
-  // Takes a snapshot for the story controlled by this |StoryController| and
-  // then loads it. |view_owner| is an interface request for the view of the
-  // snapshot. If there is no snapshot to load, the |view_owner| is closed. The
-  // callback will be invoked once the snapshot has been loaded or when the
-  // |view_owner| is closed.
+  // Creates a new view with the given |view_owner| request to display
+  // snapshots. Takes a snapshot for the story controlled by this
+  // |StoryController| and then loads the snapshot to the created view such that
+  // it is rendered. The callback will be invoked once the view has been created
+  // and the snapshot has been loaded.
   13: TakeAndLoadSnapshot(request<fuchsia.ui.viewsv1token.ViewOwner> view_owner) -> ();
 
   // Registers a watcher for changes of the story state.

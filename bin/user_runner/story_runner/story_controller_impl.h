@@ -18,6 +18,7 @@
 #include <vector>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/scenic/snapshot/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
@@ -333,12 +334,17 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
                    std::unique_ptr<OngoingActivityImpl>>
       ongoing_activities_;
 
+  // Used to load snapshots.
+  fuchsia::scenic::snapshot::LoaderPtr snapshot_loader_;
+
   // A collection of services, scoped to this Story, for use by intelligent
   // Modules.
   fuchsia::modular::IntelligenceServicesPtr intelligence_services_;
 
   // Asynchronous operations are sequenced in a queue.
   OperationQueue operation_queue_;
+
+  fxl::WeakPtrFactory<StoryControllerImpl> weak_factory_;
 
   // Operations implemented here.
   class AddIntentCall;
@@ -355,8 +361,8 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   class StopCall;
   class StopModuleCall;
   class StopModuleAndStoryIfEmptyCall;
-  class LoadSnapshotCall;
-  class TakeSnapshotCall;
+  class StartSnapshotLoaderCall;
+  class UpdateSnapshotCall;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);
 };
