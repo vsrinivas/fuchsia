@@ -6,7 +6,8 @@
         "pkgfs": [ "packages" ],
         "services": [
             "fuchsia.modular.ComponentContext",
-            "fuchsia.modular.IntelligenceServices"
+            "fuchsia.modular.IntelligenceServices",
+            "fuchsia.net.oldhttp.HttpService"
         ],
         "system": [ "data/initial_module_packages" ]
     }
