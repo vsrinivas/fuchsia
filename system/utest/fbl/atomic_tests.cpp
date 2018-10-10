@@ -498,10 +498,25 @@ const volatile S* test_values<const volatile S*>[] = {
     nullptr,
 };
 
-void nothing_0() {}
-void nothing_1() {}
-void nothing_2() {}
-void nothing_3() {}
+// Try to force each of these to be different so that the test
+// continues working under ICF. The CAS tests compare function pointer
+// values, so it's important that these have different addresses.
+static volatile int volatile_0;
+void nothing_0() {
+    volatile_0 = 0;
+}
+static volatile int volatile_1;
+void nothing_1() {
+    volatile_1 = 1;
+}
+static volatile int volatile_2;
+void nothing_2() {
+    volatile_2 = 2;
+}
+static volatile int volatile_3;
+void nothing_3() {
+    volatile_3 = 3;
+}
 
 template <>
 function_pointer test_values<function_pointer>[] = {
