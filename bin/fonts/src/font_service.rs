@@ -21,6 +21,7 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
+use unicase::UniCase;
 
 fn clone_buffer(buf: &mem::Buffer) -> Result<mem::Buffer, Error> {
     let vmo_rights = zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP;
@@ -101,14 +102,19 @@ impl FontFamily {
     fn new(fallback_group: fonts::FallbackGroup) -> FontFamily {
         FontFamily {
             fonts: FontCollection::new(),
-            fallback_group: fallback_group,
+            fallback_group,
         }
     }
 }
 
+pub enum FamilyOrAlias {
+    Family(FontFamily),
+    Alias(UniCase<String>),
+}
+
 pub struct FontService {
     assets: AssetCollection,
-    families: BTreeMap<String, FontFamily>,
+    families: BTreeMap<UniCase<String>, FamilyOrAlias>,
     fallback_collection: FontCollection,
 }
 
@@ -145,17 +151,29 @@ impl FontService {
     fn add_fonts_from_manifest(
         &mut self, mut manifest: manifest::FontsManifest,
     ) -> Result<(), Error> {
+        let font_info_loader = font_info::FontInfoLoader::new()?;
+
         for mut family_manifest in manifest.families.drain(..) {
             if family_manifest.fonts.is_empty() {
                 continue;
             }
 
-            let family = self
-                .families
-                .entry(family_manifest.family.clone())
-                .or_insert_with(|| FontFamily::new(family_manifest.fallback_group));
+            let family_name = UniCase::new(family_manifest.family.clone());
 
-            let font_info_loader = font_info::FontInfoLoader::new()?;
+            let family = match self.families.entry(family_name.clone()).or_insert_with(|| {
+                FamilyOrAlias::Family(FontFamily::new(family_manifest.fallback_group))
+            }) {
+                FamilyOrAlias::Family(f) => f,
+                FamilyOrAlias::Alias(other_family) => {
+                    // Different manifest files may declare fonts for the same family,
+                    // but font aliases cannot conflict with main family name.
+                    return Err(format_err!(
+                        "Conflicting font alias: {} is already declared as an alias for {}",
+                        family_name,
+                        other_family
+                    ));
+                }
+            };
 
             for font_manifest in family_manifest.fonts.drain(..) {
                 let asset_id = self
@@ -188,6 +206,38 @@ impl FontService {
                     self.fallback_collection.add_font(font);
                 }
             }
+
+            // Register family aliases.
+            for alias in family_manifest.aliases.unwrap_or(vec![]) {
+                let alias_unicase = UniCase::new(alias.clone());
+
+                match self.families.get(&alias_unicase) {
+                    None => {
+                        self.families
+                            .insert(alias_unicase, FamilyOrAlias::Alias(family_name.clone()));
+                    }
+                    Some(FamilyOrAlias::Family(f)) => {
+                        return Err(format_err!(
+                            "Can't add alias {} for {} because a family with that name already \
+                             exists.",
+                            alias,
+                            family_name
+                        ))
+                    }
+                    Some(FamilyOrAlias::Alias(other_family)) => {
+                        // If the alias exists then it must be for the same font family.
+                        if *other_family != family_name {
+                            return Err(format_err!(
+                                "Can't add alias {} for {} because it's already declared as alias \
+                                 for {}.",
+                                alias,
+                                family_name,
+                                other_family
+                            ));
+                        }
+                    }
+                }
+            }
         }
 
         // Flush the cache. Font files will be loaded again when they are needed.
@@ -201,7 +251,14 @@ impl FontService {
             *lang = lang.to_ascii_lowercase();
         }
 
-        let matched_family = self.families.get(&request.family);
+        let family_name = UniCase::new(request.family.clone());
+        let matched_family = self.families.get(&family_name).map(|f| match f {
+            FamilyOrAlias::Family(f) => f,
+            FamilyOrAlias::Alias(a) => match self.families.get(a) {
+                Some(FamilyOrAlias::Family(f)) => f,
+                _ => panic!("Invalid font alias."),
+            },
+        });
 
         let mut font = None;
 
@@ -209,7 +266,7 @@ impl FontService {
             font = family.fonts.match_request(&request)
         }
 
-        if font.is_none() & ((request.flags & fonts::REQUEST_FLAG_NO_FALLBACK) == 0) {
+        if font.is_none() && (request.flags & fonts::REQUEST_FLAG_NO_FALLBACK) == 0 {
             // If fallback_group is not specified by the client explicitly then copy it from
             // the matched font family.
             if request.fallback_group == fonts::FallbackGroup::None {

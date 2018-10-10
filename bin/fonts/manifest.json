@@ -1,15 +1,6 @@
 {
   "families": [
     {
-      "family": "MaterialIcons",
-      "fonts": [
-        {
-          "asset": "fonts/MaterialIcons-Regular.ttf",
-          "fallback": true
-        }
-      ]
-    },
-    {
       "family": "Roboto",
       "fallback_group": "sans-serif",
       "fallback": true,
@@ -69,39 +60,49 @@
       ]
     },
     {
-      "family": "RobotoCondensed",
+      "family": "Roboto Condensed",
+      "aliases": ["RobotoCondensed"],
       "fallback_group": "sans-serif",
+      "fallback": true,
       "fonts": [
         {
-          "asset": "fonts/RobotoCondensed-Regular.ttf"
+          "asset": "fonts/RobotoCondensed-Regular.ttf",
+          "width": 3
         },
         {
           "asset": "fonts/RobotoCondensed-Italic.ttf",
+          "width": 3,
           "slant": "italic"
         },
         {
-          "asset": "fonts/Roboto-Light.ttf",
+          "asset": "fonts/RobotoCondensed-Light.ttf",
+          "width": 3,
           "weight": 300
         },
         {
-          "asset": "fonts/Roboto-LightItalic.ttf",
+          "asset": "fonts/RobotoCondensed-LightItalic.ttf",
+          "width": 3,
           "weight": 300,
           "slant": "italic"
         },
         {
-          "asset": "fonts/Roboto-Bold.ttf",
+          "asset": "fonts/RobotoCondensed-Bold.ttf",
+          "width": 3,
           "weight": 700
         },
         {
-          "asset": "fonts/Roboto-BoldItalic.ttf",
+          "asset": "fonts/RobotoCondensed-BoldItalic.ttf",
+          "width": 3,
           "weight": 700,
           "slant": "italic"
         }
       ]
     },
     {
-      "family": "RobotoMono",
+      "family": "Roboto Mono",
+      "aliases": ["RobotoMono"],
       "fallback_group": "monospace",
+      "fallback": true,
       "fonts": [
         {
           "asset": "fonts/RobotoMono-Regular.ttf"
@@ -149,8 +150,10 @@
       ]
     },
     {
-      "family": "RobotoSlab",
+      "family": "Roboto Slab",
+      "aliases": ["RobotoSlab"],
       "fallback_group": "serif",
+      "fallback": true,
       "fonts": [
         {
           "asset": "fonts/RobotoSlab-Regular.ttf"
@@ -166,6 +169,16 @@
         {
           "asset": "fonts/RobotoSlab-Bold.ttf",
           "weight": 700
+        }
+      ]
+    },
+    {
+      "family": "Material Icons",
+      "aliases": ["MaterialIcons"],
+      "fallback": true,
+      "fonts": [
+        {
+          "asset": "fonts/MaterialIcons-Regular.ttf"
         }
       ]
     }

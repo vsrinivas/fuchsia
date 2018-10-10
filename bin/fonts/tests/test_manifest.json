@@ -1,7 +1,8 @@
 {
   "families": [
     {
-      "family": "NotoSerifCJK",
+      "family": "Noto Serif CJK",
+      "aliases": ["NotoSerifCJK"],
       "fallback_group": "serif",
       "fallback": true,
       "fonts": [
@@ -28,7 +29,8 @@
       ]
     },
     {
-      "family": "NotoSansCJK",
+      "family": "Noto Sans CJK",
+      "aliases": ["NotoSansCJK"],
       "fallback_group": "sans-serif",
       "fallback": true,
       "fonts": [

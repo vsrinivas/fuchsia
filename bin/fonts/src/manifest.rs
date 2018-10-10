@@ -22,6 +22,9 @@ pub struct FontsManifest {
 #[derive(Debug, Deserialize)]
 pub struct Family {
     pub family: String,
+
+    pub aliases: Option<Vec<String>>,
+
     pub fonts: Vec<Font>,
 
     #[serde(default = "default_fallback")]

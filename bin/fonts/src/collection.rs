@@ -187,7 +187,7 @@ fn select_best_match<'a, 'b>(
             return a;
         }
         if b.font.weight == request.weight {
-            return a;
+            return b;
         }
 
         if request.weight < 400 {
@@ -408,6 +408,11 @@ mod tests {
             make_fake_font_style(5, Upright, 200),
             make_fake_font_style(5, Upright, 400),
         ]);
+
+        // Exact match.
+        assert!(request_style(&collection, 3, Upright, 200).weight == 200);
+        assert!(request_style(&collection, 3, Upright, 400).weight == 400);
+        assert!(request_style(&collection, 3, Upright, 700).weight == 700);
 
         // For weight < 400 lower weights are preferred.
         assert!(request_style(&collection, 3, Upright, 300).weight == 200);

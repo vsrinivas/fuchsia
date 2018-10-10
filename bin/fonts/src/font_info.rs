@@ -116,13 +116,13 @@ impl VmoStreamInternal {
         &self.stream_rec as freetype::FT_Stream
     }
 
-    fn read(&mut self, mut offset: u64, mut read_buffer: &mut [u8]) -> u64 {
+    fn read(&mut self, offset: u64, read_buffer: &mut [u8]) -> u64 {
         if read_buffer.len() == 0 || offset >= self.stream_rec.size as u64 {
             return 0;
         }
         let read_size = std::cmp::min(read_buffer.len(), (self.stream_rec.size - offset) as usize);
         match self.vmo.read(&mut read_buffer[..read_size], offset) {
-            Ok(n) => read_size as u64,
+            Ok(_) => read_size as u64,
             Err(err) => {
                 println!("Error when reading from font VMO: {:?}", err);
                 0

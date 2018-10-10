@@ -67,15 +67,35 @@ async fn test_basic() -> Result<(), Error> {
         .context("Failed to load default font")?;
     let roboto = await!(get_font_info_basic(&font_provider, "Roboto".to_string()))
         .context("Failed to load Roboto")?;
-    let roboto_slab = await!(get_font_info_basic(&font_provider, "RobotoSlab".to_string()))
-        .context("Failed to load RobotoSlab")?;
+    let roboto_slab = await!(get_font_info_basic(&font_provider, "Roboto Slab".to_string()))
+        .context("Failed to load Roboto Slab")?;
 
     // Roboto should be returned by default.
     assert!(default == roboto);
 
-    // RobotoSlab request should return a different font.
+    // Roboto Slab request should return a different font.
     assert!(default.vmo_koid != roboto_slab.vmo_koid);
     assert!(default.buffer_id != roboto_slab.buffer_id);
+
+    Ok(())
+}
+
+async fn test_aliases() -> Result<(), Error> {
+    let launcher = Launcher::new().context("Failed to open launcher service")?;
+    let app = launcher
+        .launch("fonts".to_string(), None)
+        .context("Failed to launch fonts::Provider")?;
+
+    let font_provider = app
+        .connect_to_service(fonts::ProviderMarker)
+        .context("Failed to connect to fonts::Provider")?;
+
+    // Both requests should return the same font.
+    let robotoslab = await!(get_font_info_basic(&font_provider, "RobotoSlab".to_string()))
+        .context("Failed to load RobotoSlab")?;
+    let roboto_slab = await!(get_font_info_basic(&font_provider, "Roboto Slab".to_string()))
+        .context("Failed to load Roboto Slab")?;
+    assert!(robotoslab == roboto_slab);
 
     Ok(())
 }
@@ -159,19 +179,19 @@ async fn test_fallback_group() -> Result<(), Error> {
 
     let noto_serif_cjk_ja = await!(get_font_info(
         &font_provider,
-        "NotoSerifCJK".to_string(),
+        "Noto Serif CJK".to_string(),
         vec!["ja".to_string()],
         '\0'
-    )).context("Failed to load NotoSerifCJK font")?;
+    )).context("Failed to load Noto Serif CJK font")?;
 
     let noto_serif_cjk_ja_by_char = await!(get_font_info(
         &font_provider,
-        "RobotoSlab".to_string(),
+        "Roboto Slab".to_string(),
         vec!["ja".to_string()],
         'な'
-    )).context("Failed to load NotoSerifCJK font")?;
+    )).context("Failed to load Noto Serif CJK font")?;
 
-    // The query above requested RobotoSlab, so it's expected to return
+    // The query above requested Roboto Slab, so it's expected to return
     // Noto Serif CJK instead of Noto Sans CJK because Roboto Slab and
     // Noto Serif CJK are both in serif fallback group.
     assert!(noto_serif_cjk_ja == noto_serif_cjk_ja_by_char);
@@ -181,6 +201,7 @@ async fn test_fallback_group() -> Result<(), Error> {
 
 async fn run_tests() -> Result<(), Error> {
     await!(test_basic())?;
+    await!(test_aliases())?;
     await!(test_font_collections())?;
     await!(test_fallback())?;
     await!(test_fallback_group())?;
