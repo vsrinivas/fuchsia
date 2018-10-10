@@ -6,6 +6,7 @@
 
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/lib/debug_ipc/client_protocol.h"
+#include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 #include "third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h"
 
@@ -21,12 +22,20 @@ Err ErrNoImpl() { return Err("Feature not implemented for minidump"); }
 
 template <typename ReplyType>
 void ErrNoLive(std::function<void(const Err&, ReplyType)> cb) {
-  cb(ErrNoLive(), ReplyType());
+  debug_ipc::MessageLoop::Current()->PostTask(
+    [cb]() { cb(ErrNoLive(), ReplyType()); });
 }
 
 template <typename ReplyType>
 void ErrNoImpl(std::function<void(const Err&, ReplyType)> cb) {
-  cb(ErrNoImpl(), ReplyType());
+  debug_ipc::MessageLoop::Current()->PostTask(
+    [cb]() { cb(ErrNoImpl(), ReplyType()); });
+}
+
+template <typename ReplyType>
+void Succeed(std::function<void(const Err&, ReplyType)> cb, ReplyType r) {
+  debug_ipc::MessageLoop::Current()->PostTask(
+    [cb, r]() { cb(Err(), r); });
 }
 
 }  // namespace
@@ -69,7 +78,7 @@ Err MinidumpRemoteAPI::Close() {
 void MinidumpRemoteAPI::Hello(
     const debug_ipc::HelloRequest& request,
     std::function<void(const Err&, debug_ipc::HelloReply)> cb) {
-  cb(Err(), debug_ipc::HelloReply());
+  Succeed(cb, debug_ipc::HelloReply());
 }
 
 void MinidumpRemoteAPI::Launch(
