@@ -239,13 +239,15 @@ static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
   std::istringstream tokenStream(spec);
   while (std::getline(tokenStream, token, ',')) {
     if (token == "fdio") {
-      out->data_plane = machina::BlockDispatcher::DataPlane::FDIO;
+      out->block_fmt = fuchsia::guest::device::BlockFormat::RAW;
     } else if (token == "qcow") {
-      out->data_plane = machina::BlockDispatcher::DataPlane::QCOW;
+      out->block_fmt = fuchsia::guest::device::BlockFormat::QCOW;
     } else if (token == "rw") {
-      out->mode = machina::BlockDispatcher::Mode::RW;
+      out->block_mode = fuchsia::guest::device::BlockMode::READ_WRITE;
     } else if (token == "ro") {
-      out->mode = machina::BlockDispatcher::Mode::RO;
+      out->block_mode = fuchsia::guest::device::BlockMode::READ_ONLY;
+    } else if (token == "volatile") {
+      out->block_mode = fuchsia::guest::device::BlockMode::VOLATILE_WRITE;
     } else if (token.size() > 0 && token[0] == '/') {
       out->path = std::move(token);
     } else if (token.compare(0, 5, "guid:") == 0) {
@@ -263,8 +265,6 @@ static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
       }
       out->guid.type =
           machina::BlockDispatcher::GuidType::GPT_PARTITION_TYPE_GUID;
-    } else if (token == "volatile") {
-      out->volatile_writes = true;
     }
   }
 

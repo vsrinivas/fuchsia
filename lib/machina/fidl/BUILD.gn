@@ -11,5 +11,6 @@ fidl("fuchsia.guest.device") {
 
   deps = [
     "//garnet/public/fidl/fuchsia.guest",
+    "//zircon/public/fidl/fuchsia-io",
   ]
 }

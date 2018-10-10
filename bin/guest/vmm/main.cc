@@ -185,12 +185,12 @@ int main(int argc, char** argv) {
     std::unique_ptr<machina::BlockDispatcher> dispatcher;
     if (!block_spec.path.empty()) {
       status = machina::BlockDispatcher::CreateFromPath(
-          block_spec.path.c_str(), block_spec.mode, block_spec.data_plane,
+          block_spec.path.c_str(), block_spec.block_mode, block_spec.block_fmt,
           guest.phys_mem(), &dispatcher);
     } else if (!block_spec.guid.empty()) {
       status = machina::BlockDispatcher::CreateFromGuid(
           block_spec.guid, cfg.block_wait() ? ZX_TIME_INFINITE : 0,
-          block_spec.mode, block_spec.data_plane, guest.phys_mem(),
+          block_spec.block_mode, block_spec.block_fmt, guest.phys_mem(),
           &dispatcher);
     } else {
       FXL_LOG(ERROR) << "Block spec missing path or GUID attributes " << status;
@@ -200,7 +200,8 @@ int main(int argc, char** argv) {
       FXL_LOG(ERROR) << "Failed to create block dispatcher " << status;
       return status;
     }
-    if (block_spec.volatile_writes) {
+    if (block_spec.block_mode ==
+        fuchsia::guest::device::BlockMode::VOLATILE_WRITE) {
       status = machina::BlockDispatcher::CreateVolatileWrapper(
           std::move(dispatcher), &dispatcher);
       if (status != ZX_OK) {

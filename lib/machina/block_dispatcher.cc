@@ -85,22 +85,24 @@ class FdioBlockDispatcher : public BlockDispatcher {
 };
 
 zx_status_t BlockDispatcher::CreateFromPath(
-    const char* path, Mode mode, DataPlane data_plane, const PhysMem& phys_mem,
+    const char* path, fuchsia::guest::device::BlockMode block_mode,
+    fuchsia::guest::device::BlockFormat block_fmt, const PhysMem& phys_mem,
     std::unique_ptr<BlockDispatcher>* dispatcher) {
-  bool read_only = mode == Mode::RO;
+  bool read_only = block_mode != fuchsia::guest::device::BlockMode::READ_WRITE;
   int fd = open(path, read_only ? O_RDONLY : O_RDWR);
   if (fd < 0) {
-    FXL_LOG(ERROR) << "Failed to open block file \"" << path << "\" "
-                   << (read_only ? "RO" : "RW");
+    FXL_LOG(ERROR) << "Failed to open block file \"" << path << "\" as "
+                   << (read_only ? "read-only" : "read-write") << ": "
+                   << strerror(errno);
     return ZX_ERR_IO;
   }
 
-  return CreateFromFd(fd, mode, data_plane, phys_mem, dispatcher);
+  return CreateFromFd(fd, block_mode, block_fmt, phys_mem, dispatcher);
 }
 
 struct GuidLookupArgs {
   int fd;
-  BlockDispatcher::Mode mode;
+  fuchsia::guest::device::BlockMode block_mode;
   const BlockDispatcher::Guid& guid;
   ssize_t (*guid_ioctl)(int fd, void* out, size_t out_len);
 };
@@ -110,10 +112,12 @@ static zx_status_t MatchBlockDeviceToGuid(int dirfd, int event, const char* fn,
   if (event != WATCH_EVENT_ADD_FILE) {
     return ZX_OK;
   }
-  auto args = static_cast<GuidLookupArgs*>(cookie);
 
-  fbl::unique_fd fd(openat(
-      dirfd, fn, args->mode == BlockDispatcher::Mode::RO ? O_RDONLY : O_RDWR));
+  auto args = static_cast<GuidLookupArgs*>(cookie);
+  int flags = args->block_mode == fuchsia::guest::device::BlockMode::READ_ONLY
+                  ? O_RDONLY
+                  : O_RDWR;
+  fbl::unique_fd fd(openat(dirfd, fn, flags));
   if (!fd) {
     FXL_LOG(ERROR) << "Failed to open device " << kBlockDirPath << "/" << fn;
     return ZX_ERR_IO;
@@ -136,9 +140,11 @@ static zx_status_t MatchBlockDeviceToGuid(int dirfd, int event, const char* fn,
 }
 
 zx_status_t BlockDispatcher::CreateFromGuid(
-    const Guid& guid, zx_duration_t timeout, Mode mode, DataPlane data_plane,
-    const PhysMem& phys_mem, std::unique_ptr<BlockDispatcher>* dispatcher) {
-  GuidLookupArgs args = {-1, mode, guid, nullptr};
+    const Guid& guid, zx_duration_t timeout,
+    fuchsia::guest::device::BlockMode block_mode,
+    fuchsia::guest::device::BlockFormat block_fmt, const PhysMem& phys_mem,
+    std::unique_ptr<BlockDispatcher>* dispatcher) {
+  GuidLookupArgs args = {-1, block_mode, guid, nullptr};
   switch (guid.type) {
     case GuidType::GPT_PARTITION_GUID:
       args.guid_ioctl = &ioctl_block_get_partition_guid;
@@ -158,13 +164,14 @@ zx_status_t BlockDispatcher::CreateFromGuid(
   zx_status_t status = fdio_watch_directory(
       dir_fd.get(), MatchBlockDeviceToGuid, timeout, &args);
   if (status == ZX_ERR_STOP) {
-    return CreateFromFd(args.fd, mode, data_plane, phys_mem, dispatcher);
+    return CreateFromFd(args.fd, block_mode, block_fmt, phys_mem, dispatcher);
   }
   return status;
 }
 
 zx_status_t BlockDispatcher::CreateFromFd(
-    int fd, Mode mode, DataPlane data_plane, const PhysMem& phys_mem,
+    int fd, fuchsia::guest::device::BlockMode block_mode,
+    fuchsia::guest::device::BlockFormat block_fmt, const PhysMem& phys_mem,
     std::unique_ptr<BlockDispatcher>* dispatcher) {
   off_t file_size = lseek(fd, 0, SEEK_END);
   if (file_size < 0) {
@@ -172,13 +179,13 @@ zx_status_t BlockDispatcher::CreateFromFd(
     return ZX_ERR_IO;
   }
 
-  bool read_only = mode == Mode::RO;
-  switch (data_plane) {
-    case DataPlane::FDIO:
+  bool read_only = block_mode != fuchsia::guest::device::BlockMode::READ_WRITE;
+  switch (block_fmt) {
+    case fuchsia::guest::device::BlockFormat::RAW:
       *dispatcher =
           std::make_unique<FdioBlockDispatcher>(file_size, read_only, fd);
       return ZX_OK;
-    case DataPlane::QCOW:
+    case fuchsia::guest::device::BlockFormat::QCOW:
       return QcowDispatcher::Create(fd, read_only, dispatcher);
     default:
       FXL_LOG(ERROR) << "Unsupported block dispatcher data plane";

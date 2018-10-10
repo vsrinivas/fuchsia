@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <vector>
 
+#include <fuchsia/guest/device/cpp/fidl.h>
 #include <zircon/types.h>
 
 namespace machina {
@@ -16,14 +17,6 @@ class PhysMem;
 
 class BlockDispatcher {
  public:
-  enum class Mode {
-    RO,
-    RW,
-  };
-  enum class DataPlane {
-    FDIO,
-    QCOW,
-  };
   enum class GuidType {
     NONE,
 
@@ -50,14 +43,19 @@ class BlockDispatcher {
       std::unique_ptr<BlockDispatcher>* out);
 
   static zx_status_t CreateFromPath(
-      const char* path, Mode mode, DataPlane data_plane,
-      const PhysMem& phys_mem, std::unique_ptr<BlockDispatcher>* dispatcher);
+      const char* path, fuchsia::guest::device::BlockMode block_mode,
+      fuchsia::guest::device::BlockFormat block_fmt, const PhysMem& phys_mem,
+      std::unique_ptr<BlockDispatcher>* dispatcher);
 
   static zx_status_t CreateFromGuid(
-      const Guid& guid, zx_duration_t timeout, Mode mode, DataPlane data_plane,
-      const PhysMem& phys_mem, std::unique_ptr<BlockDispatcher>* dispatcher);
+      const Guid& guid, zx_duration_t timeout,
+      fuchsia::guest::device::BlockMode block_mode,
+      fuchsia::guest::device::BlockFormat block_fmt, const PhysMem& phys_mem,
+      std::unique_ptr<BlockDispatcher>* dispatcher);
 
-  static zx_status_t CreateFromFd(int fd, Mode mode, DataPlane data_plane,
+  static zx_status_t CreateFromFd(int fd,
+                                  fuchsia::guest::device::BlockMode block_mode,
+                                  fuchsia::guest::device::BlockFormat block_fmt,
                                   const PhysMem& phys_mem,
                                   std::unique_ptr<BlockDispatcher>* dispatcher);
 

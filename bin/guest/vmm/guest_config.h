@@ -20,10 +20,10 @@ struct BlockSpec {
   std::string path;
   machina::BlockDispatcher::Guid guid;
 
-  machina::BlockDispatcher::Mode mode = machina::BlockDispatcher::Mode::RW;
-  machina::BlockDispatcher::DataPlane data_plane =
-      machina::BlockDispatcher::DataPlane::FDIO;
-  bool volatile_writes = false;
+  fuchsia::guest::device::BlockFormat block_fmt =
+      fuchsia::guest::device::BlockFormat::RAW;
+  fuchsia::guest::device::BlockMode block_mode =
+      fuchsia::guest::device::BlockMode::READ_WRITE;
 };
 
 enum class Kernel {

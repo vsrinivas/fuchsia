@@ -40,9 +40,9 @@ class VirtioBlockTest : public ::gtest::TestLoopFixture {
     std::unique_ptr<machina::BlockDispatcher> dispatcher;
     zx_status_t status = machina::BlockDispatcher::CreateFromPath(
         block_path,
-        read_only ? machina::BlockDispatcher::Mode::RO
-                  : machina::BlockDispatcher::Mode::RW,
-        machina::BlockDispatcher::DataPlane::FDIO, phys_mem_, &dispatcher);
+        read_only ? fuchsia::guest::device::BlockMode::READ_ONLY
+                  : fuchsia::guest::device::BlockMode::READ_WRITE,
+        fuchsia::guest::device::BlockFormat::RAW, phys_mem_, &dispatcher);
     if (status != ZX_OK) {
       return status;
     }
