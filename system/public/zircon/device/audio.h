@@ -20,34 +20,31 @@ IOCTL_WRAPPER_OUT(ioctl_audio_get_channel, AUDIO_IOCTL_GET_CHANNEL, zx_handle_t)
 
 __BEGIN_CDECLS
 
-typedef enum audio_cmd {
-    // Commands sent on the stream channel
-    AUDIO_STREAM_CMD_GET_FORMATS    = 0x1000,
-    AUDIO_STREAM_CMD_SET_FORMAT     = 0x1001,
-    AUDIO_STREAM_CMD_GET_GAIN       = 0x1002,
-    AUDIO_STREAM_CMD_SET_GAIN       = 0x1003,
-    AUDIO_STREAM_CMD_PLUG_DETECT    = 0x1004,
-    AUDIO_STREAM_CMD_GET_UNIQUE_ID  = 0x1005,
-    AUDIO_STREAM_CMD_GET_STRING     = 0x1006,
+typedef uint32_t audio_cmd_t;
 
-    // Async notifications sent on the stream channel.
-    AUDIO_STREAM_PLUG_DETECT_NOTIFY = 0x2000,
+// Commands sent on the stream channel
+#define AUDIO_STREAM_CMD_GET_FORMATS    ((audio_cmd_t)0x1000)
+#define AUDIO_STREAM_CMD_SET_FORMAT     ((audio_cmd_t)0x1001)
+#define AUDIO_STREAM_CMD_GET_GAIN       ((audio_cmd_t)0x1002)
+#define AUDIO_STREAM_CMD_SET_GAIN       ((audio_cmd_t)0x1003)
+#define AUDIO_STREAM_CMD_PLUG_DETECT    ((audio_cmd_t)0x1004)
+#define AUDIO_STREAM_CMD_GET_UNIQUE_ID  ((audio_cmd_t)0x1005)
+#define AUDIO_STREAM_CMD_GET_STRING     ((audio_cmd_t)0x1006)
 
-    // Commands sent on the ring buffer channel
-    AUDIO_RB_CMD_GET_FIFO_DEPTH     = 0x3000,
-    AUDIO_RB_CMD_GET_BUFFER         = 0x3001,
-    AUDIO_RB_CMD_START              = 0x3002,
-    AUDIO_RB_CMD_STOP               = 0x3003,
+// Async notifications sent on the stream channel.
+#define AUDIO_STREAM_PLUG_DETECT_NOTIFY ((audio_cmd_t)0x2000)
 
-    // Async notifications sent on the ring buffer channel.
-    AUDIO_RB_POSITION_NOTIFY        = 0x4000,
+// Commands sent on the ring buffer channel
+#define AUDIO_RB_CMD_GET_FIFO_DEPTH     ((audio_cmd_t)0x3000)
+#define AUDIO_RB_CMD_GET_BUFFER         ((audio_cmd_t)0x3001)
+#define AUDIO_RB_CMD_START              ((audio_cmd_t)0x3002)
+#define AUDIO_RB_CMD_STOP               ((audio_cmd_t)0x3003)
 
-    // Flags used to modify commands.
-    AUDIO_FLAG_NO_ACK               = 0x80000000,
-} audio_cmd_t;
+// Async notifications sent on the ring buffer channel.
+#define AUDIO_RB_POSITION_NOTIFY        ((audio_cmd_t)0x4000)
 
-static_assert(sizeof(audio_cmd_t) == sizeof(uint32_t),
-              "audio_cmd_t must be 32 bits!");
+// Flags used to modify commands.
+#define AUDIO_FLAG_NO_ACK               ((audio_cmd_t)0x80000000)
 
 typedef struct audio_cmd_hdr {
     zx_txid_t   transaction_id;
@@ -61,25 +58,21 @@ static_assert(sizeof(audio_cmd_hdr_t) == 8,
 //
 // Bitfield which describes audio sample format as they reside in memory.
 //
-typedef enum audio_sample_format {
-    AUDIO_SAMPLE_FORMAT_BITSTREAM    = (1u << 0),
-    AUDIO_SAMPLE_FORMAT_8BIT         = (1u << 1),
-    AUDIO_SAMPLE_FORMAT_16BIT        = (1u << 2),
-    AUDIO_SAMPLE_FORMAT_20BIT_PACKED = (1u << 4),
-    AUDIO_SAMPLE_FORMAT_24BIT_PACKED = (1u << 5),
-    AUDIO_SAMPLE_FORMAT_20BIT_IN32   = (1u << 6),
-    AUDIO_SAMPLE_FORMAT_24BIT_IN32   = (1u << 7),
-    AUDIO_SAMPLE_FORMAT_32BIT        = (1u << 8),
-    AUDIO_SAMPLE_FORMAT_32BIT_FLOAT  = (1u << 9),
-
-    AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED      = (1u << 30),
-    AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN = (1u << 31),
-    AUDIO_SAMPLE_FORMAT_FLAG_MASK = AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED |
-                                    AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN,
-} audio_sample_format_t;
-
-static_assert(sizeof(audio_sample_format_t) == sizeof(uint32_t),
-              "audio_sample_format_t must be 32 bits!");
+typedef uint32_t audio_sample_format_t;
+#define AUDIO_SAMPLE_FORMAT_BITSTREAM          ((audio_sample_format_t)(1u << 0))
+#define AUDIO_SAMPLE_FORMAT_8BIT               ((audio_sample_format_t)(1u << 1))
+#define AUDIO_SAMPLE_FORMAT_16BIT              ((audio_sample_format_t)(1u << 2))
+#define AUDIO_SAMPLE_FORMAT_20BIT_PACKED       ((audio_sample_format_t)(1u << 4))
+#define AUDIO_SAMPLE_FORMAT_24BIT_PACKED       ((audio_sample_format_t)(1u << 5))
+#define AUDIO_SAMPLE_FORMAT_20BIT_IN32         ((audio_sample_format_t)(1u << 6))
+#define AUDIO_SAMPLE_FORMAT_24BIT_IN32         ((audio_sample_format_t)(1u << 7))
+#define AUDIO_SAMPLE_FORMAT_32BIT              ((audio_sample_format_t)(1u << 8))
+#define AUDIO_SAMPLE_FORMAT_32BIT_FLOAT        ((audio_sample_format_t)(1u << 9))
+#define AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED      ((audio_sample_format_t)(1u << 30))
+#define AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN ((audio_sample_format_t)(1u << 31))
+#define AUDIO_SAMPLE_FORMAT_FLAG_MASK                            \
+    ((audio_sample_format_t)(AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED | \
+                             AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN))
 
 // audio_stream_format_range_t
 //
@@ -104,44 +97,32 @@ static_assert(sizeof(audio_stream_format_range_t) == 16,
 //
 // Flags used by the AUDIO_STREAM_CMD_SET_GAIN message.
 //
-typedef enum audio_set_gain_flags {
-    AUDIO_SGF_MUTE_VALID = 0x1,        // Whether or not the mute flag is valid.
-    AUDIO_SGF_AGC_VALID  = 0x2,        // Whether or not the agc flag is valid.
-    AUDIO_SGF_GAIN_VALID = 0x4,        // Whether or not the gain float is valid.
-    AUDIO_SGF_MUTE       = 0x40000000, // Whether or not to mute the stream.
-    AUDIO_SGF_AGC        = 0x80000000, // Whether or not enable AGC for the stream.
-} audio_set_gain_flags_t;
-
-static_assert(sizeof(audio_set_gain_flags_t) == sizeof(uint32_t),
-              "audio_set_gain_flags_t must be 32 bits!");
+typedef uint32_t audio_set_gain_flags_t;
+#define AUDIO_SGF_MUTE_VALID ((audio_set_gain_flags_t)0x1)        // Whether or not the mute flag is valid.
+#define AUDIO_SGF_AGC_VALID  ((audio_set_gain_flags_t)0x2)        // Whether or not the agc flag is valid.
+#define AUDIO_SGF_GAIN_VALID ((audio_set_gain_flags_t)0x4)        // Whether or not the gain float is valid.
+#define AUDIO_SGF_MUTE       ((audio_set_gain_flags_t)0x40000000) // Whether or not to mute the stream.
+#define AUDIO_SGF_AGC        ((audio_set_gain_flags_t)0x80000000) // Whether or not enable AGC for the stream.
 
 // audio_pd_flags_t
 //
 // Flags used by AUDIO_STREAM_CMD_PLUG_DETECT commands to enable or disable
 // asynchronous plug detect notifications.
 //
-typedef enum audio_pd_flags {
-    AUDIO_PDF_NONE                  = 0,
-    AUDIO_PDF_ENABLE_NOTIFICATIONS  = 0x40000000,
-    AUDIO_PDF_DISABLE_NOTIFICATIONS = 0x80000000,
-} audio_pd_flags_t;
-
-static_assert(sizeof(audio_pd_flags_t) == sizeof(uint32_t),
-              "audio_pd_flags_t must be 32 bits!");
+typedef uint32_t audio_pd_flags_t;
+#define AUDIO_PDF_NONE                  ((audio_pd_flags_t)0)
+#define AUDIO_PDF_ENABLE_NOTIFICATIONS  ((audio_pd_flags_t)0x40000000)
+#define AUDIO_PDF_DISABLE_NOTIFICATIONS ((audio_pd_flags_t)0x80000000)
 
 // audio_pd_notify_flags_t
 //
 // Flags used by responses to the AUDIO_STREAM_CMD_PLUG_DETECT
 // message, and by AUDIO_STREAM_PLUG_DETECT_NOTIFY messages.
 //
-typedef enum audio_pd_notify_flags {
-    AUDIO_PDNF_HARDWIRED  = 0x1,        // Stream is hardwired (will always be plugged in)
-    AUDIO_PDNF_CAN_NOTIFY = 0x2,        // Stream is able to notify of plug state changes.
-    AUDIO_PDNF_PLUGGED    = 0x80000000, // Stream is currently plugged in.
-} audio_pd_notify_flags_t;
-
-static_assert(sizeof(audio_pd_notify_flags_t) == sizeof(uint32_t),
-              "audio_pd_resp_flags_t must be 32 bits!");
+typedef uint32_t audio_pd_notify_flags_t;
+#define AUDIO_PDNF_HARDWIRED  ((audio_pd_notify_flags_t)0x1)        // Stream is hardwired (will always be plugged in)
+#define AUDIO_PDNF_CAN_NOTIFY ((audio_pd_notify_flags_t)0x2)        // Stream is able to notify of plug state changes.
+#define AUDIO_PDNF_PLUGGED    ((audio_pd_notify_flags_t)0x80000000) // Stream is currently plugged in.
 
 // AUDIO_STREAM_CMD_GET_FORMATS
 //
@@ -329,13 +310,9 @@ typedef struct audio_stream_cmd_get_unique_id_resp {
 // Drivers are encouraged to NULL terminate all of their strings whenever
 // possible, but are not required to do so if the response buffer is too small.
 //
-typedef enum audio_stream_string_id {
-    AUDIO_STREAM_STR_ID_MANUFACTURER = 0x80000000,
-    AUDIO_STREAM_STR_ID_PRODUCT      = 0x80000001,
-} audio_stream_string_id_t;
-
-static_assert(sizeof(audio_stream_string_id_t) == sizeof(uint32_t),
-              "audio_stream_string_id_t must be 32 bits!");
+typedef uint32_t audio_stream_string_id_t;
+#define AUDIO_STREAM_STR_ID_MANUFACTURER ((audio_stream_string_id_t)0x80000000)
+#define AUDIO_STREAM_STR_ID_PRODUCT      ((audio_stream_string_id_t)0x80000001)
 
 typedef struct audio_stream_cmd_get_string_req {
     audio_cmd_hdr_t  hdr;
