@@ -10,7 +10,7 @@
 #include <type_traits>
 #include <utility>
 
-#include <lib/fit/optional.h>
+#include "optional.h"
 
 namespace fit {
 
@@ -58,9 +58,13 @@ struct is_nullable<void> : public std::false_type {};
 // - sizeof(fit::nullable<int) == sizeof(struct { bool; int; })
 // - sizeof(std::nullable<void*>) == sizeof(struct { bool; void*; })
 // - sizeof(fit::nullable<int) == sizeof(struct { bool; int; })
-template <typename T, bool = is_nullable<T>::value>
+template <typename T, bool = (is_nullable<T>::value &&
+                              std::is_constructible<T, T&&>::value &&
+                              std::is_assignable<T&, T&&>::value)>
 class nullable final {
 public:
+    using value_type = T;
+
     constexpr nullable() = default;
     explicit constexpr nullable(decltype(nullptr)) {}
     explicit constexpr nullable(T value)
@@ -69,8 +73,10 @@ public:
     nullable(nullable&& other) = default;
     ~nullable() = default;
 
-    constexpr T& value() { return opt_.value(); }
-    constexpr const T& value() const { return opt_.value(); }
+    constexpr T& value() & { return opt_.value(); }
+    constexpr const T& value() const& { return opt_.value(); }
+    constexpr T&& value() && { return std::move(opt_.value()); }
+    constexpr const T&& value() const&& { return std::move(opt_.value()); }
 
     template <typename U = T>
     constexpr T value_or(U&& default_value) const {
@@ -109,6 +115,8 @@ private:
 template <typename T>
 class nullable<T, true> final {
 public:
+    using value_type = T;
+
     constexpr nullable()
         : value_(nullptr) {}
     explicit constexpr nullable(decltype(nullptr))
@@ -122,13 +130,21 @@ public:
     }
     ~nullable() = default;
 
-    constexpr T& value() {
+    constexpr T& value() & {
         assert(has_value());
         return value_;
     }
-    constexpr const T& value() const {
+    constexpr const T& value() const& {
         assert(has_value());
         return value_;
+    }
+    constexpr T&& value() && {
+        assert(has_value());
+        return std::move(value_);
+    }
+    constexpr const T&& value() const&& {
+        assert(has_value());
+        return std::move(value_);
     }
 
     template <typename U = T>

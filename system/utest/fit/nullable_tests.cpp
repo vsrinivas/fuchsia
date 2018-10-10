@@ -144,6 +144,10 @@ static_assert(!fit::is_null(void_a), "");
 static_assert(!fit::is_null(fit::nullable<void*>(void_a)), "");
 static_assert(!fit::is_null(5), "");
 
+// Test nullable::value_type.
+static_assert(std::is_same<int, fit::nullable<int>::value_type>::value, "");
+static_assert(std::is_same<void*, fit::nullable<void*>::value_type>::value, "");
+
 // Test constexpr comparators for nullable.
 static_assert(!fit::nullable<void*>(), "");
 static_assert(!fit::nullable<void*>().has_value(), "");
@@ -332,6 +336,28 @@ bool construct_move() {
     EXPECT_EQ(42, b.value().value);
     EXPECT_FALSE(c.has_value());
     EXPECT_FALSE(d.has_value());
+
+    END_TEST;
+}
+
+template <typename T>
+bool accessors() {
+    BEGIN_TEST;
+
+    fit::nullable<T> a(traits<T>::a);
+    T& value = a.value();
+    EXPECT_EQ(42, value.value);
+
+    const T& const_value = const_cast<const decltype(a)&>(a).value();
+    EXPECT_EQ(42, const_value.value);
+
+    T rvalue = fit::nullable<T>(traits<T>::a).value();
+    EXPECT_EQ(42, rvalue.value);
+
+    T const_rvalue = const_cast<const fit::nullable<T>&&>(
+                         fit::nullable<T>(traits<T>::a))
+                         .value();
+    EXPECT_EQ(42, const_rvalue.value);
 
     END_TEST;
 }
@@ -558,6 +584,8 @@ RUN_TEST(construct_copy<nullable_struct>)
 RUN_TEST(construct_copy<non_nullable_struct>)
 RUN_TEST(construct_move<nullable_struct>)
 RUN_TEST(construct_move<non_nullable_struct>)
+RUN_TEST(accessors<nullable_struct>)
+RUN_TEST(accessors<non_nullable_struct>)
 RUN_TEST(assign<nullable_struct>)
 RUN_TEST(assign<non_nullable_struct>)
 RUN_TEST(assign_copy<nullable_struct>)

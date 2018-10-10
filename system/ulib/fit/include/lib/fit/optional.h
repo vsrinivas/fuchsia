@@ -12,6 +12,52 @@
 #include <utility>
 
 namespace fit {
+namespace internal {
+
+template <typename T, bool = std::is_assignable<T&, const T&>::value>
+struct copy_assign_or_reconstruct final {
+    static void assign(T* dest, const T& source) {
+        dest->~T();
+        new (dest) T(source);
+    }
+};
+
+template <typename T>
+struct copy_assign_or_reconstruct<T, true> final {
+    static void assign(T* dest, const T& source) {
+        *dest = source;
+    }
+};
+
+template <typename T, bool = std::is_assignable<T&, T&&>::value>
+struct move_assign_or_reconstruct final {
+    static void assign(T* dest, T&& source) {
+        dest->~T();
+        new (dest) T(std::move(source));
+    }
+
+    static void swap(T& a, T& b) {
+        T temp(std::move(a));
+        a.~T();
+        new (&a) T(std::move(b));
+        b.~T();
+        new (&b) T(std::move(temp));
+    }
+};
+
+template <typename T>
+struct move_assign_or_reconstruct<T, true> final {
+    static void assign(T* dest, T&& source) {
+        *dest = std::move(source);
+    }
+
+    static void swap(T& a, T& b) {
+        using std::swap;
+        swap(a, b);
+    }
+};
+
+} // namespace internal
 
 // A sentinel value for |fit::optional<T>| indicating that it contains
 // no value.
@@ -32,6 +78,8 @@ static constexpr nullopt_t nullopt(0);
 template <typename T>
 class optional final {
 public:
+    using value_type = T;
+
     constexpr optional()
         : has_value_(false) {}
     explicit constexpr optional(nullopt_t)
@@ -65,14 +113,24 @@ public:
         }
     }
 
-    constexpr T& value() {
+    constexpr T& value() & {
         assert(has_value_);
         return value_;
     }
 
-    constexpr const T& value() const {
+    constexpr const T& value() const& {
         assert(has_value_);
         return value_;
+    }
+
+    constexpr T&& value() && {
+        assert(has_value_);
+        return std::move(value_);
+    }
+
+    constexpr const T&& value() const&& {
+        assert(has_value_);
+        return std::move(value_);
     }
 
     template <typename U = T>
@@ -93,7 +151,8 @@ public:
             return *this;
         if (has_value_) {
             if (other.has_value_) {
-                value_ = other.value_;
+                ::fit::internal::copy_assign_or_reconstruct<T>::assign(
+                    &value_, other.value_);
             } else {
                 reset();
             }
@@ -109,7 +168,8 @@ public:
             return *this;
         if (has_value_) {
             if (other.has_value_) {
-                value_ = std::move(other.value_);
+                ::fit::internal::move_assign_or_reconstruct<T>::assign(
+                    &value_, std::move(other.value_));
                 other.value_.~T();
                 other.has_value_ = false;
             } else {
@@ -131,7 +191,8 @@ public:
 
     optional& operator=(T value) {
         if (has_value_) {
-            value_ = std::move(value);
+            ::fit::internal::move_assign_or_reconstruct<T>::assign(
+                &value_, std::move(value));
         } else {
             new (&value_) T(std::move(value));
             has_value_ = true;
@@ -147,12 +208,12 @@ public:
     }
 
     void swap(optional& other) {
-        using std::swap;
         if (&other == this)
             return;
         if (has_value_) {
             if (other.has_value_) {
-                swap(value_, other.value_);
+                ::fit::internal::move_assign_or_reconstruct<T>::swap(
+                    value_, other.value_);
             } else {
                 new (&other.value_) T(std::move(value_));
                 other.has_value_ = true;

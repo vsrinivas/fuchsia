@@ -3,13 +3,23 @@
 // found in the LICENSE file.
 
 #include <memory>
+#include <type_traits>
 
 #include <lib/fit/optional.h>
 #include <unittest/unittest.h>
 
 namespace {
 
-struct slot {
+template <bool define_assignment_operators>
+struct base {};
+template <>
+struct base<false> {
+    base& operator=(const base& other) = delete;
+    base& operator=(base&& other) = delete;
+};
+
+template <bool define_assignment_operators>
+struct slot : base<define_assignment_operators> {
     slot(int value = 0)
         : value(value) {
         balance++;
@@ -42,12 +52,24 @@ struct slot {
     bool operator==(const slot& other) const { return value == other.value; }
     bool operator!=(const slot& other) const { return value != other.value; }
 };
-int slot::balance = 0;
+template <>
+int slot<false>::balance = 0;
+template <>
+int slot<true>::balance = 0;
 
+// Test optional::value_type.
+static_assert(std::is_same<int, fit::optional<int>::value_type>::value, "");
+
+// TODO(US-90): Unfortunately fit::optional is not a literal type unlike
+// std::optional so expressions involving fit::optional are not constexpr.
+// Once we fix that, we should add static asserts to check cases where
+// fit::optional wraps a literal type.
+
+template <typename T>
 bool construct_without_value() {
     BEGIN_TEST;
 
-    fit::optional<slot> opt;
+    fit::optional<T> opt;
     EXPECT_FALSE(opt.has_value());
     EXPECT_FALSE(!!opt);
 
@@ -59,10 +81,11 @@ bool construct_without_value() {
     END_TEST;
 }
 
+template <typename T>
 bool construct_with_value() {
     BEGIN_TEST;
 
-    fit::optional<slot> opt({42});
+    fit::optional<T> opt({42});
     EXPECT_TRUE(opt.has_value());
     EXPECT_TRUE(!!opt);
 
@@ -79,13 +102,14 @@ bool construct_with_value() {
     END_TEST;
 }
 
+template <typename T>
 bool construct_copy() {
     BEGIN_TEST;
 
-    fit::optional<slot> a({42});
-    fit::optional<slot> b(a);
-    fit::optional<slot> c;
-    fit::optional<slot> d(c);
+    fit::optional<T> a({42});
+    fit::optional<T> b(a);
+    fit::optional<T> c;
+    fit::optional<T> d(c);
     EXPECT_TRUE(a.has_value());
     EXPECT_EQ(42, a.value().value);
     EXPECT_TRUE(b.has_value());
@@ -96,13 +120,14 @@ bool construct_copy() {
     END_TEST;
 }
 
+template <typename T>
 bool construct_move() {
     BEGIN_TEST;
 
-    fit::optional<slot> a({42});
-    fit::optional<slot> b(std::move(a));
-    fit::optional<slot> c;
-    fit::optional<slot> d(std::move(c));
+    fit::optional<T> a({42});
+    fit::optional<T> b(std::move(a));
+    fit::optional<T> c;
+    fit::optional<T> d(std::move(c));
     EXPECT_FALSE(a.has_value());
     EXPECT_TRUE(b.has_value());
     EXPECT_EQ(42, b.value().value);
@@ -112,10 +137,33 @@ bool construct_move() {
     END_TEST;
 }
 
+template <typename T>
+bool accessors() {
+    BEGIN_TEST;
+
+    fit::optional<T> a({42});
+    T& value = a.value();
+    EXPECT_EQ(42, value.value);
+
+    const T& const_value = const_cast<const decltype(a)&>(a).value();
+    EXPECT_EQ(42, const_value.value);
+
+    T rvalue = fit::optional<T>({42}).value();
+    EXPECT_EQ(42, rvalue.value);
+
+    T const_rvalue = const_cast<const fit::optional<T>&&>(
+                         fit::optional<T>({42}))
+                         .value();
+    EXPECT_EQ(42, const_rvalue.value);
+
+    END_TEST;
+}
+
+template <typename T>
 bool assign() {
     BEGIN_TEST;
 
-    fit::optional<slot> a({42});
+    fit::optional<T> a({42});
     EXPECT_TRUE(a.has_value());
     EXPECT_EQ(42, a.value().value);
 
@@ -136,12 +184,13 @@ bool assign() {
     END_TEST;
 }
 
+template <typename T>
 bool assign_copy() {
     BEGIN_TEST;
 
-    fit::optional<slot> a({42});
-    fit::optional<slot> b({55});
-    fit::optional<slot> c;
+    fit::optional<T> a({42});
+    fit::optional<T> b({55});
+    fit::optional<T> c;
     EXPECT_TRUE(a.has_value());
     EXPECT_EQ(42, a.value().value);
     EXPECT_TRUE(b.has_value());
@@ -174,12 +223,13 @@ bool assign_copy() {
     END_TEST;
 }
 
+template <typename T>
 bool assign_move() {
     BEGIN_TEST;
 
-    fit::optional<slot> a({42});
-    fit::optional<slot> b({55});
-    fit::optional<slot> c;
+    fit::optional<T> a({42});
+    fit::optional<T> b({55});
+    fit::optional<T> c;
     EXPECT_TRUE(a.has_value());
     EXPECT_EQ(42, a.value().value);
     EXPECT_TRUE(b.has_value());
@@ -214,10 +264,11 @@ bool assign_move() {
     END_TEST;
 }
 
+template <typename T>
 bool invoke() {
     BEGIN_TEST;
 
-    fit::optional<slot> a({42});
+    fit::optional<T> a({42});
     EXPECT_EQ(42, a->get());
     EXPECT_EQ(43, a->increment());
     EXPECT_EQ(43, (*a).value);
@@ -225,14 +276,15 @@ bool invoke() {
     END_TEST;
 }
 
+template <typename T>
 bool comparisons() {
     BEGIN_TEST;
 
-    fit::optional<slot> a({42});
-    fit::optional<slot> b({55});
-    fit::optional<slot> c({42});
-    fit::optional<slot> d;
-    fit::optional<slot> e;
+    fit::optional<T> a({42});
+    fit::optional<T> b({55});
+    fit::optional<T> c({42});
+    fit::optional<T> d;
+    fit::optional<T> e;
 
     EXPECT_FALSE(a == b);
     EXPECT_TRUE(a == c);
@@ -242,12 +294,12 @@ bool comparisons() {
 
     EXPECT_FALSE(a == fit::nullopt);
     EXPECT_FALSE(fit::nullopt == a);
-    EXPECT_TRUE(a == slot{42});
-    EXPECT_TRUE(slot{42} == a);
-    EXPECT_FALSE(a == slot{55});
-    EXPECT_FALSE(slot{55} == a);
-    EXPECT_FALSE(d == slot{42});
-    EXPECT_FALSE(slot{42} == d);
+    EXPECT_TRUE(a == T{42});
+    EXPECT_TRUE(T{42} == a);
+    EXPECT_FALSE(a == T{55});
+    EXPECT_FALSE(T{55} == a);
+    EXPECT_FALSE(d == T{42});
+    EXPECT_FALSE(T{42} == d);
     EXPECT_TRUE(d == fit::nullopt);
     EXPECT_TRUE(fit::nullopt == d);
 
@@ -259,25 +311,26 @@ bool comparisons() {
 
     EXPECT_TRUE(a != fit::nullopt);
     EXPECT_TRUE(fit::nullopt != a);
-    EXPECT_FALSE(a != slot{42});
-    EXPECT_FALSE(slot{42} != a);
-    EXPECT_TRUE(a != slot{55});
-    EXPECT_TRUE(slot{55} != a);
-    EXPECT_TRUE(d != slot{42});
-    EXPECT_TRUE(slot{42} != d);
+    EXPECT_FALSE(a != T{42});
+    EXPECT_FALSE(T{42} != a);
+    EXPECT_TRUE(a != T{55});
+    EXPECT_TRUE(T{55} != a);
+    EXPECT_TRUE(d != T{42});
+    EXPECT_TRUE(T{42} != d);
     EXPECT_FALSE(d != fit::nullopt);
     EXPECT_FALSE(fit::nullopt != d);
 
     END_TEST;
 }
 
+template <typename T>
 bool swapping() {
     BEGIN_TEST;
 
-    fit::optional<slot> a({42});
-    fit::optional<slot> b({55});
-    fit::optional<slot> c;
-    fit::optional<slot> d;
+    fit::optional<T> a({42});
+    fit::optional<T> b({55});
+    fit::optional<T> c;
+    fit::optional<T> d;
 
     swap(a, b);
     EXPECT_TRUE(a.has_value());
@@ -309,31 +362,40 @@ bool swapping() {
     END_TEST;
 }
 
+template <typename T>
 bool balance() {
     BEGIN_TEST;
 
-    EXPECT_EQ(0, slot::balance);
+    EXPECT_EQ(0, T::balance);
 
     END_TEST;
 }
 
-// TODO(US-90): Unfortunately fit::optional is not a literal type unlike
-// std::optional so expressions involving fit::optional are not constexpr.
-// Once we fit that, we should add static asserts to check cases where
-// fit::optional wraps a literal type.
-
 } // namespace
 
 BEGIN_TEST_CASE(optional_tests)
-RUN_TEST(construct_without_value)
-RUN_TEST(construct_with_value)
-RUN_TEST(construct_copy)
-RUN_TEST(construct_move)
-RUN_TEST(assign)
-RUN_TEST(assign_copy)
-RUN_TEST(assign_move)
-RUN_TEST(invoke)
-RUN_TEST(comparisons)
-RUN_TEST(swapping)
-RUN_TEST(balance)
+RUN_TEST(construct_without_value<slot<false>>)
+RUN_TEST(construct_without_value<slot<true>>)
+RUN_TEST(construct_with_value<slot<false>>)
+RUN_TEST(construct_with_value<slot<true>>)
+RUN_TEST(construct_copy<slot<false>>)
+RUN_TEST(construct_copy<slot<true>>)
+RUN_TEST(construct_move<slot<false>>)
+RUN_TEST(construct_move<slot<true>>)
+RUN_TEST(accessors<slot<false>>)
+RUN_TEST(accessors<slot<true>>)
+RUN_TEST(assign<slot<false>>)
+RUN_TEST(assign<slot<true>>)
+RUN_TEST(assign_copy<slot<false>>)
+RUN_TEST(assign_copy<slot<true>>)
+RUN_TEST(assign_move<slot<false>>)
+RUN_TEST(assign_move<slot<true>>)
+RUN_TEST(invoke<slot<false>>)
+RUN_TEST(invoke<slot<true>>)
+RUN_TEST(comparisons<slot<false>>)
+RUN_TEST(comparisons<slot<true>>)
+RUN_TEST(swapping<slot<false>>)
+RUN_TEST(swapping<slot<true>>)
+RUN_TEST(balance<slot<false>>)
+RUN_TEST(balance<slot<true>>)
 END_TEST_CASE(optional_tests)
