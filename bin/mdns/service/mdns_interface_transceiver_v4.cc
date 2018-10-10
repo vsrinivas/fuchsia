@@ -13,7 +13,7 @@
 
 namespace mdns {
 
-MdnsInterfaceTransceiverV4::MdnsInterfaceTransceiverV4(IpAddress address,
+MdnsInterfaceTransceiverV4::MdnsInterfaceTransceiverV4(inet::IpAddress address,
                                                        const std::string& name,
                                                        uint32_t index)
     : MdnsInterfaceTransceiver(address, name, index) {}
@@ -86,7 +86,7 @@ int MdnsInterfaceTransceiverV4::Bind() {
 }
 
 int MdnsInterfaceTransceiverV4::SendTo(const void* buffer, size_t size,
-                                       const SocketAddress& address) {
+                                       const inet::SocketAddress& address) {
   return sendto(socket_fd().get(), buffer, size, 0, address.as_sockaddr(),
                 address.socklen());
 }

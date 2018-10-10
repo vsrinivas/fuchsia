@@ -28,7 +28,7 @@ namespace mdns {
 
 // static
 std::unique_ptr<MdnsInterfaceTransceiver> MdnsInterfaceTransceiver::Create(
-    IpAddress address, const std::string& name, uint32_t index) {
+    inet::IpAddress address, const std::string& name, uint32_t index) {
   MdnsInterfaceTransceiver* interface_transceiver;
 
   if (address.is_v4()) {
@@ -42,7 +42,7 @@ std::unique_ptr<MdnsInterfaceTransceiver> MdnsInterfaceTransceiver::Create(
   return std::unique_ptr<MdnsInterfaceTransceiver>(interface_transceiver);
 }
 
-MdnsInterfaceTransceiver::MdnsInterfaceTransceiver(IpAddress address,
+MdnsInterfaceTransceiver::MdnsInterfaceTransceiver(inet::IpAddress address,
                                                    const std::string& name,
                                                    uint32_t index)
     : address_(address),
@@ -89,14 +89,14 @@ void MdnsInterfaceTransceiver::Stop() {
 }
 
 void MdnsInterfaceTransceiver::SetAlternateAddress(
-    const IpAddress& alternate_address) {
+    const inet::IpAddress& alternate_address) {
   FXL_DCHECK(alternate_address.family() != address_.family());
 
   alternate_address_ = alternate_address;
 }
 
 void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
-                                           const SocketAddress& address) {
+                                           const inet::SocketAddress& address) {
   FXL_DCHECK(message);
   FXL_DCHECK(address.is_valid());
   FXL_DCHECK(address.family() == address_.family() ||
@@ -239,7 +239,7 @@ MdnsInterfaceTransceiver::GetAlternateAddressResource(
 }
 
 std::shared_ptr<DnsResource> MdnsInterfaceTransceiver::MakeAddressResource(
-    const std::string& host_full_name, const IpAddress& address) {
+    const std::string& host_full_name, const inet::IpAddress& address) {
   std::shared_ptr<DnsResource> resource;
 
   if (address.is_v4()) {

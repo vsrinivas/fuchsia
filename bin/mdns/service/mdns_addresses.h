@@ -9,17 +9,17 @@
 #include <vector>
 
 #include "garnet/bin/mdns/service/reply_address.h"
-#include "garnet/bin/mdns/service/socket_address.h"
+#include "garnet/lib/inet/socket_address.h"
 
 namespace mdns {
 
 struct MdnsAddresses {
-  static const IpPort kMdnsPort;
+  static const inet::IpPort kMdnsPort;
 
-  static const SocketAddress kV4Multicast;
-  static const SocketAddress kV6Multicast;
-  static const SocketAddress kV4Bind;
-  static const SocketAddress kV6Bind;
+  static const inet::SocketAddress kV4Multicast;
+  static const inet::SocketAddress kV6Multicast;
+  static const inet::SocketAddress kV4Bind;
+  static const inet::SocketAddress kV6Bind;
 
   static const ReplyAddress kV4MulticastReply;
   static const ReplyAddress kV6MulticastReply;

@@ -23,10 +23,10 @@ class MdnsInterfaceTransceiverV6 : public MdnsInterfaceTransceiver {
   int SetOptionFamilySpecific() override;
   int Bind() override;
   int SendTo(const void* buffer, size_t size,
-             const SocketAddress& address) override;
+             const inet::SocketAddress& address) override;
 
  private:
-  MdnsInterfaceTransceiverV6(IpAddress address, const std::string& name,
+  MdnsInterfaceTransceiverV6(inet::IpAddress address, const std::string& name,
                              uint32_t index);
 
   friend class MdnsInterfaceTransceiver;  // For constructor.

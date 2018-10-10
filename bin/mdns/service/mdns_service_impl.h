@@ -66,14 +66,14 @@ class MdnsServiceImpl : public fuchsia::mdns::MdnsService {
     // Mdns::Subscriber implementation:
     void InstanceDiscovered(const std::string& service,
                             const std::string& instance,
-                            const SocketAddress& v4_address,
-                            const SocketAddress& v6_address,
+                            const inet::SocketAddress& v4_address,
+                            const inet::SocketAddress& v6_address,
                             const std::vector<std::string>& text) override;
 
     void InstanceChanged(const std::string& service,
                          const std::string& instance,
-                         const SocketAddress& v4_address,
-                         const SocketAddress& v6_address,
+                         const inet::SocketAddress& v4_address,
+                         const inet::SocketAddress& v6_address,
                          const std::vector<std::string>& text) override;
 
     void InstanceLost(const std::string& service,
@@ -97,7 +97,7 @@ class MdnsServiceImpl : public fuchsia::mdns::MdnsService {
   // Publisher for PublishServiceInstance.
   class SimplePublisher : public Mdns::Publisher {
    public:
-    SimplePublisher(IpPort port, fidl::VectorPtr<fidl::StringPtr> text,
+    SimplePublisher(inet::IpPort port, fidl::VectorPtr<fidl::StringPtr> text,
                     PublishServiceInstanceCallback callback);
 
    private:
@@ -108,7 +108,7 @@ class MdnsServiceImpl : public fuchsia::mdns::MdnsService {
                         fit::function<void(std::unique_ptr<Mdns::Publication>)>
                             callback) override;
 
-    IpPort port_;
+    inet::IpPort port_;
     std::vector<std::string> text_;
     PublishServiceInstanceCallback callback_;
 

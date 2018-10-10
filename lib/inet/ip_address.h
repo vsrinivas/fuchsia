@@ -54,6 +54,9 @@ class IpAddress {
   // Creates an address from a sockaddr struct.
   explicit IpAddress(const sockaddr* addr);
 
+  // Creates an address from a sockaddr_storage struct.
+  explicit IpAddress(const sockaddr_storage& addr);
+
   // Creates an address from a NetAddress struct.
   explicit IpAddress(const fuchsia::netstack::NetAddress* addr);
 

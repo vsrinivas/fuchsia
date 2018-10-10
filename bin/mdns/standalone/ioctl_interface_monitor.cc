@@ -10,7 +10,7 @@
 #include <sys/socket.h>
 #include <zx/time.h>
 
-#include "garnet/bin/mdns/service/ip_address.h"
+#include "garnet/lib/inet/ip_address.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/netstack/c/netconfig.h"
@@ -80,7 +80,7 @@ bool IoctlInterfaceMonitor::CheckInterfaces() {
   for (uint32_t i = 0; i < if_infos.n_info; ++i) {
     netc_if_info_t* if_info = &if_infos.info[i];
 
-    IpAddress address(if_info->addr);
+    inet::IpAddress address(if_info->addr);
 
     if (!address.is_valid() || address.is_loopback() ||
         (if_info->flags & NETC_IFF_UP) == 0) {

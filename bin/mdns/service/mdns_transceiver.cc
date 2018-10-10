@@ -142,7 +142,7 @@ void MdnsTransceiver::OnLinkChange() {
     auto interface_transceiver = GetInterfaceTransceiver(index);
 
     if (!interface_descr ||
-        interface_descr->address_ == IpAddress(0, 0, 0, 0) ||
+        interface_descr->address_ == inet::IpAddress(0, 0, 0, 0) ||
         !InterfaceEnabled(*interface_descr)) {
       if (interface_transceiver != nullptr) {
         // Interface went away.

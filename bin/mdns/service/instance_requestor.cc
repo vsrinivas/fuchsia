@@ -116,16 +116,16 @@ void InstanceRequestor::EndOfMessage() {
       for (auto subscriber : subscribers_) {
         subscriber->InstanceDiscovered(
             service_name_, instance_info.instance_name_,
-            SocketAddress(target_info.v4_address_, instance_info.port_),
-            SocketAddress(target_info.v6_address_, instance_info.port_),
+            inet::SocketAddress(target_info.v4_address_, instance_info.port_),
+            inet::SocketAddress(target_info.v6_address_, instance_info.port_),
             instance_info.text_);
       }
     } else {
       for (auto subscriber : subscribers_) {
         subscriber->InstanceChanged(
             service_name_, instance_info.instance_name_,
-            SocketAddress(target_info.v4_address_, instance_info.port_),
-            SocketAddress(target_info.v6_address_, instance_info.port_),
+            inet::SocketAddress(target_info.v4_address_, instance_info.port_),
+            inet::SocketAddress(target_info.v6_address_, instance_info.port_),
             instance_info.text_);
       }
     }
@@ -174,8 +174,8 @@ void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
     updates_happened = true;
     subscriber->InstanceDiscovered(
         service_name_, instance_info.instance_name_,
-        SocketAddress(target_info.v4_address_, instance_info.port_),
-        SocketAddress(target_info.v6_address_, instance_info.port_),
+        inet::SocketAddress(target_info.v4_address_, instance_info.port_),
+        inet::SocketAddress(target_info.v6_address_, instance_info.port_),
         instance_info.text_);
   }
 
@@ -285,7 +285,7 @@ void InstanceRequestor::ReceiveAResource(const DnsResource& resource,
                                          TargetInfo* target_info) {
   if (resource.time_to_live_ == 0) {
     if (target_info->v4_address_) {
-      target_info->v4_address_ = IpAddress::kInvalid;
+      target_info->v4_address_ = inet::IpAddress::kInvalid;
       target_info->dirty_ = true;
     }
 
@@ -305,7 +305,7 @@ void InstanceRequestor::ReceiveAaaaResource(const DnsResource& resource,
                                             TargetInfo* target_info) {
   if (resource.time_to_live_ == 0) {
     if (target_info->v6_address_) {
-      target_info->v6_address_ = IpAddress::kInvalid;
+      target_info->v6_address_ = inet::IpAddress::kInvalid;
       target_info->dirty_ = true;
     }
 

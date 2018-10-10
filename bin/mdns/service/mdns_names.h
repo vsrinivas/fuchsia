@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "garnet/bin/mdns/service/socket_address.h"
+#include "garnet/lib/inet/socket_address.h"
 
 namespace mdns {
 

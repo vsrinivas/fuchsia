@@ -12,7 +12,7 @@
 
 #include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/bin/mdns/service/mdns_agent.h"
-#include "garnet/bin/mdns/service/socket_address.h"
+#include "garnet/lib/inet/socket_address.h"
 #include "lib/fxl/time/time_delta.h"
 
 namespace mdns {
@@ -44,15 +44,15 @@ class InstanceRequestor : public MdnsAgent {
   struct InstanceInfo {
     std::string instance_name_;
     std::string target_;
-    IpPort port_;
+    inet::IpPort port_;
     std::vector<std::string> text_;
     bool new_ = true;
     bool dirty_ = true;
   };
 
   struct TargetInfo {
-    IpAddress v4_address_;
-    IpAddress v6_address_;
+    inet::IpAddress v4_address_;
+    inet::IpAddress v6_address_;
     bool keep_ = false;
     bool dirty_ = false;
   };

@@ -9,9 +9,9 @@
 #include <string>
 #include <vector>
 
-#include "garnet/bin/mdns/service/ip_port.h"
 #include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/bin/mdns/service/mdns_agent.h"
+#include "garnet/lib/inet/ip_port.h"
 #include "lib/fxl/time/time_delta.h"
 
 namespace mdns {

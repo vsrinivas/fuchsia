@@ -17,7 +17,7 @@
 #include "garnet/bin/mdns/service/dns_message.h"
 #include "garnet/bin/mdns/service/mdns_agent.h"
 #include "garnet/bin/mdns/service/mdns_transceiver.h"
-#include "garnet/bin/mdns/service/socket_address.h"
+#include "garnet/lib/inet/socket_address.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_point.h"
 
@@ -34,10 +34,10 @@ class Mdns : public MdnsAgent::Host {
   // Describes an initial instance publication or query response.
   struct Publication {
     static std::unique_ptr<Publication> Create(
-        IpPort port,
+        inet::IpPort port,
         const std::vector<std::string>& text = std::vector<std::string>());
 
-    IpPort port_;
+    inet::IpPort port_;
     std::vector<std::string> text_;
     uint32_t ptr_ttl_seconds = 4500;  // default 75 minutes
     uint32_t srv_ttl_seconds = 120;   // default 2 minutes
@@ -56,15 +56,15 @@ class Mdns : public MdnsAgent::Host {
     // Called when a new instance is discovered.
     virtual void InstanceDiscovered(const std::string& service,
                                     const std::string& instance,
-                                    const SocketAddress& v4_address,
-                                    const SocketAddress& v6_address,
+                                    const inet::SocketAddress& v4_address,
+                                    const inet::SocketAddress& v6_address,
                                     const std::vector<std::string>& text) = 0;
 
     // Called when a previously discovered instance changes addresses or text.
     virtual void InstanceChanged(const std::string& service,
                                  const std::string& instance,
-                                 const SocketAddress& v4_address,
-                                 const SocketAddress& v6_address,
+                                 const inet::SocketAddress& v4_address,
+                                 const inet::SocketAddress& v6_address,
                                  const std::vector<std::string>& text) = 0;
 
     // Called when an instance is lost.
@@ -130,8 +130,8 @@ class Mdns : public MdnsAgent::Host {
   };
 
   using ResolveHostNameCallback = fit::function<void(
-      const std::string& host_name, const IpAddress& v4_address,
-      const IpAddress& v6_address)>;
+      const std::string& host_name, const inet::IpAddress& v4_address,
+      const inet::IpAddress& v6_address)>;
 
   Mdns();
 
@@ -251,7 +251,7 @@ class Mdns : public MdnsAgent::Host {
   // Adds an instance responder.
   bool ProbeAndAddInstanceResponder(const std::string& service_name,
                                     const std::string& instance_name,
-                                    IpPort port,
+                                    inet::IpPort port,
                                     std::shared_ptr<InstanceResponder> agent);
 
   // Sends any messages found in |outbound_messages_by_reply_address_| and

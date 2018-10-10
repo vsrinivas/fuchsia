@@ -163,7 +163,7 @@ bool Mdns::PublishServiceInstance(const std::string& service_name,
   // We're using a bogus port number here, which is OK, because the 'proposed'
   // resource created from it is only used for collision resolution.
   return ProbeAndAddInstanceResponder(service_name, instance_name,
-                                      IpPort::From_uint16_t(0), agent);
+                                      inet::IpPort::From_uint16_t(0), agent);
 }
 
 void Mdns::LogTraffic() { transceiver_.LogTraffic(); }
@@ -325,7 +325,7 @@ void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
 
 bool Mdns::ProbeAndAddInstanceResponder(
     const std::string& service_name, const std::string& instance_name,
-    IpPort port, std::shared_ptr<InstanceResponder> agent) {
+    inet::IpPort port, std::shared_ptr<InstanceResponder> agent) {
   FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
   FXL_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
 
@@ -444,7 +444,7 @@ void Mdns::PostTask() {
 
 // static
 std::unique_ptr<Mdns::Publication> Mdns::Publication::Create(
-    IpPort port, const std::vector<std::string>& text) {
+    inet::IpPort port, const std::vector<std::string>& text) {
   auto publication = new Publication();
   publication->port_ = port;
   publication->text_ = text;

@@ -10,7 +10,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
-#include "garnet/bin/mdns/service/socket_address.h"
+#include "garnet/lib/inet/socket_address.h"
 #include "lib/fxl/logging.h"
 
 namespace mdns {
@@ -20,14 +20,15 @@ class ReplyAddress {
  public:
   // Creates a reply address from an sockaddr_storage struct and an interface
   // index.
-  ReplyAddress(const SocketAddress& socket_address, uint32_t interface_index);
+  ReplyAddress(const inet::SocketAddress& socket_address,
+               uint32_t interface_index);
 
   // Creates a reply address from an sockaddr_storage struct and an interface
   // index.
   ReplyAddress(const sockaddr_storage& socket_address,
                uint32_t interface_index);
 
-  const SocketAddress& socket_address() const { return socket_address_; }
+  const inet::SocketAddress& socket_address() const { return socket_address_; }
 
   uint32_t interface_index() const { return interface_index_; }
 
@@ -39,7 +40,7 @@ class ReplyAddress {
   bool operator!=(const ReplyAddress& other) const { return !(*this == other); }
 
  private:
-  SocketAddress socket_address_;
+  inet::SocketAddress socket_address_;
   uint32_t interface_index_;
 };
 

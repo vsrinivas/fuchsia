@@ -81,8 +81,8 @@ void MdnsStandalone::LogTrafficAfterDelay() {
 
 void MdnsStandalone::InstanceDiscovered(const std::string& service,
                                         const std::string& instance,
-                                        const SocketAddress& v4_address,
-                                        const SocketAddress& v6_address,
+                                        const inet::SocketAddress& v4_address,
+                                        const inet::SocketAddress& v6_address,
                                         const std::vector<std::string>& text) {
   std::cout << "discovered: " << service << " " << instance << " " << v4_address
             << " " << v6_address << " " << text << "\n";
@@ -90,8 +90,8 @@ void MdnsStandalone::InstanceDiscovered(const std::string& service,
 
 void MdnsStandalone::InstanceChanged(const std::string& service,
                                      const std::string& instance,
-                                     const SocketAddress& v4_address,
-                                     const SocketAddress& v6_address,
+                                     const inet::SocketAddress& v4_address,
+                                     const inet::SocketAddress& v6_address,
                                      const std::vector<std::string>& text) {
   std::cout << "changed: " << service << " " << instance << " " << v4_address
             << " " << v6_address << " " << text << "\n";
@@ -117,7 +117,7 @@ void MdnsStandalone::GetPublication(
     bool query, const std::string& subtype,
     fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) {
   FXL_DCHECK(callback);
-  callback(Mdns::Publication::Create(IpPort::From_uint16_t(6666),
+  callback(Mdns::Publication::Create(inet::IpPort::From_uint16_t(6666),
                                      {"some", "metadata"}));
 }
 

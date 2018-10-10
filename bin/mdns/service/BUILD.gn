@@ -56,10 +56,6 @@ source_set("lib") {
     "instance_responder.cc",
     "instance_responder.h",
     "interface_monitor.h",
-    "ip_address.cc",
-    "ip_address.h",
-    "ip_port.cc",
-    "ip_port.h",
     "mdns.cc",
     "mdns.h",
     "mdns_addresses.cc",
@@ -85,8 +81,6 @@ source_set("lib") {
     "reply_address.h",
     "resource_renewer.cc",
     "resource_renewer.h",
-    "socket_address.cc",
-    "socket_address.h",
   ]
 
   deps = [
@@ -97,6 +91,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//garnet/lib/inet",
     "//zircon/public/lib/fit",
   ]
 }

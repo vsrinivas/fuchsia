@@ -49,9 +49,9 @@ void MdnsServiceImpl::ResolveHostName(fidl::StringPtr host_name,
   mdns_.ResolveHostName(
       host_name,
       fxl::TimePoint::Now() + fxl::TimeDelta::FromMilliseconds(timeout_ms),
-      [this, callback = std::move(callback)](const std::string& host_name,
-                                             const IpAddress& v4_address,
-                                             const IpAddress& v6_address) {
+      [this, callback = std::move(callback)](
+          const std::string& host_name, const inet::IpAddress& v4_address,
+          const inet::IpAddress& v6_address) {
         callback(MdnsFidlUtil::CreateSocketAddressIPv4(v4_address),
                  MdnsFidlUtil::CreateSocketAddressIPv6(v6_address));
       });
@@ -90,7 +90,7 @@ void MdnsServiceImpl::PublishServiceInstance(
   }
 
   auto publisher = std::unique_ptr<SimplePublisher>(new SimplePublisher(
-      IpPort::From_uint16_t(port), std::move(text), callback.share()));
+      inet::IpPort::From_uint16_t(port), std::move(text), callback.share()));
 
   if (!mdns_.PublishServiceInstance(service_name, instance_name,
                                     publisher.get())) {
@@ -236,7 +236,8 @@ MdnsServiceImpl::Subscriber::~Subscriber() {}
 
 void MdnsServiceImpl::Subscriber::InstanceDiscovered(
     const std::string& service, const std::string& instance,
-    const SocketAddress& v4_address, const SocketAddress& v6_address,
+    const inet::SocketAddress& v4_address,
+    const inet::SocketAddress& v6_address,
     const std::vector<std::string>& text) {
   instances_by_name_.emplace(
       instance, MdnsFidlUtil::CreateServiceInstance(
@@ -245,7 +246,8 @@ void MdnsServiceImpl::Subscriber::InstanceDiscovered(
 
 void MdnsServiceImpl::Subscriber::InstanceChanged(
     const std::string& service, const std::string& instance,
-    const SocketAddress& v4_address, const SocketAddress& v6_address,
+    const inet::SocketAddress& v4_address,
+    const inet::SocketAddress& v6_address,
     const std::vector<std::string>& text) {
   auto iter = instances_by_name_.find(instance);
   if (iter != instances_by_name_.end()) {
@@ -269,7 +271,7 @@ void MdnsServiceImpl::Subscriber::GetInstances(uint64_t version_last_seen,
 }
 
 MdnsServiceImpl::SimplePublisher::SimplePublisher(
-    IpPort port, fidl::VectorPtr<fidl::StringPtr> text,
+    inet::IpPort port, fidl::VectorPtr<fidl::StringPtr> text,
     PublishServiceInstanceCallback callback)
     : port_(port),
       text_(fxl::To<std::vector<std::string>>(text)),

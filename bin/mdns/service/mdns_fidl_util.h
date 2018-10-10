@@ -9,7 +9,7 @@
 
 #include <fuchsia/mdns/cpp/fidl.h>
 #include "garnet/bin/mdns/service/mdns.h"
-#include "garnet/bin/mdns/service/socket_address.h"
+#include "garnet/lib/inet/socket_address.h"
 
 namespace mdns {
 
@@ -20,27 +20,30 @@ class MdnsFidlUtil {
 
   static fuchsia::mdns::MdnsServiceInstancePtr CreateServiceInstance(
       const std::string& service_name, const std::string& instance_name,
-      const SocketAddress& v4_address, const SocketAddress& v6_address,
+      const inet::SocketAddress& v4_address,
+      const inet::SocketAddress& v6_address,
       const std::vector<std::string>& text);
 
   static void UpdateServiceInstance(
       const fuchsia::mdns::MdnsServiceInstancePtr& service_instance,
-      const SocketAddress& v4_address, const SocketAddress& v6_address,
+      const inet::SocketAddress& v4_address,
+      const inet::SocketAddress& v6_address,
       const std::vector<std::string>& text);
 
   static fuchsia::netstack::SocketAddressPtr CreateSocketAddressIPv4(
-      const IpAddress& ip_address);
+      const inet::IpAddress& ip_address);
 
   static fuchsia::netstack::SocketAddressPtr CreateSocketAddressIPv6(
-      const IpAddress& ip_address);
+      const inet::IpAddress& ip_address);
 
   static fuchsia::netstack::SocketAddressPtr CreateSocketAddressIPv4(
-      const SocketAddress& socket_address);
+      const inet::SocketAddress& socket_address);
 
   static fuchsia::netstack::SocketAddressPtr CreateSocketAddressIPv6(
-      const SocketAddress& socket_address);
+      const inet::SocketAddress& socket_address);
 
-  static IpAddress IpAddressFrom(const fuchsia::netstack::NetAddress* addr);
+  static inet::IpAddress IpAddressFrom(
+      const fuchsia::netstack::NetAddress* addr);
 
   static std::unique_ptr<Mdns::Publication> Convert(
       const fuchsia::mdns::MdnsPublicationPtr& publication_ptr);

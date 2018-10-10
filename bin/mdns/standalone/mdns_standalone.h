@@ -22,13 +22,13 @@ class MdnsStandalone : public Mdns::Subscriber, public Mdns::Publisher {
   // Mdns::Subscriber implementation:
   void InstanceDiscovered(const std::string& service,
                           const std::string& instance,
-                          const SocketAddress& v4_address,
-                          const SocketAddress& v6_address,
+                          const inet::SocketAddress& v4_address,
+                          const inet::SocketAddress& v6_address,
                           const std::vector<std::string>& text) override;
 
   void InstanceChanged(const std::string& service, const std::string& instance,
-                       const SocketAddress& v4_address,
-                       const SocketAddress& v6_address,
+                       const inet::SocketAddress& v4_address,
+                       const inet::SocketAddress& v6_address,
                        const std::vector<std::string>& text) override;
 
   void InstanceLost(const std::string& service,

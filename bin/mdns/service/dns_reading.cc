@@ -92,14 +92,14 @@ PacketReader& operator>>(PacketReader& reader, DnsName& value) {
 PacketReader& operator>>(PacketReader& reader, DnsV4Address& value) {
   in_addr addr;
   reader.GetBytes(sizeof(addr), &addr);
-  value.address_ = IpAddress(addr);
+  value.address_ = inet::IpAddress(addr);
   return reader;
 }
 
 PacketReader& operator>>(PacketReader& reader, DnsV6Address& value) {
   in6_addr addr;
   reader.GetBytes(sizeof(addr), &addr);
-  value.address_ = IpAddress(addr);
+  value.address_ = inet::IpAddress(addr);
   return reader;
 }
 
@@ -195,7 +195,7 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataAaaa& value) {
 PacketReader& operator>>(PacketReader& reader, DnsResourceDataSrv& value) {
   uint16_t port;
   reader >> value.priority_ >> value.weight_ >> port >> value.target_;
-  value.port_ = IpPort::From_uint16_t(port);
+  value.port_ = inet::IpPort::From_uint16_t(port);
   return reader;
 }
 

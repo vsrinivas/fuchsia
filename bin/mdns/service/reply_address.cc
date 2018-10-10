@@ -8,7 +8,7 @@
 
 namespace mdns {
 
-ReplyAddress::ReplyAddress(const SocketAddress& socket_address,
+ReplyAddress::ReplyAddress(const inet::SocketAddress& socket_address,
                            uint32_t interface_index)
     : socket_address_(socket_address), interface_index_(interface_index) {}
 

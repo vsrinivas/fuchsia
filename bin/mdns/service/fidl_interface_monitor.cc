@@ -41,7 +41,7 @@ void FidlInterfaceMonitor::InterfacesChanged(
   bool link_change = false;
 
   for (const auto& if_info : *interfaces) {
-    IpAddress address = MdnsFidlUtil::IpAddressFrom(&if_info.addr);
+    inet::IpAddress address = MdnsFidlUtil::IpAddressFrom(&if_info.addr);
 
     if (!address.is_valid() || address.is_loopback() ||
         (if_info.flags & fuchsia::netstack::NetInterfaceFlagUp) == 0) {

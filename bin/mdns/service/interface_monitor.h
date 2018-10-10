@@ -11,16 +11,16 @@
 
 #include <lib/fit/function.h>
 
-#include "garnet/bin/mdns/service/ip_address.h"
+#include "garnet/lib/inet/ip_address.h"
 
 namespace mdns {
 
 // Describes an interface.
 struct InterfaceDescriptor {
-  InterfaceDescriptor(IpAddress address, const std::string& name)
+  InterfaceDescriptor(inet::IpAddress address, const std::string& name)
       : address_(address), name_(name) {}
 
-  IpAddress address_;
+  inet::IpAddress address_;
   std::string name_;
 };
 

@@ -9,8 +9,8 @@
 #include <string>
 #include <vector>
 
-#include "garnet/bin/mdns/service/ip_address.h"
-#include "garnet/bin/mdns/service/ip_port.h"
+#include "garnet/lib/inet/ip_address.h"
+#include "garnet/lib/inet/ip_port.h"
 
 namespace mdns {
 
@@ -112,12 +112,12 @@ struct DnsName {
 
 // IPV4 address.
 struct DnsV4Address {
-  IpAddress address_;
+  inet::IpAddress address_;
 };
 
 // IPV6 address.
 struct DnsV6Address {
-  IpAddress address_;
+  inet::IpAddress address_;
 };
 
 // Query type for DNS message headers.
@@ -238,7 +238,7 @@ struct DnsResourceDataAaaa {
 struct DnsResourceDataSrv {
   uint16_t priority_ = 0;
   uint16_t weight_ = 0;
-  IpPort port_;
+  inet::IpPort port_;
   DnsName target_;
 };
 

@@ -11,9 +11,9 @@
 #include <lib/fit/function.h>
 
 #include "garnet/bin/mdns/service/dns_message.h"
-#include "garnet/bin/mdns/service/ip_address.h"
 #include "garnet/bin/mdns/service/reply_address.h"
-#include "garnet/bin/mdns/service/socket_address.h"
+#include "garnet/lib/inet/ip_address.h"
+#include "garnet/lib/inet/socket_address.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
@@ -33,13 +33,13 @@ class MdnsInterfaceTransceiver {
   // address family specified in |address|. |name| is the name of the interface,
   // and |index| is its index.
   static std::unique_ptr<MdnsInterfaceTransceiver> Create(
-      IpAddress address, const std::string& name, uint32_t index);
+      inet::IpAddress address, const std::string& name, uint32_t index);
 
   virtual ~MdnsInterfaceTransceiver();
 
   const std::string& name() const { return name_; }
 
-  const IpAddress& address() const { return address_; }
+  const inet::IpAddress& address() const { return address_; }
 
   // Starts the interface transceiver.
   bool Start(InboundMessageCallback callback);
@@ -48,14 +48,14 @@ class MdnsInterfaceTransceiver {
   void Stop();
 
   // Sets an alternate address for the interface.
-  void SetAlternateAddress(const IpAddress& alternate_address);
+  void SetAlternateAddress(const inet::IpAddress& alternate_address);
 
   // Sends a messaage to the specified address. A V6 interface will send to
   // |MdnsAddresses::kV6Multicast| if |reply_address| is
   // |MdnsAddresses::kV4Multicast|. This method expects there to be at most two
   // address records per record vector and, if there are two, that they are
   // adjacent. The same constraints will apply when this method returns.
-  void SendMessage(DnsMessage* message, const SocketAddress& address);
+  void SendMessage(DnsMessage* message, const inet::SocketAddress& address);
 
   // Sends a message containing only an address resource for this interface.
   void SendAddress(const std::string& host_full_name);
@@ -71,7 +71,7 @@ class MdnsInterfaceTransceiver {
   static constexpr int kTimeToLive_ = 255;
   static constexpr size_t kMaxPacketSize = 1500;
 
-  MdnsInterfaceTransceiver(IpAddress address, const std::string& name,
+  MdnsInterfaceTransceiver(inet::IpAddress address, const std::string& name,
                            uint32_t index);
 
   uint32_t index() const { return index_; }
@@ -85,7 +85,7 @@ class MdnsInterfaceTransceiver {
   virtual int SetOptionFamilySpecific() = 0;
   virtual int Bind() = 0;
   virtual int SendTo(const void* buffer, size_t size,
-                     const SocketAddress& address) = 0;
+                     const inet::SocketAddress& address) = 0;
 
  private:
   int SetOptionSharePort();
@@ -106,7 +106,7 @@ class MdnsInterfaceTransceiver {
 
   // Makes an address resource (A/AAAA) record with the given name and address.
   std::shared_ptr<DnsResource> MakeAddressResource(
-      const std::string& host_full_name, const IpAddress& address);
+      const std::string& host_full_name, const inet::IpAddress& address);
 
   // Fixes up the address records in the vector. This method expects there to
   // be at most two address records in the vector and, if there are two, that
@@ -114,8 +114,8 @@ class MdnsInterfaceTransceiver {
   // returns.
   void FixUpAddresses(std::vector<std::shared_ptr<DnsResource>>* resources);
 
-  IpAddress address_;
-  IpAddress alternate_address_;
+  inet::IpAddress address_;
+  inet::IpAddress alternate_address_;
   std::string name_;
   uint32_t index_;
   fxl::UniqueFD socket_fd_;

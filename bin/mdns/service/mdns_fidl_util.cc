@@ -16,7 +16,8 @@ const std::string MdnsFidlUtil::kFuchsiaServiceName = "_fuchsia._tcp.";
 // static
 fuchsia::mdns::MdnsServiceInstancePtr MdnsFidlUtil::CreateServiceInstance(
     const std::string& service_name, const std::string& instance_name,
-    const SocketAddress& v4_address, const SocketAddress& v6_address,
+    const inet::SocketAddress& v4_address,
+    const inet::SocketAddress& v6_address,
     const std::vector<std::string>& text) {
   fuchsia::mdns::MdnsServiceInstancePtr service_instance =
       fuchsia::mdns::MdnsServiceInstance::New();
@@ -39,7 +40,8 @@ fuchsia::mdns::MdnsServiceInstancePtr MdnsFidlUtil::CreateServiceInstance(
 // static
 void MdnsFidlUtil::UpdateServiceInstance(
     const fuchsia::mdns::MdnsServiceInstancePtr& service_instance,
-    const SocketAddress& v4_address, const SocketAddress& v6_address,
+    const inet::SocketAddress& v4_address,
+    const inet::SocketAddress& v6_address,
     const std::vector<std::string>& text) {
   service_instance->text = fxl::To<fidl::VectorPtr<fidl::StringPtr>>(text);
 
@@ -58,7 +60,7 @@ void MdnsFidlUtil::UpdateServiceInstance(
 
 // static
 fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
-    const IpAddress& ip_address) {
+    const inet::IpAddress& ip_address) {
   if (!ip_address) {
     return nullptr;
   }
@@ -79,7 +81,7 @@ fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
 
 // static
 fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
-    const IpAddress& ip_address) {
+    const inet::IpAddress& ip_address) {
   if (!ip_address) {
     return nullptr;
   }
@@ -100,7 +102,7 @@ fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
 
 // static
 fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
-    const SocketAddress& socket_address) {
+    const inet::SocketAddress& socket_address) {
   if (!socket_address) {
     return nullptr;
   }
@@ -117,7 +119,7 @@ fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
 
 // static
 fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
-    const SocketAddress& socket_address) {
+    const inet::SocketAddress& socket_address) {
   if (!socket_address) {
     return nullptr;
   }
@@ -133,28 +135,28 @@ fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
 }
 
 // static
-IpAddress MdnsFidlUtil::IpAddressFrom(
+inet::IpAddress MdnsFidlUtil::IpAddressFrom(
     const fuchsia::netstack::NetAddress* addr) {
   FXL_DCHECK(addr != nullptr);
   switch (addr->family) {
     case fuchsia::netstack::NetAddressFamily::IPV4:
       if (!addr->ipv4) {
-        return IpAddress();
+        return inet::IpAddress();
       }
 
       FXL_DCHECK(addr->ipv4->addr.count() == sizeof(in_addr));
-      return IpAddress(
+      return inet::IpAddress(
           *reinterpret_cast<const in_addr*>(addr->ipv4->addr.data()));
     case fuchsia::netstack::NetAddressFamily::IPV6:
       if (!addr->ipv6) {
-        return IpAddress();
+        return inet::IpAddress();
       }
 
       FXL_DCHECK(addr->ipv6->addr.count() == sizeof(in6_addr));
-      return IpAddress(
+      return inet::IpAddress(
           *reinterpret_cast<const in6_addr*>(addr->ipv6->addr.data()));
     default:
-      return IpAddress();
+      return inet::IpAddress();
   }
 }
 
@@ -166,7 +168,7 @@ std::unique_ptr<Mdns::Publication> MdnsFidlUtil::Convert(
   }
 
   auto publication = Mdns::Publication::Create(
-      IpPort::From_uint16_t(publication_ptr->port),
+      inet::IpPort::From_uint16_t(publication_ptr->port),
       fxl::To<std::vector<std::string>>(publication_ptr->text));
   publication->ptr_ttl_seconds = publication_ptr->ptr_ttl_seconds;
   publication->srv_ttl_seconds = publication_ptr->srv_ttl_seconds;
