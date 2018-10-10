@@ -8,11 +8,11 @@ import os
 import shutil
 import sys
 
+# NOTE: deprecated, use `generate.py --tests` instead.
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-FUCHSIA_ROOT = os.path.dirname(  # $root
-    os.path.dirname(             # scripts
-    os.path.dirname(             # sdk
-    SCRIPT_DIR)))                # bazel
+
+from create_test_workspace import create_test_workspace
 
 
 def main():
@@ -26,39 +26,10 @@ def main():
                         required=True)
     args = parser.parse_args()
 
-    # Remove any existing output.
-    shutil.rmtree(args.output, True)
+    if not create_test_workspace(args.sdk, args.output):
+        return 1
 
-    shutil.copytree(os.path.join(SCRIPT_DIR, 'tests'), args.output)
-
-    with open(os.path.join(args.output, 'WORKSPACE'), 'w') as workspace_file:
-        workspace_file.write('''# This is a generated file.
-
-local_repository(
-    name = "fuchsia_sdk",
-    path = "%s",
-)
-
-http_archive(
-  name = "io_bazel_rules_dart",
-  url = "https://github.com/dart-lang/rules_dart/archive/master.zip",
-  strip_prefix = "rules_dart-master",
-)
-
-load("@io_bazel_rules_dart//dart/build_rules:repositories.bzl", "dart_repositories")
-dart_repositories()
-
-load("@fuchsia_sdk//build_defs:crosstool.bzl", "install_fuchsia_crosstool")
-install_fuchsia_crosstool(
-    name = "fuchsia_crosstool",
-)
-
-load("@fuchsia_sdk//build_defs:setup_dart.bzl", "setup_dart")
-setup_dart()
-
-load("@fuchsia_sdk//build_defs:setup_flutter.bzl", "setup_flutter")
-setup_flutter()
-''' % os.path.relpath(args.sdk, args.output))
+    return 0
 
 
 if __name__ == '__main__':

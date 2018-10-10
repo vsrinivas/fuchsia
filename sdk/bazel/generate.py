@@ -21,6 +21,7 @@ from mako.template import Template
 sys.path += [os.path.join(FUCHSIA_ROOT, 'scripts', 'sdk', 'common')]
 from frontend import Frontend
 
+from create_test_workspace import create_test_workspace
 import template_model as model
 
 
@@ -294,6 +295,8 @@ def main():
     parser.add_argument('--output',
                         help='Path to the directory where to install the SDK',
                         required=True)
+    parser.add_argument('--tests',
+                        help='Path to the directory where to generate tests')
     args = parser.parse_args()
 
     # Remove any existing output.
@@ -302,7 +305,13 @@ def main():
     builder = BazelBuilder(archive=args.archive,
                            directory=args.directory,
                            output=args.output)
-    return 0 if builder.run() else 1
+    if not builder.run():
+        return 1
+
+    if args.tests and not create_test_workspace(args.output, args.tests):
+        return 1
+
+    return 0
 
 
 if __name__ == '__main__':

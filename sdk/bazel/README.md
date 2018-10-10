@@ -7,7 +7,6 @@ The Bazel SDK frontend produces a [Bazel](https://bazel.build/) workspace.
 - `generate.py`: the script that generates the SDK;
 - `templates`: Mako templates used to produce various SDK files;
 - `base`: SDK contents that are copied verbatim;
-- `generate-tests.py`: a script that creates a test workspace;
 - `tests`: various SDK tests, copied over to the test workspace.
 
 ## Output layout
@@ -47,12 +46,30 @@ $root/
             sysroot/                       # arm64 sysroot
 ```
 
+## Generating
+
+In order to generate a Bazel workspace, point the `generate.py` script to an
+SDK archive, e.g.:
+```
+$ scripts/sdk/bazel/generate.py \
+    --archive my_sdk_archive.tar.gz \
+    --output my_workspace/
+```
+
 ## Testing
 
-The `generate-tests.py` script creates a workspace for testing the generated
-SDK. From within that workspace, run:
+The `generate.py` script optionally creates a workspace for testing the
+generated SDK:
 ```
-$ ./run.py
+$ scripts/sdk/bazel/generate.py \
+    --archive my_sdk_archive.tar.gz \
+    --output my_workspace/ \
+    --tests my_test_workspace/
+```
+
+Tests are then run with:
+```
+$ my_test_workspace/run.py
 ```
 
 To exclude a target from the suite, mark it as ignored with:
