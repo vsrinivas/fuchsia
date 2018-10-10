@@ -73,20 +73,18 @@ typedef struct multiboot_info {
     uint32_t apm_table;
 } multiboot_info_t;
 
-enum {
-    MB_INFO_MEM_SIZE    = 0x001,
-    MB_INFO_BOOT_DEV    = 0x002,
-    MB_INFO_CMD_LINE    = 0x004,
-    MB_INFO_MODS        = 0x008,
-    MB_INFO_SYMS        = 0x010,
-    MB_INFO_SHDR        = 0x020,
-    MB_INFO_MMAP        = 0x040,
-    MB_INFO_DRIVES      = 0x080,
-    MB_INFO_CONFIG      = 0x100,
-    MB_INFO_BOOT_LOADER = 0x200,
-    MB_INFO_APM_TABLE   = 0x400,
-    MB_INFO_VBE         = 0x800,
-};
+#define MB_INFO_MEM_SIZE 0x001
+#define MB_INFO_BOOT_DEV 0x002
+#define MB_INFO_CMD_LINE 0x004
+#define MB_INFO_MODS 0x008
+#define MB_INFO_SYMS 0x010
+#define MB_INFO_SHDR 0x020
+#define MB_INFO_MMAP 0x040
+#define MB_INFO_DRIVES 0x080
+#define MB_INFO_CONFIG 0x100
+#define MB_INFO_BOOT_LOADER 0x200
+#define MB_INFO_APM_TABLE 0x400
+#define MB_INFO_VBE 0x800
 
 /* module structure */
 typedef struct module {
@@ -107,12 +105,10 @@ typedef struct memory_map {
 } memory_map_t;
 
 /* memory map entry types */
-enum {
-    MB_MMAP_TYPE_AVAILABLE      = 0x01,
-    MB_MMAP_TYPE_RESERVED       = 0x02,
-    MB_MMAP_TYPE_ACPI_RECLAIM   = 0x03,
-    MB_MMAP_TYPE_ACPI_NVS       = 0x04,
-};
+#define MB_MMAP_TYPE_AVAILABLE 0x01
+#define MB_MMAP_TYPE_RESERVED 0x02
+#define MB_MMAP_TYPE_ACPI_RECLAIM 0x03
+#define MB_MMAP_TYPE_ACPI_NVS 0x04
 
 #endif
 
