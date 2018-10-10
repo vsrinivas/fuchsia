@@ -102,8 +102,8 @@ void PageEvictionManagerImpl::Completer::CallCallbacks(Status status) {
   }
 }
 
-PageEvictionManagerImpl::PageEvictionManagerImpl(
-    ledger::Environment* environment, ledger::DetachedPath db_path)
+PageEvictionManagerImpl::PageEvictionManagerImpl(Environment* environment,
+                                                 DetachedPath db_path)
     : environment_(environment),
       db_(environment, db_path.SubPath({storage::kSerializationVersion,
                                         kPageUsageDbSerializationVersion})),

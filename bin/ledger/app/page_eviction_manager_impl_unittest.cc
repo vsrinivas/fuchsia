@@ -54,8 +54,7 @@ class FakeDelegate : public PageEvictionManager::Delegate {
 class PageEvictionManagerTest : public TestWithEnvironment {
  public:
   PageEvictionManagerTest()
-      : page_eviction_manager_(&environment_,
-                               ledger::DetachedPath(tmpfs_.root_fd())),
+      : page_eviction_manager_(&environment_, DetachedPath(tmpfs_.root_fd())),
         policy_(NewLeastRecentyUsedPolicy(environment_.coroutine_service(),
                                           &page_eviction_manager_)) {}
 

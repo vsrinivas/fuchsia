@@ -22,8 +22,7 @@ namespace ledger {
 
 class PageEvictionManagerImpl : public PageEvictionManager {
  public:
-  PageEvictionManagerImpl(ledger::Environment* environment,
-                          ledger::DetachedPath db_path);
+  PageEvictionManagerImpl(Environment* environment, DetachedPath db_path);
   ~PageEvictionManagerImpl() override;
 
   // Initializes this PageEvictionManager. |IO_ERROR| will be returned in case
@@ -116,7 +115,7 @@ class PageEvictionManagerImpl : public PageEvictionManager {
 
   ExpiringToken NewExpiringToken();
 
-  ledger::Environment* environment_;
+  Environment* environment_;
   // The initialization completer. |Init| method starts marking pages as closed,
   // and returns before that operation is done. This completer makes sure that
   // all methods accessing the page usage database wait until the initialization

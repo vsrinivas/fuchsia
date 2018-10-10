@@ -647,10 +647,10 @@ void LedgerManager::BindLedgerDebug(
 
 // TODO(ayaelattar): See LE-370: Inspect ledgers and pages not currently active.
 void LedgerManager::GetPagesList(GetPagesListCallback callback) {
-  fidl::VectorPtr<ledger::PageId> result;
+  fidl::VectorPtr<PageId> result;
   result.resize(0);
   for (const auto& key_value : page_managers_) {
-    ledger::PageId page_id;
+    PageId page_id;
     convert::ToArray(key_value.first, &page_id.id);
     result.push_back(page_id);
   }
@@ -658,7 +658,7 @@ void LedgerManager::GetPagesList(GetPagesListCallback callback) {
 }
 
 void LedgerManager::GetPageDebug(
-    ledger::PageId page_id,
+    PageId page_id,
     fidl::InterfaceRequest<ledger_internal::PageDebug> page_debug,
     GetPageDebugCallback callback) {
   MaybeMarkPageOpened(page_id.id);

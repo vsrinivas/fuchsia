@@ -92,8 +92,7 @@ class PageInfoIterator final : public storage::Iterator<const PageInfo> {
 };
 }  // namespace
 
-PageUsageDb::PageUsageDb(ledger::Environment* environment,
-                         ledger::DetachedPath db_path)
+PageUsageDb::PageUsageDb(Environment* environment, DetachedPath db_path)
     : environment_(environment),
       db_(environment_->dispatcher(), std::move(db_path)) {}
 

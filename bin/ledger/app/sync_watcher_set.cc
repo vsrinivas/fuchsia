@@ -89,7 +89,7 @@ class SyncWatcherSet::SyncWatcherContainer
   }
 
   // fidl interface to the client.
-  ledger::SyncWatcherPtr watcher_;
+  SyncWatcherPtr watcher_;
 
   // True if a notification has been sent but not acknowledged by the client.
   bool notification_in_progress_ = false;

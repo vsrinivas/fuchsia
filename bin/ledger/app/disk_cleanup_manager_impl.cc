@@ -6,8 +6,8 @@
 
 namespace ledger {
 
-DiskCleanupManagerImpl::DiskCleanupManagerImpl(ledger::Environment* environment,
-                                               ledger::DetachedPath db_path)
+DiskCleanupManagerImpl::DiskCleanupManagerImpl(Environment* environment,
+                                               DetachedPath db_path)
     : page_eviction_manager_(environment, std::move(db_path)),
       policy_(NewLeastRecentyUsedPolicy(environment->coroutine_service(),
                                         &page_eviction_manager_)) {}

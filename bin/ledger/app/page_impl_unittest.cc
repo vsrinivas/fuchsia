@@ -200,7 +200,7 @@ class PageImplTest : public TestWithEnvironment {
 
 TEST_F(PageImplTest, GetId) {
   bool called;
-  ledger::PageId page_id;
+  PageId page_id;
   page_ptr_->GetId(
       callback::Capture(callback::SetWhenCalled(&called), &page_id));
   DrainLoop();
@@ -667,8 +667,8 @@ TEST_F(PageImplTest, TransactionRollback) {
 
   page_ptr_->StartTransaction(
       callback::Capture(callback::SetWhenCalled(&called_start), &status_start));
-  page_ptr_->Rollback(
-      callback::Capture(callback::SetWhenCalled(&called_rollback), &status_rollback));
+  page_ptr_->Rollback(callback::Capture(
+      callback::SetWhenCalled(&called_rollback), &status_rollback));
 
   DrainLoop();
   EXPECT_TRUE(called_start);

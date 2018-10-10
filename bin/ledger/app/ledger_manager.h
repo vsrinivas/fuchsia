@@ -158,7 +158,7 @@ class LedgerManager : public LedgerImpl::Delegate,
   void GetPagesList(GetPagesListCallback callback) override;
 
   void GetPageDebug(
-      ledger::PageId page_id,
+      PageId page_id,
       fidl::InterfaceRequest<ledger_internal::PageDebug> page_debug,
       GetPageDebugCallback callback) override;
 

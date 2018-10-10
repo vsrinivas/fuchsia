@@ -31,7 +31,7 @@ class LedgerRepositoryFactoryImpl
     : public ledger_internal::LedgerRepositoryFactory {
  public:
   explicit LedgerRepositoryFactoryImpl(
-      ledger::Environment* environment,
+      Environment* environment,
       std::unique_ptr<p2p_sync::UserCommunicatorFactory>
           user_communicator_factory);
   ~LedgerRepositoryFactoryImpl() override;
@@ -68,7 +68,7 @@ class LedgerRepositoryFactoryImpl
   Status DeleteRepositoryDirectory(
       const RepositoryInformation& repository_information);
 
-  ledger::Environment* const environment_;
+  Environment* const environment_;
   std::unique_ptr<p2p_sync::UserCommunicatorFactory> const
       user_communicator_factory_;
 

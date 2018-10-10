@@ -15,8 +15,7 @@ namespace ledger {
 
 class DiskCleanupManagerImpl : public DiskCleanupManager {
  public:
-  DiskCleanupManagerImpl(ledger::Environment* environment,
-                         ledger::DetachedPath db_path);
+  DiskCleanupManagerImpl(Environment* environment, DetachedPath db_path);
   ~DiskCleanupManagerImpl() override;
 
   // Initializes this DiskCleanupManagerImpl.

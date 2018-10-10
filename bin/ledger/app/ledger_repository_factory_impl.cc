@@ -183,9 +183,8 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
 };
 
 LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
-    ledger::Environment* environment,
-    std::unique_ptr<p2p_sync::UserCommunicatorFactory>
-        user_communicator_factory)
+    Environment* environment, std::unique_ptr<p2p_sync::UserCommunicatorFactory>
+                                  user_communicator_factory)
     : environment_(environment),
       user_communicator_factory_(std::move(user_communicator_factory)) {}
 

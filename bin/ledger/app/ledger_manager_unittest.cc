@@ -37,8 +37,8 @@ namespace {
 class DelayIsSyncedCallbackFakePageStorage
     : public storage::fake::FakePageStorage {
  public:
-  explicit DelayIsSyncedCallbackFakePageStorage(
-      ledger::Environment* environment, storage::PageId id)
+  explicit DelayIsSyncedCallbackFakePageStorage(Environment* environment,
+                                                storage::PageId id)
       : storage::fake::FakePageStorage(environment, id) {}
   ~DelayIsSyncedCallbackFakePageStorage() override {}
 
@@ -71,7 +71,7 @@ class DelayIsSyncedCallbackFakePageStorage
 
 class FakeLedgerStorage : public storage::LedgerStorage {
  public:
-  explicit FakeLedgerStorage(ledger::Environment* environment)
+  explicit FakeLedgerStorage(Environment* environment)
       : environment_(environment) {}
   ~FakeLedgerStorage() override {}
 
@@ -176,7 +176,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
   fit::function<void(storage::Status)> delete_page_storage_callback;
 
  private:
-  ledger::Environment* const environment_;
+  Environment* const environment_;
   std::map<storage::PageId, DelayIsSyncedCallbackFakePageStorage*>
       page_storages_;
   std::set<storage::PageId> synced_pages_;
@@ -255,8 +255,8 @@ class LedgerManagerTest : public TestWithEnvironment {
     ledger_manager_->BindLedgerDebug(ledger_debug_.NewRequest());
   }
 
-  ledger::PageId RandomId() {
-    ledger::PageId result;
+  PageId RandomId() {
+    PageId result;
     environment_.random()->Draw(&result.id);
     return result;
   }
@@ -317,7 +317,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   page.Unbind();
   storage_ptr->ClearCalls();
 
-  ledger::PageId id = RandomId();
+  PageId id = RandomId();
   ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest(),
                    [this](Status) { QuitLoop(); });
   RunLoopUntilIdle();
@@ -357,7 +357,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckNotFound) {
   Status status;
   PagePredicateResult is_closed_and_synced;
 
-  ledger::PageId id = RandomId();
+  PageId id = RandomId();
 
   // Check for a page that doesn't exist.
   storage_ptr->should_get_page_fail = true;
@@ -378,7 +378,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckClosed) {
 
   storage_ptr->should_get_page_fail = false;
   PagePtr page;
-  ledger::PageId id = RandomId();
+  PageId id = RandomId();
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
 
   ledger_->GetPage(
@@ -419,7 +419,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckSynced) {
 
   storage_ptr->should_get_page_fail = false;
   PagePtr page;
-  ledger::PageId id = RandomId();
+  PageId id = RandomId();
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
 
   ledger_->GetPage(
@@ -452,7 +452,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckPageOpened) {
 
   storage_ptr->should_get_page_fail = false;
   PagePtr page;
-  ledger::PageId id = RandomId();
+  PageId id = RandomId();
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
 
   ledger_->GetPage(
@@ -502,7 +502,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
 
   storage_ptr->should_get_page_fail = false;
   PagePtr page;
-  ledger::PageId id = RandomId();
+  PageId id = RandomId();
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
 
   ledger_->GetPage(
@@ -564,7 +564,7 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckNotFound) {
   Status status;
   PagePredicateResult is_closed_offline_empty;
 
-  ledger::PageId id = RandomId();
+  PageId id = RandomId();
 
   // Check for a page that doesn't exist.
   storage_ptr->should_get_page_fail = true;
@@ -583,7 +583,7 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
 
   storage_ptr->should_get_page_fail = false;
   PagePtr page;
-  ledger::PageId id = RandomId();
+  PageId id = RandomId();
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
 
   ledger_->GetPage(
@@ -617,7 +617,7 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
 
 // Verifies that two successive calls to GetPage do not create 2 storages.
 TEST_F(LedgerManagerTest, CallGetPageTwice) {
-  ledger::PageId id = RandomId();
+  PageId id = RandomId();
 
   uint8_t calls = 0;
   PagePtr page1;
@@ -639,7 +639,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   Status status;
 
   PagePtr page;
-  ledger::PageId id = RandomId();
+  PageId id = RandomId();
   bool called;
   // Get the root page.
   storage_ptr->ClearCalls();
@@ -677,7 +677,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
 // Verifies that LedgerDebugImpl proxy vended by LedgerManager works correctly.
 TEST_F(LedgerManagerTest, CallGetPagesList) {
   std::vector<PagePtr> pages(3);
-  std::vector<ledger::PageId> ids;
+  std::vector<PageId> ids;
 
   for (size_t i = 0; i < pages.size(); ++i) {
     ids.push_back(RandomId());
@@ -685,7 +685,7 @@ TEST_F(LedgerManagerTest, CallGetPagesList) {
 
   Status status;
 
-  fidl::VectorPtr<ledger::PageId> actual_pages_list;
+  fidl::VectorPtr<PageId> actual_pages_list;
 
   EXPECT_EQ(0u, actual_pages_list->size());
 
@@ -709,11 +709,9 @@ TEST_F(LedgerManagerTest, CallGetPagesList) {
   EXPECT_TRUE(called);
   EXPECT_EQ(pages.size(), actual_pages_list->size());
 
-  std::sort(ids.begin(), ids.end(),
-            [](const ledger::PageId& lhs, const ledger::PageId& rhs) {
-              return convert::ToStringView(lhs.id) <
-                     convert::ToStringView(rhs.id);
-            });
+  std::sort(ids.begin(), ids.end(), [](const PageId& lhs, const PageId& rhs) {
+    return convert::ToStringView(lhs.id) < convert::ToStringView(rhs.id);
+  });
   for (size_t i = 0; i < ids.size(); i++)
     EXPECT_EQ(ids[i].id, actual_pages_list->at(i).id);
 }
@@ -721,7 +719,7 @@ TEST_F(LedgerManagerTest, CallGetPagesList) {
 TEST_F(LedgerManagerTest, OnPageOpenedClosedCalls) {
   PagePtr page1;
   PagePtr page2;
-  ledger::PageId id = RandomId();
+  PageId id = RandomId();
 
   EXPECT_EQ(0, disk_cleanup_manager_->page_opened_count);
   EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
@@ -764,7 +762,7 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCalls) {
 
 TEST_F(LedgerManagerTest, OnPageOpenedClosedCallInternalRequest) {
   PagePtr page;
-  ledger::PageId id = RandomId();
+  PageId id = RandomId();
 
   EXPECT_EQ(0, disk_cleanup_manager_->page_opened_count);
   EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
@@ -799,7 +797,7 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCallInternalRequest) {
 
 TEST_F(LedgerManagerTest, DeletePageStorageWhenPageOpenFails) {
   PagePtr page;
-  ledger::PageId id = RandomId();
+  PageId id = RandomId();
   bool called;
   Status status;
 
@@ -820,7 +818,7 @@ TEST_F(LedgerManagerTest, DeletePageStorageWhenPageOpenFails) {
 
 TEST_F(LedgerManagerTest, OpenPageWithDeletePageStorageInProgress) {
   PagePtr page;
-  ledger::PageId id = RandomId();
+  PageId id = RandomId();
 
   // Start deleting the page.
   bool delete_called;

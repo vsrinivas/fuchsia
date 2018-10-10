@@ -79,7 +79,7 @@ TEST_F(LedgerRepositoryImplTest, DiskCleanUpError) {
 
   // Make a second one before the first one has finished.
   bool callback_called2 = false;
-  ledger::Status status2;
+  Status status2;
   repository_->DiskCleanUp(
       callback::Capture(callback::SetWhenCalled(&callback_called2), &status2));
 

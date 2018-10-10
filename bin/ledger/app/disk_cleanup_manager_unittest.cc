@@ -48,8 +48,7 @@ class FakeDelegate : public PageEvictionManager::Delegate {
 class DiskCleanupManagerTest : public TestWithEnvironment {
  public:
   DiskCleanupManagerTest()
-      : disk_cleanup_manager_(&environment_,
-                              ledger::DetachedPath(tmpfs_.root_fd())) {}
+      : disk_cleanup_manager_(&environment_, DetachedPath(tmpfs_.root_fd())) {}
 
   // gtest::TestLoopFixture:
   void SetUp() override {
