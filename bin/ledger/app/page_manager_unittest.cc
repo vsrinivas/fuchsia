@@ -322,8 +322,8 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
 
-  page->GetId(callback::Capture(callback::SetWhenCalled(&called),
-                                static_cast<PageId*>(nullptr)));
+  page->GetId(
+      callback::Capture(callback::SetWhenCalled(&called), &std::ignore));
   DrainLoop();
   EXPECT_TRUE(called);
 }
@@ -358,8 +358,8 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
   ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
 
-  page->GetId(callback::Capture(callback::SetWhenCalled(&called),
-                                static_cast<PageId*>(nullptr)));
+  page->GetId(
+      callback::Capture(callback::SetWhenCalled(&called), &std::ignore));
   DrainLoop();
   EXPECT_TRUE(called);
 }
@@ -424,8 +424,8 @@ TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
   ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
 
-  page->GetId(callback::Capture(callback::SetWhenCalled(&called),
-                                static_cast<PageId*>(nullptr)));
+  page->GetId(
+      callback::Capture(callback::SetWhenCalled(&called), &std::ignore));
   DrainLoop();
   EXPECT_TRUE(called);
 }

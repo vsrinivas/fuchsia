@@ -124,11 +124,9 @@ TEST_F(FirebaseImplTest, GetWithSingleQueryParam) {
   fake_network_wrapper_.SetStringResponse("content", 200);
   bool called;
   Status status;
-  std::unique_ptr<rapidjson::Value> value;
   firebase_.Get("bazinga", {"orderBy=\"timestamp\""},
-                callback::Capture(
-                    callback::SetWhenCalled(&called), &status,
-                    static_cast<std::unique_ptr<rapidjson::Value>*>(nullptr)));
+                callback::Capture(callback::SetWhenCalled(&called), &status,
+                                  &std::ignore));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -145,9 +143,8 @@ TEST_F(FirebaseImplTest, GetWithTwoQueryParams) {
   bool called;
   Status status;
   firebase_.Get("bazinga", {"one_param", "other_param=bla"},
-                callback::Capture(
-                    callback::SetWhenCalled(&called), &status,
-                    static_cast<std::unique_ptr<rapidjson::Value>*>(nullptr)));
+                callback::Capture(callback::SetWhenCalled(&called), &status,
+                                  &std::ignore));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::PARSE_ERROR, status);
@@ -164,9 +161,8 @@ TEST_F(FirebaseImplTest, Root) {
   bool called;
   Status status;
   firebase_.Get("", {},
-                callback::Capture(
-                    callback::SetWhenCalled(&called), &status,
-                    static_cast<std::unique_ptr<rapidjson::Value>*>(nullptr)));
+                callback::Capture(callback::SetWhenCalled(&called), &status,
+                                  &std::ignore));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);

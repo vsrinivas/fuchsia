@@ -173,9 +173,8 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdMaxRetry) {
   AuthStatus auth_status;
   token_provider_.SetError(fuchsia::modular::auth::Status::NETWORK_ERROR);
   backoff_->SetOnGetNext(QuitLoopClosure());
-  firebase_auth_.GetFirebaseUserId(
-      callback::Capture(callback::SetWhenCalled(&called), &auth_status,
-                        static_cast<std::string*>(nullptr)));
+  firebase_auth_.GetFirebaseUserId(callback::Capture(
+      callback::SetWhenCalled(&called), &auth_status, &std::ignore));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
   EXPECT_EQ(1, backoff_->get_next_count);
@@ -197,9 +196,8 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdNonRetriableError) {
   AuthStatus auth_status;
   token_provider_.SetError(fuchsia::modular::auth::Status::BAD_REQUEST);
   backoff_->SetOnGetNext(QuitLoopClosure());
-  firebase_auth_.GetFirebaseUserId(
-      callback::Capture(callback::SetWhenCalled(&called), &auth_status,
-                        static_cast<std::string*>(nullptr)));
+  firebase_auth_.GetFirebaseUserId(callback::Capture(
+      callback::SetWhenCalled(&called), &auth_status, &std::ignore));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(AuthStatus::ERROR, auth_status);
