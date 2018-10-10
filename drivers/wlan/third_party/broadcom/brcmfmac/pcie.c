@@ -16,6 +16,7 @@
 #include "pcie.h"
 
 #include <ddk/driver.h>
+#include <ddk/mmio-buffer.h>
 #include <lib/sync/completion.h>
 
 #include "brcm_hw_ids.h"
