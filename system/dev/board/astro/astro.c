@@ -81,6 +81,11 @@ static int aml_start_thread(void* arg) {
 
     zxlogf(INFO, "Detected board rev 0x%x\n", info.board_revision);
 
+    if ((status = astro_buttons_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "astro_buttons_init failed: %d\n", status);
+        goto fail;
+    }
+
     if ((status = aml_i2c_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_i2c_init failed: %d\n", status);
         goto fail;

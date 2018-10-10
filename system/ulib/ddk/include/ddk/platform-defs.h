@@ -60,6 +60,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_GAUSS_LED          4
 #define PDEV_DID_ASTRO_FOCALTOUCH   5
 #define PDEV_DID_ASTRO_GOODIXTOUCH  6
+#define PDEV_DID_ASTRO_BUTTONS      7
 
 
 // Khadas
