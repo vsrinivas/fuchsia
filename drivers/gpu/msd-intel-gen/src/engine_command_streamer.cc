@@ -47,7 +47,7 @@ bool EngineCommandStreamer::InitContext(MsdIntelContext* context) const
     return true;
 }
 
-bool EngineCommandStreamer::InitContextCacheConfig(std::shared_ptr<MsdIntelContext> context)
+bool EngineCommandStreamer::InitContextCacheConfig(MsdIntelContext* context)
 {
     auto ringbuffer = context->get_ringbuffer(id());
 

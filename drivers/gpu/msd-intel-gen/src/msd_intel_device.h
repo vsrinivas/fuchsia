@@ -139,6 +139,8 @@ private:
     bool RenderEngineInit(bool exec_init_batch);
     bool RenderEngineReset();
 
+    bool InitContextForRender(MsdIntelContext* context);
+
     void ProcessCompletedCommandBuffers();
     void HangCheckTimeout();
 

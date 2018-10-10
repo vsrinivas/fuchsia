@@ -35,9 +35,7 @@ public:
     // Map all execution resources into the gpu address space, patches relocations based on the
     // mapped addresses, and locks the weak reference to the context for the rest of the lifetime
     // of this object.
-    // If the context has no address space then |ggtt| should be used.
-    // This should be called only when we are ready to submit the CommandBuffer for execution.
-    bool PrepareForExecution(EngineCommandStreamer* engine, std::shared_ptr<AddressSpace> ggtt);
+    bool PrepareForExecution();
 
     std::weak_ptr<MsdIntelContext> GetContext() override;
 
@@ -98,26 +96,26 @@ private:
     static bool PatchRelocation(magma_system_relocation_entry* relocation,
                                 ExecResource* exec_resource, gpu_addr_t target_gpu_address);
 
-    std::shared_ptr<MsdIntelBuffer> abi_cmd_buf_;
     // magma::CommandBuffer implementation
     magma::PlatformBuffer* platform_buffer() override { return abi_cmd_buf_->platform_buffer(); }
 
+    const std::shared_ptr<MsdIntelBuffer> abi_cmd_buf_;
+    const std::weak_ptr<ClientContext> context_;
+    const uint64_t nonce_;
+
+    // Set on connection thread; valid only when prepared_to_execute_ is true
+    bool prepared_to_execute_ = false;
     std::vector<ExecResource> exec_resources_;
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores_;
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores_;
     std::vector<std::shared_ptr<GpuMapping>> exec_resource_mappings_;
-    std::weak_ptr<ClientContext> context_;
-
-    bool prepared_to_execute_;
-    // valid only when prepared_to_execute_ is true
     std::shared_ptr<ClientContext> locked_context_;
     uint32_t batch_buffer_index_;
     uint32_t batch_start_offset_;
-    EngineCommandStreamerId engine_id_;
-    uint32_t sequence_number_ = Sequencer::kInvalidSequenceNumber;
     // ---------------------------- //
 
-    uint64_t nonce_;
+    // Set on device thread
+    uint32_t sequence_number_ = Sequencer::kInvalidSequenceNumber;
 
     friend class TestCommandBuffer;
 };

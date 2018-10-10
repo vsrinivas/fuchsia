@@ -4,7 +4,6 @@
 
 #include "command_buffer.h"
 #include "address_space.h"
-#include "engine_command_streamer.h"
 #include "instructions.h"
 #include "msd_intel_connection.h"
 #include "msd_intel_context.h"
@@ -50,10 +49,8 @@ std::unique_ptr<CommandBuffer> CommandBuffer::Create(msd_buffer_t* abi_cmd_buf,
 
 CommandBuffer::CommandBuffer(std::shared_ptr<MsdIntelBuffer> abi_cmd_buf,
                              std::weak_ptr<ClientContext> context)
-    : abi_cmd_buf_(std::move(abi_cmd_buf)), context_(context)
+    : abi_cmd_buf_(std::move(abi_cmd_buf)), context_(context), nonce_(TRACE_NONCE())
 {
-    nonce_ = TRACE_NONCE();
-    prepared_to_execute_ = false;
 }
 
 CommandBuffer::~CommandBuffer()
@@ -170,27 +167,11 @@ uint64_t CommandBuffer::GetBatchBufferId()
 
 void CommandBuffer::UnmapResourcesGpu() { exec_resource_mappings_.clear(); }
 
-bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine,
-                                        std::shared_ptr<AddressSpace> global_gtt)
+bool CommandBuffer::PrepareForExecution()
 {
-    DASSERT(engine);
-
     locked_context_ = context_.lock();
     if (!locked_context_)
         return DRETF(false, "context has already been deleted, aborting");
-
-    std::shared_ptr<AddressSpace> address_space = locked_context_->exec_address_space();
-
-    if (!locked_context_->IsInitializedForEngine(engine->id())) {
-        if (!engine->InitContext(locked_context_.get()))
-            return DRETF(false, "failed to initialize context");
-
-        if (!locked_context_->Map(global_gtt, engine->id()))
-            return DRETF(false, "failed to map context");
-
-        if (!engine->InitContextCacheConfig(locked_context_))
-            return DRETF(false, "failed to init cache config");
-    }
 
     exec_resource_mappings_.clear();
     exec_resource_mappings_.reserve(exec_resources_.size());
@@ -198,21 +179,16 @@ bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine,
     uint64_t ATTRIBUTE_UNUSED buffer_id = resource(batch_buffer_resource_index()).buffer_id();
     TRACE_FLOW_STEP("magma", "command_buffer", buffer_id);
 
-    if (!MapResourcesGpu(address_space, exec_resource_mappings_))
+    if (!MapResourcesGpu(locked_context_->exec_address_space(), exec_resource_mappings_))
         return DRETF(false, "failed to map execution resources");
 
     if (!PatchRelocations(exec_resource_mappings_))
         return DRETF(false, "failed to patch relocations");
 
-    for (auto semaphore : signal_semaphores_) {
-        semaphore->Reset();
-    }
-
     batch_buffer_index_ = batch_buffer_resource_index();
     batch_start_offset_ = batch_start_offset();
 
     prepared_to_execute_ = true;
-    engine_id_ = engine->id();
 
     return true;
 }

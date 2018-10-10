@@ -522,6 +522,21 @@ void MsdIntelDevice::HangCheckTimeout()
     RenderEngineReset();
 }
 
+bool MsdIntelDevice::InitContextForRender(MsdIntelContext* context)
+{
+    auto engine = render_engine_cs();
+    if (!engine->InitContext(context))
+        return DRETF(false, "failed to initialize context");
+
+    if (!context->Map(gtt(), engine->id()))
+        return DRETF(false, "failed to map context");
+
+    if (!engine->InitContextCacheConfig(context))
+        return DRETF(false, "failed to init cache config");
+
+    return true;
+}
+
 magma::Status MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)
 {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
@@ -535,8 +550,13 @@ magma::Status MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer
     if (context->killed())
         return DRET_MSG(MAGMA_STATUS_CONTEXT_KILLED, "Context killed");
 
+    if (!context->IsInitializedForEngine(render_engine_cs()->id())) {
+        if (!InitContextForRender(context.get()))
+            return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to initialize context");
+    }
+
     TRACE_DURATION_BEGIN("magma", "PrepareForExecution", "id", command_buffer->GetBatchBufferId());
-    if (!command_buffer->PrepareForExecution(render_engine_cs_.get(), gtt()))
+    if (!command_buffer->PrepareForExecution())
         return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
                         "Failed to prepare command buffer for execution");
     TRACE_DURATION_END("magma", "PrepareForExecution");

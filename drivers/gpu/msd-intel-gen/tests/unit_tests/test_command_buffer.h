@@ -78,6 +78,11 @@ public:
 
     // TODO(MA-208) - move this
     static void StartDeviceThread(MsdIntelDevice* device) { device->StartDeviceThread(); }
+
+    static bool InitContextForRender(MsdIntelDevice* device, MsdIntelContext* context)
+    {
+        return device->InitContextForRender(context);
+    }
 };
 
 #endif // TEST_COMMAND_BUFFER_H

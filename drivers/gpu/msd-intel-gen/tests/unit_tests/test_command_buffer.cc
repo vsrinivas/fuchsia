@@ -108,19 +108,20 @@ public:
 
     void TestPrepareForExecution()
     {
-        auto engine =
-            TestCommandBuffer::render_engine(MsdIntelDevice::cast(helper_->dev()->msd_dev()));
-        auto address_space = exec_address_space();
+        auto device = MsdIntelDevice::cast(helper_->dev()->msd_dev());
+        auto engine = TestCommandBuffer::render_engine(device);
 
         uint32_t batch_start_offset = 0x10;
         helper_->abi_cmd_buf()->batch_start_offset = batch_start_offset;
 
-        ASSERT_TRUE(cmd_buf_->PrepareForExecution(engine, address_space));
+        ASSERT_TRUE(cmd_buf_->PrepareForExecution());
 
         auto context = cmd_buf_->GetContext().lock();
         ASSERT_NE(context, nullptr);
         ClientContext* ctx = static_cast<ClientContext*>(context.get());
         ASSERT_NE(ctx, nullptr);
+
+        EXPECT_TRUE(TestCommandBuffer::InitContextForRender(device, context.get()));
 
         gpu_addr_t gpu_addr;
         EXPECT_TRUE(cmd_buf_->GetGpuAddress(&gpu_addr));
