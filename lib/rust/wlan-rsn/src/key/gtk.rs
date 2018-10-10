@@ -2,10 +2,48 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// Remove once GtkProvider is used.
+#[allow(unused)]
+
 use crate::cipher::Cipher;
 use crate::crypto_utils::prf;
 use crate::Error;
 use failure::{self, ensure};
+use mundane::rand_bytes;
+
+/// This GTK provider does not support key rotations yet.
+#[derive(Debug)]
+pub struct GtkProvider {
+    key: Box<[u8]>,
+    cipher: Cipher,
+}
+
+// This implementation is a direct result of a test outside of this crate comparing an object which
+// transitively owns a GtkProvider to an expected value. As a result, many structs in this crate now
+// have to derive PartialEq. This should get fixed: NET-1677
+impl PartialEq for GtkProvider {
+    fn eq(&self, _other: &GtkProvider) -> bool { true }
+}
+
+fn generate_random_gtk(len: usize) -> Box<[u8]> {
+    let mut key = vec![0; len];
+    rand_bytes(&mut key[..]);
+    key.into_boxed_slice()
+}
+
+impl GtkProvider {
+    pub fn new(cipher: Cipher) -> Result<GtkProvider, failure::Error> {
+        let tk_bytes = cipher.tk_bytes().ok_or(Error::GtkHierarchyUnsupportedCipherError)?;
+        Ok(GtkProvider {
+            cipher,
+            key: generate_random_gtk(tk_bytes)
+        })
+    }
+
+    pub fn get_gtk(&self) -> Result<Gtk, failure::Error> {
+        Gtk::from_gtk(self.key.to_vec(), 0, self.cipher.clone())
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Gtk {
@@ -60,4 +98,26 @@ impl Gtk {
     }
 }
 
-// TODO(hahnr): Add tests.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bytes::Bytes;
+    use crate::cipher;
+    use crate::suite_selector::OUI;
+    use std::collections::HashSet;
+
+    #[test]
+    fn test_gtk_generation() {
+        let mut gtks = HashSet::new();
+        for _ in 0..10000 {
+            let provider = GtkProvider::new(Cipher {
+                oui: Bytes::from(&OUI[..]),
+                suite_type: cipher::CCMP_128,
+            }).expect("failed creating GTK Provider");
+            let gtk = provider.get_gtk().expect("could not read GTK").tk().to_vec();
+            assert!(gtk.iter().any(|&x| x != 0));
+            assert!(!gtks.contains(&gtk));
+            gtks.insert(gtk);
+        }
+    }
+}

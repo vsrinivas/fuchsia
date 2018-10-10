@@ -73,6 +73,40 @@ impl Akm {
         }
     }
 
+    pub fn kck_bytes(&self) -> Option<u16> {
+        return_none_if_unknown_algo!(self);
+
+        // IEEE 802.11-2016, 12.7.3, Table 12-8
+        match self.suite_type {
+            1...11 => Some(16),
+            12 | 13 => Some(24),
+            _ => None,
+        }
+    }
+
+    pub fn kek_bytes(&self) -> Option<u16> {
+        return_none_if_unknown_algo!(self);
+
+        // IEEE 802.11-2016, 12.7.3, Table 12-8
+        match self.suite_type {
+            1...11 => Some(16),
+            12 | 13 => Some(32),
+            _ => None,
+        }
+    }
+
+    pub fn pmk_bytes(&self) -> Option<u16> {
+        return_none_if_unknown_algo!(self);
+
+        // IEEE 802.11-2016, 12.7.1.3
+        match self.suite_type {
+            1...11 | 13 => Some(32),
+            12 => Some(48),
+            _ => None,
+        }
+    }
+
+    #[deprecated(note="use `kck_bytes` instead")]
     pub fn kck_bits(&self) -> Option<u16> {
         return_none_if_unknown_algo!(self);
 
@@ -84,6 +118,7 @@ impl Akm {
         }
     }
 
+    #[deprecated(note="use `kek_bytes` instead")]
     pub fn kek_bits(&self) -> Option<u16> {
         return_none_if_unknown_algo!(self);
 
@@ -95,6 +130,7 @@ impl Akm {
         }
     }
 
+    #[deprecated(note="use `pmk_bytes` instead")]
     pub fn pmk_bits(&self) -> Option<u16> {
         return_none_if_unknown_algo!(self);
 

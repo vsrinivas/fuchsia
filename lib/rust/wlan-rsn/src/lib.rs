@@ -6,6 +6,9 @@
 #![feature(drain_filter)]
 #![deny(warnings)]
 
+// Remove once Cipher and AKM *_bits() were replaced with *_len() calls.
+#![allow(deprecated)]
+
 use failure::{self, Fail};
 
 // TODO(hahnr): Limit exports and rearrange modules.
