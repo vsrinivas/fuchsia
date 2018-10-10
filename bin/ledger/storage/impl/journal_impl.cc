@@ -95,8 +95,8 @@ void JournalImpl::Commit(
                 if (contains_clear_operation ==
                     JournalContainsClearOperation::NO) {
                   // The journal doesn't contain the clear operation. The
-                  // changes recorded on the journal need to be executed over
-                  // the content of the first parent.
+                  // changes recorded on the journal need to be executed
+                  // over the content of the first parent.
                   ObjectIdentifier root_identifier =
                       parents[0]->GetRootIdentifier();
                   CreateCommitFromChanges(

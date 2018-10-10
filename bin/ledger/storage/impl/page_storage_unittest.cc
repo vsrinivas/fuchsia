@@ -918,7 +918,7 @@ TEST_F(PageStorageTest, CreateJournals) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &journal));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(Status::OK, status);
   EXPECT_NE(nullptr, journal);
 
   storage_->RollbackJournal(
@@ -2111,7 +2111,7 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
                                                &status, &journal_merge));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(Status::OK, status);
 
   std::unique_ptr<const Commit> commit_merge =
       TryCommitJournal(std::move(journal_merge), Status::OK);

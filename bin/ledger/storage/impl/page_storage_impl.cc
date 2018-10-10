@@ -154,7 +154,7 @@ void PageStorageImpl::AddCommitFromLocal(
 }
 
 void PageStorageImpl::AddCommitsFromSync(
-    std::vector<CommitIdAndBytes> ids_and_bytes, storage::ChangeSource source,
+    std::vector<CommitIdAndBytes> ids_and_bytes, ChangeSource source,
     fit::function<void(Status, std::vector<CommitId>)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),

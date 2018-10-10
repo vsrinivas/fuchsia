@@ -46,10 +46,9 @@ class PageStorageEmptyImpl : public PageStorage {
       const CommitId& left, const CommitId& right,
       fit::function<void(Status, std::unique_ptr<Journal>)> callback) override;
 
-  void CommitJournal(
-      std::unique_ptr<Journal> journal,
-      fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
-          callback) override;
+  void CommitJournal(std::unique_ptr<Journal> journal,
+                     fit::function<void(Status, std::unique_ptr<const Commit>)>
+                         callback) override;
 
   void RollbackJournal(std::unique_ptr<Journal> journal,
                        fit::function<void(Status)> callback) override;

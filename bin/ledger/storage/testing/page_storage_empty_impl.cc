@@ -54,8 +54,7 @@ void PageStorageEmptyImpl::StartMergeCommit(
 
 void PageStorageEmptyImpl::CommitJournal(
     std::unique_ptr<Journal> /*journal*/,
-    fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
-        callback) {
+    fit::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
