@@ -228,24 +228,28 @@ void MinstrelRateSelector::AddPeer(const wlan_assoc_ctx_t& assoc_ctx) {
         warnf("Peer %s already exists. Forgot to clean up?\n", addr.ToString().c_str());
     }
     peer_map_.emplace(addr, std::move(peer));
-    // TODO(eyw): RemovePeer() needs to be called at de-association.
+    // TODO(eyw): RemovePeer() for roles other than client.
 }
 
 void MinstrelRateSelector::RemovePeer(const common::MacAddr& addr) {
     auto iter = peer_map_.find(addr);
-    if (iter == peer_map_.end()) { return; }
+    if (iter == peer_map_.end()) {
+        debugmstl("peer %s not found.\n", addr.ToString().c_str());
+        return;
+    }
 
     outdated_peers_.erase(addr);
     peer_map_.erase(iter);
     if (peer_map_.empty()) { next_update_event_.Cancel(); }
+    debugmstl("peer %s removed.\n", addr.ToString().c_str());
 }
 
 void MinstrelRateSelector::HandleTxStatusReport(const wlan_tx_status_t& tx_status) {
     auto peer_addr = common::MacAddr(tx_status.peer_addr);
     auto peer = GetPeer(peer_addr);
-    ZX_DEBUG_ASSERT(peer != nullptr);
     if (peer == nullptr) {
-        errorf("Peer [%s] does not exist for tx status report.\n", peer_addr.ToString().c_str());
+        errorf("Peer [%s] received tx status report after it is removed.\n",
+               peer_addr.ToString().c_str());
         return;
     }
 
@@ -317,8 +321,6 @@ void UpdateStatsPeer(Peer* peer) {
 }
 
 void MinstrelRateSelector::HandleTimeout() {
-    if (!next_update_event_.IsActive()) { return; }
-
     zx::time now = timer_mgr_.HandleTimeout();
     if (next_update_event_.Triggered(now)) {
         timer_mgr_.Schedule(now + kMinstrelUpdateInterval, &next_update_event_);
@@ -329,10 +331,12 @@ void MinstrelRateSelector::HandleTimeout() {
 void MinstrelRateSelector::UpdateStats() {
     for (auto peer_addr : outdated_peers_) {
         auto* peer = GetPeer(peer_addr);
-        ZX_DEBUG_ASSERT(peer != nullptr);
-        debugmstl("%s has update.\n", peer_addr.ToString().c_str());
-
-        UpdateStatsPeer(peer);
+        if (peer != nullptr) {
+            debugmstl("%s has update.\n", peer_addr.ToString().c_str());
+            UpdateStatsPeer(peer);
+        } else {
+            ZX_DEBUG_ASSERT(0);
+        }
     }
     outdated_peers_.clear();
 }

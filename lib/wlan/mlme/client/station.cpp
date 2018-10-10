@@ -223,11 +223,11 @@ zx_status_t Station::HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::Deauthenticate
         errorf("could not send deauth packet: %d\n", status);
         // Deauthenticate nevertheless. IEEE isn't clear on what we are supposed to do.
     }
-
     infof("deauthenticating from \"%s\" (%s), reason=%hu\n",
           debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str(),
           join_ctx_->bssid().ToString().c_str(), req.body()->reason_code);
 
+    if (state_ == WlanState::kAssociated) { device_->ClearAssoc(join_ctx_->bssid()); }
     state_ = WlanState::kIdle;
     device_->SetStatus(0);
     controlled_port_ = eapol::PortState::kBlocked;
@@ -464,6 +464,7 @@ zx_status_t Station::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame)
           debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str(),
           join_ctx_->bssid().ToString().c_str(), deauth->reason_code);
 
+    if (state_ == WlanState::kAssociated) { device_->ClearAssoc(join_ctx_->bssid()); }
     state_ = WlanState::kIdle;
     device_->SetStatus(0);
     controlled_port_ = eapol::PortState::kBlocked;
@@ -561,6 +562,7 @@ zx_status_t Station::HandleDisassociation(MgmtFrame<Disassociation>&& frame) {
           disassoc->reason_code);
 
     state_ = WlanState::kAuthenticated;
+    device_->ClearAssoc(bssid);
     device_->SetStatus(0);
     controlled_port_ = eapol::PortState::kBlocked;
     signal_report_timeout_.Cancel();
@@ -899,6 +901,7 @@ zx_status_t Station::HandleTimeout() {
         } else if (state_ == WlanState::kAssociated) {
             infof("lost BSS; deauthenticating...\n");
             state_ = WlanState::kIdle;
+            device_->ClearAssoc(join_ctx_->bssid());
             device_->SetStatus(0);
             controlled_port_ = eapol::PortState::kBlocked;
 

@@ -131,6 +131,7 @@ struct MockDevice : public DeviceInterface {
     }
 
     zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) override final { return ZX_OK; }
+    zx_status_t ClearAssoc(const common::MacAddr& peer_addr) override final { return ZX_OK; }
 
     fbl::RefPtr<DeviceState> GetState() override final { return state; }
 

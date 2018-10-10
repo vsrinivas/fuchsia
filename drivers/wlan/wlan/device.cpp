@@ -517,6 +517,11 @@ zx_status_t Device::ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) {
     return wlanmac_proxy_.ConfigureAssoc(0u, assoc_ctx);
 }
 
+zx_status_t Device::ClearAssoc(const wlan::common::MacAddr& peer_addr) {
+    if (minstrel_ != nullptr) { minstrel_->RemovePeer(peer_addr); }
+    return ZX_OK;
+}
+
 fbl::RefPtr<DeviceState> Device::GetState() {
     return state_;
 }
