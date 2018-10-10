@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <vector>
-
 #include <lib/fit/function.h>
 #include <unittest/unittest.h>
+
+#include "examples/function_example1.h"
+#include "examples/function_example2.h"
 
 namespace {
 
 using Closure = void();
+using ClosureWrongReturnType = int();
 using BinaryOp = int(int a, int b);
+using BinaryOpWrongReturnType = void(int a, int b);
 using MoveOp = std::unique_ptr<int>(std::unique_ptr<int> value);
 
 // A big object which causes a function target to be heap allocated.
@@ -703,84 +706,48 @@ bool bind_member() {
     END_TEST;
 }
 
-// This is the code which is included in <function.h>.
-namespace example1 {
-using fold_function = fit::function<int(int value, int item)>;
-
-int fold(const std::vector<int>& in, int value, const fold_function& f) {
-    for (auto& item : in) {
-        value = f(value, item);
-    }
-    return value;
-}
-
-int sum_item(int value, int item) {
-    return value + item;
-}
-
-int sum(const std::vector<int>& in) {
-    // bind to a function pointer
-    fold_function fn(&sum_item);
-    return fold(in, 0, fn);
-}
-
-int alternating_sum(const std::vector<int>& in) {
-    // bind to a lambda
-    int sign = 1;
-    fold_function fn([&sign](int value, int item) {
-        value += sign * item;
-        sign *= -1;
-        return value;
-    });
-    return fold(in, 0, fn);
-}
-
-bool test() {
+bool example1() {
     BEGIN_TEST;
-
-    std::vector<int> in;
-    for (int i = 0; i < 10; i++) {
-        in.push_back(i);
-    }
-
-    EXPECT_EQ(45, sum(in));
-    EXPECT_EQ(-5, alternating_sum(in));
-
+    function_example1::run();
     END_TEST;
 }
-} // namespace example1
 
-namespace example2 {
-class accumulator {
-public:
-    void add(int value) {
-        sum += value;
-    }
-
-    int sum = 0;
-};
-
-void count_to_ten(fit::function<void(int)> fn) {
-    for (int i = 1; i <= 10; i++) {
-        fn(i);
-    }
-}
-
-int sum_to_ten() {
-    accumulator accum;
-    count_to_ten(fit::bind_member(&accum, &accumulator::add));
-    return accum.sum;
-}
-
-bool test() {
+bool example2() {
     BEGIN_TEST;
-
-    EXPECT_EQ(55, sum_to_ten());
-
+    function_example2::run();
     END_TEST;
 }
-} // namespace example2
 } // namespace
+
+namespace test_conversions {
+static_assert(std::is_convertible<Closure, fit::function<Closure>>::value, "");
+static_assert(std::is_convertible<BinaryOp, fit::function<BinaryOp>>::value, "");
+static_assert(std::is_assignable<fit::function<Closure>, Closure>::value, "");
+static_assert(std::is_assignable<fit::function<BinaryOp>, BinaryOp>::value, "");
+
+static_assert(!std::is_convertible<BinaryOp, fit::function<Closure>>::value, "");
+static_assert(!std::is_convertible<Closure, fit::function<BinaryOp>>::value, "");
+static_assert(!std::is_assignable<fit::function<Closure>, BinaryOp>::value, "");
+static_assert(!std::is_assignable<fit::function<BinaryOp>, Closure>::value, "");
+
+static_assert(!std::is_convertible<ClosureWrongReturnType,
+                                   fit::function<Closure>>::value,
+              "");
+static_assert(!std::is_convertible<BinaryOpWrongReturnType,
+                                   fit::function<BinaryOp>>::value,
+              "");
+static_assert(!std::is_assignable<fit::function<Closure>,
+                                  ClosureWrongReturnType>::value,
+              "");
+static_assert(!std::is_assignable<fit::function<BinaryOp>,
+                                  BinaryOpWrongReturnType>::value,
+              "");
+
+static_assert(!std::is_convertible<void, fit::function<Closure>>::value, "");
+static_assert(!std::is_convertible<void, fit::function<BinaryOp>>::value, "");
+static_assert(!std::is_assignable<void, fit::function<Closure>>::value, "");
+static_assert(!std::is_assignable<void, fit::function<BinaryOp>>::value, "");
+} // namespace test_conversions
 
 BEGIN_TEST_CASE(function_tests)
 RUN_TEST((closure<fit::function<Closure>>))
@@ -798,6 +765,6 @@ RUN_TEST(implicit_construction);
 RUN_TEST(overload_resolution);
 RUN_TEST(sharing)
 RUN_TEST(bind_member);
-RUN_TEST(example1::test);
-RUN_TEST(example2::test);
+RUN_TEST(example1);
+RUN_TEST(example2);
 END_TEST_CASE(function_tests)
