@@ -46,14 +46,13 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_pr
   zx_status_t BtHciOpenSnoopChannel(zx_handle_t* out_channel);
 
  private:
+  zx_status_t LoadSecureFirmware(zx::channel* cmd, zx::channel* acl);
+  zx_status_t LoadLegacyFirmware(zx::channel* cmd, zx::channel* acl);
+
   // Removes the device and leaves an error on the kernel log
   // prepended with |note|.
   // Returns |status|.
   zx_status_t Remove(zx_status_t status, const char* note);
-
-  // Makes the device visible and leaves |note| on the kernel log.
-  // Returns ZX_OK.
-  zx_status_t Appear(const char* note);
 
   // Maps the firmware refrenced by |name| into memory.
   // Returns the vmo that the firmware is loaded into or ZX_HANDLE_INVALID if it

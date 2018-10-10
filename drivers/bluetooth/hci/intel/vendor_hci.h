@@ -135,7 +135,7 @@ class VendorHci {
 
   std::unique_ptr<btlib::hci::EventPacket> WaitForEventPacket(
       zx::duration timeout = zx::sec(5),
-      const btlib::hci::EventCode* expected_event = nullptr) const;
+      btlib::hci::EventCode expected_event = 0) const;
 };
 
 }  // namespace btintel

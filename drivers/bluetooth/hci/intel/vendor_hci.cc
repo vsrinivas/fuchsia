@@ -59,10 +59,10 @@ btlib::hci::StatusCode VendorHci::SendHciReset() const {
   SendCommand(packet->view());
 
   // TODO(armansito): Consider collecting a metric for initialization time
-  // (successful and failing) to provide us with a better sense of how long these
-  // timeouts should be.
+  // (successful and failing) to provide us with a better sense of how long
+  // these timeouts should be.
   auto evt_packet =
-      WaitForEventPacket(kInitTimeoutMs, &btlib::hci::kCommandCompleteEventCode);
+      WaitForEventPacket(kInitTimeoutMs, btlib::hci::kCommandCompleteEventCode);
   if (!evt_packet) {
     errorf("VendorHci: failed while waiting for HCI_Reset response\n");
     return btlib::hci::StatusCode::kUnspecifiedError;
@@ -219,7 +219,7 @@ void VendorHci::SendCommand(
 }
 
 std::unique_ptr<btlib::hci::EventPacket> VendorHci::WaitForEventPacket(
-    zx::duration timeout, const btlib::hci::EventCode* expected_event) const {
+    zx::duration timeout, btlib::hci::EventCode expected_event) const {
   zx_wait_item_t wait_items[2];
   uint32_t wait_item_count = 1;
 
@@ -236,7 +236,8 @@ std::unique_ptr<btlib::hci::EventPacket> VendorHci::WaitForEventPacket(
   }
 
   auto begin = zx::clock::get_monotonic();
-  for (zx::duration elapsed; elapsed < timeout; elapsed = zx::clock::get_monotonic() - begin) {
+  for (zx::duration elapsed; elapsed < timeout;
+       elapsed = zx::clock::get_monotonic() - begin) {
     zx_status_t status =
         zx_object_wait_many(wait_items, wait_item_count,
                             zx::deadline_after(timeout - elapsed).get());
@@ -294,9 +295,9 @@ std::unique_ptr<btlib::hci::EventPacket> VendorHci::WaitForEventPacket(
       return nullptr;
     }
 
-    if (expected_event && *expected_event != packet->event_code()) {
+    if (expected_event && expected_event != packet->event_code()) {
       tracef("VendorHci: keep waiting (expected: 0x%02x, got: 0x%02x)\n",
-             *expected_event, packet->event_code());
+             expected_event, packet->event_code());
       continue;
     }
 

@@ -11,13 +11,13 @@ driver_module("driver") {
 
   sources = [
     "binding.c",
-    "device.cpp",
+    "device.cc",
     "device.h",
-    "driver.cpp",
-    "firmware_loader.cpp",
+    "driver.cc",
+    "firmware_loader.cc",
     "firmware_loader.h",
     "logging.h",
-    "vendor_hci.cpp",
+    "vendor_hci.cc",
     "vendor_hci.h",
   ]
 
