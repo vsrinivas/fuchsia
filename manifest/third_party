@@ -5,7 +5,7 @@
     <import remote="https://fuchsia.googlesource.com/third_party/boringssl"
             manifest="manifest"
             name="third_party/boringssl"
-            revision="ef49f124d79f3406961e389a88f472737a3ffee2"/>
+            revision="634602ab96a81b0e9140354c0ba4802f2c117b0e"/>
   </imports>
   <projects>
     <project name="docs"
@@ -332,7 +332,7 @@
     <project name="third_party/vulkan_loader_and_validation_layers"
              path="third_party/vulkan_loader_and_validation_layers"
              remote="https://fuchsia.googlesource.com/third_party/vulkan_loader_and_validation_layers"
-             revision="3cd387d71e06b766282903147ae8bfafb6f66d84"
+             revision="3106666ca09bdab1a0f3c4c5d4d614bf4dab1f3d"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/wayland"
              path="third_party/wayland"
