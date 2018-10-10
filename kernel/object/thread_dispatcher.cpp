@@ -269,7 +269,7 @@ zx_status_t ThreadDispatcher::Suspend() {
     return ZX_OK;
 }
 
-zx_status_t ThreadDispatcher::Resume() {
+void ThreadDispatcher::Resume() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -278,21 +278,18 @@ zx_status_t ThreadDispatcher::Resume() {
 
     LTRACEF("%p: state %s\n", this, ThreadLifecycleToString(state_.lifecycle()));
 
-    // TODO(brettw) ZX-1072 :The suspend_count_ == 0 check can be removed and converted to an
-    // assertion when the bug is fixed. In that case, the suspend token shouldn't be calling Resume
-    // unless it's previously suspended it. Currently callers can bypass this invariant using the
-    // legacy suspend/resume API so give a good error.
-    // DEBUG_ASSERT(suspend_count_ > 0)
-    if ((state_.lifecycle() != ThreadState::Lifecycle::RUNNING &&
-         state_.lifecycle() != ThreadState::Lifecycle::SUSPENDED) ||
-        suspend_count_ == 0)
-        return ZX_ERR_BAD_STATE;
+    // It's possible the thread never transitioned from RUNNING -> SUSPENDED.
+    // But if it's dying or dead then bail.
+    if (state_.lifecycle() != ThreadState::Lifecycle::RUNNING &&
+        state_.lifecycle() != ThreadState::Lifecycle::SUSPENDED) {
+        return;
+    }
 
+    DEBUG_ASSERT(suspend_count_ > 0);
     suspend_count_--;
     if (suspend_count_ == 0)
         thread_resume(&thread_);
     // Otherwise there's still an out-standing Suspend() call so keep it suspended.
-    return ZX_OK;
 }
 
 static void ThreadCleanupDpc(dpc_t* d) {

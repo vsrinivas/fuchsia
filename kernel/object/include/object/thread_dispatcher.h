@@ -90,7 +90,7 @@ public:
     void Kill();
 
     zx_status_t Suspend();
-    zx_status_t Resume();
+    void Resume();
 
     // accessors
     ProcessDispatcher* process() const { return process_.get(); }

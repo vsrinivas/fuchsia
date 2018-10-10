@@ -885,6 +885,7 @@ struct suspend_in_exception_data {
     fbl::atomic<int> suspend_count;
     fbl::atomic<int> resume_count;
     zx_handle_t thread_handle;
+    zx_handle_t suspend_token;
     zx_koid_t process_id;
     zx_koid_t thread_id;
 };
@@ -915,7 +916,7 @@ bool suspended_in_exception_handler(zx_handle_t inferior, zx_handle_t port,
         if (packet->signal.observed & ZX_THREAD_SUSPENDED) {
             ASSERT_EQ(pkt_tid, data->thread_id);
             atomic_fetch_add(&data->suspend_count, 1);
-            ASSERT_EQ(zx_task_resume(data->thread_handle, 0), ZX_OK);
+            ASSERT_EQ(zx_handle_close(data->suspend_token), ZX_OK);
             // At this point we should get ZX_THREAD_RUNNING, we'll
             // process it later.
         }
@@ -942,8 +943,7 @@ bool suspended_in_exception_handler(zx_handle_t inferior, zx_handle_t port,
 
             // Suspend the thread before fixing the segv to verify register
             // access works while the thread is in an exception and suspended.
-            zx_handle_t token;
-            ASSERT_EQ(zx_task_suspend_token(data->thread_handle, &token), ZX_OK);
+            ASSERT_EQ(zx_task_suspend_token(data->thread_handle, &data->suspend_token), ZX_OK);
 
             // Waiting for the thread to suspend doesn't work here as the
             // thread stays in the exception until we pass ZX_RESUME_EXCEPTION.

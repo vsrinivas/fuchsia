@@ -454,6 +454,9 @@ static bool test_resume_suspended() {
     ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED);
     ASSERT_EQ(info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_NONE);
 
+    // Verify the deprecated zx_task_resume() function fails.
+    ASSERT_EQ(zx_task_resume(thread_h, 0), ZX_ERR_BAD_STATE);
+
     // Resuming the thread should mark the thread as blocked again.
     ASSERT_TRUE(resume_thread_synchronous(thread_h, suspend_token));
 
@@ -675,11 +678,6 @@ static bool test_suspend_stops_thread() {
 
 static bool test_suspend_multiple() {
     BEGIN_TEST;
-
-    // TODO(brettw) ZX-1072 Fix this test and enable. Currently suspend tokens
-    // and exception resumption don't interact well and resuming from an
-    // exception will resume the thread, even if there is an open suspend
-    // token.
 
     zx_handle_t event;
     zxr_thread_t thread;

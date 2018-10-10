@@ -153,6 +153,7 @@ zx_status_t sys_task_bind_exception_port(zx_handle_t obj_handle, zx_handle_t epo
 }
 
 // zx_status_t zx_task_resume
+// TODO(ZX-2720,ZX-1072): This function is deprecated.
 zx_status_t sys_task_resume(zx_handle_t handle, uint32_t options) {
     LTRACE_ENTRY;
 
@@ -187,7 +188,9 @@ zx_status_t sys_task_resume(zx_handle_t handle, uint32_t options) {
             return ZX_ERR_INVALID_ARGS;
         }
 
-        return thread->Resume();
+        // There should be no more uses of this function to resume from
+        // suspensions, and we don't want to allow new ones.
+        return ZX_ERR_BAD_STATE;
     }
 }
 
