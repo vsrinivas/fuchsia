@@ -56,6 +56,8 @@ interface StoryController {
   // |intent| is the intent that will be used for module resolution.
   // |surface_relation| is used to determine how the started module will be
   //                    presented.
+  //
+  // DEPRECATED: To add modules to stories, use PuppetMaster.
   12: AddModule(vector<string>? parent_module_path, string module_name,
                 Intent intent, SurfaceRelation? surface_relation);
 
@@ -67,9 +69,15 @@ interface StoryController {
   //
   // Notifications for changes to this list are provided through
   // StoryModulesWatcher.OnNewModule(), if a watcher is supplied in the call.
+  //
+  // DEPRECATED: StoryController is only to be used for Story concepts
+  // (metadata about, and requesting changes to runtime state).
   7: GetActiveModules(StoryModulesWatcher? watcher) -> (vector<ModuleData> module_data);
 
   // Lists all known modules in the story, as recorded in the ledger.
+  //
+  // DEPRECATED: StoryController is only to be used for Story concepts
+  // (metadata about, and requesting changes to runtime state).
   8: GetModules() -> (vector<ModuleData> module_data);
 
   // Obtains a ModuleController for the module at the given path. If no module
@@ -79,6 +87,9 @@ interface StoryController {
   // TODO(mesch): This is EXPERIMENTAL. We want something like this for story
   // crafting, but giving the same module controller to the story crafting
   // client as to the parent module or story runner might not be right yet.
+  //
+  // DEPRECATED: StoryController is only to be used for Story concepts
+  // (metadata about, and requesting changes to runtime state).
   9: GetModuleController(vector<string> module_path, request<ModuleController> request);
 
   // Deprecated: MI4-1084
@@ -87,6 +98,9 @@ interface StoryController {
   // Gets a connection to a link in the story with the specified |link_path|. If
   // link does not exist yet, it is implicitly created when it is first
   // accessed.
+  //
+  // DEPRECATED: StoryController is only to be used for Story concepts
+  // (metadata about, and requesting changes to runtime state).
   11: GetLink(LinkPath link_path, request<Link> link);
 };
 
@@ -99,14 +113,23 @@ interface StoryWatcher {
   // Called when a module is added to a story.
   //
   // TODO(mesch): Remove, use StoryModulesWatcher instead.
+  //
+  // DEPRECATED: StoryController is only to be used for Story concepts
+  // (metadata about, and requesting changes to runtime state).
   2: OnModuleAdded(ModuleData module_data);
 
   // Called when a module is focused in the story.
   // EXPERIMENTAL
+  //
+  // DEPRECATED: StoryController is only to be used for Story concepts
+  // (metadata about, and requesting changes to runtime state).
   3: OnModuleFocused(vector<string> module_path);
 };
 
 // Implemented by the client calling StoryController.GetActiveModules().
+//
+// DEPRECATED: StoryController is only to be used for Story concepts
+// (metadata about, and requesting changes to runtime state).
 interface StoryModulesWatcher {
   // Called when a module becomes active in the story, i.e. when a module
   // controller for it is created. After this notification, the ModuleController
@@ -125,6 +148,9 @@ interface StoryModulesWatcher {
 };
 
 // Implemented by the client calling StoryController.GetActiveLinks().
+//
+// DEPRECATED: StoryController is only to be used for Story concepts
+// (metadata about, and requesting changes to runtime state).
 interface StoryLinksWatcher {
   // Called when a link becomes active in the story, i.e. when it is loaded into
   // memory and connected with modules and watchers. After this notification,
