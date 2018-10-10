@@ -40,8 +40,15 @@ namespace zxdb {
 class GeneralCommandLineParser {
  public:
   // The callbacks may return an error to indicate a problem with the argument.
-  // In this case, parsing will stop and the error will be returned.
+  // In this case, parsing will stop and the error will be returned. These
+  // callbacks are called in order as switches are processed, so can be
+  // called more than once.
+
+  // Callback used for command-line switch presence checks. There is no value
+  // and if one is provided it will be an error.
   using NoArgCallback = std::function<void()>;
+
+  // Callback used for string-value switches.
   using StringCallback = std::function<Err(const std::string&)>;
 
   GeneralCommandLineParser();
@@ -128,6 +135,25 @@ class CommandLineParser : public GeneralCommandLineParser {
     AddGeneralSwitch(long_name, short_name, help,
                      [this, value](const std::string& v) -> Err {
                        result_.*value = v;
+                       return Err();
+                     });
+  }
+
+  // Collects a list of all values passed with this flag. This allows multiple
+  // flag invocations. For examples "-f foo -f bar" would produce a vector
+  // { "foo", "bar" }
+  //
+  // Example
+  //   struct MyOptions {
+  //     std::vector<std::string> foo;
+  //   };
+  //   CommandLineParser<MyOptions> parser;
+  //   parser.AddSwitch("foo", 'f', kFooHelp, &MyOptions::foo);
+  void AddSwitch(const char* long_name, const char short_name, const char* help,
+                 std::vector<std::string> ResultStruct::*value) {
+    AddGeneralSwitch(long_name, short_name, help,
+                     [this, value](const std::string& v) -> Err {
+                       (result_.*value).push_back(v);
                        return Err();
                      });
   }

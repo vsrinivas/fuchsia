@@ -32,11 +32,20 @@ const char kRunHelp[] = R"(  --run=<program>
       Attemps to run a binary in the target system. The debugger must be
       already connected to the debug_agent (use with -c).)";
 
-const char kScriptFileHelp[] = R"( --script-file=<file>
+const char kScriptFileHelp[] = R"(  --script-file=<file>
   -S <file>
       Reads a script file from a file. The file must contains valid zxdb
       commands as they would be input from the command line. They will be
       executed sequentially.)";
+
+const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
+  -s <path>
+      Adds the given directory or file to the symbol search path. Multiple
+      -s switches can be passed to add multiple locations. When a directory
+      path is passed, the directory will be enumerated non-recursively to
+      index all ELF files. When a .txt file is passed, it will be treated
+      as a mapping database from build ID to file path. Otherwise, the path
+      will be loaded as an ELF file (if possible).)";
 
 }  // namespace
 
@@ -48,6 +57,8 @@ Err ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
   parser.AddSwitch("run", 'r', kRunHelp, &CommandLineOptions::run);
   parser.AddSwitch("script-file", 'S', kScriptFileHelp,
                    &CommandLineOptions::script_file);
+  parser.AddSwitch("symbol-path", 's', kSymbolPathHelp,
+                   &CommandLineOptions::symbol_paths);
 
   // Special --help switch which doesn't exist in the options structure.
   bool requested_help = false;

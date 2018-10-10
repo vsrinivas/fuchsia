@@ -44,8 +44,14 @@ void BuildIDIndex::AddSymbolSource(const std::string& path) {
   ClearCache();
 }
 
+BuildIDIndex::StatusList BuildIDIndex::GetStatus() {
+  EnsureCacheClean();
+  return status_;
+}
+
 void BuildIDIndex::ClearCache() {
   build_id_to_file_.clear();
+  status_.clear();
   cache_dirty_ = true;
 }
 
@@ -91,6 +97,7 @@ void BuildIDIndex::LogMessage(const std::string& msg) const {
 void BuildIDIndex::LoadOneBuildIDFile(const std::string& file_name) {
   FILE* id_file = fopen(file_name.c_str(), "r");
   if (!id_file) {
+  status_.emplace_back(file_name, 0);
     LogMessage("Can't open build ID file: " + file_name);
     return;
   }
@@ -98,6 +105,7 @@ void BuildIDIndex::LoadOneBuildIDFile(const std::string& file_name) {
   fseek(id_file, 0, SEEK_END);
   long length = ftell(id_file);
   if (length <= 0) {
+    status_.emplace_back(file_name, 0);
     LogMessage("Can't load build ID file: " + file_name);
     return;
   }
@@ -108,6 +116,7 @@ void BuildIDIndex::LoadOneBuildIDFile(const std::string& file_name) {
   fseek(id_file, 0, SEEK_SET);
   if (fread(&contents[0], 1, contents.size(), id_file) !=
       static_cast<size_t>(length)) {
+    status_.emplace_back(file_name, 0);
     LogMessage("Can't read build ID file: " + file_name);
     return;
   }
@@ -115,12 +124,9 @@ void BuildIDIndex::LoadOneBuildIDFile(const std::string& file_name) {
   fclose(id_file);
 
   int added = ParseIDs(contents, &build_id_to_file_);
-  if (!added) {
+  status_.emplace_back(file_name, added);
+  if (!added)
     LogMessage("No mappings found in build ID file: " + file_name);
-  } else {
-    LogMessage(fxl::StringPrintf("Loaded %d system symbol mappings from:\n  %s",
-                                 added, file_name.c_str()));
-  }
 }
 
 void BuildIDIndex::IndexOneSourcePath(const std::string& path) {
@@ -131,11 +137,13 @@ void BuildIDIndex::IndexOneSourcePath(const std::string& path) {
       if (IndexOneSourceFile(child.path()))
         indexed++;
     }
-    LogMessage(fxl::StringPrintf("Loaded %d symbol paddings from:\n  %s",
-                                 indexed, path.c_str()));
+    status_.emplace_back(path, indexed);
   } else {
-    if (!IndexOneSourceFile(path)) {
-      LogMessage(fxl::StringPrintf("Symbol file could not be loaded:\n  %s",
+    if (IndexOneSourceFile(path)) {
+      status_.emplace_back(path, 1);
+    } else {
+      status_.emplace_back(path, 0);
+      LogMessage(fxl::StringPrintf("Symbol file could not be loaded: %s",
                                    path.c_str()));
     }
   }

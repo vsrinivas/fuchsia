@@ -21,6 +21,9 @@ class BuildIDIndex {
  public:
   using IDMap = std::map<std::string, std::string>;
 
+  // Lists symbol sources and the number of ELF files indexed at that location.
+  using StatusList = std::vector<std::pair<std::string, int>>;
+
   BuildIDIndex();
   ~BuildIDIndex();
 
@@ -46,6 +49,10 @@ class BuildIDIndex {
   //
   // If the path is a directory, all files in that directory will be indexed.
   void AddSymbolSource(const std::string& path);
+
+  // Returns the status of the symbols. This will force the cache to be fresh
+  // so may cause I/O.
+  StatusList GetStatus();
 
   // Clears all cachehed build IDs. They will be reloaded when required.
   void ClearCache();
@@ -79,6 +86,9 @@ class BuildIDIndex {
 
   // Either files or directories to index.
   std::vector<std::string> sources_;
+
+  // Maintains the logs of how many symbols were indexed for each location.
+  StatusList status_;
 
   // Indicates if build_id_to_file_ is up-to-date. This is necessary to
   // disambiguate whether an empty cache means "not scanned" or "nothing found".

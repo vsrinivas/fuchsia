@@ -19,6 +19,7 @@
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_context.h"
+#include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_util.h"
@@ -27,6 +28,7 @@
 #include "garnet/bin/zxdb/symbols/module_symbol_status.h"
 #include "garnet/bin/zxdb/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/symbols/resolve_options.h"
+#include "garnet/bin/zxdb/symbols/system_symbols.h"
 #include "garnet/bin/zxdb/symbols/target_symbols.h"
 #include "garnet/bin/zxdb/symbols/type.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
@@ -350,9 +352,13 @@ const char kSymStatShortHelp[] = "sym-stat: Print process symbol status.";
 const char kSymStatHelp[] =
     R"(sym-stat
 
-  Prints out the symbol information for the current process. This includes
-  which libraries are loaded, how many symbols each has, and where the symbol
-  file is located.
+  Prints out symbol information.
+
+  The global information includes the symbol search path and how many files are
+  indexed from each location.
+
+  If there is a process it will includes which libraries are loaded, how many
+  symbols each has, and where the symbol file is located.
 
 Example
 
@@ -360,53 +366,84 @@ Example
   process 2 sym-stat
 )";
 
+void SummarizeProcessSymbolStatus(ConsoleContext* context, Process* process,
+                                  OutputBuffer* out) {
+  // Get modules sorted by name.
+  std::vector<ModuleSymbolStatus> modules = process->GetSymbols()->GetStatus();
+  std::sort(modules.begin(), modules.end(),
+            [](const ModuleSymbolStatus& a, const ModuleSymbolStatus& b) {
+              return a.name < b.name;
+            });
+
+  out->Append(Syntax::kHeading,
+              fxl::StringPrintf("\nProcess %d symbol status\n\n",
+                                context->IdForTarget(process->GetTarget())));
+
+  for (const auto& module : modules) {
+    out->Append(Syntax::kHeading, "  " + module.name + "\n");
+    out->Append(fxl::StringPrintf("    Base: 0x%" PRIx64 "\n", module.base));
+    out->Append("    Build ID: " + module.build_id + "\n");
+
+    if (module.symbols_loaded) {
+      out->Append("    Symbols loaded: Yes\n    Symbol file: " +
+                  module.symbol_file);
+      out->Append(module.files_indexed ? Syntax::kNormal : Syntax::kError,
+                  fxl::StringPrintf("\n    Source files indexed: %zu",
+                                    module.files_indexed));
+      out->Append(module.functions_indexed ? Syntax::kNormal : Syntax::kError,
+                  fxl::StringPrintf("\n    Symbols indexed: %zu",
+                                    module.functions_indexed));
+    } else {
+      out->Append(Syntax::kError, "    Symbols loaded: No");
+    }
+    out->Append("\n\n");
+  }
+
+  if (modules.empty())
+    out->Append(Syntax::kError, "  No known modules.\n");
+
+  out->Append(Syntax::kWarning, "  👉 ");
+  out->Append(Syntax::kComment,
+              "Use \"libs\" to refresh the module list from the process.");
+  out->Append(Syntax::kNormal, "\n\n");
+}
+
 Err DoSymStat(ConsoleContext* context, const Command& cmd) {
   Err err = cmd.ValidateNouns({Noun::kProcess});
-  if (err.has_error())
-    return err;
-  err = AssertRunningTarget(context, "sym-stat", cmd.target());
   if (err.has_error())
     return err;
 
   if (!cmd.args().empty())
     return Err("\"sym-stat\" takes no arguments.");
 
-  std::string load_tip(
-      "Tip: Use \"libs\" to refresh the module list from the process.\n");
+  OutputBuffer out;
+  out.Append(Syntax::kHeading, "Symbol index status\n\n");
 
-  std::vector<ModuleSymbolStatus> modules =
-      cmd.target()->GetProcess()->GetSymbols()->GetStatus();
+  SystemSymbols* system_symbols = context->session()->system().GetSymbols();
+
+  std::vector<std::vector<OutputBuffer>> table;
+  auto index_status = system_symbols->build_id_index().GetStatus();
+  if (index_status.empty()) {
+    out.Append(Syntax::kError, "  No symbol locations are indexed.");
+    out.Append("\n\n  Use the command-line switch \"zxdb -s <path>\" to "
+               "specify the location of\n  your symbols.\n\n");
+  } else {
+    for (const auto& pair : index_status) {
+      auto& row = table.emplace_back();
+      auto syntax = pair.second ? Syntax::kNormal : Syntax::kError;
+      row.emplace_back(syntax, fxl::StringPrintf("%d", pair.second));
+      row.emplace_back(syntax, pair.first);
+    }
+    FormatTable({ColSpec(Align::kRight, 0, "Indexed", 2),
+                 ColSpec(Align::kLeft, 0, "Source path", 1)},
+                table, &out);
+  }
+
+  // Process symbol status (if any).
+  if (cmd.target() && cmd.target()->GetProcess())
+    SummarizeProcessSymbolStatus(context, cmd.target()->GetProcess(), &out);
 
   Console* console = Console::get();
-  if (modules.empty()) {
-    console->Output("No known modules.\n" + load_tip);
-    return Err();
-  }
-
-  // Sort by name.
-  std::sort(modules.begin(), modules.end(),
-            [](const ModuleSymbolStatus& a, const ModuleSymbolStatus& b) {
-              return a.name < b.name;
-            });
-
-  OutputBuffer out;
-  for (const auto& module : modules) {
-    out.Append(Syntax::kHeading, module.name + "\n");
-    out.Append(fxl::StringPrintf("  Base: 0x%" PRIx64 "\n", module.base));
-    out.Append("  Build ID: " + module.build_id + "\n");
-
-    out.Append("  Symbols loaded: ");
-    if (module.symbols_loaded) {
-      out.Append("Yes\n  Symbol file: " + module.symbol_file);
-    } else {
-      out.Append(Syntax::kError, "No");
-    }
-
-    out.Append(fxl::StringPrintf(
-        "\n  Source files indexed: %zu\n  Symbols indexed: %zu\n\n",
-        module.files_indexed, module.functions_indexed));
-  }
-  out.Append(std::move(load_tip));
   console->Output(std::move(out));
 
   return Err();
@@ -448,8 +485,9 @@ Err DoSymNear(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  auto locations = cmd.target()->GetProcess()->GetSymbols()->ResolveInputLocation(
-      InputLocation(address));
+  auto locations =
+      cmd.target()->GetProcess()->GetSymbols()->ResolveInputLocation(
+          InputLocation(address));
   FXL_DCHECK(locations.size() == 1u);
   Console::get()->Output(DescribeLocation(locations[0], true));
   return Err();

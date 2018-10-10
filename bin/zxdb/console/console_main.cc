@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/console/console_main.h"
 
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/bin/zxdb/console/actions.h"
 #include "garnet/bin/zxdb/console/command_line_options.h"
 #include "garnet/bin/zxdb/console/command_line_options.h"
@@ -101,6 +102,16 @@ int ConsoleMain(int argc, const char* argv[]) {
         [&session]() { session.OnStreamReadable(); });
 
     Console console(&session);
+
+    // Save command-line switches.
+    for (const auto& path : options.symbol_paths) {
+      if (StringEndsWith(path, ".txt")) {
+        session.system().GetSymbols()->build_id_index().AddBuildIDMappingFile(
+            path);
+      } else {
+        session.system().GetSymbols()->build_id_index().AddSymbolSource(path);
+      }
+    }
 
     if (!actions.empty()) {
       ScheduleActions(session, console, std::move(actions));
