@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <blobfs/lz4.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fvm/container.h>
@@ -508,6 +509,36 @@ bool TestCompressorBufferTooSmall() {
 
     ASSERT_EQ(status, ZX_ERR_INTERNAL);
     ASSERT_EQ(compression.Finish(), ZX_OK);
+
+    END_TEST;
+}
+
+bool TestBlobfsCompressor() {
+    BEGIN_TEST;
+    blobfs::Compressor compressor;
+
+    // Pretend we're going to compress only one byte of data.
+    const size_t buf_size = compressor.BufferMax(1);
+    fbl::unique_ptr<char[]> buf(new char[buf_size]);
+    ASSERT_EQ(compressor.Initialize(buf.get(), buf_size), ZX_OK);
+
+    // Create data as large as possible that will fit still within this buffer.
+    size_t data_size = 0;
+    while (compressor.BufferMax(data_size + 1) <= buf_size) {
+        ++data_size;
+    }
+
+    ASSERT_GT(data_size, 0);
+    ASSERT_EQ(compressor.BufferMax(data_size), buf_size);
+    ASSERT_GT(compressor.BufferMax(data_size+1), buf_size);
+
+    unsigned int seed = 0;
+    for (size_t i = 0; i < data_size; i++) {
+        char data = static_cast<char>(rand_r(&seed));
+        ASSERT_EQ(compressor.Update(&data, 1), ZX_OK);
+    }
+
+    ASSERT_EQ(compressor.End(), ZX_OK);
     END_TEST;
 }
 
@@ -606,6 +637,7 @@ RUN_FOR_ALL_TYPES(10, 100, (1 << 20), 8192)
 RUN_FOR_ALL_TYPES(10, 100, (1 << 20), 32768)
 RUN_FOR_ALL_TYPES(10, 100, (1 << 20), DEFAULT_SLICE_SIZE)
 RUN_TEST_MEDIUM(TestCompressorBufferTooSmall)
+RUN_TEST_MEDIUM(TestBlobfsCompressor)
 END_TEST_CASE(fvm_host_tests)
 
 int main(int argc, char** argv) {

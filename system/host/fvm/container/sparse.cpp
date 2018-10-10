@@ -6,6 +6,8 @@
 
 #include "fvm/container.h"
 
+constexpr size_t kLz4HeaderSize = 15;
+
 static LZ4F_preferences_t lz4_prefs = {
     .frameInfo = {
         .blockSizeID = LZ4F_max64KB,
@@ -21,7 +23,7 @@ zx_status_t CompressionContext::Setup(size_t max_len) {
         return ZX_ERR_INTERNAL;
     }
 
-    Reset(LZ4F_compressBound(max_len, &lz4_prefs));
+    Reset(kLz4HeaderSize + LZ4F_compressBound(max_len, &lz4_prefs));
 
     size_t r = LZ4F_compressBegin(cctx_, GetBuffer(), GetRemaining(), &lz4_prefs);
     if (LZ4F_isError(r)) {

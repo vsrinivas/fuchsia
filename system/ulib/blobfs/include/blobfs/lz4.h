@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include <fbl/macros.h>
 #include <lz4/lz4frame.h>
+#include <zircon/types.h>
 
 namespace blobfs {
 
@@ -38,9 +40,7 @@ public:
     // in order to compress a blob of size |blob_size|.
     //
     // Typically used in conjunction with |Initialize()|.
-    size_t BufferMax(size_t blob_size) const {
-        return LZ4F_compressBound(blob_size, nullptr);
-    }
+    size_t BufferMax(size_t blob_size) const;
 
     // Continues the compression after initialization.
     zx_status_t Update(const void* data, size_t length);
@@ -55,6 +55,8 @@ private:
     void* Buffer() const {
         return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(buf_) + buf_used_);
     }
+
+    size_t buf_remaining() const { return buf_max_ - buf_used_; }
 
     LZ4F_compressionContext_t ctx_;
     void* buf_;
