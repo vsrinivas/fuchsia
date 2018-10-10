@@ -831,7 +831,6 @@ struct CodecPacket {
 // contexts. While the picture for HW-based decoders looks somewhat different
 // and is out of scope of this paragraph, the client should always use separate
 // Codec instances for security-separate client-side contexts.
-[ServiceName="media::Codec"]
 interface Codec {
   // EnableOnStreamFailed()
   //
