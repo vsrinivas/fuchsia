@@ -117,7 +117,7 @@ std::unique_ptr<raw::CompoundIdentifier> Parser::ParseCompoundIdentifier() {
         return Fail();
 
     auto parse_component = [&components, this]() {
-        switch (Peek().combined()) {
+        switch (Peek().kind_and_subkind().combined()) {
         default:
             return Done;
 
@@ -187,7 +187,7 @@ std::unique_ptr<raw::FalseLiteral> Parser::ParseFalseLiteral() {
 }
 
 std::unique_ptr<raw::Literal> Parser::ParseLiteral() {
-    switch (Peek().combined()) {
+    switch (Peek().kind_and_subkind().combined()) {
     case CASE_TOKEN(Token::Kind::kStringLiteral):
         return ParseStringLiteral();
 
@@ -292,7 +292,7 @@ std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList() {
 }
 
 std::unique_ptr<raw::Constant> Parser::ParseConstant() {
-    switch (Peek().combined()) {
+    switch (Peek().kind_and_subkind().combined()) {
     case CASE_TOKEN(Token::Kind::kIdentifier): {
         auto identifier = ParseCompoundIdentifier();
         if (!Ok())
@@ -452,7 +452,7 @@ std::unique_ptr<raw::HandleType> Parser::ParseHandleType() {
 std::unique_ptr<raw::PrimitiveType> Parser::ParsePrimitiveType() {
     types::PrimitiveSubtype subtype;
 
-    switch (Peek().combined()) {
+    switch (Peek().kind_and_subkind().combined()) {
     case CASE_IDENTIFIER(Token::Subkind::kBool):
         subtype = types::PrimitiveSubtype::kBool;
         break;
@@ -520,7 +520,7 @@ std::unique_ptr<raw::RequestHandleType> Parser::ParseRequestHandleType() {
 }
 
 std::unique_ptr<raw::Type> Parser::ParseType() {
-    switch (Peek().combined()) {
+    switch (Peek().kind_and_subkind().combined()) {
     case CASE_TOKEN(Token::Kind::kIdentifier): {
         ASTScope scope(this);
         auto identifier = ParseCompoundIdentifier();
@@ -648,7 +648,7 @@ Parser::ParseEnumDeclaration(std::unique_ptr<raw::AttributeList> attributes, AST
         return Fail();
 
     auto parse_member = [&members, this]() {
-        switch (Peek().combined()) {
+        switch (Peek().kind_and_subkind().combined()) {
         default:
             ConsumeToken(OfKind(Token::Kind::kRightCurly));
             return Done;
@@ -695,7 +695,7 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
     ASTScope scope(this);
     std::vector<std::unique_ptr<raw::Parameter>> parameter_list;
 
-    switch (Peek().combined()) {
+    switch (Peek().kind_and_subkind().combined()) {
     default:
         break;
 
@@ -708,7 +708,7 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
             ConsumeToken(OfKind(Token::Kind::kComma));
             if (!Ok())
                 return Fail();
-            switch (Peek().combined()) {
+            switch (Peek().kind_and_subkind().combined()) {
             TOKEN_TYPE_CASES:
                 parameter_list.emplace_back(ParseParameter());
                 if (!Ok())
@@ -880,7 +880,7 @@ Parser::ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes, A
         return Fail();
 
     auto parse_member = [&members, this]() {
-        switch (Peek().combined()) {
+        switch (Peek().kind_and_subkind().combined()) {
         default:
             ConsumeToken(OfKind(Token::Kind::kRightCurly));
             return Done;
@@ -966,7 +966,7 @@ Parser::ParseTableDeclaration(std::unique_ptr<raw::AttributeList> attributes, AS
         return Fail();
 
     auto parse_member = [&members, this]() {
-        switch (Peek().combined()) {
+        switch (Peek().kind_and_subkind().combined()) {
         default:
             ConsumeToken(OfKind(Token::Kind::kRightCurly));
             return Done;
@@ -1026,7 +1026,7 @@ Parser::ParseUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, AS
         return Fail();
 
     auto parse_member = [&members, this]() {
-        switch (Peek().combined()) {
+        switch (Peek().kind_and_subkind().combined()) {
         default:
             ConsumeToken(OfKind(Token::Kind::kRightCurly));
             return Done;
@@ -1081,7 +1081,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         return Fail();
 
     auto parse_using = [&using_list, this]() {
-        switch (Peek().combined()) {
+        switch (Peek().kind_and_subkind().combined()) {
         default:
             return Done;
 
@@ -1107,7 +1107,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         if (!Ok())
             return More;
 
-        switch (Peek().combined()) {
+        switch (Peek().kind_and_subkind().combined()) {
         default:
             return Done;
 

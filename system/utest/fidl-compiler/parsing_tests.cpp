@@ -27,6 +27,7 @@ library 0fidl.test.badcompoundidentifier;
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(), "unexpected token");
+    ASSERT_STR_STR(errors[0].c_str(), "\"0f\"");
 
     END_TEST;
 }
@@ -116,7 +117,7 @@ interface InInterface {
 }
 
 // Test that an @ prefix in an identifier emits an error message. Regression test for FIDL-303.
-bool detect_deprecated_at_sign_test() {
+bool bad_at_sign_test() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -130,6 +131,7 @@ struct Test {
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(), "unexpected token");
+    ASSERT_STR_STR(errors[0].c_str(), "\"@\"");
 
     END_TEST;
 }
@@ -140,5 +142,5 @@ BEGIN_TEST_CASE(parser_tests);
 RUN_TEST(bad_compound_identifier_test);
 RUN_TEST(parsing_reserved_words_in_struct_test);
 RUN_TEST(parsing_reserved_words_in_interface_test);
-RUN_TEST(detect_deprecated_at_sign_test);
+RUN_TEST(bad_at_sign_test);
 END_TEST_CASE(parser_tests);
