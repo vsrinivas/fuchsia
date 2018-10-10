@@ -6,12 +6,14 @@
 #define LIB_CALLBACK_CAPTURE_H_
 
 #include <functional>
+#include <tuple>
 #include <utility>
 
 namespace callback {
 
 // Takes a callback, and a list of pointers. Returns a lambda that takes a list
 // of objects, saves these in the pointed variables and runs the callback.
+// If one wants to ignore one of the captured value, one can pass &std::ignore.
 template <typename C, typename... T>
 auto Capture(C callback, T*... ptrs) {
   return [callback = std::move(callback), ptrs...](auto&&... values) mutable {

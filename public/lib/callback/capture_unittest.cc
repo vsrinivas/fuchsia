@@ -44,5 +44,15 @@ TEST(Capture, CaptureConstReference) {
   EXPECT_EQ(2, a2);
 }
 
+TEST(Capture, UseStdIgnore) {
+  int a1 = 0;
+  bool called = false;
+
+  Capture([&called] { called = true; }, &a1, &std::ignore)(1, 2);
+
+  EXPECT_TRUE(called);
+  EXPECT_EQ(1, a1);
+}
+
 }  // namespace
 }  // namespace callback
