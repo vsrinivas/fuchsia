@@ -56,6 +56,7 @@ struct ApInfraBssTest : public ::testing::Test {
         return frame;
     }
 
+    void SetUp() override { device.SetTime(zx::time(0)); }
     void TearDown() override { bss.Stop(); }
 
     zx_status_t SendStartReqMsg(bool protected_ap) {
@@ -148,6 +149,12 @@ struct ApInfraBssTest : public ::testing::Test {
         });
     }
 
+    zx::duration TuPeriodsToDuration(size_t periods) { return zx::usec(1024) * periods; }
+
+    void SetTimeInTuPeriods(size_t periods) {
+        device.SetTime(zx::time(0) + TuPeriodsToDuration(periods));
+    }
+
     void StartAp(bool protected_ap = true) {
         SendStartReqMsg(protected_ap);
         device.svc_queue.clear();
@@ -188,14 +195,14 @@ struct ApInfraBssTest : public ::testing::Test {
         EXPECT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), kClientAddress, 6), 0);
     }
 
-    void AssertDeauthInd(fbl::unique_ptr<Packet> pkt) {
+    void AssertDeauthInd(fbl::unique_ptr<Packet> pkt, wlan_mlme::ReasonCode reason_code) {
         ASSERT_EQ(pkt->peer(), Packet::Peer::kService);
         MlmeMsg<wlan_mlme::DeauthenticateIndication> msg;
         auto status =
             MlmeMsg<wlan_mlme::DeauthenticateIndication>::FromPacket(fbl::move(pkt), &msg);
         ASSERT_EQ(status, ZX_OK);
 
-        EXPECT_EQ(msg.body()->reason_code, wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
+        EXPECT_EQ(msg.body()->reason_code, reason_code);
     }
 
     void AssertAssocInd(fbl::unique_ptr<Packet> pkt) {
@@ -297,7 +304,6 @@ TEST_F(ApInfraBssTest, Authenticate_SmeRefuses) {
 
     // Send authentication request frame
     SendClientAuthReqFrame();
-    device.svc_queue.empty();
 
     // Simulate SME sending MLME-AUTHENTICATE.response msg with a refusal code
     SendAuthResponseMsg(wlan_mlme::AuthenticateResultCodes::REFUSED);
@@ -314,6 +320,32 @@ TEST_F(ApInfraBssTest, Authenticate_SmeRefuses) {
     EXPECT_EQ(frame.body()->status_code, status_code::kRefused);
 }
 
+TEST_F(ApInfraBssTest, Authenticate_Timeout) {
+    StartAp();
+
+    // Send authentication request frame
+    SendClientAuthReqFrame();
+    device.svc_queue.clear();
+
+    // No timeout yet, so nothing happens. Even if another auth request comes, it's a no-op
+    SetTimeInTuPeriods(59000);
+    bss.HandleTimeout(common::MacAddr(kClientAddress));
+    SendClientAuthReqFrame();
+    EXPECT_TRUE(device.svc_queue.empty());
+    EXPECT_TRUE(device.wlan_queue.empty());
+
+    // Timeout triggers. Verify that if another auth request comes, it's processed.
+    SetTimeInTuPeriods(60000);
+    bss.HandleTimeout(common::MacAddr(kClientAddress));
+    SendClientAuthReqFrame();
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
+    EXPECT_TRUE(device.wlan_queue.empty());
+    auto auth_inds =
+        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateIndOrdinal>);
+    ASSERT_FALSE(auth_inds.empty());
+    AssertAuthInd(fbl::move(*auth_inds.begin()));
+}
+
 TEST_F(ApInfraBssTest, DeauthenticateWhileAuthenticated) {
     StartAp();
     AuthenticateClient();
@@ -325,7 +357,7 @@ TEST_F(ApInfraBssTest, DeauthenticateWhileAuthenticated) {
     auto deauth_inds =
         device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_FALSE(deauth_inds.empty());
-    AssertDeauthInd(fbl::move(*deauth_inds.begin()));
+    AssertDeauthInd(fbl::move(*deauth_inds.begin()), wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
 }
 
 TEST_F(ApInfraBssTest, Associate_Success) {
@@ -388,6 +420,33 @@ TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
     EXPECT_TRUE(device.wlan_queue.empty());
 }
 
+TEST_F(ApInfraBssTest, Associate_Timeout) {
+    StartAp();
+    AuthenticateClient();
+
+    // Send association request frame
+    SendClientAssocReqFrame();
+    device.svc_queue.clear();
+
+    // No timeout yet, so nothing happens. Even if another assoc request comes, it's a no-op
+    SetTimeInTuPeriods(59000);
+    bss.HandleTimeout(common::MacAddr(kClientAddress));
+    SendClientAssocReqFrame();
+    EXPECT_TRUE(device.svc_queue.empty());
+    EXPECT_TRUE(device.wlan_queue.empty());
+
+    // Timeout triggers. Verify that if another assoc request comes, it's processed.
+    SetTimeInTuPeriods(60000);
+    bss.HandleTimeout(common::MacAddr(kClientAddress));
+    SendClientAssocReqFrame();
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
+    EXPECT_TRUE(device.wlan_queue.empty());
+    auto assoc_inds =
+        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateIndOrdinal>);
+    ASSERT_FALSE(assoc_inds.empty());
+    AssertAssocInd(fbl::move(*assoc_inds.begin()));
+}
+
 TEST_F(ApInfraBssTest, DeauthenticateWhileAssociated) {
     StartAp();
     AuthenticateAndAssociateClient();
@@ -399,7 +458,7 @@ TEST_F(ApInfraBssTest, DeauthenticateWhileAssociated) {
     auto deauth_inds =
         device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_FALSE(deauth_inds.empty());
-    AssertDeauthInd(fbl::move(*deauth_inds.begin()));
+    AssertDeauthInd(fbl::move(*deauth_inds.begin()), wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
 }
 
 TEST_F(ApInfraBssTest, Disassociate) {

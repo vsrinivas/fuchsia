@@ -139,13 +139,21 @@ class AuthenticatingState : public BaseState {
    public:
     AuthenticatingState(RemoteClient* client, MgmtFrame<Authentication>&& frame);
 
+    void OnEnter() override;
+    void OnExit() override;
+
+    void HandleTimeout() override;
     zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
 
     inline const char* name() const override { return kName; }
 
    private:
     static constexpr const char* kName = "Authenticating";
+    static constexpr wlan_tu_t kAuthenticatingTimeoutTu = 60000;  // ~1 minute
+
     zx_status_t FinalizeAuthenticationAttempt(const status_code::StatusCode st_code);
+
+    zx::time auth_timeout_;
 };
 
 class AuthenticatedState : public BaseState {
@@ -177,6 +185,10 @@ class AssociatingState : public BaseState {
    public:
     AssociatingState(RemoteClient* client, MgmtFrame<AssociationRequest>&& frame);
 
+    void OnEnter() override;
+    void OnExit() override;
+
+    void HandleTimeout() override;
     zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
     zx_status_t FinalizeAssociationAttempt(status_code::StatusCode st_code);
 
@@ -184,8 +196,10 @@ class AssociatingState : public BaseState {
 
    private:
     static constexpr const char* kName = "Associating";
+    static constexpr wlan_tu_t kAssociatingTimeoutTu = 60000;  // ~1 minute
 
     uint16_t aid_;
+    zx::time assoc_timeout_;
 };
 
 class AssociatedState : public BaseState {

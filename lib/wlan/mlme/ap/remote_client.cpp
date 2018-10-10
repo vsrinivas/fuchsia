@@ -71,16 +71,36 @@ AuthenticatingState::AuthenticatingState(RemoteClient* client, MgmtFrame<Authent
         return;
     }
 
-    // TODO(NET-1463): set timeout to transition back to deauthenticating state if response from
-    //                 SME doesn't arrive
     service::SendAuthIndication(client_->device(), client_->addr(),
                                 wlan_mlme::AuthenticationTypes::OPEN_SYSTEM);
+}
+
+void AuthenticatingState::OnEnter() {
+    auth_timeout_ = client_->CreateTimerDeadline(kAuthenticatingTimeoutTu);
+    client_->StartTimer(auth_timeout_);
+}
+
+void AuthenticatingState::OnExit() {
+    client_->CancelTimer();
+    auth_timeout_ = zx::time();
+}
+
+void AuthenticatingState::HandleTimeout() {
+    if (client_->IsDeadlineExceeded(auth_timeout_)) {
+        warnf("[client] [%s] timed out authenticating\n", client_->addr().ToString().c_str());
+        client_->ReportFailedAuth();
+        MoveToState<DeauthenticatedState>();
+    }
 }
 
 zx_status_t AuthenticatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     if (auto auth_resp = msg.As<wlan_mlme::AuthenticateResponse>()) {
         ZX_DEBUG_ASSERT(client_->addr() ==
                         common::MacAddr(auth_resp->body()->peer_sta_address.data()));
+        // Received request which we've been waiting for. Timer can get canceled.
+        client_->CancelTimer();
+        auth_timeout_ = zx::time();
+
         status_code::StatusCode st_code;
         if (auth_resp->body()->result_code == wlan_mlme::AuthenticateResultCodes::SUCCESS) {
             st_code = status_code::kSuccess;
@@ -201,16 +221,35 @@ AssociatingState::AssociatingState(RemoteClient* client, MgmtFrame<AssociationRe
 
     ZX_DEBUG_ASSERT(ssid_element != nullptr);
 
-    // TODO(NET-1463): set timeout to transition back to deauthenticated state if response from
-    //                 SME doesn't arrive
     service::SendAssocIndication(client_->device(), client_->addr(), frame.body()->listen_interval,
                                  *ssid_element, rsn_element);
+}
+
+void AssociatingState::OnEnter() {
+    assoc_timeout_ = client_->CreateTimerDeadline(kAssociatingTimeoutTu);
+    client_->StartTimer(assoc_timeout_);
+}
+
+void AssociatingState::OnExit() {
+    client_->CancelTimer();
+    assoc_timeout_ = zx::time();
+}
+
+void AssociatingState::HandleTimeout() {
+    if (client_->IsDeadlineExceeded(assoc_timeout_)) {
+        warnf("[client] [%s] timed out associating\n", client_->addr().ToString().c_str());
+        MoveToState<AuthenticatedState>();
+    }
 }
 
 zx_status_t AssociatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     if (auto assoc_resp = msg.As<wlan_mlme::AssociateResponse>()) {
         ZX_DEBUG_ASSERT(client_->addr() ==
                         common::MacAddr(assoc_resp->body()->peer_sta_address.data()));
+        // Received request which we've been waiting for. Timer can get canceled.
+        client_->CancelTimer();
+        assoc_timeout_ = zx::time();
+
         status_code::StatusCode st_code;
         if (assoc_resp->body()->result_code == wlan_mlme::AssociateResultCodes::SUCCESS) {
             aid_ = assoc_resp->body()->association_id;
