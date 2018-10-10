@@ -39,9 +39,9 @@ public:
     // |mapped_len| may be more than |size|, in the event that |size| is
     // not page-aligned.  |mapped_len| will always be page-aligned.
     //
-    // The memory in the given range of |vmo| MUST have been pined before
+    // The memory in the given range of |vmo| MUST have been pinned before
     // calling this function, and if this function returns ZX_OK,
-    // MUST NOT be unpined until after Unmap() is called on the returned range.
+    // MUST NOT be unpinned until after Unmap() is called on the returned range.
     //
     // |perms| defines the access permissions, using the IOMMU_FLAG_PERM_*
     // flags.

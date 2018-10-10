@@ -56,7 +56,7 @@
 // kernel counters. TODO(cpu): remove LK-era counters
 // The counters below never decrease.
 //
-// counts the number of thread_t succesfully created.
+// counts the number of thread_t successfully created.
 KCOUNTER(thread_create_count, "kernel.thread.create");
 // counts the number of thread_t joined. Never decreases.
 KCOUNTER(thread_join_count, "kernel.thread.join");
@@ -131,7 +131,7 @@ static void invoke_user_callback(thread_t* t, enum thread_user_state_change new_
  *                         to start on.
  *
  * Thread priority is an integer from 0 (lowest) to 31 (highest).  Some standard
- * prioritys are defined in <kernel/thread.h>:
+ * priorities are defined in <kernel/thread.h>:
  *
  *  HIGHEST_PRIORITY
  *  DPC_PRIORITY

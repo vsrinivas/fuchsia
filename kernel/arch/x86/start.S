@@ -57,7 +57,7 @@
     shrl $SHIFT_REMAIN(\shift), %ecx
     andl $ADDR_OFFSET_MASK, %ecx
 
-    // Get the adddress on the page table of index * 8 and set the value
+    // Get the address on the page table of index * 8 and set the value
     shll $3, %ecx
     addl $PHYS(\table), %ecx
     movl \value, (%ecx)

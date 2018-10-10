@@ -35,7 +35,7 @@ FUNCTION_LABEL(x86_bootstrap16_entry)
 
     // We cheat a little and don't switch off of our real mode segments in
     // protected mode.  In real mode and protected mode, all of our code
-    // and data accesess are relative to %cs and %ss, using the real mode
+    // and data accesses are relative to %cs and %ss, using the real mode
     // segment calculations.
 
     // setup %ds/%ss to refer to the data region
@@ -179,7 +179,7 @@ FUNCTION_LABEL(_x86_suspend_wakeup)
     // Restore %gs.base to &bp_percpu.  We need to do this before
     // returning to C code, since the C code might use safe-stack
     // and/or stack-protector.
-    // TODO(teisenbe):  There is a small peformance gain that could be made here
+    // TODO(teisenbe):  There is a small performance gain that could be made here
     // by switching from wrmsr to wrgsbase, if wrgsbase is supported.  Currently
     // this is omitted for simplicity.
     lea bp_percpu(%rip), %rax

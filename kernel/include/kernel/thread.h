@@ -192,7 +192,7 @@ typedef struct thread {
     //    while preempt_pending is being checked.
     volatile bool preempt_pending;
 
-    // thread local storage, intialized to zero
+    // thread local storage, initialized to zero
     void* tls[THREAD_MAX_TLS_ENTRY];
 
     // callback for cleanup of tls slots
@@ -257,7 +257,7 @@ zx_status_t thread_set_real_time(thread_t* t);
 // scheduler routines to be used by regular kernel code
 void thread_yield(void);      // give up the cpu and time slice voluntarily
 void thread_preempt(void);    // get preempted at irq time
-void thread_reschedule(void); // revaluate the run queue on the current cpu
+void thread_reschedule(void); // re-evaluate the run queue on the current cpu
 
 void thread_owner_name(thread_t* t, char out_name[THREAD_NAME_LENGTH]);
 

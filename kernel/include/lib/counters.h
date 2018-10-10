@@ -38,7 +38,7 @@ __BEGIN_CDECLS
 //             "kernel.handles.new"
 //
 //  Reading the counters in code
-//  Don't. The counters are mantained in a per-cpu arena and
+//  Don't. The counters are maintained in a per-cpu arena and
 //  atomic operations are never used to set their value so
 //  they are both imprecise and reflect only the operations
 //  on a particular core.
@@ -68,7 +68,7 @@ static_assert(sizeof(struct k_counter_desc) ==
 // array bounded by these two symbols, sorted by name.
 extern const struct k_counter_desc kcountdesc_begin[], kcountdesc_end[];
 
-// The order of the descriptors is the order of the slots in each percpu array.
+// The order of the descriptors is the order of the slots in each per-cpu array.
 static inline size_t kcounter_index(const struct k_counter_desc* var) {
     return var - kcountdesc_begin;
 }

@@ -35,7 +35,7 @@ typedef struct cbuf {
 void cbuf_initialize(cbuf_t* cbuf, size_t len);
 
 /**
- * cbuf_initalize_etc
+ * cbuf_initialize_etc
  *
  * Initialize a cbuf structure using the supplied buffer for internal storage.
  *

@@ -286,7 +286,7 @@ void pc_init_debug(void) {
     cbuf_initialize(&console_input_buf, 1024);
 
     if (!platform_serial_enabled()) {
-        // Need to bail after initializing the input_buf to prevent unintialized
+        // Need to bail after initializing the input_buf to prevent uninitialized
         // access to it.
         return;
     }
@@ -303,7 +303,7 @@ void pc_init_debug(void) {
 
         uart_write(1, (1<<0)); // enable receive data available interrupt
 
-        // modem control register: Axiliary Output 2 is another IRQ enable bit
+        // modem control register: Auxiliary Output 2 is another IRQ enable bit
         const uint8_t mcr = uart_read(4);
         uart_write(4, mcr | 0x8);
         printf("UART: started IRQ driven RX\n");

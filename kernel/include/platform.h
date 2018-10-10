@@ -53,7 +53,7 @@ platform_halt_reason platform_get_reboot_reason(void);
 
 
 /* platform_panic_start informs the system that a panic message is about
- * to be printed and that platformn_halt will be called shortly.  The
+ * to be printed and that platform_halt will be called shortly.  The
  * platform should stop other CPUs if possible and do whatever is necessary
  * to safely ensure that the panic message will be visible to the user.
  */

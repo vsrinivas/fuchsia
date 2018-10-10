@@ -852,7 +852,7 @@ __NO_INLINE static void priority_test() {
     int base_priority = t->base_priority;
 
     if (base_priority != DEFAULT_PRIORITY) {
-        printf("unexpected intial state, aborting test\n");
+        printf("unexpected initial state, aborting test\n");
         return;
     }
 
