@@ -14,9 +14,10 @@ namespace testing {
 
 EnvironmentServices::EnvironmentServices(
     const fuchsia::sys::EnvironmentPtr& parent_env,
-    const fbl::RefPtr<fs::Service>& loader_service)
-    : vfs_(
-          std::make_unique<fs::SynchronousVfs>(async_get_default_dispatcher())),
+    const fbl::RefPtr<fs::Service>& loader_service,
+    async_dispatcher_t* dispatcher)
+    : vfs_(std::make_unique<fs::SynchronousVfs>(
+          dispatcher == nullptr ? async_get_default_dispatcher() : dispatcher)),
       svc_(fbl::AdoptRef(new fs::PseudoDir())) {
   parent_env->GetServices(parent_svc_.NewRequest());
   if (loader_service) {
@@ -28,18 +29,20 @@ EnvironmentServices::EnvironmentServices(
 
 // static
 std::unique_ptr<EnvironmentServices> EnvironmentServices::Create(
-    const fuchsia::sys::EnvironmentPtr& parent_env) {
+    const fuchsia::sys::EnvironmentPtr& parent_env,
+    async_dispatcher_t* dispatcher) {
   return std::unique_ptr<EnvironmentServices>(
-      new EnvironmentServices(parent_env, nullptr));
+      new EnvironmentServices(parent_env, nullptr, dispatcher));
 }
 
 // static
 std::unique_ptr<EnvironmentServices>
 EnvironmentServices::CreateWithCustomLoader(
     const fuchsia::sys::EnvironmentPtr& parent_env,
-    const fbl::RefPtr<fs::Service>& loader_service) {
+    const fbl::RefPtr<fs::Service>& loader_service,
+    async_dispatcher_t* dispatcher) {
   return std::unique_ptr<EnvironmentServices>(
-      new EnvironmentServices(parent_env, loader_service));
+      new EnvironmentServices(parent_env, loader_service, dispatcher));
 }
 
 zx_status_t EnvironmentServices::AddService(
@@ -108,9 +111,9 @@ EnclosingEnvironment::EnclosingEnvironment(
       OpenAsDirectory(services_->vfs_.get(), services_->svc_);
   fuchsia::sys::EnvironmentPtr env;
 
-  parent_env->CreateNestedEnvironment(
-      env.NewRequest(), env_controller_.NewRequest(), label_,
-      std::move(service_list), options);
+  parent_env->CreateNestedEnvironment(env.NewRequest(),
+                                      env_controller_.NewRequest(), label_,
+                                      std::move(service_list), options);
   env_controller_.set_error_handler([this] { running_ = false; });
   // Connect to launcher
   env->GetLauncher(launcher_.NewRequest());
@@ -126,8 +129,8 @@ std::unique_ptr<EnclosingEnvironment> EnclosingEnvironment::Create(
     const std::string& label, const fuchsia::sys::EnvironmentPtr& parent_env,
     std::unique_ptr<EnvironmentServices> services,
     const fuchsia::sys::EnvironmentOptions& options) {
-  auto* env = new EnclosingEnvironment(label, parent_env, std::move(services),
-                                       options);
+  auto* env =
+      new EnclosingEnvironment(label, parent_env, std::move(services), options);
   return std::unique_ptr<EnclosingEnvironment>(env);
 }
 

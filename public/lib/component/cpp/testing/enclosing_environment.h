@@ -41,11 +41,13 @@ class EnvironmentServices {
 
   // Creates services with parent's loader service.
   static std::unique_ptr<EnvironmentServices> Create(
-      const fuchsia::sys::EnvironmentPtr& parent_env);
+      const fuchsia::sys::EnvironmentPtr& parent_env,
+      async_dispatcher_t* dispatcher = nullptr);
   // Creates services with custom loader service.
   static std::unique_ptr<EnvironmentServices> CreateWithCustomLoader(
       const fuchsia::sys::EnvironmentPtr& parent_env,
-      const fbl::RefPtr<fs::Service>& loader_service);
+      const fbl::RefPtr<fs::Service>& loader_service,
+      async_dispatcher_t* dispatcher = nullptr);
 
   // Adds the specified interface to the set of services.
   //
@@ -92,7 +94,8 @@ class EnvironmentServices {
  private:
   friend class EnclosingEnvironment;
   EnvironmentServices(const fuchsia::sys::EnvironmentPtr& parent_env,
-                      const fbl::RefPtr<fs::Service>& loader_service);
+                      const fbl::RefPtr<fs::Service>& loader_service,
+                      async_dispatcher_t* dispatcher = nullptr);
 
   void set_enclosing_env(EnclosingEnvironment* e) { enclosing_env_ = e; }
 
