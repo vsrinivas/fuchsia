@@ -119,14 +119,9 @@ public:
                                          ThreadState::Exception* out_estatus);
 
     // Called when an exception handler is finished processing the exception.
-    // TODO(brettw) ZX-1072 Remove this when all callers are updated to use
-    // the exception port variant below.
-    zx_status_t MarkExceptionHandled();
-    zx_status_t MarkExceptionNotHandled();
-
-    // Called when an exception handler is finished processing the exception.
-    // The exception is only continued if the eport corresponds to the current
-    // exception port.
+    // If |eport| is non-nullptr, then the exception is only continued if
+    // |eport| corresponds to the current exception port.
+    // TODO(ZX-2720): Remove nullptr support when |zx_task_resume()| is deleted.
     zx_status_t MarkExceptionHandled(PortDispatcher* eport);
     zx_status_t MarkExceptionNotHandled(PortDispatcher* eport);
 
@@ -191,6 +186,10 @@ private:
     void Suspending();
     // callback from kernel when thread is resuming
     void Resuming();
+
+    // Helper routine to minimize code duplication.
+    zx_status_t MarkExceptionHandledWorker(PortDispatcher* eport,
+                                           ThreadState::Exception handled_state);
 
     // Dispatch routine for state changes that LK tells us about
     static void ThreadUserCallback(enum thread_user_state_change new_state, void* arg);

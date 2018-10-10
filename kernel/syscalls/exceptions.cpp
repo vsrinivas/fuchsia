@@ -153,7 +153,8 @@ zx_status_t sys_task_bind_exception_port(zx_handle_t obj_handle, zx_handle_t epo
 }
 
 // zx_status_t zx_task_resume
-// TODO(ZX-2720,ZX-1072): This function is deprecated.
+// TODO(ZX-2720): This function is deprecated.
+// Remove it when all uses have been eliminated.
 zx_status_t sys_task_resume(zx_handle_t handle, uint32_t options) {
     LTRACE_ENTRY;
 
@@ -179,9 +180,9 @@ zx_status_t sys_task_resume(zx_handle_t handle, uint32_t options) {
 
     if (options & ZX_RESUME_EXCEPTION) {
         if (options & ZX_RESUME_TRY_NEXT) {
-            return thread->MarkExceptionNotHandled();
+            return thread->MarkExceptionNotHandled(nullptr);
         } else {
-            return thread->MarkExceptionHandled();
+            return thread->MarkExceptionHandled(nullptr);
         }
     } else {
         if (options != 0) {
