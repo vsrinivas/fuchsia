@@ -150,6 +150,21 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
         // GDB does something similar but also checks that the instruction is
         // the right type of jump. This involves two memory lookups which make
         // it difficult for us to implement since they require async calls.
+        // We might be able to just check that the address is inside the
+        // prodecure linkage table (see below).
+        //
+        // ELF imports
+        // -----------
+        // ELF imports go through the "procedure linkage table" (see the ELF
+        // spec) which allows lazy resolution. These trampolines have a default
+        // jump address is to the next instruction which then pushes the item
+        // index on the stack and does a dance to jump to the dynamic linker to
+        // resolve this import. Once resolved, the first jump takes the code
+        // directly to the destination.
+        //
+        // Our loader seems to resolve these up-front. In the future we might
+        // need to add logic to step over the dynamic loader when its resolving
+        // the import.
         Log("In function with no symbols, single-stepping.");
         current_range_ = AddressRange();  // No range = step by instruction.
         return kContinue;
