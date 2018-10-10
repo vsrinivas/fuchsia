@@ -201,4 +201,17 @@ zx_status_t copy_vmo(zx_handle_t src, zx_off_t offset, size_t length, zx_handle_
     return ZX_OK;
 }
 
+bool getenv_bool(const char* key, bool default_value) {
+    const char* value = getenv(key);
+    if (value == nullptr) {
+        return default_value;
+    }
+    if ((strcmp(value, "0") == 0) ||
+        (strcmp(value, "false") == 0) ||
+        (strcmp(value, "off") == 0)) {
+        return false;
+    }
+    return true;
+}
+
 } // namespace

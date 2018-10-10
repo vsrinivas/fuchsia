@@ -45,19 +45,6 @@ static zx_handle_t appmgr_req_cli;
 // If appmgr cannot be launched within a timeout, this handle is closed.
 static zx_handle_t appmgr_req_srv;
 
-bool getenv_bool(const char* key, bool _default) {
-    const char* value = getenv(key);
-    if (value == nullptr) {
-        return _default;
-    }
-    if ((strcmp(value, "0") == 0) ||
-        (strcmp(value, "false") == 0) ||
-        (strcmp(value, "off") == 0)) {
-        return false;
-    }
-    return true;
-}
-
 static zx_handle_t root_resource_handle;
 static zx_handle_t root_job_handle;
 static zx_handle_t svcs_job_handle;
@@ -100,7 +87,14 @@ static int fuchsia_starter(void* arg) {
     bool autorun_started = false;
     bool drivers_loaded = false;
 
-    zx_time_t deadline = zx_deadline_after(ZX_SEC(10));
+    size_t appmgr_timeout = 10;
+    if (getenv_bool("zircon.system.filesystem-check", false)) {
+        // This command line option can slow the booting process, so increase
+        // the timeout here to compensate.
+        appmgr_timeout *= 2;
+    }
+
+    zx_time_t deadline = zx_deadline_after(ZX_SEC(appmgr_timeout));
 
     do {
         zx_status_t status = zx_object_wait_one(fshost_event, FSHOST_SIGNAL_READY, deadline, nullptr);

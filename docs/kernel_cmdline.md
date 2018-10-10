@@ -382,6 +382,13 @@ It may be set to:
 
 A "/system" ramdisk provided by bootdata always supersedes this option.
 
+## zircon.system.filesystem-check=\<bool>
+
+This option requests that filesystems automatically mounted by the system
+are pre-verified using a filesystem consistency checker before being mounted.
+
+By default, this option is set to false.
+
 ## netsvc.netboot=\<bool>
 
 If true, zircon will attempt to netboot into another instance of zircon upon

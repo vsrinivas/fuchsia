@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -292,6 +293,60 @@ static bool data_mounted = false;
 static bool install_mounted = false;
 static bool blob_mounted = false;
 
+static zx_status_t fshost_fsck(const char* device_path, disk_format_t df) {
+    if (!getenv_bool("zircon.system.filesystem-check", false)) {
+        return ZX_OK;
+    }
+
+    printf("fshost: fsck of %s started\n", disk_format_string_[df]);
+    const fsck_options_t* options = &default_fsck_options;
+
+    auto launch_fsck = [](int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
+                          size_t len) {
+        zx::process proc;
+        zx_status_t status = devmgr_launch(job, "fsck", &fshost_launch_load, nullptr, argc, argv,
+                                           nullptr, -1, hnd, ids, len, proc.reset_and_get_address(),
+                                           FS_FOR_FSPROC);
+        if (status != ZX_OK) {
+            fprintf(stderr, "fshost: Couldn't launch fsck\n");
+            return status;
+        }
+        status = proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
+        if (status != ZX_OK) {
+            fprintf(stderr, "fshost: Error waiting for fsck to terminate\n");
+            return status;
+        }
+
+        zx_info_process_t info;
+        status = proc.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
+        if (status != ZX_OK) {
+            fprintf(stderr, "fshost: Failed to get process info\n");
+            return status;
+        }
+
+        if (info.return_code != 0) {
+            fprintf(stderr, "fshost: Fsck return code: %" PRId64 "\n", info.return_code);
+            return ZX_ERR_BAD_STATE;
+        }
+        return ZX_OK;
+    };
+
+    zx_status_t status = fsck(device_path, df, options, launch_fsck);
+    if (status != ZX_OK) {
+        fprintf(stderr, "---------------------------------------------------------\n");
+        fprintf(stderr, "|                                                        \n");
+        fprintf(stderr, "|   WARNING: fshost fsck failure!                        \n");
+        fprintf(stderr, "|   Corrupt device: %s \n", device_path);
+        fprintf(stderr, "|   Please report this device to the local storage team, \n");
+        fprintf(stderr, "|   Preferably BEFORE reformatting your device.          \n");
+        fprintf(stderr, "|                                                        \n");
+        fprintf(stderr, "---------------------------------------------------------\n");
+    } else {
+        printf("fshost: fsck of %s completed OK\n", disk_format_string_[df]);
+    }
+    return status;
+}
+
 /*
  * Attempt to mount the device pointed to be the file descriptor at a known
  * location.
@@ -467,6 +522,11 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
             close(fd);
             return ZX_OK;
         }
+        if (fshost_fsck(device_path, DISK_FORMAT_BLOBFS) != ZX_OK) {
+            close(fd);
+            return ZX_OK;
+        }
+
         if (!blob_mounted) {
             mount_options_t options = default_mount_options;
             zx_status_t status = mount(fd, "/fs" PATH_BLOB, DISK_FORMAT_BLOBFS,
@@ -484,6 +544,10 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
     }
     case DISK_FORMAT_MINFS: {
         printf("devmgr: mounting minfs\n");
+        if (fshost_fsck(device_path, DISK_FORMAT_MINFS) != ZX_OK) {
+            close(fd);
+            return ZX_OK;
+        }
         mount_options_t options = default_mount_options;
         options.wait_until_ready = false;
         mount_minfs(fd, &options);
