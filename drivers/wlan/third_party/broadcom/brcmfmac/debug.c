@@ -73,6 +73,10 @@ void __brcmf_err(const char* func, const char* fmt, ...) {}
 #endif  // CONFIG_BRCMFMAC_DBG
 
 void brcmf_hexdump(const void* buf, size_t len) {
+    if (!(brcmf_msg_filter & BRCMF_INFO_VAL)) {
+        return;
+    }
+
     if (len > 4096) {
         brcmf_dbg(INFO, "Truncating hexdump to 4096 bytes");
         len = 4096;
