@@ -8,15 +8,24 @@
 
 #include <string>
 
+namespace crashpad {
+
+class ProcessSnapshotMinidump;
+
+}  // namespace crashpad
+
 namespace zxdb {
 
 class Session;
 
-// An implementation of  for Session. This class is logically part of
-// the Session class (it's a friend) but is separated out for clarity.
+// An implementation of RemoteAPI for Session that accesses a minidump file.
 class MinidumpRemoteAPI : public RemoteAPI {
  public:
-  explicit MinidumpRemoteAPI(const std::string& path);
+  MinidumpRemoteAPI();
+  ~MinidumpRemoteAPI();
+
+  Err Open(const std::string& path);
+  Err Close();
 
   // RemoteAPI implementation.
   void Hello(
@@ -71,6 +80,7 @@ class MinidumpRemoteAPI : public RemoteAPI {
       override;
 
  private:
+  std::unique_ptr<crashpad::ProcessSnapshotMinidump> minidump_;
   FXL_DISALLOW_COPY_AND_ASSIGN(MinidumpRemoteAPI);
 };
 

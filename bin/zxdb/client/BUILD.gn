@@ -113,6 +113,11 @@ static_library("client") {
   deps = [
     "//garnet/third_party/llvm:LLVMMC",
     "//garnet/third_party/llvm:LLVMObject",
+    "//third_party/crashpad/client",
+    "//third_party/crashpad/compat",
+    "//third_party/crashpad/util",
+    "//third_party/crashpad/third_party/mini_chromium:base",
+    "//third_party/crashpad/snapshot",
   ]
 }
 
@@ -138,6 +143,16 @@ source_set("test_support") {
   ]
 }
 
+copy("copy_test_data") {
+  sources = [
+    "test_example_minidump.dmp",
+  ]
+
+  outputs = [
+    "$root_build_dir/test_data/zxdb/test_example_minidump.dmp",
+  ]
+}
+
 source_set("tests") {
   testonly = true
   sources = [
@@ -145,6 +160,7 @@ source_set("tests") {
     "disassembler_unittest.cc",
     "finish_thread_controller_unittest.cc",
     "memory_dump_unittest.cc",
+    "minidump_unittest.cc",
     "process_impl_unittest.cc",
     "register_unittest.cc",
     "session_unittest.cc",
@@ -160,6 +176,7 @@ source_set("tests") {
 
   deps = [
     ":client",
+    ":copy_test_data",
     ":test_support",
     "//garnet/bin/zxdb/symbols:test_support",
     "//garnet/bin/zxdb/symbols:tests",

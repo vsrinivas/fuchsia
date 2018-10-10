@@ -404,10 +404,11 @@ void Session::OpenMinidump(const std::string& path,
   }
 
   is_minidump_ = true;
-  remote_api_ = std::make_unique<MinidumpRemoteAPI>(path);
+  remote_api_ = std::make_unique<MinidumpRemoteAPI>();
+  Err err = reinterpret_cast<MinidumpRemoteAPI*>(remote_api_.get())->Open(path);
 
   debug_ipc::MessageLoop::Current()->PostTask(
-      [callback]() { callback(Err()); });
+      [callback, err]() { callback(err); });
 }
 
 void Session::Disconnect(std::function<void(const Err&)> callback) {

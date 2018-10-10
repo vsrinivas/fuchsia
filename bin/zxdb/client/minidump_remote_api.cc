@@ -6,6 +6,8 @@
 
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/lib/debug_ipc/client_protocol.h"
+#include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h"
 
 namespace zxdb {
 
@@ -29,7 +31,40 @@ void ErrNoImpl(std::function<void(const Err&, ReplyType)> cb) {
 
 }  // namespace
 
-MinidumpRemoteAPI::MinidumpRemoteAPI(const std::string& path) {}
+MinidumpRemoteAPI::MinidumpRemoteAPI() = default;
+MinidumpRemoteAPI::~MinidumpRemoteAPI() = default;
+
+Err MinidumpRemoteAPI::Open(const std::string& path) {
+  crashpad::FileReader reader;
+
+  if (minidump_) {
+    return Err("Dump already open");
+  }
+
+  if (!reader.Open(base::FilePath(path))) {
+    return Err(fxl::StringPrintf("Could not open %s", path.c_str()));
+  }
+
+  minidump_ = std::make_unique<crashpad::ProcessSnapshotMinidump>();
+  bool success = minidump_->Initialize(&reader);
+  reader.Close();
+
+  if (!success) {
+    minidump_.release();
+    return Err(fxl::StringPrintf("Minidump %s not valid", path.c_str()));
+  }
+
+  return Err();
+}
+
+Err MinidumpRemoteAPI::Close() {
+  if (!minidump_) {
+    return Err("No open dump to close");
+  }
+
+  minidump_.reset();
+  return Err();
+}
 
 void MinidumpRemoteAPI::Hello(
     const debug_ipc::HelloRequest& request,
