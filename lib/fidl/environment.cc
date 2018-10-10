@@ -11,17 +11,20 @@ namespace modular {
 
 Environment::Environment(const fuchsia::sys::EnvironmentPtr& parent_env,
                          const std::string& label,
-                         const std::vector<std::string>& service_names)
+                         const std::vector<std::string>& service_names,
+                         bool kill_on_oom)
     : vfs_(async_get_default_dispatcher()) {
-  InitEnvironment(parent_env, label, service_names);
+  InitEnvironment(parent_env, label, service_names, kill_on_oom);
 }
 
 Environment::Environment(const Environment* const parent_scope,
                          const std::string& label,
-                         const std::vector<std::string>& service_names)
+                         const std::vector<std::string>& service_names,
+                         bool kill_on_oom)
     : vfs_(async_get_default_dispatcher()) {
   FXL_DCHECK(parent_scope != nullptr);
-  InitEnvironment(parent_scope->environment(), label, service_names);
+  InitEnvironment(parent_scope->environment(), label, service_names,
+                  kill_on_oom);
 }
 
 fuchsia::sys::Launcher* Environment::GetLauncher() {
@@ -42,16 +45,17 @@ zx::channel Environment::OpenAsDirectory() {
 
 void Environment::InitEnvironment(
     const fuchsia::sys::EnvironmentPtr& parent_env, const std::string& label,
-    const std::vector<std::string>& service_names) {
+    const std::vector<std::string>& service_names, bool kill_on_oom) {
   services_dir_ = fbl::AdoptRef(new fs::PseudoDir);
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
-  for (const auto& name : service_names ) {
+  for (const auto& name : service_names) {
     service_list->names.push_back(name);
   }
   service_list->host_directory = OpenAsDirectory();
   parent_env->CreateNestedEnvironment(
       env_.NewRequest(), env_controller_.NewRequest(), label,
-      std::move(service_list), {.inherit_parent_services = true});
+      std::move(service_list),
+      {.inherit_parent_services = true, .kill_on_oom = kill_on_oom});
 }
 
 }  // namespace modular

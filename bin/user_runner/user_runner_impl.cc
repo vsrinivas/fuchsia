@@ -231,7 +231,8 @@ void UserRunnerImpl::InitializeUser(
   user_environment_ = std::make_unique<Environment>(
       startup_context_->environment(),
       std::string(kUserEnvironmentLabelPrefix) + GetAccountId(account_),
-      *kEnvServices);
+      *kEnvServices,
+      /* kill_on_oom = */ true);
   AtEnd(Reset(&user_environment_));
 }
 
@@ -345,7 +346,7 @@ void UserRunnerImpl::InitializeLedgerDashboard() {
       fuchsia::ledger::internal::LedgerRepositoryDebug::Name_};
   ledger_dashboard_environment_ = std::make_unique<Environment>(
       user_environment_->environment(), std::string(kLedgerDashboardEnvLabel),
-      *kEnvServices);
+      *kEnvServices, /* kill_on_oom = */ false);
   AtEnd(Reset(&ledger_dashboard_environment_));
 
   ledger_dashboard_environment_->AddService<

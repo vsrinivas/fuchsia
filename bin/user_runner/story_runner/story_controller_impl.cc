@@ -1718,7 +1718,8 @@ void StoryControllerImpl::InitStoryEnvironment() {
       new std::vector<std::string>{fuchsia::modular::ContextWriter::Name_};
   story_environment_ = std::make_unique<Environment>(
       story_provider_impl_->user_environment(),
-      kStoryEnvironmentLabelPrefix + story_id_.get(), *kEnvServices);
+      kStoryEnvironmentLabelPrefix + story_id_.get(), *kEnvServices,
+      /* kill_on_oom = */ false);
   story_environment_->AddService<fuchsia::modular::ContextWriter>(
       [this](fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) {
         intelligence_services_->GetContextWriter(std::move(request));
