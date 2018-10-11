@@ -22,6 +22,12 @@ class MinidumpTest : public testing::Test {
 
   Err TryOpen(const std::string& filename);
 
+  template <typename RequestType, typename ReplyType>
+  void DoRequest(
+      RequestType request, ReplyType& reply, Err& err,
+      void (RemoteAPI::*handler)(const RequestType&,
+                                 std::function<void(const Err&, ReplyType)>));
+
  private:
   debug_ipc::PlatformMessageLoop loop_;
   std::unique_ptr<Session> session_;
@@ -52,30 +58,43 @@ Err MinidumpTest::TryOpen(const std::string& filename) {
   return err;
 }
 
+template<typename RequestType, typename ReplyType>
+void MinidumpTest::DoRequest(RequestType request, ReplyType& reply, Err& err,
+                             void (RemoteAPI::*handler)(
+                               const RequestType&,
+                               std::function<void(const Err&, ReplyType)>)) {
+  (session().remote_api()->*handler)(request,
+    [&reply, &err](const Err& e, ReplyType r) {
+      err = e;
+      reply = r;
+      debug_ipc::MessageLoop::Current()->QuitNow();
+    });
+  loop().Run();
+}
+
+#define EXPECT_ZXDB_SUCCESS(e_) \
+  ({ Err e = e_; EXPECT_FALSE(e.has_error()) << e.msg(); })
+#define ASSERT_ZXDB_SUCCESS(e_) \
+  ({ Err e = e_; ASSERT_FALSE(e.has_error()) << e.msg(); })
+
 TEST_F(MinidumpTest, Load) {
-  Err err = TryOpen("test_example_minidump.dmp");
-  EXPECT_FALSE(err.has_error()) << err.msg();
+  EXPECT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 }
 
 TEST_F(MinidumpTest, ProcessTreeRecord) {
-  Err err = TryOpen("test_example_minidump.dmp");
-  ASSERT_FALSE(err.has_error()) << err.msg();
+  ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 
-  debug_ipc::ProcessTreeRecord record;
-  session().remote_api()->ProcessTree(debug_ipc::ProcessTreeRequest(),
-    [&record, &err](const Err& e, debug_ipc::ProcessTreeReply r) {
-      err = e;
-      record = r.root;
-      debug_ipc::MessageLoop::Current()->QuitNow();
-    }
-  );
+  Err err;
+  debug_ipc::ProcessTreeReply reply;
+  DoRequest(debug_ipc::ProcessTreeRequest(), reply, err,
+            &RemoteAPI::ProcessTree);
+  ASSERT_ZXDB_SUCCESS(err);
 
-  loop().Run();
-  ASSERT_FALSE(err.has_error()) << err.msg();
-
+  auto record = reply.root;
   EXPECT_EQ(debug_ipc::ProcessTreeRecord::Type::kProcess, record.type);
   EXPECT_EQ("<core dump>", record.name);
   EXPECT_EQ(656254UL, record.koid);
+  EXPECT_EQ(0UL, record.children.size());
 }
 
 }  // namespace zxdb
