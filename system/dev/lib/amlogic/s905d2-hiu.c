@@ -62,7 +62,7 @@ static zx_status_t s905d2_pll_init_regs(aml_pll_dev_t* pll_dev) {
         zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
         return ZX_OK;
     }
-    return ZX_OK;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t s905d2_pll_init(aml_hiu_dev_t* device, aml_pll_dev_t* pll_dev, hhi_plls_t pll_num) {
