@@ -106,7 +106,7 @@ zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
     }
 
     if (mapping.length() > compressor.Size() + kCompressionMinBytesSaved) {
-        out_info->length = compressor.Size();
+        out_info->compressed_length = compressor.Size();
         out_info->compressed = true;
     }
 
@@ -117,13 +117,12 @@ zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
 // blob in Blobfs.
 zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, const FileMapping& mapping,
                                                const MerkleInfo& info) {
+    ZX_ASSERT(mapping.length() == info.length);
     const void* data;
-    size_t data_blocks = fbl::round_up(info.length, kBlobfsBlockSize) / kBlobfsBlockSize;
 
     if (info.compressed) {
         data = info.compressed_data.get();
     } else {
-        ZX_ASSERT(mapping.length() == info.length);
         data = mapping.data();
     }
 
@@ -143,7 +142,7 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, const FileMapping& ma
 
     Inode* inode = inode_block->GetInode();
     inode->blob_size = mapping.length();
-    inode->num_blocks = MerkleTreeBlocks(*inode) + data_blocks;
+    inode->num_blocks = MerkleTreeBlocks(*inode) + info.GetDataBlocks();
     inode->flags |= (info.compressed ? kBlobFlagLZ4Compressed : 0);
 
     if ((status = bs->AllocateBlocks(inode->num_blocks,

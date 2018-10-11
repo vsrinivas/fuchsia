@@ -183,8 +183,9 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
     for (const auto& info : merkle_list_) {
         blobfs::Inode node;
         node.blob_size = info.length;
-        data_blocks_ += MerkleTreeBlocks(node) + BlobDataBlocks(node);
+        data_blocks_ += MerkleTreeBlocks(node) + info.GetDataBlocks();
     }
+
 
     blobfs::Superblock info;
     info.inode_count = blobfs::kBlobfsDefaultInodeCount;

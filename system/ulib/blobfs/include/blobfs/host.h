@@ -49,7 +49,13 @@ struct MerkleInfo {
 
     // Compressed blob data, if the blob is compressible.
     fbl::unique_ptr<uint8_t[]> compressed_data;
+    uint64_t compressed_length = 0;
     bool compressed = false;
+
+    uint64_t GetDataBlocks() const {
+        uint64_t blob_size = compressed ? compressed_length : length;
+        return fbl::round_up(blob_size, kBlobfsBlockSize) / kBlobfsBlockSize;
+    }
 };
 
 // A mapping of a file. Does not own the file.
