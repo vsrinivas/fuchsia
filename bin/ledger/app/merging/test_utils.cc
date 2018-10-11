@@ -92,8 +92,8 @@ TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
     std::unique_ptr<storage::PageStorage>* page_storage) {
   std::unique_ptr<storage::PageStorageImpl> local_page_storage =
       std::make_unique<storage::PageStorageImpl>(
-          &environment_, &encryption_service_,
-          ledger::DetachedPath(tmpfs_.root_fd()), kRootPageId.ToString());
+          &environment_, &encryption_service_, DetachedPath(tmpfs_.root_fd()),
+          kRootPageId.ToString());
   storage::Status status;
   bool called;
   local_page_storage->Init(

@@ -2136,7 +2136,7 @@ TEST_P(MergingIntegrationTest,
   ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(status, Status::OK);
 
-  fuchsia::ledger::InlinedValuePtr val1;
+  InlinedValuePtr val1;
   waiter = NewWaiter();
   snapshot3->GetInline(
       convert::ToArray("name"),
@@ -2152,7 +2152,7 @@ TEST_P(MergingIntegrationTest,
   ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(status, Status::OK);
 
-  fuchsia::ledger::InlinedValuePtr val2;
+  InlinedValuePtr val2;
   waiter = NewWaiter();
   snapshot4->GetInline(
       convert::ToArray("name"),
@@ -2291,7 +2291,7 @@ TEST_P(MergingIntegrationTest,
   ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(status, Status::OK);
 
-  fuchsia::ledger::InlinedValuePtr val1;
+  InlinedValuePtr val1;
   waiter = NewWaiter();
   snapshot3->GetInline(
       convert::ToArray("name"),
@@ -2307,7 +2307,7 @@ TEST_P(MergingIntegrationTest,
   ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(status, Status::OK);
 
-  fuchsia::ledger::InlinedValuePtr val2;
+  InlinedValuePtr val2;
   waiter = NewWaiter();
   snapshot4->GetInline(
       convert::ToArray("name"),

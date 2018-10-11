@@ -16,7 +16,7 @@
 
 namespace ledger {
 namespace {
-ledger::SyncParams* sync_params_ptr = nullptr;
+SyncParams* sync_params_ptr = nullptr;
 
 class FactoryBuilderE2eImpl : public LedgerAppInstanceFactoryBuilder {
  public:
@@ -25,6 +25,26 @@ class FactoryBuilderE2eImpl : public LedgerAppInstanceFactoryBuilder {
         std::make_unique<LoopControllerRealLoop>(), *sync_params_ptr);
   }
 };
+
+int Main(int argc, char** argv) {
+  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  SyncParams sync_params;
+
+  {
+    async::Loop loop(&kAsyncLoopConfigAttachToThread);
+    auto startup_context = component::StartupContext::CreateFromStartupInfo();
+
+    if (!ParseSyncParamsFromCommandLine(command_line, startup_context.get(),
+                                        &sync_params)) {
+      std::cerr << GetSyncParamsUsage();
+      return -1;
+    }
+    sync_params_ptr = &sync_params;
+  }
+
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}
 
 }  // namespace
 
@@ -38,22 +58,4 @@ GetLedgerAppInstanceFactoryBuilders() {
 
 }  // namespace ledger
 
-int main(int argc, char** argv) {
-  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  ledger::SyncParams sync_params;
-
-  {
-    async::Loop loop(&kAsyncLoopConfigAttachToThread);
-    auto startup_context = component::StartupContext::CreateFromStartupInfo();
-
-    if (!ledger::ParseSyncParamsFromCommandLine(
-            command_line, startup_context.get(), &sync_params)) {
-      std::cerr << ledger::GetSyncParamsUsage();
-      return -1;
-    }
-    ledger::sync_params_ptr = &sync_params;
-  }
-
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+int main(int argc, char** argv) { return ledger::Main(argc, argv); }

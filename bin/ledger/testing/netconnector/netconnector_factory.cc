@@ -24,8 +24,8 @@ class NetConnectorFactory::Holder {
   void OnEmpty();
 
   const std::string device_name_;
-  ledger::fidl_helpers::BoundInterface<fuchsia::netconnector::NetConnector,
-                                       FakeNetConnector>
+  fidl_helpers::BoundInterface<fuchsia::netconnector::NetConnector,
+                               FakeNetConnector>
       interface_;
   fit::closure on_empty_;
   fit::closure on_disconnect_;

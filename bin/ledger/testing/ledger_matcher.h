@@ -23,14 +23,14 @@ testing::Matcher<const fuchsia::mem::Buffer&> MatchesBuffer(
 
 // Matcher that matches a Ledger entry against a pair of matchers on the entry's
 // key and value. The entry's priority is not considered in this Matcher.
-testing::Matcher<const ledger::Entry&> MatchesEntry(
+testing::Matcher<const Entry&> MatchesEntry(
     std::pair<testing::Matcher<std::string>, testing::Matcher<std::string>>
         matcher);
 
 // Matcher that matches a list of ledger entries against a map from key to
 // matchers on the entries' values. The entries' priorities are not considered
 // in this Matcher.
-testing::Matcher<const std::vector<ledger::Entry>&> MatchEntries(
+testing::Matcher<const std::vector<Entry>&> MatchEntries(
     std::map<std::string, testing::Matcher<std::string>> matchers);
 
 }  // namespace ledger

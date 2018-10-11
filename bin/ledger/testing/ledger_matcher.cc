@@ -45,15 +45,14 @@ testing::Matcher<const fuchsia::mem::Buffer&> MatchesBuffer(
   return InternalBufferMatcher(std::move(matcher));
 }
 
-testing::Matcher<const ledger::Entry&> MatchesEntry(
+testing::Matcher<const Entry&> MatchesEntry(
     std::pair<testing::Matcher<std::string>, testing::Matcher<std::string>>
         matcher) {
-  return AllOf(
-      Field(&ledger::Entry::key, MatchesView(matcher.first)),
-      Field(&ledger::Entry::value, Pointee(MatchesBuffer(matcher.second))));
+  return AllOf(Field(&Entry::key, MatchesView(matcher.first)),
+               Field(&Entry::value, Pointee(MatchesBuffer(matcher.second))));
 }
 
-testing::Matcher<const std::vector<ledger::Entry>&> MatchEntries(
+testing::Matcher<const std::vector<Entry>&> MatchEntries(
     std::map<std::string, testing::Matcher<std::string>> matchers) {
   return Pointwise(PointWiseMatchesEntry(), matchers);
 }

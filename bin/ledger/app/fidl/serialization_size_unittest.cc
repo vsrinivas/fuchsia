@@ -125,7 +125,7 @@ TEST_F(SerializationSizeTest, GetInline) {
   snapshot_proxy->GetInline(std::move(key), std::move(client_callback));
   RunLoopUntilIdle();
 
-  fidl::InterfaceHandle<ledger::PageSnapshot> handle = snapshot_proxy.Unbind();
+  fidl::InterfaceHandle<PageSnapshot> handle = snapshot_proxy.Unbind();
   reader = handle.TakeChannel();
 
   // Run the callback directly.
@@ -167,7 +167,7 @@ TEST_F(SerializationSizeTest, Get) {
   snapshot_proxy->Get(std::move(key), std::move(client_callback));
   RunLoopUntilIdle();
 
-  fidl::InterfaceHandle<ledger::PageSnapshot> handle = snapshot_proxy.Unbind();
+  fidl::InterfaceHandle<PageSnapshot> handle = snapshot_proxy.Unbind();
   reader = handle.TakeChannel();
 
   // Run the callback directly.
@@ -203,7 +203,7 @@ TEST_F(SerializationSizeTest, GetEntriesInline) {
                                    std::move(client_callback));
   RunLoopUntilIdle();
 
-  fidl::InterfaceHandle<ledger::PageSnapshot> handle = snapshot_proxy.Unbind();
+  fidl::InterfaceHandle<PageSnapshot> handle = snapshot_proxy.Unbind();
   reader = handle.TakeChannel();
 
   fidl::VectorPtr<InlinedEntry> entries_to_send;
@@ -265,7 +265,7 @@ TEST_F(SerializationSizeTest, GetEntries) {
                              std::move(client_callback));
   RunLoopUntilIdle();
 
-  fidl::InterfaceHandle<ledger::PageSnapshot> handle = snapshot_proxy.Unbind();
+  fidl::InterfaceHandle<PageSnapshot> handle = snapshot_proxy.Unbind();
   reader = handle.TakeChannel();
 
   fidl::VectorPtr<Entry> entries_to_send;

@@ -39,8 +39,7 @@ TEST(LedgerMatcher, EntryMatcher) {
   ASSERT_TRUE(fsl::VmoFromString("hello", &size_vmo));
   fuchsia::mem::Buffer buffer = std::move(size_vmo).ToTransport();
 
-  ledger::Entry entry{convert::ToArray("key"),
-                      fidl::MakeOptional(std::move(buffer))};
+  Entry entry{convert::ToArray("key"), fidl::MakeOptional(std::move(buffer))};
 
   EXPECT_THAT(entry, MatchesEntry({"key", "hello"}));
   EXPECT_THAT(entry, MatchesEntry({Not("key2"), HasSubstr("ll")}));
@@ -51,16 +50,14 @@ TEST(LedgerMatcher, EntriesMatcher) {
   ASSERT_TRUE(fsl::VmoFromString("hello", &size_vmo));
   fuchsia::mem::Buffer buffer = std::move(size_vmo).ToTransport();
 
-  ledger::Entry entry1{convert::ToArray("key1"),
-                       fidl::MakeOptional(std::move(buffer))};
+  Entry entry1{convert::ToArray("key1"), fidl::MakeOptional(std::move(buffer))};
 
   ASSERT_TRUE(fsl::VmoFromString("hello2", &size_vmo));
   buffer = std::move(size_vmo).ToTransport();
 
-  ledger::Entry entry2{convert::ToArray("key2"),
-                       fidl::MakeOptional(std::move(buffer))};
+  Entry entry2{convert::ToArray("key2"), fidl::MakeOptional(std::move(buffer))};
 
-  std::vector<ledger::Entry> entries;
+  std::vector<Entry> entries;
   entries.push_back(std::move(entry1));
   entries.push_back(std::move(entry2));
 

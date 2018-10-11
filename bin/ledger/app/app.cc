@@ -28,8 +28,8 @@
 #include "peridot/bin/ledger/p2p_sync/impl/user_communicator_factory_impl.h"
 
 namespace ledger {
-
 namespace {
+
 constexpr fxl::StringView kNoStatisticsReportingFlag = "disable_reporting";
 constexpr fxl::StringView kFirebaseApiKeyFlag = "firebase_api_key";
 
@@ -127,28 +127,30 @@ class App : public ledger_internal::LedgerController {
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
-}  // namespace
-}  // namespace ledger
-
-int main(int argc, const char** argv) {
+int Main(int argc, const char** argv) {
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   fxl::SetLogSettingsFromCommandLine(command_line);
 
-  ledger::AppParams app_params;
+  AppParams app_params;
   app_params.disable_statistics =
-      command_line.HasOption(ledger::kNoStatisticsReportingFlag);
-  if (command_line.HasOption(ledger::kFirebaseApiKeyFlag)) {
-    if (!command_line.GetOptionValue(ledger::kFirebaseApiKeyFlag,
+      command_line.HasOption(kNoStatisticsReportingFlag);
+  if (command_line.HasOption(kFirebaseApiKeyFlag)) {
+    if (!command_line.GetOptionValue(kFirebaseApiKeyFlag,
                                      &app_params.firebase_api_key)) {
       FXL_LOG(ERROR) << "Unable to retrieve the firebase api key.";
       return 1;
     }
   }
 
-  ledger::App app(app_params);
+  App app(app_params);
   if (!app.Start()) {
     return 1;
   }
 
   return 0;
 }
+
+}  // namespace
+}  // namespace ledger
+
+int main(int argc, const char** argv) { return ledger::Main(argc, argv); }

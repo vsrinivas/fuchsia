@@ -121,7 +121,7 @@ void LedgerMergeManager::GetResolverStrategyForPage(
     // happens for pages where conflict resolution has not been setup.
     // Conflict resolution continues for pages that already have a policy.
   } else {
-    ledger::PageId converted_page_id;
+    PageId converted_page_id;
     convert::ToArray(page_id, &converted_page_id.id);
     current_conflict_resolver_factory_->GetPolicy(
         converted_page_id,
@@ -144,7 +144,7 @@ void LedgerMergeManager::GetResolverStrategyForPage(
               break;
             }
             case MergePolicy::CUSTOM: {
-              ledger::PageId converted_page_id;
+              PageId converted_page_id;
               convert::ToArray(page_id, &converted_page_id.id);
               ConflictResolverPtr conflict_resolver;
               current_conflict_resolver_factory_->NewConflictResolver(
