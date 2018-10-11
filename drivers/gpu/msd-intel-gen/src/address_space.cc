@@ -113,13 +113,15 @@ bool AddressSpace::AddMapping(std::shared_ptr<GpuMapping> gpu_mapping)
     return true;
 }
 
-void AddressSpace::ReleaseBuffer(magma::PlatformBuffer* buffer, uint32_t* released_count_out)
+void AddressSpace::ReleaseBuffer(magma::PlatformBuffer* buffer,
+                                 std::vector<std::shared_ptr<GpuMapping>>* released_mappings_out)
 {
-    *released_count_out = 0;
+    released_mappings_out->clear();
+
     auto range = mappings_by_buffer_.equal_range(buffer);
     for (auto iter = range.first; iter != range.second;) {
+        released_mappings_out->emplace_back(std::move(iter->second->second));
         mappings_.erase(iter->second);
         iter = mappings_by_buffer_.erase(iter);
-        *released_count_out += 1;
     }
 }

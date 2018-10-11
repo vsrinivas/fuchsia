@@ -234,8 +234,16 @@ magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer
 {
     auto context = MsdIntelAbiContext::cast(ctx)->ptr();
 
-    magma::Status status = context->SubmitCommandBuffer(CommandBuffer::Create(
-        cmd_buf, exec_resources, context, wait_semaphores, signal_semaphores));
+    auto command_buffer =
+        CommandBuffer::Create(cmd_buf, exec_resources, context, wait_semaphores, signal_semaphores);
+
+    TRACE_DURATION_BEGIN("magma", "PrepareForExecution", "id", command_buffer->GetBatchBufferId());
+    if (!command_buffer->PrepareForExecution())
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
+                        "Failed to prepare command buffer for execution");
+    TRACE_DURATION_END("magma", "PrepareForExecution");
+
+    magma::Status status = context->SubmitCommandBuffer(std::move(command_buffer));
     return status.get();
 }
 

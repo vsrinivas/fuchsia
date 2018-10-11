@@ -57,25 +57,6 @@ private:
     std::shared_ptr<ClientContext> client_context_;
 };
 
-class MsdIntelDevice::ReleaseBufferRequest : public DeviceRequest {
-public:
-    ReleaseBufferRequest(std::shared_ptr<AddressSpace> address_space,
-                         std::shared_ptr<MsdIntelBuffer> buffer)
-        : address_space_(std::move(address_space)), buffer_(std::move(buffer))
-    {
-    }
-
-protected:
-    magma::Status Process(MsdIntelDevice* device) override
-    {
-        return device->ProcessReleaseBuffer(std::move(address_space_), std::move(buffer_));
-    }
-
-private:
-    std::shared_ptr<AddressSpace> address_space_;
-    std::shared_ptr<MsdIntelBuffer> buffer_;
-};
-
 class MsdIntelDevice::InterruptRequest : public DeviceRequest {
 public:
     InterruptRequest(uint64_t interrupt_time_ns, uint32_t master_interrupt_control,
@@ -356,16 +337,6 @@ void MsdIntelDevice::DestroyContext(std::shared_ptr<ClientContext> client_contex
     EnqueueDeviceRequest(std::make_unique<DestroyContextRequest>(std::move(client_context)));
 }
 
-void MsdIntelDevice::ReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
-                                   std::shared_ptr<MsdIntelBuffer> buffer)
-{
-    DLOG("ReleaseBuffer");
-    CHECK_THREAD_NOT_CURRENT(device_thread_id_);
-
-    EnqueueDeviceRequest(
-        std::make_unique<ReleaseBufferRequest>(std::move(address_space), std::move(buffer)));
-}
-
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 void MsdIntelDevice::EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request,
@@ -556,12 +527,6 @@ magma::Status MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer
             return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to initialize context");
     }
 
-    TRACE_DURATION_BEGIN("magma", "PrepareForExecution", "id", command_buffer->GetBatchBufferId());
-    if (!command_buffer->PrepareForExecution())
-        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
-                        "Failed to prepare command buffer for execution");
-    TRACE_DURATION_END("magma", "PrepareForExecution");
-
     TRACE_DURATION_BEGIN("magma", "SubmitCommandBuffer");
     render_engine_cs_->SubmitCommandBuffer(std::move(command_buffer));
     TRACE_DURATION_END("magma", "SubmitCommandBuffer");
@@ -578,20 +543,6 @@ magma::Status MsdIntelDevice::ProcessDestroyContext(std::shared_ptr<ClientContex
 
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
     // Just let it go out of scope
-
-    return MAGMA_STATUS_OK;
-}
-
-magma::Status MsdIntelDevice::ProcessReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
-                                                   std::shared_ptr<MsdIntelBuffer> buffer)
-{
-    DLOG("ProcessReleaseBuffer");
-    TRACE_DURATION("magma", "ProcessReleaseBuffer");
-
-    CHECK_THREAD_IS_CURRENT(device_thread_id_);
-
-    uint32_t released_count;
-    address_space->ReleaseBuffer(buffer->platform_buffer(), &released_count);
 
     return MAGMA_STATUS_OK;
 }

@@ -128,8 +128,6 @@ private:
     // MsdIntelConnection::Owner
     magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
     void DestroyContext(std::shared_ptr<ClientContext> client_context) override;
-    void ReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
-                       std::shared_ptr<MsdIntelBuffer> buffer) override;
     magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
 
     void StartDeviceThread();

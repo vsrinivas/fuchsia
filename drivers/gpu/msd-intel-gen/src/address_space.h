@@ -73,7 +73,8 @@ public:
                         std::shared_ptr<MsdIntelBuffer> buffer, uint64_t offset, uint64_t length);
 
     bool AddMapping(std::shared_ptr<GpuMapping> gpu_mapping);
-    void ReleaseBuffer(magma::PlatformBuffer* buffer, uint32_t* released_count_out);
+    void ReleaseBuffer(magma::PlatformBuffer* buffer,
+                       std::vector<std::shared_ptr<GpuMapping>>* released_mappings_out);
 
     static uint64_t GetMappedSize(uint64_t buffer_size)
     {

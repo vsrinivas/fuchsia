@@ -89,9 +89,11 @@ public:
         // Mapping retained in the address space
         EXPECT_EQ(2u, buffer.use_count());
 
-        uint32_t release_count;
-        address_space->ReleaseBuffer(buffer->platform_buffer(), &release_count);
-        EXPECT_EQ(1u, release_count);
+        std::vector<std::shared_ptr<GpuMapping>> mappings;
+        address_space->ReleaseBuffer(buffer->platform_buffer(), &mappings);
+        EXPECT_EQ(1u, mappings.size());
+        EXPECT_EQ(2u, buffer.use_count());
+        mappings.clear();
         EXPECT_EQ(1u, buffer.use_count());
     }
 

@@ -49,9 +49,23 @@ magma_status_t msd_connection_commit_buffer(msd_connection_t* connection, msd_bu
 
 void msd_connection_release_buffer(msd_connection_t* connection, msd_buffer_t* buffer)
 {
+    std::vector<std::shared_ptr<GpuMapping>> released_mappings;
     MsdIntelAbiConnection::cast(connection)
         ->ptr()
-        ->ReleaseBuffer(MsdIntelAbiBuffer::cast(buffer)->ptr());
+        ->per_process_gtt()
+        ->ReleaseBuffer(MsdIntelAbiBuffer::cast(buffer)->ptr()->platform_buffer(),
+                        &released_mappings);
+
+    // It's an error to release a buffer while it has inflight mappings, as that
+    // can fault the gpu.
+    for (const auto& mapping : released_mappings) {
+        uint32_t use_count = mapping.use_count();
+        if (use_count != 1) {
+            DLOG("mapping use_count %d", use_count);
+            MsdIntelAbiConnection::cast(connection)->ptr()->SendContextKilled();
+            return;
+        }
+    }
 }
 
 std::unique_ptr<MsdIntelConnection> MsdIntelConnection::Create(Owner* owner,

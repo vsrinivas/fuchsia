@@ -54,13 +54,14 @@ public:
 
         for (auto& map : mappings) {
             gpu_addr_t addr = map->gpu_addr();
-            MsdIntelBuffer* buffer = map->buffer();
 
-            uint32_t released_count;
-            addr_space->ReleaseBuffer(buffer->platform_buffer(), &released_count);
-            EXPECT_EQ(1u, released_count);
+            std::vector<std::shared_ptr<GpuMapping>> mappings;
+            addr_space->ReleaseBuffer(map->buffer()->platform_buffer(), &mappings);
+            EXPECT_EQ(1u, mappings.size());
+            EXPECT_EQ(2u, map.use_count());
+            mappings.clear();
+            EXPECT_EQ(1u, map.use_count());
             EXPECT_TRUE(addr_space->is_allocated(addr));
-
             map.reset();
             EXPECT_FALSE(addr_space->is_allocated(addr));
         }

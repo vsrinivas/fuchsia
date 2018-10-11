@@ -22,8 +22,6 @@ public:
 
         virtual magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
         virtual void DestroyContext(std::shared_ptr<ClientContext> client_context) = 0;
-        virtual void ReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
-                                   std::shared_ptr<MsdIntelBuffer> buffer) = 0;
     };
 
     static std::unique_ptr<MsdIntelConnection> Create(Owner* owner, msd_client_id_t client_id);
@@ -37,11 +35,6 @@ public:
     magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
     {
         return owner_->SubmitCommandBuffer(std::move(cmd_buf));
-    }
-
-    void ReleaseBuffer(std::shared_ptr<MsdIntelBuffer> buffer)
-    {
-        owner_->ReleaseBuffer(ppgtt_, std::move(buffer));
     }
 
     void DestroyContext(std::shared_ptr<ClientContext> client_context)
@@ -62,10 +55,10 @@ public:
 
     void SendContextKilled() { notifications_.SendContextKilled(); }
 
-private:
     // PerProcessGtt::Owner
     magma::PlatformBusMapper* GetBusMapper() override { return owner_->GetBusMapper(); }
 
+private:
     MsdIntelConnection(Owner* owner, std::shared_ptr<PerProcessGtt> ppgtt,
                        msd_client_id_t client_id)
         : owner_(owner), ppgtt_(std::move(ppgtt)), client_id_(client_id)
