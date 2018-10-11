@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Zircon rights.
 
-use bitflags::{__bitflags, __impl_bitflags, bitflags};
+use bitflags::bitflags;
 use fuchsia_zircon_sys as sys;
 
 bitflags! {

@@ -48,7 +48,7 @@ pub fn watch_iface_devices()
 
 fn handle_open_error<T>(path: &PathBuf, r: Result<T, failure::Error>) -> Option<T> {
     if let Err(ref e) = &r {
-        if let Some(&zx_Status::ALREADY_BOUND) = e.cause().downcast_ref::<zx_Status>() {
+        if let Some(&zx_Status::ALREADY_BOUND) = e.as_fail().downcast_ref::<zx_Status>() {
             info!("iface {:?} already open, deferring", path.display())
         } else {
             error!("Error opening device '{}': {}", path.display(), e);

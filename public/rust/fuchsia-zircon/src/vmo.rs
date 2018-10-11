@@ -6,7 +6,7 @@
 
 use crate::{AsHandleRef, Cookied, HandleBased, Handle, HandleRef, Status};
 use crate::ok;
-use bitflags::{__bitflags, __impl_bitflags, bitflags};
+use bitflags::bitflags;
 use fuchsia_zircon_sys as sys;
 use std::ptr;
 

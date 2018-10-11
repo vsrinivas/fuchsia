@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Zircon signals.
 
-use bitflags::{__bitflags, __impl_bitflags, bitflags};
+use bitflags::bitflags;
 use fuchsia_zircon_sys::*;
 
 bitflags! {

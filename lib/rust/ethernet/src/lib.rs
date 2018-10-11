@@ -8,7 +8,7 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
-use bitflags::{bitflags, __bitflags, __impl_bitflags};
+use bitflags::bitflags;
 use fuchsia_async as fasync;
 use futures::{Poll, FutureExt, Stream, task::LocalWaker, ready, try_ready};
 use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};

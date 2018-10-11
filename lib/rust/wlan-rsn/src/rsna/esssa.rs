@@ -345,7 +345,7 @@ impl EssSa {
             frame, &self.role, &self.negotiated_rsne, self.key_replay_counter);
         // TODO(hahnr): The status should not be pushed as an update but isntead as a Result.
         let verified_frame = match result {
-            Err(e) => match e.cause().downcast_ref::<Error>() {
+            Err(e) => match e.as_fail().downcast_ref::<Error>() {
                 Some(Error::WrongAesKeywrapKey) => {
                     update_sink.push(SecAssocUpdate::Status(SecAssocStatus::WrongPassword));
                     return Ok(());
