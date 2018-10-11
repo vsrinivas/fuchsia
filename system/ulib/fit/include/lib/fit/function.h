@@ -6,6 +6,7 @@
 #define LIB_FIT_FUNCTION_H_
 
 #include <memory>
+#include <type_traits>
 
 #include "function_internal.h"
 #include "nullable.h"
@@ -109,9 +110,10 @@ public:
     // appropriate operator () to resolve overloads and implicit casts properly.
     template <typename Callable,
               typename = std::enable_if_t<
-                  std::is_same<result_type,
-                               decltype(std::declval<Callable&>()(
-                                   std::declval<Args>()...))>::value>>
+                  std::is_convertible<
+                      decltype(std::declval<Callable&>()(
+                          std::declval<Args>()...)),
+                      result_type>::value>>
     function_impl(Callable target) {
         initialize_target(std::move(target));
     }
@@ -149,9 +151,10 @@ public:
     // If target == nullptr, assigns an empty target.
     template <typename Callable,
               typename = std::enable_if_t<
-                  std::is_same<result_type,
-                               decltype(std::declval<Callable&>()(
-                                   std::declval<Args>()...))>::value>>
+                  std::is_convertible<
+                      decltype(std::declval<Callable&>()(
+                          std::declval<Args>()...)),
+                      result_type>::value>>
     function_impl& operator=(Callable target) {
         destroy_target();
         initialize_target(std::move(target));

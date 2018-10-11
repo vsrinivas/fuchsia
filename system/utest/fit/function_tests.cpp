@@ -15,6 +15,16 @@ using ClosureWrongReturnType = int();
 using BinaryOp = int(int a, int b);
 using BinaryOpWrongReturnType = void(int a, int b);
 using MoveOp = std::unique_ptr<int>(std::unique_ptr<int> value);
+using BooleanGenerator = bool();
+using IntGenerator = int();
+
+class BuildableFromInt {
+ public:
+  BuildableFromInt(int);
+  BuildableFromInt& operator=(int);
+};
+
+using BuildableFromIntGenerator = BuildableFromInt();
 
 // A big object which causes a function target to be heap allocated.
 struct Big {
@@ -724,6 +734,10 @@ static_assert(std::is_convertible<Closure, fit::function<Closure>>::value, "");
 static_assert(std::is_convertible<BinaryOp, fit::function<BinaryOp>>::value, "");
 static_assert(std::is_assignable<fit::function<Closure>, Closure>::value, "");
 static_assert(std::is_assignable<fit::function<BinaryOp>, BinaryOp>::value, "");
+
+static_assert(std::is_assignable<fit::function<BooleanGenerator>, IntGenerator>::value, "");
+static_assert(std::is_assignable<fit::function<BuildableFromIntGenerator>, IntGenerator>::value, "");
+static_assert(!std::is_assignable<fit::function<IntGenerator>, BuildableFromIntGenerator>::value, "");
 
 static_assert(!std::is_convertible<BinaryOp, fit::function<Closure>>::value, "");
 static_assert(!std::is_convertible<Closure, fit::function<BinaryOp>>::value, "");
