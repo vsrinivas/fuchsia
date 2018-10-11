@@ -44,6 +44,13 @@ class StoryStorage : public PageClient {
     OK = 0,
     LEDGER_ERROR = 1,
     VMO_COPY_ERROR = 2,
+    // Indicates the storage operation detected either an invalid or conflicting
+    // entity type (e.g. an empty type string or a write with a mismatched
+    // type).
+    INVALID_ENTITY_TYPE = 3,
+    // Indicates the storage operation detected an invalid entity cookie (e.g.
+    // an empty cookie).
+    INVALID_ENTITY_COOKIE = 4,
   };
 
   // =========================================================================
@@ -130,12 +137,55 @@ class StoryStorage : public PageClient {
       std::function<void(fidl::StringPtr* value)> mutate_fn,
       const void* context);
 
+  // Sets the type and data for the Entity stored under |cookie|.
+  //
+  // |type| If Entity data has already been written, this type is expected to
+  //        match the type which was previously written.
+  // |data| The data to write to the Entity.
+  FuturePtr<Status> SetEntityData(const std::string& cookie,
+                                  const std::string& type,
+                                  fuchsia::mem::Buffer data);
+
+  // Returns the type for the Entity stored under the provided |cookie|.
+  //
+  // If an error occurred the Status will indicate the error, and returned
+  // string will be empty.
+  FuturePtr<Status, std::string> GetEntityType(const std::string& cookie);
+
+  // Returns the data for the Entity stored under the provided |cookie|.
+  //
+  // |type| The expected type of the data.
+  //
+  // If an error occurred the Status will indicate the error, and returned
+  // fuchsia::mem::BufferPtr will be nullptr.
+  FuturePtr<Status, fuchsia::mem::BufferPtr> GetEntityData(
+      const std::string& cookie, const std::string& type);
+
+  // A callback which is used to notify watchers of updates to Entity data.
+  //
+  // |cookie| The cookie for the Entity which was updated.
+  // |value| The new Entity data.
+  using EntityUpdatedCallback = std::function<void(const std::string& cookie,
+                                                   fuchsia::mem::Buffer value)>;
+
+  // A fit::deferred_action which is used to remove Entity watchers.
+  using EntityWatcherAutoCancel = fit::deferred_action<std::function<void()>>;
+
+  // Registers a watcher for an Entity and returns an EntityWatcherAutoCancel.
+  // Updates will be sent as long as the EntityWatcherAutoCancel stays alive.
+  //
+  // |cookie| The Entity cookie.
+  // |callback| The callback which gets called when an update is received.
+  EntityWatcherAutoCancel WatchEntity(const std::string& cookie,
+                                      EntityUpdatedCallback callback);
+
   // Completes the returned future after all prior methods have completed.
   FuturePtr<> Sync();
 
  private:
   // |PageClient|
-  void OnPageChange(const std::string& key, const std::string& value) override;
+  void OnPageChange(const std::string& key,
+                    fuchsia::mem::BufferPtr value) override;
 
   // |PageClient|
   void OnPageDelete(const std::string& key) override;
@@ -149,6 +199,12 @@ class StoryStorage : public PageClient {
   // string, so a null value will be presented as the string "null".
   void NotifyLinkWatchers(const std::string& link_key, fidl::StringPtr value,
                           const void* context);
+
+  // Notifies any watchers in |entity_watchers_[cookie]|.
+  //
+  // |value| is a valid fuchsia::mem::Buffer.
+  void NotifyEntityWatchers(const std::string& cookie,
+                            fuchsia::mem::Buffer value);
 
   // Completes the returned Future when the ledger notifies us (through
   // OnPageChange()) of a write for |key| with |value|.
@@ -169,6 +225,10 @@ class StoryStorage : public PageClient {
   // A map of link ledger key -> watcher callback. Multiple clients can watch
   // the same Link.
   std::multimap<std::string, LinkUpdatedCallback> link_watchers_;
+
+  // A map of Entity ledger key -> watcher callback. Multiple clients can watche
+  // the same Entity.
+  std::multimap<std::string, EntityUpdatedCallback> entity_watchers_;
 
   // A map of ledger (key, value) to (vec of future). When we see a
   // notification in OnPageChange() for a matching (key, value), we complete

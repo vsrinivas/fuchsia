@@ -7,6 +7,7 @@
 #include <memory>
 
 #include <lib/async/cpp/future.h>
+#include <lib/fsl/vmo/strings.h>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/ledger_client/page_id.h"
@@ -24,7 +25,6 @@ class StoryStorageTest : public testing::TestWithLedger {
     return std::make_unique<StoryStorage>(ledger_client(), MakePageId(page_id));
   }
 };
-
 ModuleData Clone(const ModuleData& data) {
   ModuleData dup;
   data.Clone(&dup);
@@ -404,6 +404,325 @@ TEST_F(StoryStorageTest, WatchingOtherStorageInstance) {
   EXPECT_EQ(1, notified_count);
   EXPECT_EQ("10", notified_value);
   EXPECT_EQ(nullptr, notified_context);
+}
+
+// Creates an entity with a valid type and data and verifies they are returned
+// as expected.
+TEST_F(StoryStorageTest, CreateAndReadEntity) {
+  auto storage = CreateStorage("page");
+  std::string cookie = "cookie";
+  std::string expected_type = "com.fuchsia.test.type";
+
+  std::string data_string = "test_data";
+  fuchsia::mem::Buffer buffer;
+  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+
+  bool created_entity{};
+  storage->SetEntityData(cookie, expected_type, std::move(buffer))
+      ->Then([&](StoryStorage::Status status) {
+        EXPECT_EQ(status, StoryStorage::Status::OK);
+        created_entity = true;
+      });
+  RunLoopUntil([&] { return created_entity; });
+
+  bool read_entity_type{};
+  storage->GetEntityType(cookie)->Then(
+      [&](StoryStorage::Status status, std::string type) {
+        EXPECT_EQ(type, expected_type);
+        read_entity_type = true;
+      });
+  RunLoopUntil([&] { return read_entity_type; });
+
+  bool read_entity_data{};
+  storage->GetEntityData(cookie, expected_type)
+      ->Then([&](StoryStorage::Status status, fuchsia::mem::BufferPtr buffer) {
+        EXPECT_TRUE(buffer);
+        std::string read_data;
+        EXPECT_TRUE(fsl::StringFromVmo(*buffer, &read_data));
+        EXPECT_EQ(read_data, data_string);
+        read_entity_data = true;
+      });
+  RunLoopUntil([&] { return read_entity_data; });
+}
+
+// Creates an entity with a valid type and data and attempts to get the data of
+// a different type.
+TEST_F(StoryStorageTest, CreateAndReadEntityIncorrectType) {
+  auto storage = CreateStorage("page");
+  std::string cookie = "cookie";
+  std::string expected_type = "com.fuchsia.test.type";
+
+  std::string data_string = "test_data";
+  fuchsia::mem::Buffer buffer;
+  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+
+  bool created_entity{};
+  storage->SetEntityData(cookie, expected_type, std::move(buffer))
+      ->Then([&](StoryStorage::Status status) {
+        EXPECT_EQ(status, StoryStorage::Status::OK);
+        created_entity = true;
+      });
+  RunLoopUntil([&] { return created_entity; });
+
+  bool read_entity_data{};
+  storage->GetEntityData(cookie, expected_type + expected_type)
+      ->Then([&](StoryStorage::Status status, fuchsia::mem::BufferPtr buffer) {
+        EXPECT_EQ(status, StoryStorage::Status::INVALID_ENTITY_TYPE);
+        read_entity_data = true;
+      });
+  RunLoopUntil([&] { return read_entity_data; });
+}
+
+// Creates an entity with a valid type and data and attempts to get the data of
+// a different cookie.
+TEST_F(StoryStorageTest, CreateAndReadEntityIncorrectCookie) {
+  auto storage = CreateStorage("page");
+  std::string cookie = "cookie";
+  std::string expected_type = "com.fuchsia.test.type";
+
+  std::string data_string = "test_data";
+  fuchsia::mem::Buffer buffer;
+  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+
+  bool created_entity{};
+  storage->SetEntityData(cookie, expected_type, std::move(buffer))
+      ->Then([&](StoryStorage::Status status) {
+        EXPECT_EQ(status, StoryStorage::Status::OK);
+        created_entity = true;
+      });
+  RunLoopUntil([&] { return created_entity; });
+
+  bool read_entity_data{};
+  storage->GetEntityData(cookie + cookie, expected_type)
+      ->Then([&](StoryStorage::Status status, fuchsia::mem::BufferPtr buffer) {
+        EXPECT_EQ(status, StoryStorage::Status::INVALID_ENTITY_COOKIE);
+        read_entity_data = true;
+      });
+  RunLoopUntil([&] { return read_entity_data; });
+}
+
+// Attempts to create an entity with an empty type and verifies it fails.
+TEST_F(StoryStorageTest, CreateEntityWithEmptyType) {
+  auto storage = CreateStorage("page");
+  std::string cookie = "cookie";
+  std::string expected_type = "";
+
+  std::string data_string = "test_data";
+  fuchsia::mem::Buffer buffer;
+  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+
+  bool created_entity{};
+  storage->SetEntityData(cookie, expected_type, std::move(buffer))
+      ->Then([&](StoryStorage::Status status) {
+        EXPECT_EQ(status, StoryStorage::Status::INVALID_ENTITY_TYPE);
+        created_entity = true;
+      });
+  RunLoopUntil([&] { return created_entity; });
+}
+
+// Attempts to create an entity with an empty cookie and verifies it fails.
+TEST_F(StoryStorageTest, CreateEntityWithEmptyCookie) {
+  auto storage = CreateStorage("page");
+  std::string cookie = "";
+  std::string expected_type = "com.fuchsia.test.type";
+
+  std::string data_string = "test_data";
+  fuchsia::mem::Buffer buffer;
+  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+
+  bool created_entity{};
+  storage->SetEntityData(cookie, expected_type, std::move(buffer))
+      ->Then([&](StoryStorage::Status status) {
+        EXPECT_EQ(status, StoryStorage::Status::INVALID_ENTITY_COOKIE);
+        created_entity = true;
+      });
+  RunLoopUntil([&] { return created_entity; });
+}
+
+// Creates an entity and performs a second write with a different type, and
+// verifies the second write fails and that the second attempted write doesn't
+// corrupt the data.
+TEST_F(StoryStorageTest, WriteEntityDataWithIncorrectType) {
+  auto storage = CreateStorage("page");
+  std::string cookie = "cookie";
+  std::string expected_type = "com.fuchsia.test.type";
+  std::string incorrect_type = "com.fuchsia.test.incorrect.type";
+
+  std::string data_string = "test_data";
+  fuchsia::mem::Buffer buffer;
+  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+
+  bool created_entity{};
+  storage->SetEntityData(cookie, expected_type, std::move(buffer))
+      ->Then([&](StoryStorage::Status status) {
+        EXPECT_EQ(status, StoryStorage::Status::OK);
+        created_entity = true;
+      });
+  RunLoopUntil([&] { return created_entity; });
+
+  bool wrote_entity{};
+  storage->SetEntityData(cookie, incorrect_type, fuchsia::mem::Buffer())
+      ->Then([&](StoryStorage::Status status) {
+        EXPECT_EQ(status, StoryStorage::Status::INVALID_ENTITY_TYPE);
+        wrote_entity = true;
+      });
+  RunLoopUntil([&] { return wrote_entity; });
+
+  // Verify that the second write didn't mess up the data or type.
+  bool read_entity_type{};
+  storage->GetEntityType(cookie)->Then(
+      [&](StoryStorage::Status status, std::string type) {
+        EXPECT_EQ(type, expected_type);
+        read_entity_type = true;
+      });
+  RunLoopUntil([&] { return read_entity_type; });
+
+  bool read_entity_data{};
+  storage->GetEntityData(cookie, expected_type)
+      ->Then([&](StoryStorage::Status status, fuchsia::mem::BufferPtr buffer) {
+        EXPECT_TRUE(buffer);
+        std::string read_data;
+        EXPECT_TRUE(fsl::StringFromVmo(*buffer, &read_data));
+        EXPECT_EQ(read_data, data_string);
+        read_entity_data = true;
+      });
+  RunLoopUntil([&] { return read_entity_data; });
+}
+
+// Creates an entity and performs a second write with the same type, and
+// verifies the data is written correctly.
+TEST_F(StoryStorageTest, WriteToEntityTwice) {
+  auto storage = CreateStorage("page");
+  std::string cookie = "cookie";
+  std::string expected_type = "com.fuchsia.test.type";
+
+  std::string data_string = "test_data";
+  fuchsia::mem::Buffer buffer;
+  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+
+  std::string second_data_string = "more_test_data";
+  fuchsia::mem::Buffer second_buffer;
+  FXL_CHECK(fsl::VmoFromString(second_data_string, &second_buffer));
+
+  bool created_entity{};
+  storage->SetEntityData(cookie, expected_type, std::move(buffer))
+      ->Then([&](StoryStorage::Status status) {
+        EXPECT_EQ(status, StoryStorage::Status::OK);
+        created_entity = true;
+      });
+  RunLoopUntil([&] { return created_entity; });
+
+  bool wrote_entity{};
+  storage->SetEntityData(cookie, expected_type, std::move(second_buffer))
+      ->Then([&](StoryStorage::Status status) {
+        EXPECT_EQ(status, StoryStorage::Status::OK);
+        wrote_entity = true;
+      });
+  RunLoopUntil([&] { return wrote_entity; });
+
+  // Verify that the second write successfully updated the data.
+  bool read_entity_type{};
+  storage->GetEntityType(cookie)->Then(
+      [&](StoryStorage::Status status, std::string type) {
+        EXPECT_EQ(type, expected_type);
+        read_entity_type = true;
+      });
+  RunLoopUntil([&] { return read_entity_type; });
+
+  bool read_entity_data{};
+  storage->GetEntityData(cookie, expected_type)
+      ->Then([&](StoryStorage::Status status, fuchsia::mem::BufferPtr buffer) {
+        EXPECT_TRUE(buffer);
+        std::string read_data;
+        EXPECT_TRUE(fsl::StringFromVmo(*buffer, &read_data));
+        EXPECT_EQ(read_data, second_data_string);
+        read_entity_data = true;
+      });
+  RunLoopUntil([&] { return read_entity_data; });
+}
+
+// Creates an entity with a watcher and verifies that updates to the entity are
+// delivered to the watcher.
+TEST_F(StoryStorageTest, WatchEntityData) {
+  auto storage = CreateStorage("page");
+  std::string expected_cookie = "cookie";
+  std::string expected_type = "com.fuchsia.test.type";
+
+  std::string data_string = "test_data";
+  fuchsia::mem::Buffer buffer;
+  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+
+  bool saw_entity_update{};
+  auto watcher = storage->WatchEntity(
+      expected_cookie,
+      [&](const std::string& cookie, fuchsia::mem::Buffer value) {
+        EXPECT_EQ(cookie, expected_cookie);
+
+        std::string read_data;
+        EXPECT_TRUE(fsl::StringFromVmo(value, &read_data));
+        EXPECT_EQ(read_data, data_string);
+
+        saw_entity_update = true;
+      });
+
+  bool created_entity{};
+  storage->SetEntityData(expected_cookie, expected_type, std::move(buffer))
+      ->Then([&](StoryStorage::Status status) {
+        EXPECT_EQ(status, StoryStorage::Status::OK);
+        created_entity = true;
+      });
+  RunLoopUntil([&] { return created_entity; });
+  RunLoopUntil([&, watcher = std::move(watcher)] { return saw_entity_update; });
+}
+
+// Creates an entity with multiple watchers and verifies that updates to the
+// entity are delivered to all watchers.
+TEST_F(StoryStorageTest, WatchEntityDataMultipleWatchers) {
+  auto storage = CreateStorage("page");
+  std::string expected_cookie = "cookie";
+  std::string expected_type = "com.fuchsia.test.type";
+
+  std::string data_string = "test_data";
+  fuchsia::mem::Buffer buffer;
+  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+
+  bool saw_entity_update{};
+  auto watcher = storage->WatchEntity(
+      expected_cookie,
+      [&](const std::string& cookie, fuchsia::mem::Buffer value) {
+        EXPECT_EQ(cookie, expected_cookie);
+
+        std::string read_data;
+        EXPECT_TRUE(fsl::StringFromVmo(value, &read_data));
+        EXPECT_EQ(read_data, data_string);
+
+        saw_entity_update = true;
+      });
+
+  bool saw_entity_update_too{};
+  auto second_watcher = storage->WatchEntity(
+      expected_cookie,
+      [&](const std::string& cookie, fuchsia::mem::Buffer value) {
+        EXPECT_EQ(cookie, expected_cookie);
+
+        std::string read_data;
+        EXPECT_TRUE(fsl::StringFromVmo(value, &read_data));
+        EXPECT_EQ(read_data, data_string);
+
+        saw_entity_update_too = true;
+      });
+
+  bool created_entity{};
+  storage->SetEntityData(expected_cookie, expected_type, std::move(buffer))
+      ->Then([&](StoryStorage::Status status) {
+        EXPECT_EQ(status, StoryStorage::Status::OK);
+        created_entity = true;
+      });
+  RunLoopUntil([&] { return created_entity; });
+  RunLoopUntil([&, watcher = std::move(watcher),
+                second_watcher = std::move(second_watcher)] {
+    return saw_entity_update && saw_entity_update_too;
+  });
 }
 
 }  // namespace
