@@ -365,12 +365,12 @@ void Session::OnStreamError() {
   ClearConnectionData();
 }
 
-bool Session::IsConnected() const { return !is_minidump_ && !!stream_; }
-
 bool Session::ConnectCanProceed(std::function<void(const Err&)> callback) {
   Err err;
-  if (IsConnected()) {
+  if (stream_) {
     err = Err("Already connected.");
+  } else if (is_minidump_) {
+    err = Err("A dump file is currently open.");
   } else if (pending_connection_.get()) {
     err = Err("A connection is already pending.");
   }
@@ -412,7 +412,7 @@ void Session::OpenMinidump(const std::string& path,
 }
 
 void Session::Disconnect(std::function<void(const Err&)> callback) {
-  if (!IsConnected()) {
+  if (!stream_ && !is_minidump_) {
     Err err;
     if (pending_connection_.get()) {
       // Cancel pending connection.
@@ -428,7 +428,10 @@ void Session::Disconnect(std::function<void(const Err&)> callback) {
     return;
   }
 
-  if (!connection_storage_) {
+  if (is_minidump_) {
+    is_minidump_ = false;
+    remote_api_ = std::make_unique<RemoteAPIImpl>(this);
+  } else if (!connection_storage_) {
     // The connection is persistent (passed in via the constructor) and can't
     // be disconnected.
     if (callback) {
