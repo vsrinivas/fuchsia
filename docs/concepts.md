@@ -80,6 +80,14 @@ There are two special koid values:
 
 *ZX_KOID_KERNEL* There is only one kernel, and it has its own koid.
 
+Kernel generated koids only use 63 bits (which is plenty).
+This leaves space for artificially allocated koids by having the most
+significant bit set.
+Artificial koids exist to support things like identifying artificial objects,
+like virtual threads in tracing, for consumption by tools.
+How artificial koids are allocated is left to each program,
+this document does not impose any rules or conventions.
+
 
 ## Running Code: Jobs, Processes, and Threads.
 

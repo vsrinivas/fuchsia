@@ -170,6 +170,9 @@ typedef uint32_t zx_signals_t;
 #define ZX_VMO_ZERO_CHILDREN        __ZX_OBJECT_SIGNALED
 
 // global kernel object id.
+// Note: kernel object ids use 63 bits, with the most significant bit being zero.
+// The remaining values (msb==1) are for use by programs and tools that wish to
+// create koids for artificial objets.
 typedef uint64_t zx_koid_t;
 #define ZX_KOID_INVALID ((uint64_t) 0)
 #define ZX_KOID_KERNEL  ((uint64_t) 1)
