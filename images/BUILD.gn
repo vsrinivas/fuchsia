@@ -23,6 +23,10 @@ declare_args() {
   #   misc -- utilities in /bin
   #   test -- test binaries in /bin and /test
   zircon_boot_groups = "core"
+
+  # Path to manifest file containing data to place into the initial /data
+  # partition.
+  data_partition_manifest = ""
 }
 
 declare_args() {
@@ -678,10 +682,18 @@ zircon_tool_action("data.blk") {
   outputs = [
     data_image_path,
   ]
+  depfile = "$target_out_dir/data.blk.d"
   args = [
+    "--depfile",
     rebase_path(data_image_path, root_build_dir) + "@${data_image_size}",
     "create",
   ]
+  if (data_partition_manifest != "") {
+    args += [
+      "--manifest",
+      rebase_path(data_partition_manifest),
+    ]
+  }
 }
 images += [
   {
