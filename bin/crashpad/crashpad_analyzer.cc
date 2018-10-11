@@ -190,6 +190,10 @@ int HandleException(zx::process process, zx::thread thread,
   // crashpad_handler here. Instead, directly use CrashReportExceptionHandler
   // and terminate when it has completed.
 
+  const std::string package_name = GetPackageName(process);
+  FX_LOGS(INFO) << "generating crash report for exception thrown by "
+                << package_name;
+
   std::unique_ptr<crashpad::CrashReportDatabase> database = GetReportDatabase();
   if (!database) {
     return EXIT_FAILURE;
@@ -208,7 +212,7 @@ int HandleException(zx::process process, zx::thread thread,
 
   // Prepare annotations and attachments.
   const std::map<std::string, std::string> annotations =
-      GetAnnotations(/*package_name=*/GetPackageName(process));
+      GetAnnotations(package_name);
   std::map<std::string, base::FilePath> attachments;
   ScopedUnlink temp_log_file(GetSystemLogToFile());
   if (temp_log_file.is_valid()) {
@@ -227,6 +231,8 @@ int HandleException(zx::process process, zx::thread thread,
 }
 
 int Process(fuchsia::mem::Buffer crashlog) {
+  FX_LOGS(INFO) << "generating crash report for previous kernel panic";
+
   std::unique_ptr<crashpad::CrashReportDatabase> database = GetReportDatabase();
   if (!database) {
     return EXIT_FAILURE;
@@ -314,7 +320,7 @@ int Process(fuchsia::mem::Buffer crashlog) {
     return EXIT_FAILURE;
   }
   database->RecordUploadComplete(std::move(upload_report), server_report_id);
-  FX_LOGS(INFO) << "Successfully uploaded crash report at "
+  FX_LOGS(INFO) << "successfully uploaded crash report at "
                    "https://crash.corp.google.com/"
                 << server_report_id;
 
@@ -329,7 +335,7 @@ class AnalyzerImpl : public fuchsia::crash::Analyzer {
     callback();
     if (HandleException(std::move(process), std::move(thread),
                         std::move(exception_port)) != EXIT_SUCCESS) {
-      FX_LOGS(ERROR) << "Failed to handle exception. Won't retry.";
+      FX_LOGS(ERROR) << "failed to handle exception. Won't retry.";
     }
   }
 
@@ -337,7 +343,7 @@ class AnalyzerImpl : public fuchsia::crash::Analyzer {
                ProcessCallback callback) override {
     callback();
     if (::Process(fbl::move(crashlog)) != EXIT_SUCCESS) {
-      FX_LOGS(ERROR) << "Failed to process VMO crashlog. Won't retry.";
+      FX_LOGS(ERROR) << "failed to process VMO crashlog. Won't retry.";
     }
   }
 };
