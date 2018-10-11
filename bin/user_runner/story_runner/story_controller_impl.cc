@@ -236,6 +236,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     fuchsia::sys::ServiceProviderPtr module_context_provider;
     auto module_context_provider_request = module_context_provider.NewRequest();
     auto service_list = fuchsia::sys::ServiceList::New();
+    service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
     service_list->names.push_back(fuchsia::modular::ModuleContext::Name_);
     service_list->provider = std::move(module_context_provider);
 

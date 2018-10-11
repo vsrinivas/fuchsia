@@ -69,6 +69,7 @@ class AgentContextImpl::InitializeCall : public Operation<> {
   }
 
   void Continue(fuchsia::sys::ServiceListPtr service_list, FlowToken flow) {
+    service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
     service_list->names.push_back(fuchsia::modular::AgentContext::Name_);
     agent_context_impl_->service_provider_impl_.AddBinding(
         service_list->provider.NewRequest());
