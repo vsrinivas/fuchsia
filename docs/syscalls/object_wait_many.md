@@ -54,7 +54,7 @@ TODO(ZX-2399)
 observed on their respective object before *deadline* passed.
 
 In the event of **ZX_ERR_TIMED_OUT**, *items* may reflect state changes
-that occurred after the deadline pased, but before the syscall returned.
+that occurred after the deadline passed, but before the syscall returned.
 
 In the event of **ZX_ERR_CANCELED**, one or more of the items being waited
 upon have had their handles closed, and the *pending* field for those items

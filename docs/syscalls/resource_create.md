@@ -25,7 +25,7 @@ zx_status_t zx_resource_create(zx_handle_t parent_rsrc,
 **resource_create**() creates an resource object for use with other DDK
 syscalls. Resources are typically handed out to bus drivers and rarely need to
 be interacted with directly by drivers using driver protocols. Resource objects
-grant access to an addresss space range starting at *base* up to but not
+grant access to an address space range starting at *base* up to but not
 including *base* + *len*. Two special values for *kind* exist:
 **ZX_RSRC_KIND_ROOT** and **ZX_RSRC_KIND_HYPERVISOR**. These resources have no
 range associated with them and are used as a privilege check.
@@ -83,6 +83,6 @@ longer occur.
 ## SEE ALSO
 
 [handle_close](handle_close.md), [interrupt_create](interrupt_create.md),
-[ioports_requeat](ioports_request.md),
+[ioports_request](ioports_request.md),
 [vmo_create_physical](vmo_create_physical.md)
 

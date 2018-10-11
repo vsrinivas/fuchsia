@@ -33,7 +33,7 @@ platform bus driver. Protocol implementation drivers can also implement vendor o
 protocols and make them available to platform devices using a **proxy client driver** (see below).
 
 - The **proxy client driver** is a driver that implements client support for a vendor or
-SOC-specific protocol. This driver loads in the the platform device's devhost and is responsible
+SOC-specific protocol. This driver loads in the platform device's devhost and is responsible
 for proxying its protocol to the protocol implementation driver.
 The Amlogic Canvas driver at [system/dev/display/aml-canvas/](../../system/dev/display/aml-canvas/)
 provides a simple example of how the proxying works.
@@ -82,7 +82,7 @@ known by the driver. Instead the board driver configures the MMIO addresses and 
 
 The platform device protocol is also available to protocol implementation drivers.
 For example, a GPIO driver may use the platform device protocol to access its MMIO and interrupts.
-This allows protocol implemention drivers to be shared among different SOC variants,
+This allows protocol implementation drivers to be shared among different SOC variants,
 where the functionality may be identical but the MMIO addresses and interrupt numbers may be
 different.
 

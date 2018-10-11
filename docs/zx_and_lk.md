@@ -21,6 +21,6 @@ More specifically, some the visible differences are:
 + Zircon has first class user-mode support. LK does not.
 + Zircon has a capability-based security model. In LK all code is trusted.
 
-Over time, even the low level constructs have changed to accomodate the new
+Over time, even the low level constructs have changed to accommodate the new
 requirements and to better fit the rest of the system.
 

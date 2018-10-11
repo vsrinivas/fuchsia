@@ -28,7 +28,7 @@ Each driver is responsible for managing its own hardware in a way that makes the
 client interfaces identical, even though the hardware is different.
 
 Note that the interfaces that are provided by the driver may be "intermediate" &mdash;
-that is, they might not necesarily represent the "final" device in the chain.
+that is, they might not necessarily represent the "final" device in the chain.
 
 Consider a PCI-based ethernet device.
 First, a base PCI driver is required that understands how to talk to the PCI bus itself.
@@ -91,7 +91,7 @@ has a given VID and DID."
 If a suitable driver is found (one that matches the required protocol, VID and
 DID), it's bound to the parent.
 
-As part of binding, we iniitalize the driver &mdash; this involves such operations
+As part of binding, we initialize the driver &mdash; this involves such operations
 as setting up the card for operation, bringing up the interface(s), and
 publishing a child or children of this device.
 In the case of the PCI ethernet driver, it publishes the "ethernet" interface,

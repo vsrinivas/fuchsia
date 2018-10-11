@@ -22,7 +22,7 @@ Conversely, [vmo_get_size](../syscalls/vmo_get_size.md) will retrieve a VMO's cu
 
 The size of a VMO will be rounded up to the next page size boundary by the kernel.
 
-Pages are committed (allocated) for VMOs on demand through [vmo_read](../syscalls/vmo_read.md), [vmo_write](../syscalls/vmo_write.md), or by writing to a mapping of the VMO created using [vmar_map](../syscalls/vmar_map.md). Pages can be commited and decommited from a VMO manually by calling
+Pages are committed (allocated) for VMOs on demand through [vmo_read](../syscalls/vmo_read.md), [vmo_write](../syscalls/vmo_write.md), or by writing to a mapping of the VMO created using [vmar_map](../syscalls/vmar_map.md). Pages can be committed and decommitted from a VMO manually by calling
 [vmo_op_range](../syscalls/vmo_op_range.md) with the *ZX_VMO_OP_COMMIT* and *ZX_VMO_OP_DECOMMIT*
 operations, but this should be considered a low level operation. [vmo_op_range](../syscalls/vmo_op_range.md) can also be used for cache and locking operations against pages a VMO holds.
 

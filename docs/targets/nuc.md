@@ -47,7 +47,7 @@ drive pulls your freshly-built OS across the network, from host machine to NUC.
       Zedboot may not work.
       ***
 1. Disable secure boot (on machines that support it)
-     + On the the Boot section, Secure Boot tab, disable __Secure Boot__
+     + On the Boot section, Secure Boot tab, disable __Secure Boot__
 1. Save BIOS changes
      + Press F10 (or click the top right (x) button) to Save and Exit, Y to confirm
      + Device will automatically reboot and begin looking for a USB or network boot

@@ -532,7 +532,7 @@ zx_status_t pci_get_bti(const pci_protocol_t* pci,
 
 The **pci_get_bti()**
 function takes a `pci` protocol pointer (just like all the other **pci_...()** functions
-discusssed above) and an `index` (reserved for future use, use `0`).
+discussed above) and an `index` (reserved for future use, use `0`).
 It returns a [BTI](../objects/bus_transaction_initiator.md)
 handle through the `bti_handle` pointer argument.
 
@@ -544,7 +544,7 @@ of virtual pages (that may or may not have physical pages committed to them),
 which can be mapped into the virtual address space of the driver process.
 (It's even more than that, but that's a discussion for a different chapter.)
 
-Utlimately, these pages serve as the source or destination of the DMA transfer.
+Ultimately, these pages serve as the source or destination of the DMA transfer.
 
 There are two functions,
 [**zx_vmo_create()**](../syscalls/vmo_create.md)
@@ -671,7 +671,7 @@ While you can't set this property, you can read it via
 [**zx_object_get_info()**](../syscalls/object_get_info.md).
 Effectively, the minimum contiguity property is a guarantee that
 [**zx_bti_pin()**](../syscalls/bti_pin.md)
-will always be able to return addreses that are contiguous for at least that many bytes.
+will always be able to return addresses that are contiguous for at least that many bytes.
 
 For example, if the property had the value 1MB, then a call to
 [**zx_bti_pin()**](../syscalls/bti_pin.md)

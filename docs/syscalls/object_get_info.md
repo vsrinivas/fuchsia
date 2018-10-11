@@ -66,7 +66,7 @@ typedef struct zx_info_handle_basic {
     uint32_t type;                // zx_obj_type_t;
 
     // If the object referenced by the handle is related to another (such
-    // as the the other end of a channel, or the parent of a job) then
+    // as the other end of a channel, or the parent of a job) then
     // |related_koid| is the koid of that object, otherwise it is zero.
     // This relationship is immutable: an object's |related_koid| does
     // not change even if the related object no longer exists.
@@ -94,7 +94,7 @@ The *handle_count* should only be used as a debugging aid. Do not use it
 to check that an untrusted processes cannot modify a kernel object. Due to
 asynchronous nature of the system scheduler, there might be a time window
 during which it is possible for an object to be modified by a previous handle
-owner even as the last handle is transfered from one process to another.
+owner even as the last handle is transferred from one process to another.
 
 ### ZX_INFO_PROCESS_HANDLE_STATS
 
@@ -347,7 +347,7 @@ typedef struct zx_info_vmo {
 } zx_info_vmo_t;
 ```
 
-This returns a single *zx_info_vmo_t* that describes various attrubutes of
+This returns a single *zx_info_vmo_t* that describes various attributes of
 the VMO.
 
 ### ZX_INFO_SOCKET
@@ -634,7 +634,7 @@ The resource kind is one of
 
 ```
 typedef struct zx_info_bti {
-    // zx_bti_pin will always be able to return addreses that are contiguous for at
+    // zx_bti_pin will always be able to return addresses that are contiguous for at
     // least this many bytes.  E.g. if this returns 1MB, then a call to
     // zx_bti_pin() with a size of 2MB will return at most two physically-contiguous runs.
     // If the size were 2.5MB, it will return at most three physically-contiguous runs.

@@ -87,7 +87,7 @@ In order to get into zedboot you can reboot into the recovery:
 dm reboot-recovery
 ```
 
-Alternatively, you can get to zedboot by reseting your vim2 by pressing SW1(rightmost button) quickly and keeping pressing SW2 for a few seconds.
+Alternatively, you can get to zedboot by resetting your vim2 by pressing SW1(rightmost button) quickly and keeping pressing SW2 for a few seconds.
 
 ### netbooting
 
@@ -115,7 +115,7 @@ fx set arm64 && fx full-build && fx boot arm -1
 
 ### Fuchsia logo
 
-To update the the boot splash screen to be the Fuchsia logo, do this in fastboot mode:
+To update the boot splash screen to be the Fuchsia logo, do this in fastboot mode:
 ```
 fastboot flash logo kernel/target/arm64/board/vim2/firmware/logo.img
 ```

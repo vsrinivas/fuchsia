@@ -19,7 +19,7 @@ zx_status_t zx_object_wait_async(zx_handle_t handle,
 ## DESCRIPTION
 
 **object_wait_async**() is a non-blocking syscall which causes packets to be
-enqueued on *port* when the the specified condition is met.
+enqueued on *port* when the specified condition is met.
 Use **port_wait**() to retrieve the packets.
 
 *handle* points to the object that is to be watched for changes and must be a waitable object.

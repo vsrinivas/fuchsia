@@ -10,7 +10,7 @@ and what output the validator produces.
 The theory of operation for the validator itself can be found in the
 [design document](lockdep-design.md).
 
-## Enabling the Lock Validaor
+## Enabling the Lock Validator
 
 Lock validation is disabled by default. **When disabled the lock instrumentation
 is transparent, acting as a zero-overhead wrapper for the underlying locking
@@ -74,7 +74,7 @@ private:
 
 Note that the containing type is passed to the macro
 `DECLARE_MUTEX(containing_type)`. This type provides the context the validator
-needs to distingush locks that are members of `MyType` from locks that are
+needs to distinguish locks that are members of `MyType` from locks that are
 members of other types.
 
 The macro `DECLARE_SPINLOCK(containing_type)` provides similar support for
@@ -356,7 +356,7 @@ The lock validator detects and reports two broad classes of violations:
 
 ### Violations Reported at Acquisition
 
-When a violation is detected at the point of lock acquision the validator
+When a violation is detected at the point of lock acquisition the validator
 produces a message like the following in the kernel log:
 
 ```

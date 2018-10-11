@@ -724,7 +724,7 @@ sequence regardless of the original order of the arguments.
 
 Now suppose we add two more lock classes to the sequence: class **A** acquired
 before operation **F** and class **B** acquired after operation **F**. The
-the resulting lock sequence is:
+resulting lock sequence is:
 
 **A**, **L<sub>0</sub>**, **L<sub>1</sub>**, **B**
 

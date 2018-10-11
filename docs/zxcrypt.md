@@ -85,7 +85,7 @@ yet very sparse, [VMO](concepts.md#shared-memory-virtual-memory-objects-vmos-).
 
 As shadow requests are needed, they are allocated backed sequentially by pages in the VMO.  When the
 worker needs to transform the data it either encrypts data from the original, encapsulated write
-request into the the shadow request, or decrypts data from the shadow request into the original,
+request into the shadow request, or decrypts data from the shadow request into the original,
 encapsulated read request.  As soon as the original request can be handed back to the original
 requester, the shadow request is deallocated and its page [decommitted](syscalls/vmo_op_range.md).
 This ensures no more memory is used than is needed for outstanding I/O requests.
@@ -171,7 +171,7 @@ There are a number of areas where further work could, should, or must be done:
 * __Adjust number of workers__
 
   Currently there is one encrypter and one decrypter.  These are designed to work with an arbitrary
-  number of threads, so performance tuning may be need to find the optimal number of workers thats
+  number of threads, so performance tuning may be need to find the optimal number of workers that
   balances I/O bandwidth with [scheduler churn][thrash].
 
 * __Remove internal checks__

@@ -105,7 +105,7 @@ to contain the reply message.
 
 ## NOTES
 
-The facilities provied by **channel_call**() can interoperate with message dispatchers
+The facilities provided by **channel_call**() can interoperate with message dispatchers
 using **channel_read**() and **channel_write**() directly, provided the following rules
 are observed:
 

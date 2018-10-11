@@ -100,7 +100,7 @@ Column tags:
     necessarily backed by physical memory.
 -   `:res`: The amount of memory "resident" in the entry, in bytes; i.e., the
     amount of physical memory that backs the entry. This memory may be private
-    (only acceessable by this process) or shared by multiple processes.
+    (only accessible by this process) or shared by multiple processes.
 -   `:vmo`: The `koid` of the VMO mapped into this region.
 
 ```
@@ -177,7 +177,7 @@ Columns:
     -   `m`: `ZX_RIGHT_MAP`
     -   `d`: `ZX_RIGHT_DUPLICATE`
     -   `t`: `ZX_RIGHT_TRANSFER`
-    -   **NOTE**: Non-handle entries will have a single '-' in this colum.
+    -   **NOTE**: Non-handle entries will have a single '-' in this column.
 -   `koid`: The koid of the VMO, if it has one. Zero otherwise. A VMO without a
     koid was created by the kernel, and has never had a userspace handle.
 -   `parent`: The koid of the VMO's parent, if it's a clone.

@@ -47,7 +47,7 @@ Once the custom U-Boot has been flashed, perform the following:
 + From u-boot command line do the following:
     + fastboot 0
 
-From the host side, go to your zircon repository and run the following commnand:
+From the host side, go to your zircon repository and run the following command:
 + ./scripts/flash-nxp
 
 If successful, the board will reboot into Zircon.

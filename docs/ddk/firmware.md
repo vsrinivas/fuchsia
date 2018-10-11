@@ -87,7 +87,7 @@ When the ticket is resolved, the Gerrit change is ready to be sent
 to CQ. The firmware package will be downloaded by
 `scripts/download-prebuilt` along with the toolchain and QEMU.
 
-Optional: Verify locally the package has been mirroed to Google Storage by
+Optional: Verify locally the package has been mirrored to Google Storage by
 the infra team before sending the patch to CQ:
 
 ```

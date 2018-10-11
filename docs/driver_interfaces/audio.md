@@ -198,7 +198,7 @@ Notes
    to a decoder device somewhere outside of the system.
  * Be default, multi-byte sample formats are assumed to use host-endianness.
    If the INVERT_ENDIAN flag is set on the format, the format uses the
-   opposie of host endianness.  eg. A 16 bit little endian PCM audio format
+   opposite of host endianness.  eg. A 16 bit little endian PCM audio format
    would have the INVERT_ENDIAN flag set on it in a when used on a big endian
    host.  The INVERT_ENDIAN flag has no effect on COMPRESSED, 8BIT or FLOAT
    encodings.
@@ -206,7 +206,7 @@ Notes
    representation.
  * Be default, non-floating point PCM encodings are assumed expressed using
    2s compliment signed integers.  eg. the bit values for a 16 bit PCM sample
-   format would range from [0x8000, 0x7FFF] with 0x0000 represting zero
+   format would range from [0x8000, 0x7FFF] with 0x0000 representing zero
    speaker deflection.  If the UNSIGNED flag is set on the format, the bit
    values would range from [0x0000, 0xFFFF] with 0x8000 representing zero
    deflection.

@@ -19,7 +19,7 @@ zx_status_t zx_fifo_create(size_t elem_count, size_t elem_size,
 
 **fifo_create**() creates a fifo, which is actually a pair of fifos
 of *elem_count* entries of *elem_size* bytes.  Two endpoints are
-returned.  Writing to one endpoint enqueus an element into the fifo
+returned.  Writing to one endpoint enqueues an element into the fifo
 that the opposing endpoint reads from.
 
 Fifos are intended to be the control plane for shared memory transports.

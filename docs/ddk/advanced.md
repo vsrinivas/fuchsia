@@ -88,7 +88,7 @@ The following functions are used to set the state of a device:
 
 Function                | Purpose
 ------------------------|-------------------------------------------
-**device_state_set()**       | sets the given signal(s) an the device
+**device_state_set()**       | sets the given signal(s) on the device
 **device_state_clr()**       | clears the given signal(s) on the device
 
 We saw these in the `/dev/misc/demo-fifo` handler above.

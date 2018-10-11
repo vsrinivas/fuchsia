@@ -22,7 +22,7 @@ AcpiDbgLayer is a bitmap of values defined in
 third\_party/lib/acpica/source/include/acpica/acoutput.h.  These do not have a
 common prefix, but are listed as "Component IDs".  These control which
 submodules of ACPICA are to be traced.  For example, to trace through the
-namespace logic and and the executor, you can set AcpiDbgLayer to
+namespace logic and the executor, you can set AcpiDbgLayer to
 
 "ACPI\_NAMESPACE | ACPI\_EXECUTOR"
 

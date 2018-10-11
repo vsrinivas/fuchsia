@@ -150,7 +150,7 @@ The last section, the binding instructions, corresponds with the `BI_ABORT_IF` a
 macro directives.
 Note that the first binding instruction compares the field `Protocol` against the hexadecimal
 number `0x70504349` &mdash; that "number" is simply the ASCII encoding of the string "`pPCI`",
-indicating the PCI procotol (you can see all of the encodings in
+indicating the PCI protocol (you can see all of the encodings in
 `//zircon/system/ulib/ddk/include/ddk/protodefs.h`)
 
 From the `ZIRCON_DRIVER_BEGIN` macro, the `intel_ethernet_driver_ops`

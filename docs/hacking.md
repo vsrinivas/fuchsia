@@ -140,7 +140,7 @@ To support testing the system during early boot, there is a mechanism to export
 data files from the kernel to the /boot filesystem. To export a data file,
 create a VMO, give it a name, and pass it to userboot with handle\_info of type
 PA\_VMO\_DEBUG\_FILE (and argument 0). Then userboot will automatically pass it
-throough to devmgr, and devmgr will export the VMO as a file at the path
+through to devmgr, and devmgr will export the VMO as a file at the path
 
 ```
 /boot/kernel/<name-of-vmo>

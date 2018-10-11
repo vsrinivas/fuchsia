@@ -36,7 +36,7 @@ resource.  Exclusive and shared resource ranges may not overlap.
 Resources are lifecycle tracked and upon the last handle being closed will be
 freed. In the case of exclusive resources this means the given address range
 will be released back to the allocator for the given *kind* of resource. Objects
-created through a resource do not hold a reference to a the resource and thus do
+created through a resource do not hold a reference to the resource and thus do
 not keep it alive.
 
 ## NOTES
@@ -48,7 +48,7 @@ fine-grained resources to other drivers.
 ## SYSCALLS
 
 [interrupt_create](../syscalls/interrupt_create.md),
-[ioports_requeat](../syscalls/ioports_request.md),
+[ioports_request](../syscalls/ioports_request.md),
 [resource_create](../syscalls/resource_create.md),
 [vmo_create_physical](../syscalls/vmo_create_physical.md)
 

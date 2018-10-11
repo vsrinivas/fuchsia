@@ -456,7 +456,7 @@ For example, in `/dev/misc/demo-number`, we might want a way to preset the count
 In a tradition POSIX environment, this is done with an **ioctl()** call on the client
 side, and an appropriate **ioctl()** handler on the driver side.
 
-Under Fuschia, this is done differently, by marshalling data through the Fuchsia Interface
+Under Fuchsia, this is done differently, by marshalling data through the Fuchsia Interface
 Definition Language
 ([**FIDL**](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/README.md).
 
@@ -621,7 +621,7 @@ Briefly, the generated code presents:
 1.  a definition for the command numbers (the "`NumberOrdinal`", recall we used command
     number `1` for **SetNumber()**),
 2.  external definitions of tables (we don't use these),
-3.  declaractions for the request and response message formats; these consist of a FIDL
+3.  declarations for the request and response message formats; these consist of a FIDL
     overhead header and the data we specified,
 4.  client binding prototypes &mdash; we'll see how the client uses this below,
 5.  FIDL message ops structure; this is a list of functions that you supply in the driver
@@ -786,7 +786,7 @@ specification's prototype of the result portion of the interface definition.
 #### Advanced uses
 
 FIDL expressions can certainly be made more complex than what we've shown above.
-For exmaple, nested structures can be used, rather than the simple `uint32`.
+For example, nested structures can be used, rather than the simple `uint32`.
 Multiple parameters are allowed for both inputs and outputs. See the
 [FIDL reference](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/README.md).
 
@@ -970,7 +970,7 @@ typedef struct {
 Notice that the `multi_root_device_t` per-device context structure contains 1 `multidev_t`
 context block (for the base device) and 16 pointers to dynamically allocated context
 blocks for the sub-devices.
-The initialization of those context blocks occured in steps (3) (for the base device)
+The initialization of those context blocks occurred in steps (3) (for the base device)
 and (4) (done in the `for` loop for each sub-device).
 
 ![Figure: Relationship between per-device context and devices](simple-008-cropped.png)
@@ -1047,7 +1047,7 @@ operation), or (in the case of `/dev/misc/demo-null`), accepted data without blo
 (for the **write()** operation).
 
 The next device we'll discuss, `/dev/misc/demo-fifo`, will return data immediately if
-there's data availble, otherwise it will block the client until data is available.
+there's data available, otherwise it will block the client until data is available.
 Similarly, for writing, it will accept data immediately if there's room, otherwise
 it will block the client until room is available.
 

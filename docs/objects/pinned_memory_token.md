@@ -6,7 +6,7 @@ pinned_memory_token - Representation of a device DMA grant
 
 ## SYNOPSIS
 
-Pinned Memory Tokens (PMTs) represent an outstanding acccess grant to a device
+Pinned Memory Tokens (PMTs) represent an outstanding access grant to a device
 for performing DMA.
 
 ## DESCRIPTION

@@ -111,9 +111,9 @@ Three types of file are handled:
   The first line of the file starts with `#!` and must be no more than 127
   characters long.  The first non-whitespace word following `#!` is the
   *script interpreter name*.  If there's anything after that, it all
-  together becomes the *script interperter argument*.
+  together becomes the *script interpreter argument*.
 
-   * The script interpereter name is prepended to the original argument
+   * The script interpreter name is prepended to the original argument
      list (to become `argv[0]`).
    * If there was a script interpreter argument, it's inserted between the
      interpreter name and the original argument list (to become `argv[1]`,
@@ -164,7 +164,7 @@ Three types of file are handled:
 
       * `entry` sets the new thread's PC to `e_entry` from the executable's
         ELF header, adjusted by base address.
-      * `stack` sets the the new thread's stack pointer to the top of the
+      * `stack` sets the new thread's stack pointer to the top of the
         stack mapping.
       * `arg1` transfers the handle to the *bootstrap channel* into the
         first argument register in the C ABI.
@@ -183,7 +183,7 @@ Three types of file are handled:
   the ELF executable after reading its `PT_INTERP` header.  Instead, it
   uses the `PT_INTERP` contents as the name of an *ELF interpreter*.  This
   name is used in a request to the [loader service](#the-loader-service) to
-  get a new VMO containing the ELF interpeter, which is another ELF
+  get a new VMO containing the ELF interpreter, which is another ELF
   `ET_DYN` file.  Then that VMO is loaded instead of the main executable's
   VMO.  Startup is as described above, with these differences:
 
@@ -288,7 +288,7 @@ which does not need to know what they're for.
 
 In dynamic linking systems, an executable file refers to and uses at
 runtime additional files containing shared libraries and plugins.  The
-dynamic linker is loaded as an [*ELF interperter*](#PT_INTERP) and is
+dynamic linker is loaded as an [*ELF interpreter*](#PT_INTERP) and is
 responsible getting access to all these additional files to complete
 dynamic linking before the main program's entry point gets control.
 
@@ -323,7 +323,7 @@ additional data; some contain a VMO handle.  Request opcodes are:
 
  * `LOADER_SVC_OP_LOAD_SCRIPT_INTERP`: *string* -> *VMO handle*
 
-   The program loader sends the *script interperter name* from
+   The program loader sends the *script interpreter name* from
    a [`#!` script](#hashbang) and gets back a VMO to execute in place of
    the script.
 
@@ -379,7 +379,7 @@ the [`processargs`](#the-processargs-protocol)
 and [loader service](#the-loader-service) protocols are the permanent
 system ABI for program loading.  Programs can use any implementation of a
 machine code executable that meets the basic ELF format conventions.  The
-implementation can use the the [vDSO](vdso.md) [system call](syscalls.md)
+implementation can use the [vDSO](vdso.md) [system call](syscalls.md)
 ABI, the `processargs` data, and the loader service facilities as it sees
 fit.  The exact details of what handles and data they will receive via
 these protocols depend on the higher-layer program environment.  Zircon's
@@ -393,7 +393,7 @@ from [`musl`](http://www.musl-libc.org/).  It's identified by the
 shared libraries as [loader service](#the-loader-service) *object* names.
 
 The simple loader service maps requests into filesystem access:
- * *script interperter* and *debug configuration* names must start with `/`
+ * *script interpreter* and *debug configuration* names must start with `/`
    and are used as absolute file names.
  * *data sink* names become subdirectories in `/tmp`, and each VMO
    published becomes a file in that subdirectory with the VMO's object name
@@ -401,7 +401,7 @@ The simple loader service maps requests into filesystem access:
  * *load configuration* strings are taken as a subdirectory name,
    optionally preceded by a `!` character.  Subdirectories by that name in
    system `lib/` directories searched are searched before `lib/` itself.
-   If there was a `!` prefix, *only* those subdirecotries are searched.
+   If there was a `!` prefix, *only* those subdirectories are searched.
    For example, sanitizer runtimes use `asan` because that instrumentation
    is compatible with uninstrumented library code, but `!dfsan` because
    that instrumentation requires that all code in the process be
@@ -410,7 +410,7 @@ The simple loader service maps requests into filesystem access:
 A version of the standard runtime instrumented with
 LLVM [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
 is identified by the `PT_INTERP` string `asan/ld.so.1`.  This version sends
-the *load configuration* string `asan` before loading shareed libraries.
+the *load configuration* string `asan` before loading shared libraries.
 When [SanitizerCoverage](https://clang.llvm.org/docs/SanitizerCoverage.html)
 is enabled, it publishes a VMO to the *data sink* name `sancov` and uses a
 VMO name including the process KOID.
