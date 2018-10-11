@@ -81,8 +81,11 @@ out/x64/host_x64/zxdb
 ```
 (Substitute your build directory as-needed).
 
-If you're launching many times, there is also a command-line switch `zxdb
---connect=192.168.3.53:2345`.
+If you're connecting or running many times, there are command-line switches:
+
+```sh
+zxdb -c 192.168.3.53:2345 -r /system/bin/coway
+```
 
 See `help connect` for more examples, including IPv6 syntax.
 
@@ -105,8 +108,16 @@ or
 
 ### 5. Run and step
 
-Type "help" for commands, there is an extensive built-in help system. Some
-examples of stuff you can do:
+Type "help" for commands, there is an extensive built-in help system. The key
+commands are:
+
+   * **run:** Runs a program.
+   * **continue:** Continues a paused thread.
+   * **next:** Advance to next line.
+   * **step:** Advance, stepping into function calls.
+   * **finish:** Runs the current function to the end.
+
+Some examples:
 
 ```
 [zxdb] b main
@@ -144,6 +155,15 @@ Exited with code 0: Process 1 Not running /foo/bar/myapp
 ```
 
 ### 6. Print stuff.
+
+The main querying commands are:
+
+   * **print:** Print an expressions.
+   * **f:** Print a short backtrace of stack frames.
+   * **bt:** Print a backtrace with function parameters.
+   * **locals:** Print all local variables.
+
+Some examples:
 
 ```
 [zxdb] bt
@@ -195,38 +215,59 @@ consider adding another globally build optimization level.
 
 ### Running out-of-tree
 
-The debugger is currently designed to run in-tree on a system you have just
-built. If you build out-of-tree, you can still experiment with some extra
-manual; steps.
+The debugger is optimized to run in-tree (you compiled the debugger from the
+same tree as you compiled your system from, and are running them both
+in-place). But you can run with kernels or user programs compiled elsewhere
+with some extra steps.
 
 Be aware that we aren't yet treating the protocol as frozen. Ideally the
 debugger will be from the same build as the operating system itself (more
-precisely, it needs to match the debug\_agent).
+precisely, it needs to match the debug\_agent). But the protocol does not
+change very often so there is some flexibility.
 
-The main thing will be finding symbols for your binary as we have not designed
-the system for registering new symbols with the debugger.
+When you run out-of-tree, you will need to tell zxdb where your symbols are
+on the local development box (Linux or Mac). Having symbols in the binary
+you pushed to the target device doesn't help. Use the `-s` command-line flag
+to tell zxdb about new symbol locations:
 
-zxdb will look in a file "../ids.txt" relative to its own binary for the
-mappings to symbolized binaries on the local dev host (symbols in the binary on
-the Fuchsia target are never used so the files can be stripped). It will
-print the path of this file when it loads it after it connects to the remote
-system.
+```sh
+zxdb -s path/to/my_binary -s some/other_location
+```
 
-The ids.txt file has one line per binary, with each line having the format:
+The `-s` flag accepts three possible things:
 
-  * **Build ID**: A hex string which uniquely identifies a binary file. One
-    way to look this up is to run the debugger on your binary and type
-    `sym-stat`. It will list the build ID and probably tell you that it
-    couldn't find symbols for it.
-  * **Space**
-  * **Full path to binary with symbols**: This should be an unstripped ELF
-    binary on the local developer host system.
+   * Directory names. Zxdb will index all build IDs of elf files in this
+     directory.
 
-While there is no way to add a second ID mapping file, you can append to the
-existing one (watch out: it will be overwritten by the next Fuchsia build).
-You will need to disconnect and reconnect zxdb to re-read this file.
+   * File names ending in ".txt". Zxdb will treat this as a "ids.txt" file
+     mapping build IDs to binaries (see below).
 
-The best way to debug issues around finding symbols is the `sym-stat` command.
+   * Any other file name will be treated as an ELF file with symbols.
+
+The Fuchsia build outputs a file called "ids.txt" that lists build IDs and
+binary names produced by the build process. By default zxdb will look relative
+to its own binary name "../ids.txt" which matches the in-tree location. You
+can specify different or additional ids.txt files using `-s`.
+
+#### Diagnosing symbol problems.
+
+The `sym-stat` command will tell you status for symbols. With no running
+process, it will give stats on the different symbol locations you have
+specified. If your symbols aren't getting found, make sure these stats match
+your expectations:
+
+```sh
+[zxdb] sym-stat
+
+Symbol index status
+
+  Indexed  Source path
+      950  /home/me/build/garnet/out/x64/ids.txt
+        0  my_dir/my_file
+```
+
+When you have a running program, sym-stat will additionally print symbol
+information for each binary loaded into the process.
 
 ## Running the tests
 
