@@ -5,26 +5,43 @@
 #ifndef GARNET_BIN_MEDIAPLAYER_DEMUX_READER_CACHE_H_
 #define GARNET_BIN_MEDIAPLAYER_DEMUX_READER_CACHE_H_
 
+#include <atomic>
+#include <map>
 #include <memory>
+#include <mutex>
+#include <vector>
 
 #include "garnet/bin/mediaplayer/demux/reader.h"
 #include "garnet/bin/mediaplayer/demux/sparse_byte_buffer.h"
 #include "garnet/bin/mediaplayer/util/incident.h"
-#include "lib/async/dispatcher.h"
-#include "lib/fxl/synchronization/thread_checker.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media_player {
 
-// ReaderCache implements Reader against a dynamic in-memory cache of an
-// upstream Reader's asset.
+// Store for reading.
 //
-// ReaderCache is backed by a SparseByteBuffer which tracks holes (spans of the
-// asset that haven't been read) and regions (spans of the asset that have been
-// read). See SparseByteBuffer for details.
+// ReaderCache is an Reader filter that reads an entire asset from an
+// Reader into memory and implements Reader against the cache.
+// Currently, there is no support for throttling the intake rate or for
+// limiting the amount of memory used by the cache. The entire asset is read
+// into memory and remains there until the cache is deleted.
+// TODO(dalesat): Devise and implement a management policy.
 //
-// ReaderCache will serve ReadAt requests from its in-memory cache, and maintain
-// its cache asynchronously using the upstream reader on a schedule determined
-// by the cache options (see SetCacheOptions).
+// ReaderCache is implemented using a collection of holes (spans of the asset
+// that haven't been read) and regions (spans of the asset that have been read).
+// Holes can be indefinitely large, and no two holes are adjacent to each other.
+// Regions represent successful past reads and can be any non-zero size.
+//
+// The intake side of ReaderCache chooses a hole to work on, reading regions
+// and shrinking the hole from front to back. If the outlet side (the
+// ReadAt implementation) needs content from a different part of the asset,
+// the intake side finds the hole that starts at that position or creates one
+// (by splitting an existing hole) and starts working on that. Once a hole is
+// completely filled, intake moves to the next hole in order, wrapping around
+// at the end of the asset. Once the entire asset is read, the intake side
+// shuts down.
+// TODO(dalesat): Provide methods for discovering what parts of the asset are
+// cached.
 class ReaderCache : public Reader,
                     public std::enable_shared_from_this<ReaderCache> {
  public:
@@ -41,60 +58,119 @@ class ReaderCache : public Reader,
   void ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
               ReadAtCallback callback) override;
 
-  // Configures the ReaderCache to respect the given memory budget.
-  //   |capacity| is the amount of memory ReaderCache is allowed to use for
-  //              caching the upstream Reader's content.
-  //   |max_backtrack| is the amount of memory (< capacity) that ReaderCache
-  //                   will maintain _behind_ the ReadAt point (for skipping
-  //                   back).
-  //   |chunk_size| is the size of read chunks ReaderCache will use when reading
-  //                from upstream.
-  void SetCacheOptions(size_t capacity, size_t max_backtrack,
-                       size_t chunk_size);
-
  private:
-  // Loads if
-  //   1. No load is in progress already.
-  //   2. There are holes in the desired cache range for this position which
-  //      require filling.
-  // Starts a load from the upstream Reader into our buffer over the given
-  // range.
-  //   1. If requested, clean up memory outside the desired range to pay for the
-  //      new allocations.
-  //   2. Makes async calls for the upstream Reader to fill all the holes in the
-  //      desired cache range.
-  //   3. Running any ReadAt call queued on this reload.
-  void MaybeStartLoadForPosition(size_t position);
+  static constexpr size_t kDefaultReadSize = 32 * 1024;
 
-  // Makes async calls to the upstream Reader to fill the given holes in our
-  // underlying buffer. Calls callback on completion.
-  void FillHoles(std::vector<SparseByteBuffer::Hole> holes,
-                 fit::closure callback);
+  // Represents a pending ReadAt call. The buffer associated with the request
+  // can be filled in sequential fragments using the CopyFrom method.
+  class ReadAtRequest {
+   public:
+    ReadAtRequest();
 
-  // Calculates the desired cache range according to our cache options around
-  // the requested read position.
-  std::pair<size_t, size_t> CalculateCacheRange(size_t position);
+    ~ReadAtRequest();
 
-  // |buffer_| is the underlying storage for the cache.
-  SparseByteBuffer buffer_;
-  Result last_result_;
+    // Initializes the request.
+    void Start(size_t position, uint8_t* buffer, size_t bytes_to_read,
+               ReadAtCallback callback);
 
-  Incident describe_is_complete_;
-  Incident load_is_complete_;
+    // Gets the current read position.
+    size_t position() { return position_; }
 
-  // These values are stable after |describe_is_complete_|.
-  std::shared_ptr<Reader> upstream_reader_;
-  size_t upstream_size_;
-  // TODO(turnage): Respect can_seek_ == false in upstream reader.
-  bool upstream_can_seek_;
+    // Gets the remaining number of bytes to read.
+    size_t remaining_bytes_to_read() { return remaining_bytes_to_read_; }
 
-  size_t capacity_ = 16 * 1024 * 1024;
-  size_t max_backtrack_ = 0;
-  size_t chunk_size_ = 512 * 1024;
+    // Delivers all or part of the data indicated by position and
+    // remaining_bytes_to_read.
+    void CopyFrom(uint8_t* source, size_t byte_count);
 
-  async_dispatcher_t* dispatcher_;
+    // Completes the request with the indicated result.
+    void Complete(Result result);
 
-  bool load_in_progress_;
+   private:
+    std::atomic_bool in_progress_;
+    size_t position_;  // Updated by CopyFrom.
+    uint8_t* buffer_;  // Updated by CopyFrom.
+    size_t original_bytes_to_read_;
+    size_t remaining_bytes_to_read_;  // Updated by CopyFrom.
+    ReadAtCallback callback_;
+  };
+
+  // Maintains the cached data in an in-memory data structure. Handles
+  // fulfillment of at most one ReadAtRequest. Interacts with Intake to arrange
+  // for the acquisition of data from the upstream reader. By default, intake
+  // proceeds from the start of the asset to the end. The store deviates from
+  // this order when a ReadAtRequest is submitted for data that isn't yet
+  // cached. In that case, intake skips to the position of the ReadAtRequest
+  // and proceeds from there, skipping filled regions and wrapping around as
+  // needed until the entire asset is cached.
+  class Store {
+   public:
+    Store();
+
+    ~Store();
+
+    // Initializes the store.
+    void Initialize(Result result, size_t size, bool can_seek);
+
+    // Calls the callback immediately with description values.
+    void Describe(DescribeCallback callback);
+
+    // Sets a read request to fulfill.
+    void SetReadAtRequest(ReadAtRequest* request);
+
+    // Determines what data intake should produce next. Returns kUnknownSize if
+    // intake isn't required.
+    size_t GetIntakePositionAndSize(size_t* size_out);
+
+    // Submits intaken data.
+    void PutIntakeBuffer(size_t position, std::vector<uint8_t>&& buffer);
+
+    // Reports an intake error.
+    void ReportIntakeError(Result result);
+
+   private:
+    // Attempts to progress satisfaction of the current read request.
+    void ServeRequest()
+        FXL_THREAD_ANNOTATION_ATTRIBUTE__(release_capability(mutex_));
+
+    // These fields are stable after Initialize.
+    size_t size_ = kUnknownSize;
+    bool can_seek_ = false;
+
+    mutable std::mutex mutex_;
+    Result result_ FXL_GUARDED_BY(mutex_) = Result::kOk;
+    SparseByteBuffer sparse_byte_buffer_ FXL_GUARDED_BY(mutex_);
+    SparseByteBuffer::Hole intake_hole_ FXL_GUARDED_BY(mutex_);
+    SparseByteBuffer::Hole read_hole_ FXL_GUARDED_BY(mutex_);
+    SparseByteBuffer::Region read_region_ FXL_GUARDED_BY(mutex_);
+    ReadAtRequest* read_request_ FXL_GUARDED_BY(mutex_) = nullptr;
+    size_t read_request_position_ FXL_GUARDED_BY(mutex_);
+    size_t read_request_remaining_bytes_ FXL_GUARDED_BY(mutex_);
+  };
+
+  // Reads from the upstream reader into the store.
+  class Intake {
+   public:
+    Intake();
+
+    ~Intake();
+
+    void Start(std::weak_ptr<ReaderCache> owner,
+               std::shared_ptr<Reader> upstream_reader);
+
+   private:
+    void Continue();
+
+    std::weak_ptr<ReaderCache> owner_;
+    std::shared_ptr<Reader> upstream_reader_;
+    std::vector<uint8_t> buffer_;
+  };
+
+  ReadAtRequest read_at_request_;
+  Store store_;
+  Intake intake_;
+
+  ThreadsafeIncident describe_is_complete_;
 };
 
 }  // namespace media_player

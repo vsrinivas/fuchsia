@@ -45,6 +45,7 @@ void SparseByteBuffer::Initialize(size_t size) {
 size_t SparseByteBuffer::ReadRange(size_t start, size_t size,
                                    uint8_t* dest_buffer) {
   FXL_DCHECK(start < size_);
+  FXL_DCHECK(start + size < size_);
   FXL_DCHECK(dest_buffer != nullptr);
 
   size_t copied = 0;
@@ -168,6 +169,7 @@ SparseByteBuffer::Hole SparseByteBuffer::FindHoleContaining(size_t position) {
 std::vector<SparseByteBuffer::Hole> SparseByteBuffer::FindOrCreateHolesInRange(
     size_t start, size_t size) {
   FXL_DCHECK(start < size_);
+  FXL_DCHECK(start + size < size_);
 
   std::vector<Hole> holes_in_range;
 
@@ -204,8 +206,8 @@ std::vector<SparseByteBuffer::Hole> SparseByteBuffer::FindOrCreateHolesInRange(
   return holes_in_range;
 }
 
-SparseByteBuffer::Hole SparseByteBuffer::Fill(
-    Hole hole, std::vector<uint8_t>&& buffer) {
+SparseByteBuffer::Hole SparseByteBuffer::Fill(Hole hole,
+                                              std::vector<uint8_t>&& buffer) {
   FXL_DCHECK(size_ > 0u);
   FXL_DCHECK(hole.iter_ != holes_.end());
   FXL_DCHECK(buffer.size() != 0);
@@ -254,6 +256,7 @@ SparseByteBuffer::Hole SparseByteBuffer::Fill(
 size_t SparseByteBuffer::CleanUpExcept(size_t goal, size_t protected_start,
                                        size_t protected_size) {
   FXL_DCHECK(protected_start < size_);
+  FXL_DCHECK(protected_start + protected_size < size_);
 
   if (regions_.empty()) {
     return 0;
