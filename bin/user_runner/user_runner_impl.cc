@@ -169,7 +169,6 @@ UserRunnerImpl::UserRunnerImpl(component::StartupContext* const startup_context,
                                const Options& options)
     : startup_context_(startup_context),
       options_(options),
-      user_shell_context_binding_(this),
       story_provider_impl_("StoryProviderImpl"),
       agent_runner_("AgentRunner") {
   startup_context_->outgoing()
@@ -705,8 +704,28 @@ void UserRunnerImpl::InitializeUserShell(
 }
 
 void UserRunnerImpl::RunUserShell(fuchsia::modular::AppConfig user_shell) {
+  // |user_shell_services_| is a ServiceProvider (aka a Directory) that will
+  // be used to augment the user shell's namespace.
+  user_shell_services_.AddService<fuchsia::modular::UserShellContext>(
+      [this](
+          fidl::InterfaceRequest<fuchsia::modular::UserShellContext> request) {
+        user_shell_context_bindings_.AddBinding(this, std::move(request));
+      });
+  // |user_shell_service_provider_| is an InterfacePtr impl for ServiceProvider
+  // that binds to |user_shell_services_|.
+  fuchsia::sys::ServiceProviderPtr user_shell_service_provider_ptr_;
+  user_shell_services_.AddBinding(
+      user_shell_service_provider_ptr_.NewRequest());
+
+  // |service_list| specifies which services are available to the child
+  // component from which ServiceProvicer. There is a lot of indirection here.
+  auto service_list = fuchsia::sys::ServiceList::New();
+  service_list->names.push_back(fuchsia::modular::UserShellContext::Name_);
+  service_list->provider = std::move(user_shell_service_provider_ptr_);
+
   user_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      user_environment_->GetLauncher(), std::move(user_shell));
+      user_environment_->GetLauncher(), std::move(user_shell),
+      /* data_origin = */ "", std::move(service_list));
 
   if (user_shell_.is_bound()) {
     user_shell_.Unbind();
@@ -725,10 +744,8 @@ void UserRunnerImpl::RunUserShell(fuchsia::modular::AppConfig user_shell) {
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
   user_shell_view_host_->ConnectView(std::move(view_owner));
 
-  if (user_shell_context_binding_.is_bound()) {
-    user_shell_context_binding_.Unbind();
-  }
-  user_shell_->Initialize(user_shell_context_binding_.NewBinding());
+  // TODO(thatguy): Remove this. MI4-1445
+  user_shell_->Initialize(user_shell_context_bindings_.AddBinding(this));
 }
 
 void UserRunnerImpl::TerminateUserShell(const std::function<void()>& done) {

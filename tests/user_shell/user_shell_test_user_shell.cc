@@ -201,6 +201,13 @@ class TestApp
   explicit TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
+
+    user_shell_context_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
+
+    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    story_provider_state_watcher_.Watch(&story_provider_);
   }
 
   ~TestApp() override = default;
@@ -224,10 +231,11 @@ class TestApp
                       user_shell_context) override {
     initialize_.Pass();
 
-    user_shell_context_.Bind(std::move(user_shell_context));
-    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-    story_provider_state_watcher_.Watch(&story_provider_);
+    // Only check that Initialize was also called. We get our actual
+    // UserShellContext from the environment.
 
+    // TODO(thatguy): Once Initialize() goes away entirely, call this method
+    // from the constructor.
     TestStoryProvider_GetStoryInfo_Null();
   }
 

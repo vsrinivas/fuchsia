@@ -202,7 +202,8 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
   std::unique_ptr<scoped_tmpfs::ScopedTmpFS> memfs_for_ledger_;
 
   fidl::BindingSet<fuchsia::modular::internal::UserRunner> bindings_;
-  fidl::Binding<fuchsia::modular::UserShellContext> user_shell_context_binding_;
+  component::ServiceProviderImpl user_shell_services_;
+  fidl::BindingSet<fuchsia::modular::UserShellContext> user_shell_context_bindings_;
 
   fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory_;
   fuchsia::auth::TokenManagerPtr agent_token_manager_;

@@ -19,6 +19,9 @@ using fuchsia.ui.policy;
 // Teardown may be initiated by the user shell calling
 // UserShellContext.Logout(), by the user runner being terminated, or by the
 // system shutting down.
+//
+// DEPRECATED: The UserShellContext is now available in the environment of
+// user shell processes, so UserShell is not necessary to expose any more.
 [Discoverable]  // Created by user shell components.
 interface UserShell {
   1: Initialize(UserShellContext user_shell_context);
@@ -27,6 +30,7 @@ interface UserShell {
 // This interface allows the |UserShell| to request capabilities from the
 // |UserRunner| in a way that is more explicit about the services that are
 // offered than a generic |ServiceProvider|.
+[Discoverable]
 interface UserShellContext {
   // The account associated with the currently logged-in user. It's NULL if
   // logged into GUEST mode.
