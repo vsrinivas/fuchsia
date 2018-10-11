@@ -4,6 +4,7 @@
 
 #include "minstrel.h"
 
+#include <wlan/common/channel.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/protocol/mac.h>
 
@@ -31,9 +32,9 @@ zx::duration TxTimeErp(SupportedRate rate) {
     return HeaderTxTimeErp() + PayloadTxTimeErp(rate);
 }
 
-std::unordered_map<tx_vec_idx_t, zx::duration> GetSupportedErp(
-    const std::vector<SupportedRate>& rates) {
-    std::unordered_map<tx_vec_idx_t, zx::duration> tx_vec_to_add;
+void AddSupportedErp(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
+                     const std::vector<SupportedRate>& rates) {
+    size_t tx_stats_added = 0;
     for (const auto& rate : rates) {
         TxVector tx_vector;
         zx_status_t status = TxVector::FromSupportedRate(rate, &tx_vector);
@@ -44,12 +45,16 @@ std::unordered_map<tx_vec_idx_t, zx::duration> GetSupportedErp(
         status = tx_vector.ToIdx(&tx_vector_idx);
         zx::duration perfect_tx_time = TxTimeErp(rate);
         ZX_DEBUG_ASSERT(perfect_tx_time.to_nsecs() != 0);
-        tx_vec_to_add.emplace(tx_vector_idx, TxTimeErp(rate));
         debugmstl("%s, tx_time %lu nsec\n", debug::Describe(tx_vector).c_str(),
                   perfect_tx_time.to_nsecs());
-        tx_vec_to_add.emplace(tx_vector_idx, perfect_tx_time);
+        TxStats tx_stats{
+            .tx_vector_idx = tx_vector_idx,
+            .perfect_tx_time = perfect_tx_time,
+        };
+        tx_stats_map->emplace(tx_vector_idx, tx_stats);
+        ++tx_stats_added;
     }
-    return tx_vec_to_add;
+    debugmstl("%zu ERP added.\n", tx_stats_added);
 }
 
 zx::duration HeaderTxTimeHt() {
@@ -107,9 +112,9 @@ zx::duration TxTimeHt(CBW cbw, GI gi, uint8_t relative_mcs_idx) {
 
 // SupportedMcsRx is 78 bit long in IEEE802.11-2016, Figure 9-334
 // In reality, devices implement MCS 0-31, sometimes 32, almost never beyond 32.
-std::unordered_map<tx_vec_idx_t, zx::duration> GetSupportedHt(
-    CBW cbw, GI gi, const SupportedMcsRxMcsHead& mcs_set) {
-    std::unordered_map<tx_vec_idx_t, zx::duration> tx_vec_to_add;
+void AddSupportedHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map, CBW cbw, GI gi,
+                    const SupportedMcsRxMcsHead& mcs_set) {
+    size_t tx_stats_added = 0;
     for (uint8_t mcs_idx = 0; mcs_idx < kHtNumMcs; ++mcs_idx) {
         // Skip if this mcs is not supported
         if (!mcs_set.Support(mcs_idx)) { continue; }
@@ -127,9 +132,16 @@ std::unordered_map<tx_vec_idx_t, zx::duration> GetSupportedHt(
         ZX_DEBUG_ASSERT(perfect_tx_time.to_nsecs() != 0);
         debugmstl("%s, tx_time %lu nsec\n", debug::Describe(tx_vector).c_str(),
                   perfect_tx_time.to_nsecs());
-        tx_vec_to_add.emplace(tx_vector_idx, perfect_tx_time);
+
+        TxStats tx_stats{
+            .tx_vector_idx = tx_vector_idx,
+            .perfect_tx_time = perfect_tx_time,
+        };
+        tx_stats_map->emplace(tx_vector_idx, tx_stats);
+        ++tx_stats_added;
     }
-    return tx_vec_to_add;
+    debugmstl("%zu HT added with cbw=%s, gi=%s\n", tx_stats_added, ::wlan::common::kCbwStr[cbw],
+              debug::Describe(gi).c_str());
 }
 
 MinstrelRateSelector::MinstrelRateSelector(TimerManager&& timer_mgr)
@@ -148,44 +160,34 @@ void AddErp(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
                    legacy_rates.begin() + assoc_ctx.supported_rates_cnt, SupportedRate::basic);
 
     debugmstl("Supported rates: %s\n", debug::Describe(legacy_rates).c_str());
-    auto erp_to_add = GetSupportedErp(legacy_rates);
-    debugmstl("%zu ERP added.\n", erp_to_add.size());
-    for (auto iter : erp_to_add) {
-        TxStats tx_stats;
-        tx_stats.tx_vector_idx = iter.first;
-        tx_stats.perfect_tx_time = iter.second;
-        tx_stats_map->emplace(iter.first, tx_stats);
-    }
+    AddSupportedErp(tx_stats_map, legacy_rates);
 }
 
 void AddHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map, const HtCapabilities& ht_cap) {
     tx_vec_idx_t max_size = kHtNumMcs;
-    uint8_t assoc_chan_width = 20;
+    // TODO(NET-1726): Enable CBW40 support once its information is available from AssocCtx
+    const CBW assoc_chan_width = CBW20;
+    const bool sgi_20 = ht_cap.ht_cap_info.short_gi_20() == 1;
+    const bool sgi_40 = ht_cap.ht_cap_info.short_gi_40() == 1;
 
-    if (ht_cap.ht_cap_info.chan_width_set() == HtCapabilityInfo::ChanWidthSet::TWENTY_FORTY) {
-        assoc_chan_width = 40;
-        max_size *= 2;
+    if (sgi_20) { max_size += kHtNumMcs; }
+    if (assoc_chan_width == CBW40) {
+        max_size += kHtNumMcs;
+        if (sgi_40) { max_size += kHtNumMcs; }
     }
-    uint8_t assoc_sgi = WLAN_GI_800NS;      // SGI not supported yet
-    max_size = max_size + kErpNumTxVector;  // Taking in to account legacy_rates.
+
+    max_size += kErpNumTxVector;  // Taking in to account erp_rates.
 
     debugmstl("max_size is %d.\n", max_size);
 
     tx_stats_map->reserve(max_size);
 
-    // Enumerate all combinations of chan_width, gi, nss and mcs_idx
-    for (uint8_t bw = 20; bw <= assoc_chan_width; bw *= 2) {
-        uint8_t cbw = bw == 20 ? CBW20 : CBW40;
-        for (uint8_t gi = 1 << 0; gi <= assoc_sgi; gi <<= 1) {
-            auto tx_params_to_add = GetSupportedHt(static_cast<CBW>(cbw), static_cast<GI>(gi),
-                                                   ht_cap.mcs_set.rx_mcs_head);
-            debugmstl("%zu HT added with cbw=%u, gi=%u\n", tx_params_to_add.size(), cbw, gi);
-            for (auto iter : tx_params_to_add) {
-                TxStats tx_stats;
-                tx_stats.tx_vector_idx = iter.first;
-                tx_stats.perfect_tx_time = iter.second;
-                tx_stats_map->emplace(iter.first, tx_stats);
-            }
+    AddSupportedHt(tx_stats_map, CBW20, WLAN_GI_800NS, ht_cap.mcs_set.rx_mcs_head);
+    if (sgi_20) { AddSupportedHt(tx_stats_map, CBW20, WLAN_GI_400NS, ht_cap.mcs_set.rx_mcs_head); }
+    if (assoc_chan_width == CBW40) {
+        AddSupportedHt(tx_stats_map, CBW40, WLAN_GI_800NS, ht_cap.mcs_set.rx_mcs_head);
+        if (sgi_40) {
+            AddSupportedHt(tx_stats_map, CBW40, WLAN_GI_400NS, ht_cap.mcs_set.rx_mcs_head);
         }
     }
     debugmstl("tx_stats_map size: %zu.\n", tx_stats_map->size());
@@ -200,6 +202,11 @@ void MinstrelRateSelector::AddPeer(const wlan_assoc_ctx_t& assoc_ctx) {
     constexpr uint32_t kMcsMask0_31 = 0xFFFFFFFF;
     if (assoc_ctx.has_ht_cap) {
         ht_cap = HtCapabilities::FromDdk(assoc_ctx.ht_cap);
+
+        // TODO(eyw): SGI support suppressed. Remove these once they are supported.
+        ht_cap.ht_cap_info.set_short_gi_20(false);
+        ht_cap.ht_cap_info.set_short_gi_40(false);
+
         if ((ht_cap.mcs_set.rx_mcs_head.bitmask() & kMcsMask0_31) == 0) {
             errorf("Invalid AssocCtx: HT supported but no valid MCS. %s\n",
                    debug::Describe(ht_cap.mcs_set).c_str());
@@ -294,8 +301,8 @@ void UpdateStatsPeer(Peer* peer) {
             if (tsp->attempts_total == 0) {
                 tsp->probability = prob;
             } else {
-                tsp->probability = tsp->probability * kMinstrelExpWeight +
-                                            prob * (1 - kMinstrelExpWeight);
+                tsp->probability =
+                    tsp->probability * kMinstrelExpWeight + prob * (1 - kMinstrelExpWeight);
             }
             tsp->cur_tp = 1e9 / tsp->perfect_tx_time.to_nsecs() * tsp->probability;
 
@@ -357,7 +364,7 @@ zx_status_t MinstrelRateSelector::GetListToFidl(wlan_minstrel::Peers* peers_fidl
 }
 
 wlan_minstrel::StatsEntry TxStats::ToFidl() const {
-    return wlan_minstrel::StatsEntry {
+    return wlan_minstrel::StatsEntry{
         .tx_vector_idx = tx_vector_idx,
         .tx_vec_desc = debug::Describe(tx_vector_idx),
         .success_cur = success_cur,
@@ -369,8 +376,8 @@ wlan_minstrel::StatsEntry TxStats::ToFidl() const {
     };
 }
 
-zx_status_t MinstrelRateSelector::GetStatsToFidl(
-    const common::MacAddr& peer_addr, wlan_minstrel::Peer* peer_fidl) const {
+zx_status_t MinstrelRateSelector::GetStatsToFidl(const common::MacAddr& peer_addr,
+                                                 wlan_minstrel::Peer* peer_fidl) const {
     auto iter = peer_map_.find(peer_addr);
     if (iter == peer_map_.end()) { return ZX_ERR_INVALID_ARGS; }
 
