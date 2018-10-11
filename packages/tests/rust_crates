@@ -1,5 +1,6 @@
 {
     "packages": [
+        "//garnet/lib/rust/connectivity-testing:connectivity-testing-tests",
         "//garnet/lib/rust/ethernet:ethernet-tests",
         "//garnet/public/rust:rust-crates-tests"
     ]
