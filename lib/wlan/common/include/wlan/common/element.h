@@ -297,6 +297,80 @@ struct RsnElement : public Element<RsnElement, element_id::kRsn> {
     uint8_t fields[];
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.4.2.98
+struct MeshConfiguration {
+    enum PathSelProtoId : uint8_t {
+        kHwmp = 1u,
+    };
+
+    enum PathSelMetricId : uint8_t {
+        kAirtime = 1u,
+    };
+
+    enum CongestCtrlModeId : uint8_t {
+        kCongestCtrlInactive = 0u,
+        kCongestCtrlSignaling = 1u,
+    };
+
+    enum SyncMethodId : uint8_t {
+        kNeighborOffsetSync = 1u,
+    };
+
+    enum AuthProtoId : uint8_t {
+        kNoAuth = 0u,
+        kSae = 1u,
+        kIeee8021X = 2u,
+    };
+
+    struct MeshFormationInfo : public common::BitField<uint8_t> {
+        WLAN_BIT_FIELD(connected_to_mesh_gate, 0, 1);
+        WLAN_BIT_FIELD(num_peerings, 1, 6);
+        WLAN_BIT_FIELD(connected_to_as, 7, 1);
+    } __PACKED;
+
+    struct MeshCapability : public common::BitField<uint8_t> {
+        WLAN_BIT_FIELD(accepting_additional_peerings, 0, 1);
+        WLAN_BIT_FIELD(mcca_supported, 1, 1);
+        WLAN_BIT_FIELD(mcca_enabled, 2, 1);
+        WLAN_BIT_FIELD(forwarding, 3, 1);
+        WLAN_BIT_FIELD(mbca_enabled, 4, 1);
+        WLAN_BIT_FIELD(tbtt_adjusting, 5, 1);
+        WLAN_BIT_FIELD(power_save_level, 6, 1);
+        // bit 7 is reserved
+    } __PACKED;
+
+    PathSelProtoId active_path_sel_proto_id;
+    PathSelMetricId active_path_sel_metric_id;
+    CongestCtrlModeId congest_ctrl_method_id;
+    SyncMethodId sync_method_id;
+    AuthProtoId auth_proto_id;
+    MeshFormationInfo mesh_formation_info;
+    MeshCapability mesh_capability;
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.2.98
+struct MeshConfigurationElement
+    : public Element<MeshConfigurationElement, element_id::kMeshConfiguration>
+{
+    static bool Create(void* buf, size_t len, size_t* actual, MeshConfiguration body);
+    static constexpr size_t kMinLen = 7;
+    static constexpr size_t kMaxLen = 7;
+
+    ElementHeader hdr;
+    MeshConfiguration body;
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.2.99
+struct MeshIdElement : public Element<MeshIdElement, element_id::kMeshId> {
+    static bool Create(void* buf, size_t len, size_t* actual, const uint8_t* mesh_id,
+                       size_t mesh_id_len);
+    static constexpr size_t kMinLen = 0;
+    static constexpr size_t kMaxLen = 32;
+
+    ElementHeader hdr;
+    uint8_t mesh_id[];
+} __PACKED;
+
 // IEEE Std 802.11-2016, 9.4.1.17
 class QosInfo : public common::BitField<uint8_t> {
    public:

@@ -186,6 +186,31 @@ bool RsnElement::Create(void* buf, size_t len, size_t* actual, const uint8_t* ra
     return true;
 }
 
+bool MeshConfigurationElement::Create(void* buf, size_t len, size_t* actual,
+                                      MeshConfiguration body) {
+    if (sizeof(MeshConfigurationElement) > len) { return false; }
+    auto elem = static_cast<MeshConfigurationElement*>(buf);
+    elem->hdr.id = element_id::kMeshConfiguration;
+    elem->hdr.len = sizeof(elem->body);
+    elem->body = body;
+    *actual = sizeof(MeshConfigurationElement);
+    return true;
+}
+
+bool MeshIdElement::Create(void* buf, size_t len, size_t* actual, const uint8_t* mesh_id,
+                           size_t mesh_id_len) {
+    if (mesh_id_len > kMaxLen) { return false; }
+    size_t elem_size = sizeof(MeshIdElement) + mesh_id_len;
+    if (elem_size > len) { return false; }
+
+    auto elem = static_cast<MeshIdElement*>(buf);
+    elem->hdr.id = element_id::kMeshId;
+    elem->hdr.len = mesh_id_len;
+    std::memcpy(elem->mesh_id, mesh_id, mesh_id_len);
+    *actual = elem_size;
+    return true;
+}
+
 bool QosCapabilityElement::Create(void* buf, size_t len, size_t* actual, const QosInfo& qos_info) {
     constexpr size_t elem_size = sizeof(QosCapabilityElement);
     if (elem_size > len) return false;

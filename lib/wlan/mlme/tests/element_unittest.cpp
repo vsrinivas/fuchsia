@@ -312,6 +312,40 @@ TEST_F(Elements, Country) {
                              sizeof(SubbandTriplet)));
 }
 
+TEST_F(Elements, MeshConfiguration) {
+    MeshConfiguration::MeshFormationInfo formation_info;
+    formation_info.set_val(0xCC);
+    MeshConfiguration::MeshCapability mesh_cap;
+    mesh_cap.set_val(0xF0);
+
+    const MeshConfiguration mesh_config = {
+        MeshConfiguration::kHwmp,
+        MeshConfiguration::kAirtime,
+        MeshConfiguration::kCongestCtrlInactive,
+        MeshConfiguration::kNeighborOffsetSync,
+        MeshConfiguration::kSae,
+        formation_info,
+        mesh_cap
+    };
+
+    EXPECT_TRUE(MeshConfigurationElement::Create(buf_, sizeof(buf_), &actual_, mesh_config));
+    EXPECT_EQ(sizeof(MeshConfigurationElement), actual_);
+
+    auto element = FromBytes<MeshConfigurationElement>(buf_, actual_);
+    ASSERT_NE(nullptr, element);
+    EXPECT_EQ(0, std::memcmp(&mesh_config, &element->body, sizeof(mesh_config)));
+}
+
+TEST_F(Elements, MeshId) {
+    const uint8_t mesh_id[] = {'t', 'e', 's', 't', ' ', 'm', 'e', 's', 'h'};
+    EXPECT_TRUE(MeshIdElement::Create(buf_, sizeof(buf_), &actual_, mesh_id, sizeof(mesh_id)));
+    EXPECT_EQ(sizeof(MeshIdElement) + sizeof(mesh_id), actual_);
+
+    auto element = FromBytes<MeshIdElement>(buf_, actual_);
+    ASSERT_NE(nullptr, element);
+    EXPECT_EQ(0, std::memcmp(mesh_id, element->mesh_id, sizeof(mesh_id)));
+}
+
 TEST_F(Elements, QosAp) {
     QosInfo info;
     info.set_edca_param_set_update_count(9);
