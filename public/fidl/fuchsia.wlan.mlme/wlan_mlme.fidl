@@ -706,6 +706,8 @@ struct StartRequest {
     // MLME-CHANNELSWITCH.request is supported.
     uint8 channel;
 
+    vector<uint8>:32 mesh_id;
+
     // TODO(hahnr): Add additional elements.
 
     // Although MLME-START.request is used to start a BSS, IEEE does not include an RSNE in this
@@ -722,6 +724,7 @@ enum StartResultCodes {
     BSS_ALREADY_STARTED_OR_JOINED = 1;
     RESET_REQUIRED_BEFORE_START = 2;
     NOT_SUPPORTED = 3;
+    INTERNAL_ERROR = 4;
 };
 
 struct StartConfirm {
@@ -861,7 +864,6 @@ interface MLME {
 
     26: EapolReq(EapolRequest req);
     27: -> EapolConf(EapolConfirm resp);
-
 
     // The following are extensions to the 802.11 MLME SAP interface.
 

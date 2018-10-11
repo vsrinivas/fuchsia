@@ -181,6 +181,9 @@ zx_status_t SendEapolConfirm(DeviceInterface* device,
                              ::fuchsia::wlan::mlme::EapolResultCodes result_code);
 zx_status_t SendEapolIndication(DeviceInterface* device, const EapolHdr& eapol,
                                 const common::MacAddr& src, const common::MacAddr& dst);
+
+zx_status_t SendStartConfirm(DeviceInterface* device, ::fuchsia::wlan::mlme::StartResultCodes code);
+
 }  // namespace service
 
 }  // namespace wlan

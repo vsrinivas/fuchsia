@@ -161,6 +161,7 @@ zx_status_t CreateStartRequest(MlmeMsg<wlan_mlme::StartRequest>* out_msg, bool p
     req->beacon_period = kBeaconPeriodTu;
     req->dtim_period = kDtimPeriodTu;
     req->channel = kBssChannel.primary;
+    req->mesh_id.resize(0);
     if (protected_ap) { req->rsne.reset(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne))); }
 
     return WriteServiceMessage(req.get(), fuchsia_wlan_mlme_MLMEStartReqOrdinal, out_msg);

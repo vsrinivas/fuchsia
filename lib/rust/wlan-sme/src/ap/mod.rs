@@ -386,6 +386,7 @@ fn create_start_request(config: &Config, ap_rsn: Option<&RsnCfg>) -> fidl_mlme::
         dtim_period: DEFAULT_DTIM_PERIOD,
         channel: config.channel,
         rsne: rsne_bytes,
+        mesh_id: vec![],
     }
 }
 

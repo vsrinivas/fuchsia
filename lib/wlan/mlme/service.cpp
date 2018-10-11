@@ -151,5 +151,11 @@ zx_status_t SendEapolIndication(DeviceInterface* device, const EapolHdr& eapol,
     return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEEapolIndOrdinal);
 }
 
+zx_status_t SendStartConfirm(DeviceInterface* device, wlan_mlme::StartResultCodes code) {
+    wlan_mlme::StartConfirm msg;
+    msg.result_code = code;
+    return SendServiceMsg(device, &msg, fuchsia_wlan_mlme_MLMEStartConfOrdinal);
+}
+
 }  // namespace service
 }  // namespace wlan

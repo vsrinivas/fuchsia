@@ -8,6 +8,8 @@
 
 namespace wlan {
 
+template <typename T> class MlmeMsg;
+
 class MeshMlme : public Mlme {
    public:
     explicit MeshMlme(DeviceInterface* device);
@@ -19,7 +21,11 @@ class MeshMlme : public Mlme {
     zx_status_t HandleTimeout(const ObjectId id) override;
 
    private:
-    DeviceInterface* const device_ __attribute__((unused));
+    ::fuchsia::wlan::mlme::StartResultCodes Start(
+            const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req);
+
+    DeviceInterface* const device_;
+    bool joined_ = false;
 };
 
 } // namespace wlan
