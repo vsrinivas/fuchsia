@@ -194,7 +194,7 @@ mod test {
             TestInterfaceRequest::from_args(5 /* opcode */, vec![Arg::NewId(NEW_ID_VALUE)])
                 .unwrap();
 
-        assert_match!(request, TestInterfaceRequest::NewId{arg} => assert_eq!(arg, NEW_ID_VALUE));
+        assert_match!(request, TestInterfaceRequest::NewId{arg} => assert_eq!(arg.id(), NEW_ID_VALUE));
     }
 
     static UNTYPED_NEW_ID_INTERFACE_NAME: &'static str = "test_interface";

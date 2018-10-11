@@ -17,6 +17,7 @@
 ///! glue and dispatch logic.
 use std::any::Any;
 use std::collections::hash_map::{Entry, HashMap};
+use std::fmt::{self, Debug, Display};
 use std::marker::PhantomData;
 
 use failure::{format_err, Error, Fail};
@@ -70,30 +71,6 @@ pub enum ObjectLookupError {
     ObjectDoesNotExist,
     #[fail(display = "Failed to downcast")]
     DowncastFailed,
-}
-
-/// When the concrete type of an object is known statically, we can provide
-/// an ObjectRef wrapper around the ObjectId in order to make downcasting
-/// simpler.
-///
-/// This is primarily useful when vending self references to MessageReceviers.
-#[derive(Copy, Clone, Debug)]
-pub struct ObjectRef<T: 'static>(PhantomData<T>, ObjectId);
-
-impl<T> ObjectRef<T> {
-    pub fn id(&self) -> ObjectId {
-        self.1
-    }
-
-    /// Provides an immutable reference to an object, downcasted to |T|.
-    pub fn get<'a>(&self, map: &'a ObjectMap) -> Result<&'a T, ObjectLookupError> {
-        map.get(self.1)
-    }
-
-    /// Provides a mutable reference to an object, downcasted to |T|.
-    pub fn get_mut<'a>(&self, map: &'a mut ObjectMap) -> Result<&'a mut T, ObjectLookupError> {
-        map.get_mut(self.1)
-    }
 }
 
 impl ObjectMap {
@@ -152,9 +129,10 @@ impl ObjectMap {
     ///
     /// Returns Err if there is already an object for |id| in this |ObjectMap|.
     pub fn add_object<I: Interface + 'static, R: RequestReceiver<I> + 'static>(
-        &mut self, _: I, id: u32, receiver: R,
-    ) -> Result<(), Error> {
-        self.add_object_raw(id, Box::new(RequestDispatcher::new(receiver)), &I::REQUESTS)
+        &mut self, id: u32, receiver: R,
+    ) -> Result<ObjectRef<R>, Error> {
+        self.add_object_raw(id, Box::new(RequestDispatcher::new(receiver)), &I::REQUESTS)?;
+        Ok(ObjectRef::from_id(id))
     }
 
     /// Adds an object to the map using the low-level primitives. It's favorable
@@ -182,6 +160,90 @@ impl ObjectMap {
         } else {
             Err(format_err!("Item {} does not exist", id))
         }
+    }
+}
+
+/// When the concrete type of an object is known statically, we can provide
+/// an ObjectRef wrapper around the ObjectId in order to make downcasting
+/// simpler.
+///
+/// This is primarily useful when vending self references to MessageReceviers.
+pub struct ObjectRef<T: 'static>(PhantomData<T>, ObjectId);
+
+// We cannot just derive these since that will place the corresponding trait
+// bound on `T`.
+impl<T: 'static> Copy for ObjectRef<T> {}
+impl<T: 'static> Clone for ObjectRef<T> {
+    fn clone(&self) -> Self {
+        ObjectRef(PhantomData, self.1)
+    }
+}
+impl<T: 'static> Debug for ObjectRef<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "ObjectRef({})", self.1)
+    }
+}
+
+impl<T> ObjectRef<T> {
+    pub fn from_id(id: ObjectId) -> Self {
+        ObjectRef(PhantomData, id)
+    }
+
+    pub fn id(&self) -> ObjectId {
+        self.1
+    }
+
+    /// Provides an immutable reference to an object, downcasted to |T|.
+    pub fn get<'a>(&self, map: &'a ObjectMap) -> Result<&'a T, ObjectLookupError> {
+        map.get(self.1)
+    }
+
+    /// Provides a mutable reference to an object, downcasted to |T|.
+    pub fn get_mut<'a>(&self, map: &'a mut ObjectMap) -> Result<&'a mut T, ObjectLookupError> {
+        map.get_mut(self.1)
+    }
+}
+
+/// A `NewObject` is a type-safe wrapper around a 'new_id' argument that has
+/// a static wayland interface. This wrapper will enforce that the object is
+/// only implemented by types that can receive wayland messages for the
+/// expected interface.
+pub struct NewObject<I: Interface + 'static>(PhantomData<I>, ObjectId);
+impl<I: Interface + 'static> Display for NewObject<I> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "NewObject<{}>({})", I::NAME, self.1)
+    }
+}
+impl<I: Interface + 'static> Debug for NewObject<I> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "{}", self)
+    }
+}
+
+/// Support turning raw `ObjectId`s into `NewObject`s.
+///
+/// Ex:
+///   let id: ObjectId = 3;
+///   let new_object: NewObject<MyInterface> = id.into();
+impl<I: Interface + 'static> From<ObjectId> for NewObject<I> {
+    fn from(id: ObjectId) -> Self {
+        Self::from_id(id)
+    }
+}
+
+impl<I: Interface + 'static> NewObject<I> {
+    pub fn from_id(id: ObjectId) -> Self {
+        NewObject(PhantomData, id)
+    }
+
+    pub fn id(&self) -> ObjectId {
+        self.1
+    }
+
+    pub fn implement<R: RequestReceiver<I>>(
+        self, client: &mut Client, receiver: R,
+    ) -> Result<ObjectRef<R>, Error> {
+        client.objects().add_object(self.1, receiver)
     }
 }
 
@@ -296,9 +358,7 @@ mod tests {
     #[test]
     fn dispatch_message_to_request_receiver() -> Result<(), Error> {
         let mut client = create_client()?;
-        client
-            .objects()
-            .add_object(TestInterface, 0, TestReceiver::new())?;
+        client.objects().add_object(0, TestReceiver::new())?;
 
         // Send a sync message; verify it's received.
         client.receive_message(TestMessage::Message1.into_message(0)?)?;
@@ -310,16 +370,8 @@ mod tests {
     fn add_object_duplicate_id() -> Result<(), Error> {
         let mut client = create_client()?;
         let objects = client.objects();
-        assert!(
-            objects
-                .add_object(TestInterface, 0, TestReceiver::new())
-                .is_ok()
-        );
-        assert!(
-            objects
-                .add_object(TestInterface, 0, TestReceiver::new())
-                .is_err()
-        );
+        assert!(objects.add_object(0, TestReceiver::new()).is_ok());
+        assert!(objects.add_object(0, TestReceiver::new()).is_err());
         Ok(())
     }
 

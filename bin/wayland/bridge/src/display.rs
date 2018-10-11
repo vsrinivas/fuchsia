@@ -37,7 +37,7 @@ impl Display {
         // is empty so failure should not be possible.
         client
             .objects()
-            .add_object(WlDisplay, DISPLAY_SINGLETON_OBJECT_ID, DisplayReceiver)
+            .add_object(DISPLAY_SINGLETON_OBJECT_ID, DisplayReceiver)
             .unwrap();
 
         // Start polling the channel for messages.
@@ -54,15 +54,13 @@ impl wl::RequestReceiver<WlDisplay> for DisplayReceiver {
     ) -> Result<(), Error> {
         match request {
             WlDisplayRequest::GetRegistry { registry } => {
+                let registry = registry.implement(client, RegistryReceiver)?;
                 RegistryReceiver::report_globals(registry, client)?;
-                client
-                    .objects()
-                    .add_object(WlRegistry, registry, RegistryReceiver)?;
                 Ok(())
             }
             WlDisplayRequest::Sync { callback } => {
-                client.post(callback, WlCallbackEvent::Done { callback_data: 0 })?;
-                client.post(this.id(), WlDisplayEvent::DeleteId { id: callback })?;
+                client.post(callback.id(), WlCallbackEvent::Done { callback_data: 0 })?;
+                client.post(this.id(), WlDisplayEvent::DeleteId { id: callback.id() })?;
                 Ok(())
             }
         }
@@ -74,11 +72,11 @@ struct RegistryReceiver;
 
 impl RegistryReceiver {
     /// Sends a wl_registry::global event for each entry in the |wl::Registry|.
-    pub fn report_globals(this: wl::ObjectId, client: &wl::Client) -> Result<(), Error> {
+    pub fn report_globals(this: wl::ObjectRef<Self>, client: &wl::Client) -> Result<(), Error> {
         let registry = client.registry();
         for (name, global) in registry.lock().globals().iter().enumerate() {
             client.post(
-                this,
+                this.id(),
                 WlRegistryEvent::Global {
                     name: name as u32,
                     interface: global.interface().into(),

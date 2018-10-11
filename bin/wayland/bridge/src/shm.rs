@@ -31,8 +31,8 @@ impl wl::RequestReceiver<WlShm> for Shm {
         _this: wl::ObjectRef<Self>, request: WlShmRequest, client: &mut wl::Client,
     ) -> Result<(), Error> {
         let WlShmRequest::CreatePool { id, size, .. } = request;
-        println!("wl_shm::create_pool(id: {}, fd, size: {})", id, size);
-        client.objects().add_object(WlShmPool, id, ShmPool::new())?;
+        println!("wl_shm::create_pool(id: {}, fd, size: {})", id.id(), size);
+        id.implement(client, ShmPool::new())?;
         Ok(())
     }
 }
@@ -64,7 +64,12 @@ impl wl::RequestReceiver<WlShmPool> for ShmPool {
                 println!(
                     "wl_shm_pool::create_buffer(id: {}, offset: {}, width: {}, height: {}, \
                      stride: {}, format: {:?})",
-                    id, offset, width, height, stride, format
+                    id.id(),
+                    offset,
+                    width,
+                    height,
+                    stride,
+                    format
                 );
             }
             WlShmPoolRequest::Resize { size } => {

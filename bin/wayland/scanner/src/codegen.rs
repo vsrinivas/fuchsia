@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::borrow::Cow;
 use std::io;
 
 use crate::ast;
@@ -37,7 +38,8 @@ use bitflags::*;
 use failure;
 use fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,
                             MessageGroupSpec, MessageHeader, MessageSpec, NewId,
-                            ObjectId, EncodeError, DecodeError, Interface }};"
+                            NewObject, ObjectId, EncodeError, DecodeError,
+                            Interface }};"
         )?;
 
         for interface in protocol.interfaces.into_iter() {
@@ -95,7 +97,7 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,
     ///    Request1 { arg1: u32 },
     ///    Request2 { name: String},
     ///  }
-    fn codegen_message_enum<F: Fn(&ast::Arg) -> String>(
+    fn codegen_message_enum<F: Fn(&ast::Arg) -> Cow<str>>(
         &mut self, name: &str, messages: &Vec<ast::Message>, arg_formatter: F,
     ) -> Result {
         writeln!(self.w, "#[derive(Debug)]");
@@ -230,7 +232,7 @@ impl FromArgs for Request {{
                     self.w,
                     "                {}: iter.next()
                                              .ok_or(DecodeError::InsufficientArgs)?
-                                             .{}?,",
+                                             .{},",
                     arg.name,
                     arg_to_primitive(&arg)
                 )?;
@@ -424,26 +426,31 @@ fn enum_path(name: &str) -> String {
     }
 }
 
-fn format_dispatch_arg_rust(arg: &ast::Arg) -> String {
+fn format_dispatch_arg_rust(arg: &ast::Arg) -> Cow<str> {
     if let Some(ref enum_type) = arg.enum_type {
-        return format!("Enum<{}>", enum_path(enum_type));
+        return format!("Enum<{}>", enum_path(enum_type)).into();
     }
     match arg.kind {
-        ArgKind::Int => "i32",
-        ArgKind::Uint => "u32",
-        ArgKind::Fixed => "u32",
-        ArgKind::String => "String",
-        ArgKind::Object => "ObjectId",
-        ArgKind::NewId => "ObjectId",
-        ArgKind::Array => "Vec<u8>",
-        ArgKind::Fd => "fuchsia_zircon::Handle",
+        ArgKind::Int => "i32".into(),
+        ArgKind::Uint => "u32".into(),
+        ArgKind::Fixed => "u32".into(),
+        ArgKind::String => "String".into(),
+        ArgKind::Object => "ObjectId".into(),
+        ArgKind::NewId => {
+            if let Some(interface) = &arg.interface {
+                format!("NewObject<{}>", to_camel_case(&interface)).into()
+            } else {
+                "ObjectId".into()
+            }
+        }
+        ArgKind::Array => "Vec<u8>".into(),
+        ArgKind::Fd => "fuchsia_zircon::Handle".into(),
     }
-    .to_string()
 }
 
-fn format_wire_arg_rust(arg: &ast::Arg) -> String {
+fn format_wire_arg_rust(arg: &ast::Arg) -> Cow<str> {
     if let Some(ref enum_type) = arg.enum_type {
-        return enum_path(enum_type);
+        return enum_path(enum_type).into();
     }
     match arg.kind {
         ArgKind::Int => "i32",
@@ -455,7 +462,7 @@ fn format_wire_arg_rust(arg: &ast::Arg) -> String {
         ArgKind::Array => "Vec<u8>",
         ArgKind::Fd => "fuchsia_zircon::Handle",
     }
-    .to_string()
+    .into()
 }
 
 fn format_arg_kind(arg: &ast::Arg) -> &'static str {
@@ -493,19 +500,19 @@ fn arg_to_primitive(arg: &ast::Arg) -> String {
             "as_uint().map(|i| match {}::from_bits(i) {{
                                       Some(e) => Enum::Recognized(e),
                                       None => Enum::Unrecognized(i),
-                                 }})",
+                                 }})?",
             enum_path(enum_type)
         );
     }
     match arg.kind {
-        ArgKind::Int => "as_int()",
-        ArgKind::Uint => "as_uint()",
-        ArgKind::Fixed => "as_fixed()",
-        ArgKind::String => "as_string()",
-        ArgKind::Object => "as_object()",
-        ArgKind::NewId => "as_new_id()",
-        ArgKind::Array => "as_array()",
-        ArgKind::Fd => "as_handle()",
+        ArgKind::Int => "as_int()?",
+        ArgKind::Uint => "as_uint()?",
+        ArgKind::Fixed => "as_fixed()?",
+        ArgKind::String => "as_string()?",
+        ArgKind::Object => "as_object()?",
+        ArgKind::NewId => "as_new_id()?.into()",
+        ArgKind::Array => "as_array()?",
+        ArgKind::Fd => "as_handle()?",
     }
     .to_string()
 }
