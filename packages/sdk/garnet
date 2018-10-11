@@ -7,6 +7,7 @@
         "garnet/packages/prod/logger",
         "garnet/packages/prod/log_listener",
         "garnet/packages/prod/media_audio",
+        "garnet/packages/prod/media_codec",
         "garnet/packages/prod/netstack",
         "garnet/packages/prod/openssh",
         "garnet/packages/prod/pkgsvr",
