@@ -17,7 +17,7 @@ Logger can only be initialized once.
 #### Basic initialization
 
 ```C
-#include <syslog/global.h>
+#include <lib/syslog/global.h>
 
 int main(int argc, char** argv) {
     fx_log_init();
@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
 #### Initialization with tags
 
 ```C
-#include <syslog/global.h>
+#include <lib/syslog/global.h>
 
 int main(int argc, char** argv) {
     fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
