@@ -456,7 +456,7 @@ side, and an appropriate **ioctl()** handler on the driver side.
 
 Under Fuchsia, this is done differently, by marshalling data through the Fuchsia Interface
 Definition Language
-([**FIDL**](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/README.md).
+([**FIDL**](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/README.md)).
 
 For more details about FIDL itself, consult the reference above.
 For our purposes here, FIDL:
