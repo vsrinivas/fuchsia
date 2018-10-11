@@ -73,6 +73,12 @@ enum ieee80211_frame_subtype {
     IEEE80211_FRAME_SUBTYPE_QOS_NULL   = 0xc0,
 };
 
+enum nl80211_band {
+    NL80211_BAND_2GHZ,
+    NL80211_BAND_5GHZ,
+    NL80211_BAND_60GHZ,
+};
+
 #define IEEE80211_FRAME_TYPE_MASK      0x000c
 #define IEEE80211_FRAME_SUBTYPE_MASK   0x00f0
 #define IEEE80211_FRAME_PROTECTED_MASK 0x4000
@@ -108,6 +114,8 @@ static inline uint8_t* ieee80211_get_bssid(struct ieee80211_frame_header* fh) {
     return fh->addr3;
 }
 
+#define IEEE80211_HT_MAX_AMPDU_FACTOR 13
+
 // IEEE Std 802.11-2016, 9.4.2.1, Table 9-77
 enum ieee80211_assoc_tags {
     IEEE80211_ASSOC_TAG_RATES = 1,
@@ -124,6 +132,7 @@ enum ieee80211_ht_caps {
         IEEE80211_HT_CAPS_SMPS_STATIC   = 0x0000,
         IEEE80211_HT_CAPS_SMPS_DYNAMIC  = 0x0004,
         IEEE80211_HT_CAPS_SMPS_DISABLED = 0x000c,
+        IEEE80211_HT_CAPS_SMPS_SHIFT    = 2,
     IEEE80211_HT_CAPS_GF                = 0x0010,
     IEEE80211_HT_CAPS_SGI_20            = 0x0020,
     IEEE80211_HT_CAPS_SGI_40            = 0x0040,
@@ -138,10 +147,12 @@ enum ieee80211_ht_caps {
     IEEE80211_HT_CAPS_L_SIG_TXOP_PROT   = 0x8000
 };
 
+#define IEEE80211_HT_MCS_MASK_LEN 10
+
 enum ieee80211_ampdu_params {
-    IEEE80211_AMPDU_MAX_RX_LEN           = 0x03,
-        IEEE80211_AMPDU_MAX_RX_LEN_SHIFT = 0,
-    IEEE80211_AMPDU_DENSITY              = 0x1c,
+    IEEE80211_AMPDU_RX_LEN_MASK          = 0x03,
+        IEEE80211_AMPDU_RX_LEN_SHIFT     = 0,
+    IEEE80211_AMPDU_DENSITY_MASK         = 0x1c,
         IEEE80211_AMPDU_DENSITY_SHIFT    = 2
 };
 
@@ -166,6 +177,7 @@ enum ieee80211_vht_caps {
     IEEE80211_VHT_CAPS_TXOP_PS         =   0x200000,
     IEEE80211_VHT_CAPS_HTC_VHT         =   0x400000,
     IEEE80211_VHT_CAPS_MAX_AMPDU_LEN   =  0x3800000,
+        IEEE80211_VHT_CAPS_MAX_AMPDU_LEN_SHIFT     = 23,
     IEEE80211_VHT_CAPS_VHT_LINK_ADAPT  =  0xc000000,
     IEEE80211_VHT_CAPS_RX_ANT_CONSIST  = 0x10000000,
     IEEE80211_VHT_CAPS_TX_ANT_CONSIST  = 0x20000000,

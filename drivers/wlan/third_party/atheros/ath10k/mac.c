@@ -35,6 +35,12 @@
 #include "wow.h"
 
 // clang-format off
+
+// The mask of bit |x|.
+#ifndef BIT
+#define BIT(x) (1 << (x))
+#endif
+
 #define CHAN2G(_channel, _freq, _flags) { \
     .hw_value           = (_channel), \
     .center_freq        = (_freq), \
@@ -215,6 +221,7 @@ static struct ieee80211_rate ath10k_rates_rev2[] = {
 
 #define ath10k_g_rates_rev2 (ath10k_rates_rev2 + 0)
 #define ath10k_g_rates_rev2_size (countof(ath10k_rates_rev2))
+#endif  // NEEDS PORTING
 
 static bool ath10k_mac_bitrate_is_cck(int bitrate) {
     switch (bitrate) {
@@ -233,6 +240,7 @@ static uint8_t ath10k_mac_bitrate_to_rate(int bitrate) {
            (ath10k_mac_bitrate_is_cck(bitrate) ? (1 << 7) : 0);
 }
 
+#if 0  // NEEDS PORTING
 uint8_t ath10k_mac_hw_rate_to_idx(const struct ieee80211_supported_band* sband,
                                   uint8_t hw_rate, bool cck) {
     const struct ieee80211_rate* rate;
@@ -532,7 +540,6 @@ static inline enum wmi_phy_mode chan_to_phymode(wlan_channel_t* wlan_chan) {
     return phymode;
 }
 
-#if 0   // NEEDS PORTING
 static uint8_t ath10k_parse_mpdudensity(uint8_t mpdudensity) {
     /*
      * 802.11n D2.0 defined values for "Minimum MPDU Start Spacing":
@@ -568,6 +575,7 @@ static uint8_t ath10k_parse_mpdudensity(uint8_t mpdudensity) {
     }
 }
 
+#if 0   // NEEDS PORTING
 int ath10k_mac_vif_chan(struct ieee80211_vif* vif,
                         struct cfg80211_chan_def* def) {
     struct ieee80211_chanctx_conf* conf;
@@ -611,8 +619,8 @@ ath10k_mac_get_any_chandef_iter(struct ieee80211_hw* hw,
 
     *def = &conf->def;
 }
-#endif  //NEEDS PORTING
 
+#endif  // NEEDS PORTING
 static zx_status_t ath10k_peer_create(struct ath10k* ar,
                                       uint32_t vdev_id,
                                       const uint8_t* addr,
@@ -628,7 +636,7 @@ static zx_status_t ath10k_peer_create(struct ath10k* ar,
         num_peers++;
 #else
     num_peers++; // There is only one vdev for now
-#endif  // NEEDS PORTING
+#endif
 
     if (num_peers >= ar->max_num_peers) {
         return ZX_ERR_NO_RESOURCES;
@@ -2110,13 +2118,13 @@ static void ath10k_mac_vif_sta_connection_loss_work(struct work_struct* work) {
 
     ieee80211_connection_loss(vif);
 }
+#endif  // NEEDS PORTING
 
 /**********************/
 /* Station management */
 /**********************/
 
-static uint32_t ath10k_peer_assoc_h_listen_intval(struct ath10k* ar,
-        struct ieee80211_vif* vif) {
+static uint32_t ath10k_peer_assoc_h_listen_intval(struct ath10k* ar) {
     /* Some firmware revisions have unstable STA powersave when listen
      * interval is set too high (e.g. 5). The symptoms are firmware doesn't
      * generate NullFunc frames properly even if buffered frames have been
@@ -2125,41 +2133,42 @@ static uint32_t ath10k_peer_assoc_h_listen_intval(struct ath10k* ar,
      *
      * As a workaround set it to 1.
      */
-    if (vif->type == NL80211_IFTYPE_STATION) {
+    if (ar->arvif.vdev_type == WMI_VDEV_TYPE_STA) {
         return 1;
     }
 
-    return ar->hw->conf.listen_interval;
+    return 3;  // Original code is ar->hw->conf.listen_interval.
 }
 
 static void ath10k_peer_assoc_h_basic(struct ath10k* ar,
-                                      struct ieee80211_vif* vif,
-                                      struct ieee80211_sta* sta,
+                                      wlan_assoc_ctx_t* assoc,
                                       struct wmi_peer_assoc_complete_arg* arg) {
-    struct ath10k_vif* arvif = (void*)vif->drv_priv;
-    uint32_t aid;
+    struct ath10k_vif* arvif = &ar->arvif;
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
+#if 0  // NEEDS PORTING
     if (vif->type == NL80211_IFTYPE_STATION) {
         aid = vif->bss_conf.aid;
     } else {
         aid = sta->aid;
     }
+#endif  // NEEDS PORTING
 
-    memcpy(arg->addr, sta->addr, ETH_ALEN);
+    memcpy(arg->addr, assoc->bssid, ETH_ALEN);
     arg->vdev_id = arvif->vdev_id;
-    arg->peer_aid = aid;
+    arg->peer_aid = assoc->aid;
     arg->peer_flags |= arvif->ar->wmi.peer_flags->auth;
-    arg->peer_listen_intval = ath10k_peer_assoc_h_listen_intval(ar, vif);
+    arg->peer_listen_intval = ath10k_peer_assoc_h_listen_intval(ar);
     arg->peer_num_spatial_streams = 1;
-    arg->peer_caps = vif->bss_conf.assoc_capability;
+    arg->peer_caps = assoc->cap_info[0] | (assoc->cap_info[1] << 8);
 }
 
 static void ath10k_peer_assoc_h_crypto(struct ath10k* ar,
-                                       struct ieee80211_vif* vif,
-                                       struct ieee80211_sta* sta,
+                                       wlan_assoc_ctx_t* assoc,
                                        struct wmi_peer_assoc_complete_arg* arg) {
+    // TODO(NET-1661): Come back later when we want to enable the security feature on AP mode.
+#if 0  // NEEDS PORTING
     struct ieee80211_bss_conf* info = &vif->bss_conf;
     struct cfg80211_chan_def def;
     struct cfg80211_bss* bss;
@@ -2205,47 +2214,32 @@ static void ath10k_peer_assoc_h_crypto(struct ath10k* ar,
             BITARR_TEST(ar->running_fw->fw_file.fw_features, ATH10K_FW_FEATURE_MFP_SUPPORT)) {
         arg->peer_flags |= ar->wmi.peer_flags->pmf;
     }
+#endif  // NEEDS PORTING
 }
 
 static void ath10k_peer_assoc_h_rates(struct ath10k* ar,
-                                      struct ieee80211_vif* vif,
-                                      struct ieee80211_sta* sta,
+                                      wlan_assoc_ctx_t* assoc,
                                       struct wmi_peer_assoc_complete_arg* arg) {
-    struct ath10k_vif* arvif = (void*)vif->drv_priv;
     struct wmi_rate_set_arg* rateset = &arg->peer_legacy_rates;
-    struct cfg80211_chan_def def;
-    const struct ieee80211_supported_band* sband;
-    const struct ieee80211_rate* rates;
-    enum nl80211_band band;
-    uint32_t ratemask;
-    uint8_t rate;
-    int i;
+    size_t i;
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
+#if 0  // NEEDS PORTING
     if (COND_WARN(ath10k_mac_vif_chan(vif, &def))) {
         return;
     }
+#endif  // NEEDS PORTING
 
-    band = def.chan->band;
-    sband = ar->hw->wiphy->bands[band];
-    ratemask = sta->supp_rates[band];
-    ratemask &= arvif->bitrate_mask.control[band].legacy;
-    rates = sband->bitrates;
-
+    size_t rates_size = sizeof(rateset->rates) / sizeof(rateset->rates[0]);
     rateset->num_rates = 0;
-
-    for (i = 0; i < 32; i++, ratemask >>= 1, rates++) {
-        if (!(ratemask & 1)) {
-            continue;
-        }
-
-        rate = ath10k_mac_bitrate_to_rate(rates->bitrate);
-        rateset->rates[rateset->num_rates] = rate;
+    for(i = 0; i < MIN(rates_size, assoc->supported_rates_cnt); i++) {
+        rateset->rates[rateset->num_rates] = ath10k_mac_bitrate_to_rate(assoc->supported_rates[i]);
         rateset->num_rates++;
     }
 }
 
+// Returns true if there is no mask asserted for all spatial streams.
 static bool
 ath10k_peer_assoc_h_ht_masked(const uint8_t ht_mcs_mask[IEEE80211_HT_MCS_MASK_LEN]) {
     int nss;
@@ -2258,11 +2252,12 @@ ath10k_peer_assoc_h_ht_masked(const uint8_t ht_mcs_mask[IEEE80211_HT_MCS_MASK_LE
     return true;
 }
 
+// Returns true if there is no mask asserted for all spatial streams.
 static bool
-ath10k_peer_assoc_h_vht_masked(const uint16_t vht_mcs_mask[NL80211_VHT_NSS_MAX]) {
+ath10k_peer_assoc_h_vht_masked(const uint16_t vht_mcs_mask[VHT_NSS_NUM]) {
     int nss;
 
-    for (nss = 0; nss < NL80211_VHT_NSS_MAX; nss++)
+    for (nss = 0; nss < VHT_NSS_NUM; nss++)
         if (vht_mcs_mask[nss]) {
             return false;
         }
@@ -2271,51 +2266,47 @@ ath10k_peer_assoc_h_vht_masked(const uint16_t vht_mcs_mask[NL80211_VHT_NSS_MAX])
 }
 
 static void ath10k_peer_assoc_h_ht(struct ath10k* ar,
-                                   void* assoc_resp_frame,
+                                   wlan_assoc_ctx_t* assoc,
                                    struct wmi_peer_assoc_complete_arg* arg) {
-    const struct ieee80211_sta_ht_cap* ht_cap = &sta->ht_cap;
-    struct ath10k_vif* arvif = (void*)vif->drv_priv;
-    struct cfg80211_chan_def def;
-    enum nl80211_band band;
-    const uint8_t* ht_mcs_mask;
-    const uint16_t* vht_mcs_mask;
-    int i, n;
+    const wlan_ht_caps_t* ht_cap = &assoc->ht_cap;
+    const uint8_t ht_mcs_mask[] = {1};  // TODO(NET-1682)
+    const uint16_t vht_mcs_mask[] = {0};  // TODO(NET-1682)
+    size_t i, n;
     uint8_t max_nss;
     uint32_t stbc;
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
-    if (COND_WARN(ath10k_mac_vif_chan(vif, &def))) {
+    if (!assoc->has_ht_cap) {
         return;
     }
 
-    if (!ht_cap->ht_supported) {
-        return;
-    }
-
+#if 0  // NEEDS PORTING
     band = def.chan->band;
     ht_mcs_mask = arvif->bitrate_mask.control[band].ht_mcs;
     vht_mcs_mask = arvif->bitrate_mask.control[band].vht_mcs;
+#endif  // NEEDS PORTING
 
     if (ath10k_peer_assoc_h_ht_masked(ht_mcs_mask) &&
-            ath10k_peer_assoc_h_vht_masked(vht_mcs_mask)) {
+        ath10k_peer_assoc_h_vht_masked(vht_mcs_mask)) {
         return;
     }
 
     arg->peer_flags |= ar->wmi.peer_flags->ht;
     arg->peer_max_mpdu = (1 << (IEEE80211_HT_MAX_AMPDU_FACTOR +
-                                ht_cap->ampdu_factor)) - 1;
+                                (ht_cap->ampdu_params & IEEE80211_AMPDU_RX_LEN_MASK))) - 1;
 
-    arg->peer_mpdu_density =
-        ath10k_parse_mpdudensity(ht_cap->ampdu_density);
+    arg->peer_mpdu_density = ath10k_parse_mpdudensity(
+            (ht_cap->ampdu_params & IEEE80211_AMPDU_DENSITY_MASK) >> IEEE80211_AMPDU_DENSITY_SHIFT);
 
-    arg->peer_ht_caps = ht_cap->cap;
+    arg->peer_ht_caps = ht_cap->ht_capability_info;
     arg->peer_rate_caps |= WMI_RC_HT_FLAG;
 
-    if (ht_cap->cap & IEEE80211_HT_CAP_LDPC_CODING) {
+    if (ht_cap->ht_capability_info & IEEE80211_HT_CAPS_LDPC) {
         arg->peer_flags |= ar->wmi.peer_flags->ldbc;
     }
 
+#if 0  // NEEDS PORTING
     if (sta->bandwidth >= IEEE80211_STA_RX_BW_40) {
         arg->peer_flags |= ar->wmi.peer_flags->bw40;
         arg->peer_rate_caps |= WMI_RC_CW40_FLAG;
@@ -2330,28 +2321,29 @@ static void ath10k_peer_assoc_h_ht(struct ath10k* ar,
             arg->peer_rate_caps |= WMI_RC_SGI_FLAG;
         }
     }
+#endif  // NEEDS PORTING
 
-    if (ht_cap->cap & IEEE80211_HT_CAP_TX_STBC) {
+    if (ht_cap->ht_capability_info & IEEE80211_HT_CAPS_TX_STBC) {
         arg->peer_rate_caps |= WMI_RC_TX_STBC_FLAG;
         arg->peer_flags |= ar->wmi.peer_flags->stbc;
     }
 
-    if (ht_cap->cap & IEEE80211_HT_CAP_RX_STBC) {
-        stbc = ht_cap->cap & IEEE80211_HT_CAP_RX_STBC;
-        stbc = stbc >> IEEE80211_HT_CAP_RX_STBC_SHIFT;
+    if (ht_cap->ht_capability_info & IEEE80211_HT_CAPS_RX_STBC) {
+        stbc = ht_cap->ht_capability_info & IEEE80211_HT_CAPS_RX_STBC;
+        stbc = stbc >> IEEE80211_HT_CAPS_RX_STBC_SHIFT;
         stbc = stbc << WMI_RC_RX_STBC_FLAG_S;
         arg->peer_rate_caps |= stbc;
         arg->peer_flags |= ar->wmi.peer_flags->stbc;
     }
 
-    if (ht_cap->mcs.rx_mask[1] && ht_cap->mcs.rx_mask[2]) {
+    if (ht_cap->supported_mcs_set[1] && ht_cap->supported_mcs_set[2]) {
         arg->peer_rate_caps |= WMI_RC_TS_FLAG;
-    } else if (ht_cap->mcs.rx_mask[1]) {
+    } else if (ht_cap->supported_mcs_set[1]) {
         arg->peer_rate_caps |= WMI_RC_DS_FLAG;
     }
 
     for (i = 0, n = 0, max_nss = 0; i < IEEE80211_HT_MCS_MASK_LEN * 8; i++)
-        if ((ht_cap->mcs.rx_mask[i / 8] & BIT(i % 8)) &&
+        if ((ht_cap->supported_mcs_set[i / 8] & BIT(i % 8)) &&
                 (ht_mcs_mask[i / 8] & BIT(i % 8))) {
             max_nss = (i / 8) + 1;
             arg->peer_ht_rates.rates[n++] = i;
@@ -2373,7 +2365,7 @@ static void ath10k_peer_assoc_h_ht(struct ath10k* ar,
         }
     } else {
         arg->peer_ht_rates.num_rates = n;
-        arg->peer_num_spatial_streams = MIN(sta->rx_nss, max_nss);
+        arg->peer_num_spatial_streams = 1;  // NEEDS PORTING: MIN(sta->rx_nss, max_nss);
     }
 
     ath10k_dbg(ar, ATH10K_DBG_MAC, "mac ht peer %pM mcs cnt %d nss %d\n",
@@ -2382,6 +2374,7 @@ static void ath10k_peer_assoc_h_ht(struct ath10k* ar,
                arg->peer_num_spatial_streams);
 }
 
+#if 0  // NEEDS PORTING
 static int ath10k_peer_assoc_qos_ap(struct ath10k* ar,
                                     struct ath10k_vif* arvif,
                                     struct ieee80211_sta* sta) {
@@ -2500,30 +2493,35 @@ ath10k_peer_assoc_h_vht_limit(uint16_t tx_mcs_set,
 
     return tx_mcs_set;
 }
+#endif  // NEEDS PORTING
 
 static void ath10k_peer_assoc_h_vht(struct ath10k* ar,
-                                    struct ieee80211_vif* vif,
-                                    struct ieee80211_sta* sta,
+                                    wlan_assoc_ctx_t* assoc,
                                     struct wmi_peer_assoc_complete_arg* arg) {
-    const struct ieee80211_sta_vht_cap* vht_cap = &sta->vht_cap;
-    struct ath10k_vif* arvif = (void*)vif->drv_priv;
-    struct cfg80211_chan_def def;
+    const wlan_vht_caps_t* vht_cap = &assoc->vht_cap;
     enum nl80211_band band;
-    const uint16_t* vht_mcs_mask;
+    const uint16_t vht_mcs_mask[] = {0};  // TODO(NET-1682)
     uint8_t ampdu_factor;
     uint8_t max_nss, vht_mcs;
     int i;
 
+#if 0  // NEEDS PORTING
     if (COND_WARN(ath10k_mac_vif_chan(vif, &def))) {
         return;
     }
+#endif  // NEEDS PORTING
 
-    if (!vht_cap->vht_supported) {
+    if (!assoc->has_vht_cap) {
         return;
     }
 
+#if 1  // NEEDS PORTING
+    // TODO(NET-1682): Supports other bands.
+    band = NL80211_BAND_2GHZ;
+#else
     band = def.chan->band;
     vht_mcs_mask = arvif->bitrate_mask.control[band].vht_mcs;
+#endif  // NEEDS PORTING
 
     if (ath10k_peer_assoc_h_vht_masked(vht_mcs_mask)) {
         return;
@@ -2531,25 +2529,24 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar,
 
     arg->peer_flags |= ar->wmi.peer_flags->vht;
 
-    if (def.chan->band == NL80211_BAND_2GHZ) {
+    if (band == NL80211_BAND_2GHZ) {
         arg->peer_flags |= ar->wmi.peer_flags->vht_2g;
     }
 
-    arg->peer_vht_caps = vht_cap->cap;
+    arg->peer_vht_caps = vht_cap->vht_capability_info;
 
-    ampdu_factor = (vht_cap->cap &
-                    IEEE80211_VHT_CAP_MAX_AMPDU_LENGTH_EXPONENT_MASK) >>
-                   IEEE80211_VHT_CAP_MAX_AMPDU_LENGTH_EXPONENT_SHIFT;
+    ampdu_factor = (vht_cap->vht_capability_info & IEEE80211_VHT_CAPS_MAX_AMPDU_LEN) >>
+                   IEEE80211_VHT_CAPS_MAX_AMPDU_LEN_SHIFT;
 
     /* Workaround: Some Netgear/Linksys 11ac APs set Rx A-MPDU factor to
      * zero in VHT IE. Using it would result in degraded throughput.
      * arg->peer_max_mpdu at this point contains HT max_mpdu so keep
      * it if VHT max_mpdu is smaller.
      */
-    arg->peer_max_mpdu = max(arg->peer_max_mpdu,
-                             (1U << (IEEE80211_HT_MAX_AMPDU_FACTOR +
-                                     ampdu_factor)) - 1);
+    arg->peer_max_mpdu = MAX(arg->peer_max_mpdu,
+                             (1U << (IEEE80211_HT_MAX_AMPDU_FACTOR + ampdu_factor)) - 1);
 
+#if 0  // NEEDS PORTING
     if (sta->bandwidth == IEEE80211_STA_RX_BW_80) {
         arg->peer_flags |= ar->wmi.peer_flags->bw80;
     }
@@ -2557,32 +2554,34 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar,
     if (sta->bandwidth == IEEE80211_STA_RX_BW_160) {
         arg->peer_flags |= ar->wmi.peer_flags->bw160;
     }
+#endif  // NEEDS PORTING
 
     /* Calculate peer NSS capability from VHT capabilities if STA
      * supports VHT.
      */
-    for (i = 0, max_nss = 0, vht_mcs = 0; i < NL80211_VHT_NSS_MAX; i++) {
-        vht_mcs = vht_cap->vht_mcs.rx_mcs_map >>
-                  (2 * i) & 3;
+    for (i = 0, max_nss = 0, vht_mcs = 0; i < VHT_NSS_NUM; i++) {
+        vht_mcs = vht_cap->supported_vht_mcs_and_nss_set >> (2 * i) & 3;
 
-        if ((vht_mcs != IEEE80211_VHT_MCS_NOT_SUPPORTED) &&
-                vht_mcs_mask[i]) {
+        if ((vht_mcs != IEEE80211_VHT_MCS_NONE) && vht_mcs_mask[i]) {
             max_nss = i + 1;
         }
     }
+
+#if 0  // NEEDS PORTING
     arg->peer_num_spatial_streams = MIN(sta->rx_nss, max_nss);
-    arg->peer_vht_rates.rx_max_rate =
-        vht_cap->vht_mcs.rx_highest;
-    arg->peer_vht_rates.rx_mcs_set =
-        vht_cap->vht_mcs.rx_mcs_map;
-    arg->peer_vht_rates.tx_max_rate =
-        vht_cap->vht_mcs.tx_highest;
+    arg->peer_vht_rates.rx_max_rate = vht_cap->vht_mcs.rx_highest;
+    arg->peer_vht_rates.rx_mcs_set = vht_cap->vht_mcs.rx_mcs_map;
+    arg->peer_vht_rates.tx_max_rate = vht_cap->vht_mcs.tx_highest;
     arg->peer_vht_rates.tx_mcs_set = ath10k_peer_assoc_h_vht_limit(
                                          vht_cap->vht_mcs.tx_mcs_map, vht_mcs_mask);
+#endif  // NEEDS PORTING
 
     ath10k_dbg(ar, ATH10K_DBG_MAC, "mac vht peer %pM max_mpdu %d flags 0x%x\n",
-               sta->addr, arg->peer_max_mpdu, arg->peer_flags);
+               assoc->bssid, arg->peer_max_mpdu, arg->peer_flags);
 
+#if 1  // NEEDS PORTING
+    arg->peer_bw_rxnss_override = 1;
+#else
     if (arg->peer_vht_rates.rx_max_rate &&
             (sta->vht_cap.cap & IEEE80211_VHT_CAP_SUPP_CHAN_WIDTH_MASK)) {
         switch (arg->peer_vht_rates.rx_max_rate) {
@@ -2596,14 +2595,15 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar,
             break;
         }
     }
+#endif  // NEEDS PORTING
 }
 
 static void ath10k_peer_assoc_h_qos(struct ath10k* ar,
-                                    struct ieee80211_vif* vif,
-                                    struct ieee80211_sta* sta,
+                                    wlan_assoc_ctx_t* assoc,
                                     struct wmi_peer_assoc_complete_arg* arg) {
-    struct ath10k_vif* arvif = (void*)vif->drv_priv;
+    struct ath10k_vif* arvif = &ar->arvif;
 
+#if 0  // NEEDS PORTING
     switch (arvif->vdev_type) {
     case WMI_VDEV_TYPE_AP:
         if (sta->wme) {
@@ -2628,12 +2628,13 @@ static void ath10k_peer_assoc_h_qos(struct ath10k* ar,
     default:
         break;
     }
+#endif  // NEEDS PORTING
 
     ath10k_dbg(ar, ATH10K_DBG_MAC, "mac peer %pM qos %d\n",
-               sta->addr, !!(arg->peer_flags&
-                             arvif->ar->wmi.peer_flags->qos));
+               assoc->bssid, !!(arg->peer_flags & arvif->ar->wmi.peer_flags->qos));
 }
 
+#if 0  // NEEDS PORTING
 static bool ath10k_mac_sta_has_ofdm_only(struct ieee80211_sta* sta) {
     return sta->supp_rates[NL80211_BAND_2GHZ] >>
            ATH10K_MAC_FIRST_OFDM_RATE_IDX;
@@ -2667,11 +2668,14 @@ static enum wmi_phy_mode ath10k_mac_get_phymode_vht(struct ath10k* ar,
 
     return MODE_UNKNOWN;
 }
+#endif  // NEEDS PORTING
 
 static void ath10k_peer_assoc_h_phymode(struct ath10k* ar,
-                                        struct ieee80211_vif* vif,
-                                        struct ieee80211_sta* sta,
+                                        wlan_assoc_ctx_t* assoc,
                                         struct wmi_peer_assoc_complete_arg* arg) {
+    // TODO(NET-1709): rewrite with chan_to_phymode().
+    enum wmi_phy_mode phymode = MODE_11NG_HT20;
+#if 0  // NEEDS PORTING
     struct ath10k_vif* arvif = (void*)vif->drv_priv;
     struct cfg80211_chan_def def;
     enum nl80211_band band;
@@ -2732,61 +2736,62 @@ static void ath10k_peer_assoc_h_phymode(struct ath10k* ar,
     default:
         break;
     }
+#endif  // NEEDS PORTING
 
     ath10k_dbg(ar, ATH10K_DBG_MAC, "mac peer %pM phymode %s\n",
-               sta->addr, ath10k_wmi_phymode_str(phymode));
+               assoc->bssid, ath10k_wmi_phymode_str(phymode));
 
     arg->peer_phymode = phymode;
     COND_WARN(phymode == MODE_UNKNOWN);
 }
 
-static int ath10k_peer_assoc_prepare(struct ath10k* ar,
-                                     struct ieee80211_vif* vif,
-                                     struct ieee80211_sta* sta,
-                                     struct wmi_peer_assoc_complete_arg* arg) {
+static zx_status_t ath10k_peer_assoc_prepare(struct ath10k* ar,
+                                             struct ath10k_vif* arvif,
+                                             wlan_assoc_ctx_t* assoc,
+                                             struct wmi_peer_assoc_complete_arg* arg) {
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
     memset(arg, 0, sizeof(*arg));
 
-    ath10k_peer_assoc_h_basic(ar, vif, sta, arg);
-    ath10k_peer_assoc_h_crypto(ar, vif, sta, arg);
-    ath10k_peer_assoc_h_rates(ar, vif, sta, arg);
-    ath10k_peer_assoc_h_ht(ar, vif, sta, arg);
-    ath10k_peer_assoc_h_vht(ar, vif, sta, arg);
-    ath10k_peer_assoc_h_qos(ar, vif, sta, arg);
-    ath10k_peer_assoc_h_phymode(ar, vif, sta, arg);
+    ath10k_peer_assoc_h_basic(ar, assoc, arg);
+    ath10k_peer_assoc_h_crypto(ar, assoc, arg);
+    ath10k_peer_assoc_h_rates(ar, assoc, arg);
+    ath10k_peer_assoc_h_ht(ar, assoc, arg);
+    ath10k_peer_assoc_h_vht(ar, assoc, arg);
+    ath10k_peer_assoc_h_qos(ar, assoc, arg);
+    ath10k_peer_assoc_h_phymode(ar, assoc, arg);
 
     return 0;
 }
 
 static const uint32_t ath10k_smps_map[] = {
-    [WLAN_HT_CAP_SM_PS_STATIC] = WMI_PEER_SMPS_STATIC,
-    [WLAN_HT_CAP_SM_PS_DYNAMIC] = WMI_PEER_SMPS_DYNAMIC,
-    [WLAN_HT_CAP_SM_PS_INVALID] = WMI_PEER_SMPS_PS_NONE,
-    [WLAN_HT_CAP_SM_PS_DISABLED] = WMI_PEER_SMPS_PS_NONE,
+    WMI_PEER_SMPS_STATIC,
+    WMI_PEER_SMPS_DYNAMIC,
+    WMI_PEER_SMPS_PS_NONE,
+    WMI_PEER_SMPS_PS_NONE,
 };
 
-static int ath10k_setup_peer_smps(struct ath10k* ar, struct ath10k_vif* arvif,
-                                  const uint8_t* addr,
-                                  const struct ieee80211_sta_ht_cap* ht_cap) {
-    int smps;
+static zx_status_t ath10k_setup_peer_smps(struct ath10k* ar, struct ath10k_vif* arvif,
+                                          wlan_assoc_ctx_t* assoc) {
+    size_t smps;
 
-    if (!ht_cap->ht_supported) {
-        return 0;
+    if (!assoc->has_ht_cap) {
+        return ZX_OK;
     }
 
-    smps = ht_cap->cap & IEEE80211_HT_CAP_SM_PS;
-    smps >>= IEEE80211_HT_CAP_SM_PS_SHIFT;
+    smps = assoc->ht_cap.ht_capability_info & IEEE80211_HT_CAPS_SMPS;
+    smps >>= IEEE80211_HT_CAPS_SMPS_SHIFT;
 
     if (smps >= countof(ath10k_smps_map)) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    return ath10k_wmi_peer_set_param(ar, arvif->vdev_id, addr,
+    return ath10k_wmi_peer_set_param(ar, arvif->vdev_id, assoc->bssid,
                                      WMI_PEER_SMPS_STATE,
                                      ath10k_smps_map[smps]);
 }
 
+#if 0  // NEEDS PORTING
 static int ath10k_mac_vif_recalc_txbf(struct ath10k* ar,
                                       struct ieee80211_vif* vif,
                                       struct ieee80211_sta_vht_cap vht_cap) {
@@ -2881,9 +2886,9 @@ static bool is_zero_ether_addr(uint8_t* addr) {
 
 static void ath10k_mac_parse_ampdu(uint8_t response_ampdu,
                                    struct wmi_peer_assoc_complete_arg* assoc_arg) {
-    assoc_arg->peer_max_mpdu = response_ampdu & IEEE80211_AMPDU_MAX_RX_LEN;
-    assoc_arg->peer_mpdu_density =
-        (response_ampdu & IEEE80211_AMPDU_DENSITY) >> IEEE80211_AMPDU_DENSITY_SHIFT;
+    assoc_arg->peer_max_mpdu = response_ampdu & IEEE80211_AMPDU_RX_LEN_MASK;
+    assoc_arg->peer_mpdu_density = (response_ampdu & IEEE80211_AMPDU_DENSITY_MASK) >>
+                                   IEEE80211_AMPDU_DENSITY_SHIFT;
 }
 
 static void ath10k_mac_parse_assoc_resp(struct ath10k* ar, const uint8_t* tagged_data,
@@ -3313,28 +3318,28 @@ static void ath10k_bss_disassoc(struct ieee80211_hw* hw,
 
     cancel_delayed_work_sync(&arvif->connection_loss_work);
 }
+#endif  // NEEDS PORTING
 
-static int ath10k_station_assoc(struct ath10k* ar,
-                                struct ieee80211_vif* vif,
-                                struct ieee80211_sta* sta,
-                                bool reassoc) {
-    struct ath10k_vif* arvif = (void*)vif->drv_priv;
+static zx_status_t ath10k_station_assoc(struct ath10k* ar,
+                                        wlan_assoc_ctx_t* assoc,
+                                        bool reassoc) {
+    struct ath10k_vif* arvif = &ar->arvif;
     struct wmi_peer_assoc_complete_arg peer_arg;
-    int ret = 0;
+    zx_status_t ret;
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
-    ret = ath10k_peer_assoc_prepare(ar, vif, sta, &peer_arg);
-    if (ret) {
-        ath10k_warn("failed to prepare WMI peer assoc for %pM vdev %i: %i\n",
-                    sta->addr, arvif->vdev_id, ret);
+    ret = ath10k_peer_assoc_prepare(ar, arvif, assoc, &peer_arg);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to prepare WMI peer assoc for %pM vdev %i: %s\n",
+                    peer_arg.addr, arvif->vdev_id, zx_status_get_string(ret));
         return ret;
     }
 
     ret = ath10k_wmi_peer_assoc(ar, &peer_arg);
-    if (ret) {
-        ath10k_warn("failed to run peer assoc for STA %pM vdev %i: %d\n",
-                    sta->addr, arvif->vdev_id, ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to run peer assoc for STA vdev %i: %s\n",
+                    arvif->vdev_id, zx_status_get_string(ret));
         return ret;
     }
 
@@ -3342,14 +3347,14 @@ static int ath10k_station_assoc(struct ath10k* ar,
      * doesn't make much sense to reconfigure the peer completely.
      */
     if (!reassoc) {
-        ret = ath10k_setup_peer_smps(ar, arvif, sta->addr,
-                                     &sta->ht_cap);
-        if (ret) {
-            ath10k_warn("failed to setup peer SMPS for vdev %d: %d\n",
-                        arvif->vdev_id, ret);
+        ret = ath10k_setup_peer_smps(ar, arvif, assoc);
+        if (ret != ZX_OK) {
+            ath10k_warn("failed to setup peer SMPS for vdev %d: %s\n",
+                        arvif->vdev_id, zx_status_get_string(ret));
             return ret;
         }
 
+#if 0  // NEEDS PORTING
         ret = ath10k_peer_assoc_qos_ap(ar, arvif, sta);
         if (ret) {
             ath10k_warn("failed to set qos params for STA %pM for vdev %i: %d\n",
@@ -3376,11 +3381,37 @@ static int ath10k_station_assoc(struct ath10k* ar,
                 return ret;
             }
         }
+#endif  // NEEDS PORTING
     }
 
     return ret;
 }
 
+// Used by an AP after accepted a station's association request.
+zx_status_t ath10k_mac_ap_assoc_with_sta(struct ath10k* ar, wlan_assoc_ctx_t* assoc) {
+    struct ath10k_vif* arvif = &ar->arvif;
+    zx_status_t ret;
+
+    mtx_lock(&ar->conf_mutex);
+
+    ret = ath10k_peer_create(ar, arvif->vdev_id, assoc->bssid, WMI_PEER_TYPE_DEFAULT);
+    if (ret != ZX_OK) {
+        ath10k_err("peer create failed: %s\n", zx_status_get_string(ret));
+        goto out;
+    }
+
+    ret = ath10k_station_assoc(ar, assoc, false);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to associate station: %s\n", zx_status_get_string(ret));
+        goto out;
+    }
+
+out:
+    mtx_unlock(&ar->conf_mutex);
+    return ret;
+}
+
+#if 0  // NEEDS PORTING
 static int ath10k_station_disassoc(struct ath10k* ar,
                                    struct ieee80211_vif* vif,
                                    struct ieee80211_sta* sta) {
@@ -6924,7 +6955,7 @@ ath10k_mac_can_set_bitrate_mask(struct ath10k* ar,
      * to express all VHT MCS rate masks. Effectively only the following
      * ranges can be used: none, 0-7, 0-8 and 0-9.
      */
-    for (i = 0; i < NL80211_VHT_NSS_MAX; i++) {
+    for (i = 0; i < VHT_NSS_NUM; i++) {
         vht_mcs = mask->control[band].vht_mcs[i];
 
         switch (vht_mcs) {

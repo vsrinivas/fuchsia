@@ -60,6 +60,7 @@
 #define LOG2(val) \
     (((val) == 0) ? 0 : (((sizeof(unsigned long long) * 8) - 1) - __builtin_clzll(val)))
 
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MIN_T(t, a, b) (((t)(a) < (t)(b)) ? (t)(a) : (t)(b))
 
