@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![feature(async_await, await_macro)]
+#![feature(async_await, await_macro, futures_api, pin)]
 
 use failure::{Error, Fail};
 use std::io;
