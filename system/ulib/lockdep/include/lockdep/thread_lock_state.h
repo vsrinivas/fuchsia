@@ -17,7 +17,7 @@ namespace lockdep {
 
 // Linked list entry that tracks a lock acquired by a thread. Each thread
 // maintains a local list of AcquiredLockEntry instances. AcquiredLockEntry is
-// intented to be allocated on the stack as a member of a RAII type to manage
+// intended to be allocated on the stack as a member of a RAII type to manage
 // the lifetime of the acquisition. Consequently, this type is move-only to
 // permit moving the context to a different stack frame. However, an instance
 // must only be manipulated by the thread that created it.
@@ -160,7 +160,7 @@ private:
     ThreadLockState(const ThreadLockState&) = delete;
     void operator=(const ThreadLockState&) = delete;
 
-    // Replaces the given orignal entry with the replacement entry. This permits
+    // Replaces the given original entry with the replacement entry. This permits
     // lock entries to be allocated on the stack and migrate between stack
     // frames if lock guards are moved or returned.
     //

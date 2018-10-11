@@ -89,12 +89,12 @@ constexpr inline LockFlags SingletonLockFlags(
 #define LOCK_DEP_INSTRUMENT(containing_type, lock_type) \
     ::lockdep::LockDep<containing_type, lock_type, __LINE__>
 
-// Defines a singleton lock with the given name and type. The singletion
+// Defines a singleton lock with the given name and type. The singleton
 // instance may be retrieved using the static Get() method provided by the base
 // class. This instance is appropriate to pass to Guard<lock_type, [option]>.
 //
 // Arguments:
-//  name:        The name of the singletion to define.
+//  name:        The name of the singleton to define.
 //  lock_type:   The type of the lock to use under the hood.
 //  __VA_ARGS__: LockFlags expression specifying lock flags to honor in addition
 //               to the flags specified for the lock type using the
@@ -118,14 +118,14 @@ constexpr inline LockFlags SingletonLockFlags(
                       ::lockdep::internal::SingletonLockFlags(__VA_ARGS__)> {}
 
 // Defines a singleton lock with the given name that wraps a raw global lock.
-// The signleton behaves similarly to the version above, except the raw global
+// The singleton behaves similarly to the version above, except the raw global
 // lock is used as the underlying lock instead of an internally-defined lock.
 // This is useful to instrument an existing global lock that may be shared with
 // C code or for other reasons cannot be completely replaced with the above
 // global lock type.
 //
 // Arguments:
-//  name:        The name of the singletion to define.
+//  name:        The name of the singleton to define.
 //  global_lock: The global lock to wrap with this lock type. This must be an
 //               lvalue reference expression to a lock with static storage
 //               duration, with either external or internal linkage.

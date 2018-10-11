@@ -39,7 +39,7 @@ constexpr LockClassId kInvalidLockClassId = 0;
 
 namespace internal {
 
-// Returns a prime number that reasonably accomodates a hash table of the given
+// Returns a prime number that reasonably accommodates a hash table of the given
 // number of entries. Each number is selected to be slightly less than twice the
 // previous and as far as possible from the nearest two powers of two.
 constexpr size_t NextPrime(size_t n) {
@@ -65,7 +65,7 @@ constexpr size_t NextPrime(size_t n) {
 
 // The maximum number of dependencies each lock class may have. This is the
 // maximum branching factor of the directed graph of locks managed by this
-// lock dependency alogrithm. The value is a prime number selected to optimize
+// lock dependency algorithm. The value is a prime number selected to optimize
 // the hash map in LockDependencySet.
 constexpr size_t kMaxLockDependencies = internal::NextPrime(LOCK_DEP_MAX_DEPENDENCIES);
 

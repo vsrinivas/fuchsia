@@ -35,7 +35,7 @@ public:
     LockClassState(const LockClassState&) = delete;
     LockClassState& operator=(const LockClassState&) = delete;
 
-    // Retruns the LockClassState instance for the given lock class id. The id must
+    // Returns the LockClassState instance for the given lock class id. The id must
     // be a valid lock class id.
     static LockClassState* Get(LockClassId id) {
         return reinterpret_cast<LockClassState*>(id);
@@ -199,7 +199,7 @@ private:
 
         // Returns a pointer to the LockClassState instance that contains this
         // LoopNode. This allows the loop detector to mostly operate in terms
-        // of LoopNode instances, simplfying expressions in the main algorithm.
+        // of LoopNode instances, simplifying expressions in the main algorithm.
         LockClassState* ToState() {
             static_assert(fbl::is_standard_layout<LockClassState>::value,
                           "LockClassState must be standard layout!");

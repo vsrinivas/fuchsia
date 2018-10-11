@@ -29,7 +29,7 @@ public:
     LockDependencySet(LockDependencySet&&) = delete;
     void operator=(LockDependencySet&&) = delete;
 
-    // Checks the depedency hash set for the given lock class. This method may
+    // Checks the dependency hash set for the given lock class. This method may
     // safely race with AddLockClass(), converging on the correct answer by the
     // next check.
     bool HasLockClass(LockClassId id) const {

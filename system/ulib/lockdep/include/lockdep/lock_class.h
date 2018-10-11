@@ -17,7 +17,7 @@
 
 namespace lockdep {
 
-// Looks up a lock traits type using ADL to perfrom cross-namespace matching.
+// Looks up a lock traits type using ADL to perform cross-namespace matching.
 // This alias works in concert with the macro LOCK_DEP_TRAITS(type, flags) to
 // find the defined lock traits for a lock, even when defined in a different
 // namespace.
@@ -39,7 +39,7 @@ struct LockTraits<T, fbl::void_t<LookupLockTraits<T>>> {
     static constexpr LockFlags Flags = LookupLockTraits<T>::Flags;
 };
 
-// Singleton type that represents a lock class. Each template instantion
+// Singleton type that represents a lock class. Each template instantiation
 // represents an independent, unique lock class. This type maintains a global
 // dependency set that tracks which other lock classes have been observed
 // being held prior to acquisitions of this lock class. This type is only used
@@ -227,7 +227,7 @@ private:
 // type permits creating a tracked alias of a raw lock of type LockType that
 // has static storage duration, with either external or internal linkage.
 //
-// This type supports tranistioning from C-compatible APIs to full C++.
+// This type supports transitioning from C-compatible APIs to full C++.
 template <typename LockType, LockType& Reference>
 class __TA_CAPABILITY("mutex") Lock<GlobalReference<LockType, Reference>> {
 public:

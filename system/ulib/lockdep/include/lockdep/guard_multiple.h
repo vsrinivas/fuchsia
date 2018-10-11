@@ -90,7 +90,7 @@ private:
     }
 
     // Storage type to permit late initialization of the underlying Guard
-    // instances. Since Guard objects are not default construtible, using union
+    // instances. Since Guard objects are not default constructible, using union
     // semantics allows the GuardMultiple constructor to delay initializing the
     // Guard array until after it has sorted the incoming lock pointers. This
     // type also leverages aggregate initialization since we can't use
