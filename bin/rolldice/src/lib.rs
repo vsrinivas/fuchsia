@@ -6,11 +6,11 @@ use rand::{Rand, Rng};
 use std::fmt;
 use std::iter::Iterator;
 
-const corner : char = '+';
-const horiz  : char = '-';
-const vert   : char = '|';
-const pip    : char = '*';
-const blank  : char = ' ';
+const CORNER: char = '+';
+const HORIZ: char = '-';
+const VERT: char = '|';
+const PIP: char = '*';
+const BLANK: char = ' ';
 
 #[derive(Debug)]
 pub enum RollResult {
@@ -39,46 +39,46 @@ impl fmt::Display for RollResult {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let pips = match self {
             RollResult::One => [
-                [blank, blank, blank],
-                [blank, pip,   blank],
-                [blank, blank, blank],
+                [BLANK, BLANK, BLANK],
+                [BLANK, (PIP), BLANK],
+                [BLANK, BLANK, BLANK],
             ],
             RollResult::Two => [
-                [blank, blank, pip],
-                [blank, blank, blank],
-                [pip,   blank, blank],
+                [BLANK, BLANK, (PIP)],
+                [BLANK, BLANK, BLANK],
+                [(PIP), BLANK, BLANK],
             ],
             RollResult::Three => [
-                [blank, blank, pip],
-                [blank, pip,   blank],
-                [pip,   blank, blank],
+                [BLANK, BLANK, (PIP)],
+                [BLANK, (PIP), BLANK],
+                [(PIP), BLANK, BLANK],
             ],
             RollResult::Four => [
-                [pip,   blank, pip],
-                [blank, blank, blank],
-                [pip,   blank, pip],
+                [(PIP), BLANK, (PIP)],
+                [BLANK, BLANK, BLANK],
+                [(PIP), BLANK, (PIP)],
             ],
             RollResult::Five => [
-                [pip,   blank, pip],
-                [blank, pip,   blank],
-                [pip,   blank, pip],
+                [(PIP), BLANK, (PIP)],
+                [BLANK, (PIP), BLANK],
+                [(PIP), BLANK, (PIP)],
             ],
             RollResult::Six => [
-                [pip,   blank, pip],
-                [pip,   blank, pip],
-                [pip,   blank, pip],
+                [(PIP), BLANK, (PIP)],
+                [(PIP), BLANK, (PIP)],
+                [(PIP), BLANK, (PIP)],
             ],
         };
 
-        writeln!(f, "{}{}{}{}{}", corner, horiz, horiz, horiz, corner);
+        writeln!(f, "{}{}{}{}{}", CORNER, HORIZ, HORIZ, HORIZ, CORNER);
         for row in &pips {
-            write!(f, "{}", vert);
+            write!(f, "{}", VERT);
             for c in row {
                 write!(f, "{}", c);
             }
-            writeln!(f, "{}", vert);
+            writeln!(f, "{}", VERT);
         }
-        write!(f, "{}{}{}{}{}", corner, horiz, horiz, horiz, corner);
+        write!(f, "{}{}{}{}{}", CORNER, HORIZ, HORIZ, HORIZ, CORNER);
 
         Ok(())
     }
@@ -89,17 +89,15 @@ impl fmt::Display for RollResult {
 /// All iterators must use the same item type. Iteration ends when the end of
 /// any iterator is reached. If the number of iterators is known at compile
 /// time, consider using itertools crate's izip! macro instead.
-pub struct MultiZip<I : Iterator> {
-    iters : Vec<I>,
+pub struct MultiZip<I: Iterator> {
+    iters: Vec<I>,
 }
 
-pub fn multizip<I : Iterator>(iters: Vec<I>) -> MultiZip<I> {
-    MultiZip {
-        iters,
-    }
+pub fn multizip<I: Iterator>(iters: Vec<I>) -> MultiZip<I> {
+    MultiZip { iters }
 }
 
-impl<I : Iterator> Iterator for MultiZip<I> {
+impl<I: Iterator> Iterator for MultiZip<I> {
     type Item = Vec<I::Item>;
 
     fn next(&mut self) -> Option<Self::Item> {

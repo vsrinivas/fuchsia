@@ -31,6 +31,13 @@ package("rolldice") {
   ]
 
   binary = "rolldice"
+
+  meta = [
+    {
+      path = rebase_path("meta/rolldice.cmx")
+      dest = "rolldice.cmx"
+    }
+  ]
 }
 
 package("rolldice-tests") {

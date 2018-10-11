@@ -3,27 +3,36 @@
 // found in the LICENSE file.
 
 use rand::{thread_rng, Rng};
-use structopt::StructOpt;
 use rolldice_lib::*;
+use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
-#[structopt(name="rolldice", bin_name="rolldice", about="Rolls some number of 6 sided dice.")]
+#[structopt(
+    name = "rolldice",
+    bin_name = "rolldice",
+    about = "Rolls some number of 6 sided dice."
+)]
 struct Config {
-    #[structopt(help="Number of dice", default_value="1")]
+    #[structopt(help = "Number of dice", default_value = "1")]
     number_of_dice: u16,
 
-    #[structopt(short="r", long="rowsize", help="Maximum dice per row", default_value="8")]
+    #[structopt(
+        short = "r",
+        long = "rowsize",
+        help = "Maximum dice per row",
+        default_value = "8"
+    )]
     dice_per_row: u16,
 }
 
-fn print_row(rolls : &[RollResult]) {
+fn print_row(rolls: &[RollResult]) {
     // A RollResult can be formatted into a multiline String. Using this primitive:
 
     // 1. Format all the provided RollResult instances into Strings.
-    let formatted : Vec<_> = rolls.iter().map(|roll| format!("{}", roll)).collect();
+    let formatted: Vec<_> = rolls.iter().map(|roll| format!("{}", roll)).collect();
 
     // 2. Create iterators for each string that yield lines from the string.
-    let iters : Vec<_> = formatted.iter().map(|s| s.lines()).collect();
+    let iters: Vec<_> = formatted.iter().map(|s| s.lines()).collect();
 
     // 3. Print each String's first line as a single line, then each String's second line, etc.
     for parts in multizip(iters) {
