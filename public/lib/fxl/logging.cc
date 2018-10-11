@@ -13,7 +13,7 @@
 #if defined(OS_ANDROID)
 #include <android/log.h>
 #elif defined(OS_IOS)
-#include <syslog.h>
+#include <lib/syslog.h>
 #endif
 
 namespace fxl {

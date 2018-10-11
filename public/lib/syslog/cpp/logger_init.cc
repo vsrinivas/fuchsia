@@ -7,8 +7,8 @@
 #include <initializer_list>
 #include <string>
 
-#include <syslog/global.h>
-#include <syslog/logger.h>
+#include <lib/syslog/global.h>
+#include <lib/syslog/logger.h>
 
 namespace syslog {
 

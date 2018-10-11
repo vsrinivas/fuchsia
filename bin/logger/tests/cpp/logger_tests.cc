@@ -5,7 +5,7 @@
 #include <vector>
 
 #include <fuchsia/logger/cpp/fidl.h>
-#include <syslog/wire_format.h>
+#include <lib/syslog/wire_format.h>
 #include <zircon/syscalls/log.h>
 
 #include "lib/component/cpp/startup_context.h"

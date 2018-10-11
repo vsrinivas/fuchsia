@@ -4,7 +4,7 @@
 
 #include "logger.h"
 
-#include <syslog/global.h>
+#include <lib/syslog/global.h>
 
 namespace syslog {
 namespace {

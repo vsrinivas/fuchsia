@@ -10,7 +10,7 @@
 #include <sstream>
 #include <string>
 
-#include <syslog/global.h>
+#include <lib/syslog/global.h>
 
 namespace syslog {
 namespace internal {
