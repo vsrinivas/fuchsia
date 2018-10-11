@@ -146,76 +146,56 @@ std::string Describe(const DataFrameHeader& hdr) {
 }
 
 std::string Describe(const PHY& phy) {
-    char buf[16];
-    size_t offset = 0;
     switch (phy) {
     case WLAN_PHY_CCK:
-        BUFFER("CCK");
-        break;
+        return "CCK";
     case WLAN_PHY_DSSS:
-        BUFFER("DSSS");
-        break;
+        return "DSSS";
     case WLAN_PHY_ERP:
-        BUFFER("ERP");
-        break;
+        return "ERP";
     case WLAN_PHY_HT:
-        BUFFER("HT");
-        break;
+        return " HT";
     case WLAN_PHY_VHT:
-        BUFFER("VHT");
-        break;
+        return "VHT";
     default:
-        BUFFER("PHY---");
-        break;
+        return "PHY---";
     }
-    return std::string(buf);
 }
 
 std::string Describe(const GI& gi) {
-    char buf[16];
-    size_t offset = 0;
     switch (gi) {
     case WLAN_GI_800NS:
-        BUFFER("GI800");
-        break;
+        return "GI800";
     case WLAN_GI_400NS:
-        BUFFER("GI400");
-        break;
+        return "GI400";
     case WLAN_GI_200NS:
-        BUFFER("GI200");
-        break;
+        return "GI200";
     case WLAN_GI_1600NS:
-        BUFFER("GI1600");
-        break;
+        return "GI1600";
     case WLAN_GI_3200NS:
-        BUFFER("GI3200");
-        break;
+        return "GI3200";
     default:
-        BUFFER("GI---");
-        break;
+        return "GI---";
     }
-    return std::string(buf);
 }
 
 std::string Describe(const TxVector& tx_vec, tx_vec_idx_t tx_vec_idx) {
-    char buf[128];
-    size_t offset = 0;
-    buf[0] = 0;
-
     if (tx_vec_idx == kInvalidTxVectorIdx) {
         zx_status_t status = tx_vec.ToIdx(&tx_vec_idx);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }
 
-    BUFFER("%u:", tx_vec_idx);
-    BUFFER("%s", Describe(tx_vec.phy).c_str());
-    BUFFER("%s", Describe(tx_vec.gi).c_str());
-    BUFFER("%s", ::wlan::common::kCbwStr[tx_vec.cbw]);
-    BUFFER("NSS %u", tx_vec.nss);
-    BUFFER("MCS %u", tx_vec.mcs_idx);
-    BUFFER("%s", tx_vec.IsValid() ? "" : "(x)");
+    std::ostringstream oss;
 
-    return std::string(buf);
+    oss << std::setfill(' ');
+    oss << std::setw(3) << +tx_vec_idx << ": ";
+    oss << Describe(tx_vec.phy) << " ";
+    oss << Describe(tx_vec.gi) << " ";
+    oss << ::wlan::common::kCbwStr[tx_vec.cbw] << " ";
+    oss << "NSS " << +tx_vec.nss << " ";
+    oss << "MCS " << std::setw(2) << +tx_vec.mcs_idx;
+    if (!tx_vec.IsValid()) { oss << "(x)"; }
+    return oss.str();
 }
 
 std::string Describe(tx_vec_idx_t tx_vec_idx) {

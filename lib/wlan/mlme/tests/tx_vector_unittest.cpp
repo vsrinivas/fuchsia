@@ -180,5 +180,12 @@ TEST(ErpRateTest, ErpRateToTxVector) {
         EXPECT_EQ(tv.want_vec, got_vec);
     }
 }
+
+TEST(DebugTest, DebugStringVisualInspection) {
+    for (tx_vec_idx_t i = 1; i <= 140; ++i) {
+        std::cout << debug::Describe(i) << std::endl;
+    }
+}
+
 }  // namespace
 }  // namespace wlan
