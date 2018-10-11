@@ -5,7 +5,7 @@
 #pragma once
 
 #include "aml-clk-blocks.h"
-#include <soc/aml-meson/g12a-clk.h>
+#include <soc/aml-meson/g12b-clk.h>
 
 // TODO(braval): Use common bitfield header (ZX-2526) when available for
 //               macros used below to avoid duplication.
@@ -19,21 +19,23 @@
 #define MSR_RUN BIT(19)
 #define MSR_BUSY BIT(31)
 
-#define G12A_HHI_SYS_CPU_CLK_CNTL1 (0x57 << 2)
-#define G12A_HHI_TS_CLK_CNTL (0x64 << 2)
+#define G12B_HHI_SYS_CPU_CLK_CNTL1 (0x57 << 2)
+#define G12B_HHI_TS_CLK_CNTL (0x64 << 2)
+#define G12B_HHI_XTAL_DIVN_CNTL (0x2f << 2)
 
 // NOTE: This list only contains the clocks in use currently and
 //       not all avaialbe clocks.
-static meson_clk_gate_t g12a_clk_gates[] = {
+static meson_clk_gate_t g12b_clk_gates[] = {
     // SYS CPU Clock gates.
-    {.reg = G12A_HHI_SYS_CPU_CLK_CNTL1, .bit = 24}, // CLK_SYS_PLL_DIV16
-    {.reg = G12A_HHI_SYS_CPU_CLK_CNTL1, .bit = 1},  // CLK_SYS_CPU_CLK_DIV16
+    {.reg = G12B_HHI_SYS_CPU_CLK_CNTL1, .bit = 24}, // G12B_CLK_SYS_PLL_DIV16
+    {.reg = G12B_HHI_SYS_CPU_CLK_CNTL1, .bit = 1},  // G12B_CLK_SYS_CPU_CLK_DIV16
+    {.reg = G12B_HHI_XTAL_DIVN_CNTL, .bit = 11},    // G12B_CLK_CAM_INCK_24M
 };
 
-static_assert(CLK_G12A_COUNT == countof(g12a_clk_gates),
-              "g12a_clk_gates[] and g12a_clk_gate_idx_t count mismatch");
+static_assert(CLK_G12B_COUNT == countof(g12b_clk_gates),
+              "g12b_clk_gates[] and g12b_clk_gate_idx_t count mismatch");
 
-static meson_clk_msr_t g12a_clk_msr = {
+static meson_clk_msr_t g12b_clk_msr = {
     .reg0_offset = (0x1 << 2),
     .reg2_offset = (0x3 << 2),
 };
@@ -41,7 +43,7 @@ static meson_clk_msr_t g12a_clk_msr = {
 // This clock table is meant only for CLK-MEASURE
 // Indexes here, correspond to actual clk mux
 // values written to measure respective clk.
-static const char* const g12a_clk_table[] = {
+static const char* const g12b_clk_table[] = {
     "am_ring_osc_clk_out_ee[0]", //  0
     "am_ring_osc_clk_out_ee[1]", //  1
     "am_ring_osc_clk_out_ee[2]", //  2
@@ -165,4 +167,8 @@ static const char* const g12a_clk_table[] = {
     "audio_spdifout_mst_clk",    // 120
     "audio_spdifin_mst_clk",     // 121
     "mod_audio_pdm_dclk_o",      // 122
+    "cts_gdc_axi_clk",           // 123
+    "cts_gdc_core_clk",          // 124
+    "mipi_csi_phy0_clk_out",     // 125
+    "mipi_csi_phy1_clk_out",     // 126
 };

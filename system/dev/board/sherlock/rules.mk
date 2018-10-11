@@ -14,6 +14,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/sherlock-gpio.cpp \
     $(LOCAL_DIR)/sherlock-usb.cpp \
     $(LOCAL_DIR)/sherlock-i2c.cpp \
+    $(LOCAL_DIR)/sherlock-clk.cpp \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/amlogic \

@@ -5,6 +5,7 @@
 #include "aml-clk.h"
 #include "aml-axg-blocks.h"
 #include "aml-g12a-blocks.h"
+#include "aml-g12b-blocks.h"
 #include "aml-gxl-blocks.h"
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
@@ -26,7 +27,7 @@ zx_status_t AmlClock::InitHiuRegs(pdev_device_info_t* info) {
     // Map the HIU registers.
     mmio_buffer_t mmio;
     zx_status_t status = pdev_map_mmio_buffer2(&pdev_, kHiuMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                              &mmio);
+                                               &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-clk: could not map periph mmio: %d\n", status);
         return status;
@@ -40,7 +41,7 @@ zx_status_t AmlClock::InitMsrRegs(pdev_device_info_t* info) {
     // Map the MSR registers.
     mmio_buffer_t mmio;
     zx_status_t status = pdev_map_mmio_buffer2(&pdev_, kMsrClk, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                              &mmio);
+                                               &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-clk: could not map periph mmio: %d\n", status);
         return status;
@@ -87,7 +88,8 @@ zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
     // Populate the correct register blocks.
     switch (info.did) {
     case PDEV_DID_AMLOGIC_AXG_CLK: {
-        clk_gates = (meson_clk_gate_t*)calloc(fbl::count_of(axg_clk_gates), sizeof(meson_clk_gate_t));
+        clk_gates = (meson_clk_gate_t*)calloc(fbl::count_of(axg_clk_gates),
+                                              sizeof(meson_clk_gate_t));
         if (clk_gates == nullptr) {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -98,7 +100,8 @@ zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
         break;
     }
     case PDEV_DID_AMLOGIC_GXL_CLK: {
-        clk_gates = (meson_clk_gate_t*)calloc(fbl::count_of(gxl_clk_gates), sizeof(meson_clk_gate_t));
+        clk_gates = (meson_clk_gate_t*)calloc(fbl::count_of(gxl_clk_gates),
+                                              sizeof(meson_clk_gate_t));
         if (clk_gates == nullptr) {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -109,15 +112,29 @@ zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
         break;
     }
     case PDEV_DID_AMLOGIC_G12A_CLK: {
-        clk_msr_offsets_ = g12_clk_msr;
+        clk_msr_offsets_ = g12a_clk_msr;
         clk_table_.reset(g12a_clk_table, fbl::count_of(g12a_clk_table));
-        clk_gates = (meson_clk_gate_t*)calloc(fbl::count_of(g12a_clk_gates), sizeof(meson_clk_gate_t));
+        clk_gates = (meson_clk_gate_t*)calloc(fbl::count_of(g12a_clk_gates),
+                                              sizeof(meson_clk_gate_t));
         if (clk_gates == nullptr) {
             return ZX_ERR_INVALID_ARGS;
         }
         memcpy(clk_gates, g12a_clk_gates, sizeof(meson_clk_gate_t) * fbl::count_of(g12a_clk_gates));
 
         gates_.reset(clk_gates, fbl::count_of(g12a_clk_gates));
+        break;
+    }
+    case PDEV_DID_AMLOGIC_G12B_CLK: {
+        clk_msr_offsets_ = g12b_clk_msr;
+        clk_table_.reset(g12b_clk_table, fbl::count_of(g12b_clk_table));
+        clk_gates = (meson_clk_gate_t*)calloc(fbl::count_of(g12b_clk_gates),
+                                              sizeof(meson_clk_gate_t));
+        if (clk_gates == nullptr) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        memcpy(clk_gates, g12b_clk_gates, sizeof(meson_clk_gate_t) * fbl::count_of(g12b_clk_gates));
+
+        gates_.reset(clk_gates, fbl::count_of(g12b_clk_gates));
         break;
     }
     default:

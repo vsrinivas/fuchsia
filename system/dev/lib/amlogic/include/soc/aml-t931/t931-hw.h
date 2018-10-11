@@ -18,6 +18,11 @@
 #define T931_I2C2_BASE                  (T931_CBUS_BASE + 0x1d000)
 #define T931_I2C3_BASE                  (T931_CBUS_BASE + 0x1c000)
 
+#define T931_HIU_BASE                   0xff63c000
+#define T931_HIU_LENGTH                 0x2000
+
+#define T931_MSR_CLK_BASE               0xffd18000
+#define T931_MSR_CLK_LENGTH             0x1000
 
 #define T931_USB0_BASE                  0xff500000
 #define T931_USB0_LENGTH                0x100000

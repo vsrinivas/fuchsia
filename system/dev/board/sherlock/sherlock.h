@@ -42,6 +42,7 @@ private:
     zx_status_t GpioInit();
     zx_status_t I2cInit();
     zx_status_t UsbInit();
+    zx_status_t ClkInit();
     int Thread();
 
     ddk::PlatformBusProtocolProxy pbus_;
