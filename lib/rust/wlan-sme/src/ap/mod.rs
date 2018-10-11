@@ -118,7 +118,7 @@ impl<T: Tokens> ApSme<T> {
             State::Idle { device_info, mlme_sink, user_sink } => {
                 let rsn_cfg = create_rsn_cfg(config.password.clone());
                 let req = create_start_request(&config, rsn_cfg.as_ref());
-                mlme_sink.send(MlmeRequest::StartAp(req));
+                mlme_sink.send(MlmeRequest::Start(req));
                 // Currently, MLME doesn't send any response back. We simply assume
                 // that the start request succeeded immediately
                 user_sink.send(UserEvent::StartComplete {
@@ -152,7 +152,7 @@ impl<T: Tokens> ApSme<T> {
             },
             State::Started { bss } => {
                 let req = fidl_mlme::StopRequest { ssid: bss.ssid.clone() };
-                bss.mlme_sink.send(MlmeRequest::StopAp(req));
+                bss.mlme_sink.send(MlmeRequest::Stop(req));
                 // Currently, MLME doesn't send any response back. We simply assume
                 // that the stop request succeeded immediately
                 bss.user_sink.send(UserEvent::StopComplete { token });
@@ -450,7 +450,7 @@ mod tests {
         sme.on_start_command(unprotected_config(), 10);
 
         let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
-        if let MlmeRequest::StartAp(start_req) = msg {
+        if let MlmeRequest::Start(start_req) = msg {
             assert_eq!(start_req.ssid, SSID.to_vec());
             assert_eq!(start_req.bss_type, fidl_mlme::BssTypes::Infrastructure);
             assert!(start_req.beacon_period != 0);
@@ -606,7 +606,7 @@ mod tests {
         let config = if protected { protected_config() } else { unprotected_config() };
         sme.on_start_command(config, 10);
         match mlme_stream.try_next().unwrap().expect("expect mlme message") {
-            MlmeRequest::StartAp(..) => {} // expected path
+            MlmeRequest::Start(..) => {} // expected path
             _ => panic!("expect start AP to MLME"),
         }
         (sme, mlme_stream, event_stream)

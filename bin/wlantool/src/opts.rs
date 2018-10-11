@@ -81,6 +81,10 @@ pub enum Opt {
     #[structopt(name = "ap")]
     /// commands for AP stations
     Ap(ApCmd),
+
+    #[structopt(name = "mesh")]
+    /// commands for mesh stations
+    Mesh(MeshCmd),
 }
 
 #[derive(StructOpt, Copy, Clone, Debug)]
@@ -186,3 +190,15 @@ pub enum ApCmd {
     },
 }
 
+#[derive(StructOpt, Clone, Debug)]
+pub enum MeshCmd {
+    #[structopt(name = "join")]
+    Join {
+        #[structopt(raw(required = "true"))]
+        iface_id: u16,
+        #[structopt(short = "m", long = "mesh_id")]
+        mesh_id: String,
+        #[structopt(short = "c", long = "channel")]
+        channel: u8,
+    },
+}

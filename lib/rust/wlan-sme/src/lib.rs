@@ -34,8 +34,8 @@ pub enum MlmeRequest {
     Deauthenticate(fidl_mlme::DeauthenticateRequest),
     Eapol(fidl_mlme::EapolRequest),
     SetKeys(fidl_mlme::SetKeysRequest),
-    StartAp(fidl_mlme::StartRequest),
-    StopAp(fidl_mlme::StopRequest),
+    Start(fidl_mlme::StartRequest),
+    Stop(fidl_mlme::StopRequest),
 }
 
 pub trait Station {

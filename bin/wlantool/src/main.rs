@@ -38,6 +38,7 @@ fn main() -> Result<(), Error> {
             Opt::Iface(cmd) => await!(do_iface(cmd, wlan_svc)),
             Opt::Client(cmd) => await!(do_client(cmd, wlan_svc)),
             Opt::Ap(cmd) => await!(do_ap(cmd, wlan_svc)),
+            Opt::Mesh(cmd) => await!(do_mesh(cmd, wlan_svc)),
         }
     };
     exec.run_singlethreaded(fut)
@@ -182,6 +183,21 @@ async fn do_ap(cmd: opts::ApCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     Ok(())
 }
 
+async fn do_mesh(cmd: opts::MeshCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
+    match cmd {
+        opts::MeshCmd::Join { iface_id, mesh_id, channel } => {
+            let sme = await!(get_mesh_sme(wlan_svc, iface_id))?;
+            let mut config = fidl_sme::MeshConfig {
+                mesh_id: mesh_id.as_bytes().to_vec(),
+                channel
+            };
+            let r = await!(sme.join(&mut config));
+            println!("{:?}", r);
+        },
+    }
+    Ok(())
+}
+
 #[derive(Debug, PartialEq)]
 struct MacAddr([u8; 6]);
 
@@ -314,6 +330,18 @@ async fn get_ap_sme(wlan_svc: WlanSvc, iface_id: u16)
 {
     let (proxy, remote) = endpoints::create_proxy()?;
     let status = await!(wlan_svc.get_ap_sme(iface_id, remote)).context("error sending GetApSme request")?;
+    if status == zx::sys::ZX_OK {
+        Ok(proxy)
+    } else {
+        Err(format_err!("Invalid interface id {}", iface_id))
+    }
+}
+
+async fn get_mesh_sme(wlan_svc: WlanSvc, iface_id: u16)
+    -> Result<fidl_sme::MeshSmeProxy, Error>
+{
+    let (proxy, remote) = endpoints::create_proxy()?;
+    let status = await!(wlan_svc.get_mesh_sme(iface_id, remote)).context("error sending GetMeshSme request")?;
     if status == zx::sys::ZX_OK {
         Ok(proxy)
     } else {

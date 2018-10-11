@@ -118,5 +118,17 @@ interface ApSme {
     2: Stop() -> ();
 };
 
+struct MeshConfig {
+    vector<uint8>:32 mesh_id;
+    uint8 channel;
+};
+
+enum JoinMeshResultCode {
+    SUCCESS = 0;
+    CANCELED = 1;
+    INTERNAL_ERROR = 2;
+};
+
 interface MeshSme {
+    1: Join(MeshConfig config) -> (JoinMeshResultCode code);
 };

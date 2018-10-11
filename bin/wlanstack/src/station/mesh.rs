@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy},
     fidl_fuchsia_wlan_sme as fidl_sme,
     futures::{
-        channel::mpsc,
+        channel::{mpsc, oneshot},
         prelude::*,
         select,
     },
@@ -27,7 +27,9 @@ use {
 
 struct Tokens;
 
-impl mesh_sme::Tokens for Tokens { }
+impl mesh_sme::Tokens for Tokens {
+    type JoinToken = oneshot::Sender<mesh_sme::JoinMeshResult>;
+}
 
 pub type Endpoint = fidl::endpoints::ServerEnd<fidl_sme::MeshSmeMarker>;
 type Sme = mesh_sme::MeshSme<Tokens>;
@@ -78,7 +80,7 @@ async fn serve_fidl(sme: Arc<Mutex<Sme>>,
 
 fn handle_user_event(e: UserEvent<Tokens>) {
     match e {
-        UserEvent::_Dummy(_) => unimplemented!(),
+        UserEvent::JoinMeshFinished { token, result } => token.send(result).unwrap_or_else(|_| ()),
     }
 }
 
@@ -99,8 +101,35 @@ async fn serve_fidl_endpoint(sme: Arc<Mutex<Sme>>, endpoint: Endpoint) {
     }
 }
 
-async fn handle_fidl_request(_sme: Arc<Mutex<Sme>>, _request: fidl_sme::MeshSmeRequest)
+async fn handle_fidl_request(sme: Arc<Mutex<Sme>>, request: fidl_sme::MeshSmeRequest)
     -> Result<(), ::fidl::Error>
 {
-    Ok(())
+    match request {
+        fidl_sme::MeshSmeRequest::Join { config, responder } => {
+            let code = await!(join_mesh(sme, config));
+            responder.send(code)
+        },
+    }
+}
+
+async fn join_mesh(sme: Arc<Mutex<Sme>>, config: fidl_sme::MeshConfig)
+    -> fidl_sme::JoinMeshResultCode
+{
+    let (sender, receiver) = oneshot::channel();
+    sme.lock().unwrap().on_join_command(sender, mesh_sme::Config {
+        mesh_id: config.mesh_id,
+        channel: config.channel,
+    });
+    let r = await!(receiver).unwrap_or_else(|_| {
+        error!("Responder for Join Mesh command was dropped without sending a response");
+        mesh_sme::JoinMeshResult::Error
+    });
+    convert_join_mesh_result(r)
+}
+
+fn convert_join_mesh_result(result: mesh_sme::JoinMeshResult) -> fidl_sme::JoinMeshResultCode {
+    match result {
+        mesh_sme::JoinMeshResult::Success => fidl_sme::JoinMeshResultCode::Success,
+        mesh_sme::JoinMeshResult::Error => fidl_sme::JoinMeshResultCode::InternalError,
+    }
 }
