@@ -6,7 +6,13 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.setui") {
   sources = [
+    "mutations.fidl",
     "service.fidl",
     "types.fidl",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1token",
   ]
 }

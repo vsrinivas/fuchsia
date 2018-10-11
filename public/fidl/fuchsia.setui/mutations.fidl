@@ -1,0 +1,43 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.setui;
+
+using fuchsia.ui.viewsv1token;
+
+
+/// operations supported by string settings.
+enum StringOperation {
+    UPDATE = 1;
+};
+
+/// Configuration for string mutations.
+struct StringMutation {
+    StringOperation operation;
+    string value;
+};
+
+/// Operations supported by account settings.
+enum AccountOperation {
+    ADD = 1;
+};
+
+/// Configuration for account mutations.
+struct AccountMutation {
+    AccountOperation operation;
+};
+
+/// Container for setting mutations.
+union Mutation {
+    AccountMutation account_mutation_value;
+    StringMutation string_mutation_value;
+};
+
+struct AccountMutationHandles {
+  fuchsia.ui.viewsv1token.ViewOwner view_owner;
+};
+
+union MutationHandles {
+  AccountMutationHandles account_handles;
+};

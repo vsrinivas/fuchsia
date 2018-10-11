@@ -7,6 +7,7 @@ library fuchsia.setui;
 enum ReturnCode {
   OK = 0;
   FAILED = 1;
+  UNSUPPORTED = 2;
 };
 
 struct SettingsObject {
@@ -18,7 +19,11 @@ struct UpdateResponse {
   ReturnCode return_code;
 };
 
-// The main interface for UIs to change system settings. Currently, the 
+struct MutationResponse {
+  ReturnCode return_code;
+};
+
+// The main interface for UIs to change system settings. Currently, the
 // settings are scoped to the device, but will eventually be scoped to the user
 // as is applicable.
 [Discoverable]
@@ -31,8 +36,12 @@ interface SetUiService {
   1: Listen(SettingType settingType, SettingListener listener);
 
   // Sets the value of a given settings object. Returns once operation
-  // has completed. 
+  // has completed.
   2: Update(SettingsObject value) -> (UpdateResponse response);
+
+//  3: Mutate(SettingType settingType, Mutation mutation) -> (MutationResponse response);
+
+//  4: InteractiveMutate(SettingType settingType, Mutation mutation, MutationHandles mutation_handles) -> (MutationResponse response);
 };
 
 interface SettingListener {
