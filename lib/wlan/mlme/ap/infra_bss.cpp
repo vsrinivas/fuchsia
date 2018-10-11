@@ -243,7 +243,7 @@ void InfraBss::HandleNewClientAuthAttempt(const MgmtFrameView<Authentication>& f
     fbl::unique_ptr<Timer> timer = nullptr;
     auto status = CreateClientTimer(client_addr, &timer);
     if (status == ZX_OK) {
-        auto client = fbl::make_unique<RemoteClient>(device_, fbl::move(timer),
+        auto client = fbl::make_unique<RemoteClient>(device_, TimerManager(fbl::move(timer)),
                                                      this,  // bss
                                                      this,  // client listener
                                                      client_addr);
