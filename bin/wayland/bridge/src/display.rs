@@ -55,7 +55,9 @@ impl wl::RequestReceiver<WlDisplay> for DisplayReceiver {
         match request {
             WlDisplayRequest::GetRegistry { registry } => {
                 RegistryReceiver::report_globals(registry, client)?;
-                client.objects().add_object(WlRegistry, registry, RegistryReceiver)?;
+                client
+                    .objects()
+                    .add_object(WlRegistry, registry, RegistryReceiver)?;
                 Ok(())
             }
             WlDisplayRequest::Sync { callback } => {
@@ -81,7 +83,7 @@ impl RegistryReceiver {
                     name: name as u32,
                     interface: global.interface().into(),
                     version: global.version(),
-                }
+                },
             )?;
         }
         Ok(())

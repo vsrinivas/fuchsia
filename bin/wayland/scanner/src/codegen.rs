@@ -35,11 +35,9 @@ impl<W: io::Write> Codegen<W> {
             "
 use bitflags::*;
 use failure;
-use \
-             fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,
+use fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,
                             MessageGroupSpec, MessageHeader, MessageSpec, NewId,
-                            ObjectId, EncodeError, DecodeError,
-                            Interface }};"
+                            ObjectId, EncodeError, DecodeError, Interface }};"
         )?;
 
         for interface in protocol.interfaces.into_iter() {
@@ -158,10 +156,8 @@ use \
             "\
 impl IntoMessage for Event {{
     type Error = EncodeError;
-    fn \
-             into_message(self, id: u32) -> Result<Message, Self::Error> {{
-        let mut \
-             header = MessageHeader {{
+    fn into_message(self, id: u32) -> Result<Message, Self::Error> {{
+        let mut header = MessageHeader {{
             sender: id,
             opcode: 0,
             length: 0,
@@ -214,8 +210,7 @@ impl IntoMessage for Event {{
             self.w,
             "\
 impl FromArgs for Request {{
-    fn from_args(op: u16, mut args: Vec<Arg>) -> \
-             Result<Self, failure::Error> {{
+    fn from_args(op: u16, mut args: Vec<Arg>) -> Result<Self, failure::Error> {{
         match op {{",
         )?;
 
@@ -224,8 +219,7 @@ impl FromArgs for Request {{
                 self.w,
                 "
         {opcode} /* {op_name} */ => {{
-            let mut iter = \
-                 args.into_iter();
+            let mut iter = args.into_iter();
             Ok(Request::{message_name} {{\n",
                 opcode = op,
                 op_name = message.name,
@@ -443,7 +437,8 @@ fn format_dispatch_arg_rust(arg: &ast::Arg) -> String {
         ArgKind::NewId => "ObjectId",
         ArgKind::Array => "Vec<u8>",
         ArgKind::Fd => "fuchsia_zircon::Handle",
-    }.to_string()
+    }
+    .to_string()
 }
 
 fn format_wire_arg_rust(arg: &ast::Arg) -> String {
@@ -459,7 +454,8 @@ fn format_wire_arg_rust(arg: &ast::Arg) -> String {
         ArgKind::NewId => "NewId",
         ArgKind::Array => "Vec<u8>",
         ArgKind::Fd => "fuchsia_zircon::Handle",
-    }.to_string()
+    }
+    .to_string()
 }
 
 fn format_arg_kind(arg: &ast::Arg) -> &'static str {
@@ -510,7 +506,8 @@ fn arg_to_primitive(arg: &ast::Arg) -> String {
         ArgKind::NewId => "as_new_id()",
         ArgKind::Array => "as_array()",
         ArgKind::Fd => "as_handle()",
-    }.to_string()
+    }
+    .to_string()
 }
 
 /// Helper trait for transforming wayland protocol names into the rust

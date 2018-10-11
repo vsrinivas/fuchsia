@@ -200,16 +200,19 @@ impl Message {
                     String::from_utf8(vec).map_err(|_| {
                         io::Error::new(io::ErrorKind::InvalidData, "Unable to decode string")
                     })
-                }).map(Arg::String),
+                })
+                .map(Arg::String),
             ArgKind::Array => self.read_slice(false).map(Arg::Array),
-            ArgKind::Handle => if !self.handle_buf.is_empty() {
-                Ok(Arg::Handle(self.handle_buf.remove(0)))
-            } else {
-                Err(io::Error::new(
-                    io::ErrorKind::UnexpectedEof,
-                    "Unable to read handle from Message",
-                ))
-            },
+            ArgKind::Handle => {
+                if !self.handle_buf.is_empty() {
+                    Ok(Arg::Handle(self.handle_buf.remove(0)))
+                } else {
+                    Err(io::Error::new(
+                        io::ErrorKind::UnexpectedEof,
+                        "Unable to read handle from Message",
+                    ))
+                }
+            }
         }
     }
 
@@ -327,7 +330,6 @@ mod tests {
     ///
     /// let arg = Arg::Uint(8);
     /// assert_matches(arg, Arg::Uint(x) => assert_eq!(x, 8));
-    ///
     macro_rules! assert_matches(
         ($e:expr, $p:pat => $a:expr) => (
             match $e {

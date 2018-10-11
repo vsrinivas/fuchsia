@@ -15,14 +15,14 @@
 ///! Consumers should mostly have to only concern themselves with the
 ///! |RequestReceiver<I:Interface>| trait, with the other types being mostly the
 ///! glue and dispatch logic.
-
 use std::any::Any;
 use std::collections::hash_map::{Entry, HashMap};
 use std::marker::PhantomData;
 
 use failure::{format_err, Error, Fail};
 
-use crate::{Arg, Client, FromArgs, Interface, MessageHeader, MessageSpec, MessageGroupSpec, ObjectId};
+use crate::{Arg, Client, FromArgs, Interface, MessageGroupSpec, MessageHeader, MessageSpec,
+            ObjectId};
 
 /// The |ObjectMap| holds the state of active objects for a single connection.
 ///
@@ -129,7 +129,7 @@ impl ObjectMap {
 
     /// Looks up the recevier function and the message structure from the map.
     pub(crate) fn lookup_internal(
-        &self, header: &MessageHeader
+        &self, header: &MessageHeader,
     ) -> Result<(MessageReceiverFn, &'static MessageSpec), Error> {
         let ObjectMapEntry {
             request_spec,
@@ -190,13 +190,12 @@ impl ObjectMap {
 ///
 /// The server will dispatch |Message|s to the appropriate |MessageReceiver|
 /// by reading the sender field in the message header.
-type MessageReceiverFn = fn(this: ObjectId, opcode: u16, args: Vec<Arg>, client: &mut Client) -> Result<(), Error>;
+type MessageReceiverFn =
+    fn(this: ObjectId, opcode: u16, args: Vec<Arg>, client: &mut Client) -> Result<(), Error>;
 pub trait MessageReceiver {
     /// Returns a function pointer that will be called to handle requests
     /// targeting this object.
-    fn receiver(
-        &self,
-    ) -> MessageReceiverFn;
+    fn receiver(&self) -> MessageReceiverFn;
 
     fn data(&self) -> &Any;
 
@@ -279,10 +278,10 @@ impl<I: Interface, R: RequestReceiver<I>> MessageReceiver for RequestDispatcher<
 mod tests {
     use super::*;
 
-    use std::sync::Arc;
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
     use parking_lot::Mutex;
+    use std::sync::Arc;
 
     use crate::test_protocol::*;
     use crate::{IntoMessage, RegistryBuilder};
@@ -297,7 +296,9 @@ mod tests {
     #[test]
     fn dispatch_message_to_request_receiver() -> Result<(), Error> {
         let mut client = create_client()?;
-        client.objects().add_object(TestInterface, 0, TestReceiver::new())?;
+        client
+            .objects()
+            .add_object(TestInterface, 0, TestReceiver::new())?;
 
         // Send a sync message; verify it's received.
         client.receive_message(TestMessage::Message1.into_message(0)?)?;

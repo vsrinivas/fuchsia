@@ -130,7 +130,8 @@ mod test {
     fn test_serialize_string() {
         let (bytes, handles) = TestInterfaceEvent::String {
             arg: STRING_VALUE.to_string(),
-        }.into_message(SENDER_ID)
+        }
+        .into_message(SENDER_ID)
         .unwrap()
         .take();
         assert!(handles.is_empty());
@@ -142,7 +143,8 @@ mod test {
         let request = TestInterfaceRequest::from_args(
             3, /* opcode */
             vec![Arg::String(STRING_VALUE.to_string())],
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_match!(request, TestInterfaceRequest::String{arg} => assert_eq!(arg, STRING_VALUE));
     }
@@ -232,7 +234,8 @@ mod test {
                 Arg::Uint(UNTYPED_NEW_ID_INTERFACE_VERSION),
                 Arg::NewId(UNTYPED_NEW_ID_VALUE),
             ],
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_match!(request, TestInterfaceRequest::UntypedNewId{
             arg,
@@ -260,7 +263,8 @@ mod test {
     fn test_serialize_array() {
         let (bytes, handles) = TestInterfaceEvent::Array {
             arg: ARRAY_VALUE.to_vec(),
-        }.into_message(SENDER_ID)
+        }
+        .into_message(SENDER_ID)
         .unwrap()
         .take();
         assert!(handles.is_empty());
@@ -272,7 +276,8 @@ mod test {
         let request = TestInterfaceRequest::from_args(
             6, /* opcode */
             vec![Arg::Array(ARRAY_VALUE.to_vec())],
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_match!(request, TestInterfaceRequest::Array{arg} => assert_eq!(arg, ARRAY_VALUE));
     }
@@ -288,7 +293,8 @@ mod test {
         let (s1, _s2) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
         let (bytes, handles) = TestInterfaceEvent::Handle {
             arg: s1.into_handle(),
-        }.into_message(SENDER_ID)
+        }
+        .into_message(SENDER_ID)
         .unwrap()
         .take();
         assert_eq!(bytes, HANDLE_MESSAGE_BYTES);
@@ -302,7 +308,8 @@ mod test {
         let request = TestInterfaceRequest::from_args(
             7, /* opcode */
             vec![Arg::Handle(s1.into_handle())],
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_match!(request, TestInterfaceRequest::Handle{arg} => assert!(!arg.is_invalid()));
     }
@@ -342,7 +349,8 @@ mod test {
                 Arg::String(STRING_VALUE.to_string()),
                 Arg::Array(ARRAY_VALUE.to_vec()),
             ],
-        ).unwrap();
+        )
+        .unwrap();
 
         match request {
             test_protocol::TestInterfaceRequest::Complex {

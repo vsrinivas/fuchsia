@@ -7,10 +7,8 @@ use fuchsia_wayland_core as wl;
 use wayland::*;
 
 /// The set of pixel formats that will be announced to clients.
-const SUPPORTED_PIXEL_FORMATS: &[wl_shm::Format] = &[
-    wl_shm::Format::Argb8888,
-    wl_shm::Format::Xrgb8888,
-];
+const SUPPORTED_PIXEL_FORMATS: &[wl_shm::Format] =
+    &[wl_shm::Format::Argb8888, wl_shm::Format::Xrgb8888];
 
 pub struct Shm;
 

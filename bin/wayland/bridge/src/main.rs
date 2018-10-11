@@ -25,7 +25,6 @@ use crate::display::*;
 mod shm;
 use crate::shm::*;
 
-
 /// The main FIDL server that listens for incomming client connection
 /// requests.
 struct WaylandDispatcher {
@@ -37,7 +36,7 @@ struct WaylandDispatcher {
 impl WaylandDispatcher {
     pub fn new() -> Self {
         let registry = wl::RegistryBuilder::new()
-            .add_global(WlCompositor, move |_,_| {
+            .add_global(WlCompositor, move |_, _| {
                 Ok(Box::new(wl::RequestDispatcher::new(Compositor::new())))
             })
             .add_global(WlShm, move |id, client| {
@@ -46,7 +45,7 @@ impl WaylandDispatcher {
                 shm.post_formats(id, client)?;
                 Ok(Box::new(wl::RequestDispatcher::new(shm)))
             })
-        .build();
+            .build();
         WaylandDispatcher {
             display: Arc::new(Mutex::new(Display::new(registry))),
         }

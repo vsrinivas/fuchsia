@@ -96,7 +96,9 @@ impl Global {
     /// Create a new object instance for this global. The returned
     /// |MessageReceiver| will be used to handle all requests for the new
     /// object.
-    pub fn bind(&mut self, id: ObjectId, client: &mut Client) -> Result<Box<MessageReceiver>, Error> {
+    pub fn bind(
+        &mut self, id: ObjectId, client: &mut Client,
+    ) -> Result<Box<MessageReceiver>, Error> {
         (*self.bind_fn)(id, client)
     }
 }
@@ -130,14 +132,14 @@ mod tests {
 
         {
             let counts = counts.clone();
-            registry.add_global(TestInterface, move |_,_| {
+            registry.add_global(TestInterface, move |_, _| {
                 counts.lock().interface_1_bind_count += 1;
                 Ok(Box::new(RequestDispatcher::new(TestReceiver::new())))
             });
         }
         {
             let counts = counts.clone();
-            registry.add_global(TestInterface2, move |_,_| {
+            registry.add_global(TestInterface2, move |_, _| {
                 counts.lock().interface_2_bind_count += 1;
                 Ok(Box::new(RequestDispatcher::new(TestReceiver::new())))
             });
@@ -154,10 +156,16 @@ mod tests {
         let _executor = fasync::Executor::new();
         let mut client = Client::new(fasync::Channel::from_channel(c1)?, registry.clone());
 
-        let mut receivers: Vec<Box<MessageReceiver>> =
-            registry.lock().globals.iter_mut().map(|g| g.bind(0, &mut client).unwrap()).collect();
+        let mut receivers: Vec<Box<MessageReceiver>> = registry
+            .lock()
+            .globals
+            .iter_mut()
+            .map(|g| g.bind(0, &mut client).unwrap())
+            .collect();
         for (id, r) in receivers.into_iter().enumerate() {
-            client.objects().add_object_raw(id as u32, r, &TestInterface::REQUESTS)?;
+            client
+                .objects()
+                .add_object_raw(id as u32, r, &TestInterface::REQUESTS)?;
         }
         assert_eq!(1, counts.lock().interface_1_bind_count);
         assert_eq!(1, counts.lock().interface_2_bind_count);

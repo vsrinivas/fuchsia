@@ -16,7 +16,9 @@ mod test {
     use fuchsia_zircon::prelude::*;
     use wayland::{WlCompositor, WlShm};
 
-    async fn expect_global_with_name<I: Interface>(expect_name: u32, client_channel: &fasync::Channel) {
+    async fn expect_global_with_name<I: Interface>(
+        expect_name: u32, client_channel: &fasync::Channel,
+    ) {
         let mut buffer = zx::MessageBuf::new();
         await!(client_channel.recv_msg(&mut buffer))
             .expect("Failed to receive message from the bridge");
