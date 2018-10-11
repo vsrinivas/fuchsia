@@ -136,8 +136,14 @@ def check_file(path, fix_guards=False):
     else:
         print('%s contained neither a proper header guard nor #pragma once' %
               path)
+
+    header_guards_fixed = False
     if fix_guards:
-        fix_header_guard(path, header_guard)
+        header_guards_fixed = fix_header_guard(path, header_guard)
+
+    if not header_guards_fixed:
+        print('Allowable header guard values are %s' % all_header_guards.keys());
+
     return False
 
 
@@ -187,8 +193,10 @@ def fix_header_guard(path, header_guard):
 
     if (fixed_ifndef and fixed_define and fixed_endif) or fixed_pragma_once:
         print('Fixed!')
-    else:
-        print('Not fixed...')
+        return True
+
+    print('Not fixed...')
+    return False
 
 
 def check_dir(p, fix_guards=False):
