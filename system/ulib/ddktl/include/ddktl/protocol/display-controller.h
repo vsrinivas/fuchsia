@@ -25,7 +25,7 @@ class DisplayControllerProtocol : public internal::base_protocol {
         ops_.compute_linear_stride = ComputeLinearStride;
         ops_.allocate_vmo = AllocateVmo;
 
-        // Can only inherit from one base_protocol implemenation
+        // Can only inherit from one base_protocol implementation
         ZX_ASSERT(ddk_proto_id_ == 0);
         ddk_proto_id_ = ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL;
         ddk_proto_ops_ = &ops_;

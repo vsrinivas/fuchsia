@@ -79,7 +79,7 @@ public:
         return gpio_set_polarity(&gpio_, polarity);
     }
 
-    // Check to determine if this object is intiialized
+    // Check to determine if this object is initialized
     bool is_valid() const {
         return (gpio_.ops && gpio_.ctx);
     }

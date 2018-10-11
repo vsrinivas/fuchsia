@@ -10,7 +10,7 @@
 namespace ddk {
 namespace internal {
 
-// base_device is a tag that default initalizes the zx_protocol_device_t so the mixin classes
+// base_device is a tag that default initializes the zx_protocol_device_t so the mixin classes
 // can fill in the table.
 struct base_device {
   protected:
@@ -47,7 +47,7 @@ struct base_protocol {
 //         internal::CheckMyProtocol<D, NewMethod>();
 //         ops_.foo = Foo;
 //
-//         // Can only inherit from one base_protocol implemenation
+//         // Can only inherit from one base_protocol implementation
 //         ZX_ASSERT(this->ddk_proto_ops_ == nullptr);
 //         ddk_proto_id_ = ZX_PROTOCOL_MY_FOO;
 //         ddk_proto_ops_ = &ops_;

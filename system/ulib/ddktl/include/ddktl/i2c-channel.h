@@ -42,7 +42,7 @@ public:
         i2c_ = {0, 0};
     }
 
-    // Check to determine if this object is intiialized
+    // Check to determine if this object is initialized
     bool is_valid() const {
         return (i2c_.ops && i2c_.ctx);
     }
@@ -50,7 +50,7 @@ public:
     /*
         The following methods assume the I2cChannel has been successfully
         constructed/initialized by the friend class Pdev.  A crash will result
-        from calling these methods on an unitialized I2cChannel instance.
+        from calling these methods on an uninitialized I2cChannel instance.
 
         is_valid() can be called at any time to safely check if the instance
         is properly initialized.

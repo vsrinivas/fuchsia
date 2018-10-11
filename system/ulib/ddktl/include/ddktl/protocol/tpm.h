@@ -48,7 +48,7 @@ template <typename D>
 class TpmProtocol : public internal::base_protocol {
 public:
     TpmProtocol() {
-        // Can only inherit from one base_protocol implemenation
+        // Can only inherit from one base_protocol implementation
         ZX_ASSERT(ddk_proto_id_ == 0);
         ddk_proto_id_ = ZX_PROTOCOL_TPM;
         ddk_proto_ops_ = &ops_;

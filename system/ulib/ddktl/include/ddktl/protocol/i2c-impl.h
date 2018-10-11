@@ -52,7 +52,7 @@ public:
         ops_.set_bitrate = I2cImplSetBitRate;
         ops_.transact = I2cImplTransact;
 
-        // Can only inherit from one base_protocol implemenation
+        // Can only inherit from one base_protocol implementation
         ZX_ASSERT(ddk_proto_id_ == 0);
         ddk_proto_id_ = ZX_PROTOCOL_I2C_IMPL;
         ddk_proto_ops_ = &ops_;

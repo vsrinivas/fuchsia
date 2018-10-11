@@ -51,7 +51,7 @@ public:
         ops_.transact = I2cTransact;
         ops_.get_max_transfer_size = I2cGetMaxTransferSize;
 
-        // Can only inherit from one base_protocol implemenation
+        // Can only inherit from one base_protocol implementation
         ZX_ASSERT(ddk_proto_id_ == 0);
         ddk_proto_id_ = ZX_PROTOCOL_I2C;
         ddk_proto_ops_ = &ops_;
