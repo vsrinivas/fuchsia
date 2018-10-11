@@ -7,8 +7,8 @@
 #include <fbl/string_buffer.h>
 #include <zircon/assert.h>
 
-#include <syslog/logger.h>
-#include <syslog/wire_format.h>
+#include <lib/syslog/logger.h>
+#include <lib/syslog/wire_format.h>
 
 #include "fx_logger.h"
 

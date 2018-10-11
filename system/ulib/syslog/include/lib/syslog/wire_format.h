@@ -4,11 +4,10 @@
 //
 // This header file defines wire format to transfer logs to listening service.
 
-#ifndef ZIRCON_SYSTEM_ULIB_SYSLOG_INCLUDE_SYSLOG_WIRE_FORMAT_H_
-#define ZIRCON_SYSTEM_ULIB_SYSLOG_INCLUDE_SYSLOG_WIRE_FORMAT_H_
+#ifndef LIB_SYSLOG_WIRE_FORMAT_H_
+#define LIB_SYSLOG_WIRE_FORMAT_H_
 
-#include "logger.h"
-
+#include <lib/syslog/logger.h>
 #include <zircon/types.h>
 
 // Defines max length for storing log_metadata, tags and msgbuffer.
@@ -36,4 +35,4 @@ typedef struct fx_log_packet {
     char data[FX_LOG_MAX_DATAGRAM_LEN - sizeof(fx_log_metadata_t)];
 } fx_log_packet_t;
 
-#endif // ZIRCON_SYSTEM_ULIB_SYSLOG_INCLUDE_SYSLOG_WIRE_FORMAT_H_
+#endif // LIB_SYSLOG_WIRE_FORMAT_H_

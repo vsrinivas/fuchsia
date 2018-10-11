@@ -5,7 +5,7 @@
 #include <lib/fdio/util.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
-#include <syslog/logger.h>
+#include <lib/syslog/logger.h>
 
 // TODO: Remove this hack once FIDL-182  is fixed.
 typedef zx_handle_t fuchsia_logger_LogListener;

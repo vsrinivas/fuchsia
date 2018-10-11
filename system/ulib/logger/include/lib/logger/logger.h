@@ -13,7 +13,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
 #include <stdint.h>
-#include <syslog/wire_format.h>
+#include <lib/syslog/wire_format.h>
 
 namespace logger {
 

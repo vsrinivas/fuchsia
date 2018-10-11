@@ -5,10 +5,10 @@
 //
 // Entry points used by clients.
 
-#ifndef ZIRCON_SYSTEM_ULIB_SYSLOG_INCLUDE_SYSLOG_GLOBAL_H_
-#define ZIRCON_SYSTEM_ULIB_SYSLOG_INCLUDE_SYSLOG_GLOBAL_H_
+#ifndef LIB_SYSLOG_GLOBAL_H_
+#define LIB_SYSLOG_GLOBAL_H_
 
-#include "logger.h"
+#include <lib/syslog/logger.h>
 
 __BEGIN_CDECLS
 
@@ -129,4 +129,4 @@ zx_status_t fx_log_init(void);
 
 __END_CDECLS
 
-#endif // ZIRCON_SYSTEM_ULIB_SYSLOG_INCLUDE_SYSLOG_GLOBAL_H_
+#endif // LIB_SYSLOG_GLOBAL_H_

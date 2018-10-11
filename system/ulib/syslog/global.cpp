@@ -4,7 +4,7 @@
 
 #include <fbl/unique_ptr.h>
 
-#include <syslog/global.h>
+#include <lib/syslog/global.h>
 
 #include "fx_logger.h"
 

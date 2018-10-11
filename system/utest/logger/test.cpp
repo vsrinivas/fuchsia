@@ -6,7 +6,7 @@
 
 #include <fuchsia/logger/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <syslog/global.h>
+#include <lib/syslog/global.h>
 #include <unittest/unittest.h>
 
 #include <fcntl.h>

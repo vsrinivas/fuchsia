@@ -6,8 +6,8 @@
 #include <fbl/type_support.h>
 #include <fbl/unique_fd.h>
 #include <lib/zx/socket.h>
-#include <syslog/global.h>
-#include <syslog/wire_format.h>
+#include <lib/syslog/global.h>
+#include <lib/syslog/wire_format.h>
 #include <unittest/unittest.h>
 
 #include <errno.h>

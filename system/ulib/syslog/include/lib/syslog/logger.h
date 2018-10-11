@@ -5,8 +5,8 @@
 //
 // This header contains definition for the logger object and protocol.
 
-#ifndef ZIRCON_SYSTEM_ULIB_SYSLOG_INCLUDE_SYSLOG_LOGGER_H_
-#define ZIRCON_SYSTEM_ULIB_SYSLOG_INCLUDE_SYSLOG_LOGGER_H_
+#ifndef LIB_SYSLOG_LOGGER_H_
+#define LIB_SYSLOG_LOGGER_H_
 
 #include <stdarg.h>
 #include <unistd.h>
@@ -123,4 +123,4 @@ zx_status_t fx_logger_log(fx_logger_t* logger, fx_log_severity_t severity,
 
 __END_CDECLS
 
-#endif // ZIRCON_SYSTEM_ULIB_SYSLOG_INCLUDE_SYSLOG_LOGGER_H_
+#endif // LIB_SYSLOG_LOGGER_H_

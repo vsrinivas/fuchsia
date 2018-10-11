@@ -9,7 +9,7 @@
 #include <lib/fidl/bind.h>
 #include <lib/zx/vmo.h>
 #include <string.h>
-#include <syslog/global.h>
+#include <lib/syslog/global.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 

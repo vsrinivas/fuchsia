@@ -5,6 +5,8 @@
 #ifndef ZIRCON_SYSTEM_ULIB_SYSLOG_FX_LOGGER_H_
 #define ZIRCON_SYSTEM_ULIB_SYSLOG_FX_LOGGER_H_
 
+#include <lib/syslog/logger.h>
+
 #include <fbl/mutex.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
@@ -12,8 +14,6 @@
 #include <lib/zx/process.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/thread.h>
-
-#include "syslog/logger.h"
 
 namespace {
 
