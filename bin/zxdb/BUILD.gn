@@ -2,12 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/sdk_executable.gni")
 import("//build/host.gni")
 import("//build/package.gni")
 
 # ZXDB currently only compiles for the host.
 if (current_toolchain == host_toolchain) {
-  executable("zxdb") {
+  sdk_executable("zxdb") {
+    category = "partner"
+
     sources = [
       "main_host.cc",
     ]
@@ -22,8 +25,7 @@ if (current_toolchain == host_toolchain) {
     testonly = true
     output_name = "zxdb_tests"
 
-    sources = [
-    ]
+    sources = []
 
     deps = [
       "//garnet/bin/zxdb/client:tests",
@@ -32,8 +34,8 @@ if (current_toolchain == host_toolchain) {
       "//garnet/bin/zxdb/expr:tests",
       "//garnet/lib/debug_ipc:tests",
       "//garnet/lib/debug_ipc/helper:tests",
-      "//third_party/googletest:gtest_main",
       "//third_party/googletest:gtest",
+      "//third_party/googletest:gtest_main",
     ]
   }
 }
@@ -43,6 +45,6 @@ install_host_tools("zxdb_host") {
     ":zxdb",
   ]
   outputs = [
-    "zxdb"
+    "zxdb",
   ]
 }

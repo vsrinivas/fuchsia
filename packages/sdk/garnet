@@ -18,6 +18,7 @@
         "garnet/packages/prod/sbase",
         "garnet/packages/prod/scenic",
         "garnet/packages/prod/tracing",
+        "garnet/packages/products/devtools",
         "garnet/packages/tools/tiles"
     ],
     "labels": [
