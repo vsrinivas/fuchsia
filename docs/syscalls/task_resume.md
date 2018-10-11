@@ -101,6 +101,10 @@ In the event of failure, a negative error value is returned.
 it is dead or **ZX_RESUME_EXCEPTION** was passed but the thread is not in an
 exception).
 
+This is also returned if *options* was 0 meaning to resume the
+thread after being suspended. This is no longer supported, instead close
+the suspend token. See [task_suspend](task_suspend.md).
+
 **ZX_ERR_INVALID_ARGS** *options* is not a valid combination.
 
 ## LIMITATIONS
