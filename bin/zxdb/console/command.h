@@ -70,6 +70,7 @@ enum class Verb {
   kNew,
   kNext,
   kNexti,
+  kOpenDump,
   kPause,
   kPrint,
   kQuit,

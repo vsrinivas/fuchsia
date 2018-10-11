@@ -162,8 +162,8 @@ const char kConnectShortHelp[] =
 const char kConnectHelp[] =
     R"(connect <remote_address>
 
-  Connectes to a debug_agent at the given address/port. Both IP address and
-  port are required.
+  Connects to a debug_agent at the given address/port. Both IP address and port
+  are required.
 
   See also "disconnect".
 
@@ -232,6 +232,43 @@ Err DoConnect(ConsoleContext* context, const Command& cmd,
   return Err();
 }
 
+// opendump --------------------------------------------------------------------
+
+const char kOpenDumpShortHelp[] =
+    R"(opendump: Open a dump file for debugging.)";
+const char kOpenDumpHelp[] =
+    R"(opendump <path>
+
+  Opens a minidump file. Currently only the 'minidump' format is supported.
+)";
+
+Err DoOpenDump(ConsoleContext* context, const Command& cmd,
+               CommandCallback callback = nullptr) {
+  std::string path;
+
+  if (cmd.args().size() == 0) {
+    return Err(ErrType::kInput, "Need path to open.");
+  } else if (cmd.args().size() == 1) {
+    path = cmd.args()[0];
+  } else {
+    return Err(ErrType::kInput, "Too many arguments.");
+  }
+
+  context->session()->OpenMinidump(path, [callback](const Err& err) {
+    if (err.has_error()) {
+      Console::get()->Output(err);
+    } else {
+      Console::get()->Output("Dump loaded successfully.\n");
+    }
+
+    if (callback)
+      callback(err);
+  });
+  Console::get()->Output("Opening dump file...\n");
+
+  return Err();
+}
+
 // disconnect ------------------------------------------------------------------
 
 const char kDisconnectShortHelp[] =
@@ -296,6 +333,9 @@ void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
                                      kQuitHelp, CommandGroup::kGeneral);
   (*verbs)[Verb::kConnect] =
       VerbRecord(&DoConnect, {"connect"}, kConnectShortHelp, kConnectHelp,
+                 CommandGroup::kGeneral);
+  (*verbs)[Verb::kOpenDump] =
+      VerbRecord(&DoOpenDump, {"opendump"}, kOpenDumpShortHelp, kOpenDumpHelp,
                  CommandGroup::kGeneral);
   (*verbs)[Verb::kDisconnect] =
       VerbRecord(&DoDisconnect, {"disconnect"}, kDisconnectShortHelp,
