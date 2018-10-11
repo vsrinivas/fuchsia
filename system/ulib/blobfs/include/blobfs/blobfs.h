@@ -234,7 +234,7 @@ private:
     // Does not verify the blob.
     zx_status_t InitCompressed();
 
-    // Initialize a deompressed blob by reading it from disk.
+    // Initialize a decompressed blob by reading it from disk.
     // Does not verify the blob.
     zx_status_t InitUncompressed();
 

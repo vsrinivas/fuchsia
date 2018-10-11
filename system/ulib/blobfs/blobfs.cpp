@@ -391,7 +391,7 @@ zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
         status = write_info_->compressor.Initialize(write_info_->compressed_blob->GetData(),
                                                     write_info_->compressed_blob->GetSize());
         if (status != ZX_OK) {
-            fprintf(stderr, "blobfs: Failed to initalize compressor: %d\n", status);
+            fprintf(stderr, "blobfs: Failed to initialize compressor: %d\n", status);
             return status;
         }
     }
