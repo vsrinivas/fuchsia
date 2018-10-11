@@ -945,9 +945,9 @@ zx_status_t CodecAdapterH264::InitializeFramesHandler(
   // CoreCodecRecycleOutputPacket(), despite not necessarily getting signalled
   // to the HW by H264Decoder::ReturnFrame further down.  For now, we always
   // re-allocate buffers.  Old buffers still active elsewhere in the system can
-  // continue to be referenced by those parts of the system - the importan thing
-  // for now is we avoid overwriting the content of those buffers by using an
-  // entirely new set of buffers for each stream for now.
+  // continue to be referenced by those parts of the system - the important
+  // thing for now is we avoid overwriting the content of those buffers by using
+  // an entirely new set of buffers for each stream for now.
 
   // First stash some format and buffer count info needed to initialize frames
   // before triggering mid-stream format change.  Later, frames satisfying these

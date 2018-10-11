@@ -966,6 +966,9 @@ void CodecImpl::UnbindLocked() {
       // but it doesn't stop lambdas re. this CodecImpl from being queued to
       // fidl_thread().  Potentially such lambdas can be coming from
       // StreamControl domain still at this point (even after the Unbind()).
+      // Those which are sending a FIDL message can omit their send if binding_
+      // is no longer bound, but they need binding_ to still be allocated when
+      // they run.
       if (binding_.is_bound()) {
         binding_.Unbind();
       }
@@ -1017,8 +1020,11 @@ void CodecImpl::UnbindLocked() {
       // this->binding_ (which is soon to be deleted) will run before the lambda
       // postead here.
       //
-      // This relies on other lambdas running on fidl_thread() re. this
-      // CodecImpl to not re-post to the fidl_thread().
+      // This relies on other previously-posted _lambdas_ running on
+      // fidl_thread() re. this CodecImpl to not re-post to the fidl_thread().
+      // In contrast, it is ok if a FIDL dispatch (on FIDL thread) re-posts to
+      // the fidl_thread(); this is ok because we've already stopped any more
+      // FIDL dispatching by binding_.Unbind() above.
       device_->driver()->PostToSharedFidl(
           [client_error_handler = std::move(owner_error_handler_)] {
             // This call deletes the CodecImpl.
