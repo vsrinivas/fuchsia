@@ -24,7 +24,7 @@ public:
 private:
     Token Lex() { return lexer_->LexNoComments(); }
 
-    const Token& Peek() const { return last_token_; }
+    Token::KindAndSubkind Peek() { return last_token_.kind_and_subkind(); }
 
     // ASTScope is a tool to track the start and end source location of each
     // node automatically.  The parser associates each node with the start and
@@ -141,11 +141,11 @@ private:
     }
 
     static auto OfKind(Token::Kind expected_kind) {
-        return [expected_kind](const Token& actual) -> std::unique_ptr<std::string> {
+        return [expected_kind](Token::KindAndSubkind actual) -> std::unique_ptr<std::string> {
             if (actual.kind() != expected_kind) {
-                auto message = std::make_unique<std::string>("unexpected token \"");
-                message->append(actual.data());
-                message->append("\", was expecting ");
+                auto message = std::make_unique<std::string>("unexpected token ");
+                message->append(Token::Name(actual));
+                message->append(", was expecting ");
                 message->append(Token::Name(Token::KindAndSubkind(expected_kind, Token::Subkind::kNone)));
                 return message;
             }
@@ -154,11 +154,11 @@ private:
     }
 
     static auto IdentifierOfSubkind(Token::Subkind expected_subkind) {
-        return [expected_subkind](const Token& actual) -> std::unique_ptr<std::string> {
+        return [expected_subkind](Token::KindAndSubkind actual) -> std::unique_ptr<std::string> {
             auto expected = Token::KindAndSubkind(Token::Kind::kIdentifier, expected_subkind);
-            if (actual.kind_and_subkind().combined() != expected.combined()) {
-                auto message = std::make_unique<std::string>("unexpected identifier \"");
-                message->append(Token::Name(actual.kind_and_subkind()));
+            if (actual.combined() != expected.combined()) {
+                auto message = std::make_unique<std::string>("unexpected identifier ");
+                message->append(Token::Name(actual));
                 message->append(", was expecting ");
                 message->append(Token::Name(Token::KindAndSubkind(Token::Kind::kIdentifier, Token::Subkind::kNone)));
                 return message;

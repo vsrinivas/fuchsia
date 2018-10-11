@@ -221,7 +221,7 @@ enum struct Behavior {
 
 bool Parse(const fidl::SourceFile& source_file, fidl::IdentifierTable* identifier_table,
            fidl::ErrorReporter* error_reporter, fidl::flat::Library* library) {
-    fidl::Lexer lexer(source_file, identifier_table);
+    fidl::Lexer lexer(source_file, identifier_table, error_reporter);
     fidl::Parser parser(&lexer, error_reporter);
     auto ast = parser.Parse();
     if (!parser.Ok()) {

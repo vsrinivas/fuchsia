@@ -27,7 +27,6 @@ library 0fidl.test.badcompoundidentifier;
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(), "unexpected token");
-    ASSERT_STR_STR(errors[0].c_str(), "\"0f\"");
 
     END_TEST;
 }
@@ -116,8 +115,7 @@ interface InInterface {
     END_TEST;
 }
 
-// Test that an @ prefix in an identifier emits an error message. Regression test for FIDL-303.
-bool bad_at_sign_test() {
+bool bad_char_at_sign_test() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -125,13 +123,48 @@ library test;
 
 struct Test {
     uint8 @uint8;
-}
+};
 )FIDL");
     EXPECT_FALSE(library.Compile());
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "unexpected token");
-    ASSERT_STR_STR(errors[0].c_str(), "\"@\"");
+    ASSERT_STR_STR(errors[0].c_str(), "invalid character '@'");
+
+    END_TEST;
+}
+
+bool bad_char_slash_test() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library test;
+
+struct Test / {
+    uint8 uint8;
+};
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "invalid character '/'");
+
+    END_TEST;
+}
+
+bool bad_identifier_test() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library test;
+
+struct test_ {
+    uint8 uint8;
+};
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "invalid identifier 'test_'");
 
     END_TEST;
 }
@@ -142,5 +175,7 @@ BEGIN_TEST_CASE(parser_tests);
 RUN_TEST(bad_compound_identifier_test);
 RUN_TEST(parsing_reserved_words_in_struct_test);
 RUN_TEST(parsing_reserved_words_in_interface_test);
-RUN_TEST(bad_at_sign_test);
+RUN_TEST(bad_char_at_sign_test);
+RUN_TEST(bad_char_slash_test);
+RUN_TEST(bad_identifier_test);
 END_TEST_CASE(parser_tests);

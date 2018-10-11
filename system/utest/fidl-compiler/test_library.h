@@ -25,7 +25,7 @@ public:
 
     TestLibrary(const std::string& filename, const std::string& raw_source_code)
         : source_file_(MakeSourceFile(filename, raw_source_code)),
-          lexer_(source_file_, &identifier_table_),
+          lexer_(source_file_, &identifier_table_, &error_reporter_),
           parser_(&lexer_, &error_reporter_),
           library_(std::make_unique<fidl::flat::Library>(&all_libraries_, &error_reporter_)) {
     }
@@ -63,7 +63,7 @@ public:
     bool AddSourceFile(const std::string& filename, const std::string& raw_source_code) {
         auto source_file = MakeSourceFile(filename, raw_source_code);
         fidl::IdentifierTable identifier_table;
-        fidl::Lexer lexer(source_file, &identifier_table);
+        fidl::Lexer lexer(source_file, &identifier_table, &error_reporter_);
         fidl::Parser parser(&lexer, &error_reporter_);
         auto ast = parser.Parse();
         return parser.Ok() &&

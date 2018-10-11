@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #include "identifier_table.h"
+#include "error_reporter.h"
 #include "source_manager.h"
 #include "string_view.h"
 #include "token.h"
@@ -22,13 +23,12 @@ class Lexer {
 public:
     // The Lexer assumes the final character is 0. This substantially
     // simplifies advancing to the next character.
-    Lexer(const SourceFile& source_file, IdentifierTable* identifier_table)
-        : source_file_(source_file), identifier_table_(identifier_table) {
+    Lexer(const SourceFile& source_file, IdentifierTable* identifier_table, ErrorReporter* error_reporter)
+        : source_file_(source_file), identifier_table_(identifier_table), error_reporter_(error_reporter) {
         assert(data()[data().size() - 1] == 0);
         current_ = data().data();
         previous_end_ = token_start_ = current_;
     }
-    Lexer(const Lexer&) = delete;
 
     Token Lex();
     Token LexNoComments();
@@ -53,6 +53,7 @@ private:
 
     const SourceFile& source_file_;
     const IdentifierTable* identifier_table_;
+    ErrorReporter* error_reporter_;
 
     const char* current_ = nullptr;
     const char* token_start_ = nullptr;

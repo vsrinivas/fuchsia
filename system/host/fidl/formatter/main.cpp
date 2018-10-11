@@ -49,7 +49,7 @@ void Usage(const std::string& argv0) {
 
 bool Format(const fidl::SourceFile& source_file, fidl::IdentifierTable* identifier_table,
             fidl::ErrorReporter* error_reporter, std::string& output) {
-    fidl::Lexer lexer(source_file, identifier_table);
+    fidl::Lexer lexer(source_file, identifier_table, error_reporter);
     fidl::Parser parser(&lexer, error_reporter);
     std::unique_ptr<fidl::raw::File> ast = parser.Parse();
     if (!parser.Ok()) {
