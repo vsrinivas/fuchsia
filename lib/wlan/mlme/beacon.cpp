@@ -103,6 +103,22 @@ static bool WriteRsne(ElementWriter* w, const BeaconConfig& config) {
     }
 }
 
+static bool WriteMeshConfiguration(ElementWriter* w, const BeaconConfig& config) {
+    if (config.mesh_config != nullptr) {
+        return w->write<MeshConfigurationElement>(*config.mesh_config);
+    } else {
+        return true;
+    }
+}
+
+static bool WriteMeshId(ElementWriter* w, const BeaconConfig& config) {
+    if (config.mesh_id != nullptr) {
+        return w->write<MeshIdElement>(config.mesh_id, config.mesh_id_len);
+    } else {
+        return true;
+    }
+}
+
 static bool WriteElements(ElementWriter* w, const BeaconConfig& config, size_t* rel_tim_ele_offset) {
     // TODO(hahnr): Query from hardware which IEs must be filled out here.
     return WriteSsid(w, config)
@@ -113,7 +129,28 @@ static bool WriteElements(ElementWriter* w, const BeaconConfig& config, size_t* 
         && WriteExtendedSupportedRates(w)
         && WriteRsne(w, config)
         && WriteHtCapabilities(w, config)
-        && WriteHtOperation(w, config);
+        && WriteHtOperation(w, config)
+        && WriteMeshConfiguration(w, config)
+        && WriteMeshId(w, config);
+}
+
+template<typename T>
+static void SetBssType(T* bcn, BssType bss_type) {
+    // IEEE Std 802.11-2016, 9.4.1.4
+    switch (bss_type) {
+    case BssType::kInfrastructure:
+        bcn->cap.set_ess(1);
+        bcn->cap.set_ibss(0);
+        break;
+    case BssType::kIndependent:
+        bcn->cap.set_ess(0);
+        bcn->cap.set_ibss(1);
+        break;
+    case BssType::kMesh:
+        bcn->cap.set_ess(0);
+        bcn->cap.set_ibss(0);
+        break;
+    }
 }
 
 template<typename T>
@@ -134,7 +171,8 @@ static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config,
     bcn->beacon_interval = config.beacon_period;
     bcn->timestamp = config.timestamp;
     bcn->cap.set_privacy(config.rsne != nullptr);
-    bcn->cap.set_ess(1);
+
+    SetBssType(bcn, config.bss_type);
     bcn->cap.set_short_preamble(1);
 
     // Write elements.

@@ -10,8 +10,15 @@
 
 namespace wlan {
 
+enum class BssType {
+    kInfrastructure = 0,
+    kIndependent,
+    kMesh
+};
+
 struct BeaconConfig {
     common::MacAddr bssid;
+    BssType bss_type;
     const uint8_t* ssid;
     size_t ssid_len;
     const uint8_t* rsne;
@@ -21,6 +28,9 @@ struct BeaconConfig {
     const PsCfg* ps_cfg;
     uint64_t timestamp;
     HtConfig ht;
+    MeshConfiguration* mesh_config;
+    const uint8_t* mesh_id;
+    size_t mesh_id_len;
 };
 
 zx_status_t BuildBeacon(const BeaconConfig& config, MgmtFrame<Beacon>* buffer,
