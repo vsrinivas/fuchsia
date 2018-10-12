@@ -21,6 +21,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <zircon/types.h>
+#include <hw/pci.h>
 
 zx_status_t brcmfmac_bind(void* ctx, zx_device_t* device) {
     zxlogf(INFO, "brcmfmac: Bind was called!!\n");

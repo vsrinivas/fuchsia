@@ -17,8 +17,10 @@
 #ifndef BRCMF_DEVICE_H
 #define BRCMF_DEVICE_H
 
+#include <assert.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/pci-lib.h>
 #include <ddk/protocol/usb.h>
 #include <lib/async-loop/loop.h> // to start the worker thread
 #include <lib/async/default.h>  // for async_get_default_dispatcher()

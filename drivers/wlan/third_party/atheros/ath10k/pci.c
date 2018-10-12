@@ -26,6 +26,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/pci-lib.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -3249,13 +3250,13 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
     }
 
     uint16_t subsystem_vendor_id;
-    ret = pci_config_read16(&pci, kPciCfgSubsystemVendorId, &subsystem_vendor_id);
+    ret = pci_config_read16(&pci, PCI_CFG_SUBSYSTEM_VENDOR_ID, &subsystem_vendor_id);
     if (ret != ZX_OK) {
         ath10k_err("failed to read PCI subsystem vendor ID: %s\n", zx_status_get_string(ret));
     }
 
     uint16_t subsystem_device_id;
-    ret = pci_config_read16(&pci, kPciCfgSubsystemId, &subsystem_device_id);
+    ret = pci_config_read16(&pci, PCI_CFG_SUBSYSTEM_ID, &subsystem_device_id);
     if (ret != ZX_OK) {
         ath10k_err("failed to read PCI subsystem device ID: %s\n", zx_status_get_string(ret));
     }
