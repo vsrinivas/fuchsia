@@ -31,7 +31,7 @@ use crate::{Arg, Client, FromArgs, Interface, MessageGroupSpec, MessageHeader, M
 /// |ObjectMap| with the "wl_display" singleton object. From the the client can
 /// query the registry and bind new objects to the interfaces the client
 /// understands.
-pub struct ObjectMap {
+pub(crate) struct ObjectMap {
     /// The set of active objects. This holds the descriptors of supported
     /// messages for each object, as well as the |MessageReceiver| that's
     /// capable of handling the requests.
@@ -194,13 +194,13 @@ impl<T> ObjectRef<T> {
     }
 
     /// Provides an immutable reference to an object, downcasted to |T|.
-    pub fn get<'a>(&self, map: &'a ObjectMap) -> Result<&'a T, ObjectLookupError> {
-        map.get(self.1)
+    pub fn get<'a>(&self, client: &'a Client) -> Result<&'a T, ObjectLookupError> {
+        client.get_object(self.1)
     }
 
     /// Provides a mutable reference to an object, downcasted to |T|.
-    pub fn get_mut<'a>(&self, map: &'a mut ObjectMap) -> Result<&'a mut T, ObjectLookupError> {
-        map.get_mut(self.1)
+    pub fn get_mut<'a>(&self, client: &'a mut Client) -> Result<&'a mut T, ObjectLookupError> {
+        client.get_object_mut(self.1)
     }
 }
 
@@ -243,7 +243,7 @@ impl<I: Interface + 'static> NewObject<I> {
     pub fn implement<R: RequestReceiver<I>>(
         self, client: &mut Client, receiver: R,
     ) -> Result<ObjectRef<R>, Error> {
-        client.objects().add_object(self.1, receiver)
+        client.add_object(self.1, receiver)
     }
 }
 
@@ -358,20 +358,19 @@ mod tests {
     #[test]
     fn dispatch_message_to_request_receiver() -> Result<(), Error> {
         let mut client = create_client()?;
-        client.objects().add_object(0, TestReceiver::new())?;
+        client.add_object(0, TestReceiver::new())?;
 
         // Send a sync message; verify it's received.
         client.receive_message(TestMessage::Message1.into_message(0)?)?;
-        assert_eq!(1, client.objects().get::<TestReceiver>(0)?.count());
+        assert_eq!(1, client.get_object::<TestReceiver>(0)?.count());
         Ok(())
     }
 
     #[test]
     fn add_object_duplicate_id() -> Result<(), Error> {
         let mut client = create_client()?;
-        let objects = client.objects();
-        assert!(objects.add_object(0, TestReceiver::new()).is_ok());
-        assert!(objects.add_object(0, TestReceiver::new()).is_err());
+        assert!(client.add_object(0, TestReceiver::new()).is_ok());
+        assert!(client.add_object(0, TestReceiver::new()).is_err());
         Ok(())
     }
 

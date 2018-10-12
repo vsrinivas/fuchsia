@@ -14,6 +14,16 @@ use wayland::*;
 /// that the client can immediately interact with.
 const DISPLAY_SINGLETON_OBJECT_ID: u32 = 1;
 
+/// Since `wl::Client` is in the core library, it doesn't have access to the
+/// protocol bindings required to send delete_id events for us as we'd like,
+///
+/// Instead we provide this callback function to `wl::Client` to send the
+/// wl_display::delete_id event after the key has been cleared from the internal
+/// object map.
+fn send_delete_id_event(client: &mut wl::Client, id: wl::ObjectId) -> Result<(), Error> {
+    client.post(DISPLAY_SINGLETON_OBJECT_ID, WlDisplayEvent::DeleteId { id })
+}
+
 /// |Display| is the global object used to manage a wayland server.
 ///
 /// The |Display| has a |wl::Registry| that will hold the set of global
@@ -32,11 +42,11 @@ impl Display {
 
     pub fn spawn_new_client(&self, chan: fasync::Channel) {
         let mut client = wl::Client::new(chan, self.registry.clone());
+        client.set_object_deleter(send_delete_id_event);
 
         // Add the global wl_display object. We unwrap here since the object map
         // is empty so failure should not be possible.
         client
-            .objects()
             .add_object(DISPLAY_SINGLETON_OBJECT_ID, DisplayReceiver)
             .unwrap();
 
@@ -59,6 +69,10 @@ impl wl::RequestReceiver<WlDisplay> for DisplayReceiver {
                 Ok(())
             }
             WlDisplayRequest::Sync { callback } => {
+                // Since we callback immediately we'll skip actually adding this
+                // object, but we need to send the wl_display::delete_id event
+                // explicitly, which is otherwise done for us in
+                // wl::Client:delete_id,
                 client.post(callback.id(), WlCallbackEvent::Done { callback_data: 0 })?;
                 client.post(this.id(), WlDisplayEvent::DeleteId { id: callback.id() })?;
                 Ok(())
@@ -102,7 +116,7 @@ impl wl::RequestReceiver<WlRegistry> for RegistryReceiver {
                 return Err(format_err!("Invalid global name {}", name));
             }
         };
-        client.objects().add_object_raw(id, receiver, spec)?;
+        client.add_object_raw(id, receiver, spec)?;
         Ok(())
     }
 }

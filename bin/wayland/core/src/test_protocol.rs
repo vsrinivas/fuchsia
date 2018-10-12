@@ -98,7 +98,7 @@ impl RequestReceiver<TestInterface> for TestReceiver {
         this: ObjectRef<Self>, request: TestMessage, client: &mut Client,
     ) -> Result<(), Error> {
         if let TestMessage::Message1 = request {
-            this.get_mut(client.objects())?.increment_count();
+            this.get_mut(client)?.increment_count();
         }
         Ok(())
     }

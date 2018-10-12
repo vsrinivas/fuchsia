@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::any::Any;
 use std::sync::Arc;
 
 use failure::Error;
@@ -13,9 +14,11 @@ use futures::select;
 
 use parking_lot::Mutex;
 
-use crate::{IntoMessage, Message, ObjectId, ObjectMap, Registry};
+use crate::{Interface, IntoMessage, Message, MessageGroupSpec, MessageReceiver, ObjectId,
+            ObjectLookupError, ObjectMap, ObjectRef, Registry, RequestReceiver};
 
 type Task = Box<FnMut(&mut Client) -> Result<(), Error> + 'static>;
+type ObjectDeleter = fn(&mut Client, ObjectId) -> Result<(), Error>;
 
 /// The state of a single client connection. Each client connection will have
 /// have its own zircon channel and its own set of protocol objects. The
@@ -38,6 +41,11 @@ pub struct Client {
 
     /// The sending endpoint for the task channel.
     task_queue: TaskQueue,
+
+    /// A function that will be called after objects have been deleted from
+    /// the underlying `ObjectMap`. The purpose of this is to allow the
+    /// application to send the wl_display::delete_id event
+    object_deleter: Option<ObjectDeleter>,
 }
 
 impl Client {
@@ -50,7 +58,12 @@ impl Client {
             objects: ObjectMap::new(),
             tasks: receiver,
             task_queue: TaskQueue(sender),
+            object_deleter: None,
         }
+    }
+
+    pub fn set_object_deleter(&mut self, deleter: ObjectDeleter) {
+        self.object_deleter = Some(deleter);
     }
 
     /// Returns a object that can post messages to the `Client`.
@@ -110,9 +123,42 @@ impl Client {
         self.chan.clone()
     }
 
-    /// Provides a reference to the object map for this client.
-    pub fn objects(&mut self) -> &mut ObjectMap {
-        &mut self.objects
+    /// Looks up an object in the map and returns a downcasted reference to
+    /// the implementation.
+    pub fn get_object<T: Any>(&self, id: ObjectId) -> Result<&T, ObjectLookupError> {
+        self.objects.get(id)
+    }
+
+    /// Looks up an object in the map and returns a downcasted mutable
+    /// reference to the implementation.
+    pub fn get_object_mut<T: Any>(&mut self, id: ObjectId) -> Result<&mut T, ObjectLookupError> {
+        self.objects.get_mut(id)
+    }
+
+    /// Adds a new object into the map that will handle messages with the sender
+    /// set to |id|. When a message is received with the corresponding |id|, the
+    /// message will be decoded and forwarded to the |RequestReceiver|.
+    ///
+    /// Returns Err if there is already an object for |id| in this |ObjectMap|.
+    pub fn add_object<I: Interface + 'static, R: RequestReceiver<I> + 'static>(
+        &mut self, id: u32, receiver: R,
+    ) -> Result<ObjectRef<R>, Error> {
+        self.objects.add_object(id, receiver)
+    }
+
+    /// Adds an object to the map using the low-level primitives. It's favorable
+    /// to use instead |add_object| if the wayland interface for the object is
+    /// statically known.
+    pub fn add_object_raw(
+        &mut self, id: ObjectId, receiver: Box<MessageReceiver>,
+        request_spec: &'static MessageGroupSpec,
+    ) -> Result<(), Error> {
+        self.objects.add_object_raw(id, receiver, request_spec)
+    }
+
+    pub fn delete_id(&mut self, id: ObjectId) -> Result<(), Error> {
+        self.objects.delete(id)?;
+        self.object_deleter.map_or(Ok(()), |f| f(self, id))
     }
 
     /// Reads the message header to find the target for this message and then
@@ -149,7 +195,7 @@ impl Client {
 ///   let foo: ObjectRef<Foo> = get_foo_ref();
 ///   let tasks = client.task_queue();
 ///   task.post_at(zx::Time::after(100.millis()), |client| {
-///       let foo = foo.get(client.objects());
+///       let foo = foo.get(client);
 ///       foo.handle_delayed_operation();
 ///   });
 #[derive(Clone)]

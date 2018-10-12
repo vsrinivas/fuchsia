@@ -163,14 +163,12 @@ mod tests {
             .map(|g| g.bind(0, &mut client).unwrap())
             .collect();
         for (id, r) in receivers.into_iter().enumerate() {
-            client
-                .objects()
-                .add_object_raw(id as u32, r, &TestInterface::REQUESTS)?;
+            client.add_object_raw(id as u32, r, &TestInterface::REQUESTS)?;
         }
         assert_eq!(1, counts.lock().interface_1_bind_count);
         assert_eq!(1, counts.lock().interface_2_bind_count);
-        assert_eq!(0, client.objects().get::<TestReceiver>(0)?.count());
-        assert_eq!(0, client.objects().get::<TestReceiver>(1)?.count());
+        assert_eq!(0, client.get_object::<TestReceiver>(0)?.count());
+        assert_eq!(0, client.get_object::<TestReceiver>(1)?.count());
 
         // Dispatch a message to each receiver.
         client.receive_message(TestMessage::Message1.into_message(0)?)?;
@@ -178,8 +176,8 @@ mod tests {
 
         assert_eq!(1, counts.lock().interface_1_bind_count);
         assert_eq!(1, counts.lock().interface_2_bind_count);
-        assert_eq!(1, client.objects().get::<TestReceiver>(0)?.count());
-        assert_eq!(1, client.objects().get::<TestReceiver>(1)?.count());
+        assert_eq!(1, client.get_object::<TestReceiver>(0)?.count());
+        assert_eq!(1, client.get_object::<TestReceiver>(1)?.count());
         Ok(())
     }
 }
