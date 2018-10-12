@@ -212,6 +212,8 @@ typedef struct wlan_bcn_config {
     // TIM offset (in bytes) to the start of |bcn_tmpl|. This points to the first byte of TIM IE,
     // which is the tag ID.
     size_t tim_ele_offset;
+
+    uint16_t beacon_interval; // in TU
 } wlan_bcn_config_t;
 
 typedef struct wlanmac_ifc {

@@ -99,6 +99,7 @@ wlan_mlme::StartResultCodes MeshMlme::Start(const MlmeMsg<wlan_mlme::StartReques
     auto packet = buffer.Take();
     cfg.tmpl.packet_head.len = packet->len();
     cfg.tmpl.packet_head.data = packet->mut_data();
+    cfg.beacon_interval = req.body()->beacon_period;
     status = device_->EnableBeaconing(&cfg);
     if (status != ZX_OK) {
         errorf("[mesh-mlme] failed to enable beaconing: %s\n", zx_status_get_string(status));

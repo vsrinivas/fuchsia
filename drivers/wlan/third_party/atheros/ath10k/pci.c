@@ -3097,6 +3097,10 @@ static zx_status_t ath10k_pci_enable_beaconing(void* ctx, uint32_t options,
         return ZX_ERR_INVALID_ARGS;
     }
 
+    mtx_lock(&ar->conf_mutex);
+    arvif->beacon_interval = bcn_cfg->beacon_interval;
+    mtx_unlock(&ar->conf_mutex);
+
     // Copy the beacon template content and ask the hardware to broadcast it.
     mtx_lock(&ar->data_lock);
     arvif->bcn_tmpl_len = bcn_cfg->tmpl.packet_head.len;
