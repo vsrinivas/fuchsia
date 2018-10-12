@@ -131,5 +131,47 @@ struct KeyEraseUtils<
     }
 };
 
+// Swaps two plain old data types with size no greater than 64 bits.
+template <class T, class = typename enable_if<is_pod<T>::value && (sizeof(T) <= 8)>::type>
+inline void Swap(T& a, T& b) noexcept {
+    T tmp = a;
+    a = b;
+    b = tmp;
+}
+
+// Create a sentinel pointer from a raw pointer, converting it to the specified
+// type in the process.
+template <typename T, typename U, typename = typename enable_if<is_pointer<T>::value>::type>
+constexpr T make_sentinel(U* ptr) {
+    return reinterpret_cast<T>(reinterpret_cast<uintptr_t>(ptr) |
+                               kContainerSentinelBit);
+}
+
+template <typename T, typename = typename enable_if<is_pointer<T>::value>::type>
+constexpr T make_sentinel(decltype(nullptr)) {
+    return reinterpret_cast<T>(kContainerSentinelBit);
+}
+
+// Turn a sentinel pointer back into a normal pointer, automatically
+// re-interpreting its type in the process.
+template <typename T, typename U, typename = typename enable_if<is_pointer<T>::value>::type>
+constexpr T unmake_sentinel(U* sentinel) {
+    return reinterpret_cast<T>(reinterpret_cast<uintptr_t>(sentinel) &
+                               ~kContainerSentinelBit);
+}
+
+// Test to see if a pointer is a sentinel pointer.
+template <typename T>
+constexpr bool is_sentinel_ptr(const T* ptr) {
+    return (reinterpret_cast<uintptr_t>(ptr) & kContainerSentinelBit) != 0;
+}
+
+// Test to see if a pointer (which may be a sentinel) is valid.  Valid in this
+// context means that the pointer is not null, and is not a sentinel.
+template <typename T>
+constexpr bool valid_sentinel_ptr(const T* ptr) {
+    return ptr && !is_sentinel_ptr(ptr);
+}
+
 }  // namespace internal
 }  // namespace fbl
