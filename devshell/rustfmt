@@ -1,0 +1,70 @@
+#!/usr/bin/env python
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Runs rustfmt on a Rust target
+
+import argparse
+import os
+import platform
+import subprocess
+import sys
+
+ROOT_PATH = os.path.abspath(__file__ + "/../../..")
+CONFIG_PATH = os.path.join(ROOT_PATH, ".config")
+
+def main():
+    parser = argparse.ArgumentParser("Format a rust target")
+    parser.add_argument("gn_target",
+                        nargs=1,
+                        help="GN target to format. \
+                              Use the absolute path to the target \
+                              (relative to $FUCHSIA_DIR). \
+                              For example: //garnet/bin/foo/bar:baz.")
+
+    args = parser.parse_args()
+
+    out_dir = ""
+    with open(CONFIG_PATH, "r") as config:
+        for line in config.readlines():
+            if line.startswith("FUCHSIA_BUILD_DIR="):
+                segments = line.split("=")
+                assert(len(segments) == 2)
+                out_dir = segments[1].strip().strip("'")
+    if out_dir == "":
+        print("Invalid fuchsia/.config: no FUCHSIA_BUILD_DIR entry found")
+
+    gn_target = args.gn_target[0]
+    gn_target = gn_target.lstrip("/")
+    gn_target_parts = gn_target.split(":", 1)
+    main_file = os.path.join(ROOT_PATH, gn_target_parts[0], "src/main.rs")
+    if not os.path.exists(main_file):
+        main_file = os.path.join(ROOT_PATH, gn_target_parts[0], "src/lib.rs")
+    if not os.path.exists(main_file):
+        print("No lib.rs or main.rs found for this gn target")
+        return 1
+
+    env = os.environ.copy()
+    host_platform = "%s-%s" % (
+        platform.system().lower().replace("darwin", "mac"),
+        {
+            "x86_64": "x64",
+            "aarch64": "arm64",
+        }[platform.machine()],
+    )
+    buildtools_dir = os.path.join(ROOT_PATH, "buildtools", host_platform)
+    rustfmt = os.path.join(buildtools_dir, "rust", "bin", "rustfmt")
+
+    call_args = [
+        rustfmt,
+        main_file,
+    ]
+
+    job = subprocess.Popen(call_args, env=env, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
+    stdout, stderr = job.communicate()
+    return job.returncode
+
+if __name__ == '__main__':
+    sys.exit(main())
