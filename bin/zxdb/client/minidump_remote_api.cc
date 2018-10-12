@@ -179,8 +179,18 @@ void MinidumpRemoteAPI::ProcessTree(
 void MinidumpRemoteAPI::Threads(
     const debug_ipc::ThreadsRequest& request,
     std::function<void(const Err&, debug_ipc::ThreadsReply)> cb) {
-  // TODO
-  ErrNoImpl(cb);
+  debug_ipc::ThreadsReply reply;
+
+  if (static_cast<pid_t>(request.process_koid) == minidump_->ProcessID()) {
+    for (const auto& thread : minidump_->Threads()) {
+      auto& record = reply.threads.emplace_back();
+
+      record.koid = thread->ThreadID();
+      record.state = debug_ipc::ThreadRecord::State::kDead;
+    }
+  }
+
+  Succeed(cb, reply);
 }
 
 void MinidumpRemoteAPI::ReadMemory(

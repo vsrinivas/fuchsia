@@ -78,6 +78,7 @@ void MinidumpTest::DoRequest(RequestType request, ReplyType& reply, Err& err,
   ({ Err e = e_; ASSERT_FALSE(e.has_error()) << e.msg(); })
 
 constexpr uint32_t kTestExampleMinidumpKOID = 656254UL;
+constexpr uint32_t kTestExampleMinidumpThreadKOID = 671806UL;
 
 TEST_F(MinidumpTest, Load) {
   EXPECT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
@@ -141,6 +142,27 @@ TEST_F(MinidumpTest, AttachFail) {
   ASSERT_ZXDB_SUCCESS(err);
 
   EXPECT_NE(0UL, reply.status);
+}
+
+TEST_F(MinidumpTest, Threads) {
+  ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
+
+  Err err;
+  debug_ipc::ThreadsRequest request;
+  debug_ipc::ThreadsReply reply;
+
+  request.process_koid = kTestExampleMinidumpKOID;
+  DoRequest(request, reply, err, &RemoteAPI::Threads);
+  ASSERT_ZXDB_SUCCESS(err);
+
+  ASSERT_LT(0UL, reply.threads.size());
+  EXPECT_EQ(1UL, reply.threads.size());
+
+  auto& thread = reply.threads[0];
+
+  EXPECT_EQ(kTestExampleMinidumpThreadKOID, thread.koid);
+  EXPECT_EQ("", thread.name);
+  EXPECT_EQ(debug_ipc::ThreadRecord::State::kDead, thread.state);
 }
 
 }  // namespace zxdb
