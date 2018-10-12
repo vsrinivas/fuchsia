@@ -361,74 +361,75 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
     // initialize our data for this run
     ssize_t read_sz = ioctl_block_get_type_guid(fd, type_guid,
                                                 sizeof(type_guid));
-
-    // check if this partition matches any special type GUID
-    if (read_sz == GPT_GUID_LEN) {
-        if (gpt_is_sys_guid(type_guid, read_sz)) {
-            if (secondary_bootfs_ready()) {
-                return ZX_ERR_ALREADY_BOUND;
-            }
-            if (getenv("zircon.system.blob-init") != nullptr) {
-                printf("fshost: minfs system partition ignored due to zircon.system.blob-init\n");
-                return ZX_ERR_ALREADY_BOUND;
-            }
-            const char* volume = getenv("zircon.system.volume");
-            if (volume != nullptr && !strcmp(volume, "any")) {
-                // Fall-through; we'll take anything.
-            } else if (volume != nullptr && !strcmp(volume, "local")) {
-                // Fall-through only if we can guarantee the partition
-                // is not removable.
-                block_info_t info;
-                if ((ioctl_block_get_info(fd, &info) < 0) ||
-                    (info.flags & BLOCK_FLAG_REMOVABLE)) {
-                    return ZX_ERR_BAD_STATE;
-                }
-            } else {
-                return ZX_ERR_BAD_STATE;
-            }
-
-            // TODO(ZX-1008): replace getenv with cmdline_bool("zircon.system.writable", false);
-            options->readonly = getenv("zircon.system.writable") == nullptr;
-            options->wait_until_ready = true;
-
-            zx_status_t st = mount(fd, "/fs" PATH_SYSTEM, DISK_FORMAT_MINFS, options, launch_minfs);
-            if (st != ZX_OK) {
-                printf("devmgr: failed to mount %s: %s.\n", PATH_SYSTEM, zx_status_get_string(st));
-            } else {
-                fuchsia_start();
-            }
-
-            return st;
-        } else if (gpt_is_data_guid(type_guid, read_sz)) {
-            if (data_mounted) {
-                return ZX_ERR_ALREADY_BOUND;
-            }
-            data_mounted = true;
-            options->wait_until_ready = true;
-
-            zx_status_t st = mount(fd, "/fs" PATH_DATA, DISK_FORMAT_MINFS, options, launch_minfs);
-            if (st != ZX_OK) {
-                printf("devmgr: failed to mount %s: %s.\n", PATH_DATA, zx_status_get_string(st));
-            }
-
-            return st;
-        } else if (gpt_is_install_guid(type_guid, read_sz)) {
-            if (install_mounted) {
-                return ZX_ERR_ALREADY_BOUND;
-            }
-            install_mounted = true;
-            options->readonly = true;
-            options->wait_until_ready = true;
-
-            zx_status_t st = mount(fd, "/fs" PATH_INSTALL, DISK_FORMAT_MINFS, options, launch_minfs);
-            if (st != ZX_OK) {
-                printf("devmgr: failed to mount %s: %s.\n", PATH_INSTALL, zx_status_get_string(st));
-            }
-
-            return st;
-        }
+    if (read_sz != GPT_GUID_LEN) {
+        printf("fshost: cannot read GUID from minfs-formatted device\n");
+        return ZX_ERR_INVALID_ARGS;
     }
 
+    if (gpt_is_sys_guid(type_guid, read_sz)) {
+        if (secondary_bootfs_ready()) {
+            return ZX_ERR_ALREADY_BOUND;
+        }
+        if (getenv("zircon.system.blob-init") != nullptr) {
+            printf("fshost: minfs system partition ignored due to zircon.system.blob-init\n");
+            return ZX_ERR_ALREADY_BOUND;
+        }
+        const char* volume = getenv("zircon.system.volume");
+        if (volume != nullptr && !strcmp(volume, "any")) {
+            // Fall-through; we'll take anything.
+        } else if (volume != nullptr && !strcmp(volume, "local")) {
+            // Fall-through only if we can guarantee the partition
+            // is not removable.
+            block_info_t info;
+            if ((ioctl_block_get_info(fd, &info) < 0) ||
+                (info.flags & BLOCK_FLAG_REMOVABLE)) {
+                return ZX_ERR_BAD_STATE;
+            }
+        } else {
+            return ZX_ERR_BAD_STATE;
+        }
+
+        // TODO(ZX-1008): replace getenv with cmdline_bool("zircon.system.writable", false);
+        options->readonly = getenv("zircon.system.writable") == nullptr;
+        options->wait_until_ready = true;
+
+        zx_status_t st = mount(fd, "/fs" PATH_SYSTEM, DISK_FORMAT_MINFS, options, launch_minfs);
+        if (st != ZX_OK) {
+            printf("devmgr: failed to mount %s: %s.\n", PATH_SYSTEM, zx_status_get_string(st));
+        } else {
+            fuchsia_start();
+        }
+
+        return st;
+    } else if (gpt_is_data_guid(type_guid, read_sz)) {
+        if (data_mounted) {
+            return ZX_ERR_ALREADY_BOUND;
+        }
+        data_mounted = true;
+        options->wait_until_ready = true;
+
+        zx_status_t st = mount(fd, "/fs" PATH_DATA, DISK_FORMAT_MINFS, options, launch_minfs);
+        if (st != ZX_OK) {
+            printf("devmgr: failed to mount %s: %s.\n", PATH_DATA, zx_status_get_string(st));
+        }
+
+        return st;
+    } else if (gpt_is_install_guid(type_guid, read_sz)) {
+        if (install_mounted) {
+            return ZX_ERR_ALREADY_BOUND;
+        }
+        install_mounted = true;
+        options->readonly = true;
+        options->wait_until_ready = true;
+
+        zx_status_t st = mount(fd, "/fs" PATH_INSTALL, DISK_FORMAT_MINFS, options, launch_minfs);
+        if (st != ZX_OK) {
+            printf("devmgr: failed to mount %s: %s.\n", PATH_INSTALL, zx_status_get_string(st));
+        }
+
+        return st;
+    }
+    printf("fshost: Unrecognized partition GUID for minfs; not mounting\n");
     return ZX_ERR_INVALID_ARGS;
 }
 
