@@ -61,8 +61,7 @@ class Renderer : public Resource {
    public:
     std::vector<escher::Object> TakeDisplayList();
 
-    void Visit(GpuMemory* r) override;
-    void Visit(HostMemory* r) override;
+    void Visit(Memory* r) override;
     void Visit(Image* r) override;
     void Visit(ImagePipe* r) override;
     void Visit(Buffer* r) override;

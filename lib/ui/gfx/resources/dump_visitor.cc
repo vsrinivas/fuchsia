@@ -11,14 +11,13 @@
 #include "garnet/lib/ui/gfx/resources/compositor/display_compositor.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer_stack.h"
-#include "garnet/lib/ui/gfx/resources/gpu_memory.h"
-#include "garnet/lib/ui/gfx/resources/host_memory.h"
 #include "garnet/lib/ui/gfx/resources/image.h"
 #include "garnet/lib/ui/gfx/resources/image_pipe.h"
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/lights/ambient_light.h"
 #include "garnet/lib/ui/gfx/resources/lights/directional_light.h"
 #include "garnet/lib/ui/gfx/resources/material.h"
+#include "garnet/lib/ui/gfx/resources/memory.h"
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/opacity_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/scene.h"
@@ -39,18 +38,10 @@ DumpVisitor::DumpVisitor(std::ostream& output) : output_(output) {}
 
 DumpVisitor::~DumpVisitor() = default;
 
-void DumpVisitor::Visit(GpuMemory* r) {
+void DumpVisitor::Visit(Memory* r) {
   // To prevent address space layout leakage, we don't print the pointers.
-  BeginItem("GpuMemory", r);
-  WriteProperty("size") << r->escher_gpu_mem()->size();
-  WriteProperty("offset") << r->escher_gpu_mem()->offset();
-  VisitResource(r);
-  EndItem();
-}
-
-void DumpVisitor::Visit(HostMemory* r) {
-  // To prevent address space layout leakage, we don't print the pointers.
-  BeginItem("HostMemory", r);
+  BeginItem("Memory", r);
+  WriteProperty("is_host") << r->is_host();
   WriteProperty("size") << r->size();
   VisitResource(r);
   EndItem();
@@ -401,9 +392,7 @@ void DumpVisitor::BeginSection(const char* label) {
   EndLine();
 }
 
-void DumpVisitor::EndSection() {
-  FXL_DCHECK(!partial_line_);
-}
+void DumpVisitor::EndSection() { FXL_DCHECK(!partial_line_); }
 
 void DumpVisitor::BeginLine() {
   EndLine();

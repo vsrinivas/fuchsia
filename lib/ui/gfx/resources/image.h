@@ -5,8 +5,6 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_IMAGE_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_IMAGE_H_
 
-#include "garnet/lib/ui/gfx/resources/gpu_memory.h"
-#include "garnet/lib/ui/gfx/resources/host_memory.h"
 #include "garnet/lib/ui/gfx/resources/image_base.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"

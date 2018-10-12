@@ -5,8 +5,7 @@
 #include "garnet/lib/ui/gfx/resources/gpu_image.h"
 
 #include "garnet/lib/ui/gfx/engine/session.h"
-#include "garnet/lib/ui/gfx/resources/gpu_memory.h"
-#include "garnet/lib/ui/gfx/resources/host_memory.h"
+#include "garnet/lib/ui/gfx/resources/memory.h"
 #include "lib/escher/util/image_utils.h"
 
 namespace scenic_impl {
@@ -16,18 +15,17 @@ const ResourceTypeInfo GpuImage::kTypeInfo = {
     ResourceType::kGpuImage | ResourceType::kImage | ResourceType::kImageBase,
     "GpuImage"};
 
-GpuImage::GpuImage(Session* session, ResourceId id, GpuMemoryPtr memory,
+GpuImage::GpuImage(Session* session, ResourceId id, MemoryPtr memory,
                    uint64_t memory_offset, escher::ImageInfo image_info,
                    vk::Image vk_image)
     : Image(session, id, GpuImage::kTypeInfo), memory_(std::move(memory)) {
   image_ = escher::Image::New(session->engine()->escher_resource_recycler(),
-                              image_info, vk_image, memory_->escher_gpu_mem(),
+                              image_info, vk_image, memory_->gpu_mem(),
                               memory_offset);
   FXL_CHECK(image_);
 }
 
-GpuImagePtr GpuImage::New(Session* session, ResourceId id,
-                          GpuMemoryPtr memory,
+GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
                           const fuchsia::images::ImageInfo& image_info,
                           uint64_t memory_offset,
                           ErrorReporter* error_reporter) {
@@ -81,6 +79,8 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id,
   escher_image_info.usage = vk::ImageUsageFlagBits::eTransferSrc |
                             vk::ImageUsageFlagBits::eTransferDst |
                             vk::ImageUsageFlagBits::eSampled;
+  // TODO(SCN-1012): Don't hardcode this -- use the data on the memory
+  // object once we support a bitmask instead of an enum.
   escher_image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
   vk::Device vk_device = session->engine()->vk_device();

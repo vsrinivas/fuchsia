@@ -20,9 +20,7 @@ namespace scenic {
 class HostData : public std::enable_shared_from_this<HostData> {
  public:
   // Maps a range of an existing VMO into memory.
-  HostData(const zx::vmo& vmo, off_t offset, size_t size,
-           uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
-                            ZX_VM_MAP_RANGE);
+  HostData(const zx::vmo& vmo, off_t offset, size_t size);
   ~HostData();
 
   HostData(const HostData&) = delete;
@@ -45,6 +43,9 @@ class HostData : public std::enable_shared_from_this<HostData> {
 // this object is destroyed.
 // TODO(MZ-268): Don't inherit from Memory, so that Memory can have a public
 // move constructor.
+// TODO(MA-492): The memory is currently not transferred read-only, as we may
+// choose to map it as device-local memory on UMA platforms, and Vulkan requires
+// a read/write vmo in order to successfully import the memory.
 class HostMemory final : public Memory {
  public:
   HostMemory(Session* session, size_t size);

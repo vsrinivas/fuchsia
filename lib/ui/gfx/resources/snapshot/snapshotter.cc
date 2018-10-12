@@ -10,14 +10,13 @@
 #include "garnet/lib/ui/gfx/resources/compositor/display_compositor.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer_stack.h"
-#include "garnet/lib/ui/gfx/resources/gpu_memory.h"
-#include "garnet/lib/ui/gfx/resources/host_memory.h"
 #include "garnet/lib/ui/gfx/resources/image.h"
 #include "garnet/lib/ui/gfx/resources/image_pipe.h"
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/lights/ambient_light.h"
 #include "garnet/lib/ui/gfx/resources/lights/directional_light.h"
 #include "garnet/lib/ui/gfx/resources/material.h"
+#include "garnet/lib/ui/gfx/resources/memory.h"
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/opacity_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/scene.h"
@@ -178,8 +177,7 @@ void Snapshotter::Visit(Material* r) {
   VisitResource(r);
 }
 
-void Snapshotter::Visit(GpuMemory* r) { VisitResource(r); }
-void Snapshotter::Visit(HostMemory* r) { VisitResource(r); }
+void Snapshotter::Visit(Memory* r) { VisitResource(r); }
 
 void Snapshotter::Visit(Image* r) {
   if (r->GetEscherImage()) {

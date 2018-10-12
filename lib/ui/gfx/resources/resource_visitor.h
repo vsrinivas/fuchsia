@@ -9,8 +9,7 @@ namespace scenic_impl {
 namespace gfx {
 
 class Import;
-class GpuMemory;
-class HostMemory;
+class Memory;
 class Image;
 class ImagePipe;
 class Buffer;
@@ -39,8 +38,7 @@ class DirectionalLight;
 class ResourceVisitor {
  public:
   // Memory resources.
-  virtual void Visit(GpuMemory* r) = 0;
-  virtual void Visit(HostMemory* r) = 0;
+  virtual void Visit(Memory* r) = 0;
   virtual void Visit(Image* r) = 0;
   virtual void Visit(ImagePipe* r) = 0;
   virtual void Visit(Buffer* r) = 0;

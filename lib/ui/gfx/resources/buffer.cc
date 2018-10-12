@@ -11,12 +11,12 @@ namespace gfx {
 
 const ResourceTypeInfo Buffer::kTypeInfo = {ResourceType::kBuffer, "Buffer"};
 
-Buffer::Buffer(Session* session, ResourceId id, GpuMemoryPtr memory,
-               uint32_t size, uint32_t offset)
+Buffer::Buffer(Session* session, ResourceId id, MemoryPtr memory, uint32_t size,
+               uint32_t offset)
     : Resource(session, id, Buffer::kTypeInfo),
       memory_(std::move(memory)),
       escher_buffer_(escher::Buffer::New(
-          session->escher()->resource_recycler(), memory_->escher_gpu_mem(),
+          session->escher()->resource_recycler(), memory_->gpu_mem(),
           vk::BufferUsageFlagBits::eTransferSrc |
               vk::BufferUsageFlagBits::eTransferDst |
               vk::BufferUsageFlagBits::eStorageTexelBuffer |

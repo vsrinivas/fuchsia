@@ -18,13 +18,12 @@
 #include "garnet/lib/ui/gfx/resources/compositor/display_compositor.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer_stack.h"
-#include "garnet/lib/ui/gfx/resources/gpu_memory.h"
-#include "garnet/lib/ui/gfx/resources/host_memory.h"
 #include "garnet/lib/ui/gfx/resources/image.h"
 #include "garnet/lib/ui/gfx/resources/image_pipe.h"
 #include "garnet/lib/ui/gfx/resources/image_pipe_handler.h"
 #include "garnet/lib/ui/gfx/resources/lights/ambient_light.h"
 #include "garnet/lib/ui/gfx/resources/lights/directional_light.h"
+#include "garnet/lib/ui/gfx/resources/memory.h"
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/opacity_node.h"
@@ -1114,14 +1113,7 @@ bool Session::ApplyCreateVariable(ResourceId id,
 
 ResourcePtr Session::CreateMemory(ResourceId id,
                                   ::fuchsia::ui::gfx::MemoryArgs args) {
-  vk::Device device = engine()->vk_device();
-  switch (args.memory_type) {
-    case fuchsia::images::MemoryType::VK_DEVICE_MEMORY:
-      return GpuMemory::New(this, id, device, std::move(args), error_reporter_);
-    case fuchsia::images::MemoryType::HOST_MEMORY:
-      return HostMemory::New(this, id, device, std::move(args),
-                             error_reporter_);
-  }
+  return Memory::New(this, id, std::move(args));
 }
 
 ResourcePtr Session::CreateImage(ResourceId id, MemoryPtr memory,
@@ -1132,25 +1124,24 @@ ResourcePtr Session::CreateImage(ResourceId id, MemoryPtr memory,
 
 ResourcePtr Session::CreateBuffer(ResourceId id, MemoryPtr memory,
                                   uint32_t memory_offset, uint32_t num_bytes) {
-  if (!memory->IsKindOf<GpuMemory>()) {
-    // TODO(SCN-273): host memory should also be supported.
+  // TODO(SCN-273): host memory should also be supported.
+  if (memory->is_host()) {
     error_reporter_->ERROR() << "scenic_impl::gfx::Session::CreateBuffer(): "
                                 "memory must be of type "
                                 "ui.gfx.MemoryType.VK_DEVICE_MEMORY";
     return ResourcePtr();
   }
 
-  auto gpu_memory = memory->As<GpuMemory>();
-  if (memory_offset + num_bytes > gpu_memory->size()) {
+  if (memory_offset + num_bytes > memory->size()) {
     error_reporter_->ERROR() << "scenic_impl::gfx::Session::CreateBuffer(): "
                                 "buffer does not fit within memory (buffer "
                                 "offset: "
                              << memory_offset << ", buffer size: " << num_bytes
-                             << ", memory size: " << gpu_memory->size() << ")";
+                             << ", memory size: " << memory->size() << ")";
     return ResourcePtr();
   }
 
-  return fxl::MakeRefCounted<Buffer>(this, id, std::move(gpu_memory), num_bytes,
+  return fxl::MakeRefCounted<Buffer>(this, id, std::move(memory), num_bytes,
                                      memory_offset);
 }
 
