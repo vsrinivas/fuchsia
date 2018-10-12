@@ -31,11 +31,6 @@
 
 #include "nvme-hw.h"
 
-// If enabled, gather stats on concurrent io ops,
-// pending txns, etc.  Stats are retrieved by
-// IOCTL_BLOCK_GET_STATS
-#define WITH_STATS 1
-
 #define TXN_FLAG_FAILED 1
 
 typedef struct {
@@ -149,35 +144,9 @@ typedef struct {
     thrd_t irqthread;
     thrd_t iothread;
 
-#if WITH_STATS
-    size_t stat_concur;
-    size_t stat_pending;
-    size_t stat_max_concur;
-    size_t stat_max_pending;
-    size_t stat_total_ops;
-    size_t stat_total_blocks;
-#endif
-
     // pool of utxns
     nvme_utxn_t utxn[UTXN_COUNT];
 } nvme_device_t;
-
-#if WITH_STATS
-#define STAT_INC(name) do { nvme->stat_##name++; } while (0)
-#define STAT_DEC(name) do { nvme->stat_##name--; } while (0)
-#define STAT_DEC_IF(name, c) do { if (c) nvme->stat_##name--; } while (0)
-#define STAT_ADD(name, num) do { nvme->stat_##name += num; } while (0)
-#define STAT_INC_MAX(name) do { \
-    if (++nvme->stat_##name > nvme->stat_max_##name) { \
-        nvme->stat_max_##name = nvme->stat_##name; \
-    }} while (0)
-#else
-#define STAT_INC(name) do { } while (0)
-#define STAT_DEC(name) do { } while (0)
-#define STAT_DEC_IF(name, c) do { } while (0)
-#define STAT_ADD(name, num) do { } while (0)
-#define STAT_INC_MAX(name) do { } while (0)
-#endif
 
 
 // We break IO transactions down into one or more "micro transactions" (utxn)
@@ -200,13 +169,11 @@ static nvme_utxn_t* utxn_get(nvme_device_t* nvme) {
     }
     n--;
     nvme->utxn_avail &= ~(1ULL << n);
-    STAT_INC_MAX(concur);
     return nvme->utxn + n;
 }
 
 static void utxn_put(nvme_device_t* nvme, nvme_utxn_t* utxn) {
     uint64_t n = utxn->id;
-    STAT_DEC(concur);
     nvme->utxn_avail |= (1ULL << n);
 }
 
@@ -455,7 +422,6 @@ static void io_process_txns(nvme_device_t* nvme) {
     for (;;) {
         mtx_lock(&nvme->lock);
         txn = list_remove_head_type(&nvme->pending_txns, nvme_txn_t, node);
-        STAT_DEC_IF(pending, txn != NULL);
         mtx_unlock(&nvme->lock);
 
         if (txn == NULL) {
@@ -466,7 +432,6 @@ static void io_process_txns(nvme_device_t* nvme) {
             // put txn back at front of queue for further processing later
             mtx_lock(&nvme->lock);
             list_add_head(&nvme->pending_txns, &txn->node);
-            STAT_INC_MAX(pending);
             mtx_unlock(&nvme->lock);
             return;
         }
@@ -594,12 +559,8 @@ static void nvme_queue(void* ctx, block_op_t* op) {
            txn->opcode == NVME_OP_WRITE ? "wr" : "rd",
            txn->op.rw.length + 1U, txn->op.rw.offset_dev);
 
-    STAT_INC(total_ops);
-    STAT_ADD(total_blocks, txn->op.rw.length);
-
     mtx_lock(&nvme->lock);
     list_add_tail(&nvme->pending_txns, &txn->node);
-    STAT_INC_MAX(pending);
     mtx_unlock(&nvme->lock);
 
     sync_completion_signal(&nvme->io_signal);
@@ -623,34 +584,6 @@ static zx_status_t nvme_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cm
         nvme_query(nvme, reply, &sz);
         *out_actual = sizeof(block_info_t);
         return ZX_OK;
-    }
-    case IOCTL_BLOCK_GET_STATS: {
-#if WITH_STATS
-        if (cmdlen != sizeof(bool)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        block_stats_t* out = reply;
-        if (max < sizeof(*out)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        mtx_lock(&nvme->lock);
-        out->max_concur = nvme->stat_max_concur;
-        out->max_pending = nvme->stat_max_pending;
-        out->total_ops = nvme->stat_total_ops;
-        out->total_blocks = nvme->stat_total_blocks;
-        bool clear = *(bool *)cmd;
-        if (clear) {
-            nvme->stat_max_concur = 0;
-            nvme->stat_max_pending = 0;
-            nvme->stat_total_ops = 0;
-            nvme->stat_total_blocks = 0;
-        }
-        mtx_unlock(&nvme->lock);
-        *out_actual = sizeof(*out);
-        return ZX_OK;
-#else
-        return ZX_ERR_NOT_SUPPORTED;
-#endif
     }
     case IOCTL_DEVICE_SYNC: {
         return ZX_OK;

@@ -16,11 +16,12 @@
 #include <unistd.h>
 
 #include <fbl/string.h>
+#include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
-#include <lib/fzl/fdio.h>
 #include <fs-test-utils/fixture.h>
 #include <fs-test-utils/unittest.h>
 #include <fuchsia/io/c/fidl.h>
+#include <lib/fzl/fdio.h>
 #include <unittest/unittest.h>
 #include <zircon/device/block.h>
 #include <zircon/device/ramdisk.h>
@@ -38,6 +39,15 @@ fs_test_utils::FixtureOptions PartitionOverFvmWithRamdisk() {
     options.use_fvm = true;
     options.fs_format = false;
     options.fs_mount = false;
+    return options;
+}
+
+fs_test_utils::FixtureOptions MinfsRamdiskOptions() {
+    fs_test_utils::FixtureOptions options =
+        fs_test_utils::FixtureOptions::Default(DISK_FORMAT_MINFS);
+    options.use_fvm = false;
+    options.fs_format = true;
+    options.fs_mount = true;
     return options;
 }
 
@@ -308,7 +318,7 @@ bool UmountTestEvil() {
     // Try opening a non-root directory without O_ADMIN. We shouldn't be able
     // to umount.
     ASSERT_EQ(mkdirat(weak_root_fd.get(), "subdir", 0666), 0);
-    fbl::unique_fd  weak_subdir_fd(openat(weak_root_fd.get(), "subdir", O_RDONLY | O_DIRECTORY));
+    fbl::unique_fd weak_subdir_fd(openat(weak_root_fd.get(), "subdir", O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(weak_subdir_fd);
     caller.reset(fbl::move(weak_subdir_fd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminUnmount(caller.borrow_channel(), &status), ZX_OK);
@@ -445,7 +455,8 @@ bool MountGetDevice() {
     fzl::FdioCaller caller(fbl::move(mountfd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
                                                      device_path, sizeof(device_buffer),
-                                                     &path_len), ZX_OK);
+                                                     &path_len),
+              ZX_OK);
     ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
 
     int fd = open(ramdisk_path, O_RDWR);
@@ -459,7 +470,8 @@ bool MountGetDevice() {
     caller.reset(fbl::move(mountfd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
                                                      device_path, sizeof(device_buffer),
-                                                     &path_len), ZX_OK);
+                                                     &path_len),
+              ZX_OK);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_GT(path_len, 0, "Device path not found");
     ASSERT_EQ(strncmp(ramdisk_path, device_path, path_len), 0, "Unexpected device path");
@@ -469,7 +481,8 @@ bool MountGetDevice() {
     caller.reset(fbl::move(mountfd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
                                                      device_path, sizeof(device_buffer),
-                                                     &path_len), ZX_OK);
+                                                     &path_len),
+              ZX_OK);
     ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
 
     ASSERT_EQ(umount(mount_path), ZX_OK);
@@ -480,7 +493,8 @@ bool MountGetDevice() {
     caller.reset(fbl::move(mountfd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
                                                      device_path, sizeof(device_buffer),
-                                                     &path_len), ZX_OK);
+                                                     &path_len),
+              ZX_OK);
     ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
 
     ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0);
@@ -643,6 +657,62 @@ bool StatfsTest() {
     END_TEST;
 }
 
+// Verifies that the values in stats match the other parameters
+bool CheckStats(block_stats_t stats, size_t total_ops, size_t total_blocks, size_t total_reads,
+                size_t total_blocks_read, size_t total_writes, size_t total_blocks_written) {
+    BEGIN_HELPER;
+    ASSERT_EQ(stats.total_ops, total_ops);
+    ASSERT_EQ(stats.total_blocks, total_blocks);
+    ASSERT_EQ(stats.total_reads, total_reads);
+    ASSERT_EQ(stats.total_blocks_read, total_blocks_read);
+    ASSERT_EQ(stats.total_writes, total_writes);
+    ASSERT_EQ(stats.total_blocks_written, total_blocks_written);
+    END_HELPER;
+}
+
+// Tests functionality of IOCTL_BLOCK_GET_STATS
+bool GetStatsTest(fs_test_utils::Fixture* fixture) {
+    fbl::StringBuffer<512> test_data;
+    test_data.Resize(512, 'c');
+    char test_read[512];
+
+    BEGIN_TEST;
+    fbl::unique_fd ram_fd(open(fixture->block_device_path().c_str(), O_RDONLY));
+    ASSERT_TRUE(ram_fd);
+    block_stats_t block_stats;
+    bool clear = true;
+    // Clear stats from creating ramdisk
+    ASSERT_GE(ioctl_block_get_stats(ram_fd.get(), &clear, &block_stats), ZX_OK);
+    // Retrieve cleared stats
+    ASSERT_GE(ioctl_block_get_stats(ram_fd.get(), &clear, &block_stats), ZX_OK);
+    ASSERT_TRUE(CheckStats(block_stats, 0, 0, 0, 0, 0, 0));
+
+    fbl::StringBuffer<fs_test_utils::kPathSize> myfile;
+    myfile.AppendPrintf("%s/my_file.txt", fixture->fs_path().c_str());
+    fbl::unique_fd file_to_create(open(myfile.c_str(), O_RDWR | O_CREAT));
+    fsync(file_to_create.get());
+
+    // Clear stats from creating file
+    ASSERT_GE(ioctl_block_get_stats(ram_fd.get(), &clear, &block_stats), ZX_OK);
+    ASSERT_EQ(write(file_to_create.get(), test_data.data(), 512), 512);
+    fsync(file_to_create.get());
+    ASSERT_GE(ioctl_block_get_stats(ram_fd.get(), &clear, &block_stats), ZX_OK);
+    // 5 ops total, 4 for the write and 1 for the sync, 64 blocks written by 4 16 block writes
+    ASSERT_TRUE(CheckStats(block_stats, 5, 64, 0, 0, 4, 64));
+    ASSERT_EQ(lseek(file_to_create.get(), 0, SEEK_SET), 0);
+    // Reset file to clear it from the cache
+    file_to_create.reset();
+    fixture->Remount();
+    file_to_create.reset(open(myfile.c_str(), O_RDONLY));
+    // Clear the stats from reseting the file
+    ASSERT_GE(ioctl_block_get_stats(ram_fd.get(), &clear, &block_stats), ZX_OK);
+    ASSERT_EQ(read(file_to_create.get(), test_read, 512), 512);
+    ASSERT_GE(ioctl_block_get_stats(ram_fd.get(), &clear, &block_stats), ZX_OK);
+    // 1 op for reading 16 blocks, no writes
+    ASSERT_TRUE(CheckStats(block_stats, 1, 16, 1, 16, 0, 0));
+    END_TEST;
+}
+
 bool GetPartitionSliceCount(int partition_fd, size_t* out_count) {
     BEGIN_HELPER;
 
@@ -714,6 +784,10 @@ RUN_TEST_MEDIUM(MountReadonly)
 RUN_TEST_MEDIUM(MountBlockReadonly)
 RUN_TEST_MEDIUM(StatfsTest)
 END_TEST_CASE(fs_management_tests)
+
+BEGIN_FS_TEST_CASE(fs_management_get_stats, MinfsRamdiskOptions)
+RUN_FS_TEST_F(GetStatsTest)
+END_FS_TEST_CASE(fs_management_get_stats, MinfsRamdiskOptions)
 
 BEGIN_FS_TEST_CASE(fs_management_mkfs_tests, PartitionOverFvmWithRamdisk)
 RUN_FS_TEST_F(MkfsMinfsWithMinFvmSlices)

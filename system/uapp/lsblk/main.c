@@ -300,10 +300,12 @@ static int cmd_stats(const char* dev, bool clear) {
         goto out;
     }
 
-    printf("max concurrent ops:        %zu\n", stats.max_concur);
-    printf("max pending block ops:     %zu\n", stats.max_pending);
-    printf("total submitted block ops: %zu\n", stats.total_ops);
-    printf("total submitted blocks:    %zu\n", stats.total_blocks);
+    printf("total submitted block ops:      %zu\n", stats.total_ops);
+    printf("total submitted blocks:         %zu\n", stats.total_blocks);
+    printf("total submitted read ops:       %zu\n", stats.total_reads);
+    printf("total submitted blocks read:    %zu\n", stats.total_blocks_read);
+    printf("total submitted write ops:      %zu\n", stats.total_writes);
+    printf("total submitted blocks written: %zu\n", stats.total_blocks_written);
 out:
     close(fd);
     return rc;

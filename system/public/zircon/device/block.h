@@ -98,10 +98,12 @@ typedef struct {
 } block_info_t;
 
 typedef struct {
-    size_t max_concur;      // The maximum number of concurrent ops
-    size_t max_pending;     // The maximum number of pending block ops
     size_t total_ops;       // Total number of block ops processed
     size_t total_blocks;    // Total number of blocks processed
+    size_t total_reads;
+    size_t total_blocks_read;
+    size_t total_writes;
+    size_t total_blocks_written;
 } block_stats_t;
 
 // ssize_t ioctl_block_get_info(int fd, block_info_t* out);

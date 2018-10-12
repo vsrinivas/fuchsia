@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/binding.h>
 #include <ddk/metadata.h>
 
 #include <assert.h>
 #include <inttypes.h>
 #include <limits.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <sys/param.h>
 #include <threads.h>
+#include <sys/param.h>
+
 #include <lib/sync/completion.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
@@ -55,6 +56,9 @@ typedef struct blkdev {
     zx_status_t iostatus;
     sync_completion_t iosignal;
     block_op_t* iobop;
+
+    bool enable_stats;
+    block_stats_t stats;
 } blkdev_t;
 
 static int blockserver_thread_serve(blkdev_t* bdev) {
@@ -142,8 +146,8 @@ unlock_exit:
 }
 
 static zx_status_t blkdev_attach_vmo(blkdev_t* bdev,
-                                 const void* in_buf, size_t in_len,
-                                 void* out_buf, size_t out_len, size_t* out_actual) {
+                                     const void* in_buf, size_t in_len,
+                                     void* out_buf, size_t out_len, size_t* out_actual) {
     if ((in_len < sizeof(zx_handle_t)) || (out_len < sizeof(vmoid_t))) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -182,7 +186,7 @@ static zx_status_t blkdev_rebind(blkdev_t* bdev) {
 }
 
 static zx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
-                            size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
+                                size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
     blkdev_t* blkdev = ctx;
     switch (op) {
     case IOCTL_BLOCK_GET_FIFOS:
@@ -215,6 +219,9 @@ static zx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
             }
         }
         return status;
+    }
+    case IOCTL_BLOCK_GET_STATS: {
+        return blkdev->self_protocol.ops->get_stats(blkdev, cmd, cmdlen, reply, max, out_actual);
     }
     default:
         // TODO: this may no longer be necessary now that we handle IOCTL_BLOCK_GET_INFO here
@@ -271,7 +278,6 @@ static zx_status_t blkdev_io(blkdev_t* bdev, void* buf, size_t count,
                 return ZX_ERR_INTERNAL;
             }
         }
-
         block_op_t* bop = bdev->iobop;
         bop->command = write ? BLOCK_OP_WRITE : BLOCK_OP_READ;
         bop->rw.length = sub_txn_length / bsz;
@@ -315,7 +321,7 @@ static zx_status_t blkdev_write(void* ctx, const void* buf, size_t count,
                                 zx_off_t off, size_t* actual) {
     blkdev_t* bdev = ctx;
     mtx_lock(&bdev->iolock);
-    zx_status_t status = blkdev_io(bdev, (void*) buf, count, off, true);
+    zx_status_t status = blkdev_io(bdev, (void*)buf, count, off, true);
     mtx_unlock(&bdev->iolock);
     *actual = (status == ZX_OK) ? count : 0;
     return status;
@@ -361,12 +367,59 @@ static void block_query(void* ctx, block_info_t* bi, size_t* bopsz) {
 
 static void block_queue(void* ctx, block_op_t* bop) {
     blkdev_t* bdev = ctx;
+    uint64_t op = bop->command & BLOCK_OP_MASK;
+    bdev->stats.total_ops++;
+    if (op == BLOCK_OP_READ) {
+        bdev->stats.total_reads++;
+        bdev->stats.total_blocks_read += bop->rw.length;
+        bdev->stats.total_blocks += bop->rw.length;
+    } else if (op == BLOCK_OP_WRITE) {
+        bdev->stats.total_writes++;
+        bdev->stats.total_blocks_written += bop->rw.length;
+        bdev->stats.total_blocks += bop->rw.length;
+    }
     bdev->parent_protocol.ops->queue(bdev->parent_protocol.ctx, bop);
+}
+
+static zx_status_t handle_stats(void* ctx, const void* cmd,
+                                size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
+    blkdev_t* blkdev = ctx;
+    if (blkdev->enable_stats) {
+        if (cmdlen != sizeof(bool)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        block_stats_t* out = reply;
+        if (max < sizeof(*out)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        mtx_lock(&blkdev->lock);
+        out->total_ops = blkdev->stats.total_ops;
+        out->total_blocks = blkdev->stats.total_blocks;
+        out->total_reads = blkdev->stats.total_reads;
+        out->total_blocks_read = blkdev->stats.total_blocks_read;
+        out->total_writes = blkdev->stats.total_writes;
+        out->total_blocks_written = blkdev->stats.total_blocks_written;
+        bool clear = *(bool*)cmd;
+        if (clear) {
+            blkdev->stats.total_ops = 0;
+            blkdev->stats.total_blocks = 0;
+            blkdev->stats.total_reads = 0;
+            blkdev->stats.total_blocks_read = 0;
+            blkdev->stats.total_writes = 0;
+            blkdev->stats.total_blocks_written = 0;
+        }
+        mtx_unlock(&blkdev->lock);
+        *out_actual = sizeof(*out);
+        return ZX_OK;
+    } else {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 }
 
 static block_protocol_ops_t block_ops = {
     .query = block_query,
     .queue = block_queue,
+    .get_stats = handle_stats,
 };
 
 static zx_protocol_device_t blkdev_ops = {
@@ -397,6 +450,8 @@ static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev) {
     bdev->self_protocol.ctx = bdev;
     bdev->self_protocol.ops = &block_ops;
     bdev->parent_protocol.ops->query(bdev->parent_protocol.ctx, &bdev->info, &bdev->block_op_size);
+    // TODO(kmerrick) have this start as false and create IOCTL to toggle it
+    bdev->enable_stats = true;
 
     if (bdev->info.max_transfer_size < bdev->info.block_size) {
         printf("ERROR: block device '%s': has smaller max xfer (0x%x) than block size (0x%x)\n",
@@ -412,7 +467,7 @@ static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev) {
     }
 
     size_t bsz = bdev->info.block_size;
-    if ((bsz < 512) || (bsz & (bsz - 1))){
+    if ((bsz < 512) || (bsz & (bsz - 1))) {
         printf("block: device '%s': invalid block size: %zu\n",
                device_get_name(dev), bsz);
         status = ZX_ERR_NOT_SUPPORTED;

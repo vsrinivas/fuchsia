@@ -69,6 +69,12 @@ typedef struct block_protocol_ops {
     // be reported via the completion_cb() in the block_op_t.  This
     // callback may be called before the queue() method returns.
     void (*queue)(void* ctx, block_op_t* txn);
+
+    // Return stats concerning IO operations on the device. Will
+    // return ZX_ERR_NOT_SUPPORTED if stats are not enabled on this
+    // device
+    zx_status_t (*get_stats)(void* ctx, const void* cmd,
+                             size_t cmdlen, void* reply, size_t max, size_t* out_actual);
 } block_protocol_ops_t;
 
 typedef struct block_protocol {
