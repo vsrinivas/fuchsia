@@ -3,7 +3,12 @@
 // found in the LICENSE file.
 
 mod constants;
-use self::constants::{CHARACTERISTIC_NUMBERS, DESCRIPTOR_NUMBERS, SERVICE_UUIDS};
+use self::constants::{
+    CHARACTERISTIC_NUMBERS,
+    CUSTOM_SERVICE_UUIDS,
+    DESCRIPTOR_NUMBERS,
+    SERVICE_UUIDS,
+};
 
 /// An assigned number, code, or identifier for a concept in the Bluetooth wireless standard.
 /// Includes an associated abbreviation and human-readable name for the number.
@@ -61,7 +66,11 @@ impl AssignedNumber {
 /// and return associated information. `identifier` can be a human readable
 /// string, abbreviation, or the number in full uuid format or shortened forms
 pub fn find_service_uuid(identifier: &str) -> Option<AssignedNumber> {
-    SERVICE_UUIDS.iter().find(|sn| sn.matches(identifier)).map(|&an| an)
+    SERVICE_UUIDS
+        .iter()
+        .chain(CUSTOM_SERVICE_UUIDS.iter())
+        .find(|sn| sn.matches(identifier))
+        .map(|&an| an)
 }
 
 /// Search for the Bluetooth SIG number for a given characteristic identifier
@@ -104,6 +113,7 @@ mod tests {
         find_descriptor_number,
         find_service_uuid,
         CHARACTERISTIC_NUMBERS,
+        CUSTOM_SERVICE_UUIDS,
         DESCRIPTOR_NUMBERS,
         SERVICE_UUIDS,
     };
@@ -145,5 +155,8 @@ mod tests {
         assert_eq!(find_service_uuid("0000183A-0000-1000-8000-000000000000"), None);
         assert_eq!(find_service_uuid("ZZZZZZZZ"), None);
         assert_eq!(find_service_uuid("ZZZZZZZZ-0000-1000-8000-00805F9B34FB"), None);
+        // found in CUSTOM_SERVICE_UUIDS
+        assert_eq!(find_service_uuid("fdcf"), Some(CUSTOM_SERVICE_UUIDS[0]));
+        assert_eq!(find_service_uuid("FDE2"), Some(CUSTOM_SERVICE_UUIDS[19]));
     }
 }
