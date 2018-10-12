@@ -12,11 +12,12 @@
 
 #include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/bin/zxdb/client/frame_fingerprint.h"
+#include "garnet/bin/zxdb/client/setting_store.h"
 #include "garnet/bin/zxdb/client/thread_observer.h"
 #include "garnet/lib/debug_ipc/protocol.h"
-#include "garnet/public/lib/fxl/macros.h"
-#include "garnet/public/lib/fxl/memory/weak_ptr.h"
-#include "garnet/public/lib/fxl/observer_list.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/observer_list.h"
 
 namespace zxdb {
 
@@ -91,7 +92,8 @@ class Thread : public ClientObject {
   //
   // Since the running/stopped state of a thread isn't available synchronously
   // in a non-racy manner, you can always request a Sync of the frames if the
-  // frames are not all available. If the thread is destroyed before the backtrace can be issued, the callback will not be executed.
+  // frames are not all available. If the thread is destroyed before the
+  // backtrace can be issued, the callback will not be executed.
   //
   // If the thread is running when the request is processed, the callback will
   // be issued but a subsequent call to GetFrames() will return an empty vector
@@ -126,8 +128,15 @@ class Thread : public ClientObject {
       std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
       std::function<void(const Err&, const RegisterSet&)>) = 0;
 
+  // Provides the setting schema for this object.
+  static fxl::RefPtr<SettingSchema> GetSchema();
+
+  SettingStore& settings() { return settings_; }
+
  protected:
   fxl::ObserverList<ThreadObserver>& observers() { return observers_; }
+
+  SettingStore settings_;
 
  private:
   fxl::ObserverList<ThreadObserver> observers_;

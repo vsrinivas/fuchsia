@@ -4,9 +4,15 @@
 
 #include "garnet/bin/zxdb/client/thread.h"
 
+#include "garnet/bin/zxdb/client/setting_schema.h"
+
 namespace zxdb {
 
-Thread::Thread(Session* session) : ClientObject(session), weak_factory_(this) {}
+Thread::Thread(Session* session)
+    : ClientObject(session),
+      // Implementations should insert a fallback if needed.
+      settings_(GetSchema(), nullptr),
+      weak_factory_(this) {}
 Thread::~Thread() = default;
 
 void Thread::AddObserver(ThreadObserver* observer) {
@@ -18,5 +24,10 @@ void Thread::RemoveObserver(ThreadObserver* observer) {
 }
 
 fxl::WeakPtr<Thread> Thread::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
+
+fxl::RefPtr<SettingSchema> Thread::GetSchema() {
+  static auto schema = fxl::MakeRefCounted<SettingSchema>();
+  return schema;
+}
 
 }  // namespace zxdb

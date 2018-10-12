@@ -26,6 +26,8 @@ class SettingStore {
  public:
    SettingStore(fxl::RefPtr<SettingSchema> schema, SettingStore* fallback);
 
+   void set_fallback(SettingStore* fallback) { fallback_ = fallback; }
+
    bool GetBool(const std::string& key) const;
    int GetInt(const std::string& key) const;
    std::string GetString(const std::string& key) const;
@@ -58,7 +60,7 @@ class SettingStore {
    fxl::RefPtr<SettingSchema> schema_;
 
    // SettingStore this store lookup settings when it cannot find them locally.
-   // Can be null.
+   // Can be null. If set, should outlive |this|.
    SettingStore* fallback_;
 
    std::map<std::string, SettingValue> settings_;

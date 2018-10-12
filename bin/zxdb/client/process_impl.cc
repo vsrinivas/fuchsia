@@ -23,7 +23,9 @@ ProcessImpl::ProcessImpl(TargetImpl* target, uint64_t koid,
       koid_(koid),
       name_(name),
       symbols_(this, target->symbols()),
-      weak_factory_(this) {}
+      weak_factory_(this) {
+  settings_.set_fallback(&target->session()->system().settings());
+}
 
 ProcessImpl::~ProcessImpl() {
   // Send notifications for all destroyed threads.

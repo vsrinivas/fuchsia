@@ -11,9 +11,10 @@
 
 #include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/bin/zxdb/client/process_observer.h"
-#include "garnet/public/lib/fxl/macros.h"
-#include "garnet/public/lib/fxl/memory/weak_ptr.h"
-#include "garnet/public/lib/fxl/observer_list.h"
+#include "garnet/bin/zxdb/client/setting_store.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/observer_list.h"
 
 namespace debug_ipc {
 struct MemoryBlock;
@@ -108,8 +109,15 @@ class Process : public ClientObject {
       uint64_t address, uint32_t size,
       std::function<void(const Err&, MemoryDump)> callback) = 0;
 
+  // Provides the setting schema for this object.
+  static fxl::RefPtr<SettingSchema> GetSchema();
+
+  SettingStore& settings() { return settings_; }
+
  protected:
   fxl::ObserverList<ProcessObserver>& observers() { return observers_; }
+
+  SettingStore settings_;
 
  private:
   fxl::ObserverList<ProcessObserver> observers_;

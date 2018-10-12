@@ -10,10 +10,11 @@
 
 #include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/bin/zxdb/client/job_context.h"
+#include "garnet/bin/zxdb/client/setting_store.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/lib/debug_ipc/protocol.h"
-#include "garnet/public/lib/fxl/macros.h"
-#include "garnet/public/lib/fxl/observer_list.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/observer_list.h"
 
 namespace zxdb {
 
@@ -85,8 +86,15 @@ class System : public ClientObject {
   virtual void Pause() = 0;
   virtual void Continue() = 0;
 
+  // Provides the setting schema for this object.
+  static fxl::RefPtr<SettingSchema> GetSchema();
+
+  SettingStore& settings() { return settings_; }
+
  protected:
   fxl::ObserverList<SystemObserver>& observers() { return observers_; }
+
+  SettingStore settings_;
 
  private:
   fxl::ObserverList<SystemObserver> observers_;

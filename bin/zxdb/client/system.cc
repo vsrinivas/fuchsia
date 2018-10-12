@@ -4,9 +4,12 @@
 
 #include "garnet/bin/zxdb/client/system.h"
 
+#include "garnet/bin/zxdb/client/setting_schema.h"
+
 namespace zxdb {
 
-System::System(Session* session) : ClientObject(session) {}
+System::System(Session* session)
+    : ClientObject(session), settings_(GetSchema(), nullptr) {}
 System::~System() = default;
 
 void System::AddObserver(SystemObserver* observer) {
@@ -15,6 +18,11 @@ void System::AddObserver(SystemObserver* observer) {
 
 void System::RemoveObserver(SystemObserver* observer) {
   observers_.RemoveObserver(observer);
+}
+
+fxl::RefPtr<SettingSchema> System::GetSchema() {
+  static auto schema = fxl::MakeRefCounted<SettingSchema>();
+  return schema;
 }
 
 }  // namespace zxdb
