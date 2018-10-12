@@ -39,9 +39,9 @@ interface SetUiService {
   // has completed.
   2: Update(SettingsObject value) -> (UpdateResponse response);
 
-//  3: Mutate(SettingType settingType, Mutation mutation) -> (MutationResponse response);
+  3: Mutate(SettingType settingType, Mutation mutation) -> (MutationResponse response);
 
-//  4: InteractiveMutate(SettingType settingType, Mutation mutation, MutationHandles mutation_handles) -> (MutationResponse response);
+  4: InteractiveMutate(SettingType settingType, Mutation mutation, MutationHandles mutation_handles) -> (MutationResponse response);
 };
 
 interface SettingListener {
