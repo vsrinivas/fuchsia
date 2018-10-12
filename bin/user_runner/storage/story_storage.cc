@@ -33,7 +33,7 @@ std::string EntityTypeKeyForCookie(const std::string& cookie) {
 }
 
 std::string CookieFromEntityKey(const std::string& key) {
-  return key.substr(std::strlen(kEntityKeyPrefix));
+  return key.substr(sizeof(kEntityKeyPrefix) - 1);
 }
 
 }  // namespace
@@ -718,6 +718,43 @@ StoryStorage::EntityWatcherAutoCancel StoryStorage::WatchEntity(
   return EntityWatcherAutoCancel(std::move(auto_remove));
 }
 
+FuturePtr<StoryStorage::Status> StoryStorage::SetEntityName(
+    const std::string& cookie, const std::string& entity_name) {
+  auto did_set = Future<StoryStorage::Status>::Create(
+      "StoryStorage.SetEntityName.did_set");
+  fuchsia::mem::Buffer data;
+  if (fsl::VmoFromString(cookie, &data)) {
+    operation_queue_.Add(new WriteVmoCall(this, kEntityNamePrefix + entity_name,
+                                          std::move(data),
+                                          did_set->Completer()));
+  } else {
+    did_set->Complete(StoryStorage::Status::VMO_COPY_ERROR);
+  }
+  return did_set;
+}
+
+FuturePtr<StoryStorage::Status, std::string>
+StoryStorage::GetEntityCookieForName(const std::string& entity_name) {
+  auto did_get = Future<StoryStorage::Status, std::string>::Create(
+      "StoryStorage.GetEntityName.did_get");
+  operation_queue_.Add(new ReadVmoCall(
+      this, kEntityNamePrefix + entity_name,
+      [did_get](fuchsia::ledger::Status status, fuchsia::mem::BufferPtr data) {
+        if (status != fuchsia::ledger::Status::OK || !data) {
+          did_get->Complete(StoryStorage::Status::LEDGER_ERROR, "");
+          return;
+        }
+        std::string cookie;
+        if (!fsl::StringFromVmo(*data, &cookie)) {
+          did_get->Complete(StoryStorage::Status::VMO_COPY_ERROR, "");
+          return;
+        }
+
+        did_get->Complete(StoryStorage::Status::OK, std::move(cookie));
+      }));
+  return did_get;
+}
+
 FuturePtr<> StoryStorage::Sync() {
   auto ret = Future<>::Create("StoryStorage::Sync.ret");
   operation_queue_.Add(NewCallbackOperation("StoryStorage::Sync",
@@ -766,7 +803,7 @@ void StoryStorage::OnPageChange(const std::string& key,
       }
       on_module_data_updated_(std::move(*module_data));
     }
-  } else {
+  } else if (!StartsWith(key, kEntityNamePrefix)) {
     // TODO(thatguy): We store some Link data on the root page (where
     // StoryData is stored) for the user shell to make use of. This means we
     // get notified in that instance of changes we don't care about.

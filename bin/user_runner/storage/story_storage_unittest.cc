@@ -725,5 +725,23 @@ TEST_F(StoryStorageTest, WatchEntityDataMultipleWatchers) {
   });
 }
 
+// Creates a name for a given Entity cookie and verifies it is retrieved
+// successfully.
+TEST_F(StoryStorageTest, NameEntity) {
+  auto storage = CreateStorage("page");
+  std::string expected_cookie = "cookie";
+  std::string expected_name = "the best entity";
+
+  storage->SetEntityName(expected_cookie, expected_name);
+
+  bool did_get_cookie{};
+  storage->GetEntityCookieForName(expected_name)
+      ->Then([&](StoryStorage::Status status, const std::string& cookie) {
+        EXPECT_EQ(cookie, expected_cookie);
+        did_get_cookie = true;
+      });
+  RunLoopUntil([&] { return did_get_cookie; });
+}
+
 }  // namespace
 }  // namespace modular

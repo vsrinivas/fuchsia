@@ -60,6 +60,7 @@ constexpr char kLinkKeyPrefix[] =
     "fuchsia::modular::Link|3/";  // version 3: no more incremental links
 constexpr char kModuleKeyPrefix[] = "Module/";
 constexpr char kEntityKeyPrefix[] = "Entity/";
+constexpr char kEntityNamePrefix[] = "EntityName/";
 
 // 2. ID values, separated by slashes, to identify the data item under this
 //    key. The set of ID values under each key is defined by the arguments of

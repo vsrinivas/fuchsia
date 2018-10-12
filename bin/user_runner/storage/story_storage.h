@@ -179,6 +179,17 @@ class StoryStorage : public PageClient {
   EntityWatcherAutoCancel WatchEntity(const std::string& cookie,
                                       EntityUpdatedCallback callback);
 
+  // Sets the |entity_name| of the Entity associated with |cookie|.
+  //
+  // Once an entity has been named, the associated |cookie| can be retrieved by
+  // calling |GetEntityCookieForName|.
+  FuturePtr<Status> SetEntityName(const std::string& cookie,
+                                  const std::string& entity_name);
+
+  // Gets the Entity cookie associated with the specified name.
+  FuturePtr<Status, std::string> GetEntityCookieForName(
+      const std::string& entity_name);
+
   // Completes the returned future after all prior methods have completed.
   FuturePtr<> Sync();
 
