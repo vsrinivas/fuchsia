@@ -7,7 +7,7 @@
 
 #include "frame_sink.h"
 #include "use_aac_decoder.h"
-#include "use_h264_decoder.h"
+#include "use_video_decoder.h"
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>

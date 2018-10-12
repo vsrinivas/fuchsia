@@ -18,8 +18,8 @@ source_set("use_media_decoder_source_set") {
     "frame_sink_view.h",
     "use_aac_decoder.cc",
     "use_aac_decoder.h",
-    "use_h264_decoder.cc",
-    "use_h264_decoder.h",
+    "use_video_decoder.cc",
+    "use_video_decoder.h",
     "util.cc",
     "util.h",
   ]
@@ -72,7 +72,7 @@ test("use_aac_decoder_test") {
   ]
 }
 
-# This test target uses the AAC decoder the same way as the example program and
+# This test target uses the h264 decoder the same way as the example program and
 # then also verifies the output data (without writing an output file).
 test("use_h264_decoder_test") {
   testonly = true

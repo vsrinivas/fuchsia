@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_USE_H264_DECODER_H_
-#define GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_USE_H264_DECODER_H_
+#ifndef GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_USE_VIDEO_DECODER_H_
+#define GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_USE_VIDEO_DECODER_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -57,4 +57,4 @@ void use_vp9_decoder(async::Loop* main_loop,
                      std::vector<std::pair<bool, uint64_t>>* timestamps_out,
                      FrameSink* frame_sink);
 
-#endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_USE_H264_DECODER_H_
+#endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_USE_VIDEO_DECODER_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "use_h264_decoder.h"
+#include "use_video_decoder.h"
 
 #include "codec_client.h"
 #include "frame_sink.h"
