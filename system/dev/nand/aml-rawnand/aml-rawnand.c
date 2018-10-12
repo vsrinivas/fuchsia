@@ -339,10 +339,6 @@ static int aml_get_ecc_corrections(aml_raw_nand_t* raw_nand, int ecc_pages,
             zxlogf(INFO, "%s: Blank Page@%u\n", __func__, nand_page);
             continue;
         }
-        if (info->ecc.eccerr_cnt != 0) {
-            zxlogf(INFO, "%s: Corrected %u ECC errors@%u\n",
-                   __func__, info->ecc.eccerr_cnt, nand_page);
-        }
         raw_nand->stats.ecc_corrected += info->ecc.eccerr_cnt;
         bitflips = MAX(bitflips, info->ecc.eccerr_cnt);
     }
