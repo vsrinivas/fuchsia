@@ -308,7 +308,7 @@ static fdio_ops_t zx_pipe_ops = {
     .shutdown = zx_pipe_shutdown,
 };
 
-#define FDIO_USE_ZXIO_PIPE 0
+#define FDIO_USE_ZXIO_PIPE 1
 
 fdio_t* fdio_pipe_create(zx_handle_t h) {
 #if FDIO_USE_ZXIO_PIPE
