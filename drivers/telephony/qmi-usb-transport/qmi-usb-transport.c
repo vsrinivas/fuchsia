@@ -72,7 +72,6 @@ static inline zx_status_t set_async_wait(qmi_ctx_t *ctx) {
   return status;
 }
 
-
 static zx_status_t qmi_ioctl(void* ctx, uint32_t op, const void* in_buf,
                              size_t in_len, void* out_buf, size_t out_len,
                              size_t* out_actual) {
@@ -88,13 +87,18 @@ static zx_status_t qmi_ioctl(void* ctx, uint32_t op, const void* in_buf,
     goto done;
   }
 
-  status = get_channel(ctx, (zx_handle_t*)out_buf);
+  zx_handle_t* out_channel = (zx_handle_t*)out_buf;
+  status = get_channel(ctx, out_channel);
   if (status != ZX_OK) {
     goto done;
   }
   *out_actual = sizeof(zx_handle_t);
 
   status = set_async_wait(qmi_ctx);
+  if (status != ZX_OK) {
+    zx_handle_close(*out_channel);
+    zx_handle_close(qmi_ctx->channel);
+  }
 
 done:
   zxlogf(TRACE, "qmi-usb-transport: ioctl status: %s\n",
@@ -373,7 +377,9 @@ fail:
   zxlogf(ERROR, "qmi-usb-transport: bind failed: %s\n",
          zx_status_get_string(status));
 failnoerr:
-  usb_request_release(int_buf);
+  if (int_buf) {
+    usb_request_release(int_buf);
+  }
   free(qmi_ctx);
   return status;
 }
