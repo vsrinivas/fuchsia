@@ -15,10 +15,11 @@ class EntityProviderController::EntityImpl : fuchsia::modular::Entity {
  public:
   EntityImpl(EntityProviderController* const entity_provider_controller,
              fuchsia::modular::EntityProvider* const entity_provider,
-             const std::string& cookie)
+             const std::string& cookie, const std::string& entity_reference)
       : entity_provider_controller_(entity_provider_controller),
         entity_provider_(entity_provider),
-        cookie_(cookie) {
+        cookie_(cookie),
+        entity_reference_(entity_reference) {
     entity_bindings_.set_empty_set_handler([this] {
       entity_provider_controller_->OnEmptyEntityImpls(cookie_);
       // |this| is no longer valid.
@@ -45,27 +46,25 @@ class EntityProviderController::EntityImpl : fuchsia::modular::Entity {
   // |fuchsia::modular::Entity|
   void WriteData(fidl::StringPtr type, fuchsia::mem::Buffer data,
                  WriteDataCallback callback) override {
-    // TODO(MI4-1301)
-    callback(fuchsia::modular::EntityWriteStatus::READ_ONLY);
+    entity_provider_->WriteData(cookie_, type, std::move(data), callback);
   }
 
   // |fuchsia::modular::Entity|
   void GetReference(GetReferenceCallback callback) override {
-    // TODO(MI4-1301)
-    FXL_NOTIMPLEMENTED();
+    callback(entity_reference_);
   }
 
   // |fuchsia::modular::Entity|
   void Watch(
       fidl::StringPtr type,
       fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) override {
-    // TODO(MI4-1301)
-    FXL_NOTIMPLEMENTED();
+    entity_provider_->Watch(cookie_, type, std::move(watcher));
   }
 
   EntityProviderController* const entity_provider_controller_;
   fuchsia::modular::EntityProvider* const entity_provider_;
   const std::string cookie_;
+  const std::string entity_reference_;
   fidl::BindingSet<fuchsia::modular::Entity> entity_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(EntityImpl);
@@ -89,14 +88,14 @@ EntityProviderController::EntityProviderController(
 EntityProviderController::~EntityProviderController() = default;
 
 void EntityProviderController::ProvideEntity(
-    const std::string& cookie,
+    const std::string& cookie, const std::string& entity_reference,
     fidl::InterfaceRequest<fuchsia::modular::Entity> request) {
   auto it = entity_impls_.find(cookie);
   if (it == entity_impls_.end()) {
     bool inserted;
     std::tie(it, inserted) = entity_impls_.insert(std::make_pair(
-        cookie,
-        std::make_unique<EntityImpl>(this, entity_provider_.get(), cookie)));
+        cookie, std::make_unique<EntityImpl>(this, entity_provider_.get(),
+                                             cookie, entity_reference)));
     FXL_DCHECK(inserted);
   }
   // When there are no more |fuchsia::modular::Entity|s being serviced for this

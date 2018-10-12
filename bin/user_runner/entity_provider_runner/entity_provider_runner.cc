@@ -275,7 +275,8 @@ void EntityProviderRunner::ResolveEntity(
     FXL_DCHECK(inserted);
   }
 
-  it->second->ProvideEntity(cookie, std::move(entity_request));
+  it->second->ProvideEntity(cookie, entity_reference,
+                            std::move(entity_request));
 }
 
 }  // namespace modular

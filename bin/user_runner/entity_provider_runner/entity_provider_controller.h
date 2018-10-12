@@ -33,6 +33,7 @@ class EntityProviderController {
   // to be provided, usually when an entity reference is being resolved to an
   // |fuchsia::modular::Entity|.
   void ProvideEntity(const std::string& cookie,
+                     const std::string& entity_reference,
                      fidl::InterfaceRequest<fuchsia::modular::Entity> request);
 
  private:
