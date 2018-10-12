@@ -37,33 +37,32 @@ static zx_status_t hogd_hid_query(void* ctx, uint32_t options,
   hogd_device_t* child = (hogd_device_t*)ctx;
   switch (child->device_type) {
     case HOGD_DEVICE_BOOT_KEYBOARD:
-      info->dev_num = HID_DEV_CLASS_KBD;
-      info->dev_class = HID_DEV_CLASS_KBD;
+      info->dev_num = HID_DEVICE_CLASS_KBD;
+      info->device_class = HID_DEVICE_CLASS_KBD;
       info->boot_device = true;
       break;
     case HOGD_DEVICE_BOOT_MOUSE:
-      info->dev_num = HID_DEV_CLASS_POINTER;
-      info->dev_class = HID_DEV_CLASS_POINTER;
+      info->dev_num = HID_DEVICE_CLASS_POINTER;
+      info->device_class = HID_DEVICE_CLASS_POINTER;
       info->boot_device = true;
       break;
     default:
-      info->dev_num = HID_DEV_CLASS_OTHER;
-      info->dev_class = HID_DEV_CLASS_OTHER;
+      info->dev_num = HID_DEVICE_CLASS_OTHER;
+      info->device_class = HID_DEVICE_CLASS_OTHER;
       info->boot_device = false;
   }
   return ZX_OK;
 }
 
-static zx_status_t hogd_hid_start(void* ctx, hidbus_ifc_t* ifc, void* cookie) {
-  hog_log_trace("bthog hog_hid_start, ctx: %p, cookie: %p\n", ctx, cookie);
+static zx_status_t hogd_hid_start(void* ctx, const hidbus_ifc_t* ifc) {
+  hog_log_trace("bthog hog_hid_start, ctx: %p, cookie: %p\n", ctx, ifc->ctx);
   hogd_device_t* child = (hogd_device_t*)ctx;
   mtx_lock(&child->lock);
-  if (child->ifc) {
+  if (child->ifc.ops) {
     mtx_unlock(&child->lock);
     return ZX_ERR_ALREADY_BOUND;
   }
-  child->ifc = ifc;
-  child->cookie = cookie;
+  child->ifc = *ifc;
   mtx_unlock(&child->lock);
 
   return ZX_OK;
@@ -79,7 +78,7 @@ static zx_status_t hogd_hid_get_descriptor(void* ctx, uint8_t desc_type,
   hogd_device_t* hogd_child = (hogd_device_t*)ctx;
   hog_log_trace("bthog hogd_hid_get_descriptor, ctx: %p, desc_type: %u\n", ctx,
                 desc_type);
-  if (desc_type != HID_DESC_TYPE_REPORT) {
+  if (desc_type != HID_DESCRIPTION_TYPE_REPORT) {
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -119,7 +118,7 @@ static zx_status_t hogd_hid_get_report(void* ctx, uint8_t rpt_type,
 }
 
 static zx_status_t hogd_hid_set_report(void* ctx, uint8_t rpt_type,
-                                       uint8_t rpt_id, void* data, size_t len) {
+                                       uint8_t rpt_id, const void* data, size_t len) {
   hog_log_trace(
       "bthog hogd_hid_set_report, ctx: %p, rpt_type: %u, rpt_id: %u\n", ctx,
       rpt_type, rpt_id);
@@ -257,8 +256,8 @@ static void hogd_report_notification(void* ctx, bt_gatt_id_t id,
     len = 3;
 
   mtx_lock(&child->lock);
-  if (child->ifc) {
-    child->ifc->io_queue(child->cookie, value, len);
+  if (child->ifc.ops) {
+    hidbus_ifc_io_queue(&child->ifc, value, len);
   }
   mtx_unlock(&child->lock);
 }
