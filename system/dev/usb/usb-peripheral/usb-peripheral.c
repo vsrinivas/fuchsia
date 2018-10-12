@@ -20,6 +20,7 @@
 #include <usb/usb-request.h>
 #include <zircon/listnode.h>
 #include <zircon/device/usb-peripheral.h>
+#include <zircon/usb/peripheral/c/fidl.h>
 #include <zircon/hw/usb-cdc.h>
 #include <zircon/hw/usb.h>
 
@@ -73,6 +74,8 @@
 */
 
 #define MAX_INTERFACES 32
+
+typedef zircon_usb_peripheral_FunctionDescriptor usb_function_descriptor_t;
 
 typedef struct {
     zx_device_t* zxdev;
@@ -608,48 +611,48 @@ usb_dci_interface_ops_t dci_ops = {
     .set_speed = usb_dev_set_speed,
 };
 
-static zx_status_t usb_dev_set_device_desc(usb_device_t* dev, const void* in_buf, size_t in_len) {
-    if (in_len != sizeof(dev->device_desc)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    const usb_device_descriptor_t* desc = in_buf;
-    if (desc->bLength != sizeof(*desc) ||
-        desc->bDescriptorType != USB_DT_DEVICE) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+static zx_status_t usb_dev_set_device_desc(void* ctx,
+                                           const zircon_usb_peripheral_DeviceDescriptor* desc,
+                                           fidl_txn_t* txn) {
+    usb_device_t* dev = ctx;
+
+    zx_status_t status;
     if (desc->bNumConfigurations != 1) {
         zxlogf(ERROR, "usb_device_ioctl: bNumConfigurations: %u, only 1 supported\n",
                 desc->bNumConfigurations);
-        return ZX_ERR_INVALID_ARGS;
+        status = ZX_ERR_INVALID_ARGS;
+    } else {
+        dev->device_desc.bLength = sizeof(usb_device_descriptor_t);
+        dev->device_desc.bDescriptorType = USB_DT_DEVICE;
+        dev->device_desc.bcdUSB = desc->bcdUSB;
+        dev->device_desc.bDeviceClass = desc->bDeviceClass;
+        dev->device_desc.bDeviceSubClass = desc->bDeviceSubClass;
+        dev->device_desc.bDeviceProtocol = desc->bDeviceProtocol;
+        dev->device_desc.bMaxPacketSize0 = desc->bMaxPacketSize0;
+        dev->device_desc.idVendor = desc->idVendor;
+        dev->device_desc.idProduct = desc->idProduct;
+        dev->device_desc.bcdDevice = desc->bcdDevice;
+        dev->device_desc.iManufacturer = desc->iManufacturer;
+        dev->device_desc.iProduct = desc->iProduct;
+        dev->device_desc.iSerialNumber = desc->iSerialNumber;
+        dev->device_desc.bNumConfigurations = desc->bNumConfigurations;
+        status = ZX_OK;
     }
-    memcpy(&dev->device_desc, desc, sizeof(dev->device_desc));
-    return ZX_OK;
+
+    return zircon_usb_peripheral_DeviceSetDeviceDescriptor_reply(txn, status);
 }
 
-static zx_status_t usb_dev_alloc_string_desc(usb_device_t* dev, const void* in_buf, size_t in_len,
-                                             void* out_buf, size_t out_len, size_t* out_actual) {
-    if (in_len < 2 || out_len < sizeof(uint8_t)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+static zx_status_t usb_dev_alloc_string_desc(void* ctx, const char* name_data, size_t name_size,
+                                             fidl_txn_t* txn) {
+    usb_device_t* dev = ctx;
 
-    // make sure string is zero terminated
-    *((char *)in_buf + in_len - 1) = 0;
-
-    uint8_t index;
-    zx_status_t status = usb_device_alloc_string_desc(dev, in_buf, &index);
-    if (status != ZX_OK) {
-        return status;
-     }
-
-    *((uint8_t *)out_buf) = index;
-    *out_actual = sizeof(index);
-    return ZX_OK;
+    uint8_t index = 0;
+    zx_status_t status = usb_device_alloc_string_desc(dev, name_data, &index);
+    return zircon_usb_peripheral_DeviceAllocStringDesc_reply(txn, status, index);
 }
 
-static zx_status_t usb_dev_add_function(usb_device_t* dev, const void* in_buf, size_t in_len) {
-    if (in_len != sizeof(usb_function_descriptor_t)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+static zx_status_t usb_dev_do_add_function(usb_device_t* dev,
+                                           const usb_function_descriptor_t* desc) {
     if (dev->functions_bound) {
         return ZX_ERR_BAD_STATE;
     }
@@ -660,10 +663,18 @@ static zx_status_t usb_dev_add_function(usb_device_t* dev, const void* in_buf, s
     }
     function->dci_dev = dev->dci_dev;
     function->dev = dev;
-    memcpy(&function->desc, in_buf, sizeof(function->desc));
+    memcpy(&function->desc, desc, sizeof(function->desc));
     list_add_tail(&dev->functions, &function->node);
 
     return ZX_OK;
+}
+
+static zx_status_t usb_dev_add_function(void* ctx, const usb_function_descriptor_t* desc,
+                                        fidl_txn_t* txn) {
+    usb_device_t* dev = ctx;
+
+    zx_status_t status = usb_dev_do_add_function(dev, desc);
+    return zircon_usb_peripheral_DeviceAddFunction_reply(txn, status);
 }
 
 static void usb_dev_remove_function_devices_locked(usb_device_t* dev) {
@@ -779,7 +790,7 @@ static zx_status_t usb_dev_state_changed_locked(usb_device_t* dev) {
     return status;
 }
 
-static zx_status_t usb_dev_bind_functions(usb_device_t* dev) {
+static zx_status_t usb_dev_do_bind_functions(usb_device_t* dev) {
     mtx_lock(&dev->lock);
 
     if (dev->functions_bound) {
@@ -804,11 +815,19 @@ static zx_status_t usb_dev_bind_functions(usb_device_t* dev) {
     dev->functions_bound = true;
     zx_status_t status = usb_dev_state_changed_locked(dev);
     mtx_unlock(&dev->lock);
+
     return status;
 }
 
-static zx_status_t usb_dev_clear_functions(usb_device_t* dev) {
-    zxlogf(TRACE, "usb_dev_clear_functions\n");
+static zx_status_t usb_dev_bind_functions(void* ctx, fidl_txn_t* txn) {
+    usb_device_t* dev = ctx;
+
+    zx_status_t status = usb_dev_do_bind_functions(dev);
+    return zircon_usb_peripheral_DeviceBindFunctions_reply(txn, status);
+}
+
+
+static zx_status_t usb_dev_do_clear_functions(usb_device_t* dev) {
     mtx_lock(&dev->lock);
 
     usb_function_t* function;
@@ -834,61 +853,59 @@ static zx_status_t usb_dev_clear_functions(usb_device_t* dev) {
 
     zx_status_t status = usb_dev_state_changed_locked(dev);
     mtx_unlock(&dev->lock);
+
     return status;
 }
 
-static zx_status_t usb_dev_get_mode(usb_device_t* dev, void* out_buf, size_t out_len,
-                                    size_t* out_actual) {
-    if (out_len < sizeof(usb_mode_t)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    *((usb_mode_t *)out_buf) = dev->usb_mode;
-    *out_actual = sizeof(usb_mode_t);
-    return ZX_OK;
-}
-
-static zx_status_t usb_dev_set_mode(usb_device_t* dev, const void* in_buf, size_t in_len) {
-    if (in_len < sizeof(usb_mode_t)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    mtx_lock(&dev->lock);
-    dev->usb_mode = *((usb_mode_t *)in_buf);
-    zx_status_t status = usb_dev_state_changed_locked(dev);
-    mtx_unlock(&dev->lock);
-    return status;
-}
-
-static zx_status_t usb_dev_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                 void* out_buf, size_t out_len, size_t* out_actual) {
-    zxlogf(TRACE, "usb_dev_ioctl %x\n", op);
+static zx_status_t usb_dev_clear_functions(void* ctx, fidl_txn_t* txn) {
     usb_device_t* dev = ctx;
 
-    switch (op) {
-    case IOCTL_USB_PERIPHERAL_SET_DEVICE_DESC:
-        return usb_dev_set_device_desc(dev, in_buf, in_len);
-    case IOCTL_USB_PERIPHERAL_ALLOC_STRING_DESC:
-        return usb_dev_alloc_string_desc(dev, in_buf, in_len, out_buf, out_len, out_actual);
-    case IOCTL_USB_PERIPHERAL_ADD_FUNCTION:
-        return usb_dev_add_function(dev, in_buf, in_len);
-    case IOCTL_USB_PERIPHERAL_BIND_FUNCTIONS:
-        return usb_dev_bind_functions(dev);
-    case IOCTL_USB_PERIPHERAL_CLEAR_FUNCTIONS:
-        return usb_dev_clear_functions(dev);
-    case IOCTL_USB_PERIPHERAL_GET_MODE:
-        return usb_dev_get_mode(dev, out_buf, out_len, out_actual);
-    case IOCTL_USB_PERIPHERAL_SET_MODE:
-        return usb_dev_set_mode(dev, in_buf, in_len);
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    zxlogf(TRACE, "usb_dev_clear_functions\n");
+
+    zx_status_t status = usb_dev_do_clear_functions(dev);
+    return zircon_usb_peripheral_DeviceClearFunctions_reply(txn, status);
+}
+
+static zx_status_t usb_dev_get_mode(void* ctx, fidl_txn_t* txn) {
+    usb_device_t* dev = ctx;
+
+    mtx_lock(&dev->lock);
+    uint32_t mode = dev->usb_mode;
+    mtx_unlock(&dev->lock);
+
+    return zircon_usb_peripheral_DeviceGetMode_reply(txn, ZX_OK, mode);
+}
+
+static zx_status_t usb_dev_set_mode(void* ctx, uint32_t mode, fidl_txn_t* txn) {
+    usb_device_t* dev = ctx;
+
+    mtx_lock(&dev->lock);
+    dev->usb_mode = mode;
+    zx_status_t status = usb_dev_state_changed_locked(dev);
+    mtx_unlock(&dev->lock);
+
+    return zircon_usb_peripheral_DeviceSetMode_reply(txn, status);
+}
+
+static zircon_usb_peripheral_Device_ops_t fidl_ops = {
+
+    .SetDeviceDescriptor = usb_dev_set_device_desc,
+    .AllocStringDesc = usb_dev_alloc_string_desc,
+    .AddFunction = usb_dev_add_function,
+    .BindFunctions = usb_dev_bind_functions,
+    .ClearFunctions = usb_dev_clear_functions,
+    .GetMode = usb_dev_get_mode,
+    .SetMode = usb_dev_set_mode,
+};
+
+zx_status_t usb_dev_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return zircon_usb_peripheral_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 static void usb_dev_unbind(void* ctx) {
     zxlogf(TRACE, "usb_dev_unbind\n");
     usb_device_t* dev = ctx;
-    usb_dev_clear_functions(dev);
+    usb_dev_do_clear_functions(dev);
     device_remove(dev->zxdev);
 }
 
@@ -904,7 +921,7 @@ static void usb_dev_release(void* ctx) {
 
 static zx_protocol_device_t device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .ioctl = usb_dev_ioctl,
+    .message = usb_dev_message,
     .unbind = usb_dev_unbind,
     .release = usb_dev_release,
 };
@@ -940,8 +957,7 @@ static zx_status_t usb_dev_set_default_config(usb_device_t* dev) {
     if (status != ZX_OK) return status;
 #endif
 
-    status = usb_dev_set_device_desc(dev, &device_desc, sizeof(device_desc));
-    if (status != ZX_OK) return status;
+    memcpy(&dev->device_desc, &device_desc, sizeof(dev->device_desc));
 
     usb_function_descriptor_t function_desc;
     if (strcasecmp(USB_DEVICE_FUNCTIONS, "cdc") == 0) {
@@ -957,10 +973,10 @@ static zx_status_t usb_dev_set_default_config(usb_device_t* dev) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    status = usb_dev_add_function(dev, &function_desc, sizeof(function_desc));
+    status = usb_dev_do_add_function(dev, &function_desc);
     if (status != ZX_OK) return status;
 
-    return usb_dev_bind_functions(dev);
+    return usb_dev_do_bind_functions(dev);
 }
 #endif // defined(USB_DEVICE_VID) && defined(USB_DEVICE_PID) && defined(USB_DEVICE_FUNCTIONS)
 

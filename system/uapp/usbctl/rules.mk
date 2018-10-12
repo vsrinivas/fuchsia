@@ -17,4 +17,9 @@ MODULE_LIBS := \
     system/ulib/fdio \
     system/ulib/c
 
+MODULE_STATIC_LIBS := \
+    system/ulib/fidl \
+
+MODULE_FIDL_LIBS := system/fidl/zircon-usb-peripheral
+
 include make/module.mk
