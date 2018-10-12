@@ -44,6 +44,11 @@ struct AxisF {
   AxisScale scale = LINEAR;
 };
 
+// |ButtonsDescriptor| describes the buttons.
+struct ButtonsDescriptor {
+  // The list of buttons available.
+  uint32 buttons;
+};
 
 // Keyboards
 
@@ -213,6 +218,12 @@ union SensorReport {
   uint16 scalar;
 };
 
+// |ButtonsReport| describes the buttons event delivered from the event stream.
+union ButtonsReport {
+  // Volume changes +1/-1 for volume up/down, this is a relative value.
+  int8 volume;
+};
+
 // Device and Report
 
 struct DeviceInfo {
@@ -226,6 +237,7 @@ struct DeviceInfo {
 struct DeviceDescriptor {
   DeviceInfo? device_info;
   KeyboardDescriptor? keyboard;
+  ButtonsDescriptor? buttons;
   MouseDescriptor? mouse;
   StylusDescriptor? stylus;
   TouchscreenDescriptor? touchscreen;
@@ -238,6 +250,7 @@ struct InputReport {
   uint64 event_time;
 
   KeyboardReport? keyboard;
+  ButtonsReport? buttons;
   MouseReport? mouse;
   StylusReport? stylus;
   TouchscreenReport? touchscreen;

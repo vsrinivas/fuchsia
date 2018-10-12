@@ -11,3 +11,6 @@ const uint32  kMouseButtonTertiary  = 4;
 
 // Common stylus buttons report constants
 const uint32  kStylusBarrel = 1;
+
+const uint32  kVolumeUp             = 1;
+const uint32  kVolumeDown           = 2;

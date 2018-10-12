@@ -27,6 +27,7 @@ class HidDecoder {
     Touchpad,
     Gamepad,
     LightSensor,
+    Buttons,
     // The ones below are hacks that need to be removed.
     Acer12Touch,
     SamsungTouch,
@@ -51,6 +52,10 @@ class HidDecoder {
 
   struct HidAmbientLightSimple {
     int16_t illuminance;
+  };
+
+  struct HidButtons {
+    int8_t volume;
   };
 
   // The decoder does not take ownership of the |fd|. InputReader takes
@@ -83,6 +88,7 @@ class HidDecoder {
   // Only valid if Init() out_proto is valid.
   bool Read(HidGamepadSimple* gamepad);
   bool Read(HidAmbientLightSimple* light);
+  bool Read(HidButtons* data);
 
  private:
   struct DataLocator {
@@ -93,8 +99,8 @@ class HidDecoder {
 
   bool ParseProtocol(const fzl::FdioCaller& caller, Protocol* protocol);
   bool ParseGamepadDescriptor(const hid::ReportField* fields, size_t count);
-  bool ParseAmbientLightDescriptor(const hid::ReportField* fields,
-                                   size_t count);
+  bool ParseAmbientLightDescriptor(const hid::ReportField* fields, size_t count);
+  bool ParseButtonsDescriptor(const hid::ReportField* fields, size_t count);
 
   const int fd_;
   const std::string name_;

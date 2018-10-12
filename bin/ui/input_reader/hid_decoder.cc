@@ -100,16 +100,19 @@ bool HidDecoder::GetEvent(zx_handle_t* handle) {
 HidDecoder::Protocol ExtractProtocol(hid::Usage input) {
   using ::hid::usage::Page;
   using ::hid::usage::Sensor;
+  using ::hid::usage::Consumer;
   struct {
-    Page page;
-    Sensor usage;
+    hid::Usage usage;
     HidDecoder::Protocol protocol;
   } usage_to_protocol[] = {
-      {Page::kSensor, Sensor::kAmbientLight, HidDecoder::Protocol::LightSensor},
-      // Add more sensors here
+    {{static_cast<uint16_t>(Page::kSensor), static_cast<uint32_t>(Sensor::kAmbientLight)},
+     HidDecoder::Protocol::LightSensor},
+    {{static_cast<uint16_t>(Page::kConsumer), static_cast<uint32_t>(Consumer::kVolume)},
+     HidDecoder::Protocol::Buttons},
+    // Add more sensors here
   };
-  for (const auto& j : usage_to_protocol) {
-    if (input.page == j.page && input.usage == j.usage) {
+  for (auto& j : usage_to_protocol) {
+    if (input.page == j.usage.page && input.usage == j.usage.usage) {
       return j.protocol;
     }
   }
@@ -267,6 +270,9 @@ bool HidDecoder::ParseProtocol(const fzl::FdioCaller& caller, Protocol* protocol
       case Protocol::LightSensor:
         ParseAmbientLightDescriptor(input_fields, field_count);
         break;
+      case Protocol::Buttons:
+        ParseButtonsDescriptor(input_fields, field_count);
+        break;
       // Add more protocols here
       default:
         break;
@@ -370,6 +376,41 @@ bool HidDecoder::ParseAmbientLightDescriptor(const hid::ReportField* fields,
   return false;
 }
 
+bool HidDecoder::ParseButtonsDescriptor(const hid::ReportField* fields, size_t count) {
+  if (count == 0u)
+    return false;
+
+  decoder_.resize(2u);
+  uint8_t offset = 0;
+
+  if (fields[0].report_id != 0) {
+    // If exists, the first entry (8-bits) is always the report id and
+    // all items start after the first byte.
+    decoder_[0] = DataLocator{0u, 8u, fields[0].report_id};
+    offset = 8u;
+  }
+
+  uint32_t bit_count = 0;
+
+  // Traverse each input report field and see if there is a match in the table.
+  // If so place the location in |decoder_| array.
+  for (size_t ix = 0; ix != count; ix++) {
+    if (fields[ix].type != hid::kInput)
+      continue;
+
+    if (fields[ix].attr.usage.usage == hid::usage::Consumer::kVolume) {
+      decoder_[1] = DataLocator{bit_count + offset, fields[ix].attr.bit_sz, 0};
+      // Found a required usage.
+      // Here |decoder_| should look like this:
+      // [rept_id][volume]
+      return true;
+    }
+
+    bit_count += fields[ix].attr.bit_sz;
+  }
+  return false;
+}
+
 const std::vector<uint8_t>& HidDecoder::Read(int* bytes_read) {
   *bytes_read = read(fd_, report_.data(), report_.size());
   return report_;
@@ -440,4 +481,40 @@ bool HidDecoder::Read(HidAmbientLightSimple* data) {
   data->illuminance = extract_uint16(report, cur->begin);
   return true;
 }
+
+bool HidDecoder::Read(HidButtons* data) {
+  if (protocol_ != Protocol::Buttons)
+    return false;
+
+  int rc;
+  auto report = Read(&rc);
+  if (rc < 1) {
+    FXL_LOG(ERROR) << "Failed to read from input: " << rc;
+    return false;
+  }
+
+  auto cur = &decoder_[0];
+  if ((cur->match != 0) && (cur->count == 8u)) {
+    // The first byte is the report id.
+    if (report[0] != cur->match) {
+      // This is a normal condition. The device can generate reports
+      // for controls we don't yet handle.
+      *data = {};
+      return true;
+    }
+    ++cur;
+  }
+  // 2 bits, see zircon/system/ulib/hid's buttons.c and include/hid/buttons.h
+  if (cur->count != 2u) {
+    FXL_LOG(ERROR) << "Unexpected count in report from buttons:" << cur->count;
+    return false;
+  }
+  // TODO(SCN-843): We need to generalize these extraction functions, e.g. add extract_int8
+  data->volume = extract_uint8(report, cur->begin, 2u);
+  if (data->volume == 3) { // 2 bits unsigned 3 is signed -1
+    data->volume = -1;
+  }
+  return true;
+}
+
 }  // namespace mozart

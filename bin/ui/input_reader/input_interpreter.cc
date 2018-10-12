@@ -98,6 +98,14 @@ bool InputInterpreter::Initialize() {
 
     keyboard_report_ = fuchsia::ui::input::InputReport::New();
     keyboard_report_->keyboard = fuchsia::ui::input::KeyboardReport::New();
+  } else if (protocol == HidDecoder::Protocol::Buttons) {
+    FXL_VLOG(2) << "Device " << name() << " has buttons";
+    has_buttons_ = true;
+    buttons_descriptor_ = fuchsia::ui::input::ButtonsDescriptor::New();
+    buttons_descriptor_->buttons |= fuchsia::ui::input::kVolumeUp;
+    buttons_descriptor_->buttons |= fuchsia::ui::input::kVolumeDown;
+    buttons_report_ = fuchsia::ui::input::InputReport::New();
+    buttons_report_->buttons = fuchsia::ui::input::ButtonsReport::New();
   } else if (protocol == HidDecoder::Protocol::Mouse ||
              protocol == HidDecoder::Protocol::Gamepad) {
     FXL_VLOG(2) << "Device " << name() << " has mouse";
@@ -506,6 +514,13 @@ bool InputInterpreter::Read(bool discard) {
     ParseKeyboardReport(report.data(), rc);
     if (!discard) {
       input_device_->DispatchReport(CloneReport(keyboard_report_));
+    }
+  }
+
+  if (has_buttons_) {
+    ParseButtonsReport();
+    if (!discard) {
+      input_device_->DispatchReport(CloneReport(buttons_report_));
     }
   }
 
@@ -1005,6 +1020,20 @@ bool InputInterpreter::ParseAmbientLightSensorReport() {
   FXL_VLOG(2) << name()
               << " parsed (sensor=" << static_cast<uint16_t>(sensor_idx_)
               << "): " << *sensor_report_;
+  return true;
+}
+
+bool InputInterpreter::ParseButtonsReport() {
+  HidDecoder::HidButtons data;
+  if (!hid_decoder_.Read(&data)) {
+    FXL_LOG(ERROR) << " failed reading from buttons";
+    return false;
+  }
+  buttons_report_->buttons->set_volume(data.volume);
+  buttons_report_->event_time = InputEventTimestampNow();
+
+  FXL_VLOG(2) << name() << " parsed buttons: " << *buttons_report_
+              << " volume: " << static_cast<int32_t>(data.volume);
   return true;
 }
 

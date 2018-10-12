@@ -92,6 +92,7 @@ class InputInterpreter {
   bool ParseFt3x27TouchscreenReport(uint8_t* r, size_t len);
 
   bool ParseAmbientLightSensorReport();
+  bool ParseButtonsReport();
 
   fuchsia::ui::input::InputDeviceRegistry* registry_;
 
@@ -101,6 +102,8 @@ class InputInterpreter {
 
   bool has_keyboard_ = false;
   fuchsia::ui::input::KeyboardDescriptorPtr keyboard_descriptor_;
+  bool has_buttons_ = false;
+  fuchsia::ui::input::ButtonsDescriptorPtr buttons_descriptor_;
   bool has_mouse_ = false;
   fuchsia::ui::input::MouseDescriptorPtr mouse_descriptor_;
   bool has_stylus_ = false;
@@ -132,6 +135,7 @@ class InputInterpreter {
   fuchsia::ui::input::InputReportPtr touchscreen_report_;
   fuchsia::ui::input::InputReportPtr stylus_report_;
   fuchsia::ui::input::InputReportPtr sensor_report_;
+  fuchsia::ui::input::InputReportPtr buttons_report_;
 
   fuchsia::ui::input::InputDevicePtr input_device_;
 
