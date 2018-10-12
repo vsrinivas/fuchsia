@@ -3,6 +3,14 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services", "persistent-storage" ]
+        "services": [
+            "fuchsia.bluetooth.bredr.Profile",
+            "fuchsia.bluetooth.control.Control",
+            "fuchsia.bluetooth.gatt.Server",
+            "fuchsia.bluetooth.le.Central",
+            "fuchsia.bluetooth.le.Peripheral",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher"
+        ]
     }
 }

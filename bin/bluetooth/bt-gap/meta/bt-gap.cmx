@@ -3,7 +3,10 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services" ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.stash.Store"
+        ],
         "dev": [ "class/bt-host" ]
     }
 }
