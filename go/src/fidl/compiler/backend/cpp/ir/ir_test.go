@@ -66,6 +66,11 @@ func TestCompileInterface(t *testing.T) {
 			//Request:[{Type:{Decl:int16_t Dtor: DeclType:} Name:Value Offset:0}]
 			//
 			expected: Interface{
+				Attributes: types.Attributes{
+					Attributes: []types.Attribute{
+						{Name: types.Identifier("ServiceName"), Value: "Test"},
+					},
+				},
 				Namespace:       "::",
 				Name:            "Test",
 				ClassName:       "Test_clazz",
@@ -151,7 +156,7 @@ func TestCompileInterface(t *testing.T) {
 				t.Fatalf("decls[0] not an interface, was instead %T", result.Decls[0])
 			}
 			if !reflect.DeepEqual(ex.expected, *actual) {
-				t.Fatalf("expected %+v, actual %+v", ex.expected, *actual)
+				t.Fatalf("expected %+v\nactual %+v", ex.expected, *actual)
 			}
 		})
 	}
@@ -178,35 +183,40 @@ func TestCompileTable(t *testing.T) {
 						Ordinal:  1,
 					},
 					{
-						Ordinal:    2,
-						Name:       types.Identifier("second"),
-						Reserved:   false,
-						Type:       types.Type{
-							Kind: types.PrimitiveType,
+						Ordinal:  2,
+						Name:     types.Identifier("second"),
+						Reserved: false,
+						Type: types.Type{
+							Kind:             types.PrimitiveType,
 							PrimitiveSubtype: types.Int64,
 						},
 					},
 				},
 			},
 			expected: Table{
-				Namespace:       "::",
-				Name:            "Test",
-				TableType:       "_TestTable",
-				BiggestOrdinal:  2,
+				Attributes: types.Attributes{
+					Attributes: []types.Attribute{
+						{Name: types.Identifier("ServiceName"), Value: "Test"},
+					},
+				},
+				Namespace:      "::",
+				Name:           "Test",
+				TableType:      "_TestTable",
+				BiggestOrdinal: 2,
 				Members: []TableMember{
 					{
-						Type: Type {
-							Decl: "int64_t",
-							Dtor: "",
+						Type: Type{
+							Decl:     "int64_t",
+							Dtor:     "",
 							DeclType: "",
 						},
-						Name: "second",
-						Ordinal: 2,
+						Name:              "second",
+						Ordinal:           2,
 						FieldPresenceName: "has_second_",
-						FieldDataName: "second_",
-						MethodHasName: "has_second",
-						MethodClearName: "clear_second",
-						ValueUnionName: "ValueUnion_second",
+						FieldDataName:     "second_",
+						MethodHasName:     "has_second",
+						MethodClearName:   "clear_second",
+						ValueUnionName:    "ValueUnion_second",
 					},
 				},
 			},
@@ -227,7 +237,7 @@ func TestCompileTable(t *testing.T) {
 				t.Fatalf("decls[0] not an table, was instead %T", result.Decls[0])
 			}
 			if !reflect.DeepEqual(ex.expected, *actual) {
-				t.Fatalf("expected %+v, actual %+v", ex.expected, *actual)
+				t.Fatalf("expected %+v\nactual %+v", ex.expected, *actual)
 			}
 		})
 	}

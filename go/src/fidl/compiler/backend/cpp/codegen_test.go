@@ -5,6 +5,7 @@ package cpp
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -12,22 +13,28 @@ import (
 	"fidl/compiler/backend/typestest"
 )
 
-var cases = map[string]struct {
-	header, source string
-}{
-	"doc_comments.fidl.json": {
-		header: "doc_comments.fidl.json.h.golden",
-		source: "doc_comments.fidl.json.cc.golden",
-	},
+type example string
+
+func (s example) header() string {
+	return fmt.Sprintf("%s.h.golden", s)
+}
+
+func (s example) source() string {
+	return fmt.Sprintf("%s.cc.golden", s)
+}
+
+var cases = []example{
+	"doc_comments.fidl.json",
+	"tables.fidl.json",
 }
 
 func TestCodegenHeader(t *testing.T) {
-	for filename, expected := range cases {
-		t.Run(filename, func(t *testing.T) {
-			fidl := typestest.GetExample(filename)
+	for _, filename := range cases {
+		t.Run(string(filename), func(t *testing.T) {
+			fidl := typestest.GetExample(string(filename))
 			tree := ir.Compile(fidl)
-			tree.PrimaryHeader = strings.TrimRight(expected.header, ".golden")
-			header := typestest.GetGolden(expected.header)
+			tree.PrimaryHeader = strings.TrimRight(filename.header(), ".golden")
+			header := typestest.GetGolden(filename.header())
 
 			buf := new(bytes.Buffer)
 			if err := NewFidlGenerator().GenerateHeader(buf, tree); err != nil {
@@ -39,12 +46,12 @@ func TestCodegenHeader(t *testing.T) {
 	}
 }
 func TestCodegenSource(t *testing.T) {
-	for filename, expected := range cases {
-		t.Run(filename, func(t *testing.T) {
-			fidl := typestest.GetExample(filename)
+	for _, filename := range cases {
+		t.Run(string(filename), func(t *testing.T) {
+			fidl := typestest.GetExample(string(filename))
 			tree := ir.Compile(fidl)
-			tree.PrimaryHeader = strings.TrimRight(expected.header, ".golden")
-			source := typestest.GetGolden(expected.source)
+			tree.PrimaryHeader = strings.TrimRight(filename.header(), ".golden")
+			source := typestest.GetGolden(filename.source())
 
 			buf := new(bytes.Buffer)
 			if err := NewFidlGenerator().GenerateSource(buf, tree); err != nil {

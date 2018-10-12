@@ -1,0 +1,150 @@
+{
+  "version": "0.0.1",
+  "name": "test.name",
+  "library_dependencies": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [
+    {
+      "name": "test.name/SimpleTable",
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "x",
+          "size": 8,
+          "alignment": 8,
+          "max_handles": 0
+        },
+        {
+          "ordinal": 2,
+          "reserved": true
+        },
+        {
+          "ordinal": 3,
+          "reserved": true
+        },
+        {
+          "ordinal": 4,
+          "reserved": true
+        },
+        {
+          "ordinal": 5,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "y",
+          "size": 8,
+          "alignment": 8,
+          "max_handles": 0
+        }
+      ],
+      "size": 16,
+      "alignment": 8,
+      "max_handles": 0
+    },
+    {
+      "name": "test.name/OlderSimpleTable",
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "x",
+          "size": 8,
+          "alignment": 8,
+          "max_handles": 0
+        },
+        {
+          "ordinal": 2,
+          "reserved": true
+        }
+      ],
+      "size": 16,
+      "alignment": 8,
+      "max_handles": 0
+    },
+    {
+      "name": "test.name/NewerSimpleTable",
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "x",
+          "size": 8,
+          "alignment": 8,
+          "max_handles": 0
+        },
+        {
+          "ordinal": 2,
+          "reserved": true
+        },
+        {
+          "ordinal": 3,
+          "reserved": true
+        },
+        {
+          "ordinal": 4,
+          "reserved": true
+        },
+        {
+          "ordinal": 5,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "y",
+          "size": 8,
+          "alignment": 8,
+          "max_handles": 0
+        },
+        {
+          "ordinal": 6,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "z",
+          "size": 8,
+          "alignment": 8,
+          "max_handles": 0
+        },
+        {
+          "ordinal": 7,
+          "reserved": true
+        }
+      ],
+      "size": 16,
+      "alignment": 8,
+      "max_handles": 0
+    }
+  ],
+  "union_declarations": [],
+  "declaration_order": [
+    "test.name/OlderSimpleTable",
+    "test.name/NewerSimpleTable",
+    "test.name/SimpleTable"
+  ],
+  "declarations": {
+    "test.name/SimpleTable": "table",
+    "test.name/OlderSimpleTable": "table",
+    "test.name/NewerSimpleTable": "table"
+  }
+}

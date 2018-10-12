@@ -85,6 +85,45 @@ func (u *Union) SetField(field int32) {
 	u.UnionTag = UnionField
 	u.Field = field
 }
+
+// table comment #1
+//
+// table comment #3
+type Table struct {
+	_ struct{} `fidl2:"t,16,8"`
+	// table field comment #1
+	//
+	// table field comment #3
+	Field int32 `fidl:"1" fidl2:"1"`
+	FieldPresent bool
+}
+
+// Implements Payload.
+func (_ *Table) InlineAlignment() int {
+	return 8
+}
+
+// Implements Payload.
+func (_ *Table) InlineSize() int {
+	return 16
+}
+
+func (u *Table) SetField(field int32) {
+	u.Field = field
+	u.FieldPresent = true
+}
+
+func (u *Table) GetField() int32 {
+	return u.Field
+}
+
+func (u *Table) HasField() bool {
+	return u.FieldPresent
+}
+
+func (u *Table) ClearField() {
+	u.FieldPresent = false
+}
 const (
 	InterfaceMethodOrdinal uint32 = 1
 )

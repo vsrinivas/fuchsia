@@ -338,6 +338,7 @@ type Table struct {
 
 // TableMember represents the declaration of a field in a FIDL table.
 type TableMember struct {
+	Attributes
 	Reserved          bool       `json:"reserved"`
 	Type              Type       `json:"type"`
 	Name              Identifier `json:"name"`

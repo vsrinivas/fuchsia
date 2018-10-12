@@ -103,6 +103,8 @@ type Struct struct {
 	Alignment int
 }
 
+// TODO(pascallouis): document, see `readTag` function in
+// https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/encoding_new.go#211
 type tagNew struct {
 	reverseOfBounds []int
 }
@@ -143,6 +145,9 @@ func (t tagNew) String() string {
 // Rather than representing handle nullability using a pointer indirection, we
 // include it as part of the struct tag. For example, vector<handle?>:2 will
 // have tag `fidl:"*,2"`.
+//
+// Lastly, when a field is on table, its ordinal is stored in `Ordinal`, and
+// appears in the struct tag as the rightmost element.
 type Tag struct {
 	// MaxElems is the maximum number of elements a type is annotated with.
 	MaxElems []*int
@@ -150,6 +155,9 @@ type Tag struct {
 	// Nullable is whether the innermost type is nullable. This only applies
 	// for handle types.
 	Nullable bool
+
+	// Ordinal is the table ordinal of the field this type is annotated with.
+	Ordinal int
 }
 
 // String generates a string representation for the tag.
@@ -167,6 +175,10 @@ func (t *Tag) String() string {
 		}
 		anyData = true
 		elemsTag = append(elemsTag, strconv.Itoa(*elems))
+	}
+	if 0 < t.Ordinal {
+		anyData = true
+		elemsTag = append(elemsTag, strconv.Itoa(t.Ordinal))
 	}
 	if !anyData {
 		return ""
@@ -206,7 +218,7 @@ type StructMember struct {
 	Tags string
 }
 
-// Union represets a FIDL union as a golang struct.
+// Union represents a FIDL union as a golang struct.
 type Union struct {
 	types.Attributes
 
@@ -241,6 +253,52 @@ type UnionMember struct {
 
 	// Tag are the golang struct member tag which holds additional metadata
 	// about the union member.
+	Tags string
+}
+
+// Table represents a FIDL table as a golang struct.
+type Table struct {
+	types.Attributes
+	Name      string
+	Members   []TableMember
+	Size      int
+	Alignment int
+}
+
+// TableMember represents a FIDL table member as two golang struct members, one
+// for the member itself, and one to indicate presence or absence.
+type TableMember struct {
+	types.Attributes
+
+	// DataField is the exported name of the FIDL table member.
+	DataField string
+
+	// PrivateDataField is an unexported name of the FIDL table member, used as
+	// argument.
+	PrivateDataField string
+
+	// PresenceField is the exported name of boolean indicating presence of
+	// the FIDL table member.
+	PresenceField string
+
+	// Setter is the exported name of the FIDL table member setter.
+	Setter string
+
+	// Getter is the exported name of the FIDL table member getter.
+	Getter string
+
+	// Clearer is the exported name of the FIDL table member clearer.
+	Clearer string
+
+	// Haser is the exported name of the presence checker of the FIDL table
+	// member.
+	Haser string
+
+	// Type is the golang type of the table member.
+	Type Type
+
+	// Tag are the golang struct member tag which holds additional metadata
+	// about the table member.
 	Tags string
 }
 
@@ -337,6 +395,9 @@ type Root struct {
 
 	// Unions represents the list of FIDL unions represented as Go structs.
 	Unions []Union
+
+	// Table represents the list of FIDL tables represented as Go structs.
+	Tables []Table
 
 	// Interfaces represents the list of FIDL interfaces represented as Go types.
 	Interfaces []Interface
@@ -611,6 +672,8 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag, t2 tagNew) {
 		case types.StructDeclType:
 			fallthrough
 		case types.UnionDeclType:
+			fallthrough
+		case types.TableDeclType:
 			if val.Nullable {
 				r = Type("*" + e)
 			} else {
@@ -704,6 +767,41 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		r.Members = append(r.Members, c.compileUnionMember(r.Name, v))
 	}
 	return r
+}
+
+func (c *compiler) compileTable(val types.Table) Table {
+	var members []TableMember
+	for _, member := range val.Members {
+		if member.Reserved {
+			continue
+		}
+		var (
+			ty, tag, tag2 = c.compileType(member.Type)
+			name          = c.compileIdentifier(member.Name, true, "")
+			privateName   = c.compileIdentifier(member.Name, false, "")
+		)
+		tag.Ordinal = member.Ordinal
+		tag2.reverseOfBounds = append(tag2.reverseOfBounds, member.Ordinal)
+		members = append(members, TableMember{
+			Attributes:       member.Attributes,
+			DataField:        name,
+			PrivateDataField: privateName,
+			PresenceField:    name + "Present",
+			Setter:           "Set" + name,
+			Getter:           "Get" + name,
+			Haser:            "Has" + name,
+			Clearer:          "Clear" + name,
+			Type:             ty,
+			Tags:             tagsfmt(tag, tag2),
+		})
+	}
+	return Table{
+		Attributes: val.Attributes,
+		Name:       c.compileCompoundIdentifier(val.Name, ""),
+		Size:       val.Size,
+		Alignment:  val.Alignment,
+		Members:    members,
+	}
 }
 
 func (c *compiler) compileParameter(p types.Parameter) StructMember {
@@ -831,6 +929,9 @@ func Compile(fidlData types.Root) Root {
 	}
 	for _, v := range fidlData.Unions {
 		r.Unions = append(r.Unions, c.compileUnion(v))
+	}
+	for _, v := range fidlData.Tables {
+		r.Tables = append(r.Tables, c.compileTable(v))
 	}
 	if len(fidlData.Structs) != 0 || len(fidlData.Interfaces) != 0 {
 		c.usedLibraryDeps[BindingsPackage] = BindingsAlias

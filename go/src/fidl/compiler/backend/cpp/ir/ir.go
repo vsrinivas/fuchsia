@@ -69,6 +69,7 @@ type UnionMember struct {
 }
 
 type Table struct {
+	types.Attributes
 	Namespace      string
 	Name           string
 	TableType      string
@@ -78,6 +79,7 @@ type Table struct {
 }
 
 type TableMember struct {
+	types.Attributes
 	Type              Type
 	Name              string
 	DefaultValue      string
@@ -105,6 +107,7 @@ type StructMember struct {
 }
 
 type Interface struct {
+	types.Attributes
 	Namespace       string
 	Name            string
 	ClassName       string
@@ -587,6 +590,7 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
+		Attributes:      val.Attributes,
 		Namespace:       c.namespace,
 		Name:            c.compileCompoundIdentifier(val.Name, ""),
 		ClassName:       c.compileCompoundIdentifier(val.Name, "_clazz"),
@@ -673,6 +677,7 @@ func (c *compiler) compileTableMember(val types.TableMember) TableMember {
 	}
 
 	return TableMember{
+		Attributes:        val.Attributes,
 		Type:              t,
 		Name:              changeIfReserved(val.Name, ""),
 		DefaultValue:      defaultValue,
@@ -700,6 +705,7 @@ func (m byOrdinal) Less(i, j int) bool {
 func (c *compiler) compileTable(val types.Table) Table {
 	name := c.compileCompoundIdentifier(val.Name, "")
 	r := Table{
+		Attributes:     val.Attributes,
 		Namespace:      c.namespace,
 		Name:           name,
 		TableType:      fmt.Sprintf("%s_%sTable", c.symbolPrefix, name),

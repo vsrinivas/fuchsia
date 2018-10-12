@@ -16,9 +16,10 @@ import (
 type expectKind int
 
 const (
-	expectEnum expectKind = iota
+	expectEnums expectKind = iota
 	expectStructs
 	expectInterface
+	expectTable
 )
 
 func compileExpect(t *testing.T, testName string, kind expectKind, input types.Root, wrapped_expect Root) {
@@ -26,7 +27,7 @@ func compileExpect(t *testing.T, testName string, kind expectKind, input types.R
 		wrapped_actual := Compile(input)
 		var actual, expect interface{}
 		switch kind {
-		case expectEnum:
+		case expectEnums:
 			actual = wrapped_actual.Enums
 			expect = wrapped_expect.Enums
 		case expectStructs:
@@ -35,21 +36,28 @@ func compileExpect(t *testing.T, testName string, kind expectKind, input types.R
 		case expectInterface:
 			actual = wrapped_actual.Interfaces
 			expect = wrapped_expect.Interfaces
+		case expectTable:
+			actual = wrapped_actual.Tables
+			expect = wrapped_expect.Tables
 		default:
 			panic(fmt.Sprintf("unknown expect kind %d", kind))
 		}
 		if !reflect.DeepEqual(actual, expect) {
-			t.Fatalf("expected: %+v, got %+v", expect, actual)
+			t.Fatalf("expected: %+v,\ngot     :%+v", expect, actual)
 		}
 	})
 }
 
 func compileEnumsExpect(t *testing.T, testName string, input []types.Enum, expect []Enum) {
-	compileExpect(t, testName, expectEnum, types.Root{Enums: input}, Root{Enums: expect})
+	compileExpect(t, testName, expectEnums, types.Root{Enums: input}, Root{Enums: expect})
 }
 
 func compileStructsExpect(t *testing.T, testName string, input []types.Struct, expect []Struct) {
 	compileExpect(t, testName, expectStructs, types.Root{Structs: input}, Root{Structs: expect})
+}
+
+func compileTableExpect(t *testing.T, testName string, input types.Table, expect Table) {
+	compileExpect(t, testName, expectTable, types.Root{Tables: []types.Table{input}}, Root{Tables: []Table{expect}})
 }
 
 func compileInterfaceExpect(t *testing.T, testName string, input types.Interface, expect Interface) {
@@ -613,4 +621,103 @@ func TestCompileInterface(t *testing.T) {
 			},
 		},
 	})
+}
+func TestCompileTable(t *testing.T) {
+	five, seven := 5, 7
+	compileTableExpect(
+		t,
+		"Basic",
+		types.Table{
+			Name:      types.EncodedCompoundIdentifier("Test"),
+			Size:      123,
+			Alignment: 456,
+			Members: []types.TableMember{
+				{
+					Reserved: true,
+					Ordinal:  1,
+				},
+				{
+					Ordinal:  2,
+					Name:     "second",
+					Reserved: false,
+					Type:     VectorType(PrimitiveType(types.Uint32), &seven),
+				},
+			},
+		},
+		Table{
+			Name:      "Test",
+			Size:      123,
+			Alignment: 456,
+			Members: []TableMember{
+				{
+					Type:             "[]uint32",
+					DataField:        "Second",
+					PrivateDataField: "second",
+					PresenceField:    "SecondPresent",
+					Setter:           "SetSecond",
+					Getter:           "GetSecond",
+					Haser:            "HasSecond",
+					Clearer:          "ClearSecond",
+					Tags:             "`" + `fidl:"7,2" fidl2:"2,7"` + "`",
+				},
+			},
+		})
+
+	compileTableExpect(
+		t,
+		"MoreComplex",
+		types.Table{
+			Name:      types.EncodedCompoundIdentifier("Test"),
+			Size:      123,
+			Alignment: 456,
+			Members: []types.TableMember{
+				{
+					Ordinal:  1,
+					Reserved: true,
+				},
+				{
+					Ordinal: 2,
+					Name:    "second",
+					Type:    VectorType(ArrayType(VectorType(PrimitiveType(types.Uint32), &seven), 6), &five),
+				},
+				{
+					Ordinal:  3,
+					Reserved: true,
+				},
+				{
+					Ordinal: 4,
+					Name:    "fourth",
+					Type:    VectorType(Nullable(HandleType()), &five),
+				},
+			},
+		},
+		Table{
+			Name:      "Test",
+			Size:      123,
+			Alignment: 456,
+			Members: []TableMember{
+				{
+					Type:             "[][6][]uint32",
+					DataField:        "Second",
+					PrivateDataField: "second",
+					PresenceField:    "SecondPresent",
+					Setter:           "SetSecond",
+					Getter:           "GetSecond",
+					Haser:            "HasSecond",
+					Clearer:          "ClearSecond",
+					Tags:             "`" + `fidl:"7,5,2" fidl2:"2,5,7"` + "`",
+				},
+				{
+					Type:             "[]_zx.Handle",
+					DataField:        "Fourth",
+					PrivateDataField: "fourth",
+					PresenceField:    "FourthPresent",
+					Setter:           "SetFourth",
+					Getter:           "GetFourth",
+					Haser:            "HasFourth",
+					Clearer:          "ClearFourth",
+					Tags:             "`" + `fidl:"*,5,4" fidl2:"4,5,1"` + "`",
+				},
+			},
+		})
 }
