@@ -24,14 +24,20 @@ TimerManager::~TimerManager() {
     if (timer_) { timer_->CancelTimer(); }
 }
 
+void TimerManager::CleanUp(zx::time now) {
+    while (!events_.empty() && events_.top() <= now) {
+         events_.pop();
+    }
+}
+
 zx_status_t TimerManager::Schedule(zx::time deadline, TimedEvent* event) {
     ZX_DEBUG_ASSERT(timer_ != nullptr);
     ZX_DEBUG_ASSERT(event != nullptr);
 
+    if (!events_.empty()) { CleanUp(Now()); };
     events_.push(deadline);
 
     if (events_.top() == deadline) {
-        timer_->CancelTimer();
         zx_status_t status = timer_->SetTimer(deadline);
         if (status != ZX_OK) { return status; }
     }
@@ -44,9 +50,7 @@ zx::time TimerManager::HandleTimeout() {
     ZX_DEBUG_ASSERT(timer_ != nullptr);
 
     zx::time now = Now();
-    while (!events_.empty() && events_.top() <= now) {
-        events_.pop();
-    }
+    CleanUp(now);
 
     timer_->CancelTimer();
     if (!events_.empty()) { timer_->SetTimer(events_.top()); }

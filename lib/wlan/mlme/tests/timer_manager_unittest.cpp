@@ -81,6 +81,7 @@ TEST_F(TimerManagerTest, ScheduleWithFailure) {
 TEST_F(TimerManagerTest, UpdateTimerAfterSchedule) {
     // Schedule event and verify timer was started.
     TimedEvent event;
+    clock()->Set(zx::time(0));
     auto status = timer_manager->Schedule(zx::time(40), &event);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(timer()->deadline, zx::time(40));
@@ -106,6 +107,7 @@ TEST_F(TimerManagerTest, Move) {
 TEST_F(TimerManagerTest, UpdateTimerAfterTimeoutTriggered) {
     // Schedule multiple events.
     TimedEvent event;
+    clock()->Set(zx::time(0));
     timer_manager->Schedule(zx::time(40), &event);
     timer_manager->Schedule(zx::time(50), &event);
     timer_manager->Schedule(zx::time(40), &event);
@@ -152,6 +154,16 @@ TEST_F(TimerManagerTest, Now) {
     clock()->Set(zx::time(0));
     ASSERT_EQ(timer_manager->Now(), zx::time(0));
     ASSERT_EQ(timer_manager->HandleTimeout(), zx::time(0));
+}
+
+TEST_F(TimerManagerTest, ForgotToHandleTimeout) {
+    clock()->Set(zx::time(0));
+    TimedEvent event;
+    timer_manager->Schedule(zx::time(40), &event);
+    event.Cancel();
+    clock()->Set(zx::time(50));
+    timer_manager->Schedule(zx::time(60), &event);
+    ASSERT_EQ(timer()->deadline, zx::time(60));
 }
 
 }  // namespace

@@ -48,6 +48,7 @@ class TimerManager {
     Timer* timer() { return timer_.get(); }
 
   private:
+    void CleanUp(zx::time now);
     std::priority_queue<zx::time, std::vector<zx::time>, std::greater<zx::time>> events_;
     fbl::unique_ptr<Timer> timer_;
 };
