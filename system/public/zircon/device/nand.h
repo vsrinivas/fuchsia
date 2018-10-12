@@ -6,12 +6,10 @@
 
 #include <zircon/nand/c/fidl.h>
 
-enum {
-    NAND_CLASS_PARTMAP = 1,   // NAND device contains multiple partitions.
-    NAND_CLASS_FTL = 2,       // NAND device is a FTL partition.
-    NAND_CLASS_BBS = 3,       // NAND device is a bad block skip partition.
-    NAND_CLASS_DUMMY = 4      // Test or otherwise unknown device.
-};
+#define NAND_CLASS_PARTMAP 1   // NAND device contains multiple partitions.
+#define NAND_CLASS_FTL 2       // NAND device is a FTL partition.
+#define NAND_CLASS_BBS 3       // NAND device is a bad block skip partition.
+#define NAND_CLASS_DUMMY 4     // Test or otherwise unknown device.
 
 // TODO(ZX-2677): Remove this when done.
 typedef zircon_nand_Info nand_info_t;

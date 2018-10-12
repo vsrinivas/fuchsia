@@ -12,14 +12,13 @@
 
 __BEGIN_CDECLS
 
-enum {
-    // Device type for MIDI source
-    MIDI_TYPE_SOURCE = (1u << 0),
-    // Device type for MIDI sink
-    MIDI_TYPE_SINK   = (1u << 1),
+// Device type for MIDI source
+#define MIDI_TYPE_SOURCE (1u << 0)
 
-    MIDI_TYPE_SINK_SOURCE = MIDI_TYPE_SINK | MIDI_TYPE_SOURCE,
-};
+// Device type for MIDI sink
+#define MIDI_TYPE_SINK (1u << 1)
+
+#define MIDI_TYPE_SINK_SOURCE (MIDI_TYPE_SINK | MIDI_TYPE_SOURCE)
 
 // returns the device type (either MIDI_TYPE_SOURCE or MIDI_TYPE_SINK)
 // call with out_len = sizeof(int)

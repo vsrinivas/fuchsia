@@ -8,10 +8,8 @@
 #include <zircon/device/ioctl-wrapper.h>
 #include <zircon/types.h>
 
-enum {
-    USB_TESTER_DATA_PATTERN_CONSTANT = 1,
-    USB_TESTER_DATA_PATTERN_RANDOM   = 2,
-};
+#define USB_TESTER_DATA_PATTERN_CONSTANT 1
+#define USB_TESTER_DATA_PATTERN_RANDOM 2
 
 typedef struct usb_tester_params {
     uint32_t data_pattern;  // USB_TESTER_DATA_PATTERN_CONSTANT or USB_TESTER_DATA_PATTERN_RANDOM.

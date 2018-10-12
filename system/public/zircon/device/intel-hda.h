@@ -24,18 +24,16 @@
 
 __BEGIN_CDECLS
 
-typedef enum ihda_cmd {
-    IHDA_CMD_GET_IDS                  = 0x1000,
-    IHDA_CONTROLLER_CMD_SNAPSHOT_REGS = 0x2000,
-    IHDA_CODEC_SEND_CORB_CMD          = 0x3000,
-    IHDA_CODEC_REQUEST_STREAM         = 0x3001,
-    IHDA_CODEC_RELEASE_STREAM         = 0x3002,
-    IHDA_CODEC_SET_STREAM_FORMAT      = 0x3003,
-
-    IHDA_NOACK_FLAG                   = 0x80000000,
-    IHDA_CODEC_SEND_CORB_CMD_NOACK    = IHDA_NOACK_FLAG | IHDA_CODEC_SEND_CORB_CMD,
-    IHDA_CODEC_RELEASE_STREAM_NOACK   = IHDA_NOACK_FLAG | IHDA_CODEC_RELEASE_STREAM,
-} ihda_cmd_t;
+typedef uint32_t ihda_cmd_t;
+#define IHDA_CMD_GET_IDS                  ((ihda_cmd_t)0x1000)
+#define IHDA_CONTROLLER_CMD_SNAPSHOT_REGS ((ihda_cmd_t)0x2000)
+#define IHDA_CODEC_SEND_CORB_CMD          ((ihda_cmd_t)0x3000)
+#define IHDA_CODEC_REQUEST_STREAM         ((ihda_cmd_t)0x3001)
+#define IHDA_CODEC_RELEASE_STREAM         ((ihda_cmd_t)0x3002)
+#define IHDA_CODEC_SET_STREAM_FORMAT      ((ihda_cmd_t)0x3003)
+#define IHDA_NOACK_FLAG                   ((ihda_cmd_t)0x80000000)
+#define IHDA_CODEC_SEND_CORB_CMD_NOACK    ((ihda_cmd_t)(IHDA_NOACK_FLAG | IHDA_CODEC_SEND_CORB_CMD))
+#define IHDA_CODEC_RELEASE_STREAM_NOACK   ((ihda_cmd_t)(IHDA_NOACK_FLAG | IHDA_CODEC_RELEASE_STREAM))
 
 typedef struct ihda_cmd_hdr {
     zx_txid_t  transaction_id;

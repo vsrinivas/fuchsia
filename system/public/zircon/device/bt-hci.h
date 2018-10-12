@@ -13,12 +13,11 @@
 __BEGIN_CDECLS
 
 // Potential values for the flags bitfield in a snoop channel packet.
-typedef enum {
-  BT_HCI_SNOOP_TYPE_CMD = 0,
-  BT_HCI_SNOOP_TYPE_EVT = 1,
-  BT_HCI_SNOOP_TYPE_ACL = 2,
-  BT_HCI_SNOOP_TYPE_SCO = 3,
-} bt_hci_snoop_type_t;
+typedef uint32_t bt_hci_snoop_type_t;
+#define BT_HCI_SNOOP_TYPE_CMD ((bt_hci_snoop_type_t)0)
+#define BT_HCI_SNOOP_TYPE_EVT ((bt_hci_snoop_type_t)1)
+#define BT_HCI_SNOOP_TYPE_ACL ((bt_hci_snoop_type_t)2)
+#define BT_HCI_SNOOP_TYPE_SCO ((bt_hci_snoop_type_t)3)
 
 #define BT_HCI_SNOOP_FLAG_RECV 0x04 // Host -> Controller
 

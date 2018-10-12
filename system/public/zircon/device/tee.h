@@ -37,15 +37,14 @@ IOCTL_WRAPPER_OUT(ioctl_tee_get_description, IOCTL_TEE_GET_DESCRIPTION, tee_ioct
 // TODO(rjascani): Eventually, this should evolve into a generic parameter set. The possible
 // parameters required to open a communication channel with a Trusted Application will vary
 // depending on the Trusted OS. This will be easier to accomplish once we've migrated to FIDL.
-typedef enum {
-    TEE_PARAM_TYPE_NONE,
-    TEE_PARAM_TYPE_VALUE_INPUT,
-    TEE_PARAM_TYPE_VALUE_OUTPUT,
-    TEE_PARAM_TYPE_VALUE_INOUT,
-    TEE_PARAM_TYPE_MEMREF_INPUT,
-    TEE_PARAM_TYPE_MEMREF_OUTPUT,
-    TEE_PARAM_TYPE_MEMREF_INOUT,
-} tee_ioctl_param_type_t;
+typedef uint32_t tee_ioctl_param_type_t;
+#define TEE_PARAM_TYPE_NONE          ((tee_ioctl_param_type_t)0)
+#define TEE_PARAM_TYPE_VALUE_INPUT   ((tee_ioctl_param_type_t)1)
+#define TEE_PARAM_TYPE_VALUE_OUTPUT  ((tee_ioctl_param_type_t)2)
+#define TEE_PARAM_TYPE_VALUE_INOUT   ((tee_ioctl_param_type_t)3)
+#define TEE_PARAM_TYPE_MEMREF_INPUT  ((tee_ioctl_param_type_t)4)
+#define TEE_PARAM_TYPE_MEMREF_OUTPUT ((tee_ioctl_param_type_t)5)
+#define TEE_PARAM_TYPE_MEMREF_INOUT  ((tee_ioctl_param_type_t)6)
 
 typedef struct tee_ioctl_param {
     tee_ioctl_param_type_t type;

@@ -8,10 +8,7 @@
 #include <stdint.h>
 
 typedef uint32_t usb_mode_t;
-
-// clang-format off
-#define USB_MODE_NONE       0
-#define USB_MODE_HOST       1
-#define USB_MODE_PERIPHERAL 2
-#define USB_MODE_OTG        3
-// clang-format on
+#define USB_MODE_NONE ((usb_mode_t)0)
+#define USB_MODE_HOST ((usb_mode_t)1)
+#define USB_MODE_PERIPHERAL ((usb_mode_t)2)
+#define USB_MODE_OTG ((usb_mode_t)3)
