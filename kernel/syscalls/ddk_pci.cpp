@@ -12,7 +12,6 @@
 #include <string.h>
 #include <trace.h>
 
-#include <dev/address_provider/ecam_region.h>
 #include <dev/interrupt.h>
 #include <lib/pci/pio.h>
 #include <lib/user_copy/user_ptr.h>
@@ -45,6 +44,7 @@ static inline void shutdown_early_init_console() {
 }
 
 #ifdef WITH_KERNEL_PCIE
+#include <dev/address_provider/ecam_region.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_root.h>
 #include <object/pci_device_dispatcher.h>
