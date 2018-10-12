@@ -13,6 +13,11 @@
 
 #include <threads.h>
 
+// BTI IDs for our devices
+enum {
+    BTI_DISPLAY,
+};
+
 namespace board_mt8167 {
 
 enum {
@@ -40,6 +45,7 @@ private:
     zx_status_t EmmcInit();
     zx_status_t SocInit();
     zx_status_t GpioInit();
+    zx_status_t DisplayInit();
     int Thread();
 
     ddk::PlatformBusProtocolProxy pbus_;

@@ -8,18 +8,14 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS := \
+MODULE_SRCS += \
     $(LOCAL_DIR)/bind.c \
-    $(LOCAL_DIR)/mt8167.cpp \
-    $(LOCAL_DIR)/mt8167-emmc.cpp \
-    $(LOCAL_DIR)/mt8167-soc.cpp \
-    $(LOCAL_DIR)/mt8167-gpio.cpp \
-    $(LOCAL_DIR)/mt8167-display.cpp \
+    $(LOCAL_DIR)/mt8167s-display.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/dev/lib/mt8167 \
     system/ulib/ddk \
     system/ulib/ddktl \
+    system/ulib/hwreg \
     system/ulib/fbl \
     system/ulib/zx \
     system/ulib/zxcpp \

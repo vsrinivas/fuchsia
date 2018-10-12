@@ -60,9 +60,12 @@ int Mt8167::Thread() {
         zxlogf(ERROR, "GpioInit() failed\n");
         return -1;
     }
-
     if (EmmcInit() != ZX_OK) {
         zxlogf(ERROR, "EmmcInit() failed\n");
+        return -1;
+    }
+    if (DisplayInit() != ZX_OK) {
+        zxlogf(ERROR, "DisplayInit() failed\n");
         return -1;
     }
     return 0;
