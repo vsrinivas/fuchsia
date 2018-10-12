@@ -4,16 +4,14 @@
 
 use account_common::{FidlLocalAccountId, LocalAccountId};
 use fidl::encoding::OutOfLine;
-use fidl::endpoints::{ClientEnd, RequestStream, ServerEnd};
+use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl::Error;
 use fidl_fuchsia_auth::{AuthState, AuthStateSummary, AuthenticationContextProviderMarker};
 use fidl_fuchsia_auth_account::{AccountAuthState, AccountListenerMarker, AccountListenerOptions,
-                                AccountManagerRequest, AccountManagerRequestStream, AccountMarker,
-                                Status};
-use fuchsia_async as fasync;
+                                AccountManagerRequest, AccountMarker, Status};
 use futures::future;
 use futures::prelude::*;
-use log::{error, info};
+use log::info;
 use std::collections::BTreeSet;
 
 /// The core component of the account system for Fuchsia.
@@ -32,17 +30,12 @@ pub struct AccountManager {
 }
 
 impl AccountManager {
-    /// Creates a new AccountManager to handle requests from the supplied channel.
-    pub fn spawn(chan: fasync::Channel) {
-        let mut account_manager = AccountManager {
+    /// Constructs a new AccountManager with no accounts.
+    pub fn new() -> AccountManager {
+        AccountManager {
             next_id: 1,
             ids: BTreeSet::new(),
-        };
-        fasync::spawn(
-            AccountManagerRequestStream::from_channel(chan)
-                .try_for_each(move |req| account_manager.handle_request(req))
-                .unwrap_or_else(|e| error!("Error running AccountManager {:?}", e)),
-        )
+        }
     }
 
     /// (Temporary) A fixed AuthState that is used for all accounts until authenticators are
@@ -55,7 +48,7 @@ impl AccountManager {
     ///
     /// Note: We define this method as asynchronous since most of the interface methods will
     /// require asynchronous processing in the near future.
-    fn handle_request(
+    pub fn handle_request(
         &mut self, req: AccountManagerRequest,
     ) -> impl Future<Output = Result<(), Error>> {
         match req {
@@ -159,7 +152,9 @@ impl AccountManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_auth_account::AccountManagerProxy;
+    use fidl::endpoints::RequestStream;
+    use fidl_fuchsia_auth_account::{AccountManagerProxy, AccountManagerRequestStream};
+    use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
 
     const TEST_AUTH_PROVIDER_TYPE: &str = "dev";
@@ -173,7 +168,14 @@ mod tests {
         let (server_chan, client_chan) = zx::Channel::create().expect("Failed to create channel");
 
         let proxy = AccountManagerProxy::new(fasync::Channel::from_channel(client_chan).unwrap());
-        AccountManager::spawn(fasync::Channel::from_channel(server_chan).unwrap());
+        let mut account_manager = AccountManager::new();
+        fasync::spawn(
+            AccountManagerRequestStream::from_channel(
+                fasync::Channel::from_channel(server_chan).unwrap(),
+            )
+            .try_for_each(move |req| account_manager.handle_request(req))
+            .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err))
+        );
 
         executor
             .run_singlethreaded(test_fn(proxy))
