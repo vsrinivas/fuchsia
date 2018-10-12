@@ -34,6 +34,11 @@ struct TcpStateInner<I: Ip> {
     listeners: HashMap<TwoTuple<I::Addr>, Listener>,
 }
 
+/// The identifier for timer events in the TCP layer.
+pub struct TcpTimerId {
+    // TODO
+}
+
 #[derive(Eq, PartialEq, Hash)]
 struct TwoTuple<A: IpAddr> {
     local_ip: A,

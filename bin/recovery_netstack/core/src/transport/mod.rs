@@ -81,6 +81,17 @@ impl<D: EventDispatcher> Default for TransportLayerState<D> {
     }
 }
 
+/// The identifier for timer events in the transport layer.
+pub enum TransportLayerTimerId {
+    /// A timer event in the TCP layer
+    Tcp(tcp::TcpTimerId),
+}
+
+/// Handle a timer event firing in the transport layer.
+pub fn handle_timer_event(id: TransportLayerTimerId) {
+    unimplemented!()
+}
+
 /// An event dispatcher for the transport layer.
 ///
 /// See the `EventDispatcher` trait in the crate root for more details.

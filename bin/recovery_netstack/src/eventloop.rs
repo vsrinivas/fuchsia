@@ -16,7 +16,7 @@ use futures::prelude::*;
 
 use netstack_core::{receive_frame, set_ip_addr, Context, DeviceId, DeviceLayerEventDispatcher,
                     EventDispatcher, UdpEventDispatcher, Ipv4Addr, Mac, StackState, Subnet,
-                    TransportLayerEventDispatcher};
+                    TransportLayerEventDispatcher, TimerId};
 
 /// The event loop.
 pub struct EventLoop {
@@ -93,8 +93,16 @@ struct EventLoopInner {
 }
 
 impl EventDispatcher for EventLoopInner {
-    fn schedule_timeout<F: FnOnce(&mut Context<Self>)>(&mut self, _duration: (), _f: F) {
-        // TODO(joshlf)
+    fn schedule_timeout(&mut self, _duration: std::time::Duration, _id: TimerId) -> Option<std::time::Instant> {
+        unimplemented!()
+    }
+
+    fn schedule_timeout_instant(&mut self, _time: std::time::Instant, _id: TimerId) -> Option<std::time::Instant> {
+        unimplemented!()
+    }
+
+    fn cancel_timeout(&mut self, id: TimerId) -> Option<std::time::Instant> {
+        unimplemented!()
     }
 }
 

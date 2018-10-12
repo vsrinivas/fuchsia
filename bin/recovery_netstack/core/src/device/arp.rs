@@ -61,6 +61,14 @@ impl ArpHardwareType {
     }
 }
 
+/// The identifier for timer events in the ARP layer.
+///
+/// This is used to retry sending ARP requests.
+pub struct ArpTimerId<P: PType> {
+    device_id: u64,
+    ip_addr: P,
+}
+
 /// A device layer protocol which can support ARP.
 ///
 /// An `ArpDevice<P>` is a device layer protocol which can support ARP with the

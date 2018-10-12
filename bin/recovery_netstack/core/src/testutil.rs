@@ -11,7 +11,7 @@ use rand::{SeedableRng, XorShiftRng};
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
-use crate::{Context, EventDispatcher};
+use crate::{Context, EventDispatcher, TimerId};
 
 /// Create a new deterministic RNG from a seed.
 pub fn new_rng(mut seed: u64) -> impl SeedableRng<[u32; 4]> {
@@ -95,7 +95,15 @@ impl DeviceLayerEventDispatcher for DummyEventDispatcher {
 }
 
 impl EventDispatcher for DummyEventDispatcher {
-    fn schedule_timeout<F: FnOnce(&mut Context<Self>)>(&mut self, duration: (), f: F) {
+    fn schedule_timeout(&mut self, _duration: std::time::Duration, _id: TimerId) -> Option<std::time::Instant> {
+        unimplemented!()
+    }
+
+    fn schedule_timeout_instant(&mut self, _time: std::time::Instant, _id: TimerId) -> Option<std::time::Instant> {
+        unimplemented!()
+    }
+
+    fn cancel_timeout(&mut self, id: TimerId) -> Option<std::time::Instant> {
         unimplemented!()
     }
 }

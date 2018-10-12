@@ -13,7 +13,7 @@ use std::fmt::{self, Debug, Display, Formatter};
 use log::debug;
 
 use crate::device::ethernet::{EthernetDeviceState, Mac};
-use crate::ip::{IpAddr, Subnet};
+use crate::ip::{IpAddr, Ipv4Addr, Subnet};
 use crate::wire::SerializationRequest;
 use crate::{Context, EventDispatcher};
 
@@ -91,6 +91,17 @@ impl DeviceLayerState {
         self.next_id += 1;
         id
     }
+}
+
+/// The identifier for timer events in the device layer.
+pub enum DeviceLayerTimerId {
+    /// A timer event in the ARP layer with a protocol type of IPv4
+    ArpIpv4(arp::ArpTimerId<Ipv4Addr>),
+}
+
+/// Handle a timer event firing in the device layer.
+pub fn handle_timer_event(id: DeviceLayerTimerId) {
+    unimplemented!()
 }
 
 /// An event dispatcher for the device layer.

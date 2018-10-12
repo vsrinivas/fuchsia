@@ -34,10 +34,10 @@ mod transport;
 mod wire;
 
 pub use crate::device::{ethernet::Mac, receive_frame, set_ip_addr, DeviceId,
-                        DeviceLayerEventDispatcher};
+                        DeviceLayerEventDispatcher, DeviceLayerTimerId};
 pub use crate::ip::{Ipv4Addr, Subnet};
 pub use crate::transport::udp::UdpEventDispatcher;
-pub use crate::transport::TransportLayerEventDispatcher;
+pub use crate::transport::{TransportLayerEventDispatcher, TransportLayerTimerId};
 
 use crate::device::DeviceLayerState;
 use crate::ip::IpLayerState;
@@ -107,6 +107,16 @@ impl<D: EventDispatcher> Context<D> {
     }
 }
 
+/// The identifier for any timer event.
+pub struct TimerId(TimerIdInner);
+
+enum TimerIdInner {
+    /// A timer event in the device layer.
+    DeviceLayer(DeviceLayerTimerId),
+    /// A timer event in the transport layer.
+    TransportLayer(TransportLayerTimerId),
+}
+
 /// An object which can dispatch events to a real system.
 ///
 /// An `EventDispatcher` provides access to a real system. It provides the
@@ -115,11 +125,31 @@ impl<D: EventDispatcher> Context<D> {
 /// that must be supported in order to support that layer of the stack. The
 /// `EventDispatcher` trait is a sub-trait of all of these traits.
 pub trait EventDispatcher: DeviceLayerEventDispatcher + TransportLayerEventDispatcher {
-    // TODO(joshlf): Figure out how to cancel timeouts.
-
     /// Schedule a callback to be invoked after a timeout.
     ///
-    /// `schedule_timeout` schedules `f` to be invoked after `duration` has
-    /// elapsed.
-    fn schedule_timeout<F: FnOnce(&mut Context<Self>)>(&mut self, duration: (), f: F);
+    /// `schedule_timeout` schedules `f` to be invoked after `duration` has elapsed, overwriting any
+    /// previous timeout with the same ID.
+    ///
+    /// If there was previously a timer with that ID, return the time at which is was scheduled to
+    /// fire.
+    fn schedule_timeout(
+        &mut self, duration: std::time::Duration, id: TimerId,
+    ) -> Option<std::time::Instant>;
+
+    /// Schedule a callback to be invoked at a specific time.
+    ///
+    /// `schedule_timeout_instant` schedules `f` to be invoked at `time`, overwriting any previous
+    /// timeout with the same ID.
+    ///
+    /// If there was previously a timer with that ID, return the time at which is was scheduled to
+    /// fire.
+    fn schedule_timeout_instant(
+        &mut self, time: std::time::Instant, id: TimerId,
+    ) -> Option<std::time::Instant>;
+
+    /// Cancel a timeout.
+    ///
+    /// Returns true if the timeout was cancelled, false if there was no timeout
+    /// for the given ID.
+    fn cancel_timeout(&mut self, id: TimerId) -> Option<std::time::Instant>;
 }
