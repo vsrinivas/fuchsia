@@ -42,7 +42,7 @@ guest_package("linux_guest") {
   } else if (target_cpu == "x64") {
     cmdline = "earlycon=uart,io,0x3f8"
   }
-  cmdline += " console=hvc0 console=tty0 root=/dev/vda"
+  cmdline += " console=hvc0 console=tty0 root=/dev/vda rw"
 
   linux = "$target_out_dir/linux/Image"
 
