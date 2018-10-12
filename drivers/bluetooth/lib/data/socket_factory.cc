@@ -8,10 +8,11 @@
 #include <zircon/status.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/socket_channel_relay.h"
+
+#include "socket_channel_relay.h"
 
 namespace btlib {
-namespace l2cap {
+namespace data {
 
 SocketFactory::SocketFactory() : weak_ptr_factory_(this) {}
 
@@ -19,7 +20,8 @@ SocketFactory::~SocketFactory() {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 }
 
-zx::socket SocketFactory::MakeSocketForChannel(fbl::RefPtr<Channel> channel) {
+zx::socket SocketFactory::MakeSocketForChannel(
+    fbl::RefPtr<l2cap::Channel> channel) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(channel);
 
@@ -41,8 +43,8 @@ zx::socket SocketFactory::MakeSocketForChannel(fbl::RefPtr<Channel> channel) {
   auto relay = std::make_unique<internal::SocketChannelRelay>(
       std::move(local_socket), channel,
       internal::SocketChannelRelay::DeactivationCallback(
-          [self =
-               weak_ptr_factory_.GetWeakPtr()](ChannelId channel_id) mutable {
+          [self = weak_ptr_factory_.GetWeakPtr()](
+              l2cap::ChannelId channel_id) mutable {
             ZX_DEBUG_ASSERT_MSG(self, "(channel_id=%u)", channel_id);
             size_t n_erased = self->channel_to_relay_.erase(channel_id);
             ZX_DEBUG_ASSERT_MSG(n_erased == 1, "(n_erased=%zu, channel_id=%u)",
@@ -61,5 +63,5 @@ zx::socket SocketFactory::MakeSocketForChannel(fbl::RefPtr<Channel> channel) {
   return remote_socket;
 }
 
-}  // namespace l2cap
+}  // namespace data
 }  // namespace btlib

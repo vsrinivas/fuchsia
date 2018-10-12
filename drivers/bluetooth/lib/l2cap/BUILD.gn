@@ -45,10 +45,6 @@ static_library("l2cap") {
     "sdu.h",
     "signaling_channel.cc",
     "signaling_channel.h",
-    "socket_channel_relay.cc",
-    "socket_channel_relay.h",
-    "socket_factory.cc",
-    "socket_factory.h",
   ]
 
   public_deps = [
@@ -96,8 +92,6 @@ source_set("tests") {
     "recombiner_unittest.cc",
     "scoped_channel_unittest.cc",
     "signaling_channel_unittest.cc",
-    "socket_channel_relay_unittest.cc",
-    "socket_factory_unittest.cc",
   ]
 
   deps = [

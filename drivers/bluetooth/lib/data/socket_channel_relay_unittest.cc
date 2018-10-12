@@ -17,18 +17,18 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel.h"
 
 namespace btlib {
-namespace l2cap {
+namespace data {
 namespace {
 
-class L2CAP_SocketChannelRelayTest : public ::testing::Test {
+class DATA_SocketChannelRelayTest : public ::testing::Test {
  public:
-  L2CAP_SocketChannelRelayTest() : loop_(&kAsyncLoopConfigAttachToThread) {
+  DATA_SocketChannelRelayTest() : loop_(&kAsyncLoopConfigAttachToThread) {
     EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop_.GetState());
 
-    constexpr ChannelId kDynamicChannelIdMin = 0x0040;
-    constexpr ChannelId kRemoteChannelId = 0x0050;
+    constexpr l2cap::ChannelId kDynamicChannelIdMin = 0x0040;
+    constexpr l2cap::ChannelId kRemoteChannelId = 0x0050;
     constexpr hci::ConnectionHandle kDefaultConnectionHandle = 0x0001;
-    channel_ = fbl::AdoptRef(new testing::FakeChannel(
+    channel_ = fbl::AdoptRef(new l2cap::testing::FakeChannel(
         kDynamicChannelIdMin, kRemoteChannelId, kDefaultConnectionHandle,
         hci::Connection::LinkType::kACL));
     EXPECT_TRUE(channel_);
@@ -97,7 +97,7 @@ class L2CAP_SocketChannelRelayTest : public ::testing::Test {
  protected:
   static constexpr auto kGoodChar = 'a';
   static constexpr auto kSpamChar = 'b';
-  fbl::RefPtr<testing::FakeChannel> channel() { return channel_; }
+  fbl::RefPtr<l2cap::testing::FakeChannel> channel() { return channel_; }
   async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
   zx::socket* local_socket() { return &local_socket_; }
   zx::unowned_socket local_socket_unowned() {
@@ -114,7 +114,7 @@ class L2CAP_SocketChannelRelayTest : public ::testing::Test {
   void ShutdownLoop() { loop_.Shutdown(); }
 
  private:
-  fbl::RefPtr<testing::FakeChannel> channel_;
+  fbl::RefPtr<l2cap::testing::FakeChannel> channel_;
   zx::socket local_socket_;
   zx::socket remote_socket_;
   zx::unowned_socket local_socket_unowned_;
@@ -123,15 +123,14 @@ class L2CAP_SocketChannelRelayTest : public ::testing::Test {
   async::Loop loop_;
 };
 
-class L2CAP_SocketChannelRelayLifetimeTest
-    : public L2CAP_SocketChannelRelayTest {
+class DATA_SocketChannelRelayLifetimeTest : public DATA_SocketChannelRelayTest {
  public:
-  L2CAP_SocketChannelRelayLifetimeTest()
+  DATA_SocketChannelRelayLifetimeTest()
       : was_deactivation_callback_invoked_(false),
         relay_(std::make_unique<internal::SocketChannelRelay>(
-            ConsumeLocalSocket(), channel(),
-            [this](ChannelId) { was_deactivation_callback_invoked_ = true; })) {
-  }
+            ConsumeLocalSocket(), channel(), [this](l2cap::ChannelId) {
+              was_deactivation_callback_invoked_ = true;
+            })) {}
 
  protected:
   bool was_deactivation_callback_invoked() {
@@ -148,26 +147,26 @@ class L2CAP_SocketChannelRelayLifetimeTest
   std::unique_ptr<internal::SocketChannelRelay> relay_;
 };
 
-TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
+TEST_F(DATA_SocketChannelRelayLifetimeTest,
        ActivateFailsIfGivenStoppedDispatcher) {
   ShutdownLoop();
   EXPECT_FALSE(relay()->Activate());
 }
 
-TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
+TEST_F(DATA_SocketChannelRelayLifetimeTest,
        ActivateDoesNotInvokeDeactivationCallbackOnSuccess) {
   ASSERT_TRUE(relay()->Activate());
   EXPECT_FALSE(was_deactivation_callback_invoked());
 }
 
-TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
+TEST_F(DATA_SocketChannelRelayLifetimeTest,
        ActivateDoesNotInvokeDeactivationCallbackOnFailure) {
   ShutdownLoop();
   ASSERT_FALSE(relay()->Activate());
   EXPECT_FALSE(was_deactivation_callback_invoked());
 }
 
-TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
+TEST_F(DATA_SocketChannelRelayLifetimeTest,
        SocketIsClosedWhenRelayIsDestroyed) {
   const char data = kGoodChar;
   ASSERT_EQ(ZX_OK, remote_socket()->write(0, &data, sizeof(data), nullptr));
@@ -176,7 +175,7 @@ TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
             remote_socket()->write(0, &data, sizeof(data), nullptr));
 }
 
-TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
+TEST_F(DATA_SocketChannelRelayLifetimeTest,
        RelayIsDeactivatedWhenDispatcherIsShutDown) {
   ASSERT_TRUE(relay()->Activate());
 
@@ -184,13 +183,13 @@ TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
   EXPECT_TRUE(was_deactivation_callback_invoked());
 }
 
-TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
+TEST_F(DATA_SocketChannelRelayLifetimeTest,
        RelayActivationFailsIfChannelActivationFails) {
   channel()->set_activate_fails(true);
   EXPECT_FALSE(relay()->Activate());
 }
 
-TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
+TEST_F(DATA_SocketChannelRelayLifetimeTest,
        DestructionWithPendingSdusFromChannelDoesNotCrash) {
   ASSERT_TRUE(relay()->Activate());
   channel()->Receive(common::CreateStaticByteBuffer('h', 'e', 'l', 'l', 'o'));
@@ -198,7 +197,7 @@ TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
   RunLoopUntilIdle();
 }
 
-TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
+TEST_F(DATA_SocketChannelRelayLifetimeTest,
        RelayIsDeactivatedWhenChannelIsClosed) {
   ASSERT_TRUE(relay()->Activate());
 
@@ -206,7 +205,7 @@ TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
   EXPECT_TRUE(was_deactivation_callback_invoked());
 }
 
-TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
+TEST_F(DATA_SocketChannelRelayLifetimeTest,
        RelayIsDeactivatedWhenRemoteSocketIsClosed) {
   ASSERT_TRUE(relay()->Activate());
 
@@ -215,7 +214,7 @@ TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
   EXPECT_TRUE(was_deactivation_callback_invoked());
 }
 
-TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
+TEST_F(DATA_SocketChannelRelayLifetimeTest,
        RelayIsDeactivatedWhenRemoteSocketIsClosedEvenWithPendingSocketData) {
   ASSERT_TRUE(relay()->Activate());
   ASSERT_TRUE(StuffSocket());
@@ -229,8 +228,7 @@ TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
   EXPECT_TRUE(was_deactivation_callback_invoked());
 }
 
-TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
-       OversizedDatagramDeactivatesRelay) {
+TEST_F(DATA_SocketChannelRelayLifetimeTest, OversizedDatagramDeactivatesRelay) {
   const size_t kMessageBufSize = channel()->tx_mtu() * 5;
   common::DynamicByteBuffer large_message(kMessageBufSize);
   large_message.Fill('a');
@@ -247,7 +245,7 @@ TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
   EXPECT_TRUE(was_deactivation_callback_invoked());
 }
 
-TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
+TEST_F(DATA_SocketChannelRelayLifetimeTest,
        SocketClosureAfterChannelClosureDoesNotHangOrCrash) {
   ASSERT_TRUE(relay()->Activate());
   channel()->Close();
@@ -257,7 +255,7 @@ TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
   RunLoopUntilIdle();
 }
 
-TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
+TEST_F(DATA_SocketChannelRelayLifetimeTest,
        ChannelClosureAfterSocketClosureDoesNotHangOrCrash) {
   ASSERT_TRUE(relay()->Activate());
   CloseRemoteSocket();
@@ -267,7 +265,7 @@ TEST_F(L2CAP_SocketChannelRelayLifetimeTest,
   ASSERT_TRUE(was_deactivation_callback_invoked());
 }
 
-TEST_F(L2CAP_SocketChannelRelayLifetimeTest, DeactivationClosesSocket) {
+TEST_F(DATA_SocketChannelRelayLifetimeTest, DeactivationClosesSocket) {
   ASSERT_TRUE(relay()->Activate());
   channel()->Close();  // Triggers relay deactivation.
 
@@ -276,10 +274,9 @@ TEST_F(L2CAP_SocketChannelRelayLifetimeTest, DeactivationClosesSocket) {
             remote_socket()->write(0, &data, sizeof(data), nullptr));
 }
 
-class L2CAP_SocketChannelRelayDataPathTest
-    : public L2CAP_SocketChannelRelayTest {
+class DATA_SocketChannelRelayDataPathTest : public DATA_SocketChannelRelayTest {
  public:
-  L2CAP_SocketChannelRelayDataPathTest()
+  DATA_SocketChannelRelayDataPathTest()
       : relay_(ConsumeLocalSocket(), channel(), nullptr /* deactivation_cb */) {
     channel()->SetSendCallback(
         [&](auto data) { sent_to_channel_.push_back(std::move(data)); },
@@ -296,8 +293,8 @@ class L2CAP_SocketChannelRelayDataPathTest
 };
 
 // Fixture for tests which exercise the datapath from the controller.
-class L2CAP_SocketChannelRelayRxTest
-    : public L2CAP_SocketChannelRelayDataPathTest {
+class DATA_SocketChannelRelayRxTest
+    : public DATA_SocketChannelRelayDataPathTest {
  protected:
   common::DynamicByteBuffer ReadDatagramFromSocket(const size_t dgram_len) {
     common::DynamicByteBuffer socket_read_buffer(
@@ -316,7 +313,7 @@ class L2CAP_SocketChannelRelayRxTest
   }
 };
 
-TEST_F(L2CAP_SocketChannelRelayRxTest,
+TEST_F(DATA_SocketChannelRelayRxTest,
        MessageFromChannelIsCopiedToSocketSynchronously) {
   const auto kExpectedMessage =
       common::CreateStaticByteBuffer('h', 'e', 'l', 'l', 'o');
@@ -332,7 +329,7 @@ TEST_F(L2CAP_SocketChannelRelayRxTest,
       kExpectedMessage, ReadDatagramFromSocket(kExpectedMessage.size())));
 }
 
-TEST_F(L2CAP_SocketChannelRelayRxTest,
+TEST_F(DATA_SocketChannelRelayRxTest,
        MultipleSdusFromChannelAreCopiedToSocketPreservingSduBoundaries) {
   const auto kExpectedMessage1 =
       common::CreateStaticByteBuffer('h', 'e', 'l', 'l', 'o');
@@ -349,7 +346,7 @@ TEST_F(L2CAP_SocketChannelRelayRxTest,
       kExpectedMessage2, ReadDatagramFromSocket(kExpectedMessage2.size())));
 }
 
-TEST_F(L2CAP_SocketChannelRelayRxTest,
+TEST_F(DATA_SocketChannelRelayRxTest,
        SduFromChannelIsCopiedToSocketWhenSocketUnblocks) {
   size_t n_junk_bytes = StuffSocket();
   ASSERT_TRUE(n_junk_bytes);
@@ -366,7 +363,7 @@ TEST_F(L2CAP_SocketChannelRelayRxTest,
       kExpectedMessage, ReadDatagramFromSocket(kExpectedMessage.size())));
 }
 
-TEST_F(L2CAP_SocketChannelRelayRxTest, CanQueueAndWriteMultipleSDUs) {
+TEST_F(DATA_SocketChannelRelayRxTest, CanQueueAndWriteMultipleSDUs) {
   size_t n_junk_bytes = StuffSocket();
   ASSERT_TRUE(n_junk_bytes);
 
@@ -390,7 +387,7 @@ TEST_F(L2CAP_SocketChannelRelayRxTest, CanQueueAndWriteMultipleSDUs) {
       kExpectedMessage2, ReadDatagramFromSocket(kExpectedMessage2.size())));
 }
 
-TEST_F(L2CAP_SocketChannelRelayRxTest,
+TEST_F(DATA_SocketChannelRelayRxTest,
        CanQueueAndIncrementallyWriteMultipleSDUs) {
   // Find the socket buffer size.
   const size_t socket_buffer_size = StuffSocket();
@@ -459,7 +456,7 @@ TEST_F(L2CAP_SocketChannelRelayRxTest,
       << "Found unexpected datagram";
 }
 
-TEST_F(L2CAP_SocketChannelRelayRxTest,
+TEST_F(DATA_SocketChannelRelayRxTest,
        SdusReceivedBeforeChannelActivationAreCopiedToSocket) {
   const auto kExpectedMessage1 =
       common::CreateStaticByteBuffer('h', 'e', 'l', 'l', 'o');
@@ -477,7 +474,7 @@ TEST_F(L2CAP_SocketChannelRelayRxTest,
       kExpectedMessage2, ReadDatagramFromSocket(kExpectedMessage2.size())));
 }
 
-TEST_F(L2CAP_SocketChannelRelayRxTest,
+TEST_F(DATA_SocketChannelRelayRxTest,
        SdusPendingAtChannelClosureAreCopiedToSocket) {
   ASSERT_TRUE(StuffSocket());
   ASSERT_TRUE(relay()->Activate());
@@ -507,7 +504,7 @@ TEST_F(L2CAP_SocketChannelRelayRxTest,
       common::ContainersEqual(kExpectedMessage2, ReadDatagramFromSocket(1u)));
 }
 
-TEST_F(L2CAP_SocketChannelRelayRxTest,
+TEST_F(DATA_SocketChannelRelayRxTest,
        ReceivingFromChannelBetweenSocketCloseAndCloseWaitTriggerDoesNotCrash) {
   // Note: we call Channel::Receive() first, to force FakeChannel to deliver the
   // SDU synchronously to the SocketChannelRelay. Asynchronous delivery could
@@ -519,7 +516,7 @@ TEST_F(L2CAP_SocketChannelRelayRxTest,
 }
 
 TEST_F(
-    L2CAP_SocketChannelRelayRxTest,
+    DATA_SocketChannelRelayRxTest,
     SocketCloseBetweenReceivingFromChannelAndSocketWritabilityDoesNotCrashOrHang) {
   ASSERT_TRUE(relay()->Activate());
 
@@ -533,7 +530,7 @@ TEST_F(
   RunLoopUntilIdle();
 }
 
-TEST_F(L2CAP_SocketChannelRelayRxTest,
+TEST_F(DATA_SocketChannelRelayRxTest,
        NoDataFromChannelIsWrittenToSocketAfterDeactivation) {
   ASSERT_TRUE(relay()->Activate());
 
@@ -555,9 +552,9 @@ TEST_F(L2CAP_SocketChannelRelayRxTest,
 
 // Alias for the fixture for tests which exercise the datapath to the
 // controller.
-using L2CAP_SocketChannelRelayTxTest = L2CAP_SocketChannelRelayDataPathTest;
+using DATA_SocketChannelRelayTxTest = DATA_SocketChannelRelayDataPathTest;
 
-TEST_F(L2CAP_SocketChannelRelayTxTest, SduFromSocketIsCopiedToChannel) {
+TEST_F(DATA_SocketChannelRelayTxTest, SduFromSocketIsCopiedToChannel) {
   const auto kExpectedMessage =
       common::CreateStaticByteBuffer('h', 'e', 'l', 'l', 'o');
   ASSERT_TRUE(relay()->Activate());
@@ -577,7 +574,7 @@ TEST_F(L2CAP_SocketChannelRelayTxTest, SduFromSocketIsCopiedToChannel) {
   EXPECT_TRUE(common::ContainersEqual(kExpectedMessage, *sdus[0]));
 }
 
-TEST_F(L2CAP_SocketChannelRelayTxTest,
+TEST_F(DATA_SocketChannelRelayTxTest,
        MultipleSdusFromSocketAreCopiedToChannel) {
   const auto kExpectedMessage =
       common::CreateStaticByteBuffer('h', 'e', 'l', 'l', 'o');
@@ -604,7 +601,7 @@ TEST_F(L2CAP_SocketChannelRelayTxTest,
   EXPECT_TRUE(common::ContainersEqual(kExpectedMessage, *sdus[2]));
 }
 
-TEST_F(L2CAP_SocketChannelRelayTxTest,
+TEST_F(DATA_SocketChannelRelayTxTest,
        MultipleSdusAreCopiedToChannelInOneRelayTask) {
   const auto kExpectedMessage =
       common::CreateStaticByteBuffer('h', 'e', 'l', 'l', 'o');
@@ -633,7 +630,7 @@ TEST_F(L2CAP_SocketChannelRelayTxTest,
   EXPECT_TRUE(common::ContainersEqual(kExpectedMessage, *sdus[2]));
 }
 
-TEST_F(L2CAP_SocketChannelRelayTxTest, OversizedSduIsDropped) {
+TEST_F(DATA_SocketChannelRelayTxTest, OversizedSduIsDropped) {
   const size_t kMessageBufSize = channel()->tx_mtu() * 5;
   common::DynamicByteBuffer large_message(kMessageBufSize);
   large_message.Fill(kGoodChar);
@@ -650,7 +647,7 @@ TEST_F(L2CAP_SocketChannelRelayTxTest, OversizedSduIsDropped) {
   ASSERT_TRUE(sent_to_channel().empty());
 }
 
-TEST_F(L2CAP_SocketChannelRelayTxTest, ValidSduAfterOversizedSduIsIgnored) {
+TEST_F(DATA_SocketChannelRelayTxTest, ValidSduAfterOversizedSduIsIgnored) {
   const auto kSentMsg = common::CreateStaticByteBuffer('h', 'e', 'l', 'l', 'o');
   ASSERT_TRUE(relay()->Activate());
 
@@ -678,7 +675,7 @@ TEST_F(L2CAP_SocketChannelRelayTxTest, ValidSduAfterOversizedSduIsIgnored) {
   EXPECT_TRUE(sent_to_channel().empty());
 }
 
-TEST_F(L2CAP_SocketChannelRelayTxTest,
+TEST_F(DATA_SocketChannelRelayTxTest,
        NewSocketDataAfterChannelClosureIsNotSentToChannel) {
   ASSERT_TRUE(relay()->Activate());
   channel()->Close();
@@ -693,5 +690,5 @@ TEST_F(L2CAP_SocketChannelRelayTxTest,
 }
 
 }  // namespace
-}  // namespace l2cap
+}  // namespace data
 }  // namespace btlib

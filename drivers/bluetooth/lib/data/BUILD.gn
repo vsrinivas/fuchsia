@@ -6,6 +6,10 @@ static_library("data") {
   sources = [
     "domain.cc",
     "domain.h",
+    "socket_channel_relay.cc",
+    "socket_channel_relay.h",
+    "socket_factory.cc",
+    "socket_factory.h",
   ]
 
   deps = [
@@ -27,5 +31,21 @@ source_set("testing") {
   public_deps = [
     ":data",
     "//garnet/drivers/bluetooth/lib/l2cap:testing",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "socket_channel_relay_unittest.cc",
+    "socket_factory_unittest.cc",
+  ]
+
+  deps = [
+    ":data",
+    "//garnet/drivers/bluetooth/lib/l2cap:testing",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

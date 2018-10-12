@@ -12,12 +12,11 @@
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 
 namespace btlib {
-namespace l2cap {
-
+namespace data {
 namespace internal {
 
 SocketChannelRelay::SocketChannelRelay(zx::socket socket,
-                                       fbl::RefPtr<Channel> channel,
+                                       fbl::RefPtr<l2cap::Channel> channel,
                                        DeactivationCallback deactivation_cb)
     : state_(RelayState::kActivating),
       socket_(std::move(socket)),
@@ -69,7 +68,7 @@ bool SocketChannelRelay::Activate() {
   const auto self = weak_ptr_factory_.GetWeakPtr();
   const auto channel_id = channel_->id();
   const bool activate_success = channel_->Activate(
-      [self, channel_id](SDU sdu) {
+      [self, channel_id](l2cap::SDU sdu) {
         // Note: this lambda _may_ be invoked synchronously.
         if (self) {
           self->OnChannelDataReceived(std::move(sdu));
@@ -154,7 +153,7 @@ void SocketChannelRelay::OnSocketClosed(zx_status_t status) {
   DeactivateAndRequestDestruction();
 }
 
-void SocketChannelRelay::OnChannelDataReceived(SDU sdu) {
+void SocketChannelRelay::OnChannelDataReceived(l2cap::SDU sdu) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   // Note: kActivating is deliberately permitted, as ChannelImpl::Activate()
   // will synchronously deliver any queued frames.
@@ -253,8 +252,8 @@ void SocketChannelRelay::ServiceSocketWriteQueue() {
     ZX_DEBUG_ASSERT(socket_write_queue_.front().is_valid());
     ZX_DEBUG_ASSERT(socket_write_queue_.front().length());
 
-    const SDU& sdu = socket_write_queue_.front();
-    const auto read_success = PDU::Reader(&sdu).ReadNext(
+    const l2cap::SDU& sdu = socket_write_queue_.front();
+    const bool read_success = l2cap::PDU::Reader(&sdu).ReadNext(
         sdu.length(), [&](const common::ByteBuffer& pdu) {
           size_t n_bytes_written = 0;
           write_res =
@@ -367,5 +366,5 @@ void SocketChannelRelay::UnbindAndCancelWait(async::Wait* wait) {
 }
 
 }  // namespace internal
-}  // namespace l2cap
+}  // namespace data
 }  // namespace btlib

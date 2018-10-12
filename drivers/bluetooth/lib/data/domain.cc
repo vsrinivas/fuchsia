@@ -8,8 +8,9 @@
 #include "garnet/drivers/bluetooth/lib/common/task_domain.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel_manager.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/socket_factory.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/channel_manager.h"
+
+#include "socket_factory.h"
 
 namespace btlib {
 namespace data {
@@ -31,7 +32,7 @@ class Impl final : public Domain, public common::TaskDomain<Impl, Domain> {
 
       InitializeL2CAP();
       InitializeRFCOMM();
-      socket_factory_ = std::make_unique<l2cap::SocketFactory>();
+      socket_factory_ = std::make_unique<SocketFactory>();
 
       bt_log(TRACE, "data-domain", "initialized");
     });
@@ -198,7 +199,7 @@ class Impl final : public Domain, public common::TaskDomain<Impl, Domain> {
 
   // Creates sockets that bridge internal L2CAP and RFCOMM channels to profile
   // processes.
-  std::unique_ptr<l2cap::SocketFactory> socket_factory_;
+  std::unique_ptr<SocketFactory> socket_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Impl);
 };

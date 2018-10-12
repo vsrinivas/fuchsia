@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_SOCKET_CHANNEL_RELAY_H_
-#define GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_SOCKET_CHANNEL_RELAY_H_
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_DATA_SOCKET_CHANNEL_RELAY_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_DATA_SOCKET_CHANNEL_RELAY_H_
 
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
@@ -17,9 +17,7 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 
 namespace btlib {
-
-namespace l2cap {
-
+namespace data {
 namespace internal {
 
 // SocketChannelRelay relays data between a zx::socket and a Channel. This class
@@ -30,7 +28,7 @@ namespace internal {
 // single-threaded, must run on that same thread.
 class SocketChannelRelay final {
  public:
-  using DeactivationCallback = fit::function<void(ChannelId)>;
+  using DeactivationCallback = fit::function<void(l2cap::ChannelId)>;
 
   // Creates a SocketChannelRelay which executes on |dispatcher|. Note that
   // |dispatcher| must be single-threaded.
@@ -52,7 +50,7 @@ class SocketChannelRelay final {
   // we never leave the thread idle), and b) to provide in-order delivery,
   // moving the data between the zx::socket and the l2cap::Channel needs to be
   // serialized even in the multi-threaded case.
-  SocketChannelRelay(zx::socket socket, fbl::RefPtr<Channel> channel,
+  SocketChannelRelay(zx::socket socket, fbl::RefPtr<l2cap::Channel> channel,
                      DeactivationCallback deactivation_cb);
   ~SocketChannelRelay();
 
@@ -94,7 +92,7 @@ class SocketChannelRelay final {
   void OnSocketClosed(zx_status_t status);
 
   // Callbacks for l2cap::Channel events.
-  void OnChannelDataReceived(SDU sdu);
+  void OnChannelDataReceived(l2cap::SDU sdu);
   void OnChannelClosed();
 
   // Copies any data currently available on |socket_| to |channel_|. Does not
@@ -124,7 +122,7 @@ class SocketChannelRelay final {
   RelayState state_;  // Initial state is kActivating.
 
   zx::socket socket_;
-  const fbl::RefPtr<Channel> channel_;
+  const fbl::RefPtr<l2cap::Channel> channel_;
   async_dispatcher_t* const dispatcher_;
   DeactivationCallback deactivation_cb_;
 
@@ -139,7 +137,7 @@ class SocketChannelRelay final {
   //
   // TODO(NET-1478): Switch to common::LinkedList.
   // TODO(NET-1476): We should set an upper bound on the size of this queue.
-  std::deque<SDU> socket_write_queue_;
+  std::deque<l2cap::SDU> socket_write_queue_;
 
   const fxl::ThreadChecker thread_checker_;
   fxl::WeakPtrFactory<SocketChannelRelay> weak_ptr_factory_;  // Keep last.
@@ -148,7 +146,7 @@ class SocketChannelRelay final {
 };
 
 }  // namespace internal
-}  // namespace l2cap
+}  // namespace data
 }  // namespace btlib
 
-#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_SOCKET_CHANNEL_RELAY_H_
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_DATA_SOCKET_CHANNEL_RELAY_H_

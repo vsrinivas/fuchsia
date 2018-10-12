@@ -6,7 +6,7 @@
 #define GARNET_DRIVERS_BLUETOOTH_LIB_DATA_FAKE_DOMAIN_H_
 
 #include "garnet/drivers/bluetooth/lib/data/domain.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/socket_factory.h"
+#include "garnet/drivers/bluetooth/lib/data/socket_factory.h"
 
 namespace btlib {
 
@@ -122,7 +122,7 @@ class FakeDomain final : public Domain {
   std::unordered_map<l2cap::PSM, ChannelDelivery> inbound_conn_cbs_;
 
   // Makes sockets for RegisterService
-  l2cap::SocketFactory socket_factory_;
+  SocketFactory socket_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeDomain);
 };
