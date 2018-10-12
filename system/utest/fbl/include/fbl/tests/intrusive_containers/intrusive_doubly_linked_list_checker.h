@@ -11,6 +11,8 @@ namespace fbl {
 namespace tests {
 namespace intrusive_containers {
 
+using ::fbl::internal::is_sentinel_ptr;
+
 // Sanity checks for doubly linked lists are almost the same as those for singly
 // linked lists.  We also check to be sure that the tail pointer is properly
 // linked up (if the list is not empty) and that it is terminated with the
@@ -23,22 +25,22 @@ public:
         using PtrTraits  = typename ContainerType::PtrTraits;
         BEGIN_TEST;
 
-        typename PtrTraits::RawPtrType tmp = PtrTraits::GetRaw(container.head_);
+        typename PtrTraits::RawPtrType tmp = container.head_;
         while (true) {
             ASSERT_NONNULL(tmp, "");
 
-            if (PtrTraits::IsSentinel(tmp)) {
+            if (is_sentinel_ptr(tmp)) {
                 ASSERT_EQ(container.sentinel(), tmp, "");
                 break;
             }
 
-            tmp = PtrTraits::GetRaw(NodeTraits::node_state(*tmp).next_);
+            tmp = NodeTraits::node_state(*tmp).next_;
         }
 
         tmp = container.tail();
-        if (!PtrTraits::IsSentinel(container.head_)) {
+        if (!is_sentinel_ptr(container.head_)) {
             ASSERT_NONNULL(tmp, "");
-            tmp = PtrTraits::GetRaw(NodeTraits::node_state(*tmp).next_);
+            tmp = NodeTraits::node_state(*tmp).next_;
         }
         ASSERT_EQ(container.sentinel(), tmp, "");
 

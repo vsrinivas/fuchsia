@@ -5,6 +5,8 @@
 #pragma once
 
 #include <zircon/assert.h>
+#include <fbl/algorithm.h>
+#include <fbl/intrusive_container_utils.h>
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/macros.h>
 
@@ -36,17 +38,32 @@ namespace fbl {
 namespace tests {
 namespace intrusive_containers {
 class DoublyLinkedListChecker;
+template <typename> class SequenceContainerTestEnvironment;
 }  // namespace tests
 }  // namespace intrusive_containers
 
 template <typename T>
 struct DoublyLinkedListNodeState {
     using PtrTraits = internal::ContainerPtrTraits<T>;
-    typename PtrTraits::PtrType    next_ = nullptr;
-    typename PtrTraits::RawPtrType prev_ = nullptr;
+    constexpr DoublyLinkedListNodeState() { }
+    ~DoublyLinkedListNodeState() {
+        // Note; this ASSERT can only be enforced for lists made of managed
+        // pointer types.  Lists formed from unmanaged pointers can potentially
+        // leave next_ in a non-null state during destruction if the list is
+        // cleared using "clear_unsafe".
+        ZX_DEBUG_ASSERT(IsValid() && (!PtrTraits::IsManaged || !InContainer()));
+    }
 
     bool IsValid() const     { return ((next_ == nullptr) == (prev_ == nullptr)); }
-    bool InContainer() const { return ((next_ != nullptr) && (prev_ != nullptr)); }
+    bool InContainer() const { return (next_ != nullptr); }
+
+private:
+    template <typename, typename> friend class DoublyLinkedList;
+    template <typename> friend class tests::intrusive_containers::SequenceContainerTestEnvironment;
+    friend class tests::intrusive_containers::DoublyLinkedListChecker;
+
+    typename PtrTraits::RawPtrType next_ = nullptr;
+    typename PtrTraits::RawPtrType prev_ = nullptr;
 };
 
 template <typename T>
@@ -126,13 +143,12 @@ public:
         // will automatically release their references to their elements.
         ZX_DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
         clear();
-        PtrTraits::DetachSentinel(head_);
     }
 
     // Standard begin/end, cbegin/cend iterator accessors.
-    iterator        begin()       { return iterator(PtrTraits::GetRaw(head_)); }
-    const_iterator  begin() const { return const_iterator(PtrTraits::GetRaw(head_)); }
-    const_iterator cbegin() const { return const_iterator(PtrTraits::GetRaw(head_)); }
+    iterator        begin()       { return iterator(head_); }
+    const_iterator  begin() const { return const_iterator(head_); }
+    const_iterator cbegin() const { return const_iterator(head_); }
 
     iterator          end()       { return iterator(sentinel()); }
     const_iterator    end() const { return const_iterator(sentinel()); }
@@ -142,7 +158,10 @@ public:
     iterator make_iterator(ValueType& obj) { return iterator(&obj); }
 
     // is_empty : True if the list has at least one element in it, false otherwise.
-    bool is_empty() const { return PtrTraits::IsSentinel(head_); }
+    bool is_empty() const {
+        ZX_DEBUG_ASSERT(head_ != nullptr);
+        return internal::is_sentinel_ptr(head_);
+    }
 
     // front
     //
@@ -167,7 +186,7 @@ public:
 
     // push_front : Push an element onto the front of the list.
     void push_front(const PtrType& ptr) { push_front(PtrType(ptr)); }
-    void push_front(PtrType&& ptr) { internal_insert(PtrTraits::GetRaw(head_), fbl::move(ptr)); }
+    void push_front(PtrType&& ptr) { internal_insert(head_, fbl::move(ptr)); }
 
     // push_back : Push an element onto the end of the list.
     void push_back(const PtrType& ptr) { push_back(PtrType(ptr)); }
@@ -195,7 +214,7 @@ public:
         }
         if (is_empty()) {
             ZX_DEBUG_ASSERT(before == sentinel());
-            ZX_DEBUG_ASSERT(before == PtrTraits::GetRaw(head_));
+            ZX_DEBUG_ASSERT(before == head_);
             swap(other_list);
             return;
         }
@@ -204,15 +223,15 @@ public:
         // tail, and the node_state which contains the prev pointer we need to
         // update is head's.  Otherwise, it is the node_state of the node we are
         // being inserted before.
-        auto& prev_ns  = NodeTraits::node_state(PtrTraits::IsSentinel(before) ? *head_ : *before);
+        auto& prev_ns  = NodeTraits::node_state(internal::is_sentinel_ptr(before) ? *head_ : *before);
         auto& tgt_prev = prev_ns.prev_;
 
         // If we are being inserted before the head, then we need to update the
-        // managed head pointer.  Otherwise, we need to update the next pointer
-        // of the node which is about to come before us.
-        auto& tgt_next = (PtrTraits::GetRaw(head_) == before)
+        // head pointer.  Otherwise, we need to update the next pointer of the
+        // node which is about to come before us.
+        auto& tgt_next = (head_ == before)
                        ? head_
-                       : PtrTraits::IsSentinel(before) ? NodeTraits::node_state(*tail()).next_
+                       : internal::is_sentinel_ptr(before) ? NodeTraits::node_state(*tail()).next_
                                                        : NodeTraits::node_state(*tgt_prev).next_;
 
         auto& other_head_ns  = NodeTraits::node_state(*other_list.head_);
@@ -224,11 +243,12 @@ public:
         tgt_prev            = other_tail;
 
         // Update the next pointers.
-        PtrTraits::DetachSentinel(other_tail_ns.next_);
-        other_tail_ns.next_ = PtrTraits::Take(tgt_next);
-        tgt_next            = PtrTraits::Take(other_list.head_);
+        other_tail_ns.next_ = tgt_next;
+        tgt_next            = other_list.head_;
 
-        other_list.head_ = PtrTraits::MakeSentinel(&other_list);
+        // Mark the other list as being empty now by replacing its head pointer
+        // with its sentinel value.
+        other_list.head_ = other_list.sentinel();
     }
 
     // insert_after : Insert an element after iter in the list.
@@ -242,7 +262,7 @@ public:
         ZX_DEBUG_ASSERT(iter.IsValid());
 
         auto& ns = NodeTraits::node_state(*iter.node_);
-        internal_insert(PtrTraits::GetRaw(ns.next_), fbl::move(ptr));
+        internal_insert(ns.next_, fbl::move(ptr));
     }
 
     // pop_front and pop_back
@@ -250,7 +270,7 @@ public:
     // Removes either the head or the tail of the list and transfers the pointer
     // to the caller.  If the list is empty, return a nullptr instance of
     // PtrType.
-    PtrType pop_front() { return internal_erase(PtrTraits::GetRaw(head_)); }
+    PtrType pop_front() { return internal_erase(head_); }
     PtrType pop_back()  { return internal_erase(tail()); }
 
     // erase
@@ -274,12 +294,12 @@ public:
         ZX_DEBUG_ASSERT(iter.IsValid());
         auto& ns = NodeTraits::node_state(*iter.node_);
 
-        if (PtrTraits::IsSentinel(ns.next_)) {
-            ZX_DEBUG_ASSERT(sentinel() == PtrTraits::GetRaw(ns.next_));
+        if (internal::is_sentinel_ptr(ns.next_)) {
+            ZX_DEBUG_ASSERT(sentinel() == ns.next_);
             return PtrType(nullptr);
         }
 
-        return internal_erase(PtrTraits::GetRaw(ns.next_));
+        return internal_erase(ns.next_);
     }
 
     // clear
@@ -291,9 +311,14 @@ public:
         while (!is_empty()) {
             auto& head_ns = NodeTraits::node_state(*head_);
 
-            PtrTraits::Swap(head_, head_ns.next_);
+            // Reclaim our pointer so that it will release its reference when it
+            // goes out of scope a the end of the loop.  Note, this needs to be
+            // flagged as UNUSED because for unmanaged pointer types, nothing
+            // happens when the pointer goes out of scope.
+            __UNUSED auto tmp = PtrTraits::Reclaim(head_);
+            head_ = head_ns.next_;
+            head_ns.next_ = nullptr;
             head_ns.prev_ = nullptr;
-            PtrTraits::Take(head_ns.next_);
         }
     }
 
@@ -304,18 +329,20 @@ public:
     void clear_unsafe() {
         static_assert(PtrTraits::IsManaged == false,
                      "clear_unsafe is not allowed for containers of managed pointers");
-        head_ = PtrTraits::MakeSentinel(sentinel());
+        head_ = sentinel();
     }
 
     // swap : swaps the contest of two lists.
     void swap(DoublyLinkedList<T, NodeTraits>& other) {
-        PtrTraits::Swap(head_, other.head_);
+        internal::Swap(head_, other.head_);
 
-        PtrType& sentinel_ptr = is_empty() ? head_ : NodeTraits::node_state(*tail()).next_;
-        PtrType& other_sentinel_ptr = other.is_empty()
-                                    ? other.head_
-                                    : NodeTraits::node_state(*other.tail()).next_;
-        PtrTraits::Swap(sentinel_ptr, other_sentinel_ptr);
+        RawPtrType& sentinel_ptr = is_empty() ? head_ : NodeTraits::node_state(*tail()).next_;
+        RawPtrType& other_sentinel_ptr = other.is_empty()
+                                       ? other.head_
+                                       : NodeTraits::node_state(*other.tail()).next_;
+
+        sentinel_ptr = sentinel();
+        other_sentinel_ptr = other.sentinel();
     }
 
     // size_slow : count the elements in the list in O(n) fashion
@@ -426,7 +453,7 @@ private:
             return *this;
         }
 
-        bool IsValid() const { return !PtrTraits::IsSentinel(node_) && (node_ != nullptr); }
+        bool IsValid() const { return !internal::is_sentinel_ptr(node_) && (node_ != nullptr); }
         bool operator==(const iterator_impl& other) const { return node_ == other.node_; }
         bool operator!=(const iterator_impl& other) const { return node_ != other.node_; }
 
@@ -434,7 +461,7 @@ private:
         iterator_impl& operator++() {
             if (IsValid()) {
                 auto& ns = NodeTraits::node_state(*node_);
-                node_ = PtrTraits::GetRaw(ns.next_);
+                node_ = ns.next_;
                 ZX_DEBUG_ASSERT(node_ != nullptr);
             }
 
@@ -443,8 +470,8 @@ private:
 
         iterator_impl& operator--() {
             if (node_) {
-                if (PtrTraits::IsSentinel(node_)) {
-                    ListPtrType list = GetList();
+                if (internal::is_sentinel_ptr(node_)) {
+                    auto list = internal::unmake_sentinel<ListPtrType>(node_);
                     node_ = list->tail();
                 } else {
                     auto& ns = NodeTraits::node_state(*node_);
@@ -457,8 +484,8 @@ private:
                     // Reset our internal pointer to point to the sentinel value
                     // instead.
                     auto& new_ns = NodeTraits::node_state(*node_);
-                    if (PtrTraits::IsSentinel(new_ns.next_))
-                        node_ = PtrTraits::GetRaw(new_ns.next_);
+                    if (internal::is_sentinel_ptr(new_ns.next_))
+                        node_ = new_ns.next_;
                 }
             }
 
@@ -499,11 +526,6 @@ private:
         iterator_impl(const typename PtrTraits::RawPtrType node)
             : node_(const_cast<typename PtrTraits::RawPtrType>(node)) { }
 
-        ListPtrType GetList() const {
-            return reinterpret_cast<ListPtrType>(
-                    reinterpret_cast<uintptr_t>(node_) & ~internal::kContainerSentinelBit);
-        }
-
         typename PtrTraits::RawPtrType node_ = nullptr;
     };
 
@@ -514,8 +536,7 @@ private:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(DoublyLinkedList);
 
     constexpr RawPtrType sentinel() const {
-        return reinterpret_cast<RawPtrType>(
-                reinterpret_cast<uintptr_t>(this) | internal::kContainerSentinelBit);
+        return internal::make_sentinel<RawPtrType>(this);
     }
 
     void internal_insert(RawPtrType before, PtrType&& ptr) {
@@ -529,11 +550,11 @@ private:
         // Handle the (slightly) special case of an empty list.
         if (is_empty()) {
             ZX_DEBUG_ASSERT(before == sentinel());
-            ZX_DEBUG_ASSERT(before == PtrTraits::GetRaw(head_));
+            ZX_DEBUG_ASSERT(before == head_);
 
-            ptr_ns.prev_ = PtrTraits::GetRaw(ptr);
-            ptr_ns.next_ = fbl::move(head_);
-            head_        = fbl::move(ptr);
+            ptr_ns.prev_ = PtrTraits::Leak(ptr);
+            ptr_ns.next_ = head_;
+            head_        = ptr_ns.prev_;
 
             return;
         }
@@ -542,28 +563,28 @@ private:
         // tail, and the node_state which contains the prev pointer we need to
         // update is head's.  Otherwise, it is the node_state of the node we are
         // being inserted before.
-        auto& prev_ns  = NodeTraits::node_state(PtrTraits::IsSentinel(before) ? *head_ : *before);
+        auto& prev_ns  = NodeTraits::node_state(internal::is_sentinel_ptr(before) ? *head_ : *before);
         auto& tgt_prev = prev_ns.prev_;
 
         // If we are being inserted before the head, then we need to update the
         // managed head pointer.  Otherwise, we need to update the next pointer
         // of the node which is about to come before us.
-        auto& tgt_next = (PtrTraits::GetRaw(head_) == before)
+        auto& tgt_next = (head_ == before)
                        ? head_
-                       : PtrTraits::IsSentinel(before) ? NodeTraits::node_state(*tail()).next_
+                       : internal::is_sentinel_ptr(before) ? NodeTraits::node_state(*tail()).next_
                                                        : NodeTraits::node_state(*tgt_prev).next_;
 
-        // Update the prev pointers.
+        // Update the pointers in the inserted node.
+        ptr_ns.next_ = tgt_next;
         ptr_ns.prev_ = tgt_prev;
-        tgt_prev     = PtrTraits::GetRaw(ptr);
 
-        // Update the next pointers.
-        ptr_ns.next_ = fbl::move(tgt_next);
-        tgt_next     = fbl::move(ptr);
+        // Update the pointers which should now point to the inserted node.
+        tgt_next = PtrTraits::GetRaw(ptr);
+        tgt_prev = PtrTraits::Leak(ptr);
     }
 
     PtrType internal_erase(RawPtrType node) {
-        if (!node || PtrTraits::IsSentinel(node))
+        if (!node || internal::is_sentinel_ptr(node))
             return PtrType(nullptr);
 
         auto& node_ns = NodeTraits::node_state(*node);
@@ -572,22 +593,21 @@ private:
         // Find the prev pointer we need to update.  If we are removing the tail
         // of the list, the prev pointer is head_'s prev pointer.  Otherwise, it
         // is the prev pointer of the node which currently follows "ptr".
-        auto& tgt_prev = PtrTraits::IsSentinel(node_ns.next_)
+        auto& tgt_prev = internal::is_sentinel_ptr(node_ns.next_)
                        ? NodeTraits::node_state(*head_).prev_
                        : NodeTraits::node_state(*node_ns.next_).prev_;
 
         // Find the next pointer we need to update.  If we are removing the
         // head of the list, this is head_.  Otherwise it is the next pointer of
         // the node which comes before us in the list.
-        auto& tgt_next = PtrTraits::GetRaw(head_) == node
-                       ? head_
-                       : NodeTraits::node_state(*node_ns.prev_).next_;
+        auto& tgt_next = (head_ == node) ? head_ : NodeTraits::node_state(*node_ns.prev_).next_;
 
         tgt_prev = node_ns.prev_;
+        tgt_next = node_ns.next_;
         node_ns.prev_ = nullptr;
+        node_ns.next_ = nullptr;
 
-        PtrTraits::Swap(tgt_next, node_ns.next_);
-        return PtrTraits::Take(node_ns.next_);
+        return PtrTraits::Reclaim(node);
     }
 
     PtrType internal_swap(typename PtrTraits::RefType node, PtrType&& ptr) {
@@ -599,53 +619,52 @@ private:
         ZX_DEBUG_ASSERT(node_ns.InContainer());
 
         // Handle the case of there being only a single node in the list.
-        ZX_DEBUG_ASSERT(PtrTraits::IsValid(head_));
-        if (PtrTraits::IsSentinel(NodeTraits::node_state(*head_).next_)) {
-            ZX_DEBUG_ASSERT(PtrTraits::GetRaw(head_) == &node);
-            ZX_DEBUG_ASSERT(PtrTraits::IsSentinel(node_ns.next_));
+        ZX_DEBUG_ASSERT(internal::valid_sentinel_ptr(head_));
+        if (internal::is_sentinel_ptr(NodeTraits::node_state(*head_).next_)) {
+            ZX_DEBUG_ASSERT(head_ == &node);
+            ZX_DEBUG_ASSERT(internal::is_sentinel_ptr(node_ns.next_));
             ZX_DEBUG_ASSERT(&node == node_ns.prev_);
 
+            ptr_ns.next_  = node_ns.next_;
             ptr_ns.prev_  = PtrTraits::GetRaw(ptr);
+            node_ns.next_ = nullptr;
             node_ns.prev_ = nullptr;
-            PtrTraits::Swap(ptr_ns.next_, node_ns.next_);
-            PtrTraits::Swap(head_, ptr);
 
-            return fbl::move(ptr);
+            head_ = PtrTraits::Leak(ptr);
+            return PtrTraits::Reclaim(&node);
         }
 
         // Find the prev pointer we need to update.  If we are swapping the tail
         // of the list, the prev pointer is head_'s prev pointer.  Otherwise, it
         // is the prev pointer of the node which currently follows "ptr".
-        auto& tgt_prev = PtrTraits::IsSentinel(node_ns.next_)
+        auto& tgt_prev = internal::is_sentinel_ptr(node_ns.next_)
                        ? NodeTraits::node_state(*head_).prev_
                        : NodeTraits::node_state(*node_ns.next_).prev_;
 
         // Find the next pointer we need to update.  If we are swapping the
         // head of the list, this is head_.  Otherwise it is the next pointer of
         // the node which comes before us in the list.
-        auto& tgt_next = PtrTraits::GetRaw(head_) == &node
-                       ? head_
-                       : NodeTraits::node_state(*node_ns.prev_).next_;
+        auto& tgt_next = (head_ == &node) ? head_ : NodeTraits::node_state(*node_ns.prev_).next_;
 
-        PtrTraits::Swap(ptr_ns.next_, node_ns.next_);
-        RawPtrTraits::Swap(ptr_ns.prev_, node_ns.prev_);
-        tgt_prev = PtrTraits::GetRaw(ptr);
-        PtrTraits::Swap(tgt_next, ptr);
+        tgt_next = PtrTraits::Leak(ptr);
+        tgt_prev = tgt_next;
+        internal::Swap(ptr_ns.next_, node_ns.next_);
+        internal::Swap(ptr_ns.prev_, node_ns.prev_);
 
-        return fbl::move(ptr);
+        return PtrTraits::Reclaim(&node);
     }
 
     RawPtrType tail() const {
         ZX_DEBUG_ASSERT(head_ != nullptr);
-        if (PtrTraits::IsSentinel(head_))
-            return PtrTraits::GetRaw(head_);
+        if (internal::is_sentinel_ptr(head_))
+            return head_;
         return NodeTraits::node_state(*head_).prev_;
     }
 
-    // State consists of managed pointer to the head of the list.  Initially,
-    // this is set to the special sentinel value, which allows iterators set to
+    // State consists of a raw pointer to the head of the list.  Initially, this
+    // is set to the special sentinel value, which allows iterators set to
     // this->end() to back up to the tail of the list.
-    PtrType head_ = PtrTraits::MakeSentinel(this);
+    RawPtrType head_ = sentinel();
 };
 
 // Explicit declaration of constexpr storage.
