@@ -21,7 +21,7 @@ from mako.template import Template
 sys.path += [os.path.join(FUCHSIA_ROOT, 'scripts', 'sdk', 'common')]
 from frontend import Frontend
 
-from create_test_workspace import create_test_workspace
+from create_test_workspace import create_test_workspace, SdkWorkspaceInfo
 import template_model as model
 
 
@@ -43,6 +43,7 @@ class BazelBuilder(Frontend):
         self.has_sysroot = False
         self.dart_vendor_packages = {}
         self.target_arches = []
+        self.workspace_info = SdkWorkspaceInfo()
 
 
     def _copy_file(self, file, root, destination, result=[]):
@@ -70,11 +71,11 @@ class BazelBuilder(Frontend):
         return os.path.join(SCRIPT_DIR, *args)
 
 
-    def write_file(self, path, template_name, data, append=False):
+    def write_file(self, path, template_name, data):
         '''Writes a file based on a Mako template.'''
         lookup = TemplateLookup(directories=[self.local('templates')])
         template = lookup.get_template(template_name + '.mako')
-        with open(path, 'a' if append else 'w') as file:
+        with open(path, 'w') as file:
             file.write(template.render(data=data))
 
     def add_dart_vendor_package(self, name, version):
@@ -200,6 +201,10 @@ class BazelBuilder(Frontend):
         library.includes.append(os.path.relpath(atom['include_dir'],
                                                 atom['root']))
 
+        include_paths = map(lambda h: os.path.relpath(h, atom['include_dir']),
+                            atom['headers'])
+        self.workspace_info.headers['//pkg/' + name] = include_paths
+
         self.write_file(os.path.join(base, 'BUILD'), 'cc_prebuilt_library',
                         library)
 
@@ -216,11 +221,15 @@ class BazelBuilder(Frontend):
             library.deps.append('//pkg/' + sanitize(dep))
 
         for dep in atom['fidl_deps']:
-            name = sanitize(dep)
-            library.deps.append('//fidl/%s:%s_cc' % (name, name))
+            dep_name = sanitize(dep)
+            library.deps.append('//fidl/%s:%s_cc' % (dep_name, dep_name))
 
         library.includes.append(os.path.relpath(atom['include_dir'],
                                                 atom['root']))
+
+        include_paths = map(lambda h: os.path.relpath(h, atom['include_dir']),
+                            atom['headers'])
+        self.workspace_info.headers['//pkg/' + name] = include_paths
 
         self.write_file(os.path.join(base, 'BUILD'), 'cc_library', library)
 
@@ -308,7 +317,8 @@ def main():
     if not builder.run():
         return 1
 
-    if args.tests and not create_test_workspace(args.output, args.tests):
+    if args.tests and not create_test_workspace(args.output, args.tests,
+                                                builder.workspace_info):
         return 1
 
     return 0

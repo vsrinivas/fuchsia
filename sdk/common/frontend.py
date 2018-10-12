@@ -4,12 +4,13 @@
 # found in the LICENSE file.
 
 import contextlib
-import errno
 import json
 import os
 import shutil
 import tarfile
 import tempfile
+
+from files import make_dir
 
 
 class Frontend(object):
@@ -47,7 +48,7 @@ class Frontend(object):
           path = os.path.join(*args)
         else:
           path = os.path.join(self.output, *args)
-        return self._make_dir(path)
+        return make_dir(path)
 
     def prepare(self, arch):
         '''Called before elements are processed.'''
@@ -87,20 +88,6 @@ class Frontend(object):
     def _handle_atom(self, atom):
         '''Default atom handler.'''
         print('Ignored %s (%s)' % (atom['name'], atom['type']))
-
-    def _make_dir(self, file_path):
-        '''Creates the directory hierarchy for the given file and returns the
-        given path.
-        '''
-        target = os.path.dirname(file_path)
-        try:
-            os.makedirs(target)
-        except OSError as exception:
-            if exception.errno == errno.EEXIST and os.path.isdir(target):
-                pass
-            else:
-                raise
-        return file_path
 
     @contextlib.contextmanager
     def _create_archive_dir(self):

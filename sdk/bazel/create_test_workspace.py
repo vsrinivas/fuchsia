@@ -9,40 +9,58 @@ import shutil
 import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+FUCHSIA_ROOT = os.path.dirname(  # $root
+    os.path.dirname(             # scripts
+    os.path.dirname(             # sdk
+    SCRIPT_DIR)))                # bazel
 
-def create_test_workspace(sdk, output):
+sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'mako')]
+from mako.lookup import TemplateLookup
+from mako.template import Template
+sys.path += [os.path.join(FUCHSIA_ROOT, 'scripts', 'sdk', 'common')]
+from files import make_dir
+
+
+class SdkWorkspaceInfo(object):
+    '''Gathers information about an SDK workspace that is necessary to generate
+    tests for it.
+    '''
+
+    def __init__(self):
+        # Map of target to list of header files.
+        # Used to verify that including said headers works properly.
+        self.headers = {}
+
+
+def write_file(path, template_name, data):
+    '''Writes a file based on a Mako template.'''
+    base = os.path.join(SCRIPT_DIR, 'templates')
+    lookup = TemplateLookup(directories=[base, os.path.join(base, 'tests')])
+    template = lookup.get_template(template_name + '.mako')
+    with open(path, 'w') as file:
+        file.write(template.render(data=data))
+
+
+def create_test_workspace(sdk, output, workspace_info):
     # Remove any existing output.
     shutil.rmtree(output, True)
 
+    # Copy the base tests.
     shutil.copytree(os.path.join(SCRIPT_DIR, 'tests'), output)
 
-    with open(os.path.join(output, 'WORKSPACE'), 'w') as workspace_file:
-        workspace_file.write('''# This is a generated file.
+    # WORKSPACE file.
+    write_file(os.path.join(output, 'WORKSPACE'), 'workspace', {
+        'sdk_path': os.path.relpath(sdk, output),
+    })
 
-local_repository(
-    name = "fuchsia_sdk",
-    path = "%s",
-)
-
-http_archive(
-  name = "io_bazel_rules_dart",
-  url = "https://github.com/dart-lang/rules_dart/archive/master.zip",
-  strip_prefix = "rules_dart-master",
-)
-
-load("@io_bazel_rules_dart//dart/build_rules:repositories.bzl", "dart_repositories")
-dart_repositories()
-
-load("@fuchsia_sdk//build_defs:crosstool.bzl", "install_fuchsia_crosstool")
-install_fuchsia_crosstool(
-    name = "fuchsia_crosstool",
-)
-
-load("@fuchsia_sdk//build_defs:setup_dart.bzl", "setup_dart")
-setup_dart()
-
-load("@fuchsia_sdk//build_defs:setup_flutter.bzl", "setup_flutter")
-setup_flutter()
-''' % os.path.relpath(sdk, output))
+    # Generate test to verify that headers compile fine.
+    headers = workspace_info.headers
+    header_base = os.path.join(output, 'headers')
+    write_file(make_dir(os.path.join(header_base, 'BUILD')), 'headers_build', {
+        'deps': list(filter(lambda k: headers[k], headers.keys())),
+    })
+    write_file(make_dir(os.path.join(header_base, 'headers.cc')), 'headers', {
+        'headers': headers,
+    })
 
     return True
