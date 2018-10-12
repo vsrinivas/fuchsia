@@ -100,8 +100,8 @@ void Vfs::WillFreeVMO(size_t vmo_size) {
     num_allocated_pages_ -= freed_pages;
 }
 
-fbl::atomic<uint64_t> VnodeMemfs::ino_ctr_(0);
-fbl::atomic<uint64_t> VnodeMemfs::deleted_ino_ctr_(0);
+fbl::atomic<uint64_t> VnodeMemfs::ino_ctr_ = 0;
+fbl::atomic<uint64_t> VnodeMemfs::deleted_ino_ctr_ = 0;
 
 VnodeMemfs::VnodeMemfs(Vfs* vfs) : dnode_(nullptr), link_count_(0), vfs_(vfs),
     ino_(ino_ctr_.fetch_add(1, fbl::memory_order_relaxed)) {

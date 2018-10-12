@@ -63,7 +63,7 @@ static bool probe_address_space(void) {
 
 // This is a basic smoketest for creating resources and verifying the internals
 // returned by zx_object_get_info match what the caller passed for creation.
-static bool test_basic_actions(void) {
+static bool TestBasicActions(void) {
     BEGIN_TEST;
 
     zx::resource new_root;
@@ -101,7 +101,7 @@ static bool test_basic_actions(void) {
 }
 
 // This test covers every path that returns ZX_ERR_INVALID_ARGS from the the syscall.
-static bool test_invalid_args(void) {
+static bool TestInvalidArgs(void) {
     BEGIN_TEST;
     zx::resource temp;
     zx::resource fail_hnd;
@@ -139,7 +139,7 @@ static bool test_invalid_args(void) {
     END_TEST;
 }
 
-static bool test_exclusive_shared(void) {
+static bool TestExclusiveShared(void) {
     // Try to create a shared  resource and ensure it blocks an exclusive
     // resource.
     BEGIN_TEST;
@@ -153,7 +153,7 @@ static bool test_exclusive_shared(void) {
     END_TEST;
 }
 
-static bool test_shared_exclusive(void) {
+static bool TestSharedExclusive(void) {
     // Try to create a shared  resource and ensure it blocks an exclusive
     // resource.
     BEGIN_TEST;
@@ -167,7 +167,7 @@ static bool test_shared_exclusive(void) {
     END_TEST;
 }
 
-static bool test_vmo_creation(void) {
+static bool TestVmoCreation(void) {
     // Attempt to create a resource and then a vmo using that resource.
     BEGIN_TEST;
     zx::resource mmio;
@@ -181,7 +181,7 @@ static bool test_vmo_creation(void) {
     END_TEST;
 }
 
-static bool test_vmo_creation_smaller(void) {
+static bool TestVmoCreationSmaller(void) {
     // Attempt to create a resource smaller than a page and ensure it still expands access to the
     // entire page.
     BEGIN_TEST;
@@ -196,7 +196,7 @@ static bool test_vmo_creation_smaller(void) {
     END_TEST;
 }
 
-static bool test_vmo_creation_unaligned(void) {
+static bool TestVmoCreationUnaligned(void) {
     // Attempt to create an unaligned resource and ensure that the bounds are rounded appropriately
     // to the proper PAGE_SIZE.
     BEGIN_TEST;
@@ -223,7 +223,7 @@ static zx_rights_t get_vmo_rights(const zx::vmo& vmo) {
     return info.rights;
 }
 
-static bool test_vmo_replace_as_executable() {
+static bool TestVmoReplaceAsExecutable() {
     BEGIN_TEST;
 
     zx::resource vmex;
@@ -271,14 +271,14 @@ static bool test_ioports(void) {
 
 BEGIN_TEST_CASE(resource_tests)
 RUN_TEST(probe_address_space);
-RUN_TEST(test_basic_actions);
-RUN_TEST(test_exclusive_shared);
-RUN_TEST(test_shared_exclusive);
-RUN_TEST(test_invalid_args);
-RUN_TEST(test_vmo_creation);
-RUN_TEST(test_vmo_creation_smaller);
-RUN_TEST(test_vmo_creation_unaligned);
-RUN_TEST(test_vmo_replace_as_executable);
+RUN_TEST(TestBasicActions);
+RUN_TEST(TestExclusiveShared);
+RUN_TEST(TestSharedExclusive);
+RUN_TEST(TestInvalidArgs);
+RUN_TEST(TestVmoCreation);
+RUN_TEST(TestVmoCreationSmaller);
+RUN_TEST(TestVmoCreationUnaligned);
+RUN_TEST(TestVmoReplaceAsExecutable);
 #if defined(__x86_64__)
 RUN_TEST(test_ioports);
 #endif

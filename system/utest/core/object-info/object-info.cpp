@@ -91,27 +91,27 @@ bool task_stats_smoke() {
 }
 
 // Structs to keep track of VMARs/mappings in the test child process.
-typedef struct test_mapping {
+struct TestMapping {
     uintptr_t base;
     size_t size;
     uint32_t flags; // ZX_INFO_MAPS_MMU_FLAG_PERM_{READ,WRITE,EXECUTE}
-} test_mapping_t;
+};
 
 // A VMO that the test process maps or has a handle to.
-typedef struct test_vmo {
+struct TestVmo {
     zx_koid_t koid;
     size_t size;
     uint32_t flags; // ZX_INFO_VMO_VIA_{HANDLE,MAPPING}
-} test_vmo_t;
+};
 
-typedef struct test_mapping_info {
+struct TestMappingInfo {
     uintptr_t vmar_base;
     size_t vmar_size;
     size_t num_mappings;
-    test_mapping_t* mappings; // num_mappings entries
+    TestMapping* mappings; // num_mappings entries
     size_t num_vmos;
-    test_vmo_t* vmos; // num_vmos entries
-} test_mapping_info_t;
+    TestVmo* vmos; // num_vmos entries
+};
 
 // Gets the koid of the object pointed to by |handle|.
 zx_status_t get_koid(zx_handle_t handle, zx_koid_t* koid) {
@@ -128,9 +128,9 @@ zx_status_t get_koid(zx_handle_t handle, zx_koid_t* koid) {
 // process, so tests should use this instead.
 // This handle is leaked, and we expect our process teardown to clean it up
 // naturally.
-zx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
+zx_handle_t get_test_process_etc(const TestMappingInfo** info) {
     static zx_handle_t test_process = ZX_HANDLE_INVALID;
-    static test_mapping_info_t* test_info = nullptr;
+    static TestMappingInfo* test_info = nullptr;
 
     if (info != nullptr) {
         *info = nullptr;
@@ -203,10 +203,10 @@ zx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
 
         static const size_t kNumMappings = 8;
         // Leaked on failure. Never freed on success.
-        test_mapping_info_t* ti = (test_mapping_info_t*)malloc(sizeof(*ti));
+        TestMappingInfo* ti = (TestMappingInfo*)malloc(sizeof(*ti));
         ti->num_mappings = kNumMappings;
         ti->mappings =
-            (test_mapping_t*)malloc(kNumMappings * sizeof(test_mapping_t));
+            (TestMapping*)malloc(kNumMappings * sizeof(TestMapping));
 
         // Big enough to fit all of the mappings with some slop.
         ti->vmar_size = PAGE_SIZE * kNumMappings * 16;
@@ -242,7 +242,7 @@ zx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
 
         // Record the VMOs now that we have both of them.
         ti->num_vmos = 2;
-        ti->vmos = (test_vmo_t*)malloc(2 * sizeof(test_vmo_t));
+        ti->vmos = (TestVmo*)malloc(2 * sizeof(TestVmo));
         ti->vmos[0].koid = unmapped_vmo_koid;
         ti->vmos[0].size = unmapped_vmo_size;
         ti->vmos[0].flags = ZX_INFO_VMO_VIA_HANDLE;
@@ -252,7 +252,7 @@ zx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
 
         // Map each page of the VMO to some arbitray location in the VMAR.
         for (size_t i = 0; i < kNumMappings; i++) {
-            test_mapping_t* m = &ti->mappings[i];
+            TestMapping* m = &ti->mappings[i];
             m->size = PAGE_SIZE;
 
             // Pick flags for this mapping; cycle through different
@@ -314,7 +314,7 @@ bool process_maps_unstarted() {
 // Tests that ZX_INFO_PROCESS_MAPS seems to work.
 bool process_maps_smoke() {
     BEGIN_TEST;
-    const test_mapping_info_t* test_info;
+    const TestMappingInfo* test_info;
     const zx_handle_t process = get_test_process_etc(&test_info);
     ASSERT_NONNULL(test_info, "get_test_process_etc");
 
@@ -384,7 +384,7 @@ bool process_maps_smoke() {
                 // Look for it in the expected mappings.
                 bool found = false;
                 for (size_t j = 0; j < test_info->num_mappings; j++) {
-                    const test_mapping_t* t = &test_info->mappings[j];
+                    const TestMapping* t = &test_info->mappings[j];
                     if (t->base == entry->base && t->size == entry->size) {
                         // Make sure we don't see duplicates.
                         EXPECT_EQ(0u, saw_mapping & (1 << j), msg);
@@ -676,7 +676,7 @@ bool bad_avail_fails() {
 // Tests that ZX_INFO_PROCESS_VMOS seems to work.
 bool process_vmos_smoke() {
     BEGIN_TEST;
-    const test_mapping_info_t* test_info;
+    const TestMappingInfo* test_info;
     const zx_handle_t process = get_test_process_etc(&test_info);
     ASSERT_NONNULL(test_info, "get_test_process_etc");
 
@@ -713,7 +713,7 @@ bool process_vmos_smoke() {
         // Look for it in the expected VMOs. We won't find all VMOs here,
         // since we don't track the vDSO or mini-process stack.
         for (size_t j = 0; j < test_info->num_vmos; j++) {
-            const test_vmo_t* t = &test_info->vmos[j];
+            const TestVmo* t = &test_info->vmos[j];
             if (t->koid == entry->koid && t->size == entry->size_bytes) {
                 // These checks aren't appropriate for all VMOs.
                 // The VMOs we track are:

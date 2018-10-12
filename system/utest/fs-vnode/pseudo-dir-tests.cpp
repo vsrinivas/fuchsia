@@ -43,7 +43,7 @@ private:
     size_t remaining_;
 };
 
-bool test_pseudo_dir() {
+bool TestPseudoDir() {
     BEGIN_TEST;
 
     auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
@@ -157,5 +157,5 @@ bool test_pseudo_dir() {
 } // namespace
 
 BEGIN_TEST_CASE(pseudo_dir_tests)
-RUN_TEST(test_pseudo_dir)
+RUN_TEST(TestPseudoDir)
 END_TEST_CASE(pseudo_dir_tests)

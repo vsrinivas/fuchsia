@@ -23,7 +23,7 @@
 
 namespace {
 
-bool test_memfs_null() {
+bool TestMemfsNull() {
     BEGIN_TEST;
 
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -40,7 +40,7 @@ bool test_memfs_null() {
     END_TEST;
 }
 
-bool test_memfs_basic() {
+bool TestMemfsBasic() {
     BEGIN_TEST;
 
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -85,7 +85,7 @@ bool test_memfs_basic() {
     END_TEST;
 }
 
-bool test_memfs_limit_pages() {
+bool TestMemfsLimitPages() {
     BEGIN_TEST;
 
     constexpr ssize_t kPageSize = static_cast<ssize_t>(PAGE_SIZE);
@@ -168,7 +168,7 @@ bool test_memfs_limit_pages() {
     END_TEST;
 }
 
-bool test_memfs_install() {
+bool TestMemfsInstall() {
     BEGIN_TEST;
 
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -212,7 +212,7 @@ bool test_memfs_install() {
     END_TEST;
 }
 
-bool test_memfs_close_during_access() {
+bool TestMemfsCloseDuringAccess() {
     BEGIN_TEST;
 
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -279,9 +279,9 @@ bool test_memfs_close_during_access() {
 } // namespace
 
 BEGIN_TEST_CASE(memfs_tests)
-RUN_TEST(test_memfs_null)
-RUN_TEST(test_memfs_basic)
-RUN_TEST(test_memfs_limit_pages)
-RUN_TEST(test_memfs_install)
-RUN_TEST(test_memfs_close_during_access)
+RUN_TEST(TestMemfsNull)
+RUN_TEST(TestMemfsBasic)
+RUN_TEST(TestMemfsLimitPages)
+RUN_TEST(TestMemfsInstall)
+RUN_TEST(TestMemfsCloseDuringAccess)
 END_TEST_CASE(memfs_tests)

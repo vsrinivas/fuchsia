@@ -70,7 +70,7 @@ static zx::process make_test_process(const zx::job& job, zx::thread* out_thread,
     return proc;
 }
 
-static bool abs_then_rel() {
+static bool AbsThenRel() {
     BEGIN_TEST;
 
     zx_policy_basic_t policy[] = {
@@ -144,7 +144,7 @@ static bool invalid_calls(uint32_t options) {
     return true;
 }
 
-static bool invalid_calls_abs() {
+static bool InvalidCallsAbs() {
     BEGIN_TEST;
 
     invalid_calls(ZX_JOB_POL_ABSOLUTE);
@@ -152,7 +152,7 @@ static bool invalid_calls_abs() {
     END_TEST;
 }
 
-static bool invalid_calls_rel() {
+static bool InvalidCallsRel() {
     BEGIN_TEST;
 
     invalid_calls(ZX_JOB_POL_RELATIVE);
@@ -162,7 +162,7 @@ static bool invalid_calls_rel() {
 
 // Test that executing the given mini-process.h command (|minip_cmd|)
 // produces the given result (|expect|) when the given policy is in force.
-static bool test_invoking_policy(
+static bool TestInvokingPolicy(
     zx_policy_basic_t* pol, uint32_t pol_count, uint32_t minip_cmd, zx_status_t expect) {
     auto job = make_job();
     ASSERT_EQ(job.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC, pol, pol_count), ZX_OK);
@@ -180,56 +180,56 @@ static bool test_invoking_policy(
     return true;
 }
 
-static bool enforce_deny_event() {
+static bool EnforceDenyEvent() {
     BEGIN_TEST;
 
     zx_policy_basic_t policy[] = { { ZX_POL_NEW_EVENT, ZX_POL_ACTION_DENY } };
-    test_invoking_policy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_EVENT,
+    TestInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_EVENT,
                          ZX_ERR_ACCESS_DENIED);
 
     END_TEST;
 }
 
-static bool enforce_deny_channel() {
+static bool EnforceDenyChannel() {
     BEGIN_TEST;
 
     zx_policy_basic_t policy[] = { { ZX_POL_NEW_CHANNEL, ZX_POL_ACTION_DENY } };
-    test_invoking_policy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_CHANNEL,
+    TestInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_CHANNEL,
                          ZX_ERR_ACCESS_DENIED);
 
     END_TEST;
 }
 
-static bool enforce_deny_any() {
+static bool EnforceDenyAny() {
     BEGIN_TEST;
 
     zx_policy_basic_t policy[] = { { ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY } };
-    test_invoking_policy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_EVENT,
+    TestInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_EVENT,
                          ZX_ERR_ACCESS_DENIED);
 
     END_TEST;
 }
 
-static bool enforce_allow_any() {
+static bool EnforceAllowAny() {
     BEGIN_TEST;
 
     zx_policy_basic_t policy[] = { { ZX_POL_NEW_ANY, ZX_POL_ACTION_ALLOW } };
-    test_invoking_policy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_EVENT,
+    TestInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_EVENT,
                          ZX_OK);
 
     END_TEST;
 }
 
-static bool enforce_deny_but_event() {
+static bool EnforceDenyButEvent() {
     BEGIN_TEST;
 
     zx_policy_basic_t policy[] = {
         { ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY },
         { ZX_POL_NEW_EVENT, ZX_POL_ACTION_ALLOW }
     };
-    test_invoking_policy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_EVENT,
+    TestInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_EVENT,
                          ZX_OK);
-    test_invoking_policy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_CHANNEL,
+    TestInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_CHANNEL,
                          ZX_ERR_ACCESS_DENIED);
 
     END_TEST;
@@ -260,11 +260,11 @@ static uint64_t get_syscall_result(zx_thread_state_general_regs_t* regs) {
 # error Unsupported architecture
 #endif
 
-// Like test_invoking_policy(), this tests that executing the given
+// Like TestInvokingPolicy(), this tests that executing the given
 // mini-process.h command produces the given result when the given policy
 // is in force.  In addition, it tests that a debug port exception gets
 // generated.
-static bool test_invoking_policy_with_exception(
+static bool TestInvokingPolicyWithException(
     zx_policy_basic_t* policy, uint32_t policy_count, uint32_t minip_cmd,
     zx_status_t expected_syscall_result) {
     auto job = make_job();
@@ -341,32 +341,32 @@ static bool test_invoking_policy_with_exception(
     return true;
 }
 
-static bool test_exception_on_new_event_and_deny() {
+static bool TestExceptionOnNewEventAndDeny() {
     BEGIN_TEST;
 
     zx_policy_basic_t policy[] = {
         { ZX_POL_NEW_EVENT, ZX_POL_ACTION_DENY | ZX_POL_ACTION_EXCEPTION },
     };
-    test_invoking_policy_with_exception(
+    TestInvokingPolicyWithException(
         policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_EVENT, ZX_ERR_ACCESS_DENIED);
 
     END_TEST;
 }
 
-static bool test_exception_on_new_event_but_allow() {
+static bool TestExceptionOnNewEventButAllow() {
     BEGIN_TEST;
 
     zx_policy_basic_t policy[] = {
         { ZX_POL_NEW_EVENT, ZX_POL_ACTION_ALLOW | ZX_POL_ACTION_EXCEPTION },
     };
-    test_invoking_policy_with_exception(
+    TestInvokingPolicyWithException(
         policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_EVENT, ZX_OK);
 
     END_TEST;
 }
 
 // Test ZX_POL_BAD_HANDLE when syscalls are allowed to continue.
-static bool test_error_on_bad_handle() {
+static bool TestErrorOnBadHandle() {
     BEGIN_TEST;
 
     // The ALLOW and DENY actions should be equivalent for ZX_POL_BAD_HANDLE.
@@ -376,10 +376,10 @@ static bool test_error_on_bad_handle() {
         zx_policy_basic_t policy[] = {
             { ZX_POL_BAD_HANDLE, action },
         };
-        test_invoking_policy(
+        TestInvokingPolicy(
             policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_USE_BAD_HANDLE_CLOSED,
             ZX_ERR_BAD_HANDLE);
-        test_invoking_policy(
+        TestInvokingPolicy(
             policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_USE_BAD_HANDLE_TRANSFERRED,
             ZX_ERR_BAD_HANDLE);
     }
@@ -388,7 +388,7 @@ static bool test_error_on_bad_handle() {
 }
 
 // Test ZX_POL_BAD_HANDLE with ZX_POL_ACTION_EXCEPTION.
-static bool test_exception_on_bad_handle() {
+static bool TestExceptionOnBadHandle() {
     BEGIN_TEST;
 
     // The ALLOW and DENY actions should be equivalent for ZX_POL_BAD_HANDLE.
@@ -398,10 +398,10 @@ static bool test_exception_on_bad_handle() {
         zx_policy_basic_t policy[] = {
             { ZX_POL_BAD_HANDLE, action | ZX_POL_ACTION_EXCEPTION },
         };
-        test_invoking_policy_with_exception(
+        TestInvokingPolicyWithException(
             policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_USE_BAD_HANDLE_CLOSED,
             ZX_ERR_BAD_HANDLE);
-        test_invoking_policy_with_exception(
+        TestInvokingPolicyWithException(
             policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_USE_BAD_HANDLE_TRANSFERRED,
             ZX_ERR_BAD_HANDLE);
     }
@@ -410,12 +410,12 @@ static bool test_exception_on_bad_handle() {
 }
 
 // The one exception for ZX_POL_BAD_HANDLE is zx_object_info( ZX_INFO_HANDLE_VALID).
-static bool test_get_info_on_bad_handle() {
+static bool TestGetInfoOnBadHandle() {
     BEGIN_TEST;
 
     zx_policy_basic_t policy[] = {{
         ZX_POL_BAD_HANDLE, ZX_POL_ACTION_DENY | ZX_POL_ACTION_EXCEPTION }};
-    test_invoking_policy(
+    TestInvokingPolicy(
         policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_VALIDATE_CLOSED_HANDLE,
         ZX_ERR_BAD_HANDLE);
 
@@ -423,19 +423,19 @@ static bool test_get_info_on_bad_handle() {
 }
 
 BEGIN_TEST_CASE(job_policy)
-RUN_TEST(invalid_calls_abs)
-RUN_TEST(invalid_calls_rel)
-RUN_TEST(abs_then_rel)
-RUN_TEST(enforce_deny_event)
-RUN_TEST(enforce_deny_channel)
-RUN_TEST(enforce_deny_any)
-RUN_TEST(enforce_allow_any)
-RUN_TEST(enforce_deny_but_event)
-RUN_TEST(test_exception_on_new_event_and_deny)
-RUN_TEST(test_exception_on_new_event_but_allow)
-RUN_TEST(test_error_on_bad_handle)
-RUN_TEST(test_exception_on_bad_handle)
-RUN_TEST(test_get_info_on_bad_handle)
+RUN_TEST(InvalidCallsAbs)
+RUN_TEST(InvalidCallsRel)
+RUN_TEST(AbsThenRel)
+RUN_TEST(EnforceDenyEvent)
+RUN_TEST(EnforceDenyChannel)
+RUN_TEST(EnforceDenyAny)
+RUN_TEST(EnforceAllowAny)
+RUN_TEST(EnforceDenyButEvent)
+RUN_TEST(TestExceptionOnNewEventAndDeny)
+RUN_TEST(TestExceptionOnNewEventButAllow)
+RUN_TEST(TestErrorOnBadHandle)
+RUN_TEST(TestExceptionOnBadHandle)
+RUN_TEST(TestGetInfoOnBadHandle)
 END_TEST_CASE(job_policy)
 
 int main(int argc, char** argv) {

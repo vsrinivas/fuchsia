@@ -25,7 +25,7 @@ namespace {
 // until the file is initially accessed. Test that we can
 // actually mmap properly before the file has otherwise been
 // accessed.
-bool test_mmap_empty(void) {
+bool TestMmapEmpty(void) {
     BEGIN_TEST;
     if (!test_info->supports_mmap) {
         return true;
@@ -49,7 +49,7 @@ bool test_mmap_empty(void) {
 
 // Test that a file's writes are properly propagated to
 // a read-only buffer.
-bool test_mmap_readable(void) {
+bool TestMmapReadable(void) {
     BEGIN_TEST;
     if (!test_info->supports_mmap) {
         return true;
@@ -85,7 +85,7 @@ bool test_mmap_readable(void) {
 
 // Test that a mapped buffer's writes are properly propagated
 // to the file.
-bool test_mmap_writable(void) {
+bool TestMmapWritable(void) {
     BEGIN_TEST;
     if (!test_info->supports_mmap) {
         return true;
@@ -137,7 +137,7 @@ bool test_mmap_writable(void) {
 
 // Test that the mapping of a file remains usable even after
 // the file has been closed / unlinked / renamed.
-bool test_mmap_unlinked(void) {
+bool TestMmapUnlinked(void) {
     BEGIN_TEST;
     if (!test_info->supports_mmap) {
         return true;
@@ -172,7 +172,7 @@ bool test_mmap_unlinked(void) {
 }
 
 // Test that MAP_SHARED propagates updates to the file
-bool test_mmap_shared(void) {
+bool TestMmapShared(void) {
     BEGIN_TEST;
     if (!test_info->supports_mmap) {
         return true;
@@ -232,7 +232,7 @@ bool test_mmap_shared(void) {
 
 // Test that MAP_PRIVATE keeps all copies of the buffer
 // separate
-bool test_mmap_private(void) {
+bool TestMmapPrivate(void) {
     BEGIN_TEST;
     if (!test_info->supports_mmap) {
         return true;
@@ -284,7 +284,7 @@ bool test_mmap_private(void) {
 
 // Test that mmap fails with appropriate error codes when
 // we expect.
-bool test_mmap_evil(void) {
+bool TestMmapEvil(void) {
     BEGIN_TEST;
     if (!test_info->supports_mmap) {
         return true;
@@ -367,7 +367,7 @@ bool test_mmap_evil(void) {
     END_TEST;
 }
 
-bool test_mmap_truncate_access(void) {
+bool TestMmapTruncateAccess(void) {
     BEGIN_TEST;
     if (!test_info->supports_mmap) {
         return true;
@@ -409,7 +409,7 @@ bool test_mmap_truncate_access(void) {
     END_TEST;
 }
 
-bool test_mmap_truncate_extend(void) {
+bool TestMmapTruncateExtend(void) {
     BEGIN_TEST;
     if (!test_info->supports_mmap) {
         return true;
@@ -456,7 +456,7 @@ bool test_mmap_truncate_extend(void) {
     END_TEST;
 }
 
-bool test_mmap_truncate_write_extend(void) {
+bool TestMmapTruncateWriteExtend(void) {
     BEGIN_TEST;
     if (!test_info->supports_mmap) {
         return true;
@@ -551,7 +551,7 @@ bool mmap_crash(int prot, int flags, RW rw) {
     END_HELPER;
 }
 
-bool test_mmap_death(void) {
+bool TestMmapDeath(void) {
     BEGIN_TEST;
     if (!test_info->supports_mmap) {
         return true;
@@ -584,15 +584,15 @@ bool test_mmap_death(void) {
 }  // namespace
 
 RUN_FOR_ALL_FILESYSTEMS(fs_mmap_tests,
-    RUN_TEST_MEDIUM(test_mmap_empty)
-    RUN_TEST_MEDIUM(test_mmap_readable)
-    RUN_TEST_MEDIUM(test_mmap_writable)
-    RUN_TEST_MEDIUM(test_mmap_unlinked)
-    RUN_TEST_MEDIUM(test_mmap_shared)
-    RUN_TEST_MEDIUM(test_mmap_private)
-    RUN_TEST_MEDIUM(test_mmap_evil)
-    RUN_TEST_MEDIUM(test_mmap_truncate_access)
-    RUN_TEST_MEDIUM(test_mmap_truncate_extend)
-    RUN_TEST_MEDIUM(test_mmap_truncate_write_extend)
-    RUN_TEST_ENABLE_CRASH_HANDLER(test_mmap_death)
+    RUN_TEST_MEDIUM(TestMmapEmpty)
+    RUN_TEST_MEDIUM(TestMmapReadable)
+    RUN_TEST_MEDIUM(TestMmapWritable)
+    RUN_TEST_MEDIUM(TestMmapUnlinked)
+    RUN_TEST_MEDIUM(TestMmapShared)
+    RUN_TEST_MEDIUM(TestMmapPrivate)
+    RUN_TEST_MEDIUM(TestMmapEvil)
+    RUN_TEST_MEDIUM(TestMmapTruncateAccess)
+    RUN_TEST_MEDIUM(TestMmapTruncateExtend)
+    RUN_TEST_MEDIUM(TestMmapTruncateWriteExtend)
+    RUN_TEST_ENABLE_CRASH_HANDLER(TestMmapDeath)
 )

@@ -589,7 +589,7 @@ private:
     // At a steady state they will be empty.
     bitmap::RleBitmap reserved_blocks_ = {};
     bitmap::RleBitmap reserved_nodes_ = {};
-    uint64_t fs_id_ = {};
+    uint64_t fs_id_ = 0;
 
     // free_node_lower_bound_ is lower bound on free nodes, meaning we are sure that
     // there are no free nodes with indices less than free_node_lower_bound_. This

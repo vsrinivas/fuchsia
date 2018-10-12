@@ -146,7 +146,7 @@ struct TestAllocatorTraits : public DefaultAllocatorTraits {
 // Actual tests
 
 template <typename ItemTraits, size_t size>
-bool vector_test_access_release() {
+bool VectorTestAccessRelease() {
     using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
@@ -200,7 +200,7 @@ struct CountedAllocatorTraits : public TestAllocatorTraits {
 size_t CountedAllocatorTraits::allocation_count = 0;
 
 template <typename ItemTraits, size_t size>
-bool vector_test_push_back_in_capacity() {
+bool VectorTestPushBackInCapacity() {
     using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
@@ -238,7 +238,7 @@ bool vector_test_push_back_in_capacity() {
 }
 
 template <typename ItemTraits, size_t size>
-bool vector_test_push_back_by_const_ref_in_capacity() {
+bool VectorTestPushBackByConstRefInCapacity() {
     using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
@@ -277,7 +277,7 @@ bool vector_test_push_back_by_const_ref_in_capacity() {
 }
 
 template <typename ItemTraits, size_t size>
-bool vector_test_push_back_beyond_capacity() {
+bool VectorTestPushBackBeyondCapacity() {
     using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
@@ -308,7 +308,7 @@ bool vector_test_push_back_beyond_capacity() {
 }
 
 template <typename ItemTraits, size_t size>
-bool vector_test_push_back_by_const_ref_beyond_capacity() {
+bool VectorTestPushBackByConstRefBeyondCapacity() {
     using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
@@ -340,7 +340,7 @@ bool vector_test_push_back_by_const_ref_beyond_capacity() {
 }
 
 template <typename ItemTraits, size_t size>
-bool vector_test_pop_back() {
+bool VectorTestPopBack() {
     using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
@@ -397,7 +397,7 @@ struct PartiallyFailingAllocatorTraits : public DefaultAllocatorTraits {
 };
 
 template <typename ItemTraits, size_t size>
-bool vector_test_allocation_failure() {
+bool VectorTestAllocationFailure() {
     using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
@@ -464,7 +464,7 @@ bool vector_test_allocation_failure() {
 }
 
 template <typename ItemTraits, size_t size>
-bool vector_test_move() {
+bool VectorTestMove() {
     using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
@@ -529,7 +529,7 @@ bool vector_test_move() {
 }
 
 template <typename ItemTraits, size_t size>
-bool vector_test_swap() {
+bool VectorTestSwap() {
     using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
@@ -582,7 +582,7 @@ bool vector_test_swap() {
 }
 
 template <typename ItemTraits, size_t size>
-bool vector_test_iterator() {
+bool VectorTestIterator() {
     using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
@@ -623,7 +623,7 @@ bool vector_test_iterator() {
 }
 
 template <typename ItemTraits, size_t size>
-bool vector_test_insert_delete() {
+bool VectorTestInsertDelete() {
     using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
@@ -691,7 +691,7 @@ bool vector_test_insert_delete() {
 }
 
 template <typename ItemTraits, size_t size>
-bool vector_test_no_alloc_check() {
+bool VectorTestNoAllocCheck() {
     using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
@@ -748,7 +748,7 @@ bool vector_test_no_alloc_check() {
 }
 
 template <typename ItemTraits>
-bool vector_test_initializer_list() {
+bool VectorTestInitializerList() {
     using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
@@ -788,7 +788,7 @@ bool vector_test_initializer_list() {
     END_TEST;
 }
 
-bool vector_test_implicit_conversion() {
+bool VectorTestImplicitConversion() {
     BEGIN_TEST;
 
     {
@@ -842,21 +842,21 @@ bool vector_test_implicit_conversion() {
     RUN_FOR_ALL_TRAITS(test_base, 100)
 
 BEGIN_TEST_CASE(vector_tests)
-RUN_FOR_ALL(vector_test_access_release)
-RUN_FOR_ALL(vector_test_push_back_in_capacity)
-RUN_TEST((vector_test_push_back_by_const_ref_in_capacity<ValueTypeTraits, 100>))
-RUN_FOR_ALL(vector_test_push_back_beyond_capacity)
-RUN_TEST((vector_test_push_back_by_const_ref_beyond_capacity<ValueTypeTraits, 100>))
-RUN_FOR_ALL(vector_test_pop_back)
-RUN_FOR_ALL(vector_test_allocation_failure)
-RUN_FOR_ALL(vector_test_move)
-RUN_FOR_ALL(vector_test_swap)
-RUN_FOR_ALL(vector_test_iterator)
-RUN_FOR_ALL(vector_test_insert_delete)
-RUN_FOR_ALL(vector_test_no_alloc_check)
-RUN_TEST(vector_test_initializer_list<ValueTypeTraits>)
-RUN_TEST(vector_test_initializer_list<RefPtrTraits>)
-RUN_TEST(vector_test_implicit_conversion)
+RUN_FOR_ALL(VectorTestAccessRelease)
+RUN_FOR_ALL(VectorTestPushBackInCapacity)
+RUN_TEST((VectorTestPushBackByConstRefInCapacity<ValueTypeTraits, 100>))
+RUN_FOR_ALL(VectorTestPushBackBeyondCapacity)
+RUN_TEST((VectorTestPushBackByConstRefBeyondCapacity<ValueTypeTraits, 100>))
+RUN_FOR_ALL(VectorTestPopBack)
+RUN_FOR_ALL(VectorTestAllocationFailure)
+RUN_FOR_ALL(VectorTestMove)
+RUN_FOR_ALL(VectorTestSwap)
+RUN_FOR_ALL(VectorTestIterator)
+RUN_FOR_ALL(VectorTestInsertDelete)
+RUN_FOR_ALL(VectorTestNoAllocCheck)
+RUN_TEST(VectorTestInitializerList<ValueTypeTraits>)
+RUN_TEST(VectorTestInitializerList<RefPtrTraits>)
+RUN_TEST(VectorTestImplicitConversion)
 END_TEST_CASE(vector_tests)
 
 } // namespace tests

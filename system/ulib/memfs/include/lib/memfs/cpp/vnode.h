@@ -203,20 +203,12 @@ public:
     uint64_t GetFsId() const { return fs_id_; }
 
 private:
-    // Maximum number of pages available; fixed at Vfs creation time.
-    // Puts a bound on maximum memory usage.
-    const size_t pages_limit_;
-
-    // Number of pages currently in use by VnodeFiles.
-    size_t num_allocated_pages_;
-
-    uint64_t fs_id_{};
-
-    // Called by |CreateFilesystem| to initialize fs_id_ on the first time.
+    // Initialize fs_id_ on the first call.
     // Calling more than once is a no-op.
     zx_status_t FillFsId();
-    friend zx_status_t CreateFilesystem(
-        const char* name, memfs::Vfs* vfs, fbl::RefPtr<VnodeDir>* out);
+
+    friend zx_status_t CreateFilesystem(const char* name, memfs::Vfs* vfs,
+                                        fbl::RefPtr<VnodeDir>* out);
 
     // Allows VnodeFile (and no other class) to manipulate number of allocated pages
     // using GrowVMO and WillFreeVMO.
@@ -234,6 +226,15 @@ private:
     // VnodeFile must call this function in the destructor to signal that its VMO will be freed.
     // |vmo_size| is the size of the owned vmo in bytes. It should be a multiple of page size.
     void WillFreeVMO(size_t vmo_size);
+
+    // Maximum number of pages available; fixed at Vfs creation time.
+    // Puts a bound on maximum memory usage.
+    const size_t pages_limit_;
+
+    // Number of pages currently in use by VnodeFiles.
+    size_t num_allocated_pages_;
+
+    uint64_t fs_id_ = 0;
 };
 
 // Initializes the Vfs object and names the root directory |name|. The Vfs object is considered

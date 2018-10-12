@@ -9,7 +9,7 @@
 
 namespace {
 
-bool test_fidl_basic() {
+bool TestFidlBasic() {
     BEGIN_TEST;
 
     zx_handle_t h = ZX_HANDLE_INVALID;
@@ -38,5 +38,5 @@ bool test_fidl_basic() {
 } // namespace
 
 BEGIN_TEST_CASE(fidl_tests)
-RUN_TEST(test_fidl_basic)
+RUN_TEST(TestFidlBasic)
 END_TEST_CASE(fidl_tests)

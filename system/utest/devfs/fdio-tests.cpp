@@ -15,7 +15,7 @@
 
 namespace {
 
-bool test_device_clone() {
+bool TestDeviceClone() {
     BEGIN_TEST;
 
     fbl::unique_fd fd(open("/dev/zero", O_RDONLY));
@@ -31,7 +31,7 @@ bool test_device_clone() {
     END_TEST;
 }
 
-bool test_device_transfer() {
+bool TestDeviceTransfer() {
     BEGIN_TEST;
 
     fbl::unique_fd fd(open("/dev/zero", O_RDONLY));
@@ -50,6 +50,6 @@ bool test_device_transfer() {
 } // namespace
 
 BEGIN_TEST_CASE(fdio_tests)
-RUN_TEST(test_device_clone)
-RUN_TEST(test_device_transfer)
+RUN_TEST(TestDeviceClone)
+RUN_TEST(TestDeviceTransfer)
 END_TEST_CASE(fdio_tests)

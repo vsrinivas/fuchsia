@@ -187,7 +187,7 @@ static bool wait_thread_blocked(zx_handle_t thread, uint32_t reason) {
     return true;
 }
 
-static bool test_basics() {
+static bool TestBasics() {
     BEGIN_TEST;
     zxr_thread_t thread;
     zx_handle_t thread_h;
@@ -199,7 +199,7 @@ static bool test_basics() {
     END_TEST;
 }
 
-static bool test_detach() {
+static bool TestDetach() {
     BEGIN_TEST;
     zxr_thread_t thread;
     zx_handle_t event;
@@ -226,7 +226,7 @@ static bool test_detach() {
     END_TEST;
 }
 
-static bool test_long_name_succeeds() {
+static bool TestLongNameSucceeds() {
     BEGIN_TEST;
     // Creating a thread with a super long name should succeed.
     static const char long_name[] =
@@ -245,7 +245,7 @@ static bool test_long_name_succeeds() {
 // zx_thread_start() is not supposed to be usable for creating a
 // process's first thread.  That's what zx_process_start() is for.
 // Check that zx_thread_start() returns an error in this case.
-static bool test_thread_start_on_initial_thread() {
+static bool TestThreadStartOnInitialThread() {
     BEGIN_TEST;
 
     static const char kProcessName[] = "test-proc-thread1";
@@ -270,7 +270,7 @@ static bool test_thread_start_on_initial_thread() {
 // Test that we don't get an assertion failure (and kernel panic) if we
 // pass a zero instruction pointer when starting a thread (in this case via
 // zx_process_start()).
-static bool test_thread_start_with_zero_instruction_pointer() {
+static bool TestThreadStartWithZeroInstructionPointer() {
     BEGIN_TEST;
 
     static const char kProcessName[] = "test-proc-thread2";
@@ -300,7 +300,7 @@ static bool test_thread_start_with_zero_instruction_pointer() {
     END_TEST;
 }
 
-static bool test_kill_busy_thread() {
+static bool TestKillBusyThread() {
     BEGIN_TEST;
 
     ASSERT_TRUE(start_and_kill_thread(threads_test_busy_fn, NULL));
@@ -308,7 +308,7 @@ static bool test_kill_busy_thread() {
     END_TEST;
 }
 
-static bool test_kill_sleep_thread() {
+static bool TestKillSleepThread() {
     BEGIN_TEST;
 
     ASSERT_TRUE(start_and_kill_thread(threads_test_infinite_sleep_fn, NULL));
@@ -316,7 +316,7 @@ static bool test_kill_sleep_thread() {
     END_TEST;
 }
 
-static bool test_kill_wait_thread() {
+static bool TestKillWaitThread() {
     BEGIN_TEST;
 
     zx_handle_t event;
@@ -327,7 +327,7 @@ static bool test_kill_wait_thread() {
     END_TEST;
 }
 
-static bool test_bad_state_nonstarted_thread() {
+static bool TestBadStateNonstartedThread() {
     BEGIN_TEST;
 
     // Perform a bunch of apis against non started threads (in the INITIAL STATE).
@@ -379,7 +379,7 @@ __NO_SAFESTACK static void self_killing_fn(void* arg) {
 
 // This tests that the zx_task_kill() syscall does not return when a thread
 // uses it to kill itself.
-static bool test_thread_kills_itself() {
+static bool TestThreadKillsItself() {
     BEGIN_TEST;
 
     self_killing_thread_args args;
@@ -399,7 +399,7 @@ static bool test_thread_kills_itself() {
     END_TEST;
 }
 
-static bool test_info_task_stats_fails() {
+static bool TestInfoTaskStatsFails() {
     BEGIN_TEST;
     // Spin up a thread.
     zxr_thread_t thread;
@@ -422,7 +422,7 @@ static bool test_info_task_stats_fails() {
     END_TEST;
 }
 
-static bool test_resume_suspended() {
+static bool TestResumeSuspended() {
     BEGIN_TEST;
 
     zx_handle_t event;
@@ -482,7 +482,7 @@ static bool test_resume_suspended() {
     END_TEST;
 }
 
-static bool test_suspend_sleeping() {
+static bool TestSuspendSleeping() {
     BEGIN_TEST;
 
     const zx_time_t sleep_deadline = zx_deadline_after(ZX_MSEC(100));
@@ -526,7 +526,7 @@ static bool test_suspend_sleeping() {
     END_TEST;
 }
 
-static bool test_suspend_channel_call() {
+static bool TestSuspendChannelCall() {
     BEGIN_TEST;
 
     zxr_thread_t thread;
@@ -583,7 +583,7 @@ static bool test_suspend_channel_call() {
     END_TEST;
 }
 
-static bool test_suspend_port_call() {
+static bool TestSuspendPortCall() {
     BEGIN_TEST;
 
     zxr_thread_t thread;
@@ -626,26 +626,26 @@ static bool test_suspend_port_call() {
     END_TEST;
 }
 
-struct test_writing_thread_arg {
+struct TestWritingThreadArg {
     volatile int v;
 };
 
-__NO_SAFESTACK static void test_writing_thread_fn(void* arg_) {
-    test_writing_thread_arg* arg = static_cast<test_writing_thread_arg*>(arg_);
+__NO_SAFESTACK static void TestWritingThreadFn(void* arg_) {
+    TestWritingThreadArg* arg = static_cast<TestWritingThreadArg*>(arg_);
     while (true) {
         arg->v = 1;
     }
     __builtin_trap();
 }
 
-static bool test_suspend_stops_thread() {
+static bool TestSuspendStopsThread() {
     BEGIN_TEST;
 
     zxr_thread_t thread;
 
-    test_writing_thread_arg arg = {.v = 0};
+    TestWritingThreadArg arg = {.v = 0};
     zx_handle_t thread_h;
-    ASSERT_TRUE(start_thread(test_writing_thread_fn, &arg, &thread, &thread_h));
+    ASSERT_TRUE(start_thread(TestWritingThreadFn, &arg, &thread, &thread_h));
 
     while (arg.v != 1) {
         zx_nanosleep(0);
@@ -676,7 +676,7 @@ static bool test_suspend_stops_thread() {
     END_TEST;
 }
 
-static bool test_suspend_multiple() {
+static bool TestSuspendMultiple() {
     BEGIN_TEST;
 
     zx_handle_t event;
@@ -748,13 +748,13 @@ static bool test_suspend_multiple() {
 
 // This tests for a bug in which killing a suspended thread causes the
 // thread to be resumed and execute more instructions in userland.
-static bool test_kill_suspended_thread() {
+static bool TestKillSuspendedThread() {
     BEGIN_TEST;
 
     zxr_thread_t thread;
-    test_writing_thread_arg arg = {.v = 0};
+    TestWritingThreadArg arg = {.v = 0};
     zx_handle_t thread_h;
-    ASSERT_TRUE(start_thread(test_writing_thread_fn, &arg, &thread, &thread_h));
+    ASSERT_TRUE(start_thread(TestWritingThreadFn, &arg, &thread, &thread_h));
 
     // Wait until the thread has started and has modified arg.v.
     while (arg.v != 1) {
@@ -811,7 +811,7 @@ static bool port_wait_for_signal_repeating(zx_handle_t port,
 }
 
 // Test signal delivery of suspended threads via async wait.
-static bool test_suspend_wait_async_signal_delivery_worker(bool use_repeating) {
+static bool TestSuspendWaitAsyncSignalDeliveryWorker(bool use_repeating) {
     zx_handle_t event;
     zx_handle_t port;
     zxr_thread_t thread;
@@ -934,16 +934,16 @@ static bool test_suspend_wait_async_signal_delivery_worker(bool use_repeating) {
 }
 
 // Test signal delivery of suspended threads via single async wait.
-static bool test_suspend_single_wait_async_signal_delivery() {
+static bool TestSuspendSingleWaitAsyncSignalDelivery() {
     BEGIN_TEST;
-    EXPECT_TRUE(test_suspend_wait_async_signal_delivery_worker(false));
+    EXPECT_TRUE(TestSuspendWaitAsyncSignalDeliveryWorker(false));
     END_TEST;
 }
 
 // Test signal delivery of suspended threads via repeating async wait.
-static bool test_suspend_repeating_wait_async_signal_delivery() {
+static bool TestSuspendRepeatingWaitAsyncSignalDelivery() {
     BEGIN_TEST;
-    EXPECT_TRUE(test_suspend_wait_async_signal_delivery_worker(true));
+    EXPECT_TRUE(TestSuspendWaitAsyncSignalDeliveryWorker(true));
     END_TEST;
 }
 
@@ -997,7 +997,7 @@ private:
 // This tests the registers reported by zx_thread_read_state() for a
 // suspended thread.  It starts a thread which sets all the registers to
 // known test values.
-static bool test_reading_general_register_state() {
+static bool TestReadingGeneralRegisterState() {
     BEGIN_TEST;
 
     zx_thread_state_general_regs_t gen_regs_expected;
@@ -1016,7 +1016,7 @@ static bool test_reading_general_register_state() {
     END_TEST;
 }
 
-static bool test_reading_fp_register_state() {
+static bool TestReadingFpRegisterState() {
     BEGIN_TEST;
 
     zx_thread_state_fp_regs_t fp_regs_expected;
@@ -1034,7 +1034,7 @@ static bool test_reading_fp_register_state() {
     END_TEST;
 }
 
-static bool test_reading_vector_register_state() {
+static bool TestReadingVectorRegisterState() {
     BEGIN_TEST;
 
     zx_thread_state_vector_regs_t vector_regs_expected;
@@ -1133,7 +1133,7 @@ private:
 // This tests writing registers using zx_thread_write_state().  After
 // setting registers using that syscall, it reads back the registers and
 // checks their values.
-static bool test_writing_general_register_state() {
+static bool TestWritingGeneralRegisterState() {
     BEGIN_TEST;
 
     RegisterWriteSetup<zx_thread_state_general_regs_t> setup;
@@ -1158,7 +1158,7 @@ static bool test_writing_general_register_state() {
     END_TEST;
 }
 
-static bool test_writing_fp_register_state() {
+static bool TestWritingFpRegisterState() {
     BEGIN_TEST;
 
     RegisterWriteSetup<zx_thread_state_fp_regs_t> setup;
@@ -1179,7 +1179,7 @@ static bool test_writing_fp_register_state() {
     END_TEST;
 }
 
-static bool test_writing_vector_register_state() {
+static bool TestWritingVectorRegisterState() {
     BEGIN_TEST;
 
     RegisterWriteSetup<zx_thread_state_vector_regs_t> setup;
@@ -1218,7 +1218,7 @@ static uint32_t x86_linear_address_width() {
 // because if the kernel returns to that address using SYSRET, that can
 // cause a fault in kernel mode that is exploitable.  See
 // sysret_problem.md.
-static bool test_noncanonical_rip_address() {
+static bool TestNoncanonicalRipAddress() {
     BEGIN_TEST;
 
 #if defined(__x86_64__)
@@ -1294,14 +1294,14 @@ static bool test_noncanonical_rip_address() {
 // FIQ interrupt disable flags.  We don't want userland to be able to set
 // those flags to 1, since that would disable interrupts.  Also, userland
 // should not be able to read these bits.
-static bool test_writing_arm_flags_register() {
+static bool TestWritingArmFlagsRegister() {
     BEGIN_TEST;
 
 #if defined(__aarch64__)
-    test_writing_thread_arg arg = {.v = 0};
+    TestWritingThreadArg arg = {.v = 0};
     zxr_thread_t thread;
     zx_handle_t thread_handle;
-    ASSERT_TRUE(start_thread(test_writing_thread_fn, &arg, &thread,
+    ASSERT_TRUE(start_thread(TestWritingThreadFn, &arg, &thread,
                              &thread_handle));
     // Wait for the thread to start executing and enter its main loop.
     while (arg.v != 1) {
@@ -1355,7 +1355,7 @@ static bool test_writing_arm_flags_register() {
     END_TEST;
 }
 
-static bool test_write_read_debug_register_state() {
+static bool TestWriteReadDebugRegisterState() {
     BEGIN_TEST;
 #if defined(__x86_64__)
     zx_thread_state_debug_regs_t debug_regs_to_write;
@@ -1399,7 +1399,7 @@ static bool test_write_read_debug_register_state() {
 #define DR6_ZERO_MASK (0xffff0ff0ul)
 #define DR7_ZERO_MASK (0x700ul)
 
-static bool test_debug_registers_validation() {
+static bool TestDebugRegistersValidation() {
     BEGIN_TEST;
 #if defined(__x86_64__)
     zx_thread_state_debug_regs_t debug_regs = {};
@@ -1459,36 +1459,36 @@ static bool test_debug_registers_validation() {
 }
 
 BEGIN_TEST_CASE(threads_tests)
-RUN_TEST(test_basics)
-RUN_TEST(test_detach)
-RUN_TEST(test_long_name_succeeds)
-RUN_TEST(test_thread_start_on_initial_thread)
-RUN_TEST_ENABLE_CRASH_HANDLER(test_thread_start_with_zero_instruction_pointer)
-RUN_TEST(test_kill_busy_thread)
-RUN_TEST(test_kill_sleep_thread)
-RUN_TEST(test_kill_wait_thread)
-RUN_TEST(test_bad_state_nonstarted_thread)
-RUN_TEST(test_thread_kills_itself)
-RUN_TEST(test_info_task_stats_fails)
-RUN_TEST(test_resume_suspended)
-RUN_TEST(test_suspend_sleeping)
-RUN_TEST(test_suspend_channel_call)
-RUN_TEST(test_suspend_port_call)
-RUN_TEST(test_suspend_stops_thread)
-RUN_TEST(test_suspend_multiple)
-RUN_TEST(test_kill_suspended_thread)
-RUN_TEST(test_suspend_single_wait_async_signal_delivery)
-RUN_TEST(test_suspend_repeating_wait_async_signal_delivery)
-RUN_TEST(test_reading_general_register_state)
-RUN_TEST(test_reading_fp_register_state)
-RUN_TEST(test_reading_vector_register_state)
-RUN_TEST(test_writing_general_register_state)
-RUN_TEST(test_writing_fp_register_state)
-RUN_TEST(test_writing_vector_register_state)
-RUN_TEST(test_noncanonical_rip_address)
-RUN_TEST(test_writing_arm_flags_register)
-RUN_TEST(test_write_read_debug_register_state);
-RUN_TEST(test_debug_registers_validation);
+RUN_TEST(TestBasics)
+RUN_TEST(TestDetach)
+RUN_TEST(TestLongNameSucceeds)
+RUN_TEST(TestThreadStartOnInitialThread)
+RUN_TEST_ENABLE_CRASH_HANDLER(TestThreadStartWithZeroInstructionPointer)
+RUN_TEST(TestKillBusyThread)
+RUN_TEST(TestKillSleepThread)
+RUN_TEST(TestKillWaitThread)
+RUN_TEST(TestBadStateNonstartedThread)
+RUN_TEST(TestThreadKillsItself)
+RUN_TEST(TestInfoTaskStatsFails)
+RUN_TEST(TestResumeSuspended)
+RUN_TEST(TestSuspendSleeping)
+RUN_TEST(TestSuspendChannelCall)
+RUN_TEST(TestSuspendPortCall)
+RUN_TEST(TestSuspendStopsThread)
+RUN_TEST(TestSuspendMultiple)
+RUN_TEST(TestKillSuspendedThread)
+RUN_TEST(TestSuspendSingleWaitAsyncSignalDelivery)
+RUN_TEST(TestSuspendRepeatingWaitAsyncSignalDelivery)
+RUN_TEST(TestReadingGeneralRegisterState)
+RUN_TEST(TestReadingFpRegisterState)
+RUN_TEST(TestReadingVectorRegisterState)
+RUN_TEST(TestWritingGeneralRegisterState)
+RUN_TEST(TestWritingFpRegisterState)
+RUN_TEST(TestWritingVectorRegisterState)
+RUN_TEST(TestNoncanonicalRipAddress)
+RUN_TEST(TestWritingArmFlagsRegister)
+RUN_TEST(TestWriteReadDebugRegisterState);
+RUN_TEST(TestDebugRegistersValidation);
 
 END_TEST_CASE(threads_tests)
 

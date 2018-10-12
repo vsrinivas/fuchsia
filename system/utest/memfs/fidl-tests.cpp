@@ -24,7 +24,7 @@
 
 namespace {
 
-bool test_fidl_basic() {
+bool TestFidlBasic() {
     BEGIN_TEST;
 
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -84,7 +84,7 @@ bool QueryInfo(const char* path, fuchsia_io_FilesystemInfo* info) {
     END_HELPER;
 }
 
-bool test_fidl_query_filesystem() {
+bool TestFidlQueryFilesystem() {
     BEGIN_TEST;
 
     {
@@ -161,6 +161,6 @@ bool test_fidl_query_filesystem() {
 } // namespace
 
 BEGIN_TEST_CASE(fidl_tests)
-RUN_TEST(test_fidl_basic)
-RUN_TEST(test_fidl_query_filesystem)
+RUN_TEST(TestFidlBasic)
+RUN_TEST(TestFidlQueryFilesystem)
 END_TEST_CASE(fidl_tests)

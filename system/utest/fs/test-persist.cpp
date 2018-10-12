@@ -27,7 +27,7 @@ constexpr bool is_directory(const char* const path) {
     return path[fbl::constexpr_strlen(path) - 1] == '/';
 }
 
-bool test_persist_simple(void) {
+bool TestPersistSimple(void) {
     BEGIN_TEST;
 
     if (!test_info->can_be_mounted) {
@@ -79,7 +79,7 @@ bool test_persist_simple(void) {
     END_TEST;
 }
 
-bool test_persist_rapid_remount(void) {
+bool TestPersistRapidRemount(void) {
     BEGIN_TEST;
 
     if (!test_info->can_be_mounted) {
@@ -96,7 +96,7 @@ bool test_persist_rapid_remount(void) {
 
 
 template <size_t BufferSize>
-bool test_persist_with_data(void) {
+bool TestPersistWithData(void) {
     BEGIN_TEST;
 
     if (!test_info->can_be_mounted) {
@@ -175,7 +175,7 @@ bool test_persist_with_data(void) {
 constexpr size_t kMaxLoopLength = 26;
 
 template <bool MoveDirectory, size_t LoopLength, size_t Moves>
-bool test_rename_loop(void) {
+bool TestRenameLoop(void) {
     BEGIN_TEST;
 
     if (!test_info->can_be_mounted) {
@@ -260,20 +260,20 @@ bool test_rename_loop(void) {
 }
 
 RUN_FOR_ALL_FILESYSTEMS(persistence_tests,
-    RUN_TEST_MEDIUM(test_persist_simple)
-    RUN_TEST_LARGE(test_persist_rapid_remount)
-    RUN_TEST_MEDIUM((test_persist_with_data<1>))
-    RUN_TEST_MEDIUM((test_persist_with_data<100>))
-    RUN_TEST_LARGE((test_persist_with_data<8192 - 1>))
-    RUN_TEST_LARGE((test_persist_with_data<8192>))
-    RUN_TEST_LARGE((test_persist_with_data<8192 + 1>))
-    RUN_TEST_LARGE((test_persist_with_data<8192 * 128>))
-    RUN_TEST_MEDIUM((test_rename_loop<false, 2, 2>));
-    RUN_TEST_LARGE((test_rename_loop<false, 2, 100>));
-    RUN_TEST_LARGE((test_rename_loop<false, 15, 100>));
-    RUN_TEST_LARGE((test_rename_loop<false, 25, 500>));
-    RUN_TEST_MEDIUM((test_rename_loop<true, 2, 2>));
-    RUN_TEST_LARGE((test_rename_loop<true, 2, 100>));
-    RUN_TEST_LARGE((test_rename_loop<true, 15, 100>));
-    RUN_TEST_LARGE((test_rename_loop<true, 25, 500>));
+    RUN_TEST_MEDIUM(TestPersistSimple)
+    RUN_TEST_LARGE(TestPersistRapidRemount)
+    RUN_TEST_MEDIUM((TestPersistWithData<1>))
+    RUN_TEST_MEDIUM((TestPersistWithData<100>))
+    RUN_TEST_LARGE((TestPersistWithData<8192 - 1>))
+    RUN_TEST_LARGE((TestPersistWithData<8192>))
+    RUN_TEST_LARGE((TestPersistWithData<8192 + 1>))
+    RUN_TEST_LARGE((TestPersistWithData<8192 * 128>))
+    RUN_TEST_MEDIUM((TestRenameLoop<false, 2, 2>));
+    RUN_TEST_LARGE((TestRenameLoop<false, 2, 100>));
+    RUN_TEST_LARGE((TestRenameLoop<false, 15, 100>));
+    RUN_TEST_LARGE((TestRenameLoop<false, 25, 500>));
+    RUN_TEST_MEDIUM((TestRenameLoop<true, 2, 2>));
+    RUN_TEST_LARGE((TestRenameLoop<true, 2, 100>));
+    RUN_TEST_LARGE((TestRenameLoop<true, 15, 100>));
+    RUN_TEST_LARGE((TestRenameLoop<true, 25, 500>));
 )

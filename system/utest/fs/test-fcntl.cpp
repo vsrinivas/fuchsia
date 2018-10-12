@@ -15,7 +15,7 @@
 
 #include "filesystems.h"
 
-bool test_fcntl_append(void) {
+bool TestFcntlAppend(void) {
     BEGIN_TEST;
 
     int fd = open("::file", O_APPEND | O_RDWR | O_CREAT, 0644);
@@ -59,7 +59,7 @@ bool test_fcntl_append(void) {
     END_TEST;
 }
 
-bool test_fcntl_access_bits(void) {
+bool TestFcntlAccessBits(void) {
     BEGIN_TEST;
 
     int fd = open("::file", O_APPEND | O_RDWR | O_CREAT, 0644);
@@ -99,6 +99,6 @@ bool test_fcntl_access_bits(void) {
 }
 
 RUN_FOR_ALL_FILESYSTEMS(fcntl_tests,
-    RUN_TEST_MEDIUM(test_fcntl_append)
-    RUN_TEST_MEDIUM(test_fcntl_access_bits)
+    RUN_TEST_MEDIUM(TestFcntlAppend)
+    RUN_TEST_MEDIUM(TestFcntlAccessBits)
 )

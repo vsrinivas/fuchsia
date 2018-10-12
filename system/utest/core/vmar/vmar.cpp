@@ -53,7 +53,7 @@ bool check_pages_mapped(zx_handle_t process, uintptr_t base, uint64_t bitmap, si
 }
 
 // Thread run by test_local_address, used to attempt an access to memory
-void test_write_address_thread(uintptr_t address, bool* success) {
+void TestWriteAddressThread(uintptr_t address, bool* success) {
     auto p = reinterpret_cast<fbl::atomic_uint8_t*>(address);
     p->store(5);
     *success = true;
@@ -61,7 +61,7 @@ void test_write_address_thread(uintptr_t address, bool* success) {
     zx_thread_exit();
 }
 // Thread run by test_local_address, used to attempt an access to memory
-void test_read_address_thread(uintptr_t address, bool* success) {
+void TestReadAddressThread(uintptr_t address, bool* success) {
     auto p = reinterpret_cast<fbl::atomic_uint8_t*>(address);
     (void)p->load();
     *success = true;
@@ -83,8 +83,8 @@ zx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
 
     zx_handle_t thread = ZX_HANDLE_INVALID;
     zx_handle_t port = ZX_HANDLE_INVALID;
-    uintptr_t entry = reinterpret_cast<uintptr_t>(write ? test_write_address_thread :
-                                                          test_read_address_thread);
+    uintptr_t entry = reinterpret_cast<uintptr_t>(write ? TestWriteAddressThread :
+                                                          TestReadAddressThread);
     uintptr_t stack = reinterpret_cast<uintptr_t>(thread_stack + sizeof(thread_stack));
 
     zx_status_t status = zx_thread_create(zx_process_self(), "vmar_test_addr", 14, 0, &thread);

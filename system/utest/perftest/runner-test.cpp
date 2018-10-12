@@ -54,7 +54,7 @@ static bool check_times(perftest::TestCaseResults* test_case) {
 }
 
 // Test that a successful run of a perf test produces sensible results.
-static bool test_results() {
+static bool TestResults() {
     BEGIN_TEST;
 
     perftest::internal::TestList test_list;
@@ -82,7 +82,7 @@ static bool test_results() {
 
 // Test that if a perf test fails by returning "false", the failure gets
 // propagated correctly.
-static bool test_failing_test() {
+static bool TestFailingTest() {
     BEGIN_TEST;
 
     perftest::internal::TestList test_list;
@@ -103,7 +103,7 @@ static bool test_failing_test() {
 // Test that we report a test as failed if it calls KeepRunning() too many
 // or too few times.  Make sure that we don't overrun the array of
 // timestamps or report uninitialized data from that array.
-static bool test_bad_keep_running_calls() {
+static bool TestBadKeepRunningCalls() {
     BEGIN_TEST;
 
     for (int actual_runs = 0; actual_runs < 10; ++actual_runs) {
@@ -147,7 +147,7 @@ static bool MultistepTest(perftest::RepeatState* state) {
 }
 
 // Test the results for a simple multi-step test.
-static bool test_multistep_test() {
+static bool TestMultistepTest() {
     BEGIN_TEST;
 
     perftest::internal::TestList test_list;
@@ -174,7 +174,7 @@ static bool test_multistep_test() {
 
 // Test that we report a test as failed if it calls NextStep() before
 // KeepRunning(), which is invalid.
-static bool test_next_step_called_before_keep_running() {
+static bool TestNextStepCalledBeforeKeepRunning() {
     BEGIN_TEST;
 
     bool keeprunning_retval = true;
@@ -202,7 +202,7 @@ static bool test_next_step_called_before_keep_running() {
 
 // Test that we report a test as failed if it calls NextStep() too many or
 // too few times.
-static bool test_bad_next_step_calls() {
+static bool TestBadNextStepCalls() {
     BEGIN_TEST;
 
     for (int actual_calls = 0; actual_calls < 10; ++actual_calls) {
@@ -240,7 +240,7 @@ static bool test_bad_next_step_calls() {
 }
 
 // Check that the bytes_processed_per_run parameter is propagated through.
-static bool test_bytes_processed_parameter() {
+static bool TestBytesProcessedParameter() {
     BEGIN_TEST;
 
     auto test_func = [&](perftest::RepeatState* state) {
@@ -269,7 +269,7 @@ static bool test_bytes_processed_parameter() {
 // parameter, we should get a result reported for the overall times with a
 // bytes_processed_per_run value.  The results for the individual steps
 // should not report bytes_processed_per_run.
-static bool test_bytes_processed_parameter_multistep() {
+static bool TestBytesProcessedParameterMultistep() {
     BEGIN_TEST;
 
     auto test_func = [&](perftest::RepeatState* state) {
@@ -303,7 +303,7 @@ static bool test_bytes_processed_parameter_multistep() {
     END_TEST;
 }
 
-static bool test_parsing_command_args() {
+static bool TestParsingCommandArgs() {
     BEGIN_TEST;
 
     const char* argv[] = {"unused_argv0", "--runs", "123", "--out", "dest_file",
@@ -322,15 +322,15 @@ static bool test_parsing_command_args() {
 }
 
 BEGIN_TEST_CASE(perftest_runner_test)
-RUN_TEST(test_results)
-RUN_TEST(test_failing_test)
-RUN_TEST(test_bad_keep_running_calls)
-RUN_TEST(test_multistep_test)
-RUN_TEST(test_next_step_called_before_keep_running)
-RUN_TEST(test_bad_next_step_calls)
-RUN_TEST(test_bytes_processed_parameter)
-RUN_TEST(test_bytes_processed_parameter_multistep)
-RUN_TEST(test_parsing_command_args)
+RUN_TEST(TestResults)
+RUN_TEST(TestFailingTest)
+RUN_TEST(TestBadKeepRunningCalls)
+RUN_TEST(TestMultistepTest)
+RUN_TEST(TestNextStepCalledBeforeKeepRunning)
+RUN_TEST(TestBadNextStepCalls)
+RUN_TEST(TestBytesProcessedParameter)
+RUN_TEST(TestBytesProcessedParameterMultistep)
+RUN_TEST(TestParsingCommandArgs)
 END_TEST_CASE(perftest_runner_test)
 
 int main(int argc, char** argv) {

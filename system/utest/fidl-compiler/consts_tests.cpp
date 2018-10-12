@@ -13,7 +13,7 @@
 
 namespace {
 
-bool good_const_test_bool() {
+bool GoodConstTestBool() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -26,7 +26,7 @@ const bool c = false;
     END_TEST;
 }
 
-bool bad_const_test_bool_with_string() {
+bool BadConstTestBoolWithString() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -42,7 +42,7 @@ const bool c = "foo";
     END_TEST;
 }
 
-bool bad_const_test_bool_with_numeric() {
+bool BadConstTestBoolWithNumeric() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -58,7 +58,7 @@ const bool c = 6;
     END_TEST;
 }
 
-bool good_const_test_int32() {
+bool GoodConstTestInt32() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -71,7 +71,7 @@ const int32 c = 42;
     END_TEST;
 }
 
-bool good_const_test_int32_from_other_const() {
+bool GoodConstTestInt32FromOtherConst() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -85,7 +85,7 @@ const int32 c = b;
     END_TEST;
 }
 
-bool bad_const_test_int32_with_string() {
+bool BadConstTestInt32WithString() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -101,7 +101,7 @@ const int32 c = "foo";
     END_TEST;
 }
 
-bool bad_const_test_int32_with_bool() {
+bool BadConstTestInt32WithBool() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -117,7 +117,7 @@ const int32 c = true;
     END_TEST;
 }
 
-bool good_const_test_string() {
+bool GoodConstTestString() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -130,7 +130,7 @@ const string:4 c = "four";
     END_TEST;
 }
 
-bool good_const_test_string_from_other_const() {
+bool GoodConstTestStringFromOtherConst() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -144,7 +144,7 @@ const string:5 d = c;
     END_TEST;
 }
 
-bool bad_const_test_string_with_numeric() {
+bool BadConstTestStringWithNumeric() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -160,7 +160,7 @@ const string c = 4;
     END_TEST;
 }
 
-bool bad_const_test_string_with_bool() {
+bool BadConstTestStringWithBool() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -176,7 +176,7 @@ const string c = true;
     END_TEST;
 }
 
-bool bad_const_test_string_with_string_too_long() {
+bool BadConstTestStringWithStringTooLong() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -192,7 +192,7 @@ const string:4 c = "hello";
     END_TEST;
 }
 
-bool good_const_test_using() {
+bool GoodConstTestUsing() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -206,7 +206,7 @@ const foo c = 2;
     END_TEST;
 }
 
-bool bad_const_test_using_with_inconvertible_value() {
+bool BadConstTestUsingWithInconvertibleValue() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -223,7 +223,7 @@ const foo c = "nope";
     END_TEST;
 }
 
-bool bad_const_test_nullable_string() {
+bool BadConstTestNullableString() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -239,7 +239,7 @@ const string? c = "";
     END_TEST;
 }
 
-bool bad_const_test_enum() {
+bool BadConstTestEnum() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -256,7 +256,7 @@ const MyEnum c = "";
     END_TEST;
 }
 
-bool bad_const_test_array() {
+bool BadConstTestArray() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -272,7 +272,7 @@ const array<int32>:2 c = -1;
     END_TEST;
 }
 
-bool bad_const_test_vector() {
+bool BadConstTestVector() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -288,7 +288,7 @@ const vector<int32>:2 c = -1;
     END_TEST;
 }
 
-bool bad_const_test_handle_of_thread() {
+bool BadConstTestHandleOfThread() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -308,28 +308,28 @@ const handle<thread> c = -1;
 
 BEGIN_TEST_CASE(consts_tests);
 
-RUN_TEST(good_const_test_bool);
-RUN_TEST(bad_const_test_bool_with_string);
-RUN_TEST(bad_const_test_bool_with_numeric);
+RUN_TEST(GoodConstTestBool);
+RUN_TEST(BadConstTestBoolWithString);
+RUN_TEST(BadConstTestBoolWithNumeric);
 
-RUN_TEST(good_const_test_int32);
-RUN_TEST(good_const_test_int32_from_other_const);
-RUN_TEST(bad_const_test_int32_with_string);
-RUN_TEST(bad_const_test_int32_with_bool);
+RUN_TEST(GoodConstTestInt32);
+RUN_TEST(GoodConstTestInt32FromOtherConst);
+RUN_TEST(BadConstTestInt32WithString);
+RUN_TEST(BadConstTestInt32WithBool);
 
-RUN_TEST(good_const_test_string);
-RUN_TEST(good_const_test_string_from_other_const);
-RUN_TEST(bad_const_test_string_with_numeric);
-RUN_TEST(bad_const_test_string_with_bool);
-RUN_TEST(bad_const_test_string_with_string_too_long);
+RUN_TEST(GoodConstTestString);
+RUN_TEST(GoodConstTestStringFromOtherConst);
+RUN_TEST(BadConstTestStringWithNumeric);
+RUN_TEST(BadConstTestStringWithBool);
+RUN_TEST(BadConstTestStringWithStringTooLong);
 
-RUN_TEST(good_const_test_using);
-RUN_TEST(bad_const_test_using_with_inconvertible_value);
+RUN_TEST(GoodConstTestUsing);
+RUN_TEST(BadConstTestUsingWithInconvertibleValue);
 
-RUN_TEST(bad_const_test_nullable_string);
-RUN_TEST(bad_const_test_enum);
-RUN_TEST(bad_const_test_array);
-RUN_TEST(bad_const_test_vector);
-RUN_TEST(bad_const_test_handle_of_thread);
+RUN_TEST(BadConstTestNullableString);
+RUN_TEST(BadConstTestEnum);
+RUN_TEST(BadConstTestArray);
+RUN_TEST(BadConstTestVector);
+RUN_TEST(BadConstTestHandleOfThread);
 
 END_TEST_CASE(consts_tests);

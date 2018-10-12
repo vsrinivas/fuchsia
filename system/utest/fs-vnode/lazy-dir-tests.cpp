@@ -43,7 +43,7 @@ private:
     size_t remaining_;
 };
 
-class TestLazyDir : public fs::LazyDir {
+class TestLazyDirHelper : public fs::LazyDir {
 public:
     struct TestContent {
         uint64_t id;
@@ -77,10 +77,10 @@ private:
     fbl::Vector<TestContent> contents_;
 };
 
-bool test_lazy_dir() {
+bool TestLazyDir() {
     BEGIN_TEST;
 
-    TestLazyDir test;
+    TestLazyDirHelper test;
 
     {
         fs::vdircookie_t cookie = {};
@@ -157,5 +157,5 @@ bool test_lazy_dir() {
 } // namespace
 
 BEGIN_TEST_CASE(lazy_dir_tests)
-RUN_TEST(test_lazy_dir)
+RUN_TEST(TestLazyDir)
 END_TEST_CASE(lazy_dir_tests)

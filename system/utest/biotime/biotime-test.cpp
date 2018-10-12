@@ -39,7 +39,7 @@ bool run_biotime(fbl::Vector<const char*>&& args) {
     return true;
 }
 
-bool test_biotime_linear_access() {
+bool TestBiotimeLinearAccess() {
     BEGIN_TEST;
 
     fbl::Vector<const char*> args = {"-linear"};
@@ -48,7 +48,7 @@ bool test_biotime_linear_access() {
     END_TEST;
 }
 
-bool test_biotime_random_access() {
+bool TestBiotimeRandomAccess() {
     BEGIN_TEST;
 
     fbl::Vector<const char*> args = {"-random"};
@@ -57,7 +57,7 @@ bool test_biotime_random_access() {
     END_TEST;
 }
 
-bool test_biotime_write() {
+bool TestBiotimeWrite() {
     BEGIN_TEST;
 
     fbl::Vector<const char*> args = {"-write", "-live-dangerously"};
@@ -67,9 +67,9 @@ bool test_biotime_write() {
 }
 
 BEGIN_TEST_CASE(biotime_tests)
-RUN_TEST(test_biotime_linear_access)
-RUN_TEST(test_biotime_random_access)
-RUN_TEST(test_biotime_write)
+RUN_TEST(TestBiotimeLinearAccess)
+RUN_TEST(TestBiotimeRandomAccess)
+RUN_TEST(TestBiotimeWrite)
 END_TEST_CASE(biotime_tests)
 
 }

@@ -123,7 +123,7 @@ private:
     int pipefd_[2];
 };
 
-bool test_log_simple(void) {
+bool TestLogSimple(void) {
     BEGIN_TEST;
     Fixture fixture;
     ASSERT_TRUE(fixture.FullSetup());
@@ -134,7 +134,7 @@ bool test_log_simple(void) {
     END_TEST;
 }
 
-bool test_log_multiple_msgs(void) {
+bool TestLogMultipleMsgs(void) {
     BEGIN_TEST;
     Fixture fixture;
     ASSERT_TRUE(fixture.FullSetup());
@@ -149,7 +149,7 @@ bool test_log_multiple_msgs(void) {
     END_TEST;
 }
 
-bool test_log_with_tag(void) {
+bool TestLogWithTag(void) {
     BEGIN_TEST;
     Fixture fixture;
     ASSERT_TRUE(fixture.FullSetup());
@@ -160,7 +160,7 @@ bool test_log_with_tag(void) {
     END_TEST;
 }
 
-bool test_log_with_multiple_tags(void) {
+bool TestLogWithMultipleTags(void) {
     BEGIN_TEST;
     Fixture fixture;
     ASSERT_TRUE(fixture.CreateLogger());
@@ -174,7 +174,7 @@ bool test_log_with_multiple_tags(void) {
     END_TEST;
 }
 
-bool test_log_severity(void) {
+bool TestLogSeverity(void) {
     BEGIN_TEST;
     Fixture fixture;
     ASSERT_TRUE(fixture.FullSetup());
@@ -196,7 +196,7 @@ bool test_log_severity(void) {
     END_TEST;
 }
 
-bool test_log_when_logger_handle_dies(void) {
+bool TestLogWhenLoggerHandleDies(void) {
     BEGIN_TEST;
     Fixture fixture;
     ASSERT_TRUE(fixture.FullSetup());
@@ -210,7 +210,7 @@ bool test_log_when_logger_handle_dies(void) {
     END_TEST;
 }
 
-bool test_logger_dies_with_socket(void) {
+bool TestLoggerDiesWithSocket(void) {
     BEGIN_TEST;
     Fixture fixture;
     ASSERT_TRUE(fixture.CreateLogger());
@@ -221,7 +221,7 @@ bool test_logger_dies_with_socket(void) {
     END_TEST;
 }
 
-bool test_logger_dies_with_channel_when_no_connect_called(void) {
+bool TestLoggerDiesWithChannelWhenNoConnectCalled(void) {
     BEGIN_TEST;
     Fixture fixture;
     ASSERT_TRUE(fixture.CreateLogger());
@@ -236,14 +236,14 @@ bool test_logger_dies_with_channel_when_no_connect_called(void) {
 } // namespace
 
 BEGIN_TEST_CASE(logger_tests)
-RUN_TEST(test_log_simple)
-RUN_TEST(test_log_severity)
-RUN_TEST(test_log_multiple_msgs)
-RUN_TEST(test_log_with_tag)
-RUN_TEST(test_log_with_multiple_tags)
-RUN_TEST(test_log_when_logger_handle_dies)
-RUN_TEST(test_logger_dies_with_socket)
-RUN_TEST(test_logger_dies_with_channel_when_no_connect_called)
+RUN_TEST(TestLogSimple)
+RUN_TEST(TestLogSeverity)
+RUN_TEST(TestLogMultipleMsgs)
+RUN_TEST(TestLogWithTag)
+RUN_TEST(TestLogWithMultipleTags)
+RUN_TEST(TestLogWhenLoggerHandleDies)
+RUN_TEST(TestLoggerDiesWithSocket)
+RUN_TEST(TestLoggerDiesWithChannelWhenNoConnectCalled)
 END_TEST_CASE(logger_tests)
 
 int main(int argc, char** argv) {

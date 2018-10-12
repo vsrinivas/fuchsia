@@ -33,7 +33,7 @@ bool check_file_empty(const char* filename) {
 }
 
 // Test that the really simple cases of truncate are operational
-bool test_truncate_small(void) {
+bool TestTruncateSmall(void) {
     BEGIN_TEST;
 
     const char* str = "Hello, World!\n";
@@ -129,7 +129,7 @@ bool checked_truncate(const char* filename, uint8_t* u8, ssize_t new_len) {
 // Test that truncate doesn't have issues dealing with larger files
 // Repeatedly write to / truncate a file.
 template <size_t BufSize, size_t Iterations>
-bool test_truncate_large(void) {
+bool TestTruncateLarge(void) {
     BEGIN_TEST;
 
     // Fill a test buffer with data
@@ -161,9 +161,9 @@ bool test_truncate_large(void) {
 }
 
 RUN_MINFS_TESTS(truncate_tests,
-    RUN_TEST_MEDIUM(test_truncate_small)
-    RUN_TEST_MEDIUM((test_truncate_large<1 << 10, 1000>))
-    RUN_TEST_MEDIUM((test_truncate_large<1 << 15, 500>))
-    RUN_TEST_LARGE((test_truncate_large<1 << 20, 500>))
-    RUN_TEST_LARGE((test_truncate_large<1 << 25, 500>))
+    RUN_TEST_MEDIUM(TestTruncateSmall)
+    RUN_TEST_MEDIUM((TestTruncateLarge<1 << 10, 1000>))
+    RUN_TEST_MEDIUM((TestTruncateLarge<1 << 15, 500>))
+    RUN_TEST_LARGE((TestTruncateLarge<1 << 20, 500>))
+    RUN_TEST_LARGE((TestTruncateLarge<1 << 25, 500>))
 )

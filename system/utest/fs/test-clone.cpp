@@ -17,7 +17,7 @@
 
 #include "filesystems.h"
 
-bool test_clone_simple(void) {
+bool TestCloneSimple(void) {
     BEGIN_TEST;
 
     int fd = open("::file", O_RDWR | O_CREAT, 0644);
@@ -54,5 +54,5 @@ bool test_clone_simple(void) {
 }
 
 RUN_FOR_ALL_FILESYSTEMS(clone_tests,
-    RUN_TEST_MEDIUM(test_clone_simple)
+    RUN_TEST_MEDIUM(TestCloneSimple)
 )

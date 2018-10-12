@@ -130,7 +130,7 @@ bool test_maxfile(void) {
 // this will create two large files with non-contiguous block
 // allocations.
 template <MountType mt>
-bool test_zipped_maxfiles(void) {
+bool TestZippedMaxfiles(void) {
     BEGIN_TEST;
 
     if (!test_info->can_be_mounted && mt == DoRemount) {
@@ -246,6 +246,6 @@ const test_disk_t disk = {
 RUN_FOR_ALL_FILESYSTEMS_SIZE(maxfile_tests, disk,
     RUN_TEST_LARGE((test_maxfile<DontRemount>))
     RUN_TEST_LARGE((test_maxfile<DoRemount>))
-    RUN_TEST_LARGE((test_zipped_maxfiles<DontRemount>))
-    RUN_TEST_LARGE((test_zipped_maxfiles<DoRemount>))
+    RUN_TEST_LARGE((TestZippedMaxfiles<DontRemount>))
+    RUN_TEST_LARGE((TestZippedMaxfiles<DoRemount>))
 )

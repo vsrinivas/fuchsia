@@ -296,7 +296,7 @@ private:
     fbl::Closure on_unmount_{};
     fuchsia_minfs_Metrics metrics_ = {};
     fbl::unique_ptr<WritebackBuffer> writeback_;
-    uint64_t fs_id_{};
+    uint64_t fs_id_ = 0;
 #else
     // Store start block + length for all extents. These may differ from info block for
     // sparse files.

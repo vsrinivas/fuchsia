@@ -23,7 +23,7 @@
 // as fast as possible, in an attempt to trigger filesystem-internal
 // threading races between creation and deletion of a file.
 template <bool reuse_subdirectory>
-bool test_inode_reuse(void) {
+bool TestInodeReuse(void) {
     BEGIN_TEST;
 
     ASSERT_EQ(mkdir("::reuse", 0755), 0);
@@ -88,7 +88,7 @@ bool thread_action_test(thrd_cb_t cb, void* arg = nullptr) {
 
 constexpr size_t kIterCount = 10;
 
-bool test_create_unlink_exclusive(void) {
+bool TestCreateUnlinkExclusive(void) {
     BEGIN_TEST;
     for (size_t i = 0; i < kIterCount; i++) {
         ASSERT_TRUE((thread_action_test<10, 1>([](void* arg) {
@@ -113,7 +113,7 @@ bool test_create_unlink_exclusive(void) {
     END_TEST;
 }
 
-bool test_mkdir_rmdir_exclusive(void) {
+bool TestMkdirRmdirExclusive(void) {
     BEGIN_TEST;
     for (size_t i = 0; i < kIterCount; i++) {
         ASSERT_TRUE((thread_action_test<10, 1>([](void* arg) {
@@ -137,7 +137,7 @@ bool test_mkdir_rmdir_exclusive(void) {
     END_TEST;
 }
 
-bool test_rename_exclusive(void) {
+bool TestRenameExclusive(void) {
     BEGIN_TEST;
     for (size_t i = 0; i < kIterCount; i++) {
 
@@ -192,7 +192,7 @@ bool test_rename_exclusive(void) {
     END_TEST;
 }
 
-bool test_rename_overwrite(void) {
+bool TestRenameOverwrite(void) {
     BEGIN_TEST;
     for (size_t i = 0; i < kIterCount; i++) {
         // Test case of renaming from multiple sources at once,
@@ -215,7 +215,7 @@ bool test_rename_overwrite(void) {
     END_TEST;
 }
 
-bool test_link_exclusive(void) {
+bool TestLinkExclusive(void) {
     BEGIN_TEST;
 
     if (!test_info->supports_hardlinks) {
@@ -244,11 +244,11 @@ bool test_link_exclusive(void) {
 }
 
 RUN_FOR_ALL_FILESYSTEMS(threading_tests,
-    RUN_TEST_LARGE((test_inode_reuse<false>))
-    RUN_TEST_LARGE((test_inode_reuse<true>))
-    RUN_TEST_MEDIUM(test_create_unlink_exclusive)
-    RUN_TEST_MEDIUM(test_mkdir_rmdir_exclusive)
-    RUN_TEST_LARGE(test_rename_exclusive)
-    RUN_TEST_LARGE(test_rename_overwrite)
-    RUN_TEST_LARGE(test_link_exclusive)
+    RUN_TEST_LARGE((TestInodeReuse<false>))
+    RUN_TEST_LARGE((TestInodeReuse<true>))
+    RUN_TEST_MEDIUM(TestCreateUnlinkExclusive)
+    RUN_TEST_MEDIUM(TestMkdirRmdirExclusive)
+    RUN_TEST_LARGE(TestRenameExclusive)
+    RUN_TEST_LARGE(TestRenameOverwrite)
+    RUN_TEST_LARGE(TestLinkExclusive)
 )

@@ -57,7 +57,7 @@ bool test_service() {
     END_TEST;
 }
 
-bool test_serve_directory() {
+bool TestServeDirectory() {
     BEGIN_TEST;
 
     zx::channel client, server;
@@ -96,5 +96,5 @@ bool test_serve_directory() {
 
 BEGIN_TEST_CASE(service_tests)
 RUN_TEST(test_service)
-RUN_TEST(test_serve_directory)
+RUN_TEST(TestServeDirectory)
 END_TEST_CASE(service_tests)

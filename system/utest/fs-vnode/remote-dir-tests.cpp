@@ -8,7 +8,7 @@
 
 namespace {
 
-bool test_remote_dir() {
+bool TestRemoteDir() {
     BEGIN_TEST;
 
     zx::channel server, client;
@@ -36,5 +36,5 @@ bool test_remote_dir() {
 } // namespace
 
 BEGIN_TEST_CASE(remote_dir_tests)
-RUN_TEST(test_remote_dir)
+RUN_TEST(TestRemoteDir)
 END_TEST_CASE(remote_dir_tests)

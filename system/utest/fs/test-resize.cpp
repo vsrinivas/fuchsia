@@ -22,7 +22,7 @@
 
 namespace {
 
-bool test_use_all_inodes(void) {
+bool TestUseAllInodes(void) {
     BEGIN_TEST;
     ASSERT_TRUE(test_info->supports_resize);
 
@@ -67,7 +67,7 @@ bool test_use_all_inodes(void) {
     END_TEST;
 }
 
-bool test_use_all_data(void) {
+bool TestUseAllData(void) {
     BEGIN_TEST;
     constexpr size_t kBufSize = (1 << 20);
     constexpr size_t kFileBufCount = 20;
@@ -114,9 +114,9 @@ const test_disk_t disk = {
 
 // Reformat the disk between tests to restore original size.
 RUN_FOR_ALL_FILESYSTEMS_TYPE(fs_resize_tests_inodes, disk, FS_TEST_FVM,
-    RUN_TEST_LARGE(test_use_all_inodes)
+    RUN_TEST_LARGE(TestUseAllInodes)
 )
 
 RUN_FOR_ALL_FILESYSTEMS_TYPE(fs_resize_tests_data, disk, FS_TEST_FVM,
-    RUN_TEST_LARGE(test_use_all_data)
+    RUN_TEST_LARGE(TestUseAllData)
 )

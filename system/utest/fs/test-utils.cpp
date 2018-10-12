@@ -8,7 +8,7 @@
 
 #include <unittest/unittest.h>
 
-bool test_mapped_vmo() {
+bool TestMappedVmo() {
     BEGIN_TEST;
 
     size_t init_size = 512 * (1 << 10);
@@ -55,5 +55,5 @@ bool test_mapped_vmo() {
 }
 
 BEGIN_TEST_CASE(util_tests)
-RUN_TEST_MEDIUM(test_mapped_vmo)
+RUN_TEST_MEDIUM(TestMappedVmo)
 END_TEST_CASE(util_tests)

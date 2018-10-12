@@ -103,7 +103,7 @@ bool CheckAppend(const fbl::RefPtr<fs::Vnode>& file, zx_status_t status,
     END_HELPER;
 }
 
-bool test_open_validation_buffered() {
+bool TestOpenValidationBuffered() {
     BEGIN_TEST;
 
     // no read handler, no write handler
@@ -163,7 +163,7 @@ bool test_open_validation_buffered() {
     END_TEST;
 }
 
-bool test_open_validation_unbuffered() {
+bool TestOpenValidationUnbuffered() {
     BEGIN_TEST;
 
     // no read handler, no write handler
@@ -220,7 +220,7 @@ bool test_open_validation_unbuffered() {
     END_TEST;
 }
 
-bool test_getattr_buffered() {
+bool TestGetattrBuffered() {
     BEGIN_TEST;
 
     // no read handler, no write handler
@@ -287,7 +287,7 @@ bool test_getattr_buffered() {
     END_TEST;
 }
 
-bool test_getattr_unbuffered() {
+bool TestGetattrUnbuffered() {
     BEGIN_TEST;
 
     // no read handler, no write handler
@@ -355,7 +355,7 @@ bool test_getattr_unbuffered() {
     END_TEST;
 }
 
-bool test_read_buffered() {
+bool TestReadBuffered() {
     BEGIN_TEST;
 
     VectorReader reader{"first", "second", "",
@@ -412,7 +412,7 @@ bool test_read_buffered() {
     END_TEST;
 }
 
-bool test_read_unbuffered() {
+bool TestReadUnbuffered() {
     BEGIN_TEST;
 
     VectorReader reader{"first", "second", "third", "fourth", "fifth", "",
@@ -445,7 +445,7 @@ bool test_read_unbuffered() {
     END_TEST;
 }
 
-bool test_write_buffered() {
+bool TestWriteBuffered() {
     BEGIN_TEST;
 
     VectorWriter writer(6u);
@@ -526,7 +526,7 @@ bool test_write_buffered() {
     END_TEST;
 }
 
-bool test_write_unbuffered() {
+bool TestWriteUnbuffered() {
     BEGIN_TEST;
 
     VectorWriter writer(12u);
@@ -628,12 +628,12 @@ bool test_write_unbuffered() {
 } // namespace
 
 BEGIN_TEST_CASE(pseudo_file_tests)
-RUN_TEST(test_open_validation_buffered)
-RUN_TEST(test_open_validation_unbuffered)
-RUN_TEST(test_getattr_buffered)
-RUN_TEST(test_getattr_unbuffered)
-RUN_TEST(test_read_buffered)
-RUN_TEST(test_read_unbuffered)
-RUN_TEST(test_write_buffered)
-RUN_TEST(test_write_unbuffered)
+RUN_TEST(TestOpenValidationBuffered)
+RUN_TEST(TestOpenValidationUnbuffered)
+RUN_TEST(TestGetattrBuffered)
+RUN_TEST(TestGetattrUnbuffered)
+RUN_TEST(TestReadBuffered)
+RUN_TEST(TestReadUnbuffered)
+RUN_TEST(TestWriteBuffered)
+RUN_TEST(TestWriteUnbuffered)
 END_TEST_CASE(pseudo_file_tests)

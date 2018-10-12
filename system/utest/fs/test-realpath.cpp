@@ -43,7 +43,7 @@ static bool is_resolved(const char* path) {
     }
 }
 
-bool test_realpath_absolute(void) {
+bool TestRealpathAbsolute(void) {
     BEGIN_TEST;
 
     int fd = open(kName, O_RDWR | O_CREAT, 0644);
@@ -84,7 +84,7 @@ constexpr char kTestRelativeDotDot[] = "../my_dir/../my_dir/my_file";
 constexpr char kTestRelativeDot[] = "./././my_file";
 constexpr char kTestRelativeBothDots[] = "./..//my_dir/.././///././my_dir/./my_file";
 
-bool test_realpath_relative(void) {
+bool TestRealpathRelative(void) {
     BEGIN_TEST;
 
     ASSERT_EQ(mkdir(kNameDir, 0666), 0);
@@ -153,6 +153,6 @@ bool test_realpath_relative(void) {
 }
 
 RUN_FOR_ALL_FILESYSTEMS(realpath_tests,
-    RUN_TEST_MEDIUM(test_realpath_absolute)
-    RUN_TEST_MEDIUM(test_realpath_relative)
+    RUN_TEST_MEDIUM(TestRealpathAbsolute)
+    RUN_TEST_MEDIUM(TestRealpathRelative)
 )

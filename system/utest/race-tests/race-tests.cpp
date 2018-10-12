@@ -32,7 +32,7 @@ static void Subprocess() {
 // process -- as reported by zx_object_get_info()'s return_code field --
 // could change.  That could happen if multiple threads called
 // zx_process_exit() concurrently.
-static bool test_process_exit_status_race() {
+static bool TestProcessExitStatusRace() {
     BEGIN_TEST;
 
     // Launch a subprocess.
@@ -74,7 +74,7 @@ static bool test_process_exit_status_race() {
 }
 
 BEGIN_TEST_CASE(race_tests)
-RUN_TEST(test_process_exit_status_race)
+RUN_TEST(TestProcessExitStatusRace)
 END_TEST_CASE(race_tests)
 
 int main(int argc, char** argv) {

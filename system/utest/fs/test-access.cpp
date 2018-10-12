@@ -20,7 +20,7 @@
 #include "filesystems.h"
 #include "misc.h"
 
-bool test_access_readable(void) {
+bool TestAccessReadable(void) {
     BEGIN_TEST;
 
     const char* filename = "::alpha";
@@ -56,7 +56,7 @@ bool test_access_readable(void) {
     END_TEST;
 }
 
-bool test_access_writable(void) {
+bool TestAccessWritable(void) {
     BEGIN_TEST;
 
     const char* filename = "::alpha";
@@ -89,7 +89,7 @@ bool test_access_writable(void) {
     END_TEST;
 }
 
-bool test_access_badflags(void) {
+bool TestAccessBadflags(void) {
     BEGIN_TEST;
 
     const char* filename = "::foobar";
@@ -106,7 +106,7 @@ bool test_access_badflags(void) {
     END_TEST;
 }
 
-bool test_access_directory(void) {
+bool TestAccessDirectory(void) {
     BEGIN_TEST;
 
     const char* filename = "::foobar";
@@ -130,7 +130,7 @@ bool test_access_directory(void) {
     END_TEST;
 }
 
-bool test_access_opath(void) {
+bool TestAccessOpath(void) {
     BEGIN_TEST;
 
     const char* dirname = "::foo";
@@ -238,7 +238,7 @@ bool test_access_opath(void) {
 // opened without "O_PATH" do cause the underlying object to
 // be opened. Cloning the object should not invalidate the
 // internal file descriptor count.
-bool test_opath_fdcount(void) {
+bool TestOpathFdcount(void) {
     BEGIN_TEST;
 
     const char* dirname = "::foo";
@@ -267,10 +267,10 @@ bool test_opath_fdcount(void) {
 }
 
 RUN_FOR_ALL_FILESYSTEMS(access_tests,
-    RUN_TEST_MEDIUM(test_access_readable)
-    RUN_TEST_MEDIUM(test_access_writable)
-    RUN_TEST_MEDIUM(test_access_badflags)
-    RUN_TEST_MEDIUM(test_access_directory)
-    RUN_TEST_MEDIUM(test_access_opath)
-    RUN_TEST_MEDIUM(test_opath_fdcount)
+    RUN_TEST_MEDIUM(TestAccessReadable)
+    RUN_TEST_MEDIUM(TestAccessWritable)
+    RUN_TEST_MEDIUM(TestAccessBadflags)
+    RUN_TEST_MEDIUM(TestAccessDirectory)
+    RUN_TEST_MEDIUM(TestAccessOpath)
+    RUN_TEST_MEDIUM(TestOpathFdcount)
 )

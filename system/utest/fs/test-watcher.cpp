@@ -77,7 +77,7 @@ bool check_for_event(watch_buffer_t* wb, const zx::channel& c, const char* expec
     return check_local_event(wb, expected, event);
 }
 
-bool test_watcher_add(void) {
+bool TestWatcherAdd(void) {
     BEGIN_TEST;
 
     if (!test_info->supports_watchers) {
@@ -130,7 +130,7 @@ bool test_watcher_add(void) {
     END_TEST;
 }
 
-bool test_watcher_existing(void) {
+bool TestWatcherExisting(void) {
     BEGIN_TEST;
 
     if (!test_info->supports_watchers) {
@@ -211,7 +211,7 @@ bool test_watcher_existing(void) {
     END_TEST;
 }
 
-bool test_watcher_removed(void) {
+bool TestWatcherRemoved(void) {
     BEGIN_TEST;
 
     if (!test_info->supports_watchers) {
@@ -262,7 +262,7 @@ bool test_watcher_removed(void) {
 }
 
 RUN_FOR_ALL_FILESYSTEMS(directory_watcher_tests,
-    RUN_TEST_MEDIUM(test_watcher_add)
-    RUN_TEST_MEDIUM(test_watcher_existing)
-    RUN_TEST_MEDIUM(test_watcher_removed)
+    RUN_TEST_MEDIUM(TestWatcherAdd)
+    RUN_TEST_MEDIUM(TestWatcherExisting)
+    RUN_TEST_MEDIUM(TestWatcherRemoved)
 )

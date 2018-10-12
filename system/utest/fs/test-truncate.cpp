@@ -45,7 +45,7 @@ bool check_file_empty(const char* filename) {
 }
 
 // Test that the really simple cases of truncate are operational
-bool test_truncate_small(void) {
+bool TestTruncateSmall(void) {
     BEGIN_TEST;
 
     const char* str = "Hello, World!\n";
@@ -178,7 +178,7 @@ enum TestType {
 // Test that truncate doesn't have issues dealing with larger files
 // Repeatedly write to / truncate a file.
 template <size_t BufSize, size_t Iterations, TestType Test>
-bool test_truncate_large(void) {
+bool TestTruncateLarge(void) {
     BEGIN_TEST;
 
     if ((Test == Remount) && !test_info->can_be_mounted) {
@@ -236,7 +236,7 @@ enum SparseTestType {
 //
 // This test tries to proke at a variety of offsets of interest.
 template <SparseTestType Test>
-bool test_truncate_partial_block_sparse(void) {
+bool TestTruncatePartialBlockSparse(void) {
     BEGIN_TEST;
 
     if (strcmp(test_info->name, "minfs")) {
@@ -286,7 +286,7 @@ bool test_truncate_partial_block_sparse(void) {
     END_TEST;
 }
 
-bool test_truncate_errno(void) {
+bool TestTruncateErrno(void) {
     BEGIN_TEST;
 
     int fd = open("::truncate_errno", O_RDWR | O_CREAT | O_EXCL);
@@ -312,18 +312,18 @@ const test_disk_t disk = {
 }  // namespace
 
 RUN_FOR_ALL_FILESYSTEMS_SIZE(truncate_tests, disk,
-    RUN_TEST_MEDIUM(test_truncate_small)
-    RUN_TEST_MEDIUM((test_truncate_large<1 << 10, 100, KeepOpen>))
-    RUN_TEST_MEDIUM((test_truncate_large<1 << 10, 100, Reopen>))
-    RUN_TEST_MEDIUM((test_truncate_large<1 << 15, 50, KeepOpen>))
-    RUN_TEST_MEDIUM((test_truncate_large<1 << 15, 50, Reopen>))
-    RUN_TEST_LARGE((test_truncate_large<1 << 20, 50, KeepOpen>))
-    RUN_TEST_LARGE((test_truncate_large<1 << 20, 50, Reopen>))
-    RUN_TEST_LARGE((test_truncate_large<1 << 20, 50, Remount>))
-    RUN_TEST_LARGE((test_truncate_large<1 << 25, 50, KeepOpen>))
-    RUN_TEST_LARGE((test_truncate_large<1 << 25, 50, Reopen>))
-    RUN_TEST_LARGE((test_truncate_large<1 << 25, 50, Remount>))
-    RUN_TEST_MEDIUM((test_truncate_partial_block_sparse<UnlinkThenClose>))
-    RUN_TEST_MEDIUM((test_truncate_partial_block_sparse<CloseThenUnlink>))
-    RUN_TEST_MEDIUM(test_truncate_errno)
+    RUN_TEST_MEDIUM(TestTruncateSmall)
+    RUN_TEST_MEDIUM((TestTruncateLarge<1 << 10, 100, KeepOpen>))
+    RUN_TEST_MEDIUM((TestTruncateLarge<1 << 10, 100, Reopen>))
+    RUN_TEST_MEDIUM((TestTruncateLarge<1 << 15, 50, KeepOpen>))
+    RUN_TEST_MEDIUM((TestTruncateLarge<1 << 15, 50, Reopen>))
+    RUN_TEST_LARGE((TestTruncateLarge<1 << 20, 50, KeepOpen>))
+    RUN_TEST_LARGE((TestTruncateLarge<1 << 20, 50, Reopen>))
+    RUN_TEST_LARGE((TestTruncateLarge<1 << 20, 50, Remount>))
+    RUN_TEST_LARGE((TestTruncateLarge<1 << 25, 50, KeepOpen>))
+    RUN_TEST_LARGE((TestTruncateLarge<1 << 25, 50, Reopen>))
+    RUN_TEST_LARGE((TestTruncateLarge<1 << 25, 50, Remount>))
+    RUN_TEST_MEDIUM((TestTruncatePartialBlockSparse<UnlinkThenClose>))
+    RUN_TEST_MEDIUM((TestTruncatePartialBlockSparse<CloseThenUnlink>))
+    RUN_TEST_MEDIUM(TestTruncateErrno)
 )

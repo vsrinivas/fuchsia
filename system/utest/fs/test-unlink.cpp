@@ -19,7 +19,7 @@
 #include "filesystems.h"
 
 // Make some files, then unlink them.
-bool test_unlink_simple(void) {
+bool TestUnlinkSimple(void) {
     BEGIN_TEST;
     const char* const paths[] = {"::abc", "::def", "::ghi", "::jkl", "::mnopqrstuvxyz"};
     for (size_t i = 0; i < fbl::count_of(paths); i++) {
@@ -57,7 +57,7 @@ static bool simple_write_test(int fd, size_t data_index) {
     return simple_read_test(fd, data_index);
 }
 
-bool test_unlink_use_afterwards(void) {
+bool TestUnlinkUseAfterwards(void) {
     BEGIN_TEST;
 
     const char* path = "::foobar";
@@ -78,7 +78,7 @@ bool test_unlink_use_afterwards(void) {
     END_TEST;
 }
 
-bool test_unlink_open_elsewhere(void) {
+bool TestUnlinkOpenElsewhere(void) {
     BEGIN_TEST;
 
     const char* path = "::foobar";
@@ -135,8 +135,8 @@ bool test_remove(void) {
 }
 
 RUN_FOR_ALL_FILESYSTEMS(unlink_tests,
-    RUN_TEST_MEDIUM(test_unlink_simple)
-    RUN_TEST_MEDIUM(test_unlink_use_afterwards)
-    RUN_TEST_MEDIUM(test_unlink_open_elsewhere)
+    RUN_TEST_MEDIUM(TestUnlinkSimple)
+    RUN_TEST_MEDIUM(TestUnlinkUseAfterwards)
+    RUN_TEST_MEDIUM(TestUnlinkOpenElsewhere)
     RUN_TEST_MEDIUM(test_remove);
 )

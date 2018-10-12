@@ -21,7 +21,7 @@
 #include "filesystems.h"
 #include "misc.h"
 
-bool test_directory_filename_max(void) {
+bool TestDirectoryFilenameMax(void) {
     BEGIN_TEST;
 
     // TODO(smklein): This value may be filesystem-specific. Plumb it through
@@ -51,7 +51,7 @@ bool test_directory_filename_max(void) {
 // enough to fill a directory quickly.
 #define LARGE_PATH_LENGTH 128
 
-bool test_directory_large(void) {
+bool TestDirectoryLarge(void) {
     BEGIN_TEST;
 
     // ZX-2107: This test is humongous: ~8000 seconds in non-kvm qemu on
@@ -80,7 +80,7 @@ bool test_directory_large(void) {
     END_TEST;
 }
 
-bool test_directory_max(void) {
+bool TestDirectoryMax(void) {
     BEGIN_TEST;
 
     // Write the maximum number of files to a directory
@@ -110,7 +110,7 @@ bool test_directory_max(void) {
     END_TEST;
 }
 
-bool test_directory_coalesce_helper(const int* unlink_order) {
+bool TestDirectoryCoalesceHelper(const int* unlink_order) {
     BEGIN_HELPER;
     const char* files[] = {
         "::coalesce/aaaaaaaa",
@@ -140,7 +140,7 @@ bool test_directory_coalesce_helper(const int* unlink_order) {
     END_HELPER;
 }
 
-bool test_directory_coalesce(void) {
+bool TestDirectoryCoalesce(void) {
     BEGIN_TEST;
 
     // Test some cases of coalescing, assuming the directory was filled
@@ -151,15 +151,15 @@ bool test_directory_coalesce(void) {
 
     // Case 1: Test merge-with-left
     const int merge_with_left[] = {0, 1, 2, 3, 4};
-    ASSERT_TRUE(test_directory_coalesce_helper(merge_with_left));
+    ASSERT_TRUE(TestDirectoryCoalesceHelper(merge_with_left));
 
     // Case 2: Test merge-with-right
     const int merge_with_right[] = {4, 3, 2, 1, 0};
-    ASSERT_TRUE(test_directory_coalesce_helper(merge_with_right));
+    ASSERT_TRUE(TestDirectoryCoalesceHelper(merge_with_right));
 
     // Case 3: Test merge-with-both
     const int merge_with_both[] = {1, 3, 2, 0, 4};
-    ASSERT_TRUE(test_directory_coalesce_helper(merge_with_both));
+    ASSERT_TRUE(TestDirectoryCoalesceHelper(merge_with_both));
 
     END_TEST;
 }
@@ -170,7 +170,7 @@ bool test_directory_coalesce(void) {
 // This test ensures that if multiple large direntries are created
 // and coalesced, the 'last remaining entry' still has a valid size,
 // even though it may be quite large.
-bool test_directory_coalesce_large_record(void) {
+bool TestDirectoryCoalesceLargeRecord(void) {
     BEGIN_TEST;
 
     char buf[NAME_MAX + 1];
@@ -215,7 +215,7 @@ bool test_directory_coalesce_large_record(void) {
     END_TEST;
 }
 
-bool test_directory_trailing_slash(void) {
+bool TestDirectoryTrailingSlash(void) {
     BEGIN_TEST;
 
     // We should be able to refer to directories with any number of trailing
@@ -261,7 +261,7 @@ bool test_directory_trailing_slash(void) {
     END_TEST;
 }
 
-bool test_directory_readdir(void) {
+bool TestDirectoryReaddir(void) {
     BEGIN_TEST;
 
     ASSERT_EQ(mkdir("::a", 0755), 0);
@@ -344,7 +344,7 @@ bool large_dir_setup(size_t num_entries) {
     return true;
 }
 
-bool test_directory_readdir_rm_all(void) {
+bool TestDirectoryReaddirRmAll(void) {
     BEGIN_TEST;
 
     size_t num_entries = 1000;
@@ -375,7 +375,7 @@ bool test_directory_readdir_rm_all(void) {
     END_TEST;
 }
 
-bool test_directory_rewind(void) {
+bool TestDirectoryRewind(void) {
     BEGIN_TEST;
 
     ASSERT_EQ(mkdir("::a", 0755), 0);
@@ -416,7 +416,7 @@ bool test_directory_rewind(void) {
     END_TEST;
 }
 
-bool test_directory_after_rmdir(void) {
+bool TestDirectoryAfterRmdir(void) {
     BEGIN_TEST;
 
     expected_dirent_t empty_dir[] = {
@@ -459,18 +459,18 @@ bool test_directory_after_rmdir(void) {
 }
 
 RUN_FOR_ALL_FILESYSTEMS(directory_tests,
-    RUN_TEST_MEDIUM(test_directory_coalesce)
-    RUN_TEST_MEDIUM(test_directory_coalesce_large_record)
-    RUN_TEST_MEDIUM(test_directory_filename_max)
-    RUN_TEST_LARGE(test_directory_large)
-    RUN_TEST_MEDIUM(test_directory_trailing_slash)
-    RUN_TEST_MEDIUM(test_directory_readdir)
-    RUN_TEST_LARGE(test_directory_readdir_rm_all)
-    RUN_TEST_MEDIUM(test_directory_rewind)
-    RUN_TEST_MEDIUM(test_directory_after_rmdir)
+    RUN_TEST_MEDIUM(TestDirectoryCoalesce)
+    RUN_TEST_MEDIUM(TestDirectoryCoalesceLargeRecord)
+    RUN_TEST_MEDIUM(TestDirectoryFilenameMax)
+    RUN_TEST_LARGE(TestDirectoryLarge)
+    RUN_TEST_MEDIUM(TestDirectoryTrailingSlash)
+    RUN_TEST_MEDIUM(TestDirectoryReaddir)
+    RUN_TEST_LARGE(TestDirectoryReaddirRmAll)
+    RUN_TEST_MEDIUM(TestDirectoryRewind)
+    RUN_TEST_MEDIUM(TestDirectoryAfterRmdir)
 )
 
 // TODO(smklein): Run this when MemFS can execute it without causing an OOM
 #if 0
-    RUN_TEST_LARGE(test_directory_max)
+    RUN_TEST_LARGE(TestDirectoryMax)
 #endif

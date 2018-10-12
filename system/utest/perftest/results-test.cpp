@@ -17,7 +17,7 @@ static bool FixUpFileBuffer(FILE* fp, char* buf, size_t buf_size) {
     return true;
 }
 
-static bool test_json_output() {
+static bool TestJsonOutput() {
     BEGIN_TEST;
 
     perftest::ResultsSet results;
@@ -42,7 +42,7 @@ static bool test_json_output() {
     END_TEST;
 }
 
-static bool test_summary_statistics() {
+static bool TestSummaryStatistics() {
     BEGIN_TEST;
 
     perftest::ResultsSet results;
@@ -71,7 +71,7 @@ static bool test_summary_statistics() {
 }
 
 // Test escaping special characters in strings in JSON output.
-static bool test_json_string_escaping() {
+static bool TestJsonStringEscaping() {
     BEGIN_TEST;
 
     char buf[1000];
@@ -87,7 +87,7 @@ static bool test_json_string_escaping() {
 }
 
 BEGIN_TEST_CASE(perf_results_output_tests)
-RUN_TEST(test_json_output)
-RUN_TEST(test_summary_statistics)
-RUN_TEST(test_json_string_escaping)
+RUN_TEST(TestJsonOutput)
+RUN_TEST(TestSummaryStatistics)
+RUN_TEST(TestJsonStringEscaping)
 END_TEST_CASE(perf_results_output_tests)

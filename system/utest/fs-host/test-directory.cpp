@@ -37,7 +37,7 @@ bool check_dir_contents(const char* dirname, expected_dirent_t* edirents, size_t
 
 #define LARGE_PATH_LENGTH 128
 
-bool test_directory_large(void) {
+bool TestDirectoryLarge(void) {
     BEGIN_TEST;
 
     const int num_files = 1024;
@@ -53,7 +53,7 @@ bool test_directory_large(void) {
     END_TEST;
 }
 
-bool test_directory_readdir(void) {
+bool TestDirectoryReaddir(void) {
     BEGIN_TEST;
 
     ASSERT_EQ(emu_mkdir("::a", 0755), 0);
@@ -86,7 +86,7 @@ bool test_directory_readdir(void) {
     END_TEST;
 }
 
-bool test_directory_readdir_large(void) {
+bool TestDirectoryReaddirLarge(void) {
     BEGIN_TEST;
 
     size_t num_entries = 1000;
@@ -121,7 +121,7 @@ bool test_directory_readdir_large(void) {
 }
 
 RUN_MINFS_TESTS(directory_tests,
-    RUN_TEST_LARGE(test_directory_large)
-    RUN_TEST_MEDIUM(test_directory_readdir)
-    RUN_TEST_MEDIUM(test_directory_readdir_large)
+    RUN_TEST_LARGE(TestDirectoryLarge)
+    RUN_TEST_MEDIUM(TestDirectoryReaddir)
+    RUN_TEST_MEDIUM(TestDirectoryReaddirLarge)
 )

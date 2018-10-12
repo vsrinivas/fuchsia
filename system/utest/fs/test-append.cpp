@@ -79,7 +79,7 @@ bool test_append() {
     END_TEST;
 }
 
-bool test_append_on_clone() {
+bool TestAppendOnClone() {
     BEGIN_TEST;
 
     enum AppendState {
@@ -150,7 +150,7 @@ bool test_append_on_clone() {
 }
 
 template <size_t kNumThreads>
-bool test_append_atomic() {
+bool TestAppendAtomic() {
     BEGIN_TEST;
 
     constexpr size_t kWriteLength = 32;
@@ -224,9 +224,9 @@ bool test_append_atomic() {
 
 RUN_FOR_ALL_FILESYSTEMS(append_tests,
     RUN_TEST_MEDIUM(test_append)
-    RUN_TEST_MEDIUM(test_append_on_clone)
-    RUN_TEST_MEDIUM((test_append_atomic<1>))
-    RUN_TEST_MEDIUM((test_append_atomic<2>))
-    RUN_TEST_MEDIUM((test_append_atomic<5>))
-    RUN_TEST_MEDIUM((test_append_atomic<10>))
+    RUN_TEST_MEDIUM(TestAppendOnClone)
+    RUN_TEST_MEDIUM((TestAppendAtomic<1>))
+    RUN_TEST_MEDIUM((TestAppendAtomic<2>))
+    RUN_TEST_MEDIUM((TestAppendAtomic<5>))
+    RUN_TEST_MEDIUM((TestAppendAtomic<10>))
 )

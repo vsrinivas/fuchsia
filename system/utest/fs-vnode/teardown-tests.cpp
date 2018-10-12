@@ -123,7 +123,7 @@ bool sync_start(sync_completion_t* completions, async::Loop* loop,
 }
 
 // Test a case where the VFS object is shut down outside the dispatch loop.
-bool test_unposted_teardown() {
+bool TestUnpostedTeardown() {
     BEGIN_TEST;
 
      async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -152,7 +152,7 @@ bool test_unposted_teardown() {
 
 // Test a case where the VFS object is shut down as a posted request to the
 // dispatch loop.
-bool test_posted_teardown() {
+bool TestPostedTeardown() {
     BEGIN_TEST;
 
      async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -182,7 +182,7 @@ bool test_posted_teardown() {
 }
 
 // Test a case where the VFS object destroyed inside the callback to Shutdown.
-bool test_teardown_delete_this() {
+bool TestTeardownDeleteThis() {
     BEGIN_TEST;
 
      async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -212,7 +212,7 @@ bool test_teardown_delete_this() {
 
 // Test a case where the VFS object is shut down before a background async
 // callback gets the chance to complete.
-bool test_teardown_slow_async_callback() {
+bool TestTeardownSlowAsyncCallback() {
     BEGIN_TEST;
 
      async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -246,7 +246,7 @@ bool test_teardown_slow_async_callback() {
 
 // Test a case where the VFS object is shut down while a clone request
 // is concurrently trying to open a new connection.
-bool test_teardown_slow_clone() {
+bool TestTeardownSlowClone() {
     BEGIN_TEST;
 
      async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -301,7 +301,7 @@ bool test_teardown_slow_clone() {
     END_TEST;
 }
 
-bool test_synchronous_teardown() {
+bool TestSynchronousTeardown() {
     BEGIN_TEST;
      async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     ASSERT_EQ(loop.StartThread(), ZX_OK);
@@ -340,10 +340,10 @@ bool test_synchronous_teardown() {
 } // namespace
 
 BEGIN_TEST_CASE(teardown_tests)
-RUN_TEST(test_unposted_teardown)
-RUN_TEST(test_posted_teardown)
-RUN_TEST(test_teardown_delete_this)
-RUN_TEST(test_teardown_slow_async_callback)
-RUN_TEST(test_teardown_slow_clone)
-RUN_TEST(test_synchronous_teardown)
+RUN_TEST(TestUnpostedTeardown)
+RUN_TEST(TestPostedTeardown)
+RUN_TEST(TestTeardownDeleteThis)
+RUN_TEST(TestTeardownSlowAsyncCallback)
+RUN_TEST(TestTeardownSlowClone)
+RUN_TEST(TestSynchronousTeardown)
 END_TEST_CASE(teardown_tests)

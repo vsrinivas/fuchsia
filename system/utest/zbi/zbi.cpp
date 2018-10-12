@@ -127,7 +127,7 @@ static zbi_result_t check_contents(zbi_header_t* hdr, void* payload,
     }
 }
 
-static bool zbi_test_basic(void) {
+static bool ZbiTestBasic(void) {
     BEGIN_TEST;
     uint8_t* test_zbi = get_test_zbi();
 
@@ -156,7 +156,7 @@ static bool zbi_test_basic(void) {
     END_TEST;
 }
 
-static bool zbi_test_bad_container(void) {
+static bool ZbiTestBadContainer(void) {
     BEGIN_TEST;
 
     uint8_t* test_zbi = get_test_zbi();
@@ -184,7 +184,7 @@ static bool zbi_test_bad_container(void) {
     END_TEST;
 }
 
-static bool zbi_test_truncated(void) {
+static bool ZbiTestTruncated(void) {
     BEGIN_TEST;
     uint8_t* test_zbi = get_test_zbi();
 
@@ -218,7 +218,7 @@ static bool zbi_test_truncated(void) {
     END_TEST;
 }
 
-static bool zbi_test_append(void) {
+static bool ZbiTestAppend(void) {
     BEGIN_TEST;
     // Allocate an additional kExtraBytes at the end of the ZBI to test
     // appending.
@@ -262,7 +262,7 @@ static bool zbi_test_append(void) {
 }
 
 // Make sure we never overflow the ZBI's buffer by appending.
-static bool zbi_test_append_full(void) {
+static bool ZbiTestAppendFull(void) {
     BEGIN_TEST;
 
     // Enough space for a small payload
@@ -324,7 +324,7 @@ static bool zbi_test_append_full(void) {
 }
 
 // Test that appending multiple sections to a ZBI works
-static bool zbi_test_append_multi(void) {
+static bool ZbiTestAppendMulti(void) {
     BEGIN_TEST;
     uint8_t* reference_zbi = get_test_zbi();
     ASSERT_NONNULL(reference_zbi);
@@ -363,12 +363,12 @@ static bool zbi_test_append_multi(void) {
 }
 
 BEGIN_TEST_CASE(zbi_tests)
-RUN_TEST(zbi_test_basic)
-RUN_TEST(zbi_test_bad_container)
-RUN_TEST(zbi_test_truncated)
-RUN_TEST(zbi_test_append)
-RUN_TEST(zbi_test_append_full)
-RUN_TEST(zbi_test_append_multi)
+RUN_TEST(ZbiTestBasic)
+RUN_TEST(ZbiTestBadContainer)
+RUN_TEST(ZbiTestTruncated)
+RUN_TEST(ZbiTestAppend)
+RUN_TEST(ZbiTestAppendFull)
+RUN_TEST(ZbiTestAppendMulti)
 END_TEST_CASE(zbi_tests)
 
 int main(int argc, char** argv) {

@@ -84,7 +84,7 @@ bool CreateVmoABC(zx::vmo* out_vmo) {
     END_HELPER;
 }
 
-bool test_constructor() {
+bool TestConstructor() {
     BEGIN_TEST;
 
     zx::vmo abc;
@@ -113,7 +113,7 @@ bool test_constructor() {
     END_TEST;
 }
 
-bool test_open() {
+bool TestOpen() {
     BEGIN_TEST;
 
     zx::vmo abc;
@@ -155,7 +155,7 @@ bool test_open() {
     END_TEST;
 }
 
-bool test_read() {
+bool TestRead() {
     BEGIN_TEST;
 
     zx::vmo abc;
@@ -236,7 +236,7 @@ bool test_read() {
     END_TEST;
 }
 
-bool test_write() {
+bool TestWrite() {
     BEGIN_TEST;
 
     zx::vmo abc;
@@ -323,7 +323,7 @@ bool test_write() {
     END_TEST;
 }
 
-bool test_getattr() {
+bool TestGetattr() {
     BEGIN_TEST;
 
     zx::vmo abc;
@@ -356,7 +356,7 @@ bool test_getattr() {
     END_TEST;
 }
 
-bool test_get_handles() {
+bool TestGetHandles() {
     BEGIN_TEST;
 
     // sharing = VmoSharing::NONE
@@ -537,10 +537,10 @@ bool test_get_handles() {
 } // namespace
 
 BEGIN_TEST_CASE(vmo_file_tests)
-RUN_TEST(test_constructor)
-RUN_TEST(test_open)
-RUN_TEST(test_read)
-RUN_TEST(test_write)
-RUN_TEST(test_getattr)
-RUN_TEST(test_get_handles)
+RUN_TEST(TestConstructor)
+RUN_TEST(TestOpen)
+RUN_TEST(TestRead)
+RUN_TEST(TestWrite)
+RUN_TEST(TestGetattr)
+RUN_TEST(TestGetHandles)
 END_TEST_CASE(vmo_file_tests)

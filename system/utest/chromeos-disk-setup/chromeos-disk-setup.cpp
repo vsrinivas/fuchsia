@@ -345,7 +345,7 @@ bool assert_required_partitions(gpt_device_t* gpt) {
     END_HELPER;
 }
 
-bool test_default_config(void) {
+bool TestDefaultConfig(void) {
     BEGIN_TEST;
     TestState test;
     ASSERT_TRUE(test.PrepareGpt());
@@ -365,7 +365,7 @@ bool test_default_config(void) {
     END_TEST;
 }
 
-bool test_already_configured(void) {
+bool TestAlreadyConfigured(void) {
     BEGIN_TEST;
     TestState test;
     ASSERT_TRUE(test.PrepareGpt());
@@ -392,7 +392,7 @@ bool test_already_configured(void) {
     END_TEST;
 }
 
-bool test_no_c_parts(void) {
+bool TestNoCParts(void) {
     BEGIN_TEST;
     TestState test;
     ASSERT_TRUE(test.PrepareGpt());
@@ -416,7 +416,7 @@ bool test_no_c_parts(void) {
     END_TEST;
 }
 
-bool test_no_rootc(void) {
+bool TestNoRootc(void) {
     BEGIN_TEST;
     TestState test;
     ASSERT_TRUE(test.PrepareGpt());
@@ -445,7 +445,7 @@ bool test_no_rootc(void) {
     END_TEST;
 }
 
-bool test_no_kernc(void) {
+bool TestNoKernc(void) {
     BEGIN_TEST;
     TestState test;
     ASSERT_TRUE(test.PrepareGpt());
@@ -475,7 +475,7 @@ bool test_no_kernc(void) {
     END_TEST;
 }
 
-bool test_disk_too_small(void) {
+bool TestDiskTooSmall(void) {
     BEGIN_TEST;
 
     // first setup the device as though it is a normal test so we can compute
@@ -519,7 +519,7 @@ bool test_disk_too_small(void) {
     END_TEST;
 }
 
-bool test_is_cros_device(void) {
+bool TestIsCrosDevice(void) {
     BEGIN_TEST;
     TestState test;
     ASSERT_TRUE(test.PrepareGpt());
@@ -537,13 +537,13 @@ bool test_is_cros_device(void) {
 } // namespace
 
 BEGIN_TEST_CASE(disk_wizard_tests)
-RUN_TEST(test_default_config)
-RUN_TEST(test_already_configured)
-RUN_TEST(test_no_c_parts)
-RUN_TEST(test_no_rootc)
-RUN_TEST(test_no_kernc)
-RUN_TEST(test_disk_too_small)
-RUN_TEST(test_is_cros_device)
+RUN_TEST(TestDefaultConfig)
+RUN_TEST(TestAlreadyConfigured)
+RUN_TEST(TestNoCParts)
+RUN_TEST(TestNoRootc)
+RUN_TEST(TestNoKernc)
+RUN_TEST(TestDiskTooSmall)
+RUN_TEST(TestIsCrosDevice)
 END_TEST_CASE(disk_wizard_tests)
 
 int main(int argc, char** argv) {

@@ -214,7 +214,7 @@ static bool init_environment() {
     return true;
 }
 
-bool test_work_single_thread(void) {
+bool TestWorkSingleThread(void) {
     BEGIN_TEST;
 
     ASSERT_TRUE(init_environment());
@@ -231,5 +231,5 @@ bool test_work_single_thread(void) {
 }
 
 RUN_MINFS_TESTS(rw_workers_test,
-    RUN_TEST_MEDIUM(test_work_single_thread)
+    RUN_TEST_MEDIUM(TestWorkSingleThread)
 )

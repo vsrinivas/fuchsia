@@ -17,7 +17,7 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
-static bool test_futex_wait_value_mismatch() {
+static bool TestFutexWaitValueMismatch() {
     BEGIN_TEST;
     int32_t futex_value = 123;
     zx_status_t rc = zx_futex_wait(&futex_value, futex_value + 1,
@@ -26,7 +26,7 @@ static bool test_futex_wait_value_mismatch() {
     END_TEST;
 }
 
-static bool test_futex_wait_timeout() {
+static bool TestFutexWaitTimeout() {
     BEGIN_TEST;
     int32_t futex_value = 123;
     zx_status_t rc = zx_futex_wait(&futex_value, futex_value, 0);
@@ -35,7 +35,7 @@ static bool test_futex_wait_timeout() {
 }
 
 // This test checks that the timeout in futex_wait() is respected
-static bool test_futex_wait_timeout_elapsed() {
+static bool TestFutexWaitTimeoutElapsed() {
     BEGIN_TEST;
     int32_t futex_value = 0;
     constexpr zx_duration_t kRelativeDeadline = ZX_MSEC(500);
@@ -55,7 +55,7 @@ static bool test_futex_wait_timeout_elapsed() {
 }
 
 
-static bool test_futex_wait_bad_address() {
+static bool TestFutexWaitBadAddress() {
     BEGIN_TEST;
     // Check that the wait address is checked for validity.
     zx_status_t rc = zx_futex_wait(nullptr, 123, ZX_TIME_INFINITE);
@@ -189,7 +189,7 @@ void check_futex_wake(volatile int32_t* futex_addr, int nwake) {
 }
 
 // Test that we can wake up a single thread.
-bool test_futex_wakeup() {
+bool TestFutexWakeup() {
     BEGIN_TEST;
     volatile int32_t futex_value = 1;
     TestThread thread(&futex_value);
@@ -200,7 +200,7 @@ bool test_futex_wakeup() {
 
 // Test that we can wake up multiple threads, and that futex_wake() heeds
 // the wakeup limit.
-bool test_futex_wakeup_limit() {
+bool TestFutexWakeupLimit() {
     BEGIN_TEST;
     volatile int32_t futex_value = 1;
     TestThread thread1(&futex_value);
@@ -227,7 +227,7 @@ bool test_futex_wakeup_limit() {
 // Check that futex_wait() and futex_wake() heed their address arguments
 // properly.  A futex_wait() call on one address should not be woken by a
 // futex_wake() call on another address.
-bool test_futex_wakeup_address() {
+bool TestFutexWakeupAddress() {
     BEGIN_TEST;
     volatile int32_t futex_value1 = 1;
     volatile int32_t futex_value2 = 1;
@@ -251,7 +251,7 @@ bool test_futex_wakeup_address() {
 
 // Check that when futex_wait() times out, it removes the thread from
 // the futex wait queue.
-bool test_futex_unqueued_on_timeout() {
+bool TestFutexUnqueuedOnTimeout() {
     BEGIN_TEST;
     volatile int32_t futex_value = 1;
     zx_status_t rc = zx_futex_wait(const_cast<int32_t*>(&futex_value),
@@ -268,7 +268,7 @@ bool test_futex_unqueued_on_timeout() {
 }
 
 // This tests for a specific bug in list handling.
-bool test_futex_unqueued_on_timeout_2() {
+bool TestFutexUnqueuedOnTimeout_2() {
     BEGIN_TEST;
     volatile int32_t futex_value = 10;
     TestThread thread1(&futex_value);
@@ -286,7 +286,7 @@ bool test_futex_unqueued_on_timeout_2() {
 }
 
 // This tests for a specific bug in list handling.
-bool test_futex_unqueued_on_timeout_3() {
+bool TestFutexUnqueuedOnTimeout_3() {
     BEGIN_TEST;
     volatile int32_t futex_value = 10;
     TestThread thread1(&futex_value, ZX_MSEC(400));
@@ -306,7 +306,7 @@ bool test_futex_unqueued_on_timeout_3() {
     END_TEST;
 }
 
-bool test_futex_requeue_value_mismatch() {
+bool TestFutexRequeueValueMismatch() {
     BEGIN_TEST;
     int32_t futex_value1 = 100;
     int32_t futex_value2 = 200;
@@ -316,7 +316,7 @@ bool test_futex_requeue_value_mismatch() {
     END_TEST;
 }
 
-bool test_futex_requeue_same_addr() {
+bool TestFutexRequeueSameAddr() {
     BEGIN_TEST;
     int32_t futex_value = 100;
     zx_status_t rc = zx_futex_requeue(&futex_value, 1, futex_value,
@@ -326,7 +326,7 @@ bool test_futex_requeue_same_addr() {
 }
 
 // Test that futex_requeue() can wake up some threads and requeue others.
-bool test_futex_requeue() {
+bool TestFutexRequeue() {
     BEGIN_TEST;
     volatile int32_t futex_value1 = 100;
     volatile int32_t futex_value2 = 200;
@@ -365,7 +365,7 @@ bool test_futex_requeue() {
 // Test the case where futex_wait() times out after having been moved to a
 // different queue by futex_requeue().  Check that futex_wait() removes
 // itself from the correct queue in that case.
-bool test_futex_requeue_unqueued_on_timeout() {
+bool TestFutexRequeueUnqueuedOnTimeout() {
     BEGIN_TEST;
     zx_duration_t timeout_in_ns = ZX_MSEC(300);
     volatile int32_t futex_value1 = 100;
@@ -392,7 +392,7 @@ bool test_futex_requeue_unqueued_on_timeout() {
 // Test that we can successfully kill a thread that is waiting on a futex,
 // and that we can join the thread afterwards.  This checks that waiting on
 // a futex does not leave the thread in an unkillable state.
-bool test_futex_thread_killed() {
+bool TestFutexThreadKilled() {
     BEGIN_TEST;
     volatile int32_t futex_value = 1;
     // Note: TestThread will ensure the kernel thread died, though
@@ -413,7 +413,7 @@ bool test_futex_thread_killed() {
 // calling it gets suspended and resumed.  (This tests for a bug where the
 // futex_wait() syscall would return ZX_ERR_TIMED_OUT and not get restarted by
 // the syscall wrapper in the VDSO.)
-static bool test_futex_thread_suspended() {
+static bool TestFutexThreadSuspended() {
     BEGIN_TEST;
     volatile int32_t futex_value = 1;
     TestThread thread(&futex_value);
@@ -437,7 +437,7 @@ static bool test_futex_thread_suspended() {
 }
 
 // Test that misaligned pointers cause futex syscalls to return a failure.
-static bool test_futex_misaligned() {
+static bool TestFutexMisaligned() {
     BEGIN_TEST;
 
     // Make sure the whole thing is aligned, so the 'futex' member will
@@ -516,7 +516,7 @@ static int signal_thread3(void* arg) {
     return 0;
 }
 
-static bool test_event_signaling() {
+static bool TestEventSignaling() {
     BEGIN_TEST;
     thrd_t thread1, thread2, thread3;
 
@@ -540,24 +540,24 @@ static bool test_event_signaling() {
 }
 
 BEGIN_TEST_CASE(futex_tests)
-RUN_TEST(test_futex_wait_value_mismatch);
-RUN_TEST(test_futex_wait_timeout);
-RUN_TEST(test_futex_wait_timeout_elapsed);
-RUN_TEST(test_futex_wait_bad_address);
-RUN_TEST(test_futex_wakeup);
-RUN_TEST(test_futex_wakeup_limit);
-RUN_TEST(test_futex_wakeup_address);
-RUN_TEST(test_futex_unqueued_on_timeout);
-RUN_TEST(test_futex_unqueued_on_timeout_2);
-RUN_TEST(test_futex_unqueued_on_timeout_3);
-RUN_TEST(test_futex_requeue_value_mismatch);
-RUN_TEST(test_futex_requeue_same_addr);
-RUN_TEST(test_futex_requeue);
-RUN_TEST(test_futex_requeue_unqueued_on_timeout);
-RUN_TEST(test_futex_thread_killed);
-RUN_TEST(test_futex_thread_suspended);
-RUN_TEST(test_futex_misaligned);
-RUN_TEST(test_event_signaling);
+RUN_TEST(TestFutexWaitValueMismatch);
+RUN_TEST(TestFutexWaitTimeout);
+RUN_TEST(TestFutexWaitTimeoutElapsed);
+RUN_TEST(TestFutexWaitBadAddress);
+RUN_TEST(TestFutexWakeup);
+RUN_TEST(TestFutexWakeupLimit);
+RUN_TEST(TestFutexWakeupAddress);
+RUN_TEST(TestFutexUnqueuedOnTimeout);
+RUN_TEST(TestFutexUnqueuedOnTimeout_2);
+RUN_TEST(TestFutexUnqueuedOnTimeout_3);
+RUN_TEST(TestFutexRequeueValueMismatch);
+RUN_TEST(TestFutexRequeueSameAddr);
+RUN_TEST(TestFutexRequeue);
+RUN_TEST(TestFutexRequeueUnqueuedOnTimeout);
+RUN_TEST(TestFutexThreadKilled);
+RUN_TEST(TestFutexThreadSuspended);
+RUN_TEST(TestFutexMisaligned);
+RUN_TEST(TestEventSignaling);
 END_TEST_CASE(futex_tests)
 
 #ifndef BUILD_COMBINED_TESTS

@@ -38,8 +38,8 @@
 
 namespace tests {
 
-static int get_ramdisk(uint64_t blk_size, uint64_t blk_count, const uint8_t* guid = nullptr,
-                       size_t guid_len = 0) {
+static int GetRamdisk(uint64_t blk_size, uint64_t blk_count, const uint8_t* guid = nullptr,
+                      size_t guid_len = 0) {
     char ramdisk_path[PATH_MAX];
     zx_status_t rc = guid ? create_ramdisk_with_guid(blk_size, blk_count, guid,
                                                      guid_len, ramdisk_path)
@@ -59,7 +59,7 @@ class RamdiskTest {
 public:
     static bool Create(uint64_t blk_size, uint64_t blk_count, fbl::unique_ptr<RamdiskTest>* out) {
         BEGIN_HELPER;
-        int raw_fd = get_ramdisk(blk_size, blk_count);
+        int raw_fd = GetRamdisk(blk_size, blk_count);
         fbl::unique_fd fd(raw_fd);
         ASSERT_TRUE(fd, "Could not open ramdisk device");
         *out = fbl::unique_ptr<RamdiskTest>(new RamdiskTest(fbl::move(fd)));
@@ -69,7 +69,7 @@ public:
     static bool CreateWithGuid(uint64_t blk_size, uint64_t blk_count, const uint8_t* guid,
                                size_t guid_len, fbl::unique_ptr<RamdiskTest>* out) {
         BEGIN_HELPER;
-        int raw_fd = get_ramdisk(blk_size, blk_count, guid, guid_len);
+        int raw_fd = GetRamdisk(blk_size, blk_count, guid, guid_len);
         fbl::unique_fd fd(raw_fd);
         ASSERT_TRUE(fd, "Could not open ramdisk device");
         *out = fbl::unique_ptr<RamdiskTest>(new RamdiskTest(fbl::move(fd)));
@@ -99,7 +99,7 @@ private:
     fbl::unique_fd fd_;
 };
 
-static bool ramdisk_test_wait_for_device(void) {
+static bool RamdiskTestWaitForDevice(void) {
     BEGIN_TEST;
 
     EXPECT_EQ(wait_for_device("/", ZX_SEC(1)), ZX_ERR_BAD_PATH);
@@ -132,7 +132,7 @@ static bool ramdisk_test_wait_for_device(void) {
     END_TEST;
 }
 
-static bool ramdisk_test_simple(void) {
+static bool RamdiskTestSimple(void) {
     uint8_t buf[PAGE_SIZE];
     uint8_t out[PAGE_SIZE];
 
@@ -154,7 +154,7 @@ static bool ramdisk_test_simple(void) {
     END_TEST;
 }
 
-static bool ramdisk_test_guid(void) {
+static bool RamdiskTestGuid(void) {
     constexpr uint8_t kGuid[ZBI_PARTITION_GUID_LEN] =
         {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF};
 
@@ -169,7 +169,7 @@ static bool ramdisk_test_guid(void) {
     END_TEST;
 }
 
-static bool ramdisk_test_vmo(void) {
+static bool RamdiskTestVmo(void) {
     BEGIN_TEST;
 
     zx::vmo vmo;
@@ -202,7 +202,7 @@ static bool ramdisk_test_vmo(void) {
 // This test creates a ramdisk, verifies it is visible in the filesystem
 // (where we expect it to be!) and verifies that it is removed when we
 // "unplug" the device.
-static bool ramdisk_test_filesystem(void) {
+static bool RamdiskTestFilesystem(void) {
     BEGIN_TEST;
 
     // Make a ramdisk
@@ -286,7 +286,7 @@ static bool ramdisk_test_filesystem(void) {
     END_TEST;
 }
 
-static bool ramdisk_test_rebind(void) {
+static bool RamdiskTestRebind(void) {
     BEGIN_TEST;
 
     // Make a ramdisk
@@ -306,7 +306,7 @@ static bool ramdisk_test_rebind(void) {
     END_TEST;
 }
 
-bool ramdisk_test_bad_requests(void) {
+bool RamdiskTestBadRequests(void) {
     uint8_t buf[PAGE_SIZE];
 
     BEGIN_TEST;
@@ -340,9 +340,9 @@ bool ramdisk_test_bad_requests(void) {
     END_TEST;
 }
 
-bool ramdisk_test_release_during_access(void) {
+bool RamdiskTestReleaseDuringAccess(void) {
     BEGIN_TEST;
-    int fd = get_ramdisk(PAGE_SIZE, 512);
+    int fd = GetRamdisk(PAGE_SIZE, 512);
 
     // Spin up a background thread to repeatedly access
     // the first few blocks.
@@ -381,9 +381,9 @@ bool ramdisk_test_release_during_access(void) {
     END_TEST;
 }
 
-bool ramdisk_test_release_during_fifo_access(void) {
+bool RamdiskTestReleaseDuringFifoAccess(void) {
     BEGIN_TEST;
-    int fd = get_ramdisk(PAGE_SIZE, 512);
+    int fd = GetRamdisk(PAGE_SIZE, 512);
 
     // Set up fifo, txn, client, vmo...
     zx::fifo fifo;
@@ -442,7 +442,7 @@ bool ramdisk_test_release_during_fifo_access(void) {
     END_TEST;
 }
 
-bool ramdisk_test_multiple(void) {
+bool RamdiskTestMultiple(void) {
     uint8_t buf[PAGE_SIZE];
     uint8_t out[PAGE_SIZE];
 
@@ -475,7 +475,7 @@ bool ramdisk_test_multiple(void) {
     END_TEST;
 }
 
-bool ramdisk_test_fifo_no_op(void) {
+bool RamdiskTestFifoNoOp(void) {
     // Get a FIFO connection to a ramdisk and immediately close it
     BEGIN_TEST;
     fbl::unique_ptr<RamdiskTest> ramdisk;
@@ -500,7 +500,7 @@ static void fill_random(uint8_t* buf, uint64_t size) {
     }
 }
 
-bool ramdisk_test_fifo_basic(void) {
+bool RamdiskTestFifoBasic(void) {
     BEGIN_TEST;
     // Set up the initial handshake connection with the ramdisk
     fbl::unique_ptr<RamdiskTest> ramdisk;
@@ -573,7 +573,7 @@ bool ramdisk_test_fifo_basic(void) {
     END_TEST;
 }
 
-bool ramdisk_test_fifo_no_group(void) {
+bool RamdiskTestFifoNoGroup(void) {
     BEGIN_TEST;
     // Set up the initial handshake connection with the ramdisk
     fbl::unique_ptr<RamdiskTest> ramdisk;
@@ -674,10 +674,10 @@ typedef struct {
     zx_handle_t vmo;
     vmoid_t vmoid;
     fbl::unique_ptr<uint8_t[]> buf;
-} test_vmo_object_t;
+} TestVmoObject;
 
 // Creates a VMO, fills it with data, and gives it to the block device.
-bool create_vmo_helper(int fd, test_vmo_object_t* obj, size_t kBlockSize) {
+bool create_vmo_helper(int fd, TestVmoObject* obj, size_t kBlockSize) {
     obj->vmo_size = kBlockSize + (rand() % 5) * kBlockSize;
     ASSERT_EQ(zx_vmo_create(obj->vmo_size, 0, &obj->vmo), ZX_OK,
               "Failed to create vmo");
@@ -701,7 +701,7 @@ bool create_vmo_helper(int fd, test_vmo_object_t* obj, size_t kBlockSize) {
 // For objs.size() == 10,
 // i = 0 will write vmo block 0, 1, 2, 3... to dev block 0, 10, 20, 30...
 // i = 1 will write vmo block 0, 1, 2, 3... to dev block 1, 11, 21, 31...
-bool write_striped_vmo_helper(const block_client::Client* client, test_vmo_object_t* obj, size_t i,
+bool write_striped_vmo_helper(const block_client::Client* client, TestVmoObject* obj, size_t i,
                               size_t objs, groupid_t group, size_t kBlockSize) {
     // Make a separate request for each block
     size_t blocks = obj->vmo_size / kBlockSize;
@@ -722,7 +722,7 @@ bool write_striped_vmo_helper(const block_client::Client* client, test_vmo_objec
 }
 
 // Verifies the result from "write_striped_vmo_helper"
-bool read_striped_vmo_helper(const block_client::Client* client, test_vmo_object_t* obj, size_t i,
+bool read_striped_vmo_helper(const block_client::Client* client, TestVmoObject* obj, size_t i,
                              size_t objs, groupid_t group, size_t kBlockSize) {
     // First, empty out the VMO
     fbl::AllocChecker ac;
@@ -754,7 +754,7 @@ bool read_striped_vmo_helper(const block_client::Client* client, test_vmo_object
 }
 
 // Tears down an object created by "create_vmo_helper".
-bool close_vmo_helper(const block_client::Client* client, test_vmo_object_t* obj, groupid_t group) {
+bool close_vmo_helper(const block_client::Client* client, TestVmoObject* obj, groupid_t group) {
     block_fifo_request_t request;
     request.group = group;
     request.vmoid = obj->vmoid;
@@ -764,7 +764,7 @@ bool close_vmo_helper(const block_client::Client* client, test_vmo_object_t* obj
     return true;
 }
 
-bool ramdisk_test_fifo_multiple_vmo(void) {
+bool RamdiskTestFifoMultipleVmo(void) {
     BEGIN_TEST;
     // Set up the initial handshake connection with the ramdisk
     const size_t kBlockSize = PAGE_SIZE;
@@ -781,7 +781,7 @@ bool ramdisk_test_fifo_multiple_vmo(void) {
 
     // Create multiple VMOs
     fbl::AllocChecker ac;
-    fbl::Array<test_vmo_object_t> objs(new (&ac) test_vmo_object_t[10](), 10);
+    fbl::Array<TestVmoObject> objs(new (&ac) TestVmoObject[10](), 10);
     ASSERT_TRUE(ac.check());
     for (size_t i = 0; i < objs.size(); i++) {
         ASSERT_TRUE(create_vmo_helper(ramdisk->fd(), &objs[i], kBlockSize));
@@ -803,18 +803,18 @@ bool ramdisk_test_fifo_multiple_vmo(void) {
 }
 
 typedef struct {
-    test_vmo_object_t* obj;
+    TestVmoObject* obj;
     size_t i;
     size_t objs;
     int fd;
     const block_client::Client* client;
     groupid_t group;
     size_t kBlockSize;
-} test_thread_arg_t;
+} TestThreadArg;
 
 int fifo_vmo_thread(void* arg) {
-    test_thread_arg_t* fifoarg = (test_thread_arg_t*) arg;
-    test_vmo_object_t* obj = fifoarg->obj;
+    TestThreadArg* fifoarg = (TestThreadArg*) arg;
+    TestVmoObject* obj = fifoarg->obj;
     size_t i = fifoarg->i;
     size_t objs = fifoarg->objs;
     int fd = fifoarg->fd;
@@ -829,7 +829,7 @@ int fifo_vmo_thread(void* arg) {
     return 0;
 }
 
-bool ramdisk_test_fifo_multiple_vmo_multithreaded(void) {
+bool RamdiskTestFifoMultipleVmoMultithreaded(void) {
     BEGIN_TEST;
     // Set up the initial handshake connection with the ramdisk
     const size_t kBlockSize = PAGE_SIZE;
@@ -847,13 +847,13 @@ bool ramdisk_test_fifo_multiple_vmo_multithreaded(void) {
     // Create multiple VMOs
     size_t num_threads = MAX_TXN_GROUP_COUNT;
     fbl::AllocChecker ac;
-    fbl::Array<test_vmo_object_t> objs(new (&ac) test_vmo_object_t[num_threads](), num_threads);
+    fbl::Array<TestVmoObject> objs(new (&ac) TestVmoObject[num_threads](), num_threads);
     ASSERT_TRUE(ac.check());
 
     fbl::Array<thrd_t> threads(new (&ac) thrd_t[num_threads](), num_threads);
     ASSERT_TRUE(ac.check());
 
-    fbl::Array<test_thread_arg_t> thread_args(new (&ac) test_thread_arg_t[num_threads](),
+    fbl::Array<TestThreadArg> thread_args(new (&ac) TestThreadArg[num_threads](),
                                                num_threads);
     ASSERT_TRUE(ac.check());
 
@@ -880,7 +880,7 @@ bool ramdisk_test_fifo_multiple_vmo_multithreaded(void) {
     END_TEST;
 }
 
-bool ramdisk_test_fifo_unclean_shutdown(void) {
+bool RamdiskTestFifoUncleanShutdown(void) {
     BEGIN_TEST;
     // Set up the ramdisk
     const size_t kBlockSize = PAGE_SIZE;
@@ -897,7 +897,7 @@ bool ramdisk_test_fifo_unclean_shutdown(void) {
 
     // Create multiple VMOs
     fbl::AllocChecker ac;
-    fbl::Array<test_vmo_object_t> objs(new (&ac) test_vmo_object_t[10](), 10);
+    fbl::Array<TestVmoObject> objs(new (&ac) TestVmoObject[10](), 10);
     ASSERT_TRUE(ac.check());
     for (size_t i = 0; i < objs.size(); i++) {
         ASSERT_TRUE(create_vmo_helper(ramdisk->fd(), &objs[i], kBlockSize));
@@ -934,7 +934,7 @@ bool ramdisk_test_fifo_unclean_shutdown(void) {
     END_TEST;
 }
 
-bool ramdisk_test_fifo_large_ops_count(void) {
+bool RamdiskTestFifoLargeOpsCount(void) {
     BEGIN_TEST;
     // Set up the ramdisk
     const size_t kBlockSize = PAGE_SIZE;
@@ -950,7 +950,7 @@ bool ramdisk_test_fifo_large_ops_count(void) {
     ASSERT_EQ(block_client::Client::Create(fbl::move(fifo), &client), ZX_OK);
 
     // Create a vmo
-    test_vmo_object_t obj;
+    TestVmoObject obj;
     ASSERT_TRUE(create_vmo_helper(ramdisk->fd(), &obj, kBlockSize));
 
     for (size_t num_ops = 1; num_ops <= 32; num_ops++) {
@@ -976,7 +976,7 @@ bool ramdisk_test_fifo_large_ops_count(void) {
     END_TEST;
 }
 
-bool ramdisk_test_fifo_large_ops_count_shutdown(void) {
+bool RamdiskTestFifoLargeOpsCountShutdown(void) {
     BEGIN_TEST;
     // Set up the ramdisk
     const size_t kBlockSize = PAGE_SIZE;
@@ -990,7 +990,7 @@ bool ramdisk_test_fifo_large_ops_count_shutdown(void) {
               fifo.reset_and_get_address()), expected, "Failed to get FIFO");
 
     // Create a vmo
-    test_vmo_object_t obj;
+    TestVmoObject obj;
     ASSERT_TRUE(create_vmo_helper(ramdisk->fd(), &obj, kBlockSize));
 
     const size_t kNumOps = BLOCK_FIFO_MAX_DEPTH;
@@ -1031,7 +1031,7 @@ bool ramdisk_test_fifo_large_ops_count_shutdown(void) {
     END_TEST;
 }
 
-bool ramdisk_test_fifo_intermediate_op_failure(void) {
+bool RamdiskTestFifoIntermediateOpFailure(void) {
     BEGIN_TEST;
     // Set up the ramdisk
     const size_t kBlockSize = PAGE_SIZE;
@@ -1051,7 +1051,7 @@ bool ramdisk_test_fifo_intermediate_op_failure(void) {
     constexpr size_t kBufferSize = kRequestCount * kBlockSize;
 
     // Create a vmo
-    test_vmo_object_t obj;
+    TestVmoObject obj;
     ASSERT_TRUE(create_vmo_helper(ramdisk->fd(), &obj, kBufferSize));
 
     // Store the original value of the VMO
@@ -1114,7 +1114,7 @@ bool ramdisk_test_fifo_intermediate_op_failure(void) {
     END_TEST;
 }
 
-bool ramdisk_test_fifo_bad_client_vmoid(void) {
+bool RamdiskTestFifoBadClientVmoid(void) {
     // Try to flex the server's error handling by sending 'malicious' client requests.
     BEGIN_TEST;
     // Set up the ramdisk
@@ -1132,7 +1132,7 @@ bool ramdisk_test_fifo_bad_client_vmoid(void) {
     groupid_t group = 0;
 
     // Create a vmo
-    test_vmo_object_t obj;
+    TestVmoObject obj;
     ASSERT_TRUE(create_vmo_helper(ramdisk->fd(), &obj, kBlockSize));
 
     // Bad request: Writing to the wrong vmoid
@@ -1148,7 +1148,7 @@ bool ramdisk_test_fifo_bad_client_vmoid(void) {
     END_TEST;
 }
 
-bool ramdisk_test_fifo_bad_client_unaligned_request(void) {
+bool RamdiskTestFifoBadClientUnalignedRequest(void) {
     // Try to flex the server's error handling by sending 'malicious' client requests.
     BEGIN_TEST;
     // Set up the ramdisk
@@ -1168,7 +1168,7 @@ bool ramdisk_test_fifo_bad_client_unaligned_request(void) {
     // Create a vmo of at least size "kBlockSize * 2", since we'll
     // be reading "kBlockSize" bytes from an offset below, and we want it
     // to fit within the bounds of the VMO.
-    test_vmo_object_t obj;
+    TestVmoObject obj;
     ASSERT_TRUE(create_vmo_helper(ramdisk->fd(), &obj, kBlockSize * 2));
 
     block_fifo_request_t request;
@@ -1185,7 +1185,7 @@ bool ramdisk_test_fifo_bad_client_unaligned_request(void) {
     END_TEST;
 }
 
-bool ramdisk_test_fifo_bad_client_overflow(void) {
+bool RamdiskTestFifoBadClientOverflow(void) {
     // Try to flex the server's error handling by sending 'malicious' client requests.
     BEGIN_TEST;
     // Set up the ramdisk
@@ -1206,7 +1206,7 @@ bool ramdisk_test_fifo_bad_client_overflow(void) {
     // Create a vmo of at least size "kBlockSize * 2", since we'll
     // be reading "kBlockSize" bytes from an offset below, and we want it
     // to fit within the bounds of the VMO.
-    test_vmo_object_t obj;
+    TestVmoObject obj;
     ASSERT_TRUE(create_vmo_helper(ramdisk->fd(), &obj, kBlockSize * 2));
 
     block_fifo_request_t request;
@@ -1247,7 +1247,7 @@ bool ramdisk_test_fifo_bad_client_overflow(void) {
     END_TEST;
 }
 
-bool ramdisk_test_fifo_bad_client_bad_vmo(void) {
+bool RamdiskTestFifoBadClientBadVmo(void) {
     // Try to flex the server's error handling by sending 'malicious' client requests.
     BEGIN_TEST;
     // Set up the ramdisk
@@ -1265,7 +1265,7 @@ bool ramdisk_test_fifo_bad_client_bad_vmo(void) {
     groupid_t group = 0;
 
     // create a VMO of 1 block, which will round up to PAGE_SIZE
-    test_vmo_object_t obj;
+    TestVmoObject obj;
     obj.vmo_size = kBlockSize;
     ASSERT_EQ(zx_vmo_create(obj.vmo_size, 0, &obj.vmo), ZX_OK,
               "Failed to create vmo");
@@ -1300,7 +1300,7 @@ bool ramdisk_test_fifo_bad_client_bad_vmo(void) {
     END_TEST;
 }
 
-bool ramdisk_test_fifo_sleep_unavailable(void) {
+bool RamdiskTestFifoSleepUnavailable(void) {
     BEGIN_TEST;
     // Set up the initial handshake connection with the ramdisk
     fbl::unique_ptr<RamdiskTest> ramdisk;
@@ -1458,7 +1458,7 @@ static int fifo_wake_thread(void* arg) {
     return ZX_OK;
 }
 
-bool ramdisk_test_fifo_sleep_deferred(void) {
+bool RamdiskTestFifoSleepDeferred(void) {
     BEGIN_TEST;
     // Set up the initial handshake connection with the ramdisk
     fbl::unique_ptr<RamdiskTest> ramdisk;
@@ -1570,32 +1570,32 @@ bool ramdisk_test_fifo_sleep_deferred(void) {
 }
 
 BEGIN_TEST_CASE(ramdisk_tests)
-RUN_TEST_SMALL(ramdisk_test_wait_for_device)
-RUN_TEST_SMALL(ramdisk_test_simple)
-RUN_TEST_SMALL(ramdisk_test_guid)
-RUN_TEST_SMALL(ramdisk_test_vmo)
-RUN_TEST_SMALL(ramdisk_test_filesystem)
-RUN_TEST_SMALL(ramdisk_test_rebind)
-RUN_TEST_SMALL(ramdisk_test_bad_requests)
-RUN_TEST_SMALL(ramdisk_test_release_during_access)
-RUN_TEST_SMALL(ramdisk_test_release_during_fifo_access)
-RUN_TEST_SMALL(ramdisk_test_multiple)
-RUN_TEST_SMALL(ramdisk_test_fifo_no_op)
-RUN_TEST_SMALL(ramdisk_test_fifo_basic)
-RUN_TEST_SMALL(ramdisk_test_fifo_no_group)
-RUN_TEST_SMALL(ramdisk_test_fifo_multiple_vmo)
-RUN_TEST_SMALL(ramdisk_test_fifo_multiple_vmo_multithreaded)
+RUN_TEST_SMALL(RamdiskTestWaitForDevice)
+RUN_TEST_SMALL(RamdiskTestSimple)
+RUN_TEST_SMALL(RamdiskTestGuid)
+RUN_TEST_SMALL(RamdiskTestVmo)
+RUN_TEST_SMALL(RamdiskTestFilesystem)
+RUN_TEST_SMALL(RamdiskTestRebind)
+RUN_TEST_SMALL(RamdiskTestBadRequests)
+RUN_TEST_SMALL(RamdiskTestReleaseDuringAccess)
+RUN_TEST_SMALL(RamdiskTestReleaseDuringFifoAccess)
+RUN_TEST_SMALL(RamdiskTestMultiple)
+RUN_TEST_SMALL(RamdiskTestFifoNoOp)
+RUN_TEST_SMALL(RamdiskTestFifoBasic)
+RUN_TEST_SMALL(RamdiskTestFifoNoGroup)
+RUN_TEST_SMALL(RamdiskTestFifoMultipleVmo)
+RUN_TEST_SMALL(RamdiskTestFifoMultipleVmoMultithreaded)
 // TODO(smklein): Test ops across different vmos
-RUN_TEST_SMALL(ramdisk_test_fifo_unclean_shutdown)
-RUN_TEST_SMALL(ramdisk_test_fifo_large_ops_count)
-RUN_TEST_SMALL(ramdisk_test_fifo_large_ops_count_shutdown)
-RUN_TEST_SMALL(ramdisk_test_fifo_intermediate_op_failure)
-RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_vmoid)
-RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_unaligned_request)
-RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_overflow)
-RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_bad_vmo)
-RUN_TEST_SMALL(ramdisk_test_fifo_sleep_unavailable)
-RUN_TEST_SMALL(ramdisk_test_fifo_sleep_deferred)
+RUN_TEST_SMALL(RamdiskTestFifoUncleanShutdown)
+RUN_TEST_SMALL(RamdiskTestFifoLargeOpsCount)
+RUN_TEST_SMALL(RamdiskTestFifoLargeOpsCountShutdown)
+RUN_TEST_SMALL(RamdiskTestFifoIntermediateOpFailure)
+RUN_TEST_SMALL(RamdiskTestFifoBadClientVmoid)
+RUN_TEST_SMALL(RamdiskTestFifoBadClientUnalignedRequest)
+RUN_TEST_SMALL(RamdiskTestFifoBadClientOverflow)
+RUN_TEST_SMALL(RamdiskTestFifoBadClientBadVmo)
+RUN_TEST_SMALL(RamdiskTestFifoSleepUnavailable)
+RUN_TEST_SMALL(RamdiskTestFifoSleepDeferred)
 END_TEST_CASE(ramdisk_tests)
 
 } // namespace tests

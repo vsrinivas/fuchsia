@@ -32,7 +32,7 @@ void RunThread(fbl::Closure closure) {
     ZX_ASSERT(result == thrd_success);
 }
 
-bool test_normal_shutdown() {
+bool TestNormalShutdown() {
     BEGIN_TRACE_TEST;
 
     fixture_start_tracing();
@@ -42,7 +42,7 @@ bool test_normal_shutdown() {
     END_TRACE_TEST;
 }
 
-bool test_hard_shutdown() {
+bool TestHardShutdown() {
     BEGIN_TRACE_TEST;
 
     fixture_start_tracing();
@@ -66,7 +66,7 @@ bool test_state() {
     END_TRACE_TEST;
 }
 
-bool test_is_enabled() {
+bool TestIsEnabled() {
     BEGIN_TRACE_TEST;
 
     EXPECT_FALSE(trace_is_enabled());
@@ -80,7 +80,7 @@ bool test_is_enabled() {
     END_TRACE_TEST;
 }
 
-bool test_is_category_enabled() {
+bool TestIsCategoryEnabled() {
     BEGIN_TRACE_TEST;
 
     EXPECT_FALSE(trace_is_category_enabled("+enabled"));
@@ -100,7 +100,7 @@ bool test_is_category_enabled() {
     END_TRACE_TEST;
 }
 
-bool test_generate_nonce() {
+bool TestGenerateNonce() {
     BEGIN_TRACE_TEST;
 
     uint64_t nonce1 = trace_generate_nonce();
@@ -114,7 +114,7 @@ bool test_generate_nonce() {
     END_TRACE_TEST;
 }
 
-bool test_observer() {
+bool TestObserver() {
     const size_t kBufferSize = 4096u;
 
     // This test needs the trace engine to run in the same thread as the test:
@@ -157,7 +157,7 @@ bool test_observer() {
     END_TRACE_TEST;
 }
 
-bool test_observer_errors() {
+bool TestObserverErrors() {
     BEGIN_TRACE_TEST;
 
     zx::event event;
@@ -172,7 +172,7 @@ bool test_observer_errors() {
     END_TRACE_TEST;
 }
 
-bool test_register_current_thread() {
+bool TestRegisterCurrentThread() {
     BEGIN_TRACE_TEST;
 
     fixture_start_tracing();
@@ -198,7 +198,7 @@ Thread(index: 1, <>)
     END_TRACE_TEST;
 }
 
-bool test_register_current_thread_multiple_threads() {
+bool TestRegisterCurrentThreadMultipleThreads() {
     BEGIN_TRACE_TEST;
 
     fixture_start_tracing();
@@ -233,7 +233,7 @@ Thread(index: 2, <>)
     END_TRACE_TEST;
 }
 
-bool test_register_string_literal() {
+bool TestRegisterStringLiteral() {
     BEGIN_TRACE_TEST;
 
     fixture_start_tracing();
@@ -286,7 +286,7 @@ String(index: 3, "string3")
     END_TRACE_TEST;
 }
 
-bool test_register_string_literal_multiple_threads() {
+bool TestRegisterStringLiteralMultipleThreads() {
     BEGIN_TRACE_TEST;
 
     fixture_start_tracing();
@@ -332,7 +332,7 @@ String(index: 4, "string2")
     END_TRACE_TEST;
 }
 
-bool test_register_string_literal_table_overflow() {
+bool TestRegisterStringLiteralTableOverflow() {
     BEGIN_TRACE_TEST;
 
     fixture_start_tracing();
@@ -357,7 +357,7 @@ bool test_register_string_literal_table_overflow() {
     END_TRACE_TEST;
 }
 
-bool test_maximum_record_length() {
+bool TestMaximumRecordLength() {
     BEGIN_TRACE_TEST;
 
     fixture_start_tracing();
@@ -380,7 +380,7 @@ bool test_maximum_record_length() {
     END_TRACE_TEST;
 }
 
-bool test_event_with_inline_everything() {
+bool TestEventWithInlineEverything() {
     BEGIN_TRACE_TEST;
 
     fixture_start_tracing();
@@ -408,7 +408,7 @@ bool test_event_with_inline_everything() {
     END_TRACE_TEST;
 }
 
-bool test_circular_mode() {
+bool TestCircularMode() {
     const size_t kBufferSize = 4096u;
     BEGIN_TRACE_TEST_ETC(kNoAttachToThread,
                          TRACE_BUFFERING_MODE_CIRCULAR, kBufferSize);
@@ -475,7 +475,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: glo
     END_TRACE_TEST;
 }
 
-bool test_streaming_mode() {
+bool TestStreamingMode() {
     const size_t kBufferSize = 4096u;
     BEGIN_TRACE_TEST_ETC(kNoAttachToThread,
                          TRACE_BUFFERING_MODE_STREAMING, kBufferSize);
@@ -640,7 +640,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: glo
 // This test exercises DX-441 where a buffer becomes full and immediately
 // thereafter tracing is stopped. This causes the "please save buffer"
 // processing to run when tracing is not active.
-bool test_shutdown_when_full() {
+bool TestShutdownWhenFull() {
     const size_t kBufferSize = 4096u;
 
     // This test needs the trace engine to run in the same thread as the test:
@@ -681,21 +681,21 @@ bool test_shutdown_when_full() {
 } // namespace
 
 BEGIN_TEST_CASE(engine_tests)
-RUN_TEST(test_normal_shutdown)
-RUN_TEST(test_hard_shutdown)
-RUN_TEST(test_is_enabled)
-RUN_TEST(test_is_category_enabled)
-RUN_TEST(test_generate_nonce)
-RUN_TEST(test_observer)
-RUN_TEST(test_observer_errors)
-RUN_TEST(test_register_current_thread)
-RUN_TEST(test_register_current_thread_multiple_threads)
-RUN_TEST(test_register_string_literal)
-RUN_TEST(test_register_string_literal_multiple_threads)
-RUN_TEST(test_register_string_literal_table_overflow)
-RUN_TEST(test_maximum_record_length)
-RUN_TEST(test_event_with_inline_everything)
-RUN_TEST(test_circular_mode)
-RUN_TEST(test_streaming_mode)
-RUN_TEST(test_shutdown_when_full)
+RUN_TEST(TestNormalShutdown)
+RUN_TEST(TestHardShutdown)
+RUN_TEST(TestIsEnabled)
+RUN_TEST(TestIsCategoryEnabled)
+RUN_TEST(TestGenerateNonce)
+RUN_TEST(TestObserver)
+RUN_TEST(TestObserverErrors)
+RUN_TEST(TestRegisterCurrentThread)
+RUN_TEST(TestRegisterCurrentThreadMultipleThreads)
+RUN_TEST(TestRegisterStringLiteral)
+RUN_TEST(TestRegisterStringLiteralMultipleThreads)
+RUN_TEST(TestRegisterStringLiteralTableOverflow)
+RUN_TEST(TestMaximumRecordLength)
+RUN_TEST(TestEventWithInlineEverything)
+RUN_TEST(TestCircularMode)
+RUN_TEST(TestStreamingMode)
+RUN_TEST(TestShutdownWhenFull)
 END_TEST_CASE(engine_tests)

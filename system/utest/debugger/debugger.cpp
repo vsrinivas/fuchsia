@@ -42,12 +42,12 @@ constexpr int kNumExtraThreads = 4;
 // Produce a backtrace of sufficient size to be interesting but not excessive.
 constexpr int kTestSegfaultDepth = 4;
 
-const char test_inferior_child_name[] = "inferior";
+constexpr char kTestInferiorChildName[] = "inferior";
 // The segfault child is not used by the test.
 // It exists for debugging purposes.
-const char test_segfault_child_name[] = "segfault";
+constexpr char kTestSegfaultChildName[] = "segfault";
 // Used for testing the s/w breakpoint insn.
-const char test_swbreak_child_name[] = "swbreak";
+constexpr char kTestSwbreakChildName[] = "swbreak";
 
 fbl::atomic<int> extra_thread_count;
 
@@ -100,7 +100,7 @@ void test_memory_ops(zx_handle_t inferior, zx_handle_t thread) {
 void fix_inferior_segv(zx_handle_t thread) {
     unittest_printf("Fixing inferior segv\n");
 
-    // The segv was because r8 == 0, change it to a usable value. See test_prep_and_segv.
+    // The segv was because r8 == 0, change it to a usable value. See TestPrepAndSegv.
     zx_thread_state_general_regs_t regs;
     read_inferior_gregs(thread, &regs);
 #if defined(__x86_64__)
@@ -111,7 +111,7 @@ void fix_inferior_segv(zx_handle_t thread) {
     write_inferior_gregs(thread, &regs);
 }
 
-bool test_segv_pc(zx_handle_t thread) {
+bool TestSegvPc(zx_handle_t thread) {
     zx_thread_state_general_regs_t regs;
     read_inferior_gregs(thread, &regs);
 
@@ -258,7 +258,7 @@ bool handle_expected_page_fault(zx_handle_t inferior,
     dump_inferior_regs(thread);
 
     // Verify that the fault is at the PC we expected.
-    if (!test_segv_pc(thread))
+    if (!TestSegvPc(thread))
         return false;
 
     // Do some tests that require a suspended inferior.
@@ -332,12 +332,12 @@ bool debugger_test_exception_handler(zx_handle_t inferior, zx_handle_t port,
     END_HELPER;
 }
 
-bool debugger_test() {
+bool DebuggerTest() {
     BEGIN_TEST;
 
     launchpad_t* lp;
     zx_handle_t inferior, channel;
-    if (!setup_inferior(test_inferior_child_name, &lp, &inferior, &channel))
+    if (!setup_inferior(kTestInferiorChildName, &lp, &inferior, &channel))
         return false;
 
     fbl::atomic<int> segv_count;
@@ -382,12 +382,12 @@ bool debugger_test() {
     END_TEST;
 }
 
-bool debugger_thread_list_test() {
+bool DebuggerThreadListTest() {
     BEGIN_TEST;
 
     launchpad_t* lp;
     zx_handle_t inferior, channel;
-    if (!setup_inferior(test_inferior_child_name, &lp, &inferior, &channel))
+    if (!setup_inferior(kTestInferiorChildName, &lp, &inferior, &channel))
         return false;
 
     zx_handle_t eport = tu_io_port_create();
@@ -446,7 +446,7 @@ bool debugger_thread_list_test() {
     END_TEST;
 }
 
-bool property_process_debug_addr_test() {
+bool PropertyProcessDebugAddrTest() {
     BEGIN_TEST;
 
     zx_handle_t self = zx_process_self();
@@ -507,7 +507,7 @@ int write_text_segment_helper() {
     return 42;
 }
 
-bool write_text_segment() {
+bool WriteTextSegment() {
     BEGIN_TEST;
 
     zx_handle_t self = zx_process_self();
@@ -613,7 +613,7 @@ int reg_access_thread_func(void* arg_) {
     return 0;
 }
 
-bool suspended_reg_access_test() {
+bool SuspendedRegAccessTest() {
     BEGIN_TEST;
 
     zx_handle_t self_proc = zx_process_self();
@@ -864,7 +864,7 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
     return true;
 }
 
-bool suspended_in_syscall_reg_access_test() {
+bool SuspendedInSyscallRegAccessTest() {
     BEGIN_TEST;
 
     EXPECT_TRUE(suspended_in_syscall_reg_access_worker(false));
@@ -872,7 +872,7 @@ bool suspended_in_syscall_reg_access_test() {
     END_TEST;
 }
 
-bool suspended_in_channel_call_reg_access_test() {
+bool SuspendedInChannelCallRegAccessTest() {
     BEGIN_TEST;
 
     EXPECT_TRUE(suspended_in_syscall_reg_access_worker(true));
@@ -938,7 +938,7 @@ bool suspended_in_exception_handler(zx_handle_t inferior, zx_handle_t port,
             ASSERT_EQ(pkt_tid, data->thread_id);
 
             // Verify that the fault is at the PC we expected.
-            if (!test_segv_pc(data->thread_handle))
+            if (!TestSegvPc(data->thread_handle))
                 return false;
 
             // Suspend the thread before fixing the segv to verify register
@@ -980,12 +980,12 @@ bool suspended_in_exception_handler(zx_handle_t inferior, zx_handle_t port,
     END_HELPER;
 }
 
-bool suspended_in_exception_reg_access_test() {
+bool SuspendedInExceptionRegAccessTest() {
     BEGIN_TEST;
 
     launchpad_t* lp;
     zx_handle_t inferior, channel;
-    if (!setup_inferior(test_inferior_child_name, &lp, &inferior, &channel))
+    if (!setup_inferior(kTestInferiorChildName, &lp, &inferior, &channel))
         return false;
 
     if (!start_inferior(lp))
@@ -1046,7 +1046,7 @@ bool suspended_in_exception_reg_access_test() {
 
 // This function is marked as no-inline to avoid duplicate label in case the
 // function call is being inlined.
-__NO_INLINE static bool test_prep_and_segv() {
+__NO_INLINE static bool TestPrepAndSegv() {
     uint8_t test_data[kTestMemorySize];
     for (unsigned i = 0; i < sizeof(test_data); ++i)
         test_data[i] = static_cast<uint8_t>(i);
@@ -1099,7 +1099,7 @@ __NO_INLINE static bool test_prep_and_segv() {
     // Note: This is the inferior process, it's not running under the test harness.
     for (unsigned i = 0; i < sizeof(test_data); ++i) {
         if (test_data[i] != i + kTestDataAdjust) {
-            unittest_printf("test_prep_and_segv: bad data on resumption, test_data[%u] = 0x%x\n", i,
+            unittest_printf("TestPrepAndSegv: bad data on resumption, test_data[%u] = 0x%x\n", i,
                             test_data[i]);
             return false;
         }
@@ -1137,7 +1137,7 @@ bool msg_loop(zx_handle_t channel) {
             break;
         case MSG_CRASH_AND_RECOVER_TEST:
             for (int i = 0; i < kNumSegvTries; ++i) {
-                if (!test_prep_and_segv())
+                if (!TestPrepAndSegv())
                     exit(21);
             }
             send_msg(channel, MSG_RECOVERED_FROM_CRASH);
@@ -1246,28 +1246,28 @@ void scan_argv(int argc, char** argv) {
 } // namespace
 
 BEGIN_TEST_CASE(debugger_tests)
-RUN_TEST(debugger_test)
-RUN_TEST(debugger_thread_list_test)
-RUN_TEST(property_process_debug_addr_test)
-RUN_TEST(write_text_segment)
-RUN_TEST(suspended_reg_access_test)
-RUN_TEST(suspended_in_syscall_reg_access_test)
-RUN_TEST(suspended_in_channel_call_reg_access_test)
-RUN_TEST(suspended_in_exception_reg_access_test)
+RUN_TEST(DebuggerTest)
+RUN_TEST(DebuggerThreadListTest)
+RUN_TEST(PropertyProcessDebugAddrTest)
+RUN_TEST(WriteTextSegment)
+RUN_TEST(SuspendedRegAccessTest)
+RUN_TEST(SuspendedInSyscallRegAccessTest)
+RUN_TEST(SuspendedInChannelCallRegAccessTest)
+RUN_TEST(SuspendedInExceptionRegAccessTest)
 END_TEST_CASE(debugger_tests)
 
 int main(int argc, char** argv) {
     program_path = argv[0];
     scan_argv(argc, argv);
 
-    if (argc >= 2 && strcmp(argv[1], test_inferior_child_name) == 0) {
+    if (argc >= 2 && strcmp(argv[1], kTestInferiorChildName) == 0) {
         test_inferior();
         return 0;
     }
-    if (argc >= 2 && strcmp(argv[1], test_segfault_child_name) == 0) {
+    if (argc >= 2 && strcmp(argv[1], kTestSegfaultChildName) == 0) {
         return test_segfault();
     }
-    if (argc >= 2 && strcmp(argv[1], test_swbreak_child_name) == 0) {
+    if (argc >= 2 && strcmp(argv[1], kTestSwbreakChildName) == 0) {
         return test_swbreak();
     }
 

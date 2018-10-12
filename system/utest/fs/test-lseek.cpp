@@ -21,7 +21,7 @@
 
 namespace {
 
-bool test_lseek_position(void) {
+bool TestLseekPosition(void) {
     BEGIN_TEST;
 
     const char* const filename = "::lseek_position";
@@ -57,7 +57,7 @@ bool test_lseek_position(void) {
     END_TEST;
 }
 
-bool test_lseek_out_of_bounds(void) {
+bool TestLseekOutOfBounds(void) {
     BEGIN_TEST;
 
     const char* const filename = "::lseek_out_of_bounds";
@@ -88,7 +88,7 @@ bool test_lseek_out_of_bounds(void) {
     END_TEST;
 }
 
-bool test_lseek_zero_fill(void) {
+bool TestLseekZeroFill(void) {
     BEGIN_TEST;
 
     const char* const filename = "::lseek_zero_fill";
@@ -171,7 +171,7 @@ bool test_lseek_zero_fill(void) {
 }  // namespace
 
 RUN_FOR_ALL_FILESYSTEMS(lseek_tests,
-    RUN_TEST_MEDIUM(test_lseek_position)
-    RUN_TEST_MEDIUM(test_lseek_out_of_bounds)
-    RUN_TEST_MEDIUM(test_lseek_zero_fill)
+    RUN_TEST_MEDIUM(TestLseekPosition)
+    RUN_TEST_MEDIUM(TestLseekOutOfBounds)
+    RUN_TEST_MEDIUM(TestLseekZeroFill)
 )
