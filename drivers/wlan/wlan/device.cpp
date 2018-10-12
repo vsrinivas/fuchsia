@@ -784,8 +784,8 @@ zx_status_t Device::CreateMinstrel() {
 }
 
 void Device::AddMinstrelPeer(const wlan_assoc_ctx_t& assoc_ctx) {
-    ZX_DEBUG_ASSERT(wlanmac_info_.ifc_info.mac_role == WLAN_MAC_ROLE_CLIENT);
     if (minstrel_ == nullptr) { return; }
+    ZX_DEBUG_ASSERT(wlanmac_info_.ifc_info.mac_role == WLAN_MAC_ROLE_CLIENT);
     minstrel_->AddPeer(assoc_ctx);
 }
 }  // namespace wlan
