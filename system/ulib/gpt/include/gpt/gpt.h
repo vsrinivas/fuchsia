@@ -108,6 +108,9 @@ int gpt_device_read_gpt(int fd, gpt_device_t** dev_out);
 
 void gpt_set_debug_output_enabled(bool enabled);
 
+// Return the human-readable version of the type GUID.
+const char* gpt_guid_to_type(const char* guid);
+
 #define GPT_DIFF_TYPE    (0x01u)
 #define GPT_DIFF_GUID    (0x02u)
 #define GPT_DIFF_FIRST   (0x04u)

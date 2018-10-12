@@ -47,48 +47,6 @@ static char* size_to_cstring(char* str, size_t maxlen, uint64_t size) {
     return str;
 }
 
-static const char* guid_to_type(char* guid) {
-    if (!strcmp("FE3A2A5D-4F32-41A7-B725-ACCC3285A309", guid)) {
-        return "cros kernel";
-    } else if (!strcmp("3CB8E202-3B7E-47DD-8A3C-7FF2A13CFCEC", guid)) {
-        return "cros rootfs";
-    } else if (!strcmp("2E0A753D-9E48-43B0-8337-B15192CB1B5E", guid)) {
-        return "cros reserved";
-    } else if (!strcmp("CAB6E88E-ABF3-4102-A07A-D4BB9BE3C1D3", guid)) {
-        return "cros firmware";
-    } else if (!strcmp("C12A7328-F81F-11D2-BA4B-00A0C93EC93B", guid)) {
-        return "efi system";
-    } else if (!strcmp("EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", guid)) {
-        return "data";
-    } else if (!strcmp("21686148-6449-6E6F-744E-656564454649", guid)) {
-        return "bios";
-    } else if (!strcmp(GUID_SYSTEM_STRING, guid)) {
-        return "fuchsia-system";
-    } else if (!strcmp(GUID_DATA_STRING, guid)) {
-        return "fuchsia-data";
-    } else if (!strcmp(GUID_INSTALL_STRING, guid)) {
-        return "fuchsia-install";
-    } else if (!strcmp(GUID_BLOB_STRING, guid)) {
-        return "fuchsia-blob";
-    } else if (!strcmp(GUID_FVM_STRING, guid)) {
-        return "fuchsia-fvm";
-    } else if (!strcmp(GUID_ZIRCON_A_STRING, guid)) {
-        return "zircon-a";
-    } else if (!strcmp(GUID_ZIRCON_B_STRING, guid)) {
-        return "zircon-b";
-    } else if (!strcmp(GUID_ZIRCON_R_STRING, guid)) {
-        return "zircon-r";
-    } else if (!strcmp(GUID_SYS_CONFIG_STRING, guid)) {
-        return "sys-config";
-    } else if (!strcmp(GUID_FACTORY_CONFIG_STRING, guid)) {
-        return "factory";
-    } else if (!strcmp(GUID_BOOTLOADER_STRING, guid)) {
-        return "bootloader";
-    } else {
-        return "unknown";
-    }
-}
-
 typedef struct blkinfo {
     char path[128];
     char topo[1024];
@@ -133,7 +91,7 @@ static int cmd_list_blk(void) {
         uint8_t guid[GPT_GUID_LEN];
         if (ioctl_block_get_type_guid(fd, guid, sizeof(guid)) >= 0) {
             uint8_to_guid_string(info.guid, guid);
-            type = guid_to_type(info.guid);
+            type = gpt_guid_to_type(info.guid);
         }
         ioctl_block_get_name(fd, info.label, sizeof(info.label));
 
@@ -189,7 +147,7 @@ static int cmd_list_skip_blk(void) {
             size_to_cstring(info.sizestr, sizeof(info.sizestr),
                             partition_info.block_size_bytes * partition_info.partition_block_count);
             uint8_to_guid_string(info.guid, partition_info.partition_guid);
-            type = guid_to_type(info.guid);
+            type = gpt_guid_to_type(info.guid);
         }
 
         close(fd);
