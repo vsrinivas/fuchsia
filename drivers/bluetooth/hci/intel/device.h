@@ -41,6 +41,10 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device> {
   zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
                        void* out_buf, size_t out_len, size_t* actual);
 
+  zx_status_t BtHciOpenCommandChannel(zx_handle_t* out_channel);
+  zx_status_t BtHciOpenAclDataChannel(zx_handle_t* out_channel);
+  zx_status_t BtHciOpenSnoopChannel(zx_handle_t* out_channel);
+
  private:
   // Removes the device and leaves an error on the kernel log
   // prepended with |note|.

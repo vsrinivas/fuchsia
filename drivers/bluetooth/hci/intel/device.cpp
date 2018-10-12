@@ -233,4 +233,16 @@ zx_status_t Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
   return ZX_OK;
 }
 
+zx_status_t Device::BtHciOpenCommandChannel(zx_handle_t* out_channel) {
+    return bt_hci_open_command_channel(&hci_, out_channel);
+}
+
+zx_status_t Device::BtHciOpenAclDataChannel(zx_handle_t* out_channel) {
+    return bt_hci_open_acl_data_channel(&hci_, out_channel);
+}
+
+zx_status_t Device::BtHciOpenSnoopChannel(zx_handle_t* out_channel) {
+    return bt_hci_open_snoop_channel(&hci_, out_channel);
+}
+
 }  // namespace btintel
