@@ -101,18 +101,39 @@ void MinidumpRemoteAPI::Kill(
   ErrNoLive(cb);
 }
 
+constexpr uint32_t kAttachOk = 0;
+constexpr uint32_t kAttachNotFound = 1;
+
 void MinidumpRemoteAPI::Attach(
     const debug_ipc::AttachRequest& request,
     std::function<void(const Err&, debug_ipc::AttachReply)> cb) {
-  // TODO
-  ErrNoImpl(cb);
+  debug_ipc::AttachReply reply;
+  reply.process_name = "<core dump>";
+
+  if (static_cast<pid_t>(request.koid) != minidump_->ProcessID()) {
+    reply.status = kAttachNotFound;
+  } else {
+    reply.status = kAttachOk;
+    attached_ = true;
+  }
+
+  Succeed(cb, reply);
 }
 
 void MinidumpRemoteAPI::Detach(
     const debug_ipc::DetachRequest& request,
     std::function<void(const Err&, debug_ipc::DetachReply)> cb) {
-  // TODO
-  ErrNoImpl(cb);
+  debug_ipc::DetachReply reply;
+
+  if (static_cast<pid_t>(request.process_koid) == minidump_->ProcessID() &&
+      attached_) {
+    reply.status = kAttachOk;
+    attached_ = false;
+  } else {
+    reply.status = kAttachNotFound;
+  }
+
+  Succeed(cb, reply);
 }
 
 void MinidumpRemoteAPI::Modules(

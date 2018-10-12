@@ -77,6 +77,8 @@ void MinidumpTest::DoRequest(RequestType request, ReplyType& reply, Err& err,
 #define ASSERT_ZXDB_SUCCESS(e_) \
   ({ Err e = e_; ASSERT_FALSE(e.has_error()) << e.msg(); })
 
+constexpr uint32_t kTestExampleMinidumpKOID = 656254UL;
+
 TEST_F(MinidumpTest, Load) {
   EXPECT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 }
@@ -93,8 +95,52 @@ TEST_F(MinidumpTest, ProcessTreeRecord) {
   auto record = reply.root;
   EXPECT_EQ(debug_ipc::ProcessTreeRecord::Type::kProcess, record.type);
   EXPECT_EQ("<core dump>", record.name);
-  EXPECT_EQ(656254UL, record.koid);
+  EXPECT_EQ(kTestExampleMinidumpKOID, record.koid);
   EXPECT_EQ(0UL, record.children.size());
+}
+
+TEST_F(MinidumpTest, AttachDetach) {
+  ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
+
+  Err err;
+  debug_ipc::AttachRequest request;
+  debug_ipc::AttachReply reply;
+
+  request.koid = kTestExampleMinidumpKOID;
+  DoRequest(request, reply, err, &RemoteAPI::Attach);
+  ASSERT_ZXDB_SUCCESS(err);
+
+  EXPECT_EQ(0UL, reply.status);
+  EXPECT_EQ("<core dump>", reply.process_name);
+
+  debug_ipc::DetachRequest detach_request;
+  debug_ipc::DetachReply detach_reply;
+
+  detach_request.process_koid = kTestExampleMinidumpKOID;
+  DoRequest(detach_request, detach_reply, err, &RemoteAPI::Detach);
+  ASSERT_ZXDB_SUCCESS(err);
+
+  EXPECT_EQ(0UL, detach_reply.status);
+
+  /* Try to detach when not attached */
+  DoRequest(detach_request, detach_reply, err, &RemoteAPI::Detach);
+  ASSERT_ZXDB_SUCCESS(err);
+
+  EXPECT_NE(0UL, detach_reply.status);
+}
+
+TEST_F(MinidumpTest, AttachFail) {
+  ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
+
+  Err err;
+  debug_ipc::AttachRequest request;
+  debug_ipc::AttachReply reply;
+
+  request.koid = 42;
+  DoRequest(request, reply, err, &RemoteAPI::Attach);
+  ASSERT_ZXDB_SUCCESS(err);
+
+  EXPECT_NE(0UL, reply.status);
 }
 
 }  // namespace zxdb

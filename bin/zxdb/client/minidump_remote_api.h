@@ -80,6 +80,8 @@ class MinidumpRemoteAPI : public RemoteAPI {
       override;
 
  private:
+  bool attached_ = false;
+
   std::unique_ptr<crashpad::ProcessSnapshotMinidump> minidump_;
   FXL_DISALLOW_COPY_AND_ASSIGN(MinidumpRemoteAPI);
 };
