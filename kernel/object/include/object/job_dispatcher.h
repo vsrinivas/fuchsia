@@ -94,7 +94,12 @@ public:
 
     bool AddChildProcess(const fbl::RefPtr<ProcessDispatcher>& process);
     void RemoveChildProcess(ProcessDispatcher* process);
-    void Kill();
+
+    // Terminate the child processes and jobs. Returns |false| if the job is already
+    // in the process of killing, or the children are already terminated. Regardless
+    // of return value, the Job now will not accept new children and eventually
+    // transitions to |DEAD|.
+    bool Kill();
 
     // Set policy. |mode| is is either ZX_JOB_POL_RELATIVE or ZX_JOB_POL_ABSOLUTE and
     // in_policy is an array of |count| elements.
@@ -129,6 +134,9 @@ public:
     bool ResetExceptionPort(bool debugger, bool quietly);
     fbl::RefPtr<ExceptionPort> exception_port();
     fbl::RefPtr<ExceptionPort> debugger_exception_port();
+
+    void set_kill_on_oom(bool kill);
+    bool get_kill_on_oom() const;
 
 private:
     enum class State {
@@ -170,6 +178,8 @@ private:
     State state_ TA_GUARDED(get_lock());
     uint32_t process_count_ TA_GUARDED(get_lock());
     uint32_t job_count_ TA_GUARDED(get_lock());
+    // TODO(cpu): The OOM kill system is incomplete, see ZX-2731 for details.
+    bool kill_on_oom_ TA_GUARDED(get_lock());
 
     using RawJobList =
         fbl::DoublyLinkedList<JobDispatcher*, ListTraitsRaw>;
@@ -195,7 +205,7 @@ private:
 
     // Global list of JobDispatchers, ordered by hierarchy and
     // creation order. Used to find victims in low-resource
-    // situations.
+    // situations (for example OOM).
     fbl::DoublyLinkedListNodeState<JobDispatcher*> dll_all_jobs_;
     struct ListTraitsAllJobs {
         static fbl::DoublyLinkedListNodeState<JobDispatcher*>& node_state(

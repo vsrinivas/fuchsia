@@ -147,6 +147,7 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
       state_(State::READY),
       process_count_(0u),
       job_count_(0u),
+      kill_on_oom_(false),
       policy_(policy) {
 
     // Set the initial job order, and try to make older jobs closer to
@@ -303,7 +304,7 @@ pol_cookie_t JobDispatcher::GetPolicy() {
     return policy_;
 }
 
-void JobDispatcher::Kill() {
+bool JobDispatcher::Kill() {
     canary_.Assert();
 
     JobList jobs_to_kill;
@@ -315,12 +316,7 @@ void JobDispatcher::Kill() {
     {
         Guard<fbl::Mutex> guard{get_lock()};
         if (state_ != State::READY)
-            return;
-
-        // Short circuit if there is nothing to do. Notice |state_|
-        // does not change.
-        if ((job_count_ == 0u) && (process_count_ == 0u))
-            return;
+            return false;
 
         state_ = State::KILLING;
         zx_status_t result;
@@ -345,6 +341,8 @@ void JobDispatcher::Kill() {
     while (!procs_to_kill.is_empty()) {
         procs_to_kill.pop_front()->Kill();
     }
+
+    return true;
 }
 
 zx_status_t JobDispatcher::SetPolicy(
@@ -558,4 +556,14 @@ fbl::RefPtr<ExceptionPort> JobDispatcher::exception_port() {
 fbl::RefPtr<ExceptionPort> JobDispatcher::debugger_exception_port() {
     Guard<fbl::Mutex> guard{get_lock()};
     return debugger_exception_port_;
+}
+
+void JobDispatcher::set_kill_on_oom(bool value) {
+    Guard<fbl::Mutex> guard{get_lock()};
+    kill_on_oom_ = value;
+};
+
+bool JobDispatcher::get_kill_on_oom() const {
+    Guard<fbl::Mutex> guard{get_lock()};
+    return kill_on_oom_;
 }

@@ -419,6 +419,9 @@ typedef struct zx_info_resource {
 // endpoint can have pending in its tx direction.
 #define ZX_PROP_CHANNEL_TX_MSG_MAX          14u
 
+// Terminate this job if the system is low on memory.
+#define ZX_PROP_JOB_KILL_ON_OOM             15u
+
 // Basic thread states, in zx_info_thread_t.state.
 #define ZX_THREAD_STATE_NEW                 ((zx_thread_state_t) 0x0000u)
 #define ZX_THREAD_STATE_RUNNING             ((zx_thread_state_t) 0x0001u)

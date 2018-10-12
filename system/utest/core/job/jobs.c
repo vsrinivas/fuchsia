@@ -145,6 +145,54 @@ static bool kill_test(void) {
     END_TEST;
 }
 
+static bool kill_job_no_child_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t job_parent = zx_job_default();
+    ASSERT_NE(job_parent, ZX_HANDLE_INVALID, "");
+
+    zx_handle_t job_child;
+    ASSERT_EQ(zx_job_create(job_parent, 0u, &job_child), ZX_OK, "");
+
+    ASSERT_EQ(zx_task_kill(job_child), ZX_OK, "");
+
+    zx_handle_t job_grandchild;
+    ASSERT_EQ(zx_job_create(job_child, 0u, &job_grandchild), ZX_ERR_BAD_STATE, "");
+
+    zx_handle_t event;
+    ASSERT_EQ(zx_event_create(0u, &event), ZX_OK, "");
+
+    zx_handle_t process, thread;
+    ASSERT_EQ(start_mini_process(job_child, event, &process, &thread), ZX_ERR_BAD_STATE, "");
+
+    ASSERT_EQ(zx_handle_close(job_child), ZX_OK, "");
+
+    END_TEST;
+}
+
+static bool set_job_oom_kill_bit(void) {
+    BEGIN_TEST;
+    // TODO(cpu): Other than trivial set/reset of the property this can't be
+    // fully tested without de-establizing the system under test. The current
+    // best way to test this is to boot the full stack and issue in a console
+    //   $k oom lowmem
+    // And watch the kernel log output.
+
+    size_t oom = 1u;
+    ASSERT_EQ(zx_object_set_property(
+        zx_job_default(), ZX_PROP_JOB_KILL_ON_OOM, &oom, sizeof(size_t)), ZX_OK, "");
+
+    oom = 0u;
+    ASSERT_EQ(zx_object_set_property(
+        zx_job_default(), ZX_PROP_JOB_KILL_ON_OOM, &oom, sizeof(size_t)), ZX_OK, "");
+
+    oom = 2u;
+    ASSERT_EQ(zx_object_set_property(
+        zx_job_default(), ZX_PROP_JOB_KILL_ON_OOM, &oom, sizeof(size_t)), ZX_ERR_INVALID_ARGS, "");
+
+    END_TEST;
+}
+
 static bool wait_test(void) {
     BEGIN_TEST;
 
@@ -246,6 +294,8 @@ RUN_TEST(create_missing_rights_test)
 RUN_TEST(policy_basic_test)
 RUN_TEST(create_test)
 RUN_TEST(kill_test)
+RUN_TEST(kill_job_no_child_test)
+RUN_TEST(set_job_oom_kill_bit)
 RUN_TEST(wait_test)
 RUN_TEST(info_task_stats_fails)
 RUN_TEST(max_height_smoke)

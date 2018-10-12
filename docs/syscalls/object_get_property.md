@@ -190,6 +190,19 @@ Allowed operations: **get**
 The maximum number of packets a channel endpoint can have pending in
 its outgoing direction.
 
+### ZX_PROP_JOB_KILL_ON_OOM
+
+*handle* type: **Job**
+
+*value* type: **size_t**
+
+Allowed operations: **set**
+
+The value of 1 means the Job and its children will be terminated if the
+system finds itself in a system-wide low memory situation. Called with 0
+(which is the default) opts out the job from being terminated in this
+scenario.
+
 ## RIGHTS
 
 TODO(ZX-2399)

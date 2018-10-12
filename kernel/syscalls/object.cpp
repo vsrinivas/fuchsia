@@ -852,6 +852,23 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
             return status;
         return socket->SetWriteThreshold(value);
     }
+    case ZX_PROP_JOB_KILL_ON_OOM: {
+        auto job = DownCastDispatcher<JobDispatcher>(&dispatcher);
+        if (!job)
+            return ZX_ERR_WRONG_TYPE;
+        size_t value = 0;
+        zx_status_t status = _value.reinterpret<const size_t>().copy_from_user(&value);
+        if (status != ZX_OK)
+            return status;
+        if (value == 0u) {
+            job->set_kill_on_oom(false);
+        } else if (value == 1u) {
+            job->set_kill_on_oom(true);
+        } else {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return ZX_OK;
+    }
     }
 
     return ZX_ERR_INVALID_ARGS;
