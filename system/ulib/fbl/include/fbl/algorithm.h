@@ -253,4 +253,12 @@ T accumulate(InputIterator first, InputIterator last, T initial_value, BinaryOp 
     return initial_value;
 }
 
+// Swaps two plain old data types with size no greater than 64 bits.
+template <class T, class = typename enable_if<is_pod<T>::value && (sizeof(T) <= 8)>::type>
+inline void swap(T& a, T& b) noexcept {
+    T tmp = a;
+    a = b;
+    b = tmp;
+}
+
 }  // namespace fbl
