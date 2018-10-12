@@ -15,6 +15,10 @@
 
 namespace board_mt8167 {
 
+enum {
+    BTI_EMMC,
+};
+
 class Mt8167;
 using Mt8167Type = ddk::Device<Mt8167>;
 
@@ -33,6 +37,7 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Mt8167);
 
     zx_status_t Start();
+    zx_status_t EmmcInit();
     zx_status_t SocInit();
     zx_status_t GpioInit();
     int Thread();
