@@ -194,6 +194,13 @@ zx_status_t device_bind(zx_device_t* dev, const char* drv_libname) {
     return r;
 }
 
+zx_status_t device_unbind(zx_device_t* dev) {
+    DM_LOCK();
+    zx_status_t r = devhost_device_unbind(dev);
+    DM_UNLOCK();
+    return r;
+}
+
 zx_status_t device_open_at(zx_device_t* dev, zx_device_t** out, const char* path, uint32_t flags) {
     zx_status_t r;
     DM_LOCK();

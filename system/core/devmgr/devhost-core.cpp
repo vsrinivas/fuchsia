@@ -547,24 +547,6 @@ static const char* removal_problem(uint32_t flags) {
     return "?";
 }
 
-static void devhost_unbind_child(zx_device_t* child) TA_REQ(&__devhost_api_lock) {
-    if (!(child->flags & DEV_FLAG_UNBOUND)) {
-        child->flags |= DEV_FLAG_UNBOUND;
-        // call child's unbind op
-        if (child->ops->unbind) {
-#if TRACE_ADD_REMOVE
-            printf("call unbind child: %p(%s)\n", child, child->name);
-#endif
-            // hold a reference so the child won't get released during its unbind callback.
-            dev_ref_acquire(child);
-            DM_UNLOCK();
-            child->Unbind();
-            DM_LOCK();
-            dev_ref_release(child);
-        }
-    }
-}
-
 static void devhost_unbind_children(zx_device_t* dev) REQ_DM_LOCK {
     zx_device_t* child = nullptr;
 #if TRACE_ADD_REMOVE
@@ -573,7 +555,7 @@ static void devhost_unbind_children(zx_device_t* dev) REQ_DM_LOCK {
     enum_lock_acquire();
     list_for_every_entry(&dev->children, child, zx_device_t, node) {
         if (!(child->flags & DEV_FLAG_DEAD)) {
-            devhost_unbind_child(child);
+            devhost_device_unbind(child);
         }
     }
     enum_lock_release();
@@ -611,6 +593,25 @@ zx_status_t devhost_device_rebind(zx_device_t* dev) REQ_DM_LOCK {
     // request that any existing children go away
     devhost_unbind_children(dev);
 
+    return ZX_OK;
+}
+
+zx_status_t devhost_device_unbind(zx_device_t* dev) REQ_DM_LOCK {
+    if (!(dev->flags & DEV_FLAG_UNBOUND)) {
+        dev->flags |= DEV_FLAG_UNBOUND;
+        // Call dev's unbind op.
+        if (dev->ops->unbind) {
+#if TRACE_ADD_REMOVE
+            printf("call unbind dev: %p(%s)\n", dev, dev->name);
+#endif
+            // Hold a reference so the dev won't get released during its unbind callback.
+            dev_ref_acquire(dev);
+            DM_UNLOCK();
+            dev->Unbind();
+            DM_LOCK();
+            dev_ref_release(dev);
+        }
+    }
     return ZX_OK;
 }
 

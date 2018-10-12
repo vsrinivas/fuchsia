@@ -77,6 +77,12 @@ typedef struct {
 #define IOCTL_DEVICE_SET_DRIVER_LOG_FLAGS \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 10)
 
+// Unbind this device.
+//   in: none
+//   out: none
+#define IOCTL_DEVICE_UNBIND \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 11)
+
 // Indicates if there's data available to read,
 // or room to write, or an error condition.
 #define DEVICE_SIGNAL_READABLE ZX_USER_SIGNAL_0
@@ -114,3 +120,6 @@ IOCTL_WRAPPER_OUT(ioctl_device_get_log_flags, IOCTL_DEVICE_GET_DRIVER_LOG_FLAGS,
 
 // ssize_t ioctl_device_set_log_flags(int fd, driver_log_flags_t in);
 IOCTL_WRAPPER_IN(ioctl_device_set_log_flags, IOCTL_DEVICE_SET_DRIVER_LOG_FLAGS, driver_log_flags_t);
+
+// ssize_t ioctl_device_unbind(int fd);
+IOCTL_WRAPPER(ioctl_device_unbind, IOCTL_DEVICE_UNBIND);

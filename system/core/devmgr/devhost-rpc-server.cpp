@@ -249,6 +249,9 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
         *out_actual = sizeof(driver_log_flags_t);
         return ZX_OK;
     }
+    case IOCTL_DEVICE_UNBIND: {
+        return device_unbind(dev);
+    }
     default: {
         return dev->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
     }

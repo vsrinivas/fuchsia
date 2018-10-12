@@ -58,6 +58,7 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
 zx_status_t devhost_device_remove(zx_device_t* dev) REQ_DM_LOCK;
 zx_status_t devhost_device_bind(zx_device_t* dev, const char* drv_libname) REQ_DM_LOCK;
 zx_status_t devhost_device_rebind(zx_device_t* dev) REQ_DM_LOCK;
+zx_status_t devhost_device_unbind(zx_device_t* dev) REQ_DM_LOCK;
 zx_status_t devhost_device_create(zx_driver_t* drv, zx_device_t* parent,
                                   const char* name, void* ctx,
                                   zx_protocol_device_t* ops, zx_device_t** out) REQ_DM_LOCK;
