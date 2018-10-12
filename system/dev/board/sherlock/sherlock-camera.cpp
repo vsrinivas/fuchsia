@@ -7,8 +7,10 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/camera.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/protocol/gpio-impl.h>
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
+#include <soc/aml-meson/g12b-clk.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
 
@@ -17,6 +19,10 @@
 namespace sherlock {
 
 namespace {
+
+constexpr uint32_t kClk24MAltFunc = 7;
+constexpr uint32_t kI2cSDAAltFunc = 2;
+constexpr uint32_t kI2cSCLAltFunc = 2;
 
 constexpr pbus_mmio_t mipi_mmios[] = {
     // CSI PHY0
@@ -79,6 +85,12 @@ constexpr pbus_gpio_t sensor_gpios[] = {
     },
 };
 
+static const pbus_clk_t sensor_clk_gates[] = {
+    {
+        .clk = G12B_CLK_CAM_INCK_24M,
+    },
+};
+
 static const pbus_dev_t mipi_children = []() {
     // Sony IMX 227 Camera Sensor
     pbus_dev_t dev;
@@ -87,6 +99,8 @@ static const pbus_dev_t mipi_children = []() {
     dev.i2c_channel_count = countof(sensor_i2c);
     dev.gpios = sensor_gpios;
     dev.gpio_count = countof(sensor_gpios);
+    dev.clks = sensor_clk_gates;
+    dev.clk_count = countof(sensor_clk_gates);
     return dev;
 }();
 
@@ -108,6 +122,14 @@ static pbus_dev_t mipi_dev = []() {
 } // namespace
 
 zx_status_t Sherlock::CameraInit() {
+
+    // Set GPIO alternate functions.
+    ddk::GpioImplProtocolProxy gpio_impl(&gpio_impl_);
+    gpio_impl.SetAltFunction(T931_GPIOAO(10), kClk24MAltFunc);
+
+    gpio_impl.SetAltFunction(T931_GPIOA(14), kI2cSDAAltFunc);
+    gpio_impl.SetAltFunction(T931_GPIOA(15), kI2cSCLAltFunc);
+
 
     zx_status_t status = pbus_.DeviceAdd(&mipi_dev);
     if (status != ZX_OK) {

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/mipicsi2.h>
+#include <ddk/protocol/mipicsi.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/device.h>
@@ -28,8 +28,8 @@ public:
     void ShutDown();
 
     // Methods for ZX_PROTOCOL_MIPI_CSI.
-    static zx_status_t MipiCsi2Init(void* ctx, const mipi_info_t* info);
-    static zx_status_t MipiCsi2DeInit(void* ctx);
+    static zx_status_t MipiCsiInit(void* ctx, const mipi_info_t* info);
+    static zx_status_t MipiCsiDeInit(void* ctx);
 
 private:
     fbl::unique_ptr<ddk::MmioBuffer> csi_phy0_mmio_;

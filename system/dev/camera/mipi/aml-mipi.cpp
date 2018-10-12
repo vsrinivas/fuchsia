@@ -68,11 +68,11 @@ zx_status_t AmlMipiDevice::InitPdev(zx_device_t* parent) {
     return status;
 }
 
-zx_status_t AmlMipiDevice::MipiCsi2Init(void* ctx, const mipi_info_t* info) {
+zx_status_t AmlMipiDevice::MipiCsiInit(void* ctx, const mipi_info_t* info) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t AmlMipiDevice::MipiCsi2DeInit(void* ctx) {
+zx_status_t AmlMipiDevice::MipiCsiDeInit(void* ctx) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -94,9 +94,9 @@ static void DdkRelease(void* ctx) {
     delete &self;
 }
 
-static mipi_csi2protocol_ops_t proto_ops = {
-    .init = AmlMipiDevice::MipiCsi2Init,
-    .de_init = AmlMipiDevice::MipiCsi2DeInit,
+static mipi_csi_protocol_ops_t proto_ops = {
+    .init = AmlMipiDevice::MipiCsiInit,
+    .de_init = AmlMipiDevice::MipiCsiDeInit,
 };
 
 static zx_protocol_device_t mipi_device_ops = []() {
@@ -114,7 +114,7 @@ static device_add_args_t mipi_dev_args = []() {
     result.version = DEVICE_ADD_ARGS_VERSION;
     result.name = "aml-mipi";
     result.ops = &mipi_device_ops;
-    result.proto_id = ZX_PROTOCOL_MIPI_CSI2;
+    result.proto_id = ZX_PROTOCOL_MIPI_CSI;
     result.proto_ops = &proto_ops;
     return result;
 }();

@@ -6,6 +6,10 @@
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/clk.h>
+#include <ddktl/protocol/gpio.h>
+#include <ddktl/protocol/i2c.h>
+#include <ddktl/protocol/mipicsi.h>
 #include <zircon/camera/c/fidl.h>
 
 namespace camera {
@@ -19,6 +23,14 @@ using DeviceType = ddk::Device<Imx227Device,
 class Imx227Device : public DeviceType,
                      public ddk::internal::base_protocol {
 public:
+    // GPIO Indexes.
+    enum {
+        VANA_ENABLE,
+        VDIG_ENABLE,
+        CAM_SENSOR_RST,
+        GPIO_COUNT,
+    };
+
     static zx_status_t Create(zx_device_t* parent);
     Imx227Device(zx_device_t* device);
 
@@ -43,9 +55,20 @@ public:
     void Update();
 
 private:
-    zx_status_t InitPdev(zx_device_t* parent);
+    // Protocols.
+    platform_device_protocol_t pdev_;
+    i2c_protocol_t i2c_;
+    gpio_protocol_t gpios_[GPIO_COUNT];
+    clk_protocol_t clk_;
+    mipi_csi_protocol_t mipi_;
+
+    // I2C Helpers.
+    uint8_t ReadReg(uint16_t addr);
+    void WriteReg(uint16_t addr, uint8_t val);
 
     void ShutDown();
+    zx_status_t InitPdev(zx_device_t* parent);
+    bool ValidateSensorID();
 };
 
 } // namespace camera
