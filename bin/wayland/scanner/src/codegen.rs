@@ -37,8 +37,8 @@ impl<W: io::Write> Codegen<W> {
 use bitflags::*;
 use failure;
 use fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,
-                            MessageGroupSpec, MessageHeader, MessageSpec, NewId,
-                            NewObject, ObjectId, EncodeError, DecodeError,
+                            MessageGroupSpec, MessageHeader, MessageSpec, MessageType,
+                            NewId, NewObject, ObjectId, EncodeError, DecodeError,
                             Interface }};"
         )?;
 
@@ -60,8 +60,18 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,
             writeln!(self.w, "pub mod {} {{", interface.name)?;
             writeln!(self.w, "use super::*;")?;
             self.codegen_interface_trait(&interface)?;
-            self.codegen_message_enum("Request", &interface.requests, format_dispatch_arg_rust)?;
-            self.codegen_message_enum("Event", &interface.events, format_wire_arg_rust)?;
+            self.codegen_message_enum(
+                "Request",
+                &interface,
+                &interface.requests,
+                format_dispatch_arg_rust,
+            )?;
+            self.codegen_message_enum(
+                "Event",
+                &interface,
+                &interface.events,
+                format_wire_arg_rust,
+            )?;
             self.codegen_impl_event(&interface.events)?;
             self.codegen_from_args(&interface.requests)?;
             self.codegen_enum_types(&interface)?;
@@ -98,7 +108,8 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,
     ///    Request2 { name: String},
     ///  }
     fn codegen_message_enum<F: Fn(&ast::Arg) -> Cow<str>>(
-        &mut self, name: &str, messages: &Vec<ast::Message>, arg_formatter: F,
+        &mut self, name: &str, interface: &ast::Interface, messages: &Vec<ast::Message>,
+        arg_formatter: F,
     ) -> Result {
         writeln!(self.w, "#[derive(Debug)]");
         writeln!(self.w, "pub enum {enum_name} {{", enum_name = name)?;
@@ -124,6 +135,72 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,
             }
             writeln!(self.w, "    }},")?;
         }
+        writeln!(self.w, "}}")?;
+        writeln!(self.w, "")?;
+
+        writeln!(self.w, "impl MessageType for {} {{", name)?;
+
+        // Generate the log method:
+        //
+        // fn log(&self, this: ObjectId) -> String {
+        //     let mut string = String::new();
+        //     match *self {
+        //         WlInterface::Message { ref arg } =>
+        //             format!("wl_interface@{}::message(arg: {})", this, arg),
+        //         ...
+        //     }
+        // }
+        writeln!(self.w, "    fn log(&self, this: ObjectId) -> String {{")?;
+        writeln!(self.w, "        match *self {{")?;
+        for message in messages.iter() {
+            writeln!(self.w, "            {}::{} {{", name, message.rust_name())?;
+            for arg in message.args.iter() {
+                writeln!(self.w, "                ref {},", arg.name)?;
+            }
+            writeln!(self.w, "            }} => {{")?;
+
+            // We're using format strings to build a format string, so this is
+            // a little confusing. |message_args| are the set of strings that
+            // will be joined to form the format string litteral. |format_args|
+            // are the rust expressions that will be used by the format string.
+            //
+            // Anytime we put a '{{}}' into |message_args|, we'll need a
+            // corresponding expression pushed to |format_args|.
+            //
+            // We'll end up with something like:
+            //      format!("some_interface@3::message1(arg1: {}, arg2: {})", arg1, arg2)
+            write!(
+                self.w,
+                "                format!(\"{}@{{}}::{}(",
+                interface.name, message.name
+            )?;
+            let mut message_args = vec![];
+            let mut format_args: Vec<Cow<str>> = vec!["this".into()];
+            for arg in message.args.iter() {
+                match arg.kind {
+                    ArgKind::Array => {
+                        message_args.push(format!("{}: Array[{{}}]", arg.name));
+                        format_args.push(format!("{}.len()", arg.name).into());
+                    }
+                    ArgKind::Fd => {
+                        message_args.push(format!("{}: <handle>", arg.name));
+                    }
+                    _ => {
+                        message_args.push(format!("{}: {{}}", arg.name));
+                        format_args.push(arg.name.as_str().into());
+                    }
+                }
+            }
+            writeln!(
+                self.w,
+                "{})\", {})",
+                message_args.join(", "),
+                format_args.join(", ")
+            )?;
+            writeln!(self.w, "            }}")?;
+        }
+        writeln!(self.w, "        }}")?;
+        writeln!(self.w, "    }}")?;
         writeln!(self.w, "}}")?;
         Ok(())
     }
@@ -353,6 +430,25 @@ impl FromArgs for Request {{
         writeln!(self.w, "        *self as u32")?;
         writeln!(self.w, "    }}")?;
         writeln!(self.w, "}}")?;
+        writeln!(self.w, "")?;
+        writeln!(self.w, "impl ::std::fmt::Display for {} {{", e.rust_name())?;
+        writeln!(
+            self.w,
+            "    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {{"
+        )?;
+        writeln!(self.w, "        match self {{")?;
+        for entry in e.entries.iter() {
+            writeln!(
+                self.w,
+                "            {}::{} => write!(f, \"{}\"),",
+                e.rust_name(),
+                entry.rust_name(),
+                entry.name
+            )?;
+        }
+        writeln!(self.w, "        }}")?;
+        writeln!(self.w, "    }}")?;
+        writeln!(self.w, "}}")?;
         Ok(())
     }
 
@@ -373,6 +469,17 @@ impl FromArgs for Request {{
                 entry.value
             )?;
         }
+        writeln!(self.w, "    }}")?;
+        writeln!(self.w, "}}")?;
+        writeln!(self.w, "")?;
+        writeln!(self.w, "impl ::std::fmt::Display for {} {{", e.rust_name())?;
+        writeln!(
+            self.w,
+            "    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {{"
+        )?;
+        // TODO(tjdetwiler): this would be much nicer if printed as 'FLAG1 | FLAG2'
+        // instead of the raw numeric value.
+        writeln!(self.w, "        write!(f, \"{{}}\", *self)")?;
         writeln!(self.w, "    }}")?;
         writeln!(self.w, "}}")?;
         Ok(())
@@ -533,6 +640,12 @@ impl RustName for ast::EnumEntry {
         let is_digit = self.name.chars().next().map_or(false, |c| c.is_digit(10));
         let prefix = if is_digit { "_" } else { "" };
         format!("{}{}", prefix, to_camel_case(&self.name))
+    }
+}
+
+impl RustName for ast::Message {
+    fn rust_name(&self) -> String {
+        to_camel_case(&self.name)
     }
 }
 

@@ -6,6 +6,7 @@
 #![feature(async_await, await_macro, futures_api, pin)]
 
 use failure::{Error, Fail};
+use std::fmt::{self, Display};
 use std::io;
 
 mod client;
@@ -22,15 +23,21 @@ mod test_protocol;
 pub type ObjectId = u32;
 pub type NewId = u32;
 
+/// Common base trait for all rust types that model wayland Requests or Events.
+pub trait MessageType {
+    /// Generates a string suitable for protocol logging this message.
+    fn log(&self, this: ObjectId) -> String;
+}
+
 /// Trait to be implemented by any type used as an interface 'event'.
-pub trait IntoMessage: Sized {
+pub trait IntoMessage: Sized + MessageType {
     type Error: Fail;
     /// Consumes |self| and serializes into a |Message|.
     fn into_message(self, id: u32) -> Result<Message, Self::Error>;
 }
 
 /// Trait to be implemented by any type used as an interface 'request'.
-pub trait FromArgs: Sized {
+pub trait FromArgs: Sized + MessageType {
     /// Consumes |args| creates an instance of self.
     fn from_args(op: u16, args: Vec<Arg>) -> Result<Self, Error>;
 }
@@ -120,6 +127,15 @@ impl<E: Copy> Enum<E> {
         match *self {
             Enum::Recognized(e) => Ok(e),
             Enum::Unrecognized(i) => Err(UnknownEnumValue(i)),
+        }
+    }
+}
+
+impl<E: Copy + Display> Display for Enum<E> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match self {
+            Enum::Recognized(e) => write!(f, "{}", e),
+            Enum::Unrecognized(v) => write!(f, "{}", v),
         }
     }
 }

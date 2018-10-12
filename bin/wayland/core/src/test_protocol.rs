@@ -51,6 +51,12 @@ impl IntoMessage for TestMessage {
     }
 }
 
+impl MessageType for TestMessage {
+    fn log(&self, this: ObjectId) -> String {
+        format!("TestMessage@{}", this)
+    }
+}
+
 pub struct TestInterface;
 
 impl Interface for TestInterface {

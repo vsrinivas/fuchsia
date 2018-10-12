@@ -46,6 +46,8 @@ pub struct Client {
     /// the underlying `ObjectMap`. The purpose of this is to allow the
     /// application to send the wl_display::delete_id event
     object_deleter: Option<ObjectDeleter>,
+
+    protocol_logging: bool,
 }
 
 impl Client {
@@ -59,7 +61,18 @@ impl Client {
             tasks: receiver,
             task_queue: TaskQueue(sender),
             object_deleter: None,
+            protocol_logging: false,
         }
+    }
+
+    /// Enables or disables protocol message logging.
+    pub fn set_protocol_logging(&mut self, enabled: bool) {
+        self.protocol_logging = enabled;
+    }
+
+    /// Returns `true` if protocol messages should be logged.
+    pub(crate) fn protocol_logging(&self) -> bool {
+        self.protocol_logging
     }
 
     pub fn set_object_deleter(&mut self, deleter: ObjectDeleter) {
@@ -181,6 +194,9 @@ impl Client {
     }
 
     pub fn post<E: IntoMessage>(&self, sender: ObjectId, event: E) -> Result<(), Error> {
+        if self.protocol_logging() {
+            println!("<-e-- {}", event.log(sender));
+        }
         let message = event.into_message(sender)?;
         let (bytes, mut handles) = message.take();
         self.chan.write(&bytes, &mut handles)?;

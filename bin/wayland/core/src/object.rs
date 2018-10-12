@@ -23,7 +23,7 @@ use std::marker::PhantomData;
 use failure::{format_err, Error, Fail};
 
 use crate::{Arg, Client, FromArgs, Interface, MessageGroupSpec, MessageHeader, MessageSpec,
-            ObjectId};
+            MessageType, ObjectId};
 
 /// The |ObjectMap| holds the state of active objects for a single connection.
 ///
@@ -315,6 +315,9 @@ fn receive_message<I: Interface, R: RequestReceiver<I>>(
     this: ObjectId, opcode: u16, args: Vec<Arg>, client: &mut Client,
 ) -> Result<(), Error> {
     let request = I::Request::from_args(opcode, args)?;
+    if client.protocol_logging() {
+        println!("--r-> {}", request.log(this));
+    }
     R::receive(ObjectRef(PhantomData, this), request, client)?;
     Ok(())
 }

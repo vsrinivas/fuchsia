@@ -43,6 +43,7 @@ impl Display {
     pub fn spawn_new_client(&self, chan: fasync::Channel) {
         let mut client = wl::Client::new(chan, self.registry.clone());
         client.set_object_deleter(send_delete_id_event);
+        client.set_protocol_logging(true);
 
         // Add the global wl_display object. We unwrap here since the object map
         // is empty so failure should not be possible.
