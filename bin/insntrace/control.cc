@@ -109,6 +109,9 @@ bool AllocTrace(const IptConfig& config) {
 
   ioctl_insntrace_trace_config_t trace_config;
   trace_config.mode = config.mode;
+  trace_config.num_traces = (config.mode == IPT_MODE_CPUS
+                             ? config.num_cpus
+                             : config.max_threads);
   ssize_t ssize = ioctl_insntrace_alloc_trace(ipt_fd.get(), &trace_config);
   if (ssize < 0) {
     FXL_LOG(ERROR) << "set perf mode: " << debugger_utils::ZxErrorString(ssize);
