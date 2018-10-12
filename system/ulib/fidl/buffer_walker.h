@@ -97,12 +97,12 @@ public:
 // Macro to insert the relevant goop required to support two control flows here:
 // one where we keep reading after error, and another where we return immediately.
 // No runtime overhead thanks to if constexpr magic.
-#define FIDL_POP_AND_CONTINUE_OR_RETURN   \
-    if constexpr (kContinueAfterErrors) { \
-        Pop();                            \
-        continue;                         \
-    } else {                              \
-        return;                           \
+#define FIDL_POP_AND_CONTINUE_OR_RETURN \
+    if (kContinueAfterErrors) {         \
+        Pop();                          \
+        continue;                       \
+    } else {                            \
+        return;                         \
     }
 
         for (;;) {
