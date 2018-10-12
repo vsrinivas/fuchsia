@@ -87,5 +87,15 @@ zx_status_t RemoveDebugBreakpoint(uint64_t address,
   return ZX_OK;
 }
 
+void PrintDebugRegisters(const zx_thread_state_debug_regs_t& regs) {
+  FXL_LOG(INFO) << "Regs: " << std::endl
+                << "DR0: 0x" << std::hex << regs.dr[0] << std::endl
+                << "DR1: 0x" << std::hex << regs.dr[1] << std::endl
+                << "DR2: 0x" << std::hex << regs.dr[2] << std::endl
+                << "DR3: 0x" << std::hex << regs.dr[3] << std::endl
+                << "DR6: 0x" << std::hex << regs.dr6 << std::endl
+                << "DR7: 0x" << std::hex << regs.dr7 << std::endl;
+}
+
 }  // namespace arch
 }  // namespace debug_agent

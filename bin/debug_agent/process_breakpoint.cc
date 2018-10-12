@@ -4,6 +4,8 @@
 
 #include <inttypes.h>
 
+#include <zircon/status.h>
+#include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/exception.h>
 
 #include "garnet/bin/debug_agent/breakpoint.h"
@@ -403,8 +405,8 @@ zx_status_t ProcessBreakpoint::HardwareBreakpoint::Install(
   if (res != ZX_OK) {
     FXL_LOG(WARNING) << fxl::StringPrintf(
         "Warning: Error installing HW breakpoint for thread %u at "
-        "%" PRIX64 ": %d\n",
-        static_cast<uint32_t>(thread_id), address, res);
+        "%" PRIX64 ": %s\n",
+        static_cast<uint32_t>(thread_id), address, zx_status_get_string(res));
     return res;
   }
 
@@ -439,8 +441,8 @@ zx_status_t ProcessBreakpoint::HardwareBreakpoint::Uninstall(
   if (res != ZX_OK) {
     FXL_LOG(WARNING) << fxl::StringPrintf(
         "Warning: Error removing HW breakpoint for thread %u at %" PRIX64
-        ": %d\n",
-        static_cast<uint32_t>(thread_id), address, res);
+        ": %s\n",
+        static_cast<uint32_t>(thread_id), address, zx_status_get_string(res));
     return res;
   }
 

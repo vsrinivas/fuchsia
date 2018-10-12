@@ -27,5 +27,8 @@ zx_status_t SetupDebugBreakpoint(uint64_t address,
 zx_status_t RemoveDebugBreakpoint(uint64_t address,
                                   zx_thread_state_debug_regs_t*);
 
+// Useful function for debugging to keep around.
+void PrintDebugRegisters(const zx_thread_state_debug_regs_t&);
+
 }  // namespace arch
 }  // namespace debug_agent
