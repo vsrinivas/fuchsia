@@ -66,7 +66,7 @@
     <project name="third_party/crashpad"
              path="third_party/crashpad"
              remote="https://chromium.googlesource.com/crashpad/crashpad"
-             revision="237c5ebdf3a911cd09c2843822fe3d7c5081ed54"
+             revision="7682f0f6ebbd5ea90f29c8b5c3cad076eb9f3fb3"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/curl"
              path="third_party/curl"
