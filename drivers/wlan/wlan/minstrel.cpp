@@ -11,6 +11,9 @@
 namespace wlan {
 namespace wlan_minstrel = ::fuchsia::wlan::minstrel;
 
+// If the data rate is too low, do not probe more than twice per update interval
+static constexpr uint8_t kMaxSlowProbe = 2;
+
 zx::duration HeaderTxTimeErp() {
     // TODO(eyw): Implement Erp preamble and header
     return zx::nsec(0);
@@ -397,9 +400,43 @@ tx_vec_idx_t MinstrelRateSelector::GetNextProbe(Peer* peer) {
     ZX_DEBUG_ASSERT(peer != nullptr);
     tx_vec_idx_t idx;
     do {
-        probe_sequence_.Next(&peer->probe_entry, &idx);
+        if (probe_sequence_.Next(&peer->probe_entry, &idx)) { ++peer->num_probe_cycles_done; }
     } while (peer->tx_stats_map.count(idx) == 0);  // peer does not support this idx, keep looking
     return idx;
+}
+
+tx_vec_idx_t MinstrelRateSelector::GetTxVector(const wlan::common::MacAddr& addr, bool is_vip) {
+    Peer* peer = GetPeer(addr);
+    if (peer == nullptr) {
+        errorf("Error getting tx vector: peer %s does not exist.\n", addr.ToString().c_str());
+        ZX_DEBUG_ASSERT(0);
+        return kInvalidTxVectorIdx;
+    }
+    if (is_vip) { return peer->max_probability; }
+    if (peer->num_pkt_until_next_probe > 0) {
+        --peer->num_pkt_until_next_probe;
+        return peer->max_tp;
+    }
+    peer->num_pkt_until_next_probe = kProbeInterval;
+
+    tx_vec_idx_t probe_idx;
+    bool should_not_probe = true;
+    zx::duration baseline_tx_time = peer->tx_stats_map[peer->max_probability].perfect_tx_time;
+    while (should_not_probe) {
+        probe_idx = GetNextProbe(peer);
+        const TxStats& tx_stats = peer->tx_stats_map[probe_idx];
+        // tx vector does not need probing if:
+        // 1) It is the highest basic rate
+        // 2) It has more attempts than others
+        // 3) It is slower than max_probability and has been probed at least kMaxSlowProbe times
+        should_not_probe = (probe_idx == peer->basic_highest) ||
+                           (tx_stats.attempts_cur > peer->num_probe_cycles_done) ||
+                           ((tx_stats.perfect_tx_time > baseline_tx_time) &&
+                            (tx_stats.attempts_cur >= kMaxSlowProbe));
+    }
+    ++peer->probes;
+    ++peer->tx_stats_map[probe_idx].probes_total;
+    return probe_idx;
 }
 
 Peer* MinstrelRateSelector::GetPeer(const common::MacAddr& addr) {
@@ -433,6 +470,7 @@ wlan_minstrel::StatsEntry TxStats::ToFidl() const {
         .cur_tp = cur_tp,
         .success_total = success_total,
         .attempts_total = attempts_total,
+        .probes_total = probes_total,
     };
 }
 
@@ -453,6 +491,7 @@ zx_status_t MinstrelRateSelector::GetStatsToFidl(const common::MacAddr& peer_add
     peer_fidl->max_probability = peer->max_probability;
     peer_fidl->basic_highest = peer->basic_highest;
     peer_fidl->basic_max_probability = peer->basic_max_probability;
+    peer_fidl->probes = peer->probes;
 
     return ZX_OK;
 }

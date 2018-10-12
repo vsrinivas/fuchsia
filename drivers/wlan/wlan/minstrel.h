@@ -29,6 +29,7 @@ static constexpr zx::duration kMinstrelUpdateInterval = zx::msec(100);
 static constexpr float kMinstrelExpWeight = 0.75;  // Used to calculate moving average throughput
 static constexpr float kMinstrelProbabilityThreshold =
     0.9;  // If probability is past this level, only consider throughput
+static constexpr uint8_t kProbeInterval = 16;  // normal packets to sent between two probe packets
 
 // LINT.IfChange
 struct TxStats {
@@ -41,6 +42,7 @@ struct TxStats {
     float cur_tp = 0.0;                        // Expected average throughput.
     size_t success_total = 0;                  // cumulative succcess counts.
     size_t attempts_total = 0;                 // cumulative attempts.
+    size_t probes_total = 0;
 
     ::fuchsia::wlan::minstrel::StatsEntry ToFidl() const;
 };
@@ -60,6 +62,9 @@ struct Peer {
     tx_vec_idx_t max_probability = kInvalidTxVectorIdx;  // optimality based on success probability.
 
     ProbeSequence::Entry probe_entry;
+    uint8_t num_probe_cycles_done = 0;  // +1 when all tx_vectors are probed at least once.
+    uint8_t num_pkt_until_next_probe = kProbeInterval - 1;
+    size_t probes;
 };
 // LINT.ThenChange(//garnet/public/fidl/fuchsia.wlan.minstrel/wlan_minstrel.fidl)
 
@@ -79,6 +84,7 @@ class MinstrelRateSelector {
    private:
     void UpdateStats();
     tx_vec_idx_t GetNextProbe(Peer* peer);
+    tx_vec_idx_t GetTxVector(const common::MacAddr& addr, bool is_vip);
     Peer* GetPeer(const common::MacAddr& addr);
     const Peer* GetPeer(const common::MacAddr& addr) const;
 

@@ -18,6 +18,7 @@ struct StatsEntry {
     float32 cur_tp;
     uint64 success_total;
     uint64 attempts_total;
+    uint64 probes_total;
 };
 
 struct Peer {
@@ -26,6 +27,7 @@ struct Peer {
     uint16 max_probability;
     uint16 basic_highest;
     uint16 basic_max_probability;
+    uint64 probes;
     vector<StatsEntry> entries;
 };
 // LINT.ThenChange(//garnet/drivers/wlan/wlan/minstrel.h)

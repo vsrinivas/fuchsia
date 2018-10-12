@@ -430,18 +430,19 @@ async fn get_peer_addrs(wlan_svc: WlanSvc, iface_id: u16, peer_addr: Option<MacA
 fn print_minstrel_stats(mut peer: Box<Peer>) {
     let total_attempts : f64 = peer.entries.iter().map(|e| e.attempts_total as f64).sum();
     let total_success : f64 = peer.entries.iter().map(|e| e.success_total as f64).sum();
-    println!("{}, max_tp: {}, max_probability: {}, attempts/success: {:.6}", MacAddr(peer.mac_addr),
-            peer.max_tp, peer.max_probability, total_attempts / total_success);
+    println!("{}, max_tp: {}, max_probability: {}, attempts/success: {:.6}, probes: {}",
+            MacAddr(peer.mac_addr), peer.max_tp, peer.max_probability,
+            total_attempts / total_success, peer.probes);
     println!("     TxVector                            succ_c   att_c  succ_t   att_t \
-           probability throughput");
+           probability throughput probes");
     peer.entries.sort_by(|l, r| l.tx_vector_idx.cmp(&r.tx_vector_idx));
     for e in peer.entries {
-        println!("{}{} {:<36} {:7} {:7} {:7} {:7} {:11.4} {:10.3}",
+        println!("{}{} {:<36} {:7} {:7} {:7} {:7} {:11.4} {:10.3} {:6}",
             if e.tx_vector_idx == peer.max_tp { "T" } else { " " },
             if e.tx_vector_idx == peer.max_probability {"P"} else {" "},
             e.tx_vec_desc, e.success_cur, e.attempts_cur,
             e.success_total, e.attempts_total,
-            e.probability * 100.0, e.cur_tp,
+            e.probability * 100.0, e.cur_tp, e.probes_total,
         );
     }
 }
