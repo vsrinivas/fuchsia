@@ -318,6 +318,12 @@ void CodecAdapterH264::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
+    // Recycle can happen while stopped, but this CodecAdapater has no way yet
+    // to return frames while stopped, or to re-use buffers/frames across a
+    // stream switch.  Any new stream will request allocation of new frames.
+    if (!video_->video_decoder()) {
+      return;
+    }
     video_->video_decoder()->ReturnFrame(frame);
   }  // ~lock
 }

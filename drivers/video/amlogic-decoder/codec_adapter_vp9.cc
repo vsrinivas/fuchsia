@@ -265,9 +265,17 @@ void CodecAdapterVp9::CoreCodecStopStream() {
   // DecoderCore, then VideoDecoder.
 
   if (decoder_) {
+    Vp9Decoder* decoder_to_remove = decoder_;
+    // We care that decoder_ = nullptr under the lock before it becomes bad to
+    // call ReturnFrame() in CoreCodecRecycleOutputPacket().  The two sequential
+    // lock hold intervals of video_decoder_lock() don't need to be one
+    // interval.
+    {  // scope lock
+      std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
+      decoder_ = nullptr;
+    }
     // If the decoder's still running this will stop it as well.
-    video_->RemoveDecoder(decoder_);
-    decoder_ = nullptr;
+    video_->RemoveDecoder(decoder_to_remove);
   }
 }
 
@@ -305,6 +313,12 @@ void CodecAdapterVp9::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
+    // Recycle can happen while stopped, but this CodecAdapater has no way yet
+    // to return frames while stopped, or to re-use buffers/frames across a
+    // stream switch.  Any new stream will request allocation of new frames.
+    if (!decoder_) {
+      return;
+    }
     decoder_->ReturnFrame(frame);
     video_->TryToReschedule();
   }  // ~lock
