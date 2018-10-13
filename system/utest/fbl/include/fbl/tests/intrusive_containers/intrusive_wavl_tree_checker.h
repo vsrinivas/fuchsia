@@ -11,6 +11,9 @@ namespace fbl {
 namespace tests {
 namespace intrusive_containers {
 
+using ::fbl::internal::is_sentinel_ptr;
+using ::fbl::internal::valid_sentinel_ptr;
+
 class WAVLTreeChecker {
 public:
     template <typename TreeType>
@@ -18,17 +21,16 @@ public:
                                       typename TreeType::RawPtrType node) {
         BEGIN_TEST;
         using NodeTraits = typename TreeType::NodeTraits;
-        using PtrTraits  = typename TreeType::PtrTraits;
 
-        ASSERT_TRUE(PtrTraits::IsValid(node), "");
+        ASSERT_TRUE(valid_sentinel_ptr(node), "");
         const auto& ns = NodeTraits::node_state(*node);
 
-        if (PtrTraits::IsValid(ns.left_)) {
+        if (valid_sentinel_ptr(ns.left_)) {
             EXPECT_EQ(node, NodeTraits::node_state(*ns.left_).parent_,
                       "Corrupt left-side parent back-link!");
         }
 
-        if (PtrTraits::IsValid(ns.right_)) {
+        if (valid_sentinel_ptr(ns.right_)) {
             EXPECT_EQ(node, NodeTraits::node_state(*ns.right_).parent_,
                       "Corrupt right-side parent back-link!");
         }
@@ -40,7 +42,6 @@ public:
     static bool SanityCheck(const TreeType& tree) {
         BEGIN_TEST;
         using NodeTraits = typename TreeType::NodeTraits;
-        using PtrTraits  = typename TreeType::PtrTraits;
         using RawPtrType = typename TreeType::RawPtrType;
         using Observer   = typename TreeType::Observer;
 
@@ -57,18 +58,18 @@ public:
             // right-most pointers should all be valid.  The LR-child of the
             // LR-most element should be the sentinel value.
             ASSERT_NONNULL(tree.root_, "");
-            ASSERT_FALSE(PtrTraits::IsSentinel(tree.root_), "");
+            ASSERT_FALSE(is_sentinel_ptr(tree.root_), "");
 
             ASSERT_NONNULL(tree.left_most_, "");
-            ASSERT_FALSE(PtrTraits::IsSentinel(tree.left_most_), "");
+            ASSERT_FALSE(is_sentinel_ptr(tree.left_most_), "");
             ASSERT_EQ(tree.sentinel(),
-                       PtrTraits::GetRaw(NodeTraits::node_state(*tree.left_most_).left_),
+                       NodeTraits::node_state(*tree.left_most_).left_,
                        "");
 
             ASSERT_NONNULL(tree.right_most_, "");
-            ASSERT_FALSE(PtrTraits::IsSentinel(tree.right_most_), "");
+            ASSERT_FALSE(is_sentinel_ptr(tree.right_most_), "");
             ASSERT_EQ(tree.sentinel(),
-                       PtrTraits::GetRaw(NodeTraits::node_state(*tree.right_most_).right_),
+                       NodeTraits::node_state(*tree.right_most_).right_,
                        "");
 
             EXPECT_LT(0u, tree.size(), "");
@@ -82,20 +83,20 @@ public:
         uint64_t depth     = 0;
         size_t   size      = 0;
 
-        RawPtrType node = PtrTraits::GetRaw(tree.root_);
+        RawPtrType node = tree.root_;
 
         // Start by going left until we have determined the depth of the
         // left most node of the tree.
-        while (PtrTraits::IsValid(node)) {
+        while (valid_sentinel_ptr(node)) {
             ASSERT_TRUE(VerifyParentBackLinks(tree, node), "");
 
             auto& ns = NodeTraits::node_state(*node);
             ++cur_depth;
 
-            if (!PtrTraits::IsValid(ns.left_))
+            if (!valid_sentinel_ptr(ns.left_))
                 break;
 
-            node = PtrTraits::GetRaw(ns.left_);
+            node = ns.left_;
         }
 
         // Now walk through the tree in ascending key order.  The basic
@@ -109,7 +110,7 @@ public:
         //    traverse a left hand link.
         // 4) If we don't traverse a left hand link before hitting the root
         //    of the tree, then we are done.
-        while (PtrTraits::IsValid(node)) {
+        while (valid_sentinel_ptr(node)) {
             // #1: Visit
             if (depth < cur_depth)
                 depth = cur_depth;
@@ -127,20 +128,20 @@ public:
 
             // #2: Can we go right?
             const auto& ns = NodeTraits::node_state(*node);
-            if (PtrTraits::IsValid(ns.right_)) {
+            if (valid_sentinel_ptr(ns.right_)) {
                 cur_depth++;
-                node = PtrTraits::GetRaw(ns.right_);
+                node = ns.right_;
                 ASSERT_TRUE(VerifyParentBackLinks(tree, node), "");
 
                 // Now go as far left as we can.
                 while (true) {
                     auto& ns = NodeTraits::node_state(*node);
 
-                    if (!PtrTraits::IsValid(ns.left_))
+                    if (!valid_sentinel_ptr(ns.left_))
                         break;
 
                     ++cur_depth;
-                    node = PtrTraits::GetRaw(ns.left_);
+                    node = ns.left_;
                     ASSERT_TRUE(VerifyParentBackLinks(tree, node), "");
                 }
 
@@ -151,10 +152,10 @@ public:
             // #3: Climb until we traverse a left-hand link.
             RawPtrType parent = ns.parent_;
             bool keep_going;
-            while ((keep_going = PtrTraits::IsValid(parent))) {
+            while ((keep_going = valid_sentinel_ptr(parent))) {
                 auto& parent_ns = NodeTraits::node_state(*parent);
-                bool is_left    = (PtrTraits::GetRaw(parent_ns.left_)  == node);
-                bool is_right   = (PtrTraits::GetRaw(parent_ns.right_) == node);
+                bool is_left    = (parent_ns.left_  == node);
+                bool is_right   = (parent_ns.right_ == node);
 
                 ASSERT_TRUE(is_left != is_right, "");
                 ASSERT_TRUE(is_left || is_right, "");

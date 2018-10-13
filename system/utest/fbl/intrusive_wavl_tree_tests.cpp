@@ -14,6 +14,8 @@ namespace fbl {
 namespace tests {
 namespace intrusive_containers {
 
+using ::fbl::internal::valid_sentinel_ptr;
+
 template <typename ContainerStateType>
 struct OtherTreeTraits {
     using KeyType = typename ContainerStateType::KeyType;
@@ -142,9 +144,6 @@ public:
     static bool VerifyRankRule(const TreeType& tree, typename TreeType::RawPtrType node) {
         BEGIN_TEST;
         using NodeTraits = typename TreeType::NodeTraits;
-        using PtrTraits  = typename TreeType::PtrTraits;
-
-        ASSERT_TRUE(PtrTraits::IsValid(node));
 
         // Check the rank rule.  The rules for a WAVL tree are...
         // 1) All rank differences are either 1 or 2
@@ -153,17 +152,17 @@ public:
         const auto& ns = NodeTraits::node_state(*node);
         ASSERT_LE(0, ns.rank_, "All ranks must be non-negative.");
 
-        if (!PtrTraits::IsValid(ns.left_) && !PtrTraits::IsValid(ns.right_)) {
+        if (!valid_sentinel_ptr(ns.left_) && !valid_sentinel_ptr(ns.right_)) {
             ASSERT_EQ(0, ns.rank_, "Leaf nodes must have rank 0!");
         } else {
-            if (PtrTraits::IsValid(ns.left_)) {
+            if (valid_sentinel_ptr(ns.left_)) {
                 auto& left_ns = NodeTraits::node_state(*ns.left_);
                 auto  delta   = ns.rank_ - left_ns.rank_;
                 ASSERT_LE(1, delta, "Left hand rank difference not on range [1, 2]");
                 ASSERT_GE(2, delta, "Left hand rank difference not on range [1, 2]");
             }
 
-            if (PtrTraits::IsValid(ns.right_)) {
+            if (valid_sentinel_ptr(ns.right_)) {
                 auto& right_ns = NodeTraits::node_state(*ns.right_);
                 auto  delta    = ns.rank_ - right_ns.rank_;
                 ASSERT_LE(1, delta, "Right hand rank difference not on range [1, 2]");
