@@ -517,7 +517,9 @@ const PciConfig* PcieBusDriver::GetConfig(uint bus_id,
     }
 
     uintptr_t addr;
-    zx_status_t result = addr_provider_->Translate(bus_id, dev_id, func_id,
+    zx_status_t result = addr_provider_->Translate(static_cast<uint8_t>(bus_id),
+                                                   static_cast<uint8_t>(dev_id),
+                                                   static_cast<uint8_t>(func_id),
                                                    &addr, out_cfg_phys);
     if (result != ZX_OK) {
         return nullptr;

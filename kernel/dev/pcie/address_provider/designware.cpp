@@ -5,20 +5,14 @@
 // https://opensource.org/licenses/MIT
 
 #include <dev/address_provider/address_provider.h>
+#include <zircon/hw/pci.h>
 #include <trace.h>
 
 #define LOCAL_TRACE 0
 
 namespace {
 
-// TODO(cja): Move this to some global PCI header.
-typedef struct bdf_address {
-    uint bus_id;
-    uint device_id;
-    uint function_id;
-} bdf_address_t;
-
-inline bool isRootBridge(const bdf_address_t& bdf) {
+inline bool isRootBridge(const pci_bdf_t& bdf) {
     // The Root Bridge _must_ be BDF 0:0:0, there are no other devices on Bus 0
     // and we short circuit and return false.
     return bdf.bus_id == 0 &&
@@ -26,7 +20,7 @@ inline bool isRootBridge(const bdf_address_t& bdf) {
            bdf.function_id == 0;
 }
 
-inline bool isDownstream(const bdf_address_t& bdf) {
+inline bool isDownstream(const pci_bdf_t& bdf) {
     // This is hacky but it's reasonable. The controller appears to (?) support
     // more than a single downstream device but we've never seen this in
     // practice. If we wanted to _actually_ support multiple downstream devices
@@ -81,9 +75,9 @@ zx_status_t DesignWarePcieAddressProvider::Init(const PciEcamRegion& root_bridge
     return ZX_OK;
 }
 
-zx_status_t DesignWarePcieAddressProvider::Translate(const uint bus_id,
-                                                     const uint device_id,
-                                                     const uint function_id,
+zx_status_t DesignWarePcieAddressProvider::Translate(const uint8_t bus_id,
+                                                     const uint8_t device_id,
+                                                     const uint8_t function_id,
                                                      vaddr_t* virt,
                                                      paddr_t* phys) {
     if (!root_bridge_region_ || !downstream_region_) {
@@ -91,7 +85,7 @@ zx_status_t DesignWarePcieAddressProvider::Translate(const uint bus_id,
         return ZX_ERR_BAD_STATE;
     }
 
-    const bdf_address_t bdf = {
+    const pci_bdf_t bdf = {
         .bus_id = bus_id,
         .device_id = device_id,
         .function_id = function_id,

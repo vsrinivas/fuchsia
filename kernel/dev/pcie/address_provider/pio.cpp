@@ -7,14 +7,12 @@
 #include <dev/address_provider/address_provider.h>
 #include <lib/pci/pio.h>
 
-zx_status_t PioPcieAddressProvider::Translate(const uint bus_id,
-                                              const uint device_id,
-                                              const uint function_id,
+zx_status_t PioPcieAddressProvider::Translate(const uint8_t bus_id,
+                                              const uint8_t device_id,
+                                              const uint8_t function_id,
                                               vaddr_t* virt,
                                               paddr_t* phys) {
-    *virt = Pci::PciBdfAddr(static_cast<uint8_t>(bus_id),
-                            static_cast<uint8_t>(device_id),
-                            static_cast<uint8_t>(function_id), 0);
+    *virt = Pci::PciBdfAddr(bus_id, device_id, function_id, 0);
     return ZX_OK;
 }
 

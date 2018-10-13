@@ -19,8 +19,8 @@ MmioPcieAddressProvider::~MmioPcieAddressProvider() {
     ecam_regions_.clear();
 }
 
-zx_status_t MmioPcieAddressProvider::Translate(uint bus_id, uint device_id,
-                                               uint function_id,
+zx_status_t MmioPcieAddressProvider::Translate(uint8_t bus_id, uint8_t device_id,
+                                               uint8_t function_id,
                                                vaddr_t* virt,
                                                paddr_t* phys) {
     // Find the region which would contain this bus_id, if any.
@@ -38,7 +38,7 @@ zx_status_t MmioPcieAddressProvider::Translate(uint bus_id, uint device_id,
         return ZX_ERR_NOT_FOUND;
     }
 
-    bus_id -= iter->ecam().bus_start;
+    bus_id = static_cast<uint8_t>(bus_id - iter->ecam().bus_start);
     size_t offset = (static_cast<size_t>(bus_id) << 20) |
                     (static_cast<size_t>(device_id) << 15) |
                     (static_cast<size_t>(function_id) << 12);

@@ -25,7 +25,7 @@ public:
     // translation. phys will optionally contain the corresponding physical
     // address.
     // On failure, result must not be touched by the implementation.
-    virtual zx_status_t Translate(uint bus_id, uint device_id, uint function_id,
+    virtual zx_status_t Translate(uint8_t bus_id, uint8_t device_id, uint8_t function_id,
                                   vaddr_t* virt, paddr_t* phys) = 0;
 
     // Creates a config that corresponds to the type of the PcieAddressProvider.
@@ -45,7 +45,7 @@ public:
     MmioPcieAddressProvider() {}
     ~MmioPcieAddressProvider();
 
-    zx_status_t Translate(uint bus_id, uint device_id, uint function_id,
+    zx_status_t Translate(uint8_t bus_id, uint8_t device_id, uint8_t function_id,
                           vaddr_t* virt, paddr_t* phys) override;
     fbl::RefPtr<PciConfig> CreateConfig(const uintptr_t addr) override;
 
@@ -61,7 +61,7 @@ class PioPcieAddressProvider : public PcieAddressProvider {
 public:
     PioPcieAddressProvider() {}
 
-    zx_status_t Translate(uint bus_id, uint device_id, uint function_id,
+    zx_status_t Translate(uint8_t bus_id, uint8_t device_id, uint8_t function_id,
                           vaddr_t* virt, paddr_t* phys) override;
     fbl::RefPtr<PciConfig> CreateConfig(const uintptr_t addr) override;
 };
@@ -75,7 +75,7 @@ class DesignWarePcieAddressProvider : public PcieAddressProvider {
     zx_status_t Init(const PciEcamRegion& root_bridge,
                      const PciEcamRegion& downstream_device);
 
-    zx_status_t Translate(uint bus_id, uint device_id, uint function_id,
+    zx_status_t Translate(uint8_t bus_id, uint8_t device_id, uint8_t function_id,
                           vaddr_t* virt, paddr_t* phys) override;
     fbl::RefPtr<PciConfig> CreateConfig(const uintptr_t addr) override;
 
