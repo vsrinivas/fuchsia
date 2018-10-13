@@ -301,7 +301,7 @@ void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
             case BOOTDATA_BOOTFS_SYSTEM: {
                 const char* errmsg;
                 zx_handle_t bootfs_vmo;
-                status = decompress_bootdata(zx_vmar_root_self(), vmo.release(),
+                status = decompress_bootdata(zx_vmar_root_self(), vmo.get(),
                                              off, bootdata.length + sizeof(bootdata_t),
                                              &bootfs_vmo, &errmsg);
                 if (status < 0) {
@@ -315,7 +315,7 @@ void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
                 const char* errmsg;
                 zx_handle_t ramdisk_vmo;
                 status = decompress_bootdata(
-                    zx_vmar_root_self(), vmo.release(),
+                    zx_vmar_root_self(), vmo.get(),
                     off, bootdata.length + sizeof(bootdata_t),
                     &ramdisk_vmo, &errmsg);
                 if (status != ZX_OK) {
@@ -328,7 +328,7 @@ void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
                 break;
             }
             case BOOTDATA_LAST_CRASHLOG:
-                SetupLastCrashlog(root, vmo.release(), off + sizeof(bootdata_t), bootdata.length);
+                SetupLastCrashlog(root, vmo.get(), off + sizeof(bootdata_t), bootdata.length);
                 break;
             default:
                 break;
@@ -336,6 +336,9 @@ void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
             off += itemlen;
             len -= itemlen;
         }
+
+        // Close the VMO once we've finished processing it.
+        vmo.reset();
     }
 }
 
