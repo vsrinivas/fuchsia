@@ -324,42 +324,50 @@ bool BetterProbability(const TxStats& lhs, const TxStats& rhs) {
 }
 
 void UpdateStatsPeer(Peer* peer) {
-    // Default to the lowest rate supported.
-    peer->max_tp = peer->tx_stats_map.cbegin()->first;
-    peer->max_probability = peer->max_tp;
-    auto* sm = &peer->tx_stats_map;
-    for (auto& tx_stats : peer->tx_stats_map) {
-        tx_vec_idx_t tx_idx = tx_stats.first;
-        auto tsp = &tx_stats.second;
-        if (tsp->attempts_cur != 0) {
-            float prob = 1.0 * tsp->success_cur / tsp->attempts_cur;
-            if (tsp->attempts_total == 0) {
-                tsp->probability = prob;
+    auto& tsm = peer->tx_stats_map;
+    for (auto& [_, stats] : tsm) {
+        if (stats.attempts_cur != 0) {
+            float prob = 1.0 * stats.success_cur / stats.attempts_cur;
+            if (stats.attempts_total == 0) {
+                stats.probability = prob;
             } else {
-                tsp->probability =
-                    tsp->probability * kMinstrelExpWeight + prob * (1 - kMinstrelExpWeight);
+                stats.probability =
+                    stats.probability * kMinstrelExpWeight + prob * (1 - kMinstrelExpWeight);
             }
 
-            if (tsp->attempts_total + tsp->attempts_cur < tsp->attempts_total) {  // overflow
-                tsp->attempts_total = 0;
-                tsp->success_total = 0;
+            if (stats.attempts_total + stats.attempts_cur < stats.attempts_total) {  // overflow
+                stats.attempts_total = 0;
+                stats.success_total = 0;
             } else {
-                tsp->attempts_total += tsp->attempts_cur;
-                tsp->success_total += tsp->success_cur;
+                stats.attempts_total += stats.attempts_cur;
+                stats.success_total += stats.success_cur;
             }
-            tsp->attempts_cur = 0;
-            tsp->success_cur = 0;
+            stats.attempts_cur = 0;
+            stats.success_cur = 0;
         }
         constexpr float kNanoSecondsPerSecond = 1e9;
         // perfect_tx_time is always non-zero as guaranteed by AddSupportedHt and AddSupportedErp
-        tsp->cur_tp = kNanoSecondsPerSecond / tsp->perfect_tx_time.to_nsecs() * tsp->probability;
+        stats.cur_tp = kNanoSecondsPerSecond / stats.perfect_tx_time.to_nsecs() * stats.probability;
+    }
 
-        if (BetterThroughput(*tsp, (*sm)[peer->max_tp])) { peer->max_tp = tx_idx; }
+    const auto& ctsm = tsm;
+    const auto& brs = peer->basic_rates;
 
-        if (BetterProbability(*tsp, (*sm)[peer->max_probability])) {
-            peer->max_probability = tx_idx;
+    // Pick a random tx vector as the starting point because we will go through them all.
+    tx_vec_idx_t max_tp = ctsm.cbegin()->first;
+    tx_vec_idx_t max_probability = max_tp;
+    tx_vec_idx_t basic_max_probability = peer->basic_highest;
+    for (const auto& [idx, stats] : peer->tx_stats_map) {
+        if (BetterThroughput(stats, ctsm.at(max_tp))) { max_tp = idx; }
+        if (BetterProbability(stats, ctsm.at(max_probability))) { max_probability = idx; }
+        if (brs.count(idx) != 0 && BetterProbability(stats, ctsm.at(basic_max_probability))) {
+            basic_max_probability = idx;
         }
     }
+
+    peer->max_tp = max_tp;
+    peer->max_probability = max_probability;
+    peer->basic_max_probability = basic_max_probability;
 }
 
 bool MinstrelRateSelector::HandleTimeout() {

@@ -18,6 +18,7 @@ namespace {
 namespace wlan_minstrel = ::fuchsia::wlan::minstrel;
 
 static const common::MacAddr kTestMacAddr({50, 53, 51, 56, 55, 52});
+static const uint8_t kBasicRateBit = 0b10000000;
 
 struct MinstrelTest : public ::testing::Test {
     MinstrelTest()
@@ -32,7 +33,7 @@ struct MinstrelTest : public ::testing::Test {
     MinstrelRateSelector minstrel_;
     wlan_assoc_ctx_t assoc_ctx_ht_{
         .rates_cnt = 12,
-        .rates = {2, 4, 11, 22, 12 | 0x80, 18, 24, 36, 48, 72, 96, 108},
+        .rates = {2, 4, 11, 22, 12 | kBasicRateBit, 18, 24, 36, 48, 72, 96, 108 | kBasicRateBit},
         .has_ht_cap = true,
         .ht_cap =
             {
@@ -64,8 +65,8 @@ TEST_F(MinstrelTest, AddPeer) {
     EXPECT_EQ(24ULL, peer.entries->size());
     EXPECT_EQ(16, peer.max_tp);
     EXPECT_EQ((*peer.entries)[0].tx_vector_idx, peer.max_probability);
-    EXPECT_EQ(kErpStartIdx, peer.basic_highest);
-    EXPECT_EQ(kErpStartIdx, peer.basic_max_probability);
+    EXPECT_EQ(kErpStartIdx + kErpNumTxVector - 1, peer.basic_highest);
+    EXPECT_EQ(kErpStartIdx + kErpNumTxVector - 1, peer.basic_max_probability);
 }
 
 TEST_F(MinstrelTest, RemovePeer) {
