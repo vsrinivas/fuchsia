@@ -13,6 +13,7 @@ fit_tests := \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/nullable_tests.cpp \
     $(LOCAL_DIR)/optional_tests.cpp \
+    $(LOCAL_DIR)/variant_tests.cpp \
 
 # Userspace tests.
 # Disabled for now because libstdc++ isn't available for Zircon targets yet.
