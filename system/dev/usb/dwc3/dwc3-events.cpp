@@ -32,7 +32,7 @@ static void dwc3_handle_ep_event(dwc3_t* dwc, uint32_t event) {
     case DEPEVT_CMD_CMPLT: {
         unsigned cmd_type = DEPEVT_CMD_CMPLT_CMD_TYPE(event);
         unsigned rsrc_id = DEPEVT_CMD_CMPLT_RSRC_ID(event);
-        if (cmd_type == DEPSTRTXFER) {
+        if (cmd_type == DEPCMD::DEPSTRTXFER) {
             dwc3_ep_xfer_started(dwc, ep_num, rsrc_id);
         }
         break;
@@ -68,64 +68,64 @@ static void dwc3_handle_event(dwc3_t* dwc, uint32_t event) {
     case DEVT_LINK_STATE_CHANGE:
         zxlogf(TRACE, "DEVT_LINK_STATE_CHANGE: ");
         switch (info) {
-        case DSTS_USBLNKST_U0 | DEVT_LINK_STATE_CHANGE_SS:
-            zxlogf(TRACE, "DSTS_USBLNKST_U0\n");
+        case DSTS::USBLNKST_U0 | DEVT_LINK_STATE_CHANGE_SS:
+            zxlogf(TRACE, "DSTS::USBLNKST_U0\n");
             break;
-        case DSTS_USBLNKST_U1 | DEVT_LINK_STATE_CHANGE_SS:
+        case DSTS::USBLNKST_U1 | DEVT_LINK_STATE_CHANGE_SS:
             zxlogf(TRACE, "DSTS_USBLNKST_U1\n");
             break;
-        case DSTS_USBLNKST_U2 | DEVT_LINK_STATE_CHANGE_SS:
+        case DSTS::USBLNKST_U2 | DEVT_LINK_STATE_CHANGE_SS:
             zxlogf(TRACE, "DSTS_USBLNKST_U2\n");
             break;
-        case DSTS_USBLNKST_U3 | DEVT_LINK_STATE_CHANGE_SS:
+        case DSTS::USBLNKST_U3 | DEVT_LINK_STATE_CHANGE_SS:
             zxlogf(TRACE, "DSTS_USBLNKST_U3\n");
             break;
-        case DSTS_USBLNKST_ESS_DIS | DEVT_LINK_STATE_CHANGE_SS:
+        case DSTS::USBLNKST_ESS_DIS | DEVT_LINK_STATE_CHANGE_SS:
             zxlogf(TRACE, "DSTS_USBLNKST_ESS_DIS\n");
             break;
-        case DSTS_USBLNKST_RX_DET | DEVT_LINK_STATE_CHANGE_SS:
+        case DSTS::USBLNKST_RX_DET | DEVT_LINK_STATE_CHANGE_SS:
             zxlogf(TRACE, "DSTS_USBLNKST_RX_DET\n");
             break;
-        case DSTS_USBLNKST_ESS_INACT | DEVT_LINK_STATE_CHANGE_SS:
+        case DSTS::USBLNKST_ESS_INACT | DEVT_LINK_STATE_CHANGE_SS:
             zxlogf(TRACE, "DSTS_USBLNKST_ESS_INACT\n");
             break;
-        case DSTS_USBLNKST_POLL | DEVT_LINK_STATE_CHANGE_SS:
+        case DSTS::USBLNKST_POLL | DEVT_LINK_STATE_CHANGE_SS:
             zxlogf(TRACE, "DSTS_USBLNKST_POLL\n");
             break;
-        case DSTS_USBLNKST_RECOV | DEVT_LINK_STATE_CHANGE_SS:
+        case DSTS::USBLNKST_RECOV | DEVT_LINK_STATE_CHANGE_SS:
             zxlogf(TRACE, "DSTS_USBLNKST_RECOV\n");
             break;
-        case DSTS_USBLNKST_HRESET | DEVT_LINK_STATE_CHANGE_SS:
+        case DSTS::USBLNKST_HRESET | DEVT_LINK_STATE_CHANGE_SS:
             zxlogf(TRACE, "DSTS_USBLNKST_HRESET\n");
             break;
-        case DSTS_USBLNKST_CMPLY | DEVT_LINK_STATE_CHANGE_SS:
+        case DSTS::USBLNKST_CMPLY | DEVT_LINK_STATE_CHANGE_SS:
             zxlogf(TRACE, "DSTS_USBLNKST_CMPLY\n");
             break;
-        case DSTS_USBLNKST_LPBK | DEVT_LINK_STATE_CHANGE_SS:
+        case DSTS::USBLNKST_LPBK | DEVT_LINK_STATE_CHANGE_SS:
             zxlogf(TRACE, "DSTS_USBLNKST_LPBK\n");
             break;
-        case DSTS_USBLNKST_RESUME_RESET | DEVT_LINK_STATE_CHANGE_SS:
+        case DSTS::USBLNKST_RESUME_RESET | DEVT_LINK_STATE_CHANGE_SS:
             zxlogf(TRACE, "DSTS_USBLNKST_RESUME_RESET\n");
             break;
-        case DSTS_USBLNKST_ON:
+        case DSTS::USBLNKST_ON:
             zxlogf(TRACE, "DSTS_USBLNKST_ON\n");
             break;
-        case DSTS_USBLNKST_SLEEP:
+        case DSTS::USBLNKST_SLEEP:
             zxlogf(TRACE, "DSTS_USBLNKST_SLEEP\n");
             break;
-        case DSTS_USBLNKST_SUSPEND:
+        case DSTS::USBLNKST_SUSPEND:
             zxlogf(TRACE, "DSTS_USBLNKST_SUSPEND\n");
             break;
-        case DSTS_USBLNKST_DISCONNECTED:
+        case DSTS::USBLNKST_DISCONNECTED:
             zxlogf(TRACE, "DSTS_USBLNKST_DISCONNECTED\n");
             break;
-        case DSTS_USBLNKST_EARLY_SUSPEND:
+        case DSTS::USBLNKST_EARLY_SUSPEND:
             zxlogf(TRACE, "DSTS_USBLNKST_EARLY_SUSPEND\n");
             break;
-        case DSTS_USBLNKST_RESET:
+        case DSTS::USBLNKST_RESET:
             zxlogf(TRACE, "DSTS_USBLNKST_RESET\n");
             break;
-        case DSTS_USBLNKST_RESUME:
+        case DSTS::USBLNKST_RESUME:
             zxlogf(TRACE, "DSTS_USBLNKST_RESUME\n");
             break;
         default:
@@ -192,7 +192,7 @@ static int dwc3_irq_thread(void* arg) {
         }
         // read number of new bytes in the event buffer
         uint32_t event_count;
-        while ((event_count = DWC3_READ32(mmio + GEVNTCOUNT(0)) & GEVNTCOUNT_EVNTCOUNT_MASK) > 0) {
+        while ((event_count = GEVNTCOUNT::Get(0).ReadFrom(mmio).EVNTCOUNT()) > 0) {
             // invalidate cache so we can read fresh events
             io_buffer_cache_flush_invalidate(&dwc->event_buffer, 0, EVENT_BUFFER_SIZE);
 
@@ -205,7 +205,7 @@ static int dwc3_irq_thread(void* arg) {
             }
 
             // acknowledge the events we have processed
-            DWC3_WRITE32(mmio + GEVNTCOUNT(0), event_count);
+            GEVNTCOUNT::Get(0).FromValue(0).set_EVNTCOUNT(event_count).WriteTo(mmio);
         }
     }
 
@@ -219,15 +219,20 @@ void dwc3_events_start(dwc3_t* dwc) {
     // set event buffer pointer and size
     // keep interrupts masked until we are ready
     zx_paddr_t paddr = io_buffer_phys(&dwc->event_buffer);
-    DWC3_WRITE32(mmio + GEVNTADRLO(0), (uint32_t)paddr);
-    DWC3_WRITE32(mmio + GEVNTADRHI(0), (uint32_t)(paddr >> 32));
-    DWC3_WRITE32(mmio + GEVNTSIZ(0), EVENT_BUFFER_SIZE | GEVNTSIZ_EVNTINTRPTMASK);
-    DWC3_WRITE32(mmio + GEVNTCOUNT(0), 0);
+    GEVNTADR::Get(0).FromValue(0).set_EVNTADR(paddr).WriteTo(mmio);
+    GEVNTSIZ::Get(0).FromValue(0).set_EVENTSIZ(EVENT_BUFFER_SIZE).set_EVNTINTRPTMASK(1)
+                    .WriteTo(mmio);
+    GEVNTCOUNT::Get(0).FromValue(0).set_EVNTCOUNT(0).WriteTo(mmio);
 
     // enable events
-    uint32_t event_mask = DEVTEN_USBRSTEVTEN | DEVTEN_CONNECTDONEEVTEN | DEVTEN_DISSCONNEVTEN |
-                          DEVTEN_L1SUSPEN | DEVTEN_U3_L2_SUSP_EN;
-    DWC3_WRITE32(mmio + DEVTEN, event_mask);
+    DEVTEN::Get()
+        .FromValue(0)
+        .set_L1SUSPEN(1)
+        .set_U3L2L1SuspEn(1)
+        .set_CONNECTDONEEVTEN(1)
+        .set_USBRSTEVTEN(1)
+        .set_DISSCONNEVTEN(1)
+        .WriteTo(mmio);
 
     thrd_create_with_name(&dwc->irq_thread, dwc3_irq_thread, dwc, "dwc3_irq_thread");
 }

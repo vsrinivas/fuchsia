@@ -8,65 +8,150 @@
 #include <fbl/auto_lock.h>
 
 #include <stdio.h>
+#include <unistd.h>
 
-static void dwc3_ep_cmd(dwc3_t* dwc, unsigned ep_num, uint32_t command, uint32_t param0,
-                        uint32_t param1, uint32_t param2, uint32_t flags) {
+void dwc3_cmd_start_new_config(dwc3_t* dwc, unsigned ep_num, unsigned rsrc_id) {
     auto* mmio = dwc3_mmio(dwc);
 
     fbl::AutoLock lock(&dwc->lock);
 
-    DWC3_WRITE32(mmio + DEPCMDPAR0(ep_num), param0);
-    DWC3_WRITE32(mmio + DEPCMDPAR1(ep_num), param1);
-    DWC3_WRITE32(mmio + DEPCMDPAR2(ep_num), param2);
-
-    command |= (DEPCMD_CMDACT | flags);
-    auto* depcmd = reinterpret_cast<volatile uint32_t*>(mmio + DEPCMD(ep_num));
-    DWC3_WRITE32(depcmd, command | DEPCMD_CMDACT);
-
-    if ((flags & DEPCMD_CMDIOC) == 0) {
-        dwc3_wait_bits(depcmd, DEPCMD_CMDACT, 0);
-    }
-}
-
-void dwc3_cmd_start_new_config(dwc3_t* dwc, unsigned ep_num, unsigned rsrc_id) {
-    dwc3_ep_cmd(dwc, ep_num, DEPSTARTCFG | DEPCMD_RESOURCE_INDEX(rsrc_id),  0, 0, 0, 0);
+    DEPCMDPAR0::Get(ep_num).FromValue(0).WriteTo(mmio);
+    DEPCMDPAR1::Get(ep_num).FromValue(0).WriteTo(mmio);
+    DEPCMDPAR2::Get(ep_num).FromValue(0).WriteTo(mmio);
+    DEPCMD::Get(ep_num)
+        .FromValue(0)
+        .set_CMDTYP(DEPCMD::DEPSTARTCFG)
+        .set_COMMANDPARAM(rsrc_id)
+        .set_CMDACT(1)
+        .WriteTo(mmio);
 }
 
 void dwc3_cmd_ep_set_config(dwc3_t* dwc, unsigned ep_num, unsigned ep_type,
                                    unsigned max_packet_size, unsigned interval, bool modify) {
+    auto* mmio = dwc3_mmio(dwc);
+
+    fbl::AutoLock lock(&dwc->lock);
+
     // fifo number is zero for OUT endpoints and EP0_IN
-    unsigned fifo_num = (EP_OUT(ep_num) || ep_num == EP0_IN ? 0 : ep_num >> 1);
-    uint32_t param0 = DEPCFG_FIFO_NUM(fifo_num) | DEPCFG_MAX_PACKET_SIZE(max_packet_size)
-                      | DEPCFG_EP_TYPE(ep_type);
-    if (modify) {
-        param0 |= DEPCFG_ACTION_MODIFY;
-    } else {
-        param0 |= DEPCFG_ACTION_INITIALIZE;
-    }
-    uint32_t param1 = DEPCFG_EP_NUMBER(ep_num) | DEPCFG_INTERVAL(interval) |
-                      DEPCFG_XFER_NOT_READY_EN | DEPCFG_XFER_COMPLETE_EN | DEPCFG_INTR_NUM(0);
-    dwc3_ep_cmd(dwc, ep_num, DEPCFG, param0, param1, 0, 0);
+    uint32_t fifo_num = (EP_OUT(ep_num) || ep_num == EP0_IN ? 0 : ep_num >> 1);
+    uint32_t action = (modify ? DEPCFG_DEPCMDPAR0::ACTION_MODIFY
+                              : DEPCFG_DEPCMDPAR0::ACTION_INITIALIZE);
+
+    DEPCFG_DEPCMDPAR0::Get(ep_num)
+        .FromValue(0)
+        .set_FIFO_NUM(fifo_num)
+        .set_MAX_PACKET_SIZE(max_packet_size)
+        .set_EP_TYPE(ep_type)
+        .set_ACTION(action)
+        .WriteTo(mmio);
+    DEPCFG_DEPCMDPAR1::Get(ep_num)
+        .FromValue(0)
+        .set_EP_NUMBER(ep_num)
+        .set_INTERVAL(interval)
+        .set_XFER_NOT_READY_EN(1)
+        .set_XFER_COMPLETE_EN(1)
+        .set_INTR_NUM(0)
+        .WriteTo(mmio);
+    DEPCMDPAR2::Get(ep_num).FromValue(0).WriteTo(mmio);
+    DEPCMD::Get(ep_num).FromValue(0).set_CMDTYP(DEPCMD::DEPCFG).set_CMDACT(1).WriteTo(mmio);
 }
 
 void dwc3_cmd_ep_transfer_config(dwc3_t* dwc, unsigned ep_num) {
-    dwc3_ep_cmd(dwc, ep_num, DEPXFERCFG, 1, 0, 0, 0);
+    auto* mmio = dwc3_mmio(dwc);
+
+    fbl::AutoLock lock(&dwc->lock);
+
+    DEPCMDPAR0::Get(ep_num).FromValue(0).set_PARAMETER(1).WriteTo(mmio);
+    DEPCMDPAR1::Get(ep_num).FromValue(0).WriteTo(mmio);
+    DEPCMDPAR2::Get(ep_num).FromValue(0).WriteTo(mmio);
+    DEPCMD::Get(ep_num).FromValue(0).set_CMDTYP(DEPCMD::DEPXFERCFG).set_CMDACT(1).WriteTo(mmio);
 }
 
 void dwc3_cmd_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, zx_paddr_t trb_phys) {
-    dwc3_ep_cmd(dwc, ep_num, DEPSTRTXFER, (uint32_t)(trb_phys >> 32),
-                (uint32_t)trb_phys, 0, DEPCMD_CMDIOC);
+    auto* mmio = dwc3_mmio(dwc);
+
+    fbl::AutoLock lock(&dwc->lock);
+
+    DEPCMDPAR0::Get(ep_num)
+        .FromValue(0)
+        .set_PARAMETER(static_cast<uint32_t>(trb_phys >> 32))
+        .WriteTo(mmio);
+    DEPCMDPAR1::Get(ep_num)
+        .FromValue(0)
+        .set_PARAMETER(static_cast<uint32_t>(trb_phys))
+        .WriteTo(mmio);
+    DEPCMDPAR2::Get(ep_num).FromValue(0).WriteTo(mmio);
+    DEPCMD::Get(ep_num)
+        .FromValue(0)
+        .set_CMDTYP(DEPCMD::DEPSTRTXFER)
+        .set_CMDACT(1)
+        .set_CMDIOC(1)
+        .WriteTo(mmio);
+
+    while (DEPCMD::Get(ep_num).ReadFrom(mmio).CMDACT()) {
+        usleep(1000);
+    }
 }
 
 void dwc3_cmd_ep_end_transfer(dwc3_t* dwc, unsigned ep_num) {
+    auto* mmio = dwc3_mmio(dwc);
+
+    fbl::AutoLock lock(&dwc->lock);
+
     unsigned rsrc_id = dwc->eps[ep_num].rsrc_id;
-    dwc3_ep_cmd(dwc, ep_num, DEPENDXFER, 0, 0, 0,
-                DEPCMD_RESOURCE_INDEX(rsrc_id) | DEPCMD_CMDIOC | DEPCMD_HIPRI_FORCERM);
+
+    DEPCMDPAR0::Get(ep_num).FromValue(0).WriteTo(mmio);
+    DEPCMDPAR1::Get(ep_num).FromValue(0).WriteTo(mmio);
+    DEPCMDPAR2::Get(ep_num).FromValue(0).WriteTo(mmio);
+    DEPCMD::Get(ep_num)
+        .FromValue(0)
+        .set_CMDTYP(DEPCMD::DEPENDXFER)
+        .set_COMMANDPARAM(rsrc_id)
+        .set_CMDACT(1)
+        .set_CMDIOC(1)
+        .set_HIPRI_FORCERM(1)
+        .WriteTo(mmio);
+
+    while (DEPCMD::Get(ep_num).ReadFrom(mmio).CMDACT()) {
+        usleep(1000);
+    }
 }
 
 void dwc3_cmd_ep_set_stall(dwc3_t* dwc, unsigned ep_num) {
-    dwc3_ep_cmd(dwc, ep_num, DEPSSTALL, 0, 0, 0, DEPCMD_CMDIOC);
+    auto* mmio = dwc3_mmio(dwc);
+
+    fbl::AutoLock lock(&dwc->lock);
+
+    DEPCMDPAR0::Get(ep_num).FromValue(0).WriteTo(mmio);
+    DEPCMDPAR1::Get(ep_num).FromValue(0).WriteTo(mmio);
+    DEPCMDPAR2::Get(ep_num).FromValue(0).WriteTo(mmio);
+    DEPCMD::Get(ep_num)
+        .FromValue(0)
+        .set_CMDTYP(DEPCMD::DEPSSTALL)
+        .set_CMDACT(1)
+        .set_CMDIOC(1)
+        .WriteTo(mmio);
+
+    while (DEPCMD::Get(ep_num).ReadFrom(mmio).CMDACT()) {
+        usleep(1000);
+    }
 }
 
 void dwc3_cmd_ep_clear_stall(dwc3_t* dwc, unsigned ep_num) {
-    dwc3_ep_cmd(dwc, ep_num, DEPCSTALL, 0, 0, 0, DEPCMD_CMDIOC);
+    auto* mmio = dwc3_mmio(dwc);
+
+    fbl::AutoLock lock(&dwc->lock);
+
+    DEPCMDPAR0::Get(ep_num).FromValue(0).WriteTo(mmio);
+    DEPCMDPAR1::Get(ep_num).FromValue(0).WriteTo(mmio);
+    DEPCMDPAR2::Get(ep_num).FromValue(0).WriteTo(mmio);
+    DEPCMD::Get(ep_num)
+        .FromValue(0)
+        .set_CMDTYP(DEPCMD::DEPCSTALL)
+        .set_CMDACT(1).set_CMDIOC(1)
+        .WriteTo(mmio);
+
+    while (DEPCMD::Get(ep_num).ReadFrom(mmio).CMDACT()) {
+        usleep(1000);
+    }
 }

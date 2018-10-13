@@ -6,11 +6,12 @@
 
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
-#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/usb-dci.h>
 #include <ddk/protocol/usb-mode-switch.h>
+#include <ddktl/mmio.h>
 #include <fbl/mutex.h>
+#include <fbl/optional.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/interrupt.h>
 #include <zircon/device/usb-peripheral.h>
@@ -85,7 +86,7 @@ typedef struct {
     platform_device_protocol_t pdev;
     usb_mode_switch_protocol_t ums;
     usb_dci_interface_t dci_intf;
-    mmio_buffer_t mmio;
+    fbl::optional<ddk::MmioBuffer> mmio;
     zx::handle bti_handle;
 
     usb_mode_t usb_mode;
@@ -115,8 +116,9 @@ typedef struct {
     bool configured;
 } dwc3_t;
 
-static inline volatile uint8_t* dwc3_mmio(dwc3_t* dwc) {
-    return static_cast<volatile uint8_t*>(dwc->mmio.vaddr);
+
+static inline ddk::MmioBuffer* dwc3_mmio(dwc3_t* dwc) {
+    return &*dwc->mmio;
 }
 
 void dwc3_usb_reset(dwc3_t* dwc);
@@ -164,7 +166,6 @@ void dwc3_events_start(dwc3_t* dwc);
 void dwc3_events_stop(dwc3_t* dwc);
 
 // Utils
-void dwc3_wait_bits(volatile uint32_t* ptr, uint32_t bits, uint32_t expected);
 void dwc3_print_status(dwc3_t* dwc);
 
 __BEGIN_CDECLS

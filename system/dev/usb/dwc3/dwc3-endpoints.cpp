@@ -23,19 +23,15 @@ static zx_paddr_t dwc3_ep_trb_phys(dwc3_endpoint_t* ep, dwc3_trb_t* trb) {
 }
 
 static void dwc3_enable_ep(dwc3_t* dwc, unsigned ep_num, bool enable) {
-    volatile void* reg = dwc3_mmio(dwc) + DALEPENA;
+    auto* mmio = dwc3_mmio(dwc);
 
     fbl::AutoLock lock(&dwc->lock);
 
-    uint32_t temp = DWC3_READ32(reg);
-    uint32_t bit = 1 << ep_num;
-
     if (enable) {
-        temp |= bit;
+        DALEPENA::Get().ReadFrom(mmio).EnableEp(ep_num).WriteTo(mmio);
     } else {
-        temp &= ~bit;
+        DALEPENA::Get().ReadFrom(mmio).DisableEp(ep_num).WriteTo(mmio);
     }
-    DWC3_WRITE32(reg, temp);
 }
 
 zx_status_t dwc3_ep_fifo_init(dwc3_t* dwc, unsigned ep_num) {

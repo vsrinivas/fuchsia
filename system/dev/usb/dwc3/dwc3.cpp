@@ -30,89 +30,84 @@ enum {
     IRQ_USB3,
 };
 
-void dwc3_wait_bits(volatile uint32_t* ptr, uint32_t bits, uint32_t expected) {
-    uint32_t value = DWC3_READ32(ptr);
-    while ((value & bits) != expected) {
-        usleep(1000);
-        value = DWC3_READ32(ptr);
-    }
-}
-
 void dwc3_print_status(dwc3_t* dwc) {
     auto* mmio = dwc3_mmio(dwc);
-    uint32_t status = DWC3_READ32(mmio + DSTS);
+    auto dsts = DSTS::Get().ReadFrom(mmio);
     zxlogf(TRACE, "DSTS: ");
-    zxlogf(TRACE, "USBLNKST: %d ", DSTS_USBLNKST(status));
-    zxlogf(TRACE, "SOFFN: %d ", DSTS_SOFFN(status));
-    zxlogf(TRACE, "CONNECTSPD: %d ", DSTS_CONNECTSPD(status));
-    if (status & DSTS_DCNRD) zxlogf(TRACE, "DCNRD ");
-    if (status & DSTS_SRE) zxlogf(TRACE, "SRE ");
-    if (status & DSTS_RSS) zxlogf(TRACE, "RSS ");
-    if (status & DSTS_SSS) zxlogf(TRACE, "SSS ");
-    if (status & DSTS_COREIDLE) zxlogf(TRACE, "COREIDLE ");
-    if (status & DSTS_DEVCTRLHLT) zxlogf(TRACE, "DEVCTRLHLT ");
-    if (status & DSTS_RXFIFOEMPTY) zxlogf(TRACE, "RXFIFOEMPTY ");
+    zxlogf(TRACE, "USBLNKST: %d ", dsts.USBLNKST());
+    zxlogf(TRACE, "SOFFN: %d ", dsts.SOFFN());
+    zxlogf(TRACE, "CONNECTSPD: %d ", dsts.CONNECTSPD());
+    if (dsts.DCNRD()) zxlogf(TRACE, "DCNRD ");
+    if (dsts.SRE()) zxlogf(TRACE, "SRE ");
+    if (dsts.RSS()) zxlogf(TRACE, "RSS ");
+    if (dsts.SSS()) zxlogf(TRACE, "SSS ");
+    if (dsts.COREIDLE()) zxlogf(TRACE, "COREIDLE ");
+    if (dsts.DEVCTRLHLT()) zxlogf(TRACE, "DEVCTRLHLT ");
+    if (dsts.RXFIFOEMPTY()) zxlogf(TRACE, "RXFIFOEMPTY ");
     zxlogf(TRACE, "\n");
 
-    status = DWC3_READ32(mmio + GSTS);
+    auto gsts = GSTS::Get().ReadFrom(mmio);
     zxlogf(TRACE, "GSTS: ");
-    zxlogf(TRACE, "CBELT: %d ", GSTS_CBELT(status));
-    zxlogf(TRACE, "CURMOD: %d ", GSTS_CURMOD(status));
-    if (status & GSTS_SSIC_IP) zxlogf(TRACE, "SSIC_IP ");
-    if (status & GSTS_OTG_IP) zxlogf(TRACE, "OTG_IP ");
-    if (status & GSTS_BC_IP) zxlogf(TRACE, "BC_IP ");
-    if (status & GSTS_ADP_IP) zxlogf(TRACE, "ADP_IP ");
-    if (status & GSTS_HOST_IP) zxlogf(TRACE, "HOST_IP ");
-    if (status & GSTS_DEVICE_IP) zxlogf(TRACE, "DEVICE_IP ");
-    if (status & GSTS_CSR_TIMEOUT) zxlogf(TRACE, "CSR_TIMEOUT ");
-    if (status & GSTS_BUSERRADDRVLD) zxlogf(TRACE, "BUSERRADDRVLD ");
+    zxlogf(TRACE, "CBELT: %d ", gsts.CBELT());
+    zxlogf(TRACE, "CURMOD: %d ", gsts.CURMOD());
+    if (gsts.SSIC_IP()) zxlogf(TRACE, "SSIC_IP ");
+    if (gsts.OTG_IP()) zxlogf(TRACE, "OTG_IP ");
+    if (gsts.BC_IP()) zxlogf(TRACE, "BC_IP ");
+    if (gsts.ADP_IP()) zxlogf(TRACE, "ADP_IP ");
+    if (gsts.Host_IP()) zxlogf(TRACE, "HOST_IP ");
+    if (gsts.Device_IP()) zxlogf(TRACE, "DEVICE_IP ");
+    if (gsts.CSRTimeout()) zxlogf(TRACE, "CSR_TIMEOUT ");
+    if (gsts.BUSERRADDRVLD()) zxlogf(TRACE, "BUSERRADDRVLD ");
     zxlogf(TRACE, "\n");
 }
 
 static void dwc3_stop(dwc3_t* dwc) {
     auto* mmio = dwc3_mmio(dwc);
-    uint32_t temp;
 
     fbl::AutoLock lock(&dwc->lock);
 
-    temp = DWC3_READ32(mmio + DCTL);
-    temp &= ~DCTL_RUN_STOP;
-    temp |= DCTL_CSFTRST;
-    DWC3_WRITE32(mmio + DCTL, temp);
-    auto dctl = reinterpret_cast<volatile uint32_t*>(mmio + DCTL);
-    dwc3_wait_bits(dctl, DCTL_CSFTRST, 0);
+    DCTL::Get()
+        .ReadFrom(mmio)
+        .set_RUN_STOP(0)
+        .set_CSFTRST(1)
+        .WriteTo(mmio);
+    while (DCTL::Get().ReadFrom(mmio).CSFTRST()) {
+        usleep(1000);
+    }
 }
 
 static void dwc3_start_peripheral_mode(dwc3_t* dwc) {
     auto* mmio = dwc3_mmio(dwc);
-    uint32_t temp;
 
     dwc->lock.Acquire();
 
     // configure and enable PHYs
-    temp = DWC3_READ32(mmio + GUSB2PHYCFG(0));
-    temp &= ~(GUSB2PHYCFG_USBTRDTIM_MASK | GUSB2PHYCFG_SUSPENDUSB20);
-    temp |= GUSB2PHYCFG_USBTRDTIM(9);
-    DWC3_WRITE32(mmio + GUSB2PHYCFG(0), temp);
-
-    temp = DWC3_READ32(mmio + GUSB3PIPECTL(0));
-    temp &= ~(GUSB3PIPECTL_DELAYP1TRANS | GUSB3PIPECTL_SUSPENDENABLE);
-    temp |= GUSB3PIPECTL_LFPSFILTER | GUSB3PIPECTL_SS_TX_DE_EMPHASIS(1);
-    DWC3_WRITE32(mmio + GUSB3PIPECTL(0), temp);
+    GUSB2PHYCFG::Get(0).ReadFrom(mmio).set_USBTRDTIM(9).WriteTo(mmio);
+    GUSB3PIPECTL::Get(0)
+        .ReadFrom(mmio)
+        .set_DELAYP1TRANS(0)
+        .set_SUSPENDENABLE(0)
+        .set_LFPSFILTER(1)
+        .set_SS_TX_DE_EMPHASIS(1)
+        .WriteTo(mmio);
 
     // configure for device mode
-    DWC3_WRITE32(mmio + GCTL, GCTL_U2EXIT_LFPS | GCTL_PRTCAPDIR_DEVICE | GCTL_U2RSTECN |
-                              GCTL_PWRDNSCALE(2));
+    GCTL::Get()
+        .FromValue(0)
+        .set_PWRDNSCALE(2)
+        .set_U2RSTECN(1)
+        .set_PRTCAPDIR(GCTL::PRTCAPDIR_DEVICE)
+        .set_U2EXIT_LFPS(1)
+        .WriteTo(mmio);
 
-    temp = DWC3_READ32(mmio + DCFG);
     uint32_t nump = 16;
-    uint32_t max_speed = DCFG_DEVSPD_SUPER;
-    temp &= ~DWC3_MASK(DCFG_NUMP_START, DCFG_NUMP_BITS);
-    temp |= nump << DCFG_NUMP_START;
-    temp &= ~DWC3_MASK(DCFG_DEVSPD_START, DCFG_DEVSPD_BITS);
-    temp |= max_speed << DCFG_DEVSPD_START;
-    temp &= ~DWC3_MASK(DCFG_DEVADDR_START, DCFG_DEVADDR_BITS);  // clear address
-    DWC3_WRITE32(mmio + DCFG, temp);
+    uint32_t max_speed = DCFG::DEVSPD_SUPER;
+    DCFG::Get()
+        .ReadFrom(mmio)
+        .set_NUMP(nump)
+        .set_DEVSPD(max_speed)
+        .set_DEVADDR(0)
+        .WriteTo(mmio);
 
     dwc3_events_start(dwc);
 
@@ -123,7 +118,7 @@ static void dwc3_start_peripheral_mode(dwc3_t* dwc) {
     dwc->lock.Acquire();
 
     // start the controller
-    DWC3_WRITE32(mmio + DCTL, DCTL_RUN_STOP);
+    DCTL::Get().FromValue(0).set_RUN_STOP(1).WriteTo(mmio);
 
     dwc->lock.Release();
 }
@@ -160,8 +155,14 @@ static void dwc3_start_host_mode(dwc3_t* dwc) {
     dwc->lock.Acquire();
 
     // configure for host mode
-    DWC3_WRITE32(mmio + GCTL, GCTL_U2EXIT_LFPS | GCTL_PRTCAPDIR_HOST | GCTL_U2RSTECN |
-                              GCTL_PWRDNSCALE(2));
+    GCTL::Get()
+        .FromValue(0)
+        .set_PWRDNSCALE(2)
+        .set_U2RSTECN(1)
+        .set_PRTCAPDIR(GCTL::PRTCAPDIR_HOST)
+        .set_U2EXIT_LFPS(1)
+        .WriteTo(mmio);
+
     dwc->lock.Release();
 
     // add a device to bind the XHCI driver
@@ -224,21 +225,20 @@ void dwc3_connection_done(dwc3_t* dwc) {
 
     dwc->lock.Acquire();
 
-    uint32_t status = DWC3_READ32(mmio + DSTS);
-    uint32_t speed = DSTS_CONNECTSPD(status);
+    uint32_t speed = DSTS::Get().ReadFrom(mmio).CONNECTSPD();
     uint16_t ep0_max_packet = 0;
 
     switch (speed) {
-    case DSTS_CONNECTSPD_HIGH:
+    case DSTS::CONNECTSPD_HIGH:
         dwc->speed = USB_SPEED_HIGH;
         ep0_max_packet = 64;
         break;
-    case DSTS_CONNECTSPD_FULL:
+    case DSTS::CONNECTSPD_FULL:
         dwc->speed = USB_SPEED_FULL;
         ep0_max_packet = 64;
         break;
-    case DSTS_CONNECTSPD_SUPER:
-    case DSTS_CONNECTSPD_ENHANCED_SUPER:
+    case DSTS::CONNECTSPD_SUPER:
+    case DSTS::CONNECTSPD_ENHANCED_SUPER:
         dwc->speed = USB_SPEED_SUPER;
         ep0_max_packet = 512;
         break;
@@ -264,7 +264,7 @@ void dwc3_set_address(dwc3_t* dwc, unsigned address) {
     auto* mmio = dwc3_mmio(dwc);
     fbl::AutoLock lock(&dwc->lock);
 
-    DWC3_SET_BITS32(mmio + DCFG, DCFG_DEVADDR_START, DCFG_DEVADDR_BITS, address);
+    DCFG::Get().ReadFrom(mmio).set_DEVADDR(address).WriteTo(mmio);
 }
 
 void dwc3_reset_configuration(dwc3_t* dwc) {
@@ -273,7 +273,7 @@ void dwc3_reset_configuration(dwc3_t* dwc) {
     dwc->lock.Acquire();
 
     // disable all endpoints except EP0_OUT and EP0_IN
-    DWC3_WRITE32(mmio + DALEPENA, (1 << EP0_OUT) | (1 << EP0_IN));
+    DALEPENA::Get().FromValue(0).EnableEp(EP0_OUT).EnableEp(EP0_IN).WriteTo(mmio);
 
     dwc->lock.Release();
 
@@ -442,8 +442,7 @@ static void dwc3_release(void* ctx) {
     }
     io_buffer_release(&dwc->event_buffer);
     io_buffer_release(&dwc->ep0_buffer);
-    mmio_buffer_release(&dwc->mmio);
-    free(dwc);
+    delete dwc;
 }
 
 static zx_protocol_device_t dwc3_device_ops = []() {
@@ -457,7 +456,7 @@ static zx_protocol_device_t dwc3_device_ops = []() {
 zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
     zxlogf(INFO, "dwc3_bind\n");
 
-    auto* dwc = static_cast<dwc3_t*>(calloc(1, sizeof(dwc3_t)));
+    auto* dwc = new dwc3_t;
     if (!dwc) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -486,12 +485,14 @@ zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
     dwc->parent = parent;
     dwc->usb_mode = USB_MODE_NONE;
 
+    mmio_buffer_t mmio;
     status = pdev_map_mmio_buffer2(&dwc->pdev, MMIO_USB3OTG, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                   &dwc->mmio);
+                                   &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "dwc3_bind: pdev_map_mmio_buffer failed\n");
         goto fail;
     }
+    dwc->mmio = mmio;
 
     status = io_buffer_init(&dwc->event_buffer, dwc->bti_handle.get(), EVENT_BUFFER_SIZE,
                             IO_BUFFER_RO | IO_BUFFER_CONTIG);
