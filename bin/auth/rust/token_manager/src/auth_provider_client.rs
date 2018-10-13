@@ -4,8 +4,8 @@
 
 use failure::{format_err, Error, ResultExt};
 use fidl::endpoints::ServerEnd;
-use fidl_fuchsia_auth::{AuthProviderConfig, AuthProviderFactoryMarker,
-                        AuthProviderProxy, AuthProviderStatus};
+use fidl_fuchsia_auth::{AuthProviderConfig, AuthProviderFactoryMarker, AuthProviderProxy,
+                        AuthProviderStatus};
 use fuchsia_app::client::{App, Launcher};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -13,8 +13,8 @@ use futures::prelude::*;
 use log::info;
 use std::sync::{Arc, RwLock};
 
-/// A simple wrapper to set an optional value after instantiation. The value
-/// cannot be unset once set.
+/// A simple wrapper to set an optional value after instantiation. The value cannot be unset once
+/// set.
 struct DeferredOption<T> {
     value: Option<T>,
 }
@@ -41,12 +41,11 @@ struct ConnectionState {
     provider_proxy: Arc<AuthProviderProxy>,
 }
 
-/// An object capable of launching a particular AuthProvider and acquiring
-/// a proxy to communicate with it.
+/// An object capable of launching a particular AuthProvider and acquiring a proxy to communicate
+/// with it.
 ///
-/// The URL and configuration parameters for this provider are supplied at
-/// construction but initialization of the interface is delayed until the first
-/// call to get_proxy().
+/// The URL and configuration parameters for this provider are supplied at construction but
+/// initialization of the interface is delayed until the first call to get_proxy().
 pub struct AuthProviderClient {
     // Most operations on an AuthProviderClient operate asynchronously. Define internal state
     // in an Arc for ease of decoupling lifetimes.
@@ -59,8 +58,8 @@ struct Inner {
     url: String,
     /// Optional params to be passed to the AuthProvider at launch.
     params: Option<Vec<String>>,
-    /// A wrapper containing the proxy object and associated objects for the AuthProvider,
-    /// once it has been created.
+    /// A wrapper containing the proxy object and associated objects for the AuthProvider, once it
+    /// has been created.
     deferred_state: RwLock<DeferredOption<ConnectionState>>,
 }
 
@@ -76,10 +75,9 @@ impl AuthProviderClient {
         }
     }
 
-    /// Gets a proxy object for actions on the AuthProvider. If a proxy has
-    /// been created previously this is returned, otherwise a new proxy is
-    /// created by launching a factory interface and then acquiring a
-    /// provider interface from this factory.
+    /// Gets a proxy object for actions on the AuthProvider. If a proxy has been created previously
+    /// this is returned, otherwise a new proxy is created by launching a factory interface and
+    /// then acquiring a provider interface from this factory.
     pub fn get_proxy(
         &self,
     ) -> impl Future<Output = Result<Arc<AuthProviderProxy>, Error>> + 'static {
@@ -115,7 +113,7 @@ impl AuthProviderClient {
                         provider_proxy: provider_proxy.clone(),
                     });
                     Ok(provider_proxy)
-                },
+                }
                 Ok(status) => Err(format_err!("Error getting auth provider: {:?}", status)),
                 Err(err) => Err(format_err!("GetAuthProvider method failed with {:?}", err)),
             }

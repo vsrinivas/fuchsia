@@ -8,10 +8,9 @@ use failure::{format_err, Error, Fail};
 use fidl_fuchsia_auth::{AuthProviderStatus, Status};
 use futures::future::{ready as fready, FutureObj};
 
-/// An Error type for problems encountered in the token manager. Each error
-/// contains the fuchsia.auth.Status that should be reported back to the
-/// client and an indication of whether it is fatal.
-
+/// An Error type for problems encountered in the token manager. Each error contains the
+/// fuchsia.auth.Status that should be reported back to the client and an indication of whether it
+/// is fatal.
 #[derive(Debug, Fail)]
 #[fail(
     display = "TokenManager error, returning {:?}. ({:?})",
@@ -21,8 +20,8 @@ use futures::future::{ready as fready, FutureObj};
 pub struct TokenManagerError {
     /// The most appropriate `fuchsia.auth.Status` to describe this problem.
     pub status: Status,
-    /// Whether this error should be considered fatal, i.e. whether it should
-    /// terminate processing of all requests on the current channel.
+    /// Whether this error should be considered fatal, i.e. whether it should terminate processing
+    /// of all requests on the current channel.
     pub fatal: bool,
     /// The root cause of this error, if available.
     pub cause: Option<Error>,

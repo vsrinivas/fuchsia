@@ -16,8 +16,7 @@ use super::token_manager::TokenManager;
 pub struct TokenManagerFactory;
 
 impl TokenManagerFactory {
-    /// Creates a new TokenManagerFactory to handle requests from the supplied
-    /// channel.
+    /// Creates a new TokenManagerFactory to handle requests from the supplied channel.
     pub fn spawn(chan: fasync::Channel) {
         fasync::spawn(
             TokenManagerFactoryRequestStream::from_channel(chan)

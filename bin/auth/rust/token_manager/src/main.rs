@@ -2,7 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! TokenManager manages a set of Service Provider credentials for a Fuchsia account.
+//!
+//! The interaction with each service provider is mediated by a component implementing the
+//! AuthProvider interface. Availalle AuthProviders are configured as a TokenManger is constructed.
+//! The token manager retains long lived credentials such as OAuth refresh tokens in persistent
+//! storage. These long lived credentials are used to request short lived credentials such as OAuth
+//! access tokens that are cached in memory.
+
 #![deny(warnings)]
+#![deny(missing_docs)]
 #![feature(async_await, await_macro, futures_api, pin)]
 
 #[macro_use]
@@ -29,7 +38,8 @@ fn main() -> Result<(), Error> {
     let fut = ServicesServer::new()
         .add_service((TokenManagerFactoryMarker::NAME, |chan| {
             TokenManagerFactory::spawn(chan)
-        })).start()
+        }))
+        .start()
         .context("Error starting Auth TokenManager server")?;
 
     executor

@@ -23,8 +23,7 @@ impl AuthContextClient {
         })
     }
 
-    /// Creates a new authentication context and returns the ClientEnd for
-    /// communicating with it.
+    /// Creates a new authentication context and returns the ClientEnd for communicating with it.
     pub fn get_new_ui_context(&self) -> Result<ClientEnd<AuthenticationUiContextMarker>, Error> {
         let (client_end, server_end) = create_endpoints()?;
 

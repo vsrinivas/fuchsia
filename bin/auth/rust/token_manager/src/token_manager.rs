@@ -35,9 +35,9 @@ const DB_POSTFIX: &str = "_token_store.json";
 
 type TokenManagerFuture<T> = FutureObj<'static, Result<T, TokenManagerError>>;
 
-/// An object capable of creating authentication tokens for a user across a
-/// range of services as represented by AuthProviderConfigs. Uses the supplied
-/// `AuthenticationContextProvider` to render UI where necessary.
+/// An object capable of creating authentication tokens for a user across a range of services as
+/// represented by AuthProviderConfigs. Uses the supplied `AuthenticationContextProvider` to render
+/// UI where necessary.
 pub struct TokenManager {
     /// A map of clients capable of communicating with each AuthProvider.
     auth_providers: HashMap<String, AuthProviderClient>,
@@ -50,8 +50,8 @@ pub struct TokenManager {
 }
 
 impl TokenManager {
-    /// Creates a new TokenManager to handle requests for the specified user
-    /// over the supplied channel.
+    /// Creates a new TokenManager to handle requests for the specified user over the supplied
+    /// channel.
     pub fn spawn(
         user_id: String, application_url: String, auth_provider_configs: Vec<AuthProviderConfig>,
         auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
@@ -103,7 +103,8 @@ impl TokenManager {
                     apc.auth_provider_type.clone(),
                     AuthProviderClient::from_config(apc),
                 )
-            }).collect();
+            })
+            .collect();
 
         let auth_context = AuthContextClient::from_client_end(auth_context_provider)
             .map_err(|err| format_err!("Error creating AuthContext {:?}", err))?;
@@ -116,8 +117,8 @@ impl TokenManager {
         })
     }
 
-    /// Handles a single request to the TokenManager by dispatching to more
-    /// specific functions for each method.
+    /// Handles a single request to the TokenManager by dispatching to more specific functions for
+    /// each method.
     fn handle_request(
         &mut self, req: TokenManagerRequest,
     ) -> FutureObj<'static, Result<(), failure::Error>> {
@@ -192,8 +193,8 @@ impl TokenManager {
         }
     }
 
-    /// Performs authorization for connected devices flow for the supplied
-    /// 'AppConfig' and returns an 'UserProfileInfo' on successful user consent.
+    /// Performs authorization for connected devices flow for the supplied 'AppConfig' and returns
+    /// an 'UserProfileInfo' on successful user consent.
     fn handle_iotid_authorize(
         &self, app_config: AppConfig, user_profile_id: Option<String>, _app_scopes: Vec<String>,
         auth_code: Option<String>,
@@ -207,70 +208,73 @@ impl TokenManager {
         );
 
         let auth_provider_proxy_fut = self.get_auth_provider_proxy(&app_config.auth_provider_type);
-        FutureObj::new(Box::new(async move {
-            let proxy = await!(auth_provider_proxy_fut)?;
+        FutureObj::new(Box::new(
+            async move {
+                let proxy = await!(auth_provider_proxy_fut)?;
 
-            // TODO(ukode): Create a new attestation signer handle for
-            // each request using the device attestation key with better
-            // error handling.
-            let (_server_chan, client_chan) = zx::Channel::create()
-                .map_err(|err| {
-                    TokenManagerError::new(Status::InternalError).with_cause(err)
-                }).expect("Failed to create attestation_signer");
-            let attestation_signer = ClientEnd::<AttestationSignerMarker>::new(client_chan);
+                // TODO(ukode): Create a new attestation signer handle for
+                // each request using the device attestation key with better
+                // error handling.
+                let (_server_chan, client_chan) = zx::Channel::create()
+                    .map_err(|err| TokenManagerError::new(Status::InternalError).with_cause(err))
+                    .expect("Failed to create attestation_signer");
+                let attestation_signer = ClientEnd::<AttestationSignerMarker>::new(client_chan);
 
-            // TODO(ukode): Add product root certificates and device
-            // attestation certificate to this certificate chain.
-            let certificate_chain = Vec::<String>::new();
+                // TODO(ukode): Add product root certificates and device
+                // attestation certificate to this certificate chain.
+                let certificate_chain = Vec::<String>::new();
 
-            // TODO(ukode): Create an ephemeral credential key and
-            // add the public key params here.
-            let credential_key = CredentialEcKey {
-                curve: String::from("P-256"),
-                key_x_val: String::from("TODO"),
-                key_y_val: String::from("TODO"),
-                fingerprint_sha_256: String::from("TODO"),
-            };
+                // TODO(ukode): Create an ephemeral credential key and
+                // add the public key params here.
+                let credential_key = CredentialEcKey {
+                    curve: String::from("P-256"),
+                    key_x_val: String::from("TODO"),
+                    key_y_val: String::from("TODO"),
+                    fingerprint_sha_256: String::from("TODO"),
+                };
 
-            let mut attestation_jwt_params = AttestationJwtParams {
-                credential_eckey: credential_key,
-                certificate_chain: certificate_chain,
-                auth_code: auth_code.clone().unwrap_or("".to_string()),
-            };
+                let mut attestation_jwt_params = AttestationJwtParams {
+                    credential_eckey: credential_key,
+                    certificate_chain: certificate_chain,
+                    auth_code: auth_code.clone().unwrap_or("".to_string()),
+                };
 
-            let (status, credential, _access_token, auth_challenge, user_profile_info)
-                = await!(proxy.get_persistent_credential_from_attestation_jwt(
-                    attestation_signer,
-                    &mut attestation_jwt_params,
-                    Some(ui_context),
-                    user_profile_id.as_ref().map(|x| &**x),
-                )).map_err(|err| {
-                    TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-                })?;
+                let (status, credential, _access_token, auth_challenge, user_profile_info) =
+                    await!(proxy.get_persistent_credential_from_attestation_jwt(
+                        attestation_signer,
+                        &mut attestation_jwt_params,
+                        Some(ui_context),
+                        user_profile_id.as_ref().map(|x| &**x),
+                    ))
+                    .map_err(|err| {
+                        TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+                    })?;
 
-            match (credential, auth_challenge, user_profile_info) {
-                (Some(credential), Some(_auth_challenge), Some(user_profile_info)) => {
-                    // Store persistent credential
-                    let db_value = CredentialValue::new(
-                        auth_provider_type,
-                        user_profile_info.id.clone(),
-                        credential,
-                        None,
-                    ).map_err(|_| Status::AuthProviderServerError)?;
-                    store.lock().unwrap().add_credential(db_value)?;
+                match (credential, auth_challenge, user_profile_info) {
+                    (Some(credential), Some(_auth_challenge), Some(user_profile_info)) => {
+                        // Store persistent credential
+                        let db_value = CredentialValue::new(
+                            auth_provider_type,
+                            user_profile_info.id.clone(),
+                            credential,
+                            None,
+                        )
+                        .map_err(|_| Status::AuthProviderServerError)?;
+                        store.lock().unwrap().add_credential(db_value)?;
 
-                    // TODO(ukode): Store credential keys
+                        // TODO(ukode): Store credential keys
 
-                    // TODO(ukode): Cache auth_challenge
-                    Ok(*user_profile_info)
+                        // TODO(ukode): Cache auth_challenge
+                        Ok(*user_profile_info)
+                    }
+                    _ => Err(TokenManagerError::from(status)),
                 }
-                _ => Err(TokenManagerError::from(status)),
-            }
-        }))
+            },
+        ))
     }
 
-    /// Performs OAuth authorization for the supplied 'AppConfig' and returns an
-    /// 'UserProfileInfo' on successful user consent.
+    /// Performs OAuth authorization for the supplied 'AppConfig' and returns an 'UserProfileInfo'
+    /// on successful user consent.
     fn handle_authorize(
         &self, app_config: AppConfig, user_profile_id: Option<String>, _app_scopes: Vec<String>,
         _auth_code: Option<String>,
@@ -284,34 +288,37 @@ impl TokenManager {
         );
 
         let auth_provider_proxy_fut = self.get_auth_provider_proxy(&app_config.auth_provider_type);
-        FutureObj::new(Box::new(async move {
-            let proxy = await!(auth_provider_proxy_fut)?;
-            let (status, credential, user_profile_info) =
-                await!(proxy.get_persistent_credential(
+        FutureObj::new(Box::new(
+            async move {
+                let proxy = await!(auth_provider_proxy_fut)?;
+                let (status, credential, user_profile_info) =
+                    await!(proxy.get_persistent_credential(
                         Some(ui_context),
                         user_profile_id.as_ref().map(|x| &**x),
-                    )).map_err(|err| {
+                    ))
+                    .map_err(|err| {
                         TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
                     })?;
 
-            match (credential, user_profile_info) {
-                (Some(credential), Some(user_profile_info)) => {
-                    let db_value = CredentialValue::new(
-                        auth_provider_type,
-                        user_profile_info.id.clone(),
-                        credential,
-                        None,
-                    ).map_err(|_| Status::AuthProviderServerError)?;
-                    store.lock().unwrap().add_credential(db_value)?;
-                    Ok(*user_profile_info)
+                match (credential, user_profile_info) {
+                    (Some(credential), Some(user_profile_info)) => {
+                        let db_value = CredentialValue::new(
+                            auth_provider_type,
+                            user_profile_info.id.clone(),
+                            credential,
+                            None,
+                        )
+                        .map_err(|_| Status::AuthProviderServerError)?;
+                        store.lock().unwrap().add_credential(db_value)?;
+                        Ok(*user_profile_info)
+                    }
+                    _ => Err(TokenManagerError::from(status)),
                 }
-                _ => Err(TokenManagerError::from(status)),
-            }
-        }))
+            },
+        ))
     }
 
-    /// Sends a downscoped OAuth access token for a given `AppConfig`, user,
-    /// and set of scopes.
+    /// Sends a downscoped OAuth access token for a given `AppConfig`, user, and set of scopes.
     fn get_access_token(
         &self, app_config: AppConfig, user_profile_id: String, app_scopes: Vec<String>,
     ) -> TokenManagerFuture<Arc<OAuthToken>> {
@@ -352,8 +359,8 @@ impl TokenManager {
         }
     }
 
-    // Exchanges an existing user grant for supplied 'AppConfig' to a shortlived
-    // access token 'AuthToken' using the connected devices flow.
+    /// Exchanges an existing user grant for supplied 'AppConfig' to a shortlived access token
+    /// 'AuthToken' using the connected devices flow.
     fn handle_iotid_get_access_token(
         &self, app_config: AppConfig, user_profile_id: String, refresh_token: String,
         app_scopes: Vec<String>, cache_key: CacheKey,
@@ -366,78 +373,77 @@ impl TokenManager {
         let auth_provider_type = app_config.auth_provider_type.clone();
 
         let auth_provider_proxy_fut = self.get_auth_provider_proxy(&app_config.auth_provider_type);
-        FutureObj::new(Box::new(async move {
-            let proxy = await!(auth_provider_proxy_fut)?;
-            // TODO(ukode): Retrieve the ephemeral credential key from
-            // store and add the public key params here.
-            let credential_key = CredentialEcKey {
-                curve: String::from("P-256"),
-                key_x_val: String::from("TODO"),
-                key_y_val: String::from("TODO"),
-                fingerprint_sha_256: String::from("TODO"),
-            };
+        FutureObj::new(Box::new(
+            async move {
+                let proxy = await!(auth_provider_proxy_fut)?;
+                // TODO(ukode): Retrieve the ephemeral credential key from
+                // store and add the public key params here.
+                let credential_key = CredentialEcKey {
+                    curve: String::from("P-256"),
+                    key_x_val: String::from("TODO"),
+                    key_y_val: String::from("TODO"),
+                    fingerprint_sha_256: String::from("TODO"),
+                };
 
-            // TODO(ukode): Create a new attestation signer handle for
-            // each request using the device attestation key with better
-            // error handling.
-            let (_server_chan, client_chan) = zx::Channel::create()
-                .map_err(|err| {
-                    TokenManagerError::new(Status::InternalError).with_cause(err)
-                }).expect("Failed to create attestation_signer");
-            let attestation_signer = ClientEnd::<AttestationSignerMarker>::new(client_chan);
+                // TODO(ukode): Create a new attestation signer handle for
+                // each request using the device attestation key with better
+                // error handling.
+                let (_server_chan, client_chan) = zx::Channel::create()
+                    .map_err(|err| TokenManagerError::new(Status::InternalError).with_cause(err))
+                    .expect("Failed to create attestation_signer");
+                let attestation_signer = ClientEnd::<AttestationSignerMarker>::new(client_chan);
 
-            // TODO(ukode): Read challenge from cache.
-            let mut assertion_jwt_params = AssertionJwtParams {
-                credential_eckey: credential_key,
-                challenge: Some("".to_string()),
-            };
+                // TODO(ukode): Read challenge from cache.
+                let mut assertion_jwt_params = AssertionJwtParams {
+                    credential_eckey: credential_key,
+                    challenge: Some("".to_string()),
+                };
 
-            let scopes_copy = app_scopes_1.iter().map(|x| &**x).collect::<Vec<_>>();
+                let scopes_copy = app_scopes_1.iter().map(|x| &**x).collect::<Vec<_>>();
 
-            let (status, updated_credential, access_token, auth_challenge) =
-                await!(proxy.get_app_access_token_from_assertion_jwt(
-                    attestation_signer,
-                    &mut assertion_jwt_params,
-                    &refresh_token,
-                    &mut scopes_copy.into_iter(),
-                )).map_err(|err| {
-                    TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-                })?;
+                let (status, updated_credential, access_token, auth_challenge) =
+                    await!(proxy.get_app_access_token_from_assertion_jwt(
+                        attestation_signer,
+                        &mut assertion_jwt_params,
+                        &refresh_token,
+                        &mut scopes_copy.into_iter(),
+                    ))
+                    .map_err(|err| {
+                        TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+                    })?;
 
-            match (updated_credential, access_token, auth_challenge) {
-                (
-                    Some(updated_credential),
-                    Some(access_token),
-                    Some(_auth_challenge),
-                ) => {
-                    // Store updated_credential in token store
-                    let db_value = CredentialValue::new(
-                        auth_provider_type,
-                        user_profile_id.clone(),
-                        updated_credential,
-                        None,
-                    ).map_err(|_| Status::AuthProviderServerError)?;
+                match (updated_credential, access_token, auth_challenge) {
+                    (Some(updated_credential), Some(access_token), Some(_auth_challenge)) => {
+                        // Store updated_credential in token store
+                        let db_value = CredentialValue::new(
+                            auth_provider_type,
+                            user_profile_id.clone(),
+                            updated_credential,
+                            None,
+                        )
+                        .map_err(|_| Status::AuthProviderServerError)?;
 
-                    store.lock().unwrap().add_credential(db_value)?;
+                        store.lock().unwrap().add_credential(db_value)?;
 
-                    // Cache access token
-                    let native_token = Arc::new(OAuthToken::from(*access_token));
-                    cache.lock().unwrap().put_access_token(
-                        cache_key,
-                        &app_scopes_2,
-                        native_token.clone(),
-                    );
+                        // Cache access token
+                        let native_token = Arc::new(OAuthToken::from(*access_token));
+                        cache.lock().unwrap().put_access_token(
+                            cache_key,
+                            &app_scopes_2,
+                            native_token.clone(),
+                        );
 
-                    // TODO(ukode): Cache auth_challenge
-                    Ok(native_token)
+                        // TODO(ukode): Cache auth_challenge
+                        Ok(native_token)
+                    }
+                    _ => Err(TokenManagerError::from(status)),
                 }
-                _ => Err(TokenManagerError::from(status)),
-            }
-        }))
+            },
+        ))
     }
 
-    // Exchanges an existing user grant for supplied 'AppConfig' to a shortlived
-    // access token 'AuthToken' using the traditional OAuth flow.
+    /// Exchanges an existing user grant for supplied 'AppConfig' to a shortlived access token
+    /// 'AuthToken' using the traditional OAuth flow.
     fn handle_get_access_token(
         &self, app_config: AppConfig, refresh_token: String, app_scopes: Vec<String>,
         cache_key: CacheKey,
@@ -447,32 +453,32 @@ impl TokenManager {
         let app_scopes_2 = app_scopes_1.clone();
 
         let auth_provider_proxy_fut = self.get_auth_provider_proxy(&app_config.auth_provider_type);
-        FutureObj::new(Box::new(async move {
-            let proxy = await!(auth_provider_proxy_fut)?;
-            let scopes_copy = app_scopes_1.iter().map(|x| &**x).collect::<Vec<_>>();
-            let (status, provider_token) =
-                await!(proxy
-                    .get_app_access_token(
-                        &refresh_token,
-                        app_config.client_id.as_ref().map(|x| &**x),
-                        &mut scopes_copy.into_iter(),
-                    )).map_err(|err| {
-                        TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-                    })?;
+        FutureObj::new(Box::new(
+            async move {
+                let proxy = await!(auth_provider_proxy_fut)?;
+                let scopes_copy = app_scopes_1.iter().map(|x| &**x).collect::<Vec<_>>();
+                let (status, provider_token) = await!(proxy.get_app_access_token(
+                    &refresh_token,
+                    app_config.client_id.as_ref().map(|x| &**x),
+                    &mut scopes_copy.into_iter(),
+                ))
+                .map_err(|err| {
+                    TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+                })?;
 
-            let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
-            let native_token = Arc::new(OAuthToken::from(*provider_token));
-            cache.lock().unwrap().put_access_token(
-                cache_key,
-                &app_scopes_2,
-                native_token.clone(),
-            );
-            Ok(native_token)
-        }))
+                let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
+                let native_token = Arc::new(OAuthToken::from(*provider_token));
+                cache.lock().unwrap().put_access_token(
+                    cache_key,
+                    &app_scopes_2,
+                    native_token.clone(),
+                );
+                Ok(native_token)
+            },
+        ))
     }
 
-    /// Returns a JWT Identity token for a given `AppConfig`, user, and
-    /// audience.
+    /// Returns a JWT Identity token for a given `AppConfig`, user, and audience.
     fn get_id_token(
         &self, app_config: AppConfig, user_profile_id: String, audience: Option<String>,
     ) -> TokenManagerFuture<Arc<OAuthToken>> {
@@ -494,26 +500,27 @@ impl TokenManager {
         let refresh_token = future_try!(self.get_refresh_token(&db_key));
         let cache = self.token_cache.clone();
         let auth_provider_proxy_fut = self.get_auth_provider_proxy(&app_config.auth_provider_type);
-        FutureObj::new(Box::new(async move {
-            let proxy = await!(auth_provider_proxy_fut)?;
-            let (status, provider_token) =
-                await!(proxy.get_app_id_token(&refresh_token, audience.as_ref().map(|x| &**x)))
-                    .map_err(|err| {
-                        TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-                    })?;
-            let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
-            let native_token = Arc::new(OAuthToken::from(*provider_token));
-            cache.lock().unwrap().put_id_token(
-                cache_key,
-                audience_str,
-                native_token.clone(),
-            );
-            Ok(native_token)
-        }))
+        FutureObj::new(Box::new(
+            async move {
+                let proxy = await!(auth_provider_proxy_fut)?;
+                let (status, provider_token) =
+                    await!(proxy.get_app_id_token(&refresh_token, audience.as_ref().map(|x| &**x)))
+                        .map_err(|err| {
+                            TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+                        })?;
+                let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
+                let native_token = Arc::new(OAuthToken::from(*provider_token));
+                cache
+                    .lock()
+                    .unwrap()
+                    .put_id_token(cache_key, audience_str, native_token.clone());
+                Ok(native_token)
+            },
+        ))
     }
 
-    /// Returns a Firebase a given `AppConfig`, user, audience, and Firebase
-    /// API key, creating an ID token if necessary.
+    /// Returns a Firebase a given `AppConfig`, user, audience, and Firebase API key, creating an
+    /// ID token if necessary.
     fn get_firebase_token(
         &self, app_config: AppConfig, user_profile_id: String, audience: String, api_key: String,
     ) -> TokenManagerFuture<Arc<FirebaseAuthToken>> {
@@ -535,22 +542,23 @@ impl TokenManager {
         let auth_provider_type = app_config.auth_provider_type.clone();
         let id_token_future = self.get_id_token(app_config, user_profile_id, Some(audience));
         let proxy_future = self.get_auth_provider_proxy(&auth_provider_type);
-        FutureObj::new(Box::new(async move {
-            let (id_token, proxy) = try_join!(id_token_future, proxy_future)?;
-            let (status, provider_token) =
-                await!(proxy.get_app_firebase_token(&*id_token, &api_key))
-                    .map_err(|err|
+        FutureObj::new(Box::new(
+            async move {
+                let (id_token, proxy) = try_join!(id_token_future, proxy_future)?;
+                let (status, provider_token) =
+                    await!(proxy.get_app_firebase_token(&*id_token, &api_key)).map_err(|err| {
                         TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-                    )?;
-            let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
-            let native_token = Arc::new(FirebaseAuthToken::from(*provider_token));
-            cache.lock().unwrap().put_firebase_token(
-                cache_key,
-                api_key_clone,
-                native_token.clone(),
-            );
-            Ok(native_token)
-        }))
+                    })?;
+                let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
+                let native_token = Arc::new(FirebaseAuthToken::from(*provider_token));
+                cache.lock().unwrap().put_firebase_token(
+                    cache_key,
+                    api_key_clone,
+                    native_token.clone(),
+                );
+                Ok(native_token)
+            },
+        ))
     }
 
     /// Deletes any existing tokens for a user in both the database and cache.
@@ -572,55 +580,57 @@ impl TokenManager {
 
         // Request that the auth provider revoke the credential server-side.
         let auth_provider_proxy_fut = self.get_auth_provider_proxy(&app_config.auth_provider_type);
-        FutureObj::new(Box::new(async move {
-            let proxy = await!(auth_provider_proxy_fut)?;
-            let status = await!(proxy.revoke_app_or_persistent_credential(&refresh_token))
-                .map_err(|err| {
-                    TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-                })?;
+        FutureObj::new(Box::new(
+            async move {
+                let proxy = await!(auth_provider_proxy_fut)?;
+                let status = await!(proxy.revoke_app_or_persistent_credential(&refresh_token))
+                    .map_err(|err| {
+                        TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+                    })?;
 
-            // In the case of probably-temporary AuthProvider failures we fail this method
-            // and expect the client to retry. For other AuthProvider failures we continue
-            // to delete our copy of the credential even if the server can't revoke it.
-            // Note this means it will never be possible to ask the server to revoke the
-            // token in the future, but it does let us clean up broken tokens from our
-            // database.
-            if status == AuthProviderStatus::NetworkError {
-                return Err(TokenManagerError::from(status));
-            }
+                // In the case of probably-temporary AuthProvider failures we fail this method
+                // and expect the client to retry. For other AuthProvider failures we continue
+                // to delete our copy of the credential even if the server can't revoke it.
+                // Note this means it will never be possible to ask the server to revoke the
+                // token in the future, but it does let us clean up broken tokens from our
+                // database.
+                if status == AuthProviderStatus::NetworkError {
+                    return Err(TokenManagerError::from(status));
+                }
 
-            match cache.lock().unwrap().delete(&cache_key) {
-                Ok(()) | Err(AuthCacheError::KeyNotFound) => {},
-                Err(err) => return Err(TokenManagerError::from(err)),
-            }
+                match cache.lock().unwrap().delete(&cache_key) {
+                    Ok(()) | Err(AuthCacheError::KeyNotFound) => {}
+                    Err(err) => return Err(TokenManagerError::from(err)),
+                }
 
-            match store.lock().unwrap().delete_credential(&db_key) {
-                Ok(()) | Err(AuthDbError::CredentialNotFound) => {},
-                Err(err) => return Err(TokenManagerError::from(err)),
-            }
+                match store.lock().unwrap().delete_credential(&db_key) {
+                    Ok(()) | Err(AuthDbError::CredentialNotFound) => {}
+                    Err(err) => return Err(TokenManagerError::from(err)),
+                }
 
-            Ok(())
-        }))
+                Ok(())
+            },
+        ))
     }
 
-    /// Returns index keys for referencing a token in both the database and
-    /// cache.
+    /// Returns index keys for referencing a token in both the database and cache.
     fn create_keys(
         app_config: &AppConfig, user_profile_id: &String,
     ) -> Result<(CredentialKey, CacheKey), TokenManagerError> {
         let db_key = CredentialKey::new(
             app_config.auth_provider_type.clone(),
             user_profile_id.clone(),
-        ).map_err(|_| TokenManagerError::new(Status::InvalidRequest))?;
+        )
+        .map_err(|_| TokenManagerError::new(Status::InvalidRequest))?;
         let cache_key = CacheKey::new(
             app_config.auth_provider_type.clone(),
             user_profile_id.clone(),
-        ).map_err(|_| TokenManagerError::new(Status::InvalidRequest))?;
+        )
+        .map_err(|_| TokenManagerError::new(Status::InvalidRequest))?;
         Ok((db_key, cache_key))
     }
 
-    /// Returns an `AuthProviderProxy` to handle requests for the supplied
-    /// `AppConfig`.
+    /// Returns an `AuthProviderProxy` to handle requests for the supplied `AppConfig`.
     fn get_auth_provider_proxy(
         &self, auth_provider_type: &str,
     ) -> TokenManagerFuture<Arc<AuthProviderProxy>> {
@@ -637,8 +647,8 @@ impl TokenManager {
         })))
     }
 
-    /// Returns the current refresh token for a user from the data store.
-    /// Failure to find the user leads to an Error.
+    /// Returns the current refresh token for a user from the data store.  Failure to find the user
+    /// leads to an Error.
     fn get_refresh_token(&self, db_key: &CredentialKey) -> Result<String, TokenManagerError> {
         match (**self.token_store.lock().unwrap()).get_refresh_token(db_key) {
             Ok(rt) => Ok(rt.to_string()),
@@ -647,14 +657,13 @@ impl TokenManager {
     }
 }
 
-/// A trait that we implement for the autogenerated FIDL responder types for
-/// each method to simplify the process of responding.
+/// A trait that we implement for the autogenerated FIDL responder types for each method to
+/// simplify the process of responding.
 trait Responder: Sized {
     type Data;
 
-    /// Sends the supplied result logging any errors in the result or sending.
-    /// The return value is an error if the input was a fatal error, or Ok(())
-    /// otherwise.
+    /// Sends the supplied result logging any errors in the result or sending.  The return value is
+    /// an error if the input was a fatal error, or Ok(()) otherwise.
     fn send_result(
         self, result: Result<Self::Data, TokenManagerError>,
     ) -> Result<(), failure::Error> {
