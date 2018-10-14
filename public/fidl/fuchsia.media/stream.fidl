@@ -8,10 +8,11 @@ library fuchsia.media;
 // Ordinal range: 0x0200-0x2ff
 [FragileBase]
 interface StreamBufferSet {
-  // Add a payload buffer for stream packets.
+  // Adds a payload buffer for stream packets. StreamPacket structs reference
+  // a payload buffer by ID using the StreamPacket.payload_buffer_id field.
   0x0201: AddPayloadBuffer(uint32 id, handle<vmo> payload_buffer);
 
-  // Remove a payload buffer.
+  // Removes a payload buffer.
   0x0202: RemovePayloadBuffer(uint32 id);
 };
 
@@ -31,7 +32,7 @@ interface StreamSink {
   // Indicates the stream has ended.
   0x0303: EndOfStream();
 
-  // Discards packets previous sent via SendPacket or SendPacketNoReply.
+  // Discards packets previously sent via SendPacket or SendPacketNoReply.
   0x0304: DiscardAllPackets() -> ();
   0x0305: DiscardAllPacketsNoReply();
 };
@@ -50,7 +51,7 @@ interface StreamSource {
   // Releases a packet delivered via OnPacketProduced.
   0x0403: ReleasePacket(StreamPacket packet);
 
-  // Discards packets queued packets.
+  // Discards queued packets.
   0x0404: DiscardAllPackets() -> ();
   0x0405: DiscardAllPacketsNoReply();
 };
@@ -61,9 +62,10 @@ struct StreamPacket {
   // clock.
   int64 pts = NO_TIMESTAMP;
 
-  // Identifies the payload buffer used for this packet. This interface doesn't
-  // define how payload buffers are defined. That's left to buffer management
-  // interfaces such as StreamBufferSet.
+  // ID of the payload buffer used for this packet. When this struct is used
+  // with StreamBufferSet, this field is the ID of a payload buffer provided
+  // via StreamBufferSet.AddPayloadBuffer. Other interfaces may define other
+  // semantics for this field.
   uint32 payload_buffer_id;
 
   // Offset of the packet payload in the payload buffer.
@@ -76,13 +78,14 @@ struct StreamPacket {
   // packet.
   uint32 flags = 0;
 
-  // The buffer configuration associated with this packet. This interface
-  // doesn't define how buffer configurations are defined. That's left to
-  // other interfaces.
+  // The buffer configuration associated with this packet. The semantics of
+  // this field depend on the the interface with which this struct is used.
+  // In many contexts, this field is not used.
   uint64 buffer_config = 0;
 
-  // The stream associated with this packet. This interface doesn't define how
-  // streams are defined. That's left to other interfaces.
+  // The stream associated with this packet. The semantics of this field
+  // depend on the the interface with which this struct is used. In many
+  // contexts, this field is not used.
   uint64 stream_id = 0;
 };
 
