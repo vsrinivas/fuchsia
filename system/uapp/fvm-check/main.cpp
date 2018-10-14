@@ -22,9 +22,9 @@
 namespace {
 
 constexpr char kUsageMessage[] = R"""(
-Dump an FVM device using a saved image file (or block device).
+Validate the metadata of a FVM using a saved image file (or block device).
 
-fvm-dump [options] image_file
+fvm-check [options] image_file
 
 Options:
   --block-size (-b) xxx : Number of bytes per block. Defaults to 512.
