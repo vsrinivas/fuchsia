@@ -61,6 +61,8 @@ class FakeSession : public ::fuchsia::ui::scenic::Session {
                         ::fuchsia::ui::gfx::vec3 ray_direction,
                         HitTestDeviceRayCallback callback) override;
 
+  void SetDebugName(fidl::StringPtr debug_name) override {}
+
  private:
   static constexpr uint32_t kNullResourceId = 0;
 

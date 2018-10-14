@@ -66,6 +66,14 @@ void Session::HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
                     std::move(callback));
 }
 
+void Session::SetDebugName(fidl::StringPtr debug_name) {
+  auto& dispatcher = dispatchers_[System::TypeId::kGfx];
+  FXL_DCHECK(dispatcher);
+  TempSessionDelegate* delegate =
+      static_cast<TempSessionDelegate*>(dispatcher.get());
+  delegate->SetDebugName(*debug_name);
+}
+
 void Session::HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
                                ::fuchsia::ui::gfx::vec3 ray_direction,
                                HitTestCallback callback) {

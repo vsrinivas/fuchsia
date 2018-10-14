@@ -126,6 +126,8 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   // to Unbind().
   void Rebind();
 
+  void SetDebugName(const std::string& debug_name);
+
  private:
   // |fuchsia::ui::scenic::SessionListener|
   void OnScenicError(fidl::StringPtr error) override;

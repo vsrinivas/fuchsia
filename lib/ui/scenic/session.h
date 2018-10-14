@@ -61,6 +61,9 @@ class Session final : public fuchsia::ui::scenic::Session,
                         ::fuchsia::ui::gfx::vec3 ray_direction,
                         HitTestCallback callback) override;
 
+  // |fuchsia::ui::scenic::Session|
+  void SetDebugName(fidl::StringPtr debug_name) override;
+
   // |EventReporter|
   // Enqueues the gfx/cmd event and schedules call to FlushEvents().
   void EnqueueEvent(fuchsia::ui::gfx::Event event) override;

@@ -65,6 +65,8 @@ class TempSessionDelegate : public CommandDispatcher {
       ::fuchsia::ui::gfx::vec3 ray_direction,
       fuchsia::ui::scenic::Session::HitTestCallback callback) = 0;
 
+  virtual void SetDebugName(const std::string& debug_name) = 0;
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(TempSessionDelegate);
 };

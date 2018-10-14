@@ -1549,7 +1549,8 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
          scheduled_updates_.front().presentation_time <= presentation_time) {
     if (!scheduled_updates_.front().acquire_fences->ready()) {
       TRACE_INSTANT("gfx", "Session missed frame", TRACE_SCOPE_PROCESS,
-                    "session_id", id(), "target presentation time (usecs)",
+                    "session_id", id(), "session_debug_name", debug_name_,
+                    "target presentation time (usecs)",
                     presentation_time / 1000,
                     "session target presentation time (usecs)",
                     scheduled_updates_.front().presentation_time / 1000);

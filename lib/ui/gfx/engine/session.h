@@ -106,6 +106,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
                         ::fuchsia::ui::gfx::vec3 ray_direction,
                         fuchsia::ui::scenic::Session::HitTestCallback callback);
 
+  void SetDebugName(const std::string& debug_name) { debug_name_ = debug_name; }
+
  protected:
   friend class SessionHandler;
   // Called only by SessionHandler. Use BeginTearDown() instead when you need to
@@ -329,6 +331,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
       scheduled_image_pipe_updates_;
 
   const SessionId id_;
+  std::string debug_name_;
   Engine* const engine_;
   ErrorReporter* error_reporter_ = nullptr;
   EventReporter* event_reporter_ = nullptr;

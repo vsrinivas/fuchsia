@@ -54,6 +54,11 @@ class SessionHandler : public TempSessionDelegate {
       ::fuchsia::ui::gfx::vec3 ray_direction,
       fuchsia::ui::scenic::Session::HitTestCallback callback) override;
 
+  // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
+  void SetDebugName(const std::string& debug_name) override {
+    session_->SetDebugName(debug_name);
+  }
+
   // |scenic::CommandDispatcher|
   void DispatchCommand(fuchsia::ui::scenic::Command command) override;
 

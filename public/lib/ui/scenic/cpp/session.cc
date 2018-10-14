@@ -177,4 +177,8 @@ void Session::OnScenicEvent(
     event_handler_(std::move(events));
 }
 
+void Session::SetDebugName(const std::string& debug_name) {
+  session_->SetDebugName(debug_name);
+}
+
 }  // namespace scenic
