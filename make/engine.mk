@@ -684,14 +684,6 @@ KERNEL_DEFINES += \
     ARCH_$(ARCH)=1 \
     ARCH=\"$(ARCH)\" \
 
-# debug build?
-# TODO(johngro) : Make LK and ZX debug levels independently controlable.
-ifneq ($(DEBUG),)
-GLOBAL_DEFINES += \
-    LK_DEBUGLEVEL=$(DEBUG) \
-    ZX_DEBUGLEVEL=$(DEBUG)
-endif
-
 # allow additional defines from outside the build system
 ifneq ($(EXTERNAL_DEFINES),)
 GLOBAL_DEFINES += $(EXTERNAL_DEFINES)
@@ -807,6 +799,7 @@ endif
 HOST_COMPILEFLAGS := -g -O2 -Isystem/public -Isystem/private -I$(GENERATED_INCLUDES)
 HOST_COMPILEFLAGS += -Wall -Wextra
 HOST_COMPILEFLAGS += -Wno-unused-parameter -Wno-sign-compare
+HOST_COMPILEFLAGS += -include $(HOST_CONFIG_HEADER)
 HOST_CFLAGS := -std=c11
 HOST_CPPFLAGS := -std=c++17 -fno-exceptions -fno-rtti
 HOST_LDFLAGS :=
@@ -904,6 +897,17 @@ HOST_DEFINES += HOST_CFLAGS=\"$(subst $(SPACE),_,$(HOST_CFLAGS))\"
 HOST_DEFINES += HOST_CPPFLAGS=\"$(subst $(SPACE),_,$(HOST_CPPFLAGS))\"
 HOST_DEFINES += HOST_ASMFLAGS=\"$(subst $(SPACE),_,$(HOST_ASMFLAGS))\"
 HOST_DEFINES += HOST_LDFLAGS=\"$(subst $(SPACE),_,$(HOST_LDFLAGS))\"
+
+# debug build?
+# TODO(johngro) : Make LK and ZX debug levels independently controlable.
+ifneq ($(DEBUG),)
+GLOBAL_DEFINES += \
+    LK_DEBUGLEVEL=$(DEBUG) \
+    ZX_DEBUGLEVEL=$(DEBUG)
+HOST_DEFINES += \
+    LK_DEBUGLEVEL=$(DEBUG) \
+    ZX_DEBUGLEVEL=$(DEBUG)
+endif
 
 #$(info LIBGCC = $(LIBGCC))
 #$(info GLOBAL_COMPILEFLAGS = $(GLOBAL_COMPILEFLAGS))
