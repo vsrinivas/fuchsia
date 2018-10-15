@@ -23,7 +23,20 @@ function main {
 
   local -r build_dir="$1"
 
-  fx-config-write "${build_dir}"
+  if [[ "$build_dir" == /* ]]; then
+    local -r full_build_dir="${build_dir}"
+  else
+    local -r full_build_dir="${FUCHSIA_DIR}/${build_dir}"
+  fi
+
+  if [[ -e "${full_build_dir}/args.gn" ]]; then
+    fx-config-write "${build_dir}"
+  else
+    echo "\"${build_dir}\" is not a valid build dir."
+    echo ""
+    fx-command-help
+    return 1
+  fi
 }
 
 main "$@"
