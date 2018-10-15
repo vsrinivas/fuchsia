@@ -94,26 +94,12 @@ source_set("sources") {
     "vp9_utils.h",
 
     # CodecFactory+Codec interface handling:
-    "codec_adapter.cc",
-    "codec_adapter.h",
-    "codec_adapter_events.cc",
-    "codec_adapter_events.h",
     "codec_adapter_h264.cc",
     "codec_adapter_h264.h",
     "codec_adapter_mpeg2.cc",
     "codec_adapter_mpeg2.h",
     "codec_adapter_vp9.cc",
     "codec_adapter_vp9.h",
-    "codec_admission_control.cc",
-    "codec_admission_control.h",
-    "codec_buffer.cc",
-    "codec_buffer.h",
-    "codec_impl.cc",
-    "codec_impl.h",
-    "codec_input_item.cc",
-    "codec_input_item.h",
-    "codec_packet.cc",
-    "codec_packet.h",
     "device_fidl.cc",
     "device_fidl.h",
     "local_codec_factory.cc",
@@ -132,6 +118,7 @@ source_set("sources") {
   deps = [
     ":test_support",
     "third_party/libvpx",
+    "//garnet/lib/media/codec_impl",
     "//garnet/public/fidl/fuchsia.mediacodec",
     "//garnet/public/lib/fidl/cpp",
   ]
@@ -144,6 +131,7 @@ source_set("tests") {
   deps = [
     ":sources",
     ":test_support",
+    "//garnet/lib/media/codec_impl:codec_impl",
     "//garnet/public/fidl/fuchsia.mediacodec",
     "//third_party/googletest:gtest",
   ]

@@ -9,10 +9,9 @@
 #include "codec_adapter_h264.h"
 #include "codec_adapter_mpeg2.h"
 #include "codec_adapter_vp9.h"
-#include "codec_admission_control.h"
 
 #include <lib/fidl/cpp/clone.h>
-
+#include <lib/media/codec_impl/codec_admission_control.h>
 #include <optional>
 
 namespace {
@@ -212,7 +211,9 @@ void LocalCodecFactory::CreateDecoder(
         }
 
         std::unique_ptr<CodecImpl> codec = std::make_unique<CodecImpl>(
-            std::move(codec_admission), device_,
+            std::move(codec_admission),
+            device_->driver()->shared_fidl_loop()->dispatcher(),
+            device_->driver()->shared_fidl_thread(),
             std::make_unique<fuchsia::mediacodec::CreateDecoder_Params>(
                 std::move(video_decoder_params)),
             std::move(video_decoder));

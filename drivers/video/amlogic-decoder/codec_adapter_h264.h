@@ -5,10 +5,9 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_H264_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_H264_H_
 
-#include "codec_adapter.h"
-
 #include <fbl/macros.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/zx/bti.h>
 
 class AmlogicVideo;

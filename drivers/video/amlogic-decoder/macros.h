@@ -63,9 +63,4 @@ __WARN_UNUSED_RESULT bool SpinWaitForRegister(DurationType timeout,
   return true;
 }
 
-inline void BreakDebugger() {
-  // TODO: break into debugger
-  abort();
-}
-
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MACROS_H_

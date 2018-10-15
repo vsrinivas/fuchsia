@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_FRAME_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_FRAME_H_
+#ifndef GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_FRAME_H_
+#define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_FRAME_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 
@@ -17,4 +17,4 @@ struct CodecFrame {
   CodecPacket* codec_packet;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_FRAME_H_
+#endif  // GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_FRAME_H_

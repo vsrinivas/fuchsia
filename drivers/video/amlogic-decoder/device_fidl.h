@@ -5,12 +5,11 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DEVICE_FIDL_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DEVICE_FIDL_H_
 
-#include "codec_impl.h"
-
 #include "local_codec_factory.h"
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/media/codec_impl/codec_impl.h>
 
 #include <map>
 

@@ -48,7 +48,8 @@ static zx_protocol_device_t amlogic_video_device_ops = {
 }  // namespace
 
 DeviceCtx::DeviceCtx(DriverCtx* driver)
-    : driver_(driver), codec_admission_control_(this) {
+    : driver_(driver),
+      codec_admission_control_(driver->shared_fidl_loop()->dispatcher()) {
   video_ = std::make_unique<AmlogicVideo>();
   device_fidl_ = std::make_unique<DeviceFidl>(this);
 }

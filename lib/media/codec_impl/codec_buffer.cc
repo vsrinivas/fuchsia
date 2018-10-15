@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "codec_buffer.h"
+#include <lib/media/codec_impl/codec_buffer.h>
 
 #include <zircon/assert.h>
 
-#include "codec_impl.h"
-#include "codec_port.h"
+#include <lib/media/codec_impl/codec_impl.h>
+#include <lib/media/codec_impl/codec_port.h>
 
 CodecBuffer::CodecBuffer(CodecImpl* parent, CodecPort port,
                          fuchsia::mediacodec::CodecBuffer buffer)

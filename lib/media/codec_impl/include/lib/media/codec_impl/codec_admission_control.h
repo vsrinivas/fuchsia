@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADMISSION_CONTROL_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADMISSION_CONTROL_H_
+#ifndef GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_ADMISSION_CONTROL_H_
+#define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_ADMISSION_CONTROL_H_
 
+#include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <zircon/compiler.h>
 
@@ -16,15 +17,11 @@
 //
 // There's a limit of 1 for single-instance decoders, but arbitrarily-many
 // multi-instance decoders can be used if there's no single-instance decoder.
-class DeviceCtx;
 class CodecAdmission;
 class CodecAdmissionControl {
  public:
-  // Should be created by DeviceCtx only.
-  //
-  // The CodecAdmissionControl is a member of DeviceCtx so inherently out-lasts
-  // the parent device_ctx pointer.
-  explicit CodecAdmissionControl(DeviceCtx* device_ctx);
+  // Create with a dispatcher to post async calls to the shared fidl thread.
+  explicit CodecAdmissionControl(async_dispatcher_t* shared_fidl_dispatcher);
 
   // Get a move-only CodecAdmission as a move-only ticket that allows creation
   // of a CodecImpl.
@@ -62,7 +59,7 @@ class CodecAdmissionControl {
 
   void RemoveCodec(bool multi_instance);
 
-  DeviceCtx* device_ctx_ = nullptr;
+  async_dispatcher_t* shared_fidl_dispatcher_;
 
   std::mutex lock_;
   uint32_t single_instance_codec_count_ __TA_GUARDED(lock_);
@@ -92,4 +89,4 @@ class CodecAdmission {
   bool multi_instance_;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADMISSION_CONTROL_H_
+#endif  // GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_ADMISSION_CONTROL_H_

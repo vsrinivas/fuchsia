@@ -4,7 +4,7 @@
 
 #include "device_fidl.h"
 
-#include "codec_admission_control.h"
+#include <lib/media/codec_impl/codec_admission_control.h>
 #include "device_ctx.h"
 
 #include <threads.h>

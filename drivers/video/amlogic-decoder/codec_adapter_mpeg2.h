@@ -5,9 +5,8 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_MPEG2_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_MPEG2_H_
 
+#include <lib/media/codec_impl/codec_adapter.h>
 #include <zircon/compiler.h>
-
-#include "codec_adapter.h"
 
 class DeviceCtx;
 class AmlogicVideo;

@@ -10,6 +10,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
+#include <lib/media/codec_impl/codec_frame.h>
 #include <lib/zx/bti.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -17,7 +18,6 @@
 
 #include <functional>
 
-#include "codec_frame.h"
 #include "decoder_core.h"
 #include "pts_manager.h"
 #include "registers.h"

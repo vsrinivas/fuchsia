@@ -4,7 +4,8 @@
 
 #include "vp9_decoder.h"
 
-#include "codec_packet.h"
+#include <lib/media/codec_impl/codec_packet.h>
+
 #include "firmware_blob.h"
 #include "macros.h"
 #include "memory_barriers.h"

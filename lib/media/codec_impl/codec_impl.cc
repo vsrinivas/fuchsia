@@ -2,17 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "codec_impl.h"
+#include <lib/media/codec_impl/codec_impl.h>
 
 #include <fbl/macros.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/defer.h>
 
 #include <threads.h>
-
-#include "device_ctx.h"
-#include "macros.h"
 
 // "is_bound_checks" - In serveral lamdas that just send a message, we check
 // is_bound() first, only becaues of ZX_POL_BAD_HANDLE ZX_POL_ACTION_EXCEPTION.
@@ -142,13 +140,15 @@ uint32_t BufferCountFromPortSettings(
 }  // namespace
 
 CodecImpl::CodecImpl(
-    std::unique_ptr<CodecAdmission> codec_admission, DeviceCtx* device,
+    std::unique_ptr<CodecAdmission> codec_admission,
+    async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
     std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params> decoder_params,
     fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request)
     // The parameters to CodecAdapter constructor here aren't important.
     : CodecAdapter(lock_, this),
       codec_admission_(std::move(codec_admission)),
-      device_(device),
+      shared_fidl_dispatcher_(shared_fidl_dispatcher),
+      shared_fidl_thread_(shared_fidl_thread),
       // TODO(dustingreen): Maybe have another parameter for encoder params, or
       // maybe separate constructor.
       decoder_params_(std::move(decoder_params)),
@@ -176,12 +176,12 @@ CodecImpl::~CodecImpl() {
 
   // Ensure the CodecAdmission is deleted entirely after ~this, including after
   // any relevant base class destructors have run.
-  device_->driver()->PostToSharedFidl(
-      [codec_admission = std::move(codec_admission_)] {
-        // Nothing else to do here.
-        //
-        // ~codec_admission
-      });
+  PostSerial(shared_fidl_dispatcher_,
+             [codec_admission = std::move(codec_admission_)] {
+               // Nothing else to do here.
+               //
+               // ~codec_admission
+             });
 }
 
 std::mutex& CodecImpl::lock() { return lock_; }
@@ -242,9 +242,8 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
     // of that dispatching would tend to land in FailLocked().  The concurrency
     // is just worth keeping in mind for the rest of the current lambda is all.
     PostToSharedFidl([this] {
-      zx_status_t bind_result =
-          binding_.Bind(std::move(tmp_interface_request_),
-                        device_->driver()->shared_fidl_loop()->dispatcher());
+      zx_status_t bind_result = binding_.Bind(std::move(tmp_interface_request_),
+                                              shared_fidl_dispatcher_);
       if (bind_result != ZX_OK) {
         Fail("binding_.Bind() failed");
         return;
@@ -1025,11 +1024,11 @@ void CodecImpl::UnbindLocked() {
       // In contrast, it is ok if a FIDL dispatch (on FIDL thread) re-posts to
       // the fidl_thread(); this is ok because we've already stopped any more
       // FIDL dispatching by binding_.Unbind() above.
-      device_->driver()->PostToSharedFidl(
-          [client_error_handler = std::move(owner_error_handler_)] {
-            // This call deletes the CodecImpl.
-            client_error_handler();
-          });
+      PostSerial(shared_fidl_dispatcher_,
+                 [client_error_handler = std::move(owner_error_handler_)] {
+                   // This call deletes the CodecImpl.
+                   client_error_handler();
+                 });
       // "this" will be deleted shortly async when lambda posted just above
       // runs.
       return;
@@ -1865,9 +1864,7 @@ void CodecImpl::MidStreamOutputConfigChange(uint64_t stream_lifetime_ordinal) {
   VLOGF("Done with mid-stream format change.\n");
 }
 
-thrd_t CodecImpl::fidl_thread() {
-  return device_->driver()->shared_fidl_thread();
-}
+thrd_t CodecImpl::fidl_thread() { return shared_fidl_thread_; }
 
 void CodecImpl::SendFreeInputPacketLocked(
     fuchsia::mediacodec::CodecPacketHeader header) {
@@ -1981,8 +1978,7 @@ void CodecImpl::vFailLocked(bool is_fatal, const char* format, va_list args) {
   // with trying to send.
 
   if (is_fatal) {
-    BreakDebugger();
-    exit(-1);
+    abort();
   } else {
     UnbindLocked();
   }
@@ -1994,7 +1990,8 @@ void CodecImpl::vFailLocked(bool is_fatal, const char* format, va_list args) {
 }
 
 void CodecImpl::PostSerial(async_dispatcher_t* async, fit::closure to_run) {
-  device_->driver()->PostSerial(async, std::move(to_run));
+  zx_status_t result = async::PostTask(async, std::move(to_run));
+  ZX_ASSERT(result == ZX_OK);
 }
 
 void CodecImpl::PostToSharedFidl(
@@ -2009,12 +2006,11 @@ void CodecImpl::PostToSharedFidl(
   // self-contained while still permitting FIDL dispatch to lambda self-post.
   ZX_DEBUG_ASSERT(promise_not_on_previously_posted_fidl_thread_lambda ||
                   (thrd_current() != fidl_thread()));
-  device_->driver()->PostToSharedFidl(std::move(to_run));
+  PostSerial(shared_fidl_dispatcher_, std::move(to_run));
 }
 
 void CodecImpl::PostToStreamControl(fit::closure to_run) {
-  device_->driver()->PostSerial(stream_control_loop_.dispatcher(),
-                                std::move(to_run));
+  PostSerial(stream_control_loop_.dispatcher(), std::move(to_run));
 }
 
 bool CodecImpl::IsStoppingLocked() { return was_unbind_started_; }
@@ -2252,16 +2248,15 @@ void CodecImpl::onCoreCodecOutputEndOfStream(bool error_detected_before) {
     stream_->SetOutputEndOfStream();
     output_end_of_stream_seen_.notify_all();
     VLOGF("sending OnOutputEndOfStream()\n");
-    PostToSharedFidl(
-        [this, stream_lifetime_ordinal = stream_lifetime_ordinal_,
-         error_detected_before] {
-          // See "is_bound_checks" comment up top.
-          if (binding_.is_bound()) {
-            binding_.events().OnOutputEndOfStream(stream_lifetime_ordinal,
-                                                  error_detected_before);
-          }
-        },
-        true);
+    PostSerial(shared_fidl_dispatcher_,
+               [this, stream_lifetime_ordinal = stream_lifetime_ordinal_,
+                error_detected_before] {
+                 // See "is_bound_checks" comment up top.
+                 if (binding_.is_bound()) {
+                   binding_.events().OnOutputEndOfStream(
+                       stream_lifetime_ordinal, error_detected_before);
+                 }
+               });
   }  // ~lock
 }
 

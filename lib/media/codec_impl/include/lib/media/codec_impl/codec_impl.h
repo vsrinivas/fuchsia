@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_IMPL_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_IMPL_H_
+#ifndef GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_IMPL_H_
+#define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_IMPL_H_
 
 #include "codec_adapter.h"
 #include "codec_adapter_events.h"
@@ -58,13 +58,13 @@
 // the shared_fidl_thread(), are handled by exiting the devhost, because those
 // conditions are not really unique to any one CodecImpl.
 
-class DeviceCtx;
-
 class CodecImpl : public fuchsia::mediacodec::Codec,
                   public CodecAdapterEvents,
                   private CodecAdapter {
  public:
-  CodecImpl(std::unique_ptr<CodecAdmission> codec_admission, DeviceCtx* device,
+  CodecImpl(std::unique_ptr<CodecAdmission> codec_admission,
+            async_dispatcher_t* shared_fidl_dispatcher,
+            thrd_t shared_fidl_thread,
             std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params>
                 video_decoder_params,
             fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request);
@@ -242,6 +242,9 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
   // previous Codec channel, when there's a concurrency cap of 1 (for example).
   std::unique_ptr<CodecAdmission> codec_admission_;
 
+  async_dispatcher_t* shared_fidl_dispatcher_;
+  thrd_t shared_fidl_thread_;
+
   // Parts of CodecImpl are accessed from shared_fidl_thread(),
   // stream_control_thread_, and decoder thread(s) such as interrupt handling
   // thread(s).
@@ -278,10 +281,6 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
   // Like UnbindLocked(), but acquires the lock so the caller doesn't have to.
   // On return from this method, "this" can be deallocated.
   void Unbind();
-
-  // TODO(dustingreen): Factor out the dependency on DeviceCtx so that CodecImpl
-  // can be separate.
-  DeviceCtx* device_ = nullptr;
 
   // The CodecAdapter is owned by the CodecImpl, and is listed near the top of
   // the local variables in CodecImpl so that it gets deleted near the end of
@@ -733,4 +732,4 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecImpl);
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_IMPL_H_
+#endif  // GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_IMPL_H_

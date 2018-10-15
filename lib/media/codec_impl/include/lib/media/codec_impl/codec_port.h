@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_PORT_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_PORT_H_
+#ifndef GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_PORT_H_
+#define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_PORT_H_
 
 #include <stdint.h>
 #include <limits>
@@ -17,4 +17,4 @@ enum CodecPort {
   kInvalidPort = std::numeric_limits<uint32_t>::max(),
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_PORT_H_
+#endif  // GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_PORT_H_

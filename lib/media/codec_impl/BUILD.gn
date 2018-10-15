@@ -1,0 +1,42 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+config("codec_impl_include_config") {
+  include_dirs = [ "include" ]
+}
+
+source_set("codec_impl") {
+  sources = [
+    "codec_adapter.cc",
+    "codec_adapter_events.cc",
+    "codec_admission_control.cc",
+    "codec_buffer.cc",
+    "codec_impl.cc",
+    "codec_input_item.cc",
+    "codec_packet.cc",
+  ]
+  include_dirs = [ "include" ]
+  public = [
+    "include/lib/media/codec_impl/codec_adapter.h",
+    "include/lib/media/codec_impl/codec_adapter_events.h",
+    "include/lib/media/codec_impl/codec_admission_control.h",
+    "include/lib/media/codec_impl/codec_buffer.h",
+    "include/lib/media/codec_impl/codec_impl.h",
+    "include/lib/media/codec_impl/codec_input_item.h",
+    "include/lib/media/codec_impl/codec_packet.h",
+  ]
+  public_deps = [
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fbl",
+  ]
+  public_configs = [ ":codec_impl_include_config" ]
+  deps = [
+    "//garnet/public/fidl/fuchsia.mediacodec",
+    "//garnet/public/lib/fidl/cpp",
+  ]
+}

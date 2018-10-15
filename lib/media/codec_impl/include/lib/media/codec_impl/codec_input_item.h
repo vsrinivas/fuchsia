@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_INPUT_ITEM_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_INPUT_ITEM_H_
+#ifndef GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_INPUT_ITEM_H_
+#define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_INPUT_ITEM_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 
@@ -51,4 +51,4 @@ class CodecInputItem {
   // Lack of format_details_ and lack of packet_ means is_end_of_stream().
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_INPUT_ITEM_H_
+#endif  // GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_INPUT_ITEM_H_

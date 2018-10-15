@@ -4,10 +4,10 @@
 
 #include "h264_decoder.h"
 
+#include <lib/media/codec_impl/codec_frame.h>
+#include <lib/media/codec_impl/codec_packet.h>
 #include <zx/vmo.h>
 
-#include "codec_frame.h"
-#include "codec_packet.h"
 #include "firmware_blob.h"
 #include "macros.h"
 #include "memory_barriers.h"

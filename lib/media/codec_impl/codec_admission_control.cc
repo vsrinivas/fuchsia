@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "codec_admission_control.h"
-
-#include "device_ctx.h"
+#include <lib/media/codec_impl/codec_admission_control.h>
 
 #include <stdint.h>
 #include <zircon/assert.h>
@@ -28,7 +26,9 @@ void CodecAdmissionControl::PostAfterPreviouslyStartedClosesDone(
   // TODO(dustingreen): This post is a partial simulation of more robust fencing
   // of previously initiated closes before newly initiated create.  See TODO in
   // the header file.
-  device_ctx_->driver()->PostToSharedFidl(std::move(to_run));
+  zx_status_t result =
+      async::PostTask(shared_fidl_dispatcher_, std::move(to_run));
+  ZX_ASSERT(result == ZX_OK);
 }
 
 std::unique_ptr<CodecAdmission> CodecAdmissionControl::TryAddCodecInternal(
@@ -57,9 +57,10 @@ std::unique_ptr<CodecAdmission> CodecAdmissionControl::TryAddCodecInternal(
       new CodecAdmission(this, multi_instance));
 }
 
-CodecAdmissionControl::CodecAdmissionControl(DeviceCtx* device_ctx)
-    : device_ctx_(device_ctx) {
-  ZX_DEBUG_ASSERT(device_ctx_);
+CodecAdmissionControl::CodecAdmissionControl(
+    async_dispatcher_t* shared_fidl_dispatcher)
+    : shared_fidl_dispatcher_(shared_fidl_dispatcher) {
+  ZX_DEBUG_ASSERT(shared_fidl_dispatcher_);
 }
 
 void CodecAdmissionControl::RemoveCodec(bool multi_instance) {
