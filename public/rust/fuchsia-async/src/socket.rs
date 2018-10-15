@@ -4,8 +4,9 @@
 
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::io::{self, AsyncRead, AsyncWrite, Initializer};
-use futures::{task::LocalWaker, try_ready, Poll};
+use futures::{future::poll_fn, stream::Stream, task::LocalWaker, try_ready, Poll};
 use std::fmt;
+use std::pin::Pin;
 
 use crate::RWHandle;
 
@@ -83,6 +84,39 @@ impl Socket {
             Poll::Ready(res)
         }
     }
+
+    /// Polls for the next data on the socket, appending it to the end of |out| if it has arrived.
+    /// Not very useful for a non-datagram socket as it will return all available data
+    /// on the socket.
+    pub fn poll_datagram(
+        &self, out: &mut Vec<u8>, lw: &LocalWaker,
+    ) -> Poll<Result<usize, zx::Status>> {
+        try_ready!(self.0.poll_read(lw));
+        let avail = self.0.get_ref().outstanding_read_bytes()?;
+        let len = out.len();
+        out.resize(len + avail, 0);
+        let (_, mut tail) = out.split_at_mut(len);
+        match self.0.get_ref().read(&mut tail) {
+            Err(zx::Status::SHOULD_WAIT) => {
+                self.0.need_read(lw)?;
+                Poll::Pending
+            }
+            Err(e) => Poll::Ready(Err(e)),
+            Ok(bytes) => {
+                if bytes == avail {
+                    Poll::Ready(Ok(bytes))
+                } else {
+                    Poll::Ready(Err(zx::Status::BAD_STATE))
+                }
+            }
+        }
+    }
+
+    /// Reads the next datagram that becomes available onto the end of |out|.  Note: Using this
+    /// multiple times concurrently is an error and the first one will never complete.
+    pub async fn read_datagram<'a>(&'a self, out: &'a mut Vec<u8>) -> Result<usize, zx::Status> {
+        await!(poll_fn(move |lw| self.poll_datagram(out, lw)))
+    }
 }
 
 impl fmt::Debug for Socket {
@@ -143,6 +177,35 @@ impl<'a> AsyncWrite for &'a Socket {
     }
 }
 
+/// Note: It's probably a good idea to split the socket into read/write halves
+/// before using this so you can still write on this socket.
+/// Taking two streams of the same socket will not work.
+impl Stream for Socket {
+    type Item = Result<Vec<u8>, zx::Status>;
+
+    fn poll_next(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+        let mut res = Vec::<u8>::new();
+        match self.poll_datagram(&mut res, lw) {
+            Poll::Ready(Ok(_size)) => Poll::Ready(Some(Ok(res))),
+            Poll::Ready(Err(e)) => Poll::Ready(Some(Err(e))),
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
+impl<'a> Stream for &'a Socket {
+    type Item = Result<Vec<u8>, zx::Status>;
+
+    fn poll_next(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+        let mut res = Vec::<u8>::new();
+        match self.poll_datagram(&mut res, lw) {
+            Poll::Ready(Ok(_size)) => Poll::Ready(Some(Ok(res))),
+            Poll::Ready(Err(e)) => Poll::Ready(Some(Err(e))),
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -152,6 +215,7 @@ mod tests {
     };
     use fuchsia_zircon::prelude::*;
     use futures::future::{FutureExt, TryFutureExt};
+    use futures::stream::StreamExt;
 
     #[test]
     fn can_read_write() {
@@ -179,4 +243,70 @@ mod tests {
         let done = receiver.try_join(sender);
         exec.run_singlethreaded(done).unwrap();
     }
+
+    #[test]
+    fn can_read_datagram() {
+        let mut exec = Executor::new().unwrap();
+
+        let (one, two) = (&[0, 1], &[2, 3, 4, 5]);
+
+        let (tx, rx) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let rx = Socket::from_socket(rx).unwrap();
+
+        let mut out = vec![50];
+
+        assert!(tx.write(one).is_ok());
+        assert!(tx.write(two).is_ok());
+
+        let size = exec.run_singlethreaded(rx.read_datagram(&mut out));
+
+        assert!(size.is_ok());
+        assert_eq!(one.len(), size.unwrap());
+
+        assert_eq!([50, 0, 1], out.as_slice());
+
+        let size = exec.run_singlethreaded(rx.read_datagram(&mut out));
+
+        assert!(size.is_ok());
+        assert_eq!(two.len(), size.unwrap());
+
+        assert_eq!([50, 0, 1, 2, 3, 4, 5], out.as_slice());
+    }
+
+    #[test]
+    fn stream_datagram() {
+        let mut exec = Executor::new().unwrap();
+
+        let (tx, rx) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let mut rx = Socket::from_socket(rx).unwrap();
+
+        let packets = 20;
+
+        for size in 1..packets + 1 {
+            let mut vec = Vec::<u8>::new();
+            vec.resize(size, size as u8);
+            assert!(tx.write(&vec).is_ok());
+        }
+
+        // Close the socket.
+        drop(tx);
+
+        let stream_read_fut = async move {
+            let mut count = 0;
+            while let Some(packet) = await!(rx.next()) {
+                let packet = match packet {
+                    Ok(bytes) => bytes,
+                    Err(zx::Status::PEER_CLOSED) => break,
+                    e => panic!("received error from stream: {:?}", e),
+                };
+                count = count + 1;
+                assert_eq!(packet.len(), count);
+                assert!(packet.iter().all(|&x| x == count as u8));
+            }
+            assert_eq!(packets, count);
+        };
+
+        exec.run_singlethreaded(stream_read_fut);
+    }
+
 }
