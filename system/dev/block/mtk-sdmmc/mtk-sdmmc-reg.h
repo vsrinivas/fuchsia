@@ -32,8 +32,10 @@ public:
 
     DEF_BIT(15, data_crc_err);
     DEF_BIT(14, data_timeout);
+    DEF_BIT(12, transfer_complete);
     DEF_BIT(10, cmd_crc_err);
     DEF_BIT(9, cmd_timeout);
+    DEF_BIT(8, cmd_ready);
 };
 
 class MsdcFifoCs : public hwreg::RegisterBase<MsdcFifoCs, uint32_t> {
@@ -110,7 +112,7 @@ public:
             }
 
             if (!(req->cmd_flags & SDMMC_CMD_READ)) {
-                cmd.set_write(0);
+                cmd.set_write(1);
             }
 
             if (req->blockcount > 1) {
@@ -193,6 +195,7 @@ public:
     static auto Get() { return hwreg::RegisterAddr<DmaCtrl>(0x98); }
 
     DEF_BIT(10, last_buffer);
+    DEF_BIT(1, dma_stop);
     DEF_BIT(0, dma_start);
 };
 

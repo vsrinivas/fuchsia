@@ -221,16 +221,21 @@ zx_status_t MtkSdmmc::RequestPrepareDma(sdmmc_req_t* req) {
     DmaStartAddr::Get().FromValue(0).set(phys).WriteTo(&mmio_);
     DmaStartAddrHigh4Bits::Get().FromValue(0).set(phys).WriteTo(&mmio_);
 
+    return ZX_OK;
+}
+
+zx_status_t MtkSdmmc::RequestFinishDma(sdmmc_req_t* req) {
+    while (!MsdcInt::Get().ReadFrom(&mmio_).cmd_ready()) {}
+
     DmaCtrl::Get()
         .ReadFrom(&mmio_)
         .set_last_buffer(1)
         .set_dma_start(1)
         .WriteTo(&mmio_);
 
-    return ZX_OK;
-}
+    while (!MsdcInt::Get().ReadFrom(&mmio_).transfer_complete()) {}
 
-zx_status_t MtkSdmmc::ReadResponseDma(sdmmc_req_t* req) {
+    DmaCtrl::Get().ReadFrom(&mmio_).set_dma_stop(1).WriteTo(&mmio_);
     while (DmaCfg::Get().ReadFrom(&mmio_).dma_active()) {}
 
     zx_status_t cache_status = ZX_OK;
@@ -263,12 +268,7 @@ zx_status_t MtkSdmmc::RequestPreparePolled(sdmmc_req_t* req) {
     return ZX_OK;
 }
 
-zx_status_t MtkSdmmc::ReadResponsePolled(sdmmc_req_t* req) {
-    if (!(req->cmd_flags & SDMMC_CMD_READ)) {
-        // TODO(bradenkell): Implement block write.
-        return ZX_OK;
-    }
-
+zx_status_t MtkSdmmc::RequestFinishPolled(sdmmc_req_t* req) {
     uint32_t bytes_remaining = req->blockcount * req->blocksize;
     uint8_t* data_ptr = reinterpret_cast<uint8_t*>(req->virt_buffer) + req->buf_offset;
     while (bytes_remaining > 0) {
@@ -286,8 +286,8 @@ zx_status_t MtkSdmmc::ReadResponsePolled(sdmmc_req_t* req) {
 
 zx_status_t MtkSdmmc::SdmmcRequest(sdmmc_req_t* req) {
     uint32_t is_data_request = req->cmd_flags & SDMMC_RESP_DATA_PRESENT;
-    if (is_data_request && !(req->cmd_flags & SDMMC_CMD_READ)) {
-        // TODO(bradenkell): Implement block write.
+    if (is_data_request && !req->use_dma && !(req->cmd_flags & SDMMC_CMD_READ)) {
+        // TODO(bradenkell): Implement polled block writes.
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -310,7 +310,7 @@ zx_status_t MtkSdmmc::SdmmcRequest(sdmmc_req_t* req) {
     SdcCmd::FromRequest(req).WriteTo(&mmio_);
 
     if (is_data_request) {
-        status = req->use_dma ? ReadResponseDma(req) : ReadResponsePolled(req);
+        status = req->use_dma ? RequestFinishDma(req) : RequestFinishPolled(req);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s: %s response read failed\n", __FILE__, req->use_dma ? "DMA" : "PIO");
         }

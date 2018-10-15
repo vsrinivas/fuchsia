@@ -40,12 +40,12 @@ private:
     // Prepares the VMO and the DMA engine for receiving data.
     zx_status_t RequestPrepareDma(sdmmc_req_t* req);
     // Waits for the DMA engine to finish and unpins the VMO pages.
-    zx_status_t ReadResponseDma(sdmmc_req_t* req);
+    zx_status_t RequestFinishDma(sdmmc_req_t* req);
 
     // Clears the FIFO in preparation for receiving data.
     zx_status_t RequestPreparePolled(sdmmc_req_t* req);
     // Polls the FIFO register for received data.
-    zx_status_t ReadResponsePolled(sdmmc_req_t* req);
+    zx_status_t RequestFinishPolled(sdmmc_req_t* req);
 
     ddk::MmioBuffer mmio_;
     zx::bti bti_;
