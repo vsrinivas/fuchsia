@@ -306,86 +306,73 @@ TEST_F(MergeResolverTest, Empty) {
   EXPECT_EQ(1u, ids.size());
 }
 
-class VerifyingMergeStrategy : public MergeStrategy {
+class CapturingMergeStrategy : public MergeStrategy {
  public:
-  VerifyingMergeStrategy(async_dispatcher_t* dispatcher,
-                         storage::CommitId head1, storage::CommitId head2,
-                         storage::CommitId ancestor)
-      : dispatcher_(dispatcher),
-        head1_(std::move(head1)),
-        head2_(std::move(head2)),
-        ancestor_(std::move(ancestor)) {}
-  ~VerifyingMergeStrategy() override {}
+  CapturingMergeStrategy() {}
+  ~CapturingMergeStrategy() override {}
 
   void SetOnError(fit::function<void()> /*on_error*/) override {}
 
   void Merge(storage::PageStorage* /*storage*/, PageManager* /*page_manager*/,
-             std::unique_ptr<const storage::Commit> head_1,
-             std::unique_ptr<const storage::Commit> head_2,
-             std::unique_ptr<const storage::Commit> ancestor,
-             fit::function<void(Status)> callback) override {
-    EXPECT_EQ(ancestor_, ancestor->GetId());
-    storage::CommitId actual_head1_id = head_1->GetId();
-    if (actual_head1_id != head1_ && actual_head1_id != head2_) {
-      // Fail
-      EXPECT_EQ(head1_, actual_head1_id);
-    }
-    storage::CommitId actual_head2_id = head_2->GetId();
-    if (actual_head2_id != head1_ && actual_head2_id != head2_) {
-      // Fail
-      EXPECT_EQ(head2_, actual_head2_id);
-    }
-    async::PostTask(dispatcher_, [callback = std::move(callback)]() {
-      callback(Status::OK);
-    });
+             std::unique_ptr<const storage::Commit> merge_head_1,
+             std::unique_ptr<const storage::Commit> merge_head_2,
+             std::unique_ptr<const storage::Commit> merge_ancestor,
+             fit::function<void(Status)> merge_callback) override {
+    head_1 = std::move(merge_head_1);
+    head_2 = std::move(merge_head_2);
+    ancestor = std::move(merge_ancestor);
+    callback = std::move(merge_callback);
   }
 
   void Cancel() override{};
 
+  std::unique_ptr<const storage::Commit> head_1;
+  std::unique_ptr<const storage::Commit> head_2;
+  std::unique_ptr<const storage::Commit> ancestor;
+  fit::function<void(Status)> callback;
+
  private:
-  async_dispatcher_t* const dispatcher_;
-  const storage::CommitId head1_;
-  const storage::CommitId head2_;
-  const storage::CommitId ancestor_;
+  FXL_DISALLOW_ASSIGN(CapturingMergeStrategy);
 };
 
 TEST_F(MergeResolverTest, CommonAncestor) {
-  // Set up conflict
+  // Add commits forming the following history graph:
+  // (root) -> (1) -> (2) ->  (3)
+  //                      \
+  //                       -> (4) -> (5)
   storage::CommitId commit_1 = CreateCommit(
       storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
-
   storage::CommitId commit_2 =
       CreateCommit(commit_1, AddKeyValueToJournal("key2", "val2.0"));
-
   storage::CommitId commit_3 =
       CreateCommit(commit_2, AddKeyValueToJournal("key3", "val3.0"));
-
   storage::CommitId commit_4 =
       CreateCommit(commit_2, DeleteKeyFromJournal("key1"));
-
   storage::CommitId commit_5 =
       CreateCommit(commit_4, AddKeyValueToJournal("key2", "val2.1"));
-
-  bool called;
-  storage::Status status;
-  std::vector<storage::CommitId> ids;
-  page_storage_->GetHeadCommitIds(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &ids));
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, status);
-  EXPECT_EQ(2u, ids.size());
-  EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_3));
-  EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_5));
 
-  std::unique_ptr<VerifyingMergeStrategy> strategy =
-      std::make_unique<VerifyingMergeStrategy>(dispatcher(), commit_5, commit_3,
-                                               commit_2);
+  // Set a merge strategy to capture the requested merge.
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<TestBackoff>());
+  std::unique_ptr<CapturingMergeStrategy> strategy =
+      std::make_unique<CapturingMergeStrategy>();
+  auto strategy_ptr = strategy.get();
   resolver.SetMergeStrategy(std::move(strategy));
-  resolver.set_on_empty(QuitLoopClosure());
+  RunLoopUntilIdle();
 
+  // Verify that the strategy is asked to merge commits 5 and 3, with 2 as the
+  // common ancestor.
+  EXPECT_EQ(commit_3, strategy_ptr->head_1->GetId());
+  EXPECT_EQ(commit_5, strategy_ptr->head_2->GetId());
+  EXPECT_EQ(commit_2, strategy_ptr->ancestor->GetId());
+
+  // Resolve the conflict.
+  CreateMergeCommit(strategy_ptr->head_1->GetId(),
+                    strategy_ptr->head_2->GetId(),
+                    AddKeyValueToJournal("key_foo", "abc"));
+  strategy_ptr->callback(Status::OK);
+  strategy_ptr->callback = nullptr;
   RunLoopUntilIdle();
   EXPECT_TRUE(resolver.IsEmpty());
 }
@@ -788,52 +775,31 @@ TEST_F(MergeResolverTest, NoConflictCallback_NoConflicts) {
 TEST_F(MergeResolverTest, HasUnfinishedMerges) {
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<TestBackoff>());
-  resolver.SetMergeStrategy(nullptr);
-  resolver.set_on_empty(QuitLoopClosure());
+  std::unique_ptr<CapturingMergeStrategy> strategy =
+      std::make_unique<CapturingMergeStrategy>();
+  auto strategy_ptr = strategy.get();
+  resolver.SetMergeStrategy(std::move(strategy));
   RunLoopUntilIdle();
   EXPECT_FALSE(resolver.HasUnfinishedMerges());
 
-  // Set up conflict.
+  // Set up a conflict and verify that HasUnfinishedMerges() returns true.
   storage::CommitId commit_1 = CreateCommit(storage::kFirstPageCommitId,
                                             AddKeyValueToJournal("foo", "bar"));
   storage::CommitId commit_2 = CreateCommit(storage::kFirstPageCommitId,
                                             AddKeyValueToJournal("foo", "baz"));
-
-  bool called;
-  storage::Status status;
-  std::vector<storage::CommitId> ids;
-  page_storage_->GetHeadCommitIds(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &ids));
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, status);
-  EXPECT_EQ(2u, ids.size());
-
-  std::unique_ptr<VerifyingMergeStrategy> strategy =
-      std::make_unique<VerifyingMergeStrategy>(
-          dispatcher(), commit_1, commit_2,
-          storage::kFirstPageCommitId.ToString());
-  resolver.SetMergeStrategy(std::move(strategy));
-  resolver.set_on_empty(QuitLoopClosure());
-
-  RunLoopUntilIdle();
-  // VerifyingResolver tells MergeResolver that the conflict is finished, but
-  // doesn't touch storage. Thus, there is still two head commits at this point:
-  // MergeResolver should be empty (no merge in progress), but a merge should be
-  // pending still.
-  EXPECT_TRUE(resolver.IsEmpty());
   EXPECT_TRUE(resolver.HasUnfinishedMerges());
 
-  std::unique_ptr<LastOneWinsMergeStrategy> new_strategy =
-      std::make_unique<LastOneWinsMergeStrategy>();
-  resolver.SetMergeStrategy(std::move(new_strategy));
-  // TODO(LE-465): Simplify this so it's less brittle and easier to understand.
-  // The resolver will find the conflict in the first run, then enqueue
-  // async tasks to actually finish the merge, then the "on_empty" callback
-  // will quit the loop, so RunLoopUntilIdle will stop.
-  RunLoopUntilIdle();
-  EXPECT_TRUE(resolver.IsEmpty());
-  // This second runs the tasks enqueued by the first.
+  // Resolve the conflict and verify that HasUnfinishedMerges() returns false.
+  ASSERT_TRUE(strategy_ptr->head_1);
+  ASSERT_TRUE(strategy_ptr->head_2);
+  ASSERT_TRUE(strategy_ptr->ancestor);
+  ASSERT_TRUE(strategy_ptr->callback);
+  CreateMergeCommit(strategy_ptr->head_1->GetId(),
+                    strategy_ptr->head_2->GetId(),
+                    AddKeyValueToJournal("key3", "val3.0"));
+  strategy_ptr->callback(Status::OK);
+  strategy_ptr->callback = nullptr;
   RunLoopUntilIdle();
   EXPECT_FALSE(resolver.HasUnfinishedMerges());
 }
