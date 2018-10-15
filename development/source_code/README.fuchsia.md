@@ -16,7 +16,7 @@ in `README.fuchsia` files and software that consumes them should not
 treat the appearance of an unknown directive as an error. Similarly,
 such software should match directive keywords case-insensitively.
 
-Description lines are optional and and follow a `Description` directive
+Description lines are optional and follow a `Description` directive
 that must appear on a line by itself prior to any unstructured
 description text.
 

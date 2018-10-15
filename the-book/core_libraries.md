@@ -30,7 +30,7 @@ Much of Zircon is written in C++, both in kernel and in
 userspace. Linking against the C++ standard library is not especially
 well suited to this environment (it is too easy to allocate, throw
 exceptions, etc., and the library itself is large). There are a number
-of useful constructs in the standard libary that we would wish to use,
+of useful constructs in the standard library that we would wish to use,
 like type traits and unique pointers. However, C++ standard libraries
 are not really to be consumed piecemeal like this. So we built a
 library which provides similar constructs named fbl. This library

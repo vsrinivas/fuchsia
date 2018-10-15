@@ -17,7 +17,7 @@ Today we support automating benchmarks for these projects:
 
 ## Writing a benchmark
 
-Fuchsia benchmarks are command-line exectables that produce a JSON results file.  The
+Fuchsia benchmarks are command-line executables that produce a JSON results file.  The
 executable must meet the following criteria:
 
 1. It accepts the location to the results file as a command line flag.

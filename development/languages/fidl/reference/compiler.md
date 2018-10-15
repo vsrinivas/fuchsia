@@ -77,7 +77,7 @@ takes a number of arguments:
 
 ## Limitations
 
-For the `cpp` backend, the generated `.h` file must be incluable as
+For the `cpp` backend, the generated `.h` file must be includeable as
 `#include <fuchsia/cpp/$LIBRARY_NAME.h>`, where `$LIBRARY_NAME` is the name of
 the corresponding FIDL library. Typically, that means that the `--output-base`
 flag will have the value `$INCLUDE_BASE/fuchsia/cpp/$LIBRARY_NAME`, where

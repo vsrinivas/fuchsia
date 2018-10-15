@@ -62,7 +62,7 @@ The `binary` property describes where in the package namespace to find the
 binary to run the component.
 
 If [`runner`](#runner) is present, `program` is a freeform string-string JSON
-object interpreted as args to pass to the runner. 
+object interpreted as args to pass to the runner.
 
 ### runner
 
@@ -168,7 +168,7 @@ The set of currently known features are as follows:
   likely make this access more fine-grained than just the `/data` directory.)
 
 - `root-ssl-certificates`, which requests access to the root SSL certificates
-  for the device. These certicates are provided in the `/config/ssl` directory
+  for the device. These certificates are provided in the `/config/ssl` directory
   in the package's namespace.
 
 - `shell`, which requests access to the resources appropriate for an interactive

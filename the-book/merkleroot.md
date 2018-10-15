@@ -40,7 +40,7 @@ last block is 0 padded.
  1. Initialize the level with an index, an offset starting at 0, and an empty
     list of hashes.
  2. For each 8kb (or remainder of) of input, compute the next block identity by
-    taking the binary OR of the the level index and the current offset, followed
+    taking the binary OR of the level index and the current offset, followed
     by the length of the input.
  3. Init a SHA-256 digest, append to it the identity, the input, and if the
     input is shorter than 8kb, a pad of 0 up to 8kb.

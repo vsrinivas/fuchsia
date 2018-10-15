@@ -81,6 +81,6 @@ Chrome team has a Sheriff rotation (oncall rotation) to triage regression alerts
 dashboard only allows triaging bugs in monorail, so we'll have to make due without JIRA
 support.
 
-See this link for more information about the [Sherrif rotation]
+See this link for more information about the [Sheriff rotation]
 
-[Sherrif rotation]: https://chromium.googlesource.com/chromium/src/+/master/docs/speed/perf_regression_sheriffing.md
+[Sheriff rotation]: https://chromium.googlesource.com/chromium/src/+/master/docs/speed/perf_regression_sheriffing.md

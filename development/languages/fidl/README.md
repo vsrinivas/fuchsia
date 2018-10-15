@@ -8,7 +8,7 @@ The following topics are presented:
 * [Guides](guides/README.md) &mdash; high-level use cases
 * [Tutorial](tutorial/README.md) &mdash; language-specific "how-to"s based on the Guides
 * [Effective FIDL] &mdash; specific advice about best practices
-* [Reference](reference/README.md) &mdash; a techincal deep dive for the interested developer,
+* [Reference](reference/README.md) &mdash; a technical deep dive for the interested developer,
 	featuring FIDL grammar, language features, on-wire format, building, and so on.
 
 # Supported Languages

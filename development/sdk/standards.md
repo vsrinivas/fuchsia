@@ -52,7 +52,7 @@ FIDL definitions in the SDK should follow the [FIDL API readability rubric].
 
 ## Client Libraries
 
-### Stablity
+### Stability
 
 Client libraries are neither source nor binary stable. Clients that wish to use
 these libraries should link them into their programs, either statically or

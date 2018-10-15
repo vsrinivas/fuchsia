@@ -141,7 +141,7 @@ the system package constraint.
 
 Packaging and pushing code that lives outside the Fuchsia tree is possible, but
 will require more work. The Fuchsia package format is quite simple. It consists
-of a metdata file describing the package contents which is described in more
+of a metadata file describing the package contents which is described in more
 detail in the [Fuchsia package][pkg-struct] documentation. The metadata file is
 added to a TUF file tree and each of the contents are named after their Merkle
 root hash and put in a directory at the root of the TUF file tree called 'blobs'.

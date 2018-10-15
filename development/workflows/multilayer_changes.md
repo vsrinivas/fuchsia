@@ -25,7 +25,7 @@ previous layers at pinned revisions, which means changes that land in one layer
 are not immediately visible to the upper layers.
 
 When making a change that spans layers, you need to think about when the
-differnet layers will see the different parts of you change. For example,
+different layers will see the different parts of you change. For example,
 suppose you want to change an interface in Zircon and affects clients in Garnet.
 When you land your change in Zircon, people building Garnet will not see your
 change immediately. Instead, they will start seeing your change once Garnet

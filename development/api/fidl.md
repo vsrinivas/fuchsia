@@ -846,7 +846,7 @@ as a capability that controls access to that object.
 In protocols that use feed-forward dataflow, the client often sends many one-way
 messages to the server before sending a two-way synchronization message.  If the
 protocol involves a particularly high volume of messages, the overhead for
-sending a message can become noticable.  In those situations, consider using the
+sending a message can become noticeable.  In those situations, consider using the
 _command union pattern_ to batch multiple commands into a single message.
 
 In this pattern, the client sends a `vector` of commands rather than sending an

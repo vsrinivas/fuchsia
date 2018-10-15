@@ -79,7 +79,7 @@ The `trace` tool supports the following types of measurements:
  - `argument_value`
 
 A `duration` measurement targets a single trace event and computes the
-duration of its occurences. The target trace event can be recorded as a
+duration of its occurrences. The target trace event can be recorded as a
 duration, an async, or a flow event.
 
 **Example**:

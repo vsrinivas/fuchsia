@@ -219,7 +219,7 @@ To open a server-side resource, the server is provided some starting point
 segments by the “/” character, and each component is “looked up” with a
 callback to the underlying filesystem. If the lookup successfully returns a
 vnode, and another “/” segment is detected, then the process continues until
-(1) `lookup` failsto find a component, (2) path processing reaches the last
+(1) `lookup` fails to find a component, (2) path processing reaches the last
 component in a path, or (3) `lookup` finds a **mountpoint vnode**, which is a
 vnode that has an attached “remote” handle. For now, we will ignore mountpoint
 vnodes, although they are discussed in a section on [filesystem
@@ -233,7 +233,7 @@ interact with the Vnode. Assuming the client asked for the “foo” object
 synchronously (which is implied with the default POSIX open call), any
 additional handles required to interact with “foo” are packed into a small FIDL
 description object and passed back to the client. Alternatively, if "foo" had
-failed to open, a FIDL discription object would still be returned, but with the
+failed to open, a FIDL description object would still be returned, but with the
 “status” field set to an error code, indicating failure. Let’s assume the “foo”
 open was successful. The server will proceed to create an “iostate” object for
 “foo” and register it with the dispatcher. Doing so, future calls to “foo” can

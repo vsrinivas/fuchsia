@@ -89,7 +89,7 @@ $ mkfs /dev/class/block/003 minfs
 $ mkfs /dev/class/block/004 blobfs
 ```
 
-You're done. Now reboot and pass `-d` to `frun` to run with peristent disks.
+You're done. Now reboot and pass `-d` to `frun` to run with persistent disks.
 
 ## Keeping a spare
 

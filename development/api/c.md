@@ -119,7 +119,7 @@ A single header in a C library contains a few kinds of things.
 - A list of file inclusions
 - Extern C guards
 - Constant declarations
-- Extern symbol declations
+- Extern symbol declarations
   - Including extern function declarations
 - Static inline functions
 - Macro definitions
@@ -292,7 +292,7 @@ and for typedefs like `size_t` from the C or POSIX headers.
 
 When possible, pointer types mentioned in interfaces should refer to
 specific types. This includes pointers to opaque structs. `void*` is
-acceptable for refering to raw memory, and to interfaces that pass
+acceptable for referring to raw memory, and to interfaces that pass
 around opaque user cookies or contexts.
 
 #### Opaque/Explicit types
@@ -319,10 +319,10 @@ of the reservation.
 A future version of this document will give guidance as to how to
 describe string parameters in C interfaces.
 
-#### Anonymouse types
+#### Anonymous types
 
 Top-level anonymous types are not allowed. Anonymous structures and
-unions are allowed insade other structures, and inside function
+unions are allowed inside other structures, and inside function
 bodies, as they are then not part of the top level namespace. For
 instance, the following contains an allowed anonymous union.
 
@@ -367,7 +367,7 @@ such, not via `free`.
 
 Libraries should not expose global variables. Instead, provide
 functions to manipulate that state. Libraries with process-global
-state must be dynmaically linked, not statically. A common pattern is
+state must be dynamically linked, not statically. A common pattern is
 to split a library into a stateless static part, containing almost all
 of the code, and a small dynamic library holding global state.
 
@@ -429,7 +429,7 @@ constants.
 
 C allows for function `with_empty_parameter_lists()`, which are
 distinct from `functions_that_take(void)`. The first means "take any
-number and type of paramaters", while the second means "take zero
+number and type of parameters", while the second means "take zero
 parameters". We ban the empty parameter list for being too dangerous.
 
 ### Flexible Array Members
