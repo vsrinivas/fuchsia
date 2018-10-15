@@ -269,9 +269,11 @@ bool BetterThroughput(const TxStats& lhs, const TxStats& rhs) {
 }
 
 bool BetterProbability(const TxStats& lhs, const TxStats& rhs) {
-    // When probability is "high enough", consider throughput instead.
-    return (lhs.probability >= kMinstrelProbabilityThreshold && lhs.cur_tp > rhs.cur_tp) ||
-           lhs.probability > rhs.probability;
+    if (lhs.probability >= kMinstrelProbabilityThreshold) {
+        // When probability is "high enough", consider throughput instead.
+        return lhs.cur_tp > rhs.cur_tp;
+    }
+    return lhs.probability > rhs.probability;
 }
 
 void UpdateStatsPeer(Peer* peer) {
