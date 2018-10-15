@@ -80,6 +80,15 @@ typedef struct xhci_slot {
     usb_speed_t speed;
 } xhci_slot_t;
 
+typedef struct xhci_usb_request_internal {
+     // callback to the upper layer
+     usb_request_complete_cb complete_cb;
+     // context for the callback
+     void* cookie;
+     // for queueing request at xhci level
+     list_node_t node;
+} xhci_usb_request_internal_t;
+
 typedef struct xhci xhci_t;
 
 typedef void (*xhci_command_complete_cb)(void* data, uint32_t cc, xhci_trb_t* command_trb,

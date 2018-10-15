@@ -138,6 +138,7 @@ typedef struct {
                                          uint8_t* buf, size_t* inout_buflen);
     zx_status_t (*cancel_all)(void* ctx, uint8_t ep_address);
     uint64_t (*get_current_frame)(void* ctx);
+    size_t (*get_request_size)(void* ctx);
 } usb_protocol_ops_t;
 
 typedef struct usb_protocol {
@@ -274,4 +275,8 @@ static inline uint64_t usb_get_current_frame(const usb_protocol_t* usb) {
     return usb->ops->get_current_frame(usb->ctx);
 }
 
+// return the internal context size plus parents request size
+static inline uint64_t usb_get_request_size(const usb_protocol_t* usb) {
+    return usb->ops->get_request_size(usb->ctx);
+}
 __END_CDECLS;

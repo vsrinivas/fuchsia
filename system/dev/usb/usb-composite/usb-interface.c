@@ -286,6 +286,11 @@ static uint64_t usb_interface_get_current_frame(void* ctx) {
     return usb_get_current_frame(&intf->comp->usb);
 }
 
+static size_t usb_interface_get_request_size(void* ctx) {
+    usb_interface_t* intf = ctx;
+    return usb_get_request_size(&intf->comp->usb);
+}
+
 usb_protocol_ops_t usb_device_protocol = {
     .control = usb_interface_control,
     .request_queue = usb_interface_request_queue,
@@ -303,6 +308,7 @@ usb_protocol_ops_t usb_device_protocol = {
     .get_string_descriptor = usb_interface_get_string_descriptor,
     .cancel_all = usb_interface_cancel_all,
     .get_current_frame = usb_interface_get_current_frame,
+    .get_request_size = usb_interface_get_request_size,
 };
 
 usb_composite_protocol_ops_t usb_composite_device_protocol = {

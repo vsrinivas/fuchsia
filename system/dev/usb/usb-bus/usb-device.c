@@ -489,6 +489,11 @@ static uint64_t usb_device_get_current_frame(void* ctx) {
     return usb_hci_get_current_frame(&dev->hci);
 }
 
+static size_t usb_device_get_request_size(void* ctx) {
+    usb_device_t* dev = ctx;
+    return sizeof(usb_device_request_internal_t) + dev->parent_request_size;
+}
+
 static usb_protocol_ops_t _usb_protocol = {
     .control = usb_device_control,
     .request_queue = usb_device_request_queue,
@@ -506,6 +511,7 @@ static usb_protocol_ops_t _usb_protocol = {
     .get_string_descriptor = usb_device_get_string_descriptor,
     .cancel_all = usb_device_cancel_all,
     .get_current_frame = usb_device_get_current_frame,
+    .get_request_size = usb_device_get_request_size,
 };
 
 zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
@@ -604,6 +610,7 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
     dev->hub_id = hub_id;
     dev->speed = speed;
     dev->config_descs = configs;
+    dev->parent_request_size = usb_hci_get_request_size(&dev->hci);
 
     // callback thread must be started before device_add() since it will recursively
     // bind other drivers to us before it returns.

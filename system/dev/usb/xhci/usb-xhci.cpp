@@ -139,6 +139,11 @@ static zx_status_t xhci_get_bti(void* ctx, zx_handle_t* out_handle) {
     return ZX_OK;
 }
 
+//Returns the public request size plus its private context size.
+static size_t xhci_get_request_size(void* ctx) {
+    return sizeof(xhci_usb_request_internal_t) + sizeof(usb_request_t);
+}
+
 usb_hci_protocol_ops_t xhci_hci_protocol = {
     .request_queue = xhci_hci_request_queue,
     .set_bus_interface = xhci_set_bus_interface,
@@ -152,6 +157,7 @@ usb_hci_protocol_ops_t xhci_hci_protocol = {
     .get_max_transfer_size = xhci_get_max_transfer_size,
     .cancel_all = xhci_cancel_all,
     .get_bti = xhci_get_bti,
+    .get_request_size = xhci_get_request_size,
 };
 
 void xhci_request_queue(xhci_t* xhci, usb_request_t* req) {
