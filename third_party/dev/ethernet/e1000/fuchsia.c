@@ -140,7 +140,9 @@ struct adapter {
 
     mtx_t send_lock;
 
-    zx_handle_t ioh;
+    mmio_buffer_t bar0_mmio;
+    mmio_buffer_t ioport_mmio;
+    mmio_buffer_t flash_mmio;
     struct txrx_funcs* txrx;
 };
 
@@ -237,10 +239,12 @@ static void e1000_release(void* ctx) {
     pci_enable_bus_master(&adapter->osdep.pci, false);
 
     io_buffer_release(&adapter->buffer);
+    mmio_buffer_release(&adapter->bar0_mmio);
+    mmio_buffer_release(&adapter->ioport_mmio);
+    mmio_buffer_release(&adapter->flash_mmio);
 
     zx_handle_close(adapter->btih);
     zx_handle_close(adapter->irqh);
-    zx_handle_close(adapter->ioh);
     free(adapter);
 }
 
@@ -548,16 +552,14 @@ static void e1000_identify_hardware(struct adapter* adapter) {
 static zx_status_t e1000_allocate_pci_resources(struct adapter* adapter) {
     pci_protocol_t* pci = &adapter->osdep.pci;
 
-    uint64_t sz;
-    zx_handle_t h;
-    void* io;
-    zx_status_t status = pci_map_bar(pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz, &h);
+    zx_status_t status = pci_map_bar_buffer(pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                            &adapter->bar0_mmio);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "pci_map_bar cannot map io %d\n", h);
+        zxlogf(ERROR, "pci_map_bar cannot map io %d\n", status);
         return status;
     }
 
-    adapter->osdep.membase = (uintptr_t)io;
+    adapter->osdep.membase = (uintptr_t)adapter->bar0_mmio.vaddr;
     adapter->hw.hw_addr = (u8*)&adapter->osdep.membase;
 
     /* Only older adapters use IO mapping */
@@ -582,12 +584,13 @@ static zx_status_t e1000_allocate_pci_resources(struct adapter* adapter) {
             zxlogf(ERROR, "Unable to locate IO BAR\n");
             return ZX_ERR_IO_NOT_PRESENT;
         }
-        status = pci_map_bar(pci, adapter->io_rid / 4, ZX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz, &h);
+        status = pci_map_bar_buffer(pci, adapter->io_rid / 4, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                    &adapter->ioport_mmio);
         if (!status) {
             zxlogf(ERROR, "Unable to allocate bus resource: ioport\n");
             return status;
         }
-        adapter->osdep.iobase = (uintptr_t)io;
+        adapter->osdep.iobase = (uintptr_t)adapter->ioport_mmio.vaddr;
         adapter->hw.io_base = 0;
     }
 
@@ -1004,17 +1007,15 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
         (hw->mac.type == e1000_pchlan) ||
         (hw->mac.type == e1000_pch2lan) ||
         (hw->mac.type == e1000_pch_lpt)) {
-        void* io;
-        uint64_t sz;
-        zx_handle_t h;
-        status = pci_map_bar(pci, EM_BAR_TYPE_FLASH / 4, ZX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz, &h);
+        status = pci_map_bar_buffer(pci, EM_BAR_TYPE_FLASH / 4, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                    &adapter->flash_mmio);
         if (status != ZX_OK) {
             zxlogf(ERROR, "Mapping of Flash failed\n");
             goto fail;
         }
         /* This is used in the shared code */
-        hw->flash_address = io;
-        adapter->osdep.flashbase = (uintptr_t)io;
+        hw->flash_address = adapter->flash_mmio.vaddr;
+        adapter->osdep.flashbase = (uintptr_t)adapter->flash_mmio.vaddr;
     }
     /*
     ** In the new SPT device flash is not  a
@@ -1138,11 +1139,13 @@ fail:
     if (adapter->btih) {
         zx_handle_close(adapter->btih);
     }
-    if (adapter->ioh) {
+    if (adapter->osdep.pci.ops) {
         pci_enable_bus_master(&adapter->osdep.pci, false);
-        zx_handle_close(adapter->irqh);
-        zx_handle_close(adapter->ioh);
     }
+    zx_handle_close(adapter->irqh);
+    mmio_buffer_release(&adapter->bar0_mmio);
+    mmio_buffer_release(&adapter->ioport_mmio);
+    mmio_buffer_release(&adapter->flash_mmio);
     free(adapter);
     zxlogf(ERROR, "%s: %d FAIL\n", __FUNCTION__, __LINE__);
     return ZX_ERR_NOT_SUPPORTED;

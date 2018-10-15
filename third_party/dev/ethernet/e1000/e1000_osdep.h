@@ -49,6 +49,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/pci-lib.h>
