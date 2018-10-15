@@ -9,7 +9,7 @@ vmar_unmap - unmap virtual memory pages
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmar_unmap(zx_handle_t handle, zx_vaddr_t addr, uint64_t len);
+zx_status_t zx_vmar_unmap(zx_handle_t vmar_handle, zx_vaddr_t addr, uint64_t len);
 ```
 
 ## DESCRIPTION
