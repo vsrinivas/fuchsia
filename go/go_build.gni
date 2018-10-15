@@ -34,13 +34,18 @@ template("go_build") {
   }
   output_path = "${root_out_dir}/${output_name}"
 
+  define_sdk_target =
+      defined(invoker.sdk_category) && invoker.sdk_category != "excluded" &&
+      !is_fuchsia && (!defined(invoker.test) || !invoker.test)
+
   action(main_target_name) {
     deps = []
     if (defined(invoker.non_go_deps)) {
       deps += invoker.non_go_deps
     }
 
-    use_strip = is_fuchsia
+    # Strip target binaries and binaries that are included in the SDK.
+    use_strip = is_fuchsia || define_sdk_target
 
     outputs = [
       output_path,
@@ -142,8 +147,7 @@ template("go_build") {
   }
 
   # Allow host binaries to be published in SDKs.
-  if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded" &&
-      !is_fuchsia && (!defined(invoker.test) || !invoker.test)) {
+  if (define_sdk_target) {
     file_base = "tools/$output_name"
 
     sdk_atom("${target_name}_sdk") {
