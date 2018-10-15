@@ -121,9 +121,9 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
   auto break_type = debug_ipc::BreakpointType::kSoftware;
   if (cmd.HasSwitch(kTypeSwitch)) {
     std::string type_str = cmd.GetSwitchValue(kTypeSwitch);
-    if (type_str == "software") {
+    if (type_str == "s" || type_str == "software") {
       break_type = debug_ipc::BreakpointType::kSoftware;
-    } else if (type_str == "hardware") {
+    } else if (type_str == "h" || type_str == "hardware") {
       break_type = debug_ipc::BreakpointType::kHardware;
     } else {
       return Err(
@@ -237,8 +237,8 @@ Options
       If "none" is specified, any threads hitting the breakpoint will
       immediately resume, but the hit count will continue to accumulate.
 
-  --type=[ software | hardware ]  (default: software)
-  -t [ software | hardware ]
+  --type=[ (software|s) | (hardware|h) ]  (default: software)
+  -t [ (software|s) | (hardware|h) ]
 
       Defines what kind of breakpoint to use. Hardware registers require support
       from the architecture and are limited in quantity. Keep this in mind when
@@ -296,7 +296,7 @@ Examples
   frame 3 break 23
       Break at line 23 of the file referenced by frame 3.
 
-  break 32 --type=hardware
+  break 32 --type h
       Break at line 23 of the file referenced by the current frame and use a
       hardware breakpoint.
 )";

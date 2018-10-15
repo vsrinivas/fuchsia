@@ -294,6 +294,15 @@ const char* BreakpointEnabledToString(bool enabled) {
   return enabled ? "Enabled" : "Disabled";
 }
 
+const char* BreakpointTypeToString(debug_ipc::BreakpointType type) {
+  switch (type) {
+    case debug_ipc::BreakpointType::kSoftware:
+      return "Software";
+    case debug_ipc::BreakpointType::kHardware:
+      return "Hardware";
+  }
+}
+
 std::string ExceptionTypeToString(debug_ipc::NotifyException::Type type) {
   switch (type) {
     case debug_ipc::NotifyException::Type::kGeneral:
@@ -388,11 +397,13 @@ std::string DescribeBreakpoint(const ConsoleContext* context,
   std::string scope = BreakpointScopeToString(context, settings);
   std::string stop = BreakpointStopToString(settings.stop_mode);
   const char* enabled = BreakpointEnabledToString(settings.enabled);
+  const char* type = BreakpointTypeToString(settings.type);
   std::string location = DescribeInputLocation(settings.location);
 
-  return fxl::StringPrintf("Breakpoint %d on %s, %s, stop=%s, @ %s",
-                           context->IdForBreakpoint(breakpoint), scope.c_str(),
-                           enabled, stop.c_str(), location.c_str());
+  return fxl::StringPrintf("Breakpoint %d (%s) on %s, %s, stop=%s, @ %s",
+                           context->IdForBreakpoint(breakpoint), type,
+                           scope.c_str(), enabled, stop.c_str(),
+                           location.c_str());
 }
 
 std::string DescribeInputLocation(const InputLocation& location) {

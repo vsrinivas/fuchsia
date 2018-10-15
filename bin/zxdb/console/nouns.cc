@@ -495,10 +495,9 @@ void ListBreakpoints(ConsoleContext* context) {
   int active_breakpoint_id = context->GetActiveBreakpointId();
 
   // Sort by ID.
-  std::vector<std::pair<int, Breakpoint*>> id_bp;
+  std::map<int, Breakpoint*> id_bp;
   for (auto& bp : breakpoints)
-    id_bp.push_back(std::make_pair(context->IdForBreakpoint(bp), bp));
-  std::sort(id_bp.begin(), id_bp.end());
+    id_bp[context->IdForBreakpoint(bp)] = bp;
 
   std::vector<std::vector<std::string>> rows;
 
@@ -517,6 +516,7 @@ void ListBreakpoints(ConsoleContext* context) {
     row.push_back(BreakpointScopeToString(context, settings));
     row.push_back(BreakpointStopToString(settings.stop_mode));
     row.push_back(BreakpointEnabledToString(settings.enabled));
+    row.push_back(BreakpointTypeToString(settings.type));
     row.push_back(DescribeInputLocation(settings.location));
   }
 
@@ -524,8 +524,10 @@ void ListBreakpoints(ConsoleContext* context) {
   FormatTable(
       {ColSpec(Align::kLeft),
        ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
-       ColSpec(Align::kLeft, 0, "Scope"), ColSpec(Align::kLeft, 0, "Stop"),
+       ColSpec(Align::kLeft, 0, "Scope"),
+       ColSpec(Align::kLeft, 0, "Stop"),
        ColSpec(Align::kLeft, 0, "Enabled"),
+       ColSpec(Align::kLeft, 0, "Type"),
        ColSpec(Align::kLeft, 0, "Location")},
       rows, &out);
   Console::get()->Output(std::move(out));
