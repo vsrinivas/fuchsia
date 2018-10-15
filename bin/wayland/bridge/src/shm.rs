@@ -49,7 +49,7 @@ impl wl::RequestReceiver<WlShmPool> for ShmPool {
         _this: wl::ObjectRef<Self>, request: WlShmPoolRequest, _client: &mut wl::Client,
     ) -> Result<(), Error> {
         match request {
-            WlShmPoolRequest::Destroy {} => {}
+            WlShmPoolRequest::Destroy => {}
             WlShmPoolRequest::CreateBuffer { .. } => {}
             WlShmPoolRequest::Resize { .. } => {}
         }

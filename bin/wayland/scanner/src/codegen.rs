@@ -117,23 +117,33 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,
             if let Some(ref d) = message.description {
                 self.codegen_description(d, "    ")?;
             }
-            writeln!(
-                self.w,
-                "    {enum_variant} {{",
-                enum_variant = to_camel_case(&message.name)
-            )?;
-            for arg in message.args.iter() {
-                if let Some(ref summary) = arg.summary {
-                    writeln!(self.w, "        /// {}", summary.trim())?;
+            if message.args.is_empty() {
+                // For messages without args, emit a marker enum variant.
+                //  Ex:
+                //      Request::Message,
+                writeln!(self.w, "    {},", message.rust_name())?;
+            } else {
+                // For messages with args, emit a struct enum variant with an
+                // entry for each arg:
+                //  Ex:
+                //      Request::Message {
+                //          arg1: u32,
+                //          arg2: String,
+                //      },
+                writeln!(self.w, "    {} {{", message.rust_name())?;
+                for arg in message.args.iter() {
+                    if let Some(ref summary) = arg.summary {
+                        writeln!(self.w, "        /// {}", summary.trim())?;
+                    }
+                    writeln!(
+                        self.w,
+                        "        {arg_name}: {arg_type},",
+                        arg_name = arg.name,
+                        arg_type = arg_formatter(&arg)
+                    )?;
                 }
-                writeln!(
-                    self.w,
-                    "        {arg_name}: {arg_type},",
-                    arg_name = arg.name,
-                    arg_type = arg_formatter(&arg)
-                )?;
+                writeln!(self.w, "    }},")?;
             }
-            writeln!(self.w, "    }},")?;
         }
         writeln!(self.w, "}}")?;
         writeln!(self.w, "")?;
