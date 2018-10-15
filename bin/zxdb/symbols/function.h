@@ -20,9 +20,9 @@ namespace zxdb {
 // function may be outside of any namespace or class definitions.
 //
 // It seems Clang puts the function parameters in both places, some attributes
-// like DW_AT_frame_base and DW_AT_object_pointer will only be on the
-// implementation, and others like DW_AT_decl_file/line, DW_AT_accessibility,
-// and the return type (DW_AT_type) are only on the specification.
+// like DW_AT_frame_base will only be on the implementation, and others like
+// DW_AT_decl_file/line, DW_AT_accessibility, and the return type (DW_AT_type)
+// are only on the specification.
 //
 // In the case of an implementation, the decoder will attempt to fill in the
 // attributes from the specification automatically so this Function object
@@ -58,6 +58,14 @@ class Function final : public CodeBlock {
   const std::vector<LazySymbol>& parameters() const { return parameters_; }
   void set_parameters(std::vector<LazySymbol> p) { parameters_ = std::move(p); }
 
+  // The object pointer will be a reference to a parameter (which should
+  // theoretically match one of the entries in the parameters() list but we
+  // can't guarantee what the compiler has generated) for the implicit object
+  // ("this") pointer for member functions. For nonmember or static member
+  // functions the object pointer will be null.
+  const LazySymbol& object_pointer() const { return object_pointer_; }
+  void set_object_pointer(const LazySymbol& op) { object_pointer_ = op; }
+
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(Function);
   FRIEND_MAKE_REF_COUNTED(Function);
@@ -73,6 +81,7 @@ class Function final : public CodeBlock {
   FileLine decl_line_;
   LazySymbol return_type_;
   std::vector<LazySymbol> parameters_;
+  LazySymbol object_pointer_;
 };
 
 }  // namespace zxdb

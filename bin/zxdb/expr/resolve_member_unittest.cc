@@ -8,6 +8,7 @@
 #include "garnet/bin/zxdb/symbols/base_type.h"
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
+#include "garnet/bin/zxdb/symbols/inherited_from.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/type_test_support.h"
 #include "gtest/gtest.h"
@@ -126,6 +127,38 @@ TEST(ResolveMember, BadAccess) {
       "Member value 'c' is outside of the data of base 'Foo'. Please file a "
       "bug with a repro.",
       err.msg());
+}
+
+// Tests foo.bar where bar is in a derived class of foo's type.
+TEST(ResolveMember, DerivedClass) {
+  const DataMember* a_data;
+  const DataMember* b_data;
+  auto base = GetTestClassType(&a_data, &b_data);
+
+  auto derived = fxl::MakeRefCounted<Collection>(Symbol::kTagClassType);
+
+  uint32_t base_offset = 4;  // Offset in derived of base.
+  auto inherited =
+      fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base), base_offset);
+  derived->set_inherited_from({LazySymbol(inherited)});
+
+  // This struct has the values 1 and 2 in it, offset by 4 bytes (the offset
+  // within "derived" of "base").
+  constexpr uint64_t kBaseAddr = 0x11000;
+  ExprValue value(derived, {0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00,
+                            0x02, 0x00, 0x00, 0x00},
+                  ExprValueSource(kBaseAddr));
+
+  // Resolve B by name.
+  ExprValue out;
+  Err err = ResolveMember(value, "b", &out);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+  EXPECT_EQ("int32_t", out.type()->GetAssignedName());
+  EXPECT_EQ(4u, out.data().size());
+  EXPECT_EQ(2, out.GetAs<int32_t>());
+
+  // Offset of B in "derived".
+  EXPECT_EQ(kBaseAddr + base_offset + 4, out.source().address());
 }
 
 }  // namespace zxdb

@@ -45,6 +45,7 @@ static_library("symbols") {
     "value.h",
     "variable.h",
     "variable_location.h",
+    "visit_scopes.h",
   ]
 
   sources = [
@@ -90,6 +91,7 @@ static_library("symbols") {
     "value.cc",
     "variable.cc",
     "variable_location.cc",
+    "visit_scopes.cc",
   ]
 
   # This library can not use any part of the debugger other than the "common"
@@ -158,6 +160,7 @@ source_set("tests") {
     "test_symbol_module.cc",
     "type_utils_unittest.cc",
     "variable_location_unittest.cc",
+    "visit_scopes_unittest.cc",
   ]
 
   deps = [

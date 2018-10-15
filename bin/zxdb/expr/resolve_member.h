@@ -17,7 +17,10 @@ class ExprEvalContext;
 class ExprValue;
 
 // Resolves a DataMember given a base class and a record for a variable
-// within that class. Returns an error on failure, or puts the result in
+// within that class. The data member must be on the class itself, not on
+// a base class.
+//
+// Returns an error on failure, or puts the result in
 // |out| on success.
 //
 // The DataMember may be null. If so, this class will return an error (this
@@ -25,7 +28,10 @@ class ExprValue;
 Err ResolveMember(const ExprValue& base, const DataMember* member,
                   ExprValue* out);
 
-// Resolves a DataMember by name. Returns an error if the name isn't found.
+// Resolves a DataMember by name. This variant searches base classes for name
+// matches.
+//
+// Returns an error if the name isn't found.
 Err ResolveMember(const ExprValue& base, const std::string& member_name,
                   ExprValue* out);
 

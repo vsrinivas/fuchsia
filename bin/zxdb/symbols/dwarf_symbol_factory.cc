@@ -258,6 +258,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
   llvm::Optional<uint64_t> decl_line;
   decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_decl_line, &decl_line);
 
+  llvm::DWARFDie object_ptr;
+  decoder.AddReference(llvm::dwarf::DW_AT_object_pointer, &object_ptr);
+
   // TODO(brettw) handle DW_AT_ranges.
 
   if (!decoder.Decode(die))
@@ -288,6 +291,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
   function->set_decl_line(MakeFileLine(decl_file, decl_line));
   if (type)
     function->set_return_type(MakeLazy(type));
+  if (object_ptr)
+    function->set_object_pointer(MakeLazy(object_ptr));
 
   // Handle sub-DIEs: parameters, child blocks, and variables.
   std::vector<LazySymbol> parameters;
