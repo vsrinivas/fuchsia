@@ -16,7 +16,7 @@ use fuchsia_async as fasync;
 use fuchsia_wayland_core as wl;
 use futures::prelude::*;
 use parking_lot::Mutex;
-use wayland::{WlCompositor, WlOutput, WlShm};
+use wayland::{WlCompositor, WlOutput, WlSeat, WlShm};
 
 mod compositor;
 use crate::compositor::*;
@@ -26,6 +26,8 @@ mod frontend;
 use crate::frontend::*;
 mod output;
 use crate::output::*;
+mod seat;
+use crate::seat::*;
 mod shm;
 use crate::shm::*;
 
@@ -55,6 +57,13 @@ impl WaylandDispatcher {
             registry.add_global(WlOutput, move |id, client| {
                 Output::update_display_info(id, client, view_sink.scenic());
                 Ok(Box::new(wl::RequestDispatcher::new(Output::new())))
+            });
+        }
+        {
+            registry.add_global(WlSeat, move |id, client| {
+                let seat = Seat::new();
+                seat.post_seat_info(id, client)?;
+                Ok(Box::new(wl::RequestDispatcher::new(seat)))
             });
         }
         {
