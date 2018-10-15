@@ -94,7 +94,7 @@ struct SdmmcHostInfo {
     uint64 prefs;
 };
 
-[Layout="ddk-protocol"]
+[Layout="ddk-protocol", DefaultProtocol]
 interface Sdmmc {
     /// Get host info.
     1: HostInfo() -> (zx.status s, SdmmcHostInfo info);
