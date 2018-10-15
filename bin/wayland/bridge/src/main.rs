@@ -16,7 +16,7 @@ use fuchsia_async as fasync;
 use fuchsia_wayland_core as wl;
 use futures::prelude::*;
 use parking_lot::Mutex;
-use wayland::{WlCompositor, WlShm};
+use wayland::{WlCompositor, WlOutput, WlShm};
 
 mod compositor;
 use crate::compositor::*;
@@ -24,6 +24,8 @@ mod display;
 use crate::display::*;
 mod frontend;
 use crate::frontend::*;
+mod output;
+use crate::output::*;
 mod shm;
 use crate::shm::*;
 
@@ -49,7 +51,14 @@ impl WaylandDispatcher {
             });
         }
         {
-            let scenic = scenic.clone();
+            let view_sink = view_sink.clone();
+            registry.add_global(WlOutput, move |id, client| {
+                Output::update_display_info(id, client, view_sink.scenic());
+                Ok(Box::new(wl::RequestDispatcher::new(Output::new())))
+            });
+        }
+        {
+            let scenic = view_sink.scenic_session();
             registry.add_global(WlShm, move |id, client| {
                 let shm = Shm::new(scenic.clone());
                 // announce the set of supported shm pixel formats.

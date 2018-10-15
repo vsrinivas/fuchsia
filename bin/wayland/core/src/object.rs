@@ -183,6 +183,11 @@ impl<T: 'static> Debug for ObjectRef<T> {
         write!(f, "ObjectRef({})", self.1)
     }
 }
+impl<T> From<ObjectId> for ObjectRef<T> {
+    fn from(id: ObjectId) -> Self {
+        Self::from_id(id)
+    }
+}
 
 impl<T> ObjectRef<T> {
     pub fn from_id(id: ObjectId) -> Self {
@@ -201,6 +206,20 @@ impl<T> ObjectRef<T> {
     /// Provides a mutable reference to an object, downcasted to |T|.
     pub fn get_mut<'a>(&self, client: &'a mut Client) -> Result<&'a mut T, ObjectLookupError> {
         client.get_object_mut(self.1)
+    }
+
+    /// Returns `true` iff the underlying object is still valid.
+    ///
+    /// Here 'valid' means that the object_id exists and refers to an object
+    /// of type `T`. This method will still return `true` if the associated
+    /// object_id has been deleted and recreated with the same type `T. If this
+    /// is not desirable then the caller must track instance with some state
+    /// embedded into `T`.
+    ///
+    /// This can be useful to verify prior to sending events using the
+    /// associated object_id but the host object itself is not required.
+    pub fn is_valid(&self, client: &mut Client) -> bool {
+        self.get(client).is_ok()
     }
 }
 
