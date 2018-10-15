@@ -4,18 +4,20 @@
 
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("ble_battery_service") {
+rustc_binary("bt-le-battery-service") {
+  name = "bt_le_battery_service"
+  edition = "2018"
+
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
+    "//garnet/lib/rust/fuchsia-bluetooth",
     "//garnet/public/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
-    "//garnet/public/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
     "//garnet/public/fidl/fuchsia.power:fuchsia.power-rustc",
-    "//garnet/public/rust/fuchsia-app:fuchsia-app-rustc",
-    "//garnet/public/rust/fuchsia-async:fuchsia-async-rustc",
-    "//garnet/public/rust/fuchsia-zircon",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:pin-utils",
   ]
 }

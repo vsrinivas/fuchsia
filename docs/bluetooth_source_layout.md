@@ -26,8 +26,8 @@ garnet/drivers/bluetooth/
     host/                                       # bt-host driver
     lib/                                        # profiles (HCI, SDP, ...)
 garnet/examples/bluetooth/
-    ble_battery_service/                        # headless LE peripheral
     bt_beacon_reader/                           # reads from BLE Broadcasters
+    bt-le-battery-service/                      # headless LE peripheral
     bt-le-heart-rate-peripheral/                # HRM peripheral
 garnet/lib/
     bluetooth/                                  # internal API

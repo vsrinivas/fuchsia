@@ -37,7 +37,7 @@ Eddystone beacons. This is built in topaz by default.
 This is a Flutter module that can advertise any entered URL as an Eddystone
 beacon.
 - __LE peripheral__: see the [`ble_rect`](https://fuchsia.googlesource.com/topaz/+/master/examples/bluetooth/ble_rect/)
-and [`ble_battery_service`](../../examples/bluetooth/ble_battery_service) examples.
+and [`bt-le-battery-service`](../../examples/bluetooth/bt-le-battery-service) examples.
 - __LE central__: see [`ble_scanner`](https://fuchsia.googlesource.com/topaz/+/master/examples/bluetooth/ble_scanner/).
 
 ### Control API
