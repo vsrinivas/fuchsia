@@ -60,7 +60,7 @@ static zx_status_t pci_sdhci_get_mmio(void* ctx, zx_handle_t* out) {
         }
         dev->regs = dev->mmio.vaddr;
     }
-    return zx_vmo_clone(dev->mmio.vmo, ZX_RIGHT_SAME_RIGHTS, 0, dev->mmio.size, out);
+    return zx_handle_duplicate(dev->mmio.vmo, ZX_RIGHT_SAME_RIGHTS, out);
 }
 
 static zx_status_t pci_sdhci_get_bti(void* ctx, uint32_t index, zx_handle_t* out_handle) {
