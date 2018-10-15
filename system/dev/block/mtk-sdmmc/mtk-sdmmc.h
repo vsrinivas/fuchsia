@@ -12,10 +12,10 @@
 
 namespace sdmmc {
 
-class MtkSdMmc;
-using DeviceType = ddk::Device<MtkSdMmc>;
+class MtkSdmmc;
+using DeviceType = ddk::Device<MtkSdmmc>;
 
-class MtkSdMmc : public DeviceType, public ddk::SdmmcProtocol<MtkSdMmc> {
+class MtkSdmmc : public DeviceType, public ddk::SdmmcProtocol<MtkSdmmc> {
 
 public:
     static zx_status_t Create(zx_device_t* parent);
@@ -32,7 +32,7 @@ public:
     zx_status_t SdmmcRequest(sdmmc_req_t* req);
 
 private:
-    MtkSdMmc(zx_device_t* parent, ddk::MmioBuffer mmio, zx::bti bti, const sdmmc_host_info_t& info)
+    MtkSdmmc(zx_device_t* parent, ddk::MmioBuffer mmio, zx::bti bti, const sdmmc_host_info_t& info)
         : DeviceType(parent), mmio_(fbl::move(mmio)), bti_(fbl::move(bti)), info_(info) {}
 
     void Init();

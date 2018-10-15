@@ -21,7 +21,7 @@ constexpr uint32_t kIdentificationModeBusFreq = 400000;
 
 namespace sdmmc {
 
-zx_status_t MtkSdMmc::Create(zx_device_t* parent) {
+zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
     zx_status_t status;
 
     platform_device_protocol_t pdev;
@@ -66,11 +66,11 @@ zx_status_t MtkSdMmc::Create(zx_device_t* parent) {
     };
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<MtkSdMmc> device(new (&ac) MtkSdMmc(parent, fbl::move(mmio_obj), fbl::move(bti),
+    fbl::unique_ptr<MtkSdmmc> device(new (&ac) MtkSdmmc(parent, fbl::move(mmio_obj), fbl::move(bti),
                                                         info));
 
     if (!ac.check()) {
-        zxlogf(ERROR, "%s: MtkSdMmc alloc failed\n", __FILE__);
+        zxlogf(ERROR, "%s: MtkSdmmc alloc failed\n", __FILE__);
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -86,7 +86,7 @@ zx_status_t MtkSdMmc::Create(zx_device_t* parent) {
     return ZX_OK;
 }
 
-void MtkSdMmc::Init() {
+void MtkSdmmc::Init() {
     // Set bus clock to f_OD (400 kHZ) for identification mode.
     SdmmcSetBusFreq(kIdentificationModeBusFreq);
 
@@ -98,17 +98,17 @@ void MtkSdMmc::Init() {
         .WriteTo(&mmio_);
 }
 
-zx_status_t MtkSdMmc::SdmmcHostInfo(sdmmc_host_info_t* info) {
+zx_status_t MtkSdmmc::SdmmcHostInfo(sdmmc_host_info_t* info) {
     memcpy(info, &info_, sizeof(info_));
     return ZX_OK;
 }
 
-zx_status_t MtkSdMmc::SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) {
+zx_status_t MtkSdmmc::SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) {
     // TODO(bradenkell): According to the schematic VCCQ is fixed at 1.8V. Verify this and update.
     return ZX_OK;
 }
 
-zx_status_t MtkSdMmc::SdmmcSetBusWidth(sdmmc_bus_width_t bus_width) {
+zx_status_t MtkSdmmc::SdmmcSetBusWidth(sdmmc_bus_width_t bus_width) {
     uint32_t bus_width_value;
 
     switch (bus_width) {
@@ -130,7 +130,7 @@ zx_status_t MtkSdMmc::SdmmcSetBusWidth(sdmmc_bus_width_t bus_width) {
     return ZX_OK;
 }
 
-zx_status_t MtkSdMmc::SdmmcSetBusFreq(uint32_t bus_freq) {
+zx_status_t MtkSdmmc::SdmmcSetBusFreq(uint32_t bus_freq) {
     if (bus_freq == 0) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -145,7 +145,7 @@ zx_status_t MtkSdMmc::SdmmcSetBusFreq(uint32_t bus_freq) {
     uint32_t cckdiv = kMsdcSrcCkFreq / bus_freq;
     cckdiv = ((cckdiv + 3) >> 2) & 0xff;  // Round the divider up, i.e. to a lower frequency.
     uint32_t actual = cckdiv == 0 ? kMsdcSrcCkFreq >> 1 : kMsdcSrcCkFreq / (cckdiv << 2);
-    zxlogf(INFO, "MtkSdMmc::%s: requested frequency=%u, actual frequency=%u\n", __FUNCTION__,
+    zxlogf(INFO, "MtkSdmmc::%s: requested frequency=%u, actual frequency=%u\n", __FUNCTION__,
            bus_freq, actual);
 
     MsdcCfg::Get().ReadFrom(&mmio_).set_card_ck_div(cckdiv).WriteTo(&mmio_);
@@ -155,7 +155,7 @@ zx_status_t MtkSdMmc::SdmmcSetBusFreq(uint32_t bus_freq) {
     return ZX_OK;
 }
 
-zx_status_t MtkSdMmc::SdmmcSetTiming(sdmmc_timing_t timing) {
+zx_status_t MtkSdmmc::SdmmcSetTiming(sdmmc_timing_t timing) {
     uint32_t ck_mode;
 
     switch (timing) {
@@ -176,16 +176,16 @@ zx_status_t MtkSdMmc::SdmmcSetTiming(sdmmc_timing_t timing) {
     return ZX_OK;
 }
 
-void MtkSdMmc::SdmmcHwReset() {
+void MtkSdmmc::SdmmcHwReset() {
     // TODO(bradenkell): Use MSDC0_RTSB (GPIO 114) to reset the eMMC chip.
 }
 
-zx_status_t MtkSdMmc::SdmmcPerformTuning(uint32_t cmd_idx) {
+zx_status_t MtkSdmmc::SdmmcPerformTuning(uint32_t cmd_idx) {
     // TODO(bradenkell): Implement this.
     return ZX_OK;
 }
 
-zx_status_t MtkSdMmc::RequestPrepareDma(sdmmc_req_t* req) {
+zx_status_t MtkSdmmc::RequestPrepareDma(sdmmc_req_t* req) {
     const uint64_t req_len = req->blockcount * req->blocksize;
     const bool is_read = req->cmd_flags & SDMMC_CMD_READ;
 
@@ -229,7 +229,7 @@ zx_status_t MtkSdMmc::RequestPrepareDma(sdmmc_req_t* req) {
     return ZX_OK;
 }
 
-zx_status_t MtkSdMmc::ReadResponseDma(sdmmc_req_t* req) {
+zx_status_t MtkSdmmc::ReadResponseDma(sdmmc_req_t* req) {
     while (DmaCfg::Get().ReadFrom(&mmio_).dma_active()) {}
 
     zx_status_t cache_status = ZX_OK;
@@ -252,7 +252,7 @@ zx_status_t MtkSdMmc::ReadResponseDma(sdmmc_req_t* req) {
     return ZX_OK;
 }
 
-zx_status_t MtkSdMmc::RequestPreparePolled(sdmmc_req_t* req) {
+zx_status_t MtkSdmmc::RequestPreparePolled(sdmmc_req_t* req) {
     MsdcCfg::Get().ReadFrom(&mmio_).set_pio_mode(1).WriteTo(&mmio_);
 
     // Clear the FIFO.
@@ -262,7 +262,7 @@ zx_status_t MtkSdMmc::RequestPreparePolled(sdmmc_req_t* req) {
     return ZX_OK;
 }
 
-zx_status_t MtkSdMmc::ReadResponsePolled(sdmmc_req_t* req) {
+zx_status_t MtkSdmmc::ReadResponsePolled(sdmmc_req_t* req) {
     if (!(req->cmd_flags & SDMMC_CMD_READ)) {
         // TODO(bradenkell): Implement block write.
         return ZX_OK;
@@ -283,7 +283,7 @@ zx_status_t MtkSdMmc::ReadResponsePolled(sdmmc_req_t* req) {
     return ZX_OK;
 }
 
-zx_status_t MtkSdMmc::SdmmcRequest(sdmmc_req_t* req) {
+zx_status_t MtkSdmmc::SdmmcRequest(sdmmc_req_t* req) {
     uint32_t is_data_request = req->cmd_flags & SDMMC_RESP_DATA_PRESENT;
     if (is_data_request && !(req->cmd_flags & SDMMC_CMD_READ)) {
         // TODO(bradenkell): Implement block write.
@@ -339,5 +339,5 @@ zx_status_t MtkSdMmc::SdmmcRequest(sdmmc_req_t* req) {
 }  // namespace sdmmc
 
 extern "C" zx_status_t mtk_sdmmc_bind(void* ctx, zx_device_t* parent) {
-    return sdmmc::MtkSdMmc::Create(parent);
+    return sdmmc::MtkSdmmc::Create(parent);
 }
