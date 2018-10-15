@@ -7,14 +7,6 @@ minor_version: "llvm:7.x.x"
 default_target_cpu: "${data.arches[0].short_name}"
 
 % for arch in data.arches:
-default_toolchain {
-  cpu: "${arch.short_name}"
-  toolchain_identifier: "crosstool-1.x.x-llvm-fuchsia-${arch.short_name}"
-}
-
-% endfor
-
-% for arch in data.arches:
 toolchain {
   abi_version: "local"
   abi_libc_version: "local"
@@ -34,7 +26,7 @@ toolchain {
   target_libc: "fuchsia"
   target_cpu: "${arch.long_name}"
   target_system_name: "${arch.long_name}-fuchsia"
-  toolchain_identifier: "crosstool-1.x.x-llvm-fuchsia-${arch.short_name}"
+  toolchain_identifier: "crosstool-1.x.x-llvm-fuchsia-${arch.long_name}"
   cc_target_os: "fuchsia"
 
   tool_path { name: "ar" path: "clang/bin/llvm-ar" }

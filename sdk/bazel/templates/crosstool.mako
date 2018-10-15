@@ -2,21 +2,21 @@
 
 package(default_visibility = ["//visibility:public"])
 
+cc_toolchain_suite(
+    name = "toolchain",
+    toolchains = {
+        % for arch in data.arches:
+        "${arch.long_name}|llvm": ":cc-compiler-${arch.long_name}",
+        "${arch.long_name}": ":cc-compiler-${arch.long_name}",
+        % endfor
+    },
+)
+
 TARGET_CPUS = [
     % for arch in data.arches:
     "${arch.long_name}",
     % endfor
 ]
-
-CC_TOOLCHAINS = [(
-    cpu + "|llvm",
-    ":cc-compiler-" + cpu,
-) for cpu in TARGET_CPUS]
-
-cc_toolchain_suite(
-    name = "toolchain",
-    toolchains = dict(CC_TOOLCHAINS),
-)
 
 filegroup(
     name = "empty",
@@ -89,6 +89,7 @@ filegroup(
 [
     cc_toolchain(
         name = "cc-compiler-" + cpu,
+        toolchain_identifier = "crosstool-1.x.x-llvm-fuchsia-" + cpu,
         all_files = ":every-file-" + cpu,
         compiler_files = ":compile",
         cpu = cpu,

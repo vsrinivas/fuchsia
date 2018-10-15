@@ -113,7 +113,7 @@ To reference the toolchains, add this to the .bazelrc file:
 
 ```
 build:fuchsia --crosstool_top=@fuchsia_crosstool//:toolchain
-build:fuchsia --cpu=x64
+build:fuchsia --cpu=x86_64
 build:fuchsia --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
 ```
 

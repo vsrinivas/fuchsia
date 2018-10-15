@@ -11,13 +11,13 @@ package(
 config_setting(
     name = "arm64",
     values = {
-        "cpu": "arm64",
+        "cpu": "aarch64",
     },
 )
 
 config_setting(
     name = "x64",
     values = {
-        "cpu": "x64",
+        "cpu": "x86_64",
     },
 )
