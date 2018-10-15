@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "imx227.h"
+#include "imx227-seq.h"
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
@@ -14,21 +15,16 @@
 #include <hw/reg.h>
 #include <stdint.h>
 #include <threads.h>
+#include <zircon/device/camera.h>
 #include <zircon/types.h>
 
 namespace camera {
 
 namespace {
-constexpr uint16_t kSensorId = 0x0227;
-}
 
-Imx227Device::Imx227Device(zx_device_t* device)
-    : ddk::Device<Imx227Device,
-                  ddk::Unbindable,
-                  ddk::Ioctlable,
-                  ddk::Messageable>(device) {
-    ddk_proto_id_ = ZX_PROTOCOL_CAMERA;
-}
+constexpr uint16_t kSensorId = 0x0227;
+
+} // namespace
 
 zx_status_t Imx227Device::InitPdev(zx_device_t* parent) {
     zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev_);
@@ -161,6 +157,23 @@ int32_t Imx227Device::AllocateDigitalGain(int32_t gain) {
 void Imx227Device::Update() {
 }
 
+zx_status_t Imx227Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
+                                   void* out_buf, size_t out_len, size_t* out_actual) {
+    switch (op) {
+    case CAMERA_IOCTL_GET_SUPPORTED_MODES: {
+        if (out_len < sizeof(zircon_camera_SensorMode) * MAX_SUPPORTED_MODES) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        memcpy(out_buf, &supported_modes, sizeof(supported_modes));
+        *out_actual = sizeof(supported_modes);
+        return ZX_OK;
+    }
+
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
 static zx_status_t Init(void* ctx, fidl_txn_t* txn) {
     auto& self = *static_cast<Imx227Device*>(ctx);
     zx_status_t status = self.Init();
@@ -222,11 +235,6 @@ zircon_camera_CameraSensor_ops_t fidl_ops = {
 
 zx_status_t Imx227Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     return zircon_camera_CameraSensor_dispatch(this, txn, msg, &fidl_ops);
-}
-
-zx_status_t Imx227Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                                   void* out_buf, size_t out_len, size_t* out_actual) {
-    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Imx227Device::Create(zx_device_t* parent) {

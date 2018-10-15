@@ -12,7 +12,6 @@ struct ImageResolution {
     uint16 height;
 };
 
-
 // A sensor can support several different predefined modes.
 struct SensorMode {
     // Frames per milliseconds. NOTE: (Reference code has fps * 256)
@@ -25,6 +24,14 @@ struct SensorMode {
     uint8 wdr_mode;
     // Bit depth of data from sensor.
     uint8 bits;
+    // Lane count.
+    uint8 lanes;
+    // MBps per lane.
+    uint32 mbps;
+    // The setting idx in seq.
+    uint8 idx;
+    // The setting bayer pattern
+    uint8 bayer;
 };
 
 struct SensorInfo {
@@ -66,8 +73,6 @@ struct SensorInfo {
     uint32 lines_per_second;
     // Number of different exposures supported by the sensor.
     int32 sensor_exp_number;
-    // Table of predefined modes which are supported by the sensor.
-    vector<SensorMode> modes_table;
     // The number of predefined modes.
     uint32 modes_num;
     // Current mode. This value is from the range [ 0 : modes_num - 1 ].
@@ -119,8 +124,11 @@ interface CameraSensor {
   // All sensor parameters must be updated here.
   8: Update();
 
+  // Get supported sensor modes.
+  // 9: GetSupportedModes() -> (vector<SensorMode> supported_modes, uint32 num);
+
   // Gets the Sensor Parameters.
   // Note: This is not supported in Zircon yet under "Simple" layout.
-  // 9: GetInfo() -> (SensorInfo info);
+  // 10: GetInfo() -> (zx.status s, SensorInfo info);
 };
 

@@ -32,7 +32,10 @@ public:
     };
 
     static zx_status_t Create(zx_device_t* parent);
-    Imx227Device(zx_device_t* device);
+    Imx227Device(zx_device_t* device)
+        : DeviceType(device) {
+        ddk_proto_id_ = ZX_PROTOCOL_CAMERA;
+    }
 
     // Methods required by the ddk mixins.
     void DdkUnbind();
@@ -43,6 +46,7 @@ public:
 
     // Methods for IOCTLs.
     zx_status_t GetInfo(zircon_camera_SensorInfo* out_info);
+    void GetSupportedModes(void* out_buf, size_t* out_actual);
 
     // Methods for FIDL Message.
     zx_status_t Init();
