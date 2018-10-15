@@ -54,7 +54,7 @@ public:
     bool CommitPages(uint32_t start_page_index, uint32_t page_count) const override;
     bool MapCpu(void** addr_out, uintptr_t alignment) override;
     bool UnmapCpu() override;
-    bool MapAtCpuAddr(uint64_t addr) override;
+    bool MapAtCpuAddr(uint64_t addr, uint64_t offset, uint64_t length) override;
 
     bool CleanCache(uint64_t offset, uint64_t size, bool invalidate) override;
     bool SetCachePolicy(magma_cache_policy_t cache_policy) override;

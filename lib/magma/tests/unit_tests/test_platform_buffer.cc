@@ -55,18 +55,24 @@ public:
     static void MapSpecific()
     {
         std::unique_ptr<magma::PlatformBuffer> buffer =
-            magma::PlatformBuffer::Create(PAGE_SIZE, "test");
+            magma::PlatformBuffer::Create(PAGE_SIZE * 2, "test");
         // Unaligned
-        EXPECT_FALSE(buffer->MapAtCpuAddr(0x1000001));
+        EXPECT_FALSE(buffer->MapAtCpuAddr(0x1000001, 0, PAGE_SIZE));
 
         // Below bottom of root vmar
-        EXPECT_FALSE(buffer->MapAtCpuAddr(PAGE_SIZE));
+        EXPECT_FALSE(buffer->MapAtCpuAddr(PAGE_SIZE, 0, PAGE_SIZE));
         uint64_t addr = 0x10000000;
         uint32_t i;
         // Try multiple times in case something is already mapped there.
         for (i = 0; i < 100; i++) {
             addr += PAGE_SIZE * 100;
-            if (buffer->MapAtCpuAddr(addr))
+            // Can't map portions outside the buffer.
+            ASSERT_FALSE(buffer->MapAtCpuAddr(addr, PAGE_SIZE, PAGE_SIZE * 2));
+        }
+
+        for (i = 0; i < 100; i++) {
+            addr += PAGE_SIZE * 100;
+            if (buffer->MapAtCpuAddr(addr, 0, PAGE_SIZE))
                 break;
         }
 
@@ -78,7 +84,7 @@ public:
 
         for (i = 0; i < 100; i++) {
             addr += PAGE_SIZE * 100;
-            if (buffer->MapAtCpuAddr(addr))
+            if (buffer->MapAtCpuAddr(addr, 0, PAGE_SIZE))
                 break;
         }
         EXPECT_EQ(100u, i);
@@ -86,7 +92,7 @@ public:
         EXPECT_TRUE(buffer->UnmapCpu());
         for (i = 0; i < 100; i++) {
             addr += PAGE_SIZE * 100;
-            if (buffer->MapAtCpuAddr(addr))
+            if (buffer->MapAtCpuAddr(addr, 0, PAGE_SIZE))
                 break;
         }
 

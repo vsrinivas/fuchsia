@@ -189,11 +189,11 @@ magma_status_t magma_map_aligned(magma_connection_t* connection, magma_buffer_t 
 }
 
 magma_status_t magma_map_specific(magma_connection_t* connection, magma_buffer_t buffer,
-                                  uint64_t addr)
+                                  uint64_t addr, uint64_t offset, uint64_t length)
 {
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
 
-    if (!platform_buffer->MapAtCpuAddr(addr))
+    if (!platform_buffer->MapAtCpuAddr(addr, offset, length))
         return DRET(MAGMA_STATUS_MEMORY_ERROR);
 
     return MAGMA_STATUS_OK;

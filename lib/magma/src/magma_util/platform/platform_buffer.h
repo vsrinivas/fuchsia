@@ -38,7 +38,7 @@ public:
     virtual bool MapCpu(void** addr_out, uintptr_t alignment = 0) = 0;
     virtual bool UnmapCpu() = 0;
 
-    virtual bool MapAtCpuAddr(uint64_t addr) = 0;
+    virtual bool MapAtCpuAddr(uint64_t addr, uint64_t offset, uint64_t length) = 0;
 
     virtual bool CleanCache(uint64_t offset, uint64_t size, bool invalidate) = 0;
 

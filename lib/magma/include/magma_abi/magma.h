@@ -81,7 +81,7 @@ magma_status_t magma_map_aligned(struct magma_connection_t* connection, magma_bu
 // Attempts to map the given |buffer| at a specific cpu virtual address |addr|.
 // Fails if the buffer was previously mapped, or if that address is unavailable.
 magma_status_t magma_map_specific(struct magma_connection_t* connection, magma_buffer_t buffer,
-                                  uint64_t addr);
+                                  uint64_t addr, uint64_t offset, uint64_t length);
 
 // Releases a cpu mapping for the given |buffer|.
 // Should be paired with each call to one of the mapping interfaces.
