@@ -33,10 +33,20 @@ Options:
 
 class Logger {
 public:
+    Logger() : silent_(false) {};
     explicit Logger(bool silent) : silent_(silent) {};
 
+    // Toggles the output of future calls to |Log|.
     void SetSilent(bool silent) {
         silent_ = silent;
+    }
+
+    // Prints the format string and arguments to stderr.
+    void Error(const char* format, ...) const {
+        va_list arg;
+        va_start(arg, format);
+        vprintf(format, arg);
+        va_end(arg);
     }
 
     // Prints the format string and arguments to stdout, unless explicitly silenced.
@@ -53,56 +63,6 @@ private:
     bool silent_;
 };
 
-struct Config {
-    const char* path;
-    uint32_t block_size;
-    Logger logger;
-};
-
-bool GetOptions(int argc, char** argv, Config* config) {
-    while (true) {
-        struct option options[] = {
-            {"block-size", required_argument, nullptr, 'b'},
-            {"silent", no_argument, nullptr, 's'},
-            {"help", no_argument, nullptr, 'h'},
-            {nullptr, 0, nullptr, 0},
-        };
-        int opt_index;
-        int c = getopt_long(argc, argv, "b:sh", options, &opt_index);
-        if (c < 0) {
-            break;
-        }
-        switch (c) {
-        case 'b':
-            config->block_size = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
-            break;
-        case 's':
-            config->logger.SetSilent(true);
-            break;
-        case 'h':
-            return false;
-        }
-    }
-    if (argc == optind + 1) {
-        config->path = argv[optind];
-        return true;
-    }
-    return false;
-}
-
-bool ValidateOptions(const Config& config) {
-    if (!config.path) {
-        fprintf(stderr, "Input path needed\n");
-        fprintf(stderr, "%s\n", kUsageMessage);
-        return false;
-    }
-    if (config.block_size == 0) {
-        fprintf(stderr, "Invalid block size\n");
-        return false;
-    }
-    return true;
-}
-
 // Cached information from loading and validating the FVM.
 struct FvmInfo {
     // Contains both copies of metadata.
@@ -115,73 +75,6 @@ struct FvmInfo {
     size_t device_size;
     size_t slice_size;
 };
-
-// Parses the FVM info from the device, and validate it (minimally).
-bool LoadFVM(const Config& config, FvmInfo* out) {
-    fbl::unique_fd fd(open(config.path, O_RDONLY));
-    if (!fd) {
-        fprintf(stderr, "Cannot open %s\n", config.path);
-        return false;
-    }
-
-    const off_t device_size = lseek(fd.get(), 0, SEEK_END);
-    if (device_size < 0) {
-        fprintf(stderr, "Unable to get file length\n");
-        return false;
-    }
-    if (device_size % config.block_size != 0) {
-        fprintf(stderr, "File size is not divisible by block size\n");
-        return false;
-    }
-    const size_t block_count = device_size / config.block_size;
-
-    fbl::unique_ptr<uint8_t[]> header(new uint8_t[FVM_BLOCK_SIZE]);
-    if (pread(fd.get(), header.get(), FVM_BLOCK_SIZE, 0) != static_cast<ssize_t>(FVM_BLOCK_SIZE)) {
-        fprintf(stderr, "Could not read header\n");
-        return false;
-    }
-    const fvm::fvm_t* superblock = reinterpret_cast<fvm::fvm_t*>(header.get());
-    const size_t slice_size = superblock->slice_size;
-    if (slice_size % config.block_size != 0) {
-        fprintf(stderr, "Slice size not divisible by block size\n");
-        return false;
-    }
-    const size_t metadata_size = fvm::MetadataSize(device_size, slice_size);
-    fbl::unique_ptr<uint8_t[]> metadata(new uint8_t[metadata_size * 2]);
-    if (pread(fd.get(), metadata.get(), metadata_size * 2, 0) !=
-        static_cast<ssize_t>(metadata_size * 2)) {
-        fprintf(stderr, "Could not read metadata\n");
-        return false;
-    }
-
-    const void* metadata1 = metadata.get();
-    const void* metadata2 = reinterpret_cast<const void*>(metadata.get() + metadata_size);
-
-    const void* valid_metadata;
-    zx_status_t status = fvm_validate_header(metadata1, metadata2, metadata_size,
-                                             &valid_metadata);
-    if (status != ZX_OK) {
-        fprintf(stderr, "Invalid FVM metadata\n");
-        return false;
-    }
-
-    const void* invalid_metadata = (metadata1 == valid_metadata) ? metadata2 : metadata1;
-    const size_t valid_metadata_offset = (metadata1 == valid_metadata) ? 0 : metadata_size;
-
-    FvmInfo info = {
-        fbl::Array<uint8_t>(metadata.release(), metadata_size * 2),
-        valid_metadata_offset,
-        static_cast<const uint8_t*>(valid_metadata),
-        static_cast<const uint8_t*>(invalid_metadata),
-        config.block_size,
-        block_count,
-        static_cast<size_t>(device_size),
-        slice_size,
-    };
-
-    *out = fbl::move(info);
-    return true;
-}
 
 struct Slice {
     uint64_t virtual_partition;
@@ -196,12 +89,189 @@ struct Partition {
     fbl::Vector<Slice> slices;
 };
 
-// Acquires a list of slices and partitions while parsing the FVM.
-//
-// Returns false if the FVM contains contradictory or invalid data.
-bool LoadPartitions(const size_t slice_count, const fvm::slice_entry_t* slice_table,
-                    const fvm::vpart_entry_t* vpart_table,
-                    fbl::Vector<Slice>* out_slices, fbl::Array<Partition>* out_partitions) {
+// Checker defines a class which may be used to validate an FVM
+// (provided as either a regular file or a raw block device).
+class Checker {
+public:
+    Checker() = default;
+    Checker(fbl::unique_fd fd, uint32_t block_size, bool silent) :
+        fd_(fbl::move(fd)), block_size_(block_size), logger_(silent) {}
+
+    // Sets the path of the block device / image to read the FVM from.
+    void SetDevice(fbl::unique_fd fd) {
+        fd_ = fbl::move(fd);
+    }
+
+    // Sets the block size of the provided device. Not automatically queried from the underlying
+    // device, since this checker may operate on a regular file, which does not have an
+    // attached block size.
+    void SetBlockSize(uint32_t block_size) {
+        block_size_ = block_size;
+    }
+
+    // Toggles on or off the informational stdout output.
+    void SetSilent(bool silent) {
+        logger_.SetSilent(silent);
+    }
+
+    // Read from and validate the provided device, logging information if requested.
+    bool Validate() const {
+        if (!ValidateOptions()) {
+            return false;
+        }
+
+        FvmInfo info;
+        if (!LoadFVM(&info)) {
+            return false;
+        }
+
+        return CheckFVM(info);
+    }
+
+private:
+    // Parses the FVM info from the device, and validate it (minimally).
+    bool LoadFVM(FvmInfo* out) const;
+
+    // Outputs and checks information about the FVM, optionally logging parsed information.
+    bool CheckFVM(const FvmInfo& info) const;
+
+    // Acquires a list of slices and partitions while parsing the FVM.
+    //
+    // Returns false if the FVM contains contradictory or invalid data.
+    bool LoadPartitions(const size_t slice_count, const fvm::slice_entry_t* slice_table,
+                        const fvm::vpart_entry_t* vpart_table, fbl::Vector<Slice>* out_slices,
+                        fbl::Array<Partition>* out_partitions) const;
+
+    // Displays information about |slices|, assuming they are sorted in physical slice order.
+    void DumpSlices(const fbl::Vector<Slice>& slices) const;
+
+    uint32_t BlockSize() const {
+        return block_size_;
+    }
+
+    const fbl::unique_fd& Device() const {
+        return fd_;
+    }
+
+    bool ValidateOptions() const {
+        if (!Device()) {
+            logger_.Error("FVM checker missing a device\n");
+            return false;
+        }
+        if (BlockSize() == 0) {
+            logger_.Error("Invalid block size\n");
+            return false;
+        }
+        return true;
+    }
+
+    fbl::unique_fd fd_;
+    uint32_t block_size_ = 512;
+    Logger logger_;
+};
+
+bool GetOptions(int argc, char** argv, Checker* checker) {
+    while (true) {
+        struct option options[] = {
+            {"block-size", required_argument, nullptr, 'b'},
+            {"silent", no_argument, nullptr, 's'},
+            {"help", no_argument, nullptr, 'h'},
+            {nullptr, 0, nullptr, 0},
+        };
+        int opt_index;
+        int c = getopt_long(argc, argv, "b:sh", options, &opt_index);
+        if (c < 0) {
+            break;
+        }
+        switch (c) {
+        case 'b':
+            checker->SetBlockSize(static_cast<uint32_t>(strtoul(optarg, NULL, 0)));
+            break;
+        case 's':
+            checker->SetSilent(true);
+            break;
+        case 'h':
+            return false;
+        }
+    }
+    if (argc == optind + 1) {
+        const char* path = argv[optind];
+        fbl::unique_fd fd(open(path, O_RDONLY));
+        if (!fd) {
+            fprintf(stderr, "Cannot open %s\n", path);
+            return false;
+        }
+
+        checker->SetDevice(fbl::move(fd));
+        return true;
+    }
+    return false;
+}
+
+bool Checker::LoadFVM(FvmInfo* out) const {
+    const fbl::unique_fd& fd = Device();
+    const off_t device_size = lseek(fd.get(), 0, SEEK_END);
+    if (device_size < 0) {
+        logger_.Error("Unable to get file length\n");
+        return false;
+    }
+    if (device_size % BlockSize() != 0) {
+        logger_.Error("File size is not divisible by block size\n");
+        return false;
+    }
+    const size_t block_count = device_size / BlockSize();
+
+    fbl::unique_ptr<uint8_t[]> header(new uint8_t[FVM_BLOCK_SIZE]);
+    if (pread(fd.get(), header.get(), FVM_BLOCK_SIZE, 0) != static_cast<ssize_t>(FVM_BLOCK_SIZE)) {
+        logger_.Error("Could not read header\n");
+        return false;
+    }
+    const fvm::fvm_t* superblock = reinterpret_cast<fvm::fvm_t*>(header.get());
+    const size_t slice_size = superblock->slice_size;
+    if (slice_size % BlockSize() != 0) {
+        logger_.Error("Slice size not divisible by block size\n");
+        return false;
+    }
+    const size_t metadata_size = fvm::MetadataSize(device_size, slice_size);
+    fbl::unique_ptr<uint8_t[]> metadata(new uint8_t[metadata_size * 2]);
+    if (pread(fd.get(), metadata.get(), metadata_size * 2, 0) !=
+        static_cast<ssize_t>(metadata_size * 2)) {
+        logger_.Error("Could not read metadata\n");
+        return false;
+    }
+
+    const void* metadata1 = metadata.get();
+    const void* metadata2 = reinterpret_cast<const void*>(metadata.get() + metadata_size);
+
+    const void* valid_metadata;
+    zx_status_t status = fvm_validate_header(metadata1, metadata2, metadata_size,
+                                             &valid_metadata);
+    if (status != ZX_OK) {
+        logger_.Error("Invalid FVM metadata\n");
+        return false;
+    }
+
+    const void* invalid_metadata = (metadata1 == valid_metadata) ? metadata2 : metadata1;
+    const size_t valid_metadata_offset = (metadata1 == valid_metadata) ? 0 : metadata_size;
+
+    FvmInfo info = {
+        fbl::Array<uint8_t>(metadata.release(), metadata_size * 2),
+        valid_metadata_offset,
+        static_cast<const uint8_t*>(valid_metadata),
+        static_cast<const uint8_t*>(invalid_metadata),
+        BlockSize(),
+        block_count,
+        static_cast<size_t>(device_size),
+        slice_size,
+    };
+
+    *out = fbl::move(info);
+    return true;
+}
+
+bool Checker::LoadPartitions(const size_t slice_count, const fvm::slice_entry_t* slice_table,
+                             const fvm::vpart_entry_t* vpart_table, fbl::Vector<Slice>* out_slices,
+                             fbl::Array<Partition>* out_partitions) const {
     fbl::Vector<Slice> slices;
     fbl::Array<Partition> partitions(new Partition[FVM_MAX_ENTRIES], FVM_MAX_ENTRIES);
 
@@ -220,11 +290,11 @@ bool LoadPartitions(const size_t slice_count, const fvm::slice_entry_t* slice_ta
         if (slice_table[i].Vpart() != FVM_SLICE_ENTRY_FREE) {
             const uint64_t vpart = slice_table[i].Vpart();
             if (vpart >= FVM_MAX_ENTRIES) {
-                fprintf(stderr, "Invalid vslice entry; claims vpart which is out of range.\n");
+                logger_.Error("Invalid vslice entry; claims vpart which is out of range.\n");
                 valid = false;
             } else if (!partitions[vpart].Allocated()) {
-                fprintf(stderr, "Invalid slice entry; claims that it is allocated to invalid ");
-                fprintf(stderr, "partition %zu\n", vpart);
+                logger_.Error("Invalid slice entry; claims that it is allocated to invalid ");
+                logger_.Error("partition %zu\n", vpart);
                 valid = false;
             }
 
@@ -241,8 +311,8 @@ bool LoadPartitions(const size_t slice_count, const fvm::slice_entry_t* slice_ta
             const size_t claimed = partitions[i].entry->slices;
             const size_t actual = partitions[i].slices.size();
             if (claimed != actual) {
-                fprintf(stderr, "Disagreement about allocated slice count: ");
-                fprintf(stderr, "Partition %zu claims %zu slices, has %zu\n", i, claimed, actual);
+                logger_.Error("Disagreement about allocated slice count: ");
+                logger_.Error("Partition %zu claims %zu slices, has %zu\n", i, claimed, actual);
                 valid = false;
             }
         }
@@ -253,9 +323,8 @@ bool LoadPartitions(const size_t slice_count, const fvm::slice_entry_t* slice_ta
     return valid;
 }
 
-// Displays information about |slices|, assuming they are sorted in physical slice order.
-void DumpSlices(const Config& config, const fbl::Vector<Slice>& slices) {
-    config.logger.Log("[  Slice Info  ]\n");
+void Checker::DumpSlices(const fbl::Vector<Slice>& slices) const {
+    logger_.Log("[  Slice Info  ]\n");
     Slice* run_start = nullptr;
     size_t run_length = 0;
 
@@ -269,17 +338,17 @@ void DumpSlices(const Config& config, const fbl::Vector<Slice>& slices) {
         run_start = slice;
         run_length = 1;
     };
-    auto end_run = [&config, &run_start, &run_length]() {
+    auto end_run = [this, &run_start, &run_length]() {
         if (run_length == 1) {
-            config.logger.Log("Physical Slice %zu allocated\n", run_start->physical_slice);
-            config.logger.Log("  Allocated as virtual slice %zu\n", run_start->virtual_slice);
-            config.logger.Log("  Allocated to partition %zu\n", run_start->virtual_partition);
+            logger_.Log("Physical Slice %zu allocated\n", run_start->physical_slice);
+            logger_.Log("  Allocated as virtual slice %zu\n", run_start->virtual_slice);
+            logger_.Log("  Allocated to partition %zu\n", run_start->virtual_partition);
         } else if (run_length > 1) {
-            config.logger.Log("Physical Slices [%zu, %zu] allocated\n",
-                   run_start->physical_slice, run_start->physical_slice + run_length - 1);
-            config.logger.Log("  Allocated as virtual slices [%zu, %zu]\n",
-                   run_start->virtual_slice, run_start->virtual_slice + run_length - 1);
-            config.logger.Log("  Allocated to partition %zu\n", run_start->virtual_partition);
+            logger_.Log("Physical Slices [%zu, %zu] allocated\n",
+                run_start->physical_slice, run_start->physical_slice + run_length - 1);
+            logger_.Log("  Allocated as virtual slices [%zu, %zu]\n",
+                run_start->virtual_slice, run_start->virtual_slice + run_length - 1);
+            logger_.Log("  Allocated to partition %zu\n", run_start->virtual_partition);
         }
         run_start = nullptr;
         run_length = 0;
@@ -304,59 +373,58 @@ void DumpSlices(const Config& config, const fbl::Vector<Slice>& slices) {
     end_run();
 }
 
-// Outputs and checks information about the FVM, optionally logging to stdout.
-bool CheckFVM(const Config& config, const FvmInfo& info) {
+bool Checker::CheckFVM(const FvmInfo& info) const {
     auto superblock = reinterpret_cast<const fvm::fvm_t*>(info.valid_metadata);
     auto invalid_superblock = reinterpret_cast<const fvm::fvm_t*>(info.invalid_metadata);
-    config.logger.Log("[  FVM Info  ]\n");
-    config.logger.Log("Version: %" PRIu64 "\n", superblock->version);
-    config.logger.Log("Generation number: %" PRIu64 "\n", superblock->generation);
-    config.logger.Log("Generation number: %" PRIu64 " (invalid copy)\n", invalid_superblock->generation);
-    config.logger.Log("\n");
+    logger_.Log("[  FVM Info  ]\n");
+    logger_.Log("Version: %" PRIu64 "\n", superblock->version);
+    logger_.Log("Generation number: %" PRIu64 "\n", superblock->generation);
+    logger_.Log("Generation number: %" PRIu64 " (invalid copy)\n", invalid_superblock->generation);
+    logger_.Log("\n");
 
     const size_t slice_count = fvm::UsableSlicesCount(info.device_size, info.slice_size);
-    config.logger.Log("[  Size Info  ]\n");
-    config.logger.Log("Device Length: %zu\n", info.device_size);
-    config.logger.Log("   Block size: %zu\n", info.block_size);
-    config.logger.Log("   Slice size: %zu\n", info.slice_size);
-    config.logger.Log("  Slice count: %zu\n", slice_count);
-    config.logger.Log("\n");
+    logger_.Log("[  Size Info  ]\n");
+    logger_.Log("%-15s %10zu\n", "Device Length:", info.device_size);
+    logger_.Log("%-15s %10zu\n", "Block size:", info.block_size);
+    logger_.Log("%-15s %10zu\n", "Slice size:", info.slice_size);
+    logger_.Log("%-15s %10zu\n", "Slice count:", slice_count);
+    logger_.Log("\n");
 
     const size_t metadata_size = fvm::MetadataSize(info.device_size, info.slice_size);
     const size_t metadata_count = 2;
     const size_t metadata_end = metadata_size * metadata_count;
-    config.logger.Log("[  Metadata  ]\n");
-    config.logger.Log("Valid metadata start: 0x%016zx\n", info.valid_metadata_offset);
-    config.logger.Log("      Metadata start: 0x%016x\n", 0);
-    config.logger.Log("       Metadata size: %zu (for each copy)\n", metadata_size);
-    config.logger.Log("      Metadata count: %zu\n", metadata_count);
-    config.logger.Log("        Metadata end: 0x%016zx\n", metadata_end);
-    config.logger.Log("\n");
+    logger_.Log("[  Metadata  ]\n");
+    logger_.Log("%-25s 0x%016zx\n", "Valid metadata start:", info.valid_metadata_offset);
+    logger_.Log("%-25s 0x%016x\n", "Metadata start:", 0);
+    logger_.Log("%-25s   %16zu (for each copy)\n", "Metadata size:", metadata_size);
+    logger_.Log("%-25s   %16zu\n", "Metadata count:", metadata_count);
+    logger_.Log("%-25s 0x%016zx\n", "Metadata end:", metadata_end);
+    logger_.Log("\n");
 
-    config.logger.Log("[  All Subsequent Offsets Relative to Valid Metadata Start  ]\n");
-    config.logger.Log("\n");
+    logger_.Log("[  All Subsequent Offsets Relative to Valid Metadata Start  ]\n");
+    logger_.Log("\n");
 
     const size_t vpart_table_start = fvm::kVPartTableOffset;
     const size_t vpart_entry_size = sizeof(fvm::vpart_entry_t);
     const size_t vpart_table_size = fvm::kVPartTableLength;
     const size_t vpart_table_end = vpart_table_start + vpart_table_size;
-    config.logger.Log("[  Virtual Partition Table  ]\n");
-    config.logger.Log("VPartition Entry Start: 0x%016zx\n", vpart_table_start);
-    config.logger.Log(" VPartition entry size: %zu\n", vpart_entry_size);
-    config.logger.Log(" VPartition table size: %zu\n", vpart_table_size);
-    config.logger.Log("  VPartition table end: 0x%016zx\n", vpart_table_end);
-    config.logger.Log("\n");
+    logger_.Log("[  Virtual Partition Table  ]\n");
+    logger_.Log("%-25s 0x%016zx\n", "VPartition Entry Start:", vpart_table_start);
+    logger_.Log("%-25s   %16zu\n", "VPartition entry size:", vpart_entry_size);
+    logger_.Log("%-25s   %16zu\n", "VPartition table size:", vpart_table_size);
+    logger_.Log("%-25s 0x%016zx\n", "VPartition table end:", vpart_table_end);
+    logger_.Log("\n");
 
     const size_t slice_table_start = fvm::kAllocTableOffset;
     const size_t slice_entry_size = sizeof(fvm::slice_entry_t);
     const size_t slice_table_size = slice_entry_size * slice_count;
     const size_t slice_table_end = slice_table_start + slice_table_size;
-    config.logger.Log("[  Slice Allocation Table  ]\n");
-    config.logger.Log("Slice table start: 0x%016zx\n", slice_table_start);
-    config.logger.Log(" Slice entry size: %zu\n", slice_entry_size);
-    config.logger.Log(" Slice table size: %zu\n", slice_table_size);
-    config.logger.Log("  Slice table end: 0x%016zx\n", slice_table_end);
-    config.logger.Log("\n");
+    logger_.Log("[  Slice Allocation Table  ]\n");
+    logger_.Log("%-25s 0x%016zx\n", "Slice table start:", slice_table_start);
+    logger_.Log("%-25s   %16zu\n", "Slice entry size:", slice_entry_size);
+    logger_.Log("%-25s   %16zu\n", "Slice table size:", slice_table_size);
+    logger_.Log("%-25s 0x%016zx\n", "Slice table end:", slice_table_end);
+    logger_.Log("\n");
 
     const fvm::slice_entry_t* slice_table = reinterpret_cast<const fvm::slice_entry_t*>(
             info.valid_metadata + slice_table_start);
@@ -368,46 +436,37 @@ bool CheckFVM(const Config& config, const FvmInfo& info) {
     bool valid = true;
     if (!LoadPartitions(slice_count, slice_table, vpart_table, &slices, &partitions)) {
         valid = false;
-        config.logger.Log("Partitions invalid; displaying info anyway...\n");
+        logger_.Log("Partitions invalid; displaying info anyway...\n");
     }
 
-    config.logger.Log("[  Partition Info  ]\n");
+    logger_.Log("[  Partition Info  ]\n");
     for (size_t i = 1; i < FVM_MAX_ENTRIES; i++) {
         const uint32_t slices = vpart_table[i].slices;
         if (slices != 0) {
             char guid_string[GPT_GUID_STRLEN];
             uint8_to_guid_string(guid_string, vpart_table[i].type);
-            config.logger.Log("Partition %zu allocated\n", i);
-            config.logger.Log("  Has %u slices allocated\n", slices);
-            config.logger.Log("  Type: %s\n", gpt_guid_to_type(guid_string));
-            config.logger.Log("  Name: %.*s\n", FVM_NAME_LEN, vpart_table[i].name);
+            logger_.Log("Partition %zu allocated\n", i);
+            logger_.Log("  Has %u slices allocated\n", slices);
+            logger_.Log("  Type: %s\n", gpt_guid_to_type(guid_string));
+            logger_.Log("  Name: %.*s\n", FVM_NAME_LEN, vpart_table[i].name);
         }
     }
-    config.logger.Log("\n");
+    logger_.Log("\n");
 
-    DumpSlices(config, slices);
+    DumpSlices(slices);
     return valid;
 }
 
 }  // namespace
 
 int main(int argc, char** argv) {
-    Config config = {nullptr, 512, Logger(false)};
-    if (!GetOptions(argc, argv, &config)) {
+    Checker checker;
+    if (!GetOptions(argc, argv, &checker)) {
         fprintf(stderr, "%s\n", kUsageMessage);
         return -1;
     }
 
-    if (!ValidateOptions(config)) {
-        return -1;
-    }
-
-    FvmInfo info;
-    if (!LoadFVM(config, &info)) {
-        return -1;
-    }
-
-    if (!CheckFVM(config, info)) {
+    if (!checker.Validate()) {
         return -1;
     }
     return 0;
