@@ -450,7 +450,7 @@ zx_status_t AmlGxlGpio::GpioImplReleaseInterrupt(uint32_t pin) {
         if (irq_info_[i] == pin) {
             irq_status_ &= static_cast<uint8_t>(~(1 << i));
             irq_info_[i] = kMaxGpioIndex + 1;
-            return ZX_ERR_NOT_FOUND;
+            return ZX_OK;
         }
     }
 

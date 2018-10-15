@@ -380,10 +380,10 @@ static zx_status_t aml_gpio_release_interrupt(void *ctx, uint32_t pin) {
         if(interrupt->irq_info[i] == pin) {
             interrupt->irq_status &= ~(1 << i);
             interrupt->irq_info[i] = MAX_GPIO_INDEX+1;
-            goto fail;
+            mtx_unlock(&interrupt->lock);
+            return ZX_OK;
         }
     }
-fail:
     mtx_unlock(&interrupt->lock);
     return ZX_ERR_NOT_FOUND;
 }
