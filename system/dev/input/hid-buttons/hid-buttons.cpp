@@ -24,11 +24,10 @@
 #include "hid-buttons.h"
 
 // clang-format off
-// zx_port_packet::type.
-#define PORT_TYPE_SHUTDOWN                 0x01
-#define PORT_TYPE_INTERRUPT_VOLUME_UP      0x02
-#define PORT_TYPE_INTERRUPT_VOLUME_DOWN    0x03
-#define PORT_TYPE_INTERRUPT_VOLUME_UP_DOWN 0x04
+// zx_port_packet::key.
+constexpr uint64_t PORT_KEY_SHUTDOWN = 0x01;
+// Start of up to kNumberOfRequiredGpios port types used for interrupts.
+constexpr uint64_t PORT_KEY_INTERRUPT_START = 0x10;
 // clang-format on
 
 namespace buttons {
@@ -39,42 +38,36 @@ int HidButtonsDevice::Thread() {
         zx_status_t status = zx_port_wait(port_handle_, ZX_TIME_INFINITE, &packet);
         zxlogf(TRACE, "%s msg received on port key %lu\n", __FUNCTION__, packet.key);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "%s port wait failed: %d\n", __FUNCTION__, status);
+            zxlogf(ERROR, "%s port wait failed %d\n", __FUNCTION__, status);
             return thrd_error;
         }
 
-        switch (packet.key) {
-        case PORT_TYPE_SHUTDOWN:
+        if (packet.key == PORT_KEY_SHUTDOWN) {
             zxlogf(INFO, "%s shutting down\n", __FUNCTION__);
             return thrd_success;
-        case PORT_TYPE_INTERRUPT_VOLUME_UP:
-            __FALLTHROUGH;
-        case PORT_TYPE_INTERRUPT_VOLUME_DOWN:
-            {
-                buttons_input_rpt_t input_rpt;
-                input_rpt.rpt_id = BUTTONS_RPT_ID_INPUT;
-                switch (packet.key) {
-                case PORT_TYPE_INTERRUPT_VOLUME_UP:
-                    keys_[kGpioVolumeUp].irq.ack();
-                    input_rpt.volume = 1;
-                    break;
-                case PORT_TYPE_INTERRUPT_VOLUME_DOWN:
-                    keys_[kGpioVolumeDown].irq.ack();
-                    input_rpt.volume = 3; // -1 for 2 bits.
-                    break;
-                }
-                input_rpt.padding = 0;
+        } else if (packet.key >= PORT_KEY_INTERRUPT_START &&
+                   packet.key < (PORT_KEY_INTERRUPT_START + kNumberOfRequiredGpios)) {
+            uint32_t type = static_cast<uint32_t>(packet.key - PORT_KEY_INTERRUPT_START);
+            keys_[type].irq.ack();
+            // We need to reconfigure the GPIO edge detection to catch the opposite direction.
+            ReconfigureGpio(type, packet.key);
+
+            buttons_input_rpt_t input_rpt;
+            size_t out_len;
+            status = HidbusGetReport(0, BUTTONS_RPT_ID_INPUT, &input_rpt, sizeof(input_rpt),
+                                     &out_len);
+            if (status != ZX_OK) {
+                zxlogf(ERROR, "%s HidbusGetReport failed %d\n", __FUNCTION__, status);
+            } else {
                 fbl::AutoLock lock(&proxy_lock_);
                 if (proxy_.is_valid()) {
                     proxy_.IoQueue(&input_rpt, sizeof(buttons_input_rpt_t));
                     // If report could not be filled, we do not ioqueue.
                 }
             }
-            break;
-        case PORT_TYPE_INTERRUPT_VOLUME_UP_DOWN:
-            keys_[kGpioVolumeUpDown].irq.ack();
-            zxlogf(INFO, "FDR (up and down buttons) pressed\n");
-            break;
+            if (packet.key == PORT_KEY_INTERRUPT_START + kGpioVolumeUpDown) {
+                zxlogf(INFO, "FDR (up and down buttons) pressed\n");
+            }
         }
     }
     return thrd_success;
@@ -149,6 +142,8 @@ zx_status_t HidButtonsDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, 
     if (!val) {               // Down button is pressed down.
         input_rpt.volume = 3; // -1 for 2 bits.
     }
+    gpio_read(&keys_[kGpioMicPrivacy].gpio, &val);
+    input_rpt.mute = static_cast<bool>(val);
     auto out = static_cast<buttons_input_rpt_t*>(data);
     *out = input_rpt;
 
@@ -176,33 +171,28 @@ zx_status_t HidButtonsDevice::HidbusSetProtocol(uint8_t protocol) {
     return ZX_OK;
 }
 
-zx_status_t HidButtonsDevice::ConfigureGpio(uint32_t idx, uint64_t int_port) {
+zx_status_t HidButtonsDevice::ReconfigureGpio(uint32_t idx, uint64_t int_port) {
     zx_status_t status;
-    platform_device_protocol_t pdev;
-    status = device_get_protocol(parent_, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s device_get_protocol failed %d\n", __FUNCTION__, status);
-        return status;
-    }
-    status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, idx, &keys_[idx].gpio);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s pdev_get_protocol failed %d\n", __FUNCTION__, status);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    status = gpio_config_in(&keys_[idx].gpio, GPIO_NO_PULL);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s gpio_config_in failed %d\n", __FUNCTION__, status);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    status = gpio_get_interrupt(&keys_[idx].gpio, ZX_INTERRUPT_MODE_EDGE_LOW,
-                                keys_[idx].irq.reset_and_get_address());
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s gpio_get_interrupt failed %d\n", __FUNCTION__, status);
-        return status;
-    }
+    uint8_t current = 0, old;
+    gpio_read(&keys_[idx].gpio, &current);
+    do {
+        gpio_release_interrupt(&keys_[idx].gpio);
+        // We setup a trigger for the opposite of the current GPIO value.
+        status = gpio_get_interrupt(&keys_[idx].gpio, current ? ZX_INTERRUPT_MODE_EDGE_LOW :
+                                    ZX_INTERRUPT_MODE_EDGE_HIGH,
+                                    keys_[idx].irq.reset_and_get_address());
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s gpio_get_interrupt failed %d\n", __FUNCTION__, status);
+            return status;
+        }
+        old = current;
+        gpio_read(&keys_[idx].gpio, &current);
+        zxlogf(SPEW, "%s old gpio %u new gpio %u\n", __FUNCTION__, old, current);
+        // If current switches after setup, we setup a new trigger for it (opposite edge).
+    } while (current != old);
     status = keys_[idx].irq.bind(port_handle_, int_port, 0);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "HidButtonsDevice::Bind: zx_interrupt_bind failed: %d\n", status);
+        zxlogf(ERROR, "%s zx_interrupt_bind failed %d\n", __FUNCTION__, status);
         return status;
     }
     return ZX_OK;
@@ -213,7 +203,7 @@ zx_status_t HidButtonsDevice::Bind() {
 
     status = zx_port_create(ZX_PORT_BIND_TO_INTERRUPT, &port_handle_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s port_create failed: %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s port_create failed %d\n", __FUNCTION__, status);
         return status;
     }
 
@@ -234,17 +224,21 @@ zx_status_t HidButtonsDevice::Bind() {
     keys_ = fbl::make_unique<GpioKeys[]>(pdev_info.gpio_count);
     // TODO(andresoportus): use fbl::make_unique_checked once array can be used.
 
-    status = ConfigureGpio(kGpioVolumeUp, PORT_TYPE_INTERRUPT_VOLUME_UP);
-    if (status != ZX_OK) {
-        return status;
-    }
-    status = ConfigureGpio(kGpioVolumeDown, PORT_TYPE_INTERRUPT_VOLUME_DOWN);
-    if (status != ZX_OK) {
-        return status;
-    }
-    status = ConfigureGpio(kGpioVolumeUpDown, PORT_TYPE_INTERRUPT_VOLUME_UP_DOWN);
-    if (status != ZX_OK) {
-        return status;
+    for (uint32_t i = 0; i < kNumberOfRequiredGpios; ++i) {
+        status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, i, &keys_[i].gpio);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s pdev_get_protocol failed %d\n", __FUNCTION__, status);
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        status = gpio_config_in(&keys_[i].gpio, GPIO_NO_PULL);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s gpio_config_in failed %d\n", __FUNCTION__, status);
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        status = ReconfigureGpio(i, PORT_KEY_INTERRUPT_START + i);
+        if (status != ZX_OK) {
+            return status;
+        }
     }
 
     int rc = thrd_create_with_name(&thread_,
@@ -259,7 +253,7 @@ zx_status_t HidButtonsDevice::Bind() {
 
     status = DdkAdd("hid-buttons");
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s DdkAdd failed: %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s DdkAdd failed %d\n", __FUNCTION__, status);
         ShutDown();
         return status;
     }
@@ -268,17 +262,15 @@ zx_status_t HidButtonsDevice::Bind() {
 }
 
 void HidButtonsDevice::ShutDown() {
-    zx_port_packet packet = {PORT_TYPE_SHUTDOWN, ZX_PKT_TYPE_USER, ZX_OK, {}};
+    zx_port_packet packet = {PORT_KEY_SHUTDOWN, ZX_PKT_TYPE_USER, ZX_OK, {}};
     zx_status_t status = zx_port_queue(port_handle_, &packet);
     ZX_ASSERT(status == ZX_OK);
     thrd_join(thread_, NULL);
-    keys_[kGpioVolumeUp].irq.destroy();
-    keys_[kGpioVolumeDown].irq.destroy();
-    keys_[kGpioVolumeUpDown].irq.destroy();
-    {
-        fbl::AutoLock lock(&proxy_lock_);
-        proxy_.clear();
+    for (uint32_t i = 0; i < kNumberOfRequiredGpios; ++i) {
+        keys_[i].irq.destroy();
     }
+    fbl::AutoLock lock(&proxy_lock_);
+    proxy_.clear();
 }
 
 void HidButtonsDevice::DdkUnbind() {

@@ -25,6 +25,11 @@ static const pbus_gpio_t astro_buttons_gpios[] = {
         // Both Volume up and down pressed.
         .gpio = S905D2_GPIOAO(10),
     },
+    {
+        // Mic privacy switch.
+        .gpio = S905D2_GPIOZ(2),
+
+    },
 };
 
 static pbus_dev_t astro_buttons_dev = {

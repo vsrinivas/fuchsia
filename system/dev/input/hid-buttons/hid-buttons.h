@@ -52,6 +52,7 @@ private:
         kGpioVolumeUp = 0,
         kGpioVolumeDown,
         kGpioVolumeUpDown,
+        kGpioMicPrivacy,
         kNumberOfRequiredGpios,
     };
     struct GpioKeys {
@@ -62,7 +63,7 @@ private:
 
     int Thread();
     void ShutDown() TA_EXCL(proxy_lock_);
-    zx_status_t ConfigureGpio(uint32_t idx, uint64_t int_port);
+    zx_status_t ReconfigureGpio(uint32_t idx, uint64_t int_port);
 
     thrd_t thread_;
     zx_handle_t port_handle_;

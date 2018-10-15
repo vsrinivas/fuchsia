@@ -401,6 +401,12 @@ enum class Sensor : uint32_t {
     kLightUltravioletIndex          = 0x4DD,
 };
 
+enum class Telephony : uint32_t {
+    kUndefined                      = 0x00,
+
+    kPhoneMute                      = 0x2F,
+};
+
 }   // namespace usage
 }   // namespace hid
 
