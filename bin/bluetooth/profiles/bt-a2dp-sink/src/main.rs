@@ -61,6 +61,36 @@ fn get_available_stream_info() -> Result<Vec<avdtp::StreamInformation>, avdtp::E
     Ok(vec![s])
 }
 
+// Defined in the Bluetooth Assigned Numbers for Audio/Video applications
+// https://www.bluetooth.com/specifications/assigned-numbers/audio-video
+const AUDIO_CODEC_SBC : u8 = 0;
+
+fn get_stream_capabilities(
+    _: avdtp::StreamEndpointId,
+) -> Result<Vec<avdtp::ServiceCapability>, avdtp::Error> {
+    // TODO(jamuraa): get the capabilities of the available stream from the Media Framework
+    // This is SBC with minimal requirements for a sink.
+    Ok(vec![
+        avdtp::ServiceCapability::MediaTransport,
+        avdtp::ServiceCapability::MediaCodec {
+            media_type: avdtp::MediaType::Audio,
+            codec_type: avdtp::MediaCodecType::new(AUDIO_CODEC_SBC),
+            // SBC Codec Specific Information Elements:
+            // These are the mandatory support in sink.
+            // Byte 0:
+            //  - Sampling Frequencies: 44.1kHz, 48.0kHz
+            //  - Channel modes: All (MONO, DUAL CHANNEL, STEREO, JOINT STEREO)
+            // Byte 1:
+            //  - Block length: all (4, 8, 12, 16)
+            //  - Subbands: all (4, 8)
+            //  - Allocation Method: all (SNR and loudness)
+            // Byte 2-3: Minimum and maximum bitpool value. This is just the minimum to the max.
+            // TODO(jamuraa): there should be a way to build this data in a structured way (bt-a2dp?)
+            codec_extra: vec![0x3F, 0xFF, 2, 250],
+        },
+    ])
+}
+
 fn start_media_stream(sock: zx::Socket) -> Result<(), zx::Status> {
     let mut stream_sock = fasync::Socket::from_socket(sock)?;
     fuchsia_async::spawn(
@@ -96,11 +126,22 @@ fn handle_request(r: avdtp::Request) -> Result<(), avdtp::Error> {
             let streams = get_available_stream_info()?;
             responder.send(&streams)
         }
-        //_ => Ok(()),
+        avdtp::Request::GetCapabilities {
+            responder,
+            stream_id,
+        }
+        | avdtp::Request::GetAllCapabilities {
+            responder,
+            stream_id,
+        } => {
+            let caps = get_stream_capabilities(stream_id)?;
+            responder.send(&caps)
+        }
     }
 }
 
 async fn init() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&["a2dp-sink"]).expect("Can't init logger");
     let profile_svc = fuchsia_app::client::connect_to_service::<ProfileMarker>()
         .context("Failed to connect to Bluetooth profile service")?;
 

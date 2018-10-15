@@ -139,8 +139,7 @@ fn responds_with_same_tx_id() {
 
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::Discover { responder } => responder.send(&[]),
-        // TODO: enabled when there's another request impemented
-        //_ => panic!("should have received a Discover"),
+        _ => panic!("should have received a Discover"),
     };
 
     assert!(respond_res.is_ok());
@@ -164,124 +163,6 @@ fn invalid_signal_id_responds_error() {
     // The peer should have responded with a General Reject message with the
     // same TxLabel, and the same (invalid) signal identifier.
     expect_remote_recv(&[0x41, 0x30], &remote);
-}
-
-#[test]
-fn discover_invalid_length() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
-
-    // TxLabel 4, Discover, which doesn't have a payload, but we're including one.
-    assert!(remote.write(&[0x40, 0x01, 0x40]).is_ok());
-
-    let mut fut = stream.next();
-    let complete = exec.run_until_stalled(&mut fut);
-
-    // We shouldn't have received anything on the future
-    assert!(complete.is_pending());
-
-    // The peer should have responded with a Response Reject message with the
-    // same TxLabel with BAD_LENGTH
-    expect_remote_recv(&[0x43, 0x01, 0x11], &remote);
-}
-
-// Discovery tests
-
-#[test]
-fn discover_event_returns_results_correctly() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
-
-    assert!(remote.write(&CMD_DISCOVER).is_ok());
-
-    let respond_res = match next_request(&mut stream, &mut exec) {
-        Request::Discover { responder } => {
-            let s = StreamInformation::new(0x0A, false, MediaType::Video, EndpointType::Source);
-            assert!(s.is_ok());
-            responder.send(&[s.unwrap()])
-        }
-        // TODO: enable when we add the next request type
-        //_ => panic!("should have received a Discover"),
-    };
-
-    assert!(respond_res.is_ok());
-
-    expect_remote_recv(&[0x42, 0x01, 0x0A << 2, 0x01 << 4], &remote);
-}
-
-#[test]
-fn discover_command_works() {
-    let mut exec = fasync::Executor::new().expect("failed to create an executor");
-    let (peer, remote) = setup_peer();
-    let response_fut = peer.discover();
-    pin_mut!(response_fut);
-    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
-
-    let received = recv_remote(&remote).unwrap();
-    // Last half of header must be Single (0b00) and Command (0b00)
-    assert_eq!(0x00, received[0] & 0xF);
-    assert_eq!(0x01, received[1]); // 0x01 = Discover
-
-    let txlabel_raw = received[0] & 0xF0;
-
-    let response: &[u8] = &[
-        txlabel_raw << 4 | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
-        0x01,                              // Discover
-        0x3E << 2 | 0x0 << 1,              // SEID (3E), Not In Use (0b0)
-        0x00 << 4 | 0x1 << 3,              // Audio (0x00), Sink (0x01)
-        0x01 << 2 | 0x1 << 1,              // SEID (1), In Use (0b1)
-        0x01 << 4 | 0x0 << 3,              // Video (0x01), Source (0x01)
-        0x17 << 2 | 0x0 << 1,              // SEID (17), Not In Use (0b0)
-        0x02 << 4 | 0x1 << 3,              // Multimedia (0x02), Sink (0x01)
-    ];
-    assert!(remote.write(response).is_ok());
-
-    let complete = exec.run_until_stalled(&mut response_fut);
-
-    let endpoints = match complete {
-        Poll::Ready(Ok(response)) => response,
-        x => panic!("Should have a ready Ok response: {:?}", x),
-    };
-
-    assert_eq!(3, endpoints.len());
-    let e1 = StreamInformation::new(0x3E, false, MediaType::Audio, EndpointType::Sink).unwrap();
-    assert_eq!(e1, endpoints[0]);
-    let e2 = StreamInformation::new(0x01, true, MediaType::Video, EndpointType::Source).unwrap();
-    assert_eq!(e2, endpoints[1]);
-    let e3 =
-        StreamInformation::new(0x17, false, MediaType::Multimedia, EndpointType::Sink).unwrap();
-    assert_eq!(e3, endpoints[2]);
-}
-
-#[test]
-fn discover_reject_command() {
-    let mut exec = fasync::Executor::new().expect("failed to create an executor");
-    let (peer, remote) = setup_peer();
-    let response_fut = peer.discover();
-    pin_mut!(response_fut);
-    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
-
-    let received = recv_remote(&remote).unwrap();
-    // Last half of header must be Single (0b00) and Command (0b00)
-    assert_eq!(0x00, received[0] & 0xF);
-    assert_eq!(0x01, received[1]); // 0x01 = Discover
-
-    let txlabel_raw = received[0] & 0xF0;
-
-    let response: &[u8] = &[
-        txlabel_raw | 0x0 << 2 | 0x3, // txlabel (same), Single (0b00), Response Reject (0b11)
-        0x01,                         // Discover
-        0x31,                         // BAD_STATE
-    ];
-
-    assert!(remote.write(response).is_ok());
-
-    let complete = exec.run_until_stalled(&mut response_fut);
-
-    let error = match complete {
-        Poll::Ready(Err(response)) => response,
-        x => panic!("Should have a ready Error response: {:?}", x),
-    };
-
-    assert_eq!(Error::RemoteRejected(0x31), error);
 }
 
 #[test]
@@ -332,4 +213,580 @@ fn exhaust_request_ids() {
     assert!(exec
         .run_until_stalled(&mut another_response_fut)
         .is_pending());
+}
+
+// Discovery tests
+
+#[test]
+fn discover_invalid_length() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    // TxLabel 4, Discover, which doesn't have a payload, but we're including one.
+    assert!(remote.write(&[0x40, 0x01, 0x40]).is_ok());
+
+    let mut fut = stream.next();
+    let complete = exec.run_until_stalled(&mut fut);
+
+    // We shouldn't have received anything on the future
+    assert!(complete.is_pending());
+
+    // The peer should have responded with a Response Reject message with the
+    // same TxLabel with BAD_LENGTH
+    expect_remote_recv(&[0x43, 0x01, 0x11], &remote);
+}
+
+#[test]
+fn discover_event_responder_send_works() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    assert!(remote.write(&CMD_DISCOVER).is_ok());
+
+    let respond_res = match next_request(&mut stream, &mut exec) {
+        Request::Discover { responder } => {
+            let s = StreamInformation::new(0x0A, false, MediaType::Video, EndpointType::Source);
+            assert!(s.is_ok());
+            responder.send(&[s.unwrap()])
+        }
+        _ => panic!("should have received a Discover"),
+    };
+
+    assert!(respond_res.is_ok());
+
+    expect_remote_recv(&[0x42, 0x01, 0x0A << 2, 0x01 << 4], &remote);
+}
+
+#[test]
+fn discover_event_responder_reject_works() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    assert!(remote.write(&CMD_DISCOVER).is_ok());
+
+    let respond_res = match next_request(&mut stream, &mut exec) {
+        Request::Discover { responder } => responder.reject(ErrorCode::BadState),
+        _ => panic!("should have received a Discover"),
+    };
+
+    assert!(respond_res.is_ok());
+
+    let discover_rsp = &[
+        0x43, // TxLabel (4),  RemoteRejected (3)
+        0x01, // Discover
+        0x31, // BAD_STATE
+    ];
+    expect_remote_recv(discover_rsp, &remote);
+}
+
+#[test]
+fn discover_command_works() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let response_fut = peer.discover();
+    pin_mut!(response_fut);
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(0x01, received[1]); // 0x01 = Discover
+
+    let txlabel_raw = received[0] & 0xF0;
+
+    let response: &[u8] = &[
+        txlabel_raw << 4 | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
+        0x01,                              // Discover
+        0x3E << 2 | 0x0 << 1,              // SEID (3E), Not In Use (0b0)
+        0x00 << 4 | 0x1 << 3,              // Audio (0x00), Sink (0x01)
+        0x01 << 2 | 0x1 << 1,              // SEID (1), In Use (0b1)
+        0x01 << 4 | 0x0 << 3,              // Video (0x01), Source (0x01)
+        0x17 << 2 | 0x0 << 1,              // SEID (17), Not In Use (0b0)
+        0x02 << 4 | 0x1 << 3,              // Multimedia (0x02), Sink (0x01)
+    ];
+    assert!(remote.write(response).is_ok());
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+
+    let endpoints = match complete {
+        Poll::Ready(Ok(response)) => response,
+        x => panic!("Should have a ready Ok response: {:?}", x),
+    };
+
+    assert_eq!(3, endpoints.len());
+    let e1 = StreamInformation::new(0x3E, false, MediaType::Audio, EndpointType::Sink).unwrap();
+    assert_eq!(e1, endpoints[0]);
+    let e2 = StreamInformation::new(0x01, true, MediaType::Video, EndpointType::Source).unwrap();
+    assert_eq!(e2, endpoints[1]);
+    let e3 =
+        StreamInformation::new(0x17, false, MediaType::Multimedia, EndpointType::Sink).unwrap();
+    assert_eq!(e3, endpoints[2]);
+}
+
+#[test]
+fn discover_command_rejected() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let response_fut = peer.discover();
+    pin_mut!(response_fut);
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(0x01, received[1]); // 0x01 = Discover
+
+    let txlabel_raw = received[0] & 0xF0;
+
+    let response: &[u8] = &[
+        txlabel_raw | 0x0 << 2 | 0x3, // txlabel (same), Single (0b00), Response Reject (0b11)
+        0x01,                         // Discover
+        0x31,                         // BAD_STATE
+    ];
+
+    assert!(remote.write(response).is_ok());
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+
+    let error = match complete {
+        Poll::Ready(Err(response)) => response,
+        x => panic!("Should have a ready Error response: {:?}", x),
+    };
+
+    assert_eq!(Error::RemoteRejected(0x31), error);
+}
+
+// Get(All)Capabilities tests
+
+const CMD_GET_CAPABILITIES: &'static [u8] = &[
+    0x40, // TxLabel (4), Single Packet (0b00), Command (0b00)
+    0x02, // RFA (0b00), Get Capabilities (0x02)
+    0x30, // SEID 12 (0b001100)
+];
+
+#[test]
+fn get_capabilities_invalid_length() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    // TxLabel 4, GetCapabilities, which needs a SEID.
+    assert!(remote.write(&[0x40, 0x02]).is_ok());
+
+    let mut fut = stream.next();
+    let complete = exec.run_until_stalled(&mut fut);
+
+    // We shouldn't have received any request.
+    assert!(complete.is_pending());
+
+    // The peer should have responded with a Response Reject message with the
+    // same TxLabel with BAD_LENGTH
+    expect_remote_recv(&[0x43, 0x02, 0x11], &remote);
+
+    // TxLabel 4, GetCapabilities, with more than we expected.
+    assert!(remote.write(&[0x40, 0x02, 0x01, 0x10]).is_ok());
+
+    let mut fut = stream.next();
+    let complete = exec.run_until_stalled(&mut fut);
+
+    // We shouldn't have received any request.
+    assert!(complete.is_pending());
+
+    // The peer should have responded with a Response Reject message with the
+    // same TxLabel with BAD_LENGTH
+    expect_remote_recv(&[0x43, 0x02, 0x11], &remote);
+}
+
+#[test]
+fn get_capabilities_event_responder_send_works() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    assert!(remote.write(&CMD_GET_CAPABILITIES).is_ok());
+
+    let respond_res = match next_request(&mut stream, &mut exec) {
+        Request::GetCapabilities {
+            responder,
+            stream_id,
+        } => {
+            assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
+            let capabilities = &[
+                ServiceCapability::MediaTransport,
+                ServiceCapability::Reporting,
+                ServiceCapability::Recovery {
+                    recovery_type: 0x01,
+                    max_recovery_window_size: 10,
+                    max_number_media_packets: 255,
+                },
+                ServiceCapability::MediaCodec {
+                    media_type: MediaType::Audio,
+                    codec_type: MediaCodecType::new(0x40),
+                    codec_extra: vec![0xDE, 0xAD, 0xBE, 0xEF],
+                },
+                ServiceCapability::ContentProtection {
+                    protection_type: ContentProtectionType::DigitalTransmissionContentProtection,
+                    extra: vec![0xF0, 0x0D],
+                },
+                ServiceCapability::DelayReporting,
+            ];
+            responder.send(capabilities)
+        }
+        _ => panic!("should have received a GetCapabilities"),
+    };
+
+    assert!(respond_res.is_ok());
+
+    // Should receive the encoded version of the MediaTransport
+    let get_capabilities_rsp = &[
+        0x42, // TxLabel (4) + ResponseAccept (0x02)
+        0x02, // GetCapabilities Signal
+        // MediaTransport (Length of Service Capability = 0)
+        0x01, 0x00,
+        // Reporting (LOSC = 0)
+        0x02, 0x00,
+        // Recovery (LOSC = 3), Type (0x01), Window size (10), Number Media Packets (255)
+        0x03, 0x03, 0x01, 0x0A, 0xFF,
+        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec speciic
+        // as above
+        0x07, 0x06, 0x00, 0x40, 0xDE, 0xAD, 0xBE, 0xEF,
+        // Content Protection (LOSC = 2 + 2), DTCP (0x01, 0x00), CP Specific as above
+        0x04, 0x04, 0x01, 0x00, 0xF0, 0x0D,
+        /* NOTE: DelayReporting should NOT be included here
+         * (GetCapabilities response cannot return DelayReporting) */
+    ];
+    expect_remote_recv(get_capabilities_rsp, &remote);
+}
+
+#[test]
+fn get_capabilities_responder_reject_works() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    assert!(remote.write(&CMD_GET_CAPABILITIES).is_ok());
+
+    let respond_res = match next_request(&mut stream, &mut exec) {
+        Request::GetCapabilities {
+            responder,
+            stream_id,
+        } => {
+            assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
+            responder.reject(ErrorCode::BadAcpSeid)
+        }
+        _ => panic!("should have received a GetAllCapabilities"),
+    };
+
+    assert!(respond_res.is_ok());
+
+    let get_capabilities_rsp = &[
+        0x43, // TxLabel (4),  RemoteRejected (3)
+        0x02, // Get Capabilities
+        0x12, // BAD_ACP_SEID
+    ];
+    expect_remote_recv(get_capabilities_rsp, &remote);
+}
+
+#[test]
+fn get_capabilities_command_works() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let seid = &StreamEndpointId::try_from(1).unwrap();
+    let response_fut = peer.get_capabilities(&seid);
+    pin_mut!(response_fut);
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(0x02, received[1]); // 0x02 = GetCapabilities
+    assert_eq!(0x01 << 2, received[2]); // SEID (0x01) , RFA
+
+    let txlabel_raw = received[0] & 0xF0;
+
+    let response: &[u8] = &[
+        txlabel_raw << 4 | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
+        0x02,                              // Get Capabilities
+        // MediaTransport (Length of Service Capability = 0)
+        0x01, 0x00,
+        // Recovery (LOSC = 3), Type (0x01), Window size (2), Number Media Packets (5)
+        0x03, 0x03, 0x01, 0x02, 0x05,
+        // Media Codec (LOSC = 2 + 2), Video (0x1), Codec type (0x20), Codec speific (0xB0DE)
+        0x07, 0x04, 0x10, 0x20, 0xB0, 0xDE,
+        // Content Protection (LOSC = 2 + 1), SCMS (0x02, 0x00), CP Specific (0x7A)
+        0x04, 0x03, 0x02, 0x00, 0x7A,
+    ];
+    assert!(remote.write(response).is_ok());
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+
+    let capabilities = match complete {
+        Poll::Ready(Ok(response)) => response,
+        x => panic!("Should have a ready Ok response: {:?}", x),
+    };
+
+    assert_eq!(4, capabilities.len());
+    let c1 = ServiceCapability::MediaTransport;
+    assert_eq!(c1, capabilities[0]);
+    let c2 = ServiceCapability::Recovery {
+        recovery_type: 1,
+        max_recovery_window_size: 2,
+        max_number_media_packets: 5,
+    };
+    assert_eq!(c2, capabilities[1]);
+    let c3 = ServiceCapability::MediaCodec {
+        media_type: MediaType::Video,
+        codec_type: MediaCodecType::new(0x20),
+        codec_extra: vec![0xb0, 0xde],
+    };
+    assert_eq!(c3, capabilities[2]);
+    let c4 = ServiceCapability::ContentProtection {
+        protection_type: ContentProtectionType::SerialCopyManagementSystem,
+        extra: vec![0x7a],
+    };
+    assert_eq!(c4, capabilities[3]);
+}
+
+#[test]
+fn get_capabilities_reject_command() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let seid = &StreamEndpointId::try_from(1).unwrap();
+    let response_fut = peer.get_capabilities(&seid);
+    pin_mut!(response_fut);
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(0x02, received[1]); // 0x02 = GetCapabilities
+    assert_eq!(0x01 << 2, received[2]); // SEID (0x01), RFA
+
+    let txlabel_raw = received[0] & 0xF0;
+
+    let response: &[u8] = &[
+        txlabel_raw | 0x0 << 2 | 0x3, // txlabel (same), Single (0b00), Response Reject (0b11)
+        0x02,                         // Get Capabiliities
+        0x12,                         // BAD_ACP_SEID
+    ];
+
+    assert!(remote.write(response).is_ok());
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+
+    let error = match complete {
+        Poll::Ready(Err(response)) => response,
+        x => panic!("Should have a ready Error response: {:?}", x),
+    };
+
+    assert_eq!(Error::RemoteRejected(0x12), error);
+}
+
+//  Get All Capabilities
+
+const CMD_GET_ALL_CAPABILITIES: &'static [u8] = &[
+    0x40, // TxLabel (4), Single Packet (0b00), Command (0b00)
+    0x0C, // RFA (0b00), Get All Capabilities (0x0C)
+    0x30, // SEID 12 (0b001100)
+];
+
+#[test]
+fn get_all_capabilities_invalid_length() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    // TxLabel 4, GetAllCapabilities, which needs a SEID.
+    assert!(remote.write(&[0x40, 0x0C]).is_ok());
+
+    let mut fut = stream.next();
+    let complete = exec.run_until_stalled(&mut fut);
+
+    // We shouldn't have received any request.
+    assert!(complete.is_pending());
+
+    // The peer should have responded with a Response Reject message with the
+    // same TxLabel with BAD_LENGTH
+    expect_remote_recv(&[0x43, 0x0C, 0x11], &remote);
+
+    // TxLabel 4, GetCapabilities, with more than we expected.
+    assert!(remote.write(&[0x40, 0x0C, 0x01, 0x10]).is_ok());
+
+    let mut fut = stream.next();
+    let complete = exec.run_until_stalled(&mut fut);
+
+    // We shouldn't have received any request.
+    assert!(complete.is_pending());
+
+    // The peer should have responded with a Response Reject message with the
+    // same TxLabel with BAD_LENGTH
+    expect_remote_recv(&[0x43, 0x0C, 0x11], &remote);
+}
+
+#[test]
+fn get_all_capabilities_event_responder_send_works() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    assert!(remote.write(&CMD_GET_ALL_CAPABILITIES).is_ok());
+
+    let respond_res = match next_request(&mut stream, &mut exec) {
+        Request::GetAllCapabilities {
+            responder,
+            stream_id,
+        } => {
+            assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
+            let capabilities = &[
+                ServiceCapability::MediaTransport,
+                ServiceCapability::Reporting,
+                ServiceCapability::Recovery {
+                    recovery_type: 0x01,
+                    max_recovery_window_size: 10,
+                    max_number_media_packets: 255,
+                },
+                ServiceCapability::MediaCodec {
+                    media_type: MediaType::Audio,
+                    codec_type: MediaCodecType::new(0x40),
+                    codec_extra: vec![0xDE, 0xAD, 0xBE, 0xEF],
+                },
+                ServiceCapability::ContentProtection {
+                    protection_type: ContentProtectionType::DigitalTransmissionContentProtection,
+                    extra: vec![0xF0, 0x0D],
+                },
+                ServiceCapability::DelayReporting,
+            ];
+            responder.send(capabilities)
+        }
+        _ => panic!("should have received a GetAllCapabilities"),
+    };
+
+    assert!(respond_res.is_ok());
+
+    // Should receive the encoded version of the MediaTransport
+    let get_capabilities_rsp = &[
+        0x42, // TxLabel (4) + ResponseAccept (0x02)
+        0x0C, // GetAllCapabilities Signal
+        // MediaTransport (Length of Service Capability = 0)
+        0x01, 0x00, // Reporting (LOSC = 0)
+        0x02, 0x00,
+        // Recovery (LOSC = 3), Type (0x01), Window size (10), Number Media Packets (255)
+        0x03, 0x03, 0x01, 0x0A, 0xFF,
+        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec speciic
+        // as above
+        0x07, 0x06, 0x00, 0x40, 0xDE, 0xAD, 0xBE, 0xEF,
+        // Content Protection (LOSC = 2 + 2), DTCP (0x01, 0x00), CP Specific as above
+        0x04, 0x04, 0x01, 0x00, 0xF0, 0x0D,
+        // DelayReporting (LOSC = 0)
+        0x08, 0x00,
+    ];
+    expect_remote_recv(get_capabilities_rsp, &remote);
+}
+
+#[test]
+fn get_all_capabilities_responder_reject_works() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    assert!(remote.write(&CMD_GET_ALL_CAPABILITIES).is_ok());
+
+    let respond_res = match next_request(&mut stream, &mut exec) {
+        Request::GetAllCapabilities {
+            responder,
+            stream_id,
+        } => {
+            assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
+            responder.reject(ErrorCode::BadAcpSeid)
+        }
+        _ => panic!("should have received a GetAllCapabilities"),
+    };
+
+    assert!(respond_res.is_ok());
+
+    let get_all_capabilities_rsp = &[
+        0x43, // TxLabel (4),  RemoteRejected (3)
+        0x0C, // Get All Capabilities
+        0x12, // BAD_ACP_SEID
+    ];
+    expect_remote_recv(get_all_capabilities_rsp, &remote);
+}
+
+#[test]
+fn get_all_capabilities_command_works() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let seid = StreamEndpointId::try_from(1).unwrap();
+    let mut response_fut = Box::pinned(peer.get_all_capabilities(&seid));
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(0x0C, received[1]); // 0x0C = GetAllCapabilities
+    assert_eq!(0x01 << 2, received[2]); // SEID (0x01) , RFA
+
+    let txlabel_raw = received[0] & 0xF0;
+
+    let response: &[u8] = &[
+        txlabel_raw << 4 | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
+        0x0C,                              // Get All Capabilities
+        // MediaTransport (Length of Service Capability = 0)
+        0x01, 0x00,
+        // Reporting (LOSC = 0)
+        0x02, 0x00,
+        // Media Codec (LOSC = 2 + 2), Video (0x1), Codec type (0x20), Codec speific (0xB0DE)
+        0x07, 0x04, 0x10, 0x20, 0xB0, 0xDE,
+        // Content Protection (LOSC = 2 + 1), SCMS (0x02, 0x00), CP Specific (0x7A)
+        0x04, 0x03, 0x02, 0x00, 0x7A,
+        // Delay Reporting
+        0x08, 0x00,
+    ];
+    assert!(remote.write(response).is_ok());
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+
+    let capabilities = match complete {
+        Poll::Ready(Ok(response)) => response,
+        x => panic!("Should have a ready Ok response: {:?}", x),
+    };
+
+    assert_eq!(5, capabilities.len());
+    let c1 = ServiceCapability::MediaTransport;
+    assert_eq!(c1, capabilities[0]);
+    let c2 = ServiceCapability::Reporting;
+    assert_eq!(c2, capabilities[1]);
+    let c3 = ServiceCapability::MediaCodec {
+        media_type: MediaType::Video,
+        codec_type: MediaCodecType::new(0x20),
+        codec_extra: vec![0xb0, 0xde],
+    };
+    assert_eq!(c3, capabilities[2]);
+    let c4 = ServiceCapability::ContentProtection {
+        protection_type: ContentProtectionType::SerialCopyManagementSystem,
+        extra: vec![0x7a],
+    };
+    assert_eq!(c4, capabilities[3]);
+    let c5 = ServiceCapability::DelayReporting;
+    assert_eq!(c5, capabilities[4]);
+}
+
+#[test]
+fn get_all_capabilities_reject_command() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let seid = StreamEndpointId::try_from(1).unwrap();
+    let response_fut = peer.get_all_capabilities(&seid);
+    pin_mut!(response_fut);
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(0x0C, received[1]); // 0x02 = GetAllCapabilities
+    assert_eq!(0x01 << 2, received[2]); // SEID (0x01), RFA
+
+    let txlabel_raw = received[0] & 0xF0;
+
+    let response: &[u8] = &[
+        txlabel_raw | 0x0 << 2 | 0x3, // txlabel (same), Single (0b00), Response Reject (0b11)
+        0x0C,                         // Get Capabiliities
+        0x12,                         // BAD_ACP_SEID
+    ];
+
+    assert!(remote.write(response).is_ok());
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+
+    let error = match complete {
+        Poll::Ready(Err(response)) => response,
+        x => panic!("Should have a ready Error response: {:?}", x),
+    };
+
+    assert_eq!(Error::RemoteRejected(0x12), error);
 }
