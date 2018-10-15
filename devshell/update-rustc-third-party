@@ -24,6 +24,8 @@ case "$(uname -s)" in
   *) echo "Error: unrecognized OS"; exit 1;;
 esac
 
+declare -x PATH=$FUCHSIA_DIR/buildtools/$OS/cmake/bin:$PATH
+
 if [[ "$OS" = "mac-x64" ]]; then
   if ! [[ -x "$(command -v brew)" ]]; then
     echo >&2 "'brew' binary not found"
@@ -31,7 +33,6 @@ if [[ "$OS" = "mac-x64" ]]; then
     exit 1
   fi
 
-  declare -x PATH=$FUCHSIA_DIR/buildtools/$OS/cmake/bin:$PATH
   declare -x LDFLAGS="-L$(brew --prefix)/opt/openssl/lib"
   declare -x CPPFLAGS="-I$(brew --prefix)/opt/openssl/include"
 fi
