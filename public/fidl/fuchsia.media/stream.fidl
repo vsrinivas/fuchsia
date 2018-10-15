@@ -8,85 +8,85 @@ library fuchsia.media;
 // Ordinal range: 0x0200-0x2ff
 [FragileBase]
 interface StreamBufferSet {
-  // Adds a payload buffer for stream packets. StreamPacket structs reference
-  // a payload buffer by ID using the StreamPacket.payload_buffer_id field.
-  0x0201: AddPayloadBuffer(uint32 id, handle<vmo> payload_buffer);
+    // Adds a payload buffer for stream packets. StreamPacket structs reference
+    // a payload buffer by ID using the StreamPacket.payload_buffer_id field.
+    0x0201: AddPayloadBuffer(uint32 id, handle<vmo> payload_buffer);
 
-  // Removes a payload buffer.
-  0x0202: RemovePayloadBuffer(uint32 id);
+    // Removes a payload buffer.
+    0x0202: RemovePayloadBuffer(uint32 id);
 };
 
 // Consumes a stream of packets.
 // Ordinal range: 0x0300-03ff
 [FragileBase]
 interface StreamSink {
-  // Sends a packet to this object. The response is sent when this object is
-  // done with the associated payload memory.
-  0x0301: SendPacket(StreamPacket packet) -> ();
+    // Sends a packet to this object. The response is sent when this object is
+    // done with the associated payload memory.
+    0x0301: SendPacket(StreamPacket packet) -> ();
 
-  // Sends a packet to this object. This interface doesn't define how the client
-  // knows when the sink is done with the associated payload memory. The
-  // inheriting interface must define that.
-  0x0302: SendPacketNoReply(StreamPacket packet);
+    // Sends a packet to this object. This interface doesn't define how the client
+    // knows when the sink is done with the associated payload memory. The
+    // inheriting interface must define that.
+    0x0302: SendPacketNoReply(StreamPacket packet);
 
-  // Indicates the stream has ended.
-  0x0303: EndOfStream();
+    // Indicates the stream has ended.
+    0x0303: EndOfStream();
 
-  // Discards packets previously sent via SendPacket or SendPacketNoReply.
-  0x0304: DiscardAllPackets() -> ();
-  0x0305: DiscardAllPacketsNoReply();
+    // Discards packets previously sent via SendPacket or SendPacketNoReply.
+    0x0304: DiscardAllPackets() -> ();
+    0x0305: DiscardAllPacketsNoReply();
 };
 
 // Produces a stream of packets.
 // Ordinal range: 0x0400-04ff
 [FragileBase]
 interface StreamSource {
-  // Delivers a packet produced by this object. Each packet delivered via this
-  // event must be released with a call to ReleasePacket.
-  0x0401: -> OnPacketProduced(StreamPacket packet);
+    // Delivers a packet produced by this object. Each packet delivered via this
+    // event must be released with a call to ReleasePacket.
+    0x0401: -> OnPacketProduced(StreamPacket packet);
 
-  // Indicates that the stream has ended.
-  0x0402: -> OnEndOfStream();
+    // Indicates that the stream has ended.
+    0x0402: -> OnEndOfStream();
 
-  // Releases a packet delivered via OnPacketProduced.
-  0x0403: ReleasePacket(StreamPacket packet);
+    // Releases a packet delivered via OnPacketProduced.
+    0x0403: ReleasePacket(StreamPacket packet);
 
-  // Discards queued packets.
-  0x0404: DiscardAllPackets() -> ();
-  0x0405: DiscardAllPacketsNoReply();
+    // Discards queued packets.
+    0x0404: DiscardAllPackets() -> ();
+    0x0405: DiscardAllPacketsNoReply();
 };
 
 // Describes a packet consumed by StreamSink or produced by StreamSource.
 struct StreamPacket {
-  // Time at which the packet is to be presented, according to the presentation
-  // clock.
-  int64 pts = NO_TIMESTAMP;
+    // Time at which the packet is to be presented, according to the presentation
+    // clock.
+    int64 pts = NO_TIMESTAMP;
 
-  // ID of the payload buffer used for this packet. When this struct is used
-  // with StreamBufferSet, this field is the ID of a payload buffer provided
-  // via StreamBufferSet.AddPayloadBuffer. Other interfaces may define other
-  // semantics for this field.
-  uint32 payload_buffer_id;
+    // ID of the payload buffer used for this packet. When this struct is used
+    // with StreamBufferSet, this field is the ID of a payload buffer provided
+    // via StreamBufferSet.AddPayloadBuffer. Other interfaces may define other
+    // semantics for this field.
+    uint32 payload_buffer_id;
 
-  // Offset of the packet payload in the payload buffer.
-  uint64 payload_offset;
+    // Offset of the packet payload in the payload buffer.
+    uint64 payload_offset;
 
-  // Size in bytes of the payload.
-  uint64 payload_size;
+    // Size in bytes of the payload.
+    uint64 payload_size;
 
-  // A collection of flags (see constants below) describing properties of this
-  // packet.
-  uint32 flags = 0;
+    // A collection of flags (see constants below) describing properties of this
+    // packet.
+    uint32 flags = 0;
 
-  // The buffer configuration associated with this packet. The semantics of
-  // this field depend on the the interface with which this struct is used.
-  // In many contexts, this field is not used.
-  uint64 buffer_config = 0;
+    // The buffer configuration associated with this packet. The semantics of
+    // this field depend on the the interface with which this struct is used.
+    // In many contexts, this field is not used.
+    uint64 buffer_config = 0;
 
-  // The stream associated with this packet. The semantics of this field
-  // depend on the the interface with which this struct is used. In many
-  // contexts, this field is not used.
-  uint64 stream_id = 0;
+    // The stream associated with this packet. The semantics of this field
+    // depend on the the interface with which this struct is used. In many
+    // contexts, this field is not used.
+    uint64 stream_id = 0;
 };
 
 const uint32 STREAM_PACKET_FLAG_KEY_FRAME = 0x01;

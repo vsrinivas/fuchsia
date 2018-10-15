@@ -6,22 +6,22 @@ library fuchsia.media;
 
 // Describes the type of an elementary stream.
 struct StreamType {
-  // Medium-specific type information.
-  MediumSpecificStreamType medium_specific;
+    // Medium-specific type information.
+    MediumSpecificStreamType medium_specific;
 
-  // Encoding (see constants below).
-  string encoding;
+    // Encoding (see constants below).
+    string encoding;
 
-  // Encoding-specific parameters.
-  vector<uint8>? encoding_parameters;
+    // Encoding-specific parameters.
+    vector<uint8>? encoding_parameters;
 };
 
 // A union of all medium-specific stream type structs.
 union MediumSpecificStreamType {
-  AudioStreamType audio;
-  VideoStreamType video;
-  TextStreamType text;
-  SubpictureStreamType subpicture;
+    AudioStreamType audio;
+    VideoStreamType video;
+    TextStreamType text;
+    SubpictureStreamType subpicture;
 };
 
 const string MEDIA_ENCODING_UNSUPPORTED = "fuchsia.media.unsupported";
@@ -51,24 +51,24 @@ const string VIDEO_ENCODING_VP9 = "fuchsia.media.vp9";
 
 // Describes the type of an audio elementary stream.
 struct AudioStreamType {
-  AudioSampleFormat sample_format;
-  uint32 channels;
-  uint32 frames_per_second;
-  // TODO(mpuryear): Add channel config.
+    AudioSampleFormat sample_format;
+    uint32 channels;
+    uint32 frames_per_second;
+    // TODO(mpuryear): Add channel config.
 };
 
 enum AudioSampleFormat {
-  // 8-bit unsigned samples, sample size 1 byte.
-  UNSIGNED_8 = 1;
+    // 8-bit unsigned samples, sample size 1 byte.
+    UNSIGNED_8 = 1;
 
-  // 16-bit signed samples, host-endian, sample size 2 bytes.
-  SIGNED_16 = 2;
+    // 16-bit signed samples, host-endian, sample size 2 bytes.
+    SIGNED_16 = 2;
 
-  // 24-bit signed samples in 32 bits, host-endian, sample size 4 bytes.
-  SIGNED_24_IN_32 = 3;
+    // 24-bit signed samples in 32 bits, host-endian, sample size 4 bytes.
+    SIGNED_24_IN_32 = 3;
 
-  // 32-bit floating-point samples, sample size 4 bytes.
-  FLOAT = 4;
+    // 32-bit floating-point samples, sample size 4 bytes.
+    FLOAT = 4;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -76,81 +76,81 @@ enum AudioSampleFormat {
 
 // Describes the type of a video elementary stream.
 struct VideoStreamType {
-  VideoProfile profile;
-  // TODO(dalesat): Use fuchsia.images.PixelFormat.
-  PixelFormat pixel_format;
-  // TODO(dalesat): Use fuchsia.images.ColorSpace.
-  ColorSpace color_space;
-  uint32 width;
-  uint32 height;
-  uint32 coded_width;
-  uint32 coded_height;
-  uint32 pixel_aspect_ratio_width;
-  uint32 pixel_aspect_ratio_height;
-  // TODO(dalesat): Change to single line_stride value for all planes.
-  vector<uint32> line_stride;
-  // TODO(dalesat): Remove.
-  vector<uint32> plane_offset;
+    VideoProfile profile;
+    // TODO(dalesat): Use fuchsia.images.PixelFormat.
+    PixelFormat pixel_format;
+    // TODO(dalesat): Use fuchsia.images.ColorSpace.
+    ColorSpace color_space;
+    uint32 width;
+    uint32 height;
+    uint32 coded_width;
+    uint32 coded_height;
+    uint32 pixel_aspect_ratio_width;
+    uint32 pixel_aspect_ratio_height;
+    // TODO(dalesat): Change to single line_stride value for all planes.
+    vector<uint32> line_stride;
+    // TODO(dalesat): Remove.
+    vector<uint32> plane_offset;
 };
 
 // TODO(dalesat): Blindly copied from Chromium, revisit.
 enum VideoProfile {
-  UNKNOWN = 0;
-  NOT_APPLICABLE = 1;
-  H264_BASELINE = 2;
-  H264_MAIN = 3;
-  H264_EXTENDED = 4;
-  H264_HIGH = 5;
-  H264_HIGH10 = 6;
-  H264_HIGH422 = 7;
-  H264_HIGH444_PREDICTIVE = 8;
-  H264_SCALABLE_BASELINE = 9;
-  H264_SCALABLE_HIGH = 10;
-  H264_STEREO_HIGH = 11;
-  H264_MULTIVIEW_HIGH = 12;
+    UNKNOWN = 0;
+    NOT_APPLICABLE = 1;
+    H264_BASELINE = 2;
+    H264_MAIN = 3;
+    H264_EXTENDED = 4;
+    H264_HIGH = 5;
+    H264_HIGH10 = 6;
+    H264_HIGH422 = 7;
+    H264_HIGH444_PREDICTIVE = 8;
+    H264_SCALABLE_BASELINE = 9;
+    H264_SCALABLE_HIGH = 10;
+    H264_STEREO_HIGH = 11;
+    H264_MULTIVIEW_HIGH = 12;
 };
 
 // TODO(dalesat): Replace with fuchsia.images.PixelFormat.
 enum PixelFormat {
-  UNKNOWN = 0;
-  I420 = 1;  // 12bpp YUV planar 1x1 Y, 2x2 UV samples, a.k.a. YU12.
-  YV12 = 2;  // 12bpp YVU planar 1x1 Y, 2x2 VU samples.
-  YV16 = 3;  // 16bpp YVU planar 1x1 Y, 2x1 VU samples.
-  YV12A = 4;  // 20bpp YUVA planar 1x1 Y, 2x2 VU, 1x1 A samples.
-  YV24 = 5;  // 24bpp YUV planar, no subsampling.
-  NV12 = 6;  // 12bpp with Y plane followed by a 2x2 interleaved UV plane.
-  NV21 = 7;  // 12bpp with Y plane followed by a 2x2 interleaved VU plane.
-  UYVY = 8;  // 16bpp interleaved 2x1 U, 1x1 Y, 2x1 V, 1x1 Y samples.
-  YUY2 = 9;  // 16bpp interleaved 1x1 Y, 2x1 U, 1x1 Y, 2x1 V samples.
-  ARGB = 10;  // 32bpp ARGB, 1 plane.
-  XRGB = 11;  // 24bpp XRGB, 1 plane.
-  RGB24 = 12;  // 24bpp BGR, 1 plane.
-  RGB32 = 13;  // 32bpp BGRA, 1 plane.
-  MJPEG = 14;  // MJPEG compressed.
-  MT21 = 15;
+    UNKNOWN = 0;
+    I420 = 1; // 12bpp YUV planar 1x1 Y, 2x2 UV samples, a.k.a. YU12.
+    YV12 = 2; // 12bpp YVU planar 1x1 Y, 2x2 VU samples.
+    YV16 = 3; // 16bpp YVU planar 1x1 Y, 2x1 VU samples.
+    YV12A = 4; // 20bpp YUVA planar 1x1 Y, 2x2 VU, 1x1 A samples.
+    YV24 = 5; // 24bpp YUV planar, no subsampling.
+    NV12 = 6; // 12bpp with Y plane followed by a 2x2 interleaved UV plane.
+    NV21 = 7; // 12bpp with Y plane followed by a 2x2 interleaved VU plane.
+    UYVY = 8; // 16bpp interleaved 2x1 U, 1x1 Y, 2x1 V, 1x1 Y samples.
+    YUY2 = 9; // 16bpp interleaved 1x1 Y, 2x1 U, 1x1 Y, 2x1 V samples.
+    ARGB = 10; // 32bpp ARGB, 1 plane.
+    XRGB = 11; // 24bpp XRGB, 1 plane.
+    RGB24 = 12; // 24bpp BGR, 1 plane.
+    RGB32 = 13; // 32bpp BGRA, 1 plane.
+    MJPEG = 14; // MJPEG compressed.
+    MT21 = 15;
 };
 
 // TODO(dalesat): Replace with fuchsia.images.ColorSpace.
 enum ColorSpace {
-  UNKNOWN = 0;
-  NOT_APPLICABLE = 1;
-  JPEG = 2;
-  HD_REC709 = 3;
-  SD_REC601 = 4;
+    UNKNOWN = 0;
+    NOT_APPLICABLE = 1;
+    JPEG = 2;
+    HD_REC709 = 3;
+    SD_REC601 = 4;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 // Text
 
 struct TextStreamType {
-  // TODO(dalesat): Define.
-  uint8 dummy;
+    // TODO(dalesat): Define.
+    uint8 dummy;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 // Subpicture
 
 struct SubpictureStreamType {
-  // TODO(dalesat): Define.
-  uint8 dummy;
+    // TODO(dalesat): Define.
+    uint8 dummy;
 };

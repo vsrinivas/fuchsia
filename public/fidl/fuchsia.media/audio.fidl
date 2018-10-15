@@ -7,90 +7,90 @@ library fuchsia.media;
 // Ordinal range: 0x0700-0x7ff
 [Discoverable]
 interface Audio {
-  0x0701: CreateAudioRenderer(request<AudioRenderer> audio_renderer_request);
+    0x0701: CreateAudioRenderer(request<AudioRenderer> audio_renderer_request);
 
-  // Create an AudioCapturer which either captures from the current default
-  // audio input device, or loops-back from the current default audio output
-  // device based on value passed for the the loopback flag.
-  //
-  // TODO(mpuryear): Get rid of the loopback flag ASAP.  Routing decisions (and
-  // security surrounding routing decisions) should be much more sophisticated
-  // than this.  This is just a placeholder until we have a design in place.
-  // Eventually, I suspect that all of this will move up into the audio policy
-  // manager and application clients will obtain AudioCapturers from and control
-  // through the policy manager.
-  0x0702: CreateAudioCapturer(request<AudioCapturer> audio_capturer_request,
-                              bool loopback);
+    // Create an AudioCapturer which either captures from the current default
+    // audio input device, or loops-back from the current default audio output
+    // device based on value passed for the the loopback flag.
+    //
+    // TODO(mpuryear): Get rid of the loopback flag ASAP.  Routing decisions (and
+    // security surrounding routing decisions) should be much more sophisticated
+    // than this.  This is just a placeholder until we have a design in place.
+    // Eventually, I suspect that all of this will move up into the audio policy
+    // manager and application clients will obtain AudioCapturers from and control
+    // through the policy manager.
+    0x0702: CreateAudioCapturer(request<AudioCapturer> audio_capturer_request,
+                                bool loopback);
 
-  // System Gain and Mute
-  // TODO(mpuryear): remove this systemwide setting once device-centric settings
-  // are plumbed into the system UI. Also, device-centric (and certainly
-  // systemwide settings) should be moved out of the accessible-to-all public
-  // audio interface and relocated to a more restrictive interface that is only
-  // accessible by clients with the appropriate privileges (such as system
-  // configuration API, or the governor of audio policy).
-  //
-  // Mirroring device-centric gain and mute stages, Fuchsia's systemwide Gain
-  // and Mute settings are fully independent. Changing the value of one does not
-  // change the value of the other. Both have the ability to silence a system
-  // (or a device, in the case of device Gain/Mute). If Mute is true, or if Gain
-  // is kMutedGain, the system is silenced regardless of the other. Similarly,
-  // one's value does not restrict the other's possible values in any way.
-  //
-  // Sets the system-wide gain in decibels. |db| values are clamped to the range
-  // -160db to 0db, inclusive. This setting is applied to all audio output
-  // devices. Audio input devices are unaffected. System Gain changes do not
-  // affect the System Mute state.
-  0x0703: SetSystemGain(float32 gain_db);
+    // System Gain and Mute
+    // TODO(mpuryear): remove this systemwide setting once device-centric settings
+    // are plumbed into the system UI. Also, device-centric (and certainly
+    // systemwide settings) should be moved out of the accessible-to-all public
+    // audio interface and relocated to a more restrictive interface that is only
+    // accessible by clients with the appropriate privileges (such as system
+    // configuration API, or the governor of audio policy).
+    //
+    // Mirroring device-centric gain and mute stages, Fuchsia's systemwide Gain
+    // and Mute settings are fully independent. Changing the value of one does not
+    // change the value of the other. Both have the ability to silence a system
+    // (or a device, in the case of device Gain/Mute). If Mute is true, or if Gain
+    // is kMutedGain, the system is silenced regardless of the other. Similarly,
+    // one's value does not restrict the other's possible values in any way.
+    //
+    // Sets the system-wide gain in decibels. |db| values are clamped to the range
+    // -160db to 0db, inclusive. This setting is applied to all audio output
+    // devices. Audio input devices are unaffected. System Gain changes do not
+    // affect the System Mute state.
+    0x0703: SetSystemGain(float32 gain_db);
 
-  // Sets/clears the systemwide 'Mute' state for audio output devices. Audio
-  // input devices are unaffected. Changes to the System Mute state do not
-  // affect the value of System Gain.
-  0x0704: SetSystemMute(bool muted);
+    // Sets/clears the systemwide 'Mute' state for audio output devices. Audio
+    // input devices are unaffected. Changes to the System Mute state do not
+    // affect the value of System Gain.
+    0x0704: SetSystemMute(bool muted);
 
-  // Provides current values for the systemwide Gain and Mute.
-  // When a client connects to Audio, the system enqueues an action (to be
-  // executed once the system regains control) to send this newly-connected
-  // client a callback with the current systemwide Gain|Mute settings. Further,
-  // upon any change to the systemwide Gain|Mute values, the system will trigger
-  // all registered callbacks, notifying clients of the new values.
-  //
-  // Calls to SetSystemMute or SetSystemGain that do NOT result in a change to
-  // these values (e.g. calling SetSystemMute(false) when Mute is already false)
-  // will not cause the callbacks to be triggered.
-  //
-  // During and immediately following connecting to Audio, it is essential that
-  // clients keep in mind the fundamental single-threaded nature of FIDL.
-  // Specifically, if a newly-connected client registers a SystemGainMuteChanged
-  // callback before returning, that client will (once the system has subsequent
-  // opportunity) be notified via callback of the Gain|Mute settings at the time
-  // the connection was established. If however a newly-connected client returns
-  // from a FIDL message dispatch (returning control to the FIDL dispatcher),
-  // then that client subsequently registers this callback, the client has no
-  // way to learn the current Gain|Mute settings until they actually change.
-  0x0705: -> SystemGainMuteChanged(float32 gain_db, bool muted);
+    // Provides current values for the systemwide Gain and Mute.
+    // When a client connects to Audio, the system enqueues an action (to be
+    // executed once the system regains control) to send this newly-connected
+    // client a callback with the current systemwide Gain|Mute settings. Further,
+    // upon any change to the systemwide Gain|Mute values, the system will trigger
+    // all registered callbacks, notifying clients of the new values.
+    //
+    // Calls to SetSystemMute or SetSystemGain that do NOT result in a change to
+    // these values (e.g. calling SetSystemMute(false) when Mute is already false)
+    // will not cause the callbacks to be triggered.
+    //
+    // During and immediately following connecting to Audio, it is essential that
+    // clients keep in mind the fundamental single-threaded nature of FIDL.
+    // Specifically, if a newly-connected client registers a SystemGainMuteChanged
+    // callback before returning, that client will (once the system has subsequent
+    // opportunity) be notified via callback of the Gain|Mute settings at the time
+    // the connection was established. If however a newly-connected client returns
+    // from a FIDL message dispatch (returning control to the FIDL dispatcher),
+    // then that client subsequently registers this callback, the client has no
+    // way to learn the current Gain|Mute settings until they actually change.
+    0x0705: -> SystemGainMuteChanged(float32 gain_db, bool muted);
 
-  0x0706: SetRoutingPolicy(AudioOutputRoutingPolicy policy);
+    0x0706: SetRoutingPolicy(AudioOutputRoutingPolicy policy);
 
-  // DEPRECATED
-  0x07FE: CreateAudioOut(request<AudioOut> audio_out_request);
-  0x07FF: CreateAudioIn(request<AudioIn> audio_in_request,
-                              bool loopback);
+    // DEPRECATED
+    0x07FE: CreateAudioOut(request<AudioOut> audio_out_request);
+    0x07FF: CreateAudioIn(request<AudioIn> audio_in_request,
+                          bool loopback);
 };
 
 // A placeholder for various types of simple routing policies.  This should be
 // replaced when routing policy moves to a more centralized policy manager.
 enum AudioOutputRoutingPolicy {
-  // AudioRenderers are always connected to all audio outputs which currently
-  // in the plugged state (eg; have a connector attached to them)
-  ALL_PLUGGED_OUTPUTS = 0;
+    // AudioRenderers are always connected to all audio outputs which currently
+    // in the plugged state (eg; have a connector attached to them)
+    ALL_PLUGGED_OUTPUTS = 0;
 
-  // AudioRenderers are only connected to the output stream which most
-  // recently entered the plugged state.  AudioRenderers move around from output to
-  // output as streams are published/unpublished and become plugged/unplugged.
-  //
-  // This is the initial setting for audio output routing.
-  LAST_PLUGGED_OUTPUT = 1;
+    // AudioRenderers are only connected to the output stream which most
+    // recently entered the plugged state.  AudioRenderers move around from output to
+    // output as streams are published/unpublished and become plugged/unplugged.
+    //
+    // This is the initial setting for audio output routing.
+    LAST_PLUGGED_OUTPUT = 1;
 };
 
 // Permitted ranges for AudioRenderer and AudioCapturer

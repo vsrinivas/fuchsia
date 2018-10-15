@@ -20,271 +20,272 @@ library fuchsia.media;
 // Ordinal range: 0x0600-0x6ff
 [FragileBase]
 interface AudioRenderer : StreamBufferSet, StreamSink {
-  // Sets the type of the stream to be delivered by the client. Using this
-  // method implies that the stream encoding is AUDIO_ENCODING_LPCM.
-  0x0601: SetPcmStreamType(AudioStreamType type);
+    // Sets the type of the stream to be delivered by the client. Using this
+    // method implies that the stream encoding is AUDIO_ENCODING_LPCM.
+    0x0601: SetPcmStreamType(AudioStreamType type);
 
-  // Sets the stream type to be delivered by the client. This method is used for
-  // compressed pass-through. The media_specific field must be of type audio.
-  // NOTE: Not currently implemented.
-  0x0602: SetStreamType(StreamType type);
+    // Sets the stream type to be delivered by the client. This method is used for
+    // compressed pass-through. The media_specific field must be of type audio.
+    // NOTE: Not currently implemented.
+    0x0602: SetStreamType(StreamType type);
 
-  // Sets the units used by the presentation (media) timeline. By default, PTS
-  // units are nanoseconds (as if this were called with values of 1e9 and 1).
-  0x0603: SetPtsUnits(uint32 tick_per_second_numerator,
-                      uint32 tick_per_second_denominator);
+    // Sets the units used by the presentation (media) timeline. By default, PTS
+    // units are nanoseconds (as if this were called with values of 1e9 and 1).
+    0x0603: SetPtsUnits(uint32 tick_per_second_numerator,
+                        uint32 tick_per_second_denominator);
 
-  // Sets the maximum threshold (in frames) between an explicit PTS (user-
-  // provided) and an expected PTS (determined using interpolation). Beyond this
-  // threshold, a stream is no longer considered 'continuous' by the renderer.
-  //
-  // Defaults to RoundUp((AudioFPS/PTSTicksPerSec) / 2.0) / AudioFPS
-  // Most users should not need to change this value from its default.
-  //
-  // Example:
-  // A user is playing back 48KHz audio from a container, which also contains
-  // video and needs to be synchronized with the audio. The timestamps are
-  // provided explicitly per packet by the container, and expressed in mSec
-  // units. This means that a single tick of the media timeline (1 mSec)
-  // represents exactly 48 frames of audio. The application in this scenario
-  // delivers packets of audio to the AudioRenderer, each with exactly 470
-  // frames of audio, and each with an explicit timestamp set to the best
-  // possible representation of the presentation time (given this media clock's
-  // resolution). So, starting from zero, the timestamps would be..
-  //
-  // [ 0, 10, 20, 29, 39, 49, 59, 69, 78, 88, ... ]
-  //
-  // In this example, attempting to use the presentation time to compute the
-  // starting frame number of the audio in the packet would be wrong the
-  // majority of the time. The first timestamp is correct (by definition), but
-  // it will be 24 packets before the timestamps and frame numbers come back
-  // into alignment (the 24th packet would start with the 11280th audio frame
-  // and have a PTS of exactly 235).
-  //
-  // One way to fix this situation is to set the PTS continuity threshold
-  // (henceforth, CT) for the stream to be equal to 1/2 of the time taken by the
-  // number of frames contained within a single tick of the media clock, rounded
-  // up. In this scenario, that would be 24.0 frames of audio, or 500 uSec.
-  // Any packets whose expected PTS was within +/-CT frames of the explicitly
-  // provided PTS would be considered to be a continuation of the previous frame
-  // of audio.
-  //
-  // Other possible uses:
-  // Users who are scheduling audio explicitly, relative to a clock which has
-  // not been configured as the reference clock, can use this value to control
-  // the maximum acceptable synchronization error before a discontinuity is
-  // introduced. E.g., if a user is scheduling audio based on a recovered common
-  // media clock, and has not published that clock as the reference clock, and
-  // they set the CT to 20mSec, then up to 20mSec of drift error can accumulate
-  // before the AudioRenderer deliberately inserts a presentation discontinuity
-  // to account for the error.
-  //
-  // Users whose need to deal with a container where their timestamps may be
-  // even less correct than +/- 1/2 of a PTS tick may set this value to
-  // something larger. This should be the maximum level of inaccuracy present
-  // in the container timestamps, if known. Failing that, it could be set to
-  // the maximum tolerable level of drift error before absolute timestamps are
-  // explicitly obeyed. Finally, a user could set this number to a very large
-  // value (86400.0 seconds, for example) to effectively cause *all* timestamps
-  // to be ignored after the first, thus treating all audio as continuous with
-  // previously delivered packets. Conversely, users who wish to *always*
-  // explicitly schedule their audio packets exactly may specify a CT of 0.
-  //
-  0x0604: SetPtsContinuityThreshold(float32 threshold_seconds);
+    // Sets the maximum threshold (in frames) between an explicit PTS (user-
+    // provided) and an expected PTS (determined using interpolation). Beyond this
+    // threshold, a stream is no longer considered 'continuous' by the renderer.
+    //
+    // Defaults to RoundUp((AudioFPS/PTSTicksPerSec) / 2.0) / AudioFPS
+    // Most users should not need to change this value from its default.
+    //
+    // Example:
+    // A user is playing back 48KHz audio from a container, which also contains
+    // video and needs to be synchronized with the audio. The timestamps are
+    // provided explicitly per packet by the container, and expressed in mSec
+    // units. This means that a single tick of the media timeline (1 mSec)
+    // represents exactly 48 frames of audio. The application in this scenario
+    // delivers packets of audio to the AudioRenderer, each with exactly 470
+    // frames of audio, and each with an explicit timestamp set to the best
+    // possible representation of the presentation time (given this media clock's
+    // resolution). So, starting from zero, the timestamps would be..
+    //
+    // [ 0, 10, 20, 29, 39, 49, 59, 69, 78, 88, ... ]
+    //
+    // In this example, attempting to use the presentation time to compute the
+    // starting frame number of the audio in the packet would be wrong the
+    // majority of the time. The first timestamp is correct (by definition), but
+    // it will be 24 packets before the timestamps and frame numbers come back
+    // into alignment (the 24th packet would start with the 11280th audio frame
+    // and have a PTS of exactly 235).
+    //
+    // One way to fix this situation is to set the PTS continuity threshold
+    // (henceforth, CT) for the stream to be equal to 1/2 of the time taken by the
+    // number of frames contained within a single tick of the media clock, rounded
+    // up. In this scenario, that would be 24.0 frames of audio, or 500 uSec.
+    // Any packets whose expected PTS was within +/-CT frames of the explicitly
+    // provided PTS would be considered to be a continuation of the previous frame
+    // of audio.
+    //
+    // Other possible uses:
+    // Users who are scheduling audio explicitly, relative to a clock which has
+    // not been configured as the reference clock, can use this value to control
+    // the maximum acceptable synchronization error before a discontinuity is
+    // introduced. E.g., if a user is scheduling audio based on a recovered common
+    // media clock, and has not published that clock as the reference clock, and
+    // they set the CT to 20mSec, then up to 20mSec of drift error can accumulate
+    // before the AudioRenderer deliberately inserts a presentation discontinuity
+    // to account for the error.
+    //
+    // Users whose need to deal with a container where their timestamps may be
+    // even less correct than +/- 1/2 of a PTS tick may set this value to
+    // something larger. This should be the maximum level of inaccuracy present
+    // in the container timestamps, if known. Failing that, it could be set to
+    // the maximum tolerable level of drift error before absolute timestamps are
+    // explicitly obeyed. Finally, a user could set this number to a very large
+    // value (86400.0 seconds, for example) to effectively cause *all* timestamps
+    // to be ignored after the first, thus treating all audio as continuous with
+    // previously delivered packets. Conversely, users who wish to *always*
+    // explicitly schedule their audio packets exactly may specify a CT of 0.
+    //
+    0x0604: SetPtsContinuityThreshold(float32 threshold_seconds);
 
-  // Set the reference clock used to control playback rate.
-  //
-  // TODO(mpuryear): refine this type when we solidly define what a clock handle
-  // is/looks like. Also should we allow users to lock their rates to CLOCK_MONO
-  // instead of following the default (perhaps dynamic) system rate?
-  0x0605: SetReferenceClock(handle reference_clock);
+    // Set the reference clock used to control playback rate.
+    //
+    // TODO(mpuryear): refine this type when we solidly define what a clock handle
+    // is/looks like. Also should we allow users to lock their rates to CLOCK_MONO
+    // instead of following the default (perhaps dynamic) system rate?
+    0x0605: SetReferenceClock(handle reference_clock);
 
-  // Immediately put the AudioRenderer into a playing state. Start the advance
-  // of the media timeline, using specific values provided by the caller (or
-  // default values if not specified). In an optional callback, return the
-  // timestamp values ultimately used -- these set the ongoing relationship
-  // between the media and reference timelines (i.e., how to translate between
-  // the domain of presentation timestamps, and the realm of local system time).
-  //
-  // Local system time is specified in units of nanoseconds; media_time is
-  // specified in the units defined by the user in the `SetPtsUnits` function,
-  // or nanoseconds if `SetPtsUnits` is not called.
-  //
-  // The act of placing an AudioRenderer into the playback state establishes a
-  // relationship between 1) the user-defined media (or presentation) timeline
-  // for this particular AudioRenderer, and 2) the real-world system reference
-  // timeline. To communicate how to translate between timelines, the Play()
-  // callback provides an equivalent timestamp in each time domain. The first
-  // value ('reference_time') is given in terms of the local system clock; the
-  // second value ('media_time') is what media instant exactly corresponds to
-  // that local time. Restated, the frame at 'media_time' in the audio stream
-  // should be presented at system local time 'reference_time'.
-  //
-  // Note: on calling this API, media_time immediately starts advancing. It is
-  // possible, although uncommon, for a caller to specify a system time that is
-  // far in the past, or far into the future. This, along with the specified
-  // media time, is simply used to determine what media time corresponds to
-  // 'now', and THAT media time is then intersected with presentation
-  // timestamps of packets already submitted, to determine which media frames
-  // should be presented next.
-  //
-  // With the corresponding reference_time and media_time values, a user can
-  // translate arbitrary time values from one timeline into the other. After
-  // calling `SetPtsUnits(pts_per_sec_numerator, pts_per_sec_denominator)` and
-  // given the 'ref_start' and 'media_start' values from `Play()`, then for any
-  // 'ref_time':
-  //
-  // media_time = ( (ref_time - ref_start) / 1e9
-  //                * (pts_per_sec_numerator / pts_per_sec_denominator) )
-  //              + media_start
-  //
-  // Conversely, for any presentation timestamp 'media_time':
-  //
-  // ref_time = ( (media_time - media_start)
-  //              * (pts_per_sec_denominator / pts_per_sec_numerator)
-  //              * 1e9 )
-  //            + ref_start
-  //
-  // Users, depending on their use case, may optionally choose not to specify
-  // one or both of these timestamps. A timestamp may be omitted by supplying
-  // the special value 'kNoTimestamp'. The AudioRenderer automatically deduces
-  // any omitted timestamp value using the following rules:
-  //
-  // Reference Time
-  // If 'reference_time' is omitted, the AudioRenderer will select a "safe"
-  // reference time to begin presentation, based on the minimum lead times for
-  // the output devices that are currently bound to this AudioRenderer. For
-  // example, if an AudioRenderer is bound to an internal audio output
-  // requiring at least 3 mSec of lead time, and an HDMI output requiring at
-  // least 75 mSec of lead time, the AudioRenderer might (if 'reference_time'
-  // is omitted) select a reference time 80 mSec from now.
-  //
-  // Media Time
-  // If media_time is omitted, the AudioRenderer will select one of two values.
-  // - If the AudioRenderer is resuming from the paused state, and packets have
-  // not been discarded since being paused, then the AudioRenderer will use a
-  // media_time corresponding to the instant at which the presentation became
-  // paused.
-  // - If the AudioRenderer is being placed into a playing state for the first
-  // time following startup or a 'discard packets' operation, the initial
-  // media_time will be set to the PTS of the first payload in the pending
-  // packet queue. If the pending queue is empty, initial media_time will be
-  // set to zero.
-  //
-  // Return Value
-  // When requested, the AudioRenderer will return the 'reference_time' and
-  // 'media_time' which were selected and used (whether they were explicitly
-  // specified or not) in the return value of the play call.
-  //
-  // Examples
-  // 1. A user has queued some audio using `SendPacket` and simply wishes them
-  // to start playing as soon as possible. The user may call Play without
-  // providing explicit timestamps -- `Play(kNoTimestamp, kNoTimestamp)`.
-  //
-  // 2. A user has queued some audio using `SendPacket`, and wishes to start
-  // playback at a specified 'reference_time', in sync with some other media
-  // stream, either initially or after discarding packets. The user would call
-  // `Play(reference_time, kNoTimestamp)`.
-  //
-  // 3. A user has queued some audio using `SendPacket`. The first of these
-  // packets has a PTS of zero, and the user wishes playback to begin as soon as
-  // possible, but wishes to skip all of the audio content between PTS 0 and PTS
-  // 'media_time'. The user would call `Play(kNoTimestamp, media_time)`.
-  //
-  // 4. A user has queued some audio using `SendPacket` and want to present this
-  // media in synch with another player in a different device. The coordinator
-  // of the group of distributed players sends an explicit message to each
-  // player telling them to begin presentation of audio at PTS 'media_time', at
-  // the time (based on the group's shared reference clock) 'reference_time'.
-  // Here the user would call `Play(reference_time, media_time)`.
-  //
-  // TODO(mpuryear): Define behavior in the case that a user calls `Play` while
-  // the system is already playing. We should probably do nothing but return a
-  // valid correspondence pair in response -- unless both reference and media
-  // times are provided (and do not equate to the current timeline
-  // relationship), in which case we should introduce a discontinuity.
-  //
-  // TODO(mpuryear): Collapse these if we ever have optional retvals in FIDL
-  0x0606: Play(int64 reference_time, int64 media_time) ->
-      (int64 reference_time, int64 media_time);
-  0x0607: PlayNoReply(int64 reference_time, int64 media_time);
+    // Immediately put the AudioRenderer into a playing state. Start the advance
+    // of the media timeline, using specific values provided by the caller (or
+    // default values if not specified). In an optional callback, return the
+    // timestamp values ultimately used -- these set the ongoing relationship
+    // between the media and reference timelines (i.e., how to translate between
+    // the domain of presentation timestamps, and the realm of local system time).
+    //
+    // Local system time is specified in units of nanoseconds; media_time is
+    // specified in the units defined by the user in the `SetPtsUnits` function,
+    // or nanoseconds if `SetPtsUnits` is not called.
+    //
+    // The act of placing an AudioRenderer into the playback state establishes a
+    // relationship between 1) the user-defined media (or presentation) timeline
+    // for this particular AudioRenderer, and 2) the real-world system reference
+    // timeline. To communicate how to translate between timelines, the Play()
+    // callback provides an equivalent timestamp in each time domain. The first
+    // value ('reference_time') is given in terms of the local system clock; the
+    // second value ('media_time') is what media instant exactly corresponds to
+    // that local time. Restated, the frame at 'media_time' in the audio stream
+    // should be presented at system local time 'reference_time'.
+    //
+    // Note: on calling this API, media_time immediately starts advancing. It is
+    // possible, although uncommon, for a caller to specify a system time that is
+    // far in the past, or far into the future. This, along with the specified
+    // media time, is simply used to determine what media time corresponds to
+    // 'now', and THAT media time is then intersected with presentation
+    // timestamps of packets already submitted, to determine which media frames
+    // should be presented next.
+    //
+    // With the corresponding reference_time and media_time values, a user can
+    // translate arbitrary time values from one timeline into the other. After
+    // calling `SetPtsUnits(pts_per_sec_numerator, pts_per_sec_denominator)` and
+    // given the 'ref_start' and 'media_start' values from `Play()`, then for any
+    // 'ref_time':
+    //
+    // media_time = ( (ref_time - ref_start) / 1e9
+    //                * (pts_per_sec_numerator / pts_per_sec_denominator) )
+    //              + media_start
+    //
+    // Conversely, for any presentation timestamp 'media_time':
+    //
+    // ref_time = ( (media_time - media_start)
+    //              * (pts_per_sec_denominator / pts_per_sec_numerator)
+    //              * 1e9 )
+    //            + ref_start
+    //
+    // Users, depending on their use case, may optionally choose not to specify
+    // one or both of these timestamps. A timestamp may be omitted by supplying
+    // the special value 'kNoTimestamp'. The AudioRenderer automatically deduces
+    // any omitted timestamp value using the following rules:
+    //
+    // Reference Time
+    // If 'reference_time' is omitted, the AudioRenderer will select a "safe"
+    // reference time to begin presentation, based on the minimum lead times for
+    // the output devices that are currently bound to this AudioRenderer. For
+    // example, if an AudioRenderer is bound to an internal audio output
+    // requiring at least 3 mSec of lead time, and an HDMI output requiring at
+    // least 75 mSec of lead time, the AudioRenderer might (if 'reference_time'
+    // is omitted) select a reference time 80 mSec from now.
+    //
+    // Media Time
+    // If media_time is omitted, the AudioRenderer will select one of two values.
+    // - If the AudioRenderer is resuming from the paused state, and packets have
+    // not been discarded since being paused, then the AudioRenderer will use a
+    // media_time corresponding to the instant at which the presentation became
+    // paused.
+    // - If the AudioRenderer is being placed into a playing state for the first
+    // time following startup or a 'discard packets' operation, the initial
+    // media_time will be set to the PTS of the first payload in the pending
+    // packet queue. If the pending queue is empty, initial media_time will be
+    // set to zero.
+    //
+    // Return Value
+    // When requested, the AudioRenderer will return the 'reference_time' and
+    // 'media_time' which were selected and used (whether they were explicitly
+    // specified or not) in the return value of the play call.
+    //
+    // Examples
+    // 1. A user has queued some audio using `SendPacket` and simply wishes them
+    // to start playing as soon as possible. The user may call Play without
+    // providing explicit timestamps -- `Play(kNoTimestamp, kNoTimestamp)`.
+    //
+    // 2. A user has queued some audio using `SendPacket`, and wishes to start
+    // playback at a specified 'reference_time', in sync with some other media
+    // stream, either initially or after discarding packets. The user would call
+    // `Play(reference_time, kNoTimestamp)`.
+    //
+    // 3. A user has queued some audio using `SendPacket`. The first of these
+    // packets has a PTS of zero, and the user wishes playback to begin as soon as
+    // possible, but wishes to skip all of the audio content between PTS 0 and PTS
+    // 'media_time'. The user would call `Play(kNoTimestamp, media_time)`.
+    //
+    // 4. A user has queued some audio using `SendPacket` and want to present this
+    // media in synch with another player in a different device. The coordinator
+    // of the group of distributed players sends an explicit message to each
+    // player telling them to begin presentation of audio at PTS 'media_time', at
+    // the time (based on the group's shared reference clock) 'reference_time'.
+    // Here the user would call `Play(reference_time, media_time)`.
+    //
+    // TODO(mpuryear): Define behavior in the case that a user calls `Play` while
+    // the system is already playing. We should probably do nothing but return a
+    // valid correspondence pair in response -- unless both reference and media
+    // times are provided (and do not equate to the current timeline
+    // relationship), in which case we should introduce a discontinuity.
+    //
+    // TODO(mpuryear): Collapse these if we ever have optional retvals in FIDL
+    0x0606: Play(int64 reference_time, int64 media_time)
+                -> (int64 reference_time, int64 media_time);
+    0x0607: PlayNoReply(int64 reference_time, int64 media_time);
 
-  // Immediately put the AudioRenderer into the paused state and then report the
-  // relationship between the media and reference timelines which was
-  // established (if requested).
-  //
-  // TODO(mpuryear): Define behavior in the case that a user calls `Pause` while
-  // the system is already in the paused state. We should probably do nothing
-  // but provide a valid correspondence pair in response.
-  //
-  // TODO(mpuryear): Collapse these if we ever have optional retvals in FIDL
-  0x0608: Pause() -> (int64 reference_time, int64 media_time);
-  0x0609: PauseNoReply();
+    // Immediately put the AudioRenderer into the paused state and then report the
+    // relationship between the media and reference timelines which was
+    // established (if requested).
+    //
+    // TODO(mpuryear): Define behavior in the case that a user calls `Pause` while
+    // the system is already in the paused state. We should probably do nothing
+    // but provide a valid correspondence pair in response.
+    //
+    // TODO(mpuryear): Collapse these if we ever have optional retvals in FIDL
+    0x0608: Pause() -> (int64 reference_time, int64 media_time);
+    0x0609: PauseNoReply();
 
-  // Enable or disable notifications about changes to the minimum clock lead
-  // time (in nanoseconds) for this AudioRenderer. Calling this method with
-  // 'enabled' set to true will trigger an immediate `OnMinLeadTimeChanged`
-  // event with the current minimum lead time for the AudioRenderer. If the
-  // value changes, an `OnMinLeadTimeChanged` event will be raised with the new
-  // value. This behavior will continue until the user calls
-  // `EnableMinLeadTimeEvents(false)`.
-  //
-  // The minimum clock lead time is the amount of time ahead of the reference
-  // clock's understanding of "now" that packets needs to arrive (relative to
-  // the playback clock transformation) in order for the mixer to be able to mix
-  // packet. For example...
-  //
-  // ++ Let the PTS of packet X be P(X)
-  // ++ Let the function which transforms PTS -> RefClock be R(p) (this function
-  //    is determined by the call to Play(...)
-  // ++ Let the minimum lead time be MLT
-  //
-  // If R(P(X)) < RefClock.Now() + MLT
-  // Then the packet is late, and some (or all) of the packet's payload will
-  // need to be skipped in order to present the packet at the scheduled time.
-  //
-  // TODO(mpuryear): What should the units be here?  Options include...
-  //
-  // 1) Normalized to nanoseconds (this is the current API)
-  // 2) Reference clock units (what happens if the reference clock changes?)
-  // 3) PTS units (what happens when the user changes the PTS units?)
-  //
-  // TODO(mpuryear): Should `EnableMinLeadTimeEvents` have an optional -> ()
-  // return value for synchronization purposes?  Probably not; users should be
-  // able to send a disable request and clear their event handler if they no
-  // longer want notifications. Their in-process dispatcher framework can handle
-  // draining and dropping any lead time changed events that were already in
-  // flight when the disable message was sent.
-  //
-  0x060a: EnableMinLeadTimeEvents(bool enabled);
-  0x060b: -> OnMinLeadTimeChanged(int64 min_lead_time_nsec);
+    // Enable or disable notifications about changes to the minimum clock lead
+    // time (in nanoseconds) for this AudioRenderer. Calling this method with
+    // 'enabled' set to true will trigger an immediate `OnMinLeadTimeChanged`
+    // event with the current minimum lead time for the AudioRenderer. If the
+    // value changes, an `OnMinLeadTimeChanged` event will be raised with the new
+    // value. This behavior will continue until the user calls
+    // `EnableMinLeadTimeEvents(false)`.
+    //
+    // The minimum clock lead time is the amount of time ahead of the reference
+    // clock's understanding of "now" that packets needs to arrive (relative to
+    // the playback clock transformation) in order for the mixer to be able to mix
+    // packet. For example...
+    //
+    // ++ Let the PTS of packet X be P(X)
+    // ++ Let the function which transforms PTS -> RefClock be R(p) (this function
+    //    is determined by the call to Play(...)
+    // ++ Let the minimum lead time be MLT
+    //
+    // If R(P(X)) < RefClock.Now() + MLT
+    // Then the packet is late, and some (or all) of the packet's payload will
+    // need to be skipped in order to present the packet at the scheduled time.
+    //
+    // TODO(mpuryear): What should the units be here?  Options include...
+    //
+    // 1) Normalized to nanoseconds (this is the current API)
+    // 2) Reference clock units (what happens if the reference clock changes?)
+    // 3) PTS units (what happens when the user changes the PTS units?)
+    //
+    // TODO(mpuryear): Should `EnableMinLeadTimeEvents` have an optional -> ()
+    // return value for synchronization purposes?  Probably not; users should be
+    // able to send a disable request and clear their event handler if they no
+    // longer want notifications. Their in-process dispatcher framework can handle
+    // draining and dropping any lead time changed events that were already in
+    // flight when the disable message was sent.
+    //
+    0x060a: EnableMinLeadTimeEvents(bool enabled);
+    0x060b: -> OnMinLeadTimeChanged(int64 min_lead_time_nsec);
 
-  // TODO(mpuryear): Eliminate this method when possible. Right now, it is used
-  // by code requiring synchronous FIDL interfaces to talk to AudioRenderers.
-  0x060c: GetMinLeadTime() -> (int64 min_lead_time_nsec);
+    // TODO(mpuryear): Eliminate this method when possible. Right now, it is used
+    // by code requiring synchronous FIDL interfaces to talk to AudioRenderers.
+    0x060c: GetMinLeadTime() -> (int64 min_lead_time_nsec);
 
-  // Binds to the gain control for this AudioRenderer.
-  0x060d: BindGainControl(request<GainControl> gain_control_request);
+    // Binds to the gain control for this AudioRenderer.
+    0x060d: BindGainControl(request<GainControl> gain_control_request);
 
-  /////////////////////////////////////////////////////////////////////////////
-  // StreamBufferSet methods
-  // See stream.fidl.
+    /////////////////////////////////////////////////////////////////////////////
+    // StreamBufferSet methods
+    // See stream.fidl.
 
-  /////////////////////////////////////////////////////////////////////////////
-  // StreamSink methods
-  // See stream.fidl.
+    /////////////////////////////////////////////////////////////////////////////
+    // StreamSink methods
+    // See stream.fidl.
 
-  // TODO(mpuryear): Spec methods/events which can be used for unintentional
-  // discontinuity/underflow detection.
-  //
-  // TODO(mpuryear): Spec methods/events which can be used to report routing
-  // changes. (Presuming that they belong at this level at all; they may belong
-  // on some sort of policy object).
-  //
-  // TODO(mpuryear): Spec methods/events which can be used to report policy
-  // induced gain/ducking changes. (Presuming that they belong at this level at
-  // all; they may belong on some sort of policy object).
+    // TODO(mpuryear): Spec methods/events which can be used for unintentional
+    // discontinuity/underflow detection.
+    //
+    // TODO(mpuryear): Spec methods/events which can be used to report routing
+    // changes. (Presuming that they belong at this level at all; they may belong
+    // on some sort of policy object).
+    //
+    // TODO(mpuryear): Spec methods/events which can be used to report policy
+    // induced gain/ducking changes. (Presuming that they belong at this level at
+    // all; they may belong on some sort of policy object).
 };
 
 // DEPRECATED
-interface AudioOut : AudioRenderer {};
+interface AudioOut : AudioRenderer {
+};
