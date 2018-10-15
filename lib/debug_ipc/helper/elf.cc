@@ -27,6 +27,7 @@ using Elf64_Xword = uint64_t;
 using Elf64_Addr = uint64_t;
 using Elf64_Off = uint64_t;
 
+// ELF header.
 struct Elf64_Ehdr {
   unsigned char e_ident[EI_NIDENT];
   Elf64_Half e_type;
@@ -44,6 +45,7 @@ struct Elf64_Ehdr {
   Elf64_Half e_shstrndx;
 };
 
+// Program header.
 struct Elf64_Phdr {
   Elf64_Word p_type;
   Elf64_Word p_flags;
@@ -55,6 +57,7 @@ struct Elf64_Phdr {
   Elf64_Xword p_align;
 };
 
+// Note header.
 struct Elf64_Nhdr {
   Elf64_Word n_namesz;
   Elf64_Word n_descsz;
@@ -70,33 +73,43 @@ std::string ExtractBuildID(
   constexpr size_t buf_size = kMaxBuildIDSize * 2 + 1;
   char buf[buf_size];
 
-  // ELF header.
-  uint8_t header[SELFMAG];
-  if (!read_fn(0, header, SELFMAG))
+  // ELF header magic number.
+  uint8_t magic_number[SELFMAG];
+  if (!read_fn(0, magic_number, SELFMAG))
     return std::string();
-  if (memcmp(header, ELFMAG, SELFMAG))
-    return std::string();
-
-  Elf64_Off phoff;
-  Elf64_Half num;
-  if (!read_fn(offsetof(Elf64_Ehdr, e_phoff), &phoff, sizeof(phoff)))
-    return std::string();
-  if (!read_fn(offsetof(Elf64_Ehdr, e_phnum), &num, sizeof(num)))
+  if (memcmp(magic_number, ELFMAG, SELFMAG))
     return std::string();
 
-  for (Elf64_Half n = 0; n < num; n++) {
-    uint64_t phaddr = phoff + (n * sizeof(Elf64_Phdr));
+  // Find the program header table.
+  Elf64_Off program_header_offset;
+  Elf64_Half program_header_count;
+  if (!read_fn(offsetof(Elf64_Ehdr, e_phoff), &program_header_offset,
+               sizeof(program_header_offset)))
+    return std::string();
+  if (!read_fn(offsetof(Elf64_Ehdr, e_phnum), &program_header_count,
+               sizeof(program_header_count)))
+    return std::string();
+
+  for (Elf64_Half i = 0; i < program_header_count; i++) {
+    uint64_t entry_offset = program_header_offset + (i * sizeof(Elf64_Phdr));
+
+    // Extract the program header entry type. The build ID is stored in the
+    // "note" segment.
     Elf64_Word type;
-    if (!read_fn(phaddr + offsetof(Elf64_Phdr, p_type), &type, sizeof(type)))
+    if (!read_fn(entry_offset + offsetof(Elf64_Phdr, p_type), &type,
+                 sizeof(type)))
       return std::string();
     if (type != PT_NOTE)
       continue;
 
-    Elf64_Off off;
-    Elf64_Xword size;
-    if (!read_fn(phaddr + offsetof(Elf64_Phdr, p_offset), &off, sizeof(off)))
+    // Find the note section data.
+    Elf64_Off note_offset;
+    Elf64_Xword note_size;
+    if (!read_fn(entry_offset + offsetof(Elf64_Phdr, p_offset), &note_offset,
+                 sizeof(note_offset)))
       return std::string();
-    if (!read_fn(phaddr + offsetof(Elf64_Phdr, p_filesz), &size, sizeof(size)))
+    if (!read_fn(entry_offset + offsetof(Elf64_Phdr, p_filesz), &note_size,
+                 sizeof(note_size)))
       return std::string();
 
     constexpr size_t kGnuSignatureSize = 4;
@@ -105,30 +118,35 @@ std::string ExtractBuildID(
     struct {
       Elf64_Nhdr hdr;
       char name[kGnuSignatureSize];
-    } hdr;
+    } note_header;
 
-    while (size > sizeof(hdr)) {
-      if (!read_fn(off, &hdr, sizeof(hdr)))
+    // Iterate through the notes.
+    Elf64_Xword remaining_size = note_size;
+    while (remaining_size > sizeof(note_header)) {
+      if (!read_fn(note_offset, &note_header, sizeof(note_header)))
         return std::string();
-      size_t header_size = sizeof(Elf64_Nhdr) + ((hdr.hdr.n_namesz + 3) & -4);
-      size_t payload_size = (hdr.hdr.n_descsz + 3) & -4;
-      off += header_size;
-      size -= header_size;
-      uint64_t payload_vaddr = off;
-      off += payload_size;
-      size -= payload_size;
-      if (hdr.hdr.n_type != NT_GNU_BUILD_ID ||
-          hdr.hdr.n_namesz != kGnuSignatureSize ||
-          memcmp(hdr.name, kGnuSignature, kGnuSignatureSize) != 0) {
+      size_t header_size =
+          sizeof(Elf64_Nhdr) + ((note_header.hdr.n_namesz + 3) & -4);
+      size_t payload_size = (note_header.hdr.n_descsz + 3) & -4;
+      note_offset += header_size;
+      remaining_size -= header_size;
+
+      uint64_t payload_vaddr = note_offset;
+      note_offset += payload_size;
+      remaining_size -= payload_size;
+      if (note_header.hdr.n_type != NT_GNU_BUILD_ID ||
+          note_header.hdr.n_namesz != kGnuSignatureSize ||
+          memcmp(note_header.name, kGnuSignature, kGnuSignatureSize) != 0) {
         continue;
       }
-      if (hdr.hdr.n_descsz > kMaxBuildIDSize) {
+      if (note_header.hdr.n_descsz > kMaxBuildIDSize) {
         return std::string();  // Too large.
       } else {
+        // Found the build ID, convert to a hex string.
         uint8_t buildid[kMaxBuildIDSize];
-        if (!read_fn(payload_vaddr, buildid, hdr.hdr.n_descsz))
+        if (!read_fn(payload_vaddr, buildid, note_header.hdr.n_descsz))
           return std::string();
-        for (uint32_t i = 0; i < hdr.hdr.n_descsz; ++i)
+        for (uint32_t i = 0; i < note_header.hdr.n_descsz; ++i)
           snprintf(&buf[i * 2], 3, "%02x", buildid[i]);
       }
       return std::string(buf);
