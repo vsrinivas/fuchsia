@@ -42,7 +42,7 @@ typedef struct {
 } __PACKED xhci_cap_regs_t;
 
 // XHCI Port Register Set
-typedef volatile struct {
+typedef struct {
     uint32_t portsc;        // Port Status and Control
     uint32_t portpmsc;      // Port Power Management Status and Control
     uint32_t portli;        // Port Link Info
@@ -50,7 +50,7 @@ typedef volatile struct {
 } __PACKED xhci_port_regs_t;
 
 // XHCI Operational Registers
-typedef volatile struct {
+typedef struct {
     uint32_t usbcmd;        // USB Command
     uint32_t usbsts;        // USB Status
     uint32_t pagesize;      // Page Size
@@ -65,7 +65,7 @@ typedef volatile struct {
 } __PACKED xhci_op_regs_t;
 
 // XHCI Interrupter Registers
-typedef volatile struct {
+typedef struct {
     uint32_t    iman;       // Interrupter Management
     uint32_t    imod;       // Interrupter Moderation
     uint32_t    erstsz;     // Event Ring Segment Table Size
@@ -75,7 +75,7 @@ typedef volatile struct {
 } __PACKED xhci_intr_regs_t;
 
 // XHCI Runtime Registers
-typedef volatile struct {
+typedef struct {
     uint32_t    mfindex;    // Microframe Index Register
     uint32_t    reserved[7];
     xhci_intr_regs_t intr_regs[1024];
@@ -83,7 +83,7 @@ typedef volatile struct {
 #define XHCI_MFINDEX_BITS   14
 
 // Slot Context
-typedef volatile struct {
+typedef struct {
     uint32_t sc0;
     uint32_t sc1;
     uint32_t sc2;
@@ -92,7 +92,7 @@ typedef volatile struct {
 } __PACKED xhci_slot_context_t;
 
 // Endpoint Context
-typedef volatile struct {
+typedef struct {
     uint32_t epc0;
     uint32_t epc1;
     uint32_t epc2;
@@ -102,7 +102,7 @@ typedef volatile struct {
 } __PACKED xhci_endpoint_context_t;
 
 // Stream Context
-typedef volatile struct {
+typedef struct {
     uint32_t sc0;
     uint32_t sc1;
     uint32_t sc2;
@@ -110,7 +110,7 @@ typedef volatile struct {
 } __PACKED xhci_stream_context_t;
 
 // Input Control Context
-typedef volatile struct {
+typedef struct {
     uint32_t drop_context_flags;
     uint32_t add_context_flags;
     uint32_t reserved[5];
@@ -118,7 +118,7 @@ typedef volatile struct {
 } __PACKED xhci_input_control_context_t;
 
 // Transfer Request Block
-typedef volatile struct {
+typedef struct {
     union {
     uint64_t ptr;
         struct {
@@ -131,14 +131,14 @@ typedef volatile struct {
 } __PACKED xhci_trb_t;
 
 // Event Ring Segment Table Entry
-typedef volatile struct {
+typedef struct {
     uint64_t ptr;
     uint32_t size;
     uint32_t reserved;
 } __PACKED erst_entry_t;
 
 // XHCI USB Legacy Support Extended Cap
-typedef volatile struct {
+typedef struct {
     uint8_t cap_id;
     uint8_t next_cap_ptr;
     uint8_t bios_owned_sem;
@@ -557,22 +557,6 @@ typedef volatile struct {
 
 static inline uint32_t trb_get_type(xhci_trb_t* trb) {
     return XHCI_GET_BITS32(&trb->control, TRB_TYPE_START, TRB_TYPE_BITS);
-}
-
-static inline void* trb_get_ptr(xhci_trb_t* trb) {
-#if (UINTPTR_MAX == UINT32_MAX)
-    return (void *)(uint32_t)XHCI_READ64(&trb->ptr);
-#else
-    return (void *)XHCI_READ64(&trb->ptr);
-#endif
-}
-
-static inline void trb_set_ptr(xhci_trb_t* trb, void* ptr) {
-#if (UINTPTR_MAX == UINT32_MAX)
-    XHCI_WRITE64(&trb->ptr, (uint32_t)ptr);
-#else
-    XHCI_WRITE64(&trb->ptr, (uint64_t)ptr);
-#endif
 }
 
 static inline void trb_set_control(xhci_trb_t* trb, uint32_t type, uint32_t flags) {

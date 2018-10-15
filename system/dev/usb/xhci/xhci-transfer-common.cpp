@@ -8,11 +8,11 @@
 #include "xhci-transfer-common.h"
 
 void xhci_print_trb(xhci_transfer_ring_t* ring, xhci_trb_t* trb) {
-    int index = trb - ring->start;
+    size_t index = trb - ring->start;
     uint32_t* ptr = (uint32_t *)trb;
     uint64_t paddr = io_buffer_phys(&ring->buffer) + index * sizeof(xhci_trb_t);
 
-    zxlogf(LSPEW, "trb[%03d] %p: %08X %08X %08X %08X\n", index, (void *)paddr, ptr[0], ptr[1], ptr[2], ptr[3]);
+    zxlogf(LSPEW, "trb[%03zu] %p: %08X %08X %08X %08X\n", index, (void *)paddr, ptr[0], ptr[1], ptr[2], ptr[3]);
 }
 
 void xhci_transfer_state_init(xhci_transfer_state_t* state, usb_request_t* req,
@@ -30,7 +30,7 @@ void xhci_transfer_state_init(xhci_transfer_state_t* state, usb_request_t* req,
 
     usb_request_phys_iter_init(&state->phys_iter, req, XHCI_MAX_DATA_BUFFER);
 
-    usb_setup_t* setup = (req->header.ep_address == 0 ? &req->setup : NULL);
+    usb_setup_t* setup = (req->header.ep_address == 0 ? &req->setup : nullptr);
     if (setup) {
         state->direction = setup->bmRequestType & USB_ENDPOINT_DIR_MASK;
         state->needs_status = true;
@@ -62,7 +62,7 @@ zx_status_t xhci_queue_data_trbs(xhci_transfer_ring_t* ring, xhci_transfer_state
         xhci_clear_trb(trb);
         XHCI_WRITE64(&trb->ptr, paddr);
         XHCI_SET_BITS32(&trb->status, XFER_TRB_XFER_LENGTH_START, XFER_TRB_XFER_LENGTH_BITS,
-                        transfer_size);
+                        static_cast<uint32_t>(transfer_size));
         // number of packets remaining after this one
         uint32_t td_size = --state->packet_count;
         if (state->needs_zlp) {
@@ -86,7 +86,7 @@ zx_status_t xhci_queue_data_trbs(xhci_transfer_ring_t* ring, xhci_transfer_state
                 control_bits |= XFER_TRB_SIA;
             } else {
                 // schedule packet for specified frame
-                control_bits |= (((frame % 2048) << XFER_TRB_FRAME_ID_START) &
+                control_bits |= ((static_cast<uint32_t>(frame % 2048) << XFER_TRB_FRAME_ID_START) &
                                  XHCI_MASK(XFER_TRB_FRAME_ID_START, XFER_TRB_FRAME_ID_BITS));
            }
             trb_set_control(trb, TRB_TRANSFER_ISOCH, control_bits);
@@ -120,7 +120,7 @@ zx_status_t xhci_queue_data_trbs(xhci_transfer_ring_t* ring, xhci_transfer_state
         // Queue event data TRB
         xhci_trb_t* trb = ring->current;
         xhci_clear_trb(trb);
-        trb_set_ptr(trb, req);
+        trb->ptr = reinterpret_cast<uint64_t>(req);
         XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
                         interrupter_target);
         trb_set_control(trb, TRB_TRANSFER_EVENT_DATA, XFER_TRB_IOC);

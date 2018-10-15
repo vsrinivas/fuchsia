@@ -9,23 +9,31 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/usb-xhci.c \
-    $(LOCAL_DIR)/xdc.c \
-    $(LOCAL_DIR)/xdc-transfer.c \
-    $(LOCAL_DIR)/xhci.c \
-    $(LOCAL_DIR)/xhci-device-manager.c \
-    $(LOCAL_DIR)/xhci-root-hub.c \
-    $(LOCAL_DIR)/xhci-transfer.c \
-    $(LOCAL_DIR)/xhci-transfer-common.c \
-    $(LOCAL_DIR)/xhci-trb.c \
-    $(LOCAL_DIR)/xhci-util.c \
+    $(LOCAL_DIR)/bind.c \
+    $(LOCAL_DIR)/usb-xhci.cpp \
+    $(LOCAL_DIR)/xdc.cpp \
+    $(LOCAL_DIR)/xdc-transfer.cpp \
+    $(LOCAL_DIR)/xhci.cpp \
+    $(LOCAL_DIR)/xhci-device-manager.cpp \
+    $(LOCAL_DIR)/xhci-root-hub.cpp \
+    $(LOCAL_DIR)/xhci-transfer.cpp \
+    $(LOCAL_DIR)/xhci-transfer-common.cpp \
+    $(LOCAL_DIR)/xhci-trb.cpp \
+    $(LOCAL_DIR)/xhci-util.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
+    system/ulib/ddktl \
+    system/ulib/fbl \
+    system/ulib/hwreg \
     system/ulib/sync \
     system/ulib/xdc-server-utils \
+    system/ulib/zx \
     system/dev/lib/usb \
 
-MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+MODULE_LIBS := \
+    system/ulib/driver \
+    system/ulib/zircon \
+    system/ulib/c \
 
 include make/module.mk

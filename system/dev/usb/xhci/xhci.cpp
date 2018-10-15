@@ -33,7 +33,7 @@
 
 uint8_t xhci_endpoint_index(uint8_t ep_address) {
     if (ep_address == 0) return 0;
-    uint32_t index = 2 * (ep_address & ~USB_ENDPOINT_DIR_MASK);
+    uint8_t index = static_cast<uint8_t>(2 * (ep_address & ~USB_ENDPOINT_DIR_MASK));
     if ((ep_address & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_OUT)
         index--;
     return index;
@@ -43,14 +43,16 @@ uint8_t xhci_endpoint_index(uint8_t ep_address) {
 int xhci_get_root_hub_index(xhci_t* xhci, uint32_t device_id) {
     // regular devices have IDs 1 through xhci->max_slots
     // root hub IDs start at xhci->max_slots + 1
-    int index = device_id - (xhci->max_slots + 1);
-    if (index < 0 || index >= XHCI_RH_COUNT) return -1;
-    return index;
+    if (device_id > xhci->max_slots) {
+        return static_cast<int>(device_id - xhci->max_slots - 1);
+    } else {
+        return -1;
+    }
 }
 
 static void xhci_read_extended_caps(xhci_t* xhci) {
-    uint32_t* cap_ptr = NULL;
-    while ((cap_ptr = xhci_get_next_ext_cap(xhci->mmio.vaddr, cap_ptr, NULL))) {
+    uint32_t* cap_ptr = nullptr;
+    while ((cap_ptr = xhci_get_next_ext_cap(xhci->mmio.vaddr, cap_ptr, nullptr))) {
         uint32_t cap_id = XHCI_GET_BITS32(cap_ptr, EXT_CAP_CAPABILITY_ID_START,
                                           EXT_CAP_CAPABILITY_ID_BITS);
 
@@ -74,14 +76,14 @@ static void xhci_read_extended_caps(xhci_t* xhci) {
             zxlogf(TRACE, "compat_port_offset: %d compat_port_count: %d psic: %d\n",
                     compat_port_offset, compat_port_count, psic);
 
-            int rh_index;
+            uint8_t rh_index;
             if (rev_major == 3) {
                 rh_index = XHCI_RH_USB_3;
             } else if (rev_major == 2) {
                 rh_index = XHCI_RH_USB_2;
             } else {
                 zxlogf(ERROR, "unsupported rev_major in XHCI extended capabilities\n");
-                rh_index = -1;
+                break;
             }
             for (off_t i = 0; i < compat_port_count; i++) {
                 off_t index = compat_port_offset + i - 1;
@@ -108,7 +110,7 @@ static void xhci_read_extended_caps(xhci_t* xhci) {
 
 static zx_status_t xhci_claim_ownership(xhci_t* xhci) {
     xhci_usb_legacy_support_cap_t* cap = xhci->usb_legacy_support_cap;
-    if (cap == NULL) {
+    if (cap == nullptr) {
         return ZX_OK;
     }
 
@@ -128,7 +130,7 @@ static zx_status_t xhci_claim_ownership(xhci_t* xhci) {
     }
 
     if (cap->bios_owned_sem & 1) {
-        cap->os_owned_sem &= ~1;
+        cap->os_owned_sem &= static_cast<uint8_t>(~1u);
         return ZX_ERR_TIMED_OUT;
     }
     return ZX_OK;
@@ -221,7 +223,8 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
         goto fail;
     }
 
-    bool scratch_pad_is_contig = false;
+    bool scratch_pad_is_contig;
+    scratch_pad_is_contig = false;
     if (scratch_pad_bufs > 0) {
         // map scratchpad buffers read-only
         uint32_t flags = IO_BUFFER_RO;
@@ -260,9 +263,11 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
     xhci->input_context_phys = io_buffer_phys(&xhci->input_context_buffer);
 
     // DCBAA can only be 256 * sizeof(uint64_t) = 2048 bytes, so we have room for ERST array after DCBAA
-    zx_off_t erst_offset = 256 * sizeof(uint64_t);
+    zx_off_t erst_offset;
+    erst_offset = 256 * sizeof(uint64_t);
 
-    size_t array_bytes = ERST_ARRAY_SIZE * sizeof(erst_entry_t);
+    size_t array_bytes;
+    array_bytes = ERST_ARRAY_SIZE * sizeof(erst_entry_t);
     // MSI only supports up to 32 interupts, so the required ERST arrays will fit
     // within the page. Potentially more pages will need to be allocated for MSI-X.
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
@@ -272,7 +277,8 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
                     xhci->num_interrupts);
             goto fail;
         }
-        xhci->erst_arrays[i] = (void *)xhci->dcbaa + erst_offset;
+        xhci->erst_arrays[i] = reinterpret_cast<erst_entry_t*>(
+                                    reinterpret_cast<uintptr_t>(xhci->dcbaa) + erst_offset);
         xhci->erst_arrays_phys[i] = xhci->dcbaa_phys + erst_offset;
         // ERST arrays must be 64 byte aligned - see Table 54 in XHCI spec.
         // dcbaa_phys is already page (and hence 64 byte) aligned, so only
@@ -327,7 +333,7 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
             mtx_init(&ep->lock, mtx_plain);
             list_initialize(&ep->queued_reqs);
             list_initialize(&ep->pending_reqs);
-            ep->current_req = NULL;
+            ep->current_req = nullptr;
         }
     }
 
@@ -470,10 +476,12 @@ static void xhci_slot_stop(xhci_slot_t* slot) {
         mtx_lock(&ep->lock);
         if (ep->state != EP_STATE_DEAD) {
             usb_request_t* req;
-            while ((req = list_remove_tail_type(&ep->pending_reqs, usb_request_t, node)) != NULL) {
+            while ((req = list_remove_tail_type(&ep->pending_reqs, usb_request_t, node))
+                    != nullptr) {
                 usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
             }
-            while ((req = list_remove_tail_type(&ep->queued_reqs, usb_request_t, node)) != NULL) {
+            while ((req = list_remove_tail_type(&ep->queued_reqs, usb_request_t, node))
+                    != nullptr) {
                 usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
             }
             ep->state = EP_STATE_DEAD;
@@ -544,7 +552,7 @@ void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t co
 
     xhci_transfer_ring_t* cr = &xhci->command_ring;
     xhci_trb_t* trb = cr->current;
-    int index = trb - cr->start;
+    auto index = trb - cr->start;
     xhci->command_contexts[index] = context;
 
     XHCI_WRITE64(&trb->ptr, ptr);
@@ -565,7 +573,7 @@ static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_t
     zxlogf(TRACE, "xhci_handle_command_complete_event slot_id: %d command: %d cc: %d\n",
             (event_trb->control >> TRB_SLOT_ID_START), trb_get_type(command_trb), cc);
 
-    int index = command_trb - xhci->command_ring.start;
+    size_t index = command_trb - xhci->command_ring.start;
 
     if (cc == TRB_CC_COMMAND_RING_STOPPED) {
         // TRB_CC_COMMAND_RING_STOPPED is generated after aborting a command.
@@ -575,7 +583,7 @@ static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_t
 
     mtx_lock(&xhci->command_ring_lock);
     xhci_command_context_t* context = xhci->command_contexts[index];
-    xhci->command_contexts[index] = NULL;
+    xhci->command_contexts[index] = nullptr;
     mtx_unlock(&xhci->command_ring_lock);
 
     context->callback(context->data, cc, command_trb, event_trb);

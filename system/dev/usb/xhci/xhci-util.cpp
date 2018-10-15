@@ -80,10 +80,10 @@ uint32_t* xhci_get_next_ext_cap(void* mmio, uint32_t* prev_cap, uint32_t* match_
         uint32_t offset = XHCI_GET_BITS32(hccparams1, HCCPARAMS1_EXT_CAP_PTR_START,
                                           HCCPARAMS1_EXT_CAP_PTR_BITS);
         if (!offset) {
-            return NULL;
+            return nullptr;
         }
         // offset is 32-bit words from MMIO base
-        cap_ptr = (uint32_t *)(mmio + (offset << 2));
+        cap_ptr = reinterpret_cast<uint32_t*>(reinterpret_cast<uintptr_t>(mmio) + (offset << 2));
     }
 
     while (cap_ptr) {
@@ -102,7 +102,7 @@ uint32_t* xhci_get_next_ext_cap(void* mmio, uint32_t* prev_cap, uint32_t* match_
         // Get the next cap ptr, offset is 32-bit words from cap_ptr
         uint32_t offset = XHCI_GET_BITS32(cap_ptr, EXT_CAP_NEXT_PTR_START,
                                           EXT_CAP_NEXT_PTR_BITS);
-        cap_ptr = (offset ? cap_ptr + offset : NULL);
+        cap_ptr = (offset ? cap_ptr + offset : nullptr);
     }
-    return NULL;
+    return nullptr;
 }

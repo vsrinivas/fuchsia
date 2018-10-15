@@ -13,7 +13,7 @@ zx_status_t xhci_transfer_ring_init(xhci_transfer_ring_t* ring, zx_handle_t bti_
                                         IO_BUFFER_RW | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
     if (status != ZX_OK) return status;
 
-    ring->start = io_buffer_virt(&ring->buffer);
+    ring->start = static_cast<xhci_trb_t*>(io_buffer_virt(&ring->buffer));
     ring->current = ring->start;
     ring->dequeue_ptr = ring->start;
     ring->full = false;
@@ -21,7 +21,7 @@ zx_status_t xhci_transfer_ring_init(xhci_transfer_ring_t* ring, zx_handle_t bti_
     ring->pcs = TRB_C;
 
     // set link TRB at end to point back to the beginning
-    trb_set_ptr(&ring->start[count - 1], (void *)io_buffer_phys(&ring->buffer));
+    ring->start[count - 1].ptr = io_buffer_phys(&ring->buffer);
     trb_set_control(&ring->start[count - 1], TRB_LINK, TRB_TC);
     return ZX_OK;
 }
@@ -40,13 +40,13 @@ size_t xhci_transfer_ring_free_trbs(xhci_transfer_ring_t* ring) {
         return 0;
     }
 
-    int size = ring->size;
+    auto size = ring->size;
 
     if (current < dequeue_ptr) {
         current += size;
     }
 
-    int busy_count = current - dequeue_ptr;
+    size_t busy_count = current - dequeue_ptr;
     return size - busy_count;
 }
 
@@ -58,7 +58,7 @@ zx_status_t xhci_event_ring_init(xhci_event_ring_t* ring, zx_handle_t bti_handle
                                         IO_BUFFER_RO | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
     if (status != ZX_OK) return status;
 
-    ring->start = io_buffer_virt(&ring->buffer);
+    ring->start = static_cast<xhci_trb_t*>(io_buffer_virt(&ring->buffer));
     XHCI_WRITE64(&erst_array[0].ptr, io_buffer_phys(&ring->buffer));
     XHCI_WRITE32(&erst_array[0].size, count);
 
@@ -90,11 +90,11 @@ void xhci_set_transfer_noop_trb(xhci_trb_t* trb) {
     trb_set_control(trb, TRB_TRANSFER_NOOP, control & TRB_C);
 }
 
-void* xhci_read_trb_ptr(xhci_transfer_ring_t* ring, xhci_trb_t* trb) {
+xhci_trb_t* xhci_read_trb_ptr(xhci_transfer_ring_t* ring, xhci_trb_t* trb) {
     // convert physical address to virtual
-    uint8_t* ptr = trb_get_ptr(trb);
-    ptr += ((uint8_t *)io_buffer_virt(&ring->buffer) - (uint8_t *)io_buffer_phys(&ring->buffer));
-    return ptr;
+    uintptr_t ptr = trb->ptr;
+    ptr += ((uintptr_t)io_buffer_virt(&ring->buffer) - io_buffer_phys(&ring->buffer));
+    return reinterpret_cast<xhci_trb_t*>(ptr);
 }
 
 xhci_trb_t* xhci_get_next_trb(xhci_transfer_ring_t* ring, xhci_trb_t* trb) {
@@ -147,7 +147,7 @@ xhci_trb_t* xhci_transfer_ring_phys_to_trb(xhci_transfer_ring_t* ring, zx_paddr_
     zx_paddr_t last_trb_phys = first_trb_phys + (ring->size * sizeof(xhci_trb_t));
 
     if (phys < first_trb_phys || phys > last_trb_phys) {
-        return NULL;
+        return nullptr;
     }
    return ring->start + ((phys - first_trb_phys) / sizeof(xhci_trb_t));
 }

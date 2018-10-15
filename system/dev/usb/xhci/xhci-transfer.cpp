@@ -94,7 +94,8 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint8_t ep_addre
             // This should come after the successful completion of a Reset Endpoint Command.
             // See XHCI spec, section 4.6.8
             xhci_control_request(xhci, slot_id, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_ENDPOINT,
-                                 USB_REQ_CLEAR_FEATURE, USB_ENDPOINT_HALT, ep_address, NULL, 0);
+                                 USB_REQ_CLEAR_FEATURE, USB_ENDPOINT_HALT, ep_address, nullptr, 0,
+                                 nullptr);
         }
     }
 
@@ -113,7 +114,7 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint8_t ep_addre
     // so move them all to the queued list so they will be requeued
     // Completed these with ZX_ERR_CANCELED out of the lock.
     // Remove from tail and add to head to preserve the ordering
-    while ((req = list_remove_tail_type(&ep->pending_reqs, usb_request_t, node)) != NULL) {
+    while ((req = list_remove_tail_type(&ep->pending_reqs, usb_request_t, node)) != nullptr) {
         list_add_head(&ep->queued_reqs, &req->node);
     }
 
@@ -152,7 +153,7 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint8_t ep_addre
     mtx_unlock(&ep->lock);
 
     // call complete callbacks out of the lock
-    while ((req = list_remove_head_type(&completed_reqs, usb_request_t, node)) != NULL) {
+    while ((req = list_remove_head_type(&completed_reqs, usb_request_t, node)) != nullptr) {
         usb_request_complete(req, req->response.status, req->response.actual);
     }
 
@@ -180,10 +181,13 @@ static zx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_slot_t* slot, u
     xhci_transfer_state_t* state = ep->transfer_state;
     xhci_transfer_state_init(state, req, ep->ep_type, ep->max_packet_size);
 
-    size_t length = req->header.length;
+    if (req->header.length > UINT32_MAX) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    auto length = static_cast<uint32_t>(req->header.length);
     uint32_t interrupter_target = 0;
 
-    usb_setup_t* setup = (req->header.ep_address == 0 ? &req->setup : NULL);
+    usb_setup_t* setup = (req->header.ep_address == 0 ? &req->setup : nullptr);
     if (setup) {
         // Setup Stage
         xhci_trb_t* trb = ring->current;
@@ -345,7 +349,7 @@ static void xhci_process_transactions_locked(xhci_t* xhci, xhci_slot_t* slot, ui
                     list_delete(&req->node);
                     list_add_tail(completed_reqs, &req->node);
                 }
-                ep->current_req = NULL;
+                ep->current_req = nullptr;
             }
         }
     }
@@ -354,7 +358,7 @@ static void xhci_process_transactions_locked(xhci_t* xhci, xhci_slot_t* slot, ui
 zx_status_t xhci_queue_transfer(xhci_t* xhci, usb_request_t* req) {
     uint32_t slot_id = req->header.device_id;
     uint8_t ep_index = xhci_endpoint_index(req->header.ep_address);
-    __UNUSED usb_setup_t* setup = (ep_index == 0 ? &req->setup : NULL);
+    __UNUSED usb_setup_t* setup = (ep_index == 0 ? &req->setup : nullptr);
 
     zxlogf(LSPEW, "xhci_queue_transfer slot_id: %d setup: %p ep_index: %d length: %lu\n",
             slot_id, setup, ep_index, req->header.length);
@@ -418,7 +422,7 @@ zx_status_t xhci_queue_transfer(xhci_t* xhci, usb_request_t* req) {
     mtx_unlock(&ep->lock);
 
     // call complete callbacks out of the lock
-    while ((req = list_remove_head_type(&completed_reqs, usb_request_t, node)) != NULL) {
+    while ((req = list_remove_head_type(&completed_reqs, usb_request_t, node)) != nullptr) {
         usb_request_complete(req, req->response.status, req->response.actual);
     }
 
@@ -503,7 +507,7 @@ zx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t ep_in
     mtx_unlock(&ep->lock);
 
     // call complete callbacks out of the lock
-    while ((req = list_remove_head_type(&completed_reqs, usb_request_t, node)) != NULL) {
+    while ((req = list_remove_head_type(&completed_reqs, usb_request_t, node)) != nullptr) {
         usb_request_complete(req, req->response.status, req->response.actual);
     }
 
@@ -514,9 +518,9 @@ static void xhci_control_complete(usb_request_t* req, void* cookie) {
     sync_completion_signal((sync_completion_t*)cookie);
 }
 
-int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, uint8_t request,
-                         uint16_t value, uint16_t index, void* data, uint16_t length) {
-
+zx_status_t xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type,
+                                 uint8_t request, uint16_t value, uint16_t index, void* data,
+                                 uint16_t length, size_t* out_actual) {
     zxlogf(LTRACE, "xhci_control_request slot_id: %d type: 0x%02X req: %d value: %d index: %d "
             "length: %d\n", slot_id, request_type, request, value, index, length);
 
@@ -524,9 +528,11 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
     // so it makes sense to pool them.
     usb_request_t* req = usb_request_pool_get(&xhci->free_reqs, length);
 
-    if (req == NULL) {
-        zx_status_t status = usb_request_alloc(&req, length, 0);
-        if (status != ZX_OK) return status;
+    if (req == nullptr) {
+        auto status = usb_request_alloc(&req, length, 0);
+        if (status != ZX_OK) {
+            return status;
+        }
     }
 
     usb_setup_t* setup = &req->setup;
@@ -542,13 +548,13 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
         usb_request_copy_to(req, data, length, 0);
     }
 
-    sync_completion_t completion = SYNC_COMPLETION_INIT;
+    sync_completion_t completion;
 
     req->header.length = length;
     req->complete_cb = xhci_control_complete;
     req->cookie = &completion;
     xhci_request_queue(xhci, req);
-    zx_status_t status = sync_completion_wait(&completion, ZX_SEC(1));
+    auto status = sync_completion_wait(&completion, ZX_SEC(1));
     if (status == ZX_OK) {
         status = req->response.status;
     } else if (status == ZX_ERR_TIMED_OUT) {
@@ -561,8 +567,8 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
         }
     }
     zxlogf(TRACE, "xhci_control_transfer got %d\n", status);
-    if (status == ZX_OK) {
-        status = req->response.actual;
+    if (status == ZX_OK && out_actual != nullptr) {
+        *out_actual = req->response.actual;
 
         if (length > 0 && !out) {
             usb_request_copy_from(req, data, req->response.actual, 0);
@@ -576,9 +582,9 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
 }
 
 zx_status_t xhci_get_descriptor(xhci_t* xhci, uint32_t slot_id, uint8_t type, uint16_t value,
-                                uint16_t index, void* data, uint16_t length) {
+                                uint16_t index, void* data, uint16_t length, size_t* out_actual) {
     return xhci_control_request(xhci, slot_id, USB_DIR_IN | type | USB_RECIP_DEVICE,
-                                USB_REQ_GET_DESCRIPTOR, value, index, data, length);
+                                USB_REQ_GET_DESCRIPTOR, value, index, data, length, out_actual);
 }
 
 void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
@@ -589,14 +595,15 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     uint32_t status = XHCI_READ32(&trb->status);
     uint32_t slot_id = READ_FIELD(control, TRB_SLOT_ID_START, TRB_SLOT_ID_BITS);
     // ep_index is device context index, so decrement by 1 to get zero based index
-    uint32_t ep_index = READ_FIELD(control, TRB_ENDPOINT_ID_START, TRB_ENDPOINT_ID_BITS) - 1;
+    auto ep_index = static_cast<uint8_t>(
+                            READ_FIELD(control, TRB_ENDPOINT_ID_START, TRB_ENDPOINT_ID_BITS) - 1);
     xhci_slot_t* slot = &xhci->slots[slot_id];
     xhci_endpoint_t* ep = &slot->eps[ep_index];
     xhci_transfer_ring_t* ring = &ep->transfer_ring;
 
     uint32_t cc = READ_FIELD(status, EVT_TRB_CC_START, EVT_TRB_CC_BITS);
     uint32_t length = READ_FIELD(status, EVT_TRB_XFER_LENGTH_START, EVT_TRB_XFER_LENGTH_BITS);
-    usb_request_t* req = NULL;
+    usb_request_t* req = nullptr;
 
     mtx_lock(&ep->lock);
 
@@ -612,7 +619,8 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             break;
         case TRB_CC_TRB_ERROR:
             zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_TRB_ERROR\n");
-            int ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
+            int ep_ctx_state;
+            ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
             /*
              * For usb-c ethernet adapters on Intel xhci controller, we receive this error
              * when a packet fails with NRDY token on the bus.see NET:97 for more details.
@@ -686,10 +694,10 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
 
     bool req_status_set = false;
 
-    if (trb_get_ptr(trb) && !list_is_empty(&ep->pending_reqs)
+    if (trb->ptr && !list_is_empty(&ep->pending_reqs)
             && ep->state != EP_STATE_DISABLED && ep->state != EP_STATE_DEAD) {
         if (control & EVT_TRB_ED) {
-            req = (usb_request_t *)trb_get_ptr(trb);
+            req = reinterpret_cast<usb_request_t*>(trb->ptr);
             if (ep_index == 0) {
                 // For control requests we are expecting a second transfer event to signal the end
                 // of the status phase. So here we record the status and actual for the data phase
@@ -710,7 +718,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             if (trb_get_type(trb) == TRB_TRANSFER_STATUS && slot->current_ctrl_req) {
                 // complete current control request
                 req = slot->current_ctrl_req;
-                slot->current_ctrl_req = NULL;
+                slot->current_ctrl_req = nullptr;
                 if (result < 0) {
                     // sometimes we receive stall errors in the status phase so update
                     // request status if necessary
@@ -721,7 +729,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             } else {
                 for (uint i = 0; i < TRANSFER_RING_SIZE && trb; i++) {
                     if (trb_get_type(trb) == TRB_TRANSFER_EVENT_DATA) {
-                        req = (usb_request_t *)trb_get_ptr(trb);
+                        req = reinterpret_cast<usb_request_t*>(trb->ptr);
                         break;
                     }
                     trb = xhci_get_next_trb(ring, trb);
@@ -762,7 +770,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     }
 
     // update dequeue_ptr to TRB following this transaction
-    xhci_set_dequeue_ptr(ring, req->context);
+    xhci_set_dequeue_ptr(ring, static_cast<xhci_trb_t*>(req->context));
 
     // remove request from pending_reqs
     list_delete(&req->node);
@@ -791,7 +799,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     mtx_unlock(&ep->lock);
 
     // call complete callbacks out of the lock
-    while ((req = list_remove_head_type(&completed_reqs, usb_request_t, node)) != NULL) {
+    while ((req = list_remove_head_type(&completed_reqs, usb_request_t, node)) != nullptr) {
         usb_request_complete(req, req->response.status, req->response.actual);
     }
 }

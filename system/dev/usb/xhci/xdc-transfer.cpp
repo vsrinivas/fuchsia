@@ -54,7 +54,7 @@ static zx_status_t xdc_schedule_transfer_locked(xdc_t* xdc, xdc_endpoint_t* ep,
 
     // If we get here, then we are ready to ring the doorbell.
     // Save the ring position so we can update the ring dequeue ptr once the transfer completes.
-    req->context = (void *)ring->current;
+    req->context = ring->current;
     xdc_ring_doorbell(xdc, ep);
 
     return ZX_OK;
@@ -88,7 +88,7 @@ void xdc_process_transactions_locked(xdc_t* xdc, xdc_endpoint_t* ep) __TA_REQUIR
             // No available TRBs - need to wait for some to complete.
             return;
         } else {
-            ep->current_req = NULL;
+            ep->current_req = nullptr;
         }
     }
 }
@@ -163,7 +163,7 @@ zx_status_t xdc_restart_transfer_ring_locked(xdc_t* xdc, xdc_endpoint_t* ep) {
 
     // Convert all pending TRBs on the transfer ring into NO-OPs TRBs.
     // ring->current is just after our last queued TRB.
-    xhci_trb_t* last_trb = NULL;
+    xhci_trb_t* last_trb = nullptr;
     while (trb != ring->current) {
         xhci_set_transfer_noop_trb(trb);
         last_trb = trb;
@@ -181,7 +181,7 @@ zx_status_t xdc_restart_transfer_ring_locked(xdc_t* xdc, xdc_endpoint_t* ep) {
 
     // Requeue and reschedule the requests.
     usb_request_t* req;
-    while ((req = list_remove_tail_type(&ep->pending_reqs, usb_request_t, node)) != NULL) {
+    while ((req = list_remove_tail_type(&ep->pending_reqs, usb_request_t, node)) != nullptr) {
         list_add_head(&ep->queued_reqs, &req->node);
     }
     xdc_process_transactions_locked(xdc, ep);
@@ -198,7 +198,7 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, 
 
     uint32_t cc = READ_FIELD(status, EVT_TRB_CC_START, EVT_TRB_CC_BITS);
     uint32_t length = READ_FIELD(status, EVT_TRB_XFER_LENGTH_START, EVT_TRB_XFER_LENGTH_BITS);
-    usb_request_t* req = NULL;
+    usb_request_t* req = nullptr;
     bool error = false;
 
     switch (cc) {
@@ -233,7 +233,7 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, 
     if (control & EVT_TRB_ED) {
         // An Event Data TRB generated the completion event, so the TRB Pointer field
         // will contain the usb request pointer we previously stored.
-        req = (usb_request_t *)trb_get_ptr(trb);
+        req = reinterpret_cast<usb_request_t*>(trb->ptr);
     } else {
         // Get the pointer to the TRB that generated the event.
         trb = xhci_read_trb_ptr(ring, trb);
@@ -249,7 +249,7 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, 
         // Look for the Event Data TRB which will have the usb request pointer.
         for (uint i = 0; i < TRANSFER_RING_SIZE && trb; i++) {
             if (trb_get_type(trb) == TRB_TRANSFER_EVENT_DATA) {
-                req = (usb_request_t *)trb_get_ptr(trb);
+                req = reinterpret_cast<usb_request_t*>(trb->ptr);
                 break;
             }
             trb = xhci_get_next_trb(ring, trb);
@@ -278,7 +278,7 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, 
     list_delete(&req->node);
 
     // Update our copy of the dequeue_ptr to the TRB following this transaction.
-    xhci_set_dequeue_ptr(ring, req->context);
+    xhci_set_dequeue_ptr(ring, static_cast<xhci_trb_t*>(req->context));
     xdc_process_transactions_locked(xdc, ep);
 
     // Save the request to be completed later out of the lock.

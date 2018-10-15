@@ -40,7 +40,7 @@ typedef volatile struct {
 static_assert(sizeof(xdc_debug_cap_regs_t) == 0x40, "xdc debug cap wrong size");
 
 // Debug Capability Info Context (DbCIC) Data Structure (XHCI Spec, Figure 7-11, p.537)
-typedef volatile struct {
+typedef struct {
     uint64_t str_0_desc_addr;
     uint64_t manufacturer_desc_addr;
     uint64_t product_desc_addr;
@@ -57,7 +57,7 @@ typedef volatile struct {
 static_assert(sizeof(xdc_dbcic_t) == 0x40, "xdc dbcic wrong size");
 
 // Debug Capability Context Data Structure (XHCI Spec, Figure 7-10, p. 536)
-typedef volatile struct {
+typedef struct {
     xdc_dbcic_t dbcic;
 
     // These are the 64-byte versions of an Endpoint Context.

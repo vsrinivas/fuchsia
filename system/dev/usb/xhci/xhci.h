@@ -18,6 +18,7 @@
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb.h>
+#include <fbl/atomic.h>
 #include <usb/usb-request.h>
 
 #include "xhci-hw.h"
@@ -103,7 +104,7 @@ struct xhci {
     usb_bus_interface_t bus;
 
     xhci_mode_t mode;
-    atomic_bool suspended;
+    fbl::atomic<bool> suspended;
 
     // Desired number of interrupters. This may be greater than what is
     // supported by hardware. The actual number of interrupts configured
@@ -144,13 +145,13 @@ struct xhci {
     zx_paddr_t erst_arrays_phys[INTERRUPTER_COUNT];
 
     size_t page_size;
-    size_t max_slots;
+    uint32_t max_slots;
     size_t context_size;
     // true if controller supports large ESIT payloads
     bool large_esit;
 
     // total number of ports for the root hub
-    uint32_t rh_num_ports;
+    uint8_t rh_num_ports;
 
     // state for virtual root hub devices
     // one for USB 2.0 and the other for USB 3.0
@@ -235,3 +236,7 @@ zx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int spee
 void xhci_remove_device(xhci_t* xhci, int slot_id);
 
 void xhci_request_queue(xhci_t* xhci, usb_request_t* req);
+
+__BEGIN_CDECLS
+zx_status_t usb_xhci_bind(void* ctx, zx_device_t* parent);
+__END_CDECLS

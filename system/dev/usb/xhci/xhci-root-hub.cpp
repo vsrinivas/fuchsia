@@ -225,7 +225,7 @@ static void xhci_reset_port(xhci_t* xhci, xhci_root_hub_t* rh, int rh_port_index
 zx_status_t xhci_root_hub_init(xhci_t* xhci, int rh_index) {
     xhci_root_hub_t* rh = &xhci->root_hubs[rh_index];
     const uint8_t* rh_port_map = xhci->rh_map;
-    size_t rh_ports = xhci->rh_num_ports;
+    uint8_t rh_ports = xhci->rh_num_ports;
 
     list_initialize(&rh->pending_intr_reqs);
 
@@ -233,7 +233,7 @@ zx_status_t xhci_root_hub_init(xhci_t* xhci, int rh_index) {
     rh->config_desc = (usb_configuration_descriptor_t *)&xhci_rh_config_desc;
 
     // first count number of ports
-    int port_count = 0;
+    uint8_t port_count = 0;
     for (size_t i = 0; i < rh_ports; i++) {
         if (rh_port_map[i] == rh_index) {
             port_count++;
@@ -244,12 +244,12 @@ zx_status_t xhci_root_hub_init(xhci_t* xhci, int rh_index) {
     rh->port_status = (usb_port_status_t *)calloc(port_count, sizeof(usb_port_status_t));
     if (!rh->port_status) return ZX_ERR_NO_MEMORY;
 
-    rh->port_map = calloc(port_count, sizeof(uint8_t));
+    rh->port_map = static_cast<uint8_t*>(calloc(port_count, sizeof(uint8_t)));
     if (!rh->port_map) return ZX_ERR_NO_MEMORY;
 
     // build map from virtual port index to actual port index
-    int port_index = 0;
-    for (size_t i = 0; i < rh_ports; i++) {
+    uint8_t port_index = 0;
+    for (uint8_t i = 0; i < rh_ports; i++) {
         if (rh_port_map[i] == rh_index) {
             xhci->rh_port_map[i] = port_index;
             rh->port_map[port_index] = i;
@@ -266,12 +266,13 @@ void xhci_root_hub_free(xhci_root_hub_t* rh) {
 }
 
 static zx_status_t xhci_start_root_hub(xhci_t* xhci, xhci_root_hub_t* rh, int rh_index) {
-    usb_device_descriptor_t* device_desc = malloc(sizeof(usb_device_descriptor_t));
+    auto* device_desc =
+            static_cast<usb_device_descriptor_t*>(malloc(sizeof(usb_device_descriptor_t)));
     if (!device_desc) {
         return ZX_ERR_NO_MEMORY;
     }
-    usb_configuration_descriptor_t* config_desc =
-                        (usb_configuration_descriptor_t *)malloc(sizeof(xhci_rh_config_desc));
+    auto* config_desc =
+            static_cast<usb_configuration_descriptor_t*>(malloc(sizeof(xhci_rh_config_desc)));
     if (!config_desc) {
         free(device_desc);
         return ZX_ERR_NO_MEMORY;
@@ -303,7 +304,7 @@ void xhci_stop_root_hubs(xhci_t* xhci) {
     zxlogf(TRACE, "xhci_stop_root_hubs\n");
 
     volatile xhci_port_regs_t* port_regs = xhci->op_regs->port_regs;
-    for (uint32_t i = 0; i < xhci->rh_num_ports; i++) {
+    for (uint8_t i = 0; i < xhci->rh_num_ports; i++) {
         uint32_t portsc = XHCI_READ32(&port_regs[i].portsc);
         portsc &= PORTSC_CONTROL_BITS;
         portsc |= PORTSC_PED;   // disable port
@@ -314,7 +315,8 @@ void xhci_stop_root_hubs(xhci_t* xhci) {
     for (int i = 0; i < XHCI_RH_COUNT; i++) {
         usb_request_t* req;
         xhci_root_hub_t* rh = &xhci->root_hubs[i];
-        while ((req = list_remove_tail_type(&rh->pending_intr_reqs, usb_request_t, node)) != NULL) {
+        while ((req = list_remove_tail_type(&rh->pending_intr_reqs, usb_request_t, node))
+                != nullptr) {
             usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
         }
     }
@@ -326,7 +328,7 @@ static zx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t*
     uint8_t recipient = request_type & USB_RECIP_MASK;
 
     if (type == USB_TYPE_STANDARD && recipient == USB_RECIP_DEVICE) {
-        uint8_t desc_type = value >> 8;
+        auto desc_type = static_cast<uint8_t>(value >> 8);
         if (desc_type == USB_DT_DEVICE && index == 0) {
             if (length > sizeof(usb_device_descriptor_t)) length = sizeof(usb_device_descriptor_t);
             usb_request_copy_to(req, rh->device_desc, length, 0);
@@ -339,7 +341,7 @@ static zx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t*
             usb_request_complete(req, ZX_OK, length);
             return ZX_OK;
         } else if (value >> 8 == USB_DT_STRING) {
-            uint8_t string_index = value & 0xFF;
+            auto string_index = static_cast<uint8_t>(value & 0xFF);
             if (string_index < countof(xhci_rh_string_table)) {
                 const uint8_t* string = xhci_rh_string_table[string_index];
                 if (length > string[0]) length = string[0];
@@ -356,7 +358,7 @@ static zx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t*
             usb_hub_descriptor_t desc;
             memset(&desc, 0, sizeof(desc));
             desc.bDescLength = sizeof(desc);
-            desc.bDescriptorType = value >> 8;
+            desc.bDescriptorType = static_cast<uint8_t>(value >> 8);
             desc.bNbrPorts = rh->num_ports;
             desc.bPowerOn2PwrGood = 0;
             // TODO - fill in other stuff. But usb-hub driver doesn't need anything else at this point.
@@ -392,8 +394,8 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
             usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0);
             return ZX_OK;
         }
-        int rh_port_index = rh->port_map[index - 1];
-        int port_index = index - 1;
+        auto rh_port_index = rh->port_map[index - 1];
+        auto port_index = static_cast<uint8_t>(index - 1);
 
         if (request == USB_REQ_SET_FEATURE) {
             if (value == USB_FEATURE_PORT_POWER) {
@@ -406,23 +408,23 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
                 return ZX_OK;
             }
         } else if (request == USB_REQ_CLEAR_FEATURE) {
-            uint16_t* change_bits = &rh->port_status[port_index].wPortChange;
+            auto* change_bits = &rh->port_status[port_index].wPortChange;
 
             switch (value) {
                 case USB_FEATURE_C_PORT_CONNECTION:
-                    *change_bits &= ~USB_C_PORT_CONNECTION;
+                    *change_bits &= static_cast<uint16_t>(~USB_C_PORT_CONNECTION);
                     break;
                 case USB_FEATURE_C_PORT_ENABLE:
-                    *change_bits &= ~USB_C_PORT_ENABLE;
+                    *change_bits &= static_cast<uint16_t>(~USB_C_PORT_ENABLE);
                     break;
                 case USB_FEATURE_C_PORT_SUSPEND:
-                    *change_bits &= ~USB_C_PORT_SUSPEND;
+                    *change_bits &= static_cast<uint16_t>(~USB_C_PORT_SUSPEND);
                     break;
                 case USB_FEATURE_C_PORT_OVER_CURRENT:
-                    *change_bits &= ~USB_C_PORT_OVER_CURRENT;
+                    *change_bits &= static_cast<uint16_t>(~USB_C_PORT_OVER_CURRENT);
                     break;
                 case USB_FEATURE_C_PORT_RESET:
-                    *change_bits &= ~USB_C_PORT_RESET;
+                    *change_bits &= static_cast<uint16_t>(~USB_C_PORT_RESET);
                     break;
             }
 
@@ -463,7 +465,7 @@ static void xhci_rh_handle_intr_req(xhci_root_hub_t* rh, usb_request_t* req) {
     for (uint32_t i = 0; i < rh->num_ports; i++) {
         usb_port_status_t* status = &rh->port_status[i];
         if (status->wPortChange) {
-            *ptr |= (1 << bit);
+            *ptr |= static_cast<uint8_t>(1 << bit);
             have_status = true;
         }
         if (++bit == 8) {
@@ -505,7 +507,7 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
 
     zxlogf(TRACE, "xhci_handle_root_hub_change\n");
 
-    for (uint32_t i = 0; i < xhci->rh_num_ports; i++) {
+    for (uint8_t i = 0; i < xhci->rh_num_ports; i++) {
         uint32_t portsc = XHCI_READ32(&port_regs[i].portsc);
         uint32_t speed = (portsc & XHCI_MASK(PORTSC_SPEED_START, PORTSC_SPEED_BITS)) >> PORTSC_SPEED_START;
         uint32_t status_bits = portsc & PORTSC_STATUS_BITS;
@@ -544,7 +546,7 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
                 // port reset change
                 zxlogf(TRACE, "port %d PORTSC_PRC enabled: %d\n", i, enabled);
                 if (enabled) {
-                    status->wPortStatus &= ~USB_PORT_RESET;
+                    status->wPortStatus &= static_cast<uint16_t>(~USB_PORT_RESET);
                     status->wPortChange |= USB_C_PORT_RESET;
                     if (!(status->wPortStatus & USB_PORT_ENABLE)) {
                         status->wPortStatus |= USB_PORT_ENABLE;

@@ -42,12 +42,12 @@ void xhci_event_ring_free(xhci_event_ring_t* ring);
 void xhci_clear_trb(xhci_trb_t* trb);
 // Converts a transfer trb into a NO-OP transfer TRB, does nothing if it is the LINK TRB.
 void xhci_set_transfer_noop_trb(xhci_trb_t* trb);
-void* xhci_read_trb_ptr(xhci_transfer_ring_t* ring, xhci_trb_t* trb);
+xhci_trb_t* xhci_read_trb_ptr(xhci_transfer_ring_t* ring, xhci_trb_t* trb);
 xhci_trb_t* xhci_get_next_trb(xhci_transfer_ring_t* ring, xhci_trb_t* trb);
 void xhci_increment_ring(xhci_transfer_ring_t* ring);
 void xhci_set_dequeue_ptr(xhci_transfer_ring_t* ring, xhci_trb_t* new_ptr);
 
-// Returns the TRB corresponding to the given physical address, or NULL if the address is invalid.
+// Returns the TRB corresponding to the given physical address, or nullptr if the address is invalid.
 xhci_trb_t* xhci_transfer_ring_phys_to_trb(xhci_transfer_ring_t* ring, zx_paddr_t phys);
 
 static inline zx_paddr_t xhci_transfer_ring_start_phys(xhci_transfer_ring_t* ring) {

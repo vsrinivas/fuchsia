@@ -85,7 +85,7 @@ static void xdc_wait_bits(volatile uint32_t* ptr, uint32_t bits, uint32_t expect
 // Populates the pointer to the debug capability in the xdc struct.
 static zx_status_t xdc_get_debug_cap(xdc_t* xdc) {
     uint32_t cap_id = EXT_CAP_USB_DEBUG_CAPABILITY;
-    xdc->debug_cap_regs = (xdc_debug_cap_regs_t*)xhci_get_next_ext_cap(xdc->mmio, NULL, &cap_id);
+    xdc->debug_cap_regs = (xdc_debug_cap_regs_t*)xhci_get_next_ext_cap(xdc->mmio, nullptr, &cap_id);
     return xdc->debug_cap_regs ? ZX_OK : ZX_ERR_NOT_FOUND;
 }
 
@@ -181,11 +181,13 @@ static zx_status_t xdc_context_data_init(xdc_t* xdc) {
         zxlogf(ERROR, "failed to alloc xdc context and strings buffer, err: %d\n", status);
         return status;
     }
-    xdc->context_data = (xdc_context_data_t *)io_buffer_virt(&xdc->context_str_descs_buffer);
+    xdc->context_data = static_cast<xdc_context_data_t*>(
+                                    io_buffer_virt(&xdc->context_str_descs_buffer));
     zx_paddr_t context_data_phys = io_buffer_phys(&xdc->context_str_descs_buffer);
 
     // The context data only takes 192 bytes, so we can store the string descriptors after it.
-    xdc->str_descs = (void *)xdc->context_data + sizeof(xdc_context_data_t);
+    xdc->str_descs = reinterpret_cast<xdc_str_descs_t*>(
+                    reinterpret_cast<uintptr_t>(xdc->context_data) + sizeof(xdc_context_data_t));
     zx_paddr_t str_descs_phys = context_data_phys + sizeof(xdc_context_data_t);
 
     // Populate the string descriptors, and string descriptor metadata in the context data.
@@ -258,7 +260,7 @@ static zx_status_t xdc_init_debug_cap(xdc_t* xdc) {
 
 static zx_status_t xdc_write_instance(void* ctx, const void* buf, size_t count,
                                       zx_off_t off, size_t* actual) {
-    xdc_instance_t* inst = ctx;
+    auto* inst = static_cast<xdc_instance_t*>(ctx);
 
     mtx_lock(&inst->lock);
 
@@ -309,7 +311,7 @@ static xdc_host_stream_t* xdc_get_host_stream(xdc_t* xdc, uint32_t stream_id)
             return host_stream;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 // Sends a message to the host to notify when a xdc device stream becomes online or offline.
@@ -360,7 +362,7 @@ static zx_status_t xdc_register_stream(xdc_instance_t* inst, uint32_t stream_id)
     mtx_lock(&inst->lock);
     inst->stream_id = stream_id;
     inst->has_stream_id = true;
-    inst->connected = xdc_get_host_stream(xdc, stream_id) != NULL;
+    inst->connected = xdc_get_host_stream(xdc, stream_id) != nullptr;
     mtx_unlock(&inst->lock);
 
     mtx_unlock(&xdc->instance_list_lock);
@@ -397,7 +399,7 @@ static void xdc_update_instance_read_signal_locked(xdc_instance_t* inst)
 
 static zx_status_t xdc_read_instance(void* ctx, void* buf, size_t count,
                                      zx_off_t off, size_t* actual) {
-    xdc_instance_t* inst = ctx;
+    auto* inst = static_cast<xdc_instance_t*>(ctx);
 
     mtx_lock(&inst->lock);
 
@@ -423,7 +425,7 @@ static zx_status_t xdc_read_instance(void* ctx, void* buf, size_t count,
     usb_request_t* req;
     // Copy up to the requested amount, or until we have no completed read buffers left.
     while ((copied < count) &&
-           (req = list_peek_head_type(&inst->completed_reads, usb_request_t, node)) != NULL) {
+           (req = list_peek_head_type(&inst->completed_reads, usb_request_t, node)) != nullptr) {
         if (inst->cur_req_read_offset == 0) {
             bool is_new_packet;
             void* data;
@@ -447,7 +449,7 @@ static zx_status_t xdc_read_instance(void* ctx, void* buf, size_t count,
         }
         size_t req_bytes_left = req->response.actual - inst->cur_req_read_offset;
         size_t to_copy = MIN(count - copied, req_bytes_left);
-        size_t bytes_copied = usb_request_copy_from(req, buf + copied,
+        size_t bytes_copied = usb_request_copy_from(req, static_cast<uint8_t*>(buf) + copied,
                                                    to_copy, inst->cur_req_read_offset);
 
         copied += bytes_copied;
@@ -467,7 +469,7 @@ static zx_status_t xdc_read_instance(void* ctx, void* buf, size_t count,
 
     xdc_t* xdc = inst->parent;
     mtx_lock(&xdc->read_lock);
-    while ((req = list_remove_tail_type(&done_reqs, usb_request_t, node)) != NULL) {
+    while ((req = list_remove_tail_type(&done_reqs, usb_request_t, node)) != nullptr) {
         xdc_queue_read_locked(xdc, req);
     }
     mtx_unlock(&xdc->read_lock);
@@ -478,14 +480,15 @@ static zx_status_t xdc_read_instance(void* ctx, void* buf, size_t count,
 
 static zx_status_t xdc_ioctl_instance(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
                                       void* out_buf, size_t out_len, size_t* out_actual) {
-    xdc_instance_t* inst = ctx;
+    auto* inst = static_cast<xdc_instance_t*>(ctx);
 
     switch (op) {
     case IOCTL_DEBUG_SET_STREAM:
         if (in_len != sizeof(uint32_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        uint32_t stream_id = *((int *)in_buf);
+        uint32_t stream_id;
+        stream_id = *((int *)in_buf);
         return xdc_register_stream(inst, stream_id);
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -493,7 +496,7 @@ static zx_status_t xdc_ioctl_instance(void* ctx, uint32_t op, const void* in_buf
 }
 
 static zx_status_t xdc_close_instance(void* ctx, uint32_t flags) {
-    xdc_instance_t* inst = ctx;
+    auto* inst = static_cast<xdc_instance_t*>(ctx);
 
     list_node_t free_reqs = LIST_INITIAL_VALUE(free_reqs);
 
@@ -510,7 +513,7 @@ static zx_status_t xdc_close_instance(void* ctx, uint32_t flags) {
     // Return any unprocessed requests back to the read queue to be reused.
     mtx_lock(&xdc->read_lock);
     usb_request_t* req;
-    while ((req = list_remove_tail_type(&free_reqs, usb_request_t, node)) != NULL) {
+    while ((req = list_remove_tail_type(&free_reqs, usb_request_t, node)) != nullptr) {
         xdc_queue_read_locked(xdc, req);
     }
     mtx_unlock(&xdc->read_lock);
@@ -520,43 +523,45 @@ static zx_status_t xdc_close_instance(void* ctx, uint32_t flags) {
         xdc_notify_stream_state(xdc, inst->stream_id, false /* online */);
     }
 
-    atomic_fetch_add(&xdc->num_instances, -1);
+    xdc->num_instances.fetch_add(-1);
 
     return ZX_OK;
 }
 
 static void xdc_release_instance(void* ctx) {
-    xdc_instance_t* inst = ctx;
+    auto* inst = static_cast<xdc_instance_t*>(ctx);
     free(inst);
 }
 
-zx_protocol_device_t xdc_instance_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .write = xdc_write_instance,
-    .read = xdc_read_instance,
-    .ioctl = xdc_ioctl_instance,
-    .close = xdc_close_instance,
-    .release = xdc_release_instance,
-};
+static zx_protocol_device_t xdc_instance_ops = []() {
+    zx_protocol_device_t device;
+    device.version = DEVICE_OPS_VERSION;
+    device.write = xdc_write_instance;
+    device.read = xdc_read_instance;
+    device.ioctl = xdc_ioctl_instance;
+    device.close = xdc_close_instance;
+    device.release = xdc_release_instance;
+    return device;
+}();
 
 static zx_status_t xdc_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
-    xdc_t* xdc = ctx;
+    auto* xdc = static_cast<xdc_t*>(ctx);
 
-    xdc_instance_t* inst = calloc(1, sizeof(xdc_instance_t));
-    if (inst == NULL) {
+    auto* inst = static_cast<xdc_instance_t*>(calloc(1, sizeof(xdc_instance_t)));
+    if (inst == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "xdc",
-        .ctx = inst,
-        .ops = &xdc_instance_proto,
-        .proto_id = ZX_PROTOCOL_USB_DBC,
-        .flags = DEVICE_ADD_INSTANCE,
-    };
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "xdc";
+    args.ctx = inst;
+    args.ops = &xdc_instance_ops;
+    args.proto_id = ZX_PROTOCOL_USB_DBC;
+    args.flags = DEVICE_ADD_INSTANCE;
 
-    zx_status_t status = status = device_add(xdc->zxdev, &args, &inst->zxdev);
+    zx_status_t status;
+    status = device_add(xdc->zxdev, &args, &inst->zxdev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "xdc: error creating instance %d\n", status);
         free(inst);
@@ -572,7 +577,7 @@ static zx_status_t xdc_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
 
     *dev_out = inst->zxdev;
 
-    atomic_fetch_add(&xdc->num_instances, 1);
+    xdc->num_instances.fetch_add(1);
     sync_completion_signal(&xdc->has_instance_completion);
     return ZX_OK;
 
@@ -581,7 +586,7 @@ static zx_status_t xdc_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
 static void xdc_shutdown(xdc_t* xdc) {
     zxlogf(TRACE, "xdc_shutdown\n");
 
-    atomic_store(&xdc->suspended, true);
+    xdc->suspended.store(true);
     // The poll thread will be waiting on this completion if no instances are open.
     sync_completion_signal(&xdc->has_instance_completion);
 
@@ -602,10 +607,10 @@ static void xdc_shutdown(xdc_t* xdc) {
         ep->state = XDC_EP_STATE_DEAD;
 
         usb_request_t* req;
-        while ((req = list_remove_tail_type(&ep->pending_reqs, usb_request_t, node)) != NULL) {
+        while ((req = list_remove_tail_type(&ep->pending_reqs, usb_request_t, node)) != nullptr) {
             usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
         }
-        while ((req = list_remove_tail_type(&ep->queued_reqs, usb_request_t, node)) != NULL) {
+        while ((req = list_remove_tail_type(&ep->queued_reqs, usb_request_t, node)) != nullptr) {
             usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
         }
     }
@@ -631,7 +636,7 @@ static void xdc_free(xdc_t* xdc) {
     usb_request_pool_release(&xdc->free_write_reqs);
 
     usb_request_t* req;
-    while ((req = list_remove_tail_type(&xdc->free_read_reqs, usb_request_t, node)) != NULL) {
+    while ((req = list_remove_tail_type(&xdc->free_read_reqs, usb_request_t, node)) != nullptr) {
         usb_request_release(req);
     }
     free(xdc);
@@ -639,7 +644,7 @@ static void xdc_free(xdc_t* xdc) {
 
 static zx_status_t xdc_suspend(void* ctx, uint32_t flags) {
     zxlogf(TRACE, "xdc_suspend %u\n", flags);
-    xdc_t* xdc = ctx;
+    auto* xdc = static_cast<xdc_t*>(ctx);
 
     // TODO(jocelyndang) do different things based on the flags.
     // For now we shutdown the driver in preparation for mexec.
@@ -650,7 +655,7 @@ static zx_status_t xdc_suspend(void* ctx, uint32_t flags) {
 
 static void xdc_unbind(void* ctx) {
     zxlogf(INFO, "xdc_unbind\n");
-    xdc_t* xdc = ctx;
+    auto* xdc = static_cast<xdc_t*>(ctx);
     xdc_shutdown(xdc);
 
     mtx_lock(&xdc->instance_list_lock);
@@ -671,7 +676,7 @@ static void xdc_unbind(void* ctx) {
 
 static void xdc_release(void* ctx) {
     zxlogf(INFO, "xdc_release\n");
-    xdc_t* xdc = ctx;
+    auto* xdc = static_cast<xdc_t*>(ctx);
     xdc_free(xdc);
 }
 
@@ -692,7 +697,7 @@ static void xdc_update_write_signal_locked(xdc_t* xdc, bool online)
 }
 
 static void xdc_write_complete(usb_request_t* req, void* cookie) {
-    xdc_t* xdc = cookie;
+    auto* xdc = static_cast<xdc_t*>(cookie);
 
     zx_status_t status = req->response.status;
     if (status != ZX_OK) {
@@ -763,14 +768,14 @@ static void xdc_handle_msg(xdc_t* xdc, xdc_msg_t* msg) {
 
         // Find the saved host stream if it exists.
         xdc_host_stream_t* host_stream = xdc_get_host_stream(xdc, state->stream_id);
-        if (state->online == (host_stream != NULL)) {
+        if (state->online == (host_stream != nullptr)) {
             zxlogf(ERROR, "cannot set host stream state for id %u as it was already %s\n",
                    state->stream_id, state->online ? "online" : "offline");
             mtx_unlock(&xdc->instance_list_lock);
             return;
         }
         if (state->online) {
-            xdc_host_stream_t* host_stream = malloc(sizeof(xdc_host_stream_t));
+            auto* host_stream = static_cast<xdc_host_stream_t*>(malloc(sizeof(xdc_host_stream_t)));
             if (!host_stream) {
                 zxlogf(ERROR, "can't create host stream, out of memory!\n");
                 mtx_unlock(&xdc->instance_list_lock);
@@ -786,7 +791,7 @@ static void xdc_handle_msg(xdc_t* xdc, xdc_msg_t* msg) {
 
         // Check if any instance is registered to this stream id and update its connected status.
         xdc_instance_t* test;
-        xdc_instance_t* match = NULL;
+        xdc_instance_t* match = nullptr;
         list_for_every_entry(&xdc->instance_list, test, xdc_instance_t, node) {
             mtx_lock(&test->lock);
             if (test->has_stream_id && test->stream_id == state->stream_id) {
@@ -815,7 +820,7 @@ static void xdc_handle_msg(xdc_t* xdc, xdc_msg_t* msg) {
 }
 
 static void xdc_read_complete(usb_request_t* req, void* cookie) {
-    xdc_t* xdc = cookie;
+    auto* xdc = static_cast<xdc_t*>(cookie);
 
     mtx_lock(&xdc->read_lock);
 
@@ -831,7 +836,8 @@ static void xdc_read_complete(usb_request_t* req, void* cookie) {
     }
 
     void* data;
-    zx_status_t status = usb_request_mmap(req, &data);
+    zx_status_t status;
+    status = usb_request_mmap(req, &data);
     if (status != ZX_OK) {
         zxlogf(ERROR, "usb_request_mmap failed, err: %d\n", status);
         xdc_queue_read_locked(xdc, req);
@@ -867,7 +873,8 @@ static void xdc_read_complete(usb_request_t* req, void* cookie) {
     // Find the instance that is registered for the stream id of the message.
     mtx_lock(&xdc->instance_list_lock);
 
-    bool found = false;
+    bool found;
+    found = false;
     xdc_instance_t* inst;
     list_for_every_entry(&xdc->instance_list, inst, xdc_instance_t, node) {
         mtx_lock(&inst->lock);
@@ -894,13 +901,14 @@ out:
     mtx_unlock(&xdc->read_lock);
 }
 
-static zx_protocol_device_t xdc_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .open = xdc_open,
-    .suspend = xdc_suspend,
-    .unbind = xdc_unbind,
-    .release = xdc_release,
-};
+static zx_protocol_device_t xdc_device_ops = []() {
+    zx_protocol_device_t device;
+    device.version = DEVICE_OPS_VERSION;
+    device.suspend = xdc_suspend,
+    device.unbind = xdc_unbind,
+    device.release = xdc_release;
+    return device;
+}();
 
 static void xdc_handle_port_status_change(xdc_t* xdc, xdc_poll_state_t* poll_state) {
     uint32_t dcportsc = XHCI_READ32(&xdc->debug_cap_regs->dcportsc);
@@ -1117,11 +1125,11 @@ zx_status_t xdc_poll(xdc_t* xdc) {
         sync_completion_reset(&xdc->has_instance_completion);
 
         for (;;) {
-            if (atomic_load(&xdc->suspended)) {
+            if (xdc->suspended.load()) {
                 zxlogf(INFO, "xdc_poll: suspending xdc, shutting down poll thread\n");
                 return ZX_OK;
             }
-            if (atomic_load(&xdc->num_instances) == 0) {
+            if (xdc->num_instances.load() == 0) {
                 // If all pending writes have completed, exit the poll loop.
                 mtx_lock(&xdc->lock);
                 if (list_is_empty(&xdc->eps[OUT_EP_IDX].pending_reqs)) {
@@ -1145,7 +1153,7 @@ zx_status_t xdc_poll(xdc_t* xdc) {
                 mtx_lock(&xdc->read_lock);
                 usb_request_t* req;
                 while ((req = list_remove_tail_type(&xdc->free_read_reqs,
-                                                    usb_request_t, node)) != NULL) {
+                                                    usb_request_t, node)) != nullptr) {
                     xdc_queue_read_locked(xdc, req);
                 }
                 mtx_unlock(&xdc->read_lock);
@@ -1159,7 +1167,7 @@ zx_status_t xdc_poll(xdc_t* xdc) {
             // TODO(jocelyndang): might want a separate thread for this.
             usb_request_t* req;
             while ((req = list_remove_head_type(&poll_state.completed_reqs,
-                                                usb_request_t, node)) != NULL) {
+                                                usb_request_t, node)) != nullptr) {
                 usb_request_complete(req, req->response.status, req->response.actual);
             }
         }
@@ -1168,7 +1176,7 @@ zx_status_t xdc_poll(xdc_t* xdc) {
 }
 
 static int xdc_start_thread(void* arg) {
-    xdc_t* xdc = arg;
+    auto* xdc = static_cast<xdc_t*>(arg);
 
     zxlogf(TRACE, "about to enable XHCI DBC\n");
     XHCI_WRITE32(&xdc->debug_cap_regs->dcctrl, DCCTRL_LSE | DCCTRL_DCE);
@@ -1183,12 +1191,9 @@ static zx_status_t xdc_init_internal(xdc_t* xdc) {
     list_initialize(&xdc->instance_list);
     mtx_init(&xdc->instance_list_lock, mtx_plain);
 
-    atomic_init(&xdc->suspended, false);
-
     list_initialize(&xdc->host_streams);
 
     sync_completion_reset(&xdc->has_instance_completion);
-    atomic_init(&xdc->num_instances, 0);
 
     usb_request_pool_init(&xdc->free_write_reqs);
     mtx_init(&xdc->write_lock, mtx_plain);
@@ -1223,7 +1228,7 @@ static zx_status_t xdc_init_internal(xdc_t* xdc) {
 }
 
 zx_status_t xdc_bind(zx_device_t* parent, zx_handle_t bti_handle, void* mmio) {
-    xdc_t* xdc = calloc(1, sizeof(xdc_t));
+    auto* xdc = static_cast<xdc_t*>(calloc(1, sizeof(xdc_t)));
     if (!xdc) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1245,21 +1250,22 @@ zx_status_t xdc_bind(zx_device_t* parent, zx_handle_t bti_handle, void* mmio) {
         goto error_return;
     }
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "xdc",
-        .ctx = xdc,
-        .ops = &xdc_proto,
-        .proto_id = ZX_PROTOCOL_USB_DBC,
-        .flags = DEVICE_ADD_NON_BINDABLE,
-    };
+    device_add_args_t args;
+    args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "xdc";
+    args.ctx = xdc;
+    args.ops = &xdc_device_ops;
+    args.proto_id = ZX_PROTOCOL_USB_DBC;
+    args.flags = DEVICE_ADD_NON_BINDABLE;
 
     status = device_add(parent, &args, &xdc->zxdev);
     if (status != ZX_OK) {
         goto error_return;
     }
 
-    int ret = thrd_create_with_name(&xdc->start_thread, xdc_start_thread, xdc, "xdc_start_thread");
+    int ret;
+    ret = thrd_create_with_name(&xdc->start_thread, xdc_start_thread, xdc, "xdc_start_thread");
     if (ret != thrd_success) {
         device_remove(xdc->zxdev);
         return ZX_ERR_BAD_STATE;
