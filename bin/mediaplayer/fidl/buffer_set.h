@@ -5,11 +5,10 @@
 #ifndef GARNET_BIN_MEDIAPLAYER_FIDL_BUFFER_SET_H_
 #define GARNET_BIN_MEDIAPLAYER_FIDL_BUFFER_SET_H_
 
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <memory>
-#include <mutex>
-#include <unordered_map>
-#include "garnet/bin/mediaplayer/decode/decoder.h"
+#include "garnet/bin/mediaplayer/graph/payloads/payload_allocator.h"
 #include "garnet/bin/mediaplayer/graph/payloads/payload_buffer.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/synchronization/thread_checker.h"
@@ -20,12 +19,12 @@ namespace media_player {
 // buffer lifetime ordinal.
 //
 // This class is thread-safe.
-class BufferSet {
+class BufferSet : public fbl::RefCounted<BufferSet> {
  public:
   // Creates a buffer set with the specified settings and lifetime ordinal.
   // |single_vmo| indicates whether the buffers should be allocated from a
   // single VMO (true) or a VMO per buffer.
-  static std::unique_ptr<BufferSet> Create(
+  static fbl::RefPtr<BufferSet> Create(
       const fuchsia::mediacodec::CodecPortBufferSettings& settings,
       uint64_t lifetime_ordinal, bool single_vmo);
 
@@ -112,12 +111,17 @@ class BufferSet {
   // by calling |CancelPendingFreeBufferCallback|.
   bool HasFreeBuffer(fit::closure callback);
 
+  // Indicates that this |BufferSet| has been parked in favor of a new one.
+  // After decommissioning and When all its buffers have been recycled, the
+  // buffer set will be deleted.
+  void Decommission();
+
  private:
   // The current state of a buffer in the set.
   struct BufferInfo {
     // Indicates whether the buffer is free. |decoder_ref_| must be false if
     // this field is true.
-    bool free_= true;
+    bool free_ = true;
 
     // This field is non-null for buffers that are currently owned by the
     // outboard decoder.
@@ -201,8 +205,10 @@ class BufferSetManager {
  private:
   FXL_DECLARE_THREAD_CHECKER(thread_checker_);
 
-  std::unique_ptr<BufferSet> current_set_;
-  std::unordered_map<uint64_t, std::unique_ptr<BufferSet>> old_sets_by_ordinal_;
+  // The current |BufferSet| this is only null when |ApplyConstraints| has
+  // never been called. It's important not to clear this arbitrarily, because
+  // that would prevent the buffer lifetime ordinals from progressing correctly.
+  fbl::RefPtr<BufferSet> current_set_;
 
   // Disallow copy and assign.
   BufferSetManager(const BufferSetManager&) = delete;

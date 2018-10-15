@@ -9,11 +9,11 @@
 namespace media_player {
 
 // static
-std::unique_ptr<BufferSet> BufferSet::Create(
+fbl::RefPtr<BufferSet> BufferSet::Create(
     const fuchsia::mediacodec::CodecPortBufferSettings& settings,
     uint64_t buffer_lifetime_ordinal, bool single_vmo) {
-  return std::make_unique<BufferSet>(settings, buffer_lifetime_ordinal,
-                                     single_vmo);
+  return fbl::MakeRefCounted<BufferSet>(settings, buffer_lifetime_ordinal,
+                                        single_vmo);
 }
 
 BufferSet::BufferSet(
@@ -78,7 +78,6 @@ fbl::RefPtr<PayloadBuffer> BufferSet::AllocateBuffer(
   buffers_[index].free_ = false;
 
   suggest_next_to_allocate_ = (index + 1) % buffers_.size();
-  --free_buffer_count_;
 
   return CreateBuffer(index, vmos);
 }
@@ -162,6 +161,15 @@ bool BufferSet::HasFreeBuffer(fit::closure callback) {
   return false;
 }
 
+void BufferSet::Decommission() {
+  // This was probably taken care of by the decoder, but let's make sure. Any
+  // decoder-owned buffers left behind will cause this |BufferSet| to leak.
+  ReleaseAllDecoderOwnedBuffers();
+
+  std::lock_guard<std::mutex> locker(mutex_);
+  free_buffer_callback_ = nullptr;
+}
+
 fbl::RefPtr<PayloadVmo> BufferSet::BufferVmo(
     size_t buffer_index, const PayloadVmos& payload_vmos) const {
   FXL_DCHECK(buffer_index < buffers_.size());
@@ -184,10 +192,13 @@ fbl::RefPtr<PayloadBuffer> BufferSet::CreateBuffer(
   uint64_t offset_in_vmo =
       single_vmo_ ? buffer_index * settings_.per_packet_buffer_bytes : 0;
 
+  // The recycler used here captures an |fbl::RefPtr| to |this| in case this
+  // buffer set is no longer current when the buffer is recycled.
   fbl::RefPtr<PayloadBuffer> payload_buffer = PayloadBuffer::Create(
       settings_.per_packet_buffer_bytes, payload_vmo->at_offset(offset_in_vmo),
       payload_vmo, offset_in_vmo,
-      [this, buffer_index](PayloadBuffer* payload_buffer) {
+      [this, buffer_index,
+       this_ref = fbl::WrapRefPtr(this)](PayloadBuffer* payload_buffer) {
         fit::closure free_buffer_callback;
 
         {
@@ -209,6 +220,7 @@ fbl::RefPtr<PayloadBuffer> BufferSet::CreateBuffer(
 
   payload_buffer->SetId(buffer_index);
   payload_buffer->SetBufferConfig(settings_.buffer_lifetime_ordinal);
+  --free_buffer_count_;
 
   return payload_buffer;
 }
@@ -222,12 +234,7 @@ void BufferSetManager::ApplyConstraints(
 
   if (current_set_) {
     lifetime_ordinal = current_set_->lifetime_ordinal() + 2;
-    if (current_set_->free_buffer_count() == current_set_->buffer_count()) {
-      current_set_.reset();
-    } else {
-      auto lifetime_ordinal = current_set_->lifetime_ordinal();
-      old_sets_by_ordinal_.emplace(lifetime_ordinal, std::move(current_set_));
-    }
+    current_set_->Decommission();
   }
 
   current_set_ = BufferSet::Create(
@@ -245,19 +252,8 @@ void BufferSetManager::ReleaseBufferForDecoder(uint64_t lifetime_ordinal,
     return;
   }
 
-  // Free a buffer from an old set.
-  auto iter = old_sets_by_ordinal_.find(lifetime_ordinal);
-  if (iter == old_sets_by_ordinal_.end()) {
-    FXL_LOG(ERROR)
-        << "Tried to free buffer with unrecognized lifetime ordinal: "
-        << lifetime_ordinal;
-    return;
-  }
-
-  iter->second->TakeBufferFromDecoder(index);
-  if (iter->second->free_buffer_count() == iter->second->buffer_count()) {
-    old_sets_by_ordinal_.erase(iter);
-  }
+  // The buffer is from an old set and has already been released for the
+  // decoder.
 }
 
 }  // namespace media_player
