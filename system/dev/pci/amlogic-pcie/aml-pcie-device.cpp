@@ -74,13 +74,13 @@ zx_status_t AmlPcieDevice::InitMmios() {
     }
     dbi_ = ddk::MmioBuffer(mmio);
 
-    fbl::unique_ptr<ddk::MmioPinnedBuffer> mmio_pinned;
+    fbl::optional<ddk::MmioPinnedBuffer> mmio_pinned;
     st = dbi_->Pin(pin_bti, &mmio_pinned);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to pin DBI, st = %d\n", st);
         return st;
     }
-    dbi_pinned_ = fbl::move(*mmio_pinned.release());
+    dbi_pinned_ = fbl::move(*mmio_pinned);
 
     st = pdev_map_mmio_buffer2(&pdev_, kCfgMmio,
                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);

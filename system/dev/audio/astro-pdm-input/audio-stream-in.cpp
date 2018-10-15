@@ -63,7 +63,7 @@ zx_status_t AstroAudioStreamIn::InitPdev() {
         zxlogf(ERROR, "%s could not obtain bti - %d\n", __func__, status);
         return status;
     }
-    fbl::unique_ptr<ddk::MmioBuffer> mmio0, mmio1;
+    fbl::optional<ddk::MmioBuffer> mmio0, mmio1;
     status = pdev_->GetMmio(0, &mmio0);
     if (status != ZX_OK) {
         return status;
@@ -73,8 +73,8 @@ zx_status_t AstroAudioStreamIn::InitPdev() {
         return status;
     }
 
-    pdm_ = AmlPdmDevice::Create(fbl::move(*(mmio0.release())),
-                                fbl::move(*(mmio1.release())),
+    pdm_ = AmlPdmDevice::Create(fbl::move(*mmio0),
+                                fbl::move(*mmio1),
                                 HIFI_PLL, 7, 499, TODDR_B);
     if (pdm_ == nullptr) {
         zxlogf(ERROR, "%s failed to create pdm device\n", __func__);

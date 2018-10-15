@@ -9,8 +9,8 @@
 #include <ddk/debug.h>
 #include <ddk/mmio-buffer.h>
 #include <fbl/macros.h>
+#include <fbl/optional.h>
 #include <fbl/type_support.h>
-#include <fbl/unique_ptr.h>
 #include <hw/arch_ops.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
@@ -20,7 +20,45 @@
 
 namespace ddk {
 
-class MmioPinnedBuffer;
+// MmioPinnedBuffer is wrapper around mmio_pinned_buffer_t.
+class MmioPinnedBuffer {
+
+public:
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(MmioPinnedBuffer);
+
+    explicit MmioPinnedBuffer(mmio_pinned_buffer_t pinned)
+        : pinned_(pinned) {
+        ZX_ASSERT(pinned_.paddr != 0);
+    }
+
+    ~MmioPinnedBuffer() {
+        mmio_buffer_unpin(&pinned_);
+    }
+
+    MmioPinnedBuffer(MmioPinnedBuffer&& other) {
+        transfer(fbl::move(other));
+    }
+
+    MmioPinnedBuffer& operator=(MmioPinnedBuffer&& other) {
+        transfer(fbl::move(other));
+        return *this;
+    }
+
+    void reset() {
+        memset(&pinned_, 0, sizeof(pinned_));
+    }
+
+    zx_paddr_t get_paddr() const {
+        return pinned_.paddr;
+    }
+
+private:
+    void transfer(MmioPinnedBuffer&& other) {
+        pinned_ = other.pinned_;
+        other.reset();
+    }
+    mmio_pinned_buffer_t pinned_;
+};
 
 // MmioBase is wrapper around mmio_block_t.
 // Use MmioBuffer (defined below) instead of MmioBase.
@@ -30,7 +68,7 @@ class MmioBase {
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(MmioBase);
 
-    MmioBase(mmio_buffer_t mmio)
+    explicit MmioBase(mmio_buffer_t mmio)
         : mmio_(mmio), ptr_(reinterpret_cast<uintptr_t>(mmio.vaddr)) {
         ZX_ASSERT(mmio_.vaddr != nullptr);
     }
@@ -49,22 +87,22 @@ public:
     }
 
     static zx_status_t Create(zx_off_t offset, size_t size, zx::vmo vmo, uint32_t cache_policy,
-                              fbl::unique_ptr<MmioBase>* mmio_buffer) {
+                              fbl::optional<MmioBase>* mmio_buffer) {
         mmio_buffer_t mmio;
         zx_status_t status = mmio_buffer_init(&mmio, offset, size, vmo.release(), cache_policy);
         if (status == ZX_OK) {
-            *mmio_buffer = fbl::make_unique<MmioBase>(mmio);
+            *mmio_buffer = MmioBase(mmio);
         }
         return status;
     }
 
-    static zx_status_t Create(zx_paddr_t base, size_t size, zx::unowned_resource resource,
-                              uint32_t cache_policy, fbl::unique_ptr<MmioBase>* mmio_buffer) {
+    static zx_status_t Create(zx_paddr_t base, size_t size, const zx::resource& resource,
+                              uint32_t cache_policy, fbl::optional<MmioBase>* mmio_buffer) {
         mmio_buffer_t mmio;
-        zx_status_t status = mmio_buffer_init_physical(&mmio, base, size, resource->get(),
+        zx_status_t status = mmio_buffer_init_physical(&mmio, base, size, resource.get(),
                                                        cache_policy);
         if (status == ZX_OK) {
-            *mmio_buffer = fbl::make_unique<MmioBase>(mmio);
+            *mmio_buffer = MmioBase(mmio);
         }
         return status;
     }
@@ -88,11 +126,11 @@ public:
         return zx::unowned_vmo(mmio_.vmo);
     }
 
-    zx_status_t Pin(const zx::bti& bti, fbl::unique_ptr<MmioPinnedBuffer>* pinned_buffer) {
+    zx_status_t Pin(const zx::bti& bti, fbl::optional<MmioPinnedBuffer>* pinned_buffer) {
         mmio_pinned_buffer_t pinned;
         zx_status_t status = mmio_buffer_pin(&mmio_, bti.get(), &pinned);
         if (status == ZX_OK) {
-            *pinned_buffer = fbl::make_unique<MmioPinnedBuffer>(pinned);
+            *pinned_buffer = MmioPinnedBuffer(pinned);
         }
         return status;
     }
@@ -244,46 +282,6 @@ public:
         // Prevent unmap operation from occurring.
         mmio_.vmo = ZX_HANDLE_INVALID;
     }
-};
-
-// MmioPinnedBuffer is wrapper around mmio_pinned_buffer_t.
-class MmioPinnedBuffer {
-
-public:
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(MmioPinnedBuffer);
-
-    MmioPinnedBuffer(mmio_pinned_buffer_t pinned)
-        : pinned_(pinned) {
-        ZX_ASSERT(pinned_.paddr != 0);
-    }
-
-    ~MmioPinnedBuffer() {
-        mmio_buffer_unpin(&pinned_);
-    }
-
-    MmioPinnedBuffer(MmioPinnedBuffer&& other) {
-        transfer(fbl::move(other));
-    }
-
-    MmioPinnedBuffer& operator=(MmioPinnedBuffer&& other) {
-        transfer(fbl::move(other));
-        return *this;
-    }
-
-    void reset() {
-        memset(&pinned_, 0, sizeof(pinned_));
-    }
-
-    zx_paddr_t get_paddr() const {
-        return pinned_.paddr;
-    }
-
-private:
-    void transfer(MmioPinnedBuffer&& other) {
-        pinned_ = other.pinned_;
-        other.reset();
-    }
-    mmio_pinned_buffer_t pinned_;
 };
 
 } //namespace ddk

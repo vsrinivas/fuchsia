@@ -8,6 +8,7 @@
 #include <ddk/protocol/platform-device.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <fbl/unique_ptr.h>
 
 #include "gt92xx.h"
 

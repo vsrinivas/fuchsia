@@ -13,6 +13,7 @@
 #include <ddk/protocol/platform-device.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 #include <soc/aml-s912/s912-hw.h>
 #include <stdio.h>

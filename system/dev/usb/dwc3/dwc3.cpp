@@ -492,7 +492,7 @@ zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "dwc3_bind: pdev_map_mmio_buffer failed\n");
         goto fail;
     }
-    dwc->mmio = mmio;
+    dwc->mmio = ddk::MmioBuffer(mmio);
 
     status = io_buffer_init(&dwc->event_buffer, dwc->bti_handle.get(), EVENT_BUFFER_SIZE,
                             IO_BUFFER_RO | IO_BUFFER_CONTIG);

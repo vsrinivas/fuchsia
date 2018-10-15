@@ -8,6 +8,7 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/unique_ptr.h>
 #include <hw/sdio.h>
 #include <hw/sdmmc.h>
 

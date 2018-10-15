@@ -20,7 +20,7 @@ void Pdev::ShowInfo() {
     zxlogf(INFO, "bti count           = %d\n", pdev_info_.bti_count);
 }
 
-zx_status_t Pdev::GetMmio(uint32_t index, fbl::unique_ptr<MmioBuffer>* mmio) {
+zx_status_t Pdev::GetMmio(uint32_t index, fbl::optional<MmioBuffer>* mmio) {
     pdev_mmio_t pdev_mmio;
 
     zx_status_t status = pdev_get_mmio(&pdev_, index, &pdev_mmio);

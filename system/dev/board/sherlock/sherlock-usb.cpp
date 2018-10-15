@@ -6,7 +6,7 @@
 #include <ddk/device.h>
 #include <ddktl/mmio.h>
 #include <ddk/platform-defs.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/optional.h>
 #include <hw/reg.h>
 #include <lib/zx/handle.h>
 #include <soc/aml-common/aml-usb-phy-v2.h>
@@ -64,11 +64,11 @@ constexpr uint32_t PLL_SETTING_6 = 0xe0004;
 constexpr uint32_t PLL_SETTING_7 = 0xe000c;
 
 zx_status_t PerformUsbTuning(bool host, bool default_val) {
-    fbl::unique_ptr<ddk::MmioBuffer> buf;
+    fbl::optional<ddk::MmioBuffer> buf;
     zx_status_t status;
 
     zx::unowned_resource resource(get_root_resource());
-    status = ddk::MmioBuffer::Create(T931_USBPHY21_BASE, T931_USBPHY21_LENGTH, fbl::move(resource),
+    status = ddk::MmioBuffer::Create(T931_USBPHY21_BASE, T931_USBPHY21_LENGTH, *resource,
                                      ZX_CACHE_POLICY_UNCACHED_DEVICE, &buf);
     if (status != ZX_OK) {
         return status;
