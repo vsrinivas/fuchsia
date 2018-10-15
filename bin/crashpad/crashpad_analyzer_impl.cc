@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "crashpad_analyzer_impl.h"
+
 #include <string>
 #include <utility>
 
+#include <fbl/type_support.h>
 #include <fuchsia/crash/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/io.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/file.h>
@@ -37,12 +38,13 @@
 #include <third_party/crashpad/util/net/url.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/sysinfo.h>
-#include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/object.h>
 
+namespace fuchsia {
+namespace crash {
 namespace {
 
 const char kLocalCrashDatabase[] = "/data/crashes";
@@ -303,6 +305,8 @@ int UploadReportForKernel(
 
 }  // namespace
 
+namespace internal {
+
 int HandleException(zx::process process, zx::thread thread,
                     zx::port exception_port) {
   const std::string package_name = GetPackageName(process);
@@ -395,42 +399,25 @@ int Process(fuchsia::mem::Buffer crashlog) {
 
   return UploadReportForKernel(database, local_report_id, annotations);
 }
+}  // namespace internal
 
-class AnalyzerImpl : public fuchsia::crash::Analyzer {
- public:
-  // fuchsia::crash::Analyzer:
-  void Analyze(::zx::process process, ::zx::thread thread,
-               ::zx::port exception_port, AnalyzeCallback callback) override {
-    callback();
-    if (HandleException(std::move(process), std::move(thread),
-                        std::move(exception_port)) != EXIT_SUCCESS) {
-      FX_LOGS(ERROR) << "failed to handle exception. Won't retry.";
-    }
+void CrashpadAnalyzerImpl::Analyze(zx::process process, zx::thread thread,
+                                   zx::port exception_port,
+                                   AnalyzeCallback callback) {
+  callback();
+  if (internal::HandleException(std::move(process), std::move(thread),
+                                std::move(exception_port)) != EXIT_SUCCESS) {
+    FX_LOGS(ERROR) << "failed to handle exception. Won't retry.";
   }
-
-  void Process(fuchsia::mem::Buffer crashlog,
-               ProcessCallback callback) override {
-    callback();
-    if (::Process(fbl::move(crashlog)) != EXIT_SUCCESS) {
-      FX_LOGS(ERROR) << "failed to process VMO crashlog. Won't retry.";
-    }
-  }
-};
-
-int main(int argc, const char** argv) {
-  syslog::InitLogger({"crash"});
-
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  std::unique_ptr<component::StartupContext> app_context(
-      component::StartupContext::CreateFromStartupInfo());
-
-  AnalyzerImpl analyzer;
-
-  fidl::BindingSet<fuchsia::crash::Analyzer> bindings;
-
-  app_context->outgoing().AddPublicService(bindings.GetHandler(&analyzer));
-
-  loop.Run();
-
-  return 0;
 }
+
+void CrashpadAnalyzerImpl::Process(fuchsia::mem::Buffer crashlog,
+                                   ProcessCallback callback) {
+  callback();
+  if (internal::Process(fbl::move(crashlog)) != EXIT_SUCCESS) {
+    FX_LOGS(ERROR) << "failed to process VMO crashlog. Won't retry.";
+  }
+}
+
+}  // namespace crash
+}  // namespace fuchsia

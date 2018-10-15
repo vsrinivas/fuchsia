@@ -8,25 +8,16 @@ executable("bin") {
   output_name = "crashpad_analyzer"
 
   deps = [
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/syslog/cpp",
-    "//third_party/crashpad/client",
-    "//third_party/crashpad/handler",
-    "//third_party/crashpad/minidump",
-    "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
-    "//third_party/crashpad/util",
+    ":crashpad_analyzer_impl",
     "//zircon/public/fidl/fuchsia-crash",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/fdio",
-    "//zircon/public/lib/zx",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/syslog/cpp",
   ]
 
   sources = [
-    "crashpad_analyzer.cc",
+    "main.cc",
   ]
-
-  libs = [ "zircon" ]
 }
 
 package("crashpad_analyzer") {
@@ -43,3 +34,26 @@ package("crashpad_analyzer") {
     },
   ]
 }
+
+source_set("crashpad_analyzer_impl") {
+  sources = [
+    "crashpad_analyzer_impl.cc",
+    "crashpad_analyzer_impl.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/syslog/cpp",
+    "//third_party/crashpad/client",
+    "//third_party/crashpad/handler",
+    "//third_party/crashpad/minidump",
+    "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
+    "//third_party/crashpad/util",
+    "//zircon/public/fidl/fuchsia-crash",
+    "//zircon/public/fidl/fuchsia-mem",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
