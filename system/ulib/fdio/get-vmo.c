@@ -120,7 +120,7 @@ static zx_status_t copy_file_vmo(fdio_t* io, zx_handle_t* out_vmo) {
         status = zx_handle_replace(
             vmo,
             ZX_RIGHTS_BASIC | ZX_RIGHTS_PROPERTY |
-            ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP,
+            ZX_RIGHT_READ | ZX_RIGHT_MAP,
             out_vmo);
     }
     return status;
