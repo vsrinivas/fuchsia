@@ -20,6 +20,7 @@
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
+#include <third_party/crashpad/client/crash_report_database.h>
 #include <third_party/crashpad/client/settings.h>
 #include <third_party/crashpad/handler/fuchsia/crash_report_exception_handler.h>
 #include <third_party/crashpad/handler/minidump_to_upload_parameters.h>
@@ -82,26 +83,6 @@ class ScopedUnlink {
   std::string filename_;
   DISALLOW_COPY_AND_ASSIGN(ScopedUnlink);
 };
-
-std::unique_ptr<crashpad::CrashReportDatabase> GetReportDatabase() {
-  if (!files::IsDirectory(kLocalCrashDatabase)) {
-    files::CreateDirectory(kLocalCrashDatabase);
-  }
-
-  std::unique_ptr<crashpad::CrashReportDatabase> database(
-      crashpad::CrashReportDatabase::Initialize(
-          base::FilePath(kLocalCrashDatabase)));
-  if (!database) {
-    FX_LOGS(ERROR) << "error initializing local crash report database at "
-                   << kLocalCrashDatabase;
-    return nullptr;
-  }
-
-  // Today we enable uploads here. In the future, this will most likely be set
-  // in some external settings.
-  database->GetSettings()->SetUploadsEnabled(true);
-  return database;
-}
 
 std::string GetSystemLogToFile() {
   std::string filename = files::SimplifyPath(
@@ -188,8 +169,9 @@ std::map<std::string, std::string> GetAnnotations(
   };
 }
 
-int UploadReport(
-    const std::unique_ptr<crashpad::CrashReportDatabase>& database,
+}  // namespace
+
+int CrashpadAnalyzerImpl::UploadReport(
     std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report,
     const std::map<std::string, std::string>& annotations) {
   // We have to build the MIME multipart message ourselves as all the public
@@ -221,14 +203,14 @@ int UploadReport(
 
   std::string server_report_id;
   if (!http_transport->ExecuteSynchronously(&server_report_id)) {
-    database->SkipReportUpload(
+    database_->SkipReportUpload(
         report->uuid,
         crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
     FX_LOGS(ERROR) << "error uploading local crash report, ID "
                    << report->uuid.ToString();
     return EXIT_FAILURE;
   }
-  database->RecordUploadComplete(std::move(report), server_report_id);
+  database_->RecordUploadComplete(std::move(report), server_report_id);
   FX_LOGS(INFO) << "successfully uploaded crash report at "
                    "https://crash.corp.google.com/"
                 << server_report_id;
@@ -237,11 +219,10 @@ int UploadReport(
 }
 
 std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport>
-GetUploadReport(const std::unique_ptr<crashpad::CrashReportDatabase>& database,
-                const crashpad::UUID& local_report_id) {
+CrashpadAnalyzerImpl::GetUploadReport(const crashpad::UUID& local_report_id) {
   std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report;
   const crashpad::CrashReportDatabase::OperationStatus database_status =
-      database->GetReportForUploading(local_report_id, &report);
+      database_->GetReportForUploading(local_report_id, &report);
   if (database_status != crashpad::CrashReportDatabase::kNoError) {
     FX_LOGS(ERROR) << "error loading local crash report, ID "
                    << local_report_id.ToString() << " (" << database_status
@@ -251,12 +232,11 @@ GetUploadReport(const std::unique_ptr<crashpad::CrashReportDatabase>& database,
   return report;
 }
 
-int UploadReportForUserspace(
-    const std::unique_ptr<crashpad::CrashReportDatabase>& database,
+int CrashpadAnalyzerImpl::UploadReportForUserspace(
     const crashpad::UUID& local_report_id) {
   // Retrieve local report as an "upload" report.
   std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report =
-      GetUploadReport(database, local_report_id);
+      GetUploadReport(local_report_id);
   if (!report) {
     return EXIT_FAILURE;
   }
@@ -268,7 +248,7 @@ int UploadReportForUserspace(
   crashpad::FileOffset start_offset = reader->SeekGet();
   crashpad::ProcessSnapshotMinidump minidump_process_snapshot;
   if (!minidump_process_snapshot.Initialize(reader)) {
-    database->SkipReportUpload(
+    database_->SkipReportUpload(
         report->uuid,
         crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
     FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
@@ -279,7 +259,7 @@ int UploadReportForUserspace(
       crashpad::BreakpadHTTPFormParametersFromMinidump(
           &minidump_process_snapshot);
   if (!reader->SeekSet(start_offset)) {
-    database->SkipReportUpload(
+    database_->SkipReportUpload(
         report->uuid,
         crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
     FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
@@ -287,34 +267,28 @@ int UploadReportForUserspace(
     return EXIT_FAILURE;
   }
 
-  return UploadReport(database, std::move(report), annotations);
+  return UploadReport(std::move(report), annotations);
 }
 
-int UploadReportForKernel(
-    const std::unique_ptr<crashpad::CrashReportDatabase>& database,
+int CrashpadAnalyzerImpl::UploadReportForKernel(
     const crashpad::UUID& local_report_id,
     const std::map<std::string, std::string>& annotations) {
   // Retrieve local report as an "upload" report.
   std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report =
-      GetUploadReport(database, local_report_id);
+      GetUploadReport(local_report_id);
   if (!report) {
     return EXIT_FAILURE;
   }
-  return UploadReport(database, std::move(report), annotations);
+  return UploadReport(std::move(report), annotations);
 }
 
-}  // namespace
-
-namespace internal {
-
-int HandleException(zx::process process, zx::thread thread,
-                    zx::port exception_port) {
+int CrashpadAnalyzerImpl::HandleException(zx::process process,
+                                          zx::thread thread,
+                                          zx::port exception_port) {
   const std::string package_name = GetPackageName(process);
   FX_LOGS(INFO) << "generating crash report for exception thrown by "
                 << package_name;
-
-  std::unique_ptr<crashpad::CrashReportDatabase> database = GetReportDatabase();
-  if (!database) {
+  if (!database_) {
     return EXIT_FAILURE;
   }
 
@@ -334,13 +308,13 @@ int HandleException(zx::process process, zx::thread thread,
   // We don't pass an upload_thread so we can do the upload ourselves
   // synchronously.
   crashpad::CrashReportExceptionHandler exception_handler(
-      database.get(), /*upload_thread=*/nullptr, &annotations, &attachments,
+      database_.get(), /*upload_thread=*/nullptr, &annotations, &attachments,
       /*user_stream_data_sources=*/nullptr);
   crashpad::UUID local_report_id;
   if (!exception_handler.HandleExceptionHandles(
           process, thread, zx::unowned_port(exception_port),
           &local_report_id)) {
-    database->SkipReportUpload(
+    database_->SkipReportUpload(
         local_report_id,
         crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
     FX_LOGS(ERROR) << "error handling exception for local crash report, ID "
@@ -348,14 +322,12 @@ int HandleException(zx::process process, zx::thread thread,
     return EXIT_FAILURE;
   }
 
-  return UploadReportForUserspace(database, local_report_id);
+  return UploadReportForUserspace(local_report_id);
 }
 
-int Process(fuchsia::mem::Buffer crashlog) {
+int CrashpadAnalyzerImpl::Process(fuchsia::mem::Buffer crashlog) {
   FX_LOGS(INFO) << "generating crash report for previous kernel panic";
-
-  std::unique_ptr<crashpad::CrashReportDatabase> database = GetReportDatabase();
-  if (!database) {
+  if (!database_) {
     return EXIT_FAILURE;
   }
 
@@ -363,7 +335,7 @@ int Process(fuchsia::mem::Buffer crashlog) {
 
   // Create report.
   std::unique_ptr<crashpad::CrashReportDatabase::NewReport> report;
-  database_status = database->PrepareNewCrashReport(&report);
+  database_status = database_->PrepareNewCrashReport(&report);
   if (database_status != crashpad::CrashReportDatabase::kNoError) {
     FX_LOGS(ERROR) << "error creating local crash report (" << database_status
                    << ")";
@@ -389,24 +361,41 @@ int Process(fuchsia::mem::Buffer crashlog) {
 
   // Finish new report.
   crashpad::UUID local_report_id;
-  database_status =
-      database->FinishedWritingCrashReport(std::move(report), &local_report_id);
+  database_status = database_->FinishedWritingCrashReport(std::move(report),
+                                                          &local_report_id);
   if (database_status != crashpad::CrashReportDatabase::kNoError) {
     FX_LOGS(ERROR) << "error writing local crash report (" << database_status
                    << ")";
     return EXIT_FAILURE;
   }
 
-  return UploadReportForKernel(database, local_report_id, annotations);
+  return UploadReportForKernel(local_report_id, annotations);
 }
-}  // namespace internal
+
+CrashpadAnalyzerImpl::CrashpadAnalyzerImpl() {
+  if (!files::IsDirectory(kLocalCrashDatabase)) {
+    files::CreateDirectory(kLocalCrashDatabase);
+  }
+
+  database_ = crashpad::CrashReportDatabase::Initialize(
+      base::FilePath(kLocalCrashDatabase));
+  if (!database_) {
+    FX_LOGS(ERROR) << "error initializing local crash report database at "
+                   << kLocalCrashDatabase;
+    return;
+  }
+
+  // Today we enable uploads here. In the future, this will most likely be set
+  // in some external settings.
+  database_->GetSettings()->SetUploadsEnabled(true);
+}
 
 void CrashpadAnalyzerImpl::Analyze(zx::process process, zx::thread thread,
                                    zx::port exception_port,
                                    AnalyzeCallback callback) {
   callback();
-  if (internal::HandleException(std::move(process), std::move(thread),
-                                std::move(exception_port)) != EXIT_SUCCESS) {
+  if (HandleException(std::move(process), std::move(thread),
+                      std::move(exception_port)) != EXIT_SUCCESS) {
     FX_LOGS(ERROR) << "failed to handle exception. Won't retry.";
   }
 }
@@ -414,7 +403,7 @@ void CrashpadAnalyzerImpl::Analyze(zx::process process, zx::thread thread,
 void CrashpadAnalyzerImpl::Process(fuchsia::mem::Buffer crashlog,
                                    ProcessCallback callback) {
   callback();
-  if (internal::Process(fbl::move(crashlog)) != EXIT_SUCCESS) {
+  if (Process(fbl::move(crashlog)) != EXIT_SUCCESS) {
     FX_LOGS(ERROR) << "failed to process VMO crashlog. Won't retry.";
   }
 }
