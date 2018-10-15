@@ -98,7 +98,7 @@ public:
         case Value::DEAD_IDLE:
             return Lifecycle::DEAD;
         default:
-            DEBUG_ASSERT(false);
+            ASSERT(false);
         }
     }
 
