@@ -12,6 +12,7 @@ package("bt-tools") {
     "bt-fake-hci",
     "bt-hci-tool",
     "bt-intel-tool",
+    "bt-le-peripheral",
     "bt-le-central",
     "bt-pairing-tool",
     "bt-snoop",
@@ -35,6 +36,10 @@ package("bt-tools") {
     {
       name = "bt_le_central"
       dest = "bt-le-central"
+    },
+    {
+      name = "bt_le_peripheral"
+      dest = "bt-le-peripheral"
     },
     {
       name = "bt_pairing_tool"
