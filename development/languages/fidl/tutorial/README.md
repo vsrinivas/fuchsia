@@ -402,9 +402,8 @@ This file has two functions: `main()`, and `spawn_echo_server`:
 -   The `main()` function creates an asynchronous task executor
     and a `ServicesServer` and runs the `ServicesServer` to completion on
     the executor.
--   `spawn_echo_server` creates a new instance of a server which implements the
-    `Echo` service, attaches it to a channel, and spawns it as a new task on
-    the global asynchronous task executor.
+-   `spawn_echo_server` spawns a new asynchronous task which will handle
+    incoming echo service requests.
 
 To understand how the code works, here's a summary of what happens in the server
 to execute an IPC call. We will dig into what each of these lines means, so it's
@@ -431,11 +430,11 @@ not necessary to understand all of this before you move on.
     It spawns that future to be run on the thread-local `async::Executor`.
 1.  **API Request:** An `echo_string` request is sent on the channel.
     This makes the channel the `Echo` service is running on readable, which
-    wakes up the `Echo` service. The `Echo` service reads the request off of
-    the channel. It's read by the `for_each` future and given to the provided
-    `for_each` handler.
-1.  **API Response:** The `for_each` handler calls `responder.send`, which
-    causes a response to be written back into the channel.
+    wakes up the asynchronous task spawned in `spawn_echo_server`. The task
+    reads the request off of the channel and yields a value from the
+    `try_next()` future.
+1.  **API Response:** Upon receiving a request, the task sends a response
+    back to the client with `responder.send`.
 
 Now let's go through the code and see how this works.
 
@@ -444,55 +443,46 @@ Now let's go through the code and see how this works.
 Here are the import declarations in the Rust server implementation:
 
 ```rust
-extern crate fidl;
-extern crate failure;
-extern crate fuchsia_app as component;
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-extern crate fidl_fidl_examples_echo;
-
-use component::server::ServicesServer;
 use failure::{Error, ResultExt};
-use futures::future;
-use futures::prelude::*;
 use fidl::endpoints2::{ServiceMarker, RequestStream};
-use fidl_echo2::{EchoMarker, EchoRequest, EchoRequestStream};
+use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
+use fuchsia_app::server::ServicesServer;
+use fuchsia_async as fasync;
+use futures::prelude::*;
 ```
-
--   `ServicesServer` links service requests to service launcher functions.
 -   `failure` provides conveniences for error handling, including a standard
     dynamically-dispatched `Error` type as well as a extension trait that adds
     the `context` method to `Result` for providing extra information about
     where the error occurred.
--   `futures` is a crate for working with asynchronous tasks. These tasks are
-    composed of asynchronous units of work that may produce a single value
-    (a `Future`) or many values (a `Stream`). For the echo server, we use the
-    `future` module for the `future::ok(())` function to create an immediately
-    ready future that requires no asynchronous operations. We also import the
-    prelude, which provides a number of useful extension traits with functions
-    like `IntoFuture::into_future()`, `FutureExt::map`, and
-    `FutureExt::recover`. For more about futures, see
-    [the crate's documentation][docs]. To understand more about how futures
-    are structured internally, see [this post][Tokio internals] on how futures
-    connect to system waiting primitives like `epoll` and Fuchsia's ports.
-    Note that Fuchsia does not use Tokio, but employs a very similar strategy
-    for managing asynchronous tasks.
 -   `fidl::endpoints2::ServiceMarker` is the trait implemented by `XXXMarker`
     types. It provides the associated string `NAME`.
 -   `fidl_fidl_examples_echo` contains bindings for the `Echo` interface.
     This file is generated from the interface defined in `echo2.fidl`.
     These bindings include:
-    -   The `Echo` trait, an interface which is implemented by all types
-        that can serve `Echo` requests
     -   The `EchoMarker` type, a [zero-sized type] used to hold compile-time
         metadata about the `Echo` service (such as `NAME`)
     -   The `EchoRequest` type, an enum over all of the different request types
         that can be received.
     -   The `EchoRequestStream` type, a [`Stream`] of incoming requests for the
         server to handle.
+-   `ServicesServer` links service requests to service launcher functions.
+-   `fuchsia_async`, often aliased to the abbreviated `fasync`, is the runtime
+    library for running asynchronous tasks on Fuchsia. It also provides
+    asynchronous bindings to a number of Fuchsia primitives, such as channels,
+    sockets, and TCP/UDP.
+-   `futures` is a crate for working with asynchronous tasks. These tasks are
+    composed of asynchronous units of work that may produce a single value
+    (a `Future`) or many values (a `Stream`). Futures can be `await!`ed inside
+    an `async` function or block, which will cause the current task to be
+    suspended until the future is able to make more progress.
+    For more about futures, see [the crate's documentation][docs].
+    To understand more about how futures
+    are structured internally, see [this post][Tokio internals] on how futures
+    connect to system waiting primitives like `epoll` and Fuchsia's ports.
+    Note that Fuchsia does not use Tokio, but employs a very similar strategy
+    for managing asynchronous tasks.
 
-[docs]: https://docs.rs/futures/*/futures/
+[docs]: https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.5/futures/
 [`Stream`]: https://docs.rs/futures/0.2.0/futures/stream/trait.Stream.html
 [Tokio internals]: https://cafbit.com/post/tokio_internals/
 [zero-sized type]: https://doc.rust-lang.org/nomicon/exotic-sizes.html#zero-sized-types-zsts
@@ -503,10 +493,11 @@ Everything starts with main():
 
 ```rust
 fn main() -> Result<(), Error> {
-    let mut executor = async::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let quiet = env::args().any(|arg| arg == "-q");
 
     let fut = ServicesServer::new()
-                .add_service((EchoMarker::NAME, |chan| spawn_echo_server(chan)))
+                .add_service((EchoMarker::NAME, move |chan| spawn_echo_server(chan, quiet)))
                 .start()
                 .context("Error starting echo services server")?;
 
@@ -536,25 +527,44 @@ requests until a protocol error occurs or the startup handle is closed.
 ### `fn spawn_echo_server`
 
 ```rust
-fn spawn_echo_server(chan: async::Channel) {
-    async::spawn(EchoRequestStream::from_channel(chan)
-        .for_each(|EchoRequest::EchoString { value, responder }| {
-            println!("Received echo request for string {:?}", value);
-            responder.send(value.as_ref().map(|s| &**s))
-                .into_future()
-                .map(|_| println!("echo response sent successfully"))
-                .recover(|e| eprintln!("error sending response: {:?}", e))
-        })
-        .map(|_| ())
-        .recover(|e| eprintln!("error running echo server: {:?}", e)))
+fn spawn_echo_server(chan: fasync::Channel, quiet: bool) {
+    fasync::spawn(async move {
+        let mut stream = EchoRequestStream::from_channel(chan);
+        while let Some(EchoRequest::EchoString { value, responder }) =
+            await!(stream.try_next()).context("error running echo server")?
+        {
+            if !quiet {
+                println!("Received echo request for string {:?}", value);
+            }
+            responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
+            if !quiet {
+                println!("echo response sent successfully");
+            }
+        }
+        Ok(())
+    }.unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)));
 }
 ```
 
 When a request for an echo service is received, `spawn_echo_server` is called
-with the channel to host the `Echo` service on.
+with the channel to host the `Echo` service on. The channel that will contain
+incoming requests is turned into an `EchoRequestStream`, an asynchronous
+stream of `EchoRequest`s.
 
-When a request is received, the closure inside `for_each` is called. It
-uses pattern-matching to extract the contents of the `EchoString` variant
+We use `async move { ... }` to create an asynchronous block, and spawn that
+asynchronous task onto the local executor using `fasync::spawn`.
+
+The `.try_next()` function will return a future which yields a value of type
+`Result<Option<EchoRequest>, fidl::Error>`. We `await!` the future, causing
+the current task to yield if no request is yet available. When a value
+becomes available, `await!` returns the result. We apply a `context("...")`
+to give some information about the error that may have occurred, and use
+`?` to return early in the error case. If no request is available, this
+expression will result in `None`, the `while` loop will exit, and we return
+`Ok`.
+
+When a request is received, we
+use pattern-matching to extract the contents of the `EchoString` variant
 of the `EchoRequest` enum. For an interface with more than one type of request,
 we would instead write `|x| match x { MyServiceRequest::Req1 { ... } => ... }`.
 In our case, we receive `value`, an optional string, and `responder`, a control
@@ -579,16 +589,11 @@ by value and so consumes its input, but we want to instead create a *reference*
 to its input.
 
 Once we've done the conversion from `Option<String>` to `Option<&str>`, we call
-`send`, which returns a `Result<(), Error>`, which we convert into a
-`Future<Item = (), Error = Error>` using the `into_future` method. We map the
-success case to one log message, and `recover` from error cases by logging a
-different message. `for_each` returns a `Future<Item = YourStreamType>`,
-so we have to `map` it away and `recover` from any errors in by printing
-an error message.
+`send`, which returns a `Result<(), Error>` which we use `?` on to return an
+error on failure.
 
-All of this put together gives us our `Future` for handling incoming requests
-on `chan`. We call `async::spawn` to run this future on the `Executor` until
-either the channel is closed or a protocol error occurs.
+Finally, we call `.unwrap_or_else(|e| ...)` on our `async move { ... }` block
+to handle the case in which an error occurred.
 
 ## `Echo` client in Rust
 
@@ -638,11 +643,13 @@ fn main() -> Result<(), Error> {
     let echo = app.connect_to_service(EchoMarker)
        .context("Failed to connect to echo service")?;
 
-    let fut = echo.echo_string(Some("hello world!"))
-        .map(|res| println!("response: {:?}", res));
+    let fut = async {
+        let res = await!(echo.echo_string(Some("hello world!")))?;
+        println!("response: {:?}", res);
+        Ok(())
+    };
 
-    executor.run_singlethreaded(fut).context("failed to execute echo future")?;
-    Ok(())
+    executor.run_singlethreaded(fut)
 }
 ```
 
