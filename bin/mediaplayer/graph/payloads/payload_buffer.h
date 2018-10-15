@@ -10,6 +10,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fit/function.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <memory>
 #include "lib/fxl/logging.h"
@@ -22,18 +23,14 @@ class VmoPayloadAllocator;
 // A VMO used for payload buffers.
 class PayloadVmo : public fbl::RefCounted<PayloadVmo> {
  public:
-  // Creates a |PayloadVmo| from a mapped VMO. |vmo_start| is the start of the
-  // VMO in system memory.
-  static fbl::RefPtr<PayloadVmo> Create(zx::vmo vmo, void* vmo_start,
-                                        uint64_t vmo_size);
-
   // Creates a |PayloadVmo| that wraps a newly-created VMO. If |bti_handle| is
   // provided, the VMO is created with |zx_vmo_create_contiguous|.
   // TODO(dalesat): Remove |bti_handle| when the fidl buffer allocator happens.
   static fbl::RefPtr<PayloadVmo> Create(uint64_t vmo_size,
                                         const zx::handle* bti_handle = nullptr);
 
-  PayloadVmo(zx::vmo vmo, void* vmo_start, uint64_t vmo_size);
+  PayloadVmo(uint64_t vmo_size, const zx::handle* bti_handle,
+             zx_status_t* status_out);
 
   ~PayloadVmo() = default;
 
@@ -42,18 +39,18 @@ class PayloadVmo : public fbl::RefCounted<PayloadVmo> {
 
   // Returns the address in process virtual memory where this VMO is mapped, if
   // it is mapped, nullptr otherwise.
-  void* start() const { return start_; }
+  void* start() const { return vmo_mapper_.start(); }
 
   // Returns |start()| offset by |offset| if the VMO is mapped, nullptr
   // otherwise.
   void* at_offset(uint64_t offset) {
     FXL_DCHECK(offset < size_);
 
-    if (start_ == nullptr) {
+    if (start() == nullptr) {
       return nullptr;
     }
 
-    return reinterpret_cast<uint8_t*>(start_) + offset;
+    return reinterpret_cast<uint8_t*>(start()) + offset;
   }
 
   // Returns a reference to the VMO.
@@ -65,8 +62,9 @@ class PayloadVmo : public fbl::RefCounted<PayloadVmo> {
 
  private:
   zx::vmo vmo_;
-  void* start_;
   uint64_t size_;
+
+  fzl::VmoMapper vmo_mapper_;
 
   // NOTE: Access to these two fields is serialized using the mutex on the
   // owning |VmoPayloadAllocator|.
