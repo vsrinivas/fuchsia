@@ -294,7 +294,7 @@ impl Encodable for SignalingHeader {
     }
 }
 
-// The error type of the AVDTP library.
+/// The error type of the AVDTP library.
 #[derive(Fail, Debug, PartialEq)]
 pub enum Error {
     /// The value that was sent on the wire was out of range.
@@ -312,10 +312,6 @@ pub enum Error {
     /// The body format was invalid when parsing a message from the peer.
     #[fail(display = "Failed to parse AVDTP message contents")]
     InvalidMessage,
-
-    /// The request patcket length is not match the assumed length
-    #[fail(display = "Command has bad length")]
-    BadLength,
 
     /// The remote end failed to respond to this command in time.
     #[fail(display = "Command timed out")]
@@ -361,6 +357,16 @@ pub enum Error {
     #[fail(display = "Encontered an error encoding a message")]
     Encoding,
 
+    /// An error has been detected, and the request that is being handled
+    /// should be rejected with the error code given.
+    #[fail(display = "Invalid request detected: {:?}", _0)]
+    RequestInvalid(ErrorCode),
+
+    /// Same as RequestInvalid, but an extra byte is included, which is used
+    /// in Stream and Configure responses
+    #[fail(display = "Invalid request detected: {:?} (extra: {:?})", _0, _1)]
+    RequestInvalidExtra(ErrorCode, u8),
+
     #[doc(hidden)]
     #[fail(display = "__Nonexhaustive error should never be created.")]
     __Nonexhaustive,
@@ -370,7 +376,10 @@ pub_decodable_enum!{
     /// Error Codes that can be returned as part of a reject message.
     /// See Section 8.20.6
     ErrorCode<u8> {
+        // Header Error Codes
         BadHeaderFormat => 0x01,
+
+        // Payload Format Error Codes
         BadLength => 0x11,
         BadAcpSeid => 0x12,
         SepInUse => 0x13,
@@ -378,8 +387,9 @@ pub_decodable_enum!{
         BadServiceCategory => 0x17,
         BadPayloadFormat => 0x18,
         NotSupportedCommand => 0x19,
-        InvalidCapabiliies => 0x1A,
+        InvalidCapabilities => 0x1A,
 
+        // Transport Service Capabilities Error Codes
         BadRecoveryType => 0x22,
         BadMediaTransportFormat => 0x23,
         BadRecoveryFormat => 0x25,
@@ -388,6 +398,7 @@ pub_decodable_enum!{
         BadMultiplexingFormat => 0x28,
         UnsupportedConfiguration => 0x29,
 
+        // Procedure Error Codes
         BadState => 0x31,
     }
 }

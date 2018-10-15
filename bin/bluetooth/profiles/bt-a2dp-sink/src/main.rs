@@ -159,6 +159,8 @@ fn handle_request(r: avdtp::Request) -> Result<(), avdtp::Error> {
             responder.send(&caps)
         }
         // Positively respond to everything else.
+        avdtp::Request::SetConfiguration { responder, .. }
+        | avdtp::Request::Reconfigure { responder, .. } => responder.send(),
         avdtp::Request::Open { responder, .. }
         | avdtp::Request::Close { responder, .. }
         | avdtp::Request::Abort { responder, .. } => responder.send(),

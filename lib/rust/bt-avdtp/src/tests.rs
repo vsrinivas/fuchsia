@@ -11,12 +11,71 @@ use pin_utils::pin_mut;
 
 use crate::*;
 
+// Helper functions
+
 fn setup_peer() -> (Peer, zx::Socket) {
     let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
     let peer = Peer::new(signaling);
     assert!(peer.is_ok());
     (peer.unwrap(), remote)
+}
+
+fn setup_stream_test() -> (RequestStream, Peer, zx::Socket, fasync::Executor) {
+    let exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let stream = peer.take_request_stream();
+    (stream, peer, remote, exec)
+}
+
+fn next_request(stream: &mut RequestStream, exec: &mut fasync::Executor) -> Request {
+    let mut fut = stream.next();
+    let complete = exec.run_until_stalled(&mut fut);
+
+    match complete {
+        Poll::Ready(Some(Ok(r))) => r,
+        _ => panic!("should have a request"),
+    }
+}
+
+fn recv_remote(remote: &zx::Socket) -> Result<Vec<u8>, zx::Status> {
+    let waiting = remote.outstanding_read_bytes();
+    assert!(waiting.is_ok());
+    let mut response: Vec<u8> = vec![0; waiting.unwrap()];
+    let response_read = remote.read(response.as_mut_slice())?;
+    assert_eq!(response.len(), response_read);
+    Ok(response)
+}
+
+fn expect_remote_recv(expected: &[u8], remote: &zx::Socket) {
+    let r = recv_remote(&remote);
+    assert!(r.is_ok());
+    let response = r.unwrap();
+    if expected.len() != response.len() {
+        panic!(
+            "received wrong length\nexpected: {:?}\nreceived: {:?}",
+            expected, response
+        );
+    }
+    assert_eq!(expected, &response[0..expected.len()]);
+}
+
+fn stream_request_response(
+    exec: &mut fasync::Executor, stream: &mut RequestStream, remote: &zx::Socket, cmd: &[u8],
+    expect: &[u8],
+) {
+    assert!(remote.write(cmd).is_ok());
+
+    let mut fut = stream.next();
+    let complete = exec.run_until_stalled(&mut fut);
+
+    // We shouldn't have received anything on the stream.
+    assert!(complete.is_pending());
+
+    // The peer should have responded with:
+    // Response Reject message with the same TxLabel
+    // with the MediaTransport code and BAD_MEDIA_TRANSPORT_FORMAT (0x23)
+    expect_remote_recv(expect, &remote);
 }
 
 #[test]
@@ -55,40 +114,6 @@ const CMD_DISCOVER: &'static [u8] = &[
     0x40, // TxLabel (4), Single Packet (0b00), Command (0b00)
     0x01, // RFA (0b00), Discover (0x01)
 ];
-
-fn setup_stream_test() -> (RequestStream, Peer, zx::Socket, fasync::Executor) {
-    let exec = fasync::Executor::new().expect("failed to create an executor");
-    let (peer, remote) = setup_peer();
-    let stream = peer.take_request_stream();
-    (stream, peer, remote, exec)
-}
-
-fn next_request(stream: &mut RequestStream, exec: &mut fasync::Executor) -> Request {
-    let mut fut = stream.next();
-    let complete = exec.run_until_stalled(&mut fut);
-
-    match complete {
-        Poll::Ready(Some(Ok(r))) => r,
-        _ => panic!("should have a request"),
-    }
-}
-
-fn recv_remote(remote: &zx::Socket) -> Result<Vec<u8>, zx::Status> {
-    let waiting = remote.outstanding_read_bytes();
-    assert!(waiting.is_ok());
-    let mut response: Vec<u8> = vec![0; waiting.unwrap()];
-    let response_read = remote.read(response.as_mut_slice())?;
-    assert_eq!(response.len(), response_read);
-    Ok(response)
-}
-
-fn expect_remote_recv(expected: &[u8], remote: &zx::Socket) {
-    let r = recv_remote(&remote);
-    assert!(r.is_ok());
-    let response = r.unwrap();
-    assert_eq!(expected.len(), response.len());
-    assert_eq!(expected, &response[0..expected.len()]);
-}
 
 #[test]
 fn closed_peer_ends_request_stream() {
@@ -1275,4 +1300,398 @@ fn abort_sent_no_response() {
         Poll::Ready(Err(Error::Timeout)),
         exec.run_until_stalled(&mut response_fut)
     );
+}
+
+// Set Configuration
+
+fn expect_config_recv_cap_okay(
+    cmd: &[u8], local_seid: StreamEndpointId, remote_seid: StreamEndpointId,
+    capability: ServiceCapability,
+) {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    let txlabel_mask = cmd[0] & 0xF0;
+
+    assert!(remote.write(cmd).is_ok());
+
+    let respond_res = match next_request(&mut stream, &mut exec) {
+        Request::SetConfiguration {
+            responder,
+            local_stream_id,
+            remote_stream_id,
+            capabilities,
+        } => {
+            assert_eq!(local_seid, local_stream_id);
+            assert_eq!(remote_seid, remote_stream_id);
+            assert_eq!(capability, capabilities[0]);
+            responder.send()
+        }
+        _ => panic!("should have received a SetConfiguration"),
+    };
+
+    assert!(respond_res.is_ok());
+
+    // Expected response: Same TxLabel & ResponseAccept (0x2) , Signal.
+    expect_remote_recv(&[txlabel_mask | 0x02, 0x03], &remote);
+}
+
+// Set config must be at least 2 SEIDs and one configuration long.
+incoming_cmd_length_fail_test!(set_config_length_too_short, 0x03, 2);
+
+#[test]
+fn set_configration_invalid_media_transport_format() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    // TxLabel (4), ResponseReject, Signal, Relevant Cap (Media Transport),
+    // BadMediaTransportFormat
+    let rsp = &[0x43, 0x03, 0x01, 0x23];
+
+    let cmd = &[
+        0x40, 0x03, 0x04, 0x08, // TxLabel 4, Signal, ACP (1) and INT (2) SEID
+        0x01, 0x01, 0x01, // Media Transport, Length 1 (too long), dummy
+    ];
+    stream_request_response(&mut exec, &mut stream, &remote, cmd, rsp);
+}
+
+// These also test that the MediaTransport is decoded and received correctly.
+#[test]
+fn set_config_event_responder_send_works() {
+    let set_config_cmd = &[
+        0x40, 0x03, 0x04, 0x08, // TxLabel 4, Signal, ACP (1) and INT (2) SEID
+        0x01, 0x00, // Media Transport, Length 0
+    ];
+
+    expect_config_recv_cap_okay(
+        set_config_cmd,
+        StreamEndpointId(1),
+        StreamEndpointId(2),
+        ServiceCapability::MediaTransport,
+    );
+}
+
+#[test]
+fn set_config_event_responder_reject_works() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    let set_config_cmd = &[
+        0x40, 0x03, 0x04, 0x08, // TxLabel 4, Signal, ACP (1) and INT (2) SEID
+        0x01, 0x00, // Media Transport, Length 0
+    ];
+
+    assert!(remote.write(set_config_cmd).is_ok());
+
+    let respond_res = match next_request(&mut stream, &mut exec) {
+        Request::SetConfiguration {
+            responder,
+            local_stream_id,
+            remote_stream_id,
+            capabilities,
+        } => {
+            assert_eq!(StreamEndpointId(1), local_stream_id);
+            assert_eq!(StreamEndpointId(2), remote_stream_id);
+            assert_eq!(ServiceCapability::MediaTransport, capabilities[0]);
+            responder.reject(Some(&capabilities[0]), ErrorCode::UnsupportedConfiguration)
+        }
+        _ => panic!("should have received a SetConfiguration"),
+    };
+
+    assert!(respond_res.is_ok());
+
+    // Expected response: Same TxLabel (4) & ResponseReject, Signal,
+    // Relevant capabilitiy, Error Code (Unsupported Configure)
+    expect_remote_recv(&[0x43, 0x03, 0x01, 0x29], &remote);
+}
+
+// Set Config: Reporting
+
+#[test]
+fn set_config_bad_reporting_format() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    // TxLabel (4), ResponseReject, Signal, Relevant Cap (Reporting), BadPayloadFormat
+    let rsp = &[0x43, 0x03, 0x02, 0x18];
+
+    let cmd = &[
+        0x40, 0x03, 0x04, 0x08, // TxLabel 4, Signal, ACP (1) and INT (2) SEID
+        0x02, 0x01, 0x01, // Reporting, Length 1 (too long), dummy
+    ];
+    stream_request_response(&mut exec, &mut stream, &remote, cmd, rsp);
+}
+
+#[test]
+fn set_config_reporting_ok() {
+    let set_config_cmd = &[
+        0x40, 0x03, 0x04, 0x08, // TxLabel 4, Signal, ACP (1) and INT (2) SEID
+        0x02, 0x00, // Reporting, Length 0
+    ];
+
+    expect_config_recv_cap_okay(
+        set_config_cmd,
+        StreamEndpointId(1),
+        StreamEndpointId(2),
+        ServiceCapability::Reporting,
+    );
+}
+
+// Set Config: Content Protection
+
+#[test]
+fn set_config_bad_content_protection_format() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    // TxLabel (4), ResponseReject, Signal, Relevant Cap (CP), BadCpFormat
+    let rsp = &[0x43, 0x03, 0x04, 0x27];
+
+    let cmd = &[
+        0x40, 0x03, 0x04, 0x08, // TxLabel 4, Signal, ACP (1) and INT (2) SEID
+        0x04, 0x01, 0x01, // Content Protection (4), Length 1 (too short), dummy
+    ];
+    stream_request_response(&mut exec, &mut stream, &remote, cmd, rsp);
+
+    let cmd = &[
+        0x40, 0x03, 0x04, 0x08, // TxLabel 4, Signal, ACP (1) and INT (2) SEID
+        0x04, 0x02, // Content Protection (4), Length 2
+        0xF0, 0x0F, // CP Type 0x0FF0 (invalid)
+    ];
+    stream_request_response(&mut exec, &mut stream, &remote, cmd, rsp);
+}
+
+#[test]
+fn set_config_content_protection_ok() {
+    let set_config_cmd = &[
+        0x40, 0x03, 0x04, 0x08, // TxLabel 4, Signal, ACP (1) and INT (2) SEID
+        0x04, 0x02, // Content Protection (4), Length 2
+        0x01, 0x00, // LSB, MSB of DTCP
+    ];
+
+    expect_config_recv_cap_okay(
+        set_config_cmd,
+        StreamEndpointId(1),
+        StreamEndpointId(2),
+        ServiceCapability::ContentProtection {
+            protection_type: ContentProtectionType::DigitalTransmissionContentProtection,
+            extra: vec![],
+        },
+    );
+}
+
+// Set Config: Recovery
+
+#[rustfmt::skip]
+fn build_recovery_cmd(recovery_type: u8, mrws: u8, mnmp: u8) -> [u8; 9] {
+    [
+        0x40, 0x03, 0x04, 0x08, // TxLabel 4, Signal, ACP (1) and INT (2) SEID
+        0x03, 0x03,             // Recovery (3), length 3
+        recovery_type,          // Recovery Type
+        mrws,                   // Maximum Recovery Window Size
+        mnmp,                   // Maximum Number of Media Packets
+    ]
+}
+
+#[test]
+fn set_config_bad_recovery_type() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    // TxLabel (4), Signal, Relevant Cap (Recovery), BadRecoveryType
+    let rsp = &[0x43, 0x03, 0x03, 0x22];
+
+    // Forbidden Recovery Type
+    let cmd = &build_recovery_cmd(0x00, 0x01, 0x01);
+
+    stream_request_response(&mut exec, &mut stream, &remote, cmd, rsp);
+
+    // RFD recovery type
+    let cmd = &build_recovery_cmd(0x02, 0x01, 0x01);
+
+    stream_request_response(&mut exec, &mut stream, &remote, cmd, rsp);
+}
+
+#[test]
+fn set_config_bad_recovery_format() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    let cmd = &[
+        0x40, 0x03, 0x04, 0x08, // TxLabel 4, Signal, ACP (1) and INT (2) SEID
+        0x03, 0x01, 0x01, // Recovery (3), length 1, 0x01
+    ];
+    // TxLabel 4, ResponseReject, Relevant Cap (Recovery), BadRecoveryFormat
+    let rsp = &[0x43, 0x03, 0x03, 0x25];
+
+    stream_request_response(&mut exec, &mut stream, &remote, cmd, rsp);
+
+    // Bad Maximum Recovery Window Size (zero is not allowed)
+    let cmd = &build_recovery_cmd(0x01, 0x00, 0x01);
+    stream_request_response(&mut exec, &mut stream, &remote, cmd, rsp);
+    // Bad Maximum Recovery Window Size (too large)
+    let cmd = &build_recovery_cmd(0x01, 0x20, 0x01);
+    stream_request_response(&mut exec, &mut stream, &remote, cmd, rsp);
+    // Bad Maximum Number of Media Packets (zero is not allowed)
+    let cmd = &build_recovery_cmd(0x01, 0x01, 0x00);
+    stream_request_response(&mut exec, &mut stream, &remote, cmd, rsp);
+    // Bad Maximum Number of Media Packets (too large)
+    let cmd = &build_recovery_cmd(0x01, 0x01, 0x21);
+    stream_request_response(&mut exec, &mut stream, &remote, cmd, rsp);
+}
+
+#[test]
+fn set_config_recovery_ok() {
+    let set_config_cmd = &build_recovery_cmd(0x01, 0x01, 0x01);
+    expect_config_recv_cap_okay(
+        set_config_cmd,
+        StreamEndpointId(1),
+        StreamEndpointId(2),
+        ServiceCapability::Recovery {
+            recovery_type: 0x01,
+            max_recovery_window_size: 0x01,
+            max_number_media_packets: 0x01,
+        },
+    );
+}
+
+// Media Codec
+
+#[test]
+fn set_config_bad_media_codec_format() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    let cmd = &[
+        0x40, 0x03, 0x04, 0x08, // TxLabel 4, Signal, ACP (1) and INT (2) SEID
+        0x07, 0x01, 0x01, // Media Codec (7), length 1, dummy byte
+    ];
+    // TxLabel 4, ResponseReject, Relevant Cap (Media Codec), BadPayloadFormat
+    let rsp = &[0x43, 0x03, 0x07, 0x18];
+
+    stream_request_response(&mut exec, &mut stream, &remote, cmd, rsp);
+
+    let cmd = &[
+        0x40, 0x03, 0x04, 0x08, // TxLabel 4, Signal, ACP (1) and INT (2) SEID
+        0x07, 0x02, // Media Codec (7), length 2
+        0x40, // Unknown Media Type, RFA
+        0x01, // Media Codec Type
+    ];
+    stream_request_response(&mut exec, &mut stream, &remote, cmd, rsp);
+}
+
+#[test]
+fn set_config_media_type_ok() {
+    // Sample set config command sent from a phone
+    let set_config_cmd = &[
+        0x40, 0x03, 0x18, 0x04, // TxLabel 4, Signal, ACP (6) and INT (1) SEID
+        0x07, 0x06, // Media Codec (7), length 6
+        0x00, // Media Type: Audio
+        0x00, // Media Codec Type: SBC (0x00)
+        0x21, // Sampling Freq: 44.1khz (0x20), Channel Mode Joint Stereo (0x01)
+        0x15, // Block length 16 (0x10), 8 Subbands (0x04), Loudness Allocation (0x01)
+        0x02, // Minimum bitpool: 2
+        0x35, // Maximum bitpool: 53 (0x35)
+    ];
+    expect_config_recv_cap_okay(
+        set_config_cmd,
+        StreamEndpointId(6),
+        StreamEndpointId(1),
+        ServiceCapability::MediaCodec {
+            media_type: MediaType::Audio,
+            codec_type: MediaCodecType(0),
+            codec_extra: vec![0x21, 0x15, 0x02, 0x35],
+        },
+    );
+}
+
+// Reconfigure
+
+// Set config must be at least 1 SEID and one configuration long.
+incoming_cmd_length_fail_test!(reconfigure_length_too_short, 0x05, 1);
+
+#[test]
+fn reconfigure_invalid_capabilities() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    let cmd = &[
+        0x40, 0x05, 0x04, // TxLabel 4, Signal, ACP (1) SEID
+        0x03, 0x03, // Recovery (3), length 3,
+        0x01, 0x01, 0x01, // RFC2733, MRWS, MNMP
+    ];
+    // TxLabel (4), ResponseRreject, Relevant cap (Recovery), Invalid Capabilities
+    let rsp = &[0x43, 0x05, 0x03, 0x1A];
+
+    stream_request_response(&mut exec, &mut stream, &remote, cmd, rsp);
+}
+
+#[test]
+fn reconfig_event_responder_send_works() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    let reconfigure_cmd = &[
+        0x40, 0x05, 0x04, // TxLabel 4, Signal, ACP (1) SEID
+        0x07, 0x02, // Media Codec, Length 2
+        0x00, // Media Type: Audio
+        0x00, // Media Codec Type: SBC
+    ];
+
+    assert!(remote.write(reconfigure_cmd).is_ok());
+
+    let respond_res = match next_request(&mut stream, &mut exec) {
+        Request::Reconfigure {
+            responder,
+            local_stream_id,
+            capabilities,
+        } => {
+            assert_eq!(StreamEndpointId(1), local_stream_id);
+            assert_eq!(
+                ServiceCapability::MediaCodec {
+                    media_type: MediaType::Audio,
+                    codec_type: MediaCodecType(0),
+                    codec_extra: vec![],
+                },
+                capabilities[0]
+            );
+            responder.send()
+        }
+        _ => panic!("should have received a Reconfigure"),
+    };
+
+    assert!(respond_res.is_ok());
+
+    // Expected response: Same TxLabel (4) & ResponseAccept, Signal,
+    expect_remote_recv(&[0x42, 0x05], &remote);
+}
+
+#[test]
+fn reconfig_event_responder_reject_works() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    let reconfigure_cmd = &[
+        0x40, 0x05, 0x04, // TxLabel 4, Signal, ACP (1) SEID
+        0x07, 0x02, // Media Codec, Length 2
+        0x00, // Media Type: Audio
+        0x00, // Media Codec Type: SBC
+    ];
+
+    assert!(remote.write(reconfigure_cmd).is_ok());
+
+    let respond_res = match next_request(&mut stream, &mut exec) {
+        Request::Reconfigure {
+            responder,
+            local_stream_id,
+            capabilities,
+        } => {
+            assert_eq!(StreamEndpointId(1), local_stream_id);
+            assert_eq!(
+                ServiceCapability::MediaCodec {
+                    media_type: MediaType::Audio,
+                    codec_type: MediaCodecType(0),
+                    codec_extra: vec![],
+                },
+                capabilities[0]
+            );
+            responder.reject(Some(&capabilities[0]), ErrorCode::UnsupportedConfiguration)
+        }
+        _ => panic!("should have received a Reconfigure"),
+    };
+
+    assert!(respond_res.is_ok());
+
+    // Expected response: Same TxLabel (4) & ResponseReject, Signal,
+    // Relevant capability, Error Code (Unsupported Config)
+    expect_remote_recv(&[0x43, 0x05, 0x07, 0x29], &remote);
 }
