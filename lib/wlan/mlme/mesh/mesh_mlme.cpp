@@ -4,6 +4,7 @@
 
 #include <wlan/common/channel.h>
 #include <wlan/mlme/beacon.h>
+#include <wlan/mlme/device_caps.h>
 #include <wlan/mlme/mesh/mesh_mlme.h>
 #include <wlan/mlme/service.h>
 #include <zircon/status.h>
@@ -57,6 +58,10 @@ static zx_status_t BuildMeshBeacon(wlan_channel_t channel,
         .mesh_id = req.body()->mesh_id->data(),
         .mesh_id_len = req.body()->mesh_id->size(),
     };
+    const uint8_t* rates = GetRatesByChannel(
+        device->GetWlanInfo().ifc_info, channel.primary, &c.rates_len);
+    static_assert(sizeof(SupportedRate) == sizeof(rates[0]));
+    c.rates = reinterpret_cast<const SupportedRate*>(rates);
     return BuildBeacon(c, buffer, tim_ele_offset);
 }
 

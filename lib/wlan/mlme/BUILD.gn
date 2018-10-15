@@ -52,6 +52,7 @@ source_set("mlme") {
     "client/scanner.cpp",
     "client/station.cpp",
     "debug.cpp",
+    "device_caps.cpp",
     "device_interface.cpp",
     "dispatcher.cpp",
     "ht.cpp",

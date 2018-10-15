@@ -37,6 +37,7 @@ class BssInterface {
 
     virtual bool IsRsn() const = 0;
     virtual HtConfig Ht() const = 0;
+    virtual const SupportedRate* Rates(size_t* num_rates) const = 0;
 
     virtual zx_status_t SendMgmtFrame(MgmtFrame<>&& mgmt_frame) = 0;
     virtual zx_status_t SendDataFrame(DataFrame<>&& data_frame) = 0;

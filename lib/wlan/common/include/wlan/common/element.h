@@ -170,7 +170,7 @@ struct SupportedRate : public common::BitField<uint8_t> {
 // IEEE Std 802.11-2016, 9.4.2.3
 struct SupportedRatesElement : public Element<SupportedRatesElement, element_id::kSuppRates> {
     static bool Create(void* buf, size_t len, size_t* actual,
-                       const std::vector<SupportedRate>& rates);
+                       const SupportedRate rates[], size_t num_rates);
     static const size_t kMinLen = 1;
     static const size_t kMaxLen = 8;
 
@@ -274,7 +274,7 @@ struct CountryElement : public Element<CountryElement, element_id::kCountry> {
 struct ExtendedSupportedRatesElement
     : public Element<ExtendedSupportedRatesElement, element_id::kExtSuppRates> {
     static bool Create(void* buf, size_t len, size_t* actual,
-                       const std::vector<SupportedRate>& rates);
+                       const SupportedRate rates[], size_t num_rates);
     static const size_t kMinLen = 1;
     static const size_t kMaxLen = 255;
 

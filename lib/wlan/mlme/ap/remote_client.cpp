@@ -825,10 +825,9 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     // Write elements.
     ElementWriter w(assoc->elements, reserved_ie_len);
 
-    std::vector<SupportedRate> rates = {
-        SupportedRate::basic(12), SupportedRate(18), SupportedRate::basic(24), SupportedRate(36),
-        SupportedRate::basic(48), SupportedRate(72), SupportedRate(96),        SupportedRate(108)};
-    if (!w.write<SupportedRatesElement>(std::move(rates))) {
+    size_t num_rates;
+    auto* rates = bss_->Rates(&num_rates);
+    if (!w.write<SupportedRatesElement>(rates, num_rates)) {
         errorf("[client] [%s] could not write supported rates\n", addr_.ToString().c_str());
         return ZX_ERR_IO;
     }

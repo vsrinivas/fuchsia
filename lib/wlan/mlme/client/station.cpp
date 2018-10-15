@@ -283,7 +283,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     }
 
     auto supp_rates = client_capability.supported_rates;
-    if (!w.write<SupportedRatesElement>(std::move(supp_rates))) {
+    if (!w.write<SupportedRatesElement>(supp_rates.data(), supp_rates.size())) {
         errorf("could not write supported rates\n");
         service::SendAssocConfirm(device_,
                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
@@ -291,7 +291,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     }
 
     auto ext_rates = client_capability.ext_supported_rates;
-    if (!w.write<ExtendedSupportedRatesElement>(std::move(ext_rates))) {
+    if (!w.write<ExtendedSupportedRatesElement>(ext_rates.data(), ext_rates.size())) {
         errorf("could not write extended supported rates\n");
         service::SendAssocConfirm(device_,
                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);

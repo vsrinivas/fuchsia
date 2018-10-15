@@ -31,8 +31,8 @@ zx_status_t WriteSsid(ElementWriter* w, const uint8_t* ssid, size_t ssid_len) {
     return ZX_OK;
 }
 
-zx_status_t WriteSupportedRates(ElementWriter* w, const std::vector<SupportedRate>& rates) {
-    if (!w->write<SupportedRatesElement>(rates)) {
+zx_status_t WriteSupportedRates(ElementWriter* w, const SupportedRate rates[], size_t rates_len) {
+    if (!w->write<SupportedRatesElement>(rates, rates_len)) {
         errorf("could not write supported rates\n");
         return ZX_ERR_IO;
     }
@@ -90,9 +90,9 @@ zx_status_t WriteCountry(ElementWriter* w, const wlan_channel_t chan) {
     return ZX_OK;
 }
 
-zx_status_t WriteExtendedSupportedRates(ElementWriter* w,
-                                        const std::vector<SupportedRate>& ext_rates) {
-    if (!w->write<ExtendedSupportedRatesElement>(ext_rates)) {
+zx_status_t WriteExtendedSupportedRates(ElementWriter* w, const SupportedRate rates[],
+                                        size_t rates_len) {
+    if (!w->write<ExtendedSupportedRatesElement>(rates, rates_len)) {
         errorf("could not write extended supported rates\n");
         return ZX_ERR_IO;
     }
@@ -281,16 +281,18 @@ zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>* out_packet, comm
     ElementWriter w(bcn->elements, body_payload_len);
     if (WriteSsid(&w, kSsid, sizeof(kSsid)) != ZX_OK) { return ZX_ERR_IO; }
 
-    std::vector<SupportedRate> rates(std::cbegin(kSupportedRates), std::cend(kSupportedRates));
-    if (WriteSupportedRates(&w, rates) != ZX_OK) { return ZX_ERR_IO; }
+    if (WriteSupportedRates(&w, kSupportedRates, countof(kSupportedRates)) != ZX_OK) {
+        return ZX_ERR_IO;
+    }
 
     if (WriteDsssParamSet(&w, kBssChannel) != ZX_OK) { return ZX_ERR_IO; }
 
     if (WriteCountry(&w, kBssChannel) != ZX_OK) { return ZX_ERR_IO; }
 
-    std::vector<SupportedRate> ext_rates(std::cbegin(kExtendedSupportedRates),
-                                         std::cend(kExtendedSupportedRates));
-    if (WriteExtendedSupportedRates(&w, ext_rates) != ZX_OK) { return ZX_ERR_IO; }
+    if (WriteExtendedSupportedRates(&w, kExtendedSupportedRates,
+                                    countof(kExtendedSupportedRates)) != ZX_OK) {
+        return ZX_ERR_IO;
+    }
 
     ZX_DEBUG_ASSERT(bcn->Validate(w.size()));
     size_t body_len = bcn->len() + w.size();

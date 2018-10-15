@@ -52,15 +52,15 @@ bool SsidElement::Create(void* buf, size_t len, size_t* actual, const uint8_t* s
 const size_t SupportedRatesElement::kMaxLen;
 
 bool SupportedRatesElement::Create(void* buf, size_t len, size_t* actual,
-                                   const std::vector<SupportedRate>& rates) {
-    if (rates.size() > kMaxLen) return false;
-    size_t elem_size = sizeof(SupportedRatesElement) + rates.size();
+                                   const SupportedRate rates[], size_t num_rates) {
+    if (num_rates > kMaxLen) return false;
+    size_t elem_size = sizeof(SupportedRatesElement) + num_rates;
     if (elem_size > len) return false;
 
     auto elem = static_cast<SupportedRatesElement*>(buf);
     elem->hdr.id = element_id::kSuppRates;
-    elem->hdr.len = rates.size();
-    std::copy(rates.begin(), rates.end(), elem->rates);
+    elem->hdr.len = num_rates;
+    std::copy_n(rates, num_rates, elem->rates);
     *actual = elem_size;
     return true;
 }
@@ -160,15 +160,15 @@ bool CountryElement::Create(void* buf, size_t len, size_t* actual, const uint8_t
 const size_t ExtendedSupportedRatesElement::kMaxLen;
 
 bool ExtendedSupportedRatesElement::Create(void* buf, size_t len, size_t* actual,
-                                           const std::vector<SupportedRate>& rates) {
-    if (rates.size() > kMaxLen) return false;
-    size_t elem_size = sizeof(ExtendedSupportedRatesElement) + rates.size();
+                                           const SupportedRate rates[], size_t num_rates) {
+    if (num_rates > kMaxLen) return false;
+    size_t elem_size = sizeof(ExtendedSupportedRatesElement) + num_rates;
     if (elem_size > len) return false;
 
     auto elem = static_cast<ExtendedSupportedRatesElement*>(buf);
     elem->hdr.id = element_id::kExtSuppRates;
-    elem->hdr.len = rates.size();
-    std::copy(rates.begin(), rates.end(), elem->rates);
+    elem->hdr.len = num_rates;
+    std::copy_n(rates, num_rates, elem->rates);
     *actual = elem_size;
     return true;
 }

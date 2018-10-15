@@ -177,6 +177,7 @@ executable("common_tests") {
 
   sources = [
     "channel_scheduler_unittest.cpp",
+    "device_caps_unittest.cpp",
     "moving_average_unittest.cpp",
     "stats_unittest.cpp",
   ]

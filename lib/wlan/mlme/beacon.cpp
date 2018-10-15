@@ -16,10 +16,12 @@ static bool WriteSsid(ElementWriter* w, const BeaconConfig& config) {
 }
 
 static bool WriteSupportedRates(ElementWriter* w, const BeaconConfig& config) {
-    std::vector<SupportedRate> rates = {
-        SupportedRate::basic(12), SupportedRate(18), SupportedRate::basic(24), SupportedRate(36),
-        SupportedRate::basic(48), SupportedRate(72), SupportedRate(96),        SupportedRate(108)};
-    return w->write<SupportedRatesElement>(std::move(rates));
+    if (config.rates == nullptr || config.rates_len == 0) {
+        return true;
+    }
+
+    size_t num_rates = std::min(config.rates_len, SupportedRatesElement::kMaxLen);
+    return w->write<SupportedRatesElement>(config.rates, num_rates);
 }
 
 static bool WriteDsssParamSet(ElementWriter* w, const BeaconConfig& config) {
@@ -70,10 +72,20 @@ static bool WriteCountry(ElementWriter* w, const BeaconConfig& config) {
     return w->write<CountryElement>(kCountry, subbands);
 }
 
-static bool WriteExtendedSupportedRates(ElementWriter* w) {
-    std::vector<SupportedRate> ext_rates = {SupportedRate(48), SupportedRate(72), SupportedRate(96),
-                                            SupportedRate(108)};
-    return w->write<ExtendedSupportedRatesElement>(std::move(ext_rates));
+static bool WriteExtendedSupportedRates(ElementWriter* w, const BeaconConfig& config) {
+    if (config.rates == nullptr) {
+        return true;
+    }
+
+    // Don't write the Extended Supported Rates element if everything fits in Supported rates
+    if (config.rates_len <= SupportedRatesElement::kMaxLen) {
+        return true;
+    }
+
+    const SupportedRate* ext_rates = config.rates + SupportedRatesElement::kMaxLen;
+    size_t num_rates = config.rates_len - SupportedRatesElement::kMaxLen;
+
+    return w->write<ExtendedSupportedRatesElement>(ext_rates, num_rates);
 }
 
 static bool WriteHtCapabilities(ElementWriter* w, const BeaconConfig& config) {
@@ -126,7 +138,7 @@ static bool WriteElements(ElementWriter* w, const BeaconConfig& config, size_t* 
         && WriteDsssParamSet(w, config)
         && WriteTim(w, config.ps_cfg, rel_tim_ele_offset)
         && WriteCountry(w, config)
-        && WriteExtendedSupportedRates(w)
+        && WriteExtendedSupportedRates(w, config)
         && WriteRsne(w, config)
         && WriteHtCapabilities(w, config)
         && WriteHtOperation(w, config)

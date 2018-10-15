@@ -6,6 +6,7 @@
 
 #include <wlan/common/channel.h>
 #include <wlan/mlme/debug.h>
+#include <wlan/mlme/device_caps.h>
 #include <wlan/mlme/key.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/mlme.h>
@@ -535,6 +536,13 @@ HtConfig InfraBss::Ht() const {
         .cbw_40_rx_ready = true,
         .cbw_40_tx_ready = false,
     };
+}
+
+const SupportedRate* InfraBss::Rates(size_t* num_rates) const {
+    const uint8_t* rates = GetRatesByChannel(device_->GetWlanInfo().ifc_info,
+                                             device_->GetState()->channel().primary, num_rates);
+    static_assert(sizeof(SupportedRate) == sizeof(rates[0]));
+    return reinterpret_cast<const SupportedRate*>(rates);
 }
 
 }  // namespace wlan

@@ -87,7 +87,7 @@ TEST(ProbeRequest, Validate) {
 
     std::vector<SupportedRate> rates{SupportedRate(2), SupportedRate(4), SupportedRate(11),
                                      SupportedRate(22)};
-    ASSERT_TRUE(writer.write<SupportedRatesElement>(rates));
+    ASSERT_TRUE(writer.write<SupportedRatesElement>(rates.data(), rates.size()));
 
     auto probe_request = FromBytes<ProbeRequest>(buf, writer.size());
     EXPECT_TRUE(probe_request->Validate(writer.size()));
@@ -99,7 +99,7 @@ TEST(ProbeRequest, OutOfOrderElements) {
 
     std::vector<SupportedRate> rates{SupportedRate(2), SupportedRate(4), SupportedRate(11),
                                      SupportedRate(22)};
-    ASSERT_TRUE(writer.write<SupportedRatesElement>(rates));
+    ASSERT_TRUE(writer.write<SupportedRatesElement>(rates.data(), rates.size()));
 
     const uint8_t ssid[] = {'t', 'e', 's', 't', ' ', 's', 's', 'i', 'd'};
     ASSERT_TRUE(writer.write<SsidElement>(ssid, sizeof(ssid)));

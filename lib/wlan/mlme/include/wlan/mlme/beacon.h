@@ -31,6 +31,8 @@ struct BeaconConfig {
     MeshConfiguration* mesh_config;
     const uint8_t* mesh_id;
     size_t mesh_id_len;
+    const SupportedRate* rates; // covers both Supported Rates and Ext Sup Rates elements
+    size_t rates_len;
 };
 
 zx_status_t BuildBeacon(const BeaconConfig& config, MgmtFrame<Beacon>* buffer,

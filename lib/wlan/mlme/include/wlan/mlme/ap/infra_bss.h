@@ -64,6 +64,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
 
     bool IsRsn() const override;
     HtConfig Ht() const override;
+    const SupportedRate* Rates(size_t* num_rates) const override;
 
     wlan_channel_t Chan() const override { return chan_; }
 

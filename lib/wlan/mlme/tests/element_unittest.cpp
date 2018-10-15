@@ -139,7 +139,7 @@ TEST(ElementWriter, Insert) {
 
     std::vector<SupportedRate> rates = {SupportedRate(1), SupportedRate(2), SupportedRate(3),
                                         SupportedRate(4)};
-    EXPECT_TRUE(w.write<SupportedRatesElement>(std::move(rates)));
+    EXPECT_TRUE(w.write<SupportedRatesElement>(rates.data(), rates.size()));
     EXPECT_EQ(12u, w.size());
 
     EXPECT_TRUE(w.write<DsssParamSetElement>(11));
@@ -177,16 +177,16 @@ TEST_F(Elements, SsidTooLong) {
 }
 
 TEST_F(Elements, SupportedRates) {
-    std::vector<SupportedRate> rates = {SupportedRate(1), SupportedRate(2), SupportedRate(3)};
-    EXPECT_TRUE(SupportedRatesElement::Create(buf_, sizeof(buf_), &actual_, rates));
-    EXPECT_EQ(sizeof(SupportedRatesElement) + rates.size(), actual_);
+    SupportedRate rates[] = {SupportedRate(1), SupportedRate(2), SupportedRate(3)};
+    EXPECT_TRUE(SupportedRatesElement::Create(buf_, sizeof(buf_), &actual_, rates, countof(rates)));
+    EXPECT_EQ(sizeof(SupportedRatesElement) + sizeof(rates), actual_);
 
     // Check that the rates are the same. mismatch will return a pair of iterators pointing to
     // mismatching elements, or the end() iterator.
     auto element = FromBytes<SupportedRatesElement>(buf_, sizeof(buf_));
     ASSERT_NE(nullptr, element);
-    auto pair = std::mismatch(rates.begin(), rates.end(), element->rates);
-    EXPECT_EQ(rates.end(), pair.first);
+    auto pair = std::mismatch(std::cbegin(rates), std::cend(rates), element->rates);
+    EXPECT_EQ(std::cend(rates), pair.first);
 }
 
 TEST_F(Elements, SupportedRatesTooLong) {
@@ -194,7 +194,8 @@ TEST_F(Elements, SupportedRatesTooLong) {
                                         SupportedRate(4), SupportedRate(5), SupportedRate(6),
                                         SupportedRate(7), SupportedRate(8), SupportedRate(9)};
     ASSERT_GT(rates.size(), SupportedRatesElement::kMaxLen);
-    EXPECT_FALSE(SupportedRatesElement::Create(buf_, sizeof(buf_), &actual_, rates));
+    EXPECT_FALSE(SupportedRatesElement::Create(buf_, sizeof(buf_), &actual_,
+                                               rates.data(), rates.size()));
 }
 
 TEST_F(Elements, DsssParamSet) {
