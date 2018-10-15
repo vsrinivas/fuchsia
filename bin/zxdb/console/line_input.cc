@@ -32,6 +32,7 @@ constexpr char kKeyFormFeed = 12;
 constexpr char kKeyEnter = 13;
 constexpr char kKeyControlN = 14;
 constexpr char kKeyControlP = 16;
+constexpr char kKeyControlU = 21;
 constexpr char kKeyEsc = 27;
 constexpr char kKeyBackspace = 127;
 
@@ -119,6 +120,9 @@ bool LineInputBase::OnInput(char c) {
       break;
     case kKeyControlP:
       MoveUp();
+      break;
+    case kKeyControlU:
+      HandleNegAck();
       break;
     case kKeyEsc:
       reading_escaped_input_ = true;
@@ -273,6 +277,12 @@ void LineInputBase::HandleTab() {
   // Show the new completion.
   cur_line() = completions_[completion_index_];
   pos_ = cur_line().size();
+  RepaintLine();
+}
+
+void LineInputBase::HandleNegAck() {
+  cur_line() = cur_line().substr(pos_);
+  pos_ = 0;
   RepaintLine();
 }
 

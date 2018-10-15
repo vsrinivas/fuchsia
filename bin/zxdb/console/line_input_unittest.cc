@@ -12,6 +12,8 @@ namespace {
 // Some common terminal codes.
 #define TERM_UP "\x1b[A"
 #define TERM_DOWN "\x1b[B"
+#define TERM_LEFT "\x1b[D"
+#define TERM_RIGHT "\x1b[C"
 
 // Dummy completion functions that return two completions.
 std::vector<std::string> CompletionCallback(const std::string& line) {
@@ -214,6 +216,30 @@ TEST(LineInput, Scroll) {
   // Move left, the line should scroll back.
   EXPECT_FALSE(input.OnInput(2));  // 2 = Control-B.
   EXPECT_EQ("\rABCDEFGHIJ\x1b[0K\r\x1B[9C", input.GetAndClearOutput());
+}
+
+TEST(LineInput, NegAck) {
+  TestLineInput input("ABCDE");
+  input.BeginReadLine();
+
+  // Empty should remain with them prompt.
+  EXPECT_FALSE(input.OnInput(21));  // 21 = Control-U
+  EXPECT_EQ(input.line(), "");
+
+  // Adding characters and then Control-U should clear.
+  input.OnInputStr("12345");
+  EXPECT_FALSE(input.OnInput(21));  // 21 = Control-U
+  EXPECT_EQ(input.line(), "");
+
+  // In the middle of the line should clear until the cursor.
+  input.OnInputStr("0123456789");
+  EXPECT_FALSE(input.OnInputStr(TERM_LEFT));
+  EXPECT_FALSE(input.OnInputStr(TERM_LEFT));
+  EXPECT_FALSE(input.OnInputStr(TERM_LEFT));
+  EXPECT_FALSE(input.OnInputStr(TERM_LEFT));
+  EXPECT_FALSE(input.OnInput(21));  // 21 = Control-U
+  EXPECT_EQ(input.line(), "6789");
+  EXPECT_EQ(input.pos(), 0u);
 }
 
 }  // namespace zxdb

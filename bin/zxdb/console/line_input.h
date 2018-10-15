@@ -90,6 +90,8 @@ class LineInputBase {
   void HandleFormFeed();
   void HandleEnter();
   void HandleTab();
+  // NegAck is the name of Ctrl-U in ASCII world.
+  void HandleNegAck();
 
   void Insert(char c);
   void MoveLeft();
