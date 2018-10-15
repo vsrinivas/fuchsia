@@ -12,6 +12,7 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/fvm.cpp \
+    $(LOCAL_DIR)/fvm-check.cpp \
     $(LOCAL_DIR)/fvm-lz4.cpp \
 
 MODULE_STATIC_LIBS := \
@@ -39,6 +40,7 @@ MODULE_TYPE := hostlib
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/fvm.cpp \
+    $(LOCAL_DIR)/fvm-check.cpp \
     $(LOCAL_DIR)/fvm-lz4.cpp \
 
 MODULE_COMPILEFLAGS := \

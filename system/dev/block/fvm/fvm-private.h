@@ -164,11 +164,11 @@ private:
 
     // Mark a slice as free in the metadata structure.
     // Update free slice accounting.
-    void FreePhysicalSlice(size_t pslice) TA_REQ(lock_);
+    void FreePhysicalSlice(VPartition* vp, size_t pslice) TA_REQ(lock_);
 
     // Mark a slice as allocated in the metadata structure.
     // Update allocated slice accounting.
-    void AllocatePhysicalSlice(size_t pslice, uint64_t vpart, uint64_t vslice) TA_REQ(lock_);
+    void AllocatePhysicalSlice(VPartition* vp, size_t pslice, uint64_t vslice) TA_REQ(lock_);
 
     // Given a physical slice (acting as an index into the slice table),
     // return the associated slice entry.
