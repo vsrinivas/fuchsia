@@ -5,6 +5,7 @@
 
 import errno
 import os
+import shutil
 
 
 def make_dir(file_path):
@@ -20,3 +21,24 @@ def make_dir(file_path):
         else:
             raise
     return file_path
+
+
+def copy_tree(src, dst):
+    '''Recursively copies a directory into another.
+    Differs with shutil.copytree in that it won't fail if the destination
+    directory already exists.
+    '''
+    if not os.path.isdir(dst):
+        os.mkdir(dst)
+    for path, directories, files in os.walk(src):
+        def get_path(name):
+            source_path = os.path.join(path, name)
+            dest_path = os.path.join(dst, os.path.relpath(source_path, src))
+            return (source_path, dest_path)
+        for dir in directories:
+            source, dest = get_path(dir)
+            if not os.path.isdir(dest):
+                os.mkdir(dest)
+        for file in files:
+            source, dest = get_path(file)
+            shutil.copy2(source, dest)

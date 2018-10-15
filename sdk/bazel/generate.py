@@ -20,6 +20,7 @@ from mako.lookup import TemplateLookup
 from mako.template import Template
 sys.path += [os.path.join(FUCHSIA_ROOT, 'scripts', 'sdk', 'common')]
 from frontend import Frontend
+from files import copy_tree
 
 from create_test_workspace import create_test_workspace, SdkWorkspaceInfo
 import template_model as model
@@ -40,7 +41,7 @@ class BazelBuilder(Frontend):
     def __init__(self, **kwargs):
         super(BazelBuilder, self).__init__(**kwargs)
         self.has_dart = False
-        self.has_sysroot = False
+        self.has_cc = False
         self.dart_vendor_packages = {}
         self.target_arches = []
         self.workspace_info = SdkWorkspaceInfo()
@@ -78,6 +79,7 @@ class BazelBuilder(Frontend):
         with open(path, 'w') as file:
             file.write(template.render(data=data))
 
+
     def add_dart_vendor_package(self, name, version):
         '''Adds a reference to a new Dart third-party package.'''
         if name == 'flutter' and version == 'flutter_sdk':
@@ -93,14 +95,28 @@ class BazelBuilder(Frontend):
             self.dart_vendor_packages[name] = version
 
 
-    def prepare(self, arch):
+    def prepare(self, arch, types):
         self.target_arches = arch['target']
-        # Copy the static files.
-        shutil.copytree(self.local('base'), self.output)
 
+        # Copy the common files.
+        shutil.copytree(self.local('base', 'common'), self.output)
+        # Copy C/C++ files if needed.
+        if ('sysroot' in types or 'cc_source_library' in types or
+            'cc_prebuilt_library' in types):
+            self.has_cc = True
+            copy_tree(self.local('base', 'cc'), self.output)
+        # Copy Dart files if needed.
+        if 'dart_library' in types:
+            self.has_dart = True
+            copy_tree(self.local('base', 'dart'), self.output)
 
-    def finalize(self, arch):
         self.install_crosstool(arch)
+
+        self.workspace_info.with_cc = self.has_cc
+        self.workspace_info.with_dart = self.has_dart
+
+
+    def finalize(self, arch, types):
         self.install_tools()
         self.install_dart()
 
@@ -116,7 +132,7 @@ class BazelBuilder(Frontend):
         '''Generates crosstool.bzl based on the availability of sysroot
         versions.
         '''
-        if not self.has_sysroot:
+        if not self.has_cc:
             return
         crosstool = model.Crosstool()
         for arch in arches['target']:
@@ -145,8 +161,6 @@ class BazelBuilder(Frontend):
 
 
     def install_dart_library_atom(self, atom):
-        self.has_dart = True
-
         package_name = atom['name']
         name = sanitize(package_name)
         library = model.DartLibrary(name, package_name)
@@ -235,7 +249,6 @@ class BazelBuilder(Frontend):
 
 
     def install_sysroot_atom(self, atom):
-        self.has_sysroot = True
         for arch in self.target_arches:
             base = self.dest('arch', arch, 'sysroot')
             arch_data = atom['versions'][arch]
@@ -262,6 +275,8 @@ class BazelBuilder(Frontend):
     def install_fidl_library_atom(self, atom):
         name = sanitize(atom['name'])
         data = model.FidlLibrary(name, atom['name'])
+        data.with_cc = self.has_cc
+        data.with_dart = self.has_dart
         base = self.dest('fidl', name)
         self._copy_files(atom['sources'], atom['root'], base, data.srcs)
         for dep in atom['deps']:

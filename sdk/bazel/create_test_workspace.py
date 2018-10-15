@@ -18,7 +18,7 @@ sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'mako')]
 from mako.lookup import TemplateLookup
 from mako.template import Template
 sys.path += [os.path.join(FUCHSIA_ROOT, 'scripts', 'sdk', 'common')]
-from files import make_dir
+from files import copy_tree, make_dir
 
 
 class SdkWorkspaceInfo(object):
@@ -30,6 +30,10 @@ class SdkWorkspaceInfo(object):
         # Map of target to list of header files.
         # Used to verify that including said headers works properly.
         self.headers = {}
+        # Whether the workspace has C/C++ content.
+        self.with_cc = False
+        # Whether the workspace has Dart content.
+        self.with_dart = False
 
 
 def write_file(path, template_name, data):
@@ -46,21 +50,30 @@ def create_test_workspace(sdk, output, workspace_info):
     shutil.rmtree(output, True)
 
     # Copy the base tests.
-    shutil.copytree(os.path.join(SCRIPT_DIR, 'tests'), output)
+    copy_tree(os.path.join(SCRIPT_DIR, 'tests', 'common'), output)
+    if workspace_info.with_cc:
+        copy_tree(os.path.join(SCRIPT_DIR, 'tests', 'cc'), output)
+    if workspace_info.with_dart:
+        copy_tree(os.path.join(SCRIPT_DIR, 'tests', 'dart'), output)
 
     # WORKSPACE file.
     write_file(os.path.join(output, 'WORKSPACE'), 'workspace', {
         'sdk_path': os.path.relpath(sdk, output),
+        'with_cc': workspace_info.with_cc,
+        'with_dart': workspace_info.with_dart,
     })
 
-    # Generate test to verify that headers compile fine.
-    headers = workspace_info.headers
-    header_base = os.path.join(output, 'headers')
-    write_file(make_dir(os.path.join(header_base, 'BUILD')), 'headers_build', {
-        'deps': list(filter(lambda k: headers[k], headers.keys())),
-    })
-    write_file(make_dir(os.path.join(header_base, 'headers.cc')), 'headers', {
-        'headers': headers,
-    })
+    if workspace_info.with_cc:
+        # Generate test to verify that headers compile fine.
+        headers = workspace_info.headers
+        header_base = os.path.join(output, 'headers')
+        write_file(make_dir(os.path.join(header_base, 'BUILD')),
+                   'headers_build', {
+            'deps': list(filter(lambda k: headers[k], headers.keys())),
+        })
+        write_file(make_dir(os.path.join(header_base, 'headers.cc')),
+                   'headers', {
+            'headers': headers,
+        })
 
     return True

@@ -1,7 +1,5 @@
 <%include file="header.mako" />
 
-load("//build_defs:cc_fidl_library.bzl", "cc_fidl_library")
-load("//build_defs:dart_fidl_library.bzl", "dart_fidl_library")
 load("//build_defs:fidl_library.bzl", "fidl_library")
 
 package(default_visibility = ["//visibility:public"])
@@ -21,6 +19,9 @@ fidl_library(
     ],
 )
 
+% if data.with_cc:
+load("//build_defs:cc_fidl_library.bzl", "cc_fidl_library")
+
 cc_fidl_library(
     name = "${data.name}_cc",
     library = ":${data.name}",
@@ -32,8 +33,13 @@ cc_fidl_library(
         % endfor
     ],
 )
+% endif
+
+% if data.with_dart:
+load("//build_defs:dart_fidl_library.bzl", "dart_fidl_library")
 
 dart_fidl_library(
     name = "${data.name}_dart",
     library = ":${data.name}",
 )
+% endif

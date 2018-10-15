@@ -50,11 +50,11 @@ class Frontend(object):
           path = os.path.join(self.output, *args)
         return make_dir(path)
 
-    def prepare(self, arch):
+    def prepare(self, arch, atom_types):
         '''Called before elements are processed.'''
         pass
 
-    def finalize(self, arch):
+    def finalize(self, arch, atom_types):
         '''Called after all elements have been processed.'''
         pass
 
@@ -69,17 +69,18 @@ class Frontend(object):
             def load_metadata(*args):
                 with open(self.source(*args), 'r') as meta_file:
                     return json.load(meta_file)
-
             manifest = load_metadata('meta', 'manifest.json')
-            self.prepare(manifest['arch'])
+            atoms = [load_metadata(p) for p in manifest['parts']]
+            types = set([a['type'] for a in atoms])
+
+            self.prepare(manifest['arch'], types)
 
             # Process each SDK atom.
-            for part in manifest['parts']:
-                atom = load_metadata(part)
+            for atom in atoms:
                 type = atom['type']
                 getattr(self, 'install_%s_atom' % type, self._handle_atom)(atom)
 
-            self.finalize(manifest['arch'])
+            self.finalize(manifest['arch'], types)
 
             # Reset the source directory, which may be about to disappear.
             self._source_dir = ''

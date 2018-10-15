@@ -46,6 +46,8 @@ class FidlLibrary(object):
         self.library = library
         self.srcs = []
         self.deps = []
+        self.with_cc = False
+        self.with_dart = False
 
 
 class Arch(object):
