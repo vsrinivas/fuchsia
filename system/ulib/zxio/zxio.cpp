@@ -28,7 +28,7 @@ static_assert(ZXIO_READABLE == __ZX_OBJECT_READABLE,
               "ZXIO signal bits should match ZX");
 static_assert(ZXIO_WRITABLE == __ZX_OBJECT_WRITABLE,
               "ZXIO signal bits should match ZX");
-static_assert(ZXIO_READ_DISABLED == ZX_SOCKET_READ_DISABLED,
+static_assert(ZXIO_READ_DISABLED == ZX_SOCKET_PEER_WRITE_DISABLED,
               "ZXIO signal bits should match ZX");
 static_assert(ZXIO_WRITE_DISABLED == ZX_SOCKET_WRITE_DISABLED,
               "ZXIO signal bits should match ZX");

@@ -45,7 +45,7 @@ static ssize_t zx_pipe_read_internal(zx_handle_t h, void* data, size_t len, int 
         if (r == ZX_ERR_SHOULD_WAIT && !nonblock) {
             zx_signals_t pending;
             r = zx_object_wait_one(h,
-                                   ZX_SOCKET_READABLE | ZX_SOCKET_READ_DISABLED | ZX_SOCKET_PEER_CLOSED,
+                                   ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED,
                                    ZX_TIME_INFINITE,
                                    &pending);
             if (r < 0) {
@@ -54,7 +54,7 @@ static ssize_t zx_pipe_read_internal(zx_handle_t h, void* data, size_t len, int 
             if (pending & ZX_SOCKET_READABLE) {
                 continue;
             }
-            if (pending & (ZX_SOCKET_READ_DISABLED | ZX_SOCKET_PEER_CLOSED)) {
+            if (pending & (ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED)) {
                 return 0;
             }
             // impossible
@@ -122,26 +122,26 @@ static void zx_pipe_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle,
     *handle = p->h;
     zx_signals_t signals = 0;
     if (events & POLLIN) {
-        signals |= ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_READ_DISABLED;
+        signals |= ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED;
     }
     if (events & POLLOUT) {
         signals |= ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED;
     }
     if (events & POLLRDHUP) {
-        signals |= ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_READ_DISABLED;
+        signals |= ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED;
     }
     *_signals = signals;
 }
 
 static void zx_pipe_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* _events) {
     uint32_t events = 0;
-    if (signals & (ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_READ_DISABLED)) {
+    if (signals & (ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED)) {
         events |= POLLIN;
     }
     if (signals & (ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED)) {
         events |= POLLOUT;
     }
-    if (signals & (ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_READ_DISABLED)) {
+    if (signals & (ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED)) {
         events |= POLLRDHUP;
     }
     *_events = events;

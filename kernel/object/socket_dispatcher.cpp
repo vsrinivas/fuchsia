@@ -134,9 +134,9 @@ zx_status_t SocketDispatcher::Shutdown(uint32_t how) TA_NO_THREAD_SAFETY_ANALYSI
     zx_signals_t signals = GetSignalsStateLocked();
     // If we're already shut down in the requested way, return immediately.
     const uint32_t want_signals =
-        (shutdown_read ? ZX_SOCKET_READ_DISABLED : 0) |
+        (shutdown_read ? ZX_SOCKET_PEER_WRITE_DISABLED : 0) |
         (shutdown_write ? ZX_SOCKET_WRITE_DISABLED : 0);
-    const uint32_t have_signals = signals & (ZX_SOCKET_READ_DISABLED | ZX_SOCKET_WRITE_DISABLED);
+    const uint32_t have_signals = signals & (ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_WRITE_DISABLED);
     if (want_signals == have_signals) {
         return ZX_OK;
     }
@@ -144,8 +144,7 @@ zx_status_t SocketDispatcher::Shutdown(uint32_t how) TA_NO_THREAD_SAFETY_ANALYSI
     zx_signals_t set_mask = 0u;
     if (shutdown_read) {
         read_disabled_ = true;
-        if (is_empty())
-            set_mask |= ZX_SOCKET_READ_DISABLED;
+        set_mask |= ZX_SOCKET_PEER_WRITE_DISABLED;
     }
     if (shutdown_write) {
         clear_mask |= ZX_SOCKET_WRITABLE;
@@ -171,17 +170,12 @@ zx_status_t SocketDispatcher::ShutdownOtherLocked(uint32_t how) {
     zx_signals_t clear_mask = 0u;
     zx_signals_t set_mask = 0u;
     if (shutdown_read) {
-        // If the other end shut down reading, we can't write any more.
         clear_mask |= ZX_SOCKET_WRITABLE;
         set_mask |= ZX_SOCKET_WRITE_DISABLED;
     }
     if (shutdown_write) {
-        // If the other end shut down writing, we can't read any more than already exists in the
-        // buffer. If we're empty, set ZX_SOCKET_READ_DISABLED now. If we aren't empty, Read() will
-        // set this bit after reading the remaining data from the socket.
         read_disabled_ = true;
-        if (is_empty())
-            set_mask |= ZX_SOCKET_READ_DISABLED;
+        set_mask |= ZX_SOCKET_PEER_WRITE_DISABLED;
     }
 
     UpdateStateLocked(clear_mask, set_mask);
@@ -340,8 +334,6 @@ zx_status_t SocketDispatcher::Read(user_out_ptr<void> dst, size_t len,
         clear |= ZX_SOCKET_READ_THRESHOLD;
 
     if (is_empty()) {
-        if (read_disabled_)
-            set |= ZX_SOCKET_READ_DISABLED;
         clear |= ZX_SOCKET_READABLE;
     }
     if (set || clear) {

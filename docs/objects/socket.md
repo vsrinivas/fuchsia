@@ -65,12 +65,11 @@ The following signals may be set for a socket object:
 **ZX_SOCKET_PEER_CLOSED** the other endpoint of this socket has
 been closed.
 
-**ZX_SOCKET_READ_DISABLED** reading (beyond already buffered data) is disabled
-permanently for this endpoint either because of passing
-**ZX_SOCKET_SHUTDOWN_READ** to this endpoint or passing
-**ZX_SOCKET_SHUTDOWN_WRITE** to the peer. Reads on a socket endpoint with this
-signal raised will succeed so long as there is data in the socket that was
-written before reading was disabled.
+**ZX_SOCKET_PEER_WRITE_DISABLED** writing is disabled permanently for the other
+endpoint either because of passing **ZX_SOCKET_SHUTDOWN_READ** to this endpoint
+or passing **ZX_SOCKET_SHUTDOWN_WRITE** to the peer. Reads on a socket endpoint
+with this signal raised will succeed so long as there is data in the socket that
+was written before writing was disabled.
 
 **ZX_SOCKET_WRITE_DISABLED** writing is disabled permanently for this endpoint
 either because of passing **ZX_SOCKET_SHUTDOWN_WRITE** to this endpoint or
