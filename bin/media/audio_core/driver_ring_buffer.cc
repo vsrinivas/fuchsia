@@ -4,8 +4,6 @@
 
 #include "garnet/bin/media/audio_core/driver_ring_buffer.h"
 
-#include <lib/zx/vmar.h>
-
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -25,12 +23,6 @@ fbl::RefPtr<DriverRingBuffer> DriverRingBuffer::Create(zx::vmo vmo,
   return ret;
 }
 
-DriverRingBuffer::~DriverRingBuffer() {
-  if (virt_ != nullptr) {
-    zx_vmar_unmap(vmo_.get(), reinterpret_cast<uintptr_t>(virt_), size_);
-  }
-}
-
 zx_status_t DriverRingBuffer::Init(zx::vmo vmo, uint32_t frame_size,
                                    uint32_t frame_count, bool input) {
   if (!vmo.is_valid()) {
@@ -43,35 +35,33 @@ zx_status_t DriverRingBuffer::Init(zx::vmo vmo, uint32_t frame_size,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  frame_size_ = frame_size;
-  frames_ = frame_count;
-  size_ = static_cast<uint64_t>(frame_size_ * frames_);
-
-  zx_status_t res;
   uint64_t vmo_size;
-  vmo_ = fbl::move(vmo);
-  res = vmo_.get_size(&vmo_size);
+  zx_status_t res = vmo.get_size(&vmo_size);
 
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get ring buffer VMO size (res " << res << ")";
     return res;
   }
 
-  if (size_ > vmo_size) {
-    FXL_LOG(ERROR) << "Driver reported ring buffer size (" << size_
+  uint64_t size = static_cast<uint64_t>(frame_size) * frame_count;
+  if (size > vmo_size) {
+    FXL_LOG(ERROR) << "Driver-reported ring buffer size (" << size
                    << ") is greater than VMO size (" << vmo_size << ")";
     return res;
   }
 
   // Map the VMO into our address space.
-  // TODO(johngro) : How do I specify the cache policy for this mapping?
+  // TODO(johngro): How do I specify the cache policy for this mapping?
   zx_vm_option_t flags = ZX_VM_PERM_READ | (input ? 0 : ZX_VM_PERM_WRITE);
-  res = zx_vmar_map(zx_vmar_root_self(), flags, 0u, vmo_.get(), 0u, size_,
-                    reinterpret_cast<uintptr_t*>(&virt_));
+  res = vmo_mapper_.Map(fbl::move(vmo), 0u, size, flags);
+
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map ring buffer VMO (res " << res << ")";
     return res;
   }
+
+  frame_size_ = frame_size;
+  frames_ = frame_count;
 
   return res;
 }

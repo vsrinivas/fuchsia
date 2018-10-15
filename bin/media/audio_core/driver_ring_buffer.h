@@ -7,6 +7,7 @@
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 
 namespace media {
@@ -17,25 +18,25 @@ class DriverRingBuffer : public fbl::RefCounted<DriverRingBuffer> {
   static fbl::RefPtr<DriverRingBuffer> Create(zx::vmo vmo, uint32_t frame_size,
                                               uint32_t frame_count, bool input);
 
-  uint64_t size() const { return size_; }
+  uint64_t size() const { return vmo_mapper_.size(); }
   uint32_t frames() const { return frames_; }
   uint32_t frame_size() const { return frame_size_; }
-  uint8_t* virt() const { return reinterpret_cast<uint8_t*>(virt_); }
+  uint8_t* virt() const {
+    return reinterpret_cast<uint8_t*>(vmo_mapper_.start());
+  }
 
  private:
   friend class fbl::RefPtr<DriverRingBuffer>;
 
   DriverRingBuffer() {}
-  ~DriverRingBuffer();
+  ~DriverRingBuffer() {}
 
   zx_status_t Init(zx::vmo vmo, uint32_t frame_size, uint32_t frame_count,
                    bool input);
 
-  zx::vmo vmo_;
-  uint64_t size_ = 0;
+  fzl::VmoMapper vmo_mapper_;
   uint32_t frames_ = 0;
   uint32_t frame_size_ = 0;
-  void* virt_ = nullptr;
 };
 
 }  // namespace audio
