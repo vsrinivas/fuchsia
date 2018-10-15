@@ -7,7 +7,7 @@
 #include <zircon/compiler.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/mmio.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/optional.h>
 #include "common.h"
 
 namespace astro_display {
@@ -31,7 +31,7 @@ private:
     void EnableScaling(bool enable);
     void Enable();
 
-    fbl::unique_ptr<ddk::MmioBuffer>    vpu_mmio_;
+    fbl::optional<ddk::MmioBuffer>      vpu_mmio_;
     platform_device_protocol_t          pdev_ = {nullptr, nullptr};
 
     // Framebuffer dimension

@@ -465,7 +465,7 @@ zx_status_t DwMipiDsi::Init(zx_device_t* parent) {
         DISP_ERROR("DwMipiDsi: Could not map MIPI DSI mmio\n");
         return status;
     }
-    mipi_dsi_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    mipi_dsi_mmio_ = ddk::MmioBuffer(mmio);
 
     initialized_ = true;
     return status;

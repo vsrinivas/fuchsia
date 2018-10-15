@@ -12,6 +12,7 @@
 #include <ddk/protocol/platform-bus.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <fbl/unique_ptr.h>
 #include <string.h>
 
 namespace amlogic_clock {
@@ -32,7 +33,7 @@ zx_status_t AmlClock::InitHiuRegs(pdev_device_info_t* info) {
         zxlogf(ERROR, "aml-clk: could not map periph mmio: %d\n", status);
         return status;
     }
-    hiu_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    hiu_mmio_ = ddk::MmioBuffer(mmio);
 
     return ZX_OK;
 }
@@ -46,7 +47,7 @@ zx_status_t AmlClock::InitMsrRegs(pdev_device_info_t* info) {
         zxlogf(ERROR, "aml-clk: could not map periph mmio: %d\n", status);
         return status;
     }
-    msr_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    msr_mmio_ = ddk::MmioBuffer(mmio);
 
     return ZX_OK;
 }

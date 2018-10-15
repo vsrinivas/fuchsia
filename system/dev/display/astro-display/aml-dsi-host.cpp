@@ -236,7 +236,7 @@ zx_status_t AmlDsiHost::Init() {
         DISP_ERROR("Could not map MIPI DSI mmio\n");
         return status;
     }
-    mipi_dsi_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    mipi_dsi_mmio_ = ddk::MmioBuffer(mmio);
 
     status = pdev_map_mmio_buffer2(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &mmio);
@@ -244,7 +244,7 @@ zx_status_t AmlDsiHost::Init() {
         DISP_ERROR("Could not map HHI mmio\n");
         return status;
     }
-    hhi_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    hhi_mmio_ = ddk::MmioBuffer(mmio);
 
     initialized_ = true;
     return ZX_OK;

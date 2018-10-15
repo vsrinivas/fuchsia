@@ -14,6 +14,7 @@
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
 #include <ddktl/protocol/ethernet.h>
+#include <fbl/optional.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/interrupt.h>
@@ -153,7 +154,7 @@ private:
     platform_device_protocol_t pdev_;
     eth_board_protocol_t eth_board_;
 
-    fbl::unique_ptr<ddk::MmioBuffer> dwmac_regs_iobuff_;
+    fbl::optional<ddk::MmioBuffer> dwmac_regs_iobuff_;
 
     dw_mac_regs_t* dwmac_regs_ = nullptr;
     dw_dma_regs_t* dwdma_regs_ = nullptr;

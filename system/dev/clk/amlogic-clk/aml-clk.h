@@ -13,7 +13,7 @@
 #include <ddktl/protocol/clk.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/optional.h>
 #include <hwreg/mmio.h>
 #include <zircon/device/clk.h>
 #include <zircon/thread_annotations.h>
@@ -64,8 +64,8 @@ private:
     // Platform device protocol.
     platform_device_protocol_t pdev_;
     // IO MMIO
-    fbl::unique_ptr<ddk::MmioBuffer> hiu_mmio_;
-    fbl::unique_ptr<ddk::MmioBuffer> msr_mmio_;
+    fbl::optional<ddk::MmioBuffer> hiu_mmio_;
+    fbl::optional<ddk::MmioBuffer> msr_mmio_;
     // Protects clock gate registers.
     fbl::Mutex lock_;
     // Clock gates.

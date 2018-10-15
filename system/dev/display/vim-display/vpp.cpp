@@ -71,7 +71,7 @@ void osd_debug_dump_register_all(vim2_display_t* display) {
 
 void disable_vd(vim2_display* display, uint32_t vd_index) {
     display->vd1_image_valid = false;
-    auto* const vpu = display->mmio_vpu.get();
+    auto* const vpu = &*display->mmio_vpu;
     registers::Vd(vd_index).IfGenReg().ReadFrom(vpu).set_enable(false).WriteTo(vpu);
     registers::VpuVppMisc::Get()
         .ReadFrom(vpu)
@@ -81,7 +81,7 @@ void disable_vd(vim2_display* display, uint32_t vd_index) {
 
 void configure_vd(vim2_display* display, uint32_t vd_index) {
     disable_vd(display, vd_index);
-    auto* const vpu = display->mmio_vpu.get();
+    auto* const vpu = &*display->mmio_vpu;
     uint32_t x_start, x_end, y_start, y_end;
     x_start = y_start = 0;
     x_end = display->cur_display_mode.h_addressable - 1;
@@ -118,7 +118,7 @@ void configure_vd(vim2_display* display, uint32_t vd_index) {
 void flip_vd(vim2_display* display, uint32_t vd_index, uint32_t index) {
     display->vd1_image_valid = true;
     display->vd1_image = index;
-    auto* const vpu = display->mmio_vpu.get();
+    auto* const vpu = &*display->mmio_vpu;
     auto vd = registers::Vd(vd_index);
     vd.IfGenReg()
         .FromValue(0)
@@ -138,7 +138,7 @@ void flip_vd(vim2_display* display, uint32_t vd_index, uint32_t index) {
 
 void disable_osd(vim2_display_t* display, uint32_t osd_index) {
     display->current_image_valid = false;
-    auto* const vpu = display->mmio_vpu.get();
+    auto* const vpu = &*display->mmio_vpu;
     auto osd = registers::Osd(osd_index);
     osd
         .CtrlStat()
@@ -166,7 +166,7 @@ zx_status_t configure_osd(vim2_display_t* display, uint32_t osd_index) {
     y_end = display->cur_display_mode.v_addressable - 1;
 
     disable_osd(display, osd_index);
-    auto* const vpu = display->mmio_vpu.get();
+    auto* const vpu = &*display->mmio_vpu;
     auto osd = registers::Osd(osd_index);
     registers::VpuVppOsdScCtrl0::Get().FromValue(0).WriteTo(vpu);
 
@@ -205,7 +205,7 @@ zx_status_t configure_osd(vim2_display_t* display, uint32_t osd_index) {
 void flip_osd(vim2_display_t* display, uint32_t osd_index, uint8_t idx) {
     display->current_image = idx;
     display->current_image_valid = true;
-    auto* const vpu = display->mmio_vpu.get();
+    auto* const vpu = &*display->mmio_vpu;
     auto osd = registers::Osd(osd_index);
     osd.Blk0CfgW0()
         .FromValue(0)

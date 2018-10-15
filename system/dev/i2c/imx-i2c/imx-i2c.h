@@ -11,7 +11,7 @@
 #include <ddktl/protocol/i2c-impl.h>
 
 #include <fbl/atomic.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/optional.h>
 
 namespace imx_i2c {
 
@@ -53,7 +53,7 @@ private:
     }
     const uint32_t dev_cnt_;
     thrd_t thread_;
-    fbl::unique_ptr<ddk::MmioBuffer> mmio_;
+    fbl::optional<ddk::MmioBuffer> mmio_;
 
     void Reset();
     zx_status_t Read(uint8_t addr, void* buf, size_t len, bool stop);

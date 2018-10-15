@@ -77,7 +77,7 @@ zx_status_t Vpu::Init(zx_device_t* parent) {
         DISP_ERROR("vpu: Could not map VPU mmio\n");
         return status;
     }
-    vpu_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    vpu_mmio_ = ddk::MmioBuffer(mmio);
 
     // Map HHI registers
     status = pdev_map_mmio_buffer2(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
@@ -86,7 +86,7 @@ zx_status_t Vpu::Init(zx_device_t* parent) {
         DISP_ERROR("vpu: Could not map HHI mmio\n");
         return status;
     }
-    hhi_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    hhi_mmio_ = ddk::MmioBuffer(mmio);
 
     // Map AOBUS registers
     status = pdev_map_mmio_buffer2(&pdev_, MMIO_AOBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
@@ -95,7 +95,7 @@ zx_status_t Vpu::Init(zx_device_t* parent) {
         DISP_ERROR("vpu: Could not map AOBUS mmio\n");
         return status;
     }
-    aobus_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    aobus_mmio_ = ddk::MmioBuffer(mmio);
 
     // Map CBUS registers
     status = pdev_map_mmio_buffer2(&pdev_, MMIO_CBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
@@ -104,7 +104,7 @@ zx_status_t Vpu::Init(zx_device_t* parent) {
         DISP_ERROR("vpu: Could not map CBUS mmio\n");
         return status;
     }
-    cbus_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    cbus_mmio_ = ddk::MmioBuffer(mmio);
 
     // VPU object is ready to be used
     initialized_ = true;

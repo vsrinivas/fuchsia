@@ -693,7 +693,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         DISP_ERROR("Could not map display MMIO PRESET\n");
         return status;
     }
-    display->mmio_preset = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    display->mmio_preset = ddk::MmioBuffer(mmio);
 
     status = pdev_map_mmio_buffer2(&display->pdev, MMIO_HDMITX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &mmio);
@@ -701,7 +701,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         DISP_ERROR("Could not map display MMIO HDMITX\n");
         return status;
     }
-    display->mmio_hdmitx = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    display->mmio_hdmitx = ddk::MmioBuffer(mmio);
 
     status = pdev_map_mmio_buffer2(&display->pdev, MMIO_HIU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &mmio);
@@ -709,7 +709,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         DISP_ERROR("Could not map display MMIO HIU\n");
         return status;
     }
-    display->mmio_hiu = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    display->mmio_hiu = ddk::MmioBuffer(mmio);
 
     status = pdev_map_mmio_buffer2(&display->pdev, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &mmio);
@@ -717,7 +717,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         DISP_ERROR("Could not map display MMIO VPU\n");
         return status;
     }
-    display->mmio_vpu = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    display->mmio_vpu = ddk::MmioBuffer(mmio);
 
     status = pdev_map_mmio_buffer2(&display->pdev, MMIO_HDMTX_SEC, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &mmio);
@@ -725,7 +725,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         DISP_ERROR("Could not map display MMIO HDMITX SEC\n");
         return status;
     }
-    display->mmio_hdmitx_sec = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    display->mmio_hdmitx_sec = ddk::MmioBuffer(mmio);
 
     status = pdev_map_mmio_buffer2(&display->pdev, MMIO_CBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &mmio);
@@ -733,7 +733,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         DISP_ERROR("Could not map display MMIO CBUS\n");
         return status;
     }
-    display->mmio_cbus = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    display->mmio_cbus = ddk::MmioBuffer(mmio);
 
     status = gpio_config_in(&display->gpio, GPIO_PULL_DOWN);
     if (status != ZX_OK) {

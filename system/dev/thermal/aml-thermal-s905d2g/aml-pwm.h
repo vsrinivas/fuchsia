@@ -8,7 +8,7 @@
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/optional.h>
 #include <hwreg/mmio.h>
 
 namespace thermal {
@@ -35,7 +35,7 @@ private:
     uint32_t enable_bit_;
     uint32_t clk_enable_bit_;
     platform_device_protocol_t pdev_;
-    fbl::unique_ptr<ddk::MmioBuffer> pwm_mmio_;
+    fbl::optional<ddk::MmioBuffer> pwm_mmio_;
     fbl::Mutex pwm_lock_;
 };
 } // namespace thermal

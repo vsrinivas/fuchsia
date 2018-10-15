@@ -57,7 +57,7 @@ zx_status_t Osd::Init(zx_device_t* parent) {
         return status;
     }
 
-    vpu_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    vpu_mmio_ = ddk::MmioBuffer(mmio);
 
     // OSD object is ready to be used.
     initialized_ = true;

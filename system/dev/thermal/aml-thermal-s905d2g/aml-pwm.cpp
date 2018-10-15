@@ -7,7 +7,6 @@
 #include <ddk/debug.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 #include <threads.h>
 #include <unistd.h>
@@ -41,7 +40,7 @@ zx_status_t AmlPwm::Init(zx_device_t* parent) {
         return status;
     }
 
-    pwm_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    pwm_mmio_ = ddk::MmioBuffer(mmio);
 
     switch (hwpwm_) {
     case 0:

@@ -6,7 +6,6 @@
 
 #include <ddk/debug.h>
 #include <dev/pci/designware/atu-cfg.h>
-#include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 
 #include "aml-pcie-device.h"
@@ -17,11 +16,11 @@ namespace pcie {
 namespace aml {
 
 void AmlPcie::AssertReset(const uint32_t mask) {
-    rst_->ClearBits32(mask, 0);
+    rst_.ClearBits32(mask, 0);
 }
 
 void AmlPcie::ClearReset(const uint32_t mask) {
-    rst_->SetBits32(mask, 0);
+    rst_.SetBits32(mask, 0);
 }
 
 void AmlPcie::RmwCtrlSts(const uint32_t size, const uint32_t shift, const uint32_t mask) {
@@ -49,24 +48,24 @@ void AmlPcie::RmwCtrlSts(const uint32_t size, const uint32_t shift, const uint32
         regval = 1;
     }
 
-    dbi_->ClearBits32(mask << shift, PCIE_CTRL_STS_OFF);
-    dbi_->SetBits32(regval << shift, PCIE_CTRL_STS_OFF);
+    dbi_.ClearBits32(mask << shift, PCIE_CTRL_STS_OFF);
+    dbi_.SetBits32(regval << shift, PCIE_CTRL_STS_OFF);
 }
 
 void AmlPcie::PcieInit() {
-    cfg_->SetBits32(APP_LTSSM_ENABLE, 0);
+    cfg_.SetBits32(APP_LTSSM_ENABLE, 0);
 
-    dbi_->SetBits32(PLC_FAST_LINK_MODE, PORT_LINK_CTRL_OFF);
+    dbi_.SetBits32(PLC_FAST_LINK_MODE, PORT_LINK_CTRL_OFF);
 
-    dbi_->ClearBits32(PLC_LINK_CAPABLE_MASK, PORT_LINK_CTRL_OFF);
+    dbi_.ClearBits32(PLC_LINK_CAPABLE_MASK, PORT_LINK_CTRL_OFF);
 
-    dbi_->SetBits32(PLC_LINK_CAPABLE_X1, PORT_LINK_CTRL_OFF);
+    dbi_.SetBits32(PLC_LINK_CAPABLE_X1, PORT_LINK_CTRL_OFF);
 
-    dbi_->ClearBits32(G2_CTRL_NUM_OF_LANES_MASK, GEN2_CTRL_OFF);
+    dbi_.ClearBits32(G2_CTRL_NUM_OF_LANES_MASK, GEN2_CTRL_OFF);
 
-    dbi_->SetBits32(G2_CTRL_NO_OF_LANES(1), GEN2_CTRL_OFF);
+    dbi_.SetBits32(G2_CTRL_NO_OF_LANES(1), GEN2_CTRL_OFF);
 
-    dbi_->SetBits32(G2_CTRL_DIRECT_SPEED_CHANGE, GEN2_CTRL_OFF);
+    dbi_.SetBits32(G2_CTRL_DIRECT_SPEED_CHANGE, GEN2_CTRL_OFF);
 }
 
 void AmlPcie::SetMaxPayload(const uint32_t size) {
@@ -86,11 +85,11 @@ void AmlPcie::EnableMemorySpace() {
     constexpr uint32_t bits = (PCIE_TYPE1_STS_CMD_IO_ENABLE |
                                PCIE_TYPE1_STS_CMD_MEM_SPACE_ENABLE |
                                PCIE_TYPE1_STS_CMD_BUS_MASTER_ENABLE);
-    dbi_->SetBits32(bits, PCIE_TYPE1_STS_CMD_OFF);
+    dbi_.SetBits32(bits, PCIE_TYPE1_STS_CMD_OFF);
 }
 
 bool AmlPcie::IsLinkUp() {
-    uint32_t val = cfg_->Read32(PCIE_CFG_STATUS12);
+    uint32_t val = cfg_.Read32(PCIE_CFG_STATUS12);
 
     return (val & PCIE_CFG12_SMLH_UP) &&
            (val & PCIE_CFG12_RDLH_UP) &&
@@ -110,7 +109,7 @@ zx_status_t AmlPcie::AwaitLinkUp() {
 
 void AmlPcie::ConfigureRootBridge(const iatu_translation_entry_t* mem) {
     // PCIe Type 1 header Bus Register (offset 0x18 into the Ecam)
-    auto reg = PciBusReg::Get().ReadFrom(dbi_.get());
+    auto reg = PciBusReg::Get().ReadFrom(&dbi_);
 
     // The Upstream Bus for the root bridge is Bus 0
     reg.set_primary_bus(0x0);
@@ -122,12 +121,12 @@ void AmlPcie::ConfigureRootBridge(const iatu_translation_entry_t* mem) {
     // this bus.
     reg.set_subordinate_bus(0xff);
 
-    reg.WriteTo(dbi_.get());
+    reg.WriteTo(&dbi_);
 
     // Zero out the BARs for the Root bridge because the DW root bridge doesn't
     // need them.
-    dbi_->Write32(0, PCI_TYPE1_BAR0);
-    dbi_->Write32(0, PCI_TYPE1_BAR1);
+    dbi_.Write32(0, PCI_TYPE1_BAR0);
+    dbi_.Write32(0, PCI_TYPE1_BAR1);
 
     const uint32_t kRevisionMask    = 0x000000ff;
     const uint32_t kDeviceBridge    = 0x600;
@@ -136,10 +135,10 @@ void AmlPcie::ConfigureRootBridge(const iatu_translation_entry_t* mem) {
 
     // This device improperly reports the class of the root bridge so we need
     // to fill in the correct value.
-    uint32_t val = dbi_->Read32(PCI_CLASSREV);
+    uint32_t val = dbi_.Read32(PCI_CLASSREV);
     val &= kRevisionMask;
     val |= (kDeviceBridge | kDevicePciBridge) << kDeviceShift;
-    dbi_->Write32(val, PCI_CLASSREV);
+    dbi_.Write32(val, PCI_CLASSREV);
 
     // Set the Base and limit registers for this root bridge.
     // On x86 we rely on the BIOS to do this for us, but on arm we must size our
@@ -149,8 +148,8 @@ void AmlPcie::ConfigureRootBridge(const iatu_translation_entry_t* mem) {
     // difficult.
     // These are both hacks for the AMLogic implementation of this driver.
     // Ideally we should be pulling these out of the iATU config.
-    dbi_->Write32(0x000000f0, PCI_IO_BASE_LIMIT);
-    dbi_->Write32(0xf9f0f9e0, PCI_MEM_BASE_LIMIT);
+    dbi_.Write32(0x000000f0, PCI_IO_BASE_LIMIT);
+    dbi_.Write32(0xf9f0f9e0, PCI_MEM_BASE_LIMIT);
 }
 
 zx_status_t AmlPcie::EstablishLink(const iatu_translation_entry_t* cfg,

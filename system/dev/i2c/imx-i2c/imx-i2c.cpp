@@ -17,6 +17,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_printf.h>
+#include <fbl/unique_ptr.h>
 
 #include <lib/zx/time.h>
 
@@ -70,17 +71,17 @@ zx_status_t ImxI2cDevice::WaitFor(Wait type) {
     while (zx::clock::get_monotonic() < timeout) {
         switch (type) {
         case Wait::kIdle:
-            if (!StatusReg::Get().ReadFrom(mmio_.get()).bus_busy()) {
+            if (!StatusReg::Get().ReadFrom(&*mmio_).bus_busy()) {
                 return ZX_OK;
             }
             break;
         case Wait::kBusy:
-            if (StatusReg::Get().ReadFrom(mmio_.get()).bus_busy()) {
+            if (StatusReg::Get().ReadFrom(&*mmio_).bus_busy()) {
                 return ZX_OK;
             }
             break;
         case Wait::kInterruptPending:
-            if (StatusReg::Get().ReadFrom(mmio_.get()).interrupt_pending()) {
+            if (StatusReg::Get().ReadFrom(&*mmio_).interrupt_pending()) {
                 return ZX_OK;
             }
             break;
@@ -89,25 +90,25 @@ zx_status_t ImxI2cDevice::WaitFor(Wait type) {
         zx::nanosleep(zx::deadline_after(zx::usec(10)));
     }
     zxlogf(ERROR, "ImxI2cDevice::WaitFor: %s timedout\n", WaitStr(type));
-    ControlReg::Get().ReadFrom(mmio_.get()).Print();
-    StatusReg::Get().ReadFrom(mmio_.get()).Print();
+    ControlReg::Get().ReadFrom(&*mmio_).Print();
+    StatusReg::Get().ReadFrom(&*mmio_).Print();
     return ZX_ERR_TIMED_OUT;
 }
 
 zx_status_t ImxI2cDevice::Start() {
-    ControlReg::Get().ReadFrom(mmio_.get()).set_master(1).set_transmit(1).WriteTo(mmio_.get());
+    ControlReg::Get().ReadFrom(&*mmio_).set_master(1).set_transmit(1).WriteTo(&*mmio_);
     return WaitFor(Wait::kBusy);
 }
 
 void ImxI2cDevice::Stop() {
-    ControlReg::Get().ReadFrom(mmio_.get()).set_master(0).set_transmit(0).WriteTo(mmio_.get());
+    ControlReg::Get().ReadFrom(&*mmio_).set_master(0).set_transmit(0).WriteTo(&*mmio_);
 }
 
 void ImxI2cDevice::Reset() {
     zxlogf(INFO, "ImxI2cDevice::Reset: reseting...\n");
-    ControlReg::Get().FromValue(0).WriteTo(mmio_.get()); // Implies set_enable(0).
-    StatusReg::Get().FromValue(0).WriteTo(mmio_.get());
-    ControlReg::Get().FromValue(0).set_enable(1).WriteTo(mmio_.get());
+    ControlReg::Get().FromValue(0).WriteTo(&*mmio_); // Implies set_enable(0).
+    StatusReg::Get().FromValue(0).WriteTo(&*mmio_);
+    ControlReg::Get().FromValue(0).set_enable(1).WriteTo(&*mmio_);
 }
 
 zx_status_t ImxI2cDevice::RxData(uint8_t* buf, size_t length, bool stop) {
@@ -117,18 +118,18 @@ zx_status_t ImxI2cDevice::RxData(uint8_t* buf, size_t length, bool stop) {
     }
 
     // Switch to Rx mode
-    auto control = ControlReg::Get().ReadFrom(mmio_.get()).set_transmit(0).set_tx_ack_disable(0);
+    auto control = ControlReg::Get().ReadFrom(&*mmio_).set_transmit(0).set_tx_ack_disable(0);
     if (length == 1) {
         // If length is 1 then we need to no ACK (to finish RX) immediately
         control.set_tx_ack_disable(1);
     }
-    control.WriteTo(mmio_.get());
+    control.WriteTo(&*mmio_);
 
-    StatusReg::Get().ReadFrom(mmio_.get()).set_interrupt_pending(0).WriteTo(mmio_.get());
+    StatusReg::Get().ReadFrom(&*mmio_).set_interrupt_pending(0).WriteTo(&*mmio_);
     // Required dummy read, per reference manual:
     // "If Master Receive mode is required, then I2C_I2CR[MTX] should be toggled and a dummy read
     // of the I2C_I2DR register must be executed to trigger receive data."
-    DataReg::Get().ReadFrom(mmio_.get()).data();
+    DataReg::Get().ReadFrom(&*mmio_).data();
 
     for (size_t i = 0; i < length; ++i) {
 
@@ -137,20 +138,20 @@ zx_status_t ImxI2cDevice::RxData(uint8_t* buf, size_t length, bool stop) {
         if (status != ZX_OK) {
             return status;
         }
-        if (!StatusReg::Get().ReadFrom(mmio_.get()).transfer_complete()) {
+        if (!StatusReg::Get().ReadFrom(&*mmio_).transfer_complete()) {
             return ZX_ERR_IO;
         }
-        StatusReg::Get().ReadFrom(mmio_.get()).set_interrupt_pending(0).WriteTo(mmio_.get());
+        StatusReg::Get().ReadFrom(&*mmio_).set_interrupt_pending(0).WriteTo(&*mmio_);
         if (i == length - 2) {
             // Set TX_ACK_DISABLE two bytes before last
-            ControlReg::Get().ReadFrom(mmio_.get()).set_tx_ack_disable(1).WriteTo(mmio_.get());
+            ControlReg::Get().ReadFrom(&*mmio_).set_tx_ack_disable(1).WriteTo(&*mmio_);
         }
         if (i == length - 1) {
             if (stop) {
                 Stop(); // Set STOP one byte before the last
             }
         }
-        buf[i] = DataReg::Get().ReadFrom(mmio_.get()).data();
+        buf[i] = DataReg::Get().ReadFrom(&*mmio_).data();
     }
     return ZX_OK;
 }
@@ -160,15 +161,15 @@ zx_status_t ImxI2cDevice::TxData(const uint8_t* buf, size_t length, bool stop) {
         if (i == length - 1 && stop) {
             Stop(); // Set STOP one byte before the last
         }
-        StatusReg::Get().ReadFrom(mmio_.get()).set_interrupt_pending(0).WriteTo(mmio_.get());
-        DataReg::Get().FromValue(0).set_data(buf[i]).WriteTo(mmio_.get());
+        StatusReg::Get().ReadFrom(&*mmio_).set_interrupt_pending(0).WriteTo(&*mmio_);
+        DataReg::Get().FromValue(0).set_data(buf[i]).WriteTo(&*mmio_);
 
         // Wait for and check Tx transfer completed
         zx_status_t status = WaitFor(Wait::kInterruptPending);
         if (status != ZX_OK) {
             return status;
         }
-        if (!StatusReg::Get().ReadFrom(mmio_.get()).transfer_complete()) {
+        if (!StatusReg::Get().ReadFrom(&*mmio_).transfer_complete()) {
             return ZX_ERR_IO;
         }
     }
@@ -181,7 +182,7 @@ zx_status_t ImxI2cDevice::TxAddress(uint8_t addr, bool is_read) {
 }
 
 zx_status_t ImxI2cDevice::Read(uint8_t addr, void* buf, size_t len, bool stop) {
-    ControlReg::Get().ReadFrom(mmio_.get()).set_repeat_start(1).WriteTo(mmio_.get());
+    ControlReg::Get().ReadFrom(&*mmio_).set_repeat_start(1).WriteTo(&*mmio_);
     zx_status_t status = TxAddress(addr, true);
     if (status != ZX_OK) {
         return status;
@@ -252,13 +253,7 @@ zx_status_t ImxI2cDevice::Bind(int id) {
         zxlogf(ERROR, "ImxI2cDevice::Bind: pdev_map_mmio_buffer failed: %d\n", status);
         return status;
     }
-
-    fbl::AllocChecker ac;
-    mmio_ = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mmio);
-    if (!ac.check()) {
-        zxlogf(ERROR, "ImxI2cDevice::Bind: no memory for MmioBuffer\n");
-        return ZX_ERR_NO_MEMORY;
-    }
+    mmio_ = ddk::MmioBuffer(mmio);
 
     Reset();
     status = WaitFor(Wait::kIdle);

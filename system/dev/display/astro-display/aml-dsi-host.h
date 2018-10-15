@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <ddk/protocol/platform-device.h>
+#include <fbl/optional.h>
 #include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
 #include <ddktl/device.h>
@@ -40,8 +41,8 @@ private:
     void PhyDisable();
     zx_status_t HostModeInit(uint32_t opp, const DisplaySetting& disp_setting);
 
-    fbl::unique_ptr<ddk::MmioBuffer>            mipi_dsi_mmio_;
-    fbl::unique_ptr<ddk::MmioBuffer>            hhi_mmio_;
+    fbl::optional<ddk::MmioBuffer>              mipi_dsi_mmio_;
+    fbl::optional<ddk::MmioBuffer>              hhi_mmio_;
 
     platform_device_protocol_t                  pdev_ = {};
 

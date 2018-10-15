@@ -273,7 +273,7 @@ zx_status_t AmlMipiPhy::Init(zx_device_t* parent, uint32_t lane_num) {
         DISP_ERROR("AmlMipiPhy: Could not map MIPI DSI mmio\n");
         return status;
     }
-    mipi_dsi_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    mipi_dsi_mmio_ = ddk::MmioBuffer(mmio);
 
     status = pdev_map_mmio_buffer2(&pdev_, MMIO_DSI_PHY, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &mmio);
@@ -281,7 +281,7 @@ zx_status_t AmlMipiPhy::Init(zx_device_t* parent, uint32_t lane_num) {
         DISP_ERROR("AmlMipiPhy: Could not map DSI PHY mmio\n");
         return status;
     }
-    dsi_phy_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    dsi_phy_mmio_ = ddk::MmioBuffer(mmio);
 
     initialized_ = true;
     return ZX_OK;

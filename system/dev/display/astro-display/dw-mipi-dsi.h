@@ -8,7 +8,7 @@
 #include <zircon/compiler.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/mmio.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/optional.h>
 #include "mipi-dsi.h"
 #include "dw-mipi-dsi-reg.h"
 #include "common.h"
@@ -54,7 +54,7 @@ private:
     zx_status_t GenRead(const MipiDsiCmd& cmd);
     zx_status_t SendCmd(const MipiDsiCmd& cmd);
 
-    fbl::unique_ptr<ddk::MmioBuffer>        mipi_dsi_mmio_;
+    fbl::optional<ddk::MmioBuffer>          mipi_dsi_mmio_;
     platform_device_protocol_t              pdev_ = {nullptr, nullptr};
 
     bool                                    initialized_ = false;

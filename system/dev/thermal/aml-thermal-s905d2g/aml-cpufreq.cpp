@@ -57,7 +57,7 @@ zx_status_t AmlCpuFrequency::InitPdev(zx_device_t* parent) {
         zxlogf(ERROR, "aml-cpufreq: could not map periph mmio: %d\n", status);
         return status;
     }
-    hiu_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    hiu_mmio_ = ddk::MmioBuffer(mmio);
 
     // Get BTI handle.
     status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
@@ -134,11 +134,11 @@ zx_status_t AmlCpuFrequency::Init(zx_device_t* parent) {
 }
 
 zx_status_t AmlCpuFrequency::WaitForBusy() {
-    auto sys_cpu_ctrl0 = SysCpuClkControl0::Get().ReadFrom(hiu_mmio_.get());
+    auto sys_cpu_ctrl0 = SysCpuClkControl0::Get().ReadFrom(&*hiu_mmio_);
 
     // Wait till we are not busy.
     for (uint32_t i = 0; i < SYS_CPU_WAIT_BUSY_RETRIES; i++) {
-        sys_cpu_ctrl0 = SysCpuClkControl0::Get().ReadFrom(hiu_mmio_.get());
+        sys_cpu_ctrl0 = SysCpuClkControl0::Get().ReadFrom(&*hiu_mmio_);
         if (sys_cpu_ctrl0.busy()) {
             // Wait a little bit before trying again.
             zx_nanosleep(zx_deadline_after(ZX_USEC(SYS_CPU_WAIT_BUSY_TIMEOUT_US)));
@@ -175,7 +175,7 @@ zx_status_t AmlCpuFrequency::ConfigureFixedPLL(uint32_t new_rate) {
     }
 
     // Now program the values into sys cpu clk control0
-    auto sys_cpu_ctrl0 = SysCpuClkControl0::Get().ReadFrom(hiu_mmio_.get());
+    auto sys_cpu_ctrl0 = SysCpuClkControl0::Get().ReadFrom(&*hiu_mmio_);
 
     if (sys_cpu_ctrl0.final_dyn_mux_sel()) {
         // Dynamic mux 1 is in use, we setup dynamic mux 0
@@ -192,7 +192,7 @@ zx_status_t AmlCpuFrequency::ConfigureFixedPLL(uint32_t new_rate) {
     }
 
     // Select the final mux.
-    sys_cpu_ctrl0.set_final_mux_sel(kFixedPll).WriteTo(hiu_mmio_.get());
+    sys_cpu_ctrl0.set_final_mux_sel(kFixedPll).WriteTo(&*hiu_mmio_);
 
     current_rate_ = new_rate;
     return ZX_OK;
@@ -215,8 +215,8 @@ zx_status_t AmlCpuFrequency::ConfigureSysPLL(uint32_t new_rate) {
     }
 
     // Select the final mux.
-    auto sys_cpu_ctrl0 = SysCpuClkControl0::Get().ReadFrom(hiu_mmio_.get());
-    sys_cpu_ctrl0.set_final_mux_sel(kSysPll).WriteTo(hiu_mmio_.get());
+    auto sys_cpu_ctrl0 = SysCpuClkControl0::Get().ReadFrom(&*hiu_mmio_);
+    sys_cpu_ctrl0.set_final_mux_sel(kSysPll).WriteTo(&*hiu_mmio_);
 
     current_rate_ = new_rate;
     return status;

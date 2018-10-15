@@ -19,11 +19,7 @@ const uint32_t kRstPciePhy = (0x1 << 7);
 // The Aml Pcie controller is an instance of the DesignWare IP
 class AmlPcie : public designware::DwPcie {
   public:
-      AmlPcie(
-          fbl::unique_ptr<ddk::MmioBuffer> elbi,
-          fbl::unique_ptr<ddk::MmioBuffer> cfg,
-          fbl::unique_ptr<ddk::MmioBuffer> rst,
-          const uint32_t nLanes)
+      AmlPcie(ddk::MmioBuffer elbi, ddk::MmioBuffer cfg, ddk::MmioBuffer rst, const uint32_t nLanes)
           : designware::DwPcie(fbl::move(elbi), fbl::move(cfg), nLanes), rst_(fbl::move(rst)) {}
 
       void AssertReset(const uint32_t bits);
@@ -45,7 +41,7 @@ class AmlPcie : public designware::DwPcie {
     void ConfigureRootBridge(const iatu_translation_entry_t* mem);
     void RmwCtrlSts(const uint32_t size, const uint32_t shift, const uint32_t mask);
 
-    fbl::unique_ptr<ddk::MmioBuffer> rst_;
+    ddk::MmioBuffer rst_;
 };
 
 }  // namespace aml

@@ -1965,12 +1965,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     {
         fbl::AutoLock lock(&bar_lock_);
         fbl::AllocChecker ac;
-        auto mmio_space = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mapped_bars_[0].mmio);
-        if (!ac.check()) {
-            LOG_ERROR("Failed to alloc RegisterIo\n");
-            return ZX_ERR_NO_MEMORY;
-        }
-        mmio_space_ = fbl::move(mmio_space);
+        mmio_space_ = ddk::MmioBuffer(mapped_bars_[0].mmio);
     }
 
     for (unsigned i = 0; i < registers::kDdiCount; i++) {

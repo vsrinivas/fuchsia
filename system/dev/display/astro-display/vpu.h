@@ -7,7 +7,7 @@
 #include <zircon/compiler.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/mmio.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/optional.h>
 #include "vpu-regs.h"
 #include "common.h"
 
@@ -32,13 +32,13 @@ private:
     // and/or clock initialization sequences
     void ConfigureClock();
 
-    fbl::unique_ptr<ddk::MmioBuffer>    vpu_mmio_;
-    fbl::unique_ptr<ddk::MmioBuffer>    hhi_mmio_;
-    fbl::unique_ptr<ddk::MmioBuffer>    aobus_mmio_;
-    fbl::unique_ptr<ddk::MmioBuffer>    cbus_mmio_;
-    platform_device_protocol_t          pdev_ = {};
+    fbl::optional<ddk::MmioBuffer>    vpu_mmio_;
+    fbl::optional<ddk::MmioBuffer>    hhi_mmio_;
+    fbl::optional<ddk::MmioBuffer>    aobus_mmio_;
+    fbl::optional<ddk::MmioBuffer>    cbus_mmio_;
+    platform_device_protocol_t        pdev_ = {};
 
-    bool                                initialized_ = false;
+    bool                              initialized_ = false;
 
 };
 } // namespace astro_display

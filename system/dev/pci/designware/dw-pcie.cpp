@@ -27,7 +27,7 @@ namespace pcie {
 namespace designware {
 
 bool DwPcie::IsLinkUp() {
-    auto phyDebugR1 = PortLogic::DebugR1::Get().ReadFrom(dbi_.get());
+    auto phyDebugR1 = PortLogic::DebugR1::Get().ReadFrom(&dbi_);
 
     const bool isLinkUp = phyDebugR1.link_up();
     const bool isLinkTraining = phyDebugR1.link_in_training();
@@ -36,11 +36,11 @@ bool DwPcie::IsLinkUp() {
 }
 
 uint32_t DwPcie::ReadRC(const uint32_t offset) {
-    return dbi_->Read32(offset);
+    return dbi_.Read32(offset);
 }
 
 void DwPcie::WriteRC(const uint32_t offset, const uint32_t val) {
-    return dbi_->Write32(val, offset);
+    return dbi_.Write32(val, offset);
 }
 
 /*
@@ -65,7 +65,7 @@ zx_status_t DwPcie::ProgramOutboundAtu(const uint32_t index,
     // DBI base
     const size_t bank_offset = (0x3 << 20) | (index << 9);
     volatile uint8_t* atu_base =
-        reinterpret_cast<volatile uint8_t*>(dbi_->get()) + bank_offset;
+        reinterpret_cast<volatile uint8_t*>(dbi_.get()) + bank_offset;
 
     volatile atu_ctrl_regs_t* regs =
         reinterpret_cast<volatile atu_ctrl_regs_t*>(atu_base);
@@ -105,7 +105,7 @@ zx_status_t DwPcie::ProgramOutboundAtu(const uint32_t index,
 }
 
 void DwPcie::LinkSpeedChange() {
-    dbi_->SetBits32(G2_CTRL_DIRECT_SPEED_CHANGE, GEN2_CTRL_OFF);
+    dbi_.SetBits32(G2_CTRL_DIRECT_SPEED_CHANGE, GEN2_CTRL_OFF);
 }
 
 zx_status_t DwPcie::SetupRootComplex(

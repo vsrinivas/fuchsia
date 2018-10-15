@@ -194,7 +194,7 @@ zx_status_t PciModernBackend::MapBar(uint8_t bar) {
         return s;
     }
 
-    bar_[bar] = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    bar_[bar] = ddk::MmioBuffer(mmio);
     zxlogf(TRACE, "%s: bar %u mapped to %p\n", tag(), bar, bar_[bar]->get());
     return ZX_OK;
 }

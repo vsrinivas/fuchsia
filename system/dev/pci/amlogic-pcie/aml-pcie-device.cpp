@@ -10,6 +10,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_free_ptr.h>
+#include <lib/zx/bti.h>
 #include <zircon/driver/binding.h>
 
 #include "aml-pcie-clk.h"
@@ -61,27 +62,25 @@ zx_status_t AmlPcieDevice::InitMmios() {
     zx_status_t st;
 
     // Get a BTI for pinning the DBI.
-    zx_handle_t pin_bti;
-    pdev_get_bti(&pdev_, 0, &pin_bti);
-    auto cleanup = fbl::MakeAutoCall([pin_bti]() { zx_handle_close(pin_bti); });
+    zx::bti pin_bti;
+    pdev_get_bti(&pdev_, 0, pin_bti.reset_and_get_address());
 
     mmio_buffer_t mmio;
-    mmio_pinned_buffer_t mmio_pinned;
     st = pdev_map_mmio_buffer2(&pdev_, kElbMmio,
                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to map dbi mmio, st = %d\n", st);
         return st;
     }
-    dbi_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    dbi_ = ddk::MmioBuffer(mmio);
 
-
-    st = mmio_buffer_pin(&mmio, pin_bti, &mmio_pinned);
+    fbl::unique_ptr<ddk::MmioPinnedBuffer> mmio_pinned;
+    st = dbi_->Pin(pin_bti, &mmio_pinned);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to pin DBI, st = %d\n", st);
         return st;
     }
-    dbi_pinned_ = fbl::make_unique<ddk::MmioPinnedBuffer>(mmio_pinned);
+    dbi_pinned_ = fbl::move(*mmio_pinned.release());
 
     st = pdev_map_mmio_buffer2(&pdev_, kCfgMmio,
                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
@@ -89,7 +88,7 @@ zx_status_t AmlPcieDevice::InitMmios() {
         zxlogf(ERROR, "aml_pcie: failed to map cfg mmio, st = %d\n", st);
         return st;
     }
-    cfg_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    cfg_ = ddk::MmioBuffer(mmio);
 
     st = pdev_map_mmio_buffer2(&pdev_, kRstMmio,
                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
@@ -97,7 +96,7 @@ zx_status_t AmlPcieDevice::InitMmios() {
         zxlogf(ERROR, "aml_pcie: failed to map rst mmio, st = %d\n", st);
         return st;
     }
-    rst_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    rst_ = ddk::MmioBuffer(mmio);
 
     st = pdev_map_mmio_buffer2(&pdev_, kPllMmio,
                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
@@ -105,7 +104,7 @@ zx_status_t AmlPcieDevice::InitMmios() {
         zxlogf(ERROR, "aml_pcie: failed to map pll mmio, st = %d\n", st);
         return st;
     }
-    pll_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    pll_ = ddk::MmioBuffer(mmio);
 
     return st;
 }
@@ -182,15 +181,15 @@ zx_status_t AmlPcieDevice::Init() {
     if (st != ZX_OK) return st;
 
     pcie_ = fbl::make_unique<AmlPcie>(
-        fbl::move(dbi_),
-        fbl::move(cfg_),
-        fbl::move(rst_),
+        fbl::move(*dbi_),
+        fbl::move(*cfg_),
+        fbl::move(*rst_),
         1   // Single Lane PCIe
     );
 
     pcie_->AssertReset(kRstPcieA | kRstPcieB | kRstPcieApb | kRstPciePhy);
 
-    PllSetRate(pll_.get());
+    PllSetRate(&*pll_);
 
     pcie_->ClearReset(kRstPcieApb | kRstPciePhy);
 

@@ -13,6 +13,7 @@
 #include <ddktl/mmio.h>
 #include <ddktl/protocol/display-controller.h>
 
+#include <fbl/optional.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <threads.h>
@@ -110,7 +111,7 @@ public:
     bool DpcdWrite(registers::Ddi ddi, uint32_t addr, const uint8_t* buf, size_t size);
 
     pci_protocol_t* pci() { return &pci_; }
-    ddk::MmioBuffer* mmio_space() { return mmio_space_.get(); }
+    ddk::MmioBuffer* mmio_space() { return &*mmio_space_; }
     Gtt* gtt() { return &gtt_; }
     Interrupts* interrupts() { return &interrupts_; }
     uint16_t device_id() const { return device_id_; }
@@ -207,7 +208,7 @@ private:
     mtx_t bar_lock_;
     // The mmio_space_ is read only. The internal registers are guarded by various locks where
     // appropriate.
-    fbl::unique_ptr<ddk::MmioBuffer> mmio_space_;
+    fbl::optional<ddk::MmioBuffer> mmio_space_;
 
     // References to displays. References are owned by devmgr, but will always
     // be valid while they are in this vector.

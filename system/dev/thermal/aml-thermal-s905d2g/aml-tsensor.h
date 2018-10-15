@@ -8,7 +8,7 @@
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
 #include <fbl/atomic.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/optional.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
 #include <zircon/device/thermal.h>
@@ -39,9 +39,9 @@ private:
     void UpdateRiseThresholdIrq(uint32_t irq);
     uint32_t trim_info_;
     platform_device_protocol_t pdev_;
-    fbl::unique_ptr<ddk::MmioBuffer> pll_mmio_;
-    fbl::unique_ptr<ddk::MmioBuffer> ao_mmio_;
-    fbl::unique_ptr<ddk::MmioBuffer> hiu_mmio_;
+    fbl::optional<ddk::MmioBuffer> pll_mmio_;
+    fbl::optional<ddk::MmioBuffer> ao_mmio_;
+    fbl::optional<ddk::MmioBuffer> hiu_mmio_;
     zx::interrupt tsensor_irq_;
     thrd_t irq_thread_;
     fbl::atomic<bool> running_;

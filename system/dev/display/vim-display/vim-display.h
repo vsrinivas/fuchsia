@@ -11,6 +11,7 @@
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/display-controller.h>
 #include <ddktl/mmio.h>
+#include <fbl/optional.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,13 +80,13 @@ typedef struct vim2_display {
     bool                                vd1_image_valid;
     uint32_t                            vd1_image;
 
-    fbl::unique_ptr<ddk::MmioBuffer>    mmio_preset;
-    fbl::unique_ptr<ddk::MmioBuffer>    mmio_hdmitx;
-    fbl::unique_ptr<ddk::MmioBuffer>    mmio_hiu;
-    fbl::unique_ptr<ddk::MmioBuffer>    mmio_vpu;
-    fbl::unique_ptr<ddk::MmioBuffer>    mmio_hdmitx_sec;
-    fbl::unique_ptr<ddk::MmioBuffer>    mmio_dmc;
-    fbl::unique_ptr<ddk::MmioBuffer>    mmio_cbus;
+    fbl::optional<ddk::MmioBuffer>    mmio_preset;
+    fbl::optional<ddk::MmioBuffer>    mmio_hdmitx;
+    fbl::optional<ddk::MmioBuffer>    mmio_hiu;
+    fbl::optional<ddk::MmioBuffer>    mmio_vpu;
+    fbl::optional<ddk::MmioBuffer>    mmio_hdmitx_sec;
+    fbl::optional<ddk::MmioBuffer>    mmio_dmc;
+    fbl::optional<ddk::MmioBuffer>    mmio_cbus;
 
     zx_handle_t                         vsync_interrupt;
 

@@ -6,6 +6,7 @@
 
 #include "backend.h"
 #include <ddktl/mmio.h>
+#include <fbl/optional.h>
 #include <zircon/thread_annotations.h>
 
 namespace virtio {
@@ -125,7 +126,7 @@ public:
 private:
     zx_status_t MapBar(uint8_t bar);
 
-    fbl::unique_ptr<ddk::MmioBuffer> bar_[6];
+    fbl::optional<ddk::MmioBuffer> bar_[6];
 
     uintptr_t notify_base_ = 0;
     volatile uint32_t* isr_status_ = nullptr;

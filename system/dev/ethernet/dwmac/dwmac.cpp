@@ -136,7 +136,7 @@ zx_status_t DWMacDevice::InitPdev() {
         return status;
     }
 
-    dwmac_regs_iobuff_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    dwmac_regs_iobuff_ = ddk::MmioBuffer(mmio);
     dwmac_regs_ = static_cast<dw_mac_regs_t*>(dwmac_regs_iobuff_->get());
     dwdma_regs_ = offset_ptr<dw_dma_regs_t>(dwmac_regs_, DW_DMA_BASE_OFFSET);
 

@@ -8,7 +8,7 @@
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/mmio.h>
 #include <ddktl/protocol/clk.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/optional.h>
 #include <hwreg/mmio.h>
 #include <soc/aml-s905d2/s905d2-hiu.h>
 #include <lib/zx/bti.h>
@@ -36,9 +36,9 @@ private:
     zx_status_t InitPdev(zx_device_t* parent);
     // Protocols.
     clk_protocol_t clk_protocol_;
-    fbl::unique_ptr<ddk::ClkProtocolProxy> clk_;
+    fbl::optional<ddk::ClkProtocolProxy> clk_;
     // MMIOS.
-    fbl::unique_ptr<ddk::MmioBuffer> hiu_mmio_;
+    fbl::optional<ddk::MmioBuffer> hiu_mmio_;
     // BTI handle.
     zx::bti bti_;
     // HIU Handle.
