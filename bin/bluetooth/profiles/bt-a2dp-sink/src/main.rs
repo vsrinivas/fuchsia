@@ -15,10 +15,10 @@ use fuchsia_async as fasync;
 use fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog};
 use fuchsia_zircon as zx;
 use futures::{StreamExt, TryFutureExt};
-use std::collections::HashSet;
 use parking_lot::RwLock;
-use std::sync::Arc;
+use std::collections::HashSet;
 use std::string::String;
+use std::sync::Arc;
 
 /// Make the SDP definidion for the A2DP sink service.
 fn make_profile_service_definition() -> ServiceDefinition {
@@ -75,14 +75,16 @@ async fn discover_remote_streams(peer: Arc<avdtp::Peer>) {
                     fx_log_info!(tag: "a2dp-sink", "  - {:?}", cap);
                 }
             }
-            Err(e) => fx_log_info!(tag: "a2dp-sink", "Stream {} discovery failed: {:?}", info.id(), e),
+            Err(e) => {
+                fx_log_info!(tag: "a2dp-sink", "Stream {} discovery failed: {:?}", info.id(), e)
+            }
         };
     }
 }
 
 // Defined in the Bluetooth Assigned Numbers for Audio/Video applications
 // https://www.bluetooth.com/specifications/assigned-numbers/audio-video
-const AUDIO_CODEC_SBC : u8 = 0;
+const AUDIO_CODEC_SBC: u8 = 0;
 
 fn get_stream_capabilities(
     _: avdtp::StreamEndpointId,
@@ -156,17 +158,25 @@ fn handle_request(r: avdtp::Request) -> Result<(), avdtp::Error> {
             let caps = get_stream_capabilities(stream_id)?;
             responder.send(&caps)
         }
+        // Positively respond to everything else.
+        avdtp::Request::Open { responder, .. } | avdtp::Request::Close { responder, .. } => {
+            responder.send()
+        }
+        avdtp::Request::Start { responder, .. } | avdtp::Request::Suspend { responder, .. } => {
+            responder.send()
+        }
     }
 }
 
-async fn handle_requests(peer: Arc<avdtp::Peer>, remotes: Arc<RwLock<HashSet<String>>>,
-                         device_id: String) {
+async fn handle_requests(
+    peer: Arc<avdtp::Peer>, remotes: Arc<RwLock<HashSet<String>>>, device_id: String,
+) {
     let mut stream = peer.take_request_stream();
     while let Some(r) = await!(stream.next()) {
         match r {
             Err(e) => {
                 fx_log_info!(tag: "a2dp-sink", "Request Error: {:?}", e);
-            },
+            }
             Ok(request) => {
                 if let Err(e) = handle_request(request) {
                     fx_log_warn!(tag: "a2dp-sink", "Error handling request: {:?}", e);
@@ -224,7 +234,11 @@ async fn init() -> Result<(), Error> {
                     }
                 };
                 // Spawn threads to handle this peer
-                fuchsia_async::spawn(handle_requests(peer.clone(), remotes.clone(), device_id.clone()));
+                fuchsia_async::spawn(handle_requests(
+                    peer.clone(),
+                    remotes.clone(),
+                    device_id.clone(),
+                ));
                 fuchsia_async::spawn(discover_remote_streams(peer.clone()));
                 remotes.write().insert(device_id);
             }

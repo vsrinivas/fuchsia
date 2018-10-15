@@ -309,7 +309,7 @@ pub enum Error {
     #[fail(display = "Invalid Header for a AVDTP message")]
     InvalidHeader,
 
-    /// The header was invalid when parsing a message from the peer.
+    /// The body format was invalid when parsing a message from the peer.
     #[fail(display = "Failed to parse AVDTP message contents")]
     InvalidMessage,
 
@@ -321,7 +321,15 @@ pub enum Error {
     #[fail(display = "Remote end rejected the command (code = {:}", _0)]
     RemoteRejected(u8),
 
-    /// Unimplemented
+    /// The Remote end rejected a start or suspend command we sent, indicating this SEID and error
+    /// code.
+    #[fail(
+        display = "Remote end rejected the command (SEID = {:}, code = {:}",
+        _0, _1
+    )]
+    RemoteStreamRejected(u8, u8),
+
+    /// Message has been requested that isn't Implemented
     #[fail(display = "Message has not been implemented yet")]
     UnimplementedMessage,
 
@@ -345,7 +353,7 @@ pub enum Error {
     #[fail(display = "Encountered an IO error writing to the peer: {}", _0)]
     PeerWrite(#[cause] zx::Status),
 
-    /// Returened when a message can't be encoded
+    /// A message couldn't be encoded.
     #[fail(display = "Encontered an error encoding a message")]
     Encoding,
 

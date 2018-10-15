@@ -78,10 +78,10 @@ impl Peer {
         }
     }
 
-    /// Send a "Discover" command to the remote peer.  Asynchronously returns
-    /// a vector of discovered endpoint information.
-    /// Error will be RemoteRejected with the error code returned by the remote peer
-    /// if the remote peer rejected the command, or an appropriate other error.
+    /// Send a Stream End Point Discovery (Sec 8.6) command to the remote peer.
+    /// Asynchronously returns a the reply in a vector of endpoint information.
+    /// Error will be RemoteRejected with the error code returned by the remote
+    /// if the remote peer rejected the command.
     pub async fn discover(&self) -> Result<Vec<StreamInformation>, Error> {
         let response: Result<DiscoverResponse, Error> =
             await!(self.send_command(SignalIdentifier::Discover, &[]));
@@ -91,10 +91,17 @@ impl Peer {
         }
     }
 
+    /// Send a Get Capabilities (Sec 8.7) command to the remote peer for the
+    /// given `stream_id`.
+    /// Asynchronously returns the reply which contains the ServiceCapabilities
+    /// reported.
+    /// In general, Get All Capabilities should be preferred to this command.
+    /// Error will be RemoteRejected with the error code reported by the remote
+    /// if the remote peer rejects the command.
     pub async fn get_capabilities<'a>(
         &'a self, stream_id: &'a StreamEndpointId,
     ) -> Result<Vec<ServiceCapability>, Error> {
-        let stream_params = &[stream_id.0 << 2];
+        let stream_params = &[stream_id.to_msg()];
         let response: Result<GetCapabilitiesResponse, Error> =
             await!(self.send_command(SignalIdentifier::GetCapabilities, stream_params));
         match response {
@@ -103,10 +110,16 @@ impl Peer {
         }
     }
 
+    /// Send a Get All Capabilities (Sec 8.8) command to the remote peer for the
+    /// given `stream_id`.
+    /// Asynchronously returns the reply which contains the ServiceCapabilities
+    /// reported.
+    /// Error will be RemoteRejected with the error code reported by the remote
+    /// if the remote peer rejects the command.
     pub async fn get_all_capabilities<'a>(
         &'a self, stream_id: &'a StreamEndpointId,
     ) -> Result<Vec<ServiceCapability>, Error> {
-        let stream_params = &[stream_id.0 << 2];
+        let stream_params = &[stream_id.to_msg()];
         let response: Result<GetCapabilitiesResponse, Error> =
             await!(self.send_command(SignalIdentifier::GetAllCapabilities, stream_params));
         match response {
@@ -115,7 +128,63 @@ impl Peer {
         }
     }
 
-    /// Send a signal on the socket and receive a future that will complete
+    /// Send a Open Stream Command (Sec 8.12) to the remote peer for the given
+    /// `stream_id`.
+    /// Returns Ok(()) if the command is accepted, and RemoteRejected if the
+    /// remote peer rejects the command with the code returned by the remote.
+    pub async fn open<'a>(&'a self, stream_id: &'a StreamEndpointId) -> Result<(), Error> {
+        let stream_params = &[stream_id.to_msg()];
+        let response: Result<SimpleResponse, Error> =
+            await!(self.send_command(SignalIdentifier::Open, stream_params));
+        response?;
+        Ok(())
+    }
+
+    /// Send a Start Stream Command (Sec 8.13) to the remote peer for all the
+    /// streams in `stream_ids`.
+    /// Returns Ok(()) if the command is accepted, and RemoteStreamRejected
+    /// with the stream endpoint id and error code reported by the remote if
+    /// the remote signals a failure.
+    pub async fn start<'a>(&'a self, stream_ids: &'a [StreamEndpointId]) -> Result<(), Error> {
+        let mut stream_params = Vec::with_capacity(stream_ids.len());
+        for stream_id in stream_ids {
+            stream_params.push(stream_id.to_msg());
+        }
+        let response: Result<SimpleResponse, Error> =
+            await!(self.send_command(SignalIdentifier::Start, &stream_params));
+        response?;
+        Ok(())
+    }
+
+    /// Send a Close Stream Command (Sec 8.14) to the remote peer for the given
+    /// `stream_id`.
+    /// Returns Ok(()) if the command is accepted, and RemoteRejected if the
+    /// remote peer rejects the command with the code returned by the remote.
+    pub async fn close<'a>(&'a self, stream_id: &'a StreamEndpointId) -> Result<(), Error> {
+        let stream_params = &[stream_id.to_msg()];
+        let response: Result<SimpleResponse, Error> =
+            await!(self.send_command(SignalIdentifier::Close, stream_params));
+        response?;
+        Ok(())
+    }
+
+    /// Send a Suspend Command (Sec 8.15) to the remote peer for all the
+    /// streams in `stream_ids`.
+    /// Returns Ok(()) if the command is accepted, and RemoteStreamRejected
+    /// with the stream endpoint id and error code reported by the remote if
+    /// the remote signals a failure.
+    pub async fn suspend<'a>(&'a self, stream_ids: &'a [StreamEndpointId]) -> Result<(), Error> {
+        let mut stream_params = Vec::with_capacity(stream_ids.len());
+        for stream_id in stream_ids {
+            stream_params.push(stream_id.to_msg());
+        }
+        let response: Result<SimpleResponse, Error> =
+            await!(self.send_command(SignalIdentifier::Suspend, &stream_params));
+        response?;
+        Ok(())
+    }
+
+    /// Sends a signal on the socket and receive a future that will complete
     /// when we get the expected reponse.
     async fn send_command<'a, D: Decodable>(
         &'a self, signal: SignalIdentifier, payload: &'a [u8],
@@ -158,6 +227,22 @@ pub enum Request {
         stream_id: StreamEndpointId,
         responder: GetCapabilitiesResponder,
     },
+    Open {
+        stream_id: StreamEndpointId,
+        responder: SimpleResponder,
+    },
+    Start {
+        stream_ids: Vec<StreamEndpointId>,
+        responder: StreamResponder,
+    },
+    Close {
+        stream_id: StreamEndpointId,
+        responder: SimpleResponder,
+    },
+    Suspend {
+        stream_ids: Vec<StreamEndpointId>,
+        responder: StreamResponder,
+    },
     // TODO(jamuraa): add the rest of the requests
 }
 
@@ -180,7 +265,7 @@ impl Request {
                     return Err(Error::BadLength);
                 }
                 Ok(Request::GetCapabilities {
-                    stream_id: StreamEndpointId(body[0] >> 2),
+                    stream_id: StreamEndpointId::from_msg(&body[0]),
                     responder: GetCapabilitiesResponder {
                         signal: signal,
                         peer: peer,
@@ -193,8 +278,72 @@ impl Request {
                     return Err(Error::BadLength);
                 }
                 Ok(Request::GetAllCapabilities {
-                    stream_id: StreamEndpointId(body[0] >> 2),
+                    stream_id: StreamEndpointId::from_msg(&body[0]),
                     responder: GetCapabilitiesResponder {
+                        signal: signal,
+                        peer: peer,
+                        id: id,
+                    },
+                })
+            }
+            SignalIdentifier::Open => {
+                if body.len() != 1 {
+                    return Err(Error::BadLength);
+                }
+                Ok(Request::Open {
+                    stream_id: StreamEndpointId::from_msg(&body[0]),
+                    responder: SimpleResponder {
+                        signal: signal,
+                        peer: peer,
+                        id: id,
+                    },
+                })
+            }
+            SignalIdentifier::Start => {
+                if body.len() < 1 {
+                    return Err(Error::BadLength);
+                }
+                let mut streams = Vec::<StreamEndpointId>::new();
+                let mut loc = 0;
+                while loc < body.len() {
+                    streams.push(StreamEndpointId::from_msg(&body[loc]));
+                    loc += 1;
+                }
+                Ok(Request::Start {
+                    stream_ids: streams,
+                    responder: StreamResponder {
+                        signal: signal,
+                        peer: peer,
+                        id: id,
+                    },
+                })
+            }
+            SignalIdentifier::Close => {
+                if body.len() != 1 {
+                    return Err(Error::BadLength);
+                }
+                Ok(Request::Close {
+                    stream_id: StreamEndpointId::from_msg(&body[0]),
+                    responder: SimpleResponder {
+                        signal: signal,
+                        peer: peer,
+                        id: id,
+                    },
+                })
+            }
+            SignalIdentifier::Suspend => {
+                if body.len() < 1 {
+                    return Err(Error::BadLength);
+                }
+                let mut streams = Vec::<StreamEndpointId>::new();
+                let mut loc = 0;
+                while loc < body.len() {
+                    streams.push(StreamEndpointId::from_msg(&body[loc]));
+                    loc += 1;
+                }
+                Ok(Request::Suspend {
+                    stream_ids: streams,
+                    responder: StreamResponder {
                         signal: signal,
                         peer: peer,
                         id: id,
@@ -251,6 +400,20 @@ impl Drop for RequestStream {
 /// Valid values are 0x01 - 0x3E
 #[derive(Debug, PartialEq)]
 pub struct StreamEndpointId(u8);
+
+impl StreamEndpointId {
+    /// Interpret a StreamEndpointId from the upper six bits of a byte, which
+    /// is often how it's transmitted in a message.
+    fn from_msg(byte: &u8) -> Self {
+        StreamEndpointId(byte >> 2)
+    }
+
+    /// Produce a byte where the SEID value is placed in the upper six bits,
+    /// which is often how it is placed in a mesage.
+    fn to_msg(&self) -> u8 {
+        self.0 << 2
+    }
+}
 
 impl TryFrom<u8> for StreamEndpointId {
     type Error = Error;
@@ -325,9 +488,22 @@ impl Encodable for StreamInformation {
         if into.len() < self.encoded_len() {
             return Err(Error::Encoding);
         }
-        into[0] = self.id.0 << 2 | if self.in_use { 0x02 } else { 0x00 };
+        into[0] = self.id.to_msg() | if self.in_use { 0x02 } else { 0x00 };
         into[1] = u8::from(&self.media_type) << 4 | u8::from(&self.endpoint_type) << 3;
         Ok(())
+    }
+}
+
+// Simple responses have no body data.
+#[derive(Debug)]
+pub struct SimpleResponse {}
+
+impl Decodable for SimpleResponse {
+    fn decode(from: &[u8]) -> Result<Self, Error> {
+        if from.len() > 0 {
+            return Err(Error::InvalidMessage);
+        }
+        Ok(SimpleResponse {})
     }
 }
 
@@ -394,7 +570,9 @@ impl GetCapabilitiesResponder {
         let header =
             SignalingHeader::new(self.id, self.signal, SignalingMessageType::ResponseAccept);
         let included_iter = capabilities.iter().filter(|x| x.in_response(self.signal));
-        let reply_len = included_iter.clone().fold(header.encoded_len(), |a, b| a + b.encoded_len());
+        let reply_len = included_iter
+            .clone()
+            .fold(header.encoded_len(), |a, b| a + b.encoded_len());
         let mut reply = vec![0 as u8; reply_len];
         header.encode(&mut reply[0..header.encoded_len()])?;
         let mut pos = header.encoded_len();
@@ -658,6 +836,52 @@ impl Encodable for ServiceCapability {
 }
 
 #[derive(Debug)]
+pub struct SimpleResponder {
+    peer: Arc<PeerInner>,
+    signal: SignalIdentifier,
+    id: TxLabel,
+}
+
+impl SimpleResponder {
+    pub fn send(self) -> Result<(), Error> {
+        let header =
+            SignalingHeader::new(self.id, self.signal, SignalingMessageType::ResponseAccept);
+        let mut reply = vec![0 as u8; header.encoded_len()];
+        header.encode(reply.as_mut_slice())?;
+        self.peer.send_signal(reply.as_slice())
+    }
+
+    pub fn reject(self, error_code: ErrorCode) -> Result<(), Error> {
+        self.peer.send_reject(self.id, self.signal, error_code)
+    }
+}
+
+#[derive(Debug)]
+pub struct StreamResponder {
+    peer: Arc<PeerInner>,
+    signal: SignalIdentifier,
+    id: TxLabel,
+}
+
+impl StreamResponder {
+    pub fn send(self) -> Result<(), Error> {
+        let header =
+            SignalingHeader::new(self.id, self.signal, SignalingMessageType::ResponseAccept);
+        let mut reply = vec![0 as u8; header.encoded_len()];
+        header.encode(reply.as_mut_slice())?;
+        self.peer.send_signal(reply.as_slice())
+    }
+
+    pub fn reject(self, stream_id: &StreamEndpointId, error_code: ErrorCode) -> Result<(), Error> {
+        self.peer.send_reject_params(
+            self.id,
+            self.signal,
+            &[stream_id.to_msg(), u8::from(&error_code)],
+        )
+    }
+}
+
+#[derive(Debug)]
 struct UnparsedRequest(SignalingHeader, Vec<u8>);
 
 impl UnparsedRequest {
@@ -730,7 +954,15 @@ fn decode_signaling_response<D: Decodable>(
         return Err(Error::InvalidHeader);
     }
     if !header.is_type(SignalingMessageType::ResponseAccept) {
-        return Err(Error::RemoteRejected(buf[header.encoded_len()]));
+        match header.signal() {
+            SignalIdentifier::Start | SignalIdentifier::Suspend => {
+                return Err(Error::RemoteStreamRejected(
+                    buf[header.encoded_len()] >> 2,
+                    buf[header.encoded_len() + 1],
+                ));
+            }
+            _ => return Err(Error::RemoteRejected(buf[header.encoded_len()])),
+        };
     }
     D::decode(&buf[header.encoded_len()..])
 }
@@ -977,10 +1209,16 @@ impl PeerInner {
     fn send_reject(
         &self, label: TxLabel, signal: SignalIdentifier, error_code: ErrorCode,
     ) -> Result<(), Error> {
+        self.send_reject_params(label, signal, &[u8::from(&error_code)])
+    }
+
+    fn send_reject_params(
+        &self, label: TxLabel, signal: SignalIdentifier, params: &[u8],
+    ) -> Result<(), Error> {
         let header = SignalingHeader::new(label, signal, SignalingMessageType::ResponseReject);
-        let mut packet = vec![0 as u8; header.encoded_len() + 1];
+        let mut packet = vec![0 as u8; header.encoded_len() + params.len()];
         header.encode(packet.as_mut_slice())?;
-        packet[header.encoded_len()] = u8::from(&error_code);
+        packet[header.encoded_len()..].clone_from_slice(params);
         self.send_signal(&packet)
     }
 

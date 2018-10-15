@@ -431,6 +431,7 @@ fn get_capabilities_event_responder_send_works() {
     assert!(respond_res.is_ok());
 
     // Should receive the encoded version of the MediaTransport
+    #[rustfmt::skip]
     let get_capabilities_rsp = &[
         0x42, // TxLabel (4) + ResponseAccept (0x02)
         0x02, // GetCapabilities Signal
@@ -495,6 +496,7 @@ fn get_capabilities_command_works() {
 
     let txlabel_raw = received[0] & 0xF0;
 
+    #[rustfmt::skip]
     let response: &[u8] = &[
         txlabel_raw << 4 | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
         0x02,                              // Get Capabilities
@@ -651,11 +653,13 @@ fn get_all_capabilities_event_responder_send_works() {
     assert!(respond_res.is_ok());
 
     // Should receive the encoded version of the MediaTransport
+    #[rustfmt::skip]
     let get_capabilities_rsp = &[
         0x42, // TxLabel (4) + ResponseAccept (0x02)
         0x0C, // GetAllCapabilities Signal
         // MediaTransport (Length of Service Capability = 0)
-        0x01, 0x00, // Reporting (LOSC = 0)
+        0x01, 0x00,
+        // Reporting (LOSC = 0)
         0x02, 0x00,
         // Recovery (LOSC = 3), Type (0x01), Window size (10), Number Media Packets (255)
         0x03, 0x03, 0x01, 0x0A, 0xFF,
@@ -713,6 +717,7 @@ fn get_all_capabilities_command_works() {
 
     let txlabel_raw = received[0] & 0xF0;
 
+    #[rustfmt::skip]
     let response: &[u8] = &[
         txlabel_raw << 4 | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
         0x0C,                              // Get All Capabilities
@@ -790,3 +795,386 @@ fn get_all_capabilities_reject_command() {
 
     assert_eq!(Error::RemoteRejected(0x12), error);
 }
+
+macro_rules! incoming_cmd_length_fail_test {
+    ($test_name:ident, $signal_value:expr, $length:expr) => {
+        #[test]
+        fn $test_name() {
+            let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+            // TxLabel 4, signal value, no params
+            let mut incoming_cmd = vec![0x40, $signal_value];
+
+            // Add $length bytes
+            incoming_cmd.extend_from_slice(&[0; $length]);
+
+            // Send the command
+            assert!(remote.write(&incoming_cmd).is_ok());
+
+            let mut fut = stream.next();
+            let complete = exec.run_until_stalled(&mut fut);
+
+            // We shouldn't have received any request.
+            assert!(complete.is_pending());
+
+            // The peer should have responded with a Response Reject message with the
+            // same TxLabel with BAD_LENGTH
+            expect_remote_recv(&[0x43, $signal_value, 0x11], &remote);
+        }
+    };
+}
+
+macro_rules! seid_command_test {
+    ($test_name:ident, $signal_value:expr, $peer_function:ident) => {
+        #[test]
+        fn $test_name() {
+            let mut exec = fasync::Executor::new().expect("failed to create an executor");
+            let (peer, remote) = setup_peer();
+            let seid = StreamEndpointId::try_from(1).unwrap();
+            let mut response_fut = Box::pinned(peer.$peer_function(&seid));
+            assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+            let received = recv_remote(&remote).unwrap();
+            // Last half of header must be Single (0b00) and Command (0b00)
+            assert_eq!(0x00, received[0] & 0xF);
+            assert_eq!($signal_value, received[1]); // $signal_value = $request_variant
+            assert_eq!(0x01 << 2, received[2]); // SEID (0x01) , RFA
+
+            let txlabel_raw = received[0] & 0xF0;
+
+            let response: &[u8] = &[
+                // txlabel (same), Single (0b00), Response Accept (0b10)
+                txlabel_raw << 4 | 0x0 << 2 | 0x2,
+                $signal_value, // $request_variant
+            ];
+            assert!(remote.write(response).is_ok());
+
+            let complete = exec.run_until_stalled(&mut response_fut);
+
+            assert_eq!(Poll::Ready(Ok(())), complete);
+        }
+    };
+}
+
+macro_rules! seids_command_test {
+    ($test_name:ident, $signal_value:expr, $peer_function:ident) => {
+        #[test]
+        fn $test_name() {
+            let mut exec = fasync::Executor::new().expect("failed to create an executor");
+            let (peer, remote) = setup_peer();
+            let seid1 = StreamEndpointId::try_from(1).unwrap();
+            let seid2 = StreamEndpointId::try_from(16).unwrap();
+            let seids = [seid1, seid2];
+            let mut response_fut = Box::pinned(peer.$peer_function(&seids));
+            assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+            let received = recv_remote(&remote).unwrap();
+            // Last half of header must be Single (0b00) and Command (0b00)
+            assert_eq!(0x00, received[0] & 0xF);
+            assert_eq!($signal_value, received[1]); // $signal_value = $request_variant
+            assert_eq!(0x01 << 2, received[2]); // SEID (0x01) , RFA
+            assert_eq!(0x10 << 2, received[3]); // SEID (0x10) , RFA
+
+            let txlabel_raw = received[0] & 0xF0;
+
+            let response: &[u8] = &[
+                // txlabel (same), Single (0b00), Response Accept (0b10)
+                txlabel_raw << 4 | 0x0 << 2 | 0x2,
+                $signal_value, // Signal value
+            ];
+            assert!(remote.write(response).is_ok());
+
+            let complete = exec.run_until_stalled(&mut response_fut);
+
+            assert_eq!(Poll::Ready(Ok(())), complete);
+        }
+    };
+}
+
+macro_rules! seid_command_reject_test {
+    ($test_name:ident, $signal_value: expr, $peer_function:ident) => {
+        #[test]
+        fn $test_name() {
+            let mut exec = fasync::Executor::new().expect("failed to create an executor");
+            let (peer, remote) = setup_peer();
+            let seid = StreamEndpointId::try_from(1).unwrap();
+            let response_fut = peer.$peer_function(&seid);
+            pin_mut!(response_fut);
+            assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+            let received = recv_remote(&remote).unwrap();
+            // Last half of header must be Single (0b00) and Command (0b00)
+            assert_eq!(0x00, received[0] & 0xF);
+            assert_eq!($signal_value, received[1]); // 0x02 = GetAllCapabilities
+            assert_eq!(0x01 << 2, received[2]); // SEID (0x01), RFA
+
+            let txlabel_raw = received[0] & 0xF0;
+
+            let response: &[u8] = &[
+                // txlabel (same), Single (0b00), Response Reject (0b11)
+                txlabel_raw | 0x0 << 2 | 0x3,
+                $signal_value, // $request_variant
+                0x12,          // BAD_ACP_SEID
+            ];
+
+            assert!(remote.write(response).is_ok());
+
+            let complete = exec.run_until_stalled(&mut response_fut);
+
+            let error = match complete {
+                Poll::Ready(Err(response)) => response,
+                x => panic!("Should have a ready Error response: {:?}", x),
+            };
+
+            assert_eq!(Error::RemoteRejected(0x12), error);
+        }
+    };
+}
+
+macro_rules! seids_command_reject_test {
+    ($test_name:ident, $signal_value: expr, $peer_function:ident) => {
+        #[test]
+        fn $test_name() {
+            let mut exec = fasync::Executor::new().expect("failed to create an executor");
+            let (peer, remote) = setup_peer();
+            let seid1 = StreamEndpointId::try_from(1).unwrap();
+            let seid2 = StreamEndpointId::try_from(16).unwrap();
+            let seids = [seid1, seid2];
+            let response_fut = peer.$peer_function(&seids);
+            pin_mut!(response_fut);
+            assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+            let received = recv_remote(&remote).unwrap();
+            // Last half of header must be Single (0b00) and Command (0b00)
+            assert_eq!(0x00, received[0] & 0xF);
+            assert_eq!($signal_value, received[1]); // 0x02 = GetAllCapabilities
+            assert_eq!(0x01 << 2, received[2]); // SEID (0x01), RFA
+            assert_eq!(0x10 << 2, received[3]); // SEID (0x10), RFA
+
+            let txlabel_raw = received[0] & 0xF0;
+
+            let response: &[u8] = &[
+                // txlabel (same), Single (0b00), Response Reject (0b11)
+                txlabel_raw | 0x0 << 2 | 0x3,
+                $signal_value, // $request_variant
+                0x10 << 2,     // SEID 16, RFA
+                0x12,          // BAD_ACP_SEID
+            ];
+
+            assert!(remote.write(response).is_ok());
+
+            let complete = exec.run_until_stalled(&mut response_fut);
+
+            let error = match complete {
+                Poll::Ready(Err(response)) => response,
+                x => panic!("Should have a ready Error response: {:?}", x),
+            };
+
+            assert_eq!(Error::RemoteStreamRejected(0x10, 0x12), error);
+        }
+    };
+}
+macro_rules! seid_event_responder_send_test {
+    ($test_name:ident, $variant:ident, $signal_value:expr, $command_var:ident) => {
+        #[test]
+        fn $test_name() {
+            let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+            assert!(remote.write(&$command_var).is_ok());
+
+            let respond_res = match next_request(&mut stream, &mut exec) {
+                Request::$variant {
+                    responder,
+                    stream_id,
+                } => {
+                    assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
+                    responder.send()
+                }
+                _ => panic!("should have received a Open"),
+            };
+
+            assert!(respond_res.is_ok());
+
+            // Should receive the response.
+            let ok_rsp = &[
+                0x42,          // TxLabel (4) + ResponseAccept (0x02)
+                $signal_value, // $variant Signal
+            ];
+            expect_remote_recv(ok_rsp, &remote);
+        }
+    };
+}
+
+macro_rules! seids_event_responder_send_test {
+    ($test_name:ident, $variant:ident, $signal_value:expr, $command_var:ident) => {
+        #[test]
+        fn $test_name() {
+            let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+            assert!(remote.write(&$command_var).is_ok());
+
+            let respond_res = match next_request(&mut stream, &mut exec) {
+                Request::$variant {
+                    responder,
+                    stream_ids,
+                } => {
+                    assert_eq!(
+                        &StreamEndpointId::try_from(12).unwrap(),
+                        stream_ids.get(0).unwrap()
+                    );
+                    responder.send()
+                }
+                _ => panic!("should have received a Open"),
+            };
+
+            assert!(respond_res.is_ok());
+
+            // Should receive the response.
+            let ok_rsp = &[
+                0x42,          // TxLabel (4) + ResponseAccept (0x02)
+                $signal_value, // $variant Signal
+            ];
+            expect_remote_recv(ok_rsp, &remote);
+        }
+    };
+}
+
+macro_rules! seid_event_responder_reject_test {
+    ($test_name:ident, $variant:ident, $signal_value:expr, $command_var:ident) => {
+        #[test]
+        fn $test_name() {
+            let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+            assert!(remote.write(&$command_var).is_ok());
+
+            let respond_res = match next_request(&mut stream, &mut exec) {
+                Request::$variant {
+                    responder,
+                    stream_id,
+                } => {
+                    assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
+                    responder.reject(ErrorCode::BadAcpSeid)
+                }
+                _ => panic!("should have received a GetAllCapabilities"),
+            };
+
+            assert!(respond_res.is_ok());
+
+            let rejected_rsp = &[
+                0x43,          // TxLabel (4),  RemoteRejected (3)
+                $signal_value, // $variant
+                0x12,          // BAD_ACP_SEID
+            ];
+            expect_remote_recv(rejected_rsp, &remote);
+        }
+    };
+}
+
+macro_rules! stream_event_responder_reject_test {
+    ($test_name:ident, $variant:ident, $signal_value:expr, $command_var:ident) => {
+        #[test]
+        fn $test_name() {
+            let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+            assert!(remote.write(&$command_var).is_ok());
+
+            let respond_res = match next_request(&mut stream, &mut exec) {
+                Request::$variant {
+                    responder,
+                    stream_ids,
+                } => {
+                    let stream_id = stream_ids.get(0).unwrap();
+                    assert_eq!(&StreamEndpointId::try_from(12).unwrap(), stream_id);
+                    responder.reject(stream_id, ErrorCode::BadAcpSeid)
+                }
+                _ => panic!("should have received a GetAllCapabilities"),
+            };
+
+            assert!(respond_res.is_ok());
+
+            let rejected_rsp = &[
+                0x43,          // TxLabel (4),  RemoteRejected (3)
+                $signal_value, // $variant
+                12 << 2,       // Stream ID (12), RFA
+                0x12,          // BAD_ACP_SEID
+            ];
+            expect_remote_recv(rejected_rsp, &remote);
+        }
+    };
+}
+
+// Open
+
+const CMD_OPEN: &'static [u8] = &[
+    0x40, // TxLabel (4), Single Packet (0b00), Command (0b00)
+    0x06, // RFA (0b00), Open (0x06)
+    0x30, // SEID 12 (0b001100)
+];
+
+const CMD_OPEN_VALUE: &'static u8 = &0x06;
+
+incoming_cmd_length_fail_test!(open_length_too_short, *CMD_OPEN_VALUE, 0);
+incoming_cmd_length_fail_test!(open_length_too_long, *CMD_OPEN_VALUE, 2);
+seid_command_test!(open_command_works, *CMD_OPEN_VALUE, open);
+seid_command_reject_test!(open_command_reject_works, *CMD_OPEN_VALUE, open);
+seid_event_responder_send_test!(open_responder_send, Open, *CMD_OPEN_VALUE, CMD_OPEN);
+seid_event_responder_reject_test!(open_responder_reject, Open, *CMD_OPEN_VALUE, CMD_OPEN);
+
+// Start
+
+const CMD_START: &'static [u8] = &[
+    0x40, // TxLabel (4), Single Packet (0b00), Command (0b00)
+    0x07, // RFA (0b00), Start (0x07)
+    0x30, // SEID 12 (0b001100)
+];
+
+const CMD_START_VALUE: &'static u8 = &0x07;
+
+incoming_cmd_length_fail_test!(start_length, *CMD_START_VALUE, 0);
+seids_command_test!(start_command_works, *CMD_START_VALUE, start);
+seids_command_reject_test!(start_command_reject_works, *CMD_START_VALUE, start);
+seids_event_responder_send_test!(start_responder_send, Start, *CMD_START_VALUE, CMD_START);
+stream_event_responder_reject_test!(start_responder_reject, Start, *CMD_START_VALUE, CMD_START);
+
+// Close
+
+const CMD_CLOSE: &'static [u8] = &[
+    0x40, // TxLabel (4), Single Packet (0b00), Command (0b00)
+    0x08, // RFA (0b00), Close (0x08)
+    0x30, // SEID 12 (0b001100)
+];
+
+const CMD_CLOSE_VALUE: &'static u8 = &0x08;
+
+incoming_cmd_length_fail_test!(close_length_too_short, *CMD_CLOSE_VALUE, 0);
+incoming_cmd_length_fail_test!(close_length_too_long, *CMD_CLOSE_VALUE, 2);
+seid_command_test!(close_command_works, *CMD_CLOSE_VALUE, close);
+seid_command_reject_test!(close_command_reject_works, *CMD_CLOSE_VALUE, close);
+seid_event_responder_send_test!(close_responder_send, Close, *CMD_CLOSE_VALUE, CMD_CLOSE);
+seid_event_responder_reject_test!(close_responder_reject, Close, *CMD_CLOSE_VALUE, CMD_CLOSE);
+
+// Suspend
+
+const CMD_SUSPEND: &'static [u8] = &[
+    0x40, // TxLabel (4), Single Packet (0b00), Command (0b00)
+    0x09, // RFA (0b00), Suspend (0x09)
+    0x30, // SEID 12 (0b001100)
+];
+
+const CMD_SUSPEND_VALUE: &'static u8 = &0x09;
+
+incoming_cmd_length_fail_test!(suspend_length, *CMD_SUSPEND_VALUE, 0);
+seids_command_test!(suspend_command_works, *CMD_SUSPEND_VALUE, suspend);
+seids_command_reject_test!(suspend_command_reject_works, *CMD_SUSPEND_VALUE, suspend);
+seids_event_responder_send_test!(
+    suspend_responder_send,
+    Suspend,
+    *CMD_SUSPEND_VALUE,
+    CMD_SUSPEND
+);
+stream_event_responder_reject_test!(
+    suspend_responder_reject,
+    Suspend,
+    *CMD_SUSPEND_VALUE,
+    CMD_SUSPEND
+);
