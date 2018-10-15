@@ -38,6 +38,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "domain_unittest.cc",
     "socket_channel_relay_unittest.cc",
     "socket_factory_unittest.cc",
   ]
@@ -45,6 +46,7 @@ source_set("tests") {
   deps = [
     ":data",
     "//garnet/drivers/bluetooth/lib/l2cap:testing",
+    "//garnet/drivers/bluetooth/lib/testing",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest",
   ]

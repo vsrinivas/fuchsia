@@ -33,6 +33,11 @@ class Domain : public fbl::RefCounted<Domain> {
   static fbl::RefPtr<Domain> Create(fxl::RefPtr<hci::Transport> hci,
                                     std::string thread_name);
 
+  // Constructs an instance using the given |dispatcher| instead of spawning a
+  // thread. This is intended for unit tests.
+  static fbl::RefPtr<Domain> CreateWithDispatcher(
+      fxl::RefPtr<hci::Transport> hci, async_dispatcher_t* dispatcher);
+
   // These send an Initialize/ShutDown message to the data task runner. It is
   // safe for the caller to drop its Domain reference after ShutDown is called.
   //
@@ -122,6 +127,11 @@ class Domain : public fbl::RefCounted<Domain> {
   // receive any data sent to the channel and any data sent to the socket
   // will be sent as if sent by l2cap::Channel::Send.
   // |link_handle| disambiguates which remote device initiated the channel.
+  //
+  // TODO(armansito): Return the socket in a data structure that contains
+  // additional meta-data about the connection, such as its link type and
+  // channel configuration parameters (see NET-1084 and TODOs for
+  // RegisterService above.
   using SocketCallback =
       fit::function<void(zx::socket, hci::ConnectionHandle link_handle)>;
   virtual void RegisterService(l2cap::PSM psm, SocketCallback socket_callback,

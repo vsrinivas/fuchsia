@@ -24,6 +24,14 @@ class Impl final : public Domain, public common::TaskDomain<Impl, Domain> {
     ZX_DEBUG_ASSERT(hci_);
   }
 
+  // Second constructor used by CreateWithDispatcher.
+  Impl(fxl::RefPtr<hci::Transport> hci, async_dispatcher_t* dispatcher)
+      : Domain(),
+        common::TaskDomain<Impl, Domain>(this, dispatcher),
+        hci_(hci) {
+    ZX_DEBUG_ASSERT(hci_);
+  }
+
   void Initialize() override {
     PostMessage([this] {
       // This can only run once during initialization.
@@ -209,6 +217,14 @@ fbl::RefPtr<Domain> Domain::Create(fxl::RefPtr<hci::Transport> hci,
                                    std::string thread_name) {
   ZX_DEBUG_ASSERT(hci);
   return AdoptRef(new Impl(hci, std::move(thread_name)));
+}
+
+// static
+fbl::RefPtr<Domain> Domain::CreateWithDispatcher(
+    fxl::RefPtr<hci::Transport> hci, async_dispatcher_t* dispatcher) {
+  ZX_DEBUG_ASSERT(hci);
+  ZX_DEBUG_ASSERT(dispatcher);
+  return AdoptRef(new Impl(hci, dispatcher));
 }
 
 }  // namespace data
