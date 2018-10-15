@@ -6,12 +6,12 @@ library fuchsia.mediaplayer;
 
 // Describes media.
 struct Metadata {
-  vector<Property> properties;
+    vector<Property> properties;
 };
 
 struct Property {
-  string label;
-  string value;
+    string label;
+    string value;
 };
 
 const string METADATA_LABEL_TITLE = "fuchsia.mediaplayer.title";

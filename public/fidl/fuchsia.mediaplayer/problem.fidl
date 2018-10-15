@@ -16,11 +16,11 @@ library fuchsia.mediaplayer;
 // general means of dismissing a |Problem|.
 struct Problem {
 
-  // The type of problem. This is a string for extensibility.
-  string type;
+    // The type of problem. This is a string for extensibility.
+    string type;
 
-  // Type-dependent details.
-  string? details;
+    // Type-dependent details.
+    string? details;
 };
 
 const string kProblemInternal = "ProblemInternal";

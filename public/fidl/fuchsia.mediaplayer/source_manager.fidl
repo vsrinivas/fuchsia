@@ -9,82 +9,82 @@ using fuchsia.media;
 // Manages sources on behalf of a Player.
 // Ordinal range: 0x1101-11ff
 interface SourceManager {
-  // Creates a source that reads from a URL.
-  0x1101: CreateHttpSource(string http_url, request<Source> source_request);
+    // Creates a source that reads from a URL.
+    0x1101: CreateHttpSource(string http_url, request<Source> source_request);
 
-  // Creates a source that reads from a file.
-  0x1102: CreateFileSource(handle<channel> file_channel,
-                           request<Source> source_request);
-
-  // Creates a source that reads from a SeekingReader.
-  0x1103: CreateReaderSource(SeekingReader seeking_reader,
+    // Creates a source that reads from a file.
+    0x1102: CreateFileSource(handle<channel> file_channel,
                              request<Source> source_request);
 
-  // Creates a source that allows the client to provide independent elementary
-  // streams to the player.
-  0x1104: CreateStreamSource(request<StreamSource> source_request);
+    // Creates a source that reads from a SeekingReader.
+    0x1103: CreateReaderSource(SeekingReader seeking_reader,
+                               request<Source> source_request);
 
-  // Sets the source for this player to use. If source is null, the player
-  // becomes idle.
-  0x1105: SetSource(Source? source);
+    // Creates a source that allows the client to provide independent elementary
+    // streams to the player.
+    0x1104: CreateStreamSource(request<StreamSource> source_request);
 
-  // Transitions to the specified source when playback of the current source
-  // reaches transition_pts. The new source starts playback at start_pts. If
-  // a transition is already pending, it will be discarded in favor of the new
-  // transition.
-  0x1106: TransitionToSource(Source source, int64 transition_pts,
-                             int64 start_pts);
+    // Sets the source for this player to use. If source is null, the player
+    // becomes idle.
+    0x1105: SetSource(Source? source);
 
-  // Cancels a pending transition, returning the source. If no transition is
-  // pending, the request channel is closed.
-  0x1107: CancelSourceTransition(request<Source> returned_source_request);
+    // Transitions to the specified source when playback of the current source
+    // reaches transition_pts. The new source starts playback at start_pts. If
+    // a transition is already pending, it will be discarded in favor of the new
+    // transition.
+    0x1106: TransitionToSource(Source source, int64 transition_pts,
+                               int64 start_pts);
+
+    // Cancels a pending transition, returning the source. If no transition is
+    // pending, the request channel is closed.
+    0x1107: CancelSourceTransition(request<Source> returned_source_request);
 };
 
 // Ordinal range: 0x1201-12ff
 [FragileBase]
 interface Source {
-  // Provides current status immediately after binding and whenever status
-  // changes thereafter.
-  0x1201: -> OnStatusChanged(SourceStatus source_status);
+    // Provides current status immediately after binding and whenever status
+    // changes thereafter.
+    0x1201: -> OnStatusChanged(SourceStatus source_status);
 };
 
 // Source variant for providing elementary streams directly.
 // Ordinal range: 0x1301-13ff
 interface StreamSource : Source {
-  // Adds an elementary stream. The elementary stream can be removed by
-  // closing the StreamSourceSink.
-  0x1301: AddStream(
-    fuchsia.media.StreamType type,
-    request<StreamSourceSink> stream_source_sink_request);
+    // Adds an elementary stream. The elementary stream can be removed by
+    // closing the StreamSourceSink.
+    0x1301: AddStream(
+                fuchsia.media.StreamType type,
+                request<StreamSourceSink> stream_source_sink_request);
 
-  // Adds a new binding to this StreamSource.
-  0x1302: AddBinding(request<StreamSource> stream_source_request);
+    // Adds a new binding to this StreamSource.
+    0x1302: AddBinding(request<StreamSource> stream_source_request);
 };
 
 // A StreamSink exposed by a StreamSource.
 // Ordinal range: 0x1401-14ff
 interface StreamSourceSink :
-  fuchsia.media.StreamSink, fuchsia.media.StreamBufferSet {
+fuchsia.media.StreamSink, fuchsia.media.StreamBufferSet {
 };
 
 // Source status information.
 struct SourceStatus {
-  // Duration in nanoseconds.
-  int64 duration_ns;
+    // Duration in nanoseconds.
+    int64 duration_ns;
 
-  // Whether the source has an audio stream.
-  bool has_audio;
+    // Whether the source has an audio stream.
+    bool has_audio;
 
-  // Whether the source has a video stream.
-  bool has_video;
+    // Whether the source has a video stream.
+    bool has_video;
 
-  // Indicates whether the source is ready. A true value signals that the
-  // content has been probed and there are no known problems with it.
-  bool ready;
+    // Indicates whether the source is ready. A true value signals that the
+    // content has been probed and there are no known problems with it.
+    bool ready;
 
-  // Describes the media.
-  Metadata? metadata;
+    // Describes the media.
+    Metadata? metadata;
 
-  // Indicates a problem preventing intended operation.
-  Problem? problem;
+    // Indicates a problem preventing intended operation.
+    Problem? problem;
 };

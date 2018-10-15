@@ -14,102 +14,102 @@ using fuchsia.ui.viewsv1token;
 // Ordinal range: 0x1001-10ff
 [Discoverable]
 interface Player {
-  /////////////////////////////////////////////////////////////////////////////
-  // Player methods
-  // These methods will remain in Player.
-  // TODO(dalesat): Player will inherit SourceManager and SinkManager.
+    /////////////////////////////////////////////////////////////////////////////
+    // Player methods
+    // These methods will remain in Player.
+    // TODO(dalesat): Player will inherit SourceManager and SinkManager.
 
-  // Sets an HTTP URL to read from. The provided headers are added to each
-  // HTTP request issued to the URL.
-  0x1001: SetHttpSource(string http_url,
-                        vector<fuchsia.net.oldhttp.HttpHeader>? headers);
+    // Sets an HTTP URL to read from. The provided headers are added to each
+    // HTTP request issued to the URL.
+    0x1001: SetHttpSource(string http_url,
+                          vector<fuchsia.net.oldhttp.HttpHeader>? headers);
 
-  // Sets a file channel to read from.
-  0x1002: SetFileSource(handle<channel> file_channel);
+    // Sets a file channel to read from.
+    0x1002: SetFileSource(handle<channel> file_channel);
 
-  // Starts playback.
-  0x1003: Play();
+    // Starts playback.
+    0x1003: Play();
 
-  // Pauses playback.
-  0x1004: Pause();
+    // Pauses playback.
+    0x1004: Pause();
 
-  // Provides current status immediately after binding and whenever status
-  // changes thereafter.
-  0x1005: -> OnStatusChanged(PlayerStatus player_status);
+    // Provides current status immediately after binding and whenever status
+    // changes thereafter.
+    0x1005: -> OnStatusChanged(PlayerStatus player_status);
 
-  // Seeks to the specified position, specified in nanoseconds.
-  0x1006: Seek(int64 position);
+    // Seeks to the specified position, specified in nanoseconds.
+    0x1006: Seek(int64 position);
 
-  // Creates a video view.
-  0x1007: CreateView(fuchsia.ui.viewsv1.ViewManager view_manager,
-                request<fuchsia.ui.viewsv1token.ViewOwner> view_owner_request);
+    // Creates a video view.
+    0x1007: CreateView(fuchsia.ui.viewsv1.ViewManager view_manager,
+                       request<fuchsia.ui.viewsv1token.ViewOwner> view_owner_request);
 
-  // Binds to the gain control for this player.
-  0x1008: BindGainControl(
-    request<fuchsia.media.GainControl> gain_control_request);
+    // Binds to the gain control for this player.
+    0x1008: BindGainControl(
+                request<fuchsia.media.GainControl> gain_control_request);
 
-  // Adds a new binding to this player.
-  0x1009: AddBinding(request<Player> player_request);
+    // Adds a new binding to this player.
+    0x1009: AddBinding(request<Player> player_request);
 
-  /////////////////////////////////////////////////////////////////////////////
-  // SourceManager methods
-  // Player will inherit the SourceManager interface. Currently, we have only
-  // the deprecated method SetReaderSource.
-  // TODO(dalesat): Include and implement SourceManager methods.
+    /////////////////////////////////////////////////////////////////////////////
+    // SourceManager methods
+    // Player will inherit the SourceManager interface. Currently, we have only
+    // the deprecated method SetReaderSource.
+    // TODO(dalesat): Include and implement SourceManager methods.
 
-  // DEPRECATED
-  0x1101: SetReaderSource(SeekingReader? reader);
+    // DEPRECATED
+    0x1101: SetReaderSource(SeekingReader? reader);
 
-  /////////////////////////////////////////////////////////////////////////////
-  // SinkManager methods
-  // Player will inherit the SinkManager interface. Currently, we have only
-  // the deprecated method SetAudioRenderer.
+    /////////////////////////////////////////////////////////////////////////////
+    // SinkManager methods
+    // Player will inherit the SinkManager interface. Currently, we have only
+    // the deprecated method SetAudioRenderer.
 
-  // DEPRECATED
-  0x1501: SetAudioRenderer(fuchsia.media.AudioRenderer? audio_renderer);
+    // DEPRECATED
+    0x1501: SetAudioRenderer(fuchsia.media.AudioRenderer? audio_renderer);
 };
 
 // Player status information.
 struct PlayerStatus {
-  // Duration in nanoseconds.
-  int64 duration_ns;
+    // Duration in nanoseconds.
+    int64 duration_ns;
 
-  // Whether the source has an audio stream.
-  bool has_audio;
+    // Whether the source has an audio stream.
+    bool has_audio;
 
-  // Whether the source has a video stream.
-  bool has_video;
+    // Whether the source has a video stream.
+    bool has_video;
 
-  // Indicates whether the player is ready to play. After SetSource is called,
-  // this value is false until the player is fully prepared to play the content
-  // from the source.
-  bool ready;
+    // Indicates whether the player is ready to play. After SetSource is called,
+    // this value is false until the player is fully prepared to play the content
+    // from the source.
+    bool ready;
 
-  // Describes the media.
-  Metadata? metadata;
+    // Describes the media.
+    Metadata? metadata;
 
-  // Indicates a problem preventing intended operation.
-  Problem? problem;
+    // Indicates a problem preventing intended operation.
+    Problem? problem;
 
-  // Indicates whether an audio stream is currently connected for rendering.
-  // This value will be false if |has_audio| is false if the audio stream
-  // type isn't supported.
-  bool audio_connected;
+    // Indicates whether an audio stream is currently connected for rendering.
+    // This value will be false if |has_audio| is false if the audio stream
+    // type isn't supported.
+    bool audio_connected;
 
-  // Indicates whether a video stream is currently connected for rendering.
-  // This value will be false if |has_video| is false if the video stream
-  // type isn't supported.
-  bool video_connected;
+    // Indicates whether a video stream is currently connected for rendering.
+    // This value will be false if |has_video| is false if the video stream
+    // type isn't supported.
+    bool video_connected;
 
-  // Size of the video currently being produced.
-  fuchsia.math.Size? video_size;
+    // Size of the video currently being produced.
+    fuchsia.math.Size? video_size;
 
-  // Relative dimensions of a video pixel.
-  fuchsia.math.Size? pixel_aspect_ratio;
+    // Relative dimensions of a video pixel.
+    fuchsia.math.Size? pixel_aspect_ratio;
 
-  // Function translating local time to presentation time.
-  TimelineFunction? timeline_function;
+    // Function translating local time to presentation time.
+    TimelineFunction? timeline_function;
 
-  // Indicates whether presentation has reached end-of-stream.
-  bool end_of_stream;
+    // Indicates whether presentation has reached end-of-stream.
+    bool end_of_stream;
 };
