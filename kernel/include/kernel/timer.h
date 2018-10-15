@@ -23,9 +23,9 @@ typedef void (*timer_callback)(struct timer*, zx_time_t now, void* arg);
 #define TIMER_MAGIC (0x74696D72) //'timr'
 
 enum slack_mode {
-    TIMER_SLACK_CENTER, // slack is centered arround dealine
-    TIMER_SLACK_LATE,   // slack interval is [deadline, dealine + slack)
-    TIMER_SLACK_EARLY,  // slack interval is (deadline - slack, dealine]
+    TIMER_SLACK_CENTER, // slack is centered around deadline
+    TIMER_SLACK_LATE,   // slack interval is [deadline, deadline + slack)
+    TIMER_SLACK_EARLY,  // slack interval is (deadline - slack, deadline]
 };
 
 typedef struct timer {
@@ -85,7 +85,7 @@ void timer_init(timer_t*);
 // is acceptable to fire the timer:
 //
 // - TIMER_SLACK_CENTER: |deadline - slack| to |deadline + slack|
-// - TIMER_SLACK_LATE: |dealine| to |deadline + slack|
+// - TIMER_SLACK_LATE: |deadline| to |deadline + slack|
 // - TIMER_SLACK_EARLY: |deadline - slack| to |deadline|
 void timer_set(timer_t* timer, zx_time_t deadline,
                enum slack_mode mode, zx_duration_t slack, timer_callback callback, void* arg);
