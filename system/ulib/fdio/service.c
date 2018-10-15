@@ -127,8 +127,3 @@ zx_handle_t fdio_unsafe_borrow_channel(fdio_t* io) {
     }
     return ZX_HANDLE_INVALID;
 }
-
-__EXPORT
-zx_handle_t __fdio_borrow_channel(fdio_t* io) {
-    return fdio_unsafe_borrow_channel(io);
-}

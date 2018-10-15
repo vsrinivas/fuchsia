@@ -157,11 +157,6 @@ fdio_t* fdio_unsafe_fd_to_io(int fd) {
     return io;
 }
 
-__EXPORT
-fdio_t* __fdio_fd_to_io(int fd) {
-    return fdio_unsafe_fd_to_io(fd);
-}
-
 zx_status_t fdio_close(fdio_t* io) {
     if (io->dupcount > 0) {
         LOG(1, "fdio: close(%p): nonzero dupcount!\n", io);
@@ -1978,31 +1973,14 @@ void fdio_unsafe_wait_begin(fdio_t* io, uint32_t events,
 }
 
 __EXPORT
-void __fdio_wait_begin(fdio_t* io, uint32_t events,
-                       zx_handle_t* handle_out, zx_signals_t* signals_out) {
-    return fdio_unsafe_wait_begin(io, events, handle_out, signals_out);
-}
-
-__EXPORT
 void fdio_unsafe_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* events_out) {
     return io->ops->wait_end(io, signals, events_out);
-}
-
-__EXPORT
-void __fdio_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* events_out) {
-    return fdio_unsafe_wait_end(io, signals, events_out);
 }
 
 __EXPORT
 void fdio_unsafe_release(fdio_t* io) {
     fdio_release(io);
 }
-
-__EXPORT
-void __fdio_release(fdio_t* io) {
-    return fdio_unsafe_release(io);
-}
-
 
 // TODO: getrlimit(RLIMIT_NOFILE, ...)
 #define MAX_POLL_NFDS 1024

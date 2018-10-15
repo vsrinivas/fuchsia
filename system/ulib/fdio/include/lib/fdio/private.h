@@ -10,20 +10,6 @@
 
 __BEGIN_CDECLS;
 
-typedef struct fdio fdio_t;
-
-// Deprecated version of fdio_unsafe_fd_to_io()
-fdio_t* __fdio_fd_to_io(int fd);
-// Deprecated version of fdio_unsafe_borrow_channel()
-zx_handle_t __fdio_borrow_channel(fdio_t* io);
-// Deprecated version of fdio_unsafe_release()
-void __fdio_release(fdio_t* io);
-// Deprecated version of fdio_unsafe_wait_begin()
-void __fdio_wait_begin(fdio_t* io, uint32_t events,
-                       zx_handle_t* handle_out, zx_signals_t* signals_out);
-// Deprecated version of fdio_unsafe_wait_end()
-void __fdio_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* events_out);
-
 // WARNING: These APIs are subject to change
 
 // __fdio_cleanpath cleans an input path, placing the output
