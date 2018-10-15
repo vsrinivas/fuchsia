@@ -110,6 +110,7 @@ zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo,
         (vmo->is_paged() ? ZX_INFO_VMO_TYPE_PAGED : ZX_INFO_VMO_TYPE_PHYSICAL) |
         (vmo->is_cow_clone() ? ZX_INFO_VMO_IS_COW_CLONE : 0);
     entry.committed_bytes = vmo->AllocatedPages() * PAGE_SIZE;
+    entry.cache_policy = vmo->GetMappingCachePolicy();
     if (is_handle) {
         entry.flags |= ZX_INFO_VMO_VIA_HANDLE;
         entry.handle_rights = handle_rights;

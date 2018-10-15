@@ -102,23 +102,18 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
     // Check to see if a cache policy exists if a VMO is passed in. VMOs that do not support
     // cache policy return ERR_UNSUPPORTED, anything aside from that and ZX_OK is an error.
     if (vmo) {
-        uint32_t cache_policy;
-        zx_status_t status = vmo->GetMappingCachePolicy(&cache_policy);
-        if (status == ZX_OK) {
-            // Warn in the event that we somehow receive a VMO that has a cache
-            // policy set while also holding cache policy flags within the arch
-            // flags. The only path that should be able to achieve this is if
-            // something in the kernel maps into their aspace incorrectly.
-            if ((arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) != 0 &&
-                (arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) != cache_policy) {
-                TRACEF("warning: mapping %s has conflicting cache policies: vmo %02x "
-                       "arch_mmu_flags %02x.\n",
-                       name, cache_policy, arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK);
-            }
-            arch_mmu_flags |= cache_policy;
-        } else if (status != ZX_ERR_NOT_SUPPORTED) {
-            return ZX_ERR_INVALID_ARGS;
+        uint32_t cache_policy = vmo->GetMappingCachePolicy();
+        // Warn in the event that we somehow receive a VMO that has a cache
+        // policy set while also holding cache policy flags within the arch
+        // flags. The only path that should be able to achieve this is if
+        // something in the kernel maps into their aspace incorrectly.
+        if ((arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) != 0 &&
+            (arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) != cache_policy) {
+            TRACEF("warning: mapping %s has conflicting cache policies: vmo %02x "
+                   "arch_mmu_flags %02x.\n",
+                   name, cache_policy, arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK);
         }
+        arch_mmu_flags |= cache_policy;
     }
 
     // Check that we have the required privileges if we want a SPECIFIC mapping

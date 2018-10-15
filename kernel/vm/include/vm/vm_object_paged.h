@@ -95,7 +95,7 @@ public:
         // Called under the parent's lock, which confuses analysis.
         TA_NO_THREAD_SAFETY_ANALYSIS;
 
-    zx_status_t GetMappingCachePolicy(uint32_t* cache_policy) override;
+    uint32_t GetMappingCachePolicy() const override;
     zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) override;
 
     // maximum size of a VMO is one page less than the full 64bit range

@@ -428,13 +428,17 @@ bool vmo_info_test() {
     EXPECT_EQ(info.size_bytes, len, "vm_info_test: info_vmo.size_bytes");
     EXPECT_NE(info.create_options, (1u << 0),
               "vm_info_test: info_vmo.create_options");
+    EXPECT_EQ(info.cache_policy,
+              ZX_CACHE_POLICY_CACHED,
+              "vm_info_test: info_vmo.cache_policy");
 //    printf("NON_Resizeable VMO, size = %lu, create_options = %ux\n",
 //           info.size_bytes, info.create_options);
 
-    // Create a resizeable VMO, query the INFO on it and dump it.
+    // Create a resizeable uncached VMO, query the INFO on it and dump it.
     len = PAGE_SIZE * 8;
     zx_vmo_create(len, 0, &vmo);
     EXPECT_EQ(ZX_OK, status, "vm_info_test: vmo_create");
+    zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_UNCACHED);
 
     status = zx_object_get_info(vmo, ZX_INFO_VMO, &info,
                                 sizeof(info), nullptr, nullptr);
@@ -446,6 +450,9 @@ bool vmo_info_test() {
     EXPECT_EQ(info.size_bytes, len, "vm_info_test: info_vmo.size_bytes");
     EXPECT_EQ(info.create_options, (1u << 0),
               "vm_info_test: info_vmo.create_options");
+    EXPECT_EQ(info.cache_policy,
+              ZX_CACHE_POLICY_UNCACHED,
+              "vm_info_test: info_vmo.cache_policy");
 //    printf("Resizeable VMO, size = %lu, create_options = %ux\n",
 //           info.size_bytes, info.create_options);
 

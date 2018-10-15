@@ -344,6 +344,9 @@ typedef struct zx_info_vmo {
     // kResizable    = (1u << 0);
     // kContiguous   = (1u << 1);
     uint32_t create_options;
+
+    // VMO mapping cache policy. One of ZX_CACHE_POLICY_*
+    uint32_t cache_policy;
 } zx_info_vmo_t;
 ```
 

@@ -165,15 +165,10 @@ zx_status_t VmObjectPhysical::Lookup(uint64_t offset, uint64_t len, uint pf_flag
     return ZX_OK;
 }
 
-zx_status_t VmObjectPhysical::GetMappingCachePolicy(uint32_t* cache_policy) {
+uint32_t VmObjectPhysical::GetMappingCachePolicy() const {
     Guard<fbl::Mutex> guard{&lock_};
 
-    if (!cache_policy) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    *cache_policy = mapping_cache_flags_;
-    return ZX_OK;
+    return mapping_cache_flags_;
 }
 
 zx_status_t VmObjectPhysical::SetMappingCachePolicy(const uint32_t cache_policy) {

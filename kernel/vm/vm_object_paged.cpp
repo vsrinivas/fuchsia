@@ -1163,12 +1163,10 @@ zx_status_t VmObjectPaged::CacheOp(const uint64_t start_offset, const uint64_t l
     return ZX_OK;
 }
 
-zx_status_t VmObjectPaged::GetMappingCachePolicy(uint32_t* cache_policy) {
+uint32_t VmObjectPaged::GetMappingCachePolicy() const {
     Guard<fbl::Mutex> guard{&lock_};
 
-    *cache_policy = cache_policy_;
-
-    return ZX_OK;
+    return cache_policy_;
 }
 
 zx_status_t VmObjectPaged::SetMappingCachePolicy(const uint32_t cache_policy) {

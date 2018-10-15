@@ -157,10 +157,7 @@ public:
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    virtual zx_status_t GetMappingCachePolicy(uint32_t* cache_policy) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
+    virtual uint32_t GetMappingCachePolicy() const = 0;
     virtual zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) {
         return ZX_ERR_NOT_SUPPORTED;
     }

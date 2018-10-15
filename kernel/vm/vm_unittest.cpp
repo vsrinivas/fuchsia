@@ -507,7 +507,7 @@ static bool vmo_create_physical_test() {
     status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
-    EXPECT_EQ(ZX_OK, vmo->GetMappingCachePolicy(&cache_policy), "try get");
+    cache_policy = vmo->GetMappingCachePolicy();
     EXPECT_EQ(ARCH_MMU_FLAG_UNCACHED, cache_policy, "check initial cache policy");
     EXPECT_TRUE(vmo->is_contiguous(), "check contiguous");
 
@@ -847,10 +847,10 @@ static bool vmo_cache_test() {
         status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
         ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
         ASSERT_TRUE(vmo, "vmobject creation\n");
-        EXPECT_EQ(ZX_OK, vmo->GetMappingCachePolicy(&cache_policy_get), "try get");
+        cache_policy_get = vmo->GetMappingCachePolicy();
         EXPECT_NE(cache_policy, cache_policy_get, "check initial cache policy");
         EXPECT_EQ(ZX_OK, vmo->SetMappingCachePolicy(cache_policy), "try set");
-        EXPECT_EQ(ZX_OK, vmo->GetMappingCachePolicy(&cache_policy_get), "try get");
+        cache_policy_get = vmo->GetMappingCachePolicy();
         EXPECT_EQ(cache_policy, cache_policy_get, "compare flags");
     }
 

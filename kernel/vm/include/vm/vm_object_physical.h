@@ -41,7 +41,7 @@ public:
     zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
                               vm_page_t**, paddr_t* pa) override TA_REQ(lock_);
 
-    zx_status_t GetMappingCachePolicy(uint32_t* cache_policy) override;
+    uint32_t GetMappingCachePolicy() const override;
     zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) override;
 
 private:
