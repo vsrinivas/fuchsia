@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/expr/resolve_member.h"
+#include "garnet/bin/zxdb/expr/resolve_collection.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
@@ -31,7 +31,7 @@ fxl::RefPtr<Collection> GetTestClassType(const DataMember** member_a,
 
 }  // namespace
 
-TEST(ResolveMember, GoodAccess) {
+TEST(ResolveCollection, GoodMemberAccess) {
   const DataMember* a_data;
   const DataMember* b_data;
   auto sc = GetTestClassType(&a_data, &b_data);
@@ -76,7 +76,7 @@ TEST(ResolveMember, GoodAccess) {
   EXPECT_EQ(out, out_by_name);
 }
 
-TEST(ResolveMember, BadArgs) {
+TEST(ResolveCollection, BadMemberArgs) {
   const DataMember* a_data;
   const DataMember* b_data;
   auto sc = GetTestClassType(&a_data, &b_data);
@@ -98,7 +98,7 @@ TEST(ResolveMember, BadArgs) {
   EXPECT_EQ("Invalid data member for struct 'Foo'.", err.msg());
 }
 
-TEST(ResolveMember, BadAccess) {
+TEST(ResolveCollection, BadMemberAccess) {
   const DataMember* a_data;
   const DataMember* b_data;
   auto sc = GetTestClassType(&a_data, &b_data);
@@ -123,14 +123,11 @@ TEST(ResolveMember, BadAccess) {
   out = ExprValue();
   err = ResolveMember(base, bad_member.get(), &out);
   EXPECT_TRUE(err.has_error());
-  EXPECT_EQ(
-      "Member value 'c' is outside of the data of base 'Foo'. Please file a "
-      "bug with a repro.",
-      err.msg());
+  EXPECT_EQ("Invalid data member for struct 'Foo'.", err.msg());
 }
 
 // Tests foo.bar where bar is in a derived class of foo's type.
-TEST(ResolveMember, DerivedClass) {
+TEST(ResolveCollection, DerivedClass) {
   const DataMember* a_data;
   const DataMember* b_data;
   auto base = GetTestClassType(&a_data, &b_data);
@@ -159,6 +156,15 @@ TEST(ResolveMember, DerivedClass) {
 
   // Offset of B in "derived".
   EXPECT_EQ(kBaseAddr + base_offset + 4, out.source().address());
+
+  // Test extracting the base class from the derived one.
+  ExprValue base_value;
+  err = ResolveInherited(value, inherited.get(), &base_value);
+  EXPECT_FALSE(err.has_error());
+
+  EXPECT_EQ(ExprValue(base, {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00},
+                      ExprValueSource(kBaseAddr + base_offset)),
+            base_value);
 }
 
 }  // namespace zxdb

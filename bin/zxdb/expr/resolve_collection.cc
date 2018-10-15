@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/expr/resolve_member.h"
+#include "garnet/bin/zxdb/expr/resolve_collection.h"
 
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/resolve_ptr_ref.h"
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
+#include "garnet/bin/zxdb/symbols/inherited_from.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
 #include "garnet/bin/zxdb/symbols/type_utils.h"
@@ -30,9 +31,9 @@ Err GetPointedToCollection(const Type* type, const Collection** coll) {
   *coll = pointed_to->GetConcreteType()->AsCollection();
   if (!coll) {
     return Err(
-        fxl::StringPrintf("Attempting to dereference a pointer to '%s' which "
-                          "is not a class or a struct.",
-                          pointed_to->GetFullName().c_str()));
+        "Attempting to dereference a pointer to '%s' which "
+        "is not a class or a struct.",
+        pointed_to->GetFullName().c_str());
   }
   return Err();
 }
@@ -47,14 +48,13 @@ Err GetPointedToCollection(const Type* type, const Collection** coll) {
 Err FindMemberNamed(const Collection* base, const std::string& member_name,
                     const DataMember** out, uint32_t* offset) {
   if (!base) {
-    return Err(
-        fxl::StringPrintf("Can't resolve '%s' on non-struct/class/union value.",
-                          member_name.c_str()));
+    return Err("Can't resolve '%s' on non-struct/class/union value.",
+               member_name.c_str());
   }
 
   // Check the class and all of its base classes.
   bool found = VisitClassHierarchy(
-      base, [member_name, out, offset](const Collection* cur_collection,
+      base, [&member_name, out, offset](const Collection* cur_collection,
                                        uint32_t cur_offset) -> bool {
         // Called for each collection in the hierarchy.
         for (const auto& lazy : cur_collection->data_members()) {
@@ -70,27 +70,41 @@ Err FindMemberNamed(const Collection* base, const std::string& member_name,
 
   if (found)
     return Err();  // Out vars already filled in.
-  return Err(fxl::StringPrintf("No member '%s' in %s '%s'.",
-                               member_name.c_str(), base->GetKindString(),
-                               base->GetFullName().c_str()));
+  return Err("No member '%s' in %s '%s'.", member_name.c_str(),
+             base->GetKindString(), base->GetFullName().c_str());
+}
+
+Err GetErrorForInvalidMemberOf(const Collection* coll) {
+  return Err("Invalid data member for %s '%s'.", coll->GetKindString(),
+             coll->GetFullName().c_str());
+}
+
+// Tries to describe the type of the value as best as possible when a member
+// access is invalid.
+Err GetErrorForInvalidMemberOf(const ExprValue& value) {
+  if (!value.type())
+    return Err("No type information.");
+
+  if (const Collection* coll = value.type()->AsCollection())
+    return GetErrorForInvalidMemberOf(coll);
+
+  // Something other than a collection is the base.
+  return Err("Accessing a member of non-struct/class/union '%s'.",
+             value.type()->GetFullName().c_str());
 }
 
 // Validates the input member (it will null check) and extracts the type
 // for the member.
 Err GetMemberType(const Collection* coll, const DataMember* member,
                   fxl::RefPtr<Type>* member_type) {
-  if (!member) {
-    return Err(fxl::StringPrintf("Invalid data member for %s '%s'.",
-                                 coll->GetKindString(),
-                                 coll->GetFullName().c_str()));
-  }
+  if (!member)
+    return GetErrorForInvalidMemberOf(coll);
 
   *member_type =
       fxl::RefPtr<Type>(const_cast<Type*>(member->type().Get()->AsType()));
   if (!*member_type) {
-    return Err(fxl::StringPrintf("Bad type information for '%s.%s'.",
-                                 coll->GetFullName().c_str(),
-                                 member->GetAssignedName().c_str()));
+    return Err("Bad type information for '%s.%s'.", coll->GetFullName().c_str(),
+               member->GetAssignedName().c_str());
   }
   return Err();
 }
@@ -119,9 +133,25 @@ void DoResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
                  std::move(member_type), std::move(cb));
 }
 
-// This variant takes a precomputed ofsfet of the data member in the base
+// Extracts an embedded type inside of a base. This can be used for finding
+// collection data members and inherited classes, both of which consist of a
+// type and an offset.
+Err ExtractSubType(const ExprValue& base, fxl::RefPtr<Type> sub_type,
+                   uint32_t offset, ExprValue* out) {
+  uint32_t size = sub_type->byte_size();
+  if (offset + size > base.data().size())
+    return GetErrorForInvalidMemberOf(base);
+  std::vector<uint8_t> member_data(base.data().begin() + offset,
+                                   base.data().begin() + (offset + size));
+
+  *out = ExprValue(std::move(sub_type), std::move(member_data),
+                   base.source().GetOffsetInto(offset));
+  return Err();
+}
+
+// This variant takes a precomputed offset of the data member in the base
 // class. This is to support the case where the data member is in a derived
-// class and the offset is itself offset.
+// class (the derived class will have its own offset).
 Err DoResolveMember(const ExprValue& base, const DataMember* member,
                     uint32_t offset, ExprValue* out) {
   const Collection* coll = nullptr;
@@ -133,50 +163,16 @@ Err DoResolveMember(const ExprValue& base, const DataMember* member,
   if (err.has_error())
     return err;
 
-  // Extract the data.
-  uint32_t size = member_type->byte_size();
-  if (offset + size > base.data().size()) {
-    return Err(fxl::StringPrintf(
-        "Member value '%s' is outside of the data of base '%s'. Please file a "
-        "bug with a repro.",
-        member->GetAssignedName().c_str(), coll->GetFullName().c_str()));
-  }
-  std::vector<uint8_t> member_data(base.data().begin() + offset,
-                                   base.data().begin() + (offset + size));
-
-  *out = ExprValue(std::move(member_type), std::move(member_data),
-                   base.source().GetOffsetInto(offset));
-  return Err();
+  return ExtractSubType(base, std::move(member_type), offset, out);
 }
 
 }  // namespace
 
 Err ResolveMember(const ExprValue& base, const DataMember* member,
                   ExprValue* out) {
-  const Collection* coll = nullptr;
-  if (!base.type() || !(coll = base.type()->GetConcreteType()->AsCollection()))
-    return Err("Can't resolve data member on non-struct/class value.");
-
-  fxl::RefPtr<Type> member_type;
-  Err err = GetMemberType(coll, member, &member_type);
-  if (err.has_error())
-    return err;
-
-  // Extract the data.
-  uint32_t offset = member->member_location();
-  uint32_t size = member_type->byte_size();
-  if (offset + size > base.data().size()) {
-    return Err(fxl::StringPrintf(
-        "Member value '%s' is outside of the data of base '%s'. Please file a "
-        "bug with a repro.",
-        member->GetAssignedName().c_str(), coll->GetFullName().c_str()));
-  }
-  std::vector<uint8_t> member_data(base.data().begin() + offset,
-                                   base.data().begin() + (offset + size));
-
-  *out = ExprValue(std::move(member_type), std::move(member_data),
-                   base.source().GetOffsetInto(offset));
-  return Err();
+  if (!member)
+    return GetErrorForInvalidMemberOf(base);
+  return DoResolveMember(base, member, member->member_location(), out);
 }
 
 Err ResolveMember(const ExprValue& base, const std::string& member_name,
@@ -226,6 +222,16 @@ void ResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
   }
 
   DoResolveMemberByPointer(context, base_ptr, coll, member, std::move(cb));
+}
+
+Err ResolveInherited(const ExprValue& value, const InheritedFrom* from,
+                     ExprValue* out) {
+  const Type* from_type = from->from().Get()->AsType();
+  if (!from_type)
+    return GetErrorForInvalidMemberOf(value);
+
+  return ExtractSubType(value, fxl::RefPtr<Type>(const_cast<Type*>(from_type)),
+                        from->offset(), out);
 }
 
 }  // namespace zxdb

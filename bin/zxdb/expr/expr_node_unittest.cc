@@ -412,7 +412,7 @@ TEST_F(ExprNodeTest, ArrayAccess) {
 }
 
 // This is more of an integration smoke test for "." and "->". The details are
-// tested in resolve_member_unittest.cc.
+// tested in resolve_collection_unittest.cc.
 TEST_F(ExprNodeTest, MemberAccess) {
   auto context = fxl::MakeRefCounted<TestEvalContext>();
 

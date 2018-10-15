@@ -9,16 +9,18 @@
 
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/resolve_array.h"
-#include "garnet/bin/zxdb/expr/resolve_member.h"
+#include "garnet/bin/zxdb/expr/resolve_collection.h"
 #include "garnet/bin/zxdb/expr/resolve_ptr_ref.h"
 #include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
 #include "garnet/bin/zxdb/symbols/array_type.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
+#include "garnet/bin/zxdb/symbols/inherited_from.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
+#include "garnet/bin/zxdb/symbols/visit_scopes.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -299,10 +301,11 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
 }
 
 // GDB format:
-//   {a = 1, b = 2, sub_struct = {foo = 1, bar = 2}}
+//   {<BaseClass> = { ... }, a = 1, b = 2, sub_struct = {foo = 1, bar = 2}}
 //
 // LLDB format:
 //   {
+//     BaseClass = { ... }
 //     a = 1
 //     b = 2
 //     sub_struct = {
@@ -316,13 +319,53 @@ void FormatValue::FormatCollection(
     OutputKey output_key) {
   AppendToOutputKey(output_key, OutputBuffer("{"));
 
-  for (size_t i = 0; i < coll->data_members().size(); i++) {
-    const DataMember* member = coll->data_members()[i].Get()->AsDataMember();
+  // True after printing the first item.
+  bool needs_comma = false;
+
+  // Base classes.
+  for (const auto& lazy_inherited : coll->inherited_from()) {
+    const InheritedFrom* inherited = lazy_inherited.Get()->AsInheritedFrom();
+    if (!inherited)
+      continue;
+
+    const Collection* from = inherited->from().Get()->AsCollection();
+    if (!from)
+      continue;
+
+    // Some base classes are empty. Only show if this base class or any of
+    // its base classes have member values.
+    if (!VisitClassHierarchy(from, [](const Collection* cur, uint32_t) -> bool {
+          return !cur->data_members().empty();
+        }))
+      continue;
+
+    if (needs_comma)
+      AppendToOutputKey(output_key, OutputBuffer(", "));
+    else
+      needs_comma = true;
+
+    // Print "ClassName = "
+    AppendToOutputKey(output_key,
+                      OutputBuffer(Syntax::kSpecial, from->GetFullName()));
+    AppendToOutputKey(output_key, OutputBuffer(" = "));
+
+    // Pass "true" to suppress type printing since we just printed the type.
+    ExprValue from_value;
+    Err err = ResolveInherited(value, inherited, &from_value);
+    FormatExprValue(data_provider, err, from_value, options, true,
+                    AsyncAppend(output_key));
+  }
+
+  // Data members.
+  for (const auto& lazy_member : coll->data_members()) {
+    const DataMember* member = lazy_member.Get()->AsDataMember();
     if (!member)
       continue;
 
-    if (i > 0)
+    if (needs_comma)
       AppendToOutputKey(output_key, OutputBuffer(", "));
+    else
+      needs_comma = true;
 
     ExprValue member_value;
     Err err = ResolveMember(value, member, &member_value);

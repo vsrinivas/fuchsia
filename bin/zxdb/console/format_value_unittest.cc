@@ -10,6 +10,7 @@
 #include "garnet/bin/zxdb/symbols/base_type.h"
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
+#include "garnet/bin/zxdb/symbols/inherited_from.h"
 #include "garnet/bin/zxdb/symbols/mock_symbol_data_provider.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/type_test_support.h"
@@ -470,6 +471,46 @@ TEST_F(FormatValueTest, Union) {
 
   ExprValue value(union_type, {42, 0, 0, 0});
   EXPECT_EQ("{a = 42, b = 42}", SyncFormatValue(value, opts));
+}
+
+// Tests formatting when a class has derived base classes.
+TEST_F(FormatValueTest, DerivedClasses) {
+  auto int32_type = MakeInt32Type();
+  auto base = MakeStruct2Members("Base", int32_type, "a", int32_type, "b");
+
+  // This second base class is empty, it should be omitted from the output.
+  auto empty_base = fxl::MakeRefCounted<Collection>(Symbol::kTagClassType);
+  empty_base->set_assigned_name("EmptyBase");
+
+  auto derived =
+      MakeStruct2Members("Derived", int32_type, "c", int32_type, "d");
+
+  // This puts the base class' data after the derived class' data which the
+  // C++ compiler won't do. But this allows us to use the MakeStruct2Members
+  // helper function, and we should be able to cope with any layout.
+  auto inherited = fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base), 8);
+  auto empty_inherited =
+      fxl::MakeRefCounted<InheritedFrom>(LazySymbol(empty_base), 0);
+  derived->set_inherited_from(
+      {LazySymbol(inherited), LazySymbol(empty_inherited)});
+
+  ExprValue value(derived, {1, 0, 0, 0,    // (int32) Derived.c = 1
+                            2, 0, 0, 0,    // (int32) Derived.d = 2,
+                            3, 0, 0, 0,    // (int32) Base.a = 3
+                            4, 0, 0, 0});  // (int32) Base.b = 4
+
+  // Default formatting. Only the Base should be printed, EmptyBase should be
+  // omitted because it has no data.
+  FormatValueOptions opts;
+  EXPECT_EQ("{Base = {a = 3, b = 4}, c = 1, d = 2}",
+            SyncFormatValue(value, opts));
+
+  // Force types on. The type of the base class should not be duplicated.
+  opts.always_show_types = true;
+  EXPECT_EQ(
+      "(Derived) {Base = {(int32_t) a = 3, (int32_t) b = 4}, (int32_t) c = 1, "
+      "(int32_t) d = 2}",
+      SyncFormatValue(value, opts));
 }
 
 }  // namespace zxdb
