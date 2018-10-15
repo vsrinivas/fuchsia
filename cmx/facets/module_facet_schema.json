@@ -1,0 +1,121 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "title": "Schema for a .cmx's `fuchsia.module` facet",
+  "definitions": {
+    "facets": {
+      "type": "object",
+      "properties": {
+        "fuchsia.module": {
+          "$ref": "#/definitions/moduleFacet"
+        }
+      }
+    },
+    "moduleFacet": {
+      "type": "object",
+      "properties": {
+        "suggestion_headline": {
+          "type": "string"
+        },
+        "intent_filters": {
+          "$ref": "#/definitions/intentFilterArray"
+        },
+        "composition_pattern": {
+          "$ref": "#/definitions/compositionPattern"
+        },
+        "action": {
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/definitions/parameterArray"
+        },
+        "@version": {
+          "type": "integer"
+        },
+        "placeholder_color": {
+          "$ref": "#definitions/hexColor"
+        }
+      },
+      "dependencies": {
+        "intent_filters": {
+          "required": [
+            "@version"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "intentFilterArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/intentFilter"
+      },
+      "additionalItems": false,
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "intentFilter": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/definitions/parameterArray"
+        }
+      },
+      "required": [
+        "action",
+        "parameters"
+      ]
+    },
+    "parameterArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/parameter"
+      },
+      "additionalItems": false,
+      "uniqueItems": true
+    },
+    "parameter": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/alphaNumString"
+        },
+        "type": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "alphaNumString": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_]+$"
+    },
+    "compositionPattern": {
+      "type": "string",
+      "enum": [
+        "ticker",
+        "comments-right"
+      ]
+    },
+    "hexColor": {
+      "type": "string",
+      "pattern": "^#([A-Fa-f0-9]{6})$"
+    }
+  },
+  "type": "object",
+  "properties": {
+    "facets": {
+      "$ref": "#/definitions/facets"
+    }
+  },
+  "additionalProperties": true
+}

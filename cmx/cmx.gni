@@ -1,0 +1,38 @@
+import("//build/json/validate_json.gni")
+
+# Given a .cmx file, validates it.
+#
+# Parameters
+#   cmx (required)
+#     This is the .cmx file that wants to be validated. 
+#
+#   deps (optional)
+template("validate_cmx") {
+  module_facet_validation = target_name + "_module_facet"
+
+  # Validate the |fuchsia.module| facet schema.
+  validate_json(module_facet_validation) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    data = invoker.cmx
+    schema = "//build/cmx/facets/module_facet_schema.json"
+  }
+
+  # Validate the entire cmx schema.
+  validate_json(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    data = invoker.cmx
+    schema = "//build/cmx/cmx_schema.json"
+    deps = invoker.deps + [":$module_facet_validation"]
+  }
+}
