@@ -28,6 +28,7 @@ namespace storage {
 
 namespace {
 
+constexpr fxl::StringView kLevelDbDir = "leveldb";
 constexpr fxl::StringView kStagingPathPrefix = "staging";
 
 // Encodes opaque bytes in a way that is usable as a directory name.
@@ -163,7 +164,7 @@ std::vector<PageId> LedgerStorageImpl::ListLocalPages() {
 
 ledger::DetachedPath LedgerStorageImpl::GetPathFor(PageIdView page_id) {
   FXL_DCHECK(!page_id.empty());
-  return storage_dir_.SubPath(GetDirectoryName(page_id));
+  return storage_dir_.SubPath({GetDirectoryName(page_id), kLevelDbDir});
 }
 
 ledger::DetachedPath LedgerStorageImpl::GetStagingPathFor(PageIdView page_id) {

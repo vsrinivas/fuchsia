@@ -45,9 +45,10 @@ class PageDbTest : public ledger::TestWithEnvironment {
  public:
   PageDbTest()
       : encryption_service_(dispatcher()),
+        base_path(tmpfs_.root_fd()),
         page_storage_(&environment_, &encryption_service_,
-                      ledger::DetachedPath(tmpfs_.root_fd()), "page_id"),
-        page_db_(&environment_, ledger::DetachedPath(tmpfs_.root_fd())) {}
+                      base_path.SubPath("storage"), "page_id"),
+        page_db_(&environment_, base_path.SubPath("page_db")) {}
 
   ~PageDbTest() override {}
 
@@ -71,6 +72,7 @@ class PageDbTest : public ledger::TestWithEnvironment {
  protected:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   encryption::FakeEncryptionService encryption_service_;
+  ledger::DetachedPath base_path;
   PageStorageImpl page_storage_;
   PageDbImpl page_db_;
 
