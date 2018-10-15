@@ -18,7 +18,9 @@ destroyed, either via **zx_handle_close**(), **zx_pmt_unpin**(), or process
 termination, access to the represented memory becomes illegal (this is
 enforced by hardware on systems with the capability to do so, such as IOMMUs).
 
-TODO(teisenbe): Describe quarantining
+If a PMT object is destroyed by means other than **zx_pmt_unpin**(), the
+underlying memory is *quarantined*.  See
+[bus_transaction_initiator](bus_transaction_initiator.md) for more details.
 
 ## SEE ALSO
 
