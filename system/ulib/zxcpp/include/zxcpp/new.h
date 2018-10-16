@@ -24,9 +24,9 @@ void* operator new[](size_t, void* caller, const std::nothrow_t&) noexcept;
 
 #endif // !_KERNEL
 
-void* operator new(size_t, void *ptr) noexcept;
-
-void* operator new[](size_t, void *ptr) noexcept;
+// Define placement new operators as inline for optimal code generation.
+inline void* operator new(size_t, void *ptr) noexcept { return ptr; }
+inline void* operator new[](size_t, void *ptr) noexcept { return ptr; }
 
 void operator delete(void *p);
 void operator delete[](void *p);

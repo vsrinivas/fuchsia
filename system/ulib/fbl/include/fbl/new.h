@@ -10,16 +10,24 @@
 
 #include <new>
 
-#else  // ! __has_include(<new>)
+// if we're linking with zxcpp, use its new implementation
+#elif __has_include(<zxcpp/new.h>)
+
+#include <zxcpp/new.h>
+
+#else
 
 // No standard library in this build, so declare them locally.
 
 #include <stddef.h>
 
-// Declare placement allocation functions.
-// Note: This library does not provide an implementation of these functions.
-void* operator new(size_t size, void* ptr) noexcept;
-void* operator new[](size_t size, void* ptr) noexcept;
+namespace std {
+struct nothrow_t {};
+} // namespace std
+
+// Define placement allocation functions inline for optimal code generation.
+inline void* operator new(size_t size, void* ptr) noexcept { return ptr; }
+inline void* operator new[](size_t size, void* ptr) noexcept { return ptr; }
 
 // Declare (but don't define) non-throwing allocation functions.
 // Note: This library does not provide an implementation of these functions.

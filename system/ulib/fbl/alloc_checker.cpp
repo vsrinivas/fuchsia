@@ -8,12 +8,6 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
-#if !__has_include(<new>)
-namespace std {
-struct nothrow_t {};
-} // namespace std
-#endif
-
 namespace fbl {
 namespace {
 

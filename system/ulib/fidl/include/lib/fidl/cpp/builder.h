@@ -13,13 +13,19 @@
 #include <zircon/fidl.h>
 #include <zircon/types.h>
 
+// Try to pull a definition of the placement new operator from existing
+// libraries that we may be linking with.
 #if __has_include(<new>)
 #include <new>
+#elif __has_include(<zxcpp/new.h>)
+#include <zxcpp/new.h>
+#elif __has_include(<fbl/new.h>)
+#include <fbl/new.h>
 #else
-// Declare placement allocation functions.
-// Note: This library does not provide an implementation of these functions.
-void* operator new(size_t size, void* ptr) noexcept;
-void* operator new[](size_t size, void* ptr) noexcept;
+// If none of the existing libraries are available, define our own
+// placement allocation functions as inline for optimal code generation.
+inline void* operator new(size_t size, void* ptr) noexcept { return ptr; }
+inline void* operator new[](size_t size, void* ptr) noexcept { return ptr; }
 #endif
 
 namespace fidl {

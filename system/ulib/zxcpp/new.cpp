@@ -91,16 +91,6 @@ void operator delete[](void *p, size_t s) {
 
 #endif  // !__has_feature(address_sanitizer)
 
-// Placement new is always the same trivial no-op everywhere.
-
-void* operator new(size_t , void *p) noexcept {
-    return p;
-}
-
-void* operator new[](size_t , void* p) noexcept {
-    return p;
-}
-
 // These are the mangled names of all the functions above.  Because these
 // functions are magical in the language, the compiler insists on making
 // default-visibility definitions regardless of all the ways to tell it to use
