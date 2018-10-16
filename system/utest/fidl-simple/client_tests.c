@@ -66,7 +66,7 @@ static bool crash_analyzer_test(void) {
     zx_handle_t port;
     ASSERT_EQ(ZX_OK, zx_port_create(0, &port), "");
 
-    status = fuchsia_crash_AnalyzerAnalyze(client, h0, h1, port);
+    status = fuchsia_crash_AnalyzerHandleException(client, h0, h1, port);
     ASSERT_EQ(ZX_OK, status, "");
 
     status = zx_handle_close(client);

@@ -225,8 +225,8 @@ int crash_analyzer_listener(void* arg) {
         analyzer_request = ZX_HANDLE_INVALID;
         if (status != ZX_OK)
             goto cleanup;
-        status = fuchsia_crash_AnalyzerAnalyze(analyzer, handles[0], handles[1], handles[2]);
-        // fuchsia_crash_AnalyzerAnalyze always consumes the handles.
+        status = fuchsia_crash_AnalyzerHandleException(analyzer, handles[0], handles[1], handles[2]);
+        // fuchsia_crash_AnalyzerHandleException always consumes the handles.
         memset(handles, 0, sizeof(handles));
 
     cleanup:
@@ -428,7 +428,7 @@ static int pwrbtn_monitor_starter(void* arg) {
     launchpad_set_args(lp, argc, argv);
 
     // create a namespace containing /dev/class/input and /dev/misc
-    const char* nametable[2] = { };
+    const char* nametable[2] = {};
     uint32_t count = 0;
     zx::channel fs_handle = fs_clone("dev/class/input");
     if (fs_handle.is_valid()) {
@@ -607,7 +607,6 @@ int main(int argc, char** argv) {
 
     devmgr_svc_init();
     devmgr_vfs_init();
-
 
     // if we're not a full fuchsia build, no point to set up appmgr services
     // which will just cause things attempting to access it to block until
@@ -917,7 +916,7 @@ zx_status_t svchost_start() {
     argv[0] = "/boot/bin/svchost";
     argv[1] = require_system ? "--require-system" : nullptr;
     int argc;
-    argc = require_system? 2 : 1;
+    argc = require_system ? 2 : 1;
 
     zx_handle_t svchost_vmo;
     svchost_vmo = devmgr_load_file(argv[0], nullptr);

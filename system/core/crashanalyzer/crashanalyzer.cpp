@@ -326,7 +326,7 @@ static void process_report(zx_handle_t process, zx_handle_t thread, zx_handle_t 
                                          pc, sp, fp, use_libunwind);
     }
 
-// TODO(ZX-588): Print a backtrace of all other threads in the process.
+    // TODO(ZX-588): Print a backtrace of all other threads in the process.
 
 Fail:
     if (verbosity_level >= 1)
@@ -351,21 +351,21 @@ static zx_status_t handle_message(zx_handle_t channel, fidl::MessageBuffer* buff
     if (!message.has_header())
         return ZX_ERR_INVALID_ARGS;
     switch (message.ordinal()) {
-    case fuchsia_crash_AnalyzerAnalyzeOrdinal: {
+    case fuchsia_crash_AnalyzerHandleExceptionOrdinal: {
         const char* error_msg = nullptr;
-        zx_status_t status = message.Decode(&fuchsia_crash_AnalyzerAnalyzeRequestTable, &error_msg);
+        zx_status_t status = message.Decode(&fuchsia_crash_AnalyzerHandleExceptionRequestTable, &error_msg);
         if (status != ZX_OK) {
             fprintf(stderr, "crashanalyzer: error: %s\n", error_msg);
             return status;
         }
-        auto* request = message.GetBytesAs<fuchsia_crash_AnalyzerAnalyzeRequest>();
+        auto* request = message.GetBytesAs<fuchsia_crash_AnalyzerHandleExceptionRequest>();
 
         // Whether to use libunwind or not.
         // If not then we use a simple algorithm that assumes ABI-specific
         // frame pointers are present.
         bool use_libunwind = true;
 
-        fuchsia_crash_AnalyzerAnalyzeResponse response;
+        fuchsia_crash_AnalyzerHandleExceptionResponse response;
         memset(&response, 0, sizeof(response));
         response.hdr.txid = request->hdr.txid;
         response.hdr.ordinal = request->hdr.ordinal;
@@ -375,16 +375,16 @@ static zx_status_t handle_message(zx_handle_t channel, fidl::MessageBuffer* buff
 
         return status;
     }
-    case fuchsia_crash_AnalyzerProcessOrdinal: {
+    case fuchsia_crash_AnalyzerProcessCrashlogOrdinal: {
         fprintf(stderr, "crashanalyzer: error: No processing of crashlog VMO supported\n");
 
         const char* error_msg = nullptr;
-        zx_status_t status = message.Decode(&fuchsia_crash_AnalyzerProcessRequestTable, &error_msg);
+        zx_status_t status = message.Decode(&fuchsia_crash_AnalyzerProcessCrashlogRequestTable, &error_msg);
         if (status != ZX_OK) {
             fprintf(stderr, "crashanalyzer: error: %s\n", error_msg);
             return status;
         }
-        auto* request = message.GetBytesAs<fuchsia_crash_AnalyzerProcessRequest>();
+        auto* request = message.GetBytesAs<fuchsia_crash_AnalyzerProcessCrashlogRequest>();
         zx_handle_close(request->crashlog.vmo);
 
         return ZX_ERR_NOT_SUPPORTED;
