@@ -898,7 +898,7 @@ zx_status_t UsbAudioStream::OnStopLocked(dispatcher::Channel* channel,
     // TODO(johngro): Fix this to use the cancel transaction capabilities added
     // to the USB bus driver.
     //
-    // Also, investigate whether or not the cancel interface is syncronous or
+    // Also, investigate whether or not the cancel interface is synchronous or
     // whether we will need to maintain an intermediate stopping state.
     if (ring_buffer_state_ != RingBufferState::STARTED) {
         audio_proto::RingBufStopResp resp = { };

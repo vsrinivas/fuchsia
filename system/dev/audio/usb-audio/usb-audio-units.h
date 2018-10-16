@@ -45,7 +45,7 @@ class AudioUnit : public fbl::WAVLTreeContainable<fbl::RefPtr<AudioUnit>>,
 
     // the 16 bit index which needs to be used any time a command needs to be
     // sent to this unit (the wIndex field).  This is formed from the unit ID
-    // (high byte) and the control inteface id (low byte).
+    // (high byte) and the control interface id (low byte).
     uint16_t index() const { return static_cast<uint16_t>((id() << 8) | iid()); }
 
     // Every audio unit needs to define which source(s) feed it.  This
@@ -88,7 +88,7 @@ class AudioUnit : public fbl::WAVLTreeContainable<fbl::RefPtr<AudioUnit>>,
     }
 
     // See note in UsbAudioControlInterface.  Holding a constant RefPtr to our
-    // descriptor list ensures that we can never accidenatly release the list
+    // descriptor list ensures that we can never accidentally release the list
     // while we still exist.
     const fbl::RefPtr<DescriptorListMemory> desc_list_;
     const usb_audio_ac_ut_desc* const desc_;
@@ -112,7 +112,7 @@ class Terminal : public AudioUnit {
     uint16_t terminal_type() const { return term_desc_->wTerminalType; }
     bool is_stream_terminal() const { return terminal_type() == USB_AUDIO_TERMINAL_USB_STREAMING; }
     bool is_usb_terminal() const {
-        // See Universal Serial Bus Device Class Deinition for Terminal Types,
+        // See Universal Serial Bus Device Class Definition for Terminal Types,
         // rev 1.0 Section 2.1
         return (terminal_type() & 0xFF00) == 0x0100;
     }
@@ -195,7 +195,7 @@ class MixerUnit : public AudioUnit {
     const usb_audio_ac_mixer_unit_desc_2* mixer_desc_2() const { return mixer_desc_2_; }
 
     // TODO(johngro): Add a probe method to mixer so that we can read all of the
-    // mix/max/cur setttings for the mixer crossbar.  Because of the way that we
+    // mix/max/cur settings for the mixer crossbar.  Because of the way that we
     // are organizing our graph, this method may need to be extended to have
     // access to the set of all units present in the control interface.
 
@@ -309,7 +309,7 @@ class FeatureUnit : public AudioUnit {
 
     static fbl::RefPtr<FeatureUnit> Create(const DescriptorListMemory::Iterator& iter, uint8_t iid);
 
-    // Map a feature ordinal to its cooresponding bit in the bmaControls
+    // Map a feature ordinal to its corresponding bit in the bmaControls
     // bitmask.  Thankfully, as of the USB Audio 1.0 spec, this is just a simple
     // offset and shift operation.
     static constexpr uint32_t FeatureToBit(uint8_t ord) { return 1u << (ord - 1); }

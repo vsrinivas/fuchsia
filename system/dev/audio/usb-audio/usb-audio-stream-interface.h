@@ -26,7 +26,7 @@ class UsbAudioStreamInterface :
     struct FormatMapEntry {
         const audio_stream_format_range_t range_;
 
-        // The alternatate interface ID, endpoint address, and maximum request
+        // The alternate interface ID, endpoint address, and maximum request
         // size  which need to be used when configuring the stream interface to
         // use the format described by range_.
         const uint8_t alt_id_;
@@ -45,7 +45,7 @@ class UsbAudioStreamInterface :
 
     // Note that UsbAudioStreamInterfaces are entirely owned by UsbAudioDevice
     // instances.  The stream interface needs to hold a pointer to its parent,
-    // so it is critically important that the owning parent is certain that the
+    // so it is critically important that the owning parent is certain that
     // the stream interface (and all of its children) have been properly shut
     // down before exiting.  At all times, the lifetime of the stream interface
     // needs to be a subset of the lifetime of the device parent.
@@ -68,7 +68,7 @@ class UsbAudioStreamInterface :
     // support them.
     zx_status_t BuildFormatMap();
 
-    // Called from the UsbAudioStream to lookup the index of a the format which
+    // Called from the UsbAudioStream to lookup the index of a format which
     // matches the user's request.  Note, this does not actually cause the
     // interface to switch to this format.  Use ActivateFormat, passing the
     // index retrieved from there, to achieve that.
@@ -142,7 +142,7 @@ class UsbAudioStreamInterface :
         uint8_t     bit_resolution() const { return fmt_desc_->bBitResolution; }
         uint8_t     subframe_bytes() const { return fmt_desc_->bSubFrameSize; }
 
-        // Min/Max continuous frame rates.  Valid *only* after initilaize has
+        // Min/Max continuous frame rates.  Valid *only* after initialize has
         // been successfully called, and *only* if frame_rate_cnt() == 0.
         uint32_t min_cont_frame_rate() const {
             ZX_DEBUG_ASSERT(frame_rate_cnt() == 0);
@@ -154,7 +154,7 @@ class UsbAudioStreamInterface :
             return UnpackFrameRate(fmt_desc_->tSamFreq[1]);
         }
 
-        // Fetch discrete frame rate #ndx.  Valid *only* after initilaize has
+        // Fetch discrete frame rate #ndx.  Valid *only* after initialize has
         // been successfully called, and *only* if ndx < frame_rate_cnt()
         uint32_t frame_rate(uint8_t ndx) const {
             ZX_DEBUG_ASSERT(ndx < frame_rate_cnt());
@@ -181,7 +181,7 @@ class UsbAudioStreamInterface :
         const usb_interface_descriptor_t* const interface_hdr_;
         const usb_audio_as_header_desc* const class_hdr_;
 
-        // Determined at initializtion time
+        // Determined at initialization time
         const usb_audio_as_format_type_i_desc* fmt_desc_ = nullptr;
         const usb_endpoint_descriptor_t* ep_desc_ = nullptr;
         const usb_audio_as_isoch_ep_desc* class_ep_desc_ = nullptr;
@@ -210,7 +210,7 @@ class UsbAudioStreamInterface :
     // desc_list_ reference.
     //
     // TODO(johngro) : this desc_list_ memory is contained in our parent
-    // UsbAudioDevice.  Since we have already commited to having a lifetime
+    // UsbAudioDevice.  Since we have already committed to having a lifetime
     // which is strictly <= the lifetime of our parent, we should probably just
     // access the descriptor memory using our parent instead of holding our own
     // reference to it.
@@ -219,7 +219,7 @@ class UsbAudioStreamInterface :
     // A pointer to an "idle" interface; IOW an interface which defines no
     // endpoints.  While not all audio streaming interfaces have one of these,
     // many seem to.  In theory, this allows a stream interface to save
-    // isochronos bandwidth by selecting an alternatate interface which requires
+    // isochronos bandwidth by selecting an alternate interface which requires
     // no isoch bandwidth allocation when the device is idle.
     const usb_interface_descriptor_t* idle_hdr_ = nullptr;
 
@@ -236,7 +236,7 @@ class UsbAudioStreamInterface :
     // endpoints.
     uint16_t max_req_size_ = 0;
 
-    // A list of the formats (generic descrptors followed by a class specific
+    // A list of the formats (generic descriptors followed by a class specific
     // interface descriptor) we have discovered.
     fbl::DoublyLinkedList<fbl::unique_ptr<Format>> formats_;
 

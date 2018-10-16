@@ -13,7 +13,7 @@ namespace audio {
 namespace usb {
 
 DescriptorListMemory::~DescriptorListMemory() {
-    // Accorrding to docs in the header, data allocated using
+    // According to docs in the header, data allocated using
     // usb_get_descriptor_list should be free'ed using a standard C "free"
     if (data_ != nullptr) {
         free(data_);

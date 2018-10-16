@@ -28,7 +28,7 @@ zx_status_t UsbAudioDevice::DriverBind(zx_device_t* parent) {
         return status;
     }
 
-    // We have transfered our fbl::RefPtr reference to the C ddk.  We will
+    // We have transferred our fbl::RefPtr reference to the C ddk.  We will
     // recover it (someday) when the release hook is called.  Until then, we
     // need to deliberately leak our reference so that we do not destruct as we
     // exit this function.
@@ -279,7 +279,7 @@ void UsbAudioDevice::Probe() {
     // Now that we are done parsing all of our descriptors, go over our list of
     // audio streaming interfaces and pair each up with the appropriate audio
     // path as we go.  Create an actual Fuchsia audio stream for each valid
-    // streaming interface with a a valid audio path.
+    // streaming interface with a valid audio path.
     while (!aud_stream_ifcs.is_empty()) {
         // Build the format map for this stream interface.  If we cannot find
         // any usable formats for this streaming interface, simply discard it.
@@ -326,7 +326,7 @@ void UsbAudioDevice::Probe() {
         }
 
         // Make sure that the stream is being tracked in our streams_ collection
-        // before attemping to publish its device node.
+        // before attempting to publish its device node.
         {
             fbl::AutoLock lock(&lock_);
             streams_.push_back(stream);

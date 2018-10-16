@@ -66,7 +66,7 @@ class UsbAudioControlInterface {
     // desc_list_ reference.
     //
     // TODO(johngro) : this desc_list_ memory is contained in our parent
-    // UsbAudioDevice.  Since we have already commited to having a lifetime
+    // UsbAudioDevice.  Since we have already committed to having a lifetime
     // which is strictly <= the lifetime of our parent, we should probably just
     // access the descriptor memory using our parent instead of holding our own
     // reference to it.

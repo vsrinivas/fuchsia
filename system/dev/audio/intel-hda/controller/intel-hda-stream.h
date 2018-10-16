@@ -108,12 +108,12 @@ private:
     static void EnsureStopped(hda_stream_desc_regs_t* regs);
     static void Reset(hda_stream_desc_regs_t* regs);
 
-    // Accessor for the CPU accessble view of the Buffer Descriptor List
+    // Accessor for the CPU accessible view of the Buffer Descriptor List
     IntelHDABDLEntry* bdl() const {
         return reinterpret_cast<IntelHDABDLEntry*>(bdl_cpu_mem_.start());
     }
 
-    // Paramters determined construction time.
+    // Parameters determined construction time.
     const Type                    type_ = Type::INVALID;
     const uint16_t                id_   = 0;
     hda_stream_desc_regs_t* const regs_ = nullptr;
@@ -140,12 +140,12 @@ private:
     fbl::RefPtr<dispatcher::Channel> channel_ TA_GUARDED(channel_lock_);
     fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(channel_lock_);
 
-    // Paramters determined after stream format configuration.
+    // Parameters determined after stream format configuration.
     uint16_t encoded_fmt_ = 0;
     uint16_t fifo_depth_ = 0;
     uint32_t bytes_per_frame_ TA_GUARDED(channel_lock_) = 0;
 
-    // Paramters determined after ring buffer allocation.
+    // Parameters determined after ring buffer allocation.
     uint32_t cyclic_buffer_length_ TA_GUARDED(channel_lock_) = 0;
     uint32_t bdl_last_valid_index_ TA_GUARDED(channel_lock_) = 0;
 

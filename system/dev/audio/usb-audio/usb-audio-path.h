@@ -86,7 +86,7 @@ class AudioPath : public fbl::DoublyLinkedListable<fbl::unique_ptr<AudioPath>> {
     // cache references.   This said, the cost of holding an extra reference on
     // the objects is basically zero, and storing the pointers internally as
     // RefPtr<>s makes it easy to know that this is safe from a lifecycle
-    // perspective, if perhaps a tiny bit parinoid.
+    // perspective, if perhaps a tiny bit paranoid.
     fbl::RefPtr<const Terminal> stream_terminal_;
     fbl::RefPtr<FeatureUnit> feature_unit_;
 };
