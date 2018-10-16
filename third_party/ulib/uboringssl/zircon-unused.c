@@ -9,10 +9,10 @@
 
 #include "crypto/fipsmodule/modes/internal.h"
 
-// The functions in this file are referenced in uboringssl but never used.  Unfortunately, under
-// certain conditions the build can't determine that they are unused and will fail with an
-// 'unresolved symbol' error.  The simplest solution to keep the footprint of uboringssl as small as
-// possible is to simply abort if any of these unused functions are in fact used.
+// The functions in this file are symbols that appear in Zircon's uboringssl but never used.
+// In some linking approaches the build can't determine that they are unused and will fail with an
+// 'unresolved symbol' error.  The simplest solution that keeps the footprint of uboringssl as small
+// as possible is to simply abort if any of these unused functions are in fact used.
 
 void CRYPTO_cbc128_decrypt(const uint8_t* in, uint8_t* out, size_t len, const AES_KEY* key,
                            uint8_t ivec[16], block128_f block) {

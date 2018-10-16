@@ -34,7 +34,7 @@ SHARED_SRCS := \
     $(CRYPTO_DIR)/hkdf/hkdf.c \
     $(CRYPTO_DIR)/mem.c \
     $(CRYPTO_DIR)/thread_pthread.c \
-    $(LOCAL_DIR)/unused.c
+    $(LOCAL_DIR)/zircon-unused.c
 
 # TODO(aarongreen): Replace or get upstream to support more fully.
 DECREPIT_DIR=$(LOCAL_DIR)/decrepit

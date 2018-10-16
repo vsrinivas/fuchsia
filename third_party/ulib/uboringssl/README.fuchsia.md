@@ -19,4 +19,4 @@ All code under this directory is covered by the same [license] as BoringSSL.
 [license]: https://fuchsia.googlesource.com/third_party/boringssl/+/master/LICENSE
 
 [//]: # (UPDATE THE DIGEST WHEN ROLLING BORINGSSL)
-[revision]: https://fuchsia.googlesource.com/third_party/boringssl/+/28babde159253bfa9003a445242605806fff5f1f/
+[revision]: https://fuchsia.googlesource.com/third_party/boringssl/+/4b968339e3ced2d498f4182cd725243bb6cca81b/
