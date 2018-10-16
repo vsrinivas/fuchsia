@@ -241,7 +241,7 @@ Status PageDbImpl::ReadObject(CoroutineHandler* handler,
                               ObjectIdentifier object_identifier,
                               std::unique_ptr<const Object>* object) {
   return db_.GetObject(handler,
-                       ObjectRow::GetKeyFor(object_identifier.object_digest),
+                       ObjectRow::GetKeyFor(object_identifier.object_digest()),
                        object_identifier, object);
 }
 

@@ -17,9 +17,24 @@ std::ostream& operator<<(std::ostream& os, const std::unique_ptr<T>& ptr) {
 }
 }  // namespace
 
+ObjectIdentifier::ObjectIdentifier() = default;
+
+ObjectIdentifier::ObjectIdentifier(uint32_t key_index,
+                                   uint32_t deletion_scope_id,
+                                   ObjectDigest object_digest)
+    : key_index_(key_index),
+      deletion_scope_id_(deletion_scope_id),
+      object_digest_(std::move(object_digest)) {}
+
+ObjectIdentifier::ObjectIdentifier(const ObjectIdentifier&) = default;
+ObjectIdentifier::ObjectIdentifier(ObjectIdentifier&&) = default;
+ObjectIdentifier& ObjectIdentifier::operator=(const ObjectIdentifier&) =
+    default;
+ObjectIdentifier& ObjectIdentifier::operator=(ObjectIdentifier&&) = default;
+
 bool operator==(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs) {
-  return std::tie(lhs.key_index, lhs.deletion_scope_id, lhs.object_digest) ==
-         std::tie(rhs.key_index, rhs.deletion_scope_id, rhs.object_digest);
+  return std::tie(lhs.key_index_, lhs.deletion_scope_id_, lhs.object_digest_) ==
+         std::tie(rhs.key_index_, rhs.deletion_scope_id_, rhs.object_digest_);
 }
 
 bool operator!=(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs) {
@@ -27,14 +42,14 @@ bool operator!=(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs) {
 }
 
 bool operator<(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs) {
-  return std::tie(lhs.key_index, lhs.deletion_scope_id, lhs.object_digest) <
-         std::tie(rhs.key_index, rhs.deletion_scope_id, rhs.object_digest);
+  return std::tie(lhs.key_index_, lhs.deletion_scope_id_, lhs.object_digest_) <
+         std::tie(rhs.key_index_, rhs.deletion_scope_id_, rhs.object_digest_);
 }
 
 std::ostream& operator<<(std::ostream& os, const ObjectIdentifier& e) {
-  return os << "ObjectIdentifier{key_index: " << e.key_index
-            << ", deletion_scope_id: " << e.deletion_scope_id
-            << ", object_digest: " << convert::ToHex(e.object_digest) << "}";
+  return os << "ObjectIdentifier{key_index: " << e.key_index()
+            << ", deletion_scope_id: " << e.deletion_scope_id()
+            << ", object_digest: " << convert::ToHex(e.object_digest()) << "}";
 }
 
 bool operator==(const Entry& lhs, const Entry& rhs) {

@@ -12,7 +12,7 @@ namespace storage {
 
 testing::Matcher<ObjectIdentifier> MatchesDigest(
     testing::Matcher<std::string> matcher) {
-  return Field(&ObjectIdentifier::object_digest, matcher);
+  return Property(&ObjectIdentifier::object_digest, matcher);
 }
 
 testing::Matcher<Entry> MatchesEntry(

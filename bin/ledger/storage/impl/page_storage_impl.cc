@@ -140,7 +140,7 @@ void PageStorageImpl::AddCommitFromLocal(
     std::unique_ptr<const Commit> commit,
     std::vector<ObjectIdentifier> new_objects,
     fit::function<void(Status)> callback) {
-  FXL_DCHECK(IsDigestValid(commit->GetRootIdentifier().object_digest));
+  FXL_DCHECK(IsDigestValid(commit->GetRootIdentifier().object_digest()));
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, commit = std::move(commit), new_objects = std::move(new_objects)](
@@ -442,7 +442,7 @@ void PageStorageImpl::AddObjectFromLocal(
         if (chunk) {
           FXL_DCHECK(status == IterationStatus::IN_PROGRESS);
 
-          if (GetObjectDigestType(identifier.object_digest) !=
+          if (GetObjectDigestType(identifier.object_digest()) !=
               ObjectDigestType::INLINE) {
             AddPiece(identifier, ChangeSource::LOCAL, IsObjectSynced::NO,
                      std::move(chunk), waiter->NewCallback());
@@ -463,7 +463,7 @@ void PageStorageImpl::AddObjectFromLocal(
 void PageStorageImpl::GetObject(
     ObjectIdentifier object_identifier, Location location,
     fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
-  FXL_DCHECK(IsDigestValid(object_identifier.object_digest));
+  FXL_DCHECK(IsDigestValid(object_identifier.object_digest()));
   GetPiece(
       object_identifier,
       [this, object_identifier, location, callback = std::move(callback)](
@@ -484,7 +484,7 @@ void PageStorageImpl::GetObject(
 
         FXL_DCHECK(object);
         ObjectDigestType digest_type =
-            GetObjectDigestType(object_identifier.object_digest);
+            GetObjectDigestType(object_identifier.object_digest());
 
         if (digest_type == ObjectDigestType::INLINE ||
             digest_type == ObjectDigestType::CHUNK_HASH) {
@@ -541,7 +541,7 @@ void PageStorageImpl::GetPiece(
     ObjectIdentifier object_identifier,
     fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
   ObjectDigestType digest_type =
-      GetObjectDigestType(object_identifier.object_digest);
+      GetObjectDigestType(object_identifier.object_digest());
   if (digest_type == ObjectDigestType::INLINE) {
     callback(Status::OK,
              std::make_unique<InlinedObject>(std::move(object_identifier)));
@@ -733,14 +733,14 @@ Status PageStorageImpl::MarkAllPiecesLocal(
     auto it = seen_identifiers.insert(std::move(object_identifiers.back()));
     object_identifiers.pop_back();
     const ObjectIdentifier& object_identifier = *(it.first);
-    FXL_DCHECK(GetObjectDigestType(object_identifier.object_digest) !=
+    FXL_DCHECK(GetObjectDigestType(object_identifier.object_digest()) !=
                ObjectDigestType::INLINE);
     Status status = batch->SetObjectStatus(handler, object_identifier,
                                            PageDbObjectStatus::LOCAL);
     if (status != Status::OK) {
       return status;
     }
-    if (GetObjectDigestType(object_identifier.object_digest) ==
+    if (GetObjectDigestType(object_identifier.object_digest()) ==
         ObjectDigestType::INDEX_HASH) {
       std::unique_ptr<const Object> object;
       status = db_->ReadObject(handler, object_identifier, &object);
@@ -810,7 +810,7 @@ void PageStorageImpl::AddPiece(ObjectIdentifier object_identifier,
 void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
                                          fit::function<void(Status)> callback) {
   FXL_DCHECK(page_sync_);
-  FXL_DCHECK(GetObjectDigestType(object_identifier.object_digest) !=
+  FXL_DCHECK(GetObjectDigestType(object_identifier.object_digest()) !=
              ObjectDigestType::INLINE);
 
   coroutine_manager_.StartCoroutine(
@@ -843,11 +843,11 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
           return;
         }
         auto object_digest_type =
-            GetObjectDigestType(object_identifier.object_digest);
+            GetObjectDigestType(object_identifier.object_digest());
         FXL_DCHECK(object_digest_type == ObjectDigestType::CHUNK_HASH ||
                    object_digest_type == ObjectDigestType::INDEX_HASH);
 
-        if (object_identifier.object_digest !=
+        if (object_identifier.object_digest() !=
             ComputeObjectDigest(GetObjectType(object_digest_type),
                                 chunk->Get())) {
           callback(Status::OBJECT_DIGEST_MISMATCH);
@@ -864,7 +864,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
         auto waiter =
             fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
         status = ForEachPiece(chunk->Get(), [&](ObjectIdentifier identifier) {
-          if (GetObjectDigestType(identifier.object_digest) ==
+          if (GetObjectDigestType(identifier.object_digest()) ==
               ObjectDigestType::INLINE) {
             return Status::OK;
           }
@@ -926,7 +926,7 @@ void PageStorageImpl::ObjectIsUntracked(
       [this, object_identifier = std::move(object_identifier)](
           CoroutineHandler* handler,
           fit::function<void(Status, bool)> callback) mutable {
-        if (GetObjectDigestType(object_identifier.object_digest) ==
+        if (GetObjectDigestType(object_identifier.object_digest()) ==
             ObjectDigestType::INLINE) {
           callback(Status::OK, false);
           return;
@@ -968,7 +968,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
   }
 
   ObjectDigestType digest_type =
-      GetObjectDigestType(object->GetIdentifier().object_digest);
+      GetObjectDigestType(object->GetIdentifier().object_digest());
   if (digest_type == ObjectDigestType::INLINE ||
       digest_type == ObjectDigestType::CHUNK_HASH) {
     if (size != content.size()) {
@@ -1422,11 +1422,11 @@ Status PageStorageImpl::SynchronousAddPiece(
     CoroutineHandler* handler, ObjectIdentifier object_identifier,
     ChangeSource source, IsObjectSynced is_object_synced,
     std::unique_ptr<DataSource::DataChunk> data) {
-  FXL_DCHECK(GetObjectDigestType(object_identifier.object_digest) !=
+  FXL_DCHECK(GetObjectDigestType(object_identifier.object_digest()) !=
              ObjectDigestType::INLINE);
-  FXL_DCHECK(object_identifier.object_digest ==
+  FXL_DCHECK(object_identifier.object_digest() ==
              ComputeObjectDigest(GetObjectType(GetObjectDigestType(
-                                     object_identifier.object_digest)),
+                                     object_identifier.object_digest())),
                                  data->Get()));
 
   std::unique_ptr<const Object> object;

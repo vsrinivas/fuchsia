@@ -228,8 +228,8 @@ void BuildObjectRequestBuffer(
   fb_object_ids.reserve(object_ids.size());
   for (const storage::ObjectIdentifier& object_id : object_ids) {
     fb_object_ids.emplace_back(CreateObjectId(
-        *buffer, object_id.key_index, object_id.deletion_scope_id,
-        convert::ToFlatBufferVector(buffer, object_id.object_digest)));
+        *buffer, object_id.key_index(), object_id.deletion_scope_id(),
+        convert::ToFlatBufferVector(buffer, object_id.object_digest())));
   }
   flatbuffers::Offset<ObjectRequest> object_request =
       CreateObjectRequest(*buffer, buffer->CreateVector(fb_object_ids));
@@ -258,9 +258,9 @@ void BuildObjectResponseBuffer(
     bool is_synced = std::get<2>(object_tuple);
 
     flatbuffers::Offset<ObjectId> fb_object_id = CreateObjectId(
-        *buffer, object_identifier.key_index,
-        object_identifier.deletion_scope_id,
-        convert::ToFlatBufferVector(buffer, object_identifier.object_digest));
+        *buffer, object_identifier.key_index(),
+        object_identifier.deletion_scope_id(),
+        convert::ToFlatBufferVector(buffer, object_identifier.object_digest()));
     if (!data.empty()) {
       flatbuffers::Offset<Data> fb_data =
           CreateData(*buffer, convert::ToFlatBufferVector(buffer, data));

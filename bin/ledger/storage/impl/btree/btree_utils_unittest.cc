@@ -695,7 +695,7 @@ TEST_F(BTreeUtilsTest, DeleteAll) {
   EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
   EXPECT_NE(root_identifier, new_root_identifier);
-  EXPECT_NE("", new_root_identifier.object_digest);
+  EXPECT_NE("", new_root_identifier.object_digest());
   // The empty node is new.
   EXPECT_EQ(1u, new_nodes.size());
   EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());

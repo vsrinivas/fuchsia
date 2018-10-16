@@ -119,7 +119,7 @@ Status PageDbBatchImpl::WriteObject(
     PageDbObjectStatus object_status) {
   FXL_DCHECK(object_status > PageDbObjectStatus::UNKNOWN);
 
-  auto object_key = ObjectRow::GetKeyFor(object_identifier.object_digest);
+  auto object_key = ObjectRow::GetKeyFor(object_identifier.object_digest());
   bool has_key;
   RETURN_ON_ERROR(db_->HasObject(handler, object_key, &has_key));
   if (has_key) {
@@ -140,7 +140,7 @@ Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* handler,
                                         ObjectIdentifier object_identifier,
                                         PageDbObjectStatus object_status) {
   FXL_DCHECK(object_status >= PageDbObjectStatus::LOCAL);
-  RETURN_ON_ERROR(DCheckHasObject(handler, object_identifier.object_digest));
+  RETURN_ON_ERROR(DCheckHasObject(handler, object_identifier.object_digest()));
 
   PageDbObjectStatus previous_object_status;
   RETURN_ON_ERROR(db_->GetObjectStatus(handler, object_identifier,

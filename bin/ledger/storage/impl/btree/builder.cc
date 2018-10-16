@@ -148,11 +148,11 @@ class NodeBuilder {
   // Validate that the content of this builder follows the expected constraints.
   bool Validate() {
     if (type_ == BuilderType::NULL_NODE &&
-        !object_identifier_.object_digest.empty()) {
+        !object_identifier_.object_digest().empty()) {
       return false;
     }
     if (type_ == BuilderType::EXISTING_NODE &&
-        object_identifier_.object_digest.empty()) {
+        object_identifier_.object_digest().empty()) {
       return false;
     }
     if (type_ == BuilderType::NEW_NODE && children_.empty()) {
@@ -627,7 +627,7 @@ void ApplyChanges(
     fit::function<void(Status, ObjectIdentifier, std::set<ObjectIdentifier>)>
         callback,
     const NodeLevelCalculator* node_level_calculator) {
-  FXL_DCHECK(storage::IsDigestValid(root_identifier.object_digest));
+  FXL_DCHECK(storage::IsDigestValid(root_identifier.object_digest()));
   coroutine_service->StartCoroutine(
       [page_storage, root_identifier = std::move(root_identifier),
        changes = std::move(changes), callback = std::move(callback),
@@ -651,7 +651,7 @@ void ApplyChanges(
           return;
         }
 
-        if (!object_identifier.object_digest.empty()) {
+        if (!object_identifier.object_digest().empty()) {
           callback(Status::OK, std::move(object_identifier),
                    std::move(new_identifiers));
           return;

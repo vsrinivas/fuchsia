@@ -92,7 +92,7 @@ std::unique_ptr<DataSource::DataChunk> ObjectData::ToChunk() {
 ObjectDigest MakeObjectDigest(std::string content,
                               InlineBehavior inline_behavior) {
   return MakeObjectIdentifier(std::move(content), inline_behavior)
-      .object_digest;
+      .object_digest();
 }
 
 ObjectIdentifier MakeObjectIdentifier(std::string content,
@@ -114,7 +114,7 @@ CommitId RandomCommitId(rng::Random* random) {
 
 ObjectDigest RandomObjectDigest(rng::Random* random) {
   ObjectData data(RandomString(random, 16), InlineBehavior::PREVENT);
-  return data.object_identifier.object_digest;
+  return data.object_identifier.object_digest();
 }
 
 ObjectIdentifier RandomObjectIdentifier(rng::Random* random) {

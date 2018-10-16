@@ -953,10 +953,10 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
   std::set<ObjectIdentifier> unsynced_identifiers(object_identifiers.begin(),
                                                   object_identifiers.end());
   for (const auto& identifier : unsynced_identifiers) {
-    EXPECT_FALSE(GetObjectDigestType(identifier.object_digest) ==
+    EXPECT_FALSE(GetObjectDigestType(identifier.object_digest()) ==
                  ObjectDigestType::INLINE);
 
-    if (GetObjectDigestType(identifier.object_digest) ==
+    if (GetObjectDigestType(identifier.object_digest()) ==
         ObjectDigestType::INDEX_HASH) {
       found_index = true;
       std::set<ObjectIdentifier> sub_identifiers;
@@ -1144,7 +1144,7 @@ TEST_F(PageStorageTest, AddSmallObjectFromLocal) {
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(data.object_identifier, object_identifier);
-    EXPECT_EQ(data.value, object_identifier.object_digest);
+    EXPECT_EQ(data.value, object_identifier.object_digest());
 
     std::unique_ptr<const Object> object;
     EXPECT_EQ(Status::NOT_FOUND,
@@ -1305,7 +1305,7 @@ TEST_F(PageStorageTest, AddAndGetHugeObjectFromLocal) {
   ObjectData data(std::move(data_str), InlineBehavior::PREVENT);
 
   ASSERT_EQ(ObjectDigestType::INDEX_HASH,
-            GetObjectDigestType(data.object_identifier.object_digest));
+            GetObjectDigestType(data.object_identifier.object_digest()));
 
   bool called;
   Status status;

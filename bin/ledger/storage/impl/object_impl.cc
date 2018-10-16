@@ -21,7 +21,7 @@ InlinedObject::~InlinedObject() {}
 ObjectIdentifier InlinedObject::GetIdentifier() const { return identifier_; }
 
 Status InlinedObject::GetData(fxl::StringView* data) const {
-  *data = identifier_.object_digest;
+  *data = identifier_.object_digest();
   return Status::OK;
 }
 
@@ -93,18 +93,17 @@ Status VmoObject::Initialize() const {
   uintptr_t allocate_address;
   zx_status_t zx_status = zx::vmar::root_self()->allocate(
       0, ToFullPages(vmo_.size()),
-      ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC,
-      &vmar_, &allocate_address);
+      ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, &vmar_,
+      &allocate_address);
   if (zx_status != ZX_OK) {
     FXL_LOG(ERROR) << "Unable to allocate VMAR. Error: " << zx_status;
     return Status::INTERNAL_IO_ERROR;
   }
 
   char* mapped_address;
-  zx_status = vmar_.map(
-      0, vmo_.vmo(), 0, vmo_.size(),
-      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
-      reinterpret_cast<uintptr_t*>(&mapped_address));
+  zx_status = vmar_.map(0, vmo_.vmo(), 0, vmo_.size(),
+                        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                        reinterpret_cast<uintptr_t*>(&mapped_address));
   if (zx_status != ZX_OK) {
     FXL_LOG(ERROR) << "Unable to map VMO. Error: " << zx_status;
     vmar_.reset();

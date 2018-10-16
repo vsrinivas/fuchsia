@@ -157,7 +157,7 @@ void GetObjectIdentifiers(
     coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
     ObjectIdentifier root_identifier,
     fit::function<void(Status, std::set<ObjectIdentifier>)> callback) {
-  FXL_DCHECK(!root_identifier.object_digest.empty());
+  FXL_DCHECK(!root_identifier.object_digest().empty());
   auto object_digests = std::make_unique<std::set<ObjectIdentifier>>();
   object_digests->insert(root_identifier);
 
@@ -214,7 +214,7 @@ void ForEachEntry(coroutine::CoroutineService* coroutine_service,
                   std::string min_key,
                   fit::function<bool(EntryAndNodeIdentifier)> on_next,
                   fit::function<void(Status)> on_done) {
-  FXL_DCHECK(!root_identifier.object_digest.empty());
+  FXL_DCHECK(!root_identifier.object_digest().empty());
   coroutine_service->StartCoroutine(
       [page_storage, root_identifier = std::move(root_identifier),
        min_key = std::move(min_key), on_next = std::move(on_next),

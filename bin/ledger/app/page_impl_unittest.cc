@@ -273,8 +273,8 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
   EXPECT_EQ(1u, it->second->GetData().size());
   storage::Entry entry = it->second->GetData().at(key);
   std::unique_ptr<const storage::Object> object = AddObject(object_data);
-  EXPECT_EQ(object->GetIdentifier().object_digest,
-            entry.object_identifier.object_digest);
+  EXPECT_EQ(object->GetIdentifier().object_digest(),
+            entry.object_identifier.object_digest());
   EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
 }
 
@@ -458,7 +458,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     for (const auto& object : objects) {
       if (object.second == value) {
         object_found = true;
-        object_digest1 = object.first.object_digest;
+        object_digest1 = object.first.object_digest();
         break;
       }
     }
@@ -473,7 +473,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_FALSE(it->second->IsCommitted());
     EXPECT_EQ(1u, it->second->GetData().size());
     storage::Entry entry = it->second->GetData().at(key1);
-    EXPECT_EQ(object_digest1, entry.object_identifier.object_digest);
+    EXPECT_EQ(object_digest1, entry.object_identifier.object_digest());
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
   }
 
@@ -496,8 +496,8 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_FALSE(it->second->IsCommitted());
     EXPECT_EQ(2u, it->second->GetData().size());
     storage::Entry entry = it->second->GetData().at(key2);
-    EXPECT_EQ(AddObject(value2)->GetIdentifier().object_digest,
-              entry.object_identifier.object_digest);
+    EXPECT_EQ(AddObject(value2)->GetIdentifier().object_digest(),
+              entry.object_identifier.object_digest());
     EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
   }
 
@@ -615,7 +615,7 @@ TEST_F(PageImplTest, TransactionClearCommit) {
     for (const auto& object : objects) {
       if (object.second == value2) {
         object_found = true;
-        object_digest2 = object.first.object_digest;
+        object_digest2 = object.first.object_digest();
         break;
       }
     }

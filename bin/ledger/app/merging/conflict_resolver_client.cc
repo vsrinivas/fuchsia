@@ -245,7 +245,7 @@ void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValue> merged_values,
               fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
                   storage::Status::OK);
           for (size_t i = 0; i < object_identifiers.size(); ++i) {
-            if (object_identifiers[i].object_digest.empty()) {
+            if (object_identifiers[i].object_digest().empty()) {
               continue;
             }
             weak_this->journal_->Put(

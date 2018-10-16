@@ -68,7 +68,7 @@ void TreeNode::FromEntries(
              children.cbegin()->first <= entries.size());
 #ifndef NDEBUG
   for (const auto& identifier : children) {
-    FXL_DCHECK(storage::IsDigestValid(identifier.second.object_digest));
+    FXL_DCHECK(storage::IsDigestValid(identifier.second.object_digest()));
   }
 #endif
   std::string encoding = EncodeNode(level, entries, children);

@@ -31,10 +31,28 @@ enum class KeyPriority {
 
 // The identifier of an object. This contains the digest of the object, as well
 // as the information needed to hide its name and encrypt its content.
-struct ObjectIdentifier {
-  uint32_t key_index;
-  uint32_t deletion_scope_id;
-  ObjectDigest object_digest;
+class ObjectIdentifier {
+ public:
+  ObjectIdentifier();
+  ObjectIdentifier(uint32_t key_index, uint32_t deletion_scope_id,
+                   ObjectDigest object_digest);
+
+  ObjectIdentifier(const ObjectIdentifier&);
+  ObjectIdentifier& operator=(const ObjectIdentifier&);
+  ObjectIdentifier(ObjectIdentifier&&);
+  ObjectIdentifier& operator=(ObjectIdentifier&&);
+
+  uint32_t key_index() const { return key_index_; }
+  uint32_t deletion_scope_id() const { return deletion_scope_id_; }
+  const ObjectDigest& object_digest() const { return object_digest_; }
+
+ private:
+  friend bool operator==(const ObjectIdentifier&, const ObjectIdentifier&);
+  friend bool operator<(const ObjectIdentifier&, const ObjectIdentifier&);
+
+  uint32_t key_index_;
+  uint32_t deletion_scope_id_;
+  ObjectDigest object_digest_;
 };
 
 bool operator==(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs);

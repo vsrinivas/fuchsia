@@ -194,7 +194,7 @@ void CommitImpl::Empty(
           return;
         }
 
-        FXL_DCHECK(IsDigestValid(root_identifier.object_digest));
+        FXL_DCHECK(IsDigestValid(root_identifier.object_digest()));
 
         auto storage_ptr = fxl::MakeRefCounted<SharedStorageBytes>("");
 

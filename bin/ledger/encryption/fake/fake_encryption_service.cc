@@ -105,7 +105,7 @@ std::string FakeEncryptionService::DecryptCommitSynchronous(
 
 std::string FakeEncryptionService::GetObjectNameSynchronous(
     storage::ObjectIdentifier object_identifier) {
-  return Encode(object_identifier.object_digest);
+  return Encode(object_identifier.object_digest());
 }
 
 std::string FakeEncryptionService::EncryptObjectSynchronous(

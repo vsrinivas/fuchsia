@@ -173,14 +173,14 @@ void EncryptionServiceImpl::DecryptCommit(
 void EncryptionServiceImpl::GetObjectName(
     storage::ObjectIdentifier object_identifier,
     fit::function<void(Status, std::string)> callback) {
-  GetReferenceKey(
-      object_identifier, [object_identifier, callback = std::move(callback)](
-                             const std::string& reference_key) {
-        callback(Status::OK,
-                 HMAC256KDF(fxl::Concatenate({reference_key,
-                                              object_identifier.object_digest}),
-                            kDerivedKeySize));
-      });
+  GetReferenceKey(object_identifier, [object_identifier,
+                                      callback = std::move(callback)](
+                                         const std::string& reference_key) {
+    callback(Status::OK,
+             HMAC256KDF(fxl::Concatenate(
+                            {reference_key, object_identifier.object_digest()}),
+                        kDerivedKeySize));
+  });
 }
 
 void EncryptionServiceImpl::EncryptObject(
@@ -191,13 +191,13 @@ void EncryptionServiceImpl::EncryptObject(
     callback(Status::IO_ERROR, "");
     return;
   }
-  Encrypt(object_identifier.key_index, std::move(data), std::move(callback));
+  Encrypt(object_identifier.key_index(), std::move(data), std::move(callback));
 }
 
 void EncryptionServiceImpl::DecryptObject(
     storage::ObjectIdentifier object_identifier, std::string encrypted_data,
     fit::function<void(Status, std::string)> callback) {
-  Decrypt(object_identifier.key_index, std::move(encrypted_data),
+  Decrypt(object_identifier.key_index(), std::move(encrypted_data),
           std::move(callback));
 }
 
@@ -209,14 +209,15 @@ void EncryptionServiceImpl::GetReferenceKey(
     storage::ObjectIdentifier object_identifier,
     fit::function<void(const std::string&)> callback) {
   std::string deletion_scope_seed;
-  if (object_identifier.deletion_scope_id == kPerObjectDeletionScopedId) {
-    deletion_scope_seed = object_identifier.object_digest;
+  if (object_identifier.deletion_scope_id() == kPerObjectDeletionScopedId) {
+    deletion_scope_seed = object_identifier.object_digest();
   } else {
-    deletion_scope_seed = std::string(
-        reinterpret_cast<char*>(&object_identifier.deletion_scope_id),
-        sizeof(object_identifier.deletion_scope_id));
+    const uint32_t deletion_scope_id = object_identifier.deletion_scope_id();
+    deletion_scope_seed =
+        std::string(reinterpret_cast<const char*>(&deletion_scope_id),
+                    sizeof(deletion_scope_id));
   }
-  DeletionScopeSeed seed = {object_identifier.key_index,
+  DeletionScopeSeed seed = {object_identifier.key_index(),
                             std::move(deletion_scope_seed)};
   reference_keys_.Get(
       seed, [callback = std::move(callback)](

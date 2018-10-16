@@ -425,8 +425,9 @@ void PageCommunicatorImpl::BuildObjectRequestBuffer(
                             convert::ToFlatBufferVector(buffer, namespace_id_),
                             convert::ToFlatBufferVector(buffer, page_id_));
   flatbuffers::Offset<ObjectId> object_id = CreateObjectId(
-      *buffer, object_identifier.key_index, object_identifier.deletion_scope_id,
-      convert::ToFlatBufferVector(buffer, object_identifier.object_digest));
+      *buffer, object_identifier.key_index(),
+      object_identifier.deletion_scope_id(),
+      convert::ToFlatBufferVector(buffer, object_identifier.object_digest()));
   flatbuffers::Offset<ObjectRequest> object_request = CreateObjectRequest(
       *buffer, buffer->CreateVector(
                    std::vector<flatbuffers::Offset<ObjectId>>({object_id})));
@@ -623,10 +624,10 @@ void PageCommunicatorImpl::BuildObjectResponseBuffer(
   std::vector<flatbuffers::Offset<Object>> fb_objects;
   for (const ObjectResponseHolder& object_response : object_responses) {
     flatbuffers::Offset<ObjectId> fb_object_id =
-        CreateObjectId(*buffer, object_response.identifier.key_index,
-                       object_response.identifier.deletion_scope_id,
+        CreateObjectId(*buffer, object_response.identifier.key_index(),
+                       object_response.identifier.deletion_scope_id(),
                        convert::ToFlatBufferVector(
-                           buffer, object_response.identifier.object_digest));
+                           buffer, object_response.identifier.object_digest()));
     if (object_response.object) {
       fxl::StringView data;
       storage::Status status = object_response.object->GetData(&data);

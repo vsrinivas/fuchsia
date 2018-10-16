@@ -21,9 +21,9 @@ flatbuffers::Offset<ObjectIdentifierStorage> ToObjectIdentifierStorage(
     flatbuffers::FlatBufferBuilder* builder,
     const ObjectIdentifier& object_identifier) {
   return CreateObjectIdentifierStorage(
-      *builder, object_identifier.key_index,
-      object_identifier.deletion_scope_id,
-      convert::ToFlatBufferVector(builder, object_identifier.object_digest));
+      *builder, object_identifier.key_index(),
+      object_identifier.deletion_scope_id(),
+      convert::ToFlatBufferVector(builder, object_identifier.object_digest()));
 }
 
 std::string EncodeObjectIdentifier(const ObjectIdentifier& object_identifier) {

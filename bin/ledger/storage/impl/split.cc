@@ -109,11 +109,10 @@ class SplitContext {
       // finished. The top-level object_identifier is the unique element.
       if (i == current_identifiers_per_level_.size() - 1 &&
           current_identifiers_per_level_[i].size() == 1) {
-        callback_(
-            IterationStatus::DONE,
-            std::move(
-                current_identifiers_per_level_[i][0].identifier.object_digest),
-            nullptr);
+        callback_(IterationStatus::DONE,
+                  std::move(current_identifiers_per_level_[i][0]
+                                .identifier.object_digest()),
+                  nullptr);
         return;
       }
 
@@ -305,7 +304,8 @@ void CollectPiecesInternal(ObjectIdentifier root,
     return;
   }
 
-  if (GetObjectDigestType(root.object_digest) != ObjectDigestType::INDEX_HASH) {
+  if (GetObjectDigestType(root.object_digest()) !=
+      ObjectDigestType::INDEX_HASH) {
     on_done();
     return;
   }

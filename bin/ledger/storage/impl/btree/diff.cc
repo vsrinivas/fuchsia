@@ -492,8 +492,8 @@ Status ForEachDiffInternal(SynchronousStorage* storage,
                            ObjectIdentifier right_node_identifier,
                            std::string min_key,
                            fit::function<bool(EntryChange)> on_next) {
-  FXL_DCHECK(storage::IsDigestValid(left_node_identifier.object_digest));
-  FXL_DCHECK(storage::IsDigestValid(right_node_identifier.object_digest));
+  FXL_DCHECK(storage::IsDigestValid(left_node_identifier.object_digest()));
+  FXL_DCHECK(storage::IsDigestValid(right_node_identifier.object_digest()));
 
   if (left_node_identifier == right_node_identifier) {
     return Status::OK;
@@ -527,9 +527,9 @@ Status ForEachThreeWayDiffInternal(
     ObjectIdentifier left_node_identifier,
     ObjectIdentifier right_node_identifier, std::string min_key,
     fit::function<bool(ThreeWayChange)> on_next) {
-  FXL_DCHECK(IsDigestValid(base_node_identifier.object_digest));
-  FXL_DCHECK(IsDigestValid(left_node_identifier.object_digest));
-  FXL_DCHECK(IsDigestValid(right_node_identifier.object_digest));
+  FXL_DCHECK(IsDigestValid(base_node_identifier.object_digest()));
+  FXL_DCHECK(IsDigestValid(left_node_identifier.object_digest()));
+  FXL_DCHECK(IsDigestValid(right_node_identifier.object_digest()));
 
   if (left_node_identifier == right_node_identifier) {
     return Status::OK;
@@ -557,8 +557,8 @@ void ForEachDiff(coroutine::CoroutineService* coroutine_service,
                  ObjectIdentifier other_root_identifier, std::string min_key,
                  fit::function<bool(EntryChange)> on_next,
                  fit::function<void(Status)> on_done) {
-  FXL_DCHECK(storage::IsDigestValid(base_root_identifier.object_digest));
-  FXL_DCHECK(storage::IsDigestValid(other_root_identifier.object_digest));
+  FXL_DCHECK(storage::IsDigestValid(base_root_identifier.object_digest()));
+  FXL_DCHECK(storage::IsDigestValid(other_root_identifier.object_digest()));
   coroutine_service->StartCoroutine(
       [page_storage, base_root_identifier = std::move(base_root_identifier),
        other_root_identifier = std::move(other_root_identifier),
@@ -581,9 +581,9 @@ void ForEachThreeWayDiff(coroutine::CoroutineService* coroutine_service,
                          std::string min_key,
                          fit::function<bool(ThreeWayChange)> on_next,
                          fit::function<void(Status)> on_done) {
-  FXL_DCHECK(storage::IsDigestValid(base_root_identifier.object_digest));
-  FXL_DCHECK(storage::IsDigestValid(left_root_identifier.object_digest));
-  FXL_DCHECK(storage::IsDigestValid(right_root_identifier.object_digest));
+  FXL_DCHECK(storage::IsDigestValid(base_root_identifier.object_digest()));
+  FXL_DCHECK(storage::IsDigestValid(left_root_identifier.object_digest()));
+  FXL_DCHECK(storage::IsDigestValid(right_root_identifier.object_digest()));
   coroutine_service->StartCoroutine(
       [page_storage, base_root_identifier = std::move(base_root_identifier),
        left_root_identifier = std::move(left_root_identifier),
