@@ -34,14 +34,9 @@ class CrashpadAnalyzerImpl : public Analyzer {
                       zx::port exception_port);
   int Process(fuchsia::mem::Buffer crashlog);
 
-  int UploadReportForKernel(
-      const crashpad::UUID& local_report_id,
-      const std::map<std::string, std::string>& annotations);
-  int UploadReportForUserspace(const crashpad::UUID& local_report_id);
   int UploadReport(
       std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report,
       const std::map<std::string, std::string>& annotations);
-
   std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport>
   GetUploadReport(const crashpad::UUID& local_report_id);
 
