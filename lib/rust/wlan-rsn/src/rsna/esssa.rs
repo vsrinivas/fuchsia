@@ -470,6 +470,31 @@ mod tests {
     }
 
     #[test]
+    fn test_replay_first_message() {
+        let mut supplicant = test_util::get_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
+
+        // Send first message of handshake.
+        let (result, _) = send_msg1(&mut supplicant, |msg1| {
+            msg1.key_replay_counter = 1;
+        });
+        assert!(result.is_ok());
+
+        // Replay first message which should restart the entire handshake.
+        // Verify the second message of the handshake was received.
+        let (result, updates) = send_msg1(&mut supplicant, |msg1| {
+            msg1.key_replay_counter = 3;
+        });
+        assert!(result.is_ok());
+
+        // Extract second message response and verify Supplicant responded to the replayed first
+        // message.
+        let msg2 = extract_eapol_resp(&updates[..])
+            .expect("Supplicant did not respond with 2nd message");
+        assert_eq!(msg2.key_replay_counter, 3);
+    }
+
+    #[test]
     fn test_zero_key_replay_counter_msg1() {
         let mut supplicant = test_util::get_supplicant();
         supplicant.start().expect("Failed starting Supplicant");

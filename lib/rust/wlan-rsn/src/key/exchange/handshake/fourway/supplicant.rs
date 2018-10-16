@@ -15,7 +15,7 @@ use crate::rsne::Rsne;
 use crate::Error;
 use eapol;
 use failure::{self, bail, ensure};
-use log::error;
+use log::{error, info};
 
 // IEEE Std 802.11-2016, 12.7.6.2
 fn handle_message_1(
@@ -224,7 +224,7 @@ impl State {
                 match fourway::message_number(frame.get().unsafe_get_raw()) {
                     // Restart handshake if first message was received.
                     fourway::MessageNumber::Message1 => {
-                        State::AwaitingMsg1 { pmk, cfg }
+                        State::AwaitingMsg1 { pmk, cfg }.on_eapol_key_frame(update_sink, frame)
                     },
                     // Third message of the handshake is only processed once to prevent replay
                     // attacks.
@@ -252,8 +252,15 @@ impl State {
                 // Safe since the frame is only used for deriving the message number.
                 match fourway::message_number(frame.get().unsafe_get_raw()) {
                     // Restart handshake if first message was received to support re-keying.
-                    fourway::MessageNumber::Message1 => State::AwaitingMsg1 { pmk, cfg },
-                    _ => State::Completed { pmk, cfg }
+                    fourway::MessageNumber::Message1 => {
+                        info!("restarting already completed 4-Way Handshake");
+                        State::AwaitingMsg1 { pmk, cfg }.on_eapol_key_frame(update_sink, frame)
+                    },
+                    unexpected_msg => {
+                        error!("ignoring message {:?}; 4-Way Handshake already completed",
+                               unexpected_msg);
+                        State::Completed { pmk, cfg }
+                    }
                 }
             },
         }
