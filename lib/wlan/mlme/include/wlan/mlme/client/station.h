@@ -194,8 +194,10 @@ const wlan_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz);
 zx_status_t ParseAssocRespIe(const uint8_t* ie_chains, size_t ie_chains_len,
                              AssocContext* assoc_ctx);
 AssocContext ToAssocContext(const wlan_info_t& ifc_info, const wlan_channel_t join_chan);
-void SetAssocCtxSuppRates(const AssocContext& from_ap, const AssocContext& from_client,
-                          std::vector<SupportedRate>* supp_rates,
-                          std::vector<SupportedRate>* ext_rates);
-
+void FindCommonSuppRates(const std::vector<SupportedRate>& ap_supp_rates,
+                         const std::vector<SupportedRate>& ap_ext_rates,
+                         const std::vector<SupportedRate>& client_supp_rates,
+                         const std::vector<SupportedRate>& client_ext_rates,
+                         std::vector<SupportedRate>* supp_rates,
+                         std::vector<SupportedRate>* ext_rates);
 }  // namespace wlan

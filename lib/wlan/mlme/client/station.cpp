@@ -1390,7 +1390,9 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
     debugjoin("from WlanInfo: [%s]\n", debug::Describe(client).c_str());
 
     assoc_ctx_.cap = IntersectCapInfo(ap.cap, client.cap);
-    SetAssocCtxSuppRates(ap, client, &assoc_ctx_.supported_rates, &assoc_ctx_.ext_supported_rates);
+    FindCommonSuppRates(ap.supported_rates, ap.ext_supported_rates, client.supported_rates,
+                        client.ext_supported_rates, &assoc_ctx_.supported_rates,
+                        &assoc_ctx_.ext_supported_rates);
 
     if (ap.ht_cap.has_value() && client.ht_cap.has_value()) {
         // TODO(porce): Supported MCS Set field from the outcome of the intersection
@@ -1583,14 +1585,16 @@ AssocContext ToAssocContext(const wlan_info_t& ifc_info, const wlan_channel_t jo
     return assoc_ctx;
 }
 
-void SetAssocCtxSuppRates(const AssocContext& ap, const AssocContext& client,
-                          std::vector<SupportedRate>* supp_rates,
-                          std::vector<SupportedRate>* ext_rates) {
-    auto ap_rates(ap.supported_rates);
-    ap_rates.insert(ap_rates.end(), ap.ext_supported_rates.cbegin(), ap.ext_supported_rates.cend());
-    auto client_rates(client.supported_rates);
-    client_rates.insert(client_rates.end(), client.ext_supported_rates.cbegin(),
-                        client.ext_supported_rates.cend());
+void FindCommonSuppRates(const std::vector<SupportedRate>& ap_supp_rates,
+                           const std::vector<SupportedRate>& ap_ext_rates,
+                           const std::vector<SupportedRate>& client_supp_rates,
+                           const std::vector<SupportedRate>& client_ext_rates,
+                           std::vector<SupportedRate>* supp_rates,
+                           std::vector<SupportedRate>* ext_rates) {
+    auto ap_rates(ap_supp_rates);
+    ap_rates.insert(ap_rates.end(), ap_ext_rates.cbegin(), ap_ext_rates.cend());
+    auto client_rates(client_supp_rates);
+    client_rates.insert(client_rates.end(), client_ext_rates.cbegin(), client_ext_rates.cend());
 
     *supp_rates = IntersectRatesAp(ap_rates, client_rates);
 
