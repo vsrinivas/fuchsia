@@ -23,16 +23,17 @@ class CrashpadAnalyzerImpl : public Analyzer {
  public:
   CrashpadAnalyzerImpl();
 
-  void Analyze(zx::process process, zx::thread thread, zx::port exception_port,
-               AnalyzeCallback callback) override;
+  void HandleException(zx::process process, zx::thread thread,
+                       zx::port exception_port,
+                       HandleExceptionCallback callback) override;
 
-  void Process(fuchsia::mem::Buffer crashlog,
-               ProcessCallback callback) override;
+  void ProcessCrashlog(fuchsia::mem::Buffer crashlog,
+                       ProcessCrashlogCallback callback) override;
 
  private:
   int HandleException(zx::process process, zx::thread thread,
                       zx::port exception_port);
-  int Process(fuchsia::mem::Buffer crashlog);
+  int ProcessCrashlog(fuchsia::mem::Buffer crashlog);
 
   int UploadReport(
       std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report,

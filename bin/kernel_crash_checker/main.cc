@@ -34,12 +34,12 @@ class CrashpadAnalyzer {
     FXL_DCHECK(context_);
   }
 
-  void Process(fuchsia::mem::Buffer crashlog) {
+  void ProcessCrashlog(fuchsia::mem::Buffer crashlog) {
     fuchsia::crash::AnalyzerSyncPtr analyzer;
     context_->ConnectToEnvironmentService(analyzer.NewRequest());
     FXL_DCHECK(analyzer);
 
-    analyzer->Process(fbl::move(crashlog));
+    analyzer->ProcessCrashlog(fbl::move(crashlog));
   }
 
  private:
@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
       return;
     }
     CrashpadAnalyzer crashpad_analyzer;
-    crashpad_analyzer.Process(std::move(crashlog_vmo).ToTransport());
+    crashpad_analyzer.ProcessCrashlog(std::move(crashlog_vmo).ToTransport());
   };
   loop.Run();
 #endif  // USE_CRASHPAD

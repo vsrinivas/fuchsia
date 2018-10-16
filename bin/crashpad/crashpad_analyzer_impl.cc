@@ -308,7 +308,7 @@ int CrashpadAnalyzerImpl::HandleException(zx::process process,
   return UploadReport(std::move(report), annotations);
 }
 
-int CrashpadAnalyzerImpl::Process(fuchsia::mem::Buffer crashlog) {
+int CrashpadAnalyzerImpl::ProcessCrashlog(fuchsia::mem::Buffer crashlog) {
   FX_LOGS(INFO) << "generating crash report for previous kernel panic";
   if (!database_) {
     return EXIT_FAILURE;
@@ -379,9 +379,10 @@ CrashpadAnalyzerImpl::CrashpadAnalyzerImpl() {
   database_->GetSettings()->SetUploadsEnabled(true);
 }
 
-void CrashpadAnalyzerImpl::Analyze(zx::process process, zx::thread thread,
-                                   zx::port exception_port,
-                                   AnalyzeCallback callback) {
+void CrashpadAnalyzerImpl::HandleException(zx::process process,
+                                           zx::thread thread,
+                                           zx::port exception_port,
+                                           HandleExceptionCallback callback) {
   callback();
   if (HandleException(std::move(process), std::move(thread),
                       std::move(exception_port)) != EXIT_SUCCESS) {
@@ -389,10 +390,10 @@ void CrashpadAnalyzerImpl::Analyze(zx::process process, zx::thread thread,
   }
 }
 
-void CrashpadAnalyzerImpl::Process(fuchsia::mem::Buffer crashlog,
-                                   ProcessCallback callback) {
+void CrashpadAnalyzerImpl::ProcessCrashlog(fuchsia::mem::Buffer crashlog,
+                                           ProcessCrashlogCallback callback) {
   callback();
-  if (Process(fbl::move(crashlog)) != EXIT_SUCCESS) {
+  if (ProcessCrashlog(fbl::move(crashlog)) != EXIT_SUCCESS) {
     FX_LOGS(ERROR) << "failed to process VMO crashlog. Won't retry.";
   }
 }
