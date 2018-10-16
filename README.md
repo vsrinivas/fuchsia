@@ -32,6 +32,7 @@ This page is a non-comprehensive index of the zircon documentation.
 
 + [Concepts Overview](docs/concepts.md)
 + [Kernel Objects](docs/objects.md)
++ [Kernel Scheduling](docs/kernel_scheduling.md)
 + [Process Objects](docs/objects/process.md)
 + [Thread Objects](docs/objects/thread.md)
 + [Handles](docs/handles.md)
