@@ -93,7 +93,11 @@ template("clang_toolchain") {
 
     forward_variables_from(invoker, [ "use_strip" ])
     if (use_strip) {
-      strip = "${prefix}/llvm-objcopy"
+      if (invoker.toolchain_os == "mac") {
+        strip = "xcrun strip"
+      } else {
+        strip = "${prefix}/llvm-objcopy"
+      }
     }
 
     # Override any tools as requested by the invoker
@@ -198,7 +202,12 @@ template("clang_toolchain") {
         default_output_extension = ".so"
       }
       if (use_strip) {
-        command += " && $strip --strip-all \"$unstripped_outfile\" \"$outfile\""
+        if (invoker.toolchain_os == "mac") {
+          command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
+        } else {
+          command +=
+              " && $strip --strip-all \"$unstripped_outfile\" \"$outfile\""
+        }
       }
       description = "SOLINK $outfile"
       default_output_dir = "{{root_out_dir}}"
@@ -230,7 +239,12 @@ template("clang_toolchain") {
         default_output_extension = ".so"
       }
       if (use_strip) {
-        command += " && $strip --strip-all \"$unstripped_outfile\" \"$outfile\""
+        if (invoker.toolchain_os == "mac") {
+          command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
+        } else {
+          command +=
+              " && $strip --strip-all \"$unstripped_outfile\" \"$outfile\""
+        }
       }
       description = "SOLINK $outfile"
       default_output_dir = "{{root_out_dir}}"
@@ -257,8 +271,12 @@ template("clang_toolchain") {
         rspfile_content = "{{inputs}}"
       }
       if (use_strip) {
-        command +=
-            " && $strip --strip-sections \"$unstripped_outfile\" \"$outfile\""
+        if (invoker.toolchain_os == "mac") {
+          command += " && $strip \"$unstripped_outfile\" -o \"$outfile\""
+        } else {
+          command +=
+              " && $strip --strip-sections \"$unstripped_outfile\" \"$outfile\""
+        }
       }
       description = "LINK $outfile"
       default_output_dir = "{{root_out_dir}}"
