@@ -65,7 +65,7 @@ Err FormatCategory(const FormatRegisterOptions& options,
       return err;
     }
   } else if (options.arch == debug_ipc::Arch::kArm64) {
-    if (FormatCategoryARM64(category, registers, &category_out,
+    if (FormatCategoryARM64(options, category, registers, &category_out,
                             &err)) {
       if (err.ok())
         out->Append(std::move(category_out));
@@ -163,12 +163,14 @@ Err FormatRegisters(const FormatRegisterOptions& options,
   for (auto kv : filtered_set) {
     if (kv.second.empty())
       continue;
-    OutputBuffer out;
-    Err err = FormatCategory(options, kv.first, kv.second, &out);
+    OutputBuffer cat_out;
+    Err err = FormatCategory(options, kv.first, kv.second, &cat_out);
     if (!err.ok())
       return err;
-    out_buffers.emplace_back(std::move(out));
+    out_buffers.emplace_back(std::move(cat_out));
   }
+
+  out->Clear();
 
   // Each section is separated by a new line.
   for (const auto& buf : out_buffers) {

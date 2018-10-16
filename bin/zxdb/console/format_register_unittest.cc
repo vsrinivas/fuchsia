@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include "garnet/bin/zxdb/console/format_register.cc"
+#include "garnet/lib/debug_ipc/helper/arch_arm64.h"
 #include "garnet/lib/debug_ipc/helper/arch_x86.h"
 #include "lib/fxl/logging.h"
 
@@ -389,7 +390,8 @@ TEST(FormatRegisters, CPSRValues) {
 
   // filtered_set now holds a pointer to rflags that we can change.
   auto& reg = filtered_set[RegisterCategory::Type::kGeneral].front();
-  SetRegisterValue(&reg, 0xA1234567);
+  SetRegisterValue(&reg, ARM64_FLAG_MASK(CpsrC) |
+                         ARM64_FLAG_MASK(CpsrN));
 
   OutputBuffer out;
   err = FormatRegisters(options, filtered_set, &out);
@@ -397,7 +399,29 @@ TEST(FormatRegisters, CPSRValues) {
 
   EXPECT_EQ(
       "General Purpose Registers\n"
-      "cpsr  0xa1234567 V=0, C=1, Z=0, N=1\n"
+      "cpsr  0xa0000000 V=0, C=1, Z=0, N=1\n"
+      "\n",
+      out.AsString());
+
+  // Check out extended
+  SetRegisterValue(&reg, ARM64_FLAG_MASK(CpsrC) |
+                         ARM64_FLAG_MASK(CpsrN) |
+                         // Extended flags.
+                         ARM64_FLAG_MASK(CpsrEL) |
+                         ARM64_FLAG_MASK(CpsrI) |
+                         ARM64_FLAG_MASK(CpsrA) |
+                         ARM64_FLAG_MASK(CpsrIL) |
+                         ARM64_FLAG_MASK(CpsrPAN) |
+                         ARM64_FLAG_MASK(CpsrUAO));
+
+  options.extended = true;
+  err = FormatRegisters(options, filtered_set, &out);
+  ASSERT_FALSE(err.has_error()) << err.msg();
+
+  EXPECT_EQ(
+      "General Purpose Registers\n"
+      "cpsr  0xa0d00181 V=0, C=1, Z=0, N=1\n"
+      "                 EL=1, F=0, I=1, A=1, D=0, IL=1, SS=0, PAN=1, UAO=1\n"
       "\n",
       out.AsString());
 }

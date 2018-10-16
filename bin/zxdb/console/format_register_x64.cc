@@ -65,8 +65,7 @@ TextForegroundColor GetRowColor(size_t table_len) {
 
 // Format General Registers ----------------------------------------------------
 
-std::vector<OutputBuffer> DescribeRflags(const FormatRegisterOptions& options,
-                                         const Register& rflags,
+std::vector<OutputBuffer> DescribeRflags(const Register& rflags,
                                          TextForegroundColor color) {
   std::vector<OutputBuffer> result;
   result.emplace_back(color, RegisterIDToString(rflags.id()));
@@ -95,9 +94,8 @@ std::vector<OutputBuffer> DescribeRflags(const FormatRegisterOptions& options,
   return result;
 }
 
-std::vector<OutputBuffer> DescribeRflagsExtended(
-    const FormatRegisterOptions& options, const Register& rflags,
-    TextForegroundColor color) {
+std::vector<OutputBuffer> DescribeRflagsExtended(const Register& rflags,
+                                                 TextForegroundColor color) {
   std::vector<OutputBuffer> result;
   result.reserve(3);
   result.emplace_back(OutputBuffer());
@@ -129,11 +127,10 @@ void FormatGeneralRegisters(const FormatRegisterOptions& options,
   for (const Register& reg : registers) {
     auto color = GetRowColor(rows.size());
     if (reg.id() == RegisterID::kX64_rflags) {
-      rows.push_back(DescribeRflags(options, reg, color));
+      rows.push_back(DescribeRflags(reg, color));
       if (options.extended)
-        rows.push_back(DescribeRflagsExtended(options, reg, color));
-    }
-    else
+        rows.push_back(DescribeRflagsExtended(reg, color));
+    } else
       rows.push_back(DescribeRegister(reg, color));
   }
 

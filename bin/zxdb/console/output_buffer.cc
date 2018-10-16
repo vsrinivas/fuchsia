@@ -296,4 +296,8 @@ void OutputBuffer::SetForegroundColor(TextForegroundColor color) {
     span.foreground = color;
 }
 
+void OutputBuffer::Clear() {
+  spans_.clear();
+}
+
 }  // namespace zxdb

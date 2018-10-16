@@ -118,6 +118,8 @@ class OutputBuffer {
   void SetBackgroundColor(TextBackgroundColor);
   void SetForegroundColor(TextForegroundColor);
 
+  void Clear();
+
   bool empty() const { return spans_.empty(); }
 
  private:
