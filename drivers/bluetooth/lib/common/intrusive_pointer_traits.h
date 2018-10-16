@@ -35,6 +35,12 @@ struct ContainerPtrTraits<::std::unique_ptr<T>> {
     first.swap(second);
   }
 
+  static inline RawPtrType Leak(PtrType& ptr) __WARN_UNUSED_RESULT {
+    return ptr.release();
+  }
+
+  static inline PtrType Reclaim(RawPtrType ptr) { return PtrType(ptr); }
+
   static constexpr PtrType MakeSentinel(void* sentinel) {
     return PtrType(reinterpret_cast<RawPtrType>(
         reinterpret_cast<uintptr_t>(sentinel) | kContainerSentinelBit));
