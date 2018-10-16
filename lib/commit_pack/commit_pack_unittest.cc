@@ -9,8 +9,7 @@
 namespace cloud_provider {
 namespace {
 
-class CommitPackTest
-    : public ::testing::TestWithParam<std::vector<CommitPackEntry>> {};
+using CommitPackTest = ::testing::TestWithParam<std::vector<CommitPackEntry>>;
 
 TEST_P(CommitPackTest, BackAndForth) {
   const std::vector<CommitPackEntry> commits = GetParam();
