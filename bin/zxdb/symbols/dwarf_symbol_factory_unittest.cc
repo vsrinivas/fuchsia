@@ -9,6 +9,7 @@
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/dwarf_test_util.h"
+#include "garnet/bin/zxdb/symbols/inherited_from.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/module_symbols_impl.h"
@@ -211,23 +212,41 @@ TEST(DwarfSymbolFactory, Collection) {
   ASSERT_TRUE(struct_type);
   EXPECT_EQ("my_ns::Struct", struct_type->GetFullName());
 
-  // The struct has two data members.
+  // The struct has two data members and two base classes.
   ASSERT_EQ(2u, struct_type->data_members().size());
+  ASSERT_EQ(2u, struct_type->inherited_from().size());
 
-  // The first member should be "int member_a" at offset 0.
+  // The first thing should be Base1 at offset 0.
+  auto* base1 = struct_type->inherited_from()[0].Get()->AsInheritedFrom();
+  ASSERT_TRUE(base1);
+  auto* base1_type = base1->from().Get()->AsType();
+  EXPECT_EQ("my_ns::Base1", base1_type->GetFullName());
+  EXPECT_EQ(0u, base1->offset());
+
+  // It should be followed by Base2. To allow flexibility in packing without
+  // breaking this test, all offsets below check only that the offset is
+  // greater than the previous one and a multiple of 4.
+  auto* base2 = struct_type->inherited_from()[1].Get()->AsInheritedFrom();
+  ASSERT_TRUE(base2);
+  auto* base2_type = base2->from().Get()->AsType();
+  EXPECT_EQ("my_ns::Base2", base2_type->GetFullName());
+  EXPECT_LT(0u, base2->offset());
+  EXPECT_TRUE(base2->offset() % 4 == 0);
+
+  // The base classes should be followed by the data members on the struct.
   auto* member_a = struct_type->data_members()[0].Get()->AsDataMember();
   ASSERT_TRUE(member_a);
   auto* member_a_type = member_a->type().Get()->AsType();
   EXPECT_EQ("int", member_a_type->GetFullName());
-  EXPECT_EQ(0u, member_a->member_location());
+  EXPECT_LT(base2->offset(), member_a->member_location());
+  EXPECT_TRUE(member_a->member_location() % 4 == 0);
 
-  // The first member should be "int member_a". To have flexibility with the
-  // compiler packing, just ensure that the offset is > 0 and a multiple of 4.
+  // The second data member should be "Struct* member_b".
   auto* member_b = struct_type->data_members()[1].Get()->AsDataMember();
   ASSERT_TRUE(member_b);
   auto* member_b_type = member_b->type().Get()->AsType();
   EXPECT_EQ("my_ns::Struct*", member_b_type->GetFullName());
-  EXPECT_LT(0u, member_b->member_location());
+  EXPECT_LT(member_a->member_location(), member_b->member_location());
   EXPECT_TRUE(member_b->member_location() % 4 == 0);
 }
 

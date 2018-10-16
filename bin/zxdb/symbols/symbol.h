@@ -18,6 +18,7 @@ class CodeBlock;
 class Collection;
 class DataMember;
 class Function;
+class InheritedFrom;
 class ModifiedType;
 class Namespace;
 class Type;
@@ -245,6 +246,7 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   virtual const CodeBlock* AsCodeBlock() const;
   virtual const DataMember* AsDataMember() const;
   virtual const Function* AsFunction() const;
+  virtual const InheritedFrom* AsInheritedFrom() const;
   virtual const ModifiedType* AsModifiedType() const;
   virtual const Namespace* AsNamespace() const;
   virtual const Collection* AsCollection() const;
@@ -270,6 +272,10 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   }
   Function* AsFunction() {
     return const_cast<Function*>(const_cast<const Symbol*>(this)->AsFunction());
+  }
+  InheritedFrom* AsInheritedFrom() {
+    return const_cast<InheritedFrom*>(
+        const_cast<const Symbol*>(this)->AsInheritedFrom());
   }
   ModifiedType* AsModifiedType() {
     return const_cast<ModifiedType*>(

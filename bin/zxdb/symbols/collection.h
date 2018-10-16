@@ -22,6 +22,15 @@ class Collection final : public Type {
     data_members_ = std::move(d);
   }
 
+  // Classes/structs this one inherits from. These are in the same order as
+  // declared in the symbol file.
+  const std::vector<LazySymbol>& inherited_from() const {
+    return inherited_from_;
+  }
+  void set_inherited_from(std::vector<LazySymbol> f) {
+    inherited_from_ = std::move(f);
+  }
+
   // Returns a pointer to either "struct", "class", or "union" depending on the
   // type of this object. This is useful for error messages.
   const char* GetKindString() const;
@@ -38,6 +47,7 @@ class Collection final : public Type {
   virtual ~Collection();
 
   std::vector<LazySymbol> data_members_;
+  std::vector<LazySymbol> inherited_from_;
 };
 
 }  // namespace zxdb

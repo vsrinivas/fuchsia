@@ -13,6 +13,7 @@
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/dwarf_die_decoder.h"
 #include "garnet/bin/zxdb/symbols/function.h"
+#include "garnet/bin/zxdb/symbols/inherited_from.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/module_symbols_impl.h"
 #include "garnet/bin/zxdb/symbols/namespace.h"
@@ -184,6 +185,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(
     case llvm::dwarf::DW_TAG_formal_parameter:
     case llvm::dwarf::DW_TAG_variable:
       symbol = DecodeVariable(die);
+      break;
+    case llvm::dwarf::DW_TAG_inheritance:
+      symbol = DecodeInheritedFrom(die);
       break;
     case llvm::dwarf::DW_TAG_lexical_block:
       symbol = DecodeLexicalBlock(die);
@@ -438,10 +442,14 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(
   if (byte_size)
     result->set_byte_size(static_cast<uint32_t>(*byte_size));
 
-  // Handle sub-DIEs: data members.
+  // Handle sub-DIEs: data members and inheritance.
   std::vector<LazySymbol> data;
+  std::vector<LazySymbol> inheritance;
   for (const llvm::DWARFDie& child : die) {
     switch (child.getTag()) {
+      case llvm::dwarf::DW_TAG_inheritance:
+        inheritance.push_back(MakeLazy(child));
+        break;
       case llvm::dwarf::DW_TAG_member:
         data.push_back(MakeLazy(child));
         break;
@@ -450,6 +458,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(
     }
   }
   result->set_data_members(std::move(data));
+  result->set_inherited_from(std::move(inheritance));
   return result;
 }
 
@@ -478,6 +487,37 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(
   if (member_offset)
     result->set_member_location(static_cast<uint32_t>(*member_offset));
   return result;
+}
+
+fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeInheritedFrom(
+    const llvm::DWARFDie& die) {
+  DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
+
+  llvm::DWARFDie type;
+  decoder.AddReference(llvm::dwarf::DW_AT_type, &type);
+
+  llvm::Optional<uint64_t> member_offset;
+  decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_data_member_location,
+                              &member_offset);
+
+  if (!decoder.Decode(die))
+    return fxl::MakeRefCounted<Symbol>();
+
+  LazySymbol lazy_type;
+  if (type)
+    lazy_type = MakeLazy(type);
+  if (!member_offset) {
+    // According to the spec the offset could be a location description which
+    // won't have been read as an unsigned. See InheritedFrom::offset() for
+    // more. If this triggers, we should implement and test this feature.
+    fprintf(stderr,
+            "DW_TAG_inheritance has a non-constant offset for the base class. "
+            "Please file a bug with a repro so we can support this case.\n");
+    return fxl::MakeRefCounted<Symbol>();
+  }
+
+  return fxl::MakeRefCounted<InheritedFrom>(std::move(lazy_type),
+                                            *member_offset);
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeLexicalBlock(

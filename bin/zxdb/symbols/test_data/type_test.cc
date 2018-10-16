@@ -16,7 +16,14 @@ EXPORT char GetString() {
 
 namespace my_ns {
 
-struct Struct {
+struct Base1 {
+  int base1;
+};
+struct Base2 {
+  int base2;
+};
+
+struct Struct : public Base1, private Base2 {
   int member_a;
   Struct* member_b;
 };

@@ -96,6 +96,7 @@ const CodeBlock* Symbol::AsCodeBlock() const { return nullptr; }
 const Collection* Symbol::AsCollection() const { return nullptr; }
 const DataMember* Symbol::AsDataMember() const { return nullptr; }
 const Function* Symbol::AsFunction() const { return nullptr; }
+const InheritedFrom* Symbol::AsInheritedFrom() const { return nullptr; }
 const ModifiedType* Symbol::AsModifiedType() const { return nullptr; }
 const Namespace* Symbol::AsNamespace() const { return nullptr; }
 const Type* Symbol::AsType() const { return nullptr; }
