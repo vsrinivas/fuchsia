@@ -73,6 +73,7 @@ fn get_server_config_file_path() -> Result<String, Error> {
     }
 }
 
+#[allow(unused)] // https://github.com/rust-lang/rust/issues/55124
 enum Never {}
 async fn define_msg_handling_loop_future<F: Fn() -> i64>(
     sock: UdpSocket, server: &Mutex<Server<F>>,

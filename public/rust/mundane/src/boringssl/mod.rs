@@ -113,7 +113,6 @@ impl CStackWrapper<CBB> {
     ///
     /// `cbb_with_data` accepts a callback, and invokes that callback, passing a
     /// slice of the current contents of this `CBB`.
-    #[must_use]
     pub fn cbb_with_data<O, F: Fn(&[u8]) -> O>(&self, with_data: F) -> O {
         unsafe {
             // NOTE: The return value of CBB_data is only valid until the next
@@ -151,7 +150,6 @@ impl CStackWrapper<CBS> {
     /// and invokes a callback on the `CBS`. The `CBS` is destructed before
     /// `cbs_with_temp_buffer` returns.
     // TODO(joshlf): Holdover until we figure out how to put lifetimes in CStackWrappers.
-    #[must_use]
     pub fn cbs_with_temp_buffer<O, F: Fn(&mut CStackWrapper<CBS>) -> O>(
         bytes: &[u8], with_cbs: F,
     ) -> O {
@@ -486,7 +484,6 @@ impl CStackWrapper<HMAC_CTX> {
     }
 
     /// The `HMAC_Update` function.
-    #[must_use]
     pub fn hmac_update(&mut self, data: &[u8]) {
         unsafe { HMAC_Update(self.as_mut(), data.as_ptr(), data.len()) }
     }
@@ -500,7 +497,6 @@ impl CStackWrapper<HMAC_CTX> {
     ///
     /// `hmac_final` panics if `out` is not exactly the right length (as defined
     /// by `HMAC_size`).
-    #[must_use]
     pub fn hmac_final(&mut self, out: &mut [u8]) {
         unsafe {
             let size = HMAC_size(self.as_const());

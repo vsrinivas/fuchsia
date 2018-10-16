@@ -321,7 +321,6 @@ pub unsafe fn HMAC_Init_ex(
 }
 
 #[allow(non_snake_case)]
-#[must_use]
 pub unsafe fn HMAC_Update(ctx: *mut HMAC_CTX, data: *const u8, data_len: usize) {
     // HMAC_Update promises to return 1.
     assert_abort_eq!(::boringssl_sys::HMAC_Update(ctx, data, data_len), 1);
@@ -338,7 +337,6 @@ pub unsafe fn HMAC_Final(
 // rand.h
 
 #[allow(non_snake_case)]
-#[must_use]
 pub unsafe fn RAND_bytes(buf: *mut u8, len: usize) {
     // RAND_bytes promises to return 1.
     assert_abort_eq!(::boringssl_sys::RAND_bytes(buf, len), 1);
@@ -347,7 +345,6 @@ pub unsafe fn RAND_bytes(buf: *mut u8, len: usize) {
 // sha.h
 
 #[allow(non_snake_case)]
-#[must_use]
 pub unsafe fn SHA384_Init(ctx: *mut SHA512_CTX) {
     // SHA384_Init promises to return 1.
     assert_abort_eq!(::boringssl_sys::SHA384_Init(ctx), 1);

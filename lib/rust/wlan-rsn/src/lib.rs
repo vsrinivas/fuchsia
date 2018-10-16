@@ -58,7 +58,7 @@ impl Supplicant {
         let akm = negotiated_rsne.akm.clone();
         let group_data = negotiated_rsne.group_data.clone();
 
-        let mut esssa = EssSa::new(
+        let esssa = EssSa::new(
             Role::Supplicant,
             negotiated_rsne,
             auth::Config::Psk(psk::Config::new(passphrase, ssid)?),

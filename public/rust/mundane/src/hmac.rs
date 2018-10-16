@@ -108,7 +108,6 @@ pub(crate) mod insecure_hmac_sha1 {
         ///
         /// HMAC-SHA1 is considered insecure, and should only be used for
         /// compatibility with legacy applications.
-        #[must_use]
         #[deprecated(note = "HMAC-SHA1 is considered insecure")]
         pub fn insecure_update(&mut self, bytes: &[u8]) {
             self.hmac.update(bytes);
