@@ -7,10 +7,15 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/strings/string_view.h>
 
 namespace cloud_provider_firestore {
 
 namespace {
+
+constexpr fxl::StringView kGoogleCloudResourcePrefixHeader =
+    "google-cloud-resource-prefix";
+
 // Handles the general case of call response that returns a status and a
 // response value.
 template <typename ResponseType>
@@ -75,7 +80,7 @@ void FirestoreServiceImpl::GetDocument(
         callback) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   DocumentResponseCall& call = document_response_calls_.emplace();
-  call.context.set_credentials(call_credentials);
+  SetUpContext(&call.context, call_credentials);
   auto response_reader =
       firestore_->AsyncGetDocument(&call.context, request, &cq_);
   MakeCall<google::firestore::v1beta1::Document>(
@@ -90,7 +95,7 @@ void FirestoreServiceImpl::ListDocuments(
         callback) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   ListDocumentsResponseCall& call = list_documents_response_calls_.emplace();
-  call.context.set_credentials(call_credentials);
+  SetUpContext(&call.context, call_credentials);
   auto response_reader =
       firestore_->AsyncListDocuments(&call.context, request, &cq_);
   MakeCall<google::firestore::v1beta1::ListDocumentsResponse>(
@@ -104,7 +109,7 @@ void FirestoreServiceImpl::CreateDocument(
         callback) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   DocumentResponseCall& call = document_response_calls_.emplace();
-  call.context.set_credentials(call_credentials);
+  SetUpContext(&call.context, call_credentials);
   auto response_reader =
       firestore_->AsyncCreateDocument(&call.context, request, &cq_);
 
@@ -118,7 +123,7 @@ void FirestoreServiceImpl::DeleteDocument(
     fit::function<void(grpc::Status)> callback) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   EmptyResponseCall& call = empty_response_calls_.emplace();
-  call.context.set_credentials(call_credentials);
+  SetUpContext(&call.context, call_credentials);
   auto response_reader =
       firestore_->AsyncDeleteDocument(&call.context, request, &cq_);
 
@@ -134,7 +139,7 @@ void FirestoreServiceImpl::Commit(
         callback) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   CommitResponseCall& call = commit_response_calls_.emplace();
-  call.context.set_credentials(call_credentials);
+  SetUpContext(&call.context, call_credentials);
   auto response_reader = firestore_->AsyncCommit(&call.context, request, &cq_);
 
   MakeCall<google::firestore::v1beta1::CommitResponse>(
@@ -150,7 +155,7 @@ void FirestoreServiceImpl::RunQuery(
         callback) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   auto context = std::make_unique<grpc::ClientContext>();
-  context->set_credentials(call_credentials);
+  SetUpContext(context.get(), call_credentials);
 
   auto stream = firestore_->PrepareAsyncRunQuery(context.get(), request, &cq_);
   auto& call = run_query_calls_.emplace(std::move(context), std::move(stream));
@@ -162,7 +167,7 @@ std::unique_ptr<ListenCallHandler> FirestoreServiceImpl::Listen(
     ListenCallClient* client) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   auto context = std::make_unique<grpc::ClientContext>();
-  context->set_credentials(call_credentials);
+  SetUpContext(context.get(), call_credentials);
 
   auto stream = firestore_->PrepareAsyncListen(context.get(), &cq_);
   auto& call =
@@ -183,6 +188,14 @@ void FirestoreServiceImpl::ShutDown(fit::closure callback) {
   // CompletionQueue shut down. These must be processed before we call the
   // client callback, so post the client callback on the main thread too.
   async::PostTask(dispatcher_, std::move(callback));
+}
+
+void FirestoreServiceImpl::SetUpContext(
+    grpc::ClientContext* context,
+    std::shared_ptr<grpc::CallCredentials> call_credentials) {
+  context->AddMetadata(kGoogleCloudResourcePrefixHeader.ToString(),
+                       database_path_);
+  context->set_credentials(call_credentials);
 }
 
 void FirestoreServiceImpl::Poll() {

@@ -122,6 +122,9 @@ class FirestoreServiceImpl : public FirestoreService {
   void ShutDown(fit::closure callback) override;
 
  private:
+  void SetUpContext(grpc::ClientContext* context,
+                    std::shared_ptr<grpc::CallCredentials> call_credentials);
+
   void Poll();
 
   const std::string server_id_;
