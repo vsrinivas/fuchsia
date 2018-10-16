@@ -11,22 +11,25 @@ import platform
 import subprocess
 import sys
 
-ROOT_PATH = os.path.abspath(__file__ + "/../../..")
-CONFIG_PATH = os.path.join(ROOT_PATH, ".config")
+import lib.rust
+from lib.rust import ROOT_PATH
 
-# Runs the given command and returns its return code and output.
-def run_command(args, env, cwd):
-    job = subprocess.Popen(args, env=env, cwd=cwd, stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE)
-    stdout, stderr = job.communicate()
-    return (job.returncode, stdout, stderr)
+def manifest_path_from_path_or_gn_target(arg):
+    if arg.endswith("Cargo.toml"):
+        return os.path.abspath(arg)
+    else:
+        gn_target = lib.rust.GnTarget(arg)
+        return gn_target.manifest_path(lib.rust.find_out_dir())
 
 def main():
     parser = argparse.ArgumentParser("Compiles all third-party Rust crates")
-    parser.add_argument("gn_target",
-                        nargs=1,
-                        help="GN target to generate a symlink for. \
-                              Use the absolute path to the target \
+    parser.add_argument("manifest_path",
+                        metavar="gn_target",
+                        type=manifest_path_from_path_or_gn_target,
+                        help="GN target to document. \
+                              Use '.[:target]' to discover the cargo target \
+                              for the current directory or use the \
+                              absolute path to the target \
                               (relative to $FUCHSIA_DIR). \
                               For example: //garnet/bin/foo/bar:baz. \
                               Alternatively, this can be a path to a \
@@ -44,32 +47,7 @@ def main():
 
     args = parser.parse_args()
 
-    out_dir = ""
-    with open(CONFIG_PATH, "r") as config:
-        for line in config.readlines():
-            if line.startswith("FUCHSIA_BUILD_DIR="):
-                segments = line.split("=")
-                assert(len(segments) == 2)
-                out_dir = segments[1].strip().strip("'")
-    if out_dir == "":
-        print "Invalid fuchsia/.config: no FUCHSIA_BUILD_DIR entry found"
-
-    gn_target = args.gn_target[0]
-    if gn_target.endswith("Cargo.toml"):
-        manifest_path = os.path.abspath(gn_target)
-    else:
-        gn_target = gn_target.lstrip("/")
-        gn_target_parts = gn_target.split(":", 1)
-        if len(gn_target_parts) == 1:
-            # Turn foo/bar into foo/bar/bar
-            path = os.path.join(gn_target, os.path.basename(gn_target))
-        elif len(gn_target_parts) == 2:
-            # Turn foo/bar:baz into foo/bar/baz
-            path = gn_target.replace(":", os.sep)
-        else:
-            print "Invalid gn_target: explected at most one colon."
-            return 1
-        manifest_path = os.path.join(ROOT_PATH, out_dir, "gen", path, "Cargo.toml")
+    out_dir = lib.rust.find_out_dir()
 
     env = os.environ.copy()
 
@@ -131,8 +109,7 @@ def main():
     call_args = [
         cargo,
         "doc",
-        "--manifest-path=%s" % manifest_path,
-        "--color=always",
+        "--manifest-path=%s" % args.manifest_path,
         "--target=%s" % args.target,
     ]
 
@@ -142,9 +119,7 @@ def main():
     if args.open:
         call_args.append("--open")
 
-    retcode, stdout, stderr = run_command(call_args, env, cwd)
-    print(stdout + stderr)
-    return retcode
+    return subprocess.call(call_args, env=env, cwd=cwd)
 
 if __name__ == '__main__':
     sys.exit(main())

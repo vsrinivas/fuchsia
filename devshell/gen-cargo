@@ -10,41 +10,14 @@ import os
 import subprocess
 import sys
 
-ROOT_PATH = os.path.abspath(__file__ + "/../../..")
-FX_PATH = os.path.join(ROOT_PATH, "scripts", "fx")
-CONFIG_PATH = os.path.join(ROOT_PATH, ".config")
-
-def walk_up_path(path):
-    res = set([path])
-    while True:
-        path, basename = os.path.split(path)
-        if not path:
-            break
-        res.add(path)
-    return res
-
-def find_cargo_target(path, target_filter=None):
-    match_paths = walk_up_path(path)
-    all_targets = subprocess.check_output([FX_PATH, "build", "-t", "targets"])
-    for gn_target in all_targets.split("\n"):
-        target_parts = gn_target.split(":")
-        if len(target_parts) < 2:
-            continue
-        target_path, gn_target = target_parts[0], target_parts[1]
-        if target_path in match_paths and gn_target.endswith("_cargo"):
-            gn_target=gn_target[:gn_target.rindex("_")]
-            if target_filter and target_filter != gn_target:
-                continue
-            yield "{path}:{target}".format(
-                    path=target_path,
-                    target=gn_target,
-            )
+import lib.rust
+from lib.rust import ROOT_PATH
 
 def main():
     parser = argparse.ArgumentParser(
             "Generate symlinks to Rust Cargo.toml output files")
     parser.add_argument("gn_target",
-                        nargs=1,
+                        type=lib.rust.GnTarget,
                         help="GN target to generate a symlink for. \
                               Use '.[:target]' to discover the cargo target \
                               for the current directory or use the \
@@ -62,50 +35,14 @@ def main():
     if args.out_dir:
         out_dir = args.out_dir
     else:
-        out_dir = ""
-        with open(CONFIG_PATH, "r") as config:
-            for line in config.readlines():
-                if line.startswith("FUCHSIA_BUILD_DIR="):
-                    segments = line.split("=")
-                    assert(len(segments) == 2)
-                    out_dir = segments[1].strip().strip("'")
-        if out_dir == "":
-            print "Invalid fuchsia/.config: no FUCHSIA_BUILD_DIR entry found"
+        out_dir = lib.rust.find_out_dir()
 
-    gn_target = args.gn_target[0]
-    gn_target = gn_target.lstrip("/")
-
-    gn_target_parts = gn_target.split(":", 1)
-
-    if gn_target_parts[0] == ".":
-        cwd_rel_path = os.path.relpath(os.path.abspath("."), ROOT_PATH)
-        target_filter = None if len(gn_target_parts) == 1 else gn_target_parts[1]
-        gn_targets = list(find_cargo_target(cwd_rel_path, target_filter))
-        if not gn_targets:
-            print "No cargo targets found at '{}'".format(cwd_rel_path)
-            return 1
-        elif len(gn_targets) > 1:
-            print "Multiple cargo targets found at '{}'".format(cwd_rel_path)
-            for gn_target in gn_targets:
-                print "- {}".format(gn_target)
-            return 1
-        else:
-            gn_target, = gn_targets
-            gn_target_parts = gn_target.split(":", 1)
-
-    if len(gn_target_parts) == 1:
-        # Turn foo/bar into foo/bar/bar
-        path = os.path.join(gn_target, os.path.basename(gn_target))
-    else:
-        # Turn foo/bar:baz into foo/bar/baz
-        path = gn_target.replace(":", os.sep)
-
-    path = os.path.join(ROOT_PATH, out_dir, "gen", path, "Cargo.toml")
+    path = args.gn_target.manifest_path(out_dir)
 
     if args.output:
         output = args.output
     else:
-        output = os.path.join(ROOT_PATH, gn_target_parts[0], "Cargo.toml")
+        output = os.path.join(args.gn_target.path, "Cargo.toml")
 
     if os.path.exists(path):
         try:
