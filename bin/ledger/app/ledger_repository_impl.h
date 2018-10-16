@@ -24,6 +24,7 @@
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
 #include "peridot/bin/ledger/p2p_sync/public/user_communicator.h"
+#include "peridot/bin/ledger/storage/impl/db_factory.h"
 #include "peridot/bin/ledger/sync_coordinator/public/user_sync.h"
 #include "peridot/lib/convert/convert.h"
 
@@ -35,6 +36,7 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
  public:
   LedgerRepositoryImpl(
       DetachedPath content_path, Environment* environment,
+      std::unique_ptr<storage::DbFactory> db_factory,
       std::unique_ptr<SyncWatcherSet> watchers,
       std::unique_ptr<sync_coordinator::UserSync> user_sync,
       std::unique_ptr<DiskCleanupManager> disk_cleanup_manager);
@@ -96,6 +98,7 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
 
   const DetachedPath content_path_;
   Environment* const environment_;
+  std::unique_ptr<storage::DbFactory> db_factory_;
   encryption::EncryptionServiceFactoryImpl encryption_service_factory_;
   std::unique_ptr<SyncWatcherSet> watchers_;
   std::unique_ptr<sync_coordinator::UserSync> user_sync_;

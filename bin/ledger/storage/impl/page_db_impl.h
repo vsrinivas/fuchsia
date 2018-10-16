@@ -26,7 +26,7 @@ class PageStorageImpl;
 // TRANSIENT objects.
 class PageDbImpl : public PageDb {
  public:
-  PageDbImpl(ledger::Environment* environment, ledger::DetachedPath db_path);
+  PageDbImpl(ledger::Environment* environment, std::unique_ptr<LevelDb> db);
   ~PageDbImpl() override;
 
   Status Init(coroutine::CoroutineHandler* handler) override;
@@ -114,7 +114,7 @@ class PageDbImpl : public PageDb {
                       fit::function<void(Status)> callback);
 
   ledger::Environment* environment_;
-  LevelDb db_;
+  std::unique_ptr<LevelDb> db_;
 };
 
 }  // namespace storage

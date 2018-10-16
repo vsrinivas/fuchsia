@@ -47,8 +47,12 @@ class PageDbTest : public ledger::TestWithEnvironment {
       : encryption_service_(dispatcher()),
         base_path(tmpfs_.root_fd()),
         page_storage_(&environment_, &encryption_service_,
-                      base_path.SubPath("storage"), "page_id"),
-        page_db_(&environment_, base_path.SubPath("page_db")) {}
+                      std::make_unique<LevelDb>(dispatcher(),
+                                                base_path.SubPath("storage")),
+                      "page_id"),
+        page_db_(&environment_,
+                 std::make_unique<LevelDb>(dispatcher(),
+                                           base_path.SubPath("page_db"))) {}
 
   ~PageDbTest() override {}
 

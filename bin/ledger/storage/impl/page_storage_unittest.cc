@@ -184,7 +184,9 @@ class PageStorageTest : public ledger::TestWithEnvironment {
     PageId id = RandomString(environment_.random(), 10);
     storage_ = std::make_unique<PageStorageImpl>(
         &environment_, &encryption_service_,
-        ledger::DetachedPath(tmpfs_->root_fd()), id);
+        std::make_unique<LevelDb>(dispatcher(),
+                                  ledger::DetachedPath(tmpfs_->root_fd())),
+        id);
 
     bool called;
     Status status;

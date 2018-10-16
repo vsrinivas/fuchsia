@@ -30,6 +30,7 @@
 #include "peridot/bin/ledger/p2p_provider/impl/p2p_provider_impl.h"
 #include "peridot/bin/ledger/p2p_provider/impl/user_id_provider_impl.h"
 #include "peridot/bin/ledger/p2p_sync/impl/user_communicator_impl.h"
+#include "peridot/bin/ledger/storage/impl/leveldb_factory.h"
 #include "peridot/bin/ledger/sync_coordinator/impl/user_sync_impl.h"
 
 namespace ledger {
@@ -254,8 +255,10 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
 
   DiskCleanupManagerImpl* disk_cleanup_manager_ptr = disk_cleanup_manager.get();
   auto repository = std::make_unique<LedgerRepositoryImpl>(
-      repository_information.content_path, environment_, std::move(watchers),
-      std::move(user_sync), std::move(disk_cleanup_manager));
+      repository_information.content_path, environment_,
+      std::make_unique<storage::LevelDbFactory>(environment_->dispatcher()),
+      std::move(watchers), std::move(user_sync),
+      std::move(disk_cleanup_manager));
   disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());
   container->SetRepository(Status::OK, std::move(repository));
 }

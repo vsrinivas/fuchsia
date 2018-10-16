@@ -467,6 +467,8 @@ void LedgerManager::GetPage(storage::PageIdView page_id, PageState page_state,
   }
 
   PageManagerContainer* container = AddPageManagerContainer(page_id);
+  // TODO(LE-631): We will need to remove empty pages that are unknown to the
+  // user or the page usage database.
   container->BindPage(std::move(page_request), std::move(callback));
 
   InitPageManagerContainer(container, page_id,

@@ -9,11 +9,13 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
+#include "peridot/bin/ledger/storage/impl/db_factory.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
 
 namespace storage {
@@ -22,6 +24,7 @@ class LedgerStorageImpl : public LedgerStorage {
  public:
   LedgerStorageImpl(ledger::Environment* environment,
                     encryption::EncryptionService* encryption_service,
+                    storage::DbFactory* db_factory,
                     ledger::DetachedPath content_dir,
                     const std::string& ledger_name);
   ~LedgerStorageImpl() override;
@@ -42,6 +45,12 @@ class LedgerStorageImpl : public LedgerStorage {
   std::vector<PageId> ListLocalPages();
 
  private:
+  // Creates and returns through the callback, an initialized |PageStorageImpl|
+  // object.
+  void InitializePageStorage(
+      PageId page_id, std::unique_ptr<storage::LevelDb> db,
+      fit::function<void(Status, std::unique_ptr<PageStorage>)> callback);
+
   ledger::DetachedPath GetPathFor(PageIdView page_id);
 
   // Returns the staging path for the given |page_id|.
@@ -49,7 +58,11 @@ class LedgerStorageImpl : public LedgerStorage {
 
   ledger::Environment* const environment_;
   encryption::EncryptionService* const encryption_service_;
+  storage::DbFactory* const db_factory_;
   ledger::DetachedPath storage_dir_;
+
+  // This must be the last member of the class.
+  fxl::WeakPtrFactory<LedgerStorageImpl> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerStorageImpl);
 };

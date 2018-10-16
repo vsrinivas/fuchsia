@@ -163,6 +163,7 @@ source_set("unittests") {
     "//peridot/bin/ledger/encryption/primitives",
     "//peridot/bin/ledger/storage/fake:lib",
     "//peridot/bin/ledger/storage/impl:lib",
+    "//peridot/bin/ledger/storage/impl:test_utils",
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/storage/testing",
     "//peridot/bin/ledger/sync_coordinator/public",

@@ -133,9 +133,11 @@ struct PageDbImpl::DbInitializationState
 };
 
 PageDbImpl::PageDbImpl(ledger::Environment* environment,
-                       ledger::DetachedPath db_path)
-    : environment_(environment),
-      db_(environment->dispatcher(), std::move(db_path)) {}
+                       std::unique_ptr<LevelDb> db)
+    : environment_(environment), db_(std::move(db)) {
+  FXL_DCHECK(environment_);
+  FXL_DCHECK(db_);
+}
 
 PageDbImpl::~PageDbImpl() {}
 
@@ -179,7 +181,7 @@ Status PageDbImpl::Init(coroutine::CoroutineHandler* handler) {
 Status PageDbImpl::StartBatch(coroutine::CoroutineHandler* handler,
                               std::unique_ptr<Batch>* batch) {
   std::unique_ptr<Db::Batch> db_batch;
-  RETURN_ON_ERROR(db_.StartBatch(handler, &db_batch));
+  RETURN_ON_ERROR(db_->StartBatch(handler, &db_batch));
   *batch = std::make_unique<PageDbBatchImpl>(environment_->random(),
                                              std::move(db_batch), this);
   return Status::OK;
@@ -188,7 +190,7 @@ Status PageDbImpl::StartBatch(coroutine::CoroutineHandler* handler,
 Status PageDbImpl::GetHeads(CoroutineHandler* handler,
                             std::vector<CommitId>* heads) {
   std::vector<std::pair<std::string, std::string>> entries;
-  RETURN_ON_ERROR(db_.GetEntriesByPrefix(
+  RETURN_ON_ERROR(db_->GetEntriesByPrefix(
       handler, convert::ToSlice(HeadRow::kPrefix), &entries));
   ExtractSortedCommitsIds<zx::time_utc>(&entries, heads);
   return Status::OK;
@@ -197,14 +199,14 @@ Status PageDbImpl::GetHeads(CoroutineHandler* handler,
 Status PageDbImpl::GetCommitStorageBytes(CoroutineHandler* handler,
                                          CommitIdView commit_id,
                                          std::string* storage_bytes) {
-  return db_.Get(handler, CommitRow::GetKeyFor(commit_id), storage_bytes);
+  return db_->Get(handler, CommitRow::GetKeyFor(commit_id), storage_bytes);
 }
 
 Status PageDbImpl::GetImplicitJournalIds(CoroutineHandler* handler,
                                          std::vector<JournalId>* journal_ids) {
-  return db_.GetByPrefix(handler,
-                         convert::ToSlice(ImplicitJournalMetadataRow::kPrefix),
-                         journal_ids);
+  return db_->GetByPrefix(handler,
+                          convert::ToSlice(ImplicitJournalMetadataRow::kPrefix),
+                          journal_ids);
 }
 
 Status PageDbImpl::GetBaseCommitForJournal(CoroutineHandler* handler,
@@ -212,8 +214,8 @@ Status PageDbImpl::GetBaseCommitForJournal(CoroutineHandler* handler,
                                            CommitId* base) {
   FXL_DCHECK(journal_id.size() == JournalEntryRow::kJournalIdSize);
   FXL_DCHECK(journal_id[0] == JournalEntryRow::kImplicitPrefix);
-  return db_.Get(handler, ImplicitJournalMetadataRow::GetKeyFor(journal_id),
-                 base);
+  return db_->Get(handler, ImplicitJournalMetadataRow::GetKeyFor(journal_id),
+                  base);
 }
 
 Status PageDbImpl::GetJournalEntries(
@@ -223,12 +225,12 @@ Status PageDbImpl::GetJournalEntries(
   std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
                                            convert::ExtendedStringView>>>
       it;
-  RETURN_ON_ERROR(db_.GetIteratorAtPrefix(
+  RETURN_ON_ERROR(db_->GetIteratorAtPrefix(
       handler, JournalEntryRow::GetEntriesPrefixFor(journal_id), &it));
   bool contains_clear_operation_key;
-  RETURN_ON_ERROR(db_.HasKey(handler,
-                             JournalEntryRow::GetClearMarkerKey(journal_id),
-                             &contains_clear_operation_key));
+  RETURN_ON_ERROR(db_->HasKey(handler,
+                              JournalEntryRow::GetClearMarkerKey(journal_id),
+                              &contains_clear_operation_key));
 
   *entries = std::make_unique<JournalEntryIterator>(std::move(it));
   *contains_clear_operation = contains_clear_operation_key
@@ -240,14 +242,14 @@ Status PageDbImpl::GetJournalEntries(
 Status PageDbImpl::ReadObject(CoroutineHandler* handler,
                               ObjectIdentifier object_identifier,
                               std::unique_ptr<const Object>* object) {
-  return db_.GetObject(handler,
-                       ObjectRow::GetKeyFor(object_identifier.object_digest()),
-                       object_identifier, object);
+  return db_->GetObject(handler,
+                        ObjectRow::GetKeyFor(object_identifier.object_digest()),
+                        object_identifier, object);
 }
 
 Status PageDbImpl::HasObject(CoroutineHandler* handler,
                              ObjectDigestView object_digest, bool* has_object) {
-  return db_.HasKey(handler, ObjectRow::GetKeyFor(object_digest), has_object);
+  return db_->HasKey(handler, ObjectRow::GetKeyFor(object_digest), has_object);
 }
 
 Status PageDbImpl::GetObjectStatus(CoroutineHandler* handler,
@@ -265,7 +267,7 @@ Status PageDbImpl::GetObjectStatus(CoroutineHandler* handler,
        {PageDbObjectStatus::SYNCED, PageDbObjectStatus::TRANSIENT,
         PageDbObjectStatus::LOCAL, PageDbObjectStatus::SYNCED}) {
     bool has_key;
-    RETURN_ON_ERROR(db_.HasKey(
+    RETURN_ON_ERROR(db_->HasKey(
         handler, ObjectStatusRow::GetKeyFor(possible_status, object_identifier),
         &has_key));
     if (has_key) {
@@ -281,7 +283,7 @@ Status PageDbImpl::GetObjectStatus(CoroutineHandler* handler,
 Status PageDbImpl::GetUnsyncedCommitIds(CoroutineHandler* handler,
                                         std::vector<CommitId>* commit_ids) {
   std::vector<std::pair<std::string, std::string>> entries;
-  RETURN_ON_ERROR(db_.GetEntriesByPrefix(
+  RETURN_ON_ERROR(db_->GetEntriesByPrefix(
       handler, convert::ToSlice(UnsyncedCommitRow::kPrefix), &entries));
   // Unsynced commit row values are the commit's generation.
   ExtractSortedCommitsIds<uint64_t>(&entries, commit_ids);
@@ -292,7 +294,7 @@ Status PageDbImpl::IsCommitSynced(CoroutineHandler* handler,
                                   const CommitId& commit_id, bool* is_synced) {
   bool has_key;
   RETURN_ON_ERROR(
-      db_.HasKey(handler, UnsyncedCommitRow::GetKeyFor(commit_id), &has_key));
+      db_->HasKey(handler, UnsyncedCommitRow::GetKeyFor(commit_id), &has_key));
   *is_synced = !has_key;
   return Status::OK;
 }
@@ -302,8 +304,8 @@ Status PageDbImpl::GetUnsyncedPieces(
     std::vector<ObjectIdentifier>* object_identifiers) {
   std::vector<std::string> encoded_identifiers;
   Status status =
-      db_.GetByPrefix(handler, convert::ToSlice(ObjectStatusRow::kLocalPrefix),
-                      &encoded_identifiers);
+      db_->GetByPrefix(handler, convert::ToSlice(ObjectStatusRow::kLocalPrefix),
+                       &encoded_identifiers);
   if (status != Status::OK) {
     return status;
   }
@@ -322,12 +324,12 @@ Status PageDbImpl::GetUnsyncedPieces(
 
 Status PageDbImpl::GetSyncMetadata(CoroutineHandler* handler,
                                    fxl::StringView key, std::string* value) {
-  return db_.Get(handler, SyncMetadataRow::GetKeyFor(key), value);
+  return db_->Get(handler, SyncMetadataRow::GetKeyFor(key), value);
 }
 
 Status PageDbImpl::IsPageOnline(coroutine::CoroutineHandler* handler,
                                 bool* page_is_online) {
-  return db_.HasKey(handler, PageIsOnlineRow::kKey, page_is_online);
+  return db_->HasKey(handler, PageIsOnlineRow::kKey, page_is_online);
 }
 
 Status PageDbImpl::AddHead(CoroutineHandler* handler, CommitIdView head,
@@ -479,7 +481,7 @@ void PageDbImpl::InitOnIOThread(
   if (initialization_state->cancelled) {
     return;
   }
-  Status status = db_.Init();
+  Status status = db_->Init();
   async::PostTask(
       environment_->dispatcher(),
       [status, callback = std::move(callback)] { callback(status); });

@@ -49,12 +49,14 @@ std::string GetId(fxl::StringView bytes) {
 
 LedgerStorageImpl::LedgerStorageImpl(
     ledger::Environment* environment,
-    encryption::EncryptionService* encryption_service,
+    encryption::EncryptionService* encryption_service, DbFactory* db_factory,
     ledger::DetachedPath content_dir, const std::string& ledger_name)
     : environment_(environment),
       encryption_service_(encryption_service),
+      db_factory_(db_factory),
       storage_dir_(content_dir.SubPath(
-          {kSerializationVersion, GetDirectoryName(ledger_name)})) {}
+          {kSerializationVersion, GetDirectoryName(ledger_name)})),
+      weak_factory_(this) {}
 
 LedgerStorageImpl::~LedgerStorageImpl() {}
 
@@ -70,17 +72,21 @@ void LedgerStorageImpl::CreatePageStorage(
     timed_callback(Status::INTERNAL_IO_ERROR, nullptr);
     return;
   }
-  auto result = std::make_unique<PageStorageImpl>(
-      environment_, encryption_service_, std::move(path), std::move(page_id));
-  result->Init([callback = std::move(timed_callback),
-                result = std::move(result)](Status status) mutable {
-    if (status != Status::OK) {
-      FXL_LOG(ERROR) << "Failed to initialize PageStorage. Status: " << status;
-      callback(status, nullptr);
-      return;
-    }
-    callback(Status::OK, std::move(result));
-  });
+
+  db_factory_->CreateDb(
+      std::move(path),
+      callback::MakeScoped(
+          weak_factory_.GetWeakPtr(),
+          [this, page_id = std::move(page_id),
+           callback = std::move(timed_callback)](
+              Status status, std::unique_ptr<LevelDb> db) mutable {
+            if (status != Status::OK) {
+              callback(status, nullptr);
+              return;
+            }
+            InitializePageStorage(std::move(page_id), std::move(db),
+                                  std::move(callback));
+          }));
 }
 
 void LedgerStorageImpl::GetPageStorage(
@@ -94,16 +100,20 @@ void LedgerStorageImpl::GetPageStorage(
     return;
   }
 
-  auto result = std::make_unique<PageStorageImpl>(
-      environment_, encryption_service_, std::move(path), std::move(page_id));
-  result->Init([callback = std::move(timed_callback),
-                result = std::move(result)](Status status) mutable {
-    if (status != Status::OK) {
-      callback(status, nullptr);
-      return;
-    }
-    callback(status, std::move(result));
-  });
+  db_factory_->GetDb(
+      std::move(path),
+      callback::MakeScoped(
+          weak_factory_.GetWeakPtr(),
+          [this, page_id = std::move(page_id),
+           callback = std::move(timed_callback)](
+              Status status, std::unique_ptr<LevelDb> db) mutable {
+            if (status != Status::OK) {
+              callback(status, nullptr);
+              return;
+            }
+            InitializePageStorage(std::move(page_id), std::move(db),
+                                  std::move(callback));
+          }));
 }
 
 void LedgerStorageImpl::DeletePageStorage(
@@ -160,6 +170,23 @@ std::vector<PageId> LedgerStorageImpl::ListLocalPages() {
         return true;
       });
   return local_pages;
+}
+
+void LedgerStorageImpl::InitializePageStorage(
+    PageId page_id, std::unique_ptr<LevelDb> db,
+    fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
+  auto storage = std::make_unique<PageStorageImpl>(
+      environment_, encryption_service_, std::move(db), std::move(page_id));
+  PageStorageImpl* storage_ptr = storage.get();
+  storage_ptr->Init([callback = std::move(callback),
+                     storage = std::move(storage)](Status status) mutable {
+    if (status != Status::OK) {
+      FXL_LOG(ERROR) << "Failed to initialize PageStorage. Status: " << status;
+      callback(status, nullptr);
+      return;
+    }
+    callback(Status::OK, std::move(storage));
+  });
 }
 
 ledger::DetachedPath LedgerStorageImpl::GetPathFor(PageIdView page_id) {

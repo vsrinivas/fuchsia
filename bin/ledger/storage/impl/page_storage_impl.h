@@ -30,7 +30,7 @@ class PageStorageImpl : public PageStorage {
  public:
   PageStorageImpl(ledger::Environment* environment,
                   encryption::EncryptionService* encryption_service,
-                  ledger::DetachedPath page_dir, PageId page_id);
+                  std::unique_ptr<LevelDb> db, PageId page_id);
   PageStorageImpl(ledger::Environment* environment,
                   encryption::EncryptionService* encryption_service,
                   std::unique_ptr<PageDb> page_db, PageId page_id);

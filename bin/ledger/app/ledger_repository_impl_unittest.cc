@@ -14,6 +14,7 @@
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
+#include "peridot/bin/ledger/storage/impl/fake_db_factory.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
@@ -58,8 +59,9 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
     disk_cleanup_manager_ = fake_page_eviction_manager.get();
 
     repository_ = std::make_unique<LedgerRepositoryImpl>(
-        DetachedPath(tmpfs_.root_fd()), &environment_, nullptr, nullptr,
-        std::move(fake_page_eviction_manager));
+        DetachedPath(tmpfs_.root_fd()), &environment_,
+        std::make_unique<storage::FakeDbFactory>(dispatcher()), nullptr,
+        nullptr, std::move(fake_page_eviction_manager));
   }
 
   ~LedgerRepositoryImplTest() override {}

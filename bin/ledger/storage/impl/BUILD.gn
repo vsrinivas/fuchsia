@@ -69,6 +69,7 @@ source_set("lib") {
     "commit_impl.h",
     "data_serialization.h",
     "db.h",
+    "db_factory.h",
     "db_serialization.cc",
     "db_serialization.h",
     "file_index.cc",
@@ -79,6 +80,8 @@ source_set("lib") {
     "ledger_storage_impl.h",
     "leveldb.cc",
     "leveldb.h",
+    "leveldb_factory.cc",
+    "leveldb_factory.h",
     "object_impl.cc",
     "object_impl.h",
     "page_db.h",
@@ -127,6 +130,8 @@ source_set("test_utils") {
   testonly = true
 
   sources = [
+    "fake_db_factory.cc",
+    "fake_db_factory.h",
     "storage_test_utils.cc",
     "storage_test_utils.h",
   ]
