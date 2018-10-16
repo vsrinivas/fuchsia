@@ -19,7 +19,6 @@ group("ui") {
     "shapes",
     "sketchy",
     "spinning_square",
-    "spinning_square_rs",
     "tile",
     "video_display",
   ]
@@ -220,21 +219,6 @@ package("spinning_square_view") {
     {
       path = rebase_path("meta/ui_example.cmx")
       dest = "spinning_square_view.cmx"
-    },
-  ]
-}
-
-package("spinning_square_rs_pkg") {
-  deps = [
-    "spinning_square_rs",
-  ]
-
-  binary = "rust_crates/spinning_square_rs"
-
-  meta = [
-    {
-      path = rebase_path("meta/ui_example.cmx")
-      dest = "spinning_square_rs_pkg.cmx"
     },
   ]
 }
