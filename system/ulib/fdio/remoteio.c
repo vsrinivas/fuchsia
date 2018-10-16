@@ -326,7 +326,7 @@ zx_status_t fdio_acquire_socket(zx_handle_t socket, fdio_t** out_io) {
         }
     } else {
         // Without a control plane, the socket is a pipe.
-        io = fdio_pipe_create(socket);
+        io = fdio_zxio_create_pipe(socket);
     }
     if (!io) {
         return ZX_ERR_NO_RESOURCES;
