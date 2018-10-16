@@ -270,24 +270,29 @@ void Fuzzer::FindFuchsiaFuzzers(const fbl::String& package, const fbl::String& t
     }
 
     auto packages = path.List();
-    packages->keep_if("_fuzzers");
     packages->keep_if(package);
 
     for (const char* p = packages->first(); p; p = packages->next()) {
-        if (GetPackagePath(p, &path) != ZX_OK || path.Push("meta") != ZX_OK) {
+        if (GetPackagePath(p, &path) != ZX_OK || path.Push("data") != ZX_OK) {
             continue;
         }
-
         auto targets = path.List();
         targets->keep_if(target);
-        targets->keep_if(".cmx");
-
         fbl::String abspath;
         for (const char* t = targets->first(); t; t = targets->next()) {
-            fbl::String t1(t, strlen(t) - strlen(".cmx"));
-            out->set(fbl::StringPrintf("%s/%s", p, t1.c_str()),
-                     fbl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s", p, t));
+            if (path.Push(t) != ZX_OK) {
+                continue;
+            }
+            size_t tmp;
+            if (path.GetSize("corpora", &tmp) == ZX_OK &&
+                path.GetSize("dictionary", &tmp) == ZX_OK &&
+                path.GetSize("options", &tmp) == ZX_OK) {
+                out->set(fbl::StringPrintf("%s/%s", p, t),
+                         fbl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx", p, t));
+            }
+            path.Pop();
         }
+        path.Pop();
     }
 }
 
