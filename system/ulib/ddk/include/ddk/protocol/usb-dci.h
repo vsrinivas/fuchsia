@@ -62,6 +62,7 @@ typedef struct usb_dci_protocol_ops {
     zx_status_t (*ep_set_stall)(void* ctx, uint8_t ep_address);
     zx_status_t (*ep_clear_stall)(void* ctx, uint8_t ep_address);
     zx_status_t (*get_bti)(void* ctx, zx_handle_t* out_bti);
+    size_t (*get_request_size)(void* ctx);
 } usb_dci_protocol_ops_t;
 
 struct usb_dci_protocol {
@@ -97,5 +98,11 @@ static inline zx_status_t usb_dci_ep_clear_stall(const usb_dci_protocol_t* proto
 static inline zx_status_t usb_dci_get_bti(const usb_dci_protocol_t* proto, zx_handle_t* out_bti) {
     return proto->ops->get_bti(proto->ctx, out_bti);
 }
+// Return request size of parent plus the size of private region per request for
+// this layer..
+static inline size_t usb_dci_get_request_size(const usb_dci_protocol_t* proto) {
+    return proto->ops->get_request_size(proto->ctx);
+}
+
 
 __END_CDECLS;

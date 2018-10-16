@@ -330,6 +330,10 @@ static zx_status_t dwc3_get_bti(void* ctx, zx_handle_t* out_handle) {
     return ZX_OK;
 }
 
+static size_t dwc3_get_request_size(void* ctx) {
+    return sizeof(usb_request_t);
+}
+
 usb_dci_protocol_ops_t dwc_dci_ops = {
     .request_queue = dwc3_request_queue,
     .set_interface = dwc3_set_interface,
@@ -338,6 +342,7 @@ usb_dci_protocol_ops_t dwc_dci_ops = {
     .ep_set_stall = dwc3_set_stall,
     .ep_clear_stall = dwc3_clear_stall,
     .get_bti = dwc3_get_bti,
+    .get_request_size = dwc3_get_request_size,
 };
 
 static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {

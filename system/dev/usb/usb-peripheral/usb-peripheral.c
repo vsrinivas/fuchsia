@@ -132,6 +132,7 @@ typedef struct usb_device {
     uint8_t configuration;
     // USB connection speed
     usb_speed_t speed;
+    size_t parent_request_size;
 } usb_device_t;
 
 // for mapping bEndpointAddress value to/from index in range 0 - 31
@@ -382,6 +383,11 @@ static zx_status_t usb_func_ep_clear_stall(void* ctx, uint8_t ep_address) {
     return usb_dci_ep_clear_stall(&function->dev->usb_dci, ep_address);
 }
 
+static size_t usb_func_get_request_size(void* ctx) {
+    usb_function_t* function = ctx;
+    return function->dev->parent_request_size;
+}
+
 usb_function_protocol_ops_t usb_function_proto = {
     .register_func = usb_func_register,
     .alloc_interface = usb_func_alloc_interface,
@@ -392,6 +398,7 @@ usb_function_protocol_ops_t usb_function_proto = {
     .queue = usb_func_queue,
     .ep_set_stall = usb_func_ep_set_stall,
     .ep_clear_stall = usb_func_ep_clear_stall,
+    .get_request_size = usb_func_get_request_size,
 };
 
 static zx_status_t usb_dev_get_descriptor(usb_device_t* dev, uint8_t request_type,
@@ -1021,6 +1028,7 @@ zx_status_t usb_dev_bind(void* ctx, zx_device_t* parent) {
     // Set DCI mode to USB_MODE_NONE until we are ready
     usb_mode_switch_set_mode(&dev->usb_mode_switch, USB_MODE_NONE);
     dev->dci_usb_mode = USB_MODE_NONE;
+    dev->parent_request_size = usb_dci_get_request_size(&dev->usb_dci);
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,

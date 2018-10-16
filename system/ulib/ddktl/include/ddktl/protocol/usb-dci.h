@@ -132,6 +132,7 @@ public:
         ops_.ep_set_stall = UsbDciEpSetStall;
         ops_.ep_clear_stall = UsbDciEpClearStall;
         ops_.get_bti = UsbDciGetBti;
+        ops_.get_request_size = UsbDciGetRequestSize;
 
         // Can only inherit from one base_protocol implementation.
         ZX_ASSERT(ddk_proto_id_ = 0);
@@ -167,6 +168,9 @@ private:
     static zx_status_t UsbDciGetBti(void* ctx, zx_handle_t* out_bti) {
         return static_cast<D*>(ctx)->UsbDciGetBti(out_bti);
     }
+    static size_t UsbDciGetRequestSize(void* ctx) {
+        return static_cast<D*>(ctx)->UsbDciGetRequestSize();
+    }
 };
 
 class UsbDciProtocolProxy {
@@ -197,7 +201,7 @@ public:
     zx_status_t EpClearStall(uint8_t ep_address) { return ops_->ep_clear_stall(ctx_, ep_address); }
     // Shares a copy of the DCI driver's BTI handle.
     zx_status_t GetBti(zx_handle_t* out_bti) { return ops_->get_bti(ctx_, out_bti); }
-
+    size_t GetRequestSize() { return ops_->get_request_size(ctx_); }
 private:
     usb_dci_protocol_ops_t* ops_;
     void* ctx_;

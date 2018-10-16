@@ -77,6 +77,7 @@ typedef struct {
     void (*queue)(void* ctx, usb_request_t* req);
     zx_status_t (*ep_set_stall)(void* ctx, uint8_t ep_address);
     zx_status_t (*ep_clear_stall)(void* ctx, uint8_t ep_address);
+    size_t (*get_request_size)(void* ctx);
 } usb_function_protocol_ops_t;
 
 typedef struct {
@@ -138,4 +139,9 @@ static zx_status_t usb_function_ep_clear_stall(usb_function_protocol_t* func, ui
     return func->ops->ep_clear_stall(func->ctx, ep_address);
 }
 
+// returns the total request size including any internal context size at this
+// layer per usb_request
+static size_t usb_function_get_request_size(usb_function_protocol_t* func) {
+    return func->ops->get_request_size(func->ctx);
+}
 __END_CDECLS;
