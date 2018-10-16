@@ -19,22 +19,6 @@
 
 #include "private-socket.h"
 
-static bool is_rio_message_valid(zxsio_msg_t* msg) {
-    if ((msg->datalen > ZXSIO_PAYLOAD_SZ) ||
-        (msg->hcount > 0)) {
-        return false;
-    }
-    return true;
-}
-
-static bool is_rio_message_reply_valid(zxsio_msg_t* msg, uint32_t size) {
-    if ((size < ZXSIO_HDR_SZ) ||
-        (msg->datalen != (size - ZXSIO_HDR_SZ))) {
-        return false;
-    }
-    return is_rio_message_valid(msg);
-}
-
 zx_status_t zxsio_accept(fdio_t* io, zx_handle_t* s2) {
     zxsio_t* sio = (zxsio_t*)io;
 
@@ -543,98 +527,6 @@ static void zxsio_wait_end_dgram(fdio_t* io, zx_signals_t signals, uint32_t* _ev
     *_events = events;
 }
 
-static zx_status_t zxsio_write_control(zxsio_t* sio, zxsio_msg_t* msg) {
-    for (;;) {
-        ssize_t r;
-        size_t len = ZXSIO_HDR_SZ + msg->datalen;
-        if ((r = zx_socket_write(sio->s, ZX_SOCKET_CONTROL, msg, len, &len)) == ZX_OK) {
-            return (ssize_t)len;
-        }
-        // If the socket has no control plane then control messages are not
-        // supported.
-        if (r == ZX_ERR_BAD_STATE) {
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-        if (r == ZX_ERR_SHOULD_WAIT) {
-            zx_signals_t pending;
-            r = zx_object_wait_one(sio->s,
-                                   ZX_SOCKET_CONTROL_WRITABLE | ZX_SOCKET_PEER_CLOSED,
-                                   ZX_TIME_INFINITE, &pending);
-            if (r < 0) {
-                return r;
-            }
-            if (pending & ZX_SOCKET_PEER_CLOSED) {
-                return ZX_ERR_PEER_CLOSED;
-            }
-            if (pending & ZX_SOCKET_CONTROL_WRITABLE) {
-                continue;
-            }
-            // impossible
-            return ZX_ERR_INTERNAL;
-        }
-        return r;
-    }
-}
-
-static ssize_t zxsio_read_control(zxsio_t* sio, void* data, size_t len) {
-    // TODO: let the generic read() to do this loop
-    for (;;) {
-        ssize_t r;
-        size_t bytes_read;
-        if ((r = zx_socket_read(sio->s, ZX_SOCKET_CONTROL, data, len, &bytes_read)) == ZX_OK) {
-            // zx_socket_read() sets *actual to the number of bytes in the buffer when data is NULL
-            // and len is 0. read() should return 0 in that case.
-            if (len == 0) {
-                return 0;
-            } else {
-                return (ssize_t)bytes_read;
-            }
-        }
-        if (r == ZX_ERR_PEER_CLOSED || r == ZX_ERR_BAD_STATE) {
-            return 0;
-        } else if (r == ZX_ERR_SHOULD_WAIT) {
-            zx_signals_t pending;
-            r = zx_object_wait_one(sio->s,
-                                   ZX_SOCKET_CONTROL_READABLE | ZX_SOCKET_PEER_CLOSED,
-                                   ZX_TIME_INFINITE, &pending);
-            if (r < 0) {
-                return r;
-            }
-            if (pending & ZX_SOCKET_CONTROL_READABLE) {
-                continue;
-            }
-            if (pending & ZX_SOCKET_PEER_CLOSED) {
-                return 0;
-            }
-            // impossible
-            return ZX_ERR_INTERNAL;
-        }
-        return r;
-    }
-}
-
-static zx_status_t zxsio_txn(zxsio_t* sio, zxsio_msg_t* msg) {
-    if (!is_rio_message_valid(msg)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    zx_status_t r = zxsio_write_control(sio, msg);
-    if (r < 0)
-        return r;
-
-    const uint32_t request_op = msg->op;
-    r = zxsio_read_control(sio, msg, sizeof(*msg));
-    if (r < 0)
-        return r;
-
-    size_t dsize = (size_t)r;
-    // check for protocol errors
-    if (!is_rio_message_reply_valid(msg, dsize) || (msg->op != request_op)) {
-        return ZX_ERR_IO;
-    }
-    return msg->arg;
-}
-
 static zx_status_t zxsio_misc(fdio_t* io, uint32_t op, int64_t off,
                               uint32_t maxreply, void* ptr, size_t len) {
     zxsio_t* sio = (zxsio_t*)io;
@@ -667,7 +559,7 @@ static zx_status_t zxsio_misc(fdio_t* io, uint32_t op, int64_t off,
         memcpy(msg.data, ptr, len);
     }
 
-    if ((r = zxsio_txn(sio, &msg)) < 0) {
+    if ((r = zxsio_txn(sio->s, &msg)) < 0) {
         return r;
     }
     if (msg.datalen > maxreply) {
@@ -691,7 +583,7 @@ static zx_status_t zxsio_close(fdio_t* io) {
 
     memset(&msg, 0, ZXSIO_HDR_SZ);
     msg.op = ZXSIO_CLOSE;
-    r = zxsio_txn(sio, &msg);
+    r = zxsio_txn(sio->s, &msg);
 
     zx_handle_t h = sio->s;
     sio->s = 0;
@@ -722,7 +614,7 @@ static ssize_t zxsio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
     msg.arg2.op = op;
     memcpy(msg.data, data, in_len);
 
-    if ((r = zxsio_txn(sio, &msg)) < 0) {
+    if ((r = zxsio_txn(sio->s, &msg)) < 0) {
         return r;
     }
 
