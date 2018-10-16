@@ -128,9 +128,9 @@ public:
 
     bool ReadPciConfig16(uint64_t addr, uint16_t* value) override
     {
-        zx_status_t status = ops()->read_pci_config_16(context(), addr, value);
+        zx_status_t status = ops()->read_pci_config16(context(), addr, value);
         if (status != ZX_OK)
-            return DRETF(false, "read_pci_config_16 failed: %d", status);
+            return DRETF(false, "read_pci_config16 failed: %d", status);
         return true;
     }
 
@@ -148,8 +148,9 @@ public:
     bool RegisterInterruptCallback(InterruptManager::InterruptCallback callback, void* data,
                                    uint32_t interrupt_mask) override
     {
+        const zx_intel_gpu_core_interrupt_t kCallback = {callback, data};
         zx_status_t status =
-            ops()->register_interrupt_callback(context(), callback, data, interrupt_mask);
+            ops()->register_interrupt_callback(context(), &kCallback, interrupt_mask);
         if (status != ZX_OK)
             return DRETF(false, "register_interrupt_callback failed: %d", status);
         return true;
