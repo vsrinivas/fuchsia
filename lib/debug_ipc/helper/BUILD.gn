@@ -6,6 +6,7 @@
 # but that aren't directly related to the protocol.
 static_library("helper") {
   sources = [
+    "arch_x86.h",
     "buffered_fd.cc",
     "buffered_fd.h",
     "elf.cc",

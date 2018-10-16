@@ -683,7 +683,7 @@ using debug_ipc::RegisterCategory;
 const char kRegsShortHelp[] =
     "regs / rg: Show the current registers for a thread.";
 const char kRegsHelp[] =
-    R"(regs [--category=<category>] [<regexp>]
+    R"(regs [(--category|-c)=<category>] [(--extended|-e)] [<regexp>]
 
   Alias: "rg"
 
@@ -703,11 +703,18 @@ Arguments
 
       - general: Show general purpose registers.
       - fp: Show floating point registers.
-      - vector: Show vector registries.
+      - vector: Show vector registers.
+      - debug: Show debug registers (eg. The DR registers on x86).
       - all: Show all the categories available.
 
       NOTE: not all categories exist within all architectures. For example,
             ARM64's fp category doesn't have any registers.
+
+  --extended | -e
+      Enables more verbose flag decoding. This will enable more information
+      that is not normally useful for everyday debugging. This includes
+      information such as the system level flags within the RFLAGS register for
+      x86.
 
   <regexp>
       Case insensitive regular expression. Any register that matches will be
@@ -723,26 +730,27 @@ Examples
 
 // Switches
 constexpr int kRegsCategoriesSwitch = 1;
+constexpr int kRegsExtendedSwitch = 2;
 
 void OnRegsComplete(const Err& cmd_err, const RegisterSet& register_set,
-                    const std::string& search_regexp,
-                    const std::vector<RegisterCategory::Type>& cats_to_show) {
+                    FormatRegisterOptions options) {
   Console* console = Console::get();
   if (cmd_err.has_error()) {
     console->Output(cmd_err);
     return;
   }
 
+  options.arch = register_set.arch();
+
   FilteredRegisterSet filtered_set;
-  Err err =
-      FilterRegisters(register_set, &filtered_set, cats_to_show, search_regexp);
+  Err err = FilterRegisters(options, register_set, &filtered_set);
   if (!err.ok()) {
     console->Output(err);
     return;
   }
 
   OutputBuffer out;
-  err = FormatRegisters(register_set.arch(), filtered_set, &out);
+  err = FormatRegisters(options, filtered_set, &out);
   if (!err.ok()) {
     console->Output(err);
     return;
@@ -756,16 +764,14 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
     return err;
 
   // When empty, we print all the registers.
-  std::string reg_name;
+  std::string regex_filter;
   if (!cmd.args().empty()) {
     // We expect only one name.
     if (cmd.args().size() > 1u) {
-      return Err("Only one register name expected.");
+      return Err("Only one register regular expression filter expected.");
     }
-    reg_name = cmd.args().front();
+    regex_filter= cmd.args().front();
   }
-
-  // Parse the switches
 
   // General purpose are the default.
   std::vector<RegisterCategory::Type> cats_to_show = {
@@ -792,10 +798,16 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
     }
   }
 
+  // Parse the switches
+  FormatRegisterOptions options;
+  options.categories = cats_to_show;
+  options.extended = cmd.HasSwitch(kRegsExtendedSwitch);
+  options.filter_regexp = std::move(regex_filter);
+
   // We pass the given register name to the callback
-  auto regs_cb = [ reg_name, cats = cats_to_show ](
-      const Err& err, const RegisterSet& registers) {
-    OnRegsComplete(err, registers, reg_name, std::move(cats));
+  auto regs_cb = [options = std::move(options)](const Err& err,
+                                                const RegisterSet& registers) {
+    OnRegsComplete(err, registers, std::move(options));
   };
 
   cmd.thread()->GetRegisters(std::move(cats_to_show), regs_cb);
@@ -966,9 +978,11 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
 
   // regs
   SwitchRecord regs_categories(kRegsCategoriesSwitch, true, "category", 'c');
+  SwitchRecord regs_extended(kRegsExtendedSwitch, false, "extended", 'e');
   VerbRecord regs(&DoRegs, {"regs", "rg"}, kRegsShortHelp, kRegsHelp,
                   CommandGroup::kAssembly);
-  regs.switches.push_back(regs_categories);
+  regs.switches.push_back(std::move(regs_categories));
+  regs.switches.push_back(std::move(regs_extended));
   (*verbs)[Verb::kRegs] = std::move(regs);
 
   // step

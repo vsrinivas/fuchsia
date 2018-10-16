@@ -18,18 +18,33 @@ class Err;
 class Register;
 class RegisterSet;
 
+// Struct meant to configure how the FilterRegister/FormatRegister calls will
+// behave.
+struct FormatRegisterOptions {
+  // What arch this FormatRegisters call belongs to.
+  debug_ipc::Arch arch = debug_ipc::Arch::kUnknown;
+
+  // The categories to filter within the FilterRegister step.
+  std::vector<debug_ipc::RegisterCategory::Type> categories;
+
+  // Regexp used to filter what registers to show. Empty means no filter.
+  std::string filter_regexp;
+
+  // Whether to print extra information about the registers.
+  bool extended = false;
+};
+
 using FilteredRegisterSet =
     std::map<debug_ipc::RegisterCategory::Type, std::vector<Register>>;
 
 // Filters the available registers to the ones matching the given categories and
 // matching the registers.
 // Not defining a regexp will let all the registers pass.
-Err FilterRegisters(const RegisterSet&, FilteredRegisterSet* out,
-                    std::vector<debug_ipc::RegisterCategory::Type> categories,
-                    const std::string& search_regexp = std::string());
+Err FilterRegisters(const FormatRegisterOptions&, const RegisterSet&,
+                    FilteredRegisterSet* out);
 
 // Format the output of the FilterRegisters call into a console readable format.
-Err FormatRegisters(debug_ipc::Arch, const FilteredRegisterSet&,
+Err FormatRegisters(const FormatRegisterOptions&, const FilteredRegisterSet&,
                     OutputBuffer* out);
 
 // Formatting helpers ----------------------------------------------------------

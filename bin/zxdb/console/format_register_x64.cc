@@ -13,6 +13,7 @@
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_formatters.h"
+#include "garnet/lib/debug_ipc/helper/arch_x86.h"
 #include "garnet/lib/debug_ipc/records.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -24,7 +25,6 @@ namespace zxdb {
 
 namespace {
 
-#define FLAG_VALUE(value, shift, mask) (uint8_t)((value >> shift) & mask)
 
 inline void PushName(const Register& reg, TextForegroundColor color,
                      std::vector<OutputBuffer>* row) {
@@ -65,30 +65,8 @@ TextForegroundColor GetRowColor(size_t table_len) {
 
 // Format General Registers ----------------------------------------------------
 
-constexpr int kRflagsCarryFlagShift = 0;
-constexpr int kRflagsParityFlagShift = 2;
-constexpr int kRflagsAuxCarryFlagShift = 4;
-constexpr int kRflagsZeroFlagShift = 6;
-constexpr int kRflagsSignFlagShift = 7;
-constexpr int kRflagsTrapFlagShift = 8;
-constexpr int kRflagsInterruptEnableFlagShift = 9;
-constexpr int kRflagsDirectionFlagShift = 10;
-constexpr int kRflagsOverflowFlagShift = 11;
-
-#ifdef ENABLE_X64_SYSTEM_FLAGS
-
-constexpr int kRflagsIoPriviledgeLevelShift = 12;
-constexpr int kRflagsNestedTaskShift = 14;
-constexpr int kRflagsResumeFlagShift = 16;
-constexpr int kRflagsVirtual8086ModeShift = 17;
-constexpr int kRflagsAlignmentCheckShift = 18;
-constexpr int kRflagsVirtualInterruptFlagShift = 19;
-constexpr int kRflagsVirtualInterruptPendingShift = 20;
-constexpr int kRflagsIdFlagShift = 21;
-
-#endif
-
-std::vector<OutputBuffer> DescribeRflags(const Register& rflags,
+std::vector<OutputBuffer> DescribeRflags(const FormatRegisterOptions& options,
+                                         const Register& rflags,
                                          TextForegroundColor color) {
   std::vector<OutputBuffer> result;
   result.emplace_back(color, RegisterIDToString(rflags.id()));
@@ -103,30 +81,58 @@ std::vector<OutputBuffer> DescribeRflags(const Register& rflags,
       color,
       fxl::StringPrintf(
           "CF=%d, PF=%d, AF=%d, ZF=%d, SF=%d, TF=%d, IF=%d, DF=%d, OF=%d",
-          FLAG_VALUE(value, kRflagsCarryFlagShift, 0x1),
-          FLAG_VALUE(value, kRflagsParityFlagShift, 0x1),
-          FLAG_VALUE(value, kRflagsAuxCarryFlagShift, 0x1),
-          FLAG_VALUE(value, kRflagsZeroFlagShift, 0x1),
-          FLAG_VALUE(value, kRflagsSignFlagShift, 0x1),
-          FLAG_VALUE(value, kRflagsTrapFlagShift, 0x1),
-          FLAG_VALUE(value, kRflagsInterruptEnableFlagShift, 0x1),
-          FLAG_VALUE(value, kRflagsDirectionFlagShift, 0x1),
-          FLAG_VALUE(value, kRflagsOverflowFlagShift, 0x1)));
+          X86_FLAG_VALUE(value, RflagsCF),
+          X86_FLAG_VALUE(value, RflagsPF),
+          X86_FLAG_VALUE(value, RflagsAF),
+          X86_FLAG_VALUE(value, RflagsZF),
+          X86_FLAG_VALUE(value, RflagsSF),
+          X86_FLAG_VALUE(value, RflagsTF),
+          X86_FLAG_VALUE(value, RflagsIF),
+          X86_FLAG_VALUE(value, RflagsDF),
+          X86_FLAG_VALUE(value, RflagsOF)));
 
-  // TODO(donosoc): Do the correct formatting when we enable
-  //                ENABLE_X64_SYSTEM_FLAGS
 
   return result;
 }
 
-void FormatGeneralRegisters(const std::vector<Register>& registers,
+std::vector<OutputBuffer> DescribeRflagsExtended(
+    const FormatRegisterOptions& options, const Register& rflags,
+    TextForegroundColor color) {
+  std::vector<OutputBuffer> result;
+  result.reserve(3);
+  result.emplace_back(OutputBuffer());
+  result.emplace_back(OutputBuffer());
+
+  uint64_t value = rflags.GetValue();
+
+  // Decode individual flags.
+  result.emplace_back(
+      color, fxl::StringPrintf(
+                 "IOPL=%d, NT=%d, RF=%d, VM=%d, AC=%d, VIF=%d, VIP=%d, ID=%d",
+                 X86_FLAG_VALUE(value, RflagsIOPL),
+                 X86_FLAG_VALUE(value, RflagsNT),
+                 X86_FLAG_VALUE(value, RflagsRF),
+                 X86_FLAG_VALUE(value, RflagsVM),
+                 X86_FLAG_VALUE(value, RflagsAC),
+                 X86_FLAG_VALUE(value, RflagsVIF),
+                 X86_FLAG_VALUE(value, RflagsVIP),
+                 X86_FLAG_VALUE(value, RflagsID)));
+
+  return result;
+}
+
+void FormatGeneralRegisters(const FormatRegisterOptions& options,
+                            const std::vector<Register>& registers,
                             OutputBuffer* out) {
   std::vector<std::vector<OutputBuffer>> rows;
 
   for (const Register& reg : registers) {
     auto color = GetRowColor(rows.size());
-    if (reg.id() == RegisterID::kX64_rflags)
-      rows.push_back(DescribeRflags(reg, color));
+    if (reg.id() == RegisterID::kX64_rflags) {
+      rows.push_back(DescribeRflags(options, reg, color));
+      if (options.extended)
+        rows.push_back(DescribeRflagsExtended(options, reg, color));
+    }
     else
       rows.push_back(DescribeRegister(reg, color));
   }
@@ -247,14 +253,6 @@ Err FormatFPRegisters(const std::vector<Register>& registers,
 
 // Format Debug Registers ------------------------------------------------------
 
-constexpr int kDr6B0Shift = 0;
-constexpr int kDr6B1Shift = 1;
-constexpr int kDr6B2Shift = 2;
-constexpr int kDr6B3Shift = 3;
-constexpr int kDr6BDShidt = 13;
-constexpr int kDr6BSShidt = 14;
-constexpr int kDr6BTShidt = 15;
-
 std::vector<OutputBuffer> FormatDr6(const Register& dr6,
                                     TextForegroundColor color) {
   std::vector<OutputBuffer> result;
@@ -265,36 +263,15 @@ std::vector<OutputBuffer> FormatDr6(const Register& dr6,
   result.emplace_back(color, fxl::StringPrintf("0x%08" PRIx64, value));
 
   result.emplace_back(
-      color,
-      fxl::StringPrintf(
-          "B0=%d, B1=%d, B2=%d, B3=%d, BD=%d, BS=%d, BT=%d",
-          FLAG_VALUE(value, kDr6B0Shift, 1), FLAG_VALUE(value, kDr6B1Shift, 1),
-          FLAG_VALUE(value, kDr6B2Shift, 1), FLAG_VALUE(value, kDr6B3Shift, 1),
-          FLAG_VALUE(value, kDr6BDShidt, 1), FLAG_VALUE(value, kDr6BSShidt, 1),
-          FLAG_VALUE(value, kDr6BTShidt, 1)));
+      color, fxl::StringPrintf(
+                 "B0=%d, B1=%d, B2=%d, B3=%d, BD=%d, BS=%d, BT=%d",
+                 X86_FLAG_VALUE(value, Dr6B0), X86_FLAG_VALUE(value, Dr6B1),
+                 X86_FLAG_VALUE(value, Dr6B2), X86_FLAG_VALUE(value, Dr6B3),
+                 X86_FLAG_VALUE(value, Dr6BD), X86_FLAG_VALUE(value, Dr6BS),
+                 X86_FLAG_VALUE(value, Dr6BT)));
 
   return result;
 }
-
-constexpr int kDr7L0Shift = 0;
-constexpr int kDr7G0Shift = 1;
-constexpr int kDr7L1Shift = 2;
-constexpr int kDr7G1Shift = 3;
-constexpr int kDr7L2Shift = 4;
-constexpr int kDr7G2Shift = 5;
-constexpr int kDr7L3Shift = 6;
-constexpr int kDr7G3Shift = 7;
-constexpr int kDr7LEShift = 8;
-constexpr int kDr7GEShift = 9;
-constexpr int kDr7GDShift = 13;
-constexpr int kDr7RW0Shift = 16;
-constexpr int kDr7LEN0Shift = 18;
-constexpr int kDr7RW1Shift = 20;
-constexpr int kDr7LEN1Shift = 22;
-constexpr int kDr7RW2Shift = 24;
-constexpr int kDr7LEN2Shift = 26;
-constexpr int kDr7RW3Shift = 28;
-constexpr int kDr7LEN3Shift = 30;
 
 // NOTE: This function receives the table because it will append another row.
 void FormatDr7(const Register& dr7, TextForegroundColor color,
@@ -314,12 +291,12 @@ void FormatDr7(const Register& dr7, TextForegroundColor color,
           "L0=%d, G0=%d, L1=%d, G1=%d, L2=%d, G2=%d, L3=%d, G4=%d, LE=%d, "
           "GE=%d, "
           "GD=%d",
-          FLAG_VALUE(value, kDr7L0Shift, 1), FLAG_VALUE(value, kDr7G0Shift, 1),
-          FLAG_VALUE(value, kDr7L1Shift, 1), FLAG_VALUE(value, kDr7G1Shift, 1),
-          FLAG_VALUE(value, kDr7L2Shift, 1), FLAG_VALUE(value, kDr7G2Shift, 1),
-          FLAG_VALUE(value, kDr7L3Shift, 1), FLAG_VALUE(value, kDr7G3Shift, 1),
-          FLAG_VALUE(value, kDr7LEShift, 1), FLAG_VALUE(value, kDr7GEShift, 1),
-          FLAG_VALUE(value, kDr7GDShift, 1)));
+          X86_FLAG_VALUE(value, Dr7L0), X86_FLAG_VALUE(value, Dr7G0),
+          X86_FLAG_VALUE(value, Dr7L1), X86_FLAG_VALUE(value, Dr7G1),
+          X86_FLAG_VALUE(value, Dr7L2), X86_FLAG_VALUE(value, Dr7G2),
+          X86_FLAG_VALUE(value, Dr7L3), X86_FLAG_VALUE(value, Dr7G3),
+          X86_FLAG_VALUE(value, Dr7LE), X86_FLAG_VALUE(value, Dr7GE),
+          X86_FLAG_VALUE(value, Dr7GD)));
 
   // Second row only gets decoded values in the 3rd column.
   rows->emplace_back();
@@ -327,16 +304,14 @@ void FormatDr7(const Register& dr7, TextForegroundColor color,
   second_row.resize(2);  // Default-construct two empty cols.
 
   second_row.emplace_back(
-      color, fxl::StringPrintf("R/W0=%d, LEN0=%d, R/W1=%d, LEN1=%d, R/W2=%d, "
-                               "LEN2=%d, R/W3=%d, LEN3=%d",
-                               FLAG_VALUE(value, kDr7RW0Shift, 2),
-                               FLAG_VALUE(value, kDr7LEN0Shift, 2),
-                               FLAG_VALUE(value, kDr7RW1Shift, 2),
-                               FLAG_VALUE(value, kDr7LEN1Shift, 2),
-                               FLAG_VALUE(value, kDr7RW2Shift, 2),
-                               FLAG_VALUE(value, kDr7LEN2Shift, 2),
-                               FLAG_VALUE(value, kDr7RW3Shift, 2),
-                               FLAG_VALUE(value, kDr7LEN3Shift, 2)));
+      color,
+      fxl::StringPrintf(
+          "R/W0=%d, LEN0=%d, R/W1=%d, LEN1=%d, R/W2=%d, "
+          "LEN2=%d, R/W3=%d, LEN3=%d",
+          X86_FLAG_VALUE(value, Dr7RW0), X86_FLAG_VALUE(value, Dr7LEN0),
+          X86_FLAG_VALUE(value, Dr7RW1), X86_FLAG_VALUE(value, Dr7LEN1),
+          X86_FLAG_VALUE(value, Dr7RW2), X86_FLAG_VALUE(value, Dr7LEN2),
+          X86_FLAG_VALUE(value, Dr7RW3), X86_FLAG_VALUE(value, Dr7LEN3)));
 }
 
 void FormatDebugRegisters(const std::vector<Register>& registers,
@@ -368,12 +343,13 @@ void FormatDebugRegisters(const std::vector<Register>& registers,
 
 }  // namespace
 
-bool FormatCategoryX64(debug_ipc::RegisterCategory::Type category,
+bool FormatCategoryX64(const FormatRegisterOptions& options,
+                       debug_ipc::RegisterCategory::Type category,
                        const std::vector<Register>& registers,
                        OutputBuffer* out, Err* err) {
   switch (category) {
     case RegisterCategory::Type::kGeneral:
-      FormatGeneralRegisters(registers, out);
+      FormatGeneralRegisters(options, registers, out);
       return true;
     case RegisterCategory::Type::kFloatingPoint:
       *err = FormatFPRegisters(registers, out);

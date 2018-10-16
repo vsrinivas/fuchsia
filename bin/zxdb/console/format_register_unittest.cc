@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include "garnet/bin/zxdb/console/format_register.cc"
+#include "garnet/lib/debug_ipc/helper/arch_x86.h"
 #include "lib/fxl/logging.h"
 
 namespace zxdb {
@@ -102,10 +103,12 @@ TEST(FormatRegisters, GeneralRegisters) {
   RegisterSet registers;
   GetCategories(&registers);
 
-  std::vector<RegisterCategory::Type> cats_to_show = {
-      RegisterCategory::Type::kGeneral};
+  FormatRegisterOptions options;
+  options.arch = debug_ipc::Arch::kX64;
+  options.categories = {RegisterCategory::Type::kGeneral};
+
   FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(registers, &filtered_set, cats_to_show);
+  Err err = FilterRegisters(options, registers, &filtered_set);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   // Force rcx to -2 to test negative integer formatting.
@@ -115,7 +118,7 @@ TEST(FormatRegisters, GeneralRegisters) {
   SetRegisterValue(&rcx, static_cast<uint64_t>(-2));
 
   OutputBuffer out;
-  err = FormatRegisters(debug_ipc::Arch::kX64, filtered_set, &out);
+  err = FormatRegisters(options, filtered_set, &out);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   EXPECT_EQ(
@@ -132,14 +135,16 @@ TEST(FormatRegisters, VectorRegisters) {
   RegisterSet registers;
   GetCategories(&registers);
 
-  std::vector<RegisterCategory::Type> cats_to_show = {
-      RegisterCategory::Type::kVector};
+  FormatRegisterOptions options;
+  options.arch = debug_ipc::Arch::kX64;
+  options.categories = {RegisterCategory::Type::kVector};
+
   FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(registers, &filtered_set, cats_to_show);
+  Err err = FilterRegisters(options, registers, &filtered_set);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   OutputBuffer out;
-  err = FormatRegisters(debug_ipc::Arch::kX64, filtered_set, &out);
+  err = FormatRegisters(options, filtered_set, &out);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   EXPECT_EQ(
@@ -157,15 +162,17 @@ TEST(FormatRegisters, AllRegisters) {
   RegisterSet registers;
   GetCategories(&registers);
 
-  std::vector<RegisterCategory::Type> cats_to_show = {
-      {RegisterCategory::Type::kGeneral, RegisterCategory::Type::kFloatingPoint,
-       RegisterCategory::Type::kVector}};
+  FormatRegisterOptions options;
+  options.arch = debug_ipc::Arch::kX64;
+  options.categories = {RegisterCategory::Type::kGeneral,
+                        RegisterCategory::Type::kFloatingPoint,
+                        RegisterCategory::Type::kVector};
   FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(registers, &filtered_set, cats_to_show);
+  Err err = FilterRegisters(options, registers, &filtered_set);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   OutputBuffer out;
-  err = FormatRegisters(debug_ipc::Arch::kX64, filtered_set, &out);
+  err = FormatRegisters(options, filtered_set, &out);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   // TODO(donosoc): Detect the maximum length and make the the tables coincide.
@@ -195,15 +202,19 @@ TEST(FormatRegisters, OneRegister) {
   RegisterSet registers;
   GetCategories(&registers);
 
-  std::vector<RegisterCategory::Type> cats_to_show = {
-      {RegisterCategory::Type::kGeneral, RegisterCategory::Type::kFloatingPoint,
-       RegisterCategory::Type::kVector}};
+  FormatRegisterOptions options;
+  options.arch = debug_ipc::Arch::kX64;
+  options.filter_regexp = "xmm3";
+  options.categories = {RegisterCategory::Type::kGeneral,
+                        RegisterCategory::Type::kFloatingPoint,
+                        RegisterCategory::Type::kVector};
+
   FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(registers, &filtered_set, cats_to_show, "xmm3");
+  Err err = FilterRegisters(options, registers, &filtered_set);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   OutputBuffer out;
-  err = FormatRegisters(debug_ipc::Arch::kX64, filtered_set, &out);
+  err = FormatRegisters(options, filtered_set, &out);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   EXPECT_EQ(
@@ -217,15 +228,17 @@ TEST(FormatRegister, RegexSearch) {
   RegisterSet registers;
   GetCategories(&registers);
 
-  std::vector<RegisterCategory::Type> cats_to_show = {
-      RegisterCategory::Type::kVector};
+  FormatRegisterOptions options;
+  options.arch = debug_ipc::Arch::kX64;
+  options.filter_regexp = "XMm[2-4]$";
+  options.categories = {RegisterCategory::Type::kVector};
+
   FilteredRegisterSet filtered_set;
-  Err err =
-      FilterRegisters(registers, &filtered_set, cats_to_show, "XMm[2-4]$");
+  Err err = FilterRegisters(options, registers, &filtered_set);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   OutputBuffer out;
-  err = FormatRegisters(debug_ipc::Arch::kX64, filtered_set, &out);
+  err = FormatRegisters(options, filtered_set, &out);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   EXPECT_EQ(
@@ -241,11 +254,14 @@ TEST(FormatRegisters, CannotFindRegister) {
   RegisterSet registers;
   GetCategories(&registers);
 
-  std::vector<RegisterCategory::Type> cats_to_show = {
-      {RegisterCategory::Type::kGeneral, RegisterCategory::Type::kFloatingPoint,
-       RegisterCategory::Type::kVector}};
+  FormatRegisterOptions options;
+  options.arch = debug_ipc::Arch::kX64;
+  options.filter_regexp = "W0";
+  options.categories = {RegisterCategory::Type::kGeneral,
+                        RegisterCategory::Type::kFloatingPoint,
+                        RegisterCategory::Type::kVector};
   FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(registers, &filtered_set, cats_to_show, "W0");
+  Err err = FilterRegisters(options, registers, &filtered_set);
   EXPECT_TRUE(err.has_error());
 }
 
@@ -255,14 +271,16 @@ TEST(FormatRegisters, WithRflags) {
   auto& cat = register_set.category_map()[RegisterCategory::Type::kGeneral];
   cat.push_back(CreateRegisterWithValue(RegisterID::kX64_rflags, 0));
 
-  std::vector<RegisterCategory::Type> cats_to_show = {
-      RegisterCategory::Type::kGeneral};
+  FormatRegisterOptions options;
+  options.arch = debug_ipc::Arch::kX64;
+  options.categories = {RegisterCategory::Type::kGeneral};
+
   FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(register_set, &filtered_set, cats_to_show);
+  Err err = FilterRegisters(options, register_set, &filtered_set);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   OutputBuffer out;
-  err = FormatRegisters(debug_ipc::Arch::kX64, filtered_set, &out);
+  err = FormatRegisters(options, filtered_set, &out);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   EXPECT_EQ(
@@ -282,27 +300,77 @@ TEST(FormatRegisters, RFlagsValues) {
   auto& cat = register_set.category_map()[RegisterCategory::Type::kGeneral];
   cat.push_back(CreateRegisterWithValue(RegisterID::kX64_rflags, 0));
 
-  std::vector<RegisterCategory::Type> cats_to_show = {
-      RegisterCategory::Type::kGeneral};
+  FormatRegisterOptions options;
+  options.arch = debug_ipc::Arch::kX64;
+  options.filter_regexp = "rflags";
+  options.categories = {RegisterCategory::Type::kGeneral};
+
   FilteredRegisterSet filtered_set;
-  Err err =
-      FilterRegisters(register_set, &filtered_set, cats_to_show, "rflags");
+  Err err = FilterRegisters(options, register_set, &filtered_set);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   // filtered_set now holds a pointer to rflags that we can change.
   auto& reg = filtered_set[RegisterCategory::Type::kGeneral].front();
-  SetRegisterValue(&reg, 0b1110100110010101010101);
+  SetRegisterValue(&reg, X86_FLAG_MASK(RflagsCF) |
+                         X86_FLAG_MASK(RflagsPF) |
+                         X86_FLAG_MASK(RflagsAF) |
+                         X86_FLAG_MASK(RflagsZF) |
+                         X86_FLAG_MASK(RflagsTF) |
+                         X86_FLAG_MASK(RflagsDF));
 
   OutputBuffer out;
-  err = FormatRegisters(debug_ipc::Arch::kX64, filtered_set, &out);
+  err = FormatRegisters(options, filtered_set, &out);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   EXPECT_EQ(
       "General Purpose Registers\n"
-      "rflags  0x003a6555 CF=1, PF=1, AF=1, ZF=1, SF=0, TF=1, IF=0, DF=1, "
+      "rflags  0x00000555 CF=1, PF=1, AF=1, ZF=1, SF=0, TF=1, IF=0, DF=1, "
       "OF=0\n"
       "\n",
       out.AsString());
+}
+
+TEST(FormatRegisters, RFlagsValuesExtended) {
+  RegisterSet register_set;
+  auto& cat = register_set.category_map()[RegisterCategory::Type::kGeneral];
+  cat.push_back(CreateRegisterWithValue(RegisterID::kX64_rflags, 0));
+
+  FormatRegisterOptions options;
+  options.arch = debug_ipc::Arch::kX64;
+  options.filter_regexp = "rflags";
+  options.extended = true;
+  options.categories = {RegisterCategory::Type::kGeneral};
+
+  FilteredRegisterSet filtered_set;
+  Err err = FilterRegisters(options, register_set, &filtered_set);
+  ASSERT_FALSE(err.has_error()) << err.msg();
+
+  // filtered_set now holds a pointer to rflags that we can change.
+  auto& reg = filtered_set[RegisterCategory::Type::kGeneral].front();
+
+  SetRegisterValue(&reg, X86_FLAG_MASK(RflagsCF) |
+                         X86_FLAG_MASK(RflagsPF) |
+                         X86_FLAG_MASK(RflagsAF) |
+                         X86_FLAG_MASK(RflagsZF) |
+                         X86_FLAG_MASK(RflagsTF) |
+                         X86_FLAG_MASK(RflagsDF) |
+                         // Extended flags
+                         (0b10 << kRflagsIOPLShift) |
+                         X86_FLAG_MASK(RflagsNT) |
+                         X86_FLAG_MASK(RflagsVM) |
+                         X86_FLAG_MASK(RflagsVIF) |
+                         X86_FLAG_MASK(RflagsID));
+
+  OutputBuffer out;
+  err = FormatRegisters(options, filtered_set, &out);
+  ASSERT_FALSE(err.has_error()) << err.msg();
+
+  EXPECT_EQ(
+    "General Purpose Registers\n"
+    "rflags  0x002a6555 CF=1, PF=1, AF=1, ZF=1, SF=0, TF=1, IF=0, DF=1, OF=0\n"
+    "                   IOPL=2, NT=1, RF=0, VM=1, AC=0, VIF=1, VIP=0, ID=1\n"
+    "\n",
+    out.AsString());
 }
 
 TEST(FormatRegisters, CPSRValues) {
@@ -310,10 +378,13 @@ TEST(FormatRegisters, CPSRValues) {
   auto& cat = register_set.category_map()[RegisterCategory::Type::kGeneral];
   cat.push_back(CreateRegisterWithValue(RegisterID::kARMv8_cpsr, 0));
 
-  std::vector<RegisterCategory::Type> cats_to_show = {
-      RegisterCategory::Type::kGeneral};
+  FormatRegisterOptions options;
+  options.arch = debug_ipc::Arch::kArm64;
+  options.filter_regexp = "cpsr";
+  options.categories = {RegisterCategory::Type::kGeneral};
+
   FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(register_set, &filtered_set, cats_to_show, "cpsr");
+  Err err = FilterRegisters(options, register_set, &filtered_set);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   // filtered_set now holds a pointer to rflags that we can change.
@@ -321,7 +392,7 @@ TEST(FormatRegisters, CPSRValues) {
   SetRegisterValue(&reg, 0xA1234567);
 
   OutputBuffer out;
-  err = FormatRegisters(debug_ipc::Arch::kArm64, filtered_set, &out);
+  err = FormatRegisters(options, filtered_set, &out);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   EXPECT_EQ(
@@ -343,14 +414,16 @@ TEST(FormatRegisters, DebugRegisters) {
   cat.push_back(CreateRegisterWithValue(RegisterID::kX64_dr6, 0xaffa));
   cat.push_back(CreateRegisterWithValue(RegisterID::kX64_dr7, 0xaaaa26aa));
 
-  std::vector<RegisterCategory::Type> cats_to_show = {
-      RegisterCategory::Type::kDebug};
+  FormatRegisterOptions options;
+  options.arch = debug_ipc::Arch::kX64;
+  options.categories = {RegisterCategory::Type::kDebug};
+
   FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(register_set, &filtered_set, cats_to_show);
+  Err err = FilterRegisters(options, register_set, &filtered_set);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   OutputBuffer out;
-  err = FormatRegisters(debug_ipc::Arch::kX64, filtered_set, &out);
+  err = FormatRegisters(options, filtered_set, &out);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   EXPECT_EQ(

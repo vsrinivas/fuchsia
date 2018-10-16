@@ -43,9 +43,9 @@ void InternalFormatGeneric(const std::vector<Register>& registers,
               out);
 }
 
-Err FormatCategory(debug_ipc::Arch arch, RegisterCategory::Type category,
+Err FormatCategory(const FormatRegisterOptions& options,
+                   RegisterCategory::Type category,
                    const std::vector<Register>& registers, OutputBuffer* out) {
-
   auto title = fxl::StringPrintf("%s Registers\n",
                                  RegisterCategoryTypeToString(category));
   out->Append(OutputBuffer(Syntax::kHeading, std::move(title)));
@@ -58,14 +58,15 @@ Err FormatCategory(debug_ipc::Arch arch, RegisterCategory::Type category,
   // We see if architecture specific printing wants to take over.
   Err err;
   OutputBuffer category_out;
-  if (arch == debug_ipc::Arch::kX64) {
-    if (FormatCategoryX64(category, registers, &category_out, &err)) {
+  if (options.arch == debug_ipc::Arch::kX64) {
+    if (FormatCategoryX64(options, category, registers, &category_out, &err)) {
       if (err.ok())
         out->Append(std::move(category_out));
       return err;
     }
-  } else if (arch == debug_ipc::Arch::kArm64) {
-    if (FormatCategoryARM64(category, registers, &category_out, &err)) {
+  } else if (options.arch == debug_ipc::Arch::kArm64) {
+    if (FormatCategoryARM64(category, registers, &category_out,
+                            &err)) {
       if (err.ok())
         out->Append(std::move(category_out));
       return err;
@@ -89,13 +90,12 @@ inline Err RegexpError(const char* prefix, const std::string& pattern,
 
 }  // namespace
 
-Err FilterRegisters(const RegisterSet& register_set, FilteredRegisterSet* out,
-                    std::vector<RegisterCategory::Type> categories,
-                    const std::string& search_regexp) {
+Err FilterRegisters(const FormatRegisterOptions& options,
+                    const RegisterSet& register_set, FilteredRegisterSet* out) {
   const auto& category_map = register_set.category_map();
   // Used to track how many registers we found when filtering.
   int registers_found = 0;
-  for (const auto& category : categories) {
+  for (const auto& category : options.categories) {
     auto it = category_map.find(category);
     if (it == category_map.end())
       continue;
@@ -104,7 +104,7 @@ Err FilterRegisters(const RegisterSet& register_set, FilteredRegisterSet* out,
     (*out)[category] = {};
     auto& registers = (*out)[category];
 
-    if (search_regexp.empty()) {
+    if (options.filter_regexp.empty()) {
       // Add all registers.
       registers.reserve(it->second.size());
       for (const auto& reg : it->second) {
@@ -114,12 +114,12 @@ Err FilterRegisters(const RegisterSet& register_set, FilteredRegisterSet* out,
     } else {
       // We use insensitive case regexp matching.
       regex_t regexp;
-      auto status = regcomp(&regexp, search_regexp.c_str(), REG_ICASE);
+      auto status = regcomp(&regexp, options.filter_regexp.data(), REG_ICASE);
       auto reg_freer = fit::defer([&regexp]() { regfree(&regexp); });
 
       if (status) {
-        return RegexpError("Could not compile regexp", search_regexp.c_str(),
-                           &regexp, status);
+        return RegexpError("Could not compile regexp",
+                           options.filter_regexp.data(), &regexp, status);
       }
 
       for (const auto& reg : it->second) {
@@ -130,28 +130,28 @@ Err FilterRegisters(const RegisterSet& register_set, FilteredRegisterSet* out,
           registers.push_back(reg);
           registers_found++;
         } else if (status != REG_NOMATCH) {
-          return RegexpError("Error running regexp", search_regexp.c_str(),
-                             &regexp, status);
+          return RegexpError("Error running regexp",
+                             options.filter_regexp.data(), &regexp, status);
         }
       }
     }
   }
 
   if (registers_found == 0) {
-    if (search_regexp.empty()) {
+    if (options.filter_regexp.empty()) {
       return Err("Could not find registers in the selected categories");
     } else {
       return Err(
           "Could not find any registers that match \"%s\" in the selected "
           "categories",
-          search_regexp.data());
+          options.filter_regexp.data());
     }
   }
 
   return Err();
 }
 
-Err FormatRegisters(debug_ipc::Arch arch,
+Err FormatRegisters(const FormatRegisterOptions& options,
                     const FilteredRegisterSet& filtered_set,
                     OutputBuffer* out) {
   // We should have detected on the filtering stage that we didn't find any
@@ -164,7 +164,7 @@ Err FormatRegisters(debug_ipc::Arch arch,
     if (kv.second.empty())
       continue;
     OutputBuffer out;
-    Err err = FormatCategory(arch, kv.first, kv.second, &out);
+    Err err = FormatCategory(options, kv.first, kv.second, &out);
     if (!err.ok())
       return err;
     out_buffers.emplace_back(std::move(out));
