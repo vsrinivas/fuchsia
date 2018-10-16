@@ -4,11 +4,9 @@
 
 #![deny(warnings)]
 
-use {
-    failure::Error,
-    fuchsia_syslog::{self as syslog, fx_log, fx_log_info},
-    rouille,
-};
+use {failure::Error,
+     fuchsia_syslog::{self as syslog, fx_log, fx_log_info},
+     rouille};
 
 const LISTEN_IP: &str = "0.0.0.0";
 const LISTEN_PORT: &str = "80";
@@ -21,6 +19,6 @@ fn main() -> Result<(), Error> {
     fx_log_info!("Listening on: {:?}", address);
 
     rouille::start_server(address, move |request| {
-         rouille::match_assets(&request, "/pkg/data")
-    });
+        rouille::match_assets(&request, "/pkg/data")
+    })
 }

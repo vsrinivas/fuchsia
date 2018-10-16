@@ -15,7 +15,7 @@ $ fx full-build
 To run the server on the fuchsia device, from fx shell:
 
 ```
-$ run fuchsia-pkg://fuchsia.com/example_http_server#meta/example_http_server.cmx
+run fuchsia-pkg://fuchsia.com/example_http_server#meta/example_http_server.cmx
 ```
 
 To view the served webpage from the browser:
