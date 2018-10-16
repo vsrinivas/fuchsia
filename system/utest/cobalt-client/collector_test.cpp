@@ -127,19 +127,28 @@ private:
     fbl::atomic<bool> fail_;
 };
 
+CollectorOptions MakeCollectorOptions(size_t max_histograms, size_t max_counters) {
+    CollectorOptions options;
+    options.max_counters = max_counters;
+    options.max_histograms = max_histograms;
+    // Just create a dummy vmo.
+    options.load_config = [](zx::vmo* vmo, size_t* size) {
+        *size = 1;
+        return zx::vmo::create(1, 0, vmo) == ZX_OK;
+    };
+    return fbl::move(options);
+}
+
 Collector MakeCollector(size_t max_histograms, size_t max_counters,
                         FakeStorage<BaseHistogram>* histograms, FakeStorage<BaseCounter>* counters,
                         TestLogger** test_logger = nullptr) {
     fbl::unique_ptr<TestLogger> logger = fbl::make_unique<TestLogger>(histograms, counters);
-    CollectorOptions options;
-    options.max_counters = max_counters;
-    options.max_histograms = max_histograms;
 
     if (test_logger != nullptr) {
         *test_logger = logger.get();
     }
 
-    return fbl::move(Collector(options, fbl::move(logger)));
+    return fbl::move(Collector(MakeCollectorOptions(max_histograms, max_counters), fbl::move(logger)));
 }
 
 HistogramOptions MakeOptions() {
@@ -148,6 +157,59 @@ HistogramOptions MakeOptions() {
     HistogramOptions options =
         HistogramOptions::Linear(/*bucket_count=*/2, /*scalar=*/2, /*offset=*/-2);
     return fbl::move(options);
+}
+
+// Sanity check for this codepath.
+bool DebugTest() {
+    BEGIN_TEST;
+    Collector collector = Collector::Debug(MakeCollectorOptions(1, 1));
+    auto histogram = collector.AddHistogram(0, 1, MakeOptions());
+    auto counter = collector.AddCounter(0, 1);
+
+    histogram.Add(1);
+    counter.Increment();
+
+    collector.Flush();
+    END_TEST;
+}
+
+bool FishfoodTest() {
+    BEGIN_TEST;
+    Collector collector = Collector::Fishfood(MakeCollectorOptions(1, 1));
+    auto histogram = collector.AddHistogram(0, 1, MakeOptions());
+    auto counter = collector.AddCounter(0, 1);
+
+    histogram.Add(1);
+    counter.Increment();
+
+    collector.Flush();
+    END_TEST;
+}
+
+bool DogfoodTest() {
+    BEGIN_TEST;
+    Collector collector = Collector::Dogfood(MakeCollectorOptions(1, 1));
+    auto histogram = collector.AddHistogram(0, 1, MakeOptions());
+    auto counter = collector.AddCounter(0, 1);
+
+    histogram.Add(1);
+    counter.Increment();
+
+    collector.Flush();
+    END_TEST;
+}
+
+bool GeneralAvailabilityTest() {
+    BEGIN_TEST;
+    Collector collector = Collector::GeneralAvailability(MakeCollectorOptions(1, 1));
+    auto histogram = collector.AddHistogram(0, 1, MakeOptions());
+    auto counter = collector.AddCounter(0, 1);
+
+    histogram.Add(1);
+    counter.Increment();
+
+    collector.Flush();
+    END_TEST;
 }
 
 bool AddCounterTest() {
@@ -457,8 +519,13 @@ RUN_TEST(AddHistogramTest)
 RUN_TEST(AddHistogramMultipleTest)
 RUN_TEST(FlushTest)
 RUN_TEST(FlushFailTest)
-RUN_TEST_LARGE(FlushMultithreadTest<false>)
-RUN_TEST_LARGE(FlushMultithreadTest<true>)
+RUN_TEST(FlushFailTest)
+RUN_TEST(FlushMultithreadTest<false>)
+RUN_TEST(FlushMultithreadTest<true>)
+RUN_TEST(GeneralAvailabilityTest)
+RUN_TEST(DogfoodTest)
+RUN_TEST(FishfoodTest)
+RUN_TEST(DebugTest)
 END_TEST_CASE(CollectorTest)
 
 } // namespace

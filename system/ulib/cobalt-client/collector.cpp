@@ -10,6 +10,7 @@
 #include <cobalt-client/cpp/histogram-internal.h>
 #include <cobalt-client/cpp/types-internal.h>
 #include <fuchsia/cobalt/c/fidl.h>
+#include <lib/fdio/util.h>
 #include <lib/fidl/cpp/vector_view.h>
 #include <lib/zx/channel.h>
 
@@ -45,6 +46,19 @@ Histogram AddHistogramInternal(uint32_t metric_id, const HistogramOptions& optio
     histogram_options->push_back(options);
     size_t index = remote_histograms->size() - 1;
     return Histogram(&(*histogram_options)[index], &(*remote_histograms)[index]);
+}
+
+Collector MakeCollector(CollectorOptions options, internal::CobaltOptions cobalt_options) {
+    ZX_DEBUG_ASSERT_MSG(options.load_config, "Must define a load_config function.");
+    cobalt_options.logger_deadline_first_attempt = options.initial_response_deadline;
+    cobalt_options.logger_deadline = options.response_deadline;
+    cobalt_options.config_reader = fbl::move(options.load_config);
+    cobalt_options.service_connect = [](const char* service_path,
+                                        zx::channel service) -> zx_status_t {
+        return fdio_service_connect(service_path, service.release());
+    };
+    cobalt_options.service_path.AppendPrintf("/svc/%s", fuchsia_cobalt_LoggerFactory_Name);
+    return Collector(options, fbl::make_unique<internal::CobaltLogger>(fbl::move(cobalt_options)));
 }
 
 } // namespace
@@ -162,6 +176,30 @@ void Collector::LogCounter(RemoteCounter* counter) {
         // Make the buffer writeable again.
         complete_fn();
     });
+}
+
+Collector Collector::GeneralAvailability(CollectorOptions options) {
+    internal::CobaltOptions cobalt_options;
+    cobalt_options.release_stage = internal::ReleaseStage::kGa;
+    return MakeCollector(fbl::move(options), fbl::move(cobalt_options));
+}
+
+Collector Collector::Dogfood(CollectorOptions options) {
+    internal::CobaltOptions cobalt_options;
+    cobalt_options.release_stage = internal::ReleaseStage::kDogfood;
+    return MakeCollector(fbl::move(options), fbl::move(cobalt_options));
+}
+
+Collector Collector::Fishfood(CollectorOptions options) {
+    internal::CobaltOptions cobalt_options;
+    cobalt_options.release_stage = internal::ReleaseStage::kFishfood;
+    return MakeCollector(fbl::move(options), fbl::move(cobalt_options));
+}
+
+Collector Collector::Debug(CollectorOptions options) {
+    internal::CobaltOptions cobalt_options;
+    cobalt_options.release_stage = internal::ReleaseStage::kDebug;
+    return MakeCollector(fbl::move(options), fbl::move(cobalt_options));
 }
 
 } // namespace cobalt_client

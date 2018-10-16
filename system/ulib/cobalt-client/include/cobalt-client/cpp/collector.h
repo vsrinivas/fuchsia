@@ -11,6 +11,7 @@
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 
 namespace cobalt_client {
@@ -27,7 +28,17 @@ struct CollectorOptions {
     // Callback used when reading the config to create a cobalt logger.
     // Returns true when the write was successfull. The VMO will be transferred
     // to the cobalt service.
-    fbl::Function<bool(zx::vmo*)> load_config;
+    fbl::Function<bool(zx::vmo*, size_t*)> load_config;
+
+    // Configuration for RPC behavior.
+
+    // When registering with cobalt, will block for this amount of time, each
+    // time we need to reach cobalt, until the response is received.
+    zx::duration response_deadline;
+
+    // When registering with cobalt, will block for this amount of time, the first
+    // time we need to wait for a response.
+    zx::duration initial_response_deadline;
 
     // We need this information for pre-allocating storage
     // and guaranteeing no dangling pointers, plus contiguos
@@ -52,10 +63,17 @@ struct CollectorOptions {
 // This class is thread-compatible.
 class Collector {
 public:
-    // TODO(gevalentino): Once the cobalt client is written add a factory method to return
-    // an instance of |Collector|. The cobalt client will implement the logger interface,
-    // we do this to simplify testing.
-    // static Collector Create(const Collector& options);
+    // Returns a |Collector| whose data will be logged for GA release stage.
+    static Collector GeneralAvailability(CollectorOptions options);
+
+    // Returns a |Collector| whose data will be logged for Dogfood release stage.
+    static Collector Dogfood(CollectorOptions options);
+
+    // Returns a |Collector| whose data will be logged for Fishfood release stage.
+    static Collector Fishfood(CollectorOptions options);
+
+    // Returns a |Collector| whose data will be logged for Debug release stage.
+    static Collector Debug(CollectorOptions options);
 
     Collector(const CollectorOptions& options, fbl::unique_ptr<internal::Logger> logger);
     Collector(const Collector&) = delete;
