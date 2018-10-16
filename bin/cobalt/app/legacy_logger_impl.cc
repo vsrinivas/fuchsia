@@ -320,9 +320,9 @@ void LegacyLoggerImpl::StartTimer(
     callback(Status::INVALID_ARGUMENTS);
     return;
   }
-  auto status = timer_manager_->GetTimerValWithStart(metric_id, encoding_id,
-                                                     timer_id.get(), timestamp,
-                                                     timeout_s, &timer_val_ptr);
+  auto status = timer_manager_->GetTimerValWithStart(
+      metric_id, 0, "", encoding_id, timer_id.get(), timestamp, timeout_s,
+      &timer_val_ptr);
 
   if (status != Status::OK) {
     callback(status);

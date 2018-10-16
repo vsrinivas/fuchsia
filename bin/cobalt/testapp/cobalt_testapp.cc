@@ -36,12 +36,25 @@ namespace testapp {
 
 // This app is not launched through appmgr as part of a package so we need the
 // full path
-constexpr char kConfigBinProtoPath[] =
+constexpr char kLegacyConfigBinProtoPath[] =
     "/pkgfs/packages/cobalt_tests/0/data/cobalt_config.pb";
 
-fuchsia::cobalt::ProjectProfile CobaltTestApp::LoadCobaltConfig() {
+constexpr char kConfigBinProtoPath[] =
+    "/pkgfs/packages/cobalt_tests/0/data/cobalt_config2.binproto";
+
+fuchsia::cobalt::ProjectProfile CobaltTestApp::LoadCobaltConfig(
+    CobaltConfigType type) {
   fsl::SizedVmo config_vmo;
-  bool success = fsl::VmoFromFilename(kConfigBinProtoPath, &config_vmo);
+  auto path = "";
+  switch (type) {
+    case kLegacyCobaltConfig:
+      path = kLegacyConfigBinProtoPath;
+      break;
+    case kCobaltConfig:
+      path = kConfigBinProtoPath;
+      break;
+  }
+  bool success = fsl::VmoFromFilename(path, &config_vmo);
   FXL_CHECK(success) << "Could not read Cobalt config file into VMO";
 
   fuchsia::cobalt::ProjectProfile profile;
@@ -67,6 +80,7 @@ bool CobaltTestApp::RunTests() {
 
 void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
                             uint32_t min_interval_seconds,
+                            CobaltConfigType type,
                             uint32_t initial_interval_seconds) {
   controller_.Unbind();
   component::Services services;
@@ -106,13 +120,13 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   services.ConnectToService(logger_factory.NewRequest());
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  logger_factory->CreateLogger(LoadCobaltConfig(), logger_.logger_.NewRequest(),
-                               &status);
+  logger_factory->CreateLogger(LoadCobaltConfig(type),
+                               logger_.logger_.NewRequest(), &status);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLogger() => " << StatusToString(status);
 
   logger_factory->CreateLoggerSimple(
-      LoadCobaltConfig(), logger_.logger_simple_.NewRequest(), &status);
+      LoadCobaltConfig(type), logger_.logger_simple_.NewRequest(), &status);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLoggerSimple() => " << StatusToString(status);
 
@@ -124,12 +138,23 @@ bool CobaltTestApp::RunTestsWithRequestSendSoon() {
   // essentially configuring the ShippingManager to be in manual mode. It will
   // never send Observations because of the schedule and send them immediately
   // in response to RequestSendSoon().
-  Connect(999999999, 0);
+  Connect(999999999, 0, kLegacyCobaltConfig);
 
-  // Invoke RequestSendSoonTests() three times and return true if it
+  // Invoke LegacyRequestSendSoonTests() three times and return true if it
   // succeeds all three times.
   for (int i = 0; i < 3; i++) {
-    FXL_LOG(INFO) << "\nRunTestsWithRequestSendSoon iteration " << i << ".";
+    FXL_LOG(INFO) << "\nRunTestsWithRequestSendSoon (legacy config) iteration "
+                  << i << ".";
+    if (!LegacyRequestSendSoonTests()) {
+      return false;
+    }
+  }
+
+  // Reconnect using the cobalt 1.0 config.
+  Connect(999999999, 0, kCobaltConfig);
+  for (int i = 0; i < 3; i++) {
+    FXL_LOG(INFO) << "\nRunTestsWithRequestSendSoon (v1.0 config) iteration "
+                  << i << ".";
     if (!RequestSendSoonTests()) {
       return false;
     }
@@ -139,13 +164,13 @@ bool CobaltTestApp::RunTestsWithRequestSendSoon() {
 }
 
 bool CobaltTestApp::RunTestsWithBlockUntilEmpty() {
-  Connect(1, 0);
+  Connect(1, 0, kLegacyCobaltConfig);
 
   // Invoke TestLogStringUsingBlockUntilEmpty() three times and
   // return true if it succeeds all three times.
   for (int i = 0; i < 3; i++) {
     FXL_LOG(INFO) << "\nRunTestsWithBlockUntilEmpty iteration " << i << ".";
-    if (!TestLogStringUsingBlockUntilEmpty(&logger_)) {
+    if (!legacy::TestLogStringUsingBlockUntilEmpty(&logger_)) {
       return false;
     }
   }
@@ -159,13 +184,14 @@ bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   context_->ConnectToEnvironmentService(logger_factory.NewRequest());
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  logger_factory->CreateLogger(LoadCobaltConfig(), logger_.logger_.NewRequest(),
-                               &status);
+  logger_factory->CreateLogger(LoadCobaltConfig(kLegacyCobaltConfig),
+                               logger_.logger_.NewRequest(), &status);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLogger() => " << StatusToString(status);
 
-  logger_factory->CreateLoggerSimple(
-      LoadCobaltConfig(), logger_.logger_simple_.NewRequest(), &status);
+  logger_factory->CreateLoggerSimple(LoadCobaltConfig(kLegacyCobaltConfig),
+                                     logger_.logger_simple_.NewRequest(),
+                                     &status);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLoggerSimple() => " << StatusToString(status);
 
@@ -174,7 +200,8 @@ bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   for (int i = 0; i < 3; i++) {
     FXL_LOG(INFO) << "\nRunTestsUsingServiceFromEnvironment iteration " << i
                   << ".";
-    if (!TestLogEventUsingServiceFromEnvironment(&logger_)) {
+    // TODO(zmbush): Add a test from environment for v1.0
+    if (!legacy::TestLogEventUsingServiceFromEnvironment(&logger_)) {
       return false;
     }
   }
@@ -182,34 +209,28 @@ bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   return true;
 }
 
+#define TRY_TEST(test) \
+  if (!(test)) {       \
+    return false;      \
+  }
+
+bool CobaltTestApp::LegacyRequestSendSoonTests() {
+  TRY_TEST(legacy::TestLogEvent(&logger_));
+  TRY_TEST(legacy::TestLogEventCount(&logger_));
+  TRY_TEST(legacy::TestLogElapsedTime(&logger_));
+  TRY_TEST(legacy::TestLogFrameRate(&logger_));
+  TRY_TEST(legacy::TestLogMemoryUsage(&logger_));
+  TRY_TEST(legacy::TestLogString(&logger_));
+  TRY_TEST(legacy::TestLogTimer(&logger_));
+  TRY_TEST(legacy::TestLogIntHistogram(&logger_));
+  TRY_TEST(legacy::TestLogCustomEvent(&logger_));
+  return true;
+}
+
 bool CobaltTestApp::RequestSendSoonTests() {
-  if (!TestLogEvent(&logger_)) {
-    return false;
-  }
-  if (!TestLogEventCount(&logger_)) {
-    return false;
-  }
-  if (!TestLogElapsedTime(&logger_)) {
-    return false;
-  }
-  if (!TestLogFrameRate(&logger_)) {
-    return false;
-  }
-  if (!TestLogMemoryUsage(&logger_)) {
-    return false;
-  }
-  if (!TestLogString(&logger_)) {
-    return false;
-  }
-  if (!TestLogTimer(&logger_)) {
-    return false;
-  }
-  if (!TestLogIntHistogram(&logger_)) {
-    return false;
-  }
-  if (!TestLogCustomEvent(&logger_)) {
-    return false;
-  }
+  // TODO(zmbush): Create tests for all logger methods (as we have for legacy).
+  TRY_TEST(TestLogEvent(&logger_));
+  TRY_TEST(TestLogCustomEvent(&logger_));
   return true;
 }
 

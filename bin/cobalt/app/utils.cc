@@ -27,6 +27,26 @@ Status ToCobaltStatus(ObservationStore::StoreStatus s) {
   }
 }
 
+Status ToCobaltStatus(logger::Status s) {
+  switch (s) {
+    case logger::Status::kOK:
+      return Status::OK;
+
+    case logger::Status::kInvalidArguments:
+    case logger::Status::kInvalidConfig:
+      return Status::INVALID_ARGUMENTS;
+
+    case logger::Status::kTooBig:
+      return Status::EVENT_TOO_BIG;
+
+    case logger::Status::kFull:
+      return Status::BUFFER_FULL;
+
+    case logger::Status::kOther:
+      return Status::INTERNAL_ERROR;
+  }
+}
+
 std::string ReadPublicKeyPem(const std::string& pem_file_path) {
   VLOG(2) << "Reading PEM file at " << pem_file_path;
   std::string pem_out;

@@ -20,11 +20,14 @@
 #include "garnet/bin/cobalt/app/timer_manager.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/network_wrapper/network_wrapper_impl.h"
+#include "third_party/cobalt/config/client_config.h"
 #include "third_party/cobalt/encoder/client_secret.h"
 #include "third_party/cobalt/encoder/file_observation_store.h"
 #include "third_party/cobalt/encoder/send_retryer.h"
 #include "third_party/cobalt/encoder/shipping_manager.h"
 #include "third_party/cobalt/encoder/shuffler_client.h"
+#include "third_party/cobalt/logger/encoder.h"
+#include "third_party/cobalt/logger/observation_writer.h"
 
 namespace cobalt {
 
@@ -64,6 +67,9 @@ class CobaltApp {
   util::EncryptedMessageMaker encrypt_to_shuffler_;
   encoder::LegacyShippingManager shipping_manager_;
   TimerManager timer_manager_;
+
+  logger::Encoder logger_encoder_;
+  logger::ObservationWriter observation_writer_;
 
   std::shared_ptr<config::ClientConfig> client_config_;
 

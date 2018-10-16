@@ -22,6 +22,8 @@
 namespace cobalt {
 namespace testapp {
 
+namespace legacy {
+
 bool TestLogEvent(CobaltTestAppLogger* logger_);
 
 bool TestLogEventUsingServiceFromEnvironment(CobaltTestAppLogger* logger_);
@@ -41,6 +43,12 @@ bool TestLogStringUsingBlockUntilEmpty(CobaltTestAppLogger* logger_);
 bool TestLogTimer(CobaltTestAppLogger* logger_);
 
 bool TestLogIntHistogram(CobaltTestAppLogger* logger_);
+
+bool TestLogCustomEvent(CobaltTestAppLogger* logger_);
+
+}  // namespace legacy
+
+bool TestLogEvent(CobaltTestAppLogger* logger_);
 
 bool TestLogCustomEvent(CobaltTestAppLogger* logger_);
 

@@ -54,6 +54,12 @@ const uint32_t kEventInComponentMetricId = 14;
 const uint32_t kEventInComponentIndex = 2;
 const std::string kEventInComponentName = "some_component";
 
+const uint32_t kErrorOccurredMetricId = 1;
+const uint32_t kErrorOccurredIndicesToUse[] = {0, 1, 2, 9};
+const uint32_t kErrorOccurredInvalidIndex = 18;
+
+const uint32_t kErrorOccurredIndex = 2;
+
 }  // namespace testapp
 }  // namespace cobalt
 

@@ -9,11 +9,12 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 
-#include "garnet/bin/cobalt/app/legacy_logger_impl.h"
 #include "garnet/bin/cobalt/app/timer_manager.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "third_party/cobalt/encoder/observation_store.h"
 #include "third_party/cobalt/encoder/shipping_manager.h"
+#include "third_party/cobalt/logger/encoder.h"
+#include "third_party/cobalt/logger/observation_writer.h"
 #include "third_party/cobalt/util/encrypted_message_util.h"
 
 namespace cobalt {
@@ -25,7 +26,9 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
                     util::EncryptedMessageMaker* encrypt_to_analyzer,
                     encoder::ShippingManager* shipping_manager,
                     const encoder::SystemData* system_data,
-                    TimerManager* timer_manager);
+                    TimerManager* timer_manager,
+                    logger::Encoder* logger_encoder,
+                    logger::ObservationWriter* observation_writer);
 
  private:
   void CreateLogger(fuchsia::cobalt::ProjectProfile profile,
@@ -49,6 +52,8 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   encoder::ShippingManager* shipping_manager_;        // not owned
   const encoder::SystemData* system_data_;            // not owned
   TimerManager* timer_manager_;                       // not owned
+  logger::Encoder* logger_encoder_;                   // not owned
+  logger::ObservationWriter* observation_writer_;     // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LoggerFactoryImpl);
 };

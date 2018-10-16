@@ -15,10 +15,13 @@ using std::string;
 
 const uint32_t kMaxTimerTimeout = 300;
 
-void TimerVal::AddStart(uint32_t metric_id, uint32_t encoding_id,
+void TimerVal::AddStart(uint32_t metric_id, uint32_t event_type_index,
+                        const std::string& component, uint32_t encoding_id,
                         int64_t timestamp) {
   this->metric_id = metric_id;
   this->encoding_id = encoding_id;
+  this->event_type_index = event_type_index;
+  this->component = component;
   this->start_timestamp = timestamp;
 }
 
@@ -61,9 +64,9 @@ bool TimerManager::isValidTimerArguments(fidl::StringPtr timer_id,
 }
 
 Status TimerManager::GetTimerValWithStart(
-    uint32_t metric_id, uint32_t encoding_id, const std::string& timer_id,
-    int64_t timestamp, uint32_t timeout_s,
-    std::unique_ptr<TimerVal>* timer_val_ptr) {
+    uint32_t metric_id, uint32_t event_type_index, const std::string& component,
+    uint32_t encoding_id, const std::string& timer_id, int64_t timestamp,
+    uint32_t timeout_s, std::unique_ptr<TimerVal>* timer_val_ptr) {
   if (!timer_val_ptr ||
       !isValidTimerArguments(timer_id, timestamp, timeout_s)) {
     return Status::INVALID_ARGUMENTS;
@@ -83,7 +86,8 @@ Status TimerManager::GetTimerValWithStart(
   if (timer_val_iter == timer_values_.end()) {
     auto& timer = timer_values_[timer_id];
     timer.reset(new TimerVal());
-    timer->AddStart(metric_id, encoding_id, timestamp);
+    timer->AddStart(metric_id, event_type_index, component, encoding_id,
+                    timestamp);
     ScheduleExpiryTask(timer_id, timeout_s, &timer);
     return Status::OK;
   }
@@ -95,7 +99,8 @@ Status TimerManager::GetTimerValWithStart(
   }
 
   // Return TimerVal with start_timestamp and end_timestamp.
-  timer_val_iter->second->AddStart(metric_id, encoding_id, timestamp);
+  timer_val_iter->second->AddStart(metric_id, event_type_index, component,
+                                   encoding_id, timestamp);
   MoveTimerToTimerVal(&timer_val_iter, timer_val_ptr);
   return Status::OK;
 }

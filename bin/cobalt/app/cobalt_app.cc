@@ -76,13 +76,17 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
                                                    kDeadlinePerSendAttempt),
           &send_retryer_),
       timer_manager_(dispatcher),
+      logger_encoder_(getClientSecret(), &system_data_),
+      observation_writer_(&observation_store_, &shipping_manager_,
+                          &encrypt_to_analyzer_),
       controller_impl_(
           new CobaltControllerImpl(dispatcher, &shipping_manager_)) {
   shipping_manager_.Start();
 
   logger_factory_impl_.reset(new LoggerFactoryImpl(
       getClientSecret(), &observation_store_, &encrypt_to_analyzer_,
-      &shipping_manager_, &system_data_, &timer_manager_));
+      &shipping_manager_, &system_data_, &timer_manager_, &logger_encoder_,
+      &observation_writer_));
 
   context_->outgoing().AddPublicService(
       logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));
