@@ -156,7 +156,7 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,
         //     let mut string = String::new();
         //     match *self {
         //         WlInterface::Message { ref arg } =>
-        //             format!("wl_interface@{}::message(arg: {})", this, arg),
+        //             format!("wl_interface@{}::message(arg: {:?})", this, arg),
         //         ...
         //     }
         // }
@@ -181,7 +181,7 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,
             //      format!("some_interface@3::message1(arg1: {}, arg2: {})", arg1, arg2)
             write!(
                 self.w,
-                "                format!(\"{}@{{}}::{}(",
+                "                format!(\"{}@{{:?}}::{}(",
                 interface.name, message.name
             )?;
             let mut message_args = vec![];
@@ -196,7 +196,7 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,
                         message_args.push(format!("{}: <handle>", arg.name));
                     }
                     _ => {
-                        message_args.push(format!("{}: {{}}", arg.name));
+                        message_args.push(format!("{}: {{:?}}", arg.name));
                         format_args.push(arg.name.as_str().into());
                     }
                 }
@@ -440,25 +440,6 @@ impl FromArgs for Request {{
         writeln!(self.w, "        *self as u32")?;
         writeln!(self.w, "    }}")?;
         writeln!(self.w, "}}")?;
-        writeln!(self.w, "")?;
-        writeln!(self.w, "impl ::std::fmt::Display for {} {{", e.rust_name())?;
-        writeln!(
-            self.w,
-            "    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {{"
-        )?;
-        writeln!(self.w, "        match self {{")?;
-        for entry in e.entries.iter() {
-            writeln!(
-                self.w,
-                "            {}::{} => write!(f, \"{}\"),",
-                e.rust_name(),
-                entry.rust_name(),
-                entry.name
-            )?;
-        }
-        writeln!(self.w, "        }}")?;
-        writeln!(self.w, "    }}")?;
-        writeln!(self.w, "}}")?;
         Ok(())
     }
 
@@ -479,17 +460,6 @@ impl FromArgs for Request {{
                 entry.value
             )?;
         }
-        writeln!(self.w, "    }}")?;
-        writeln!(self.w, "}}")?;
-        writeln!(self.w, "")?;
-        writeln!(self.w, "impl ::std::fmt::Display for {} {{", e.rust_name())?;
-        writeln!(
-            self.w,
-            "    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {{"
-        )?;
-        // TODO(tjdetwiler): this would be much nicer if printed as 'FLAG1 | FLAG2'
-        // instead of the raw numeric value.
-        writeln!(self.w, "        write!(f, \"{{}}\", *self)")?;
         writeln!(self.w, "    }}")?;
         writeln!(self.w, "}}")?;
         Ok(())
