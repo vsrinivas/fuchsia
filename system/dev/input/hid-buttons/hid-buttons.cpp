@@ -65,8 +65,10 @@ int HidButtonsDevice::Thread() {
                 }
                 input_rpt.padding = 0;
                 fbl::AutoLock lock(&proxy_lock_);
-                proxy_.IoQueue(&input_rpt, sizeof(buttons_input_rpt_t));
-                // If report could not be filled, we do not ioqueue.
+                if (proxy_.is_valid()) {
+                    proxy_.IoQueue(&input_rpt, sizeof(buttons_input_rpt_t));
+                    // If report could not be filled, we do not ioqueue.
+                }
             }
             break;
         case PORT_TYPE_INTERRUPT_VOLUME_UP_DOWN:

@@ -146,7 +146,7 @@ int Tcs3400Device::Thread() {
             }
             {
                 fbl::AutoLock lock(&proxy_input_lock_);
-                if (FillInputRpt() == ZX_OK) {
+                if (FillInputRpt() == ZX_OK && proxy_.is_valid()) {
                     if (input_rpt_.illuminance > threshold_high) {
                         input_rpt_.event =
                             HID_USAGE_SENSOR_EVENT_HIGH_THRESHOLD_CROSS_UPWARD_VAL;
