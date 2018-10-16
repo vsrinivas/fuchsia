@@ -127,6 +127,67 @@ bool DigestEquality(void) {
     END_TEST;
 }
 
+bool DigestMove(void) {
+    BEGIN_TEST;
+    const Digest uninitialized_digest;
+    Digest digest1;
+
+    {
+        // Verify that digest1 is not valid, and that it's current digest value
+        // is all zeros.  Verify that when move digest1 into digest2, that
+        // both retain this property (not valid, digest full of zeros)
+        ASSERT_TRUE(digest1 == uninitialized_digest);
+        ASSERT_FALSE(digest1.is_valid());
+
+        Digest digest2(fbl::move(digest1));
+        ASSERT_TRUE(digest1 == uninitialized_digest);
+        ASSERT_FALSE(digest1.is_valid());
+        ASSERT_TRUE(digest2 == uninitialized_digest);
+        ASSERT_FALSE(digest2.is_valid());
+    }
+
+    // Start a hash operation in digest1, verify that this does not update the
+    // initial hash value.
+    zx_status_t rc = digest1.Init();
+    ASSERT_EQ(rc, ZX_OK, zx_status_get_string(rc));
+    ASSERT_TRUE(digest1 == uninitialized_digest);
+    ASSERT_TRUE(digest1.is_valid());
+
+    // Hash some nothing into the hash.  Again veryify the digest is still
+    // valid, but that the internal result is still full of nothing.
+    digest1.Hash(nullptr, 0);
+    ASSERT_TRUE(digest1 == uninitialized_digest);
+    ASSERT_TRUE(digest1.is_valid());
+
+    // Move the hash into digest2.  Verify that the context goes with the move
+    // operation.
+    Digest digest2(fbl::move(digest1));
+    ASSERT_TRUE(digest1 == uninitialized_digest);
+    ASSERT_FALSE(digest1.is_valid());
+    ASSERT_TRUE(digest1 == uninitialized_digest);
+    ASSERT_TRUE(digest2.is_valid());
+
+    // Finish the hash operation started in digest1 which was moved into
+    // digest2.  Verify that digest2 is no longer valid, but that the result is
+    // what we had expected.
+    Digest zero_digest;
+    rc = zero_digest.Parse(kZeroDigest, strlen(kZeroDigest));
+    ASSERT_EQ(rc, ZX_OK, zx_status_get_string(rc));
+    digest2.Final();
+    ASSERT_FALSE(digest2.is_valid());
+    ASSERT_TRUE(digest2 == zero_digest);
+
+    // Move the result of the hash into a new digest3.  Verify that neither is
+    // valid, but that the result was properly moved.
+    Digest digest3(fbl::move(digest2));
+    ASSERT_FALSE(digest2.is_valid());
+    ASSERT_FALSE(digest3.is_valid());
+    ASSERT_TRUE(digest2 == uninitialized_digest);
+    ASSERT_TRUE(digest3 == zero_digest);
+
+    END_TEST;
+}
+
 } // namespace
 BEGIN_TEST_CASE(DigestTests)
 RUN_TEST(DigestStrings)

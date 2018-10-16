@@ -90,6 +90,16 @@ public:
     bool operator==(const uint8_t* rhs) const;
     bool operator!=(const uint8_t* rhs) const;
 
+    // Check to see if this digest is currently valid.  A digest is defined as
+    // valid when it has a valid crypto context; so any time after a successful
+    // call to Init, but before the call to Final.  The following operations
+    // require a valid digest in order to execute.
+    //
+    // ++ Update
+    // ++ Final
+    //
+    bool is_valid() const { return ctx_ != nullptr; }
+
 private:
     // Opaque crypto implementation context.
     struct Context;
@@ -101,7 +111,7 @@ private:
     uint8_t bytes_[kLength];
     // The number of outstanding calls to |AcquireBytes| without matching calls
     // to |ReleaseBytes|.
-    mutable size_t ref_count_;
+    mutable size_t ref_count_ = 0;
 };
 
 } // namespace digest
