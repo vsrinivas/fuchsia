@@ -23,7 +23,7 @@
 //
 // See also
 // https://en.wikipedia.org/wiki/WAVL_tree
-// http://www.cs.princeton.edu/~sssix/papers/rb-trees-talg.pdf
+// http://sidsen.azurewebsites.net/papers/rb-trees-talg.pdf
 //
 // WAVLTree<>s, like HashTables, are associative containers and support all of
 // the same key-centric operations (such as find() and insert_or_find()) that
