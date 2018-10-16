@@ -2,18 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ZXS_PROTOCOL_H_
+#define LIB_ZXS_PROTOCOL_H_
 
-#include <zircon/compiler.h>
-#include <zircon/types.h>
-#include <zircon/device/ioctl.h>
-
-#include <lib/fdio/io.h>
-
-#include <stdint.h>
-
-#include <sys/socket.h>
 #include <netdb.h>
+#include <stdint.h>
+#include <sys/socket.h>
+#include <zircon/compiler.h>
+#include <zircon/device/ioctl.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -68,3 +65,5 @@ typedef struct fdio_socket_msg {
 #define FDIO_SOCKET_MSG_HEADER_SIZE offsetof(fdio_socket_msg_t, data)
 
 __END_CDECLS
+
+#endif // LIB_ZXS_PROTOCOL_H_

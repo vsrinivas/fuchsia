@@ -40,7 +40,7 @@
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/vfs.h>
-#include <lib/fdio/socket.h>
+#include <lib/zxs/protocol.h>
 
 #include "private.h"
 #include "unistd.h"

@@ -21,8 +21,8 @@
 #include <lib/fdio/debug.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/remoteio.h>
-#include <lib/fdio/socket.h>
 #include <lib/fdio/util.h>
+#include <lib/zxs/protocol.h>
 
 #include "private.h"
 #include "unistd.h"

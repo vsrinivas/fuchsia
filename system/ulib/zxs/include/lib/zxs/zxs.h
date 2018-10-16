@@ -62,6 +62,8 @@ typedef struct zxs_option {
 // Given a channel |socket_provider| that implements the
 // |fuchsia.net.LegacySocketProvider| interface, create a |zxs_socket_t| with
 // the given characteristics.
+//
+// This function does not take ownership of |socket_provider|.
 zx_status_t zxs_socket(zx_handle_t socket_provider,
                        fuchsia_net_SocketDomain domain,
                        fuchsia_net_SocketType type,

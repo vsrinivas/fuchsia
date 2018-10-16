@@ -47,6 +47,7 @@ MODULE_FIDL_LIBS := \
 MODULE_STATIC_LIBS := \
     system/ulib/fidl \
     system/ulib/zxio \
+    system/ulib/zxs \
     system/ulib/zx
 
 MODULE_LIBS := system/ulib/zircon \
