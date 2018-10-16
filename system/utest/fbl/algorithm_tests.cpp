@@ -425,68 +425,6 @@ bool accumulate_op_test() {
 
     END_TEST;
 }
-
-#define SWAP_SUBTEST(__type, __val1, __val2)                    \
-{                                                               \
-    constexpr __type kVal1 = __val1;                            \
-    constexpr __type kVal2 = __val2;                            \
-    __type A = kVal1;                                           \
-    __type B = kVal2;                                           \
-    fbl::swap(A, B);                                            \
-    EXPECT_EQ(A, kVal2, "Swap mismatch for type: " ##__type);   \
-    EXPECT_EQ(B, kVal1, "Swap mismatch for type: " ##__type);   \
-}
-
-template <typename T>
-bool swap_test(const T initial_a, const T initial_b) {
-    BEGIN_HELPER;
-
-    // Starting A and B need to be different in order for us to know that swap
-    // worked.
-    EXPECT_NE(::memcmp(&initial_a, &initial_b, sizeof(T)), 0);
-
-    T a = initial_a;
-    T b = initial_b;
-    fbl::swap(a, b);
-
-    EXPECT_EQ(::memcmp(&a, &initial_b, sizeof(T)), 0);
-    EXPECT_EQ(::memcmp(&b, &initial_a, sizeof(T)), 0);
-
-    END_HELPER;
-}
-
-bool swap_test() {
-    BEGIN_TEST;
-
-    struct SimpleSmallStruct { uint8_t a, b; };
-    struct SimpleBigStruct   { uint32_t a, b; };
-    struct SimpleHugeStruct  { uint64_t a, b; };
-
-    EXPECT_TRUE(swap_test<char>('a', 'b'));
-    EXPECT_TRUE(swap_test<int8_t>(-5, 10));
-    EXPECT_TRUE(swap_test<uint8_t>(5, 10));
-    EXPECT_TRUE(swap_test<int16_t>(-12345, 12345));
-    EXPECT_TRUE(swap_test<uint16_t>(12345, 54321));
-    EXPECT_TRUE(swap_test<int32_t>(-1234567890, 123456789));
-    EXPECT_TRUE(swap_test<uint32_t>(1234567890, 987654321));
-    EXPECT_TRUE(swap_test<int64_t>(-12345678901234567, 12345678901234567));
-    EXPECT_TRUE(swap_test<uint64_t>(12345678901234567, 98765432109876543));
-    EXPECT_TRUE(swap_test<float>(-0.1234567f, 0.7654321f));
-    EXPECT_TRUE(swap_test<double>(-0.12345678901234567890, 0.98765432109876543210));
-    EXPECT_TRUE(swap_test<SimpleSmallStruct>({ 5, 4 }, { 2, 9 }));
-    EXPECT_TRUE(swap_test<SimpleBigStruct>({ 5, 4 }, { 2, 9 }));
-#if TEST_WILL_NOT_COMPILE || 0
-    EXPECT_TRUE(swap_test<SimpleHugeStruct>({ 5, 4 }, { 2, 9 }));
-#endif
-
-    SimpleBigStruct a = {};
-    SimpleBigStruct b = {};
-    EXPECT_TRUE(swap_test<void*>(&a, &b));
-    EXPECT_TRUE(swap_test<SimpleBigStruct*>(&a, &b));
-
-    END_TEST;
-}
-
 }  // namespace
 
 BEGIN_TEST_CASE(algorithm_tests)
@@ -518,5 +456,4 @@ RUN_NAMED_TEST("lcm_test<uint64_t>", lcm_test<uint64_t>)
 RUN_NAMED_TEST("lcm_test<size_t>",   lcm_test<size_t>)
 RUN_NAMED_TEST("accumulate test", accumulate_test)
 RUN_NAMED_TEST("accumulate_op test", accumulate_op_test)
-RUN_NAMED_TEST("swap test", swap_test)
 END_TEST_CASE(algorithm_tests);
