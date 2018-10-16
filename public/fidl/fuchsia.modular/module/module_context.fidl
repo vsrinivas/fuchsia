@@ -53,6 +53,7 @@ interface ModuleContext {
   /// specifies a custom layout for them (aka container).
   ///
   /// There are multiple layouts specified, for different screen sizes etc.
+  /// DEPRECATED
   6: StartContainerInShell(string container_name,
                            SurfaceRelation parent_relation,
                            vector<ContainerLayout> layout,

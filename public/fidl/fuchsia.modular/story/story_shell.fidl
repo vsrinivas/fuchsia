@@ -48,6 +48,7 @@ interface StoryShell {
   // Adds a container, with corresponding container layouts to the story.
   // Optionally provide a parent_id to connect to, if omitted adds the
   // Container node as the root of a new tree in the Story
+  // DEPRECATED
   5: AddContainer(string containerName, string? parentId,
                   SurfaceRelation relation, // relation of container to parent
                   vector<ContainerLayout> layout,

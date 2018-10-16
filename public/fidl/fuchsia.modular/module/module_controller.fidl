@@ -24,5 +24,7 @@ interface ModuleController {
   4: Stop() -> ();
 
   /// Called with the current state when it changes.
+  /// DEPRECATED: Do not use this. ModuleState is a framework-internal concept
+  /// and should not be exposed outside.
   5: -> OnStateChange(ModuleState new_state);
 };

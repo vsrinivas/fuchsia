@@ -17,7 +17,6 @@ library fuchsia.modular;
 ///                           StoryController.AddModule()
 ///   RUNNING  -> STOPPED     ModuleController.Stop() or StoryController.Stop()
 ///   RUNNING  -> ERROR       application exits
-///
 enum ModuleState {
   /// Module instance was created.
   RUNNING = 2;

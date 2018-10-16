@@ -92,7 +92,7 @@ interface StoryController {
   // (metadata about, and requesting changes to runtime state).
   9: GetModuleController(vector<string> module_path, request<ModuleController> request);
 
-  // Deprecated: MI4-1084
+  // DEPRECATED: MI4-1084
   10: GetActiveLinks(StoryLinksWatcher? watcher) -> (vector<LinkPath> link_data);
 
   // Gets a connection to a link in the story with the specified |link_path|. If
