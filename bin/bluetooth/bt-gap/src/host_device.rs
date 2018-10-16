@@ -14,14 +14,11 @@ use fidl_fuchsia_bluetooth_control::{InputCapabilityType, OutputCapabilityType};
 use fidl_fuchsia_bluetooth_gatt::ClientProxy;
 use fidl_fuchsia_bluetooth_host::{BondingData, HostEvent, HostProxy};
 use fidl_fuchsia_bluetooth_le::{CentralMarker, CentralProxy};
-use fuchsia_async::{self as fasync,
-                    temp::Either::{Left, Right}};
-use fuchsia_bluetooth::{bt_fidl_status, make_clones};
+use fuchsia_async as fasync;
+use fuchsia_bluetooth::bt_fidl_status;
 use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
-use futures::TryFutureExt;
-use futures::TryStreamExt;
-use futures::{future, Future};
+use futures::{Future, StreamExt};
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -66,26 +63,22 @@ impl HostDevice {
         self.gatt.insert(id, (central, client));
     }
 
-    pub fn rm_gatt(&mut self, id: String) -> impl Future<Output = Result<Status, fidl::Error>> {
-        if let Some((central, _)) = self.gatt.remove(&id) {
-            Left(
-                central
-                    .disconnect_peripheral(id.as_str())
-                    .and_then(|res| future::ready(Ok(res))),
-            )
-        } else {
-            Right(future::ready(Ok(bt_fidl_status!(
-                BluetoothNotAvailable,
-                "Unknown peripheral"
-            ))))
+    pub fn rm_gatt(&mut self, id: String) -> impl Future<Output = fidl::Result<Status>> {
+        let gatt_entry = self.gatt.remove(&id);
+        async move {
+            if let Some((central, _)) = gatt_entry {
+                await!(central.disconnect_peripheral(id.as_str()))
+            } else {
+                Ok(bt_fidl_status!(BluetoothNotAvailable, "Unknown peripheral"))
+            }
         }
     }
 
-    pub fn set_name(&self, mut name: String) -> impl Future<Output = Result<Status, fidl::Error>> {
+    pub fn set_name(&self, mut name: String) -> impl Future<Output = fidl::Result<Status>> {
         self.host.set_local_name(&mut name)
     }
 
-    pub fn start_discovery(&mut self) -> impl Future<Output = Result<Status, fidl::Error>> {
+    pub fn start_discovery(&mut self) -> impl Future<Output = fidl::Result<Status>> {
         self.host.start_discovery()
     }
 
@@ -103,65 +96,63 @@ impl HostDevice {
         self.host.close()
     }
 
-    pub fn restore_bonds(
-        &self, mut bonds: Vec<BondingData>,
-    ) -> impl Future<Output = Result<Status, fidl::Error>> {
+    pub fn restore_bonds(&self, mut bonds: Vec<BondingData>) -> impl Future<Output = fidl::Result<Status>> {
         self.host.add_bonded_devices(&mut bonds.iter_mut())
     }
 
-    pub fn set_connectable(&self, value: bool) -> impl Future<Output = Result<Status, fidl::Error>> {
+    pub fn set_connectable(&self, value: bool) -> impl Future<Output = fidl::Result<Status>> {
         self.host.set_connectable(value)
     }
 
-    pub fn stop_discovery(&self) -> impl Future<Output = Result<Status, fidl::Error>> {
-        self.host.stop_discovery()
+    pub async fn stop_discovery(&self) -> fidl::Result<Status> {
+        await!(self.host.stop_discovery())
     }
 
-    pub fn set_discoverable(
-        &self, discoverable: bool,
-    ) -> impl Future<Output = Result<Status, fidl::Error>> {
+    pub fn set_discoverable(&self, discoverable: bool) -> impl Future<Output = fidl::Result<Status>> {
         self.host.set_discoverable(discoverable)
     }
 
-    pub fn enable_background_scan(&self, enable: bool) -> Result<(), fidl::Error> {
+    pub fn enable_background_scan(&self, enable: bool) -> fidl::Result<()> {
         self.host.enable_background_scan(enable)
     }
 }
 
-pub fn run(
-    hd: HostDispatcher, host: Arc<RwLock<HostDevice>>,
-) -> impl Future<Output = Result<(), fidl::Error>> {
-    make_clones!(host => host_stream, host);
-    let stream = host_stream.read().host.take_event_stream();
-    stream.try_for_each(move |evt| {
-        match evt {
+pub async fn run(hd: HostDispatcher, host: Arc<RwLock<HostDevice>>) -> fidl::Result<()> {
+    let mut stream = host.read().host.take_event_stream();
+
+    while let Some(event) = await!(stream.next()) {
+        let host_ = host.clone();
+        let dispatcher = hd.clone();
+        match event? {
             HostEvent::OnAdapterStateChanged { ref state } => {
-                host.write().info.state = Some(Box::new(clone_host_state(&state)));
+                host_.write().info.state = Some(Box::new(clone_host_state(&state)));
             }
             // TODO(NET-968): Add integration test for this.
             HostEvent::OnDeviceUpdated { mut device } => {
                 // TODO(NET-1297): generic method for this pattern
-                for listener in hd.event_listeners().iter() {
+                for listener in dispatcher.event_listeners().iter() {
                     let _res = listener
                         .send_on_device_updated(&mut device)
-                        .map_err(|e| fx_log_err!("Failed to send device updated event: {:?}", e));
+                        .map_err(|e|
+                                 fx_log_err!("Failed to send device updated event: {:?}", e));
                 }
             }
             // TODO(NET-1038): Add integration test for this.
             HostEvent::OnDeviceRemoved { identifier } => {
-                for listener in hd.event_listeners().iter() {
+                for listener in dispatcher.event_listeners().iter() {
                     let _res = listener
                         .send_on_device_removed(&identifier)
-                        .map_err(|e| fx_log_err!("Failed to send device removed event: {:?}", e));
+                        .map_err(|e|
+                                 fx_log_err!("Failed to send device removed event: {:?}", e));
                 }
             }
             HostEvent::OnNewBondingData { data } => {
                 fx_log_info!("Received bonding data");
-                if let Err(e) = hd.store_bond(data) {
+                if let Err(e) = dispatcher.store_bond(data) {
                     fx_log_err!("Failed to persist bonding data: {:#?}", e);
                 }
             }
         };
-        future::ready(Ok(()))
-    })
+    };
+    Ok(())
 }
