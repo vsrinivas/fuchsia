@@ -55,7 +55,8 @@ uint32_t GetExponentialBucket(double value, const HistogramOptions& options, dou
     uint32_t unshifted_bucket = 0;
     // Only use the formula if the difference is positive.
     if (diff >= options.scalar) {
-        unshifted_bucket = static_cast<uint32_t>(floor((log2(diff) - log2(options.scalar)) / log2(options.base)));
+        unshifted_bucket =
+            static_cast<uint32_t>(floor((log2(diff) - log2(options.scalar)) / log2(options.base)));
     }
     ZX_DEBUG_ASSERT(unshifted_bucket <= options.bucket_count + 1);
 
@@ -96,8 +97,8 @@ BaseHistogram::BaseHistogram(uint32_t num_buckets) {
 BaseHistogram::BaseHistogram(BaseHistogram&& other) = default;
 
 RemoteHistogram::RemoteHistogram(uint32_t num_buckets, uint32_t metric_id,
-                                 const fbl::Vector<Metadata>& metadata)
-    : BaseHistogram(num_buckets), buffer_(metadata), metric_id_(metric_id) {
+                                 RemoteHistogram::EventBuffer buffer)
+    : BaseHistogram(num_buckets), buffer_(fbl::move(buffer)), metric_id_(metric_id) {
     bucket_buffer_.reserve(num_buckets);
     for (uint32_t i = 0; i < num_buckets; ++i) {
         HistogramBucket bucket;

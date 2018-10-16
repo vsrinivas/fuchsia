@@ -34,11 +34,22 @@ constexpr uint32_t kBuckets = 40;
 // Default id for the histogram.
 constexpr uint64_t kMetricId = 1;
 
+// Component name.
+constexpr char kComponent[] = "SomeRamdomComponent";
+
 // Returns an immutable vector of metadata.
 fbl::Vector<Metadata>& GetMetadata() {
     static fbl::Vector<Metadata> metadata = {{/*event_type =*/1, /*event_type_index =*/2},
                                              {/*event_type =*/2, /*event_type_index =*/4}};
     return metadata;
+}
+
+RemoteHistogram::EventBuffer MakeEmptyBuffer() {
+    return RemoteHistogram::EventBuffer(fbl::Vector<Metadata>());
+}
+
+RemoteHistogram::EventBuffer MakeBufferWithComponent() {
+    return RemoteHistogram::EventBuffer(kComponent, GetMetadata());
 }
 
 // Returns true if both vectors contains the same metadata entries in the same order.
@@ -57,7 +68,7 @@ bool MetadataEq(const fbl::Vector<Metadata>& lhs, const fbl::Vector<Metadata>& r
 }
 
 RemoteHistogram MakeRemoteHistogram() {
-    return RemoteHistogram(kBuckets, kMetricId, GetMetadata());
+    return RemoteHistogram(kBuckets, kMetricId, MakeBufferWithComponent());
 }
 
 bool HistEventValuesEq(fidl::VectorView<HistogramBucket> actual,
@@ -200,6 +211,7 @@ bool TestFlush() {
     uint32_t flushed_metric_id;
     RemoteHistogram::FlushCompleteFn complete_fn;
     const fbl::Vector<Metadata>* flushed_metadata;
+    fbl::String flushed_component;
 
     // Increase the count of each bucket bucket_index times.
     for (uint32_t bucket_index = 0; bucket_index < kBuckets; ++bucket_index) {
@@ -209,18 +221,21 @@ bool TestFlush() {
     }
 
     ASSERT_TRUE(histogram.Flush(
-        [&flushed_event_data, &flushed_metadata, &flushed_metric_id, &complete_fn](
-            uint32_t metric_id, const EventBuffer<fidl::VectorView<HistogramBucket>>& buffer,
-            RemoteHistogram::FlushCompleteFn comp_fn) {
+        [&flushed_event_data, &flushed_metadata, &flushed_metric_id, &flushed_component,
+         &complete_fn](uint32_t metric_id,
+                       const EventBuffer<fidl::VectorView<HistogramBucket>>& buffer,
+                       RemoteHistogram::FlushCompleteFn comp_fn) {
             flushed_event_data = buffer.event_data();
             flushed_metadata = &buffer.metadata();
             flushed_metric_id = metric_id;
+            flushed_component = buffer.component().data();
             complete_fn = fbl::move(comp_fn);
         }));
 
     // Check that flushed data is actually what we expect:
     // The metadata is the same, and each bucket contains bucket_index count.
     ASSERT_EQ(flushed_metric_id, kMetricId);
+    ASSERT_STR_EQ(flushed_component.c_str(), kComponent);
     for (uint64_t metadata_index = 0; metadata_index < GetMetadata().size(); ++metadata_index) {
         EXPECT_TRUE(MetadataEq(*flushed_metadata, GetMetadata()));
     }
@@ -349,7 +364,7 @@ bool TestAdd() {
     // Buckets 2^i + offset.
     HistogramOptions options = HistogramOptions::Exponential(/*bucket_count=*/kBuckets, /*base=*/2,
                                                              /*scalar=*/1, /*offset=*/-10);
-    RemoteHistogram remote_histogram(kBuckets + 2, kMetricId, {});
+    RemoteHistogram remote_histogram(kBuckets + 2, kMetricId, MakeEmptyBuffer());
     ASSERT_TRUE(options.IsValid());
     Histogram histogram(&options, &remote_histogram);
 
@@ -372,7 +387,7 @@ bool TestAddMultiple() {
     // Buckets 2^i + offset.
     HistogramOptions options = HistogramOptions::Exponential(/*bucket_count=*/kBuckets, /*base=*/2,
                                                              /*scalar=*/1, /*offset=*/-10);
-    RemoteHistogram remote_histogram(kBuckets + 2, kMetricId, {});
+    RemoteHistogram remote_histogram(kBuckets + 2, kMetricId, MakeEmptyBuffer());
     BaseHistogram expected_hist(kBuckets + 2);
     ASSERT_TRUE(options.IsValid());
     Histogram histogram(&options, &remote_histogram);
@@ -424,7 +439,7 @@ bool TestAddAfterFlush() {
     // Buckets 2^i + offset.
     HistogramOptions options = HistogramOptions::Exponential(/*bucket_count=*/kBuckets, /*base=*/2,
                                                              /*scalar=*/1, /*offset=*/-10);
-    RemoteHistogram remote_histogram(kBuckets + 2, kMetricId, {});
+    RemoteHistogram remote_histogram(kBuckets + 2, kMetricId, MakeEmptyBuffer());
     BaseHistogram expected_hist(kBuckets + 2);
     ASSERT_TRUE(options.IsValid());
     Histogram histogram(&options, &remote_histogram);
@@ -499,7 +514,7 @@ bool TestAddMultiThread() {
     // Buckets 2^i + offset.
     HistogramOptions options = HistogramOptions::Linear(/*bucket_count=*/kBuckets,
                                                         /*scalar=*/2, /*offset=*/0);
-    RemoteHistogram remote_histogram(kBuckets + 2, kMetricId, {});
+    RemoteHistogram remote_histogram(kBuckets + 2, kMetricId, MakeEmptyBuffer());
     BaseHistogram expected_hist(kBuckets + 2);
     ASSERT_TRUE(options.IsValid());
     Histogram histogram(&options, &remote_histogram);
@@ -562,7 +577,7 @@ bool TestAddAndFlushMultiThread() {
     // Buckets 2^i + offset.
     HistogramOptions options = HistogramOptions::Linear(/*bucket_count=*/kBuckets,
                                                         /*scalar=*/2, /*offset=*/0);
-    RemoteHistogram remote_histogram(kBuckets + 2, kMetricId, {});
+    RemoteHistogram remote_histogram(kBuckets + 2, kMetricId, MakeEmptyBuffer());
     BaseHistogram expected_hist(kBuckets + 2);
     BaseHistogram flushed_hist(kBuckets + 2);
     ASSERT_TRUE(options.IsValid());

@@ -29,6 +29,24 @@ Metadata MakeMetadata(uint32_t event_type_index) {
     return metadata;
 }
 
+Counter AddCounterInternal(uint32_t metric_id, internal::RemoteCounter::EventBuffer buffer,
+                           fbl::Vector<RemoteCounter>* remote_counters) {
+    remote_counters->push_back(RemoteCounter(metric_id, fbl::move(buffer)));
+    size_t index = remote_counters->size() - 1;
+    return Counter(&((*remote_counters)[index]));
+}
+
+Histogram AddHistogramInternal(uint32_t metric_id, const HistogramOptions& options,
+                               internal::RemoteHistogram::EventBuffer buffer,
+                               fbl::Vector<RemoteHistogram>* remote_histograms,
+                               fbl::Vector<HistogramOptions>* histogram_options) {
+    remote_histograms->push_back(
+        RemoteHistogram(options.bucket_count + 2, metric_id, fbl::move(buffer)));
+    histogram_options->push_back(options);
+    size_t index = remote_histograms->size() - 1;
+    return Histogram(&(*histogram_options)[index], &(*remote_histograms)[index]);
+}
+
 } // namespace
 
 Collector::Collector(const CollectorOptions& options, fbl::unique_ptr<internal::Logger> logger)
@@ -53,21 +71,43 @@ Collector::~Collector() {
 
 Histogram Collector::AddHistogram(uint32_t metric_id, uint32_t event_type_index,
                                   const HistogramOptions& options) {
+    ZX_DEBUG_ASSERT_MSG(event_type_index > 0,
+                        "event_type_index 0 value is reserved.");
     ZX_DEBUG_ASSERT_MSG(remote_histograms_.size() < remote_histograms_.capacity(),
                         "Exceeded pre-allocated histogram capacity.");
-    remote_histograms_.push_back(
-        RemoteHistogram(options.bucket_count + 2, metric_id, {MakeMetadata(event_type_index)}));
-    histogram_options_.push_back(options);
-    size_t index = remote_histograms_.size() - 1;
-    return Histogram(&histogram_options_[index], &remote_histograms_[index]);
+    RemoteHistogram::EventBuffer buffer({MakeMetadata(event_type_index)});
+    return AddHistogramInternal(metric_id, options, fbl::move(buffer), &remote_histograms_,
+                                &histogram_options_);
+}
+
+Histogram Collector::AddHistogram(uint32_t metric_id, uint32_t event_type_index,
+                                  const fbl::String& component, const HistogramOptions& options) {
+    ZX_DEBUG_ASSERT_MSG(event_type_index > 0,
+                        "event_type_index 0 value is reserved.");
+    ZX_DEBUG_ASSERT_MSG(remote_histograms_.size() < remote_histograms_.capacity(),
+                        "Exceeded pre-allocated histogram capacity.");
+    RemoteHistogram::EventBuffer buffer({MakeMetadata(event_type_index)});
+    return AddHistogramInternal(metric_id, options, fbl::move(buffer), &remote_histograms_,
+                                &histogram_options_);
 }
 
 Counter Collector::AddCounter(uint32_t metric_id, uint32_t event_type_index) {
+    ZX_DEBUG_ASSERT_MSG(event_type_index > 0,
+                        "event_type_index 0 value is reserved.");
     ZX_DEBUG_ASSERT_MSG(remote_counters_.size() < remote_counters_.capacity(),
                         "Exceeded pre-allocated counter capacity.");
-    remote_counters_.push_back(RemoteCounter(metric_id, {MakeMetadata(event_type_index)}));
-    size_t index = remote_counters_.size() - 1;
-    return Counter(&remote_counters_[index]);
+    RemoteCounter::EventBuffer buffer({MakeMetadata(event_type_index)});
+    return AddCounterInternal(metric_id, fbl::move(buffer), &remote_counters_);
+}
+
+Counter Collector::AddCounter(uint32_t metric_id, uint32_t event_type_index,
+                              const fbl::String& component) {
+    ZX_DEBUG_ASSERT_MSG(event_type_index > 0,
+                        "event_type_index 0 value is reserved.");
+    ZX_DEBUG_ASSERT_MSG(remote_counters_.size() < remote_counters_.capacity(),
+                        "Exceeded pre-allocated counter capacity.");
+    RemoteCounter::EventBuffer buffer(component, {MakeMetadata(event_type_index)});
+    return AddCounterInternal(metric_id, fbl::move(buffer), &remote_counters_);
 }
 
 void Collector::Flush() {

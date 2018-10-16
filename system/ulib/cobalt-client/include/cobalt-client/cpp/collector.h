@@ -64,14 +64,39 @@ public:
     Collector& operator=(Collector&&) = delete;
     ~Collector();
 
-    // Returns a histogram to log events for a given |metric_id|, |event_type_index|
+    // Returns a histogram to log events for a given |metric_id| and |event_type_index|
     // on a histogram described by |options|.
+    // Preconditions:
+    //     |metric_id| must be greater than 0.
+    //     |event_type_index| must be greater than 0.
     Histogram AddHistogram(uint32_t metric_id, uint32_t event_type_index,
                            const HistogramOptions& options);
 
+    // Returns a histogram to log events for a given |metric_id|, |event_type_index| and |component|
+    // on a histogram described by |options|.
+    // Preconditions:
+    //     |metric_id| must be greater than 0.
+    //     |event_type_index| must be greater than 0.
+    // Warning: |component| is not yet supported in the backend, so it will be ignored.
+    // TODO(gevalentino): remove the warning when Cobalt adds the required support.
+    Histogram AddHistogram(uint32_t metric_id, uint32_t event_type_index,
+                           const fbl::String& component, const HistogramOptions& options);
+
     // Returns a counter to log events for a given |metric_id| and |event_type_index|
     // as a raw counter.
+    // Preconditions:
+    //     |metric_id| must be greater than 0.
+    //     |event_type_index| must be greater than 0.
     Counter AddCounter(uint32_t metric_id, uint32_t event_type_index);
+
+    // Returns a counter to log events for a given |metric_id|, |event_type_index| and |component|
+    // as a raw counter.
+    // Preconditions:
+    //     |metric_id| must be greater than 0.
+    //     |event_type_index| must be greater than 0.
+    // Warning: |component| is not yet supported in the backend, so it will be ignored.
+    // TODO(gevalentino): remove the warning when Cobalt adds the required support.
+    Counter AddCounter(uint32_t metric_id, uint32_t event_type_index, const fbl::String& component);
 
     // Flushes the content of all flushable metrics into |sink_|. The |sink_| is
     // in charge of persisting the data.

@@ -12,8 +12,8 @@ namespace internal {
 
 BaseCounter::BaseCounter(BaseCounter&& other) : counter_(other.Exchange(0)) {}
 
-RemoteCounter::RemoteCounter(uint32_t metric_id, const fbl::Vector<Metadata>& metadata)
-    : BaseCounter(), buffer_(metadata), metric_id_(metric_id) {
+RemoteCounter::RemoteCounter(uint32_t metric_id, EventBuffer buffer)
+    : BaseCounter(), buffer_(fbl::move(buffer)), metric_id_(metric_id) {
     *buffer_.mutable_event_data() = 0;
 }
 

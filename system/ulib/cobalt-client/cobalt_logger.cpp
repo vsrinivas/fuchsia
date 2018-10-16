@@ -91,9 +91,10 @@ bool CobaltLogger::Log(uint32_t metric_id, const RemoteHistogram::EventBuffer& h
         counts[bucket_index] = histogram.event_data()[bucket_index].count;
     };
     fuchsia_cobalt_Status cobalt_status;
+    // TODO(gevalentino): Use EventBuffer::component and the respective event_type_index
+    // when cobalt allows it.
     zx_status_t result = fuchsia_cobalt_LoggerSimpleLogIntHistogram(
-        logger_.get(), metric_id, histogram.metadata()[0].event_type_index, nullptr, 0, indexes,
-        buckets, counts, buckets, &cobalt_status);
+        logger_.get(), metric_id, 0, nullptr, 0, indexes, buckets, counts, buckets, &cobalt_status);
     HandleChannelStatus(&logger_, result);
     return result == ZX_OK && cobalt_status == fuchsia_cobalt_Status_OK;
 }
@@ -104,9 +105,11 @@ bool CobaltLogger::Log(uint32_t metric_id, const RemoteCounter::EventBuffer& cou
     }
 
     fuchsia_cobalt_Status cobalt_status;
+    // TODO(gevalentino): Use EventBuffer::component and the respective event_type_index
+    // when cobalt allows it.
     zx_status_t result = fuchsia_cobalt_LoggerBaseLogEventCount(
-        logger_.get(), metric_id, counter.metadata()[0].event_type_index, nullptr, 0, 0,
-        static_cast<int64_t>(counter.event_data()), &cobalt_status);
+        logger_.get(), metric_id, 0, nullptr, 0, 0, static_cast<int64_t>(counter.event_data()),
+        &cobalt_status);
     HandleChannelStatus(&logger_, result);
     return result == ZX_OK && cobalt_status == fuchsia_cobalt_Status_OK;
 }

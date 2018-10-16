@@ -39,6 +39,9 @@ constexpr ReleaseStage kReleaseStage = ReleaseStage::kDebug;
 // Expected path.
 constexpr char kSvcPath[] = "/svc/cobalt_service";
 
+// Component name being logged.
+constexpr char kComponent[] = "ImportantComponent";
+
 fbl::Vector<Metadata> MakeMetadata() {
     Metadata metadata;
     metadata.event_type = 0;
@@ -60,7 +63,10 @@ public:
             // We enforce our test data to be bucket_i = i
             EXPECT_EQ(bucket_counts_data[bucket_indices_data[i]], bucket_indices_data[i]);
         }
-        EXPECT_EQ(event_type_index, MakeMetadata()[0].event_type_index);
+        // TODO(gevalentino): Uncomment when cobalt supports this.
+        // EXPECT_EQ(event_type_index, MakeMetadata()[0].event_type_index);
+        // EXPECT_EQ(component_size, strlen(kComponent));
+        // EXPECT_STR_EQ(component_data, kComponent);
         return fuchsia_cobalt_LoggerSimpleLogIntHistogram_reply(txn, response_status_);
     }
 
@@ -69,7 +75,10 @@ public:
                            int64_t count, fidl_txn_t* txn) {
         EXPECT_EQ(metric_id, kMetricId);
         EXPECT_EQ(count, kCounterValue);
-        EXPECT_EQ(event_type_index, MakeMetadata()[0].event_type_index);
+        // TODO(gevalentino): Uncomment when cobalt supports this.
+        // EXPECT_EQ(event_type_index, MakeMetadata()[0].event_type_index);
+        // EXPECT_EQ(component_size, strlen(kComponent));
+        // EXPECT_STR_EQ(component_data, kComponent);
         return fuchsia_cobalt_LoggerSimpleLogEventCount_reply(txn, response_status_);
     }
 
@@ -391,7 +400,7 @@ private:
 
         // Event buffer sent to the SimpleLogger service.
         typename MetricType::EventBuffer event_buffer =
-            typename MetricType::EventBuffer(MakeMetadata());
+            typename MetricType::EventBuffer(kComponent, MakeMetadata());
     };
 
     // Sets the data of the event buffer for the context.

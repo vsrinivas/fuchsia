@@ -17,8 +17,20 @@ namespace {
 // Number of threads to spawn on multi threaded test.
 constexpr size_t kThreads = 20;
 
+// Fixed component name.
+constexpr char kComponent[] = "SomeRandomComponent";
+
 // Return a buffer with two event_types each with their own event_type_index.
 EventBuffer<uint32_t> MakeBuffer() {
+    fbl::Vector<Metadata> metadata = {{.event_type = 1, .event_type_index = 2},
+                                      {.event_type = 2, .event_type_index = 4}};
+    EventBuffer<uint32_t> buffer(kComponent, metadata);
+    *buffer.mutable_event_data() = 0;
+    return buffer;
+}
+
+// Return a buffer with two event_types each with their own event_type_index.
+EventBuffer<uint32_t> MakeBufferWithoutComponent() {
     fbl::Vector<Metadata> metadata = {{.event_type = 1, .event_type_index = 2},
                                       {.event_type = 2, .event_type_index = 4}};
     EventBuffer<uint32_t> buffer(metadata);
@@ -37,6 +49,26 @@ bool TestMetadataPreserved() {
     ASSERT_EQ(buffer.metadata()[1].event_type, 2);
     ASSERT_EQ(buffer.metadata()[1].event_type_index, 4);
     ASSERT_EQ(buffer.event_data(), 0);
+    ASSERT_EQ(buffer.component().size(), strlen(kComponent));
+    ASSERT_STR_EQ(buffer.component().data(), kComponent);
+
+    END_TEST;
+}
+
+// Verify that the metadata is stored correctly.
+bool TestMetadataPreservedNoComponent() {
+    BEGIN_TEST;
+    EventBuffer<uint32_t> buffer = MakeBufferWithoutComponent();
+
+    ASSERT_EQ(buffer.metadata().size(), 2);
+    ASSERT_EQ(buffer.metadata()[0].event_type, 1);
+    ASSERT_EQ(buffer.metadata()[0].event_type_index, 2);
+    ASSERT_EQ(buffer.metadata()[1].event_type, 2);
+    ASSERT_EQ(buffer.metadata()[1].event_type_index, 4);
+    ASSERT_EQ(buffer.event_data(), 0);
+    ASSERT_EQ(buffer.component().size(), 0);
+    printf("%p\n", buffer.component().data());
+    ASSERT_TRUE(buffer.component().is_null());
 
     END_TEST;
 }
@@ -152,6 +184,7 @@ bool TestSingleFlushWithMultipleThreads() {
 
 BEGIN_TEST_CASE(EventBufferTest)
 RUN_TEST(TestMetadataPreserved)
+RUN_TEST(TestMetadataPreservedNoComponent)
 RUN_TEST(TestMetricUpdatePersisted)
 RUN_TEST(TestFlushDoNotOverlap)
 RUN_TEST(TestSingleFlushWithMultipleThreads)

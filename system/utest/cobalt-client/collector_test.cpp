@@ -388,7 +388,7 @@ bool FlushMultithreadTest() {
         MakeCollector(/*max_histograms=*/9, /*max_counters=*/9, &histograms, &counters, &logger);
 
     for (uint32_t metric_id = 0; metric_id < 3; ++metric_id) {
-        for (uint32_t event_type_index = 0; event_type_index < 3; ++event_type_index) {
+        for (uint32_t event_type_index = 1; event_type_index < 4; ++event_type_index) {
             observe_args.histograms.push_back(
                 collector.AddHistogram(2 * metric_id, event_type_index, options));
             observe_args.counters.push_back(
@@ -429,8 +429,8 @@ bool FlushMultithreadTest() {
     // 2 count.
     constexpr size_t target_count = kThreads * kOperations / 2;
     for (uint32_t metric_id = 0; metric_id < 3; ++metric_id) {
-        for (uint32_t event_type_index = 0; event_type_index < 3; ++event_type_index) {
-            size_t index = 3 * metric_id + event_type_index;
+        for (uint32_t event_type_index = 1; event_type_index < 4; ++event_type_index) {
+            size_t index = 3 * metric_id + event_type_index - 1;
             auto* tmp_hist = histograms.GetOrNull(2 * metric_id, 0, event_type_index);
             // Each bucket is increased |index| + |i| for each thread recording observations.
             for (uint32_t i = 0; i < 4; ++i) {

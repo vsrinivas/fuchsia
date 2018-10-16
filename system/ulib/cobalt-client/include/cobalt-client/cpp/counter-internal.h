@@ -71,7 +71,7 @@ public:
         fbl::Function<void(uint32_t metric_id, const EventBuffer&, FlushCompleteFn complete)>;
 
     RemoteCounter() = delete;
-    RemoteCounter(uint32_t metric_id, const fbl::Vector<Metadata>& metadata);
+    RemoteCounter(uint32_t metric_id, EventBuffer buffer);
     RemoteCounter(const RemoteCounter&) = delete;
     RemoteCounter(RemoteCounter&&);
     RemoteCounter& operator=(const RemoteCounter&) = delete;

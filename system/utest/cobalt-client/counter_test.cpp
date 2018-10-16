@@ -25,6 +25,10 @@ constexpr uint64_t kMetricId = 1;
 
 // Number of threads spawned for multi-threaded tests.
 constexpr uint64_t kThreads = 20;
+
+// Component name.
+constexpr char kComponent[] = "SomeRamdomComponent";
+
 } // namespace
 
 namespace internal {
@@ -36,8 +40,12 @@ fbl::Vector<Metadata>& GetMetadata() {
     return metadata;
 }
 
+RemoteCounter::EventBuffer MakeBuffer() {
+    return RemoteCounter::EventBuffer(kComponent, GetMetadata());
+}
+
 RemoteCounter MakeRemoteCounter() {
-    return RemoteCounter(kMetricId, GetMetadata());
+    return RemoteCounter(kMetricId, MakeBuffer());
 }
 
 // Verify that increments increases the underlying count by 1.
@@ -237,6 +245,7 @@ bool TestFlush() {
     counter.Increment(20);
     uint32_t actual_metric_id;
     const fbl::Vector<Metadata>* actual_metadata;
+    fbl::String actual_component;
     uint32_t actual_count;
 
     // Check that all data is present, we abuse some implementation details which guarantee
@@ -248,6 +257,7 @@ bool TestFlush() {
         actual_metric_id = metric_id;
         actual_metadata = &buffer.metadata();
         actual_count = buffer.event_data();
+        actual_component = buffer.component().data();
         mark_complete = fbl::move(complete_fn);
     }));
     // We capture the values and then verify outside to avoid having to pass flag around,
@@ -257,6 +267,7 @@ bool TestFlush() {
     // All metadata is present.
     ASSERT_TRUE(MetadataEq(*actual_metadata, metadata));
     ASSERT_EQ(actual_count, 20);
+    ASSERT_STR_EQ(actual_component.c_str(), kComponent);
 
     // We haven't 'completed' the flush, so another call should return false.
     ASSERT_FALSE(counter.Flush(RemoteCounter::FlushFn()));

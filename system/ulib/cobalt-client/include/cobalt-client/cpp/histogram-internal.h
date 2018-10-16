@@ -77,8 +77,7 @@ public:
         fbl::Function<void(uint32_t metric_id, const EventBuffer&, FlushCompleteFn complete)>;
 
     RemoteHistogram() = delete;
-    RemoteHistogram(uint32_t num_buckets, uint32_t metric_id,
-                    const fbl::Vector<Metadata>& metadata);
+    RemoteHistogram(uint32_t num_buckets, uint32_t metric_id, EventBuffer buffer);
     RemoteHistogram(const RemoteHistogram&) = delete;
     RemoteHistogram(RemoteHistogram&&);
     RemoteHistogram& operator=(const RemoteHistogram&) = delete;

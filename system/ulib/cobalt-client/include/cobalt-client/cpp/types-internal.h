@@ -8,8 +8,10 @@
 #include <unistd.h>
 
 #include <fbl/atomic.h>
+#include <fbl/string.h>
 #include <fbl/vector.h>
 #include <fuchsia/cobalt/c/fidl.h>
+#include <lib/fidl/cpp/string_view.h>
 
 namespace cobalt_client {
 namespace internal {
@@ -57,7 +59,8 @@ struct Metadata {
 template <typename BufferType> class EventBuffer {
 public:
     EventBuffer() = delete;
-    EventBuffer(const fbl::Vector<Metadata>& metadata);
+    explicit EventBuffer(const fbl::Vector<Metadata>& metadata);
+    EventBuffer(const fbl::String& component, const fbl::Vector<Metadata>& metadata);
     EventBuffer(const EventBuffer&) = delete;
     EventBuffer(EventBuffer&&);
     EventBuffer& operator=(const EventBuffer&) = delete;
@@ -67,6 +70,8 @@ public:
     const fbl::Vector<Metadata>& metadata() const { return metadata_; }
 
     const BufferType& event_data() const { return buffer_; }
+
+    const fidl::StringView component() const;
 
     // Returns a pointer to metric where the value should be written.
     // The metric should only be modified by a flushing thread, and only during the flushing
@@ -82,6 +87,9 @@ public:
     void CompleteFlush() { flushing_.exchange(false); };
 
 private:
+    // Unique string representing a component.
+    fbl::String component_;
+
     // Collection of metadata for the given metric.
     fbl::Vector<Metadata> metadata_;
 
@@ -89,6 +97,8 @@ private:
     BufferType buffer_;
 
     fbl::atomic<bool> flushing_;
+
+    bool has_component_;
 };
 
 } // namespace internal
