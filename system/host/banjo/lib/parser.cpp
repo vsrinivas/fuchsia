@@ -68,6 +68,7 @@ Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter)
         {"port", types::HandleSubtype::kPort},
         {"interrupt", types::HandleSubtype::kInterrupt},
         {"log", types::HandleSubtype::kLog},
+        {"debuglog", types::HandleSubtype::kLog},
         {"socket", types::HandleSubtype::kSocket},
         {"resource", types::HandleSubtype::kResource},
         {"eventpair", types::HandleSubtype::kEventpair},
