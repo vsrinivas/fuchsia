@@ -130,8 +130,8 @@ void ConvertYv12ToBgra(uint8_t* out_ptr, uint8_t* in_ptr, uint32_t width,
     uint8_t* y2_sample_iter = y_base + (y + 1) * in_stride;
     uint8_t* u_sample_iter = u_base + y / 2 * in_stride / 2;
     uint8_t* v_sample_iter = v_base + y / 2 * in_stride / 2;
-    uint8_t* bgra1_sample_iter = out_ptr + y * width * 4;
-    uint8_t* bgra2_sample_iter = out_ptr + (y + 1) * width * 4;
+    uint8_t* bgra1_sample_iter = out_ptr + y * width * sizeof(uint32_t);
+    uint8_t* bgra2_sample_iter = out_ptr + (y + 1) * width * sizeof(uint32_t);
 
     for (uint32_t x = 0; x < width; x += 2) {
       uint8_t u = *u_sample_iter;
