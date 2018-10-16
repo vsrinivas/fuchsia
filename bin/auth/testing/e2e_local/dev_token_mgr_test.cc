@@ -148,7 +148,9 @@ class DevTokenManagerAppTest
     Status status;
     fuchsia::auth::UserProfileInfoPtr user_info;
 
-    token_mgr_->Authorize(app_config, std::move(scopes),
+    token_mgr_->Authorize(app_config,
+                          nullptr, /* optional AuthenticationUiContext */
+                          std::move(scopes),
                           "", /* new user, no existing user_profile_id */
                           "", /* empty auth_code */
                           &status, &user_info);
@@ -167,7 +169,12 @@ TEST_P(DevTokenManagerAppTest, Authorize) {
   Status status;
   fuchsia::auth::UserProfileInfoPtr user_info;
 
-  token_mgr_->Authorize(dev_app_config_, std::move(scopes), "", "", &status,
+  token_mgr_->Authorize(dev_app_config_,
+                        nullptr, /* optional AuthenticationUiContext */
+                        std::move(scopes),
+                        "", /* new user, no existing user_profile_id */
+                        "", /* empty auth_code */
+                        &status,
                         &user_info);
   ASSERT_EQ(Status::OK, status);
   ASSERT_FALSE(!user_info);
@@ -365,8 +372,8 @@ TEST_P(DevTokenManagerAppTest, Reauthorize) {
   Status status;
   fuchsia::auth::UserProfileInfoPtr user_info;
 
-  token_mgr_->Authorize(dev_app_config_, std::move(scopes), "", "", &status,
-                        &user_info);
+  token_mgr_->Authorize(dev_app_config_, nullptr, std::move(scopes), "", "",
+                        &status, &user_info);
   ASSERT_EQ(Status::OK, status);
   fidl::StringPtr user_profile_id = user_info->id;
 
@@ -388,8 +395,8 @@ TEST_P(DevTokenManagerAppTest, Reauthorize) {
 
   // Re-authorize and obtain a fresh credential for the same |user_profile_id|
   scopes = fidl::VectorPtr<fidl::StringPtr>::New(0);
-  token_mgr_->Authorize(dev_app_config_, std::move(scopes), user_profile_id, "",
-                        &status, &user_info);
+  token_mgr_->Authorize(dev_app_config_, nullptr, std::move(scopes),
+                        user_profile_id, "", &status, &user_info);
   ASSERT_EQ(Status::OK, status);
   ASSERT_EQ(user_info->id, user_profile_id);
 

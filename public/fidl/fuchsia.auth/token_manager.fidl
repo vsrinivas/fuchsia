@@ -105,9 +105,9 @@ interface TokenManagerFactory {
   // by |application_url|, the Fuchsia user specified by |user_id|, and the list
   // of auth providers specified in |auth_provider_configs|.
   //
-  // This instance is also initialized with a provider for creating instances of
-  // AuthenticationUIContext to display OAuth permissions during first-time
-  // user authentication and authorization and subsequent re-auth operations.
+  // |auth_context_provider| is used to generate AuthenticationUIContexts during
+  // TokenManager methods that require UI, unless the caller of those methods
+  // supplies an alternative AuthenticationUIContext.
   1: GetTokenManager(string user_id, string application_url,
       vector<AuthProviderConfig> auth_provider_configs,
       AuthenticationContextProvider auth_context_provider,
@@ -127,10 +127,17 @@ interface TokenManagerFactory {
 interface TokenManager {
   // The first step of OAuth is to get authorization from the user. For Fuchsia
   // components, this is accomplished by displaying OAuth permissions in a view
-  // provided by the caller's AuthenticationUIContext. The component's OAuth
-  // configuration is provided in |app_config| and |app_scopes|. An optional
-  // |user_profile_id| that uniquely identifies a user for a given auth provider
-  // is provided for simplifying the re-auth flow.
+  // provided by the caller. This view will use |auth_ui_context| if supplied,
+  // or the |auth_context_provider| supplied at TokenManager creation if not.
+  // The component's OAuth configuration is provided in |app_config| and
+  // |app_scopes|. An optional |user_profile_id| that uniquely identifies an
+  // account for a given auth provider may be provided to identify an existing
+  // account during a re-auth flow.
+  //
+  // IoT ID authorization includes a mode where the user authorizes on a second
+  // device and that device acquires an auth code from the auth provider.
+  // In this mode, the auth code may be supplied in |auth_code| and no local
+  // user interface will be displayed.
   //
   // After the user has successfully authorized, Token manager receives and
   // securely stores a persistent credential, such as an OAuth refresh token,
@@ -141,8 +148,8 @@ interface TokenManager {
   // profile information in |user_profile_info| such as the user's email,
   // image_url, profile_url, and first and last names as configured on the auth
   // provider backend system.
-  1: Authorize(AppConfig app_config, vector<string> app_scopes,
-      string? user_profile_id, string? auth_code)
+  1: Authorize(AppConfig app_config, AuthenticationUIContext? auth_ui_context,
+      vector<string> app_scopes, string? user_profile_id, string? auth_code)
       -> (Status status, UserProfileInfo? user_profile_info);
 
   // Returns a downscoped access token from an auth provider for the given user

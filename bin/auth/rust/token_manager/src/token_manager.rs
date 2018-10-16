@@ -15,10 +15,10 @@ use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_auth::{
     AppConfig, AssertionJwtParams, AttestationJwtParams, AttestationSignerMarker,
     AuthProviderConfig, AuthProviderProxy, AuthProviderStatus, AuthenticationContextProviderMarker,
-    CredentialEcKey, Status, TokenManagerAuthorizeResponder, TokenManagerDeleteAllTokensResponder,
-    TokenManagerGetAccessTokenResponder, TokenManagerGetFirebaseTokenResponder,
-    TokenManagerGetIdTokenResponder, TokenManagerListProfileIdsResponder, TokenManagerRequest,
-    UserProfileInfo,
+    AuthenticationUiContextMarker, CredentialEcKey, Status, TokenManagerAuthorizeResponder,
+    TokenManagerDeleteAllTokensResponder, TokenManagerGetAccessTokenResponder,
+    TokenManagerGetFirebaseTokenResponder, TokenManagerGetIdTokenResponder,
+    TokenManagerListProfileIdsResponder, TokenManagerRequest, UserProfileInfo,
 };
 use fuchsia_zircon as zx;
 use futures::prelude::*;
@@ -97,12 +97,14 @@ impl TokenManager {
         match req {
             TokenManagerRequest::Authorize {
                 app_config,
+                auth_ui_context,
                 user_profile_id,
                 app_scopes,
                 auth_code,
                 responder,
             } => responder.send_result(await!(self.authorize(
                 app_config,
+                auth_ui_context,
                 user_profile_id,
                 app_scopes,
                 auth_code
@@ -154,9 +156,13 @@ impl TokenManager {
     /// Performs initial authorization for a user_profile.
     /// TODO: |app_scopes| will be used in the future for Authenticators.
     async fn authorize(
-        &self, app_config: AppConfig, user_profile_id: Option<String>, app_scopes: Vec<String>,
-        auth_code: Option<String>,
+        &self, app_config: AppConfig,
+        _auth_ui_context: Option<ClientEnd<AuthenticationUiContextMarker>>,
+        user_profile_id: Option<String>, app_scopes: Vec<String>, auth_code: Option<String>,
     ) -> TokenManagerResult<UserProfileInfo> {
+        // TODO(jsankey): Once we're closer to Topaz actually supplying it, pass through
+        // auth_ui_context and use it as an alternative to the auth UI context supplied at
+        // token manager construction (AUTH-110).
         // TODO(ukode, jsankey): This iotid check against the auth_provider_type is brittle and is
         // only a short-term solution. Eventually, this information will be coming from the
         // AuthProviderConfig params in some form.
@@ -528,7 +534,8 @@ impl TokenManager {
     /// Returns a vector of all known accounts matching the supplied auth_provider_type.
     fn list_profile_ids(&self, app_config: AppConfig) -> TokenManagerResult<Vec<String>> {
         let token_store = self.token_store.lock();
-        Ok(token_store.get_all_credential_keys()?
+        Ok(token_store
+            .get_all_credential_keys()?
             .into_iter()
             .filter(|k| k.auth_provider_type() == &app_config.auth_provider_type)
             .map(|k| k.user_profile_id().to_string())
