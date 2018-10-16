@@ -12,21 +12,21 @@ extern crate serde_derive;
 mod opts;
 mod wlan_service_util;
 
-use failure::{Error, ResultExt, bail};
+use crate::opts::Opt;
+use failure::{bail, Error, ResultExt};
 use fidl_fuchsia_net_oldhttp::{self as http, HttpServiceProxy};
-use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
 use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
+use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{self as syslog, fx_log, fx_log_info};
 use fuchsia_zircon as zx;
 use futures::io::{AllowStdIo, AsyncReadExt};
+use std::collections::HashMap;
 use std::process;
 use std::{thread, time};
-use std::collections::HashMap;
 use structopt::StructOpt;
-use crate::opts::Opt;
 
 #[allow(dead_code)]
 type WlanService = DeviceServiceProxy;
@@ -55,13 +55,11 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn run_test(opt: Opt, test_results: &mut TestResults)
-        -> Result<(), Error>
-{
+fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     let mut test_pass = true;
     let mut exec = fasync::Executor::new().context("error creating event loop")?;
-    let wlan_svc = connect_to_service::<DeviceServiceMarker>()
-            .context("Failed to connect to wlan_service")?;
+    let wlan_svc =
+        connect_to_service::<DeviceServiceMarker>().context("Failed to connect to wlan_service")?;
     test_results.connect_to_wlan_service = true;
 
     let http_svc = connect_to_service::<http::HttpServiceMarker>()?;
@@ -72,7 +70,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults)
 
     let fut = async {
         let wlan_iface_ids = await!(wlan_service_util::get_iface_list(&wlan_svc))
-                .context("wlan-smoke-test: failed to query wlanservice iface list")?;
+            .context("wlan-smoke-test: failed to query wlanservice iface list")?;
         test_results.query_wlan_service_iface_list = true;
 
         if wlan_iface_ids.is_empty() {
@@ -83,8 +81,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults)
         test_results.interface_status = true;
 
         for iface in wlan_iface_ids {
-            let sme_proxy = await!(
-                    wlan_service_util::get_iface_sme_proxy(&wlan_svc, iface))?;
+            let sme_proxy = await!(wlan_service_util::get_iface_sme_proxy(&wlan_svc, iface))?;
             let status_response = match await!(sme_proxy.status()) {
                 Ok(status) => status,
                 Err(_) => {
@@ -101,20 +98,23 @@ fn run_test(opt: Opt, test_results: &mut TestResults)
         for (iface_id, wlan_iface) in test_results.iface_objects.iter_mut() {
             let mut requires_disconnect = false;
             // first check if we are connected to the target network already
-            if is_connect_to_target_network_needed(opt.stay_connected,
-                                                   &opt.target_ssid,
-                                                   &wlan_iface.initial_status) {
+            if is_connect_to_target_network_needed(
+                opt.stay_connected,
+                &opt.target_ssid,
+                &wlan_iface.initial_status,
+            ) {
                 let connect_result = await!(wlan_service_util::connect_to_network(
-                            &wlan_iface.sme_proxy,
-                            opt.target_ssid.as_bytes().to_vec(),
-                            opt.target_pwd.as_bytes().to_vec()));
+                    &wlan_iface.sme_proxy,
+                    opt.target_ssid.as_bytes().to_vec(),
+                    opt.target_pwd.as_bytes().to_vec()
+                ));
 
                 match connect_result {
                     Ok(true) => {
                         wlan_iface.connection_success = true;
                         requires_disconnect = true;
-                    },
-                    _ => continue
+                    }
+                    _ => continue,
                 };
             } else {
                 // connection already established, mark as successful
@@ -125,10 +125,13 @@ fn run_test(opt: Opt, test_results: &mut TestResults)
 
             while dhcp_check_attempts < 3 && !wlan_iface.dhcp_success {
                 // check if there is a non-zero ip addr as a first check for dhcp success
-                let ip_addrs = match await!(
-                        get_ip_addrs_for_wlan_iface(&wlan_svc, &network_svc, *iface_id)) {
+                let ip_addrs = match await!(get_ip_addrs_for_wlan_iface(
+                    &wlan_svc,
+                    &network_svc,
+                    *iface_id
+                )) {
                     Ok(result) => result,
-                    Err(_) => continue
+                    Err(_) => continue,
                 };
                 if check_dhcp_complete(ip_addrs) {
                     wlan_iface.dhcp_success = true;
@@ -146,9 +149,10 @@ fn run_test(opt: Opt, test_results: &mut TestResults)
 
             // if any of the checks failed, throw an error to indicate a part of
             // the test failure
-            if !(wlan_iface.connection_success &&
-                 wlan_iface.dhcp_success &&
-                 wlan_iface.data_transfer) {
+            if !(wlan_iface.connection_success
+                && wlan_iface.dhcp_success
+                && wlan_iface.data_transfer)
+            {
                 // note: failures are logged at the point of the failure,
                 // simply checking here to return overall test status
                 test_pass = false;
@@ -194,7 +198,7 @@ struct TestResults {
     #[serde(flatten)]
     iface_objects: HashMap<u16, WlanIface>,
 
-    error_message: String
+    error_message: String,
 }
 
 // Object to hold test specific status
@@ -210,28 +214,33 @@ struct WlanIface {
 
     dhcp_success: bool,
 
-    data_transfer: bool
+    data_transfer: bool,
 }
 
 impl WlanIface {
-    pub fn new(sme_proxy: fidl_sme::ClientSmeProxy,
-               status: fidl_sme::ClientStatusResponse) -> WlanIface {
+    pub fn new(
+        sme_proxy: fidl_sme::ClientSmeProxy, status: fidl_sme::ClientStatusResponse,
+    ) -> WlanIface {
         WlanIface {
             sme_proxy: sme_proxy,
             initial_status: status,
             connection_success: false,
             dhcp_success: false,
-            data_transfer: false
+            data_transfer: false,
         }
     }
 }
 
 fn report_results(test_results: &TestResults) {
-    println!("Test Results: {}", serde_json::to_string_pretty(&test_results).unwrap());
+    println!(
+        "Test Results: {}",
+        serde_json::to_string_pretty(&test_results).unwrap()
+    );
 }
 
 fn is_connect_to_target_network_needed<T: AsRef<[u8]>>(
-    stay_connected: bool, target_ssid: T, status: &fidl_sme::ClientStatusResponse) -> bool {
+    stay_connected: bool, target_ssid: T, status: &fidl_sme::ClientStatusResponse,
+) -> bool {
     if !stay_connected {
         // doesn't matter if we are connected, we will force a reconnection
         return true;
@@ -239,7 +248,7 @@ fn is_connect_to_target_network_needed<T: AsRef<[u8]>>(
     // are we already connected?  if so, check the current ssid
     match status.connected_to {
         Some(ref bss) if bss.ssid.as_slice() == target_ssid.as_ref() => false,
-        _ => true
+        _ => true,
     }
 }
 
@@ -256,9 +265,9 @@ fn create_url_request<T: Into<String>>(url_string: T) -> http::UrlRequest {
     }
 }
 
-async fn fetch_and_discard_url(http_service: HttpServiceProxy, mut url_request: http::UrlRequest)
-        -> Result<(), Error> {
-
+async fn fetch_and_discard_url(
+    http_service: HttpServiceProxy, mut url_request: http::UrlRequest,
+) -> Result<(), Error> {
     // Create a UrlLoader instance
     let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
     let proxy = fasync::Channel::from_channel(p).context("failed to make async channel")?;
@@ -270,7 +279,11 @@ async fn fetch_and_discard_url(http_service: HttpServiceProxy, mut url_request: 
     let response = await!(loader_proxy.start(&mut url_request))?;
 
     if let Some(e) = response.error {
-        bail!("UrlLoaderProxy error - code:{} ({})", e.code, e.description.unwrap_or("".into()))
+        bail!(
+            "UrlLoaderProxy error - code:{} ({})",
+            e.code,
+            e.description.unwrap_or("".into())
+        )
     }
 
     let mut socket = match response.body.map(|x| *x) {
@@ -286,10 +299,9 @@ async fn fetch_and_discard_url(http_service: HttpServiceProxy, mut url_request: 
     Ok(())
 }
 
-async fn get_ip_addrs_for_wlan_iface(wlan_svc: &'static DeviceServiceProxy,
-                                     network_svc: &'static StackProxy,
-                                     wlan_iface_id: u16)
-        -> Result<Vec<netstack::InterfaceAddress>, Error> {
+async fn get_ip_addrs_for_wlan_iface(
+    wlan_svc: &'static DeviceServiceProxy, network_svc: &'static StackProxy, wlan_iface_id: u16,
+) -> Result<Vec<netstack::InterfaceAddress>, Error> {
     // temporary implementation for getting the ip addrs for a wlan iface.  A more robust
     // lookup will be designed and implemented in the future (TODO: <bug already filed?>)
 
@@ -344,7 +356,7 @@ fn check_dhcp_complete(ip_addrs: Vec<netstack::InterfaceAddress>) -> bool {
                         return true;
                     }
                 }
-            },
+            }
             fidl_fuchsia_net::IpAddress::Ipv6(address) => {
                 for &a in address.addr.iter() {
                     if a != 0 as u8 {
