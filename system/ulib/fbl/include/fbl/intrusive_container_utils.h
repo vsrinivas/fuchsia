@@ -139,6 +139,31 @@ inline void Swap(T& a, T& b) noexcept {
     b = tmp;
 }
 
+// Notes on container sentinels:
+//
+// Intrusive container implementations employ a slightly tricky pattern where
+// sentinel values are used in place of nullptr in various places in the
+// internal data structure in order to make some operations a bit easier.
+// Generally speaking, a sentinel pointer is a pointer to a container with the
+// sentinel bit set.  It is cast and stored in the container's data structure as
+// a pointer to an element which the container contains, even though it is
+// actually a slightly damaged pointer to the container itself.
+//
+// An example of where this is used is in the doubly linked list implementation.
+// The final element in the list holds the container's sentinel value instead of
+// nullptr or a pointer to the head of the list.  When an iterator hits the end
+// of the list, it knows that it is at the end (because the sentinel bit is set)
+// but can still get back to the list itself (by clearing the sentinel bit in
+// the pointer) without needing to store an explicit pointer to the list itself.
+//
+// Care must be taken when using sentinel values.  They are *not* valid pointers
+// and must never be dereferenced, recovered into an managed representation, or
+// returned to a user.  In addition, it is essential that a legitimate pointer
+// to a container never need to set the sentinel bit.  Currently, bit 0 is being
+// used because it should never be possible to have a proper container instance
+// which is odd-aligned.
+constexpr uintptr_t kContainerSentinelBit = 1u;
+
 // Create a sentinel pointer from a raw pointer, converting it to the specified
 // type in the process.
 template <typename T, typename U, typename = typename enable_if<is_pointer<T>::value>::type>

@@ -27,6 +27,7 @@ public:
     using OtherContainerType = typename ContainerTraits::OtherContainerType;
     using PtrTraits          = typename ContainerType::PtrTraits;
     using RefAction          = typename TestEnvironment<TestEnvTraits>::RefAction;
+    using TestEnvironment<TestEnvTraits>::TakePtr;
 
     // Utility method for checking the size of the container via either size()
     // or size_slow(), depending on whether or not the container supports a
@@ -896,7 +897,7 @@ public:
 
             PtrType replaced = container().replace_if(
                 [](const ObjType& obj) -> bool { return true; },
-                PtrTraits::Take(new_obj));
+                TakePtr(new_obj));
 
             EXPECT_NULL(new_obj, "");
             ASSERT_NONNULL(replaced, "");
@@ -932,7 +933,7 @@ public:
             PtrType replaced = container().replace_if(
                 [i](const ObjType& obj) -> bool {
                     return (obj.value() == i);
-                }, PtrTraits::Take(new_obj));
+                }, TakePtr(new_obj));
 
             EXPECT_NULL(new_obj, "");
             ASSERT_NONNULL(replaced, "");
@@ -956,7 +957,7 @@ public:
             PtrType replaced = container().replace_if(
                 [i](const ObjType& obj) -> bool {
                     return (obj.value() == i);
-                }, PtrTraits::Take(new_obj));
+                }, TakePtr(new_obj));
 
             EXPECT_NULL(new_obj, "");
             ASSERT_NONNULL(replaced, "");
@@ -1072,7 +1073,7 @@ public:
             ASSERT_TRUE(iter.IsValid(), "");
             EXPECT_EQ(i, iter->value(), "");
 
-            PtrType replaced = container().replace(*iter, PtrTraits::Take(new_obj));
+            PtrType replaced = container().replace(*iter, TakePtr(new_obj));
 
             EXPECT_NULL(new_obj, "");
             ASSERT_NONNULL(replaced, "");

@@ -205,11 +205,12 @@ public:
             fbl::move(ptr));
 
         if (orig == PtrTraits::GetRaw(replaced)) {
-            bucket.push_front(PtrTraits::Take(replaced));
+            bucket.push_front(fbl::move(replaced));
             count_++;
+            return nullptr;
         }
 
-        return fbl::move(replaced);
+        return replaced;
     }
 
     iterator find(const KeyType& key) {

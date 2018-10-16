@@ -1207,6 +1207,16 @@ public:
         END_TEST;
     }
 
+    static PtrType TakePtr(PtrType& ptr) {
+        if constexpr (PtrTraits::IsManaged) {
+            return fbl::move(ptr);
+        } else {
+            PtrType tmp = ptr;
+            ptr = nullptr;
+            return tmp;
+        }
+    }
+
 private:
     // Accessors for base class members so we don't have to type
     // this->base_member all of the time.
