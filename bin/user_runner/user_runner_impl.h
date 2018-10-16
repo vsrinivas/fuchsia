@@ -228,7 +228,6 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> context_engine_app_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> module_resolver_app_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> user_shell_app_;
-  fuchsia::modular::UserShellPtr user_shell_;
   std::unique_ptr<ViewHost> user_shell_view_host_;
 
   std::unique_ptr<EntityProviderRunner> entity_provider_runner_;

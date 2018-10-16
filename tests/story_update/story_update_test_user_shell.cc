@@ -25,27 +25,26 @@ namespace {
 
 // Tests how modules are updated in a story.
 class TestApp
-    : public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
+    : public modular::testing::ComponentBase<void> {
  public:
   TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
+
+    user_shell_context_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
+    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+
+    CreateStory();
   }
 
   ~TestApp() override = default;
 
  private:
-  TestPoint initialize_{"Initialize()"};
   TestPoint story_create_{"Story Create"};
 
-  // |fuchsia::modular::UserShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
-                      user_shell_context) override {
-    initialize_.Pass();
-
-    user_shell_context_.Bind(std::move(user_shell_context));
-    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-
+  void CreateStory() {
     story_provider_->CreateStory(kCommonNullModule,
                                  [this](fidl::StringPtr story_id) {
                                    story_create_.Pass();

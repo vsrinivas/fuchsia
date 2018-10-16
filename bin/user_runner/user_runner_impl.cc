@@ -727,11 +727,6 @@ void UserRunnerImpl::RunUserShell(fuchsia::modular::AppConfig user_shell) {
       user_environment_->GetLauncher(), std::move(user_shell),
       /* data_origin = */ "", std::move(service_list));
 
-  if (user_shell_.is_bound()) {
-    user_shell_.Unbind();
-  }
-  user_shell_app_->services().ConnectToService(user_shell_.NewRequest());
-
   user_shell_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "User Shell seems to have crashed unexpectedly."
                    << "Logging out.";
@@ -743,14 +738,10 @@ void UserRunnerImpl::RunUserShell(fuchsia::modular::AppConfig user_shell) {
   user_shell_app_->services().ConnectToService(view_provider.NewRequest());
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
   user_shell_view_host_->ConnectView(std::move(view_owner));
-
-  // TODO(thatguy): Remove this. MI4-1445
-  user_shell_->Initialize(user_shell_context_bindings_.AddBinding(this));
 }
 
 void UserRunnerImpl::TerminateUserShell(const std::function<void()>& done) {
   user_shell_app_->Teardown(kBasicTimeout, [this, done] {
-    user_shell_.Unbind();
     user_shell_app_.reset();
     done();
   });

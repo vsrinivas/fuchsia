@@ -196,7 +196,7 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
 
 // Cf. README.md for what this test does and how.
 class TestApp
-    : public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
+    : public modular::testing::ComponentBase<void> {
  public:
   explicit TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
@@ -208,6 +208,8 @@ class TestApp
 
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     story_provider_state_watcher_.Watch(&story_provider_);
+
+    TestStoryProvider_GetStoryInfo_Null();
   }
 
   ~TestApp() override = default;
@@ -222,21 +224,6 @@ class TestApp
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {
     create_view_.Pass();
-  }
-
-  TestPoint initialize_{"Initialize()"};
-
-  // |fuchsia::modular::UserShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
-                      user_shell_context) override {
-    initialize_.Pass();
-
-    // Only check that Initialize was also called. We get our actual
-    // UserShellContext from the environment.
-
-    // TODO(thatguy): Once Initialize() goes away entirely, call this method
-    // from the constructor.
-    TestStoryProvider_GetStoryInfo_Null();
   }
 
   TestPoint get_story_info_null_{"StoryProvider.GetStoryInfo() is null"};

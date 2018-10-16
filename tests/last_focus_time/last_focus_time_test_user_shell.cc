@@ -146,24 +146,15 @@ class FocusWatcherImpl : fuchsia::modular::FocusWatcher {
 
 // Cf. README.md for what this test does and how.
 class TestApp
-    : public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
+    : public modular::testing::ComponentBase<void> {
  public:
   TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
-  }
 
-  ~TestApp() override = default;
-
- private:
-  TestPoint initialize_{"Initialize()"};
-
-  // |fuchsia::modular::UserShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
-                      user_shell_context) override {
-    initialize_.Pass();
-
-    user_shell_context_.Bind(std::move(user_shell_context));
+    user_shell_context_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     story_provider_watcher_.Watch(&story_provider_);
 
@@ -174,6 +165,9 @@ class TestApp
     CreateStory();
   }
 
+  ~TestApp() override = default;
+
+ private:
   TestPoint create_story_{"CreateStory()"};
 
   void CreateStory() {

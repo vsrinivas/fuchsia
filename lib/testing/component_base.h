@@ -74,6 +74,47 @@ class ComponentBase : protected SingleServiceApp<Component> {
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentBase);
 };
 
+template <>
+class ComponentBase<void> : protected ViewApp {
+ public:
+  void Terminate(std::function<void()> done) override {
+    modular::testing::Done(done);
+  }
+
+ protected:
+  ComponentBase(component::StartupContext* const startup_context)
+      : ViewApp(startup_context), weak_factory_(this) {}
+
+  ~ComponentBase() override = default;
+
+  // We must not call testing::Init() in the base class
+  // constructor, because that's before the test points are initialized. It's
+  // fine to call this from the derived class constructor.
+  void TestInit(const char* const file) {
+    testing::Init(ViewApp::startup_context(), file);
+  }
+
+  // Wraps the callback function into a layer that protects executing the
+  // callback in the argument against execution after this instance is deleted,
+  // using the weak pointer factory.
+  std::function<void()> Protect(std::function<void()> callback) {
+    return [ptr = weak_factory_.GetWeakPtr(), callback = std::move(callback)] {
+      if (ptr) {
+        callback();
+      }
+    };
+  }
+
+ private:
+  // This weak ptr factory is not the last member in the derived class, so it
+  // cannot be used to protect code executed in member destructors against
+  // accessing this. But it is enough to protect callbacks sent to the runloop
+  // against execution after the instance is deleted.
+  fxl::WeakPtrFactory<ComponentBase> weak_factory_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ComponentBase);
+};
+
 // A main function for an application that only runs the implementation of a
 // single component used for integration testing. The component implementation
 // Impl usually derives from ComponentBase.

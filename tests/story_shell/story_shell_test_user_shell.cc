@@ -36,13 +36,17 @@ using modular::testing::TestPoint;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp
-    : public modular::testing::ComponentBase<fuchsia::modular::UserShell>,
-      fuchsia::modular::UserShellPresentationProvider {
+class TestApp : public modular::testing::ComponentBase<void>,
+                fuchsia::modular::UserShellPresentationProvider {
  public:
   explicit TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
+
+    user_shell_context_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
+    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
     startup_context->outgoing()
         .AddPublicService<fuchsia::modular::UserShellPresentationProvider>(
@@ -52,6 +56,8 @@ class TestApp
               presentation_provider_bindings_.AddBinding(this,
                                                          std::move(request));
             });
+
+    Story1_Create();
   }
 
   ~TestApp() override = default;
@@ -97,15 +103,6 @@ class TestApp
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {
     create_view_.Pass();
-  }
-
-  // |fuchsia::modular::UserShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
-                      user_shell_context) override {
-    user_shell_context_.Bind(std::move(user_shell_context));
-    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-
-    Story1_Create();
   }
 
   TestPoint story1_create_{"Story1 Create"};

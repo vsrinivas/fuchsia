@@ -134,11 +134,16 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
 // is invoked as a user shell from device runner and executes a predefined
 // sequence of steps, rather than to expose a UI to be driven by user
 // interaction, as a user shell normally would.
-class TestApp : public modular::SingleServiceApp<fuchsia::modular::UserShell> {
+class TestApp : public modular::ViewApp {
  public:
-  using Base = modular::SingleServiceApp<fuchsia::modular::UserShell>;
   TestApp(component::StartupContext* const startup_context, Settings settings)
-      : Base(startup_context), settings_(std::move(settings)) {}
+      : ViewApp(startup_context), settings_(std::move(settings)) {
+    user_shell_context_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
+    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    tracing_waiter_.WaitForTracing([this] { Loop(); });
+  }
 
   ~TestApp() override = default;
 
@@ -152,14 +157,6 @@ class TestApp : public modular::SingleServiceApp<fuchsia::modular::UserShell> {
   }
 
  private:
-  // |fuchsia::modular::UserShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
-                      user_shell_context) override {
-    user_shell_context_.Bind(std::move(user_shell_context));
-    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-    tracing_waiter_.WaitForTracing([this] { Loop(); });
-  }
-
   void Loop() {
     if (story_count_ < settings_.story_count) {
       FXL_LOG(INFO) << "Loop at " << story_count_ << " of "

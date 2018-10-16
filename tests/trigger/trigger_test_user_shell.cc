@@ -25,11 +25,18 @@ using ::modular::testing::TestPoint;
 namespace {
 
 class TestApp
-    : public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
+    : public modular::testing::ComponentBase<void> {
  public:
   TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context), weak_ptr_factory_(this) {
     TestInit(__FILE__);
+
+    user_shell_context_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
+    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+
+    CreateStory();
   }
 
   ~TestApp() override = default;
@@ -37,17 +44,9 @@ class TestApp
  private:
   using TestPoint = modular::testing::TestPoint;
 
-  TestPoint initialize_{"Initialize()"};
   TestPoint story_create_{"Created story."};
 
-  // |fuchsia::modular::UserShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
-                      user_shell_context) override {
-    initialize_.Pass();
-
-    user_shell_context_.Bind(std::move(user_shell_context));
-    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-
+  void CreateStory() {
     story_provider_->CreateStory(kModuleUrl, [this](fidl::StringPtr story_id) {
       story_create_.Pass();
       StartStory(story_id);

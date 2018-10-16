@@ -56,31 +56,16 @@ class DevUserShellApp
     : fuchsia::modular::StoryWatcher,
       fuchsia::modular::InterruptionListener,
       fuchsia::modular::NextListener,
-      public modular::SingleServiceApp<fuchsia::modular::UserShell> {
+      public modular::ViewApp {
  public:
   explicit DevUserShellApp(component::StartupContext* const startup_context,
                            Settings settings)
-      : SingleServiceApp(startup_context),
+      : ViewApp(startup_context),
         settings_(std::move(settings)),
-        story_watcher_binding_(this) {}
-
-  ~DevUserShellApp() override = default;
-
- private:
-  // |SingleServiceApp|
-  void CreateView(
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
-      override {
-    view_owner_request_ = std::move(view_owner_request);
-    Connect();
-  }
-
-  // |fuchsia::modular::UserShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
-                      user_shell_context) override {
-    user_shell_context_.Bind(std::move(user_shell_context));
+        story_watcher_binding_(this) {
+    user_shell_context_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     user_shell_context_->GetSuggestionProvider(
         suggestion_provider_.NewRequest());
@@ -92,17 +77,25 @@ class DevUserShellApp
         interruption_listener_bindings_.AddBinding(this));
     suggestion_provider_->SubscribeToNext(
         next_listener_bindings_.AddBinding(this), 3);
+  }
+
+  ~DevUserShellApp() override = default;
+
+ private:
+  // |ViewApp|
+  void CreateView(
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+          view_owner_request,
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
+      override {
+    view_owner_request_ = std::move(view_owner_request);
 
     Connect();
   }
 
   void Connect() {
-    if (!view_owner_request_ || !story_provider_) {
-      // Not yet ready, wait for the other of CreateView() and
-      // Initialize() to be called.
-      return;
-    }
-
+    FXL_CHECK(!!view_owner_request_);
+    FXL_CHECK(!!story_provider_);
     FXL_LOG(INFO) << "DevUserShell START " << settings_.root_module << " "
                   << settings_.root_link;
 

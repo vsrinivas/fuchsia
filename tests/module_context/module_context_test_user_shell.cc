@@ -66,27 +66,19 @@ class StoryActivityWatcherImpl : fuchsia::modular::StoryActivityWatcher {
 };
 
 class TestApp
-    : public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
+    : public modular::testing::ComponentBase<void> {
+ private:
+  TestPoint story_create_{"Created story."};
+
  public:
   TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context), weak_ptr_factory_(this) {
     TestInit(__FILE__);
-  }
 
-  ~TestApp() override = default;
+    user_shell_context_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
 
- private:
-  using TestPoint = modular::testing::TestPoint;
-
-  TestPoint initialize_{"Initialize()"};
-  TestPoint story_create_{"Created story."};
-
-  // |fuchsia::modular::UserShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
-                      user_shell_context) override {
-    initialize_.Pass();
-
-    user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
     story_provider_->CreateStory(nullptr, [this](fidl::StringPtr story_id) {
@@ -100,6 +92,11 @@ class TestApp
                              [this] { user_shell_context_->Logout(); }),
         zx::msec(modular::testing::kTestTimeoutMilliseconds));
   }
+
+  ~TestApp() override = default;
+
+ private:
+  using TestPoint = modular::testing::TestPoint;
 
   TestPoint story_get_controller_{"Story GetController()"};
   // Starts the story and adds two modules to it.

@@ -8,27 +8,8 @@ using fuchsia.modular.auth;
 using fuchsia.speech;
 using fuchsia.ui.policy;
 
-// This interface is implemented by a user shell. Dependencies are passed to it
-// in Initialize() on startup. The user shell is also expected to implement
-// Lifecycle in order to receive a Terminate() call on teardown.
-//
-// In one component instance there can only be one UserShell service instance.
-// The ViewOwner request is sent to the separate ViewProvider service. This way,
-// the user shell may be implemented as a flutter component.
-//
-// Teardown may be initiated by the user shell calling
-// UserShellContext.Logout(), by the user runner being terminated, or by the
-// system shutting down.
-//
-// DEPRECATED: The UserShellContext is now available in the environment of
-// user shell processes, so UserShell is not necessary to expose any more.
-[Discoverable]  // Created by user shell components.
-interface UserShell {
-  1: Initialize(UserShellContext user_shell_context);
-};
-
-// This interface allows the |UserShell| to request capabilities from the
-// |UserRunner| in a way that is more explicit about the services that are
+// This interface allows a |UserShell| to request capabilities from its
+// creator in a way that is more explicit about the services that are
 // offered than a generic |ServiceProvider|.
 [Discoverable]
 interface UserShellContext {

@@ -25,22 +25,15 @@ namespace {
 // Cf. README.md for what this test does and how.
 class TestApp
     : fuchsia::modular::NextListener,
-      public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
+      public modular::testing::ComponentBase<void> {
  public:
   TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
-  }
 
-  ~TestApp() override = default;
-
- private:
-  TestPoint initialized_{"SuggestionTestUserShell initialized"};
-
-  // |fuchsia::modular::UserShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
-                      user_shell_context) override {
-    user_shell_context_.Bind(std::move(user_shell_context));
+    user_shell_context_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
 
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     user_shell_context_->GetSuggestionProvider(
@@ -50,11 +43,16 @@ class TestApp
         suggestion_listener_bindings_.AddBinding(this),
         20 /* arbitrarily chosen */);
 
+    CreateStory();
+  }
+
+  ~TestApp() override = default;
+
+ private:
+  void CreateStory() {
     story_provider_->CreateStory(
         kSuggestionTestModule,
         [this](const fidl::StringPtr& story_id) { StartStoryById(story_id); });
-
-    initialized_.Pass();
 
     Await(kSuggestionTestModuleDone, [this] {
       story_controller_->Stop([this] {
