@@ -146,6 +146,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
 
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> app_client_;
   fuchsia::modular::AgentPtr agent_;
+  fuchsia::modular::auth::TokenProviderPtr token_provider_;
   fidl::BindingSet<fuchsia::modular::AgentContext> agent_context_bindings_;
   fidl::BindingSet<fuchsia::modular::AgentController>
       agent_controller_bindings_;

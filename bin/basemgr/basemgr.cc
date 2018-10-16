@@ -24,6 +24,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fxl/command_line.h>
+#include <lib/fxl/files/file.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 #include <trace-provider/provider.h>
@@ -62,8 +63,13 @@ class Settings {
     no_minfs = command_line.HasOption("no_minfs");
     test = command_line.HasOption("test");
     enable_presenter = command_line.HasOption("enable_presenter");
+    // fuchsia::auth::TokenManager is used if the settings flag
+    // |enable_garnet_token_manager| is enabled or if the file
+    // |/data/modular/use_garnet_token_manager| exists. The latter form will be
+    // useful for QA to test the flow before we turn on for everyone.
     enable_garnet_token_manager =
-        command_line.HasOption("enable_garnet_token_manager");
+        command_line.HasOption("enable_garnet_token_manager") ||
+        files::IsFile("/data/modular/use_garnet_token_manager");
 
     ParseShellArgs(
         command_line.GetOptionValueWithDefault("base_shell_args", ""),
@@ -382,8 +388,8 @@ class BasemgrApp : fuchsia::modular::BaseShellContext,
 
     // Start OAuth Token Manager App.
     fuchsia::modular::AppConfig token_manager_config;
-    token_manager_config.url = settings_.account_provider.url;
     if (settings_.enable_garnet_token_manager) {
+      token_manager_config.url = "token_manager_rust";
       FXL_DLOG(INFO) << "Initialzing token_manager_factory_app()";
       token_manager_factory_app_ =
           std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
@@ -391,6 +397,7 @@ class BasemgrApp : fuchsia::modular::BaseShellContext,
       token_manager_factory_app_->services().ConnectToService(
           token_manager_factory_.NewRequest());
     } else {
+      token_manager_config.url = settings_.account_provider.url;
       token_manager_factory_app_.release();
     }
 

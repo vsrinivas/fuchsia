@@ -18,6 +18,25 @@ constexpr char kAppStoragePath[] = "/data/APP_DATA";
 
 namespace {
 
+// Maps |fuchsia::modular::auth::Status| status codes to |fuchsia::auth::Status|
+// status codes.
+fuchsia::auth::Status ConvertAuthStatus(fuchsia::modular::auth::Status status) {
+  switch (status) {
+    case fuchsia::modular::auth::Status::OK:
+      return fuchsia::auth::Status::OK;
+    case fuchsia::modular::auth::Status::OAUTH_SERVER_ERROR:
+      return fuchsia::auth::Status::AUTH_PROVIDER_SERVER_ERROR;
+    case fuchsia::modular::auth::Status::BAD_RESPONSE:
+      return fuchsia::auth::Status::AUTH_PROVIDER_SERVER_ERROR;
+    case fuchsia::modular::auth::Status::NETWORK_ERROR:
+      return fuchsia::auth::Status::NETWORK_ERROR;
+    case fuchsia::modular::auth::Status::INTERNAL_ERROR:
+      return fuchsia::auth::Status::INTERNAL_ERROR;
+    default:
+      return fuchsia::auth::Status::UNKNOWN_ERROR;
+  }
+}
+
 // A stopgap solution to map an agent's url to a directory name where the
 // agent's /data is mapped. We need three properties here - (1) two module urls
 // that are the same get mapped to the same hash, (2) two modules urls that are
@@ -259,11 +278,22 @@ void AgentContextImpl::GetComponentContext(
 
 void AgentContextImpl::GetTokenProvider(
     fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request) {
-  token_provider_factory_->GetTokenProvider(url_, std::move(request));
+  if (token_provider_factory_ != nullptr) {
+    token_provider_factory_->GetTokenProvider(url_, std::move(request));
+  } else {
+    // This should never happen. But if there is a bug in setting these handles
+    // by |user_runner|, atleast we can infer it from the logs.
+    FXL_LOG(ERROR) << "Token provider factory is not set.";
+  }
 }
 
 void AgentContextImpl::GetTokenManager(
     fidl::InterfaceRequest<fuchsia::auth::TokenManager> request) {
+  if (token_manager_ == nullptr) {
+    FXL_DLOG(INFO) << "Token manager is not set, falling back to token "
+                   << "provider";
+    GetTokenProvider(token_provider_.NewRequest());
+  }
   token_manager_bindings_.AddBinding(this, std::move(request));
 }
 
@@ -305,17 +335,54 @@ void AgentContextImpl::GetAccessToken(
     fuchsia::auth::AppConfig app_config, fidl::StringPtr user_profile_id,
     fidl::VectorPtr<::fidl::StringPtr> app_scopes,
     GetAccessTokenCallback callback) {
-  token_manager_->GetAccessToken(std::move(app_config),
-                                 std::move(user_profile_id),
-                                 std::move(app_scopes), std::move(callback));
+  FXL_DLOG(INFO) << "AgentContextImpl::GetAccessToken() invoked for user:"
+                 << user_profile_id;
+  if (token_manager_ != nullptr) {
+    token_manager_->GetAccessToken(std::move(app_config),
+                                   std::move(user_profile_id),
+                                   std::move(app_scopes), std::move(callback));
+  } else {
+    if (!token_provider_.is_bound()) {
+      GetTokenProvider(token_provider_.NewRequest());
+    }
+    token_provider_->GetAccessToken(
+        [callback = std::move(callback)](
+            fidl::StringPtr access_token,
+            fuchsia::modular::auth::AuthErr authErr) {
+          if (authErr.status != fuchsia::modular::auth::Status::OK) {
+            callback(ConvertAuthStatus(authErr.status), nullptr);
+            return;
+          }
+
+          callback(fuchsia::auth::Status::OK, std::move(access_token));
+        });
+  }
 }
 
 void AgentContextImpl::GetIdToken(fuchsia::auth::AppConfig app_config,
                                   fidl::StringPtr user_profile_id,
                                   fidl::StringPtr audience,
                                   GetIdTokenCallback callback) {
-  token_manager_->GetIdToken(std::move(app_config), std::move(user_profile_id),
-                             std::move(audience), std::move(callback));
+  FXL_DLOG(INFO) << "AgentContextImpl::GetIdToken() invoked for user:"
+                 << user_profile_id;
+  if (token_manager_ != nullptr) {
+    token_manager_->GetIdToken(std::move(app_config),
+                               std::move(user_profile_id), std::move(audience),
+                               std::move(callback));
+  } else {
+    if (!token_provider_.is_bound()) {
+      GetTokenProvider(token_provider_.NewRequest());
+    }
+    token_provider_->GetIdToken(
+        [callback = std::move(callback)](
+            fidl::StringPtr id_token, fuchsia::modular::auth::AuthErr authErr) {
+          if (authErr.status != fuchsia::modular::auth::Status::OK) {
+            callback(ConvertAuthStatus(authErr.status), nullptr);
+            return;
+          }
+          callback(fuchsia::auth::Status::OK, std::move(id_token));
+        });
+  }
 }
 
 void AgentContextImpl::GetFirebaseToken(fuchsia::auth::AppConfig app_config,
@@ -323,9 +390,35 @@ void AgentContextImpl::GetFirebaseToken(fuchsia::auth::AppConfig app_config,
                                         fidl::StringPtr audience,
                                         fidl::StringPtr firebase_api_key,
                                         GetFirebaseTokenCallback callback) {
-  token_manager_->GetFirebaseToken(
-      std::move(app_config), std::move(user_profile_id), std::move(audience),
-      std::move(firebase_api_key), std::move(callback));
+  FXL_DLOG(INFO) << "AgentContextImpl::GetFirebaseToken() invoked for user:"
+                 << user_profile_id;
+  if (token_manager_ != nullptr) {
+    token_manager_->GetFirebaseToken(
+        std::move(app_config), std::move(user_profile_id), std::move(audience),
+        std::move(firebase_api_key), std::move(callback));
+  } else {
+    if (!token_provider_.is_bound()) {
+      GetTokenProvider(token_provider_.NewRequest());
+    }
+    token_provider_->GetFirebaseAuthToken(
+        std::move(firebase_api_key),
+        [callback = std::move(callback)](
+            fuchsia::modular::auth::FirebaseTokenPtr firebase_token,
+            fuchsia::modular::auth::AuthErr authErr) {
+          if (authErr.status != fuchsia::modular::auth::Status::OK) {
+            callback(ConvertAuthStatus(authErr.status), nullptr);
+            return;
+          }
+
+          fuchsia::auth::FirebaseTokenPtr fb_token;
+          fb_token->id_token = firebase_token->id_token;
+          fb_token->email = firebase_token->email;
+          fb_token->local_id = firebase_token->local_id;
+          fb_token->expires_in = 0;
+
+          callback(fuchsia::auth::Status::OK, std::move(fb_token));
+        });
+  }
 }
 
 void AgentContextImpl::DeleteAllTokens(fuchsia::auth::AppConfig app_config,
@@ -338,7 +431,13 @@ void AgentContextImpl::DeleteAllTokens(fuchsia::auth::AppConfig app_config,
 
 void AgentContextImpl::ListProfileIds(fuchsia::auth::AppConfig app_config,
                                       ListProfileIdsCallback callback) {
-  token_manager_->ListProfileIds(std::move(app_config), std::move(callback));
+  if (token_manager_ != nullptr) {
+    token_manager_->ListProfileIds(std::move(app_config), std::move(callback));
+  } else {
+    // ListProfileIds is not needed for old TokenProvider
+    auto user_profile_ids = fidl::VectorPtr<fidl::StringPtr>::New(0);
+    callback(fuchsia::auth::Status::OK, std::move(user_profile_ids));
+  }
 }
 
 void AgentContextImpl::StopAgentIfIdle() {

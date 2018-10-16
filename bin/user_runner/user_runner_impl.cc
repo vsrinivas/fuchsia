@@ -478,7 +478,9 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   agent_runner_.reset(new AgentRunner(
       user_environment_->GetLauncher(), message_queue_manager_.get(),
       ledger_repository_.get(), agent_runner_storage_.get(),
-      token_provider_factory_.get(), agent_token_manager_.get(),
+      token_provider_factory_.is_bound() ? token_provider_factory_.get()
+                                         : nullptr,
+      agent_token_manager_.is_bound() ? agent_token_manager_.get() : nullptr,
       user_intelligence_provider_impl_.get(), entity_provider_runner_.get()));
   AtEnd(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 

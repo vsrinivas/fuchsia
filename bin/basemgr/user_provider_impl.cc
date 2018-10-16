@@ -213,8 +213,6 @@ void UserProviderImpl::Login(fuchsia::modular::UserLoginParams params) {
     return;
   }
 
-  FXL_LOG(INFO) << "fuchsia::modular::UserProvider::Login() account: "
-                << params.account_id;
   LoginInternal(Convert(found_user), std::move(params));
 }
 
@@ -289,7 +287,6 @@ void UserProviderImpl::AddUserV1(
 void UserProviderImpl::AddUserV2(
     const fuchsia::modular::auth::IdentityProvider identity_provider,
     AddUserCallback callback) {
-  FXL_DLOG(INFO) << "Adding a new user with fuchsia::auth::Authorize()";
   FXL_DCHECK(token_manager_factory_);
 
   // Creating a new user, the initial bootstrapping will be done by
@@ -314,7 +311,8 @@ void UserProviderImpl::AddUserV2(
        callback](fuchsia::auth::Status status,
                  fuchsia::auth::UserProfileInfoPtr user_profile_info) {
         if (status != fuchsia::auth::Status::OK) {
-          FXL_LOG(ERROR) << "Authorize() call returned error";
+          FXL_LOG(ERROR) << "Authorize() call returned error for user: "
+                         << account_id;
           callback(nullptr, "Failed to authorize user");
           return;
         }
@@ -403,7 +401,7 @@ void UserProviderImpl::RemoveUserV1(fuchsia::modular::auth::AccountPtr account,
   FXL_DCHECK(account);
   FXL_DCHECK(account_provider_);
 
-  FXL_LOG(INFO) << "Removing user account :" << account->id;
+  FXL_DLOG(INFO) << "Removing user account :" << account->id;
 
   auto account_id = account->id;
   account_provider_->RemoveAccount(
