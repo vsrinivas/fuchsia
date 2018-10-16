@@ -59,9 +59,7 @@ storage::Status FindCommonAncestorSync(
            expected_generation == (*commits.rbegin())->GetGeneration()) {
       // Pop the newest commit.
       std::unique_ptr<const storage::Commit> commit =
-          std::move(const_cast<std::unique_ptr<const storage::Commit>&>(
-              *commits.rbegin()));
-      commits.erase(std::prev(commits.end()));
+          std::move(commits.extract(std::prev(commits.end())).value());
       // Request its parents.
       for (const auto& parent_id : commit->GetParentIds()) {
         storage->GetCommit(parent_id, waiter->NewCallback());
@@ -83,9 +81,7 @@ storage::Status FindCommonAncestorSync(
     }
   }
   FXL_DCHECK(commits.size() == 1);
-  // TODO(qsr): Use std::set::extract when C++17 is available.
-  *result = std::move(
-      const_cast<std::unique_ptr<const storage::Commit>&>(*commits.begin()));
+  *result = std::move(commits.extract(commits.begin()).value());
   return storage::Status::OK;
 }
 
