@@ -26,6 +26,12 @@ enum {
     BTI_TEE,
 };
 
+// MAC address metadata indices
+enum {
+    MACADDR_WIFI = 0,
+    MACADDR_BLUETOOTH = 1,
+};
+
 typedef struct {
     zx_device_t* parent;
     platform_bus_protocol_t pbus;

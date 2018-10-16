@@ -31,6 +31,13 @@ static const pbus_metadata_t wifi_metadata[] = {
     }
 };
 
+static const pbus_boot_metadata_t wifi_boot_metadata[] = {
+    {
+        .zbi_type = DEVICE_METADATA_MAC_ADDRESS,
+        .zbi_extra = MACADDR_WIFI,
+    },
+};
+
 static const pbus_dev_t sdio_children[] = {
     {
         // Wifi driver.
@@ -39,6 +46,8 @@ static const pbus_dev_t sdio_children[] = {
         .gpio_count = countof(wifi_gpios),
         .metadata = wifi_metadata,
         .metadata_count = countof(wifi_metadata),
+        .boot_metadata = wifi_boot_metadata,
+        .boot_metadata_count = countof(wifi_boot_metadata),
     },
 };
 

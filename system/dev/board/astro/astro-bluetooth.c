@@ -49,6 +49,13 @@ static const pbus_metadata_t bt_uart_metadata[] = {
     },
 };
 
+static const pbus_boot_metadata_t bt_uart_boot_metadata[] = {
+    {
+        .zbi_type = DEVICE_METADATA_MAC_ADDRESS,
+        .zbi_extra = MACADDR_BLUETOOTH,
+    },
+};
+
 static pbus_dev_t bt_uart_dev = {
     .name = "bt-uart",
     .vid = PDEV_VID_AMLOGIC,
@@ -60,6 +67,8 @@ static pbus_dev_t bt_uart_dev = {
     .irq_count = countof(bt_uart_irqs),
     .metadata = bt_uart_metadata,
     .metadata_count = countof(bt_uart_metadata),
+    .boot_metadata = bt_uart_boot_metadata,
+    .boot_metadata_count = countof(bt_uart_boot_metadata),
 };
 
 // Enables and configures PWM_E on the SOC_WIFI_LPO_32k768 line for the Wifi/Bluetooth module
