@@ -56,12 +56,13 @@ template("fidlmerge_cpp") {
   template_path = invoker.template_path
   source_base = invoker.generated_source_base
 
-  generated_source_extensions = [
-    ".cc",
-    ".h",
-  ]
   if (defined(invoker.generated_source_extensions)) {
     generated_source_extensions = invoker.generated_source_extensions
+  } else {
+    generated_source_extensions = [
+      ".cc",
+      ".h",
+    ]
   }
 
   main_target_name = target_name
