@@ -15,6 +15,7 @@ executable("netstack_integration_test") {
     "//garnet/public/fidl/fuchsia.netstack",
     "//garnet/public/lib/component/cpp/testing",
     "//third_party/googletest:gtest_main",
+    "//zircon/public/banjo/ddk-protocol-ethernet",
     "//zircon/public/fidl/fuchsia-net-stack",
     "//zircon/public/fidl/zircon-ethernet",
     "//zircon/public/lib/ddk",

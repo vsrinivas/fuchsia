@@ -4988,8 +4988,8 @@ void brcmf_hook_eapol_req(void* ctx, wlanif_eapol_req_t* req) {
         *(uint16_t*)(packet + 2 * ETH_ALEN) = EAPOL_ETHERNET_TYPE_UINT16;
         memcpy(packet + 2 * ETH_ALEN + sizeof(uint16_t), req->data, req->data_len);
         ethmac_netbuf_t netbuf;
-        netbuf.data = packet;
-        netbuf.len = packet_length;
+        netbuf.data_buffer = packet;
+        netbuf.data_size = packet_length;
         brcmf_netdev_start_xmit(ndev, &netbuf);
         free(packet);
         confirm.result_code = WLAN_EAPOL_RESULT_SUCCESS;

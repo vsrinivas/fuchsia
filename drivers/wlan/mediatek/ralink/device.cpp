@@ -3995,8 +3995,8 @@ size_t Device::WriteBulkout(uint8_t* dest, const wlan_tx_packet_t& wlan_pkt) {
 
     ZX_DEBUG_ASSERT(dest != nullptr);
 
-    auto head_data = static_cast<uint8_t*>(wlan_pkt.packet_head.data);
-    auto head_len = wlan_pkt.packet_head.len;
+    const auto head_data = static_cast<const uint8_t*>(wlan_pkt.packet_head.data_buffer);
+    auto head_len = wlan_pkt.packet_head.data_size;
     uint16_t frame_hdr_len = GetMacHdrLength(head_data, head_len);
     // If the header length is invalid use the entire length as header length.
     // This is just as problematic as before but we need to put proper error handling
@@ -4027,8 +4027,8 @@ size_t Device::WriteBulkout(uint8_t* dest, const wlan_tx_packet_t& wlan_pkt) {
     if (wlan_pkt.packet_tail != nullptr) {
         auto tail = wlan_pkt.packet_tail;
         uint16_t tail_offset = wlan_pkt.tail_offset;
-        uint8_t* tail_data = static_cast<uint8_t*>(tail->data) + tail_offset;
-        tail_len_eff = tail->len - tail_offset;
+        const uint8_t* tail_data = static_cast<const uint8_t*>(tail->data_buffer) + tail_offset;
+        tail_len_eff = tail->data_size - tail_offset;
         std::memcpy(dest + dest_offset, tail_data, tail_len_eff);
         dest_offset += tail_len_eff;
     }
@@ -4041,8 +4041,8 @@ size_t Device::WriteBulkout(uint8_t* dest, const wlan_tx_packet_t& wlan_pkt) {
     payload_len += extra_pad_len;
 
     finspect(
-        "[ralink] WriteBulkout mpdu_len:%zu head_len:%u tail_len_eff:%u frame_hdr_len:%u "
-        "l2pad_len:%u aggr_pad_len:%u extra_pad_len:%zu payload_len:%u\n",
+        "[ralink] WriteBulkout mpdu_len:%zu head_len:%zu tail_len_eff:%u frame_hdr_len:%u "
+        "l2pad_len:%u aggr_pad_len:%zu extra_pad_len:%zu payload_len:%zu\n",
         GetMpduLen(wlan_pkt), head_len, tail_len_eff, frame_hdr_len, l2pad_len, aggregate_pad_len,
         extra_pad_len, payload_len);
 
@@ -4219,7 +4219,7 @@ int Device::AddTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt) {
             num_overrun = 0;
         }
         tx_stats_fifo_counter_ = (tx_stats_fifo_counter_ + 1) % (kTxStatsFifoSize - 1);
-        auto bytes = static_cast<uint8_t*>(wlan_pkt.packet_head.data);
+        const auto bytes = static_cast<const uint8_t*>(wlan_pkt.packet_head.data_buffer);
         auto addr1_offset = bytes + kMacHdrAddr1Offset;
         std::copy(addr1_offset, addr1_offset + wlan::common::kMacAddrLen, tx_stats.peer_addr);
         tx_stats.tx_vector_idx = wlan_pkt.info.tx_vector_idx;
@@ -4391,8 +4391,8 @@ zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* 
     // If the frame requires protection, lookup the matching WCID.
     uint8_t wcid = kWcidUnknown;
     if (protected_frame) {
-        if (wlan_pkt->packet_head.len >= kMacHdrAddr1Offset + ETH_MAC_SIZE) {
-            auto frame_data = static_cast<const uint8_t*>(wlan_pkt->packet_head.data);
+        if (wlan_pkt->packet_head.data_size >= kMacHdrAddr1Offset + ETH_MAC_SIZE) {
+            auto frame_data = static_cast<const uint8_t*>(wlan_pkt->packet_head.data_buffer);
             auto addr1 = wlan::common::MacAddr(frame_data + kMacHdrAddr1Offset);
 
             auto wcid_lookup = GetWcid(addr1);
@@ -4960,10 +4960,10 @@ uint8_t Device::GetRxAckPolicy(const wlan_tx_packet_t& wlan_pkt) {
 }
 
 size_t Device::GetMpduLen(const wlan_tx_packet_t& wlan_pkt) {
-    auto len = wlan_pkt.packet_head.len;
+    auto len = wlan_pkt.packet_head.data_size;
     if (wlan_pkt.packet_tail != nullptr) {
-        if (wlan_pkt.packet_tail->len < wlan_pkt.tail_offset) { return ZX_ERR_INVALID_ARGS; }
-        len += wlan_pkt.packet_tail->len - wlan_pkt.tail_offset;
+        if (wlan_pkt.packet_tail->data_size < wlan_pkt.tail_offset) { return ZX_ERR_INVALID_ARGS; }
+        len += wlan_pkt.packet_tail->data_size - wlan_pkt.tail_offset;
     }
     return len;
 }
@@ -4984,14 +4984,14 @@ size_t Device::GetBulkoutAggrPayloadLen(const wlan_tx_packet_t& wlan_pkt) {
     // MSDU            :      (d) bytes // (d).  (b) + (d) is mpdu_len
     // Bulkout Agg Pad :      0~3 bytes // (e).
 
-    auto head_data = static_cast<uint8_t*>(wlan_pkt.packet_head.data);
-    auto head_len = wlan_pkt.packet_head.len;
+    const auto head_data = static_cast<const uint8_t*>(wlan_pkt.packet_head.data_buffer);
+    auto head_len = wlan_pkt.packet_head.data_size;
     auto has_tail = wlan_pkt.packet_tail != nullptr;
     uint16_t tail_len_eff = 0;
     if (has_tail) {
         auto tail = wlan_pkt.packet_tail;
         uint16_t tail_offset = wlan_pkt.tail_offset;
-        tail_len_eff = tail->len - tail_offset;
+        tail_len_eff = tail->data_size - tail_offset;
     }
 
     auto mpdu_hdr_len = GetMacHdrLength(head_data, head_len);
@@ -5003,7 +5003,7 @@ size_t Device::GetBulkoutAggrPayloadLen(const wlan_tx_packet_t& wlan_pkt) {
     aggr_payload_len = ROUNDUP(aggr_payload_len, 4);
 
     finspect(
-        "[ralink] head:%u tail_eff:%u mpdu_hdr:%u msdu_len:%u l2pad_len:%zu txwi:%zu "
+        "[ralink] head:%zu tail_eff:%u mpdu_hdr:%u msdu_len:%zu l2pad_len:%zu txwi:%zu "
         "aggr_payload_len:%zu\n",
         head_len, tail_len_eff, mpdu_hdr_len, msdu_len, l2pad_len, GetTxwiLen(), aggr_payload_len);
     return aggr_payload_len;
@@ -5030,10 +5030,10 @@ void Device::DumpLengths(const wlan_tx_packet_t& wlan_pkt, BulkoutAggregation* u
     }
 
     {  // wlan_pkt
-        uint16_t wlan_pkt_head_len = wlan_pkt.packet_head.len;
+        uint16_t wlan_pkt_head_len = wlan_pkt.packet_head.data_size;
         uint16_t wlan_pkt_tail_offset = wlan_pkt.tail_offset;
         bool has_wlan_pkt_tail = (wlan_pkt.packet_tail != nullptr);
-        uint16_t wlan_pkt_tail_len = has_wlan_pkt_tail ? wlan_pkt.packet_tail->len : 0;
+        uint16_t wlan_pkt_tail_len = has_wlan_pkt_tail ? wlan_pkt.packet_tail->data_size : 0;
         debugf("        mpdu_len:%zu wlan_pkt head:%u\n", GetMpduLen(wlan_pkt), wlan_pkt_head_len);
         if (has_wlan_pkt_tail) {
             debugf("        wlan_pkt tail:%u offset:%u\n", wlan_pkt_tail_len, wlan_pkt_tail_offset);
@@ -5045,8 +5045,8 @@ void Device::DumpLengths(const wlan_tx_packet_t& wlan_pkt, BulkoutAggregation* u
 }
 
 size_t Device::GetL2PadLen(const wlan_tx_packet_t& wlan_pkt) {
-    auto head_data = static_cast<uint8_t*>(wlan_pkt.packet_head.data);
-    auto head_len = wlan_pkt.packet_head.len;
+    const auto head_data = static_cast<const uint8_t*>(wlan_pkt.packet_head.data_buffer);
+    auto head_len = wlan_pkt.packet_head.data_size;
     auto frame_hdr_len = GetMacHdrLength(head_data, head_len);
     auto l2pad_len = ROUNDUP(frame_hdr_len, 4) - frame_hdr_len;
 

@@ -27,8 +27,8 @@ zx_status_t Packet::CopyFrom(const void* src, size_t len, size_t offset) {
 wlan_tx_packet_t Packet::AsWlanTxPacket() {
     ZX_DEBUG_ASSERT(len() <= fbl::numeric_limits<uint16_t>::max());
     wlan_tx_packet_t tx_pkt = {};
-    tx_pkt.packet_head.data = data();
-    tx_pkt.packet_head.len = static_cast<uint16_t>(len());
+    tx_pkt.packet_head.data_buffer = data();
+    tx_pkt.packet_head.data_size = static_cast<uint16_t>(len());
     if (has_ext_data()) {
         tx_pkt.packet_tail = ext_data();
         tx_pkt.tail_offset = ext_offset();

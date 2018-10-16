@@ -3090,9 +3090,9 @@ static zx_status_t ath10k_pci_enable_beaconing(void* ctx, uint32_t options,
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    if (bcn_cfg->tmpl.packet_head.len > ATH10K_MAX_BCN_TMPL_SIZE) {
-        ath10k_err("%s(): the given beacon template (%u) cannot be larger than the buffer (%d)\n",
-                   __func__, bcn_cfg->tmpl.packet_head.len, ATH10K_MAX_BCN_TMPL_SIZE);
+    if (bcn_cfg->tmpl.packet_head.data_size > ATH10K_MAX_BCN_TMPL_SIZE) {
+        ath10k_err("%s(): the given beacon template (%zu) cannot be larger than the buffer (%d)\n",
+                   __func__, bcn_cfg->tmpl.packet_head.data_size, ATH10K_MAX_BCN_TMPL_SIZE);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -3102,8 +3102,8 @@ static zx_status_t ath10k_pci_enable_beaconing(void* ctx, uint32_t options,
 
     // Copy the beacon template content and ask the hardware to broadcast it.
     mtx_lock(&ar->data_lock);
-    arvif->bcn_tmpl_len = bcn_cfg->tmpl.packet_head.len;
-    memcpy(arvif->bcn_tmpl_data, bcn_cfg->tmpl.packet_head.data, arvif->bcn_tmpl_len);
+    arvif->bcn_tmpl_len = bcn_cfg->tmpl.packet_head.data_size;
+    memcpy(arvif->bcn_tmpl_data, bcn_cfg->tmpl.packet_head.data_buffer, arvif->bcn_tmpl_len);
     arvif->tim_ie_offset = bcn_cfg->tim_ele_offset;
     arvif->bcn_tmpl_changed = true;
     mtx_unlock(&ar->data_lock);

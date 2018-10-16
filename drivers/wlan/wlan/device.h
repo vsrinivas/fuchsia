@@ -9,6 +9,7 @@
 #include "proxy_helpers.h"
 
 #include <ddk/driver.h>
+#include <ddktl/protocol/ethernet.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
@@ -61,10 +62,10 @@ class Device : public DeviceInterface {
 
     // ddk ethmac_protocol_ops methods
     zx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
-    zx_status_t EthmacStart(ethmac_ifc_t* ifc, void* cookie) __TA_EXCLUDES(lock_);
+    zx_status_t EthmacStart(const ethmac_ifc_t* ifc) __TA_EXCLUDES(lock_);
     void EthmacStop() __TA_EXCLUDES(lock_);
     zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf);
-    zx_status_t EthmacSetParam(uint32_t param, int32_t value, void* data);
+    zx_status_t EthmacSetParam(uint32_t param, int32_t value, const void* data, size_t data_size);
 
     // DeviceInterface methods
     zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final;
@@ -130,7 +131,7 @@ class Device : public DeviceInterface {
     zx_device_t* ethdev_;
 
     WlanmacProxy wlanmac_proxy_;
-    fbl::unique_ptr<EthmacIfcProxy> ethmac_proxy_;
+    fbl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_;
 
     wlanmac_info_t wlanmac_info_ = {};
     fbl::RefPtr<DeviceState> state_;

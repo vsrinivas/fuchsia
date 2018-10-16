@@ -99,12 +99,13 @@ static ethmac_protocol_ops_t ethmac_ops = {
                  { return DEV(ctx)->EthQuery(options, info); },
     .stop = [](void* ctx)
                 { DEV(ctx)->EthStop(); },
-    .start = [](void* ctx, ethmac_ifc_t* ifc, void* cookie) -> zx_status_t
-                 { return DEV(ctx)->EthStart(ifc, cookie); },
+    .start = [](void* ctx, const ethmac_ifc_t* ifc) -> zx_status_t
+                 { return DEV(ctx)->EthStart(ifc); },
     .queue_tx = [](void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) -> zx_status_t
                     { return DEV(ctx)->EthQueueTx(options, netbuf); },
-    .set_param = [](void* ctx, uint32_t param, int32_t value, void* data) -> zx_status_t
-                     { return DEV(ctx)->EthSetParam(param, value, data); },
+    .set_param = [](void* ctx, uint32_t param, int32_t value, const void* data,
+                    size_t data_size) -> zx_status_t
+                     { return DEV(ctx)->EthSetParam(param, value, data, data_size); },
 };
 #undef DEV
 
@@ -124,7 +125,7 @@ zx_status_t Device::AddEthDevice() {
     args.name = "wlan-ethernet";
     args.ctx = this;
     args.ops = &eth_device_ops;
-    args.proto_id = ZX_PROTOCOL_ETHERNET_IMPL;
+    args.proto_id = ZX_PROTOCOL_ETHMAC;
     args.proto_ops = &ethmac_ops;
     return device_add(zxdev_, &args, &ethdev_);
 }
@@ -912,10 +913,9 @@ void Device::StatsQueryResp(wlanif_stats_query_response_t* resp) {
     binding_.events().StatsQueryResp(std::move(fidl_resp));
 }
 
-zx_status_t Device::EthStart(ethmac_ifc_t* ifc, void* cookie) {
+zx_status_t Device::EthStart(const ethmac_ifc_t* ifc) {
     std::lock_guard<std::mutex> lock(lock_);
     ethmac_ifc_ = *ifc;
-    ethmac_cookie_ = cookie;
     eth_started_ = true;
     return ZX_OK;
 }
@@ -923,7 +923,6 @@ zx_status_t Device::EthStart(ethmac_ifc_t* ifc, void* cookie) {
 void Device::EthStop() {
     std::lock_guard<std::mutex> lock(lock_);
     eth_started_ = false;
-    ethmac_cookie_ = nullptr;
     std::memset(&ethmac_ifc_, 0, sizeof(ethmac_ifc_));
 }
 
@@ -959,13 +958,13 @@ zx_status_t Device::EthQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
     }
 }
 
-zx_status_t Device::EthSetParam(uint32_t param, int32_t value, void* data) {
+zx_status_t Device::EthSetParam(uint32_t param, int32_t value, const void* data, size_t data_size) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 void Device::SetDataStateLocked(data_states new_state) {
     if (((new_state == ONLINE) != (data_state_ == ONLINE)) && eth_started_) {
-        ethmac_ifc_.status(ethmac_cookie_, new_state == ONLINE ? ETHMAC_STATUS_ONLINE : 0);
+        ethmac_ifc_status(&ethmac_ifc_, new_state == ONLINE ? ETHMAC_STATUS_ONLINE : 0);
     }
     data_state_ = new_state;
 }
@@ -978,14 +977,14 @@ void Device::SetDataStateUnlocked(data_states new_state) {
 void Device::EthRecv(void* data, size_t length, uint32_t flags) {
     std::lock_guard<std::mutex> lock(lock_);
     if (eth_started_) {
-        ethmac_ifc_.recv(ethmac_cookie_, data, length, flags);
+        ethmac_ifc_recv(&ethmac_ifc_, data, length, flags);
     }
 }
 
 void Device::EthCompleteTx(ethmac_netbuf_t* netbuf, zx_status_t status) {
     std::lock_guard<std::mutex> lock(lock_);
     if (eth_started_) {
-        ethmac_ifc_.complete_tx(ethmac_cookie_, netbuf, status);
+        ethmac_ifc_complete_tx(&ethmac_ifc_, netbuf, status);
     }
 }
 

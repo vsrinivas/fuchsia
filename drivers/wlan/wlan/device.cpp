@@ -78,14 +78,15 @@ static ethmac_protocol_ops_t ethmac_ops = {
         return DEV(ctx)->EthmacQuery(options, info);
     },
     .stop = [](void* ctx) { DEV(ctx)->EthmacStop(); },
-    .start = [](void* ctx, ethmac_ifc_t* ifc, void* cookie) -> zx_status_t {
-        return DEV(ctx)->EthmacStart(ifc, cookie);
+    .start = [](void* ctx, const ethmac_ifc_t* ifc) -> zx_status_t {
+        return DEV(ctx)->EthmacStart(ifc);
     },
     .queue_tx = [](void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) -> zx_status_t {
         return DEV(ctx)->EthmacQueueTx(options, netbuf);
     },
-    .set_param = [](void* ctx, uint32_t param, int32_t value, void* data) -> zx_status_t {
-        return DEV(ctx)->EthmacSetParam(param, value, data);
+    .set_param = [](void* ctx, uint32_t param, int32_t value, const void* data,
+                    size_t data_size) -> zx_status_t {
+        return DEV(ctx)->EthmacSetParam(param, value, data, data_size);
     },
 };
 #undef DEV
@@ -211,7 +212,7 @@ zx_status_t Device::AddEthDevice() {
     args.name = "wlan-ethernet";
     args.ctx = this;
     args.ops = &eth_device_ops;
-    args.proto_id = ZX_PROTOCOL_ETHERNET_IMPL;
+    args.proto_id = ZX_PROTOCOL_ETHMAC;
     args.proto_ops = &ethmac_ops;
     return device_add(zxdev_, &args, &ethdev_);
 }
@@ -314,13 +315,13 @@ zx_status_t Device::EthmacQuery(uint32_t options, ethmac_info_t* info) {
     return ZX_OK;
 }
 
-zx_status_t Device::EthmacStart(ethmac_ifc_t* ifc, void* cookie) {
+zx_status_t Device::EthmacStart(const ethmac_ifc_t* ifc) {
     debugfn();
     ZX_DEBUG_ASSERT(ifc != nullptr);
 
     std::lock_guard<std::mutex> lock(lock_);
     if (ethmac_proxy_ != nullptr) { return ZX_ERR_ALREADY_BOUND; }
-    ethmac_proxy_.reset(new EthmacIfcProxy(ifc, cookie));
+    ethmac_proxy_.reset(new ddk::EthmacIfcProxy(ifc));
     return ZX_OK;
 }
 
@@ -334,9 +335,9 @@ void Device::EthmacStop() {
 
 zx_status_t Device::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
     // no debugfn() because it's too noisy
-    auto packet = PreparePacket(netbuf->data, netbuf->len, Packet::Peer::kEthernet);
+    auto packet = PreparePacket(netbuf->data_buffer, netbuf->data_size, Packet::Peer::kEthernet);
     if (packet == nullptr) {
-        warnf("could not prepare Ethernet packet with len %u\n", netbuf->len);
+        warnf("could not prepare Ethernet packet with len %zu\n", netbuf->data_size);
         return ZX_ERR_NO_RESOURCES;
     }
     zx_status_t status = QueuePacket(std::move(packet));
@@ -344,7 +345,8 @@ zx_status_t Device::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
     return status;
 }
 
-zx_status_t Device::EthmacSetParam(uint32_t param, int32_t value, void* data) {
+zx_status_t Device::EthmacSetParam(uint32_t param, int32_t value, const void* data,
+                                   size_t data_size) {
     debugfn();
     return ZX_ERR_NOT_SUPPORTED;
 }

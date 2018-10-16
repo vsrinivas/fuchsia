@@ -258,10 +258,10 @@ void brcmf_netdev_start_xmit(struct net_device* ndev, ethmac_netbuf_t* ethmac_ne
         goto done;
     }
 
-    struct brcmf_netbuf* netbuf = brcmf_netbuf_allocate(ethmac_netbuf->len + drvr->hdrlen);
-    brcmf_netbuf_grow_tail(netbuf, ethmac_netbuf->len + drvr->hdrlen);
+    struct brcmf_netbuf* netbuf = brcmf_netbuf_allocate(ethmac_netbuf->data_size + drvr->hdrlen);
+    brcmf_netbuf_grow_tail(netbuf, ethmac_netbuf->data_size + drvr->hdrlen);
     brcmf_netbuf_shrink_head(netbuf, drvr->hdrlen);
-    memcpy(netbuf->data, ethmac_netbuf->data, ethmac_netbuf->len);
+    memcpy(netbuf->data, ethmac_netbuf->data_buffer, ethmac_netbuf->data_size);
     brcmf_hexdump(netbuf->data, 32);
 
     /* Make sure there's enough writeable headroom */

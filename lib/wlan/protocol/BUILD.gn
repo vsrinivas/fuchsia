@@ -15,5 +15,8 @@ source_set("protocol") {
 
   public_configs = [ ":wlan_protocol_config" ]
 
-  public_deps = [ "//zircon/public/lib/ddk" ]
+  public_deps = [
+    "//zircon/public/banjo/ddk-protocol-ethernet",
+    "//zircon/public/lib/ddk"
+  ]
 }

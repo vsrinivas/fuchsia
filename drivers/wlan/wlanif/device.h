@@ -77,11 +77,11 @@ class Device : public wlan_mlme::MLME {
     void StatsQueryResp(wlanif_stats_query_response_t* resp);
 
     // wlanif_protocol_t (ethmac_protocol -> wlanif_impl_protocol)
-    zx_status_t EthStart(ethmac_ifc_t* ifc, void* cookie);
+    zx_status_t EthStart(const ethmac_ifc_t* ifc);
     void EthStop();
     zx_status_t EthQuery(uint32_t options, ethmac_info_t* info);
     zx_status_t EthQueueTx(uint32_t options, ethmac_netbuf_t* netbuf);
-    zx_status_t EthSetParam(uint32_t param, int32_t value, void* data);
+    zx_status_t EthSetParam(uint32_t param, int32_t value, const void* data, size_t data_size);
 
     // wlanif_impl_ifc (wlanif-impl -> ethmac_ifc_t)
     void EthRecv(void* data, size_t length, uint32_t flags);
@@ -111,7 +111,6 @@ class Device : public wlan_mlme::MLME {
 
     bool eth_started_ __TA_GUARDED(lock_) = false;
     ethmac_ifc_t ethmac_ifc_ __TA_GUARDED(lock_);
-    void* ethmac_cookie_ __TA_GUARDED(lock_);
 
     bool have_query_info_ __TA_GUARDED(lock_) = false;
     wlanif_query_info query_info_ __TA_GUARDED(lock_);
