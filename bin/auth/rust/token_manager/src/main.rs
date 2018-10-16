@@ -14,8 +14,6 @@
 #![deny(missing_docs)]
 #![feature(async_await, await_macro, futures_api, pin)]
 
-#[macro_use]
-mod macros;
 mod auth_context_client;
 mod auth_provider_client;
 mod error;
@@ -24,27 +22,45 @@ mod token_manager_factory;
 
 use crate::token_manager_factory::TokenManagerFactory;
 use failure::{Error, ResultExt};
+use fidl::endpoints::RequestStream;
 use fidl::endpoints::ServiceMarker;
-use fidl_fuchsia_auth::TokenManagerFactoryMarker;
+use fidl_fuchsia_auth::{TokenManagerFactoryMarker, TokenManagerFactoryRequestStream};
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
-use log::info;
+use futures::prelude::*;
+use log::{error, info};
+use std::sync::Arc;
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
-    info!("Starting token manager");
+
+    // Create a single token manager factory instance that we use to back all incoming requests.
+    info!("Starting token manager factory");
+    let token_manager_factory = Arc::new(TokenManagerFactory::new());
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let fut = ServicesServer::new()
-        .add_service((TokenManagerFactoryMarker::NAME, |chan| {
-            TokenManagerFactory::spawn(chan)
+        .add_service((TokenManagerFactoryMarker::NAME, move |chan| {
+            let tmf_clone = Arc::clone(&token_manager_factory);
+            fasync::spawn(
+                (async move {
+                    let mut stream = TokenManagerFactoryRequestStream::from_channel(chan);
+                    while let Some(req) = await!(stream.try_next())? {
+                        await!(tmf_clone.handle_request(req))?;
+                    }
+                    Ok(())
+                })
+                    .unwrap_or_else(|e: failure::Error| {
+                        error!("Error handling TokenManagerFactory channel {:?}", e)
+                    }),
+            )
         }))
         .start()
-        .context("Error starting Auth TokenManager server")?;
+        .context("Error starting token manager factory server")?;
 
     executor
         .run_singlethreaded(fut)
-        .context("Failed to execute Auth TokenManager future")?;
-    info!("Stopping token manager");
+        .context("Failed to execute token manager factory future")?;
+    info!("Stopping token manager factory");
     Ok(())
 }
