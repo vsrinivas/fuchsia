@@ -26,12 +26,12 @@ fuchsia/qemu/mac-amd64
 	2d3358ae9a569b2d4a474f498b32b202a152134f
 
 fuchsia/rust/linux-amd64
-	git_revision:1c5e9c68ea6c76fe400528de17ebe03e338bac68
-	7I3GuRjmt5UCeFjhDkBrrVCA1MZ3Q57KyO1dxNrKMNkC
+	git_revision:46880f41b7aeb897b8245474196bba9dc11f0e88
+	YjEjqVlj8kDnYgkuvubPi6YFCde23t9tLO4_1pSEWhwC
 
 fuchsia/rust/mac-amd64
-	git_revision:1c5e9c68ea6c76fe400528de17ebe03e338bac68
-	8RAWFktRUg7FbtD_Tg-zhQCmC-qQERm4mlDQY-i3MB8C
+	git_revision:46880f41b7aeb897b8245474196bba9dc11f0e88
+	--6o5Yx0rk63114hqBN3kYCwuffabwyCRkfWhfQKdMkC
 
 fuchsia/swift/linux-amd64
 	git_revision:d4943f3da1ae8b69fba21fa359b62f25d74a6b14

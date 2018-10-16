@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Note: changes to this file will require updating fuchsia.versions, which
+# can be done by running `./cipd ensure-file-resolve -ensure-file fuchsia.ensure`
+# from this directory.
+
 $VerifiedPlatform linux-amd64
 $VerifiedPlatform mac-amd64
 
@@ -46,7 +50,7 @@ fuchsia/go/${platform} git_revision:b8bd7d94a2ae6c80ab8b6ed5900d3eeba8a777c3
 
 # Rust
 @Subdir rust
-fuchsia/rust/${platform} git_revision:1c5e9c68ea6c76fe400528de17ebe03e338bac68
+fuchsia/rust/${platform} git_revision:46880f41b7aeb897b8245474196bba9dc11f0e88
 
 # Swift
 @Subdir swift
