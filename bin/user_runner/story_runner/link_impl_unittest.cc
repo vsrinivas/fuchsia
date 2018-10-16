@@ -206,6 +206,32 @@ TEST_F(LinkImplTest, SetAndWatchAndGet) {
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return get_done; }));
 }
 
+TEST_F(LinkImplTest, SetNonJsonAndGetJsonPointer) {
+  auto storage = MakeStorage("page");
+  auto link = MakeLink(storage.get(), "mylink");
+
+  SetLink(link.get(), nullptr, R"({
+    "one": 1,
+    "two": 2invalidjson
+  })");
+
+  bool synced{};
+  link->Sync([&synced] { synced = true; });
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return synced; }));
+
+  fidl::VectorPtr<fidl::StringPtr> path;
+  path->push_back("one");
+  bool get_done{};
+  link->Get(std::move(path),
+            [&](std::unique_ptr<fuchsia::mem::Buffer> value) {
+              std::string content_string;
+              FXL_CHECK(fsl::StringFromVmo(*value, &content_string));
+              get_done = true;
+              EXPECT_EQ("null", content_string);
+            });
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return get_done; }));
+}
+
 TEST_F(LinkImplTest, Erase) {
   auto storage = MakeStorage("page");
   auto link = MakeLink(storage.get(), "mylink");

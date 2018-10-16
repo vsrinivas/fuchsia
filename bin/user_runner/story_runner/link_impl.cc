@@ -115,8 +115,9 @@ void LinkImpl::Get(fidl::VectorPtr<fidl::StringPtr> path,
               // Extract just the |path| portion of the value.
               CrtJsonDoc json;
               json.Parse(value);
-              FXL_DCHECK(!json.HasParseError());  // StoryStorage guarantees
-                                                  // we get valid JSON.
+              if (json.HasParseError()) {
+                return std::string("null");
+              }
               auto& value_at_path = CreatePointer(json, *path)
                                         .GetWithDefault(json, CrtJsonValue());
               return JsonValueToString(value_at_path);
