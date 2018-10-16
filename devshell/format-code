@@ -8,6 +8,7 @@
 ## Usage: fx format-code
 ##           [--help] [--dry-run] [--verbose] [--all]
 ##           [--files=FILES,[FILES ...]]
+##           [--target=GN_TARGET]
 ##           [--git]
 ##
 ##   --help    Prints this message
@@ -17,6 +18,7 @@
 ##   --files   Allows the user to specify files.  Files are comma separated.
 ##             Globs are dealt with by bash; fx format-code "--files=foo/*" will
 ##             work as expected.
+##    --target Allows the user to specify a gn target.
 ##    --git    The default; it uses `git diff-index` against the newest parent
 ##             commit in the upstream branch (or against HEAD if no such commit
 ##             is found).  Files that are locally modified, staged or touched by
@@ -70,30 +72,53 @@ function hg-cmd() {
   [[ $1 =~ .*\.h ]] && printf "${FIX_HEADER_GUARDS_CMD}"
 }
 
+# Removes leading //, resolves to absolute path, and resolves globs.  The first
+# argument is a path prefix, and the remaining arguments are relative to that
+# path prefix.
+function canonicalize() {
+  local root_dir="$1"
+  shift
+  for fileglob in "${@}"; do
+    # // means it comes from gn, [^/]* means it is relative
+    if [[ "${fileglob}" = //* || "${fileglob}" = [^/]* ]]; then
+      local dir="${root_dir}"/
+    else
+      local dir=""
+    fi
+    for file in "${dir}"${fileglob#"//"}; do
+      echo "${file}"
+    done
+  done
+}
+
 DRY_RUN=
 VERBOSE=
+
+fx-config-read
 
 for ARG in "$@"; do
   case "${ARG}" in
     --verbose) VERBOSE="1" ;;
     --dry-run) DRY_RUN="1" ;;
-    --all) FILES="$(git ls-files)" ;;
+    --all) FILES=$(canonicalize "${PWD}" $(git ls-files)) ;;
     --git) ;; # We'll figure this out later
-    --files=*) FILES="${ARG#--files=}" ;;
+    --files=*) FILES=$(canonicalize "${PWD}" $(zap-commas "${ARG#--files=}")) ;;
+    --target=*) FILES=$(canonicalize "${FUCHSIA_DIR}" \
+        $(fx-buildtool-run gn desc \
+            "${FUCHSIA_OUT_DIR}/${FUCHSIA_ARCH}" "${ARG#--target=}" sources)) ;;
     --help) usage && exit 1 ;;
     *) usage && printf "Unknown flag %s\n" "${ARG}" && exit 1 ;;
   esac
 done
 
 if [ -z "${FILES+x}" ]; then
-  FILES=$(git diff-index --name-only $(get-diff-base))
+  FILES=$(canonicalize $(git rev-parse --show-toplevel) \
+    $(git diff-index --name-only $(get-diff-base)))
 fi
 
 if [[ -n "${VERBOSE}" ]]; then
   printf "Files to be formatted:\n%s\n" "${FILES}"
 fi
-
-fx-config-read
 
 declare BUILDTOOLS_ROOT="${FUCHSIA_DIR}"/buildtools
 declare HOST_OS=$(uname | tr '[:upper:]' '[:lower:]')
