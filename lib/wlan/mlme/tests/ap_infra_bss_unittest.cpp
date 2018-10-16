@@ -378,6 +378,32 @@ TEST_F(ApInfraBssTest, Associate_Success) {
     // Simulate SME sending MLME-ASSOCIATE.response msg with a success code
     SendAssocResponseMsg(wlan_mlme::AssociateResultCodes::SUCCESS);
 
+    // Expect association context has been set.
+    const wlan_assoc_ctx_t* actual_ctx = device.GetStationAssocContext();
+    EXPECT_EQ(std::memcmp(actual_ctx->bssid, kClientAddress, 6), 0);
+    EXPECT_EQ(actual_ctx->aid, kAid);
+    const SupportedRate* rates;
+    size_t num_rates;
+    rates = bss.Rates(&num_rates);
+    EXPECT_EQ(actual_ctx->supported_rates_cnt, num_rates);
+    for (size_t i = 0; i < num_rates; i++) {
+        EXPECT_EQ(actual_ctx->supported_rates[i], rates[i]);
+    }
+    EXPECT_TRUE(actual_ctx->has_ht_cap);
+    const wlan_ht_caps_t expected_ht_cap = BuildHtCapabilities(bss.Ht()).ToDdk();
+    const wlan_ht_caps_t actual_ht_cap = actual_ctx->ht_cap;
+    EXPECT_EQ(actual_ht_cap.ht_capability_info, expected_ht_cap.ht_capability_info);
+    EXPECT_EQ(actual_ht_cap.ampdu_params, expected_ht_cap.ampdu_params);
+    size_t len = sizeof(expected_ht_cap.supported_mcs_set) /
+                 sizeof(expected_ht_cap.supported_mcs_set[0]);
+    for (size_t i = 0; i < len; i++) {
+        EXPECT_EQ(actual_ht_cap.supported_mcs_set[i], expected_ht_cap.supported_mcs_set[i]);
+    }
+    EXPECT_EQ(actual_ht_cap.ht_ext_capabilities, expected_ht_cap.ht_ext_capabilities);
+    EXPECT_EQ(actual_ht_cap.tx_beamforming_capabilities,
+              expected_ht_cap.tx_beamforming_capabilities);
+    EXPECT_EQ(actual_ht_cap.asel_capabilities, expected_ht_cap.asel_capabilities);
+
     // Verify association response frame for the client
     // WLAN queue should have AssociateResponse and BlockAck request
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(2));
@@ -403,6 +429,11 @@ TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
 
     // Simulate SME sending MLME-ASSOCIATE.response msg with a success code
     SendAssocResponseMsg(wlan_mlme::AssociateResultCodes::REFUSED_CAPABILITIES_MISMATCH);
+
+    // Expect association context has not been set (blank).
+    wlan_assoc_ctx_t expected_ctx = {};
+    const wlan_assoc_ctx_t* actual_ctx = device.GetStationAssocContext();
+    EXPECT_EQ(std::memcmp(actual_ctx, &expected_ctx, sizeof(expected_ctx)), 0);
 
     // Verify association response frame for the client is a refusal
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));

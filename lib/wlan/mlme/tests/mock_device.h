@@ -42,7 +42,7 @@ struct MockDevice : public DeviceInterface {
     using KeyList = std::vector<wlan_key_config_t>;
     typedef bool (*PacketPredicate)(const Packet*);
 
-    MockDevice() {
+    MockDevice() : sta_assoc_ctx_{} {
         state = fbl::AdoptRef(new DeviceState);
         common::MacAddr addr(kClientAddress);
         state->set_address(addr);
@@ -131,7 +131,10 @@ struct MockDevice : public DeviceInterface {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) override final { return ZX_OK; }
+    zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) override final {
+        sta_assoc_ctx_ = *assoc_ctx;
+        return ZX_OK;
+    }
     zx_status_t ClearAssoc(const common::MacAddr& peer_addr) override final { return ZX_OK; }
 
     fbl::RefPtr<DeviceState> GetState() override final { return state; }
@@ -180,6 +183,8 @@ struct MockDevice : public DeviceInterface {
 
     KeyList GetKeys() { return keys; }
 
+    const wlan_assoc_ctx_t* GetStationAssocContext(void) { return &sta_assoc_ctx_; }
+
     fbl::RefPtr<DeviceState> state;
     wlanmac_info_t wlanmac_info;
     PacketList wlan_queue;
@@ -189,6 +194,7 @@ struct MockDevice : public DeviceInterface {
     KeyList keys;
     fbl::unique_ptr<Packet> beacon;
     bool beaconing_enabled;
+    wlan_assoc_ctx_t sta_assoc_ctx_;
 
    private:
     PacketList GetPackets(PacketList* lst, PacketPredicate predicate) {

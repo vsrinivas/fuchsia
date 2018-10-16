@@ -349,6 +349,9 @@ void AssociatedState::OnEnter() {
         eapol_controlled_port_ = eapol::PortState::kOpen;
     }
 
+    wlan_assoc_ctx_t assoc = client_->BuildAssocContext(aid_);
+    client_->device()->ConfigureAssoc(&assoc);
+
     // TODO(NET-833): Establish BlockAck session conditionally on the client capability
     // and the AP configurations
     client_->SendAddBaRequest();
@@ -1035,6 +1038,32 @@ zx_status_t RemoteClient::SendAddBaResponse(const AddBaRequestFrame& req) {
     }
 
     return ZX_OK;
+}
+
+wlan_assoc_ctx_t RemoteClient::BuildAssocContext(uint16_t aid) {
+    wlan_assoc_ctx_t assoc;
+    memset(&assoc, 0, sizeof(assoc));
+
+    addr().CopyTo(assoc.bssid);
+    assoc.aid = aid;
+
+    const SupportedRate* rates;
+    size_t num_rates;
+    rates = bss_->Rates(&num_rates);
+    assoc.supported_rates_cnt = num_rates;
+    memcpy(assoc.supported_rates, rates, sizeof(rates[0]) * num_rates);
+
+    auto ht = bss_->Ht();
+    if (ht.ready) {
+        assoc.has_ht_cap = true;
+        HtCapabilities ht_cap = BuildHtCapabilities(ht);
+
+        assoc.ht_cap = ht_cap.ToDdk();
+    }
+
+    // TODO(NET-1708): Support VHT MSC
+
+    return assoc;
 }
 
 }  // namespace wlan

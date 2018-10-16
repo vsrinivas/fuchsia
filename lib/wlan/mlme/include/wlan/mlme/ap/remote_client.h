@@ -51,6 +51,8 @@ class RemoteClient : public RemoteClientInterface {
     zx_status_t SendAddBaRequest();
     zx_status_t SendAddBaResponse(const AddBaRequestFrame& rx_frame);
 
+    wlan_assoc_ctx_t BuildAssocContext(uint16_t aid);
+
     uint8_t GetTid();
     uint8_t GetTid(const EthFrame& frame);
 
