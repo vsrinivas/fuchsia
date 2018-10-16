@@ -14,6 +14,9 @@ import sys
 import lib.rust
 from lib.rust import ROOT_PATH, CONFIG_PATH
 
+sys.path += [os.path.join(ROOT_PATH, "third_party", "pytoml")]
+import pytoml as toml
+
 def main():
     parser = argparse.ArgumentParser("Format a rust target")
     parser.add_argument("gn_target",
@@ -24,16 +27,31 @@ def main():
                               absolute path to the target \
                               (relative to $FUCHSIA_DIR). \
                               For example: //garnet/bin/foo/bar:baz.")
+    parser.add_argument("-v", "--verbose",
+                        action='store_true',
+                        help="Show verbose output")
 
     args = parser.parse_args()
 
     out_dir = lib.rust.find_out_dir()
 
-    main_file = os.path.join(args.gn_target.path, "src", "main.rs")
-    if not os.path.exists(main_file):
-        main_file = os.path.join(args.gn_target.path, "src", "lib.rs")
-    if not os.path.exists(main_file):
-        print("No lib.rs or main.rs found for this gn target")
+    with open(args.gn_target.manifest_path(out_dir), "r") as fin:
+        cargo_toml = toml.load(fin)
+
+    main_file = None
+    if 'bin' in cargo_toml:
+        bins = cargo_toml['bin']
+        if len(bins) != 1:
+            print("Expected a single bin target for {gn_target}, found {n}".format(
+                    gn_target = args.gn_target,
+                    n = len(bins)))
+            return 1
+        main_file = bins[0]['path']
+    elif 'lib' in cargo_toml:
+        main_file = cargo_toml['lib']['path']
+
+    if not main_file or not os.path.exists(main_file):
+        print("No source root (typically lib.rs or main.rs) found for this gn target")
         return 1
 
     host_platform = "%s-%s" % (
@@ -50,6 +68,9 @@ def main():
         rustfmt,
         main_file,
     ]
+
+    if args.verbose:
+        call_args.append("-v")
 
     return subprocess.call(call_args)
 
