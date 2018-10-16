@@ -46,7 +46,9 @@ std::unique_ptr<CodecAdmission> CodecAdmissionControl::TryAddCodecInternal(
     if (multi_instance_codec_count_ > 0 || single_instance_codec_count_ > 0) {
       printf(
           "CodecAdmissionControl::AddCodec(): we've already got an existing "
-          "codec\n");
+          "codec.  multi_instance_codec_count: %u single_instance_codec_count: "
+          "%u\n",
+          multi_instance_codec_count_, single_instance_codec_count_);
       return nullptr;
     }
     single_instance_codec_count_++;
