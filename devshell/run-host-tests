@@ -20,7 +20,17 @@ set -o pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
+ARGS=""
 function main {
+  while getopts "v" opt; do
+    case $opt in
+      v)
+        shift
+        ARGS="$ARGS -v"
+        ;;
+    esac
+  done
+
   if [[ $# -gt 0 ]] && [[ $1 = "-z" ]]; then
     host_test_dir="${ZIRCON_BUILD_DIR}/host_tests"
     fx-command-run build-zircon "-v"
@@ -34,14 +44,14 @@ function main {
     fx-command-run build "${build_targets}"
   fi
 
-  runtests_cmd="${ZIRCON_TOOLS_DIR}/runtests -v"
+  runtests_cmd="${ZIRCON_TOOLS_DIR}/runtests $ARGS"
 
   if [[ $# -gt 0 ]]; then
     # Comma-separated list of host test names to filter by.
     local IFS=","
     filtered_host_tests="'$*'"
 
-    runtests_cmd="${runtests_cmd} -t ${filtered_host_tests}"
+    runtests_cmd="${runtests_cmd} -t ${filtered_host_tests} $ARGS"
   fi
 
   runtests_cmd="${runtests_cmd} ${host_test_dir}"
