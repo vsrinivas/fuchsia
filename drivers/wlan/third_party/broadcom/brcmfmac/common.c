@@ -18,6 +18,7 @@
 
 #include <stdarg.h>
 #include <string.h>
+#include <sys/random.h>
 
 #include <zircon/status.h>
 
@@ -226,6 +227,16 @@ done:
     return err;
 }
 
+#if CONFIG_BRCMFMAC_RANDOM_MAC
+static void brcmf_gen_random_mac_addr(uint8_t* addr) {
+    int err = getentropy(addr, ETH_ALEN);
+    ZX_ASSERT(!err);
+
+    addr[0] &= 0xfe; // bit 0: 0 = unicast
+    addr[0] |= 0x02; // bit 1: 1 = locally-administered
+}
+#endif
+
 zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     int8_t eventmask[BRCMF_EVENTING_MASK_LEN];
     uint8_t buf[BRCMF_DCMD_SMLEN];
@@ -234,13 +245,24 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     char* clmver;
     char* ptr;
     zx_status_t err;
+    uint8_t mac_addr[ETH_ALEN];
 
-    /* retreive mac address */
-    err = brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", ifp->mac_addr, sizeof(ifp->mac_addr));
+#if CONFIG_BRCMFMAC_RANDOM_MAC
+    brcmf_gen_random_mac_addr(mac_addr);
+    err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", mac_addr, sizeof(mac_addr));
+    if (err != ZX_OK) {
+        brcmf_err("Setting cur_etheraddr failed, %s\n", zx_status_get_string(err));
+        goto done;
+    }
+#else
+    /* retreive mac address from firmware */
+    err = brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", mac_addr, sizeof(mac_addr));
     if (err != ZX_OK) {
         brcmf_err("Retrieving cur_etheraddr failed, %d\n", err);
         goto done;
     }
+#endif
+    memcpy(ifp->mac_addr, mac_addr, sizeof(ifp->mac_addr));
     memcpy(ifp->drvr->mac, ifp->mac_addr, sizeof(ifp->drvr->mac));
 
     err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_REVINFO, &revinfo, sizeof(revinfo));
