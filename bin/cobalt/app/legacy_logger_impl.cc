@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/cobalt/app/logger_impl.h"
+#include "garnet/bin/cobalt/app/legacy_logger_impl.h"
 
 #include "garnet/bin/cobalt/app/utils.h"
 
@@ -60,13 +60,13 @@ std::tuple<std::string, std::string, std::string> ThreePartMetricPartNames(
 }
 }  // namespace
 
-LoggerImpl::LoggerImpl(std::unique_ptr<encoder::ProjectContext> project_context,
-                       encoder::ClientSecret client_secret,
-                       encoder::ObservationStore* observation_store,
-                       util::EncryptedMessageMaker* encrypt_to_analyzer,
-                       encoder::ShippingManager* shipping_manager,
-                       const encoder::SystemData* system_data,
-                       TimerManager* timer_manager)
+LegacyLoggerImpl::LegacyLoggerImpl(
+    std::unique_ptr<encoder::ProjectContext> project_context,
+    encoder::ClientSecret client_secret,
+    encoder::ObservationStore* observation_store,
+    util::EncryptedMessageMaker* encrypt_to_analyzer,
+    encoder::ShippingManager* shipping_manager,
+    const encoder::SystemData* system_data, TimerManager* timer_manager)
     : encoder_(std::move(project_context), std::move(client_secret),
                system_data),
       observation_store_(observation_store),
@@ -75,11 +75,12 @@ LoggerImpl::LoggerImpl(std::unique_ptr<encoder::ProjectContext> project_context,
       timer_manager_(timer_manager) {}
 
 template <class ValueType, class CB>
-void LoggerImpl::LogThreePartMetric(const std::string& value_part_name,
-                                    uint32_t metric_id,
-                                    uint32_t event_type_index,
-                                    fidl::StringPtr component, ValueType value,
-                                    CB callback, bool value_part_required) {
+void LegacyLoggerImpl::LogThreePartMetric(const std::string& value_part_name,
+                                          uint32_t metric_id,
+                                          uint32_t event_type_index,
+                                          fidl::StringPtr component,
+                                          ValueType value, CB callback,
+                                          bool value_part_required) {
   const Metric* metric = encoder_.GetMetric(metric_id);
   if (!metric) {
     FXL_LOG(ERROR) << "There is no metric with ID = " << metric_id << ".";
@@ -162,8 +163,8 @@ void LoggerImpl::LogThreePartMetric(const std::string& value_part_name,
 
 // Duplicated from cobalt_encoder_impl.cc
 template <class CB>
-void LoggerImpl::AddEncodedObservation(cobalt::encoder::Encoder::Result* result,
-                                       CB callback) {
+void LegacyLoggerImpl::AddEncodedObservation(
+    cobalt::encoder::Encoder::Result* result, CB callback) {
   switch (result->status) {
     case cobalt::encoder::Encoder::kOK:
       break;
@@ -198,7 +199,7 @@ void LoggerImpl::AddEncodedObservation(cobalt::encoder::Encoder::Result* result,
   callback(status);
 }
 
-uint32_t LoggerImpl::GetSinglePartMetricEncoding(uint32_t metric_id) {
+uint32_t LegacyLoggerImpl::GetSinglePartMetricEncoding(uint32_t metric_id) {
   const Metric* metric = encoder_.GetMetric(metric_id);
   if (!metric) {
     FXL_LOG(ERROR) << "There is no metric with ID = " << metric_id << ".";
@@ -216,7 +217,7 @@ uint32_t LoggerImpl::GetSinglePartMetricEncoding(uint32_t metric_id) {
   return encodings.begin()->second;
 }
 
-void LoggerImpl::LogEvent(
+void LegacyLoggerImpl::LogEvent(
     uint32_t metric_id, uint32_t event_type_index,
     fuchsia::cobalt::LoggerBase::LogEventCallback callback) {
   uint32_t encoding_id = GetSinglePartMetricEncoding(metric_id);
@@ -229,7 +230,7 @@ void LoggerImpl::LogEvent(
   AddEncodedObservation(&result, std::move(callback));
 }
 
-void LoggerImpl::LogEventCount(
+void LegacyLoggerImpl::LogEventCount(
     uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
     int64_t period_duration_micros, int64_t count,
     fuchsia::cobalt::LoggerBase::LogEventCountCallback callback) {
@@ -252,7 +253,7 @@ void LoggerImpl::LogEventCount(
                      count, std::move(callback), false);
 }
 
-void LoggerImpl::LogElapsedTime(
+void LegacyLoggerImpl::LogElapsedTime(
     uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
     int64_t elapsed_micros,
     fuchsia::cobalt::LoggerBase::LogElapsedTimeCallback callback) {
@@ -260,14 +261,14 @@ void LoggerImpl::LogElapsedTime(
                      elapsed_micros, std::move(callback), true);
 }
 
-void LoggerImpl::LogFrameRate(
+void LegacyLoggerImpl::LogFrameRate(
     uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
     float fps, fuchsia::cobalt::LoggerBase::LogFrameRateCallback callback) {
   LogThreePartMetric("frame rate", metric_id, event_type_index, component, fps,
                      std::move(callback), true);
 }
 
-void LoggerImpl::LogMemoryUsage(
+void LegacyLoggerImpl::LogMemoryUsage(
     uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
     int64_t bytes,
     fuchsia::cobalt::LoggerBase::LogMemoryUsageCallback callback) {
@@ -275,7 +276,7 @@ void LoggerImpl::LogMemoryUsage(
                      bytes, std::move(callback), true);
 }
 
-void LoggerImpl::LogString(
+void LegacyLoggerImpl::LogString(
     uint32_t metric_id, fidl::StringPtr s,
     fuchsia::cobalt::LoggerBase::LogStringCallback callback) {
   uint32_t encoding_id = GetSinglePartMetricEncoding(metric_id);
@@ -289,7 +290,7 @@ void LoggerImpl::LogString(
 }
 
 template <class CB>
-void LoggerImpl::AddTimerObservationIfReady(
+void LegacyLoggerImpl::AddTimerObservationIfReady(
     std::unique_ptr<TimerVal> timer_val_ptr, CB callback) {
   if (!TimerManager::isReady(timer_val_ptr)) {
     // TimerManager has not received both StartTimer and EndTimer calls. Return
@@ -304,7 +305,7 @@ void LoggerImpl::AddTimerObservationIfReady(
   AddEncodedObservation(&result, std::move(callback));
 }
 
-void LoggerImpl::StartTimer(
+void LegacyLoggerImpl::StartTimer(
     uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
     fidl::StringPtr timer_id, uint64_t timestamp, uint32_t timeout_s,
     fuchsia::cobalt::LoggerBase::StartTimerCallback callback) {
@@ -331,7 +332,7 @@ void LoggerImpl::StartTimer(
   AddTimerObservationIfReady(std::move(timer_val_ptr), std::move(callback));
 }
 
-void LoggerImpl::EndTimer(
+void LegacyLoggerImpl::EndTimer(
     fidl::StringPtr timer_id, uint64_t timestamp, uint32_t timeout_s,
     fuchsia::cobalt::LoggerBase::EndTimerCallback callback) {
   std::unique_ptr<TimerVal> timer_val_ptr;
@@ -346,7 +347,7 @@ void LoggerImpl::EndTimer(
   AddTimerObservationIfReady(std::move(timer_val_ptr), std::move(callback));
 }
 
-void LoggerImpl::LogIntHistogram(
+void LegacyLoggerImpl::LogIntHistogram(
     uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
     fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram,
     fuchsia::cobalt::Logger::LogIntHistogramCallback callback) {
@@ -389,7 +390,7 @@ void LoggerImpl::LogIntHistogram(
   AddEncodedObservation(&result, std::move(callback));
 }
 
-void LoggerImpl::LogIntHistogram(
+void LegacyLoggerImpl::LogIntHistogram(
     uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
     fidl::VectorPtr<uint32_t> bucket_indices,
     fidl::VectorPtr<uint64_t> bucket_counts,
@@ -398,7 +399,7 @@ void LoggerImpl::LogIntHistogram(
   callback(Status::INTERNAL_ERROR);
 }
 
-void LoggerImpl::LogCustomEvent(
+void LegacyLoggerImpl::LogCustomEvent(
     uint32_t metric_id,
     fidl::VectorPtr<fuchsia::cobalt::CustomEventValue> event_values,
     fuchsia::cobalt::Logger::LogCustomEventCallback callback) {

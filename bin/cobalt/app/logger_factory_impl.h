@@ -9,7 +9,7 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 
-#include "garnet/bin/cobalt/app/logger_impl.h"
+#include "garnet/bin/cobalt/app/legacy_logger_impl.h"
 #include "garnet/bin/cobalt/app/timer_manager.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "third_party/cobalt/encoder/observation_store.h"

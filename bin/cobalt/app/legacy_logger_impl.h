@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_APP_LOGGER_IMPL_H_
-#define GARNET_BIN_COBALT_APP_LOGGER_IMPL_H_
+#ifndef GARNET_BIN_COBALT_APP_LEGACY_LOGGER_IMPL_H_
+#define GARNET_BIN_COBALT_APP_LEGACY_LOGGER_IMPL_H_
 
 #include <stdlib.h>
 
@@ -22,16 +22,16 @@
 
 namespace cobalt {
 
-class LoggerImpl : public fuchsia::cobalt::Logger,
-                   public fuchsia::cobalt::LoggerSimple {
+class LegacyLoggerImpl : public fuchsia::cobalt::Logger,
+                         public fuchsia::cobalt::LoggerSimple {
  public:
-  LoggerImpl(std::unique_ptr<encoder::ProjectContext> project_context,
-             encoder::ClientSecret client_secret,
-             encoder::ObservationStore* observation_store,
-             util::EncryptedMessageMaker* encrypt_to_analyzer,
-             encoder::ShippingManager* shipping_manager,
-             const encoder::SystemData* system_data,
-             TimerManager* timer_manager);
+  LegacyLoggerImpl(std::unique_ptr<encoder::ProjectContext> project_context,
+                   encoder::ClientSecret client_secret,
+                   encoder::ObservationStore* observation_store,
+                   util::EncryptedMessageMaker* encrypt_to_analyzer,
+                   encoder::ShippingManager* shipping_manager,
+                   const encoder::SystemData* system_data,
+                   TimerManager* timer_manager);
 
  private:
   // Helper function to allow LogEventCount, LogElapsedTime, LogMemoryUsage and
@@ -124,9 +124,9 @@ class LoggerImpl : public fuchsia::cobalt::Logger,
   encoder::ShippingManager* shipping_manager_;        // not owned
   TimerManager* timer_manager_;                       // not owned
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(LoggerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LegacyLoggerImpl);
 };
 
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_APP_LOGGER_IMPL_H_
+#endif  // GARNET_BIN_COBALT_APP_LEGACY_LOGGER_IMPL_H_

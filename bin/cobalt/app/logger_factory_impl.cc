@@ -72,7 +72,7 @@ void LoggerFactoryImpl::CreateLogger(
     return;
   }
 
-  std::unique_ptr<LoggerImpl> logger_impl(new LoggerImpl(
+  std::unique_ptr<LegacyLoggerImpl> logger_impl(new LegacyLoggerImpl(
       std::move(project_context), client_secret_, observation_store_,
       encrypt_to_analyzer_, shipping_manager_, system_data_, timer_manager_));
   logger_bindings_.AddBinding(std::move(logger_impl), std::move(request));
@@ -89,7 +89,7 @@ void LoggerFactoryImpl::CreateLoggerSimple(
     return;
   }
 
-  std::unique_ptr<LoggerImpl> logger_impl(new LoggerImpl(
+  std::unique_ptr<LegacyLoggerImpl> logger_impl(new LegacyLoggerImpl(
       std::move(project_context), client_secret_, observation_store_,
       encrypt_to_analyzer_, shipping_manager_, system_data_, timer_manager_));
   logger_simple_bindings_.AddBinding(std::move(logger_impl),
