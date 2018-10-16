@@ -269,7 +269,8 @@ bool BetterThroughput(const TxStats& lhs, const TxStats& rhs) {
 }
 
 bool BetterProbability(const TxStats& lhs, const TxStats& rhs) {
-    if (lhs.probability >= kMinstrelProbabilityThreshold) {
+    if (lhs.probability >= kMinstrelProbabilityThreshold &&
+        rhs.probability >= kMinstrelProbabilityThreshold) {
         // When probability is "high enough", consider throughput instead.
         return lhs.cur_tp > rhs.cur_tp;
     }
@@ -285,7 +286,6 @@ void UpdateStatsPeer(Peer* peer) {
         tx_vec_idx_t tx_idx = tx_stats.first;
         auto tsp = &tx_stats.second;
         if (tsp->attempts_cur != 0) {
-            debugmstl("%s\n", debug::Describe(*tsp).c_str());
             float prob = 1.0 * tsp->success_cur / tsp->attempts_cur;
             if (tsp->attempts_total == 0) {
                 tsp->probability = prob;
@@ -304,6 +304,7 @@ void UpdateStatsPeer(Peer* peer) {
             }
             tsp->attempts_cur = 0;
             tsp->success_cur = 0;
+            debugmstl("%s\n", debug::Describe(*tsp).c_str());
         }
 
         if (BetterThroughput(*tsp, (*sm)[peer->max_tp])) { peer->max_tp = tx_idx; }
