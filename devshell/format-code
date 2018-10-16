@@ -12,7 +12,8 @@
 ##
 ##   --help    Prints this message
 ##   --dry-run Stops the program short of running the formatters
-##   --all     Formats all code in the git repo
+##   --all     Formats all code in the git repo under the current working
+##             directory.
 ##   --files   Allows the user to specify files.  Files are comma separated.
 ##             Globs are dealt with by bash; fx format-code "--files=foo/*" will
 ##             work as expected.
