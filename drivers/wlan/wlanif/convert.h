@@ -10,6 +10,7 @@
 namespace wlanif {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
+namespace wlan_stats = ::fuchsia::wlan::stats;
 
 uint8_t ConvertBSSType(wlan_mlme::BSSTypes bss_type);
 uint8_t ConvertScanType(wlan_mlme::ScanTypes scan_type);
@@ -44,5 +45,6 @@ wlan_mlme::EapolResultCodes ConvertEapolResultCode(uint8_t code);
 wlan_mlme::MacRole ConvertMacRole(uint8_t role);
 void ConvertBandCapabilities(wlan_mlme::BandCapabilities* fidl_band,
                              const wlanif_band_capabilities_t& band);
+void ConvertIfaceStats(wlan_stats::IfaceStats* fidl_stats, const wlanif_stats_t& stats);
 
 }  // namespace wlanif

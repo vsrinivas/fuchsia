@@ -5029,12 +5029,34 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
 
 void brcmf_hook_stats_query_req(void* ctx) {
     struct net_device* ndev = ctx;
+    struct wireless_dev* wdev = ndev_to_wdev(ndev);
 
     brcmf_dbg(TRACE, "Enter");
     wlanif_stats_query_response_t response = {};
     wlanif_mlme_stats_t mlme_stats = {};
     response.stats.mlme_stats = &mlme_stats;
+
     // TODO(cphoenix): Fill in all the stats fields.
+    switch (wdev->iftype) {
+    case WLAN_MAC_ROLE_CLIENT:
+        {
+            mlme_stats.tag = WLANIF_MLME_STATS_TYPE_CLIENT;
+            wlanif_client_mlme_stats_t* stats = &mlme_stats.client_mlme_stats;
+            memset(stats, 0, sizeof(*stats));
+            break;
+        }
+    case WLAN_MAC_ROLE_AP:
+        {
+            mlme_stats.tag = WLANIF_MLME_STATS_TYPE_AP;
+            wlanif_ap_mlme_stats_t* stats = &mlme_stats.ap_mlme_stats;
+            memset(stats, 0, sizeof(*stats));
+            break;
+        }
+    default:
+        response.stats.mlme_stats = NULL;
+        break;
+    }
+
 
     ndev->if_callbacks->stats_query_resp(ndev->if_callback_cookie, &response);
 }

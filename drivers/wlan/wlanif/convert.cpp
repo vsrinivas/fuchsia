@@ -791,15 +791,93 @@ wlan_mlme::MacRole ConvertMacRole(uint8_t role) {
 void ConvertBandCapabilities(wlan_mlme::BandCapabilities* fidl_band,
                              const wlanif_band_capabilities_t& band) {
     // basic_rates
-    fidl_band->basic_rates.resize(band.num_basic_rates);
+    fidl_band->basic_rates.resize(0);
     fidl_band->basic_rates->assign(band.basic_rates, band.basic_rates + band.num_basic_rates);
 
     // base_frequency
     fidl_band->base_frequency = band.base_frequency;
 
     // channels
-    fidl_band->channels.resize(band.num_channels);
+    fidl_band->channels.resize(0);
     fidl_band->channels->assign(band.channels, band.channels + band.num_channels);
+}
+
+void ConvertCounter(wlan_stats::Counter* fidl_counter, const wlanif_counter_t& counter) {
+    fidl_counter->count = counter.count;
+    if (counter.name != nullptr) {
+        std::string str(counter.name);
+        fidl_counter->name.reset(str);
+    } else {
+        fidl_counter->name.reset("");
+    }
+}
+
+void ConvertPacketCounter(wlan_stats::PacketCounter* fidl_counter,
+                          const wlanif_packet_counter_t& counter) {
+    ConvertCounter(&fidl_counter->in, counter.in);
+    ConvertCounter(&fidl_counter->out, counter.out);
+    ConvertCounter(&fidl_counter->drop, counter.drop);
+    ConvertCounter(&fidl_counter->in_bytes, counter.in_bytes);
+    ConvertCounter(&fidl_counter->out_bytes, counter.out_bytes);
+    ConvertCounter(&fidl_counter->drop_bytes, counter.drop_bytes);
+}
+
+void ConvertDispatcherStats(wlan_stats::DispatcherStats* fidl_stats,
+                            const wlanif_dispatcher_stats_t& stats) {
+    ConvertPacketCounter(&fidl_stats->any_packet, stats.any_packet);
+    ConvertPacketCounter(&fidl_stats->mgmt_frame, stats.mgmt_frame);
+    ConvertPacketCounter(&fidl_stats->ctrl_frame, stats.ctrl_frame);
+    ConvertPacketCounter(&fidl_stats->data_frame, stats.data_frame);
+}
+
+void ConvertRssiStats(wlan_stats::RssiStats* fidl_stats, const wlanif_rssi_stats& stats) {
+    fidl_stats->hist.resize(0);
+    fidl_stats->hist->assign(stats.hist, stats.hist + stats.hist_len);
+}
+
+wlan_stats::ClientMlmeStats BuildClientMlmeStats(const wlanif_client_mlme_stats_t& client_stats) {
+    wlan_stats::ClientMlmeStats fidl_client_stats;
+
+    ConvertPacketCounter(&fidl_client_stats.svc_msg, client_stats.svc_msg);
+    ConvertPacketCounter(&fidl_client_stats.data_frame, client_stats.data_frame);
+    ConvertPacketCounter(&fidl_client_stats.mgmt_frame, client_stats.mgmt_frame);
+    ConvertPacketCounter(&fidl_client_stats.tx_frame, client_stats.tx_frame);
+    ConvertPacketCounter(&fidl_client_stats.rx_frame, client_stats.rx_frame);
+
+    ConvertRssiStats(&fidl_client_stats.assoc_data_rssi, client_stats.assoc_data_rssi);
+    ConvertRssiStats(&fidl_client_stats.beacon_rssi, client_stats.beacon_rssi);
+
+    return fidl_client_stats;
+}
+
+wlan_stats::ApMlmeStats BuildApMlmeStats(const wlanif_ap_mlme_stats_t& ap_stats) {
+    wlan_stats::ApMlmeStats fidl_ap_stats;
+
+    ConvertPacketCounter(&fidl_ap_stats.not_used, ap_stats.not_used);
+
+    return fidl_ap_stats;
+}
+
+void ConvertMlmeStats(wlan_stats::MlmeStats* fidl_stats,
+                      const wlanif_mlme_stats_t& stats) {
+    switch (stats.tag) {
+    case WLANIF_MLME_STATS_TYPE_CLIENT:
+        fidl_stats->set_client_mlme_stats(BuildClientMlmeStats(stats.client_mlme_stats));
+        break;
+    case WLANIF_MLME_STATS_TYPE_AP:
+        fidl_stats->set_ap_mlme_stats(BuildApMlmeStats(stats.ap_mlme_stats));
+        break;
+    default:
+        ZX_ASSERT(0);
+    }
+}
+
+void ConvertIfaceStats(wlan_stats::IfaceStats* fidl_stats, const wlanif_stats_t& stats) {
+    ConvertDispatcherStats(&fidl_stats->dispatcher_stats, stats.dispatcher_stats);
+    if (stats.mlme_stats != nullptr) {
+        fidl_stats->mlme_stats = ::std::make_unique<wlan_stats::MlmeStats>();
+        ConvertMlmeStats(fidl_stats->mlme_stats.get(), *stats.mlme_stats);
+    }
 }
 
 }  // namespace wlanif

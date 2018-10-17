@@ -391,6 +391,9 @@ typedef struct wlanif_packet_count {
     wlanif_counter_t in;
     wlanif_counter_t out;
     wlanif_counter_t drop;
+    wlanif_counter_t in_bytes;
+    wlanif_counter_t out_bytes;
+    wlanif_counter_t drop_bytes;
 } wlanif_packet_counter_t;
 
 typedef struct wlanif_dispatcher_stats {
@@ -400,19 +403,36 @@ typedef struct wlanif_dispatcher_stats {
     wlanif_packet_counter_t data_frame;
 } wlanif_dispatcher_stats_t;
 
+typedef struct wlanif_rssi_stats {
+    size_t hist_len;
+    uint64_t* hist;
+} wlanif_rssi_stats_t;
+
 typedef struct wlanif_client_mlme_stats {
     wlanif_packet_counter_t svc_msg;
     wlanif_packet_counter_t data_frame;
     wlanif_packet_counter_t mgmt_frame;
+    wlanif_packet_counter_t tx_frame;
+    wlanif_packet_counter_t rx_frame;
+    wlanif_rssi_stats_t assoc_data_rssi;
+    wlanif_rssi_stats_t beacon_rssi;
 } wlanif_client_mlme_stats_t;
 
 typedef struct wlanif_ap_mlme_stats {
     wlanif_packet_counter_t not_used;
 } wlanif_ap_mlme_stats_t;
 
+enum {
+    WLANIF_MLME_STATS_TYPE_CLIENT,
+    WLANIF_MLME_STATS_TYPE_AP,
+};
+
 typedef union wlanif_mlme_stats {
-    wlanif_client_mlme_stats_t client_mlme_stats;
-    wlanif_ap_mlme_stats_t ap_mlme_stats;
+    uint8_t tag; // WLANIF_MLME_STATS_TYPE_*
+    union {
+        wlanif_client_mlme_stats_t client_mlme_stats;
+        wlanif_ap_mlme_stats_t ap_mlme_stats;
+    };
 } wlanif_mlme_stats_t;
 
 typedef struct wlanif_stats {

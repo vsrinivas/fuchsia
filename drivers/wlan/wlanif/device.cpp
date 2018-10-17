@@ -17,6 +17,7 @@
 namespace wlanif {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
+namespace wlan_stats = ::fuchsia::wlan::stats;
 
 Device::Device(zx_device_t* device, wlanif_impl_protocol_t wlanif_impl_proto)
     : parent_(device),
@@ -893,8 +894,14 @@ void Device::EapolInd(wlanif_eapol_indication_t* ind) {
 }
 
 void Device::StatsQueryResp(wlanif_stats_query_response_t* resp) {
-    // TODO: NET-1376
-    errorf("wlanif: stats_query_resp message not yet supported (see NET-1376)\n");
+    std::lock_guard<std::mutex> lock(lock_);
+    if (!binding_.is_bound()) {
+        return;
+    }
+
+    wlan_mlme::StatsQueryResponse fidl_resp;
+    ConvertIfaceStats(&fidl_resp.stats, resp->stats);
+    binding_.events().StatsQueryResp(std::move(fidl_resp));
 }
 
 zx_status_t Device::EthStart(ethmac_ifc_t* ifc, void* cookie) {
