@@ -23,7 +23,7 @@ force_multiline_blocks = false
 format_strings = false
 hard_tabs = false
 hide_parse_errors = false
-imports_indent = "Visual"
+imports_indent = "Block"
 imports_layout = "Mixed"
 ignore = [
   "bin/netcfg/src/device_id.rs",
