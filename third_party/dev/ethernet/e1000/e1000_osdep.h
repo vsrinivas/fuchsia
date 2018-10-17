@@ -53,6 +53,7 @@
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/pci-lib.h>
+#include <hw/inout.h>
 #include <hw/pci.h>
 #include <hw/reg.h>
 #include <zircon/assert.h>
@@ -159,11 +160,8 @@ struct e1000_osdep {
 #define E1000_WRITE_REG_ARRAY_WORD(hw, reg, index, value) \
     e1000_writew((value), hw2membase(hw) + E1000_REGISTER((hw), (reg)) + ((index) << 1))
 
-#define E1000_WRITE_REG_IO(hw, reg, value)        \
-    do {                                          \
-        e1000_writel((reg),   hw2iobase(hw) + 0); \
-        e1000_writel((value), hw2iobase(hw) + 4); \
-    } while (0)
+#define E1000_WRITE_REG_IO(hw, reg, value) \
+    outpd(hw2iobase(hw) + (reg), (value));
 
 #define E1000_READ_FLASH_REG(hw, reg) \
     e1000_readl(hw2flashbase(hw) + (reg))

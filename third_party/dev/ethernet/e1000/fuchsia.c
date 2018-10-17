@@ -104,7 +104,6 @@ struct adapter {
     struct e1000_hw hw;
     struct e1000_osdep osdep;
     mtx_t lock;
-    int io_rid;
     zx_device_t* zxdev;
     thrd_t thread;
     zx_handle_t irqh;
@@ -141,7 +140,6 @@ struct adapter {
     mtx_t send_lock;
 
     mmio_buffer_t bar0_mmio;
-    mmio_buffer_t ioport_mmio;
     mmio_buffer_t flash_mmio;
     struct txrx_funcs* txrx;
 };
@@ -240,7 +238,6 @@ static void e1000_release(void* ctx) {
 
     io_buffer_release(&adapter->buffer);
     mmio_buffer_release(&adapter->bar0_mmio);
-    mmio_buffer_release(&adapter->ioport_mmio);
     mmio_buffer_release(&adapter->flash_mmio);
 
     zx_handle_close(adapter->btih);
@@ -563,6 +560,7 @@ static zx_status_t e1000_allocate_pci_resources(struct adapter* adapter) {
     adapter->hw.hw_addr = (u8*)&adapter->osdep.membase;
 
     /* Only older adapters use IO mapping */
+    uint32_t iorid;
     if (adapter->hw.mac.type < em_mac_min &&
         adapter->hw.mac.type > e1000_82543) {
         /* Figure our where our IO BAR is ? */
@@ -572,7 +570,7 @@ static zx_status_t e1000_allocate_pci_resources(struct adapter* adapter) {
             pci_config_read32(pci, rid, &val);
 
             if (EM_BAR_TYPE(val) == EM_BAR_TYPE_IO) {
-                adapter->io_rid = rid;
+                iorid = (rid - PCI_CONFIG_BASE_ADDRESSES) / 4;
                 break;
             }
             rid += 4;
@@ -584,14 +582,14 @@ static zx_status_t e1000_allocate_pci_resources(struct adapter* adapter) {
             zxlogf(ERROR, "Unable to locate IO BAR\n");
             return ZX_ERR_IO_NOT_PRESENT;
         }
-        status = pci_map_bar_buffer(pci, adapter->io_rid / 4, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                    &adapter->ioport_mmio);
+
+        zx_pci_bar_t bar;
+        status = pci_get_bar(pci, iorid, &bar);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "Unable to allocate bus resource: ioport\n");
-            adapter->osdep.iobase = (uintptr_t)adapter->bar0_mmio.vaddr;
-        } else {
-            adapter->osdep.iobase = (uintptr_t)adapter->ioport_mmio.vaddr;
+            zxlogf(ERROR, "Unable to allocate bus resource: ioport (%d)\n", status);
         }
+
+        adapter->osdep.iobase = bar.addr;
         adapter->hw.io_base = 0;
     }
 
@@ -1145,7 +1143,6 @@ fail:
     }
     zx_handle_close(adapter->irqh);
     mmio_buffer_release(&adapter->bar0_mmio);
-    mmio_buffer_release(&adapter->ioport_mmio);
     mmio_buffer_release(&adapter->flash_mmio);
     free(adapter);
     zxlogf(ERROR, "%s: %d FAIL\n", __FUNCTION__, __LINE__);
