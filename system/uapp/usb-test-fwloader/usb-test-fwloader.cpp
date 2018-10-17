@@ -5,12 +5,14 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/usb-test-fwloader.h>
 #include <zircon/device/usb-tester.h>
 #include <zircon/hw/usb.h>
 #include <zircon/types.h>
+#include <zircon/usb/test/fwloader/c/fidl.h>
 
 #include <dirent.h>
 #include <errno.h>
@@ -43,7 +45,7 @@ zx_status_t watch_dir_cb(int dirfd, int event, const char* filename, void* cooki
 }
 
 // Waits for a device to enumerate and be added to the given directory.
-zx_status_t wait_dev_enumerate(const char* dir, fbl::unique_fd& out_fd) {
+zx_status_t wait_dev_enumerate(const char* dir, fbl::unique_fd* out_fd) {
     DIR* d = opendir(dir);
     if (d == nullptr) {
         fprintf(stderr, "Could not open dir: \"%s\"\n", dir);
@@ -55,14 +57,14 @@ zx_status_t wait_dev_enumerate(const char* dir, fbl::unique_fd& out_fd) {
                                               zx_deadline_after(ZX_SEC(ENUMERATION_WAIT_SECS)),
                                               reinterpret_cast<void*>(&fd));
     if (status == ZX_ERR_STOP) {
-        out_fd.reset(fd);
+        out_fd->reset(fd);
         return ZX_OK;
     } else {
         return status;
     }
 }
 
-zx_status_t open_dev(const char* dir, fbl::unique_fd& out_fd) {
+zx_status_t open_dev(const char* dir, fbl::unique_fd* out_fd) {
     DIR* d = opendir(dir);
     if (d == nullptr) {
         fprintf(stderr, "Could not open dir: \"%s\"\n", dir);
@@ -75,7 +77,7 @@ zx_status_t open_dev(const char* dir, fbl::unique_fd& out_fd) {
         if (fd < 0) {
             continue;
         }
-        out_fd.reset(fd);
+        out_fd->reset(fd);
         closedir(d);
         return ZX_OK;
     }
@@ -84,11 +86,11 @@ zx_status_t open_dev(const char* dir, fbl::unique_fd& out_fd) {
     return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t open_fwloader_dev(fbl::unique_fd& out_fd) {
+zx_status_t open_fwloader_dev(fbl::unique_fd* out_fd) {
     return open_dev(DEV_FX3_DIR, out_fd);
 }
 
-zx_status_t open_usb_tester_dev(fbl::unique_fd& out_fd) {
+zx_status_t open_usb_tester_dev(fbl::unique_fd* out_fd) {
     return open_dev(DEV_USB_TESTER_DIR, out_fd);
 }
 // Reads the firmware file and populates the provided vmo with the contents.
@@ -145,10 +147,10 @@ int main(int argc, char** argv) {
         }
     }
     fbl::unique_fd fd;
-    zx_status_t status = open_fwloader_dev(fd);
+    zx_status_t status = open_fwloader_dev(&fd);
     if (status != ZX_OK) {
         // Check if there is a usb tester device we can switch to firmware loading mode.
-        status = open_usb_tester_dev(fd);
+        status = open_usb_tester_dev(&fd);
         if (status != ZX_OK) {
             fprintf(stderr, "No usb test fwloader or tester device found, err: %d\n", status);
             return -1;
@@ -159,33 +161,48 @@ int main(int argc, char** argv) {
             fprintf(stderr, "Failed to switch usb test device to fwloader mode, err: %zd\n", res);
             return -1;
         }
-        status = wait_dev_enumerate(DEV_FX3_DIR, fd);
+        status = wait_dev_enumerate(DEV_FX3_DIR, &fd);
         if (status != ZX_OK) {
             fprintf(stderr, "Failed to wait for fwloader to re-enumerate, err: %d\n", status);
             return -1;
         }
     }
+    zx::channel svc;
+    status = fdio_get_service_handle(fd.release(), svc.reset_and_get_address());
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to get fwloader service handle, err : %d\n", status);
+        return -1;
+    }
     if (fw_vmo.is_valid()) {
         zx_handle_t handle = fw_vmo.release();
-        ssize_t res = ioctl_usb_test_fwloader_load_firmware(fd.get(), &handle);
-        if (res < ZX_OK) {
-            fprintf(stderr, "Failed to load firmware, err: %zd\n", res);
+        zx_status_t status;
+        zx_status_t res = zircon_usb_test_fwloader_DeviceLoadFirmware(svc.get(), handle, &status);
+        if (res == ZX_OK) {
+            res = status;
+        }
+        if (res != ZX_OK) {
+            fprintf(stderr, "Failed to load firmware, err: %d\n", res);
             return -1;
         }
     } else {
-        ssize_t res = ioctl_usb_test_fwloader_load_prebuilt_firmware(fd.get());
-        if (res < ZX_OK) {
-            fprintf(stderr, "Failed to load prebuilt firmware, err: %zd\n", res);
+        zx_status_t status;
+        zx_status_t res = zircon_usb_test_fwloader_DeviceLoadPrebuiltFirmware(svc.get(), &status);
+        if (res == ZX_OK) {
+            res = status;
+        }
+        if (res != ZX_OK) {
+            fprintf(stderr, "Failed to load prebuilt firmware, err: %d\n", res);
             return -1;
         }
     }
-    status = wait_dev_enumerate(DEV_USB_TESTER_DIR, fd);
+    fbl::unique_fd updated_dev;
+    status = wait_dev_enumerate(DEV_USB_TESTER_DIR, &updated_dev);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to wait for updated usb tester to enumerate, err: %d\n", status);
         return -1;
     }
     usb_device_descriptor_t device_desc;
-    ssize_t res = ioctl_usb_tester_get_device_desc(fd.get(), &device_desc);
+    ssize_t res = ioctl_usb_tester_get_device_desc(updated_dev.get(), &device_desc);
     if (res != sizeof(device_desc)) {
         printf("Failed to get updated usb tester device descriptor, err: %zd\n", res);
         return -1;

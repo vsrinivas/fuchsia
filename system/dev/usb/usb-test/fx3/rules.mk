@@ -11,9 +11,11 @@ MODULE_TYPE := driver
 MODULE_SRCS += \
     $(LOCAL_DIR)/fx3.c \
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/dev/lib/usb
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/fidl system/dev/lib/usb
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
+
+MODULE_FIDL_LIBS := system/fidl/zircon-usb-test-fwloader
 
 ifeq ($(call TOBOOL,$(INTERNAL_ACCESS)),true)
 MODULE_FIRMWARE := usb-testing/fx3/fx3.img

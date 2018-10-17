@@ -1,0 +1,16 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zircon.usb.test.fwloader;
+
+using zx;
+
+[Layout = "Simple"]
+interface Device {
+    /// Loads the prebuilt firmware onto the USB test device, and renumerates as the new device.
+    1: LoadPrebuiltFirmware() -> (zx.status s);
+
+    /// Loads the firmware onto the USB test device, and renumerates as the new device.
+    2: LoadFirmware(handle<vmo> firmware_vmo) -> (zx.status s);
+};

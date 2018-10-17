@@ -6,9 +6,9 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/usb/usb.h>
-#include <zircon/device/usb-test-fwloader.h>
-#include <zircon/hw/usb.h>
 #include <zircon/assert.h>
+#include <zircon/usb/test/fwloader/c/fidl.h>
+#include <zircon/hw/usb.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -169,36 +169,36 @@ static zx_status_t fx3_load_firmware(fx3_t* fx3, zx_handle_t fw_vmo) {
     }
 }
 
-static zx_status_t fx3_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                             void* out_buf, size_t out_len, size_t* out_actual) {
+static zx_status_t fidl_LoadPrebuiltFirmware(void* ctx, fidl_txn_t* txn) {
     fx3_t* fx3 = ctx;
 
-    switch (op) {
-    case IOCTL_USB_TEST_FWLOADER_LOAD_PREBUILT_FIRMWARE: {
-        zx_handle_t fw_vmo;
-        size_t fw_size;
-        zx_status_t status = load_firmware(fx3->zxdev, FIRMWARE_PATH, &fw_vmo, &fw_size);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "failed to load firmware at path ""%s"", err: %d\n",
-                   FIRMWARE_PATH, status);
-            return status;
-        }
-        status = fx3_load_firmware(fx3, fw_vmo);
-        zx_handle_close(fw_vmo);
-        return status;
+    zx_handle_t fw_vmo;
+    size_t fw_size;
+    zx_status_t status = load_firmware(fx3->zxdev, FIRMWARE_PATH, &fw_vmo, &fw_size);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "failed to load firmware at path ""%s"", err: %d\n",
+               FIRMWARE_PATH, status);
+        return zircon_usb_test_fwloader_DeviceLoadPrebuiltFirmware_reply(txn, status);
     }
-    case IOCTL_USB_TEST_FWLOADER_LOAD_FIRMWARE: {
-        if (in_buf == NULL || in_len != sizeof(zx_handle_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        const zx_handle_t* fw_vmo = in_buf;
-        zx_status_t status = fx3_load_firmware(fx3, *fw_vmo);
-        zx_handle_close(*fw_vmo);
-        return status;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    status = fx3_load_firmware(fx3, fw_vmo);
+    zx_handle_close(fw_vmo);
+    return zircon_usb_test_fwloader_DeviceLoadPrebuiltFirmware_reply(txn, status);
+}
+
+static zx_status_t fidl_LoadFirmware(void* ctx, zx_handle_t fw_vmo, fidl_txn_t* txn) {
+    fx3_t* fx3 = ctx;
+    zx_status_t status = fx3_load_firmware(fx3, fw_vmo);
+    zx_handle_close(fw_vmo);
+    return zircon_usb_test_fwloader_DeviceLoadFirmware_reply(txn, status);
+}
+
+static zircon_usb_test_fwloader_Device_ops_t fidl_ops = {
+    .LoadPrebuiltFirmware = fidl_LoadPrebuiltFirmware,
+    .LoadFirmware = fidl_LoadFirmware,
+};
+
+static zx_status_t fx3_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return zircon_usb_test_fwloader_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 static void fx3_free(fx3_t* ctx) {
@@ -219,7 +219,7 @@ static void fx3_release(void* ctx) {
 
 static zx_protocol_device_t fx3_device_protocol = {
     .version = DEVICE_OPS_VERSION,
-    .ioctl = fx3_ioctl,
+    .message = fx3_message,
     .unbind = fx3_unbind,
     .release = fx3_release,
 };
