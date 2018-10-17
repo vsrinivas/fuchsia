@@ -144,14 +144,22 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
             // after testing, check if we need to disconnect
             if requires_disconnect {
-                // TODO(NET-1095): disconnect any test-established connections when complete
+                match await!(wlan_service_util::disconnect_from_network(
+                    &wlan_iface.sme_proxy
+                )) {
+                    Err(_) => wlan_iface.disconnect_success = false,
+                    _ => wlan_iface.disconnect_success = true,
+                };
+            } else {
+                wlan_iface.disconnect_success = true;
             }
 
             // if any of the checks failed, throw an error to indicate a part of
             // the test failure
             if !(wlan_iface.connection_success
                 && wlan_iface.dhcp_success
-                && wlan_iface.data_transfer)
+                && wlan_iface.data_transfer
+                && wlan_iface.disconnect_success)
             {
                 // note: failures are logged at the point of the failure,
                 // simply checking here to return overall test status
@@ -212,6 +220,8 @@ struct WlanIface {
 
     connection_success: bool,
 
+    disconnect_success: bool,
+
     dhcp_success: bool,
 
     data_transfer: bool,
@@ -225,6 +235,7 @@ impl WlanIface {
             sme_proxy: sme_proxy,
             initial_status: status,
             connection_success: false,
+            disconnect_success: false,
             dhcp_success: false,
             data_transfer: false,
         }

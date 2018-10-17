@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{format_err, Error, ResultExt};
+use failure::{bail, format_err, Error, ResultExt};
 use fidl::endpoints;
 use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
 use fidl_fuchsia_wlan_sme as fidl_sme;
@@ -117,6 +117,23 @@ async fn handle_connect_transaction(
     Ok(result_code)
 }
 
+pub async fn disconnect_from_network(
+    iface_sme_proxy: &fidl_sme::ClientSmeProxy,
+) -> Result<(), Error> {
+    await!(iface_sme_proxy.disconnect()).context("failed to trigger disconnect")?;
+
+    // check the status and ensure we are not connected to or connecting to anything
+    let rsp = await!(iface_sme_proxy.status()).context("failed to check status from sme_proxy")?;
+    if rsp.connected_to.is_some() || !rsp.connecting_to_ssid.is_empty() {
+        bail!(
+            "Disconnect confirmation failed: connected_to[{:?}] connecting_to_ssid:[{:?}]",
+            rsp.connected_to,
+            rsp.connecting_to_ssid
+        );
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -125,6 +142,7 @@ mod tests {
     use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
     use fidl_fuchsia_wlan_device_service::{DeviceServiceRequest, DeviceServiceRequestStream};
     use fidl_fuchsia_wlan_device_service::{IfaceListItem, ListIfacesResponse};
+    use fidl_fuchsia_wlan_sme::BssInfo;
     use fidl_fuchsia_wlan_sme::ClientSmeMarker;
     use fidl_fuchsia_wlan_sme::ConnectResultCode;
     use fidl_fuchsia_wlan_sme::{ClientSmeRequest, ClientSmeRequestStream};
@@ -397,5 +415,105 @@ mod tests {
             .into_stream()
             .expect("failed to create a wlan_service response stream");
         (proxy, server)
+    }
+
+    enum StatusResponse {
+        Empty,
+        Connected,
+        Connecting,
+    }
+
+    #[test]
+    fn disconnect_with_empty_status_response() {
+        if let Poll::Ready(result) = test_disconnect(StatusResponse::Empty) {
+            return assert!(result.is_ok());
+        }
+        panic!("disconnect did not return a Poll::Ready")
+    }
+
+    #[test]
+    fn disconnect_fail_because_connected() {
+        if let Poll::Ready(result) = test_disconnect(StatusResponse::Connected) {
+            return assert!(result.is_err());
+        }
+        panic!("disconnect did not return a Poll::Ready")
+    }
+
+    #[test]
+    fn disconnect_fail_because_connecting() {
+        if let Poll::Ready(result) = test_disconnect(StatusResponse::Connecting) {
+            return assert!(result.is_err());
+        }
+        panic!("disconnect did not return a Poll::Ready")
+    }
+
+    fn get_dummy_bssinfo() -> Option<Box<BssInfo>> {
+        let mut dummy_bss: fidl_sme::BssInfo = fidl_sme::BssInfo {
+            bssid: [0, 1, 2, 3, 4, 5],
+            ssid: vec![1, 2, 3, 4],
+            rx_dbm: -30,
+            channel: 1,
+            protected: true,
+            compatible: true,
+        };
+        Some(Box::new(dummy_bss))
+    }
+
+    fn test_disconnect(status: StatusResponse) -> Poll<Result<(), Error>> {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (client_sme, server) = create_client_sme_proxy();
+        let mut client_sme_req = server.into_future();
+
+        let fut = disconnect_from_network(&client_sme);
+        pin_mut!(fut);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        send_disconnect_request_response(&mut exec, &mut client_sme_req);
+
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        match status {
+            StatusResponse::Empty => {
+                send_status_response(&mut exec, &mut client_sme_req, None, vec![])
+            }
+            StatusResponse::Connected => {
+                send_status_response(&mut exec, &mut client_sme_req, get_dummy_bssinfo(), vec![])
+            }
+            StatusResponse::Connecting => {
+                send_status_response(&mut exec, &mut client_sme_req, None, vec![1, 2, 3, 4])
+            }
+        }
+
+        exec.run_until_stalled(&mut fut)
+    }
+
+    fn send_disconnect_request_response(
+        exec: &mut fasync::Executor, server: &mut StreamFuture<ClientSmeRequestStream>,
+    ) {
+        let rsp = match poll_client_sme_request(exec, server) {
+            Poll::Ready(ClientSmeRequest::Disconnect { responder }) => responder,
+            Poll::Pending => panic!("Expected a DisconnectRequest"),
+            _ => panic!("Expected a DisconnectRequest"),
+        };
+        rsp.send().expect("Failed to send DisconnectResponse.");
+    }
+
+    fn send_status_response(
+        exec: &mut fasync::Executor, server: &mut StreamFuture<ClientSmeRequestStream>,
+        connected_to: Option<Box<BssInfo>>, connecting_to_ssid: Vec<u8>,
+    ) {
+        let rsp = match poll_client_sme_request(exec, server) {
+            Poll::Ready(ClientSmeRequest::Status { responder }) => responder,
+            Poll::Pending => panic!("Expected a StatusRequest"),
+            _ => panic!("Expected a StatusRequest"),
+        };
+
+        let mut response = fidl_sme::ClientStatusResponse {
+            connected_to: connected_to,
+            connecting_to_ssid: connecting_to_ssid,
+        };
+
+        rsp.send(&mut response)
+            .expect("Failed to send StatusResponse.");
     }
 }
