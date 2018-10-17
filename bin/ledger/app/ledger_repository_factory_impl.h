@@ -18,12 +18,13 @@
 #include <lib/fxl/files/unique_fd.h>
 #include <lib/fxl/macros.h>
 
-#include "peridot/bin/ledger/app/ledger_repository_impl.h"
 #include "peridot/bin/ledger/app/disk_cleanup_manager_impl.h"
+#include "peridot/bin/ledger/app/ledger_repository_impl.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/p2p_sync/public/user_communicator_factory.h"
+#include "peridot/bin/ledger/sync_coordinator/impl/user_sync_impl.h"
 
 namespace ledger {
 
@@ -56,11 +57,10 @@ class LedgerRepositoryFactoryImpl
       fidl::InterfaceRequest<ledger_internal::LedgerRepository>
           repository_request,
       GetRepositoryCallback callback);
-  void CreateRepository(
-      LedgerRepositoryContainer* container,
+  std::unique_ptr<sync_coordinator::UserSyncImpl> CreateUserSync(
       const RepositoryInformation& repository_information,
-      cloud_sync::UserConfig user_config,
-      std::unique_ptr<DiskCleanupManagerImpl> disk_cleanup_manager);
+      fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+      SyncWatcherSet* watchers);
   std::unique_ptr<p2p_sync::UserCommunicator> CreateP2PSync(
       const RepositoryInformation& repository_information);
   void OnVersionMismatch(const RepositoryInformation& repository_information);

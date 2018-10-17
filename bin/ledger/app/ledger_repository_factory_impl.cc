@@ -242,40 +242,38 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
     return;
   }
 
-  if (!cloud_provider) {
+  std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
+  std::unique_ptr<sync_coordinator::UserSyncImpl> user_sync;
+  if (cloud_provider) {
+    user_sync = CreateUserSync(repository_information,
+                               std::move(cloud_provider), watchers.get());
+  } else {
     FXL_LOG(WARNING) << "No cloud provider - Ledger will work locally but "
                      << "not sync. (running in Guest mode?)";
-
-    DiskCleanupManagerImpl* disk_cleanup_manager_ptr =
-        disk_cleanup_manager.get();
-    auto repository = std::make_unique<LedgerRepositoryImpl>(
-        repository_information.content_path, environment_,
-        std::make_unique<SyncWatcherSet>(), nullptr,
-        std::move(disk_cleanup_manager));
-    disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());
-    container->SetRepository(Status::OK, std::move(repository));
-    return;
   }
 
+  DiskCleanupManagerImpl* disk_cleanup_manager_ptr = disk_cleanup_manager.get();
+  auto repository = std::make_unique<LedgerRepositoryImpl>(
+      repository_information.content_path, environment_, std::move(watchers),
+      std::move(user_sync), std::move(disk_cleanup_manager));
+  disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());
+  container->SetRepository(Status::OK, std::move(repository));
+}
+
+std::unique_ptr<sync_coordinator::UserSyncImpl>
+LedgerRepositoryFactoryImpl::CreateUserSync(
+    const RepositoryInformation& repository_information,
+    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+    SyncWatcherSet* watchers) {
   auto cloud_provider_ptr = cloud_provider.Bind();
-  cloud_provider_ptr.set_error_handler([name = repository_information.name] {
-    FXL_LOG(ERROR) << "Lost connection to the cloud provider, cloud sync will "
-                      "no longer work.";
+  cloud_provider_ptr.set_error_handler([] {
+    FXL_LOG(ERROR)
+        << "Lost connection to cloud provider; cloud sync will no longer work.";
   });
 
   cloud_sync::UserConfig user_config;
   user_config.user_directory = repository_information.content_path;
   user_config.cloud_provider = std::move(cloud_provider_ptr);
-  CreateRepository(container, repository_information, std::move(user_config),
-                   std::move(disk_cleanup_manager));
-}
-
-void LedgerRepositoryFactoryImpl::CreateRepository(
-    LedgerRepositoryContainer* container,
-    const RepositoryInformation& repository_information,
-    cloud_sync::UserConfig user_config,
-    std::unique_ptr<DiskCleanupManagerImpl> disk_cleanup_manager) {
-  std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
   fit::closure on_version_mismatch = [this, repository_information]() mutable {
     OnVersionMismatch(repository_information);
   };
@@ -287,14 +285,9 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
 
   auto user_sync = std::make_unique<sync_coordinator::UserSyncImpl>(
       std::move(cloud_sync), std::move(p2p_sync));
-  user_sync->SetWatcher(watchers.get());
+  user_sync->SetWatcher(watchers);
   user_sync->Start();
-  DiskCleanupManagerImpl* disk_cleanup_manager_ptr = disk_cleanup_manager.get();
-  auto repository = std::make_unique<LedgerRepositoryImpl>(
-      repository_information.content_path, environment_, std::move(watchers),
-      std::move(user_sync), std::move(disk_cleanup_manager));
-  disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());
-  container->SetRepository(Status::OK, std::move(repository));
+  return user_sync;
 }
 
 std::unique_ptr<p2p_sync::UserCommunicator>
