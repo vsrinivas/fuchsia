@@ -258,6 +258,29 @@ bool create_fd_from_connected_socket(void) {
     END_TEST;
 }
 
+static bool bind_to_fd_invalid_tests(void) {
+    BEGIN_TEST;
+
+    fdio_t* fdio = fdio_null_create();
+    EXPECT_NONNULL(fdio, "");
+
+    // When binding and not providing a specific |fd|, the
+    // |starting_fd| must be nonnegative.
+    int fd = fdio_bind_to_fd(fdio, -1, -1);
+    int err = errno;
+    EXPECT_LT(fd, 0, "");
+    EXPECT_EQ(err, EINVAL, "");
+
+    // Starting with a huge |starting_fd| will fail since the table
+    // does not hold so many.
+    fd = fdio_bind_to_fd(fdio, -1, INT_MAX);
+    err = errno;
+    EXPECT_LT(fd, 0, "");
+    EXPECT_EQ(err, EMFILE, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(fdio_handle_fd_test)
 RUN_TEST(close_test);
 RUN_TEST(pipe_test);
@@ -268,4 +291,6 @@ RUN_TEST(ppoll_immediate_timeout_test);
 RUN_TEST(transfer_fd_test);
 RUN_TEST(transfer_device_test);
 RUN_TEST(create_fd_from_connected_socket);
+RUN_TEST(bind_to_fd_invalid_tests);
+
 END_TEST_CASE(fdio_handle_fd_test)
