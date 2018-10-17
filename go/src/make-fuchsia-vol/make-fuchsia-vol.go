@@ -8,6 +8,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -33,9 +34,9 @@ var (
 	zirconToolsDir  = flag.String("zircon-tools-dir", os.Getenv("ZIRCON_TOOLS_DIR"), "zircon tools dir")
 
 	bootloader = flag.String("bootloader", "", "path to bootx64.efi")
-	zbi        = flag.String("zbi", "", "path to zbi (default: IMAGE_ZIRCON_ZBI from image manifests)")
+	zbi        = flag.String("zbi", "", "path to zbi (default: zircon-a from image manifests)")
 	cmdline    = flag.String("cmdline", "", "path to command line file (if exists)")
-	zedboot    = flag.String("zedboot", "", "path to zedboot.zbi (default: IMAGE_ZEDBOOT_ZBI from image manifests)")
+	zedboot    = flag.String("zedboot", "", "path to zedboot.zbi (default: zircon-r from image manifests)")
 
 	ramdiskOnly = flag.Bool("ramdisk-only", false, "ramdisk-only mode - only write an ESP partition")
 	blob        = flag.String("blob", "", "path to blob partition image (not used with ramdisk)")
@@ -44,7 +45,7 @@ var (
 	abr     = flag.Bool("abr", false, "add Zircon-{A,B,R} partitions")
 	zirconA = flag.String("zirconA", "", "path to partition image for Zircon-A (default: from -zbi)")
 	zirconB = flag.String("zirconB", "", "path to partition image for Zircon-B (default: from -zbi)")
-	zirconR = flag.String("zirconR", "", "path to partition image for Zircon-R (default: IMAGE_ZIRCONR_ZBI from image manifests)")
+	zirconR = flag.String("zirconR", "", "path to partition image for Zircon-R (default: zircon-r from image manifests)")
 	abrSize = flag.Int64("abr-size", 16*1024*1024, "Kernel partition size for A/B/R")
 
 	blockSize           = flag.Int64("block-size", 0, "the block size of the target disk (0 means detect)")
@@ -56,7 +57,12 @@ var (
 )
 
 // imageManifests contains a list of known manifests produced by the build that contains build-dir relative paths to images.
-var imageManifests = []string{"zedboot_image_paths.sh", "image_paths.sh"}
+var imageManifests = []string{"zedboot_images.json", "images.json"}
+
+type imageManifest struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+}
 
 // imagePaths contains the default image paths that are produced by a build manifest, populated by tryLoadManifests.
 var imagePaths = map[string]string{}
@@ -80,22 +86,21 @@ func init() {
 func tryLoadManifests() {
 	if *fuchsiaBuildDir != "" {
 		for _, manifest := range imageManifests {
-			content, err := ioutil.ReadFile(filepath.Join(*fuchsiaBuildDir, manifest))
+			f, err := os.Open(filepath.Join(*fuchsiaBuildDir, manifest))
 			if err != nil {
-				log.Printf("warning: failed to load %s manifest: %s", manifest, err)
+				log.Printf("warning: failed to load %q manifest: %s", manifest, err)
 				continue
 			}
-			lines := strings.Split(string(content), "\n")
-			for _, line := range lines {
-				line = strings.TrimSpace(line)
-				if line == "" {
-					continue
-				}
-				parts := strings.SplitN(line, "=", 2)
-				if len(parts) != 2 {
-					log.Fatalf("Failed to parse %s: line %q contained incorrect number of `=`", manifest, line)
-				}
-				imagePaths[parts[0]] = parts[1]
+			defer f.Close()
+
+			var imageManifests []imageManifest
+			if err := json.NewDecoder(f).Decode(&imageManifests); err != nil {
+				log.Printf("warning: failed to load %q manifest: %s", manifest, err)
+				continue
+			}
+
+			for _, image := range imageManifests {
+				imagePaths[image.Name] = image.Path
 			}
 		}
 	}
@@ -129,11 +134,11 @@ func main() {
 	}
 	if *zbi == "" {
 		needZirconBuildDir()
-		*zbi = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_ZIRCONA_ZBI"))
+		*zbi = filepath.Join(*fuchsiaBuildDir, getImage("zircon-a"))
 	}
 	if *zedboot == "" {
 		needFuchsiaBuildDir()
-		*zedboot = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_ZEDBOOT_ZBI"))
+		*zedboot = filepath.Join(*fuchsiaBuildDir, getImage("zircon-r"))
 	}
 	if *cmdline == "" {
 		needFuchsiaBuildDir()
@@ -156,18 +161,18 @@ func main() {
 			*zirconB = *zbi
 		}
 		if *zirconR == "" {
-			*zirconR = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_ZIRCONR_ZBI"))
+			*zirconR = filepath.Join(*fuchsiaBuildDir, getImage("zircon-r"))
 		}
 	}
 
 	if !*ramdiskOnly {
 		if *blob == "" {
 			needFuchsiaBuildDir()
-			*blob = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_BLOB_RAW"))
+			*blob = filepath.Join(*fuchsiaBuildDir, getImage("blob"))
 		}
 		if *data == "" {
 			needFuchsiaBuildDir()
-			*data = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_DATA_RAW"))
+			*data = filepath.Join(*fuchsiaBuildDir, getImage("data"))
 		}
 
 		if _, err := os.Stat(*blob); err != nil {
