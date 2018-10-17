@@ -203,7 +203,8 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
 
   fidl::BindingSet<fuchsia::modular::internal::UserRunner> bindings_;
   component::ServiceProviderImpl user_shell_services_;
-  fidl::BindingSet<fuchsia::modular::UserShellContext> user_shell_context_bindings_;
+  fidl::BindingSet<fuchsia::modular::UserShellContext>
+      user_shell_context_bindings_;
 
   fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory_;
   fuchsia::auth::TokenManagerPtr agent_token_manager_;

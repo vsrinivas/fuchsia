@@ -7,140 +7,77 @@ library fuchsia.modular;
 using fuchsia.mem;
 
 struct Proposal {
-  // Identifies a proposal, namespaced internally to the proposing component and
-  // proposal channel (Query or Next/Interruption).
-  string id;
+    // Identifies a proposal, namespaced internally to the proposing component and
+    // proposal channel (Query or Next/Interruption).
+    string id;
 
-  // A client-assigned name for the story to which the actions in |on_selected|
-  // apply. If a story with the given name already exists (ie, because a past
-  // Proposal with the same |story_name| was executed), the actions in
-  // |on_selected| will apply to the existing story. Otherwise, a new story is
-  // created.
-  // If |story_name| is null, a new story is always created.
-  // This name is namespaced to the agent that submitted the proposal.
-  string? story_name;
+    // A client-assigned name for the story to which the actions in |on_selected|
+    // apply. If a story with the given name already exists (ie, because a past
+    // Proposal with the same |story_name| was executed), the actions in
+    // |on_selected| will apply to the existing story. Otherwise, a new story is
+    // created.
+    // If |story_name| is null, a new story is always created.
+    // This name is namespaced to the agent that submitted the proposal.
+    string? story_name;
 
-  // Used to restrict the proposal potential appearance as a suggestion only
-  // when certain story or mod is focused.
-  vector<ProposalAffinity> affinity;
+    // Used to restrict the proposal potential appearance as a suggestion only
+    // when certain story or mod is focused.
+    vector<ProposalAffinity> affinity;
 
-  // The list of actions to take when the user selects the associated
-  // Suggestion.
-  vector<Action> on_selected;
+    // The list of actions to take when the user selects the associated
+    // Suggestion.
+    vector<StoryCommand> on_selected;
 
-  // An optional hint about the probability that this proposal would be chosen
-  // if it were the only proposal presented to the user. A confidence of 0.0
-  // indicates no hint. The confidence assigned by the system may be subject to
-  // other considerations such as performance metrics.
-  float32 confidence = 0.0;
+    // An optional hint about the probability that this proposal would be chosen
+    // if it were the only proposal presented to the user. A confidence of 0.0
+    // indicates no hint. The confidence assigned by the system may be subject to
+    // other considerations such as performance metrics.
+    float32 confidence = 0.0;
 
-  // True iff the proposal would like to make use of a rich suggestion. Only
-  // certain components are allowed to use rich suggestions.
-  bool wants_rich_suggestion = false;
+    // True iff the proposal would like to make use of a rich suggestion. Only
+    // certain components are allowed to use rich suggestions.
+    bool wants_rich_suggestion = false;
 
-  SuggestionDisplay display;
+    SuggestionDisplay display;
 
-  // A listener interface that is notified when the proposal is accepted by
-  // the system.
-  //
-  // The listener is currently notified once when a proposal is accepted. Thus
-  // the |story_id| provided will be of the first create story action in
-  // |on_selected|, and subsequent create story actions will not notify the
-  // listener.
-  ProposalListener? listener;
+    // A listener interface that is notified when the proposal is accepted by
+    // the system.
+    //
+    // The listener is currently notified once when a proposal is accepted. Thus
+    // the |story_id| provided will be of the first create story action in
+    // |on_selected|, and subsequent create story actions will not notify the
+    // listener.
+    ProposalListener? listener;
 };
 
 // Restricts the proposal potential apparance as a suggestion only when
 // a story or a mod within a story are focused.
 union ProposalAffinity {
-  StoryAffinity story_affinity;
-  ModuleAffinity module_affinity;
+    StoryAffinity story_affinity;
+    ModuleAffinity module_affinity;
 };
 
 // Restricts the proposal to appear only when the story identified by
 // |story_name| is focused.
 // The name is namespace to the agent that submitted the proposal.
 struct StoryAffinity {
-  string story_name;
+    string story_name;
 };
 
 // Restricts the proposal to appear only when the module identified by
 // |module_name| within the story identified by |story_name| is focused.
 // The name is namespace to the agent that submitted the proposal.
 struct ModuleAffinity {
-  string story_name;
-  vector<string> module_name;
+    string story_name;
+    vector<string> module_name;
 };
 
 // An interface that allows Proposal creators to be notified when a proposal
 // is accepted by the system.
 interface ProposalListener {
-  // Indicates that a proposal was accepted by the system.
-  //
-  // |proposal_id| The identifier of the accepted proposal.
-  // |story_id| The identifier of the created story, if a story was created.
-  1: OnProposalAccepted(string proposal_id, string? story_id);
-};
-
-union Action {
-  FocusStory focus_story;
-  FocusModule focus_module;
-  AddModule add_module;
-  UpdateModule update_module;
-  SetLinkValueAction set_link_value_action;
-  CustomAction custom_action;
-};
-
-// Brings an existing story into focus.
-struct FocusStory {
-  // Struct can't be empty. This field is ignored.
-  bool hack;
-};
-
-// Brings an existing module into focus.
-struct FocusModule {
-  // The module path of the existing module.
-  vector<string> module_path;
-};
-
-// Adds a module from an Intent to an existing story.
-struct AddModule {
-  // The name of the module that will be added as a result of this proposal.  A
-  // proposal for the same |story_id|, |module_name| and
-  // |surface_parent_module_path| from the same Agent will result in replacing
-  // the module at |module_name|, not adding a new one.
-  string module_name;
-
-  // The Intent that is to be added to the story.
-  Intent intent;
-
-  // The relation, relative to |surface_parent_module_path| to use. This
-  // information is passed to the story shell for visual module composition.
-  SurfaceRelation surface_relation;
-
-  // The module path of an existing module to assign as the surface-relationship
-  // parent of this new module.
-  vector<string> surface_parent_module_path;
-};
-
-struct SetLinkValueAction {
-  // Identifies the link within the story.
-  LinkPath link_path;
-
-  // The bytes that will be written to the link.
-  // If empty, unsets the link value.
-  fuchsia.mem.Buffer? value;
-};
-
-struct UpdateModule {
-  vector<string> module_name;
-
-  // For every entry |p| in |parameters|, update the value of the link
-  // backing |p.name| to that specified in |p.data|.
-  vector<IntentParameter> parameters;
-};
-
-// An action that calls back to the proposal publisher to be performed.
-interface CustomAction {
-  1: Execute();
+    // Indicates that a proposal was accepted by the system.
+    //
+    // |proposal_id| The identifier of the accepted proposal.
+    // |story_id| The identifier of the created story, if a story was created.
+    1: OnProposalAccepted(string proposal_id, string? story_id);
 };

@@ -64,12 +64,12 @@ void AddValueToContextUpdate(
 TEST_F(ModPairRankingFeatureTest, ComputeFeatureAddModuleAction) {
   fuchsia::modular::Intent intent;
   intent.handler = "mod4";
-  fuchsia::modular::AddModule add_module;
-  add_module.intent = std::move(intent);
-  fuchsia::modular::Action action;
-  action.set_add_module(std::move(add_module));
+  fuchsia::modular::AddMod add_mod;
+  add_mod.intent = std::move(intent);
+  fuchsia::modular::StoryCommand command;
+  command.set_add_mod(std::move(add_mod));
   fuchsia::modular::Proposal proposal;
-  proposal.on_selected.push_back(std::move(action));
+  proposal.on_selected.push_back(std::move(command));
   SuggestionPrototype prototype;
   prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
@@ -85,12 +85,12 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureAddModuleAction) {
 TEST_F(ModPairRankingFeatureTest, ComputeFeatureNoModule) {
   fuchsia::modular::Intent intent;
   intent.handler = "mod-fiction";
-  fuchsia::modular::AddModule add_module;
-  add_module.intent = std::move(intent);
-  fuchsia::modular::Action action;
-  action.set_add_module(std::move(add_module));
+  fuchsia::modular::AddMod add_mod;
+  add_mod.intent = std::move(intent);
+  fuchsia::modular::StoryCommand command;
+  command.set_add_mod(std::move(add_mod));
   fuchsia::modular::Proposal proposal;
-  proposal.on_selected.push_back(std::move(action));
+  proposal.on_selected.push_back(std::move(command));
   SuggestionPrototype prototype;
   prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
@@ -104,22 +104,22 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureNoModule) {
 }
 
 TEST_F(ModPairRankingFeatureTest, ComputeFeatureMultipleActions) {
-  fuchsia::modular::AddModule add_module;
-  add_module.intent.handler = "mod-fiction";
-  fuchsia::modular::Action action;
-  action.set_add_module(std::move(add_module));
+  fuchsia::modular::AddMod add_mod;
+  add_mod.intent.handler = "mod-fiction";
+  fuchsia::modular::StoryCommand command;
+  command.set_add_mod(std::move(add_mod));
   fuchsia::modular::Proposal proposal;
-  proposal.on_selected.push_back(std::move(action));
+  proposal.on_selected.push_back(std::move(command));
   SuggestionPrototype prototype;
   prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
-  add_module = fuchsia::modular::AddModule();
-  add_module.intent.handler = "mod3";
-  fuchsia::modular::Action action2;
-  action2.set_add_module(std::move(add_module));
-  suggestion.prototype->proposal.on_selected.push_back(std::move(action2));
+  add_mod = fuchsia::modular::AddMod();
+  add_mod.intent.handler = "mod3";
+  fuchsia::modular::StoryCommand command2;
+  command2.set_add_mod(std::move(add_mod));
+  suggestion.prototype->proposal.on_selected.push_back(std::move(command2));
 
   fidl::VectorPtr<fuchsia::modular::ContextValue> context_update;
   AddValueToContextUpdate(context_update, "mod1");

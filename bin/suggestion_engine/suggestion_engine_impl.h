@@ -164,19 +164,6 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   void AddProposalWithRichSuggestion(ProposalPublisherImpl* source,
                                      fuchsia::modular::Proposal proposal);
 
-  // |story_puppet_master| for the story where the actions will be executed.
-  // |actions| are the actions to perform.
-  modular::FuturePtr<fuchsia::modular::ExecuteResult> PerformActions(
-      fuchsia::modular::StoryPuppetMasterPtr story_puppet_master,
-      fidl::VectorPtr<fuchsia::modular::Action> actions);
-
-  fuchsia::modular::StoryCommand ActionToStoryCommand(
-      const fuchsia::modular::Action& action);
-
-  void PerformDeprecatedActions(std::vector<fuchsia::modular::Action> actions);
-
-  void PerformCustomAction(fuchsia::modular::Action* action);
-
   void RegisterRankingFeatures();
 
   // |fuchsia::modular::ContextListener|

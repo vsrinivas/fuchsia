@@ -45,10 +45,11 @@ class TestApp : fuchsia::modular::ProposalListener {
         [this](const fidl::StringPtr& story_id) {
           received_story_id_.Pass();
 
-          fuchsia::modular::FocusStory focus_story;
+          fuchsia::modular::SetFocusState focus_story;
+          focus_story.focused = true;
 
-          fuchsia::modular::Action action;
-          action.set_focus_story(std::move(focus_story));
+          fuchsia::modular::StoryCommand command;
+          command.set_set_focus_state(std::move(focus_story));
 
           // Craft a minimal suggestion proposal.
           fuchsia::modular::SuggestionDisplay suggestion_display;
@@ -62,7 +63,7 @@ class TestApp : fuchsia::modular::ProposalListener {
           proposal.affinity.resize(0);
           proposal.story_name = story_id;
           proposal.display = std::move(suggestion_display);
-          proposal.on_selected.push_back(std::move(action));
+          proposal.on_selected.push_back(std::move(command));
           proposal_listener_bindings_.AddBinding(
               this, proposal.listener.NewRequest());
 

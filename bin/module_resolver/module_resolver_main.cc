@@ -201,19 +201,19 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
     }
     intent.parameters = std::move(parameters);
 
-    fuchsia::modular::AddModule add_module;
+    fuchsia::modular::AddMod add_mod;
     fidl::Clone(intent, intent_out);
-    add_module.intent = std::move(intent);
-    add_module.module_name = module_result.module_id;
-    add_module.surface_parent_module_path = std::move(parent_mod_path);
-    fuchsia::modular::Action action;
-    action.set_add_module(std::move(add_module));
+    add_mod.intent = std::move(intent);
+    add_mod.mod_name.push_back(module_result.module_id);
+    add_mod.surface_parent_mod_name = std::move(parent_mod_path);
+    fuchsia::modular::StoryCommand command;
+    command.set_add_mod(std::move(add_mod));
 
     fuchsia::modular::Proposal proposal;
     proposal.id = std::to_string(proposal_id);
     proposal.affinity.resize(0);
     proposal.story_name = story_id;
-    proposal.on_selected.push_back(std::move(action));
+    proposal.on_selected.push_back(std::move(command));
 
     fuchsia::modular::SuggestionDisplay display;
     if (module_result.manifest && module_result.manifest->suggestion_headline) {

@@ -50,19 +50,20 @@ double ModPairRankingFeature::ComputeFeatureInternal(
     const RankedSuggestion& suggestion) {
   double prob = 0.0;
 
-  for (auto& action : *suggestion.prototype->proposal.on_selected) {
+  for (auto& command : *suggestion.prototype->proposal.on_selected) {
     fidl::StringPtr module_url;
-    switch (action.Which()) {
-      case fuchsia::modular::Action::Tag::kAddModule: {
-        module_url = action.add_module().intent.handler;
+    switch (command.Which()) {
+      case fuchsia::modular::StoryCommand::Tag::kAddMod: {
+        module_url = command.add_mod().intent.handler;
         break;
       }
-      case fuchsia::modular::Action::Tag::kCustomAction:
-      case fuchsia::modular::Action::Tag::kFocusStory:
-      case fuchsia::modular::Action::Tag::kFocusModule:
-      case fuchsia::modular::Action::Tag::kSetLinkValueAction:
-      case fuchsia::modular::Action::Tag::kUpdateModule:
-      case fuchsia::modular::Action::Tag::Invalid:
+      case fuchsia::modular::StoryCommand::Tag::kSetKindOfProtoStoryOption:
+      case fuchsia::modular::StoryCommand::Tag::kSetFocusState:
+      case fuchsia::modular::StoryCommand::Tag::kFocusMod:
+      case fuchsia::modular::StoryCommand::Tag::kSetLinkValue:
+      case fuchsia::modular::StoryCommand::Tag::kUpdateMod:
+      case fuchsia::modular::StoryCommand::Tag::kRemoveMod:
+      case fuchsia::modular::StoryCommand::Tag::Invalid:
         continue;
     }
     if (module_url.is_null() || module_url->empty()) {

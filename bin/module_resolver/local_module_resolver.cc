@@ -484,14 +484,14 @@ void LocalModuleResolver::OnQuery(fuchsia::modular::UserInput query,
         proposal.id = manifest.binary;
         proposal.affinity.resize(0);
 
-        fuchsia::modular::AddModule add_module;
-        add_module.intent.handler = manifest.binary;
-        add_module.module_name = "root";
-        add_module.surface_parent_module_path.resize(0);
+        fuchsia::modular::AddMod add_mod;
+        add_mod.intent.handler = manifest.binary;
+        add_mod.mod_name.push_back("root");
+        add_mod.surface_parent_mod_name.resize(0);
 
-        fuchsia::modular::Action action;
-        action.set_add_module(std::move(add_module));
-        proposal.on_selected.push_back(std::move(action));
+        fuchsia::modular::StoryCommand command;
+        command.set_add_mod(std::move(add_mod));
+        proposal.on_selected.push_back(std::move(command));
 
         proposal.display.headline =
             std::string("Go go gadget ") + last_part.ToString();

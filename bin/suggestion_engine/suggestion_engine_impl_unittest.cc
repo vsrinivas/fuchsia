@@ -171,35 +171,36 @@ class SuggestionEngineTest : public testing::TestWithSessionStorage {
                               fuchsia::modular::SurfaceArrangement::NONE) {
     fuchsia::modular::Intent intent;
     intent.handler = mod_url;
-    fuchsia::modular::AddModule add_module;
-    add_module.module_name = mod_name;
-    add_module.intent = std::move(intent);
+    fuchsia::modular::AddMod add_mod;
+    add_mod.mod_name.push_back(mod_name);
+    add_mod.intent = std::move(intent);
     if (parent_mod.empty()) {
-      add_module.surface_parent_module_path.resize(0);
+      add_mod.surface_parent_mod_name.resize(0);
     } else {
-      add_module.surface_parent_module_path.push_back(parent_mod);
+      add_mod.surface_parent_mod_name.push_back(parent_mod);
     }
-    add_module.surface_relation.arrangement = arrangement;
+    add_mod.surface_relation.arrangement = arrangement;
 
-    fuchsia::modular::Action action;
-    action.set_add_module(std::move(add_module));
-    proposal->on_selected.push_back(std::move(action));
+    fuchsia::modular::StoryCommand command;
+    command.set_add_mod(std::move(add_mod));
+    proposal->on_selected.push_back(std::move(command));
   }
 
   void AddFocusStoryAction(fuchsia::modular::Proposal* proposal) {
-    fuchsia::modular::FocusStory focus_story;
-    fuchsia::modular::Action action;
-    action.set_focus_story(std::move(focus_story));
-    proposal->on_selected.push_back(std::move(action));
+    fuchsia::modular::SetFocusState focus_story;
+    focus_story.focused = true;
+    fuchsia::modular::StoryCommand command;
+    command.set_set_focus_state(std::move(focus_story));
+    proposal->on_selected.push_back(std::move(command));
   }
 
   void AddFocusModuleAction(fuchsia::modular::Proposal* proposal,
                             const std::string& mod_name) {
-    fuchsia::modular::FocusModule focus_module;
-    focus_module.module_path.push_back(mod_name);
-    fuchsia::modular::Action action;
-    action.set_focus_module(std::move(focus_module));
-    proposal->on_selected.push_back(std::move(action));
+    fuchsia::modular::FocusMod focus_mod;
+    focus_mod.mod_name.push_back(mod_name);
+    fuchsia::modular::StoryCommand command;
+    command.set_focus_mod(std::move(focus_mod));
+    proposal->on_selected.push_back(std::move(command));
   }
 
   void AddUpdateModuleAction(fuchsia::modular::Proposal* proposal,
@@ -211,13 +212,13 @@ class SuggestionEngineTest : public testing::TestWithSessionStorage {
     fsl::SizedVmo vmo;
     FXL_CHECK(fsl::VmoFromString(json_param_value, &vmo));
     parameter.data.set_json(std::move(vmo).ToTransport());
-    fuchsia::modular::UpdateModule update_module;
-    update_module.module_name.push_back(mod_name);
-    update_module.parameters.push_back(std::move(parameter));
+    fuchsia::modular::UpdateMod update_mod;
+    update_mod.mod_name.push_back(mod_name);
+    update_mod.parameters.push_back(std::move(parameter));
 
-    fuchsia::modular::Action action;
-    action.set_update_module(std::move(update_module));
-    proposal->on_selected.push_back(std::move(action));
+    fuchsia::modular::StoryCommand command;
+    command.set_update_mod(std::move(update_mod));
+    proposal->on_selected.push_back(std::move(command));
   }
 
   void AddSetLinkValueAction(fuchsia::modular::Proposal* proposal,
@@ -227,16 +228,16 @@ class SuggestionEngineTest : public testing::TestWithSessionStorage {
     fuchsia::modular::LinkPath link_path;
     link_path.module_path.push_back(mod_name);
     link_path.link_name = link_name;
-    fuchsia::modular::SetLinkValueAction set_link_value;
-    set_link_value.link_path = std::move(link_path);
+    fuchsia::modular::SetLinkValue set_link_value;
+    set_link_value.path = std::move(link_path);
     fsl::SizedVmo vmo;
     FXL_CHECK(fsl::VmoFromString(link_value, &vmo));
     set_link_value.value =
         std::make_unique<fuchsia::mem::Buffer>(std::move(vmo).ToTransport());
 
-    fuchsia::modular::Action action;
-    action.set_set_link_value_action(std::move(set_link_value));
-    proposal->on_selected.push_back(std::move(action));
+    fuchsia::modular::StoryCommand command;
+    command.set_set_link_value(std::move(set_link_value));
+    proposal->on_selected.push_back(std::move(command));
   }
 
   std::unique_ptr<ProposalPublisherImpl> proposal_publisher_;

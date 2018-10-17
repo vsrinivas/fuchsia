@@ -38,11 +38,11 @@ class NWriter {
 
 fuchsia::modular::Proposal CreateProposal(
     const std::string& id, const std::string& headline,
-    fidl::VectorPtr<fuchsia::modular::Action> actions,
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands,
     fuchsia::modular::AnnoyanceType annoyance) {
   fuchsia::modular::Proposal p;
   p.id = id;
-  p.on_selected = std::move(actions);
+  p.on_selected = std::move(commands);
   p.affinity.resize(0);
   fuchsia::modular::SuggestionDisplay d;
 
@@ -65,17 +65,17 @@ class Proposinator {
   virtual ~Proposinator() = default;
 
   void Propose(const std::string& id,
-               fidl::VectorPtr<fuchsia::modular::Action> actions =
-                   fidl::VectorPtr<fuchsia::modular::Action>::New(0)) {
-    Propose(id, id, fuchsia::modular::AnnoyanceType::NONE, std::move(actions));
+               fidl::VectorPtr<fuchsia::modular::StoryCommand> commands =
+                   fidl::VectorPtr<fuchsia::modular::StoryCommand>::New(0)) {
+    Propose(id, id, fuchsia::modular::AnnoyanceType::NONE, std::move(commands));
   }
 
   void Propose(const std::string& id, const std::string& headline,
                fuchsia::modular::AnnoyanceType annoyance =
                    fuchsia::modular::AnnoyanceType::NONE,
-               fidl::VectorPtr<fuchsia::modular::Action> actions =
-                   fidl::VectorPtr<fuchsia::modular::Action>::New(0)) {
-    Propose(CreateProposal(id, headline, std::move(actions), annoyance));
+               fidl::VectorPtr<fuchsia::modular::StoryCommand> commands =
+                   fidl::VectorPtr<fuchsia::modular::StoryCommand>::New(0)) {
+    Propose(CreateProposal(id, headline, std::move(commands), annoyance));
   }
 
   void Propose(fuchsia::modular::Proposal proposal) {
@@ -128,18 +128,19 @@ class AskProposinator : public Proposinator,
   fidl::StringPtr query() const { return query_ ? query_->text : nullptr; }
 
   void ProposeForAsk(const std::string& id) {
-    auto actions = fidl::VectorPtr<fuchsia::modular::Action>::New(0);
+    auto commands = fidl::VectorPtr<fuchsia::modular::StoryCommand>::New(0);
     ProposeForAsk(id, id, fuchsia::modular::AnnoyanceType::NONE,
-                  std::move(actions));
+                  std::move(commands));
   }
 
-  void ProposeForAsk(const std::string& id, const std::string& headline,
-                     fuchsia::modular::AnnoyanceType annoyance =
-                         fuchsia::modular::AnnoyanceType::NONE,
-                     fidl::VectorPtr<fuchsia::modular::Action> actions =
-                         fidl::VectorPtr<fuchsia::modular::Action>::New(0)) {
+  void ProposeForAsk(
+      const std::string& id, const std::string& headline,
+      fuchsia::modular::AnnoyanceType annoyance =
+          fuchsia::modular::AnnoyanceType::NONE,
+      fidl::VectorPtr<fuchsia::modular::StoryCommand> commands =
+          fidl::VectorPtr<fuchsia::modular::StoryCommand>::New(0)) {
     query_proposals_.push_back(
-        CreateProposal(id, headline, std::move(actions), annoyance));
+        CreateProposal(id, headline, std::move(commands), annoyance));
   }
 
  private:
@@ -900,16 +901,16 @@ TEST_F(SuggestionFilteringTest, Baseline) {
 
   fuchsia::modular::Intent intent;
   intent.handler = "foo://bar";
-  fuchsia::modular::AddModule add_module;
-  add_module.module_name = "foo";
-  add_module.intent = std::move(intent);
-  add_module.surface_parent_module_path.resize(0);
+  fuchsia::modular::AddMod add_mod;
+  add_mod.mod_name.push_back("foo");
+  add_mod.intent = std::move(intent);
+  add_mod.surface_parent_mod_name.resize(0);
 
-  fuchsia::modular::Action action;
-  action.set_add_module(std::move(add_module));
-  fidl::VectorPtr<fuchsia::modular::Action> actions;
-  actions.push_back(std::move(action));
-  p.Propose("1", std::move(actions));
+  fuchsia::modular::StoryCommand command;
+  command.set_add_mod(std::move(add_mod));
+  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+  commands.push_back(std::move(command));
+  p.Propose("1", std::move(commands));
   WaitUntilIdle();
   EXPECT_EQ(1, suggestion_count());
 }
@@ -931,16 +932,16 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
 
   fuchsia::modular::Intent intent;
   intent.handler = "foo://bar";
-  fuchsia::modular::AddModule add_module;
-  add_module.intent = std::move(intent);
-  add_module.module_name = "foo";
-  add_module.surface_parent_module_path.resize(0);
+  fuchsia::modular::AddMod add_mod;
+  add_mod.intent = std::move(intent);
+  add_mod.mod_name.push_back("foo");
+  add_mod.surface_parent_mod_name.resize(0);
 
-  fuchsia::modular::Action action;
-  action.set_add_module(std::move(add_module));
-  fidl::VectorPtr<fuchsia::modular::Action> actions;
-  actions.push_back(std::move(action));
-  p.Propose("1", std::move(actions));
+  fuchsia::modular::StoryCommand command;
+  command.set_add_mod(std::move(add_mod));
+  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+  commands.push_back(std::move(command));
+  p.Propose("1", std::move(commands));
   WaitUntilIdle();
   EXPECT_EQ(1, suggestion_count());
 }
