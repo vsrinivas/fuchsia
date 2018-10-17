@@ -122,6 +122,10 @@ public:
         case Value::SUSPENDED_RESUME:
         case Value::DYING_RESUME:
             return Exception::RESUME;
+        case Value::INITIALIZED_IDLE:
+        case Value::DEAD_IDLE:
+            // Someone could have, for example, requested zx_info_thread_t.
+            return Exception::IDLE;
         default:
             ASSERT(false);
         }
