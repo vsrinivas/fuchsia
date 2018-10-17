@@ -40,6 +40,15 @@ func (e *endpoint) IsAttached() bool {
 }
 
 func (e *endpoint) WritePacket(r *stack.Route, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
+	if r.LocalAddress != "" && r.LocalAddress == r.RemoteAddress {
+		views := make([]buffer.View, 1, 1+len(payload.Views()))
+		views[0] = hdr.View()
+		views = append(views, payload.Views()...)
+		vv := buffer.NewVectorisedView(len(views[0])+payload.Size(), views)
+		e.dispatcher.DeliverNetworkPacket(e, r.RemoteLinkAddress, r.LocalLinkAddress, protocol, vv)
+		return nil
+	}
+
 	trace.DebugTrace("eth write")
 
 	eth := header.Ethernet(hdr.Prepend(header.EthernetMinimumSize))

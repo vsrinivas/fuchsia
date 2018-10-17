@@ -205,7 +205,7 @@ func TestClient_AllocForSend(t *testing.T) {
 		d.stop = func() error {
 			return nil
 		}
-		c, err := eth.NewClient(t.Name(), "topo", &d, arena, func(eth.State) {})
+		c, err := eth.NewClient(t.Name(), "topo", &d, arena, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
