@@ -16,6 +16,7 @@ bool rtc_is_invalid(const rtc_t* rtc);
 // Computes seconds (Unix epoch) to |rtc|. Does not validate. Does not handle times
 // earlier than 2000/1/1T00:00:00.
 uint64_t seconds_since_epoch(const rtc_t* rtc);
+void seconds_to_rtc(uint64_t seconds, rtc_t* rtc);
 
 // Validates and cleans what an RTC device |dev| returns. If the device returns
 // nonsensical values, it sets |rtc| to  2018/1/1T00:00:00.

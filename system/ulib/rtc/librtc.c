@@ -61,6 +61,44 @@ uint64_t seconds_since_epoch(const rtc_t* rtc) {
     return rtc_seconds;
 }
 
+void seconds_to_rtc(uint64_t seconds, rtc_t* rtc) {
+    // subtract local epoch offset to get to rtc time
+    uint64_t epoch = seconds - local_epoch;
+
+    rtc->seconds = epoch % 60; epoch /= 60;
+    rtc->minutes = epoch % 60; epoch /= 60;
+    rtc->hours = epoch % 24; epoch /= 24;
+
+    for (rtc->year = local_epoch_year;; rtc->year++) {
+        uint32_t days_per_year = 365;
+        if (is_leap_year(rtc->year)) {
+            days_per_year++;
+        }
+
+        if (epoch < days_per_year) {
+            break;
+        }
+
+        epoch -= days_per_year;
+    }
+
+    for (rtc->month = 1;; rtc->month++) {
+        uint32_t days_per_month = days_in_month[rtc->month];
+        if ((rtc->month == 2) && is_leap_year(rtc->year)) {
+            days_per_month++;
+        }
+
+        if (epoch < days_per_month) {
+            break;
+        }
+
+        epoch -= days_per_month;
+    }
+
+    // remaining epoch is a whole number of days so just make it one-indexed
+    rtc->day = epoch + 1;
+}
+
 uint8_t to_bcd(uint8_t binary) {
     return ((binary / 10) << 4) | (binary % 10);
 }
