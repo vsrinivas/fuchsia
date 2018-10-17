@@ -1323,6 +1323,295 @@ TEST_F(GATT_RemoteServiceManagerTest, WriteWithoutResponseSuccess) {
   EXPECT_TRUE(called);
 }
 
+TEST_F(GATT_RemoteServiceManagerTest, ReadDescAfterShutDown) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  service->ShutDown();
+
+  att::Status status;
+  service->ReadDescriptor(
+      0, [&](att::Status cb_status, const auto&) { status = cb_status; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(HostError::kFailed, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadDescWhileNotReady) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  att::Status status;
+  service->ReadDescriptor(
+      0, [&](att::Status cb_status, const auto&) { status = cb_status; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(HostError::kNotReady, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadDescriptorNotFound) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+  SetupCharacteristics(service, std::vector<CharacteristicData>());
+
+  att::Status status;
+  service->ReadDescriptor(
+      0, [&](att::Status cb_status, const auto&) { status = cb_status; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(HostError::kNotFound, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadDescSendsReadRequest) {
+  // TODO(armansito): Some of the service set up and |status| verification
+  // boilerplate could be reduced by factoring them out into helpers on the test
+  // harness (also see code review comment in
+  // https://fuchsia-review.googlesource.com/c/garnet/+/213794/6/drivers/bluetooth/lib/gatt/remote_service_manager_unittest.cc).
+  constexpr att::Handle kValueHandle1 = 3;
+  constexpr att::Handle kValueHandle2 = 5;
+  constexpr att::Handle kDescrHandle = 6;
+
+  ServiceData data(1, kDescrHandle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chr1(Property::kRead, 2, kValueHandle1, kTestUuid3);
+  CharacteristicData chr2(Property::kRead, 4, kValueHandle2, kTestUuid3);
+  DescriptorData desc(kDescrHandle, kTestUuid4);
+  SetupCharacteristics(service, {{chr1, chr2}}, {{desc}});
+
+  const auto kValue = CreateStaticByteBuffer('t', 'e', 's', 't');
+
+  fake_client()->set_read_request_callback(
+      [&](att::Handle handle, auto callback) {
+        EXPECT_EQ(kDescrHandle, handle);
+        callback(att::Status(), kValue);
+      });
+
+  // We read the first descriptor of the second characteristic. The descriptor
+  // has this ID based on the scheme described in remote_characteristic.h.
+  constexpr IdType kDescrId = 0x010000;
+  att::Status status(HostError::kFailed);
+  service->ReadDescriptor(kDescrId,
+                          [&](att::Status cb_status, const auto& value) {
+                            status = cb_status;
+                            EXPECT_TRUE(common::ContainersEqual(kValue, value));
+                          });
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(status);
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadDescSendsReadRequestWithDispatcher) {
+  constexpr att::Handle kValueHandle = 3;
+  constexpr att::Handle kDescrHandle = 4;
+
+  ServiceData data(1, kDescrHandle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chr(Property::kRead, 2, kValueHandle, kTestUuid3);
+  DescriptorData desc(kDescrHandle, kTestUuid4);
+  SetupCharacteristics(service, {{chr}}, {{desc}});
+
+  const auto kValue = CreateStaticByteBuffer('t', 'e', 's', 't');
+
+  fake_client()->set_read_request_callback(
+      [&](att::Handle handle, auto callback) {
+        EXPECT_EQ(kDescrHandle, handle);
+        callback(att::Status(), kValue);
+      });
+
+  att::Status status(HostError::kFailed);
+  service->ReadDescriptor(
+      0,
+      [&](att::Status cb_status, const auto& value) {
+        status = cb_status;
+        EXPECT_TRUE(common::ContainersEqual(kValue, value));
+      },
+      dispatcher());
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(status);
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadLongDescWhileNotReady) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  att::Status status;
+  service->ReadLongDescriptor(
+      0, 0, 512,
+      [&](att::Status cb_status, const auto&) { status = cb_status; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(HostError::kNotReady, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadLongDescNotFound) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+  SetupCharacteristics(service, std::vector<CharacteristicData>());
+
+  att::Status status;
+  service->ReadLongDescriptor(
+      0, 0, 512,
+      [&](att::Status cb_status, const auto&) { status = cb_status; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(HostError::kNotFound, status.error());
+}
+
+// Tests that ReadLongDescriptor sends Read Blob requests. Other conditions
+// around the long read procedure are already covered by the tests for
+// ReadLongCharacteristic as the implementations are shared.
+TEST_F(GATT_RemoteServiceManagerTest, ReadLongDescriptor) {
+  constexpr att::Handle kValueHandle = 3;
+  constexpr att::Handle kDescrHandle = 4;
+  constexpr uint16_t kOffset = 0;
+  constexpr size_t kMaxBytes = 1000;
+  constexpr int kExpectedBlobCount = 4;
+
+  ServiceData data(1, kDescrHandle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chr(Property::kRead, 2, kValueHandle, kTestUuid3);
+  DescriptorData desc(kDescrHandle, kTestUuid4);
+  SetupCharacteristics(service, {{chr}}, {{desc}});
+
+  // Create a buffer that will take 4 requests to read. Since the default MTU is
+  // 23:
+  //   a. The size of |expected_value| is 69.
+  //   b. We should read 22 + 22 + 22 + 3 bytes across 4 requests.
+  StaticByteBuffer<att::kLEMinMTU * 3> expected_value;
+
+  // Initialize the contents.
+  for (size_t i = 0; i < expected_value.size(); ++i) {
+    expected_value[i] = i;
+  }
+
+  int read_blob_count = 0;
+  fake_client()->set_read_blob_request_callback(
+      [&](att::Handle handle, uint16_t offset, auto callback) {
+        EXPECT_EQ(kDescrHandle, handle);
+        read_blob_count++;
+
+        // Return a blob at the given offset with at most MTU - 1 bytes.
+        auto blob = expected_value.view(offset, att::kLEMinMTU - 1);
+        if (read_blob_count == kExpectedBlobCount) {
+          // The final blob should contain 3 bytes.
+          EXPECT_EQ(3u, blob.size());
+        }
+
+        callback(att::Status(), blob);
+      });
+
+  att::Status status(HostError::kFailed);
+  service->ReadLongDescriptor(
+      0, kOffset, kMaxBytes, [&](att::Status cb_status, const auto& value) {
+        status = cb_status;
+        EXPECT_TRUE(ContainersEqual(expected_value, value));
+      });
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(status);
+  EXPECT_EQ(kExpectedBlobCount, read_blob_count);
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, WriteDescAfterShutDown) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  service->ShutDown();
+
+  att::Status status;
+  service->WriteDescriptor(0, std::vector<uint8_t>(),
+                           [&](att::Status cb_status) { status = cb_status; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(HostError::kFailed, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, WriteDescWhileNotReady) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  att::Status status;
+  service->WriteDescriptor(0, std::vector<uint8_t>(),
+                           [&](att::Status cb_status) { status = cb_status; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(HostError::kNotReady, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, WriteDescNotFound) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+  SetupCharacteristics(service, std::vector<CharacteristicData>());
+
+  att::Status status;
+  service->WriteDescriptor(0, std::vector<uint8_t>(),
+                           [&](att::Status cb_status) { status = cb_status; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(HostError::kNotFound, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, WriteDescNotAllowed) {
+  ServiceData data(1, 4, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  // "CCC" characteristic cannot be written to.
+  CharacteristicData chr(0, 2, 3, kTestUuid3);
+  DescriptorData desc(4, types::kClientCharacteristicConfig);
+  SetupCharacteristics(service, {{chr}}, {{desc}});
+
+  att::Status status;
+  service->WriteDescriptor(0, std::vector<uint8_t>(),
+                           [&](att::Status cb_status) { status = cb_status; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(HostError::kNotSupported, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, WriteDescSendsWriteRequest) {
+  constexpr att::Handle kValueHandle = 3;
+  constexpr att::Handle kDescrHandle = 4;
+  const std::vector<uint8_t> kValue{{'t', 'e', 's', 't'}};
+  const att::Status kStatus(HostError::kNotSupported);
+
+  ServiceData data(1, kValueHandle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chr(Property::kWrite, 2, kValueHandle, kTestUuid3);
+  DescriptorData desc(kDescrHandle, kTestUuid4);
+  SetupCharacteristics(service, {{chr}}, {{desc}});
+
+  fake_client()->set_write_request_callback(
+      [&](att::Handle handle, const auto& value, auto status_callback) {
+        EXPECT_EQ(kValueHandle, handle);
+        EXPECT_TRUE(std::equal(kValue.begin(), kValue.end(), value.begin(),
+                               value.end()));
+        status_callback(kStatus);
+      });
+
+  att::Status status;
+  service->WriteDescriptor(0, kValue,
+                           [&](att::Status cb_status) { status = cb_status; });
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(kStatus, status);
+}
+
 TEST_F(GATT_RemoteServiceManagerTest, EnableNotificationsAfterShutDown) {
   ServiceData data(1, 2, kTestServiceUuid1);
   auto service = SetUpFakeService(data);

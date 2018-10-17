@@ -112,6 +112,31 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   void WriteCharacteristicWithoutResponse(IdType id,
                                           std::vector<uint8_t> value);
 
+  // TODO(NET-1712): Add support for "write long characteristic values"
+  // procedure.
+
+  // Performs the "Read Characteristic Descriptors" procedure (v5.0, Vol 3, Part
+  // G, 4.12.1).
+  void ReadDescriptor(IdType id, ReadValueCallback callback,
+                      async_dispatcher_t* dispatcher = nullptr);
+
+  // Performs the "Read Long Characteristic Descriptors" procedure (v5.0, Vol 3,
+  // Part G, 4.12.2).
+  void ReadLongDescriptor(IdType id, uint16_t offset, size_t max_bytes,
+                          ReadValueCallback callback,
+                          async_dispatcher_t* dispatcher = nullptr);
+
+  // Performs the "Write Characteristic Descriptors" procedure (v5.0, Vol 3,
+  // Part G, 4.12.3).
+  //
+  // TODO(armansito): Add a ByteBuffer version.
+  void WriteDescriptor(IdType id, std::vector<uint8_t> value,
+                       att::StatusCallback callback,
+                       async_dispatcher_t* dispatcher = nullptr);
+
+  // TODO(NET-1713): Add support for "write long characteristic descriptors"
+  // procedure.
+
   // Subscribe to characteristic handle/value notifications or indications
   // from the characteristic with the given identifier. Either notifications or
   // indications will be enabled depending on the characteristic properties.
@@ -177,6 +202,11 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   common::HostError GetCharacteristic(IdType id,
                                       RemoteCharacteristic** out_char);
 
+  // Returns a pointer to the characteristic descriptor with |id|. Returns
+  // nullptr if not found.
+  common::HostError GetDescriptor(
+      IdType id, const RemoteCharacteristic::Descriptor** out_desc);
+
   // Called immediately after characteristic discovery to initiate descriptor
   // discovery.
   void StartDescriptorDiscovery() __TA_EXCLUDES(mtx_);
@@ -193,6 +223,18 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
 
   // Completes all pending characteristic discovery requests.
   void CompleteCharacteristicDiscovery(att::Status status) __TA_EXCLUDES(mtx_);
+
+  // Sends an ATT_Read_Request and reports the result via |cb| on |dispatcher|.
+  // |cb| executes on the GATT dispatcher if the provided |dispatcher| is
+  // nullptr.
+  void SendReadRequest(att::Handle handle, ReadValueCallback cb,
+                       async_dispatcher_t* dispatcher);
+
+  // Sends an ATT_Write_Request and reports the result via |cb| on |dispatcher|.
+  // |cb| executes on the GATT dispatcher if the provided |dispatcher| is
+  // nullptr.
+  void SendWriteRequest(att::Handle handle, const common::ByteBuffer& value,
+                        att::StatusCallback cb, async_dispatcher_t* dispatcher);
 
   // Helper function that drives the recursive "Read Long Characteristic Values"
   // procedure. Called by ReadLongCharacteristic().
