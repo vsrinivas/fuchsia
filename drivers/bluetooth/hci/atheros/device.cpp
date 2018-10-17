@@ -101,7 +101,7 @@ zx_status_t Device::UsbRequest(usb_request_t* req) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  result = usb_request_alloc(&req, DFU_PACKET_LEN, bulk_out_addr);
+  result = usb_request_alloc(&req, DFU_PACKET_LEN, bulk_out_addr, sizeof(usb_request_t));
   req->complete_cb = interrupt_complete;
   req->cookie = &completion_;
   return result;

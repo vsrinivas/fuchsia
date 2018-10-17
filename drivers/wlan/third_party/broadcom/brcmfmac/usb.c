@@ -190,7 +190,7 @@ struct brcmf_urb* brcmf_usb_allocate_urb(usb_protocol_t* usb) {
     if (urb == NULL) {
         return NULL;
     }
-    result = usb_request_alloc(&urb->zxurb, USB_MAX_TRANSFER_SIZE, 0);
+    result = usb_request_alloc(&urb->zxurb, USB_MAX_TRANSFER_SIZE, 0, sizeof(usb_request_t));
     if (result != ZX_OK) {
         free(urb);
         return NULL;

@@ -159,7 +159,7 @@ zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
 
   for (uint32_t i = 0; i < MAX_OUTSTANDING_REQS; i++) {
     usb_request_t* req;
-    zx_status_t status = usb_request_alloc(&req, size, usb_ep_addr_);
+    zx_status_t status = usb_request_alloc(&req, size, usb_ep_addr_, sizeof(usb_request_t));
     if (status != ZX_OK) {
       zxlogf(ERROR, "usb_request_alloc failed: %d\n", status);
       return status;

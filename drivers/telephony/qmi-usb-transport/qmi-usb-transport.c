@@ -327,7 +327,7 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   }
 
   // set up interrupt
-  status = usb_request_alloc(&int_buf, intr_max_packet, intr_addr);
+  status = usb_request_alloc(&int_buf, intr_max_packet, intr_addr, sizeof(usb_request_t));
   qmi_ctx->max_packet_size = bulk_max_packet;
   if (status != ZX_OK) {
     zxlogf(ERROR, "qmi-usb-transport: failed to allocate for usb request: %s\n",
