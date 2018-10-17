@@ -382,7 +382,7 @@ int emu_stat(const char* fn, struct stat* s) {
             fn++;
         }
         if (fn[0] == 0) {
-            fn = ".";
+            break;
         }
         len = strlen(fn);
         nextpath = strchr(fn, '/');
@@ -396,17 +396,11 @@ int emu_stat(const char* fn, struct stat* s) {
             return -ENOENT;
         }
         vn = fbl::RefPtr<fs::Vnode>::Downcast(vn_fs);
-        if (cur != fakeFs.fake_root) {
-            cur->Close();
-        }
         cur = vn;
         fn = nextpath;
     } while (nextpath != nullptr);
 
     status = do_stat(vn, s);
-    if (vn != fakeFs.fake_root) {
-        vn->Close();
-    }
     STATUS(status);
 }
 
