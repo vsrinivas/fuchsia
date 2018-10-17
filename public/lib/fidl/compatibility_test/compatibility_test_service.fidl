@@ -224,7 +224,7 @@ struct handles {
   handle<vmo> vmo_handle;
   handle<event> event_handle;
   handle<port> port_handle;
-  handle<log> log_handle;
+  handle<debuglog> log_handle;
   handle<socket> socket_handle;
   handle<eventpair> eventpair_handle;
   handle<job> job_handle;
@@ -239,7 +239,7 @@ struct handles {
   handle<event>? nullable_event_handle;
   handle<port>? nullable_port_handle;
   handle<interrupt>? nullable_interrupt_handle;
-  handle<log>? nullable_log_handle;
+  handle<debuglog>? nullable_log_handle;
   handle<socket>? nullable_socket_handle;
   handle<eventpair>? nullable_eventpair_handle;
   handle<job>? nullable_job_handle;
