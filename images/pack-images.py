@@ -14,7 +14,7 @@ import time
 import zipfile
 
 
-def generate_script(images):
+def generate_script(images, type):
     # The bootserver must be in there or we lose.
     # TODO(mcgrathr): Multiple bootservers for different platforms
     # and switch in the script.
@@ -26,8 +26,8 @@ dir="$(dirname "$0")"
 set -x
 '''
     switches = dict((switch, '"$dir/%s"' % image['path'])
-                    for image in images if 'bootserver' in image
-                    for switch in image['bootserver'])
+                    for image in images if type in image
+                    for switch in image[type])
     primary = switches.get('')
     if primary:
         del switches['']
@@ -84,14 +84,19 @@ def write_archive(outfile, format, images):
         image['path'] = image['name'] + '.' + image['type']
         packed_images.append((path, image))
 
-    # Generate a script that uses the sanitized file names.
-    def generate_archive_script():
-        return generate_script([image for path, image in packed_images])
-    packed_images.append((generate_archive_script, {
-        'name': 'pave',
-        'type': 'sh',
-        'path': 'pave.sh'
-    }))
+    # Generate scripts that use the sanitized file names.
+    packed_images += [
+        (lambda: generate_script([image for path, image in packed_images], 'bootserver_pave'), {
+            'name': 'pave',
+            'type': 'sh',
+            'path': 'pave.sh'
+        }),
+        (lambda: generate_script([image for path, image in packed_images], 'bootserver_netboot'), {
+            'name': 'netboot',
+            'type': 'sh',
+            'path': 'netboot.sh'
+        })
+    ]
 
     # Self-reference.
     packed_images.append(
@@ -126,6 +131,9 @@ def main():
     parser.add_argument('--pave',
                         metavar='FILE',
                         help='Write paving bootserver script to FILE')
+    parser.add_argument('--netboot',
+                        metavar='FILE',
+                        help='Write netboot bootserver script to FILE')
     parser.add_argument('--archive',
                         metavar='FILE',
                         help='Write archive to FILE')
@@ -157,18 +165,25 @@ Cannot guess archive format from file name %r; use --format.
 
     outfile = None
 
-    # First write the local script that works relative to the build directory.
-    if args.pave:
-        outfile = args.pave
-        with os.fdopen(os.open(outfile, os.O_CREAT | os.O_WRONLY, 0o777),
+    # Write an executable script into outfile for the given bootserver mode.
+    def write_script_for(outfile, mode):
+        with os.fdopen(os.open(outfile, os.O_CREAT | os.O_TRUNC | os.O_WRONLY, 0o777),
                        'w') as script_file:
-            script_file.write(generate_script(images))
+            script_file.write(generate_script(images, mode))
+
+    # First write the local scripts that work relative to the build directory.
+    if args.pave:
+        write_script_for(args.pave, 'bootserver_pave')
+    if args.netboot:
+        write_script_for(args.netboot, 'bootserver_netboot')
+
 
     if args.archive:
         outfile = args.archive
         archive_images = [image for image in images
                           if (image.get('archive', False) or
-                              'bootserver' in image)]
+                              'bootserver_pave' in image or
+                              'bootserver_netboot' in image)]
         files_read |= set(image['path'] for image in archive_images)
         write_archive(outfile, args.format, archive_images)
 

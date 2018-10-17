@@ -125,7 +125,7 @@ zedboot_images += [
       name = "zircon-r"
       type = "zbi"
       if (custom_signing_script == "") {
-        bootserver = [ "--zirconr" ]
+        bootserver_pave = [ "--zirconr" ]
       }
     }
   },
@@ -151,7 +151,7 @@ if (custom_signing_script != "") {
       json = {
         name = "zircon-r.signed"
         type = "zbi.signed"
-        bootserver = [
+        bootserver_pave = [
           "--zirconr",
 
           # TODO(ZX-2625): `dm reboot-recovery` boots from

@@ -45,10 +45,16 @@
 #         [string] A simple identifier for the image.
 #       type (required)
 #         [string] Type of image: "zbi", "blk", "kernel", "vboot"
-#       bootserver (optional)
+#       bootserver_pave (optional)
 #         [string] The command-line switch to `bootserver` that should
 #         precede this file's name.  The presence of this field implies
 #         that this image is needed for paving via Zedboot.  The value ""
+#         means this image is the primary ZBI, which is not preceded by a
+#         switch on the `bootserver` command line.
+#       bootserver_netboot (optional)
+#         [string] The command-line switch to `bootserver` that should
+#         precede this file's name.  The presence of this field implies
+#         that this image is needed for netbooting via Zedboot.  The value ""
 #         means this image is the primary ZBI, which is not preceded by a
 #         switch on the `bootserver` command line.
 #       archive (optional; default: false)

@@ -506,11 +506,14 @@ images += [
       type = "zbi"
 
       # The empty string means "kernel", i.e. the primary ZBI.
-      bootserver = [ "" ]
+      bootserver_pave = [ "" ]
       if (custom_signing_script == "") {
-        bootserver += [
+        bootserver_pave += [
           "--zircona",
-          "--zirconr",
+
+          # TODO(ZX-2625): `dm reboot-recovery` boots from zircon-b instead of
+          # zircon-r, so for now zedboot is being paved to this slot.
+          # "--zirconb",
         ]
       }
     }
@@ -548,7 +551,7 @@ if (custom_signing_script != "") {
       json = {
         name = "zircon-a.signed"
         type = "zbi.signed"
-        bootserver = [ "--zircona" ]
+        bootserver_pave = [ "--zircona" ]
       }
       public = [
         "IMAGE_ZIRCONA_SIGNEDZBI",
@@ -714,7 +717,7 @@ images += [
     json = {
       name = "storage-sparse"
       type = "blk"
-      bootserver = [ "--fvm" ]
+      bootserver_pave = [ "--fvm" ]
     }
     installer = "fvm.sparse.blk"
     sdk = "fvm.sparse.blk"
@@ -743,6 +746,7 @@ images += [
   {
     default = false
     json = {
+      bootserver_netboot = [ "" ]
       name = "netboot"
       type = "zbi"
     }
@@ -778,7 +782,7 @@ images += [
       name = "zircon-vboot"
       type = "vboot"
       if (current_cpu != "arm64") {
-        bootserver = [ "--kernc" ]
+        bootserver_pave = [ "--kernc" ]
       }
     }
     deps = [
@@ -834,7 +838,7 @@ if (target_cpu != "arm64") {
       json = {
         name = "efi"
         type = "blk"
-        bootserver = [ "--efi" ]
+        bootserver_pave = [ "--efi" ]
       }
       installer = "local.esp.blk"
       sdk = "local.esp.blk"
@@ -940,6 +944,7 @@ group("images") {
     ":default-legacy-images",
     ":ids.txt",
     ":paver-script",
+    ":netboot-script",
     "zedboot",
   ]
 }
@@ -1004,6 +1009,17 @@ paver_targets = [
       type = "sh"
     }
   },
+  {
+    name = "netboot-script"
+    outputs = [
+      "$root_build_dir/netboot.sh",
+    ]
+    switch = "--netboot="
+    json = {
+      name = "netboot"
+      type = "sh"
+    }
+  },
 ]
 foreach(format,
         [
@@ -1039,6 +1055,7 @@ foreach(target, paver_targets) {
   action(target.name) {
     deps = [
       ":default-images",
+      ":netboot",
       "zedboot",
     ]
     testonly = true
