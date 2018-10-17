@@ -6,6 +6,22 @@ library fidl.test.spaceship;
 
 using zx;
 
+// StarData is 16 bytes, all inline.
+struct StarData {
+    array<uint8>:16 data;
+};
+
+// PlanetData is 4 bytes, all inline.
+struct PlanetData {
+    array<uint8>:4 data;
+};
+
+// AstrologicalData is 20 bytes long, i.e. tag of 4 bytes + max(4, 16).
+union AstrologicalData {
+    StarData star;
+    PlanetData planet;
+};
+
 [Layout = "Simple"]
 interface AstrometricsListener {
     1: OnNova();
@@ -40,6 +56,6 @@ interface SpaceShip {
     4: SetDefenseCondition(Alert alert);
     5: GetFuelRemaining(handle<eventpair>? cancel) -> (zx.status status, FuelLevel? level);
     6: AddFuelTank(FuelLevel? level) -> (uint32 consumed);
-    // A higher-order lifeform
     7: ScanForTensorLifeforms() -> (array<array<array<uint32>:3>:5>:8 lifesigns);
+    8: ReportAstrologicalData(AstrologicalData data) -> (zx.status status);
 };

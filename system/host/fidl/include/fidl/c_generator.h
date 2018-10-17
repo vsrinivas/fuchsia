@@ -104,6 +104,11 @@ private:
         const flat::Union& union_info;
     };
 
+    enum class StructKind {
+        kMessage,
+        kNonmessage,
+    };
+
     void GeneratePrologues();
     void GenerateEpilogues();
 
@@ -113,7 +118,7 @@ private:
     void GenerateStringDefine(StringView name, StringView value);
     void GenerateStructTypedef(StringView name);
 
-    void GenerateStructDeclaration(StringView name, const std::vector<Member>& members);
+    void GenerateStructDeclaration(StringView name, const std::vector<Member>& members, StructKind kind);
     void GenerateTaggedUnionDeclaration(StringView name, const std::vector<Member>& members);
 
     std::map<const flat::Decl*, NamedConst>

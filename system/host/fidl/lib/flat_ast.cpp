@@ -23,6 +23,8 @@ namespace flat {
 
 namespace {
 
+constexpr uint32_t kMessageAlign = 8u;
+
 class ScopeInsertResult {
 public:
     explicit ScopeInsertResult(std::unique_ptr<SourceLocation> previous_occurance)
@@ -124,6 +126,12 @@ uint32_t ClampedAdd(uint32_t a, uint32_t b) {
                  static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())));
 }
 
+TypeShape AlignTypeshape(TypeShape shape, uint32_t alignment) {
+    uint32_t new_alignment = std::max(shape.Alignment(), alignment);
+    uint32_t new_size = AlignTo(shape.Size(), new_alignment);
+    return TypeShape(new_size, new_alignment, shape.Depth(), shape.MaxHandles(), shape.MaxOutOfLine());
+}
+
 TypeShape CStructTypeShape(std::vector<FieldShape*>* fields, uint32_t extra_handles = 0u) {
     uint32_t size = 0u;
     uint32_t alignment = 1u;
@@ -166,6 +174,15 @@ TypeShape CUnionTypeShape(const std::vector<flat::Union::Member>& members) {
 
     size = AlignTo(size, alignment);
     return TypeShape(size, alignment, depth, max_handles, max_out_of_line);
+}
+
+TypeShape FidlStructTypeShape(std::vector<FieldShape*>* fields) {
+    return CStructTypeShape(fields);
+}
+
+TypeShape FidlMessageTypeShape(std::vector<FieldShape*>* fields) {
+    auto struct_shape =  FidlStructTypeShape(fields);
+    return AlignTypeshape(struct_shape, kMessageAlign);
 }
 
 TypeShape PointerTypeShape(TypeShape element, uint32_t max_element_count = 1u) {
@@ -1649,7 +1666,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
                     return false;
                 message_struct.push_back(&param.fieldshape);
             }
-            message->typeshape = CStructTypeShape(&message_struct);
+            message->typeshape = FidlMessageTypeShape(&message_struct);
             return true;
         };
         if (method.maybe_request) {

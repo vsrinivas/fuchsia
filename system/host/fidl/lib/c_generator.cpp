@@ -257,7 +257,7 @@ void EmitMeasureInParams(std::ostream* file,
         else if (member.kind == flat::Type::Kind::kString)
             *file << " + FIDL_ALIGN(" << member.name << "_size)";
         else if (IsStoredOutOfLine(member))
-            *file << " + (" << member.name << " ? sizeof(*" << member.name << ") : 0u)";
+            *file << " + (" << member.name << " ? FIDL_ALIGN(sizeof(*" << member.name << ")) : 0u)";
     }
 }
 
@@ -269,7 +269,7 @@ void EmitMeasureOutParams(std::ostream* file,
         else if (member.kind == flat::Type::Kind::kString)
             *file << " + FIDL_ALIGN(" << member.name << "_capacity)";
         else if (IsStoredOutOfLine(member))
-            *file << " + (out_" << member.name << " ? sizeof(*out_" << member.name << ") : 0u)";
+            *file << " + (out_" << member.name << " ? FIDL_ALIGN(sizeof(*out_" << member.name << ")) : 0u)";
     }
 }
 
@@ -643,9 +643,12 @@ void CGenerator::GenerateStructTypedef(StringView name) {
     file_ << "typedef struct " << name << " " << name << ";\n";
 }
 
-void CGenerator::GenerateStructDeclaration(StringView name, const std::vector<Member>& members) {
+void CGenerator::GenerateStructDeclaration(StringView name, const std::vector<Member>& members,
+                                           StructKind kind) {
     file_ << "struct " << name << " {\n";
-    file_ << kIndent << "FIDL_ALIGNDECL\n";
+    if (kind == StructKind::kMessage) {
+        file_ << kIndent << "FIDL_ALIGNDECL\n";
+    }
     for (const auto& member : members) {
         file_ << kIndent;
         EmitMemberDecl(&file_, member);
@@ -657,7 +660,6 @@ void CGenerator::GenerateStructDeclaration(StringView name, const std::vector<Me
 void CGenerator::GenerateTaggedUnionDeclaration(StringView name,
                                                 const std::vector<Member>& members) {
     file_ << "struct " << name << " {\n";
-    file_ << kIndent << "FIDL_ALIGNDECL\n";
     file_ << kIndent << "fidl_union_tag_t tag;\n";
     file_ << kIndent << "union {\n";
     for (const auto& member : members) {
@@ -860,6 +862,9 @@ void CGenerator::ProduceConstDeclaration(const NamedConst& named_const) {
 }
 
 void CGenerator::ProduceMessageDeclaration(const NamedMessage& named_message) {
+    // When we generate a request or response struct (i.e. messages), we must
+    // both include the message header, and ensure the message is FIDL aligned.
+
     std::vector<CGenerator::Member> members;
     members.reserve(1 + named_message.parameters.size());
     members.push_back(MessageHeader());
@@ -867,7 +872,7 @@ void CGenerator::ProduceMessageDeclaration(const NamedMessage& named_message) {
         members.push_back(CreateMember(library_, parameter));
     }
 
-    GenerateStructDeclaration(named_message.c_name, members);
+    GenerateStructDeclaration(named_message.c_name, members, StructKind::kMessage);
 
     EmitBlank(&file_);
 }
@@ -888,7 +893,7 @@ void CGenerator::ProduceStructDeclaration(const NamedStruct& named_struct) {
         members.push_back(CreateMember(library_, struct_member));
     }
 
-    GenerateStructDeclaration(named_struct.c_name, members);
+    GenerateStructDeclaration(named_struct.c_name, members, StructKind::kNonmessage);
 
     EmitBlank(&file_);
 }
