@@ -7,7 +7,7 @@
            "--user_shell_args=--story_count=20",
            "--story_shell=dev_story_shell"],
   "categories": ["benchmark", "modular"],
-  "duration": 1200,
+  "duration": 120,
   "measure": [
     {
       "type": "duration",
@@ -22,246 +22,27 @@
     {
       "type": "duration",
       "event_name": "story/create",
-      "event_category": "benchmark",
-      "split_first": true
+      "event_category": "benchmark"
     },
     {
       "type": "duration",
       "event_name": "story/info",
-      "event_category": "benchmark",
-      "split_first": true
+      "event_category": "benchmark"
     },
     {
       "type": "duration",
       "event_name": "story/start",
-      "event_category": "benchmark",
-      "split_first": true
+      "event_category": "benchmark"
     },
     {
       "type": "duration",
       "event_name": "story/stop",
-      "event_category": "benchmark",
-      "split_first": true
+      "event_category": "benchmark"
     },
     {
       "type": "duration",
       "event_name": "user/logout",
       "event_category": "benchmark"
-    },
-    {
-      "type": "duration",
-      "event_name": "ReadAllDataCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "ReadDataCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "WriteDataCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "SyncCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "AgentContextImpl::InitializeCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "AgentContextImpl::StopCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "AgentRunnerStorageImpl::InitializeCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "AgentRunnerStorageImpl::WriteTaskCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "AgentRunnerStorageImpl::DeleteTaskCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "LinkImpl::ReadLinkDataCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "LinkImpl::WriteLinkDataCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "LinkImpl::FlushWatchersCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "LinkImpl::WriteCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "LinkImpl::ReadCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "LinkImpl::GetCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "LinkImpl::SetCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "LinkImpl::EraseCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "LinkImpl::GetEntityCallCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "LinkImpl::WatchCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "LinkImpl::ChangeCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "SessionStorage::CreateStoryCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "SessionStorage::MutateStoryDataCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryControllerImpl::LaunchModuleCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryControllerImpl::KillModuleCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryControllerImpl::ConnectLinkCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryControllerImpl::InitializeChainCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryControllerImpl::LaunchModuleInShellCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryControllerImpl::StopCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryControllerImpl::StopModuleCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryControllerImpl::DeleteCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryControllerImpl::OnModuleDataUpdatedCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryControllerImpl::FocusCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryControllerImpl::DefocusCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryControllerImpl::ResolveParametersCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryControllerImpl::ResolveModulesCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryProviderImpl::CreateStoryCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryProviderImpl::DeleteStoryCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryProviderImpl::GetControllerCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryProviderImpl::StopAllStoriesCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryProviderImpl::StopStoryShellCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryStorage::ReadLinkDataCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryStorage::WriteLinkDataCall",
-      "event_category": "modular"
-    },
-    {
-      "type": "duration",
-      "event_name": "StoryStorage::UpdateLinkCall",
-      "event_category": "modular"
     }
   ]
 }
