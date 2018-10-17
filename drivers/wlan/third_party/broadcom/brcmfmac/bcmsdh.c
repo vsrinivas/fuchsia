@@ -123,6 +123,24 @@ zx_status_t brcmf_sdiod_configure_oob_interrupt(struct brcmf_sdio_dev* sdiodev,
     return ZX_OK;
 }
 
+zx_status_t brcmf_sdiod_get_bootloader_macaddr(struct brcmf_sdio_dev* sdiodev, uint8_t *macaddr) {
+    // MAC address is only 6 bytes, but it is rounded up to 8 in the ZBI
+    uint8_t bootloader_macaddr[8];
+    size_t actual_len;
+    zx_status_t ret = device_get_metadata(sdiodev->dev.zxdev, DEVICE_METADATA_MAC_ADDRESS,
+                                          bootloader_macaddr, sizeof(bootloader_macaddr),
+                                          &actual_len);
+
+    if (ret != ZX_OK || actual_len < ETH_ALEN) {
+        printf("failed to get bootloader mac address: %d\n", ret);
+        return ret;
+    }
+    memcpy(macaddr, bootloader_macaddr, 6);
+    printf("got bootloader mac address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+            macaddr[0], macaddr[1], macaddr[2], macaddr[3], macaddr[4], macaddr[5]);
+    return ZX_OK;
+}
+
 zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
     struct brcmfmac_sdio_pd* pdata;
     zx_status_t ret = ZX_OK;

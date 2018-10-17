@@ -33,6 +33,7 @@
 #include "fwil_types.h"
 #include "linuxisms.h"
 #include "of.h"
+#include "sdio.h"
 
 MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("Broadcom 802.11 wireless LAN fullmac driver.");
@@ -227,15 +228,66 @@ done:
     return err;
 }
 
-#if CONFIG_BRCMFMAC_RANDOM_MAC
-static void brcmf_gen_random_mac_addr(uint8_t* addr) {
-    int err = getentropy(addr, ETH_ALEN);
+static void brcmf_gen_random_mac_addr(uint8_t* mac_addr) {
+    int err = getentropy(mac_addr, ETH_ALEN);
     ZX_ASSERT(!err);
 
-    addr[0] &= 0xfe; // bit 0: 0 = unicast
-    addr[0] |= 0x02; // bit 1: 1 = locally-administered
+    mac_addr[0] &= 0xfe; // bit 0: 0 = unicast
+    mac_addr[0] |= 0x02; // bit 1: 1 = locally-administered
 }
-#endif
+
+static zx_status_t brcmf_get_macaddr_from_bootloader(struct brcmf_if* ifp, uint8_t* mac_addr) {
+    // TODO(porce): Support other buses than SDIO
+    zx_status_t err = brcmf_sdiod_get_bootloader_macaddr(ifp->drvr->bus_if->bus_priv.sdio,
+                                                         mac_addr);
+    if (err != ZX_OK) {
+        brcmf_err("Retrieving mac address from bootloader failed, %s\n",
+                  zx_status_get_string(err));
+        return err;
+    }
+    return ZX_OK;
+}
+
+zx_status_t brcmf_set_macaddr_from_firmware(struct brcmf_if* ifp) {
+    // Use static MAC address defined in the firmware.
+    // eg. "macaddr" field of brcmfmac43455-sdio.txt
+    uint8_t mac_addr[ETH_ALEN];
+
+    zx_status_t err = brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", mac_addr, ETH_ALEN);
+    if (err != ZX_OK) {
+        brcmf_err("Retrieving mac address from firmware failed, %s\n",
+                  zx_status_get_string(err));
+        return err;
+    }
+
+    memcpy(ifp->mac_addr, mac_addr, sizeof(ifp->mac_addr));
+    memcpy(ifp->drvr->mac, ifp->mac_addr, sizeof(ifp->drvr->mac));
+    return ZX_OK;
+}
+
+static zx_status_t brcmf_set_macaddr(struct brcmf_if* ifp) {
+    uint8_t mac_addr[ETH_ALEN];
+
+    zx_status_t err = brcmf_get_macaddr_from_bootloader(ifp, mac_addr);
+    if (err != ZX_OK) {
+        // If desired, fall back to firmware mac address
+        // by using brcmf_set_macaddr_from_firmware();
+
+        // Fallback to a random mac address.
+        brcmf_err("Failed to get mac address from bootloader. Fallback to random mac address\n");
+        brcmf_gen_random_mac_addr(mac_addr);
+    }
+
+    err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", mac_addr, ETH_ALEN);
+    if (err != ZX_OK) {
+        brcmf_err("Setting mac address failed, %s\n", zx_status_get_string(err));
+        return err;
+    }
+
+    memcpy(ifp->mac_addr, mac_addr, sizeof(ifp->mac_addr));
+    memcpy(ifp->drvr->mac, ifp->mac_addr, sizeof(ifp->drvr->mac));
+    return ZX_OK;
+}
 
 zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     int8_t eventmask[BRCMF_EVENTING_MASK_LEN];
@@ -245,25 +297,11 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     char* clmver;
     char* ptr;
     zx_status_t err;
-    uint8_t mac_addr[ETH_ALEN];
 
-#if CONFIG_BRCMFMAC_RANDOM_MAC
-    brcmf_gen_random_mac_addr(mac_addr);
-    err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", mac_addr, sizeof(mac_addr));
+    err = brcmf_set_macaddr(ifp);
     if (err != ZX_OK) {
-        brcmf_err("Setting cur_etheraddr failed, %s\n", zx_status_get_string(err));
         goto done;
     }
-#else
-    /* retreive mac address from firmware */
-    err = brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", mac_addr, sizeof(mac_addr));
-    if (err != ZX_OK) {
-        brcmf_err("Retrieving cur_etheraddr failed, %d\n", err);
-        goto done;
-    }
-#endif
-    memcpy(ifp->mac_addr, mac_addr, sizeof(ifp->mac_addr));
-    memcpy(ifp->drvr->mac, ifp->mac_addr, sizeof(ifp->drvr->mac));
 
     err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_REVINFO, &revinfo, sizeof(revinfo));
     ri = &ifp->drvr->revinfo;

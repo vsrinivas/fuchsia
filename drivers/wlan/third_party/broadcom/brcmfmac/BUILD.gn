@@ -24,7 +24,6 @@ source_set("brcmfmac_srcs") {
     "CONFIG_BRCMFMAC_SDIO=1",
     "CONFIG_BRCMFMAC_PCIE=1",
     "CONFIG_BRCMFMAC_DBG=0",
-    "CONFIG_BRCMFMAC_RANDOM_MAC=1",
   ]
 
   sources = [

@@ -301,6 +301,9 @@ struct sdpcmd_regs {
     uint16_t PAD[0x80];
 };
 
+/* Get Bootloader MAC address. */
+zx_status_t brcmf_sdiod_get_bootloader_macaddr(struct brcmf_sdio_dev* sdiodev, uint8_t *macaddr);
+
 /* Register/deregister interrupt handler. */
 zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev);
 void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev);
