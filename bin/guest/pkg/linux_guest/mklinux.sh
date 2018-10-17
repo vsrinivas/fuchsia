@@ -24,12 +24,14 @@ while getopts "b:d:l:o:" OPT; do
   b) LINUX_BRANCH="${OPTARG}";;
   l) LINUX_DIR="${OPTARG}";;
   o) LINUX_OUT="${OPTARG}";;
+  d) LINUX_DEFCONFIG="${OPTARG}";;
   *) usage;;
   esac
 done
 shift $((OPTIND - 1))
 
 declare -r LINUX_DIR=${LINUX_DIR:-/tmp/linux}
+declare -r LINUX_DEFCONFIG=${LINUX_DEFCONFIG:-machina_defconfig}
 
 case "${1}" in
 arm64)
@@ -68,7 +70,7 @@ fi
 
 # Build Linux.
 pushd "${LINUX_DIR}"
-make machina_defconfig
+make "${LINUX_DEFCONFIG}"
 make -j $(getconf _NPROCESSORS_ONLN)
 popd
 
