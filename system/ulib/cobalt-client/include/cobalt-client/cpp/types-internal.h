@@ -38,7 +38,7 @@ struct Metadata {
 
 // Wraps a collection of observations. The buffer provides two methods for
 // flushing the buffer. Flushing the buffer is an operation were the contents
-// are being transfered, during this transfer the buffer becomes unwriteable
+// are being transferred, during this transfer the buffer becomes unwriteable
 // until the flush is marked as complete. Any synchronization is left to the
 // user, but |TryBeginFlush| will return true for exactly one thread in a
 // concurrent environment, it is the job of the user to notify when the
@@ -78,7 +78,7 @@ public:
     // operation.
     BufferType* mutable_event_data() { return &buffer_; }
 
-    // Returns true if the calling thread succesfully started a flush. Only a single thread
+    // Returns true if the calling thread successfully started a flush. Only a single thread
     // at any point can start a flush, and once started, no flush can start until
     // the started flush is completed.
     bool TryBeginFlush() { return !flushing_.exchange(true); }

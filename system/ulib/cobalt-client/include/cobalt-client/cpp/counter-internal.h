@@ -54,7 +54,7 @@ protected:
 // Counter which represents a standalone cobalt metric. Provides API for converting
 // to cobalt FIDL types.
 //
-// This class is moveable and move-assignanle.
+// This class is moveable and move-assignable.
 // This class is not copy or copy-assignable.
 // This class is thread-safe.
 class RemoteCounter : public BaseCounter {

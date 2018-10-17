@@ -149,7 +149,7 @@ void Collector::LogHistogram(RemoteHistogram* histogram) {
                                        RemoteHistogram::FlushCompleteFn complete_fn) {
         if (!logger_->Log(metric_id, buffer)) {
             // If we failed to log the data, then add the values again to the histogram, so they may
-            // be flushed in the future, and we dont need to keep a buffer around for retrying or
+            // be flushed in the future, and we don't need to keep a buffer around for retrying or
             // anything.
             for (auto& bucket : buffer.event_data()) {
                 if (bucket.count > 0) {

@@ -16,7 +16,7 @@ namespace {
 // we will never issue another request until a reply is issued, or the channel is closed,
 // so number of 'on-the-fly' transactions will always be one.
 // This is not necessary for sync bindings, because channel_call will fill it for us.
-constexpr zx_txid_t kFactoryRequstTxnId = 1u;
+constexpr zx_txid_t kFactoryRequestTxnId = 1u;
 
 // We reuse the same channel that is connecting the factory.
 // TODO(gevalentino): When async FIDL bindings become available, use this.
@@ -28,7 +28,7 @@ zx_status_t SendLoggerSimpleCreateRequest(zx::channel* logger_factory_client,
     memset(msg, 0, sizeof(msg));
     fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleRequest* request =
         reinterpret_cast<fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleRequest*>(msg);
-    request->hdr.txid = kFactoryRequstTxnId;
+    request->hdr.txid = kFactoryRequestTxnId;
     request->hdr.ordinal = fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleOrdinal;
     request->logger = logger_svc->release();
 
@@ -182,7 +182,7 @@ bool CobaltLogger::IsLoggerReady() {
     if (!logger_.is_valid() && !TrySendLoggerRequest()) {
         return false;
     }
-    // if we are connecting, wait for |polling_deadline_| for a response to become availble.
+    // if we are connecting, wait for |polling_deadline_| for a response to become available.
     // If the channel does not become readable, return as 'failed' and don't push the data yet.
     zx::duration deadline =
         is_first_attempt_ ? options_.logger_deadline_first_attempt : options_.logger_deadline;

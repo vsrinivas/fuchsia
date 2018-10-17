@@ -47,7 +47,7 @@ enum Status : int32 {
     // For example the supplied metric id is invalid.
     INVALID_ARGUMENTS = 1;
 
-    // An attempt was made to log an Event whose seralized size exceeds
+    // An attempt was made to log an Event whose serialized size exceeds
     // MAX_BYTES_PER_EVENT.
     EVENT_TOO_BIG = 2;
 
@@ -303,7 +303,7 @@ interface LoggerBase {
     //         StartTimer() calls. In this case Cobalt will delete the
     //         timer and invoke LogElapsedTime() using the difference
     //         between the end timestamp and the start timestamp as the
-    //         value of |duration_micors|. It is ok if this value is
+    //         value of |duration_micros|. It is ok if this value is
     //         negative.
     //     Returns INVALID_ARGUMENTS if |timer_id| is empty, the timeout
     //        is not positive and less than 5 minutes or Cobalt currently
@@ -321,7 +321,7 @@ interface LoggerBase {
     // This method is part of Cobalt's helper service for measuring the time
     // delta between two events that occur in different processes. This ends
     // the timer. A corresponding invocation of StartTimer() with the same
-    // |timer_id| starts the timer. After both StartTimer() and EnvdTimer() have
+    // |timer_id| starts the timer. After both StartTimer() and EndTimer() have
     // been invoked, LogElapsedTime() will be invoked with the difference
     // between the end timestamp and the start timestamp as the value of
     // |duration_microseconds|. It is OK if Cobalt receives the EndTimer()
@@ -359,7 +359,7 @@ interface LoggerBase {
     //         EndTimer() calls. In this case Cobalt will delete the
     //         timer and invoke LogElapsedTime() using the difference
     //         between the end timestamp and the start timestamp as the
-    //         value of |duration_micors|. It is ok if this value is
+    //         value of |duration_micros|. It is ok if this value is
     //         negative.
     //     Returns INVALID_ARGUMENTS if |timer_id| is empty, the timeout
     //        is not positive and less than 5 minutes or Cobalt currently
@@ -443,7 +443,7 @@ interface Logger : LoggerBase {
              -> (Status status);
 
     // Logs a custom Event. The semantics of the Metric are specified in the
-    // Metric defintion.
+    // Metric definition.
     //
     // |metric_id| ID of the metric to use. It must be one of the Metrics
     // from the ProjectProfile used to obtain this Logger, and it must be of
@@ -491,7 +491,7 @@ interface LoggerSimple : LoggerBase {
 struct Experiment {
     // The id of the experiment as defined by the A/B Experiment framework.
     uint64 experiment_id;
-    // The id of the experiment arm as definedby the A/B Experiment framework.
+    // The id of the experiment arm as defined by the A/B Experiment framework.
     uint32 arm_id;
 };
 

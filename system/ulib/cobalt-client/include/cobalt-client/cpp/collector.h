@@ -26,7 +26,7 @@ class Logger;
 // Defines the options for initializing the Collector.
 struct CollectorOptions {
     // Callback used when reading the config to create a cobalt logger.
-    // Returns true when the write was successfull. The VMO will be transferred
+    // Returns true when the write was successful. The VMO will be transferred
     // to the cobalt service.
     fbl::Function<bool(zx::vmo*, size_t*)> load_config;
 
@@ -41,8 +41,8 @@ struct CollectorOptions {
     zx::duration initial_response_deadline;
 
     // We need this information for pre-allocating storage
-    // and guaranteeing no dangling pointers, plus contiguos
-    // memory for cache friendlyness.
+    // and guaranteeing no dangling pointers, plus contiguous
+    // memory for cache friendliness.
 
     // Number of histograms to be used.
     size_t max_histograms;
@@ -51,12 +51,12 @@ struct CollectorOptions {
     size_t max_counters;
 };
 
-// This class acts as a peer for instantiating Hisotgrams and Counters. All
+// This class acts as a peer for instantiating Histograms and Counters. All
 // objects instantiated through this class act as a view, which means that
 // their lifetime is coupled to this object's lifetime. This class does require
 // the number of different configurations on construction.
 //
-// The Sink provides an API for persisiting the supported data types. This is
+// The Sink provides an API for persisting the supported data types. This is
 // exposed to simplify testing.
 //
 // This class is moveable, but not copyable or assignable.

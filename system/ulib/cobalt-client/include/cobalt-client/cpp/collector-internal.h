@@ -89,7 +89,7 @@ public:
     }
 
 protected:
-    // If returns true, a channel has been established with the enpoint,
+    // If returns true, a channel has been established with the endpoint,
     // and the handshake to set up a logger started.
     bool TrySendLoggerRequest();
 
