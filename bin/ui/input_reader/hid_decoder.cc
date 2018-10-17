@@ -7,13 +7,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <hid-parser/parser.h>
+#include <hid-parser/usages.h>
 #include <hid/acer12.h>
 #include <hid/egalax.h>
 #include <hid/eyoyo.h>
 #include <hid/ft3x27.h>
 #include <hid/paradise.h>
-#include <hid-parser/parser.h>
-#include <hid-parser/usages.h>
 #include <hid/samsung.h>
 #include <lib/fxl/logging.h>
 #include <lib/fzl/fdio.h>
@@ -98,18 +98,24 @@ bool HidDecoder::GetEvent(zx_handle_t* handle) {
 }
 
 HidDecoder::Protocol ExtractProtocol(hid::Usage input) {
+  using ::hid::usage::Consumer;
   using ::hid::usage::Page;
   using ::hid::usage::Sensor;
-  using ::hid::usage::Consumer;
+  using ::hid::usage::Telephony;
   struct {
     hid::Usage usage;
     HidDecoder::Protocol protocol;
   } usage_to_protocol[] = {
-    {{static_cast<uint16_t>(Page::kSensor), static_cast<uint32_t>(Sensor::kAmbientLight)},
-     HidDecoder::Protocol::LightSensor},
-    {{static_cast<uint16_t>(Page::kConsumer), static_cast<uint32_t>(Consumer::kVolume)},
-     HidDecoder::Protocol::Buttons},
-    // Add more sensors here
+      {{static_cast<uint16_t>(Page::kSensor),
+        static_cast<uint32_t>(Sensor::kAmbientLight)},
+       HidDecoder::Protocol::LightSensor},
+      {{static_cast<uint16_t>(Page::kConsumer),
+        static_cast<uint32_t>(Consumer::kVolume)},
+       HidDecoder::Protocol::Buttons},
+      {{static_cast<uint16_t>(Page::kTelephony),
+        static_cast<uint32_t>(Telephony::kPhoneMute)},
+       HidDecoder::Protocol::Buttons},
+      // Add more sensors here
   };
   for (auto& j : usage_to_protocol) {
     if (input.page == j.usage.page && input.usage == j.usage.usage) {
@@ -119,11 +125,12 @@ HidDecoder::Protocol ExtractProtocol(hid::Usage input) {
   return HidDecoder::Protocol::Other;
 }
 
-bool HidDecoder::ParseProtocol(const fzl::FdioCaller& caller, Protocol* protocol) {
+bool HidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
+                               Protocol* protocol) {
   zx_handle_t svc = caller.borrow_channel();
 
   zircon_input_BootProtocol boot_protocol;
-  zx_status_t status = zircon_input_DeviceGetBootProtocol(svc , &boot_protocol);
+  zx_status_t status = zircon_input_DeviceGetBootProtocol(svc, &boot_protocol);
   if (status != ZX_OK)
     return log_err(status, "ioctl protocol", name_);
 
@@ -139,8 +146,8 @@ bool HidDecoder::ParseProtocol(const fzl::FdioCaller& caller, Protocol* protocol
     return true;
   }
 
-  // For the rest of devices (zircon_input_BootProtocol_NONE) we need to parse the
-  // report descriptor. The legacy method involves memcmp() of known
+  // For the rest of devices (zircon_input_BootProtocol_NONE) we need to parse
+  // the report descriptor. The legacy method involves memcmp() of known
   // descriptors which cover the next 8 devices:
 
   uint16_t report_desc_len;
@@ -150,8 +157,8 @@ bool HidDecoder::ParseProtocol(const fzl::FdioCaller& caller, Protocol* protocol
 
   std::vector<uint8_t> desc(report_desc_len);
   size_t actual;
-  status = zircon_input_DeviceGetReportDesc(svc, desc.data(), desc.size(),
-                                            &actual);
+  status =
+      zircon_input_DeviceGetReportDesc(svc, desc.data(), desc.size(), &actual);
   if (status != ZX_OK)
     return log_err(status, "report descriptor", name_);
   desc.resize(actual);
@@ -376,11 +383,12 @@ bool HidDecoder::ParseAmbientLightDescriptor(const hid::ReportField* fields,
   return false;
 }
 
-bool HidDecoder::ParseButtonsDescriptor(const hid::ReportField* fields, size_t count) {
+bool HidDecoder::ParseButtonsDescriptor(const hid::ReportField* fields,
+                                        size_t count) {
   if (count == 0u)
     return false;
 
-  decoder_.resize(2u);
+  decoder_.resize(3u);
   uint8_t offset = 0;
 
   if (fields[0].report_id != 0) {
@@ -390,6 +398,12 @@ bool HidDecoder::ParseButtonsDescriptor(const hid::ReportField* fields, size_t c
     offset = 8u;
   }
 
+  // Needs to be kept in sync with HidButtons {}.
+  const uint16_t table[] = {
+      static_cast<uint16_t>(hid::usage::Consumer::kVolume),
+      static_cast<uint16_t>(hid::usage::Telephony::kPhoneMute),
+  };
+
   uint32_t bit_count = 0;
 
   // Traverse each input report field and see if there is a match in the table.
@@ -398,17 +412,21 @@ bool HidDecoder::ParseButtonsDescriptor(const hid::ReportField* fields, size_t c
     if (fields[ix].type != hid::kInput)
       continue;
 
-    if (fields[ix].attr.usage.usage == hid::usage::Consumer::kVolume) {
-      decoder_[1] = DataLocator{bit_count + offset, fields[ix].attr.bit_sz, 0};
-      // Found a required usage.
-      // Here |decoder_| should look like this:
-      // [rept_id][volume]
-      return true;
+    for (size_t iy = 0; iy != countof(table); iy++) {
+      if (fields[ix].attr.usage.usage == table[iy]) {
+        // Found a required usage.
+        decoder_[iy + 1] =
+            DataLocator{bit_count + offset, fields[ix].attr.bit_sz, 0};
+        break;
+      }
     }
 
     bit_count += fields[ix].attr.bit_sz;
   }
-  return false;
+
+  // Here |decoder_| should look like this:
+  // [rept_id][volume][mic_mute]
+  return true;
 }
 
 const std::vector<uint8_t>& HidDecoder::Read(int* bytes_read) {
@@ -504,16 +522,26 @@ bool HidDecoder::Read(HidButtons* data) {
     }
     ++cur;
   }
+
   // 2 bits, see zircon/system/ulib/hid's buttons.c and include/hid/buttons.h
   if (cur->count != 2u) {
     FXL_LOG(ERROR) << "Unexpected count in report from buttons:" << cur->count;
     return false;
   }
-  // TODO(SCN-843): We need to generalize these extraction functions, e.g. add extract_int8
+  // TODO(SCN-843): We need to generalize these extraction functions, e.g. add
+  // extract_int8
   data->volume = extract_uint8(report, cur->begin, 2u);
-  if (data->volume == 3) { // 2 bits unsigned 3 is signed -1
+  if (data->volume == 3) {  // 2 bits unsigned 3 is signed -1
     data->volume = -1;
   }
+  ++cur;
+
+  // 1 bit, see zircon/system/ulib/hid's buttons.c and include/hid/buttons.h
+  if (cur->count != 1u) {
+    FXL_LOG(ERROR) << "Unexpected count in report from buttons:" << cur->count;
+    return false;
+  }
+  data->mic_mute = extract_uint8(report, cur->begin, 1u);
   return true;
 }
 

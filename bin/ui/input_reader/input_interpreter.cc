@@ -104,6 +104,7 @@ bool InputInterpreter::Initialize() {
     buttons_descriptor_ = fuchsia::ui::input::ButtonsDescriptor::New();
     buttons_descriptor_->buttons |= fuchsia::ui::input::kVolumeUp;
     buttons_descriptor_->buttons |= fuchsia::ui::input::kVolumeDown;
+    buttons_descriptor_->buttons |= fuchsia::ui::input::kMicMute;
     buttons_report_ = fuchsia::ui::input::InputReport::New();
     buttons_report_->buttons = fuchsia::ui::input::ButtonsReport::New();
   } else if (protocol == HidDecoder::Protocol::Mouse ||
@@ -1030,10 +1031,12 @@ bool InputInterpreter::ParseButtonsReport() {
     return false;
   }
   buttons_report_->buttons->set_volume(data.volume);
+  buttons_report_->buttons->set_mic_mute(data.mic_mute);
   buttons_report_->event_time = InputEventTimestampNow();
 
   FXL_VLOG(2) << name() << " parsed buttons: " << *buttons_report_
-              << " volume: " << static_cast<int32_t>(data.volume);
+              << " volume: " << static_cast<int32_t>(data.volume)
+              << " mic mute: " << (data.mic_mute ? "yes" : "no");
   return true;
 }
 

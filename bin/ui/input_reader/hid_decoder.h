@@ -56,6 +56,7 @@ class HidDecoder {
 
   struct HidButtons {
     int8_t volume;
+    bool mic_mute;
   };
 
   // The decoder does not take ownership of the |fd|. InputReader takes
@@ -99,7 +100,8 @@ class HidDecoder {
 
   bool ParseProtocol(const fzl::FdioCaller& caller, Protocol* protocol);
   bool ParseGamepadDescriptor(const hid::ReportField* fields, size_t count);
-  bool ParseAmbientLightDescriptor(const hid::ReportField* fields, size_t count);
+  bool ParseAmbientLightDescriptor(const hid::ReportField* fields,
+                                   size_t count);
   bool ParseButtonsDescriptor(const hid::ReportField* fields, size_t count);
 
   const int fd_;

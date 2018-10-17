@@ -222,6 +222,7 @@ union SensorReport {
 union ButtonsReport {
   // Volume changes +1/-1 for volume up/down, this is a relative value.
   int8 volume;
+  bool mic_mute;
 };
 
 // Device and Report
