@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIAPLAYER_RENDER_FIDL_VIDEO_RENDERER_H_
-#define GARNET_BIN_MEDIAPLAYER_RENDER_FIDL_VIDEO_RENDERER_H_
+#ifndef GARNET_BIN_MEDIAPLAYER_FIDL_FIDL_VIDEO_RENDERER_H_
+#define GARNET_BIN_MEDIAPLAYER_FIDL_FIDL_VIDEO_RENDERER_H_
 
 #include <fbl/array.h>
 #include <fuchsia/media/cpp/fidl.h>
@@ -203,4 +203,4 @@ class FidlVideoRenderer
 
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIAPLAYER_RENDER_FIDL_VIDEO_RENDERER_H_
+#endif  // GARNET_BIN_MEDIAPLAYER_FIDL_FIDL_VIDEO_RENDERER_H_

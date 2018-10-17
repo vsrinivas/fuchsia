@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/mediaplayer/demux/fidl_reader.h"
+#include "garnet/bin/mediaplayer/fidl/fidl_reader.h"
 
 #include <limits>
 #include <string>

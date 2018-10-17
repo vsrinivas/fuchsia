@@ -12,7 +12,7 @@ source_set("graph_create") {
     "//garnet/bin/mediaplayer/decode",
     "//garnet/bin/mediaplayer/demux",
     "//garnet/bin/mediaplayer/ffmpeg",
-    "//garnet/bin/mediaplayer/fidl:decoders",
+    "//garnet/bin/mediaplayer/fidl",
     "//garnet/bin/mediaplayer/graph",
     "//garnet/public/lib/fxl",
   ]

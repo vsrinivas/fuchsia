@@ -7,8 +7,6 @@ import("//build/test.gni")
 source_set("demux") {
   sources = [
     "demux.h",
-    "fidl_reader.cc",
-    "fidl_reader.h",
     "file_reader.cc",
     "file_reader.h",
     "http_reader.cc",
@@ -22,10 +20,8 @@ source_set("demux") {
 
   deps = [
     "//garnet/bin/http:errors",
-    "//garnet/bin/mediaplayer/fidl",
     "//garnet/bin/mediaplayer/graph",
     "//garnet/bin/mediaplayer/util",
-    "//garnet/public/fidl/fuchsia.mediaplayer",
     "//garnet/public/fidl/fuchsia.net.oldhttp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -33,7 +29,6 @@ source_set("demux") {
 
   public_deps = [
     "//garnet/public/lib/component/cpp",
-    "//zircon/public/lib/fit",
   ]
 }
 

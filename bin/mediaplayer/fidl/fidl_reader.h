@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIAPLAYER_DEMUX_FIDL_READER_H_
-#define GARNET_BIN_MEDIAPLAYER_DEMUX_FIDL_READER_H_
+#ifndef GARNET_BIN_MEDIAPLAYER_FIDL_FIDL_READER_H_
+#define GARNET_BIN_MEDIAPLAYER_FIDL_FIDL_READER_H_
 
 #include <atomic>
 #include <memory>
@@ -74,4 +74,4 @@ class FidlReader : public Reader,
 
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIAPLAYER_DEMUX_FIDL_READER_H_
+#endif  // GARNET_BIN_MEDIAPLAYER_FIDL_FIDL_READER_H_
