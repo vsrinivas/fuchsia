@@ -42,9 +42,9 @@ static constexpr uint8_t kEapolPdu[] = {'E', 'A', 'P', 'O', 'L'};
 static constexpr uint8_t kKeyData[] = {0x40, 0x41, 0x42, 0x43, 0x44};
 static constexpr SupportedRate kSupportedRates[] = {
     SupportedRate(2),  SupportedRate(12), SupportedRate(24), SupportedRate(48),
-    SupportedRate(54), SupportedRate(96), SupportedRate(108)};
-static constexpr SupportedRate kExtendedSupportedRates[] = {SupportedRate(1), SupportedRate(16),
-                                                            SupportedRate(36)};
+    SupportedRate(54), SupportedRate(96), SupportedRate(108),
+    SupportedRate(1),  SupportedRate(16), SupportedRate(36)};
+
 static constexpr uint8_t kRsne[] = {
     0x30,                    // element id
     0x12,                    // length

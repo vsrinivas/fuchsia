@@ -61,6 +61,7 @@ source_set("mlme") {
     "mcs.cpp",
     "mesh/mesh_mlme.cpp",
     "packet.cpp",
+    "rates_elements.cpp",
     "service.cpp",
     "timer.cpp",
     "timer_manager.cpp",

@@ -10,6 +10,7 @@
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
+#include <wlan/mlme/rates_elements.h>
 #include <wlan/mlme/service.h>
 
 #include <fbl/unique_ptr.h>
@@ -26,14 +27,6 @@ zx_status_t WriteSsid(ElementWriter* w, const uint8_t* ssid, size_t ssid_len) {
     if (!w->write<SsidElement>(ssid, ssid_len)) {
         errorf("could not write ssid \"%s\" to Beacon\n",
                debug::ToAsciiOrHexStr(ssid, ssid_len).c_str());
-        return ZX_ERR_IO;
-    }
-    return ZX_OK;
-}
-
-zx_status_t WriteSupportedRates(ElementWriter* w, const SupportedRate rates[], size_t rates_len) {
-    if (!w->write<SupportedRatesElement>(rates, rates_len)) {
-        errorf("could not write supported rates\n");
         return ZX_ERR_IO;
     }
     return ZX_OK;
@@ -87,15 +80,6 @@ zx_status_t WriteCountry(ElementWriter* w, const wlan_channel_t chan) {
         return ZX_ERR_IO;
     }
 
-    return ZX_OK;
-}
-
-zx_status_t WriteExtendedSupportedRates(ElementWriter* w, const SupportedRate rates[],
-                                        size_t rates_len) {
-    if (!w->write<ExtendedSupportedRatesElement>(rates, rates_len)) {
-        errorf("could not write extended supported rates\n");
-        return ZX_ERR_IO;
-    }
     return ZX_OK;
 }
 
@@ -281,7 +265,8 @@ zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>* out_packet, comm
     ElementWriter w(bcn->elements, body_payload_len);
     if (WriteSsid(&w, kSsid, sizeof(kSsid)) != ZX_OK) { return ZX_ERR_IO; }
 
-    if (WriteSupportedRates(&w, kSupportedRates, countof(kSupportedRates)) != ZX_OK) {
+    RatesWriter rates_writer { kSupportedRates, countof(kSupportedRates) };
+    if (!rates_writer.WriteSupportedRates(&w)) {
         return ZX_ERR_IO;
     }
 
@@ -289,8 +274,7 @@ zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>* out_packet, comm
 
     if (WriteCountry(&w, kBssChannel) != ZX_OK) { return ZX_ERR_IO; }
 
-    if (WriteExtendedSupportedRates(&w, kExtendedSupportedRates,
-                                    countof(kExtendedSupportedRates)) != ZX_OK) {
+    if (!rates_writer.WriteExtendedSupportedRates(&w)) {
         return ZX_ERR_IO;
     }
 

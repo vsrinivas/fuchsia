@@ -179,6 +179,7 @@ executable("common_tests") {
     "channel_scheduler_unittest.cpp",
     "device_caps_unittest.cpp",
     "moving_average_unittest.cpp",
+    "rates_elements_unittest.cpp",
     "stats_unittest.cpp",
   ]
 

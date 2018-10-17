@@ -4,6 +4,7 @@
 
 #include <wlan/common/channel.h>
 #include <wlan/mlme/beacon.h>
+#include <wlan/mlme/rates_elements.h>
 
 namespace wlan {
 
@@ -13,15 +14,6 @@ static bool WriteSsid(ElementWriter* w, const BeaconConfig& config) {
     } else {
         return true;
     }
-}
-
-static bool WriteSupportedRates(ElementWriter* w, const BeaconConfig& config) {
-    if (config.rates == nullptr || config.rates_len == 0) {
-        return true;
-    }
-
-    size_t num_rates = std::min(config.rates_len, SupportedRatesElement::kMaxLen);
-    return w->write<SupportedRatesElement>(config.rates, num_rates);
 }
 
 static bool WriteDsssParamSet(ElementWriter* w, const BeaconConfig& config) {
@@ -72,22 +64,6 @@ static bool WriteCountry(ElementWriter* w, const BeaconConfig& config) {
     return w->write<CountryElement>(kCountry, subbands);
 }
 
-static bool WriteExtendedSupportedRates(ElementWriter* w, const BeaconConfig& config) {
-    if (config.rates == nullptr) {
-        return true;
-    }
-
-    // Don't write the Extended Supported Rates element if everything fits in Supported rates
-    if (config.rates_len <= SupportedRatesElement::kMaxLen) {
-        return true;
-    }
-
-    const SupportedRate* ext_rates = config.rates + SupportedRatesElement::kMaxLen;
-    size_t num_rates = config.rates_len - SupportedRatesElement::kMaxLen;
-
-    return w->write<ExtendedSupportedRatesElement>(ext_rates, num_rates);
-}
-
 static bool WriteHtCapabilities(ElementWriter* w, const BeaconConfig& config) {
     if (config.ht.ready) {
         auto h = BuildHtCapabilities(config.ht);
@@ -132,13 +108,14 @@ static bool WriteMeshId(ElementWriter* w, const BeaconConfig& config) {
 }
 
 static bool WriteElements(ElementWriter* w, const BeaconConfig& config, size_t* rel_tim_ele_offset) {
+    RatesWriter rates_writer { config.rates, config.rates_len };
     // TODO(hahnr): Query from hardware which IEs must be filled out here.
     return WriteSsid(w, config)
-        && WriteSupportedRates(w, config)
+        && rates_writer.WriteSupportedRates(w)
         && WriteDsssParamSet(w, config)
         && WriteTim(w, config.ps_cfg, rel_tim_ele_offset)
         && WriteCountry(w, config)
-        && WriteExtendedSupportedRates(w, config)
+        && rates_writer.WriteExtendedSupportedRates(w)
         && WriteRsne(w, config)
         && WriteHtCapabilities(w, config)
         && WriteHtOperation(w, config)

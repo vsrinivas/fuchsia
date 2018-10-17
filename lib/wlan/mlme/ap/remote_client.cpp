@@ -7,6 +7,7 @@
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
+#include <wlan/mlme/rates_elements.h>
 #include <wlan/mlme/service.h>
 
 namespace wlan {
@@ -827,8 +828,16 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
 
     size_t num_rates;
     auto* rates = bss_->Rates(&num_rates);
-    if (!w.write<SupportedRatesElement>(rates, num_rates)) {
+
+    RatesWriter rates_writer { rates, num_rates };
+
+    if (!rates_writer.WriteSupportedRates(&w)) {
         errorf("[client] [%s] could not write supported rates\n", addr_.ToString().c_str());
+        return ZX_ERR_IO;
+    }
+
+    if (!rates_writer.WriteExtendedSupportedRates(&w)) {
+        errorf("[client] [%s] could not write ext. supported rates\n", addr_.ToString().c_str());
         return ZX_ERR_IO;
     }
 
