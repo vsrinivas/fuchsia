@@ -5,16 +5,26 @@
 #include "socket_factory.h"
 
 #include <memory>
+#include <type_traits>
 
 #include <lib/async-loop/cpp/loop.h>
 
 #include "gtest/gtest.h"
 
+#include "garnet/drivers/bluetooth/lib/data/l2cap_socket_factory.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
 
-namespace btlib {
-namespace data {
+namespace btlib::data::internal {
 namespace {
+
+// We'll test the template using (only) the set of type parameters necessary
+// for the L2CAP instantiation.
+using FactoryT = internal::SocketFactory<l2cap::Channel,
+                                         l2cap::Channel::UniqueId, l2cap::SDU>;
+static_assert(std::is_same<FactoryT, L2capSocketFactory>::value);
 
 constexpr l2cap::ChannelId kDynamicChannelIdMin = 0x0040;
 constexpr l2cap::ChannelId kRemoteChannelId = 0x0050;
@@ -47,12 +57,12 @@ class DATA_SocketFactoryTest : public ::testing::Test {
 };
 
 TEST_F(DATA_SocketFactoryTest, CanCreateSocket) {
-  SocketFactory socket_factory;
+  FactoryT socket_factory;
   EXPECT_TRUE(socket_factory.MakeSocketForChannel(channel()));
 }
 
 TEST_F(DATA_SocketFactoryTest, SocketCreationFailsIfChannelAlreadyHasASocket) {
-  SocketFactory socket_factory;
+  FactoryT socket_factory;
   zx::socket socket = socket_factory.MakeSocketForChannel(channel());
   ASSERT_TRUE(socket);
 
@@ -61,11 +71,11 @@ TEST_F(DATA_SocketFactoryTest, SocketCreationFailsIfChannelAlreadyHasASocket) {
 
 TEST_F(DATA_SocketFactoryTest, SocketCreationFailsIfChannelActivationFails) {
   channel()->set_activate_fails(true);
-  EXPECT_FALSE(SocketFactory().MakeSocketForChannel(channel()));
+  EXPECT_FALSE(FactoryT().MakeSocketForChannel(channel()));
 }
 
 TEST_F(DATA_SocketFactoryTest, CanCreateSocketForNewChannelWithRecycledId) {
-  SocketFactory socket_factory;
+  FactoryT socket_factory;
   auto original_channel = fbl::MakeRefCounted<l2cap::testing::FakeChannel>(
       kDynamicChannelIdMin + 1, kRemoteChannelId, kDefaultConnectionHandle,
       hci::Connection::LinkType::kACL);
@@ -81,14 +91,14 @@ TEST_F(DATA_SocketFactoryTest, CanCreateSocketForNewChannelWithRecycledId) {
 }
 
 TEST_F(DATA_SocketFactoryTest, DestructionWithActiveRelayDoesNotCrash) {
-  SocketFactory socket_factory;
+  FactoryT socket_factory;
   zx::socket socket = socket_factory.MakeSocketForChannel(channel());
   ASSERT_TRUE(socket);
   // |socket_factory| is destroyed implicitly.
 }
 
 TEST_F(DATA_SocketFactoryTest, DestructionAfterDeactivatingRelayDoesNotCrash) {
-  SocketFactory socket_factory;
+  FactoryT socket_factory;
   zx::socket socket = socket_factory.MakeSocketForChannel(channel());
   ASSERT_TRUE(socket);
   channel()->Close();
@@ -97,7 +107,7 @@ TEST_F(DATA_SocketFactoryTest, DestructionAfterDeactivatingRelayDoesNotCrash) {
 }
 
 TEST_F(DATA_SocketFactoryTest, SameChannelIdDifferentHandles) {
-  SocketFactory socket_factory;
+  FactoryT socket_factory;
   EXPECT_TRUE(socket_factory.MakeSocketForChannel(channel()));
   auto another_channel = fbl::MakeRefCounted<l2cap::testing::FakeChannel>(
       kDynamicChannelIdMin, kRemoteChannelId, kAnotherConnectionHandle,
@@ -106,5 +116,4 @@ TEST_F(DATA_SocketFactoryTest, SameChannelIdDifferentHandles) {
 }
 
 }  // namespace
-}  // namespace data
-}  // namespace btlib
+}  // namespace btlib::data::internal

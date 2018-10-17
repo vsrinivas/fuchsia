@@ -16,10 +16,9 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 
-#include "garnet/drivers/bluetooth/lib/data/l2cap_socket_channel_relay.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
+#include "garnet/drivers/bluetooth/lib/data/socket_channel_relay.h"
 
-namespace btlib::data {
+namespace btlib::data::internal {
 
 // A SocketFactory vends zx::socket objects that an IPC peer can use to
 // communicate with l2cap::Channels.
@@ -33,7 +32,8 @@ namespace btlib::data {
 // created and destroyed on a single thread. Said thread must have a
 // single-threaded dispatcher. Failure to follow those rules may cause the
 // program to abort.
-class SocketFactory {
+template <typename ChannelT, typename ChannelIdT, typename ChannelRxDataT>
+class SocketFactory final {
  public:
   SocketFactory();
   ~SocketFactory();
@@ -52,22 +52,22 @@ class SocketFactory {
   // the same Channel.
   //
   // Returns the new socket on success, and an invalid socket otherwise.
-  zx::socket MakeSocketForChannel(fbl::RefPtr<l2cap::Channel> channel);
+  zx::socket MakeSocketForChannel(fbl::RefPtr<ChannelT> channel);
 
  private:
+  using RelayT = SocketChannelRelay<ChannelT, ChannelIdT, ChannelRxDataT>;
+
   const fxl::ThreadChecker thread_checker_;
 
   // TODO(NET-1535): Figure out what we need to do handle the possibility that a
   // channel id is recycled. (See comment in LogicalLink::HandleRxPacket.)
-  std::unordered_map<l2cap::Channel::UniqueId,
-                     std::unique_ptr<internal::L2capSocketChannelRelay>>
-      channel_to_relay_;
+  std::unordered_map<ChannelIdT, std::unique_ptr<RelayT>> channel_to_relay_;
 
   fxl::WeakPtrFactory<SocketFactory> weak_ptr_factory_;  // Keep last.
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketFactory);
 };
 
-}  // namespace btlib::data
+}  // namespace btlib::data::internal
 
 #endif  // GARNET_DRIVERS_BLUETOOTH_LIB_DATA_SOCKET_FACTORY_H_
