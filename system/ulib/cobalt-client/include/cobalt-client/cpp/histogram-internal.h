@@ -92,14 +92,17 @@ public:
     // | Metadata | Histogram|
     bool Flush(const FlushFn& flush_handler);
 
-    // Keeps a buffer for the metadata and the metric.
-    EventBuffer buffer_;
+    // Returns the metric_id associated with this remote metric.
+    uint32_t metric_id() const { return metric_id_; }
 
 private:
     // Buffer for out of line allocation for the data being sent
     // through fidl. This buffer is rewritten on every flush, and contains
     // an entry for each bucket.
     fbl::Vector<HistogramBucket> bucket_buffer_;
+
+    // Keeps a buffer for the metadata and the metric.
+    EventBuffer buffer_;
 
     // Id for the cobalt metric backed by this histogram.
     uint32_t metric_id_;

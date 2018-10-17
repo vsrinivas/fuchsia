@@ -111,8 +111,9 @@ RemoteHistogram::RemoteHistogram(uint32_t num_buckets, uint32_t metric_id,
 }
 
 RemoteHistogram::RemoteHistogram(RemoteHistogram&& other)
-    : BaseHistogram(fbl::move(other)), buffer_(fbl::move(other.buffer_)),
-      bucket_buffer_(fbl::move(other.bucket_buffer_)), metric_id_(other.metric_id_) {}
+    : BaseHistogram(fbl::move(other)), bucket_buffer_(fbl::move(other.bucket_buffer_)),
+      buffer_(fbl::move(other.buffer_)),
+      metric_id_(other.metric_id_) {}
 
 bool RemoteHistogram::Flush(const RemoteHistogram::FlushFn& flush_handler) {
     if (!buffer_.TryBeginFlush()) {
@@ -171,13 +172,15 @@ Histogram& Histogram::operator=(const Histogram&) = default;
 Histogram& Histogram::operator=(Histogram&&) = default;
 Histogram::~Histogram() = default;
 
-template <typename ValueType> void Histogram::Add(ValueType value, Histogram::Count times) {
+template <typename ValueType>
+void Histogram::Add(ValueType value, Histogram::Count times) {
     double dbl_value = static_cast<double>(value);
     uint32_t bucket = options_->map_fn(dbl_value, *options_);
     remote_histogram_->IncrementCount(bucket, times);
 }
 
-template <typename ValueType> Histogram::Count Histogram::GetRemoteCount(ValueType value) const {
+template <typename ValueType>
+Histogram::Count Histogram::GetRemoteCount(ValueType value) const {
     double dbl_value = static_cast<double>(value);
     uint32_t bucket = options_->map_fn(dbl_value, *options_);
     return remote_histogram_->GetCount(bucket);
