@@ -5,6 +5,7 @@
 #include "socket_channel_relay.h"
 
 #include <memory>
+#include <type_traits>
 
 #include <lib/async-loop/cpp/loop.h>
 #include <zircon/assert.h>
@@ -14,11 +15,18 @@
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
+#include "garnet/drivers/bluetooth/lib/data/l2cap_socket_channel_relay.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel.h"
 
-namespace btlib {
-namespace data {
+namespace btlib::data {
 namespace {
+
+// We'll test the template using (only) the set of type parameters necessary for
+// the L2CAP instantiation.
+using RelayT =
+    internal::SocketChannelRelay<l2cap::Channel, l2cap::Channel::UniqueId,
+                                 l2cap::SDU>;
+static_assert(std::is_same_v<RelayT, internal::L2capSocketChannelRelay>);
 
 class DATA_SocketChannelRelayTest : public ::testing::Test {
  public:
@@ -127,8 +135,8 @@ class DATA_SocketChannelRelayLifetimeTest : public DATA_SocketChannelRelayTest {
  public:
   DATA_SocketChannelRelayLifetimeTest()
       : was_deactivation_callback_invoked_(false),
-        relay_(std::make_unique<internal::SocketChannelRelay>(
-            ConsumeLocalSocket(), channel(), [this](l2cap::ChannelId) {
+        relay_(std::make_unique<RelayT>(
+            ConsumeLocalSocket(), channel(), [this](auto channel_id) {
               was_deactivation_callback_invoked_ = true;
             })) {}
 
@@ -136,7 +144,7 @@ class DATA_SocketChannelRelayLifetimeTest : public DATA_SocketChannelRelayTest {
   bool was_deactivation_callback_invoked() {
     return was_deactivation_callback_invoked_;
   }
-  internal::SocketChannelRelay* relay() {
+  RelayT* relay() {
     ZX_DEBUG_ASSERT(relay_);
     return relay_.get();
   }
@@ -144,7 +152,7 @@ class DATA_SocketChannelRelayLifetimeTest : public DATA_SocketChannelRelayTest {
 
  private:
   bool was_deactivation_callback_invoked_;
-  std::unique_ptr<internal::SocketChannelRelay> relay_;
+  std::unique_ptr<RelayT> relay_;
 };
 
 TEST_F(DATA_SocketChannelRelayLifetimeTest,
@@ -284,11 +292,11 @@ class DATA_SocketChannelRelayDataPathTest : public DATA_SocketChannelRelayTest {
   }
 
  protected:
-  internal::SocketChannelRelay* relay() { return &relay_; }
+  RelayT* relay() { return &relay_; }
   auto& sent_to_channel() { return sent_to_channel_; }
 
  private:
-  internal::SocketChannelRelay relay_;
+  RelayT relay_;
   std::vector<common::ByteBufferPtr> sent_to_channel_;
 };
 
@@ -688,5 +696,4 @@ TEST_F(DATA_SocketChannelRelayTxTest,
 }
 
 }  // namespace
-}  // namespace data
-}  // namespace btlib
+}  // namespace btlib::data

@@ -6,6 +6,8 @@ static_library("data") {
   sources = [
     "domain.cc",
     "domain.h",
+    "l2cap_socket_channel_relay.cc",
+    "l2cap_socket_channel_relay.h",
     "socket_channel_relay.cc",
     "socket_channel_relay.h",
     "socket_factory.cc",

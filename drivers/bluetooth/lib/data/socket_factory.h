@@ -16,11 +16,10 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 
-#include "garnet/drivers/bluetooth/lib/data/socket_channel_relay.h"
+#include "garnet/drivers/bluetooth/lib/data/l2cap_socket_channel_relay.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 
-namespace btlib {
-namespace data {
+namespace btlib::data {
 
 // A SocketFactory vends zx::socket objects that an IPC peer can use to
 // communicate with l2cap::Channels.
@@ -61,7 +60,7 @@ class SocketFactory {
   // TODO(NET-1535): Figure out what we need to do handle the possibility that a
   // channel id is recycled. (See comment in LogicalLink::HandleRxPacket.)
   std::unordered_map<l2cap::Channel::UniqueId,
-                     std::unique_ptr<internal::SocketChannelRelay>>
+                     std::unique_ptr<internal::L2capSocketChannelRelay>>
       channel_to_relay_;
 
   fxl::WeakPtrFactory<SocketFactory> weak_ptr_factory_;  // Keep last.
@@ -69,7 +68,6 @@ class SocketFactory {
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketFactory);
 };
 
-}  // namespace data
-}  // namespace btlib
+}  // namespace btlib::data
 
 #endif  // GARNET_DRIVERS_BLUETOOTH_LIB_DATA_SOCKET_FACTORY_H_

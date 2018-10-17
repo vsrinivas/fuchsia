@@ -8,11 +8,9 @@
 #include <zircon/status.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
+#include "garnet/drivers/bluetooth/lib/data/l2cap_socket_channel_relay.h"
 
-#include "socket_channel_relay.h"
-
-namespace btlib {
-namespace data {
+namespace btlib::data {
 
 SocketFactory::SocketFactory() : weak_ptr_factory_(this) {}
 
@@ -40,9 +38,9 @@ zx::socket SocketFactory::MakeSocketForChannel(
     return {};
   }
 
-  auto relay = std::make_unique<internal::SocketChannelRelay>(
+  auto relay = std::make_unique<internal::L2capSocketChannelRelay>(
       std::move(local_socket), channel,
-      internal::SocketChannelRelay::DeactivationCallback(
+      internal::L2capSocketChannelRelay::DeactivationCallback(
           [self = weak_ptr_factory_.GetWeakPtr()](
               l2cap::Channel::UniqueId unique_id) mutable {
             ZX_DEBUG_ASSERT_MSG(self, "(unique_id=%lu)", unique_id);
@@ -63,5 +61,4 @@ zx::socket SocketFactory::MakeSocketForChannel(
   return remote_socket;
 }
 
-}  // namespace data
-}  // namespace btlib
+}  // namespace btlib::data

@@ -5,6 +5,9 @@
 #ifndef GARNET_DRIVERS_BLUETOOTH_LIB_DATA_SOCKET_CHANNEL_RELAY_H_
 #define GARNET_DRIVERS_BLUETOOTH_LIB_DATA_SOCKET_CHANNEL_RELAY_H_
 
+#include <deque>
+
+#include <fbl/ref_ptr.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <zircon/status.h>
@@ -14,11 +17,7 @@
 #include "lib/fxl/synchronization/thread_checker.h"
 #include "lib/zx/socket.h"
 
-#include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
-
-namespace btlib {
-namespace data {
-namespace internal {
+namespace btlib::data::internal {
 
 // SocketChannelRelay relays data between a zx::socket and a Channel. This class
 // should not be used directly. Instead, see SocketFactory.
@@ -26,9 +25,10 @@ namespace internal {
 // THREAD-SAFETY: This class is thread-hostile. Creation, use, and destruction
 // _must_ occur on a single thread. |dispatcher|, which _must_ be
 // single-threaded, must run on that same thread.
+template <typename ChannelT, typename ChannelIdT, typename RxDataT>
 class SocketChannelRelay final {
  public:
-  using DeactivationCallback = fit::function<void(l2cap::Channel::UniqueId)>;
+  using DeactivationCallback = fit::function<void(ChannelIdT)>;
 
   // Creates a SocketChannelRelay which executes on |dispatcher|. Note that
   // |dispatcher| must be single-threaded.
@@ -48,14 +48,14 @@ class SocketChannelRelay final {
   // Note that requiring |dispatcher| to be single-threaded shouldn't cause
   // increased latency vs. multi-threading, since a) all I/O is non-blocking (so
   // we never leave the thread idle), and b) to provide in-order delivery,
-  // moving the data between the zx::socket and the l2cap::Channel needs to be
+  // moving the data between the zx::socket and the ChannelT needs to be
   // serialized even in the multi-threaded case.
-  SocketChannelRelay(zx::socket socket, fbl::RefPtr<l2cap::Channel> channel,
+  SocketChannelRelay(zx::socket socket, fbl::RefPtr<ChannelT> channel,
                      DeactivationCallback deactivation_cb);
   ~SocketChannelRelay();
 
   // Enables read and close callbacks for the zx::socket and the
-  // l2cap::Channel. (Write callbacks aren't necessary until we have data
+  // ChannelT. (Write callbacks aren't necessary until we have data
   // buffered.) Returns true on success.
   //
   // Activate() is guaranteed _not_ to invoke |deactivation_cb|, even in the
@@ -72,10 +72,10 @@ class SocketChannelRelay final {
   };
 
   // Deactivates and unbinds all callbacks from the zx::socket and the
-  // l2cap::Channel. Drops any data still queued for transmission to the
-  // zx::socket. Ensures that the zx::socket is closed, and the l2cap::Channel
+  // ChannelT. Drops any data still queued for transmission to the
+  // zx::socket. Ensures that the zx::socket is closed, and the ChannelT
   // is deactivated. It is an error to call this when |state_ == kDeactivated|.
-  // l2cap::Channel.
+  // ChannelT.
   //
   // Note that Deactivate() _may_ be called from the dtor. As such, this method
   // avoids doing any "real work" (such as calling ServiceSocketWriteQueue()),
@@ -91,8 +91,8 @@ class SocketChannelRelay final {
   void OnSocketWritable(zx_status_t status);
   void OnSocketClosed(zx_status_t status);
 
-  // Callbacks for l2cap::Channel events.
-  void OnChannelDataReceived(l2cap::SDU sdu);
+  // Callbacks for ChannelT events.
+  void OnChannelDataReceived(RxDataT sdu);
   void OnChannelClosed();
 
   // Copies any data currently available on |socket_| to |channel_|. Does not
@@ -122,7 +122,7 @@ class SocketChannelRelay final {
   RelayState state_;  // Initial state is kActivating.
 
   zx::socket socket_;
-  const fbl::RefPtr<l2cap::Channel> channel_;
+  const fbl::RefPtr<ChannelT> channel_;
   async_dispatcher_t* const dispatcher_;
   DeactivationCallback deactivation_cb_;
 
@@ -137,7 +137,7 @@ class SocketChannelRelay final {
   //
   // TODO(NET-1478): Switch to common::LinkedList.
   // TODO(NET-1476): We should set an upper bound on the size of this queue.
-  std::deque<l2cap::SDU> socket_write_queue_;
+  std::deque<RxDataT> socket_write_queue_;
 
   const fxl::ThreadChecker thread_checker_;
   fxl::WeakPtrFactory<SocketChannelRelay> weak_ptr_factory_;  // Keep last.
@@ -145,8 +145,6 @@ class SocketChannelRelay final {
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketChannelRelay);
 };
 
-}  // namespace internal
-}  // namespace data
-}  // namespace btlib
+}  // namespace btlib::data::internal
 
 #endif  // GARNET_DRIVERS_BLUETOOTH_LIB_DATA_SOCKET_CHANNEL_RELAY_H_
