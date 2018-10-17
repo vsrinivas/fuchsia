@@ -144,9 +144,8 @@ private:
 class BlockServer {
 public:
     // Creates a new BlockServer.
-    static zx_status_t Create(zx_device_t* dev, block_protocol_t* bp,
-                              fzl::fifo<block_fifo_request_t, block_fifo_response_t>* fifo_out,
-                              BlockServer** out);
+    static zx_status_t Create(block_protocol_t* bp, fzl::fifo<block_fifo_request_t,
+                              block_fifo_response_t>* fifo_out, BlockServer** out);
 
     // Starts the BlockServer using the current thread
     zx_status_t Serve() TA_EXCL(server_lock_);
@@ -170,7 +169,7 @@ public:
     ~BlockServer();
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(BlockServer);
-    BlockServer(zx_device_t* dev, block_protocol_t* bp);
+    BlockServer(block_protocol_t* bp);
 
     // Helper for processing a single message read from the FIFO.
     void ProcessRequest(block_fifo_request_t* request);
@@ -194,9 +193,8 @@ private:
     zx_status_t FindVmoIDLocked(vmoid_t* out) TA_REQ(server_lock_);
 
     fzl::fifo<block_fifo_response_t, block_fifo_request_t> fifo_;
-    zx_device_t* dev_;
     block_info_t info_;
-    block_protocol_t bp_;
+    block_protocol_t* bp_;
     size_t block_op_size_;
 
     // BARRIER_AFTER is implemented by sticking "BARRIER_BEFORE" on the
@@ -222,8 +220,7 @@ typedef struct BlockServer BlockServer;
 __BEGIN_CDECLS
 
 // Allocate a new blockserver + FIFO combo
-zx_status_t blockserver_create(zx_device_t* dev, block_protocol_t* bp,
-                               zx_handle_t* fifo_out, BlockServer** out);
+zx_status_t blockserver_create(block_protocol_t* bp, zx_handle_t* fifo_out, BlockServer** out);
 
 // Shut down the blockserver. It will stop serving requests.
 void blockserver_shutdown(BlockServer* bs);

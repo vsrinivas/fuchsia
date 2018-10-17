@@ -35,7 +35,12 @@ typedef struct blkdev {
 
     uint32_t threadcount;
 
-    block_protocol_t bp;
+    // The block protocol of the device we are binding against.
+    block_protocol_t parent_protocol;
+    // The block protocol for ourselves, which redirects to the parent protocol,
+    // but may also collect auxiliary information like statistics.
+    block_protocol_t self_protocol;
+
     block_info_t info;
     size_t block_op_size;
 
@@ -102,7 +107,7 @@ static zx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_le
     }
 
     BlockServer* bs;
-    if ((status = blockserver_create(bdev->parent, &bdev->bp, out_buf, &bs)) != ZX_OK) {
+    if ((status = blockserver_create(&bdev->self_protocol, out_buf, &bs)) != ZX_OK) {
         goto unlock_exit;
     }
     bdev->bs = bs;
@@ -278,7 +283,7 @@ static zx_status_t blkdev_io(blkdev_t* bdev, void* buf, size_t count,
         bop->cookie = bdev;
 
         sync_completion_reset(&bdev->iosignal);
-        bdev->bp.ops->queue(bdev->bp.ctx, bop);
+        bdev->self_protocol.ops->queue(bdev->self_protocol.ctx, bop);
         sync_completion_wait(&bdev->iosignal, ZX_TIME_INFINITE);
 
         if (bdev->iostatus != ZX_OK) {
@@ -356,7 +361,7 @@ static void block_query(void* ctx, block_info_t* bi, size_t* bopsz) {
 
 static void block_queue(void* ctx, block_op_t* bop) {
     blkdev_t* bdev = ctx;
-    bdev->bp.ops->queue(bdev->bp.ctx, bop);
+    bdev->parent_protocol.ops->queue(bdev->parent_protocol.ctx, bop);
 }
 
 static block_protocol_ops_t block_ops = {
@@ -382,14 +387,16 @@ static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev) {
     mtx_init(&bdev->lock, mtx_plain);
     bdev->parent = dev;
 
-    if (device_get_protocol(dev, ZX_PROTOCOL_BLOCK_IMPL, &bdev->bp) != ZX_OK) {
+    if (device_get_protocol(dev, ZX_PROTOCOL_BLOCK_IMPL, &bdev->parent_protocol) != ZX_OK) {
         printf("ERROR: block device '%s': does not support block protocol\n",
                device_get_name(dev));
         free(bdev);
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    bdev->bp.ops->query(bdev->bp.ctx, &bdev->info, &bdev->block_op_size);
+    bdev->self_protocol.ctx = bdev;
+    bdev->self_protocol.ops = &block_ops;
+    bdev->parent_protocol.ops->query(bdev->parent_protocol.ctx, &bdev->info, &bdev->block_op_size);
 
     if (bdev->info.max_transfer_size < bdev->info.block_size) {
         printf("ERROR: block device '%s': has smaller max xfer (0x%x) than block size (0x%x)\n",

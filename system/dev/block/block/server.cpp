@@ -262,15 +262,14 @@ void BlockServer::InQueueDrainer() {
         // This may be altered in the future if block devices
         // are capable of implementing hardware barriers.
         msg->op.command &= ~(BLOCK_FL_BARRIER_BEFORE | BLOCK_FL_BARRIER_AFTER);
-        bp_.ops->queue(bp_.ctx, &msg->op);
+        bp_->ops->queue(bp_->ctx, &msg->op);
     }
 }
 
-zx_status_t BlockServer::Create(zx_device_t* dev, block_protocol_t* bp,
-                                fzl::fifo<block_fifo_request_t, block_fifo_response_t>* fifo_out,
-                                BlockServer** out) {
+zx_status_t BlockServer::Create(block_protocol_t* bp, fzl::fifo<block_fifo_request_t,
+                                block_fifo_response_t>* fifo_out, BlockServer** out) {
     fbl::AllocChecker ac;
-    BlockServer* bs = new (&ac) BlockServer(dev, bp);
+    BlockServer* bs = new (&ac) BlockServer(bp);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -294,9 +293,7 @@ zx_status_t BlockServer::Create(zx_device_t* dev, block_protocol_t* bp,
         return status;
     }
 
-    if (bp->ops != NULL) {
-        bp->ops->query(bp->ctx, &bs->info_, &bs->block_op_size_);
-    }
+    bp->ops->query(bp->ctx, &bs->info_, &bs->block_op_size_);
 
     // TODO(ZX-1583): Allocate BlockMsg arena based on block_op_size_.
 
@@ -492,11 +489,11 @@ zx_status_t BlockServer::Serve() {
     }
 }
 
-BlockServer::BlockServer(zx_device_t* dev, block_protocol_t* bp) :
-    dev_(dev), bp_(*bp), block_op_size_(0), pending_count_(0),
-    barrier_in_progress_(false), last_id_(VMOID_INVALID + 1) {
-    size_t actual;
-    device_ioctl(dev_, IOCTL_BLOCK_GET_INFO, nullptr, 0, &info_, sizeof(info_), &actual);
+BlockServer::BlockServer(block_protocol_t* bp) :
+    bp_(bp), block_op_size_(0), pending_count_(0), barrier_in_progress_(false),
+    last_id_(VMOID_INVALID + 1) {
+    size_t block_op_size;
+    bp->ops->query(bp->ctx, &info_, &block_op_size);
 }
 
 BlockServer::~BlockServer() {
@@ -514,10 +511,9 @@ void BlockServer::ShutDown() {
 }
 
 // C declarations
-zx_status_t blockserver_create(zx_device_t* dev, block_protocol_t* bp,
-                               zx_handle_t* fifo_out, BlockServer** out) {
+zx_status_t blockserver_create(block_protocol_t* bp, zx_handle_t* fifo_out, BlockServer** out) {
     fzl::fifo<block_fifo_request_t, block_fifo_response_t> fifo;
-    zx_status_t status = BlockServer::Create(dev, bp, &fifo, out);
+    zx_status_t status = BlockServer::Create(bp, &fifo, out);
     *fifo_out = fifo.release();
     return status;
 }
