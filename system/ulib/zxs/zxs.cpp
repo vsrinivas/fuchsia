@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/zxs/inception.h>
+#include <lib/zxs/protocol.h>
 #include <lib/zxs/zxs.h>
+#include <string.h>
 #include <zircon/syscalls.h>
 
 static bool is_rio_message_valid(zxsio_msg_t* msg) {
@@ -114,6 +116,49 @@ zx_status_t zxsio_txn(zx_handle_t socket, zxsio_msg_t* msg) {
     return msg->arg;
 }
 
+zx_status_t zxsio_op(zx_handle_t socket, uint32_t op, int64_t off,
+                     uint32_t maxreply, void* buffer, size_t length) {
+    if ((length > ZXSIO_PAYLOAD_SZ) || (maxreply > ZXSIO_PAYLOAD_SZ)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    switch (op) {
+    case ZXSIO_GETSOCKNAME:
+    case ZXSIO_GETPEERNAME:
+    case ZXSIO_GETSOCKOPT:
+    case ZXSIO_SETSOCKOPT:
+    case ZXSIO_CONNECT:
+    case ZXSIO_BIND:
+    case ZXSIO_LISTEN:
+        break;
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    zxsio_msg_t msg;
+    memset(&msg, 0, ZXSIO_HDR_SZ);
+    msg.op = op;
+    msg.arg = maxreply;
+    msg.arg2.off = off;
+    msg.datalen = static_cast<uint32_t>(length);
+    if (buffer && length > 0) {
+        memcpy(msg.data, buffer, length);
+    }
+
+    zx_status_t status = zxsio_txn(socket, &msg);
+    if (status < 0) {
+        return status;
+    }
+    if (msg.datalen > maxreply) {
+        return ZX_ERR_IO;
+    }
+    if (buffer && msg.datalen > 0) {
+        memcpy(buffer, msg.data, msg.datalen);
+    }
+
+    return status;
+}
+
 zx_status_t zxs_socket(zx_handle_t socket_provider,
                        fuchsia_net_SocketDomain domain,
                        fuchsia_net_SocketType type,
@@ -147,12 +192,32 @@ zx_status_t zxs_accept(const zxs_socket_t* socket, const zxs_option_t* options,
 
 zx_status_t zxs_getsockname(const zxs_socket_t* socket, struct sockaddr* addr,
                             size_t capacity, size_t* out_actual) {
-    return ZX_ERR_NOT_SUPPORTED;
+    zxrio_sockaddr_reply_t reply = {};
+    zx_status_t status = zxsio_op(socket->socket, ZXSIO_GETSOCKNAME, 0,
+                                  sizeof(zxrio_sockaddr_reply_t), &reply,
+                                  sizeof(reply));
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    *out_actual = reply.len;
+    memcpy(addr, &reply.addr, (capacity < reply.len) ? capacity : reply.len);
+    return status;
 }
 
 zx_status_t zxs_getpeername(const zxs_socket_t* socket, struct sockaddr* addr,
                             size_t capacity, size_t* out_actual) {
-    return ZX_ERR_NOT_SUPPORTED;
+    zxrio_sockaddr_reply_t reply = {};
+    zx_status_t status = zxsio_op(socket->socket, ZXSIO_GETPEERNAME, 0,
+                                  sizeof(zxrio_sockaddr_reply_t), &reply,
+                                  sizeof(reply));
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    *out_actual = reply.len;
+    memcpy(addr, &reply.addr, (capacity < reply.len) ? capacity : reply.len);
+    return status;
 }
 
 zx_status_t zxs_getsockopt(const zxs_socket_t* socket, int32_t level,

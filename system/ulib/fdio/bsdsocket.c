@@ -23,8 +23,10 @@
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/util.h>
 #include <lib/zxs/protocol.h>
+#include <lib/zxs/zxs.h>
 
 #include "private.h"
+#include "private-socket.h"
 #include "unistd.h"
 
 zx_status_t zxsio_accept(fdio_t* io, zx_handle_t* s2);
@@ -434,41 +436,46 @@ void freeaddrinfo(struct addrinfo* res) {
     free(res);
 }
 
-static int getsockaddr(int fd, int op, struct sockaddr* restrict addr,
-                       socklen_t* restrict len) {
+__EXPORT
+int getsockname(int fd, struct sockaddr* restrict addr, socklen_t* restrict len) {
     if (len == NULL || addr == NULL) {
         return ERRNO(EINVAL);
     }
 
-    fdio_t* io = fd_to_io(fd);
+    const zxs_socket_t* socket;
+    fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
     }
 
-    zxrio_sockaddr_reply_t reply;
-    zx_status_t r = io->ops->misc(io, op, 0, sizeof(zxrio_sockaddr_reply_t),
-                                  &reply, sizeof(reply));
-    fdio_release(io);
-
-    if (r < 0) {
-        return ERROR(r);
+    size_t actual = 0u;
+    zx_status_t status = zxs_getsockname(socket, addr, *len, &actual);
+    if (status == ZX_OK) {
+        *len = actual;
     }
-
-    socklen_t avail = *len;
-    *len = reply.len;
-    memcpy(addr, &reply.addr, (avail < reply.len) ? avail : reply.len);
-
-    return 0;
-}
-
-__EXPORT
-int getsockname(int fd, struct sockaddr* restrict addr, socklen_t* restrict len) {
-    return getsockaddr(fd, ZXSIO_GETSOCKNAME, addr, len);
+    fdio_release(io);
+    return STATUS(status);
 }
 
 __EXPORT
 int getpeername(int fd, struct sockaddr* restrict addr, socklen_t* restrict len) {
-    return getsockaddr(fd, ZXSIO_GETPEERNAME, addr, len);
+    if (len == NULL || addr == NULL) {
+        return ERRNO(EINVAL);
+    }
+
+    const zxs_socket_t* socket;
+    fdio_t* io = fd_to_socket(fd, &socket);
+    if (io == NULL) {
+        return ERRNO(EBADF);
+    }
+
+    size_t actual = 0u;
+    zx_status_t status = zxs_getpeername(socket, addr, *len, &actual);
+    if (status == ZX_OK) {
+        *len = actual;
+    }
+    fdio_release(io);
+    return STATUS(status);
 }
 
 static zx_status_t fdio_getsockopt(fdio_t* io, int level, int optname,
