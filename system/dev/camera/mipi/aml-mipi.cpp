@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "aml-mipi.h"
+#include "aml-mipi-regs.h"
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
@@ -65,18 +66,113 @@ zx_status_t AmlMipiDevice::InitPdev(zx_device_t* parent) {
         return status;
     }
     mipi_adap_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+
     return status;
 }
 
-zx_status_t AmlMipiDevice::MipiCsiInit(void* ctx, const mipi_info_t* info) {
-    return ZX_ERR_NOT_SUPPORTED;
+void AmlMipiDevice::MipiPhyReset() {
+    uint32_t data32 = 0x1f; //disable lanes digital clock
+    data32 |= 0x1 << 31;    //soft reset bit
+    csi_phy0_mmio_->Write32(data32, MIPI_PHY_CTRL);
+}
+
+void AmlMipiDevice::MipiCsi2Reset() {
+    csi_host0_mmio_->Write32(0, MIPI_CSI_PHY_SHUTDOWNZ); // enable power
+    csi_host0_mmio_->Write32(0, MIPI_CSI_DPHY_RSTZ);     // release DPHY reset
+    csi_host0_mmio_->Write32(0, MIPI_CSI_CSI2_RESETN);   // csi2 reset
+}
+
+void AmlMipiDevice::MipiPhyInit(const mipi_info_t* info) {
+    if (info->ui_value <= 1) {
+        aphy0_mmio_->Write32(0x0b440585, HI_CSI_PHY_CNTL0);
+    } else {
+        aphy0_mmio_->Write32(0x0b440581, HI_CSI_PHY_CNTL0);
+    }
+
+    aphy0_mmio_->Write32(0x803f0000, HI_CSI_PHY_CNTL1);
+    aphy0_mmio_->Write32(0x02, HI_CSI_PHY_CNTL3);
+
+    // 3d8 :continue mode
+    csi_phy0_mmio_->Write32(0x3d8, MIPI_PHY_CLK_LANE_CTRL);
+    // clck miss = 50 ns --(x< 60 ns)
+    csi_phy0_mmio_->Write32(0x9, MIPI_PHY_TCLK_MISS);
+    // clck settle = 160 ns --(95ns< x < 300 ns)
+    csi_phy0_mmio_->Write32(0x1f, MIPI_PHY_TCLK_SETTLE);
+    // hs exit = 160 ns --(x>100ns)
+    csi_phy0_mmio_->Write32(0x1f, MIPI_PHY_THS_EXIT);
+    // hs skip = 55 ns --(40ns<x<55ns+4*UI)
+    csi_phy0_mmio_->Write32(0xa, MIPI_PHY_THS_SKIP);
+
+    // No documentation for this regisgter.
+    // hs settle = 160 ns --(85 ns + 6*UI<x<145 ns + 10*UI)
+    uint32_t settle = ((85 + 145 + (16 * info->ui_value)) / 2) / 5;
+    csi_phy0_mmio_->Write32(settle, MIPI_PHY_THS_SETTLE);
+
+    csi_phy0_mmio_->Write32(0x4e20, MIPI_PHY_TINIT); // >100us
+    csi_phy0_mmio_->Write32(0x100, MIPI_PHY_TMBIAS);
+    csi_phy0_mmio_->Write32(0x1000, MIPI_PHY_TULPS_C);
+    csi_phy0_mmio_->Write32(0x100, MIPI_PHY_TULPS_S);
+    csi_phy0_mmio_->Write32(0x0c, MIPI_PHY_TLP_EN_W);
+    csi_phy0_mmio_->Write32(0x100, MIPI_PHY_TLPOK);
+    csi_phy0_mmio_->Write32(0x400000, MIPI_PHY_TWD_INIT);
+    csi_phy0_mmio_->Write32(0x400000, MIPI_PHY_TWD_HS);
+    csi_phy0_mmio_->Write32(0x0, MIPI_PHY_DATA_LANE_CTRL);
+    // enable data lanes pipe line and hs sync bit err.
+    csi_phy0_mmio_->Write32((0x3 | (0x1f << 2) | (0x3 << 7)), MIPI_PHY_DATA_LANE_CTRL1);
+    csi_phy0_mmio_->Write32(0x00000123, MIPI_PHY_MUX_CTRL0);
+    csi_phy0_mmio_->Write32(0x00000123, MIPI_PHY_MUX_CTRL1);
+
+    // NOTE: Possible bug in reference code. Leaving it here for future reference.
+    // data32 = ((~(m_info->channel)) & 0xf) | (0 << 4); //enable lanes digital clock
+    // data32 |= ((0x10 | m_info->channel) << 5);        //mipi_chpu  to analog
+    csi_phy0_mmio_->Write32(0, MIPI_PHY_CTRL);
+}
+
+void AmlMipiDevice::MipiCsi2Init(const mipi_info_t* info) {
+    // csi2 reset
+    csi_host0_mmio_->Write32(MIPI_CSI_CSI2_RESETN, 0);
+    // release csi2 reset
+    csi_host0_mmio_->Write32(MIPI_CSI_CSI2_RESETN, 0xffffffff);
+    // release DPHY reset
+    csi_host0_mmio_->Write32(MIPI_CSI_DPHY_RSTZ, 0xffffffff);
+    //set lanes
+    csi_host0_mmio_->Write32(MIPI_CSI_N_LANES, (info->lanes - 1) & 3);
+    // enable power
+    csi_host0_mmio_->Write32(MIPI_CSI_PHY_SHUTDOWNZ, 0xffffffff);
+}
+
+zx_status_t AmlMipiDevice::MipiCsiInit(void* ctx,
+                                       const mipi_info_t* mipi_info,
+                                       const mipi_adap_info_t* adap_info) {
+    auto& self = *static_cast<AmlMipiDevice*>(ctx);
+
+    // Initialize the PHY.
+    self.MipiPhyInit(mipi_info);
+    // Initialize the CSI Host.
+    self.MipiCsi2Init(mipi_info);
+
+    // Initialize the MIPI Adapter.
+    zx_status_t status = self.MipiAdapInit(adap_info);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: MipiAdapInit failed %d\n", __FUNCTION__, status);
+        return status;
+    }
+
+    // Start the MIPI Adapter.
+    self.MipiAdapStart();
+    return status;
 }
 
 zx_status_t AmlMipiDevice::MipiCsiDeInit(void* ctx) {
-    return ZX_ERR_NOT_SUPPORTED;
+    auto& self = *static_cast<AmlMipiDevice*>(ctx);
+    self.MipiPhyReset();
+    self.MipiCsi2Reset();
+    self.MipiAdapReset();
+    return ZX_OK;
 }
 
 void AmlMipiDevice::ShutDown() {
+    MipiCsiDeInit(this);
     csi_phy0_mmio_.reset();
     aphy0_mmio_.reset();
     csi_host0_mmio_.reset();

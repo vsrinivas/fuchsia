@@ -28,7 +28,9 @@ public:
     void ShutDown();
 
     // Methods for ZX_PROTOCOL_MIPI_CSI.
-    static zx_status_t MipiCsiInit(void* ctx, const mipi_info_t* info);
+    static zx_status_t MipiCsiInit(void* ctx,
+                                   const mipi_info_t* mipi_info,
+                                   const mipi_adap_info_t* adap_info);
     static zx_status_t MipiCsiDeInit(void* ctx);
 
 private:
@@ -40,6 +42,21 @@ private:
     platform_device_protocol_t pdev_;
 
     zx_status_t InitPdev(zx_device_t* parent);
+
+    // MIPI Iternal APIs
+    void MipiPhyInit(const mipi_info_t* info);
+    void MipiCsi2Init(const mipi_info_t* info);
+    void MipiPhyReset();
+    void MipiCsi2Reset();
+
+    // Mipi Adapter APIs
+    zx_status_t MipiAdapInit(const mipi_adap_info_t* info);
+    void MipiAdapReset();
+    void MipiAdapStart();
+    zx_status_t AdapFrontendInit(const mipi_adap_info_t* info);
+    zx_status_t AdapReaderInit(const mipi_adap_info_t* info);
+    zx_status_t AdapPixelInit(const mipi_adap_info_t* info);
+    zx_status_t AdapAlignInit(const mipi_adap_info_t* info);
 };
 
 } // namespace camera

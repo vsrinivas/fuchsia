@@ -11,6 +11,7 @@ MODULE_TYPE := driver
 MODULE_SRCS := \
     $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/aml-mipi.cpp \
+    $(LOCAL_DIR)/aml-mipi-adap.cpp \
 
 MODULE_HEADER_DEPS := \
     system/dev/lib/amlogic

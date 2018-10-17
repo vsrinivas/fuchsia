@@ -3,8 +3,13 @@
 // found in the LICENSE file.
 
 library ddk.protocol.mipicsi;
-
 using zx;
+
+// This structure represents image resolution.
+struct ImageResolution {
+    uint16 width;
+    uint16 height;
+};
 
 struct MipiInfo {
     // Number of channels used.
@@ -17,9 +22,41 @@ struct MipiInfo {
     uint32 csi_version;
 };
 
+/// Values for Image Formats.
+enum ImageFormat : uint32 {
+    AM_RAW6 = 0x0;
+    AM_RAW7 = 0x1;
+    AM_RAW8 = 0x2;
+    AM_RAW10 = 0x3;
+    AM_RAW12 = 0x4;
+    AM_RAW14 = 0x5;
+};
+
+/// Values for different MIPI modes.
+enum MipiModes : uint32 {
+    DDR_MODE = 0x0;
+    // Direct mode.
+    DIR_MODE = 0x1;
+    // Dual Overlay mode?
+    DOL_MODE = 0x2;
+};
+
+/// Values for virtual channel.
+enum MipiPath : uint32 {
+    PATH0 = 0x0;
+    PATH1 = 0x1;
+};
+
+struct MipiAdapInfo {
+    ImageResolution resolution;
+    ImageFormat format;
+    MipiModes mode;
+    MipiPath path;
+};
+
 [Layout="ddk-protocol", DefaultProtocol]
 interface MipiCsi {
-  1: Init(MipiInfo info) -> (zx.status s);
+  1: Init(MipiInfo mipi_info, MipiAdapInfo adap_info) -> (zx.status s);
   2: DeInit() -> (zx.status s);
 };
 

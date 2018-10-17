@@ -39,7 +39,7 @@
 //     MipiCsiDevice(zx_device_t* parent)
 //         : MipiCsiDeviceType("my-mipi-csi-protocol-device", parent) {}
 //
-//     zx_status_t MipiCsiInit(const mipi_info_t* info);
+//     zx_status_t MipiCsiInit(const mipi_info_t* mipi_info, const mipi_adap_info_t* adap_info);
 //
 //     zx_status_t MipiCsiDeInit();
 //
@@ -66,8 +66,9 @@ protected:
     mipi_csi_protocol_ops_t ops_ = {};
 
 private:
-    static zx_status_t MipiCsiInit(void* ctx, const mipi_info_t* info) {
-        return static_cast<D*>(ctx)->MipiCsiInit(info);
+    static zx_status_t MipiCsiInit(void* ctx, const mipi_info_t* mipi_info,
+                                   const mipi_adap_info_t* adap_info) {
+        return static_cast<D*>(ctx)->MipiCsiInit(mipi_info, adap_info);
     }
     static zx_status_t MipiCsiDeInit(void* ctx) { return static_cast<D*>(ctx)->MipiCsiDeInit(); }
 };
@@ -86,7 +87,9 @@ public:
         ctx_ = nullptr;
         ops_ = nullptr;
     }
-    zx_status_t Init(const mipi_info_t* info) { return ops_->init(ctx_, info); }
+    zx_status_t Init(const mipi_info_t* mipi_info, const mipi_adap_info_t* adap_info) {
+        return ops_->init(ctx_, mipi_info, adap_info);
+    }
     zx_status_t DeInit() { return ops_->de_init(ctx_); }
 
 private:

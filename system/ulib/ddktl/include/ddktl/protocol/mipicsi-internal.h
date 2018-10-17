@@ -14,15 +14,17 @@ namespace ddk {
 namespace internal {
 
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_mipi_csi_protocol_init, MipiCsiInit,
-                                     zx_status_t (C::*)(const mipi_info_t* info));
+                                     zx_status_t (C::*)(const mipi_info_t* mipi_info,
+                                                        const mipi_adap_info_t* adap_info));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_mipi_csi_protocol_de_init, MipiCsiDeInit,
                                      zx_status_t (C::*)());
 
 template <typename D>
 constexpr void CheckMipiCsiProtocolSubclass() {
-    static_assert(internal::has_mipi_csi_protocol_init<D>::value,
-                  "MipiCsiProtocol subclasses must implement "
-                  "zx_status_t MipiCsiInit(const mipi_info_t* info");
+    static_assert(
+        internal::has_mipi_csi_protocol_init<D>::value,
+        "MipiCsiProtocol subclasses must implement "
+        "zx_status_t MipiCsiInit(const mipi_info_t* mipi_info, const mipi_adap_info_t* adap_info");
     static_assert(internal::has_mipi_csi_protocol_de_init<D>::value,
                   "MipiCsiProtocol subclasses must implement "
                   "zx_status_t MipiCsiDeInit(");
