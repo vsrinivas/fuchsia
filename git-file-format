@@ -65,7 +65,7 @@ try:
     FIDL_TOOL = os.path.join(paths.ZIRCON_TOOLS_ROOT, "tools/fidl-format")
     FIDL_CMD = [FIDL_TOOL, "-i"]
     EXT_TO_COMMANDS[".fidl"] = [FIDL_CMD]
-except NameError:
+except (AttributeError, NameError):
     print "Warning: FIDL formatter not available (you may want to run fx format-code instead)"
 
 def main():

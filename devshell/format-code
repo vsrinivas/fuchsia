@@ -130,7 +130,6 @@ case $(uname -m) in
   *) echo "Unknown arch $(uname -m)" && exit 1 ;;
 esac
 
-
 declare HOST_PLATFORM="${HOST_OS}-${HOST_ARCH}"
 
 declare CLANG_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/clang/bin/clang-format -style=file -fallback-style=Google -sort-includes -i"
@@ -157,6 +156,10 @@ done
 [[ -n "${DRY_RUN}" ]] && exit
 
 for file in ${FILES}; do
+  # Git reports deleted files, which we don't want to try to format
+  [[ ! -f "${file}" ]] && continue
+
+  # Format the file
   declare fcmd=$(format-cmd ${file})
   [[ -n "${fcmd}" ]] && ${fcmd} "${file}"
   declare hgcmd=$(hg-cmd ${file})
