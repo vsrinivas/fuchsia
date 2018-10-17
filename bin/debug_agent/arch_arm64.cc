@@ -5,6 +5,7 @@
 #include "garnet/bin/debug_agent/arch.h"
 
 #include <zircon/syscalls/exception.h>
+#include <zircon/status.h>
 
 #include "garnet/lib/debug_ipc/register_desc.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
@@ -80,7 +81,7 @@ inline debug_ipc::Register CreateRegister(RegisterID id, uint32_t length,
 }
 
 inline bool ReadGeneralRegs(const zx::thread& thread,
-                                   std::vector<debug_ipc::Register>* out) {
+                            std::vector<debug_ipc::Register>* out) {
   // We get the general state registers.
   zx_thread_state_general_regs gen_regs;
   zx_status_t status = thread.read_state(ZX_THREAD_STATE_GENERAL_REGS,
@@ -124,6 +125,28 @@ inline bool ReadVectorRegs(const zx::thread& thread,
   return true;
 }
 
+bool ReadDebugRegs(const zx::thread& thread,
+                   std::vector<debug_ipc::Register>* out) {
+  zx_thread_state_debug_regs_t debug_regs;
+  zx_status_t status = thread.read_state(ZX_THREAD_STATE_DEBUG_REGS,
+                                         &debug_regs, sizeof(debug_regs));
+  if (status != ZX_OK)
+    return false;
+
+  // TODO(donosoc): Currently this registers that are platform information are
+  //                being hacked out as HW breakpoint values in order to know
+  //                what the actual settings are.
+  //                This should be changed to get the actual values instead, but
+  //                check in for now in order to continue.
+  out->push_back(CreateRegister(
+      RegisterID::kARMv8_id_aa64dfr0_el1, 8u,
+      &debug_regs.hw_bps[AARCH64_MAX_HW_BREAKPOINTS - 1].dbgbvr));
+  out->push_back(CreateRegister(
+      RegisterID::kARMv8_mdscr_el1, 8u,
+      &debug_regs.hw_bps[AARCH64_MAX_HW_BREAKPOINTS - 2].dbgbvr));
+  return true;
+}
+
 }  // namespace
 
 bool ArchProvider::GetRegisters(const debug_ipc::RegisterCategory::Type& cat,
@@ -138,8 +161,7 @@ bool ArchProvider::GetRegisters(const debug_ipc::RegisterCategory::Type& cat,
     case debug_ipc::RegisterCategory::Type::kVector:
       return ReadVectorRegs(thread, out);
     case debug_ipc::RegisterCategory::Type::kDebug:
-      // TODO(donosoc): Read ARM64 debug registers.
-      return false;
+      return ReadDebugRegs(thread, out);
     default:
       FXL_LOG(ERROR) << "Invalid category: " << static_cast<uint32_t>(cat);
       return false;

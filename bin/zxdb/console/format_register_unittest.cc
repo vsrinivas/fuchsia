@@ -390,8 +390,8 @@ TEST(FormatRegisters, CPSRValues) {
 
   // filtered_set now holds a pointer to rflags that we can change.
   auto& reg = filtered_set[RegisterCategory::Type::kGeneral].front();
-  SetRegisterValue(&reg, ARM64_FLAG_MASK(CpsrC) |
-                         ARM64_FLAG_MASK(CpsrN));
+  SetRegisterValue(&reg, ARM64_FLAG_MASK(Cpsr, C) |
+                         ARM64_FLAG_MASK(Cpsr, N));
 
   OutputBuffer out;
   err = FormatRegisters(options, filtered_set, &out);
@@ -404,15 +404,15 @@ TEST(FormatRegisters, CPSRValues) {
       out.AsString());
 
   // Check out extended
-  SetRegisterValue(&reg, ARM64_FLAG_MASK(CpsrC) |
-                         ARM64_FLAG_MASK(CpsrN) |
+  SetRegisterValue(&reg, ARM64_FLAG_MASK(Cpsr, C) |
+                         ARM64_FLAG_MASK(Cpsr, N) |
                          // Extended flags.
-                         ARM64_FLAG_MASK(CpsrEL) |
-                         ARM64_FLAG_MASK(CpsrI) |
-                         ARM64_FLAG_MASK(CpsrA) |
-                         ARM64_FLAG_MASK(CpsrIL) |
-                         ARM64_FLAG_MASK(CpsrPAN) |
-                         ARM64_FLAG_MASK(CpsrUAO));
+                         ARM64_FLAG_MASK(Cpsr, EL) |
+                         ARM64_FLAG_MASK(Cpsr, I) |
+                         ARM64_FLAG_MASK(Cpsr, A) |
+                         ARM64_FLAG_MASK(Cpsr, IL) |
+                         ARM64_FLAG_MASK(Cpsr, PAN) |
+                         ARM64_FLAG_MASK(Cpsr, UAO));
 
   options.extended = true;
   err = FormatRegisters(options, filtered_set, &out);

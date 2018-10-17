@@ -97,6 +97,11 @@ enum class RegisterID : uint32_t {
   kARMv8_v30 = 1230,
   kARMv8_v31 = 1231,
 
+  // Debug.
+
+  kARMv8_id_aa64dfr0_el1 = 1300,  // Debug Feature Register 0.
+  kARMv8_mdscr_el1 = 1301,        // Debug System Control Register.
+
   // x64 (Range: 2000-2999) ----------------------------------------------------
 
   // General purpose

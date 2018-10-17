@@ -386,6 +386,13 @@ const char* RegisterIDToString(RegisterID id) {
     case RegisterID::kARMv8_v31:
       return "v31";
 
+    // Debug.
+
+    case RegisterID::kARMv8_id_aa64dfr0_el1:
+      return "id_aa64dfr0_el1";
+    case RegisterID::kARMv8_mdscr_el1:
+      return "mdscr_el1";
+
     // x64
     // ---------------------------------------------------------------------
 
