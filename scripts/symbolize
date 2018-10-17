@@ -320,12 +320,12 @@ class Symbolizer:
         self.args = args
         self.arch = "x86_64"
         self.build_dirs = choose_build_dirs(self.args, self.arch)
+        self.name_to_buildid = {}
+        self.bias_to_name = {}
         self.reset()
 
     def reset(self):
         self.bias = 0
-        self.name_to_buildid = {}
-        self.bias_to_name = {}
         self.processed_lines = []
         self.prev_sp = None
         self.prev_frame_num = None
