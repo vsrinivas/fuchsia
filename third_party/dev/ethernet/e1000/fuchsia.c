@@ -586,11 +586,12 @@ static zx_status_t e1000_allocate_pci_resources(struct adapter* adapter) {
         }
         status = pci_map_bar_buffer(pci, adapter->io_rid / 4, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                     &adapter->ioport_mmio);
-        if (!status) {
+        if (status != ZX_OK) {
             zxlogf(ERROR, "Unable to allocate bus resource: ioport\n");
-            return status;
+            adapter->osdep.iobase = (uintptr_t)adapter->bar0_mmio.vaddr;
+        } else {
+            adapter->osdep.iobase = (uintptr_t)adapter->ioport_mmio.vaddr;
         }
-        adapter->osdep.iobase = (uintptr_t)adapter->ioport_mmio.vaddr;
         adapter->hw.io_base = 0;
     }
 
