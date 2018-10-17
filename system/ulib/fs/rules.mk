@@ -38,7 +38,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/async.cpp \
     system/ulib/fbl \
-    system/ulib/fit \
     system/ulib/sync \
     system/ulib/trace \
     system/ulib/zx \
