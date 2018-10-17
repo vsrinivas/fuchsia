@@ -326,6 +326,31 @@ type. Unless the object encoding includes internal references which
 must be fixed up, the only work amounts to checking the object size and the
 ranges of data types such as enums and union tags.
 
+### fidl_validate
+
+Declared in
+[system/ulib/fidl/include/lib/fidl/coding.h](
+https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl/include/lib/fidl/coding.h),
+defined in
+[system/ulib/fidl/validating.cpp](
+https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl/validating.cpp).
+
+Validates the object in **bytes** in-place by performing a depth-first
+traversal of the encoding data from **type** to fix up internal
+references. This performs the same validation as **fidl_decode()**, but
+does not modify any passed-in data.
+
+The **bytes** buffer is not modified by the operation.
+
+If anything other than `ZX_OK` is returned, **error_msg_out** will be set.
+
+Result is the same as for **fidl_encode()** above.
+
+This function is effectively a simple interpreter of the contents of the
+type. Unless the object encoding includes internal references which
+must be fixed up, the only work amounts to checking the object size and the
+ranges of data types such as enums and union tags.
+
 ### Sending Messages
 
 The client performs the following operations to send a message through a

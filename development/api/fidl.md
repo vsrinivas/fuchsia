@@ -259,6 +259,16 @@ with references to the external thing.  For example, reference the WiFi
 specification that describes a configuration structure.  Similarly, if a
 structure must match an ABI defined in a C header, reference the C header.
 
+If you would like your comments to "flow through" to the target language,
+then use either `///` as the comment introducer (yes, three forward slashes
+in a row) or the `[Doc = "this is a comment"]` attribute:
+
+```fidl
+/// this is a comment that flows through to the target
+
+[Doc = "and so is this"]
+```
+
 ### Files
 
 A library is comprised of one or more files.  The files are stored in a

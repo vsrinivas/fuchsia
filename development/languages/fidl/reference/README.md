@@ -2,11 +2,13 @@
 
 The reference section provides the following material:
 
+* [Attributes](attributes.md) &mdash; describes the available FIDL attributes
 * [Compiler](compiler.md) &mdash; describes the organization of the compiler
+* [Editors](editors.md) &mdash; discusses support for FIDL in IDEs and stand-alone editors
 * [Grammar](grammar.md) &mdash; the FIDL grammar
+* [JSON IR](json-ir.md) &mdash; a tour of the JSON Intermediate Representation (**JSON IR**) generator
 * [Language](language.md) &mdash; defines the syntax of the FIDL language
 * [Wire Format](wire-format/index.md) &mdash; details the byte-by-byte organization of data
-* [Editors](editors.md) &mdash; discusses support for FIDL in IDEs and stand-alone editors
 
 ### Readability rubric
 
