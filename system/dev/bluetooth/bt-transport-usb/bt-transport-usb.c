@@ -631,7 +631,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
 
     for (int i = 0; i < EVENT_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, intr_max_packet, intr_addr);
+        status = usb_request_alloc(&req, intr_max_packet, intr_addr, sizeof(usb_request_t));
         if (status != ZX_OK) {
             goto fail;
         }
@@ -641,7 +641,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < ACL_READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, ACL_MAX_FRAME_SIZE, bulk_in_addr);
+        status = usb_request_alloc(&req, ACL_MAX_FRAME_SIZE, bulk_in_addr, sizeof(usb_request_t));
         if (status != ZX_OK) {
             goto fail;
         }
@@ -651,7 +651,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < ACL_WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, ACL_MAX_FRAME_SIZE, bulk_out_addr);
+        status = usb_request_alloc(&req, ACL_MAX_FRAME_SIZE, bulk_out_addr, sizeof(usb_request_t));
         if (status != ZX_OK) {
             goto fail;
         }

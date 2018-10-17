@@ -24,11 +24,11 @@ typedef struct {
 
 // usb_request_alloc() creates a new usb request with payload space of data_size.
 zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size,
-                              uint8_t ep_address);
+                              uint8_t ep_address, size_t req_size);
 
 // usb_request_alloc_vmo() creates a new usb request with the given VMO.
 zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t vmo_handle, uint64_t vmo_offset,
-                                  uint64_t length, uint8_t ep_address);
+                                  uint64_t length, uint8_t ep_address, size_t req_size);
 
 // usb_request_init() initializes the statically allocated usb request with the given VMO.
 // This will free any resources allocated by the usb request but not the usb request itself.

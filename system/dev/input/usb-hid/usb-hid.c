@@ -296,7 +296,8 @@ static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev) {
     }
 
     status = usb_request_alloc(&usbhid->req, usb_ep_max_packet(endpt),
-                               endpt->bEndpointAddress);
+                               endpt->bEndpointAddress,
+                               sizeof(usb_request_t));
     if (status != ZX_OK) {
         status = ZX_ERR_NO_MEMORY;
         goto fail;

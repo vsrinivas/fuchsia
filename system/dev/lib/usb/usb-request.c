@@ -57,8 +57,8 @@ static void usb_request_release_free(usb_request_t* req) {
 }
 
 __EXPORT zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size,
-                                       uint8_t ep_address) {
-    usb_request_t* req = calloc(1, sizeof(usb_request_t));
+                                       uint8_t ep_address, size_t req_size) {
+    usb_request_t* req = calloc(1, req_size);
     if (!req) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -85,6 +85,7 @@ __EXPORT zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size,
         req->offset = 0;
         req->size = data_size;
     }
+    req->alloc_size = req_size;
     req->header.ep_address = ep_address;
     req->header.length = data_size;
     req->release_cb = usb_request_release_free;
@@ -95,8 +96,8 @@ __EXPORT zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size,
 // usb_request_alloc_vmo() creates a new usb request with the given VMO.
 __EXPORT zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t vmo_handle,
                                            uint64_t vmo_offset, uint64_t length,
-                                           uint8_t ep_address) {
-    usb_request_t* req = calloc(1, sizeof(usb_request_t));
+                                           uint8_t ep_address, size_t req_size) {
+    usb_request_t* req = calloc(1, req_size);
     if (!req) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -126,6 +127,7 @@ __EXPORT zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t vmo_
         return status;
     }
 
+    req->alloc_size = req_size;
     req->vmo_handle = dup_handle;
     req->virt = (void *)mapped_addr;
     req->offset = vmo_offset;
@@ -144,7 +146,7 @@ __EXPORT zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t vmo_
 // This will free any resources allocated by the usb request but not the usb request itself.
 __EXPORT zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle,
                                       uint64_t vmo_offset, uint64_t length, uint8_t ep_address) {
-    memset(req, 0, sizeof(*req));
+    memset(req, 0, req->alloc_size);
 
     zx_handle_t dup_handle;
     zx_status_t status = zx_handle_duplicate(vmo_handle, ZX_RIGHT_SAME_RIGHTS, &dup_handle);

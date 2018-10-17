@@ -166,7 +166,7 @@ static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t r
     }
 
     if (req == NULL) {
-        zx_status_t status = usb_request_alloc(&req, length, 0);
+        zx_status_t status = usb_request_alloc(&req, length, 0, sizeof(usb_request_t));
         if (status != ZX_OK) {
             return status;
         }

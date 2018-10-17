@@ -754,15 +754,18 @@ static zx_status_t ums_bind(void* ctx, zx_device_t* device) {
     size_t max_out = usb_get_max_transfer_size(&usb, bulk_out_addr);
     ums->max_transfer = (max_in < max_out ? max_in : max_out);
 
-    status = usb_request_alloc(&ums->cbw_req, sizeof(ums_cbw_t), bulk_out_addr);
+    status = usb_request_alloc(&ums->cbw_req, sizeof(ums_cbw_t), bulk_out_addr,
+                               sizeof(usb_request_t));
     if (status != ZX_OK) {
         goto fail;
     }
-    status = usb_request_alloc(&ums->data_req, PAGE_SIZE, bulk_in_addr);
+    status = usb_request_alloc(&ums->data_req, PAGE_SIZE, bulk_in_addr,
+                               sizeof(usb_request_t));
     if (status != ZX_OK) {
         goto fail;
     }
-    status = usb_request_alloc(&ums->csw_req, sizeof(ums_csw_t), bulk_in_addr);
+    status = usb_request_alloc(&ums->csw_req, sizeof(ums_csw_t), bulk_in_addr,
+                               sizeof(usb_request_t));
     if (status != ZX_OK) {
         goto fail;
     }

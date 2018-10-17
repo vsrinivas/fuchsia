@@ -100,7 +100,7 @@ zx_status_t UsbAudioStream::Bind() {
         for (uint32_t i = 0; i < MAX_OUTSTANDING_REQ; ++i) {
             usb_request_t* req;
             zx_status_t status = usb_request_alloc(&req, ifc_->max_req_size(),
-                                                   ifc_->ep_addr());
+                                                   ifc_->ep_addr(), sizeof(usb_request_t));
             if (status != ZX_OK) {
                 LOG(ERROR, "Failed to allocate usb request %u/%u (size %u): %d\n",
                     i + 1, MAX_OUTSTANDING_REQ, ifc_->max_req_size(), status);

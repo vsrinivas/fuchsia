@@ -661,7 +661,7 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     zx_status_t status = ZX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, USB_BUF_IN_SIZE, bulk_in_addr);
+        status = usb_request_alloc(&req, USB_BUF_IN_SIZE, bulk_in_addr, sizeof(usb_request_t));
         if (status != ZX_OK) {
             goto fail;
         }
@@ -671,7 +671,7 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, USB_BUF_OUT_SIZE, bulk_out_addr);
+        status = usb_request_alloc(&req, USB_BUF_OUT_SIZE, bulk_out_addr, sizeof(usb_request_t));
         if (status != ZX_OK) {
             goto fail;
         }
@@ -681,7 +681,7 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < INTR_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, INTR_REQ_SIZE, intr_addr);
+        status = usb_request_alloc(&req, INTR_REQ_SIZE, intr_addr, sizeof(usb_request_t));
         if (status != ZX_OK) {
             goto fail;
         }

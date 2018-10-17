@@ -529,7 +529,7 @@ zx_status_t xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request
     usb_request_t* req = usb_request_pool_get(&xhci->free_reqs, length);
 
     if (req == nullptr) {
-        auto status = usb_request_alloc(&req, length, 0);
+        auto status = usb_request_alloc(&req, length, 0, sizeof(usb_request_t));
         if (status != ZX_OK) {
             return status;
         }

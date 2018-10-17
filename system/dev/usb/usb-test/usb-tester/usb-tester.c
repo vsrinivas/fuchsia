@@ -68,7 +68,7 @@ static zx_status_t test_req_alloc(usb_tester_t* usb_tester, size_t len, uint8_t 
     test_req->completion = SYNC_COMPLETION_INIT;
 
     usb_request_t* req;
-    zx_status_t status = usb_request_alloc(&req, len, ep_address);
+    zx_status_t status = usb_request_alloc(&req, len, ep_address, sizeof(usb_request_t));
     if (status != ZX_OK) {
         free(test_req);
         return status;

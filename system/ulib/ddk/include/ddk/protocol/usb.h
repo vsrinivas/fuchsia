@@ -111,6 +111,7 @@ typedef struct usb_request {
     // invoked by the 'usb_request_release' method when it is called
     // by the requestor.
     void (*release_cb)(usb_request_t* req);
+    size_t alloc_size;
 } usb_request_t;
 
 

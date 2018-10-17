@@ -463,7 +463,7 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
     memcpy(&hub->bus, &bus, sizeof(usb_bus_protocol_t));
 
     usb_request_t* req;
-    status = usb_request_alloc(&req, max_packet_size, ep_addr);
+    status = usb_request_alloc(&req, max_packet_size, ep_addr, sizeof(usb_request_t));
     if (status != ZX_OK) {
         usb_desc_iter_release(&iter);
         usb_hub_free(hub);

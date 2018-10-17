@@ -35,7 +35,7 @@ zx_status_t usb_util_control(usb_device_t* dev, uint8_t request_type, uint8_t re
         req = usb_request_pool_get(&dev->free_reqs, length);
     }
     if (req == NULL) {
-        zx_status_t status = usb_request_alloc(&req, length, 0);
+        zx_status_t status = usb_request_alloc(&req, length, 0, sizeof(usb_request_t));
         if (status != ZX_OK) return status;
     }
 
