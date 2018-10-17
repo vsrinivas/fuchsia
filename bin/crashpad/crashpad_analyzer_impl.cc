@@ -84,9 +84,9 @@ class ScopedUnlink {
   DISALLOW_COPY_AND_ASSIGN(ScopedUnlink);
 };
 
-std::string GetSystemLogToFile() {
+std::string WriteKernelLogToFile() {
   std::string filename = files::SimplifyPath(
-      fxl::Concatenate({kLocalCrashDatabase, "/log.XXXXXX"}));
+      fxl::Concatenate({kLocalCrashDatabase, "/kernel_log.XXXXXX"}));
   base::ScopedFD fd(mkstemp(filename.data()));
   if (fd.get() < 0) {
     FX_LOGS(ERROR) << "could not create temp file";
@@ -246,9 +246,9 @@ int CrashpadAnalyzerImpl::HandleException(zx::process process,
   const std::map<std::string, std::string> annotations =
       GetAnnotations(package_name);
   std::map<std::string, base::FilePath> attachments;
-  ScopedUnlink temp_log_file(GetSystemLogToFile());
-  if (temp_log_file.is_valid()) {
-    attachments["log"] = base::FilePath(temp_log_file.get());
+  ScopedUnlink temp_kernel_log_file(WriteKernelLogToFile());
+  if (temp_kernel_log_file.is_valid()) {
+    attachments["kernel_log"] = base::FilePath(temp_kernel_log_file.get());
   }
 
   // Set minidump and create local crash report.
