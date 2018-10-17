@@ -222,6 +222,10 @@ static int qmi_transport_thread(void* cookie) {
                  zx_status_get_string(status));
           return status;
         }
+        status = set_async_wait(ctx);
+        if (status != ZX_OK) {
+          return status;
+        }
       } else if (packet.key == INTERRUPT_MSG) {
         if (txn->response.status == ZX_OK) {
           qmi_handle_interrupt(ctx, txn);
@@ -233,10 +237,6 @@ static int qmi_transport_thread(void* cookie) {
           return txn->response.status;
         }
       }
-    }
-    status = set_async_wait(ctx);
-    if (status != ZX_OK) {
-      return status;
     }
   }
 }
