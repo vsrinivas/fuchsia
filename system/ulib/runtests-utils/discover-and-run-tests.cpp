@@ -36,11 +36,16 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
             "Usage: %s [-q|-v] [-S|-s] [-M|-m] [-L|-l] [-P|-p] [-a]\n"
             "    [-w timeout] [-t test names] [-o directory]       \n"
             "    [directory globs ...]                             \n"
+            "    [-- [-args -to -the -test -bin]]                  \n"
             "\n"
             "The %s [directory globs...] is a list of        \n"
             "globs which match directories containing tests to run,\n"
             "non-recursively. Note that non-directories captured by\n"
-            "a glob will be silently ignored.                      \n",
+            "a glob will be silently ignored.                      \n"
+            "\n"
+            "After directory globs, `--` can be followed by any    \n"
+            "number of arguments to pass to the binaries under     \n"
+            "test.\n",
             name, test_dirs_required ? "required" : "optional");
     if (!test_dirs_required) {
         fprintf(stderr,
@@ -99,7 +104,7 @@ void SyncPathAndAncestors(const char* path) {
     char mutable_path[PATH_MAX];
     strncpy(mutable_path, path, PATH_MAX - 1);
     mutable_path[PATH_MAX - 1] = '\0';
-    for (char* p = mutable_path; ; p = dirname(p)) {
+    for (char* p = mutable_path;; p = dirname(p)) {
         int fd = open(p, O_RDONLY);
         if (fd < 0) {
             fprintf(stderr, "Warning: Could not open %s for syncing: %s", p, strerror(errno));
@@ -111,7 +116,9 @@ void SyncPathAndAncestors(const char* path) {
             fprintf(stderr, "Warning: Could not close %s: %s", p, strerror(errno));
             return;
         }
-        if (!strcmp(p, "/")) break;
+        if (!strcmp(p, "/")) {
+            break;
+        }
     }
 };
 } // namespace
@@ -122,6 +129,7 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
     unsigned int test_types = TEST_DEFAULT;
     fbl::Vector<fbl::String> basename_whitelist;
     fbl::Vector<fbl::String> test_dir_globs;
+    fbl::Vector<fbl::String> test_args;
     const char* output_dir = nullptr;
     signed char verbosity = -1;
     int watchdog_timeout_seconds = -1;
@@ -179,8 +187,7 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
         case 'f':
             test_list_path = optarg;
             break;
-        case 'w':
-        {
+        case 'w': {
             const char* timeout_str = optarg;
             char* end;
             long timeout = strtol(timeout_str, &end, 0);
@@ -195,9 +202,20 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
             return Usage(argv[0], default_test_dirs);
         }
     }
-    // Treat the rest of the argv array as a list of directory globs.
-    for (int i = optind; i < argc; ++i) {
-        test_dir_globs.push_back(argv[i]);
+    // Treat the rest of the argv array as a list of directory globs,
+    // until a `--` arg is encountered, after which point all arguments should
+    // be forwarded on to the binaries under test.
+    int i = optind;
+    for (; i < argc; ++i) {
+        fbl::String arg(argv[i]);
+        if (arg == "--") {
+            break;
+        }
+        test_dir_globs.push_back(fbl::move(arg));
+    }
+    i++; // Skip "--" itself
+    for (; i < argc; ++i) {
+        test_args.push_back(argv[i]);
     }
 
     if (test_list_path && !test_dir_globs.is_empty()) {
@@ -261,7 +279,6 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
         return EXIT_FAILURE;
     }
 
-
     struct stat st;
     if (output_dir != nullptr && stat(output_dir, &st) < 0 && (st.st_mode & S_IFMT) == S_IFDIR) {
         fprintf(stderr, "Error: Could not open %s\n", output_dir);
@@ -272,8 +289,8 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
     stopwatch->Start();
     int failed_count = 0;
     fbl::Vector<fbl::unique_ptr<Result>> results;
-    if (!RunTests(RunTest, test_paths, output_dir, kOutputFileName, verbosity, &failed_count,
-                  &results)) {
+    if (!RunTests(RunTest, test_paths, test_args, output_dir, kOutputFileName, verbosity,
+                  &failed_count, &results)) {
         return EXIT_FAILURE;
     }
 

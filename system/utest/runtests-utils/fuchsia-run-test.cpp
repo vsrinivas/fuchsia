@@ -173,7 +173,7 @@ bool RunTestsPublishData() {
     const fbl::String output_dir = JoinPath(test_dir.path(), "output");
     const char output_file_base_name[] = "output.txt";
     ASSERT_EQ(0, MkDirAll(output_dir));
-    EXPECT_TRUE(RunTests(PlatformRunTest, {test_name},
+    EXPECT_TRUE(RunTests(PlatformRunTest, {test_name}, {},
                          output_dir.c_str(), output_file_base_name, verbosity,
                          &num_failed, &results));
     EXPECT_EQ(0, num_failed);
@@ -195,7 +195,7 @@ bool RunAllTestsPublishData() {
     EXPECT_EQ(0, MkDirAll(output_dir));
 
     const char* const argv[] = {"./runtests", "-o", output_dir.c_str(),
-      test_dir.path()};
+                                test_dir.path()};
     TestStopwatch stopwatch;
     EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(PlatformRunTest, 4, argv, {},
                                                 &stopwatch, ""));

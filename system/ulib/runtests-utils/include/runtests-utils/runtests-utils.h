@@ -40,10 +40,11 @@ struct DumpFile {
 
 // Represents data published through data sink.
 struct DataSink : public fbl::SinglyLinkedListable<fbl::unique_ptr<DataSink>> {
-    fbl::String name; // Name of the data sink.
+    fbl::String name;            // Name of the data sink.
     fbl::Vector<DumpFile> files; // All the sink dumpfiles.
 
-    explicit DataSink(fbl::String name) : name(name) {}
+    explicit DataSink(fbl::String name)
+        : name(name) {}
 
     // Runtimes may publish more than one file with the same data sink name. We use hash table
     // that's mapping data sink name to the list of file names to store these efficiently.
@@ -135,6 +136,7 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs,
 //
 // |run_test| is the function used to invoke the test binaries.
 // |test_paths| are the paths of the binaries to execute.
+// |test_args| are arguments passed into the binaries under test.
 // |output_dir| is the output directory for all the tests' output. May be nullptr, in which case
 //   output will not be captured.
 // |output_file_basename| is the basename of the tests' output files. May be nullptr only if
@@ -150,6 +152,7 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs,
 //
 // Returns false if any test binary failed, true otherwise.
 bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_paths,
+              const fbl::Vector<fbl::String>& test_args,
               const char* output_dir, const fbl::StringPiece output_file_basename,
               signed char verbosity, int* failed_count,
               fbl::Vector<fbl::unique_ptr<Result>>* results);

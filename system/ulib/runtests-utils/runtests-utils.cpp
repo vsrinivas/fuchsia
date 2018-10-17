@@ -7,9 +7,9 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <glob.h>
 #include <inttypes.h>
-#include <fcntl.h>
 #include <libgen.h>
 #include <limits.h>
 #include <stdio.h>
@@ -157,7 +157,7 @@ int WriteSummaryJSON(const fbl::Vector<fbl::unique_ptr<Result>>& results,
             }
             fprintf(summary_json, "\n      }\n");
         } else {
-          fprintf(summary_json, "\n");
+            fprintf(summary_json, "\n");
         }
         fprintf(summary_json, "    }");
         test_count++;
@@ -290,6 +290,7 @@ int DiscoverTestsInListFile(FILE* test_list_file, fbl::Vector<fbl::String>* test
 }
 
 bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_paths,
+              const fbl::Vector<fbl::String>& test_args,
               const char* output_dir,
               const fbl::StringPiece output_file_basename, signed char verbosity, int* failed_count,
               fbl::Vector<fbl::unique_ptr<Result>>* results) {
@@ -319,6 +320,11 @@ bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_pat
             // if it was specified: i.e., non-negative.
             verbosity_arg = fbl::StringPrintf("v=%d", verbosity);
             argv.push_back(verbosity_arg.c_str());
+        }
+        // Add in args to the test binary
+        argv.reserve(test_args.size());
+        for (auto test_arg = test_args.begin(); test_arg != test_args.end(); ++test_arg) {
+            argv.push_back(test_arg->c_str());
         }
         argv.push_back(nullptr); // Important, since there's no argc.
         const char* output_dir_for_test =
