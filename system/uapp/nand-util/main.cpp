@@ -10,10 +10,12 @@
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <lib/fdio/watcher.h>
 #include <lib/fzl/mapped-vmo.h>
 #include <lib/cksum.h>
 #include <pretty/hexdump.h>
 #include <zircon/assert.h>
+#include <zircon/device/device.h>
 #include <zircon/device/nand.h>
 #include <zircon/device/nand-broker.h>
 #include <zircon/status.h>
@@ -28,10 +30,13 @@ constexpr char kUsageMessage[] = R"""(
 Low level access tool for a NAND device.
 WARNING: This tool may overwrite the NAND device.
 
-./nand-util --device /dev/sys/platform/05:00:d/aml-raw_nand/nand/broker --info
+nand-util --device /dev/sys/platform/05:00:d/aml-raw_nand/nand/broker --info
 
-Note that to use this tool the driver binding rules have to be adjusted so that
-the broker driver is loaded for the desired NAND device.
+Note that to use this tool either the driver binding rules have to be adjusted
+so that the broker driver is loaded for the desired NAND device, or at least the
+NAND device should not be bound to any other driver (like an FTL, skip-block or
+or nandpart). This tool will attempt to load a broker driver if the device path
+doesn't end with "/broker".
 
 Options:
   --device (-d) path : Specifies the broker device to use.
@@ -68,10 +73,32 @@ struct Config {
     bool skip_prompt;
 };
 
+// Open a device named "broker" from the path provided. Fails if there is no
+// device after 5 seconds.
+fbl::unique_fd OpenBroker(const char* path) {
+    fbl::unique_fd broker;
+
+    auto callback = [](int dir_fd, int event, const char* filename, void* cookie) {
+        if (event != WATCH_EVENT_ADD_FILE || strcmp(filename, "broker") != 0) {
+            return ZX_OK;
+        }
+        fbl::unique_fd* broker = reinterpret_cast<fbl::unique_fd*>(cookie);
+        broker->reset(openat(dir_fd, filename, O_RDWR));
+        return ZX_ERR_STOP;
+    };
+
+    fbl::unique_fd dir(open(path, O_DIRECTORY));
+    if (dir) {
+        zx_time_t deadline = zx_deadline_after(ZX_SEC(5));
+        fdio_watch_directory(dir.get(), callback, deadline, &broker);
+    }
+    return broker;
+}
+
 // Broker device wrapper.
 class NandBroker {
   public:
-    explicit NandBroker(const char* path) : device_(open(path, O_RDWR)) {}
+    explicit NandBroker(const char* path) : path_(path), device_(open(path, O_RDWR)) {}
     ~NandBroker() {}
 
     // Returns true on success.
@@ -86,7 +113,7 @@ class NandBroker {
 
     const nand_info_t& Info() const { return info_; }
 
-    // The operations to perform:
+    // The operations to perform (return true on success):
     bool Query();
     void ShowInfo() const;
     bool ReadPages(uint32_t first_page, uint32_t count) const;
@@ -94,12 +121,20 @@ class NandBroker {
     bool EraseBlock(uint32_t block) const;
 
   private:
+    // Attempts to load the broker driver, if it seems it's needed. Returns true
+    // on success.
+    bool LoadBroker();
+
+    const char* path_;
     fbl::unique_fd device_;
     nand_info_t info_ = {};
     fbl::unique_ptr<fzl::MappedVmo> vmo_;
 };
 
 bool NandBroker::Initialize()  {
+    if (!LoadBroker()) {
+        return false;
+    }
     if (!Query()) {
         printf("Failed to open or query the device\n");
         return false;
@@ -217,6 +252,25 @@ bool NandBroker::EraseBlock(uint32_t block) const {
         return false;
     }
 
+    return true;
+}
+
+bool NandBroker::LoadBroker() {
+    ZX_ASSERT(path_);
+    if (strstr(path_, "/broker") == path_ + strlen(path_) - strlen("/broker")) {
+        // The passed-in device is already a broker.
+        return true;
+    }
+    const char kBroker[] = "/boot/driver/nand-broker.so";
+    if (ioctl_device_bind(device_.get(), kBroker, sizeof(kBroker) - 1) < 0) {
+        printf("Failed to issue bind command\n");
+        return false;
+    }
+    device_ = OpenBroker(path_);
+    if (!device_) {
+        printf("Failed to bind broker\n");
+        return false;
+    }
     return true;
 }
 
