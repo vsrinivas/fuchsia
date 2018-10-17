@@ -19,12 +19,14 @@ Channel::Channel(DLCI dlci, Session* session)
       remote_credits_(0),
       wait_queue_{} {};
 
+size_t Channel::tx_mtu() const { return session_->GetMaximumUserDataLength(); }
+
 namespace internal {
 
 ChannelImpl::ChannelImpl(DLCI dlci, Session* session)
     : Channel(dlci, session) {}
 
-void ChannelImpl::Activate(RxCallback rx_callback,
+bool ChannelImpl::Activate(RxCallback rx_callback,
                            ClosedCallback closed_callback,
                            async_dispatcher_t* dispatcher) {
   rx_callback_ = std::move(rx_callback);
@@ -38,15 +40,18 @@ void ChannelImpl::Activate(RxCallback rx_callback,
     });
     pending_rxed_frames_.pop();
   }
+
+  return true;
 }
 
-void ChannelImpl::Send(common::ByteBufferPtr data) {
+bool ChannelImpl::Send(common::ByteBufferPtr data) {
   ZX_DEBUG_ASSERT(session_);
   ZX_DEBUG_ASSERT_MSG(rx_callback_, "must call Activate() first");
   session_->SendUserData(dlci_, std::move(data));
+  return true;
 }
 
-void ChannelImpl::Receive(std::unique_ptr<common::ByteBuffer> data) {
+void ChannelImpl::Receive(common::ByteBufferPtr data) {
   if (rx_callback_) {
     async::PostTask(dispatcher_, [this, data_ = std::move(data)]() mutable {
       rx_callback_(std::move(data_));

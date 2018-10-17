@@ -268,15 +268,15 @@ void SocketChannelRelay<ChannelT, ChannelIdT,
   zx_status_t write_res;
   do {
     ZX_DEBUG_ASSERT(!socket_write_queue_.empty());
-    ZX_DEBUG_ASSERT(socket_write_queue_.front().is_valid());
-    ZX_DEBUG_ASSERT(socket_write_queue_.front().length());
+    ZX_DEBUG_ASSERT(ValidateRxData(socket_write_queue_.front()));
+    ZX_DEBUG_ASSERT(GetRxDataLen(socket_write_queue_.front()));
 
     const RxDataT& rx_data = socket_write_queue_.front();
-    const bool read_success = typename RxDataT::Reader(&rx_data).ReadNext(
-        rx_data.length(), [&](const common::ByteBuffer& pdu) {
+    const bool copy_success = InvokeWithRxData(
+        [&](const common::ByteBuffer& rx_bytes) {
           size_t n_bytes_written = 0;
-          write_res =
-              socket_.write(0, pdu.data(), pdu.size(), &n_bytes_written);
+          write_res = socket_.write(0, rx_bytes.data(), rx_bytes.size(),
+                                    &n_bytes_written);
           ZX_DEBUG_ASSERT_MSG(write_res == ZX_OK ||
                                   write_res == ZX_ERR_SHOULD_WAIT ||
                                   write_res == ZX_ERR_PEER_CLOSED,
@@ -285,15 +285,17 @@ void SocketChannelRelay<ChannelT, ChannelIdT,
             ZX_DEBUG_ASSERT(n_bytes_written == 0);
             bt_log(SPEW, "l2cap",
                    "Failed to write %zu bytes to socket for channel %u: %s",
-                   pdu.size(), channel_->id(), zx_status_get_string(write_res));
+                   rx_bytes.size(), channel_->id(),
+                   zx_status_get_string(write_res));
             return;
           }
-          ZX_DEBUG_ASSERT_MSG(n_bytes_written == pdu.size(),
-                              "(n_bytes_written=%zu, pdu.size()=%zu)",
-                              n_bytes_written, pdu.size());
+          ZX_DEBUG_ASSERT_MSG(n_bytes_written == rx_bytes.size(),
+                              "(n_bytes_written=%zu, rx_bytes.size()=%zu)",
+                              n_bytes_written, rx_bytes.size());
           socket_write_queue_.pop_front();
-        });
-    ZX_DEBUG_ASSERT(read_success);
+        },
+        rx_data);
+    ZX_DEBUG_ASSERT(copy_success);
   } while (write_res == ZX_OK && !socket_write_queue_.empty());
 
   if (!socket_write_queue_.empty() && write_res == ZX_ERR_SHOULD_WAIT) {
@@ -304,7 +306,7 @@ void SocketChannelRelay<ChannelT, ChannelIdT,
     // Note: it is safe to leave TX_THRESHOLD set, even when our queue is empty,
     // because we will only be woken if we also have an active Wait for
     // ZX_SOCKET_WRITE_THRESHOLD, and Waits are one-shot.
-    const size_t rx_data_len = socket_write_queue_.front().length();
+    const size_t rx_data_len = GetRxDataLen(socket_write_queue_.front());
     const auto prop_set_res = socket_.set_property(
         ZX_PROP_SOCKET_TX_THRESHOLD, &rx_data_len, sizeof(rx_data_len));
     switch (prop_set_res) {

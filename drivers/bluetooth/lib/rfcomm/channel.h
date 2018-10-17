@@ -12,32 +12,49 @@
 #include <lib/fit/function.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/hci/connection.h"
+#include "garnet/drivers/bluetooth/lib/rfcomm/frames.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/rfcomm.h"
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace btlib {
 namespace rfcomm {
 
-class Session;
-class Frame;
+class Session;  // Break mutual dependency.
 
 class Channel : public fbl::RefCounted<Channel> {
  public:
+  using UniqueId = uint64_t;
+
   virtual ~Channel() = default;
+
+  DLCI id() const { return dlci_; }
+  size_t tx_mtu() const;
+  // TODO(quiche): Provide lower-layer ID info for debugging purposes.
+  hci::ConnectionHandle link_handle() const { return 0; }
+  // TODO(NET-1763): Make this identifier unique across L2CAP channels and HCI
+  // connections.
+  UniqueId unique_id() const { return dlci_; }
 
   using RxCallback = fit::function<void(common::ByteBufferPtr)>;
   using ClosedCallback = fit::closure;
-  virtual void Activate(RxCallback rx_callback, ClosedCallback closed_callback,
+  // Activates this channel assigning |dispatcher| to execute |rx_callback| and
+  // |closed_callback|. Returns true on success.
+  virtual bool Activate(RxCallback rx_callback, ClosedCallback closed_callback,
                         async_dispatcher_t* dispatcher) = 0;
+  // Cleans up resources associated with this channel.
+  // TODO(NET-1756): Implement cleanup.
+  void Deactivate() {}
 
   // Send a buffer of user data. Takes ownership of |data|. This method is
   // asynchronous, and there is no notification of delivery. We operate under
   // the assumption that the underlying transport is reliable. The channel must
-  // be activated prior to sending.
-  virtual void Send(common::ByteBufferPtr data) = 0;
+  // be activated prior to sending. Returns true if the data was successfully
+  // queued.
+  virtual bool Send(common::ByteBufferPtr data) = 0;
 
  protected:
-  friend class rfcomm::Session;
+  friend class Session;
 
   Channel(DLCI dlci, Session* session);
 
@@ -77,9 +94,9 @@ namespace internal {
 class ChannelImpl : public Channel {
  public:
   // Channel overrides
-  void Activate(RxCallback rx_callback, ClosedCallback closed_callback,
+  bool Activate(RxCallback rx_callback, ClosedCallback closed_callback,
                 async_dispatcher_t* dispatcher) override;
-  void Send(common::ByteBufferPtr data) override;
+  bool Send(common::ByteBufferPtr data) override;
 
  private:
   friend class rfcomm::Session;
@@ -88,9 +105,9 @@ class ChannelImpl : public Channel {
   ChannelImpl(DLCI dlci, Session* session);
 
   // This should only be called from Session.
-  void Receive(std::unique_ptr<common::ByteBuffer> data) override;
+  void Receive(common::ByteBufferPtr data) override;
 
-  std::queue<std::unique_ptr<common::ByteBuffer>> pending_rxed_frames_;
+  std::queue<common::ByteBufferPtr> pending_rxed_frames_;
 };
 
 }  //  namespace internal
