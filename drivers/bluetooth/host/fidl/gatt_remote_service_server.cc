@@ -146,6 +146,61 @@ void GattRemoteServiceServer::WriteCharacteristicWithoutResponse(
   service_->WriteCharacteristicWithoutResponse(id, value.take());
 }
 
+void GattRemoteServiceServer::ReadDescriptor(uint64_t id,
+                                             ReadDescriptorCallback callback) {
+  auto cb = [callback = std::move(callback)](
+                btlib::att::Status status,
+                const btlib::common::ByteBuffer& value) {
+    // We always reply with a non-null value.
+    std::vector<uint8_t> vec;
+
+    if (status && value.size()) {
+      vec.resize(value.size());
+
+      MutableBufferView vec_view(vec.data(), vec.size());
+      value.Copy(&vec_view);
+    }
+
+    callback(fidl_helpers::StatusToFidl(status),
+             fidl::VectorPtr<uint8_t>(std::move(vec)));
+  };
+
+  service_->ReadDescriptor(id, std::move(cb));
+}
+
+void GattRemoteServiceServer::ReadLongDescriptor(
+    uint64_t id, uint16_t offset, uint16_t max_bytes,
+    ReadLongDescriptorCallback callback) {
+  auto cb = [callback = std::move(callback)](
+                btlib::att::Status status,
+                const btlib::common::ByteBuffer& value) {
+    // We always reply with a non-null value.
+    std::vector<uint8_t> vec;
+
+    if (status && value.size()) {
+      vec.resize(value.size());
+
+      MutableBufferView vec_view(vec.data(), vec.size());
+      value.Copy(&vec_view);
+    }
+
+    callback(fidl_helpers::StatusToFidl(status),
+             fidl::VectorPtr<uint8_t>(std::move(vec)));
+  };
+
+  service_->ReadLongDescriptor(id, offset, max_bytes, std::move(cb));
+}
+
+void GattRemoteServiceServer::WriteDescriptor(
+    uint64_t id, ::fidl::VectorPtr<uint8_t> value,
+    WriteDescriptorCallback callback) {
+  service_->WriteDescriptor(
+      id, value.take(),
+      [callback = std::move(callback)](btlib::att::Status status) {
+        callback(fidl_helpers::StatusToFidl(status, ""));
+      });
+}
+
 void GattRemoteServiceServer::NotifyCharacteristic(
     uint64_t id, bool enable, NotifyCharacteristicCallback callback) {
   if (!enable) {

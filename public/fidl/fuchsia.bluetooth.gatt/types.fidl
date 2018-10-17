@@ -1,0 +1,135 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.gatt;
+
+// Codes that can be returned in the |protocol_error_code| field of a
+// bluetooth.Error.
+enum ErrorCode {
+  // Indicates that the operation was successful.
+  NO_ERROR = 0;
+
+  // Indicates that the offset used in a read or write request exceeds the
+  // bounds of the value.
+  INVALID_OFFSET = 1;
+
+  // Indicates that the value given in a write request would exceed the maximum
+  // length allowed for the destionation characteristic or descriptor.
+  INVALID_VALUE_LENGTH = 2;
+
+  // Indicates that a read or write request is not permitted.
+  NOT_PERMITTED = 3;
+};
+
+// Represents encryption, authentication, and authorization permissions that can
+// be assigned to a specific access permission.
+struct SecurityRequirements {
+  // If true, the physical link must be encrypted to access this attribute.
+  bool encryption_required;
+
+  // If true, the physical link must be authenticated to access this
+  // attribute.
+  bool authentication_required;
+
+  // If true, the client needs to be authorized before accessing this
+  // attribute.
+  bool authorization_required;
+};
+
+// Specifies the access permissions for a specific attribute value.
+struct AttributePermissions {
+  // Specifies whether or not an attribute has the read permission. If null,
+  // then the attribute value cannot be read. Otherwise, it can be read only if
+  // the permissions specified in the Permissions struct are satisfied.
+  SecurityRequirements? read;
+
+  // Specifies whether or not an attribute has the write permission. If null,
+  // then the attribute value cannot be written. Otherwise, it be written only
+  // if the permissions specified in the Permissions struct are satisfied.
+  SecurityRequirements? write;
+
+  // Specifies the security requirements for a client to subscribe to
+  // notifications or indications on a characteristic. A characteristic's
+  // support for notifications or indiciations is specified using the NOTIFY and
+  // INDICATE characteristic properties. If a local characteristic has one of
+  // these properties then this field can not be null. Otherwise, this field
+  // must be left as null.
+  //
+  // This field is ignored for Descriptors.
+  SecurityRequirements? update;
+};
+
+// Possible values for the characteristic properties bitfield. These specify the
+// GATT procedures that are allowed for a particular characteristic.
+const uint32 kPropertyBroadcast = 1;
+const uint32 kPropertyRead = 2;
+const uint32 kPropertyWriteWithoutResponse = 4;
+const uint32 kPropertyWrite = 8;
+const uint32 kPropertyNotify = 16;
+const uint32 kPropertyIndicate = 32;
+const uint32 kPropertyAuthenticatedSignedWrites = 64;
+const uint32 kPropertyReliableWrite = 256;
+const uint32 kPropertyWritableAuxiliaries= 512;
+
+// Represents a local or remote GATT service.
+struct ServiceInfo {
+  // Uniquely identifies this GATT service. This value will be ignored for local
+  // services. Remote services will always have an identifier.
+  uint64 id;
+
+  // Indicates whether this is a primary or secondary service.
+  bool primary;
+
+  // The 128-bit UUID that identifies the type of this service. This is a string
+  // in the canonical 8-4-4-4-12 format.
+  string type;
+
+  // The characteristics of this service.
+  vector<Characteristic>? characteristics;
+
+  // Ids of other services that are included by this service.
+  vector<uint64>? includes;
+};
+
+// Represents a local or remote GATT characteristic.
+struct Characteristic {
+  // Uniquely identifies this characteristic within a service.
+  uint64 id;
+
+  // The 128-bit UUID that identifies the type of this characteristic. This is a
+  // string in the canonical 8-4-4-4-12 format.
+  string type;
+
+  // The characteristic properties bitfield. See kProperty* above for possible
+  // values.
+  uint32 properties;
+
+  // The attribute permissions of this characteristic. For remote
+  // characteristics, this value will be null until the permissions are
+  // discovered via read and write requests.
+  //
+  // For local characteristics, this value is mandatory.
+  AttributePermissions? permissions;
+
+  // The descriptors of this characteristic.
+  vector<Descriptor>? descriptors;
+};
+
+// Represents a local or remote GATT characteristic descriptor.
+struct Descriptor {
+  // Uniquely identifies this descriptor within the characteristic that it
+  // belongs to.
+  uint64 id;
+
+  // The 128-bit UUID that identifies the type of this descriptor. This is a
+  // string in the canonical 8-4-4-4-12 format.
+  string type;
+
+  // The attribute permissions of this descriptor. For remote
+  // descriptors, this value will be null until the permissions are
+  // discovered via read and write requests.
+  //
+  // For local descriptors, this value is mandatory.
+  AttributePermissions? permissions;
+};
