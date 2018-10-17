@@ -28,7 +28,7 @@
  * a request if the transfer needs to be triggered by the consumer of this
  * library.
  *
- * Once a transfer has been succesfully started, repeated calls to the receive
+ * Once a transfer has been successfully started, repeated calls to the receive
  * method should be made with the incoming data. Outgoing packets will be
  * generated in the outgoing buffer parameters to each method call.
  *

@@ -567,7 +567,7 @@ tftp_status tftp_handle_request(tftp_session* session,
                                                       cookie)) {
             case TFTP_ERR_SHOULD_WAIT:
                 // The open_write() callback can return an ERR_SHOULD_WAIT response if it isn't
-                // prepared to service another requst at the moment and the client should retry
+                // prepared to service another request at the moment and the client should retry
                 // later.
                 xprintf("Denying write request received when not ready\n");
                 set_error(session, TFTP_ERR_CODE_BUSY, resp, resp_len, "not ready to receive");
@@ -592,7 +592,7 @@ tftp_status tftp_handle_request(tftp_session* session,
             file_size = session->file_interface.open_read(session->filename, cookie);
             if (file_size == TFTP_ERR_SHOULD_WAIT) {
                 // The open_read() callback can return an ERR_SHOULD_WAIT response if it isn't
-                // prepared to service another requst at the moment and the client should retry
+                // prepared to service another request at the moment and the client should retry
                 // later.
                 xprintf("Denying read request received when not ready\n");
                 set_error(session, TFTP_ERR_CODE_BUSY, resp, resp_len, "not ready to send");

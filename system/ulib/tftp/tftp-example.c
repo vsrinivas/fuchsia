@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This is an example binary to exercise ulib/tftp. It runs on Linux or MacOs.
+// This is an example binary to exercise ulib/tftp. It runs on Linux or macOS.
 
 #define _POSIX_C_SOURCE 200809L
 #include <errno.h>
