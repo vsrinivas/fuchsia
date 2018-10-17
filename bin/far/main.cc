@@ -31,7 +31,7 @@ constexpr fxl::StringView kKnownCommands =
 constexpr fxl::StringView kArchive = "archive";
 constexpr fxl::StringView kManifest = "manifest";
 constexpr fxl::StringView kFile = "file";
-constexpr fxl::StringView kOuput = "output";
+constexpr fxl::StringView kOutput = "output";
 
 constexpr fxl::StringView kCatUsage = "cat --archive=<archive> --file=<path> ";
 constexpr fxl::StringView kCreateUsage =
@@ -100,7 +100,7 @@ int Extract(const fxl::CommandLine& command_line) {
     return -1;
 
   std::string output_dir;
-  if (!GetOptionValue(command_line, kOuput, kExtractUsage, &output_dir))
+  if (!GetOptionValue(command_line, kOutput, kExtractUsage, &output_dir))
     return -1;
 
   fxl::UniqueFD fd(open(archive_path.c_str(), O_RDONLY));
@@ -124,7 +124,7 @@ int ExtractFile(const fxl::CommandLine& command_line) {
     return -1;
 
   std::string output_path;
-  if (!GetOptionValue(command_line, kOuput, kExtractFileUsage, &output_path))
+  if (!GetOptionValue(command_line, kOutput, kExtractFileUsage, &output_path))
     return -1;
 
   fxl::UniqueFD fd(open(archive_path.c_str(), O_RDONLY));
