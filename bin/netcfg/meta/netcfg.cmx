@@ -3,7 +3,15 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "dev": [ "class/ethernet" ],
-        "features": [ "deprecated-all-services", "persistent-storage" ]
+        "dev": [
+            "class/ethernet"
+        ],
+        "features": [
+            "persistent-storage"
+        ],
+        "services": [
+            "fuchsia.devicesettings.DeviceSettingsManager",
+            "fuchsia.netstack.Netstack"
+        ]
     }
 }

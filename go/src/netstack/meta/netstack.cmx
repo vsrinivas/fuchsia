@@ -3,6 +3,8 @@
         "binary": "bin/netstack"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services" ]
+        "services": [
+            "fuchsia.devicesettings.DeviceSettingsManager"
+        ]
     }
 }

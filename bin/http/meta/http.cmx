@@ -3,6 +3,11 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services", "root-ssl-certificates" ]
+        "features": [
+            "root-ssl-certificates"
+        ],
+        "services": [
+            "fuchsia.net.LegacySocketProvider"
+        ]
     }
 }

@@ -3,7 +3,8 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services" ],
-        "dev": [ "class/ethernet" ]
+        "dev": [
+            "class/ethernet"
+        ]
     }
 }
