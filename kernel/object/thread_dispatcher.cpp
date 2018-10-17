@@ -551,21 +551,7 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
     // it and processes it before we are asleep? This is handled by locking state_lock_ in places
     // where the handler can see/modify thread state.
 
-    {
-        Guard<fbl::Mutex> guard{get_lock()};
-
-        // Mark that we're in an exception.
-        thread_.exception_context = arch_context;
-
-        // For GetExceptionReport.
-        exception_report_ = report;
-
-        // For OnExceptionPortRemoval in case the port is unbound.
-        DEBUG_ASSERT(exception_wait_port_ == nullptr);
-        exception_wait_port_ = eport;
-
-        state_.set(ThreadState::Exception::UNPROCESSED);
-    }
+    EnterException(eport, report, arch_context);
 
     zx_status_t status;
 
@@ -583,6 +569,7 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
             // Can't send the request to the exception handler. Report the error, which will
             // probably kill the process.
             LTRACEF("SendPacket returned %d\n", status);
+            ExitException();
             return status;
         }
 
@@ -608,6 +595,10 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
         // Note: The event could be signaled after event_wait_deadline returns
         // if the thread was killed while the event was signaled.
         DEBUG_ASSERT(!event_signaled(&exception_event_));
+        // Fetch TRY_NEXT/RESUME status.
+        *out_estatus = state_.exception();
+        DEBUG_ASSERT(*out_estatus == ThreadState::Exception::TRY_NEXT ||
+                     *out_estatus == ThreadState::Exception::RESUME);
         break;
     case ZX_ERR_INTERNAL_INTR_KILLED:
         // Thread was killed.
@@ -617,16 +608,41 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
         __UNREACHABLE;
     }
 
-    exception_wait_port_.reset();
-    exception_report_ = nullptr;
-    thread_.exception_context = nullptr;
-
-    *out_estatus = state_.exception();
-    state_.set(ThreadState::Exception::IDLE);
+    ExitExceptionLocked();
 
     LTRACEF("returning status %d, estatus %d\n",
             status, static_cast<int>(*out_estatus));
     return status;
+}
+
+void ThreadDispatcher::EnterException(fbl::RefPtr<ExceptionPort> eport,
+                                      const zx_exception_report_t* report,
+                                      const arch_exception_context_t* arch_context) {
+    Guard<fbl::Mutex> guard{get_lock()};
+
+    // Mark that we're in an exception.
+    thread_.exception_context = arch_context;
+
+    // For GetExceptionReport.
+    exception_report_ = report;
+
+    // For OnExceptionPortRemoval in case the port is unbound.
+    DEBUG_ASSERT(exception_wait_port_ == nullptr);
+    exception_wait_port_ = eport;
+
+    state_.set(ThreadState::Exception::UNPROCESSED);
+}
+
+void ThreadDispatcher::ExitException() {
+    Guard<fbl::Mutex> guard{get_lock()};
+    ExitExceptionLocked();
+}
+
+void ThreadDispatcher::ExitExceptionLocked() {
+    exception_wait_port_.reset();
+    exception_report_ = nullptr;
+    thread_.exception_context = nullptr;
+    state_.set(ThreadState::Exception::IDLE);
 }
 
 zx_status_t ThreadDispatcher::MarkExceptionHandledWorker(PortDispatcher* eport,

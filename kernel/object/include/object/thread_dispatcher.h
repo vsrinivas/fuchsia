@@ -118,6 +118,13 @@ public:
                                          const arch_exception_context_t* arch_context,
                                          ThreadState::Exception* out_estatus);
 
+    // Record entry/exit to being in an exception.
+    void EnterException(fbl::RefPtr<ExceptionPort> eport,
+                        const zx_exception_report_t* report,
+                        const arch_exception_context_t* arch_context);
+    void ExitException();
+    void ExitExceptionLocked() TA_REQ(get_lock());
+
     // Called when an exception handler is finished processing the exception.
     // If |eport| is non-nullptr, then the exception is only continued if
     // |eport| corresponds to the current exception port.

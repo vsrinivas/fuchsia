@@ -179,8 +179,22 @@ static handler_status_t exception_handler_worker(uint exception_type,
             }
             break;
         default:
-            ASSERT_MSG(0, "unexpected exception result %d", status);
-            __UNREACHABLE;
+            // Instead of requiring exception processing to only return
+            // specific kinds of errors (and thus requiring us to be updated
+            // every time a change causes a new error to be returned), treat
+            // all other errors as fatal. It's debatable whether to give the
+            // next handler a try or immediately kill the task. By immediately
+            // killing the task we bypass the root job exception handler,
+            // but it feels safer.
+            // TODO(ZX-2853): Are there times when we should try harder to
+            // process the exception?
+            // Print something to give the user a clue.
+            printf("KERN: Error %d processing exception in user thread %lu.%lu\n",
+                   status, thread->process()->get_koid(), thread->get_koid());
+            // Still mark the exception as processed so that we don't trigger
+            // later bare-bones crash reporting (TRACE_EXCEPTIONS).
+            *out_processed = true;
+            return HS_NOT_HANDLED;
         }
     }
 
