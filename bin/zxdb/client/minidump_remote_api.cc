@@ -4,6 +4,8 @@
 
 #include "garnet/bin/zxdb/client/minidump_remote_api.h"
 
+#include <cstring>
+
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/lib/debug_ipc/client_protocol.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
@@ -21,6 +23,8 @@ Err ErrNoLive() {
 Err ErrNoImpl() { return Err("Feature not implemented for minidump"); }
 
 Err ErrNoDump() { return Err("Core dump failed to open"); }
+
+Err ErrNoArch() { return Err("Architecture not supported"); }
 
 template <typename ReplyType>
 void ErrNoLive(std::function<void(const Err&, ReplyType)> cb) {
@@ -41,9 +45,216 @@ void ErrNoDump(std::function<void(const Err&, ReplyType)> cb) {
 }
 
 template <typename ReplyType>
+void ErrNoArch(std::function<void(const Err&, ReplyType)> cb) {
+  debug_ipc::MessageLoop::Current()->PostTask(
+    [cb]() { cb(ErrNoArch(), ReplyType()); });
+}
+
+template <typename ReplyType>
 void Succeed(std::function<void(const Err&, ReplyType)> cb, ReplyType r) {
   debug_ipc::MessageLoop::Current()->PostTask(
     [cb, r]() { cb(Err(), r); });
+}
+
+template <typename ValueType>
+void AddReg(debug_ipc::RegisterCategory* category, debug_ipc::RegisterID id,
+            const ValueType& value) {
+  auto& reg = category->registers.emplace_back();
+  reg.id = id;
+  reg.data.resize(sizeof(ValueType));
+  std::memcpy(reg.data.data(), reinterpret_cast<const void*>(&value),
+              reg.data.size());
+}
+
+template <typename IterType>
+debug_ipc::RegisterCategory* MakeCategory(
+    IterType& pos, debug_ipc::RegisterCategory::Type type,
+    debug_ipc::RegistersReply* reply) {
+  if (*pos == type) {
+    pos++;
+    auto category = &reply->categories.emplace_back();
+    category->type = type;
+    return category;
+  }
+
+  return nullptr;
+}
+
+void PopulateRegistersARM64(const crashpad::CPUContextARM64& ctx,
+                            const debug_ipc::RegistersRequest& request,
+                            debug_ipc::RegistersReply* reply) {
+  auto pos = request.categories.begin();
+
+  using R = debug_ipc::RegisterID;
+
+  auto category =
+      MakeCategory(pos, debug_ipc::RegisterCategory::Type::kGeneral, reply);
+  if (category != nullptr) {
+    AddReg(category, R::kARMv8_x0, ctx.regs[0]);
+    AddReg(category, R::kARMv8_x1, ctx.regs[1]);
+    AddReg(category, R::kARMv8_x2, ctx.regs[2]);
+    AddReg(category, R::kARMv8_x3, ctx.regs[3]);
+    AddReg(category, R::kARMv8_x4, ctx.regs[4]);
+    AddReg(category, R::kARMv8_x5, ctx.regs[5]);
+    AddReg(category, R::kARMv8_x6, ctx.regs[6]);
+    AddReg(category, R::kARMv8_x7, ctx.regs[7]);
+    AddReg(category, R::kARMv8_x8, ctx.regs[8]);
+    AddReg(category, R::kARMv8_x9, ctx.regs[9]);
+    AddReg(category, R::kARMv8_x10, ctx.regs[10]);
+    AddReg(category, R::kARMv8_x11, ctx.regs[11]);
+    AddReg(category, R::kARMv8_x12, ctx.regs[12]);
+    AddReg(category, R::kARMv8_x13, ctx.regs[13]);
+    AddReg(category, R::kARMv8_x14, ctx.regs[14]);
+    AddReg(category, R::kARMv8_x15, ctx.regs[15]);
+    AddReg(category, R::kARMv8_x16, ctx.regs[16]);
+    AddReg(category, R::kARMv8_x17, ctx.regs[17]);
+    AddReg(category, R::kARMv8_x18, ctx.regs[18]);
+    AddReg(category, R::kARMv8_x19, ctx.regs[19]);
+    AddReg(category, R::kARMv8_x20, ctx.regs[20]);
+    AddReg(category, R::kARMv8_x21, ctx.regs[21]);
+    AddReg(category, R::kARMv8_x22, ctx.regs[22]);
+    AddReg(category, R::kARMv8_x23, ctx.regs[23]);
+    AddReg(category, R::kARMv8_x24, ctx.regs[24]);
+    AddReg(category, R::kARMv8_x25, ctx.regs[25]);
+    AddReg(category, R::kARMv8_x26, ctx.regs[26]);
+    AddReg(category, R::kARMv8_x27, ctx.regs[27]);
+    AddReg(category, R::kARMv8_x28, ctx.regs[28]);
+    AddReg(category, R::kARMv8_x29, ctx.regs[29]);
+    AddReg(category, R::kARMv8_lr, ctx.regs[30]);
+    AddReg(category, R::kARMv8_sp, ctx.sp);
+    AddReg(category, R::kARMv8_pc, ctx.pc);
+    AddReg(category, R::kARMv8_cpsr, ctx.pstate);
+  }
+
+  // ARM doesn't define any registers in this category.
+  MakeCategory(pos, debug_ipc::RegisterCategory::Type::kFloatingPoint, reply);
+
+  category =
+      MakeCategory(pos, debug_ipc::RegisterCategory::Type::kVector, reply);
+  if (category != nullptr) {
+    AddReg(category, R::kARMv8_fpcr, ctx.fpcr);
+    AddReg(category, R::kARMv8_fpsr, ctx.fpsr);
+    AddReg(category, R::kARMv8_v0, ctx.fpsimd[0]);
+    AddReg(category, R::kARMv8_v1, ctx.fpsimd[1]);
+    AddReg(category, R::kARMv8_v2, ctx.fpsimd[2]);
+    AddReg(category, R::kARMv8_v3, ctx.fpsimd[3]);
+    AddReg(category, R::kARMv8_v4, ctx.fpsimd[4]);
+    AddReg(category, R::kARMv8_v5, ctx.fpsimd[5]);
+    AddReg(category, R::kARMv8_v6, ctx.fpsimd[6]);
+    AddReg(category, R::kARMv8_v7, ctx.fpsimd[7]);
+    AddReg(category, R::kARMv8_v8, ctx.fpsimd[8]);
+    AddReg(category, R::kARMv8_v9, ctx.fpsimd[9]);
+    AddReg(category, R::kARMv8_v10, ctx.fpsimd[10]);
+    AddReg(category, R::kARMv8_v11, ctx.fpsimd[11]);
+    AddReg(category, R::kARMv8_v12, ctx.fpsimd[12]);
+    AddReg(category, R::kARMv8_v13, ctx.fpsimd[13]);
+    AddReg(category, R::kARMv8_v14, ctx.fpsimd[14]);
+    AddReg(category, R::kARMv8_v15, ctx.fpsimd[15]);
+    AddReg(category, R::kARMv8_v16, ctx.fpsimd[16]);
+    AddReg(category, R::kARMv8_v17, ctx.fpsimd[17]);
+    AddReg(category, R::kARMv8_v18, ctx.fpsimd[18]);
+    AddReg(category, R::kARMv8_v19, ctx.fpsimd[19]);
+    AddReg(category, R::kARMv8_v20, ctx.fpsimd[20]);
+    AddReg(category, R::kARMv8_v21, ctx.fpsimd[21]);
+    AddReg(category, R::kARMv8_v22, ctx.fpsimd[22]);
+    AddReg(category, R::kARMv8_v23, ctx.fpsimd[23]);
+    AddReg(category, R::kARMv8_v24, ctx.fpsimd[24]);
+    AddReg(category, R::kARMv8_v25, ctx.fpsimd[25]);
+    AddReg(category, R::kARMv8_v26, ctx.fpsimd[26]);
+    AddReg(category, R::kARMv8_v27, ctx.fpsimd[27]);
+    AddReg(category, R::kARMv8_v28, ctx.fpsimd[28]);
+    AddReg(category, R::kARMv8_v29, ctx.fpsimd[29]);
+    AddReg(category, R::kARMv8_v30, ctx.fpsimd[30]);
+    AddReg(category, R::kARMv8_v31, ctx.fpsimd[31]);
+  }
+
+  // ARM Doesn't define any registers in this category either.
+  MakeCategory(pos, debug_ipc::RegisterCategory::Type::kDebug, reply);
+}
+
+void PopulateRegistersX86_64(const crashpad::CPUContextX86_64& ctx,
+                             const debug_ipc::RegistersRequest& request,
+                             debug_ipc::RegistersReply* reply) {
+  auto pos = request.categories.begin();
+
+  using R = debug_ipc::RegisterID;
+
+  auto category =
+      MakeCategory(pos, debug_ipc::RegisterCategory::Type::kGeneral, reply);
+  if (category != nullptr) {
+    AddReg(category, R::kX64_rax, ctx.rax);
+    AddReg(category, R::kX64_rbx, ctx.rbx);
+    AddReg(category, R::kX64_rcx, ctx.rcx);
+    AddReg(category, R::kX64_rdx, ctx.rdx);
+    AddReg(category, R::kX64_rsi, ctx.rsi);
+    AddReg(category, R::kX64_rdi, ctx.rdi);
+    AddReg(category, R::kX64_rbp, ctx.rbp);
+    AddReg(category, R::kX64_rsp, ctx.rsp);
+    AddReg(category, R::kX64_r8, ctx.r8);
+    AddReg(category, R::kX64_r9, ctx.r9);
+    AddReg(category, R::kX64_r10, ctx.r10);
+    AddReg(category, R::kX64_r11, ctx.r11);
+    AddReg(category, R::kX64_r12, ctx.r12);
+    AddReg(category, R::kX64_r13, ctx.r13);
+    AddReg(category, R::kX64_r14, ctx.r14);
+    AddReg(category, R::kX64_r15, ctx.r15);
+    AddReg(category, R::kX64_rip, ctx.rip);
+    AddReg(category, R::kX64_rflags, ctx.rflags);
+  }
+
+  category = MakeCategory(
+      pos, debug_ipc::RegisterCategory::Type::kFloatingPoint, reply);
+  if (category != nullptr) {
+    AddReg(category, R::kX64_fcw, ctx.fxsave.fcw);
+    AddReg(category, R::kX64_fsw, ctx.fxsave.fsw);
+    AddReg(category, R::kX64_ftw, ctx.fxsave.ftw);
+    AddReg(category, R::kX64_fop, ctx.fxsave.fop);
+    AddReg(category, R::kX64_fip, ctx.fxsave.fpu_ip_64);
+    AddReg(category, R::kX64_fdp, ctx.fxsave.fpu_dp_64);
+    AddReg(category, R::kX64_st0, ctx.fxsave.st_mm[0]);
+    AddReg(category, R::kX64_st1, ctx.fxsave.st_mm[1]);
+    AddReg(category, R::kX64_st2, ctx.fxsave.st_mm[2]);
+    AddReg(category, R::kX64_st3, ctx.fxsave.st_mm[3]);
+    AddReg(category, R::kX64_st4, ctx.fxsave.st_mm[4]);
+    AddReg(category, R::kX64_st5, ctx.fxsave.st_mm[5]);
+    AddReg(category, R::kX64_st6, ctx.fxsave.st_mm[6]);
+    AddReg(category, R::kX64_st7, ctx.fxsave.st_mm[7]);
+  }
+
+  category =
+      MakeCategory(pos, debug_ipc::RegisterCategory::Type::kVector, reply);
+  if (category != nullptr) {
+    AddReg(category, R::kX64_mxcsr, ctx.fxsave.mxcsr);
+    AddReg(category, R::kX64_xmm0, ctx.fxsave.xmm[0]);
+    AddReg(category, R::kX64_xmm1, ctx.fxsave.xmm[1]);
+    AddReg(category, R::kX64_xmm2, ctx.fxsave.xmm[2]);
+    AddReg(category, R::kX64_xmm3, ctx.fxsave.xmm[3]);
+    AddReg(category, R::kX64_xmm4, ctx.fxsave.xmm[4]);
+    AddReg(category, R::kX64_xmm5, ctx.fxsave.xmm[5]);
+    AddReg(category, R::kX64_xmm6, ctx.fxsave.xmm[6]);
+    AddReg(category, R::kX64_xmm7, ctx.fxsave.xmm[7]);
+    AddReg(category, R::kX64_xmm8, ctx.fxsave.xmm[8]);
+    AddReg(category, R::kX64_xmm9, ctx.fxsave.xmm[9]);
+    AddReg(category, R::kX64_xmm10, ctx.fxsave.xmm[10]);
+    AddReg(category, R::kX64_xmm11, ctx.fxsave.xmm[11]);
+    AddReg(category, R::kX64_xmm12, ctx.fxsave.xmm[12]);
+    AddReg(category, R::kX64_xmm13, ctx.fxsave.xmm[13]);
+    AddReg(category, R::kX64_xmm14, ctx.fxsave.xmm[14]);
+    AddReg(category, R::kX64_xmm15, ctx.fxsave.xmm[15]);
+
+    // YMM registers are missing from minidump at this time.
+  }
+
+  category =
+      MakeCategory(pos, debug_ipc::RegisterCategory::Type::kDebug, reply);
+  if (category != nullptr) {
+    AddReg(category, R::kX64_dr0, ctx.dr0);
+    AddReg(category, R::kX64_dr1, ctx.dr1);
+    AddReg(category, R::kX64_dr2, ctx.dr2);
+    AddReg(category, R::kX64_dr3, ctx.dr3);
+    AddReg(category, R::kX64_dr6, ctx.dr6);
+    AddReg(category, R::kX64_dr7, ctx.dr7);
+  }
 }
 
 }  // namespace
@@ -179,6 +390,11 @@ void MinidumpRemoteAPI::ProcessTree(
 void MinidumpRemoteAPI::Threads(
     const debug_ipc::ThreadsRequest& request,
     std::function<void(const Err&, debug_ipc::ThreadsReply)> cb) {
+  if (!minidump_) {
+    ErrNoDump(cb);
+    return;
+  }
+
   debug_ipc::ThreadsReply reply;
 
   if (static_cast<pid_t>(request.process_koid) == minidump_->ProcessID()) {
@@ -203,8 +419,47 @@ void MinidumpRemoteAPI::ReadMemory(
 void MinidumpRemoteAPI::Registers(
     const debug_ipc::RegistersRequest& request,
     std::function<void(const Err&, debug_ipc::RegistersReply)> cb) {
-  // TODO
-  ErrNoImpl(cb);
+  if (!minidump_) {
+    ErrNoDump(cb);
+    return;
+  }
+
+  debug_ipc::RegistersReply reply;
+
+  if (static_cast<pid_t>(request.process_koid) != minidump_->ProcessID()) {
+    Succeed(cb, reply);
+    return;
+  }
+
+  const crashpad::ThreadSnapshot* thread = nullptr;
+
+  for (const auto& item : minidump_->Threads()) {
+    if (item->ThreadID() == request.thread_koid) {
+      thread = item;
+      break;
+    }
+  }
+
+  if (thread == nullptr) {
+    Succeed(cb, reply);
+    return;
+  }
+
+  const auto& context = *thread->Context();
+
+  switch (context.architecture) {
+    case crashpad::CPUArchitecture::kCPUArchitectureARM64:
+      PopulateRegistersARM64(*context.arm64, request, &reply);
+      break;
+    case crashpad::CPUArchitecture::kCPUArchitectureX86_64:
+      PopulateRegistersX86_64(*context.x86_64, request, &reply);
+      break;
+    default:
+      ErrNoArch(cb);
+      return;
+  }
+
+  Succeed(cb, reply);
 }
 
 void MinidumpRemoteAPI::AddOrChangeBreakpoint(
