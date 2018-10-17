@@ -9,8 +9,8 @@
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>
 #include <lib/sync/completion.h>
-#include <zircon/device/usb-tester.h>
 #include <zircon/hw/usb.h>
+#include <zircon/usb/tester/c/fidl.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -54,6 +54,9 @@ typedef struct {
 
     list_node_t node;
 } test_req_t;
+
+static inline int MSB(int n) { return n >> 8; }
+static inline int LSB(int n) { return n & 0xFF; }
 
 static void test_req_complete(usb_request_t* req, void* cookie) {
     sync_completion_signal((sync_completion_t*)cookie);
@@ -135,10 +138,10 @@ static zx_status_t test_req_fill_data(usb_tester_t* usb_tester, test_req_t* test
     }
     for (size_t i = 0; i < test_req->req->header.length; ++i) {
         switch (data_pattern) {
-        case USB_TESTER_DATA_PATTERN_CONSTANT:
+        case zircon_usb_tester_DataPatternType_CONSTANT:
             buf[i] = TEST_DUMMY_DATA;
             break;
-        case USB_TESTER_DATA_PATTERN_RANDOM:
+        case zircon_usb_tester_DataPatternType_RANDOM:
             buf[i] = rand();
             break;
         default:
@@ -226,7 +229,7 @@ static zx_status_t usb_tester_set_mode_fwloader(usb_tester_t* usb_tester) {
 
 // Tests the loopback of data from the bulk OUT EP to the bulk IN EP.
 static zx_status_t usb_tester_bulk_loopback(usb_tester_t* usb_tester,
-                                            const usb_tester_params_t* params) {
+                                            const zircon_usb_tester_TestParams* params) {
     if (params->len > REQ_MAX_LEN) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -323,8 +326,8 @@ static zx_status_t usb_tester_verify_loopback(usb_tester_t* usb_tester, list_nod
 }
 
 static zx_status_t usb_tester_isoch_loopback(usb_tester_t* usb_tester,
-                                             const usb_tester_params_t* params,
-                                             usb_tester_result_t* result) {
+                                             const zircon_usb_tester_TestParams* params,
+                                             zircon_usb_tester_IsochResult* result) {
     if (params->len > REQ_MAX_LEN) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -391,44 +394,43 @@ done:;
     return status;
 }
 
-static zx_status_t usb_tester_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                    void* out_buf, size_t out_len, size_t* out_actual) {
+static zx_status_t fidl_SetModeFwloader(void* ctx, fidl_txn_t* txn) {
     usb_tester_t* usb_tester = ctx;
+    return zircon_usb_tester_DeviceSetModeFwloader_reply(
+        txn, usb_tester_set_mode_fwloader(usb_tester));
+}
 
-    switch (op) {
-    case IOCTL_USB_TESTER_SET_MODE_FWLOADER:
-        return usb_tester_set_mode_fwloader(usb_tester);
-    case IOCTL_USB_TESTER_BULK_LOOPBACK: {
-        if (in_buf == NULL || in_len != sizeof(usb_tester_params_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        return usb_tester_bulk_loopback(usb_tester, in_buf);
-    }
-    case IOCTL_USB_TESTER_ISOCH_LOOPBACK: {
-        if (in_buf == NULL || in_len != sizeof(usb_tester_params_t) ||
-            out_buf == NULL || out_len != sizeof(usb_tester_result_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        usb_tester_result_t* result = out_buf;
-        zx_status_t status = usb_tester_isoch_loopback(usb_tester, in_buf, result);
-        if (status != ZX_OK) {
-            return status;
-        }
-        *out_actual = sizeof(*result);
-        return ZX_OK;
-    }
-    case  IOCTL_USB_TESTER_GET_DEVICE_DESC: {
-        usb_device_descriptor_t* descriptor = out_buf;
-        if (out_len < sizeof(*descriptor)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        usb_get_device_descriptor(&usb_tester->usb, descriptor);
-        *out_actual = sizeof(*descriptor);
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+static zx_status_t fidl_BulkLoopback(void* ctx, const zircon_usb_tester_TestParams* params,
+                                     fidl_txn_t* txn) {
+    usb_tester_t* usb_tester = ctx;
+    return zircon_usb_tester_DeviceBulkLoopback_reply(
+        txn, usb_tester_bulk_loopback(usb_tester, params));
+}
+
+static zx_status_t fidl_IsochLoopback(void* ctx, const zircon_usb_tester_TestParams* params,
+                                      fidl_txn_t* txn) {
+    usb_tester_t* usb_tester = ctx;
+    zircon_usb_tester_IsochResult result = {};
+    zx_status_t status = usb_tester_isoch_loopback(usb_tester, params, &result);
+    return zircon_usb_tester_DeviceIsochLoopback_reply(txn, status, &result);
+}
+
+static zx_status_t fidl_GetVersion(void* ctx, fidl_txn_t* txn) {
+    usb_tester_t* usb_tester = ctx;
+    usb_device_descriptor_t desc = {};
+    usb_get_device_descriptor(&usb_tester->usb, &desc);
+    return zircon_usb_tester_DeviceGetVersion_reply(txn, MSB(desc.bcdDevice), LSB(desc.bcdDevice));
+}
+
+static zircon_usb_tester_Device_ops_t fidl_ops = {
+    .SetModeFwloader = fidl_SetModeFwloader,
+    .BulkLoopback = fidl_BulkLoopback,
+    .IsochLoopback = fidl_IsochLoopback,
+    .GetVersion = fidl_GetVersion,
+};
+
+static zx_status_t usb_tester_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return zircon_usb_tester_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 static void usb_tester_free(usb_tester_t* ctx) {
@@ -449,8 +451,8 @@ static void usb_tester_release(void* ctx) {
 
 static zx_protocol_device_t usb_tester_device_protocol = {
     .version = DEVICE_OPS_VERSION,
-    .ioctl = usb_tester_ioctl,
     .unbind = usb_tester_unbind,
+    .message = usb_tester_message,
     .release = usb_tester_release,
 };
 

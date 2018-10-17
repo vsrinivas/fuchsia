@@ -12,6 +12,12 @@ MODULE_SRCS += $(LOCAL_DIR)/usb-test.c
 
 MODULE_NAME := usb-test
 
-MODULE_LIBS := system/ulib/unittest system/ulib/fdio system/ulib/c
+MODULE_LIBS := \
+    system/ulib/unittest \
+    system/ulib/zircon \
+    system/ulib/fdio \
+    system/ulib/c \
+
+MODULE_FIDL_LIBS := system/fidl/zircon-usb-tester
 
 include make/module.mk

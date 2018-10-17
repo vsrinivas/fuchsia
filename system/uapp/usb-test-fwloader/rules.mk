@@ -20,6 +20,8 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/c
 
-MODULE_FIDL_LIBS := system/fidl/zircon-usb-test-fwloader
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-usb-test-fwloader \
+    system/fidl/zircon-usb-tester
 
 include make/module.mk

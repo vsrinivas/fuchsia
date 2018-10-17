@@ -9,10 +9,10 @@
 #include <lib/fdio/watcher.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/usb-tester.h>
 #include <zircon/hw/usb.h>
 #include <zircon/types.h>
 #include <zircon/usb/test/fwloader/c/fidl.h>
+#include <zircon/usb/tester/c/fidl.h>
 
 #include <dirent.h>
 #include <errno.h>
@@ -27,9 +27,6 @@ static const char* const DEV_USB_TESTER_DIR = "/dev/class/usb-tester";
 static const int ENUMERATION_WAIT_SECS = 5;
 
 static constexpr uint32_t BUFFER_SIZE = 8 * 1024;
-
-static inline int MSB(int n) { return n >> 8; }
-static inline int LSB(int n) { return n & 0xFF; }
 
 zx_status_t watch_dir_cb(int dirfd, int event, const char* filename, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
@@ -149,16 +146,27 @@ int main(int argc, char** argv) {
     fbl::unique_fd fd;
     zx_status_t status = open_fwloader_dev(&fd);
     if (status != ZX_OK) {
+        fbl::unique_fd usb_tester_fd;
         // Check if there is a usb tester device we can switch to firmware loading mode.
-        status = open_usb_tester_dev(&fd);
+        status = open_usb_tester_dev(&usb_tester_fd);
         if (status != ZX_OK) {
             fprintf(stderr, "No usb test fwloader or tester device found, err: %d\n", status);
             return -1;
         }
+        zx::channel usb_tester_svc;
+        status = fdio_get_service_handle(usb_tester_fd.release(),
+                                         usb_tester_svc.reset_and_get_address());
+        if (status != ZX_OK) {
+            fprintf(stderr, "Failed to get usb tester device service handle, err : %d\n", status);
+            return -1;
+        }
         printf("Switching usb tester device to fwloader mode\n");
-        ssize_t res = ioctl_usb_tester_set_mode_fwloader(fd.get());
-        if (res != 0) {
-            fprintf(stderr, "Failed to switch usb test device to fwloader mode, err: %zd\n", res);
+        zx_status_t res = zircon_usb_tester_DeviceSetModeFwloader(usb_tester_svc.get(), &status);
+        if (res == ZX_OK) {
+            res = status;
+        }
+        if (res != ZX_OK) {
+            fprintf(stderr, "Failed to switch usb test device to fwloader mode, err: %d\n", res);
             return -1;
         }
         status = wait_dev_enumerate(DEV_FX3_DIR, &fd);
@@ -201,13 +209,18 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Failed to wait for updated usb tester to enumerate, err: %d\n", status);
         return -1;
     }
-    usb_device_descriptor_t device_desc;
-    ssize_t res = ioctl_usb_tester_get_device_desc(updated_dev.get(), &device_desc);
-    if (res != sizeof(device_desc)) {
-        printf("Failed to get updated usb tester device descriptor, err: %zd\n", res);
+    status = fdio_get_service_handle(updated_dev.release(), svc.reset_and_get_address());
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to get updated device service handle, err : %d\n", status);
         return -1;
     }
-    printf("Updated usb tester firmware to v%x.%x\n",
-           MSB(device_desc.bcdDevice), LSB(device_desc.bcdDevice));
+    uint8_t major_version;
+    uint8_t minor_version;
+    status = zircon_usb_tester_DeviceGetVersion(svc.get(), &major_version, &minor_version);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to get updated device version, err: %d\n", status);
+        return -1;
+    }
+    printf("Updated usb tester firmware to v%x.%x\n", major_version, minor_version);
     return 0;
 }

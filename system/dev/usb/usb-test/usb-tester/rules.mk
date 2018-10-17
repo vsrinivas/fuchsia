@@ -10,7 +10,13 @@ MODULE_TYPE := driver
 
 MODULE_SRCS += $(LOCAL_DIR)/usb-tester.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync system/dev/lib/usb
+MODULE_STATIC_LIBS := \
+    system/ulib/ddk \
+    system/ulib/fidl \
+    system/ulib/sync \
+    system/dev/lib/usb \
+
+MODULE_FIDL_LIBS := system/fidl/zircon-usb-tester
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 

@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/util.h>
 #include <unittest/unittest.h>
-#include <zircon/device/usb-tester.h>
+#include <zircon/usb/tester/c/fidl.h>
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -14,7 +15,7 @@
 #define ISOCH_MIN_PASS_PERCENT 80
 #define ISOCH_MIN_PACKETS      10lu
 
-static zx_status_t open_test_device(int* out_fd) {
+static zx_status_t open_test_device(zx_handle_t* out_svc) {
     DIR* d = opendir(USB_TESTER_DEV_DIR);
     if (d == NULL) {
         return ZX_ERR_BAD_STATE;
@@ -25,7 +26,12 @@ static zx_status_t open_test_device(int* out_fd) {
         if (fd < 0) {
             continue;
         }
-        *out_fd = fd;
+        zx_handle_t svc;
+        zx_status_t status = fdio_get_service_handle(fd, &svc);
+        if (status != ZX_OK) {
+            continue;
+        }
+        *out_svc = svc;
         closedir(d);
         return ZX_OK;
     }
@@ -36,29 +42,33 @@ static zx_status_t open_test_device(int* out_fd) {
 static bool usb_bulk_loopback_test(void) {
     BEGIN_TEST;
 
-    int dev_fd;
-    if (open_test_device(&dev_fd) != ZX_OK) {
+    zx_handle_t dev_svc;
+    if (open_test_device(&dev_svc) != ZX_OK) {
         unittest_printf_critical(" [SKIPPING]");
         return true;
     }
-    ASSERT_GE(dev_fd, 0, "invalid device fd");
+    ASSERT_NE(dev_svc, ZX_HANDLE_INVALID, "invalid device service handle");
 
-    usb_tester_params_t params = {
-        .data_pattern = USB_TESTER_DATA_PATTERN_CONSTANT,
+    zircon_usb_tester_TestParams params = {
+        .data_pattern = zircon_usb_tester_DataPatternType_CONSTANT,
         .len =  64 * 1024
     };
-    ASSERT_EQ(ioctl_usb_tester_bulk_loopback(dev_fd, &params), ZX_OK,
-              "bulk loopback failed: USB_TESTER_DATA_PATTERN_CONSTANT 64 K");
+    zx_status_t status;
+    ASSERT_EQ(zircon_usb_tester_DeviceBulkLoopback(dev_svc, &params, &status), ZX_OK,
+              "failed to call DeviceBulkLoopback");
+    ASSERT_EQ(status, ZX_OK, "bulk loopback failed: USB_TESTER_DATA_PATTERN_CONSTANT 64 K");
 
-    params.data_pattern = USB_TESTER_DATA_PATTERN_RANDOM;
-    ASSERT_EQ(ioctl_usb_tester_bulk_loopback(dev_fd, &params), ZX_OK,
-              "bulk loopback failed: USB_TESTER_DATA_PATTERN_RANDOM 64 K");
+    params.data_pattern = zircon_usb_tester_DataPatternType_RANDOM;
+    ASSERT_EQ(zircon_usb_tester_DeviceBulkLoopback(dev_svc, &params, &status), ZX_OK,
+              "failed to call DeviceBulkLoopback");
+    ASSERT_EQ(status, ZX_OK, "bulk loopback failed: USB_TESTER_DATA_PATTERN_RANDOM 64 K");
 
-    close(dev_fd);
+    close(dev_svc);
     END_TEST;
 }
 
-static bool usb_isoch_verify_result(usb_tester_params_t* params, usb_tester_result_t* result) {
+static bool usb_isoch_verify_result(zircon_usb_tester_TestParams* params,
+                                    zircon_usb_tester_IsochResult* result) {
     BEGIN_HELPER;
 
     ASSERT_GT(result->num_packets, 0lu, "didn't transfer any isochronous packets");
@@ -74,30 +84,33 @@ static bool usb_isoch_verify_result(usb_tester_params_t* params, usb_tester_resu
 static bool usb_isoch_loopback_test(void) {
     BEGIN_TEST;
 
-    int dev_fd;
-    if (open_test_device(&dev_fd) != ZX_OK) {
+    zx_handle_t dev_svc;
+    if (open_test_device(&dev_svc) != ZX_OK) {
         unittest_printf_critical(" [SKIPPING]");
         return true;
     }
-    ASSERT_GE(dev_fd, 0, "Invalid device fd");
+    ASSERT_NE(dev_svc, ZX_HANDLE_INVALID, "Invalid device service handle");
 
-    usb_tester_params_t params = {
-        .data_pattern = USB_TESTER_DATA_PATTERN_CONSTANT,
+    zircon_usb_tester_TestParams params = {
+        .data_pattern = zircon_usb_tester_DataPatternType_CONSTANT,
         .len =  64 * 1024
     };
     char err_msg1[] = "isoch loopback failed: USB_TESTER_DATA_PATTERN_CONSTANT 64 K";
-    usb_tester_result_t result = {};
-    ASSERT_EQ(ioctl_usb_tester_isoch_loopback(dev_fd, &params, &result),
-              (ssize_t)(sizeof(result)), err_msg1);
+    zx_status_t status;
+    zircon_usb_tester_IsochResult result = {};
+    ASSERT_EQ(zircon_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result), ZX_OK,
+              "failed to call DeviceIsochLoopback");
+    ASSERT_EQ(status, ZX_OK, err_msg1);
     ASSERT_TRUE(usb_isoch_verify_result(&params, &result), err_msg1);
 
     char err_msg2[] = "isoch loopback failed: USB_TESTER_DATA_PATTERN_RANDOM 64 K";
-    params.data_pattern = USB_TESTER_DATA_PATTERN_RANDOM;
-    ASSERT_EQ(ioctl_usb_tester_isoch_loopback(dev_fd, &params, &result),
-              (ssize_t)(sizeof(result)), err_msg2);
+    params.data_pattern = zircon_usb_tester_DataPatternType_RANDOM;
+    ASSERT_EQ(zircon_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result), ZX_OK,
+              "failed to call DeviceIsochLoopback");
+    ASSERT_EQ(status, ZX_OK, err_msg2);
     ASSERT_TRUE(usb_isoch_verify_result(&params, &result), err_msg2);
 
-    close(dev_fd);
+    close(dev_svc);
 
     END_TEST;
 }
