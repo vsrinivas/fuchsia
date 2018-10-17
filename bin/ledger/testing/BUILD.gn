@@ -25,8 +25,6 @@ source_set("lib") {
     "run_with_tracing.h",
     "sync_params.cc",
     "sync_params.h",
-    "test_backoff.cc",
-    "test_backoff.h",
     "test_with_environment.cc",
     "test_with_environment.h",
   ]

@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 
+#include <lib/backoff/testing/test_backoff.h>
 #include <lib/callback/cancellable_helper.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
@@ -22,7 +23,6 @@
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "peridot/bin/ledger/testing/test_backoff.h"
 
 namespace ledger {
 namespace {
@@ -41,7 +41,8 @@ class ConflictResolverClientTest : public TestWithPageStorage {
     page_storage_ = page_storage.get();
 
     std::unique_ptr<MergeResolver> resolver = std::make_unique<MergeResolver>(
-        [] {}, &environment_, page_storage_, std::make_unique<TestBackoff>());
+        [] {}, &environment_, page_storage_,
+        std::make_unique<backoff::TestBackoff>());
     resolver->SetMergeStrategy(nullptr);
     resolver->set_on_empty(QuitLoopClosure());
     merge_resolver_ = resolver.get();

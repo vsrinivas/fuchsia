@@ -8,6 +8,7 @@
 #include <utility>
 
 #include <lib/async/cpp/task.h>
+#include <lib/backoff/testing/test_backoff.h>
 #include <lib/callback/cancellable_helper.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
@@ -26,7 +27,6 @@
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "peridot/bin/ledger/testing/test_backoff.h"
 
 namespace ledger {
 namespace {
@@ -280,7 +280,7 @@ TEST_F(MergeResolverTest, Empty) {
   std::unique_ptr<LastOneWinsMergeStrategy> strategy =
       std::make_unique<LastOneWinsMergeStrategy>();
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
-                         std::make_unique<TestBackoff>());
+                         std::make_unique<backoff::TestBackoff>());
   resolver.SetMergeStrategy(std::move(strategy));
   resolver.set_on_empty(QuitLoopClosure());
 
@@ -354,7 +354,7 @@ TEST_F(MergeResolverTest, CommonAncestor) {
 
   // Set a merge strategy to capture the requested merge.
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
-                         std::make_unique<TestBackoff>());
+                         std::make_unique<backoff::TestBackoff>());
   std::unique_ptr<CapturingMergeStrategy> strategy =
       std::make_unique<CapturingMergeStrategy>();
   auto strategy_ptr = strategy.get();
@@ -409,7 +409,7 @@ TEST_F(MergeResolverTest, LastOneWins) {
   std::unique_ptr<LastOneWinsMergeStrategy> strategy =
       std::make_unique<LastOneWinsMergeStrategy>();
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
-                         std::make_unique<TestBackoff>());
+                         std::make_unique<backoff::TestBackoff>());
   resolver.SetMergeStrategy(std::move(strategy));
   resolver.set_on_empty(callback::SetWhenCalled(&called));
 
@@ -478,7 +478,7 @@ TEST_F(MergeResolverTest, LastOneWinsDiffNotAvailable) {
   std::unique_ptr<LastOneWinsMergeStrategy> strategy =
       std::make_unique<LastOneWinsMergeStrategy>();
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
-                         std::make_unique<TestBackoff>());
+                         std::make_unique<backoff::TestBackoff>());
   resolver.SetMergeStrategy(std::move(strategy));
   resolver.set_on_empty(callback::SetWhenCalled(&called));
 
@@ -524,7 +524,7 @@ TEST_F(MergeResolverTest, None) {
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_5));
 
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
-                         std::make_unique<TestBackoff>());
+                         std::make_unique<backoff::TestBackoff>());
   resolver.set_on_empty(QuitLoopClosure());
   RunLoopUntilIdle();
   EXPECT_TRUE(resolver.IsEmpty());
@@ -561,7 +561,7 @@ TEST_F(MergeResolverTest, UpdateMidResolution) {
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_3));
 
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
-                         std::make_unique<TestBackoff>());
+                         std::make_unique<backoff::TestBackoff>());
   resolver.set_on_empty(callback::SetWhenCalled(&called));
   resolver.SetMergeStrategy(std::make_unique<LastOneWinsMergeStrategy>());
   async::PostTask(dispatcher(), [&resolver] {
@@ -590,10 +590,11 @@ TEST_F(MergeResolverTest, UpdateMidResolution) {
 TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
   storage::fake::FakePageStorage page_storage(&environment_, "page_id");
 
-  int get_next_count = 0;
   bool on_empty_called;
+  auto backoff = std::make_unique<backoff::TestBackoff>();
+  auto backoff_ptr = backoff.get();
   MergeResolver resolver([] {}, &environment_, &page_storage,
-                         std::make_unique<TestBackoff>(&get_next_count));
+                         std::move(backoff));
   resolver.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   auto strategy = std::make_unique<RecordingTestStrategy>();
   strategy->SetOnMerge(QuitLoopClosure());
@@ -646,7 +647,7 @@ TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
   // before inserting tasks into the message loop.
   RunLoopFor(zx::sec(5));
 
-  EXPECT_GT(get_next_count, 0);
+  EXPECT_GT(backoff_ptr->get_next_count, 0);
 }
 
 TEST_F(MergeResolverTest, AutomaticallyMergeIdenticalCommits) {
@@ -670,7 +671,7 @@ TEST_F(MergeResolverTest, AutomaticallyMergeIdenticalCommits) {
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_2));
 
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
-                         std::make_unique<TestBackoff>());
+                         std::make_unique<backoff::TestBackoff>());
   resolver.set_on_empty(callback::SetWhenCalled(&called));
   auto merge_strategy = std::make_unique<RecordingTestStrategy>();
   auto merge_strategy_ptr = merge_strategy.get();
@@ -696,7 +697,7 @@ TEST_F(MergeResolverTest, NoConflictCallback_ConflictsResolved) {
   std::unique_ptr<LastOneWinsMergeStrategy> strategy =
       std::make_unique<LastOneWinsMergeStrategy>();
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
-                         std::make_unique<TestBackoff>());
+                         std::make_unique<backoff::TestBackoff>());
   resolver.SetMergeStrategy(std::move(strategy));
   resolver.set_on_empty(MakeQuitTaskOnce());
 
@@ -752,7 +753,7 @@ TEST_F(MergeResolverTest, NoConflictCallback_NoConflicts) {
   std::unique_ptr<LastOneWinsMergeStrategy> strategy =
       std::make_unique<LastOneWinsMergeStrategy>();
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
-                         std::make_unique<TestBackoff>());
+                         std::make_unique<backoff::TestBackoff>());
   resolver.SetMergeStrategy(std::move(strategy));
   resolver.set_on_empty(MakeQuitTaskOnce());
 
@@ -774,7 +775,7 @@ TEST_F(MergeResolverTest, NoConflictCallback_NoConflicts) {
 
 TEST_F(MergeResolverTest, HasUnfinishedMerges) {
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
-                         std::make_unique<TestBackoff>());
+                         std::make_unique<backoff::TestBackoff>());
   std::unique_ptr<CapturingMergeStrategy> strategy =
       std::make_unique<CapturingMergeStrategy>();
   auto strategy_ptr = strategy.get();

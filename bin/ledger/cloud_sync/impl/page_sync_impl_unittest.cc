@@ -11,7 +11,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <lib/async/cpp/task.h>
-#include <lib/backoff/backoff.h>
+#include <lib/backoff/testing/test_backoff.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/optional.h>
@@ -27,7 +27,6 @@
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
-#include "peridot/bin/ledger/testing/test_backoff.h"
 
 namespace cloud_sync {
 namespace {
@@ -65,14 +64,18 @@ class PageSyncImplTest : public gtest::TestLoopFixture {
     std::unique_ptr<TestSyncStateWatcher> watcher =
         std::make_unique<TestSyncStateWatcher>();
     state_watcher_ = watcher.get();
+
+    auto download_backoff = std::make_unique<backoff::TestBackoff>();
+    download_backoff->backoff_to_return = zx::msec(50);
+    download_backoff_ptr_ = download_backoff.get();
+    auto upload_backoff = std::make_unique<backoff::TestBackoff>();
+    upload_backoff->backoff_to_return = zx::msec(50);
+    upload_backoff_ptr_ = upload_backoff.get();
+
     page_sync_ = std::make_unique<PageSyncImpl>(
         dispatcher(), &storage_, &storage_, &encryption_service_,
-        std::move(page_cloud_ptr_),
-        std::make_unique<ledger::TestBackoff>(&download_backoff_get_next_calls_,
-                                              zx::msec(50)),
-        std::make_unique<ledger::TestBackoff>(&upload_backoff_get_next_calls_,
-                                              zx::msec(50)),
-        std::move(watcher));
+        std::move(page_cloud_ptr_), std::move(download_backoff),
+        std::move(upload_backoff), std::move(watcher));
   }
   ~PageSyncImplTest() override {}
 
@@ -92,8 +95,8 @@ class PageSyncImplTest : public gtest::TestLoopFixture {
   encryption::FakeEncryptionService encryption_service_;
   cloud_provider::PageCloudPtr page_cloud_ptr_;
   TestPageCloud page_cloud_;
-  int download_backoff_get_next_calls_ = 0;
-  int upload_backoff_get_next_calls_ = 0;
+  backoff::TestBackoff* download_backoff_ptr_;
+  backoff::TestBackoff* upload_backoff_ptr_;
   TestSyncStateWatcher* state_watcher_;
   std::unique_ptr<PageSyncImpl> page_sync_;
 
@@ -397,7 +400,7 @@ TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
   // We need to wait for the callback to be executed on the PageSync side.
   RunLoopUntilIdle();
   EXPECT_EQ(1u, page_cloud_.add_commits_calls);
-  EXPECT_EQ(1, upload_backoff_get_next_calls_);
+  EXPECT_EQ(1, upload_backoff_ptr_->get_next_count);
 
   // Verify that the commit is still not marked as synced in storage.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
