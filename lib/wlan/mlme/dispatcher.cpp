@@ -259,6 +259,7 @@ zx_status_t Dispatcher::HandleMinstrelPeerList(uint32_t ordinal, zx_txid_t txid)
     zx_status_t status = device_->GetMinstrelPeers(&resp.peers);
     if (status != ZX_OK) {
         errorf("cannot get minstrel peer list: %s\n", zx_status_get_string(status));
+        resp.peers.peers.resize(0);
     }
     return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEListMinstrelPeersOrdinal, txid);
 }
