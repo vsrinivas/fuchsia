@@ -104,6 +104,14 @@ class PlayerCore {
   // currently unknown.
   int64_t duration_ns() const;
 
+  // Indicates whether the player can pause. Returns false if this information
+  // is currently unknown.
+  bool can_pause() const;
+
+  // Indicates whether the player can seek. Returns false if this information
+  // is currently unknown.
+  bool can_seek() const;
+
   // Returns the metadata for the current content or nullptr if no metadata
   // has been obtained.
   // TODO(dalesat): Remove metadata concerns from the player and source

@@ -16,7 +16,8 @@ namespace media_player {
 // A graph segment that produces elementary streams.
 //
 // Note that the update callback supplied in Segment::Provision is used to
-// notify of changes to the value returned by metadata().
+// notify of changes to the values returned by duration_ns(), can_pause(),
+// can_seek() and metadata().
 // TODO(dalesat): Consider moving metadata out of this definition. Not all
 // sources will provide metadata, and there's no reason why Player should be
 // concerned with metadata.
@@ -43,6 +44,12 @@ class SourceSegment : public Segment {
   // Returns the duration of the content in nanoseconds or 0 if the duration is
   // currently unknown.
   virtual int64_t duration_ns() const = 0;
+
+  // Indicates whether this segment can pause.
+  virtual bool can_pause() const = 0;
+
+  // Indicates whether this segment can seek.
+  virtual bool can_seek() const = 0;
 
   // Returns the metadata for the current content or nullptr if no metadata
   // has been obtained.

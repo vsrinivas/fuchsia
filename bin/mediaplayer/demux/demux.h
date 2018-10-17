@@ -26,7 +26,7 @@ class Demux : public AsyncNode {
  public:
   using SeekCallback = fit::closure;
   using StatusCallback = fit::function<void(
-      int64_t duration_ns, const Metadata& metadata,
+      int64_t duration_ns, bool can_seek, const Metadata& metadata,
       const std::string& problem_type, const std::string& problem_details)>;
 
   // Represents a stream produced by the demux.

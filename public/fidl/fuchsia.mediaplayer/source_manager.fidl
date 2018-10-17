@@ -72,6 +72,12 @@ struct SourceStatus {
     // Duration in nanoseconds.
     int64 duration_ns;
 
+    // Whether the source can pause.
+    bool can_pause;
+
+    // Whether the source can seek.
+    bool can_seek;
+
     // Whether the source has an audio stream.
     bool has_audio;
 

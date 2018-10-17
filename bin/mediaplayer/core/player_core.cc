@@ -126,6 +126,10 @@ void PlayerCore::SetTimelineFunction(media::TimelineFunction timeline_function,
                                      fit::closure callback) {
   FXL_DCHECK(timeline_function.reference_delta() != 0);
 
+  // We allow pause even though the source may not be capable. We should be
+  // able to stop progress prior to shutting down the player.
+  // TODO(dalesat): Check for pause if this turns out not to be the case.
+
   int64_t reference_time = timeline_function.reference_time();
   if (reference_time == fuchsia::media::NO_TIMESTAMP) {
     reference_time = media::Timeline::local_now() + kMinimumLeadTime;
@@ -164,6 +168,8 @@ void PlayerCore::SetProgramRange(uint64_t program, int64_t min_pts,
 
 void PlayerCore::Seek(int64_t position, fit::closure callback) {
   if (source_segment_) {
+    FXL_DCHECK(can_seek());
+
     source_segment_->Seek(position,
                           [this, callback = std::move(callback)]() mutable {
                             async::PostTask(dispatcher_, std::move(callback));
@@ -195,6 +201,22 @@ int64_t PlayerCore::duration_ns() const {
   }
 
   return 0;
+}
+
+bool PlayerCore::can_pause() const {
+  if (source_segment_) {
+    return source_segment_->can_pause();
+  }
+
+  return false;
+}
+
+bool PlayerCore::can_seek() const {
+  if (source_segment_) {
+    return source_segment_->can_seek();
+  }
+
+  return false;
 }
 
 const Metadata* PlayerCore::metadata() const {

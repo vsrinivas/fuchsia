@@ -23,10 +23,14 @@ DemuxSourceSegment::DemuxSourceSegment(std::shared_ptr<Demux> demux)
   FXL_DCHECK(demux_);
 
   demux_->SetStatusCallback([this](int64_t duration_ns,
+                                   bool can_seek,
                                    const Metadata& metadata,
                                    const std::string& problem_type,
                                    const std::string& problem_details) {
     duration_ns_ = duration_ns;
+
+    can_seek_ = can_seek;
+
     if (metadata.empty()) {
       metadata_ = nullptr;
     } else {
@@ -89,6 +93,7 @@ void DemuxSourceSegment::Flush(bool hold_frame, fit::closure callback) {
 
 void DemuxSourceSegment::Seek(int64_t position, fit::closure callback) {
   FXL_DCHECK(demux_initialized_.occurred());
+  FXL_DCHECK(can_seek_);
   demux_->Seek(position, std::move(callback));
 }
 

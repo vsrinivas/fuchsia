@@ -33,6 +33,10 @@ class FakeSourceSegment : public SourceSegment {
 
   int64_t duration_ns() const override { return duration_ns_; };
 
+  bool can_pause() const override { return can_pause_; }
+
+  bool can_seek() const override { return can_seek_; }
+
   const Metadata* metadata() const override { return metadata_; }
 
   void Flush(bool hold_frame, fit::closure callback) override {
@@ -82,6 +86,8 @@ class FakeSourceSegment : public SourceSegment {
   bool will_deprovision_called_ = false;
 
   int64_t duration_ns_ = 0;
+  bool can_pause_ = true;
+  bool can_seek_ = true;
   const Metadata* metadata_ = nullptr;
 
   bool flush_called_ = false;

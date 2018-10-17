@@ -69,6 +69,10 @@ PlayerImpl::PlayerImpl(
 
         os << fostr::NewLine
            << "duration:           " << AsNs(status_.duration_ns);
+        os << fostr::NewLine
+           << "can pause:          " << AsNs(status_.can_pause);
+        os << fostr::NewLine
+           << "can seek:           " << AsNs(status_.can_seek);
 
         if (status_.metadata) {
           for (auto& property : *status_.metadata->properties) {
@@ -434,11 +438,21 @@ void PlayerImpl::Play() {
 }
 
 void PlayerImpl::Pause() {
+  if (!core_.can_pause()) {
+    FXL_LOG(WARNING) << "Pause requested, cannot pause. Ignoring.";
+    return;
+  }
+
   target_state_ = State::kPrimed;
   Update();
 }
 
 void PlayerImpl::Seek(int64_t position) {
+  if (!core_.can_seek()) {
+    FXL_LOG(WARNING) << "Seek requested, cannot seek. Ignoring.";
+    return;
+  }
+
   target_position_ = position;
   Update();
 }
@@ -507,6 +521,8 @@ void PlayerImpl::UpdateStatus() {
   status_.video_connected = core_.medium_connected(StreamType::Medium::kVideo);
 
   status_.duration_ns = core_.duration_ns();
+  status_.can_pause = core_.can_pause();
+  status_.can_seek = core_.can_seek();
 
   auto metadata = core_.metadata();
   status_.metadata =
