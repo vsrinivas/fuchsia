@@ -20,6 +20,7 @@ MODULE_DEPS := \
 	kernel/vm
 
 MODULE_SRCS := \
+	$(LOCAL_DIR)/brwlock.cpp \
 	$(LOCAL_DIR)/cmdline.cpp \
 	$(LOCAL_DIR)/deadline.cpp \
 	$(LOCAL_DIR)/debug.cpp \
