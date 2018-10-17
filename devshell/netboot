@@ -1,0 +1,15 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### run bootserver for netbooting
+
+## usage: fx netboot [extra bootserver arguments]
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx-config-read
+
+exec "${FUCHSIA_BUILD_DIR}/netboot.sh" "$@"
