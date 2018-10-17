@@ -72,6 +72,7 @@ executable("client_tests") {
   sources = [
     "bss_unittest.cpp",
     "client_unittest.cpp",
+    "station_unittest.cpp",
   ]
 
   deps = [

@@ -1596,5 +1596,8 @@ VhtCapabilities IntersectVhtCap(const VhtCapabilities& lhs, const VhtCapabilitie
 // The outcoming "Basic rates" follows those specified in AP
 std::vector<SupportedRate> IntersectRatesAp(const std::vector<SupportedRate>& ap_rates,
                                             const std::vector<SupportedRate>& client_rates);
+void BssDescToSuppRates(const ::fuchsia::wlan::mlme::BSSDescription& bss,
+                        std::vector<SupportedRate>* supp_rates,
+                        std::vector<SupportedRate>* ext_rates);
 
 }  // namespace wlan

@@ -200,4 +200,8 @@ void FindCommonSuppRates(const std::vector<SupportedRate>& ap_supp_rates,
                          const std::vector<SupportedRate>& client_ext_rates,
                          std::vector<SupportedRate>* supp_rates,
                          std::vector<SupportedRate>* ext_rates);
+zx_status_t BuildAssocReqSuppRates(const ::fuchsia::wlan::mlme::BSSDescription& bss,
+                                   const AssocContext& client_capability,
+                                   std::vector<SupportedRate>* supp_rates,
+                                   std::vector<SupportedRate>* ext_rates);
 }  // namespace wlan

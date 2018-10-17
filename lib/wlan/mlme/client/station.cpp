@@ -273,6 +273,11 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     assoc->cap = OverrideCapability(client_capability.cap);
     assoc->listen_interval = 0;
 
+    std::vector<SupportedRate> supp_rates;
+    std::vector<SupportedRate> ext_rates;
+    status = BuildAssocReqSuppRates(*join_ctx_->bss(), client_capability, &supp_rates, &ext_rates);
+    if (status != ZX_OK) { return status; }
+
     ElementWriter w(assoc->elements, reserved_ie_len);
     if (!w.write<SsidElement>(join_ctx_->bss()->ssid->data(), join_ctx_->bss()->ssid->size())) {
         errorf("could not write ssid \"%s\" to association request\n",
@@ -282,7 +287,6 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
         return ZX_ERR_IO;
     }
 
-    auto supp_rates = client_capability.supported_rates;
     if (!w.write<SupportedRatesElement>(supp_rates.data(), supp_rates.size())) {
         errorf("could not write supported rates\n");
         service::SendAssocConfirm(device_,
@@ -290,7 +294,6 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
         return ZX_ERR_IO;
     }
 
-    auto ext_rates = client_capability.ext_supported_rates;
     if (!w.write<ExtendedSupportedRatesElement>(ext_rates.data(), ext_rates.size())) {
         errorf("could not write extended supported rates\n");
         service::SendAssocConfirm(device_,
@@ -1589,11 +1592,11 @@ AssocContext ToAssocContext(const wlan_info_t& ifc_info, const wlan_channel_t jo
 }
 
 void FindCommonSuppRates(const std::vector<SupportedRate>& ap_supp_rates,
-                           const std::vector<SupportedRate>& ap_ext_rates,
-                           const std::vector<SupportedRate>& client_supp_rates,
-                           const std::vector<SupportedRate>& client_ext_rates,
-                           std::vector<SupportedRate>* supp_rates,
-                           std::vector<SupportedRate>* ext_rates) {
+                         const std::vector<SupportedRate>& ap_ext_rates,
+                         const std::vector<SupportedRate>& client_supp_rates,
+                         const std::vector<SupportedRate>& client_ext_rates,
+                         std::vector<SupportedRate>* supp_rates,
+                         std::vector<SupportedRate>* ext_rates) {
     auto ap_rates(ap_supp_rates);
     ap_rates.insert(ap_rates.end(), ap_ext_rates.cbegin(), ap_ext_rates.cend());
     auto client_rates(client_supp_rates);
@@ -1607,6 +1610,28 @@ void FindCommonSuppRates(const std::vector<SupportedRate>& ap_supp_rates,
                   std::back_inserter(*ext_rates));
         supp_rates->resize(SupportedRatesElement::kMaxLen);
     }
+}
+
+zx_status_t BuildAssocReqSuppRates(const ::fuchsia::wlan::mlme::BSSDescription& bss,
+                                   const AssocContext& client_capability,
+                                   std::vector<SupportedRate>* supp_rates,
+                                   std::vector<SupportedRate>* ext_rates) {
+    std::vector<SupportedRate> ap_supp_rates;
+    std::vector<SupportedRate> ap_ext_rates;
+    BssDescToSuppRates(bss, &ap_supp_rates, &ap_ext_rates);
+
+    FindCommonSuppRates(ap_supp_rates, ap_ext_rates, client_capability.supported_rates,
+                        client_capability.ext_supported_rates, supp_rates, ext_rates);
+    for (uint8_t rate : bss.basic_rate_set.get()) {
+        const auto basic_rate = SupportedRate::basic(rate);
+        if (std::binary_search(supp_rates->cbegin(), supp_rates->cend(), basic_rate) ||
+            std::binary_search(ext_rates->cbegin(), ext_rates->cend(), basic_rate)) {
+            continue;
+        }
+        errorf("AP basic rate %hhu is not supported by client.\n", rate);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return ZX_OK;
 }
 
 std::string Station::GetPhyStr() const {
