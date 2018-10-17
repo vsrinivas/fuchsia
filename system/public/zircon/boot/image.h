@@ -339,7 +339,7 @@ typedef struct {
 
 // A kernel command line fragment, a NUL-terminated UTF-8 string.
 // Multiple ZBI_TYPE_CMDLINE items can appear.  They are treated as if
-// concatented with ' ' between each item, in the order they appear:
+// concatenated with ' ' between each item, in the order they appear:
 // first items in the complete ZBI containing the kernel; then items in
 // the ZBI synthesized by the boot loader.  The kernel interprets the
 // [whole command line](../../../../docs/kernel_cmdline.md).
@@ -530,7 +530,7 @@ typedef struct {
     // Device GUID.
     uint8_t guid[ZBI_PARTITION_GUID_LEN];
 
-    // parition_count partition entries follow.
+    // partition_count partition entries follow.
     zbi_partition_t partitions[];
 } zbi_partition_map_t;
 #endif

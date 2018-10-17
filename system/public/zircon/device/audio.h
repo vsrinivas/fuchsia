@@ -274,7 +274,7 @@ typedef audio_stream_cmd_plug_detect_resp_t audio_stream_plug_detect_notify_t;
 // Note: a small number of hardcoded unique ID has been provided for built-in
 // devices.  Platform drivers for systems with hardwired audio devices may use
 // these unique IDs as appropriate to signal which audio streams represent the
-// built-in devices for the system.  Drivers for hot-plugable audio devices
+// built-in devices for the system.  Drivers for hot-pluggable audio devices
 // should *never* use these identifiers.
 //
 // Even given this, higher level code should *not* depend on these identifiers

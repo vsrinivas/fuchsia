@@ -32,7 +32,7 @@
 #define IOCTL_BLOCK_ATTACH_VMO \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_BLOCK, 7)
 // Shut down the fifo server, waiting for it to be ready to be started again.
-// Only necessary to guarantee availibility to the next fifo server client;
+// Only necessary to guarantee availability to the next fifo server client;
 // otherwise, closing the client fifo is sufficient to shut down the server.
 #define IOCTL_BLOCK_FIFO_CLOSE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 10)
@@ -214,7 +214,7 @@ IOCTL_WRAPPER_INOUT(ioctl_block_get_stats, IOCTL_BLOCK_GET_STATS, bool, block_st
 //
 // MAX_TXN_GROUP_COUNT "groups" are pre-allocated lanes separated on the block
 // server.  Using a group allows multiple message to be buffered at once
-// on a single communication chanel before receiving a response.
+// on a single communication channel before receiving a response.
 //
 // Usage of groups is identified by BLOCKIO_GROUP_ITEM, and is optional.
 //

@@ -55,7 +55,7 @@ typedef struct zx_info_handle_basic {
     zx_obj_type_t type;
 
     // If the object referenced by the handle is related to another (such
-    // as the the other end of a channel, or the parent of a job) then
+    // as the other end of a channel, or the parent of a job) then
     // |related_koid| is the koid of that object, otherwise it is zero.
     // This relationship is immutable: an object's |related_koid| does
     // not change even if the related object no longer exists.
@@ -147,7 +147,7 @@ typedef struct zx_info_vmar {
 } zx_info_vmar_t;
 
 typedef struct zx_info_bti {
-    // zx_bti_pin will always be able to return addreses that are contiguous for at
+    // zx_bti_pin will always be able to return addresses that are contiguous for at
     // least this many bytes.  E.g. if this returns 1MB, then a call to
     // zx_bti_pin() with a size of 2MB will return at most two physically-contiguous runs.
     // If the size were 2.5MB, it will return at most three physically-contiguous runs.

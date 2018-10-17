@@ -23,7 +23,7 @@ __BEGIN_CDECLS
 // in the representation of pointers to out-of-line allocations. On
 // the wire, allocations are encoded as either present or not. In C,
 // they are actual pointers. The C representation also places any
-// transfered handle types (including requests) inline. The wire
+// transferred handle types (including requests) inline. The wire
 // format tracks handles separately, just like the underlying channel
 // transport does.
 //
@@ -327,7 +327,7 @@ typedef struct fidl_txn fidl_txn_t;
 struct fidl_txn {
     // Replies to the outstanding request and complete the FIDL transaction.
     //
-    // Pass the |fidl_txn_t| object itself as the first paramter. The |msg|
+    // Pass the |fidl_txn_t| object itself as the first parameter. The |msg|
     // should already be encoded. This function always consumes any handles
     // present in |msg|.
     //

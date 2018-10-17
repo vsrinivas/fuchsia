@@ -349,7 +349,7 @@ typedef uint64_t zx_off_t;
 #define ZX_TIMER_SLACK_EARLY        ((uint32_t)1u)
 #define ZX_TIMER_SLACK_LATE         ((uint32_t)2u)
 
-// Bus Transaction Initiatior options.
+// Bus Transaction Initiator options.
 #define ZX_BTI_PERM_READ          ((uint32_t)1u << 0)
 #define ZX_BTI_PERM_WRITE         ((uint32_t)1u << 1)
 #define ZX_BTI_PERM_EXECUTE       ((uint32_t)1u << 2)

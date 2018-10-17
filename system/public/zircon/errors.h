@@ -191,7 +191,7 @@
 // Unlike ZX_ERR_STOP, which implies that iteration on an object
 // should stop, and ZX_ERR_NEXT, which implies that iteration
 // should continue to the next item, ZX_ERR_ASYNC implies
-// that an asynchronous worker is responsible for continuing interation.
+// that an asynchronous worker is responsible for continuing iteration.
 //
 // Example: A notification callback will be called on every
 // event, but one event needs to handle some work asynchronously
