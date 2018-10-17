@@ -27,43 +27,15 @@ struct ContainerPtrTraits<::std::unique_ptr<T>> {
   using ConstRawPtrType = const T*;
 
   static constexpr bool IsManaged = true;
+  static constexpr bool CanCopy = false;
 
   static inline T* GetRaw(const PtrType& ptr) { return ptr.get(); }
-  static inline const T* GetRaw(const ConstPtrType& ptr) { return ptr.get(); }
-  static inline PtrType Take(PtrType& ptr) { return PtrType(fbl::move(ptr)); }
-  static inline void Swap(PtrType& first, PtrType& second) {
-    first.swap(second);
-  }
 
   static inline RawPtrType Leak(PtrType& ptr) __WARN_UNUSED_RESULT {
     return ptr.release();
   }
 
   static inline PtrType Reclaim(RawPtrType ptr) { return PtrType(ptr); }
-
-  static constexpr PtrType MakeSentinel(void* sentinel) {
-    return PtrType(reinterpret_cast<RawPtrType>(
-        reinterpret_cast<uintptr_t>(sentinel) | kContainerSentinelBit));
-  }
-
-  static inline void DetachSentinel(PtrType& ptr) {
-    __UNUSED RawPtrType detached = ptr.release();
-    ZX_DEBUG_ASSERT((detached == nullptr) || IsSentinel(detached));
-  }
-
-  static constexpr bool IsSentinel(const PtrType& ptr) {
-    return IsSentinel(ptr.get());
-  }
-  static constexpr bool IsSentinel(RawPtrType ptr) {
-    return (reinterpret_cast<uintptr_t>(ptr) & kContainerSentinelBit) != 0;
-  }
-
-  static constexpr bool IsValid(const PtrType& ptr) {
-    return IsValid(ptr.get());
-  }
-  static constexpr bool IsValid(RawPtrType ptr) {
-    return ptr && !IsSentinel(ptr);
-  }
 };
 
 }  // namespace internal
