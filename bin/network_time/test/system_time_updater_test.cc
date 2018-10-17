@@ -63,14 +63,6 @@ constexpr uint8_t kPublicKey[roughtime::kPublicKeyLength] = {
 
 #undef GARNET_BIN_NETWORK_TIME_TEST_PUBLIC_KEY
 
-// Usage:
-//   TEST_F(MyTestClass, DISABLED_ON_ARM(MyTestMethod)) {
-#if defined (__arm__) || defined(__aarch64__)
-#define DISABLED_ON_ARM(test) DISABLED_##test
-#else
-#define DISABLED_ON_ARM(test) test
-#endif
-
 // 0-indexed month
 constexpr uint8_t kOctober = 9;
 constexpr char kNetworkTimePackage[] =
@@ -228,8 +220,7 @@ MATCHER_P3(EqualsGmtDate, expected_year, expected_month, expected_day,
   return false;
 };
 
-// TODO(ZX-2736): RTC is not yet supported on ARM.
-TEST_F(SystemTimeUpdaterTest, DISABLED_ON_ARM(UpdateTimeFromLocalRoughtimeServer)) {
+TEST_F(SystemTimeUpdaterTest, UpdateTimeFromLocalRoughtimeServer) {
   // Launch the roughtime server in a separate thread.
   const std::unique_ptr<std::thread> server_thread =
       LaunchLocalRoughtimeServer(kPortNumber);
