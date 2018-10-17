@@ -7,7 +7,6 @@
 #include <fbl/unique_ptr.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/usb-device.h>
 #include <zircon/device/usb-test-fwloader.h>
 #include <zircon/device/usb-tester.h>
 #include <zircon/hw/usb.h>
@@ -186,7 +185,7 @@ int main(int argc, char** argv) {
         return -1;
     }
     usb_device_descriptor_t device_desc;
-    ssize_t res = ioctl_usb_get_device_desc(fd.get(), &device_desc);
+    ssize_t res = ioctl_usb_tester_get_device_desc(fd.get(), &device_desc);
     if (res != sizeof(device_desc)) {
         printf("Failed to get updated usb tester device descriptor, err: %zd\n", res);
         return -1;

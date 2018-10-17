@@ -895,7 +895,6 @@ static zx_status_t usb_dev_set_mode(void* ctx, uint32_t mode, fidl_txn_t* txn) {
 }
 
 static zircon_usb_peripheral_Device_ops_t fidl_ops = {
-
     .SetDeviceDescriptor = usb_dev_set_device_desc,
     .AllocStringDesc = usb_dev_alloc_string_desc,
     .AddFunction = usb_dev_add_function,

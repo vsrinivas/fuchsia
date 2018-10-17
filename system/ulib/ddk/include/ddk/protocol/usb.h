@@ -134,8 +134,9 @@ typedef struct {
                                                 usb_configuration_descriptor_t** out,
                                                 size_t* out_length);
     zx_status_t (*get_descriptor_list)(void* ctx, void** out_descriptors, size_t* out_length);
-    zx_status_t (*get_string_descriptor)(void* ctx, uint8_t desc_id, uint16_t* inout_lang_id,
-                                         uint8_t* buf, size_t* inout_buflen);
+    zx_status_t (*get_string_descriptor)(void* ctx, uint8_t desc_id, uint16_t lang_id,
+                                         uint8_t* buf, size_t buflen, size_t* out_actual,
+                                         uint16_t* out_actual_lang_id);
     zx_status_t (*cancel_all)(void* ctx, uint8_t ep_address);
     uint64_t (*get_current_frame)(void* ctx);
     size_t (*get_request_size)(void* ctx);
@@ -254,16 +255,16 @@ static inline zx_status_t usb_get_descriptor_list(const usb_protocol_t* usb, voi
 // parameter.
 //
 // The string will be encoded using UTF-8, and will be truncated to fit the
-// space provided by the buflen parameter.  buflen will be updated to indicate
-// the amount of space needed to hold the actual UTF-8 encoded string lenth, and
-// may be larger than the original value passed.  Embedded nulls may be present
+// space provided by the buflen parameter.  Embedded nulls may be present
 // in the string, and the result may not be null terminated if the string
 // occupies the entire provided buffer.
 //
-static inline zx_status_t usb_get_string_descriptor(const usb_protocol_t* usb,
-                                                    uint8_t desc_id, uint16_t* inout_lang_id,
-                                                    uint8_t* buf, size_t* inout_buflen) {
-    return usb->ops->get_string_descriptor(usb->ctx, desc_id, inout_lang_id, buf, inout_buflen);
+static inline zx_status_t usb_get_string_descriptor(const usb_protocol_t* usb, uint8_t desc_id, 
+                                                    uint16_t lang_id, uint8_t* buf, size_t buflen,
+                                                    size_t* out_actual,
+                                                    uint16_t* out_actual_lang_id) {
+    return usb->ops->get_string_descriptor(usb->ctx, desc_id, lang_id, buf, buflen, out_actual,
+                                           out_actual_lang_id);
 }
 
 static inline zx_status_t usb_cancel_all(const usb_protocol_t* usb, uint8_t ep_address) {

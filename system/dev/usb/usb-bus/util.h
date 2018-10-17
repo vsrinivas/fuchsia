@@ -18,12 +18,10 @@ zx_status_t usb_util_get_descriptor(usb_device_t* dev, uint16_t type, uint16_t i
 // parameter.
 //
 // The string will be encoded using UTF-8, and will be truncated to fit the
-// space provided by the buflen parameter.  buflen will be updated to indicate
-// the amount of space needed to hold the actual UTF-8 encoded string lenth, and
-// may be larger than the original value passed.  Embedded nulls may be present
+// space provided by the buflen parameter. Embedded nulls may be present
 // in the string, and the result may not be null terminated if the string
 // occupies the entire provided buffer.
 //
-zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id,
-                                           uint16_t* inout_lang_id, uint8_t* buf,
-                                           size_t* inout_buflen);
+zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id, uint16_t lang_id,
+                                           uint8_t* buf, size_t buflen, size_t* out_actual,
+                                           uint16_t* out_actual_lang_id);

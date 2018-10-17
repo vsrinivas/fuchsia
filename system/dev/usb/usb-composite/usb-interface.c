@@ -245,10 +245,12 @@ static zx_status_t usb_interface_get_additional_descriptor_list(void* ctx, void*
     return ZX_OK;
 }
 
-zx_status_t usb_interface_get_string_descriptor(void* ctx, uint8_t desc_id, uint16_t* inout_lang_id,
-                                                uint8_t* buf, size_t* inout_buflen) {
+zx_status_t usb_interface_get_string_descriptor(void* ctx, uint8_t desc_id, uint16_t lang_id,
+                                                uint8_t* buf, size_t buflen, size_t* out_actual,
+                                                uint16_t* out_actual_lang_id) {
     usb_interface_t* intf = ctx;
-    return usb_get_string_descriptor(&intf->comp->usb, desc_id, inout_lang_id, buf, inout_buflen);
+    return usb_get_string_descriptor(&intf->comp->usb, desc_id, lang_id, buf, buflen, out_actual,
+                                     out_actual_lang_id);
 }
 
 static zx_status_t usb_interface_claim_device_interface(void* ctx,

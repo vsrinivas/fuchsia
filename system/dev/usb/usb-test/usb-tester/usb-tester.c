@@ -9,7 +9,6 @@
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>
 #include <lib/sync/completion.h>
-#include <zircon/device/usb-device.h>
 #include <zircon/device/usb-tester.h>
 #include <zircon/hw/usb.h>
 
@@ -418,7 +417,7 @@ static zx_status_t usb_tester_ioctl(void* ctx, uint32_t op, const void* in_buf, 
         *out_actual = sizeof(*result);
         return ZX_OK;
     }
-    case IOCTL_USB_GET_DEVICE_DESC: {
+    case  IOCTL_USB_TESTER_GET_DEVICE_DESC: {
         usb_device_descriptor_t* descriptor = out_buf;
         if (out_len < sizeof(*descriptor)) {
             return ZX_ERR_BUFFER_TOO_SMALL;

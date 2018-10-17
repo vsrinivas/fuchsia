@@ -6,6 +6,7 @@
 
 #include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
+#include <zircon/hw/usb.h>
 #include <zircon/types.h>
 
 #define USB_TESTER_DATA_PATTERN_CONSTANT 1
@@ -37,3 +38,8 @@ typedef struct {
 #define IOCTL_USB_TESTER_ISOCH_LOOPBACK IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB_TEST, 2)
 IOCTL_WRAPPER_INOUT(ioctl_usb_tester_isoch_loopback, IOCTL_USB_TESTER_ISOCH_LOOPBACK,
                     usb_tester_params_t, usb_tester_result_t);
+
+// returns the device's USB device descriptor
+// call with out_len = sizeof(usb_device_descriptor_t)
+#define IOCTL_USB_TESTER_GET_DEVICE_DESC IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB_TEST, 3)
+IOCTL_WRAPPER_OUT(ioctl_usb_tester_get_device_desc, IOCTL_USB_TESTER_GET_DEVICE_DESC, usb_device_descriptor_t);

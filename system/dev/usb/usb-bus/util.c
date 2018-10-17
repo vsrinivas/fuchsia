@@ -93,31 +93,9 @@ zx_status_t usb_util_get_descriptor(usb_device_t* dev, uint16_t type, uint16_t i
                            USB_REQ_GET_DESCRIPTOR, type << 8 | index, language, data, length);
 }
 
-zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id,
-                                           uint16_t* inout_lang_id, uint8_t* buf,
-                                           size_t* inout_buflen) {
-    // Sanity check our user parameters and default all of our out parameters to 0.
-    uint16_t lang_id = 0;
-    size_t buflen = 0;
-
-    if (inout_lang_id) {
-        lang_id = *inout_lang_id;
-        *inout_lang_id = 0;
-    }
-
-    if (inout_buflen) {
-        buflen = *inout_buflen;
-        *inout_buflen = 0;
-    }
-
-    if (buf) {
-        memset(buf, 0, buflen);
-    }
-
-    if (!dev || !inout_lang_id || !inout_buflen || !buf) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
+zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id, uint16_t lang_id,
+                                           uint8_t* buf, size_t buflen, size_t* out_actual,
+                                           uint16_t* out_actual_lang_id) {
     //  If we have never attempted to load our language ID table, do so now.
     zx_status_t result;
     if (!atomic_load_explicit(&dev->langids_fetched, memory_order_relaxed)) {
@@ -181,8 +159,10 @@ zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id,
     if (desc_id == 0) {
         size_t table_sz = (lang_ids->bLength << 1);
         buflen &= ~1;
-        memcpy(buf, lang_ids->wLangIds, MIN(table_sz, buflen));
-        *inout_buflen = table_sz;
+        
+        size_t actual = MIN(table_sz, buflen);
+        memcpy(buf, lang_ids->wLangIds, actual);
+        *out_actual = actual;
         return ZX_OK;
     }
 
@@ -236,10 +216,10 @@ zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id,
         // Success! Convert this result from UTF16LE to UTF8 and store the
         // language ID we actually fetched (if it was not what the user
         // requested).
-        *inout_buflen = buflen;
-        *inout_lang_id = lang_id;
+        *out_actual = buflen;
+        *out_actual_lang_id = lang_id;
         utf16_to_utf8(string_desc.code_points, (string_desc.bLength >> 1) - 1,
-                      buf, inout_buflen,
+                      buf, out_actual,
                       UTF_CONVERT_FLAG_FORCE_LITTLE_ENDIAN);
         return ZX_OK;
     }
