@@ -54,6 +54,7 @@ pub async fn connect_to_network(
     iface_sme_proxy: &fidl_sme::ClientSmeProxy, target_ssid: Vec<u8>, target_pwd: Vec<u8>,
 ) -> Result<bool, Error> {
     let (connection_proxy, connection_remote) = endpoints::create_proxy()?;
+    let target_ssid_clone = target_ssid.clone();
 
     // create ConnectRequest holding network info
     let mut req = fidl_sme::ConnectRequest {
@@ -72,7 +73,7 @@ pub async fn connect_to_network(
     let connection_code = await!(handle_connect_transaction(connection_proxy))?;
 
     #[allow(unreachable_patterns)]
-    let connected = match connection_code {
+    let mut connected = match connection_code {
         fidl_sme::ConnectResultCode::Success => true,
         fidl_sme::ConnectResultCode::Canceled => {
             fx_log_err!("Connecting was canceled or superseded by another command");
@@ -92,6 +93,24 @@ pub async fn connect_to_network(
             false
         }
     };
+
+    if connected == true {
+        let rsp =
+            await!(iface_sme_proxy.status()).context("failed to check status from sme_proxy")?;
+
+        connected = connected && match rsp.connected_to {
+            Some(ref bss) if bss.ssid.as_slice().to_vec() == target_ssid_clone => true,
+            Some(ref bss) => {
+                fx_log_err!(
+                    "Connected to wrong network: {:?}. Expected: {:?}.",
+                    bss.ssid.as_slice(),
+                    target_ssid_clone
+                );
+                false
+            }
+            _ => false,
+        };
+    }
 
     Ok(connected)
 }
@@ -252,29 +271,37 @@ mod tests {
 
     #[test]
     fn connect_to_network_success_returns_true() {
-        let connect_result = test_connect("TestAp", "", ConnectResultCode::Success);
+        let connect_result = test_connect("TestAp", "", "TestAp", ConnectResultCode::Success);
         assert!(connect_result);
     }
 
     #[test]
     fn connect_to_network_failed_returns_false() {
-        let connect_result = test_connect("TestAp", "", ConnectResultCode::Failed);
+        let connect_result = test_connect("TestAp", "", "", ConnectResultCode::Failed);
         assert!(!connect_result);
     }
 
     #[test]
     fn connect_to_network_canceled_returns_false() {
-        let connect_result = test_connect("TestAp", "", ConnectResultCode::Canceled);
+        let connect_result = test_connect("TestAp", "", "", ConnectResultCode::Canceled);
         assert!(!connect_result);
     }
 
     #[test]
     fn connect_to_network_bad_credentials_returns_false() {
-        let connect_result = test_connect("TestAp", "", ConnectResultCode::BadCredentials);
+        let connect_result = test_connect("TestAp", "", "", ConnectResultCode::BadCredentials);
         assert!(!connect_result);
     }
 
-    fn test_connect(ssid: &str, password: &str, result_code: ConnectResultCode) -> bool {
+    #[test]
+    fn connect_to_network_different_ssid_returns_false() {
+        let connect_result = test_connect("TestAp1", "", "TestAp2", ConnectResultCode::Success);
+        assert!(!connect_result);
+    }
+
+    fn test_connect(
+        ssid: &str, password: &str, connected_to: &str, result_code: ConnectResultCode,
+    ) -> bool {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
         let mut next_client_sme_req = server.into_future();
@@ -295,7 +322,19 @@ mod tests {
             result_code,
         );
 
+        // if connection is successful, status is requested to extract ssid
+        if result_code == ConnectResultCode::Success {
+            assert!(exec.run_until_stalled(&mut fut).is_pending());
+            send_status_response(
+                &mut exec,
+                &mut next_client_sme_req,
+                connected_to.as_bytes().to_vec(),
+                target_ssid.to_vec(),
+            );
+        }
+
         let complete = exec.run_until_stalled(&mut fut);
+
         let connection_result = match complete {
             Poll::Ready(result) => result,
             _ => panic!("Expected a connect response"),
@@ -447,18 +486,6 @@ mod tests {
         panic!("disconnect did not return a Poll::Ready")
     }
 
-    fn get_dummy_bssinfo() -> Option<Box<BssInfo>> {
-        let mut dummy_bss: fidl_sme::BssInfo = fidl_sme::BssInfo {
-            bssid: [0, 1, 2, 3, 4, 5],
-            ssid: vec![1, 2, 3, 4],
-            rx_dbm: -30,
-            channel: 1,
-            protected: true,
-            compatible: true,
-        };
-        Some(Box::new(dummy_bss))
-    }
-
     fn test_disconnect(status: StatusResponse) -> Poll<Result<(), Error>> {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
@@ -474,13 +501,13 @@ mod tests {
 
         match status {
             StatusResponse::Empty => {
-                send_status_response(&mut exec, &mut client_sme_req, None, vec![])
+                send_status_response(&mut exec, &mut client_sme_req, vec![], vec![])
             }
             StatusResponse::Connected => {
-                send_status_response(&mut exec, &mut client_sme_req, get_dummy_bssinfo(), vec![])
+                send_status_response(&mut exec, &mut client_sme_req, vec![1, 2, 3, 4], vec![])
             }
             StatusResponse::Connecting => {
-                send_status_response(&mut exec, &mut client_sme_req, None, vec![1, 2, 3, 4])
+                send_status_response(&mut exec, &mut client_sme_req, vec![], vec![1, 2, 3, 4])
             }
         }
 
@@ -498,9 +525,26 @@ mod tests {
         rsp.send().expect("Failed to send DisconnectResponse.");
     }
 
+    fn create_bssinfo_using_ssid(ssid: Vec<u8>) -> Option<Box<BssInfo>> {
+        match ssid.is_empty() {
+            true => None,
+            _ => {
+                let bss_info: fidl_sme::BssInfo = fidl_sme::BssInfo {
+                    bssid: [0, 1, 2, 3, 4, 5],
+                    ssid: ssid,
+                    rx_dbm: -30,
+                    channel: 1,
+                    protected: true,
+                    compatible: true,
+                };
+                Some(Box::new(bss_info))
+            }
+        }
+    }
+
     fn send_status_response(
         exec: &mut fasync::Executor, server: &mut StreamFuture<ClientSmeRequestStream>,
-        connected_to: Option<Box<BssInfo>>, connecting_to_ssid: Vec<u8>,
+        connected_to: Vec<u8>, connecting_to_ssid: Vec<u8>,
     ) {
         let rsp = match poll_client_sme_request(exec, server) {
             Poll::Ready(ClientSmeRequest::Status { responder }) => responder,
@@ -508,8 +552,10 @@ mod tests {
             _ => panic!("Expected a StatusRequest"),
         };
 
+        let connected_to_bss_info = create_bssinfo_using_ssid(connected_to);
+
         let mut response = fidl_sme::ClientStatusResponse {
-            connected_to: connected_to,
+            connected_to: connected_to_bss_info,
             connecting_to_ssid: connecting_to_ssid,
         };
 
