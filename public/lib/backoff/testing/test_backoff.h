@@ -12,7 +12,10 @@ namespace backoff {
 
 class TestBackoff : public Backoff {
  public:
+  // Backoff with GetNext returning kDefaultBackoffDuration.
   TestBackoff();
+  // Backoff with GetNext returning |duration|.
+  TestBackoff(zx::duration duration);
   ~TestBackoff() override;
 
   // Backoff:
@@ -21,8 +24,9 @@ class TestBackoff : public Backoff {
 
   void SetOnGetNext(fit::closure on_get_next);
 
-  zx::duration backoff_to_return = zx::sec(0);
+  zx::duration backoff_to_return;
 
+  static constexpr zx::duration kDefaultBackoffDuration = zx::sec(0);
   int get_next_count = 0;
   int reset_count = 0;
 

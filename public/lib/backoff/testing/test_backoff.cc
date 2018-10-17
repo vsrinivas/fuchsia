@@ -6,7 +6,9 @@
 
 namespace backoff {
 
-TestBackoff::TestBackoff() {}
+TestBackoff::TestBackoff() : TestBackoff(kDefaultBackoffDuration) {}
+
+TestBackoff::TestBackoff(zx::duration duration) : backoff_to_return(duration) {}
 
 TestBackoff::~TestBackoff() {}
 
