@@ -5,14 +5,16 @@
 #ifndef GARNET_EXAMPLES_UI_TILE_TILE_VIEW_H_
 #define GARNET_EXAMPLES_UI_TILE_TILE_VIEW_H_
 
-#include <map>
-#include <memory>
-
+#include <fs/pseudo-dir.h>
+#include <fs/synchronous-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include <fs/pseudo-dir.h>
-#include <fs/synchronous-vfs.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
+#include <zx/eventpair.h>
+#include <map>
+#include <memory>
+
 #include "garnet/examples/ui/tile/tile_params.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -35,12 +37,11 @@ class TileView : public mozart::BaseView,
 
  private:
   struct ViewData {
-    explicit ViewData(const std::string& url, uint32_t key,
+    explicit ViewData(uint32_t key,
                       fuchsia::sys::ComponentControllerPtr controller,
                       scenic::Session* session);
     ~ViewData();
 
-    const std::string url;
     const uint32_t key;
     fuchsia::sys::ComponentControllerPtr controller;
     scenic::EntityNode host_node;
@@ -62,7 +63,10 @@ class TileView : public mozart::BaseView,
   void Present(
       fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner,
       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation)
-      override;
+      final;
+  void Present2(zx::eventpair view_owner_token,
+                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                    presentation) final;
   void HACK_SetRendererParams(
       bool enable_clipping,
       ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override {}
@@ -78,9 +82,8 @@ class TileView : public mozart::BaseView,
 
   zx::channel OpenAsDirectory();
 
-  void AddChildView(
-      fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-      const std::string& url, fuchsia::sys::ComponentControllerPtr);
+  void AddChildView(zx::eventpair child_view_owner_token,
+                    fuchsia::sys::ComponentControllerPtr);
   void RemoveChildView(uint32_t child_key);
 
   // Nested environment within which the apps started by TileView will run.

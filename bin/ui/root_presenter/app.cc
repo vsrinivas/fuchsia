@@ -83,6 +83,13 @@ void App::Present(fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
                       view_owner_handle,
                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                       presentation_request) {
+  Present2(zx::eventpair(view_owner_handle.TakeChannel().release()),
+           std::move(presentation_request));
+}
+
+void App::Present2(zx::eventpair view_owner_token,
+                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                       presentation_request) {
   InitializeServices();
 
   // Duplication intentional, this copy will go away soon.
@@ -101,7 +108,7 @@ void App::Present(fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
       view_manager_.get(), scenic_.get(), session_.get(), compositor_->id(),
       renderer_params_, display_startup_rotation_adjustment,
       startup_context_.get());
-  presentation->Present(view_owner_handle.Bind(),
+  presentation->Present(std::move(view_owner_token),
                         std::move(presentation_request), GetYieldCallback(),
                         GetShutdownCallback(presentation.get()));
 

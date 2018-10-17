@@ -14,6 +14,7 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <zx/eventpair.h>
 
 #include "garnet/bin/ui/presentation_mode/detector.h"
 #include "garnet/bin/ui/root_presenter/display_rotater.h"
@@ -85,7 +86,7 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
   // Invokes the callback if an error occurs.
   // This method must be called at most once for the lifetime of the
   // presentation.
-  void Present(::fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner,
+  void Present(zx::eventpair view_owner_token,
                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                    presentation_request,
                YieldCallback yield_callback,
@@ -223,7 +224,7 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
       fidl::InterfaceHandle<fuchsia::ui::policy::PresentationModeListener>
           listener) override;
 
-  void CreateViewTree(::fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner,
+  void CreateViewTree(zx::eventpair view_owner_token,
                       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                           presentation_request,
                       fuchsia::ui::gfx::DisplayInfo display_info);

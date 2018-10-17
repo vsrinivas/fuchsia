@@ -36,11 +36,16 @@ TileView::TileView(
 TileView::~TileView() {}
 
 void TileView::Present(
-    fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
-        child_view_owner,
+    fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation) {
-  const std::string empty_url;
-  AddChildView(std::move(child_view_owner), empty_url, nullptr);
+  Present2(zx::eventpair(view_owner.TakeChannel().release()),
+           std::move(presentation));
+}
+
+void TileView::Present2(
+    zx::eventpair view_owner_token,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation) {
+  AddChildView(std::move(view_owner_token), nullptr);
 }
 
 void TileView::ConnectViews() {
@@ -77,7 +82,8 @@ void TileView::ConnectViews() {
     view_provider->CreateView(child_view_owner.NewRequest(), nullptr);
 
     // Add the view, which increments child_key_.
-    AddChildView(std::move(child_view_owner), url, std::move(controller));
+    AddChildView(zx::eventpair(child_view_owner.TakeChannel().release()),
+                 std::move(controller));
   }
 }
 
@@ -95,7 +101,7 @@ void TileView::CreateNestedEnvironment() {
   auto service = fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
     presenter_bindings_.AddBinding(
         this, fidl::InterfaceRequest<fuchsia::ui::policy::Presenter>(
-            std::move(channel)));
+                  std::move(channel)));
     return ZX_OK;
   }));
   services_dir_->AddEntry(fuchsia::ui::policy::Presenter::Name_, service);
@@ -123,14 +129,12 @@ void TileView::OnChildUnavailable(uint32_t child_key) {
   RemoveChildView(child_key);
 }
 
-void TileView::AddChildView(
-    fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
-        child_view_owner,
-    const std::string& url, fuchsia::sys::ComponentControllerPtr controller) {
+void TileView::AddChildView(zx::eventpair child_view_owner_token,
+                            fuchsia::sys::ComponentControllerPtr controller) {
   const uint32_t view_key = next_child_view_key_++;
 
-  auto view_data = std::make_unique<ViewData>(url, view_key,
-                                              std::move(controller), session());
+  auto view_data =
+      std::make_unique<ViewData>(view_key, std::move(controller), session());
 
   zx::eventpair host_import_token;
   view_data->host_node.ExportAsRequest(&host_import_token);
@@ -141,8 +145,8 @@ void TileView::AddChildView(
 
   views_.emplace(view_key, std::move(view_data));
 
-  GetViewContainer()->AddChild(view_key, std::move(child_view_owner),
-                               std::move(host_import_token));
+  GetViewContainer()->AddChild2(view_key, std::move(child_view_owner_token),
+                                std::move(host_import_token));
   InvalidateScene();
 }
 
@@ -222,11 +226,10 @@ void TileView::OnSceneInvalidated(
   }
 }
 
-TileView::ViewData::ViewData(const std::string& url, uint32_t key,
+TileView::ViewData::ViewData(uint32_t key,
                              fuchsia::sys::ComponentControllerPtr controller,
                              scenic::Session* session)
-    : url(url),
-      key(key),
+    : key(key),
       controller(std::move(controller)),
       host_node(session),
       clip_shape_node(session) {}

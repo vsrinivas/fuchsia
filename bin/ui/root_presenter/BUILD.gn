@@ -39,6 +39,7 @@ executable("root_presenter") {
     "//garnet/public/fidl/fuchsia.ui.input",
     "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1token",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",

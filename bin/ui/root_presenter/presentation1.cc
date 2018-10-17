@@ -156,29 +156,30 @@ void Presentation1::OverrideRendererParams(RendererParams renderer_params,
 Presentation1::~Presentation1() {}
 
 void Presentation1::Present(
-    ::fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner,
+    zx::eventpair view_owner_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
         presentation_request,
     YieldCallback yield_callback, ShutdownCallback shutdown_callback) {
-  FXL_DCHECK(view_owner);
+  FXL_DCHECK(view_owner_token);
   FXL_DCHECK(!display_model_initialized_);
 
   yield_callback_ = std::move(yield_callback);
   shutdown_callback_ = std::move(shutdown_callback);
 
   scenic_->GetDisplayInfo(fxl::MakeCopyable(
-      [weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
+      [weak = weak_factory_.GetWeakPtr(),
+       view_owner_token = std::move(view_owner_token),
        presentation_request = std::move(presentation_request)](
           fuchsia::ui::gfx::DisplayInfo display_info) mutable {
         if (weak)
-          weak->CreateViewTree(std::move(view_owner),
+          weak->CreateViewTree(std::move(view_owner_token),
                                std::move(presentation_request),
                                std::move(display_info));
       }));
 }
 
 void Presentation1::CreateViewTree(
-    ::fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner,
+    zx::eventpair view_owner_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
         presentation_request,
     fuchsia::ui::gfx::DisplayInfo display_info) {
@@ -228,19 +229,20 @@ void Presentation1::CreateViewTree(
   });
 
   // Create root view.
-  fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> root_view_owner;
-  auto root_view_owner_request = root_view_owner.NewRequest();
+  zx::eventpair root_view_owner_token, root_view_token;
+  FXL_CHECK(zx::eventpair::create(0, &root_view_owner_token,
+                                  &root_view_token) == ZX_OK);
   ::fuchsia::ui::viewsv1::ViewListenerPtr root_view_listener;
   view_listener_binding_.Bind(root_view_listener.NewRequest());
-  view_manager_->CreateView(
-      root_view_.NewRequest(), std::move(root_view_owner_request),
+  view_manager_->CreateView2(
+      root_view_.NewRequest(), std::move(root_view_token),
       std::move(root_view_listener), std::move(root_view_parent_export_token_),
       "RootView");
   root_view_->GetContainer(root_container_.NewRequest());
 
   // Attach root view to view tree.
-  tree_container_->AddChild(kRootViewKey, std::move(root_view_owner),
-                            std::move(root_view_host_import_token_));
+  tree_container_->AddChild2(kRootViewKey, std::move(root_view_owner_token),
+                             std::move(root_view_host_import_token_));
 
   // Get display parameters and propagate values appropriately.
   InitializeDisplayModel(std::move(display_info));
@@ -249,8 +251,8 @@ void Presentation1::CreateViewTree(
   ::fuchsia::ui::viewsv1::ViewContainerListenerPtr view_container_listener;
   view_container_listener_binding_.Bind(view_container_listener.NewRequest());
   root_container_->SetListener(std::move(view_container_listener));
-  root_container_->AddChild(kContentViewKey, std::move(view_owner),
-                            std::move(content_view_host_import_token_));
+  root_container_->AddChild2(kContentViewKey, std::move(view_owner_token),
+                             std::move(content_view_host_import_token_));
   root_container_->SetChildProperties(
       kContentViewKey, ::fuchsia::ui::viewsv1::ViewProperties::New());
 

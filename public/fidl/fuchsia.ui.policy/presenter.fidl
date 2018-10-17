@@ -16,16 +16,18 @@ using fuchsia.ui.viewsv1token;
 interface Presenter {
   1: Present(fuchsia.ui.viewsv1token.ViewOwner view_owner, request<Presentation>? presentation_request);
 
+  2: Present2(handle<eventpair> view_owner_token, request<Presentation>? presentation_request);
+
   // Sets new default renderer params and forces them on for the duration of the
   // presenter's lifetime. Only applies to any subsequent calls to Present().
   // Used for testing.
-  2: HACK_SetRendererParams(bool enable_clipping, vector<fuchsia.ui.gfx.RendererParam> params);
+  3: HACK_SetRendererParams(bool enable_clipping, vector<fuchsia.ui.gfx.RendererParam> params);
 
   // Set the input path. Root presenter will send to ViewManager (legacy) or Scenic.
-  3: HACK_SetInputPath(bool use_legacy);
+  4: HACK_SetInputPath(bool use_legacy);
 
   // Query the input path. Return true if ViewManager receives input.
-  4: HACK_QueryInputPath() -> (bool use_legacy);
+  5: HACK_QueryInputPath() -> (bool use_legacy);
 };
 
 // The Presenter service provides a way for applications to ask that a

@@ -12,6 +12,8 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
+
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "garnet/bin/ui/root_presenter/presentation1.h"
 #include "garnet/bin/ui/root_presenter/presentation2.h"
@@ -50,7 +52,12 @@ class App : public fuchsia::ui::policy::Presenter,
   void Present(
       fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner,
       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-          presentation_request) override;
+          presentation_request) final;
+
+  // |Presenter|
+  void Present2(zx::eventpair view_owner_token,
+                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                    presentation_request) final;
 
   // |Presenter|
   void HACK_SetRendererParams(
