@@ -72,3 +72,12 @@ package("codec_runner_sw_omx") {
     },
   ]
 }
+
+# This package is only really expected to be used by the codec_factory package.
+package("codec_runner_sw_ffmpeg") {
+  deps = [
+    "//garnet/bin/media/codecs/sw/ffmpeg:codec_runner_sw_ffmpeg",
+  ]
+
+  binary = "codec_runner_sw_ffmpeg"
+}

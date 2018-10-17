@@ -14,6 +14,12 @@ namespace {
 // factory registration initiated by a driver process, or by discovering a
 // device, or similar).
 const std::string kIsolateUrlOmx = "codec_runner_sw_omx";
+const std::string kIsolateUrlFfmpeg = "codec_runner_sw_ffmpeg";
+
+// TODO(turnage): Devise a better routing system between ffmpeg and omx codec
+// factories. Using this should be fine for now because omx does not service
+// this mime type and it is the first one we will roll out with ffmpeg.
+const std::string kFfmpegMimeType = "video/h264";
 
 }  // namespace
 
@@ -86,12 +92,15 @@ void CodecFactoryImpl::CreateDecoder(
     return;
   }
 
-  // For now, we always forward to a kIsolateUrlOmx app instance that we create
-  // here.
   fuchsia::sys::ComponentControllerPtr component_controller;
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info{};
-  std::string url = kIsolateUrlOmx;
+  std::string url;
+  if (params.input_details.mime_type == kFfmpegMimeType) {
+    url = kIsolateUrlFfmpeg;
+  } else {
+    url = kIsolateUrlOmx;
+  }
   launch_info.url = url;
   launch_info.directory_request = services.NewRequest();
   startup_context_->launcher()->CreateComponent(
