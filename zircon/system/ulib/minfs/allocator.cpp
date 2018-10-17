@@ -25,11 +25,26 @@ blk_t BitmapBlocksForSize(size_t size) {
 }  // namespace
 
 AllocatorPromise::~AllocatorPromise() {
-    ZX_DEBUG_ASSERT(allocator_ != nullptr);
+    ZX_DEBUG_ASSERT(reserved_ == 0);
+}
 
-    if (reserved_ > 0) {
-        allocator_->Unreserve(reserved_);
+zx_status_t AllocatorPromise::Initialize(WriteTxn* txn, size_t reserved, Allocator* allocator) {
+    if (allocator_ != nullptr) {
+        return ZX_ERR_BAD_STATE;
     }
+
+    if (allocator == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    ZX_DEBUG_ASSERT(reserved_ == 0);
+
+    zx_status_t status = allocator->Reserve(txn, reserved, this);
+    if (status == ZX_OK) {
+        allocator_ = allocator;
+        reserved_ = reserved;
+    }
+    return status;
 }
 
 size_t AllocatorPromise::Allocate(WriteTxn* txn) {
@@ -51,7 +66,31 @@ void AllocatorPromise::SwapCommit(WriteTxn* txn) {
     ZX_DEBUG_ASSERT(allocator_ != nullptr);
     allocator_->SwapCommit(txn);
 }
+
+void AllocatorPromise::Split(size_t requested, AllocatorPromise* other_promise) {
+    ZX_DEBUG_ASSERT(requested <= reserved_);
+    ZX_DEBUG_ASSERT(other_promise != nullptr);
+
+    if (other_promise->IsInitialized()) {
+        ZX_DEBUG_ASSERT(other_promise->allocator_ == allocator_);
+    } else {
+        other_promise->allocator_ = allocator_;
+    }
+
+    reserved_ -= requested;
+    other_promise->reserved_ += requested;
+}
+
 #endif
+
+void AllocatorPromise::Cancel() {
+    if (IsInitialized()) {
+        allocator_->Unreserve(reserved_);
+        reserved_ = 0;
+    }
+
+    ZX_DEBUG_ASSERT(reserved_ == 0);
+}
 
 AllocatorFvmMetadata::AllocatorFvmMetadata() = default;
 AllocatorFvmMetadata::AllocatorFvmMetadata(uint32_t* data_slices,
@@ -91,11 +130,6 @@ AllocatorMetadata::AllocatorMetadata(AllocatorMetadata&&) = default;
 AllocatorMetadata& AllocatorMetadata::operator=(AllocatorMetadata&&) = default;
 AllocatorMetadata::~AllocatorMetadata() = default;
 
-Allocator::Allocator(Bcache* bc, SuperblockManager* sb, size_t unit_size, GrowHandler grow_cb,
-                     AllocatorMetadata metadata) :
-    bc_(bc), sb_(sb), unit_size_(unit_size), grow_cb_(std::move(grow_cb)),
-    metadata_(std::move(metadata)), reserved_(0), first_free_(0) {}
-
 Allocator::~Allocator() {
 #ifdef __Fuchsia__
     ZX_DEBUG_ASSERT(swap_in_.num_bits() == 0);
@@ -103,42 +137,65 @@ Allocator::~Allocator() {
 #endif
 }
 
-zx_status_t Allocator::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn* txn, size_t unit_size,
-                              GrowHandler grow_cb, AllocatorMetadata metadata,
-                              fbl::unique_ptr<Allocator>* out) {
-    auto allocator = fbl::unique_ptr<Allocator>(new Allocator(bc, sb, unit_size,
-                                                              std::move(grow_cb),
-                                                              std::move(metadata)));
-    blk_t pool_blocks = BitmapBlocksForSize(allocator->metadata_.PoolTotal());
-
-    zx_status_t status;
-    if ((status = allocator->map_.Reset(pool_blocks * kMinfsBlockBits)) != ZX_OK) {
-        return status;
-    }
-    if ((status = allocator->map_.Shrink(allocator->metadata_.PoolTotal())) != ZX_OK) {
-        return status;
-    }
+size_t Allocator::GetAvailable() {
+    size_t total_reserved = reserved_;
 #ifdef __Fuchsia__
-    vmoid_t map_vmoid;
-    if ((status = bc->AttachVmo(allocator->map_.StorageUnsafe()->GetVmo(), &map_vmoid)) != ZX_OK) {
+    total_reserved += swap_in_.num_bits();
+#endif
+    ZX_DEBUG_ASSERT(storage_->PoolAvailable() >= total_reserved);
+    return storage_->PoolAvailable() - total_reserved;
+}
+
+void Allocator::Free(WriteTxn* txn, size_t index) {
+#ifdef __Fuchsia__
+    ZX_DEBUG_ASSERT(!swap_out_.GetOne(index));
+#endif
+    ZX_DEBUG_ASSERT(map_.GetOne(index));
+
+    map_.ClearOne(index);
+    storage_->PersistRange(txn, GetMapData(), index, 1);
+    storage_->PersistRelease(txn, 1);
+
+    if (index < first_free_) {
+        first_free_ = index;
+    }
+}
+
+zx_status_t Allocator::ResetMap() {
+    zx_status_t status;
+    blk_t total_blocks = storage_->PoolTotal();
+    blk_t pool_blocks = BitmapBlocksForSize(total_blocks);
+    if ((status = map_.Reset(pool_blocks * kMinfsBlockBits)) != ZX_OK) {
         return status;
     }
-    vmoid_t data = map_vmoid;
-#else
-    const void* data = allocator->map_.StorageUnsafe()->GetData();
-#endif
-    txn->Enqueue(data, 0, allocator->metadata_.MetadataStartBlock(), pool_blocks);
-    *out = std::move(allocator);
+    return map_.Shrink(total_blocks);
+}
+
+zx_status_t Allocator::GrowMap(size_t new_size, size_t* old_size) {
+    ZX_DEBUG_ASSERT(new_size >= map_.size());
+    *old_size = map_.size();
+    // Grow before shrinking to ensure the underlying storage is a multiple
+    // of kMinfsBlockSize.
+    zx_status_t status;
+    if ((status = map_.Grow(fbl::round_up(new_size, kMinfsBlockBits))) != ZX_OK) {
+        fprintf(stderr, "minfs::Allocator failed to Grow (in memory): %d\n", status);
+        return ZX_ERR_NO_SPACE;
+    }
+
+    map_.Shrink(new_size);
     return ZX_OK;
 }
 
-zx_status_t Allocator::Reserve(WriteTxn* txn, size_t count,
-                               fbl::unique_ptr<AllocatorPromise>* out_promise) {
+zx_status_t Allocator::Reserve(WriteTxn* txn, size_t count, AllocatorPromise* promise) {
     if (GetAvailable() < count) {
         // If we do not have enough free elements, attempt to extend the partition.
+        auto grow_map = [this](size_t pool_size, size_t* old_pool_size) {
+            return this->GrowMap(pool_size, old_pool_size);
+        };
+
         zx_status_t status;
         //TODO(planders): Allow Extend to take in count.
-        if ((status = Extend(txn)) != ZX_OK) {
+        if ((status = storage_->Extend(txn, GetMapData(), grow_map)) != ZX_OK) {
             return status;
         }
 
@@ -146,20 +203,7 @@ zx_status_t Allocator::Reserve(WriteTxn* txn, size_t count,
     }
 
     reserved_ += count;
-    (*out_promise).reset(new AllocatorPromise(this, count));
     return ZX_OK;
-}
-
-void Allocator::Free(WriteTxn* txn, size_t index) {
-    ZX_DEBUG_ASSERT(map_.Get(index, index + 1));
-    map_.Clear(index, index + 1);
-    Persist(txn, index, 1);
-    metadata_.PoolRelease(1);
-    sb_->Write(txn);
-
-    if (index < first_free_) {
-        first_free_ = index;
-    }
 }
 
 size_t Allocator::Find() {
@@ -189,6 +233,8 @@ size_t Allocator::Find() {
         // If we found a valid range, return; otherwise start searching from upper_limit.
         if (status == ZX_OK) {
             ZX_DEBUG_ASSERT(out < upper_limit);
+            ZX_DEBUG_ASSERT(!map_.GetOne(out));
+            ZX_DEBUG_ASSERT(!swap_in_.GetOne(out));
             return out;
         }
 
@@ -202,18 +248,143 @@ size_t Allocator::Find() {
 size_t Allocator::Allocate(WriteTxn* txn) {
     ZX_DEBUG_ASSERT(reserved_ > 0);
     size_t bitoff_start = Find();
-    ZX_ASSERT(map_.Set(bitoff_start, bitoff_start + 1) == ZX_OK);
-    Persist(txn, bitoff_start, 1);
-    metadata_.PoolAllocate(1);
+
+    ZX_ASSERT(map_.SetOne(bitoff_start) == ZX_OK);
+    storage_->PersistRange(txn, GetMapData(), bitoff_start, 1);
     reserved_ -= 1;
-    sb_->Write(txn);
+    storage_->PersistAllocate(txn, 1);
     first_free_ = bitoff_start + 1;
     return bitoff_start;
 }
 
-zx_status_t Allocator::Extend(WriteTxn* txn) {
+void Allocator::Unreserve(size_t count) {
+#ifdef __Fuchsia__
+    ZX_DEBUG_ASSERT(swap_in_.num_bits() == 0);
+    ZX_DEBUG_ASSERT(swap_out_.num_bits() == 0);
+#endif
+    ZX_DEBUG_ASSERT(reserved_ >= count);
+    reserved_ -= count;
+}
+
+#ifdef __Fuchsia__
+size_t Allocator::Swap(size_t old_index) {
+    ZX_DEBUG_ASSERT(reserved_ > 0);
+
+    if (old_index > 0) {
+        ZX_DEBUG_ASSERT(map_.GetOne(old_index));
+        ZX_ASSERT(swap_out_.SetOne(old_index) == ZX_OK);
+    }
+
+    size_t new_index = Find();
+    ZX_DEBUG_ASSERT(!swap_in_.GetOne(new_index));
+    ZX_ASSERT(swap_in_.SetOne(new_index) == ZX_OK);
+    reserved_--;
+    first_free_ = new_index + 1;
+    ZX_DEBUG_ASSERT(swap_in_.num_bits() >= swap_out_.num_bits());
+    return new_index;
+}
+
+void Allocator::SwapCommit(WriteTxn* txn) {
+    if (swap_in_.num_bits() == 0 && swap_out_.num_bits() == 0) {
+        return;
+    }
+
+    for (auto range = swap_in_.begin(); range != swap_in_.end(); ++range) {
+        // Ensure that none of the bits are already allocated.
+        ZX_DEBUG_ASSERT(map_.Scan(range->bitoff, range->end(), false));
+
+        // Swap in the new bits.
+        zx_status_t status = map_.Set(range->bitoff, range->end());
+        ZX_DEBUG_ASSERT(status == ZX_OK);
+        storage_->PersistRange(txn, GetMapData(), range->bitoff, range->bitlen);
+    }
+
+    for (auto range = swap_out_.begin(); range != swap_out_.end(); ++range) {
+        if (range->bitoff < first_free_) {
+            // If we are freeing up a value < our current hint, update hint now.
+            first_free_ = range->bitoff;
+        }
+        // Ensure that all bits are already allocated.
+        ZX_DEBUG_ASSERT(map_.Get(range->bitoff, range->end()));
+
+        // Swap out the old bits.
+        zx_status_t status = map_.Clear(range->bitoff, range->end());
+        ZX_DEBUG_ASSERT(status == ZX_OK);
+        storage_->PersistRange(txn, GetMapData(), range->bitoff, range->bitlen);
+    }
+
+    // Update count of allocated blocks.
+    // Since we swap out 1 or fewer elements each time one is swapped in,
+    // the elements in swap_out can never be greater than those in swap_in.
+    ZX_DEBUG_ASSERT(swap_in_.num_bits() >= swap_out_.num_bits());
+    storage_->PersistAllocate(txn, swap_in_.num_bits() - swap_out_.num_bits());
+
+    // Clear the reserved/unreserved bitmaps
+    swap_in_.ClearAll();
+    swap_out_.ClearAll();
+}
+#endif
+
+#ifdef __Fuchsia__
+fbl::Vector<BlockRegion> Allocator::GetAllocatedRegions() const {
+    fbl::Vector<BlockRegion> out_regions;
+    uint64_t offset = 0;
+    uint64_t end = 0;
+    while (!map_.Scan(end, map_.size(), false, &offset)) {
+        if (map_.Scan(offset, map_.size(), true, &end)) {
+            end = map_.size();
+        }
+        out_regions.push_back({offset, end - offset});
+    }
+    return out_regions;
+}
+#endif
+
+PersistentStorage::PersistentStorage(Bcache* bc, SuperblockManager* sb, size_t unit_size,
+                                     GrowHandler grow_cb, AllocatorMetadata metadata) :
+#ifdef __Fuchsia__
+      bc_(bc), unit_size_(unit_size),
+#endif
+      sb_(sb),  grow_cb_(std::move(grow_cb)), metadata_(std::move(metadata)) {}
+
+zx_status_t Allocator::Create(fs::ReadTxn* txn, fbl::unique_ptr<AllocatorStorage> storage,
+                              fbl::unique_ptr<Allocator>* out) {
+    zx_status_t status;
+    fbl::unique_ptr<Allocator> allocator(new Allocator(std::move(storage)));
+
+    if ((status = allocator->ResetMap()) != ZX_OK) {
+        return status;
+    }
+
+#ifdef __Fuchsia__
+    vmoid_t map_vmoid;
+    if ((status = allocator->storage_->AttachVmo(allocator->map_.StorageUnsafe()->GetVmo(),
+                                                 &map_vmoid)) != ZX_OK) {
+        return status;
+    }
+    allocator->storage_->Load(txn, map_vmoid);
+#else
+    allocator->storage_->Load(txn, allocator->GetMapData());
+#endif
+    *out = std::move(allocator);
+    return ZX_OK;
+}
+
+#ifdef __Fuchsia__
+zx_status_t PersistentStorage::AttachVmo(const zx::vmo& vmo, vmoid_t* vmoid) {
+    return bc_->AttachVmo(vmo, vmoid);
+}
+#endif
+
+void PersistentStorage::Load(fs::ReadTxn* txn, ReadData data) {
+    blk_t pool_blocks = BitmapBlocksForSize(metadata_.PoolTotal());
+    txn->Enqueue(data, 0, metadata_.MetadataStartBlock(), pool_blocks);
+}
+
+zx_status_t PersistentStorage::Extend(WriteTxn* txn, WriteData data, GrowMapCallback grow_map) {
 #ifdef __Fuchsia__
     TRACE_DURATION("minfs", "Minfs::Allocator::Extend");
+    ZX_DEBUG_ASSERT(txn != nullptr);
     if (!metadata_.UsingFvm()) {
         return ZX_ERR_NO_SPACE;
     }
@@ -261,125 +432,41 @@ zx_status_t Allocator::Extend(WriteTxn* txn) {
     }
 
     // Extend the in memory representation of our allocation pool -- it grew!
-    ZX_DEBUG_ASSERT(pool_size >= map_.size());
-    size_t old_pool_size = map_.size();
-    if ((status = map_.Grow(fbl::round_up(pool_size, kMinfsBlockBits))) != ZX_OK) {
-        FS_TRACE_ERROR("minfs::Allocator failed to Grow (in memory): %d\n", status);
-        return ZX_ERR_NO_SPACE;
+    size_t old_pool_size;
+    if ((status = grow_map(pool_size, &old_pool_size)) != ZX_OK) {
+        return status;
     }
-    // Grow before shrinking to ensure the underlying storage is a multiple
-    // of kMinfsBlockSize.
-    map_.Shrink(pool_size);
 
     metadata_.Fvm().SetDataSlices(data_slices_new);
     metadata_.SetPoolTotal(pool_size);
     sb_->Write(txn);
 
     // Update the block bitmap.
-    Persist(txn, old_pool_size, pool_size - old_pool_size);
+    PersistRange(txn, data, old_pool_size, pool_size - old_pool_size);
     return ZX_OK;
 #else
     return ZX_ERR_NO_SPACE;
 #endif
 }
 
-#ifdef __Fuchsia__
-size_t Allocator::Swap(size_t old_index) {
-    ZX_DEBUG_ASSERT(reserved_ > 0);
-
-    size_t bitoff_start = Find();
-    ZX_ASSERT(swap_in_.Set(bitoff_start, bitoff_start + 1) == ZX_OK);
-    reserved_--;
-    first_free_ = bitoff_start + 1;
-
-    if (old_index > 0) {
-        ZX_DEBUG_ASSERT(map_.Get(old_index, old_index + 1));
-        ZX_ASSERT(swap_out_.Set(old_index, old_index + 1) == ZX_OK);
-    }
-
-    ZX_DEBUG_ASSERT(swap_in_.num_bits() >= swap_out_.num_bits());
-    return bitoff_start;
-}
-
-void Allocator::SwapCommit(WriteTxn* txn) {
-    // No action required if no blocks have been reserved.
-    if (!swap_in_.num_bits() && !swap_out_.num_bits()) {
-        return;
-    }
-
+void PersistentStorage::PersistRange(WriteTxn* txn, WriteData data, size_t index, size_t count) {
     ZX_DEBUG_ASSERT(txn != nullptr);
-
-    for (auto range = swap_in_.begin(); range != swap_in_.end(); ++range) {
-        // Ensure that none of the bits are already allocated.
-        ZX_DEBUG_ASSERT(map_.Scan(range->bitoff, range->end(), false));
-
-        // Swap in the new bits.
-        zx_status_t status = map_.Set(range->bitoff, range->end());
-        ZX_DEBUG_ASSERT(status == ZX_OK);
-        Persist(txn, range->bitoff, range->bitlen);
-    }
-
-    for (auto range = swap_out_.begin(); range != swap_out_.end(); ++range) {
-        if (range->bitoff < first_free_) {
-            // If we are freeing up a value < our current hint, update hint now.
-            first_free_ = range->bitoff;
-        }
-        // Ensure that all bits are already allocated.
-        ZX_DEBUG_ASSERT(map_.Get(range->bitoff, range->end()));
-
-        // Swap out the old bits.
-        zx_status_t status = map_.Clear(range->bitoff, range->end());
-        ZX_DEBUG_ASSERT(status == ZX_OK);
-        Persist(txn, range->bitoff, range->bitlen);
-    }
-
-    // Update count of allocated blocks.
-    // Since we swap out 1 or fewer elements each time one is swapped in,
-    // the elements in swap_out can never be greater than those in swap_in.
-    ZX_DEBUG_ASSERT(swap_in_.num_bits() >= swap_out_.num_bits());
-    metadata_.PoolAllocate(static_cast<blk_t>(swap_in_.num_bits() - swap_out_.num_bits()));
-    sb_->Write(txn);
-
-    // Clear the reserved/unreserved bitmaps
-    swap_in_.ClearAll();
-    swap_out_.ClearAll();
-}
-#endif
-
-void Allocator::Persist(WriteTxn* txn, size_t index, size_t count) {
     blk_t rel_block = static_cast<blk_t>(index) / kMinfsBlockBits;
     blk_t abs_block = metadata_.MetadataStartBlock() + rel_block;
     blk_t blk_count = BitmapBlocksForSize(count);
-
-#ifdef __Fuchsia__
-    zx_handle_t data = map_.StorageUnsafe()->GetVmo().get();
-#else
-    const void* data = map_.StorageUnsafe()->GetData();
-#endif
     txn->Enqueue(data, rel_block, abs_block, blk_count);
 }
 
-#ifdef __Fuchsia__
-fbl::Vector<BlockRegion> Allocator::GetAllocatedRegions() const {
-    fbl::Vector<BlockRegion> out_regions;
-    uint64_t offset = 0;
-    uint64_t end = 0;
-    while (!map_.Scan(end, map_.size(), false, &offset)) {
-        if (map_.Scan(offset, map_.size(), true, &end)) {
-            end = map_.size();
-        }
-        out_regions.push_back({offset, end - offset});
-    }
-    return out_regions;
+void PersistentStorage::PersistAllocate(WriteTxn* txn, size_t count) {
+    ZX_DEBUG_ASSERT(txn != nullptr);
+    metadata_.PoolAllocate(static_cast<blk_t>(count));
+    sb_->Write(txn);
 }
-#endif
 
-void Allocator::Unreserve(size_t count) {
-#ifdef __Fuchsia__
-    ZX_DEBUG_ASSERT(swap_in_.num_bits() == 0);
-    ZX_DEBUG_ASSERT(swap_out_.num_bits() == 0);
-#endif
-    ZX_DEBUG_ASSERT(reserved_ >= count);
-    reserved_ -= count;
+void PersistentStorage::PersistRelease(WriteTxn* txn, size_t count) {
+    ZX_DEBUG_ASSERT(txn != nullptr);
+    metadata_.PoolRelease(static_cast<blk_t>(count));
+    sb_->Write(txn);
 }
+
 } // namespace minfs

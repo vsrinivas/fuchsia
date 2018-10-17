@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [
+    ":minfs-unit",
+  ]
+}
+
+test("minfs-unit") {
+  test_group = "fs"
+  sources = [
+    "allocator-test.cpp",
+    "main.cpp",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-minfs:c",
+    "$zx/system/ulib/block-client",
+    "$zx/system/ulib/minfs",
+    "$zx/system/ulib/zxtest",
+  ]
+}

@@ -72,6 +72,7 @@ test("fs") {
     "$zx/system/ulib/async:async-default",
     "$zx/system/ulib/async-loop",
     "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/block-client",
     "$zx/system/ulib/cobalt-client",
     "$zx/system/ulib/digest",
     "$zx/system/ulib/fbl",

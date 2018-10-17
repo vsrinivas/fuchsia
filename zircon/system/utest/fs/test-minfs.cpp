@@ -19,6 +19,7 @@
 #include <fvm/format.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fzl/fdio.h>
+#include <minfs/allocator.h>
 #include <minfs/format.h>
 #include <unittest/unittest.h>
 #include <zircon/device/vfs.h>

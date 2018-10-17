@@ -28,9 +28,10 @@ zx_status_t InodeManager::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn*
     };
 
     zx_status_t status;
-    if ((status = Allocator::Create(bc, sb, txn, kMinfsInodeSize,
-                                    std::move(grow_cb), std::move(metadata),
-                                    &mgr->inode_allocator_)) != ZX_OK) {
+    fbl::unique_ptr<PersistentStorage> storage(new PersistentStorage(bc, sb, kMinfsInodeSize,
+                                                                     std::move(grow_cb),
+                                                                     std::move(metadata)));
+    if ((status = Allocator::Create(txn, std::move(storage), &mgr->inode_allocator_)) != ZX_OK) {
         return status;
     }
 

@@ -287,18 +287,19 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
     ZX_DEBUG_ASSERT(reserve_blocks <= limits_.GetMaximumDataBlocks());
 #endif
     fbl::unique_ptr<WritebackWork> work(new WritebackWork(bc_.get()));
-    fbl::unique_ptr<AllocatorPromise> inode_promise;
-    fbl::unique_ptr<AllocatorPromise> block_promise;
+    fbl::unique_ptr<AllocatorPromise> inode_promise(new AllocatorPromise());
+    fbl::unique_ptr<AllocatorPromise> block_promise(new AllocatorPromise());
 
     // Reserve blocks from allocators before returning WritebackWork to client.
     zx_status_t status;
     if (reserve_inodes &&
-        (status = inodes_->Reserve(work.get(), reserve_inodes, &inode_promise)) != ZX_OK) {
+        (status = inodes_->Reserve(work.get(), reserve_inodes, inode_promise.get())) != ZX_OK) {
         return status;
     }
 
     if (reserve_blocks &&
-        (status = block_allocator_->Reserve(work.get(), reserve_blocks, &block_promise)) != ZX_OK) {
+        (status = block_promise->Initialize(work.get(), reserve_blocks,
+                                            block_allocator_.get())) != ZX_OK) {
         return status;
     }
 
@@ -798,9 +799,12 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
                           std::move(block_allocator_fvm), &sb->MutableInfo()->alloc_block_count,
                           &sb->MutableInfo()->block_count);
 
+    fbl::unique_ptr<PersistentStorage> storage(
+        new PersistentStorage(bc.get(), sb.get(), kMinfsBlockSize, nullptr,
+                              std::move(block_allocator_meta)));
+
     fbl::unique_ptr<Allocator> block_allocator;
-    if ((status = Allocator::Create(bc.get(), sb.get(), &txn, kMinfsBlockSize, nullptr,
-                                    std::move(block_allocator_meta), &block_allocator)) != ZX_OK) {
+    if ((status = Allocator::Create(&txn, std::move(storage), &block_allocator)) != ZX_OK) {
         FS_TRACE_ERROR("Minfs::Create failed to initialize block allocator: %d\n", status);
         return status;
     }

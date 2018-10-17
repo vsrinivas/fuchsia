@@ -25,7 +25,6 @@
 #include <minfs/superblock.h>
 
 namespace minfs {
-
 #ifdef __Fuchsia__
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
 using BlockRegion = fuchsia_minfs_BlockRegion;
@@ -44,14 +43,24 @@ class AllocatorPromise {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(AllocatorPromise);
 
-    AllocatorPromise() = delete;
+    AllocatorPromise() {}
     ~AllocatorPromise();
+
+    // Returns |ZX_OK| when |allocator| reserves |reserved| elements and |this| is successfully
+    // initialized. Returns an error if not enough elements are available for reservation,
+    // |allocator| is null, or |this| was previously initialized.
+    zx_status_t Initialize(WriteTxn* txn, size_t reserved, Allocator* allocator);
+
+    bool IsInitialized() const { return allocator_ != nullptr; }
 
     // Allocate a new item in allocator_. Return the index of the newly allocated item.
     // A call to Allocate() is effectively the same as a call to Swap(0) + SwapCommit(), but under
     // the hood completes these operations more efficiently as additional state doesn't need to be
     // stored between the two.
     size_t Allocate(WriteTxn* txn);
+
+    // Unreserve all currently reserved items.
+    void Cancel();
 
 #ifdef __Fuchsia__
     // Swap the element currently allocated at |old_index| for a new index.
@@ -61,17 +70,14 @@ public:
 
     // Commit any pending swaps, allocating new indices and de-allocating old indices.
     void SwapCommit(WriteTxn* txn);
+
+    // Remove |requested| reserved elements and give them to |other_promise|.
+    // The reserved count belonging to the Allocator does not change.
+    void Split(size_t requested, AllocatorPromise* other_promise);
+
+    size_t GetReserved() const { return reserved_; }
 #endif
-
 private:
-    friend class Allocator;
-
-    // Constructor which only allows creation through an Allocator.
-    AllocatorPromise(Allocator* allocator, size_t reserved) : allocator_(allocator),
-                                                              reserved_(reserved) {
-        ZX_DEBUG_ASSERT(allocator != nullptr);
-    }
-
     Allocator* allocator_ = nullptr;
     size_t reserved_ = 0;
 
@@ -169,10 +175,12 @@ public:
     }
 
     void PoolAllocate(uint32_t units) {
+        ZX_DEBUG_ASSERT(*pool_used_ + units <= *pool_total_);
         *pool_used_ += units;
     }
 
     void PoolRelease(uint32_t units) {
+        ZX_DEBUG_ASSERT(*pool_used_ >= units);
         *pool_used_ -= units;
     }
 
@@ -202,28 +210,107 @@ private:
     uint32_t* pool_total_;
 };
 
-// The Allocator class is used to abstract away the mechanism by which
-// minfs allocates objects internally.
-class Allocator {
+// Types of data to use with read and write transactions.
+#ifdef __Fuchsia__
+using ReadData = vmoid_t;
+using WriteData = zx_handle_t;
+#else
+using ReadData = const void*;
+using WriteData = const void*;
+#endif
+
+using GrowMapCallback = fbl::Function<zx_status_t(size_t pool_size, size_t* old_pool_size)>;
+
+// Interface for an Allocator's underlying storage.
+class AllocatorStorage {
+public:
+    AllocatorStorage() = default;
+    AllocatorStorage(const AllocatorStorage&) = delete;
+    AllocatorStorage& operator=(const AllocatorStorage&) = delete;
+    virtual ~AllocatorStorage() {}
+
+#ifdef __Fuchsia__
+    virtual zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* vmoid) = 0;
+#endif
+
+    // Loads data from disk into |data| using |txn|.
+    virtual void Load(fs::ReadTxn* txn, ReadData data) = 0;
+
+    // Extend the on-disk extent containing map_.
+    virtual zx_status_t Extend(WriteTxn* txn, WriteData data, GrowMapCallback grow_map) = 0;
+
+    // Returns the number of unallocated elements.
+    virtual uint32_t PoolAvailable() const = 0;
+
+    // Returns the total number of elements.
+    virtual uint32_t PoolTotal() const = 0;
+
+    // Persists the map at range |index| - |index + count|.
+    virtual void PersistRange(WriteTxn* txn, WriteData data, size_t index, size_t count) = 0;
+
+    // Marks |count| elements allocated and persists the latest data.
+    virtual void PersistAllocate(WriteTxn* txn, size_t count) = 0;
+
+    // Marks |count| elements released and persists the latest data.
+    virtual void PersistRelease(WriteTxn* txn, size_t count) = 0;
+};
+
+// A type of storage which represents a persistent disk.
+class PersistentStorage : public AllocatorStorage {
 public:
     // Callback invoked after the data portion of the allocator grows.
     using GrowHandler = fbl::Function<zx_status_t(uint32_t pool_size)>;
 
-    Allocator() = delete;
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Allocator);
-    ~Allocator();
+    PersistentStorage() = delete;
+    PersistentStorage(const PersistentStorage&) = delete;
+    PersistentStorage& operator=(const PersistentStorage&) = delete;
 
-    // Creates an allocator.
-    //
-    // |grow_cb| is an optional callback to increase the size of the
-    // allocator.
-    static zx_status_t Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn* txn,
-                              size_t unit_size, GrowHandler grow_cb,
-                              AllocatorMetadata metadata, fbl::unique_ptr<Allocator>* out);
+    // |grow_cb| is an optional callback to increase the size of the allocator.
+    PersistentStorage(Bcache* bc, SuperblockManager* sb, size_t unit_size, GrowHandler grow_cb,
+                      AllocatorMetadata metadata);
+    ~PersistentStorage() {}
 
-    // Reserve |count| elements. This is required in order to later allocate them.
-    // Outputs a |promise| which contains reservation details.
-    zx_status_t Reserve(WriteTxn* txn, size_t count, fbl::unique_ptr<AllocatorPromise>* promise);
+#ifdef __Fuchsia__
+    zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* vmoid);
+#endif
+
+    void Load(fs::ReadTxn* txn, ReadData data);
+
+    zx_status_t Extend(WriteTxn* txn, WriteData data, GrowMapCallback grow_map) final;
+
+    uint32_t PoolAvailable() const final { return metadata_.PoolAvailable(); }
+
+    uint32_t PoolTotal() const final { return metadata_.PoolTotal(); }
+
+    void PersistRange(WriteTxn* txn, WriteData data, size_t index, size_t count) final;
+
+    void PersistAllocate(WriteTxn* txn, size_t count) final;
+
+    void PersistRelease(WriteTxn* txn, size_t count) final;
+private:
+#ifdef __Fuchsia__
+    Bcache* bc_;
+    size_t unit_size_;
+#endif
+    SuperblockManager* sb_;
+    GrowHandler grow_cb_;
+    AllocatorMetadata metadata_;
+};
+
+// The Allocator class is used to abstract away the mechanism by which
+// minfs allocates objects internally.
+class Allocator {
+public:
+    virtual ~Allocator();
+
+    Allocator(const Allocator&) = delete;
+    Allocator& operator=(const Allocator&) = delete;
+
+    static zx_status_t Create(fs::ReadTxn* txn, fbl::unique_ptr<AllocatorStorage> storage,
+                              fbl::unique_ptr<Allocator>* out);
+
+    // Return the number of total available elements, after taking reservations into account.
+    size_t GetAvailable();
 
     // Free an item from the allocator.
     void Free(WriteTxn* txn, size_t index);
@@ -236,11 +323,26 @@ private:
     friend class MinfsChecker;
     friend class AllocatorPromise;
 
-    Allocator(Bcache* bc, SuperblockManager* sb, size_t unit_size, GrowHandler grow_cb,
-              AllocatorMetadata metadata);
+    Allocator(fbl::unique_ptr<AllocatorStorage> storage) : reserved_(0), first_free_(0),
+                                                           storage_(std::move(storage)) {}
 
-    // Extend the on-disk extent containing map_.
-    zx_status_t Extend(WriteTxn* txn);
+    // Resets the map size to hold total number of elements specified by storage_.
+    zx_status_t ResetMap();
+
+    // Grows the map to |new_size|, returning the current size as |old_size|.
+    zx_status_t GrowMap(size_t new_size, size_t* old_size);
+
+    WriteData GetMapData() const {
+#ifdef __Fuchsia__
+        return map_.StorageUnsafe()->GetVmo().get();
+#else
+        return map_.StorageUnsafe()->GetData();
+#endif
+    }
+
+    // Reserve |count| elements. This is required in order to later allocate them.
+    // Outputs a |promise| which contains reservation details.
+    zx_status_t Reserve(WriteTxn* txn, size_t count, AllocatorPromise* promise);
 
     // Find and return a free element. This should only be called when reserved_ > 0,
     // ensuring that at least one free element must exist.
@@ -248,6 +350,10 @@ private:
 
     // Allocate an element and return the newly allocated index.
     size_t Allocate(WriteTxn* txn);
+
+    // Unreserve |count| elements. This may be called in the event of failure, or if we
+    // over-reserved initially.
+    void Unreserve(size_t count);
 
 #ifdef __Fuchsia__
     // Mark |index| for de-allocation by adding it to the swap_out map,
@@ -257,32 +363,30 @@ private:
 
     // Allocate / de-allocate elements from the swap_in / swap_out maps (respectively).
     // This is currently only used for the block allocator.
+    // Since elements are only ever swapped synchronously, all elements represented in the swap_in_
+    // and swap_out_ maps are guaranteed to belong to only one Vnode. This method should only be
+    // called in the same thread as the block swaps -- i.e. we should never be resolving blocks for
+    // more than one vnode at a time.
     void SwapCommit(WriteTxn* txn);
 #endif
 
-    // Write back the allocation of the following items to disk.
-    void Persist(WriteTxn* txn, size_t index, size_t count);
-
-    // Unreserve |count| elements. This may be called in the event of failure, or if we
-    // over-reserved initially.
-    void Unreserve(size_t count);
-
-    // Return the number of total available elements, after taking reservations into account.
-    size_t GetAvailable() {
-        size_t total_reserved = reserved_;
-#ifdef __Fuchsia__
-        total_reserved += swap_in_.num_bits();
-#endif
-        ZX_DEBUG_ASSERT(metadata_.PoolAvailable() >= total_reserved);
-        return metadata_.PoolAvailable() - total_reserved;
-    }
-
-    Bcache* bc_;
-    SuperblockManager* sb_;
-    size_t unit_size_;
-    GrowHandler grow_cb_;
-    AllocatorMetadata metadata_;
     RawBitmap map_;
+
+    // Total number of elements reserved by AllocatorPromise objects. Represents the maximum number
+    // of elements that are allowed to be allocated or swapped in at a given time.
+    // Once an element is marked for allocation or swap, the reserved_ count is updated accordingly.
+    // Remaining reserved blocks will be committed by the end of each Vnode operation,
+    // with the exception of copy-on-write data blocks.
+    // These will be committed asynchronously via the DataBlockAssigner thread.
+    // This means that at the time of reservation if |reserved_| > 0, all reserved blocks must
+    // belong to vnodes which are already enqueued in the DataBlockAssigner thread.
+    size_t reserved_;
+
+    // Index of the first free element in the map.
+    size_t first_free_;
+
+    // Represents the Allocator's backing storage.
+    fbl::unique_ptr<AllocatorStorage> storage_;
 
 #ifdef __Fuchsia__
     // Bitmap of elements to be allocated on SwapCommit.
@@ -290,15 +394,5 @@ private:
     // Bitmap of elements to be de-allocated on SwapCommit.
     bitmap::RleBitmap swap_out_;
 #endif
-
-    // Total number of elements reserved by AllocatorPromise objects. Represents the maximum number
-    // of elements that are allowed to be allocated or swapped in at a given time.
-    // Once an element is marked for allocation or swap, the reserved_ count is updated accordingly.
-    // Remaining reserved blocks will be committed by the end of each Vnode operation.
-    size_t reserved_;
-
-    // Index of the first free element in the map.
-    size_t first_free_;
 };
-
 } // namespace minfs

@@ -37,9 +37,8 @@ public:
                               fbl::unique_ptr<InodeManager>* out);
 
     // Reserve |inodes| inodes in the allocator.
-    zx_status_t Reserve(WriteTxn* txn, size_t inodes,
-                        fbl::unique_ptr<AllocatorPromise>* out) {
-        return inode_allocator_->Reserve(txn, inodes, out);
+    zx_status_t Reserve(WriteTxn* txn, size_t inodes, AllocatorPromise* promise) {
+        return promise->Initialize(txn, inodes, inode_allocator_.get());
     }
 
     // Free an inode.
