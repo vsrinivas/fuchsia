@@ -90,6 +90,22 @@ private:
     //  * Otherwise, an iterator object pointing to the end of allocated_shared_memory_.
     SharedMemoryList::iterator FindSharedMemory(uint64_t mem_id);
 
+    // Gets a pointer to the memory referenced by a SharedMemoryList iterator.
+    //
+    // Parameters:
+    //  * mem_iter:  The SharedMemoryList iterator object.
+    //  * min_size:  The minimum amount of usable memory expected. This is compared against the size
+    //               of the SharedMemory block minus the offset.
+    //  * offset:    The offset from the beginning of the SharedMemory to return.
+    //
+    // Returns:
+    //  * If the iterator points to a valid memory reference of proper size, a uint8_t pointer to
+    //    the beginning of the memory plus the requested offset.
+    //  * Otherwise, a nullptr.
+    void* GetSharedMemoryPointer(SharedMemoryList::iterator mem_iter,
+                                 size_t min_size,
+                                 zx_off_t offset);
+
     //
     // OP-TEE RPC Function Handlers
     //

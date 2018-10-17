@@ -265,7 +265,7 @@ zx_status_t OpteeClient::AllocateSharedMemory(size_t size,
 zx_status_t OpteeClient::FreeSharedMemory(uint64_t mem_id) {
     // Check if client owns memory that matches the memory id
     SharedMemoryList::iterator mem_iter = FindSharedMemory(mem_id);
-    if (mem_iter == allocated_shared_memory_.end()) {
+    if (!mem_iter.IsValid()) {
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -287,6 +287,26 @@ OpteeClient::SharedMemoryList::iterator OpteeClient::FindSharedMemory(uint64_t m
         [mem_id_ptr_val](auto& item) {
             return mem_id_ptr_val == reinterpret_cast<uintptr_t>(&item);
         });
+}
+
+void* OpteeClient::GetSharedMemoryPointer(const SharedMemoryList::iterator mem_iter,
+                                          size_t min_size,
+                                          zx_off_t offset) {
+    if (!mem_iter.IsValid()) {
+        zxlogf(ERROR, "optee: received invalid shared memory region!\n");
+        return nullptr;
+    }
+
+    size_t mem_size = mem_iter->size();
+    if (offset > 0 && offset >= mem_size) {
+        zxlogf(ERROR, "optee: expected offset into shared memory region exceeds its bounds!\n");
+        return nullptr;
+    } else if (mem_size - offset < min_size) {
+        zxlogf(ERROR, "optee: received shared memory region smaller than expected!\n");
+        return nullptr;
+    }
+
+    return reinterpret_cast<void*>(mem_iter->vaddr() + offset);
 }
 
 zx_status_t OpteeClient::HandleRpc(const RpcFunctionArgs& args, RpcFunctionResult* out_result) {
@@ -363,12 +383,7 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
     // This dispatcher method only checks that the memory needed for the header is valid. Commands
     // that require more memory than just the header will need to do further memory checks.
     SharedMemoryList::iterator mem_iter = FindSharedMemory(mem_id);
-    if (mem_iter == allocated_shared_memory_.end()) {
-        zxlogf(ERROR, "optee: invalid shared memory region passed into RPC command!\n");
-        return ZX_ERR_INVALID_ARGS;
-    } else if (mem_iter->size() < sizeof(MessageHeader)) {
-        zxlogf(ERROR,
-               "optee: shared memory region passed into RPC command is too small\n");
+    if (GetSharedMemoryPointer(mem_iter, sizeof(MessageHeader), 0) == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -448,28 +463,17 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
                                message->memory_reference_offset();
 
     // Try to find the SharedMemory based on the memory id
-    uint8_t* out_ta_mem; // Where to write the TA in memory
+    void* out_ta_mem; // Where to write the TA in memory
 
     if (message->memory_reference_id() != 0) {
         SharedMemoryList::iterator out_mem_iter = FindSharedMemory(message->memory_reference_id());
-        if (out_mem_iter == allocated_shared_memory_.end()) {
-            // Valid memory reference could not be found and TEE is not querying size
-            zxlogf(ERROR,
-                   "optee: received invalid memory reference from TEE command to load TA!\n");
-            message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-            return ZX_ERR_INVALID_ARGS;
-        } else if (mem_usable_size > out_mem_iter->size()) {
-            // The TEE is claiming the memory reference given is larger than it actually is
-            // We want to catch this in case TEE is buggy
-            zxlogf(ERROR,
-                   "optee: TEE claimed a memory reference's size is larger than the real memory"
-                   "size!\n");
+        out_ta_mem = GetSharedMemoryPointer(out_mem_iter,
+                                            mem_usable_size,
+                                            message->memory_reference_offset());
+        if (out_ta_mem == nullptr) {
             message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
             return ZX_ERR_INVALID_ARGS;
         }
-
-        out_ta_mem = reinterpret_cast<uint8_t*>(out_mem_iter->vaddr() +
-                                                message->memory_reference_offset());
     } else {
         // TEE is just querying size of TA, so it sent a memory identifier of 0
         ZX_DEBUG_ASSERT(message->memory_reference_offset() == 0);
@@ -528,8 +532,8 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
 
     if (ta_size < mem_usable_size) {
         // Clear out the rest of the memory after the TA
-        uint8_t* ta_end = out_ta_mem + ta_size;
-        memset(ta_end, 0, mem_usable_size - ta_size);
+        void* ta_end = static_cast<void*>(static_cast<uint8_t*>(out_ta_mem) + ta_size);
+        ::memset(ta_end, 0, mem_usable_size - ta_size);
     }
 
     message->set_return_code(TEEC_SUCCESS);
