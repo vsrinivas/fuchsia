@@ -88,7 +88,7 @@ fbl::RefPtr<SharedLegacyIrqHandler> SharedLegacyIrqHandler::Create(uint irq_id) 
 
     SharedLegacyIrqHandler* handler = new (&ac) SharedLegacyIrqHandler(irq_id);
     if (!ac.check()) {
-        TRACEF("Failed to create shared legacry IRQ handler for system IRQ ID %u\n", irq_id);
+        TRACEF("Failed to create shared legacy IRQ handler for system IRQ ID %u\n", irq_id);
         return nullptr;
     }
 
@@ -423,7 +423,7 @@ zx_status_t PcieDevice::EnterMsiIrqMode(uint requested_irqs) {
         return ZX_ERR_NOT_SUPPORTED;
 
     // If we support PVM, make sure that we are completely masked before
-    // attempting to allocte the block of IRQs.
+    // attempting to allocate the block of IRQs.
     bool initially_masked;
     if (irq_.msi->has_pvm()) {
         cfg_->Write(irq_.msi->mask_bits_reg(), 0xFFFFFFFF);

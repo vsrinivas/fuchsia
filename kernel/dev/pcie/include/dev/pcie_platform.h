@@ -60,7 +60,7 @@ public:
      * @param is_msix True if this request is for an MSI-X compatible block.  False
      *        for plain old MSI.
      * @param out_block A pointer to the allocation bookkeeping to be filled out
-     *        upon successful allocation of the reqested block of IRQs.
+     *        upon successful allocation of the requested block of IRQs.
      *
      * @return A status code indicating the success or failure of the operation.
      */
@@ -107,7 +107,7 @@ public:
     }
 
     /**
-     * Method used for masking/unmaskingof MSI handlers at the platform level.
+     * Method used for masking/unmasking of MSI handlers at the platform level.
      *
      * @param block A pointer to a block of MSIs allocated using a platform supplied
      *        platform_msi_alloc_block_t callback.
@@ -136,7 +136,7 @@ private:
     const bool supports_msi_masking_;
 };
 
-// A thin vaneer version that declares no MSI
+// A thin veneer version that declares no MSI
 class NoMsiPciePlatformInterface : public PciePlatformInterface {
 public:
     NoMsiPciePlatformInterface()

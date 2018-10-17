@@ -133,7 +133,7 @@ PciCapPcie::PciCapPcie(const PcieDevice& dev, uint16_t base, uint8_t id)
         case PCIE_DEVTYPE_RC_EVENT_COLLECTOR:
             if (dev.is_bridge()) {
                 TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has a Type 0 PCIe "
-                       "device type (0x%x) in PCIe capabilties structure, but "
+                       "device type (0x%x) in PCIe capabilities structure, but "
                        "does not have a Type 0 config header.\n",
                        dev.bus_id(), dev.dev_id(), dev.func_id(),
                        dev.vendor_id(), dev.device_id(),
@@ -150,7 +150,7 @@ PciCapPcie::PciCapPcie(const PcieDevice& dev, uint16_t base, uint8_t id)
         case PCIE_DEVTYPE_PCI_TO_PCIE_BRIDGE:
             if (!dev.is_bridge()) {
                 TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has a Type 1 PCIe "
-                       "device type (0x%x) in PCIe capabilties structure, but "
+                       "device type (0x%x) in PCIe capabilities structure, but "
                        "does not have a Type 1 config header.\n",
                        dev.bus_id(), dev.dev_id(), dev.func_id(),
                        dev.vendor_id(), dev.device_id(),
@@ -161,7 +161,7 @@ PciCapPcie::PciCapPcie(const PcieDevice& dev, uint16_t base, uint8_t id)
 
         default:
             TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has an illegal PCIe "
-                   "device type (0x%x) in PCIe capabilties structure.\n",
+                   "device type (0x%x) in PCIe capabilities structure.\n",
                    dev.bus_id(), dev.dev_id(), dev.func_id(),
                    dev.vendor_id(), dev.device_id(),
                    devtype_);

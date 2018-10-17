@@ -440,7 +440,7 @@ zx_status_t PcieDevice::ProbeBarLocked(uint bar_id) {
     /* Disable either MMIO or PIO (depending on the BAR type) access while we
      * perform the probe.  We don't want the addresses written during probing to
      * conflict with anything else on the bus.  Note:  No drivers should have
-     * acccess to this device's registers during the probe process as the device
+     * access to this device's registers during the probe process as the device
      * should not have been published yet.  That said, there could be other
      * (special case) parts of the system accessing a devices registers at this
      * point in time, like an early init debug console or serial port.  Don't

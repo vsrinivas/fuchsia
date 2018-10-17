@@ -320,7 +320,7 @@ public:
             return PCIE_DEVTYPE_UNKNOWN;
     }
 
-    // TODO(johngro) : make these protected.  They are currently only visibile
+    // TODO(johngro) : make these protected.  They are currently only visible
     // because of debug code.
     fbl::Mutex* dev_lock() { return &dev_lock_; }
 

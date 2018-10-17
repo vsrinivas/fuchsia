@@ -33,10 +33,10 @@ public:
     // QuirkHandler
     //
     // Definition of a quirk handler hook.  Quirks are behaviors which can be
-    // registered by patforms to deal with the sometimes odd (dare I say,
+    // registered by platforms to deal with the sometimes odd (dare I say,
     // quirky?) behavior of hardware detected on the PCI bus.  All registered
     // quirks handlers are executed whenever new hardware is discovered and
-    // probed, but before resource assignement has taken place.
+    // probed, but before resource assignment has taken place.
     //
     // Once the system has been initialized and is ready to begin resource
     // allocation, all quirks will be executed one final time will nullptr
@@ -47,7 +47,7 @@ public:
     //
     // For example, if a platform has a quirk to deal with a particular oddness
     // of a specific chipset, the quirk should use the final call as a chance to
-    // check to make sure that it saw a chipset device recogized and took
+    // check to make sure that it saw a chipset device recognized and took
     // appropriate action.  If it didn't, it should log a warning informing the
     // maintainers to come back and update the quirk to take the appropriate
     // actions (if any) for the new chipset.
@@ -117,7 +117,7 @@ public:
     zx_status_t RescanDevices();
 
     // TODO(johngro) : Remove this someday.  Getting the "Nth" device is not a
-    // concept which is going to carry over well to the world of hot-plugable
+    // concept which is going to carry over well to the world of hot-pluggable
     // devices.
     fbl::RefPtr<PcieDevice> GetNthDevice(uint32_t index);
 

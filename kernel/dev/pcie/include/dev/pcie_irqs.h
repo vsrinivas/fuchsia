@@ -65,7 +65,7 @@ typedef struct pcie_irq_mode_caps {
     uint max_irqs;  /** The maximum number of IRQ supported by the selected mode */
     /**
      * For MSI or MSI-X, indicates whether or not per-vector-masking has been
-     * implementd by the hardware.
+     * implemented by the hardware.
      */
     bool per_vector_masking_supported;
 } pcie_irq_mode_caps_t;

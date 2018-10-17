@@ -24,7 +24,7 @@ inline bool isDownstream(const pci_bdf_t& bdf) {
     // This is hacky but it's reasonable. The controller appears to (?) support
     // more than a single downstream device but we've never seen this in
     // practice. If we wanted to _actually_ support multiple downstream devices
-    // we'd have to perform additional iATU acrobatics (which we wil eventually
+    // we'd have to perform additional iATU acrobatics (which we will eventually
     // do, when this driver lives in userland).
     // For now, we pin this device to BDF 1:0:0. Also note that the choice of
     // bus_id and device_id are arbitrary.
@@ -107,7 +107,7 @@ zx_status_t DesignWarePcieAddressProvider::Translate(const uint8_t bus_id,
     //          program the iATU each time we perform a config access and stack
     //          ECAMs for all devices as shadow registers on top of one another.
     //
-    // * Enough to accomodate all PF/MMIO/IO BARs for all downstream devices
+    // * Enough to accommodate all PF/MMIO/IO BARs for all downstream devices
     //   with enough aperture left over for a full ECAM.
     if (isRootBridge(bdf)) {
         *virt = reinterpret_cast<vaddr_t>(root_bridge_region_->vaddr());

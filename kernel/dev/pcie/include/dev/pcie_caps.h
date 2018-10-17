@@ -46,7 +46,7 @@ constexpr uint8_t PCIE_CAP_ID_ENHANCED_ALLOCATION      = 0x14;
 /**
  * Structure definitions for capability PCIE_CAP_ID_MSI
  *
- * @see The PCI Local Bus specificiaion v3.0 Section 6.8.1
+ * @see The PCI Local Bus specification v3.0 Section 6.8.1
  */
 #define PCIE_CAP_MSI_CAP_HDR_SIZE               (offsetof(pcie_cap_msi_t, nopvm_32bit))
 #define PCIE_CAP_MSI_CTRL_PVM_SUPPORTED(ctrl)   ((ctrl & 0x0100) != 0)

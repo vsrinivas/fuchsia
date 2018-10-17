@@ -25,10 +25,10 @@ using fbl::AutoLock;
 /* TODO(johngro) : figure this out someday.
  *
  * In theory, BARs which map PIO regions for devices are supposed to be able to
- * use bits [2, 31] to describe the programable section of the PIO window.  On
+ * use bits [2, 31] to describe the programmable section of the PIO window.  On
  * real x86/64 systems, however, using the write-1s-readback technique to
- * determine programable bits of the BAR's address (and therefor the size of the
- * I/O window) shows that the upper 16 bits are not programable.  This makes
+ * determine programmable bits of the BAR's address (and therefor the size of the
+ * I/O window) shows that the upper 16 bits are not programmable.  This makes
  * sense for x86 (where I/O space is only 16-bits), but fools the system into
  * thinking that the I/O window is enormous.
  *
@@ -47,7 +47,7 @@ fbl::Mutex PcieBusDriver::driver_lock_;
 PcieBusDriver::PcieBusDriver(PciePlatformInterface& platform) : platform_(platform) { }
 PcieBusDriver::~PcieBusDriver() {
     // TODO(johngro): For now, if the bus driver is shutting down and unloading,
-    // ASSERT that there are no currently claimed devices out there.  In the the
+    // ASSERT that there are no currently claimed devices out there.  In the
     // long run, we need to gracefully handle disconnecting from all user mode
     // drivers (probably using a simulated hot-unplug) if we unload the bus
     // driver.
