@@ -326,6 +326,10 @@ images += [
     public = [
       "IMAGE_BLOB_RAW",
     ]
+    json = {
+      name = "blob"
+      type = "blk"
+    }
   },
 ]
 
@@ -665,6 +669,10 @@ images += [
     public = [
       "IMAGE_DATA_RAW",
     ]
+    json = {
+      name = "data"
+      type = "blk"
+    }
     deps = [
       ":data.blk",
     ]
