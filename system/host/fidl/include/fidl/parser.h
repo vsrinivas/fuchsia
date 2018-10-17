@@ -97,9 +97,9 @@ private:
             token.set_previous_end(gap_start_);
         }
 
-        for (int i = 0; i < active_ast_scopes_.size(); i++) {
-            if (active_ast_scopes_[i].start_.kind() == Token::Kind::kNotAToken) {
-                active_ast_scopes_[i].start_ = token;
+        for (auto& scope : active_ast_scopes_) {
+            if (scope.start_.kind() == Token::Kind::kNotAToken) {
+                scope.start_ = token;
             }
         }
 

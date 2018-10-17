@@ -106,23 +106,21 @@ constexpr TypeShape kFloat32TypeShape = TypeShape(4u, 4u);
 constexpr TypeShape kFloat64TypeShape = TypeShape(8u, 8u);
 
 uint32_t AlignTo(uint64_t size, uint64_t alignment) {
-    auto mask = alignment - 1;
-    size += mask;
-    size &= ~mask;
-    if (size > std::numeric_limits<uint32_t>::max()) {
-        size = std::numeric_limits<uint32_t>::max();
-    }
-    return size;
+    return static_cast<uint32_t>(
+        std::min((size + alignment - 1) & -alignment,
+                 static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())));
 }
 
 uint32_t ClampedMultiply(uint32_t a, uint32_t b) {
-    uint64_t product = (uint64_t)a * b;
-    return std::min(product, (uint64_t)std::numeric_limits<uint32_t>::max());
+    return static_cast<uint32_t>(
+        std::min(static_cast<uint64_t>(a) * static_cast<uint64_t>(b),
+                 static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())));
 }
 
 uint32_t ClampedAdd(uint32_t a, uint32_t b) {
-    uint64_t sum = (uint64_t)a + b;
-    return std::min(sum, (uint64_t)std::numeric_limits<uint32_t>::max());
+    return static_cast<uint32_t>(
+        std::min(static_cast<uint64_t>(a) + static_cast<uint64_t>(b),
+                 static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())));
 }
 
 TypeShape CStructTypeShape(std::vector<FieldShape*>* fields, uint32_t extra_handles = 0u) {

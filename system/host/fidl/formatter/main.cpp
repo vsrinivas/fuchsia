@@ -90,9 +90,8 @@ int main(int argc, char* argv[]) {
 
     fidl::SourceManager source_manager;
 
-    // Process filenames
-    for (; pos < args.size(); pos++) {
-        std::string arg = args[pos];
+    // Process filenames.
+    for (const auto& arg : args) {
         if (!source_manager.CreateSource(arg.data())) {
             Fail("Couldn't read in source data from %s\n", arg.data());
         }

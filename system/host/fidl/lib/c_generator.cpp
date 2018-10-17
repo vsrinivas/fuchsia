@@ -138,6 +138,7 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
         for (uint32_t array_count : member.array_counts) {
             *file << "[" << array_count << "]";
         }
+        break;
     case flat::Type::Kind::kVector:
         *file << member.element_type << "* " << member.name << "_buffer, "
               << "size_t " << member.name << "_capacity, "

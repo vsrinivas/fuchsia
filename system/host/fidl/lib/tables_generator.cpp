@@ -109,7 +109,7 @@ void TablesGenerator::Generate(const coded::StructType& struct_type) {
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedStruct(");
     Emit(&tables_file_, NameFields(struct_type.coded_name));
     Emit(&tables_file_, ", ");
-    Emit(&tables_file_, struct_type.fields.size());
+    Emit(&tables_file_, static_cast<uint32_t>(struct_type.fields.size()));
     Emit(&tables_file_, ", ");
     Emit(&tables_file_, struct_type.size);
     Emit(&tables_file_, ", \"");
@@ -129,7 +129,7 @@ void TablesGenerator::Generate(const coded::TableType& table_type) {
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedTable(");
     Emit(&tables_file_, NameFields(table_type.coded_name));
     Emit(&tables_file_, ", ");
-    Emit(&tables_file_, table_type.fields.size());
+    Emit(&tables_file_, static_cast<uint32_t>(table_type.fields.size()));
     Emit(&tables_file_, ", \"");
     Emit(&tables_file_, table_type.qname);
     Emit(&tables_file_, "\"));\n\n");
@@ -147,7 +147,7 @@ void TablesGenerator::Generate(const coded::UnionType& union_type) {
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedUnion(");
     Emit(&tables_file_, NameMembers(union_type.coded_name));
     Emit(&tables_file_, ", ");
-    Emit(&tables_file_, union_type.types.size());
+    Emit(&tables_file_, static_cast<uint32_t>(union_type.types.size()));
     Emit(&tables_file_, ", ");
     Emit(&tables_file_, union_type.data_offset);
     Emit(&tables_file_, ", ");
@@ -173,7 +173,7 @@ void TablesGenerator::Generate(const coded::MessageType& message_type) {
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedStruct(");
     Emit(&tables_file_, NameFields(message_type.coded_name));
     Emit(&tables_file_, ", ");
-    Emit(&tables_file_, message_type.fields.size());
+    Emit(&tables_file_, static_cast<uint32_t>(message_type.fields.size()));
     Emit(&tables_file_, ", ");
     Emit(&tables_file_, message_type.size);
     Emit(&tables_file_, ", \"");

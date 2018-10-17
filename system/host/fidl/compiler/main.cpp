@@ -180,7 +180,7 @@ public:
     std::string Claim() override {
         std::string argument;
         while (Remaining() && !IsWhitespace()) {
-            argument.push_back(file_.get());
+            argument.push_back(static_cast<char>(file_.get()));
         }
         ConsumeWhitespace();
         return argument;
