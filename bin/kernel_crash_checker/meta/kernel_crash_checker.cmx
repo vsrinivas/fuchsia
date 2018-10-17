@@ -3,7 +3,11 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services" ],
-        "boot": [ "log" ]
+        "boot": [ "log" ],
+        "services": [
+            "fuchsia.crash.Analyzer",
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.Connectivity"
+        ]
     }
 }

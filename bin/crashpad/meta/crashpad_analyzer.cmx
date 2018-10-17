@@ -4,7 +4,11 @@
     },
     "sandbox": {
         "dev": [ "misc/sysinfo" ],
-        "features": [ "deprecated-all-services", "persistent-storage", "root-ssl-certificates" ],
+        "features": [ "persistent-storage", "root-ssl-certificates" ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.LegacySocketProvider"
+        ],
         "system": [ "data/build" ]
     }
 }
