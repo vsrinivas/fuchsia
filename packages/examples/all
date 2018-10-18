@@ -1,6 +1,5 @@
 {
     "imports": [
-        "garnet/packages/examples/auth",
         "garnet/packages/examples/benchmark",
         "garnet/packages/examples/bluetooth",
         "garnet/packages/examples/components",

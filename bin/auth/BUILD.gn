@@ -4,21 +4,6 @@
 
 import("//build/package.gni")
 
-package("token_manager") {
-  deps = [
-    "//garnet/bin/auth/token_manager",
-  ]
-
-  binary = "token_manager"
-
-  meta = [
-    {
-      path = rebase_path("meta/token_manager.cmx")
-      dest = "token_manager.cmx"
-    },
-  ]
-}
-
 package("token_manager_rust") {
   deps = [
     "//garnet/bin/auth/rust/token_manager:token_manager_rust",
@@ -49,21 +34,6 @@ package("account_manager") {
   ]
 }
 
-package("oauth_examples") {
-  testonly = true
-  deprecated_system_image = true
-
-  deps = [
-    "//garnet/bin/auth/testing/e2e_manual:google_oauth_demo",
-  ]
-
-  binaries = [
-    {
-      name = "google_oauth_demo"
-    },
-  ]
-}
-
 package("rust_tests") {
   testonly = true
   package_name = "auth_rust_tests"
@@ -90,7 +60,6 @@ package("tests") {
   package_name = "token_manager_tests"
 
   deps = [
-    ":token_manager_unittests",
     "//garnet/bin/auth/testing/e2e_local:e2e_dev",
     "//garnet/bin/auth/rust/testing/dev_auth_provider:dev_auth_provider_rust_bin",
     "//garnet/bin/auth/rust/testing/dev_auth_provider_iotid:dev_auth_provider_iotid_rust_bin"
@@ -107,21 +76,7 @@ package("tests") {
 
   tests = [
     {
-      name = "token_manager_unittests"
-    },
-    {
       name = "dev_token_mgr_e2e_test"
     },
-  ]
-}
-
-executable("token_manager_unittests") {
-  testonly = true
-
-  deps = [
-    "//garnet/bin/auth/cache:unittests",
-    "//garnet/bin/auth/store:unittests",
-    "//garnet/public/lib/fxl:fxl_printers",
-    "//third_party/googletest:gtest_main",
   ]
 }

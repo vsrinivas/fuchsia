@@ -10,8 +10,6 @@
 #include <fuchsia/auth/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include "garnet/bin/auth/token_manager/token_manager_factory_impl.h"
-#include "garnet/bin/auth/token_manager/token_manager_impl.h"
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/component/cpp/connect.h"
@@ -47,11 +45,6 @@ const std::string kDevIdp = "Dev";
 const std::string kDevIotIDIdp = "DevIotID";
 
 const TestComponentParam kTestComponentParams[] = {
-    // C++ test cases
-    {{kDevIdp,
-      "/pkgfs/packages/token_manager_tests/0/bin/dev_auth_provider_rust"},
-     "token_manager"},
-    // Rust test cases
     {{kDevIdp,
       "/pkgfs/packages/token_manager_tests/0/bin/dev_auth_provider_rust"},
      "token_manager_rust"},
