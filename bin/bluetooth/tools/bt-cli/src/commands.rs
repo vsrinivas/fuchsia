@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    crate::State,
+    parking_lot::Mutex,
     rustyline::{
         completion::Completer,
         error::ReadlineError,
@@ -13,7 +15,8 @@ use {
     std::{
         borrow::Cow::{self, Borrowed, Owned},
         fmt,
-        str::FromStr
+        str::FromStr,
+        sync::Arc,
     },
 };
 
@@ -40,6 +43,15 @@ macro_rules! gen_commands {
                 match self {
                     $(
                         $name::$variant => concat!($("<", $arg, "> ",)*)
+                    ),*
+                }
+            }
+
+            /// Return string value for a given command varient.
+            pub fn as_str(&self) -> &'static str {
+                match self {
+                    $(
+                        $name::$variant => $val
                     ),*
                 }
             }
@@ -103,25 +115,60 @@ gen_commands! {
 }
 
 /// CmdHelper provides completion, hints, and highlighting for bt-cli
-pub struct CmdHelper;
+pub struct CmdHelper {
+    state: Arc<Mutex<State>>,
+}
 
 impl CmdHelper {
-    pub fn new() -> CmdHelper {
-        CmdHelper {}
+    pub fn new(state: Arc<Mutex<State>>) -> CmdHelper {
+        CmdHelper { state }
     }
 }
 
 impl Completer for CmdHelper {
     type Candidate = String;
 
+    // TODO(belgum): complete arguments for commands. Should be generalized to use the information
+    // given by the Cmd enum with a closure for extracting a list from state.
+    // Complete command variants
     fn complete(&self, line: &str, _pos: usize) -> Result<(usize, Vec<String>), ReadlineError> {
-        let mut variants = Vec::new();
-        for variant in Cmd::variants() {
-            if variant.starts_with(line) {
-                variants.push(variant)
+        let components: Vec<_> = line.trim_left().split_whitespace().collect();
+
+        // Check whether we have entered a command and either whitespace or a partial argument.
+        // If yes, complete arguments; if no, complete commands
+        let should_complete_arguments =
+            (components.len() == 1 && line.ends_with(" ")) ||
+            (components.len() == 2 && !line.ends_with(" "));
+        if should_complete_arguments {
+            let command = components[0].trim();
+            let partial_argument = components.get(1).unwrap_or(&"");
+            let devices = &self.state.lock().devices;
+            let mut candidates = vec![];
+            if command == "connect" {
+                // connect has an 'id' argument
+                for id in devices.keys() {
+                    if id.starts_with(partial_argument) {
+                        candidates.push(format!("connect {}", id));
+                    }
+                }
+            } else if command == "device" {
+                // device has an 'addr' argument
+                for device in devices.values() {
+                    if device.0.address.starts_with(partial_argument) {
+                        candidates.push(format!("device {}", device.0.address));
+                    }
+                }
             }
+            Ok((0, candidates))
+        } else {
+            let mut variants = Vec::new();
+            for variant in Cmd::variants() {
+                if variant.starts_with(line) {
+                    variants.push(variant)
+                }
+            }
+            Ok((0, variants))
         }
-        Ok((0, variants))
     }
 }
 

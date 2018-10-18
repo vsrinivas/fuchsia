@@ -41,6 +41,7 @@ use {
     std::{
         collections::HashMap,
         fmt::Write,
+        iter::FromIterator,
         sync::Arc,
         thread,
     },
@@ -75,46 +76,46 @@ async fn get_adapters(control_svc: &ControlProxy) -> Result<String, Error> {
     Ok(String::from("No adapters detected"))
 }
 
-async fn get_devices(_control_svc: &ControlProxy, state: Arc<Mutex<State>>)
-    -> Result<String, Error>
-{
+fn get_devices(state: &Mutex<State>) -> String {
     let state = state.lock();
-    let devices: Vec<_> = state
+    if state.devices.is_empty() {
+        String::from("No known remote devices")
+    } else {
+        String::from_iter(
+            state.devices.values().map(|device| device.to_string())
+        )
+    }
+}
+
+fn get_device<'a>(args: &'a [&'a str], state: &Mutex<State>) -> String {
+    if args.len() != 1 {
+        return format!("usage: {}", Cmd::GetDevice.cmd_help());
+    }
+    state
+        .lock()
         .devices
         .values()
-        .filter(|(deleted, _)| !deleted)
-        .collect();
-    if !devices.is_empty() {
-        let mut string = String::new();
-        for (_, device) in devices {
-            string += &device.to_string();
-        }
-        return Ok(string);
-    }
-    Ok(String::from("No known remote devices"))
+        .find(|device| device.0.address == args[0])
+        .map(|device| device.to_string())
+        .unwrap_or_else(|| String::from("No known device"))
 }
 
 async fn start_discovery(control_svc: &ControlProxy) -> Result<String, Error> {
     let response = await!(control_svc.request_discovery(true))?;
-    Ok(Status::from(response).to_string())
+    if response.error.is_some() {
+        Ok(Status::from(response).to_string())
+    } else {
+        Ok(String::new())
+    }
 }
 
 async fn stop_discovery(control_svc: &ControlProxy) -> Result<String, Error> {
     let response = await!(control_svc.request_discovery(false))?;
-    Ok(Status::from(response).to_string())
-}
-
-async fn get_device<'a>(args: &'a [&'a str], state: Arc<Mutex<State>>)
-    -> Result<String, Error>
-{
-    if args.len() != 1 {
-        return Ok(format!("usage: {}", Cmd::GetDevice.cmd_help()));
+    if response.error.is_some() {
+        Ok(Status::from(response).to_string())
+    } else {
+        Ok(String::new())
     }
-    let state = state.lock();
-    if let Some((false, device)) = state.devices.get(args[0]) {
-        return Ok(device.to_string());
-    }
-    return Ok(String::from("No known device"));
 }
 
 async fn connect<'a>(args: &'a [&'a str], control_svc: &'a ControlProxy) -> Result<String, Error> {
@@ -122,14 +123,22 @@ async fn connect<'a>(args: &'a [&'a str], control_svc: &'a ControlProxy) -> Resu
         return Ok(format!("usage: {}", Cmd::Connect.cmd_help()));
     }
     let response = await!(control_svc.connect(args[0]))?;
-    Ok(Status::from(response).to_string())
+    if response.error.is_some() {
+        Ok(Status::from(response).to_string())
+    } else {
+        Ok(String::new())
+    }
 }
 
 async fn set_discoverable(
     discoverable: bool, control_svc: &ControlProxy,
 ) -> Result<String, Error> {
     let response = await!(control_svc.set_discoverable(discoverable))?;
-    Ok(Status::from(response).to_string())
+    if response.error.is_some() {
+        Ok(Status::from(response).to_string())
+    } else {
+        Ok(String::new())
+    }
 }
 
 /// Listen on the control event channel for new events. Track state and print output where
@@ -155,19 +164,20 @@ async fn run_listeners(mut stream: ControlEventStream, state: &Mutex<State>)
             ControlEvent::OnDeviceUpdated { device } => {
                 let device = RemoteDevice::from(device);
                 println!("{}", device.summary());
-                state.lock().devices.insert(device.0.address.clone(), (false, device));
+                state.lock().devices.insert(device.0.identifier.clone(), device);
             }
             ControlEvent::OnDeviceRemoved { identifier } => {
                 println!("Device {} removed", identifier);
+                state.lock().devices.remove(&identifier);
             }
         }
     }
     Ok(())
 }
 
-/// Tracks any state local to the command line tool.
-struct State {
-    pub devices: HashMap<String, (bool, RemoteDevice)>,
+/// Tracks all state local to the command line tool.
+pub struct State {
+    pub devices: HashMap<String, RemoteDevice>,
 }
 
 impl State {
@@ -206,8 +216,8 @@ async fn handle_cmd(bt_svc: &ControlProxy, state: Arc<Mutex<State>>, line: Strin
                 println!("Revoking discoverability..");
                 await!(set_discoverable(false, &bt_svc))
             }
-            Ok(Cmd::GetDevices) => await!(get_devices(&bt_svc, state)),
-            Ok(Cmd::GetDevice) => await!(get_device(args, state)),
+            Ok(Cmd::GetDevices) => Ok(get_devices(&state)),
+            Ok(Cmd::GetDevice) => Ok(get_device(args, &state)),
             Ok(Cmd::GetAdapters) => await!(get_adapters(&bt_svc)),
             Ok(Cmd::ActiveAdapter) => await!(get_active_adapter(&bt_svc)),
             Ok(Cmd::Help) => Ok(Cmd::help_msg().to_string()),
@@ -231,7 +241,7 @@ async fn handle_cmd(bt_svc: &ControlProxy, state: Arc<Mutex<State>>, line: Strin
 /// Because rustyline shares control over output to the screen with other parts of the system, a
 /// `Sink` is passed to the caller to send acknowledgements that a command has been processed and
 /// that rustyline should handle the next line of input.
-fn cmd_stream() -> (impl Stream<Item = String>, impl Sink<SinkItem = (), SinkError = SendError>) {
+fn cmd_stream(state: Arc<Mutex<State>>) -> (impl Stream<Item = String>, impl Sink<SinkItem = (), SinkError = SendError>) {
 
     // Editor thread and command processing thread must be syncronized so that output
     // is printed in the correct order.
@@ -248,7 +258,7 @@ fn cmd_stream() -> (impl Stream<Item = String>, impl Sink<SinkItem = (), SinkErr
                 .completion_type(CompletionType::List)
                 .edit_mode(EditMode::Emacs)
                 .build();
-            let c = CmdHelper::new();
+            let c = CmdHelper::new(state);
             let mut rl: Editor<CmdHelper> = Editor::with_config(config);
             rl.set_helper(Some(c));
             loop {
@@ -279,7 +289,7 @@ fn cmd_stream() -> (impl Stream<Item = String>, impl Sink<SinkItem = (), SinkErr
 async fn run_repl(bt_svc: ControlProxy, state: Arc<Mutex<State>>) -> Result<(), Error> {
     // `cmd_stream` blocks on input in a seperate thread and passes commands and acks back to
     // the main thread via async channels.
-    let (mut commands, mut acks) = cmd_stream();
+    let (mut commands, mut acks) = cmd_stream(state.clone());
     loop {
         if let Some(cmd) = await!(commands.next()) {
             match await!(handle_cmd(&bt_svc, state.clone(), cmd)) {
