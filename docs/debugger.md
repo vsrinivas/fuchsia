@@ -249,16 +249,15 @@ binary names produced by the build process. By default zxdb will look relative
 to its own binary name "../ids.txt" which matches the in-tree location. You
 can specify different or additional ids.txt files using `-s`.
 
-#### Diagnosing symbol problems.
+### Diagnosing symbol problems.
 
 The `sym-stat` command will tell you status for symbols. With no running
 process, it will give stats on the different symbol locations you have
-specified. If your symbols aren't getting found, make sure these stats match
-your expectations:
+specified. If your symbols aren't found, make sure these stats match your
+expectations:
 
-```sh
+```
 [zxdb] sym-stat
-
 Symbol index status
 
   Indexed  Source path
@@ -266,8 +265,37 @@ Symbol index status
         0  my_dir/my_file
 ```
 
+If you see "0" in the "Indexed" column of the "Symbol index stats" that means
+that the debugger could not find where your symbols are. Try the `-s` flag (see
+"Running out-of-tree" above) to specify where your symbols are.
+
 When you have a running program, sym-stat will additionally print symbol
-information for each binary loaded into the process.
+information for each binary loaded into the process. If you're not getting
+symbols, find the entry for the binary or shared library in this list. If it
+says:
+
+```
+    Symbols loaded: No
+```
+
+then that means it couldn't find the symbolized binary on the local computer
+for the given build ID in any of the locations listed in "Symbol index status".
+You may need to add a new location with `-s`.
+
+If instead it says something like this:
+
+```
+    Symbols loaded: Yes
+    Symbol file: /home/foo/bar/...
+    Source files indexed: 1
+    Symbols indexed: 0
+```
+
+where "Source files indexed" and "Symbols indexed" is 0 or a very low integer,
+that means that the debugger found a symbolized file but there are few or no
+symbols in it. Normally this means the binary was not built with symbols
+enabled or the symbols were stripped. Check your build, the compile line should
+have a `-g` in it for gcc and Clang.
 
 ## Running the tests
 
