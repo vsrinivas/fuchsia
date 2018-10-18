@@ -32,6 +32,9 @@ amlogic-canvas:
 bad-block:
 	$(run-banjo)
 
+bt-gatt-svc:
+	$(run-banjo)
+
 bt-hci:
 	$(run-banjo)
 
