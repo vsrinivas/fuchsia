@@ -94,20 +94,22 @@ impl AssetCollection {
 }
 
 struct FontFamily {
+    name: String,
     fonts: FontCollection,
     fallback_group: fonts::FallbackGroup,
 }
 
 impl FontFamily {
-    fn new(fallback_group: fonts::FallbackGroup) -> FontFamily {
+    fn new(name: String, fallback_group: fonts::FallbackGroup) -> FontFamily {
         FontFamily {
+            name,
             fonts: FontCollection::new(),
             fallback_group,
         }
     }
 }
 
-pub enum FamilyOrAlias {
+enum FamilyOrAlias {
     Family(FontFamily),
     Alias(UniCase<String>),
 }
@@ -161,7 +163,10 @@ impl FontService {
             let family_name = UniCase::new(family_manifest.family.clone());
 
             let family = match self.families.entry(family_name.clone()).or_insert_with(|| {
-                FamilyOrAlias::Family(FontFamily::new(family_manifest.fallback_group))
+                FamilyOrAlias::Family(FontFamily::new(
+                    family_manifest.family.clone(),
+                    family_manifest.fallback_group,
+                ))
             }) {
                 FamilyOrAlias::Family(f) => f,
                 FamilyOrAlias::Alias(other_family) => {
@@ -216,7 +221,7 @@ impl FontService {
                         self.families
                             .insert(alias_unicase, FamilyOrAlias::Alias(family_name.clone()));
                     }
-                    Some(FamilyOrAlias::Family(f)) => {
+                    Some(FamilyOrAlias::Family(_)) => {
                         return Err(format_err!(
                             "Can't add alias {} for {} because a family with that name already \
                              exists.",
@@ -246,25 +251,25 @@ impl FontService {
         Ok(())
     }
 
+    fn match_family(&self, family_name: &UniCase<String>) -> Option<&FontFamily> {
+        let family = match self.families.get(family_name)? {
+            FamilyOrAlias::Family(f) => f,
+            FamilyOrAlias::Alias(a) => match self.families.get(a) {
+                Some(FamilyOrAlias::Family(f)) => f,
+                _ => panic!("Invalid font alias."),
+            },
+        };
+        Some(family)
+    }
+
     fn match_request(&self, mut request: fonts::Request) -> Result<fonts::Response, Error> {
         for lang in request.language.iter_mut() {
             *lang = lang.to_ascii_lowercase();
         }
 
         let family_name = UniCase::new(request.family.clone());
-        let matched_family = self.families.get(&family_name).map(|f| match f {
-            FamilyOrAlias::Family(f) => f,
-            FamilyOrAlias::Alias(a) => match self.families.get(a) {
-                Some(FamilyOrAlias::Family(f)) => f,
-                _ => panic!("Invalid font alias."),
-            },
-        });
-
-        let mut font = None;
-
-        if let Some(family) = matched_family {
-            font = family.fonts.match_request(&request)
-        }
+        let matched_family = self.match_family(&family_name);
+        let mut font = matched_family.and_then(|family| family.fonts.match_request(&request));
 
         if font.is_none() && (request.flags & fonts::REQUEST_FLAG_NO_FALLBACK) == 0 {
             // If fallback_group is not specified by the client explicitly then copy it from
@@ -296,6 +301,15 @@ impl FontService {
         Ok(response)
     }
 
+    fn get_font_info(&self, family_name: String) -> Option<fonts::FamilyInfo> {
+        let family_name = UniCase::new(family_name);
+        let family = self.match_family(&family_name)?;
+        Some(fonts::FamilyInfo {
+                name: family.name.clone(),
+                styles: family.fonts.get_styles().collect(),
+        })
+    }
+
     fn handle_font_provider_request(
         &self, request: fonts::ProviderRequest,
     ) -> impl Future<Output = Result<(), fidl::Error>> {
@@ -306,6 +320,10 @@ impl FontService {
                 // FontProvider implementation, but it isn't the right thing to do.
                 let mut response = self.match_request(request).ok();
                 future::ready(responder.send(response.as_mut().map(OutOfLine)))
+            }
+            fonts::ProviderRequest::GetFamilyInfo { family, responder } => {
+                let mut font_info = self.get_font_info(family);
+                future::ready(responder.send(font_info.as_mut().map(OutOfLine)))
             }
         }
     }

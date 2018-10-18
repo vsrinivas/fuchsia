@@ -280,6 +280,12 @@ impl FontCollection {
     pub fn add_font(&mut self, font: Arc<Font>) {
         self.fonts.push(font);
     }
+
+    pub fn get_styles<'a>(&'a self) -> impl Iterator<Item = fonts::Style> + 'a {
+        self.fonts.iter().map(|f|
+            fonts::Style { width: f.width, slant: f.slant, weight: f.weight}
+        )
+    }
 }
 
 #[cfg(test)]

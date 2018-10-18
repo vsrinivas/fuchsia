@@ -32,7 +32,7 @@ async fn get_font_info(
         language: language,
         fallback_group: fonts::FallbackGroup::None,
         flags: 0,
-  }))?;
+    }))?;
     let font = *font.ok_or_else(|| format_err!("Received empty response for {}", name))?;
 
     assert!(font.buffer.size > 0);
@@ -53,7 +53,7 @@ async fn get_font_info_basic(
     await!(get_font_info(font_provider, name, vec![], '\0'))
 }
 
-async fn test_basic() -> Result<(), Error> {
+fn start_provider_with_default_fonts() -> Result<(App, fonts::ProviderProxy), Error> {
     let launcher = Launcher::new().context("Failed to open launcher service")?;
     let app = launcher
         .launch("fonts".to_string(), None)
@@ -62,6 +62,13 @@ async fn test_basic() -> Result<(), Error> {
     let font_provider = app
         .connect_to_service(fonts::ProviderMarker)
         .context("Failed to connect to fonts::Provider")?;
+
+    Ok((app, font_provider))
+}
+
+
+async fn test_basic() -> Result<(), Error> {
+    let (_app, font_provider) = start_provider_with_default_fonts()?;
 
     let default = await!(get_font_info_basic(&font_provider, "".to_string()))
         .context("Failed to load default font")?;
@@ -81,14 +88,7 @@ async fn test_basic() -> Result<(), Error> {
 }
 
 async fn test_aliases() -> Result<(), Error> {
-    let launcher = Launcher::new().context("Failed to open launcher service")?;
-    let app = launcher
-        .launch("fonts".to_string(), None)
-        .context("Failed to launch fonts::Provider")?;
-
-    let font_provider = app
-        .connect_to_service(fonts::ProviderMarker)
-        .context("Failed to connect to fonts::Provider")?;
+    let (_app, font_provider) = start_provider_with_default_fonts()?;
 
     // Both requests should return the same font.
     let robotoslab = await!(get_font_info_basic(&font_provider, "RobotoSlab".to_string()))
@@ -199,12 +199,27 @@ async fn test_fallback_group() -> Result<(), Error> {
     Ok(())
 }
 
+async fn test_get_family_info() -> Result<(), Error> {
+    let (_app, font_provider) = start_provider_with_default_fonts()?;
+
+    let family_info = await!(font_provider.get_family_info("robotoslab"))?;
+
+    assert!(family_info.is_some());
+    let family_info = family_info.unwrap();
+
+    assert!(family_info.name == "Roboto Slab");
+    assert!(family_info.styles.len() > 0);
+
+    Ok(())
+}
+
 async fn run_tests() -> Result<(), Error> {
     await!(test_basic())?;
     await!(test_aliases())?;
     await!(test_font_collections())?;
     await!(test_fallback())?;
     await!(test_fallback_group())?;
+    await!(test_get_family_info())?;
 
     Ok(())
 }
