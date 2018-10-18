@@ -30,9 +30,10 @@ std::string FetchString(const usb_protocol_t& usb_proto,
                         uint8_t description_index) {
   uint8_t str_buf[kUsbDescriptorStringSize];
   size_t buflen = sizeof(str_buf);
-  uint16_t language_id;
+  uint16_t language_id = 0;
   zx_status_t res = usb_get_string_descriptor(&usb_proto, description_index,
-                                              &language_id, str_buf, &buflen);
+                                              language_id, str_buf, buflen,
+                                              &buflen, &language_id);
   if (res != ZX_OK) {
     return std::string();
   }
