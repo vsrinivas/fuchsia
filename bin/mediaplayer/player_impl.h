@@ -35,7 +35,7 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
 
   ~PlayerImpl() override;
 
-  // MediaPlayer implementation.
+  // Player implementation.
   void SetHttpSource(
       fidl::StringPtr http_url,
       fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers) override;
@@ -134,6 +134,11 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
   // The state we're currently in.
   State state_ = State::kWaiting;
   const char* waiting_reason_ = "to initialize";
+
+  // Indicates that the player has become ready after the source has been set.
+  // The actual ready value reported in status is true if and only if this
+  // field is true and there is no problem.
+  bool ready_if_no_problem_ = false;
 
   // The state we're trying to transition to, either because the client has
   // called |Play| or |Pause| or because we've hit end-of-stream.

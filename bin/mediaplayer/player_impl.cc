@@ -12,7 +12,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
-
 #include "garnet/bin/mediaplayer/core/demux_source_segment.h"
 #include "garnet/bin/mediaplayer/core/renderer_sink_segment.h"
 #include "garnet/bin/mediaplayer/demux/file_reader.h"
@@ -269,6 +268,7 @@ void PlayerImpl::Update() {
 
           core_.Prime([this]() {
             state_ = State::kPrimed;
+            ready_if_no_problem_ = true;
             Update();
           });
 
@@ -392,6 +392,7 @@ void PlayerImpl::BeginSetReader(std::shared_ptr<Reader> reader) {
   // Note the pending reader change and advance the state machine. When the
   // old reader (if any) is shut down, the state machine will call
   // |FinishSetReader|.
+  ready_if_no_problem_ = false;
   setting_reader_ = true;
   new_reader_ = reader;
   target_position_ = 0;
@@ -537,6 +538,8 @@ void PlayerImpl::UpdateStatus() {
   }
 
   status_.problem = SafeClone(core_.problem());
+
+  status_.ready = ready_if_no_problem_ && (status_.problem == nullptr);
 }
 
 // static

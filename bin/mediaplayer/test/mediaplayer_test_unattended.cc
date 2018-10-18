@@ -35,10 +35,22 @@ MediaPlayerTestUnattended::MediaPlayerTestUnattended(
   media_player_.events().OnStatusChanged =
       [this](fuchsia::mediaplayer::PlayerStatus status) {
         if (status.end_of_stream) {
+          bool succeeded = true;
+
+          if (!status.ready) {
+            FXL_LOG(ERROR) << "MediaPlayerTest: status.ready false";
+            succeeded = false;
+          }
+
+          if (!fake_audio_renderer_.expected()) {
+            FXL_LOG(ERROR)
+                << "MediaPlayerTest: audio renderer expectations not met";
+            succeeded = false;
+          }
+
           FXL_LOG(INFO) << "MediaPlayerTest "
-                        << (fake_audio_renderer_.expected() ? "SUCCEEDED"
-                                                            : "FAILED");
-          quit_callback_(fake_audio_renderer_.expected() ? 0 : 1);
+                        << (succeeded ? "SUCCEEDED" : "FAILED");
+          quit_callback_(succeeded ? 0 : 1);
         }
       };
 
