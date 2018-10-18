@@ -1504,8 +1504,12 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
 
     // Now we can wait for the client to catch up to the current output config
     // or for the client to tell the server to discard the current stream.
-    while (!stream_->future_discarded() && !IsOutputConfiguredLocked()) {
+    while (!IsStoppingLocked() && !stream_->future_discarded() && !IsOutputConfiguredLocked()) {
       wake_stream_control_condition_.wait(lock);
+    }
+
+    if (IsStoppingLocked()) {
+      return false;
     }
 
     if (stream_->future_discarded()) {
@@ -1839,8 +1843,12 @@ void CodecImpl::MidStreamOutputConfigChange(uint64_t stream_lifetime_ordinal) {
 
     // Now we can wait for the client to catch up to the current output config
     // or for the client to tell the server to discard the current stream.
-    while (!stream_->future_discarded() && !IsOutputConfiguredLocked()) {
+    while (!IsStoppingLocked() && !stream_->future_discarded() && !IsOutputConfiguredLocked()) {
       wake_stream_control_condition_.wait(lock);
+    }
+
+    if (IsStoppingLocked()) {
+      return;
     }
 
     if (stream_->future_discarded()) {
