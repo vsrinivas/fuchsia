@@ -21,7 +21,7 @@ magma_status_t magma_query(int32_t file_descriptor, uint64_t id, uint64_t* value
 
 // Opens a connection to a device.
 // |file_descriptor| must correspond to an open device of class gpu.
-// |capabilities| must be MAGMA_CAPABILITY_RENDERING.
+// |capabilities| is deprecated.
 // Returns null on failure.
 struct magma_connection_t* magma_create_connection(int32_t file_descriptor, uint32_t capabilities);
 

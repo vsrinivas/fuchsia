@@ -18,19 +18,14 @@ uint32_t MagmaSystemDevice::GetDeviceId()
 }
 
 std::shared_ptr<magma::PlatformConnection>
-MagmaSystemDevice::Open(std::shared_ptr<MagmaSystemDevice> device, msd_client_id_t client_id,
-                        uint32_t capabilities)
+MagmaSystemDevice::Open(std::shared_ptr<MagmaSystemDevice> device, msd_client_id_t client_id)
 {
-    // at least one valid capability must be set, and rendering is the only valid capability
-    if (capabilities != MAGMA_CAPABILITY_RENDERING)
-        return DRETP(nullptr, "attempting to open connection to device with invalid capabilities");
-
     msd_connection_t* msd_connection = msd_device_open(device->msd_dev(), client_id);
     if (!msd_connection)
         return DRETP(nullptr, "msd_device_open failed");
 
     return magma::PlatformConnection::Create(std::make_unique<MagmaSystemConnection>(
-        std::move(device), MsdConnectionUniquePtr(msd_connection), capabilities));
+        std::move(device), MsdConnectionUniquePtr(msd_connection)));
 }
 
 void MagmaSystemDevice::StartConnectionThread(

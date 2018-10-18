@@ -41,8 +41,8 @@ public:
 
     // Opens a connection to the device. On success |connection_handle_out| will contain the
     // connection handle to be passed to the client
-    static std::shared_ptr<magma::PlatformConnection>
-    Open(std::shared_ptr<MagmaSystemDevice>, msd_client_id_t client_id, uint32_t capabilities);
+    static std::shared_ptr<magma::PlatformConnection> Open(std::shared_ptr<MagmaSystemDevice>,
+                                                           msd_client_id_t client_id);
 
     msd_device_t* msd_dev() { return msd_dev_.get(); }
 

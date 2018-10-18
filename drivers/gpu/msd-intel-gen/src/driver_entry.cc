@@ -142,11 +142,8 @@ static zx_status_t sysdrv_gpu_ioctl(void* ctx, uint32_t op, const void* in_buf, 
             if (!out_buf || out_len < sizeof(*device_handle_out) * 2)
                 return DRET(ZX_ERR_INVALID_ARGS);
 
-            if ((request->capabilities & MAGMA_CAPABILITY_RENDERING) == 0)
-                return DRET(ZX_ERR_INVALID_ARGS);
-
-            auto connection = MagmaSystemDevice::Open(
-                device->magma_system_device, request->client_id, MAGMA_CAPABILITY_RENDERING);
+            auto connection =
+                MagmaSystemDevice::Open(device->magma_system_device, request->client_id);
             if (!connection)
                 return DRET(ZX_ERR_INVALID_ARGS);
 

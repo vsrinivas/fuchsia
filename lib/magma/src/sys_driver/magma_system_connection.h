@@ -28,7 +28,7 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
                               public magma::PlatformConnection::Delegate {
 public:
     MagmaSystemConnection(std::weak_ptr<MagmaSystemDevice> device,
-                          msd_connection_unique_ptr_t msd_connection_t, uint32_t capabilities);
+                          msd_connection_unique_ptr_t msd_connection_t);
 
     ~MagmaSystemConnection() override;
 
@@ -97,8 +97,6 @@ private:
     std::unordered_map<uint32_t, std::unique_ptr<MagmaSystemContext>> context_map_;
     std::unordered_map<uint64_t, BufferReference> buffer_map_;
     std::unordered_map<uint64_t, SemaphoreReference> semaphore_map_;
-
-    bool has_render_capability_;
 };
 
 #endif // GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_CONNECTION_H_

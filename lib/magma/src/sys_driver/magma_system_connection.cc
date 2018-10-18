@@ -8,17 +8,10 @@
 #include <vector>
 
 MagmaSystemConnection::MagmaSystemConnection(std::weak_ptr<MagmaSystemDevice> weak_device,
-                                             msd_connection_unique_ptr_t msd_connection_t,
-                                             uint32_t capabilities)
+                                             msd_connection_unique_ptr_t msd_connection_t)
     : device_(weak_device), msd_connection_(std::move(msd_connection_t))
 {
     DASSERT(msd_connection_);
-
-    has_render_capability_ = capabilities & MAGMA_CAPABILITY_RENDERING;
-
-    // should already be enforced in MagmaSystemDevice
-    DASSERT(has_render_capability_);
-    DASSERT((capabilities & ~(MAGMA_CAPABILITY_RENDERING)) == 0);
 }
 
 MagmaSystemConnection::~MagmaSystemConnection()
@@ -41,9 +34,6 @@ uint32_t MagmaSystemConnection::GetDeviceId()
 
 bool MagmaSystemConnection::CreateContext(uint32_t context_id)
 {
-    if (!has_render_capability_)
-        return DRETF(false, "Attempting to create a context without render capability");
-
     auto iter = context_map_.find(context_id);
     if (iter != context_map_.end())
         return DRETF(false, "Attempting to add context with duplicate id");
@@ -61,9 +51,6 @@ bool MagmaSystemConnection::CreateContext(uint32_t context_id)
 
 bool MagmaSystemConnection::DestroyContext(uint32_t context_id)
 {
-    if (!has_render_capability_)
-        return DRETF(false, "Attempting to destroy a context without render capability");
-
     auto iter = context_map_.find(context_id);
     if (iter == context_map_.end())
         return DRETF(false, "MagmaSystemConnection:Attempting to destroy invalid context id");
@@ -73,9 +60,6 @@ bool MagmaSystemConnection::DestroyContext(uint32_t context_id)
 
 MagmaSystemContext* MagmaSystemConnection::LookupContext(uint32_t context_id)
 {
-    if (!has_render_capability_)
-        return DRETP(nullptr, "Attempting to look up a context without render capability");
-
     auto iter = context_map_.find(context_id);
     if (iter == context_map_.end())
         return DRETP(nullptr, "MagmaSystemConnection: Attempting to lookup invalid context id");
@@ -86,10 +70,6 @@ MagmaSystemContext* MagmaSystemConnection::LookupContext(uint32_t context_id)
 magma::Status MagmaSystemConnection::ExecuteCommandBuffer(uint32_t command_buffer_handle,
                                                           uint32_t context_id)
 {
-    if (!has_render_capability_)
-        return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED,
-                        "Attempting to execute a command buffer without render capability");
-
     auto command_buffer = magma::PlatformBuffer::Import(command_buffer_handle);
     if (!command_buffer)
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Failed to import command buffer");
@@ -108,10 +88,6 @@ magma::Status MagmaSystemConnection::ExecuteImmediateCommands(uint32_t context_i
                                                               uint64_t semaphore_count,
                                                               uint64_t* semaphore_ids)
 {
-    if (!has_render_capability_)
-        return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED,
-                        "Attempting to execute a command buffer without render capability");
-
     auto context = LookupContext(context_id);
     if (!context)
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,

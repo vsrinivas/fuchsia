@@ -59,8 +59,7 @@ TEST(MagmaSystemConnection, ContextManagement)
     auto msd_dev = new MsdMockDevice();
     auto dev =
         std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
-    MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection),
-                                     MAGMA_CAPABILITY_RENDERING);
+    MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection));
 
     EXPECT_EQ(msd_connection->NumActiveContexts(), 0u);
 
@@ -92,8 +91,7 @@ TEST(MagmaSystemConnection, BufferManagement)
         std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
     auto msd_connection = msd_device_open(msd_dev, 0);
     ASSERT_NE(msd_connection, nullptr);
-    MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection),
-                                     MAGMA_CAPABILITY_RENDERING);
+    MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection));
 
     uint64_t test_size = 4096;
 
@@ -143,8 +141,7 @@ TEST(MagmaSystemConnection, Semaphores)
         std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
     auto msd_connection = msd_device_open(msd_dev, 0);
     ASSERT_NE(msd_connection, nullptr);
-    MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection),
-                                     MAGMA_CAPABILITY_RENDERING);
+    MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection));
 
     auto semaphore = magma::PlatformSemaphore::Create();
 
@@ -190,13 +187,11 @@ TEST(MagmaSystemConnection, BufferSharing)
 
     auto msd_connection = msd_device_open(msd_dev, 0);
     ASSERT_NE(msd_connection, nullptr);
-    MagmaSystemConnection connection_0(dev, MsdConnectionUniquePtr(msd_connection),
-                                       MAGMA_CAPABILITY_RENDERING);
+    MagmaSystemConnection connection_0(dev, MsdConnectionUniquePtr(msd_connection));
 
     msd_connection = msd_device_open(msd_dev, 0);
     ASSERT_NE(msd_connection, nullptr);
-    MagmaSystemConnection connection_1(dev, MsdConnectionUniquePtr(msd_connection),
-                                       MAGMA_CAPABILITY_RENDERING);
+    MagmaSystemConnection connection_1(dev, MsdConnectionUniquePtr(msd_connection));
 
     auto platform_buf = magma::PlatformBuffer::Create(4096, "test");
 

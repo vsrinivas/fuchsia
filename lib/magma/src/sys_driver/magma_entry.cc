@@ -95,11 +95,8 @@ static zx_status_t device_ioctl(void* context, uint32_t op, const void* in_buf, 
             if (!out_buf || out_len < sizeof(*device_handle_out) * 2)
                 return DRET(ZX_ERR_INVALID_ARGS);
 
-            if (request->capabilities != MAGMA_CAPABILITY_RENDERING)
-                return DRET(ZX_ERR_INVALID_ARGS);
-
-            auto connection = MagmaSystemDevice::Open(device->magma_system_device,
-                                                      request->client_id, request->capabilities);
+            auto connection =
+                MagmaSystemDevice::Open(device->magma_system_device, request->client_id);
             if (!connection)
                 return DRET(ZX_ERR_INVALID_ARGS);
 

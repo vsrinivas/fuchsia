@@ -56,8 +56,7 @@ public:
     void ConnectionThreadLoop(uint32_t num_iterations)
     {
         auto connection = std::make_unique<MagmaSystemConnection>(
-            device_, MsdConnectionUniquePtr(msd_device_open(device_->msd_dev(), 0)),
-            MAGMA_CAPABILITY_RENDERING);
+            device_, MsdConnectionUniquePtr(msd_device_open(device_->msd_dev(), 0)));
         ASSERT_NE(connection, nullptr);
 
         uint32_t context_id = ++context_id_;

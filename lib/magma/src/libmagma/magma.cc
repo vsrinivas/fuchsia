@@ -16,10 +16,8 @@
 
 magma_connection_t* magma_create_connection(int fd, uint32_t capabilities)
 {
-
     magma_system_connection_request request;
     request.client_id = magma::PlatformThreadId().id();
-    request.capabilities = capabilities;
 
     uint32_t device_handles[2];
     int ioctl_ret = fdio_ioctl(fd, IOCTL_MAGMA_CONNECT, &request, sizeof(request), device_handles,
