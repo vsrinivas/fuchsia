@@ -55,6 +55,7 @@ Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd,
         command_name));
   }
   if (cmd.thread()->GetState() != debug_ipc::ThreadRecord::State::kBlocked &&
+      cmd.thread()->GetState() != debug_ipc::ThreadRecord::State::kCoreDump &&
       cmd.thread()->GetState() != debug_ipc::ThreadRecord::State::kSuspended) {
     return Err(fxl::StringPrintf(
         "\"%s\" requires a suspended thread but thread %d is %s.\n"
@@ -249,6 +250,8 @@ std::string ThreadStateToString(debug_ipc::ThreadRecord::State state) {
       return "Dying";
     case debug_ipc::ThreadRecord::State::kDead:
       return "Dead";
+    case debug_ipc::ThreadRecord::State::kCoreDump:
+      return "Core Dump";
     case debug_ipc::ThreadRecord::State::kLast:
       break;  // Fall through to assertion, this value shouldn't be used.
   }

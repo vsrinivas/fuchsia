@@ -402,7 +402,7 @@ void MinidumpRemoteAPI::Threads(
       auto& record = reply.threads.emplace_back();
 
       record.koid = thread->ThreadID();
-      record.state = debug_ipc::ThreadRecord::State::kDead;
+      record.state = debug_ipc::ThreadRecord::State::kCoreDump;
     }
   }
 

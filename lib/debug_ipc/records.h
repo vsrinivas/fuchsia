@@ -36,6 +36,7 @@ struct ThreadRecord {
     kBlocked,
     kDying,
     kDead,
+    kCoreDump,
 
     kLast  // Not an actual thread state, for range checking.
   };

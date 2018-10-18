@@ -173,7 +173,7 @@ TEST_F(MinidumpTest, Threads) {
 
   EXPECT_EQ(kTestExampleMinidumpThreadKOID, thread.koid);
   EXPECT_EQ("", thread.name);
-  EXPECT_EQ(debug_ipc::ThreadRecord::State::kDead, thread.state);
+  EXPECT_EQ(debug_ipc::ThreadRecord::State::kCoreDump, thread.state);
 }
 
 TEST_F(MinidumpTest, Registers) {
