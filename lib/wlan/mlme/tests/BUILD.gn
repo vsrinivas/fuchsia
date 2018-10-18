@@ -201,6 +201,7 @@ executable("common_tests") {
     "device_caps_unittest.cpp",
     "moving_average_unittest.cpp",
     "rates_elements_unittest.cpp",
+    "span_unittest.cpp",
     "stats_unittest.cpp",
   ]
 
