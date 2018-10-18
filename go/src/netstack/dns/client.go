@@ -93,12 +93,21 @@ func roundTrip(ctx context.Context, transport tcpip.TransportProtocolNumber, ep 
 
 	// Write to endpoint.
 	for len(b) > 0 {
-		n, err := ep.Write(tcpip.SlicePayload(b), tcpip.WriteOptions{})
+		// TODO(tamird): this incorrectly handles short writes.
+		n, resCh, err := ep.Write(tcpip.SlicePayload(b), tcpip.WriteOptions{})
+		b = b[n:]
+		if resCh != nil {
+			select {
+			case <-resCh:
+				continue
+			case <-ctx.Done():
+				return nil, fmt.Errorf("dns: write: %v (%v)", err, ctx.Err())
+			}
+		}
+
 		if err != nil {
 			return nil, fmt.Errorf("dns: write: %v", err)
 		}
-
-		b = b[n:]
 	}
 
 	// Read from endpoint.

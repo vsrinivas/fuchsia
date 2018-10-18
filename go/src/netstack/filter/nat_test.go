@@ -172,7 +172,7 @@ func TestNATOneWayLanToWanUDP(t *testing.T) {
 	waitEntryWan, chWan := waiter.NewChannelEntry(nil)
 	wqWan.EventRegister(&waitEntryWan, waiter.EventIn)
 
-	if _, err := epLanUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverWan}); err != nil {
+	if _, _, err := epLanUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverWan}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -232,7 +232,7 @@ func TestNATRoundtripLanToWanUDP(t *testing.T) {
 	waitEntryWan, chWan := waiter.NewChannelEntry(nil)
 	wqWan.EventRegister(&waitEntryWan, waiter.EventIn)
 
-	if _, err := epLanUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverWan}); err != nil {
+	if _, _, err := epLanUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverWan}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -259,7 +259,7 @@ func TestNATRoundtripLanToWanUDP(t *testing.T) {
 	waitEntryLan, chLan := waiter.NewChannelEntry(nil)
 	wqLan.EventRegister(&waitEntryLan, waiter.EventIn)
 
-	if _, err := epWanUDP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{To: &sender}); err != nil {
+	if _, _, err := epWanUDP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{To: &sender}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -357,7 +357,7 @@ func TestNATLanToWanTCP(t *testing.T) {
 	waitEntryWan, chWan := waiter.NewChannelEntry(nil)
 	wqWan.EventRegister(&waitEntryWan, waiter.EventIn)
 
-	if _, err := epLanTCP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{}); err != nil {
+	if _, _, err := epLanTCP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -378,7 +378,7 @@ func TestNATLanToWanTCP(t *testing.T) {
 
 	wqLan.EventRegister(&waitEntryLan, waiter.EventIn)
 
-	if _, err := epWanTCP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{}); err != nil {
+	if _, _, err := epWanTCP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 

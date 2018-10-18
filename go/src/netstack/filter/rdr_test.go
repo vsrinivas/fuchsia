@@ -100,7 +100,7 @@ func TestRDROneWayWanToLanUDP(t *testing.T) {
 	waitEntryLan, chLan := waiter.NewChannelEntry(nil)
 	wqLan.EventRegister(&waitEntryLan, waiter.EventIn)
 
-	if _, err := epWanUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverRouter}); err != nil {
+	if _, _, err := epWanUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverRouter}); err != nil {
 		t.Fatalf("failed to write: %s", err)
 	}
 
@@ -161,7 +161,7 @@ func TestRDRRoundtripWanToLanUDP(t *testing.T) {
 	waitEntryLan, chLan := waiter.NewChannelEntry(nil)
 	wqLan.EventRegister(&waitEntryLan, waiter.EventIn)
 
-	if _, err := epWanUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverRouter}); err != nil {
+	if _, _, err := epWanUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverRouter}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -190,7 +190,7 @@ func TestRDRRoundtripWanToLanUDP(t *testing.T) {
 	waitEntryWan, chWan := waiter.NewChannelEntry(nil)
 	wqWan.EventRegister(&waitEntryWan, waiter.EventIn)
 
-	if _, err := epLanUDP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{To: &sender}); err != nil {
+	if _, _, err := epLanUDP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{To: &sender}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -289,7 +289,7 @@ func TestRDRWanToLanTCP(t *testing.T) {
 	waitEntryLan, chLan := waiter.NewChannelEntry(nil)
 	wqLan.EventRegister(&waitEntryLan, waiter.EventIn)
 
-	if _, err := epWanTCP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{}); err != nil {
+	if _, _, err := epWanTCP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -310,7 +310,7 @@ func TestRDRWanToLanTCP(t *testing.T) {
 
 	wqWan.EventRegister(&waitEntryWan, waiter.EventIn)
 
-	if _, err := epLanTCP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{}); err != nil {
+	if _, _, err := epLanTCP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 

@@ -116,7 +116,7 @@ func TestBridge(t *testing.T) {
 	}
 
 	const payload = "hello"
-	if _, err := s1txep.Write(tcpip.SlicePayload(payload), tcpip.WriteOptions{To: &s2fulladdr}); err != nil {
+	if _, _, err := s1txep.Write(tcpip.SlicePayload(payload), tcpip.WriteOptions{To: &s2fulladdr}); err != nil {
 		t.Logf("s1.Stats() = %+v", s1.Stats())
 		t.Fatal(err)
 	}

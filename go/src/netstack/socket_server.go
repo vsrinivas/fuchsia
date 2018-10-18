@@ -204,8 +204,12 @@ func (ios *iostate) loopStreamWrite(stk *stack.Stack) {
 
 		v = v[:n]
 		for {
-			n, err := ios.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{})
+			n, resCh, err := ios.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{})
 			v = v[n:]
+			if resCh != nil {
+				<-resCh
+				continue
+			}
 			if err == tcpip.ErrWouldBlock {
 				// Note that Close should not interrupt this wait.
 				<-notifyCh
@@ -467,8 +471,12 @@ func (ios *iostate) loopDgramWrite(stk *stack.Stack) {
 
 		v = v[c_fdio_socket_msg_hdr_len:]
 		for {
-			n, err := ios.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{To: receiver})
+			n, resCh, err := ios.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{To: receiver})
 			v = v[n:]
+			if resCh != nil {
+				<-resCh
+				continue
+			}
 			if err == tcpip.ErrWouldBlock {
 				// Note that Close should not interrupt this wait.
 				<-notifyCh
