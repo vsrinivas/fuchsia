@@ -96,6 +96,9 @@ struct dc_devhost {
 #define DEV_HOST_SUSPEND 2
 
 struct dc_device {
+    dc_device();
+    ~dc_device();
+
     zx_handle_t hrpc;
     uint32_t flags;
 
@@ -104,7 +107,7 @@ struct dc_device {
     devhost_t* host;
     const char* name;
     const char* libname;
-    const char* args;
+    fbl::unique_ptr<const char[]> args;
     work_t work;
     mutable int32_t refcount_;
     uint32_t protocol_id;
@@ -135,10 +138,10 @@ struct dc_device {
     // listnode for this device's metadata (list of dc_metadata_t)
     list_node_t metadata;
 
-    zx_device_prop_t* Props() {
-        dc_device* end = this + 1;
-        return reinterpret_cast<zx_device_prop_t*>(end);
-    }
+    fbl::unique_ptr<zx_device_prop_t[]> props;
+
+    // Allocation backing |name| and |libname|
+    fbl::unique_ptr<char[]> name_alloc_;
 
     // The AddRef and Release functions follow the contract for fbl::RefPtr.
     void AddRef() const {
