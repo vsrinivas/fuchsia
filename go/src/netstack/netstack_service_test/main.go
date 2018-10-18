@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/netstack/tcpip"
@@ -104,9 +105,9 @@ func netAddrToString(addr netstack.NetAddress) string {
 }
 
 func flagsToString(flags uint32) string {
-	str := ""
+	var b strings.Builder
 	if flags&netstack.NetInterfaceFlagUp != 0 {
-		str += "UP"
+		b.WriteString("UP")
 	}
-	return str
+	return b.String()
 }

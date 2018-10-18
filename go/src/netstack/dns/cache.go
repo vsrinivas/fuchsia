@@ -5,7 +5,6 @@
 package dns
 
 import (
-	"fmt"
 	"log"
 	"math"
 	"sync"
@@ -216,15 +215,6 @@ func (cache *cacheInfo) prune() {
 	}
 }
 
-func debugString(rr []dnsmessage.Resource) string {
-	str := "["
-	for _, rr := range rr {
-		str += fmt.Sprintf("%v, ", rr)
-	}
-	str += "]"
-	return str
-}
-
 var cache = newCache()
 
 func newCachedResolver(fallback Resolver) Resolver {
@@ -238,14 +228,14 @@ func newCachedResolver(fallback Resolver) Resolver {
 		cache.mu.Unlock()
 		if len(rrs) != 0 {
 			if debug {
-				log.Printf("DNS cache hit %v(%v) => %v", question.Name, question.Type, debugString(rrs))
+				log.Printf("DNS cache hit %v(%v) => %v", question.Name, question.Type, rrs)
 			}
 			return "", rrs, nil, nil
 		}
 
 		cname, rrs, msg, err := fallback(c, question)
 		if debug {
-			log.Printf("DNS cache miss, server returned %v(%v) => %v; err=%v", question.Name, question.Type, debugString(rrs), err)
+			log.Printf("DNS cache miss, server returned %v(%v) => %v; err=%v", question.Name, question.Type, rrs, err)
 		}
 		cache.mu.Lock()
 		if err == nil {

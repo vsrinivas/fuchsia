@@ -222,7 +222,7 @@ func TestNegativeUpdate(t *testing.T) {
 	})
 	cache.insertAll(smallTestResources)
 	rrs := cache.lookup(smallTestQuestion)
-	if len(rrs) != 2 {
-		t.Errorf("cache.lookup failed. Got %s. Want %d.", debugString(rrs), 2)
+	if want := 2; len(rrs) != want {
+		t.Errorf("got cache.lookup(...) = %v, want len(...) = %d", rrs, want)
 	}
 }

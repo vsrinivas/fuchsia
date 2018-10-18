@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"syscall/zx"
 
 	"app/context"
@@ -364,34 +365,32 @@ func wlanStateToStr(state service.State) string {
 }
 
 func hwAddrToString(hwaddr []uint8) string {
-	str := ""
-	for i := 0; i < len(hwaddr); i++ {
+	var b strings.Builder
+	for i, d := range hwaddr {
 		if i > 0 {
-			str += ":"
+			b.WriteByte(':')
 		}
-		str += fmt.Sprintf("%02x", hwaddr[i])
+		fmt.Fprintf(&b, "%02x", d)
 	}
-	return str
+	return b.String()
 }
 
 func netAddrToString(addr netstack.NetAddress) string {
 	switch addr.Family {
 	case netstack.NetAddressFamilyIpv4:
-		a := tcpip.Address(addr.Ipv4.Addr[:])
-		return fmt.Sprintf("%s", a)
+		return tcpip.Address(addr.Ipv4.Addr[:]).String()
 	case netstack.NetAddressFamilyIpv6:
-		a := tcpip.Address(addr.Ipv6.Addr[:])
-		return fmt.Sprintf("%s", a)
+		return tcpip.Address(addr.Ipv6.Addr[:]).String()
 	}
 	return ""
 }
 
 func flagsToString(flags uint32) string {
-	str := ""
+	var b strings.Builder
 	if flags&netstack.NetInterfaceFlagUp != 0 {
-		str += "UP"
+		b.WriteString("UP")
 	}
-	return str
+	return b.String()
 }
 
 func isIPv4(ip net.IP) bool {
