@@ -213,6 +213,11 @@ USER_CFLAGS :=
 USER_CPPFLAGS :=
 USER_ASMFLAGS :=
 
+# Allow driver tracing to be completely disabled (as if it didn't exist).
+ifeq ($(call TOBOOL,$(ENABLE_DRIVER_TRACING)),true)
+USER_COMPILEFLAGS += -DENABLE_DRIVER_TRACING=1
+endif
+
 # Additional flags for dynamic linking, both for dynamically-linked
 # executables and for shared libraries.
 USER_LDFLAGS := \

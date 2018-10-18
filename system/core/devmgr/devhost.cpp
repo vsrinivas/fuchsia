@@ -31,6 +31,9 @@
 #include "devcoordinator.h"
 #include "devhost.h"
 #include "devhost-main.h"
+#if ENABLE_DRIVER_TRACING
+#include "devhost-tracing.h"
+#endif
 #include "log.h"
 
 namespace devmgr {
@@ -991,6 +994,20 @@ __EXPORT int device_host_main(int argc, char** argv) {
     }
 
     zx_status_t r;
+
+#if ENABLE_DRIVER_TRACING
+    {
+        const char* enable = getenv("driver.tracing.enable");
+        if (enable && strcmp(enable, "1") == 0) {
+            r = devhost_start_trace_provider();
+            if (r != ZX_OK) {
+                log(INFO, "devhost: error registering as trace provider: %d\n", r);
+                // This is not a fatal error.
+            }
+        }
+    }
+#endif
+
     if ((r = port_init(&dh_port)) < 0) {
         log(ERROR, "devhost: could not create port: %d\n", r);
         return -1;

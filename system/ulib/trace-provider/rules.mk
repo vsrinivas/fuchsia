@@ -9,7 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
-MODULE_SRCS = \
+MODULE_SRCS := \
     $(LOCAL_DIR)/handler.cpp \
     $(LOCAL_DIR)/provider_impl.cpp \
     $(LOCAL_DIR)/session.cpp \

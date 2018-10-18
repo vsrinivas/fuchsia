@@ -19,6 +19,7 @@ This Driver Development Kit (*DDK*) tutorial documentation section consists of:
 *   [Ethernet Devices](ethernet.md) &mdash; walkthrough of Intel Ethernet driver
 *   [Advanced Topics and Tips](advanced.md) &mdash; hints for experienced driver writers
     and comments on unusual situations
+*   [Tracing](tracing.md) &mdash; monitoring driver performance with tracing
 *   [Reference](reference.md) &mdash; helper functions, data structures, manifest constants
 
 The sections are listed above in default reading order, but it's perfectly fine

@@ -18,6 +18,7 @@
 #include <ddk/debug.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/sdmmc.h>
+#include <ddk/trace/event.h>
 
 // Zircon Includes
 #include <lib/sync/completion.h>
@@ -27,11 +28,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 #include <zircon/device/block.h>
-
-// Tracing Includes
-#include <lib/async-loop/loop.h>
-#include <trace-provider/provider.h>
-#include <trace/event.h>
 
 #include "sdmmc.h"
 
@@ -61,51 +57,10 @@
 #define STAT_INC_MAX(name) do { } while (0)
 #endif
 
-static void register_trace(sdmmc_device_t* dev) {
-    dev->trace_on = true;
-    // Create a message loop.
-    zx_status_t status = async_loop_create(&kAsyncLoopConfigNoAttachToThread, &(dev->loop));
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "Failed to create a message loop.\n");
-        zxlogf(ERROR, "Failed to register the tracing interface.\n");
-        dev->trace_on = false;
-        return;
-    }
-
-    // Start a thread for the loop to run on.
-    // We could instead use async_loop_run() to run on the current thread.
-    status = async_loop_start_thread(dev->loop, "loop", NULL);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "Failed to start a thread.\n");
-        zxlogf(ERROR, "Failed to register the tracing interface.\n");
-        dev->trace_on = false;
-        return;
-    }
-
-    // Create the trace provider.
-    async_dispatcher_t* async = async_loop_get_dispatcher(dev->loop);
-    dev->trace_provider = trace_provider_create(async);
-    if (!dev->trace_provider) {
-        zxlogf(ERROR, "Failed to create a trace provider.\n");
-        zxlogf(ERROR, "Failed to register the tracing interface.\n");
-        dev->trace_on = false;
-        return;
-    }
-    zxlogf(TRACE, "Tracing interface is registered successfully!\n");
-}
-
-static void close_trace(void* ctx) {
-    sdmmc_device_t* dev = ctx;
-    trace_provider_destroy(dev->trace_provider);
-    async_loop_shutdown(dev->loop);
-    dev->trace_on = false;
-    zxlogf(TRACE, "Tracing interface is closed successfully!\n");
-}
-
 static void block_complete(block_op_t* bop, zx_status_t status, sdmmc_device_t* dev) {
     if (bop->completion_cb) {
-        if (dev->trace_on) {
-            TRACE_ASYNC_END("sdmmc","sdmmc_do_txn", dev->async_id,
+        // If tracing is not enabled this is a no-op.
+        TRACE_ASYNC_END("sdmmc","sdmmc_do_txn", dev->async_id,
             "command", TA_INT32(bop->rw.command),
             "extra", TA_INT32(bop->rw.extra),
             "length", TA_INT32(bop->rw.length),
@@ -113,7 +68,6 @@ static void block_complete(block_op_t* bop, zx_status_t status, sdmmc_device_t* 
             "offset_dev", TA_INT64(bop->rw.offset_dev),
             "pages", TA_POINTER(bop->rw.pages),
             "txn_status", TA_INT32(status));
-        }
         bop->completion_cb(bop, status);
     } else {
         zxlogf(TRACE, "sdmmc: block op %p completion_cb unset!\n", bop);
@@ -177,7 +131,6 @@ static zx_status_t sdmmc_ioctl(void* ctx, uint32_t op, const void* cmd,
 static void sdmmc_unbind(void* ctx) {
     sdmmc_device_t* dev = ctx;
     device_remove(dev->zxdev);
-    close_trace(ctx);
 }
 
 static void sdmmc_release(void* ctx) {
@@ -321,7 +274,9 @@ static zx_status_t sdmmc_wait_for_tran(sdmmc_device_t* dev) {
 }
 
 static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
-    if (dev->trace_on) {
+    // The TRACE_*() event macros are empty if driver tracing isn't enabled.
+    // But that doesn't work for our call to trace_state().
+    if (TRACE_ENABLED()) {
         dev->async_id = TRACE_NONCE();
         TRACE_ASYNC_BEGIN("sdmmc","sdmmc_do_txn", dev->async_id,
             "command", TA_INT32(txn->bop.rw.command),
@@ -582,9 +537,6 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* parent) {
     if (st != ZX_OK) {
         goto fail;
     }
-
-    // Register the tracing interface
-    register_trace(dev);
 
     // bootstrap in a thread
     int rc = thrd_create_with_name(&dev->worker_thread, sdmmc_worker_thread, dev, "sdmmc-worker");

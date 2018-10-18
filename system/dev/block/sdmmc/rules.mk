@@ -20,21 +20,15 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/sync \
     system/ulib/pretty \
-    system/ulib/trace-provider \
-    system/ulib/trace \
-    system/ulib/async.cpp \
-    system/ulib/async \
-    system/ulib/async-loop.cpp \
-    system/ulib/async-loop \
-    system/ulib/zxcpp \
-    system/ulib/fbl \
-    system/ulib/zx
 
 MODULE_LIBS := system/ulib/driver \
     system/ulib/c \
     system/ulib/zircon \
     system/ulib/fdio \
-    system/ulib/async.default \
-    system/ulib/trace-engine
+
+ifeq ($(call TOBOOL,$(ENABLE_DRIVER_TRACING)),true)
+MODULE_STATIC_LIBS += system/ulib/trace.driver
+endif
+MODULE_HEADER_DEPS += system/ulib/trace system/ulib/trace-engine
 
 include make/module.mk

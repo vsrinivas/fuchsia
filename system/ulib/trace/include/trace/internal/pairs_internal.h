@@ -7,7 +7,8 @@
 // This is not part of the public API: use <trace/event.h> instead.
 //
 
-#pragma once
+#ifndef TRACE_INTERNAL_PAIRS_INTERNAL_H_
+#define TRACE_INTERNAL_PAIRS_INTERNAL_H_
 
 // Count the number of pairs of arguments passed to it without evaluating them.
 // When the number of arguments is uneven, rounds down.
@@ -193,3 +194,5 @@
         fn(5, k5, v5), fn(6, k6, v6), fn(7, k7, v7), fn(8, k8, v8),               \
         fn(9, k9, v9), fn(10, k10, v10), fn(11, k11, v11), fn(12, k12, v12),      \
         fn(13, k13, v13), fn(14, k14, v14), fn(15, k15, v15)
+
+#endif // TRACE_INTERNAL_PAIRS_INTERNAL_H_

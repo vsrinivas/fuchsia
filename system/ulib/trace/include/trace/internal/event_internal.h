@@ -7,14 +7,15 @@
 // This is not part of the public API: use <trace/event.h> instead.
 //
 
-#pragma once
+#ifndef TRACE_INTERNAL_EVENT_INTERNAL_H_
+#define TRACE_INTERNAL_EVENT_INTERNAL_H_
 
 #include <assert.h>
 
 #include <zircon/compiler.h>
 
 #include <trace-engine/instrumentation.h>
-#include <trace/pairs_internal.h>
+#include <trace/internal/pairs_internal.h>
 
 __BEGIN_CDECLS
 
@@ -563,3 +564,5 @@ trace_arg_value_t MakeArgumentValue(const T& value) {
 } // namespace trace
 
 #endif // __cplusplus
+
+#endif // TRACE_INTERNAL_EVENT_INTERNAL_H_
