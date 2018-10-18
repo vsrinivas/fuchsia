@@ -9,6 +9,7 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 
+#include "garnet/bin/cobalt/app/logger_impl.h"
 #include "garnet/bin/cobalt/app/timer_manager.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "third_party/cobalt/encoder/observation_store.h"
@@ -47,6 +48,14 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   fidl::BindingSet<fuchsia::cobalt::LoggerSimple,
                    std::unique_ptr<fuchsia::cobalt::LoggerSimple>>
       logger_simple_bindings_;
+
+  // The owned copy of the ProjectContext for internal_logger_.
+  // TODO(zmbush): Update logger::Logger to own its ProjectContext.
+  std::unique_ptr<logger::ProjectContext> internal_project_context_;
+
+  // Cobalt uses internal_logger_ to log events about Cobalt.
+  std::unique_ptr<logger::Logger> internal_logger_;
+
   encoder::ObservationStore* observation_store_;      // not owned
   util::EncryptedMessageMaker* encrypt_to_analyzer_;  // not owned
   encoder::ShippingManager* shipping_manager_;        // not owned

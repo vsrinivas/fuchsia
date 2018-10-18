@@ -18,7 +18,8 @@ class LoggerImpl : public fuchsia::cobalt::Logger,
   LoggerImpl(std::unique_ptr<logger::ProjectContext> project_context,
              logger::Encoder* encoder,
              logger::ObservationWriter* observation_writer,
-             TimerManager* timer_manager);
+             TimerManager* timer_manager,
+             logger::LoggerInterface* internal_logger);
 
  private:
   void LogEvent(

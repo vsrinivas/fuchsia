@@ -43,6 +43,8 @@ constexpr char kShufflerPublicKeyPemPath[] =
 constexpr char kLegacyObservationStorePath[] =
     "/data/cobalt_legacy_observation_store";
 
+constexpr char kObservationStorePath[] = "/data/cobalt_observation_store";
+
 CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
                      std::chrono::seconds schedule_interval,
                      std::chrono::seconds min_interval,
@@ -61,17 +63,21 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
       // makes sense to use MAX_BYTES_PER_EVENT as the value of
       // max_bytes_per_observation. But when we start implementing non-immediate
       // observations this needs to be revisited.
+      legacy_observation_store_(fuchsia::cobalt::MAX_BYTES_PER_EVENT,
+                                kMaxBytesPerEnvelope, kMaxBytesTotal,
+                                std::make_unique<PosixFileSystem>(),
+                                kLegacyObservationStorePath),
       observation_store_(fuchsia::cobalt::MAX_BYTES_PER_EVENT,
                          kMaxBytesPerEnvelope, kMaxBytesTotal,
                          std::make_unique<PosixFileSystem>(),
-                         kLegacyObservationStorePath),
+                         kObservationStorePath),
       encrypt_to_analyzer_(ReadPublicKeyPem(kAnalyzerPublicKeyPemPath),
                            EncryptedMessage::HYBRID_ECDH_V1),
       encrypt_to_shuffler_(ReadPublicKeyPem(kShufflerPublicKeyPemPath),
                            EncryptedMessage::HYBRID_ECDH_V1),
       shipping_manager_(
           UploadScheduler(schedule_interval, min_interval, initial_interval),
-          &observation_store_, &encrypt_to_shuffler_,
+          &legacy_observation_store_, &encrypt_to_shuffler_,
           LegacyShippingManager::SendRetryerParams(kInitialRpcDeadline,
                                                    kDeadlinePerSendAttempt),
           &send_retryer_),
@@ -84,7 +90,7 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
   shipping_manager_.Start();
 
   logger_factory_impl_.reset(new LoggerFactoryImpl(
-      getClientSecret(), &observation_store_, &encrypt_to_analyzer_,
+      getClientSecret(), &legacy_observation_store_, &encrypt_to_analyzer_,
       &shipping_manager_, &system_data_, &timer_manager_, &logger_encoder_,
       &observation_writer_));
 

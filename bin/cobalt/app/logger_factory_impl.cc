@@ -5,10 +5,13 @@
 #include "garnet/bin/cobalt/app/logger_factory_impl.h"
 
 #include "garnet/bin/cobalt/app/legacy_logger_impl.h"
-#include "garnet/bin/cobalt/app/logger_impl.h"
+#include "lib/fsl/vmo/file.h"
 #include "lib/fsl/vmo/strings.h"
 
 namespace cobalt {
+
+constexpr char kInternalMetricsProtoPath[] =
+    "/pkgfs/packages/cobalt/0/data/cobalt_config.pb";
 
 using cobalt::TimerManager;
 using config::ClientConfig;
@@ -103,7 +106,19 @@ LoggerFactoryImpl::LoggerFactoryImpl(
       system_data_(system_data),
       timer_manager_(timer_manager),
       logger_encoder_(logger_encoder),
-      observation_writer_(observation_writer) {}
+      observation_writer_(observation_writer) {
+  ProjectProfile profile;
+  fsl::SizedVmo config_vmo;
+  fsl::VmoFromFilename(kInternalMetricsProtoPath, &config_vmo);
+  profile.config = std::move(config_vmo).ToTransport();
+
+  auto [legacy_project_context, project_context] =
+      CreateProjectContexts(std::move(profile));
+  internal_project_context_ = std::move(project_context);
+  internal_logger_.reset(
+      new logger::Logger(logger_encoder_, observation_writer_,
+                         internal_project_context_.get(), nullptr));
+}
 
 void LoggerFactoryImpl::CreateLogger(
     ProjectProfile profile,
@@ -120,10 +135,11 @@ void LoggerFactoryImpl::CreateLogger(
         std::move(request));
     callback(Status::OK);
   } else if (project_context) {
-    logger_bindings_.AddBinding(std::make_unique<LoggerImpl>(
-                                    std::move(project_context), logger_encoder_,
-                                    observation_writer_, timer_manager_),
-                                std::move(request));
+    logger_bindings_.AddBinding(
+        std::make_unique<LoggerImpl>(std::move(project_context),
+                                     logger_encoder_, observation_writer_,
+                                     timer_manager_, internal_logger_.get()),
+        std::move(request));
     callback(Status::OK);
   } else {
     callback(Status::INVALID_ARGUMENTS);
@@ -149,7 +165,7 @@ void LoggerFactoryImpl::CreateLoggerSimple(
     logger_simple_bindings_.AddBinding(
         std::make_unique<LoggerImpl>(std::move(project_context),
                                      logger_encoder_, observation_writer_,
-                                     timer_manager_),
+                                     timer_manager_, internal_logger_.get()),
         std::move(request));
     callback(Status::OK);
   } else {

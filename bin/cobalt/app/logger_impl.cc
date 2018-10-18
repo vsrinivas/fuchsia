@@ -7,9 +7,11 @@ namespace cobalt {
 LoggerImpl::LoggerImpl(std::unique_ptr<logger::ProjectContext> project_context,
                        logger::Encoder* encoder,
                        logger::ObservationWriter* observation_writer,
-                       TimerManager* timer_manager)
+                       TimerManager* timer_manager,
+                       logger::LoggerInterface* internal_logger)
     : project_context_(std::move(project_context)),
-      logger_(encoder, observation_writer, project_context_.get()),
+      logger_(encoder, observation_writer, project_context_.get(),
+              internal_logger),
       timer_manager_(timer_manager) {}
 
 void LoggerImpl::LogEvent(

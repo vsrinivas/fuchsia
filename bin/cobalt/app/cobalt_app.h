@@ -62,6 +62,7 @@ class CobaltApp {
   encoder::ShufflerClient shuffler_client_;
   encoder::send_retryer::SendRetryer send_retryer_;
   network_wrapper::NetworkWrapperImpl network_wrapper_;
+  encoder::FileObservationStore legacy_observation_store_;
   encoder::FileObservationStore observation_store_;
   util::EncryptedMessageMaker encrypt_to_analyzer_;
   util::EncryptedMessageMaker encrypt_to_shuffler_;

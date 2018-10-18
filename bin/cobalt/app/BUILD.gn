@@ -4,6 +4,15 @@
 
 import("//build/package.gni")
 import("//third_party/protobuf/proto_library.gni")
+import("//third_party/cobalt_config/cobalt_config.gni")
+
+# Generate the cobalt_config.pb file to be used in constructing Cobalt's
+# internal metric logging system.
+cobalt_config("generate_cobalt_internal_config") {
+  # cobalt_internal customer
+  customer_id = 2147483647
+  project_name = "metrics"
+}
 
 source_set("lib") {
   sources = [
@@ -60,6 +69,7 @@ executable("app") {
 package("cobalt") {
   deps = [
     ":app",
+    ":generate_cobalt_internal_config",
   ]
 
   binary = "cobalt"
@@ -81,6 +91,11 @@ package("cobalt") {
       path = rebase_path(
               "//third_party/cobalt/production/fuchsia-cobalt-us-central1-c/shuffler_public.pem")
       dest = "certs/cobaltv0.1/shuffler_public.pem"
+    },
+    {
+      path = rebase_path(get_label_info(":generate_cobalt_internal_config",
+                                        "target_gen_dir") + "/cobalt_config.pb")
+      dest = "cobalt_config.pb"
     },
   ]
 }
