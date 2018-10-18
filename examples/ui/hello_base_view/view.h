@@ -5,8 +5,8 @@
 #ifndef GARNET_EXAMPLES_UI_HELLO_BASE_VIEW_VIEW_H_
 #define GARNET_EXAMPLES_UI_HELLO_BASE_VIEW_VIEW_H_
 
-#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include "lib/ui/base_view/cpp/base_view.h"
@@ -18,10 +18,7 @@ namespace hello_base_view {
 // of shadertoy_client.
 class ShadertoyEmbedderView : public scenic::BaseView {
  public:
-  ShadertoyEmbedderView(
-      component::StartupContext* startup_context, async::Loop* message_loop,
-      scenic::SessionPtrAndListenerRequest session_and_listener_request,
-      zx::eventpair view_token);
+  ShadertoyEmbedderView(scenic::ViewContext context, async::Loop* message_loop);
   ~ShadertoyEmbedderView() = default;
 
   void LaunchShadertoyClient();

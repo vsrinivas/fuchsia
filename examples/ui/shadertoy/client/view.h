@@ -11,7 +11,6 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/base_view/cpp/base_view.h"
-#include "lib/ui/base_view/cpp/view_factory.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/view_framework/base_view.h"
 
@@ -95,7 +94,7 @@ class OldView : public mozart::BaseView {
 // animation and a static layout.
 class NewView : public scenic::BaseView {
  public:
-  NewView(scenic::ViewFactoryArgs args, const std::string& debug_name);
+  NewView(scenic::ViewContext context, const std::string& debug_name);
   ~NewView() = default;
 
  private:

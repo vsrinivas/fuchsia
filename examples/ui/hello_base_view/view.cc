@@ -5,19 +5,15 @@
 #include "garnet/examples/ui/hello_base_view/view.h"
 
 #include "lib/fxl/logging.h"
-#include "lib/ui/input/cpp/formatting.h"
 
 namespace hello_base_view {
 using ::fuchsia::ui::input::InputEvent;
 using ::fuchsia::ui::input::KeyboardEventPhase;
 using ::fuchsia::ui::input::PointerEventPhase;
 
-ShadertoyEmbedderView::ShadertoyEmbedderView(
-    component::StartupContext* startup_context, async::Loop* message_loop,
-    scenic::SessionPtrAndListenerRequest session_and_listener_request,
-    zx::eventpair view_token)
-    : scenic::BaseView(startup_context, std::move(session_and_listener_request),
-                       std::move(view_token),
+ShadertoyEmbedderView::ShadertoyEmbedderView(scenic::ViewContext context,
+                                             async::Loop* message_loop)
+    : scenic::BaseView(std::move(context),
                        "hello_base_view ShadertoyEmbedderView"),
       message_loop_(message_loop),
       node_(session()),
@@ -36,7 +32,7 @@ ShadertoyEmbedderView::ShadertoyEmbedderView(
 void ShadertoyEmbedderView::LaunchShadertoyClient() {
   FXL_DCHECK(!view_holder_);
 
-  embedded_view_info_ = LaunchAppAndCreateView("shadertoy_client");
+  embedded_view_info_ = LaunchComponentAndCreateView("shadertoy_client");
 
   view_holder_ = std::make_unique<scenic::ViewHolder>(
       session(), std::move(embedded_view_info_.view_holder_token),

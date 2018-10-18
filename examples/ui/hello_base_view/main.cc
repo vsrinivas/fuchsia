@@ -70,10 +70,16 @@ int main(int argc, const char** argv) {
     FXL_LOG(INFO) << "To quit: Tap the background and hit the ESC key.";
 
     // Create a View; Shadertoy's View will be plumbed through it.
-    auto view = std::make_unique<ShadertoyEmbedderView>(
-        startup_context.get(), &loop,
-        scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-        std::move(view_token));
+    scenic::ViewContext view_context = {
+        .session_and_listener_request =
+            scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
+        .view_token = std::move(view_token),
+        .incoming_services = nullptr,
+        .outgoing_services = nullptr,
+        .startup_context = startup_context.get(),
+    };
+    auto view =
+        std::make_unique<ShadertoyEmbedderView>(std::move(view_context), &loop);
 
     fuchsia::ui::policy::Presenter2Ptr root_presenter =
         startup_context
@@ -88,10 +94,16 @@ int main(int argc, const char** argv) {
     FXL_LOG(INFO) << "Using example presenter.";
 
     // Create a View; Shadertoy's View will be plumbed through it.
-    auto view = std::make_unique<ShadertoyEmbedderView>(
-        startup_context.get(), &loop,
-        scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-        std::move(view_token));
+    scenic::ViewContext view_context = {
+        .session_and_listener_request =
+            scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
+        .view_token = std::move(view_token),
+        .incoming_services = nullptr,
+        .outgoing_services = nullptr,
+        .startup_context = startup_context.get(),
+    };
+    auto view =
+        std::make_unique<ShadertoyEmbedderView>(std::move(view_context), &loop);
 
     // N.B. The example presenter has an independent session to Scenic.
     auto example_presenter = std::make_unique<ExamplePresenter>(scenic.get());
@@ -114,12 +126,11 @@ int main(int argc, const char** argv) {
     FXL_LOG(INFO) << "Launching view provider service.";
     auto view_provider_service = std::make_unique<scenic::ViewProviderService>(
         startup_context.get(), scenic.get(),
-        [&loop](scenic::ViewFactoryArgs args) {
+        [&loop](scenic::ViewContext context) {
           // Create a View; Shadertoy's View will be plumbed through it.
           auto view = std::make_unique<ShadertoyEmbedderView>(
-              args.startup_context, &loop,
-              std::move(args.session_and_listener_request),
-              std::move(args.view_token));
+              std::move(context), &loop);
+
           // Launch the real shadertoy and attach its View to this View.
           view->LaunchShadertoyClient();
           return view;

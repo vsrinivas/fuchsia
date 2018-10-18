@@ -6,21 +6,16 @@
 
 #include "lib/fxl/logging.h"
 #include "lib/ui/gfx/cpp/math.h"
-#include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic {
 
-BaseView::BaseView(
-    component::StartupContext* startup_context,
-    std::pair<fuchsia::ui::scenic::SessionPtr,
-              fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener>>
-        session_and_listener,
-    zx::eventpair view_token, const std::string& debug_name)
-    : startup_context_(startup_context),
-      listener_binding_(this, std::move(session_and_listener.second)),
-      session_(std::move(session_and_listener.first)),
-      view_(&session_, std::move(view_token), debug_name) {
+BaseView::BaseView(ViewContext context, const std::string& debug_name)
+    : startup_context_(context.startup_context),
+      listener_binding_(this,
+                        std::move(context.session_and_listener_request.second)),
+      session_(std::move(context.session_and_listener_request.first)),
+      view_(&session_, std::move(context.view_token), debug_name) {
   // We must immediately invalidate the scene, otherwise we wouldn't ever hook
   // the View up to the ViewHolder.  An alternative would be to require
   // subclasses to call an Init() method to set up the initial connection.
@@ -31,8 +26,8 @@ void BaseView::SetReleaseHandler(fit::closure callback) {
   listener_binding_.set_error_handler(std::move(callback));
 }
 
-BaseView::EmbeddedViewInfo BaseView::LaunchAppAndCreateView(
-    std::string app_url) {
+BaseView::EmbeddedViewInfo BaseView::LaunchComponentAndCreateView(
+    std::string component_url, std::vector<std::string> component_args) {
   auto& launcher = startup_context_->launcher();
   FXL_DCHECK(launcher) << "no Launcher available.";
 
@@ -44,7 +39,10 @@ BaseView::EmbeddedViewInfo BaseView::LaunchAppAndCreateView(
   info.view_holder_token = std::move(view_holder_token);
 
   launcher->CreateComponent(
-      {.url = app_url, .directory_request = info.app_services.NewRequest()},
+      {.url = component_url,
+       .arguments = fidl::VectorPtr(std::vector<fidl::StringPtr>(
+           component_args.begin(), component_args.end())),
+       .directory_request = info.app_services.NewRequest()},
       info.controller.NewRequest());
 
   info.app_services.ConnectToService(info.view_provider.NewRequest());
@@ -96,7 +94,9 @@ void BaseView::OnScenicEvent(
             OnPropertiesChanged(std::move(old_props));
             break;
           }
-          default: { OnScenicEvent(std::move(event)); }
+          default: {
+            OnScenicEvent(std::move(event));
+          }
         }
         break;
       case ::fuchsia::ui::scenic::Event::Tag::kInput: {
@@ -107,7 +107,9 @@ void BaseView::OnScenicEvent(
         OnUnhandledCommand(std::move(event.unhandled()));
         break;
       }
-      default: { OnScenicEvent(std::move(event)); }
+      default: {
+        OnScenicEvent(std::move(event));
+      }
     }
   }
 }

@@ -19,7 +19,6 @@
 
 #include "garnet/examples/ui/shadertoy/client/glsl_strings.h"
 #include "lib/fxl/logging.h"
-#include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
 namespace shadertoy_client {
@@ -228,12 +227,10 @@ bool OldView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   return false;
 }
 
-NewView::NewView(scenic::ViewFactoryArgs args, const std::string& debug_name)
-    : scenic::BaseView(args.startup_context,
-                       std::move(args.session_and_listener_request),
-                       std::move(args.view_token), debug_name),
+NewView::NewView(scenic::ViewContext context, const std::string& debug_name)
+    : scenic::BaseView(std::move(context), debug_name),
       root_node_(session()),
-      impl_(args.startup_context, session(), &root_node_) {
+      impl_(startup_context(), session(), &root_node_) {
   view().AddChild(root_node_);
 
   InvalidateScene();

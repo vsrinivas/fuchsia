@@ -40,9 +40,9 @@ int main(int argc, const char** argv) {
   // Export |fuchsia.ui.app.ViewProvider| service, so that this app can be
   // attached to the Scenic view tree.
   auto view_provider = std::make_unique<scenic::ViewProviderService>(
-      startup_context.get(), scenic.get(), [](scenic::ViewFactoryArgs args) {
+      startup_context.get(), scenic.get(), [](scenic::ViewContext context) {
         return std::make_unique<shadertoy_client::NewView>(
-            std::move(args), "Shadertoy Client Example");
+            std::move(context), "Shadertoy Client Example");
       });
 
   loop.Run();

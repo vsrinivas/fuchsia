@@ -17,6 +17,15 @@
 
 namespace scenic {
 
+// Parameters for creating a BaseView.
+struct ViewContext {
+  scenic::SessionPtrAndListenerRequest session_and_listener_request;
+  zx::eventpair view_token;
+  fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services;
+  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services;
+  component::StartupContext* startup_context;
+};
+
 // Abstract base implementation of a view for simple applications.
 // Subclasses must handle layout and provide content for the scene by
 // overriding the virtual methods defined in this class.
@@ -27,14 +36,13 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
  public:
   // Subclasses are typically created by ViewProviderService::CreateView(),
   // which provides the necessary args to pass down to this base class.
-  BaseView(component::StartupContext* startup_context,
-           scenic::SessionPtrAndListenerRequest session_and_listener,
-           zx::eventpair view_token, const std::string& debug_name);
+  BaseView(ViewContext context, const std::string& debug_name);
 
   BaseView(const BaseView&) = delete;
 
   const View& view() const { return view_; }
   Session* session() { return &session_; }
+  component::StartupContext* startup_context() { return startup_context_; }
 
   fuchsia::ui::gfx::ViewProperties view_properties() const {
     return view_properties_;
@@ -105,13 +113,14 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
         services_to_child_view;
   };
 
-  // Launch an app and connect to its ViewProvider service, passing it the
+  // Launch a component and connect to its ViewProvider service, passing it the
   // necessary information to attach itself as a child view.  Populates the
   // returned EmbeddedViewInfo, which the caller can use to embed the child.
   // For example, an interface to a ViewProvider is obtained, a pair of
   // zx::eventpairs is created, CreateView is called, etc.  This encapsulates
   // the boilerplate the the client would otherwise write themselves.
-  EmbeddedViewInfo LaunchAppAndCreateView(std::string app_url);
+  EmbeddedViewInfo LaunchComponentAndCreateView(
+      std::string component_url, std::vector<std::string> component_args = {});
 
   // Invalidates the scene, causing |OnSceneInvalidated()| to be invoked
   // during the next frame.
