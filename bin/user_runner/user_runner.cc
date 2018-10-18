@@ -14,7 +14,7 @@
 #include <lib/fxl/strings/split_string.h>
 #include <trace-provider/provider.h>
 
-#include "peridot/bin/device_runner/cobalt/cobalt.h"
+#include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/user_runner/user_runner_impl.h"
 
 fit::deferred_action<fit::closure> SetupCobalt(

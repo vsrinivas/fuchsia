@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/device_runner/user_provider_impl.h"
+#include "peridot/bin/basemgr/user_provider_impl.h"
 
 #include <utility>
 
@@ -12,7 +12,7 @@
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/strings/string_printf.h>
 
-#include "peridot/bin/device_runner/users_generated.h"
+#include "peridot/bin/basemgr/users_generated.h"
 #include "peridot/lib/common/xdr.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/fidl/json_xdr.h"

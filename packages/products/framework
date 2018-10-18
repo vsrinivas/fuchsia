@@ -7,7 +7,7 @@
         "garnet/packages/prod/netconnector",
         "peridot/packages/prod/clipboard_agent",
         "peridot/packages/prod/cloud_provider_firestore",
-        "peridot/packages/prod/device_runner_monitor",
+        "peridot/packages/prod/basemgr_monitor",
         "peridot/packages/prod/ledger",
         "peridot/packages/prod/maxwell",
         "peridot/packages/prod/modular",

@@ -101,14 +101,14 @@ To run one story and watch it sync between devices, for example the
 1. Start a todo story on one side:
 
 ```
-device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=example_todo_story
+basemgr --user_shell=dev_user_shell --user_shell_args=--root_module=example_todo_story
 
 ```
 
 2. Retrieve the story id from the log output, then start the same story on the other side:
 
 ```
-device_runner --user_shell=dev_user_shell --user_shell_args='--story_id=CmfpuRWuBo'
+basemgr --user_shell=dev_user_shell --user_shell_args='--story_id=CmfpuRWuBo'
 
 ```
 

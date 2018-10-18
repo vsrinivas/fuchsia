@@ -7,7 +7,7 @@ import("//build/package.gni")
 # We follow the conventions of ../BUILD.gn for the organization of the sources,
 # build rules, and packages, with the following modifications:
 #
-# 1. All the binaries used in tests are run through a device_runner invocation
+# 1. All the binaries used in tests are run through a basemgr invocation
 #    configured in the .tspec file of the benchmark subdirectory.
 #
 # 2. The component binary as well as its package is named with a prefix that

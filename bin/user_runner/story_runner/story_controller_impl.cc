@@ -32,7 +32,7 @@
 #include <lib/fxl/strings/split_string.h>
 #include <lib/fxl/type_converter.h>
 
-#include "peridot/bin/device_runner/cobalt/cobalt.h"
+#include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/add_mod_call.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/find_modules_call.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"

@@ -1,6 +1,6 @@
 {
     "packages": [
-        "//peridot/bin/device_runner",
+        "//peridot/bin/basemgr",
         "//peridot/bin/user_runner"
     ],
     "labels": [

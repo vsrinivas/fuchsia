@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_DEVICE_RUNNER_COBALT_COBALT_H_
-#define PERIDOT_BIN_DEVICE_RUNNER_COBALT_COBALT_H_
+#ifndef PERIDOT_BIN_basemgr_COBALT_COBALT_H_
+#define PERIDOT_BIN_basemgr_COBALT_COBALT_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/component/cpp/startup_context.h>
@@ -29,7 +29,7 @@ enum class CobaltMetric : uint32_t {
 // The events to report.
 // Next enum value: 2
 enum class ModularEvent : uint32_t {
-  BOOTED_TO_DEVICE_RUNNER = 0,
+  BOOTED_TO_basemgr = 0,
   BOOTED_TO_USER_RUNNER = 1,
 };
 
@@ -49,4 +49,4 @@ void ReportStoryLaunchTime(zx::duration time);
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_DEVICE_RUNNER_COBALT_COBALT_H_
+#endif  // PERIDOT_BIN_basemgr_COBALT_COBALT_H_

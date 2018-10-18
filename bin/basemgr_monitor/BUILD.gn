@@ -5,15 +5,15 @@
 import("//peridot/build/executable_package.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
-executable_package("device_runner_monitor") {
+executable_package("basemgr_monitor") {
   sources = [
-    "device_runner_monitor.cc",
+    "basemgr_monitor.cc",
   ]
 
   meta = [
     {
-      path = rebase_path("meta/device_runner_monitor.cmx")
-      dest = "device_runner_monitor.cmx"
+      path = rebase_path("meta/basemgr_monitor.cmx")
+      dest = "basemgr_monitor.cmx"
     },
   ]
 

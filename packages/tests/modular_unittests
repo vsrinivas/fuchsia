@@ -2,7 +2,7 @@
     "packages": [
         "//peridot/bin/user_runner/agent_runner:agent_runner_unittests",
         "//peridot/bin/agents/clipboard:clipboard_unittests",
-        "//peridot/bin/device_runner:device_runner_unittests",
+        "//peridot/bin/basemgr:basemgr_unittests",
         "//peridot/bin/user_runner/entity_provider_runner:entity_provider_runner_unittests",
         "//peridot/bin/user_runner/puppet_master:puppet_master_unittests",
         "//peridot/bin/user_runner/story_runner:story_runner_unittests",

@@ -37,7 +37,7 @@ source_set("story_runner") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/device_runner/cobalt",
+    "//peridot/bin/basemgr/cobalt",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/user_runner:component_context",
     "//peridot/bin/user_runner:focus",

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_
-#define PERIDOT_BIN_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_
+#ifndef PERIDOT_BIN_basemgr_USER_CONTROLLER_IMPL_H_
+#define PERIDOT_BIN_basemgr_USER_CONTROLLER_IMPL_H_
 
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
@@ -29,13 +29,13 @@ namespace modular {
 // |UserControllerImpl| starts and manages a UserRunner. The life time of a
 // UserRunner is bound to this class.  |UserControllerImpl| is not self-owned,
 // but still drives its own deletion: On logout, it signals its
-// owner (DeviceRunnerApp) to delete it.
+// owner (BasemgrApp) to delete it.
 class UserControllerImpl : fuchsia::modular::UserController,
                            fuchsia::modular::internal::UserContext {
  public:
   // After perfoming logout, to signal our completion (and deletion of our
   // instance) to our owner, we do it using a callback supplied to us in our
-  // constructor. (The alternative is to take in a DeviceRunnerApp*, which seems
+  // constructor. (The alternative is to take in a BasemgrApp*, which seems
   // a little specific and overscoped).
   using DoneCallback = std::function<void(UserControllerImpl*)>;
 
@@ -100,4 +100,4 @@ class UserControllerImpl : fuchsia::modular::UserController,
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_
+#endif  // PERIDOT_BIN_basemgr_USER_CONTROLLER_IMPL_H_

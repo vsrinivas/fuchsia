@@ -8,9 +8,9 @@ using fuchsia.modular.auth;
 using fuchsia.ui.viewsv1token;
 using fuchsia.sys;
 
-// Given by the |DeviceRunner| to the |DeviceShell| at Initialize() so the
+// Given by the |Basemgr| to the |DeviceShell| at Initialize() so the
 // |DeviceShell| can get information about the users of this device from the
-// |DeviceRunner|, and act on the provided information (including extending the
+// |Basemgr|, and act on the provided information (including extending the
 // user database).
 interface UserProvider {
   // Adds information of a user that can be used to authenticate her/him to this
@@ -66,7 +66,7 @@ struct UserLoginParams {
   AppConfig? user_shell_config;
 };
 
-// Provided by the |DeviceRunner| to the |DeviceShell| when it authenticates a
+// Provided by the |Basemgr| to the |DeviceShell| when it authenticates a
 // new user. This interface provides control to a logged-in user's life cycle,
 // and the life of this interface is bound to a user being logged in.
 //

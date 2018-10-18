@@ -9,7 +9,7 @@
    under the Prerequisites.
 
 To be able to run modules from the Fuchsia command line, you need to select a
-Fuchsia build configuration that does not start `device_runner` and shows a
+Fuchsia build configuration that does not start `basemgr` and shows a
 graphical user shell right at boot time. You can use for example the
 `test_modular` configuration in `fx set` and build as follows:
 
@@ -27,7 +27,7 @@ An application can be run as a module in a story using `dev_user_shell`. For
 example (from [test runner invocation]):
 
 ```
-device_runner --test --account_provider=dev_token_manager \
+basemgr --test --account_provider=dev_token_manager \
   --device_shell=dev_device_shell --user_shell=dev_user_shell \
   --story_shell=dev_story_shell \
   --user_shell_args=--root_module=parent_child_test_parent_module
@@ -37,7 +37,7 @@ device_runner --test --account_provider=dev_token_manager \
 an authentication dialog. `dev_user_shell` runs the module given to it in
 `--user_shell_args` in a story.
 
-The flags `--user_shell` and `--user_shell_args` are read by `device_runner`.
+The flags `--user_shell` and `--user_shell_args` are read by `basemgr`.
 The value of `--user_shell` is the application that is run as the user shell.
 The value of `--user_shell_args` is a comma separated list of arguments passed
 to the user shell application. In this example, these arguments are in turn more
@@ -46,7 +46,7 @@ value of `--root_module` selects the module to run. The value of `--root_link`
 is a JSON representation of the initial data the module is started with.
 
 The user name provided by `dev_device_shell` can be set with `--user`. It is
-used by `device_runner` when opening the Ledger. However, the `--user` parameter
+used by `basemgr` when opening the Ledger. However, the `--user` parameter
 does not work for `userpicker_device_shell`, because that shell displays a GUI
 to select the user to login.
 

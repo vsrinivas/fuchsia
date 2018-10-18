@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/device_runner/cobalt/cobalt.h"
+#include "peridot/bin/basemgr/cobalt/cobalt.h"
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/cobalt/cpp/cobalt_logger.h>

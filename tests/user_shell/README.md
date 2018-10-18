@@ -10,7 +10,7 @@ This test exercises the APIs exposed to the user shell:
 
 * Be notified when story state changes.
 
-The test code is invoked as a user shell from device runner and executes a
+The test code is invoked as a user shell from basemgr and executes a
 predefined sequence of steps, rather than to expose a UI to be driven by user
 interaction, as a user shell normally would. I.e. the test is implemented as a
 user shell component.

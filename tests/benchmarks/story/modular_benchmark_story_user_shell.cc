@@ -131,7 +131,7 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
 };
 
 // Measures timing the machinery available to a user shell implementation. This
-// is invoked as a user shell from device runner and executes a predefined
+// is invoked as a user shell from basemgr and executes a predefined
 // sequence of steps, rather than to expose a UI to be driven by user
 // interaction, as a user shell normally would.
 class TestApp : public modular::ViewApp {

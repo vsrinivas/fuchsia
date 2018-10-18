@@ -55,7 +55,7 @@ interface TokenProviderFactory {
   1: GetTokenProvider(string application_url, request<TokenProvider> request);
 };
 
-// Implemented by device runner and provided to AccountProvider.Initialize().
+// Implemented by basemgr and provided to AccountProvider.Initialize().
 interface AccountProviderContext {
   // Used by the token mangager application to request the Framework to display
   // a view to the user.

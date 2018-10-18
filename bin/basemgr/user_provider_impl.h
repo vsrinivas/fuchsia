@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
-#define PERIDOT_BIN_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
+#ifndef PERIDOT_BIN_basemgr_USER_PROVIDER_IMPL_H_
+#define PERIDOT_BIN_basemgr_USER_PROVIDER_IMPL_H_
 
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
@@ -13,7 +13,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 
-#include "peridot/bin/device_runner/user_controller_impl.h"
+#include "peridot/bin/basemgr/user_controller_impl.h"
 
 namespace fuchsia {
 namespace modular {
@@ -155,4 +155,4 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
+#endif  // PERIDOT_BIN_basemgr_USER_PROVIDER_IMPL_H_

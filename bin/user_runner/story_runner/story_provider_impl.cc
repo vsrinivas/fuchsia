@@ -21,7 +21,7 @@
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/zx/time.h>
 
-#include "peridot/bin/device_runner/cobalt/cobalt.h"
+#include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/user_runner/focus.h"
 #include "peridot/bin/user_runner/presentation_provider.h"
 #include "peridot/bin/user_runner/storage/constants_and_utils.h"

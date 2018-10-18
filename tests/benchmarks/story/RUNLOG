@@ -1,5 +1,5 @@
 $ /pkgfs/packages/modular_benchmarks/0/bin/run_modular_benchmarks.sh
-Launching device_runner
+Launching basemgr
 Starting trace; will stop in 1200 seconds...
 Application exited with return code 0
 Stopping trace...

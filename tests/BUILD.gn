@@ -5,7 +5,7 @@
 # We follow these conventions for the organization of the sources, build rules,
 # and packages here:
 #
-# 1. All the binaries used in tests are run through a device_runner invocation
+# 1. All the binaries used in tests are run through a basemgr invocation
 #    configured in modular_tests.json. It usually does not ever make sense to
 #    run a test component binary directly, especially not as a test. Therefore,
 #    all binaries are deployed in their own packages, so that they are not run

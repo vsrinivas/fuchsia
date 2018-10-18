@@ -4,7 +4,7 @@
 
 // Implementation of a user shell for module development. It takes a
 // root module URL and data for its fuchsia::modular::Link as command line
-// arguments, which can be set using the device_runner --user-shell-args flag.
+// arguments, which can be set using the basemgr --user-shell-args flag.
 
 #include <memory>
 #include <utility>

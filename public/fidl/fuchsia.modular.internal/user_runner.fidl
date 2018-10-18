@@ -10,7 +10,7 @@ using fuchsia.modular.auth;
 using fuchsia.ui.policy;
 using fuchsia.ui.viewsv1token;
 
-// The device_runner application (there is no |DeviceRunner| service) requests
+// The basemgr application (there is no |Basemgr| service) requests
 // an instance of this service in order to launch and display a |UserRunner| per
 // user.
 [Discoverable]  // Created by user_runner application.
@@ -30,7 +30,7 @@ interface UserRunner {
   2: SwapUserShell(fuchsia.modular.AppConfig user_shell) -> ();
 };
 
-// This interface is provided by device runner to |UserRunner|.
+// This interface is provided by basemgr to |UserRunner|.
 interface UserContext {
   // See detailed comments in UserShellContext.Logout().
   1: Logout();

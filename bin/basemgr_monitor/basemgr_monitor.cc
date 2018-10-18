@@ -13,35 +13,34 @@
 
 namespace modular {
 
-class DeviceRunnerMonitorApp : fuchsia::modular::DeviceRunnerMonitor {
+class BasemgrMonitorApp : fuchsia::modular::BasemgrMonitor {
  public:
-  DeviceRunnerMonitorApp()
+  BasemgrMonitorApp()
       : context_(component::StartupContext::CreateFromStartupInfoNotChecked()) {
-    context_->outgoing()
-        .AddPublicService<fuchsia::modular::DeviceRunnerMonitor>(
-            [this](fidl::InterfaceRequest<fuchsia::modular::DeviceRunnerMonitor>
-                       request) {
-              bindings_.AddBinding(this, std::move(request));
-            });
+    context_->outgoing().AddPublicService<fuchsia::modular::BasemgrMonitor>(
+        [this](
+            fidl::InterfaceRequest<fuchsia::modular::BasemgrMonitor> request) {
+          bindings_.AddBinding(this, std::move(request));
+        });
   }
 
  private:
-  // |fuchsia::modular::DeviceRunnerMonitor|
+  // |fuchsia::modular::BasemgrMonitor|
   void GetConnectionCount(GetConnectionCountCallback callback) override {
     callback(bindings_.size());
   }
 
   std::unique_ptr<component::StartupContext> context_;
-  fidl::BindingSet<fuchsia::modular::DeviceRunnerMonitor> bindings_;
+  fidl::BindingSet<fuchsia::modular::BasemgrMonitor> bindings_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerMonitorApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BasemgrMonitorApp);
 };
 
 }  // namespace modular
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  modular::DeviceRunnerMonitorApp app;
+  modular::BasemgrMonitorApp app;
   loop.Run();
   return 0;
 }

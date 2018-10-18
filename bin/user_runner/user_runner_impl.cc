@@ -22,7 +22,7 @@
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 
-#include "peridot/bin/device_runner/cobalt/cobalt.h"
+#include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/user_runner/component_context_impl.h"
 #include "peridot/bin/user_runner/device_map_impl.h"
 #include "peridot/bin/user_runner/focus.h"

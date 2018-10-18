@@ -28,8 +28,8 @@
 #include <lib/fxl/macros.h>
 #include <trace-provider/provider.h>
 
-#include "peridot/bin/device_runner/cobalt/cobalt.h"
-#include "peridot/bin/device_runner/user_provider_impl.h"
+#include "peridot/bin/basemgr/cobalt/cobalt.h"
+#include "peridot/bin/basemgr/user_provider_impl.h"
 #include "peridot/lib/common/async_holder.h"
 #include "peridot/lib/common/names.h"
 #include "peridot/lib/common/teardown.h"
@@ -94,7 +94,7 @@ class Settings {
   }
 
   static std::string GetUsage() {
-    return R"USAGE(device_runner
+    return R"USAGE(basemgr
       --device_shell=DEVICE_SHELL
       --device_shell_args=SHELL_ARGS
       --user_shell=USER_SHELL
@@ -199,16 +199,15 @@ class Settings {
 
 }  // namespace
 
-class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
-                        fuchsia::auth::AuthenticationContextProvider,
-                        fuchsia::modular::auth::AccountProviderContext,
-                        fuchsia::ui::policy::KeyboardCaptureListenerHACK,
-                        modular::UserProviderImpl::Delegate {
+class BasemgrApp : fuchsia::modular::DeviceShellContext,
+                   fuchsia::auth::AuthenticationContextProvider,
+                   fuchsia::modular::auth::AccountProviderContext,
+                   fuchsia::ui::policy::KeyboardCaptureListenerHACK,
+                   modular::UserProviderImpl::Delegate {
  public:
-  explicit DeviceRunnerApp(
-      const Settings& settings,
-      std::shared_ptr<component::StartupContext> const context,
-      std::function<void()> on_shutdown)
+  explicit BasemgrApp(const Settings& settings,
+                      std::shared_ptr<component::StartupContext> const context,
+                      std::function<void()> on_shutdown)
       : settings_(settings),
         user_provider_impl_("UserProviderImpl"),
         context_(std::move(context)),
@@ -235,13 +234,13 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
     context_->ConnectToEnvironmentService(monitor_.NewRequest());
 
     monitor_.set_error_handler([] {
-      FXL_LOG(ERROR) << "No device runner monitor found.";
+      FXL_LOG(ERROR) << "No basemgr monitor found.";
       exit(1);
     });
 
     monitor_->GetConnectionCount([this](uint32_t count) {
       if (count != 1) {
-        FXL_LOG(ERROR) << "Another device runner is running."
+        FXL_LOG(ERROR) << "Another basemgr is running."
                        << " Please use that one, or shut it down first.";
         exit(1);
       }
@@ -400,9 +399,8 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
         std::make_unique<AppClient<fuchsia::modular::auth::AccountProvider>>(
             context_->launcher().get(), std::move(token_manager_config),
             "/data/modular/ACCOUNT_MANAGER");
-    account_provider_->SetAppErrorHandler([] {
-      FXL_CHECK(false) << "Token manager crashed. Stopping device runner.";
-    });
+    account_provider_->SetAppErrorHandler(
+        [] { FXL_CHECK(false) << "Token manager crashed. Stopping basemgr."; });
     account_provider_->primary_service()->Initialize(
         account_provider_context_binding_.NewBinding());
 
@@ -413,7 +411,7 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
         authentication_context_provider_binding_.NewBinding().Bind(),
         settings_.enable_garnet_token_manager, this));
 
-    ReportEvent(ModularEvent::BOOTED_TO_DEVICE_RUNNER);
+    ReportEvent(ModularEvent::BOOTED_TO_basemgr);
   }
 
   // |fuchsia::modular::DeviceShellContext|
@@ -460,7 +458,7 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
       fidl::StringPtr account_id,
       fidl::InterfaceRequest<fuchsia::modular::auth::AuthenticationContext>
           request) override {
-    // TODO(MI4-1107): DeviceRunner needs to implement AuthenticationContext
+    // TODO(MI4-1107): Basemgr needs to implement AuthenticationContext
     // itself, and proxy calls for StartOverlay & StopOverlay to DeviceShell,
     // starting it if it's not running yet.
     FXL_CHECK(device_shell_);
@@ -469,9 +467,9 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
 
   // |AuthenticationContextProvider|
   void GetAuthenticationUIContext(
-      fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext>
-          request) override {
-    // TODO(MI4-1107): DeviceRunner needs to implement AuthenticationUIContext
+      fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request)
+      override {
+    // TODO(MI4-1107): Basemgr needs to implement AuthenticationUIContext
     // itself, and proxy calls for StartOverlay & StopOverlay to DeviceShell,
     // starting it if it's not running yet.
     FXL_CHECK(device_shell_);
@@ -680,7 +678,7 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
   AsyncHolder<UserProviderImpl> user_provider_impl_;
 
   std::shared_ptr<component::StartupContext> const context_;
-  fuchsia::modular::DeviceRunnerMonitorPtr monitor_;
+  fuchsia::modular::BasemgrMonitorPtr monitor_;
   std::function<void()> on_shutdown_;
 
   fidl::Binding<fuchsia::modular::DeviceShellContext>
@@ -718,7 +716,7 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
 
   std::vector<UserShellSettings>::size_type active_user_shell_index_{};
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BasemgrApp);
 };
 
 fit::deferred_action<fit::closure> SetupCobalt(
@@ -747,7 +745,7 @@ int main(int argc, const char** argv) {
   fit::deferred_action<fit::closure> cobalt_cleanup = modular::SetupCobalt(
       settings, std::move(loop.dispatcher()), context.get());
 
-  modular::DeviceRunnerApp app(settings, context, [&loop, &cobalt_cleanup] {
+  modular::BasemgrApp app(settings, context, [&loop, &cobalt_cleanup] {
     cobalt_cleanup.call();
     loop.Quit();
   });

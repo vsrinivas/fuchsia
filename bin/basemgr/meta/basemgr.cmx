@@ -6,7 +6,7 @@
     "features": [ "persistent-storage" ],
     "services": [
         "fuchsia.cobalt.LoggerFactory",
-        "fuchsia.modular.DeviceRunnerMonitor",
+        "fuchsia.modular.BasemgrMonitor",
         "fuchsia.ui.policy.Presenter",
         "fuchsia.sys.Launcher",
         "fuchsia.tracelink.Registry"

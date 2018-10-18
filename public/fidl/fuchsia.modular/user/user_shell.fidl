@@ -29,7 +29,7 @@ interface UserShellContext {
   12: GetSuggestionProvider(request<SuggestionProvider> request);
   13: GetVisibleStoriesController(request<VisibleStoriesController> request);
 
-  // Requests logout of the user. This causes the device runner to tear down the
+  // Requests logout of the user. This causes the basemgr to tear down the
   // |UserRunner| instance of the user.
   16: Logout();
 };

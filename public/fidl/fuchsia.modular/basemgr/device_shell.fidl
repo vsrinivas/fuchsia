@@ -24,18 +24,18 @@ interface DeviceShell {
   1: Initialize(DeviceShellContext device_shell_context,
                 DeviceShellParams device_shell_params);
 
-  // This method may be invoked by the device runner to request an
+  // This method may be invoked by the basemgr to request an
   // AuthenticationContext associated with |username|. |request| will then be
   // used to request the device shell to show login screen during a
   // UserProvider.AddUser() or if a token needs to be refreshed.
   //
-  // A |request| is tied to a |username| because the device runner allows
+  // A |request| is tied to a |username| because the basemgr allows
   // multiple users to be logged in at the same time.
   // Deprecated
   2: GetAuthenticationContext(string username,
                               request<fuchsia.modular.auth.AuthenticationContext> request);
 
-  // This method may be invoked by the device runner to request an
+  // This method may be invoked by the basemgr to request an
   // AuthenticationUIContext. |request| will then be used to request the device
   // shell to show login screen during a UserProvider.AddUser() or if a token
   // needs to be refreshed.
@@ -43,12 +43,12 @@ interface DeviceShell {
 };
 
 // This interface allows the |DeviceShell| to request capabilities from the
-// |DeviceRunner| in a way that is more explicit about the services that are
+// |Basemgr| in a way that is more explicit about the services that are
 // offered than a generic |ServiceProvider|.
 interface DeviceShellContext {
   1: GetUserProvider(request<UserProvider> request);
 
-  // This requests the shutdown of the device runner.
+  // This requests the shutdown of the basemgr.
   2: Shutdown();
 };
 

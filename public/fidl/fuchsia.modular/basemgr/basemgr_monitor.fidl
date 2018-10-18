@@ -5,12 +5,12 @@
 library fuchsia.modular;
 
 // This service is provided to the boot environment by the
-// device_runner_monitor component. When device_runner starts it connects to
+// basemgr_monitor component. When basemgr starts it connects to
 // this service in its environment and asks it for the number of
 // connections it current has. If the number is not one, or the
-// connection cannot be made, device_runner exits.
+// connection cannot be made, basemgr exits.
 //
-// Later we can use this service to send device runner remote control
+// Later we can use this service to send basemgr remote control
 // commands from a terminal, such as asking it to change its user
 // shell. It could also be folded into appmgr or sysmgr. We play with
 // it a bit first.
@@ -18,7 +18,7 @@ library fuchsia.modular;
 // We use :: in the service name because it's more usual in
 // sysmgr/services.conf.
 [Discoverable]
-interface DeviceRunnerMonitor {
+interface BasemgrMonitor {
   // Returns the number of connection requests the service has
   // received, including this one.
   1: GetConnectionCount() -> (uint32 count);
