@@ -17,8 +17,8 @@ namespace {
 
 using ::btlib::testing::CommandTransaction;
 
-using common::UpperBits;
 using common::LowerBits;
+using common::UpperBits;
 
 using TestingBase =
     ::btlib::testing::FakeControllerTest<::btlib::testing::TestController>;
@@ -94,128 +94,6 @@ const auto kWritePageScanTypeRsp =
                                  (statuscode), 0xF0,                 \
                                  LowerBits((opcode)), UpperBits((opcode)));
 // clang-format on
-
-class BrEdrConnectionManagerTest : public TestingBase {
- public:
-  BrEdrConnectionManagerTest() = default;
-  ~BrEdrConnectionManagerTest() override = default;
-
-  void SetUp() override {
-    TestingBase::SetUp();
-    InitializeACLDataChannel();
-
-    device_cache_ = std::make_unique<RemoteDeviceCache>();
-    data_domain_ = data::testing::FakeDomain::Create();
-    data_domain_->Initialize();
-    connection_manager_ = std::make_unique<BrEdrConnectionManager>(
-        transport(), device_cache_.get(), data_domain_, true);
-
-    StartTestDevice();
-  }
-
-  void TearDown() override {
-    if (connection_manager_ != nullptr) {
-      // deallocating the connection manager disables connectivity.
-      test_device()->QueueCommandTransaction(
-          CommandTransaction(kReadScanEnable, {&kReadScanEnableRspBoth}));
-      test_device()->QueueCommandTransaction(
-          CommandTransaction(kWriteScanEnableInq, {&kWriteScanEnableRsp}));
-      connection_manager_ = nullptr;
-    }
-    RunLoopUntilIdle();
-    test_device()->Stop();
-    data_domain_ = nullptr;
-    device_cache_ = nullptr;
-    TestingBase::TearDown();
-  }
-
- protected:
-  BrEdrConnectionManager* connmgr() const { return connection_manager_.get(); }
-  void SetConnectionManager(std::unique_ptr<BrEdrConnectionManager> mgr) {
-    connection_manager_ = std::move(mgr);
-  }
-
-  data::testing::FakeDomain* data_domain() const { return data_domain_.get(); }
-
-  RemoteDeviceCache* device_cache() const { return device_cache_.get(); }
-
- private:
-  std::unique_ptr<BrEdrConnectionManager> connection_manager_;
-  std::unique_ptr<RemoteDeviceCache> device_cache_;
-  fbl::RefPtr<data::testing::FakeDomain> data_domain_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(BrEdrConnectionManagerTest);
-};
-
-using GAP_BrEdrConnectionManagerTest = BrEdrConnectionManagerTest;
-
-TEST_F(GAP_BrEdrConnectionManagerTest, DisableConnectivity) {
-  size_t cb_count = 0;
-  auto cb = [&cb_count](const auto& status) {
-    cb_count++;
-    EXPECT_TRUE(status);
-  };
-
-  test_device()->QueueCommandTransaction(
-      CommandTransaction(kReadScanEnable, {&kReadScanEnableRspPage}));
-  test_device()->QueueCommandTransaction(
-      CommandTransaction(kWriteScanEnableNone, {&kWriteScanEnableRsp}));
-
-  connmgr()->SetConnectable(false, cb);
-
-  RunLoopUntilIdle();
-
-  EXPECT_EQ(1u, cb_count);
-
-  test_device()->QueueCommandTransaction(
-      CommandTransaction(kReadScanEnable, {&kReadScanEnableRspBoth}));
-  test_device()->QueueCommandTransaction(
-      CommandTransaction(kWriteScanEnableInq, {&kWriteScanEnableRsp}));
-
-  connmgr()->SetConnectable(false, cb);
-
-  RunLoopUntilIdle();
-
-  EXPECT_EQ(2u, cb_count);
-}
-
-TEST_F(GAP_BrEdrConnectionManagerTest, EnableConnectivity) {
-  size_t cb_count = 0;
-  auto cb = [&cb_count](const auto& status) {
-    cb_count++;
-    EXPECT_TRUE(status);
-  };
-
-  test_device()->QueueCommandTransaction(
-      CommandTransaction(kWritePageScanActivity, {&kWritePageScanActivityRsp}));
-  test_device()->QueueCommandTransaction(
-      CommandTransaction(kWritePageScanType, {&kWritePageScanTypeRsp}));
-  test_device()->QueueCommandTransaction(
-      CommandTransaction(kReadScanEnable, {&kReadScanEnableRspNone}));
-  test_device()->QueueCommandTransaction(
-      CommandTransaction(kWriteScanEnablePage, {&kWriteScanEnableRsp}));
-
-  connmgr()->SetConnectable(true, cb);
-
-  RunLoopUntilIdle();
-
-  EXPECT_EQ(1u, cb_count);
-
-  test_device()->QueueCommandTransaction(
-      CommandTransaction(kWritePageScanActivity, {&kWritePageScanActivityRsp}));
-  test_device()->QueueCommandTransaction(
-      CommandTransaction(kWritePageScanType, {&kWritePageScanTypeRsp}));
-  test_device()->QueueCommandTransaction(
-      CommandTransaction(kReadScanEnable, {&kReadScanEnableRspInquiry}));
-  test_device()->QueueCommandTransaction(
-      CommandTransaction(kWriteScanEnableBoth, {&kWriteScanEnableRsp}));
-
-  connmgr()->SetConnectable(true, cb);
-
-  RunLoopUntilIdle();
-
-  EXPECT_EQ(2u, cb_count);
-}
 
 const auto kConnectionRequest = common::CreateStaticByteBuffer(
     hci::kConnectionRequestEventCode,
@@ -350,6 +228,149 @@ const auto kReadRemoteExtended2Complete = common::CreateStaticByteBuffer(
     // lmp_features  - All the bits should be ignored.
 );
 
+class BrEdrConnectionManagerTest : public TestingBase {
+ public:
+  BrEdrConnectionManagerTest() = default;
+  ~BrEdrConnectionManagerTest() override = default;
+
+  void SetUp() override {
+    TestingBase::SetUp();
+    InitializeACLDataChannel();
+
+    device_cache_ = std::make_unique<RemoteDeviceCache>();
+    data_domain_ = data::testing::FakeDomain::Create();
+    data_domain_->Initialize();
+    connection_manager_ = std::make_unique<BrEdrConnectionManager>(
+        transport(), device_cache_.get(), data_domain_, true);
+
+    StartTestDevice();
+  }
+
+  void TearDown() override {
+    if (connection_manager_ != nullptr) {
+      // deallocating the connection manager disables connectivity.
+      test_device()->QueueCommandTransaction(
+          CommandTransaction(kReadScanEnable, {&kReadScanEnableRspBoth}));
+      test_device()->QueueCommandTransaction(
+          CommandTransaction(kWriteScanEnableInq, {&kWriteScanEnableRsp}));
+      connection_manager_ = nullptr;
+    }
+    RunLoopUntilIdle();
+    test_device()->Stop();
+    data_domain_ = nullptr;
+    device_cache_ = nullptr;
+    TestingBase::TearDown();
+  }
+
+ protected:
+  BrEdrConnectionManager* connmgr() const { return connection_manager_.get(); }
+  void SetConnectionManager(std::unique_ptr<BrEdrConnectionManager> mgr) {
+    connection_manager_ = std::move(mgr);
+  }
+
+  data::testing::FakeDomain* data_domain() const { return data_domain_.get(); }
+
+  RemoteDeviceCache* device_cache() const { return device_cache_.get(); }
+
+  void QueueSuccessfulIncomingConn() const {
+    test_device()->QueueCommandTransaction(CommandTransaction(
+        kAcceptConnectionRequest,
+        {&kAcceptConnectionRequestRsp, &kConnectionComplete}));
+    test_device()->QueueCommandTransaction(CommandTransaction(
+        kRemoteNameRequest,
+        {&kRemoteNameRequestRsp, &kRemoteNameRequestComplete}));
+    test_device()->QueueCommandTransaction(CommandTransaction(
+        kReadRemoteVersionInfo,
+        {&kReadRemoteVersionInfoRsp, &kRemoteVersionInfoComplete}));
+    test_device()->QueueCommandTransaction(CommandTransaction(
+        kReadRemoteSupportedFeatures, {&kReadRemoteSupportedFeaturesRsp,
+                                       &kReadRemoteSupportedFeaturesComplete}));
+    test_device()->QueueCommandTransaction(CommandTransaction(
+        kReadRemoteExtended1,
+        {&kReadRemoteExtendedFeaturesRsp, &kReadRemoteExtended1Complete}));
+    test_device()->QueueCommandTransaction(CommandTransaction(
+        kReadRemoteExtended2,
+        {&kReadRemoteExtendedFeaturesRsp, &kReadRemoteExtended2Complete}));
+  }
+
+ private:
+  std::unique_ptr<BrEdrConnectionManager> connection_manager_;
+  std::unique_ptr<RemoteDeviceCache> device_cache_;
+  fbl::RefPtr<data::testing::FakeDomain> data_domain_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(BrEdrConnectionManagerTest);
+};
+
+using GAP_BrEdrConnectionManagerTest = BrEdrConnectionManagerTest;
+
+TEST_F(GAP_BrEdrConnectionManagerTest, DisableConnectivity) {
+  size_t cb_count = 0;
+  auto cb = [&cb_count](const auto& status) {
+    cb_count++;
+    EXPECT_TRUE(status);
+  };
+
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kReadScanEnable, {&kReadScanEnableRspPage}));
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kWriteScanEnableNone, {&kWriteScanEnableRsp}));
+
+  connmgr()->SetConnectable(false, cb);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1u, cb_count);
+
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kReadScanEnable, {&kReadScanEnableRspBoth}));
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kWriteScanEnableInq, {&kWriteScanEnableRsp}));
+
+  connmgr()->SetConnectable(false, cb);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(2u, cb_count);
+}
+
+TEST_F(GAP_BrEdrConnectionManagerTest, EnableConnectivity) {
+  size_t cb_count = 0;
+  auto cb = [&cb_count](const auto& status) {
+    cb_count++;
+    EXPECT_TRUE(status);
+  };
+
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kWritePageScanActivity, {&kWritePageScanActivityRsp}));
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kWritePageScanType, {&kWritePageScanTypeRsp}));
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kReadScanEnable, {&kReadScanEnableRspNone}));
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kWriteScanEnablePage, {&kWriteScanEnableRsp}));
+
+  connmgr()->SetConnectable(true, cb);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1u, cb_count);
+
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kWritePageScanActivity, {&kWritePageScanActivityRsp}));
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kWritePageScanType, {&kWritePageScanTypeRsp}));
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kReadScanEnable, {&kReadScanEnableRspInquiry}));
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kWriteScanEnableBoth, {&kWriteScanEnableRsp}));
+
+  connmgr()->SetConnectable(true, cb);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(2u, cb_count);
+}
+
 const auto kDisconnect = common::CreateStaticByteBuffer(
     LowerBits(hci::kDisconnect), UpperBits(hci::kDisconnect),
     0x03,        // parameter_total_size (3 bytes)
@@ -420,31 +441,14 @@ TEST_F(GAP_BrEdrConnectionManagerTest,
 
 // Test: An incoming connection request should trigger an acceptance and an
 // interrogation to discover capabilities.
-TEST_F(GAP_BrEdrConnectionManagerTest, IncomingConnection) {
+TEST_F(GAP_BrEdrConnectionManagerTest, IncomingConnectionSuccess) {
   size_t transactions = 0;
   test_device()->SetTransactionCallback([&transactions] { transactions++; },
                                         async_get_default_dispatcher());
 
   EXPECT_EQ("", connmgr()->GetPeerId(kConnectionHandle));
 
-  test_device()->QueueCommandTransaction(
-      CommandTransaction(kAcceptConnectionRequest,
-                         {&kAcceptConnectionRequestRsp, &kConnectionComplete}));
-  test_device()->QueueCommandTransaction(CommandTransaction(
-      kRemoteNameRequest,
-      {&kRemoteNameRequestRsp, &kRemoteNameRequestComplete}));
-  test_device()->QueueCommandTransaction(CommandTransaction(
-      kReadRemoteVersionInfo,
-      {&kReadRemoteVersionInfoRsp, &kRemoteVersionInfoComplete}));
-  test_device()->QueueCommandTransaction(CommandTransaction(
-      kReadRemoteSupportedFeatures, {&kReadRemoteSupportedFeaturesRsp,
-                                     &kReadRemoteSupportedFeaturesComplete}));
-  test_device()->QueueCommandTransaction(CommandTransaction(
-      kReadRemoteExtended1,
-      {&kReadRemoteExtendedFeaturesRsp, &kReadRemoteExtended1Complete}));
-  test_device()->QueueCommandTransaction(CommandTransaction(
-      kReadRemoteExtended2,
-      {&kReadRemoteExtendedFeaturesRsp, &kReadRemoteExtended2Complete}));
+  QueueSuccessfulIncomingConn();
 
   test_device()->SendCommandChannelPacket(kConnectionRequest);
 
@@ -481,24 +485,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, RemoteDisconnect) {
 
   EXPECT_EQ("", connmgr()->GetPeerId(kConnectionHandle));
 
-  test_device()->QueueCommandTransaction(
-      CommandTransaction(kAcceptConnectionRequest,
-                         {&kAcceptConnectionRequestRsp, &kConnectionComplete}));
-  test_device()->QueueCommandTransaction(CommandTransaction(
-      kRemoteNameRequest,
-      {&kRemoteNameRequestRsp, &kRemoteNameRequestComplete}));
-  test_device()->QueueCommandTransaction(CommandTransaction(
-      kReadRemoteVersionInfo,
-      {&kReadRemoteVersionInfoRsp, &kRemoteVersionInfoComplete}));
-  test_device()->QueueCommandTransaction(CommandTransaction(
-      kReadRemoteSupportedFeatures, {&kReadRemoteSupportedFeaturesRsp,
-                                     &kReadRemoteSupportedFeaturesComplete}));
-  test_device()->QueueCommandTransaction(CommandTransaction(
-      kReadRemoteExtended1,
-      {&kReadRemoteExtendedFeaturesRsp, &kReadRemoteExtended1Complete}));
-  test_device()->QueueCommandTransaction(CommandTransaction(
-      kReadRemoteExtended2,
-      {&kReadRemoteExtendedFeaturesRsp, &kReadRemoteExtended2Complete}));
+  QueueSuccessfulIncomingConn();
 
   test_device()->SendCommandChannelPacket(kConnectionRequest);
 
@@ -601,7 +588,6 @@ const auto kCapabilitiesRequestReplyRsp =
 // requirements.
 TEST_F(GAP_BrEdrConnectionManagerTest, CapabilityRequest) {
   size_t transactions = 0;
-
   test_device()->SetTransactionCallback([&transactions] { transactions++; },
                                         async_get_default_dispatcher());
 
@@ -635,7 +621,6 @@ const auto kConfirmationRequestReplyRsp =
 // Test: sends replies to Confirmation Requests
 TEST_F(GAP_BrEdrConnectionManagerTest, ConfirmationRequest) {
   size_t transactions = 0;
-
   test_device()->SetTransactionCallback([&transactions] { transactions++; },
                                         async_get_default_dispatcher());
 
@@ -655,24 +640,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, DisconnectOnLinkError) {
   test_device()->SetTransactionCallback([&transactions] { transactions++; },
                                         async_get_default_dispatcher());
 
-  test_device()->QueueCommandTransaction(
-      CommandTransaction(kAcceptConnectionRequest,
-                         {&kAcceptConnectionRequestRsp, &kConnectionComplete}));
-  test_device()->QueueCommandTransaction(CommandTransaction(
-      kRemoteNameRequest,
-      {&kRemoteNameRequestRsp, &kRemoteNameRequestComplete}));
-  test_device()->QueueCommandTransaction(CommandTransaction(
-      kReadRemoteVersionInfo,
-      {&kReadRemoteVersionInfoRsp, &kRemoteVersionInfoComplete}));
-  test_device()->QueueCommandTransaction(CommandTransaction(
-      kReadRemoteSupportedFeatures, {&kReadRemoteSupportedFeaturesRsp,
-                                     &kReadRemoteSupportedFeaturesComplete}));
-  test_device()->QueueCommandTransaction(CommandTransaction(
-      kReadRemoteExtended1,
-      {&kReadRemoteExtendedFeaturesRsp, &kReadRemoteExtended1Complete}));
-  test_device()->QueueCommandTransaction(CommandTransaction(
-      kReadRemoteExtended2,
-      {&kReadRemoteExtendedFeaturesRsp, &kReadRemoteExtended2Complete}));
+  QueueSuccessfulIncomingConn();
 
   test_device()->SendCommandChannelPacket(kConnectionRequest);
 
@@ -700,6 +668,39 @@ TEST_F(GAP_BrEdrConnectionManagerTest, DisconnectOnLinkError) {
   RunLoopUntilIdle();
 
   EXPECT_EQ(9u, transactions);
+}
+
+TEST_F(GAP_BrEdrConnectionManagerTest, ConnectedDeviceTimeout) {
+  size_t transactions = 0;
+  test_device()->SetTransactionCallback([&transactions] { transactions++; },
+                                        async_get_default_dispatcher());
+
+  QueueSuccessfulIncomingConn();
+
+  test_device()->SendCommandChannelPacket(kConnectionRequest);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(6u, transactions);
+
+  auto* dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
+  ASSERT_TRUE(dev);
+  EXPECT_TRUE(dev->connected());
+
+  // We want to make sure the connection doesn't expire.
+  RunLoopFor(zx::sec(600));
+
+  // Remote end disconnects.
+  test_device()->SendCommandChannelPacket(kDisconnectionComplete);
+
+  RunLoopUntilIdle();
+
+  // Device should still be there, but not connected anymore
+  dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
+  ASSERT_TRUE(dev);
+  EXPECT_FALSE(dev->connected());
+
+  EXPECT_EQ("", connmgr()->GetPeerId(kConnectionHandle));
 }
 
 #undef COMMAND_COMPLETE_RSP

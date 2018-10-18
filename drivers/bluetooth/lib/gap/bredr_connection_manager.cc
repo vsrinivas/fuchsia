@@ -19,7 +19,8 @@ namespace gap {
 namespace {
 
 void SetPageScanEnabled(bool enabled, fxl::RefPtr<hci::Transport> hci,
-                        async_dispatcher_t* dispatcher, hci::StatusCallback cb) {
+                        async_dispatcher_t* dispatcher,
+                        hci::StatusCallback cb) {
   ZX_DEBUG_ASSERT(cb);
   auto read_enable = hci::CommandPacket::New(hci::kReadScanEnable);
   auto finish_enable_cb = [enabled, dispatcher, hci, finish_cb = std::move(cb)](
@@ -306,6 +307,9 @@ void BrEdrConnectionManager::OnConnectionComplete(
     device = cache_->NewDevice(addr, true);
   }
 
+  device->MutBrEdr().SetConnectionState(
+      RemoteDevice::ConnectionState::kInitializing);
+
   // Interrogate this device to find out its version/capabilities.
   interrogator_.Start(
       device->identifier(), std::move(conn_ptr),
@@ -342,6 +346,8 @@ void BrEdrConnectionManager::OnConnectionComplete(
             self->dispatcher_);
 
         self->connections_.emplace(conn_ptr->handle(), std::move(conn_ptr));
+        device->MutBrEdr().SetConnectionState(
+            RemoteDevice::ConnectionState::kConnected);
         // TODO(NET-1019): Start SDP service discovery.
       });
 }
@@ -368,6 +374,8 @@ void BrEdrConnectionManager::OnDisconnectionComplete(
   auto* device = cache_->FindDeviceByAddress(it->second->peer_address());
   ZX_DEBUG_ASSERT_MSG(device, "Couldn't find RemoteDevice for handle: %#.4x",
                       handle);
+  device->MutBrEdr().SetConnectionState(
+      RemoteDevice::ConnectionState::kNotConnected);
   auto conn = std::move(it->second);
   connections_.erase(it);
 
