@@ -41,8 +41,7 @@ cloud_provider::Token MakeToken(convert::ExtendedStringView token_id) {
 
 constexpr zx::duration kTestBackoffInterval = zx::msec(50);
 std::unique_ptr<backoff::TestBackoff> NewTestBackoff() {
-  auto result = std::make_unique<backoff::TestBackoff>();
-  result->backoff_to_return = kTestBackoffInterval;
+  auto result = std::make_unique<backoff::TestBackoff>(kTestBackoffInterval);
   return result;
 }
 

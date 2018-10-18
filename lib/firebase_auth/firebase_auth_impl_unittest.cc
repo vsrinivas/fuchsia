@@ -74,7 +74,8 @@ class FirebaseAuthImplTest : public gtest::TestLoopFixture {
 
  protected:
   std::unique_ptr<backoff::Backoff> InitBackoff() {
-    auto backoff = std::make_unique<backoff::TestBackoff>();
+    // TODO(LE-630): Don't use a backoff duration of 0.
+    auto backoff = std::make_unique<backoff::TestBackoff>(zx::sec(0));
     backoff_ = backoff.get();
     return backoff;
   }

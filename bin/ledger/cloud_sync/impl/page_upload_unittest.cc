@@ -47,8 +47,7 @@ class PageUploadTest : public gtest::TestLoopFixture,
         encryption_service_(dispatcher()),
         page_cloud_(page_cloud_ptr_.NewRequest()),
         task_runner_(dispatcher()) {
-    auto test_backoff = std::make_unique<backoff::TestBackoff>();
-    test_backoff->backoff_to_return = kBackoffInterval;
+    auto test_backoff = std::make_unique<backoff::TestBackoff>(kBackoffInterval);
     backoff_ = test_backoff.get();
     page_upload_ = std::make_unique<PageUpload>(
         &task_runner_, &storage_, &encryption_service_, &page_cloud_ptr_, this,
