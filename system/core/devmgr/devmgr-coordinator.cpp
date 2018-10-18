@@ -76,13 +76,43 @@ static suspend_context_t suspend_ctx = []() {
     return suspend;
 }();
 
-typedef struct {
+struct dc_metadata_t {
     list_node_t node;
     uint32_t type;
     uint32_t length;
     bool has_path;      // zero terminated string starts at data[length]
-    uint8_t data[];
-} dc_metadata_t;
+
+    char* Data() {
+        return reinterpret_cast<char*>(this + 1);
+    }
+
+    static zx_status_t Create(size_t data_len, fbl::unique_ptr<dc_metadata_t>* out) {
+        uint8_t* buf = new uint8_t[sizeof(dc_metadata_t) + data_len];
+        if (!buf) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        new (buf) dc_metadata_t();
+
+        out->reset(reinterpret_cast<dc_metadata_t*>(buf));
+        return ZX_OK;
+    }
+
+    // Implement a custom delete to deal with the allocation mechanism used in
+    // Create().  Since the ctor is private, all dc_metadata_t* will come from
+    // Create().
+    void operator delete(void* ptr) {
+        delete [] reinterpret_cast<uint8_t*>(ptr);
+    }
+
+ private:
+    dc_metadata_t() = default;
+
+    dc_metadata_t(const dc_metadata_t&) = delete;
+    dc_metadata_t& operator=(const dc_metadata_t&) = delete;
+
+    dc_metadata_t(dc_metadata_t&&) = delete;
+    dc_metadata_t& operator=(dc_metadata_t&&) = delete;
+};
 
 static list_node_t published_metadata = LIST_INITIAL_VALUE(published_metadata);
 
@@ -781,7 +811,7 @@ static void dc_release_device(device_t* dev) {
             list_add_tail(&published_metadata, &md->node);
         } else {
             // metadata was attached directly to this device, so we free it here
-            free(md);
+            delete md;
         }
     }
 
@@ -1147,7 +1177,7 @@ static zx_status_t dc_get_metadata(device_t* dev, uint32_t type, void* buffer, s
                 if (md->length > buflen) {
                     return ZX_ERR_BUFFER_TOO_SMALL;
                 }
-                memcpy(buffer, md->data, md->length);
+                memcpy(buffer, md->Data(), md->length);
                 *actual = md->length;
                 return ZX_OK;
             }
@@ -1164,12 +1194,12 @@ static zx_status_t dc_get_metadata(device_t* dev, uint32_t type, void* buffer, s
 
     dc_metadata_t* temp;
     list_for_every_entry_safe(&published_metadata, md, temp, dc_metadata_t, node) {
-        char* md_path = (char*)md->data + md->length;
+        char* md_path = md->Data() + md->length;
         if (md->type == type && path_is_child(md_path, path)) {
             if (md->length > buflen) {
                 return ZX_ERR_BUFFER_TOO_SMALL;
             }
-            memcpy(buffer, md->data, md->length);
+            memcpy(buffer, md->Data(), md->length);
             *actual = md->length;
             return ZX_OK;
         }
@@ -1180,16 +1210,19 @@ static zx_status_t dc_get_metadata(device_t* dev, uint32_t type, void* buffer, s
 
 static zx_status_t dc_add_metadata(device_t* dev, uint32_t type, const void* data,
                                    uint32_t length) {
-    auto md = static_cast<dc_metadata_t*>(calloc(1, sizeof(dc_metadata_t) + length));
-    if (!md) {
-        return ZX_ERR_NO_MEMORY;
+    fbl::unique_ptr<dc_metadata_t> md;
+    zx_status_t status = dc_metadata_t::Create(length, &md);
+    if (status != ZX_OK) {
+        return status;
     }
-    new (md) dc_metadata_t;
 
     md->type = type;
     md->length = length;
-    memcpy(&md->data, data, length);
+    memcpy(md->Data(), data, length);
     list_add_head(&dev->metadata, &md->node);
+    // TODO(teisenbe/kulakowski): Don't release this, instead track it as a
+    // unique_ptr in the list
+    __UNUSED auto ptr = md.release();
     return ZX_OK;
 }
 
@@ -1218,19 +1251,21 @@ static zx_status_t dc_publish_metadata(device_t* dev, const char* path, uint32_t
         }
     }
 
-    auto md =
-        static_cast<dc_metadata_t*>(calloc(1, sizeof(dc_metadata_t) + length + strlen(path) + 1));
-    if (!md) {
-        return ZX_ERR_NO_MEMORY;
+    fbl::unique_ptr<dc_metadata_t> md;
+    status = dc_metadata_t::Create(length + strlen(path) + 1, &md);
+    if (status != ZX_OK) {
+        return status;
     }
-    new (md) dc_metadata_t;
 
     md->type = type;
     md->length = length;
     md->has_path = true;
-    memcpy(&md->data, data, length);
-    strcpy((char*)md->data + length, path);
+    memcpy(md->Data(), data, length);
+    strcpy(md->Data() + length, path);
     list_add_head(&published_metadata, &md->node);
+    // TODO(teisenbe/kulakowski): Don't release this, instead track it as a
+    // unique_ptr in the list
+    __UNUSED auto ptr = md.release();
     return ZX_OK;
 }
 
