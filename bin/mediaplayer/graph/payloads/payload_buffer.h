@@ -23,13 +23,16 @@ class VmoPayloadAllocator;
 // A VMO used for payload buffers.
 class PayloadVmo : public fbl::RefCounted<PayloadVmo> {
  public:
-  // Creates a |PayloadVmo| that wraps a newly-created VMO. If |bti_handle| is
+  // Creates a VMO and wraps it with a |PayloadVmo|. If |bti_handle| is
   // provided, the VMO is created with |zx_vmo_create_contiguous|.
   // TODO(dalesat): Remove |bti_handle| when the fidl buffer allocator happens.
   static fbl::RefPtr<PayloadVmo> Create(uint64_t vmo_size,
                                         const zx::handle* bti_handle = nullptr);
 
-  PayloadVmo(uint64_t vmo_size, const zx::handle* bti_handle,
+  // Creates a |PayloadVmo| that wraps the provided VMO.
+  static fbl::RefPtr<PayloadVmo> Create(zx::vmo vmo);
+
+  PayloadVmo(zx::vmo vmo, uint64_t vmo_size, const zx::handle* bti_handle,
              zx_status_t* status_out);
 
   ~PayloadVmo() = default;

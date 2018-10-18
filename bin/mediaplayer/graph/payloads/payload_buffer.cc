@@ -15,42 +15,57 @@ namespace media_player {
 fbl::RefPtr<PayloadVmo> PayloadVmo::Create(uint64_t vmo_size,
                                            const zx::handle* bti_handle) {
   FXL_DCHECK(vmo_size != 0);
-  zx_status_t status;
-  auto result = fbl::MakeRefCounted<PayloadVmo>(vmo_size, bti_handle, &status);
-  return status == ZX_OK ? result : nullptr;
-}
 
-PayloadVmo::PayloadVmo(uint64_t vmo_size, const zx::handle* bti_handle,
-                       zx_status_t* status_out)
-    : size_(vmo_size) {
-  FXL_DCHECK(vmo_size != 0);
-  FXL_DCHECK(status_out != nullptr);
-
-  zx_status_t status;
+  zx::vmo vmo;
 
   if (bti_handle != nullptr) {
     // Create a contiguous VMO. This is a hack that will be removed once the
     // FIDL buffer allocator is working an integrated.
-    status = zx_vmo_create_contiguous(bti_handle->get(), size_, 0,
-                                      vmo_.reset_and_get_address());
+    zx_status_t status = zx_vmo_create_contiguous(
+        bti_handle->get(), vmo_size, 0, vmo.reset_and_get_address());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create contiguous VMO of size " << size_
+      FXL_LOG(ERROR) << "Failed to create contiguous VMO of size " << vmo_size
                      << ", status " << status << ".";
-      *status_out = status;
-      return;
+      return nullptr;
     }
   } else {
-    status = zx::vmo::create(size_, 0, &vmo_);
+    zx_status_t status = zx::vmo::create(vmo_size, 0, &vmo);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create VMO of size " << size_ << ", status "
-                     << status << ".";
-      *status_out = status;
-      return;
+      FXL_LOG(ERROR) << "Failed to create VMO of size " << vmo_size
+                     << ", status " << status << ".";
+      return nullptr;
     }
   }
 
-  status = vmo_mapper_.Map(vmo_, 0, size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                           nullptr);
+  zx_status_t status;
+  auto result = fbl::MakeRefCounted<PayloadVmo>(std::move(vmo), vmo_size,
+                                                bti_handle, &status);
+  return status == ZX_OK ? result : nullptr;
+}
+
+// static
+fbl::RefPtr<PayloadVmo> PayloadVmo::Create(zx::vmo vmo) {
+  uint64_t vmo_size;
+  zx_status_t status = vmo.get_size(&vmo_size);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to get VMO size.";
+    return nullptr;
+  }
+
+  auto result = fbl::MakeRefCounted<PayloadVmo>(std::move(vmo), vmo_size,
+                                                nullptr, &status);
+  return status == ZX_OK ? result : nullptr;
+}
+
+PayloadVmo::PayloadVmo(zx::vmo vmo, uint64_t vmo_size,
+                       const zx::handle* bti_handle, zx_status_t* status_out)
+    : vmo_(std::move(vmo)), size_(vmo_size) {
+  FXL_DCHECK(vmo_);
+  FXL_DCHECK(vmo_size != 0);
+  FXL_DCHECK(status_out != nullptr);
+
+  zx_status_t status = vmo_mapper_.Map(
+      vmo_, 0, size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map VMO, status " << status;
     *status_out = status;
