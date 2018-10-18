@@ -61,11 +61,11 @@ package("netstack_gotests") {
   testonly = true
 
   deps = [
-    ":netstack_bridge_test",
     ":netstack_connectivity_test",
     ":netstack_dns_test",
     ":netstack_fidlconv_test",
     ":netstack_filter_test",
+    ":netstack_link_bridge_test",
     ":netstack_link_eth_test",
     ":netstack_netiface_test",
     ":netstack_service_impl_test",
@@ -82,9 +82,6 @@ package("netstack_gotests") {
 
   tests = [
     {
-      name = "netstack_bridge_test"
-    },
-    {
       name = "netstack_connectivity_test"
     },
     {
@@ -98,6 +95,9 @@ package("netstack_gotests") {
     },
     {
       name = "netstack_ifconfig_test"
+    },
+    {
+      name = "netstack_link_bridge_test"
     },
     {
       name = "netstack_link_eth_test"
@@ -139,13 +139,6 @@ go_binary("netstack_bin") {
   ]
 }
 
-go_test("netstack_bridge_test") {
-  gopackage = "netstack/link/bridge"
-  deps = [
-    ":netstack_lib",
-  ]
-}
-
 go_test("netstack_connectivity_test") {
   gopackage = "netstack/connectivity"
   deps = [
@@ -169,6 +162,13 @@ go_test("netstack_fidlconv_test") {
 
 go_test("netstack_filter_test") {
   gopackage = "netstack/filter"
+  deps = [
+    ":netstack_lib",
+  ]
+}
+
+go_test("netstack_link_bridge_test") {
+  gopackage = "netstack/link/bridge"
   deps = [
     ":netstack_lib",
   ]
