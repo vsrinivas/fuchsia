@@ -9,6 +9,13 @@
 #include "lib/fxl/logging.h"
 
 namespace media_player {
+namespace {
+
+// TODO(turnage): Intelligently choose this by observing read times from the
+// upstream reader and whether our reads block the demuxer.
+static constexpr size_t kChunkSize = 256 * 1024;
+
+}  // namespace
 
 // static
 std::shared_ptr<ReaderCache> ReaderCache::Create(
@@ -66,11 +73,9 @@ void ReaderCache::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
   });
 }
 
-void ReaderCache::SetCacheOptions(size_t capacity, size_t max_backtrack,
-                                  size_t chunk_size) {
+void ReaderCache::SetCacheOptions(size_t capacity, size_t max_backtrack) {
   capacity_ = capacity;
   max_backtrack_ = max_backtrack;
-  chunk_size_ = chunk_size;
 }
 
 void ReaderCache::MaybeStartLoadForPosition(size_t position) {
@@ -141,7 +146,7 @@ std::pair<size_t, size_t> ReaderCache::CalculateCacheRange(size_t position) {
     return {0, upstream_size_};
   }
 
-  size_t chunk_position = position - (position % chunk_size_);
+  size_t chunk_position = position - (position % kChunkSize);
   size_t cache_start =
       chunk_position > max_backtrack_ ? chunk_position - max_backtrack_ : 0;
 

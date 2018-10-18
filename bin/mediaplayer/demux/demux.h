@@ -10,7 +10,7 @@
 
 #include <lib/fit/function.h>
 
-#include "garnet/bin/mediaplayer/demux/reader.h"
+#include "garnet/bin/mediaplayer/demux/reader_cache.h"
 #include "garnet/bin/mediaplayer/graph/metadata.h"
 #include "garnet/bin/mediaplayer/graph/models/async_node.h"
 #include "garnet/bin/mediaplayer/graph/packet.h"
@@ -46,6 +46,10 @@ class Demux : public AsyncNode {
   // Sets a callback to call when metadata or problem changes occur.
   virtual void SetStatusCallback(StatusCallback callback) = 0;
 
+  // Sets the lead duration ahead of playback and the retained duration behind
+  // playback to optimize skipping back.
+  virtual void SetCacheOptions(zx_duration_t lead, zx_duration_t backtrack) = 0;
+
   // Calls the callback when the initial streams and metadata have
   // established.
   virtual void WhenInitialized(fit::function<void(Result)> callback) = 0;
@@ -69,7 +73,7 @@ class DemuxFactory {
   virtual ~DemuxFactory() {}
 
   // Creates a |Demux| object for a given reader.
-  virtual Result CreateDemux(std::shared_ptr<Reader> reader,
+  virtual Result CreateDemux(std::shared_ptr<ReaderCache> reader_cache,
                              std::shared_ptr<Demux>* demux_out) = 0;
 
  protected:

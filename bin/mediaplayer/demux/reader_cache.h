@@ -41,29 +41,22 @@ class ReaderCache : public Reader,
   void ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
               ReadAtCallback callback) override;
 
-  // Configures the ReaderCache to respect the given memory budget.
-  //   |capacity| is the amount of memory ReaderCache is allowed to use for
-  //              caching the upstream Reader's content.
-  //   |max_backtrack| is the amount of memory (< capacity) that ReaderCache
-  //                   will maintain _behind_ the ReadAt point (for skipping
-  //                   back).
-  //   |chunk_size| is the size of read chunks ReaderCache will use when reading
-  //                from upstream.
-  void SetCacheOptions(size_t capacity, size_t max_backtrack,
-                       size_t chunk_size);
+  // Configures the |ReaderCache| to respect the given memory budget. |capacity|
+  // is the amount of memory |ReaderCache| is allowed to spend caching the
+  // upstream |Reader|'s content. |max_backtrack| is the amount of memory that
+  // |ReaderCache| will maintain behind the |ReadAt| point (for skipping back).
+  // |max_backtrack| must be less than |capacity|.
+  void SetCacheOptions(size_t capacity, size_t max_backtrack);
 
  private:
-  // Loads if
-  //   1. No load is in progress already.
-  //   2. There are holes in the desired cache range for this position which
-  //      require filling.
-  // Starts a load from the upstream Reader into our buffer over the given
-  // range.
-  //   1. If requested, clean up memory outside the desired range to pay for the
-  //      new allocations.
-  //   2. Makes async calls for the upstream Reader to fill all the holes in the
-  //      desired cache range.
-  //   3. Running any ReadAt call queued on this reload.
+  // Loads if 1) No load is in progress already. 2) There are holes in the
+  // desired cache range for this position which require filling.
+  //
+  // Starts a load from the upstream |Reader| into our buffer over the given
+  // range. 1) Cleans up memory outside the desired range to pay for the new
+  // allocations. 2) Makes async calls for the upstream |Reader| to fill all the
+  // holes in the desired cache range. 3) Runs any |ReadAt| call queued on this
+  // reload.
   void MaybeStartLoadForPosition(size_t position);
 
   // Makes async calls to the upstream Reader to fill the given holes in our
@@ -90,7 +83,6 @@ class ReaderCache : public Reader,
 
   size_t capacity_ = 16 * 1024 * 1024;
   size_t max_backtrack_ = 0;
-  size_t chunk_size_ = 1024 * 1024;
 
   async_dispatcher_t* dispatcher_;
 

@@ -6,6 +6,7 @@
 #define GARNET_BIN_MEDIAPLAYER_FFMPEG_FFMPEG_DEMUX_FACTORY_H_
 
 #include "garnet/bin/mediaplayer/demux/demux.h"
+#include "garnet/bin/mediaplayer/demux/reader_cache.h"
 
 namespace media_player {
 
@@ -20,7 +21,7 @@ class FfmpegDemuxFactory : public DemuxFactory {
   ~FfmpegDemuxFactory() override;
 
   // Creates a |Demux| object for a given reader.
-  Result CreateDemux(std::shared_ptr<Reader> reader,
+  Result CreateDemux(std::shared_ptr<ReaderCache> reader_cache,
                      std::shared_ptr<Demux>* demux_out) override;
 };
 

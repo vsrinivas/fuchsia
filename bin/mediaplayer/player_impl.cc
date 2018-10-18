@@ -35,6 +35,10 @@ namespace {
 
 static const char* kDumpEntry = "dump";
 
+// TODO(turnage): Choose these based on media type or expose them to clients.
+static constexpr zx_duration_t kCacheLead = ZX_SEC(15);
+static constexpr zx_duration_t kCacheBacktrack = ZX_SEC(5);
+
 }  // namespace
 
 // static
@@ -423,6 +427,7 @@ void PlayerImpl::FinishSetReader() {
   demux_factory_->CreateDemux(ReaderCache::Create(new_reader_), &demux);
   // TODO(dalesat): Handle CreateDemux failure.
   FXL_DCHECK(demux);
+  demux->SetCacheOptions(kCacheLead, kCacheBacktrack);
 
   new_reader_ = nullptr;
 

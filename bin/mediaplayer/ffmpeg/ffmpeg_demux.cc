@@ -4,6 +4,7 @@
 
 #include <condition_variable>
 #include <map>
+#include <optional>
 #include <thread>
 
 #include <fuchsia/media/cpp/fidl.h>
@@ -38,16 +39,20 @@ const std::unordered_map<std::string, std::string> kMetadataLabelMap{
 
 const std::string kMetadataUnknownPropertyPrefix = "ffmpeg.";
 
+constexpr size_t kBitsPerByte = 8;
+
 }  // namespace
 
 class FfmpegDemuxImpl : public FfmpegDemux {
  public:
-  FfmpegDemuxImpl(std::shared_ptr<Reader> reader);
+  FfmpegDemuxImpl(std::shared_ptr<ReaderCache> reader_cache);
 
   ~FfmpegDemuxImpl() override;
 
   // Demux implementation.
   void SetStatusCallback(StatusCallback callback) override;
+
+  void SetCacheOptions(zx_duration_t lead, zx_duration_t backtrack) override;
 
   void WhenInitialized(fit::function<void(Result)> callback) override;
 
@@ -128,9 +133,11 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   Metadata metadata_ FXL_GUARDED_BY(mutex_);
   std::string problem_type_ FXL_GUARDED_BY(mutex_);
   std::string problem_details_ FXL_GUARDED_BY(mutex_);
+  // Bits per second if known by Ffmpeg.
+  std::optional<size_t> bit_rate_ FXL_GUARDED_BY(mutex_);
 
   // These should be stable after init until the desctructor terminates.
-  std::shared_ptr<Reader> reader_;
+  std::shared_ptr<ReaderCache> reader_cache_;
   std::vector<std::unique_ptr<DemuxStream>> streams_;
   Incident init_complete_;
   Result result_;
@@ -140,18 +147,19 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   AvFormatContextPtr format_context_;
   AvIoContextPtr io_context_;
   int64_t next_pts_;
-  int next_stream_to_end_ = -1;  // -1: don't end, streams_.size(): stop.
+  int32_t next_stream_to_end_ = -1;  // -1: don't end, streams_.size(): stop.
 
   StatusCallback status_callback_;
 };
 
 // static
-std::shared_ptr<Demux> FfmpegDemux::Create(std::shared_ptr<Reader> reader) {
-  return std::make_shared<FfmpegDemuxImpl>(reader);
+std::shared_ptr<Demux> FfmpegDemux::Create(
+    std::shared_ptr<ReaderCache> reader_cache) {
+  return std::make_shared<FfmpegDemuxImpl>(reader_cache);
 }
 
-FfmpegDemuxImpl::FfmpegDemuxImpl(std::shared_ptr<Reader> reader)
-    : reader_(reader), dispatcher_(async_get_default_dispatcher()) {
+FfmpegDemuxImpl::FfmpegDemuxImpl(std::shared_ptr<ReaderCache> reader_cache)
+    : reader_cache_(reader_cache), dispatcher_(async_get_default_dispatcher()) {
   FXL_DCHECK(dispatcher_);
   ffmpeg_thread_ = std::thread([this]() { Worker(); });
 }
@@ -170,6 +178,37 @@ FfmpegDemuxImpl::~FfmpegDemuxImpl() {
 
 void FfmpegDemuxImpl::SetStatusCallback(StatusCallback callback) {
   status_callback_ = std::move(callback);
+}
+
+void FfmpegDemuxImpl::SetCacheOptions(zx_duration_t lead,
+                                      zx_duration_t backtrack) {
+  FXL_DCHECK(lead > 0);
+
+  WhenInitialized([this, lead, backtrack](Result init_result) {
+    if (init_result != Result::kOk) {
+      return;
+    }
+
+    size_t capacity_bytes;
+    size_t backtrack_bytes;
+    {
+      std::lock_guard<std::mutex> locker(mutex_);
+
+      if (!bit_rate_.has_value()) {
+        // When ffmpeg doesn't know the media bitrate (which may be the case if
+        // file size is not known), we cannot translate from time to bits, so
+        // we'll let ReaderCache keep its defaults.
+        return;
+      }
+
+      size_t byte_rate = bit_rate_.value() / kBitsPerByte;
+      size_t lead_bytes = byte_rate * (lead / ZX_SEC(1));
+      backtrack_bytes = byte_rate * (backtrack / ZX_SEC(1));
+      capacity_bytes = lead_bytes + backtrack_bytes;
+    }
+
+    reader_cache_->SetCacheOptions(capacity_bytes, backtrack_bytes);
+  });
 }
 
 void FfmpegDemuxImpl::WhenInitialized(fit::function<void(Result)> callback) {
@@ -228,7 +267,7 @@ void FfmpegDemuxImpl::RequestOutputPacket() {
 void FfmpegDemuxImpl::Worker() {
   static constexpr uint64_t kNanosecondsPerMicrosecond = 1000;
 
-  result_ = AvIoContext::Create(reader_, &io_context_, dispatcher_);
+  result_ = AvIoContext::Create(reader_cache_, &io_context_, dispatcher_);
   if (result_ != Result::kOk) {
     FXL_LOG(ERROR) << "AvIoContext::Create failed, result "
                    << static_cast<int>(result_);
@@ -273,6 +312,9 @@ void FfmpegDemuxImpl::Worker() {
   {
     std::lock_guard<std::mutex> locker(mutex_);
     duration_ns_ = format_context_->duration * kNanosecondsPerMicrosecond;
+    if (format_context_->bit_rate != 0) {
+      bit_rate_ = format_context_->bit_rate;
+    }
     metadata_ = std::move(metadata);
   }
 

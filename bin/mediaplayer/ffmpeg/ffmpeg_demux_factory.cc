@@ -19,12 +19,13 @@ FfmpegDemuxFactory::FfmpegDemuxFactory() {}
 FfmpegDemuxFactory::~FfmpegDemuxFactory() {}
 
 // Creates a |Demux| object for a given reader.
-Result FfmpegDemuxFactory::CreateDemux(std::shared_ptr<Reader> reader,
-                                       std::shared_ptr<Demux>* demux_out) {
-  FXL_DCHECK(reader);
+Result FfmpegDemuxFactory::CreateDemux(
+    std::shared_ptr<ReaderCache> reader_cache,
+    std::shared_ptr<Demux>* demux_out) {
+  FXL_DCHECK(reader_cache);
   FXL_DCHECK(demux_out);
 
-  *demux_out = FfmpegDemux::Create(reader);
+  *demux_out = FfmpegDemux::Create(reader_cache);
 
   return Result::kOk;
 }

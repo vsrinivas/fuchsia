@@ -8,12 +8,14 @@
 #include <memory>
 
 #include "garnet/bin/mediaplayer/demux/demux.h"
+#include "garnet/bin/mediaplayer/demux/reader_cache.h"
 
 namespace media_player {
 
 class FfmpegDemux : public Demux {
  public:
-  static std::shared_ptr<Demux> Create(std::shared_ptr<Reader> reader);
+  static std::shared_ptr<Demux> Create(
+      std::shared_ptr<ReaderCache> reader_cache);
 
   ~FfmpegDemux() override {}
 };

@@ -40,6 +40,8 @@ class FakeDemux : public Demux {
     status_callback_ = std::move(callback);
   }
 
+  void SetCacheOptions(zx_duration_t lead, zx_duration_t backtrack) override {}
+
   void WhenInitialized(fit::function<void(Result)> callback) override {
     callback(Result::kOk);
   }
