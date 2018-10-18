@@ -140,4 +140,10 @@ void ath10k_msg_buf_dump_stats(struct ath10k* ar);
 
 void ath10k_msg_buf_dump(struct ath10k_msg_buf* msg_buf, const char* prefix);
 
+// Remove all buffers from the list and free them
+void ath10k_msg_buf_purge(list_node_t* msg_buf_list);
+
+// Pop |n| buffers from the head of the list and free them
+void ath10k_msg_buf_pop_and_free_n(list_node_t* msg_buf_list, int n);
+
 #endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_MSG_BUF_H_

@@ -1306,15 +1306,6 @@ static void ath10k_htt_rx_h_mpdu(struct ath10k* ar,
         status->flag |= RX_FLAG_MMIC_ERROR;
     }
 
-    /* Firmware reports all necessary management frames via WMI already.
-     * They are not reported to monitor interfaces at all so pass the ones
-     * coming via HTT to monitor interfaces instead. This simplifies
-     * matters a lot.
-     */
-    if (is_mgmt) {
-        status->flag |= RX_FLAG_ONLY_MONITOR;
-    }
-
     if (is_decrypted) {
         status->flag |= RX_FLAG_DECRYPTED;
 
@@ -1397,19 +1388,6 @@ static void ath10k_htt_rx_h_filter(struct ath10k* ar,
 }
 #endif  // NEEDS PORTING
 
-
-// Pop `n` buffers from the list and free them
-static void ath10k_htt_rx_pop_and_free_n(list_node_t* amsdu, int n) {
-    while (n--) {
-        struct ath10k_msg_buf* msg_buf = list_remove_head_type(
-                amsdu, struct ath10k_msg_buf, listnode);
-        if (!msg_buf) {
-            break;
-        }
-        ath10k_msg_buf_free(msg_buf);
-    }
-}
-
 // Pop the chained buffers from `amsdu` and append their contents into `msdu_head`
 static zx_status_t ath10k_htt_rx_unchain_msdu(list_node_t* amsdu,
                                               struct ath10k_msg_buf* msdu_head) {
@@ -1428,7 +1406,7 @@ static zx_status_t ath10k_htt_rx_unchain_msdu(list_node_t* amsdu,
             // If the first msdu buffer doesn't have any available room left, drop the frame:
             // pop the remaining messages, free them and return.
             ath10k_msg_buf_free(chained_part);
-            ath10k_htt_rx_pop_and_free_n(amsdu, num_chained);
+            ath10k_msg_buf_pop_and_free_n(amsdu, num_chained);
             return ZX_ERR_INVALID_ARGS;
         }
 
@@ -1457,6 +1435,21 @@ static void ath10k_htt_rx_unchain_amsdu(list_node_t* amsdu) {
         }
     }
     list_move(&unchained_amsdu, amsdu);
+}
+
+
+/* Firmware reports all necessary management frames via WMI already,
+ * so we need to filter them out from the regular RX path. */
+static void ath10k_htt_rx_filter_mgmt(list_node_t* amsdu) {
+    struct ath10k_msg_buf* head = list_peek_head_type(amsdu, struct ath10k_msg_buf, listnode);
+    if (head == NULL) {
+        return;
+    }
+
+    struct htt_rx_desc* rx_desc = ath10k_msg_buf_get_header(head, ATH10K_MSG_TYPE_HTT_RX);
+    if (rx_desc->attention.flags & RX_ATTENTION_FLAGS_MGMT_TYPE) {
+        ath10k_msg_buf_purge(amsdu);
+    }
 }
 
 static zx_status_t ath10k_htt_rx_handle_amsdu(struct ath10k_htt* htt) {
@@ -1491,8 +1484,9 @@ static zx_status_t ath10k_htt_rx_handle_amsdu(struct ath10k_htt* htt) {
     ath10k_htt_rx_h_filter(ar, &amsdu, rx_status);
     ath10k_htt_rx_h_mpdu(ar, &amsdu, rx_status);
 #endif // NEEDS PORTING
-    ath10k_htt_rx_h_deliver(ar, &amsdu);
 
+    ath10k_htt_rx_filter_mgmt(&amsdu);
+    ath10k_htt_rx_h_deliver(ar, &amsdu);
     return ZX_OK;
 
 fail:

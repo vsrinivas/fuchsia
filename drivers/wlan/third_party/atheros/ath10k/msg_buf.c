@@ -297,3 +297,24 @@ void ath10k_msg_buf_dump(struct ath10k_msg_buf* msg_buf, const char* prefix) {
         ath10k_err("%sBuffer has %d bytes extra\n", prefix, (int)(msg_buf->used - ndx));
     }
 }
+
+/* Pop up to |n| buffers from the head of the list and free them.
+ * |n| equal to -1 indicates clearing the entire list. */
+static void pop_and_free_n(list_node_t* msg_buf_list, int n) {
+    while (n--) {
+        struct ath10k_msg_buf* msg_buf = list_remove_head_type(
+                msg_buf_list, struct ath10k_msg_buf, listnode);
+        if (!msg_buf) {
+            break;
+        }
+        ath10k_msg_buf_free(msg_buf);
+    }
+}
+
+void ath10k_msg_buf_purge(list_node_t* msg_buf_list) {
+    pop_and_free_n(msg_buf_list, -1);
+}
+
+void ath10k_msg_buf_pop_and_free_n(list_node_t* msg_buf_list, int n) {
+    pop_and_free_n(msg_buf_list, n);
+}
