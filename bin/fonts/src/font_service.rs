@@ -17,6 +17,7 @@ use fuchsia_zircon as zx;
 use fuchsia_zircon::HandleBased;
 use futures::prelude::*;
 use futures::{future, Future, FutureExt};
+use log::error;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -25,7 +26,10 @@ use unicase::UniCase;
 
 fn clone_buffer(buf: &mem::Buffer) -> Result<mem::Buffer, Error> {
     let vmo_rights = zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP;
-    let vmo = buf.vmo.duplicate_handle(vmo_rights)?;
+    let vmo = buf
+        .vmo
+        .duplicate_handle(vmo_rights)
+        .context("Failed to duplicate VMO handle.")?;
     Ok(mem::Buffer {
         vmo,
         size: buf.size,
@@ -80,7 +84,8 @@ impl AssetCollection {
             return clone_buffer(cached);
         }
 
-        let buf = load_asset_to_vmo(&asset.path)?;
+        let buf = load_asset_to_vmo(&asset.path)
+            .with_context(|_| format!("Failed to load {}", asset.path.to_string_lossy()))?;
         let buf_clone = clone_buffer(&buf)?;
         *asset.buffer.write().unwrap() = Some(buf);
         Ok(buf_clone)
@@ -262,7 +267,7 @@ impl FontService {
         Some(family)
     }
 
-    fn match_request(&self, mut request: fonts::Request) -> Result<fonts::Response, Error> {
+    fn match_request(&self, mut request: fonts::Request) -> Option<fonts::Response> {
         for lang in request.language.iter_mut() {
             *lang = lang.to_ascii_lowercase();
         }
@@ -282,23 +287,17 @@ impl FontService {
             font = self.fallback_collection.match_request(&request);
         }
 
-        let response = match font {
-            Some(f) => fonts::Response {
-                buffer: self.assets.get_asset(f.asset_id)?,
-                buffer_id: f.asset_id,
-                font_index: f.font_index,
-            },
-            None => fonts::Response {
-                buffer: mem::Buffer {
-                    vmo: zx::Vmo::from_handle(zx::Handle::invalid()),
-                    size: 0,
-                },
-                buffer_id: 0,
-                font_index: 0,
-            },
-        };
-
-        Ok(response)
+        font.and_then(|font| match self.assets.get_asset(font.asset_id) {
+            Ok(buffer) => Some(fonts::Response {
+                buffer,
+                buffer_id: font.asset_id,
+                font_index: font.font_index,
+            }),
+            Err(err) => {
+                error!("Failed to load font file: {}", err);
+                None
+            }
+        })
     }
 
     fn get_font_info(&self, family_name: String) -> Option<fonts::FamilyInfo> {
@@ -315,10 +314,7 @@ impl FontService {
     ) -> impl Future<Output = Result<(), fidl::Error>> {
         match request {
             fonts::ProviderRequest::GetFont { request, responder } => {
-                // TODO(sergeyu): Currently the service returns an empty response when
-                // it fails to load a font. This matches behavior of the old
-                // FontProvider implementation, but it isn't the right thing to do.
-                let mut response = self.match_request(request).ok();
+                let mut response = self.match_request(request);
                 future::ready(responder.send(response.as_mut().map(OutOfLine)))
             }
             fonts::ProviderRequest::GetFamilyInfo { family, responder } => {
