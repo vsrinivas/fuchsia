@@ -369,7 +369,7 @@ func hwAddrToString(hwaddr []uint8) string {
 		if i > 0 {
 			str += ":"
 		}
-		str += fmt.Sprintf("%x", hwaddr[i])
+		str += fmt.Sprintf("%02x", hwaddr[i])
 	}
 	return str
 }
