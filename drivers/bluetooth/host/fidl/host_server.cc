@@ -370,6 +370,7 @@ void HostServer::SetDiscoverable(bool discoverable,
         }
 
         self->bredr_discoverable_session_ = std::move(session);
+        self->requesting_discoverable_ = false;
         AdapterState state;
         state.discoverable = Bool::New();
         state.discoverable->value = true;
