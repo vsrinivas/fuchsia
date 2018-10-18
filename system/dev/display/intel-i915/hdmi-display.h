@@ -12,7 +12,7 @@ namespace i915 {
 class GMBusI2c {
 public:
     GMBusI2c(registers::Ddi ddi);
-    zx_status_t I2cTransact(i2c_impl_op_t* ops, size_t count);
+    zx_status_t I2cTransact(const i2c_impl_op_t* ops, size_t count);
 
     void set_mmio_space(ddk::MmioBuffer* mmio_space) {
         fbl::AutoLock lock(&lock_);

@@ -50,6 +50,10 @@ hidbus:
 i2c:
 	$(run-banjo)
 
+i2c-impl:
+	$(run-banjo)
+
+
 intel-gpu-core:
 	$(run-banjo)
 

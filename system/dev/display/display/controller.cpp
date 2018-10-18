@@ -47,8 +47,8 @@ edid::ddc_i2c_transact ddc_tx = [](void* ctx, edid::ddc_i2c_msg_t* msgs, uint32_
     i2c_impl_op_t ops[count];
     for (unsigned i = 0; i < count; i++) {
         ops[i].address = msgs[i].addr;
-        ops[i].buf = msgs[i].buf;
-        ops[i].length = msgs[i].length;
+        ops[i].data_buffer = msgs[i].buf;
+        ops[i].data_size = msgs[i].length;
         ops[i].is_read = msgs[i].is_read;
         ops[i].stop = i == (count - 1);
     }

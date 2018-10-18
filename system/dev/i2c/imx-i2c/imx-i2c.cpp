@@ -40,23 +40,23 @@ zx_status_t ImxI2cDevice::I2cImplGetMaxTransferSize(uint32_t bus_id, size_t* out
     return ZX_OK;
 }
 
-zx_status_t ImxI2cDevice::I2cImplSetBitRate(uint32_t bus_id, uint32_t bitrate) {
+zx_status_t ImxI2cDevice::I2cImplSetBitrate(uint32_t bus_id, uint32_t bitrate) {
     // TODO(andresoportus): Support changing frequencies
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t ImxI2cDevice::I2cImplTransact(uint32_t bus_id, i2c_impl_op_t* ops, size_t count) {
+zx_status_t ImxI2cDevice::I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* ops, size_t count) {
     zx_status_t status = ZX_OK;
     for (size_t i = 0; i < count; ++i) {
         if (ops[i].address > 0xFF) {
             return ZX_ERR_NOT_SUPPORTED;
         }
         if (ops[i].is_read) {
-            status = Read(static_cast<uint8_t>(ops[i].address), ops[i].buf, ops[i].length,
-                          ops[i].stop);
+            status = Read(static_cast<uint8_t>(ops[i].address), ops[i].data_buffer,
+                          ops[i].data_size, ops[i].stop);
         } else {
-            status = Write(static_cast<uint8_t>(ops[i].address), ops[i].buf, ops[i].length,
-                           ops[i].stop);
+            status = Write(static_cast<uint8_t>(ops[i].address), ops[i].data_buffer,
+                           ops[i].data_size, ops[i].stop);
         }
         if (status != ZX_OK) {
             Reset();

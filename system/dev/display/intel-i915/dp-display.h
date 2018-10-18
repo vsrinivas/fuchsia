@@ -16,7 +16,7 @@ class DpAux {
 public:
     DpAux(registers::Ddi ddi);
 
-    zx_status_t I2cTransact(i2c_impl_op_t* ops, size_t count);
+    zx_status_t I2cTransact(const i2c_impl_op_t* ops, size_t count);
 
     bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size);
     bool DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size);

@@ -6,6 +6,7 @@
 
 #include <threads.h>
 
+#include <ddk/driver.h>
 #include <ddktl/protocol/i2c-impl.h>
 #include <fbl/mutex.h>
 #include <lib/sync/completion.h>

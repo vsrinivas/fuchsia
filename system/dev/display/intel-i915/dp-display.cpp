@@ -454,11 +454,11 @@ zx_status_t DpAux::DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf
     return ZX_OK;
 }
 
-zx_status_t DpAux::I2cTransact(i2c_impl_op_t* ops, size_t count) {
+zx_status_t DpAux::I2cTransact(const i2c_impl_op_t* ops, size_t count) {
     fbl::AutoLock lock(&lock_);
     for (unsigned i = 0; i < count; i++) {
-        uint8_t* buf = static_cast<uint8_t*>(ops[i].buf);
-        uint8_t len = static_cast<uint8_t>(ops[i].length);
+        uint8_t* buf = static_cast<uint8_t*>(ops[i].data_buffer);
+        uint8_t len = static_cast<uint8_t>(ops[i].data_size);
         zx_status_t status = ops[i].is_read
                 ? DpAuxRead(DP_REQUEST_I2C_READ, ops[i].address, buf, len)
                 : DpAuxWrite(DP_REQUEST_I2C_WRITE, ops[i].address, buf, len);

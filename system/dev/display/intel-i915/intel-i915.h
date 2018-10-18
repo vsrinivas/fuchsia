@@ -106,7 +106,7 @@ public:
     uint32_t GetBusCount();
     zx_status_t GetMaxTransferSize(uint32_t bus_id, size_t* out_size);
     zx_status_t SetBitrate(uint32_t bus_id, uint32_t bitrate);
-    zx_status_t Transact(uint32_t bus_id, i2c_impl_op_t* ops, size_t count);
+    zx_status_t Transact(uint32_t bus_id, const i2c_impl_op_t* ops, size_t count);
 
     bool DpcdRead(registers::Ddi ddi, uint32_t addr, uint8_t* buf, size_t size);
     bool DpcdWrite(registers::Ddi ddi, uint32_t addr, const uint8_t* buf, size_t size);

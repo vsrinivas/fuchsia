@@ -294,10 +294,11 @@ static zx_status_t aml_i2c_set_bitrate(void* ctx, uint32_t bus_id, uint32_t bitr
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t aml_i2c_transact(void* ctx, uint32_t bus_id, i2c_impl_op_t* rws, size_t count) {
+static zx_status_t aml_i2c_transact(void* ctx, uint32_t bus_id, const i2c_impl_op_t* rws,
+                                    size_t count) {
     size_t i;
     for (i = 0; i < count; ++i) {
-        if (rws[i].length > AML_I2C_MAX_TRANSFER) {
+        if (rws[i].data_size > AML_I2C_MAX_TRANSFER) {
             return ZX_ERR_OUT_OF_RANGE;
         }
     }
@@ -314,9 +315,9 @@ static zx_status_t aml_i2c_transact(void* ctx, uint32_t bus_id, i2c_impl_op_t* r
             return status;
         }
         if (rws[i].is_read) {
-            status = aml_i2c_read(dev, rws[i].buf, rws[i].length, rws[i].stop);
+            status = aml_i2c_read(dev, rws[i].data_buffer, rws[i].data_size, rws[i].stop);
         } else {
-            status = aml_i2c_write(dev, rws[i].buf, rws[i].length, rws[i].stop);
+            status = aml_i2c_write(dev, rws[i].data_buffer, rws[i].data_size, rws[i].stop);
         }
         if (status != ZX_OK) {
             return status; // TODO(andresoportus) release the bus

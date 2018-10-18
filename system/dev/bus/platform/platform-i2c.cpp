@@ -87,15 +87,15 @@ int PlatformI2cBus::I2cThread() {
             for (size_t i = 0; i < txn->cnt; ++i) {
                 // Same address for all ops, since there is one address per channel.
                 ops[i].address = txn->address;
-                ops[i].length = rpc_ops[i].length;
+                ops[i].data_size = rpc_ops[i].length;
                 ops[i].is_read = rpc_ops[i].is_read;
                 ops[i].stop = rpc_ops[i].stop;
                 if (ops[i].is_read) {
-                    ops[i].buf = p_reads;
-                    p_reads += ops[i].length;
+                    ops[i].data_buffer = p_reads;
+                    p_reads += ops[i].data_size;
                 } else {
-                    ops[i].buf = p_writes;
-                    p_writes += ops[i].length;
+                    ops[i].data_buffer = p_writes;
+                    p_writes += ops[i].data_size;
                 }
             }
             auto status = i2c_.Transact(bus_id_, ops, txn->cnt);

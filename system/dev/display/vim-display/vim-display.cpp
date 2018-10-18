@@ -348,7 +348,7 @@ static zx_status_t set_bitrate(void* ctx, uint32_t bus_id, uint32_t bitrate) {
     return ZX_OK;
 }
 
-static zx_status_t transact(void* ctx, uint32_t bus_id, i2c_impl_op_t* ops, size_t count) {
+static zx_status_t transact(void* ctx, uint32_t bus_id, const i2c_impl_op_t* ops, size_t count) {
     vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
     mtx_lock(&display->i2c_lock);
 
@@ -359,12 +359,12 @@ static zx_status_t transact(void* ctx, uint32_t bus_id, i2c_impl_op_t* ops, size
 
         // The HDMITX_DWC_I2CM registers are a limited interface to the i2c bus for the E-DDC
         // protocol, which is good enough for the bus this device provides.
-        if (op.address == 0x30 && !op.is_read && op.length == 1) {
-            segment_num = *((const uint8_t*) op.buf);
-        } else if (op.address == 0x50 && !op.is_read && op.length == 1) {
-            offset = *((const uint8_t*) op.buf);
+        if (op.address == 0x30 && !op.is_read && op.data_size == 1) {
+            segment_num = *((const uint8_t*) op.data_buffer);
+        } else if (op.address == 0x50 && !op.is_read && op.data_size == 1) {
+            offset = *((const uint8_t*) op.data_buffer);
         } else if (op.address == 0x50 && op.is_read) {
-            if (op.length % 8 != 0) {
+            if (op.data_size % 8 != 0) {
                 mtx_unlock(&display->i2c_lock);
                 return ZX_ERR_NOT_SUPPORTED;
             }
@@ -373,7 +373,7 @@ static zx_status_t transact(void* ctx, uint32_t bus_id, i2c_impl_op_t* ops, size
             hdmitx_writereg(display, HDMITX_DWC_I2CM_SEGADDR, 0x30);
             hdmitx_writereg(display, HDMITX_DWC_I2CM_SEGPTR, segment_num);
 
-            for (uint32_t i = 0; i < op.length; i += 8) {
+            for (uint32_t i = 0; i < op.data_size; i += 8) {
                 hdmitx_writereg(display, HDMITX_DWC_I2CM_ADDRESS, offset);
                 hdmitx_writereg(display, HDMITX_DWC_I2CM_OPERATION, 1 << 2);
                 offset = static_cast<uint8_t>(offset + 8);
@@ -394,7 +394,7 @@ static zx_status_t transact(void* ctx, uint32_t bus_id, i2c_impl_op_t* ops, size
 
                 for (int j = 0; j < 8; j++) {
                     uint32_t address = static_cast<uint32_t>(HDMITX_DWC_I2CM_READ_BUFF0 + j);
-                    ((uint8_t*) op.buf)[i + j] =
+                    ((uint8_t*) op.data_buffer)[i + j] =
                             static_cast<uint8_t>(hdmitx_readreg(display, address));
                 }
             }

@@ -196,7 +196,7 @@ bool GMBusI2c::SetDdcSegment(uint8_t segment_num) {
     return i2c_scl(mmio_space_, ddi_, 1);
 }
 
-zx_status_t GMBusI2c::I2cTransact(i2c_impl_op_t* ops, size_t size) {
+zx_status_t GMBusI2c::I2cTransact(const i2c_impl_op_t* ops, size_t size) {
     // The GMBus register is a limited interface to the i2c bus - it doesn't support complex
     // transactions like setting the E-DDC segment. For now, providing a special-case interface
     // for reading the E-DDC is good enough.
@@ -204,11 +204,11 @@ zx_status_t GMBusI2c::I2cTransact(i2c_impl_op_t* ops, size_t size) {
     zx_status_t fail_res = ZX_ERR_IO;
     bool gmbus_set = false;
     for (unsigned i = 0; i < size; i++) {
-        i2c_impl_op_t* op = ops + i;
-        if (op->address == kDdcSegmentAddress && !op->is_read && op->length == 1) {
+        const i2c_impl_op_t* op = ops + i;
+        if (op->address == kDdcSegmentAddress && !op->is_read && op->data_size == 1) {
             registers::GMBus0::Get().FromValue(0).WriteTo(mmio_space_);
             gmbus_set = false;
-            if (!SetDdcSegment(*static_cast<uint8_t*>(op->buf))) {
+            if (!SetDdcSegment(*static_cast<uint8_t*>(op->data_buffer))) {
                 goto fail;
             }
         } else if (op->address == kDdcDataAddress) {
@@ -220,8 +220,8 @@ zx_status_t GMBusI2c::I2cTransact(i2c_impl_op_t* ops, size_t size) {
                 gmbus_set = true;
             }
 
-            uint8_t* buf = static_cast<uint8_t*>(op->buf);
-            uint8_t len = static_cast<uint8_t>(op->length);
+            uint8_t* buf = static_cast<uint8_t*>(op->data_buffer);
+            uint8_t len = static_cast<uint8_t>(op->data_size);
             if (op->is_read ? GMBusRead(kDdcDataAddress, buf, len)
                     : GMBusWrite(kDdcDataAddress, buf, len)) {
                 if (!WAIT_ON_MS(registers::GMBus2::Get().ReadFrom(mmio_space_).wait(), 10)) {
@@ -516,8 +516,8 @@ bool HdmiDisplay::Query() {
         uint8_t test_data = 0;
         i2c_impl_op_t op = {
             .address = kDdcDataAddress,
-            .buf = &test_data,
-            .length = 1,
+            .data_buffer = &test_data,
+            .data_size = 1,
             .is_read = true,
             .stop = 1,
         };

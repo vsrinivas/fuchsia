@@ -139,7 +139,7 @@ static zx_status_t set_bitrate(void* ctx, uint32_t bus_id, uint32_t bitrate) {
     return static_cast<i915::Controller*>(ctx)->SetBitrate(bus_id, bitrate);
 }
 
-static zx_status_t transact(void* ctx, uint32_t bus_id, i2c_impl_op_t* ops, size_t count) {
+static zx_status_t transact(void* ctx, uint32_t bus_id, const i2c_impl_op_t* ops, size_t count) {
     return static_cast<i915::Controller*>(ctx)->Transact(bus_id, ops, count);
 }
 
@@ -1754,9 +1754,9 @@ zx_status_t Controller::SetBitrate(uint32_t bus_id, uint32_t bitrate) {
     return ZX_OK;
 }
 
-zx_status_t Controller::Transact(uint32_t bus_id, i2c_impl_op_t* ops, size_t count) {
+zx_status_t Controller::Transact(uint32_t bus_id, const i2c_impl_op_t* ops, size_t count) {
     for (unsigned i = 0; i < count; i++) {
-        if (ops[i].length > kMaxTxSize) {
+        if (ops[i].data_size > kMaxTxSize) {
             return ZX_ERR_INVALID_ARGS;
         }
     }

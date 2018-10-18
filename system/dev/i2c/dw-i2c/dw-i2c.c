@@ -166,10 +166,11 @@ static int i2c_dw_irq_thread(void* arg) {
     return ZX_OK;
 }
 
-static zx_status_t i2c_dw_transact(void* ctx, uint32_t bus_id, i2c_impl_op_t* rws, size_t count) {
+static zx_status_t i2c_dw_transact(void* ctx, uint32_t bus_id, const i2c_impl_op_t* rws,
+                                   size_t count) {
     size_t i;
     for (i = 0; i < count; ++i) {
-        if (rws[i].length > I2C_DW_MAX_TRANSFER) {
+        if (rws[i].data_size > I2C_DW_MAX_TRANSFER) {
             return ZX_ERR_OUT_OF_RANGE;
         }
     }
@@ -198,9 +199,9 @@ static zx_status_t i2c_dw_transact(void* ctx, uint32_t bus_id, i2c_impl_op_t* rw
     zx_status_t status = ZX_OK;
     for (i = 0; i < count; ++i) {
         if (rws[i].is_read) {
-            status = i2c_dw_read(dev, rws[i].buf, rws[i].length, rws[i].stop);
+            status = i2c_dw_read(dev, rws[i].data_buffer, rws[i].data_size, rws[i].stop);
         } else {
-            status = i2c_dw_write(dev, rws[i].buf, rws[i].length, rws[i].stop);
+            status = i2c_dw_write(dev, rws[i].data_buffer, rws[i].data_size, rws[i].stop);
         }
         if (status != ZX_OK) {
             return status; // TODO(andresoportus) release the bus

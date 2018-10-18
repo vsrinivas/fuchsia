@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
+//          MODIFY system/fidl/protocols/i2c_impl.banjo INSTEAD.
+
 #pragma once
 
 #include <zircon/compiler.h>
@@ -9,80 +12,54 @@
 
 __BEGIN_CDECLS;
 
-// Low-level protocol for i2c drivers
-typedef void (*i2c_impl_complete_cb)(zx_status_t status, void* cookie);
+// Forward declarations
 
-// See i2c_impl_transact below for usage.
-typedef struct {
+typedef struct i2c_impl_op i2c_impl_op_t;
+typedef struct i2c_impl_protocol i2c_impl_protocol_t;
+
+// Declarations
+
+// See `Transact` below for usage.
+struct i2c_impl_op {
     uint16_t address;
-    void* buf;
-    size_t length;
+    void* data_buffer;
+    size_t data_size;
     bool is_read;
     bool stop;
-} i2c_impl_op_t;
+};
 
-typedef struct {
+typedef struct i2c_impl_protocol_ops {
     uint32_t (*get_bus_count)(void* ctx);
     zx_status_t (*get_max_transfer_size)(void* ctx, uint32_t bus_id, size_t* out_size);
     zx_status_t (*set_bitrate)(void* ctx, uint32_t bus_id, uint32_t bitrate);
-    // transact assumes that all ops buf are not null
-    // transact assumes that all ops length are not zero
-    // transact assumes that at least the last op has stop set to true
-    zx_status_t (*transact)(void* ctx, uint32_t bus_id, i2c_impl_op_t* ops, size_t count);
+    zx_status_t (*transact)(void* ctx, uint32_t bus_id, const i2c_impl_op_t* op_list,
+                            size_t op_count);
 } i2c_impl_protocol_ops_t;
 
-typedef struct {
+// Low-level protocol for i2c drivers.
+struct i2c_impl_protocol {
     i2c_impl_protocol_ops_t* ops;
     void* ctx;
-} i2c_impl_protocol_t;
+};
 
-static inline uint32_t i2c_impl_get_bus_count(i2c_impl_protocol_t* i2c) {
-    return i2c->ops->get_bus_count(i2c->ctx);
+static inline uint32_t i2c_impl_get_bus_count(const i2c_impl_protocol_t* proto) {
+    return proto->ops->get_bus_count(proto->ctx);
 }
-
-static inline zx_status_t i2c_impl_get_max_transfer_size(i2c_impl_protocol_t* i2c,
+static inline zx_status_t i2c_impl_get_max_transfer_size(const i2c_impl_protocol_t* proto,
                                                          uint32_t bus_id, size_t* out_size) {
-    return i2c->ops->get_max_transfer_size(i2c->ctx, bus_id, out_size);
+    return proto->ops->get_max_transfer_size(proto->ctx, bus_id, out_size);
 }
-
-// Sets the bitrate for the i2c bus in KHz units
-static inline zx_status_t i2c_impl_set_bitrate(i2c_impl_protocol_t* i2c, uint32_t bus_id,
+// Sets the bitrate for the i2c bus in KHz units.
+static inline zx_status_t i2c_impl_set_bitrate(const i2c_impl_protocol_t* proto, uint32_t bus_id,
                                                uint32_t bitrate) {
-    return i2c->ops->set_bitrate(i2c->ctx, bus_id, bitrate);
+    return proto->ops->set_bitrate(proto->ctx, bus_id, bitrate);
 }
-
-// Writes and reads data on an i2c bus.  For write ops, i2c_impl_op_t.buf points to data to write.
-// For read ops, i2c_impl_op_t.buf points to the buffer where data is read into.
-// Any combination of reads and writes could be specified.  At least the last op must have the stop
-// flag set.  The results of the operations are returned synchronously.
-static inline zx_status_t i2c_impl_transact(i2c_impl_protocol_t* i2c, uint32_t bus_id,
-                                            i2c_impl_op_t* ops, size_t count) {
-    return i2c->ops->transact(i2c->ctx, bus_id, ops, count);
-}
-
-static inline zx_status_t i2c_impl_write_read(i2c_impl_protocol_t* i2c, uint32_t bus_id,
-                                              uint16_t address, const void* write_buf,
-                                              size_t write_length, void* read_buf,
-                                              size_t read_length) {
-    i2c_impl_op_t ops[2];
-    size_t count = 0;
-    if (write_length) {
-        ops[count].address = address;
-        ops[count].buf = (void*)write_buf;
-        ops[count].length = write_length;
-        ops[count].is_read = false;
-        ops[count].stop = !read_length;
-        count++;
-    }
-    if (read_length) {
-        ops[count].address = address;
-        ops[count].buf = read_buf;
-        ops[count].length = read_length;
-        ops[count].is_read = true;
-        ops[count].stop = true;
-        count++;
-    }
-    return i2c_impl_transact(i2c, bus_id, ops, count);
+// |Transact| assumes that all ops buf are not null.
+// |Transact| assumes that all ops length are not zero.
+// |Transact| assumes that at least the last op has stop set to true.
+static inline zx_status_t i2c_impl_transact(const i2c_impl_protocol_t* proto, uint32_t bus_id,
+                                            const i2c_impl_op_t* op_list, size_t op_count) {
+    return proto->ops->transact(proto->ctx, bus_id, op_list, op_count);
 }
 
 __END_CDECLS;
