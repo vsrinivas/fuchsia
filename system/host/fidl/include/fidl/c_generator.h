@@ -40,6 +40,9 @@ public:
         flat::Decl::Kind decl_kind;
         std::string type;
         std::string name;
+        // Name of the element type for sequential collections.
+        // For (multidimensional-) arrays, it names the inner-most type.
+        // For FIDL vector<T>, it names T.
         std::string element_type;
         std::vector<uint32_t> array_counts;
         types::Nullability nullability;

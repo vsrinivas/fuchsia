@@ -266,6 +266,15 @@ void EmitMeasureOutParams(std::ostream* file,
     }
 }
 
+void EmitArraySizeOf(std::ostream* file,
+                     const CGenerator::Member& member) {
+    for (const auto c : member.array_counts) {
+        *file << c;
+        *file << " * ";
+    }
+    *file << "sizeof(" << member.element_type << ")";
+}
+
 // This function assumes the |params| are part of a [Layout="Simple"] interface.
 // In particular, simple interfaces don't have nullable structs or nested
 // vectors. The only secondary objects they contain are top-level vectors and
@@ -290,7 +299,9 @@ void EmitLinearizeMessage(std::ostream* file,
         switch (member.kind) {
         case flat::Type::Kind::kArray:
             *file << kIndent << "memcpy(" << receiver << "->" << name << ", "
-                  << name << ", sizeof(" << receiver << "->" << name << "));\n";
+                  << name << ", ";
+            EmitArraySizeOf(file, member);
+            *file << ");\n";
             break;
         case flat::Type::Kind::kVector:
             *file << kIndent << receiver << "->" << name << ".data = &" << bytes << "[_next];\n";
@@ -438,11 +449,26 @@ void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
     *out_value = member_value.str();
 }
 
-std::vector<uint32_t> ArrayCounts(const flat::Library* library, const flat::Type* type) {
+flat::Decl::Kind GetDeclKind(const flat::Library* library, const flat::Type* type) {
+    if (type->kind != flat::Type::Kind::kIdentifier)
+        return flat::Decl::Kind::kConst;
+    auto identifier_type = static_cast<const flat::IdentifierType*>(type);
+    auto named_decl = library->LookupDeclByName(identifier_type->name);
+    assert(named_decl && "library must contain declaration");
+    return named_decl->kind;
+}
+
+void ArrayCountsAndElementTypeName(const flat::Library* library, const flat::Type* type,
+                                   std::vector<uint32_t>* out_array_counts,
+                                   std::string* out_element_type_name) {
     std::vector<uint32_t> array_counts;
     for (;;) {
         switch (type->kind) {
-        default: { return array_counts; }
+        default: {
+            *out_element_type_name = NameFlatCType(type, GetDeclKind(library, type));
+            *out_array_counts = array_counts;
+            return;
+        }
         case flat::Type::Kind::kArray: {
             auto array_type = static_cast<const flat::ArrayType*>(type);
             uint32_t element_count = array_type->element_count.Value();
@@ -454,23 +480,17 @@ std::vector<uint32_t> ArrayCounts(const flat::Library* library, const flat::Type
     }
 }
 
-flat::Decl::Kind GetDeclKind(const flat::Library* library, const flat::Type* type) {
-    if (type->kind != flat::Type::Kind::kIdentifier)
-        return flat::Decl::Kind::kConst;
-    auto identifier_type = static_cast<const flat::IdentifierType*>(type);
-    auto named_decl = library->LookupDeclByName(identifier_type->name);
-    assert(named_decl && "library must contain declaration");
-    return named_decl->kind;
-}
-
 template <typename T>
 CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
     std::string name = NameIdentifier(decl.name);
     const flat::Type* type = decl.type.get();
     auto decl_kind = GetDeclKind(library, type);
     auto type_name = NameFlatCType(type, decl_kind);
-    std::vector<uint32_t> array_counts = ArrayCounts(library, type);
     std::string element_type_name;
+    std::vector<uint32_t> array_counts;
+    if (type->kind == flat::Type::Kind::kArray) {
+        ArrayCountsAndElementTypeName(library, type, &array_counts, &element_type_name);
+    }
     if (type->kind == flat::Type::Kind::kVector) {
         auto vector_type = static_cast<const flat::VectorType*>(type);
         const flat::Type* element_type = vector_type->element_type.get();
@@ -1011,7 +1031,9 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
                 const auto& name = member.name;
                 switch (member.kind) {
                 case flat::Type::Kind::kArray:
-                    file_ << kIndent << "memcpy(out_" << name << ", _response->" << name << ", sizeof(out_" << name << "));\n";
+                    file_ << kIndent << "memcpy(out_" << name << ", _response->" << name << ", ";
+                    EmitArraySizeOf(&file_, member);
+                    file_ << ");\n";
                     break;
                 case flat::Type::Kind::kVector:
                     file_ << kIndent << "memcpy(" << name << "_buffer, _response->" << name << ".data, sizeof(*" << name << "_buffer) * _response->" << name << ".count);\n";

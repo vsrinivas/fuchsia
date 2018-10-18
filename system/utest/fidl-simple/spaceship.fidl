@@ -40,4 +40,6 @@ interface SpaceShip {
     4: SetDefenseCondition(Alert alert);
     5: GetFuelRemaining(handle<eventpair>? cancel) -> (zx.status status, FuelLevel? level);
     6: AddFuelTank(FuelLevel? level) -> (uint32 consumed);
+    // A higher-order lifeform
+    7: ScanForTensorLifeforms() -> (array<array<array<uint32>:3>:5>:8 lifesigns);
 };

@@ -35,6 +35,21 @@ public:
         return fidl_test_spaceship_SpaceShipScanForLifeforms_reply(txn, lifesigns, 5);
     }
 
+    virtual zx_status_t ScanForTensorLifeforms(fidl_txn_t* txn) {
+        uint32_t lifesigns[8][5][3] = {};
+        // fill the array with increasing counter
+        uint32_t counter = 0;
+        for (size_t i = 0; i < 8; i++) {
+            for (size_t j = 0; j < 5; j++) {
+                for (size_t k = 0; k < 3; k++) {
+                    lifesigns[i][j][k] = counter;
+                    counter += 1;
+                }
+            }
+        }
+        return fidl_test_spaceship_SpaceShipScanForTensorLifeforms_reply(txn, lifesigns);
+    }
+
     virtual zx_status_t SetAstrometricsListener(zx_handle_t listener) {
         EXPECT_EQ(ZX_OK, fidl_test_spaceship_AstrometricsListenerOnNova(listener), "");
         EXPECT_EQ(ZX_OK, zx_handle_close(listener), "");
@@ -68,6 +83,8 @@ public:
             .SetDefenseCondition = SpaceShipBinder::BindMember<&SpaceShip::SetDefenseCondition>,
             .GetFuelRemaining = SpaceShipBinder::BindMember<&SpaceShip::GetFuelRemaining>,
             .AddFuelTank = SpaceShipBinder::BindMember<&SpaceShip::AddFuelTank>,
+            .ScanForTensorLifeforms =
+                    SpaceShipBinder::BindMember<&SpaceShip::ScanForTensorLifeforms>,
         };
 
         return SpaceShipBinder::BindOps<fidl_test_spaceship_SpaceShip_dispatch>(
@@ -109,6 +126,21 @@ static bool spaceship_test(void) {
         ASSERT_EQ(UINT32_MAX, lifesigns[2], "");
         ASSERT_EQ(0u, lifesigns[3], "");
         ASSERT_EQ(9u, lifesigns[4], "");
+    }
+
+    {
+        uint32_t lifesigns[8][5][3];
+        ASSERT_EQ(ZX_OK, fidl_test_spaceship_SpaceShipScanForTensorLifeforms(client.get(),
+                                                                             lifesigns), "");
+        uint32_t counter = 0;
+        for (size_t i = 0; i < 8; i++) {
+            for (size_t j = 0; j < 5; j++) {
+                for (size_t k = 0; k < 3; k++) {
+                    ASSERT_EQ(counter, lifesigns[i][j][k], "");
+                    counter += 1;
+                }
+            }
+        }
     }
 
     {
@@ -200,6 +232,7 @@ public:
             .SetDefenseCondition = DerivedBinder::BindMember<&SpaceShip::SetDefenseCondition>,
             .GetFuelRemaining = DerivedBinder::BindMember<&SpaceShip::GetFuelRemaining>,
             .AddFuelTank = DerivedBinder::BindMember<&SpaceShip::AddFuelTank>,
+            .ScanForTensorLifeforms = DerivedBinder::BindMember<&Derived::ScanForTensorLifeforms>,
         };
 
         return SpaceShipBinder::BindOps<fidl_test_spaceship_SpaceShip_dispatch>(
