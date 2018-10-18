@@ -68,7 +68,7 @@ void MockSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
 
 void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                                             GetMemoryCallback callback) {
-  auto found = mem_.find(address);
+  auto found = FindBlockForAddress(address);
   if (found == mem_.end()) {
     debug_ipc::MessageLoop::Current()->PostTask([callback]() {
       // The API states that invalid memory is not an error, it just does a
@@ -76,15 +76,35 @@ void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
       callback(Err(), std::vector<uint8_t>());
     });
   } else {
+    size_t offset = address - found->first;
+
     uint32_t size_to_return =
-        std::min(size, static_cast<uint32_t>(found->second.size()));
+        std::min(size, static_cast<uint32_t>(found->second.size() - offset));
 
     std::vector<uint8_t> subset;
     subset.resize(size_to_return);
-    memcpy(&subset[0], &found->second[0], size_to_return);
+    memcpy(&subset[0], &found->second[offset], size_to_return);
     debug_ipc::MessageLoop::Current()->PostTask(
         [callback, subset]() { callback(Err(), subset); });
   }
+}
+
+MockSymbolDataProvider::RegisteredMemory::const_iterator MockSymbolDataProvider::FindBlockForAddress(uint64_t address) const {
+  // Finds the first block >= address.
+  auto found = mem_.lower_bound(address);
+
+  // We need the first block <= address.
+  if (found != mem_.end() && found->first == address)
+    return found;  // Got exact match.
+
+  // Now find the first block < address.
+  if (found == mem_.begin())
+    return mem_.end();  // Nothing before the address.
+
+  --found;
+  if (address >= found->first + found->second.size())
+    return mem_.end();  // Address is after this range.
+  return found;
 }
 
 }  // namespace zxdb

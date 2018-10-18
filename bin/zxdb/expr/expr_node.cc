@@ -227,7 +227,7 @@ void DereferenceExprNode::Print(std::ostream& out, int indent) const {
 
 void IdentifierExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                               EvalCallback cb) const {
-  context->GetVariableValue(name_.value(), std::move(cb));
+  context->GetNamedValue(name_.value(), std::move(cb));
 }
 
 void IdentifierExprNode::Print(std::ostream& out, int indent) const {

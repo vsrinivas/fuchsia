@@ -68,7 +68,7 @@ class TestEvalContext : public ExprEvalContext {
   const Variable* GetVariableSymbol(const std::string& name) override {
     return nullptr;  // Not needed by this test.
   }
-  void GetVariableValue(
+  void GetNamedValue(
       const std::string& name,
       std::function<void(const Err& err, ExprValue value)> cb) override {
     auto found = values_.find(name);
@@ -418,7 +418,8 @@ TEST_F(ExprNodeTest, MemberAccess) {
 
   // Define a class.
   auto int32_type = MakeInt32Type();
-  auto sc = MakeStruct2Members("Foo", int32_type, "a", int32_type, "b");
+  auto sc = MakeCollectionType(Symbol::kTagStructureType, "Foo",
+                               {{"a", int32_type}, {"b", int32_type}});
 
   // Set up a call to do "." synchronously.
   auto struct_node = fxl::MakeRefCounted<TestExprNode>(

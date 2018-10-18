@@ -24,9 +24,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   // should require a callback to retrieve.
   void AddRegisterValue(int register_num, bool synchronous, uint64_t value);
 
-  // Sets an expected memory value. This is currently very simple in that
-  // it only matches queries for exact addresses set by this function, not
-  // random subranges inside these.
+  // Sets an expected memory value.
   void AddMemory(uint64_t address, std::vector<uint8_t> data);
 
   // SymbolDataProvider implementation.
@@ -45,11 +43,18 @@ class MockSymbolDataProvider : public SymbolDataProvider {
     uint64_t value = 0;
   };
 
+  // Registered memory blocks indexed by address.
+  using RegisteredMemory = std::map<uint64_t, std::vector<uint8_t>>;
+
+  // Returns the memory block that contains the given address, or mem_.end()
+  // if not found.
+  RegisteredMemory::const_iterator FindBlockForAddress(uint64_t address) const;
+
   uint64_t ip_ = 0;
   uint64_t bp_ = 0;
   std::map<int, RegData> regs_;
 
-  std::map<uint64_t, std::vector<uint8_t>> mem_;
+  RegisteredMemory mem_;
 
   fxl::WeakPtrFactory<MockSymbolDataProvider> weak_factory_;
 };

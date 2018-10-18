@@ -56,4 +56,14 @@ const CodeBlock* CodeBlock::GetMostSpecificChild(
   return this;
 }
 
+const Function* CodeBlock::GetContainingFunction() const {
+  const CodeBlock* cur_block = this;
+  while (cur_block) {
+    if (const Function* function = cur_block->AsFunction())
+      return function;
+    cur_block = cur_block->parent().Get()->AsCodeBlock();
+  }
+  return nullptr;
+}
+
 }  // namespace zxdb

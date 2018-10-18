@@ -8,9 +8,9 @@
 
 namespace zxdb {
 
-fxl::RefPtr<Variable> MakeUint64VariableForTest(
-    const std::string& name, uint64_t begin_ip_range, uint64_t end_ip_range,
-    std::vector<uint8_t> location_expression) {
+fxl::RefPtr<Variable> MakeVariableForTest(
+    const std::string& name, fxl::RefPtr<Type> type, uint64_t begin_ip_range,
+    uint64_t end_ip_range, std::vector<uint8_t> location_expression) {
   auto variable = fxl::MakeRefCounted<Variable>(Symbol::kTagVariable);
   variable->set_assigned_name(name);
 
@@ -19,11 +19,18 @@ fxl::RefPtr<Variable> MakeUint64VariableForTest(
   entry.end = end_ip_range;
   entry.expression = std::move(location_expression);
   variable->set_location(VariableLocation({entry}));
-
-  variable->set_type(LazySymbol(fxl::MakeRefCounted<BaseType>(
-      BaseType::kBaseTypeUnsigned, 8, "uint64_t")));
+  variable->set_type(LazySymbol(std::move(type)));
 
   return variable;
+}
+
+fxl::RefPtr<Variable> MakeUint64VariableForTest(
+    const std::string& name, uint64_t begin_ip_range, uint64_t end_ip_range,
+    std::vector<uint8_t> location_expression) {
+  return MakeVariableForTest(
+      name,
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 8, "uint64_t"),
+      begin_ip_range, end_ip_range, std::move(location_expression));
 }
 
 }  // namespace zxdb

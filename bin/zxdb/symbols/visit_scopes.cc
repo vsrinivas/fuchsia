@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/symbols/visit_scopes.h"
 
+#include "garnet/bin/zxdb/symbols/code_block.h"
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/inherited_from.h"
 

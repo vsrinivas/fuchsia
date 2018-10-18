@@ -50,19 +50,20 @@ class Function final : public CodeBlock {
   const FileLine& decl_line() const { return decl_line_; }
   void set_decl_line(FileLine decl) { decl_line_ = std::move(decl); }
 
-  // The return value type.
+  // The return value type. This should be some kind of Type object.
   const LazySymbol& return_type() const { return return_type_; }
   void set_return_type(const LazySymbol& rt) { return_type_ = rt; }
 
-  // Parameters passed to the function.
+  // Parameters passed to the function. These should be Variable objects.
   const std::vector<LazySymbol>& parameters() const { return parameters_; }
   void set_parameters(std::vector<LazySymbol> p) { parameters_ = std::move(p); }
 
-  // The object pointer will be a reference to a parameter (which should
-  // theoretically match one of the entries in the parameters() list but we
-  // can't guarantee what the compiler has generated) for the implicit object
-  // ("this") pointer for member functions. For nonmember or static member
-  // functions the object pointer will be null.
+  // The object pointer will be a reference to a parameter (object type
+  // Variable). It should theoretically match one of the entries in the
+  // parameters() list but we can't guarantee what the compiler has generated.
+  // The variable will be the implicit object ("this") pointer for member
+  // functions. For nonmember or static member functions the object pointer
+  // will be null.
   const LazySymbol& object_pointer() const { return object_pointer_; }
   void set_object_pointer(const LazySymbol& op) { object_pointer_ = op; }
 

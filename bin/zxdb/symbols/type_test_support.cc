@@ -7,6 +7,7 @@
 #include "garnet/bin/zxdb/symbols/base_type.h"
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
+#include "garnet/bin/zxdb/symbols/inherited_from.h"
 
 namespace zxdb {
 
@@ -14,33 +15,51 @@ fxl::RefPtr<BaseType> MakeInt32Type() {
   return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int32_t");
 }
 
-// Defines a structure with two members of the given name and type. The members
-// will immediately follow each other in memory.
-fxl::RefPtr<Collection> MakeStruct2Members(const std::string& struct_name,
-                                           fxl::RefPtr<Type> member_1_type,
-                                           const std::string& member_1_name,
-                                           fxl::RefPtr<Type> member_2_type,
-                                           const std::string& member_2_name) {
-  auto sc = fxl::MakeRefCounted<Collection>(Symbol::kTagStructureType);
-  sc->set_byte_size(member_1_type->byte_size() + member_2_type->byte_size());
-  sc->set_assigned_name(struct_name);
+fxl::RefPtr<Collection> MakeCollectionType(
+    int type_tag, const std::string& type_name,
+    std::initializer_list<NameAndType> members) {
+  return MakeCollectionTypeWithOffset(type_tag, type_name, 0,
+                                      std::move(members));
+}
 
+fxl::RefPtr<Collection> MakeCollectionTypeWithOffset(
+    int type_tag, const std::string& type_name, uint32_t first_member_offset,
+    std::initializer_list<NameAndType> members) {
+  auto result = fxl::MakeRefCounted<Collection>(type_tag);
+  result->set_assigned_name(type_name);
+
+  uint32_t offset = first_member_offset;
   std::vector<LazySymbol> data_members;
+  for (const auto & [ name, type ] : members) {
+    auto member = fxl::MakeRefCounted<DataMember>();
+    member->set_assigned_name(name);
+    member->set_type(LazySymbol(type));
+    member->set_member_location(offset);
+    data_members.emplace_back(member);
 
-  auto member_1 = fxl::MakeRefCounted<DataMember>();
-  member_1->set_assigned_name(member_1_name);
-  member_1->set_type(LazySymbol(member_1_type));
-  member_1->set_member_location(0);
-  data_members.push_back(LazySymbol(member_1));
+    offset += type->byte_size();
+  }
 
-  auto member_2 = fxl::MakeRefCounted<DataMember>();
-  member_2->set_assigned_name(member_2_name);
-  member_2->set_type(LazySymbol(member_2_type));
-  member_2->set_member_location(member_1_type->byte_size());
-  data_members.push_back(LazySymbol(member_2));
+  result->set_byte_size(offset);
+  result->set_data_members(std::move(data_members));
+  return result;
+}
 
-  sc->set_data_members(std::move(data_members));
-  return sc;
+fxl::RefPtr<Collection> MakeDerivedClassPair(
+    int type_tag, const std::string& base_name,
+    std::initializer_list<NameAndType> base_members,
+    const std::string& derived_name,
+    std::initializer_list<NameAndType> derived_members) {
+  auto base = MakeCollectionTypeWithOffset(type_tag, base_name, 0,
+                                           std::move(base_members));
+
+  // Leave room at the beginning of |derived| for the base class.
+  auto derived = MakeCollectionTypeWithOffset(
+      type_tag, derived_name, base->byte_size(), std::move(derived_members));
+
+  derived->set_inherited_from(
+      {LazySymbol(fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base), 0))});
+  return derived;
 }
 
 }  // namespace zxdb

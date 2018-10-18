@@ -30,11 +30,11 @@ class SymbolEvalContext : public ExprEvalContext {
                     fxl::RefPtr<CodeBlock> code_block);
   SymbolEvalContext(fxl::RefPtr<SymbolDataProvider> data_provider,
                     const Location& location);
-  ~SymbolEvalContext() override = default;
+  ~SymbolEvalContext() override;
 
   // ExprEvalContext implementation.
   const Variable* GetVariableSymbol(const std::string& name) override;
-  void GetVariableValue(const std::string& name, ValueCallback cb) override;
+  void GetNamedValue(const std::string& name, ValueCallback cb) override;
   SymbolVariableResolver& GetVariableResolver() override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
 

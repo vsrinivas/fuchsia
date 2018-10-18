@@ -415,8 +415,10 @@ TEST_F(FormatValueTest, Structs) {
 
   // Struct with two values, an int and a int&, and a pair of two of those
   // structs.
-  auto foo = MakeStruct2Members("Foo", int32_type, "a", int_ref, "b");
-  auto pair = MakeStruct2Members("Pair", foo, "first", foo, "second");
+  auto foo = MakeCollectionType(Symbol::kTagStructureType, "Foo",
+                                {{"a", int32_type}, {"b", int_ref}});
+  auto pair = MakeCollectionType(Symbol::kTagStructureType, "Pair",
+                                 {{"first", foo}, {"second", foo}});
 
   ExprValue pair_value(
       pair, {0x11, 0x00, 0x11, 0x00,                            // (int32) a
@@ -476,40 +478,44 @@ TEST_F(FormatValueTest, Union) {
 // Tests formatting when a class has derived base classes.
 TEST_F(FormatValueTest, DerivedClasses) {
   auto int32_type = MakeInt32Type();
-  auto base = MakeStruct2Members("Base", int32_type, "a", int32_type, "b");
+  auto base = MakeCollectionType(Symbol::kTagStructureType, "Base",
+                                 {{"a", int32_type}, {"b", int32_type}});
 
   // This second base class is empty, it should be omitted from the output.
   auto empty_base = fxl::MakeRefCounted<Collection>(Symbol::kTagClassType);
   empty_base->set_assigned_name("EmptyBase");
 
-  auto derived =
-      MakeStruct2Members("Derived", int32_type, "c", int32_type, "d");
+  // Derived class, leave enough room to hold |Base|.
+  auto derived = MakeCollectionTypeWithOffset(
+      Symbol::kTagStructureType, "Derived", base->byte_size(),
+      {{"c", int32_type}, {"d", int32_type}});
 
-  // This puts the base class' data after the derived class' data which the
-  // C++ compiler won't do. But this allows us to use the MakeStruct2Members
-  // helper function, and we should be able to cope with any layout.
-  auto inherited = fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base), 8);
+  auto inherited = fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base), 0);
   auto empty_inherited =
       fxl::MakeRefCounted<InheritedFrom>(LazySymbol(empty_base), 0);
   derived->set_inherited_from(
       {LazySymbol(inherited), LazySymbol(empty_inherited)});
 
-  ExprValue value(derived, {1, 0, 0, 0,    // (int32) Derived.c = 1
-                            2, 0, 0, 0,    // (int32) Derived.d = 2,
-                            3, 0, 0, 0,    // (int32) Base.a = 3
-                            4, 0, 0, 0});  // (int32) Base.b = 4
+  uint8_t kAValue = 1;
+  uint8_t kBValue = 2;
+  uint8_t kCValue = 3;
+  uint8_t kDValue = 4;
+  ExprValue value(derived, {kAValue, 0, 0, 0,    // (int32) Base.a
+                            kBValue, 0, 0, 0,    // (int32) Base.b
+                            kCValue, 0, 0, 0,    // (int32) Derived.c
+                            kDValue, 0, 0, 0});  // (int32) Derived.d
 
   // Default formatting. Only the Base should be printed, EmptyBase should be
   // omitted because it has no data.
   FormatValueOptions opts;
-  EXPECT_EQ("{Base = {a = 3, b = 4}, c = 1, d = 2}",
+  EXPECT_EQ("{Base = {a = 1, b = 2}, c = 3, d = 4}",
             SyncFormatValue(value, opts));
 
   // Force types on. The type of the base class should not be duplicated.
   opts.always_show_types = true;
   EXPECT_EQ(
-      "(Derived) {Base = {(int32_t) a = 3, (int32_t) b = 4}, (int32_t) c = 1, "
-      "(int32_t) d = 2}",
+      "(Derived) {Base = {(int32_t) a = 1, (int32_t) b = 2}, (int32_t) c = 3, "
+      "(int32_t) d = 4}",
       SyncFormatValue(value, opts));
 }
 

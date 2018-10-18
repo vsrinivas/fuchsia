@@ -22,7 +22,8 @@ namespace {
 fxl::RefPtr<Collection> GetTestClassType(const DataMember** member_a,
                                          const DataMember** member_b) {
   auto int32_type = MakeInt32Type();
-  auto sc = MakeStruct2Members("Foo", int32_type, "a", int32_type, "b");
+  auto sc = MakeCollectionType(Symbol::kTagStructureType, "Foo",
+                               {{"a", int32_type}, {"b", int32_type}});
 
   *member_a = sc->data_members()[0].Get()->AsDataMember();
   *member_b = sc->data_members()[1].Get()->AsDataMember();

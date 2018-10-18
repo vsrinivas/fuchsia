@@ -72,6 +72,12 @@ class CodeBlock : public Symbol {
   const CodeBlock* GetMostSpecificChild(const SymbolContext& symbol_context,
                                         uint64_t absolute_address) const;
 
+  // Recursively searches the containing blocks until it finds a function. If
+  // this code block is a function, returns |this| as a Function. Returns null
+  // on error, but this should not happen for well-formed symbols (all code
+  // should be inside functions).
+  const Function* GetContainingFunction() const;
+
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(CodeBlock);
   FRIEND_MAKE_REF_COUNTED(CodeBlock);

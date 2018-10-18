@@ -151,6 +151,7 @@ source_set("tests") {
     "dwarf_symbol_factory_unittest.cc",
     "dwarf_test_util.cc",
     "dwarf_test_util.h",
+    "mock_symbol_data_provider_unittest.cc",
     "modified_type_unittest.cc",
     "module_symbol_index_unittest.cc",
     "module_symbol_index_node_unittest.cc",
@@ -167,6 +168,7 @@ source_set("tests") {
     ":symbols",
     ":test_support",
     "//third_party/googletest:gtest",
+    "//garnet/bin/zxdb/common:test_support",
     "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
   ]
 

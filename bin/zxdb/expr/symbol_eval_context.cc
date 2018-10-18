@@ -6,6 +6,7 @@
 
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/expr/resolve_collection.h"
 #include "garnet/bin/zxdb/expr/resolve_ptr_ref.h"
 #include "garnet/bin/zxdb/symbols/code_block.h"
 #include "garnet/bin/zxdb/symbols/function.h"
@@ -17,6 +18,14 @@
 #include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
+
+namespace {
+
+Err GetNoVariableErr(const std::string& name) {
+  return Err("No variable '%s' in this context.", name.c_str());
+}
+
+}  // namespace
 
 SymbolEvalContext::SymbolEvalContext(
     const SymbolContext& symbol_context,
@@ -46,6 +55,8 @@ SymbolEvalContext::SymbolEvalContext(
           location.symbol_context(), location.address())));
 }
 
+SymbolEvalContext::~SymbolEvalContext() = default;
+
 const Variable* SymbolEvalContext::GetVariableSymbol(const std::string& name) {
   // Search backwards in the nested lexical scopes searching for the first
   // variable or function parameter with the given name.
@@ -67,18 +78,56 @@ const Variable* SymbolEvalContext::GetVariableSymbol(const std::string& name) {
   return nullptr;
 }
 
-void SymbolEvalContext::GetVariableValue(const std::string& name,
-                                         ValueCallback cb) {
+void SymbolEvalContext::GetNamedValue(const std::string& name,
+                                      ValueCallback cb) {
+  // Search for local variables and function parameters.
   if (const Variable* var = GetVariableSymbol(name)) {
-    // Resolve the variable value.
     resolver_.ResolveVariable(symbol_context_, var, std::move(cb));
-  } else {
-    // Not found. In the future, it might be nice to suggest the closest
-    // match in the error message.
-    cb(Err(fxl::StringPrintf("No variable '%s' in this context.",
-                             name.c_str())),
-       ExprValue());
+    return;
   }
+  // Otherwise try to resolve the name on the |this| pointer.
+
+  // Find the function to see if it has a |this| pointer.
+  const Function* function = block_->GetContainingFunction();
+  if (!function || !function->object_pointer()) {
+    cb(GetNoVariableErr(name), ExprValue());  // No |this| pointer.
+    return;
+  }
+
+  const Variable* this_var = function->object_pointer().Get()->AsVariable();
+  if (!this_var) {
+    cb(GetNoVariableErr(name), ExprValue());  // Symbols corrupt
+    return;
+  }
+
+  // Get the value of of the |this| variable. Callback needs to capture a ref
+  // to ourselves since it's needed to resolve the member later.
+  fxl::RefPtr<SymbolEvalContext> eval_context(this);
+  resolver_.ResolveVariable(symbol_context_, this_var, [
+    cb = std::move(cb), name, eval_context = std::move(eval_context)
+  ](const Err& err, ExprValue value) {
+    if (err.has_error()) {
+      // |this| not available, probably optimized out.
+      cb(err, ExprValue());
+      return;
+    }
+
+    // Got |this|, resolve |this->name|.
+    ResolveMemberByPointer(
+        std::move(eval_context), value, name,
+        [ name, cb = std::move(cb) ](const Err& err, ExprValue value) {
+          if (err.has_error()) {
+            // Can't resolve the variable on |this|. Drop the input error
+            // and report that the variable is not found. Otherwise all
+            // unknown variable errors will become "can't resolve on <base
+            // class>" which is confusing.
+            cb(GetNoVariableErr(name), ExprValue());
+          } else {
+            // Found |this->name|.
+            cb(Err(), std::move(value));
+          }
+        });
+  });
 }
 
 SymbolVariableResolver& SymbolEvalContext::GetVariableResolver() {

@@ -17,6 +17,10 @@ class Symbol;
 //
 // The callback takes the current collection being iterated, as well as the
 // offset of that collection from the beginning of the starting collection.
+//
+// The callback returns a completion flag. It should return false to keep
+// iterating, or true to stop iteration. The return value of
+// VisitClassHierarchy() will be that of the last executed callback.
 bool VisitClassHierarchy(
     const Collection* starting,
     std::function<bool(const Collection*, uint32_t offset)> cb);
