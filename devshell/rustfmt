@@ -30,10 +30,16 @@ def main():
     parser.add_argument("-v", "--verbose",
                         action='store_true',
                         help="Show verbose output")
+    parser.add_argument("-s", "--print-sources",
+                        action='store_true',
+                        help="Only print sources; do not format")
 
     args = parser.parse_args()
 
     out_dir = lib.rust.find_out_dir()
+
+    if args.print_sources and not os.path.exists(args.gn_target.manifest_path(out_dir)):
+        return 0
 
     with open(args.gn_target.manifest_path(out_dir), "r") as fin:
         cargo_toml = toml.load(fin)
@@ -49,6 +55,11 @@ def main():
         main_file = bins[0]['path']
     elif 'lib' in cargo_toml:
         main_file = cargo_toml['lib']['path']
+
+    if args.print_sources:
+        if main_file:
+            print(main_file)
+        return 0
 
     if not main_file or not os.path.exists(main_file):
         print("No source root (typically lib.rs or main.rs) found for this gn target")

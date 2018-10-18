@@ -64,6 +64,7 @@ function format-cmd() {
       *.hh) printf "${CLANG_CMD}" ;;
       *.hpp) printf "${CLANG_CMD}" ;;
       *.ts) printf "${CLANG_CMD}" ;;
+      *.rs) printf "${RUST_FMT_CMD}" ;;
     esac
   fi
 }
@@ -105,7 +106,9 @@ for ARG in "$@"; do
     --files=*) FILES=$(canonicalize "${PWD}" $(zap-commas "${ARG#--files=}")) ;;
     --target=*) FILES=$(canonicalize "${FUCHSIA_DIR}" \
         $(fx-buildtool-run gn desc \
-            "${FUCHSIA_OUT_DIR}/${FUCHSIA_ARCH}" "${ARG#--target=}" sources)) ;;
+            "${FUCHSIA_OUT_DIR}/${FUCHSIA_ARCH}" "${ARG#--target=}" sources)) &&
+        RUST_ENTRY_POINT=$(canonicalize "${FUCHSIA_DIR}" \
+            $(fx rustfmt --print-sources ${ARG#--target=})) ;;
     --help) usage && exit 1 ;;
     *) usage && printf "Unknown flag %s\n" "${ARG}" && exit 1 ;;
   esac
@@ -139,6 +142,8 @@ declare FIDL_CMD="${FIDL_BIN} -i"
 declare GN_CMD="${BUILDTOOLS_ROOT}/gn format"
 declare GO_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/go/bin/gofmt -w"
 declare JSON_FMT_CMD="${FUCHSIA_DIR}"/scripts/style/json-fmt.py
+declare RUST_FMT_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rustfmt --config-path=${FUCHSIA_DIR}/garnet/rustfmt.toml --unstable-features --skip-children"
+declare RUST_ENTRY_POINT_FMT_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rustfmt --config-path=${FUCHSIA_DIR}/garnet/rustfmt.toml"
 
 declare FIX_HEADER_GUARDS_CMD="${FUCHSIA_DIR}/scripts/style/check-header-guards.py --fix"
 
@@ -155,6 +160,8 @@ for file in ${FILES}; do
 done
 
 [[ -n "${DRY_RUN}" ]] && exit
+
+[[ -n "${RUST_ENTRY_POINT}" ]] && ${RUST_ENTRY_POINT_FMT_CMD} "${RUST_ENTRY_POINT}"
 
 for file in ${FILES}; do
   # Git reports deleted files, which we don't want to try to format
