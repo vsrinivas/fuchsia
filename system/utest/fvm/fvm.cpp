@@ -511,7 +511,7 @@ bool CheckDeadBlock(int fd) {
 /////////////////////// Actual tests:
 
 // Test initializing the FVM on a partition that is smaller than a slice
-bool TestTooSmall(void) {
+bool TestTooSmall() {
     BEGIN_TEST;
 
     if (use_real_disk) {
@@ -533,7 +533,7 @@ bool TestTooSmall(void) {
 }
 
 // Test initializing the FVM on a large partition, with metadata size > the max transfer size
-bool TestLarge(void) {
+bool TestLarge() {
     BEGIN_TEST;
 
     if (use_real_disk) {
@@ -569,7 +569,7 @@ bool TestLarge(void) {
 }
 
 // Load and unload an empty FVM
-bool TestEmpty(void) {
+bool TestEmpty() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -581,7 +581,7 @@ bool TestEmpty(void) {
 }
 
 // Test allocating a single partition
-bool TestAllocateOne(void) {
+bool TestAllocateOne() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -623,7 +623,7 @@ bool TestAllocateOne(void) {
 }
 
 // Test allocating a collection of partitions
-bool TestAllocateMany(void) {
+bool TestAllocateMany() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -669,7 +669,7 @@ bool TestAllocateMany(void) {
 
 // Test that the fvm driver can cope with a sudden close during read / write
 // operations.
-bool TestCloseDuringAccess(void) {
+bool TestCloseDuringAccess() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -733,7 +733,7 @@ bool TestCloseDuringAccess(void) {
 
 // Test that the fvm driver can cope with a sudden release during read / write
 // operations.
-bool TestReleaseDuringAccess(void) {
+bool TestReleaseDuringAccess() {
     BEGIN_TEST;
 
     if (use_real_disk) {
@@ -795,7 +795,7 @@ bool TestReleaseDuringAccess(void) {
     END_TEST;
 }
 
-bool TestDestroyDuringAccess(void) {
+bool TestDestroyDuringAccess() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -858,7 +858,7 @@ bool TestDestroyDuringAccess(void) {
 }
 
 // Test allocating additional slices to a vpartition.
-bool TestVPartitionExtend(void) {
+bool TestVPartitionExtend() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -955,7 +955,7 @@ bool TestVPartitionExtend(void) {
 }
 
 // Test allocating very sparse VPartition
-bool TestVPartitionExtendSparse(void) {
+bool TestVPartitionExtendSparse() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1021,7 +1021,7 @@ bool TestVPartitionExtendSparse(void) {
 }
 
 // Test removing slices from a VPartition.
-bool TestVPartitionShrink(void) {
+bool TestVPartitionShrink() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1123,7 +1123,7 @@ bool TestVPartitionShrink(void) {
 }
 
 // Test splitting a contiguous slice extent into multiple parts
-bool TestVPartitionSplit(void) {
+bool TestVPartitionSplit() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1261,7 +1261,7 @@ bool TestVPartitionSplit(void) {
 }
 
 // Test removing VPartitions within an FVM
-bool TestVPartitionDestroy(void) {
+bool TestVPartitionDestroy() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1329,7 +1329,7 @@ bool TestVPartitionDestroy(void) {
     END_TEST;
 }
 
-bool TestVPartitionQuery(void) {
+bool TestVPartitionQuery() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1428,7 +1428,7 @@ bool TestVPartitionQuery(void) {
 }
 
 // Test allocating and accessing slices which are allocated contiguously.
-bool TestSliceAccessContiguous(void) {
+bool TestSliceAccessContiguous() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1494,7 +1494,7 @@ bool TestSliceAccessContiguous(void) {
 }
 
 // Test allocating and accessing multiple (3+) slices at once.
-bool TestSliceAccessMany(void) {
+bool TestSliceAccessMany() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1575,7 +1575,7 @@ bool TestSliceAccessMany(void) {
 // Test allocating and accessing slices which are allocated
 // virtually contiguously (they appear sequential to the client) but are
 // actually noncontiguous on the FVM partition.
-bool TestSliceAccessNonContiguousPhysical(void) {
+bool TestSliceAccessNonContiguousPhysical() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1726,7 +1726,7 @@ bool TestSliceAccessNonContiguousPhysical(void) {
 
 // Test allocating and accessing slices which are
 // allocated noncontiguously from the client's perspective.
-bool TestSliceAccessNonContiguousVirtual(void) {
+bool TestSliceAccessNonContiguousVirtual() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1812,7 +1812,7 @@ bool TestSliceAccessNonContiguousVirtual(void) {
 }
 
 // Test that the FVM driver actually persists updates.
-bool TestPersistenceSimple(void) {
+bool TestPersistenceSimple() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -2020,7 +2020,7 @@ bool CorruptMountHelper(const char* partition_path, disk_format_t disk_format,
     END_HELPER;
 }
 
-bool TestCorruptMount(void) {
+bool TestCorruptMount() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -2078,7 +2078,7 @@ bool TestCorruptMount(void) {
     END_TEST;
 }
 
-bool TestVPartitionUpgrade(void) {
+bool TestVPartitionUpgrade() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -2228,7 +2228,7 @@ bool TestVPartitionUpgrade(void) {
 }
 
 // Test that the FVM driver can mount filesystems.
-bool TestMounting(void) {
+bool TestMounting() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -2289,7 +2289,7 @@ bool TestMounting(void) {
 }
 
 // Test that FVM-aware filesystem can be reformatted.
-bool TestMkfs(void) {
+bool TestMkfs() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -2374,7 +2374,7 @@ bool TestMkfs(void) {
 
 // Test that the FVM can recover when one copy of
 // metadata becomes corrupt.
-bool TestCorruptionOk(void) {
+bool TestCorruptionOk() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -2453,7 +2453,7 @@ bool TestCorruptionOk(void) {
     END_TEST;
 }
 
-bool TestCorruptionRegression(void) {
+bool TestCorruptionRegression() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -2524,7 +2524,7 @@ bool TestCorruptionRegression(void) {
     END_TEST;
 }
 
-bool TestCorruptionUnrecoverable(void) {
+bool TestCorruptionUnrecoverable() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -2804,7 +2804,7 @@ int random_access_thread(void* arg) {
 }
 
 template <size_t ThreadCount, bool Persistence>
-bool TestRandomOpMultithreaded(void) {
+bool TestRandomOpMultithreaded() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -2919,6 +2919,44 @@ bool TestRandomOpMultithreaded(void) {
     END_TEST;
 }
 
+// Tests the FVM checker using invalid arguments.
+bool TestCheckBadArguments() {
+    BEGIN_TEST;
+    fvm::Checker checker;
+    ASSERT_FALSE(checker.Validate(), "Checker should be missing device, block size");
+
+    checker.SetBlockSize(512);
+    ASSERT_FALSE(checker.Validate(), "Checker should be missing device");
+
+    checker.SetBlockSize(0);
+    char ramdisk_path[PATH_MAX];
+    char fvm_driver[PATH_MAX];
+    ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0);
+    fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
+    ASSERT_TRUE(fd, 0);
+    checker.SetDevice(fbl::move(fd));
+    ASSERT_FALSE(checker.Validate(), "Checker should be missing block size");
+
+    ASSERT_EQ(EndFVMTest(ramdisk_path), 0);
+    END_TEST;
+}
+
+// Tests the FVM checker against a just-initialized FVM.
+bool TestCheckNewFVM() {
+    BEGIN_TEST;
+    char ramdisk_path[PATH_MAX];
+    char fvm_driver[PATH_MAX];
+    ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0);
+
+    fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
+    ASSERT_TRUE(fd, 0);
+
+    fvm::Checker checker(fbl::move(fd), 512, true);
+    ASSERT_TRUE(checker.Validate());
+    ASSERT_EQ(EndFVMTest(ramdisk_path), 0);
+    END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(fvm_tests)
@@ -2959,6 +2997,12 @@ RUN_TEST_LARGE((TestRandomOpMultithreaded<10, /* persistent= */ true>))
 RUN_TEST_LARGE((TestRandomOpMultithreaded<25, /* persistent= */ true>))
 RUN_TEST_MEDIUM(TestCorruptMount)
 END_TEST_CASE(fvm_tests)
+
+
+BEGIN_TEST_CASE(fvm_check_tests)
+RUN_TEST_SMALL(TestCheckBadArguments);
+RUN_TEST_SMALL(TestCheckNewFVM);
+END_TEST_CASE(fvm_check_tests);
 
 int main(int argc, char** argv) {
     int i = 1;
