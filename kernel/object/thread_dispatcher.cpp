@@ -570,6 +570,8 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
     zx_status_t status;
 
     {
+        // The caller may have already done this, but do it again for the
+        // one-off callers like the debugger synthetic exceptions.
         AutoBlocked by(Blocked::EXCEPTION);
 
         // There's no need to send the message under the lock, but we do need to make sure our

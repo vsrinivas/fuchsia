@@ -211,6 +211,9 @@ zx_status_t dispatch_user_exception(uint exception_type,
         return ZX_ERR_BAD_STATE;
     }
 
+    // From now until the exception is resolved the thread is in an exception.
+    ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::EXCEPTION);
+
     bool processed;
     handler_status_t hstatus = exception_handler_worker(exception_type, context,
                                                         thread, &processed);
