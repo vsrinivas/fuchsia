@@ -615,6 +615,41 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
   EXPECT_EQ(PagePredicateResult::YES, is_closed_offline_empty);
 }
 
+TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCanDeletePageOnCallback) {
+  bool page_is_empty_called = false;
+  Status page_is_empty_status;
+  PagePredicateResult is_closed_offline_empty;
+  bool delete_page_called = false;
+  Status delete_page_status;
+  PageId id = RandomId();
+
+  // The page is closed, offline and empty. Try to delete the page storage in
+  // the callback.
+  storage_ptr->set_page_storage_offline_empty(id.id, true);
+  ledger_manager_->PageIsClosedOfflineAndEmpty(
+      id.id, [&](Status status, PagePredicateResult result) {
+        page_is_empty_called = true;
+        page_is_empty_status = status;
+        is_closed_offline_empty = result;
+
+        ledger_manager_->DeletePageStorage(
+            id.id,
+            callback::Capture(callback::SetWhenCalled(&delete_page_called),
+                              &delete_page_status));
+      });
+  RunLoopUntilIdle();
+  // Make sure the deletion finishes successfully.
+  ASSERT_NE(nullptr, storage_ptr->delete_page_storage_callback);
+  storage_ptr->delete_page_storage_callback(storage::Status::OK);
+
+  EXPECT_TRUE(page_is_empty_called);
+  EXPECT_EQ(Status::OK, page_is_empty_status);
+  EXPECT_EQ(PagePredicateResult::YES, is_closed_offline_empty);
+
+  EXPECT_TRUE(delete_page_called);
+  EXPECT_EQ(Status::OK, delete_page_status);
+}
+
 // Verifies that two successive calls to GetPage do not create 2 storages.
 TEST_F(LedgerManagerTest, CallGetPageTwice) {
   PageId id = RandomId();

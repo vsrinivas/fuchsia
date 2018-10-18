@@ -579,28 +579,35 @@ void LedgerManager::PageIsClosedAndSatisfiesPredicate(
        predicate = std::move(predicate), on_return = std::move(on_return),
        callback = std::move(callback)](Status status, ExpiringToken token,
                                        PageManager* page_manager) mutable {
+        auto final_callback =
+            [token = std::move(token), callback = std::move(callback)](
+                Status status, PagePredicateResult result) mutable {
+              // The token needs to be valid while |predicate| is being
+              // computed. Invalidate it right before calling the callback.
+              token.call();
+              callback(status, result);
+            };
         if (status != Status::OK) {
-          callback(status, PagePredicateResult::PAGE_OPENED);
+          final_callback(status, PagePredicateResult::PAGE_OPENED);
           return;
         }
         FXL_DCHECK(page_manager);
-        predicate(page_manager,
-                  [this, page_id = std::move(page_id), operation_id,
-                   on_return = std::move(on_return), token = std::move(token),
-                   callback = std::move(callback)](Status status,
-                                                   bool condition) mutable {
-                    on_return.cancel();
-                    if (!RemoveTrackedPage(page_id, operation_id) ||
-                        status != Status::OK) {
-                      // If |RemoveTrackedPage| returns false, this means that
-                      // the page was opened during this operation and
-                      // |PAGE_OPENED| must be returned.
-                      callback(status, PagePredicateResult::PAGE_OPENED);
-                      return;
-                    }
-                    callback(Status::OK, condition ? PagePredicateResult::YES
-                                                   : PagePredicateResult::NO);
-                  });
+        predicate(page_manager, [this, page_id = std::move(page_id),
+                                 operation_id, on_return = std::move(on_return),
+                                 callback = std::move(final_callback)](
+                                    Status status, bool condition) mutable {
+          on_return.cancel();
+          if (!RemoveTrackedPage(page_id, operation_id) ||
+              status != Status::OK) {
+            // If |RemoveTrackedPage| returns false, this means that
+            // the page was opened during this operation and
+            // |PAGE_OPENED| must be returned.
+            callback(status, PagePredicateResult::PAGE_OPENED);
+            return;
+          }
+          callback(Status::OK, condition ? PagePredicateResult::YES
+                                         : PagePredicateResult::NO);
+        });
       });
 }
 
