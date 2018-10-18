@@ -23,4 +23,11 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/c
 
+MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
+    system/ulib/zx
+
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-sysinfo
+
 include make/module.mk

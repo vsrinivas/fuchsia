@@ -10,8 +10,10 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := $(LOCAL_DIR)/sysinfo.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/fidl
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+
+MODULE_FIDL_LIBS := system/fidl/zircon-sysinfo
 
 include make/module.mk

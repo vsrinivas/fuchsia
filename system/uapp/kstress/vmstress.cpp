@@ -10,7 +10,6 @@
 #include <lib/zx/thread.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/sysinfo.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 

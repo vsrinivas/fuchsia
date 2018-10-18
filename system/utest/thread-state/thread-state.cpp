@@ -11,12 +11,14 @@
 #include <unistd.h>
 
 #include <fbl/algorithm.h>
-#include <zircon/device/sysinfo.h>
+#include <lib/fdio/util.h>
+#include <lib/zx/channel.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
+#include <zircon/sysinfo/c/fidl.h>
 #include <zircon/threads.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
@@ -79,19 +81,26 @@ static zx_status_t get_root_resource(zx_handle_t* root_resource) {
         return ZX_ERR_NOT_FOUND;
     }
 
-    ssize_t n = ioctl_sysinfo_get_root_resource(fd, root_resource);
-    close(fd);
-    if (n != sizeof(*root_resource)) {
-        if (n < 0) {
-            unittest_printf("ERROR: Cannot obtain root resource: %zd/%s\n",
-                            n, zx_status_get_string(static_cast<zx_status_t>(n)));
-            return (zx_status_t)n;
-        } else {
-            unittest_printf("ERROR: Cannot obtain root resource (%zd != %zd)\n",
-                            n, sizeof(root_resource));
-            return ZX_ERR_NOT_FOUND;
-        }
+    zx::channel channel;
+    zx_status_t status = fdio_get_service_handle(fd, channel.reset_and_get_address());
+    if (status != ZX_OK) {
+        fprintf(stderr, "ERROR: Cannot obtain sysinfo channel: %s (%d)\n",
+                zx_status_get_string(status), status);
+        return status;
     }
+
+    zx_status_t fidl_status = zircon_sysinfo_DeviceGetRootResource(channel.get(), &status,
+                                                                   root_resource);
+    if (fidl_status != ZX_OK) {
+        fprintf(stderr, "ERROR: Cannot obtain root resource: %s (%d)\n",
+                zx_status_get_string(fidl_status), fidl_status);
+        return fidl_status;
+    } else if (status != ZX_OK) {
+        fprintf(stderr, "ERROR: Cannot obtain root resource: %s (%d)\n",
+                zx_status_get_string(status), status);
+        return status;
+    }
+
     return ZX_OK;
 }
 

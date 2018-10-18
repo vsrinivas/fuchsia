@@ -7,16 +7,18 @@
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
+#include <lib/fdio/util.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/guest.h>
 #include <lib/zx/port.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vcpu.h>
 #include <lib/zx/vmar.h>
 #include <unittest/unittest.h>
-#include <zircon/device/sysinfo.h>
 #include <zircon/process.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
+#include <zircon/sysinfo/c/fidl.h>
 #include <zircon/types.h>
 
 #include "constants_priv.h"
@@ -92,8 +94,20 @@ static zx_status_t guest_get_resource(zx::resource* resource) {
     if (!fd) {
         return ZX_ERR_IO;
     }
-    ssize_t n = ioctl_sysinfo_get_hypervisor_resource(fd.get(), resource->reset_and_get_address());
-    return n < 0 ? ZX_ERR_IO : ZX_OK;
+
+    zx::channel channel;
+    zx_status_t status = fdio_get_service_handle(fd.release(), channel.reset_and_get_address());
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    zx_status_t fidl_status = zircon_sysinfo_DeviceGetHypervisorResource(
+            channel.get(), &status, resource->reset_and_get_address());
+    if (fidl_status != ZX_OK) {
+        return fidl_status;
+    }
+
+    return status;
 }
 
 static bool setup(test_t* test, const char* start, const char* end) {

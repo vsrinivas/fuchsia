@@ -23,6 +23,9 @@ MODULE_STATIC_LIBS := \
     system/ulib/pretty \
     system/ulib/task-utils
 
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-sysinfo
+
 include make/module.mk
 
 
@@ -44,6 +47,9 @@ MODULE_STATIC_LIBS := \
     system/ulib/pretty \
     system/ulib/task-utils
 
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-sysinfo
+
 include make/module.mk
 
 
@@ -63,6 +69,9 @@ MODULE_LIBS := \
 
 MODULE_STATIC_LIBS := \
     system/ulib/task-utils
+
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-sysinfo
 
 include make/module.mk
 
@@ -84,6 +93,9 @@ MODULE_LIBS := \
 MODULE_STATIC_LIBS := \
     system/ulib/task-utils
 
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-sysinfo
+
 include make/module.mk
 
 
@@ -104,6 +116,9 @@ MODULE_LIBS := \
 MODULE_STATIC_LIBS := \
     system/ulib/pretty \
     system/ulib/task-utils
+
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-sysinfo
 
 include make/module.mk
 
@@ -128,6 +143,9 @@ MODULE_STATIC_LIBS := \
     system/ulib/pretty \
     system/ulib/task-utils
 
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-sysinfo
+
 include make/module.mk
 
 
@@ -151,6 +169,9 @@ MODULE_LIBS := \
 MODULE_STATIC_LIBS := \
     system/ulib/zxcpp \
     system/ulib/task-utils
+
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-sysinfo
 
 # Generate an include file that contains the schema json
 
@@ -200,6 +221,9 @@ MODULE_LIBS := \
 MODULE_STATIC_LIBS := \
     system/ulib/pretty
 
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-sysinfo
+
 include make/module.mk
 
 
@@ -226,5 +250,8 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/zxcpp \
     system/ulib/task-utils \
+
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-sysinfo
 
 include make/module.mk

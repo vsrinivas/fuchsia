@@ -14,6 +14,7 @@
 #include <zircon/boot/image.h>
 #include <zircon/device/sysinfo.h>
 #include <zircon/syscalls/resource.h>
+#include <zircon/sysinfo/c/fidl.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,6 +45,82 @@ static zx_handle_t get_sysinfo_job_root(sysinfo_t* sysinfo) {
     }
 
     return ZX_HANDLE_INVALID;
+}
+
+static zx_status_t fidl_get_root_job(void* ctx, fidl_txn_t* txn) {
+    sysinfo_t* sysinfo = ctx;
+
+    zx_handle_t h = get_sysinfo_job_root(sysinfo);
+    zx_status_t status = h == ZX_HANDLE_INVALID ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
+
+    return zircon_sysinfo_DeviceGetRootJob_reply(txn, status, h);
+}
+
+static zx_status_t fidl_get_root_resource(void* ctx, fidl_txn_t* txn) {
+    zx_handle_t h = get_root_resource();
+    if (h == ZX_HANDLE_INVALID) {
+        return zircon_sysinfo_DeviceGetRootResource_reply(txn, ZX_ERR_NOT_SUPPORTED, h);
+    }
+
+    zx_status_t status = zx_handle_duplicate(h, ZX_RIGHT_TRANSFER, &h);
+    return zircon_sysinfo_DeviceGetRootResource_reply(txn, status, h);
+}
+
+static zx_status_t fidl_get_hypervisor_resource(void* ctx, fidl_txn_t* txn) {
+    zx_handle_t h;
+    const char name[] = "hypervisor";
+    zx_status_t status = zx_resource_create(get_root_resource(),
+                                            ZX_RSRC_KIND_HYPERVISOR,
+                                            0, 0, name, sizeof(name), &h);
+    return zircon_sysinfo_DeviceGetHypervisorResource_reply(txn, status, h);
+}
+
+static zx_status_t fidl_get_board_name(void* ctx, fidl_txn_t* txn) {
+    sysinfo_t* sysinfo = ctx;
+
+    zx_status_t status = ZX_OK;
+
+    mtx_lock(&sysinfo->lock);
+    if (sysinfo->board_name[0] == 0) {
+        size_t actual = 0;
+        status = device_get_metadata(sysinfo->zxdev, DEVICE_METADATA_BOARD_NAME,
+                                     sysinfo->board_name, sizeof(sysinfo->board_name),
+                                     &actual);
+    }
+    mtx_unlock(&sysinfo->lock);
+
+    return zircon_sysinfo_DeviceGetBoardName_reply(txn, status, sysinfo->board_name,
+                                                   sizeof(sysinfo->board_name));
+}
+
+static zx_status_t fidl_get_interrupt_controller_info(void* ctx, fidl_txn_t* txn) {
+    zx_status_t status = ZX_OK;
+    zircon_sysinfo_InterruptControllerInfo info = {};
+
+#if defined(__aarch64__)
+    sysinfo_t* sysinfo = ctx;
+    size_t actual = 0;
+    status = device_get_metadata(sysinfo->zxdev, DEVICE_METADATA_INTERRUPT_CONTROLLER_TYPE,
+                                 &info.type, sizeof(uint8_t), &actual);
+#elif defined(__x86_64__)
+    info.type = zircon_sysinfo_InterruptControllerType_APIC;
+#else
+    info.type = zircon_sysinfo_InterruptControllerType_UNKNOWN;
+#endif
+
+    return zircon_sysinfo_DeviceGetInterruptControllerInfo_reply(txn, status, &info);
+}
+
+static zircon_sysinfo_Device_ops_t fidl_ops = {
+    .GetRootJob = fidl_get_root_job,
+    .GetRootResource = fidl_get_root_resource,
+    .GetHypervisorResource = fidl_get_hypervisor_resource,
+    .GetBoardName = fidl_get_board_name,
+    .GetInterruptControllerInfo = fidl_get_interrupt_controller_info,
+};
+
+static zx_status_t sysinfo_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return zircon_sysinfo_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 static zx_status_t sysinfo_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
@@ -146,6 +223,7 @@ static zx_status_t sysinfo_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
 static zx_protocol_device_t sysinfo_ops = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = sysinfo_ioctl,
+    .message = sysinfo_message,
 };
 
 zx_status_t sysinfo_bind(void* ctx, zx_device_t* parent) {

@@ -31,6 +31,9 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/c \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-sysinfo \
+
 include make/module.mk
 
 MODULE := $(LOCAL_DIR).proxy

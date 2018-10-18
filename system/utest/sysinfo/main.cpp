@@ -5,10 +5,12 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <lib/fdio/util.h>
+#include <lib/zx/channel.h>
 #include <zircon/boot/image.h>
-#include <zircon/device/sysinfo.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
+#include <zircon/sysinfo/c/fidl.h>
 #include <unittest/unittest.h>
 
 #define SYSINFO_PATH    "/dev/misc/sysinfo"
@@ -20,10 +22,15 @@ bool get_root_resource_succeeds() {
     int fd = open(SYSINFO_PATH, O_RDWR);
     ASSERT_GE(fd, 0, "Can't open sysinfo");
 
+    zx::channel channel;
+    ASSERT_EQ(fdio_get_service_handle(fd, channel.reset_and_get_address()), ZX_OK,
+              "Failed to get channel");
+
     zx_handle_t root_resource;
-    ssize_t n = ioctl_sysinfo_get_root_resource(fd, &root_resource);
-    close(fd);
-    ASSERT_EQ(n, sizeof(root_resource), "ioctl failed");
+    zx_status_t status;
+    ASSERT_EQ(zircon_sysinfo_DeviceGetRootResource(channel.get(), &status, &root_resource), ZX_OK,
+              "Failed to get root resource");
+    ASSERT_EQ(status, ZX_OK, "Failed to get root resource");
 
     // Make sure it's a resource with the expected rights.
     zx_info_handle_basic_t info;
@@ -46,15 +53,21 @@ bool get_board_name_succeeds() {
     int fd = open(SYSINFO_PATH, O_RDWR);
     ASSERT_GE(fd, 0, "Can't open sysinfo");
 
-    // Test ioctl_sysinfo_get_board_name().
-    char board_name[ZBI_BOARD_NAME_LEN];
-    ssize_t n = ioctl_sysinfo_get_board_name(fd, board_name, sizeof(board_name));
-    ASSERT_GT(n, 0, "ioctl_sysinfo_get_board_name failed");
-    ASSERT_LE((size_t)n, sizeof(board_name), "ioctl_sysinfo_get_board_name returned too much data");
-    ASSERT_NE(0, board_name[0], "board name is empty");
-    ASSERT_EQ(0, board_name[n - 1], "board name is not zero terminated");
+    zx::channel channel;
+    ASSERT_EQ(fdio_get_service_handle(fd, channel.reset_and_get_address()), ZX_OK,
+              "Failed to get channel");
 
-    close(fd);
+    // Test zircon_sysinfo_DeviceGetBoardName().
+    char board_name[ZBI_BOARD_NAME_LEN];
+    zx_status_t status;
+    size_t actual_size;
+    zx_status_t fidl_status = zircon_sysinfo_DeviceGetBoardName(channel.get(), &status, board_name,
+                                                                sizeof(board_name), &actual_size);
+    ASSERT_EQ(fidl_status, ZX_OK, "Failed to get board name");
+    ASSERT_EQ(status, ZX_OK, "Failed to get board name");
+    ASSERT_LE(actual_size, sizeof(board_name), "GetBoardName returned too much data");
+    EXPECT_NE(0, board_name[0], "board name is empty");
+    EXPECT_EQ(0, board_name[actual_size - 1], "board name is not zero terminated");
 
     END_TEST;
 }
@@ -66,13 +79,18 @@ bool get_interrupt_controller_info_succeeds() {
     int fd = open(SYSINFO_PATH, O_RDWR);
     ASSERT_GE(fd, 0, "Can't open sysinfo");
 
-    // Test ioctl_sysinfo_get_board_name().
-    interrupt_controller_info_t info;
-    ssize_t n = ioctl_sysinfo_get_interrupt_controller_info(fd, &info);
-    ASSERT_EQ(n, sizeof(info), "ioctl_sysinfo_get_interrupt_controller_info failed");
-    EXPECT_NE(info.type, INTERRUPT_CONTROLLER_TYPE_UNKNOWN, "interrupt controller type is unknown");
+    zx::channel channel;
+    ASSERT_EQ(fdio_get_service_handle(fd, channel.reset_and_get_address()), ZX_OK,
+              "Failed to get channel");
 
-    close(fd);
+    // Test zircon_sysinfo_DeviceGetInterruptControllerInfo().
+    zircon_sysinfo_InterruptControllerInfo info;
+    zx_status_t status;
+    ASSERT_EQ(zircon_sysinfo_DeviceGetInterruptControllerInfo(channel.get(), &status, &info), ZX_OK,
+              "Failed to get interrupt controller info");
+    ASSERT_EQ(status, ZX_OK, "Failed to get interrupt controller info");
+    EXPECT_NE(info.type, zircon_sysinfo_InterruptControllerType_UNKNOWN,
+              "interrupt controller type is unknown");
 
     END_TEST;
 }

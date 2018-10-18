@@ -21,9 +21,9 @@
 #include <fbl/unique_ptr.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/boot/image.h>
-#include <zircon/device/sysinfo.h>
 #include <zircon/process.h>
 #include <zircon/syscalls/iommu.h>
+#include <zircon/sysinfo/c/fidl.h>
 
 namespace platform_bus {
 
@@ -314,7 +314,7 @@ zx_status_t PlatformBus::ReadZbi(zx::vmo zbi) {
     }
 
     bool got_platform_id = false;
-    uint8_t interrupt_controller_type = INTERRUPT_CONTROLLER_TYPE_UNKNOWN;
+    uint8_t interrupt_controller_type = zircon_sysinfo_InterruptControllerType_UNKNOWN;
     zx_off_t metadata_offset = 0;
     len = zbi_length;
     off = sizeof(header);
@@ -355,9 +355,9 @@ zx_status_t PlatformBus::ReadZbi(zx::vmo zbi) {
             }
         } else if (header.type == ZBI_TYPE_KERNEL_DRIVER) {
             if (header.extra == KDRV_ARM_GIC_V2) {
-                interrupt_controller_type = INTERRUPT_CONTROLLER_TYPE_GIC_V2;
+                interrupt_controller_type = zircon_sysinfo_InterruptControllerType_GIC_V2;
             } else if (header.extra == KDRV_ARM_GIC_V3) {
-                interrupt_controller_type = INTERRUPT_CONTROLLER_TYPE_GIC_V3;
+                interrupt_controller_type = zircon_sysinfo_InterruptControllerType_GIC_V3;
             }
         } else if (ZBI_TYPE_DRV_METADATA(header.type)) {
             status = zbi.read(metadata + metadata_offset, off, itemlen);

@@ -35,4 +35,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/zx \
     system/ulib/zxcpp \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/zircon-sysinfo
+
 include make/module.mk

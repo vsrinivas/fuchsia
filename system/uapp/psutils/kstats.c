@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <pretty/sizes.h>
-#include <zircon/device/sysinfo.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
