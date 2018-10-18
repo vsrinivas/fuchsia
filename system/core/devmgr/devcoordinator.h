@@ -52,6 +52,8 @@ struct dc_pending {
 };
 
 struct dc_devhost {
+    dc_devhost();
+
     port_handler_t ph;
     zx_handle_t hrpc;
     zx_handle_t proc;

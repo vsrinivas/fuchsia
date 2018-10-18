@@ -14,6 +14,7 @@
 #include <ddk/driver.h>
 #include <driver-info/driver-info.h>
 #include <launchpad/launchpad.h>
+#include <fbl/unique_ptr.h>
 #include <zircon/assert.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -667,29 +668,31 @@ static zx_status_t dc_launch_devhost(devhost_t* host,
     return ZX_OK;
 }
 
+dc_devhost::dc_devhost()
+    : ph({}), hrpc(ZX_HANDLE_INVALID), proc(ZX_HANDLE_INVALID), koid(0), refcount_(0),
+      flags(0), parent(nullptr), anode({}), snode({}), node({}) {
+
+    list_initialize(&devices);
+    list_initialize(&children);
+}
+
 static zx_status_t dc_new_devhost(const char* name, devhost_t* parent,
                                   devhost_t** out) {
-    devhost_t* dh = static_cast<devhost_t*>(calloc(1, sizeof(devhost_t)));
+    auto dh = fbl::make_unique<devhost_t>();
     if (dh == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
-    new (dh) devhost_t;
 
     zx_handle_t hrpc;
     zx_status_t r;
     if ((r = zx_channel_create(0, &hrpc, &dh->hrpc)) < 0) {
-        free(dh);
         return r;
     }
 
-    if ((r = dc_launch_devhost(dh, name, hrpc)) < 0) {
+    if ((r = dc_launch_devhost(dh.get(), name, hrpc)) < 0) {
         zx_handle_close(dh->hrpc);
-        free(dh);
         return r;
     }
-
-    list_initialize(&dh->devices);
-    list_initialize(&dh->children);
 
     if (parent) {
         dh->parent = parent;
@@ -698,9 +701,9 @@ static zx_status_t dc_new_devhost(const char* name, devhost_t* parent,
     }
     list_add_tail(&list_devhosts, &dh->anode);
 
-    log(DEVLC, "devcoord: new host %p\n", dh);
+    log(DEVLC, "devcoord: new host %p\n", dh.get());
 
-    *out = dh;
+    *out = dh.release();
     return ZX_OK;
 }
 
@@ -719,7 +722,7 @@ static void dc_release_devhost(devhost_t* dh) {
     zx_handle_close(dh->hrpc);
     zx_task_kill(dh->proc);
     zx_handle_close(dh->proc);
-    free(dh);
+    delete dh;
 }
 
 // called when device children or proxys are removed
