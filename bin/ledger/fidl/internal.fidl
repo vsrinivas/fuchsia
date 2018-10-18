@@ -12,55 +12,55 @@ using fuchsia.ledger.cloud;
 // individual users.
 [Discoverable]
 interface LedgerRepositoryFactory {
-  // Binds to the directory referenced by |repository|. If this is called
-  // multiple times for the same directory, only the first instance of
-  // |server_id| / |token_provider| will be used. Any subsequent ones will
-  // simply be ignored.
-  //
-  // Parameters:
-  // |repository_directory| channel pointing to the disk directory where the
-  //     repository is stored. At any given time, at most one repository
-  //     instance backed by the same disk directory can be running
-  //     concurrently.
-  //     TODO(qsr): Use typed channel when remoteio has been migrated to FIDL2.
-  // |cloud_provider| is used by the Ledger to synchronize data through the
-  //     cloud. If |cloud_provider| is disconnected, Ledger shuts down the
-  //     repository and disconnects all clients.
-  1: GetRepository(handle<channel> repository_directory,
-                   fuchsia.ledger.cloud.CloudProvider? cloud_provider,
-                   request<LedgerRepository> repository)
-      -> (fuchsia.ledger.Status status);
+    // Binds to the directory referenced by |repository|. If this is called
+    // multiple times for the same directory, only the first instance of
+    // |server_id| / |token_provider| will be used. Any subsequent ones will
+    // simply be ignored.
+    //
+    // Parameters:
+    // |repository_directory| channel pointing to the disk directory where the
+    //     repository is stored. At any given time, at most one repository
+    //     instance backed by the same disk directory can be running
+    //     concurrently.
+    //     TODO(qsr): Use typed channel when remoteio has been migrated to FIDL2.
+    // |cloud_provider| is used by the Ledger to synchronize data through the
+    //     cloud. If |cloud_provider| is disconnected, Ledger shuts down the
+    //     repository and disconnects all clients.
+    1: GetRepository(handle<channel> repository_directory,
+                     fuchsia.ledger.cloud.CloudProvider? cloud_provider,
+                     request<LedgerRepository> repository)
+           -> (fuchsia.ledger.Status status);
 };
 
 // Controller interface for the Ledger application lifecycle.
 [Discoverable]
 interface LedgerController {
-  // Terminate the ledger application.
-  1: Terminate();
+    // Terminate the ledger application.
+    1: Terminate();
 };
 
 interface LedgerRepository {
-  // Creates a new Ledger for the given |ledger_name| if it doesn't already
-  // exist.
-  1: GetLedger(vector<uint8> ledger_name, request<fuchsia.ledger.Ledger> ledger)
-      -> (fuchsia.ledger.Status status);
+    // Creates a new Ledger for the given |ledger_name| if it doesn't already
+    // exist.
+    1: GetLedger(vector<uint8> ledger_name, request<fuchsia.ledger.Ledger> ledger)
+           -> (fuchsia.ledger.Status status);
 
-  // Binds a new LedgerRepository handle to this repository.
-  2: Duplicate(request<LedgerRepository> ledger_repository)
-      -> (fuchsia.ledger.Status status);
+    // Binds a new LedgerRepository handle to this repository.
+    2: Duplicate(request<LedgerRepository> ledger_repository)
+           -> (fuchsia.ledger.Status status);
 
-  // Sets a watcher to track the synchronization state of a user's Ledger. The
-  // current state is immediately sent to the watcher when this method is
-  // called.
-  3: SetSyncStateWatcher(fuchsia.ledger.SyncWatcher watcher)
-      -> (fuchsia.ledger.Status status);
+    // Sets a watcher to track the synchronization state of a user's Ledger. The
+    // current state is immediately sent to the watcher when this method is
+    // called.
+    3: SetSyncStateWatcher(fuchsia.ledger.SyncWatcher watcher)
+           -> (fuchsia.ledger.Status status);
 
-  // Returns the debugging interface for this LedgerRepository
-  4: GetLedgerRepositoryDebug(request<LedgerRepositoryDebug> ledgerRepositoryDebug)
-      -> (fuchsia.ledger.Status status);
+    // Returns the debugging interface for this LedgerRepository
+    4: GetLedgerRepositoryDebug(request<LedgerRepositoryDebug> ledgerRepositoryDebug)
+           -> (fuchsia.ledger.Status status);
 
-  // Tries to clean up disk space on the device by removing unused data that are
-  // already backed up in the cloud. If called while a previous execution of
-  // |DisckCleanUp| is in progress |ILLEGAL_STATE| is returned.
-  5: DiskCleanUp() -> (fuchsia.ledger.Status status);
+    // Tries to clean up disk space on the device by removing unused data that are
+    // already backed up in the cloud. If called while a previous execution of
+    // |DisckCleanUp| is in progress |ILLEGAL_STATE| is returned.
+    5: DiskCleanUp() -> (fuchsia.ledger.Status status);
 };

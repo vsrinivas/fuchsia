@@ -9,51 +9,51 @@ using zx;
 
 [Discoverable]
 interface LedgerRepositoryDebug {
-  // Returns the instances list in LedgerRepository.
-  1: GetInstancesList() -> (vector<vector<uint8>> result);
+    // Returns the instances list in LedgerRepository.
+    1: GetInstancesList() -> (vector<vector<uint8>> result);
 
-  // Returns the debugging interface for the given |ledger_name|.
-  2: GetLedgerDebug(vector<uint8> ledger_name, request<LedgerDebug> ledger_debug)
-      -> (fuchsia.ledger.Status status);
+    // Returns the debugging interface for the given |ledger_name|.
+    2: GetLedgerDebug(vector<uint8> ledger_name, request<LedgerDebug> ledger_debug)
+           -> (fuchsia.ledger.Status status);
 };
 
 interface LedgerDebug {
-  // Returns the pages list in Ledger.
-  1: GetPagesList() -> (vector<fuchsia.ledger.PageId> result);
+    // Returns the pages list in Ledger.
+    1: GetPagesList() -> (vector<fuchsia.ledger.PageId> result);
 
-  // Returns OK and binds the |page_debug| for the given |page_id|.
-  // Returns PAGE_NOT_FOUND if |page_id| isn't found.
-  2: GetPageDebug(fuchsia.ledger.PageId page_id, request<PageDebug> page_debug)
-      -> (fuchsia.ledger.Status status);
+    // Returns OK and binds the |page_debug| for the given |page_id|.
+    // Returns PAGE_NOT_FOUND if |page_id| isn't found.
+    2: GetPageDebug(fuchsia.ledger.PageId page_id, request<PageDebug> page_debug)
+           -> (fuchsia.ledger.Status status);
 };
 
 interface PageDebug {
-  // Returns OK and a list of the head commits IDs.
-  1: GetHeadCommitsIds() -> (fuchsia.ledger.Status status, vector<CommitId> result);
+    // Returns OK and a list of the head commits IDs.
+    1: GetHeadCommitsIds() -> (fuchsia.ledger.Status status, vector<CommitId> result);
 
-  // Returns OK and creates a snapshot of the page, allowing the client app to read a
-  // consistent view of the content of the page.
-  2: GetSnapshot(CommitId commit_id, request<fuchsia.ledger.PageSnapshot> snapshot_request)
-      -> (fuchsia.ledger.Status status);
+    // Returns OK and creates a snapshot of the page, allowing the client app to read a
+    // consistent view of the content of the page.
+    2: GetSnapshot(CommitId commit_id, request<fuchsia.ledger.PageSnapshot> snapshot_request)
+           -> (fuchsia.ledger.Status status);
 
-  // Returns OK and the Commit struct filled for the given |commit_id|.
-  3: GetCommit(CommitId commit_id) -> (fuchsia.ledger.Status status, Commit? commit);
+    // Returns OK and the Commit struct filled for the given |commit_id|.
+    3: GetCommit(CommitId commit_id) -> (fuchsia.ledger.Status status, Commit? commit);
 };
 
 struct CommitId {
-  vector<uint8> id;
+    vector<uint8> id;
 };
 
 struct Commit {
-  // The ID of this commit.
-  CommitId commit_id;
+    // The ID of this commit.
+    CommitId commit_id;
 
-  // The IDs of this commit parents.
-  vector<CommitId> parents_ids;
+    // The IDs of this commit parents.
+    vector<CommitId> parents_ids;
 
-  // The creation timestamp of this commit in nanoseconds since epoch.
-  zx.time timestamp;
+    // The creation timestamp of this commit in nanoseconds since epoch.
+    zx.time timestamp;
 
-  // The generation timestamp of this commit (the number of commits to the root).
-  int64 generation;
+    // The generation timestamp of this commit (the number of commits to the root).
+    int64 generation;
 };
