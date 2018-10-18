@@ -10,7 +10,7 @@ then
 Usage:
 trace_from_host.sh base_file_name [renderer_params...]
 
-1. Kills device_runner and all scenic-related processes.
+1. Kills basemgr and all scenic-related processes.
 2. Prompts the user (giving time to put the system in a specific state)
 3. Takes a trace
 4. Outputs:
@@ -19,7 +19,7 @@ trace_from_host.sh base_file_name [renderer_params...]
 
 Options:
 
---nokill    Will not kill scenic/device_runner
+--nokill    Will not kill scenic/basemgr
 
 Flags for renderer_params:
 
@@ -46,10 +46,10 @@ ALL_ARGS="${@}"
 if ! [[ ${ALL_ARGS} =~ "--nokill" ]]
 then
   echo "Killing processes and setting renderer params: $@"
-  (set -x; fx shell "killall root_presenter; killall scenic; killall device_runner; killall view_manager; killall flutter*; killall set_root_view")
+  (set -x; fx shell "killall root_presenter; killall scenic; killall basemgr; killall view_manager; killall flutter*; killall set_root_view")
   (set -x; fx shell "set_renderer_params --render_continuously $@")
-  echo "== Press control-C to start tracing (after device_runner starts.) =="
-  (set -x; fx shell "run device_runner &")
+  echo "== Press control-C to start tracing (after basemgr starts.) =="
+  (set -x; fx shell "run basemgr &")
 else
   (set -x; fx shell "set_renderer_params --render_continuously $@")
   sleep 2

@@ -10,7 +10,7 @@ and children in the Scenic view tree.
 Includes a simple implementation of
 [`fuchsia.ui.policy.Presenter2`](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.policy/presenter.fidl)
 which it uses instead of connecting to `root_presenter`; the topology is
-analogous to how Peridot's `device_runner` connects the `device_shell` to
+analogous to how Peridot's `basemgr` connects the `device_shell` to
 `root_presenter`.
 
 This configuration requires connecting directly to Scenic; it will not work if

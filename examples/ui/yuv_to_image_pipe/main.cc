@@ -10,7 +10,7 @@
 #include <lib/ui/view_framework/view_provider_app.h>
 #include <trace-provider/provider.h>
 
-// fx shell "killall scenic; killall device_runner; killall root_presenter;
+// fx shell "killall scenic; killall basemgr; killall root_presenter;
 // killall set_root_view"
 //
 // fx shell "set_root_view yuv_to_image_pipe --NV12"

@@ -49,7 +49,7 @@ int main(int argc, const char** argv) {
   // our UI to), and one which we pass to a Presenter to create a ViewHolder to
   // embed us.
   //
-  // In the Peridot layer of Fuchsia, the device_runner both launches the device
+  // In the Peridot layer of Fuchsia, the basemgr both launches the device
   // shell, and connects it to the root presenter.  Here, we create two
   // eventpair handles, one of which will be passed to our example Presenter and
   // the other to the View.
@@ -58,7 +58,7 @@ int main(int argc, const char** argv) {
   // tokens are passed to them via C++ methods.  However, it would work just as
   // well if the presenter/view lived in two other processes, and we passed the
   // tokens to them via FIDL messages.  In Peridot, this is exactly what the
-  // device_runner does.
+  // basemgr does.
   zx::eventpair view_holder_token, view_token;
   if (ZX_OK != zx::eventpair::create(0u, &view_holder_token, &view_token)) {
     FXL_LOG(ERROR) << "hello_base_view: parent failed to create tokens.";
@@ -112,19 +112,18 @@ int main(int argc, const char** argv) {
   } else {
     // Instead of creating a View directly, provide a service that will do so.
     FXL_LOG(INFO) << "Launching view provider service.";
-    auto view_provider_service =
-        std::make_unique<scenic::ViewProviderService>(
-            startup_context.get(), scenic.get(),
-            [&loop](scenic::ViewFactoryArgs args) {
-              // Create a View; Shadertoy's View will be plumbed through it.
-              auto view = std::make_unique<ShadertoyEmbedderView>(
-                  args.startup_context, &loop,
-                  std::move(args.session_and_listener_request),
-                  std::move(args.view_token));
-              // Launch the real shadertoy and attach its View to this View.
-              view->LaunchShadertoyClient();
-              return view;
-            });
+    auto view_provider_service = std::make_unique<scenic::ViewProviderService>(
+        startup_context.get(), scenic.get(),
+        [&loop](scenic::ViewFactoryArgs args) {
+          // Create a View; Shadertoy's View will be plumbed through it.
+          auto view = std::make_unique<ShadertoyEmbedderView>(
+              args.startup_context, &loop,
+              std::move(args.session_and_listener_request),
+              std::move(args.view_token));
+          // Launch the real shadertoy and attach its View to this View.
+          view->LaunchShadertoyClient();
+          return view;
+        });
     loop.Run();
   }
 

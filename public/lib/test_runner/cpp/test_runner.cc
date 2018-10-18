@@ -26,7 +26,7 @@
 
 // TODO(vardhan): Make it possible to run multiple tests within the same test
 // runner environment, without teardown; useful for testing modules, which may
-// not need to tear down device_runner.
+// not need to tear down basemgr.
 
 #include "lib/test_runner/cpp/test_runner.h"
 
