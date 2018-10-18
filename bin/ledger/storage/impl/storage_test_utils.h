@@ -29,10 +29,16 @@ enum class InlineBehavior {
   PREVENT,
 };
 
+// This class stores an object, computes its identifier and
+// provides accessor to transform into a data source and data chunks.
 class ObjectData {
  public:
-  explicit ObjectData(std::string value,
-                      InlineBehavior inline_behavior = InlineBehavior::ALLOW);
+  explicit ObjectData(std::string value)
+      : ObjectData(value, InlineBehavior::ALLOW) {}
+  explicit ObjectData(std::string value, InlineBehavior inline_behavior)
+      : ObjectData(value, ObjectType::BLOB, inline_behavior) {}
+  explicit ObjectData(std::string value, ObjectType object_type,
+                      InlineBehavior inline_behavior);
   std::unique_ptr<DataSource> ToDataSource();
   std::unique_ptr<DataSource::DataChunk> ToChunk();
 
@@ -88,7 +94,7 @@ class StorageTest : public ledger::TestWithEnvironment {
 
   virtual PageStorage* GetStorage() = 0;
 
-  // Adds a new object with the given value in the page storage and updates
+  // Adds a new BLOB object with the given value in the page storage and updates
   // |object| with the new value.
   ::testing::AssertionResult AddObject(std::string value,
                                        std::unique_ptr<const Object>* object);

@@ -7,6 +7,7 @@
 
 #include <lib/fit/function.h>
 
+#include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 
@@ -19,18 +20,19 @@ enum class IterationStatus {
   ERROR,
 };
 
-// Splits the data from |source| and builds a multi-level index from the
-// content. The |source| is consumed and split using a rolling hash. Each chunk
-// and each index file is returned via |callback| with a status of
-// |IN_PROGRESS|, the id of the content, and the content itself. Then the last
-// call of |callback| is done with a status of |DONE|, the final id for the data
-// and a |nullptr| chunk. |callback| is not called anymore once |source| is
-// deleted. On each iteration, |callback| must return the |ObjectIdentifier| to
-// use to reference the given content.
+// Splits the data from |source| representing an object of some |type| and
+// builds a multi-level index from the content. The |source| is consumed and
+// split using a rolling hash. Each chunk and each index file is returned. On
+// each iteration, |make_object_identifier| is called first and must return the
+// |ObjectIdentifier| to use to reference the given content id. This identifier
+// is then passed to |callback|, along with the content itself and a status of
+// |IN_PROGRESS|, except for the last chunk which has a status of |DONE|.
+// |callback| is not called anymore once |source| is deleted.
 void SplitDataSource(
-    DataSource* source,
-    fit::function<ObjectIdentifier(IterationStatus, ObjectDigest,
-                                   std::unique_ptr<DataSource::DataChunk>)>
+    DataSource* source, ObjectType type,
+    fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
+    fit::function<void(IterationStatus, ObjectIdentifier,
+                       std::unique_ptr<DataSource::DataChunk>)>
         callback);
 
 // Iterates over the pieces of an index object.

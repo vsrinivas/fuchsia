@@ -78,14 +78,20 @@ struct SplitResult {
   std::map<ObjectDigest, std::unique_ptr<DataSource::DataChunk>> data;
 };
 
-void DoSplit(DataSource* source, fit::function<void(SplitResult)> callback) {
+void DoSplit(DataSource* source, ObjectType object_type,
+             fit::function<void(SplitResult)> callback) {
   auto result = std::make_unique<SplitResult>();
   SplitDataSource(
-      source, [result = std::move(result), callback = std::move(callback)](
-                  IterationStatus status, ObjectDigest digest,
-                  std::unique_ptr<DataSource::DataChunk> data) mutable {
+      source, object_type,
+      [](ObjectDigest digest) {
+        return encryption::MakeDefaultObjectIdentifier(std::move(digest));
+      },
+      [result = std::move(result), callback = std::move(callback)](
+          IterationStatus status, ObjectIdentifier identifier,
+          std::unique_ptr<DataSource::DataChunk> data) mutable {
         EXPECT_TRUE(result);
-        if (status == IterationStatus::IN_PROGRESS) {
+        auto digest = identifier.object_digest();
+        if (status != IterationStatus::ERROR) {
           EXPECT_LE(data->Get().size(), kMaxChunkSize);
           if (result->data.count(digest) != 0) {
             EXPECT_EQ(result->data[digest]->Get(), data->Get());
@@ -99,7 +105,6 @@ void DoSplit(DataSource* source, fit::function<void(SplitResult)> callback) {
           result.reset();
           callback(std::move(to_send));
         }
-        return encryption::MakeDefaultObjectIdentifier(std::move(digest));
       });
 }
 
@@ -108,35 +113,30 @@ void DoSplit(DataSource* source, fit::function<void(SplitResult)> callback) {
     const std::map<ObjectDigest, std::unique_ptr<DataSource::DataChunk>>& data,
     std::string* result, size_t expected_size) {
   size_t start_size = result->size();
-  switch (GetObjectDigestType(digest)) {
-    case ObjectDigestType::INLINE: {
-      auto content = ExtractObjectDigestData(digest);
-      result->append(content.data(), content.size());
-      break;
+  ObjectDigestInfo digest_info = GetObjectDigestInfo(digest);
+  if (digest_info.is_inlined()) {
+    auto content = ExtractObjectDigestData(digest);
+    result->append(content.data(), content.size());
+  } else if (digest_info.is_chunk()) {
+    if (data.count(digest) == 0) {
+      return ::testing::AssertionFailure() << "Unknown object.";
     }
-    case ObjectDigestType::CHUNK_HASH: {
-      if (data.count(digest) == 0) {
-        return ::testing::AssertionFailure() << "Unknown object.";
-      }
-      auto content = data.at(digest)->Get();
-      result->append(content.data(), content.size());
-      break;
+    auto content = data.at(digest)->Get();
+    result->append(content.data(), content.size());
+  } else {
+    FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
+    if (data.count(digest) == 0) {
+      return ::testing::AssertionFailure() << "Unknown object.";
     }
-    case ObjectDigestType::INDEX_HASH: {
-      if (data.count(digest) == 0) {
-        return ::testing::AssertionFailure() << "Unknown object.";
+    auto content = data.at(digest)->Get();
+    const FileIndex* file_index = GetFileIndex(content.data());
+    for (const auto* child : *file_index->children()) {
+      auto r =
+          ReadFile(ObjectDigest(child->object_identifier()->object_digest()),
+                   data, result, child->size());
+      if (!r) {
+        return r;
       }
-      auto content = data.at(digest)->Get();
-      const FileIndex* file_index = GetFileIndex(content.data());
-      for (const auto* child : *file_index->children()) {
-        auto r =
-            ReadFile(ObjectDigest(child->object_identifier()->object_digest()),
-                     data, result, child->size());
-        if (!r) {
-          return r;
-        }
-      }
-      break;
     }
   }
   if (result->size() - start_size != expected_size) {
@@ -147,23 +147,26 @@ void DoSplit(DataSource* source, fit::function<void(SplitResult)> callback) {
   return ::testing::AssertionSuccess();
 }
 
-using SplitSmallValueTest = ::testing::TestWithParam<size_t>;
-
-using SplitBigValueTest = ::testing::TestWithParam<size_t>;
+// The first paramater is the size of the value, the second its type.
+using SplitSmallValueTest =
+    ::testing::TestWithParam<std::tuple<size_t, ObjectType>>;
+using SplitBigValueTest =
+    ::testing::TestWithParam<std::tuple<size_t, ObjectType>>;
 
 TEST_P(SplitSmallValueTest, SmallValue) {
-  std::string content = NewString(GetParam());
+  const std::string content = NewString(std::get<0>(GetParam()));
+  const ObjectType object_type = std::get<1>(GetParam());
   auto source = DataSource::Create(content);
   SplitResult split_result;
-  DoSplit(source.get(),
+  DoSplit(source.get(), object_type,
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
-  ASSERT_EQ(2u, split_result.calls.size());
-  EXPECT_EQ(IterationStatus::DONE, split_result.calls[1].status);
+  ASSERT_EQ(1u, split_result.calls.size());
+  EXPECT_EQ(IterationStatus::DONE, split_result.calls[0].status);
   ASSERT_EQ(1u, split_result.data.size());
   EXPECT_EQ(content, split_result.data.begin()->second->Get());
-  EXPECT_EQ(split_result.calls[1].digest,
-            ComputeObjectDigest(ObjectType::CHUNK, content));
+  EXPECT_EQ(split_result.calls[0].digest,
+            ComputeObjectDigest(PieceType::CHUNK, object_type, content));
 
   std::string found_content;
   ASSERT_TRUE(ReadFile(split_result.calls.back().digest, split_result.data,
@@ -172,26 +175,36 @@ TEST_P(SplitSmallValueTest, SmallValue) {
 }
 
 TEST_P(SplitBigValueTest, BigValues) {
-  std::string content = NewString(GetParam());
+  const std::string content = NewString(std::get<0>(GetParam()));
+  const ObjectType object_type = std::get<1>(GetParam());
   auto source = DataSource::Create(content);
   SplitResult split_result;
-  DoSplit(source.get(),
+  DoSplit(source.get(), object_type,
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
   EXPECT_EQ(IterationStatus::DONE, split_result.calls.back().status);
-  // There is at least 4 calls:
+  // There is at least 3 calls:
   // 1 index
-  // 2 contents
-  // 1 termination
-  ASSERT_GE(split_result.calls.size(), 4u);
+  // 2 contents (including 1 termination)
+  ASSERT_GE(split_result.calls.size(), 3u);
 
   fxl::StringView current = content;
   for (const auto& call : split_result.calls) {
     if (call.status == IterationStatus::IN_PROGRESS &&
-        GetObjectDigestType(call.digest) == ObjectDigestType::CHUNK_HASH) {
+        GetObjectDigestInfo(call.digest).is_chunk()) {
       EXPECT_EQ(current.substr(0, split_result.data[call.digest]->Get().size()),
                 split_result.data[call.digest]->Get());
+      // Check that object digest is always computed with object_type BLOB for
+      // inner pieces (and in particular for chunks here). Only the root must
+      // have it set to |object_type|.
+      EXPECT_EQ(call.digest,
+                ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB,
+                                    split_result.data[call.digest]->Get()));
       current = current.substr(split_result.data[call.digest]->Get().size());
+    }
+    if (call.status == IterationStatus::DONE) {
+      EXPECT_EQ(GetObjectDigestInfo(call.digest).piece_type, PieceType::INDEX);
+      EXPECT_EQ(GetObjectDigestInfo(call.digest).object_type, object_type);
     }
   }
 
@@ -203,21 +216,25 @@ TEST_P(SplitBigValueTest, BigValues) {
   EXPECT_EQ(content, found_content);
 }
 
-INSTANTIATE_TEST_CASE_P(SplitTest, SplitSmallValueTest,
-                        ::testing::Values(0, 12, kStorageHashSize,
-                                          kStorageHashSize + 1, 100, 1024,
-                                          kMinChunkSize));
+INSTANTIATE_TEST_CASE_P(
+    SplitTest, SplitSmallValueTest,
+    ::testing::Combine(
+        ::testing::Values(0, 12, kStorageHashSize, kStorageHashSize + 1, 100,
+                          1024, kMinChunkSize),
+        ::testing::Values(ObjectType::TREE_NODE, ObjectType::BLOB)));
 
-INSTANTIATE_TEST_CASE_P(SplitTest, SplitBigValueTest,
-                        ::testing::Values(kMaxChunkSize + 1,
-                                          32 * kMaxChunkSize));
+INSTANTIATE_TEST_CASE_P(
+    SplitTest, SplitBigValueTest,
+    ::testing::Combine(::testing::Values(kMaxChunkSize + 1, 32 * kMaxChunkSize),
+                       ::testing::Values(ObjectType::TREE_NODE,
+                                         ObjectType::BLOB)));
 
 // A stream of 0s is only cut at the maximal size.
 TEST(SplitTest, PathologicalCase) {
   constexpr size_t kDataSize = 1024 * 1024 * 128;
   auto source = std::make_unique<PathologicalDataSource>(kDataSize);
   SplitResult split_result;
-  DoSplit(source.get(),
+  DoSplit(source.get(), ObjectType::TREE_NODE,
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
   ASSERT_EQ(IterationStatus::DONE, split_result.calls.back().status);
@@ -225,7 +242,7 @@ TEST(SplitTest, PathologicalCase) {
   size_t total_size = 0u;
   for (const auto& call : split_result.calls) {
     if (call.status == IterationStatus::IN_PROGRESS &&
-        GetObjectDigestType(call.digest) == ObjectDigestType::CHUNK_HASH) {
+        GetObjectDigestInfo(call.digest).is_chunk()) {
       total_size += split_result.data[call.digest]->Get().size();
       EXPECT_EQ(std::string(split_result.data[call.digest]->Get().size(), '\0'),
                 split_result.data[call.digest]->Get());
@@ -238,7 +255,7 @@ TEST(SplitTest, PathologicalCase) {
 TEST(SplitTest, Error) {
   auto source = std::make_unique<ErrorDataSource>();
   SplitResult split_result;
-  DoSplit(source.get(),
+  DoSplit(source.get(), ObjectType::TREE_NODE,
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
   ASSERT_EQ(1u, split_result.calls.size());
@@ -250,7 +267,7 @@ ObjectIdentifier MakeIndexId(size_t i) {
   value.resize(sizeof(i));
   memcpy(&value[0], &i, sizeof(i));
   return encryption::MakeDefaultObjectIdentifier(
-      ComputeObjectDigest(ObjectType::INDEX, value));
+      ComputeObjectDigest(PieceType::INDEX, ObjectType::BLOB, value));
 }
 
 TEST(SplitTest, CollectPieces) {

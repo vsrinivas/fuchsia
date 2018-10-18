@@ -123,7 +123,8 @@ void ConflictResolverClient::OnNextMergeResult(
     }
     case ValueSource::NEW: {
       if (merged_value.new_value->is_bytes()) {
-        storage_->AddObjectFromLocal(storage::DataSource::Create(std::move(
+        storage_->AddObjectFromLocal(storage::ObjectType::BLOB,
+                                     storage::DataSource::Create(std::move(
                                          merged_value.new_value->bytes())),
                                      waiter->NewCallback());
       } else {

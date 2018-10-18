@@ -116,7 +116,8 @@ void PageDelegate::PutWithPriority(fidl::VectorPtr<uint8_t> key,
   auto promise = fxl::MakeRefCounted<
       callback::Promise<storage::Status, storage::ObjectIdentifier>>(
       storage::Status::ILLEGAL_STATE);
-  storage_->AddObjectFromLocal(storage::DataSource::Create(std::move(value)),
+  storage_->AddObjectFromLocal(storage::ObjectType::BLOB,
+                               storage::DataSource::Create(std::move(value)),
                                promise->NewCallback());
 
   operation_serializer_.Serialize<Status>(
@@ -225,7 +226,7 @@ void PageDelegate::CreateReference(
     std::unique_ptr<storage::DataSource> data,
     fit::function<void(Status, ReferencePtr)> callback) {
   storage_->AddObjectFromLocal(
-      std::move(data),
+      storage::ObjectType::BLOB, std::move(data),
       callback::MakeScoped(
           weak_factory_.GetWeakPtr(),
           [this, callback = std::move(callback)](

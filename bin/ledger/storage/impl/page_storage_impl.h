@@ -96,7 +96,7 @@ class PageStorageImpl : public PageStorage {
                      fit::function<void(Status, bool)> callback) override;
   void MarkSyncedToPeer(fit::function<void(Status)> callback) override;
   void AddObjectFromLocal(
-      std::unique_ptr<DataSource> data_source,
+      ObjectType object_type, std::unique_ptr<DataSource> data_source,
       fit::function<void(Status, ObjectIdentifier)> callback) override;
   void GetObject(ObjectIdentifier object_identifier, Location location,
                  fit::function<void(Status, std::unique_ptr<const Object>)>

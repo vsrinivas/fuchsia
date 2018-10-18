@@ -145,7 +145,7 @@ void FakePageStorage::IsSynced(fit::function<void(Status, bool)> callback) {
 }
 
 void FakePageStorage::AddObjectFromLocal(
-    std::unique_ptr<DataSource> data_source,
+    ObjectType /*object_type*/, std::unique_ptr<DataSource> data_source,
     fit::function<void(Status, ObjectIdentifier)> callback) {
   auto value = std::make_unique<std::string>();
   auto data_source_ptr = data_source.get();

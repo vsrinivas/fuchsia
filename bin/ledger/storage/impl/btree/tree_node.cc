@@ -73,7 +73,8 @@ void TreeNode::FromEntries(
 #endif
   std::string encoding = EncodeNode(level, entries, children);
   page_storage->AddObjectFromLocal(
-      storage::DataSource::Create(std::move(encoding)), std::move(callback));
+      ObjectType::TREE_NODE, storage::DataSource::Create(std::move(encoding)),
+      std::move(callback));
 }
 
 int TreeNode::GetKeyCount() const { return entries_.size(); }

@@ -6,6 +6,8 @@
 
 #include <utility>
 
+#include "peridot/bin/ledger/storage/impl/object_digest.h"
+
 namespace storage {
 
 namespace {
@@ -21,7 +23,7 @@ InlinedObject::~InlinedObject() {}
 ObjectIdentifier InlinedObject::GetIdentifier() const { return identifier_; }
 
 Status InlinedObject::GetData(fxl::StringView* data) const {
-  *data = identifier_.object_digest().Serialize();
+  *data = ExtractObjectDigestData(identifier_.object_digest());
   return Status::OK;
 }
 

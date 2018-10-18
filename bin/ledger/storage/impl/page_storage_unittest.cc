@@ -364,7 +364,7 @@ class PageStorageTest : public ledger::TestWithEnvironment {
     Status status;
     ObjectIdentifier object_identifier;
     storage_->AddObjectFromLocal(
-        DataSource::Create(std::move(content)),
+        ObjectType::BLOB, DataSource::Create(std::move(content)),
         callback::Capture(callback::SetWhenCalled(&called), &status,
                           &object_identifier));
     RunLoopUntilIdle();
@@ -955,11 +955,10 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
   std::set<ObjectIdentifier> unsynced_identifiers(object_identifiers.begin(),
                                                   object_identifiers.end());
   for (const auto& identifier : unsynced_identifiers) {
-    EXPECT_FALSE(GetObjectDigestType(identifier.object_digest()) ==
-                 ObjectDigestType::INLINE);
+    EXPECT_FALSE(GetObjectDigestInfo(identifier.object_digest()).is_inlined());
 
-    if (GetObjectDigestType(identifier.object_digest()) ==
-        ObjectDigestType::INDEX_HASH) {
+    if (GetObjectDigestInfo(identifier.object_digest()).piece_type ==
+        PieceType::INDEX) {
       found_index = true;
       std::set<ObjectIdentifier> sub_identifiers;
       IterationStatus iteration_status = IterationStatus::ERROR;
@@ -1115,8 +1114,9 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
     Status status;
     ObjectIdentifier object_identifier;
     storage_->AddObjectFromLocal(
-        data.ToDataSource(), callback::Capture(callback::SetWhenCalled(&called),
-                                               &status, &object_identifier));
+        ObjectType::BLOB, data.ToDataSource(),
+        callback::Capture(callback::SetWhenCalled(&called), &status,
+                          &object_identifier));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -1140,8 +1140,9 @@ TEST_F(PageStorageTest, AddSmallObjectFromLocal) {
     Status status;
     ObjectIdentifier object_identifier;
     storage_->AddObjectFromLocal(
-        data.ToDataSource(), callback::Capture(callback::SetWhenCalled(&called),
-                                               &status, &object_identifier));
+        ObjectType::BLOB, data.ToDataSource(),
+        callback::Capture(callback::SetWhenCalled(&called), &status,
+                          &object_identifier));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -1161,7 +1162,7 @@ TEST_F(PageStorageTest, InterruptAddObjectFromLocal) {
   ObjectData data("Some data");
 
   storage_->AddObjectFromLocal(
-      data.ToDataSource(),
+      ObjectType::BLOB, data.ToDataSource(),
       [](Status returned_status, ObjectIdentifier object_identifier) {});
 
   // Checking that we do not crash when deleting the storage while an AddObject
@@ -1175,7 +1176,7 @@ TEST_F(PageStorageTest, AddObjectFromLocalError) {
   Status status;
   ObjectIdentifier object_identifier;
   storage_->AddObjectFromLocal(
-      std::move(data_source),
+      ObjectType::BLOB, std::move(data_source),
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &object_identifier));
   RunLoopUntilIdle();
@@ -1301,20 +1302,28 @@ TEST_F(PageStorageTest, GetObjectFromSyncWrongId) {
                Status::OBJECT_DIGEST_MISMATCH);
 }
 
-TEST_F(PageStorageTest, AddAndGetHugeObjectFromLocal) {
+TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
   std::string data_str = RandomString(environment_.random(), 65536);
 
-  ObjectData data(std::move(data_str), InlineBehavior::PREVENT);
-
-  ASSERT_EQ(ObjectDigestType::INDEX_HASH,
-            GetObjectDigestType(data.object_identifier.object_digest()));
+  ObjectData data(std::move(data_str), ObjectType::TREE_NODE,
+                  InlineBehavior::PREVENT);
+  ASSERT_EQ(
+      ObjectType::TREE_NODE,
+      GetObjectDigestInfo(data.object_identifier.object_digest()).object_type);
+  ASSERT_EQ(
+      PieceType::INDEX,
+      GetObjectDigestInfo(data.object_identifier.object_digest()).piece_type);
+  ASSERT_EQ(
+      InlinedPiece::NO,
+      GetObjectDigestInfo(data.object_identifier.object_digest()).inlined);
 
   bool called;
   Status status;
   ObjectIdentifier object_identifier;
   storage_->AddObjectFromLocal(
-      data.ToDataSource(), callback::Capture(callback::SetWhenCalled(&called),
-                                             &status, &object_identifier));
+      ObjectType::TREE_NODE, data.ToDataSource(),
+      callback::Capture(callback::SetWhenCalled(&called), &status,
+                        &object_identifier));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
 
@@ -1991,13 +2000,13 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   // which contains child).
   std::string child_data = btree::EncodeNode(0u, std::vector<Entry>(), {});
   ObjectIdentifier child_identifier = encryption_service_.MakeObjectIdentifier(
-      ComputeObjectDigest(ObjectType::CHUNK, child_data));
+      ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE, child_data));
   sync.AddObject(child_identifier, child_data);
 
   std::string root_data =
       btree::EncodeNode(0u, std::vector<Entry>(), {{0u, child_identifier}});
   ObjectIdentifier root_identifier = encryption_service_.MakeObjectIdentifier(
-      ComputeObjectDigest(ObjectType::CHUNK, root_data));
+      ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE, root_data));
   sync.AddObject(root_identifier, root_data);
 
   std::vector<std::unique_ptr<const Commit>> parent;

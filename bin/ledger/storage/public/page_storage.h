@@ -147,7 +147,7 @@ class PageStorage : public PageSyncClient {
 
   // Adds the given local object and passes the new object's id to the callback.
   virtual void AddObjectFromLocal(
-      std::unique_ptr<DataSource> data_source,
+      ObjectType object_type, std::unique_ptr<DataSource> data_source,
       fit::function<void(Status, ObjectIdentifier)> callback) = 0;
   // Finds the Object associated with the given |object_identifier|. The result
   // or an an error will be returned through the given |callback|. If |location|

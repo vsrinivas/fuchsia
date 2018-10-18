@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <bitset>
+
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 
 #include <lib/fxl/strings/concatenate.h>
@@ -16,100 +18,88 @@ namespace {
 static_assert(kStorageHashSize == encryption::kHashSize,
               "Unexpected kStorageHashSize value");
 
-constexpr char kValueHashPrefix = 1;
-constexpr char kIndexHashPrefix = 2;
+// The first bit is 1 for inlined values and 0 otherwise.
+constexpr size_t kInlineBit = 0;
 
-std::string AddPrefix(char c, convert::ExtendedStringView data) {
+// The second bit is 0 for CHUNK and 1 for INDEX.
+constexpr size_t kTypeBit = 1;
+
+// The third bit is 1 for a tree node and 0 otherwise.
+constexpr char kTreeNodeBit = 2;
+
+// Builds an object digest by concatenating |prefix| and |data|.
+ObjectDigest BuildDigest(std::bitset<8> prefix,
+                         convert::ExtendedStringView data) {
   std::string result;
   result.reserve(data.size() + 1);
-  result.push_back(c);
+  result.push_back(prefix.to_ulong());
   result.append(data.data(), data.size());
-  return result;
+  return ObjectDigest(std::move(result));
 }
 
 }  // namespace
 
 bool IsDigestValid(convert::ExtendedStringView object_digest) {
-  if (object_digest.size() <= kStorageHashSize) {
-    // |object_digest| is of type inline.
-    return true;
-  }
-  if (object_digest.size() != kStorageHashSize + 1) {
-    // Digest size is invalid.
+  // All object digests should have a prefix.
+  if (object_digest.size() == 0) {
+    FXL_LOG(INFO) << "Invalid object digest: empty.";
     return false;
   }
-  // The first character of the digest indicates its type.
-  switch (object_digest[0]) {
-    case kValueHashPrefix:
-    case kIndexHashPrefix:
-      return true;
+  std::bitset<8> prefix(object_digest[0]);
+  // Check inline bit.
+  if (prefix[kInlineBit] && object_digest.size() > kStorageHashSize + 1) {
+    FXL_LOG(INFO) << "Invalid object digest: inline but size="
+                  << object_digest.size()
+                  << "; digest=" << convert::ToHex(object_digest);
+    return false;
   }
-  // The first character is invalid.
-  return false;
+  if (!prefix[kInlineBit] && object_digest.size() != kStorageHashSize + 1) {
+    FXL_LOG(INFO) << "Invalid object digest: not inline but size="
+                  << object_digest.size()
+                  << "; digest=" << convert::ToHex(object_digest);
+    return false;
+  }
+  // All bits must be zero except the ones we use for ObjectDigestInfo.
+  prefix.reset(kInlineBit);
+  prefix.reset(kTypeBit);
+  prefix.reset(kTreeNodeBit);
+  return prefix.none();
 }
 
 bool IsDigestValid(const ObjectDigest& object_digest) {
-  return IsDigestValid(object_digest.Serialize());
+  return object_digest.IsValid() && IsDigestValid(object_digest.Serialize());
 }
 
-ObjectDigestType GetObjectDigestType(const ObjectDigest& object_digest) {
+ObjectDigestInfo GetObjectDigestInfo(const ObjectDigest& object_digest) {
   FXL_DCHECK(IsDigestValid(object_digest));
 
   const std::string& digest = object_digest.Serialize();
-
-  if (digest.size() <= kStorageHashSize) {
-    return ObjectDigestType::INLINE;
-  }
-
-  switch (digest[0]) {
-    case kValueHashPrefix:
-      return ObjectDigestType::CHUNK_HASH;
-    case kIndexHashPrefix:
-      return ObjectDigestType::INDEX_HASH;
-  }
-
-  FXL_NOTREACHED() << "Unknown digest prefix: "
-                   << static_cast<uint32_t>(digest[0]);
-  return ObjectDigestType::CHUNK_HASH;
-}
-
-ObjectType GetObjectType(ObjectDigestType digest_type) {
-  switch (digest_type) {
-    case ObjectDigestType::INLINE:
-    case ObjectDigestType::CHUNK_HASH:
-      return ObjectType::CHUNK;
-    case ObjectDigestType::INDEX_HASH:
-      return ObjectType::INDEX;
-  }
+  std::bitset<8> prefix(digest[0]);
+  ObjectDigestInfo result;
+  result.object_type =
+      prefix[kTreeNodeBit] ? ObjectType::TREE_NODE : ObjectType::BLOB;
+  result.piece_type = prefix[kTypeBit] ? PieceType::INDEX : PieceType::CHUNK;
+  result.inlined = prefix[kInlineBit] ? InlinedPiece::YES : InlinedPiece::NO;
+  return result;
 }
 
 fxl::StringView ExtractObjectDigestData(const ObjectDigest& object_digest) {
   FXL_DCHECK(IsDigestValid(object_digest));
 
   fxl::StringView digest = object_digest.Serialize();
-
-  if (digest.size() <= kStorageHashSize) {
-    return digest;
-  }
-
-  FXL_DCHECK(digest[0] == kValueHashPrefix || digest[0] == kIndexHashPrefix);
-
   return digest.substr(1);
 }
 
-ObjectDigest ComputeObjectDigest(ObjectType type,
+ObjectDigest ComputeObjectDigest(PieceType piece_type, ObjectType object_type,
                                  convert::ExtendedStringView content) {
-  switch (type) {
-    case ObjectType::CHUNK:
-      if (content.size() <= kStorageHashSize) {
-        return ObjectDigest(content.ToString());
-      }
-      return ObjectDigest(AddPrefix(kValueHashPrefix,
-                                    encryption::SHA256WithLengthHash(content)));
-    case ObjectType::INDEX:
-      return ObjectDigest(AddPrefix(kIndexHashPrefix,
-                                    encryption::SHA256WithLengthHash(content)));
+  std::bitset<8> prefix;
+  prefix[kTypeBit] = piece_type == PieceType::INDEX;
+  prefix[kTreeNodeBit] = object_type == ObjectType::TREE_NODE;
+  if (content.size() <= kStorageHashSize) {
+    prefix[kInlineBit] = true;
+    return BuildDigest(prefix, content);
   }
+  return BuildDigest(prefix, encryption::SHA256WithLengthHash(content));
 }
 
 }  // namespace storage

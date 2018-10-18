@@ -76,8 +76,8 @@ class ObjectImplTest : public ledger::TestWithEnvironment {
 
 TEST_F(ObjectImplTest, InlinedObject) {
   std::string data = RandomString(12);
-  ObjectIdentifier identifier =
-      CreateObjectIdentifier(ComputeObjectDigest(ObjectType::CHUNK, data));
+  ObjectIdentifier identifier = CreateObjectIdentifier(
+      ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
 
   InlinedObject object(identifier);
   EXPECT_TRUE(CheckObjectValue(object, identifier, data));
@@ -85,8 +85,8 @@ TEST_F(ObjectImplTest, InlinedObject) {
 
 TEST_F(ObjectImplTest, StringObject) {
   std::string data = RandomString(256);
-  ObjectIdentifier identifier =
-      CreateObjectIdentifier(ComputeObjectDigest(ObjectType::CHUNK, data));
+  ObjectIdentifier identifier = CreateObjectIdentifier(
+      ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
 
   StringObject object(identifier, data);
   EXPECT_TRUE(CheckObjectValue(object, identifier, data));
@@ -108,8 +108,8 @@ TEST_F(ObjectImplTest, LevelDBObject) {
   leveldb::ReadOptions read_options_;
 
   std::string data = RandomString(256);
-  ObjectIdentifier identifier =
-      CreateObjectIdentifier(ComputeObjectDigest(ObjectType::CHUNK, data));
+  ObjectIdentifier identifier = CreateObjectIdentifier(
+      ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
 
   status = db_ptr->Put(write_options_, "", data);
   ASSERT_TRUE(status.ok());
@@ -125,8 +125,8 @@ TEST_F(ObjectImplTest, LevelDBObject) {
 
 TEST_F(ObjectImplTest, VmoObject) {
   std::string data = RandomString(256);
-  ObjectIdentifier identifier =
-      CreateObjectIdentifier(ComputeObjectDigest(ObjectType::CHUNK, data));
+  ObjectIdentifier identifier = CreateObjectIdentifier(
+      ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
 
   fsl::SizedVmo vmo;
   ASSERT_TRUE(fsl::VmoFromString(data, &vmo));

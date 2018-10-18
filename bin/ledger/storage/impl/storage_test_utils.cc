@@ -42,18 +42,22 @@ std::string ResizeForBehavior(std::string value,
   return value;
 }
 
-ObjectIdentifier GetObjectIdentifier(std::string value) {
-  ObjectDigest result = ObjectDigest();
+ObjectIdentifier GetObjectIdentifier(std::string value,
+                                     ObjectType object_type) {
+  ObjectDigest result;
   auto data_source = DataSource::Create(std::move(value));
-  SplitDataSource(data_source.get(),
-                  [&result](IterationStatus status, ObjectDigest object_digest,
-                            std::unique_ptr<DataSource::DataChunk> chunk) {
-                    if (status == IterationStatus::DONE) {
-                      result = object_digest;
-                    }
-                    return encryption::MakeDefaultObjectIdentifier(
-                        std::move(object_digest));
-                  });
+  SplitDataSource(
+      data_source.get(), object_type,
+      [](ObjectDigest object_digest) {
+        return encryption::MakeDefaultObjectIdentifier(
+            std::move(object_digest));
+      },
+      [&result](IterationStatus status, ObjectIdentifier object_identifier,
+                std::unique_ptr<DataSource::DataChunk> chunk) {
+        if (status == IterationStatus::DONE) {
+          result = object_identifier.object_digest();
+        }
+      });
   return encryption::MakeDefaultObjectIdentifier(std::move(result));
 }
 
@@ -76,10 +80,11 @@ constexpr btree::NodeLevelCalculator kTestNodeLevelCalculator = {
 
 }  // namespace
 
-ObjectData::ObjectData(std::string value, InlineBehavior inline_behavior)
+ObjectData::ObjectData(std::string value, ObjectType object_type,
+                       InlineBehavior inline_behavior)
     : value(ResizeForBehavior(std::move(value), inline_behavior)),
       size(this->value.size()),
-      object_identifier(GetObjectIdentifier(this->value)) {}
+      object_identifier(GetObjectIdentifier(this->value, object_type)) {}
 
 std::unique_ptr<DataSource> ObjectData::ToDataSource() {
   return DataSource::Create(value);
@@ -145,7 +150,7 @@ StorageTest::~StorageTest() {}
   Status status;
   ObjectIdentifier object_identifier;
   GetStorage()->AddObjectFromLocal(
-      DataSource::Create(value),
+      ObjectType::BLOB, DataSource::Create(value),
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &object_identifier));
   RunLoopFor(kSufficientDelay);

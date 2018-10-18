@@ -55,7 +55,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
   Status RemoveCommitWatcher(CommitWatcher* watcher) override;
   void IsSynced(fit::function<void(Status, bool)> callback) override;
   void AddObjectFromLocal(
-      std::unique_ptr<DataSource> data_source,
+      ObjectType object_type, std::unique_ptr<DataSource> data_source,
       fit::function<void(Status, ObjectIdentifier)> callback) override;
   void GetObject(ObjectIdentifier object_identifier, Location location,
                  fit::function<void(Status, std::unique_ptr<const Object>)>

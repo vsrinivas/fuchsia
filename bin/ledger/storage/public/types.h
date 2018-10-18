@@ -21,6 +21,19 @@ using CommitIdView = convert::ExtendedStringView;
 using JournalId = std::string;
 using JournalIdView = convert::ExtendedStringView;
 
+// The type of object.
+// Ledger stores user created content on BTrees, where the nodes (TREE_NODE
+// objects) store the user-created keys and references to the user-created
+// values. The content of the values is (usually) stored into separate BLOB
+// objects.
+// See ledger/storage/impl/btree for more details.
+enum class ObjectType {
+  // A |TreeNode| object.
+  TREE_NODE,
+  // An opaque sequence of bytes. Currently used to store values.
+  BLOB,
+};
+
 // The digest of an object.
 // This class is a container for an object digest, treated as an opaque blob. It
 // is not responsible for computing or validating the digest; see

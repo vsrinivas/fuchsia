@@ -99,10 +99,12 @@ class FakePageStorageImpl : public storage::PageStorageEmptyImpl {
   }
 
   void AddObjectFromLocal(
+      storage::ObjectType object_type,
       std::unique_ptr<storage::DataSource> data_source,
       fit::function<void(storage::Status, storage::ObjectIdentifier)> callback)
       override {
-    storage_->AddObjectFromLocal(std::move(data_source), std::move(callback));
+    storage_->AddObjectFromLocal(object_type, std::move(data_source),
+                                 std::move(callback));
   }
 
   void GetCommitContents(

@@ -415,7 +415,7 @@ void PageStorageImpl::MarkSyncedToPeer(fit::function<void(Status)> callback) {
 }
 
 void PageStorageImpl::AddObjectFromLocal(
-    std::unique_ptr<DataSource> data_source,
+    ObjectType object_type, std::unique_ptr<DataSource> data_source,
     fit::function<void(Status, ObjectIdentifier)> callback) {
   auto traced_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");
@@ -424,30 +424,29 @@ void PageStorageImpl::AddObjectFromLocal(
   auto managed_data_source_ptr = managed_data_source->get();
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   SplitDataSource(
-      managed_data_source_ptr,
+      managed_data_source_ptr, object_type,
+      [this](ObjectDigest object_digest) {
+        FXL_DCHECK(IsDigestValid(object_digest));
+        return encryption_service_->MakeObjectIdentifier(
+            std::move(object_digest));
+      },
       [this, waiter, managed_data_source = std::move(managed_data_source),
        callback = std::move(traced_callback)](
-          IterationStatus status, ObjectDigest object_digest,
+          IterationStatus status, ObjectIdentifier identifier,
           std::unique_ptr<DataSource::DataChunk> chunk) mutable {
         if (status == IterationStatus::ERROR) {
           callback(Status::IO_ERROR, ObjectIdentifier());
-          return ObjectIdentifier();
+          return;
         }
-        FXL_DCHECK(IsDigestValid(object_digest));
 
-        ObjectIdentifier identifier =
-            encryption_service_->MakeObjectIdentifier(std::move(object_digest));
+        FXL_DCHECK(chunk != nullptr);
 
-        if (chunk) {
-          FXL_DCHECK(status == IterationStatus::IN_PROGRESS);
-
-          if (GetObjectDigestType(identifier.object_digest()) !=
-              ObjectDigestType::INLINE) {
-            AddPiece(identifier, ChangeSource::LOCAL, IsObjectSynced::NO,
-                     std::move(chunk), waiter->NewCallback());
-          }
-          return identifier;
+        if (!GetObjectDigestInfo(identifier.object_digest()).is_inlined()) {
+          AddPiece(identifier, ChangeSource::LOCAL, IsObjectSynced::NO,
+                   std::move(chunk), waiter->NewCallback());
         }
+        if (status == IterationStatus::IN_PROGRESS)
+          return;
 
         FXL_DCHECK(status == IterationStatus::DONE);
         waiter->Finalize(
@@ -455,7 +454,6 @@ void PageStorageImpl::AddObjectFromLocal(
              callback = std::move(callback)](Status status) mutable {
               callback(status, std::move(identifier));
             });
-        return identifier;
       });
 }
 
@@ -482,16 +480,15 @@ void PageStorageImpl::GetObject(
         }
 
         FXL_DCHECK(object);
-        ObjectDigestType digest_type =
-            GetObjectDigestType(object_identifier.object_digest());
+        ObjectDigestInfo digest_info =
+            GetObjectDigestInfo(object_identifier.object_digest());
 
-        if (digest_type == ObjectDigestType::INLINE ||
-            digest_type == ObjectDigestType::CHUNK_HASH) {
+        if (digest_info.is_inlined() || digest_info.is_chunk()) {
           callback(status, std::move(object));
           return;
         }
 
-        FXL_DCHECK(digest_type == ObjectDigestType::INDEX_HASH);
+        FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
 
         fxl::StringView content;
         status = object->GetData(&content);
@@ -539,9 +536,9 @@ void PageStorageImpl::GetObject(
 void PageStorageImpl::GetPiece(
     ObjectIdentifier object_identifier,
     fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
-  ObjectDigestType digest_type =
-      GetObjectDigestType(object_identifier.object_digest());
-  if (digest_type == ObjectDigestType::INLINE) {
+  ObjectDigestInfo digest_info =
+      GetObjectDigestInfo(object_identifier.object_digest());
+  if (digest_info.is_inlined()) {
     callback(Status::OK,
              std::make_unique<InlinedObject>(std::move(object_identifier)));
     return;
@@ -732,15 +729,15 @@ Status PageStorageImpl::MarkAllPiecesLocal(
     auto it = seen_identifiers.insert(std::move(object_identifiers.back()));
     object_identifiers.pop_back();
     const ObjectIdentifier& object_identifier = *(it.first);
-    FXL_DCHECK(GetObjectDigestType(object_identifier.object_digest()) !=
-               ObjectDigestType::INLINE);
+    FXL_DCHECK(
+        !GetObjectDigestInfo(object_identifier.object_digest()).is_inlined());
     Status status = batch->SetObjectStatus(handler, object_identifier,
                                            PageDbObjectStatus::LOCAL);
     if (status != Status::OK) {
       return status;
     }
-    if (GetObjectDigestType(object_identifier.object_digest()) ==
-        ObjectDigestType::INDEX_HASH) {
+    if (GetObjectDigestInfo(object_identifier.object_digest()).piece_type ==
+        PieceType::INDEX) {
       std::unique_ptr<const Object> object;
       status = db_->ReadObject(handler, object_identifier, &object);
       if (status != Status::OK) {
@@ -764,8 +761,8 @@ Status PageStorageImpl::MarkAllPiecesLocal(
       for (const auto* child : *file_index->children()) {
         ObjectIdentifier new_object_identifier =
             ToObjectIdentifier(child->object_identifier());
-        if (GetObjectDigestType(new_object_identifier.object_digest()) !=
-            ObjectDigestType::INLINE) {
+        if (!GetObjectDigestInfo(new_object_identifier.object_digest())
+                 .is_inlined()) {
           if (!seen_identifiers.count(new_object_identifier)) {
             object_identifiers.push_back(std::move(new_object_identifier));
           }
@@ -809,8 +806,8 @@ void PageStorageImpl::AddPiece(ObjectIdentifier object_identifier,
 void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
                                          fit::function<void(Status)> callback) {
   FXL_DCHECK(page_sync_);
-  FXL_DCHECK(GetObjectDigestType(object_identifier.object_digest()) !=
-             ObjectDigestType::INLINE);
+  FXL_DCHECK(
+      !GetObjectDigestInfo(object_identifier.object_digest()).is_inlined());
 
   coroutine_manager_.StartCoroutine(
       std::move(callback),
@@ -841,19 +838,18 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
           callback(status);
           return;
         }
-        auto object_digest_type =
-            GetObjectDigestType(object_identifier.object_digest());
-        FXL_DCHECK(object_digest_type == ObjectDigestType::CHUNK_HASH ||
-                   object_digest_type == ObjectDigestType::INDEX_HASH);
+        auto digest_info =
+            GetObjectDigestInfo(object_identifier.object_digest());
+        FXL_DCHECK(!digest_info.is_inlined());
 
         if (object_identifier.object_digest() !=
-            ComputeObjectDigest(GetObjectType(object_digest_type),
+            ComputeObjectDigest(digest_info.piece_type, digest_info.object_type,
                                 chunk->Get())) {
           callback(Status::OBJECT_DIGEST_MISMATCH);
           return;
         }
 
-        if (object_digest_type == ObjectDigestType::CHUNK_HASH) {
+        if (digest_info.is_chunk()) {
           callback(SynchronousAddPiece(handler, std::move(object_identifier),
                                        source, is_object_synced,
                                        std::move(chunk)));
@@ -863,8 +859,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
         auto waiter =
             fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
         status = ForEachPiece(chunk->Get(), [&](ObjectIdentifier identifier) {
-          if (GetObjectDigestType(identifier.object_digest()) ==
-              ObjectDigestType::INLINE) {
+          if (GetObjectDigestInfo(identifier.object_digest()).is_inlined()) {
             return Status::OK;
           }
 
@@ -925,8 +920,8 @@ void PageStorageImpl::ObjectIsUntracked(
       [this, object_identifier = std::move(object_identifier)](
           CoroutineHandler* handler,
           fit::function<void(Status, bool)> callback) mutable {
-        if (GetObjectDigestType(object_identifier.object_digest()) ==
-            ObjectDigestType::INLINE) {
+        if (GetObjectDigestInfo(object_identifier.object_digest())
+                .is_inlined()) {
           callback(Status::OK, false);
           return;
         }
@@ -966,10 +961,9 @@ void PageStorageImpl::FillBufferWithObjectContent(
     return;
   }
 
-  ObjectDigestType digest_type =
-      GetObjectDigestType(object->GetIdentifier().object_digest());
-  if (digest_type == ObjectDigestType::INLINE ||
-      digest_type == ObjectDigestType::CHUNK_HASH) {
+  ObjectDigestInfo digest_info =
+      GetObjectDigestInfo(object->GetIdentifier().object_digest());
+  if (digest_info.is_inlined() || digest_info.is_chunk()) {
     if (size != content.size()) {
       FXL_LOG(ERROR) << "Error in serialization format. Expecting object: "
                      << object->GetIdentifier() << " to have size: " << size
@@ -1415,12 +1409,14 @@ Status PageStorageImpl::SynchronousAddPiece(
     CoroutineHandler* handler, ObjectIdentifier object_identifier,
     ChangeSource source, IsObjectSynced is_object_synced,
     std::unique_ptr<DataSource::DataChunk> data) {
-  FXL_DCHECK(GetObjectDigestType(object_identifier.object_digest()) !=
-             ObjectDigestType::INLINE);
-  FXL_DCHECK(object_identifier.object_digest() ==
-             ComputeObjectDigest(GetObjectType(GetObjectDigestType(
-                                     object_identifier.object_digest())),
-                                 data->Get()));
+  FXL_DCHECK(
+      !GetObjectDigestInfo(object_identifier.object_digest()).is_inlined());
+  FXL_DCHECK(
+      object_identifier.object_digest() ==
+      ComputeObjectDigest(
+          GetObjectDigestInfo(object_identifier.object_digest()).piece_type,
+          GetObjectDigestInfo(object_identifier.object_digest()).object_type,
+          data->Get()));
 
   std::unique_ptr<const Object> object;
   Status status = db_->ReadObject(handler, object_identifier, &object);
