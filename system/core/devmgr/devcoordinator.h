@@ -36,6 +36,8 @@ struct dc_work {
 };
 
 struct dc_pending {
+    dc_pending();
+
     fbl::DoublyLinkedListNodeState<dc_pending*> node;
     struct Node {
         static fbl::DoublyLinkedListNodeState<dc_pending*>& node_state(

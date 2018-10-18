@@ -1425,7 +1425,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
             break;
         }
         }
-        free(pending);
+        delete pending;
         return ZX_OK;
     }
     case dc_msg_t::Op::kGetMetadata: {
@@ -1631,26 +1631,25 @@ static zx_status_t dc_create_proxy(device_t* parent) {
     return ZX_OK;
 }
 
+dc_pending::dc_pending() = default;
+
 // send message to devhost, requesting the binding of a driver to a device
 static zx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     dc_msg_t msg;
     uint32_t mlen;
 
-    pending_t* pending = static_cast<pending_t*>(malloc(sizeof(pending_t)));
+    auto pending = fbl::make_unique<pending_t>();
     if (pending == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
-    new (pending) pending_t;
 
     zx_status_t r;
     if ((r = dc_msg_pack(&msg, &mlen, nullptr, 0, libname, nullptr)) < 0) {
-        free(pending);
         return r;
     }
 
     zx_handle_t vmo;
     if ((r = libname_to_vmo(libname, &vmo)) < 0) {
-        free(pending);
         return r;
     }
 
@@ -1658,14 +1657,13 @@ static zx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     msg.op = dc_msg_t::Op::kBindDriver;
 
     if ((r = zx_channel_write(dev->hrpc, 0, &msg, mlen, &vmo, 1)) < 0) {
-        free(pending);
         return r;
     }
 
     dev->flags |= DEV_CTX_BOUND;
     pending->op = dc_pending::Op::kBind;
     pending->ctx = nullptr;
-    dev->pending.push_back(pending);
+    dev->pending.push_back(pending.release());
     return ZX_OK;
 }
 
@@ -1819,17 +1817,15 @@ static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
 
     zx_handle_t rpc = ZX_HANDLE_INVALID;
 
-    pending_t* pending = static_cast<pending_t*>(malloc(sizeof(pending_t)));
+    auto pending = fbl::make_unique<pending_t>();
     if (pending == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
-    new (pending) pending_t;
 
     dc_msg_t msg;
     uint32_t mlen;
     zx_status_t r;
     if ((r = dc_msg_pack(&msg, &mlen, nullptr, 0, nullptr, nullptr)) < 0) {
-        free(pending);
         return r;
     }
     msg.txid = 0;
@@ -1837,14 +1833,13 @@ static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
     msg.value = ctx->sflags;
     rpc = dev->hrpc;
     if ((r = zx_channel_write(rpc, 0, &msg, mlen, nullptr, 0)) != ZX_OK) {
-        free(pending);
         return r;
     }
 
     dh->flags |= DEV_HOST_SUSPEND;
     pending->op = dc_pending::Op::kSuspend;
     pending->ctx = ctx;
-    dev->pending.push_back(pending);
+    dev->pending.push_back(pending.release());
 
     ctx->count += 1;
 
