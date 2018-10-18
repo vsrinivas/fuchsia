@@ -88,9 +88,19 @@ void LowEnergyPeripheralServer::StartAdvertising(
   ZX_DEBUG_ASSERT(advertising_manager);
 
   ::btlib::gap::AdvertisingData ad_data, scan_data;
-  ::btlib::gap::AdvertisingData::FromFidl(advertising_data, &ad_data);
-  if (scan_result) {
-    ::btlib::gap::AdvertisingData::FromFidl(*scan_result, &scan_data);
+  if (!::btlib::gap::AdvertisingData::FromFidl(advertising_data, &ad_data)) {
+    callback(fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
+                                        "Invalid advertising data"),
+             "");
+    return;
+  }
+
+  if (scan_result &&
+      !::btlib::gap::AdvertisingData::FromFidl(*scan_result, &scan_data)) {
+    callback(fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
+                                        "Invalid scan response data"),
+             "");
+    return;
   }
 
   auto self = weak_ptr_factory_.GetWeakPtr();

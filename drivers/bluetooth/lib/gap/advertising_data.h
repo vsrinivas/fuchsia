@@ -49,9 +49,10 @@ class AdvertisingData {
   static bool FromBytes(const common::ByteBuffer& data,
                         AdvertisingData* out_ad);
 
-  // Fill the AdvertisingData |out_ad| from the corresponding FIDL object |obj|
-  // Does not clear |out_ad| first.
-  static void FromFidl(const fuchsia::bluetooth::le::AdvertisingData& fidl_ad,
+  // Populate AdvertisingData |out_ad| from the corresponding FIDL object
+  // |fidl_ad|. Overwrites existing contents of |out_ad|. Returns false if
+  // |fidl_ad| contains malformed entries.
+  static bool FromFidl(const fuchsia::bluetooth::le::AdvertisingData& fidl_ad,
                        AdvertisingData* out_ad);
 
   // Copies all of the data in this object to |out|, including making a copy of

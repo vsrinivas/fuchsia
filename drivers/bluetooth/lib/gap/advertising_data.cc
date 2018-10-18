@@ -17,7 +17,7 @@
 #include "lib/fxl/type_converter.h"
 
 // A partial fxl::TypeConverter template specialization for copying the
-// contents of a type that derives from common::ByteBuffer into a
+// contents of a type that derives from ByteBuffer into a
 // fidl::VectorPtr<unsigned char>. If the input array is empty, the output array
 // will be empty. Used by Vector<uint8_t>::From() in AsLEAdvertisingData()
 template <typename T>
@@ -36,13 +36,18 @@ namespace ble = fuchsia::bluetooth::le;
 namespace btlib {
 namespace gap {
 
+using common::BufferView;
+using common::ByteBuffer;
+using common::DynamicByteBuffer;
+using common::MutableByteBuffer;
+using common::Optional;
+using common::UUID;
+
 namespace {
 
-using UuidFunction = fit::function<void(const common::UUID&)>;
+using UuidFunction = fit::function<void(const UUID&)>;
 
-bool ParseUuids(const common::BufferView& data,
-                size_t uuid_size,
-                UuidFunction func) {
+bool ParseUuids(const BufferView& data, size_t uuid_size, UuidFunction func) {
   ZX_DEBUG_ASSERT(func);
   ZX_DEBUG_ASSERT((uuid_size == k16BitUuidElemSize) ||
                   (uuid_size == k32BitUuidElemSize) ||
@@ -55,10 +60,9 @@ bool ParseUuids(const common::BufferView& data,
 
   size_t uuid_count = data.size() / uuid_size;
   for (size_t i = 0; i < uuid_count; i++) {
-    const common::BufferView uuid_bytes(data.data() + (i * uuid_size),
-                                        uuid_size);
-    common::UUID uuid;
-    if (!common::UUID::FromBytes(uuid_bytes, &uuid))
+    const BufferView uuid_bytes(data.data() + (i * uuid_size), uuid_size);
+    UUID uuid;
+    if (!UUID::FromBytes(uuid_bytes, &uuid))
       return false;
 
     func(uuid);
@@ -149,16 +153,14 @@ std::string DecodeUri(const std::string& uri) {
 }
 
 template <typename T>
-inline size_t BufferWrite(common::MutableByteBuffer* buffer,
-                          size_t pos,
-                          const T& var) {
+inline size_t BufferWrite(MutableByteBuffer* buffer, size_t pos, const T& var) {
   buffer->Write((uint8_t*)&var, sizeof(T), pos);
   return sizeof(T);
 }
 
 }  // namespace
 
-bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
+bool AdvertisingData::FromBytes(const ByteBuffer& data,
                                 AdvertisingData* out_ad) {
   ZX_DEBUG_ASSERT(out_ad);
   AdvertisingDataReader reader(data);
@@ -166,7 +168,7 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
     return false;
 
   DataType type;
-  common::BufferView field;
+  BufferView field;
   while (reader.GetNextField(&type, &field)) {
     switch (type) {
       case DataType::kTxPowerLevel: {
@@ -194,10 +196,9 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
       case DataType::kComplete32BitServiceUuids:
       case DataType::kIncomplete128BitServiceUuids:
       case DataType::kComplete128BitServiceUuids: {
-        if (!ParseUuids(field, SizeForType(type),
-                        [&](const common::UUID& uuid) {
-                          out_ad->AddServiceUuid(uuid);
-                        }))
+        if (!ParseUuids(field, SizeForType(type), [&](const UUID& uuid) {
+              out_ad->AddServiceUuid(uuid);
+            }))
           return false;
         break;
       }
@@ -208,8 +209,8 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
         }
 
         uint16_t id = le16toh(*reinterpret_cast<const uint16_t*>(field.data()));
-        const common::BufferView manuf_data(field.data() + kManufacturerIdSize,
-                                            field.size() - kManufacturerIdSize);
+        const BufferView manuf_data(field.data() + kManufacturerIdSize,
+                                    field.size() - kManufacturerIdSize);
 
         out_ad->SetManufacturerData(id, manuf_data);
         break;
@@ -217,13 +218,13 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
       case DataType::kServiceData16Bit:
       case DataType::kServiceData32Bit:
       case DataType::kServiceData128Bit: {
-        common::UUID uuid;
+        UUID uuid;
         size_t uuid_size = SizeForType(type);
-        const common::BufferView uuid_bytes(field.data(), uuid_size);
-        if (!common::UUID::FromBytes(uuid_bytes, &uuid))
+        const BufferView uuid_bytes(field.data(), uuid_size);
+        if (!UUID::FromBytes(uuid_bytes, &uuid))
           return false;
-        const common::BufferView service_data(field.data() + uuid_size,
-                                              field.size() - uuid_size);
+        const BufferView service_data(field.data() + uuid_size,
+                                      field.size() - uuid_size);
         out_ad->SetServiceData(uuid, service_data);
         break;
       }
@@ -300,31 +301,36 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
   return fidl_data;
 }
 
-void AdvertisingData::FromFidl(const ::ble::AdvertisingData& fidl_ad,
+bool AdvertisingData::FromFidl(const ::ble::AdvertisingData& fidl_ad,
                                AdvertisingData* out_ad) {
   ZX_DEBUG_ASSERT(out_ad);
-  common::UUID uuid;
+  UUID uuid;
   for (const auto& uuid_str : *fidl_ad.service_uuids) {
-    if (common::StringToUuid(uuid_str, &uuid)) {
-      out_ad->AddServiceUuid(uuid);
+    if (!StringToUuid(uuid_str, &uuid)) {
+      bt_log(WARN, "gap-le", "FIDL advertising data contains malformd UUID: %s",
+             uuid_str->c_str());
+      return false;
     }
+    out_ad->AddServiceUuid(uuid);
   }
 
   for (const auto& it : *fidl_ad.manufacturer_specific_data) {
     const fidl::VectorPtr<uint8_t>& data = it.data;
-    common::BufferView manuf_view(data->data(), data->size());
+    BufferView manuf_view(data->data(), data->size());
     out_ad->SetManufacturerData(it.company_id, manuf_view);
   }
 
   for (const auto& it : *fidl_ad.service_data) {
     const fidl::VectorPtr<uint8_t>& data = it.data;
-    common::BufferView servdata_view(data->data(), data->size());
-    common::UUID servdata_uuid;
-    if (StringToUuid(it.uuid.get(), &servdata_uuid)) {
-      out_ad->SetServiceData(servdata_uuid, servdata_view);
-    } else {
-      bt_log(WARN, "gap-le", "FIDL Service Data has malformed UUID");
+    BufferView service_data_bytes(data->data(), data->size());
+    UUID service_data_uuid;
+    if (!StringToUuid(it.uuid.get(), &service_data_uuid)) {
+      bt_log(WARN, "gap-le", "FIDL service data contains malformed UUID: %s",
+             it.uuid->c_str());
+      return false;
     }
+
+    out_ad->SetServiceData(service_data_uuid, service_data_bytes);
   }
 
   if (fidl_ad.appearance) {
@@ -338,6 +344,8 @@ void AdvertisingData::FromFidl(const ::ble::AdvertisingData& fidl_ad,
   if (fidl_ad.name) {
     out_ad->SetLocalName(fidl_ad.name);
   }
+
+  return true;
 }
 
 void AdvertisingData::Copy(AdvertisingData* out) const {
@@ -361,41 +369,38 @@ void AdvertisingData::Copy(AdvertisingData* out) const {
   }
 }
 
-void AdvertisingData::AddServiceUuid(const common::UUID& uuid) {
+void AdvertisingData::AddServiceUuid(const UUID& uuid) {
   service_uuids_.insert(uuid);
 }
 
-const std::unordered_set<common::UUID>& AdvertisingData::service_uuids() const {
+const std::unordered_set<UUID>& AdvertisingData::service_uuids() const {
   return service_uuids_;
 }
 
-void AdvertisingData::SetServiceData(const common::UUID& uuid,
-                                     const common::ByteBuffer& data) {
-  common::DynamicByteBuffer srv_data(data.size());
+void AdvertisingData::SetServiceData(const UUID& uuid, const ByteBuffer& data) {
+  DynamicByteBuffer srv_data(data.size());
   data.Copy(&srv_data);
   service_data_[uuid] = std::move(srv_data);
 }
 
-const std::unordered_set<common::UUID> AdvertisingData::service_data_uuids()
-    const {
-  std::unordered_set<common::UUID> uuids;
+const std::unordered_set<UUID> AdvertisingData::service_data_uuids() const {
+  std::unordered_set<UUID> uuids;
   for (const auto& it : service_data_) {
     uuids.emplace(it.first);
   }
   return uuids;
 }
 
-const common::BufferView AdvertisingData::service_data(
-    const common::UUID& uuid) const {
+const BufferView AdvertisingData::service_data(const UUID& uuid) const {
   auto iter = service_data_.find(uuid);
   if (iter == service_data_.end())
-    return common::BufferView();
-  return common::BufferView(iter->second);
+    return BufferView();
+  return BufferView(iter->second);
 }
 
 void AdvertisingData::SetManufacturerData(const uint16_t company_id,
-                                          const common::BufferView& data) {
-  common::DynamicByteBuffer manuf_data(data.size());
+                                          const BufferView& data) {
+  DynamicByteBuffer manuf_data(data.size());
   data.Copy(&manuf_data);
   manufacturer_data_[company_id] = std::move(manuf_data);
 }
@@ -409,27 +414,25 @@ const std::unordered_set<uint16_t> AdvertisingData::manufacturer_data_ids()
   return manuf_ids;
 }
 
-const common::BufferView AdvertisingData::manufacturer_data(
+const BufferView AdvertisingData::manufacturer_data(
     const uint16_t company_id) const {
   auto iter = manufacturer_data_.find(company_id);
   if (iter == manufacturer_data_.end())
-    return common::BufferView();
-  return common::BufferView(iter->second);
+    return BufferView();
+  return BufferView(iter->second);
 }
 
 void AdvertisingData::SetTxPower(int8_t dbm) {
   tx_power_ = dbm;
 }
 
-common::Optional<int8_t> AdvertisingData::tx_power() const {
-  return tx_power_;
-}
+Optional<int8_t> AdvertisingData::tx_power() const { return tx_power_; }
 
 void AdvertisingData::SetLocalName(const std::string& name) {
   local_name_ = std::string(name);
 }
 
-common::Optional<std::string> AdvertisingData::local_name() const {
+Optional<std::string> AdvertisingData::local_name() const {
   return local_name_;
 }
 
@@ -446,9 +449,7 @@ void AdvertisingData::SetAppearance(uint16_t appearance) {
   appearance_ = appearance;
 }
 
-common::Optional<uint16_t> AdvertisingData::appearance() const {
-  return appearance_;
-}
+Optional<uint16_t> AdvertisingData::appearance() const { return appearance_; }
 
 size_t AdvertisingData::CalculateBlockSize() const {
   size_t len = 0;
@@ -506,7 +507,7 @@ size_t AdvertisingData::CalculateBlockSize() const {
   return len;
 }
 
-bool AdvertisingData::WriteBlock(common::MutableByteBuffer* buffer) const {
+bool AdvertisingData::WriteBlock(MutableByteBuffer* buffer) const {
   ZX_DEBUG_ASSERT(buffer);
   if (buffer->size() < CalculateBlockSize())
     return false;
@@ -570,7 +571,7 @@ bool AdvertisingData::WriteBlock(common::MutableByteBuffer* buffer) const {
     pos += s.size();
   }
 
-  std::unordered_map<size_t, std::unordered_set<common::UUID>> uuid_sets;
+  std::unordered_map<size_t, std::unordered_set<UUID>> uuid_sets;
   for (const auto& uuid : service_uuids_) {
     uuid_sets[uuid.CompactSize()].insert(uuid);
   }
@@ -650,7 +651,7 @@ bool AdvertisingData::operator!=(const AdvertisingData& other) const {
   return !(*this == other);
 }
 
-AdvertisingDataReader::AdvertisingDataReader(const common::ByteBuffer& data)
+AdvertisingDataReader::AdvertisingDataReader(const ByteBuffer& data)
     : is_valid_(true), remaining_(data) {
   if (!remaining_.size()) {
     is_valid_ = false;
@@ -658,7 +659,7 @@ AdvertisingDataReader::AdvertisingDataReader(const common::ByteBuffer& data)
   }
 
   // Do a validity check.
-  common::BufferView tmp(remaining_);
+  BufferView tmp(remaining_);
   while (tmp.size()) {
     size_t tlv_len = tmp[0];
 
@@ -678,7 +679,7 @@ AdvertisingDataReader::AdvertisingDataReader(const common::ByteBuffer& data)
 }
 
 bool AdvertisingDataReader::GetNextField(DataType* out_type,
-                                         common::BufferView* out_data) {
+                                         BufferView* out_data) {
   ZX_DEBUG_ASSERT(out_type);
   ZX_DEBUG_ASSERT(out_data);
 
@@ -706,13 +707,12 @@ bool AdvertisingDataReader::HasMoreData() const {
   return !!remaining_[0];
 }
 
-AdvertisingDataWriter::AdvertisingDataWriter(common::MutableByteBuffer* buffer)
+AdvertisingDataWriter::AdvertisingDataWriter(MutableByteBuffer* buffer)
     : buffer_(buffer), bytes_written_(0u) {
   ZX_DEBUG_ASSERT(buffer_);
 }
 
-bool AdvertisingDataWriter::WriteField(DataType type,
-                                       const common::ByteBuffer& data) {
+bool AdvertisingDataWriter::WriteField(DataType type, const ByteBuffer& data) {
   size_t next_size = data.size() + 2;  // 2 bytes for [length][type].
   if (bytes_written_ + next_size > buffer_->size() || next_size > 255)
     return false;
