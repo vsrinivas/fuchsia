@@ -240,7 +240,6 @@ struct handles {
     handle<event> event_handle;
     handle<port> port_handle;
     handle<interrupt> interrupt_handle;
-    handle<log> log_handle;
     handle<debuglog> debuglog_handle;
     handle<socket> socket_handle;
     handle<resource> resource_handle;
@@ -259,7 +258,6 @@ struct handles {
     handle<event>? nullable_event_handle;
     handle<port>? nullable_port_handle;
     handle<interrupt>? nullable_interrupt_handle;
-    handle<log>? nullable_log_handle;
     handle<debuglog>? nullable_debuglog_handle;
     handle<socket>? nullable_socket_handle;
     handle<resource>? nullable_resource_handle;
