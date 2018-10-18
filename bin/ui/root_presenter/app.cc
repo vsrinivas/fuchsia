@@ -182,8 +182,9 @@ void App::HACK_SetInputPath(bool use_legacy) {
 }
 
 void App::HACK_QueryInputPath(HACK_QueryInputPathCallback callback) {
-  for (const auto& presentation : presentations_) {
-    presentation->HACK_QueryInputPath(std::move(callback));
+  if (active_presentation_idx_ != std::numeric_limits<size_t>::max()) {
+    presentations_[active_presentation_idx_]->HACK_QueryInputPath(
+        std::move(callback));
   }
 }
 
