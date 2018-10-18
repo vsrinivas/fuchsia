@@ -13,8 +13,8 @@
 #include <fbl/type_support.h>
 #include <hw/arch_ops.h>
 #include <lib/zx/bti.h>
-#include <lib/zx/vmo.h>
 #include <lib/zx/resource.h>
+#include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
 
@@ -160,6 +160,10 @@ public:
         ModifyBits<uint32_t>(bits, mask, offs);
     }
 
+    void ModifyBits32(uint32_t val, uint32_t start, uint32_t width, zx_off_t offs) const {
+        ModifyBits<uint32_t>(val, start, width, offs);
+    }
+
     void SetBits32(uint32_t bits, zx_off_t offs) const {
         SetBits<uint32_t>(bits, offs);
     }
@@ -192,6 +196,11 @@ public:
     void ModifyBits(T bits, T mask, zx_off_t offs) const {
         T val = Read<T>(offs);
         Write<T>(static_cast<T>((val & ~mask) | (bits & mask)), offs);
+    }
+
+    template <typename T>
+    void ModifyBits(T val, T start, T width, zx_off_t offs) const {
+        ModifyBits<T>(val << start, ((1 << width) - 1) << start, offs);
     }
 
     template <typename T>
