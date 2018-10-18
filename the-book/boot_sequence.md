@@ -37,9 +37,9 @@ service implemented by that app.
 startup. The list of components to run at startup is contained in the
 `/system/data/bootstrap/apps.config` file.
 
-# Layer 3: [device_runner](https://fuchsia.googlesource.com/peridot/+/master/bin/device_runner/)
+# Layer 3: [basemgr](https://fuchsia.googlesource.com/peridot/+/master/bin/basemgr/)
 
-`device_runner`'s job is to setup the interactive flow for user login and user
+`basemgr`'s job is to setup the interactive flow for user login and user
 management.
 
 It first gets access to the root view of the system, starts up Device Shell and
@@ -56,7 +56,7 @@ identity provider to get an id token to access the user's
 
 Logging-in as an existing user starts an instance of `user_runner` with that
 user's id token and with a namespace that is mapped within and managed by
-`device_runner`'s namespace.
+`basemgr`'s namespace.
 
 Logging-in as a guest user (in incognito mode) starts an instance of
 `user_runner` but without an id token and a temporary namespace.

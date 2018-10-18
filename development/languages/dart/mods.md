@@ -22,11 +22,11 @@ The available URLs for for flutter module examples are:
 *   `hello_mod`
 
 After a successful build of fuchsia, type the following command from the zx
-console to run the device runner with the dev user shell:
+console to run the basemgr with the dev user shell:
 
 ```
 killall scenic  # Kills all other mods.
-device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=hello_mod
+basemgr --user_shell=dev_user_shell --user_shell_args=--root_module=hello_mod
 ```
 
 # Basics

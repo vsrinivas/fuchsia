@@ -16,8 +16,7 @@ Follow the steps at in the [top level docs](../README.md) to:
 
 ### [Googlers only] Private Test Network Setup
 
-Follow the instructions at [go/tq-net-boot](https://goto.google.com/tq-net-boot)
-to set up a private test network.
+Follow netboot instructions.
 
 ### Identify Test Machines
 
@@ -69,10 +68,10 @@ $ netruncmd <nodename> cloud_sync clean
 
 ### Start A Story On One Device
 
-Use the `device_runner` to start a story on one device:
+Use the `basemgr` to start a story on one device:
 
 ```
-$ netruncmd <first-node-name> "device_runner --user_shell=dev_user_shell \
+$ netruncmd <first-node-name> "basemgr --user_shell=dev_user_shell \
   --user_shell_args=--root_module=example_todo_story"
 ```
 
@@ -89,10 +88,10 @@ The story can be started on the second device either through the system UI or by
 specifying the story ID.
 
 #### System UI, aka User Shell, aka Armadillo
-Launch the system UI using `device_runner`:
+Launch the system UI using `basemgr`:
 
 ```
-$ netruncmd <second-node-name> "device_runner"
+$ netruncmd <second-node-name> "basemgr"
 ```
 
 Once the system UI starts, you should be able to see the story started in the
@@ -103,7 +102,7 @@ step above.  Click on that to open it.
 With the story ID noted above from launch the story from a shell:
 
 ```
-$ netruncmd <second-node-name> "device_runner \
+$ netruncmd <second-node-name> "basemgr \
   --user_shell=dev_user_shell \
   --user_shell_args=--story_id=<story_id>
 ```
