@@ -24,6 +24,8 @@ Err StringNotWithinOptionsError(const std::string& value,
 
 }  // namespace
 
+// SettingSchemaItem -----------------------------------------------------------
+
 SettingSchemaItem::SettingSchemaItem() = default;
 
 // Special case for valid options.
@@ -38,6 +40,34 @@ SettingSchemaItem SettingSchemaItem::StringWithOptions(
                          std::move(value));
   item.valid_values_ = std::move(valid_values);
   return item;
+}
+
+// SettingSchema ---------------------------------------------------------------
+
+void SettingSchema::AddBool(const std::string& name, std::string description,
+                            bool value) {
+  auto item = SettingSchemaItem(name, std::move(description), value);
+  AddSetting(std::move(name), std::move(item));
+}
+
+void SettingSchema::AddInt(const std::string& name, std::string description,
+                            int value) {
+  auto item = SettingSchemaItem(name, std::move(description), value);
+  AddSetting(std::move(name), std::move(item));
+}
+
+void SettingSchema::AddString(const std::string& name, std::string description,
+                              std::string value,
+                              std::vector<std::string> valid_values) {
+  auto item = SettingSchemaItem::StringWithOptions(
+      name, std::move(description), std::move(value), std::move(valid_values));
+  AddSetting(std::move(name), std::move(item));
+}
+
+void SettingSchema::AddList(const std::string& name, std::string description,
+                            std::vector<std::string> list) {
+  auto item = SettingSchemaItem(name, std::move(description), std::move(list));
+  AddSetting(std::move(name), std::move(item));
 }
 
 void SettingSchema::AddSetting(const std::string& key, SettingSchemaItem item) {

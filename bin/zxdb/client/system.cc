@@ -21,6 +21,7 @@ void System::RemoveObserver(SystemObserver* observer) {
 }
 
 fxl::RefPtr<SettingSchema> System::GetSchema() {
+  // TODO(donosoc): Fill in the target schema.
   static auto schema = fxl::MakeRefCounted<SettingSchema>();
   return schema;
 }

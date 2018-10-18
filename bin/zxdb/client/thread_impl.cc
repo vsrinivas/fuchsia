@@ -26,7 +26,6 @@ ThreadImpl::ThreadImpl(ProcessImpl* process,
       koid_(record.koid),
       weak_factory_(this) {
   SetMetadata(record);
-  settings_.set_fallback(&process->settings());
 }
 
 ThreadImpl::~ThreadImpl() = default;

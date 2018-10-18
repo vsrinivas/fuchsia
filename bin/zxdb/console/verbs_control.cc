@@ -7,11 +7,15 @@
 #include <algorithm>
 
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/setting_schema.h"
+#include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
+#include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -324,6 +328,153 @@ Err DoCls(ConsoleContext* context, const Command& cmd,
   return Err();
 }
 
+// get -------------------------------------------------------------------------
+
+const char kGetShortHelp[] = "get: Get a setting value.";
+const char kGetHelp[] =
+    R"(get (--system|-s) [setting_name]
+
+  Gets the value of the settings that match a particular regexp.
+
+Arguments
+
+  --system|-s
+      Refer to the system context instead of the current one.
+      See below for more details.
+
+  [setting_name]
+      Filter for one setting. Will show detailed information, such as a
+      description and more easily copyable values.
+
+Contexts
+
+  Within zxdb, there is the concept of the current context. This means that at
+  any given moment, there is a current process, thread and breakpoint. This also
+  applies when handling settings. By default, get will query the settings for
+  the current thread. If you want to query the settings for the current target
+  or system, you need to qualify at such.
+
+  There are currently 3 contexts where settings live:
+
+  - System
+  - Target (roughly equivalent to a Process, but remains even when not running).
+  - Thread
+
+  In order to query a particular context, you need to qualify it:
+
+  get foo
+      Unqualified. Queries the current thread settings.
+  p 1 get foo
+      Qualified. Queries the selected process settings.
+  p 3 t 2 get foo
+      Qualified. Queries the selectedthread settings.
+
+  For system settings, we need to override the context, so we need to explicitly
+  ask for it. Any explicit context will be ignored in this case:
+
+  get -s foo
+      Retrieves the value of "foo" for the system.
+
+
+Schemas
+
+  Each setting level (thread, target, etc.) has an associated schema.
+  This defines what settings are available for it and the default values.
+  Initially, all objects default to their schemas, but values can be overriden
+  for individual objects.
+
+Instance Overrides
+
+  Values overriding means that you can modify behaviour for a particular object.
+  If a setting has not been overriden for that object, it will fallback to the
+  settings of parent object. The fallback order is as follows:
+
+  Thread -> Process -> System -> Schema Default
+
+  This means that if a thread has not overriden a value, it will check if the
+  owning process has overriden it, then is the system has overriden it. If
+  there are none, it will get the default value of the thread schema.
+
+  For example, if t1 has overriden "foo" but t2 has not:
+
+  t 1 foo
+      Gets the value of "foo" for t1.
+  t 2 foo
+      Queries the owning process for foo. If that process doesn't have it (no
+      override), it will query the system. If there is no override, it will
+      fallback to the schema default.
+
+  NOTE:
+  Not all settings are present in all schemas, as some settings only make sense
+  in a particular context. If the thread schema holds a setting "foo" which the
+  process schema does not define, asking for "foo" on a thread will only default
+  to the schema default, as the concept of "foo" does not makes sense to a
+  process.
+
+Examples
+
+  get
+      List the global settings for the System context.
+
+  p get foo
+      Get the value of foo for the global Process context.
+
+  p 2 t1 get
+      List the values of settings for t1 of p2.
+      This will list all the settings within the Thread schema, highlighting
+      which ones are overriden.
+
+  get -s
+      List the values of settings at the system level.
+  )";
+
+namespace {
+
+}  // namespace
+
+Err DoGet(ConsoleContext* context, const Command& cmd) {
+  std::string setting_name;
+  if (!cmd.args().empty()) {
+    if (cmd.args().size() > 1)
+      return Err("Expected only one setting name");
+    setting_name = cmd.args()[0];
+  }
+
+  Target* target = cmd.target();
+  if (!target)
+    return Err("No target found. Please file a bug with a repro.");
+
+  // First we check is the user is asking for process.
+  if (cmd.HasNoun(Noun::kProcess) && !cmd.HasNoun(Noun::kProcess)) {
+    // TODO(donosoc): Show the actual values from the selected target.
+    return Err("Target settings not implemented.");
+  }
+
+  if (cmd.HasNoun(Noun::kThread)) {
+    Process* process = target->GetProcess();
+    if (!process)
+      return Err("Process not running, no threads.");
+
+    Thread* thread = cmd.thread();
+    if (!thread) {
+      return Err("Could not find specified thread.");
+    }
+
+    // TODO(donosoc): Show the actual values from the selected thread.
+    return Err("Thread settings not implemented.");
+  }
+
+  Thread* thread = cmd.thread();
+  if (!thread)
+    // TODO(donosoc): Find a good way to refer the user to the schema. Showing
+    //                the schema here is inconsistent, as you cannot do the
+    //                same for the Target and System levels.
+    return Err("No thread in the current context.");
+
+  // TODO(donosoc): Show the actual values from the selected thread.
+  return Err("Thread settings not implemented.");
+}
+
 }  // namespace
 
 void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
@@ -341,6 +492,8 @@ void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
       VerbRecord(&DoDisconnect, {"disconnect"}, kDisconnectShortHelp,
                  kDisconnectHelp, CommandGroup::kGeneral);
   (*verbs)[Verb::kCls] = VerbRecord(&DoCls, {"cls"}, kClsShortHelp, kClsHelp,
+                                    CommandGroup::kGeneral);
+  (*verbs)[Verb::kGet] = VerbRecord(&DoGet, {"get"}, kGetShortHelp, kGetHelp,
                                     CommandGroup::kGeneral);
 }
 

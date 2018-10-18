@@ -24,7 +24,6 @@ ProcessImpl::ProcessImpl(TargetImpl* target, uint64_t koid,
       name_(name),
       symbols_(this, target->symbols()),
       weak_factory_(this) {
-  settings_.set_fallback(&target->session()->system().settings());
 }
 
 ProcessImpl::~ProcessImpl() {

@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/client/client_object.h"
+#include "garnet/bin/zxdb/client/setting_store.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
@@ -96,10 +97,17 @@ class Target : public ClientObject {
   // Notification from the agent that a process has exited.
   virtual void OnProcessExiting(int return_code) = 0;
 
+  // Provides the setting schema for this object.
+  static fxl::RefPtr<SettingSchema> GetSchema();
+
+  SettingStore& settings() { return settings_; }
+
  protected:
   explicit Target(Session* session);
 
   fxl::ObserverList<TargetObserver>& observers() { return observers_; }
+
+  SettingStore settings_;
 
  private:
   fxl::ObserverList<TargetObserver> observers_;

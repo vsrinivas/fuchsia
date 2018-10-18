@@ -4,9 +4,18 @@
 
 #include "garnet/bin/zxdb/client/target.h"
 
+#include "garnet/bin/zxdb/client/setting_schema.h"
+
 namespace zxdb {
 
-Target::Target(Session* session) : ClientObject(session), weak_factory_(this) {}
+Target::Target(Session* session)
+    : ClientObject(session),
+      settings_(GetSchema(), nullptr),
+      weak_factory_(this) {
+  // TODO(donosoc): Hook up the target -> system fallback.
+  //                This should be done in the implementation.
+}
+
 Target::~Target() = default;
 
 void Target::AddObserver(TargetObserver* observer) {
@@ -18,5 +27,11 @@ void Target::RemoveObserver(TargetObserver* observer) {
 }
 
 fxl::WeakPtr<Target> Target::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
+
+fxl::RefPtr<SettingSchema> Target::GetSchema() {
+  // TODO(donosoc): Fill in the target schema.
+  static auto schema = fxl::MakeRefCounted<SettingSchema>();
+  return schema;
+}
 
 }  // namespace zxdb

@@ -10,9 +10,11 @@ namespace zxdb {
 
 Thread::Thread(Session* session)
     : ClientObject(session),
-      // Implementations should insert a fallback if needed.
       settings_(GetSchema(), nullptr),
-      weak_factory_(this) {}
+      weak_factory_(this) {
+  // TODO(donosoc): Hook up the target -> system fallback.
+  //                This should be done in the implementation.
+}
 Thread::~Thread() = default;
 
 void Thread::AddObserver(ThreadObserver* observer) {
@@ -26,6 +28,7 @@ void Thread::RemoveObserver(ThreadObserver* observer) {
 fxl::WeakPtr<Thread> Thread::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 fxl::RefPtr<SettingSchema> Thread::GetSchema() {
+  // TODO(donosoc): Fill in the target schema.
   static auto schema = fxl::MakeRefCounted<SettingSchema>();
   return schema;
 }
