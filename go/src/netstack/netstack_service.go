@@ -102,24 +102,21 @@ func (ni *netstackImpl) GetPortForService(service string, protocol netstack.Prot
 	return port, err
 }
 
-func (ni *netstackImpl) GetAddress(name string, port uint16) (out []netstack.SocketAddress, netErr netstack.NetErr, retErr error) {
+func (ni *netstackImpl) GetAddress(name string, port uint16) ([]netstack.SocketAddress, netstack.NetErr, error) {
 	// TODO: This should handle IP address strings, empty strings, "localhost", etc. Pull the logic from
 	// fdio's getaddrinfo into here.
 	addrs, err := ni.ns.dnsClient.LookupIP(name)
-	if err == nil {
-		out = make([]netstack.SocketAddress, len(addrs))
-		netErr = netstack.NetErr{Status: netstack.StatusOk}
-		for i, addr := range addrs {
-			switch len(addr) {
-			case 4, 16:
-				out[i].Addr = fidlconv.ToNetAddress(addr)
-				out[i].Port = port
-			}
-		}
-	} else {
-		netErr = netstack.NetErr{Status: netstack.StatusDnsError, Message: err.Error()}
+	if err != nil {
+		return nil, netstack.NetErr{Status: netstack.StatusDnsError, Message: err.Error()}, nil
 	}
-	return out, netErr, nil
+	out := make([]netstack.SocketAddress, 0, len(addrs))
+	for _, addr := range addrs {
+		out = append(out, netstack.SocketAddress{
+			Addr: fidlconv.ToNetAddress(addr),
+			Port: port,
+		})
+	}
+	return out, netstack.NetErr{Status: netstack.StatusOk}, nil
 }
 
 func (ni *netstackImpl) GetInterfaces() (out []netstack.NetInterface, err error) {
@@ -169,15 +166,14 @@ func nsToRouteTable(table []tcpip.Route) (out []netstack.RouteTableEntry, err er
 }
 
 func routeTableToNs(rt []netstack.RouteTableEntry) []tcpip.Route {
-	routes := []tcpip.Route{}
+	routes := make([]tcpip.Route, 0, len(rt))
 	for _, r := range rt {
-		route := tcpip.Route{
+		routes = append(routes, tcpip.Route{
 			Destination: fidlconv.NetAddressToTCPIPAddress(r.Destination),
 			Mask:        fidlconv.NetAddressToTCPIPAddress(r.Netmask),
 			Gateway:     fidlconv.NetAddressToTCPIPAddress(r.Gateway),
 			NIC:         tcpip.NICID(r.Nicid),
-		}
-		routes = append(routes, route)
+		})
 	}
 
 	return routes
