@@ -1,0 +1,14 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.gpu.magma;
+
+[Layout = "Simple"]
+interface Device {
+    // Get a parameter.
+    1: Query(uint64 query_id) -> (uint64 result);
+
+    // Get the magma ipc channels.
+    2: Connect(uint64 client_id) -> (handle<channel> device_channel, handle<channel> notification_channel);
+};

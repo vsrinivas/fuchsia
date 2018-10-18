@@ -4,7 +4,9 @@
 
 #include "zircon_platform_connection.h"
 
+#include <fuchsia/gpu/magma/c/fidl.h>
 #include <lib/fdio/io.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/zx/channel.h>
 
 namespace magma {
@@ -314,6 +316,40 @@ PlatformIpcConnection::Create(uint32_t device_handle, uint32_t device_notificati
 {
     return std::unique_ptr<ZirconPlatformIpcConnection>(new ZirconPlatformIpcConnection(
         zx::channel(device_handle), zx::channel(device_notification_handle)));
+}
+
+bool PlatformIpcConnection::Query(int fd, uint64_t query_id, uint64_t* result_out)
+{
+    fdio_t* fdio = fdio_unsafe_fd_to_io(fd);
+    if (!fdio)
+        return DRETF(false, "invalid fd: %d", fd);
+
+    zx_status_t status =
+        fuchsia_gpu_magma_DeviceQuery(fdio_unsafe_borrow_channel(fdio), query_id, result_out);
+    fdio_unsafe_release(fdio);
+
+    if (status != ZX_OK)
+        return DRETF(false, "magma_DeviceQuery failed: %d", status);
+
+    return true;
+}
+
+bool PlatformIpcConnection::GetHandles(int fd, uint32_t* device_handle_out,
+                                       uint32_t* device_notification_handle_out)
+{
+    fdio_t* fdio = fdio_unsafe_fd_to_io(fd);
+    if (!fdio)
+        return DRETF(false, "invalid fd: %d", fd);
+
+    zx_status_t status = fuchsia_gpu_magma_DeviceConnect(
+        fdio_unsafe_borrow_channel(fdio), magma::PlatformThreadId().id(), device_handle_out,
+        device_notification_handle_out);
+    fdio_unsafe_release(fdio);
+
+    if (status != ZX_OK)
+        return DRETF(false, "magma_DeviceConnect failed: %d", status);
+
+    return true;
 }
 
 } // namespace magma

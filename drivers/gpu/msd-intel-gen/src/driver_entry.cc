@@ -15,6 +15,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/intel-gpu-core.h>
+#include <fuchsia/gpu/magma/c/fidl.h>
 #include <lib/zx/channel.h>
 #include <zircon/process.h>
 #include <zircon/types.h>
@@ -50,8 +51,58 @@ sysdrv_device_t* get_device(void* context) { return static_cast<sysdrv_device_t*
 
 // implement device protocol
 
-static zx_status_t sysdrv_common_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                       void* out_buf, size_t out_len, size_t* out_actual)
+static zx_status_t device_fidl_query(void* context, uint64_t query_id, fidl_txn_t* transaction)
+{
+    DLOG("device_fidl_query");
+    sysdrv_device_t* device = get_device(context);
+
+    uint64_t result;
+    switch (query_id) {
+        case MAGMA_QUERY_DEVICE_ID:
+            result = device->magma_system_device->GetDeviceId();
+            break;
+        default:
+            if (!device->magma_system_device->Query(query_id, &result))
+                return DRET_MSG(ZX_ERR_INVALID_ARGS, "unhandled query param 0x%" PRIx64, result);
+    }
+    DLOG("query query_id 0x%" PRIx64 " returning 0x%" PRIx64, query_id, result);
+
+    zx_status_t status = fuchsia_gpu_magma_DeviceQuery_reply(transaction, result);
+    if (status != ZX_OK)
+        return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceQuery_reply failed: %d", status);
+    return ZX_OK;
+}
+
+static zx_status_t device_fidl_connect(void* context, uint64_t client_id, fidl_txn_t* transaction)
+{
+    DLOG("magma_DeviceConnectOrdinal");
+    sysdrv_device_t* device = get_device(context);
+
+    auto connection = MagmaSystemDevice::Open(device->magma_system_device, client_id);
+    if (!connection)
+        return DRET_MSG(ZX_ERR_INVALID_ARGS, "MagmaSystemDevice::Open failed");
+
+    zx_status_t status = fuchsia_gpu_magma_DeviceConnect_reply(
+        transaction, connection->GetHandle(), connection->GetNotificationChannel());
+    if (status != ZX_OK)
+        return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceConnect_reply failed: %d", status);
+
+    device->magma_system_device->StartConnectionThread(std::move(connection));
+    return ZX_OK;
+}
+
+static fuchsia_gpu_magma_Device_ops_t device_fidl_ops = {
+    .Query = device_fidl_query,
+    .Connect = device_fidl_connect,
+};
+
+static zx_status_t sysdrv_gpu_message(void* context, fidl_msg_t* message, fidl_txn_t* transaction)
+{
+    return fuchsia_gpu_magma_Device_dispatch(context, transaction, message, &device_fidl_ops);
+}
+
+static zx_status_t sysdrv_gpu_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+                                    void* out_buf, size_t out_len, size_t* out_actual)
 {
     sysdrv_device_t* device = get_device(ctx);
 
@@ -60,29 +111,6 @@ static zx_status_t sysdrv_common_ioctl(void* ctx, uint32_t op, const void* in_bu
     zx_status_t result = ZX_ERR_NOT_SUPPORTED;
 
     switch (op) {
-        case IOCTL_MAGMA_QUERY: {
-            DLOG("IOCTL_MAGMA_QUERY");
-            const uint64_t* param = reinterpret_cast<const uint64_t*>(in_buf);
-            if (!in_buf || in_len < sizeof(*param))
-                return DRET_MSG(ZX_ERR_INVALID_ARGS, "bad in_buf");
-            uint64_t* value_out = reinterpret_cast<uint64_t*>(out_buf);
-            if (!out_buf || out_len < sizeof(*value_out))
-                return DRET_MSG(ZX_ERR_INVALID_ARGS, "bad out_buf");
-            switch (*param) {
-                case MAGMA_QUERY_DEVICE_ID:
-                    *value_out = device->magma_system_device->GetDeviceId();
-                    break;
-                default:
-                    if (!device->magma_system_device->Query(*param, value_out))
-                        return DRET_MSG(ZX_ERR_INVALID_ARGS, "unhandled param 0x%" PRIx64,
-                                        *value_out);
-            }
-            DLOG("query param 0x%" PRIx64 " returning 0x%" PRIx64, *param, *value_out);
-            *out_actual = sizeof(*value_out);
-            result = ZX_OK;
-            break;
-        }
-
         case IOCTL_MAGMA_DUMP_STATUS: {
             DLOG("IOCTL_MAGMA_DUMP_STATUS");
             uint32_t dump_type = 0;
@@ -117,53 +145,6 @@ static zx_status_t sysdrv_common_ioctl(void* ctx, uint32_t op, const void* in_bu
     return result;
 }
 
-static zx_status_t sysdrv_gpu_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                    void* out_buf, size_t out_len, size_t* out_actual)
-{
-    DLOG("sysdrv_gpu_ioctl");
-    zx_status_t result = sysdrv_common_ioctl(ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
-    if (result == ZX_OK)
-        return ZX_OK;
-
-    if (result != ZX_ERR_NOT_SUPPORTED)
-        return result;
-
-    sysdrv_device_t* device = get_device(ctx);
-    DASSERT(device->magma_system_device);
-
-    switch (op) {
-        case IOCTL_MAGMA_CONNECT: {
-            DLOG("IOCTL_MAGMA_CONNECT");
-            auto request = reinterpret_cast<const magma_system_connection_request*>(in_buf);
-            if (!in_buf || in_len < sizeof(*request))
-                return DRET(ZX_ERR_INVALID_ARGS);
-
-            auto device_handle_out = reinterpret_cast<uint32_t*>(out_buf);
-            if (!out_buf || out_len < sizeof(*device_handle_out) * 2)
-                return DRET(ZX_ERR_INVALID_ARGS);
-
-            auto connection =
-                MagmaSystemDevice::Open(device->magma_system_device, request->client_id);
-            if (!connection)
-                return DRET(ZX_ERR_INVALID_ARGS);
-
-            device_handle_out[0] = connection->GetHandle();
-            device_handle_out[1] = connection->GetNotificationChannel();
-            *out_actual = sizeof(*device_handle_out) * 2;
-            result = ZX_OK;
-
-            device->magma_system_device->StartConnectionThread(std::move(connection));
-
-            break;
-        }
-
-        default:
-            DLOG("sysdrv_gpu_ioctl unhandled op 0x%x", op);
-    }
-
-    return result;
-}
-
 static void sysdrv_gpu_release(void* ctx)
 {
     // TODO(ZX-1170) - when testable:
@@ -174,6 +155,7 @@ static void sysdrv_gpu_release(void* ctx)
 static zx_protocol_device_t sysdrv_gpu_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = sysdrv_gpu_ioctl,
+    .message = sysdrv_gpu_message,
     .release = sysdrv_gpu_release,
 };
 

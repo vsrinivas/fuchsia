@@ -24,8 +24,12 @@ class PlatformIpcConnection : public magma_connection_t {
 public:
     virtual ~PlatformIpcConnection() {}
 
+    static bool GetHandles(int fd, uint32_t* device_handle_out,
+                           uint32_t* device_notification_handle_out);
+    static bool Query(int fd, uint64_t query_id, uint64_t* result_out);
+
     static std::unique_ptr<PlatformIpcConnection> Create(uint32_t device_handle,
-                                                         uint32_t device_return_handle);
+                                                         uint32_t device_notification_handle);
 
     // Imports a buffer for use in the system driver
     virtual magma_status_t ImportBuffer(PlatformBuffer* buffer) = 0;

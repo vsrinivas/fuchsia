@@ -10,23 +10,19 @@
 #include "platform_semaphore.h"
 #include "platform_thread.h"
 #include "platform_trace.h"
-#include "zircon/zircon_platform_ioctl.h"
 #include <chrono>
 #include <vector>
 
 magma_connection_t* magma_create_connection(int fd, uint32_t capabilities)
 {
-    magma_system_connection_request request;
-    request.client_id = magma::PlatformThreadId().id();
-
-    uint32_t device_handles[2];
-    int ioctl_ret = fdio_ioctl(fd, IOCTL_MAGMA_CONNECT, &request, sizeof(request), device_handles,
-                               sizeof(device_handles));
-    if (ioctl_ret < 0)
-        return DRETP(nullptr, "fdio_ioctl failed: %d", ioctl_ret);
-
     // Here we release ownership of the connection to the client
-    return magma::PlatformIpcConnection::Create(device_handles[0], device_handles[1]).release();
+    uint32_t device_handle;
+    uint32_t device_notification_handle;
+    if (!magma::PlatformIpcConnection::GetHandles(fd, &device_handle, &device_notification_handle))
+        return DRETP(nullptr, "couldn't get handles from fd");
+
+    return magma::PlatformIpcConnection::Create(device_handle, device_notification_handle)
+        .release();
 }
 
 void magma_release_connection(magma_connection_t* connection)
@@ -45,9 +41,8 @@ magma_status_t magma_query(int fd, uint64_t id, uint64_t* value_out)
     if (!value_out)
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "bad value_out address");
 
-    int ret = fdio_ioctl(fd, IOCTL_MAGMA_QUERY, &id, sizeof(uint64_t), value_out, sizeof(uint64_t));
-    if (ret < 0)
-        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "fdio_ioctl failed: %d", ret);
+    if (!magma::PlatformIpcConnection::Query(fd, id, value_out))
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "magma::PlatformIpcConnection::Query failed");
 
     DLOG("magma_query id %" PRIu64 " returned 0x%" PRIx64, id, *value_out);
     return MAGMA_STATUS_OK;

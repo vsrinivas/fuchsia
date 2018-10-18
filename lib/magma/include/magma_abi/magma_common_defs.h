@@ -85,10 +85,6 @@ struct magma_system_command_buffer {
     uint32_t signal_semaphore_count;
 };
 
-struct magma_system_connection_request {
-    uint64_t client_id;
-} __attribute__((packed));
-
 struct magma_system_inline_command_buffer {
     void* data;
     uint64_t size;

@@ -112,11 +112,12 @@ source_set("client_connection") {
   ]
 
   deps = [
-    "..:connection_header",
+    "$magma_build_root/fidl",
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
     "$zircon_build_root/public/lib/fdio",
     "$zircon_build_root/public/lib/zx",
+    "..:connection_header",
   ]
 }
 
@@ -128,11 +129,11 @@ source_set("connection") {
   ]
 
   deps = [
-    "..:connection_header",
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
     "$zircon_build_root/public/lib/async-loop-cpp",
     "$zircon_build_root/public/lib/zx",
+    "..:connection_header",
   ]
 }
 
