@@ -9,10 +9,4 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-# Architectures must define the arch_copy_from_user and
-# arch_copy_to_user functions to use the higher-level functionality
-# present in this module.
-
-MODULE_SRCS := $(LOCAL_DIR)/empty.c
-
 include make/module.mk
