@@ -188,14 +188,14 @@ void PageEvictionManagerImpl::TryEvictPage(
       });
 }
 
-void PageEvictionManagerImpl::OnPageOpened(fxl::StringView ledger_name,
-                                           storage::PageIdView page_id) {
+void PageEvictionManagerImpl::MarkPageOpened(fxl::StringView ledger_name,
+                                             storage::PageIdView page_id) {
   coroutine_manager_.StartCoroutine([this, ledger_name = ledger_name.ToString(),
                                      page_id = page_id.ToString()](
                                         coroutine::CoroutineHandler* handler) {
     ExpiringToken token = NewExpiringToken();
     Status status = initialization_completer_.WaitUntilDone(handler);
-    if (LogOnInitializationError("OnPageOpened", status)) {
+    if (LogOnInitializationError("MarkPageOpened", status)) {
       return;
     }
     status = db_.MarkPageOpened(handler, ledger_name, page_id);
@@ -203,14 +203,14 @@ void PageEvictionManagerImpl::OnPageOpened(fxl::StringView ledger_name,
   });
 }
 
-void PageEvictionManagerImpl::OnPageClosed(fxl::StringView ledger_name,
-                                           storage::PageIdView page_id) {
+void PageEvictionManagerImpl::MarkPageClosed(fxl::StringView ledger_name,
+                                             storage::PageIdView page_id) {
   coroutine_manager_.StartCoroutine([this, ledger_name = ledger_name.ToString(),
                                      page_id = page_id.ToString()](
                                         coroutine::CoroutineHandler* handler) {
     ExpiringToken token = NewExpiringToken();
     Status status = initialization_completer_.WaitUntilDone(handler);
-    if (LogOnInitializationError("OnPageClosed", status)) {
+    if (LogOnInitializationError("MarkPageClosed", status)) {
       return;
     }
     status = db_.MarkPageClosed(handler, ledger_name, page_id);

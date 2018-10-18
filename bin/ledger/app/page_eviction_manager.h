@@ -36,8 +36,7 @@ namespace ledger {
 //
 // If neither of these conditions is fulfilled, the page will fail to be
 // evicted.
-class PageEvictionManager : public PageUsageListener,
-                            public PageEvictionDelegate {
+class PageEvictionManager : public PageEvictionDelegate {
  public:
   // A Delegate, providing the necessary functionality to allow
   // PageEvictionManager to perform storage clean up operations.
@@ -83,11 +82,13 @@ class PageEvictionManager : public PageUsageListener,
   virtual void TryEvictPages(PageEvictionPolicy* policy,
                              fit::function<void(Status)> callback) = 0;
 
-  // PageUsageListener:
-  void OnPageOpened(fxl::StringView ledger_name,
-                    storage::PageIdView page_id) override = 0;
-  void OnPageClosed(fxl::StringView ledger_name,
-                    storage::PageIdView page_id) override = 0;
+  // Marks the page as open.
+  virtual void MarkPageOpened(fxl::StringView ledger_name,
+                              storage::PageIdView page_id) = 0;
+
+  // Marks the page as closed.
+  virtual void MarkPageClosed(fxl::StringView ledger_name,
+                              storage::PageIdView page_id) = 0;
 
  private:
   // PageEvictionDelegate:

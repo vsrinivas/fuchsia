@@ -35,12 +35,16 @@ void DiskCleanupManagerImpl::TryCleanUp(fit::function<void(Status)> callback) {
 
 void DiskCleanupManagerImpl::OnPageOpened(fxl::StringView ledger_name,
                                           storage::PageIdView page_id) {
-  page_eviction_manager_.OnPageOpened(ledger_name, page_id);
+  page_eviction_manager_.MarkPageOpened(ledger_name, page_id);
 }
 
 void DiskCleanupManagerImpl::OnPageClosed(fxl::StringView ledger_name,
                                           storage::PageIdView page_id) {
-  page_eviction_manager_.OnPageClosed(ledger_name, page_id);
+  page_eviction_manager_.MarkPageClosed(ledger_name, page_id);
+}
+
+void DiskCleanupManagerImpl::OnPageUnused(fxl::StringView ledger_name,
+                                          storage::PageIdView page_id) {
   page_eviction_manager_.TryEvictPage(
       ledger_name, page_id, PageEvictionCondition::IF_EMPTY,
       [ledger_name = ledger_name.ToString(), page_id = page_id.ToString()](

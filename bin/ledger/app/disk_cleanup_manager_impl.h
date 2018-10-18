@@ -33,6 +33,8 @@ class DiskCleanupManagerImpl : public DiskCleanupManager {
                     storage::PageIdView page_id) override;
   void OnPageClosed(fxl::StringView ledger_name,
                     storage::PageIdView page_id) override;
+  void OnPageUnused(fxl::StringView ledger_name,
+                    storage::PageIdView page_id) override;
 
  private:
   PageEvictionManagerImpl page_eviction_manager_;

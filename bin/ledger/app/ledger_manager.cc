@@ -72,7 +72,13 @@ class PageConnectionNotifier {
   const storage::PageId page_id_;
   PageUsageListener* page_usage_listener_;
 
+  // Stores whether the page was opened by an external request. Used to
+  // determine whether to send the OnPageUnused notifications when this is
+  // empty.
+  bool must_notify_on_page_unused_ = false;
+  // Stores whether the page is opened by an external request.
   bool has_external_requests_ = false;
+  // Stores the number of active internal requests.
   ssize_t internal_request_count_ = 0;
 
   fit::closure on_empty_callback_;
@@ -93,14 +99,17 @@ void PageConnectionNotifier::RegisterExternalRequest() {
   if (has_external_requests_) {
     return;
   }
+  must_notify_on_page_unused_ = true;
   has_external_requests_ = true;
   page_usage_listener_->OnPageOpened(ledger_name_, page_id_);
 }
 
 void PageConnectionNotifier::UnregisterExternalRequests() {
-  page_usage_listener_->OnPageClosed(ledger_name_, page_id_);
-  has_external_requests_ = false;
-  CheckEmpty();
+  if (has_external_requests_) {
+    page_usage_listener_->OnPageClosed(ledger_name_, page_id_);
+    has_external_requests_ = false;
+    CheckEmpty();
+  }
 }
 
 void PageConnectionNotifier::RegisterInternalRequest() {
@@ -122,7 +131,21 @@ bool PageConnectionNotifier::IsEmpty() {
 }
 
 void PageConnectionNotifier::CheckEmpty() {
-  if (on_empty_callback_ && IsEmpty()) {
+  if (!IsEmpty()) {
+    return;
+  }
+  if (must_notify_on_page_unused_) {
+    // We must set |must_notify_on_page_unused_| to false before calling
+    // |OnPageUsed|: While |OnPageUsed| is executed it creates an internal
+    // request to the PageManagerContainer, hence triggering a call to
+    // |UnregisterInternalRequest|. Since that will be the last active request,
+    // it will then trigger |CheckEmpty|, reaching again this part of the code.
+    // Setting |must_notify_on_page_unused_| to false prevents this infinite
+    // loop.
+    must_notify_on_page_unused_ = false;
+    page_usage_listener_->OnPageUnused(ledger_name_, page_id_);
+  }
+  if (on_empty_callback_) {
     on_empty_callback_();
   }
 }

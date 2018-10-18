@@ -38,6 +38,8 @@ class DiskCleanupManager : public PageUsageListener {
                     storage::PageIdView page_id) override = 0;
   void OnPageClosed(fxl::StringView ledger_name,
                     storage::PageIdView page_id) override = 0;
+  void OnPageUnused(fxl::StringView ledger_name,
+                    storage::PageIdView page_id) override = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(DiskCleanupManager);

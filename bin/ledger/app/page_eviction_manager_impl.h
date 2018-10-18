@@ -46,11 +46,11 @@ class PageEvictionManagerImpl : public PageEvictionManager {
       PageEvictionCondition condition,
       fit::function<void(Status, PageWasEvicted)> callback) override;
 
-  void OnPageOpened(fxl::StringView ledger_name,
-                    storage::PageIdView page_id) override;
+  void MarkPageOpened(fxl::StringView ledger_name,
+                      storage::PageIdView page_id) override;
 
-  void OnPageClosed(fxl::StringView ledger_name,
-                    storage::PageIdView page_id) override;
+  void MarkPageClosed(fxl::StringView ledger_name,
+                      storage::PageIdView page_id) override;
 
  private:
   // A token that performs a given action on destruction. ExpiringToken objects

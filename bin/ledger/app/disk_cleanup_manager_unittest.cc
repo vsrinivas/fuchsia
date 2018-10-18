@@ -68,19 +68,19 @@ class DiskCleanupManagerTest : public TestWithEnvironment {
   FXL_DISALLOW_COPY_AND_ASSIGN(DiskCleanupManagerTest);
 };
 
-TEST_F(DiskCleanupManagerTest, DontEvictNonEmptyPagesOnPageClosed) {
+TEST_F(DiskCleanupManagerTest, DontEvictNonEmptyPagesOnPageUnused) {
   std::string ledger_name = "ledger";
   storage::PageId page = std::string(::fuchsia::ledger::kPageIdSize, '1');
 
   // The page cannot be evicted if its not empty and offline.
   disk_cleanup_manager_.OnPageOpened(ledger_name, page);
   delegate_.closed_offline_empty = PagePredicateResult::NO;
-  disk_cleanup_manager_.OnPageClosed(ledger_name, page);
+  disk_cleanup_manager_.OnPageUnused(ledger_name, page);
   RunLoopUntilIdle();
   EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 }
 
-TEST_F(DiskCleanupManagerTest, DontEvictUnknownEmptyPagesOnPageClosed) {
+TEST_F(DiskCleanupManagerTest, DontEvictUnknownEmptyPagesOnPageUnused) {
   std::string ledger_name = "ledger";
   storage::PageId page = std::string(::fuchsia::ledger::kPageIdSize, '1');
 
@@ -88,21 +88,32 @@ TEST_F(DiskCleanupManagerTest, DontEvictUnknownEmptyPagesOnPageClosed) {
   // offline.
   disk_cleanup_manager_.OnPageOpened(ledger_name, page);
   delegate_.closed_offline_empty = PagePredicateResult::PAGE_OPENED;
-  disk_cleanup_manager_.OnPageClosed(ledger_name, page);
+  disk_cleanup_manager_.OnPageUnused(ledger_name, page);
   RunLoopUntilIdle();
   EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 }
 
-TEST_F(DiskCleanupManagerTest, EvictEmptyOfflinePagesOnPageClosed) {
+TEST_F(DiskCleanupManagerTest, EvictEmptyOfflinePagesOnPageUnused) {
   std::string ledger_name = "ledger";
   storage::PageId page = std::string(::fuchsia::ledger::kPageIdSize, '1');
 
   // The page should be evicted is it is empty and offline.
   disk_cleanup_manager_.OnPageOpened(ledger_name, page);
   delegate_.closed_offline_empty = PagePredicateResult::YES;
-  disk_cleanup_manager_.OnPageClosed(ledger_name, page);
+  disk_cleanup_manager_.OnPageUnused(ledger_name, page);
   RunLoopUntilIdle();
   EXPECT_THAT(delegate_.deleted_pages, ElementsAre(page));
+}
+
+TEST_F(DiskCleanupManagerTest, DontEvictPagesOnPageClosed) {
+  std::string ledger_name = "ledger";
+  storage::PageId page = std::string(::fuchsia::ledger::kPageIdSize, '1');
+
+  disk_cleanup_manager_.OnPageOpened(ledger_name, page);
+  delegate_.closed_offline_empty = PagePredicateResult::YES;
+  disk_cleanup_manager_.OnPageClosed(ledger_name, page);
+  RunLoopUntilIdle();
+  EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 }
 
 }  // namespace

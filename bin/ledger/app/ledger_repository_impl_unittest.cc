@@ -30,11 +30,14 @@ class FakeDiskCleanupManager : public DiskCleanupManager {
 
   bool IsEmpty() override { return true; }
 
-  void OnPageOpened(fxl::StringView ledger_name,
-                    storage::PageIdView page_id) override {}
+  void OnPageOpened(fxl::StringView /*ledger_name*/,
+                    storage::PageIdView /*page_id*/) override {}
 
-  void OnPageClosed(fxl::StringView ledger_name,
-                    storage::PageIdView page_id) override {}
+  void OnPageClosed(fxl::StringView /*ledger_name*/,
+                    storage::PageIdView /*page_id*/) override {}
+
+  void OnPageUnused(fxl::StringView /*ledger_name*/,
+                    storage::PageIdView /*page_id*/) override {}
 
   void TryCleanUp(fit::function<void(Status)> callback) override {
     // Do not call the callback directly.

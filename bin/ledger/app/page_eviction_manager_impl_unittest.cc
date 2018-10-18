@@ -97,10 +97,10 @@ TEST_F(PageEvictionManagerTest, AtLeastOneEvictionWhenPossible) {
 
   delegate_.closed_and_synced = PagePredicateResult::YES;
 
-  page_eviction_manager_.OnPageOpened(ledger_name, page1);
-  page_eviction_manager_.OnPageClosed(ledger_name, page1);
-  page_eviction_manager_.OnPageOpened(ledger_name, page2);
-  page_eviction_manager_.OnPageClosed(ledger_name, page2);
+  page_eviction_manager_.MarkPageOpened(ledger_name, page1);
+  page_eviction_manager_.MarkPageClosed(ledger_name, page1);
+  page_eviction_manager_.MarkPageOpened(ledger_name, page2);
+  page_eviction_manager_.MarkPageClosed(ledger_name, page2);
   RunLoopUntilIdle();
 
   bool called;
@@ -123,10 +123,10 @@ TEST_F(PageEvictionManagerTest, DontEvictUnsyncedNotEmptyPages) {
   delegate_.closed_and_synced = PagePredicateResult::NO;
   delegate_.closed_and_empty = PagePredicateResult::NO;
 
-  page_eviction_manager_.OnPageOpened(ledger_name, page1);
-  page_eviction_manager_.OnPageClosed(ledger_name, page1);
-  page_eviction_manager_.OnPageOpened(ledger_name, page2);
-  page_eviction_manager_.OnPageClosed(ledger_name, page2);
+  page_eviction_manager_.MarkPageOpened(ledger_name, page1);
+  page_eviction_manager_.MarkPageClosed(ledger_name, page1);
+  page_eviction_manager_.MarkPageOpened(ledger_name, page2);
+  page_eviction_manager_.MarkPageClosed(ledger_name, page2);
   RunLoopUntilIdle();
 
   bool called;
@@ -147,7 +147,7 @@ TEST_F(PageEvictionManagerTest, DontEvictOpenPages) {
 
   delegate_.closed_and_synced = PagePredicateResult::YES;
 
-  page_eviction_manager_.OnPageOpened(ledger_name, page);
+  page_eviction_manager_.MarkPageOpened(ledger_name, page);
   RunLoopUntilIdle();
 
   bool called;
@@ -162,7 +162,7 @@ TEST_F(PageEvictionManagerTest, DontEvictOpenPages) {
   EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 
   // Close the page. It can now be evicted.
-  page_eviction_manager_.OnPageClosed(ledger_name, page);
+  page_eviction_manager_.MarkPageClosed(ledger_name, page);
   RunLoopUntilIdle();
 
   page_eviction_manager_.TryEvictPages(
@@ -181,8 +181,8 @@ TEST_F(PageEvictionManagerTest, DontEvictAnEvictedPage) {
 
   delegate_.closed_and_synced = PagePredicateResult::YES;
 
-  page_eviction_manager_.OnPageOpened(ledger_name, page);
-  page_eviction_manager_.OnPageClosed(ledger_name, page);
+  page_eviction_manager_.MarkPageOpened(ledger_name, page);
+  page_eviction_manager_.MarkPageClosed(ledger_name, page);
   RunLoopUntilIdle();
 
   bool called;
@@ -213,8 +213,8 @@ TEST_F(PageEvictionManagerTest, PageNotFoundIsNotAnError) {
 
   delegate_.closed_and_synced = PagePredicateResult::YES;
 
-  page_eviction_manager_.OnPageOpened(ledger_name, page);
-  page_eviction_manager_.OnPageClosed(ledger_name, page);
+  page_eviction_manager_.MarkPageOpened(ledger_name, page);
+  page_eviction_manager_.MarkPageClosed(ledger_name, page);
   RunLoopUntilIdle();
 
   delegate_.page_closed_and_synced_status = Status::PAGE_NOT_FOUND;
@@ -239,10 +239,10 @@ TEST_F(PageEvictionManagerTest, EvictUnsyncedButEmptyPages) {
   delegate_.closed_and_synced = PagePredicateResult::NO;
   delegate_.closed_and_empty = PagePredicateResult::YES;
 
-  page_eviction_manager_.OnPageOpened(ledger_name, page1);
-  page_eviction_manager_.OnPageClosed(ledger_name, page1);
-  page_eviction_manager_.OnPageOpened(ledger_name, page2);
-  page_eviction_manager_.OnPageClosed(ledger_name, page2);
+  page_eviction_manager_.MarkPageOpened(ledger_name, page1);
+  page_eviction_manager_.MarkPageClosed(ledger_name, page1);
+  page_eviction_manager_.MarkPageOpened(ledger_name, page2);
+  page_eviction_manager_.MarkPageClosed(ledger_name, page2);
   RunLoopUntilIdle();
 
   bool called;
@@ -265,10 +265,10 @@ TEST_F(PageEvictionManagerTest, EvictSyncedAndNotEmptyPages) {
   delegate_.closed_and_synced = PagePredicateResult::YES;
   delegate_.closed_and_empty = PagePredicateResult::NO;
 
-  page_eviction_manager_.OnPageOpened(ledger_name, page1);
-  page_eviction_manager_.OnPageClosed(ledger_name, page1);
-  page_eviction_manager_.OnPageOpened(ledger_name, page2);
-  page_eviction_manager_.OnPageClosed(ledger_name, page2);
+  page_eviction_manager_.MarkPageOpened(ledger_name, page1);
+  page_eviction_manager_.MarkPageClosed(ledger_name, page1);
+  page_eviction_manager_.MarkPageOpened(ledger_name, page2);
+  page_eviction_manager_.MarkPageClosed(ledger_name, page2);
   RunLoopUntilIdle();
 
   bool called;
@@ -294,10 +294,10 @@ TEST_F(PageEvictionManagerTest, DontEvictIfPageWasOpenedDuringQuery) {
   delegate_.closed_and_synced = PagePredicateResult::YES;
   delegate_.closed_and_empty = PagePredicateResult::PAGE_OPENED;
 
-  page_eviction_manager_.OnPageOpened(ledger_name, page1);
-  page_eviction_manager_.OnPageClosed(ledger_name, page1);
-  page_eviction_manager_.OnPageOpened(ledger_name, page2);
-  page_eviction_manager_.OnPageClosed(ledger_name, page2);
+  page_eviction_manager_.MarkPageOpened(ledger_name, page1);
+  page_eviction_manager_.MarkPageClosed(ledger_name, page1);
+  page_eviction_manager_.MarkPageOpened(ledger_name, page2);
+  page_eviction_manager_.MarkPageClosed(ledger_name, page2);
   RunLoopUntilIdle();
 
   bool called;
@@ -317,8 +317,8 @@ TEST_F(PageEvictionManagerTest, DontEvictIfPageWasOpenedDuringQuery) {
   delegate_.closed_and_synced = PagePredicateResult::PAGE_OPENED;
   delegate_.closed_and_empty = PagePredicateResult::YES;
 
-  page_eviction_manager_.OnPageOpened(ledger_name, page2);
-  page_eviction_manager_.OnPageClosed(ledger_name, page2);
+  page_eviction_manager_.MarkPageOpened(ledger_name, page2);
+  page_eviction_manager_.MarkPageClosed(ledger_name, page2);
   RunLoopUntilIdle();
 
   page_eviction_manager_.TryEvictPages(
@@ -344,7 +344,7 @@ TEST_F(PageEvictionManagerTest, IsEmpty) {
   // PageEvictionManagerImpl should be empty if there is no pending operation
   // on: OnPageOpened, OnPageClosed, or TryEvictPages.
   on_empty_called = false;
-  page_eviction_manager_.OnPageOpened(ledger_name, page);
+  page_eviction_manager_.MarkPageOpened(ledger_name, page);
   EXPECT_FALSE(page_eviction_manager_.IsEmpty());
   EXPECT_FALSE(on_empty_called);
   RunLoopUntilIdle();
@@ -352,7 +352,7 @@ TEST_F(PageEvictionManagerTest, IsEmpty) {
   EXPECT_TRUE(on_empty_called);
 
   on_empty_called = false;
-  page_eviction_manager_.OnPageClosed(ledger_name, page);
+  page_eviction_manager_.MarkPageClosed(ledger_name, page);
   EXPECT_FALSE(page_eviction_manager_.IsEmpty());
   EXPECT_FALSE(on_empty_called);
   RunLoopUntilIdle();

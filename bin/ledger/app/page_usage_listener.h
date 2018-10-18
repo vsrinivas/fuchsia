@@ -22,11 +22,18 @@ class PageUsageListener {
   virtual void OnPageOpened(fxl::StringView ledger_name,
                             storage::PageIdView page_id) = 0;
 
-  // Called when the connection to a page closes. In case of concurrent
-  // connections to the same page, this should only be called once, when the
-  // last connection closes.
+  // Called when all external connections to a page are closed. In case of
+  // concurrent connections to the same page, this should only be called once,
+  // when the last connection closes.
   // TODO(nellyv): Add argument on whether the page is synced and and cache it.
   virtual void OnPageClosed(fxl::StringView ledger_name,
+                            storage::PageIdView page_id) = 0;
+
+  // Called when there are no longer any active connections to a page. This
+  // includes both internal and external connections. Note that if the last
+  // active connection to a page is an external one, both |OnPageClosed| and
+  // then |OnPageUnused| will be called.
+  virtual void OnPageUnused(fxl::StringView ledger_name,
                             storage::PageIdView page_id) = 0;
 
  private:
