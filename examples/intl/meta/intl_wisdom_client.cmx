@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/intl_wisdom_client"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

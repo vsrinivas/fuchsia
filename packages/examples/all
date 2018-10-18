@@ -8,6 +8,7 @@
         "garnet/packages/examples/eth-rs",
         "garnet/packages/examples/fidl",
         "garnet/packages/examples/http",
+        "garnet/packages/examples/intl",
         "garnet/packages/examples/media",
         "garnet/packages/examples/mediaplayer",
         "garnet/packages/examples/netconnector",

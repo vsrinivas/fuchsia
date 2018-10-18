@@ -1,0 +1,82 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.intl;
+
+/// Typed identifier for a single Locale, which is a set of internationalization-related properties.
+struct LocaleId {
+    /// Unicode BCP-47 Locale Identifier
+    /// (http://www.unicode.org/reports/tr35/#BCP_47_Conformance).
+    ///
+    /// Must be canonicalized and well-formed. This field should not be populated from arbitrary
+    /// user- or third-party input, but instead generated programmatically.
+    ///
+    /// Includes language, region, script, and variant, plus Unicode extensions (under the "u"
+    /// singleton). Other extensions are allowed but ignored.
+    ///
+    /// Examples:
+    ///   "en-US"
+    ///     American English
+    ///   "fr-u-hc-h12"
+    ///     French, with 12-hour clock
+    ///   "ar-EG-u-fw-mon-nu-latn"
+    ///     Egyptian Arabic with "Latin" numerals and first day of week on Monday
+    string id;
+};
+
+/// Typed identifier for a single calendar system. Currently consists only of a calendar ID.
+struct CalendarId {
+    /// Unicode BCP-47 Locale Identifier with an undefined language tag and a single extension
+    /// specifying the calendar ID (from
+    /// https://unicode.org/repos/cldr/trunk/common/bcp47/calendar.xml).
+    ///
+    /// Examples:
+    ///   "und-u-ca-gregory"
+    ///   "und-u-ca-islamic"
+    string id;
+};
+
+/// Typed identifier for a timezone.
+struct TimeZoneId {
+    /// Timezone ID from tzdata, e.g. "America/New_York". See https://www.iana.org/time-zones.
+    string id;
+};
+
+/// Selection of temperature unit.
+enum TemperatureUnit {
+    CELSIUS = 0;
+    FAHRENHEIT = 1;
+};
+
+/// A collection of ranked internationalization properties.
+///
+/// There is no implied origin for this information; it might come from a user account, device
+/// settings, a synthesis of user settings and app-specific overrides, or anywhere else.
+///
+/// Language-independent properties that are supported by Unicode BCP-47 Locale IDs (e.g.
+/// first-day-of-week, timezone) are denormalized into the locale IDs in |locales|.
+struct Profile {
+    /// Ranked list of locales (in descending order).
+    vector<LocaleId> locales;
+
+    /// Ranked list of calendars (in descending order). The first entry is the primary calendar, and
+    /// will be equal to the calendar indicated in |locales|.
+    /// The list is intended for use by applications that can display multiple calendar systems.
+    vector<CalendarId> calendars;
+
+    /// Ranked list of timezones (in descending order). The first entry is the primary timezone,
+    //// which should be used by default for formatting dates and times; it will be equal to the
+    /// calendar indicated in |locales|.
+    /// The list is intended for use by applications that can display multiple timezones, e.g.
+    /// a world clock.
+    vector<TimeZoneId> time_zones;
+
+    /// Selected temperature unit.
+    TemperatureUnit temperature_unit;
+
+    // TODO(CF-168): Other properties that don't fit into locale IDs. Examples:
+    // - User date format overrides, like d/mmm/y
+    // - User currency overrides
+    // - User number overrides (grouping, decimal point)
+};
