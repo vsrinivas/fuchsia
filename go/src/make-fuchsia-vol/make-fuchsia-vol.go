@@ -54,6 +54,7 @@ var (
 
 	efiSize = flag.Int64("efi-size", 63*1024*1024, "efi partition size in bytes")
 	fvmSize = flag.Int64("fvm-size", 0, "fvm partition size in bytes (0 means `fill`)")
+	resize  = flag.Int64("resize", 0, "create or resize the image to this size in bytes")
 )
 
 // imageManifests contains a list of known manifests produced by the build that contains build-dir relative paths to images.
@@ -132,14 +133,26 @@ func main() {
 		needZirconBuildDir()
 		*bootloader = filepath.Join(*zirconBuildDir, "bootloader/bootx64.efi")
 	}
+	if _, err := os.Stat(*bootloader); err != nil {
+		log.Fatalf("cannot read %q: %s", *bootloader, err)
+	}
+
 	if *zbi == "" {
 		needZirconBuildDir()
 		*zbi = filepath.Join(*fuchsiaBuildDir, getImage("zircon-a"))
 	}
+	if _, err := os.Stat(*zbi); err != nil {
+		log.Fatalf("cannot read %q: %s", *zbi, err)
+	}
+
 	if *zedboot == "" {
 		needFuchsiaBuildDir()
 		*zedboot = filepath.Join(*fuchsiaBuildDir, getImage("zircon-r"))
 	}
+	if _, err := os.Stat(*zedboot); err != nil {
+		log.Fatalf("cannot read %q: %s", *zedboot, err)
+	}
+
 	if *cmdline == "" {
 		needFuchsiaBuildDir()
 		p := filepath.Join(*fuchsiaBuildDir, "cmdline")
@@ -193,9 +206,31 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for _, path := range []string{*zbi, disk} {
-		if _, err := os.Stat(path); err != nil {
-			log.Fatalf("cannot read %q: %s\n", path, err)
+	if *resize != 0 {
+		s, err := os.Stat(disk)
+		if err == nil {
+			if s.Size() != *resize {
+				log.Printf("Resizing %q from %d to %d", disk, s.Size(), *resize)
+				if err := os.Truncate(disk, *resize); err != nil {
+					log.Fatalf("failed to truncate %q to %d: %s", disk, *resize, err)
+				}
+			}
+		} else if os.IsNotExist(err) {
+			log.Printf("Creating %q", disk)
+			f, err := os.Create(disk)
+			if err != nil {
+				log.Fatalf("failed to create %q: %s", disk, err)
+			}
+			if err := f.Truncate(*resize); err != nil {
+				log.Fatalf("failed to truncate %q to %d: %s", disk, *resize, err)
+			}
+			f.Close()
+		} else {
+			log.Fatal(err)
+		}
+	} else {
+		if _, err := os.Stat(disk); err != nil {
+			log.Fatalf("cannot read %q: %s\n", disk, err)
 		}
 	}
 
