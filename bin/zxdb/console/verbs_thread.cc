@@ -558,6 +558,9 @@ Err DoPrint(ConsoleContext* context, const Command& cmd) {
     expr += cur;
   }
 
+  if (expr.empty())
+    return Err("Usage: print <expression>\nSee \"help print\" for more.");
+
   FormatValueOptions options = GetFormatValueOptions(cmd);
   auto data_provider = cmd.frame()->GetSymbolDataProvider();
 

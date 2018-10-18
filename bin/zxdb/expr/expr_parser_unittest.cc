@@ -50,6 +50,12 @@ class ExprParserTest : public testing::Test {
   std::unique_ptr<ExprParser> parser_;
 };
 
+TEST_F(ExprParserTest, Empty) {
+  auto result = Parse("");
+  ASSERT_FALSE(result);
+  EXPECT_EQ("No input to parse.", parser().err().msg());
+}
+
 TEST_F(ExprParserTest, Identifier) {
   auto result = Parse("name");
   ASSERT_TRUE(result);

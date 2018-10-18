@@ -101,6 +101,11 @@ fxl::RefPtr<ExprNode> ExprParser::Parse() {
     SetError(cur_token(), "Unexpected input, did you forget an operator?");
     return fxl::RefPtr<ExprNode>();
   }
+
+  if (!result && !has_error()) {
+    SetError(ExprToken(), "No input to parse.");
+    return fxl::RefPtr<ExprNode>();
+  }
   return result;
 }
 
