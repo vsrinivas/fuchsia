@@ -20,11 +20,11 @@ import (
 // TODO: make these tests table-driven.
 
 var (
-	testLanNet     = util.Parse("192.168.42.0")
-	testLanNetMask = util.Parse("255.255.255.0")
+	testLanNet                       = util.Parse("192.168.42.0")
+	testLanNetMask tcpip.AddressMask = "\xff\xff\xff\x00"
 
-	testWanNet     = util.Parse("10.0.0.0")
-	testWanNetMask = util.Parse("255.0.0.0")
+	testWanNet                       = util.Parse("10.0.0.0")
+	testWanNetMask tcpip.AddressMask = "\xff\x00\x00\x00"
 
 	testLanNICAddr     = util.Parse("192.168.42.10")
 	testRouterNICAddr1 = util.Parse("192.168.42.1")

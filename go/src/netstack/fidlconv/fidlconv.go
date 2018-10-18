@@ -7,7 +7,6 @@ package fidlconv
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"math/big"
 
 	"netstack/util"
@@ -77,19 +76,6 @@ func ToNetAddress(addr tcpip.Address) netstack.NetAddress {
 	return out
 }
 
-func ToNetSubnets(addrs []tcpip.Address) ([]net.Subnet, error) {
-	out := make([]net.Subnet, len(addrs))
-	total := 0
-	for i := range addrs {
-		if len(addrs[i]) != 4 && len(addrs[i]) != 16 {
-			return nil, fmt.Errorf("Invalid subnet: %v", addrs[i])
-		}
-		out[total] = net.Subnet{Addr: ToNetIpAddress(addrs[i]), PrefixLen: GetPrefixLen(addrs[i])}
-		total += 1
-	}
-	return out[:total], nil
-}
-
 func ToTCPIPSubnet(sn net.Subnet) (tcpip.Subnet, error) {
 	// Use ToTCPIPAddress to abstract the IPv4 vs IPv6 behavior.
 	a := []byte(ToTCPIPAddress(sn.Addr))
@@ -100,7 +86,7 @@ func ToTCPIPSubnet(sn net.Subnet) (tcpip.Subnet, error) {
 	return tcpip.NewSubnet(tcpip.Address(a), m)
 }
 
-func GetPrefixLen(mask tcpip.Address) uint8 {
+func GetPrefixLen(mask tcpip.AddressMask) uint8 {
 	prefixLen := uint8(0)
 	switch len(mask) {
 	case 4:
@@ -159,7 +145,7 @@ func ForwardingEntryToTcpipRoute(forwardingEntry stack.ForwardingEntry) tcpip.Ro
 	dest := ToTCPIPAddress(forwardingEntry.Subnet.Addr)
 	tcpipRoute := tcpip.Route{
 		Destination: dest,
-		Mask:        tcpip.Address(util.CIDRMask(int(forwardingEntry.Subnet.PrefixLen), len(dest)*8)),
+		Mask:        util.CIDRMask(int(forwardingEntry.Subnet.PrefixLen), len(dest)*8),
 	}
 	switch forwardingEntry.Destination.Which() {
 	case stack.ForwardingDestinationDeviceId:

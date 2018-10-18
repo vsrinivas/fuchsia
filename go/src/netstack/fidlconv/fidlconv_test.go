@@ -82,50 +82,6 @@ func TestToFIDLIPAddressInvalidLength(t *testing.T) {
 	t.Errorf("Expected to fail on invalid address length")
 }
 
-func TestToSubnets(t *testing.T) {
-	from := []tcpip.Address{
-		util.Parse("255.255.255.0"),
-		util.Parse("ffff:ffff:ffff:ffff::"),
-	}
-	to, err := ToNetSubnets(from)
-	if err != nil {
-		t.Fatalf("Error in ToNetSubnets: %v", err)
-	}
-
-	ipv4Subnet := net.Subnet{}
-	ipv4Subnet.Addr.SetIpv4(net.IPv4Address{Addr: [4]uint8{255, 255, 255, 0}})
-	ipv4Subnet.PrefixLen = 24
-
-	ipv6Subnet := net.Subnet{}
-	ipv6Subnet.Addr.SetIpv6(net.IPv6Address{Addr: [16]uint8{255, 255, 255, 255, 255, 255, 255, 255,
-		0, 0, 0, 0, 0, 0, 0, 0}})
-	ipv6Subnet.PrefixLen = 64
-
-	if len(to) != 2 {
-		t.Fatalf("Expected 2 subnets, got: %v\n  %v", len(to), to)
-	}
-	if to[0] != ipv4Subnet {
-		t.Errorf("Expected:\n %v\nActual: %v", ipv4Subnet, to[0])
-	}
-	if to[1] != ipv6Subnet {
-		t.Errorf("Expected:\n %v\nActual: %v", ipv6Subnet, to[1])
-	}
-}
-
-func TestToSubnetsInvalid(t *testing.T) {
-	from := []tcpip.Address{
-		util.Parse("255.255.255.0"),
-		tcpip.Address(""),
-	}
-	to, err := ToNetSubnets(from)
-	if to != nil {
-		t.Errorf("Expected ToNetSubnets to return a nil array of subnets")
-	}
-	if err == nil {
-		t.Fatalf("Expected ToNetSubnets to fail with an invalid address")
-	}
-}
-
 func TestToTCPIPSubnet(t *testing.T) {
 	cases := []struct {
 		addr     [4]uint8
@@ -160,16 +116,16 @@ func TestToTCPIPSubnet(t *testing.T) {
 
 func TestPrefixLenIPv4(t *testing.T) {
 	cases := []struct {
-		mask   tcpip.Address
+		mask   tcpip.AddressMask
 		prefix uint8
 	}{
-		{util.Parse("255.255.255.255"), 32},
-		{util.Parse("255.255.255.254"), 31},
-		{util.Parse("255.255.255.128"), 25},
-		{util.Parse("255.255.255.0"), 24},
-		{util.Parse("255.0.0.0"), 8},
-		{util.Parse("128.0.0.0"), 1},
-		{util.Parse("0.0.0.0"), 0},
+		{tcpip.AddressMask(util.Parse("255.255.255.255")), 32},
+		{tcpip.AddressMask(util.Parse("255.255.255.254")), 31},
+		{tcpip.AddressMask(util.Parse("255.255.255.128")), 25},
+		{tcpip.AddressMask(util.Parse("255.255.255.0")), 24},
+		{tcpip.AddressMask(util.Parse("255.0.0.0")), 8},
+		{tcpip.AddressMask(util.Parse("128.0.0.0")), 1},
+		{tcpip.AddressMask(util.Parse("0.0.0.0")), 0},
 	}
 	for _, testCase := range cases {
 		prefixLen := GetPrefixLen(testCase.mask)
@@ -181,15 +137,15 @@ func TestPrefixLenIPv4(t *testing.T) {
 
 func TestPrefixLenIPv6(t *testing.T) {
 	cases := []struct {
-		mask   tcpip.Address
+		mask   tcpip.AddressMask
 		prefix uint8
 	}{
-		{util.Parse("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"), 128},
-		{util.Parse("ffff:ffff:ffff:ffff:ffff:ffff:ffff:8000"), 113},
-		{util.Parse("ffff:ffff:ffff:ffff:ffff:ffff:ffff::"), 112},
-		{util.Parse("ffff:ffff:ffff:ffff:ffff:ffff:fffe::"), 111},
-		{util.Parse("8000::"), 1},
-		{util.Parse("::"), 0},
+		{tcpip.AddressMask(util.Parse("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff")), 128},
+		{tcpip.AddressMask(util.Parse("ffff:ffff:ffff:ffff:ffff:ffff:ffff:8000")), 113},
+		{tcpip.AddressMask(util.Parse("ffff:ffff:ffff:ffff:ffff:ffff:ffff::")), 112},
+		{tcpip.AddressMask(util.Parse("ffff:ffff:ffff:ffff:ffff:ffff:fffe::")), 111},
+		{tcpip.AddressMask(util.Parse("8000::")), 1},
+		{tcpip.AddressMask(util.Parse("::")), 0},
 	}
 	for _, testCase := range cases {
 		prefixLen := GetPrefixLen(testCase.mask)
@@ -206,7 +162,7 @@ func TestPrefixLenEmptyInvalid(t *testing.T) {
 		}
 	}()
 
-	GetPrefixLen(tcpip.Address(""))
+	GetPrefixLen("")
 	t.Errorf("Expected to fail on invalid address length")
 }
 
@@ -217,7 +173,7 @@ func TestPrefixLenInvalidLength(t *testing.T) {
 		}
 	}()
 
-	GetPrefixLen(tcpip.Address("\x00\x00"))
+	GetPrefixLen("\x00\x00")
 	t.Errorf("Expected to fail on invalid address length")
 }
 

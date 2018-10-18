@@ -46,11 +46,11 @@ func NewLoopback() netiface.NIC {
 		Routes: []tcpip.Route{
 			{
 				Destination: util.Parse("127.0.0.1"),
-				Mask:        util.Parse("255.255.255.255"),
+				Mask:        "\xff\xff\xff\xff",
 			},
 			{
 				Destination: util.Parse("::1"),
-				Mask:        tcpip.Address(strings.Repeat("\xff", 16)),
+				Mask:        tcpip.AddressMask(strings.Repeat("\xff", 16)),
 			},
 		},
 	}
@@ -61,11 +61,11 @@ func NewAnyDest() netiface.NIC {
 		Routes: []tcpip.Route{
 			{
 				Destination: tcpip.Address(strings.Repeat("\x00", 4)),
-				Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+				Mask:        tcpip.AddressMask(strings.Repeat("\x00", 4)),
 			},
 			{
 				Destination: util.Parse("::"),
-				Mask:        util.Parse("::"),
+				Mask:        tcpip.AddressMask(strings.Repeat("\x00", 16)),
 			},
 		},
 	}
@@ -96,22 +96,22 @@ func TestLoopbackBeforeAny(t *testing.T) {
 	expected := []tcpip.Route{
 		{
 			Destination: util.Parse("127.0.0.1"),
-			Mask:        util.Parse("255.255.255.255"),
+			Mask:        "\xff\xff\xff\xff",
 			NIC:         2,
 		},
 		{
 			Destination: util.Parse("::1"),
-			Mask:        tcpip.Address(strings.Repeat("\xff", 16)),
+			Mask:        tcpip.AddressMask(strings.Repeat("\xff", 16)),
 			NIC:         2,
 		},
 		{
 			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
-			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 4)),
 			NIC:         1,
 		},
 		{
 			Destination: util.Parse("::"),
-			Mask:        util.Parse("::"),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 16)),
 			NIC:         1,
 		},
 	}
@@ -148,24 +148,24 @@ func TestGatewayBeforeAddr(t *testing.T) {
 	expected := []tcpip.Route{
 		{
 			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
-			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 4)),
 			Gateway:     util.Parse("1.1.1.1"),
 			NIC:         2,
 		},
 		{
 			Destination: util.Parse("::"),
-			Mask:        util.Parse("::"),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 16)),
 			Gateway:     util.Parse("1.1.1.1"),
 			NIC:         2,
 		},
 		{
 			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
-			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 4)),
 			NIC:         1,
 		},
 		{
 			Destination: util.Parse("::"),
-			Mask:        util.Parse("::"),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 16)),
 			NIC:         1,
 		},
 	}
@@ -201,22 +201,22 @@ func TestAddrBeforeAny(t *testing.T) {
 	expected := []tcpip.Route{
 		{
 			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
-			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 4)),
 			NIC:         2,
 		},
 		{
 			Destination: util.Parse("::"),
-			Mask:        util.Parse("::"),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 16)),
 			NIC:         2,
 		},
 		{
 			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
-			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 4)),
 			NIC:         1,
 		},
 		{
 			Destination: util.Parse("::"),
-			Mask:        util.Parse("::"),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 16)),
 			NIC:         1,
 		},
 	}
@@ -253,22 +253,22 @@ func TestSortByIDAsFallback(t *testing.T) {
 	expected := []tcpip.Route{
 		{
 			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
-			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 4)),
 			NIC:         1,
 		},
 		{
 			Destination: util.Parse("::"),
-			Mask:        util.Parse("::"),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 16)),
 			NIC:         1,
 		},
 		{
 			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
-			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 4)),
 			NIC:         2,
 		},
 		{
 			Destination: util.Parse("::"),
-			Mask:        util.Parse("::"),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 16)),
 			NIC:         2,
 		},
 	}
@@ -348,7 +348,7 @@ func TestSpecificMaskFirst(t *testing.T) {
 			Routes: []tcpip.Route{
 				{
 					Gateway: util.Parse("192.168.0.1"),
-					Mask:    util.Parse("255.255.0.0"),
+					Mask:    "\xff\xff\x00\x00",
 					NIC:     1,
 				},
 			},
@@ -358,7 +358,7 @@ func TestSpecificMaskFirst(t *testing.T) {
 			Routes: []tcpip.Route{
 				{
 					Gateway: util.Parse("192.168.42.1"),
-					Mask:    util.Parse("255.255.255.0"),
+					Mask:    "\xff\xff\xff\x00",
 					NIC:     1,
 				},
 			},
@@ -368,12 +368,12 @@ func TestSpecificMaskFirst(t *testing.T) {
 	expected := []tcpip.Route{
 		{
 			Gateway: util.Parse("192.168.42.1"),
-			Mask:    util.Parse("255.255.255.0"),
+			Mask:    "\xff\xff\xff\x00",
 			NIC:     1,
 		},
 		{
 			Gateway: util.Parse("192.168.0.1"),
-			Mask:    util.Parse("255.255.0.0"),
+			Mask:    "\xff\xff\x00\x00",
 			NIC:     1,
 		},
 	}

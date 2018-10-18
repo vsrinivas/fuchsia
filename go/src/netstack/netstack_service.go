@@ -149,7 +149,7 @@ func nsToRouteTable(table []tcpip.Route) (out []netstack.RouteTableEntry, err er
 			dest = tcpip.Address(strings.Repeat("\x00", l))
 		}
 		if len(mask) == 0 {
-			mask = tcpip.Address(strings.Repeat("\x00", l))
+			mask = tcpip.AddressMask(strings.Repeat("\x00", l))
 		}
 		if len(gateway) == 0 {
 			gateway = tcpip.Address(strings.Repeat("\x00", l))
@@ -157,7 +157,7 @@ func nsToRouteTable(table []tcpip.Route) (out []netstack.RouteTableEntry, err er
 
 		out = append(out, netstack.RouteTableEntry{
 			Destination: fidlconv.ToNetAddress(dest),
-			Netmask:     fidlconv.ToNetAddress(mask),
+			Netmask:     fidlconv.ToNetAddress(tcpip.Address(mask)),
 			Gateway:     fidlconv.ToNetAddress(gateway),
 			Nicid:       uint32(route.NIC),
 		})
@@ -170,7 +170,7 @@ func routeTableToNs(rt []netstack.RouteTableEntry) []tcpip.Route {
 	for _, r := range rt {
 		routes = append(routes, tcpip.Route{
 			Destination: fidlconv.NetAddressToTCPIPAddress(r.Destination),
-			Mask:        fidlconv.NetAddressToTCPIPAddress(r.Netmask),
+			Mask:        tcpip.AddressMask(fidlconv.NetAddressToTCPIPAddress(r.Netmask)),
 			Gateway:     fidlconv.NetAddressToTCPIPAddress(r.Gateway),
 			NIC:         tcpip.NICID(r.Nicid),
 		})

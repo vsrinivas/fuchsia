@@ -93,13 +93,13 @@ func defaultRouteTable(nicid tcpip.NICID, gateway tcpip.Address) []tcpip.Route {
 	return []tcpip.Route{
 		{
 			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
-			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 4)),
 			Gateway:     gateway,
 			NIC:         nicid,
 		},
 		{
 			Destination: tcpip.Address(strings.Repeat("\x00", 16)),
-			Mask:        tcpip.Address(strings.Repeat("\x00", 16)),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 16)),
 			NIC:         nicid,
 		},
 	}
@@ -108,7 +108,7 @@ func defaultRouteTable(nicid tcpip.NICID, gateway tcpip.Address) []tcpip.Route {
 func subnetRoute(addr tcpip.Address, mask tcpip.AddressMask, nicid tcpip.NICID) tcpip.Route {
 	return tcpip.Route{
 		Destination: util.ApplyMask(addr, mask),
-		Mask:        tcpip.Address(mask),
+		Mask:        tcpip.AddressMask(mask),
 		Gateway:     tcpip.Address(""),
 		NIC:         nicid,
 	}
@@ -354,12 +354,12 @@ func (ns *Netstack) addLoopback() error {
 		Routes: []tcpip.Route{
 			{
 				Destination: ipv4Loopback,
-				Mask:        tcpip.Address(strings.Repeat("\xff", 4)),
+				Mask:        tcpip.AddressMask(strings.Repeat("\xff", 4)),
 				NIC:         nicid,
 			},
 			{
 				Destination: ipv6Loopback,
-				Mask:        tcpip.Address(strings.Repeat("\xff", 16)),
+				Mask:        tcpip.AddressMask(strings.Repeat("\xff", 16)),
 				NIC:         nicid,
 			},
 		},

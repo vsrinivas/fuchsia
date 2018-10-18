@@ -58,7 +58,7 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 	if len(ifs.nic.Addr) > 0 {
 		addrs = append(addrs, stack.InterfaceAddress{
 			IpAddress: fidlconv.ToNetIpAddress(ifs.nic.Addr),
-			PrefixLen: fidlconv.GetPrefixLen(tcpip.Address(ifs.nic.Netmask)),
+			PrefixLen: fidlconv.GetPrefixLen(ifs.nic.Netmask),
 		})
 	}
 

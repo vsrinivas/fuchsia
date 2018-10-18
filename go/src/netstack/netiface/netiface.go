@@ -32,7 +32,7 @@ func hasGateway(r *tcpip.Route) bool {
 	return r.Gateway != ""
 }
 
-func prefixLength(mask tcpip.Address) (len int) {
+func prefixLength(mask tcpip.AddressMask) (len int) {
 	for _, b := range []byte(mask) {
 		for i := uint(0); i < 8; i++ {
 			if b&(1<<i) != 0 {
