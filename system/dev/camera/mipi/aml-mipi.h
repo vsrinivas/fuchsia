@@ -51,12 +51,23 @@ private:
 
     // Mipi Adapter APIs
     zx_status_t MipiAdapInit(const mipi_adap_info_t* info);
+    void MipiAdapStart(const mipi_adap_info_t* info);
     void MipiAdapReset();
     void MipiAdapStart();
+
+    // Initialize the MIPI host to 720p by default.
     zx_status_t AdapFrontendInit(const mipi_adap_info_t* info);
     zx_status_t AdapReaderInit(const mipi_adap_info_t* info);
     zx_status_t AdapPixelInit(const mipi_adap_info_t* info);
     zx_status_t AdapAlignInit(const mipi_adap_info_t* info);
+
+    // Set it up for the correct format and resolution.
+    void AdapAlignStart(const mipi_adap_info_t* info);
+    void AdapPixelStart(const mipi_adap_info_t* info);
+    void AdapReaderStart(const mipi_adap_info_t* info);
+    void AdapFrontEndStart(const mipi_adap_info_t* info);
+
+    uint32_t AdapGetDepth(const mipi_adap_info_t* info);
 };
 
 } // namespace camera

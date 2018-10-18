@@ -7,8 +7,8 @@ using zx;
 
 // This structure represents image resolution.
 struct ImageResolution {
-    uint16 width;
-    uint16 height;
+    uint32 width;
+    uint32 height;
 };
 
 struct MipiInfo {

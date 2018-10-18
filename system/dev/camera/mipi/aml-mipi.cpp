@@ -159,7 +159,7 @@ zx_status_t AmlMipiDevice::MipiCsiInit(void* ctx,
     }
 
     // Start the MIPI Adapter.
-    self.MipiAdapStart();
+    self.MipiAdapStart(adap_info);
     return status;
 }
 
