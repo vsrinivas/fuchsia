@@ -9,6 +9,7 @@ rustc_library("dhcp") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//garnet/lib/rust/fidl_zircon_ethernet_ext",
     "//third_party/rust-crates/rustc_deps:byteorder",
     "//third_party/rust-crates/rustc_deps:bytes",
     "//third_party/rust-crates/rustc_deps:failure",
@@ -23,5 +24,9 @@ package("dhcp_tests") {
   deps = [
     ":dhcp",
   ]
-  tests = [ { name = "dhcp_lib_test_rustc" } ]
+  tests = [
+    {
+      name = "dhcp_lib_test_rustc"
+    },
+  ]
 }

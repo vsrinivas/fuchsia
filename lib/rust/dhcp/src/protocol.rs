@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 #![deny(warnings)]
 
+use fidl_zircon_ethernet_ext::MacAddress as MacAddr;
 use std::net::Ipv4Addr;
 
 pub const SERVER_PORT: u16 = 67;
 pub const CLIENT_PORT: u16 = 68;
-
-const MAC_ADDR_LEN: usize = 6;
 
 const OP_IDX: usize = 0;
 // currently unused
@@ -82,7 +81,7 @@ impl Message {
             yiaddr: Ipv4Addr::new(0, 0, 0, 0),
             siaddr: Ipv4Addr::new(0, 0, 0, 0),
             giaddr: Ipv4Addr::new(0, 0, 0, 0),
-            chaddr: [0; MAC_ADDR_LEN],
+            chaddr: MacAddr { octets: [0; 6] },
             sname: String::new(),
             file: String::new(),
             options: Vec::new(),
@@ -145,7 +144,7 @@ impl Message {
         buffer.extend_from_slice(&self.yiaddr.octets());
         buffer.extend_from_slice(&self.siaddr.octets());
         buffer.extend_from_slice(&self.giaddr.octets());
-        buffer.extend_from_slice(&self.chaddr);
+        buffer.extend_from_slice(&self.chaddr.octets.as_ref());
         buffer.extend_from_slice(&[0u8; UNUSED_CHADDR_BYTES]);
         trunc_string_to_n_and_push(&self.sname, SNAME_LEN, &mut buffer);
         trunc_string_to_n_and_push(&self.file, FILE_LEN, &mut buffer);
@@ -214,9 +213,6 @@ impl OpCode {
         }
     }
 }
-
-/// A 48-bit network hardware MAC address.
-pub type MacAddr = [u8; MAC_ADDR_LEN];
 
 /// A vendor extension/configuration option for DHCP protocol messages.
 ///
@@ -358,7 +354,7 @@ pub fn ip_addr_from_buf_at(buf: &[u8], start: usize) -> Option<Ipv4Addr> {
 }
 
 fn copy_buf_into_mac_addr(buf: &[u8], addr: &mut MacAddr) {
-    addr.copy_from_slice(buf);
+    addr.octets.as_mut().copy_from_slice(buf)
 }
 
 fn buf_to_msg_string(buf: &[u8]) -> Option<String> {
@@ -520,7 +516,9 @@ mod tests {
             yiaddr: Ipv4Addr::new(192, 168, 1, 1),
             siaddr: Ipv4Addr::new(0, 0, 0, 0),
             giaddr: Ipv4Addr::new(0, 0, 0, 0),
-            chaddr: [0, 0, 0, 0, 0, 0],
+            chaddr: MacAddr {
+                octets: [0, 0, 0, 0, 0, 0],
+            },
             sname: "relay.example.com".to_string(),
             file: "boot.img".to_string(),
             options: vec![opt_want1, opt_want2, opt_want3, opt_want4],

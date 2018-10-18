@@ -7,7 +7,7 @@ use fidl_zircon_ethernet as fidl;
 use bitflags::bitflags;
 use serde_derive::{Deserialize, Serialize};
 
-#[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone, Copy)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone, Copy, Hash)]
 pub struct MacAddress {
     pub octets: [u8; 6],
 }

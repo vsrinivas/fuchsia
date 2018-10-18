@@ -10,6 +10,7 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/dhcp",
+    "//garnet/lib/rust/fidl_zircon_ethernet_ext",
     "//garnet/public/rust/fuchsia-async",
     "//third_party/rust-crates/rustc_deps:failure",
   ]
@@ -28,4 +29,3 @@ package("dhcpd_test_client") {
   ]
   binary = "rust_crates/dhcpd_test_client"
 }
-

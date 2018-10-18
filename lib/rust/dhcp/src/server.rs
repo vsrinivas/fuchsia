@@ -5,6 +5,7 @@
 use byteorder::{BigEndian, ByteOrder};
 use crate::configuration::ServerConfig;
 use crate::protocol::{self, ConfigOption, Message, MessageType, OpCode, OptionCode};
+use fidl_zircon_ethernet_ext::MacAddress as MacAddr;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::net::Ipv4Addr;
 use std::ops::Fn;
@@ -213,8 +214,6 @@ where
 /// will eventually timeout, although such functionality is currently
 /// unimplemented.
 type CachedClients = HashMap<MacAddr, CachedConfig>;
-
-type MacAddr = [u8; 6];
 
 #[derive(Clone, Debug, PartialEq)]
 struct CachedConfig {
@@ -513,7 +512,9 @@ mod tests {
     fn new_test_discover() -> Message {
         let mut disc = Message::new();
         disc.xid = 42;
-        disc.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        disc.chaddr = MacAddr {
+            octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
+        };
         disc.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPDISCOVER as u8],
@@ -526,7 +527,9 @@ mod tests {
         offer.op = OpCode::BOOTREPLY;
         offer.xid = 42;
         offer.yiaddr = Ipv4Addr::new(192, 168, 1, 2);
-        offer.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        offer.chaddr = MacAddr {
+            octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
+        };
         offer.options.push(ConfigOption {
             code: OptionCode::IpAddrLeaseTime,
             value: vec![0, 0, 0, 100],
@@ -561,7 +564,9 @@ mod tests {
     fn new_test_request() -> Message {
         let mut req = Message::new();
         req.xid = 42;
-        req.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        req.chaddr = MacAddr {
+            octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
+        };
         req.options.push(ConfigOption {
             code: OptionCode::RequestedIpAddr,
             value: vec![192, 168, 1, 2],
@@ -582,7 +587,9 @@ mod tests {
         ack.op = OpCode::BOOTREPLY;
         ack.xid = 42;
         ack.yiaddr = Ipv4Addr::new(192, 168, 1, 2);
-        ack.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        ack.chaddr = MacAddr {
+            octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
+        };
         ack.options.push(ConfigOption {
             code: OptionCode::IpAddrLeaseTime,
             value: vec![0, 0, 0, 100],
@@ -618,7 +625,9 @@ mod tests {
         let mut nak = Message::new();
         nak.op = OpCode::BOOTREPLY;
         nak.xid = 42;
-        nak.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        nak.chaddr = MacAddr {
+            octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
+        };
         nak.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPNAK as u8],
@@ -634,7 +643,9 @@ mod tests {
         let mut release = Message::new();
         release.xid = 42;
         release.ciaddr = Ipv4Addr::new(192, 168, 1, 2);
-        release.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        release.chaddr = MacAddr {
+            octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
+        };
         release.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPRELEASE as u8],
@@ -646,7 +657,9 @@ mod tests {
         let mut inform = Message::new();
         inform.xid = 42;
         inform.ciaddr = Ipv4Addr::new(192, 168, 1, 2);
-        inform.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        inform.chaddr = MacAddr {
+            octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
+        };
         inform.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPINFORM as u8],
@@ -659,7 +672,9 @@ mod tests {
         ack.op = OpCode::BOOTREPLY;
         ack.xid = 42;
         ack.ciaddr = Ipv4Addr::new(192, 168, 1, 2);
-        ack.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        ack.chaddr = MacAddr {
+            octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
+        };
         ack.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPINFORM as u8],
@@ -682,7 +697,9 @@ mod tests {
     fn new_test_decline() -> Message {
         let mut decline = Message::new();
         decline.xid = 42;
-        decline.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        decline.chaddr = MacAddr {
+            octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
+        };
         decline.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPDECLINE as u8],
@@ -1100,7 +1117,9 @@ mod tests {
         let mut server = new_test_server(|| 42);
         server.pool.available_addrs.clear();
         server.cache.insert(
-            [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA],
+            MacAddr {
+                octets: [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA],
+            },
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 2),
                 options: vec![],
@@ -1112,7 +1131,9 @@ mod tests {
             .allocated_addrs
             .insert(Ipv4Addr::new(192, 168, 1, 2));
         server.cache.insert(
-            [0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB],
+            MacAddr {
+                octets: [0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB],
+            },
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 3),
                 options: vec![],
@@ -1124,7 +1145,9 @@ mod tests {
             .allocated_addrs
             .insert(Ipv4Addr::new(192, 168, 1, 3));
         server.cache.insert(
-            [0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC],
+            MacAddr {
+                octets: [0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC],
+            },
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 4),
                 options: vec![],
@@ -1148,7 +1171,9 @@ mod tests {
         let mut server = new_test_server(|| 42);
         server.pool.available_addrs.clear();
         server.cache.insert(
-            [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA],
+            MacAddr {
+                octets: [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA],
+            },
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 2),
                 options: vec![],
@@ -1160,7 +1185,9 @@ mod tests {
             .allocated_addrs
             .insert(Ipv4Addr::new(192, 168, 1, 2));
         server.cache.insert(
-            [0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB],
+            MacAddr {
+                octets: [0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB],
+            },
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 3),
                 options: vec![],
@@ -1172,7 +1199,9 @@ mod tests {
             .allocated_addrs
             .insert(Ipv4Addr::new(192, 168, 1, 3));
         server.cache.insert(
-            [0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC],
+            MacAddr {
+                octets: [0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC],
+            },
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 4),
                 options: vec![],
@@ -1196,7 +1225,9 @@ mod tests {
         let mut server = new_test_server(|| 42);
         server.pool.available_addrs.clear();
         server.cache.insert(
-            [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA],
+            MacAddr {
+                octets: [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA],
+            },
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 2),
                 options: vec![],
@@ -1208,7 +1239,9 @@ mod tests {
             .allocated_addrs
             .insert(Ipv4Addr::new(192, 168, 1, 2));
         server.cache.insert(
-            [0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB],
+            MacAddr {
+                octets: [0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB],
+            },
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 3),
                 options: vec![],
@@ -1220,7 +1253,9 @@ mod tests {
             .allocated_addrs
             .insert(Ipv4Addr::new(192, 168, 1, 3));
         server.cache.insert(
-            [0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC],
+            MacAddr {
+                octets: [0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC],
+            },
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 4),
                 options: vec![],
@@ -1235,11 +1270,9 @@ mod tests {
         server.release_expired_leases();
 
         assert_eq!(server.cache.len(), 2);
-        assert!(
-            !server
-                .cache
-                .contains_key(&[0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB])
-        );
+        assert!(!server.cache.contains_key(&MacAddr {
+            octets: [0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB]
+        }));
         assert_eq!(server.pool.available_addrs.len(), 1);
         assert_eq!(server.pool.allocated_addrs.len(), 2);
     }
@@ -1250,7 +1283,9 @@ mod tests {
         let mut server = new_test_server(|| 42);
         let client_ip = Ipv4Addr::new(192, 168, 1, 2);
         server.pool.allocate_addr(client_ip);
-        let client_mac = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        let client_mac = MacAddr {
+            octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
+        };
         let client_config = CachedConfig {
             client_addr: client_ip,
             options: vec![],
@@ -1286,7 +1321,9 @@ mod tests {
         let mut server = new_test_server(|| 42);
         let client_ip = Ipv4Addr::new(192, 168, 1, 2);
         server.pool.allocate_addr(client_ip);
-        let cached_mac = [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA];
+        let cached_mac = MacAddr {
+            octets: [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA],
+        };
         let client_config = CachedConfig {
             client_addr: client_ip,
             options: vec![],
@@ -1353,9 +1390,9 @@ mod tests {
             "addr not marked allocated"
         );
         assert!(
-            !server
-                .cache
-                .contains_key(&[0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF]),
+            !server.cache.contains_key(&MacAddr {
+                octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF]
+            }),
             "client config retained"
         );
     }

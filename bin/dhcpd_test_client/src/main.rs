@@ -7,6 +7,7 @@
 use {
     dhcp::protocol::{ConfigOption, Message, MessageType, OptionCode, CLIENT_PORT, SERVER_PORT},
     failure::{Error, ResultExt},
+    fidl_zircon_ethernet_ext::MacAddress as MacAddr,
     fuchsia_async::{net::UdpSocket, Executor},
     std::net::SocketAddr,
 };
@@ -57,7 +58,7 @@ fn build_and_bind_socket() -> (UdpSocket, SocketAddr) {
 fn build_discover() -> Message {
     let mut disc = Message::new();
     disc.xid = 42;
-    disc.chaddr = TEST_MAC;
+    disc.chaddr = MacAddr { octets: TEST_MAC };
     disc.options.push(ConfigOption {
         code: OptionCode::DhcpMessageType,
         value: vec![MessageType::DHCPDISCOVER as u8],
@@ -69,7 +70,7 @@ fn build_request(offer: Message) -> Message {
     let mut req = Message::new();
     req.xid = 42;
     req.ciaddr = offer.yiaddr;
-    req.chaddr = TEST_MAC;
+    req.chaddr = MacAddr { octets: TEST_MAC };
     req.options.push(ConfigOption {
         code: OptionCode::DhcpMessageType,
         value: vec![MessageType::DHCPREQUEST as u8],
