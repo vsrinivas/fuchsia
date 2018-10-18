@@ -10,7 +10,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/bad-block.h>
 #include <ddktl/protocol/nand.h>
-#include <ddktl/protocol/skip-block.h>
+#include <ddktl/protocol/empty-protocol.h>
 
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
@@ -32,7 +32,7 @@ using DeviceType = ddk::Device<SkipBlockDevice, ddk::GetSizable, ddk::Unbindable
                                ddk::Messageable>;
 
 class SkipBlockDevice : public DeviceType,
-                        public ddk::SkipBlockProtocol {
+                        public ddk::EmptyProtocol<ZX_PROTOCOL_SKIP_BLOCK> {
 public:
     // Spawns device node based on parent node.
     static zx_status_t Create(zx_device_t* parent);
