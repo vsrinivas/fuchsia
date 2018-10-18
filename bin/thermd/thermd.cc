@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/device/sysinfo.h>
 #include <zircon/device/thermal.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/system.h>
+#include <zircon/sysinfo/c/fidl.h>
 
 #include <lib/async-loop/cpp/loop.h>
 
 #include <lib/fdio/watcher.h>
+#include <lib/fdio/util.h>
+#include <lib/zx/channel.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 
@@ -38,16 +40,19 @@ static zx_status_t get_root_resource(zx_handle_t* root_resource) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  ssize_t n = ioctl_sysinfo_get_root_resource(fd, root_resource);
-  close(fd);
-  if (n != sizeof(*root_resource)) {
-    if (n < 0) {
-      return (zx_status_t)n;
-    } else {
-      return ZX_ERR_NOT_FOUND;
-    }
+  zx::channel channel;
+  zx_status_t status =
+      fdio_get_service_handle(fd, channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    return status;
   }
-  return ZX_OK;
+
+  zx_status_t fidl_status = zircon_sysinfo_DeviceGetRootResource(
+      channel.get(), &status, root_resource);
+  if (fidl_status != ZX_OK) {
+    return fidl_status;
+  }
+  return status;
 }
 
 static zx_status_t set_pl1(uint32_t target) {

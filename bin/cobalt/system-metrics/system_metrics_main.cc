@@ -12,9 +12,10 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/util.h>
 #include <lib/zx/resource.h>
 #include <zircon/device/device.h>
-#include <zircon/device/sysinfo.h>
+#include <zircon/sysinfo/c/fidl.h>
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/vmo/file.h"
@@ -36,13 +37,23 @@ zx_status_t get_root_resource(zx::resource* resource_out) {
     return ZX_ERR_IO;
   }
 
-  zx_handle_t raw_resource;
-  ssize_t n = ioctl_sysinfo_get_root_resource(fd, &raw_resource);
-  if (n != sizeof(zx_handle_t)) {
-    FXL_LOG(ERROR) << "Failed to get root resource: " << n;
-    return ZX_ERR_IO;
+  zx::channel channel;
+  zx_status_t status =
+      fdio_get_service_handle(fd, channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    return status;
   }
-  close(fd);
+
+  zx_handle_t raw_resource;
+  zx_status_t fidl_status = zircon_sysinfo_DeviceGetRootResource(
+      channel.get(), &status, &raw_resource);
+  if (fidl_status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to get root resource: " << fidl_status;
+    return fidl_status;
+  } else if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to get root resource: " << status;
+    return status;
+  }
   resource_out->reset(raw_resource);
   return ZX_OK;
 }

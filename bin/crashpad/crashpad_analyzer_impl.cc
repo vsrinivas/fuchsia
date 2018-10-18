@@ -10,6 +10,7 @@
 #include <fbl/type_support.h>
 #include <fuchsia/crash/cpp/fidl.h>
 #include <lib/fdio/io.h>
+#include <lib/fdio/util.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/files/path.h>
@@ -38,11 +39,11 @@
 #include <third_party/crashpad/util/net/http_transport.h>
 #include <third_party/crashpad/util/net/url.h>
 #include <zircon/boot/image.h>
-#include <zircon/device/sysinfo.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/object.h>
+#include <zircon/sysinfo/c/fidl.h>
 
 namespace fuchsia {
 namespace crash {
@@ -143,10 +144,19 @@ std::string GetBoardName() {
     return "unknown";
   }
 
+  zx::channel channel;
+  zx_status_t status =
+      fdio_get_service_handle(fd, channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to get board name";
+    return "unknown";
+  }
+
   char board_name[ZBI_BOARD_NAME_LEN];
-  const ssize_t n =
-      ioctl_sysinfo_get_board_name(fd, board_name, sizeof(board_name));
-  if (n <= 0) {
+  size_t actual_size;
+  zx_status_t fidl_status = zircon_sysinfo_DeviceGetBoardName(
+      channel.get(), &status, board_name, sizeof(board_name), &actual_size);
+  if (fidl_status != ZX_OK || status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to get board name";
     return "unknown";
   }

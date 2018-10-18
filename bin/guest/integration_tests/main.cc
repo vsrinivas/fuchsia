@@ -12,10 +12,11 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/testing/test_with_environment.h>
+#include <lib/fdio/util.h>
 #include <lib/fxl/logging.h>
 #include <lib/zx/socket.h>
-#include <zircon/device/sysinfo.h>
 #include <zircon/syscalls/hypervisor.h>
+#include <zircon/sysinfo/c/fidl.h>
 
 #include "garnet/bin/guest/integration_tests/test_serial.h"
 
@@ -134,12 +135,23 @@ zx_status_t hypervisor_supported() {
   if (!fd) {
     return ZX_ERR_IO;
   }
-  zx::resource resource;
-  ssize_t n = ioctl_sysinfo_get_hypervisor_resource(
-      fd.get(), resource.reset_and_get_address());
-  if (n < 0) {
-    return ZX_ERR_IO;
+
+  zx::channel channel;
+  zx_status_t status =
+      fdio_get_service_handle(fd.release(), channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    return status;
   }
+
+  zx::resource resource;
+  zx_status_t fidl_status = zircon_sysinfo_DeviceGetHypervisorResource(
+      channel.get(), &status, resource.reset_and_get_address());
+  if (fidl_status != ZX_OK) {
+    return fidl_status;
+  } else if (status != ZX_OK) {
+    return status;
+  }
+
   zx::guest guest;
   zx::vmar vmar;
   return zx::guest::create(resource, 0, &guest, &vmar);

@@ -5,11 +5,13 @@
 #include "garnet/lib/debugger_utils/sysinfo.h"
 
 #include <fcntl.h>
+#include <lib/fdio/util.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <unistd.h>
 
-#include <zircon/device/sysinfo.h>
 #include <zircon/syscalls.h>
+#include <zircon/sysinfo/c/fidl.h>
 
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
@@ -29,10 +31,19 @@ zx::job GetRootJob() {
     return zx::job();
   }
 
+  zx::channel channel;
+  zx_status_t status =
+      fdio_get_service_handle(fd.release(), channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "unable to open sysinfo channel";
+    return zx::job();
+  }
+
   zx_handle_t root_job;
-  size_t n = ioctl_sysinfo_get_root_job(fd.get(), &root_job);
-  if (n != sizeof(root_job)) {
-    FXL_LOG(ERROR) << "unable to get root job, bad size returned";
+  zx_status_t fidl_status =
+      zircon_sysinfo_DeviceGetRootJob(channel.get(), &status, &root_job);
+  if (fidl_status != ZX_OK || status != ZX_OK) {
+    FXL_LOG(ERROR) << "unable to get root job";
     return zx::job();
   }
 

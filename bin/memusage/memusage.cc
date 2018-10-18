@@ -11,9 +11,10 @@
 
 #include <lib/async/default.h>
 #include <lib/async/cpp/time.h>
+#include <lib/fdio/util.h>
 #include <trace/event.h>
-#include <zircon/device/sysinfo.h>
 #include <zircon/status.h>
+#include <zircon/sysinfo/c/fidl.h>
 
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
@@ -31,17 +32,25 @@ zx_status_t get_root_resource(zx_handle_t* root_resource) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  ssize_t n = ioctl_sysinfo_get_root_resource(fd, root_resource);
-  close(fd);
-  if (n != sizeof(*root_resource)) {
-    if (n < 0) {
-      FXL_LOG(ERROR) << "Cannot obtain root resource: "
-                     << zx_status_get_string(n);
-      return ZX_ERR_NOT_FOUND;
-    } else {
-       FXL_LOG(ERROR) << "Invalid size for root resource: " << n;
-      return ZX_ERR_INTERNAL;
-    }
+  zx::channel channel;
+  zx_status_t status =
+      fdio_get_service_handle(fd, channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Cannot obtain sysinfo channel: "
+                   << zx_status_get_string(status);
+    return status;
+  }
+
+  zx_status_t fidl_status = zircon_sysinfo_DeviceGetRootResource(
+      channel.get(), &status, root_resource);
+  if (fidl_status != ZX_OK) {
+    FXL_LOG(ERROR) << "Cannot obtain root resource: "
+                   << zx_status_get_string(fidl_status);
+    return fidl_status;
+  } else if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Cannot obtain root resource: "
+                   << zx_status_get_string(status);
+    return status;
   }
   return ZX_OK;
 }

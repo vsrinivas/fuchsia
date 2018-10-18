@@ -14,6 +14,7 @@ source_set("lib") {
     "//garnet/public/fidl/fuchsia.scpi",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
+    "//zircon/public/fidl/zircon-sysinfo:zircon-sysinfo_c",
     "//zircon/public/lib/ddk",
   ]
 }

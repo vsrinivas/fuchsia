@@ -94,6 +94,7 @@ source_set("machina") {
     "//garnet/public/lib/fsl",
     "//zircon/public/fidl/zircon-ethernet:zircon-ethernet_c",
     "//zircon/public/fidl/zircon-input:zircon-input_c",
+    "//zircon/public/fidl/zircon-sysinfo:zircon-sysinfo_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-testutils",
     "//zircon/public/lib/block-client",

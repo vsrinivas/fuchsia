@@ -17,6 +17,7 @@ executable("system-metrics") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/public/fidl/zircon-sysinfo:zircon-sysinfo_c",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

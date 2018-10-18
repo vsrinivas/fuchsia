@@ -8,9 +8,11 @@
 #include <fcntl.h>
 
 #include <fbl/unique_fd.h>
+#include <lib/fdio/util.h>
+#include <lib/zx/channel.h>
 #include <libzbi/zbi.h>
 #include <zircon/boot/driver-config.h>
-#include <zircon/device/sysinfo.h>
+#include <zircon/sysinfo/c/fidl.h>
 
 #include "garnet/lib/machina/bits.h"
 #include "garnet/lib/machina/guest.h"
@@ -35,16 +37,28 @@ static zx_status_t get_gic_version(GicVersion* version) {
   if (!fd) {
     return ZX_ERR_IO;
   }
-  interrupt_controller_info_t info;
-  ssize_t n = ioctl_sysinfo_get_interrupt_controller_info(fd.get(), &info);
-  if (n != sizeof(interrupt_controller_info_t)) {
-    return ZX_ERR_IO;
+
+  zx::channel channel;
+  zx_status_t status =
+      fdio_get_service_handle(fd.release(), channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    return status;
   }
+
+  zircon_sysinfo_InterruptControllerInfo info;
+  zx_status_t fidl_status = zircon_sysinfo_DeviceGetInterruptControllerInfo(
+      channel.get(), &status, &info);
+  if (fidl_status != ZX_OK) {
+    return fidl_status;
+  } else if (status != ZX_OK) {
+    return status;
+  }
+
   switch (info.type) {
-    case INTERRUPT_CONTROLLER_TYPE_GIC_V2:
+    case zircon_sysinfo_InterruptControllerType_GIC_V2:
       *version = GicVersion::V2;
       return ZX_OK;
-    case INTERRUPT_CONTROLLER_TYPE_GIC_V3:
+    case zircon_sysinfo_InterruptControllerType_GIC_V3:
       *version = GicVersion::V3;
       return ZX_OK;
     default:

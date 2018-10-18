@@ -4,12 +4,13 @@
 
 #include "garnet/bin/scpi/app.h"
 #include <ddk/protocol/scpi.h>
+#include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
 #include <stdio.h>
-#include <zircon/device/sysinfo.h>
 #include <zircon/device/thermal.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/object.h>
+#include <zircon/sysinfo/c/fidl.h>
 #include "lib/component/cpp/startup_context.h"
 
 namespace scpi {
@@ -28,11 +29,19 @@ zx::handle App::GetRootResource() {
   if (fd == 0)
     return {};
 
-  zx_handle_t root_resource;
-  auto n = ioctl_sysinfo_get_root_resource(fd, &root_resource);
-  close(fd);
+  zx::channel channel;
+  zx_status_t status =
+      fdio_get_service_handle(fd, channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    return {};
+  }
 
-  FXL_DCHECK(n == sizeof(root_resource));
+  zx_handle_t root_resource;
+  zx_status_t fidl_status = zircon_sysinfo_DeviceGetRootResource(
+      channel.get(), &status, &root_resource);
+
+  if (fidl_status != ZX_OK || status != ZX_OK)
+    return {};
 
   return zx::handle(root_resource);
 }

@@ -10,7 +10,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <zircon/device/gpu.h>
-#include <zircon/device/sysinfo.h>
 #include <zircon/device/thermal.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
