@@ -4,20 +4,22 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <reg.h>
-#include <stdio.h>
-#include <trace.h>
-#include <string.h>
 #include <arch/arm64/periphmap.h>
-#include <lib/cbuf.h>
-#include <lib/debuglog.h>
-#include <kernel/thread.h>
 #include <dev/interrupt.h>
 #include <dev/uart.h>
+#include <kernel/thread.h>
+#include <lib/cbuf.h>
+#include <lib/debuglog.h>
+#include <reg.h>
+#include <stdio.h>
+#include <string.h>
+#include <trace.h>
 
 #include <pdev/driver.h>
 #include <pdev/uart.h>
 #include <zircon/boot/driver-config.h>
+
+// clang-format off
 
 #define S905_UART_WFIFO         (0x0)
 #define S905_UART_RFIFO         (0x4)
@@ -76,6 +78,8 @@
 #define S905_UART0_AO_OFFSET       (0x081004c0)
 #define S905_UART1_AO_OFFSET       (0x081004e0)
 
+// clang-format on
+
 static cbuf_t uart_rx_buf;
 static bool initialized = false;
 static vaddr_t s905_uart_base = 0;
@@ -104,30 +108,30 @@ static event_t uart_dputc_event = EVENT_INITIAL_VALUE(uart_dputc_event,
 
 static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
-static void uart_irq(void *arg)
-{
+static void uart_irq(void* arg) {
     uintptr_t base = (uintptr_t)arg;
 
     /* read interrupt status and mask */
 
-    while ( (UARTREG(base, S905_UART_STATUS) & S905_UART_STATUS_RXCOUNT_MASK) > 0 ) {
+    while ((UARTREG(base, S905_UART_STATUS) & S905_UART_STATUS_RXCOUNT_MASK) > 0) {
         if (cbuf_space_avail(&uart_rx_buf) == 0) {
-                break;
+            break;
         }
-        char c = UARTREG(base, S905_UART_RFIFO);
+        char c = static_cast<char>(UARTREG(base, S905_UART_RFIFO));
         cbuf_write_char(&uart_rx_buf, c);
     }
-    if (UARTREG(s905_uart_base,S905_UART_CONTROL) & S905_UART_CONTROL_TXINTEN) {
+    if (UARTREG(s905_uart_base, S905_UART_CONTROL) & S905_UART_CONTROL_TXINTEN) {
         spin_lock(&uart_spinlock);
         if (!(UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_TXFULL))
-            /* Signal any waiting Tx */
+        /* Signal any waiting Tx */
+        {
             event_signal(&uart_dputc_event, true);
+        }
         spin_unlock(&uart_spinlock);
     }
 }
 
-static void s905_uart_init(const void* driver_data, uint32_t length)
-{
+static void s905_uart_init(const void* driver_data, uint32_t length) {
     assert(s905_uart_base);
     assert(s905_uart_irq);
 
@@ -135,37 +139,38 @@ static void s905_uart_init(const void* driver_data, uint32_t length)
     cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
 
     //reset the port
-    UARTREG(s905_uart_base,S905_UART_CONTROL) |=  S905_UART_CONTROL_RSTRX |
+    UARTREG(s905_uart_base, S905_UART_CONTROL) |= S905_UART_CONTROL_RSTRX |
                                                   S905_UART_CONTROL_RSTTX |
                                                   S905_UART_CONTROL_CLRERR;
-    UARTREG(s905_uart_base,S905_UART_CONTROL) &= ~(S905_UART_CONTROL_RSTRX |
-                                                   S905_UART_CONTROL_RSTTX |
-                                                   S905_UART_CONTROL_CLRERR);
+    UARTREG(s905_uart_base, S905_UART_CONTROL) &= ~(S905_UART_CONTROL_RSTRX |
+                                                    S905_UART_CONTROL_RSTTX |
+                                                    S905_UART_CONTROL_CLRERR);
     // enable rx and tx
-    UARTREG(s905_uart_base,S905_UART_CONTROL) |= S905_UART_CONTROL_TXEN |
-                                                 S905_UART_CONTROL_RXEN;
+    UARTREG(s905_uart_base, S905_UART_CONTROL) |= S905_UART_CONTROL_TXEN |
+                                                  S905_UART_CONTROL_RXEN;
 
     uint32_t val;
     val = S905_UART_CONTROL_INVRTS | S905_UART_CONTROL_RXINTEN |
-        S905_UART_CONTROL_TWOWIRE;
-    if (dlog_bypass() == false)
+          S905_UART_CONTROL_TWOWIRE;
+    if (dlog_bypass() == false) {
         val |= S905_UART_CONTROL_TXINTEN;
-    UARTREG(s905_uart_base,S905_UART_CONTROL) |= val;
+    }
+    UARTREG(s905_uart_base, S905_UART_CONTROL) |= val;
 
     // Set to interrupt every 1 rx byte
-    uint32_t temp2 = UARTREG(s905_uart_base,S905_UART_IRQ_CONTROL);
+    uint32_t temp2 = UARTREG(s905_uart_base, S905_UART_IRQ_CONTROL);
     temp2 &= 0xffff0000;
-    temp2 |= (1 << 8) | ( 1 );
-    UARTREG(s905_uart_base,S905_UART_IRQ_CONTROL) = temp2;
+    temp2 |= (1 << 8) | (1);
+    UARTREG(s905_uart_base, S905_UART_IRQ_CONTROL) = temp2;
 
-    zx_status_t status = register_int_handler(s905_uart_irq, &uart_irq, (void *)s905_uart_base);
+    zx_status_t status = register_int_handler(s905_uart_irq, &uart_irq, (void*)s905_uart_base);
     DEBUG_ASSERT(status == ZX_OK);
 
     initialized = true;
 
-    if (dlog_bypass() == true)
+    if (dlog_bypass() == true) {
         uart_tx_irq_enabled = false;
-    else {
+    } else {
         /* start up tx driven output */
         printf("UART: started IRQ driven TX\n");
         uart_tx_irq_enabled = true;
@@ -176,10 +181,10 @@ static void s905_uart_init(const void* driver_data, uint32_t length)
 }
 
 /* panic-time getc/putc */
-static int s905_uart_pputc(char c)
-{
-    if (!s905_uart_base)
+static int s905_uart_pputc(char c) {
+    if (!s905_uart_base) {
         return 0;
+    }
 
     /* spin while fifo is full */
     while (UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_TXFULL)
@@ -189,10 +194,10 @@ static int s905_uart_pputc(char c)
     return 1;
 }
 
-static int s905_uart_pgetc(void)
-{
-    if (!s905_uart_base)
+static int s905_uart_pgetc() {
+    if (!s905_uart_base) {
         return 0;
+    }
 
     if ((UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_RXEMPTY) == 0) {
         return UARTREG(s905_uart_base, S905_UART_RFIFO);
@@ -201,16 +206,17 @@ static int s905_uart_pgetc(void)
     }
 }
 
-static int s905_uart_getc(bool wait)
-{
-    if (!s905_uart_base)
+static int s905_uart_getc(bool wait) {
+    if (!s905_uart_base) {
         return -1;
+    }
 
     if (initialized) {
         // do cbuf stuff here
         char c;
-        if (cbuf_read_char(&uart_rx_buf, &c, wait) == 1)
+        if (cbuf_read_char(&uart_rx_buf, &c, wait) == 1) {
             return c;
+        }
         return ZX_ERR_INTERNAL;
 
     } else {
@@ -228,24 +234,26 @@ static int s905_uart_getc(bool wait)
  * each time a byte is read from the Tx FIFO).
  */
 static void s905_dputs(const char* str, size_t len,
-                       bool block, bool map_NL)
-{
+                       bool block, bool map_NL) {
     spin_lock_saved_state_t state;
     bool copied_CR = false;
 
-    if (!s905_uart_base)
+    if (!s905_uart_base) {
         return;
-    if (!uart_tx_irq_enabled)
+    }
+    if (!uart_tx_irq_enabled) {
         block = false;
+    }
     spin_lock_irqsave(&uart_spinlock, state);
     while (len > 0) {
         /* Is FIFO Full ? */
         while (UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_TXFULL) {
             spin_unlock_irqrestore(&uart_spinlock, state);
-            if (block)
+            if (block) {
                 event_wait(&uart_dputc_event);
-            else
+            } else {
                 arch_spinloop_pause();
+            }
             spin_lock_irqsave(&uart_spinlock, state);
         }
 
@@ -261,8 +269,7 @@ static void s905_dputs(const char* str, size_t len,
     spin_unlock_irqrestore(&uart_spinlock, state);
 }
 
-static void s905_uart_start_panic(void)
-{
+static void s905_uart_start_panic() {
     uart_tx_irq_enabled = false;
 }
 
@@ -276,7 +283,7 @@ static const struct pdev_uart_ops s905_uart_ops = {
 
 static void s905_uart_init_early(const void* driver_data, uint32_t length) {
     ASSERT(length >= sizeof(dcfg_simple_t));
-    const dcfg_simple_t* driver = driver_data;
+    auto driver = static_cast<const dcfg_simple_t*>(driver_data);
     ASSERT(driver->mmio_phys && driver->irq);
 
     s905_uart_base = periph_paddr_to_vaddr(driver->mmio_phys);

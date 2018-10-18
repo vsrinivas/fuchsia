@@ -121,7 +121,7 @@ static void uart_irq_handler(void* arg) {
 
     // Signal if anyone is waiting to TX
     if (UARTREG(UART_LSR) & UART_LSR_THRE) {
-        UARTREG(UART_IER) &= ~UART_IER_ETBEI;  // Disable TX interrupt
+        UARTREG(UART_IER) &= ~UART_IER_ETBEI; // Disable TX interrupt
         spin_lock(&uart_spinlock);
         // TODO(andresoportus): Revisit all UART drivers usage of events, from event.h:
         // 1. The reschedule flag is not supposed to be true in interrupt context.
@@ -145,7 +145,7 @@ static int mt8167_uart_pputc(char c) {
     return 1;
 }
 
-static int mt8167_uart_pgetc(void) {
+static int mt8167_uart_pgetc() {
     if (!uart_base) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -210,7 +210,7 @@ static void mt8167_dputs(const char* str, size_t len,
     spin_unlock_irqrestore(&uart_spinlock, state);
 }
 
-static void mt8167_start_panic(void) {
+static void mt8167_start_panic() {
     uart_tx_irq_enabled = false;
 }
 

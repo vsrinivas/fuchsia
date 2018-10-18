@@ -3,19 +3,21 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <arch/arm64/periphmap.h>
+#include <dev/interrupt.h>
+#include <dev/uart.h>
+#include <kernel/thread.h>
+#include <lib/cbuf.h>
+#include <lib/debuglog.h>
+#include <pdev/driver.h>
+#include <pdev/uart.h>
+#include <platform/debug.h>
 #include <reg.h>
 #include <stdio.h>
 #include <trace.h>
-#include <arch/arm64/periphmap.h>
-#include <lib/cbuf.h>
-#include <lib/debuglog.h>
-#include <kernel/thread.h>
-#include <dev/interrupt.h>
-#include <dev/uart.h>
-#include <platform/debug.h>
-#include <pdev/driver.h>
-#include <pdev/uart.h>
 #include <zircon/boot/driver-config.h>
+
+// clang-format off
 
 /* Registers */
 #define MX8_URXD                    (0x00)
@@ -59,6 +61,7 @@
 
 #define RXBUF_SIZE 32
 
+// clang-format on
 
 // values read from zbi
 static bool initialized = false;
@@ -74,14 +77,13 @@ static event_t uart_dputc_event = EVENT_INITIAL_VALUE(uart_dputc_event,
 
 static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
-#define UARTREG(reg)          (*(volatile uint32_t*)((uart_base)  + (reg)))
+#define UARTREG(reg) (*(volatile uint32_t*)((uart_base) + (reg)))
 
-static void uart_irq_handler(void *arg)
-{
+static void uart_irq_handler(void* arg) {
     /* read interrupt status and mask */
     while ((UARTREG(MX8_USR1) & USR1_RRDY)) {
         if (cbuf_space_avail(&uart_rx_buf) == 0) {
-                break;
+            break;
         }
         char c = UARTREG(MX8_URXD) & 0xFF;
         cbuf_write_char(&uart_rx_buf, c);
@@ -98,11 +100,8 @@ static void uart_irq_handler(void *arg)
     }
 }
 
-
-
 /* panic-time getc/putc */
-static int imx_uart_pputc(char c)
-{
+static int imx_uart_pputc(char c) {
     if (!uart_base) {
         return -1;
     }
@@ -115,8 +114,7 @@ static int imx_uart_pputc(char c)
     return 1;
 }
 
-static int imx_uart_pgetc(void)
-{
+static int imx_uart_pgetc() {
     if (!uart_base) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -125,11 +123,10 @@ static int imx_uart_pgetc(void)
         return ZX_ERR_INTERNAL;
     }
 
-   return UARTREG(MX8_URXD);
+    return UARTREG(MX8_URXD);
 }
 
-static int imx_uart_getc(bool wait)
-{
+static int imx_uart_getc(bool wait) {
     if (!uart_base) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -144,12 +141,10 @@ static int imx_uart_getc(bool wait)
         // Interrupts are not enabled yet. Use panic calls for now
         return imx_uart_pgetc();
     }
-
 }
 
 static void imx_dputs(const char* str, size_t len,
-                        bool block, bool map_NL)
-{
+                      bool block, bool map_NL) {
     spin_lock_saved_state_t state;
     bool copied_CR = false;
 
@@ -184,8 +179,7 @@ static void imx_dputs(const char* str, size_t len,
     spin_unlock_irqrestore(&uart_spinlock, state);
 }
 
-static void imx_start_panic(void)
-{
+static void imx_start_panic() {
     uart_tx_irq_enabled = false;
 }
 
@@ -197,8 +191,7 @@ static const struct pdev_uart_ops uart_ops = {
     .dputs = imx_dputs,
 };
 
-static void imx_uart_init(const void* driver_data, uint32_t length)
-{
+static void imx_uart_init(const void* driver_data, uint32_t length) {
     uint32_t regVal;
 
     // create circular buffer to hold received data
@@ -229,9 +222,9 @@ static void imx_uart_init(const void* driver_data, uint32_t length)
     regVal |= UCR2_RXEN | UCR2_TXEN;
     UARTREG(MX8_UCR2) = regVal;
 
-    if (dlog_bypass() == true)
+    if (dlog_bypass() == true) {
         uart_tx_irq_enabled = false;
-    else {
+    } else {
         /* start up tx driven output */
         printf("UART: started IRQ driven TX\n");
         uart_tx_irq_enabled = true;
@@ -245,7 +238,7 @@ static void imx_uart_init(const void* driver_data, uint32_t length)
 
 static void imx_uart_init_early(const void* driver_data, uint32_t length) {
     ASSERT(length >= sizeof(dcfg_simple_t));
-    const dcfg_simple_t* driver = driver_data;
+    auto driver = static_cast<const dcfg_simple_t*>(driver_data);
     ASSERT(driver->mmio_phys && driver->irq);
 
     uart_base = periph_paddr_to_vaddr(driver->mmio_phys);
