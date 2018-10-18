@@ -129,9 +129,7 @@ public:
     // If the thread is waiting for the associated exception handler, continue
     // exception processing as if the exception port had not been installed.
     void OnExceptionPortRemoval(const fbl::RefPtr<ExceptionPort>& eport);
-    // Return true if waiting for an exception response.
-    // |get_lock()| must be held.
-    bool InExceptionLocked() TA_REQ(get_lock());
+
     // Assuming the thread is stopped waiting for an exception response,
     // fill in |*report| with the exception report.
     // Returns ZX_ERR_BAD_STATE if not in an exception.
@@ -186,6 +184,9 @@ private:
     void Suspending();
     // callback from kernel when thread is resuming
     void Resuming();
+
+    // Return true if waiting for an exception response.
+    bool InExceptionLocked() TA_REQ(get_lock());
 
     // Helper routine to minimize code duplication.
     zx_status_t MarkExceptionHandledWorker(PortDispatcher* eport,
