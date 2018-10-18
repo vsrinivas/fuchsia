@@ -12,11 +12,7 @@ use {
         server::Server,
     },
     failure::{Error, Fail, ResultExt},
-    fuchsia_async::{
-        Executor,
-        Interval,
-        net::UdpSocket,
-    },
+    fuchsia_async::{net::UdpSocket, Executor, Interval},
     fuchsia_zircon::{self as zx, DurationNum},
     futures::{Future, StreamExt, TryFutureExt, TryStreamExt},
     getopts::Options,
@@ -42,7 +38,7 @@ fn main() -> Result<(), Error> {
     let server_ip = config.server_ip;
     let socket_addr = SocketAddr::new(IpAddr::V4(server_ip), SERVER_PORT);
     let udp_socket = UdpSocket::bind(&socket_addr).context("unable to bind socket")?;
-    let server = Mutex::new(Server::from_config(config, || { 
+    let server = Mutex::new(Server::from_config(config, || {
         zx::Time::get(zx::ClockId::UTC).nanos() / 1_000_000_000
     }));
     let msg_handling_loop = define_msg_handling_loop_future(udp_socket, &server);
@@ -88,13 +84,15 @@ async fn define_msg_handling_loop_future<F: Fn() -> i64>(
         println!("dhcpd: msg parsed {:?}", msg);
 
         // This call should not block because the server is single-threaded.
-        let response = server.lock().unwrap().dispatch(msg)
+        let response = server
+            .lock()
+            .unwrap()
+            .dispatch(msg)
             .ok_or_else(|| failure::err_msg("invalid message"))?;
         println!("dhcpd: msg dispatched to server {:?}", response);
         let response_buffer = response.serialize();
         println!("dhcpd: response serialized");
-        await!(sock.send_to(&response_buffer, addr))
-            .context("unable to send response")?;
+        await!(sock.send_to(&response_buffer, addr)).context("unable to send response")?;
         println!("dhcpd: response sent");
         println!("dhcpd: continuing event loop");
     }
@@ -109,6 +107,7 @@ fn define_lease_expiration_handler_future<'a, F: Fn() -> i64>(
             println!("dhcpd: interval timer fired");
             server.lock().unwrap().release_expired_leases();
             println!("dhcpd: expired leases released");
-        }).map(|_| Ok(()))
+        })
+        .map(|_| Ok(()))
         .try_collect::<()>()
 }
