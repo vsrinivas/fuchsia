@@ -21,6 +21,7 @@ typedef struct zx_protocol_device zx_protocol_device_t;
 typedef struct fidl_msg fidl_msg_t;
 typedef struct fidl_txn fidl_txn_t;
 
+// Max device name length, not including a null-terminator
 #define ZX_DEVICE_NAME_MAX 31
 
 // echo -n "mx_device_ops_v0.5" | sha256sum | cut -c1-16
