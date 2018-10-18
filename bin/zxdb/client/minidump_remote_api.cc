@@ -11,6 +11,7 @@
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 #include "third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h"
+#include "third_party/crashpad/util/misc/uuid.h"
 
 namespace zxdb {
 
@@ -318,6 +319,11 @@ constexpr uint32_t kAttachNotFound = 1;
 void MinidumpRemoteAPI::Attach(
     const debug_ipc::AttachRequest& request,
     std::function<void(const Err&, debug_ipc::AttachReply)> cb) {
+  if (!minidump_) {
+    ErrNoDump(cb);
+    return;
+  }
+
   debug_ipc::AttachReply reply;
   reply.process_name = "<core dump>";
 
@@ -334,6 +340,11 @@ void MinidumpRemoteAPI::Attach(
 void MinidumpRemoteAPI::Detach(
     const debug_ipc::DetachRequest& request,
     std::function<void(const Err&, debug_ipc::DetachReply)> cb) {
+  if (!minidump_) {
+    ErrNoDump(cb);
+    return;
+  }
+
   debug_ipc::DetachReply reply;
 
   if (static_cast<pid_t>(request.process_koid) == minidump_->ProcessID() &&
@@ -350,8 +361,30 @@ void MinidumpRemoteAPI::Detach(
 void MinidumpRemoteAPI::Modules(
     const debug_ipc::ModulesRequest& request,
     std::function<void(const Err&, debug_ipc::ModulesReply)> cb) {
-  // TODO
-  ErrNoImpl(cb);
+  if (!minidump_) {
+    ErrNoDump(cb);
+    return;
+  }
+
+  debug_ipc::ModulesReply reply;
+
+  if (static_cast<pid_t>(request.process_koid) != minidump_->ProcessID()) {
+    Succeed(cb, reply);
+    return;
+  }
+
+  for (const auto& minidump_mod : minidump_->Modules()) {
+    auto& mod = reply.modules.emplace_back();
+    mod.name = minidump_mod->Name();
+    mod.base = minidump_mod->Address();
+
+    crashpad::UUID uuid;
+    uint32_t unused_;
+    minidump_mod->UUIDAndAge(&uuid, &unused_);
+    mod.build_id = uuid.ToString();
+  }
+
+  Succeed(cb, reply);
 }
 
 void MinidumpRemoteAPI::Pause(
