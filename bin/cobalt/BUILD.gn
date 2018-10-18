@@ -34,12 +34,10 @@ package("cobalt_tests") {
   resources = [
     {
       path = rebase_path(
-              get_label_info(
-                             "testapp:generate_testapp_config",
-                             "target_gen_dir")
-              + "/cobalt_config.binproto")
+              get_label_info("testapp:generate_testapp_config",
+                             "target_gen_dir") + "/cobalt_config.binproto")
       dest = "cobalt_config.binproto"
-    }
+    },
   ]
 
   tests = [

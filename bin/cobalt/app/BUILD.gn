@@ -11,10 +11,10 @@ source_set("lib") {
     "cobalt_app.h",
     "cobalt_controller_impl.cc",
     "cobalt_controller_impl.h",
-    "logger_factory_impl.cc",
-    "logger_factory_impl.h",
     "legacy_logger_impl.cc",
     "legacy_logger_impl.h",
+    "logger_factory_impl.cc",
+    "logger_factory_impl.h",
     "product_hack.h",
     "system_data_updater_impl.cc",
     "system_data_updater_impl.h",
@@ -33,8 +33,8 @@ source_set("lib") {
     "//garnet/public/lib/network_wrapper",
     "//third_party/cobalt/config:cobalt_config_proto",
     "//third_party/cobalt/encoder",
-    "//third_party/cobalt/util:posix_file_system",
     "//third_party/cobalt/util:pem_util",
+    "//third_party/cobalt/util:posix_file_system",
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_lite",
     "//zircon/public/fidl/fuchsia-cobalt",
@@ -86,8 +86,8 @@ executable("cobalt_app_unittests") {
   testonly = true
 
   sources = [
-    "timer_manager_test.cc",
     "system_data_updater_impl_test.cc",
+    "timer_manager_test.cc",
   ]
 
   deps = [

@@ -16,8 +16,8 @@ executable("system-metrics") {
   deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
@@ -27,8 +27,8 @@ cobalt_config("generate_system_metrics_config") {
 
 package("cobalt_system_metrics") {
   deps = [
+    ":generate_system_metrics_config",
     ":system-metrics",
-    ":generate_system_metrics_config"
   ]
 
   meta = [
@@ -41,12 +41,10 @@ package("cobalt_system_metrics") {
   resources = [
     {
       path = rebase_path(
-              get_label_info(
-                             ":generate_system_metrics_config",
-                             "target_gen_dir")
-              + "/cobalt_config.binproto")
+              get_label_info(":generate_system_metrics_config",
+                             "target_gen_dir") + "/cobalt_config.binproto")
       dest = "cobalt_config.binproto"
-    }
+    },
   ]
 
   binary = "cobalt_system_metrics_bin"
