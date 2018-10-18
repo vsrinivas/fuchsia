@@ -30,7 +30,8 @@ import sys
 FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(             # scripts
     os.path.dirname(             # style
-    os.path.abspath(__file__))))
+    os.path.realpath(
+    os.path.abspath(__file__)))))
 
 PUBLIC_PREFIXES = [
     'ZIRCON_SYSTEM_ULIB_.*_INCLUDE',
@@ -236,7 +237,7 @@ def main():
     (arg_results, other_args) = parser.parse_known_args()
     fix_guards = arg_results.fix
     for p in other_args:
-        p = os.path.abspath(p)
+        p = os.path.realpath(os.path.abspath(p))
         if os.path.isdir(p):
             check_dir(p, fix_guards=fix_guards)
         else:
