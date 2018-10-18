@@ -5,7 +5,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/device/debug.h>
 #include <zircon/types.h>
 
 #include <dirent.h>
@@ -150,7 +149,7 @@ int main(int argc, char** argv) {
     print_usage.cancel();
 
     fbl::unique_fd xdc_fd;
-    zx_status_t status = configure_xdc(stream_id, xdc_fd);
+    zx_status_t status = configure_xdc(stream_id, &xdc_fd);
     if (status != ZX_OK) {
         return -1;
     }

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <zircon/device/debug.h>
+#include <xdc-server-utils/stream.h>
 
 // Stream id used to send control messages between the host and debug device.
 #define XDC_MSG_STREAM DEBUG_STREAM_ID_RESERVED

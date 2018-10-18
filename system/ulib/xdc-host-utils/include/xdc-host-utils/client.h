@@ -18,6 +18,6 @@ namespace xdc {
 //
 // Otherwise returns ZX_ERR_ALREADY_BOUND if the stream has already been claimed,
 // or ZX_ERR_IO otherwise.
-zx_status_t GetStream(uint32_t stream_id, fbl::unique_fd& out_fd);
+zx_status_t GetStream(uint32_t stream_id, fbl::unique_fd* out_fd);
 
 }  // namespace xdc

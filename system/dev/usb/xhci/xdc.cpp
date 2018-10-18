@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <fuchsia/usb/debug/c/fidl.h>
 #include <xdc-server-utils/msg.h>
-#include <zircon/device/debug.h>
+#include <xdc-server-utils/stream.h>
 #include <zircon/hw/usb.h>
 #include <assert.h>
 #include <string.h>
@@ -478,21 +479,17 @@ static zx_status_t xdc_read_instance(void* ctx, void* buf, size_t count,
     return ZX_OK;
 }
 
-static zx_status_t xdc_ioctl_instance(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                      void* out_buf, size_t out_len, size_t* out_actual) {
+static zx_status_t fidl_SetStream(void* ctx, uint32_t stream_id, fidl_txn_t* txn) {
     auto* inst = static_cast<xdc_instance_t*>(ctx);
+    return fuchsia_usb_debug_DeviceSetStream_reply(txn, xdc_register_stream(inst, stream_id));
+}
 
-    switch (op) {
-    case IOCTL_DEBUG_SET_STREAM:
-        if (in_len != sizeof(uint32_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        uint32_t stream_id;
-        stream_id = *((int *)in_buf);
-        return xdc_register_stream(inst, stream_id);
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+static fuchsia_usb_debug_Device_ops_t fidl_ops = {
+    .SetStream = fidl_SetStream,
+};
+
+static zx_status_t xdc_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_usb_debug_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 static zx_status_t xdc_close_instance(void* ctx, uint32_t flags) {
@@ -538,7 +535,7 @@ static zx_protocol_device_t xdc_instance_ops = []() {
     device.version = DEVICE_OPS_VERSION;
     device.write = xdc_write_instance;
     device.read = xdc_read_instance;
-    device.ioctl = xdc_ioctl_instance;
+    device.message = xdc_message;
     device.close = xdc_close_instance;
     device.release = xdc_release_instance;
     return device;

@@ -16,7 +16,7 @@
 
 namespace xdc {
 
-zx_status_t GetStream(uint32_t stream_id, fbl::unique_fd& out_fd) {
+zx_status_t GetStream(uint32_t stream_id, fbl::unique_fd* out_fd) {
     fbl::unique_fd fd(socket(AF_UNIX, SOCK_STREAM, 0));
     if (!fd) {
         fprintf(stderr, "Could not create socket, err: %s\n", strerror(errno));
@@ -50,7 +50,7 @@ zx_status_t GetStream(uint32_t stream_id, fbl::unique_fd& out_fd) {
         fprintf(stderr, "Stream id %u was already taken, exiting\n", stream_id);
         return ZX_ERR_ALREADY_BOUND;
     }
-    out_fd = fbl::move(fd);
+    *out_fd = fbl::move(fd);
     return ZX_OK;
 }
 

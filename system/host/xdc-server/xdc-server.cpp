@@ -6,7 +6,7 @@
 #include <xdc-host-utils/conn.h>
 #include <xdc-server-utils/msg.h>
 #include <xdc-server-utils/packet.h>
-#include <zircon/device/debug.h>
+#include <xdc-server-utils/stream.h>
 
 #include <cassert>
 #include <errno.h>
