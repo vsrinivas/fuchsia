@@ -126,8 +126,12 @@ def check_file(path, fix_guards=False):
     if found_ifndef and found_define and found_endif:
         return True
 
-    if found_ifndef or found_define or found_endif:
-        print('%s contained only part of a header guard' % path)
+    if not found_ifndef:
+      print('%s did not contain ifndef part of its header guard' % path)
+    elif not found_define:
+      print('%s did not contain define part of its header guard' % path)
+    elif not found_endif:
+      print('%s did not contain endif part of its header guard' % path)
     elif fix_guards:
         if found_pragma_once:
             print('%s contained #pragma once instead of a header guard' % path)
