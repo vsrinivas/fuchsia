@@ -22,7 +22,6 @@
 #include "garnet/bin/appmgr/hub/realm_hub.h"
 #include "garnet/bin/appmgr/namespace_builder.h"
 #include "garnet/bin/appmgr/scheme_map.h"
-#include "garnet/bin/appmgr/url_resolver.h"
 #include "garnet/bin/appmgr/util.h"
 #include "garnet/lib/cmx/cmx.h"
 #include "garnet/lib/cmx/program.h"
@@ -30,6 +29,7 @@
 #include "garnet/lib/cmx/sandbox.h"
 #include "garnet/lib/json/json_parser.h"
 #include "garnet/lib/pkg_url/fuchsia_pkg_url.h"
+#include "garnet/lib/pkg_url/url_resolver.h"
 #include "lib/component/cpp/connect.h"
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fsl/io/fd.h"
@@ -40,6 +40,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "lib/fxl/strings/substitute.h"
 #include "lib/svc/cpp/services.h"
 
 namespace component {
@@ -624,15 +625,19 @@ void Realm::CreateComponentFromPackage(
   std::string cmx_path;
   FuchsiaPkgUrl fp;
   if (fp.Parse(package->resolved_url.get())) {
-    // The package's resolved_url uses fuchsia-pkg://. This means it is a cmx,
-    // and we are requesting to launch a specific component, instead of the
-    // package default component.
-    cmx_path = fp.resource_path();
+    if (!fp.resource_path().empty()) {
+      // If the url has a resource, assume that's the cmx.
+      cmx_path = fp.resource_path();
+    } else {
+      // It's possible the url does not have a resource, in which case either
+      // the cmx exists at meta/<package_name.cmx> or it does not exist.
+      cmx_path = CmxMetadata::GetDefaultComponentCmxPath(fp);
+    }
   } else {
-    // If we do not specify a cmx, then we are launching the default component
-    // of the package.
-    cmx_path =
-        CmxMetadata::GetDefaultComponentCmxPath(package->resolved_url.get());
+    FXL_LOG(ERROR) << "invalid component url: " << package->resolved_url.get();
+    component_request.SetReturnValues(kComponentCreationFailed,
+                                      TerminationReason::INTERNAL_ERROR);
+    return;
   }
   TRACE_DURATION_BEGIN("appmgr", "Realm::CreateComponentFromPackage:IsFileAt",
                        "cmx_path", cmx_path);
@@ -688,8 +693,7 @@ void Realm::CreateComponentFromPackage(
     // Read 'data' path from cmx, or assume to be /pkg/data/<component-name>.
     std::string data_path =
         program.IsDataNull()
-            ? kDataPathPrefix +
-                  cmx.GetDefaultComponentName(package->resolved_url.get())
+            ? kDataPathPrefix + CmxMetadata::GetDefaultComponentName(fp)
             : program.data();
     // Pass a {"data", "data/<component-name>"} pair through StartupInfo, so
     // components can identify their directory under /pkg/data.

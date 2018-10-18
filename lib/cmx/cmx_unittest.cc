@@ -8,6 +8,7 @@
 #include <string>
 
 #include "garnet/lib/json/json_parser.h"
+#include "garnet/lib/pkg_url/fuchsia_pkg_url.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/path.h"
@@ -52,6 +53,12 @@ class CmxMetadataTest : public ::testing::Test {
     const int dirfd = open(tmp_dir_.path().c_str(), O_RDONLY);
     return cmx->ParseFromDeprecatedRuntimeFileAt(dirfd, *json_basename,
                                                  json_parser);
+  }
+
+  static FuchsiaPkgUrl ParseFuchsiaPkgUrl(const std::string& s) {
+    FuchsiaPkgUrl url;
+    EXPECT_TRUE(url.Parse(s));
+    return url;
   }
 
  private:
@@ -149,14 +156,19 @@ TEST_F(CmxMetadataTest, ParseWithErrors) {
                     "'binary' in program is not a string.");
 }
 
-TEST_F(CmxMetadataTest, GetDefaultComponentCmxPath) {
-  EXPECT_EQ("meta/sysmgr.cmx", CmxMetadata::GetDefaultComponentCmxPath(
-                                   "file:///pkgfs/packages/sysmgr/0"));
-  EXPECT_EQ(
-      "", CmxMetadata::GetDefaultComponentCmxPath("/pkgfs/packages/sysmgr/0"));
-  EXPECT_EQ("", CmxMetadata::GetDefaultComponentCmxPath(
-                    "file:///pkgfs/nothing/sysmgr/0"));
-  EXPECT_EQ("", CmxMetadata::GetDefaultComponentCmxPath(""));
+TEST_F(CmxMetadataTest, GetComponentDefaults) {
+  EXPECT_EQ("meta/sysmgr.cmx",
+            CmxMetadata::GetDefaultComponentCmxPath(
+                ParseFuchsiaPkgUrl("fuchsia-pkg://fuchsia.com/sysmgr")));
+  EXPECT_EQ("meta/sysmgr.cmx",
+            CmxMetadata::GetDefaultComponentCmxPath(ParseFuchsiaPkgUrl(
+                "fuchsia-pkg://fuchsia.com/sysmgr#meta/blah.cmx")));
+  EXPECT_EQ("sysmgr",
+            CmxMetadata::GetDefaultComponentName(
+                ParseFuchsiaPkgUrl("fuchsia-pkg://fuchsia.com/sysmgr")));
+  EXPECT_EQ("sysmgr",
+            CmxMetadata::GetDefaultComponentName(ParseFuchsiaPkgUrl(
+                "fuchsia-pkg://fuchsia.com/sysmgr#meta/blah.cmx")));
 }
 
 }  // namespace
