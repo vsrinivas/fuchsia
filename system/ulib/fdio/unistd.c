@@ -799,33 +799,6 @@ ssize_t fdio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_
     return r;
 }
 
-__EXPORT
-zx_status_t fdio_pipe_half(zx_handle_t* handle, uint32_t* type) {
-    zx_handle_t h0, h1;
-    zx_status_t r;
-    fdio_t* io;
-    int fd;
-    if ((r = zx_socket_create(0, &h0, &h1)) < 0) {
-        return r;
-    }
-    if ((io = fdio_zxio_create_pipe(h0)) == NULL) {
-        r = ZX_ERR_NO_MEMORY;
-        goto fail;
-    }
-    if ((fd = fdio_bind_to_fd(io, -1, 0)) < 0) {
-        fdio_release(io);
-        r = ZX_ERR_NO_RESOURCES;
-        goto fail;
-    }
-    *handle = h1;
-    *type = PA_FDIO_SOCKET;
-    return fd;
-
-fail:
-    zx_handle_close(h1);
-    return r;
-}
-
 zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx_time_t deadline,
                       uint32_t* out_pending) {
     zx_handle_t h = ZX_HANDLE_INVALID;

@@ -46,7 +46,7 @@ static void fdio_zxio_wait_begin(fdio_t* io, uint32_t events,
     zxio_t* z = fdio_get_zxio(io);
     zxio_signals_t signals = ZXIO_SIGNAL_NONE;
     if (events & POLLIN) {
-        signals |= ZXIO_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED;
+        signals |= ZXIO_READABLE | ZX_SOCKET_READ_DISABLED;
     }
     if (events & POLLOUT) {
         signals |= ZXIO_WRITABLE | ZXIO_WRITE_DISABLED;
@@ -653,25 +653,4 @@ fdio_t* fdio_zxio_create_pipe(zx_handle_t socket) {
         return NULL;
     }
     return &fv->io;
-}
-
-int fdio_pipe_pair(fdio_t** _a, fdio_t** _b) {
-    zx_handle_t h0, h1;
-    fdio_t *a, *b;
-    zx_status_t r;
-    if ((r = zx_socket_create(0, &h0, &h1)) < 0) {
-        return r;
-    }
-    if ((a = fdio_zxio_create_pipe(h0)) == NULL) {
-        zx_handle_close(h1);
-        return ZX_ERR_NO_MEMORY;
-    }
-    if ((b = fdio_zxio_create_pipe(h1)) == NULL) {
-        fdio_zxio_close(a);
-        fdio_free(a);
-        return ZX_ERR_NO_MEMORY;
-    }
-    *_a = a;
-    *_b = b;
-    return 0;
 }
