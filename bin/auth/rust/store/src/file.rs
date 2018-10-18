@@ -118,8 +118,8 @@ impl<S: Serializer> AuthDb for AuthDbFile<S> {
         }
     }
 
-    fn get_all_credentials<'a>(&'a self) -> Result<Vec<&'a CredentialValue>> {
-        Ok(self.credentials.values().collect())
+    fn get_all_credential_keys<'a>(&'a self) -> Result<Vec<&'a CredentialKey>> {
+        Ok(self.credentials.keys().collect())
     }
 
     fn get_refresh_token<'a>(&'a self, credential_key: &CredentialKey) -> Result<&'a str> {
@@ -147,8 +147,9 @@ mod test {
             "test".to_string(),
             user_profile_id.to_string(),
             refresh_token.to_string(),
-            None /* do not include a private key*/,
-        ).unwrap()
+            None, /* do not include a private key */
+        )
+        .unwrap()
     }
 
     fn create_temp_location() -> TempLocation {
@@ -189,7 +190,10 @@ mod test {
                 db.get_refresh_token(&cred_2.credential_key)?,
                 &cred_2.refresh_token
             );
-            assert_eq!(db.get_all_credentials().unwrap(), vec![&cred_1, &cred_2]);
+            assert_eq!(
+                db.get_all_credential_keys().unwrap(),
+                vec![&cred_1.credential_key, &cred_2.credential_key]
+            );
         }
         Ok(())
     }

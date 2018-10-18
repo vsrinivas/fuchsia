@@ -4,8 +4,10 @@
 
 use failure::Error;
 use fidl::endpoints::{create_endpoints, ClientEnd};
-use fidl_fuchsia_auth::{AuthenticationContextProviderMarker, AuthenticationContextProviderProxy,
-                        AuthenticationUiContextMarker};
+use fidl_fuchsia_auth::{
+    AuthenticationContextProviderMarker, AuthenticationContextProviderProxy,
+    AuthenticationUiContextMarker,
+};
 
 /// An object capable of acquiring new AuthenticationUiContexts.
 pub struct AuthContextClient {

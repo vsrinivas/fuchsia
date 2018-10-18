@@ -24,15 +24,14 @@ pub enum AuthDbError {
     /// See logs for more information.
     #[fail(display = "unexpected error serializing or deserialing the database")]
     SerializationError,
-    /// A lower level failure occured while reading and deserialization the
-    /// data.
+    /// A lower level failure occured while reading and deserialization the data.
     #[fail(
         display = "unexpected IO error accessing the database: {}",
         _0
     )]
     IoError(#[cause] std::io::Error),
-    /// The existing contents of the DB are not valid. This could be caused by
-    /// a change in file format or by data corruption.
+    /// The existing contents of the DB are not valid. This could be caused by a change in file
+    /// format or by data corruption.
     #[fail(display = "database contents could not be parsed")]
     DbInvalid,
     /// The requested credential is not present in the DB.
@@ -52,8 +51,7 @@ pub struct CredentialKey {
 }
 
 impl CredentialKey {
-    /// Create a new CredentialKey, or returns an Error if any input is
-    /// empty.
+    /// Create a new CredentialKey, or returns an Error if any input is empty.
     pub fn new(
         auth_provider_type: String, user_profile_id: String,
     ) -> result::Result<CredentialKey, Error> {
@@ -67,6 +65,16 @@ impl CredentialKey {
                 user_profile_id,
             })
         }
+    }
+
+    /// Gets the current value of the `auth_provider_type` field.
+    pub fn auth_provider_type(&self) -> &str {
+        &self.auth_provider_type
+    }
+
+    /// Gets the current value of the `user_profile_id` field.
+    pub fn user_profile_id(&self) -> &str {
+        &self.user_profile_id
     }
 }
 
@@ -102,18 +110,16 @@ impl CredentialValue {
 
 /// A trait expressing the functionality that all auth databases must provide.
 pub trait AuthDb {
-    /// Adds a new user credential to the database. The operation may insert a
-    /// new user credential or replace an existing user credential.
-    /// Replacement of an existing credential is useful when the credential
-    /// has been expired or invalidated by the identity provider.
+    /// Adds a new user credential to the database. The operation may insert a new user credential
+    /// or replace an existing user credential. Replacement of an existing credential is useful
+    /// when the credential has been expired or invalidated by the identity provider.
     fn add_credential(&mut self, credential: CredentialValue) -> Result<()>;
 
     /// Deletes the specified existing user credential from the database.
     fn delete_credential(&mut self, credential_key: &CredentialKey) -> Result<()>;
 
-    /// Returns all the credentials provisioned in this instance of the
-    /// database.
-    fn get_all_credentials<'a>(&'a self) -> Result<Vec<&'a CredentialValue>>;
+    /// Returns keys for all the credentials provisioned in this instance of the database.
+    fn get_all_credential_keys<'a>(&'a self) -> Result<Vec<&'a CredentialKey>>;
 
     /// Returns the refresh token for a specified user credential.
     fn get_refresh_token<'a>(&'a self, credential_key: &CredentialKey) -> Result<&'a str>;
@@ -135,7 +141,8 @@ mod tests {
             TEST_ID.to_string(),
             TEST_REFRESH_TOKEN.to_string(),
             None,
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(cred.credential_key.auth_provider_type, TEST_AUTH_PROVIDER);
         assert_eq!(cred.credential_key.user_profile_id, TEST_ID);
         assert_eq!(cred.refresh_token, TEST_REFRESH_TOKEN);
@@ -149,7 +156,8 @@ mod tests {
             TEST_ID.to_string(),
             TEST_REFRESH_TOKEN.to_string(),
             Some(TEST_PRIVATE_KEY.to_vec()),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(cred.credential_key.auth_provider_type, TEST_AUTH_PROVIDER);
         assert_eq!(cred.credential_key.user_profile_id, TEST_ID);
         assert_eq!(cred.refresh_token, TEST_REFRESH_TOKEN);
@@ -164,7 +172,8 @@ mod tests {
                 TEST_ID.to_string(),
                 TEST_REFRESH_TOKEN.to_string(),
                 None
-            ).is_err()
+            )
+            .is_err()
         );
         assert!(
             CredentialValue::new(
@@ -172,7 +181,8 @@ mod tests {
                 "".to_string(),
                 TEST_REFRESH_TOKEN.to_string(),
                 None
-            ).is_err()
+            )
+            .is_err()
         );
         assert!(
             CredentialValue::new(
@@ -180,7 +190,8 @@ mod tests {
                 TEST_ID.to_string(),
                 "".to_string(),
                 None
-            ).is_err()
+            )
+            .is_err()
         );
     }
 }

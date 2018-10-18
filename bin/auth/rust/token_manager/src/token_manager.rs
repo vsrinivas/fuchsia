@@ -12,13 +12,14 @@ use failure::format_err;
 use fidl;
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::ClientEnd;
-use fidl_fuchsia_auth::{AppConfig, AssertionJwtParams, AttestationJwtParams,
-                        AttestationSignerMarker, AuthProviderConfig, AuthProviderProxy,
-                        AuthProviderStatus, AuthenticationContextProviderMarker, CredentialEcKey,
-                        Status, TokenManagerAuthorizeResponder,
-                        TokenManagerDeleteAllTokensResponder, TokenManagerGetAccessTokenResponder,
-                        TokenManagerGetFirebaseTokenResponder, TokenManagerGetIdTokenResponder,
-                        TokenManagerRequest, UserProfileInfo};
+use fidl_fuchsia_auth::{
+    AppConfig, AssertionJwtParams, AttestationJwtParams, AttestationSignerMarker,
+    AuthProviderConfig, AuthProviderProxy, AuthProviderStatus, AuthenticationContextProviderMarker,
+    CredentialEcKey, Status, TokenManagerAuthorizeResponder, TokenManagerDeleteAllTokensResponder,
+    TokenManagerGetAccessTokenResponder, TokenManagerGetFirebaseTokenResponder,
+    TokenManagerGetIdTokenResponder, TokenManagerListProfileIdsResponder, TokenManagerRequest,
+    UserProfileInfo,
+};
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use futures::try_join;
@@ -143,6 +144,10 @@ impl TokenManager {
                 user_profile_id,
                 responder,
             } => responder.send_result(await!(self.delete_all_tokens(app_config, user_profile_id))),
+            TokenManagerRequest::ListProfileIds {
+                app_config,
+                responder,
+            } => responder.send_result(self.list_profile_ids(app_config)),
         }
     }
 
@@ -520,6 +525,16 @@ impl TokenManager {
         Ok(())
     }
 
+    /// Returns a vector of all known accounts matching the supplied auth_provider_type.
+    fn list_profile_ids(&self, app_config: AppConfig) -> TokenManagerResult<Vec<String>> {
+        let token_store = self.token_store.lock();
+        Ok(token_store.get_all_credential_keys()?
+            .into_iter()
+            .filter(|k| k.auth_provider_type() == &app_config.auth_provider_type)
+            .map(|k| k.user_profile_id().to_string())
+            .collect())
+    }
+
     /// Returns index keys for referencing a token in both the database and cache.
     fn create_keys(
         app_config: &AppConfig, user_profile_id: &String,
@@ -659,5 +674,17 @@ impl Responder for TokenManagerDeleteAllTokensResponder {
 
     fn send_raw(self, status: Status, _data: Option<()>) -> Result<(), fidl::Error> {
         self.send(status)
+    }
+}
+
+impl Responder for TokenManagerListProfileIdsResponder {
+    type Data = Vec<String>;
+    const METHOD_NAME: &'static str = "ListProfileIds";
+
+    fn send_raw(self, status: Status, data: Option<Vec<String>>) -> Result<(), fidl::Error> {
+        match data {
+            None => self.send(status, &mut std::iter::empty::<&str>()),
+            Some(mut profile_ids) => self.send(status, &mut profile_ids.iter_mut().map(|x| &**x)),
+        }
     }
 }

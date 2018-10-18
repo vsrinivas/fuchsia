@@ -4,8 +4,9 @@
 
 use fidl::endpoints::ClientEnd;
 use fidl::Error;
-use fidl_fuchsia_auth::{AuthProviderConfig, AuthenticationContextProviderMarker,
-                        TokenManagerFactoryRequest};
+use fidl_fuchsia_auth::{
+    AuthProviderConfig, AuthenticationContextProviderMarker, TokenManagerFactoryRequest,
+};
 use fuchsia_async as fasync;
 use futures::prelude::*;
 use log::{error, info};

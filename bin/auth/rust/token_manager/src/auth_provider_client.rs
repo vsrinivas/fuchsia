@@ -4,8 +4,9 @@
 
 use failure::{format_err, Error, ResultExt};
 use fidl::endpoints::ServerEnd;
-use fidl_fuchsia_auth::{AuthProviderConfig, AuthProviderFactoryMarker, AuthProviderProxy,
-                        AuthProviderStatus};
+use fidl_fuchsia_auth::{
+    AuthProviderConfig, AuthProviderFactoryMarker, AuthProviderProxy, AuthProviderStatus,
+};
 use fuchsia_app::client::{App, Launcher};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;

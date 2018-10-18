@@ -64,7 +64,8 @@ impl serde::ser::Serialize for CredentialValue {
                 .private_key
                 .as_ref()
                 .map(|key| base64::encode_config(key, CHARSET)),
-        }.serialize(serializer)
+        }
+        .serialize(serializer)
     }
 }
 
