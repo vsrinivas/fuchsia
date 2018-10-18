@@ -14,6 +14,36 @@
 
 namespace camera {
 
+typedef struct sensor_context {
+    // TODO(braval): Add details for each one of these
+    //               and also remove unused ones.
+    uint32_t again_limit;
+    uint32_t VMAX;
+    uint32_t int_max;
+    uint32_t dgain_limit;
+    uint32_t wdr_mode;
+    uint32_t gain_cnt;
+    uint32_t t_height;
+    uint32_t t_height_old;
+    uint16_t int_time;
+    uint16_t HMAX;
+    uint16_t dgain_old;
+    uint16_t int_time_min;
+    uint16_t int_time_limit;
+    uint16_t again_old;
+    uint16_t dgain[2];
+    uint16_t again[2];
+    uint8_t seq_width;
+    uint8_t streaming_flg;
+    uint8_t again_delay;
+    uint8_t again_change;
+    uint8_t dgain_delay;
+    uint8_t dgain_change;
+    uint8_t change_flg;
+    uint8_t hdr_flg;
+    zircon_camera_SensorInfo param;
+} sensor_context_t;
+
 class Imx227Device;
 using DeviceType = ddk::Device<Imx227Device,
                                ddk::Unbindable,
@@ -59,6 +89,9 @@ public:
     void Update();
 
 private:
+    // Sensor Context
+    sensor_context_t ctx_;
+
     // Protocols.
     platform_device_protocol_t pdev_;
     i2c_protocol_t i2c_;

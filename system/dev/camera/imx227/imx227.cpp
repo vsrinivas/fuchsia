@@ -23,6 +23,10 @@ namespace camera {
 namespace {
 
 constexpr uint16_t kSensorId = 0x0227;
+constexpr uint32_t kAGainPrecision = 12;
+constexpr uint32_t kDGainPrecision = 8;
+constexpr int32_t kLog2GainShift = 18;
+constexpr int32_t kSensorExpNumber = 1;
 
 } // namespace
 
@@ -126,6 +130,22 @@ zx_status_t Imx227Device::Init() {
     if (!ValidateSensorID()) {
         return ZX_ERR_INTERNAL;
     }
+
+    // Initialize Sensor Context.
+    ctx_.seq_width = 1;
+    ctx_.streaming_flg = 0;
+    ctx_.again_old = 0;
+    ctx_.change_flg = 0;
+    ctx_.again_limit = 8 << kAGainPrecision;
+    ctx_.dgain_limit = 15 << kDGainPrecision;
+
+    // Initialize Sensor Parameters.
+    ctx_.param.again_accuracy = 1 << kLog2GainShift;
+    ctx_.param.sensor_exp_number = kSensorExpNumber;
+    ctx_.param.again_log2_max = 3 << kLog2GainShift;
+    ctx_.param.dgain_log2_max = 3 << kLog2GainShift;
+    ctx_.param.integration_time_apply_delay = 2;
+    ctx_.param.isp_exposure_channel_delay = 0;
 
     return ZX_OK;
 }

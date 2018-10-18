@@ -73,9 +73,7 @@ struct SensorInfo {
     uint32 lines_per_second;
     // Number of different exposures supported by the sensor.
     int32 sensor_exp_number;
-    // The number of predefined modes.
-    uint32 modes_num;
-    // Current mode. This value is from the range [ 0 : modes_num - 1 ].
+    // Current mode. This value is from the range [ 0 : countof(supported_modes) - 1 ].
     uint8 mode;
     // sensor setting bayer pattern.
     uint8 bayer;
