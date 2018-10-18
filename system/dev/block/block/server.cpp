@@ -63,9 +63,9 @@ void BlockComplete(BlockMsg* msg, zx_status_t status) {
     extra->server->TxnEnd();
 }
 
-void BlockCompleteCb(block_op_t* bop, zx_status_t status) {
+void BlockCompleteCb(void* cookie, zx_status_t status, block_op_t* bop) {
     ZX_DEBUG_ASSERT(bop != nullptr);
-    BlockMsg msg(static_cast<block_msg_t*>(bop->cookie));
+    BlockMsg msg(static_cast<block_msg_t*>(cookie));
     BlockComplete(&msg, status);
 }
 
@@ -88,9 +88,6 @@ void InQueueAdd(zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
     bop->rw.vmo = vmo;
     bop->rw.offset_dev = dev_offset;
     bop->rw.offset_vmo = vmo_offset;
-    bop->rw.pages = NULL;
-    bop->completion_cb = BlockCompleteCb;
-    bop->cookie = msg;
     queue->push_back(msg);
 }
 
@@ -262,11 +259,11 @@ void BlockServer::InQueueDrainer() {
         // This may be altered in the future if block devices
         // are capable of implementing hardware barriers.
         msg->op.command &= ~(BLOCK_FL_BARRIER_BEFORE | BLOCK_FL_BARRIER_AFTER);
-        bp_->ops->queue(bp_->ctx, &msg->op);
+        bp_->ops->queue(bp_->ctx, &msg->op, BlockCompleteCb, &*msg);
     }
 }
 
-zx_status_t BlockServer::Create(block_protocol_t* bp, fzl::fifo<block_fifo_request_t,
+zx_status_t BlockServer::Create(block_impl_protocol_t* bp, fzl::fifo<block_fifo_request_t,
                                 block_fifo_response_t>* fifo_out, BlockServer** out) {
     fbl::AllocChecker ac;
     BlockServer* bs = new (&ac) BlockServer(bp);
@@ -489,7 +486,7 @@ zx_status_t BlockServer::Serve() {
     }
 }
 
-BlockServer::BlockServer(block_protocol_t* bp) :
+BlockServer::BlockServer(block_impl_protocol_t* bp) :
     bp_(bp), block_op_size_(0), pending_count_(0), barrier_in_progress_(false),
     last_id_(VMOID_INVALID + 1) {
     size_t block_op_size;
@@ -511,7 +508,8 @@ void BlockServer::ShutDown() {
 }
 
 // C declarations
-zx_status_t blockserver_create(block_protocol_t* bp, zx_handle_t* fifo_out, BlockServer** out) {
+zx_status_t blockserver_create(block_impl_protocol_t* bp, zx_handle_t* fifo_out,
+                               BlockServer** out) {
     fzl::fifo<block_fifo_request_t, block_fifo_response_t> fifo;
     zx_status_t status = BlockServer::Create(bp, &fifo, out);
     *fifo_out = fifo.release();

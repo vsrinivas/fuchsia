@@ -58,7 +58,7 @@ typedef struct mbrpart_device {
     zx_device_t* zxdev;
     zx_device_t* parent;
 
-    block_protocol_t bp;
+    block_impl_protocol_t bp;
 
     mbr_partition_entry_t partition;
 
@@ -128,7 +128,8 @@ static void mbr_query(void* ctx, block_info_t* bi, size_t* bopsz) {
     *bopsz = mbr->block_op_size;
 }
 
-static void mbr_queue(void* ctx, block_op_t* bop) {
+static void mbr_queue(void* ctx, block_op_t* bop, block_impl_queue_callback completion_cb,
+                      void* cookie) {
     mbrpart_device_t* mbr = ctx;
 
     switch (bop->command & BLOCK_OP_MASK) {
@@ -140,7 +141,7 @@ static void mbr_queue(void* ctx, block_op_t* bop) {
         // Ensure that the request is in-bounds
         if ((bop->rw.offset_dev >= max) ||
             ((max - bop->rw.offset_dev) < blocks)) {
-            bop->completion_cb(bop, ZX_ERR_INVALID_ARGS);
+            completion_cb(cookie, ZX_ERR_INVALID_ARGS, bop);
             return;
         }
 
@@ -151,11 +152,11 @@ static void mbr_queue(void* ctx, block_op_t* bop) {
     case BLOCK_OP_FLUSH:
         break;
     default:
-        bop->completion_cb(bop, ZX_ERR_NOT_SUPPORTED);
+        completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, bop);
         return;
     }
 
-    mbr->bp.ops->queue(mbr->bp.ctx, bop);
+    block_impl_queue(&mbr->bp, bop, completion_cb, cookie);
 }
 
 static void mbr_unbind(void* ctx) {
@@ -183,14 +184,14 @@ static zx_protocol_device_t mbr_proto = {
     .release = mbr_release,
 };
 
-static block_protocol_ops_t block_ops = {
+static block_impl_protocol_ops_t block_ops = {
     .query = mbr_query,
     .queue = mbr_queue,
 };
 
-static void mbr_read_sync_complete(block_op_t* bop, zx_status_t status) {
+static void mbr_read_sync_complete(void* cookie, zx_status_t status, block_op_t* bop) {
     bop->command = status;
-    sync_completion_signal((sync_completion_t*)bop->cookie);
+    sync_completion_signal((sync_completion_t*)cookie);
 }
 
 static zx_status_t vmo_read(zx_handle_t vmo, void* data, uint64_t off, size_t len) {
@@ -204,12 +205,12 @@ static int mbr_bind_thread(void* arg) {
     // Classic MBR supports 4 partitions.
     uint8_t partition_count = 0;
 
-    block_protocol_t bp;
+    block_impl_protocol_t bp;
     memcpy(&bp, &first_dev->bp, sizeof(bp));
 
     block_info_t block_info;
     size_t block_op_size;
-    bp.ops->query(bp.ctx, &block_info, &block_op_size);
+    block_impl_query(&bp, &block_info, &block_op_size);
 
     zx_handle_t vmo = ZX_HANDLE_INVALID;
     block_op_t* bop = calloc(1, block_op_size);
@@ -240,11 +241,8 @@ static int mbr_bind_thread(void* arg) {
     bop->rw.length = iosize / block_info.block_size;
     bop->rw.offset_dev = 0;
     bop->rw.offset_vmo = 0;
-    bop->rw.pages = NULL;
-    bop->completion_cb = mbr_read_sync_complete;
-    bop->cookie = &cplt;
 
-    bp.ops->queue(bp.ctx, bop);
+    bp.ops->queue(bp.ctx, bop, mbr_read_sync_complete, &cplt);
     sync_completion_wait(&cplt, ZX_TIME_INFINITE);
 
     if (bop->command != ZX_OK) {

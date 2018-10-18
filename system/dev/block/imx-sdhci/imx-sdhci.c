@@ -20,6 +20,7 @@
 #include <ddk/mmio-buffer.h>
 #include <ddk/phys-iter.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/block.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/platform-device-lib.h>

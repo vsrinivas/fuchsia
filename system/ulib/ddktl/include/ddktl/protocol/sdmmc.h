@@ -7,12 +7,10 @@
 
 #pragma once
 
-#include <ddk/protocol/block.h>
 #include <ddk/protocol/sdmmc.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
-#include <zircon/listnode.h>
 #include <zircon/types.h>
 
 #include "sdmmc-internal.h"

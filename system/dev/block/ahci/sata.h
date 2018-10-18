@@ -48,6 +48,8 @@ typedef struct sata_txn {
 
     zx_status_t status;
     zx_handle_t pmt;
+    block_impl_queue_callback completion_cb;
+    void* cookie;
 } sata_txn_t;
 
 typedef struct ahci_device ahci_device_t;
@@ -65,6 +67,6 @@ void ahci_set_devinfo(ahci_device_t* controller, int portnr, sata_devinfo_t* dev
 // queue a txn on the controller
 void ahci_queue(ahci_device_t* controller, int portnr, sata_txn_t* txn);
 
-static inline void block_complete(block_op_t* bop, zx_status_t status) {
-    bop->completion_cb(bop, status);
+static inline void block_complete(sata_txn_t* txn, zx_status_t status) {
+    txn->completion_cb(txn->cookie, status, &txn->bop);
 }

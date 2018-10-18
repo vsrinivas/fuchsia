@@ -534,7 +534,7 @@ static int ahci_worker_thread(void* arg) {
                         zx_pmt_unpin(txn->pmt);
                     }
                     zxlogf(SPEW, "ahci.%d: complete txn %p\n", port->nr, txn);
-                    block_complete(&txn->bop, ZX_OK);
+                    block_complete(txn, ZX_OK);
                     mtx_lock(&port->lock);
                 }
                 port->completed &= ~(1 << slot);
@@ -544,7 +544,7 @@ static int ahci_worker_thread(void* arg) {
                 if ((port->flags & AHCI_PORT_FLAG_SYNC_PAUSED) && !port->running) {
                     port->flags &= ~AHCI_PORT_FLAG_SYNC_PAUSED;
                     if (port->sync) {
-                        block_op_t* sop = &port->sync->bop;
+                        sata_txn_t* sop = port->sync;
                         port->sync = NULL;
                         mtx_unlock(&port->lock);
                         block_complete(sop, ZX_OK);
@@ -585,7 +585,7 @@ static int ahci_worker_thread(void* arg) {
                     } else {
                         // complete immediately if nothing in flight
                         mtx_unlock(&port->lock);
-                        block_complete(&txn->bop, ZX_OK);
+                        block_complete(txn, ZX_OK);
                         mtx_lock(&port->lock);
                     }
                 } else {
@@ -594,7 +594,7 @@ static int ahci_worker_thread(void* arg) {
                     // complete the transaction with if it failed during processing
                     if (st != ZX_OK) {
                         mtx_unlock(&port->lock);
-                        block_complete(&txn->bop, st);
+                        block_complete(txn, st);
                         mtx_lock(&port->lock);
                         continue;
                     }
@@ -636,7 +636,7 @@ static int ahci_watchdog_thread(void* arg) {
                         port->running &= ~(1 << slot);
                         port->commands[slot] = NULL;
                         mtx_unlock(&port->lock);
-                        block_complete(&txn->bop, ZX_ERR_TIMED_OUT);
+                        block_complete(txn, ZX_ERR_TIMED_OUT);
                         mtx_lock(&port->lock);
                     }
                 }

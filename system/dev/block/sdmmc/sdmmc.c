@@ -40,8 +40,17 @@
 
 #define BLOCK_OP(op)    ((op) & BLOCK_OP_MASK)
 
-static void block_complete(block_op_t* bop, zx_status_t status, sdmmc_device_t* dev) {
-    if (bop->completion_cb) {
+// block io transactions. one per client request
+typedef struct sdmmc_txn {
+    block_op_t bop;
+    list_node_t node;
+    block_impl_queue_callback completion_cb;
+    void* cookie;
+} sdmmc_txn_t;
+
+static void block_complete(sdmmc_txn_t* txn, zx_status_t status, sdmmc_device_t* dev) {
+    const block_op_t* bop = &txn->bop;
+    if (txn->completion_cb) {
         // If tracing is not enabled this is a no-op.
         TRACE_ASYNC_END("sdmmc","sdmmc_do_txn", dev->async_id,
             "command", TA_INT32(bop->rw.command),
@@ -49,9 +58,8 @@ static void block_complete(block_op_t* bop, zx_status_t status, sdmmc_device_t* 
             "length", TA_INT32(bop->rw.length),
             "offset_vmo", TA_INT64(bop->rw.offset_vmo),
             "offset_dev", TA_INT64(bop->rw.offset_dev),
-            "pages", TA_POINTER(bop->rw.pages),
             "txn_status", TA_INT32(status));
-        bop->completion_cb(bop, status);
+        txn->completion_cb(txn->cookie, status, &txn->bop);
     } else {
         zxlogf(TRACE, "sdmmc: block op %p completion_cb unset!\n", bop);
     }
@@ -102,7 +110,7 @@ static void sdmmc_release(void* ctx) {
         list_for_every_entry(&dev->txn_list, txn, sdmmc_txn_t, node) {
             SDMMC_UNLOCK(dev);
 
-            block_complete(&txn->bop, ZX_ERR_BAD_STATE, dev);
+            block_complete(txn, ZX_ERR_BAD_STATE, dev);
 
             SDMMC_LOCK(dev);
         }
@@ -134,20 +142,23 @@ static void sdmmc_query(void* ctx, block_info_t* info_out, size_t* block_op_size
     *block_op_size_out = sizeof(sdmmc_txn_t);
 }
 
-static void sdmmc_queue(void* ctx, block_op_t* btxn) {
+static void sdmmc_queue(void* ctx, block_op_t* btxn, block_impl_queue_callback completion_cb,
+                        void* cookie) {
     sdmmc_device_t* dev = ctx;
     sdmmc_txn_t* txn = containerof(btxn, sdmmc_txn_t, bop);
+    txn->completion_cb = completion_cb;
+    txn->cookie = cookie;
 
     switch (BLOCK_OP(btxn->command)) {
     case BLOCK_OP_READ:
     case BLOCK_OP_WRITE: {
         uint64_t max = dev->block_info.block_count;
         if ((btxn->rw.offset_dev >= max) || ((max - btxn->rw.offset_dev) < btxn->rw.length)) {
-            block_complete(btxn, ZX_ERR_OUT_OF_RANGE, dev);
+            block_complete(txn, ZX_ERR_OUT_OF_RANGE, dev);
             return;
         }
         if (btxn->rw.length == 0) {
-            block_complete(btxn, ZX_OK, dev);
+            block_complete(txn, ZX_OK, dev);
             return;
         }
         break;
@@ -157,7 +168,7 @@ static void sdmmc_queue(void* ctx, block_op_t* btxn) {
         // driver, when this op gets processed all previous ops are complete.
         break;
     default:
-        block_complete(btxn, ZX_ERR_NOT_SUPPORTED, dev);
+        block_complete(txn, ZX_ERR_NOT_SUPPORTED, dev);
         return;
     }
 
@@ -172,7 +183,7 @@ static void sdmmc_queue(void* ctx, block_op_t* btxn) {
 }
 
 // Block protocol
-static block_protocol_ops_t block_proto = {
+static block_impl_protocol_ops_t block_proto = {
     .query = sdmmc_query,
     .queue = sdmmc_queue,
 };
@@ -231,8 +242,7 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
             "extra", TA_INT32(txn->bop.rw.extra),
             "length", TA_INT32(txn->bop.rw.length),
             "offset_vmo", TA_INT64(txn->bop.rw.offset_vmo),
-            "offset_dev", TA_INT64(txn->bop.rw.offset_dev),
-            "pages", TA_POINTER(txn->bop.rw.pages));
+            "offset_dev", TA_INT64(txn->bop.rw.offset_dev));
     }
 
     uint32_t cmd_idx = 0;
@@ -259,13 +269,13 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
         }
         break;
     case BLOCK_OP_FLUSH:
-        block_complete(&txn->bop, ZX_OK, dev);
+        block_complete(txn, ZX_OK, dev);
         return;
     default:
         // should not get here
         zxlogf(ERROR, "sdmmc: do_txn invalid block op %d\n", BLOCK_OP(txn->bop.command));
         ZX_DEBUG_ASSERT(true);
-        block_complete(&txn->bop, ZX_ERR_INVALID_ARGS, dev);
+        block_complete(txn, ZX_ERR_INVALID_ARGS, dev);
         return;
     }
 
@@ -300,7 +310,7 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
                          (uintptr_t*)&req->virt_buffer);
         if (st != ZX_OK) {
             zxlogf(TRACE, "sdmmc: do_txn vmo map error %d\n", st);
-            block_complete(&txn->bop, st, dev);
+            block_complete(txn, st, dev);
             return;
         }
         req->virt_size = txn->bop.rw.length;
@@ -324,7 +334,7 @@ exit:
     if (!req->use_dma) {
         zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)req->virt_buffer, req->virt_size);
     }
-    block_complete(&txn->bop, st, dev);
+    block_complete(txn, st, dev);
     zxlogf(TRACE, "sdmmc: do_txn complete\n");
 }
 

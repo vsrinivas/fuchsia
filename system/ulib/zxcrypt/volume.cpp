@@ -76,11 +76,11 @@ const char* kWrapIvLabel = "wrap iv %" PRIu64;
 // Header is type GUID | instance GUID | version.
 const size_t kHeaderLen = sizeof(zxcrypt_magic) + GUID_LEN + sizeof(uint32_t);
 
-void SyncComplete(block_op_t* block, zx_status_t status) {
+void SyncComplete(void* cookie, zx_status_t status, block_op_t* block) {
     // Use the 32bit command field to shuttle the response back to the callsite that's waiting on
     // the completion
     block->command = status;
-    sync_completion_signal(static_cast<sync_completion_t*>(block->cookie));
+    sync_completion_signal(static_cast<sync_completion_t*>(cookie));
 }
 
 // Performs synchronous I/O
@@ -92,7 +92,7 @@ zx_status_t SyncIO(zx_device_t* dev, uint32_t cmd, void* buf, size_t off, size_t
         return ZX_ERR_INVALID_ARGS;
     }
 
-    block_protocol_t proto;
+    block_impl_protocol_t proto;
     if ((rc = device_get_protocol(dev, ZX_PROTOCOL_BLOCK, &proto)) != ZX_OK) {
         xprintf("block protocol not support\n");
         return ZX_ERR_NOT_SUPPORTED;
@@ -106,7 +106,7 @@ zx_status_t SyncIO(zx_device_t* dev, uint32_t cmd, void* buf, size_t off, size_t
 
     block_info_t info;
     size_t op_size;
-    proto.ops->query(proto.ctx, &info, &op_size);
+    block_impl_query(&proto, &info, &op_size);
 
     size_t bsz = info.block_size;
     ZX_DEBUG_ASSERT(off / bsz <= UINT32_MAX);
@@ -123,16 +123,13 @@ zx_status_t SyncIO(zx_device_t* dev, uint32_t cmd, void* buf, size_t off, size_t
     block->rw.length = static_cast<uint32_t>(len / bsz);
     block->rw.offset_dev = static_cast<uint32_t>(off / bsz);
     block->rw.offset_vmo = 0;
-    block->rw.pages = nullptr;
-    block->completion_cb = SyncComplete;
-    block->cookie = &completion;
 
     if (cmd == BLOCK_OP_WRITE && (rc = vmo.write(buf, 0, len)) != ZX_OK) {
         xprintf("zx::vmo::write failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
 
-    proto.ops->queue(proto.ctx, block);
+    block_impl_queue(&proto, block, SyncComplete, &completion);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
     rc = block->command;

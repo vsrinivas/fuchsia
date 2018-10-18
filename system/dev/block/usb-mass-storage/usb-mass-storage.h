@@ -66,6 +66,8 @@ typedef struct {
 
 typedef struct ums_txn {
     block_op_t op;
+    block_impl_queue_callback completion_cb;
+    void* cookie;
     list_node_t node;
     ums_block_t* dev;
 } ums_txn_t;

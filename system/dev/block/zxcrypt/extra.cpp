@@ -18,13 +18,14 @@
 
 namespace zxcrypt {
 
-zx_status_t extra_op_t::Init(block_op_t* block, size_t reserved_blocks) {
+zx_status_t extra_op_t::Init(block_op_t* block, block_impl_queue_callback cb, void* _cookie,
+                             size_t reserved_blocks) {
     LOG_ENTRY_ARGS("block=%p, reserved_blocks=%zu", block, reserved_blocks);
 
     list_initialize(&node);
     data = nullptr;
-    completion_cb = block->completion_cb;
-    cookie = block->cookie;
+    completion_cb = cb;
+    cookie = _cookie;
 
     switch (block->command & BLOCK_OP_MASK) {
     case BLOCK_OP_READ:

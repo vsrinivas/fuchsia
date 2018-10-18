@@ -37,10 +37,10 @@ typedef struct blkdev {
     uint32_t threadcount;
 
     // The block protocol of the device we are binding against.
-    block_protocol_t parent_protocol;
+    block_impl_protocol_t parent_protocol;
     // The block protocol for ourselves, which redirects to the parent protocol,
     // but may also collect auxiliary information like statistics.
-    block_protocol_t self_protocol;
+    block_impl_protocol_t self_protocol;
 
     block_info_t info;
     size_t block_op_size;
@@ -229,8 +229,8 @@ static zx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
     }
 }
 
-static void block_completion_cb(block_op_t* bop, zx_status_t status) {
-    blkdev_t* bdev = bop->cookie;
+static void block_completion_cb(void* cookie, zx_status_t status, block_op_t* bop) {
+    blkdev_t* bdev = cookie;
     bdev->iostatus = status;
     sync_completion_signal(&bdev->iosignal);
 }
@@ -284,12 +284,9 @@ static zx_status_t blkdev_io(blkdev_t* bdev, void* buf, size_t count,
         bop->rw.vmo = bdev->iovmo;
         bop->rw.offset_dev = (off + sub_txn_offset) / bsz;
         bop->rw.offset_vmo = 0;
-        bop->rw.pages = NULL;
-        bop->completion_cb = block_completion_cb;
-        bop->cookie = bdev;
 
         sync_completion_reset(&bdev->iosignal);
-        bdev->self_protocol.ops->queue(bdev->self_protocol.ctx, bop);
+        block_impl_queue(&bdev->self_protocol, bop, block_completion_cb, bdev);
         sync_completion_wait(&bdev->iosignal, ZX_TIME_INFINITE);
 
         if (bdev->iostatus != ZX_OK) {
@@ -359,13 +356,14 @@ static void blkdev_release(void* ctx) {
     }
 }
 
-static void block_query(void* ctx, block_info_t* bi, size_t* bopsz) {
+static void blkdev_query(void* ctx, block_info_t* bi, size_t* bopsz) {
     blkdev_t* bdev = ctx;
     memcpy(bi, &bdev->info, sizeof(block_info_t));
     *bopsz = bdev->block_op_size;
 }
 
-static void block_queue(void* ctx, block_op_t* bop) {
+static void blkdev_queue(void* ctx, block_op_t* bop, block_impl_queue_callback completion_cb,
+                        void* cookie) {
     blkdev_t* bdev = ctx;
     uint64_t op = bop->command & BLOCK_OP_MASK;
     bdev->stats.total_ops++;
@@ -378,7 +376,7 @@ static void block_queue(void* ctx, block_op_t* bop) {
         bdev->stats.total_blocks_written += bop->rw.length;
         bdev->stats.total_blocks += bop->rw.length;
     }
-    bdev->parent_protocol.ops->queue(bdev->parent_protocol.ctx, bop);
+    block_impl_queue(&bdev->parent_protocol, bop, completion_cb, cookie);
 }
 
 static zx_status_t handle_stats(void* ctx, const void* cmd,
@@ -416,9 +414,9 @@ static zx_status_t handle_stats(void* ctx, const void* cmd,
     }
 }
 
-static block_protocol_ops_t block_ops = {
-    .query = block_query,
-    .queue = block_queue,
+static block_impl_protocol_ops_t block_ops = {
+    .query = blkdev_query,
+    .queue = blkdev_queue,
     .get_stats = handle_stats,
 };
 
@@ -449,7 +447,7 @@ static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev) {
 
     bdev->self_protocol.ctx = bdev;
     bdev->self_protocol.ops = &block_ops;
-    bdev->parent_protocol.ops->query(bdev->parent_protocol.ctx, &bdev->info, &bdev->block_op_size);
+    block_impl_query(&bdev->parent_protocol, &bdev->info, &bdev->block_op_size);
     // TODO(kmerrick) have this start as false and create IOCTL to toggle it
     bdev->enable_stats = true;
 

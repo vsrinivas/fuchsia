@@ -33,11 +33,12 @@ struct extra_op_t {
     uint32_t length;
     uint64_t offset_dev;
     uint64_t offset_vmo;
-    void (*completion_cb)(block_op_t* block, zx_status_t status);
+    block_impl_queue_callback completion_cb;
     void* cookie;
 
     // Resets this structure to an initial state.
-    zx_status_t Init(block_op_t* block, size_t reserved_blocks);
+    zx_status_t Init(block_op_t* block, block_impl_queue_callback completion_cb, void* cookie,
+                     size_t reserved_blocks);
 };
 
 // Translates |block_op_t|s to |extra_op_t|s and vice versa.

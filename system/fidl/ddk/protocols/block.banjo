@@ -1,0 +1,85 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.block;
+
+using zircon.device.block;
+using zx;
+
+/// `BLOCK_OP_READ`, `BLOCK_OP_WRITE`
+struct BlockReadWrite {
+    /// Command and flags.
+    uint32 command;
+    /// Available for temporary use.
+    uint32 extra;
+    /// VMO of data to read or write.
+    handle<vmo> vmo;
+    /// Transfer length in blocks (0 is invalid).
+    uint32 length;
+    /// Device offset in blocks.
+    uint64 offset_dev;
+    /// VMO offset in blocks.
+    uint64 offset_vmo;
+};
+
+/// `BLOCK_OP_TRIM`
+struct BlockTrim {
+    /// Command and flags.
+    uint32 command;
+    // ???
+};
+
+union BlockOp {
+    /// All Commands
+    uint32 command;
+    /// Read and Write ops use rw for parameters.
+    BlockReadWrite rw;
+    BlockTrim trim;
+};
+
+const uint32 BLOCK_OP_READ = 0x00000001;
+const uint32 BLOCK_OP_WRITE = 0x00000002;
+
+/// Write any controller or device cached data to nonvolatile storage.
+/// This operation always implies BARRIER_BEFORE and BARRIER_AFTER,
+/// meaning that previous operations will complete before it starts
+/// and later operations will not start until it is done.
+const uint32 BLOCK_OP_FLUSH = 0x00000003;
+
+// TBD
+const uint32 BLOCK_OP_TRIM = 0x00000004;
+const uint32 BLOCK_OP_MASK = 0x000000FF;
+
+/// Mark this operation as "Force Unit Access" (FUA), indicating that
+/// it should not complete until the data is written to the non-volatile
+/// medium (write), and that reads should bypass any on-device caches.
+const uint32 BLOCK_FL_FORCE_ACCESS = 0x00001000;
+
+/// Require that this operation will not begin until all previous
+/// operations have completed.
+///
+/// Prevents earlier operations from being reordered after this one.
+const uint32 BLOCK_FL_BARRIER_BEFORE = 0x00000100;
+
+/// Require that this operation complete before any subsequent
+/// operations are started.
+///
+/// Prevents later operations from being reordered before this one.
+const uint32 BLOCK_FL_BARRIER_AFTER = 0x00000200;
+
+[Layout="ddk-protocol", DefaultProtocol]
+interface BlockImpl {
+  /// Obtain the parameters of the block device (block_info_t) and
+  /// the required size of block_txn_t.  The block_txn_t's submitted
+  /// via queue() must have block_op_size_out - sizeof(block_op_t) bytes
+  /// available at the end of the structure for the use of the driver.
+  1: Query() -> (zircon.device.block.BlockInfo info, usize block_op_size);
+  /// Submit an IO request for processing. Ownership of |op| is transferred to
+  /// callee until |completion_cb| is invoked|. Success or failure will
+  /// be reported via the |completion_cb|.  This / callback may be called
+  /// before the queue() method returns.
+  [Async]
+  2: Queue(BlockOp? txn) -> (zx.status status, BlockOp? op);
+  3: GetStats(vector<void> cmd) -> (zx.status s, vector<void> reply);
+};

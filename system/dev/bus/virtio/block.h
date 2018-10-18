@@ -20,6 +20,8 @@ namespace virtio {
 
 struct block_txn_t {
     block_op_t op;
+    block_impl_queue_callback completion_cb;
+    void* cookie;
     struct vring_desc* desc;
     size_t index;
     list_node_t node;
@@ -50,7 +52,8 @@ private:
                                           void* out_buf, size_t out_len, size_t* out_actual);
 
     static void virtio_block_query(void* ctx, block_info_t* bi, size_t* bopsz);
-    static void virtio_block_queue(void* ctx, block_op_t* bop);
+    static void virtio_block_queue(void* ctx, block_op_t* bop,
+                                   block_impl_queue_callback completion_cb, void* cookie);
 
     void GetInfo(block_info_t* info);
 
@@ -103,7 +106,7 @@ private:
     bool txn_wait_ = false;
     sync_completion_t txn_signal_;
 
-    block_protocol_ops_t block_ops_ = {};
+    block_impl_protocol_ops_t block_ops_ = {};
 };
 
 } // namespace virtio

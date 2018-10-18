@@ -26,7 +26,7 @@ typedef struct {
     zx_device_t* zxdev;
     zx_device_t* parent;
 
-    block_protocol_t bp;
+    block_impl_protocol_t bp;
     zbi_partition_t part;
 
     block_info_t info;
@@ -101,7 +101,8 @@ static void bootpart_query(void* ctx, block_info_t* bi, size_t* bopsz) {
     *bopsz = bootpart->block_op_size;
 }
 
-static void bootpart_queue(void* ctx, block_op_t* bop) {
+static void bootpart_queue(void* ctx, block_op_t* bop, block_impl_queue_callback completion_cb,
+                           void* cookie) {
     bootpart_device_t* bootpart = ctx;
 
     switch (bop->command & BLOCK_OP_MASK) {
@@ -113,7 +114,7 @@ static void bootpart_queue(void* ctx, block_op_t* bop) {
         // Ensure that the request is in-bounds
         if ((bop->rw.offset_dev >= max) ||
             ((max - bop->rw.offset_dev) < blocks)) {
-            bop->completion_cb(bop, ZX_ERR_OUT_OF_RANGE);
+            completion_cb(cookie, ZX_ERR_OUT_OF_RANGE, bop);
             return;
         }
 
@@ -124,11 +125,11 @@ static void bootpart_queue(void* ctx, block_op_t* bop) {
     case BLOCK_OP_FLUSH:
         break;
     default:
-        bop->completion_cb(bop, ZX_ERR_NOT_SUPPORTED);
+        completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, bop);
         return;
     }
 
-    bootpart->bp.ops->queue(bootpart->bp.ctx, bop);
+    bootpart->bp.ops->queue(bootpart->bp.ctx, bop, completion_cb, cookie);
 }
 
 static void bootpart_unbind(void* ctx) {
@@ -156,13 +157,13 @@ static zx_protocol_device_t device_proto = {
     .release = bootpart_release,
 };
 
-static block_protocol_ops_t block_ops = {
+static block_impl_protocol_ops_t block_ops = {
     .query = bootpart_query,
     .queue = bootpart_queue,
 };
 
 static zx_status_t bootpart_bind(void* ctx, zx_device_t* parent) {
-    block_protocol_t bp;
+    block_impl_protocol_t bp;
     uint8_t buffer[METADATA_PARTITION_MAP_MAX];
     size_t actual;
 

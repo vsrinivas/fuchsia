@@ -36,6 +36,8 @@
 typedef struct {
     block_op_t op;
     list_node_t node;
+    block_impl_queue_callback completion_cb;
+    void* cookie;
     uint16_t pending_utxns;
     uint8_t opcode;
     uint8_t flags;
@@ -297,7 +299,7 @@ done:
 }
 
 static inline void txn_complete(nvme_txn_t* txn, zx_status_t status) {
-    txn->op.completion_cb(&txn->op, status);
+    txn->completion_cb(txn->cookie, status, &txn->op);
 }
 
 // Attempt to generate utxns and queue nvme commands for a txn
@@ -518,9 +520,12 @@ static int io_thread(void* arg) {
     return 0;
 }
 
-static void nvme_queue(void* ctx, block_op_t* op) {
+static void nvme_queue(void* ctx, block_op_t* op, block_impl_queue_callback completion_cb,
+                       void* cookie) {
     nvme_device_t* nvme = ctx;
     nvme_txn_t* txn = containerof(op, nvme_txn_t, op);
+    txn->completion_cb = completion_cb;
+    txn->cookie = cookie;
 
     switch (txn->op.command & BLOCK_OP_MASK) {
     case BLOCK_OP_READ:
@@ -1005,7 +1010,7 @@ static zx_status_t nvme_init(nvme_device_t* nvme) {
     return ZX_OK;
 }
 
-block_protocol_ops_t block_ops = {
+block_impl_protocol_ops_t block_ops = {
     .query = nvme_query,
     .queue = nvme_queue,
 };

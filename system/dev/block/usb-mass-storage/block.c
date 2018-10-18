@@ -9,9 +9,12 @@
 #include <stdio.h>
 #include <string.h>
 
-static void ums_block_queue(void* ctx, block_op_t* op) {
+static void ums_block_queue(void* ctx, block_op_t* op, block_impl_queue_callback completion_cb,
+                            void* cookie) {
     ums_block_t* dev = ctx;
     ums_txn_t* txn = block_op_to_txn(op);
+    txn->completion_cb = completion_cb;
+    txn->cookie = cookie;
 
     switch (op->command & BLOCK_OP_MASK) {
     case BLOCK_OP_READ:
@@ -25,7 +28,7 @@ static void ums_block_queue(void* ctx, block_op_t* op) {
         break;
     default:
         zxlogf(ERROR, "ums_block_queue: unsupported command %u\n", op->command);
-        op->completion_cb(&txn->op, ZX_ERR_NOT_SUPPORTED);
+        completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, &txn->op);
         return;
     }
 
@@ -53,7 +56,7 @@ static void ums_block_query(void* ctx, block_info_t* info_out, size_t* block_op_
     *block_op_size_out = sizeof(ums_txn_t);
 }
 
-static block_protocol_ops_t ums_block_ops = {
+static block_impl_protocol_ops_t ums_block_ops = {
     .query = ums_block_query,
     .queue = ums_block_queue,
 };

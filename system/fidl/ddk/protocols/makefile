@@ -32,6 +32,9 @@ amlogic-canvas:
 bad-block:
 	$(run-banjo)
 
+block: $(LOCAL_DIR)/libs/block.banjo
+	$(run-banjo)
+
 bt-gatt-svc:
 	$(run-banjo)
 

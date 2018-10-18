@@ -40,7 +40,7 @@ typedef struct gptpart_device {
     zx_device_t* zxdev;
     zx_device_t* parent;
 
-    block_protocol_t bp;
+    block_impl_protocol_t bp;
 
     gpt_entry_t gpt_entry;
 
@@ -161,7 +161,8 @@ static void gpt_query(void* ctx, block_info_t* bi, size_t* bopsz) {
     *bopsz = gpt->block_op_size;
 }
 
-static void gpt_queue(void* ctx, block_op_t* bop) {
+static void gpt_queue(void* ctx, block_op_t* bop, block_impl_queue_callback completion_cb,
+                      void* cookie) {
     gptpart_device_t* gpt = ctx;
 
     switch (bop->command & BLOCK_OP_MASK) {
@@ -173,7 +174,7 @@ static void gpt_queue(void* ctx, block_op_t* bop) {
         // Ensure that the request is in-bounds
         if ((bop->rw.offset_dev >= max) ||
             ((max - bop->rw.offset_dev) < blocks)) {
-            bop->completion_cb(bop, ZX_ERR_OUT_OF_RANGE);
+            completion_cb(cookie, ZX_ERR_OUT_OF_RANGE, bop);
             return;
         }
 
@@ -184,11 +185,11 @@ static void gpt_queue(void* ctx, block_op_t* bop) {
     case BLOCK_OP_FLUSH:
         break;
     default:
-        bop->completion_cb(bop, ZX_ERR_NOT_SUPPORTED);
+        completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, bop);
         return;
     }
 
-    gpt->bp.ops->queue(gpt->bp.ctx, bop);
+    block_impl_queue(&gpt->bp, bop, completion_cb, cookie);
 }
 
 static void gpt_unbind(void* ctx) {
@@ -216,16 +217,16 @@ static zx_protocol_device_t gpt_proto = {
     .release = gpt_release,
 };
 
-static block_protocol_ops_t block_ops = {
+static block_impl_protocol_ops_t block_ops = {
     .query = gpt_query,
     .queue = gpt_queue,
 };
 
-static void gpt_read_sync_complete(block_op_t* bop, zx_status_t status) {
+static void gpt_read_sync_complete(void* cookie, zx_status_t status, block_op_t* bop) {
     // Pass 32bit status back to caller via 32bit command field
     // Saves from needing custom structs, etc.
     bop->command = status;
-    sync_completion_signal((sync_completion_t*)bop->cookie);
+    sync_completion_signal((sync_completion_t*)cookie);
 }
 
 static zx_status_t vmo_read(zx_handle_t vmo, void* data, uint64_t off, size_t len) {
@@ -242,7 +243,7 @@ static int gpt_bind_thread(void* arg) {
     // used to keep track of number of partitions found
     unsigned partitions = 0;
 
-    block_protocol_t bp;
+    block_impl_protocol_t bp;
     memcpy(&bp, &first_dev->bp, sizeof(bp));
 
     block_info_t block_info;
@@ -275,11 +276,8 @@ static int gpt_bind_thread(void* arg) {
     bop->rw.length = 1;
     bop->rw.offset_dev = 1;
     bop->rw.offset_vmo = 0;
-    bop->rw.pages = NULL;
-    bop->completion_cb = gpt_read_sync_complete;
-    bop->cookie = &completion;
 
-    bp.ops->queue(bp.ctx, bop);
+    bp.ops->queue(bp.ctx, bop, gpt_read_sync_complete, &completion);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
     if (bop->command != ZX_OK) {
         zxlogf(ERROR, "gpt: error %d reading partition header\n", bop->command);
@@ -312,10 +310,9 @@ static int gpt_bind_thread(void* arg) {
     bop->rw.length = (table_sz + (block_info.block_size - 1)) / block_info.block_size;
     bop->rw.offset_dev = header.entries;
     bop->rw.offset_vmo = 0;
-    bop->rw.pages = NULL;
 
     sync_completion_reset(&completion);
-    bp.ops->queue(bp.ctx, bop);
+    bp.ops->queue(bp.ctx, bop, gpt_read_sync_complete, &completion);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
     if (bop->command != ZX_OK) {
         zxlogf(ERROR, "gpt: error %d reading partition table\n", bop->command);

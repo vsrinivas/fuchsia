@@ -95,7 +95,9 @@ public:
 
     // Block Protocol
     size_t BlockOpSize() const { return block_op_size_; }
-    void Queue(block_op_t* txn) const { bp_.ops->queue(bp_.ctx, txn); }
+    void Queue(block_op_t* txn, block_impl_queue_callback completion_cb, void* cookie) const {
+        bp_.ops->queue(bp_.ctx, txn, completion_cb, cookie);
+    }
 
     // Acquire access to a VPart Entry which has already been modified (and
     // will, as a consequence, not be de-allocated underneath us).
@@ -127,7 +129,7 @@ public:
     void DdkRelease();
 
     VPartitionManager(zx_device_t* dev, const block_info_t& info, size_t block_op_size,
-                      const block_protocol_t* bp);
+                      const block_impl_protocol_t* bp);
     ~VPartitionManager();
 
 private:
@@ -207,10 +209,10 @@ private:
 
     // Block Protocol
     const size_t block_op_size_;
-    block_protocol_t bp_;
+    block_impl_protocol_t bp_;
 };
 
-class VPartition : public PartitionDeviceType, public ddk::BlockProtocol<VPartition> {
+class VPartition : public PartitionDeviceType, public ddk::BlockImplProtocol<VPartition> {
 public:
     static zx_status_t Create(VPartitionManager* vpm, size_t entry_index,
                               fbl::unique_ptr<VPartition>* out);
@@ -222,8 +224,12 @@ public:
     void DdkRelease();
 
     // Block Protocol
-    void BlockQuery(block_info_t* info_out, size_t* block_op_size_out);
-    void BlockQueue(block_op_t* txn);
+    void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out);
+    void BlockImplQueue(block_op_t* txn, block_impl_queue_callback completion_cb, void* cookie);
+    zx_status_t BlockImplGetStats(const void* cmd_buffer, size_t cmd_size, void* out_reply_buffer,
+                                  size_t reply_size, size_t* out_reply_actual) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
     auto ExtentBegin() TA_REQ(lock_) {
         return slice_map_.begin();

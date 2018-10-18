@@ -40,7 +40,7 @@ using DeviceType = ddk::Device<Device, ddk::Ioctlable, ddk::GetSizable, ddk::Unb
 // transparently encrypts writes to/decrypts reads from that device.  It shadows incoming requests
 // with its own |zxcrypt::Op| request structure that uses a mapped VMO as working memory for
 // cryptographic transformations.
-class Device final : public DeviceType, public ddk::BlockProtocol<Device> {
+class Device final : public DeviceType, public ddk::BlockImplProtocol<Device> {
 public:
     explicit Device(zx_device_t* parent);
     ~Device();
@@ -65,8 +65,13 @@ public:
     void DdkRelease();
 
     // ddk::BlockProtocol methods; see ddktl/protocol/block.h
-    void BlockQuery(block_info_t* out_info, size_t* out_op_size);
-    void BlockQueue(block_op_t* block) __TA_EXCLUDES(mtx_);
+    void BlockImplQuery(block_info_t* out_info, size_t* out_op_size);
+    void BlockImplQueue(block_op_t* block, block_impl_queue_callback completion_cb,
+                        void* cookie) __TA_EXCLUDES(mtx_);
+    zx_status_t BlockImplGetStats(const void* cmd_buffer, size_t cmd_size, void* out_reply_buffer,
+                                  size_t reply_size, size_t* out_reply_actual) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
     // If |status| is |ZX_OK|, sends |block| to the parent block device; otherwise calls
     // |BlockComplete| on the |block|. Uses the extra space following the |block| to save fields
@@ -92,7 +97,7 @@ private:
 
     // Callback used for block ops sent to the parent device.  Restores the fields saved by
     // |BlockForward|.
-    static void BlockCallback(block_op_t* block, zx_status_t status);
+    static void BlockCallback(void* cookie, zx_status_t status, block_op_t* block);
 
     // Requests that the workers stop if it the device is inactive and no ops are "in-flight".
     void StopWorkersIfDone();
@@ -119,7 +124,7 @@ private:
         // The parent device's required block_op_t size.
         size_t op_size;
         // Callbacks to the parent's block protocol methods.
-        block_protocol_t proto;
+        block_impl_protocol_t proto;
         // The number of blocks reserved for metadata.
         uint64_t reserved_blocks;
         // The number of slices reserved for metadata.

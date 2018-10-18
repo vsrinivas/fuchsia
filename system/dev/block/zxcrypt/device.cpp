@@ -317,7 +317,7 @@ void Device::DdkRelease() {
 ////////////////////////////////////////////////////////////////
 // ddk::BlockProtocol methods
 
-void Device::BlockQuery(block_info_t* out_info, size_t* out_op_size) {
+void Device::BlockImplQuery(block_info_t* out_info, size_t* out_op_size) {
     LOG_ENTRY_ARGS("out_info=%p, out_op_size=%p", out_info, out_op_size);
     ZX_DEBUG_ASSERT(info_);
 
@@ -326,21 +326,22 @@ void Device::BlockQuery(block_info_t* out_info, size_t* out_op_size) {
     *out_op_size = info_->op_size;
 }
 
-void Device::BlockQueue(block_op_t* block) {
+void Device::BlockImplQueue(block_op_t* block, block_impl_queue_callback completion_cb,
+                            void* cookie) {
     LOG_ENTRY_ARGS("block=%p", block);
     ZX_DEBUG_ASSERT(info_);
 
     // Check if the device is active.
     if (!active_.load()) {
         zxlogf(ERROR, "rejecting I/O request: device is not active\n");
-        block->completion_cb(block, ZX_ERR_BAD_STATE);
+        completion_cb(cookie, ZX_ERR_BAD_STATE, block);
         return;
     }
     num_ops_.fetch_add(1);
 
     // Initialize our extra space and save original values
     extra_op_t* extra = BlockToExtra(block, info_->op_size);
-    zx_status_t rc = extra->Init(block, info_->reserved_blocks);
+    zx_status_t rc = extra->Init(block, completion_cb, cookie, info_->reserved_blocks);
     if (rc != ZX_OK) {
         zxlogf(ERROR, "failed to initialize extra info: %s\n", zx_status_get_string(rc));
         BlockComplete(block, rc);
@@ -377,12 +378,9 @@ void Device::BlockForward(block_op_t* block, zx_status_t status) {
         BlockComplete(block, ZX_ERR_BAD_STATE);
         return;
     }
-    // Register ourselves as the callback
-    block->completion_cb = BlockCallback;
-    block->cookie = this;
 
     // Send the request to the parent device
-    info_->proto.ops->queue(info_->proto.ctx, block);
+    block_impl_queue(&info_->proto, block, BlockCallback, this);
 }
 
 void Device::BlockComplete(block_op_t* block, zx_status_t status) {
@@ -404,7 +402,7 @@ void Device::BlockComplete(block_op_t* block, zx_status_t status) {
     }
 
     // Complete the request.
-    block->completion_cb(block, status);
+    extra->completion_cb(extra->cookie, status, block);
 
     // If we previously stalled, try to re-queue the deferred requests; otherwise, avoid taking the
     // lock.
@@ -493,18 +491,16 @@ void Device::SendToWorker(block_op_t* block) {
     }
 }
 
-void Device::BlockCallback(block_op_t* block, zx_status_t status) {
+void Device::BlockCallback(void* cookie, zx_status_t status, block_op_t* block) {
     LOG_ENTRY_ARGS("block=%p, status=%s", block, zx_status_get_string(status));
 
     // Restore data that may have changed
-    Device* device = static_cast<Device*>(block->cookie);
+    Device* device = static_cast<Device*>(cookie);
     extra_op_t* extra = BlockToExtra(block, device->op_size());
     block->rw.vmo = extra->vmo;
     block->rw.length = extra->length;
     block->rw.offset_dev = extra->offset_dev;
     block->rw.offset_vmo = extra->offset_vmo;
-    block->completion_cb = extra->completion_cb;
-    block->cookie = extra->cookie;
 
     if (status != ZX_OK) {
         zxlogf(TRACE, "parent device returned %s\n", zx_status_get_string(status));

@@ -4,8 +4,6 @@
 
 library ddk.protocol.sdmmc;
 
-using ddk.protocol.block;
-using zircon.listnode;
 using zx;
 
 enum SdmmcVoltage : uint8 {
@@ -33,12 +31,6 @@ enum SdmmcTiming : uint8 {
     SDR104 = 8;
     DDR50 = 9;
     MAX = 10;
-};
-
-/// block io transactions. one per client request
-struct SdmmcTxn {
-    ddk.protocol.block.BlockOp bop;
-    zircon.listnode.ListNode node;
 };
 
 /// number of pages per request - 2M per request

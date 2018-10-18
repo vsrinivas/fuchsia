@@ -58,6 +58,8 @@ typedef struct ramdisk_device {
 typedef struct {
     block_op_t op;
     list_node_t node;
+    block_impl_queue_callback completion_cb;
+    void* cookie;
 } ramdisk_txn_t;
 
 // The worker thread processes messages from iotxns in the background
@@ -179,12 +181,14 @@ static int worker_thread(void* arg) {
             }
         }
 
-        txn->op.completion_cb(&txn->op, status);
+        if (txn->completion_cb) {
+            txn->completion_cb(txn->cookie, status, &txn->op);
+        }
     }
 
 goodbye:
     while (txn != NULL) {
-        txn->op.completion_cb(&txn->op, ZX_ERR_BAD_STATE);
+        txn->completion_cb(txn->cookie, ZX_ERR_BAD_STATE, &txn->op);
         txn = list_remove_head_type(&dev->deferred_list, ramdisk_txn_t, node);
 
         if (txn == NULL) {
@@ -309,7 +313,8 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
     }
 }
 
-static void ramdisk_queue(void* ctx, block_op_t* bop) {
+static void ramdisk_queue(void* ctx, block_op_t* bop, block_impl_queue_callback completion_cb,
+                          void* cookie) {
     ramdisk_device_t* ramdev = ctx;
     ramdisk_txn_t* txn = containerof(bop, ramdisk_txn_t, op);
     bool dead;
@@ -322,7 +327,7 @@ static void ramdisk_queue(void* ctx, block_op_t* bop) {
     case BLOCK_OP_WRITE:
         if ((txn->op.rw.offset_dev >= ramdev->blk_count) ||
             ((ramdev->blk_count - txn->op.rw.offset_dev) < txn->op.rw.length)) {
-            bop->completion_cb(bop, ZX_ERR_OUT_OF_RANGE);
+            completion_cb(cookie, ZX_ERR_OUT_OF_RANGE, bop);
             return;
         }
 
@@ -331,20 +336,22 @@ static void ramdisk_queue(void* ctx, block_op_t* bop) {
             if (!read) {
                 ramdev->blk_counts.received += txn->op.rw.length;
             }
+            txn->completion_cb = completion_cb;
+            txn->cookie = cookie;
             list_add_tail(&ramdev->txn_list, &txn->node);
         }
         mtx_unlock(&ramdev->lock);
         if (dead) {
-            bop->completion_cb(bop, ZX_ERR_BAD_STATE);
+            completion_cb(cookie, ZX_ERR_BAD_STATE, bop);
         } else {
             sync_completion_signal(&ramdev->signal);
         }
         break;
     case BLOCK_OP_FLUSH:
-        bop->completion_cb(bop, ZX_OK);
+        completion_cb(cookie, ZX_OK, bop);
         break;
     default:
-        bop->completion_cb(bop, ZX_ERR_NOT_SUPPORTED);
+        completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, bop);
         break;
     }
 }
@@ -376,7 +383,7 @@ static void ramdisk_release(void* ctx) {
     free(ramdev);
 }
 
-static block_protocol_ops_t block_ops = {
+static block_impl_protocol_ops_t block_ops = {
     .query = ramdisk_query,
     .queue = ramdisk_queue,
 };

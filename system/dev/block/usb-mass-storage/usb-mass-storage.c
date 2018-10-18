@@ -30,7 +30,7 @@ static csw_status_t ums_verify_csw(ums_t* ums, usb_request_t* csw_request, uint3
 
 static inline void txn_complete(ums_txn_t* txn, zx_status_t status) {
     zxlogf(TRACE, "UMS DONE %d (%p)\n", status, &txn->op);
-    txn->op.completion_cb(&txn->op, status);
+    txn->completion_cb(txn->cookie, status, &txn->op);
 }
 
 static zx_status_t ums_reset(ums_t* ums) {

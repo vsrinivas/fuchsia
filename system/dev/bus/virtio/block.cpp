@@ -32,7 +32,7 @@ void BlockDevice::txn_complete(block_txn_t* txn, zx_status_t status) {
         zx_pmt_unpin(txn->pmt);
         txn->pmt = ZX_HANDLE_INVALID;
     }
-    txn->op.completion_cb(&txn->op, status);
+    txn->completion_cb(txn->cookie, status, &txn->op);
 }
 
 // DDK level ops
@@ -65,10 +65,13 @@ void BlockDevice::virtio_block_query(void* ctx, block_info_t* info, size_t* bops
     *bopsz = sizeof(block_txn_t);
 }
 
-void BlockDevice::virtio_block_queue(void* ctx, block_op_t* bop) {
+void BlockDevice::virtio_block_queue(void* ctx, block_op_t* bop,
+                                     block_impl_queue_callback completion_cb, void* cookie) {
     BlockDevice* bd = static_cast<BlockDevice*>(ctx);
     block_txn_t* txn = static_cast<block_txn_t*>((void*) bop);
     txn->pmt = ZX_HANDLE_INVALID;
+    txn->completion_cb = completion_cb;
+    txn->cookie = cookie;
 
     switch(txn->op.command & BLOCK_OP_MASK) {
     case BLOCK_OP_READ:

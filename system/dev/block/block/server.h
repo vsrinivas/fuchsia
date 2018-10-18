@@ -120,6 +120,7 @@ public:
         return *this;
     }
 
+
     ~BlockMsg() {
         reset();
     }
@@ -144,7 +145,8 @@ private:
 class BlockServer {
 public:
     // Creates a new BlockServer.
-    static zx_status_t Create(block_protocol_t* bp, fzl::fifo<block_fifo_request_t,
+    static zx_status_t Create(
+        block_impl_protocol_t* bp, fzl::fifo<block_fifo_request_t,
                               block_fifo_response_t>* fifo_out, BlockServer** out);
 
     // Starts the BlockServer using the current thread
@@ -169,7 +171,7 @@ public:
     ~BlockServer();
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(BlockServer);
-    BlockServer(block_protocol_t* bp);
+    BlockServer(block_impl_protocol_t* bp);
 
     // Helper for processing a single message read from the FIFO.
     void ProcessRequest(block_fifo_request_t* request);
@@ -194,7 +196,7 @@ private:
 
     fzl::fifo<block_fifo_response_t, block_fifo_request_t> fifo_;
     block_info_t info_;
-    block_protocol_t* bp_;
+    block_impl_protocol_t* bp_;
     size_t block_op_size_;
 
     // BARRIER_AFTER is implemented by sticking "BARRIER_BEFORE" on the
@@ -220,7 +222,7 @@ typedef struct BlockServer BlockServer;
 __BEGIN_CDECLS
 
 // Allocate a new blockserver + FIFO combo
-zx_status_t blockserver_create(block_protocol_t* bp, zx_handle_t* fifo_out, BlockServer** out);
+zx_status_t blockserver_create(block_impl_protocol_t* bp, zx_handle_t* fifo_out, BlockServer** out);
 
 // Shut down the blockserver. It will stop serving requests.
 void blockserver_shutdown(BlockServer* bs);

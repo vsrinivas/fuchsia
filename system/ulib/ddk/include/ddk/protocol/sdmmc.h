@@ -7,9 +7,7 @@
 
 #pragma once
 
-#include <ddk/protocol/block.h>
 #include <zircon/compiler.h>
-#include <zircon/listnode.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS;
@@ -54,7 +52,6 @@ typedef uint8_t sdmmc_timing_t;
 
 typedef struct sdmmc_req sdmmc_req_t;
 typedef struct sdmmc_protocol sdmmc_protocol_t;
-typedef struct sdmmc_txn sdmmc_txn_t;
 
 // Declarations
 
@@ -147,11 +144,5 @@ static inline zx_status_t sdmmc_perform_tuning(const sdmmc_protocol_t* proto, ui
 static inline zx_status_t sdmmc_request(const sdmmc_protocol_t* proto, sdmmc_req_t* req) {
     return proto->ops->request(proto->ctx, req);
 }
-
-// block io transactions. one per client request
-struct sdmmc_txn {
-    block_op_t bop;
-    list_node_t node;
-};
 
 __END_CDECLS;

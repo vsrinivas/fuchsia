@@ -39,10 +39,10 @@ typedef struct sata_device {
     int max_cmd; // inclusive
 } sata_device_t;
 
-static void sata_device_identify_complete(block_op_t* op, zx_status_t status) {
+static void sata_device_identify_complete(void* cookie, zx_status_t status, block_op_t* op) {
     sata_txn_t* txn = containerof(op, sata_txn_t, bop);
     txn->status = status;
-    sync_completion_signal((sync_completion_t*)op->cookie);
+    sync_completion_signal((sync_completion_t*)cookie);
 }
 
 #define QEMU_MODEL_ID    "EQUMH RADDSI K" // "QEMU HARDDISK"
@@ -76,12 +76,11 @@ static zx_status_t sata_device_identify(sata_device_t* dev, ahci_device_t* contr
             .rw.length = 1,
             .rw.offset_dev = 0,
             .rw.offset_vmo = 0,
-            .rw.pages = NULL,
-            .completion_cb = sata_device_identify_complete,
-            .cookie = &completion,
         },
         .cmd = SATA_CMD_IDENTIFY_DEVICE,
         .device = 0,
+        .completion_cb = sata_device_identify_complete,
+        .cookie = &completion,
     };
 
     ahci_queue(controller, dev->port, &txn);
@@ -232,22 +231,25 @@ static void sata_query(void* ctx, block_info_t* info_out, size_t* block_op_size_
     *block_op_size_out = sizeof(sata_txn_t);
 }
 
-static void sata_queue(void* ctx, block_op_t* bop) {
+static void sata_queue(void* ctx, block_op_t* bop, block_impl_queue_callback completion_cb,
+                       void* cookie) {
     sata_device_t* dev = ctx;
     sata_txn_t* txn = containerof(bop, sata_txn_t, bop);
+    txn->completion_cb = completion_cb;
+    txn->cookie = cookie;
 
     switch (BLOCK_OP(bop->command)) {
     case BLOCK_OP_READ:
     case BLOCK_OP_WRITE:
         // complete empty transactions immediately
         if (bop->rw.length == 0) {
-            block_complete(bop, ZX_ERR_INVALID_ARGS);
+            block_complete(txn, ZX_ERR_INVALID_ARGS);
             return;
         }
         // transaction must fit within device
         if ((bop->rw.offset_dev >= dev->info.block_count) ||
             ((dev->info.block_count - bop->rw.offset_dev) < bop->rw.length)) {
-            block_complete(bop, ZX_ERR_OUT_OF_RANGE);
+            block_complete(txn, ZX_ERR_OUT_OF_RANGE);
             return;
         }
 
@@ -260,14 +262,14 @@ static void sata_queue(void* ctx, block_op_t* bop) {
         zxlogf(TRACE, "sata: queue FLUSH txn %p\n", txn);
         break;
     default:
-        block_complete(bop, ZX_ERR_NOT_SUPPORTED);
+        block_complete(txn, ZX_ERR_NOT_SUPPORTED);
         return;
     }
 
     ahci_queue(dev->controller, dev->port, txn);
 }
 
-static block_protocol_ops_t sata_block_proto = {
+static block_impl_protocol_ops_t sata_block_proto = {
     .query = sata_query,
     .queue = sata_queue,
 };
