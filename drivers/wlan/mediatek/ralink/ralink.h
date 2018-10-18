@@ -851,7 +851,11 @@ class TxStatFifo : public Register<0x1718> {
     WLAN_BIT_FIELD(txq_agg, 6, 1);
     WLAN_BIT_FIELD(txq_ackreq, 7, 1);
     WLAN_BIT_FIELD(txq_wcid, 8, 8);
-    WLAN_BIT_FIELD(txq_rate, 16, 16);
+    WLAN_BIT_FIELD(txq_mcs, 16, 7);
+    WLAN_BIT_FIELD(txq_bw, 23, 1);
+    WLAN_BIT_FIELD(txq_sgi, 24, 1);
+    // bit 25-29 reserved
+    WLAN_BIT_FIELD(txq_phy, 30, 2);
 };
 
 class TxStatFifoExt : public Register<0x1798> {
