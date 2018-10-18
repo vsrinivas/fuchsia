@@ -8,6 +8,7 @@
 
 #include <ddktl/protocol/i2c-impl.h>
 #include <fbl/mutex.h>
+#include <lib/sync/completion.h>
 
 #include "proxy-protocol.h"
 
@@ -29,7 +30,7 @@ private:
 
         list_node_t node;
         uint16_t address;
-        i2c_transact_cb transact_cb;
+        i2c_transact_callback transact_cb;
         void* cookie;
         size_t length;
         size_t cnt;

@@ -8,6 +8,7 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/hidbus.h>
 #include <ddk/protocol/i2c.h>
+#include <ddk/protocol/i2c-lib.h>
 
 #include <zircon/assert.h>
 #include <zircon/types.h>

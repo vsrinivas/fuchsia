@@ -14,6 +14,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/i2c-lib.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
 #include <fbl/auto_call.h>
@@ -169,26 +170,27 @@ zx_status_t ProxyDevice::I2cGetInterrupt(void* ctx, uint32_t flags, zx_handle_t*
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t ProxyDevice::I2cTransact(void* ctx, i2c_op_t* ops, size_t cnt,
-                                     i2c_transact_cb transact_cb, void* cookie) {
+void ProxyDevice::I2cTransact(void* ctx, const i2c_op_t* ops, size_t cnt,
+                              i2c_transact_callback transact_cb, void* cookie) {
     auto i2c_ctx = static_cast<I2cCtx*>(ctx);
     auto thiz = i2c_ctx->thiz;
     size_t writes_length = 0;
     size_t reads_length = 0;
     for (size_t i = 0; i < cnt; ++i) {
         if (ops[i].is_read) {
-            reads_length += ops[i].length;
+            reads_length += ops[i].data_size;
         } else {
-            writes_length += ops[i].length;
+            writes_length += ops[i].data_size;
         }
     }
     if (!writes_length && !reads_length) {
-        return ZX_ERR_INVALID_ARGS;
+        transact_cb(cookie, ZX_ERR_INVALID_ARGS, nullptr, 0);
+        return;
     }
 
     size_t req_length = sizeof(rpc_i2c_req_t) + cnt * sizeof(i2c_rpc_op_t) + writes_length;
     if (req_length >= PROXY_MAX_TRANSFER_SIZE) {
-        return ZX_ERR_INVALID_ARGS;
+        return transact_cb(cookie, ZX_ERR_INVALID_ARGS, nullptr, 0);
     }
     uint8_t req_buffer[PROXY_MAX_TRANSFER_SIZE];
     auto req = reinterpret_cast<rpc_i2c_req_t*>(req_buffer);
@@ -202,21 +204,22 @@ zx_status_t ProxyDevice::I2cTransact(void* ctx, i2c_op_t* ops, size_t cnt,
     auto rpc_ops = reinterpret_cast<i2c_rpc_op_t*>(req + 1);
     ZX_ASSERT(cnt < I2C_MAX_RW_OPS);
     for (size_t i = 0; i < cnt; ++i) {
-        rpc_ops[i].length = ops[i].length;
+        rpc_ops[i].length = ops[i].data_size;
         rpc_ops[i].is_read = ops[i].is_read;
         rpc_ops[i].stop = ops[i].stop;
     }
     uint8_t* p_writes = reinterpret_cast<uint8_t*>(rpc_ops) + cnt * sizeof(i2c_rpc_op_t);
     for (size_t i = 0; i < cnt; ++i) {
         if (!ops[i].is_read) {
-            memcpy(p_writes, ops[i].buf, ops[i].length);
-            p_writes += ops[i].length;
+            memcpy(p_writes, ops[i].data_buffer, ops[i].data_size);
+            p_writes += ops[i].data_size;
         }
     }
 
     const size_t resp_length = sizeof(rpc_i2c_rsp_t) + reads_length;
     if (resp_length >= PROXY_MAX_TRANSFER_SIZE) {
-        return ZX_ERR_INVALID_ARGS;
+        transact_cb(cookie, ZX_ERR_INVALID_ARGS, nullptr, 0);
+        return;
     }
     uint8_t resp_buffer[PROXY_MAX_TRANSFER_SIZE];
     rpc_i2c_rsp_t* rsp = reinterpret_cast<rpc_i2c_rsp_t*>(resp_buffer);
@@ -226,7 +229,8 @@ zx_status_t ProxyDevice::I2cTransact(void* ctx, i2c_op_t* ops, size_t cnt,
                                     &rsp->header, static_cast<uint32_t>(resp_length),
                                     nullptr, 0, nullptr, 0, &actual);
     if (status != ZX_OK) {
-        return status;
+        transact_cb(cookie, status, nullptr, 0);
+        return;
     }
 
     // TODO(voydanoff) This proxying code actually implements i2c_transact synchronously
@@ -238,22 +242,20 @@ zx_status_t ProxyDevice::I2cTransact(void* ctx, i2c_op_t* ops, size_t cnt,
     } else {
         status = rsp->header.status;
     }
-    if (transact_cb) {
-        i2c_op_t read_ops[I2C_MAX_RW_OPS];
-        size_t read_ops_cnt = 0;
-        uint8_t* p_reads = reinterpret_cast<uint8_t*>(rsp + 1);
-        for (size_t i = 0; i < cnt; ++i) {
-            if (ops[i].is_read) {
-                read_ops[read_ops_cnt] = ops[i];
-                read_ops[read_ops_cnt].buf = p_reads;
-                read_ops_cnt++;
-                p_reads += ops[i].length;
-            }
+    i2c_op_t read_ops[I2C_MAX_RW_OPS];
+    size_t read_ops_cnt = 0;
+    uint8_t* p_reads = reinterpret_cast<uint8_t*>(rsp + 1);
+    for (size_t i = 0; i < cnt; ++i) {
+        if (ops[i].is_read) {
+            read_ops[read_ops_cnt] = ops[i];
+            read_ops[read_ops_cnt].data_buffer = p_reads;
+            read_ops_cnt++;
+            p_reads += ops[i].data_size;
         }
-        transact_cb(status, read_ops, read_ops_cnt, rsp->cookie);
     }
+    transact_cb(rsp->cookie, status, read_ops, read_ops_cnt);
 
-    return ZX_OK;
+    return;
 }
 
 zx_status_t ProxyDevice::ClkEnable(void* ctx, uint32_t index) {

@@ -4,6 +4,7 @@
 
 #include "backlight.h"
 #include <ddk/debug.h>
+#include <ddk/protocol/i2c-lib.h>
 #include <ddk/protocol/platform-device.h>
 
 namespace astro_display {

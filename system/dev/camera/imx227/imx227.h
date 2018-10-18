@@ -9,6 +9,7 @@
 #include <ddktl/protocol/clk.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2c.h>
+#include <ddk/protocol/i2c-lib.h>
 #include <ddktl/protocol/mipicsi.h>
 #include <zircon/camera/c/fidl.h>
 

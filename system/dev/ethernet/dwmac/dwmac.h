@@ -5,18 +5,19 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <ddk/protocol/ethernet_board.h>
+#include <ddk/protocol/ethernet_mac.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform-device.h>
-#include <ddk/protocol/ethernet_board.h>
-#include <ddk/protocol/ethernet_mac.h>
 #include <ddk/protocol/test.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
 #include <ddktl/protocol/ethernet.h>
-#include <fbl/optional.h>
 #include <fbl/mutex.h>
+#include <fbl/optional.h>
 #include <fbl/unique_ptr.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/vmo.h>
 #include <threads.h>

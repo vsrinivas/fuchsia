@@ -47,6 +47,12 @@ gpio-impl: $(LOCAL_DIR)/gpio.banjo
 hidbus:
 	$(run-banjo)
 
+i2c:
+	$(run-banjo)
+
+intel-gpu-core:
+	$(run-banjo)
+
 intel-hda-codec:
 	$(run-banjo)
 

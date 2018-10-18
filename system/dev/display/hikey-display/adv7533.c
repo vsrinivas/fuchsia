@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <hw/reg.h>
 #include <ddk/protocol/i2c.h>
+#include <ddk/protocol/i2c-lib.h>
 #include <ddk/protocol/gpio.h>
 
 #include "dsi.h"

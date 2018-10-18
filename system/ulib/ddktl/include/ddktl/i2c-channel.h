@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/protocol/i2c.h>
+#include <ddk/protocol/i2c-lib.h>
 #include <fbl/macros.h>
 #include <zircon/assert.h>
 

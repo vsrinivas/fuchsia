@@ -12,8 +12,9 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/i2c.h>
+#include <ddk/protocol/i2c-lib.h>
 
-static void i2c_complete(zx_status_t status, i2c_op_t* ops, size_t cnt, void* cookie) {
+static void i2c_complete(void* cookie, zx_status_t status, const i2c_op_t* ops, size_t cnt) {
     if (status != ZX_OK) {
         zxlogf(ERROR, "led2472g i2c_complete error: %d\n", status);
     }
@@ -90,8 +91,7 @@ static int led2472g_thread(void* arg) {
             cix += 1;
             cix %= countof(colors);
         }
-        zx_status_t status = i2c_write_read(&led2472g->i2c, buf, sizeof(buf), 0, i2c_complete,
-                                            NULL);
+        zx_status_t status = i2c_write_sync(&led2472g->i2c, buf, sizeof(buf));
         if (status != ZX_OK) {
             zxlogf(ERROR, "led2472g i2c_write_read error: %d\n  Exiting led2472g_thread\n", status);
             return status;

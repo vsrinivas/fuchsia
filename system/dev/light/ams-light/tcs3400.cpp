@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <string.h>
 #include <threads.h>
 #include <unistd.h>
 
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/i2c-lib.h>
 #include <ddk/protocol/platform-bus.h>
 
 #include <hid/descriptor.h>
