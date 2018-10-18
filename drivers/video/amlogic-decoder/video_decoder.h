@@ -34,23 +34,20 @@ enum class DeviceType {
 
 class CanvasEntry {
  public:
-  CanvasEntry(uint32_t index) : index_(index) {}
+  class Owner {
+   public:
+    virtual void FreeCanvas(CanvasEntry* canvas) = 0;
+  };
+  CanvasEntry(Owner* owner, uint32_t index) : owner_(owner), index_(index) {}
 
-  ~CanvasEntry() { assert(!valid_); }
+  ~CanvasEntry() { owner_->FreeCanvas(this); }
 
   __WARN_UNUSED_RESULT
-  uint32_t index() const {
-    assert(valid_);
-    return index_;
-  }
-  void invalidate() {
-    assert(valid_);
-    valid_ = false;
-  }
+  uint32_t index() const { return index_; }
 
  private:
+  Owner* owner_;
   uint32_t index_;
-  bool valid_ = true;
 };
 
 class CodecPacket;
@@ -78,7 +75,6 @@ class VideoDecoder {
     virtual __WARN_UNUSED_RESULT std::unique_ptr<CanvasEntry> ConfigureCanvas(
         io_buffer_t* io_buffer, uint32_t offset, uint32_t width,
         uint32_t height, uint32_t wrap, uint32_t blockmode) = 0;
-    virtual void FreeCanvas(std::unique_ptr<CanvasEntry> canvas) = 0;
     virtual __WARN_UNUSED_RESULT DecoderCore* core() = 0;
     virtual __WARN_UNUSED_RESULT zx_status_t
     AllocateIoBuffer(io_buffer_t* buffer, size_t size, uint32_t alignement_log2,

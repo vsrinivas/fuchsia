@@ -29,7 +29,8 @@
 #include "video_decoder.h"
 
 class AmlogicVideo final : public VideoDecoder::Owner,
-                           public DecoderCore::Owner {
+                           public DecoderCore::Owner,
+                           public CanvasEntry::Owner {
  public:
   AmlogicVideo();
 
@@ -52,7 +53,6 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   __WARN_UNUSED_RESULT std::unique_ptr<CanvasEntry> ConfigureCanvas(
       io_buffer_t* io_buffer, uint32_t offset, uint32_t width, uint32_t height,
       uint32_t wrap, uint32_t blockmode) override;
-  void FreeCanvas(std::unique_ptr<CanvasEntry> canvas) override;
 
   __WARN_UNUSED_RESULT DecoderCore* core() override { return core_; }
   __WARN_UNUSED_RESULT zx_status_t AllocateIoBuffer(io_buffer_t* buffer,
@@ -70,6 +70,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   MmioRegisters* mmio() override { return registers_.get(); }
   void UngateClocks() override;
   void GateClocks() override;
+
+  // CanvasEntry::Owner implementation.
+  void FreeCanvas(CanvasEntry* canvas) override;
 
   // The pts manager has its own locking, so don't worry about the video decoder
   // lock.

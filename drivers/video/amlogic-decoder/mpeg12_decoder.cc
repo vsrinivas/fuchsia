@@ -39,10 +39,6 @@ Mpeg12Decoder::~Mpeg12Decoder() {
 
   BarrierBeforeRelease();
   io_buffer_release(&workspace_buffer_);
-  for (auto& frame : video_frames_) {
-    owner_->FreeCanvas(std::move(frame.y_canvas));
-    owner_->FreeCanvas(std::move(frame.uv_canvas));
-  }
 }
 
 void Mpeg12Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {

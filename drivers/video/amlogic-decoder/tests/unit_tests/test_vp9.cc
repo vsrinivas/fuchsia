@@ -44,7 +44,6 @@ class FakeOwner : public VideoDecoder::Owner {
                                                uint32_t blockmode) override {
     return nullptr;
   }
-  void FreeCanvas(std::unique_ptr<CanvasEntry> canvas) override {}
   DecoderCore* core() override { return &core_; }
   zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
                                uint32_t alignment_log2,

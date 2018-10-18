@@ -241,12 +241,11 @@ std::unique_ptr<CanvasEntry> AmlogicVideo::ConfigureCanvas(
     return nullptr;
   }
 
-  return std::make_unique<CanvasEntry>(idx);
+  return std::make_unique<CanvasEntry>(this, idx);
 }
 
-void AmlogicVideo::FreeCanvas(std::unique_ptr<CanvasEntry> canvas) {
+void AmlogicVideo::FreeCanvas(CanvasEntry* canvas) {
   canvas_free(&canvas_, canvas->index());
-  canvas->invalidate();
 }
 
 zx_status_t AmlogicVideo::AllocateIoBuffer(io_buffer_t* buffer, size_t size,

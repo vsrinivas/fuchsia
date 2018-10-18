@@ -208,10 +208,6 @@ H264Decoder::~H264Decoder() {
   io_buffer_release(&codec_data_);
   io_buffer_release(&sei_data_buffer_);
   io_buffer_release(&secondary_firmware_);
-  for (auto& frame : video_frames_) {
-    owner_->FreeCanvas(std::move(frame.y_canvas));
-    owner_->FreeCanvas(std::move(frame.uv_canvas));
-  }
 }
 
 zx_status_t H264Decoder::ResetHardware() {
@@ -458,10 +454,6 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
                                           uint32_t display_height, bool has_sar,
                                           uint32_t sar_width,
                                           uint32_t sar_height) {
-  for (auto& frame : video_frames_) {
-    owner_->FreeCanvas(std::move(frame.y_canvas));
-    owner_->FreeCanvas(std::move(frame.uv_canvas));
-  }
   video_frames_.clear();
   returned_frames_.clear();
 
