@@ -24,6 +24,7 @@ use {
 
 const AUTO_CONNECT_RETRY_SECONDS: i64 = 10;
 const AUTO_CONNECT_SCAN_TIMEOUT_SECONDS: u8 = 20;
+const DISCONNECTION_MONITOR_SECONDS: i64 = 10;
 
 #[derive(Clone)]
 pub struct Client {
@@ -224,11 +225,42 @@ async fn manual_connect_state(services: Services, mut next_req: NextReqFut, req:
     }
 }
 
+// This function was introduced to resolve the following error:
+// ```
+// error[E0391]: cycle detected when evaluating trait selection obligation
+// `impl core::future::future::Future: std::marker::Send`
+// ```
+// which occurs when two functions that return an `impl Trait` call each other in a cycle.
+// (in this case `auto_connect_state` calling `connected_state`, which calls `auto_connect_state`)
+fn go_to_auto_connect_state(services: Services, next_req: NextReqFut) -> State
+{
+    auto_connect_state(services, next_req).into_state()
+}
+
 async fn connected_state(services: Services, next_req: NextReqFut) -> Result<State, failure::Error>
 {
-    // TODO(gbonik): monitor connection status and jump back to auto-connect state when disconnected
-    let (req, req_stream) = await!(next_req);
-    handle_manual_request(services, req, req_stream)
+    let disconnected = wait_for_disconnection(services.clone());
+    pin_mut!(disconnected);
+    select! {
+        disconnected => {
+            disconnected?;
+            Ok(go_to_auto_connect_state(services, next_req))
+        },
+        next_req => {
+            let (req, req_stream) = next_req;
+            handle_manual_request(services, req, req_stream)
+        },
+    }
+}
+
+async fn wait_for_disconnection(services: Services) -> Result<(), failure::Error> {
+    loop {
+        let status = await!(services.sme.status())?;
+        if status.connected_to.is_none() && status.connecting_to_ssid.is_empty() {
+            return Ok(());
+        }
+        await!(fuchsia_async::Timer::new(DISCONNECTION_MONITOR_SECONDS.seconds().after_now()));
+    }
 }
 
 async fn disconnected_state(responder: oneshot::Sender<()>,
@@ -425,9 +457,60 @@ mod tests {
         // Let the state machine absorb the connect ack
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
 
-        // We should be in the 'connected' state now, with no further requests to the SME
-        // or pending timers
+        // We should be in the 'connected' state now, with a pending status request and no
+        // pending timers
+        expect_status_req_to_sme(&mut exec, &mut next_sme_req);
+        assert_eq!(None, exec.wake_next_timer());
+    }
+
+    #[test]
+    fn auto_connect_when_deauth() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+        // save the network that will be autoconnected
+        ess_store.store(b"foo".to_vec(), KnownEss { password: b"12345".to_vec() })
+            .expect("failed to store a network password");
+
+        let (_client, fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let mut next_sme_req = sme_server.into_future();
+        pin_mut!(fut);
+
+        // Get the state machine into the connected state by auto-connecting to a known network
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+        send_scan_results(&mut exec, &mut next_sme_req, &[&b"foo"[..]]);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+        exchange_connect_with_sme(&mut exec, &mut next_sme_req, b"foo", b"12345",
+                                  fidl_sme::ConnectResultCode::Success);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // We should be in the 'connected' state now, with a pending status request and no
+        // pending timers
+        assert_eq!(None, exec.wake_next_timer());
+        send_default_sme_status(&mut exec, &mut next_sme_req);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // Since we responded that the client is still connected, a timer should be scheduled for a
+        // next status request
         assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
+        assert!(exec.wake_next_timer().is_some());
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // Timer has triggered. Respond no BSS connected to get client back to auto-connect loop
+        send_sme_status(&mut exec, &mut next_sme_req, None, vec![]);
+
+        // Repeat the same auto-connect sequence as before
+        // Get the state machine into the connected state by auto-connecting to a known network
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+        send_scan_results(&mut exec, &mut next_sme_req, &[&b"foo"[..]]);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+        exchange_connect_with_sme(&mut exec, &mut next_sme_req, b"foo", b"12345",
+                                  fidl_sme::ConnectResultCode::Success);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // We should be in the 'connected' state now, with a pending status request and no
+        // pending timers
+        expect_status_req_to_sme(&mut exec, &mut next_sme_req);
         assert_eq!(None, exec.wake_next_timer());
     }
 
@@ -454,8 +537,7 @@ mod tests {
         assert_eq!(Poll::Ready(Ok(fidl_sme::ConnectResultCode::Success)),
                    exec.run_until_stalled(&mut receiver));
 
-        // Expect no other messages to SME or pending timers
-        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
+        // Expect no pending timers
         assert_eq!(None, exec.wake_next_timer());
 
         // Network should be saved as known since we connected successfully
@@ -504,8 +586,7 @@ mod tests {
         assert_eq!(Poll::Ready(Ok(fidl_sme::ConnectResultCode::Success)),
                    exec.run_until_stalled(&mut receiver_two));
 
-        // Expect no other messages to SME or pending timers
-        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
+        // Expect no pending timers
         assert_eq!(None, exec.wake_next_timer());
     }
 
@@ -530,9 +611,8 @@ mod tests {
                             fidl_sme::ConnectResultCode::Success);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
 
-        // We should be in the connected state now, with no pending timers or messages to SME
-        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
-        assert_eq!(None, exec.wake_next_timer());
+        // We should be in the connected state now. Clear out status request.
+        send_default_sme_status(&mut exec, &mut next_sme_req);
 
         // Now, send a manual connect request and expect the machine to start connecting immediately
         let mut receiver = send_manual_connect_request(&client, b"bar");
@@ -547,8 +627,7 @@ mod tests {
         assert_eq!(Poll::Ready(Ok(fidl_sme::ConnectResultCode::Success)),
                    exec.run_until_stalled(&mut receiver));
 
-        // Expect no other messages to SME or pending timers
-        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
+        // Expect no pending timers
         assert_eq!(None, exec.wake_next_timer());
     }
 
@@ -742,6 +821,9 @@ mod tests {
                                   fidl_sme::ConnectResultCode::Success);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
 
+        // Clear out status request that's sent when in connected state
+        send_default_sme_status(&mut exec, &mut next_sme_req);
+
         // Request to disconnect
         let (sender, mut receiver) = oneshot::channel();
         client.disconnect(sender).expect("sending a disconnect request failed");
@@ -790,18 +872,39 @@ mod tests {
         let mut results = Vec::new();
         for ssid in ssids {
             results.push(fidl_sme::EssInfo {
-                best_bss: fidl_sme::BssInfo {
-                    bssid: [0, 1, 2, 3, 4, 5],
-                    ssid: ssid.to_vec(),
-                    rx_dbm: -30,
-                    channel: 1,
-                    protected: true,
-                    compatible: true,
-                }
+                best_bss: bss_info(ssid)
             });
         }
         txn.send_on_result(&mut results.iter_mut()).expect("failed to send scan results");
         txn.send_on_finished().expect("failed to send OnFinished to ScanTxn");
+    }
+
+    fn send_sme_status(exec: &mut fasync::Executor,
+                       next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
+                       connected_to: Option<Box<fidl_sme::BssInfo>>,
+                       connecting_to_ssid: Vec<u8>) {
+        let responder = match poll_sme_req(exec, next_sme_req) {
+            Poll::Ready(ClientSmeRequest::Status { responder }) => responder,
+            Poll::Pending => panic!("expected a request to be available"),
+            _ => panic!("expected a Status request"),
+        };
+        let mut response = fidl_sme::ClientStatusResponse { connected_to, connecting_to_ssid };
+        responder.send(&mut response).expect("failed to send status response");
+    }
+
+    fn send_default_sme_status(exec: &mut fasync::Executor,
+                               next_sme_req: &mut StreamFuture<ClientSmeRequestStream>) {
+        let ssid = b"foo";
+        let bss_info = bss_info(&ssid[..]);
+        send_sme_status(exec, next_sme_req, Some(Box::new(bss_info)), ssid.to_vec());
+    }
+
+    fn expect_status_req_to_sme(exec: &mut fasync::Executor,
+                                next_sme_req: &mut StreamFuture<ClientSmeRequestStream>) {
+        match poll_sme_req(exec, next_sme_req) {
+            Poll::Ready(ClientSmeRequest::Status { .. }) => (),
+            _ => panic!("expected a Status request"),
+        }
     }
 
     fn exchange_connect_with_sme(exec: &mut fasync::Executor,
@@ -863,4 +966,14 @@ mod tests {
         (client, fut, server)
     }
 
+    fn bss_info(ssid: &[u8]) -> fidl_sme::BssInfo {
+        fidl_sme::BssInfo {
+            bssid: [0, 1, 2, 3, 4, 5],
+            ssid: ssid.to_vec(),
+            rx_dbm: -30,
+            channel: 1,
+            protected: true,
+            compatible: true,
+        }
+    }
 }
