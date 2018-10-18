@@ -18,6 +18,10 @@ TEST(FuchsiaPkgUrl, Parse) {
   EXPECT_FALSE(fp.Parse("#meta/stuff"));
   EXPECT_FALSE(fp.Parse("fuchsia-pkg://fuchsia.com/component_hello_world#"));
 
+  EXPECT_TRUE(fp.Parse("fuchsia-pkg://fuchsia.com/component_hello_world"));
+  EXPECT_EQ("component_hello_world", fp.package_name());
+  EXPECT_EQ("", fp.resource_path());
+
   EXPECT_TRUE(fp.Parse(
       "fuchsia-pkg://fuchsia.com/component_hello_world#meta/hello_world.cmx"));
   EXPECT_EQ("component_hello_world", fp.package_name());

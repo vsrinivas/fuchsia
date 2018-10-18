@@ -40,8 +40,6 @@ source_set("lib") {
     "scheme_map.h",
     "service_provider_dir_impl.cc",
     "service_provider_dir_impl.h",
-    "url_resolver.cc",
-    "url_resolver.h",
     "util.cc",
     "util.h",
   ]
@@ -49,6 +47,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/lib/cmx",
     "//garnet/lib/json",
+    "//garnet/lib/loader",
     "//garnet/lib/pkg_url",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/backoff",
@@ -116,7 +115,6 @@ executable("tests") {
     "namespace_unittest.cc",
     "scheme_map_unittest.cc",
     "service_provider_dir_unittest.cc",
-    "url_resolver_unittest.cc",
     "util_unittest.cc",
   ]
 

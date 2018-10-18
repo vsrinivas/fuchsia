@@ -8,6 +8,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <fstream>
+#include <string>
+#include <vector>
 
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <fs/pseudo-dir.h>
@@ -16,12 +19,13 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
 #include <lib/fdio/util.h>
-
 #include "garnet/bin/appmgr/util.h"
+#include "gtest/gtest.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/logging.h"
 
 namespace component {
 namespace {
@@ -36,38 +40,92 @@ class RealmTest : public TestWithEnvironment {
  protected:
   void SetUp() override {
     TestWithEnvironment::SetUp();
-    std::string tmp_file;
-    ASSERT_TRUE(tmp_dir_.NewTempFile(&tmp_file));
-    outf_ = std::fopen(tmp_file.c_str(), "w");
+    OpenNewOutFile();
   }
 
-  fuchsia::sys::LaunchInfo CreateLaunchInfo(const std::string& url) {
+  void OpenNewOutFile() {
+    ASSERT_TRUE(tmp_dir_.NewTempFile(&out_file_));
+    outf_ = fileno(std::fopen(out_file_.c_str(), "w"));
+  }
+
+  std::string ReadOutFile() {
+    std::string out;
+    if (!files::ReadFileToString(out_file_, &out)) {
+      FXL_LOG(ERROR) << "Could not read output file " << out_file_;
+      return "";
+    }
+    return out;
+  }
+
+  fuchsia::sys::LaunchInfo CreateLaunchInfo(
+      const std::string& url, const std::vector<std::string>& args = {}) {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = url;
-    int out_fd = fileno(outf_);
-
-    launch_info.out = CloneFileDescriptor(out_fd);
+    for (const auto& a : args) {
+      launch_info.arguments.push_back(a);
+    }
+    launch_info.out = CloneFileDescriptor(outf_);
+    launch_info.err = CloneFileDescriptor(STDERR_FILENO);
     return launch_info;
   }
 
   fuchsia::sys::ComponentControllerPtr RunComponent(
-      EnclosingEnvironment* enclosing_environment, const std::string& url) {
-    return enclosing_environment->CreateComponent(CreateLaunchInfo(url));
+      EnclosingEnvironment* enclosing_environment, const std::string& url,
+      const std::vector<std::string>& args = {}) {
+    return enclosing_environment->CreateComponent(
+        CreateLaunchInfo(url, std::move(args)));
   }
 
  private:
   files::ScopedTempDir tmp_dir_;
-  FILE* outf_;
+  std::string out_file_;
+  int outf_;
 };
 
 const char kRealm[] = "realmintegrationtest";
 const auto kTimeout = zx::sec(5);
 
+TEST_F(RealmTest, RunBinaryAsComponent) {
+  auto enclosing_environment =
+      CreateNewEnclosingEnvironment(kRealm, CreateServices());
+
+  // Absolute path.
+  {
+    OpenNewOutFile();
+    auto controller = RunComponent(enclosing_environment.get(),
+                                   "/system/bin/echo", {"-n", "Hello world"});
+    bool wait = false;
+    controller.events().OnTerminated =
+        [&wait](int64_t return_code, fuchsia::sys::TerminationReason reason) {
+          wait = true;
+          EXPECT_EQ(reason, fuchsia::sys::TerminationReason::EXITED);
+          EXPECT_EQ(return_code, 0);
+        };
+    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, kTimeout));
+    EXPECT_EQ(ReadOutFile(), "Hello world");
+  }
+
+  // Relative path.
+  {
+    OpenNewOutFile();
+    auto controller =
+        RunComponent(enclosing_environment.get(), "echo", {"-n", "Bye world"});
+    bool wait = false;
+    controller.events().OnTerminated =
+        [&wait](int64_t return_code, fuchsia::sys::TerminationReason reason) {
+          wait = true;
+          EXPECT_EQ(reason, fuchsia::sys::TerminationReason::EXITED);
+          EXPECT_EQ(return_code, 0);
+        };
+    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, kTimeout));
+    EXPECT_EQ(ReadOutFile(), "Bye world");
+  }
+}
+
 // This test exercises the fact that two components should be in separate jobs,
 // and thus when one component controller kills its job due to a .Kill() call
 // the other component should run uninterrupted.
 TEST_F(RealmTest, CreateTwoKillOne) {
-
   // launch component as a service.
   auto env_services = CreateServices();
   ASSERT_EQ(ZX_OK, env_services->AddServiceWithLaunchInfo(

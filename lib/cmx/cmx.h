@@ -13,6 +13,7 @@
 #include "garnet/lib/cmx/runtime.h"
 #include "garnet/lib/cmx/sandbox.h"
 #include "garnet/lib/json/json_parser.h"
+#include "garnet/lib/pkg_url/fuchsia_pkg_url.h"
 #include "rapidjson/document.h"
 
 namespace component {
@@ -32,15 +33,15 @@ class CmxMetadata {
   bool ParseFromDeprecatedRuntimeFileAt(int dirfd, const std::string& file,
                                         json::JSONParser* json_parser);
 
-  // Takes a package's resolved_url, e.g. file:///pkgfs/packages/<FOO>/0, and
-  // returns the default component's .cmx path, e.g. meta/<FOO>.cmx.
+  // Takes a package's parsed resolved_url and returns the default component's
+  // .cmx path, i.e. meta/<package_name>.cmx.
   static std::string GetDefaultComponentCmxPath(
-      const std::string& package_resolved_url);
+      const FuchsiaPkgUrl& package_resolved_url);
 
-  // Takes a package's resolved_url, e.g. file:///pkgfs/packages/<FOO>/0, and
-  // returns the default component's name, e.g. <FOO>.
+  // Takes a package's parsed resolved_url and returns the default component's
+  // .cmx path, i.e. <package_name>.cmx.
   static std::string GetDefaultComponentName(
-      const std::string& package_resolved_url);
+      const FuchsiaPkgUrl& package_resolved_url);
 
   const SandboxMetadata& sandbox_meta() { return sandbox_meta_; }
   const RuntimeMetadata& runtime_meta() { return runtime_meta_; }
