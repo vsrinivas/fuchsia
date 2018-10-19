@@ -182,6 +182,8 @@ zx_status_t Imx227Device::Init() {
 }
 
 void Imx227Device::DeInit() {
+    ddk::MipiCsiProtocolProxy mipi(&mipi_);
+    mipi.DeInit();
 }
 
 zx_status_t Imx227Device::GetInfo(zircon_camera_SensorInfo* out_info) {
@@ -267,17 +269,26 @@ zx_status_t Imx227Device::SetMode(uint8_t mode) {
 }
 
 void Imx227Device::StartStreaming() {
+    ctx_.streaming_flag = 1;
+    WriteReg(0x0100, 0x01);
 }
 
 void Imx227Device::StopStreaming() {
+    ctx_.streaming_flag = 0;
+    WriteReg(0x0100, 0x00);
 }
 
-int32_t Imx227Device::AllocateAnalogGain(int32_t gain) {
+int32_t Imx227Device::SetAnalogGain(int32_t gain) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-int32_t Imx227Device::AllocateDigitalGain(int32_t gain) {
+int32_t Imx227Device::SetDigitalGain(int32_t gain) {
     return ZX_ERR_NOT_SUPPORTED;
+}
+
+void Imx227Device::SetIntegrationTime(int32_t int_time,
+                                      int32_t int_time_M,
+                                      int32_t int_time_L) {
 }
 
 void Imx227Device::Update() {
@@ -330,16 +341,25 @@ static zx_status_t StopStreaming(void* ctx) {
     return ZX_OK;
 }
 
-static zx_status_t AllocateAnalogGain(void* ctx, int32_t gain, fidl_txn_t* txn) {
+static zx_status_t SetAnalogGain(void* ctx, int32_t gain, fidl_txn_t* txn) {
     auto& self = *static_cast<Imx227Device*>(ctx);
-    int32_t actual_gain = self.AllocateAnalogGain(gain);
-    return zircon_camera_CameraSensorAllocateAnalogGain_reply(txn, actual_gain);
+    int32_t actual_gain = self.SetAnalogGain(gain);
+    return zircon_camera_CameraSensorSetAnalogGain_reply(txn, actual_gain);
 }
 
-static zx_status_t AllocateDigitalGain(void* ctx, int32_t gain, fidl_txn_t* txn) {
+static zx_status_t SetDigitalGain(void* ctx, int32_t gain, fidl_txn_t* txn) {
     auto& self = *static_cast<Imx227Device*>(ctx);
-    int32_t actual_gain = self.AllocateDigitalGain(gain);
-    return zircon_camera_CameraSensorAllocateDigitalGain_reply(txn, actual_gain);
+    int32_t actual_gain = self.SetDigitalGain(gain);
+    return zircon_camera_CameraSensorSetDigitalGain_reply(txn, actual_gain);
+}
+
+static zx_status_t SetIntegrationTime(void* ctx,
+                                      int32_t int_time,
+                                      int32_t int_time_M,
+                                      int32_t int_time_L) {
+    auto& self = *static_cast<Imx227Device*>(ctx);
+    self.SetIntegrationTime(int_time, int_time_M, int_time_L);
+    return ZX_OK;
 }
 
 static zx_status_t Update(void* ctx) {
@@ -354,8 +374,9 @@ zircon_camera_CameraSensor_ops_t fidl_ops = {
     .SetMode = SetMode,
     .StartStreaming = StartStreaming,
     .StopStreaming = StopStreaming,
-    .AllocateAnalogGain = AllocateAnalogGain,
-    .AllocateDigitalGain = AllocateDigitalGain,
+    .SetAnalogGain = SetAnalogGain,
+    .SetDigitalGain = SetDigitalGain,
+    .SetIntegrationTime = SetIntegrationTime,
     .Update = Update,
 };
 

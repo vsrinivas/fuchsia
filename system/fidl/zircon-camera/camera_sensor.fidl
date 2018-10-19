@@ -99,34 +99,44 @@ interface CameraSensor {
   // This function is called from system to disable video stream from sensor.
   5: StopStreaming();
 
-  // Allocate analog gain.
+  // Set analog gain.
   // This function sets the sensor digital gain.
   // Gain should be just saved here for the future.
   // The real sensor digital gain update must be implemented in
   // Update() routine.
   // @param gain - analog gain value in log2 format precision is defined by LOG2_GAIN_SHIFT
   // @return the real digital gain which will be applied
-  6: AllocateAnalogGain(int32 gain) -> (int32 actual_gain);
+  6: SetAnalogGain(int32 gain) -> (int32 actual_gain);
 
-  // Allocate digital gain.
+  // Set digital gain.
   // This function sets the sensor digital gain.
   // Gain should be just saved here for the future.
   // The real sensor digital gain update must be implemented in
   // Update() routine.
   // @param gain - analog gain value in log2 format precision is defined by LOG2_GAIN_SHIFT
   // @return the real digital gain which will be applied
-  7: AllocateDigitalGain(int32 gain) -> (int32 actual_gain);
+  7: SetDigitalGain(int32 gain) -> (int32 actual_gain);
+
+  // Set integration time
+  // This function sets the sensor integration time.
+  // Integration time should be just saved here for the future.
+  // The real time update must be implemented in
+  // sensor_update routine.
+  // @param int_time - integration time if one exposure is used or short exposure for multi-expsoure sensors.
+  //        int_time_M - medium integration time if several exposures are supported.
+  //        int_time_L - long integration time if several exposures are supported.
+  8: SetIntegrationTime(int32 int_time, int32 int_time_M, int32 int_time_L);
 
   // Update all sensor parameters
   // The function is called from IRQ thread in vertical blanking.
   // All sensor parameters must be updated here.
-  8: Update();
+  9: Update();
 
   // Get supported sensor modes.
-  // 9: GetSupportedModes() -> (vector<SensorMode> supported_modes, uint32 num);
+  // 10: GetSupportedModes() -> (vector<SensorMode> supported_modes, uint32 num);
 
   // Gets the Sensor Parameters.
   // Note: This is not supported in Zircon yet under "Simple" layout.
-  // 10: GetInfo() -> (zx.status s, SensorInfo info);
+  // 11: GetInfo() -> (zx.status s, SensorInfo info);
 };
 

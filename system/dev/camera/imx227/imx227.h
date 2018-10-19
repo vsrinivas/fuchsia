@@ -84,8 +84,9 @@ public:
     zx_status_t SetMode(uint8_t mode);
     void StartStreaming();
     void StopStreaming();
-    int32_t AllocateAnalogGain(int32_t gain);
-    int32_t AllocateDigitalGain(int32_t gain);
+    int32_t SetAnalogGain(int32_t gain);
+    int32_t SetDigitalGain(int32_t gain);
+    void SetIntegrationTime(int32_t int_time, int32_t int_time_M, int32_t int_time_L);
     void Update();
 
 private:
