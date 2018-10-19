@@ -3927,6 +3927,12 @@ static zx_status_t brcmf_sdio_get_fwname(struct brcmf_device* dev, uint32_t chip
     return ret;
 }
 
+static zx_status_t brcmf_sdio_get_bootloader_macaddr(struct brcmf_device* dev, uint8_t* mac_addr) {
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
+    struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
+    return brcmf_sdiod_get_bootloader_macaddr(sdiodev, mac_addr);
+}
+
 static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
     .stop = brcmf_sdio_bus_stop,
     .preinit = brcmf_sdio_bus_preinit,
@@ -3938,6 +3944,7 @@ static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
     .get_ramsize = brcmf_sdio_bus_get_ramsize,
     .get_memdump = brcmf_sdio_bus_get_memdump,
     .get_fwname = brcmf_sdio_get_fwname,
+    .get_bootloader_macaddr = brcmf_sdio_get_bootloader_macaddr,
 };
 
 static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t err,

@@ -1287,6 +1287,10 @@ static zx_status_t brcmf_usb_get_fwname(struct brcmf_device* dev, uint32_t chip,
     return ret;
 }
 
+static zx_status_t brcmf_usb_get_bootloader_macaddr(struct brcmf_device* dev, uint8_t* mac_addr) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static const struct brcmf_bus_ops brcmf_usb_bus_ops = {
     .txdata = brcmf_usb_tx,
     .stop = brcmf_usb_down,
@@ -1294,6 +1298,7 @@ static const struct brcmf_bus_ops brcmf_usb_bus_ops = {
     .rxctl = brcmf_usb_rx_ctlpkt,
     .wowl_config = brcmf_usb_wowl_config,
     .get_fwname = brcmf_usb_get_fwname,
+    .get_bootloader_macaddr = brcmf_usb_get_bootloader_macaddr,
 };
 
 static zx_status_t brcmf_usb_bus_setup(struct brcmf_usbdev_info* devinfo) {

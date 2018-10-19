@@ -73,6 +73,7 @@ struct brcmf_bus_dcmd {
  * @get_ramsize: obtain size of device memory.
  * @get_memdump: obtain device memory dump in provided buffer.
  * @get_fwname: obtain firmware name.
+ * @get_bootloader_macaddr: obtain mac address from bootloader, if supported.
  *
  * This structure provides an abstract interface towards the
  * bus specific driver. For control messages to common driver
@@ -94,6 +95,7 @@ struct brcmf_bus_ops {
     zx_status_t (*get_memdump)(struct brcmf_device* dev, void* data, size_t len);
     zx_status_t (*get_fwname)(struct brcmf_device* dev, uint chip, uint chiprev,
                               unsigned char* fw_name);
+    zx_status_t (*get_bootloader_macaddr)(struct brcmf_device* dev, uint8_t* mac_addr);
 };
 
 /**
@@ -229,6 +231,11 @@ static inline zx_status_t brcmf_bus_get_memdump(struct brcmf_bus* bus, void* dat
 static inline zx_status_t brcmf_bus_get_fwname(struct brcmf_bus* bus, uint chip, uint chiprev,
                                                unsigned char* fw_name) {
     return bus->ops->get_fwname(bus->dev, chip, chiprev, fw_name);
+}
+
+static inline zx_status_t brcmf_bus_get_bootloader_macaddr(struct brcmf_bus* bus,
+                                                           uint8_t* mac_addr) {
+    return bus->ops->get_bootloader_macaddr(bus->dev, mac_addr);
 }
 
 /*

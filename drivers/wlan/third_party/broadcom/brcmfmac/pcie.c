@@ -1205,6 +1205,10 @@ static zx_status_t brcmf_pcie_get_fwname(struct brcmf_device* dev, uint32_t chip
     return ret;
 }
 
+static zx_status_t brcmf_pcie_get_bootloader_macaddr(struct brcmf_device* dev, uint8_t* mac_addr) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static const struct brcmf_bus_ops brcmf_pcie_bus_ops = {
     .txdata = brcmf_pcie_tx,
     .stop = brcmf_pcie_down,
@@ -1214,6 +1218,7 @@ static const struct brcmf_bus_ops brcmf_pcie_bus_ops = {
     .get_ramsize = brcmf_pcie_get_ramsize,
     .get_memdump = brcmf_pcie_get_memdump,
     .get_fwname = brcmf_pcie_get_fwname,
+    .get_bootloader_macaddr = brcmf_pcie_get_bootloader_macaddr,
 };
 
 static void brcmf_pcie_adjust_ramsize(struct brcmf_pciedev_info* devinfo, uint8_t* data,

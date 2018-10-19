@@ -33,7 +33,6 @@
 #include "fwil_types.h"
 #include "linuxisms.h"
 #include "of.h"
-#include "sdio.h"
 
 MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("Broadcom 802.11 wireless LAN fullmac driver.");
@@ -236,18 +235,6 @@ static void brcmf_gen_random_mac_addr(uint8_t* mac_addr) {
     mac_addr[0] |= 0x02; // bit 1: 1 = locally-administered
 }
 
-static zx_status_t brcmf_get_macaddr_from_bootloader(struct brcmf_if* ifp, uint8_t* mac_addr) {
-    // TODO(porce): Support other buses than SDIO
-    zx_status_t err = brcmf_sdiod_get_bootloader_macaddr(ifp->drvr->bus_if->bus_priv.sdio,
-                                                         mac_addr);
-    if (err != ZX_OK) {
-        brcmf_err("Retrieving mac address from bootloader failed, %s\n",
-                  zx_status_get_string(err));
-        return err;
-    }
-    return ZX_OK;
-}
-
 zx_status_t brcmf_set_macaddr_from_firmware(struct brcmf_if* ifp) {
     // Use static MAC address defined in the firmware.
     // eg. "macaddr" field of brcmfmac43455-sdio.txt
@@ -268,7 +255,7 @@ zx_status_t brcmf_set_macaddr_from_firmware(struct brcmf_if* ifp) {
 static zx_status_t brcmf_set_macaddr(struct brcmf_if* ifp) {
     uint8_t mac_addr[ETH_ALEN];
 
-    zx_status_t err = brcmf_get_macaddr_from_bootloader(ifp, mac_addr);
+    zx_status_t err = brcmf_bus_get_bootloader_macaddr(ifp->drvr->bus_if, mac_addr);
     if (err != ZX_OK) {
         // If desired, fall back to firmware mac address
         // by using brcmf_set_macaddr_from_firmware();
