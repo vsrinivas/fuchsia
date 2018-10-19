@@ -5,7 +5,6 @@
 #include <lib/zx/vmo.h>
 #include <float.h>
 #include <math.h>
-#include <zircon/device/backlight.h>
 #include <zircon/backlight/c/fidl.h>
 
 #include "display-device.h"
@@ -43,41 +42,6 @@ static zircon_backlight_Device_ops_t fidl_ops = {
 
 zx_status_t backlight_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
     return zircon_backlight_Device_dispatch(ctx, txn, msg, &fidl_ops);
-}
-
-zx_status_t backlight_ioctl(void* ctx, uint32_t op,
-                            const void* in_buf, size_t in_len,
-                            void* out_buf, size_t out_len, size_t* out_actual) {
-    if (op == IOCTL_BACKLIGHT_SET_BRIGHTNESS
-            || op == IOCTL_BACKLIGHT_GET_BRIGHTNESS) {
-        auto ref = static_cast<i915::display_ref_t*>(ctx);
-        fbl::AutoLock lock(&ref->mtx);
-
-        if (ref->display_device == NULL) {
-            return ZX_ERR_PEER_CLOSED;
-        }
-
-        if (op == IOCTL_BACKLIGHT_SET_BRIGHTNESS) {
-            if (in_len != sizeof(backlight_state_t) || out_len != 0) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-
-            const auto args = static_cast<const backlight_state_t*>(in_buf);
-            ref->display_device->SetBacklightState(args->on, args->brightness);
-            return ZX_OK;
-        } else if (op == IOCTL_BACKLIGHT_GET_BRIGHTNESS) {
-            if (out_len != sizeof(backlight_state_t) || in_len != 0) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-            
-            auto args = static_cast<backlight_state_t*>(out_buf);
-            ref->display_device->GetBacklightState(&args->on, &args->brightness);
-            *out_actual = sizeof(backlight_state_t);
-            return ZX_OK;
-        }
-    }
-
-    return ZX_ERR_NOT_SUPPORTED;
 }
 
 void backlight_release(void* ctx) {
@@ -187,7 +151,6 @@ void DisplayDevice::InitBacklight() {
             }
 
             backlight_ops.version = DEVICE_OPS_VERSION;
-            backlight_ops.ioctl = backlight_ioctl;
             backlight_ops.message = backlight_message;
             backlight_ops.release = backlight_release;
 

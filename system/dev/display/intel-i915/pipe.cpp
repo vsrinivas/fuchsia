@@ -5,7 +5,6 @@
 #include <lib/zx/vmo.h>
 #include <float.h>
 #include <math.h>
-#include <zircon/device/backlight.h>
 
 #include "display-device.h"
 #include "intel-i915.h"
