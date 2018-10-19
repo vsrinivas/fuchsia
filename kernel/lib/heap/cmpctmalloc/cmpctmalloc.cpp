@@ -265,7 +265,7 @@ static int size_to_index_helper(
         // struct is 16 bytes larger than the header, so no allocation can be
         // smaller than that (otherwise how to free it), but we have empty 8
         // and 16 byte buckets for simplicity.
-        return (size >> 3) - 1;
+        return (int)((size >> 3) - 1);
     }
 
     // We are going to go up to the next size to round up, but if we hit a
@@ -277,7 +277,7 @@ static int size_to_index_helper(
     // every 32 up to 512 etc.  This can be thought of as rows of 8 buckets.
     // GCC intrinsic count-leading-zeros.
     // Eg. 128-255 has 24 leading zeros and we want row to be 4.
-    unsigned row = sizeof(size_t) * 8 - 4 - __builtin_clzl(size);
+    unsigned row = (unsigned)(sizeof(size_t) * 8 - 4 - __builtin_clzl(size));
     // For row 4 we want to shift down 4 bits.
     unsigned column = (size >> row) & 7;
     int row_column = (row << 3) | column;
@@ -410,7 +410,7 @@ static void possibly_free_to_os(header_t *left_sentinel, size_t total_size) {
 static void free_memory(void* address, void* left, size_t size) {
     left = untag(left);
     if (IS_PAGE_ALIGNED(left) &&
-        is_start_of_os_allocation(left) &&
+        is_start_of_os_allocation((const header_t*)left) &&
         is_end_of_os_allocation((char*)address + size)) {
 
         // Assert that it's safe to do a simple 2*sizeof(header_t)) below.
@@ -1052,7 +1052,7 @@ void* cmpct_realloc(void* payload, size_t size) {
 }
 
 static void add_to_heap(void* new_area, size_t size) {
-    void* top = (char*)new_area + size;
+    char* top = (char*)new_area + size;
     // Set up the left sentinel. Its |left| field will not have FREE_BIT set,
     // stopping attempts to coalesce left.
     header_t* left_sentinel = (header_t*)new_area;
