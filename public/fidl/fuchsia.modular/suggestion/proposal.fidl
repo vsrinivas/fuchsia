@@ -47,6 +47,8 @@ struct Proposal {
     // the |story_id| provided will be of the first create story action in
     // |on_selected|, and subsequent create story actions will not notify the
     // listener.
+    //
+    // DEPRECATED in favor of using ProposalPublisher Notify methods.
     ProposalListener? listener;
 };
 

@@ -67,6 +67,13 @@ class NextProcessor {
   void RemoveProposal(const std::string& component_url,
                       const std::string& proposal_id);
 
+  // |component_url| The url of the component that created the proposal.
+  // |proposal_id| The identifier for the proposal.
+  // |proposal_publisher_impl| Notify proposal removed for the component.
+  void RemoveProposal(const std::string& component_url,
+                      const std::string& proposal_id,
+                      ProposalPublisherImpl* const proposal_publisher_impl);
+
   // Returns a pointer to the suggestion associated with the provided
   // |component_url| and |proposal_id|, or nullptr if no such suggestion exists.
   SuggestionPrototype* GetSuggestion(const std::string& component_url,

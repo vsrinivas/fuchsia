@@ -167,9 +167,13 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   // suggestions (i.e. pre-load stories to be displayed as suggestions).
   bool ComponentCanUseRichSuggestions(const std::string& component_url);
 
+  ProposalPublisherImpl* MaybeGetProposalPublisher(
+      const std::string& component_url);
+
   // Executes the Interaction::SELECTED operation. If a |preloaded_story_id| is
   // provided, it will be promoted. Otherwise the actions will be executed.
-  // Also notifies of OnProposalAccepted on the |proposal.listener|.
+  // The proposal_publisher associated with our component_url is notified about
+  // ProposalInteraction/ProposalRemoved events.
   // If |suggestion_in_ask| is true means that the proposal belongs to a query
   // suggestion. If false, to a next suggestion. This is information is used to
   // know from which list to delete.

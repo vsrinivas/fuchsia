@@ -124,18 +124,30 @@ void SuggestionEngineImpl::AddProposalWithRichSuggestion(
       }));
 }
 
+ProposalPublisherImpl* SuggestionEngineImpl::MaybeGetProposalPublisher(
+    const std::string& component_url) {
+  // Check if there exists a matching proposal publisher for the component_url.
+  if (proposal_publishers_.find(component_url) != proposal_publishers_.end()) {
+    return proposal_publishers_.at(component_url).get();
+  }
+
+  return nullptr;
+}
+
 void SuggestionEngineImpl::RemoveNextProposal(const std::string& component_url,
                                               const std::string& proposal_id) {
   SuggestionPrototype* suggestion =
       next_processor_.GetSuggestion(component_url, proposal_id);
   if (suggestion && !suggestion->preloaded_story_id.empty()) {
     auto story_name = suggestion->proposal.story_name;
-    puppet_master_->DeleteStory(
-        story_name, [this, story_name, component_url, proposal_id] {
-          next_processor_.RemoveProposal(component_url, proposal_id);
-        });
+    puppet_master_->DeleteStory(story_name, [this, story_name, component_url,
+                                             proposal_id] {
+      next_processor_.RemoveProposal(component_url, proposal_id,
+                                     MaybeGetProposalPublisher(component_url));
+    });
   } else {
-    next_processor_.RemoveProposal(component_url, proposal_id);
+    next_processor_.RemoveProposal(component_url, proposal_id,
+                                   MaybeGetProposalPublisher(component_url));
   }
 }
 
@@ -216,6 +228,12 @@ void SuggestionEngineImpl::NotifyInteraction(
   auto proposal_id = proposal.id;
   auto preloaded_story_id = suggestion->prototype->preloaded_story_id;
   suggestion->interrupting = false;
+
+  // Check if there exists a matching proposal publisher for the component_url
+  if (proposal_publishers_.find(component_url) != proposal_publishers_.end()) {
+    proposal_publishers_[component_url]->NotifyProposalInteraction(
+        proposal_id, interaction.type);
+  }
 
   switch (interaction.type) {
     case fuchsia::modular::InteractionType::SELECTED: {
@@ -361,11 +379,11 @@ void SuggestionEngineImpl::HandleSelectedInteraction(
     fuchsia::modular::ProposalListenerPtr listener, bool suggestion_in_ask) {
   // Rich suggestions are only in Next, so we don't check suggestion_in_ask.
   if (!preloaded_story_id.empty()) {
+    // TODO(miguelfrde): eventually we should promote stories here. For now rich
+    // suggestions aren't removed or promoted.
     if (listener) {
       listener->OnProposalAccepted(proposal.id, preloaded_story_id);
     }
-    // TODO(miguelfrde): eventually we should promote stories here. For now rich
-    // suggestions aren't removed or promoted.
     return;
   }
 
@@ -393,7 +411,9 @@ void SuggestionEngineImpl::HandleSelectedInteraction(
         if (suggestion_in_ask) {
           query_processor_.CleanUpPreviousQuery();
         } else {
-          next_processor_.RemoveProposal(component_url, proposal_id);
+          next_processor_.RemoveProposal(
+              component_url, proposal_id,
+              MaybeGetProposalPublisher(component_url));
         }
       }));
 }

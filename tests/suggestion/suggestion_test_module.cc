@@ -22,7 +22,7 @@ using modular::testing::TestPoint;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestModule : fuchsia::modular::ProposalListener {
+class TestModule {
  public:
   TestPoint initialized_{"Root module initialized"};
   TestPoint received_story_id_{"Root module received story id"};
@@ -41,6 +41,12 @@ class TestModule : fuchsia::modular::ProposalListener {
         intelligence_services.NewRequest());
     intelligence_services->GetProposalPublisher(
         proposal_publisher_.NewRequest());
+
+    proposal_publisher_.events().OnProposalInteraction =
+        [this](fidl::StringPtr proposal_id,
+               fuchsia::modular::InteractionType interaction_type) {
+          Signal("proposal_was_accepted");
+        };
 
     module_host_->module_context()->GetStoryId(
         [this](const fidl::StringPtr& story_id) {
@@ -65,8 +71,6 @@ class TestModule : fuchsia::modular::ProposalListener {
           proposal.story_name = story_id;
           proposal.display = std::move(suggestion_display);
           proposal.on_selected.push_back(std::move(command));
-          proposal_listener_bindings_.AddBinding(
-              this, proposal.listener.NewRequest());
 
           proposal_publisher_->Propose(std::move(proposal));
 
@@ -93,18 +97,10 @@ class TestModule : fuchsia::modular::ProposalListener {
     modular::testing::Done(done);
   }
 
-  // |fuchsia::modular::ProposalListener|
-  void OnProposalAccepted(fidl::StringPtr proposal_id,
-                          fidl::StringPtr story_id) override {
-    Signal("proposal_was_accepted");
-  }
-
  private:
   modular::ModuleHost* const module_host_;
   fuchsia::modular::ModuleContextPtr module_context_;
   fuchsia::modular::ProposalPublisherPtr proposal_publisher_;
-  fidl::BindingSet<fuchsia::modular::ProposalListener>
-      proposal_listener_bindings_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TestModule);
 };
 
