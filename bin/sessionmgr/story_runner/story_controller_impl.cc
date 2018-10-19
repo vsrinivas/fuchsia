@@ -1189,6 +1189,10 @@ StoryControllerImpl::GetStoryVisibilityState() const {
   return visibility_state_;
 }
 
+bool StoryControllerImpl::HandlingBackGesture() const {
+  return story_shell_handling_back_gesture_;
+}
+
 fidl::VectorPtr<fuchsia::modular::OngoingActivityType>
 StoryControllerImpl::GetOngoingActivities() {
   fidl::VectorPtr<fuchsia::modular::OngoingActivityType> ongoing_activities;
@@ -1572,6 +1576,8 @@ void StoryControllerImpl::StartStoryShell(
   story_shell_->Initialize(std::move(story_shell_context));
   story_shell_.events().OnSurfaceFocused =
       fit::bind_member(this, &StoryControllerImpl::OnSurfaceFocused);
+  story_shell_.events().OnHandlingBackGesture =
+      fit::bind_member(this, &StoryControllerImpl::OnHandlingBackGesture);
 }
 
 void StoryControllerImpl::SetState(
@@ -1586,8 +1592,8 @@ void StoryControllerImpl::SetState(
     (*i)->OnStateChange(state_);
   }
 
-  story_provider_impl_->NotifyStoryStateChange(story_id_, state_,
-                                               visibility_state_);
+  story_provider_impl_->NotifyStoryStateChange(
+      story_id_, state_, visibility_state_, story_shell_handling_back_gesture_);
 }
 
 bool StoryControllerImpl::IsExternalModule(
@@ -1646,8 +1652,8 @@ void StoryControllerImpl::HandleStoryVisibilityStateRequest(
 
   visibility_state_ = visibility_state;
 
-  story_provider_impl_->NotifyStoryStateChange(story_id_, state_,
-                                               visibility_state_);
+  story_provider_impl_->NotifyStoryStateChange(
+      story_id_, state_, visibility_state_, story_shell_handling_back_gesture_);
 }
 
 void StoryControllerImpl::InitStoryEnvironment() {
@@ -1699,6 +1705,15 @@ void StoryControllerImpl::OnSurfaceFocused(fidl::StringPtr surface_id) {
   auto module_path = StringToPath(surface_id);
   for (auto& watcher : watchers_.ptrs()) {
     (*watcher)->OnModuleFocused(std::move(module_path));
+  }
+}
+
+void StoryControllerImpl::OnHandlingBackGesture(bool handling_back) {
+  if (handling_back != story_shell_handling_back_gesture_) {
+    story_shell_handling_back_gesture_ = handling_back;
+    story_provider_impl_->NotifyStoryStateChange(
+        story_id_, state_, visibility_state_,
+        story_shell_handling_back_gesture_);
   }
 }
 
