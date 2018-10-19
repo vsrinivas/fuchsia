@@ -65,7 +65,7 @@ struct hogd_device_t {
 };
 
 struct hogd_t {
-  bt_gatt_svc_proto_t gatt_svc;
+  bt_gatt_svc_protocol_t gatt_svc;
 
   bool has_report_map;
   bt_gatt_id_t report_map_id;

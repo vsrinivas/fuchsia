@@ -8,11 +8,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <ddk/protocol/bt-gatt-svc-lib.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
 #define BTHOG_STATUS_OK(s) \
-  (s.status == ZX_OK && s.att_ecode == BT_GATT_ERR_NO_ERROR)
+  (s->status == ZX_OK && s->att_ecode == BT_GATT_ERR_NO_ERROR)
 
 // These are redefined here so it's easy to change them while developing.
 // Consider replacing trace calls with tracing library instead of using DDK's
@@ -129,8 +130,7 @@ static zx_status_t hogd_hid_set_report(void* ctx, uint8_t rpt_type,
   // state is stored host side anyways.
   if (child->has_output_report_id) {
     bt_gatt_svc_write_characteristic(&child->parent->gatt_svc,
-                                     child->output_report_id, child, data, len,
-                                     NULL);
+                                     child->output_report_id, data, len, NULL, child);
   }
   return ZX_OK;
 }
@@ -221,11 +221,11 @@ static zx_protocol_device_t hogd_child_dev_ops = {
 };
 
 // Catch-all handler for status callbacks we can't handle explictly.
-static void hogd_noop_status(void* ctx, bt_gatt_status_t status,
+static void hogd_noop_status(void* ctx, const bt_gatt_status_t* status,
                              bt_gatt_id_t id) {
   hog_log_trace("bthog hogd_noop_status, ctx: %p\n", ctx);
   if (!BTHOG_STATUS_OK(status)) {
-    zxlogf(ERROR, "bthog status, att_ecode: %u, id: %lu\n", status.att_ecode,
+    zxlogf(ERROR, "bthog status, att_ecode: %u, id: %lu\n", status->att_ecode,
            id);
   }
 }
@@ -242,7 +242,7 @@ static inline void hogd_log_blob(const char* name, const uint8_t* value,
 }
 
 static void hogd_report_notification(void* ctx, bt_gatt_id_t id,
-                                     const uint8_t* value, size_t len) {
+                                     const void* value, size_t len) {
   hog_log_trace("bthog hogd_report_notification, ctx: %p, id: %lu\n", ctx, id);
   hogd_log_blob("bthog input event", value, len);
   hogd_device_t* child = (hogd_device_t*)ctx;
@@ -299,9 +299,9 @@ static zx_status_t hogd_initialize_boot_device(hogd_device_t* child,
   }
 
   if (child->has_input_report_id) {
+    const bt_gatt_notification_value_t notification_cb = {hogd_report_notification, child};
     bt_gatt_svc_enable_notifications(&parent->gatt_svc, child->input_report_id,
-                                     child, hogd_noop_status,
-                                     hogd_report_notification);
+                                     &notification_cb, hogd_noop_status, child);
   }
 
   child->is_initialized = true;
@@ -309,8 +309,8 @@ static zx_status_t hogd_initialize_boot_device(hogd_device_t* child,
   return status;
 }
 
-static void hogd_on_read_report_map(void* ctx, bt_gatt_status_t status,
-                                    bt_gatt_id_t id, const uint8_t* value,
+static void hogd_on_read_report_map(void* ctx, const bt_gatt_status_t* status,
+                                    bt_gatt_id_t id, const void* value,
                                     size_t len) {
   hog_log_trace("bthog hogd_on_read_report_map, ctx: %p, id: %lu\n", ctx, id);
   hogd_t* hogd = (hogd_t*)ctx;
@@ -318,7 +318,7 @@ static void hogd_on_read_report_map(void* ctx, bt_gatt_status_t status,
     zxlogf(ERROR,
            "bthog driver was unable to read the report_map attribute (ERROR: "
            "%i ATT_ECODE: %i MAP_LEN: %lu)\n",
-           status.status, status.att_ecode, len);
+           status->status, status->att_ecode, len);
     // Unrecoverable state. Remove the device and let dev manger clean us up.
     device_remove(hogd->bus_dev);
     return;
@@ -339,7 +339,7 @@ static void hogd_on_read_report_map(void* ctx, bt_gatt_status_t status,
   // report descriptor flipped it out of boot mode.
   uint8_t val = BTHOG_PROTOCOL_MODE_BOOT_MODE;
   bt_gatt_svc_write_characteristic(&hogd->gatt_svc, hogd->protocol_mode_id,
-                                   hogd, &val, 1, NULL);
+                                   &val, 1, NULL, hogd);
 
   // TODO(zbowling): In the future, we should only really have one device
   // exposed to HIDBUS and HIDBUS should handle all report notifications on it's
@@ -365,13 +365,13 @@ static inline void hogd_debug_log_uuid(const uint8_t value[16],
       value[2], value[1], value[0]);
 }
 
-static void hogd_connect(void* ctx, bt_gatt_status_t status,
+static void hogd_connect(void* ctx, const bt_gatt_status_t* status,
                          const bt_gatt_chr_t* characteristics, size_t len) {
   if (!BTHOG_STATUS_OK(status)) {
     zxlogf(WARN,
            "bthog driver has failed to enumerate service characteristics "
            "(ERROR: %i ATT_ECODE: %i)\n",
-           status.status, status.att_ecode);
+           status->status, status->att_ecode);
     return;
   }
 
@@ -448,10 +448,10 @@ static void hogd_connect(void* ctx, bt_gatt_status_t status,
     // Set protocol mode to boot mode
     uint8_t val = BTHOG_PROTOCOL_MODE_BOOT_MODE;
     bt_gatt_svc_write_characteristic(&hogd->gatt_svc, hogd->protocol_mode_id,
-                                     hogd, &val, 1, NULL);
+                                     &val, 1, NULL, hogd);
     bt_gatt_svc_read_long_characteristic(&hogd->gatt_svc, hogd->report_map_id,
-                                         hogd, 0, UINT16_MAX,
-                                         hogd_on_read_report_map);
+                                         0, UINT16_MAX,
+                                         hogd_on_read_report_map, hogd);
   } else {
     zxlogf(ERROR,
            "bthog HID service is missing mandatory service attributes\n");
@@ -488,7 +488,7 @@ zx_status_t bthog_bind(void* ctx, zx_device_t* device) {
     return status;
   }
 
-  status = bt_gatt_svc_connect(&hogd->gatt_svc, hogd, hogd_connect);
+  bt_gatt_svc_connect(&hogd->gatt_svc, hogd_connect, hogd);
 
   return status;
 }

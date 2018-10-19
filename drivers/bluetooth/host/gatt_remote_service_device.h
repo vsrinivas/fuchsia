@@ -35,7 +35,7 @@ class GattRemoteServiceDevice final {
   zx_status_t Bind();
 
  private:
-  static bt_gatt_svc_ops_t proto_ops_;
+  static bt_gatt_svc_protocol_ops_t proto_ops_;
 
   // Protocol trampolines.
   static void DdkUnbind(void* ctx) {
@@ -46,43 +46,41 @@ class GattRemoteServiceDevice final {
     static_cast<GattRemoteServiceDevice*>(ctx)->Release();
   }
 
-  static zx_status_t OpConnect(void* ctx, void* cookie,
-                               bt_gatt_connect_cb connect_cb) {
-    return static_cast<GattRemoteServiceDevice*>(ctx)->Connect(cookie,
-                                                               connect_cb);
+  static void OpConnect(void* ctx, bt_gatt_svc_connect_callback connect_cb, void* cookie) {
+    static_cast<GattRemoteServiceDevice*>(ctx)->Connect(connect_cb, cookie);
   }
 
   static void OpStop(void* ctx) {
     static_cast<GattRemoteServiceDevice*>(ctx)->Stop();
   }
 
-  static zx_status_t OpReadCharacteristic(
-      void* ctx, bt_gatt_id_t id, void* cookie,
-      bt_gatt_read_characteristic_cb read_cb) {
-    return static_cast<GattRemoteServiceDevice*>(ctx)->ReadCharacteristic(
-        id, cookie, read_cb);
+  static void OpReadCharacteristic(
+      void* ctx, bt_gatt_id_t id,
+      bt_gatt_svc_read_characteristic_callback read_cb, void* cookie) {
+    static_cast<GattRemoteServiceDevice*>(ctx)->ReadCharacteristic(
+        id, read_cb, cookie);
   }
 
-  static zx_status_t OpReadLongCharacteristic(
-      void* ctx, bt_gatt_id_t id, void* cookie, uint16_t offset,
-      size_t max_bytes, bt_gatt_read_characteristic_cb read_cb) {
-    return static_cast<GattRemoteServiceDevice*>(ctx)->ReadLongCharacteristic(
-        id, cookie, offset, max_bytes, read_cb);
+  static void OpReadLongCharacteristic(
+      void* ctx, bt_gatt_id_t id,  uint16_t offset,
+      size_t max_bytes, bt_gatt_svc_read_characteristic_callback read_cb, void* cookie) {
+    static_cast<GattRemoteServiceDevice*>(ctx)->ReadLongCharacteristic(
+        id, offset, max_bytes, read_cb, cookie);
   }
 
-  static zx_status_t OpWriteCharacteristic(void* ctx, bt_gatt_id_t id,
-                                           void* cookie, const uint8_t* buf,
-                                           size_t len,
-                                           bt_gatt_status_cb status_cb) {
-    return static_cast<GattRemoteServiceDevice*>(ctx)->WriteCharacteristic(
-        id, cookie, buf, len, status_cb);
+  static void OpWriteCharacteristic(void* ctx, bt_gatt_id_t id,
+                                           const void* buf, size_t len,
+                                           bt_gatt_svc_write_characteristic_callback status_cb,
+                                           void* cookie) {
+    static_cast<GattRemoteServiceDevice*>(ctx)->WriteCharacteristic(
+        id, buf, len, status_cb, cookie);
   }
 
-  static zx_status_t OpEnableNotifications(
-      void* ctx, bt_gatt_id_t id, void* cookie, bt_gatt_status_cb status_cb,
-      bt_gatt_notification_value_cb value_cb) {
-    return static_cast<GattRemoteServiceDevice*>(ctx)->EnableNotifications(
-        id, cookie, status_cb, value_cb);
+  static void OpEnableNotifications(
+      void* ctx, bt_gatt_id_t id, const bt_gatt_notification_value_t* value_cb,
+      bt_gatt_svc_enable_notifications_callback status_cb, void* cookie) {
+    static_cast<GattRemoteServiceDevice*>(ctx)->EnableNotifications(
+        id, value_cb, status_cb, cookie);
   }
 
   // DDK device ops.
@@ -90,20 +88,17 @@ class GattRemoteServiceDevice final {
   void Release();
 
   // bt-gatt-svc ops.
-  zx_status_t Connect(void* cookie, bt_gatt_connect_cb connect_cb);
+  void Connect(bt_gatt_svc_connect_callback connect_cb, void* cookie);
   void Stop();
-  zx_status_t ReadCharacteristic(bt_gatt_id_t id, void* cookie,
-                                 bt_gatt_read_characteristic_cb read_cb);
+  void ReadCharacteristic(bt_gatt_id_t id, bt_gatt_svc_read_characteristic_callback read_cb,
+                          void* cookie);
 
-  zx_status_t ReadLongCharacteristic(bt_gatt_id_t id, void* cookie,
-                                     uint16_t offset, size_t max_bytes,
-                                     bt_gatt_read_characteristic_cb read_cb);
-  zx_status_t WriteCharacteristic(bt_gatt_id_t id, void* cookie,
-                                  const uint8_t* buff, size_t len,
-                                  bt_gatt_status_cb write_cb);
-  zx_status_t EnableNotifications(bt_gatt_id_t id, void* cookie,
-                                  bt_gatt_status_cb status_cb,
-                                  bt_gatt_notification_value_cb value_cb);
+  void ReadLongCharacteristic(bt_gatt_id_t id, uint16_t offset, size_t max_bytes,
+                              bt_gatt_svc_read_characteristic_callback read_cb, void* cookie);
+  void WriteCharacteristic(bt_gatt_id_t id, const void* buff, size_t len,
+                           bt_gatt_svc_write_characteristic_callback write_cb, void* cookie);
+  void EnableNotifications(bt_gatt_id_t id, const bt_gatt_notification_value_t* value_cb,
+                           bt_gatt_svc_enable_notifications_callback status_cb, void* cookie);
 
   // All device protocol messages are dispatched on this loop to not block the
   // gatt or host thread.

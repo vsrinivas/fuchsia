@@ -87,7 +87,7 @@ GattRemoteServiceDevice::~GattRemoteServiceDevice() {
   }
 }
 
-bt_gatt_svc_ops_t GattRemoteServiceDevice::proto_ops_ = {
+bt_gatt_svc_protocol_ops_t GattRemoteServiceDevice::proto_ops_ = {
     .connect = &GattRemoteServiceDevice::OpConnect,
     .stop = &GattRemoteServiceDevice::OpStop,
     .read_characteristic = &GattRemoteServiceDevice::OpReadCharacteristic,
@@ -164,8 +164,7 @@ void GattRemoteServiceDevice::Unbind() {
 }
 void GattRemoteServiceDevice::Release() { dev_ = nullptr; }
 
-zx_status_t GattRemoteServiceDevice::Connect(void* cookie,
-                                             bt_gatt_connect_cb connect_cb) {
+void GattRemoteServiceDevice::Connect(bt_gatt_svc_connect_callback connect_cb, void* cookie) {
   async::PostTask(loop_.dispatcher(), [this, connect_cb, cookie]() {
     service_->DiscoverCharacteristics(
         [connect_cb, cookie](att::Status cb_status, const auto& chrcs) {
@@ -182,20 +181,20 @@ zx_status_t GattRemoteServiceDevice::Connect(void* cookie,
 
             auto& descriptors = chr.descriptors();
             if (descriptors.size() > 0) {
-              ddk_chars[char_idx].descriptors =
+              ddk_chars[char_idx].descriptor_list =
                   new bt_gatt_descriptor_t[descriptors.size()];
-              ddk_chars[char_idx].num_descriptors = descriptors.size();
+              ddk_chars[char_idx].descriptor_count = descriptors.size();
               size_t desc_idx = 0;
               for (auto& descriptor : descriptors) {
-                ddk_chars[char_idx].descriptors[desc_idx].id =
+                ddk_chars[char_idx].descriptor_list[desc_idx].id =
                     static_cast<bt_gatt_id_t>(descriptor.id());
-                CopyUUIDBytes(&ddk_chars[char_idx].descriptors[desc_idx].type,
+                CopyUUIDBytes(&ddk_chars[char_idx].descriptor_list[desc_idx].type,
                               descriptor.info().type);
                 desc_idx++;
               }
             } else {
-              ddk_chars[char_idx].num_descriptors = 0;
-              ddk_chars[char_idx].descriptors = nullptr;
+              ddk_chars[char_idx].descriptor_count = 0;
+              ddk_chars[char_idx].descriptor_list = nullptr;
             }
 
             char_idx++;
@@ -205,20 +204,20 @@ zx_status_t GattRemoteServiceDevice::Connect(void* cookie,
                  "bt-gatt-svc: connected; discovered %zu characteristics",
                  char_idx);
           bt_gatt_status_t status = {.status = ZX_OK};
-          connect_cb(cookie, status, ddk_chars.get(), char_idx);
+          connect_cb(cookie, &status, ddk_chars.get(), char_idx);
 
           // Cleanup.
           for (char_idx = 0; char_idx < chrcs.size(); char_idx++) {
-            if (ddk_chars[char_idx].descriptors != nullptr) {
-              delete[] ddk_chars[char_idx].descriptors;
-              ddk_chars[char_idx].descriptors = nullptr;
+            if (ddk_chars[char_idx].descriptor_list != nullptr) {
+              delete[] ddk_chars[char_idx].descriptor_list;
+              ddk_chars[char_idx].descriptor_list = nullptr;
             }
           }
         },
         loop_.dispatcher());
   });
 
-  return ZX_OK;
+  return;
 }
 
 void GattRemoteServiceDevice::Stop() {
@@ -226,8 +225,8 @@ void GattRemoteServiceDevice::Stop() {
   // We may replace this with an explict unregister for notifications instead.
 }
 
-zx_status_t GattRemoteServiceDevice::ReadCharacteristic(
-    bt_gatt_id_t id, void* cookie, bt_gatt_read_characteristic_cb read_cb) {
+void GattRemoteServiceDevice::ReadCharacteristic(
+    bt_gatt_id_t id, bt_gatt_svc_read_characteristic_callback read_cb, void* cookie) {
   auto read_callback = [id, cookie, read_cb](att::Status status,
                                              const common::ByteBuffer& buff) {
     bt_gatt_err_t error_code = ATTErrorToDDKError(status.protocol_error());
@@ -235,17 +234,17 @@ zx_status_t GattRemoteServiceDevice::ReadCharacteristic(
         .status = ZX_OK,
         .att_ecode = error_code,
     };
-    read_cb(cookie, ddk_status, id, buff.data(), buff.size());
+    read_cb(cookie, &ddk_status, id, buff.data(), buff.size());
   };
   service_->ReadCharacteristic(static_cast<btlib::gatt::IdType>(id),
                                std::move(read_callback), loop_.dispatcher());
 
-  return ZX_OK;
+  return;
 }
 
-zx_status_t GattRemoteServiceDevice::ReadLongCharacteristic(
-    bt_gatt_id_t id, void* cookie, uint16_t offset, size_t max_bytes,
-    bt_gatt_read_characteristic_cb read_cb) {
+void GattRemoteServiceDevice::ReadLongCharacteristic(
+    bt_gatt_id_t id, uint16_t offset, size_t max_bytes,
+    bt_gatt_svc_read_characteristic_callback read_cb, void* cookie) {
   auto read_callback = [id, cookie, read_cb](att::Status status,
                                              const common::ByteBuffer& buff) {
     bt_gatt_err_t error_code = ATTErrorToDDKError(status.protocol_error());
@@ -253,19 +252,20 @@ zx_status_t GattRemoteServiceDevice::ReadLongCharacteristic(
         .status = ZX_OK,
         .att_ecode = error_code,
     };
-    read_cb(cookie, ddk_status, id, buff.data(), buff.size());
+    read_cb(cookie, &ddk_status, id, buff.data(), buff.size());
   };
   service_->ReadLongCharacteristic(static_cast<btlib::gatt::IdType>(id), offset,
                                    max_bytes, std::move(read_callback),
                                    loop_.dispatcher());
 
-  return ZX_OK;
+  return;
 }
 
-zx_status_t GattRemoteServiceDevice::WriteCharacteristic(
-    bt_gatt_id_t id, void* cookie, const uint8_t* buff, size_t len,
-    bt_gatt_status_cb write_cb) {
-  std::vector<uint8_t> data(buff, buff + len);
+void GattRemoteServiceDevice::WriteCharacteristic(
+    bt_gatt_id_t id, const void* buff, size_t len,
+    bt_gatt_svc_write_characteristic_callback write_cb, void* cookie) {
+  auto* buf = static_cast<const uint8_t*>(buff);
+  std::vector<uint8_t> data(buf, buf + len);
   if (write_cb == nullptr) {
     service_->WriteCharacteristicWithoutResponse(
         static_cast<btlib::gatt::IdType>(id), std::move(data));
@@ -276,21 +276,22 @@ zx_status_t GattRemoteServiceDevice::WriteCharacteristic(
           .status = ZX_OK,
           .att_ecode = error_code,
       };
-      write_cb(cookie, ddk_status, id);
+      write_cb(cookie, &ddk_status, id);
     };
 
     service_->WriteCharacteristic(static_cast<btlib::gatt::IdType>(id),
                                   std::move(data), std::move(status_callback),
                                   loop_.dispatcher());
   }
-  return ZX_OK;
+  return;
 }
 
-zx_status_t GattRemoteServiceDevice::EnableNotifications(
-    bt_gatt_id_t id, void* cookie, bt_gatt_status_cb status_cb,
-    bt_gatt_notification_value_cb value_cb) {
+void GattRemoteServiceDevice::EnableNotifications(
+    bt_gatt_id_t id, const bt_gatt_notification_value_t* value,
+    bt_gatt_svc_enable_notifications_callback status_cb, void* cookie) {
+  auto value_cb = *value;
   auto notif_callback = [cookie, id, value_cb](const common::ByteBuffer& buff) {
-    value_cb(cookie, id, buff.data(), buff.size());
+    value_cb.callback(value_cb.ctx, id, buff.data(), buff.size());
   };
 
   auto status_callback = [cookie, id, status_cb](
@@ -301,14 +302,14 @@ zx_status_t GattRemoteServiceDevice::EnableNotifications(
         .status = ZX_OK,
         .att_ecode = error_code,
     };
-    status_cb(cookie, ddk_status, id);
+    status_cb(cookie, &ddk_status, id);
   };
 
   service_->EnableNotifications(static_cast<btlib::gatt::IdType>(id),
                                 notif_callback, std::move(status_callback),
                                 loop_.dispatcher());
 
-  return ZX_OK;
+  return;
 }
 
 }  // namespace bthost
