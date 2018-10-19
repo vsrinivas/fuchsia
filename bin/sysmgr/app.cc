@@ -18,7 +18,14 @@
 
 namespace sysmgr {
 
+namespace {
 constexpr char kDefaultLabel[] = "sys";
+#ifdef AUTO_UPDATE_PACKAGES
+constexpr bool kAutoUpdatePackages = true;
+#else
+constexpr bool kAutoUpdatePackages = false;
+#endif
+}  // namespace
 
 App::App(Config config)
     : startup_context_(component::StartupContext::CreateFromStartupInfo()),
@@ -35,16 +42,25 @@ App::App(Config config)
   // delegating app loader. However, since its call back to the host directory
   // won't happen until the next (first) message loop iteration, we'll be set up
   // by then.
-  RegisterAppLoaders(config.TakeAppLoaders());
+  auto env_request = env_.NewRequest();
+  env_->GetLauncher(env_launcher_.NewRequest());
+  env_->GetServices(env_services_.NewRequest());
+  if (kAutoUpdatePackages) {
+    fuchsia::amber::ControlPtr amber_ctl;
+    env_services_->ConnectToService(fuchsia::amber::Control::Name_,
+                                    amber_ctl.NewRequest().TakeChannel());
+    RegisterAppLoaders(config.TakeAppLoaders(), std::move(amber_ctl));
+  } else {
+    RegisterAppLoaders(config.TakeAppLoaders());
+  }
 
   // Set up environment for the programs we will run.
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
   service_list->names = std::move(svc_names_);
   service_list->host_directory = OpenAsDirectory();
   startup_context_->environment()->CreateNestedEnvironment(
-      env_.NewRequest(), env_controller_.NewRequest(), kDefaultLabel,
+      std::move(env_request), env_controller_.NewRequest(), kDefaultLabel,
       std::move(service_list), {});
-  env_->GetLauncher(env_launcher_.NewRequest());
 
   // Connect to startup services
   for (auto& startup_service : config.TakeStartupServices()) {
@@ -60,7 +76,7 @@ App::App(Config config)
   }
 }
 
-App::~App() {}
+App::~App() = default;
 
 zx::channel App::OpenAsDirectory() {
   zx::channel h1, h2;
@@ -118,11 +134,16 @@ void App::RegisterSingleton(std::string service_name,
   svc_root_->AddEntry(service_name, std::move(child));
 }
 
-void App::RegisterAppLoaders(Config::ServiceMap app_loaders) {
-  app_loader_ = std::make_unique<DelegatingLoader>(
-      std::move(app_loaders), env_launcher_.get(),
-      startup_context_->ConnectToEnvironmentService<fuchsia::sys::Loader>());
-
+void App::RegisterAppLoaders(Config::ServiceMap app_loaders,
+                             fuchsia::amber::ControlPtr amber_ctl) {
+  if (amber_ctl) {
+    app_loader_ = DelegatingLoader::MakeWithPackageUpdatingFallback(
+        std::move(app_loaders), env_launcher_.get(), std::move(amber_ctl));
+  } else {
+    app_loader_ = DelegatingLoader::MakeWithParentFallback(
+        std::move(app_loaders), env_launcher_.get(),
+        startup_context_->ConnectToEnvironmentService<fuchsia::sys::Loader>());
+  }
   auto child = fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
     app_loader_bindings_.AddBinding(
         app_loader_.get(),

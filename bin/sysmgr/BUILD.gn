@@ -4,6 +4,11 @@
 
 import("//build/package.gni")
 
+declare_args() {
+  # Whether the component loader should automatically update packages.
+  auto_update_packages = false
+}
+
 source_set("lib") {
   sources = [
     "app.cc",
@@ -12,16 +17,26 @@ source_set("lib") {
     "config.h",
     "delegating_loader.cc",
     "delegating_loader.h",
+    "package_updating_loader.cc",
+    "package_updating_loader.h",
   ]
 
   public_deps = [
     "//garnet/lib/json",
+    "//garnet/lib/loader",
+    "//garnet/lib/pkg_url",
+    "//garnet/public/fidl/fuchsia.amber",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//third_party/rapidjson",
   ]
+
+  if (auto_update_packages) {
+    public_configs = [ ":update_packages_config", ]
+  }
 }
 
 executable("bin") {
@@ -73,3 +88,8 @@ config_package("network_config") {
 config_package("services_config") {
   name = "services.config"
 }
+
+config("update_packages_config") {
+  defines = [ "AUTO_UPDATE_PACKAGES" ]
+}
+

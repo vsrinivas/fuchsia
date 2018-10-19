@@ -5,8 +5,14 @@
 #ifndef GARNET_BIN_SYSMGR_DELEGATING_LOADER_H_
 #define GARNET_BIN_SYSMGR_DELEGATING_LOADER_H_
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+
+#include <fuchsia/amber/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include "garnet/bin/sysmgr/config.h"
+#include "garnet/bin/sysmgr/package_updating_loader.h"
 #include "lib/fxl/macros.h"
 
 namespace sysmgr {
@@ -20,9 +26,12 @@ namespace sysmgr {
 // falling back on the root app loader for unmapped schemes.
 class DelegatingLoader : public fuchsia::sys::Loader {
  public:
-  explicit DelegatingLoader(Config::ServiceMap delegates,
-                            fuchsia::sys::Launcher* delegate_launcher,
-                            fuchsia::sys::LoaderPtr fallback);
+  static std::unique_ptr<DelegatingLoader> MakeWithParentFallback(
+      Config::ServiceMap delegates, fuchsia::sys::Launcher* delegate_launcher,
+      fuchsia::sys::LoaderPtr fallback);
+  static std::unique_ptr<DelegatingLoader> MakeWithPackageUpdatingFallback(
+      Config::ServiceMap delegates, fuchsia::sys::Launcher* delegate_launcher,
+      fuchsia::amber::ControlPtr amber_ctl);
   ~DelegatingLoader() override;
 
   // |Loader|:
@@ -30,6 +39,12 @@ class DelegatingLoader : public fuchsia::sys::Loader {
                      LoadComponentCallback callback) override;
 
  private:
+  // |fallback| xor |amber_ctl| is set.
+  DelegatingLoader(Config::ServiceMap delegates,
+                   fuchsia::sys::Launcher* delegate_launcher,
+                   fuchsia::sys::LoaderPtr fallback,
+                   fuchsia::amber::ControlPtr amber_ctl);
+
   struct LoaderRecord {
     fuchsia::sys::LaunchInfoPtr launch_info;
     fuchsia::sys::LoaderPtr loader;
@@ -43,7 +58,8 @@ class DelegatingLoader : public fuchsia::sys::Loader {
   std::unordered_map<std::string, LoaderRecord> delegate_instances_;
 
   fuchsia::sys::Launcher* delegate_launcher_;
-  fuchsia::sys::LoaderPtr fallback_;
+  std::unique_ptr<PackageUpdatingLoader> package_updating_fallback_;
+  fuchsia::sys::LoaderPtr parent_fallback_;
 
   // indexed by scheme. LoaderRecord instances are owned by
   // delegate_instances_.

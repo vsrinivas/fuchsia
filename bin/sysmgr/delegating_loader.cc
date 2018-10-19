@@ -4,6 +4,7 @@
 
 #include "garnet/bin/sysmgr/delegating_loader.h"
 
+#include <lib/async/default.h>
 #include "lib/fidl/cpp/clone.h"
 #include "lib/svc/cpp/services.h"
 
@@ -19,14 +20,39 @@ std::string GetScheme(const std::string& url) {
 
 }  // namespace
 
+// static
+std::unique_ptr<DelegatingLoader>
+DelegatingLoader::MakeWithParentFallback(
+    Config::ServiceMap delegates, fuchsia::sys::Launcher* delegate_launcher,
+    fuchsia::sys::LoaderPtr fallback) {
+  return std::unique_ptr<DelegatingLoader>(new DelegatingLoader(
+      std::move(delegates), delegate_launcher, std::move(fallback),
+      nullptr));
+}
+
+// static
+std::unique_ptr<DelegatingLoader>
+DelegatingLoader::MakeWithPackageUpdatingFallback(
+    Config::ServiceMap delegates, fuchsia::sys::Launcher* delegate_launcher,
+    fuchsia::amber::ControlPtr amber_ctl) {
+  return std::unique_ptr<DelegatingLoader>(new DelegatingLoader(
+      std::move(delegates), delegate_launcher, nullptr, std::move(amber_ctl)));
+}
+
 DelegatingLoader::DelegatingLoader(Config::ServiceMap delegates,
                                    fuchsia::sys::Launcher* delegate_launcher,
-                                   fuchsia::sys::LoaderPtr fallback)
-    : delegate_launcher_(delegate_launcher), fallback_(std::move(fallback)) {
+                                   fuchsia::sys::LoaderPtr fallback,
+                                   fuchsia::amber::ControlPtr amber_ctl)
+    : delegate_launcher_(delegate_launcher),
+      parent_fallback_(std::move(fallback)) {
   for (auto& pair : delegates) {
     auto& record = delegate_instances_[pair.second->url];
     record.launch_info = std::move(pair.second);
     delegates_by_scheme_[pair.first] = &record;
+  }
+  if (amber_ctl) {
+    package_updating_fallback_ = std::make_unique<PackageUpdatingLoader>(
+        std::move(amber_ctl), async_get_default_dispatcher());
   }
 }
 
@@ -47,7 +73,11 @@ void DelegatingLoader::LoadComponent(fidl::StringPtr url,
     }
   }
 
-  fallback_->LoadComponent(url, std::move(callback));
+  if (package_updating_fallback_) {
+    package_updating_fallback_->LoadComponent(url, callback);
+  } else {
+    parent_fallback_->LoadComponent(url, callback);
+  }
 }
 
 void DelegatingLoader::StartDelegate(LoaderRecord* record) {

@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <fs/managed-vfs.h>
+#include <fuchsia/amber/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include "garnet/bin/sysmgr/delegating_loader.h"
 #include "lib/component/cpp/startup_context.h"
@@ -38,7 +39,8 @@ class App {
   void RegisterSingleton(std::string service_name,
                          fuchsia::sys::LaunchInfoPtr launch_info);
   void RegisterDefaultServiceConnector();
-  void RegisterAppLoaders(Config::ServiceMap app_loaders);
+  void RegisterAppLoaders(Config::ServiceMap app_loaders,
+                          fuchsia::amber::ControlPtr amber_ctl = nullptr);
   void LaunchApplication(fuchsia::sys::LaunchInfo launch_info);
 
   std::unique_ptr<component::StartupContext> startup_context_;
@@ -50,6 +52,7 @@ class App {
   fuchsia::sys::EnvironmentPtr env_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
   fuchsia::sys::LauncherPtr env_launcher_;
+  fuchsia::sys::ServiceProviderPtr env_services_;
 
   fs::ManagedVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> svc_root_;

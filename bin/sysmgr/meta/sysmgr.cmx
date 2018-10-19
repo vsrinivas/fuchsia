@@ -3,7 +3,8 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "system": [ "data/sysmgr" ],
-        "services": [ "fuchsia.sys.Environment", "fuchsia.sys.Loader" ]
+        "system": [ "data/sysmgr", "bin", "pkgs" ],
+        "services": [ "fuchsia.sys.Environment", "fuchsia.sys.Loader" ],
+        "pkgfs": [ "packages" ]
     }
 }

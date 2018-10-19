@@ -47,6 +47,27 @@ executable("service_startup_test") {
   ]
 }
 
+executable("package_updating_loader_test") {
+  testonly = true
+
+  sources = [
+    "package_updating_loader_test.cc",
+  ]
+
+  deps = [
+    ":interface",
+    "//garnet/bin/sysmgr:lib",
+    "//garnet/examples/fidl/services:echo2",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/gtest",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 package("integration_tests") {
   testonly = true
   package_name = "sysmgr_integration_tests"
@@ -54,6 +75,7 @@ package("integration_tests") {
   deps = [
     ":service",
     ":service_startup_test",
+    ":package_updating_loader_test",
   ]
 
   binaries = [
@@ -65,6 +87,9 @@ package("integration_tests") {
   tests = [
     {
       name = "service_startup_test"
+    },
+    {
+      name = "package_updating_loader_test"
     },
   ]
 }
