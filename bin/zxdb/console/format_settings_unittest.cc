@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/console/format_setting.h"
+#include "garnet/bin/zxdb/console/format_settings.h"
 
 #include <gtest/gtest.h>
 
 #include "garnet/bin/zxdb/client/setting_schema.h"
+#include "garnet/bin/zxdb/client/setting_store.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 
 namespace zxdb {
 
-TEST(FormatSetting, Schema) {
+fxl::RefPtr<SettingSchema> GetSchema() {
   auto schema = fxl::MakeRefCounted<SettingSchema>();
 
   schema->AddBool("thread-bool", "Thread bool description");
@@ -28,6 +29,16 @@ TEST(FormatSetting, Schema) {
   schema->AddList("thread-list2", "Thread list description",
                   {"first", "second", "third"});
 
+  return schema;
+}
+
+TEST(FormatSetting, Schema) {
+  SettingStore store(SettingStore::Level::kDefault, GetSchema(), nullptr);
+
+  OutputBuffer out;
+  Err err = FormatSettings(store, "", &out);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
   EXPECT_EQ("thread-bool    false\n"
             "thread-bool2   true\n"
             "thread-int     0\n"
@@ -38,8 +49,12 @@ TEST(FormatSetting, Schema) {
             "               • third\n"
             "thread-string  <empty>\n"
             "thread-string2 Test string\n",
-            FormatSchema(*schema).AsString());
+            out.AsString());
 }
+
+// TODO(donosoc): Activate these tests when the individual format settings is
+//                implemented.
+#if 0
 
 const char kName[] = "setting-name";
 const char kLongDescriptionText[] = R"(This is a title.
@@ -89,5 +104,7 @@ TEST(FormatSetting, SchemaItemList) {
   "This one spans many lines.",
   FormatSchemaItem(std::move(item)).AsString());
 }
+
+#endif
 
 }  // namespace zxdb

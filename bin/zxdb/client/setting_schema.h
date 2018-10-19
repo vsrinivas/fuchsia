@@ -40,6 +40,8 @@ class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
   // For use of SettingStore. Will assert if the key is not found.
   SettingValue GetDefault(const std::string& key) const;
 
+  SettingSchemaItem GetItem(const std::string& name) const;
+
   const std::map<std::string, SettingSchemaItem>& items() const {
     return items_;
   }

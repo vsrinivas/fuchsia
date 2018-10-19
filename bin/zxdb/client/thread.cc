@@ -10,11 +10,10 @@ namespace zxdb {
 
 Thread::Thread(Session* session)
     : ClientObject(session),
-      settings_(GetSchema(), nullptr),
-      weak_factory_(this) {
-  // TODO(donosoc): Hook up the target -> system fallback.
-  //                This should be done in the implementation.
-}
+      // Implementations can set up fallbacks if needed.
+      settings_(SettingStore::Level::kThread, GetSchema(), nullptr),
+      weak_factory_(this) {}
+
 Thread::~Thread() = default;
 
 void Thread::AddObserver(ThreadObserver* observer) {

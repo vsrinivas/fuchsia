@@ -21,7 +21,9 @@ TargetImpl::TargetImpl(SystemImpl* system)
     : Target(system->session()),
       system_(system),
       symbols_(system->GetSymbols()),
-      impl_weak_factory_(this) {}
+      impl_weak_factory_(this) {
+  settings_.set_fallback(&system_->settings());
+}
 
 TargetImpl::~TargetImpl() {
   // If the process is still running, make sure we broadcast terminated

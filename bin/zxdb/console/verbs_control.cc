@@ -13,6 +13,7 @@
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
+#include "garnet/bin/zxdb/console/format_settings.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -430,7 +431,20 @@ Examples
 
 namespace {
 
+Err HandleSettingStore(const SettingStore& store, const std::string& setting_name) {
+  OutputBuffer out;
+  Err err = FormatSettings(store, setting_name, &out);
+  if (err.has_error())
+    return err;
+
+  // If we find the values, we output them.
+  Console::get()->Output(std::move(out));
+  return Err();
+}
+
 }  // namespace
+
+constexpr int kGetSystemSwitch = 0;
 
 Err DoGet(ConsoleContext* context, const Command& cmd) {
   std::string setting_name;
@@ -444,10 +458,15 @@ Err DoGet(ConsoleContext* context, const Command& cmd) {
   if (!target)
     return Err("No target found. Please file a bug with a repro.");
 
+  // See if the user is asking for system-level settings.
+  if (cmd.HasSwitch(kGetSystemSwitch)) {
+    return HandleSettingStore(target->session()->system().settings(),
+                              setting_name);
+  }
+
   // First we check is the user is asking for process.
   if (cmd.HasNoun(Noun::kProcess) && !cmd.HasNoun(Noun::kProcess)) {
-    // TODO(donosoc): Show the actual values from the selected target.
-    return Err("Target settings not implemented.");
+    return HandleSettingStore(target->settings(), setting_name);
   }
 
   if (cmd.HasNoun(Noun::kThread)) {
@@ -460,19 +479,16 @@ Err DoGet(ConsoleContext* context, const Command& cmd) {
       return Err("Could not find specified thread.");
     }
 
-    // TODO(donosoc): Show the actual values from the selected thread.
-    return Err("Thread settings not implemented.");
+    return HandleSettingStore(thread->settings(), setting_name);
   }
 
   Thread* thread = cmd.thread();
-  if (!thread)
-    // TODO(donosoc): Find a good way to refer the user to the schema. Showing
-    //                the schema here is inconsistent, as you cannot do the
-    //                same for the Target and System levels.
-    return Err("No thread in the current context.");
+  if (!thread) {
+    return Err(
+        "No thread in the current context. See \"help get\" for more info.");
+  }
 
-  // TODO(donosoc): Show the actual values from the selected thread.
-  return Err("Thread settings not implemented.");
+  return HandleSettingStore(thread->settings(), setting_name);
 }
 
 }  // namespace
@@ -493,8 +509,14 @@ void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
                  kDisconnectHelp, CommandGroup::kGeneral);
   (*verbs)[Verb::kCls] = VerbRecord(&DoCls, {"cls"}, kClsShortHelp, kClsHelp,
                                     CommandGroup::kGeneral);
-  (*verbs)[Verb::kGet] = VerbRecord(&DoGet, {"get"}, kGetShortHelp, kGetHelp,
+
+  // get
+  SwitchRecord get_system(kGetSystemSwitch, false, "system", 's');
+
+  VerbRecord get(&DoGet, {"get"}, kGetShortHelp, kGetHelp,
                                     CommandGroup::kGeneral);
+  get.switches.push_back(std::move(get_system));
+  (*verbs)[Verb::kGet] = std::move(get);
 }
 
 }  // namespace zxdb

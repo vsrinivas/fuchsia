@@ -9,53 +9,90 @@
 
 namespace zxdb {
 
-SettingStore::SettingStore(fxl::RefPtr<SettingSchema> schema,
+namespace {
+
+StoredSetting CreateStoredSetting(SettingStore::Level level, SettingValue value,
+                                  SettingSchemaItem item) {
+  StoredSetting setting = {};
+  setting.value = std::move(value);
+  setting.schema_item = std::move(item);
+  setting.level = level;
+  return setting;
+}
+
+}  // namespace
+
+SettingStore::SettingStore(SettingStore::Level level,
+                           fxl::RefPtr<SettingSchema> schema,
                            SettingStore* fallback)
-    : schema_(std::move(schema)), fallback_(fallback) {}
+    : schema_(std::move(schema)), fallback_(fallback), level_(level) {}
 
 // Getters ---------------------------------------------------------------------
 
 bool SettingStore::GetBool(const std::string& key) const {
-  SettingValue setting = GetSetting(key);
-  FXL_DCHECK(setting.is_bool());
-  return setting.GetBool();
+  auto setting = GetSetting(key);
+  FXL_DCHECK(setting.value.is_bool());
+  return setting.value.GetBool();
 }
 
 int SettingStore::GetInt(const std::string& key) const {
-  SettingValue setting = GetSetting(key);
-  FXL_DCHECK(setting.is_int());
-  return setting.GetInt();
+  auto setting = GetSetting(key);
+  FXL_DCHECK(setting.value.is_int());
+  return setting.value.GetInt();
 }
 
 std::string SettingStore::GetString(const std::string& key) const {
-  SettingValue setting = GetSetting(key);
-  FXL_DCHECK(setting.is_string());
-  return setting.GetString();
+  auto setting = GetSetting(key);
+  FXL_DCHECK(setting.value.is_string());
+  return setting.value.GetString();
 }
 
 std::vector<std::string> SettingStore::GetList(const std::string& key) const {
-  SettingValue setting = GetSetting(key);
-  FXL_DCHECK(setting.is_list());
-  return setting.GetList();
+  auto setting = GetSetting(key);
+  FXL_DCHECK(setting.value.is_list());
+  return setting.value.GetList();
 }
 
-SettingValue SettingStore::GetSetting(const std::string& key) const {
-  // Check if it already exists. If so, we know that is within this schema.
+StoredSetting SettingStore::GetSetting(const std::string& key,
+                                       bool return_default) const {
+  // See if is within the schema.
+  auto schema_item = schema_->GetItem(key);
+  if (schema_item.value().is_null())
+    return StoredSetting();
+
+  // Check if it already exists. If so, return it.
   auto it = settings_.find(key);
   if (it != settings_.end())
-    return it->second;
-
-  // Before checking the callback, we want to know if the option is actually
-  // defined.
-  if (!schema_->HasSetting(key))
-    return SettingValue();
+    return CreateStoredSetting(level_, it->second, std::move(schema_item));
 
   // We check the fallback SettingStore to see if it has the setting.
-  if (fallback_)
-    return fallback_->GetSetting(key);
+  StoredSetting setting;
+  if (fallback_) {
+    // We tell the fallback store not return its default schema value.
+    setting = fallback_->GetSetting(key, false);
+    if (!setting.value.is_null())
+      return setting;
+  }
 
-  // Return the default value defined by the schema.
-  return schema_->GetDefault(key);
+  // We return the schema value only if we were told to.
+  if (!return_default)
+    return StoredSetting();
+  return CreateStoredSetting(SettingStore::Level::kDefault,
+                             schema_item.value(),
+                             schema_item);
+}
+
+std::map<std::string, StoredSetting> SettingStore::GetSettings() const {
+  std::map<std::string, StoredSetting> stored_settings;
+
+  // We iterate over the schema looking for values.
+  for (const auto& [key, schema_item] : schema_->items()) {
+    StoredSetting setting = GetSetting(key);
+    // There should always be a value, at least the default one.
+    FXL_DCHECK(!setting.value.is_null());
+    stored_settings[key] = std::move(setting);
+  }
+  return stored_settings;
 }
 
 // Setters ---------------------------------------------------------------------

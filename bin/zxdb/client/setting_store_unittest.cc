@@ -44,20 +44,34 @@ fxl::RefPtr<SettingSchema> GetSchema() {
 }  // namespace
 
 TEST(SettingStore, Defaults) {
-  SettingStore store(GetSchema(), nullptr);
+  SettingStore store(SettingStore::Level::kThread, GetSchema(), nullptr);
 
-  EXPECT_TRUE(store.GetBool("bool"));
-  EXPECT_EQ(store.GetInt("int"), kDefaultInt);
-  EXPECT_EQ(store.GetString("string"), kDefaultString);
-  EXPECT_EQ(store.GetList("list"), DefaultList());
+  auto setting = store.GetSetting("bool");
+  ASSERT_TRUE(setting.value.is_bool());
+  EXPECT_TRUE(setting.value.GetBool());
+  EXPECT_EQ(setting.level, SettingStore::Level::kDefault);
 
+  setting = store.GetSetting("int");
+  ASSERT_TRUE(setting.value.is_int());
+  EXPECT_EQ(setting.value.GetInt(), kDefaultInt);
+  EXPECT_EQ(setting.level, SettingStore::Level::kDefault);
+
+  setting = store.GetSetting("string");
+  ASSERT_TRUE(setting.value.is_string());
+  EXPECT_EQ(setting.value.GetString(), kDefaultString);
+  EXPECT_EQ(setting.level, SettingStore::Level::kDefault);
+
+  setting = store.GetSetting("list");
+  ASSERT_TRUE(setting.value.is_list());
+  EXPECT_EQ(setting.value.GetList(), DefaultList());
+  EXPECT_EQ(setting.level, SettingStore::Level::kDefault);
 
   // Not found.
-  EXPECT_TRUE(store.GetSetting("unexistent").is_null());
+  EXPECT_TRUE(store.GetSetting("unexistent").value.is_null());
 }
 
 TEST(SettingStore, Overrides) {
-  SettingStore store(GetSchema(), nullptr);
+  SettingStore store(SettingStore::Level::kDefault, GetSchema(), nullptr);
 
   Err err;
 
@@ -77,7 +91,7 @@ TEST(SettingStore, Overrides) {
   // Valid options.
   err = store.SetString("string_options", "list");
   ASSERT_FALSE(err.has_error()) << err.msg();
-  ASSERT_TRUE(store.GetSetting("string_options").is_string());
+  ASSERT_TRUE(store.GetSetting("string_options").value.is_string());
   EXPECT_EQ(store.GetString("string_options"), "list");
 
   // Invalid option.
@@ -86,27 +100,42 @@ TEST(SettingStore, Overrides) {
 }
 
 TEST(SettingStore, Fallback) {
-  SettingStore fallback2(GetSchema(), nullptr);
+  SettingStore fallback2(SettingStore::Level::kSystem, GetSchema(), nullptr);
   std::vector<std::string> new_list = {"new", "list"};
   fallback2.SetList("list", new_list);
 
-  SettingStore fallback(GetSchema(), &fallback2);
+  SettingStore fallback(SettingStore::Level::kTarget, GetSchema(), &fallback2);
   std::string new_string = "new string";
   fallback.SetString("string", new_string);
 
-  SettingStore store(GetSchema(), &fallback);
+  SettingStore store(SettingStore::Level::kThread, GetSchema(), &fallback);
+  store.SetBool("bool", false);
+
+  // Also test that the correct fallback level is communicated.
 
   // Should get default for not overriden.
-  ASSERT_TRUE(store.GetSetting("int").is_int());
-  EXPECT_EQ(store.GetInt("int"), kDefaultInt);
+  auto setting = store.GetSetting("int");
+  ASSERT_TRUE(setting.value.is_int());
+  EXPECT_EQ(setting.value.GetInt(), kDefaultInt);
+  EXPECT_EQ(setting.level, SettingStore::Level::kDefault);
+
+  // Should get local level.
+  setting = store.GetSetting("bool");
+  ASSERT_TRUE(setting.value.is_bool());
+  EXPECT_FALSE(setting.value.GetBool());
+  EXPECT_EQ(setting.level, SettingStore::Level::kThread);
 
   // Should get one override hop.
-  ASSERT_TRUE(store.GetSetting("string").is_string());
-  EXPECT_EQ(store.GetString("string"), new_string);
+  setting = store.GetSetting("string");
+  ASSERT_TRUE(setting.value.is_string());
+  EXPECT_EQ(setting.value.GetString(), new_string);
+  EXPECT_EQ(setting.level, SettingStore::Level::kTarget);
 
   // Should fallback through the chain.
-  ASSERT_TRUE(store.GetSetting("list").is_list());
-  EXPECT_EQ(store.GetList("list"), new_list);
+  setting = store.GetSetting("list");
+  ASSERT_TRUE(setting.value.is_list());
+  EXPECT_EQ(setting.value.GetList(), new_list);
+  EXPECT_EQ(setting.level, SettingStore::Level::kSystem);
 }
 
 }  // namespace zxdb

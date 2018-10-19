@@ -97,6 +97,13 @@ Err SettingSchema::ValidateSetting(const std::string& key,
   return Err();
 }
 
+SettingSchemaItem SettingSchema::GetItem(const std::string& name) const {
+  const auto& item = items_.find(name);
+  if (item == items_.end())
+    return SettingSchemaItem();
+  return item->second;
+}
+
 SettingValue SettingSchema::GetDefault(const std::string& key) const {
   auto it = items_.find(key);
   FXL_DCHECK(it != items_.end());

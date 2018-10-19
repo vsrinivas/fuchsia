@@ -9,7 +9,8 @@
 namespace zxdb {
 
 System::System(Session* session)
-    : ClientObject(session), settings_(GetSchema(), nullptr) {}
+    : ClientObject(session),
+      settings_(SettingStore::Level::kSystem, GetSchema(), nullptr) {}
 System::~System() = default;
 
 void System::AddObserver(SystemObserver* observer) {

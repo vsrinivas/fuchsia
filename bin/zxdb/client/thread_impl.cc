@@ -14,6 +14,7 @@
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/target_impl.h"
 #include "garnet/bin/zxdb/client/thread_controller.h"
 #include "garnet/public/lib/fxl/logging.h"
 
@@ -26,6 +27,7 @@ ThreadImpl::ThreadImpl(ProcessImpl* process,
       koid_(record.koid),
       weak_factory_(this) {
   SetMetadata(record);
+  settings_.set_fallback(&process_->target()->settings());
 }
 
 ThreadImpl::~ThreadImpl() = default;

@@ -10,11 +10,9 @@ namespace zxdb {
 
 Target::Target(Session* session)
     : ClientObject(session),
-      settings_(GetSchema(), nullptr),
-      weak_factory_(this) {
-  // TODO(donosoc): Hook up the target -> system fallback.
-  //                This should be done in the implementation.
-}
+      // Implementations can set up fallbacks if needed.
+      settings_(SettingStore::Level::kTarget, GetSchema(), nullptr),
+      weak_factory_(this) {}
 
 Target::~Target() = default;
 
