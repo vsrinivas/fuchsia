@@ -6,13 +6,8 @@
 
 #include <lib/async/default.h>
 #include <trace/event.h>
-#include <zircon/device/display-controller.h>
-#include <zircon/pixelformat.h>
 #include <zircon/syscalls.h>
 #include "fuchsia/ui/scenic/cpp/fidl.h"
-
-#include "garnet/lib/ui/gfx/displays/display_watcher.h"
-#include "garnet/lib/ui/gfx/resources/renderers/renderer.h"
 
 namespace scenic_impl {
 namespace gfx {

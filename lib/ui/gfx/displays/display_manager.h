@@ -11,7 +11,6 @@
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/displays/display_watcher.h"
 #include "lib/async/cpp/wait.h"
-#include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/macros.h"
 
 #include <lib/fit/function.h>
