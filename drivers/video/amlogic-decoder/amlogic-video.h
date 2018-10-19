@@ -93,6 +93,19 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   zx_status_t InitializeEsParser();
   __WARN_UNUSED_RESULT
   zx_status_t ParseVideo(void* data, uint32_t len);
+  // If parser_running_, try to cause WaitForParsingCompleted() to return
+  // ZX_ERR_CANCELED ASAP.  If !parser_running_, do nothing.  The caller is
+  // responsible for ensuring that only its own decoder's work is ever canceled.
+  void TryStartCancelParsing();
+  // Any error: The caller should call CancelParsing() to clean up.
+  // ZX_ERR_CANCELED: TryStartCancelParsing() was called and the caller should
+  //   call CancelParsing() to cancel the parsing, just as the caller
+  //   does for any error from WaitForParsingCompleted().  This error code in
+  //   this context can be thought of as ZX_ERR_YOU_SHOULD_CANCEL_PARSING_NOW.
+  //   It's not an indication that parsing is already canceled, only that the
+  //   caller should call CancelParsing().
+  // ZX_OK: The parsing is done.  If the caller called TryStartCancelParsing()
+  //   at some point, no harm done.  The caller should not call CancelParsing().
   __WARN_UNUSED_RESULT
   zx_status_t WaitForParsingCompleted(zx_duration_t deadline);
   void CancelParsing();
@@ -175,6 +188,14 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   zx::handle bti_;
 
+  // ZX_USER_SIGNAL_0 is for parser done.
+  // ZX_USER_SIGNAL_1 is for client wants ParseVideo() to return
+  //   ZX_ERR_CANCELED ASAP.
+  //
+  // Both must be un-signaled while parser_running_ is false (transients while
+  // under parser_running_lock_ are fine).
+  //
+  // While parser_running_ is true, either can become signaled as appropriate.
   zx::event parser_finished_event_;
 
   std::mutex parser_running_lock_;

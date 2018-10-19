@@ -247,8 +247,22 @@ void CodecAdapterH264::CoreCodecStopStream() {
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
 
-    // This helps any previously-queued ProcessInput() calls return faster.
+    // This helps any previously-queued ProcessInput() calls return faster, and
+    // is checked before calling WaitForParsingCompleted() in case
+    // TryStartCancelParsing() does nothing.
     is_cancelling_input_processing_ = true;
+  }
+
+  // Try to cause WaitForParsingCompleted() to return early.  This only cancels
+  // up to one WaitForParsingCompleted() (not queued, not sticky), so it's
+  // relevant that is_cancelling_input_processing_ == true set above is
+  // preventing us from starting another wait.  Or if we didn't set
+  // is_cancelling_input_processing_ = true soon enough, then this call does
+  // make WaitForParsingCompleted() return faster.
+  video_->TryStartCancelParsing();
+
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(lock_);
     std::condition_variable stop_input_processing_condition;
     // We know there won't be any new queuing of input, so once this posted work
     // runs, we know all previously-queued ProcessInput() calls have returned.
@@ -878,6 +892,15 @@ bool CodecAdapterH264::ParseVideoAvcc(const uint8_t* data, uint32_t length) {
 }
 
 bool CodecAdapterH264::ParseVideoAnnexB(const uint8_t* data, uint32_t length) {
+  // We don't need to check is_cancelling_input_processing_ here, because we
+  // check further down before waiting (see comment there re. why the check
+  // there after video_->ParseVideo() is important), and because returning false
+  // from this method for the first time will prevent further calls to this
+  // method thanks to propagation of false returns under ProcessInput() and a
+  // check of is_cancelling_input_processing_ in DequeueInputItem() relevant to
+  // any subsequent ProcessInput() while we're still stopping. So checking here
+  // would only be redundant.
+
   // Parse AnnexB data, with start codes and start code emulation prevention
   // bytes present.
   //
@@ -888,7 +911,35 @@ bool CodecAdapterH264::ParseVideoAnnexB(const uint8_t* data, uint32_t length) {
     return false;
   }
   parsed_video_size_ += length;
-  if (ZX_OK != video_->WaitForParsingCompleted(ZX_SEC(10))) {
+
+  // Once we're cancelling, we're cancelling until we're done stopping.  This
+  // snap of is_cancelling_input_processing_ either notices the transition to
+  // cancelling or doesn't, but doesn't have to worry about
+  // is_cancelling_input_processing_ becoming false again too soon because that
+  // doesn't happen until after this method has returned.
+  //
+  // If is_cancelling does notice is_cancelling_input_processing_ true:
+  //
+  // It's important that we snap after calling video_->ParseVideo() above so
+  // that this check occurs after parser_running_ becomes true, in case
+  // is_cancelling_input_processing_ became true and TryStartCancelParsing() ran
+  // before parser_running_ became true.  In that case TryStartCancelParsing()
+  // did nothing - this cancelation check avoids calling
+  // WaitForParsingCompleted() at all in that case, which avoids waiting for 10
+  // seconds.
+  //
+  // If is_cancelling doesn't notice is_cancelling_input_processing_ true:
+  //
+  // If on the other hand we miss is_cancelling_input_processing_ changing to
+  // true, then that means TryStartCancelParsing() will take care of canceling
+  // WaitForParsingCompleted(), which avoids waiting for 10 seconds.
+  bool is_cancelling;
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(lock_);
+    is_cancelling = is_cancelling_input_processing_;
+  }
+
+  if (is_cancelling || ZX_OK != video_->WaitForParsingCompleted(ZX_SEC(10))) {
     video_->CancelParsing();
     OnCoreCodecFailStream();
     return false;

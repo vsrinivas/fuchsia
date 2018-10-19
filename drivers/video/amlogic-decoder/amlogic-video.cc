@@ -420,9 +420,12 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
       parser_.get());
 
   // The parser finished interrupt shouldn't be signalled until after
-  // es_pack_size data has been read.
-  assert(ZX_ERR_TIMED_OUT == parser_finished_event_.wait_one(
-                                 ZX_USER_SIGNAL_0, zx::time(), nullptr));
+  // es_pack_size data has been read.  The parser cancellation bit should not
+  // be set because that bit is never set while parser_running_ is false
+  // (ignoring transients while under parser_running_lock_).
+  assert(ZX_ERR_TIMED_OUT ==
+         parser_finished_event_.wait_one(ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1,
+                                         zx::time(), nullptr));
 
   ParserFetchAddr::Get()
       .FromValue(truncate_to_32(io_buffer_phys(&search_pattern_)))
@@ -441,42 +444,76 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
   return ZX_OK;
 }
 
+void AmlogicVideo::TryStartCancelParsing() {
+  {
+    std::lock_guard<std::mutex> lock(parser_running_lock_);
+    if (!parser_running_) {
+      return;
+    }
+    // Regardless of whether this actually causes WaitForParsingCompleted() to
+    // stop early, ZX_USER_SIGNAL_1 will become non-signaled when
+    // parser_running_ goes back to false.
+    parser_finished_event_.signal(0, ZX_USER_SIGNAL_1);
+  }
+}
+
 zx_status_t AmlogicVideo::WaitForParsingCompleted(zx_duration_t deadline) {
   {
     std::lock_guard<std::mutex> lock(parser_running_lock_);
     ZX_DEBUG_ASSERT(parser_running_);
   }
+  zx_signals_t observed;
   zx_status_t status = parser_finished_event_.wait_one(
-      ZX_USER_SIGNAL_0, zx::deadline_after(zx::duration(deadline)), nullptr);
-  if (status == ZX_OK) {
-    std::lock_guard<std::mutex> lock(parser_running_lock_);
-    parser_running_ = false;
-    parser_finished_event_.signal(ZX_USER_SIGNAL_0, 0);
-    // Ensure the parser finishes before parser_input_ is written into again or
-    // released. dsb is needed instead of the dmb we get from the mutex.
-    BarrierBeforeRelease();
+      ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1,
+      zx::deadline_after(zx::duration(deadline)), &observed);
+  if (status != ZX_OK) {
+    return status;
   }
-  return status;
+  if (observed & ZX_USER_SIGNAL_1) {
+    // Reporting interruption wins if both bits are observed.
+    //
+    // The CancelParsing() will clear both ZX_USER_SIGNAL_0 (whether set or not)
+    // and ZX_USER_SIGNAL_1.
+    //
+    // The caller must still call CancelParsing(), as with any error returned
+    // from this method.
+    return ZX_ERR_CANCELED;
+  }
+
+  // Observed reports _all_ the signals, so only check the one we know is
+  // supposed to be set in observed at this point.
+  ZX_DEBUG_ASSERT(observed & ZX_USER_SIGNAL_0);
+  std::lock_guard<std::mutex> lock(parser_running_lock_);
+  parser_running_ = false;
+  // ZX_USER_SIGNAL_1 must be un-signaled while parser_running_ is false.
+  parser_finished_event_.signal(ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1, 0);
+  // Ensure the parser finishes before parser_input_ is written into again or
+  // released. dsb is needed instead of the dmb we get from the mutex.
+  BarrierBeforeRelease();
+  return ZX_OK;
 }
 
 void AmlogicVideo::CancelParsing() {
   std::lock_guard<std::mutex> lock(parser_running_lock_);
-  if (parser_running_) {
-    DECODE_ERROR("Parser cancelled\n");
-    parser_running_ = false;
-
-    ParserFetchCmd::Get().FromValue(0).WriteTo(parser_.get());
-    // Ensure the parser finishes before parser_input_ is written into again or
-    // released. dsb is needed instead of the dmb we get from the mutex.
-    BarrierBeforeRelease();
-    // Clear the parser interrupt to ensure that if the parser happened to
-    // finish before the ParserFetchCmd was processed that the finished event
-    // won't be signaled accidentally for the next parse.
-    auto status = ParserIntStatus::Get().ReadFrom(parser_.get());
-    // Writing 1 to a bit clears it.
-    status.WriteTo(parser_.get());
-    parser_finished_event_.signal(ZX_USER_SIGNAL_0, 0);
+  if (!parser_running_) {
+    return;
   }
+
+  DECODE_ERROR("Parser cancelled\n");
+  parser_running_ = false;
+
+  ParserFetchCmd::Get().FromValue(0).WriteTo(parser_.get());
+  // Ensure the parser finishes before parser_input_ is written into again or
+  // released. dsb is needed instead of the dmb we get from the mutex.
+  BarrierBeforeRelease();
+  // Clear the parser interrupt to ensure that if the parser happened to
+  // finish before the ParserFetchCmd was processed that the finished event
+  // won't be signaled accidentally for the next parse.
+  auto status = ParserIntStatus::Get().ReadFrom(parser_.get());
+  // Writing 1 to a bit clears it.
+  status.WriteTo(parser_.get());
+  // ZX_USER_SIGNAL_1 must be un-signaled while parser_running_ is false.
+  parser_finished_event_.signal(ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1, 0);
 }
 
 zx_status_t AmlogicVideo::ProcessVideoNoParser(const void* data, uint32_t len,
