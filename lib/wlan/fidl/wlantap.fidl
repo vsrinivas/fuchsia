@@ -8,89 +8,89 @@ using fuchsia.wlan.device;
 using fuchsia.wlan.mlme;
 
 struct WlantapPhyConfig {
-  fuchsia.wlan.device.PhyInfo phy_info;
-  string name;
+    fuchsia.wlan.device.PhyInfo phy_info;
+    string name;
 };
 
 // See wlan_rx_info_t
 struct WlanRxInfo {
-  uint32 rx_flags;
-  uint32 valid_fields;
-  uint16 phy;
-  uint32 data_rate;
-  fuchsia.wlan.mlme.WlanChan chan;
-  uint8 mcs;
-  int8 rssi_dbm;
-  int16 rcpi_dbmh;
-  int16 snr_dbh;
+    uint32 rx_flags;
+    uint32 valid_fields;
+    uint16 phy;
+    uint32 data_rate;
+    fuchsia.wlan.mlme.WlanChan chan;
+    uint8 mcs;
+    int8 rssi_dbm;
+    int16 rcpi_dbmh;
+    int16 snr_dbh;
 };
 
 // See wlan_tx_info_t
 struct WlanTxInfo {
-  uint32 tx_flags;
-  uint32 valid_fields;
-  uint16 phy;
-  uint8 cbw;
-  uint32 data_rate;
-  uint8 mcs;
+    uint32 tx_flags;
+    uint32 valid_fields;
+    uint16 phy;
+    uint8 cbw;
+    uint32 data_rate;
+    uint8 mcs;
 };
 
 struct WlanTxPacket {
-  vector<uint8> data;
-  WlanTxInfo info;
+    vector<uint8> data;
+    WlanTxInfo info;
 };
 
 // See wlan_bss_config_t
 struct WlanBssConfig {
-  array<uint8>:6 bssid;
-  uint8 bss_type;
-  bool remote;
+    array<uint8>:6 bssid;
+    uint8 bss_type;
+    bool remote;
 };
 
 // See wlan_key_config_t
 struct WlanKeyConfig {
-  uint8 protection;
-  array<uint8>:3 cipher_oui;
-  uint8 cipher_type;
-  uint8 key_type;
-  array<uint8>:6 peer_addr;
-  uint8 key_idx;
-  vector<uint8>:32 key;
+    uint8 protection;
+    array<uint8>:3 cipher_oui;
+    uint8 cipher_type;
+    uint8 key_type;
+    array<uint8>:6 peer_addr;
+    uint8 key_idx;
+    vector<uint8>:32 key;
 };
 
 interface WlantapPhy {
-  // wlanmac_ifc_t callbacks
-  1: Rx(uint16 wlanmac_id, vector<uint8> data, WlanRxInfo info);
-  2: Status(uint16 wlanmac_id, uint32 st);
-  // wlanmac_protocol_ops_t
-  3: -> Tx(TxArgs args);
-  4: -> SetChannel(SetChannelArgs args);
-  5: -> ConfigureBss(ConfigureBssArgs args);
-  // TODO: ConfigureBeacon
-  7: -> SetKey(SetKeyArgs args);
-  8: -> WlanmacStart(WlanmacStartArgs args);
+    // wlanmac_ifc_t callbacks
+    1: Rx(uint16 wlanmac_id, vector<uint8> data, WlanRxInfo info);
+    2: Status(uint16 wlanmac_id, uint32 st);
+    // wlanmac_protocol_ops_t
+    3: -> Tx(TxArgs args);
+    4: -> SetChannel(SetChannelArgs args);
+    5: -> ConfigureBss(ConfigureBssArgs args);
+    // TODO: ConfigureBeacon
+    7: -> SetKey(SetKeyArgs args);
+    8: -> WlanmacStart(WlanmacStartArgs args);
 };
 
 struct TxArgs {
-  uint16 wlanmac_id;
-  WlanTxPacket packet;
+    uint16 wlanmac_id;
+    WlanTxPacket packet;
 };
 
 struct SetChannelArgs {
-  uint16 wlanmac_id;
-  fuchsia.wlan.mlme.WlanChan chan;
+    uint16 wlanmac_id;
+    fuchsia.wlan.mlme.WlanChan chan;
 };
 
 struct ConfigureBssArgs {
-  uint16 wlanmac_id;
-  WlanBssConfig config;
+    uint16 wlanmac_id;
+    WlanBssConfig config;
 };
 
 struct SetKeyArgs {
-  uint16 wlanmac_id;
-  WlanKeyConfig config;
+    uint16 wlanmac_id;
+    WlanKeyConfig config;
 };
 
 struct WlanmacStartArgs {
-  uint16 wlanmac_id;
+    uint16 wlanmac_id;
 };

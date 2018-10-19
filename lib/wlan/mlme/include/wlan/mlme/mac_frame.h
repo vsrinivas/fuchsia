@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MAC_FRAME_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MAC_FRAME_H_
 
 #include <wlan/mlme/sequence.h>
 
@@ -75,7 +76,6 @@ template <typename Header, typename Body = UnknownBody> class FrameView {
     // Method has no effect when called on empty frames.
     FrameView<Body, UnknownBody> SkipHeader() const {
         if (IsEmpty()) { return {}; }
-
 
         ZX_DEBUG_ASSERT(body_offset() <= pkt_->len());
         return FrameView<Body, UnknownBody>(pkt_, body_offset());
@@ -265,7 +265,8 @@ template <typename Header, typename Body = UnknownBody> class Frame {
 
         wlan_tx_info_t txinfo = {
             .tx_flags = 0x0,
-            .valid_fields = WLAN_TX_INFO_VALID_PHY | WLAN_TX_INFO_VALID_CHAN_WIDTH | WLAN_TX_INFO_VALID_MCS,
+            .valid_fields =
+                WLAN_TX_INFO_VALID_PHY | WLAN_TX_INFO_VALID_CHAN_WIDTH | WLAN_TX_INFO_VALID_MCS,
             .phy = phy,
             .cbw = cbw,
         };
@@ -283,9 +284,7 @@ template <typename Header, typename Body = UnknownBody> class Frame {
             break;
         }
 
-        if (fc->protected_frame()) {
-            txinfo.tx_flags |= WLAN_TX_INFO_FLAGS_PROTECTED;
-        }
+        if (fc->protected_frame()) { txinfo.tx_flags |= WLAN_TX_INFO_FLAGS_PROTECTED; }
 
         pkt_->CopyCtrlFrom(txinfo);
         return ZX_OK;
@@ -365,3 +364,5 @@ using MsduCallback = std::function<void(FrameView<LlcHeader>, size_t)>;
 zx_status_t DeaggregateAmsdu(const DataFrameView<AmsduSubframeHeader>&, MsduCallback);
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MAC_FRAME_H_

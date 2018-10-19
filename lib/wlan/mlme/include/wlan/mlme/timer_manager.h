@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_TIMER_MANAGER_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_TIMER_MANAGER_H_
 
 #include <wlan/mlme/timer.h>
 
@@ -16,7 +17,7 @@ namespace wlan {
 class TimerManager;
 
 class TimedEvent {
-  public:
+   public:
     static constexpr zx::time kInactive = zx::time();
 
     TimedEvent(zx::time deadline) : deadline_(deadline) {}
@@ -28,12 +29,12 @@ class TimedEvent {
 
     void Cancel() { deadline_ = kInactive; }
 
- private:
+   private:
     zx::time deadline_;
 };
 
 class TimerManager {
-  public:
+   public:
     TimerManager(fbl::unique_ptr<Timer> timer);
     TimerManager(TimerManager&&) = default;
     ~TimerManager();
@@ -47,10 +48,12 @@ class TimerManager {
 
     Timer* timer() { return timer_.get(); }
 
-  private:
+   private:
     void CleanUp(zx::time now);
     std::priority_queue<zx::time, std::vector<zx::time>, std::greater<zx::time>> events_;
     fbl::unique_ptr<Timer> timer_;
 };
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_TIMER_MANAGER_H_

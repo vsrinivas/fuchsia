@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_TX_VECTOR_H_
+#define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_TX_VECTOR_H_
 
 #include <wlan/common/element.h>
 #include <wlan/common/logging.h>
@@ -59,3 +60,5 @@ struct TxVector {
 bool operator==(const TxVector& lhs, const TxVector& rhs);
 bool operator!=(const TxVector& lhs, const TxVector& rhs);
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_TX_VECTOR_H_

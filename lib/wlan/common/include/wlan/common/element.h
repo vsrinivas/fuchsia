@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ELEMENT_H_
+#define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ELEMENT_H_
 
 #include <fbl/type_support.h>
 #include <wlan/common/bitfield.h>
@@ -350,8 +351,7 @@ struct MeshConfiguration {
 
 // IEEE Std 802.11-2016, 9.4.2.98
 struct MeshConfigurationElement
-    : public Element<MeshConfigurationElement, element_id::kMeshConfiguration>
-{
+    : public Element<MeshConfigurationElement, element_id::kMeshConfiguration> {
     static bool Create(void* buf, size_t len, size_t* actual, MeshConfiguration body);
     static constexpr size_t kMinLen = 7;
     static constexpr size_t kMaxLen = 7;
@@ -1601,3 +1601,5 @@ void BssDescToSuppRates(const ::fuchsia::wlan::mlme::BSSDescription& bss,
                         std::vector<SupportedRate>* ext_rates);
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ELEMENT_H_

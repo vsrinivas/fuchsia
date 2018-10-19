@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_JOIN_CONTEXT_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_JOIN_CONTEXT_H_
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/protocol/mac.h>
@@ -43,3 +44,5 @@ class JoinContext {
 };
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_JOIN_CONTEXT_H_

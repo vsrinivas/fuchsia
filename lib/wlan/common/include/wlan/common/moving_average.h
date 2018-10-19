@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_MOVING_AVERAGE_H_
+#define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_MOVING_AVERAGE_H_
 
 #include <limits>
 #include <type_traits>
@@ -75,3 +76,5 @@ template <size_t N> class MovingAverageDbm {
 
 }  // namespace common
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_MOVING_AVERAGE_H_

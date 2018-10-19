@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_AP_INFRA_BSS_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_AP_INFRA_BSS_H_
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/mlme/ap/beacon_sender.h>
@@ -121,3 +122,5 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
 };
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_AP_INFRA_BSS_H_

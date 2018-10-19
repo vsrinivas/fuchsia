@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_FRAME_VALIDATION_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_FRAME_VALIDATION_H_
 
 #include <wlan/common/action_frame.h>
 #include <wlan/common/mac_frame.h>
@@ -204,3 +205,5 @@ template <typename H, typename B> bool is_valid_frame_type(const Packet* pkt, si
 }
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_FRAME_VALIDATION_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_PS_CFG_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_PS_CFG_H_
 
 #include <wlan/mlme/ap/tim.h>
 
@@ -48,4 +49,6 @@ class PsCfg {
     uint8_t dtim_count_ = 0;
 };
 
-}
+}  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_PS_CFG_H_

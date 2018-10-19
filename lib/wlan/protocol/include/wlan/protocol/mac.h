@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_MAC_H_
+#define GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_MAC_H_
 
 #include <ddk/protocol/ethernet.h>
 #include <wlan/protocol/info.h>
@@ -308,3 +309,5 @@ typedef struct wlanmac_protocol {
 } wlanmac_protocol_t;
 
 __END_CDECLS;
+
+#endif  // GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_MAC_H_

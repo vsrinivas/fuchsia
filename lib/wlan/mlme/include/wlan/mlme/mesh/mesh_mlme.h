@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MESH_MESH_MLME_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MESH_MESH_MLME_H_
 
 #include <wlan/mlme/mlme.h>
 
@@ -22,10 +23,12 @@ class MeshMlme : public Mlme {
 
    private:
     ::fuchsia::wlan::mlme::StartResultCodes Start(
-            const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req);
+        const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req);
 
     DeviceInterface* const device_;
     bool joined_ = false;
 };
 
-} // namespace wlan
+}  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MESH_MESH_MLME_H_

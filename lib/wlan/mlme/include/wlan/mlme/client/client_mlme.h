@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_CLIENT_MLME_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_CLIENT_MLME_H_
 
 #include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/client/join_context.h>
@@ -42,7 +43,7 @@ class ClientMlme : public Mlme {
     struct OnChannelHandlerImpl : OnChannelHandler {
         ClientMlme* mlme_;
 
-        explicit OnChannelHandlerImpl(ClientMlme* mlme) : mlme_(mlme) { }
+        explicit OnChannelHandlerImpl(ClientMlme* mlme) : mlme_(mlme) {}
 
         virtual void HandleOnChannelFrame(fbl::unique_ptr<Packet>) override;
         virtual void PreSwitchOffChannel() override;
@@ -66,3 +67,5 @@ class ClientMlme : public Mlme {
 };
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_CLIENT_MLME_H_

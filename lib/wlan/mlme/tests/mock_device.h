@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_TESTS_MOCK_DEVICE_H_
+#define GARNET_LIB_WLAN_MLME_TESTS_MOCK_DEVICE_H_
 
 #include <lib/timekeeper/test_clock.h>
 #include <wlan/mlme/device_interface.h>
@@ -137,14 +138,12 @@ struct MockDevice : public DeviceInterface {
 
     const wlanmac_info_t& GetWlanInfo() const override final { return wlanmac_info; }
 
-    zx_status_t GetMinstrelPeers(
-        ::fuchsia::wlan::minstrel::Peers* peers_fidl) override final {
+    zx_status_t GetMinstrelPeers(::fuchsia::wlan::minstrel::Peers* peers_fidl) override final {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    zx_status_t GetMinstrelStats(
-        const common::MacAddr& addr,
-        ::fuchsia::wlan::minstrel::Peer* resp) override final {
+    zx_status_t GetMinstrelStats(const common::MacAddr& addr,
+                                 ::fuchsia::wlan::minstrel::Peer* resp) override final {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -207,3 +206,5 @@ struct MockDevice : public DeviceInterface {
 
 }  // namespace
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_TESTS_MOCK_DEVICE_H_

@@ -14,7 +14,7 @@ namespace wlan {
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 static wlan_channel_t GetChannel(uint8_t requested_channel) {
-    return wlan_channel_t {
+    return wlan_channel_t{
         .primary = requested_channel,
         .cbw = CBW20,
     };
@@ -34,11 +34,9 @@ static MeshConfiguration GetMeshConfig() {
     return mesh_config;
 }
 
-static zx_status_t BuildMeshBeacon(wlan_channel_t channel,
-                                   DeviceInterface* device,
+static zx_status_t BuildMeshBeacon(wlan_channel_t channel, DeviceInterface* device,
                                    const MlmeMsg<wlan_mlme::StartRequest>& req,
-                                   MgmtFrame<Beacon>* buffer,
-                                   size_t* tim_ele_offset) {
+                                   MgmtFrame<Beacon>* buffer, size_t* tim_ele_offset) {
     PsCfg ps_cfg;
     uint8_t dummy;
     auto mesh_config = GetMeshConfig();
@@ -53,7 +51,10 @@ static zx_status_t BuildMeshBeacon(wlan_channel_t channel,
         .beacon_period = req.body()->beacon_period,
         .channel = channel,
         .ps_cfg = &ps_cfg,
-        .ht = { .ready = false, },
+        .ht =
+            {
+                .ready = false,
+            },
         .mesh_config = &mesh_config,
         .mesh_id = req.body()->mesh_id->data(),
         .mesh_id_len = req.body()->mesh_id->size(),
@@ -81,15 +82,13 @@ zx_status_t MeshMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
 }
 
 wlan_mlme::StartResultCodes MeshMlme::Start(const MlmeMsg<wlan_mlme::StartRequest>& req) {
-    if (joined_) {
-        return wlan_mlme::StartResultCodes::BSS_ALREADY_STARTED_OR_JOINED;
-    }
+    if (joined_) { return wlan_mlme::StartResultCodes::BSS_ALREADY_STARTED_OR_JOINED; }
 
     wlan_channel_t channel = GetChannel(req.body()->channel);
     zx_status_t status = device_->SetChannel(channel);
     if (status != ZX_OK) {
-        errorf("[mesh-mlme] failed to set channel to %s: %s\n",
-               common::ChanStr(channel).c_str(), zx_status_get_string(status));
+        errorf("[mesh-mlme] failed to set channel to %s: %s\n", common::ChanStr(channel).c_str(),
+               zx_status_get_string(status));
         return wlan_mlme::StartResultCodes::INTERNAL_ERROR;
     }
 
@@ -123,4 +122,4 @@ zx_status_t MeshMlme::HandleTimeout(const ObjectId id) {
     return ZX_OK;
 }
 
-} // namespace wlan
+}  // namespace wlan

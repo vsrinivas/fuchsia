@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_PHY_H_
+#define GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_PHY_H_
 
 #include <wlan/protocol/info.h>
 #include <zircon/compiler.h>
@@ -24,3 +25,5 @@ typedef struct wlanphy_protocol {
 } wlanphy_protocol_t;
 
 __END_CDECLS
+
+#endif  // GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_PHY_H_

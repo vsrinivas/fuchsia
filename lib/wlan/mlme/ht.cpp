@@ -131,4 +131,4 @@ HtOperation BuildHtOperation(const wlan_channel_t& chan) {
     return hto;
 }
 
-} // namespace wlan
+}  // namespace wlan

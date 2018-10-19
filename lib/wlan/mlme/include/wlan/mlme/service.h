@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_SERVICE_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_SERVICE_H_
 
 #include <wlan/common/energy.h>
 #include <wlan/common/macaddr.h>
@@ -187,3 +188,5 @@ zx_status_t SendStartConfirm(DeviceInterface* device, ::fuchsia::wlan::mlme::Sta
 }  // namespace service
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_SERVICE_H_

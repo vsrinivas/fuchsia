@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_DEBUG_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_DEBUG_H_
 
 #include <wlan/common/tx_vector.h>
 #include <wlan/mlme/client/station.h>
@@ -63,3 +64,5 @@ std::string ToAsciiOrHexStr(const std::vector<uint8_t>& vec);
 
 }  // namespace debug
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_DEBUG_H_

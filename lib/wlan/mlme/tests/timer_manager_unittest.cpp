@@ -13,7 +13,7 @@ namespace wlan {
 namespace {
 
 class MockedTimer : public Timer {
-public:
+   public:
     MockedTimer() : Timer(0) {}
 
     zx::time Now() const override { return clock.Now(); }
@@ -35,8 +35,8 @@ public:
 };
 
 struct TimerManagerTest : public ::testing::Test {
-
-    TimerManagerTest() : timer_manager(fbl::make_unique<TimerManager>(fbl::make_unique<MockedTimer>())) {}
+    TimerManagerTest()
+        : timer_manager(fbl::make_unique<TimerManager>(fbl::make_unique<MockedTimer>())) {}
 
     MockedTimer* timer() { return static_cast<MockedTimer*>(timer_manager->timer()); }
 

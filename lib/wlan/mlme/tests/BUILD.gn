@@ -50,7 +50,7 @@ executable("ap_tests") {
   testonly = true
 
   sources = [
-    "ap_infra_bss_unittest.cpp"
+    "ap_infra_bss_unittest.cpp",
   ]
 
   deps = [

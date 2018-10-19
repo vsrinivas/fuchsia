@@ -21,9 +21,7 @@ static bool WriteDsssParamSet(ElementWriter* w, const BeaconConfig& config) {
 }
 
 static bool WriteTim(ElementWriter* w, const PsCfg* ps_cfg, size_t* rel_tim_ele_offset) {
-    if (!ps_cfg) {
-        return true;
-    }
+    if (!ps_cfg) { return true; }
 
     // To get the TIM offset in frame, we have to count the header, fixed parameters and tagged
     // parameters before TIM is written.
@@ -34,15 +32,13 @@ static bool WriteTim(ElementWriter* w, const PsCfg* ps_cfg, size_t* rel_tim_ele_
     uint8_t pvb[TimElement::kMaxLenBmp];
     auto status =
         ps_cfg->GetTim()->WritePartialVirtualBitmap(pvb, sizeof(pvb), &bitmap_len, &bitmap_offset);
-    if (status != ZX_OK) {
-        return false;
-    }
+    if (status != ZX_OK) { return false; }
 
     BitmapControl bmp_ctrl;
     bmp_ctrl.set_offset(bitmap_offset);
     if (ps_cfg->IsDtim()) { bmp_ctrl.set_group_traffic_ind(ps_cfg->GetTim()->HasGroupTraffic()); }
-    return w->write<TimElement>(
-            ps_cfg->dtim_count(), ps_cfg->dtim_period(), bmp_ctrl, pvb, bitmap_len);
+    return w->write<TimElement>(ps_cfg->dtim_count(), ps_cfg->dtim_period(), bmp_ctrl, pvb,
+                                bitmap_len);
 }
 
 static bool WriteCountry(ElementWriter* w, const BeaconConfig& config) {
@@ -67,8 +63,8 @@ static bool WriteCountry(ElementWriter* w, const BeaconConfig& config) {
 static bool WriteHtCapabilities(ElementWriter* w, const BeaconConfig& config) {
     if (config.ht.ready) {
         auto h = BuildHtCapabilities(config.ht);
-        return w->write<HtCapabilities>(h.ht_cap_info, h.ampdu_params,
-                h.mcs_set, h.ht_ext_cap, h.txbf_cap, h.asel_cap);
+        return w->write<HtCapabilities>(h.ht_cap_info, h.ampdu_params, h.mcs_set, h.ht_ext_cap,
+                                        h.txbf_cap, h.asel_cap);
     } else {
         return true;
     }
@@ -142,11 +138,9 @@ static void SetBssType(T* bcn, BssType bss_type) {
     }
 }
 
-template<typename T>
-static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config,
-                                              common::MacAddr addr1,
-                                              MgmtFrame<T>* buffer,
-                                              size_t* tim_ele_offset) {
+template <typename T>
+static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config, common::MacAddr addr1,
+                                              MgmtFrame<T>* buffer, size_t* tim_ele_offset) {
     constexpr size_t reserved_ie_len = 256;
     auto status = CreateMgmtFrame(buffer, reserved_ie_len);
     if (status != ZX_OK) { return status; }
@@ -167,9 +161,7 @@ static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config,
     // Write elements.
     ElementWriter w(bcn->elements, reserved_ie_len);
     size_t rel_tim_ele_offset = SIZE_MAX;
-    if (!WriteElements(&w, config, &rel_tim_ele_offset)) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
+    if (!WriteElements(&w, config, &rel_tim_ele_offset)) { return ZX_ERR_BUFFER_TOO_SMALL; }
 
     ZX_DEBUG_ASSERT(bcn->Validate(w.size()));
 
@@ -191,16 +183,14 @@ static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config,
     return ZX_OK;
 }
 
-zx_status_t BuildBeacon(const BeaconConfig& config,
-                        MgmtFrame<Beacon>* buffer,
+zx_status_t BuildBeacon(const BeaconConfig& config, MgmtFrame<Beacon>* buffer,
                         size_t* tim_ele_offset) {
     return BuildBeaconOrProbeResponse(config, common::kBcastMac, buffer, tim_ele_offset);
 }
 
-zx_status_t BuildProbeResponse(const BeaconConfig& config,
-                               common::MacAddr addr1,
+zx_status_t BuildProbeResponse(const BeaconConfig& config, common::MacAddr addr1,
                                MgmtFrame<ProbeResponse>* buffer) {
     return BuildBeaconOrProbeResponse(config, addr1, buffer, nullptr);
 }
 
-} // namespace wlan
+}  // namespace wlan

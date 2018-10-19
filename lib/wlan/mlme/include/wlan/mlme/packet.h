@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_PACKET_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_PACKET_H_
 
 #include <wlan/mlme/wlan.h>
 
@@ -263,3 +264,5 @@ fbl::unique_ptr<Packet> GetSvcPacket(size_t len);
 FWD_DECL_STATIC_SLAB_ALLOCATOR(::wlan::HugeBufferTraits);
 FWD_DECL_STATIC_SLAB_ALLOCATOR(::wlan::LargeBufferTraits);
 FWD_DECL_STATIC_SLAB_ALLOCATOR(::wlan::SmallBufferTraits);
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_PACKET_H_

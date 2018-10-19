@@ -319,15 +319,13 @@ TEST_F(Elements, MeshConfiguration) {
     MeshConfiguration::MeshCapability mesh_cap;
     mesh_cap.set_val(0xF0);
 
-    const MeshConfiguration mesh_config = {
-        MeshConfiguration::kHwmp,
-        MeshConfiguration::kAirtime,
-        MeshConfiguration::kCongestCtrlInactive,
-        MeshConfiguration::kNeighborOffsetSync,
-        MeshConfiguration::kSae,
-        formation_info,
-        mesh_cap
-    };
+    const MeshConfiguration mesh_config = {MeshConfiguration::kHwmp,
+                                           MeshConfiguration::kAirtime,
+                                           MeshConfiguration::kCongestCtrlInactive,
+                                           MeshConfiguration::kNeighborOffsetSync,
+                                           MeshConfiguration::kSae,
+                                           formation_info,
+                                           mesh_cap};
 
     EXPECT_TRUE(MeshConfigurationElement::Create(buf_, sizeof(buf_), &actual_, mesh_config));
     EXPECT_EQ(sizeof(MeshConfigurationElement), actual_);

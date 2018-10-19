@@ -32,9 +32,7 @@ void DeauthenticatingState::OnEnter() {
     debugfn();
     client_->ReportDeauthentication();
     service::SendDeauthIndication(client_->device(), client_->addr(), reason_code_);
-    if (send_deauth_frame_) {
-        client_->SendDeauthentication(reason_code_);
-    }
+    if (send_deauth_frame_) { client_->SendDeauthentication(reason_code_); }
     MoveToState<DeauthenticatedState>();
 }
 
@@ -118,7 +116,6 @@ zx_status_t AuthenticatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
 
 zx_status_t AuthenticatingState::FinalizeAuthenticationAttempt(
     const status_code::StatusCode st_code) {
-
     bool auth_success = st_code == status_code::kSuccess;
     auto status = client_->SendAuthentication(st_code);
     if (auth_success && status == ZX_OK) {

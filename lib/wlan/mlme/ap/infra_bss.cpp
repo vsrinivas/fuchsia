@@ -531,7 +531,7 @@ bool InfraBss::IsRsn() const {
 
 HtConfig InfraBss::Ht() const {
     // TODO(NET-567): Reflect hardware capabilities and association negotiation
-    return HtConfig {
+    return HtConfig{
         .ready = true,
         .cbw_40_rx_ready = true,
         .cbw_40_tx_ready = false,

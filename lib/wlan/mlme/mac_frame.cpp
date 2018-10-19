@@ -101,7 +101,8 @@ void SetSeqNo(DataFrameHeader* hdr, Sequence* seq) {
     hdr->sc.set_seq(seq_no);
 }
 
-zx_status_t DeaggregateAmsdu(const DataFrameView<AmsduSubframeHeader>& data_amsdu_frame, MsduCallback cb) {
+zx_status_t DeaggregateAmsdu(const DataFrameView<AmsduSubframeHeader>& data_amsdu_frame,
+                             MsduCallback cb) {
     auto amsdu_subframe = data_amsdu_frame.SkipHeader();
     while (amsdu_subframe) {
         finspect("amsdu subframe: %s\n", debug::Describe(*amsdu_subframe.hdr()).c_str());
@@ -125,7 +126,8 @@ zx_status_t DeaggregateAmsdu(const DataFrameView<AmsduSubframeHeader>& data_amsd
         // Advance to next AMSDU subframe by skipping AMSDU header, MSDU and an optional padding.
         size_t base_len = amsdu_subframe.hdr()->len() + msdu_len;
         size_t padded_len = fbl::round_up(base_len, 4u);
-        amsdu_subframe = amsdu_subframe.AdvanceBy(padded_len).As<AmsduSubframeHeader>().CheckLength();
+        amsdu_subframe =
+            amsdu_subframe.AdvanceBy(padded_len).As<AmsduSubframeHeader>().CheckLength();
     }
 
     return ZX_OK;

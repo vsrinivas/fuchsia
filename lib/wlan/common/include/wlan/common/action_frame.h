@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ACTION_FRAME_H_
+#define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ACTION_FRAME_H_
 
 #include <fbl/type_support.h>
 #include <wlan/common/bitfield.h>
@@ -164,3 +165,5 @@ struct ActionFrame {
 } __PACKED;
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ACTION_FRAME_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_BITFIELD_H_
+#define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_BITFIELD_H_
 
 #include <stdint.h>
 
@@ -94,3 +95,5 @@ template <size_t N> struct Integer : IntegerType<next_bitsize(N)> {};
 
 }  // namespace common
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_BITFIELD_H_

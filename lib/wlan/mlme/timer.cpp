@@ -4,8 +4,8 @@
 
 #include <wlan/mlme/timer.h>
 
-#include <utility>
 #include <zircon/system/public/zircon/assert.h>
+#include <utility>
 
 namespace wlan {
 

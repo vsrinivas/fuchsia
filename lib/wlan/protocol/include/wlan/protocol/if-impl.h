@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_IF_IMPL_H_
+#define GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_IF_IMPL_H_
 
 #include <ddk/protocol/ethernet.h>
 #include <net/ethernet.h>
@@ -17,7 +18,6 @@ enum {
     WLAN_SCAN_TYPE_PASSIVE = 2,
 };
 
-
 // IEEE Std 802.11-2016, 9.4.2.2
 #define WLAN_MAX_SSID_LEN 32
 
@@ -30,10 +30,10 @@ typedef struct wlanif_ssid {
 
 typedef struct wlanif_scan_req {
     uint64_t txn_id;
-    uint8_t bss_type; // WLAN_BSS_TYPE_*
+    uint8_t bss_type;  // WLAN_BSS_TYPE_*
     uint8_t bssid[ETH_ALEN];
     wlanif_ssid_t ssid;
-    uint8_t scan_type; // WLAN_SCAN_TYPE_*
+    uint8_t scan_type;  // WLAN_SCAN_TYPE_*
     uint32_t probe_delay;
     size_t num_channels;
     uint8_t channel_list[WLAN_CHANNELS_MAX_LEN];
@@ -49,7 +49,7 @@ typedef struct wlanif_scan_req {
 typedef struct wlanif_bss_description {
     uint8_t bssid[ETH_ALEN];
     wlanif_ssid_t ssid;
-    uint8_t bss_type; // WLAN_BSS_TYPE_*
+    uint8_t bss_type;  // WLAN_BSS_TYPE_*
     uint32_t beacon_period;
     uint32_t dtim_period;
     uint64_t timestamp;
@@ -87,13 +87,13 @@ enum {
 
 typedef struct wlanif_auth_req {
     uint8_t peer_sta_address[ETH_ALEN];
-    uint8_t auth_type; // WLAN_AUTH_TYPE_*
+    uint8_t auth_type;  // WLAN_AUTH_TYPE_*
     uint32_t auth_failure_timeout;
 } wlanif_auth_req_t;
 
 typedef struct wlanif_auth_ind {
     uint8_t peer_sta_address[ETH_ALEN];
-    uint8_t auth_type; // WLAN_AUTH_TYPE_*
+    uint8_t auth_type;  // WLAN_AUTH_TYPE_*
 } wlanif_auth_ind_t;
 
 enum {
@@ -166,7 +166,7 @@ enum {
 
 typedef struct wlanif_deauth_req {
     uint8_t peer_sta_address[ETH_ALEN];
-    uint16_t reason_code; // WLAN_DEAUTH_REASON_*
+    uint16_t reason_code;  // WLAN_DEAUTH_REASON_*
 } wlanif_deauth_req_t;
 
 typedef struct wlanif_assoc_req {
@@ -195,7 +195,7 @@ typedef struct wlanif_reset_req {
 
 typedef struct wlanif_start_req {
     wlanif_ssid_t ssid;
-    uint8_t bss_type; // WLAN_BSS_TYPE_*
+    uint8_t bss_type;  // WLAN_BSS_TYPE_*
     uint32_t beacon_period;
     uint32_t dtim_period;
     uint8_t channel;
@@ -211,7 +211,7 @@ typedef struct set_key_descriptor {
     uint8_t* key;
     uint16_t length;
     uint16_t key_id;
-    uint8_t key_type; // WLAN_KEY_TYPE_*
+    uint8_t key_type;  // WLAN_KEY_TYPE_*
     uint8_t address[ETH_ALEN];
     uint8_t rsc[8];
     uint8_t cipher_suite_oui[3];
@@ -227,7 +227,7 @@ typedef struct wlanif_set_keys_req {
 
 typedef struct delete_key_descriptor {
     uint16_t key_id;
-    uint8_t key_type; // WLAN_KEY_TYPE_*
+    uint8_t key_type;  // WLAN_KEY_TYPE_*
     uint8_t address[ETH_ALEN];
 } delete_key_descriptor_t;
 
@@ -257,7 +257,7 @@ enum {
 
 typedef struct wlanif_scan_end {
     uint64_t txn_id;
-    uint8_t code; // WLAN_SCAN_RESULT_*
+    uint8_t code;  // WLAN_SCAN_RESULT_*
 } wlanif_scan_end_t;
 
 enum {
@@ -266,7 +266,7 @@ enum {
 };
 
 typedef struct wlanif_join_confirm {
-    uint8_t result_code; // WLAN_JOIN_RESULT_*
+    uint8_t result_code;  // WLAN_JOIN_RESULT_*
 } wlanif_join_confirm_t;
 
 enum {
@@ -280,13 +280,13 @@ enum {
 
 typedef struct wlanif_auth_confirm {
     uint8_t peer_sta_address[ETH_ALEN];
-    uint8_t auth_type; // WLAN_AUTH_TYPE_*
-    uint8_t result_code; // WLAN_AUTH_RESULT_*
+    uint8_t auth_type;    // WLAN_AUTH_TYPE_*
+    uint8_t result_code;  // WLAN_AUTH_RESULT_*
 } wlanif_auth_confirm_t;
 
 typedef struct wlanif_auth_resp {
     uint8_t peer_sta_address[ETH_ALEN];
-    uint8_t result_code; // WLAN_AUTH_RESULT_*
+    uint8_t result_code;  // WLAN_AUTH_RESULT_*
 } wlanif_auth_resp_t;
 
 typedef struct wlanif_deauth_confirm {
@@ -295,7 +295,7 @@ typedef struct wlanif_deauth_confirm {
 
 typedef struct wlanif_deauth_indication {
     uint8_t peer_sta_address[ETH_ALEN];
-    uint16_t reason_code; // WLAN_DEAUTH_REASON_*
+    uint16_t reason_code;  // WLAN_DEAUTH_REASON_*
 } wlanif_deauth_indication_t;
 
 enum {
@@ -311,13 +311,13 @@ enum {
 };
 
 typedef struct wlanif_assoc_confirm {
-    uint8_t result_code; // WLAN_ASSOC_RESULT_*
+    uint8_t result_code;  // WLAN_ASSOC_RESULT_*
     uint16_t association_id;
 } wlanif_assoc_confirm_t;
 
 typedef struct wlanif_assoc_resp {
     uint8_t peer_sta_address[ETH_ALEN];
-    uint8_t result_code; // WLAN_ASSOC_RESULT_*
+    uint8_t result_code;  // WLAN_ASSOC_RESULT_*
     uint16_t association_id;
 } wlanif_assoc_resp_t;
 
@@ -338,7 +338,7 @@ enum {
 };
 
 typedef struct wlanif_start_confirm {
-    uint8_t result_code; // WLAN_START_RESULT_*
+    uint8_t result_code;  // WLAN_START_RESULT_*
 } wlanif_start_confirm_t;
 
 enum {
@@ -347,7 +347,7 @@ enum {
 };
 
 typedef struct wlanif_eapol_confirm {
-    uint8_t result_code; // WLAN_EAPOL_RESULT_*
+    uint8_t result_code;  // WLAN_EAPOL_RESULT_*
 } wlanif_eapol_confirm_t;
 
 typedef struct wlanif_signal_report_indication {
@@ -376,8 +376,8 @@ enum {
 
 typedef struct wlanif_query_info {
     uint8_t mac_addr[ETH_ALEN];
-    uint8_t role; // WLAN_MAC_ROLE_*
-    uint32_t features; // WLANIF_FEATURE_*
+    uint8_t role;       // WLAN_MAC_ROLE_*
+    uint32_t features;  // WLANIF_FEATURE_*
     size_t num_bands;
     wlanif_band_capabilities_t bands[WLAN_MAX_BANDS];
 } wlanif_query_info_t;
@@ -509,3 +509,5 @@ typedef struct wlanif_impl_protocol {
 } wlanif_impl_protocol_t;
 
 __END_CDECLS
+
+#endif  // GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_IF_IMPL_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_MAC_FRAME_H_
+#define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_MAC_FRAME_H_
 
 #include <endian.h>
 #include <fbl/algorithm.h>
@@ -762,3 +763,5 @@ struct EapolHdr {
 CapabilityInfo IntersectCapInfo(const CapabilityInfo& lhs, const CapabilityInfo& rhs);
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_MAC_FRAME_H_

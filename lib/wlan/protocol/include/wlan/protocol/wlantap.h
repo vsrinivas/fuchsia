@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_WLANTAP_H_
+#define GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_WLANTAP_H_
 
 #include <stdint.h>
 #include <zircon/device/ioctl-wrapper.h>
@@ -23,3 +24,5 @@ typedef struct wlantap_ioctl_create_wlanphy {
 
 IOCTL_WRAPPER_IN(ioctl_wlantap_create_wlanphy, IOCTL_WLANTAP_CREATE_WLANPHY,
                  wlantap_ioctl_create_wlanphy_t);
+
+#endif  // GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_WLANTAP_H_

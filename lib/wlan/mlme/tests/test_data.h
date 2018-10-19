@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_TESTS_TEST_DATA_H_
+#define GARNET_LIB_WLAN_MLME_TESTS_TEST_DATA_H_
 
 #include <cstdint>
 #include <utility>
@@ -37,3 +38,5 @@ extern std::vector<uint8_t> kDataLlcEapolFrame;
 
 }  // namespace test_data
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_TESTS_TEST_DATA_H_

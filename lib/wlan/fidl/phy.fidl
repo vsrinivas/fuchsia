@@ -6,102 +6,102 @@ library fuchsia.wlan.device;
 using fuchsia.wlan.mlme;
 
 enum SupportedPhy {
-  DSSS = 0;
-  CCK = 1;
-  OFDM = 2;
-  HT = 3;
-  VHT = 4;
+    DSSS = 0;
+    CCK = 1;
+    OFDM = 2;
+    HT = 3;
+    VHT = 4;
 };
 
 enum DriverFeature {
-  SCAN_OFFLOAD = 0;
-  RATE_SELECTION = 1;
-  SYNTH = 2;
+    SCAN_OFFLOAD = 0;
+    RATE_SELECTION = 1;
+    SYNTH = 2;
 };
 
 enum MacRole {
-  CLIENT = 0;
-  AP = 1;
-  MESH = 2;
+    CLIENT = 0;
+    AP = 1;
+    MESH = 2;
 };
 
 enum Capability {
-  SHORT_PREAMBLE = 0;
-  SPECTRUM_MGMT = 1;
-  SHORT_SLOT_TIME = 2;
-  RADIO_MSMT = 3;
+    SHORT_PREAMBLE = 0;
+    SPECTRUM_MGMT = 1;
+    SHORT_SLOT_TIME = 2;
+    RADIO_MSMT = 3;
 };
 
 struct HtCapabilities {
-  uint16 ht_capability_info;
-  uint8 ampdu_params;
-  array<uint8>:16 supported_mcs_set;
-  uint16 ht_ext_capabilities;
-  uint32 tx_beamforming_capabilities;
-  uint8 asel_capabilities;
+    uint16 ht_capability_info;
+    uint8 ampdu_params;
+    array<uint8>:16 supported_mcs_set;
+    uint16 ht_ext_capabilities;
+    uint32 tx_beamforming_capabilities;
+    uint8 asel_capabilities;
 };
 
 struct VhtCapabilities {
-  uint32 vht_capability_info;
-  uint64 supported_vht_mcs_and_nss_set;
+    uint32 vht_capability_info;
+    uint64 supported_vht_mcs_and_nss_set;
 };
 
 struct ChannelList {
-  uint16 base_freq;
-  vector<uint8>:200 channels;
+    uint16 base_freq;
+    vector<uint8>:200 channels;
 };
 
 struct BandInfo {
-  string description;
-  fuchsia.wlan.mlme.HtCapabilities? ht_caps;
-  fuchsia.wlan.mlme.VhtCapabilities? vht_caps;
-  vector<uint8>:16 basic_rates;
-  ChannelList supported_channels;
+    string description;
+    fuchsia.wlan.mlme.HtCapabilities? ht_caps;
+    fuchsia.wlan.mlme.VhtCapabilities? vht_caps;
+    vector<uint8>:16 basic_rates;
+    ChannelList supported_channels;
 };
 
 struct PhyInfo {
-  // The following fields are not set by the phy itself, but by the service that monitors them.
-  // The phy id. This is not a stable identifier, but will not change while this phy's device node
-  // remains.
-  uint16 id;
-  // The topological path of the phy in the device tree.
-  string? dev_path;
+    // The following fields are not set by the phy itself, but by the service that monitors them.
+    // The phy id. This is not a stable identifier, but will not change while this phy's device node
+    // remains.
+    uint16 id;
+    // The topological path of the phy in the device tree.
+    string? dev_path;
 
-  // The hardware MAC address for the phy. May not be the same as the MAC address used to
-  // communicate with external systems.
-  array<uint8>:6 hw_mac_address;
+    // The hardware MAC address for the phy. May not be the same as the MAC address used to
+    // communicate with external systems.
+    array<uint8>:6 hw_mac_address;
 
-  vector<SupportedPhy>:8 supported_phys;
-  vector<DriverFeature>:8 driver_features;
-  vector<MacRole>:8 mac_roles;
-  vector<Capability>:8 caps;
-  vector<BandInfo>:8 bands;
+    vector<SupportedPhy>:8 supported_phys;
+    vector<DriverFeature>:8 driver_features;
+    vector<MacRole>:8 mac_roles;
+    vector<Capability>:8 caps;
+    vector<BandInfo>:8 bands;
 };
 
 struct QueryResponse {
-  int32 status;
-  PhyInfo info;
+    int32 status;
+    PhyInfo info;
 };
 
 struct CreateIfaceRequest {
-  MacRole role;
+    MacRole role;
 };
 
 struct CreateIfaceResponse {
-  int32 status;
-  uint16 iface_id;
+    int32 status;
+    uint16 iface_id;
 };
 
 struct DestroyIfaceRequest {
-  uint16 id;
+    uint16 id;
 };
 
 struct DestroyIfaceResponse {
-  int32 status;
+    int32 status;
 };
 
 interface Phy {
-  1: Query() -> (QueryResponse resp);
-  2: CreateIface(CreateIfaceRequest req) -> (CreateIfaceResponse resp);
-  3: DestroyIface(DestroyIfaceRequest req) -> (DestroyIfaceResponse resp);
+    1: Query() -> (QueryResponse resp);
+    2: CreateIface(CreateIfaceRequest req) -> (CreateIfaceResponse resp);
+    3: DestroyIface(DestroyIfaceRequest req) -> (DestroyIfaceResponse resp);
 };

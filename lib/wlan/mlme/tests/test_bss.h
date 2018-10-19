@@ -25,8 +25,8 @@ namespace wlan {
 // This allows to easily switch between different BSS to join to.
 static constexpr uint8_t kBssid1[6] = {0xB7, 0xCD, 0x3F, 0xB0, 0x93, 0x01};
 static constexpr uint8_t kBssid2[6] = {0xAC, 0xBF, 0x34, 0x11, 0x95, 0x02};
-static constexpr uint32_t kJoinTimeout = 200;       // Beacon Periods
-static constexpr uint32_t kAuthTimeout = 200;       // Beacon Periods
+static constexpr uint32_t kJoinTimeout = 200;        // Beacon Periods
+static constexpr uint32_t kAuthTimeout = 200;        // Beacon Periods
 static constexpr uint32_t kAutoDeauthTimeout = 100;  // Beacon Periods
 static constexpr uint16_t kAid = 2;
 static constexpr uint16_t kBeaconPeriodTu = 100;

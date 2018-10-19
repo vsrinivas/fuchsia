@@ -56,11 +56,11 @@ interface ConnectTransaction {
 };
 
 enum Phy {
-    HR = 1;   // IEEE 802.11b, used for DSSS, HR/DSSS, ERP-DSSS/CCK
-    ERP = 2;  // IEEE 802.11a/g, used for ERP-OFDM
-    HT = 3;   // IEEE 802.11n
-    VHT = 4;  // IEEE 802.11ac
-    HEW = 5;  // IEEE 802.11ax
+    HR = 1; // IEEE 802.11b, used for DSSS, HR/DSSS, ERP-DSSS/CCK
+    ERP = 2; // IEEE 802.11a/g, used for ERP-OFDM
+    HT = 3; // IEEE 802.11n
+    VHT = 4; // IEEE 802.11ac
+    HEW = 5; // IEEE 802.11ax
 };
 
 enum Cbw { // Channel Bandwidth

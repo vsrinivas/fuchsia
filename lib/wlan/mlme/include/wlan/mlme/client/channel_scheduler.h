@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_CHANNEL_SCHEDULER_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_CHANNEL_SCHEDULER_H_
 
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/packet.h>
@@ -79,3 +80,5 @@ class ChannelScheduler {
 };
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_CHANNEL_SCHEDULER_H_

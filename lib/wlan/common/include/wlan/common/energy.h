@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ENERGY_H_
+#define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ENERGY_H_
 
 #include <cstdint>
 #include <string>
@@ -199,3 +200,5 @@ dBm to_dBm(FemtoWatt fw);
 
 }  // namespace common
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ENERGY_H_

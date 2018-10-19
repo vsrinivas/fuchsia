@@ -18,18 +18,18 @@ std::optional<wlan_key_config_t> ToKeyConfig(const wlan_mlme::SetKeyDescriptor& 
 
     uint8_t key_type;
     switch (key_descriptor.key_type) {
-        case wlan_mlme::KeyType::PAIRWISE:
-            key_type = WLAN_KEY_TYPE_PAIRWISE;
-            break;
-        case wlan_mlme::KeyType::PEER_KEY:
-            key_type = WLAN_KEY_TYPE_PEER;
-            break;
-        case wlan_mlme::KeyType::IGTK:
-            key_type = WLAN_KEY_TYPE_IGTK;
-            break;
-        default:
-            key_type = WLAN_KEY_TYPE_GROUP;
-            break;
+    case wlan_mlme::KeyType::PAIRWISE:
+        key_type = WLAN_KEY_TYPE_PAIRWISE;
+        break;
+    case wlan_mlme::KeyType::PEER_KEY:
+        key_type = WLAN_KEY_TYPE_PEER;
+        break;
+    case wlan_mlme::KeyType::IGTK:
+        key_type = WLAN_KEY_TYPE_IGTK;
+        break;
+    default:
+        key_type = WLAN_KEY_TYPE_GROUP;
+        break;
     }
 
     wlan_key_config_t key_config = {};
@@ -45,4 +45,4 @@ std::optional<wlan_key_config_t> ToKeyConfig(const wlan_mlme::SetKeyDescriptor& 
     return key_config;
 }
 
-} // namespace wlan
+}  // namespace wlan

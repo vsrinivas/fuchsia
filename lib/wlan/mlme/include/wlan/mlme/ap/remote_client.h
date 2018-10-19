@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_AP_REMOTE_CLIENT_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_AP_REMOTE_CLIENT_H_
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/mlme/ap/bss_interface.h>
@@ -258,3 +259,5 @@ class AssociatedState : public BaseState {
 };
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_AP_REMOTE_CLIENT_H_

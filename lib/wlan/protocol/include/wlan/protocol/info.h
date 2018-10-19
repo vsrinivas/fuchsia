@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_INFO_H_
+#define GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_INFO_H_
 
 #include <stdint.h>
 
@@ -55,16 +56,16 @@ enum PHY {
 
 // Guard Interval
 enum GI {
-    WLAN_GI_800NS = (1 << 0),  // all 802.11 phy
-    WLAN_GI_400NS = (1 << 1),  // 802.11n/ac
-    WLAN_GI_200NS = (1 << 2),  // 802.11n/ac
-    WLAN_GI_3200NS = (1 << 3), // 802.11ax
-    WLAN_GI_1600NS = (1 << 4), // 802.11ax
+    WLAN_GI_800NS = (1 << 0),   // all 802.11 phy
+    WLAN_GI_400NS = (1 << 1),   // 802.11n/ac
+    WLAN_GI_200NS = (1 << 2),   // 802.11n/ac
+    WLAN_GI_3200NS = (1 << 3),  // 802.11ax
+    WLAN_GI_1600NS = (1 << 4),  // 802.11ax
 };
 
 enum {
     WLAN_BSS_TYPE_INFRASTRUCTURE = 1,
-    WLAN_BSS_TYPE_IBSS = 2, // Independent BSS
+    WLAN_BSS_TYPE_IBSS = 2,  // Independent BSS
     WLAN_BSS_TYPE_PERSONAL = 3,
     WLAN_BSS_TYPE_MESH = 4,
     WLAN_BSS_TYPE_ANY_BSS = 5,
@@ -214,7 +215,8 @@ typedef struct wlan_info {
     uint16_t supported_phys;
     // Bitmask indicating the WLAN_DRIVER_FEATURE_* values supported by the driver and hardware.
     uint32_t driver_features;
-    // Bitmask indicating WLAN_CAP_* capabilities. Note this differs from IEEE Std 802.11-2016, 9.4.1.4.
+    // Bitmask indicating WLAN_CAP_* capabilities. Note this differs from IEEE Std
+    // 802.11-2016, 9.4.1.4.
     uint32_t caps;
     // Supported bands.
     uint8_t num_bands;
@@ -260,3 +262,5 @@ typedef struct wlan_assoc_ctx {
 } wlan_assoc_ctx_t;
 
 __END_CDECLS;
+
+#endif  // GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_INFO_H_

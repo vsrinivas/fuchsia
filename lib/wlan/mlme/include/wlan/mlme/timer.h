@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_TIMER_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_TIMER_H_
 
 #include <lib/timekeeper/system_clock.h>
 #include <lib/zx/time.h>
@@ -50,3 +51,5 @@ class SystemTimer final : public Timer {
 };
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_TIMER_H_

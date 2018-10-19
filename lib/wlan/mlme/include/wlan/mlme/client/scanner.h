@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_SCANNER_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_SCANNER_H_
 
 #include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/client/channel_scheduler.h>
@@ -44,7 +45,7 @@ class Scanner {
     struct OffChannelHandlerImpl : OffChannelHandler {
         Scanner* scanner_;
 
-        explicit OffChannelHandlerImpl(Scanner* scanner) : scanner_(scanner) { }
+        explicit OffChannelHandlerImpl(Scanner* scanner) : scanner_(scanner) {}
 
         virtual void BeginOffChannelTime() override;
         virtual void HandleOffChannelFrame(fbl::unique_ptr<Packet>) override;
@@ -68,3 +69,5 @@ class Scanner {
 };
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_SCANNER_H_

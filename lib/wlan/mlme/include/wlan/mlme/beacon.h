@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_BEACON_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_BEACON_H_
 
 #include <wlan/mlme/ht.h>
 #include <wlan/mlme/mac_frame.h>
@@ -10,11 +11,7 @@
 
 namespace wlan {
 
-enum class BssType {
-    kInfrastructure = 0,
-    kIndependent,
-    kMesh
-};
+enum class BssType { kInfrastructure = 0, kIndependent, kMesh };
 
 struct BeaconConfig {
     common::MacAddr bssid;
@@ -38,8 +35,9 @@ struct BeaconConfig {
 zx_status_t BuildBeacon(const BeaconConfig& config, MgmtFrame<Beacon>* buffer,
                         size_t* tim_ele_offset);
 
-zx_status_t BuildProbeResponse(const BeaconConfig& config,
-                               common::MacAddr addr1,
+zx_status_t BuildProbeResponse(const BeaconConfig& config, common::MacAddr addr1,
                                MgmtFrame<ProbeResponse>* buffer);
 
-} // namespace wlan
+}  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_BEACON_H_

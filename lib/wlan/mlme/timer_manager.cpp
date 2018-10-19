@@ -26,7 +26,7 @@ TimerManager::~TimerManager() {
 
 void TimerManager::CleanUp(zx::time now) {
     while (!events_.empty() && events_.top() <= now) {
-         events_.pop();
+        events_.pop();
     }
 }
 

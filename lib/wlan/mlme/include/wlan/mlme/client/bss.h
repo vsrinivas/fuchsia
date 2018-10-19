@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_BSS_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_BSS_H_
 
 #include <wlan/common/element.h>
 #include <wlan/common/energy.h>
@@ -100,3 +101,5 @@ void BuildMlmeRateSets(const std::vector<uint8_t>& supp_rates,
                        ::fidl::VectorPtr<uint8_t>* basic, ::fidl::VectorPtr<uint8_t>* op);
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_BSS_H_

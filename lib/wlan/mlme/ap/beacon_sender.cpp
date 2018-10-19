@@ -124,7 +124,7 @@ zx_status_t BeaconSender::BuildBeacon(const PsCfg& ps_cfg, MgmtFrame<Beacon>* fr
         .rsne = req_.rsne.is_null() ? nullptr : req_.rsne->data(),
         .rsne_len = req_.rsne->size(),
         .beacon_period = req_.beacon_period,
-        .channel = bss_->Chan(), // looks like we are ignoring 'channel' in 'req'. Is that correct?
+        .channel = bss_->Chan(),  // looks like we are ignoring 'channel' in 'req'. Is that correct?
         .ps_cfg = &ps_cfg,
         .ht = bss_->Ht(),
     };
@@ -163,7 +163,7 @@ void BeaconSender::SendProbeResponse(const MgmtFrameView<ProbeRequest>& probe_re
         .rsne_len = req_.rsne->size(),
         .beacon_period = req_.beacon_period,
         .channel = bss_->Chan(),
-        .ps_cfg = nullptr, // no TIM element in probe response
+        .ps_cfg = nullptr,  // no TIM element in probe response
         .ht = bss_->Ht(),
     };
     c.rates = bss_->Rates(&c.rates_len);

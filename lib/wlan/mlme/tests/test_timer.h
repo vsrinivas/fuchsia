@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_TESTS_TEST_TIMER_H_
+#define GARNET_LIB_WLAN_MLME_TESTS_TEST_TIMER_H_
 
 #include <lib/timekeeper/clock.h>
 #include <lib/timekeeper/test_clock.h>
@@ -28,3 +29,5 @@ class TestTimer final : public Timer {
 };
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_TESTS_TEST_TIMER_H_

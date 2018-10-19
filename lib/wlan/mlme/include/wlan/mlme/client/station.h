@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_STATION_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_STATION_H_
 
 #include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/client/join_context.h>
@@ -67,7 +68,6 @@ struct AssocContext {
     bool is_vht = false;
 
     void set_aid(uint16_t aid) { aid = aid & kAidMask; }
-
 };
 
 class Station {
@@ -205,3 +205,5 @@ zx_status_t BuildAssocReqSuppRates(const ::fuchsia::wlan::mlme::BSSDescription& 
                                    std::vector<SupportedRate>* supp_rates,
                                    std::vector<SupportedRate>* ext_rates);
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_STATION_H_

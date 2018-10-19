@@ -20,7 +20,7 @@ fidl("sme") {
   name = "fuchsia.wlan.sme"
 
   sources = [
-    "sme.fidl"
+    "sme.fidl",
   ]
 }
 
@@ -28,14 +28,14 @@ fidl("service") {
   name = "fuchsia.wlan.device.service"
 
   sources = [
-    "service.fidl"
+    "service.fidl",
   ]
 
   public_deps = [
     ":fidl",
     ":sme",
-    "//garnet/public/fidl/fuchsia.wlan.stats",
     "//garnet/public/fidl/fuchsia.wlan.minstrel",
+    "//garnet/public/fidl/fuchsia.wlan.stats",
   ]
 }
 
@@ -43,11 +43,11 @@ fidl("wlantap") {
   name = "fuchsia.wlan.tap"
 
   sources = [
-    "wlantap.fidl"
+    "wlantap.fidl",
   ]
 
   public_deps = [
     ":fidl",
-    "//garnet/public/fidl/fuchsia.wlan.mlme"
+    "//garnet/public/fidl/fuchsia.wlan.mlme",
   ]
 }

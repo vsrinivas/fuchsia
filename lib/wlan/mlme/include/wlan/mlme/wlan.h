@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_WLAN_H_
+#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_WLAN_H_
 
 #include <cstdint>
 #include <cstring>
@@ -51,3 +52,5 @@ static constexpr inline typename std::underlying_type<T>::type to_enum_type(T t)
 }
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_WLAN_H_
