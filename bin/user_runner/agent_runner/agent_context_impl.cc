@@ -336,6 +336,11 @@ void AgentContextImpl::DeleteAllTokens(fuchsia::auth::AppConfig app_config,
   callback(fuchsia::auth::Status::INVALID_REQUEST);
 }
 
+void AgentContextImpl::ListProfileIds(fuchsia::auth::AppConfig app_config,
+                                      ListProfileIdsCallback callback) {
+  token_manager_->ListProfileIds(std::move(app_config), std::move(callback));
+}
+
 void AgentContextImpl::StopAgentIfIdle() {
   operation_queue_.Add(new StopCall(false /* is agent runner terminating? */,
                                     this, [this](bool stopped) {

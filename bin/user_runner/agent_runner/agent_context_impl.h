@@ -132,6 +132,10 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
                        fidl::StringPtr user_profile_id,
                        DeleteAllTokensCallback callback) override;
 
+  // |fuchsia::auth::TokenManager|
+  void ListProfileIds(fuchsia::auth::AppConfig app_config,
+                      ListProfileIdsCallback callback) override;
+
   // Adds an operation on |operation_queue_|. This operation is immediately
   // Done() if this agent is not |ready_|. Else if there are no active
   // AgentControllers and no outstanding task, fuchsia::modular::Agent.Stop() is
