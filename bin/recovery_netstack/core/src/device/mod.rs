@@ -100,7 +100,7 @@ pub enum DeviceLayerTimerId {
 }
 
 /// Handle a timer event firing in the device layer.
-pub fn handle_timer_event(id: DeviceLayerTimerId) {
+pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: DeviceLayerTimerId) {
     unimplemented!()
 }
 

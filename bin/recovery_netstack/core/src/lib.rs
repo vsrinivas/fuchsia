@@ -117,6 +117,14 @@ enum TimerIdInner {
     TransportLayer(TransportLayerTimerId),
 }
 
+/// Handle a generic timer event.
+pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TimerId) {
+    match id {
+        TimerId(TimerIdInner::DeviceLayer(x)) => { device::handle_timeout(ctx, x); },
+        TimerId(TimerIdInner::TransportLayer(x)) => { transport::handle_timeout(ctx, x); },
+    }
+}
+
 /// An object which can dispatch events to a real system.
 ///
 /// An `EventDispatcher` provides access to a real system. It provides the

@@ -88,7 +88,7 @@ pub enum TransportLayerTimerId {
 }
 
 /// Handle a timer event firing in the transport layer.
-pub fn handle_timer_event(id: TransportLayerTimerId) {
+pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TransportLayerTimerId) {
     unimplemented!()
 }
 
