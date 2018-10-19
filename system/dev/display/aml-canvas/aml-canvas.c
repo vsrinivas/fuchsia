@@ -121,12 +121,18 @@ static zx_status_t aml_canvas_free(void* ctx, uint8_t canvas_idx) {
     aml_canvas_t* canvas = ctx;
 
     mtx_lock(&canvas->lock);
+    zx_status_t status = ZX_OK;
 
-    zx_pmt_unpin(canvas->pmt_handle[canvas_idx]);
-    canvas->pmt_handle[canvas_idx] = ZX_HANDLE_INVALID;
+    if (canvas->pmt_handle[canvas_idx] == ZX_HANDLE_INVALID) {
+        CANVAS_ERROR("Freeing invalid canvas index: %d\n", canvas_idx);
+        status = ZX_ERR_INVALID_ARGS;
+    } else {
+        zx_pmt_unpin(canvas->pmt_handle[canvas_idx]);
+        canvas->pmt_handle[canvas_idx] = ZX_HANDLE_INVALID;
+    }
 
     mtx_unlock(&canvas->lock);
-    return ZX_OK;
+    return status;
 }
 
 static void aml_canvas_init(aml_canvas_t* canvas) {
@@ -196,7 +202,6 @@ static void aml_canvas_proxy_cb(platform_proxy_args_t* args, void* cookie) {
     for (uint32_t i = handles_consumed; i < args->req_handle_count; i++) {
         zx_handle_close(args->req_handles[i]);
     }
-    args->resp->status = ZX_OK;
 }
 
 static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
