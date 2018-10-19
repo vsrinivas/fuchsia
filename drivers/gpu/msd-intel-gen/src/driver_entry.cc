@@ -21,7 +21,6 @@
 #include <zircon/types.h>
 
 #include "magma_util/dlog.h"
-#include "magma_util/platform/zircon/zircon_platform_ioctl.h"
 #include "msd_intel_pci_device.h"
 #include "platform_trace.h"
 #include "sys_driver/magma_driver.h"
@@ -91,58 +90,45 @@ static zx_status_t device_fidl_connect(void* context, uint64_t client_id, fidl_t
     return ZX_OK;
 }
 
+static zx_status_t device_fidl_dump_state(void* context, uint32_t dump_type)
+{
+    DLOG("device_fidl_dump_state");
+    if (dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
+                      MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE))
+        return DRET_MSG(ZX_ERR_INVALID_ARGS, "Invalid dump type %d", dump_type);
+
+    sysdrv_device_t* device = get_device(context);
+    std::unique_lock<std::mutex> lock(device->magma_mutex);
+    if (device->magma_system_device)
+        device->magma_system_device->DumpStatus(dump_type);
+    return ZX_OK;
+}
+
+static zx_status_t device_fidl_test_restart(void* context)
+{
+#if MAGMA_TEST_DRIVER
+    DLOG("device_fidl_test_restart");
+    sysdrv_device_t* device = get_device(context);
+    std::unique_lock<std::mutex> lock(device->magma_mutex);
+    zx_status_t status = magma_stop(device);
+    if (status != ZX_OK)
+        return DRET_MSG(status, "magma_stop failed");
+    return magma_start(device);
+#else
+    return ZX_ERR_NOT_SUPPORTED;
+#endif
+}
+
 static fuchsia_gpu_magma_Device_ops_t device_fidl_ops = {
     .Query = device_fidl_query,
     .Connect = device_fidl_connect,
+    .DumpState = device_fidl_dump_state,
+    .TestRestart = device_fidl_test_restart,
 };
 
 static zx_status_t sysdrv_gpu_message(void* context, fidl_msg_t* message, fidl_txn_t* transaction)
 {
     return fuchsia_gpu_magma_Device_dispatch(context, transaction, message, &device_fidl_ops);
-}
-
-static zx_status_t sysdrv_gpu_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                    void* out_buf, size_t out_len, size_t* out_actual)
-{
-    sysdrv_device_t* device = get_device(ctx);
-
-    DASSERT(device->magma_system_device);
-
-    zx_status_t result = ZX_ERR_NOT_SUPPORTED;
-
-    switch (op) {
-        case IOCTL_MAGMA_DUMP_STATUS: {
-            DLOG("IOCTL_MAGMA_DUMP_STATUS");
-            uint32_t dump_type = 0;
-            if (in_buf && in_len >= sizeof(uint32_t)) {
-                dump_type = *reinterpret_cast<const uint32_t*>(in_buf);
-            }
-            if (dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
-                              MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE)) {
-                return DRET_MSG(ZX_ERR_INVALID_ARGS, "Invalid dump type %d", dump_type);
-            }
-            std::unique_lock<std::mutex> lock(device->magma_mutex);
-            sysdrv_device_t* device = get_device(ctx);
-            if (device->magma_system_device)
-                device->magma_system_device->DumpStatus(dump_type);
-            result = ZX_OK;
-            break;
-        }
-
-#if MAGMA_TEST_DRIVER
-        case IOCTL_MAGMA_TEST_RESTART: {
-            DLOG("IOCTL_MAGMA_TEST_RESTART");
-            std::unique_lock<std::mutex> lock(device->magma_mutex);
-            result = magma_stop(device);
-            if (result != ZX_OK)
-                return DRET_MSG(result, "magma_stop failed");
-            result = magma_start(device);
-            break;
-        }
-#endif
-    }
-
-    return result;
 }
 
 static void sysdrv_gpu_release(void* ctx)
@@ -154,7 +140,6 @@ static void sysdrv_gpu_release(void* ctx)
 
 static zx_protocol_device_t sysdrv_gpu_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .ioctl = sysdrv_gpu_ioctl,
     .message = sysdrv_gpu_message,
     .release = sysdrv_gpu_release,
 };

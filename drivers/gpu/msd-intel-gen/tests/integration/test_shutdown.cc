@@ -5,7 +5,9 @@
 #include <fcntl.h>
 #include <thread>
 
-#include "garnet/lib/magma/src/magma_util/platform/zircon/zircon_platform_ioctl.h"
+#include <fuchsia/gpu/magma/c/fidl.h>
+#include <lib/fdio/unsafe.h>
+
 #include "magma.h"
 #include "magma_util/inflight_list.h"
 #include "magma_util/macros.h"
@@ -151,9 +153,11 @@ static void test_shutdown(uint32_t iters)
         while (complete_count < kMaxCount) {
             if (complete_count > count) {
                 // Should replace this with a request to devmgr to restart the driver
-                EXPECT_EQ(
-                    fdio_ioctl(test_base.fd(), IOCTL_MAGMA_TEST_RESTART, nullptr, 0, nullptr, 0),
-                    0);
+                fdio_t* fdio = fdio_unsafe_fd_to_io(test_base.fd());
+                EXPECT_EQ(ZX_OK,
+                          fuchsia_gpu_magma_DeviceTestRestart(fdio_unsafe_borrow_channel(fdio)));
+                fdio_unsafe_release(fdio);
+
                 count += kRestartCount;
             }
             std::this_thread::yield();

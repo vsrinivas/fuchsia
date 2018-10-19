@@ -22,9 +22,11 @@ executable("msd_intel_gen_integration_tests") {
   ]
 
   deps = [
+    "$magma_build_root/fidl",
     "$magma_build_root/src/libmagma",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util:inflight_list",
+    "$zircon_build_root/public/lib/fdio",
     "//third_party/googletest:gtest",
   ]
 }

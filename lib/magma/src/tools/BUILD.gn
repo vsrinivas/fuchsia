@@ -16,6 +16,7 @@ executable("magma_info") {
   ]
 
   deps = [
+    "$magma_build_root/fidl",
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/magma_util",
     "$zircon_build_root/public/lib/ddk",
@@ -23,7 +24,5 @@ executable("magma_info") {
     "$zircon_build_root/public/lib/fdio",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 }

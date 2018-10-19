@@ -22,8 +22,10 @@ executable("msd_arm_mali_integration_tests") {
   ]
 
   public_deps = [
-    "//garnet/lib/magma/src/libmagma",
+    "$zircon_build_root/public/lib/fdio",
+    "//garnet/lib/magma/fidl",
     "//garnet/lib/magma/include:magma_abi",
+    "//garnet/lib/magma/src/libmagma",
     "//garnet/lib/magma/src/magma_util",
     "//garnet/lib/magma/tests/helper:platform_device_helper",
     "//third_party/googletest:gtest",

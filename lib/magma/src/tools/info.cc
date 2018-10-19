@@ -7,8 +7,10 @@
 #include <stdlib.h>
 #include <unistd.h> // for close
 
+#include <fuchsia/gpu/magma/c/fidl.h>
+#include <lib/fdio/unsafe.h>
+
 #include "magma_util/macros.h"
-#include "magma_util/platform/zircon/zircon_platform_ioctl.h"
 
 const char* kGpuDeviceName = "/dev/class/gpu/000";
 
@@ -25,8 +27,21 @@ int main(int argc, char** argv)
         dump_type = atoi(argv[1]);
     }
 
-    int ret = fdio_ioctl(fd, IOCTL_MAGMA_DUMP_STATUS, &dump_type, sizeof(dump_type), nullptr, 0);
-    magma::log(magma::LOG_INFO, "Dumping system driver status to system log (%d)", ret);
+    fdio_t* fdio = fdio_unsafe_fd_to_io(fd);
+    if (!fdio) {
+        printf("invalid fd: %d", fd);
+        return -1;
+    }
+
+    zx_status_t status =
+        fuchsia_gpu_magma_DeviceDumpState(fdio_unsafe_borrow_channel(fdio), dump_type);
+    fdio_unsafe_release(fdio);
+
+    if (status != ZX_OK) {
+        printf("magma_DeviceDumpStatus failed: %d", status);
+        return -1;
+    }
+    magma::log(magma::LOG_INFO, "Dumping system driver status to system log");
 
     close(fd);
     return 0;
