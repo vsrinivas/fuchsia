@@ -499,6 +499,12 @@ static int sdmmc_worker_thread(void* arg) {
         }
     } else {
         // Device must be in TRAN state at this point
+        st = zx_event_create(0, &dev->worker_event);
+        if (st != ZX_OK) {
+            zxlogf(ERROR, "sdmmc: failed to create event, retcode = %d\n", st);
+            return st;
+        }
+
         st = sdmmc_wait_for_tran(dev);
         if (st != ZX_OK) {
             zxlogf(ERROR, "sdmmc: waiting for TRAN state failed, retcode = %d\n", st);
@@ -561,12 +567,7 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* parent) {
     mtx_init(&dev->lock, mtx_plain);
     list_initialize(&dev->txn_list);
 
-    st = zx_event_create(0, &dev->worker_event);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "sdmmc: failed to create event, retcode = %d\n", st);
-        goto fail;
-    }
-
+    dev->worker_event = ZX_HANDLE_INVALID;
     device_add_args_t block_args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "sdmmc",
