@@ -100,32 +100,10 @@ struct TypeConverter<fuchsia::media::StreamType,
 };
 
 template <>
-struct TypeConverter<fuchsia::media::StreamTypePtr,
-                     std::unique_ptr<media_player::StreamType>> {
-  static fuchsia::media::StreamTypePtr Convert(
-      const std::unique_ptr<media_player::StreamType>& input) {
-    if (!input)
-      return nullptr;
-    return fidl::MakeOptional(fxl::To<fuchsia::media::StreamType>(*input));
-  }
-};
-
-template <>
 struct TypeConverter<std::unique_ptr<media_player::StreamType>,
                      fuchsia::media::StreamType> {
   static std::unique_ptr<media_player::StreamType> Convert(
       const fuchsia::media::StreamType& input);
-};
-
-template <>
-struct TypeConverter<std::unique_ptr<media_player::StreamType>,
-                     fuchsia::media::StreamTypePtr> {
-  static std::unique_ptr<media_player::StreamType> Convert(
-      const fuchsia::media::StreamTypePtr& input) {
-    if (!input)
-      return nullptr;
-    return To<std::unique_ptr<media_player::StreamType>>(*input);
-  }
 };
 
 template <>
@@ -166,6 +144,18 @@ struct TypeConverter<std::unique_ptr<media_player::StreamType>,
                      fuchsia::mediacodec::CodecFormatDetails> {
   static std::unique_ptr<media_player::StreamType> Convert(
       const fuchsia::mediacodec::CodecFormatDetails& input);
+};
+
+// Generic |std::unique_ptr| to |std::unique_ptr| conversion.
+template <typename T, typename U>
+struct TypeConverter<std::unique_ptr<T>, std::unique_ptr<U>> {
+  static std::unique_ptr<T> Convert(const std::unique_ptr<U>& input) {
+    if (!input) {
+      return nullptr;
+    }
+
+    return fidl::MakeOptional(fxl::To<T>(*input));
+  }
 };
 
 }  // namespace fxl
