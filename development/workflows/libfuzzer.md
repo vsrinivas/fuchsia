@@ -40,8 +40,8 @@ sanitizer-common, as well as to detect when inputs trigger a defect.
 
 ## Q: What do I need to write to create a fuzz target?
 
-A: LibFuzzer can be used to make a coverage-based fuzzer by combining it with a sanitized library and
-the implementation of the [fuzz target] function:
+A: LibFuzzer can be used to make a coverage-based fuzzer by combining it with a sanitized library
+and the implementation of the [fuzz target] function:
 
 ```cpp
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
@@ -211,7 +211,7 @@ select_variant = [
 A: It depends on what you're trying to fuzz:
 * For fuzzing the Zircon kernel, see [syzkaller].
 * For fuzzing the Zircon SDK, create a normal [Fuchsia fuzzer](#q-how-do-i-create-a-fuchsia-fuzzer-)
-in Garnet, i.e. under `//garnet/tests/zircon_fuzzers`.
+in Garnet, i.e. under `//garnet/tests/zircon/`.
 
 Otherwise, the library interfaces are not exposed by the SDK, and the [fuzz target] needs to reside
 in Zircon as well.  Write the target and save it with a file name that contains both the target and
@@ -223,31 +223,56 @@ corresponding rules.mk; e.g.:
 ```sh
 MODULE := $(LOCAL_DIR)-fuzztest
 MODULE_TYPE := fuzztest
+MODULE_NAME := hidparse-fuzzer # Optional
 MODULE_SRCS = $(LOCAL_DIR)/hid-parser-fuzztest.cpp
 ```
 
-__IMPORTANT__: `fuzztest` targets will be __only__ be built if `USE_ASAN` is set, e.g.:
-```
-$ fd zircon && ./scripts/build-zircon-x64 -A
-```
-*__NOTE:__ Other sanitizers, like UBSan, are [not yet supported][todo] in Zircon.*
+*__NOTE__: There are [open issues][TC-241] around how Garnet drivers are built and linked into
+Zircon.  The following is a temporary workaround until those issues are resolved.*
 
-If you have seed [corpora][corpus], [dictionaries], or an [options] file you can specify them
-normally in a [GN fuzz target] and add it to the `zircon_fuzzers` [GN fuzz package], e.g:
+The resulting fuzz tests can be run directly (look under `/boot/test/fuzz`), but to use the full
+fuzzing tools, it is easier to run the Zircon fuzzers as part of a Fuchsia build.  To accomplish
+this, first add the Zircon fuzzer to the special `zircon_fuzzers` package defined in
+`//garnet/tests/zircon/BUILD.gn`.  You can use this to add seed [corpora][corpus], [dictionaries],
+and/or an [options] file as normal in a [GN fuzz target], e.g:
 ```python
 fuzz_target("hid_parser_fuzztest") {
-  seed_corpora = [ "//zircon/system/utest/hid-parser/hid-parser-fuzztest.ensure" ]
+  corpora = [ "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ]
   dictionary = "//zircon/system/utest/hid-parser/hid-parser-fuzztest.dict"
   options = "//zircon/system/utest/hid-parser/hid-parser-fuzztest.options"
 }
+
+fuzz_package("zircon_fuzzers") {
+  omit_binaries = true
+  sanitizers = [ "asan" ]
+  targets = [
+    "hid_parser_fuzztest",
+    ...
+  ]
+}
 ```
 
-You can then build just a bit more than Zircon to get the fuzzing resources:
+Build this package as you would any other fuzz package, and finally use the `fx fuzz zbi` command to
+include the correct dependencies for you Zircon fuzzer in a Fuchsia build:
+
+```sh
+$ fx set x64 --fuzz-with asan --packages garnet/packages/garnet --packages garnet/packages/tests/zircon
+$ fx full-build
+$ fx fuzz zbi
 ```
-fx set x64 --packages garnet/packages/tests/zircon_fuzzers
-fx build-zircon -A
-fx build
-```
+
+Boot normally.  `fx fuzz list` should detect the Zircon fuzzers.
+
+*__NOTE:__ This workflow will build the Zircon fuzzers with ASan. Other sanitizers, like UBSan, are
+[not yet supported][todo] in Zircon.*
+
+*__NOTE__: This workflow will build the Zircon fuzzers with SanCov instrumentation only. Zircon has
+an [open issue][SEC-144] which prevents full coverage instrumentation from being enabled. The
+fuzzers will work, albeit with reduced corpus precision.*
+
+Finally, if needed you can run the `fuzz` tool (without the `fx`) directly from the Zircon command
+line.
+
 ## Q: How do I run a fuzzer?
 
 A: The fuzzer binary can be started directly, using the normal libFuzzer options, if you prefer.
@@ -374,3 +399,5 @@ become available.
 [go-fuzzing]: https://github.com/dvyukov/go-fuzz
 [ubsan]: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
 [oss-fuzz]: https://github.com/google/oss-fuzz
+[sec-144]: https://fuchsia.atlassian.net/browse/SEC-144
+[tc-241]: https://fuchsia.atlassian.net/browse/TC-241
