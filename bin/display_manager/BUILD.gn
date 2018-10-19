@@ -8,18 +8,19 @@ executable("bin") {
   output_name = "display_manager"
 
   sources = [
-    "display.h",
     "display.cc",
-    "display_manager_impl.h",
+    "display.h",
     "display_manager_impl.cc",
+    "display_manager_impl.h",
     "main.cc",
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/fidl/fuchsia.device.display",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//zircon/public/fidl/zircon-backlight:zircon-backlight_c_client",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -30,7 +31,7 @@ package("display_manager") {
   ]
   binary = "display_manager"
 
-    meta = [
+  meta = [
     {
       path = rebase_path("meta/display_manager.cmx")
       dest = "display_manager.cmx"

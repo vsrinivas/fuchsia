@@ -6,14 +6,15 @@
 #include "lib/fxl/logging.h"
 
 #include <fcntl.h>
-#include <zircon/device/backlight.h>
+#include <lib/fdio/util.h>
+#include <zircon/backlight/c/fidl.h>
 
 namespace display {
 
 #define DEVICE_PATH "/dev/class/backlight/000"
 #define BRIGHTNESS_BASE 255;
 
-Display::Display(int fd) : fd_{fd} {}
+Display::Display(zx::channel channel) : channel_(std::move(channel)) {}
 
 Display::~Display() {}
 
@@ -25,15 +26,21 @@ Display* Display::GetDisplay() {
     return NULL;
   }
 
-  return new Display(fd);
+  zx::channel channel;
+  if (fdio_get_service_handle(fd, channel.reset_and_get_address()) != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to get backlight channel";
+    return NULL;
+  }
+
+  return new Display(std::move(channel));
 }
 
 bool Display::GetBrightness(double* brightness) {
-  backlight_state_t state;
-  const ssize_t ret = ioctl_backlight_get_state(fd_, &state);
+  zircon_backlight_State state;
+  zx_status_t status = zircon_backlight_DeviceGetState(channel_.get(), &state);
 
-  if (ret < 0) {
-    FXL_LOG(ERROR) << "Getting backlight state ioctl failed";
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Getting backlight state failed";
     return false;
   }
 
@@ -43,12 +50,12 @@ bool Display::GetBrightness(double* brightness) {
 
 bool Display::SetBrightness(double brightness) {
   const uint32_t adjustBrightness = brightness * BRIGHTNESS_BASE;
-  backlight_state_t state = {.on = brightness > 0,
-                             .brightness = (uint8_t)adjustBrightness};
-  const ssize_t ret = ioctl_backlight_set_state(fd_, &state);
+  zircon_backlight_State state = {.on = brightness > 0,
+                                  .brightness = (uint8_t)adjustBrightness};
+  zx_status_t status = zircon_backlight_DeviceSetState(channel_.get(), &state);
 
-  if (ret < 0) {
-    FXL_LOG(ERROR) << "Set brightness ioctl failed";
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Setting backlight state failed";
     return false;
   }
 
