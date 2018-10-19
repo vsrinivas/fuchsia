@@ -59,7 +59,8 @@ class StoryInfoAcquirer : public fuchsia::modular::VisibleStoriesWatcher,
   // |fuchsia::modular::StoryProviderWatcher|
   void OnChange(
       fuchsia::modular::StoryInfo info, fuchsia::modular::StoryState state,
-      fuchsia::modular::StoryVisibilityState visibility_state) override;
+      fuchsia::modular::StoryVisibilityState visibility_state,
+      bool handle_back_gesture) override;
   void OnDelete(fidl::StringPtr story_id) override;
 
   fuchsia::modular::ContextWriterPtr context_writer_;

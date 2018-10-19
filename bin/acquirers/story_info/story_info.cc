@@ -101,7 +101,8 @@ void StoryInfoAcquirer::OnVisibleStoriesChange(
 
 void StoryInfoAcquirer::OnChange(fuchsia::modular::StoryInfo info,
                                  fuchsia::modular::StoryState state,
-                                 fuchsia::modular::StoryVisibilityState) {
+                                 fuchsia::modular::StoryVisibilityState,
+                                 bool handle_back_gesture) {
   // Here we only check if a story is new, and if so create a StoryWatcherImpl.
   // We proxy all future change events to it.
   auto it = stories_.find(info.id);

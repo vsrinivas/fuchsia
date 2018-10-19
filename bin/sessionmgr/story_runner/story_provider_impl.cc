@@ -402,7 +402,8 @@ void StoryProviderImpl::Watch(
     const auto& container = item.second;
     watcher_ptr->OnChange(CloneStruct(*container.current_info),
                           container.impl->GetStoryState(),
-                          container.impl->GetStoryVisibilityState());
+                          container.impl->GetStoryVisibilityState(),
+                          container.impl->HandlingBackGesture());
   }
   watchers_.AddInterfacePtr(std::move(watcher_ptr));
 }
@@ -540,25 +541,28 @@ void StoryProviderImpl::RequestStoryFocus(fidl::StringPtr story_id) {
 
 void StoryProviderImpl::NotifyStoryStateChange(
     fidl::StringPtr story_id, const fuchsia::modular::StoryState story_state,
-    const fuchsia::modular::StoryVisibilityState story_visibility_state) {
+    const fuchsia::modular::StoryVisibilityState story_visibility_state,
+    const bool handle_back_gesture) {
   auto on_run =
       Future<>::Create("StoryProviderImpl.NotifyStoryStateChange.on_run");
-  auto done = on_run
-                  ->AsyncMap([this, story_id] {
-                    return session_storage_->GetStoryData(story_id);
-                  })
-                  ->Then([this, story_id, story_state, story_visibility_state](
-                             fuchsia::modular::internal::StoryDataPtr data) {
-                    auto it = story_controller_impls_.find(story_id);
-                    if (it == story_controller_impls_.end()) {
-                      // If this call arrives while DeleteStory() is in
-                      // progress, the story controller might already be gone
-                      // from here.
-                      return;
-                    }
-                    NotifyStoryWatchers(data.get(), story_state,
-                                        story_visibility_state);
-                  });
+  auto done =
+      on_run
+          ->AsyncMap([this, story_id] {
+            return session_storage_->GetStoryData(story_id);
+          })
+          ->Then([this, story_id, story_state, story_visibility_state,
+                  handle_back_gesture](
+                     fuchsia::modular::internal::StoryDataPtr data) {
+            auto it = story_controller_impls_.find(story_id);
+            if (it == story_controller_impls_.end()) {
+              // If this call arrives while DeleteStory() is in
+              // progress, the story controller might already be gone
+              // from here.
+              return;
+            }
+            NotifyStoryWatchers(data.get(), story_state, story_visibility_state,
+                                handle_back_gesture);
+          });
   std::function<void()> callback = [] {};
   operation_queue_.Add(WrapFutureAsOperation(
       "StoryProviderImpl::NotifyStoryStateChange", on_run, done, callback));
@@ -661,14 +665,18 @@ void StoryProviderImpl::OnStoryStorageUpdated(
   fuchsia::modular::StoryState state = fuchsia::modular::StoryState::STOPPED;
   fuchsia::modular::StoryVisibilityState visibility_state =
       fuchsia::modular::StoryVisibilityState::DEFAULT;
+  // For now an assumption handle_back_gesture = FALSE is most likely.
+  bool handle_back_gesture = false;
   auto i = story_controller_impls_.find(story_data.story_info.id);
   if (i != story_controller_impls_.end()) {
     state = i->second.impl->GetStoryState();
     visibility_state = i->second.impl->GetStoryVisibilityState();
+    handle_back_gesture = i->second.impl->HandlingBackGesture();
     i->second.current_info = CloneOptional(story_data.story_info);
   }
 
-  NotifyStoryWatchers(&story_data, state, visibility_state);
+  NotifyStoryWatchers(&story_data, state, visibility_state,
+                      handle_back_gesture);
 }
 
 void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
@@ -722,13 +730,14 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
 void StoryProviderImpl::NotifyStoryWatchers(
     const fuchsia::modular::internal::StoryData* const story_data,
     const fuchsia::modular::StoryState story_state,
-    const fuchsia::modular::StoryVisibilityState story_visibility_state) {
+    const fuchsia::modular::StoryVisibilityState story_visibility_state,
+    bool handle_back_gesture) {
   if (story_data->story_options.kind_of_proto_story) {
     return;
   }
   for (const auto& i : watchers_.ptrs()) {
     (*i)->OnChange(CloneStruct(story_data->story_info), story_state,
-                   story_visibility_state);
+                   story_visibility_state, handle_back_gesture);
   }
 }
 

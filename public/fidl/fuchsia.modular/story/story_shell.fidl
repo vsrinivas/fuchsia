@@ -77,6 +77,16 @@ interface StoryShell {
     // E.g called when an intent resolves to a module that is known by the
     // caller to already be running, to update associated metadata.
     9: UpdateSurface(ViewConnection view_connection, SurfaceInfo surface_info);
+
+    // In cases where Story Shell and Session Shell contend for the same gesture
+    // this event notifies a change in Story Shell's determination that it
+    // should be handling the back gesture for dimissing mods in a story.
+    // When there is more than one dismissible mod in a Story, Story Shell will
+    // determine that it should handle back gestures for dismissing those mods,
+    // and notify OnHandlingBackGesture(true). When this is no longer the case
+    // Story Shell will notify OnHandlingBackGesture(false), and Session Shell
+    // can use the gesture for e.g. dismissing the Story Shell.
+    10: -> OnHandlingBackGesture(bool back_handling_state);
 };
 
 // A pair mapping the view owner to surface ID
