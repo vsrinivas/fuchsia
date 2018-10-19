@@ -11,7 +11,7 @@
 
 namespace wlan {
 
-wlan_tx_info_t MakeTxInfo(const FrameControl& fc, uint8_t cbw, uint16_t phy);
+wlan_tx_info_t MakeTxInfo(const FrameControl& fc, uint8_t cbw, uint16_t phy, uint32_t flags = 0);
 
 }  // namespace wlan
 #endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_PACKET_UTILS_H_

@@ -6,9 +6,9 @@
 
 namespace wlan {
 
-wlan_tx_info_t MakeTxInfo(const FrameControl& fc, uint8_t cbw, uint16_t phy) {
+wlan_tx_info_t MakeTxInfo(const FrameControl& fc, uint8_t cbw, uint16_t phy, uint32_t flags) {
     wlan_tx_info_t txinfo = {
-        .tx_flags = 0x0,
+        .tx_flags = flags,
         .valid_fields =
             WLAN_TX_INFO_VALID_PHY | WLAN_TX_INFO_VALID_CHAN_WIDTH | WLAN_TX_INFO_VALID_MCS,
         .phy = phy,

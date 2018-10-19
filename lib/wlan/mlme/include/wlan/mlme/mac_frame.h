@@ -259,12 +259,12 @@ template <typename Header, typename Body = UnknownBody> class Frame {
 
     size_t len() const { return View().len(); }
 
-    zx_status_t FillTxInfo(uint8_t cbw = CBW20, uint16_t phy = WLAN_PHY_OFDM) {
+    zx_status_t FillTxInfo(uint8_t cbw = CBW20, uint16_t phy = WLAN_PHY_OFDM, uint32_t flags = 0) {
         static_assert(is_mac_hdr<Header>::value, "only MAC frame can carry tx_info");
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
 
         wlan_tx_info_t txinfo = {
-            .tx_flags = 0x0,
+            .tx_flags = flags,
             .valid_fields =
                 WLAN_TX_INFO_VALID_PHY | WLAN_TX_INFO_VALID_CHAN_WIDTH | WLAN_TX_INFO_VALID_MCS,
             .phy = phy,

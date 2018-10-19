@@ -582,6 +582,7 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRe
     std::memcpy(llc_hdr->payload, req.body()->data->data(), eapol_pdu_len);
 
     data_frame.set_body_len(llc_hdr->len() + eapol_pdu_len);
+    data_frame.FillTxInfo(CBW20, WLAN_PHY_HT, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
     auto status = client_->bss()->SendDataFrame(data_frame.Generalize());
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send EAPOL request packet: %d\n",

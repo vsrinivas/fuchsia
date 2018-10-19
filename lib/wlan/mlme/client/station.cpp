@@ -997,7 +997,7 @@ zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& 
     llc_hdr->protocol_id = htobe16(kEapolProtocolId);
     w.Write({req.body()->data->data(), llc_payload_len});
 
-    packet->CopyCtrlFrom(MakeTxInfo(data_hdr->fc, CBW20, WLAN_PHY_HT));
+    packet->CopyCtrlFrom(MakeTxInfo(data_hdr->fc, CBW20, WLAN_PHY_HT, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY));
     packet->set_len(w.WrittenBytes());
 
     zx_status_t status = SendWlan(fbl::move(packet));

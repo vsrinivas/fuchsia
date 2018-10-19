@@ -72,6 +72,9 @@ typedef struct wlan_rx_info {
 
 enum {
     WLAN_TX_INFO_FLAGS_PROTECTED = (1 << 0),
+    // For rate control: indicate an important data frame, such as EAPOL, which should be sent
+    // _reliably_ rather than fast, and is exempt from rate probing
+    WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY = (1 << 1),
 };
 
 enum {
@@ -214,7 +217,7 @@ typedef struct wlan_bcn_config {
     // which is the tag ID.
     size_t tim_ele_offset;
 
-    uint16_t beacon_interval; // in TU
+    uint16_t beacon_interval;  // in TU
 } wlan_bcn_config_t;
 
 typedef struct wlanmac_ifc {
