@@ -14,10 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#pragma once
+#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_BITARR_H_
+#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_BITARR_H_
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "macros.h"
 
 typedef uint64_t BITARR_TYPE;
@@ -39,7 +40,8 @@ size_t find_next_bit(const BITARR_TYPE* bitarr, size_t num_bits, size_t bit_offs
 
 bool bitarr_empty(const BITARR_TYPE* bitarr, size_t num_bits);
 
-#define for_each_set_bit(bit, bitarr, num_bits) \
+#define for_each_set_bit(bit, bitarr, num_bits)                            \
     for ((bit) = find_first_bit((bitarr), (num_bits)); (bit) < (num_bits); \
          (bit) = find_next_bit((bitarr), (num_bits), (bit) + 1))
 
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_BITARR_H_

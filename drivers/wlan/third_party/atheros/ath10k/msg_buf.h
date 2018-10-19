@@ -14,7 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#pragma once
+#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_MSG_BUF_H_
+#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_MSG_BUF_H_
 
 #include <stdlib.h>
 
@@ -138,3 +139,5 @@ void ath10k_msg_buf_free(struct ath10k_msg_buf* msg_buf);
 void ath10k_msg_buf_dump_stats(struct ath10k* ar);
 
 void ath10k_msg_buf_dump(struct ath10k_msg_buf* msg_buf, const char* prefix);
+
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_MSG_BUF_H_

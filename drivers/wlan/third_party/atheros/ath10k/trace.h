@@ -34,7 +34,7 @@ static inline uint32_t ath10k_frm_hdr_len(const void* buf, size_t len) {
 }
 #endif
 
-#define _TRACE_H_
+#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_TRACE_H_
 
 /* create empty functions when tracing is disabled */
 #if !defined(CONFIG_ATH10K_TRACING)

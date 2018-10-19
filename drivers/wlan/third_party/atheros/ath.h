@@ -90,10 +90,10 @@ struct ath_regulatory {
 };
 
 enum ath_crypt_caps {
-// clang-format off
+    // clang-format off
     ATH_CRYPT_CAP_CIPHER_AESCCM     = BIT(0),
     ATH_CRYPT_CAP_MIC_COMBINED      = BIT(1),
-// clang-format on
+    // clang-format on
 };
 
 struct ath_keyval {

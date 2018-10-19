@@ -15,8 +15,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _CORE_H_
-#define _CORE_H_
+#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_CORE_H_
+#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_CORE_H_
 
 #include <stdatomic.h>
 #include <stdint.h>
@@ -320,7 +320,7 @@ struct ath10k_peer {
 #endif  // NEEDS PORTING
 };
 
-#if 0   // NEEDS PORTING
+#if 0  // NEEDS PORTING
 struct ath10k_sta {
     struct ath10k_vif* arvif;
 

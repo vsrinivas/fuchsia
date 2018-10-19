@@ -15,8 +15,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _WMI_H_
-#define _WMI_H_
+#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_WMI_H_
+#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_WMI_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -6595,22 +6595,18 @@ struct wmi_pdev_chan_info_req_cmd {
         WMI_MSG(PDEV_SET_WMM, wmi_pdev_set_wmm_params),                                         \
         WMI_MSG(PDEV_SUSPEND, wmi_pdev_suspend_cmd),                                            \
         WMI_MSG(10_2_PEER_ASSOC, wmi_10_2_peer_assoc_complete_cmd),                             \
-        WMI_MSG(PEER_CREATE, wmi_peer_create_cmd),                                              \
-        WMI_MSG(PEER_DELETE, wmi_peer_delete_cmd),                                              \
+        WMI_MSG(PEER_CREATE, wmi_peer_create_cmd), WMI_MSG(PEER_DELETE, wmi_peer_delete_cmd),   \
         WMI_MSG(PEER_FLUSH, wmi_peer_flush_tids_cmd),                                           \
         WMI_MSG(PEER_SET_PARAM, wmi_peer_set_param_cmd),                                        \
         WMI_MSG(SCAN_CHAN_LIST, wmi_scan_chan_list_cmd),                                        \
         WMI_MSG(10X_START_SCAN, wmi_10x_start_scan_cmd),                                        \
-        WMI_MSG(VDEV_CREATE, wmi_vdev_create_cmd),                                              \
-        WMI_MSG(VDEV_DELETE, wmi_vdev_delete_cmd), WMI_MSG(VDEV_DOWN, wmi_vdev_down_cmd),       \
+        WMI_MSG(VDEV_CREATE, wmi_vdev_create_cmd), WMI_MSG(VDEV_DELETE, wmi_vdev_delete_cmd),   \
+        WMI_MSG(VDEV_DOWN, wmi_vdev_down_cmd),                                                  \
         WMI_MSG(VDEV_INSTALL_KEY, wmi_vdev_install_key_cmd),                                    \
         WMI_MSG(VDEV_SET_PARAM, wmi_vdev_set_param_cmd),                                        \
         WMI_MSG(VDEV_START, wmi_vdev_start_request_cmd), WMI_MSG(VDEV_STOP, wmi_vdev_stop_cmd), \
-        WMI_MSG(VDEV_UP, wmi_vdev_up_cmd),                                                      \
-        WMI_MSG(BCN_TMPL, wmi_tlv_bcn_tmpl_cmd),                                                \
-        WMI_MSG(PRB_TMPL, wmi_tlv_prb_tmpl_cmd),                                                \
-        WMI_MSG(BCN_TX_REF, wmi_bcn_tx_ref_cmd)
-
+        WMI_MSG(VDEV_UP, wmi_vdev_up_cmd), WMI_MSG(BCN_TMPL, wmi_tlv_bcn_tmpl_cmd),             \
+        WMI_MSG(PRB_TMPL, wmi_tlv_prb_tmpl_cmd), WMI_MSG(BCN_TX_REF, wmi_bcn_tx_ref_cmd)
 
 #define WMI_TX_CREDITS_AVAILABLE ZX_USER_SIGNAL_0
 

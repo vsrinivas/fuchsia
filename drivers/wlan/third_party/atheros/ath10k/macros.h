@@ -14,7 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#pragma once
+#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_MACROS_H_
+#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_MACROS_H_
 
 #include <zircon/assert.h>
 
@@ -80,3 +81,5 @@
         int result = snprintf(buf, size, format, __VA_ARGS__); \
         MIN_T(int, size, result);                              \
     })
+
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_MACROS_H_
