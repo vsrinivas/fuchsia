@@ -201,6 +201,8 @@ def main():
         "-o%s" % args.depfile,
         "--emit=dep-info",
     ]
+    if args.with_unit_tests:
+        depfile_args += ["--test"]
     retcode, stdout, stderr = run_command(depfile_args, env)
     if retcode != 0:
         print(stdout + stderr)
