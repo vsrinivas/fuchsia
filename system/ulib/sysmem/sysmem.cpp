@@ -124,7 +124,9 @@ static zx_status_t Allocator_AllocateCollection(void* ctx,
     // Most basic usage of the allocator: create vmos with no special vendor format:
     // 1) Pick which format gets used.  For the simple case, just use whatever format was given.
     //    We also assume here that the format is an ImageFormat
-    ZX_ASSERT(info.format.tag == fuchsia_sysmem_BufferSpecTag_image);
+    // TODO(FIDL-204/kulakowski) Make this a union again when C bindings
+    // are rationalized, and put this assertion back.
+    // ZX_ASSERT(info.format.tag == fuchsia_sysmem_BufferSpecTag_image);
     zx_status_t status = PickImageFormat(*spec, &info.format.image, &info.vmo_size);
     if (status != ZX_OK) {
         FX_LOG(ERROR, kTag, "Failed to pick format for Buffer Collection\n");
