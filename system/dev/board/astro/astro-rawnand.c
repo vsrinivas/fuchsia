@@ -62,8 +62,8 @@ static const nand_config_t config = {
 static const pbus_metadata_t raw_nand_metadata[] = {
     {
         .type = DEVICE_METADATA_PRIVATE,
-        .data = &config,
-        .len = sizeof(config),
+        .data_buffer = &config,
+        .data_size = sizeof(config),
     },
 };
 
@@ -79,15 +79,15 @@ static const pbus_dev_t raw_nand_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_AMLOGIC_RAW_NAND,
-    .mmios = raw_nand_mmios,
+    .mmio_list = raw_nand_mmios,
     .mmio_count = countof(raw_nand_mmios),
-    .irqs = raw_nand_irqs,
+    .irq_list = raw_nand_irqs,
     .irq_count = countof(raw_nand_irqs),
-    .btis = raw_nand_btis,
+    .bti_list = raw_nand_btis,
     .bti_count = countof(raw_nand_btis),
-    .metadata = raw_nand_metadata,
+    .metadata_list= raw_nand_metadata,
     .metadata_count = countof(raw_nand_metadata),
-    .boot_metadata = raw_nand_boot_metadata,
+    .boot_metadata_list = raw_nand_boot_metadata,
     .boot_metadata_count = countof(raw_nand_boot_metadata),
 };
 

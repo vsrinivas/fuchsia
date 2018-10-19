@@ -47,9 +47,9 @@ static const pbus_dev_t display_dev = {
     .vid = PDEV_VID_NXP,
     .pid = PDEV_PID_IMX8MEVK,
     .did = PDEV_DID_IMX_DISPLAY,
-    .mmios = imx8mevk_display_mmios,
+    .mmio_list = imx8mevk_display_mmios,
     .mmio_count = countof(imx8mevk_display_mmios),
-    .btis = imx8mevk_display_btis,
+    .bti_list = imx8mevk_display_btis,
     .bti_count = countof(imx8mevk_display_btis),
 };
 
@@ -160,7 +160,7 @@ static zx_status_t imx8mevk_bus_bind(void* ctx, zx_device_t* parent) {
     }
     bus->parent = parent;
 
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &bus->pbus);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &bus->pbus);
     if (status != ZX_OK) {
         goto fail;
     }
@@ -212,7 +212,7 @@ static zx_driver_ops_t imx8mevk_bus_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(imx8mevk_bus, imx8mevk_bus_driver_ops, "zircon", "0.1", 6)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_BUS),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
     BI_GOTO_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_NXP, 0),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_IMX8MEVK),
     BI_LABEL(0),

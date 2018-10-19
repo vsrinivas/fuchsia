@@ -30,7 +30,7 @@ static pbus_dev_t clk_dev = []() {
     dev.name = "sherlock-clk",
     dev.vid = PDEV_VID_AMLOGIC;
     dev.did = PDEV_DID_AMLOGIC_G12B_CLK;
-    dev.mmios = clk_mmios;
+    dev.mmio_list = clk_mmios;
     dev.mmio_count = countof(clk_mmios);
     return dev;
 }();

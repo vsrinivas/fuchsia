@@ -47,11 +47,11 @@ static pbus_dev_t xhci_dev = [](){
     dev.vid = PDEV_VID_GENERIC;
     dev.pid = PDEV_PID_GENERIC;
     dev.did = PDEV_DID_USB_XHCI;
-    dev.mmios = xhci_mmios;
+    dev.mmio_list = xhci_mmios;
     dev.mmio_count = countof(xhci_mmios);
-    dev.irqs = xhci_irqs;
+    dev.irq_list = xhci_irqs;
     dev.irq_count = countof(xhci_irqs);
-    dev.btis = xhci_btis;
+    dev.bti_list = xhci_btis;
     dev.bti_count = countof(xhci_btis);
     return dev;
 }();

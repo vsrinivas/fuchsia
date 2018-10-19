@@ -34,7 +34,7 @@ using SherlockType = ddk::Device<Sherlock>;
 // This is the main class for the platform bus driver.
 class Sherlock : public SherlockType {
 public:
-    explicit Sherlock(zx_device_t* parent, platform_bus_protocol_t* pbus, iommu_protocol_t* iommu)
+    explicit Sherlock(zx_device_t* parent, pbus_protocol_t* pbus, iommu_protocol_t* iommu)
         : SherlockType(parent), pbus_(pbus), iommu_(iommu) {}
 
     static zx_status_t Create(zx_device_t* parent);
@@ -53,7 +53,7 @@ private:
     zx_status_t CameraInit();
     int Thread();
 
-    ddk::PlatformBusProtocolProxy pbus_;
+    ddk::PBusProtocolProxy pbus_;
     ddk::IommuProtocolProxy iommu_;
     gpio_impl_protocol_t gpio_impl_;
     thrd_t thread_;

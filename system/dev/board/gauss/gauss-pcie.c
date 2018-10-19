@@ -95,22 +95,22 @@ static const pbus_metadata_t iatu_metadata[] = {
     // PCIe Configuration Space
     {
         .type = IATU_CFG_APERTURE_METADATA,  // Private Metadata
-        .data = &cfg_entry,
-        .len = sizeof(cfg_entry),
+        .data_buffer = &cfg_entry,
+        .data_size = sizeof(cfg_entry),
     },
 
     // PCIe IO Space
     {
         .type = IATU_IO_APERTURE_METADATA,  // Private Metadata
-        .data = &io_entry,
-        .len = sizeof(io_entry),
+        .data_buffer = &io_entry,
+        .data_size = sizeof(io_entry),
     },
 
     // PCIe Memory space
     {
         .type = IATU_MMIO_APERTURE_METADATA,  // Private Metadata
-        .data = &mem_entry,
-        .len = sizeof(mem_entry),
+        .data_buffer = &mem_entry,
+        .data_size = sizeof(mem_entry),
     },
 };
 
@@ -124,7 +124,7 @@ static const pbus_bti_t pci_btis[] = {
 static const pbus_dev_t pcie_dev_children[] = {
     {
         // Resources for child-1
-        .btis = pci_btis,
+        .bti_list = pci_btis,
         .bti_count = countof(pci_btis)
     },
 };
@@ -134,21 +134,21 @@ static const pbus_dev_t pcie_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_DW_PCIE,
-    .mmios = dw_pcie_mmios,
+    .mmio_list = dw_pcie_mmios,
     .mmio_count = countof(dw_pcie_mmios),
-    .gpios = dw_pcie_gpios,
+    .gpio_list = dw_pcie_gpios,
     .gpio_count = countof(dw_pcie_gpios),
-    .clks = pcie_clk_gates,
+    .clk_list = pcie_clk_gates,
     .clk_count = countof(pcie_clk_gates),
-    .irqs = dw_pcie_irqs,
+    .irq_list = dw_pcie_irqs,
     .irq_count = countof(dw_pcie_irqs),
-    .metadata = iatu_metadata,
+    .metadata_list = iatu_metadata,
     .metadata_count = countof(iatu_metadata),
-    .btis = pci_btis,
+    .bti_list = pci_btis,
     .bti_count = countof(pci_btis),
 
     // Allow this device to publish the Kernel PCI device on the Platform Bus
-    .children = pcie_dev_children,
+    .child_list = pcie_dev_children,
     .child_count = countof(pcie_dev_children),
 };
 

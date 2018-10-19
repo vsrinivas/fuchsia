@@ -25,7 +25,7 @@
 #include "qemu-virt.h"
 
 typedef struct {
-    platform_bus_protocol_t pbus;
+    pbus_protocol_t pbus;
 } qemu_bus_t;
 
 static zx_status_t qemu_pci_init(void) {
@@ -99,7 +99,7 @@ static const pbus_dev_t pl031_dev = {
     .vid = PDEV_VID_GENERIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_RTC_PL031,
-    .mmios = pl031_mmios,
+    .mmio_list = pl031_mmios,
     .mmio_count = countof(pl031_mmios),
 };
 
@@ -110,7 +110,7 @@ static zx_status_t qemu_bus_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &bus->pbus) != ZX_OK) {
+    if (device_get_protocol(parent, ZX_PROTOCOL_PBUS, &bus->pbus) != ZX_OK) {
         free(bus);
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -144,7 +144,7 @@ static zx_status_t qemu_bus_bind(void* ctx, zx_device_t* parent) {
         .vid = PDEV_VID_GENERIC,
         .pid = PDEV_PID_GENERIC,
         .did = PDEV_DID_KPCI,
-        .btis = pci_btis,
+        .bti_list = pci_btis,
         .bti_count = countof(pci_btis),
     };
 
@@ -177,7 +177,7 @@ static zx_driver_ops_t qemu_bus_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(qemu_bus, qemu_bus_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_BUS),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_QEMU),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_QEMU),
 ZIRCON_DRIVER_END(qemu_bus)

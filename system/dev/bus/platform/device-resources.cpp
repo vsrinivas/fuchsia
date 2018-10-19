@@ -28,15 +28,15 @@ zx_status_t DeviceResources::Init(const pbus_dev_t* pdev, uint32_t* next_index) 
     if (pdev->protocol_count > PROXY_MAX_PROTOCOLS) {
         return ZX_ERR_INVALID_ARGS;
     }
-    if (!CopyResources(pdev->mmio_count, pdev->mmios, &mmios_) ||
-        !CopyResources(pdev->irq_count, pdev->irqs, &irqs_) ||
-        !CopyResources(pdev->gpio_count, pdev->gpios, &gpios_) ||
-        !CopyResources(pdev->i2c_channel_count, pdev->i2c_channels, &i2c_channels_) ||
-        !CopyResources(pdev->clk_count, pdev->clks, &clks_) ||
-        !CopyResources(pdev->bti_count, pdev->btis, &btis_) ||
-        !CopyResources(pdev->metadata_count, pdev->metadata, &metadata_) ||
-        !CopyResources(pdev->boot_metadata_count, pdev->boot_metadata, &boot_metadata_) ||
-        !CopyResources(pdev->protocol_count, pdev->protocols, &protocols_)) {
+    if (!CopyResources(pdev->mmio_count, pdev->mmio_list, &mmios_) ||
+        !CopyResources(pdev->irq_count, pdev->irq_list, &irqs_) ||
+        !CopyResources(pdev->gpio_count, pdev->gpio_list, &gpios_) ||
+        !CopyResources(pdev->i2c_channel_count, pdev->i2c_channel_list, &i2c_channels_) ||
+        !CopyResources(pdev->clk_count, pdev->clk_list, &clks_) ||
+        !CopyResources(pdev->bti_count, pdev->bti_list, &btis_) ||
+        !CopyResources(pdev->metadata_count, pdev->metadata_list, &metadata_) ||
+        !CopyResources(pdev->boot_metadata_count, pdev->boot_metadata_list, &boot_metadata_) ||
+        !CopyResources(pdev->protocol_count, pdev->protocol_list, &protocols_)) {
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -48,7 +48,7 @@ zx_status_t DeviceResources::Init(const pbus_dev_t* pdev, uint32_t* next_index) 
         }
         for (uint32_t i = 0; i < pdev->child_count; i++) {
             DeviceResources dr((*next_index)++);
-            auto status = dr.Init(&pdev->children[i], next_index);
+            auto status = dr.Init(&pdev->child_list[i], next_index);
             if (status != ZX_OK) {
                 return status;
             }

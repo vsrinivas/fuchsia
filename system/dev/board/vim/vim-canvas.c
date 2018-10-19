@@ -28,9 +28,9 @@ static const pbus_dev_t canvas_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_AMLOGIC_CANVAS,
-    .mmios = vim_canvas_mmios,
+    .mmio_list = vim_canvas_mmios,
     .mmio_count = countof(vim_canvas_mmios),
-    .btis = vim_canvas_btis,
+    .bti_list = vim_canvas_btis,
     .bti_count = countof(vim_canvas_btis),
 };
 

@@ -173,17 +173,17 @@ static thermal_device_info_t aml_vim2_config = {
 static const pbus_metadata_t vim_thermal_metadata[] = {
     {
         .type       = DEVICE_METADATA_PRIVATE,
-        .data       = &aml_vim2_config,
-        .len        = sizeof(aml_vim2_config),
+        .data_buffer       = &aml_vim2_config,
+        .data_size        = sizeof(aml_vim2_config),
     }
 };
 
 static const pbus_dev_t scpi_children[] = {
     // VIM2 thermal driver
     {
-        .gpios = fanctl_gpios,
+        .gpio_list = fanctl_gpios,
         .gpio_count = countof(fanctl_gpios),
-        .metadata = vim_thermal_metadata,
+        .metadata_list = vim_thermal_metadata,
         .metadata_count = countof(vim_thermal_metadata),
     },
 };
@@ -191,7 +191,7 @@ static const pbus_dev_t scpi_children[] = {
 static const pbus_dev_t mailbox_children[] = {
     // Amlogic SCPI driver
     {
-        .children = scpi_children,
+        .child_list = scpi_children,
         .child_count = countof(scpi_children),
     },
 };
@@ -201,11 +201,11 @@ static const pbus_dev_t mailbox_dev = {
     .vid = PDEV_VID_KHADAS,
     .pid = PDEV_PID_VIM2,
     .did = PDEV_DID_AMLOGIC_MAILBOX,
-    .mmios = mailbox_mmios,
+    .mmio_list = mailbox_mmios,
     .mmio_count = countof(mailbox_mmios),
-    .irqs = mailbox_irqs,
+    .irq_list = mailbox_irqs,
     .irq_count = countof(mailbox_irqs),
-    .children = mailbox_children,
+    .child_list = mailbox_children,
     .child_count = countof(mailbox_children),
 };
 

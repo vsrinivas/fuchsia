@@ -364,9 +364,9 @@ static zx_status_t aml_i2c_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    platform_bus_protocol_t pbus;
-    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &pbus)) != ZX_OK) {
-        zxlogf(ERROR, "aml_i2c_bind: ZX_PROTOCOL_PLATFORM_BUS not available\n");
+    pbus_protocol_t pbus;
+    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus)) != ZX_OK) {
+        zxlogf(ERROR, "aml_i2c_bind: ZX_PROTOCOL_PBUS not available\n");
         goto fail;
     }
 
@@ -413,7 +413,8 @@ static zx_status_t aml_i2c_bind(void* ctx, zx_device_t* parent) {
 
     i2c->i2c.ops = &i2c_ops;
     i2c->i2c.ctx = i2c;
-    pbus_register_protocol(&pbus, ZX_PROTOCOL_I2C_IMPL, &i2c->i2c, NULL, NULL);
+    const platform_proxy_cb_t kCallback = {NULL, NULL};
+    pbus_register_protocol(&pbus, ZX_PROTOCOL_I2C_IMPL, &i2c->i2c, sizeof(i2c->i2c), &kCallback);
 
     return ZX_OK;
 

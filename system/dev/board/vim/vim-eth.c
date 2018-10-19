@@ -73,8 +73,8 @@ static const eth_dev_metadata_t eth_phy_device = {
 static const pbus_metadata_t eth_mac_device_metadata[] = {
     {
         .type = DEVICE_METADATA_PRIVATE,
-        .data = &eth_phy_device,
-        .len = sizeof(eth_dev_metadata_t),
+        .data_buffer = &eth_phy_device,
+        .data_size = sizeof(eth_dev_metadata_t),
     },
 };
 
@@ -86,8 +86,8 @@ static const eth_dev_metadata_t eth_mac_device = {
 static const pbus_metadata_t eth_board_metadata[] = {
     {
         .type = DEVICE_METADATA_PRIVATE,
-        .data = &eth_mac_device,
-        .len = sizeof(eth_dev_metadata_t),
+        .data_buffer = &eth_mac_device,
+        .data_size = sizeof(eth_dev_metadata_t),
     },
 };
 
@@ -102,15 +102,15 @@ static const pbus_dev_t eth_board_children[] = {
     // Designware MAC.
     {
         .name = "dwmac",
-        .mmios = eth_mac_mmios,
+        .mmio_list = eth_mac_mmios,
         .mmio_count = countof(eth_mac_mmios),
-        .btis = eth_mac_btis,
+        .bti_list = eth_mac_btis,
         .bti_count = countof(eth_mac_btis),
-        .irqs = eth_mac_irqs,
+        .irq_list = eth_mac_irqs,
         .irq_count = countof(eth_mac_irqs),
-        .metadata = eth_mac_device_metadata,
+        .metadata_list = eth_mac_device_metadata,
         .metadata_count = countof(eth_mac_device_metadata),
-        .boot_metadata = eth_mac_metadata,
+        .boot_metadata_list = eth_mac_metadata,
         .boot_metadata_count = countof(eth_mac_metadata),
     },
 };
@@ -120,15 +120,15 @@ static pbus_dev_t eth_board_dev = {
     .vid = PDEV_VID_KHADAS,
     .pid = PDEV_PID_VIM2,
     .did = PDEV_DID_AMLOGIC_ETH,
-    .mmios = eth_board_mmios,
+    .mmio_list = eth_board_mmios,
     .mmio_count = countof(eth_board_mmios),
-    .gpios = eth_board_gpios,
+    .gpio_list = eth_board_gpios,
     .gpio_count = countof(eth_board_gpios),
-    .i2c_channels = vim2_mcu_i2c,
+    .i2c_channel_list = vim2_mcu_i2c,
     .i2c_channel_count = countof(vim2_mcu_i2c),
-    .metadata = eth_board_metadata,
+    .metadata_list = eth_board_metadata,
     .metadata_count = countof(eth_board_metadata),
-    .children = eth_board_children,
+    .child_list = eth_board_children,
     .child_count = countof(eth_board_children),
 };
 

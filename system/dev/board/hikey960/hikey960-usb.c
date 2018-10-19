@@ -38,9 +38,9 @@ static usb_mode_t dwc3_mode = USB_MODE_HOST;
 
 static const pbus_metadata_t dwc2_metadata[] = {
     {
-        .type       = DEVICE_METADATA_USB_MODE,
-        .data       = &dwc3_mode,
-        .len        = sizeof(dwc3_mode),
+        .type        = DEVICE_METADATA_USB_MODE,
+        .data_buffer = &dwc3_mode,
+        .data_size   = sizeof(dwc3_mode),
     }
 };
 
@@ -50,13 +50,13 @@ static const pbus_dev_t hikey_usb_children[] = {
         .vid = PDEV_VID_GENERIC,
         .pid = PDEV_PID_GENERIC,
         .did = PDEV_DID_USB_DWC3,
-        .mmios = dwc3_mmios,
+        .mmio_list = dwc3_mmios,
         .mmio_count = countof(dwc3_mmios),
-        .irqs = dwc3_irqs,
+        .irq_list = dwc3_irqs,
         .irq_count = countof(dwc3_irqs),
-        .btis = dwc3_btis,
+        .bti_list = dwc3_btis,
         .bti_count = countof(dwc3_btis),
-        .metadata = dwc2_metadata,
+        .metadata_list = dwc2_metadata,
         .metadata_count = countof(dwc2_metadata),
     },
 };
@@ -78,9 +78,9 @@ const pbus_dev_t hikey_usb_dev = {
     .vid = PDEV_VID_96BOARDS,
     .pid = PDEV_PID_HIKEY960,
     .did = PDEV_DID_HIKEY960_USB,
-    .gpios = hikey_usb_gpios,
+    .gpio_list = hikey_usb_gpios,
     .gpio_count = countof(hikey_usb_gpios),
-    .children = hikey_usb_children,
+    .child_list = hikey_usb_children,
     .child_count = countof(hikey_usb_children),
 };
 

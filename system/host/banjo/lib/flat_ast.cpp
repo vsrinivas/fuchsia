@@ -1086,8 +1086,9 @@ Decl* Library::LookupDeclByType(const Type* type, LookupOption option) const {
         case flat::Type::Kind::kPrimitive:
             return nullptr;
         case flat::Type::Kind::kVector: {
-            type = static_cast<const flat::VectorType*>(type)->element_type.get();
-            continue;
+            return nullptr;
+            //type = static_cast<const flat::VectorType*>(type)->element_type.get();
+            //continue;
         }
         case flat::Type::Kind::kArray: {
             type = static_cast<const flat::ArrayType*>(type)->element_type.get();

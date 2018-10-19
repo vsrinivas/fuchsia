@@ -70,9 +70,9 @@ static pbus_dev_t gpio_dev = [](){
     dev.vid = PDEV_VID_AMLOGIC;
     dev.pid = PDEV_PID_AMLOGIC_T931;
     dev.did = PDEV_DID_AMLOGIC_GPIO;
-    dev.mmios = gpio_mmios;
+    dev.mmio_list = gpio_mmios;
     dev.mmio_count = countof(gpio_mmios);
-    dev.irqs = gpio_irqs;
+    dev.irq_list = gpio_irqs;
     dev.irq_count = countof(gpio_irqs);
     return dev;
 }();

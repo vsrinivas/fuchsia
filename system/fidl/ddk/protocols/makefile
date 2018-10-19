@@ -75,6 +75,9 @@ pci: $(LOCAL_DIR)/libs/pci.banjo
 pciroot:
 	$(run-banjo)
 
+platform-bus:
+	$(run-banjo)
+
 rawnand: $(LOCAL_DIR)/libs/nand.banjo
 	$(run-banjo)
 

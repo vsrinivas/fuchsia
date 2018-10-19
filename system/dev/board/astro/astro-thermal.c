@@ -233,13 +233,13 @@ static opp_info_t aml_opp_info = {
 static const pbus_metadata_t thermal_metadata[] = {
     {
         .type = THERMAL_CONFIG_METADATA,
-        .data = &aml_astro_config,
-        .len = sizeof(aml_astro_config),
+        .data_buffer = &aml_astro_config,
+        .data_size = sizeof(aml_astro_config),
     },
     {
         .type = VOLTAGE_DUTY_CYCLE_METADATA,
-        .data = &aml_opp_info,
-        .len = sizeof(aml_opp_info),
+        .data_buffer = &aml_opp_info,
+        .data_size = sizeof(aml_opp_info),
     },
 };
 
@@ -248,15 +248,15 @@ static pbus_dev_t thermal_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_AMLOGIC_S905D2,
     .did = PDEV_DID_AMLOGIC_THERMAL,
-    .mmios = thermal_mmios,
+    .mmio_list = thermal_mmios,
     .mmio_count = countof(thermal_mmios),
-    .clks = thermal_clk_gates,
+    .clk_list = thermal_clk_gates,
     .clk_count = countof(thermal_clk_gates),
-    .irqs = thermal_irqs,
+    .irq_list = thermal_irqs,
     .irq_count = countof(thermal_irqs),
-    .btis = thermal_btis,
+    .bti_list = thermal_btis,
     .bti_count = countof(thermal_btis),
-    .metadata = thermal_metadata,
+    .metadata_list= thermal_metadata,
     .metadata_count = countof(thermal_metadata),
 };
 

@@ -72,13 +72,13 @@ static const pbus_dev_t video_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_AMLOGIC_S905D2,
     .did = PDEV_DID_AMLOGIC_VIDEO,
-    .mmios = astro_video_mmios,
+    .mmio_list = astro_video_mmios,
     .mmio_count = countof(astro_video_mmios),
-    .btis = astro_video_btis,
+    .bti_list = astro_video_btis,
     .bti_count = countof(astro_video_btis),
-    .irqs = astro_video_irqs,
+    .irq_list = astro_video_irqs,
     .irq_count = countof(astro_video_irqs),
-    .protocols = astro_video_protocols,
+    .protocol_list = astro_video_protocols,
     .protocol_count = countof(astro_video_protocols),
 };
 

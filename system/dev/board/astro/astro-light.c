@@ -30,9 +30,9 @@ static pbus_dev_t tcs3400_light_dev = {
     .vid = PDEV_VID_AMS,
     .pid = PDEV_PID_AMS_TCS3400,
     .did = PDEV_DID_AMS_LIGHT,
-    .i2c_channels = tcs3400_light_i2c,
+    .i2c_channel_list = tcs3400_light_i2c,
     .i2c_channel_count = countof(tcs3400_light_i2c),
-    .gpios = tcs3400_light_gpios,
+    .gpio_list = tcs3400_light_gpios,
     .gpio_count = countof(tcs3400_light_gpios),
 };
 

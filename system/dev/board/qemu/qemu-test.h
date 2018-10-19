@@ -6,4 +6,4 @@
 
 #include <ddk/protocol/platform-bus.h>
 
-zx_status_t qemu_test_init(platform_bus_protocol_t* pbus);
+zx_status_t qemu_test_init(pbus_protocol_t* pbus);

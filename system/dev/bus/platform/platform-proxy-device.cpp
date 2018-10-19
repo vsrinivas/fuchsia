@@ -223,7 +223,7 @@ void ProxyDevice::I2cTransact(void* ctx, const i2c_op_t* ops, size_t cnt,
     }
     uint8_t resp_buffer[PROXY_MAX_TRANSFER_SIZE];
     rpc_i2c_rsp_t* rsp = reinterpret_cast<rpc_i2c_rsp_t*>(resp_buffer);
-    uint32_t actual;
+    size_t actual;
     auto status = thiz->proxy_->Rpc(thiz->device_id_, &req->header,
                                     static_cast<uint32_t>(req_length),
                                     &rsp->header, static_cast<uint32_t>(resp_length),

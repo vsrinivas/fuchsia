@@ -96,7 +96,7 @@ private:
     zx_status_t AmlPinToBlock(const uint32_t pin, const AmlGpioBlock** out_block,
                               uint32_t* out_pin_index, fbl::Mutex** out_lock) const;
 
-    void Bind(const platform_bus_protocol_t& pbus);
+    void Bind(const pbus_protocol_t& pbus);
 
     inline uint32_t Read32GpioReg(int index, uint32_t offset) {
         return mmios_[index].Read32(offset << 2);

@@ -173,12 +173,12 @@ zx_status_t PlatformDevice::RpcGetMetadata(const DeviceResources* dr, uint32_t i
 
     if (index < dr->metadata_count()) {
         auto& metadata = dr->metadata(index);
-        if (metadata.len > buf_size) {
+        if (metadata.data_size > buf_size) {
             return ZX_ERR_BUFFER_TOO_SMALL;
         }
-        memcpy(buf, metadata.data, metadata.len);
+        memcpy(buf, metadata.data_buffer, metadata.data_size);
         *out_type = metadata.type;
-        *actual = metadata.len;
+        *actual = static_cast<uint32_t>(metadata.data_size);
         return ZX_OK;
     } else {
         // boot_metadata indices follow metadata indices.
@@ -544,8 +544,8 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
         if (status == ZX_OK) {
             status = args.resp->status;
         }
-        resp_len = args.resp_actual_size;
-        resp_handle_count = args.resp_actual_handles;
+        resp_len = static_cast<uint32_t>(args.resp_actual_size);
+        resp_handle_count = static_cast<uint32_t>(args.resp_actual_handles);
         break;
     }
     }
@@ -596,8 +596,8 @@ zx_status_t PlatformDevice::Start() {
             {BIND_PLATFORM_DEV_DID, 0, did_},
         };
 
-        status = DdkAdd(name, device_add_flags, props, fbl::count_of(props), ZX_PROTOCOL_PLATFORM_DEV,
-                        argstr);
+        status = DdkAdd(name, device_add_flags, props, fbl::count_of(props),
+                        ZX_PROTOCOL_PLATFORM_DEV, argstr);
     }
 
     if (status != ZX_OK) {
@@ -607,7 +607,7 @@ zx_status_t PlatformDevice::Start() {
     if (metadata_count > 0 || boot_metadata_count > 0) {
         for (size_t i = 0; i < metadata_count; i++) {
             const auto& metadata = dr->metadata(i);
-            status = DdkAddMetadata(metadata.type, metadata.data, metadata.len);
+            status = DdkAddMetadata(metadata.type, metadata.data_buffer, metadata.data_size);
             if (status != ZX_OK) {
                 DdkRemove();
                 return status;

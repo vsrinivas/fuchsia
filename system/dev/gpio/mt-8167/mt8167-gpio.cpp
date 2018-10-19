@@ -114,15 +114,16 @@ zx_status_t Mt8167GpioDevice::Bind() {
         .ctx = this,
     };
 
-    platform_bus_protocol_t pbus;
-    zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_PLATFORM_BUS, &pbus);
+    pbus_protocol_t pbus;
+    zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ZX_PROTOCOL_PLATFORM_BUS not available %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: ZX_PROTOCOL_PBUS not available %d\n", __FUNCTION__, status);
         return status;
     }
 
-    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio_proto, NULL,
-                                                NULL);
+    const platform_proxy_cb_t kCallback = {NULL, NULL};
+    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio_proto, sizeof(gpio_proto),
+                                    &kCallback);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pbus_register_protocol failed %d\n", __FUNCTION__, status);
         return status;

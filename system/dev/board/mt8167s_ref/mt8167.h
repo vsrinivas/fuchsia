@@ -30,7 +30,7 @@ using Mt8167Type = ddk::Device<Mt8167>;
 // This is the main class for the platform bus driver.
 class Mt8167 : public Mt8167Type {
 public:
-    explicit Mt8167(zx_device_t* parent, platform_bus_protocol_t* pbus)
+    explicit Mt8167(zx_device_t* parent, pbus_protocol_t* pbus)
         : Mt8167Type(parent), pbus_(pbus) {}
 
     static zx_status_t Create(zx_device_t* parent);
@@ -48,7 +48,7 @@ private:
     zx_status_t DisplayInit();
     int Thread();
 
-    ddk::PlatformBusProtocolProxy pbus_;
+    ddk::PBusProtocolProxy pbus_;
     thrd_t thread_;
 };
 

@@ -54,7 +54,7 @@ Since the platform bus driver is a generic driver that contains no information a
 platform it is running on, it first loads the board driver, which handles platform specific logic.
 To determine which board driver to load, platform bus driver reads the `BOOTDATA_PLATFORM_ID`
 record from the [ZBI data](../../system/public/zircon/boot/image.h) passed from the bootloader.
-It then adds a device with protocol `ZX_PROTOCOL_PLATFORM_BUS` with the
+It then adds a device with protocol `ZX_PROTOCOL_PBUS` with the
 `BIND_PLATFORM_DEV_VID` and `BIND_PLATFORM_DEV_PID` binding variables set to the vid and did
 from the platform data record. The correct board driver will bind to this device and continue
 the platform bus initialization process..
@@ -111,7 +111,7 @@ This allows platform device drivers to be more easily reused across different pl
 ## Platform Bus Protocol
 
 The [platform bus protocol](../../system/ulib/ddk/include/ddk/protocol/platform-bus.h)
-(`ZX_PROTOCOL_PLATFORM_BUS`) is used by board drivers and protocol implementation drivers
+(`ZX_PROTOCOL_PBUS`) is used by board drivers and protocol implementation drivers
 to communicate with the platform bus driver. It is only available to drivers running in the
 platform bus's devhost (in particular, it is not accessible to platform device drivers).
 The purpose of this protocol is for the board driver to load protocol implementation drivers

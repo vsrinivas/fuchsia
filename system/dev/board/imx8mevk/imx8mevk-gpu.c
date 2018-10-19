@@ -32,11 +32,11 @@ static const pbus_dev_t dev = {
     .vid = PDEV_VID_GENERIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_GPU_VSL_GC,
-    .mmios = mmios,
+    .mmio_list = mmios,
     .mmio_count = countof(mmios),
-    .irqs = irqs,
+    .irq_list = irqs,
     .irq_count = countof(irqs),
-    .btis = btis,
+    .bti_list = btis,
     .bti_count = countof(btis),
 };
 

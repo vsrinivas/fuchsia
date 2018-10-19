@@ -51,8 +51,8 @@ static const serial_port_info_t bt_uart_serial_info = {
 static const pbus_metadata_t bt_uart_metadata[] = {
     {
         .type = DEVICE_METADATA_SERIAL_PORT_INFO,
-        .data = &bt_uart_serial_info,
-        .len = sizeof(bt_uart_serial_info),
+        .data_buffer = &bt_uart_serial_info,
+        .data_size = sizeof(bt_uart_serial_info),
     },
 };
 
@@ -61,11 +61,11 @@ static pbus_dev_t bt_uart_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_AMLOGIC_UART,
-    .mmios = bt_uart_mmios,
+    .mmio_list = bt_uart_mmios,
     .mmio_count = countof(bt_uart_mmios),
-    .irqs = bt_uart_irqs,
+    .irq_list = bt_uart_irqs,
     .irq_count = countof(bt_uart_irqs),
-    .metadata = bt_uart_metadata,
+    .metadata_list = bt_uart_metadata,
     .metadata_count = countof(bt_uart_metadata),
 };
 
@@ -93,8 +93,8 @@ static const serial_port_info_t header_serial_info = {
 static const pbus_metadata_t header_metadata[] = {
     {
         .type = DEVICE_METADATA_SERIAL_PORT_INFO,
-        .data = &header_serial_info,
-        .len = sizeof(header_serial_info),
+        .data_buffer = &header_serial_info,
+        .data_size = sizeof(header_serial_info),
     },
 };
 
@@ -103,11 +103,11 @@ static pbus_dev_t header_uart_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_AMLOGIC_UART,
-    .mmios = header_uart_mmios,
+    .mmio_list = header_uart_mmios,
     .mmio_count = countof(header_uart_mmios),
-    .irqs = header_uart_irqs,
+    .irq_list = header_uart_irqs,
     .irq_count = countof(header_uart_irqs),
-    .metadata = header_metadata,
+    .metadata_list = header_metadata,
     .metadata_count = countof(header_metadata),
 };
 #endif

@@ -24,9 +24,9 @@
 namespace board_mt8167 {
 
 zx_status_t Mt8167::Create(zx_device_t* parent) {
-    platform_bus_protocol_t pbus;
+    pbus_protocol_t pbus;
 
-    auto status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &pbus);
+    auto status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus);
     if (status != ZX_OK) {
         return status;
     }

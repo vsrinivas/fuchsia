@@ -33,9 +33,9 @@ static const pbus_dev_t canvas_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_AMLOGIC_CANVAS,
-    .mmios = astro_canvas_mmios,
+    .mmio_list = astro_canvas_mmios,
     .mmio_count = countof(astro_canvas_mmios),
-    .btis = astro_canvas_btis,
+    .bti_list = astro_canvas_btis,
     .bti_count = countof(astro_canvas_btis),
 };
 

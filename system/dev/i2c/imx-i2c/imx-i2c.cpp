@@ -241,9 +241,9 @@ zx_status_t ImxI2cDevice::Bind(int id) {
         zxlogf(ERROR, "imx_i2c_bind: ZX_PROTOCOL_PLATFORM_DEV not available\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
-    platform_bus_protocol_t pbus;
-    if (device_get_protocol(parent(), ZX_PROTOCOL_PLATFORM_BUS, &pbus) != ZX_OK) {
-        zxlogf(ERROR, "imx_i2c_bind: ZX_PROTOCOL_PLATFORM_BUS not available\n");
+    pbus_protocol_t pbus;
+    if (device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus) != ZX_OK) {
+        zxlogf(ERROR, "imx_i2c_bind: ZX_PROTOCOL_PBUS not available\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -283,7 +283,8 @@ zx_status_t ImxI2cDevice::Bind(int id) {
         .ops = &ops_,
         .ctx = this,
     };
-    pbus_register_protocol(&pbus, ZX_PROTOCOL_I2C_IMPL, &i2c_proto, NULL, NULL);
+    const platform_proxy_cb_t kCallback = {NULL, NULL};
+    pbus_register_protocol(&pbus, ZX_PROTOCOL_I2C_IMPL, &i2c_proto, sizeof(i2c_proto), &kCallback);
 
     cleanup.cancel();
     return ZX_OK;

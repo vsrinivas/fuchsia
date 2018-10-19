@@ -46,9 +46,10 @@ zx_status_t PlatformBus::IommuGetBti(uint32_t iommu_index, uint32_t bti_id,
     return zx_bti_create(iommu_handle_.get(), 0, bti_id, out_handle);
 }
 
-zx_status_t PlatformBus::RegisterProtocol(uint32_t proto_id, void* protocol,
-                                          platform_proxy_cb_t proxy_cb, void* proxy_cb_cookie) {
-    if (!protocol) {
+zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const void* protocol,
+                                              size_t protocol_size,
+                                              const platform_proxy_cb_t* proxy_cb) {
+    if (!protocol || protocol_size < sizeof(ddk::AnyProtocol)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -56,21 +57,21 @@ zx_status_t PlatformBus::RegisterProtocol(uint32_t proto_id, void* protocol,
 
     switch (proto_id) {
     case ZX_PROTOCOL_GPIO_IMPL: {
-        if (proxy_cb != nullptr) {
+        if (proxy_cb->callback != nullptr) {
             return ZX_ERR_INVALID_ARGS;
         }
         gpio_.reset(new (&ac) ddk::GpioImplProtocolProxy(
-                                                static_cast<gpio_impl_protocol_t*>(protocol)));
+            static_cast<const gpio_impl_protocol_t*>(protocol)));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
         break;
     }
     case ZX_PROTOCOL_I2C_IMPL: {
-        if (proxy_cb != nullptr) {
+        if (proxy_cb->callback != nullptr) {
             return ZX_ERR_INVALID_ARGS;
         }
-        auto proto = static_cast<i2c_impl_protocol_t*>(protocol);
+        auto proto = static_cast<const i2c_impl_protocol_t*>(protocol);
         auto status = I2cInit(proto);
         if (status != ZX_OK) {
             return status;
@@ -83,27 +84,27 @@ zx_status_t PlatformBus::RegisterProtocol(uint32_t proto_id, void* protocol,
         break;
     }
     case ZX_PROTOCOL_CLK: {
-        if (proxy_cb != nullptr) {
+        if (proxy_cb->callback != nullptr) {
             return ZX_ERR_INVALID_ARGS;
         }
-        clk_.reset(new (&ac) ddk::ClkProtocolProxy(static_cast<clk_protocol_t*>(protocol)));
+        clk_.reset(new (&ac) ddk::ClkProtocolProxy(static_cast<const clk_protocol_t*>(protocol)));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
         break;
     }
     case ZX_PROTOCOL_IOMMU: {
-        if (proxy_cb != nullptr) {
+        if (proxy_cb->callback != nullptr) {
             return ZX_ERR_INVALID_ARGS;
         }
-        iommu_.reset(new (&ac) ddk::IommuProtocolProxy(static_cast<iommu_protocol_t*>(protocol)));
+        iommu_.reset(new (&ac) ddk::IommuProtocolProxy(static_cast<const iommu_protocol_t*>(protocol)));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
         break;
     }
     default: {
-        if (proxy_cb == nullptr) {
+        if (proxy_cb->callback == nullptr) {
             return ZX_ERR_NOT_SUPPORTED;
         }
 
@@ -115,8 +116,8 @@ zx_status_t PlatformBus::RegisterProtocol(uint32_t proto_id, void* protocol,
 
         fbl::AllocChecker ac;
         auto proxy = fbl::make_unique_checked<ProtoProxy>(&ac, proto_id,
-                                            static_cast<ddk::AnyProtocol*>(protocol), proxy_cb,
-                                            proxy_cb_cookie);
+                                                          static_cast<const ddk::AnyProtocol*>(protocol),
+                                                          *proxy_cb);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -132,7 +133,7 @@ zx_status_t PlatformBus::RegisterProtocol(uint32_t proto_id, void* protocol,
     return ZX_OK;
 }
 
-zx_status_t PlatformBus::DeviceAdd(const pbus_dev_t* pdev) {
+zx_status_t PlatformBus::PBusDeviceAdd(const pbus_dev_t* pdev) {
     if (!pdev->name) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -162,7 +163,7 @@ zx_status_t PlatformBus::DeviceAdd(const pbus_dev_t* pdev) {
     return ZX_OK;
 }
 
-zx_status_t PlatformBus::ProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* pdev) {
+zx_status_t PlatformBus::PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* pdev) {
     if (!pdev->name) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -200,11 +201,11 @@ zx_status_t PlatformBus::ProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* 
     return ZX_OK;
 }
 
-const char* PlatformBus::GetBoardName() {
+const char* PlatformBus::PBusGetBoardName() {
     return board_info_.board_name;
 }
 
-zx_status_t PlatformBus::SetBoardInfo(const pbus_board_info_t* info) {
+zx_status_t PlatformBus::PBusSetBoardInfo(const pbus_board_info_t* info) {
     board_info_.board_revision = info->board_revision;
     return ZX_OK;
 }
@@ -216,10 +217,10 @@ zx_status_t PlatformBus::GetBoardInfo(pdev_board_info_t* out_info) {
 
 zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
     switch (proto_id) {
-    case ZX_PROTOCOL_PLATFORM_BUS: {
-        auto proto = static_cast<platform_bus_protocol_t*>(out);
+    case ZX_PROTOCOL_PBUS: {
+        auto proto = static_cast<pbus_protocol_t*>(out);
         proto->ctx = this;
-        proto->ops = &pbus_proto_ops_;
+        proto->ops = &ops_;
         return ZX_OK;
     }
     case ZX_PROTOCOL_GPIO_IMPL:
@@ -414,7 +415,7 @@ zx_status_t PlatformBus::GetZbiMetadata(uint32_t type, uint32_t extra, const voi
     return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t PlatformBus::I2cInit(i2c_impl_protocol_t* i2c) {
+zx_status_t PlatformBus::I2cInit(const i2c_impl_protocol_t* i2c) {
     if (!i2c_buses_.is_empty()) {
         // already initialized
         return ZX_ERR_BAD_STATE;

@@ -2,121 +2,159 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
+//          MODIFY system/fidl/protocols/platform_bus.banjo INSTEAD.
+
 #pragma once
 
-#include <ddk/driver.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include "platform-bus-internal.h"
 
-// DDK platform bus protocol support.
+// DDK pbus-protocol support
 //
 // :: Proxies ::
 //
-// ddk::PlatformBusProtocolProxy is a simple wrappers around platform_bus_protocol_t. It does
-// not own the pointers passed to it.
+// ddk::PBusProtocolProxy is a simple wrapper around
+// pbus_protocol_t. It does not own the pointers passed to it
 //
 // :: Mixins ::
 //
-// ddk::PlatformBusProtocol is a mixin class that simplifies writing DDK drivers that
-// implement the platform bus protocol.
+// ddk::PBusProtocol is a mixin class that simplifies writing DDK drivers
+// that implement the pbus protocol. It doesn't set the base protocol.
 //
 // :: Examples ::
 //
-// // A driver that implements a ZX_PROTOCOL_PLATFORM_BUS device.
-// class PlatformBusDevice;
-// using PlatformBusDeviceType = ddk::Device<PlatformBusDevice, /* ddk mixins */>;
+// // A driver that implements a ZX_PROTOCOL_PBUS device.
+// class PBusDevice {
+// using PBusDeviceType = ddk::Device<PBusDevice, /* ddk mixins */>;
 //
-// class PlatformBusDevice : public PlatformBusDeviceType,
-//                           public ddk::PlatformBusProtocol<PlatformBusDevice> {
+// class PBusDevice : public PBusDeviceType,
+//                    public ddk::PBusProtocol<PBusDevice> {
 //   public:
-//     PlatformBusDevice(zx_device_t* parent)
-//       : PlatformBusDeviceType("my-platform-bus", parent) {}
+//     PBusDevice(zx_device_t* parent)
+//         : PBusDeviceType("my-pbus-protocol-device", parent) {}
 //
-//    zx_status_t DeviceAdd(const pbus_dev_t* dev);
-//    zx_status_t ProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev);
-//    zx_status_t RegisterProtocol(uint32_t proto_id, void* protocol, platform_proxy_cb_t proxy_cb,
-//                                 void* proxy_cb_cookie);
-//    const char* GetBoardName();
-//    zx_status_t SetBoardInfo(const pbus_board_info_t* info);
+//     zx_status_t PBusDeviceAdd(const pbus_dev_t* dev);
+//
+//     zx_status_t PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev);
+//
+//     zx_status_t PBusRegisterProtocol(uint32_t proto_id, const void* protocol_buffer, size_t
+//     protocol_size, const platform_proxy_cb_t* proxy_cb);
+//
+//     const char* PBusGetBoardName();
+//
+//     zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info);
+//
 //     ...
 // };
 
 namespace ddk {
 
 template <typename D>
-class PlatformBusProtocol : public internal::base_protocol {
+class PBusProtocol : public internal::base_protocol {
 public:
-    PlatformBusProtocol() {
-        internal::CheckPlatformBusProtocolSubclass<D>();
-        pbus_proto_ops_.device_add = DeviceAdd;
-        pbus_proto_ops_.protocol_device_add = ProtocolDeviceAdd;
-        pbus_proto_ops_.register_protocol = RegisterProtocol;
-        pbus_proto_ops_.get_board_name = GetBoardName;
-        pbus_proto_ops_.set_board_info = SetBoardInfo;
+    PBusProtocol() {
+        internal::CheckPBusProtocolSubclass<D>();
+        ops_.device_add = PBusDeviceAdd;
+        ops_.protocol_device_add = PBusProtocolDeviceAdd;
+        ops_.register_protocol = PBusRegisterProtocol;
+        ops_.get_board_name = PBusGetBoardName;
+        ops_.set_board_info = PBusSetBoardInfo;
 
         // Can only inherit from one base_protocol implementation.
         ZX_ASSERT(ddk_proto_id_ == 0);
-        ddk_proto_id_ = ZX_PROTOCOL_PLATFORM_BUS;
-        ddk_proto_ops_ = &pbus_proto_ops_;
+        ddk_proto_id_ = ZX_PROTOCOL_PBUS;
+        ddk_proto_ops_ = &ops_;
     }
 
 protected:
-    platform_bus_protocol_ops_t pbus_proto_ops_ = {};
+    pbus_protocol_ops_t ops_ = {};
 
 private:
-    static zx_status_t DeviceAdd(void* ctx, const pbus_dev_t* dev) {
-        return static_cast<D*>(ctx)->DeviceAdd(dev);
+    // Adds a new platform device to the bus, using configuration provided by |dev|.
+    // Platform devices are created in their own separate devhosts.
+    static zx_status_t PBusDeviceAdd(void* ctx, const pbus_dev_t* dev) {
+        return static_cast<D*>(ctx)->PBusDeviceAdd(dev);
     }
-
-    static zx_status_t ProtocolDeviceAdd(void* ctx, uint32_t proto_id, const pbus_dev_t* dev) {
-        return static_cast<D*>(ctx)->ProtocolDeviceAdd(proto_id, dev);
+    // Adds a device for binding a protocol implementation driver.
+    // These devices are added in the same devhost as the platform bus.
+    // After the driver binds to the device it calls `pbus_register_protocol()`
+    // to register its protocol with the platform bus.
+    // `pbus_protocol_device_add()` blocks until the protocol implementation driver
+    // registers its protocol (or times out).
+    static zx_status_t PBusProtocolDeviceAdd(void* ctx, uint32_t proto_id, const pbus_dev_t* dev) {
+        return static_cast<D*>(ctx)->PBusProtocolDeviceAdd(proto_id, dev);
     }
-
-    static zx_status_t RegisterProtocol(void* ctx, uint32_t proto_id, void* protocol,
-                                        platform_proxy_cb_t proxy_cb, void* proxy_cb_cookie) {
-        return static_cast<D*>(ctx)->RegisterProtocol(proto_id, protocol, proxy_cb, proxy_cb_cookie);
+    // Called by protocol implementation drivers to register their protocol
+    // with the platform bus.
+    static zx_status_t PBusRegisterProtocol(void* ctx, uint32_t proto_id,
+                                            const void* protocol_buffer, size_t protocol_size,
+                                            const platform_proxy_cb_t* proxy_cb) {
+        return static_cast<D*>(ctx)->PBusRegisterProtocol(proto_id, protocol_buffer, protocol_size,
+                                                          proxy_cb);
     }
-
-    static const char* GetBoardName(void* ctx) {
-        return static_cast<D*>(ctx)->GetBoardName();
+    // Returns the board name for the underlying hardware.
+    // Board drivers may use this to differentiate between multiple boards that they support.
+    static const char* PBusGetBoardName(void* ctx) {
+        return static_cast<D*>(ctx)->PBusGetBoardName();
     }
-
-    static zx_status_t SetBoardInfo(void* ctx, const pbus_board_info_t* info) {
-        return static_cast<D*>(ctx)->SetBoardInfo(info);
+    // Board drivers may use this to set information about the board
+    // (like the board revision number).
+    // Platform device drivers can access this via `pdev_get_board_info()`.
+    static zx_status_t PBusSetBoardInfo(void* ctx, const pbus_board_info_t* info) {
+        return static_cast<D*>(ctx)->PBusSetBoardInfo(info);
     }
 };
 
-class PlatformBusProtocolProxy {
+class PBusProtocolProxy {
 public:
-    PlatformBusProtocolProxy(platform_bus_protocol_t* proto)
-        : ops_(proto->ops), ctx_(proto->ctx) {}
+    PBusProtocolProxy() : ops_(nullptr), ctx_(nullptr) {}
+    PBusProtocolProxy(const pbus_protocol_t* proto) : ops_(proto->ops), ctx_(proto->ctx) {}
 
-    zx_status_t DeviceAdd(const pbus_dev_t* dev) {
-        return ops_->device_add(ctx_, dev);
+    void GetProto(pbus_protocol_t* proto) {
+        proto->ctx = ctx_;
+        proto->ops = ops_;
     }
-
+    bool is_valid() { return ops_ != nullptr; }
+    void clear() {
+        ctx_ = nullptr;
+        ops_ = nullptr;
+    }
+    // Adds a new platform device to the bus, using configuration provided by |dev|.
+    // Platform devices are created in their own separate devhosts.
+    zx_status_t DeviceAdd(const pbus_dev_t* dev) { return ops_->device_add(ctx_, dev); }
+    // Adds a device for binding a protocol implementation driver.
+    // These devices are added in the same devhost as the platform bus.
+    // After the driver binds to the device it calls `pbus_register_protocol()`
+    // to register its protocol with the platform bus.
+    // `pbus_protocol_device_add()` blocks until the protocol implementation driver
+    // registers its protocol (or times out).
     zx_status_t ProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev) {
         return ops_->protocol_device_add(ctx_, proto_id, dev);
     }
-
-    zx_status_t RegisterProtocol(uint32_t proto_id, void* protocol, platform_proxy_cb_t proxy_cb,
-                                 void* proxy_cb_cookie) {
-        return ops_->register_protocol(ctx_, proto_id, protocol, proxy_cb, proxy_cb_cookie);
+    // Called by protocol implementation drivers to register their protocol
+    // with the platform bus.
+    zx_status_t RegisterProtocol(uint32_t proto_id, const void* protocol_buffer,
+                                 size_t protocol_size, const platform_proxy_cb_t* proxy_cb) {
+        return ops_->register_protocol(ctx_, proto_id, protocol_buffer, protocol_size, proxy_cb);
     }
-
-    const char* GetBoardName() {
-        return ops_->get_board_name(ctx_);
-    }
-
+    // Returns the board name for the underlying hardware.
+    // Board drivers may use this to differentiate between multiple boards that they support.
+    const char* GetBoardName() { return ops_->get_board_name(ctx_); }
+    // Board drivers may use this to set information about the board
+    // (like the board revision number).
+    // Platform device drivers can access this via `pdev_get_board_info()`.
     zx_status_t SetBoardInfo(const pbus_board_info_t* info) {
         return ops_->set_board_info(ctx_, info);
     }
 
 private:
-    platform_bus_protocol_ops_t* ops_;
+    pbus_protocol_ops_t* ops_;
     void* ctx_;
 };
 

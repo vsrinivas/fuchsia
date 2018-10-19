@@ -19,7 +19,7 @@
 
 namespace platform_bus {
 
-PlatformI2cBus::PlatformI2cBus(i2c_impl_protocol_t* i2c, uint32_t bus_id)
+PlatformI2cBus::PlatformI2cBus(const i2c_impl_protocol_t* i2c, uint32_t bus_id)
     : i2c_(i2c), bus_id_(bus_id) {
 
     list_initialize(&queued_txns_);

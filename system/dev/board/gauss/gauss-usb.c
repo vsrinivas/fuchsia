@@ -43,11 +43,11 @@ static const pbus_dev_t xhci_dev = {
     .vid = PDEV_VID_GENERIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_USB_XHCI,
-    .mmios = xhci_mmios,
+    .mmio_list = xhci_mmios,
     .mmio_count = countof(xhci_mmios),
-    .irqs = xhci_irqs,
+    .irq_list = xhci_irqs,
     .irq_count = countof(xhci_irqs),
-    .btis = xhci_btis,
+    .bti_list = xhci_btis,
     .bti_count = countof(xhci_btis),
 };
 

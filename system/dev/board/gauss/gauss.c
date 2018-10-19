@@ -54,7 +54,7 @@ static const pbus_dev_t i2c_test_dev = {
     .vid = PDEV_VID_GOOGLE,
     .pid = PDEV_PID_GAUSS,
     .did = PDEV_DID_GAUSS_I2C_TEST,
-    .i2c_channels = i2c_test_channels,
+    .i2c_channel_list = i2c_test_channels,
     .i2c_channel_count = countof(i2c_test_channels),
 };
 #endif
@@ -71,7 +71,7 @@ static const pbus_dev_t led_dev = {
     .vid = PDEV_VID_GOOGLE,
     .pid = PDEV_PID_GAUSS,
     .did = PDEV_DID_GAUSS_LED,
-    .i2c_channels = led_i2c_channels,
+    .i2c_channel_list = led_i2c_channels,
     .i2c_channel_count = countof(led_i2c_channels),
 };
 
@@ -195,7 +195,7 @@ static zx_status_t gauss_bus_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &bus->pbus);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &bus->pbus);
     if (status != ZX_OK) {
         goto fail;
     }
@@ -247,7 +247,7 @@ static zx_driver_ops_t gauss_bus_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(gauss_bus, gauss_bus_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_BUS),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_GAUSS),
 ZIRCON_DRIVER_END(gauss_bus)

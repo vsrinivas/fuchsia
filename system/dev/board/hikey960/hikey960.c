@@ -50,7 +50,9 @@ static int hikey960_start_thread(void* arg) {
     if (status != ZX_OK) {
         goto fail;
     }
-    status = pbus_register_protocol(&hikey->pbus, ZX_PROTOCOL_GPIO_IMPL, &hikey->gpio, NULL, NULL);
+    const platform_proxy_cb_t kCallback = {NULL, NULL};
+    status = pbus_register_protocol(&hikey->pbus, ZX_PROTOCOL_GPIO_IMPL, &hikey->gpio,
+                                    sizeof(hikey->gpio), &kCallback);
     if (status != ZX_OK) {
         goto fail;
     }
@@ -83,7 +85,7 @@ static zx_status_t hikey960_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &hikey->pbus);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &hikey->pbus);
     if (status != ZX_OK) {
         free(hikey);
         return ZX_ERR_NOT_SUPPORTED;
@@ -147,7 +149,7 @@ static zx_driver_ops_t hikey960_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(hikey960, hikey960_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_BUS),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_96BOARDS),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_HIKEY960),
 ZIRCON_DRIVER_END(hikey960)

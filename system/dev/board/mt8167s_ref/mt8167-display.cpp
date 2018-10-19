@@ -39,11 +39,11 @@ zx_status_t Mt8167::DisplayInit() {
     display_dev.vid = PDEV_VID_MEDIATEK;
     display_dev.pid = PDEV_PID_MEDIATEK_8167S_REF;
     display_dev.did = PDEV_DID_MEDIATEK_DISPLAY;
-    display_dev.mmios = display_mmios;
+    display_dev.mmio_list = display_mmios;
     display_dev.mmio_count = countof(display_mmios);
-    display_dev.btis = display_btis;
+    display_dev.bti_list = display_btis;
     display_dev.bti_count = countof(display_btis);
-    display_dev.irqs = display_irqs;
+    display_dev.irq_list = display_irqs;
     display_dev.irq_count = countof(display_irqs);
 
     zx_status_t status = pbus_.DeviceAdd(&display_dev);

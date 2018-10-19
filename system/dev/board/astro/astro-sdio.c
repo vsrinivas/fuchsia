@@ -25,9 +25,9 @@ static const wifi_config_t wifi_config = {
 
 static const pbus_metadata_t wifi_metadata[] = {
     {
-        .type       = DEVICE_METADATA_PRIVATE,
-        .data       = &wifi_config,
-        .len        = sizeof(wifi_config),
+        .type        = DEVICE_METADATA_PRIVATE,
+        .data_buffer = &wifi_config,
+        .data_size   = sizeof(wifi_config),
     }
 };
 
@@ -42,11 +42,11 @@ static const pbus_dev_t sdio_children[] = {
     {
         // Wifi driver.
         .name = "astro-wifi",
-        .gpios = wifi_gpios,
+        .gpio_list = wifi_gpios,
         .gpio_count = countof(wifi_gpios),
-        .metadata = wifi_metadata,
+        .metadata_list = wifi_metadata,
         .metadata_count = countof(wifi_metadata),
-        .boot_metadata = wifi_boot_metadata,
+        .boot_metadata_list = wifi_boot_metadata,
         .boot_metadata_count = countof(wifi_boot_metadata),
     },
 };
@@ -55,7 +55,7 @@ static const pbus_dev_t aml_sd_emmc_children[] = {
     {
         // Generic SDIO driver.
         .name = "sdio",
-        .children = sdio_children,
+        .child_list = sdio_children,
         .child_count = countof(sdio_children),
     },
 };
@@ -98,9 +98,9 @@ static aml_sd_emmc_config_t config = {
 
 static const pbus_metadata_t aml_sd_emmc_metadata[] = {
     {
-        .type       = DEVICE_METADATA_PRIVATE,
-        .data       = &config,
-        .len        = sizeof(config),
+        .type        = DEVICE_METADATA_PRIVATE,
+        .data_buffer = &config,
+        .data_size   = sizeof(config),
     }
 };
 
@@ -109,17 +109,17 @@ static const pbus_dev_t aml_sd_emmc_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_AMLOGIC_SD_EMMC,
-    .mmios = aml_sd_emmc_mmios,
+    .mmio_list = aml_sd_emmc_mmios,
     .mmio_count = countof(aml_sd_emmc_mmios),
-    .irqs = aml_sd_emmc_irqs,
+    .irq_list = aml_sd_emmc_irqs,
     .irq_count = countof(aml_sd_emmc_irqs),
-    .btis = aml_sd_emmc_btis,
+    .bti_list = aml_sd_emmc_btis,
     .bti_count = countof(aml_sd_emmc_btis),
-    .gpios = aml_sd_emmc_gpios,
+    .gpio_list = aml_sd_emmc_gpios,
     .gpio_count = countof(aml_sd_emmc_gpios),
-    .metadata = aml_sd_emmc_metadata,
+    .metadata_list = aml_sd_emmc_metadata,
     .metadata_count = countof(aml_sd_emmc_metadata),
-    .children = aml_sd_emmc_children,
+    .child_list = aml_sd_emmc_children,
     .child_count = countof(aml_sd_emmc_children),
 };
 

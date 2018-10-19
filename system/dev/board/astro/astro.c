@@ -182,7 +182,7 @@ static zx_status_t aml_bus_bind(void* ctx, zx_device_t* parent) {
     }
     bus->parent = parent;
 
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &bus->pbus);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &bus->pbus);
     if (status != ZX_OK) {
         goto fail;
     }
@@ -227,7 +227,7 @@ static zx_driver_ops_t aml_bus_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(aml_bus, aml_bus_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_BUS),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_ASTRO),
 ZIRCON_DRIVER_END(aml_bus)

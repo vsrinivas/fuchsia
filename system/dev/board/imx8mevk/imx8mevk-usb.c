@@ -43,8 +43,8 @@ static usb_mode_t usb1_mode = USB_MODE_HOST;
 static const pbus_metadata_t usb1_metadata[] = {
     {
         .type = DEVICE_METADATA_USB_MODE,
-        .data = &usb1_mode,
-        .len = sizeof(usb1_mode),
+        .data_buffer = &usb1_mode,
+        .data_size = sizeof(usb1_mode),
     }};
 
 // USB1 is USB-C OTG port
@@ -53,13 +53,13 @@ static const pbus_dev_t usb1_dev = {
     .vid = PDEV_VID_GENERIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_USB_DWC3,
-    .mmios = usb1_mmios,
+    .mmio_list = usb1_mmios,
     .mmio_count = countof(usb1_mmios),
-    .irqs = usb1_irqs,
+    .irq_list = usb1_irqs,
     .irq_count = countof(usb1_irqs),
-    .btis = usb1_btis,
+    .bti_list = usb1_btis,
     .bti_count = countof(usb1_btis),
-    .metadata = usb1_metadata,
+    .metadata_list = usb1_metadata,
     .metadata_count = countof(usb1_metadata),
 };
 
@@ -88,8 +88,8 @@ static usb_mode_t usb2_mode = USB_MODE_HOST;
 static const pbus_metadata_t usb2_metadata[] = {
     {
         .type = DEVICE_METADATA_USB_MODE,
-        .data = &usb2_mode,
-        .len = sizeof(usb2_mode),
+        .data_buffer = &usb2_mode,
+        .data_size = sizeof(usb2_mode),
     }};
 
 // USB1 is USB-A port, host only
@@ -98,13 +98,13 @@ static const pbus_dev_t usb2_dev = {
     .vid = PDEV_VID_GENERIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_USB_DWC3,
-    .mmios = usb2_mmios,
+    .mmio_list = usb2_mmios,
     .mmio_count = countof(usb2_mmios),
-    .irqs = usb2_irqs,
+    .irq_list = usb2_irqs,
     .irq_count = countof(usb2_irqs),
-    .btis = usb2_btis,
+    .bti_list = usb2_btis,
     .bti_count = countof(usb2_btis),
-    .metadata = usb2_metadata,
+    .metadata_list = usb2_metadata,
     .metadata_count = countof(usb2_metadata),
 };
 

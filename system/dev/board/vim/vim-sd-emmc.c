@@ -79,8 +79,8 @@ static aml_sd_emmc_config_t config = {
 static const pbus_metadata_t emmc_metadata[] = {
     {
         .type       = DEVICE_METADATA_PRIVATE,
-        .data       = &config,
-        .len        = sizeof(config),
+        .data_buffer       = &config,
+        .data_size        = sizeof(config),
     },
 };
 
@@ -96,17 +96,17 @@ static const pbus_dev_t emmc_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_AMLOGIC_SD_EMMC,
-    .mmios = emmc_mmios,
+    .mmio_list = emmc_mmios,
     .mmio_count = countof(emmc_mmios),
-    .irqs = emmc_irqs,
+    .irq_list = emmc_irqs,
     .irq_count = countof(emmc_irqs),
-    .btis = emmc_btis,
+    .bti_list = emmc_btis,
     .bti_count = countof(emmc_btis),
-    .gpios = emmc_gpios,
+    .gpio_list = emmc_gpios,
     .gpio_count = countof(emmc_gpios),
-    .metadata = emmc_metadata,
+    .metadata_list = emmc_metadata,
     .metadata_count = countof(emmc_metadata),
-    .boot_metadata = emmc_boot_metadata,
+    .boot_metadata_list = emmc_boot_metadata,
     .boot_metadata_count = countof(emmc_boot_metadata),
 };
 

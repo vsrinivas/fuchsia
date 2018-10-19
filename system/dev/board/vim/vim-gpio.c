@@ -73,9 +73,9 @@ static const pbus_dev_t gpio_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_AMLOGIC_S912,
     .did = PDEV_DID_AMLOGIC_GPIO,
-    .mmios = gpio_mmios,
+    .mmio_list = gpio_mmios,
     .mmio_count = countof(gpio_mmios),
-    .irqs = gpio_irqs,
+    .irq_list = gpio_irqs,
     .irq_count = countof(gpio_irqs),
 };
 
@@ -111,7 +111,7 @@ zx_status_t vim_gpio_init(vim_bus_t* bus) {
         .vid = PDEV_VID_GENERIC,
         .pid = PDEV_PID_GENERIC,
         .did = PDEV_DID_GPIO_TEST,
-        .gpios = gpio_test_gpios,
+        .gpio_list = gpio_test_gpios,
         .gpio_count = countof(gpio_test_gpios),
     };
 

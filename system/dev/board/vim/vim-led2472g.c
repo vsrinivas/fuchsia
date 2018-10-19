@@ -22,7 +22,7 @@ static const pbus_dev_t led2472g_dev = {
     .vid = PDEV_VID_GENERIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_LED2472G,
-    .i2c_channels = led2472g_channels,
+    .i2c_channel_list = led2472g_channels,
     .i2c_channel_count = countof(led2472g_channels),
 };
 

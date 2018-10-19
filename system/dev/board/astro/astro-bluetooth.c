@@ -44,8 +44,8 @@ static const serial_port_info_t bt_uart_serial_info = {
 static const pbus_metadata_t bt_uart_metadata[] = {
     {
         .type = DEVICE_METADATA_SERIAL_PORT_INFO,
-        .data = &bt_uart_serial_info,
-        .len = sizeof(bt_uart_serial_info),
+        .data_buffer = &bt_uart_serial_info,
+        .data_size = sizeof(bt_uart_serial_info),
     },
 };
 
@@ -61,13 +61,13 @@ static pbus_dev_t bt_uart_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_AMLOGIC_UART,
-    .mmios = bt_uart_mmios,
+    .mmio_list = bt_uart_mmios,
     .mmio_count = countof(bt_uart_mmios),
-    .irqs = bt_uart_irqs,
+    .irq_list = bt_uart_irqs,
     .irq_count = countof(bt_uart_irqs),
-    .metadata = bt_uart_metadata,
+    .metadata_list = bt_uart_metadata,
     .metadata_count = countof(bt_uart_metadata),
-    .boot_metadata = bt_uart_boot_metadata,
+    .boot_metadata_list = bt_uart_boot_metadata,
     .boot_metadata_count = countof(bt_uart_boot_metadata),
 };
 

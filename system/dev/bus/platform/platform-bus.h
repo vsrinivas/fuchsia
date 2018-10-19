@@ -34,7 +34,7 @@ class PlatformBus;
 using PlatformBusType = ddk::Device<PlatformBus, ddk::GetProtocolable>;
 
 // This is the main class for the platform bus driver.
-class PlatformBus : public PlatformBusType, public ddk::PlatformBusProtocol<PlatformBus>,
+class PlatformBus : public PlatformBusType, public ddk::PBusProtocol<PlatformBus>,
                     public ddk::IommuProtocol<PlatformBus> {
 public:
     static zx_status_t Create(zx_device_t* parent, const char* name, zx::vmo zbi);
@@ -46,12 +46,12 @@ public:
     void DdkRelease();
 
     // Platform bus protocol implementation.
-    zx_status_t DeviceAdd(const pbus_dev_t* dev);
-    zx_status_t ProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev);
-    zx_status_t RegisterProtocol(uint32_t proto_id, void* protocol, platform_proxy_cb_t proxy_cb,
-                                 void* proxy_cb_cookie);
-    const char* GetBoardName();
-    zx_status_t SetBoardInfo(const pbus_board_info_t* info);
+    zx_status_t PBusDeviceAdd(const pbus_dev_t* dev);
+    zx_status_t PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev);
+    zx_status_t PBusRegisterProtocol(uint32_t proto_id, const void* protocol, size_t protocol_size,
+                                     const platform_proxy_cb_t* proxy_cb);
+    const char* PBusGetBoardName();
+    zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info);
 
     // IOMMU protocol implementation.
     zx_status_t IommuGetBti(uint32_t iommu_index, uint32_t bti_id, zx_handle_t* out_handle);
@@ -81,23 +81,25 @@ private:
     // It also is the element type for the proto_proxys_ WAVL tree.
     class ProtoProxy : public fbl::WAVLTreeContainable<fbl::unique_ptr<ProtoProxy>> {
     public:
-        ProtoProxy(uint32_t proto_id, ddk::AnyProtocol* protocol, platform_proxy_cb_t proxy_cb,
-                   void* proxy_cb_cookie)
-            : proto_id_(proto_id), protocol_(*protocol), proxy_cb_(proxy_cb),
-              proxy_cb_cookie_(proxy_cb_cookie) {}
+        ProtoProxy(uint32_t proto_id, const ddk::AnyProtocol* protocol,
+                   const platform_proxy_cb_t& proxy_cb)
+            : proto_id_(proto_id), protocol_(*protocol), proxy_cb_(proxy_cb) {}
 
         inline uint32_t GetKey() const { return proto_id_; }
         inline void GetProtocol(void* out) const { memcpy(out, &protocol_, sizeof(protocol_)); }
 
         inline void Proxy(platform_proxy_args_t* args) {
-            proxy_cb_(args, proxy_cb_cookie_);
+            proxy_cb_.callback(proxy_cb_.ctx, args->req, args->req_size,
+                               args->req_handles, args->req_handle_count,
+                               args->resp, args->resp_size, &args->resp_actual_size,
+                               args->resp_handles, args->resp_handle_count,
+                               &args->resp_actual_handles);
         }
 
     private:
         const uint32_t proto_id_;
-        ddk::AnyProtocol protocol_;
-        const platform_proxy_cb_t proxy_cb_;
-        void* proxy_cb_cookie_;
+        const ddk::AnyProtocol protocol_;
+        platform_proxy_cb_t proxy_cb_;
     };
 
 
@@ -110,7 +112,7 @@ private:
     // Reads the platform ID and driver metadata records from the boot image.
     zx_status_t ReadZbi(zx::vmo zbi);
 
-    zx_status_t I2cInit(i2c_impl_protocol_t* i2c);
+    zx_status_t I2cInit(const i2c_impl_protocol_t* i2c);
 
     pdev_board_info_t board_info_;
 

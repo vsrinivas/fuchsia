@@ -63,7 +63,8 @@ std::string NameCount(const DdkGenerator::Member& member) {
 
 bool ReturnFirst(const std::vector<DdkGenerator::Member>& output) {
     return output.size() > 0 && (output[0].kind == flat::Type::Kind::kHandle ||
-                                 output[0].kind == flat::Type::Kind::kPrimitive);
+                                 output[0].kind == flat::Type::Kind::kPrimitive ||
+                                 output[0].kind == flat::Type::Kind::kString);
 }
 
 void EmitFileComment(std::ostream* file, banjo::StringView name) {
@@ -145,8 +146,8 @@ void EmitMemberDecl(std::ostream* file, const DdkGenerator::Member& member, bool
                   << kIndent << "size_t " << NameCount(member) << ";\n"
                   << kIndent << "size_t" << member_name << "_actual";
         } else {
-            *file << member.element_type << (output ? "** " : "* ") << NameBuffer(member) << ";\n"
-                  << kIndent << "size_t " << NameCount(member);
+            *file << "const " << member.element_type << (output ? "** " : "* ")
+                  << NameBuffer(member) << ";\n" << kIndent << "size_t " << NameCount(member);
         }
         break;
     case flat::Type::Kind::kString:
@@ -524,6 +525,7 @@ void EmitSyncMethodImpl(std::ostream* file, const std::string& protocol_name,
             break;
         case flat::Type::Kind::kString:
             *file << kIndent << "ctx." << name << " = out_" << name << ";\n";
+            *file << kIndent << "ctx." << name << "capacity = out_" << name << "capacity;\n";
             break;
         case flat::Type::Kind::kHandle:
         case flat::Type::Kind::kRequestHandle:
@@ -699,8 +701,7 @@ flat::Decl::Kind GetDeclKind(const flat::Library* library, const flat::Type* typ
     return named_decl->kind;
 }
 
-std::string NameType(const flat::Type* type, const flat::Decl::Kind& decl_kind,
-                     bool for_struct = false) {
+std::string NameType(const flat::Type* type, const flat::Decl::Kind& decl_kind) {
     for (;;) {
         switch (type->kind) {
         case flat::Type::Kind::kHandle:

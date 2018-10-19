@@ -143,11 +143,10 @@ zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    platform_bus_protocol_t pbus;
-    status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &pbus);
+    pbus_protocol_t pbus;
+    status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml-clk: failed to get ZX_PROTOCOL_PLATFORM_BUS, "
-                      "st = %d\n",
+        zxlogf(ERROR, "aml-clk: failed to get ZX_PROTOCOL_PBUS, st = %d\n",
                status);
         return status;
     }
@@ -157,7 +156,9 @@ zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
         .ctx = this,
     };
 
-    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLK, &clk_proto, NULL, NULL);
+    const platform_proxy_cb_t kCallback = {NULL, NULL};
+    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLK, &clk_proto, sizeof(clk_proto),
+                                    &kCallback);
     if (status != ZX_OK) {
         zxlogf(ERROR, "meson_clk_bind: pbus_register_protocol failed, st = %d\n", status);
         return status;

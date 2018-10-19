@@ -52,9 +52,9 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
         return status;
     }
 
-    platform_bus_protocol_t pbus;
-    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &pbus)) != ZX_OK) {
-        zxlogf(ERROR, "AmlGxlGpio::Create: ZX_PROTOCOL_PLATFORM_BUS not available\n");
+    pbus_protocol_t pbus;
+    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus)) != ZX_OK) {
+        zxlogf(ERROR, "AmlGxlGpio::Create: ZX_PROTOCOL_PBUS not available\n");
         return status;
     }
 
@@ -161,13 +161,15 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
     return ZX_OK;
 }
 
-void AmlGxlGpio::Bind(const platform_bus_protocol_t& pbus) {
+void AmlGxlGpio::Bind(const pbus_protocol_t& pbus) {
     gpio_impl_protocol_t gpio_proto = {
         .ops = &ops_,
         .ctx = this
     };
 
-    pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio_proto, NULL, NULL);
+    const platform_proxy_cb_t kCallback = {NULL, NULL};
+    pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio_proto, sizeof(gpio_proto),
+                           &kCallback);
 }
 
 zx_status_t AmlGxlGpio::AmlPinToBlock(const uint32_t pin, const AmlGpioBlock** out_block,

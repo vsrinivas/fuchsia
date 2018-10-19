@@ -75,7 +75,7 @@ private:
 
     // Restricted subset of the platform bus protocol.
     // We do not allow protocol devices call pbus_device_add() or pbus_protocol_device_add()
-    platform_bus_protocol_ops_t pbus_ops_;
+    pbus_protocol_ops_t pbus_ops_;
     void* pbus_ctx_;
 };
 

@@ -459,9 +459,9 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    platform_bus_protocol_t pbus;
-    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &pbus)) != ZX_OK) {
-        zxlogf(ERROR, "aml_gpio_bind: ZX_PROTOCOL_PLATFORM_BUS not available\n");
+    pbus_protocol_t pbus;
+    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus)) != ZX_OK) {
+        zxlogf(ERROR, "aml_gpio_bind: ZX_PROTOCOL_PBUS not available\n");
         goto fail;
     }
 
@@ -530,7 +530,9 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
     gpio->gpio_interrupt->irq_status = 0;
     gpio->gpio.ops = &gpio_ops;
     gpio->gpio.ctx = gpio;
-    pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio->gpio, NULL, NULL);
+    const platform_proxy_cb_t kCallback = {NULL, NULL};
+    pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio->gpio, sizeof(gpio->gpio),
+                           &kCallback);
     gpio->gpio_interrupt->irq_info = calloc(gpio->gpio_interrupt->irq_count,
                                      sizeof(uint8_t));
     if (!gpio->gpio_interrupt->irq_info) {

@@ -181,10 +181,10 @@ zx_status_t hisi_clk_init(const char* name, hisi_clk_gate_t* gates,
         goto fail;
     }
 
-    platform_bus_protocol_t pbus;
-    st = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &pbus);
+    pbus_protocol_t pbus;
+    st = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus);
     if (st != ZX_OK) {
-        zxlogf(ERROR, "hisi_clk_bind: failed to get ZX_PROTOCOL_PLATFORM_BUS, "
+        zxlogf(ERROR, "hisi_clk_bind: failed to get ZX_PROTOCOL_PBUS, "
                "st = %d\n", st);
         goto fail;
     }
@@ -225,7 +225,9 @@ zx_status_t hisi_clk_init(const char* name, hisi_clk_gate_t* gates,
     hisi_clk->clk.ops = &clk_ops;
     hisi_clk->clk.ctx = hisi_clk;
 
-    st = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLK, &hisi_clk->clk, NULL, NULL);
+    const platform_proxy_cb_t kCallback = {NULL, NULL};
+    st = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLK, &hisi_clk->clk, sizeof(hisi_clk->clk),
+                                &kCallback);
     if (st != ZX_OK) {
         zxlogf(ERROR, "hisi_clk_bind: pbus_register_protocol failed, st = %d\n", st);
         goto fail;

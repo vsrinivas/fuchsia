@@ -34,8 +34,8 @@ zx_status_t Mt8167::EmmcInit() {
     static const pbus_metadata_t emmc_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,
-            .data = &msdc_fifo_depth,
-            .len = sizeof(msdc_fifo_depth)
+            .data_buffer = &msdc_fifo_depth,
+            .data_size = sizeof(msdc_fifo_depth)
         }
     };
 
@@ -44,11 +44,11 @@ zx_status_t Mt8167::EmmcInit() {
     emmc_dev.vid = PDEV_VID_MEDIATEK;
     emmc_dev.pid = PDEV_PID_MEDIATEK_8167S_REF;
     emmc_dev.did = PDEV_DID_MEDIATEK_EMMC;
-    emmc_dev.mmios = emmc_mmios;
+    emmc_dev.mmio_list = emmc_mmios;
     emmc_dev.mmio_count = countof(emmc_mmios);
-    emmc_dev.btis = emmc_btis;
+    emmc_dev.bti_list = emmc_btis;
     emmc_dev.bti_count = countof(emmc_btis);
-    emmc_dev.metadata = emmc_metadata;
+    emmc_dev.metadata_list = emmc_metadata;
     emmc_dev.metadata_count = countof(emmc_metadata);
 
     zx_status_t status = pbus_.DeviceAdd(&emmc_dev);

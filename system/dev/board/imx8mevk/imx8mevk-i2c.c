@@ -24,7 +24,7 @@ const pbus_dev_t imx_i2c_dev = {
     .vid = PDEV_VID_NXP,
     .pid = PDEV_PID_IMX8MEVK,
     .did = PDEV_DID_IMX_I2C,
-    .mmios = imx_i2c_mmios,
+    .mmio_list = imx_i2c_mmios,
     .mmio_count = countof(imx_i2c_mmios),
 };
 

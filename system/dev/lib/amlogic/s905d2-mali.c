@@ -50,15 +50,15 @@ static const pbus_dev_t mali_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_AMLOGIC_S905D2,
     .did = PDEV_DID_ARM_MALI_INIT,
-    .mmios = mali_mmios,
+    .mmio_list = mali_mmios,
     .mmio_count = countof(mali_mmios),
-    .irqs = mali_irqs,
+    .irq_list = mali_irqs,
     .irq_count = countof(mali_irqs),
-    .btis = mali_btis,
+    .bti_list = mali_btis,
     .bti_count = countof(mali_btis),
 };
 
-zx_status_t aml_mali_init(platform_bus_protocol_t* pbus, uint32_t bti_index) {
+zx_status_t aml_mali_init(pbus_protocol_t* pbus, uint32_t bti_index) {
 
     // Populate the BTI information
     mali_btis[0].iommu_index = 0;

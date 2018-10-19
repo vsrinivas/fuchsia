@@ -51,8 +51,8 @@ zx_status_t ProtocolDevice::Init(const pbus_dev_t* pdev) {
         return status;
     }
 
-    platform_bus_protocol_t pbus;
-    status = device_get_protocol(parent(), ZX_PROTOCOL_PLATFORM_BUS, &pbus);
+    pbus_protocol_t pbus;
+    status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
     if (status != ZX_OK) {
         return status;
     }
@@ -227,9 +227,9 @@ zx_status_t ProtocolDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
         proto->ops = &pdev_proto_ops_;
         proto->ctx = this;
         return ZX_OK;
-    } else if (proto_id == ZX_PROTOCOL_PLATFORM_BUS) {
+    } else if (proto_id == ZX_PROTOCOL_PBUS) {
         // Protocol implementation drivers get a restricted subset of the platform bus protocol
-        auto proto = static_cast<platform_bus_protocol_t*>(out);
+        auto proto = static_cast<pbus_protocol_t*>(out);
         proto->ops = &pbus_ops_;
         proto->ctx = pbus_ctx_;
         return ZX_OK;
@@ -274,7 +274,7 @@ zx_status_t ProtocolDevice::Start() {
     if (metadata_count > 0 || boot_metadata_count > 0) {
         for (size_t i = 0; i < metadata_count; i++) {
             const auto& metadata = resources_.metadata(i);
-            status = DdkAddMetadata(metadata.type, metadata.data, metadata.len);
+            status = DdkAddMetadata(metadata.type, metadata.data_buffer, metadata.data_size);
             if (status != ZX_OK) {
                 DdkRemove();
                 return status;

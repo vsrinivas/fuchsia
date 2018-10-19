@@ -34,9 +34,9 @@ static const pbus_dev_t tee_dev = {
     .vid = PDEV_VID_GENERIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_OPTEE,
-    .mmios = astro_tee_mmios,
+    .mmio_list = astro_tee_mmios,
     .mmio_count = countof(astro_tee_mmios),
-    .btis = astro_tee_btis,
+    .bti_list = astro_tee_btis,
     .bti_count = countof(astro_tee_btis),
 };
 

@@ -28,7 +28,7 @@ static const pbus_dev_t clk_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_AMLOGIC_S905D2,
     .did = PDEV_DID_AMLOGIC_G12A_CLK,
-    .mmios = clk_mmios,
+    .mmio_list = clk_mmios,
     .mmio_count = countof(clk_mmios),
 };
 

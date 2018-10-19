@@ -31,7 +31,7 @@ zx_status_t PlatformProxy::Rpc(uint32_t device_id, platform_proxy_req_t* req, ui
                                platform_proxy_rsp_t* resp, uint32_t resp_length,
                                zx_handle_t* in_handles, uint32_t in_handle_count,
                                zx_handle_t* out_handles, uint32_t out_handle_count,
-                               uint32_t* out_actual) {
+                               size_t* out_actual) {
     uint32_t resp_size, handle_count;
 
     // We require the client to pass us the device_id and we set here as a precaution

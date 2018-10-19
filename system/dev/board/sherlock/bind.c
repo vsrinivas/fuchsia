@@ -14,7 +14,7 @@ static zx_driver_ops_t sherlock_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(sherlock, sherlock_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_BUS),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_SHERLOCK),
 ZIRCON_DRIVER_END(sherlock)

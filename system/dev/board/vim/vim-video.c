@@ -72,13 +72,13 @@ static const pbus_dev_t video_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_AMLOGIC_S912,
     .did = PDEV_DID_AMLOGIC_VIDEO,
-    .mmios = vim_video_mmios,
+    .mmio_list = vim_video_mmios,
     .mmio_count = countof(vim_video_mmios),
-    .btis = vim_video_btis,
+    .bti_list = vim_video_btis,
     .bti_count = countof(vim_video_btis),
-    .irqs = vim_video_irqs,
+    .irq_list = vim_video_irqs,
     .irq_count = countof(vim_video_irqs),
-    .protocols = vim_video_protocols,
+    .protocol_list = vim_video_protocols,
     .protocol_count = countof(vim_video_protocols),
 };
 

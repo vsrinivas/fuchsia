@@ -36,9 +36,9 @@ static pbus_dev_t ft3x27_touch_dev = {
     .vid = PDEV_VID_GOOGLE,
     .pid = PDEV_PID_ASTRO,
     .did = PDEV_DID_ASTRO_FOCALTOUCH,
-    .i2c_channels = ft3x27_touch_i2c,
+    .i2c_channel_list = ft3x27_touch_i2c,
     .i2c_channel_count = countof(ft3x27_touch_i2c),
-    .gpios = touch_gpios,
+    .gpio_list = touch_gpios,
     .gpio_count = countof(touch_gpios),
 };
 
@@ -54,9 +54,9 @@ static pbus_dev_t gt92xx_touch_dev = {
     .vid = PDEV_VID_GOOGLE,
     .pid = PDEV_PID_ASTRO,
     .did = PDEV_DID_ASTRO_GOODIXTOUCH,
-    .i2c_channels = gt92xx_touch_i2c,
+    .i2c_channel_list = gt92xx_touch_i2c,
     .i2c_channel_count = countof(gt92xx_touch_i2c),
-    .gpios = touch_gpios,
+    .gpio_list = touch_gpios,
     .gpio_count = countof(touch_gpios),
 };
 

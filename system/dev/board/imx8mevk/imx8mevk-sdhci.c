@@ -66,16 +66,16 @@ static pbus_dev_t sdhci_dev = {
     .vid = PDEV_VID_NXP,
     .pid = PDEV_PID_IMX8MEVK,
     .did = PDEV_DID_IMX_SDHCI,
-    .mmios = sdhci_mmios,
+    .mmio_list = sdhci_mmios,
     .mmio_count = countof(sdhci_mmios),
-    .irqs = sdhci_irqs,
+    .irq_list = sdhci_irqs,
     .irq_count = countof(sdhci_irqs),
-    .btis = sdhci_btis,
+    .bti_list = sdhci_btis,
     .bti_count = countof(sdhci_btis),
-    .gpios = sdhci_gpios,
+    .gpio_list = sdhci_gpios,
     .gpio_count = countof(sdhci_gpios),
     // Disable until bootloader is updated to provide the metadata
-    // .metadata = sdhci_metadata,
+    // .metadata_list = sdhci_metadata,
     // .metadata_count = countof(sdhci_metadata),
 };
 

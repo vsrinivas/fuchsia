@@ -46,9 +46,9 @@ static const pbus_dev_t i2c_dev = {
     .vid = PDEV_VID_GENERIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_DW_I2C,
-    .mmios = i2c_mmios,
+    .mmio_list = i2c_mmios,
     .mmio_count = countof(i2c_mmios),
-    .irqs = i2c_irqs,
+    .irq_list = i2c_irqs,
     .irq_count = countof(i2c_irqs),
 };
 

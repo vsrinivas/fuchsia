@@ -51,9 +51,9 @@ static pbus_dev_t i2c_dev = []() {
     dev.vid = PDEV_VID_AMLOGIC;
     dev.pid = PDEV_PID_GENERIC;
     dev.did = PDEV_DID_AMLOGIC_I2C;
-    dev.mmios = i2c_mmios;
+    dev.mmio_list = i2c_mmios;
     dev.mmio_count = countof(i2c_mmios);
-    dev.irqs = i2c_irqs;
+    dev.irq_list = i2c_irqs;
     dev.irq_count = countof(i2c_irqs);
     return dev;
 }();

@@ -44,9 +44,9 @@ typedef struct {
     // Number of resp_handles we expect to receive.
     uint32_t resp_handle_count;
     // Number of bytes received in resp_buf.
-    uint32_t resp_actual_size;
+    size_t resp_actual_size;
     // Number of handles received in resp_handles
-     uint32_t resp_actual_handles;
+     size_t resp_actual_handles;
 } platform_proxy_args_t;
 
 typedef struct {

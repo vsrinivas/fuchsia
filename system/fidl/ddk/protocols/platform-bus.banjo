@@ -1,0 +1,120 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.platform_bus;
+
+using zx;
+
+struct PbusMmio {
+    /// Physical address of MMIO region.
+    /// Does not need to be page aligned.
+    zx.paddr  base;
+    /// Length of MMIO region in bytes.
+    /// Does not need to be page aligned.
+    usize     length;
+};
+
+struct PbusIrq {
+    uint32    irq;
+    /// `ZX_INTERRUPT_MODE_*` flags
+    uint32    mode;
+};
+
+struct PbusGpio {
+    uint32    gpio;
+};
+
+struct PbusI2cChannel{
+    uint32    bus_id;
+    uint16    address;
+};
+
+struct PbusClk {
+    uint32 clk;
+};
+
+struct PbusBti {
+    uint32    iommu_index;
+    uint32    bti_id;
+};
+
+/// Device metadata.
+struct PbusMetadata {
+    /// Metadata type.
+    uint32    type;
+    /// Pointer to metadata.
+    vector<void> data;
+};
+
+/// Device metadata to be passed from bootloader via a ZBI record.
+struct PbusBootMetadata {
+    /// Metadata type (matches `zbi_header_t.type` for bootloader metadata).
+    uint32 zbi_type;
+    /// Matches `zbi_header_t.extra` for bootloader metadata.
+    /// Used in cases where bootloader provides multiple metadata records of the same type.
+    uint32 zbi_extra;
+};
+
+struct PbusDev {
+    string name;
+    /// `BIND_PLATFORM_DEV_VID`
+    uint32 vid;
+    /// `BIND_PLATFORM_DEV_PID`
+    uint32 pid;
+    /// `BIND_PLATFORM_DEV_DID`
+    uint32 did;
+    vector<PbusMmio> mmio;
+    vector<PbusIrq> irq;
+    vector<PbusGpio> gpio;
+    vector<PbusI2cChannel> i2c_channel;
+    vector<PbusClk> clk;
+    vector<PbusBti> bti;
+    vector<PbusMetadata> metadata;
+    vector<PbusBootMetadata> boot_metadata;
+    /// List of this device's child devices.
+    /// This is only used in cases where children of a platform device also need to access
+    /// platform bus resources.
+    vector<PbusDev> child;
+    /// Extra protocols to be provided to this platform device and its children.
+    /// These fields are only used for the top level `pbus_dev_t`.
+    vector<uint32> protocol;
+};
+
+/// Subset of pdev_board_info_t to be set by the board driver.
+struct PbusBoardInfo {
+    /// Board specific revision number.
+    uint32 board_revision;
+};
+
+[Layout="ddk-callback"]
+interface PlatformProxyCb {
+    1: Callback(vector<void> req, vector<handle> req_handle) -> (vector<void> resp,
+                                                                 vector<handle> resp_handle);
+};
+
+[Layout="ddk-protocol", DefaultProtocol]
+interface PBus {
+    /// Adds a new platform device to the bus, using configuration provided by |dev|.
+    /// Platform devices are created in their own separate devhosts.
+    1: DeviceAdd(PbusDev dev) -> (zx.status s);
+    /// Adds a device for binding a protocol implementation driver.
+    /// These devices are added in the same devhost as the platform bus.
+    /// After the driver binds to the device it calls `pbus_register_protocol()`
+    /// to register its protocol with the platform bus.
+    /// `pbus_protocol_device_add()` blocks until the protocol implementation driver
+    /// registers its protocol (or times out).
+    2: ProtocolDeviceAdd(uint32 proto_id, PbusDev dev) -> (zx.status s);
+    /// Called by protocol implementation drivers to register their protocol
+    /// with the platform bus.
+    3: RegisterProtocol(uint32 proto_id, vector<void> protocol, PlatformProxyCb proxy_cb)
+           -> (zx.status s);
+    /// Returns the board name for the underlying hardware.
+    /// Board drivers may use this to differentiate between multiple boards that they support.
+    4: GetBoardName() -> (string name);
+    /// Board drivers may use this to set information about the board
+    /// (like the board revision number).
+    /// Platform device drivers can access this via `pdev_get_board_info()`.
+    5: SetBoardInfo(PbusBoardInfo info) -> (zx.status s);
+};
+

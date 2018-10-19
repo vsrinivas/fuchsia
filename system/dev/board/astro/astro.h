@@ -34,7 +34,7 @@ enum {
 
 typedef struct {
     zx_device_t* parent;
-    platform_bus_protocol_t pbus;
+    pbus_protocol_t pbus;
     gpio_impl_protocol_t gpio;
     iommu_protocol_t iommu;
 } aml_bus_t;

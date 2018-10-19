@@ -27,7 +27,7 @@ zx_status_t Mt8167::GpioInit() {
     gpio_dev.vid = PDEV_VID_MEDIATEK;
     gpio_dev.pid = PDEV_PID_MEDIATEK_8167S_REF;
     gpio_dev.did = PDEV_DID_MEDIATEK_GPIO;
-    gpio_dev.mmios = gpio_mmios;
+    gpio_dev.mmio_list = gpio_mmios;
     gpio_dev.mmio_count = countof(gpio_mmios);
 
     zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
@@ -51,7 +51,7 @@ zx_status_t Mt8167::GpioInit() {
     gpio_test_dev.vid = PDEV_VID_GENERIC;
     gpio_test_dev.pid = PDEV_PID_GENERIC;
     gpio_test_dev.did = PDEV_DID_GPIO_TEST;
-    gpio_test_dev.gpios = gpio_test_gpios;
+    gpio_test_dev.gpio_list = gpio_test_gpios;
     gpio_test_dev.gpio_count = countof(gpio_test_gpios);
     if ((status = pbus_.DeviceAdd(&gpio_test_dev)) != ZX_OK) {
         zxlogf(ERROR, "%s: Could not add gpio_test_dev %d\n", __FUNCTION__, status);

@@ -6,4 +6,4 @@
 
 #include <ddk/protocol/platform-bus.h>
 
-zx_status_t aml_mali_init(platform_bus_protocol_t* pbus, uint32_t bti_index);
+zx_status_t aml_mali_init(pbus_protocol_t* pbus, uint32_t bti_index);

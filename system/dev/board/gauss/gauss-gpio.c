@@ -66,9 +66,9 @@ static const pbus_dev_t gpio_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_AMLOGIC_A113,
     .did = PDEV_DID_AMLOGIC_GPIO,
-    .mmios = gpio_mmios,
+    .mmio_list = gpio_mmios,
     .mmio_count = countof(gpio_mmios),
-    .irqs = gpio_irqs,
+    .irq_list = gpio_irqs,
     .irq_count = countof(gpio_irqs),
 };
 

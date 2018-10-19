@@ -96,7 +96,7 @@ static_assert(sizeof(sdhci_adma64_desc_t) == 8, "unexpected ADMA2 descriptor siz
 
 typedef struct imx_sdhci_device {
     platform_device_protocol_t  pdev;
-    platform_bus_protocol_t     pbus;
+    pbus_protocol_t             pbus;
     zx_device_t*                zxdev;
     mmio_buffer_t               mmios;
     zx_handle_t                 irq_handle;

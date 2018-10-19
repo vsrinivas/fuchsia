@@ -58,8 +58,8 @@ constexpr camera_sensor_t mipi_sensor[] = {
 constexpr pbus_metadata_t mipi_metadata[] = {
     {
         .type = DEVICE_METADATA_PRIVATE,
-        .data = &mipi_sensor,
-        .len = sizeof(camera_sensor_t),
+        .data_buffer = &mipi_sensor,
+        .data_size = sizeof(camera_sensor_t),
     },
 };
 
@@ -95,11 +95,11 @@ static const pbus_dev_t mipi_children = []() {
     // Sony IMX 227 Camera Sensor
     pbus_dev_t dev;
     dev.name = "imx227";
-    dev.i2c_channels = sensor_i2c;
+    dev.i2c_channel_list = sensor_i2c;
     dev.i2c_channel_count = countof(sensor_i2c);
-    dev.gpios = sensor_gpios;
+    dev.gpio_list = sensor_gpios;
     dev.gpio_count = countof(sensor_gpios);
-    dev.clks = sensor_clk_gates;
+    dev.clk_list = sensor_clk_gates;
     dev.clk_count = countof(sensor_clk_gates);
     return dev;
 }();
@@ -110,11 +110,11 @@ static pbus_dev_t mipi_dev = []() {
     dev.vid = PDEV_VID_AMLOGIC;
     dev.pid = PDEV_PID_AMLOGIC_T931;
     dev.did = PDEV_DID_AMLOGIC_MIPI;
-    dev.mmios = mipi_mmios;
+    dev.mmio_list = mipi_mmios;
     dev.mmio_count = countof(mipi_mmios);
-    dev.metadata = mipi_metadata;
+    dev.metadata_list = mipi_metadata;
     dev.metadata_count = countof(mipi_metadata);
-    dev.children = &mipi_children;
+    dev.child_list = &mipi_children;
     dev.child_count = 1;
     return dev;
 }();

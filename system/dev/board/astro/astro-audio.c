@@ -52,13 +52,13 @@ static pbus_dev_t aml_tdm_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_AMLOGIC_S905D2,
     .did = PDEV_DID_AMLOGIC_TDM,
-    .gpios = audio_gpios,
+    .gpio_list = audio_gpios,
     .gpio_count = countof(audio_gpios),
-    .i2c_channels = codec_i2c,
+    .i2c_channel_list = codec_i2c,
     .i2c_channel_count = countof(codec_i2c),
-    .mmios = audio_mmios,
+    .mmio_list = audio_mmios,
     .mmio_count = countof(audio_mmios),
-    .btis = tdm_btis,
+    .bti_list = tdm_btis,
     .bti_count = countof(tdm_btis),
 };
 
@@ -86,9 +86,9 @@ static const pbus_dev_t aml_pdm_dev = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_AMLOGIC_S905D2,
     .did = PDEV_DID_ASTRO_PDM,
-    .mmios = pdm_mmios,
+    .mmio_list = pdm_mmios,
     .mmio_count = countof(pdm_mmios),
-    .btis = pdm_btis,
+    .bti_list = pdm_btis,
     .bti_count = countof(pdm_btis),
 };
 

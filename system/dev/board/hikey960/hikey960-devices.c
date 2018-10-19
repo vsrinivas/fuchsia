@@ -24,7 +24,7 @@ static const pbus_mmio_t dsi_mmios[] = {
     },
 };
 
-static const pbus_i2c_channel_t dsi_i2c_channels[] = {
+static const pbus_i2c_channel_t dsi.i2c_channel_list[] = {
     {
         // HDMI_MAIN
         .bus_id = DW_I2C_1,
@@ -66,13 +66,13 @@ static const pbus_dev_t dsi_dev = {
     .vid = PDEV_VID_GENERIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_DSI,
-    .mmios = dsi_mmios,
+    .mmio_list = dsi_mmios,
     .mmio_count = countof(dsi_mmios),
-    .i2c_channels = dsi_i2c_channels,
-    .i2c_channel_count = countof(dsi_i2c_channels),
-    .gpios = dsi_gpios,
+    .i2c_channel_list = dsi.i2c_channel_list,
+    .i2c_channel_count = countof(dsi.i2c_channel_list),
+    .gpio_list = dsi_gpios,
     .gpio_count = countof(dsi_gpios),
-    .btis = dsi_btis,
+    .bti_list = dsi_btis,
     .bti_count = countof(dsi_btis),
 };
 #endif
@@ -111,11 +111,11 @@ static const pbus_dev_t mali_dev = {
     .vid = PDEV_VID_GENERIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_ARM_MALI,
-    .mmios = mali_mmios,
+    .mmio_list = mali_mmios,
     .mmio_count = countof(mali_mmios),
-    .irqs = mali_irqs,
+    .irq_list = mali_irqs,
     .irq_count = countof(mali_irqs),
-    .btis = mali_btis,
+    .bti_list = mali_btis,
     .bti_count = countof(mali_btis),
 };
 
@@ -134,7 +134,7 @@ static const pbus_dev_t hi3660_clk_dev = {
     .name = "hi3660-clk",
     .vid = PDEV_VID_96BOARDS,
     .did = PDEV_DID_HI3660_CLK,
-    .mmios = clk_mmios,
+    .mmio_list = clk_mmios,
     .mmio_count = countof(clk_mmios),
 };
 
@@ -159,7 +159,7 @@ static const pbus_dev_t gpio_test_dev = {
     .vid = PDEV_VID_GENERIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_GPIO_TEST,
-    .gpios = gpio_test_gpios,
+    .gpio_list = gpio_test_gpios,
     .gpio_count = countof(gpio_test_gpios),
 };
 #endif
@@ -178,7 +178,7 @@ static const pbus_dev_t i2c_test_dev = {
     .vid = PDEV_VID_96BOARDS,
     .pid = PDEV_PID_HIKEY960,
     .did = PDEV_DID_HIKEY960_I2C_TEST,
-    .i2c_channels = i2c_test_channels,
+    .i2c_channel_list = i2c_test_channels,
     .i2c_channel_count = countof(i2c_test_channels),
 };
 #endif

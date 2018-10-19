@@ -25,7 +25,7 @@
 
 typedef struct {
     platform_device_protocol_t pdev;
-    platform_bus_protocol_t pbus;
+    pbus_protocol_t pbus;
     gpio_impl_protocol_t gpio;
     zx_device_t* zxdev;
     mmio_buffer_t mmios[IMX_GPIO_BLOCKS];
@@ -429,9 +429,9 @@ static zx_status_t imx8_gpio_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &gpio->pbus);
+    status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &gpio->pbus);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ZX_PROTOCOL_PLATFORM_BUS not available %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: ZX_PROTOCOL_PBUS not available %d\n", __FUNCTION__, status);
         goto fail;
     }
 
@@ -500,7 +500,9 @@ static zx_status_t imx8_gpio_bind(void* ctx, zx_device_t* parent) {
 
     gpio->gpio.ops = &gpio_ops;
     gpio->gpio.ctx = gpio;
-    pbus_register_protocol(&gpio->pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio->gpio, NULL, NULL);
+    const platform_proxy_cb_t kCallback = {NULL, NULL};
+    pbus_register_protocol(&gpio->pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio->gpio, sizeof(gpio->gpio),
+                           &kCallback);
 
     return ZX_OK;
 

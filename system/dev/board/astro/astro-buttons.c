@@ -37,7 +37,7 @@ static pbus_dev_t astro_buttons_dev = {
     .vid = PDEV_VID_GOOGLE,
     .pid = PDEV_PID_ASTRO,
     .did = PDEV_DID_ASTRO_BUTTONS,
-    .gpios = astro_buttons_gpios,
+    .gpio_list = astro_buttons_gpios,
     .gpio_count = countof(astro_buttons_gpios),
 };
 
