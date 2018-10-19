@@ -171,7 +171,7 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
 
     // Length can only be made shorter at this time.
     zx_status_t set_len(size_t len) {
-        if (len > len_) return ZX_ERR_INVALID_ARGS;
+        ZX_DEBUG_ASSERT(len <= len_);
         len_ = len;
         return ZX_OK;
     }

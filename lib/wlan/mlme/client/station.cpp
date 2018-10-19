@@ -4,6 +4,7 @@
 
 #include <wlan/mlme/client/station.h>
 
+#include <wlan/common/buffer_writer.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/energy.h>
 #include <wlan/common/logging.h>
@@ -15,6 +16,7 @@
 #include <wlan/mlme/key.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
+#include <wlan/mlme/packet_utils.h>
 #include <wlan/mlme/sequence.h>
 #include <wlan/mlme/service.h>
 
@@ -52,6 +54,7 @@ void Station::Reset() {
     signal_report_timeout_.Cancel();
     bu_queue_.clear();
 }
+
 zx_status_t Station::HandleAnyMlmeMsg(const BaseMlmeMsg& mlme_msg) {
     WLAN_STATS_INC(svc_msg.in);
 
@@ -166,29 +169,27 @@ zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequ
 
     debugjoin("authenticating to %s\n", join_ctx_->bssid().ToString().c_str());
 
-    MgmtFrame<Authentication> frame;
-    auto status = CreateMgmtFrame(&frame);
-    if (status != ZX_OK) {
-        errorf("authenticating: failed to build authentication frame: %s\n",
-               zx_status_get_string(status));
-        return status;
-    }
+    constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Authentication::max_len();
+    auto packet = GetWlanPacket(max_frame_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto hdr = frame.hdr();
-    hdr->addr1 = join_ctx_->bssid();
-    hdr->addr2 = self_addr();
-    hdr->addr3 = join_ctx_->bssid();
-    SetSeqNo(hdr, &seq_);
-    frame.FillTxInfo();
+    BufferWriter w(*packet);
+    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
+    mgmt_hdr->fc.set_type(FrameType::kManagement);
+    mgmt_hdr->fc.set_subtype(ManagementSubtype::kAuthentication);
+    mgmt_hdr->addr1 = join_ctx_->bssid();
+    mgmt_hdr->addr2 = self_addr();
+    mgmt_hdr->addr3 = join_ctx_->bssid();
+    SetSeqNo(mgmt_hdr, &seq_);
 
     // This assumes Open System authentication.
-    auto auth = frame.body();
+    auto auth = w.Write<Authentication>();
     auth->auth_algorithm_number = auth_alg_;
     auth->auth_txn_seq_number = 1;
     auth->status_code = 0;  // Reserved: explicitly set to 0
 
     zx::time deadline = deadline_after_bcn_period(req.body()->auth_failure_timeout);
-    status = timer_mgr_.Schedule(deadline, &auth_timeout_);
+    auto status = timer_mgr_.Schedule(deadline, &auth_timeout_);
     if (status != ZX_OK) {
         errorf("could not set authentication timeout event: %s\n", zx_status_get_string(status));
         // This is the wrong result code, but we need to define our own codes at some later time.
@@ -197,8 +198,11 @@ zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequ
         return status;
     }
 
-    finspect("Outbound Mgmt Frame(Auth): %s\n", debug::Describe(*hdr).c_str());
-    status = SendNonData(frame.Take());
+    packet->CopyCtrlFrom(MakeTxInfo(mgmt_hdr->fc, CBW20, WLAN_PHY_OFDM));
+    packet->set_len(w.WrittenBytes());
+
+    finspect("Outbound Mgmt Frame(Auth): %s\n", debug::Describe(*mgmt_hdr).c_str());
+    status = SendNonData(fbl::move(packet));
     if (status != ZX_OK) {
         errorf("could not send authentication frame: %d\n", status);
         service::SendAuthConfirm(device_, join_ctx_->bssid(),
@@ -253,33 +257,36 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
 
     debugjoin("associating to %s\n", join_ctx_->bssid().ToString().c_str());
 
-    size_t reserved_ie_len = 128;
-    MgmtFrame<AssociationRequest> frame;
-    auto status = CreateMgmtFrame(&frame, reserved_ie_len);
-    if (status != ZX_OK) { return status; }
+    constexpr size_t reserved_ie_len = 128;
+    constexpr size_t max_frame_len =
+        MgmtFrameHeader::max_len() + AssociationRequest::max_len() + reserved_ie_len;
+    auto packet = GetWlanPacket(max_frame_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto hdr = frame.hdr();
-    hdr->addr1 = join_ctx_->bssid();
-    hdr->addr2 = self_addr();
-    hdr->addr3 = join_ctx_->bssid();
-    SetSeqNo(hdr, &seq_);
-    frame.FillTxInfo();
-
-    auto assoc = frame.body();
+    BufferWriter w(*packet);
+    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
+    mgmt_hdr->fc.set_type(FrameType::kManagement);
+    mgmt_hdr->fc.set_subtype(ManagementSubtype::kAssociationRequest);
+    mgmt_hdr->addr1 = join_ctx_->bssid();
+    mgmt_hdr->addr2 = self_addr();
+    mgmt_hdr->addr3 = join_ctx_->bssid();
+    SetSeqNo(mgmt_hdr, &seq_);
 
     auto ifc_info = device_->GetWlanInfo().ifc_info;
     auto client_capability = ToAssocContext(ifc_info, join_ctx_->channel());
-
+    auto assoc = w.Write<AssociationRequest>();
     assoc->cap = OverrideCapability(client_capability.cap);
     assoc->listen_interval = 0;
 
     std::vector<SupportedRate> supp_rates;
     std::vector<SupportedRate> ext_rates;
-    status = BuildAssocReqSuppRates(*join_ctx_->bss(), client_capability, &supp_rates, &ext_rates);
+    auto status =
+        BuildAssocReqSuppRates(*join_ctx_->bss(), client_capability, &supp_rates, &ext_rates);
     if (status != ZX_OK) { return status; }
 
-    ElementWriter w(assoc->elements, reserved_ie_len);
-    if (!w.write<SsidElement>(join_ctx_->bss()->ssid->data(), join_ctx_->bss()->ssid->size())) {
+    ElementWriter elem_w(assoc->elements, reserved_ie_len);
+    if (!elem_w.write<SsidElement>(join_ctx_->bss()->ssid->data(),
+                                   join_ctx_->bss()->ssid->size())) {
         errorf("could not write ssid \"%s\" to association request\n",
                debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str());
         service::SendAssocConfirm(device_,
@@ -287,14 +294,14 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
         return ZX_ERR_IO;
     }
 
-    if (!w.write<SupportedRatesElement>(supp_rates.data(), supp_rates.size())) {
+    if (!elem_w.write<SupportedRatesElement>(supp_rates.data(), supp_rates.size())) {
         errorf("could not write supported rates\n");
         service::SendAssocConfirm(device_,
                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return ZX_ERR_IO;
     }
 
-    if (!w.write<ExtendedSupportedRatesElement>(ext_rates.data(), ext_rates.size())) {
+    if (!elem_w.write<ExtendedSupportedRatesElement>(ext_rates.data(), ext_rates.size())) {
         errorf("could not write extended supported rates\n");
         service::SendAssocConfirm(device_,
                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
@@ -303,7 +310,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
 
     // Write RSNE from MLME-Association.request if available.
     if (req.body()->rsn) {
-        if (!w.write<RsnElement>(req.body()->rsn->data(), req.body()->rsn->size())) {
+        if (!elem_w.write<RsnElement>(req.body()->rsn->data(), req.body()->rsn->size())) {
             return ZX_ERR_IO;
         }
     }
@@ -321,29 +328,21 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
         }
         debugf("HT cap(after overriding): %s\n", debug::Describe(ht_cap).c_str());
 
-        if (!w.write<HtCapabilities>(ht_cap.ht_cap_info, ht_cap.ampdu_params, ht_cap.mcs_set,
-                                     ht_cap.ht_ext_cap, ht_cap.txbf_cap, ht_cap.asel_cap)) {
+        if (!elem_w.write<HtCapabilities>(ht_cap.ht_cap_info, ht_cap.ampdu_params, ht_cap.mcs_set,
+                                          ht_cap.ht_ext_cap, ht_cap.txbf_cap, ht_cap.asel_cap)) {
             errorf("could not write HtCapabilities\n");
             service::SendAssocConfirm(device_,
                                       wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
             return ZX_ERR_IO;
         }
     }
+    ZX_DEBUG_ASSERT(assoc->Validate(elem_w.size()));
 
-    // Validate the request in debug mode
-    ZX_DEBUG_ASSERT(assoc->Validate(w.size()));
+    packet->CopyCtrlFrom(MakeTxInfo(mgmt_hdr->fc, CBW20, WLAN_PHY_OFDM));
+    packet->set_len(w.WrittenBytes() + elem_w.size());
 
-    size_t body_len = frame.body()->len() + w.size();
-    status = frame.set_body_len(body_len);
-    if (status != ZX_OK) {
-        errorf("could not set body length to %zu: %d\n", body_len, status);
-        service::SendAssocConfirm(device_,
-                                  wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
-        return status;
-    }
-
-    finspect("Outbound Mgmt Frame (AssocReq): %s\n", debug::Describe(*hdr).c_str());
-    status = SendNonData(frame.Take());
+    finspect("Outbound Mgmt Frame (AssocReq): %s\n", debug::Describe(*mgmt_hdr).c_str());
+    status = SendNonData(fbl::move(packet));
     if (status != ZX_OK) {
         errorf("could not send assoc packet: %d\n", status);
         service::SendAssocConfirm(device_,
@@ -508,7 +507,6 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
     }
 
     // TODO(porce): Move into |assoc_ctx_|
-    common::MacAddr bssid(join_ctx_->bss()->bssid.data());
     state_ = WlanState::kAssociated;
     assoc_ctx_.set_aid(assoc->aid);
 
@@ -538,7 +536,7 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
 
     infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n",
           self_addr().ToString().c_str(), debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str(),
-          bssid.ToString().c_str(), common::ChanStr(join_ctx_->channel()).c_str(),
+          join_ctx_->bssid().ToString().c_str(), common::ChanStr(join_ctx_->channel()).c_str(),
           common::BandStr(join_ctx_->channel()).c_str(), GetPhyStr().c_str());
 
     // TODO(porce): Time when to establish BlockAck session
@@ -559,19 +557,18 @@ zx_status_t Station::HandleDisassociation(MgmtFrame<Disassociation>&& frame) {
     }
 
     auto disassoc = frame.body();
-    common::MacAddr bssid(join_ctx_->bss()->bssid.data());
     infof("disassociating from \"%s\"(%s), reason=%u\n",
-          debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str(), MACSTR(bssid),
-          disassoc->reason_code);
+          debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str(),
+          join_ctx_->bssid().ToString().c_str(), disassoc->reason_code);
 
     state_ = WlanState::kAuthenticated;
-    device_->ClearAssoc(bssid);
+    device_->ClearAssoc(join_ctx_->bssid());
     device_->SetStatus(0);
     controlled_port_ = eapol::PortState::kBlocked;
     signal_report_timeout_.Cancel();
     bu_queue_.clear();
 
-    return service::SendDisassociateIndication(device_, bssid, disassoc->reason_code);
+    return service::SendDisassociateIndication(device_, join_ctx_->bssid(), disassoc->reason_code);
 }
 
 zx_status_t Station::HandleActionFrame(MgmtFrame<ActionFrame>&& frame) {
@@ -600,57 +597,55 @@ zx_status_t Station::HandleActionFrame(MgmtFrame<ActionFrame>&& frame) {
 zx_status_t Station::HandleAddBaRequest(const AddBaRequestFrame& addbareq) {
     debugfn();
 
-    // Construct AddBaResponse frame
-    MgmtFrame<ActionFrame> frame;
-    size_t body_payload_len = ActionFrameBlockAck::max_len() + AddBaRequestFrame::max_len();
-    auto status = CreateMgmtFrame(&frame, body_payload_len);
-    if (status != ZX_OK) { return status; }
+    constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + ActionFrame::max_len() +
+                                     ActionFrameBlockAck::max_len() + AddBaRequestFrame::max_len();
+    auto packet = GetWlanPacket(max_frame_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto hdr = frame.hdr();
-    hdr->addr1 = join_ctx_->bssid();
-    hdr->addr2 = self_addr();
-    hdr->addr3 = join_ctx_->bssid();
-    SetSeqNo(hdr, &seq_);
-    frame.FillTxInfo();
+    BufferWriter w(*packet);
+    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
+    mgmt_hdr->fc.set_type(FrameType::kManagement);
+    mgmt_hdr->fc.set_subtype(ManagementSubtype::kAction);
+    mgmt_hdr->addr1 = join_ctx_->bssid();
+    mgmt_hdr->addr2 = self_addr();
+    mgmt_hdr->addr3 = join_ctx_->bssid();
+    SetSeqNo(mgmt_hdr, &seq_);
 
-    auto action_frame = frame.body();
-    action_frame->category = ActionFrameBlockAck::ActionCategory();
+    w.Write<ActionFrame>()->category = ActionFrameBlockAck::ActionCategory();
+    w.Write<ActionFrameBlockAck>()->action = AddBaResponseFrame::BlockAckAction();
 
-    auto ba_frame = frame.NextFrame<ActionFrameBlockAck>();
-    ba_frame.hdr()->action = AddBaResponseFrame::BlockAckAction();
-
-    auto addbaresp_frame = ba_frame.NextFrame<AddBaResponseFrame>();
-    auto addbaresp = addbaresp_frame.hdr();
-    addbaresp->dialog_token = addbareq.dialog_token;
+    auto addbaresp_hdr = w.Write<AddBaResponseFrame>();
+    addbaresp_hdr->dialog_token = addbareq.dialog_token;
 
     // TODO(porce): Implement DelBa as a response to AddBar for decline
 
     // Note: Returning AddBaResponse with status_code::kRefused seems ineffective.
     // ArubaAP is persistent not honoring that.
-    addbaresp->status_code = status_code::kSuccess;
+    addbaresp_hdr->status_code = status_code::kSuccess;
 
-    addbaresp->params.set_amsdu(addbareq.params.amsdu() == 1);
-    addbaresp->params.set_policy(BlockAckParameters::kImmediate);
-    addbaresp->params.set_tid(addbareq.params.tid());
+    addbaresp_hdr->params.set_amsdu(addbareq.params.amsdu() == 1);
+    addbaresp_hdr->params.set_policy(BlockAckParameters::kImmediate);
+    addbaresp_hdr->params.set_tid(addbareq.params.tid());
 
+    // TODO(NET-500): Is this Ralink specific?
     // TODO(porce): Once chipset capability is ready, refactor below buffer_size
     // calculation.
-    auto buffer_size_ap = addbareq.params.buffer_size();
+    size_t buffer_size_ap = addbareq.params.buffer_size();
     constexpr size_t buffer_size_ralink = 64;
-    auto buffer_size = (buffer_size_ap <= buffer_size_ralink) ? buffer_size_ap : buffer_size_ralink;
-    addbaresp->params.set_buffer_size(buffer_size);
-    addbaresp->timeout = addbareq.timeout;
+    size_t buffer_size =
+        (buffer_size_ap <= buffer_size_ralink) ? buffer_size_ap : buffer_size_ralink;
+    addbaresp_hdr->params.set_buffer_size(buffer_size);
+    addbaresp_hdr->timeout = addbareq.timeout;
 
-    finspect("Outbound ADDBA Resp frame: len %zu\n", addbaresp_frame.len());
-    finspect("Outbound Mgmt Frame(ADDBA Resp): %s\n", debug::Describe(*addbaresp).c_str());
+    packet->CopyCtrlFrom(MakeTxInfo(mgmt_hdr->fc, CBW20, WLAN_PHY_OFDM));
+    packet->set_len(w.WrittenBytes());
 
-    status = SendNonData(addbaresp_frame.Take());
-    if (status != ZX_OK) {
-        errorf("could not send AddBaResponse: %d\n", status);
-        return status;
-    }
+    finspect("Outbound ADDBA Resp frame: len %zu\n", w.WrittenBytes());
+    finspect("Outbound Mgmt Frame(ADDBA Resp): %s\n", debug::Describe(*addbaresp_hdr).c_str());
 
-    return ZX_OK;
+    auto status = SendNonData(fbl::move(packet));
+    if (status != ZX_OK) { errorf("could not send AddBaResponse: %d\n", status); }
+    return status;
 }
 
 bool Station::ShouldDropDataFrame(const DataFrameView<>& frame) {
@@ -724,14 +719,16 @@ zx_status_t Station::HandleLlcFrame(const FrameView<LlcHeader>& llc_frame, size_
     auto packet = GetEthPacket(eth_frame_len);
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    EthFrame eth_frame(fbl::move(packet));
-    auto eth_hdr = eth_frame.hdr();
+    BufferWriter w(*packet);
+    auto eth_hdr = w.Write<EthernetII>();
     eth_hdr->dest = dest;
     eth_hdr->src = src;
     eth_hdr->ether_type = llc_frame.hdr()->protocol_id;
-    std::memcpy(eth_frame.body()->data, llc_frame.body()->data, llc_payload_len);
+    w.Write({llc_frame.body()->data, llc_payload_len});
 
-    auto status = device_->SendEthernet(eth_frame.Take());
+    packet->set_len(w.WrittenBytes());
+
+    auto status = device_->SendEthernet(fbl::move(packet));
     if (status != ZX_OK) { errorf("could not send ethernet data: %d\n", status); }
     return status;
 }
@@ -783,41 +780,25 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
 
     bool needs_protection =
         !join_ctx_->bss()->rsn.is_null() && controlled_port_ == eapol::PortState::kOpen;
-    DataFrame<LlcHeader> data_frame(fbl::move(packet));
-    auto data_hdr = data_frame.hdr();
+    BufferWriter w(*packet);
 
-    // Set header
+    auto data_hdr = w.Write<DataFrameHeader>();
     bool has_ht_ctrl = false;
-    std::memset(data_hdr, 0, DataFrameHeader::max_len());
     data_hdr->fc.set_type(FrameType::kData);
     data_hdr->fc.set_subtype(IsQosReady() ? DataSubtype::kQosdata : DataSubtype::kDataSubtype);
     data_hdr->fc.set_to_ds(1);
     data_hdr->fc.set_from_ds(0);
     data_hdr->fc.set_htc_order(has_ht_ctrl ? 1 : 0);
-    data_hdr->addr1 = common::MacAddr(join_ctx_->bss()->bssid.data());
+    data_hdr->fc.set_protected_frame(needs_protection);
+    data_hdr->addr1 = join_ctx_->bssid();
     data_hdr->addr2 = eth_hdr->src;
     data_hdr->addr3 = eth_hdr->dest;
-    data_hdr->fc.set_protected_frame(needs_protection);
+    SetSeqNo(data_hdr, &seq_);
 
     // TODO(porce): Construct addr4 field
 
-    // Ralink appears to setup BlockAck session AND AMPDU handling
-    // TODO(porce): Use a separate sequence number space in that case
-    if (assoc_ctx_.is_ht) {
-        if (assoc_ctx_.is_cbw40_tx && data_hdr->addr3.IsUcast()) {
-            // 40 MHz direction does not matter here.
-            // Radio uses the operational channel setting. This indicates the bandwidth without
-            // direction.
-            data_frame.FillTxInfo(CBW40, WLAN_PHY_HT);
-        } else {
-            data_frame.FillTxInfo(CBW20, WLAN_PHY_HT);
-        }
-    } else {
-        data_frame.FillTxInfo(CBW20, WLAN_PHY_OFDM);
-    }
-
-    if (data_hdr->HasQosCtrl()) {  // QoS Control field
-        auto qos_ctrl = data_hdr->qos_ctrl();
+    if (IsQosReady()) {  // QoS Control field
+        auto qos_ctrl = w.Write<QosControl>();
         qos_ctrl->set_tid(GetTid(eth_frame));
         qos_ctrl->set_eosp(0);
         qos_ctrl->set_ack_policy(ack_policy::kNormalAck);
@@ -829,32 +810,34 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
 
     // TODO(porce): Construct htc_order field
 
-    SetSeqNo(data_hdr, &seq_);
-
-    auto llc_hdr = data_frame.body();
+    auto llc_hdr = w.Write<LlcHeader>();
     llc_hdr->dsap = kLlcSnapExtension;
     llc_hdr->ssap = kLlcSnapExtension;
     llc_hdr->control = kLlcUnnumberedInformation;
     std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
     llc_hdr->protocol_id = eth_hdr->ether_type;
-    std::memcpy(llc_hdr->payload, eth_hdr->payload, eth_frame.body_len());
+    w.Write({eth_hdr->payload, eth_frame.body_len()});
 
-    size_t actual_body_len = llc_hdr->len() + eth_frame.body_len();
-    auto status = data_frame.set_body_len(actual_body_len);
-    if (status != ZX_OK) {
-        errorf("could not set data frame's body length to %zu: %d\n", actual_body_len, status);
-        return status;
+    if (assoc_ctx_.is_ht) {
+        if (assoc_ctx_.is_cbw40_tx && data_hdr->addr3.IsUcast()) {
+            // 40 MHz direction does not matter here.
+            // Radio uses the operational channel setting. This indicates the bandwidth without
+            // direction.
+            packet->CopyCtrlFrom(MakeTxInfo(data_hdr->fc, CBW40, WLAN_PHY_HT));
+        } else {
+            packet->CopyCtrlFrom(MakeTxInfo(data_hdr->fc, CBW20, WLAN_PHY_HT));
+        }
+    } else {
+        packet->CopyCtrlFrom(MakeTxInfo(data_hdr->fc, CBW20, WLAN_PHY_OFDM));
     }
+    packet->set_len(w.WrittenBytes());
 
-    finspect("Outbound data frame: len %zu, hdr_len:%zu body_len:%zu\n", data_frame.len(),
-             data_frame.hdr()->len(), data_frame.body_len());
-    finspect("  wlan hdr: %s\n", debug::Describe(*data_frame.hdr()).c_str());
-    finspect("  llc  hdr: %s\n", debug::Describe(*data_frame.body()).c_str());
-
-    packet = data_frame.Take();
+    finspect("Outbound data frame: len %zu\n", w.WrittenBytes());
+    finspect("  wlan hdr: %s\n", debug::Describe(*data_hdr).c_str());
+    finspect("  llc  hdr: %s\n", debug::Describe(*llc_hdr).c_str());
     finspect("  frame   : %s\n", debug::HexDump(packet->data(), packet->len()).c_str());
 
-    status = SendWlan(fbl::move(packet));
+    auto status = SendWlan(fbl::move(packet));
     if (status != ZX_OK) { errorf("could not send wlan data: %d\n", status); }
     return status;
 }
@@ -926,10 +909,9 @@ zx_status_t Station::SendKeepAliveResponse() {
 
     auto packet = GetWlanPacket(DataFrameHeader::max_len());
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    packet->clear();
 
-    DataFrame<> data_frame(fbl::move(packet));
-    auto data_hdr = data_frame.hdr();
+    BufferWriter w(*packet);
+    auto data_hdr = w.Write<DataFrameHeader>();
     data_hdr->fc.set_type(FrameType::kData);
     data_hdr->fc.set_subtype(DataSubtype::kNull);
     data_hdr->fc.set_to_ds(1);
@@ -938,26 +920,11 @@ zx_status_t Station::SendKeepAliveResponse() {
     data_hdr->addr3 = join_ctx_->bssid();
     SetSeqNo(data_hdr, &seq_);
 
-    // Ralink appears to setup BlockAck session AND AMPDU handling
-    // TODO(porce): Use a separate sequence number space in that case
-    if (assoc_ctx_.is_cbw40_tx && data_hdr->addr3.IsUcast()) {
-        // 40 MHz direction does not matter here.
-        // Radio uses the operational channel setting. This indicates the bandwidth without
-        // direction.
-        data_frame.FillTxInfo(CBW40, WLAN_PHY_HT);
-    } else {
-        data_frame.FillTxInfo(CBW20, WLAN_PHY_HT);
-    }
+    CBW cbw = (assoc_ctx_.is_cbw40_tx ? CBW40 : CBW20);
+    packet->CopyCtrlFrom(MakeTxInfo(data_hdr->fc, cbw, WLAN_PHY_HT));
+    packet->set_len(w.WrittenBytes());
 
-    // Adjust frame's length before sending it over the air.
-    auto status = data_frame.set_body_len(0);
-    if (status != ZX_OK) {
-        errorf("could not adjust keep alive frame's length; hdr len: %zu; %d\n", data_hdr->len(),
-               status);
-        return status;
-    }
-
-    status = SendWlan(data_frame.Take());
+    auto status = SendWlan(fbl::move(packet));
     if (status != ZX_OK) {
         errorf("could not send keep alive frame: %d\n", status);
         return status;
@@ -974,43 +941,46 @@ zx_status_t Station::SendAddBaRequestFrame() {
         return ZX_ERR_BAD_STATE;
     }
 
-    MgmtFrame<ActionFrame> frame;
-    size_t body_payload_len = ActionFrameBlockAck::max_len() + AddBaRequestFrame::max_len();
-    auto status = CreateMgmtFrame(&frame, body_payload_len);
-    if (status != ZX_OK) { return status; }
+    constexpr size_t max_frame_size = MgmtFrameHeader::max_len() + ActionFrame::max_len() +
+                                      ActionFrameBlockAck::max_len() + AddBaRequestFrame::max_len();
+    auto packet = GetWlanPacket(max_frame_size);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto hdr = frame.hdr();
-    hdr->addr1 = join_ctx_->bssid();
-    hdr->addr2 = self_addr();
-    hdr->addr3 = join_ctx_->bssid();
-    SetSeqNo(hdr, &seq_);
-    frame.FillTxInfo();
+    BufferWriter w(*packet);
+    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
+    mgmt_hdr->fc.set_type(FrameType::kManagement);
+    mgmt_hdr->fc.set_subtype(ManagementSubtype::kAction);
+    mgmt_hdr->addr1 = join_ctx_->bssid();
+    mgmt_hdr->addr2 = self_addr();
+    mgmt_hdr->addr3 = join_ctx_->bssid();
+    SetSeqNo(mgmt_hdr, &seq_);
 
-    auto action_hdr = frame.body();
+    auto action_hdr = w.Write<ActionFrame>();
     action_hdr->category = ActionFrameBlockAck::ActionCategory();
 
-    auto ba_frame = frame.NextFrame<ActionFrameBlockAck>();
-    ba_frame.hdr()->action = AddBaRequestFrame::BlockAckAction();
+    auto ba_hdr = w.Write<ActionFrameBlockAck>();
+    ba_hdr->action = AddBaRequestFrame::BlockAckAction();
 
-    auto addbareq_frame = ba_frame.NextFrame<AddBaRequestFrame>();
-    auto addbareq = addbareq_frame.hdr();
-
+    auto addbareq_hdr = w.Write<AddBaRequestFrame>();
     // It appears there is no particular rule to choose the value for
     // dialog_token. See IEEE Std 802.11-2016, 9.6.5.2.
-    addbareq->dialog_token = 0x01;
-    addbareq->params.set_amsdu(1);
-    addbareq->params.set_policy(BlockAckParameters::BlockAckPolicy::kImmediate);
-    addbareq->params.set_tid(GetTid());  // TODO(porce): Communicate this with lower MAC.
+    addbareq_hdr->dialog_token = 0x01;
+    addbareq_hdr->params.set_amsdu(1);
+    addbareq_hdr->params.set_policy(BlockAckParameters::BlockAckPolicy::kImmediate);
+    addbareq_hdr->params.set_tid(GetTid());  // TODO(porce): Communicate this with lower MAC.
     // TODO(porce): Fix the discrepancy of this value from the Ralink's TXWI ba_win_size setting
-    addbareq->params.set_buffer_size(64);
-    addbareq->timeout = 0;               // Disables the timeout
-    addbareq->seq_ctrl.set_fragment(0);  // TODO(porce): Send this down to the lower MAC
-    addbareq->seq_ctrl.set_starting_seq(1);
+    addbareq_hdr->params.set_buffer_size(64);
+    addbareq_hdr->timeout = 0;               // Disables the timeout
+    addbareq_hdr->seq_ctrl.set_fragment(0);  // TODO(porce): Send this down to the lower MAC
+    addbareq_hdr->seq_ctrl.set_starting_seq(1);
 
-    finspect("Outbound ADDBA Req frame: len %zu\n", addbareq_frame.len());
-    finspect("  addba req: %s\n", debug::Describe(*addbareq).c_str());
+    packet->CopyCtrlFrom(MakeTxInfo(mgmt_hdr->fc, CBW20, WLAN_PHY_OFDM));
+    packet->set_len(w.WrittenBytes());
 
-    status = SendNonData(addbareq_frame.Take());
+    finspect("Outbound ADDBA Req frame: len %zu\n", w.WrittenBytes());
+    finspect("  addba req: %s\n", debug::Describe(*addbareq_hdr).c_str());
+
+    auto status = SendNonData(fbl::move(packet));
     if (status != ZX_OK) {
         errorf("could not send AddBaRequest: %d\n", status);
         return status;
@@ -1027,16 +997,17 @@ zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& 
         return ZX_OK;
     }
 
-    size_t llc_payload_len = req.body()->data->size();
-    size_t max_frame_len = DataFrameHeader::max_len() + LlcHeader::max_len() + llc_payload_len;
+    const size_t llc_payload_len = req.body()->data->size();
+    const size_t max_frame_len =
+        DataFrameHeader::max_len() + LlcHeader::max_len() + llc_payload_len;
     auto packet = GetWlanPacket(max_frame_len);
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    packet->clear();
 
     bool needs_protection =
         !join_ctx_->bss()->rsn.is_null() && controlled_port_ == eapol::PortState::kOpen;
-    DataFrame<LlcHeader> data_frame(fbl::move(packet));
-    auto data_hdr = data_frame.hdr();
+    BufferWriter w(*packet);
+
+    auto data_hdr = w.Write<DataFrameHeader>();
     data_hdr->fc.set_type(FrameType::kData);
     data_hdr->fc.set_to_ds(1);
     data_hdr->fc.set_protected_frame(needs_protection);
@@ -1045,19 +1016,18 @@ zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& 
     data_hdr->addr3.Set(req.body()->dst_addr.data());
     SetSeqNo(data_hdr, &seq_);
 
-    auto llc_hdr = data_frame.body();
+    auto llc_hdr = w.Write<LlcHeader>();
     llc_hdr->dsap = kLlcSnapExtension;
     llc_hdr->ssap = kLlcSnapExtension;
     llc_hdr->control = kLlcUnnumberedInformation;
     std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
     llc_hdr->protocol_id = htobe16(kEapolProtocolId);
-    std::memcpy(llc_hdr->payload, req.body()->data->data(), llc_payload_len);
+    w.Write({req.body()->data->data(), llc_payload_len});
 
-    // Adjust frame's length before sending it over the air.
-    data_frame.set_body_len(llc_hdr->len() + llc_payload_len);
-    data_frame.FillTxInfo(CBW20, WLAN_PHY_HT);
+    packet->CopyCtrlFrom(MakeTxInfo(data_hdr->fc, CBW20, WLAN_PHY_HT));
+    packet->set_len(w.WrittenBytes());
 
-    zx_status_t status = SendWlan(data_frame.Take());
+    zx_status_t status = SendWlan(fbl::move(packet));
     if (status != ZX_OK) {
         errorf("could not send eapol request packet: %d\n", status);
         service::SendEapolConfirm(device_, wlan_mlme::EapolResultCodes::TRANSMISSION_FAILURE);
@@ -1162,10 +1132,9 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
 
     auto packet = GetWlanPacket(DataFrameHeader::max_len());
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    packet->clear();
 
-    DataFrame<> data_frame(fbl::move(packet));
-    auto data_hdr = data_frame.hdr();
+    BufferWriter w(*packet);
+    auto data_hdr = w.Write<DataFrameHeader>();
     data_hdr->fc.set_type(FrameType::kData);
     data_hdr->fc.set_subtype(DataSubtype::kNull);
     data_hdr->fc.set_pwr_mgmt(ps_mode);
@@ -1175,26 +1144,12 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
     data_hdr->addr3 = join_ctx_->bssid();
     SetSeqNo(data_hdr, &seq_);
 
-    // Ralink appears to setup BlockAck session AND AMPDU handling
-    // TODO(porce): Use a separate sequence number space in that case
-    if (assoc_ctx_.is_cbw40_tx && data_hdr->addr3.IsUcast()) {
-        // 40 MHz direction does not matter here.
-        // Radio uses the operational channel setting. This indicates the bandwidth without
-        // direction.
-        data_frame.FillTxInfo(CBW40, WLAN_PHY_HT);
-    } else {
-        data_frame.FillTxInfo(CBW20, WLAN_PHY_HT);
-    }
+    CBW cbw = (assoc_ctx_.is_cbw40_tx ? CBW40 : CBW20);
+    wlan_tx_info_t tx_info = MakeTxInfo(data_hdr->fc, cbw, WLAN_PHY_HT);
+    packet->CopyCtrlFrom(tx_info);
 
-    // Adjust frame's length before sending it over the air.
-    auto status = data_frame.set_body_len(0);
-    if (status != ZX_OK) {
-        errorf("could not adjust power management frame's length; hdr len: %zu; %d\n",
-               data_hdr->len(), status);
-        return status;
-    }
-
-    status = SendWlan(data_frame.Take());
+    packet->set_len(w.WrittenBytes());
+    auto status = SendWlan(fbl::move(packet));
     if (status != ZX_OK) {
         errorf("could not send power management frame: %d\n", status);
         return status;
@@ -1210,20 +1165,26 @@ zx_status_t Station::SendPsPoll() {
         return ZX_OK;
     }
 
-    size_t len = CtrlFrameHdr::max_len() + PsPollFrame::max_len();
+    constexpr size_t len = CtrlFrameHdr::max_len() + PsPollFrame::max_len();
     auto packet = GetWlanPacket(len);
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    packet->clear();
 
-    CtrlFrame<PsPollFrame> frame(std::move(packet));
-    ZX_DEBUG_ASSERT(frame.HasValidLen());
-    frame.hdr()->fc.set_type(FrameType::kControl);
-    frame.hdr()->fc.set_subtype(ControlSubtype::kPsPoll);
-    frame.body()->aid = assoc_ctx_.aid;
-    frame.body()->bssid = common::MacAddr(join_ctx_->bss()->bssid.data());
-    frame.body()->ta = self_addr();
+    BufferWriter w(*packet);
+    auto fc = w.Write<FrameControl>();
+    fc->set_type(FrameType::kControl);
+    fc->set_subtype(ControlSubtype::kPsPoll);
 
-    zx_status_t status = SendNonData(frame.Take());
+    auto ps_poll = w.Write<PsPollFrame>();
+    ps_poll->aid = assoc_ctx_.aid;
+    ps_poll->bssid = join_ctx_->bssid();
+    ps_poll->ta = self_addr();
+
+    CBW cbw = (assoc_ctx_.is_cbw40_tx ? CBW40 : CBW20);
+    wlan_tx_info_t tx_info = MakeTxInfo(*fc, cbw, WLAN_PHY_HT);
+    packet->CopyCtrlFrom(tx_info);
+
+    packet->set_len(w.WrittenBytes());
+    auto status = SendNonData(fbl::move(packet));
     if (status != ZX_OK) {
         errorf("could not send power management packet: %d\n", status);
         return status;
@@ -1234,22 +1195,29 @@ zx_status_t Station::SendPsPoll() {
 zx_status_t Station::SendDeauthFrame(wlan_mlme::ReasonCode reason_code) {
     debugfn();
 
-    MgmtFrame<Deauthentication> frame;
-    auto status = CreateMgmtFrame(&frame);
-    if (status != ZX_OK) { return status; }
+    constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Deauthentication::max_len();
+    auto packet = GetWlanPacket(max_frame_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto hdr = frame.hdr();
-    hdr->addr1 = join_ctx_->bssid();
-    hdr->addr2 = self_addr();
-    hdr->addr3 = join_ctx_->bssid();
-    SetSeqNo(hdr, &seq_);
-    frame.FillTxInfo();
+    BufferWriter w(*packet);
+    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
+    mgmt_hdr->fc.set_type(FrameType::kManagement);
+    mgmt_hdr->fc.set_subtype(ManagementSubtype::kDeauthentication);
+    mgmt_hdr->addr1 = join_ctx_->bssid();
+    mgmt_hdr->addr2 = self_addr();
+    mgmt_hdr->addr3 = join_ctx_->bssid();
+    SetSeqNo(mgmt_hdr, &seq_);
 
-    auto deauth = frame.body();
+    auto deauth = w.Write<Deauthentication>();
     deauth->reason_code = static_cast<uint16_t>(reason_code);
 
-    finspect("Outbound Mgmt Frame(Deauth): %s\n", debug::Describe(*hdr).c_str());
-    return SendNonData(frame.Take());
+    CBW cbw = (assoc_ctx_.is_cbw40_tx ? CBW40 : CBW20);
+    wlan_tx_info_t tx_info = MakeTxInfo(mgmt_hdr->fc, cbw, WLAN_PHY_HT);
+    packet->CopyCtrlFrom(tx_info);
+
+    finspect("Outbound Mgmt Frame(Deauth): %s\n", debug::Describe(*mgmt_hdr).c_str());
+    packet->set_len(w.WrittenBytes());
+    return SendNonData(fbl::move(packet));
 }
 
 zx_status_t Station::SendWlan(fbl::unique_ptr<Packet> packet) {
@@ -1376,7 +1344,7 @@ uint8_t Station::GetTid(const EthFrame& frame) {
 zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& frame) {
     assoc_ctx_ = AssocContext{};
     assoc_ctx_.ts_start = timer_mgr_.Now();
-    assoc_ctx_.bssid = common::MacAddr(join_ctx_->bss()->bssid.data());
+    assoc_ctx_.bssid = join_ctx_->bssid();
     assoc_ctx_.aid = frame.body()->aid & kAidMask;
 
     AssocContext ap{};

@@ -10,6 +10,7 @@
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
+#include <wlan/mlme/packet_utils.h>
 #include <wlan/mlme/rates_elements.h>
 #include <wlan/mlme/service.h>
 
@@ -254,7 +255,6 @@ zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>* out_packet, comm
     hdr->addr1 = common::kBcastMac;
     hdr->addr2 = bssid;
     hdr->addr3 = bssid;
-    frame.FillTxInfo();
 
     auto bcn = frame.body();
     bcn->beacon_interval = kBeaconPeriodTu;
@@ -265,18 +265,14 @@ zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>* out_packet, comm
     ElementWriter w(bcn->elements, body_payload_len);
     if (WriteSsid(&w, kSsid, sizeof(kSsid)) != ZX_OK) { return ZX_ERR_IO; }
 
-    RatesWriter rates_writer { kSupportedRates, countof(kSupportedRates) };
-    if (!rates_writer.WriteSupportedRates(&w)) {
-        return ZX_ERR_IO;
-    }
+    RatesWriter rates_writer{kSupportedRates, countof(kSupportedRates)};
+    if (!rates_writer.WriteSupportedRates(&w)) { return ZX_ERR_IO; }
 
     if (WriteDsssParamSet(&w, kBssChannel) != ZX_OK) { return ZX_ERR_IO; }
 
     if (WriteCountry(&w, kBssChannel) != ZX_OK) { return ZX_ERR_IO; }
 
-    if (!rates_writer.WriteExtendedSupportedRates(&w)) {
-        return ZX_ERR_IO;
-    }
+    if (!rates_writer.WriteExtendedSupportedRates(&w)) { return ZX_ERR_IO; }
 
     ZX_DEBUG_ASSERT(bcn->Validate(w.size()));
     size_t body_len = bcn->len() + w.size();
@@ -303,7 +299,6 @@ zx_status_t CreateAuthReqFrame(fbl::unique_ptr<Packet>* out_packet) {
     hdr->addr1 = bssid;
     hdr->addr2 = client;
     hdr->addr3 = bssid;
-    frame.FillTxInfo();
 
     auto auth = frame.body();
     auth->auth_algorithm_number = AuthAlgorithm::kOpenSystem;
@@ -331,7 +326,6 @@ zx_status_t CreateAuthRespFrame(fbl::unique_ptr<Packet>* out_packet) {
     hdr->addr1 = client;
     hdr->addr2 = bssid;
     hdr->addr3 = bssid;
-    frame.FillTxInfo();
 
     auto auth = frame.body();
     auth->auth_algorithm_number = AuthAlgorithm::kOpenSystem;
@@ -359,7 +353,6 @@ zx_status_t CreateDeauthFrame(fbl::unique_ptr<Packet>* out_packet) {
     hdr->addr1 = bssid;
     hdr->addr2 = client;
     hdr->addr3 = bssid;
-    frame.FillTxInfo();
 
     auto deauth = frame.body();
     deauth->reason_code = reason_code::ReasonCode::kLeavingNetworkDeauth;
@@ -387,7 +380,6 @@ zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>* out_packet) {
     hdr->addr1 = bssid;
     hdr->addr2 = client;
     hdr->addr3 = bssid;
-    frame.FillTxInfo();
 
     auto assoc = frame.body();
     CapabilityInfo cap = {};
@@ -423,7 +415,6 @@ zx_status_t CreateAssocRespFrame(fbl::unique_ptr<Packet>* out_packet) {
     hdr->addr1 = client;
     hdr->addr2 = bssid;
     hdr->addr3 = bssid;
-    frame.FillTxInfo();
 
     auto assoc = frame.body();
     assoc->aid = kAid;
@@ -454,7 +445,6 @@ zx_status_t CreateDisassocFrame(fbl::unique_ptr<Packet>* out_packet) {
     hdr->addr1 = bssid;
     hdr->addr2 = client;
     hdr->addr3 = bssid;
-    frame.FillTxInfo();
 
     auto disassoc = frame.body();
     disassoc->reason_code = reason_code::ReasonCode::kLeavingNetworkDisassoc;

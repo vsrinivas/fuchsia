@@ -12,6 +12,7 @@
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
+#include <wlan/mlme/packet_utils.h>
 #include <wlan/mlme/service.h>
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
@@ -175,9 +176,9 @@ void BeaconSender::SendProbeResponse(const MgmtFrameView<ProbeRequest>& probe_re
         return;
     }
 
-    frame.FillTxInfo();
-
-    status = device_->SendWlan(frame.Take());
+    auto packet = frame.Take();
+    packet->CopyCtrlFrom(MakeTxInfo(frame.hdr()->fc, CBW20, WLAN_PHY_OFDM));
+    status = device_->SendWlan(fbl::move(packet));
     if (status != ZX_OK) {
         errorf("[bcn-sender] [%s] could not send ProbeResponse packet: %d\n",
                bss_->bssid().ToString().c_str(), status);
