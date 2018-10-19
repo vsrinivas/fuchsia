@@ -10,9 +10,9 @@
 extern crate serde_derive;
 
 mod opts;
-mod wlan_service_util;
 
 use crate::opts::Opt;
+use connectivity_testing::wlan_service_util;
 use failure::{bail, Error, ResultExt};
 use fidl_fuchsia_net_oldhttp::{self as http, HttpServiceProxy};
 use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
