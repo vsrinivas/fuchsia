@@ -18,15 +18,11 @@ extern "C" {
 
 class TestConnection {
 public:
-    TestConnection() : TestConnection(MAGMA_CAPABILITY_RENDERING) {}
-
-    TestConnection(uint32_t capability)
+    TestConnection()
     {
-        if (capability == MAGMA_CAPABILITY_RENDERING)
-            fd_ = open("/dev/class/gpu/000", O_RDONLY);
-
+        fd_ = open("/dev/class/gpu/000", O_RDONLY);
         DASSERT(fd_ >= 0);
-        connection_ = magma_create_connection(fd(), capability);
+        connection_ = magma_create_connection(fd(), 0);
     }
 
     ~TestConnection()

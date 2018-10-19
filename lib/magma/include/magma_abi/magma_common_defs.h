@@ -11,8 +11,6 @@
 extern "C" {
 #endif
 
-#define MAGMA_CAPABILITY_RENDERING 1
-
 #define MAGMA_QUERY_DEVICE_ID 1
 #define MAGMA_QUERY_VENDOR_PARAM_0 10000
 
