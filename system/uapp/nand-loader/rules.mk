@@ -8,7 +8,6 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userapp
 MODULE_GROUP := core
-# MODULE_NAME := nand-util
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/main.cpp \
