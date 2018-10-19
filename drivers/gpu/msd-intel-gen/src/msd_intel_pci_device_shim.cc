@@ -41,7 +41,7 @@ public:
         zx_status_t status = owner_->ops()->gtt_free(owner_->context(), addr);
         if (status != ZX_OK)
             return DRETF(false, "gtt_free failed: %d", status);
-        return status;
+        return true;
     }
 
     bool Clear(uint64_t addr) override
