@@ -17,7 +17,6 @@
 
 #include <fidl/c_generator.h>
 #include <fidl/flat_ast.h>
-#include <fidl/identifier_table.h>
 #include <fidl/json_generator.h>
 #include <fidl/lexer.h>
 #include <fidl/library_zx.h>
@@ -219,9 +218,9 @@ enum struct Behavior {
     kJSON,
 };
 
-bool Parse(const fidl::SourceFile& source_file, fidl::IdentifierTable* identifier_table,
+bool Parse(const fidl::SourceFile& source_file,
            fidl::ErrorReporter* error_reporter, fidl::flat::Library* library) {
-    fidl::Lexer lexer(source_file, identifier_table, error_reporter);
+    fidl::Lexer lexer(source_file, error_reporter);
     fidl::Parser parser(&lexer, error_reporter);
     auto ast = parser.Parse();
     if (!parser.Ok()) {
@@ -336,7 +335,6 @@ int compile(fidl::ErrorReporter* error_reporter,
             std::string library_name,
             std::map<Behavior, std::fstream> outputs,
             std::vector<fidl::SourceManager> source_managers) {
-    fidl::IdentifierTable identifier_table;
     fidl::flat::Libraries all_libraries;
     const fidl::flat::Library* final_library = nullptr;
     for (const auto& source_manager : source_managers) {
@@ -345,7 +343,7 @@ int compile(fidl::ErrorReporter* error_reporter,
         }
         auto library = std::make_unique<fidl::flat::Library>(&all_libraries, error_reporter);
         for (const auto& source_file : source_manager.sources()) {
-            if (!Parse(*source_file, &identifier_table, error_reporter, library.get())) {
+            if (!Parse(*source_file, error_reporter, library.get())) {
                 return 1;
             }
         }

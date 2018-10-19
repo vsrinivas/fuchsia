@@ -12,7 +12,6 @@
 #include <vector>
 
 #include <fidl/formatter.h>
-#include <fidl/identifier_table.h>
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/source_manager.h>
@@ -47,9 +46,9 @@ void Usage(const std::string& argv0) {
     exit(1);
 }
 
-bool Format(const fidl::SourceFile& source_file, fidl::IdentifierTable* identifier_table,
+bool Format(const fidl::SourceFile& source_file,
             fidl::ErrorReporter* error_reporter, std::string& output) {
-    fidl::Lexer lexer(source_file, identifier_table, error_reporter);
+    fidl::Lexer lexer(source_file, error_reporter);
     fidl::Parser parser(&lexer, error_reporter);
     std::unique_ptr<fidl::raw::File> ast = parser.Parse();
     if (!parser.Ok()) {
@@ -99,11 +98,10 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    fidl::IdentifierTable identifier_table;
     fidl::ErrorReporter error_reporter;
     for (const auto& source_file : source_manager.sources()) {
         std::string output;
-        if (!Format(*source_file, &identifier_table, &error_reporter, output)) {
+        if (!Format(*source_file, &error_reporter, output)) {
             // In the formattter, we do not print the report if there are only
             // warnings.
             error_reporter.PrintReports();

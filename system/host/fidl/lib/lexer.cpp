@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <map>
 
 namespace fidl {
 
@@ -115,8 +116,12 @@ Token Lexer::LexIdentifier() {
         msg.append("'");
         error_reporter_->ReportError(location, msg);
     }
-    return identifier_table_->MakeIdentifier(
-        previous_end, identifier_data, source_file_);
+    auto subkind = Token::Subkind::kNone;
+    auto lookup = keyword_table_.find(identifier_data);
+    if (lookup != keyword_table_.end())
+        subkind = lookup->second;
+    return Token(previous_end, SourceLocation(identifier_data, source_file_),
+                 Token::Kind::kIdentifier, subkind);
 }
 
 Token Lexer::LexStringLiteral() {
