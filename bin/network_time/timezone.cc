@@ -8,13 +8,14 @@
 #include <inttypes.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <zircon/device/rtc.h>
+#include <zircon/rtc/c/fidl.h>
 
 #include <string>
 
 #include "garnet/bin/network_time/roughtime_server.h"
 #include "garnet/bin/network_time/time_server_config.h"
 #include "garnet/bin/network_time/time_util.h"
+#include "lib/fdio/util.h"
 #include "lib/syslog/cpp/logger.h"
 
 namespace time_server {
@@ -70,7 +71,7 @@ bool Timezone::UpdateSystemTime(int tries) {
 bool Timezone::SetSystemTime(time_t epoch_seconds) {
   struct tm ptm;
   gmtime_r(&epoch_seconds, &ptm);
-  rtc_t rtc;
+  zircon_rtc_Time rtc;
   rtc.seconds = ptm.tm_sec;
   rtc.minutes = ptm.tm_min;
   rtc.hours = ptm.tm_hour;
@@ -82,9 +83,17 @@ bool Timezone::SetSystemTime(time_t epoch_seconds) {
     FX_LOGS(ERROR) << "Couldn't open RTC file: " << strerror(errno);
     return false;
   }
-  ssize_t written = ioctl_rtc_set(rtc_fd, &rtc);
-  if (written != sizeof(rtc)) {
-    FX_LOGS(ERROR) << "ioctl_rtc_set failed: " << strerror(errno) << " for "
+  zx_handle_t handle;
+  zx_status_t status = fdio_get_service_handle(rtc_fd, &handle);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Couldn't get service handle: " << status;
+    return false;
+  }
+
+  zx_status_t set_status;
+  status = zircon_rtc_DeviceSet(handle, &rtc, &set_status);
+  if ((status != ZX_OK) || (set_status != ZX_OK)) {
+    FX_LOGS(ERROR) << "zircon_rtc_DeviceSet failed: " << status << "/" << set_status << " for "
                    << ToIso8601String(epoch_seconds) << " (" << epoch_seconds
                    << ")";
     return false;
