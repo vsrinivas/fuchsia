@@ -92,17 +92,15 @@ void AudioRendererImpl::SetThrottleOutput(
 void AudioRendererImpl::RecomputeMinClockLeadTime() {
   int64_t cur_lead_time = 0;
 
-  {
-    fbl::AutoLock lock(&links_lock_);
-    for (const auto& link : dest_links_) {
-      if (link->GetDest()->is_output()) {
-        const auto& output = *static_cast<AudioOutput*>(link->GetDest().get());
-        if (cur_lead_time < output.min_clock_lead_time_nsec()) {
-          cur_lead_time = output.min_clock_lead_time_nsec();
-        }
-      }
+  ForEachDestLink([throttle_ptr = throttle_output_link_.get(),
+                   &cur_lead_time](AudioLinkPacketSource* link) {
+    if (link->GetDest()->is_output() && link != throttle_ptr) {
+      const auto output = static_cast<AudioOutput*>(link->GetDest().get());
+
+      cur_lead_time =
+          std::max(cur_lead_time, output->min_clock_lead_time_nsec());
     }
-  }
+  });
 
   if (min_clock_lead_nsec_ != cur_lead_time) {
     min_clock_lead_nsec_ = cur_lead_time;
@@ -117,19 +115,11 @@ bool AudioRendererImpl::IsOperating() {
     return true;
   }
 
-  fbl::AutoLock links_lock(&links_lock_);
-  // AudioRenderers should never be linked to sources.
-  FXL_DCHECK(source_links_.empty());
-
-  for (const auto& link : dest_links_) {
-    FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
-    auto packet_link = reinterpret_cast<AudioLinkPacketSource*>(link.get());
-    if (!packet_link->pending_queue_empty()) {
-      return true;
-    }
-  }
-
-  return false;
+  return ForAnyDestLink([](AudioLinkPacketSource* link) {
+    // If pending queue empty: this link is NOT operating; ask other links.
+    // Else: Link IS operating; final answer is YES; no need to ask others.
+    return (!link->pending_queue_empty());
+  });
 }
 
 bool AudioRendererImpl::ValidateConfig() {
@@ -473,15 +463,10 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
   // the user does not provide an explicit PTS.
   next_frac_frame_pts_ = packet_ref->end_pts();
 
-  // Distribute our packet to our links
-  {
-    fbl::AutoLock links_lock(&links_lock_);
-    for (const auto& link : dest_links_) {
-      FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
-      auto packet_link = reinterpret_cast<AudioLinkPacketSource*>(link.get());
-      packet_link->PushToPendingQueue(packet_ref);
-    }
-  }
+  // Distribute our packet to all our dest links
+  ForEachDestLink([packet_ref](AudioLinkPacketSource* link) {
+    link->PushToPendingQueue(packet_ref);
+  });
 
   // Things went well, cancel the cleanup hook.
   cleanup.cancel();
@@ -503,18 +488,12 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
     flush_token = PendingFlushToken::Create(owner_, std::move(callback));
   }
 
-  // Tell each of our link thats they need to flush.  If the links are currently
-  // processing pending data, then link will take a reference to the flush token
-  // and ensure that the callback is queued at the proper time (after all of the
-  // pending packet complete callbacks have been queued).
-  {
-    fbl::AutoLock links_lock(&links_lock_);
-    for (const auto& link : dest_links_) {
-      FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
-      auto packet_link = reinterpret_cast<AudioLinkPacketSource*>(link.get());
-      packet_link->FlushPendingQueue(flush_token);
-    }
-  }
+  // Tell each link to flush. If link is currently processing pending data, it
+  // will take a reference to the flush token and ensure a callback is queued at
+  // the proper time (after all pending packet-complete callbacks are queued).
+  ForEachDestLink([flush_token](AudioLinkPacketSource* link) {
+    link->FlushPendingQueue(flush_token);
+  });
 
   // Invalidate any internal state which gets reset after a flush.
   next_frac_frame_pts_ = 0;
@@ -665,42 +644,6 @@ void AudioRendererImpl::Pause(PauseCallback callback) {
 
 void AudioRendererImpl::PauseNoReply() { Pause(nullptr); }
 
-// Call the provided function for each destination link (except throttle). This
-// distributes calls (such as SetGain) to each AudioRenderer output path.
-void AudioRendererImpl::ForEachPacketLink(LinkFunction link_task) {
-  FXL_DCHECK(link_task != nullptr);
-  //
-  // TODO(mpuryear): Review and improve this pattern, creating a mechanism that
-  // can be used for audio links and audio objects as well.
-  //
-  // As an example, upper-layer components explicitly provide a means to
-  // downcast the base class, as in mediaplayer/graph/types/stream_type.h#71.
-  // This is akin to a tagged union, in a way that makes sense in context.
-  //
-  // An alternative is to have the downcasting accessor return either a mutable
-  // object reference (once properly cast), or a RefPtr<ObjType>. Here, the
-  // former makes sense.
-  // To downcast and maintain a reference potentially Out Of Scope from this
-  // method, a version which downcasts and returns a RefPtr instance would make
-  // sense, such as:
-  //    fbl::RefPtr<Base> foo = MakeBase();
-  //    auto bar = fbl::RefPtr<Derived>::Downcast( foo -or- (fbl::move(foo) );
-  //
-
-  fbl::AutoLock links_lock(&links_lock_);
-  for (const auto& link : dest_links_) {
-    FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
-    auto packet_link = reinterpret_cast<AudioLinkPacketSource*>(link.get());
-
-    // Don't waste time on links to the throttle output.
-    if (packet_link == throttle_output_link_.get()) {
-      continue;
-    }
-
-    link_task(packet_link);
-  }
-}
-
 // Set the stream gain, in each Renderer -> Output audio path. The Gain object
 // contains multiple stages. In playback, renderer gain is pre-mix and hence is
 // "source" gain; the Output device (or master) gain is "dest" gain.
@@ -718,8 +661,12 @@ void AudioRendererImpl::SetGain(float gain_db) {
     float effective_gain_db =
         mute_ ? fuchsia::media::MUTED_GAIN_DB : stream_gain_db_;
 
-    ForEachPacketLink([effective_gain_db](AudioLinkPacketSource* link) {
-      link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
+    // Set this gain with every link (except the link to throttle output)
+    ForEachDestLink([throttle_ptr = throttle_output_link_.get(),
+                     effective_gain_db](AudioLinkPacketSource* link) {
+      if (link != throttle_ptr) {
+        link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
+      }
     });
   }
 }
@@ -736,11 +683,13 @@ void AudioRendererImpl::SetGainWithRamp(float gain_db,
     return;
   }
 
-  ForEachPacketLink(
-      [gain_db, duration_ns, rampType](AudioLinkPacketSource* link) {
-        link->bookkeeping()->gain.SetSourceGainWithRamp(gain_db, duration_ns,
-                                                        rampType);
-      });
+  ForEachDestLink([throttle_ptr = throttle_output_link_.get(), gain_db,
+                   duration_ns, rampType](AudioLinkPacketSource* link) {
+    if (link != throttle_ptr) {
+      link->bookkeeping()->gain.SetSourceGainWithRamp(gain_db, duration_ns,
+                                                      rampType);
+    }
+  });
 }
 
 // Set a stream mute, in each Renderer -> Output audio path. For now, mute is
@@ -755,8 +704,11 @@ void AudioRendererImpl::SetMute(bool mute) {
     float effective_gain_db =
         mute_ ? fuchsia::media::MUTED_GAIN_DB : stream_gain_db_;
 
-    ForEachPacketLink([effective_gain_db](AudioLinkPacketSource* link) {
-      link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
+    ForEachDestLink([throttle_ptr = throttle_output_link_.get(),
+                     effective_gain_db](AudioLinkPacketSource* link) {
+      if (link != throttle_ptr) {
+        link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
+      }
     });
   }
 }

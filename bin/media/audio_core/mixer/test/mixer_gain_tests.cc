@@ -72,7 +72,7 @@ class GainTest : public ::testing::Test {
   TimelineRate rate_1khz_output_;
 };
 
-TEST_F(GainTest, GainDefaults) {
+TEST_F(GainTest, Defaults) {
   EXPECT_EQ(gain_.GetGainScale(), Gain::kUnityScale);
   EXPECT_TRUE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsSilent());

@@ -9,7 +9,9 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <lib/fit/function.h>
 
+#include "garnet/bin/media/audio_core/audio_link_packet_source.h"
 #include "garnet/bin/media/audio_core/fwd_decls.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
@@ -75,11 +77,10 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   // properties of a link (or reject the link) before the link gets added to the
   // source and destination link sets.
   //
-  // For example, Sources like a audio out override InitializeDestLink in order
-  // to set the source gain and to make a copy of their pending packet
-  // queue.packet queue.  Destinations like an output override
-  // InitializeSourceLink in order to choose and intialize an appropriate
-  // resampling filter.
+  // For example, Sources like an AudioRenderer override InitializeDestLink in
+  // order to set the source gain and to make a copy of their pending packet
+  // queue. Destinations like an output override InitializeSourceLink in order
+  // to choose and intialize an appropriate resampling filter.
   //
   // @return MediaResult::OK if initialization succeeded, or an appropriate
   // error code otherwise.
@@ -104,6 +105,62 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   // Right now, we have no priorities, so this is just a set of
   // AudioRenderer/output links.
   AudioLinkSet source_links_ FXL_GUARDED_BY(links_lock_);
+
+  // The following iterator functions accept a function (see below) and call it
+  // sequentially with each destination link as a parameter. As described below,
+  // depending on which iterator is used, either every link is guaranteed to be
+  // included, or iteration will terminate early as soon as a task returns true.
+  //
+  // This iterator approach reduces our ability to use static thread analysis
+  // effectively, so use with care. ForEachDestLink and ForAnyDestLink each
+  // obtain the links_lock_ and hold it while each LinkFunction or
+  // LinkBoolFunction is invoked. For this reason,
+  //    1) Callers into the ForEachDestLink or ForAnyDestLink functions must not
+  //       already hold links_lock_; additionally,
+  //    2) LinkFunctions and LinkBoolFunctions themselves must not
+  //        a) attempt to obtain links_lock_ directly, nor
+  //        b) acquire any lock marked as acquired_before(links_lock_), nor
+  //        c) call any function which excludes links_lock_.
+  //
+
+  // The inline_functions below reserve stack space for up to four pointers.
+  // This can be increased as needed (but should NOT be needed any time soon).
+  //
+  // LinkFunction has no return value and is used with ForEachDestLink.
+  using LinkFunction = fit::inline_function<void(AudioLinkPacketSource* link),
+                                            sizeof(void*) * 4>;
+  // Same as LinkFunction, but returns bool for purposes of early termination.
+  // This return val is used by ForAnyDestLink (or future ForAllDestLinks).
+  // Currently stack space for one ptr is provided (the one caller needs 0).
+  using LinkBoolFunction =
+      fit::inline_function<bool(AudioLinkPacketSource* link),
+                           sizeof(void*) * 1>;
+
+  // Link Iterators - these functions iterate upon LinkPacketSource types only.
+  //
+  // Run this task on every AudioLink in dest_links_. All links will be called.
+  void ForEachDestLink(const LinkFunction& dest_task)
+      FXL_LOCKS_EXCLUDED(links_lock_);
+
+  // Run this task on each dest link. If any returns 'true', ForAnyDestLink
+  // immediately returns 'true' without calling the remaining links. If none
+  // returns 'true' or if link set is empty, ForAnyDestLink returns 'false'.
+  bool ForAnyDestLink(const LinkBoolFunction& dest_task)
+      FXL_LOCKS_EXCLUDED(links_lock_);
+
+  // TODO(mpuryear): it might be a good idea to introduce an auto-lock like
+  // object to fbl::, to behave like a lock token for situations like this. With
+  // proper tweaks to fbl::Mutex, this could for static analysis purposes seem
+  // to obtain and release a mutex without actually doing so. In debug builds,
+  // it could also assert that the mutex was held at object construction time.
+
+  // Pros: we regain much of the TA protection, if lambdas add one of these
+  // objects "holding" the proper lock at the start of their executions.
+
+  // Cons: essentially all these lambdas must capture "this", to tell the TA
+  // which instance of links_lock was being held. This price would be paid in
+  // all builds, regardless of whether code gets generated as a result.
+  //
 
  private:
   void UnlinkCleanup(AudioLinkSet* links);

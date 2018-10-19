@@ -103,6 +103,40 @@ void AudioObject::RemoveLink(const AudioLinkPtr& link) {
   }
 }
 
+// Call the provided function for each dest link (passing the link as a param).
+// This distributes calls such as SetGain to every AudioRenderer output path.
+void AudioObject::ForEachDestLink(const LinkFunction& dest_task) {
+  fbl::AutoLock links_lock(&links_lock_);
+
+  // AudioRenderers should never be linked to sources.
+  FXL_DCHECK(source_links_.empty());
+
+  for (const auto& link : dest_links_) {
+    FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
+    auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+
+    dest_task(packet_link);
+  }
+}
+
+// Call the provided function for each destination link, until one returns true.
+bool AudioObject::ForAnyDestLink(const LinkBoolFunction& dest_task) {
+  fbl::AutoLock links_lock(&links_lock_);
+
+  FXL_DCHECK(source_links_.empty());
+
+  for (const auto& link : dest_links_) {
+    FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
+    auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+
+    if (dest_task(packet_link)) {
+      return true;  // This link satisfied the need; we are done.
+    }
+    // Else, continue inquiring with the remaining links.
+  }
+  return false;  // No link satisfied the need.
+}
+
 void AudioObject::UnlinkSources() {
   AudioLinkSet old_links;
   {
@@ -133,10 +167,9 @@ void AudioObject::UnlinkCleanup(AudioLinkSet* links) {
   FXL_DCHECK(links != nullptr);
 
   // Note: we could just range-based for-loop over this set and call RemoveLink
-  // on each member.  Instead, we remove each element from our local set before
-  // calling RemoveLinks.  This is to make the transition to using intrusive
-  // containers (at a future date) a bit easier.  Explainations available upon
-  // request.
+  // on each member. Instead, we remove each element from our local set before
+  // calling RemoveLinks. This will make a future transition to using intrusive
+  // containers a bit easier. Explanations available on request.
   while (!links->empty()) {
     auto link = std::move(*links->begin());
     links->erase(links->begin());

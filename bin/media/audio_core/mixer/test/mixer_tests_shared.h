@@ -19,12 +19,6 @@ namespace test {
 // Subtest shared helper functions -- used by tests; can ASSERT on their own.
 //
 
-// Converts a gain multiplier (in fixed-pt 4.28) to decibels (in double floating
-// point). Here, dB refers to Power, so 10x change is +20 dB (not +10dB).
-inline double GainScaleToDb(Gain::AScale gain_scale) {
-  return Gain::DoubleToDb(static_cast<double>(gain_scale) / Gain::kUnityScale);
-}
-
 // Find a suitable mixer for the provided format, channels and frame rates.
 MixerPtr SelectMixer(fuchsia::media::AudioSampleFormat src_format,
                      uint32_t src_channels, uint32_t src_frame_rate,

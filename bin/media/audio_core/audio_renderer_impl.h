@@ -100,9 +100,6 @@ class AudioRendererImpl
   // Minimum Clock Lead Time state
   int64_t min_clock_lead_nsec_ = 0;
 
-  using LinkFunction = fit::function<void(AudioLinkPacketSource* link)>;
-  void ForEachPacketLink(LinkFunction task);
-
  private:
   class GainControlBinding : public fuchsia::media::GainControl {
    public:
