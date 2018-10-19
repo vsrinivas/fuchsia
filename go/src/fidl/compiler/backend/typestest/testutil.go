@@ -5,10 +5,44 @@
 package typestest
 
 import (
+	"encoding/json"
+	"io/ioutil"
+	"path/filepath"
+	"runtime"
 	"strconv"
+	"strings"
 
 	"fidl/compiler/backend/types"
 )
+
+var basePath = func() string {
+	for i := 0; i < 10; i++ {
+		_, file, _, ok := runtime.Caller(i)
+		if !ok {
+			break
+		}
+		if strings.HasSuffix(file, "testutil.go") {
+			path, _ := filepath.Split(file)
+			return path
+		}
+	}
+	panic("")
+}()
+
+// GetExample retrieves an example by filename, and parses it.
+func GetExample(filename string) types.Root {
+	data, err := ioutil.ReadFile(filepath.Join(basePath, filename))
+	if err != nil {
+		panic(err)
+	}
+
+	var fidl types.Root
+	if err := json.Unmarshal(data, &fidl); err != nil {
+		panic(err)
+	}
+
+	return fidl
+}
 
 func NumericLiteral(value int) types.Constant {
 	return types.Constant{

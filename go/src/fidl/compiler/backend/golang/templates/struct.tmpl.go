@@ -6,9 +6,15 @@ package templates
 
 const Struct = `
 {{- define "StructDefinition" -}}
+{{range .DocComments}}
+//{{ . }}
+{{- end}}
 type {{ .Name }} struct {
 	_ struct{} ` + "`" + `fidl2:"s,{{ .Size }},{{ .Alignment }}"` + "`" + `
 	{{- range .Members }}
+	{{- range .DocComments}}
+	//{{ . }}
+	{{- end}}
 	{{ .Name }} {{ .Type }} {{ .Tags }}
 	{{- end }}
 }

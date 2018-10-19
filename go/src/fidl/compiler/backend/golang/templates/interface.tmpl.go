@@ -81,9 +81,14 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 }
 {{- end }}
 
-// {{ .Name }} server interface.
+{{range .DocComments}}
+//{{ . }}
+{{- end}}
 type {{ .Name }} interface {
 {{- range .Methods }}
+	{{- range .DocComments}}
+	//{{ . }}
+	{{- end}}
 	{{- if .Request }}
 	{{ .Name }}(
 	{{- range $index, $m := .Request.Members -}}

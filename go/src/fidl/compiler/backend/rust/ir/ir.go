@@ -364,14 +364,14 @@ func (c *compiler) compileConst(val types.Const) Const {
 			Type:       "&str",
 			Name:       name,
 			Value:      c.compileConstant(val.Value),
-			DocStrings: types.GetDocString(val),
+			DocStrings: val.DocComments(),
 		}
 	} else {
 		r = Const{
 			Type:       c.compileType(val.Type, false).Decl,
 			Name:       name,
 			Value:      c.compileConstant(val.Value),
-			DocStrings: types.GetDocString(val),
+			DocStrings: val.DocComments(),
 		}
 	}
 	return r
@@ -502,14 +502,14 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 		c.compileCamelCompoundIdentifier(val.Name),
 		compilePrimitiveSubtype(val.Type),
 		[]EnumMember{},
-		types.GetDocString(val),
+		val.DocComments(),
 	}
 	for _, v := range val.Members {
 		e.Members = append(e.Members, EnumMember{
 			Name:       compileCamelIdentifier(v.Name),
 			ConstName:  compileScreamingSnakeIdentifier(v.Name),
 			Value:      c.compileConstant(v.Value),
-			DocStrings: types.GetDocString(val),
+			DocStrings: val.DocComments(),
 		})
 	}
 	return e
@@ -536,7 +536,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		c.compileCamelCompoundIdentifier(val.Name),
 		[]Method{},
 		strings.Trim(val.GetServiceName(), "\""),
-		types.GetDocString(val),
+		val.DocComments(),
 	}
 
 	for _, v := range val.Methods {
@@ -544,7 +544,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		camelName := compileCamelIdentifier(v.Name)
 		request := c.compileParameterArray(v.Request)
 		response := c.compileParameterArray(v.Response)
-		doc_string := types.GetDocString(v)
+		doc_string := val.DocComments()
 
 		m := Method{
 			Ordinal:     v.Ordinal,
@@ -564,7 +564,6 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	memberType := c.compileType(val.Type, false)
-	doc_string := types.GetDocString(val)
 	return StructMember{
 		Type:         memberType.Decl,
 		Name:         compileSnakeIdentifier(val.Name),
@@ -572,20 +571,19 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 		HasDefault:   false,
 		DefaultValue: "", // TODO(cramertj) support defaults
 		LargeArray:   memberType.LargeArray,
-		DocStrings:   doc_string,
+		DocStrings:   val.DocComments(),
 	}
 }
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	name := c.compileCamelCompoundIdentifier(val.Name)
-	doc_string := types.GetDocString(val)
 	r := Struct{
 		Name:        name,
 		Members:     []StructMember{},
 		Size:        val.Size,
 		Alignment:   val.Alignment,
 		LargeArrays: false,
-		DocStrings:  doc_string,
+		DocStrings:  val.DocComments(),
 	}
 
 	for _, v := range val.Members {

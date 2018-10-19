@@ -275,13 +275,6 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// Annotated is an interface meant to describe nodes which are annotated (or
-// decorated) by attributes.
-type Annotated interface {
-	LookupAttribute(name Identifier) (Attribute, bool)
-	GetAttribute(name Identifier) Attribute
-}
-
 type Attribute struct {
 	Name  Identifier `json:"name"`
 	Value string     `json:"value"`
@@ -293,9 +286,6 @@ type Attribute struct {
 type Attributes struct {
 	Attributes []Attribute `json:"maybe_attributes,omitempty"`
 }
-
-// Assert that Attributes implements the Annotated interface.
-var _ Annotated = Attributes{}
 
 func (el Attributes) LookupAttribute(name Identifier) (Attribute, bool) {
 	for _, a := range el.Attributes {
@@ -311,6 +301,14 @@ func (el Attributes) GetAttribute(name Identifier) Attribute {
 	return attr
 }
 
+func (el Attributes) DocComments() []string {
+	doc, ok := el.LookupAttribute("Doc")
+	if !ok || doc.Value == "" {
+		return nil
+	}
+	return strings.Split(doc.Value[0:len(doc.Value)-1], "\n")
+}
+
 // Union represents the declaration of a FIDL union.
 type Union struct {
 	Attributes
@@ -324,18 +322,18 @@ type Union struct {
 // UnionMember represents the declaration of a field in a FIDL union.
 type UnionMember struct {
 	Attributes
-	Type       Type        `json:"type"`
-	Name       Identifier  `json:"name"`
-	Offset     int         `json:"offset"`
+	Type   Type       `json:"type"`
+	Name   Identifier `json:"name"`
+	Offset int        `json:"offset"`
 }
 
 // Table represents a declaration of a FIDL table.
 type Table struct {
 	Attributes
-	Name       EncodedCompoundIdentifier `json:"name"`
-	Members    []TableMember             `json:"members"`
-	Size       int                       `json:"size"`
-	Alignment  int                       `json:"alignment"`
+	Name      EncodedCompoundIdentifier `json:"name"`
+	Members   []TableMember             `json:"members"`
+	Size      int                       `json:"size"`
+	Alignment int                       `json:"alignment"`
 }
 
 // TableMember represents the declaration of a field in a FIDL table.
@@ -370,16 +368,8 @@ type StructMember struct {
 // Interface represents the declaration of a FIDL interface.
 type Interface struct {
 	Attributes
-	Name       EncodedCompoundIdentifier `json:"name"`
-	Methods    []Method                  `json:"methods"`
-}
-
-func GetDocString(node Annotated) []string {
-	value, ok := node.LookupAttribute("Doc")
-	if !ok {
-		return nil
-	}
-	return strings.Split(value.Value[1:len(value.Value)-1], "\n")
+	Name    EncodedCompoundIdentifier `json:"name"`
+	Methods []Method                  `json:"methods"`
 }
 
 func (d *Interface) GetServiceName() string {
@@ -419,24 +409,24 @@ type Parameter struct {
 // Enum represents a FIDL delcaration of an enum.
 type Enum struct {
 	Attributes
-	Type       PrimitiveSubtype          `json:"type"`
-	Name       EncodedCompoundIdentifier `json:"name"`
-	Members    []EnumMember              `json:"members"`
+	Type    PrimitiveSubtype          `json:"type"`
+	Name    EncodedCompoundIdentifier `json:"name"`
+	Members []EnumMember              `json:"members"`
 }
 
 // EnumMember represents a single variant in a FIDL enum.
 type EnumMember struct {
 	Attributes
-	Name       Identifier  `json:"name"`
-	Value      Constant    `json:"value"`
+	Name  Identifier `json:"name"`
+	Value Constant   `json:"value"`
 }
 
 // Const represents a FIDL declaration of a named constant.
 type Const struct {
 	Attributes
-	Type       Type                      `json:"type"`
-	Name       EncodedCompoundIdentifier `json:"name"`
-	Value      Constant                  `json:"value"`
+	Type  Type                      `json:"type"`
+	Name  EncodedCompoundIdentifier `json:"name"`
+	Value Constant                  `json:"value"`
 }
 
 type DeclType string

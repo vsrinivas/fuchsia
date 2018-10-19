@@ -39,6 +39,8 @@ type Type string
 
 // Const represents the idiomatic representation of a constant in golang.
 type Const struct {
+	types.Attributes
+
 	// Name is the name of the constant.
 	Name string
 
@@ -59,6 +61,8 @@ type Const struct {
 //    ...
 // )
 type Enum struct {
+	types.Attributes
+
 	// Name is the name of the enum type alias.
 	Name string
 
@@ -72,6 +76,8 @@ type Enum struct {
 
 // EnumMember represents a single enum variant. See Enum for more details.
 type EnumMember struct {
+	types.Attributes
+
 	// Name is the name of the enum variant without any prefix.
 	Name string
 
@@ -82,6 +88,8 @@ type EnumMember struct {
 
 // Struct represents a golang struct.
 type Struct struct {
+	types.Attributes
+
 	// Name is the name of the golang struct.
 	Name string
 
@@ -182,6 +190,8 @@ func tagsfmt(t Tag, t2 tagNew) string {
 
 // StructMember represents the member of a golang struct.
 type StructMember struct {
+	types.Attributes
+
 	// Name is the name of the golang struct member.
 	Name string
 
@@ -198,6 +208,8 @@ type StructMember struct {
 
 // Union represets a FIDL union as a golang struct.
 type Union struct {
+	types.Attributes
+
 	// Name is the name of the FIDL union as a golang struct.
 	Name string
 
@@ -216,6 +228,8 @@ type Union struct {
 
 // UnionMember represents a FIDL union member as a golang struct member.
 type UnionMember struct {
+	types.Attributes
+
 	// Name is the exported name of the FIDL union member.
 	Name string
 
@@ -232,6 +246,8 @@ type UnionMember struct {
 
 // Interface represents a FIDL interface in terms of golang structures.
 type Interface struct {
+	types.Attributes
+
 	// Name is the Golang name of the interface.
 	Name string
 
@@ -262,6 +278,8 @@ type Interface struct {
 
 // Method represents a method of a FIDL interface in terms of golang structures.
 type Method struct {
+	types.Attributes
+
 	// Ordinal is the ordinal for this method.
 	Ordinal types.Ordinal
 
@@ -612,23 +630,26 @@ func (c *compiler) compileConst(val types.Const) Const {
 	// to be either an enum, a primitive, or a string.
 	t, _, _ := c.compileType(val.Type)
 	return Const{
-		Name:  c.compileCompoundIdentifier(val.Name, ""),
-		Type:  t,
-		Value: c.compileConstant(val.Value),
+		Attributes: val.Attributes,
+		Name:       c.compileCompoundIdentifier(val.Name, ""),
+		Type:       t,
+		Value:      c.compileConstant(val.Value),
 	}
 }
 
 func (c *compiler) compileEnumMember(val types.EnumMember) EnumMember {
 	return EnumMember{
-		Name:  c.compileIdentifier(val.Name, true, ""),
-		Value: c.compileConstant(val.Value),
+		Attributes: val.Attributes,
+		Name:       c.compileIdentifier(val.Name, true, ""),
+		Value:      c.compileConstant(val.Value),
 	}
 }
 
 func (c *compiler) compileEnum(val types.Enum) Enum {
 	r := Enum{
-		Name: c.compileCompoundIdentifier(val.Name, ""),
-		Type: c.compilePrimitiveSubtype(val.Type),
+		Attributes: val.Attributes,
+		Name:       c.compileCompoundIdentifier(val.Name, ""),
+		Type:       c.compilePrimitiveSubtype(val.Type),
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, c.compileEnumMember(v))
@@ -639,6 +660,7 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	ty, tag, tag2 := c.compileType(val.Type)
 	return StructMember{
+		Attributes:  val.Attributes,
 		Type:        ty,
 		Name:        c.compileIdentifier(val.Name, true, ""),
 		PrivateName: c.compileIdentifier(val.Name, false, ""),
@@ -648,9 +670,10 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	r := Struct{
-		Name:      c.compileCompoundIdentifier(val.Name, ""),
-		Size:      val.Size,
-		Alignment: val.Alignment,
+		Attributes: val.Attributes,
+		Name:       c.compileCompoundIdentifier(val.Name, ""),
+		Size:       val.Size,
+		Alignment:  val.Alignment,
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, c.compileStructMember(v))
@@ -661,6 +684,7 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 func (c *compiler) compileUnionMember(unionName string, val types.UnionMember) UnionMember {
 	ty, tag, tag2 := c.compileType(val.Type)
 	return UnionMember{
+		Attributes:  val.Attributes,
 		Type:        ty,
 		Name:        c.compileIdentifier(val.Name, true, ""),
 		PrivateName: c.compileIdentifier(val.Name, false, ""),
@@ -670,10 +694,11 @@ func (c *compiler) compileUnionMember(unionName string, val types.UnionMember) U
 
 func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
-		Name:      c.compileCompoundIdentifier(val.Name, ""),
-		TagName:   c.compileCompoundIdentifier(val.Name, TagSuffix),
-		Size:      val.Size,
-		Alignment: val.Alignment,
+		Attributes: val.Attributes,
+		Name:       c.compileCompoundIdentifier(val.Name, ""),
+		TagName:    c.compileCompoundIdentifier(val.Name, TagSuffix),
+		Size:       val.Size,
+		Alignment:  val.Alignment,
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, c.compileUnionMember(r.Name, v))
@@ -695,6 +720,7 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 	methodName := c.compileIdentifier(val.Name, true, "")
 	ordinalName := c.compileCompoundIdentifier(ifaceName, methodName+"Ordinal")
 	r := Method{
+		Attributes:      val.Attributes,
 		Name:            methodName,
 		Ordinal:         val.Ordinal,
 		OrdinalName:     ordinalName,
@@ -730,6 +756,7 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
+		Attributes:          val.Attributes,
 		Name:                c.compileCompoundIdentifier(val.Name, ""),
 		ProxyName:           c.compileCompoundIdentifier(val.Name, ProxySuffix),
 		StubName:            c.compileCompoundIdentifier(val.Name, StubSuffix),

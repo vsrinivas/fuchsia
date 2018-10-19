@@ -493,6 +493,11 @@ func TestCompileInterface(t *testing.T) {
 			},
 		},
 	}, Interface{
+		Attributes: types.Attributes{
+			Attributes: []types.Attribute{
+				{Name: types.Identifier("ServiceName"), Value: "Test"},
+			},
+		},
 		Name:                "Test",
 		ProxyName:           "TestInterface",
 		StubName:            "TestStub",
@@ -574,6 +579,11 @@ func TestCompileInterface(t *testing.T) {
 			},
 		},
 	}, Interface{
+		Attributes: types.Attributes{
+			Attributes: []types.Attribute{
+				{Name: types.Identifier("ServiceName"), Value: "Test"},
+			},
+		},
 		Name:                "Test",
 		ProxyName:           "TestInterface",
 		StubName:            "TestStub",

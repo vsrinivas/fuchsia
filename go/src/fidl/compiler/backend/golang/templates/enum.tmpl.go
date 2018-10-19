@@ -6,6 +6,9 @@ package templates
 
 const Enum = `
 {{- define "EnumDefinition" -}}
+{{range .DocComments}}
+//{{ . }}
+{{- end}}
 type {{ .Name }} {{ .Type }}
 const (
 	{{- range .Members }}

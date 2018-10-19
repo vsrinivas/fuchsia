@@ -34,6 +34,15 @@ go_test("fidlgen_cpp_ir_test") {
   deps = [ ":fidl_lib" ]
 }
 
+go_test("fidlgen_golang_test") {
+  gopackage = "fidl/compiler/backend/golang"
+
+  deps = [
+    ":fidl_lib",
+    "//garnet/public/go/third_party:github.com/google/go-cmp",
+  ]
+}
+
 go_test("fidlgen_golang_ir_test") {
   gopackage = "fidl/compiler/backend/golang/ir"
 

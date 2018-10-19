@@ -25,6 +25,9 @@ import (
 {{if .Consts}}
 const (
 {{- range $const := .Consts }}
+	{{- range .DocComments}}
+	//{{ . }}
+	{{- end}}
 	{{ .Name }} {{ .Type }} = {{ .Value }}
 {{- end }}
 )

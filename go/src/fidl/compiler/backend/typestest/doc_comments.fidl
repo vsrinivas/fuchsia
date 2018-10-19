@@ -1,0 +1,49 @@
+/// library comment #1
+///
+/// library comment #2
+library test.name;
+
+/// const comment #1
+///
+/// const comment #3
+const int32 C = 4;
+
+/// struct comment #1
+///
+/// struct comment #3
+struct Struct {
+    /// struct member comment #1
+    ///
+    /// struct member comment #3
+    int32 Field;
+};
+
+/// union comment #1
+///
+/// union comment #3
+union Union {
+    /// union member comment #1
+    ///
+    /// union member comment #3
+    int32 Field;
+};
+
+/// table comment #1
+///
+/// table comment #3
+table Table {
+    /// table field comment #1
+    ///
+    /// table field comment #3
+    1: int32 Field;
+};
+
+/// interface comment #1
+///
+/// interface comment #3
+interface Interface {
+    /// method comment #1
+    ///
+    /// method comment #3
+    1: Method();
+};

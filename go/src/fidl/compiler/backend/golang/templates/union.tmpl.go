@@ -14,10 +14,15 @@ const (
 	{{- end }}
 )
 
-// {{ .Name }} is a FIDL union.
+{{range .DocComments}}
+//{{ . }}
+{{- end}}
 type {{ .Name }} struct {
 	{{ .TagName }} ` + "`" + `fidl:"tag" fidl2:"u,{{ .Size }},{{ .Alignment }}"` + "`" + `
 	{{- range .Members }}
+	{{- range .DocComments}}
+	//{{ . }}
+	{{- end}}
 	{{ .Name }} {{ .Type }} {{ .Tags }}
 	{{- end }}
 }

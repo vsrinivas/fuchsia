@@ -5,6 +5,7 @@
     ],
     "host_tests": [
         "//garnet/go/src/fidl:fidlgen_cpp_ir_test",
+        "//garnet/go/src/fidl:fidlgen_golang_test",
         "//garnet/go/src/fidl:fidlgen_golang_ir_test"
     ]
 }
