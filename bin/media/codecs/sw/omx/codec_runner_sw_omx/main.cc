@@ -45,8 +45,6 @@ int main(int argc, char* argv[]) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  async::Now(loop.dispatcher());
-
   std::unique_ptr<component::StartupContext> startup_context =
       component::StartupContext::CreateFromStartupInfo();
 
