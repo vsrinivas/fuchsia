@@ -177,10 +177,16 @@ CodecImpl::~CodecImpl() {
   // Ensure the CodecAdmission is deleted entirely after ~this, including after
   // any relevant base class destructors have run.
   PostSerial(shared_fidl_dispatcher_,
-             [codec_admission = std::move(codec_admission_)] {
-               // Nothing else to do here.
-               //
-               // ~codec_admission
+             [codec_admission = std::move(codec_admission_),
+              codec_to_close = std::move(codec_to_close_)]() mutable {
+               // Ensure codec_to_close is destructed only after the
+               // codec_admission is destructed.  We have to be fairly explicit
+               // about this since the order of lambda members is explicitly
+               // unspecified in C++, so their destruction order is also
+               // unspecified.
+               codec_admission.reset();
+
+               // ~codec_to_close (after ~CodecAdmission above).
              });
 }
 
@@ -968,8 +974,13 @@ void CodecImpl::UnbindLocked() {
       // Those which are sending a FIDL message can omit their send if binding_
       // is no longer bound, but they need binding_ to still be allocated when
       // they run.
+      //
+      // We close the Codec channel only after ~CodecAdmission has freed up the
+      // concurrency tally, so that a client that re-tries on channel closure
+      // can retry immediately without potentially bouncing off still-existing
+      // old CodecAdmission.
       if (binding_.is_bound()) {
-        binding_.Unbind();
+        codec_to_close_ = binding_.Unbind().TakeChannel();
       }
 
       // We need to shut down the StreamControl thread, which can be shut down
@@ -1503,7 +1514,8 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
 
     // Now we can wait for the client to catch up to the current output config
     // or for the client to tell the server to discard the current stream.
-    while (!IsStoppingLocked() && !stream_->future_discarded() && !IsOutputConfiguredLocked()) {
+    while (!IsStoppingLocked() && !stream_->future_discarded() &&
+           !IsOutputConfiguredLocked()) {
       wake_stream_control_condition_.wait(lock);
     }
 
@@ -1842,7 +1854,8 @@ void CodecImpl::MidStreamOutputConfigChange(uint64_t stream_lifetime_ordinal) {
 
     // Now we can wait for the client to catch up to the current output config
     // or for the client to tell the server to discard the current stream.
-    while (!IsStoppingLocked() && !stream_->future_discarded() && !IsOutputConfiguredLocked()) {
+    while (!IsStoppingLocked() && !stream_->future_discarded() &&
+           !IsOutputConfiguredLocked()) {
       wake_stream_control_condition_.wait(lock);
     }
 

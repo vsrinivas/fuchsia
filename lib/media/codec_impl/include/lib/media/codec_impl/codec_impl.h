@@ -328,6 +328,12 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
   // itself up before calling the DeviceFidl's error handler, so that CodecImpl
   // is ready for destruction by the time DeviceFidl's error handler is called.
   fidl::Binding<fuchsia::mediacodec::Codec, CodecImpl*> binding_;
+  // This is the zx::channel we get indirectly from binding_.Unbind() (we only
+  // need the zx::channel part).  We delay closing the Codec zx::channel until
+  // after removing the concurrency tally in ~CodecAdmission, so that a Codec
+  // client can try again immediately on noticing channel closure without
+  // potentially bouncing off still-existing old CodecAdmission.
+  zx::channel codec_to_close_;
   bool was_bind_async_called_ = false;
   // This being true means BindAsync() reached the point where we can and must
   // fail via UnbindLocked() instead of just running the owner's error handler
