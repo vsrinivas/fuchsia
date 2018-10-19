@@ -646,10 +646,6 @@ void StoryProviderImpl::OnStoryStorageUpdated(
 }
 
 void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
-  for (const auto& i : watchers_.ptrs()) {
-    (*i)->OnDelete(story_id);
-  }
-
   // NOTE: DeleteStoryCall is used here, as well as in DeleteStory(). In this
   // case, either another device deleted the story, or we did and the Ledger
   // is now notifying us. In this case, we pass |already_deleted = true| so
@@ -657,7 +653,11 @@ void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
   operation_queue_.Add(
       new DeleteStoryCall(session_storage_, story_id, &story_controller_impls_,
                           component_context_info_.message_queue_manager,
-                          true /* already_deleted */, [] {}));
+                          true /* already_deleted */, [this, story_id] {
+                            for (const auto& i : watchers_.ptrs()) {
+                              (*i)->OnDelete(story_id);
+                            }
+                          }));
 }
 
 // |fuchsia::modular::FocusWatcher|

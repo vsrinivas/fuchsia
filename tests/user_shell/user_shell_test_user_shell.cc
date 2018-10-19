@@ -13,6 +13,8 @@
 #include <lib/async/default.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fsl/vmo/sized_vmo.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
@@ -30,77 +32,6 @@ using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
-
-// A simple story modules watcher implementation that just logs the
-// notifications it receives.
-class StoryModulesWatcherImpl : fuchsia::modular::StoryModulesWatcher {
- public:
-  StoryModulesWatcherImpl() : binding_(this) {}
-  ~StoryModulesWatcherImpl() override = default;
-
-  // Registers itself as a watcher on the given story. Only one story at a time
-  // can be watched.
-  void Watch(fuchsia::modular::StoryControllerPtr* const story_controller) {
-    (*story_controller)
-        ->GetActiveModules(
-            binding_.NewBinding(),
-            [this](fidl::VectorPtr<fuchsia::modular::ModuleData> data) {
-              FXL_LOG(INFO)
-                  << "StoryModulesWatcherImpl GetModules(): " << data->size()
-                  << " modules";
-            });
-  }
-
-  // Deregisters itself from the watched story.
-  void Reset() { binding_.Unbind(); }
-
- private:
-  // |fuchsia::modular::StoryModulesWatcher|
-  void OnNewModule(fuchsia::modular::ModuleData data) override {
-    FXL_LOG(INFO) << "New Module: " << data.module_url;
-  }
-
-  // |fuchsia::modular::StoryModulesWatcher|
-  void OnStopModule(fuchsia::modular::ModuleData data) override {
-    FXL_LOG(INFO) << "Stop Module: " << data.module_url;
-  }
-
-  fidl::Binding<fuchsia::modular::StoryModulesWatcher> binding_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(StoryModulesWatcherImpl);
-};
-
-// A simple story links watcher implementation that just logs the notifications
-// it receives.
-class StoryLinksWatcherImpl : fuchsia::modular::StoryLinksWatcher {
- public:
-  StoryLinksWatcherImpl() : binding_(this) {}
-  ~StoryLinksWatcherImpl() override = default;
-
-  // Registers itself as a watcher on the given story. Only one story at a time
-  // can be watched.
-  void Watch(fuchsia::modular::StoryControllerPtr* const story_controller) {
-    (*story_controller)
-        ->GetActiveLinks(
-            binding_.NewBinding(),
-            [this](fidl::VectorPtr<fuchsia::modular::LinkPath> data) {
-              FXL_LOG(INFO)
-                  << "StoryLinksWatcherImpl GetLinks(): " << data->size()
-                  << " links";
-            });
-  }
-
-  // Deregisters itself from the watched story.
-  void Reset() { binding_.Unbind(); }
-
- private:
-  // |fuchsia::modular::StoryLinksWatcher|
-  void OnNewLink(fuchsia::modular::LinkPath data) override {
-    FXL_LOG(INFO) << "New Link: " << data.link_name;
-  }
-
-  fidl::Binding<fuchsia::modular::StoryLinksWatcher> binding_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(StoryLinksWatcherImpl);
-};
 
 // A simple story provider watcher implementation. Just logs observed state
 // transitions.
@@ -195,8 +126,7 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
 };
 
 // Cf. README.md for what this test does and how.
-class TestApp
-    : public modular::testing::ComponentBase<void> {
+class TestApp : public modular::testing::ComponentBase<void> {
  public:
   explicit TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
@@ -205,6 +135,9 @@ class TestApp
     user_shell_context_ =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
+    puppet_master_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
 
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     story_provider_state_watcher_.Watch(&story_provider_);
@@ -280,12 +213,31 @@ class TestApp
 
   void TestStory1() {
     const std::string initial_json = R"({"created-with-info": true})";
-    story_provider_->CreateStoryWithInfo(kCommonActiveModule,
-                                         nullptr /* extra_info */, initial_json,
-                                         [this](fidl::StringPtr story_id) {
-                                           story1_create_.Pass();
-                                           TestStory1_GetController(story_id);
-                                         });
+    puppet_master_->ControlStory("story1", story_puppet_master_.NewRequest());
+
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    fuchsia::modular::AddMod add_mod;
+    add_mod.mod_name.push_back("mod1");
+    add_mod.intent.handler = kCommonActiveModule;
+    add_mod.surface_parent_mod_name.resize(0);
+
+    fuchsia::modular::IntentParameter param;
+    param.name = "root";
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString(initial_json, &vmo));
+    param.data.set_json(std::move(vmo).ToTransport());
+    add_mod.intent.parameters.push_back(std::move(param));
+
+    fuchsia::modular::StoryCommand command;
+    command.set_add_mod(std::move(add_mod));
+    commands.push_back(std::move(command));
+
+    story_puppet_master_->Enqueue(std::move(commands));
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          story1_create_.Pass();
+          TestStory1_GetController("story1");
+        });
   }
 
   TestPoint story1_get_controller_{"Story1 GetController"};
@@ -302,9 +254,6 @@ class TestApp
 
   TestPoint story1_run_{"Story1 Run"};
   void TestStory1_Run() {
-    story_modules_watcher_.Watch(&story_controller_);
-    story_links_watcher_.Watch(&story_controller_);
-
     // Start and show the new story.
     fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
@@ -327,11 +276,23 @@ class TestApp
   TestPoint story2_create_{"Story2 Create"};
 
   void TestStory2() {
-    const std::string url = kCommonNullModule;
-    story_provider_->CreateStory(url, [this](fidl::StringPtr story_id) {
-      story2_create_.Pass();
-      TestStory2_GetController(story_id);
-    });
+    puppet_master_->ControlStory("story2", story_puppet_master_.NewRequest());
+
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    fuchsia::modular::AddMod add_mod;
+    add_mod.mod_name.push_back("mod1");
+    add_mod.intent.handler = kCommonNullModule;
+    add_mod.surface_parent_mod_name.resize(0);
+    fuchsia::modular::StoryCommand command;
+    command.set_add_mod(std::move(add_mod));
+    commands.push_back(std::move(command));
+
+    story_puppet_master_->Enqueue(std::move(commands));
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          story2_create_.Pass();
+          TestStory2_GetController("story2");
+        });
   }
 
   TestPoint story2_get_controller_{"Story2 Get Controller"};
@@ -388,8 +349,8 @@ class TestApp
   TestPoint story2_delete_{"Story2 Delete"};
 
   void TestStory2_DeleteStory() {
-    story_provider_->DeleteStory(story_info_.id,
-                                 [this] { story2_delete_.Pass(); });
+    puppet_master_->DeleteStory(story_info_.id,
+                                [this] { story2_delete_.Pass(); });
 
     story_provider_->GetStoryInfo(
         story_info_.id, [this](fuchsia::modular::StoryInfoPtr info) {
@@ -413,13 +374,17 @@ class TestApp
   void TestStory3() {
     story_provider_state_watcher_.Reset();
     story_provider_state_watcher_.Watch(&story_provider_);
+
+    puppet_master_->ControlStory("story3", story_puppet_master_.NewRequest());
+
     fuchsia::modular::StoryOptions story_options;
     story_options.kind_of_proto_story = true;
-    story_provider_->CreateStoryWithOptions(
-        std::move(story_options), [this](fidl::StringPtr story_id) {
-          story_provider_state_watcher_.SetKindOfProtoStory(story_id);
+    story_puppet_master_->SetCreateOptions(std::move(story_options));
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          story_provider_state_watcher_.SetKindOfProtoStory("story3");
           story3_create_.Pass();
-          TestStory3_GetController(story_id);
+          TestStory3_GetController("story3");
         });
   }
 
@@ -485,8 +450,8 @@ class TestApp
   TestPoint story3_delete_{"Story3 Delete"};
 
   void TestStory3_DeleteStory() {
-    story_provider_->DeleteStory(story_info_.id,
-                                 [this] { story3_delete_.Pass(); });
+    puppet_master_->DeleteStory(story_info_.id,
+                                [this] { story3_delete_.Pass(); });
 
     story_provider_->GetStoryInfo(
         story_info_.id, [this](fuchsia::modular::StoryInfoPtr info) {
@@ -497,26 +462,21 @@ class TestApp
   TestPoint story3_info_after_delete_{"Story3 InfoAfterDeleteIsNull"};
 
   void TestStory3_InfoAfterDeleteIsNull(fuchsia::modular::StoryInfoPtr info) {
-    story3_info_after_delete_.Pass();
-    if (info) {
-      modular::testing::Fail("StoryInfo after DeleteStory() must return null.");
+    if (!info) {
+      story3_info_after_delete_.Pass();
     }
 
     Signal(modular::testing::kTestShutdown);
   }
 
-  void TeardownStoryController() {
-    story_modules_watcher_.Reset();
-    story_links_watcher_.Reset();
-    story_controller_.Unbind();
-  }
+  void TeardownStoryController() { story_controller_.Unbind(); }
 
   StoryProviderStateWatcherImpl story_provider_state_watcher_;
-  StoryModulesWatcherImpl story_modules_watcher_;
-  StoryLinksWatcherImpl story_links_watcher_;
 
   fuchsia::modular::UserShellContextPtr user_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
+  fuchsia::modular::PuppetMasterPtr puppet_master_;
+  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
   fuchsia::modular::StoryControllerPtr story_controller_;
   fuchsia::modular::LinkPtr user_shell_link_;
   fuchsia::modular::StoryInfo story_info_;

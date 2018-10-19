@@ -689,6 +689,11 @@ void UserRunnerImpl::RunUserShell(fuchsia::modular::AppConfig user_shell) {
           fidl::InterfaceRequest<fuchsia::modular::UserShellContext> request) {
         user_shell_context_bindings_.AddBinding(this, std::move(request));
       });
+  user_shell_services_.AddService<fuchsia::modular::PuppetMaster>(
+      [this](
+          fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
+        puppet_master_impl_->Connect(std::move(request));
+      });
   // |user_shell_service_provider_| is an InterfacePtr impl for ServiceProvider
   // that binds to |user_shell_services_|.
   fuchsia::sys::ServiceProviderPtr user_shell_service_provider_ptr_;
@@ -699,6 +704,7 @@ void UserRunnerImpl::RunUserShell(fuchsia::modular::AppConfig user_shell) {
   // component from which ServiceProvicer. There is a lot of indirection here.
   auto service_list = fuchsia::sys::ServiceList::New();
   service_list->names.push_back(fuchsia::modular::UserShellContext::Name_);
+  service_list->names.push_back(fuchsia::modular::PuppetMaster::Name_);
   service_list->provider = std::move(user_shell_service_provider_ptr_);
 
   user_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
