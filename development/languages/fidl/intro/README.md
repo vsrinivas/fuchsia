@@ -21,7 +21,7 @@ This document is a description of the Fuchsia Interface Definition Language
 [FIDL: C Language Bindings]: ../languages/c.md
 [FIDL: C++ Language Bindings]: ../languages/cpp.md
 [FIDL Examples]: https://fuchsia.googlesource.com/zircon/+/master/system/host/fidl/examples
-[FIDL Tutorial]: ../tutorial/REAMDE.md
+[FIDL Tutorial]: ../tutorial/README.md
 
 [TOC]
 
