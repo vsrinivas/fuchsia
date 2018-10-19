@@ -46,6 +46,7 @@
 ##                           and publishes it. Requires a pristine repository,
 ##                           as it will updates the build files with the new
 ##                           corpus location.
+##   zbi                     Adds Zircon fuzzers to 'fuchsia.zbi'
 ##
 ## The RECOMMENDED way to run a fuzzer is to omit 'command', which will use
 ## "automatic" mode.  In this mode, 'fx fuzz' will check if a corpus is already
@@ -303,8 +304,34 @@ monitor() {
   fi
 }
 
+add_to_zbi() {
+  local image="${FUCHSIA_BUILD_DIR}/fuchsia.zbi"
+  if [[ ! -f "${image}" ]] ; then
+    fatal "No such ZBI file: ${image}"
+  elif [[ -f "${image}.orig" ]] ; then
+    fatal "Cowardly refusing to overwrite existing ${image}.orig"
+  fi
+
+  # Build zircon with instrumentation
+  echo "Building Zircon fuzzers..."
+  pushd "${FUCHSIA_DIR}/zircon"
+  USE_ASAN=1 USE_SANCOV=1 scripts/build-zircon-${FUCHSIA_ARCH} -C
+
+  # Determine parts relevant for fuzzing
+  local bootfs_manifest="build-${FUCHSIA_ARCH}-asan/bootfs.manifest"
+  local fuzz_manifest="build-${FUCHSIA_ARCH}-asan/fuzz.manifest"
+  egrep '({core}|{libs}|{test})(lib/asan/|test/fuzz/)' "${bootfs_manifest}" > "${fuzz_manifest}"
+
+  # Copy fuzzers into Fuchsia
+  mv "${image}" "${image}.orig"
+  zbi -o "${image}" "${image}.orig" "${fuzz_manifest}"
+  popd
+  echo "Zircon fuzzers added to ${image}"
+}
+
 # Main
 main() {
+  fx-config-read
   # Parse options
   while [[ "$1" == "-"* ]] ; do
     case $1 in
@@ -354,6 +381,16 @@ main() {
     watch)
       query "${fuzzer}"
       monitor &
+      ;;
+    zbi)
+      # TODO(security): SEC-141. This command should be replaced by something using //build/images
+      # once vanilla drivers in instrumented devhosts are fixed and/or partial Zircon
+      # instrumentation is implemented.
+      echo "NOTE: This command is subject to change. Check the documentation at"
+      echo "//docs/development/workflows/libfuzzer.md for the currently supported way of"
+      echo "running Zircon fuzzers in a Fuchsia environment."
+      echo
+      add_to_zbi
       ;;
     *)
       # "Automatic" mode
