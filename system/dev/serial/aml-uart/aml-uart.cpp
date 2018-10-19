@@ -31,9 +31,9 @@ namespace serial {
 zx_status_t AmlUart::Create(zx_device_t* parent) {
     zx_status_t status;
 
-    platform_device_protocol_t pdev;
-    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev)) != ZX_OK) {
-        zxlogf(ERROR, "%s: ZX_PROTOCOL_PLATFORM_DEV not available\n", __func__);
+    pdev_protocol_t pdev;
+    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev)) != ZX_OK) {
+        zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __func__);
         return status;
     }
 

@@ -177,7 +177,7 @@ static void dwc3_start_host_mode(dwc3_t* dwc) {
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = "dwc3";
-    args.proto_id = ZX_PROTOCOL_PLATFORM_DEV;
+    args.proto_id = ZX_PROTOCOL_PDEV;
     args.ctx = dwc;
     args.ops = &xhci_device_ops;
     args.props = props;
@@ -466,7 +466,7 @@ zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &dwc->pdev);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &dwc->pdev);
     if (status != ZX_OK) {
         goto fail;
     }

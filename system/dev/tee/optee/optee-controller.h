@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/tee.h>
 #include <fbl/function.h>
@@ -67,7 +68,7 @@ private:
     zx_status_t InitializeSharedMemory();
     zx_status_t DiscoverSharedMemoryConfig(zx_paddr_t* out_start_addr, size_t* out_size);
 
-    platform_device_protocol_t pdev_proto_ = {};
+    pdev_protocol_t pdev_proto_ = {};
     // TODO(rjascani): Eventually, the secure_monitor_ object should be an owned resource object
     // created and provided to us by our parent. For now, we're simply stashing a copy of the
     // root resource so that we can make zx_smc_calls. We can make that switch when we can properly

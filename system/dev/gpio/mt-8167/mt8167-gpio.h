@@ -8,6 +8,7 @@
 #include <ddk/protocol/gpio-impl.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/gpio-impl.h>

@@ -152,7 +152,7 @@ private:
     zx::bti bti_;
     zx::interrupt dma_irq_;
 
-    platform_device_protocol_t pdev_;
+    pdev_protocol_t pdev_;
     eth_board_protocol_t eth_board_;
 
     fbl::optional<ddk::MmioBuffer> dwmac_regs_iobuff_;

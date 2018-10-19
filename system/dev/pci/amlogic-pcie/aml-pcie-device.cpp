@@ -31,7 +31,7 @@ const size_t kClkPort = 2;
 zx_status_t AmlPcieDevice::InitProtocols() {
     zx_status_t st;
 
-    st = device_get_protocol(parent_, ZX_PROTOCOL_PLATFORM_DEV, &pdev_);
+    st = device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev_);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to get pdev protocol, st = %d", st);
         return st;

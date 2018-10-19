@@ -25,7 +25,7 @@ constexpr uint32_t kXtalFreq = 24000000;
 
 zx_status_t AmlPwm::Init(zx_device_t* parent) {
     zx_status_t status = device_get_protocol(parent,
-                                             ZX_PROTOCOL_PLATFORM_DEV,
+                                             ZX_PROTOCOL_PDEV,
                                              &pdev_);
     if (status != ZX_OK) {
         return status;

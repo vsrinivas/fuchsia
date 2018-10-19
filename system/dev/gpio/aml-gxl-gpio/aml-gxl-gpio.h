@@ -76,7 +76,7 @@ public:
     void DdkRelease() { delete this; }
 
 private:
-    AmlGxlGpio(zx_device_t* parent, const platform_device_protocol_t& pdev,
+    AmlGxlGpio(zx_device_t* parent, const pdev_protocol_t& pdev,
                ddk::MmioBuffer mmio_gpio, ddk::MmioBuffer mmio_gpio_a0,
                ddk::MmioBuffer mmio_interrupt, const AmlGpioBlock* gpio_blocks,
                const AmlGpioInterrupt* gpio_interrupt, const AmlPinMuxBlock* pinmux_blocks,
@@ -114,7 +114,7 @@ private:
         mmio_interrupt_.Write32(value, offset << 2);
     }
 
-    platform_device_protocol_t pdev_;
+    pdev_protocol_t pdev_;
     ddk::MmioBuffer mmios_[2];  // separate MMIO for AO domain
     ddk::MmioBuffer mmio_interrupt_;
     const AmlGpioBlock* gpio_blocks_;

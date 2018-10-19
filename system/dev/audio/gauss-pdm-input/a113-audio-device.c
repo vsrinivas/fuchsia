@@ -4,6 +4,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 #include <hw/reg.h>
@@ -87,7 +88,7 @@ zx_status_t a113_audio_device_init(a113_audio_device_t* audio_device,
     ZX_DEBUG_ASSERT(audio_device);
     ZX_DEBUG_ASSERT(parent);
 
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV,
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV,
                                              &audio_device->pdev);
     if (status != ZX_OK) {
         goto init_fail;

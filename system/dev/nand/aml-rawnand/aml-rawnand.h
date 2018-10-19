@@ -21,7 +21,7 @@ typedef struct {
 
 typedef struct {
     raw_nand_protocol_t raw_nand_proto;
-    platform_device_protocol_t pdev;
+    pdev_protocol_t pdev;
     zx_device_t* zxdev;
     mmio_buffer_t mmio[ADDR_WINDOW_COUNT];
     thrd_t irq_thread;

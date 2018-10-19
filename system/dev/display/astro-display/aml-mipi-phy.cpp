@@ -259,9 +259,9 @@ zx_status_t AmlMipiPhy::Init(zx_device_t* parent, uint32_t lane_num) {
 
     num_of_lanes_ = lane_num;
 
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev_);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
     if (status != ZX_OK) {
-        DISP_ERROR("AmlMipiPhy: Could not get ZX_PROTOCOL_PLATFORM_DEV protocol\n");
+        DISP_ERROR("AmlMipiPhy: Could not get ZX_PROTOCOL_PDEV protocol\n");
         return status;
     }
 

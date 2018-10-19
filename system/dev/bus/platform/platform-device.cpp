@@ -386,7 +386,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
     uint32_t resp_len;
 
     switch (req_header->proto_id) {
-    case ZX_PROTOCOL_PLATFORM_DEV: {
+    case ZX_PROTOCOL_PDEV: {
         auto req = reinterpret_cast<rpc_pdev_req_t*>(&req_buf);
         if (actual < sizeof(*req)) {
             zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, actual, sizeof(*req));
@@ -586,7 +586,7 @@ zx_status_t PlatformDevice::Start() {
         };
 
         status = DdkAdd(name, device_add_flags, props, fbl::count_of(props),
-                        ZX_PROTOCOL_PLATFORM_DEV, argstr);
+                        ZX_PROTOCOL_PDEV, argstr);
     }
 
     if (status != ZX_OK) {

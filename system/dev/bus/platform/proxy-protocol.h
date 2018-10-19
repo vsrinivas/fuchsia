@@ -16,7 +16,7 @@ static constexpr size_t PROXY_MAX_TRANSFER_SIZE = 4096;
 // Device ID for a top level platform device (that is, an immediate child of the platform bus).
 static constexpr uint32_t ROOT_DEVICE_ID = 0;
 
-// ZX_PROTOCOL_PLATFORM_DEV proxy support.
+// ZX_PROTOCOL_PDEV proxy support.
 enum {
     PDEV_GET_MMIO,
     PDEV_GET_INTERRUPT,

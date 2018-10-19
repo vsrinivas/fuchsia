@@ -8,6 +8,7 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
 #include <ddktl/protocol/clk.h>
@@ -62,7 +63,7 @@ private:
     zx_status_t InitHiuRegs(pdev_device_info_t* info);
     zx_status_t InitMsrRegs(pdev_device_info_t* info);
     // Platform device protocol.
-    platform_device_protocol_t pdev_;
+    pdev_protocol_t pdev_;
     // IO MMIO
     fbl::optional<ddk::MmioBuffer> hiu_mmio_;
     fbl::optional<ddk::MmioBuffer> msr_mmio_;

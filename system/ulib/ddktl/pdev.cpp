@@ -38,8 +38,9 @@ I2cChannel Pdev::GetI2cChan(uint32_t index) {
 
     i2c_protocol_t i2c;
     //Note: Pdev is a friend class of I2cChannel
-    zx_status_t res = pdev_get_protocol(&pdev_, ZX_PROTOCOL_I2C, index, &i2c);
-    if (res != ZX_OK) {
+    size_t actual;
+    zx_status_t res = pdev_get_protocol(&pdev_, ZX_PROTOCOL_I2C, index, &i2c, sizeof(i2c), &actual);
+    if (res != ZX_OK || actual != sizeof(i2c)) {
         return I2cChannel();
     }
     return I2cChannel(index, i2c);
@@ -52,8 +53,10 @@ GpioPin Pdev::GetGpio(uint32_t index) {
 
     gpio_protocol_t gpio;
     //Note: Pdev is a friend class of GpioPin
-    zx_status_t res = pdev_get_protocol(&pdev_, ZX_PROTOCOL_GPIO, index, &gpio);
-    if (res != ZX_OK) {
+    size_t actual;
+    zx_status_t res = pdev_get_protocol(&pdev_, ZX_PROTOCOL_GPIO, index, &gpio, sizeof(gpio),
+                                        &actual);
+    if (res != ZX_OK || actual != sizeof(gpio)) {
         return GpioPin();
     }
     return GpioPin(gpio);
@@ -69,7 +72,7 @@ fbl::RefPtr<Pdev> Pdev::Create(zx_device_t* parent) {
     }
 
     zx_status_t status = device_get_protocol(parent,
-                                             ZX_PROTOCOL_PLATFORM_DEV,
+                                             ZX_PROTOCOL_PDEV,
                                              &pdev->pdev_);
     if (status != ZX_OK) {
         return nullptr;

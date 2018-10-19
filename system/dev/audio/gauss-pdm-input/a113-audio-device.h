@@ -17,7 +17,7 @@ __BEGIN_CDECLS;
 #include "a113-audio-regs.h"
 
 typedef struct a113_audio_device {
-    platform_device_protocol_t pdev;
+    pdev_protocol_t pdev;
     mmio_buffer_t ee_audio_mmio;
     mmio_buffer_t pdm_mmio;
 

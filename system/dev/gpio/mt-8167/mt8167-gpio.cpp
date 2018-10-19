@@ -139,10 +139,10 @@ zx_status_t Mt8167GpioDevice::Bind() {
 }
 
 zx_status_t Mt8167GpioDevice::Create(zx_device_t* parent) {
-    platform_device_protocol_t pdev;
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
+    pdev_protocol_t pdev;
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ZX_PROTOCOL_PLATFORM_DEV not available %d \n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available %d \n", __FUNCTION__, status);
         return status;
     }
 

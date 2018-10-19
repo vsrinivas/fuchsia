@@ -37,7 +37,7 @@ class Vim2Audio {
     void DdkRelease();
 
     // Display driver hooks
-    zx_status_t Init(const platform_device_protocol_t* pdev);
+    zx_status_t Init(const pdev_protocol_t* pdev);
     void OnDisplayAdded(const struct vim2_display* display, uint64_t display_id);
     void OnDisplayRemoved(uint64_t display_id);
 
@@ -56,7 +56,7 @@ class Vim2Audio {
 __BEGIN_CDECLS
 typedef struct vim2_audio vim2_audio_t;
 
-zx_status_t vim2_audio_create(const platform_device_protocol_t* pdev,
+zx_status_t vim2_audio_create(const pdev_protocol_t* pdev,
                               vim2_audio_t **out_audio);
 void vim2_audio_shutdown(vim2_audio_t** inout_audio);
 

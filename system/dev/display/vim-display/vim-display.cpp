@@ -15,6 +15,7 @@
 #include <ddk/protocol/display-controller.h>
 #include <ddk/protocol/i2c-impl.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
@@ -631,7 +632,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         display_release(display);
     });
 
-    status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &display->pdev);
+    status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &display->pdev);
     if (status !=  ZX_OK) {
         DISP_ERROR("Could not get parent protocol\n");
         return status;
@@ -936,7 +937,7 @@ static zx_driver_ops_t vim2_display_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(vim2_display, vim2_display_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_KHADAS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_VIM2),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VIM_DISPLAY),

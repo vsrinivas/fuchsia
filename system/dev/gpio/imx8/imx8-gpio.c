@@ -14,6 +14,7 @@
 #include <ddk/protocol/gpio-impl.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <zircon/syscalls/port.h>
 
 #include <hw/reg.h>
@@ -24,7 +25,7 @@
 #include <zircon/types.h>
 
 typedef struct {
-    platform_device_protocol_t pdev;
+    pdev_protocol_t pdev;
     pbus_protocol_t pbus;
     gpio_impl_protocol_t gpio;
     zx_device_t* zxdev;
@@ -423,9 +424,9 @@ static zx_status_t imx8_gpio_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &gpio->pdev);
+    status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &gpio->pdev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ZX_PROTOCOL_PLATFORM_DEV not available %d \n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available %d \n", __FUNCTION__, status);
         goto fail;
     }
 
@@ -517,7 +518,7 @@ static zx_driver_ops_t imx8_gpio_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(imx8_gpio, imx8_gpio_driver_ops, "zircon", "0.1", 6)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_NXP),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_IMX_GPIO),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_IMX8MEVK),

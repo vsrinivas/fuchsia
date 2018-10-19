@@ -12,6 +12,7 @@
 #include <ddk/protocol/iommu.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <hw/reg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -136,7 +137,7 @@ static void aml_gpu_release(void* ctx) {
 static zx_status_t aml_gpu_get_protocol(void* ctx, uint32_t proto_id, void* out_proto) {
 
     aml_gpu_t* gpu = ctx;
-    platform_device_protocol_t* gpu_proto = out_proto;
+    pdev_protocol_t* gpu_proto = out_proto;
 
     // Forward the underlying ops.
     gpu_proto->ops = gpu->pdev.ops;
@@ -182,8 +183,8 @@ static zx_status_t aml_gpu_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &gpu->pdev)) != ZX_OK) {
-        GPU_ERROR("ZX_PROTOCOL_PLATFORM_DEV not available\n");
+    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &gpu->pdev)) != ZX_OK) {
+        GPU_ERROR("ZX_PROTOCOL_PDEV not available\n");
         goto fail;
     }
 
@@ -244,7 +245,7 @@ static zx_status_t aml_gpu_bind(void* ctx, zx_device_t* parent) {
     aml_gpu_init(gpu);
 
     zx_device_prop_t props[] = {
-        {BIND_PROTOCOL, 0, ZX_PROTOCOL_PLATFORM_DEV},
+        {BIND_PROTOCOL, 0, ZX_PROTOCOL_PDEV},
         {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
         {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GENERIC},
         {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_ARM_MALI},
@@ -278,7 +279,7 @@ static zx_driver_ops_t aml_gpu_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(aml_gpu, aml_gpu_driver_ops, "zircon", "0.1", 5)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_ARM_MALI_INIT),
     // we support multiple SOC variants

@@ -26,7 +26,7 @@
 typedef struct {
     zx_device_t*                        zxdev;
     zx_device_t*                        parent;
-    platform_device_protocol_t          pdev;
+    pdev_protocol_t          pdev;
     zx_handle_t                         bti;
 
     thrd_t                              main_thread;

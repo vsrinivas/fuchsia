@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
 #include <fbl/mutex.h>
@@ -34,7 +35,7 @@ private:
     uint32_t pwm_duty_cycle_offset_;
     uint32_t enable_bit_;
     uint32_t clk_enable_bit_;
-    platform_device_protocol_t pdev_;
+    pdev_protocol_t pdev_;
     fbl::optional<ddk::MmioBuffer> pwm_mmio_;
     fbl::Mutex pwm_lock_;
 };

@@ -180,7 +180,7 @@ typedef struct {
 
 typedef struct {
     zx_device_t*                        zxdev;
-    platform_device_protocol_t          pdev;
+    pdev_protocol_t          pdev;
     zx_device_t*                        parent;
     mmio_buffer_t                       mmio;
 

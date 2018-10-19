@@ -7,6 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/usb-dci.h>
 #include <ddk/protocol/usb-mode-switch.h>
 #include <ddktl/mmio.h>
@@ -83,7 +84,7 @@ typedef struct {
     zx_device_t* zxdev;
     zx_device_t* xhci_dev;
     zx_device_t* parent;
-    platform_device_protocol_t pdev;
+    pdev_protocol_t pdev;
     usb_mode_switch_protocol_t ums;
     usb_dci_interface_t dci_intf;
     fbl::optional<ddk::MmioBuffer> mmio;

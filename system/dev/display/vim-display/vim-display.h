@@ -56,7 +56,7 @@ enum {
 
 typedef struct vim2_display {
     zx_device_t*                        zxdev;
-    platform_device_protocol_t          pdev;
+    pdev_protocol_t          pdev;
     zx_device_t*                        parent;
     zx_device_t*                        mydevice;
     zx_handle_t                         bti;

@@ -6,6 +6,7 @@
 
 #include <zircon/compiler.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/mmio.h>
 #include <fbl/optional.h>
 #include "common.h"
@@ -32,7 +33,7 @@ private:
     void Enable();
 
     fbl::optional<ddk::MmioBuffer>      vpu_mmio_;
-    platform_device_protocol_t          pdev_ = {nullptr, nullptr};
+    pdev_protocol_t          pdev_ = {nullptr, nullptr};
 
     // Framebuffer dimension
     uint32_t                            fb_width_;

@@ -189,7 +189,7 @@ zx_status_t OpteeController::DiscoverSharedMemoryConfig(zx_paddr_t* out_start_ad
 zx_status_t OpteeController::Bind() {
     zx_status_t status = ZX_ERR_INTERNAL;
 
-    status = device_get_protocol(parent(), ZX_PROTOCOL_PLATFORM_DEV, &pdev_proto_);
+    status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev_proto_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "optee: Unable to get pdev protocol\n");
         return status;

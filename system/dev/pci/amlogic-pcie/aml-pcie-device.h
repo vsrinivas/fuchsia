@@ -10,6 +10,7 @@
 #include <ddk/protocol/clk.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/mmio.h>
 #include <dev/pci/designware/atu-cfg.h>
 #include <fbl/optional.h>
@@ -36,7 +37,7 @@ class AmlPcieDevice {
     zx_device_t* dev_;
 
     // Protocols
-    platform_device_protocol_t pdev_;
+    pdev_protocol_t pdev_;
     clk_protocol_t clk_;
     gpio_protocol_t gpio_;
 

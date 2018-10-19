@@ -36,7 +36,7 @@ constexpr uint32_t kSysPll = 1;
 
 zx_status_t AmlCpuFrequency::InitPdev(zx_device_t* parent) {
     zx_status_t status = device_get_protocol(parent,
-                                             ZX_PROTOCOL_PLATFORM_DEV,
+                                             ZX_PROTOCOL_PDEV,
                                              &pdev_);
     if (status != ZX_OK) {
         return status;

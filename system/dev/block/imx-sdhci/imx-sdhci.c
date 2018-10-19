@@ -22,6 +22,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/sdmmc.h>
 #include <ddk/protocol/sdhci.h>
@@ -95,7 +96,7 @@ static_assert(sizeof(sdhci_adma64_desc_t) == 8, "unexpected ADMA2 descriptor siz
 #define IMX8M_SDHCI_BASE_CLOCK  200000000
 
 typedef struct imx_sdhci_device {
-    platform_device_protocol_t  pdev;
+    pdev_protocol_t  pdev;
     pbus_protocol_t             pbus;
     zx_device_t*                zxdev;
     mmio_buffer_t               mmios;
@@ -1120,9 +1121,9 @@ static zx_status_t imx_sdhci_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &dev->pdev);
+    status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &dev->pdev);
     if (status != ZX_OK) {
-        SDHCI_ERROR("ZX_PROTOCOL_PLATFORM_DEV not available %d \n", status);
+        SDHCI_ERROR("ZX_PROTOCOL_PDEV not available %d \n", status);
         goto fail;
     }
 
@@ -1246,7 +1247,7 @@ static zx_driver_ops_t imx_sdhci_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(imx_sdhci, imx_sdhci_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_NXP),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_IMX_SDHCI),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_IMX8MEVK),

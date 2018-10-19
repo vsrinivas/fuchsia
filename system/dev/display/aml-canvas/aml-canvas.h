@@ -74,7 +74,7 @@ typedef struct {
 // Context for driver implementation.
 typedef struct {
     zx_device_t* zxdev;
-    platform_device_protocol_t pdev;
+    pdev_protocol_t pdev;
     mmio_buffer_t dmc_regs;
     mtx_t lock;
     canvas_protocol_t canvas;

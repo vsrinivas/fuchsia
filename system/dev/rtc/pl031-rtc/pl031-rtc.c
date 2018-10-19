@@ -6,8 +6,10 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -94,8 +96,8 @@ static zx_protocol_device_t pl031_rtc_device_proto = {
 static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent) {
     zxlogf(TRACE, "pl031_rtc: bind parent = %p\n", parent);
 
-    platform_device_protocol_t proto;
-    zx_status_t st = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &proto);
+    pdev_protocol_t proto;
+    zx_status_t st = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &proto);
     if (st != ZX_OK) {
         return st;
     }

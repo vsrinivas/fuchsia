@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
 #include <fbl/atomic.h>
@@ -38,7 +39,7 @@ private:
     void UpdateFallThresholdIrq(uint32_t irq);
     void UpdateRiseThresholdIrq(uint32_t irq);
     uint32_t trim_info_;
-    platform_device_protocol_t pdev_;
+    pdev_protocol_t pdev_;
     fbl::optional<ddk::MmioBuffer> pll_mmio_;
     fbl::optional<ddk::MmioBuffer> ao_mmio_;
     fbl::optional<ddk::MmioBuffer> hiu_mmio_;

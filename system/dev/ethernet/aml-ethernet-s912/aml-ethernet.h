@@ -47,7 +47,7 @@ private:
 
     zx_status_t InitPdev(zx_device_t* parent);
 
-    platform_device_protocol_t pdev_;
+    pdev_protocol_t pdev_;
 
     i2c_protocol_t i2c_;
 

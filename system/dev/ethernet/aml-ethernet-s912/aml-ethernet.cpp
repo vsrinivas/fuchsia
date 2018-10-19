@@ -12,6 +12,7 @@
 #include <ddk/protocol/i2c-lib.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
@@ -36,13 +37,15 @@ void AmlEthernet::ResetPhy(void* ctx) {
 
 zx_status_t AmlEthernet::InitPdev(zx_device_t* parent) {
 
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev_);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
     if (status != ZX_OK) {
         return status;
     }
 
     for (uint32_t i = 0; i < countof(gpios_); i++) {
-        status = pdev_get_protocol(&pdev_, ZX_PROTOCOL_GPIO, i, &gpios_[i]);
+        size_t actual;
+        status = pdev_get_protocol(&pdev_, ZX_PROTOCOL_GPIO, i, &gpios_[i], sizeof(gpios_[i]),
+                                   &actual);
         if (status != ZX_OK) {
             return status;
         }

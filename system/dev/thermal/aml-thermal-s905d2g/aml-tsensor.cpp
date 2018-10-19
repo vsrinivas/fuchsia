@@ -235,7 +235,7 @@ zx_status_t AmlTSensor::InitTripPoints() {
 
 zx_status_t AmlTSensor::InitPdev(zx_device_t* parent) {
     zx_status_t status = device_get_protocol(parent,
-                                             ZX_PROTOCOL_PLATFORM_DEV,
+                                             ZX_PROTOCOL_PDEV,
                                              &pdev_);
     if (status != ZX_OK) {
         return status;

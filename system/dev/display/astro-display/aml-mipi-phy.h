@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/mmio.h>
 #include <fbl/optional.h>
 #include <ddktl/device.h>
@@ -58,7 +59,7 @@ private:
 
     fbl::optional<ddk::MmioBuffer>              mipi_dsi_mmio_;
     fbl::optional<ddk::MmioBuffer>              dsi_phy_mmio_;
-    platform_device_protocol_t                  pdev_ = {nullptr, nullptr};
+    pdev_protocol_t                  pdev_ = {nullptr, nullptr};
     uint32_t                                    num_of_lanes_;
     DsiPhyConfig                                dsi_phy_cfg_;
 

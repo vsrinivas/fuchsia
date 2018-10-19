@@ -11,6 +11,7 @@
 #include <ddk/io-buffer.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <hw/reg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -268,7 +269,7 @@ zx_status_t imx8m_display_bind(void* ctx, zx_device_t* parent) {
     mtx_init(&display->display_lock, mtx_plain);
     mtx_init(&display->image_lock, mtx_plain);
 
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &display->pdev);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &display->pdev);
     if (status !=  ZX_OK) {
         DISP_ERROR("Could not get parent protocol\n");
         goto fail;
@@ -314,7 +315,7 @@ static zx_driver_ops_t imx8m_display_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(imx8m_display, imx8m_display_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_NXP),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_IMX8MEVK),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_IMX_DISPLAY),

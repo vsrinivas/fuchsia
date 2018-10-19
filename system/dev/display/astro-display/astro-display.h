@@ -86,7 +86,7 @@ private:
     thrd_t                              vsync_thread_;
 
     // Protocol handles used in by this driver
-    platform_device_protocol_t          pdev_ = {};
+    pdev_protocol_t          pdev_ = {};
     gpio_protocol_t                     gpio_ = {};
     canvas_protocol_t                   canvas_ = {};
 

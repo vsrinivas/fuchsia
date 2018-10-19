@@ -31,7 +31,7 @@ using ProtocolDeviceType = ddk::Device<ProtocolDevice, ddk::GetProtocolable>;
 // Instances of this class are created by PlatformBus at boot time when the board driver
 // calls the platform bus protocol method pbus_device_add().
 
-class ProtocolDevice : public ProtocolDeviceType, public ddk::PlatformDevProtocol<ProtocolDevice> {
+class ProtocolDevice : public ProtocolDeviceType, public ddk::PDevProtocol<ProtocolDevice> {
 public:
     // Creates a new ProtocolDevice instance.
     // *flags* contains zero or more PDEV_ADD_* flags from the platform bus protocol.
@@ -47,15 +47,16 @@ public:
     void DdkRelease();
 
     // Platform device protocol implementation.
-    zx_status_t GetMmio(uint32_t index, pdev_mmio_t* out_mmio);
-    zx_status_t MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr, size_t* out_size,
-                        zx_paddr_t* out_paddr, zx_handle_t* out_handle);
-    zx_status_t MapInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle);
-    zx_status_t GetBti(uint32_t index, zx_handle_t* out_handle);
-    zx_status_t GetDeviceInfo(pdev_device_info_t* out_info);
-    zx_status_t GetBoardInfo(pdev_board_info_t* out_info);
-    zx_status_t DeviceAdd(uint32_t index, device_add_args_t* args, zx_device_t** out);
-    zx_status_t GetProtocol(uint32_t proto_id, uint32_t index, void* out_protocol);
+    zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio);
+    zx_status_t PDevMapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
+                            size_t* out_size, zx_paddr_t* out_paddr, zx_handle_t* out_handle);
+    zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle);
+    zx_status_t PDevGetBti(uint32_t index, zx_handle_t* out_handle);
+    zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info);
+    zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info);
+    zx_status_t PDevDeviceAdd(uint32_t index, const device_add_args_t* args, zx_device_t** device);
+    zx_status_t PDevGetProtocol(uint32_t proto_id, uint32_t index, void* out_protocol,
+                                size_t protocol_size, size_t* protocol_actual);
 
     // Starts the underlying devmgr device.
     zx_status_t Start();

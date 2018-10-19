@@ -26,7 +26,7 @@ class PlatformProxy;
 class ProxyDevice;
 using ProxyDeviceType = ddk::FullDevice<ProxyDevice>;
 
-class ProxyDevice : public ProxyDeviceType, public ddk::PlatformDevProtocol<ProxyDevice> {
+class ProxyDevice : public ProxyDeviceType, public ddk::PDevProtocol<ProxyDevice> {
 public:
     explicit ProxyDevice(zx_device_t* parent, uint32_t device_id, fbl::RefPtr<PlatformProxy> proxy);
 
@@ -35,7 +35,7 @@ public:
 
     // Creates a ProxyDevice to be a child platform device or a proxy client device.
     static zx_status_t CreateChild(zx_device_t* parent, uint32_t device_id,
-                                   fbl::RefPtr<PlatformProxy> proxy, device_add_args_t* args);
+                                   fbl::RefPtr<PlatformProxy> proxy, const device_add_args_t* args);
 
     // Full device protocol implementation.
     // For child devices, these call through to the device protocol passed via pdev_device_add().
@@ -55,15 +55,16 @@ public:
     zx_status_t DdkRxrpc(zx_handle_t channel);
 
     // Platform device protocol implementation.
-    zx_status_t GetMmio(uint32_t index, pdev_mmio_t* out_mmio);
-    zx_status_t MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr, size_t* out_size,
-                        zx_paddr_t* out_paddr, zx_handle_t* out_handle);
-    zx_status_t MapInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle);
-    zx_status_t GetBti(uint32_t index, zx_handle_t* out_handle);
-    zx_status_t GetDeviceInfo(pdev_device_info_t* out_info);
-    zx_status_t GetBoardInfo(pdev_board_info_t* out_info);
-    zx_status_t DeviceAdd(uint32_t index, device_add_args_t* args, zx_device_t** out);
-    zx_status_t GetProtocol(uint32_t proto_id, uint32_t index, void* out_protocol);
+    zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio);
+    zx_status_t PDevMapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
+                            size_t* out_size, zx_paddr_t* out_paddr, zx_handle_t* out_handle);
+    zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle);
+    zx_status_t PDevGetBti(uint32_t index, zx_handle_t* out_handle);
+    zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info);
+    zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info);
+    zx_status_t PDevDeviceAdd(uint32_t index, const device_add_args_t* args, zx_device_t** device);
+    zx_status_t PDevGetProtocol(uint32_t proto_id, uint32_t index, void* out_protocol,
+                                size_t protocol_size, size_t* protocol_actual);
 
     // Clock protocol implementation.
     static zx_status_t ClkEnable(void* ctx, uint32_t index);
@@ -109,7 +110,7 @@ private:
 
     zx_status_t InitCommon();
     zx_status_t InitRoot();
-    zx_status_t InitChild(device_add_args_t* args);
+    zx_status_t InitChild(const device_add_args_t* args);
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(ProxyDevice);
 

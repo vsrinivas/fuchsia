@@ -14,7 +14,7 @@ typedef struct kpci_device {
 
     // only set for non-shadow devices
     pciroot_protocol_t pciroot;
-    platform_device_protocol_t pdev;
+    pdev_protocol_t pdev;
 
     // only set for shadow devices
     zx_handle_t pciroot_rpcch;

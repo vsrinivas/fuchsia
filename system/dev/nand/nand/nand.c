@@ -20,6 +20,7 @@
 #include <string.h>
 #include <lib/sync/completion.h>
 #include <zircon/assert.h>
+#include <zircon/process.h>
 #include <zircon/status.h>
 
 // TODO: Investigate elimination of unmap.

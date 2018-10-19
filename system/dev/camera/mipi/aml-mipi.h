@@ -6,6 +6,7 @@
 #include <ddk/protocol/mipicsi.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
 #include <fbl/unique_ptr.h>
@@ -39,7 +40,7 @@ private:
     fbl::unique_ptr<ddk::MmioBuffer> csi_host0_mmio_;
     fbl::unique_ptr<ddk::MmioBuffer> mipi_adap_mmio_;
 
-    platform_device_protocol_t pdev_;
+    pdev_protocol_t pdev_;
 
     zx_status_t InitPdev(zx_device_t* parent);
 

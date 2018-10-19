@@ -207,8 +207,8 @@ zx_status_t HidButtonsDevice::Bind() {
         return status;
     }
 
-    platform_device_protocol_t pdev;
-    status = device_get_protocol(parent_, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
+    pdev_protocol_t pdev;
+    status = device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s device_get_protocol failed %d\n", __FUNCTION__, status);
         return status;
@@ -225,7 +225,9 @@ zx_status_t HidButtonsDevice::Bind() {
     // TODO(andresoportus): use fbl::make_unique_checked once array can be used.
 
     for (uint32_t i = 0; i < kNumberOfRequiredGpios; ++i) {
-        status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, i, &keys_[i].gpio);
+         size_t actual;
+        status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, i, &keys_[i].gpio,
+                                   sizeof(keys_[i].gpio), &actual);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s pdev_get_protocol failed %d\n", __FUNCTION__, status);
             return ZX_ERR_NOT_SUPPORTED;

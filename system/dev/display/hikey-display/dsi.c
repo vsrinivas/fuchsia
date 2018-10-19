@@ -6,6 +6,7 @@
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -351,7 +352,7 @@ static zx_status_t dsi_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &dsi->pdev);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &dsi->pdev);
     if (status != ZX_OK) {
         goto fail;
     }
@@ -365,22 +366,27 @@ static zx_status_t dsi_bind(void* ctx, zx_device_t* parent) {
     }
 
     /* Obtain the I2C devices */
-    if (pdev_get_protocol(&dsi->pdev, ZX_PROTOCOL_I2C, 0, &dsi->i2c_dev.i2c_main) != ZX_OK) {
+    size_t actual;
+    if (pdev_get_protocol(&dsi->pdev, ZX_PROTOCOL_I2C, 0, &dsi->i2c_dev.i2c_main,
+                          sizeof(dsi->i2c_dev.i2c_main), &actual) != ZX_OK) {
         zxlogf(ERROR, "%s: Could not obtain I2C Protocol\n", __FUNCTION__);
         goto fail;
     }
-    if (pdev_get_protocol(&dsi->pdev, ZX_PROTOCOL_I2C, 1, &dsi->i2c_dev.i2c_cec) != ZX_OK) {
+    if (pdev_get_protocol(&dsi->pdev, ZX_PROTOCOL_I2C, 1, &dsi->i2c_dev.i2c_cec,
+                          sizeof(dsi->i2c_dev.i2c_cec), &actual) != ZX_OK) {
         zxlogf(ERROR, "%s: Could not obtain I2C Protocol\n", __FUNCTION__);
         goto fail;
     }
-    if (pdev_get_protocol(&dsi->pdev, ZX_PROTOCOL_I2C, 2, &dsi->i2c_dev.i2c_edid) != ZX_OK) {
+    if (pdev_get_protocol(&dsi->pdev, ZX_PROTOCOL_I2C, 2, &dsi->i2c_dev.i2c_edid,
+                          sizeof(dsi->i2c_dev.i2c_edid), &actual) != ZX_OK) {
         zxlogf(ERROR, "%s: Could not obtain I2C Protocol\n", __FUNCTION__);
         goto fail;
     }
 
     /* Obtain the GPIO devices */
     for (uint32_t i = 0; i < countof(dsi->hdmi_gpio.gpios); i++) {
-        if (pdev_get_protocol(&dsi->pdev, ZX_PROTOCOL_GPIO, i, &dsi->hdmi_gpio.gpios[i]) != ZX_OK) {
+        if (pdev_get_protocol(&dsi->pdev, ZX_PROTOCOL_GPIO, i, &dsi->hdmi_gpio.gpios[i],
+                              sizeof(dsi->hdmi_gpio.gpios[i]), &actual) != ZX_OK) {
             zxlogf(ERROR, "%s: Could not obtain GPIO Protocol\n", __FUNCTION__);
             goto fail;
         }

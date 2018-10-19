@@ -40,14 +40,16 @@ zx_status_t HikeyUsb::Create(zx_device_t* parent) {
 }
 
 zx_status_t HikeyUsb::Init() {
-    platform_device_protocol_t pdev;
+    pdev_protocol_t pdev;
 
-    auto status = device_get_protocol(parent(), ZX_PROTOCOL_PLATFORM_DEV, &pdev);
+    auto status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev);
     if (status != ZX_OK) {
         return status;
     }
     for (uint32_t i = 0; i < countof(gpios_); i++) {
-        status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, i, &gpios_[i]);
+        size_t actual;
+        status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, i, &gpios_[i], sizeof(gpios_[i]),
+                                   &actual);
         if (status != ZX_OK) {
             return status;
         }

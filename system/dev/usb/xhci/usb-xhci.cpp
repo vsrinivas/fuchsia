@@ -433,7 +433,7 @@ error_return:
 }
 
 
-static zx_status_t usb_xhci_bind_pdev(zx_device_t* parent, platform_device_protocol_t* pdev) {
+static zx_status_t usb_xhci_bind_pdev(zx_device_t* parent, pdev_protocol_t* pdev) {
     zx_handle_t irq_handle = ZX_HANDLE_INVALID;
     xhci_t* xhci = nullptr;
     zx_status_t status;
@@ -485,13 +485,13 @@ error_return:
 
 zx_status_t usb_xhci_bind(void* ctx, zx_device_t* parent) {
     pci_protocol_t pci;
-    platform_device_protocol_t pdev;
+    pdev_protocol_t pdev;
     zx_status_t status;
 
     if ((status = device_get_protocol(parent, ZX_PROTOCOL_PCI, &pci)) == ZX_OK) {
         return usb_xhci_bind_pci(parent, &pci);
     }
-    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev)) == ZX_OK) {
+    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev)) == ZX_OK) {
         return usb_xhci_bind_pdev(parent, &pdev);
     }
 

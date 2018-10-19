@@ -21,6 +21,7 @@
 #include <fbl/unique_ptr.h>
 #include <zircon/listnode.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 
 namespace mt8167s_display {
 
@@ -67,7 +68,7 @@ private:
     thrd_t vsync_thread_;
 
     // Protocol handles
-    platform_device_protocol_t pdev_ = {};
+    pdev_protocol_t pdev_ = {};
 
     // Interrupts
     zx::interrupt vsync_irq_;

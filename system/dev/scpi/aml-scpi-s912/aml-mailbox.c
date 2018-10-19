@@ -114,7 +114,7 @@ static zx_status_t aml_mailbox_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &mailbox->pdev);
+    status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &mailbox->pdev);
     if (status != ZX_OK) {
         MAILBOX_ERROR("Could not get parent protocol\n");
         goto fail;
@@ -191,7 +191,7 @@ static zx_driver_ops_t aml_mailbox_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(aml_mailbox, aml_mailbox_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_KHADAS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_VIM2),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_MAILBOX),

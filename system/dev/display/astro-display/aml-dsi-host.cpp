@@ -222,9 +222,9 @@ zx_status_t AmlDsiHost::Init() {
         return ZX_OK;
     }
 
-    zx_status_t status = device_get_protocol(parent_, ZX_PROTOCOL_PLATFORM_DEV, &pdev_);
+    zx_status_t status = device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev_);
     if (status != ZX_OK) {
-        DISP_ERROR("AmlDsiHost: Could not get ZX_PROTOCOL_PLATFORM_DEV protocol\n");
+        DISP_ERROR("AmlDsiHost: Could not get ZX_PROTOCOL_PDEV protocol\n");
         return status;
     }
 

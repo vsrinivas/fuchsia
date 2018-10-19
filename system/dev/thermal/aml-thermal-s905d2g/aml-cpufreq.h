@@ -6,6 +6,7 @@
 
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/mmio.h>
 #include <ddktl/protocol/clk.h>
 #include <fbl/optional.h>
@@ -31,7 +32,7 @@ private:
     zx_status_t ConfigureSysPLL(uint32_t new_rate);
     zx_status_t ConfigureFixedPLL(uint32_t new_rate);
 
-    platform_device_protocol_t pdev_;
+    pdev_protocol_t pdev_;
     // Initialize platform stuff.
     zx_status_t InitPdev(zx_device_t* parent);
     // Protocols.

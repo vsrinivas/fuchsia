@@ -16,6 +16,7 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform-proxy.h>
 #include <zircon/pixelformat.h>
 
@@ -219,7 +220,7 @@ static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Get device protocol
-    status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &canvas->pdev);
+    status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &canvas->pdev);
     if (status != ZX_OK) {
         CANVAS_ERROR("Could not get parent protocol\n");
         goto fail;
@@ -284,7 +285,7 @@ static zx_driver_ops_t aml_canvas_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(aml_canvas, aml_canvas_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_CANVAS),

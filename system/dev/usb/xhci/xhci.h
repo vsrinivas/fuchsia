@@ -14,8 +14,10 @@
 #include <threads.h>
 
 #include <ddk/device.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb.h>
 #include <fbl/atomic.h>
@@ -131,7 +133,7 @@ struct xhci {
     zx_handle_t cfg_handle;
 
     // platform device support
-    platform_device_protocol_t* pdev;
+    pdev_protocol_t* pdev;
 
     // MMIO data structures
     xhci_cap_regs_t* cap_regs;

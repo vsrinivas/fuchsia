@@ -109,7 +109,7 @@ zx_status_t PlatformProxy::RegisterProtocol(uint32_t proto_id, const void* proto
         rpc_pdev_req_t req = {};
         rpc_pdev_rsp_t resp = {};
         req.header.device_id = ROOT_DEVICE_ID;
-        req.header.proto_id = ZX_PROTOCOL_PLATFORM_DEV;
+        req.header.proto_id = ZX_PROTOCOL_PDEV;
         req.header.op = PDEV_GET_DEVICE_INFO;
 
         auto status = Rpc(ROOT_DEVICE_ID, &req.header, sizeof(req), &resp.header, sizeof(resp));
@@ -128,7 +128,7 @@ zx_status_t PlatformProxy::RegisterProtocol(uint32_t proto_id, const void* proto
         device_add_args_t args = {};
         args.version = DEVICE_ADD_ARGS_VERSION;
         args.name = info.name;
-        args.proto_id = ZX_PROTOCOL_PLATFORM_DEV;
+        args.proto_id = ZX_PROTOCOL_PDEV;
         args.props = props;
         args.prop_count = fbl::count_of(props);
 
@@ -186,7 +186,7 @@ zx_status_t PlatformProxy::Init(zx_device_t* parent) {
         uint32_t protocols[PROXY_MAX_PROTOCOLS];
     } resp = {};
     req.header.device_id = ROOT_DEVICE_ID;
-    req.header.proto_id = ZX_PROTOCOL_PLATFORM_DEV;
+    req.header.proto_id = ZX_PROTOCOL_PDEV;
     req.header.op = PDEV_GET_PROTOCOLS;
 
     auto status = Rpc(ROOT_DEVICE_ID, &req.header, sizeof(req), &resp.pdev.header, sizeof(resp));

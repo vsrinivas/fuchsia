@@ -56,7 +56,7 @@ typedef struct aml_hiu_dev aml_hiu_dev_t;
 typedef struct aml_pll_dev aml_pll_dev_t;
 
 typedef struct {
-    platform_device_protocol_t  pdev;
+    pdev_protocol_t  pdev;
 
     zx_device_t*                zxdev;
 

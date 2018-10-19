@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/mmio.h>
 #include <fbl/optional.h>
 #include "mipi-dsi.h"
@@ -55,7 +56,7 @@ private:
     zx_status_t SendCmd(const MipiDsiCmd& cmd);
 
     fbl::optional<ddk::MmioBuffer>          mipi_dsi_mmio_;
-    platform_device_protocol_t              pdev_ = {nullptr, nullptr};
+    pdev_protocol_t              pdev_ = {nullptr, nullptr};
 
     bool                                    initialized_ = false;
 };

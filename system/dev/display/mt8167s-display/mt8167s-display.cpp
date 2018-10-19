@@ -204,7 +204,7 @@ void Mt8167sDisplay::DdkRelease() {
 
 zx_status_t Mt8167sDisplay::Bind() {
 
-    zx_status_t status = device_get_protocol(parent_, ZX_PROTOCOL_PLATFORM_DEV, &pdev_);
+    zx_status_t status = device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev_);
     if (status != ZX_OK) {
         DISP_ERROR("Could not get parent protocol\n");
         return status;

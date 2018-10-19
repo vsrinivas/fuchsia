@@ -31,7 +31,7 @@
 
 typedef struct {
     zx_device_t*                        zxdev;
-    platform_device_protocol_t          pdev;
+    pdev_protocol_t          pdev;
     mailbox_protocol_t                  mailbox;
     mtx_t                               lock;
 } aml_scpi_t;

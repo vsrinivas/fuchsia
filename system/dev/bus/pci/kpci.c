@@ -309,7 +309,7 @@ static zx_status_t pci_init_child(zx_device_t* parent, uint32_t index) {
     // Store the PCIROOT protocol for use with get_auxdata in the pci protocol
     // It is not fatal if this fails, but auxdata protocol methods will not work.
     device_get_protocol(parent, ZX_PROTOCOL_PCIROOT, &device->pciroot);
-    device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &device->pdev);
+    device_get_protocol(parent, ZX_PROTOCOL_PDEV, &device->pdev);
 
     char name[20];
     snprintf(name, sizeof(name), "%02x:%02x.%1x", info.bus_id, info.dev_id, info.func_id);
@@ -371,7 +371,7 @@ static zx_driver_ops_t kpci_driver_ops = {
 // clang-format off
 ZIRCON_DRIVER_BEGIN(pci, kpci_driver_ops, "zircon", "0.1", 5)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_PCIROOT),
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_KPCI),

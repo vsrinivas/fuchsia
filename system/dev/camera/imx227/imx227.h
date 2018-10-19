@@ -96,7 +96,7 @@ private:
     sensor_context_t ctx_;
 
     // Protocols.
-    platform_device_protocol_t pdev_;
+    pdev_protocol_t pdev_;
     i2c_protocol_t i2c_;
     gpio_protocol_t gpios_[GPIO_COUNT];
     clk_protocol_t clk_;

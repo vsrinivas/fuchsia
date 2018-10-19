@@ -78,6 +78,9 @@ pciroot:
 platform-bus:
 	$(run-banjo)
 
+platform-device: $(LOCAL_DIR)/libs/driver.banjo
+	$(run-banjo)
+
 platform-proxy:
 	$(run-banjo)
 

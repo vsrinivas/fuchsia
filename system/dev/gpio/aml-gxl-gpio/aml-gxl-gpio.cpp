@@ -8,6 +8,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
@@ -46,9 +47,9 @@ enum {
 zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
     zx_status_t status;
 
-    platform_device_protocol_t pdev;
-    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev)) != ZX_OK) {
-        zxlogf(ERROR, "AmlGxlGpio::Create: ZX_PROTOCOL_PLATFORM_DEV not available\n");
+    pdev_protocol_t pdev;
+    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev)) != ZX_OK) {
+        zxlogf(ERROR, "AmlGxlGpio::Create: ZX_PROTOCOL_PDEV not available\n");
         return status;
     }
 

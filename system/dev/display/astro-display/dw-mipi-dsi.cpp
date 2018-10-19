@@ -451,7 +451,7 @@ zx_status_t DwMipiDsi::Init(zx_device_t* parent) {
     if (initialized_) {
         return ZX_OK;
     }
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev_);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
     if (status != ZX_OK) {
         DISP_ERROR("DwMipiDsi: Could not get ZX_PROTOCOL_PLATFORKM_DEV protocol\n");
         return status;

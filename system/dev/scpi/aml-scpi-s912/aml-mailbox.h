@@ -12,6 +12,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/mailbox.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <hw/reg.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
@@ -31,7 +32,7 @@ typedef struct {
 
 typedef struct {
     zx_device_t* zxdev;
-    platform_device_protocol_t pdev;
+    pdev_protocol_t pdev;
 
     mmio_buffer_t mmio_mailbox;
     mmio_buffer_t mmio_mailbox_payload;

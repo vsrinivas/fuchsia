@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdlib.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 
 #include "../qemu-virt.h"
 
@@ -27,14 +30,14 @@ static zx_protocol_device_t qemu_test_device_protocol = {
 };
 
 static zx_status_t qemu_test_bind(void* ctx, zx_device_t* parent) {
-    platform_device_protocol_t pdev;
+    pdev_protocol_t pdev;
     zx_status_t status;
 
     zxlogf(INFO, "qemu_test_bind: %s \n", DRIVER_NAME);
 
-    status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
+    status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_PLATFORM_DEV\n", DRIVER_NAME);
+        zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_PDEV\n", DRIVER_NAME);
         return status;
     }
 
@@ -80,7 +83,7 @@ static zx_driver_ops_t qemu_test_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(qemu_bus, qemu_test_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_QEMU),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_QEMU),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_QEMU_TEST_CHILD_3),

@@ -6,6 +6,7 @@
 
 #include <zircon/compiler.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/mmio.h>
 #include <fbl/optional.h>
 #include "vpu-regs.h"
@@ -36,7 +37,7 @@ private:
     fbl::optional<ddk::MmioBuffer>    hhi_mmio_;
     fbl::optional<ddk::MmioBuffer>    aobus_mmio_;
     fbl::optional<ddk::MmioBuffer>    cbus_mmio_;
-    platform_device_protocol_t        pdev_ = {};
+    pdev_protocol_t        pdev_ = {};
 
     bool                              initialized_ = false;
 

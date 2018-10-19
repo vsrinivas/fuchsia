@@ -27,7 +27,7 @@ constexpr size_t SPDIF_RB_SIZE = fbl::round_up<size_t, size_t>(48000 * 2 * 2u, P
 Vim2Audio::~Vim2Audio() {
 }
 
-zx_status_t Vim2Audio::Init(const platform_device_protocol_t* pdev) {
+zx_status_t Vim2Audio::Init(const pdev_protocol_t* pdev) {
     zx_status_t res;
 
     // Get a hold of our registers.
@@ -133,7 +133,7 @@ void Vim2Audio::OnDisplayRemoved(uint64_t display_id) {
 
 extern "C" {
 
-zx_status_t vim2_audio_create(const platform_device_protocol_t* pdev,
+zx_status_t vim2_audio_create(const pdev_protocol_t* pdev,
                               vim2_audio_t **out_audio) {
     ZX_DEBUG_ASSERT(pdev != nullptr);
     ZX_DEBUG_ASSERT(out_audio != nullptr);

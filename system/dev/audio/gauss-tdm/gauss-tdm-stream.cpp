@@ -5,6 +5,7 @@
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <fbl/limits.h>
 #include <string.h>
 #include <zircon/device/audio.h>
@@ -30,7 +31,7 @@ zx_status_t TdmOutputStream::Create(zx_device_t* parent) {
     auto stream = fbl::AdoptRef(
         new TdmOutputStream(parent, fbl::move(domain)));
 
-    zx_status_t res = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &stream->pdev_);
+    zx_status_t res = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &stream->pdev_);
     if (res != ZX_OK) {
         return res;
     }

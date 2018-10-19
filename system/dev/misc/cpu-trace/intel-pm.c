@@ -1028,8 +1028,8 @@ zx_status_t cpuperf_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    platform_device_protocol_t pdev;
-    status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
+    pdev_protocol_t pdev;
+    status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev);
     if (status != ZX_OK) {
         return status;
     }

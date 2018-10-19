@@ -8,6 +8,7 @@
 #include <zircon/compiler.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/mmio.h>
 #include <fbl/optional.h>
 #include <hwreg/mmio.h>
@@ -45,7 +46,7 @@ private:
 
     fbl::optional<ddk::MmioBuffer>          vpu_mmio_;
     fbl::optional<ddk::MmioBuffer>          hhi_mmio_;
-    platform_device_protocol_t              pdev_ = {nullptr, nullptr};
+    pdev_protocol_t              pdev_ = {nullptr, nullptr};
 
     PllConfig                               pll_cfg_;
     LcdTiming                               lcd_timing_;

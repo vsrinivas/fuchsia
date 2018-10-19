@@ -59,7 +59,7 @@ private:
 
     const zx_device_t* parent_;
 
-    platform_device_protocol_t pdev_ = {};
+    pdev_protocol_t pdev_ = {};
 
     pdev_device_info_t pdev_info_ = {};
 };

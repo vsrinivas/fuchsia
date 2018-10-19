@@ -18,6 +18,7 @@
 #include <ddk/protocol/clk.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 
 #include <dev/clk/hisi-lib/hisi.h>
 
@@ -42,7 +43,7 @@
 #define SEP_STATUS  (0x2)
 
 typedef struct hisi_clk {
-    platform_device_protocol_t pdev;
+    pdev_protocol_t pdev;
     clk_protocol_t clk;
     zx_device_t* zxdev;
 
@@ -174,9 +175,9 @@ zx_status_t hisi_clk_init(const char* name, hisi_clk_gate_t* gates,
         goto fail;
     }
 
-    st = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &hisi_clk->pdev);
+    st = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &hisi_clk->pdev);
     if (st != ZX_OK) {
-        zxlogf(ERROR, "hisi_clk_bind: failed to get ZX_PROTOCOL_PLATFORM_DEV, "
+        zxlogf(ERROR, "hisi_clk_bind: failed to get ZX_PROTOCOL_PDEV, "
                       "st = %d\n", st);
         goto fail;
     }

@@ -10,6 +10,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/ethernet_mac.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -121,7 +122,7 @@ void DWMacDevice::UpdateLinkStatus() {
 zx_status_t DWMacDevice::InitPdev() {
 
     zx_status_t status = device_get_protocol(parent_,
-                                             ZX_PROTOCOL_PLATFORM_DEV,
+                                             ZX_PROTOCOL_PDEV,
                                              &pdev_);
     if (status != ZX_OK) {
         return status;

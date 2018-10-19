@@ -148,8 +148,8 @@ static zx_status_t gpio_test_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    platform_device_protocol_t pdev;
-    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev) != ZX_OK) {
+    pdev_protocol_t pdev;
+    if (device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev) != ZX_OK) {
         free(gpio_test);
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -166,7 +166,9 @@ static zx_status_t gpio_test_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
     for (uint32_t i = 0; i < info.gpio_count; i++) {
-        zx_status_t status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, i, &gpio_test->gpios[i]);
+        size_t actual;
+        zx_status_t status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, i, &gpio_test->gpios[i],
+                                               sizeof(gpio_test->gpios[i]), &actual);
         if (status != ZX_OK) {
             free(gpio_test->gpios);
             free(gpio_test);
@@ -199,7 +201,7 @@ static zx_driver_ops_t gpio_test_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(gpio_test, gpio_test_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_GPIO_TEST),

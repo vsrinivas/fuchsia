@@ -11,13 +11,14 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
-#include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/metadata.h>
 #include <ddk/phys-iter.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/sdmmc.h>
 #include <hw/reg.h>
 #include <hw/sdmmc.h>
@@ -44,7 +45,7 @@ static inline uint8_t log2_ceil(uint16_t blk_sz) {
 }
 
 typedef struct aml_sd_emmc_t {
-    platform_device_protocol_t pdev;
+    pdev_protocol_t pdev;
     zx_device_t* zxdev;
     gpio_protocol_t gpio;
     uint32_t gpio_count;
@@ -975,8 +976,8 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
     dev->req_completion = SYNC_COMPLETION_INIT;
 
     zx_status_t status = ZX_OK;
-    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &dev->pdev)) != ZX_OK) {
-        zxlogf(ERROR, "aml_sd_emmc_bind: ZX_PROTOCOL_PLATFORM_DEV not available\n");
+    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &dev->pdev)) != ZX_OK) {
+        zxlogf(ERROR, "aml_sd_emmc_bind: ZX_PROTOCOL_PDEV not available\n");
         goto fail;
     }
 
@@ -1095,7 +1096,7 @@ static zx_driver_ops_t aml_sd_emmc_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(aml_sd_emmc, aml_sd_emmc_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SD_EMMC),
 ZIRCON_DRIVER_END(aml_sd_emmc)

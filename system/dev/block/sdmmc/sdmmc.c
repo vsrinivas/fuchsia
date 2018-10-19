@@ -486,8 +486,8 @@ static int sdmmc_worker_thread(void* arg) {
         };
 
         // Use platform device protocol to create our SDIO device, if it is available.
-        platform_device_protocol_t pdev;
-        st = device_get_protocol(hci_zxdev, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
+        pdev_protocol_t pdev;
+        st = device_get_protocol(hci_zxdev, ZX_PROTOCOL_PDEV, &pdev);
         if (st == ZX_OK) {
             st = pdev_device_add(&pdev, 0, &sdio_args, &dev->zxdev);
         } else {

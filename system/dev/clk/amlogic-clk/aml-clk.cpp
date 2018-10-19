@@ -54,7 +54,7 @@ zx_status_t AmlClock::InitMsrRegs(pdev_device_info_t* info) {
 
 zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
     zx_status_t status = device_get_protocol(parent,
-                                             ZX_PROTOCOL_PLATFORM_DEV,
+                                             ZX_PROTOCOL_PDEV,
                                              &pdev_);
     if (status != ZX_OK) {
         return status;

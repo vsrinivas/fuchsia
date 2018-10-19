@@ -44,7 +44,7 @@ private:
     fbl::optional<ddk::MmioBuffer>              mipi_dsi_mmio_;
     fbl::optional<ddk::MmioBuffer>              hhi_mmio_;
 
-    platform_device_protocol_t                  pdev_ = {};
+    pdev_protocol_t                  pdev_ = {};
 
     zx_device_t*                                parent_;
 

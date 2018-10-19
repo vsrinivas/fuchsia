@@ -424,7 +424,7 @@ int AstroDisplay::VSyncThread() {
 zx_status_t AstroDisplay::Bind() {
     zx_status_t status;
 
-    status = device_get_protocol(parent_, ZX_PROTOCOL_PLATFORM_DEV, &pdev_);
+    status = device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev_);
     if (status !=  ZX_OK) {
         DISP_ERROR("Could not get parent protocol\n");
         return status;
@@ -438,7 +438,9 @@ zx_status_t AstroDisplay::Bind() {
     }
 
     // Obtain GPIO Protocol for Panel reset
-    status = pdev_get_protocol(&pdev_, ZX_PROTOCOL_GPIO, GPIO_PANEL_DETECT, &gpio_);
+    size_t actual;
+    status = pdev_get_protocol(&pdev_, ZX_PROTOCOL_GPIO, GPIO_PANEL_DETECT, &gpio_, sizeof(gpio_),
+                               &actual);
     if (status != ZX_OK) {
         DISP_ERROR("Could not obtain GPIO protocol\n");
         return status;

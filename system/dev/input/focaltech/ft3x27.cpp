@@ -64,9 +64,9 @@ int Ft3x27Device::Thread() {
 }
 
 zx_status_t Ft3x27Device::InitPdev() {
-    platform_device_protocol_t pdev;
+    pdev_protocol_t pdev;
 
-    zx_status_t status = device_get_protocol(parent_, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
+    zx_status_t status = device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "ft3x27: failed to acquire pdev\n");
         return status;
@@ -79,7 +79,9 @@ zx_status_t Ft3x27Device::InitPdev() {
     }
 
     for (uint32_t i = 0; i < FT_PIN_COUNT; i++) {
-        status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, i, &gpios_[i]);
+        size_t actual;
+        status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, i, &gpios_[i], sizeof(gpios_[i]),
+                                   &actual);
         if (status != ZX_OK) {
             return status;
         }

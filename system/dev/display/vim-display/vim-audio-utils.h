@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/mmio.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
@@ -20,7 +21,7 @@ namespace vim2 {
 class Registers : public fbl::RefCounted<Registers>,
                   public ddk::MmioBuffer {
   public:
-    static fbl::RefPtr<Registers> Create(const platform_device_protocol_t* pdev,
+    static fbl::RefPtr<Registers> Create(const pdev_protocol_t* pdev,
                                          uint32_t which_mmio,
                                          zx_status_t* out_res);
     DISALLOW_COPY_ASSIGN_AND_MOVE(Registers);

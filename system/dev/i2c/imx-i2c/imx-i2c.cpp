@@ -13,6 +13,7 @@
 #include <ddk/protocol/i2c-impl.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -236,9 +237,9 @@ void ImxI2cDevice::ShutDown() {
 zx_status_t ImxI2cDevice::Bind(int id) {
     zx_status_t status;
 
-    platform_device_protocol_t pdev;
-    if (device_get_protocol(parent(), ZX_PROTOCOL_PLATFORM_DEV, &pdev) != ZX_OK) {
-        zxlogf(ERROR, "imx_i2c_bind: ZX_PROTOCOL_PLATFORM_DEV not available\n");
+    pdev_protocol_t pdev;
+    if (device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev) != ZX_OK) {
+        zxlogf(ERROR, "imx_i2c_bind: ZX_PROTOCOL_PDEV not available\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
     pbus_protocol_t pbus;
@@ -293,9 +294,9 @@ zx_status_t ImxI2cDevice::Bind(int id) {
 } // namespace imx_i2c
 
 extern "C" zx_status_t imx_i2c_bind(void* ctx, zx_device_t* parent) {
-    platform_device_protocol_t pdev;
-    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev) != ZX_OK) {
-        zxlogf(ERROR, "imx_i2c_bind: ZX_PROTOCOL_PLATFORM_DEV not available\n");
+    pdev_protocol_t pdev;
+    if (device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev) != ZX_OK) {
+        zxlogf(ERROR, "imx_i2c_bind: ZX_PROTOCOL_PDEV not available\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
 

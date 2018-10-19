@@ -69,14 +69,14 @@ zx_status_t ProtocolDevice::Init(const pbus_dev_t* pdev) {
     return ZX_OK;
 }
 
-zx_status_t ProtocolDevice::GetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
+zx_status_t ProtocolDevice::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
     if (index >= resources_.mmio_count()) {
         return ZX_ERR_OUT_OF_RANGE;
     }
 
     const pbus_mmio_t& mmio = resources_.mmio(index);
-    const zx_paddr_t vmo_base = ROUNDDOWN(mmio.base, PAGE_SIZE);
-    const size_t vmo_size = ROUNDUP(mmio.base + mmio.length - vmo_base, PAGE_SIZE);
+    const zx_paddr_t vmo_base = ROUNDDOWN(mmio.base, ZX_PAGE_SIZE);
+    const size_t vmo_size = ROUNDUP(mmio.base + mmio.length - vmo_base, ZX_PAGE_SIZE);
     zx::vmo vmo;
 
     zx_status_t status = zx_vmo_create_physical(bus_->GetResource(), vmo_base, vmo_size,
@@ -101,16 +101,16 @@ zx_status_t ProtocolDevice::GetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
 }
 
 // TODO(surajmalhotra): Remove after migrating all clients off.
-zx_status_t ProtocolDevice::MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
-                                    size_t* out_size, zx_paddr_t* out_paddr,
-                                    zx_handle_t* out_handle) {
+zx_status_t ProtocolDevice::PDevMapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
+                                        size_t* out_size, zx_paddr_t* out_paddr,
+                                        zx_handle_t* out_handle) {
     if (index >= resources_.mmio_count()) {
         return ZX_ERR_OUT_OF_RANGE;
     }
 
     const pbus_mmio_t& mmio = resources_.mmio(index);
-    const zx_paddr_t vmo_base = ROUNDDOWN(mmio.base, PAGE_SIZE);
-    const size_t vmo_size = ROUNDUP(mmio.base + mmio.length - vmo_base, PAGE_SIZE);
+    const zx_paddr_t vmo_base = ROUNDDOWN(mmio.base, ZX_PAGE_SIZE);
+    const size_t vmo_size = ROUNDUP(mmio.base + mmio.length - vmo_base, ZX_PAGE_SIZE);
     zx::vmo vmo;
     zx_status_t status = zx_vmo_create_physical(bus_->GetResource(), vmo_base, vmo_size,
                                                 vmo.reset_and_get_address());
@@ -150,7 +150,8 @@ zx_status_t ProtocolDevice::MapMmio(uint32_t index, uint32_t cache_policy, void*
     return ZX_OK;
 }
 
-zx_status_t ProtocolDevice::MapInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle) {
+zx_status_t ProtocolDevice::PDevGetInterrupt(uint32_t index, uint32_t flags,
+                                             zx_handle_t* out_handle) {
     if (index >= resources_.irq_count()) {
         return ZX_ERR_OUT_OF_RANGE;
     }
@@ -170,7 +171,7 @@ zx_status_t ProtocolDevice::MapInterrupt(uint32_t index, uint32_t flags, zx_hand
     return status;
 }
 
-zx_status_t ProtocolDevice::GetBti(uint32_t index, zx_handle_t* out_handle) {
+zx_status_t ProtocolDevice::PDevGetBti(uint32_t index, zx_handle_t* out_handle) {
     if (index >= resources_.bti_count()) {
         return ZX_ERR_OUT_OF_RANGE;
     }
@@ -183,7 +184,7 @@ zx_status_t ProtocolDevice::GetBti(uint32_t index, zx_handle_t* out_handle) {
     return bus_->IommuGetBti(bti.iommu_index, bti.bti_id, out_handle);
 }
 
-zx_status_t ProtocolDevice::GetDeviceInfo(pdev_device_info_t* out_info) {
+zx_status_t ProtocolDevice::PDevGetDeviceInfo(pdev_device_info_t* out_info) {
     pdev_device_info_t info = {
         .vid = vid_,
         .pid = pid_,
@@ -205,26 +206,32 @@ zx_status_t ProtocolDevice::GetDeviceInfo(pdev_device_info_t* out_info) {
     return ZX_OK;
 }
 
-zx_status_t ProtocolDevice::GetBoardInfo(pdev_board_info_t* out_info) {
+zx_status_t ProtocolDevice::PDevGetBoardInfo(pdev_board_info_t* out_info) {
     return bus_->GetBoardInfo(out_info);
 }
 
-zx_status_t ProtocolDevice::DeviceAdd(uint32_t index, device_add_args_t* args, zx_device_t** out) {
+zx_status_t ProtocolDevice::PDevDeviceAdd(uint32_t index, const device_add_args_t* args,
+                                          zx_device_t** device) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t ProtocolDevice::GetProtocol(uint32_t proto_id, uint32_t index, void* out_protocol) {
+zx_status_t ProtocolDevice::PDevGetProtocol(uint32_t proto_id, uint32_t index, void* out_protocol,
+                                            size_t protocol_size, size_t* protocol_actual) {
     // Pass through to DdkGetProtocol if index is zero
     if (index != 0) {
         return ZX_ERR_OUT_OF_RANGE;
     }
+    if (protocol_size < sizeof(ddk::AnyProtocol)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    *protocol_actual = sizeof(ddk::AnyProtocol);
     return DdkGetProtocol(proto_id, out_protocol);
 }
 
 zx_status_t ProtocolDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
-    if (proto_id == ZX_PROTOCOL_PLATFORM_DEV) {
-        auto proto = static_cast<platform_device_protocol_t*>(out);
-        proto->ops = &pdev_proto_ops_;
+    if (proto_id == ZX_PROTOCOL_PDEV) {
+        auto proto = static_cast<pdev_protocol_t*>(out);
+        proto->ops = &ops_;
         proto->ctx = this;
         return ZX_OK;
     } else if (proto_id == ZX_PROTOCOL_PBUS) {

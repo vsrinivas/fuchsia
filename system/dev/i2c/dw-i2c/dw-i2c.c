@@ -10,6 +10,7 @@
 #include <ddk/protocol/i2c-impl.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <hw/reg.h>
 #include <lib/sync/completion.h>
 #include <zircon/process.h>
@@ -34,7 +35,7 @@ typedef struct {
 } i2c_dw_dev_t;
 
 typedef struct {
-    platform_device_protocol_t pdev;
+    pdev_protocol_t pdev;
     i2c_impl_protocol_t i2c;
     zx_device_t* zxdev;
     i2c_dw_dev_t* i2c_devs;
@@ -447,8 +448,8 @@ static zx_status_t dw_i2c_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &i2c->pdev)) != ZX_OK) {
-        zxlogf(ERROR, "dw_i2c_bind: ZX_PROTOCOL_PLATFORM_DEV not available\n");
+    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &i2c->pdev)) != ZX_OK) {
+        zxlogf(ERROR, "dw_i2c_bind: ZX_PROTOCOL_PDEV not available\n");
         goto fail;
     }
 
@@ -518,7 +519,7 @@ static zx_driver_ops_t dw_i2c_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(dw_i2c, dw_i2c_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_DW_I2C),

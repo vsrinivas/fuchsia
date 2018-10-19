@@ -29,9 +29,9 @@ constexpr uint32_t kMipiAdap = 3;
 } // namespace
 
 zx_status_t AmlMipiDevice::InitPdev(zx_device_t* parent) {
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev_);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ZX_PROTOCOL_PLATFORM_DEV not available %d \n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available %d \n", __FUNCTION__, status);
         return status;
     }
 

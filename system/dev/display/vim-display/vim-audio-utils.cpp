@@ -9,7 +9,7 @@
 namespace audio {
 namespace vim2 {
 
-fbl::RefPtr<Registers> Registers::Create(const platform_device_protocol_t* pdev,
+fbl::RefPtr<Registers> Registers::Create(const pdev_protocol_t* pdev,
                                          uint32_t which_mmio,
                                          zx_status_t* out_res) {
     ZX_DEBUG_ASSERT(pdev != nullptr);

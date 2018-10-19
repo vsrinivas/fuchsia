@@ -5,6 +5,7 @@
 #include <threads.h>
 
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/serial-impl.h>
 #include <ddk/protocol/serial.h>
 #include <ddktl/device.h>
@@ -48,7 +49,7 @@ public:
 private:
     using Callback = fbl::Function<void(uint32_t)>;
 
-    explicit AmlUart(zx_device_t* parent, const platform_device_protocol_t& pdev,
+    explicit AmlUart(zx_device_t* parent, const pdev_protocol_t& pdev,
                      const serial_port_info_t& serial_port_info,
                      ddk::MmioBuffer mmio)
         : DeviceType(parent), pdev_(pdev), serial_port_info_(serial_port_info),
@@ -59,7 +60,7 @@ private:
     void EnableLocked(bool enable) TA_REQ(enable_lock_);
     int IrqThread();
 
-    const platform_device_protocol_t pdev_;
+    const pdev_protocol_t pdev_;
     const serial_port_info_t serial_port_info_;
     ddk::MmioBuffer mmio_;
     zx::interrupt irq_;

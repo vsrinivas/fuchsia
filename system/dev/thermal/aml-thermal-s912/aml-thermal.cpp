@@ -23,30 +23,33 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
     zxlogf(INFO, "aml_thermal: driver begin...\n");
     zx_status_t status;
 
-    platform_device_protocol_t pdev_proto;
-    status = device_get_protocol(device, ZX_PROTOCOL_PLATFORM_DEV, &pdev_proto);
+    pdev_protocol_t pdev_proto;
+    status = device_get_protocol(device, ZX_PROTOCOL_PDEV, &pdev_proto);
     if (status != ZX_OK) {
         THERMAL_ERROR("could not get platform device protocol: %d\n", status);
         return status;
     }
-    ddk::PlatformDevProtocolProxy pdev(&pdev_proto);
+    ddk::PDevProtocolProxy pdev(&pdev_proto);
 
+    size_t actual;
     gpio_protocol_t fan0_gpio_proto;
-    status = pdev.GetProtocol(ZX_PROTOCOL_GPIO, FAN_CTL0, &fan0_gpio_proto);
+    status = pdev.GetProtocol(ZX_PROTOCOL_GPIO, FAN_CTL0, &fan0_gpio_proto, sizeof(fan0_gpio_proto),
+                              &actual);
     if (status != ZX_OK) {
         THERMAL_ERROR("could not get fan0 gpio protocol: %d\n", status);
         return status;
     }
 
     gpio_protocol_t fan1_gpio_proto;
-    status = pdev.GetProtocol(ZX_PROTOCOL_GPIO, FAN_CTL1, &fan1_gpio_proto);
+    status = pdev.GetProtocol(ZX_PROTOCOL_GPIO, FAN_CTL1, &fan1_gpio_proto, sizeof(fan1_gpio_proto),
+                              &actual);
     if (status != ZX_OK) {
         THERMAL_ERROR("could not get fan1 gpio protocol: %d\n", status);
         return status;
     }
 
     scpi_protocol_t scpi_proto;
-    status = pdev.GetProtocol(ZX_PROTOCOL_SCPI, 0, &scpi_proto);
+    status = pdev.GetProtocol(ZX_PROTOCOL_SCPI, 0, &scpi_proto, sizeof(scpi_proto), &actual);
     if (status != ZX_OK) {
         THERMAL_ERROR("could not get scpi protocol: %d\n", status);
         return status;

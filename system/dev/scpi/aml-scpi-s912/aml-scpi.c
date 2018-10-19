@@ -289,7 +289,7 @@ static zx_status_t aml_scpi_bind(void* ctx, zx_device_t* parent) {
     }
     mtx_init(&scpi->lock, mtx_plain);
 
-    status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &scpi->pdev);
+    status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &scpi->pdev);
     if (status != ZX_OK) {
         SCPI_ERROR("Could not get parent protocol\n");
         goto fail;

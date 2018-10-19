@@ -17,6 +17,7 @@
 #include <ddk/io-buffer.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/rawnand.h>
 #include <hw/reg.h>
 
@@ -1031,10 +1032,10 @@ static zx_status_t aml_raw_nand_bind(void* ctx, zx_device_t* parent) {
     raw_nand->req_completion = SYNC_COMPLETION_INIT;
 
     if ((status = device_get_protocol(parent,
-                                      ZX_PROTOCOL_PLATFORM_DEV,
+                                      ZX_PROTOCOL_PDEV,
                                       &raw_nand->pdev)) != ZX_OK) {
         zxlogf(ERROR,
-               "aml_raw_nand_bind: ZX_PROTOCOL_PLATFORM_DEV not available\n");
+               "aml_raw_nand_bind: ZX_PROTOCOL_PDEV not available\n");
         free(raw_nand);
         return status;
     }
@@ -1145,7 +1146,7 @@ static zx_driver_ops_t aml_raw_nand_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(aml_raw_nand, aml_raw_nand_driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_RAW_NAND),
     ZIRCON_DRIVER_END(aml_raw_nand)
