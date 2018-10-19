@@ -27,6 +27,7 @@ constexpr uint32_t kAGainPrecision = 12;
 constexpr uint32_t kDGainPrecision = 8;
 constexpr int32_t kLog2GainShift = 18;
 constexpr int32_t kSensorExpNumber = 1;
+constexpr uint32_t kMasterClock = 288000000;
 
 } // namespace
 
@@ -106,6 +107,36 @@ bool Imx227Device::ValidateSensorID() {
     return true;
 }
 
+zx_status_t Imx227Device::InitSensor(uint8_t idx) {
+    if (idx >= countof(kSEQUENCE_TABLE)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    const init_seq_fmt_t* sequence = kSEQUENCE_TABLE[idx];
+    bool init_command = true;
+
+    while (init_command) {
+        uint16_t address = sequence->address;
+        uint8_t value = sequence->value;
+
+        switch (address) {
+        case 0x0000: {
+            if (sequence->value == 0 && sequence->len == 0) {
+                init_command = false;
+            } else {
+                WriteReg(address, value);
+            }
+            break;
+        }
+        default:
+            WriteReg(address, value);
+            break;
+        }
+        sequence++;
+    }
+    return ZX_OK;
+}
+
 zx_status_t Imx227Device::Init() {
 
     // Power up sequence. Reference: Page 51- IMX227-0AQH5-C datasheet.
@@ -133,9 +164,9 @@ zx_status_t Imx227Device::Init() {
 
     // Initialize Sensor Context.
     ctx_.seq_width = 1;
-    ctx_.streaming_flg = 0;
+    ctx_.streaming_flag = 0;
     ctx_.again_old = 0;
-    ctx_.change_flg = 0;
+    ctx_.change_flag = 0;
     ctx_.again_limit = 8 << kAGainPrecision;
     ctx_.dgain_limit = 15 << kDGainPrecision;
 
@@ -157,7 +188,82 @@ zx_status_t Imx227Device::GetInfo(zircon_camera_SensorInfo* out_info) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-void Imx227Device::SetMode(uint8_t mode) {
+zx_status_t Imx227Device::SetMode(uint8_t mode) {
+    // Get Sensor ID to see if sensor is initialized.
+    if (!ValidateSensorID()) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    if (mode >= countof(supported_modes)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    switch (supported_modes[mode].wdr_mode) {
+    case kWDR_MODE_LINEAR: {
+
+        InitSensor(supported_modes[mode].idx);
+
+        ctx_.again_delay = 0;
+        ctx_.dgain_delay = 0;
+        ctx_.param.integration_time_apply_delay = 2;
+        ctx_.param.isp_exposure_channel_delay = 0;
+        ctx_.hdr_flag = 0;
+        break;
+    }
+    // TODO(braval) : Support other modes.
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    ctx_.param.active.width = supported_modes[mode].resolution.width;
+    ctx_.param.active.height = supported_modes[mode].resolution.height;
+    ctx_.HMAX = static_cast<uint16_t>(ReadReg(0x342) << 8 | ReadReg(0x343));
+    ctx_.VMAX = static_cast<uint16_t>(ReadReg(0x340) << 8 | ReadReg(0x341));
+    ctx_.int_max = 0x0A8C; // Max allowed for 30fps = 2782 (dec), 0x0A8E (hex)
+    ctx_.int_time_min = 1;
+    ctx_.int_time_limit = ctx_.int_max;
+    ctx_.param.total.height = ctx_.VMAX;
+    ctx_.param.total.width = ctx_.HMAX;
+    ctx_.param.pixels_per_line = ctx_.param.total.width;
+
+    uint32_t master_clock = kMasterClock;
+    ctx_.param.lines_per_second = master_clock / ctx_.HMAX;
+
+    ctx_.param.integration_time_min = ctx_.int_time_min;
+    ctx_.param.integration_time_limit = ctx_.int_time_limit;
+    ctx_.param.integration_time_max = ctx_.int_time_limit;
+    ctx_.param.integration_time_long_max = ctx_.int_time_limit;
+    ctx_.param.mode = mode;
+    ctx_.param.bayer = supported_modes[mode].bayer;
+    ctx_.wdr_mode = supported_modes[mode].wdr_mode;
+
+    ddk::MipiCsiProtocolProxy mipi(&mipi_);
+    mipi_info_t mipi_info;
+    mipi_adap_info_t adap_info;
+
+    mipi_info.lanes = supported_modes[mode].lanes;
+    mipi_info.ui_value = 1000 / supported_modes[mode].mbps;
+    if ((1000 % supported_modes[mode].mbps) != 0) {
+        mipi_info.ui_value += 1;
+    }
+
+    switch (supported_modes[mode].bits) {
+    case 10:
+        adap_info.format = IMAGE_FORMAT_AM_RAW10;
+        break;
+    case 12:
+        adap_info.format = IMAGE_FORMAT_AM_RAW12;
+        break;
+    default:
+        adap_info.format = IMAGE_FORMAT_AM_RAW10;
+        break;
+    }
+
+    adap_info.resolution.width = supported_modes[mode].resolution.width;
+    adap_info.resolution.height = supported_modes[mode].resolution.height;
+    adap_info.path = MIPI_PATH_PATH0;
+    adap_info.mode = MIPI_MODES_DIR_MODE;
+    return mipi.Init(&mipi_info, &adap_info);
 }
 
 void Imx227Device::StartStreaming() {
@@ -206,10 +312,10 @@ static zx_status_t DeInit(void* ctx) {
     return ZX_OK;
 }
 
-static zx_status_t SetMode(void* ctx, uint8_t mode) {
+static zx_status_t SetMode(void* ctx, uint8_t mode, fidl_txn_t* txn) {
     auto& self = *static_cast<Imx227Device*>(ctx);
-    self.SetMode(mode);
-    return ZX_OK;
+    zx_status_t status = self.SetMode(mode);
+    return zircon_camera_CameraSensorSetMode_reply(txn, status);
 }
 
 static zx_status_t StartStreaming(void* ctx) {

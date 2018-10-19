@@ -40,7 +40,7 @@ struct SensorInfo {
     // Active resolution without blanking.
     ImageResolution active;
     // Actual pixels per line after scaling/binning.
-    uint16 pixels_per_line;
+    uint32 pixels_per_line;
     // Maximum analog gain value in log2 format.
     int32 again_log2_max;
     // Maximum digital gain value in log2 format.
@@ -89,7 +89,7 @@ interface CameraSensor {
   2: DeInit();
 
   // Sets the Camera Sensor Mode to one of the supported modes.
-  3: SetMode(uint8 mode);
+  3: SetMode(uint8 mode) -> (zx.status s);
 
   // Stop sensor data output.
   // This function is called from system to enable video stream from sensor.

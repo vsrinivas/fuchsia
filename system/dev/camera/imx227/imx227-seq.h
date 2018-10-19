@@ -5,9 +5,9 @@
 namespace camera {
 
 typedef struct init_seq_fmt {
-    uint32_t address;
-    uint32_t value;
-    uint32_t mask;
+    uint16_t address;
+    uint8_t value;
+    uint8_t mask;
     uint8_t len;
 } init_seq_fmt_t;
 
@@ -578,6 +578,15 @@ constexpr init_seq_fmt_t setting_2400_2720_2lane_1g_28fps[] = {
 // -----------------------//
 //      SUPPORTED MODES
 // -----------------------//
+
+const init_seq_fmt_t* kSEQUENCE_TABLE[] = {
+    setting_2200_2720_2lane_1g_30fps,
+    setting_2200_2720_2lane_1g_30fps_test_pattern,
+    setting_2200_2720_2lane_960m_30fps_test_pattern,
+    setting_1920_1080_2lane_1g_30fps_test_pattern,
+    setting_1920_1080_2lane_1g_30fps,
+    setting_2400_2720_2lane_1g_28fps,
+};
 
 constexpr zircon_camera_SensorMode supported_modes[] = {
     {

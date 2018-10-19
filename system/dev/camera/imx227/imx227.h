@@ -18,29 +18,29 @@ typedef struct sensor_context {
     // TODO(braval): Add details for each one of these
     //               and also remove unused ones.
     uint32_t again_limit;
-    uint32_t VMAX;
     uint32_t int_max;
     uint32_t dgain_limit;
     uint32_t wdr_mode;
     uint32_t gain_cnt;
     uint32_t t_height;
+    uint32_t int_time_limit;
     uint32_t t_height_old;
     uint16_t int_time;
+    uint16_t VMAX;
     uint16_t HMAX;
     uint16_t dgain_old;
     uint16_t int_time_min;
-    uint16_t int_time_limit;
     uint16_t again_old;
     uint16_t dgain[2];
     uint16_t again[2];
     uint8_t seq_width;
-    uint8_t streaming_flg;
+    uint8_t streaming_flag;
     uint8_t again_delay;
     uint8_t again_change;
     uint8_t dgain_delay;
     uint8_t dgain_change;
-    uint8_t change_flg;
-    uint8_t hdr_flg;
+    uint8_t change_flag;
+    uint8_t hdr_flag;
     zircon_camera_SensorInfo param;
 } sensor_context_t;
 
@@ -81,7 +81,7 @@ public:
     // Methods for FIDL Message.
     zx_status_t Init();
     void DeInit();
-    void SetMode(uint8_t mode);
+    zx_status_t SetMode(uint8_t mode);
     void StartStreaming();
     void StopStreaming();
     int32_t AllocateAnalogGain(int32_t gain);
@@ -106,6 +106,7 @@ private:
     void ShutDown();
     zx_status_t InitPdev(zx_device_t* parent);
     bool ValidateSensorID();
+    zx_status_t InitSensor(uint8_t idx);
 };
 
 } // namespace camera

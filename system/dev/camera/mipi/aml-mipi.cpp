@@ -130,15 +130,15 @@ void AmlMipiDevice::MipiPhyInit(const mipi_info_t* info) {
 
 void AmlMipiDevice::MipiCsi2Init(const mipi_info_t* info) {
     // csi2 reset
-    csi_host0_mmio_->Write32(MIPI_CSI_CSI2_RESETN, 0);
+    csi_host0_mmio_->Write32(0, MIPI_CSI_CSI2_RESETN);
     // release csi2 reset
-    csi_host0_mmio_->Write32(MIPI_CSI_CSI2_RESETN, 0xffffffff);
+    csi_host0_mmio_->Write32(0xffffffff, MIPI_CSI_CSI2_RESETN);
     // release DPHY reset
-    csi_host0_mmio_->Write32(MIPI_CSI_DPHY_RSTZ, 0xffffffff);
+    csi_host0_mmio_->Write32(0xffffffff, MIPI_CSI_DPHY_RSTZ);
     //set lanes
-    csi_host0_mmio_->Write32(MIPI_CSI_N_LANES, (info->lanes - 1) & 3);
+    csi_host0_mmio_->Write32((info->lanes - 1) & 3, MIPI_CSI_N_LANES);
     // enable power
-    csi_host0_mmio_->Write32(MIPI_CSI_PHY_SHUTDOWNZ, 0xffffffff);
+    csi_host0_mmio_->Write32(0xffffffff, MIPI_CSI_PHY_SHUTDOWNZ);
 }
 
 zx_status_t AmlMipiDevice::MipiCsiInit(void* ctx,
