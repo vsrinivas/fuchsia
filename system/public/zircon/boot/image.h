@@ -36,7 +36,7 @@
 #ifdef __ASSEMBLER__
 #define ZBI_ALIGNMENT           (8)
 #else
-#define ZBI_ALIGNMENT           (8u)
+#define ZBI_ALIGNMENT           (8ul)
 #endif
 
 // Round n up to the next 8 byte boundary
