@@ -75,7 +75,6 @@ template("fuzz_target") {
   # knowing the original file names when building the package manifest.  These
   # files only need to be written once, so only do it in the base toolchain.
   if (current_toolchain == toolchain_variant.base) {
-
     # Copy the corpora available for the fuzzer
     data = []
     if (defined(invoker.corpora)) {
@@ -150,6 +149,12 @@ set_defaults("fuzz_target") {
 #   meta (optional)
 #   resources (optional)
 #     Passed through to the normal package template.
+#
+#   omit_binaries (optional)
+#     [bool] If true, indicates the fuzz target binaries will be provided by
+#     a non-GN build, e.g. the Zircon build.  The package will contain the
+#     resources needed by the fuzzer, but no binaries or component manifests.
+#     Defaults to false.
 
 template("fuzz_package") {
   assert(defined(invoker.targets), "targets must be defined for $target_name}")
@@ -163,6 +168,7 @@ template("fuzz_package") {
       deps = []
       resources = []
       meta = []
+      omit_binaries = false
       forward_variables_from(invoker,
                              [
                                "binaries",
@@ -177,6 +183,14 @@ template("fuzz_package") {
                                "sanitizers",
                              ])
     }
+    if (defined(invoker.omit_binaries)) {
+      fuzz.omit_binaries = invoker.omit_binaries
+    }
+
+    # It's possible (although unusual) that targets could be empty, e.g. a placeholder package
+    if (fuzz.targets == []) {
+      not_needed(fuzz, [ "sanitizers" ])
+    }
 
     foreach(fuzz_target, fuzz.targets) {
       fuzz_name = get_label_info(fuzz_target, "name")
@@ -188,22 +202,22 @@ template("fuzz_package") {
         if (!selected) {
           foreach(selector, select_variant_canonical) {
             if (selector.variant == "${sanitizer}-fuzzer") {
-              selector_target_type = []
               if (defined(selector.target_type)) {
+                selector_target_type = []
                 selector_target_type = selector.target_type
                 if (selector_target_type[0] == "fuzzed_executable") {
                   selected = true
                 }
               }
-              selector_name = []
               if (defined(selector.name)) {
+                selector_name = []
                 selector_name = selector.name
                 if (selector_name[0] == fuzz_name) {
                   selected = true
                 }
               }
-              selector_output_name = []
               if (defined(selector.output_name)) {
+                selector_output_name = []
                 selector_output_name = selector.output_name
                 if (selector_output_name[0] == fuzz_name) {
                   selected = true
@@ -219,19 +233,30 @@ template("fuzz_package") {
 
       # If enabled, add fuzz target to package
       if (sanitized_target != "") {
-        fuzz_out_dir = get_label_info(sanitized_target, "root_out_dir")
-        fuzz.binaries += [
-          {
-            name = fuzz_name
-            source = "${fuzz_out_dir}/${fuzz_name}"
-            dest = fuzz_name
-          },
-        ]
-
-        fuzz.deps += [ sanitized_target ]
-
         fuzz_gen_dir =
             get_label_info(fuzz_target, "target_gen_dir") + "/${fuzz_name}"
+
+        if (!fuzz.omit_binaries) {
+          fuzz_out_dir = get_label_info(sanitized_target, "root_out_dir")
+
+          fuzz.binaries += [
+            {
+              name = fuzz_name
+              source = "${fuzz_out_dir}/${fuzz_name}"
+              dest = fuzz_name
+            },
+          ]
+
+          fuzz.deps += [ sanitized_target ]
+
+          fuzz.meta += [
+            {
+              path = "${fuzz_gen_dir}/${fuzz_name}.cmx"
+              dest = "${fuzz_name}.cmx"
+            },
+          ]
+        }
+
         fuzz.resources += [
           {
             path = "${fuzz_gen_dir}/corpora"
@@ -246,22 +271,16 @@ template("fuzz_package") {
             dest = "${fuzz_name}/options"
           },
         ]
-
-        fuzz.meta += [
-          {
-            path = "${fuzz_gen_dir}/${fuzz_name}.cmx"
-            dest = "${fuzz_name}.cmx"
-          },
-        ]
       } else {
         not_needed([ "fuzz_name" ])
+        not_needed(fuzz, "*")
       }
     }
 
     # Build the actual package
     package(target_name) {
       testonly = true
-      forward_variables_from(fuzz, "*")
+      forward_variables_from(fuzz, "*", [ "omit_binaries" ])
     }
   } else {
     not_needed(invoker, "*")
