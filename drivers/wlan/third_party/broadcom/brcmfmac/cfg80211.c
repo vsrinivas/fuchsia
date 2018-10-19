@@ -1990,7 +1990,6 @@ static zx_status_t brcmf_cfg80211_add_key(struct wiphy* wiphy, struct net_device
     int32_t val;
     int32_t wsec;
     zx_status_t err;
-    uint8_t keybuf[8];
     bool ext_key;
     uint8_t key_idx = req->key_id;
     bool pairwise = (req->key_type == WLAN_KEY_TYPE_PAIRWISE);
@@ -2048,12 +2047,8 @@ static zx_status_t brcmf_cfg80211_add_key(struct wiphy* wiphy, struct net_device
         brcmf_dbg(CONN, "WPA_CIPHER_WEP_104\n");
         break;
     case WPA_CIPHER_TKIP:
-        if (!brcmf_is_apmode(ifp->vif)) {
-            brcmf_dbg(CONN, "Swapping RX/TX MIC key\n");
-            memcpy(keybuf, &key->data[24], sizeof(keybuf));
-            memcpy(&key->data[24], &key->data[16], sizeof(keybuf));
-            memcpy(&key->data[16], keybuf, sizeof(keybuf));
-        }
+        /* Note: Linux swaps the Tx and Rx MICs in client mode, but this doesn't work for us (see
+           NET-1679). It's unclear why this would be necessary. */
         key->algo = CRYPTO_ALGO_TKIP;
         val = TKIP_ENABLED;
         brcmf_dbg(CONN, "WPA_CIPHER_TKIP\n");
