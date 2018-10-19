@@ -1,0 +1,239 @@
+// Copyright 2018 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+syntax = "proto3";
+
+option cc_enable_arenas = true;
+
+// This file defines services for tremplin, the container springboard service.
+package vm_tools.tremplin;
+option go_package = "tremplin_proto";
+
+// This needs to be duplicated because the gyp rule for building
+// go code makes it difficult to have imports.
+message EmptyMessage {}
+
+message CreateContainerRequest {
+  // Name of the container to start within the VM.
+  string container_name = 1;
+
+  // LXD image server URL. Only simplestreams is supported for now.
+  string image_server = 2;
+
+  // LXD image alias.
+  string image_alias = 3;
+}
+
+message CreateContainerResponse {
+  enum Status {
+    // The status of creating the container is unknown.
+    UNKNOWN = 0;
+
+    // The container is now being created. Tremplin will update the caller
+    // on the result via the UpdateCreateStatus RPC.
+    CREATING = 1;
+
+    // A container with this name already exists.
+    EXISTS = 2;
+
+    // The container could not be created.
+    FAILED = 3;
+  }
+
+  // Container creation status.
+  Status status = 1;
+
+  // The failure_reason if the container could not be created.
+  string failure_reason = 2;
+}
+
+message StartContainerRequest {
+  // Name of the container to start within the VM.
+  string container_name = 1;
+
+  // SSH public key.
+  string host_public_key = 2;
+
+  // SSH private key.
+  string container_private_key = 3;
+
+  // Container token.
+  string token = 4;
+}
+
+message StartContainerResponse {
+  enum Status {
+    // The status of starting the container is unknown.
+    UNKNOWN = 0;
+
+    // The container has started.
+    STARTED = 1;
+
+    // The container was already running.
+    RUNNING = 2;
+
+    // The container could not be started.
+    FAILED = 3;
+  }
+
+  // Container startup status.
+  Status status = 1;
+
+  // The failure_reason if the container could not be started.
+  string failure_reason = 2;
+}
+
+message GetContainerUsernameRequest {
+  // Name of the container to get the primary username from.
+  string container_name = 1;
+}
+
+message GetContainerUsernameResponse {
+  enum Status {
+    // The result is unknown.
+    UNKNOWN = 0;
+
+    // The primary username is stored in the username field.
+    SUCCESS = 1;
+
+    // A container with the specified name doesn't exist.
+    CONTAINER_NOT_FOUND = 2;
+
+    // The container is not running, so the username could not be found.
+    CONTAINER_NOT_RUNNING = 3;
+
+    // The primary user doesn't exist.
+    USER_NOT_FOUND = 4;
+
+    // Some part of the operation failed.
+    FAILED = 5;
+  }
+
+  // Status of getting the container's username.
+  Status status = 1;
+
+  // The primary username of the container, if successful.
+  string username = 2;
+
+  // The failure_reason if the username could not be retrieved.
+  string failure_reason = 3;
+}
+
+message SetUpUserRequest {
+  // Name of the container to set up.
+  string container_name = 1;
+
+  // Username for the first user in the container.
+  string container_username = 2;
+}
+
+message SetUpUserResponse {
+  enum Status {
+    // The status of setting up the user is unknown.
+    UNKNOWN = 0;
+
+    // The user has been set up sucessfully.
+    SUCCESS = 1;
+
+    // The user already exists.
+    EXISTS = 2;
+
+    // Setting up the user failed.
+    FAILED = 3;
+  }
+
+  // Status of setting up the user.
+  Status status = 1;
+
+  // The failure_reason if the user was not set up successfully.
+  string failure_reason = 2;
+}
+
+message TremplinStartupInfo {}
+
+// Sent by tremplin to update the host on the create progress of a container.
+message ContainerCreationProgress {
+  enum Status {
+    // Creation status is unknown.
+    UNKNOWN = 0;
+
+    // The container is downloading.
+    DOWNLOADING = 1;
+
+    // The container has been created.
+    CREATED = 2;
+
+    // The container download timed out.
+    DOWNLOAD_TIMED_OUT = 3;
+
+    // The container creation was cancelled.
+    CANCELLED = 4;
+
+    // One or more steps failed and the container could not be created.
+    FAILED = 5;
+  }
+
+  // The current status of the container.
+  Status status = 1;
+
+  // Name of the container to create within the VM.
+  string container_name = 2;
+
+  // The download progress, if status is DOWNLOADING.
+  int32 download_progress = 3;
+
+  // The failure_reason if the container could not be created.
+  string failure_reason = 4;
+}
+
+message GetContainerInfoRequest {
+  // Name of the container to get information for.
+  string container_name = 1;
+}
+
+message GetContainerInfoResponse {
+  enum Status {
+    // The result is unknown.
+    UNKNOWN = 0;
+
+    // The container is currently running.
+    RUNNING = 1;
+
+    // The container is not running.
+    STOPPED = 2;
+
+    // The container with that name doesn't exist.
+    NOT_FOUND = 3;
+
+    // Some part of the operation failed.
+    FAILED = 4;
+  }
+
+  // Current container status.
+  Status status = 1;
+
+  // The failure_reason if container info could not be returned.
+  string failure_reason = 2;
+
+  // The IPv4 address of the container. This field is only valid if the
+  // container is running.
+  fixed32 ipv4_address = 3;
+}
+
+// Tremplin service methods.
+service Tremplin {
+  rpc CreateContainer(CreateContainerRequest) returns (CreateContainerResponse);
+  rpc StartContainer(StartContainerRequest) returns (StartContainerResponse);
+  rpc GetContainerUsername(GetContainerUsernameRequest)
+      returns (GetContainerUsernameResponse);
+  rpc SetUpUser(SetUpUserRequest) returns (SetUpUserResponse);
+  rpc GetContainerInfo(GetContainerInfoRequest)
+      returns (GetContainerInfoResponse);
+}
+
+// Service that is notified of events from tremplin.
+service TremplinListener {
+  rpc TremplinReady(TremplinStartupInfo) returns (EmptyMessage);
+  rpc UpdateCreateStatus(ContainerCreationProgress) returns (EmptyMessage);
+}

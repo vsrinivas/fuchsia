@@ -1,0 +1,218 @@
+// Copyright 2018 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+syntax = "proto3";
+
+option cc_enable_arenas = true;
+
+// This file defines services that will be running in the guest container that
+// will be used by the host.
+package vm_tools.container;
+
+// Request protobuf for launching an application in the container.
+message LaunchApplicationRequest {
+  // Display scaling of the app windows.
+  enum DisplayScaling {
+    // Default scaling.
+    UNSCALED = 0;
+    // Windows scaled. Used to scale up older app windows that don't show well
+    // with HiDPI display otherwise.
+    SCALED = 1;
+  }
+
+  // The ID of the application to launch. This should correspond to an
+  // identifier for a .desktop file available in the container.
+  string desktop_file_id = 1;
+
+  // Files to pass as arguments when launching the application, if any, given
+  // as absolute paths within the container's filesystem.
+  repeated string files = 2;
+
+  // Display scaling requested.
+  DisplayScaling display_scaling = 3;
+}
+
+// Response protobuf for launching an application.
+message LaunchApplicationResponse {
+  // If true, the requested application launched successfully.
+  bool success = 1;
+
+  // The failure_reason if the requested application could not be started.
+  string failure_reason = 2;
+}
+
+// Request proto for getting an application icon from the container.
+message IconRequest {
+  // The IDs of the applications to get icons for. These should correspond to
+  // identifiers for .desktop files available in the container.
+  repeated string desktop_file_ids = 1;
+
+  //  The size of the icon is icon_size by icon_size.
+  int32 icon_size = 2;
+
+  // The target scale of this icon. This is the scale at which this icon is
+  // designed to be used.
+  int32 scale = 3;
+}
+
+// One desktop file ID and the icon found for it.
+message DesktopIcon {
+  string desktop_file_id = 1;
+
+  // Icon data in png format.
+  bytes icon = 2;
+}
+
+// Response proto for getting an application icon.
+message IconResponse {
+  repeated DesktopIcon desktop_icons = 1;
+}
+
+// Request protobuf for launching a vshd instance.
+message LaunchVshdRequest {
+  // The host port for vshd to connect to.
+  uint32 port = 1;
+}
+
+// Response protobuf for launching a vshd instance.
+message LaunchVshdResponse {
+  // If true, the vshd launched successfully.
+  bool success = 1;
+
+  // The failure_reason if vshd could not be started.
+  string failure_reason = 2;
+}
+
+// Request to get information about a Linux package file in the container.
+message LinuxPackageInfoRequest {
+  // Path to the package file (e.g. .deb) in the container's filesystem.
+  string file_path = 1;
+}
+
+// Response sent back from a GetLinuxPackageInfo call.
+message LinuxPackageInfoResponse {
+  // True if the file was successfully parsed and the other fields are valid.
+  bool success = 1;
+
+  // Contains a textual reason for the failure in case success is false.
+  string failure_reason = 2;
+
+  // The package identifier is in the form of a semicolon delimited string of
+  // the format: name;version;arch;data
+  // name, version and arch are as expected. data is somewhat variant and refers
+  // to the state of the package as well as potentially remote repository
+  // information.
+  string package_id = 3;
+
+  // The license associated with the package. So far only the value of
+  // 'unknown' has been observed for this field.
+  string license = 4;
+
+  // The description of the package, can be a multi-line text string.
+  string description = 5;
+
+  // The URL for the homepage of the project.
+  string project_url = 6;
+
+  // Size of the package file in bytes.
+  uint64 size = 7;
+
+  // Usually more of a title for a package, but sometimes less descriptive
+  // than that.
+  string summary = 8;
+}
+
+// Request protobuf for installing a Linux package file.
+message InstallLinuxPackageRequest {
+  // Path to the package file (e.g. .deb) in the container's filesystem.
+  string file_path = 1;
+}
+
+// Response sent back from a request to install a Linux package.
+message InstallLinuxPackageResponse {
+  enum Status {
+    // Install process was successfully started, all further updates will be
+    // sent via the LinuxPackageProgress signal.
+    STARTED = 0;
+
+    // Failed to startup for a general reason, specific details are given in
+    // failure_reason.
+    FAILED = 1;
+
+    // Indicates another install (or other blocking operation) is already in
+    // process, this one will not be started.
+    INSTALL_ALREADY_ACTIVE = 2;
+  }
+  Status status = 1;
+
+  // Contains a textual reason for the failure in case of a FAILED status.
+  string failure_reason = 2;
+}
+
+// Request to uninstall the package that owns the given .desktop file. This is
+// safer than uninstalling by package_id, since packages can get upgraded and
+// we'd have a stale package_id.
+message UninstallPackageOwningFileRequest {
+  // Uninstall the package owning this .desktop file:
+  string desktop_file_id = 1;
+}
+
+// Response sent back from a request to uninstall a Linux package.
+message UninstallPackageOwningFileResponse {
+  enum Status {
+    // Uninstall process was successfully started, all further updates will be
+    // sent via the UninstallPackageOwningFileProgress callbacks.
+    STARTED = 0;
+
+    // Failed to startup for a general reason, specific details are given in
+    // failure_reason.
+    FAILED = 1;
+
+    // Indicates another blocking operation (uninstall, install, etc) is already
+    // in progress, this one will not be started.
+    BLOCKING_OPERATION_IN_PROGRESS = 2;
+  }
+  Status status = 1;
+
+  // Contains a textual reason for the failure in case of a FAILED status.
+  string failure_reason = 2;
+}
+
+// Request for debug information about container state.
+message GetDebugInformationRequest {}
+
+// Response for debug information about container state.
+message GetDebugInformationResponse {
+  string debug_information = 1;
+}
+
+// Implemented by garcon inside of the container.
+service Garcon {
+  // Called to launch an application in a container.
+  rpc LaunchApplication(LaunchApplicationRequest)
+      returns (LaunchApplicationResponse);
+
+  // Get an application icon from the container.
+  rpc GetIcon(IconRequest) returns (IconResponse);
+
+  // Launch a vshd instance that will connect back to the host.
+  rpc LaunchVshd(LaunchVshdRequest) returns (LaunchVshdResponse);
+
+  // Gets information about a Linux package file in the container.
+  rpc GetLinuxPackageInfo(LinuxPackageInfoRequest)
+      returns (LinuxPackageInfoResponse);
+
+  // Install a Linux package file in the container.
+  rpc InstallLinuxPackage(InstallLinuxPackageRequest)
+      returns (InstallLinuxPackageResponse);
+
+  // Uninstalls the package that owns the specified file. Results are in
+  // signals.
+  rpc UninstallPackageOwningFile(UninstallPackageOwningFileRequest)
+      returns (UninstallPackageOwningFileResponse);
+
+  // Get debug information about container state.
+  rpc GetDebugInformation(GetDebugInformationRequest)
+      returns (GetDebugInformationResponse);
+}

@@ -1,0 +1,180 @@
+// Copyright 2017 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+syntax = "proto3";
+
+option cc_enable_arenas = true;
+
+// This file defines services that will be running in the guest VM.
+package vm_tools;
+
+import "common.proto";
+
+// Parameters for setting up IPv4 networking inside the VM.  Each parameter
+// is stored in network-byte order (for example from the output of inet_pton).
+message IPv4Config {
+  // IPv4 address for the VM.
+  fixed32 address = 1;
+  // VM subnet.
+  fixed32 netmask = 2;
+  // Gateway for sending packets out to the internet.
+  fixed32 gateway = 3;
+}
+
+// DNS parameters for the VM. These correspond to settings in resolv.conf(5).
+message ResolvConfig {
+  // The nameservers to use for DNS resolution.
+  repeated string nameservers = 1;
+
+  // The search domains for hostname lookup. See resolv.conf(5).
+  repeated string search_domains = 2;
+}
+
+message NetworkConfigRequest {
+  // IPv4 configuration for the VM.
+  IPv4Config ipv4_config = 1;
+
+  // DNS configuration for the VM.
+  ResolvConfig resolv_config = 2;
+}
+
+// Description of a single process that should be spawned by maitre'd.
+message LaunchProcessRequest {
+  // Process arguments.  argv[0] must be either an absolute path or the name of
+  // an executable program that can be found in the default PATH inside the VM.
+  repeated string argv = 1;
+
+  // Any additional environment variables that should be set before spawning
+  // the process.  Can be empty.
+  map<string, string> env = 2;
+
+  // If |true| the process will be respawned when it exits or is killed.
+  // Processes that respawn too frequently will be stopped and will need to be
+  // explicitly restarted via a LaunchProcess rpc.  Cannot be true if
+  // |wait_for_exit| is true.
+  bool respawn = 3;
+
+  // If |true| the process will use /dev/console for its standard I/O.
+  // Otherwise all standard I/O is redirected to /dev/null.
+  bool use_console = 4;
+
+  // If |true| then maitre'd will wait for the process to exit and include its
+  // exit status in the response. Cannot be true if |respawn| is true.
+  bool wait_for_exit = 5;
+}
+
+// The current status of a process launched via LaunchProcess.
+enum ProcessStatus {
+  // ¯\_(ツ)_/¯
+  UNKNOWN = 0;
+
+  // The process exited normally.
+  EXITED = 1;
+
+  // The process was killed by a signal.
+  SIGNALED = 2;
+
+  // Successfully launched but may or may not have exited yet.
+  LAUNCHED = 3;
+
+  // One or more setup steps failed and the process did not launch.
+  FAILED = 4;
+}
+
+// Response sent back after maitre'd launches a process.  Will only be filled in
+// if the |wait_for_exit| field of the LaunchProcessRequest was set to true.
+message LaunchProcessResponse {
+  // The status of the launched process.
+  ProcessStatus status = 1;
+
+  // If |status| is EXITED then this contains the exit status of the process. If
+  // |status| is SIGNALED then this contains the signal number that killed the
+  // process.  Otherwise the contents of this field are undefined.
+  sint32 code = 2;
+}
+
+// Request for maitred to mount a filesystem.
+message MountRequest {
+  string source = 1;
+  string target = 2;
+  string fstype = 3;
+  uint64 mountflags = 4;
+  string options = 5;
+}
+
+// Request to mount a 9P filesystem via a vsock socket using the trans=fd
+// option.
+message Mount9PRequest {
+  // The port number on the host where the server is listening for connections.
+  uint32 port = 1;
+
+  // The path where the filesystem should be mounted.
+  string target = 2;
+}
+
+// Response after maitred attempts to mount a filesystem.
+message MountResponse {
+  sint32 error = 1;
+}
+
+// The request protobuf for a StartTermina message. StartTermina requests that
+// maitred run all VM guest setup necessary to start containers.
+message StartTerminaRequest {
+  // The address for tremplin to connect to.
+  uint32 tremplin_ipv4_address = 1;
+
+  // The IPv4 address config for LXD. Expected to be in a "xxx.xxx.xxx.xxx/yy"
+  // format.
+  string lxd_ipv4_subnet = 2;
+}
+
+message StartTerminaResponse {
+  enum Status {
+    // The result of StartTermina is unknown.
+    UNKNOWN = 0;
+
+    // Termina services were started successfully.
+    SUCCESS = 1;
+
+    // Termina services didn't start successfully. Check failure_reason.
+    FAILED = 2;
+  }
+
+  // The status of starting Termina services.
+  Status status = 1;
+
+  // If status is FAILED, the reason why StartTermina failed.
+  string failure_reason = 2;
+}
+
+message SetResolvConfigRequest {
+  // DNS configuration for the VM.
+  ResolvConfig resolv_config = 1;
+}
+
+// Implemented by maitred inside the VM.
+service Maitred {
+  // Set up networking inside the VM so that it can access the internet.
+  rpc ConfigureNetwork(NetworkConfigRequest) returns (EmptyMessage);
+
+  // Initiate a shut-down of the VM.
+  rpc Shutdown(EmptyMessage) returns (EmptyMessage);
+
+  // Launch one process inside the VM.
+  rpc LaunchProcess(LaunchProcessRequest) returns (LaunchProcessResponse);
+
+  // Mount a filesystem in the VM.
+  rpc Mount(MountRequest) returns (MountResponse);
+
+  // Start Termina-specific system services.
+  rpc StartTermina(StartTerminaRequest) returns (StartTerminaResponse);
+
+  // Mount a 9P server using a vsock socket.  This uses the trans=fd option
+  // when mounting the 9P server, which requires first connecting a socket
+  // to the server.  Other transports should use the normal Mount rpc instead.
+  rpc Mount9P(Mount9PRequest) returns (MountResponse);
+
+  // Sets the resolv config (nameservers, search domains, and local domain).
+  rpc SetResolvConfig(SetResolvConfigRequest) returns (EmptyMessage);
+}

@@ -1,0 +1,104 @@
+// Copyright 2017 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+syntax = "proto3";
+
+option cc_enable_arenas = true;
+option optimize_for = LITE_RUNTIME;
+
+package vm_tools.vsh;
+
+// Indicates the status of a connection.
+enum ConnectionStatus {
+  // Connection status is unknown.
+  UNKNOWN = 0;
+  // Connection was set up successfully. Server and client may now exchange
+  // messages.
+  READY = 1;
+  // The server's target program has exited. The server will immediately close
+  // the connection, and the client is expected to exit after its cleanup.
+  EXITED = 2;
+  // A fatal error was encountered. The connection will be closed.
+  FAILED = 3;
+}
+
+// Request to set up a connection to a container. This must be the first
+// message sent to the server from the client.
+message SetupConnectionRequest {
+  // Target container. "vm_shell" is a special value to get a VM shell.
+  string target = 1;
+  // User to execute the target program.
+  string user = 2;
+  // Map of environment variables to forward.
+  map<string, string> env = 3;
+  // Deprecated. Target command. Empty indicates a login shell.
+  string command = 4;
+  // Argv of the target program to run. Empty indicates a login shell.
+  repeated string argv = 5;
+}
+
+// Response to a SetupConnectionRequest.
+message SetupConnectionResponse {
+  // Status of the connection.
+  ConnectionStatus status = 1;
+  // Short description of any error encountered when setting up the
+  // connection.
+  string description = 2;
+}
+
+// A message that indicates to either the server or the client a change
+// in connection status.
+message ConnectionStatusMessage {
+  // New connection status. If the connection status is changed to anything
+  // except READY, the recipient must shut down.
+  ConnectionStatus status = 1;
+  // Short description of any error that triggered the status change.
+  string description = 2;
+  // Return code of the command, if any.
+  sint32 code = 3;
+}
+
+// Type of stdio stream that is being sent.
+enum StdioStream {
+  // The stream is invalid.
+  INVALID_STREAM = 0;
+  // This is a stdin stream, flowing from client to server.
+  STDIN_STREAM = 1;
+  // This is a stdout stream, flowing from server to client.
+  STDOUT_STREAM = 2;
+}
+
+// DataMessages encapsulate stdio to be forwarded between the server and client.
+message DataMessage {
+  // Type of stream in this message.
+  StdioStream stream = 1;
+  // Data to be forwarded.
+  bytes data = 2;
+}
+
+// Indicates that the server should resize its pseudoterminal to the given
+// dimensions. Sent by the client in response to SIGWINCH.
+message WindowResizeMessage {
+  // New number of rows for the tty.
+  int32 rows = 1;
+  // New number of cols for the tty.
+  int32 cols = 2;
+}
+
+// Wrapper message for all messages that can be sent to the host/client.
+message HostMessage {
+  oneof msg {
+    DataMessage data_message = 1;
+    ConnectionStatusMessage status_message = 2;
+  }
+}
+
+// Wrapper message for all messages that can be sent to the guest/server.
+message GuestMessage {
+  oneof msg {
+    DataMessage data_message = 1;
+    ConnectionStatusMessage status_message = 2;
+    WindowResizeMessage resize_message = 3;
+  }
+}

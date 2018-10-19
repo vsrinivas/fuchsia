@@ -1,0 +1,6 @@
+Name: chromiumos/platform2
+URL: https://chromium.googlesource.com/chromiumos/platform2/+/master/vm_tools/proto/
+License File: LICENSE
+
+This directory contains the .proto files that define the set of services used
+to communicate with a Termina virtual machine. No modifications have been made.
