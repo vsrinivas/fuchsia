@@ -82,6 +82,7 @@
         "garnet/packages/tests/wayland",
         "garnet/packages/tests/wlan",
         "garnet/packages/tests/wlan-hw-sim",
+        "garnet/packages/tests/zircon",
         "garnet/packages/tests/zxdb"
     ]
 }
