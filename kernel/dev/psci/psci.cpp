@@ -4,9 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/arm64/smccc.h>
 #include <dev/psci.h>
 
+#include <arch/arm64/smccc.h>
+#include <inttypes.h>
 #include <pdev/driver.h>
 #include <zircon/boot/driver-config.h>
 #include <string.h>
@@ -16,12 +17,12 @@ static uint64_t reboot_args[3] = { 0, 0, 0 };
 static uint64_t reboot_bootloader_args[3] = { 0, 0, 0 };
 static uint64_t reboot_recovery_args[3] = { 0, 0, 0 };
 
-static uint64_t psci_smc_call(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3) {
-    return arm_smccc_smc(arg0, arg1, arg2, arg3, 0, 0, 0, 0).x0;
+static uint64_t psci_smc_call(uint32_t function, uint64_t arg0, uint64_t arg1, uint64_t arg2) {
+    return arm_smccc_smc(function, arg0, arg1, arg2, 0, 0, 0, 0).x0;
 }
 
-static uint64_t psci_hvc_call(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3) {
-    return arm_smccc_hvc(arg0, arg1, arg2, arg3, 0, 0, 0, 0).x0;
+static uint64_t psci_hvc_call(uint32_t function, uint64_t arg0, uint64_t arg1, uint64_t arg2) {
+    return arm_smccc_hvc(function, arg0, arg1, arg2, 0, 0, 0, 0).x0;
 }
 
 #if PSCI_USE_HVC
@@ -30,7 +31,7 @@ psci_call_proc do_psci_call = psci_hvc_call;
 psci_call_proc do_psci_call = psci_smc_call;
 #endif
 
-void psci_system_off(void) {
+void psci_system_off() {
     do_psci_call(PSCI64_SYSTEM_OFF, shutdown_args[0], shutdown_args[1], shutdown_args[2]);
 }
 
@@ -54,7 +55,7 @@ static void arm_psci_init(const void* driver_data, uint32_t length) {
     ASSERT(length >= sizeof(dcfg_arm_psci_driver_t) - sizeof(reboot_recovery_args));
 #endif
 
-    const dcfg_arm_psci_driver_t* driver = driver_data;
+    auto driver = static_cast<const dcfg_arm_psci_driver_t*>(driver_data);
 
     do_psci_call = driver->use_hvc ? psci_hvc_call : psci_smc_call;
     memcpy(shutdown_args, driver->shutdown_args, sizeof(shutdown_args));
@@ -72,27 +73,19 @@ LK_PDEV_INIT(arm_psci_init, KDRV_ARM_PSCI, arm_psci_init, LK_INIT_LEVEL_PLATFORM
 #include <lib/console.h>
 
 static int cmd_psci(int argc, const cmd_args *argv, uint32_t flags) {
-    uint64_t arg0, arg1 = 0, arg2 = 0, arg3 = 0;
-
     if (argc < 2) {
         printf("not enough arguments\n");
-        printf("%s arg0 [arg1] [arg2] [arg3]\n", argv[0].str);
+        printf("%s function [arg0] [arg1] [arg2]\n", argv[0].str);
         return -1;
     }
 
-    arg0 = argv[1].u;
-    if (argc >= 3) {
-        arg1 = argv[2].u;
-        if (argc >= 4) {
-            arg2 = argv[3].u;
-            if (argc >= 5) {
-                arg3 = argv[4].u;
-            }
-        }
-    }
+    uint32_t function = static_cast<uint32_t>(argv[1].u);
+    uint64_t arg0 = (argc >= 3) ? argv[2].u : 0;
+    uint64_t arg1 = (argc >= 4) ? argv[3].u : 0;
+    uint64_t arg2 = (argc >= 5) ? argv[4].u : 0;
 
-    uint32_t ret = do_psci_call(arg0, arg1, arg2, arg3);
-    printf("do_psci_call returned %u\n", ret);
+    uint64_t ret = do_psci_call(function, arg0, arg1, arg2);
+    printf("do_psci_call returned %" PRIu64 "\n", ret);
     return 0;
 }
 

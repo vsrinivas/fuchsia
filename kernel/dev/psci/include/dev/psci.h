@@ -48,7 +48,7 @@ __BEGIN_CDECLS
             to be revisited
 */
 
-typedef uint64_t (*psci_call_proc)(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3);
+typedef uint64_t (*psci_call_proc)(uint32_t function, uint64_t arg0, uint64_t arg1, uint64_t arg2);
 
 extern psci_call_proc do_psci_call;
 
