@@ -17,6 +17,18 @@
             "bin/app"
           ]
         },
+        "args": {
+          "$id": "/properties/program/properties/args",
+          "type": "array",
+          "title": "Arguments to provide to an Elf binary",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "examples": [
+            "--verbose"
+          ]
+        },
         "data": {
           "$id": "/properties/program/properties/data",
           "type": "string",
@@ -25,6 +37,9 @@
             "data/component"
           ]
         }
+      },
+      "dependencies": {
+        "args": [ "binary" ]
       },
       "oneOf": [
         {

@@ -671,9 +671,14 @@ void Realm::CreateComponentFromPackage(
   const ProgramMetadata program = cmx.program_meta();
   if (runtime.IsNull()) {
     // If we cannot parse a runtime from either .cmx or deprecated_runtime, then
-    // we fall back to the default runner, which is running an ELF binary.
+    // we fall back to the default runner, which is running an ELF binary or
+    // shell script.
     const std::string bin_path =
         program.IsBinaryNull() ? kAppPath : program.binary();
+
+    launch_info.arguments->insert(launch_info.arguments->begin(),
+        program.args().begin(), program.args().end());
+
     app_argv0 = fxl::Concatenate({kAppArgv0Prefix, bin_path});
     TRACE_DURATION_BEGIN("appmgr",
                          "Realm::CreateComponentFromPackage:VmoFromFilenameAt",

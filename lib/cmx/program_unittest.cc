@@ -53,6 +53,31 @@ TEST_F(ProgramMetadataTest, ParseBinary) {
   EXPECT_EQ("bin/app", program.binary());
 }
 
+TEST_F(ProgramMetadataTest, ParseBinaryArgs) {
+  ProgramMetadata program;
+  EXPECT_TRUE(program.IsBinaryNull());
+  EXPECT_TRUE(program.IsArgsNull());
+  EXPECT_TRUE(program.IsDataNull());
+  std::string error;
+  EXPECT_TRUE(ParseFrom(&program,
+        R"JSON({ "binary": "bin/app", "args": ["-v", "-q"] })JSON", &error));
+  EXPECT_FALSE(program.IsBinaryNull());
+  EXPECT_FALSE(program.IsArgsNull());
+  EXPECT_TRUE(program.IsDataNull());
+  EXPECT_EQ("bin/app", program.binary());
+  std::vector<std::string> expected_args {"-v", "-q"};
+  EXPECT_EQ(expected_args, program.args());
+}
+
+TEST_F(ProgramMetadataTest, ParseBinaryArgsWithErrors) {
+  std::string error;
+  ProgramMetadata program;
+  EXPECT_FALSE(ParseFrom(&program,
+        R"JSON({ "binary": "bin/app", "args": [0, 1] })JSON", &error));
+  EXPECT_THAT(error, ::testing::HasSubstr(
+        "'args' in program contains an item that's not a string"));
+}
+
 TEST_F(ProgramMetadataTest, ParseData) {
   ProgramMetadata program;
   EXPECT_TRUE(program.IsBinaryNull());

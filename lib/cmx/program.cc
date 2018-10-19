@@ -12,11 +12,13 @@
 namespace component {
 
 constexpr char kBinary[] = "binary";
+constexpr char kArgs[] = "args";
 constexpr char kData[] = "data";
 
 bool ProgramMetadata::Parse(const rapidjson::Value& program_value,
                             json::JSONParser* json_parser) {
   binary_.clear();
+  args_.clear();
   data_.clear();
   binary_null_ = true;
   data_null_ = true;
@@ -49,7 +51,24 @@ bool ProgramMetadata::ParseBinary(const rapidjson::Value& program_value,
   }
   binary_ = binary->value.GetString();
   binary_null_ = false;
-  return true;
+
+  const auto args = program_value.FindMember(kArgs);
+  if (args != program_value.MemberEnd()) {
+    if (!args->value.IsArray()) {
+      json_parser->ReportError("'args' in program is not an array.");
+    } else {
+      for (const auto& entry : args->value.GetArray()) {
+        if (!entry.IsString()) {
+          json_parser->ReportError("'args' in program contains an item that's not a string.");
+        } else {
+          args_.push_back(entry.GetString());
+        }
+      }
+      args_null_ = false;
+    }
+  }
+
+  return !json_parser->HasError();
 }
 
 bool ProgramMetadata::ParseData(const rapidjson::Value& program_value,
