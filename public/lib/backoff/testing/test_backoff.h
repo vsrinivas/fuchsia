@@ -24,13 +24,12 @@ class TestBackoff : public Backoff {
 
   void SetOnGetNext(fit::closure on_get_next);
 
-  zx::duration backoff_to_return;
-
-  static constexpr zx::duration kDefaultBackoffDuration = zx::sec(0);
+  static constexpr zx::duration kDefaultBackoffDuration = zx::sec(1);
   int get_next_count = 0;
   int reset_count = 0;
 
  private:
+  zx::duration backoff_to_return_;
   fit::closure on_get_next_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TestBackoff);
 };

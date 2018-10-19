@@ -8,7 +8,8 @@ namespace backoff {
 
 TestBackoff::TestBackoff() : TestBackoff(kDefaultBackoffDuration) {}
 
-TestBackoff::TestBackoff(zx::duration duration) : backoff_to_return(duration) {}
+TestBackoff::TestBackoff(zx::duration duration)
+    : backoff_to_return_(duration) {}
 
 TestBackoff::~TestBackoff() {}
 
@@ -17,7 +18,7 @@ zx::duration TestBackoff::GetNext() {
   if (on_get_next_) {
     on_get_next_();
   }
-  return backoff_to_return;
+  return backoff_to_return_;
 }
 
 void TestBackoff::Reset() { reset_count++; }

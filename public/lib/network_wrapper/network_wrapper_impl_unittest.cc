@@ -94,7 +94,8 @@ class FakeNetworkWrapper : public http::HttpService {
 class NetworkWrapperImplTest : public gtest::TestLoopFixture {
  public:
   NetworkWrapperImplTest()
-      : network_service_(dispatcher(), std::make_unique<backoff::TestBackoff>(),
+      : network_service_(dispatcher(),
+                         std::make_unique<backoff::TestBackoff>(zx::sec(0)),
                          [this] { return NewHttpService(); }) {}
 
   void SetSocketResponse(zx::socket body, uint32_t status_code) {
