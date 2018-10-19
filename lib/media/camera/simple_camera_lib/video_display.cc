@@ -67,7 +67,9 @@ zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
       format.format.height * format.format.planes[0].bytes_per_row, PAGE_SIZE);
   buffer_collection->buffer_count = num_buffers;
   buffer_collection->vmo_size = buffer_size;
-  buffer_collection->format.set_image(std::move(format.format));
+  // TODO(FIDL-204/kulakowski) Make this a union again when C bindings
+  // are rationalized.
+  buffer_collection->format.image = std::move(format.format);
   zx_status_t status;
   for (uint32_t i = 0; i < num_buffers; ++i) {
     status = zx::vmo::create(buffer_size, 0, &buffer_collection->vmos[i]);
@@ -102,16 +104,18 @@ bool ConvertFormat(fuchsia::sysmem::PixelFormat driver_format,
 zx_status_t VideoDisplay::SetupBuffers(
     const fuchsia::sysmem::BufferCollectionInfo& buffer_collection) {
   // auto image_info = fuchsia::images::ImageInfo::New();
+  // TODO(FIDL-204/kulakowski) Make this a union again when C bindings
+  // are rationalized.
   fuchsia::images::ImageInfo image_info;
-  image_info.stride = buffer_collection.format.image().planes[0].bytes_per_row;
+  image_info.stride = buffer_collection.format.image.planes[0].bytes_per_row;
   image_info.tiling = fuchsia::images::Tiling::LINEAR;
-  image_info.width = buffer_collection.format.image().width;
-  image_info.height = buffer_collection.format.image().height;
+  image_info.width = buffer_collection.format.image.width;
+  image_info.height = buffer_collection.format.image.height;
 
   // To make things look like a webcam application, mirror left-right.
   image_info.transform = fuchsia::images::Transform::FLIP_HORIZONTAL;
 
-  if (!ConvertFormat(buffer_collection.format.image().pixel_format,
+  if (!ConvertFormat(buffer_collection.format.image.pixel_format,
                      &image_info.pixel_format)) {
     FXL_CHECK(false) << "Unsupported format";
   }
