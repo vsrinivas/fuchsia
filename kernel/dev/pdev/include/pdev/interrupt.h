@@ -51,7 +51,7 @@ struct pdev_interrupt_ops {
     void (*msi_register_handler)(const msi_block_t* block,
                                  uint msi_id,
                                  int_handler handler,
-                                 void *ctx);
+                                 void* ctx);
 };
 
 void pdev_register_interrupts(const struct pdev_interrupt_ops* ops);

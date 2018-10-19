@@ -9,7 +9,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/power.c \
+    $(LOCAL_DIR)/power.cpp
 
 MODULE_DEPS += \
     kernel/dev/pdev \

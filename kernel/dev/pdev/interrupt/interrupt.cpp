@@ -4,43 +4,38 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <err.h>
 #include <pdev/interrupt.h>
+
+#include <err.h>
+#include <kernel/auto_lock.h>
+#include <kernel/spinlock.h>
 #include <lk/init.h>
 #include <zircon/types.h>
 
 #define ARM_MAX_INT 1024
 
-static spin_lock_t lock = SPIN_LOCK_INITIAL_VALUE;
-
+static SpinLock lock;
 static struct int_handler_struct int_handler_table[ARM_MAX_INT];
 
-struct int_handler_struct* pdev_get_int_handler(unsigned int vector)
-{
+struct int_handler_struct* pdev_get_int_handler(unsigned int vector) {
     DEBUG_ASSERT(vector < ARM_MAX_INT);
     return &int_handler_table[vector];
 }
 
-zx_status_t register_int_handler(unsigned int vector, int_handler handler, void* arg)
-{
+zx_status_t register_int_handler(unsigned int vector, int_handler handler, void* arg) {
     if (!is_valid_interrupt(vector, 0)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    struct int_handler_struct *h;
+    AutoSpinLock guard(&lock);
 
-    spin_lock_saved_state_t state;
-    spin_lock_save(&lock, &state, SPIN_LOCK_FLAG_INTERRUPTS);
-
-    h = pdev_get_int_handler(vector);
+    auto h = pdev_get_int_handler(vector);
     if (handler && h->handler) {
-        spin_unlock_restore(&lock, state, SPIN_LOCK_FLAG_INTERRUPTS);
         return ZX_ERR_ALREADY_BOUND;
     }
     h->handler = handler;
     h->arg = arg;
 
-    spin_unlock_restore(&lock, state, SPIN_LOCK_FLAG_INTERRUPTS);
     return ZX_OK;
 }
 
@@ -75,10 +70,10 @@ static zx_status_t default_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     return ZX_ERR_NOT_CONFIGURED;
 }
 
-static void default_init_percpu_early(void) {
+static void default_init_percpu_early() {
 }
 
-static void default_init_percpu(void) {
+static void default_init_percpu() {
 }
 
 static void default_handle_irq(iframe* frame) {
@@ -87,22 +82,22 @@ static void default_handle_irq(iframe* frame) {
 static void default_handle_fiq(iframe* frame) {
 }
 
-static void default_shutdown(void) {
+static void default_shutdown() {
 }
 
-static void default_shutdown_cpu(void) {
+static void default_shutdown_cpu() {
 }
 
-static bool default_msi_is_supported(void) {
+static bool default_msi_is_supported() {
     return false;
 }
 
-static bool default_msi_supports_masking(void) {
+static bool default_msi_supports_masking() {
     return false;
 }
 
 static zx_status_t default_msi_alloc_block(uint requested_irqs, bool can_target_64bit,
-                            bool is_msix, msi_block_t* out_block) {
+                                           bool is_msix, msi_block_t* out_block) {
     return ZX_ERR_NOT_CONFIGURED;
 }
 
@@ -115,6 +110,14 @@ static void default_msi_register_handler(const msi_block_t* block, uint msi_id, 
 static void default_msi_mask_unmask(const msi_block_t* block, uint msi_id, bool mask) {
 }
 
+static uint32_t default_get_base_vector() {
+    return 0;
+}
+
+static uint32_t default_get_max_vector() {
+    return 0;
+}
+
 // by default, most interrupt operations for pdev/arm are implemented in the gic specific source
 // files and accessed via configuring this pointer table at runtime. By default most of these
 // are merely empty stubs.
@@ -124,6 +127,8 @@ static const struct pdev_interrupt_ops default_ops = {
     .configure = default_configure,
     .get_config = default_get_config,
     .is_valid = default_is_valid,
+    .get_base_vector = default_get_base_vector,
+    .get_max_vector = default_get_max_vector,
     .remap = default_remap,
     .send_ipi = default_send_ipi,
     .init_percpu_early = default_init_percpu_early,
@@ -160,11 +165,11 @@ zx_status_t get_interrupt_config(unsigned int vector, enum interrupt_trigger_mod
     return intr_ops->get_config(vector, tm, pol);
 }
 
-uint32_t interrupt_get_base_vector(void) {
+uint32_t interrupt_get_base_vector() {
     return intr_ops->get_base_vector();
 }
 
-uint32_t interrupt_get_max_vector(void) {
+uint32_t interrupt_get_max_vector() {
     return intr_ops->get_max_vector();
 }
 
@@ -180,7 +185,7 @@ zx_status_t interrupt_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     return intr_ops->send_ipi(target, ipi);
 }
 
-void interrupt_init_percpu(void) {
+void interrupt_init_percpu() {
     intr_ops->init_percpu();
 }
 
@@ -201,19 +206,19 @@ static void interrupt_init_percpu_early(uint level) {
     intr_ops->init_percpu_early();
 }
 
-void shutdown_interrupts(void) {
+void shutdown_interrupts() {
     intr_ops->shutdown();
 }
 
-void shutdown_interrupts_curr_cpu(void) {
+void shutdown_interrupts_curr_cpu() {
     intr_ops->shutdown_cpu();
 }
 
-bool msi_is_supported(void) {
+bool msi_is_supported() {
     return intr_ops->msi_is_supported();
 }
 
-bool msi_supports_masking(void) {
+bool msi_supports_masking() {
     return intr_ops->msi_supports_masking();
 }
 

@@ -4,16 +4,17 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <pdev/power.h>
+
 #include <arch/arch_ops.h>
 #include <dev/power.h>
 #include <dev/psci.h>
-#include <pdev/power.h>
 
 static void default_reboot(enum reboot_flags flags) {
     psci_system_reset(flags);
 }
 
-static void default_shutdown(void) {
+static void default_shutdown() {
     psci_system_off();
 }
 
@@ -28,8 +29,7 @@ void power_reboot(enum reboot_flags flags) {
     power_ops->reboot(flags);
 }
 
-void power_shutdown(void)
-{
+void power_shutdown() {
     power_ops->shutdown();
 }
 
