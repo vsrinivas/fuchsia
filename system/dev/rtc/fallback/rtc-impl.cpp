@@ -17,14 +17,17 @@
 
 namespace {
 
-zx_status_t set_utc_offset(const rtc_t* rtc) {
+zx_status_t set_utc_offset(const zircon_rtc_Time* rtc) {
     uint64_t rtc_nanoseconds = seconds_since_epoch(rtc) * 1000000000;;
     int64_t offset = rtc_nanoseconds - zx_clock_get_monotonic();
     return zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
 }
 
+static zx_status_t fidl_Get(void* ctx, fidl_txn_t* txn);
+static zx_status_t fidl_Set(void* ctx, const zircon_rtc_Time* rtc, fidl_txn_t* txn);
+
 class FallbackRtc;
-using RtcDevice = ddk::Device<FallbackRtc, ddk::Ioctlable>;
+using RtcDevice = ddk::Device<FallbackRtc, ddk::Ioctlable, ddk::Messageable>;
 
 // The fallback RTC driver is a fake driver which avoids to special case
 // in the upper layers on boards which don't have an RTC chip (and battery).
@@ -51,51 +54,82 @@ class FallbackRtc : public RtcDevice,
         delete this;
     }
 
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+        return zircon_rtc_Device_dispatch(this, txn, msg, &fidl_ops_);
+    }
+
     zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                          size_t out_len, size_t* out_actual) {
         switch (op) {
-        case IOCTL_RTC_GET: return static_cast<int>(Get(out_buf, out_len, out_actual));
-        case IOCTL_RTC_SET: return static_cast<int>(Set(in_buf, in_len));
-        default: return ZX_ERR_NOT_SUPPORTED;
+        case IOCTL_RTC_GET: {
+            if (out_len < sizeof(rtc_t)) {
+                return ZX_ERR_BUFFER_TOO_SMALL;
+            }
+            *out_actual = sizeof(rtc_t);
+            auto *rtc = static_cast<zircon_rtc_Time*>(out_buf);
+            return Get(*rtc);
+        }
+        case IOCTL_RTC_SET: {
+            if (in_len < sizeof(rtc_t)) {
+                return ZX_ERR_BUFFER_TOO_SMALL;
+            }
+            auto *rtc = static_cast<const zircon_rtc_Time*>(in_buf);
+            return Set(*rtc);
+        }
+        default:
+            return ZX_ERR_NOT_SUPPORTED;
         }
     }
 
   private:
-    ssize_t Get(void* out_buf, size_t out_len, size_t* out_actual) {
-        if (out_len < sizeof(rtc_last_)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
+    zx_status_t Get(zircon_rtc_Time& rtc) {
 
         // TODO(cpu): Advance the clock. This is not strictly necessary at the
         // moment because this driver basically serves as a rendezvous between
         // a Internet time server and the rest of the system.
 
-        memcpy(out_buf, &rtc_last_, sizeof(rtc_last_));
-        return sizeof(rtc_t);
+        rtc = rtc_last_;
+        return ZX_OK;
     }
 
-    ssize_t Set(const void* in_buf, size_t in_len) {
-        if (in_len < sizeof(rtc_last_)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-
-        auto rtc_new = *reinterpret_cast<const rtc_t*>(in_buf);
-        if (rtc_is_invalid(&rtc_new)) {
+    zx_status_t Set(const zircon_rtc_Time& rtc) {
+        if (rtc_is_invalid(&rtc)) {
             return ZX_ERR_OUT_OF_RANGE;
         }
 
-        rtc_last_ = rtc_new;
+        rtc_last_ = rtc;
 
         auto status = set_utc_offset(&rtc_last_);
         if (status != ZX_OK) {
             zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");
         }
 
-        return sizeof(rtc_t);
+        return ZX_OK;
     }
 
-    rtc_t rtc_last_;
+    friend zx_status_t fidl_Get(void*, fidl_txn_t*);
+    friend zx_status_t fidl_Set(void*, const zircon_rtc_Time*, fidl_txn_t*);
+
+    const zircon_rtc_Device_ops_t fidl_ops_ = {
+        .Get = fidl_Get,
+        .Set = fidl_Set,
+    };
+
+    zircon_rtc_Time rtc_last_;
 };
+
+zx_status_t fidl_Get(void* ctx, fidl_txn_t* txn) {
+    auto dev = static_cast<FallbackRtc*>(ctx);
+    zircon_rtc_Time rtc;
+    dev->Get(rtc);
+    return zircon_rtc_DeviceGet_reply(txn, &rtc);
+}
+
+zx_status_t fidl_Set(void* ctx, const zircon_rtc_Time* rtc, fidl_txn_t* txn) {
+    auto dev = static_cast<FallbackRtc*>(ctx);
+    auto status = dev->Set(*rtc);
+    return zircon_rtc_DeviceSet_reply(txn, status);
+}
 
 }  // namespace
 

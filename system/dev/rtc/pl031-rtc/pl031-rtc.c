@@ -35,46 +35,56 @@ typedef struct pl031 {
     pl031_regs_t* regs;
 } pl031_t;
 
-static zx_status_t set_utc_offset(const rtc_t* rtc) {
+static zx_status_t set_utc_offset(const zircon_rtc_Time* rtc) {
     uint64_t rtc_nanoseconds = seconds_since_epoch(rtc) * 1000000000;
     int64_t offset = rtc_nanoseconds - zx_clock_get_monotonic();
     return zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
 }
 
-static ssize_t pl031_rtc_get(pl031_t *ctx, void* buf, size_t count) {
+static zx_status_t pl031_rtc_get(void *ctx, zircon_rtc_Time* rtc) {
     ZX_DEBUG_ASSERT(ctx);
-
-    rtc_t* rtc = buf;
-    if (count < sizeof *rtc) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-
-    seconds_to_rtc(ctx->regs->dr, rtc);
-
-    return sizeof *rtc;
+    pl031_t *context = ctx;
+    seconds_to_rtc(context->regs->dr, rtc);
+    return ZX_OK;
 }
 
-static ssize_t pl031_rtc_set(pl031_t *ctx, const void* buf, size_t count) {
+static zx_status_t pl031_rtc_set(void *ctx, const zircon_rtc_Time* rtc) {
     ZX_DEBUG_ASSERT(ctx);
-
-    const rtc_t* rtc = buf;
-    if (count < sizeof *rtc) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
 
     // An invalid time was supplied.
     if (rtc_is_invalid(rtc)) {
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    ctx->regs->lr = seconds_since_epoch(rtc);
+    pl031_t *context = ctx;
+    context->regs->lr = seconds_since_epoch(rtc);
 
     zx_status_t status = set_utc_offset(rtc);
     if (status != ZX_OK) {
         zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");
     }
 
-    return sizeof *rtc;
+    return ZX_OK;
+}
+
+static zx_status_t fidl_Get(void* ctx, fidl_txn_t* txn) {
+    zircon_rtc_Time rtc;
+    pl031_rtc_get(ctx, &rtc);
+    return zircon_rtc_DeviceGet_reply(txn, &rtc);
+}
+
+static zx_status_t fidl_Set(void* ctx, const zircon_rtc_Time* rtc, fidl_txn_t* txn) {
+    zx_status_t status = pl031_rtc_set(ctx, rtc);
+    return zircon_rtc_DeviceSet_reply(txn, status);
+}
+
+static zircon_rtc_Device_ops_t fidl_ops = {
+    .Get = fidl_Get,
+    .Set = fidl_Set,
+};
+
+static zx_status_t pl031_rtc_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return zircon_rtc_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 static zx_status_t pl031_rtc_ioctl(void* ctx, uint32_t op,
@@ -82,15 +92,18 @@ static zx_status_t pl031_rtc_ioctl(void* ctx, uint32_t op,
                                    void* out_buf, size_t out_len, size_t* out_actual) {
     switch (op) {
     case IOCTL_RTC_GET: {
-        ssize_t ret = pl031_rtc_get(ctx, out_buf, out_len);
-        if (ret < 0) {
-            return ret;
+        if (out_len < sizeof(rtc_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
         }
-        *out_actual = ret;
-        return ZX_OK;
+        *out_actual = sizeof(rtc_t);
+        return pl031_rtc_get(ctx, out_buf);
     }
-    case IOCTL_RTC_SET:
-        return pl031_rtc_set(ctx, in_buf, in_len);
+    case IOCTL_RTC_SET: {
+        if (in_len < sizeof(rtc_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        return pl031_rtc_set(ctx, in_buf);
+    }
     }
     return ZX_ERR_NOT_SUPPORTED;
 }
@@ -98,6 +111,7 @@ static zx_status_t pl031_rtc_ioctl(void* ctx, uint32_t op,
 static zx_protocol_device_t pl031_rtc_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = pl031_rtc_ioctl,
+    .message = pl031_rtc_message
 };
 
 static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent) {
@@ -143,8 +157,8 @@ static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent) {
     }
 
     // set the current RTC offset in the kernel
-    rtc_t rtc;
-    sanitize_rtc(pl031, &pl031_rtc_device_proto, &rtc);
+    zircon_rtc_Time rtc;
+    sanitize_rtc(pl031, &rtc, pl031_rtc_get, pl031_rtc_set);
     st = set_utc_offset(&rtc);
     if (st != ZX_OK) {
         zxlogf(ERROR, "pl031_rtc: unable to set the UTC clock!\n");

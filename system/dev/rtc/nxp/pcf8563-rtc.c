@@ -17,23 +17,19 @@ typedef struct {
     i2c_protocol_t i2c;
 } pcf8563_context;
 
-static zx_status_t set_utc_offset(const rtc_t* rtc) {
+static zx_status_t set_utc_offset(const zircon_rtc_Time* rtc) {
     uint64_t rtc_nanoseconds = seconds_since_epoch(rtc) * 1000000000;;
     int64_t offset = rtc_nanoseconds - zx_clock_get_monotonic();
     return zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
 }
 
-static ssize_t pcf8563_rtc_get(pcf8563_context *ctx, void* buf, size_t count) {
+static zx_status_t pcf8563_rtc_get(void *ctx, zircon_rtc_Time* rtc) {
     ZX_DEBUG_ASSERT(ctx);
 
-    rtc_t* rtc = buf;
-    if (count < sizeof *rtc) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-
+    pcf8563_context *context = ctx;
     uint8_t write_buf[] = { 0x02 };
     uint8_t read_buf[7];
-    zx_status_t err = i2c_write_read_sync(&ctx->i2c, write_buf, sizeof write_buf, read_buf,
+    zx_status_t err = i2c_write_read_sync(&context->i2c, write_buf, sizeof write_buf, read_buf,
                                           sizeof read_buf);
     if (err) {
         return err;
@@ -46,16 +42,11 @@ static ssize_t pcf8563_rtc_get(pcf8563_context *ctx, void* buf, size_t count) {
     rtc->month   = from_bcd(read_buf[5] & 0x1f);
     rtc->year    = ((read_buf[5] & 0x80) ? 2000 : 1900) + from_bcd(read_buf[6]);
 
-    return sizeof *rtc;
+    return ZX_OK;
 }
 
-static ssize_t pcf8563_rtc_set(pcf8563_context *ctx, const void* buf, size_t count) {
+static zx_status_t pcf8563_rtc_set(void *ctx, const zircon_rtc_Time* rtc) {
     ZX_DEBUG_ASSERT(ctx);
-
-    const rtc_t* rtc = buf;
-    if (count < sizeof *rtc) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
 
     // An invalid time was supplied.
     if (rtc_is_invalid(rtc)) {
@@ -81,7 +72,8 @@ static ssize_t pcf8563_rtc_set(pcf8563_context *ctx, const void* buf, size_t cou
         to_bcd(year)
     };
 
-    zx_status_t err = i2c_write_read_sync(&ctx->i2c, write_buf, sizeof write_buf, NULL, 0);
+    pcf8563_context *context = ctx;
+    zx_status_t err = i2c_write_read_sync(&context->i2c, write_buf, sizeof write_buf, NULL, 0);
     if (err) {
         return err;
     }
@@ -91,23 +83,46 @@ static ssize_t pcf8563_rtc_set(pcf8563_context *ctx, const void* buf, size_t cou
         zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");
     }
 
-    return sizeof *rtc;
+    return ZX_OK;
+}
+
+static zx_status_t fidl_Get(void* ctx, fidl_txn_t* txn) {
+    zircon_rtc_Time rtc;
+    pcf8563_rtc_get(ctx, &rtc);
+    return zircon_rtc_DeviceGet_reply(txn, &rtc);
+}
+
+static zx_status_t fidl_Set(void* ctx, const zircon_rtc_Time* rtc, fidl_txn_t* txn) {
+    zx_status_t status = pcf8563_rtc_set(ctx, rtc);
+    return zircon_rtc_DeviceSet_reply(txn, status);
+}
+
+static zircon_rtc_Device_ops_t fidl_ops = {
+    .Get = fidl_Get,
+    .Set = fidl_Set,
+};
+
+static zx_status_t pcf8563_rtc_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return zircon_rtc_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 static zx_status_t pcf8563_rtc_ioctl(void* ctx, uint32_t op,
-                                     const void* in_buf, size_t in_len,
-                                     void* out_buf, size_t out_len, size_t* out_actual) {
+                                   const void* in_buf, size_t in_len,
+                                   void* out_buf, size_t out_len, size_t* out_actual) {
     switch (op) {
     case IOCTL_RTC_GET: {
-        ssize_t ret = pcf8563_rtc_get(ctx, out_buf, out_len);
-        if (ret < 0) {
-            return ret;
+        if (out_len < sizeof(rtc_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
         }
-        *out_actual = ret;
-        return ZX_OK;
+        *out_actual = sizeof(rtc_t);
+        return pcf8563_rtc_get(ctx, out_buf);
     }
-    case IOCTL_RTC_SET:
-        return pcf8563_rtc_set(ctx, in_buf, in_len);
+    case IOCTL_RTC_SET: {
+        if (in_len < sizeof(rtc_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        return pcf8563_rtc_set(ctx, in_buf);
+    }
     }
     return ZX_ERR_NOT_SUPPORTED;
 }
@@ -115,6 +130,7 @@ static zx_status_t pcf8563_rtc_ioctl(void* ctx, uint32_t op,
 static zx_protocol_device_t pcf8563_rtc_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = pcf8563_rtc_ioctl,
+    .message = pcf8563_rtc_message
 };
 
 static zx_status_t pcf8563_bind(void* ctx, zx_device_t* parent)
@@ -147,8 +163,8 @@ static zx_status_t pcf8563_bind(void* ctx, zx_device_t* parent)
         return status;
     }
 
-    rtc_t rtc;
-    sanitize_rtc(context, &pcf8563_rtc_device_proto, &rtc);
+    zircon_rtc_Time rtc;
+    sanitize_rtc(context, &rtc, pcf8563_rtc_get, pcf8563_rtc_set);
     status = set_utc_offset(&rtc);
     if (status != ZX_OK) {
         zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");

@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 #include <unittest/unittest.h>
-#include <zircon/device/rtc.h>
 #include <librtc.h>
 #include <stdint.h>
 
-rtc_t make_rtc(uint16_t year, uint8_t month,
+zircon_rtc_Time make_rtc(uint16_t year, uint8_t month,
                uint8_t day, uint8_t hours,
                uint8_t minutes, uint8_t seconds) {
-    return rtc_t { seconds, minutes, hours, day, month, year };
+    return zircon_rtc_Time { seconds, minutes, hours, day, month, year };
 }
 
 bool santitize_rtc_test() {
@@ -40,7 +39,7 @@ bool santitize_rtc_test() {
     END_TEST;
 }
 
-bool seconds_since_epoc_test() {
+bool seconds_since_epoch_test() {
     BEGIN_TEST;
 
     auto t0 = make_rtc(2018, 8, 4, 1, 19, 1);
@@ -54,7 +53,7 @@ bool seconds_since_epoc_test() {
 
 BEGIN_TEST_CASE(rtc_lib_tests)
 RUN_TEST(santitize_rtc_test)
-RUN_TEST(seconds_since_epoc_test)
+RUN_TEST(seconds_since_epoch_test)
 END_TEST_CASE(rtc_lib_tests)
 
 int main(int argc, char** argv) {

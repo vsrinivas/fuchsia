@@ -5,7 +5,6 @@
 #include "include/librtc.h"
 
 #include <ddk/driver.h>
-#include <zircon/device/rtc.h>
 #include <zircon/syscalls.h>
 
 // Leading 0 allows using the 1-indexed month values from rtc.
@@ -34,7 +33,7 @@ static bool is_leap_year(uint16_t year) {
     return ((year % 4) == 0 && (year % 100) != 0) || ((year % 400) == 0);
 }
 
-uint64_t seconds_since_epoch(const rtc_t* rtc) {
+uint64_t seconds_since_epoch(const zircon_rtc_Time* rtc) {
     // First add all of the prior years.
     uint64_t days_since_local_epoch = 0;
     for (uint16_t year = local_epoch_year; year < rtc->year; year++) {
@@ -61,7 +60,7 @@ uint64_t seconds_since_epoch(const rtc_t* rtc) {
     return rtc_seconds;
 }
 
-void seconds_to_rtc(uint64_t seconds, rtc_t* rtc) {
+void seconds_to_rtc(uint64_t seconds, zircon_rtc_Time* rtc) {
     // subtract local epoch offset to get to rtc time
     uint64_t epoch = seconds - local_epoch;
 
@@ -107,7 +106,7 @@ uint8_t from_bcd(uint8_t bcd) {
     return ((bcd >> 4) * 10) + (bcd & 0xf);
 }
 
-bool rtc_is_invalid(const rtc_t* rtc) {
+bool rtc_is_invalid(const zircon_rtc_Time* rtc) {
     return rtc->seconds > 59 ||
         rtc->minutes > 59 ||
         rtc->hours > 23 ||
@@ -119,17 +118,19 @@ bool rtc_is_invalid(const rtc_t* rtc) {
 
 // Validate that the RTC is set to a valid time, and to a relatively
 // sane one. Report the validated or reset time back via rtc.
-void sanitize_rtc(void* ctx, zx_protocol_device_t* dev, rtc_t* rtc) {
+void sanitize_rtc(void* ctx,
+    zircon_rtc_Time* rtc,
+    zx_status_t (*rtc_get)(void *, zircon_rtc_Time*),
+    zx_status_t (*rtc_set)(void *, const zircon_rtc_Time*)) {
     // January 1, 2016 00:00:00
-    static const rtc_t default_rtc = {
+    static const zircon_rtc_Time default_rtc = {
         .day = 1,
         .month = 1,
         .year = default_year,
     };
-    size_t out_actual;
-    dev->ioctl(ctx, IOCTL_RTC_GET, NULL, 0, rtc, sizeof *rtc, &out_actual);
+    rtc_get(ctx, rtc);
     if (rtc_is_invalid(rtc) || rtc->year < default_year) {
-        dev->ioctl(ctx, IOCTL_RTC_SET, &default_rtc, sizeof default_rtc, NULL, 0, NULL);
+        rtc_set(ctx, &default_rtc);
         *rtc = default_rtc;
     }
 }

@@ -10,8 +10,9 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := $(LOCAL_DIR)/pl031-rtc.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/rtc
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/rtc system/ulib/fidl
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+MODULE_FIDL_LIBS := system/fidl/zircon-rtc
 
 include make/module.mk

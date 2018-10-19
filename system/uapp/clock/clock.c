@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/device/rtc.h>
+#include <zircon/rtc/c/fidl.h>
+#include <lib/fdio/util.h>
 
 #include <ctype.h>
 #include <dirent.h>
@@ -53,22 +54,24 @@ char *guess_dev(void) {
     return NULL;
 }
 
-int open_rtc(const char *path, int mode) {
-    int rtc_fd = open(path, mode);
+zx_status_t open_rtc(const char *path, zx_handle_t *handle) {
+    int rtc_fd = open(path, O_RDONLY);
     if (rtc_fd < 0) {
         printf("Can not open RTC device\n");
     }
-    return rtc_fd;
+    return fdio_get_service_handle(rtc_fd, handle);
 }
 
 int print_rtc(const char *path) {
-    int rtc_fd = open_rtc(path, O_RDONLY);
-    if (rtc_fd < 0) {
+    zx_handle_t handle;
+    zx_status_t status = open_rtc(path, &handle);
+    if (status != ZX_OK) {
         return -1;
     }
-    rtc_t rtc;
-    ssize_t n = ioctl_rtc_get(rtc_fd, &rtc);
-    if (n < (ssize_t)sizeof(rtc_t)) {
+    zircon_rtc_Time rtc;
+
+    status = zircon_rtc_DeviceGet(handle, &rtc);
+    if (status != ZX_OK) {
         return -1;
     }
     printf(
@@ -83,7 +86,7 @@ int print_rtc(const char *path) {
 }
 
 int set_rtc(const char *path, const char* time) {
-    rtc_t rtc;
+    zircon_rtc_Time rtc;
     int n = sscanf(
         time,
         "%04hd-%02hhd-%02hhdT%02hhd:%02hhd:%02hhd",
@@ -97,13 +100,20 @@ int set_rtc(const char *path, const char* time) {
         printf("Bad time format.\n");
         return -1;
     }
-    int rtc_fd = open_rtc(path, O_WRONLY);
-    if (rtc_fd < 0) {
+    zx_handle_t handle;
+    zx_status_t status = open_rtc(path, &handle);
+    if (status != ZX_OK) {
         printf("Can not open RTC device\n");
-        return -1;
+        return status;
     }
-    ssize_t written = ioctl_rtc_set(rtc_fd, &rtc);
-    return (written == sizeof(rtc)) ? 0 : written;
+
+    zx_status_t set_status;
+    status = zircon_rtc_DeviceSet(handle, &rtc, &set_status);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return set_status;
 }
 
 int main(int argc, char** argv) {
