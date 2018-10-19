@@ -152,8 +152,17 @@ def main():
     parser.add_argument('--changelog',
                         help='Path to the changelog file to write',
                         default=None)
+    parser.add_argument('--debug',
+                        help='Turns on debugging mode',
+                        action='store_true')
     args = parser.parse_args()
+
+    def debug_print(message):
+        if args.debug:
+            print(message)
+
     tempdir = tempfile.mkdtemp()
+    debug_print('Working directory: ' + tempdir)
     try:
         importer_dir = os.path.join(tempdir, 'importer')
         os.mkdir(importer_dir)
@@ -161,11 +170,17 @@ def main():
         # Read the requested dependencies from the canonical packages.
         packages = {}
         additional_deps = {}
+        debug_print('------------------------')
+        debug_print('Development dependencies')
+        debug_print('------------------------')
         for path in args.pubspecs:
             yaml_file = os.path.join(path, 'pubspec.yaml')
             package_name, _, dev_deps, _ = parse_full_dependencies(yaml_file)
             packages[package_name] = path
             additional_deps.update(dev_deps)
+            debug_print('# From ' + yaml_file)
+            for pair in sorted(dev_deps.items()):
+                debug_print(' - %s: %s' % pair)
 
         # Generate a manifest containing all the dependencies we care about.
         manifest = {
@@ -178,11 +193,16 @@ def main():
             if dep in packages:
                 continue
             dependencies[dep] = version
+        debug_print('-------------------------')
+        debug_print('Manually-set dependencies')
+        debug_print('-------------------------')
         for project in args.projects:
             yaml_file = os.path.join(project, 'dart_dependencies.yaml')
             project_deps = parse_dependencies(yaml_file)
-            for dep, version in project_deps.iteritems():
+            debug_print('# From ' + yaml_file)
+            for dep, version in sorted(project_deps.iteritems()):
                 dependencies[dep] = version
+                debug_print(' - %s: %s' % (dep, version))
         manifest['dependencies'] = dependencies
         overrides = {}
         for package_name, path in packages.iteritems():
@@ -263,7 +283,8 @@ def main():
             generate_package_diff(old_packages, new_packages, args.changelog)
 
     finally:
-        shutil.rmtree(tempdir)
+        if not args.debug:
+            shutil.rmtree(tempdir)
 
 if __name__ == '__main__':
     sys.exit(main())

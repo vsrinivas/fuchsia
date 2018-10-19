@@ -43,6 +43,9 @@ def main():
     parser.add_argument('--changelog',
                         help='Path to the changelog file to write',
                         default=None)
+    parser.add_argument('--debug',
+                        help='Turns on debugging mode',
+                        action='store_true')
     script_args = parser.parse_args()
 
     if sys.platform.startswith('linux'):
@@ -68,6 +71,8 @@ def main():
     subprocess.check_call([flutter_tool, "--version"])
 
     args = [importer_path]
+    if script_args.debug:
+        args.append('--debug')
     args.append('--pub')
     args.append(pub_path)
     args.append('--output')
