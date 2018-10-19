@@ -263,6 +263,20 @@ void PopulateRegistersX86_64(const crashpad::CPUContextX86_64& ctx,
 MinidumpRemoteAPI::MinidumpRemoteAPI() = default;
 MinidumpRemoteAPI::~MinidumpRemoteAPI() = default;
 
+std::string MinidumpRemoteAPI::ProcessName() {
+  if (!minidump_) {
+    return std::string();
+  }
+
+  auto mods = minidump_->Modules();
+
+  if (mods.size() == 0) {
+    return "<core dump>";
+  }
+
+  return mods[0]->Name();
+}
+
 Err MinidumpRemoteAPI::Open(const std::string& path) {
   crashpad::FileReader reader;
 
@@ -325,7 +339,7 @@ void MinidumpRemoteAPI::Attach(
   }
 
   debug_ipc::AttachReply reply;
-  reply.process_name = "<core dump>";
+  reply.process_name = ProcessName();
 
   if (static_cast<pid_t>(request.koid) != minidump_->ProcessID()) {
     reply.status = kAttachNotFound;
@@ -410,7 +424,7 @@ void MinidumpRemoteAPI::ProcessTree(
   debug_ipc::ProcessTreeRecord record;
 
   record.type = debug_ipc::ProcessTreeRecord::Type::kProcess;
-  record.name = "<core dump>";
+  record.name = ProcessName();
   record.koid = minidump_->ProcessID();
 
   debug_ipc::ProcessTreeReply reply {

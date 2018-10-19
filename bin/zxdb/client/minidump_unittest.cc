@@ -106,7 +106,7 @@ TEST_F(MinidumpTest, ProcessTreeRecord) {
 
   auto record = reply.root;
   EXPECT_EQ(debug_ipc::ProcessTreeRecord::Type::kProcess, record.type);
-  EXPECT_EQ("<core dump>", record.name);
+  EXPECT_EQ("scenic", record.name);
   EXPECT_EQ(kTestExampleMinidumpKOID, record.koid);
   EXPECT_EQ(0UL, record.children.size());
 }
@@ -123,7 +123,7 @@ TEST_F(MinidumpTest, AttachDetach) {
   ASSERT_ZXDB_SUCCESS(err);
 
   EXPECT_EQ(0UL, reply.status);
-  EXPECT_EQ("<core dump>", reply.process_name);
+  EXPECT_EQ("scenic", reply.process_name);
 
   debug_ipc::DetachRequest detach_request;
   debug_ipc::DetachReply detach_reply;

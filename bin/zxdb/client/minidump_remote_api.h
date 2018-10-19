@@ -80,6 +80,8 @@ class MinidumpRemoteAPI : public RemoteAPI {
       override;
 
  private:
+  std::string ProcessName();
+
   bool attached_ = false;
 
   std::unique_ptr<crashpad::ProcessSnapshotMinidump> minidump_;
