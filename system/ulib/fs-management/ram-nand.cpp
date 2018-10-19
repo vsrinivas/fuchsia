@@ -11,7 +11,7 @@
 
 #include <fbl/unique_fd.h>
 #include <lib/fzl/fdio.h>
-#include <zircon/device/ram-nand.h>
+#include <zircon/device/device.h>
 #include <zircon/types.h>
 #include <zircon/nand/c/fidl.h>
 
@@ -48,14 +48,10 @@ zx_status_t destroy_ram_nand(const char* ram_nand_path) {
         fprintf(stderr, "Could not open ram_nand\n");
         return ZX_ERR_BAD_STATE;
     }
-    fzl::FdioCaller caller(fbl::move(ram_nand));
 
-    zx_status_t status;
-    zx_status_t io_status = zircon_nand_RamNandUnlink(caller.borrow_channel(), &status);
-    if (io_status != ZX_OK || status != ZX_OK) {
-        status = io_status != ZX_OK ? io_status : status;
+    zx_status_t status = static_cast<zx_status_t>(ioctl_device_unbind(ram_nand.get()));
+    if (status != ZX_OK) {
         fprintf(stderr, "Could not unlink ram_nand, %d\n", status);
-        return status;
     }
-    return ZX_OK;
+    return status;
 }

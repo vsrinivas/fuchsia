@@ -8,7 +8,6 @@
 #include <getopt.h>
 
 #include <fs-management/ram-nand.h>
-#include <lib/fzl/fdio.h>
 #include <unittest/unittest.h>
 #include <zircon/assert.h>
 #include <zircon/device/device.h>
@@ -78,9 +77,7 @@ ParentDevice::ParentDevice(const TestConfig& config) : config_(config) {
 
 ParentDevice::~ParentDevice() {
     if (ram_nand_) {
-        fzl::FdioCaller caller(fbl::move(ram_nand_));
-        zx_status_t status;
-        zircon_nand_RamNandUnlink(caller.borrow_channel(), &status);
+        ioctl_device_unbind(ram_nand_.get());
     }
 }
 
