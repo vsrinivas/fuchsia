@@ -342,6 +342,7 @@ void Client::HandleDestroyLayer(const fuchsia_display_ControllerDestroyLayerRequ
     }
     do_early_retire(&destroyed->waiting_images_);
     if (destroyed->displayed_image_) {
+        fbl::AutoLock lock(controller_->mtx());
         destroyed->displayed_image_->StartRetire();
     }
 }
