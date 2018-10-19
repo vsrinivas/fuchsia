@@ -141,7 +141,7 @@ PerProcessGtt::PerProcessGtt(Owner* owner, std::unique_ptr<Pml4Table> pml4_table
     DASSERT(allocator_);
 }
 
-bool PerProcessGtt::Clear(uint64_t start, uint64_t page_count)
+bool PerProcessGtt::ClearLocked(uint64_t start, uint64_t page_count)
 {
     DASSERT((start & (PAGE_SIZE - 1)) == 0);
     if (start > Size())
@@ -194,7 +194,7 @@ bool PerProcessGtt::Clear(uint64_t start, uint64_t page_count)
     return true;
 }
 
-bool PerProcessGtt::Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
+bool PerProcessGtt::AllocLocked(size_t size, uint8_t align_pow2, uint64_t* addr_out)
 {
     DASSERT(allocator_);
     // allocate an extra page on the end to avoid page faults from over fetch
@@ -205,13 +205,13 @@ bool PerProcessGtt::Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
     return allocator_->Alloc(alloc_size, align_pow2, addr_out);
 }
 
-bool PerProcessGtt::Free(uint64_t addr)
+bool PerProcessGtt::FreeLocked(uint64_t addr)
 {
     DASSERT(allocator_);
     return allocator_->Free(addr);
 }
 
-bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping)
+bool PerProcessGtt::InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping)
 {
     auto& bus_addr_array = bus_mapping->Get();
     uint64_t page_count = bus_addr_array.size();

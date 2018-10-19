@@ -18,10 +18,10 @@ public:
 
     uint64_t Size() const override { return size_; }
 
-    bool Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out) override;
-    bool Free(uint64_t addr) override;
-    bool Clear(uint64_t addr, uint64_t page_count) override;
-    bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override;
+    bool AllocLocked(size_t size, uint8_t align_pow2, uint64_t* addr_out) override;
+    bool FreeLocked(uint64_t addr) override;
+    bool ClearLocked(uint64_t addr, uint64_t page_count) override;
+    bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override;
 
     bool is_allocated(uint64_t addr)
     {

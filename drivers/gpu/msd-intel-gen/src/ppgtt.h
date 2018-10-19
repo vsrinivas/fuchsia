@@ -40,13 +40,6 @@ public:
 
     static void InitPrivatePat(magma::RegisterIo* reg_io);
 
-    // AddressSpace overrides
-    bool Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out) override;
-    bool Free(uint64_t addr) override;
-
-    bool Clear(uint64_t addr, uint64_t page_count) override;
-    bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* buffer) override;
-
     uint64_t get_pml4_bus_addr() { return pml4_table_->bus_addr(); }
 
     // Legacy 48-bit ppgtt = 512 PDPs; each PDP has 512 PDs; each PD handles 1GB
@@ -281,6 +274,13 @@ private:
     static constexpr uint32_t kGuardPageCount = 8;
 
     static_assert(kSize == 1ull << 48, "ppgtt size calculation");
+
+    // AddressSpace overrides
+    bool AllocLocked(size_t size, uint8_t align_pow2, uint64_t* addr_out) override;
+    bool FreeLocked(uint64_t addr) override;
+
+    bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* buffer) override;
+    bool ClearLocked(uint64_t start, uint64_t length) override;
 
     std::unique_ptr<Pml4Table> pml4_table_;
     std::unique_ptr<magma::AddressSpaceAllocator> allocator_;

@@ -24,8 +24,9 @@ public:
         return false;
     }
 
+private:
     // AddressSpace overrides
-    bool Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out) override
+    bool AllocLocked(size_t size, uint8_t align_pow2, uint64_t* addr_out) override
     {
         DASSERT(size % PAGE_SIZE == 0);
         // Always page aligned.
@@ -36,7 +37,7 @@ public:
         return true;
     }
 
-    bool Free(uint64_t addr) override
+    bool FreeLocked(uint64_t addr) override
     {
         zx_status_t status = owner_->ops()->gtt_free(owner_->context(), addr);
         if (status != ZX_OK)
@@ -44,7 +45,7 @@ public:
         return true;
     }
 
-    bool Clear(uint64_t addr, uint64_t page_count) override
+    bool ClearLocked(uint64_t addr, uint64_t page_count) override
     {
         zx_status_t status = owner_->ops()->gtt_clear(owner_->context(), addr);
         if (status != ZX_OK)
@@ -52,14 +53,14 @@ public:
         return true;
     }
 
-    bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override
+    bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override
     {
         DASSERT(false);
         return false;
     }
 
-    bool GlobalGttInsert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t page_offset,
-                         uint64_t page_count) override
+    bool GlobalGttInsertLocked(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t page_offset,
+                               uint64_t page_count) override
     {
         // Bus mapping will be redone in the core driver.
         uint32_t handle;

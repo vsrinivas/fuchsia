@@ -10,6 +10,7 @@
 #include "pagetable.h"
 #include "platform_bus_mapper.h"
 #include <map>
+#include <mutex>
 #include <unordered_map>
 
 // Base class for various address spaces.
@@ -29,17 +30,33 @@ public:
     virtual uint64_t Size() const = 0;
 
     // Allocates space and returns an address to the start of the allocation.
-    virtual bool Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out) = 0;
+    bool Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return AllocLocked(size, align_pow2, addr_out);
+    }
 
     // Releases the allocation at the given address.
-    virtual bool Free(uint64_t addr) = 0;
-
-    // Clears the page table entries for the allocation at the given address.
-    virtual bool Clear(uint64_t addr, uint64_t page_count) = 0;
+    bool Free(uint64_t addr)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return FreeLocked(addr);
+    }
 
     // Inserts the pages for the given buffer into page table entries for the allocation at the
     // given address.
-    virtual bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) = 0;
+    bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return InsertLocked(addr, std::move(bus_mapping));
+    }
+
+    // Clears the page table entries for the allocation at the given address.
+    bool Clear(uint64_t addr, uint64_t page_count)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return ClearLocked(addr, page_count);
+    }
 
     static std::unique_ptr<GpuMapping> MapBufferGpu(std::shared_ptr<AddressSpace> address_space,
                                                     std::shared_ptr<MsdIntelBuffer> buffer,
@@ -63,6 +80,14 @@ public:
         return magma::round_up(buffer_size, PAGE_SIZE);
     }
 
+protected:
+    virtual bool AllocLocked(size_t size, uint8_t align_pow2, uint64_t* addr_out) = 0;
+    virtual bool FreeLocked(uint64_t addr) = 0;
+    virtual bool ClearLocked(uint64_t addr, uint64_t page_count) = 0;
+    virtual bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) = 0;
+
+    std::mutex& mutex() { return mutex_; }
+
 private:
     Owner* owner_;
     AddressSpaceType type_;
@@ -73,6 +98,8 @@ private:
     // useful for cleaning up mappings when connections go away, and when
     // buffers are released.
     std::unordered_multimap<magma::PlatformBuffer*, map_container_t::iterator> mappings_by_buffer_;
+    // Used to keep mutually exclusive access to Alloc, Free, Insert, Clear.
+    std::mutex mutex_;
 };
 
 #endif // ADDRESS_SPACE_H

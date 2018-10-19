@@ -18,31 +18,31 @@ public:
         return false;
     }
 
+private:
     // AddressSpace overrides
-    bool Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out) override
+    bool AllocLocked(size_t size, uint8_t align_pow2, uint64_t* addr_out) override
     {
         return pci_device()->GetGtt()->Alloc(size, align_pow2, addr_out);
     }
-    bool Free(uint64_t addr) override { return pci_device()->GetGtt()->Free(addr); }
+    bool FreeLocked(uint64_t addr) override { return pci_device()->GetGtt()->Free(addr); }
 
-    bool Clear(uint64_t addr, uint64_t page_count) override
+    bool ClearLocked(uint64_t addr, uint64_t page_count) override
     {
         return pci_device()->GetGtt()->Clear(addr, page_count);
     }
 
-    bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override
+    bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override
     {
         DASSERT(false);
         return false;
     }
 
-    bool GlobalGttInsert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t page_offset,
-                         uint64_t page_count) override
+    bool GlobalGttInsertLocked(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t page_offset,
+                               uint64_t page_count) override
     {
         return pci_device()->GetGtt()->GlobalGttInsert(addr, buffer, page_offset, page_count);
     }
 
-private:
     MsdIntelPciDevice* pci_device() const
     {
         return static_cast<MsdIntelPciDevice*>(owner_->platform_device());
