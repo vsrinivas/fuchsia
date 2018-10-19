@@ -39,6 +39,42 @@ static bool use_monitor = false;
 
 extern struct idt _idt;
 
+#if __has_feature(safe_stack)
+static uint8_t unsafe_kstack[PAGE_SIZE] __ALIGNED(16);
+#define unsafe_kstack_end (&unsafe_kstack[sizeof(unsafe_kstack)])
+#else
+#define unsafe_kstack_end nullptr
+#endif
+
+// Fake monitor to use until smp is initialized. The size of
+// the memory range doesn't matter, since it won't actually get
+// used in a non-smp environment.
+volatile uint8_t fake_monitor;
+
+// Pre-initialize the per cpu structure for the boot cpu. Referenced by
+// early boot code prior to being able to initialize via code.
+struct x86_percpu bp_percpu = {
+    .direct = &bp_percpu,
+    .current_thread = {},
+
+    .stack_guard = {},
+    .kernel_unsafe_sp = (uintptr_t)unsafe_kstack_end,
+    .saved_user_sp = {},
+
+    .blocking_disallowed = {},
+    .monitor = &fake_monitor,
+
+    // Start with an invalid ID until we know the local APIC is set up.
+    .apic_id = INVALID_APIC_ID,
+
+    .gpf_return_target = {},
+
+    .cpu_num = 0,
+
+    .default_tss = {},
+    .interrupt_stacks = {},
+};
+
 zx_status_t x86_allocate_ap_structures(uint32_t* apic_ids, uint8_t cpu_count) {
     ASSERT(ap_percpus == nullptr);
 

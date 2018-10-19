@@ -40,7 +40,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/acpi.S \
 	$(LOCAL_DIR)/arch.cpp \
 	$(LOCAL_DIR)/asm.S \
-	$(LOCAL_DIR)/bp_percpu.c \
 	$(LOCAL_DIR)/cache.cpp \
 	$(LOCAL_DIR)/cpu_topology.cpp \
 	$(LOCAL_DIR)/debugger.cpp \
