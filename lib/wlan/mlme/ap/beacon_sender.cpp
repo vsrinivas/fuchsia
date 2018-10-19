@@ -50,7 +50,7 @@ void BeaconSender::Start(BssInterface* bss, const PsCfg& ps_cfg,
     // Copy template content.
     auto packet = frame.Take();
     bcn_cfg.tmpl.packet_head.len = packet->len();
-    bcn_cfg.tmpl.packet_head.data = packet->mut_data();
+    bcn_cfg.tmpl.packet_head.data = packet->data();
     bcn_cfg.beacon_interval = req.body()->beacon_period;
     status = device_->EnableBeaconing(&bcn_cfg);
     if (status != ZX_OK) {

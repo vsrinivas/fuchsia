@@ -22,7 +22,7 @@ TEST(BufferUtils, Writer) {
     uint8_t buf[16] = {};
     std::iota(buf, buf + sizeof(buf), 0);
 
-    BufferWriter w(buf, sizeof(buf));
+    BufferWriter w(buf);
     auto c1 = w.Write<Container<4>>();
     c1->data[0] = 1;
     c1->data[1] = 0;
@@ -34,7 +34,7 @@ TEST(BufferUtils, Writer) {
     c2->data[1] = 4;
 
     uint8_t data[4] = {5, 6, 7, 8};
-    w.Write(data, sizeof(data));
+    w.Write(data);
 
     EXPECT_EQ(w.WrittenBytes(), 10u);
     EXPECT_EQ(w.RemainingBytes(), 6u);
@@ -51,7 +51,7 @@ TEST(BufferUtils, Reader) {
     uint8_t buf[16] = {};
     std::iota(buf, buf + sizeof(buf), 0);
 
-    BufferReader r(buf, sizeof(buf));
+    BufferReader r(buf);
     auto c1 = r.Read<Container<4>>();
     ASSERT_NE(c1, nullptr);
     EXPECT_EQ(c1->data[0], 0u);
@@ -68,7 +68,8 @@ TEST(BufferUtils, Reader) {
     EXPECT_EQ(c3->data[2], 8u);
 
     auto read_data = r.Read(3);
-    ASSERT_NE(read_data, nullptr);
+    ASSERT_FALSE(read_data.empty());
+    ASSERT_EQ(read_data.size(), 3u);
     EXPECT_EQ(read_data[0], 6u);
     EXPECT_EQ(read_data[2], 8u);
 
@@ -76,13 +77,13 @@ TEST(BufferUtils, Reader) {
     EXPECT_EQ(r.RemainingBytes(), 7u);
 
     // Read over the remaining buffer size.
-    EXPECT_EQ(r.Read(8), nullptr);
+    EXPECT_TRUE(r.Read(8).empty());
     EXPECT_EQ(r.Peek<Container<8>>(), nullptr);
     EXPECT_EQ(r.Read<Container<8>>(), nullptr);
 
-    auto [remaining, remaining_len] = r.ReadRemaining();
-    ASSERT_NE(remaining, nullptr);
-    ASSERT_EQ(remaining_len, 7u);
+    auto remaining = r.ReadRemaining();
+    ASSERT_NE(remaining.data(), nullptr);
+    ASSERT_EQ(remaining.size(), 7u);
     EXPECT_EQ(r.ReadBytes(), 16u);
     EXPECT_EQ(r.RemainingBytes(), 0u);
     EXPECT_EQ(remaining[0], 9u);

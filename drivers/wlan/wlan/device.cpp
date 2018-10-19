@@ -419,7 +419,7 @@ zx_status_t Device::SendEthernet(fbl::unique_ptr<Packet> packet) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (ethmac_proxy_ != nullptr) { ethmac_proxy_->Recv(packet->mut_data(), packet->len(), 0u); }
+    if (ethmac_proxy_ != nullptr) { ethmac_proxy_->Recv(packet->data(), packet->len(), 0u); }
     return ZX_OK;
 }
 

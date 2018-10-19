@@ -5,6 +5,7 @@
 #pragma once
 
 #include <fbl/unique_ptr.h>
+#include <wlan/common/span.h>
 #include <wlan/mlme/packet.h>
 #include <zircon/types.h>
 
@@ -12,37 +13,32 @@ namespace wlan {
 
 class BufferWriter {
    public:
-    BufferWriter(uint8_t* buf, size_t len) : buf_(buf), len_(len) {
-        ZX_ASSERT(buf != nullptr);
-    }
-
-    explicit BufferWriter(Packet* pkt) : buf_(pkt->mut_data()), len_(pkt->len()) {
-        ZX_ASSERT(pkt != nullptr);
+    explicit BufferWriter(Span<uint8_t> buf) : buf_(buf) {
+        ZX_ASSERT(buf.data() != nullptr);
     }
 
     template <typename T> T* Write() {
-        ZX_ASSERT(len_ >= offset_ + sizeof(T));
+        ZX_ASSERT(buf_.size() >= offset_ + sizeof(T));
 
-        memset(buf_ + offset_, 0, sizeof(T));
-        auto data = reinterpret_cast<T*>(buf_ + offset_);
+        memset(buf_.data() + offset_, 0, sizeof(T));
+        auto data = reinterpret_cast<T*>(buf_.data() + offset_);
         offset_ += sizeof(T);
         return data;
     }
 
-    void Write(const uint8_t* buf, size_t len) {
-        ZX_ASSERT(len_ >= offset_ + len);
+    void Write(Span<const uint8_t> buf) {
+        ZX_ASSERT(buf_.size() >= offset_ + buf.size());
 
-        std::memcpy(buf_ + offset_, buf, len);
-        offset_ += len;
+        std::memcpy(buf_.data() + offset_, buf.data(), buf.size());
+        offset_ += buf.size();
     }
 
     size_t WrittenBytes() const { return offset_; }
-    size_t RemainingBytes() const { return len_ - offset_; }
+    size_t RemainingBytes() const { return buf_.size() - offset_; }
 
 private:
     size_t offset_ = 0;
-    uint8_t* buf_;
-    size_t len_ = 0;
+    Span<uint8_t> buf_;
 };
 
 }  // namespace wlan

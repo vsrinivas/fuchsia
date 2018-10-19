@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_PACKET_H_
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_PACKET_H_
 
+#include <wlan/common/span.h>
 #include <wlan/mlme/wlan.h>
 
 #include <fbl/intrusive_double_list.h>
@@ -142,6 +143,8 @@ fbl::unique_ptr<Buffer> GetBuffer(size_t len);
 // within the buffer.
 class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
    public:
+    typedef uint8_t value_type;
+
     enum class Peer {
         kUnknown,
         kDevice,
@@ -162,7 +165,9 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
     Peer peer() const { return peer_; }
 
     const uint8_t* data() const { return buffer_->data(); }
-    uint8_t* mut_data() { return buffer_->data(); }
+    uint8_t* data() { return buffer_->data(); }
+
+    size_t size() const { return len_; }
 
     // Length can only be made shorter at this time.
     zx_status_t set_len(size_t len) {

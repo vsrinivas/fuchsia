@@ -31,7 +31,7 @@ static fbl::unique_ptr<Packet> IntoPacket(const T& msg, uint32_t ordinal = 42) {
     // everyone.
     constexpr size_t kBufLen = 4096;
     auto packet = GetSvcPacket(kBufLen);
-    memset(packet->mut_data(), 0, kBufLen);
+    memset(packet->data(), 0, kBufLen);
     SerializeServiceMsg(packet.get(), ordinal, msg.get());
     return fbl::move(packet);
 }
