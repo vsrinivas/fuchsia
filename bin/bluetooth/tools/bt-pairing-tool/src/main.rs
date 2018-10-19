@@ -13,7 +13,9 @@ use fidl_fuchsia_bluetooth_control::{ControlMarker, PairingDelegateMarker};
 
 mod pairing;
 
-fn run() -> Result<(), Error> {
+const USAGE: &str = "usage: bt-pairing-tool";
+
+fn main_res() -> Result<(), Error> {
     let mut exec = fasync::Executor::new().context("Error creating event loop")?;
 
     let bt_svc = connect_to_service::<ControlMarker>()
@@ -32,12 +34,22 @@ fn run() -> Result<(), Error> {
         ));
     };
 
+    println!("Now accepting pairing requests.");
     exec.run_singlethreaded(pairing_delegate_server)
         .map_err(|_| format_err!("Failed to run pairing server"))
 }
 
 fn main() {
-    if let Err(e) = run() {
+    // Print help and exit.
+    if let Some(arg) = std::env::args().skip(1).next() {
+        if !(arg == "-h" || arg == "--help") {
+            eprintln!("Invalid command: {}", arg);
+        }
+        eprintln!("{}", USAGE);
+        return;
+    }
+    // Run tool.
+    if let Err(e) = main_res() {
         eprintln!("{}", e);
     }
 }
