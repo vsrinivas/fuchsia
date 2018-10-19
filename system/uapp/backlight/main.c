@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/fdio/unsafe.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/device/backlight.h>
+#include <zircon/backlight/c/fidl.h>
 
 static void usage(char* argv[]) {
     printf("Usage: %s [--read|--off|<brightness-val>]\n", argv[0]);
@@ -19,21 +20,27 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    if (strcmp(argv[1], "--read") == 0) {
-        int fd = open("/dev/class/backlight/000", O_RDONLY);
-        if (fd < 0) {
-            printf("Failed to open backlight\n");
-            return -1;
-        }
+    int fd = open("/dev/class/backlight/000", O_RDONLY);
+    if (fd < 0) {
+        printf("Failed to open backlight\n");
+        return -1;
+    }
 
-        backlight_state_t state;
-        ssize_t ret = ioctl_backlight_get_state(fd, &state);
-        if (ret < 0) {
-            printf("Get backlight state ioctl failed\n");
+    fdio_t* io = fdio_unsafe_fd_to_io(fd);
+    if (io == NULL) {
+        printf("Failed to get fdio_t\n");
+        return -1;
+    }
+    zx_handle_t channel = fdio_unsafe_borrow_channel(io);
+
+    if (strcmp(argv[1], "--read") == 0) {
+        zircon_backlight_State state;
+        zx_status_t status = zircon_backlight_DeviceGetState(channel, &state);
+        if (status != ZX_OK) {
+            printf("Get backlight state failed %d\n", status);
             return -1;
         }
-        printf("Backlight:%s Brightness:%d\n", state.on ? "on" : "off",
-                state.brightness);
+        printf("Backlight:%s Brightness:%d\n", state.on ? "on" : "off", state.brightness);
         return 0;
     }
 
@@ -56,16 +63,10 @@ int main(int argc, char* argv[]) {
         on = true;
     }
 
-    int fd = open("/dev/class/backlight/000", O_RDWR);
-    if (fd < 0) {
-        printf("Failed to open backlight\n");
-        return -1;
-    }
-
-    backlight_state_t state = { .on = on, .brightness = (uint8_t) brightness };
-    ssize_t ret = ioctl_backlight_set_state(fd, &state);
-    if (ret < 0) {
-        printf("Set brightness ioctl failed\n");
+    zircon_backlight_State state = { .on = on, .brightness = (uint8_t) brightness };
+    zx_status_t status = zircon_backlight_DeviceSetState(channel, &state);
+    if (status != ZX_OK) {
+        printf("Set brightness failed %d\n", status);
         return -1;
     }
 

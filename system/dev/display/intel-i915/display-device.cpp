@@ -6,6 +6,7 @@
 #include <float.h>
 #include <math.h>
 #include <zircon/device/backlight.h>
+#include <zircon/backlight/c/fidl.h>
 
 #include "display-device.h"
 #include "intel-i915.h"
@@ -16,6 +17,33 @@
 #include "tiling.h"
 
 namespace {
+
+zx_status_t get_state(void* ctx, fidl_txn_t* txn) {
+    zircon_backlight_State state;
+    {
+        fbl::AutoLock lock(&static_cast<i915::display_ref_t*>(ctx)->mtx);
+        static_cast<i915::display_ref_t*>(ctx)->display_device
+                ->GetBacklightState(&state.on, &state.brightness);
+    }
+    return zircon_backlight_DeviceGetState_reply(txn, &state);
+}
+
+zx_status_t set_state(void* ctx, const zircon_backlight_State* state) {
+    fbl::AutoLock lock(&static_cast<i915::display_ref_t*>(ctx)->mtx);
+
+    static_cast<i915::display_ref_t*>(ctx)->display_device
+            ->SetBacklightState(state->on, state->brightness);
+    return ZX_OK;
+}
+
+static zircon_backlight_Device_ops_t fidl_ops = {
+    .GetState = get_state,
+    .SetState = set_state,
+};
+
+zx_status_t backlight_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return zircon_backlight_Device_dispatch(ctx, txn, msg, &fidl_ops);
+}
 
 zx_status_t backlight_ioctl(void* ctx, uint32_t op,
                             const void* in_buf, size_t in_len,
@@ -160,6 +188,7 @@ void DisplayDevice::InitBacklight() {
 
             backlight_ops.version = DEVICE_OPS_VERSION;
             backlight_ops.ioctl = backlight_ioctl;
+            backlight_ops.message = backlight_message;
             backlight_ops.release = backlight_release;
 
             device_add_args_t args = {};
