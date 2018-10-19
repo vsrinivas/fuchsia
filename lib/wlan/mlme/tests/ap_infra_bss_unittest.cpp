@@ -358,6 +358,11 @@ TEST_F(ApInfraBssTest, DeauthenticateWhileAuthenticated) {
         device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_FALSE(deauth_inds.empty());
     AssertDeauthInd(fbl::move(*deauth_inds.begin()), wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
+
+    // Expect association context is still blank.
+    wlan_assoc_ctx_t expected_ctx = {};
+    const wlan_assoc_ctx_t* actual_ctx = device.GetStationAssocContext();
+    EXPECT_EQ(std::memcmp(actual_ctx, &expected_ctx, sizeof(expected_ctx)), 0);
 }
 
 TEST_F(ApInfraBssTest, Associate_Success) {
@@ -378,7 +383,7 @@ TEST_F(ApInfraBssTest, Associate_Success) {
     // Simulate SME sending MLME-ASSOCIATE.response msg with a success code
     SendAssocResponseMsg(wlan_mlme::AssociateResultCodes::SUCCESS);
 
-    // Expect association context has been set.
+    // Expect association context has been set properly.
     const wlan_assoc_ctx_t* actual_ctx = device.GetStationAssocContext();
     EXPECT_EQ(std::memcmp(actual_ctx->bssid, kClientAddress, 6), 0);
     EXPECT_EQ(actual_ctx->aid, kAid);
@@ -476,6 +481,11 @@ TEST_F(ApInfraBssTest, Associate_Timeout) {
         device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateIndOrdinal>);
     ASSERT_FALSE(assoc_inds.empty());
     AssertAssocInd(fbl::move(*assoc_inds.begin()));
+
+    // Expect association context has been cleared.
+    wlan_assoc_ctx_t expected_ctx = {};
+    const wlan_assoc_ctx_t* actual_ctx = device.GetStationAssocContext();
+    EXPECT_EQ(std::memcmp(actual_ctx, &expected_ctx, sizeof(expected_ctx)), 0);
 }
 
 TEST_F(ApInfraBssTest, DeauthenticateWhileAssociated) {
@@ -490,6 +500,11 @@ TEST_F(ApInfraBssTest, DeauthenticateWhileAssociated) {
         device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_FALSE(deauth_inds.empty());
     AssertDeauthInd(fbl::move(*deauth_inds.begin()), wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
+
+    // Expect association context has been cleared.
+    wlan_assoc_ctx_t expected_ctx = {};
+    const wlan_assoc_ctx_t* actual_ctx = device.GetStationAssocContext();
+    EXPECT_EQ(std::memcmp(actual_ctx, &expected_ctx, sizeof(expected_ctx)), 0);
 }
 
 TEST_F(ApInfraBssTest, Disassociate) {
@@ -504,6 +519,11 @@ TEST_F(ApInfraBssTest, Disassociate) {
         device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDisassociateIndOrdinal>);
     ASSERT_FALSE(disassoc_inds.empty());
     AssertDisassocInd(fbl::move(*disassoc_inds.begin()));
+
+    // Expect association context has been cleared.
+    wlan_assoc_ctx_t expected_ctx = {};
+    const wlan_assoc_ctx_t* actual_ctx = device.GetStationAssocContext();
+    EXPECT_EQ(std::memcmp(actual_ctx, &expected_ctx, sizeof(expected_ctx)), 0);
 }
 
 TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {

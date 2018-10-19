@@ -42,6 +42,7 @@
 #include "mac.h"
 #include "macros.h"
 #include "targaddrs.h"
+#include "utils.h"
 
 enum ath10k_pci_reset_mode {
     ATH10K_PCI_RESET_AUTO = 0,
@@ -3147,6 +3148,7 @@ static zx_status_t ath10k_pci_set_key(void* ctx, uint32_t options, wlan_key_conf
 static zx_status_t ath10k_pci_configure_assoc(void* ctx, uint32_t options,
                                               wlan_assoc_ctx_t* assoc_ctx) {
     struct ath10k* ar = ctx;
+    char buf[ETH_ALEN * 3];
 
     switch (ar->arvif.vdev_type) {
     case WMI_VDEV_TYPE_STA:
@@ -3154,12 +3156,33 @@ static zx_status_t ath10k_pci_configure_assoc(void* ctx, uint32_t options,
         return ZX_OK;
 
     case WMI_VDEV_TYPE_AP:
-        ath10k_info("As an AP, configuring an association with a STA.\n");
+        ethaddr_sprintf(buf, assoc_ctx->bssid);
+        ath10k_info("As an AP, configuring an association with a STA [%s].\n", buf);
         // TODO(NET-1682): Implement the vht/ht MCS for AP mode.
         return ath10k_mac_ap_assoc_with_sta(ar, assoc_ctx);
 
     default:
         ath10k_err("configure_assoc is not supported in this type yet: %d\n", ar->arvif.vdev_type);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
+static zx_status_t ath10k_pci_clear_assoc(void* ctx, uint32_t options, const uint8_t* peer_addr) {
+    struct ath10k* ar = ctx;
+    char buf[ETH_ALEN * 3];
+
+    switch (ar->arvif.vdev_type) {
+    case WMI_VDEV_TYPE_STA:
+        // TODO(NET-1760): Client mode supports disassociation from the associated AP.
+        return ZX_OK;
+
+    case WMI_VDEV_TYPE_AP:
+        ethaddr_sprintf(buf, peer_addr);
+        ath10k_info("As an AP, clearing the association to a STA [%s].\n", buf);
+        return ath10k_mac_ap_disassoc_sta(ar, peer_addr);
+
+    default:
+        ath10k_err("clear_assoc is not supported in this type yet: %d\n", ar->arvif.vdev_type);
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
@@ -3181,6 +3204,7 @@ wlanmac_protocol_ops_t wlanmac_ops = {
     .configure_beacon = ath10k_pci_configure_beacon,
     .set_key = ath10k_pci_set_key,
     .configure_assoc = ath10k_pci_configure_assoc,
+    .clear_assoc = ath10k_pci_clear_assoc,
     .start_hw_scan = ath10k_pci_start_hw_scan,
 };
 

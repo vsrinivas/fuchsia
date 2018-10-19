@@ -3429,6 +3429,19 @@ static int ath10k_station_disassoc(struct ath10k* ar,
 
 #endif
 
+// Used by an AP to disassociate a station.
+zx_status_t ath10k_mac_ap_disassoc_sta(struct ath10k* ar, const uint8_t* peer_addr) {
+    struct ath10k_vif* arvif = &ar->arvif;
+
+    mtx_lock(&ar->conf_mutex);
+
+    zx_status_t ret = ath10k_peer_delete(ar, arvif->vdev_id, peer_addr);
+
+    mtx_unlock(&ar->conf_mutex);
+
+    return ret;
+}
+
 /**************/
 /* Regulatory */
 /**************/

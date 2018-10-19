@@ -168,6 +168,10 @@ static wlanmac_protocol_ops_t wlanmac_ops = {
         // TODO(NET-1265): Configure the chipset for this association
         return ZX_OK;
     },
+    .clear_assoc = [](void* ctx, uint32_t options, const uint8_t* mac) -> zx_status_t {
+        // TODO(NET-1759): Configure the chipset to support disassociation
+        return ZX_OK;
+    },
 };
 #undef DEV
 

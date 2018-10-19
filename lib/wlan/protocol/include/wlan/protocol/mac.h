@@ -296,6 +296,9 @@ typedef struct wlanmac_protocol_ops {
     // Notifies MAC and PHY parameters negotiated through a successful association
     zx_status_t (*configure_assoc)(void* ctx, uint32_t options, wlan_assoc_ctx_t* assoc_ctx);
 
+    // Notifies MAC and PHY that the peer has been de-associated.
+    zx_status_t (*clear_assoc)(void* ctx, uint32_t options, const uint8_t* peer_addr);
+
     // Initiate a hardware scan
     //
     // Once the scan starts, scan results will be delivered as beacon and probe response frames

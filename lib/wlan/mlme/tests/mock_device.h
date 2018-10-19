@@ -135,7 +135,10 @@ struct MockDevice : public DeviceInterface {
         sta_assoc_ctx_ = *assoc_ctx;
         return ZX_OK;
     }
-    zx_status_t ClearAssoc(const common::MacAddr& peer_addr) override final { return ZX_OK; }
+    zx_status_t ClearAssoc(const common::MacAddr& peer_addr) override final {
+        std::memset(&sta_assoc_ctx_, 0, sizeof(sta_assoc_ctx_));
+        return ZX_OK;
+    }
 
     fbl::RefPtr<DeviceState> GetState() override final { return state; }
 

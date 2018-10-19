@@ -47,6 +47,9 @@ static wlanmac_protocol_ops_t wlanmac_test_protocol_ops = {
     .configure_assoc = [](void* ctx, uint32_t options, wlan_assoc_ctx_t* assoc_ctx) -> zx_status_t {
         return ZX_OK;
     },
+    .clear_assoc = [](void* ctx, uint32_t options, const uint8_t*) -> zx_status_t {
+        return ZX_OK;
+    },
 };
 #undef DEV
 

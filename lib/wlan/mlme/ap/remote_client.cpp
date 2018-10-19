@@ -446,6 +446,8 @@ std::optional<DataFrame<LlcHeader>> AssociatedState::EthToDataFrame(const EthFra
 void AssociatedState::OnExit() {
     inactive_timeout_.Cancel();
 
+    client_->device()->ClearAssoc(client_->addr());
+
     client_->ReportDisassociation(aid_);
     debugbss("[client] [%s] reported disassociation, AID: %u\n", client_->addr().ToString().c_str(),
              aid_);

@@ -106,6 +106,13 @@ struct WlantapMacImpl : WlantapMac {
         return ZX_OK;
     }
 
+    static zx_status_t WlanmacClearAssoc(void* ctx, uint32_t options, const uint8_t* mac) {
+        if (options != 0) { return ZX_ERR_INVALID_ARGS; }
+        if (!mac) { return ZX_ERR_INVALID_ARGS; }
+        // TODO(NET-1270): Evalute the use and implement
+        return ZX_OK;
+    }
+
     // WlantapMac impl
 
     virtual void Rx(const std::vector<uint8_t>& data, const wlantap::WlanRxInfo& rx_info) override {
@@ -171,6 +178,7 @@ zx_status_t CreateWlantapMac(zx_device_t* parent_phy,
         .configure_beacon = &WlantapMacImpl::WlanmacConfigureBeacon,
         .set_key = &WlantapMacImpl::WlanmacSetKey,
         .configure_assoc = &WlantapMacImpl::WlanmacConfigureAssoc,
+        .clear_assoc = &WlantapMacImpl::WlanmacClearAssoc,
     };
     device_add_args_t args = {.version = DEVICE_ADD_ARGS_VERSION,
                               .name = name,

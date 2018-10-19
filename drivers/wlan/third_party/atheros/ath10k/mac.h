@@ -160,5 +160,6 @@ static inline void ath10k_tx_h_seq_no(struct ieee80211_vif* vif,
 
 zx_status_t ath10k_mac_start_ap(struct ath10k_vif* arvif);
 zx_status_t ath10k_mac_ap_assoc_with_sta(struct ath10k* ar, wlan_assoc_ctx_t* assoc);
+zx_status_t ath10k_mac_ap_disassoc_sta(struct ath10k* ar, const uint8_t* peer_addr);
 
 #endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_MAC_H_
