@@ -67,6 +67,15 @@ void C1(const common::UInt128& tk, const common::UInt128& rand,
 void S1(const common::UInt128& tk, const common::UInt128& r1,
         const common::UInt128& r2, common::UInt128* out_stk);
 
+// Implements the "Random Address Hash Function ah" to resolve RPAs. Described
+// in Vol 3, Part H, 222.
+//
+//   |k|: 128-bit IRK value
+//   |r|: 24-bit random part of a RPA.
+//
+// Returns 24 bit hash value.
+uint32_t Ah(const common::UInt128& k, uint32_t r);
+
 }  // namespace util
 }  // namespace sm
 }  // namespace btlib

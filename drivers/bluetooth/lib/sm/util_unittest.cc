@@ -356,6 +356,16 @@ TEST(SMP_UtilTest, S1) {
   EXPECT_TRUE(ContainersEqual(kExpected, result));
 }
 
+// Test "ah" using the sample data from Vol 3, Part H, Appendix D.7.
+TEST(SMP_UtilTest, Ah) {
+  const UInt128 irk{{0x9B, 0x7D, 0x39, 0x0A, 0xA6, 0x10, 0x10, 0x34, 0x05, 0xad,
+                     0xC8, 0x57, 0xA3, 0x34, 0x02, 0xEC}};
+  const uint32_t prand = 0x708194;
+  const uint32_t kExpected = 0x0DFBAA;
+
+  EXPECT_EQ(kExpected, Ah(irk, prand));
+}
+
 }  // namespace
 }  // namespace util
 }  // namespace sm

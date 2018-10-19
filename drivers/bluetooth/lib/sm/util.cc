@@ -21,6 +21,7 @@ namespace util {
 namespace {
 
 constexpr size_t kPreqSize = 7;
+constexpr uint32_t k24BitMax = 0xFFFFFF;
 
 // Swap the endianness of a 128-bit integer. |in| and |out| should not be backed
 // by the same buffer.
@@ -227,6 +228,20 @@ void S1(const UInt128& tk, const UInt128& r1, const UInt128& r2,
 
   // Calculate the STK: e(tk, r’)
   Encrypt(tk, r_prime, out_stk);
+}
+
+uint32_t Ah(const UInt128& k, uint32_t r) {
+  ZX_DEBUG_ASSERT(r <= k24BitMax);
+
+  // r' = padding || r.
+  UInt128 r_prime;
+  r_prime.fill(0);
+  *reinterpret_cast<uint32_t*>(r_prime.data()) = htole32(r & k24BitMax);
+
+  UInt128 hash128;
+  Encrypt(k, r_prime, &hash128);
+
+  return le32toh(*reinterpret_cast<uint32_t*>(hash128.data())) & k24BitMax;
 }
 
 }  // namespace util
