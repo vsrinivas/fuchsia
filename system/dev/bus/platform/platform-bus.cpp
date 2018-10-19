@@ -27,14 +27,22 @@
 
 namespace platform_bus {
 
-zx_status_t PlatformBus::Proxy(platform_proxy_args_t* args) {
+zx_status_t PlatformBus::Proxy(
+    const void* req_buffer, size_t req_size, const zx_handle_t* req_handle_list,
+    size_t req_handle_count, void* out_resp_buffer, size_t resp_size, size_t* out_resp_actual,
+    zx_handle_t* out_resp_handle_list, size_t resp_handle_count,
+    size_t* out_resp_handle_actual) {
+
+    auto* req = static_cast<const platform_proxy_req*>(req_buffer);
     fbl::AutoLock lock(&proto_proxys_mutex_);
-    auto proto_proxy = proto_proxys_.find(args->req->proto_id);
+    auto proto_proxy = proto_proxys_.find(req->proto_id);
     if (!proto_proxy.IsValid()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    proto_proxy->Proxy(args);
+    proto_proxy->Proxy(req_buffer, req_size, req_handle_list, req_handle_count,
+                       out_resp_buffer, resp_size, out_resp_actual, out_resp_handle_list,
+                       resp_handle_count, out_resp_handle_actual);
     return ZX_OK;
 }
 

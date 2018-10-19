@@ -37,17 +37,11 @@ static zx_status_t aml_canvas_proxy_config(void* ctx, zx_handle_t vmo,
 
     memcpy((void*)&req.info, info, sizeof(canvas_info_t));
 
-    platform_proxy_args_t args = {
-        .req = &req.header,
-        .req_size = sizeof(req),
-        .resp = &resp.header,
-        .resp_size = sizeof(resp),
-        .req_handles = &vmo,
-        .req_handle_count = 1,
-    };
-
-    zx_status_t status = platform_proxy_proxy(&proxy->proxy, &args);
-    if (status == ZX_OK) {
+    size_t size_actual, handle_count_actual;
+    zx_status_t status = platform_proxy_proxy(&proxy->proxy, &req, sizeof(req), &vmo, 1, &resp,
+                                              sizeof(resp), &size_actual, NULL, 0,
+                                              &handle_count_actual);
+    if (status == ZX_OK && size_actual == sizeof(resp)) {
         *canvas_idx = resp.idx;
     }
     return status;
@@ -64,14 +58,9 @@ static zx_status_t aml_canvas_proxy_free(void* ctx, uint8_t canvas_idx) {
     };
     rpc_canvas_rsp_t resp;
 
-    platform_proxy_args_t args = {
-        .req = &req.header,
-        .req_size = sizeof(req),
-        .resp = &resp.header,
-        .resp_size = sizeof(resp),
-    };
-
-    return platform_proxy_proxy(&proxy->proxy, &args);
+    size_t size_actual, handle_count_actual;
+    return platform_proxy_proxy(&proxy->proxy, &req, sizeof(req), NULL, 0, &resp, sizeof(resp),
+                                &size_actual, NULL, 0, &handle_count_actual);
 }
 
 static canvas_protocol_ops_t canvas_proxy_ops = {
@@ -119,7 +108,7 @@ static zx_status_t aml_canvas_proxy_bind(void* ctx, zx_device_t* parent) {
     }
 
     status = platform_proxy_register_protocol(&proxy, ZX_PROTOCOL_AMLOGIC_CANVAS,
-                                              &canvas->canvas);
+                                              &canvas->canvas, sizeof(canvas->canvas));
     if (status != ZX_OK) {
         device_remove(canvas->zxdev);
         return status;

@@ -31,8 +31,13 @@ public:
     void DdkRelease();
 
     // Platform proxy protocol implementation.
-     zx_status_t RegisterProtocol(uint32_t proto_id, const void* protocol);
-     zx_status_t Proxy(platform_proxy_args_t* args);
+     zx_status_t PlatformProxyRegisterProtocol(uint32_t proto_id, const void* protocol,
+                                               size_t protocol_size);
+     zx_status_t PlatformProxyProxy(
+         const void* req_buffer, size_t req_size, const zx_handle_t* req_handle_list,
+         size_t req_handle_count, void* out_resp_buffer, size_t resp_size, size_t* out_resp_actual,
+         zx_handle_t* out_resp_handle_list, size_t resp_handle_count,
+         size_t* out_resp_handle_actual);
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(ProxyClient);

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
+//          MODIFY system/fidl/protocols/platform_proxy.banjo INSTEAD.
+
 #pragma once
 
 #include <zircon/compiler.h>
@@ -9,68 +12,64 @@
 
 __BEGIN_CDECLS;
 
-// Maximum transfer size we can proxy.
-#define PLATFORM_PROXY_MAX_DATA 4096
+// Forward declarations
+
+typedef struct platform_proxy_rsp platform_proxy_rsp_t;
+typedef struct platform_proxy_req platform_proxy_req_t;
+typedef struct platform_proxy_protocol platform_proxy_protocol_t;
+
+// Declarations
+
+#define PLATFORM_PROXY_MAX_DATA UINT32_C(4096)
+
+// Header for RPC responses.
+struct platform_proxy_rsp {
+    uint32_t txid;
+    zx_status_t status;
+};
 
 // Header for RPC requests.
-typedef struct {
-    zx_txid_t txid;
+struct platform_proxy_req {
+    uint32_t txid;
     uint32_t device_id;
     uint32_t proto_id;
     uint32_t op;
-} platform_proxy_req_t;
+};
 
-// Header for RPC responses.
-typedef struct {
-    zx_txid_t txid;
-    zx_status_t status;
-} platform_proxy_rsp_t;
-
-typedef struct {
-    // Pointer to request buffer.
-    platform_proxy_req_t* req;
-    // Size of req.
-    uint32_t req_size;
-    // Pointer to response buffer.
-    platform_proxy_rsp_t* resp;
-    // Size of resp.
-    uint32_t resp_size;
-    // Handles passed with request (callee takes ownership).
-    zx_handle_t* req_handles;
-    // Number of handles passed with request.
-    uint32_t req_handle_count;
-    // Buffer for receiving handles with response.
-    zx_handle_t* resp_handles;
-    // Number of resp_handles we expect to receive.
-    uint32_t resp_handle_count;
-    // Number of bytes received in resp_buf.
-    size_t resp_actual_size;
-    // Number of handles received in resp_handles
-     size_t resp_actual_handles;
-} platform_proxy_args_t;
-
-typedef struct {
-    zx_status_t (*register_protocol)(void* ctx, uint32_t proto_id, const void* protocol);
-    zx_status_t (*proxy)(void* ctx, platform_proxy_args_t* args);
+typedef struct platform_proxy_protocol_ops {
+    zx_status_t (*register_protocol)(void* ctx, uint32_t proto_id, const void* protocol_buffer,
+                                     size_t protocol_size);
+    zx_status_t (*proxy)(void* ctx, const void* req_buffer, size_t req_size,
+                         const zx_handle_t* req_handle_list, size_t req_handle_count,
+                         void* out_resp_buffer, size_t resp_size, size_t* out_resp_actual,
+                         zx_handle_t* out_resp_handle_list, size_t resp_handle_count,
+                         size_t* out_resp_handle_actual);
 } platform_proxy_protocol_ops_t;
 
-typedef struct {
+struct platform_proxy_protocol {
     platform_proxy_protocol_ops_t* ops;
     void* ctx;
-} platform_proxy_protocol_t;
+};
 
 // Used by protocol client drivers to register their local protocol implementation
 // with the platform proxy driver.
-static inline zx_status_t platform_proxy_register_protocol(platform_proxy_protocol_t* proxy,
+static inline zx_status_t platform_proxy_register_protocol(const platform_proxy_protocol_t* proto,
                                                            uint32_t proto_id,
-                                                           const void* protocol) {
-    return proxy->ops->register_protocol(proxy->ctx, proto_id, protocol);
+                                                           const void* protocol_buffer,
+                                                           size_t protocol_size) {
+    return proto->ops->register_protocol(proto->ctx, proto_id, protocol_buffer, protocol_size);
+}
+// Used by protocol client drivers to proxy a protocol call to the protocol implementation
+// driver in the platform bus driver's devhost.
+static inline zx_status_t
+platform_proxy_proxy(const platform_proxy_protocol_t* proto, const void* req_buffer,
+                     size_t req_size, const zx_handle_t* req_handle_list, size_t req_handle_count,
+                     void* out_resp_buffer, size_t resp_size, size_t* out_resp_actual,
+                     zx_handle_t* out_resp_handle_list, size_t resp_handle_count,
+                     size_t* out_resp_handle_actual) {
+    return proto->ops->proxy(proto->ctx, req_buffer, req_size, req_handle_list, req_handle_count,
+                             out_resp_buffer, resp_size, out_resp_actual, out_resp_handle_list,
+                             resp_handle_count, out_resp_handle_actual);
 }
 
-// Used by protocol client drivers to proxy a protocol call to the protocol implementation driver
-// in the platform bus driver's devhost.
-static inline zx_status_t platform_proxy_proxy(platform_proxy_protocol_t* proxy,
-                                               platform_proxy_args_t* args) {
-    return proxy->ops->proxy(proxy->ctx, args);
-}
 __END_CDECLS;

@@ -39,7 +39,11 @@ class PlatformBus : public PlatformBusType, public ddk::PBusProtocol<PlatformBus
 public:
     static zx_status_t Create(zx_device_t* parent, const char* name, zx::vmo zbi);
 
-    zx_status_t Proxy(platform_proxy_args_t* args);
+    zx_status_t Proxy(
+         const void* req_buffer, size_t req_size, const zx_handle_t* req_handle_list,
+         size_t req_handle_count, void* out_resp_buffer, size_t resp_size, size_t* out_resp_actual,
+         zx_handle_t* out_resp_handle_list, size_t resp_handle_count,
+         size_t* out_resp_handle_actual);
 
     // Device protocol implementation.
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
@@ -88,12 +92,16 @@ private:
         inline uint32_t GetKey() const { return proto_id_; }
         inline void GetProtocol(void* out) const { memcpy(out, &protocol_, sizeof(protocol_)); }
 
-        inline void Proxy(platform_proxy_args_t* args) {
-            proxy_cb_.callback(proxy_cb_.ctx, args->req, args->req_size,
-                               args->req_handles, args->req_handle_count,
-                               args->resp, args->resp_size, &args->resp_actual_size,
-                               args->resp_handles, args->resp_handle_count,
-                               &args->resp_actual_handles);
+        inline void Proxy(const void* req_buffer, size_t req_size,
+                          const zx_handle_t* req_handle_list, size_t req_handle_count,
+                          void* out_resp_buffer, size_t resp_size, size_t* out_resp_actual,
+                          zx_handle_t* out_resp_handle_list, size_t resp_handle_count,
+                          size_t* out_resp_handle_actual) {
+            proxy_cb_.callback(proxy_cb_.ctx, req_buffer, req_size,
+                               req_handle_list, req_handle_count,
+                               out_resp_buffer, resp_size, out_resp_actual,
+                               out_resp_handle_list, resp_handle_count,
+                               out_resp_handle_actual);
         }
 
     private:

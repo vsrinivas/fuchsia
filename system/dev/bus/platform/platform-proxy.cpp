@@ -27,26 +27,26 @@ void PlatformProxy::DdkRelease() {
     }
 }
 
-zx_status_t PlatformProxy::Rpc(uint32_t device_id, platform_proxy_req_t* req, uint32_t req_length,
-                               platform_proxy_rsp_t* resp, uint32_t resp_length,
-                               zx_handle_t* in_handles, uint32_t in_handle_count,
-                               zx_handle_t* out_handles, uint32_t out_handle_count,
-                               size_t* out_actual) {
+zx_status_t PlatformProxy::Rpc(uint32_t device_id, const platform_proxy_req_t* req,
+                               size_t req_length, platform_proxy_rsp_t* resp,
+                               size_t resp_length, const zx_handle_t* in_handles,
+                               size_t in_handle_count, zx_handle_t* out_handles,
+                               size_t out_handle_count, size_t* out_actual) {
     uint32_t resp_size, handle_count;
 
     // We require the client to pass us the device_id and we set here as a precaution
     // against the code above forgetting to set it.
-    req->device_id = device_id;
+    const_cast<platform_proxy_req_t*>(req)->device_id = device_id;
 
     zx_channel_call_args_t args = {
         .wr_bytes = req,
         .wr_handles = in_handles,
         .rd_bytes = resp,
         .rd_handles = out_handles,
-        .wr_num_bytes = req_length,
-        .wr_num_handles = in_handle_count,
-        .rd_num_bytes = resp_length,
-        .rd_num_handles = out_handle_count,
+        .wr_num_bytes = static_cast<uint32_t>(req_length),
+        .wr_num_handles = static_cast<uint32_t>(in_handle_count),
+        .rd_num_bytes = static_cast<uint32_t>(resp_length),
+        .rd_num_handles = static_cast<uint32_t>(out_handle_count),
     };
     auto status = rpc_channel_.call(0, zx::time::infinite(), &args, &resp_size, &handle_count);
     if (status != ZX_OK) {
@@ -60,7 +60,7 @@ zx_status_t PlatformProxy::Rpc(uint32_t device_id, platform_proxy_req_t* req, ui
         status = ZX_ERR_INTERNAL;
         goto fail;
     } else if (status == ZX_OK && handle_count != out_handle_count) {
-        zxlogf(ERROR, "PlatformProxy::Rpc handle count %u expected %u\n", handle_count,
+        zxlogf(ERROR, "PlatformProxy::Rpc handle count %u expected %zu\n", handle_count,
                out_handle_count);
         status = ZX_ERR_INTERNAL;
         goto fail;
@@ -108,6 +108,7 @@ zx_status_t PlatformProxy::RegisterProtocol(uint32_t proto_id, const void* proto
         // All the protocols are registered, so we can now add the actual platform device.
         rpc_pdev_req_t req = {};
         rpc_pdev_rsp_t resp = {};
+        req.header.device_id = ROOT_DEVICE_ID;
         req.header.proto_id = ZX_PROTOCOL_PLATFORM_DEV;
         req.header.op = PDEV_GET_DEVICE_INFO;
 
@@ -146,17 +147,24 @@ void PlatformProxy::UnregisterProtocol(uint32_t proto_id) {
     protocols_.erase(proto_id);
 }
 
-zx_status_t PlatformProxy::Proxy(platform_proxy_args_t* args) {
-    if (args->req->device_id != ROOT_DEVICE_ID) {
+zx_status_t PlatformProxy::Proxy(
+    const void* req_buffer, size_t req_size, const zx_handle_t* req_handle_list,
+    size_t req_handle_count, void* out_resp_buffer, size_t resp_size, size_t* out_resp_actual,
+    zx_handle_t* out_resp_handle_list, size_t resp_handle_count,
+    size_t* out_resp_handle_actual) {
+
+    auto* req = static_cast<const platform_proxy_req*>(req_buffer);
+    auto* resp = static_cast<platform_proxy_rsp*>(out_resp_buffer);
+    if (req->device_id != ROOT_DEVICE_ID) {
         return ZX_ERR_INVALID_ARGS;
     }
-    if (args->req_size > PLATFORM_PROXY_MAX_DATA) {
+    if (req_size > PLATFORM_PROXY_MAX_DATA) {
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    return Rpc(ROOT_DEVICE_ID, args->req, args->req_size, args->resp, args->resp_size,
-               args->req_handles, args->req_handle_count, args->resp_handles,
-               args->resp_handle_count, &args->resp_actual_size);
+    return Rpc(ROOT_DEVICE_ID, req, req_size, resp, resp_size,
+               req_handle_list, req_handle_count, out_resp_handle_list,
+               resp_handle_count, out_resp_actual);
 }
 
 zx_status_t PlatformProxy::Create(zx_device_t* parent, zx_handle_t rpc_channel) {
@@ -177,6 +185,7 @@ zx_status_t PlatformProxy::Init(zx_device_t* parent) {
         rpc_pdev_rsp_t pdev;
         uint32_t protocols[PROXY_MAX_PROTOCOLS];
     } resp = {};
+    req.header.device_id = ROOT_DEVICE_ID;
     req.header.proto_id = ZX_PROTOCOL_PLATFORM_DEV;
     req.header.op = PDEV_GET_PROTOCOLS;
 

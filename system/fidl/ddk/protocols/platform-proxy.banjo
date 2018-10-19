@@ -1,0 +1,36 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.platform_proxy;
+
+using zx;
+
+const uint32 PLATFORM_PROXY_MAX_DATA = 4096;
+
+/// Header for RPC requests.
+struct PlatformProxyReq {
+    uint32 txid;
+    uint32 device_id;
+    uint32 proto_id;
+    uint32 op;
+};
+
+/// Header for RPC responses.
+struct PlatformProxyRsp {
+    uint32 txid;
+    zx.status status;
+};
+
+[Layout="ddk-protocol", DefaultProtocol]
+interface PlatformProxy {
+    /// Used by protocol client drivers to register their local protocol implementation
+    /// with the platform proxy driver.
+    1: RegisterProtocol(uint32 proto_id, vector<void> protocol) -> (zx.status s);
+    /// Used by protocol client drivers to proxy a protocol call to the protocol implementation
+    /// driver in the platform bus driver's devhost.
+    2: Proxy(vector<void> req, vector<handle> req_handle) -> (zx.status s, vector<void> resp,
+                                                              vector<handle> resp_handle);
+};
+
+

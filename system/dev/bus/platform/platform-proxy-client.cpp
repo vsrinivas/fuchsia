@@ -51,7 +51,8 @@ void ProxyClient::DdkRelease() {
     delete this;
 }
 
-zx_status_t ProxyClient::RegisterProtocol(uint32_t proto_id, const void* protocol) {
+zx_status_t ProxyClient::PlatformProxyRegisterProtocol(uint32_t proto_id, const void* protocol,
+                                                       size_t protocol_size) {
     if (proto_id != proto_id_) {
         // We may allow drivers to implement multiple protocols in the future,
         // but for now require that the driver only proxy the one protocol we loaded it for.
@@ -61,13 +62,21 @@ zx_status_t ProxyClient::RegisterProtocol(uint32_t proto_id, const void* protoco
 
 }
 
-zx_status_t ProxyClient::Proxy(platform_proxy_args_t* args) {
-    if (args->req->proto_id != proto_id_) {
+zx_status_t ProxyClient::PlatformProxyProxy(
+    const void* req_buffer, size_t req_size, const zx_handle_t* req_handle_list,
+    size_t req_handle_count, void* out_resp_buffer, size_t resp_size, size_t* out_resp_actual,
+    zx_handle_t* out_resp_handle_list, size_t resp_handle_count, size_t* out_resp_handle_actual) {
+
+    auto* req = static_cast<const platform_proxy_req*>(req_buffer);
+    if (req->proto_id != proto_id_) {
         // We may allow drivers to implement multiple protocols in the future,
         // but for now require that the driver only proxy the one protocol we loaded it for.
         return ZX_ERR_ACCESS_DENIED;
     }
-    return proxy_->Proxy(args);
+    proxy_->Proxy(req_buffer, req_size, req_handle_list, req_handle_count, out_resp_buffer,
+                  resp_size, out_resp_actual, out_resp_handle_list, resp_handle_count,
+                  out_resp_handle_actual);
+    return ZX_OK;
 }
 
 } // namespace platform_bus

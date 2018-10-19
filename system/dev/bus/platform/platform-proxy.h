@@ -35,21 +35,24 @@ public:
     // Device protocol implementation.
     void DdkRelease();
 
-    zx_status_t Rpc(uint32_t device_id, platform_proxy_req_t* req, uint32_t req_length,
-                    platform_proxy_rsp_t* resp, uint32_t resp_length,
-                    zx_handle_t* in_handles, uint32_t in_handle_count,
-                    zx_handle_t* out_handles, uint32_t out_handle_count,
+    zx_status_t Rpc(uint32_t device_id, const platform_proxy_req_t* req, size_t req_length,
+                    platform_proxy_rsp_t* resp, size_t resp_length, const zx_handle_t* in_handles,
+                    size_t in_handle_count, zx_handle_t* out_handles, size_t out_handle_count,
                     size_t* out_actual);
 
-    inline zx_status_t Rpc(uint32_t device_id, platform_proxy_req_t* req, uint32_t req_length,
-                           platform_proxy_rsp_t* resp, uint32_t resp_length) {
+    inline zx_status_t Rpc(uint32_t device_id, const platform_proxy_req_t* req, size_t req_length,
+                           platform_proxy_rsp_t* resp, size_t resp_length) {
         return Rpc(device_id, req, req_length, resp, resp_length, nullptr, 0, nullptr, 0, nullptr);
     }
 
     zx_status_t GetProtocol(uint32_t proto_id, void* out);
     zx_status_t RegisterProtocol(uint32_t proto_id, const void* protocol);
     void UnregisterProtocol(uint32_t proto_id);
-    zx_status_t Proxy(platform_proxy_args_t* args);
+    zx_status_t Proxy(
+         const void* req_buffer, size_t req_size, const zx_handle_t* req_handle_list,
+         size_t req_handle_count, void* out_resp_buffer, size_t resp_size, size_t* out_resp_actual,
+         zx_handle_t* out_resp_handle_list, size_t resp_handle_count,
+         size_t* out_resp_handle_actual);
 
 private:
     // This class is a wrapper for a protocol added via platform_proxy_register_protocol().

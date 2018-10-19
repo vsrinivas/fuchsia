@@ -528,24 +528,13 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
         break;
     }
     default: {
-        platform_proxy_args_t args = {
-            .req = req_header,
-            .req_size = actual,
-            .resp = resp_header,
-            .resp_size = sizeof(resp_buf),
-            .req_handles = req_handles,
-            .req_handle_count = req_handle_count,
-            .resp_handles = resp_handles,
-            .resp_handle_count = fbl::count_of(resp_handles),
-            .resp_actual_size = 0,
-            .resp_actual_handles = 0,
-        };
-        status = bus_->Proxy(&args);
-        if (status == ZX_OK) {
-            status = args.resp->status;
-        }
-        resp_len = static_cast<uint32_t>(args.resp_actual_size);
-        resp_handle_count = static_cast<uint32_t>(args.resp_actual_handles);
+        size_t resp_actual = 0;
+        size_t resp_handle_actual = 0;
+        status = bus_->Proxy(req_header, actual, req_handles, req_handle_count, resp_header,
+                             sizeof(resp_buf), &resp_actual, resp_handles,
+                             fbl::count_of(resp_handles), &resp_handle_actual);
+        resp_len = static_cast<uint32_t>(resp_actual);
+        resp_handle_count = static_cast<uint32_t>(resp_handle_actual);
         break;
     }
     }
