@@ -22,10 +22,13 @@
 #define VIRTIO_BLK_T_IN         0
 #define VIRTIO_BLK_T_OUT        1
 #define VIRTIO_BLK_T_FLUSH      4
+#define VIRTIO_BLK_T_GET_ID     8
 
 #define VIRTIO_BLK_S_OK         0
 #define VIRTIO_BLK_S_IOERR      1
 #define VIRTIO_BLK_S_UNSUPP     2
+
+#define VIRTIO_BLK_ID_BYTES     20
 // clang-format on
 
 __BEGIN_CDECLS
