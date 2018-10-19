@@ -1,0 +1,7 @@
+_arguments \
+  '--dry-run[Stops the program short of running the formatters]' \
+  '--all[Formats all code in the git repo under the current working directory]' \
+  '--git[The default; it uses `git diff-index` against the newest parent commit in the upstream branch (or against HEAD if no such commit is found).  Files that are locally modified, staged or touched by any commits introduced on the local branch are formatted.]' \
+  '--files=-[Allows the user to specify files.  Files are comma separated. Globs are dealt with by bash; fx format-code "--files=foo/*" will work as expected.]:files:_sequence _files' \
+  '--target=-[Allows the user to specify a gn target]:gn_target:__fx_gn_target'
+

@@ -11,6 +11,19 @@ __fx_amber_package() {
   _values $(cd ${fuchsia_build_dir}/amber-files/repository/targets && echo *(/))
 }
 
+__fx_gn_target() {
+  # use a cache of "gn ls" that's updated when build.ninja changes.
+  local -r absolute_build_dir="${fuchsia_dir}/${fuchsia_build_dir}"
+  local -r targets_file="${absolute_build_dir}/.gn_ls"
+  local -r ninja_file="${absolute_build_dir}/build.ninja"
+  if [ ! -e "${targets_file}" -o ${ninja_file} -nt ${targets_file} ]; then
+    local -r tmp_targets_file="$(mktemp -p "${absolute_build_dir}")"
+    "${fuchsia_dir}/buildtools/gn" ls "${absolute_build_dir}" > "${tmp_targets_file}"
+    mv "${tmp_targets_file}" "${targets_file}"
+  fi
+  _values $(cat ${absolute_build_dir}/.gn_ls)
+}
+
 _fx() {
   typeset -A opt_args
 
