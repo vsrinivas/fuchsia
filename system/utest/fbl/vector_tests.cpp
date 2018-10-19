@@ -833,8 +833,8 @@ bool VectorGetConstness() {
     auto& ref_vector_int = vector_int;
     const auto& const_ref_vector_int = vector_int;
 
-    auto int_ptr = ref_vector_int.get();
-    auto const_int_ptr = const_ref_vector_int.get();
+    auto __UNUSED int_ptr = ref_vector_int.get();
+    auto __UNUSED const_int_ptr = const_ref_vector_int.get();
 
     static_assert(!fbl::is_const<fbl::remove_pointer<decltype(int_ptr)>::type>::value, "");
     static_assert(fbl::is_const<fbl::remove_pointer<decltype(const_int_ptr)>::type>::value, "");
@@ -874,6 +874,7 @@ RUN_FOR_ALL(VectorTestNoAllocCheck)
 RUN_TEST(VectorTestInitializerList<ValueTypeTraits>)
 RUN_TEST(VectorTestInitializerList<RefPtrTraits>)
 RUN_TEST(VectorTestImplicitConversion)
+RUN_TEST(VectorGetConstness)
 END_TEST_CASE(vector_tests)
 
 } // namespace tests
