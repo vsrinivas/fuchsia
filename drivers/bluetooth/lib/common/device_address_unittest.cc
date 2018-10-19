@@ -134,6 +134,20 @@ TEST(DeviceAddressTest, UnorderedMap) {
   EXPECT_EQ(3, map[address4]);
 }
 
+TEST(DeviceAddressTest, IsResolvable) {
+  DeviceAddress kClassic(DeviceAddress::Type::kBREDR, "41:11:22:33:44:55");
+  DeviceAddress kPublic(DeviceAddress::Type::kLEPublic, "42:11:22:33:44:55");
+  DeviceAddress kNonResolvable(DeviceAddress::Type::kLERandom,
+                               "00:11:22:33:44:55");
+  DeviceAddress kResolvable(DeviceAddress::Type::kLERandom,
+                            "43:11:22:33:44:55");
+
+  EXPECT_FALSE(kClassic.IsResolvable());
+  EXPECT_FALSE(kPublic.IsResolvable());
+  EXPECT_FALSE(kNonResolvable.IsResolvable());
+  EXPECT_TRUE(kResolvable.IsResolvable());
+}
+
 }  // namespace
 }  // namespace common
 }  // namespace btlib

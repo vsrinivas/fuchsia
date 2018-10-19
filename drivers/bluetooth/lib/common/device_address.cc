@@ -97,6 +97,14 @@ DeviceAddress::DeviceAddress(Type type, const std::string& bdaddr_string)
 DeviceAddress::DeviceAddress(Type type, const DeviceAddressBytes& value)
     : type_(type), value_(value) {}
 
+bool DeviceAddress::IsResolvable() const {
+  // "The most significant bits of [a RPA] shall be equal to 0 and 1" where as
+  // those of a non-resolvable address "shall be qual to 0" (Vol 6, Part B,
+  // 1.3.2.2).
+  uint8_t msb = value_.bytes()[5];
+  return type_ == Type::kLERandom && (msb & 0x40) && (~msb & 0x80);
+}
+
 std::size_t DeviceAddress::Hash() const {
   std::size_t const h1(std::hash<int>{}(static_cast<int>(type_)));
   std::size_t h2 = value_.Hash();

@@ -115,6 +115,9 @@ class DeviceAddress {
            (type_ == other.type_ && value_ < other.value_);
   }
 
+  // Returns true if this address is a Resolvable Private Address.
+  bool IsResolvable() const;
+
   // Returns a hash of the contents of this address.
   std::size_t Hash() const;
 
