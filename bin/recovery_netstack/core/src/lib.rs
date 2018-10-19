@@ -108,8 +108,10 @@ impl<D: EventDispatcher> Context<D> {
 }
 
 /// The identifier for any timer event.
+#[derive(Copy, Clone, PartialEq)]
 pub struct TimerId(TimerIdInner);
 
+#[derive(Copy, Clone, PartialEq)]
 enum TimerIdInner {
     /// A timer event in the device layer.
     DeviceLayer(DeviceLayerTimerId),

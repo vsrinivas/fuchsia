@@ -5,13 +5,14 @@
 //! Testing-related utilities.
 
 use std::collections::HashMap;
+use std::time::{Duration, Instant};
 
 use rand::{SeedableRng, XorShiftRng};
 
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
-use crate::{Context, EventDispatcher, TimerId};
+use crate::{handle_timeout, Context, EventDispatcher, TimerId};
 
 /// Create a new deterministic RNG from a seed.
 pub fn new_rng(mut seed: u64) -> impl SeedableRng<[u32; 4]> {
@@ -70,14 +71,59 @@ pub fn set_logger_for_test() {
     log::set_max_level(log::LevelFilter::Trace);
 }
 
-#[derive(Default)]
+/// Skip current (fake) time forward to trigger the next timer event.
+///
+/// Returns true if a timer was triggered, false if there were no timers waiting to be
+/// triggered.
+pub fn trigger_next_timer(ctx: &mut Context<DummyEventDispatcher>) -> bool {
+    let event = ctx.dispatcher.timer_events.iter().min_by_key(|e| e.0);
+    if let Some(event) = event {
+        let (t, id) = ctx.dispatcher.timer_events.remove(
+            ctx.dispatcher
+                .timer_events
+                .iter()
+                .position(|x| x == event)
+                .unwrap(),
+        );
+        ctx.dispatcher.current_time = t;
+        handle_timeout(ctx, id);
+        true
+    } else {
+        false
+    }
+}
+
 pub struct DummyEventDispatcher {
     frames_sent: Vec<(DeviceId, Vec<u8>)>,
+    // Currently, this list is unordered, and we scan through the entire list whenever we use it.
+    // TODO(wesleyac) Maybe use a btree?
+    timer_events: Vec<(Instant, TimerId)>,
+    current_time: Instant,
 }
 
 impl DummyEventDispatcher {
     pub fn frames_sent(&self) -> &[(DeviceId, Vec<u8>)] {
         &self.frames_sent
+    }
+
+    /// Get an unordered list of all scheduled timer events
+    pub fn timer_events(&self) -> &[(Instant, TimerId)] {
+        &self.timer_events
+    }
+
+    /// Get the current (fake) time
+    pub fn current_time(self) -> Instant {
+        self.current_time
+    }
+}
+
+impl Default for DummyEventDispatcher {
+    fn default() -> DummyEventDispatcher {
+        DummyEventDispatcher {
+            frames_sent: vec![],
+            timer_events: vec![],
+            current_time: Instant::now(),
+        }
     }
 }
 
@@ -95,15 +141,23 @@ impl DeviceLayerEventDispatcher for DummyEventDispatcher {
 }
 
 impl EventDispatcher for DummyEventDispatcher {
-    fn schedule_timeout(&mut self, _duration: std::time::Duration, _id: TimerId) -> Option<std::time::Instant> {
-        unimplemented!()
+    fn schedule_timeout(&mut self, duration: Duration, id: TimerId) -> Option<Instant> {
+        self.schedule_timeout_instant(self.current_time + duration, id)
     }
 
-    fn schedule_timeout_instant(&mut self, _time: std::time::Instant, _id: TimerId) -> Option<std::time::Instant> {
-        unimplemented!()
+    fn schedule_timeout_instant(&mut self, time: Instant, id: TimerId) -> Option<Instant> {
+        let ret = self.cancel_timeout(id);
+        self.timer_events.push((time, id));
+        ret
     }
 
-    fn cancel_timeout(&mut self, id: TimerId) -> Option<std::time::Instant> {
-        unimplemented!()
+    fn cancel_timeout(&mut self, id: TimerId) -> Option<Instant> {
+        // There is the invariant that there can only be one timer event per TimerId, so we only
+        // need to remove at most one element from timer_events.
+        Some(
+            self.timer_events
+                .remove(self.timer_events.iter().position(|x| x.1 == id)?)
+                .0,
+        )
     }
 }
