@@ -7,11 +7,11 @@
 #include "ralink.h"
 
 #include <ddk/protocol/usb.h>
-#include <usb/usb-request.h>
 #include <fbl/algorithm.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
+#include <usb/usb-request.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/cipher.h>
 #include <wlan/common/logging.h>
@@ -4281,7 +4281,7 @@ zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* 
     uint8_t wcid = kWcidUnknown;
     if (protected_frame) {
         if (wlan_pkt->packet_head.len >= kMacHdrAddr1Offset + ETH_MAC_SIZE) {
-            auto frame_data = static_cast<const uint8_t *>(wlan_pkt->packet_head.data);
+            auto frame_data = static_cast<const uint8_t*>(wlan_pkt->packet_head.data);
             auto addr1 = wlan::common::MacAddr(frame_data + kMacHdrAddr1Offset);
 
             auto wcid_lookup = GetWcid(addr1);
@@ -4523,7 +4523,7 @@ zx_status_t Device::WriteKey(const uint8_t key[], size_t key_len, uint16_t index
     case KeyMode::kTkip: {
         if (key_len != wlan::common::cipher::kTkipKeyLenBytes) {
             errorf("invalid TKIP key length %zu; expected %hhu\n", key_len,
-                    wlan::common::cipher::kTkipKeyLenBytes);
+                   wlan::common::cipher::kTkipKeyLenBytes);
             return ZX_ERR_INVALID_ARGS;
         }
 
@@ -4533,7 +4533,7 @@ zx_status_t Device::WriteKey(const uint8_t key[], size_t key_len, uint16_t index
     case KeyMode::kAes: {
         if (key_len != wlan::common::cipher::kCcmp128KeyLenBytes) {
             errorf("invalid CCMP-128 key length %zu; expected %hhu\n", key_len,
-                    wlan::common::cipher::kCcmp128KeyLenBytes);
+                   wlan::common::cipher::kCcmp128KeyLenBytes);
             return ZX_ERR_INVALID_ARGS;
         }
 
@@ -4613,7 +4613,8 @@ zx_status_t Device::ResetWcid(uint8_t wcid, uint8_t skey, uint8_t key_type) {
         WriteSharedKeyMode(skey, KeyMode::kNone);
         break;
     }
-    default: break;
+    default:
+        break;
     }
     return ZX_OK;
 }

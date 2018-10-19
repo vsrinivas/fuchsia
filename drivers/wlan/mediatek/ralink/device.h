@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_WLAN_MEDIATEK_RALINK_DEVICE_H_
+#define GARNET_DRIVERS_WLAN_MEDIATEK_RALINK_DEVICE_H_
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
-#include <wlan/common/macaddr.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/usb.h>
@@ -14,6 +14,7 @@
 #include <fbl/unique_ptr.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
+#include <wlan/common/macaddr.h>
 #include <wlan/protocol/mac.h>
 #include <wlan/protocol/phy-impl.h>
 #include <zircon/compiler.h>
@@ -348,7 +349,8 @@ class Device {
     bitmap::RawBitmapGeneric<bitmap::FixedStorage<kMaxValidWcid>> used_wcid_bitmap_;
     // Map from mac address to WCID.
     std::unordered_map<wlan::common::MacAddr, uint8_t, wlan::common::MacAddrHasher> addr_wcid_map_;
-
 };
 
 }  // namespace ralink
+
+#endif  // GARNET_DRIVERS_WLAN_MEDIATEK_RALINK_DEVICE_H_
