@@ -64,7 +64,6 @@ TEST_F(SandboxMetadataTest, Parse) {
     EXPECT_EQ(error, "");
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.system(), ::testing::ElementsAre("data"));
-    EXPECT_FALSE(sandbox.has_all_services());
   }
 
   // services
@@ -79,20 +78,6 @@ TEST_F(SandboxMetadataTest, Parse) {
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.services(),
                 ::testing::ElementsAre("fuchsia.sys.Launcher"));
-    EXPECT_FALSE(sandbox.has_all_services());
-  }
-
-  // deprecated-all-services
-  {
-    SandboxMetadata sandbox;
-    std::string error;
-    EXPECT_TRUE(ParseFrom(
-        &sandbox, R"JSON({ "features": [ "deprecated-all-services" ] })JSON",
-        &error));
-    EXPECT_EQ(error, "");
-    EXPECT_FALSE(sandbox.IsNull());
-    EXPECT_THAT(sandbox.services(), ::testing::ElementsAre());
-    EXPECT_TRUE(sandbox.has_all_services());
   }
 
   // pkgfs
@@ -139,9 +124,9 @@ TEST_F(SandboxMetadataTest, Parse) {
 }
 
 #define SERVICES_INFO                                        \
-  "\nRefer to "                                              \
+  "\nSee "                                                   \
   "https://fuchsia.googlesource.com/docs/+/master/the-book/" \
-  "package_metadata.md#sandbox for more information."
+  "package_metadata.md#sandbox"
 
 TEST_F(SandboxMetadataTest, ParseWithErrors) {
   ExpectFailedParse(
@@ -151,11 +136,10 @@ TEST_F(SandboxMetadataTest, ParseWithErrors) {
       "Entry for 'dev' in sandbox is not a string.");
   ExpectFailedParse(
       R"JSON({
-        "features": [ "vulkan", "deprecated-all-services" ],
-        "services": [ "fuchsia.sys.Launcher" ]
+        "features": [ "vulkan", "deprecated-all-services" ]
       })JSON",
-      "Sandbox may not include both 'services' and "
-      "'deprecated-all-services'." SERVICES_INFO);
+      "'deprecated-all-services' is no longer supported. Please provide a "
+      "'services' sandbox instead." SERVICES_INFO);
 }
 
 }  // namespace

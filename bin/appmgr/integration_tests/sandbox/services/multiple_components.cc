@@ -18,7 +18,7 @@
 // their service sandboxes are isolated.
 TEST_F(NamespaceTest, MultipleComponents) {
   static const std::vector<const char*> kTests = {"some_services",
-                                                  "all_services"};
+                                                  "no_services"};
 
   int num_running = kTests.size();
   std::vector<fuchsia::sys::ComponentControllerPtr> controllers;

@@ -117,6 +117,7 @@ TEST_F(CmxMetadataTest, ParseEmpty) {
   std::string file_unused;
   EXPECT_TRUE(ParseFrom(&cmx, &json_parser, json, &file_unused))
       << json_parser.error_str();
+  // Missing "sandbox" defaults to empty.
   EXPECT_FALSE(cmx.sandbox_meta().IsNull());
   EXPECT_TRUE(cmx.runtime_meta().IsNull());
   EXPECT_TRUE(cmx.program_meta().IsBinaryNull());

@@ -733,10 +733,7 @@ void Realm::CreateComponentFromPackage(
   const std::vector<std::string>* service_whitelist = nullptr;
   if (!cmx.sandbox_meta().IsNull()) {
     const auto& sandbox = cmx.sandbox_meta();
-
-    if (!sandbox.has_all_services()) {
-      service_whitelist = &sandbox.services();
-    }
+    service_whitelist = &sandbox.services();
 
     // If an app has the "shell" feature, then we use the libraries from the
     // system rather than from the package because programs spawned from the

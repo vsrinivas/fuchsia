@@ -7,7 +7,6 @@
         "//garnet/bin/appmgr/integration_tests/sandbox/features/shell:no_shell",
         "//garnet/bin/appmgr/integration_tests/sandbox/features/system-temp:has_system_temp",
         "//garnet/bin/appmgr/integration_tests/sandbox/features/system-temp:no_system_temp",
-        "//garnet/bin/appmgr/integration_tests/sandbox/services:all_services",
         "//garnet/bin/appmgr/integration_tests/sandbox/services:multiple_components",
         "//garnet/bin/appmgr/integration_tests/sandbox/services:no_services",
         "//garnet/bin/appmgr/integration_tests/sandbox/services:some_services"

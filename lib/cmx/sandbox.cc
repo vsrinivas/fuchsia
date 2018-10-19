@@ -15,7 +15,6 @@ namespace component {
 namespace {
 
 constexpr char kDeprecatedAllServices[] = "deprecated-all-services";
-
 constexpr char kCmxDocUrl[] =
     "https://fuchsia.googlesource.com/docs/+/master/the-book/"
     "package_metadata.md#sandbox";
@@ -58,7 +57,6 @@ bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
     entry.second->clear();
   }
   null_ = true;
-  has_all_services_ = false;
 
   if (!sandbox_value.IsObject()) {
     json_parser->ReportError("Sandbox is not an object.");
@@ -74,17 +72,10 @@ bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
     }
   }
 
-  // null |services| is distinguished from empty |services|.
-  // TODO(CP-25): Make null services equivalent to empty services once all
-  // component manifests are migrated.
-  auto services_member = sandbox_value.FindMember(kServices);
-  has_all_services_ = HasFeature(kDeprecatedAllServices);
-  const bool has_services_member =
-      (services_member != sandbox_value.MemberEnd());
-  if (has_all_services_ && has_services_member) {
+  if (HasFeature(kDeprecatedAllServices)) {
     json_parser->ReportError(fxl::Substitute(
-        "Sandbox may not include both 'services' and "
-        "'deprecated-all-services'.\nRefer to $0 for more information.",
+        "'deprecated-all-services' is no longer supported. Please provide a "
+        "'services' sandbox instead.\nSee $0",
         kCmxDocUrl));
   }
 
