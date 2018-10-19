@@ -29,4 +29,4 @@ int ath10k_wait_for_peer_deleted(struct ath10k* ar, uint32_t vdev_id, const uint
 void ath10k_peer_map_event(struct ath10k_htt* htt, struct htt_peer_map_event* ev);
 void ath10k_peer_unmap_event(struct ath10k_htt* htt, struct htt_peer_unmap_event* ev);
 
-#endif
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_TXRX_H_

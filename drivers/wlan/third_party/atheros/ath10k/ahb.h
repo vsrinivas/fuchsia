@@ -88,4 +88,4 @@ static inline void ath10k_ahb_exit(void) {
 
 #endif  // NEEDS PORTING
 
-#endif /* _AHB_H_ */
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_AHB_H_

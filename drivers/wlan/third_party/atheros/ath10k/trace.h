@@ -15,6 +15,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_TRACE_H_
+#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_TRACE_H_
+
 #if !defined(_TRACE_H_) || defined(TRACE_HEADER_MULTI_READ)
 
 #include <linux/tracepoint.h>
@@ -548,3 +551,5 @@ TRACE_EVENT(ath10k_wmi_diag,
 
 /* This part must be outside protection */
 #include <trace/define_trace.h>
+
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_TRACE_H_

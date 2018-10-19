@@ -280,4 +280,4 @@ static inline uint32_t ath10k_ce_base_address(struct ath10k* ar, unsigned int ce
     CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_GET( \
         ath10k_pci_read32((ar), CE_WRAPPER_BASE_ADDRESS + CE_WRAPPER_INTERRUPT_SUMMARY_ADDRESS))
 
-#endif /* _CE_H_ */
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_CE_H_

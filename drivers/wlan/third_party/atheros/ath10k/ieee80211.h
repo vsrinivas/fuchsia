@@ -249,4 +249,4 @@ static inline const char* ieee80211_cipher_str(uint8_t* oui, uint8_t cipher_type
 }
 // clang-format on
 
-#endif /* _IEEE80211_H_ */
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_IEEE80211_H_

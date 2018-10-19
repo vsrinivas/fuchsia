@@ -1038,4 +1038,4 @@ void ath10k_core_stop(struct ath10k* ar);
 zx_status_t ath10k_core_register(struct ath10k* ar, uint32_t chip_id);
 void ath10k_core_unregister(struct ath10k* ar);
 
-#endif /* _CORE_H_ */
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_CORE_H_

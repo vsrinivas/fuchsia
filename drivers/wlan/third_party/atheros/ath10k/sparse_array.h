@@ -51,4 +51,4 @@ void sa_remove(sparse_array_t sa, ssize_t ndx);
 // Call a function on each element in a sparse array.
 void sa_for_each(sparse_array_t sa, void (*fn)(ssize_t ndx, void* ptr, void* ctx), void* ctx);
 
-#endif
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_SPARSE_ARRAY_H_

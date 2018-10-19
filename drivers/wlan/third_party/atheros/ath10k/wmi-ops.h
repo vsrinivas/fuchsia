@@ -1103,4 +1103,4 @@ static inline zx_status_t ath10k_wmi_echo(struct ath10k* ar, uint32_t value) {
     return ath10k_wmi_cmd_send(ar, buf, wmi->cmd->echo_cmdid);
 }
 
-#endif
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_WMI_OPS_H_

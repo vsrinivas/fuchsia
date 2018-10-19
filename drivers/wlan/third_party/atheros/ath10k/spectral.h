@@ -14,8 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef SPECTRAL_H
-#define SPECTRAL_H
+#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_SPECTRAL_H_
+#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_SPECTRAL_H_
 
 #include "../spectral_common.h"
 
@@ -77,4 +77,4 @@ static inline void ath10k_spectral_destroy(struct ath10k* ar) {}
 
 #endif /* CONFIG_ATH10K_DEBUGFS */
 
-#endif /* SPECTRAL_H */
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_SPECTRAL_H_

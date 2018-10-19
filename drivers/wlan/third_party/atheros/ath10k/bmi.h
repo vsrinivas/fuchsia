@@ -237,4 +237,5 @@ zx_status_t ath10k_bmi_fast_download(struct ath10k* ar, uint32_t address, const 
                                      uint32_t length);
 zx_status_t ath10k_bmi_read_soc_reg(struct ath10k* ar, uint32_t address, uint32_t* reg_val);
 zx_status_t ath10k_bmi_write_soc_reg(struct ath10k* ar, uint32_t address, uint32_t reg_val);
-#endif /* _BMI_H_ */
+
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_BMI_H_

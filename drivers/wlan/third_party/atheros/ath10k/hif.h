@@ -194,4 +194,4 @@ static inline zx_status_t ath10k_hif_fetch_cal_eeprom(struct ath10k* ar, void** 
     return ar->hif.ops->fetch_cal_eeprom(ar, data, data_len);
 }
 
-#endif /* _HIF_H_ */
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_HIF_H_

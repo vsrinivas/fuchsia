@@ -1224,4 +1224,4 @@ struct fw_rx_desc_base {
 } __PACKED;
 // clang-format on
 
-#endif /* _RX_DESC_H_ */
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_RX_DESC_H_

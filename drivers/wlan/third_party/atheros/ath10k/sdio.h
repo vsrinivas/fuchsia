@@ -227,4 +227,4 @@ static inline struct ath10k_sdio* ath10k_sdio_priv(struct ath10k* ar) {
     return (struct ath10k_sdio*)ar->drv_priv;
 }
 
-#endif
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_SDIO_H_

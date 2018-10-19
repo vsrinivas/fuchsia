@@ -1082,4 +1082,5 @@ ath10k_rx_desc_get_l3_pad_bytes(struct ath10k_hw_params* hw,
 /* qca6174 PLL offset/mask end */
 
 // clang-format on
-#endif /* _HW_H_ */
+
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_HW_H_

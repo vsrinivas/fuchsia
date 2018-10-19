@@ -412,4 +412,4 @@ zx_status_t ath10k_htc_process_trailer(struct ath10k_htc* htc, uint8_t* buffer, 
                                        enum ath10k_htc_ep_id src_eid, void* next_lookaheads,
                                        int* next_lookaheads_len);
 
-#endif
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_HTC_H_

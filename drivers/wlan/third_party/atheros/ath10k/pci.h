@@ -324,4 +324,4 @@ extern wlanmac_protocol_ops_t wlanmac_ops;
  */
 #define ATH10K_PCI_SLEEP_GRACE_PERIOD_MSEC 60
 
-#endif /* _PCI_H_ */
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_PCI_H_

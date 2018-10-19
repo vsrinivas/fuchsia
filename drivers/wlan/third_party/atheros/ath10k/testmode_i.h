@@ -14,6 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_TESTMODE_I_H_
+#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_TESTMODE_I_H_
+
 /* "API" level of the ath10k testmode interface. Bump it after every
  * incompatible interface change.
  */
@@ -71,3 +74,5 @@ enum ath10k_tm_cmd {
      */
     ATH10K_TM_CMD_WMI = 3,
 };
+
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_TESTMODE_I_H_

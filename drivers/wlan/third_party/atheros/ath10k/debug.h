@@ -200,4 +200,5 @@ static inline int ath10k_dbg(struct ath10k* ar, enum ath10k_debug_mask dbg_mask,
 static inline void ath10k_dbg_dump(struct ath10k* ar, enum ath10k_debug_mask mask, const char* msg,
                                    const char* prefix, const void* buf, size_t len) {}
 #endif /* CONFIG_ATH10K_DEBUG */
-#endif /* _DEBUG_H_ */
+
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_DEBUG_H_

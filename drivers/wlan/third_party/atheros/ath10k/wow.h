@@ -39,5 +39,5 @@ static inline int ath10k_wow_init(struct ath10k* ar) {
     return 0;
 }
 
-#endif /* CONFIG_PM */
-#endif /* _WOW_H_ */
+#endif  /* CONFIG_PM */
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_WOW_H_

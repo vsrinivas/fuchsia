@@ -13,8 +13,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef _THERMAL_
-#define _THERMAL_
+
+#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_THERMAL_H_
+#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_THERMAL_H_
 
 // clang-format off
 #define ATH10K_QUIET_PERIOD_DEFAULT     100
@@ -55,4 +56,5 @@ static inline void ath10k_thermal_event_temperature(struct ath10k* ar, int tempe
 static inline void ath10k_thermal_set_throttling(struct ath10k* ar) {}
 
 #endif
-#endif /* _THERMAL_ */
+
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_THERMAL_H_
