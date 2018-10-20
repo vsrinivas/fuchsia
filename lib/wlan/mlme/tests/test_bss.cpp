@@ -5,6 +5,7 @@
 #include "test_bss.h"
 #include "mock_device.h"
 
+#include <wlan/common/buffer_writer.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/write_element.h>
 #include <wlan/mlme/ap/bss_interface.h>
@@ -111,8 +112,6 @@ zx_status_t CreateStartRequest(MlmeMsg<wlan_mlme::StartRequest>* out_msg, bool p
 }
 
 zx_status_t CreateJoinRequest(MlmeMsg<wlan_mlme::JoinRequest>* out_msg) {
-    common::MacAddr bssid(kBssid1);
-
     auto req = wlan_mlme::JoinRequest::New();
     req->join_failure_timeout = kJoinTimeout;
     req->nav_sync_delay = 20;
@@ -202,40 +201,41 @@ zx_status_t CreateBeaconFrame(fbl::unique_ptr<Packet>* out_packet) {
 }
 
 zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>* out_packet, common::MacAddr bssid) {
-    size_t body_payload_len = 256;
-    MgmtFrame<Beacon> frame;
-    auto status = CreateMgmtFrame(&frame, body_payload_len);
-    if (status != ZX_OK) { return status; }
+    constexpr size_t ie_len = 256;
+    constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Beacon::max_len() + ie_len;
+    auto packet = GetWlanPacket(max_frame_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto hdr = frame.hdr();
-    hdr->addr1 = common::kBcastMac;
-    hdr->addr2 = bssid;
-    hdr->addr3 = bssid;
+    BufferWriter w(*packet);
+    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
+    mgmt_hdr->fc.set_type(FrameType::kManagement);
+    mgmt_hdr->fc.set_subtype(ManagementSubtype::kBeacon);
+    mgmt_hdr->addr1 = common::kBcastMac;
+    mgmt_hdr->addr2 = bssid;
+    mgmt_hdr->addr3 = bssid;
 
-    auto bcn = frame.body();
+    auto bcn = w.Write<Beacon>();
     bcn->beacon_interval = kBeaconPeriodTu;
     bcn->timestamp = 0;
     bcn->cap.set_ess(1);
     bcn->cap.set_short_preamble(1);
 
-    BufferWriter w({bcn->elements, body_payload_len});
-    common::WriteSsid(&w, kSsid);
+    BufferWriter elem_w({bcn->elements, w.RemainingBytes()});
+    common::WriteSsid(&elem_w, kSsid);
 
-    RatesWriter rates_writer { kSupportedRates };
-    rates_writer.WriteSupportedRates(&w);
-    common::WriteDsssParamSet(&w, kBssChannel.primary);
-    WriteCountry(&w, kBssChannel);
-    rates_writer.WriteExtendedSupportedRates(&w);
+    RatesWriter rates_writer{kSupportedRates};
+    rates_writer.WriteSupportedRates(&elem_w);
+    common::WriteDsssParamSet(&elem_w, kBssChannel.primary);
+    WriteCountry(&elem_w, kBssChannel);
+    rates_writer.WriteExtendedSupportedRates(&elem_w);
 
-    ZX_DEBUG_ASSERT(bcn->Validate(w.WrittenBytes()));
-    size_t body_len = bcn->len() + w.WrittenBytes();
-    if (frame.set_body_len(body_len) != ZX_OK) { return ZX_ERR_IO; }
+    ZX_DEBUG_ASSERT(bcn->Validate(elem_w.WrittenBytes()));
+    packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
-    auto pkt = frame.Take();
     wlan_rx_info_t rx_info{.rx_flags = 0};
-    pkt->CopyCtrlFrom(rx_info);
+    packet->CopyCtrlFrom(rx_info);
 
-    *out_packet = fbl::move(pkt);
+    *out_packet = fbl::move(packet);
 
     return ZX_OK;
 }
@@ -244,26 +244,35 @@ zx_status_t CreateProbeRequest(fbl::unique_ptr<Packet>* out_packet) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
-    size_t body_payload_len = 256;
-    MgmtFrame<ProbeRequest> frame;
-    auto status = CreateMgmtFrame(&frame, body_payload_len);
-    if (status != ZX_OK) { return status; }
+    constexpr size_t ie_len = 256;
+    constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + ProbeRequest::max_len() + ie_len;
+    auto packet = GetWlanPacket(max_frame_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto hdr = frame.hdr();
-    hdr->addr1 = client;
-    hdr->addr2 = bssid;
-    hdr->addr3 = bssid;
+    BufferWriter w(*packet);
+    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
+    mgmt_hdr->fc.set_type(FrameType::kManagement);
+    mgmt_hdr->fc.set_subtype(ManagementSubtype::kBeacon);
+    mgmt_hdr->addr1 = client;
+    mgmt_hdr->addr2 = bssid;
+    mgmt_hdr->addr3 = bssid;
 
-    auto probereq = frame.body();
-    BufferWriter w({probereq->elements, body_payload_len});
-    // Write wildcard SSID IE.
-    common::WriteSsid(&w, {});
+    auto probereq = w.Write<ProbeRequest>();
+    BufferWriter elem_w({probereq->elements, w.RemainingBytes()});
+    common::WriteSsid(&elem_w, kSsid);
 
-    auto pkt = frame.Take();
+    RatesWriter rates_writer{kSupportedRates};
+    rates_writer.WriteSupportedRates(&elem_w);
+    rates_writer.WriteExtendedSupportedRates(&elem_w);
+    common::WriteDsssParamSet(&elem_w, kBssChannel.primary);
+
+    ZX_DEBUG_ASSERT(probereq->Validate(elem_w.WrittenBytes()));
+    packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
+
     wlan_rx_info_t rx_info{.rx_flags = 0};
-    pkt->CopyCtrlFrom(rx_info);
+    packet->CopyCtrlFrom(rx_info);
 
-    *out_packet = fbl::move(pkt);
+    *out_packet = fbl::move(packet);
 
     return ZX_OK;
 }
@@ -271,26 +280,29 @@ zx_status_t CreateProbeRequest(fbl::unique_ptr<Packet>* out_packet) {
 zx_status_t CreateAuthReqFrame(fbl::unique_ptr<Packet>* out_packet) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
+    constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Authentication::max_len();
+    auto packet = GetWlanPacket(max_frame_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    MgmtFrame<Authentication> frame;
-    auto status = CreateMgmtFrame(&frame);
-    if (status != ZX_OK) { return status; }
+    BufferWriter w(*packet);
+    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
+    mgmt_hdr->fc.set_type(FrameType::kManagement);
+    mgmt_hdr->fc.set_subtype(ManagementSubtype::kAuthentication);
+    mgmt_hdr->addr1 = bssid;
+    mgmt_hdr->addr2 = client;
+    mgmt_hdr->addr3 = bssid;
 
-    auto hdr = frame.hdr();
-    hdr->addr1 = bssid;
-    hdr->addr2 = client;
-    hdr->addr3 = bssid;
-
-    auto auth = frame.body();
+    auto auth = w.Write<Authentication>();
     auth->auth_algorithm_number = AuthAlgorithm::kOpenSystem;
     auth->auth_txn_seq_number = 1;
     auth->status_code = 0;  // Reserved: explicitly set to 0
 
-    auto pkt = frame.Take();
-    wlan_rx_info_t rx_info{.rx_flags = 0};
-    pkt->CopyCtrlFrom(rx_info);
+    packet->set_len(w.WrittenBytes());
 
-    *out_packet = fbl::move(pkt);
+    wlan_rx_info_t rx_info{.rx_flags = 0};
+    packet->CopyCtrlFrom(rx_info);
+
+    *out_packet = fbl::move(packet);
 
     return ZX_OK;
 }
@@ -299,25 +311,29 @@ zx_status_t CreateAuthRespFrame(fbl::unique_ptr<Packet>* out_packet) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
-    MgmtFrame<Authentication> frame;
-    auto status = CreateMgmtFrame(&frame);
-    if (status != ZX_OK) { return status; }
+    constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Authentication::max_len();
+    auto packet = GetWlanPacket(max_frame_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto hdr = frame.hdr();
-    hdr->addr1 = client;
-    hdr->addr2 = bssid;
-    hdr->addr3 = bssid;
+    BufferWriter w(*packet);
+    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
+    mgmt_hdr->fc.set_type(FrameType::kManagement);
+    mgmt_hdr->fc.set_subtype(ManagementSubtype::kAuthentication);
+    mgmt_hdr->addr1 = client;
+    mgmt_hdr->addr2 = bssid;
+    mgmt_hdr->addr3 = bssid;
 
-    auto auth = frame.body();
+    auto auth = w.Write<Authentication>();
     auth->auth_algorithm_number = AuthAlgorithm::kOpenSystem;
     auth->auth_txn_seq_number = 2;
     auth->status_code = status_code::kSuccess;
 
-    auto pkt = frame.Take();
-    wlan_rx_info_t rx_info{.rx_flags = 0};
-    pkt->CopyCtrlFrom(rx_info);
+    packet->set_len(w.WrittenBytes());
 
-    *out_packet = fbl::move(pkt);
+    wlan_rx_info_t rx_info{.rx_flags = 0};
+    packet->CopyCtrlFrom(rx_info);
+
+    *out_packet = fbl::move(packet);
 
     return ZX_OK;
 }
@@ -326,23 +342,26 @@ zx_status_t CreateDeauthFrame(fbl::unique_ptr<Packet>* out_packet) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
-    MgmtFrame<Deauthentication> frame;
-    auto status = CreateMgmtFrame(&frame);
-    if (status != ZX_OK) { return status; }
+    constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Deauthentication::max_len();
+    auto packet = GetWlanPacket(max_frame_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto hdr = frame.hdr();
-    hdr->addr1 = bssid;
-    hdr->addr2 = client;
-    hdr->addr3 = bssid;
+    BufferWriter w(*packet);
+    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
+    mgmt_hdr->fc.set_type(FrameType::kManagement);
+    mgmt_hdr->fc.set_subtype(ManagementSubtype::kDeauthentication);
+    mgmt_hdr->addr1 = bssid;
+    mgmt_hdr->addr2 = client;
+    mgmt_hdr->addr3 = bssid;
 
-    auto deauth = frame.body();
-    deauth->reason_code = reason_code::ReasonCode::kLeavingNetworkDeauth;
+    w.Write<Deauthentication>()->reason_code = reason_code::ReasonCode::kLeavingNetworkDeauth;
 
-    auto pkt = frame.Take();
+    packet->set_len(w.WrittenBytes());
+
     wlan_rx_info_t rx_info{.rx_flags = 0};
-    pkt->CopyCtrlFrom(rx_info);
+    packet->CopyCtrlFrom(rx_info);
 
-    *out_packet = fbl::move(pkt);
+    *out_packet = fbl::move(packet);
 
     return ZX_OK;
 }
@@ -352,34 +371,37 @@ zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>* out_packet) {
     common::MacAddr client(kClientAddress);
 
     // arbitrarily large reserved len; will shrink down later
-    size_t reserved_len = 4096;
-    MgmtFrame<AssociationRequest> frame;
-    auto status = CreateMgmtFrame(&frame, reserved_len);
-    if (status != ZX_OK) { return status; }
+    constexpr size_t ie_len = 1024;
+    constexpr size_t max_frame_len =
+        MgmtFrameHeader::max_len() + AssociationRequest::max_len() + ie_len;
+    auto packet = GetWlanPacket(max_frame_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto hdr = frame.hdr();
-    hdr->addr1 = bssid;
-    hdr->addr2 = client;
-    hdr->addr3 = bssid;
+    BufferWriter w(*packet);
+    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
+    mgmt_hdr->fc.set_type(FrameType::kManagement);
+    mgmt_hdr->fc.set_subtype(ManagementSubtype::kAssociationRequest);
+    mgmt_hdr->addr1 = bssid;
+    mgmt_hdr->addr2 = client;
+    mgmt_hdr->addr3 = bssid;
 
-    auto assoc = frame.body();
+    auto assoc = w.Write<AssociationRequest>();
     CapabilityInfo cap = {};
     cap.set_short_preamble(1);
     cap.set_ess(1);
     assoc->cap = cap;
     assoc->listen_interval = kListenInterval;
 
-    size_t elems_len = sizeof(SsidElement) + sizeof(kSsid) + sizeof(kRsne);
-    BufferWriter w({assoc->elements, elems_len});
+    BufferWriter elem_w({assoc->elements, w.RemainingBytes()});
     common::WriteSsid(&w, kSsid);
     w.Write(kRsne);
 
-    frame.set_body_len(sizeof(AssociationRequest) + elems_len);
-    auto pkt = frame.Take();
-    wlan_rx_info_t rx_info{.rx_flags = 0};
-    pkt->CopyCtrlFrom(rx_info);
+    packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
-    *out_packet = fbl::move(pkt);
+    wlan_rx_info_t rx_info{.rx_flags = 0};
+    packet->CopyCtrlFrom(rx_info);
+
+    *out_packet = fbl::move(packet);
 
     return ZX_OK;
 }
@@ -388,16 +410,19 @@ zx_status_t CreateAssocRespFrame(fbl::unique_ptr<Packet>* out_packet) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
-    MgmtFrame<AssociationResponse> frame;
-    auto status = CreateMgmtFrame(&frame);
-    if (status != ZX_OK) { return status; }
+    constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + AssociationResponse::max_len();
+    auto packet = GetWlanPacket(max_frame_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto hdr = frame.hdr();
-    hdr->addr1 = client;
-    hdr->addr2 = bssid;
-    hdr->addr3 = bssid;
+    BufferWriter w(*packet);
+    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
+    mgmt_hdr->fc.set_type(FrameType::kManagement);
+    mgmt_hdr->fc.set_subtype(ManagementSubtype::kAssociationResponse);
+    mgmt_hdr->addr1 = client;
+    mgmt_hdr->addr2 = bssid;
+    mgmt_hdr->addr3 = bssid;
 
-    auto assoc = frame.body();
+    auto assoc = w.Write<AssociationResponse>();
     assoc->aid = kAid;
     CapabilityInfo cap = {};
     cap.set_short_preamble(1);
@@ -405,11 +430,12 @@ zx_status_t CreateAssocRespFrame(fbl::unique_ptr<Packet>* out_packet) {
     assoc->cap = cap;
     assoc->status_code = status_code::kSuccess;
 
-    auto pkt = frame.Take();
-    wlan_rx_info_t rx_info{.rx_flags = 0};
-    pkt->CopyCtrlFrom(rx_info);
+    packet->set_len(w.WrittenBytes());
 
-    *out_packet = fbl::move(pkt);
+    wlan_rx_info_t rx_info{.rx_flags = 0};
+    packet->CopyCtrlFrom(rx_info);
+
+    *out_packet = fbl::move(packet);
 
     return ZX_OK;
 }
@@ -418,23 +444,26 @@ zx_status_t CreateDisassocFrame(fbl::unique_ptr<Packet>* out_packet) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
-    MgmtFrame<Disassociation> frame;
-    auto status = CreateMgmtFrame(&frame);
-    if (status != ZX_OK) { return status; }
+    constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Disassociation::max_len();
+    auto packet = GetWlanPacket(max_frame_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto hdr = frame.hdr();
-    hdr->addr1 = bssid;
-    hdr->addr2 = client;
-    hdr->addr3 = bssid;
+    BufferWriter w(*packet);
+    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
+    mgmt_hdr->fc.set_type(FrameType::kManagement);
+    mgmt_hdr->fc.set_subtype(ManagementSubtype::kDisassociation);
+    mgmt_hdr->addr1 = bssid;
+    mgmt_hdr->addr2 = client;
+    mgmt_hdr->addr3 = bssid;
 
-    auto disassoc = frame.body();
-    disassoc->reason_code = reason_code::ReasonCode::kLeavingNetworkDisassoc;
+    w.Write<Disassociation>()->reason_code = reason_code::ReasonCode::kLeavingNetworkDisassoc;
 
-    auto pkt = frame.Take();
+    packet->set_len(w.WrittenBytes());
+
     wlan_rx_info_t rx_info{.rx_flags = 0};
-    pkt->CopyCtrlFrom(rx_info);
+    packet->CopyCtrlFrom(rx_info);
 
-    *out_packet = fbl::move(pkt);
+    *out_packet = fbl::move(packet);
 
     return ZX_OK;
 }
@@ -447,12 +476,8 @@ DataFrame<LlcHeader> CreateDataFrame(const uint8_t* payload, size_t len) {
     auto packet = GetWlanPacket(buf_len);
     if (packet == nullptr) { return {}; }
 
-    wlan_rx_info_t rx_info{.rx_flags = 0};
-    packet->CopyCtrlFrom(rx_info);
-
-    DataFrame<LlcHeader> data_frame(fbl::move(packet));
-    auto data_hdr = data_frame.hdr();
-    std::memset(data_hdr, 0, DataFrameHeader::max_len());
+    BufferWriter w(*packet);
+    auto data_hdr = w.Write<DataFrameHeader>();
     data_hdr->fc.set_type(FrameType::kData);
     data_hdr->fc.set_subtype(DataSubtype::kDataSubtype);
     data_hdr->fc.set_from_ds(1);
@@ -461,19 +486,20 @@ DataFrame<LlcHeader> CreateDataFrame(const uint8_t* payload, size_t len) {
     data_hdr->addr3 = client;
     data_hdr->sc.set_val(42);
 
-    auto llc_hdr = data_frame.body();
+    auto llc_hdr = w.Write<LlcHeader>();
     llc_hdr->dsap = kLlcSnapExtension;
     llc_hdr->ssap = kLlcSnapExtension;
     llc_hdr->control = kLlcUnnumberedInformation;
     std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
     llc_hdr->protocol_id = 42;
-    if (len > 0) { std::memcpy(llc_hdr->payload, payload, len); }
+    if (len > 0) { w.Write({payload, len}); }
 
-    size_t actual_body_len = llc_hdr->len() + len;
-    auto status = data_frame.set_body_len(actual_body_len);
-    if (status != ZX_OK) { return {}; }
+    packet->set_len(w.WrittenBytes());
 
-    return data_frame;
+    wlan_rx_info_t rx_info{.rx_flags = 0};
+    packet->CopyCtrlFrom(rx_info);
+
+    return DataFrame<LlcHeader>(fbl::move(packet));
 }
 
 DataFrame<> CreateNullDataFrame() {
@@ -483,12 +509,8 @@ DataFrame<> CreateNullDataFrame() {
     auto packet = GetWlanPacket(DataFrameHeader::max_len());
     if (packet == nullptr) { return {}; }
 
-    wlan_rx_info_t rx_info{.rx_flags = 0};
-    packet->CopyCtrlFrom(rx_info);
-
-    DataFrame<> data_frame(fbl::move(packet));
-    auto data_hdr = data_frame.hdr();
-    std::memset(data_hdr, 0, DataFrameHeader::max_len());
+    BufferWriter w(*packet);
+    auto data_hdr = w.Write<DataFrameHeader>();
     data_hdr->fc.set_type(FrameType::kData);
     data_hdr->fc.set_subtype(DataSubtype::kNull);
     data_hdr->fc.set_from_ds(1);
@@ -496,7 +518,13 @@ DataFrame<> CreateNullDataFrame() {
     data_hdr->addr2 = bssid;
     data_hdr->addr3 = bssid;
     data_hdr->sc.set_val(42);
-    return data_frame;
+
+    packet->set_len(w.WrittenBytes());
+
+    wlan_rx_info_t rx_info{.rx_flags = 0};
+    packet->CopyCtrlFrom(rx_info);
+
+    return DataFrame<>(fbl::move(packet));
 }
 
 EthFrame CreateEthFrame(const uint8_t* payload, size_t len) {
@@ -507,15 +535,14 @@ EthFrame CreateEthFrame(const uint8_t* payload, size_t len) {
     auto packet = GetEthPacket(buf_len);
     if (packet == nullptr) { return {}; }
 
-    EthFrame eth_frame(fbl::move(packet));
-    auto eth_hdr = eth_frame.hdr();
-    std::memset(eth_hdr, 0, buf_len);
+    BufferWriter w(*packet);
+    auto eth_hdr = w.Write<EthernetII>();
     eth_hdr->src = client;
     eth_hdr->dest = bssid;
     eth_hdr->ether_type = 2;
-    std::memcpy(eth_hdr->payload, payload, len);
+    w.Write({payload, len});
 
-    return eth_frame;
+    return EthFrame(fbl::move(packet));
 }
 
 }  // namespace wlan

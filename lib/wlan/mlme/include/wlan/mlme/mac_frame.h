@@ -183,27 +183,6 @@ template <typename Header, typename Body = UnknownBody> class FrameView {
         return FrameView<NextH, NextB>(pkt_, body_offset());
     }
 
-    // Allows to change the representation of the frame's body. The resulting frame's length should
-    // be verified before working with it. One would typically use this method after verifying that
-    // an "unknown" body is supposed to be of a certain type. Because this method takes a frame's
-    // offset into account, it should be used when specializing frames, rather than taking the
-    // frame's Packet and constructing a new Frame yourself which can be error prone when working
-    // with advanced frames. For example, avoid doing this:
-    //     FrameView<LlcHeader, UnknownBody> llc_frame = data_frame.NextFrame();
-    //     FrameView<LlcHeader, EapolHeader> llc_eapol_frame(llc_frame.take());
-    //     PROBLEM: llc_eapol_frame.body() is *NOT* pointing to the EAPOL header
-    //              because the frame's offset got lost
-    //
-    // Instead use this method:
-    //     FrameView<LlcHeader, UnknownBody> llc_frame = data_frame.NextFrame();
-    //     FrameView<LlcHeader, EapolHeader> llc_eapol_frame = llc_frame.Specialize<EapolHeader>();
-    //     ...
-    template <typename NewBody> FrameView<Header, NewBody> Specialize() const {
-        ZX_DEBUG_ASSERT(pkt_ != nullptr);
-
-        return FrameView<Header, NewBody>(pkt_, hdr_offset());
-    }
-
     size_t hdr_offset() const { return data_offset_; }
 
     size_t body_offset() const {
@@ -250,63 +229,7 @@ template <typename Header, typename Body = UnknownBody> class Frame {
 
     size_t body_len() const { return View().body_len(); }
 
-    zx_status_t set_body_len(size_t len) {
-        ZX_DEBUG_ASSERT(!IsEmpty());
-        ZX_DEBUG_ASSERT(len <= pkt_->len());
-
-        return pkt_->set_len(View().body_offset() + len);
-    }
-
     size_t len() const { return View().len(); }
-
-    zx_status_t FillTxInfo(uint8_t cbw = CBW20, uint16_t phy = WLAN_PHY_OFDM, uint32_t flags = 0) {
-        static_assert(is_mac_hdr<Header>::value, "only MAC frame can carry tx_info");
-        ZX_DEBUG_ASSERT(pkt_ != nullptr);
-
-        wlan_tx_info_t txinfo = {
-            .tx_flags = flags,
-            .valid_fields =
-                WLAN_TX_INFO_VALID_PHY | WLAN_TX_INFO_VALID_CHAN_WIDTH | WLAN_TX_INFO_VALID_MCS,
-            .phy = phy,
-            .cbw = cbw,
-        };
-
-        // TODO(porce): Implement rate selection.
-        auto fc = pkt_->field<FrameControl>(0);
-        switch (fc->type()) {
-        // Outgoing data frames.
-        case FrameType::kData:
-            txinfo.mcs = 0x7;
-            break;
-        // Outgoing management and control frames.
-        default:
-            txinfo.mcs = 0x3;  // TODO(NET-645): Choose an optimal MCS
-            break;
-        }
-
-        if (fc->protected_frame()) { txinfo.tx_flags |= WLAN_TX_INFO_FLAGS_PROTECTED; }
-
-        pkt_->CopyCtrlFrom(txinfo);
-        return ZX_OK;
-    }
-
-    bool HasValidLen() const {
-        if (IsEmpty()) { return false; }
-        return View().HasValidLen();
-    }
-
-    // Similar to `FrameView::NextFrame()` but consumes this Frame.
-    template <typename NextH = Body, typename NextB = UnknownBody> Frame<NextH, NextB> NextFrame() {
-        return Frame<NextH, NextB>(View().body_offset(), Take());
-    }
-
-    // Similar to `FrameView::Specialize()` but consumes this Frame.
-    template <typename NewBody> Frame<Header, NewBody> Specialize() {
-        return Frame<Header, NewBody>(View().hdr_offset(), Take());
-    }
-
-    // Similar to `Specialize()` but drops the Frame's body type.
-    Frame<Header> Generalize() { return Specialize<UnknownBody>(); }
 
     // `true` if the frame was 'taken' and should no longer be used.
     bool IsEmpty() const { return pkt_ == nullptr; }
@@ -345,10 +268,6 @@ using aid_t = size_t;
 static constexpr aid_t kGroupAdressedAid = 0;
 static constexpr aid_t kMaxBssClients = 2008;
 static constexpr aid_t kUnknownAid = kMaxBssClients + 1;
-
-template <typename Body>
-zx_status_t CreateMgmtFrame(MgmtFrame<Body>* frame, size_t body_payload_len = 0,
-                            bool has_ht_ctrl = false);
 
 seq_t NextSeqNo(const MgmtFrameHeader& hdr, Sequence* seq);
 seq_t NextSeqNo(const MgmtFrameHeader& hdr, uint8_t aci, Sequence* seq);

@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <wlan/common/buffer_writer.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/write_element.h>
 #include <wlan/mlme/beacon.h>
+#include <wlan/mlme/packet_utils.h>
 #include <wlan/mlme/rates_elements.h>
 
 namespace wlan {
 
 static void WriteSsid(BufferWriter* w, const BeaconConfig& config) {
-    if (config.ssid != nullptr) {
-        common::WriteSsid(w, {config.ssid, config.ssid_len});
-    }
+    if (config.ssid != nullptr) { common::WriteSsid(w, {config.ssid, config.ssid_len}); }
 }
 
 static void WriteDsssParamSet(BufferWriter* w, const BeaconConfig& config) {
@@ -43,7 +43,7 @@ static void WriteTim(BufferWriter* w, const PsCfg* ps_cfg, size_t* rel_tim_ele_o
 
 static void WriteCountry(BufferWriter* w, const BeaconConfig& config) {
     // TODO(NET-799): Read from dot11CountryString MIB
-    const Country kCountry = {{ 'U', 'S', ' ' }};
+    const Country kCountry = {{'U', 'S', ' '}};
 
     std::vector<SubbandTriplet> subbands;
 
@@ -75,25 +75,19 @@ static void WriteHtOperation(BufferWriter* w, const BeaconConfig& config) {
 }
 
 static void WriteRsne(BufferWriter* w, const BeaconConfig& config) {
-    if (config.rsne != nullptr) {
-        w->Write({config.rsne, config.rsne_len});
-    }
+    if (config.rsne != nullptr) { w->Write({config.rsne, config.rsne_len}); }
 }
 
 static void WriteMeshConfiguration(BufferWriter* w, const BeaconConfig& config) {
-    if (config.mesh_config != nullptr) {
-        common::WriteMeshConfiguration(w, *config.mesh_config);
-    }
+    if (config.mesh_config != nullptr) { common::WriteMeshConfiguration(w, *config.mesh_config); }
 }
 
 static void WriteMeshId(BufferWriter* w, const BeaconConfig& config) {
-    if (config.mesh_id != nullptr) {
-        common::WriteMeshId(w, {config.mesh_id, config.mesh_id_len});
-    }
+    if (config.mesh_id != nullptr) { common::WriteMeshId(w, {config.mesh_id, config.mesh_id_len}); }
 }
 
 static void WriteElements(BufferWriter* w, const BeaconConfig& config, size_t* rel_tim_ele_offset) {
-    RatesWriter rates_writer {{ config.rates, config.rates_len }};
+    RatesWriter rates_writer{{config.rates, config.rates_len}};
     // TODO(hahnr): Query from hardware which IEs must be filled out here.
     WriteSsid(w, config);
     rates_writer.WriteSupportedRates(w);
@@ -105,11 +99,10 @@ static void WriteElements(BufferWriter* w, const BeaconConfig& config, size_t* r
     WriteHtCapabilities(w, config);
     WriteHtOperation(w, config);
     WriteMeshConfiguration(w, config);
-    WriteMeshId(w, config);;
+    WriteMeshId(w, config);
 }
 
-template<typename T>
-static void SetBssType(T* bcn, BssType bss_type) {
+template <typename T> static void SetBssType(T* bcn, BssType bss_type) {
     // IEEE Std 802.11-2016, 9.4.1.4
     switch (bss_type) {
     case BssType::kInfrastructure:
@@ -131,15 +124,20 @@ template <typename T>
 static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config, common::MacAddr addr1,
                                               MgmtFrame<T>* buffer, size_t* tim_ele_offset) {
     constexpr size_t reserved_ie_len = 256;
-    auto status = CreateMgmtFrame(buffer, reserved_ie_len);
-    if (status != ZX_OK) { return status; }
+    constexpr size_t max_frame_size =
+        MgmtFrameHeader::max_len() + Beacon::max_len() + reserved_ie_len;
+    auto packet = GetWlanPacket(max_frame_size);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto hdr = buffer->hdr();
-    hdr->addr1 = addr1;
-    hdr->addr2 = config.bssid;
-    hdr->addr3 = config.bssid;
+    BufferWriter w(*packet);
+    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
+    mgmt_hdr->fc.set_type(FrameType::kManagement);
+    mgmt_hdr->fc.set_subtype(T::Subtype());
+    mgmt_hdr->addr1 = addr1;
+    mgmt_hdr->addr2 = config.bssid;
+    mgmt_hdr->addr3 = config.bssid;
 
-    auto bcn = buffer->body();
+    auto bcn = w.Write<Beacon>();
     bcn->beacon_interval = config.beacon_period;
     bcn->timestamp = config.timestamp;
     bcn->cap.set_privacy(config.rsne != nullptr);
@@ -148,28 +146,25 @@ static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config, common
     bcn->cap.set_short_preamble(1);
 
     // Write elements.
-
-    BufferWriter w({bcn->elements, reserved_ie_len});
+    BufferWriter elem_w({bcn->elements, reserved_ie_len});
     size_t rel_tim_ele_offset = SIZE_MAX;
-    WriteElements(&w, config, &rel_tim_ele_offset);
+    WriteElements(&elem_w, config, &rel_tim_ele_offset);
 
-    ZX_DEBUG_ASSERT(bcn->Validate(w.WrittenBytes()));
+    ZX_DEBUG_ASSERT(bcn->Validate(elem_w.WrittenBytes()));
 
-    // Update the length with final values
-    size_t body_len = buffer->body()->len() + w.WrittenBytes();
-    status = buffer->set_body_len(body_len);
-    if (status != ZX_OK) {
-        errorf("could not set body length to %zu: %d\n", body_len, status);
-        return status;
-    }
+    // Update packet's final length and tx_info.
+    packet->CopyCtrlFrom(MakeTxInfo(mgmt_hdr->fc, CBW20, WLAN_PHY_OFDM));
+    packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
     if (tim_ele_offset != nullptr) {
         if (rel_tim_ele_offset == SIZE_MAX) {
             // A tim element offset was requested but no element was written
             return ZX_ERR_INVALID_ARGS;
         }
-        *tim_ele_offset = buffer->View().body_offset() + bcn->len() + rel_tim_ele_offset;
+        *tim_ele_offset = w.WrittenBytes() + rel_tim_ele_offset;
     }
+
+    *buffer = MgmtFrame<T>(fbl::move(packet));
     return ZX_OK;
 }
 

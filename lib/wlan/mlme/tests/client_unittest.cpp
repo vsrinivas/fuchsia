@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/timekeeper/clock.h>
+#include <wlan/common/buffer_writer.h>
 #include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/client/station.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
+#include <wlan/mlme/packet_utils.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 
@@ -381,16 +383,19 @@ TEST_F(ClientTest, DropManagementFrames) {
     Connect();
 
     // Construct and send deauthentication frame from another BSS.
-    MgmtFrame<Deauthentication> frame;
-    auto status = CreateMgmtFrame(&frame);
-    ASSERT_EQ(status, ZX_OK);
-    auto hdr = frame.hdr();
-    hdr->addr1 = common::MacAddr(kBssid2);
-    hdr->addr2 = common::MacAddr(kClientAddress);
-    hdr->addr3 = common::MacAddr(kBssid2);
-    auto deauth = frame.body();
-    deauth->reason_code = 42;
-    station.HandleAnyWlanFrame(frame.Take());
+    constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Deauthentication::max_len();
+    auto packet = GetWlanPacket(max_frame_len);
+    ASSERT_NE(packet, nullptr);
+
+    BufferWriter w(*packet);
+    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
+    mgmt_hdr->fc.set_type(FrameType::kManagement);
+    mgmt_hdr->fc.set_subtype(ManagementSubtype::kDeauthentication);
+    mgmt_hdr->addr1 = common::MacAddr(kBssid2);
+    mgmt_hdr->addr2 = common::MacAddr(kClientAddress);
+    mgmt_hdr->addr3 = common::MacAddr(kBssid2);
+    w.Write<Deauthentication>()->reason_code = 42;
+    station.HandleAnyWlanFrame(fbl::move(packet));
 
     // Verify neither a management frame nor service message were sent.
     ASSERT_TRUE(device.svc_queue.empty());

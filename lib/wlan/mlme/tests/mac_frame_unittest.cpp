@@ -116,7 +116,7 @@ TEST(ProbeRequest, InvalidElement) {
 
     const uint8_t ssid[] = {'t', 'e', 's', 't', ' ', 's', 's', 'i', 'd'};
     common::WriteSsid(&writer, ssid);
-    common::WriteCfParamSet(&writer, { 1, 2, 3, 4 });
+    common::WriteCfParamSet(&writer, {1, 2, 3, 4});
 
     auto probe_request = FromBytes<ProbeRequest>(buf, writer.WrittenBytes());
     EXPECT_FALSE(probe_request->Validate(writer.WrittenBytes()));
@@ -131,7 +131,6 @@ TEST(Frame, General) {
 
     // Verify frame's accessors and length.
     Frame<TestHdr1> frame(fbl::move(pkt));
-    ASSERT_TRUE(frame.HasValidLen());
     ASSERT_FALSE(frame.IsEmpty());
     ASSERT_EQ(frame.len(), DefaultTripleHdrFrame::len());
     ASSERT_EQ(frame.hdr()->a, 42);
@@ -148,7 +147,6 @@ TEST(Frame, General_Const_Frame) {
 
     // Verify a constant frame's accessors and length. Constant accessors differ from regular ones.
     const Frame<TestHdr1> frame(fbl::move(pkt));
-    ASSERT_TRUE(frame.HasValidLen());
     ASSERT_FALSE(frame.IsEmpty());
     ASSERT_EQ(frame.len(), DefaultTripleHdrFrame::len());
     ASSERT_EQ(frame.hdr()->a, 42);
@@ -169,89 +167,11 @@ TEST(Frame, Take) {
     Frame<TestHdr1, TestHdr2> specialized_frame(frame.Take());
     // Verify the first frame is considered "taken" and that the new specialized one is valid.
     ASSERT_TRUE(frame.IsEmpty());
-    ASSERT_FALSE(frame.HasValidLen());
-    ASSERT_TRUE(specialized_frame.HasValidLen());
     ASSERT_FALSE(specialized_frame.IsEmpty());
     ASSERT_EQ(specialized_frame.len(), DefaultTripleHdrFrame::len());
     ASSERT_EQ(specialized_frame.hdr()->a, 42);
     ASSERT_EQ(specialized_frame.body_len(), DefaultTripleHdrFrame::body_len());
     ASSERT_EQ(specialized_frame.body()->b, 24);
-}
-
-TEST(Frame, NextFrame) {
-    // Construct initial frame.
-    auto pkt = GetPacket(DefaultTripleHdrFrame::len());
-    auto test_frame = pkt->mut_field<DefaultTripleHdrFrame>(0);
-    test_frame->hdr2.b = 24;
-    test_frame->hdr3.a = 42;
-
-    // Start with first header.
-    Frame<TestHdr1, TestHdr2> frame(fbl::move(pkt));
-
-    // Access second frame with unknown body. Verify correct length and accessors.
-    auto second_frame = frame.NextFrame<TestHdr2>();
-    ASSERT_TRUE(frame.IsEmpty());
-    ASSERT_TRUE(second_frame.HasValidLen());
-    ASSERT_FALSE(second_frame.IsEmpty());
-    ASSERT_EQ(second_frame.len(), DefaultTripleHdrFrame::second_frame_len());
-    ASSERT_EQ(second_frame.body_len(), DefaultTripleHdrFrame::second_frame_body_len());
-    ASSERT_EQ(second_frame.hdr()->b, 24);
-
-    // Access the third frame with unknown body. Verify correct length and accessors.
-    auto third_frame = second_frame.NextFrame<TestHdr3>();
-    ASSERT_TRUE(second_frame.IsEmpty());
-    ASSERT_TRUE(third_frame.HasValidLen());
-    ASSERT_FALSE(third_frame.IsEmpty());
-    ASSERT_EQ(third_frame.len(), DefaultTripleHdrFrame::third_frame_len());
-    ASSERT_EQ(third_frame.body_len(), DefaultTripleHdrFrame::third_frame_body_len());
-    ASSERT_EQ(third_frame.hdr()->a, 42);
-}
-
-TEST(Frame, NextFrame_FullSpecialized) {
-    // Construct initial frame.
-    auto pkt = GetPacket(DefaultTripleHdrFrame::len());
-    auto test_frame = pkt->mut_field<DefaultTripleHdrFrame>(0);
-    test_frame->hdr2.b = 24;
-    test_frame->hdr3.a = 42;
-
-    // Start with first header.
-    Frame<TestHdr1> frame(fbl::move(pkt));
-
-    // Access second frame. Verify correct length and accessors.
-    auto second_frame = frame.NextFrame<TestHdr2, TestHdr3>();
-    ASSERT_TRUE(frame.IsEmpty());
-    ASSERT_TRUE(second_frame.HasValidLen());
-    ASSERT_FALSE(second_frame.IsEmpty());
-    ASSERT_EQ(second_frame.len(), DefaultTripleHdrFrame::second_frame_len());
-    ASSERT_EQ(second_frame.body_len(), DefaultTripleHdrFrame::second_frame_body_len());
-    ASSERT_EQ(second_frame.hdr()->b, 24);
-    ASSERT_EQ(second_frame.body()->a, 42);
-}
-
-TEST(Frame, NextFrame_DynamicSized) {
-    // Construct initial frame. This frame will compute the second frame's header length
-    // dynamically.
-    auto pkt = GetPacket(PaddedTripleHdrFrame::len());
-    auto test_frame = pkt->mut_field<PaddedTripleHdrFrame>(0);
-    test_frame->hdr2.has_padding = true;
-    test_frame->hdr3.a = 42;
-
-    Frame<TestHdr1> frame(fbl::move(pkt));
-    auto second_frame = frame.NextFrame<TestHdr2>();
-    ASSERT_TRUE(frame.IsEmpty());
-    ASSERT_TRUE(second_frame.HasValidLen());
-    ASSERT_FALSE(second_frame.IsEmpty());
-    ASSERT_EQ(second_frame.len(), PaddedTripleHdrFrame::second_frame_len());
-    ASSERT_EQ(second_frame.body_len(), PaddedTripleHdrFrame::second_frame_body_len());
-
-    // Third frame should be accessible as expected.
-    auto third_frame = second_frame.NextFrame<TestHdr3>();
-    ASSERT_TRUE(second_frame.IsEmpty());
-    ASSERT_TRUE(third_frame.HasValidLen());
-    ASSERT_FALSE(third_frame.IsEmpty());
-    ASSERT_EQ(third_frame.len(), PaddedTripleHdrFrame::third_frame_len());
-    ASSERT_EQ(third_frame.body_len(), PaddedTripleHdrFrame::third_frame_body_len());
-    ASSERT_EQ(third_frame.hdr()->a, 42);
 }
 
 TEST(Frame, ExactlySizedBuffer_HdrOnly) {
@@ -260,7 +180,6 @@ TEST(Frame, ExactlySizedBuffer_HdrOnly) {
     auto pkt = GetPacket(pkt_len);
 
     Frame<TestHdr1> frame(fbl::move(pkt));
-    ASSERT_TRUE(frame.HasValidLen());
     ASSERT_EQ(frame.len(), sizeof(TestHdr1));
     ASSERT_EQ(frame.body_len(), static_cast<size_t>(0));
 }
@@ -271,7 +190,6 @@ TEST(Frame, ExactlySizedBuffer_Frame) {
     auto pkt = GetPacket(pkt_len);
 
     Frame<TestHdr1, FixedSizedPayload> frame(fbl::move(pkt));
-    ASSERT_TRUE(frame.HasValidLen());
     ASSERT_EQ(frame.len(), sizeof(TestHdr1) + sizeof(FixedSizedPayload));
     ASSERT_EQ(frame.body_len(), sizeof(FixedSizedPayload));
 }
@@ -280,46 +198,6 @@ TEST(Frame, TooShortBuffer_NoHdr) {
     // Construct initial frame which has not space to hold a header.
     size_t pkt_len = sizeof(TestHdr1) - 1;
     auto pkt = GetPacket(pkt_len);
-
-    Frame<TestHdr1> frame(fbl::move(pkt));
-    ASSERT_FALSE(frame.HasValidLen());
-}
-
-TEST(Frame, TooShortBuffer_Hdr_NoBody) {
-    // Construct initial frame which has just enough space to hold a header but not enough to hold
-    // an entire body.
-    size_t pkt_len = sizeof(TestHdr1) + sizeof(FixedSizedPayload) - 1;
-    auto pkt = GetPacket(pkt_len);
-
-    Frame<TestHdr1> frame(fbl::move(pkt));
-    ASSERT_TRUE(frame.HasValidLen());
-
-    Frame<TestHdr1, FixedSizedPayload> specialized_frame(frame.Take());
-    ASSERT_FALSE(specialized_frame.HasValidLen());
-}
-
-TEST(Frame, TrimExcessBodyLength) {
-    // Construct initial frame which can hold three headers.
-    auto pkt = GetPacket(DefaultTripleHdrFrame::len());
-    Frame<TestHdr1, TestHdr2> frame(fbl::move(pkt));
-    ASSERT_TRUE(frame.HasValidLen());
-
-    // Trim excess body length. Frame should now be the size of two headers.
-    auto status = frame.set_body_len(sizeof(TestHdr2));
-    ASSERT_EQ(status, ZX_OK);
-    ASSERT_TRUE(frame.HasValidLen());
-    ASSERT_EQ(frame.len(), sizeof(TestHdr1) + sizeof(TestHdr2));
-    ASSERT_EQ(frame.body_len(), sizeof(TestHdr2));
-
-    // Verify sub frame is also correct.
-    auto next_frame = frame.NextFrame();
-    ASSERT_TRUE(next_frame.HasValidLen());
-    ASSERT_EQ(next_frame.len(), sizeof(TestHdr2));
-    ASSERT_EQ(next_frame.body_len(), static_cast<size_t>(0));
-
-    // Verify the frame which originally had sufficient space doesn't fit anymore.
-    Frame<TestHdr2, TestHdr3> specialized_next_frame(sizeof(TestHdr1), next_frame.Take());
-    ASSERT_FALSE(specialized_next_frame.HasValidLen());
 }
 
 TEST(Frame, RxInfo_MacFrame) {
@@ -340,10 +218,6 @@ TEST(Frame, RxInfo_MacFrame) {
     MgmtFrame<> data_frame(ctrl_frame.Take());
     ASSERT_TRUE(data_frame.View().has_rx_info());
     ASSERT_EQ(memcmp(data_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
-
-    // Verify next frame does not hold an rx_info.
-    auto next_frame = data_frame.NextFrame<LlcHeader>();
-    ASSERT_FALSE(next_frame.View().has_rx_info());
 }
 
 TEST(Frame, RxInfo_OtherFrame) {
@@ -411,46 +285,6 @@ TEST(Frame, RxInfo_NoPaddingAlignedBody) {
 TEST(Frame, ConstructEmptyFrame) {
     Frame<TestHdr1> frame;
     ASSERT_TRUE(frame.IsEmpty());
-    ASSERT_FALSE(frame.HasValidLen());
-}
-
-TEST(Frame, Specialize) {
-    // Construct initial frame
-    auto pkt = GetPacket(DefaultTripleHdrFrame::len());
-    auto test_frame = pkt->mut_field<DefaultTripleHdrFrame>(0);
-    test_frame->hdr1.a = 42;
-    test_frame->hdr2.b = 24;
-
-    // Verify frame's accessors and length.
-    Frame<TestHdr1> frame(fbl::move(pkt));
-    Frame<TestHdr1, TestHdr2> specialized_frame = frame.Specialize<TestHdr2>();
-    ASSERT_TRUE(specialized_frame.HasValidLen());
-    ASSERT_FALSE(specialized_frame.IsEmpty());
-    ASSERT_TRUE(frame.IsEmpty());
-    ASSERT_EQ(specialized_frame.len(), DefaultTripleHdrFrame::len());
-    ASSERT_EQ(specialized_frame.hdr()->a, 42);
-    ASSERT_EQ(specialized_frame.body_len(), DefaultTripleHdrFrame::body_len());
-    ASSERT_EQ(specialized_frame.body()->b, 24);
-}
-
-TEST(Frame, Specialize_ProgressedFrame) {
-    // Construct initial frame
-    auto pkt = GetPacket(DefaultTripleHdrFrame::len());
-    auto test_frame = pkt->mut_field<DefaultTripleHdrFrame>(0);
-    test_frame->hdr1.a = 42;
-    test_frame->hdr2.b = 24;
-    test_frame->hdr3.b = 1337;
-
-    // Verify frame's accessors and length.
-    Frame<TestHdr1> frame(fbl::move(pkt));
-    Frame<TestHdr2, UnknownBody> second_frame = frame.NextFrame<TestHdr2>();
-    Frame<TestHdr2, TestHdr3> specialized_frame = second_frame.Specialize<TestHdr3>();
-    ASSERT_TRUE(specialized_frame.HasValidLen());
-    ASSERT_FALSE(specialized_frame.IsEmpty());
-    ASSERT_TRUE(second_frame.IsEmpty());
-    ASSERT_EQ(specialized_frame.hdr()->b, 24);
-    ASSERT_EQ(specialized_frame.body_len(), DefaultTripleHdrFrame::second_frame_body_len());
-    ASSERT_EQ(specialized_frame.body()->b, 1337);
 }
 
 TEST(Frame, AdvanceThroughAmsduFrame) {

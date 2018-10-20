@@ -79,9 +79,14 @@ TEST_F(BeaconSenderTest, Start) {
 
     bcn_sender.UpdateBeacon(ps_cfg);
 
-    auto bcn = fbl::move(device.beacon);
-    ASSERT_NE(bcn, nullptr);
-    ASSERT_TRUE(device.beaconing_enabled);
+    auto pkt = fbl::move(device.beacon);
+    EXPECT_TRUE(device.beaconing_enabled);
+    ASSERT_NE(pkt, nullptr);
+
+    auto checked = MgmtFrameView<Beacon>::CheckType(pkt.get());
+    ASSERT_TRUE(checked);
+    auto beacon_frame = checked.CheckLength();
+    ASSERT_TRUE(beacon_frame);
 }
 
 TEST_F(BeaconSenderTest, ProbeRequest) {
@@ -95,6 +100,12 @@ TEST_F(BeaconSenderTest, ProbeRequest) {
     bcn_sender.SendProbeResponse(probe_req);
 
     ASSERT_FALSE(device.wlan_queue.empty());
+    auto pkt = std::move(*device.wlan_queue.begin());
+
+    auto checked = MgmtFrameView<ProbeResponse>::CheckType(pkt.get());
+    ASSERT_TRUE(checked);
+    auto beacon_frame = checked.CheckLength();
+    ASSERT_TRUE(beacon_frame);
 }
 
 TEST(BeaconSender, ShouldSendProbeResponse) {

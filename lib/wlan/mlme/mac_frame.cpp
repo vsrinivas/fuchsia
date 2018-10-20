@@ -12,40 +12,6 @@
 
 namespace wlan {
 
-// TODO(hahnr): Decomission and replace with FrameWriter.
-template <typename Body>
-zx_status_t CreateMgmtFrame(MgmtFrame<Body>* out_frame, size_t body_payload_len, bool has_ht_ctrl) {
-    size_t max_frame_len = MgmtFrameHeader::max_len() + Body::max_len() + body_payload_len;
-    auto packet = GetWlanPacket(max_frame_len);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    // Zero out the packet buffer by default for the management frame.
-    packet->clear();
-
-    MgmtFrame<Body> frame(fbl::move(packet));
-    if (!frame.HasValidLen()) { return ZX_ERR_BUFFER_TOO_SMALL; }
-
-    frame.hdr()->fc.set_type(FrameType::kManagement);
-    frame.hdr()->fc.set_subtype(Body::Subtype());
-    if (has_ht_ctrl) { frame.hdr()->fc.set_htc_order(1); }
-
-    *out_frame = fbl::move(frame);
-    return ZX_OK;
-}
-
-#define DECLARE_BUILD_MGMTFRAME(bodytype)                                                    \
-    template zx_status_t CreateMgmtFrame(MgmtFrame<bodytype>* frame, size_t reserved_ie_len, \
-                                         bool has_ht_ctrl)
-
-DECLARE_BUILD_MGMTFRAME(ProbeRequest);
-DECLARE_BUILD_MGMTFRAME(ProbeResponse);
-DECLARE_BUILD_MGMTFRAME(Beacon);
-DECLARE_BUILD_MGMTFRAME(Authentication);
-DECLARE_BUILD_MGMTFRAME(Deauthentication);
-DECLARE_BUILD_MGMTFRAME(AssociationRequest);
-DECLARE_BUILD_MGMTFRAME(AssociationResponse);
-DECLARE_BUILD_MGMTFRAME(Disassociation);
-DECLARE_BUILD_MGMTFRAME(ActionFrame);
-
 // IEEE Std 802.11-2016, 10.3.2.11.2 Table 10-3 SNS1
 seq_t NextSeqNo(const MgmtFrameHeader& hdr, Sequence* seq) {
     ZX_DEBUG_ASSERT(seq != nullptr);

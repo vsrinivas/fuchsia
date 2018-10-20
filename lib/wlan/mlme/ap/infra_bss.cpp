@@ -4,6 +4,7 @@
 
 #include <wlan/mlme/ap/infra_bss.h>
 
+#include <wlan/common/buffer_writer.h>
 #include <wlan/common/channel.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/device_caps.h>
@@ -11,6 +12,7 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>
+#include <wlan/mlme/packet_utils.h>
 #include <wlan/mlme/service.h>
 
 #include <zircon/syscalls.h>
@@ -205,7 +207,7 @@ void InfraBss::HandleEthFrame(EthFrame&& eth_frame) {
     } else {
         // Process multicast frames ourselves.
         if (auto data_frame = EthToDataFrame(eth_frame, false)) {
-            SendDataFrame(data_frame->Generalize());
+            SendDataFrame(DataFrame<>(data_frame->Take()));
         } else {
             errorf("[infra-bss] [%s] couldn't convert ethernet frame\n", bssid_.ToString().c_str());
         }
@@ -428,12 +430,11 @@ std::optional<DataFrame<LlcHeader>> InfraBss::EthToDataFrame(const EthFrame& eth
     if (packet == nullptr) {
         errorf("[infra-bss] [%s] cannot convert ethernet to data frame: out of packets (%zu)\n",
                bssid_.ToString().c_str(), max_frame_len);
-        return std::nullopt;
+        return {};
     }
-    packet->clear();
 
-    DataFrame<LlcHeader> data_frame(fbl::move(packet));
-    auto data_hdr = data_frame.hdr();
+    BufferWriter w(*packet);
+    auto data_hdr = w.Write<DataFrameHeader>();
     data_hdr->fc.set_type(FrameType::kData);
     data_hdr->fc.set_subtype(DataSubtype::kDataSubtype);
     data_hdr->fc.set_from_ds(1);
@@ -443,40 +444,27 @@ std::optional<DataFrame<LlcHeader>> InfraBss::EthToDataFrame(const EthFrame& eth
     data_hdr->addr3 = eth_frame.hdr()->src;
     data_hdr->sc.set_seq(NextSeq(*data_hdr));
 
-    auto llc_hdr = data_frame.body();
+    auto llc_hdr = w.Write<LlcHeader>();
     llc_hdr->dsap = kLlcSnapExtension;
     llc_hdr->ssap = kLlcSnapExtension;
     llc_hdr->control = kLlcUnnumberedInformation;
     std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
     llc_hdr->protocol_id = eth_frame.hdr()->ether_type;
-    std::memcpy(llc_hdr->payload, eth_frame.body(), payload_len);
+    w.Write({eth_frame.body()->data, payload_len});
 
-    size_t actual_body_len = llc_hdr->len() + payload_len;
-    auto status = data_frame.set_body_len(actual_body_len);
-    if (status != ZX_OK) {
-        errorf("[infra-bss] [%s] could not set data body length to %zu: %d\n",
-               bssid_.ToString().c_str(), actual_body_len, status);
-        return std::nullopt;
-    }
+    CBW cbw = CBW20;
+    if (Ht().cbw_40_tx_ready && eth_frame.hdr()->src.IsUcast()) { cbw = CBW40; }
+    packet->CopyCtrlFrom(MakeTxInfo(data_hdr->fc, cbw, WLAN_PHY_HT));
+    packet->set_len(w.WrittenBytes());
 
-    finspect("Outbound data frame: len %zu, hdr_len:%zu body_len:%zu\n", data_frame.len(),
-             data_hdr->len(), llc_hdr->len());
+    finspect("Outbound data frame: len %zu\n", w.WrittenBytes());
     finspect("  wlan hdr: %s\n", debug::Describe(*data_hdr).c_str());
     finspect("  llc  hdr: %s\n", debug::Describe(*llc_hdr).c_str());
-    finspect("  frame   : %s\n",
-             debug::HexDump(data_frame.View().data(), data_frame.len()).c_str());
+    finspect("  frame   : %s\n", debug::HexDump(packet->data(), packet->len()).c_str());
 
     // Ralink appears to setup BlockAck session AND AMPDU handling
     // TODO(porce): Use a separate sequence number space in that case
-    CBW cbw = CBW20;
-    if (Ht().cbw_40_tx_ready && eth_frame.hdr()->src.IsUcast()) {
-        // 40MHz direction does not matter here.
-        // Radio uses the operational channel setting. This indicates the
-        // bandwidth without direction.
-        cbw = CBW40;
-    }
-    data_frame.FillTxInfo(cbw, WLAN_PHY_HT);
-    return std::make_optional(fbl::move(data_frame));
+    return DataFrame<LlcHeader>(fbl::move(packet));
 }
 
 void InfraBss::OnPreTbtt() {

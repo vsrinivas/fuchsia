@@ -289,6 +289,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     common::WriteSsid(&elem_w, *join_ctx_->bss()->ssid);
     common::WriteSupportedRates(&elem_w, supp_rates);
     if (!ext_rates.empty()) { common::WriteExtendedSupportedRates(&elem_w, ext_rates); }
+
     // Write RSNE from MLME-Association.request if available.
     if (req.body()->rsn) { elem_w.Write(*req.body()->rsn); }
 
@@ -995,7 +996,8 @@ zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& 
     llc_hdr->protocol_id = htobe16(kEapolProtocolId);
     w.Write({req.body()->data->data(), llc_payload_len});
 
-    packet->CopyCtrlFrom(MakeTxInfo(data_hdr->fc, CBW20, WLAN_PHY_HT, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY));
+    packet->CopyCtrlFrom(
+        MakeTxInfo(data_hdr->fc, CBW20, WLAN_PHY_HT, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY));
     packet->set_len(w.WrittenBytes());
 
     zx_status_t status = SendWlan(fbl::move(packet));
