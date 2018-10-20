@@ -59,9 +59,6 @@ class Resource {
 // TODO(MZ-268): Make this class final, and add public move constructor.
 class Memory : public Resource {
  public:
-  // TODO(nathanrogers): Remove this overload.
-  Memory(Session* session, zx::vmo vmo,
-         fuchsia::images::MemoryType memory_type);
   Memory(Session* session, zx::vmo vmo, uint64_t allocation_size,
          fuchsia::images::MemoryType memory_type);
   ~Memory();

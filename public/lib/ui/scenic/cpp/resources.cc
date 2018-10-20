@@ -127,13 +127,6 @@ Buffer::Buffer(Buffer&& moved) : Resource(std::move(moved)) {}
 
 Buffer::~Buffer() = default;
 
-// TODO(nathanrogers): Remove this overload.
-Memory::Memory(Session* session, zx::vmo vmo,
-               fuchsia::images::MemoryType memory_type)
-    : Resource(session), memory_type_(memory_type) {
-  session->Enqueue(NewCreateMemoryCmd(id(), std::move(vmo), memory_type));
-}
-
 Memory::Memory(Session* session, zx::vmo vmo, uint64_t allocation_size,
                fuchsia::images::MemoryType memory_type)
     : Resource(session), memory_type_(memory_type) {

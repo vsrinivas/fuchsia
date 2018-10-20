@@ -37,7 +37,7 @@ VK_TEST_F(PoseBufferTest, Validation) {
   uint32_t num_entries = 1;
 
   ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(
-      memory_id, std::move(vmo),
+      memory_id, std::move(vmo), vmo_size,
       fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
   ASSERT_TRUE(
       Apply(scenic::NewCreateBufferCmd(buffer_id, memory_id, 0, vmo_size)));

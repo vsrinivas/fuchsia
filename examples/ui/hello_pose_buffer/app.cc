@@ -143,7 +143,7 @@ void App::CreateExampleScene(float display_width, float display_height) {
   uint64_t time_interval = 1024 * 1024 * 60 / 3.0;  // 16.67 ms
   uint32_t num_entries = 1;
 
-  Memory mem(session, std::move(vmo),
+  Memory mem(session, std::move(vmo), vmo_size,
              fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
   Buffer pose_buffer(mem, 0, vmo_size);
 

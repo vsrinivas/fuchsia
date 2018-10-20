@@ -25,9 +25,6 @@ fuchsia::ui::scenic::Command NewCommand(fuchsia::ui::gfx::Command command);
 fuchsia::ui::scenic::Command NewCommand(fuchsia::ui::input::Command command);
 
 // Resource creation.
-// TODO(nathanrogers): Remove this overload.
-fuchsia::ui::gfx::Command NewCreateMemoryCmd(
-    uint32_t id, zx::vmo vmo, fuchsia::images::MemoryType memory_type);
 fuchsia::ui::gfx::Command NewCreateMemoryCmd(
     uint32_t id, zx::vmo vmo, uint64_t allocation_size,
     fuchsia::images::MemoryType memory_type);
