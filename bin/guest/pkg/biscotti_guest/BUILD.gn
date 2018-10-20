@@ -10,12 +10,14 @@ action("data") {
   visibility = [ ":*" ]
   script = "mkdata.sh"
   args = [ rebase_path(data_image) ]
-  outputs = [ data_image ]
+  outputs = [
+    data_image,
+  ]
 }
 
 guest_package("biscotti_guest") {
   deps = [
-    ":data"
+    ":data",
   ]
 
   cmdline = "console=hvc0 root=/dev/vda rw"

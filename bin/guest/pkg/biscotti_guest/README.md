@@ -37,13 +37,51 @@ can proceed:
 ```
  (host) $ cd $FUCHSIA_DIR
  (host) $ fx set x64 --products "garnet/products/default" \
-                     --packages "garnet/packages/experimental/disabled/biscotti_guest"
+                     --packages "garnet/packages/experimental/disabled/biscotti"
  (host) $ fx full-build
 ```
 
-Boot the image on your device.
+## Boot to Termina
+
+For basic things, booting to the Termina VM is probably the simplest solution.
+This provides a minimal linux environment that is read-only, but is faster and
+simpler to boot:
 
 ```
  (fuchsia) $ guest launch biscotti_guest
  (guest) #
+```
+
+## Boot to Debian Container
+
+The Debian container provides a more fully functional linux environment that
+allows additional packages to be added via `apt`.
+
+> This is still experimental and is unlikely to work without some tweaks. The
+> container networking is hard-coded to use a fixed address that will likely
+> need to be changed to match your specific network configuration. It also uses
+> the host net device directly which means you'll want to enter the following
+> commands directly into the Fuchsia terminal (`fx shell` is unlikely to work).
+
+In one shell, start the guest. This will continue to show logging from the
+guest but will not be interactive.
+```
+  (fuchsia[1]) $ run biscotti
+               [INFO:guest.cc(71)] Creating Guest Environment...
+               [INFO:guest.cc(138)] Starting GRPC server...
+               .... Lots more logging ....
+               [INFO:guest.cc(312)] Starting Container...
+               [INFO:guest.cc(330)] Container started
+               [INFO:guest.cc(312)] Creating user 'machina'...
+               [INFO:guest.cc(312)] User created.
+               [INFO:guest.cc(312)] Launching container shell...
+```
+
+To interact with the container, connect to the serial port:
+```
+  (fuchsia[2]) $ guest list
+               env:0              biscotti
+                guest:3           biscotti_guest
+  (fuchsia[2]) $ guest serial 0 3
+  (container)  machina@stretch:~$ sudo apt-get update
 ```

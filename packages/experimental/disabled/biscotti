@@ -1,0 +1,9 @@
+{
+    "imports": [
+        "garnet/packages/prod/guest_runner"
+    ],
+    "packages": [
+        "//garnet/bin/guest/pkg/biscotti_guest",
+        "//garnet/bin/guest/pkg/biscotti_guest/bin:biscotti"
+    ]
+}
