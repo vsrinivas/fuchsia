@@ -23,7 +23,9 @@ package("escher_tests") {
   ]
 
   tests = [
-    { name = "escher_unittests" },
+    {
+      name = "escher_unittests"
+    },
   ]
 
   meta = [
@@ -102,7 +104,9 @@ config("vulkan_config") {
 source_set("vulkan") {
   if (is_fuchsia) {
     public_configs = [ ":vulkan_config" ]
-    public_deps = [ "//garnet/public/lib/vulkan" ]
+    public_deps = [
+      "//garnet/public/lib/vulkan",
+    ]
   } else if (!escher_use_null_vulkan_config_on_host) {
     # Host build using downloaded LunarG SDK.
     public_configs = [ ":vulkan_config" ]
@@ -182,9 +186,10 @@ source_set("escher") {
     "geometry/quad.h",
     "geometry/tessellation.cc",
     "geometry/tessellation.h",
+    "geometry/transform.cc",
     "geometry/transform.h",
-    "geometry/types.h",
     "geometry/type_utils.h",
+    "geometry/types.h",
     "hmd/pose_buffer_latching_shader.cc",
     "hmd/pose_buffer_latching_shader.h",
     "impl/command_buffer.cc",
@@ -272,19 +277,16 @@ source_set("escher") {
     "math/lerp.h",
     "math/rotations.cc",
     "math/rotations.h",
-    "paper/paper_drawable.h",
-    "paper/paper_drawable_flags.h",
     "paper/paper_draw_call.h",
     "paper/paper_draw_call_factory.cc",
     "paper/paper_draw_call_factory.h",
+    "paper/paper_drawable.h",
+    "paper/paper_drawable_flags.h",
     "paper/paper_legacy_drawable.cc",
     "paper/paper_legacy_drawable.h",
     "paper/paper_light.h",
     "paper/paper_material.h",
     "paper/paper_readme.h",
-    "paper/paper_renderer2.cc",
-    "paper/paper_renderer2.h",
-    "paper/paper_renderer_config.h",
     "paper/paper_render_funcs.cc",
     "paper/paper_render_funcs.h",
     "paper/paper_render_queue.cc",
@@ -292,6 +294,9 @@ source_set("escher") {
     "paper/paper_render_queue_context.cc",
     "paper/paper_render_queue_context.h",
     "paper/paper_render_queue_flags.h",
+    "paper/paper_renderer2.cc",
+    "paper/paper_renderer2.h",
+    "paper/paper_renderer_config.h",
     "paper/paper_scene.h",
     "paper/paper_shader_structs.h",
     "paper/paper_shape_cache.cc",
@@ -312,12 +317,12 @@ source_set("escher") {
     "renderer/moment_shadow_map_renderer.h",
     "renderer/paper_renderer.cc",
     "renderer/paper_renderer.h",
-    "renderer/renderer.cc",
-    "renderer/renderer.h",
     "renderer/render_queue.cc",
     "renderer/render_queue.h",
     "renderer/render_queue_context.h",
     "renderer/render_queue_item.h",
+    "renderer/renderer.cc",
+    "renderer/renderer.h",
     "renderer/semaphore.cc",
     "renderer/semaphore.h",
     "renderer/shadow_map.cc",
@@ -386,8 +391,8 @@ source_set("escher") {
     "third_party/granite/vk/render_pass_info.h",
     "third_party/granite/vk/shader_utils.cc",
     "third_party/granite/vk/shader_utils.h",
-    "util/alloca.h",
     "util/align.h",
+    "util/alloca.h",
     "util/bit_ops.h",
     "util/bitmap.h",
     "util/block_allocator.cc",

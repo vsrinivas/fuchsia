@@ -45,20 +45,34 @@ TEST(Transform, SimpleRotation) {
 
 TEST(Transform, AllTogetherNow) {
   Transform transform;
-  transform.translation = vec3(10, 10, 10);
-  transform.scale = vec3(2, 2, 2);
-  transform.rotation = glm::angleAxis(k45Degrees, kZAxis);
-  transform.anchor = vec3(3, 4, -4);
+  transform.translation = vec3(11, 12, 13);
+  transform.scale = vec3(1.1f, 1.2f, 1.3f);
+  transform.rotation = glm::angleAxis(.75f, glm::normalize(vec3(1, 2, 3)));
+  transform.anchor = vec3(1.4f, 1.5f, 1.6f);
 
-  vec3 input(4, 4, -5);
+  vec3 input(2, 4, 6);
   vec3 output(static_cast<mat4>(transform) * vec4(input, 1));
 
-  // With respect to the anchor, the input is vec3(1, 0, -1), which is
-  // rotated/scaled to vec3(kSqrt2, kSqrt2, -2).  With respect to the origin,
-  // the rotated/scaled value is vec3(3 + kSqrt2, 4 + kSqrt2, -6).  Finally,
-  // this last value is translated by vec3(10, 10, 10).
-  vec3 expected_output(13 + kSqrt2, 14 + kSqrt2, 4);
-  EXPECT_NEAR(0.f, glm::distance(expected_output, output), 0.00001f);
+  vec3 expected_output = input;
+
+  // With respect to the anchor, the input is:
+  expected_output -= transform.anchor;
+
+  // This is then axis-scaled:
+  expected_output[0] *= transform.scale[0];
+  expected_output[1] *= transform.scale[1];
+  expected_output[2] *= transform.scale[2];
+
+  // and rotated:
+  expected_output = glm::rotate(transform.rotation, expected_output);
+
+  // With respect to the origin, this is:
+  expected_output += transform.anchor;
+
+  // Finally, translate:
+  expected_output += transform.translation;
+
+  EXPECT_NEAR(0.f, glm::distance(expected_output, output), kEpsilon);
 }
 
 }  // namespace

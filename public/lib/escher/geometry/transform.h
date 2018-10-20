@@ -20,13 +20,7 @@ struct Transform {
   vec3 anchor;
 
   // Allow static_cast<mat4>(*this).
-  explicit operator mat4() const {
-    mat4 translate_mat = glm::translate(translation + anchor);
-    mat4 rotate_mat = glm::toMat4(rotation);
-    mat4 scale_mat = glm::scale(scale);
-    mat4 anchor_mat = glm::translate(-anchor);
-    return translate_mat * rotate_mat * scale_mat * anchor_mat;
-  }
+  explicit operator mat4() const;
 
   Transform(vec3 translation, vec3 scale = vec3(1, 1, 1),
             quat rotation = quat(), vec3 anchor = vec3(0, 0, 0))
