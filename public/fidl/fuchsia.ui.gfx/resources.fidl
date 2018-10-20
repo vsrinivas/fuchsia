@@ -66,6 +66,9 @@ struct MemoryArgs {
   // The VMO which backs this memory.
   handle<vmo> vmo;
 
+  // The amount of memory from |vmo| that should be utilized.
+  uint64 allocation_size;
+
   // The type of memory stored in the VMO, namely whether it's GPU memory or
   // host memory.
   fuchsia.images.MemoryType memory_type;

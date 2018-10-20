@@ -124,9 +124,12 @@ pub struct Memory {
 }
 
 impl Memory {
-    pub fn new(session: SessionPtr, vmo: Vmo, memory_type: MemoryType) -> Memory {
+    pub fn new(
+        session: SessionPtr, vmo: Vmo, allocation_size: u64, memory_type: MemoryType,
+    ) -> Memory {
         let args = MemoryArgs {
             vmo: vmo,
+            allocation_size: allocation_size,
             memory_type,
         };
         Memory {
@@ -452,7 +455,7 @@ impl HostMemory {
     pub fn allocate(session: SessionPtr, size: usize) -> Result<HostMemory, Status> {
         let (vmo, mapping) = MemoryMapping::allocate(size)?;
         Ok(HostMemory {
-            memory: Memory::new(session, vmo, MemoryType::HostMemory),
+            memory: Memory::new(session, vmo, size as u64, MemoryType::HostMemory),
             mapping: Arc::new(mapping),
         })
     }

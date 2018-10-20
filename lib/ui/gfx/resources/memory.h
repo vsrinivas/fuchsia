@@ -39,12 +39,7 @@ class Memory : public Resource {
   // unified.
   bool is_host() const { return is_host_; }
 
-  size_t size() const {
-    // We allocate the size of the GpuMemPtr by querying the size of the vmo
-    // directly at construction time, so we do not need separate size functions
-    // for CPU and GPU mapped memory.
-    return shared_vmo_->vmo_size();
-  }
+  size_t size() const { return allocation_size_; }
   void* host_ptr() const {
     // SharedVMO already lazily maps in response to the first map request, so we
     // don't need additional logic here.
@@ -72,6 +67,7 @@ class Memory : public Resource {
 
   bool is_host_;
   fxl::RefPtr<fsl::SharedVmo> shared_vmo_;
+  uint64_t allocation_size_;
   escher::GpuMemPtr escher_gpu_mem_;
 };
 

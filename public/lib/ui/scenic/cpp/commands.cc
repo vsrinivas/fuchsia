@@ -35,10 +35,26 @@ fuchsia::ui::gfx::Command NewCreateResourceCmd(
   return command;
 }
 
+// TODO(nathanrogers): Remove this overload.
 fuchsia::ui::gfx::Command NewCreateMemoryCmd(
     uint32_t id, zx::vmo vmo, fuchsia::images::MemoryType memory_type) {
   fuchsia::ui::gfx::MemoryArgs memory;
   memory.vmo = std::move(vmo);
+  memory.allocation_size = 0u;
+  memory.memory_type = memory_type;
+
+  fuchsia::ui::gfx::ResourceArgs resource;
+  resource.set_memory(std::move(memory));
+
+  return NewCreateResourceCmd(id, std::move(resource));
+}
+
+fuchsia::ui::gfx::Command NewCreateMemoryCmd(
+    uint32_t id, zx::vmo vmo, uint64_t allocation_size,
+    fuchsia::images::MemoryType memory_type) {
+  fuchsia::ui::gfx::MemoryArgs memory;
+  memory.vmo = std::move(vmo);
+  memory.allocation_size = allocation_size;
   memory.memory_type = memory_type;
 
   fuchsia::ui::gfx::ResourceArgs resource;
