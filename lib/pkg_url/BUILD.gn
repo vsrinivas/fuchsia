@@ -9,11 +9,9 @@ source_set("pkg_url") {
   sources = [
     "fuchsia_pkg_url.cc",
     "fuchsia_pkg_url.h",
-    "url_resolver.cc",
-    "url_resolver.h",
   ]
 
-  public_deps = [
+  deps = [
     "//garnet/public/lib/fxl",
   ]
 }
@@ -25,7 +23,6 @@ executable("tests") {
 
   sources = [
     "fuchsia_pkg_url_unittest.cc",
-    "url_resolver_unittest.cc",
   ]
 
   deps = [

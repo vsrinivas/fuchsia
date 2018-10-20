@@ -10,8 +10,6 @@
 #include <sstream>
 #include <string>
 
-#include "garnet/lib/pkg_url/fuchsia_pkg_url.h"
-#include "lib/fxl/strings/substitute.h"
 #include "rapidjson/document.h"
 
 namespace component {
@@ -19,6 +17,8 @@ namespace component {
 constexpr char kSandbox[] = "sandbox";
 constexpr char kProgram[] = "program";
 constexpr char kFacets[] = "facets";
+constexpr char kCmxPath[] = "meta/";
+constexpr char kCmxExtension[] = ".cmx";
 
 CmxMetadata::CmxMetadata() = default;
 CmxMetadata::~CmxMetadata() = default;
@@ -55,16 +55,39 @@ bool CmxMetadata::ParseFromDeprecatedRuntimeFileAt(
   return !json_parser->HasError();
 }
 
-// static
 std::string CmxMetadata::GetDefaultComponentCmxPath(
-    const FuchsiaPkgUrl& package_resolved_url) {
-  return fxl::Substitute("meta/$0.cmx", package_resolved_url.package_name());
+    const std::string& package_resolved_url) {
+  TRACE_DURATION("cmx", "CmxMetadata::GetDefaultComponentCmxPath",
+                 "package_resolved_url", package_resolved_url);
+  // Expect package resolved URL in the form of file:///pkgfs/packages/<FOO>/0.
+  // Look for <FOO> as the package name.
+  // Currently there is only one component per package. The default .cmx is
+  // meta/<FOO>.cmx.
+  std::string cmx_path;
+  std::ostringstream os;
+  std::string component_name = GetDefaultComponentName(package_resolved_url);
+  if (!component_name.empty()) {
+    os << kCmxPath << component_name << kCmxExtension;
+    cmx_path = os.str();
+  }
+  return cmx_path;
 }
 
-// static
 std::string CmxMetadata::GetDefaultComponentName(
-    const FuchsiaPkgUrl& package_resolved_url) {
-  return package_resolved_url.package_name();
+    const std::string& package_resolved_url) {
+  static const std::regex* const kPackageNameFileScheme =
+      new std::regex("^file:///pkgfs/packages/(.*?)/");
+  // Expect package resolved URL in the form of file:///pkgfs/packages/<FOO>/0.
+  // Look for <FOO> as the package name.
+  // Currently there is only one component per package. The default component is
+  // <FOO>.
+  std::string component_name;
+  std::smatch sm;
+  if (std::regex_search(package_resolved_url, sm, *kPackageNameFileScheme) &&
+      sm.size() >= 2) {
+    component_name = sm[1].str().c_str();
+  }
+  return component_name;
 }
 
 void CmxMetadata::ParseSandboxMetadata(const rapidjson::Document& document,

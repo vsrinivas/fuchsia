@@ -20,7 +20,6 @@ source_set("cmx") {
 
   deps = [
     "//garnet/lib/json",
-    "//garnet/lib/pkg_url",
     "//garnet/public/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/fit",
@@ -44,7 +43,6 @@ executable("tests") {
   deps = [
     ":cmx",
     "//garnet/lib/json",
-    "//garnet/lib/pkg_url",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gmock",

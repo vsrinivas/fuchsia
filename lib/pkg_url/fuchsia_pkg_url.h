@@ -7,31 +7,23 @@
 
 #include <string>
 
-#include "lib/fxl/macros.h"
-
 namespace component {
 
 class FuchsiaPkgUrl {
  public:
-  FuchsiaPkgUrl() = default;
-  FuchsiaPkgUrl(FuchsiaPkgUrl&&) = default;
-
   static bool IsFuchsiaPkgScheme(const std::string& url);
 
   bool Parse(const std::string& url);
 
   const std::string& package_name() const { return package_name_; }
-  const std::string& resource_path() const { return resource_path_; }
-  std::string pkgfs_dir_path() const;
 
-  const std::string& ToString() const;
+  const std::string& resource_path() const { return resource_path_; }
+
+  std::string pkgfs_dir_path();
 
  private:
-  std::string url_;
   std::string package_name_;
   std::string resource_path_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FuchsiaPkgUrl);
 };
 
 }  // namespace component
