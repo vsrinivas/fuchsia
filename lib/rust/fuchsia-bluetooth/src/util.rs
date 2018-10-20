@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_bluetooth;
+use fidl_fuchsia_bluetooth::{self, Int8};
 use fidl_fuchsia_bluetooth_control::{
     AdapterInfo,
     AdapterState,
+    RemoteDevice,
 };
 use fidl_fuchsia_bluetooth_host::{
     BondingData,
@@ -142,5 +143,27 @@ fn clone_le_data(le: &LeData) -> LeData {
         irk: le.irk.as_ref().map(|v| Box::new(clone_key(&v))),
         csrk: le.csrk.as_ref().map(|v| Box::new(clone_key(&v))),
         ..*le
+    }
+}
+
+/// Clone RemoteDevice data, as clone is not implemented for FIDL types
+pub fn clone_remote_device(d: &RemoteDevice) -> RemoteDevice {
+    fn copy_option_int8(opt: &Option<Box<Int8>>) -> Option<Box<Int8>> {
+        match opt {
+            Some(i) => Some(Box::new(Int8{ value: i.value })),
+            None => None
+        }
+    }
+    RemoteDevice {
+        identifier: d.identifier.clone(),
+        address: d.address.clone(),
+        technology: d.technology.clone(),
+        name: d.name.clone(),
+        appearance: d.appearance.clone(),
+        rssi: copy_option_int8(&d.rssi),
+        tx_power: copy_option_int8(&d.tx_power),
+        connected: d.connected,
+        bonded: d.bonded,
+        service_uuids: d.service_uuids.iter().cloned().collect(),
     }
 }

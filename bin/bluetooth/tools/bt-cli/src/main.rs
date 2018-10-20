@@ -181,10 +181,11 @@ pub struct State {
 }
 
 impl State {
-    pub fn new() -> Arc<Mutex<State>> {
-        Arc::new(Mutex::new(State {
-            devices: HashMap::new(),
-        }))
+    pub fn new(devs: Vec<fidl_fuchsia_bluetooth_control::RemoteDevice>) -> Arc<Mutex<State>> {
+        let devices: HashMap<_, _> = devs.into_iter().map(|d| {
+            (d.identifier.clone(), RemoteDevice(d))
+        }).collect();
+        Arc::new(Mutex::new(State{ devices }))
     }
 }
 
@@ -310,7 +311,6 @@ async fn run_repl(bt_svc: ControlProxy, state: Arc<Mutex<State>>) -> Result<(), 
 }
 
 fn main() -> Result<(), Error> {
-    let state = State::new();
     let mut exec = fasync::Executor::new().context("error creating event loop")?;
     let bt_svc = connect_to_service::<ControlMarker>()
         .context("failed to connect to bluetooth control interface")?;
@@ -318,6 +318,8 @@ fn main() -> Result<(), Error> {
     let evt_stream = bt_svc_thread.take_event_stream();
 
     let fut = async {
+        let devices = await!(bt_svc.get_known_remote_devices()).unwrap_or(vec![]);
+        let state = State::new(devices);
         let repl = run_repl(bt_svc, state.clone())
             .unwrap_or_else(|e| println!("REPL failed unexpectedly {:?}", e));
         let listeners = run_listeners(evt_stream, &state)

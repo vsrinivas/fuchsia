@@ -128,24 +128,9 @@ pub async fn run(hd: HostDispatcher, host: Arc<RwLock<HostDevice>>) -> fidl::Res
                 host_.write().info.state = Some(Box::new(clone_host_state(&state)));
             }
             // TODO(NET-968): Add integration test for this.
-            HostEvent::OnDeviceUpdated { mut device } => {
-                // TODO(NET-1297): generic method for this pattern
-                for listener in dispatcher.event_listeners().iter() {
-                    let _res = listener
-                        .send_on_device_updated(&mut device)
-                        .map_err(|e|
-                                 fx_log_err!("Failed to send device updated event: {:?}", e));
-                }
-            }
+            HostEvent::OnDeviceUpdated { mut device } => hd.on_device_updated(device),
             // TODO(NET-1038): Add integration test for this.
-            HostEvent::OnDeviceRemoved { identifier } => {
-                for listener in dispatcher.event_listeners().iter() {
-                    let _res = listener
-                        .send_on_device_removed(&identifier)
-                        .map_err(|e|
-                                 fx_log_err!("Failed to send device removed event: {:?}", e));
-                }
-            }
+            HostEvent::OnDeviceRemoved { identifier } => hd.on_device_removed(identifier),
             HostEvent::OnNewBondingData { data } => {
                 fx_log_info!("Received bonding data");
                 if let Err(e) = dispatcher.store_bond(data) {

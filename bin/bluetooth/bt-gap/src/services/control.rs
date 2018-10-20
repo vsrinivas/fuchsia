@@ -67,7 +67,10 @@ async fn handler(
             let mut status = await!(hd.disconnect(device_id))?;
             responder.send(&mut status)
         }
-        ControlRequest::GetKnownRemoteDevices { .. } => Ok(()),
+        ControlRequest::GetKnownRemoteDevices { responder } => {
+            let mut devices = hd.get_remote_devices();
+            responder.send(&mut devices.iter_mut())
+        }
         ControlRequest::IsBluetoothAvailable { responder } => {
             let is_available = hd.get_active_adapter_info().is_some();
             let _ = responder.send(is_available);

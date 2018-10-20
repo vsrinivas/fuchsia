@@ -17,7 +17,8 @@ use fidl_fuchsia_bluetooth_control::{
     PairingDelegateMarker,
     PairingDelegateProxy,
     InputCapabilityType,
-    OutputCapabilityType
+    OutputCapabilityType,
+    RemoteDevice
 };
 use fidl_fuchsia_bluetooth_bredr::ProfileMarker;
 use fidl_fuchsia_bluetooth_gatt::Server_Marker;
@@ -25,7 +26,11 @@ use fidl_fuchsia_bluetooth_host::HostProxy;
 use fidl_fuchsia_bluetooth_le::{CentralProxy, CentralMarker, PeripheralMarker};
 
 use fuchsia_bluetooth::{
-    self as bt, bt_fidl_status, error::Error as BTError, util::clone_host_info,
+    self as bt,
+    bt_fidl_status,
+    error::Error as BTError,
+    util::clone_host_info,
+    util::clone_remote_device
 };
 use fuchsia_async::{self as fasync, TimeoutExt};
 use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info, fx_log_warn};
@@ -86,6 +91,8 @@ impl Drop for DiscoverableRequestToken {
     }
 }
 
+type DeviceId = String;
+
 /// The HostDispatcher acts as a proxy aggregating multiple HostAdapters
 /// It appears as a Host to higher level systems, and is responsible for
 /// routing commands to the appropriate HostAdapter
@@ -102,6 +109,7 @@ struct HostDispatcherState {
     discoverable: Option<Weak<DiscoverableRequestToken>>,
     pub input: InputCapabilityType,
     pub output: OutputCapabilityType,
+    remote_devices: HashMap<DeviceId, RemoteDevice>,
 
     pub pairing_delegate: Option<PairingDelegateProxy>,
     pub event_listeners: Vec<ControlControlHandle>,
@@ -228,6 +236,7 @@ impl HostDispatcher {
             name: DEFAULT_NAME.to_string(),
             input: InputCapabilityType::None,
             output: OutputCapabilityType::None,
+            remote_devices: HashMap::new(),
             stash: stash,
             discovery: None,
             discoverable: None,
@@ -456,9 +465,32 @@ impl HostDispatcher {
     pub fn pairing_delegate(&self) -> Option<PairingDelegateProxy> {
         self.state.write().pairing_delegate()
     }
-    
+
     pub fn store_bond(&self, bond_data: fidl_fuchsia_bluetooth_host::BondingData) -> Result<(),Error> {
         self.state.write().stash.store_bond(bond_data)
+    }
+
+    pub fn on_device_updated(&self, mut device: RemoteDevice ) {
+        // TODO(NET-1297): generic method for this pattern
+        for listener in self.event_listeners().iter() {
+            let _res = listener
+                .send_on_device_updated(&mut device)
+                .map_err(|e| fx_log_err!("Failed to send device updated event: {:?}", e));
+        }
+        let _drop_old_value = self.state.write().remote_devices.insert(device.identifier.clone(), device);
+    }
+
+    pub fn on_device_removed( &self, identifier: String ) {
+        self.state.write().remote_devices.remove(&identifier);
+        for listener in self.event_listeners().iter() {
+            let _res = listener
+                .send_on_device_removed(&identifier)
+                .map_err(|e| fx_log_err!("Failed to send device removed event: {:?}", e));
+        }
+    }
+
+    pub fn get_remote_devices(&self) -> Vec<RemoteDevice> {
+        self.state.read().remote_devices.values().map(|d| clone_remote_device(d)).collect()
     }
 }
 
