@@ -43,7 +43,7 @@ interface HidbusIfc {
     1: IoQueue(vector<void> buf) -> ();
 };
 
-[Layout="ddk-protocol"]
+[Layout="ddk-protocol", DefaultProtocol]
 interface Hidbus {
     /// Obtain information about the hidbus device and supported features.
     /// Safe to call at any time.

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-//          MODIFY system/fidl/protocols/hidbus.fidl INSTEAD.
+//          MODIFY system/fidl/protocols/hidbus.banjo INSTEAD.
 
 #pragma once
 
@@ -110,24 +110,29 @@ private:
 };
 
 template <typename D>
-class HidbusProtocol : public internal::base_mixin {
+class HidbusProtocol : public internal::base_protocol {
 public:
     HidbusProtocol() {
         internal::CheckHidbusProtocolSubclass<D>();
-        hidbus_protocol_ops_.query = HidbusQuery;
-        hidbus_protocol_ops_.start = HidbusStart;
-        hidbus_protocol_ops_.stop = HidbusStop;
-        hidbus_protocol_ops_.get_descriptor = HidbusGetDescriptor;
-        hidbus_protocol_ops_.get_report = HidbusGetReport;
-        hidbus_protocol_ops_.set_report = HidbusSetReport;
-        hidbus_protocol_ops_.get_idle = HidbusGetIdle;
-        hidbus_protocol_ops_.set_idle = HidbusSetIdle;
-        hidbus_protocol_ops_.get_protocol = HidbusGetProtocol;
-        hidbus_protocol_ops_.set_protocol = HidbusSetProtocol;
+        ops_.query = HidbusQuery;
+        ops_.start = HidbusStart;
+        ops_.stop = HidbusStop;
+        ops_.get_descriptor = HidbusGetDescriptor;
+        ops_.get_report = HidbusGetReport;
+        ops_.set_report = HidbusSetReport;
+        ops_.get_idle = HidbusGetIdle;
+        ops_.set_idle = HidbusSetIdle;
+        ops_.get_protocol = HidbusGetProtocol;
+        ops_.set_protocol = HidbusSetProtocol;
+
+        // Can only inherit from one base_protocol implementation.
+        ZX_ASSERT(ddk_proto_id_ == 0);
+        ddk_proto_id_ = ZX_PROTOCOL_HIDBUS;
+        ddk_proto_ops_ = &ops_;
     }
 
 protected:
-    hidbus_protocol_ops_t hidbus_protocol_ops_ = {};
+    hidbus_protocol_ops_t ops_ = {};
 
 private:
     // Obtain information about the hidbus device and supported features.

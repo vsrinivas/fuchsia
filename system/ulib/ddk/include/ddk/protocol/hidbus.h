@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-//          MODIFY system/fidl/protocols/hidbus.fidl INSTEAD.
+//          MODIFY system/fidl/protocols/hidbus.banjo INSTEAD.
 
 #pragma once
 
