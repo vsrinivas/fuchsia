@@ -61,7 +61,7 @@ HostMemory::HostMemory(Session* session, size_t size)
 
 HostMemory::HostMemory(Session* session,
                        std::pair<zx::vmo, std::shared_ptr<HostData>> init)
-    : Memory(session, std::move(init.first),
+    : Memory(session, std::move(init.first), init.second->size(),
              fuchsia::images::MemoryType::HOST_MEMORY),
       data_(std::move(init.second)) {}
 

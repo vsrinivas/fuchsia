@@ -89,7 +89,7 @@ void GuestView::OnSceneInvalidated(
     FXL_CHECK(status == ZX_OK)
         << "Scanout target VMO duplication failed " << status;
     memory_ = std::make_unique<scenic::Memory>(
-        session(), std::move(scenic_vmo),
+        session(), std::move(scenic_vmo), vmo_size,
         fuchsia::images::MemoryType::HOST_MEMORY);
 
     scanout_->SetFlushTarget(std::move(scanout_vmo), vmo_size,
