@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_basemgr_COBALT_COBALT_H_
-#define PERIDOT_BIN_basemgr_COBALT_COBALT_H_
+#ifndef PERIDOT_BIN_BASEMGR_COBALT_COBALT_H_
+#define PERIDOT_BIN_BASEMGR_COBALT_COBALT_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/component/cpp/startup_context.h>
@@ -24,13 +24,21 @@ enum class CobaltMetric : uint32_t {
   MODULAR_EVENTS = 3,
   MODULE_LAUNCH_LATENCY = 4,
   STORY_LAUNCH_LATENCY = 5,
+  SESSION_AGENT_EVENT = 6,
 };
 
 // The events to report.
 // Next enum value: 2
 enum class ModularEvent : uint32_t {
-  BOOTED_TO_basemgr = 0,
+  BOOTED_TO_BASEMGR = 0,
   BOOTED_TO_USER_RUNNER = 1,
+};
+
+// The sesssion agent events to report.
+// Next enum value: 2
+enum class SessionAgentEvent : uint32_t {
+  CRASH = 0,
+  CRASH_LIMIT = 1,
 };
 
 // Cobalt initialization. When cobalt is not needed, the returned object must be
@@ -47,6 +55,8 @@ void ReportModuleLaunchTime(std::string module_url, zx::duration time);
 // Report a story launch time duration to Cobalt.
 void ReportStoryLaunchTime(zx::duration time);
 
+void ReportSessionAgentEvent(const std::string& url, SessionAgentEvent event);
+
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_basemgr_COBALT_COBALT_H_
+#endif  // PERIDOT_BIN_BASEMGR_COBALT_COBALT_H_

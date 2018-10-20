@@ -205,6 +205,7 @@ source_set("user_intelligence_provider") {
     ":intelligence_services",
     "//garnet/public/fidl/fuchsia.bluetooth.le",
     "//garnet/public/fidl/fuchsia.net.oldhttp",
+    "//peridot/bin/basemgr/cobalt",
     "//peridot/lib:maxwell_internal",
     "//peridot/lib/util:rate_limited_retry",
     "//peridot/public/fidl/fuchsia.modular",

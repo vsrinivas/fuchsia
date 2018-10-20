@@ -411,7 +411,7 @@ class BasemgrApp : fuchsia::modular::DeviceShellContext,
         authentication_context_provider_binding_.NewBinding().Bind(),
         settings_.enable_garnet_token_manager, this));
 
-    ReportEvent(ModularEvent::BOOTED_TO_basemgr);
+    ReportEvent(ModularEvent::BOOTED_TO_BASEMGR);
   }
 
   // |fuchsia::modular::DeviceShellContext|
