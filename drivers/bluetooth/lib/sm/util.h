@@ -76,6 +76,15 @@ void S1(const common::UInt128& tk, const common::UInt128& r1,
 // Returns 24 bit hash value.
 uint32_t Ah(const common::UInt128& k, uint32_t r);
 
+// Returns true if the given |irk| can resolve the given |rpa| using the method
+// described in Vol 6, Part B, 1.3.2.3.
+bool IrkCanResolveRpa(const common::UInt128& irk,
+                      const common::DeviceAddress& rpa);
+
+// Generates a RPA using the given IRK based on the method described in Vol 6,
+// Part B, 1.3.2.2.
+common::DeviceAddress GenerateRpa(const common::UInt128& irk);
+
 }  // namespace util
 }  // namespace sm
 }  // namespace btlib

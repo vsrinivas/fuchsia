@@ -40,6 +40,11 @@ DeviceAddressBytes::DeviceAddressBytes(std::initializer_list<uint8_t> bytes) {
   std::copy(bytes.begin(), bytes.end(), bytes_.begin());
 }
 
+DeviceAddressBytes::DeviceAddressBytes(const common::ByteBuffer& bytes) {
+  ZX_DEBUG_ASSERT(bytes.size() == bytes_.size());
+  std::copy(bytes.cbegin(), bytes.cend(), bytes_.begin());
+}
+
 DeviceAddressBytes::DeviceAddressBytes(const std::string& bdaddr_string) {
   // Use ZX_ASSERT to prevent this from being compiled out on non-debug builds.
   ZX_ASSERT(SetFromString(bdaddr_string));
@@ -99,7 +104,7 @@ DeviceAddress::DeviceAddress(Type type, const DeviceAddressBytes& value)
 
 bool DeviceAddress::IsResolvable() const {
   // "The most significant bits of [a RPA] shall be equal to 0 and 1" where as
-  // those of a non-resolvable address "shall be qual to 0" (Vol 6, Part B,
+  // those of a non-resolvable address "shall be equal to 0" (Vol 6, Part B,
   // 1.3.2.2).
   uint8_t msb = value_.bytes()[5];
   return type_ == Type::kLERandom && (msb & 0x40) && (~msb & 0x80);

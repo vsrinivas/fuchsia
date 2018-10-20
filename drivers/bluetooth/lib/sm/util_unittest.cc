@@ -4,6 +4,8 @@
 
 #include "util.h"
 
+#include <zircon/syscalls.h>
+
 #include "gtest/gtest.h"
 
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
@@ -358,12 +360,49 @@ TEST(SMP_UtilTest, S1) {
 
 // Test "ah" using the sample data from Vol 3, Part H, Appendix D.7.
 TEST(SMP_UtilTest, Ah) {
-  const UInt128 irk{{0x9B, 0x7D, 0x39, 0x0A, 0xA6, 0x10, 0x10, 0x34, 0x05, 0xad,
+  const UInt128 irk{{0x9B, 0x7D, 0x39, 0x0A, 0xA6, 0x10, 0x10, 0x34, 0x05, 0xAD,
                      0xC8, 0x57, 0xA3, 0x34, 0x02, 0xEC}};
   const uint32_t prand = 0x708194;
   const uint32_t kExpected = 0x0DFBAA;
 
   EXPECT_EQ(kExpected, Ah(irk, prand));
+}
+
+TEST(SMP_UtilTest, IrkCanResolveRpa) {
+  // Using the sample data from Vol 3, Part H, Appendix D.7.
+  const UInt128 kIRK{{0x9B, 0x7D, 0x39, 0x0A, 0xA6, 0x10, 0x10, 0x34, 0x05,
+                      0xAD, 0xC8, 0x57, 0xA3, 0x34, 0x02, 0xEC}};
+  const DeviceAddress kStaticRandom(DeviceAddress::Type::kLERandom,
+                                    "F0:81:94:0D:FB:A9");
+  const DeviceAddress kNonResolvable(DeviceAddress::Type::kLERandom,
+                                     "00:81:94:0D:FB:A9");
+  const DeviceAddress kNonMatchingResolvable(DeviceAddress::Type::kLERandom,
+                                             "70:81:94:0D:FB:A9");
+  const DeviceAddress kMatchingResolvable(DeviceAddress::Type::kLERandom,
+                                          "70:81:94:0D:FB:AA");
+
+  ASSERT_FALSE(kStaticRandom.IsResolvable());
+  ASSERT_FALSE(kNonResolvable.IsResolvable());
+  ASSERT_TRUE(kNonMatchingResolvable.IsResolvable());
+  ASSERT_TRUE(kMatchingResolvable.IsResolvable());
+
+  EXPECT_FALSE(IrkCanResolveRpa(kIRK, kStaticRandom));
+  EXPECT_FALSE(IrkCanResolveRpa(kIRK, kNonResolvable));
+  EXPECT_FALSE(IrkCanResolveRpa(kIRK, kNonMatchingResolvable));
+  EXPECT_TRUE(IrkCanResolveRpa(kIRK, kMatchingResolvable));
+}
+
+TEST(SMP_UtilTest, GenerateRpa) {
+  const UInt128 irk{{'s', 'o', 'm', 'e', ' ', 'r', 'a', 'n', 'd', 'o', 'm', ' ',
+                     'd', 'a', 't', 'a'}};
+
+  DeviceAddress rpa = GenerateRpa(irk);
+
+  EXPECT_EQ(DeviceAddress::Type::kLERandom, rpa.type());
+  EXPECT_TRUE(rpa.IsResolvable());
+
+  // It should be possible to resolve the RPA with the IRK used to generate it.
+  EXPECT_TRUE(IrkCanResolveRpa(irk, rpa));
 }
 
 }  // namespace

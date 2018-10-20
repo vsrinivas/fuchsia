@@ -14,6 +14,8 @@
 namespace btlib {
 namespace common {
 
+const size_t kDeviceAddressSize = 6;
+
 // Represents a 48-bit BD_ADDR. This data structure can be directly serialized
 // into HCI command payloads.
 class DeviceAddressBytes {
@@ -23,6 +25,7 @@ class DeviceAddressBytes {
 
   // Initializes the contents from |bytes|.
   explicit DeviceAddressBytes(std::initializer_list<uint8_t> bytes);
+  explicit DeviceAddressBytes(const common::ByteBuffer& bytes);
 
   // Initializes the contents from a string of the form XX:XX:XX:XX:XX:XX where
   // each "XX" is an ASCII encoded two-digit hexadecimal integer.
@@ -65,7 +68,7 @@ class DeviceAddressBytes {
 
  private:
   // The raw bytes of the BD_ADDR stored in little-endian byte order.
-  std::array<uint8_t, 6> bytes_;
+  std::array<uint8_t, kDeviceAddressSize> bytes_;
 };
 
 static_assert(sizeof(DeviceAddressBytes) == 6,

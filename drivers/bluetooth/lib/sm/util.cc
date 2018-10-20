@@ -6,6 +6,7 @@
 
 #include <openssl/aes.h>
 #include <zircon/assert.h>
+#include <zircon/syscalls.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
 
@@ -14,6 +15,9 @@ namespace btlib {
 using common::BufferView;
 using common::ByteBuffer;
 using common::DeviceAddress;
+using common::DeviceAddressBytes;
+using common::MutableBufferView;
+using common::StaticByteBuffer;
 using common::UInt128;
 
 namespace sm {
@@ -242,6 +246,59 @@ uint32_t Ah(const UInt128& k, uint32_t r) {
   Encrypt(k, r_prime, &hash128);
 
   return le32toh(*reinterpret_cast<uint32_t*>(hash128.data())) & k24BitMax;
+}
+
+bool IrkCanResolveRpa(const UInt128& irk, const DeviceAddress& rpa) {
+  if (!rpa.IsResolvable()) {
+    return false;
+  }
+
+  // The |rpa_hash| and |prand| values generated below should match the least
+  // and most significant 3 bytes of |rpa|, respectively.
+  BufferView rpa_bytes = rpa.value().bytes();
+
+  // Lower 24-bits (in host order).
+  uint32_t rpa_hash = le32toh(rpa_bytes.As<uint32_t>()) & k24BitMax;
+
+  // Upper 24-bits (we avoid a cast to uint32_t to prevent an invalid access
+  // since the buffer would be too short).
+  BufferView prand_bytes = rpa_bytes.view(3);
+  uint32_t prand = prand_bytes[0];
+  prand |= static_cast<uint32_t>(prand_bytes[1]) << 8;
+  prand |= static_cast<uint32_t>(prand_bytes[2]) << 16;
+
+  return Ah(irk, prand) == rpa_hash;
+}
+
+DeviceAddress GenerateRpa(const UInt128& irk) {
+  // 24-bit prand value in little-endian order.
+  constexpr auto k24BitSize = 3;
+  uint32_t prand_le = 0;
+  static_assert(k24BitSize == sizeof(uint32_t) - 1);
+  MutableBufferView prand_bytes(&prand_le, k24BitSize);
+
+  // The specification requires that at least one bit of the address is 1 and at
+  // least one bit is 0. We expect that zx_cprng_draw() satisfies these
+  // requirements.
+  // TODO(SEC-87): Maybe generate within a range to enforce this?
+  zx_cprng_draw(prand_bytes.mutable_data(), prand_bytes.size());
+
+  // Make sure that the highest two bits are 0 and 1 respectively.
+  prand_bytes[2] |= 0b01000000;
+  prand_bytes[2] &= ~0b10000000;
+
+  // 24-bit hash value in little-endian order.
+  uint32_t hash_le = htole32(Ah(irk, le32toh(prand_le)));
+  BufferView hash_bytes(&hash_le, k24BitSize);
+
+  // The |rpa_hash| and |prand| values generated below take up the least
+  // and most significant 3 bytes of |rpa|, respectively.
+  StaticByteBuffer<common::kDeviceAddressSize> addr_bytes;
+  addr_bytes.Write(hash_bytes);
+  addr_bytes.Write(prand_bytes, hash_bytes.size());
+
+  return DeviceAddress(DeviceAddress::Type::kLERandom,
+                       DeviceAddressBytes(addr_bytes));
 }
 
 }  // namespace util
