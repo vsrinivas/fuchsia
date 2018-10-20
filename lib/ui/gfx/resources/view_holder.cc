@@ -88,6 +88,10 @@ void ViewHolder::RefreshScene() {
   } else {
     // View is no longer part of a scene and therefore cannot render to one.
     SetIsViewRendering(false);
+    // Reset the render event so that when the View is reattached to the scene
+    // and its children render, this ViewHolder will get the signal.
+    ResetRenderEvent();
+
     SendViewDetachedFromSceneEvent();
   }
 }
@@ -97,6 +101,8 @@ void ViewHolder::LinkResolved(View* view) {
   // linking up the Nodes.
   FXL_DCHECK(!view_ && view);
   view_ = view;
+  // Set the render waiting event on the view.
+  ResetRenderEvent();
 
   SendViewConnectedEvent();
 
@@ -117,11 +123,54 @@ void ViewHolder::LinkDisconnected() {
   // destructor, including Detaching any grandchild Nodes from the parent.
   view_ = nullptr;
 
+  CloseRenderEvent();
   // Link was disconnected, the view can no longer be rendering. If the state
   // was previously rendering, update with not rendering event.
   SetIsViewRendering(false);
 
   SendViewDisconnectedEvent();
+}
+
+void ViewHolder::ResetRenderEvent() {
+  FXL_DCHECK(view_);
+  // Close any previously set event.
+  CloseRenderEvent();
+
+  zx_status_t status = zx::event::create(0u, &render_event_);
+  ZX_ASSERT(status == ZX_OK);
+
+  // Re-arm the wait.
+  render_waiter_.set_object(render_event_.get());
+  render_waiter_.set_trigger(ZX_EVENT_SIGNALED);
+  render_waiter_.set_handler(
+      [this](async_dispatcher_t*, async::Wait*, zx_status_t status,
+             const zx_packet_signal_t*) {
+        ZX_ASSERT(status == ZX_OK || status == ZX_ERR_CANCELED);
+        if (status == ZX_OK) {
+          SetIsViewRendering(true);
+        }
+
+        // The first frame has been signaled. Clear the event as it is not used
+        // for subsequent frames.
+        CloseRenderEvent();
+      });
+  status = render_waiter_.Begin(async_get_default_dispatcher());
+  ZX_ASSERT(status == ZX_OK);
+
+  // Set the event on the View to signal when it is next rendered.
+  view_->SetOnRenderEventHandle(render_event_.get());
+}
+
+void ViewHolder::CloseRenderEvent() {
+  if (view_) {
+    view_->InvalidateRenderEventHandle();
+  }
+
+  if (render_waiter_.is_pending()) {
+    zx_status_t wait_status = render_waiter_.Cancel();
+    ZX_ASSERT(wait_status == ZX_OK);
+  }
+  render_event_.reset();
 }
 
 void ViewHolder::SetIsViewRendering(bool is_rendering) {

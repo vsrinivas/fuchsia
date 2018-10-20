@@ -176,6 +176,47 @@ TEST_F(ViewTest, ExportViewHolderWithDeadHandleFails) {
   EXPECT_EQ(0u, engine_->view_linker()->UnresolvedImportCount());
 }
 
+TEST_F(ViewTest, ViewHolderDestroyedBeforeView) {
+  // Create ViewHolder and View.
+  zx::eventpair view_holder_token, view_token;
+  zx::eventpair::create(0, &view_holder_token, &view_token);
+  const ResourceId view_holder_id = 1u;
+  Apply(scenic::NewCreateViewHolderCmd(
+      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  const ResourceId view_id = 2u;
+  Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
+  events_.clear();
+
+  // Destroy the ViewHolder and disconnect the link.
+  Apply(scenic::NewReleaseResourceCmd(view_holder_id));
+
+  EXPECT_ERROR_COUNT(0);
+  EXPECT_EQ(1u, events_.size());
+  const fuchsia::ui::scenic::Event& event = events_[0];
+  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewHolderDisconnected,
+            event.gfx().Which());
+}
+
+TEST_F(ViewTest, ViewDestroyedBeforeViewHolder) {
+  // Create ViewHolder and View.
+  zx::eventpair view_holder_token, view_token;
+  zx::eventpair::create(0, &view_holder_token, &view_token);
+  const ResourceId view_holder_id = 1u;
+  Apply(scenic::NewCreateViewHolderCmd(
+      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  const ResourceId view_id = 2u;
+  Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
+  events_.clear();
+
+  // Destroy the ViewHolder and disconnect the link.
+  Apply(scenic::NewReleaseResourceCmd(view_id));
+
+  EXPECT_ERROR_COUNT(0);
+  const fuchsia::ui::scenic::Event& event = events_[0];
+  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewDisconnected,
+            event.gfx().Which());
+}
+
 TEST_F(ViewTest, ViewHolderConnectsToScene) {
   // Create ViewHolder and View.
   zx::eventpair view_holder_token, view_token;
@@ -291,17 +332,16 @@ TEST_F(ViewTest, ViewStateChangeNotifiesViewHolder) {
   events_.clear();
 
   // Trigger a change in the ViewState. Mark as rendering.
-  view_holder->SetIsViewRendering(true);
-  // No change in rendering state, should not enqueue another event.
-  view_holder->SetIsViewRendering(true);
+  view->SignalRender();
 
   // Verify that one ViewState change event was enqueued.
+  RunLoopUntilIdle();
   EXPECT_EQ(1u, events_.size());
   const fuchsia::ui::scenic::Event& event = events_[0];
   VerifyViewState(event, true);
 }
 
-TEST_F(ViewTest, ViewHolderNotifiedOnRenderStateChanged) {
+TEST_F(ViewTest, RenderStateAcrossManyFrames) {
   // Create ViewHolder and View.
   zx::eventpair view_holder_token, view_token;
   zx::eventpair::create(0, &view_holder_token, &view_token);
@@ -312,27 +352,25 @@ TEST_F(ViewTest, ViewHolderNotifiedOnRenderStateChanged) {
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
   EXPECT_ERROR_COUNT(0);
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
+  auto view = FindResource<View>(view_id);
+  // Verify View and ViewHolder are linked.
+  EXPECT_EQ(view.get(), view_holder->view());
   // Clear View/ViewHolder connected events from the session.
   events_.clear();
 
-  view_holder->SetIsViewRendering(false);
-  // Default is false. No event should have been enqueued.
-  EXPECT_EQ(0u, events_.size());
-
   // Trigger a change in the ViewState. Mark as rendering.
-  view_holder->SetIsViewRendering(true);
-  // Verify that a ViewState change event was enqueued.
+  view->SignalRender();
+  RunLoopUntilIdle();
+  // Signal render for subsequent frames. No change in rendering state,
+  // should not enqueue another event.
+  view->SignalRender();
+  view->SignalRender();
+  RunLoopUntilIdle();
+
+  // Verify that one ViewState change event was enqueued.
   EXPECT_EQ(1u, events_.size());
-  const fuchsia::ui::scenic::Event& event = events_.back();
+  const fuchsia::ui::scenic::Event& event = events_[0];
   VerifyViewState(event, true);
-  events_.pop_back();
-
-  // Trigger a change in the ViewState. Mark as rendering.
-  view_holder->SetIsViewRendering(false);
-  // Verify that a ViewState change event was enqueued.
-  EXPECT_EQ(1u, events_.size());
-  const fuchsia::ui::scenic::Event& event2 = events_.back();
-  VerifyViewState(event2, false);
 }
 
 TEST_F(ViewTest, RenderStateFalseWhenViewDisconnects) {
@@ -351,7 +389,8 @@ TEST_F(ViewTest, RenderStateFalseWhenViewDisconnects) {
     // Verify resources are mapped and linked.
     EXPECT_EQ(2u, session_->GetMappedResourceCount());
     // Mark the view as rendering.
-    view_holder->SetIsViewRendering(true);
+    view->SignalRender();
+    RunLoopUntilIdle();
     events_.clear();
   } // Exit scope should destroy the view and disconnect the link.
   Apply(scenic::NewReleaseResourceCmd(view_id));
@@ -361,9 +400,59 @@ TEST_F(ViewTest, RenderStateFalseWhenViewDisconnects) {
   VerifyViewState(event, false);
 
   const fuchsia::ui::scenic::Event& event2 = events_.back();
-  EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event.Which());
+  EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event2.Which());
   EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewDisconnected,
             event2.gfx().Which());
+}
+
+TEST_F(ViewTest, ViewHolderRenderWaitClearedWhenViewDestroyed) {
+  // Create ViewHolder and View.
+  zx::eventpair view_holder_token, view_token;
+  zx::eventpair::create(0, &view_holder_token, &view_token);
+  const ResourceId view_holder_id = 1u;
+  Apply(scenic::NewCreateViewHolderCmd(
+      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  auto view_holder = FindResource<ViewHolder>(view_holder_id);
+  const ResourceId view_id = 2u;
+  Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
+  // Verify resources are mapped and linked.
+  EXPECT_EQ(2u, session_->GetMappedResourceCount());
+  events_.clear();
+  EXPECT_ERROR_COUNT(0);
+
+  // Destroy the view. The link between View and ViewHolder should be
+  // disconnected.
+  Apply(scenic::NewReleaseResourceCmd(view_id));
+  EXPECT_EQ(1u, session_->GetMappedResourceCount());
+
+  EXPECT_EQ(1u, events_.size());
+  const fuchsia::ui::scenic::Event& event = events_.back();
+  EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event.Which());
+  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewDisconnected,
+            event.gfx().Which());
+}
+
+TEST_F(ViewTest, RenderSignalDoesntCrashWhenViewHolderDestroyed) {
+  // Create ViewHolder and View.
+  zx::eventpair view_holder_token, view_token;
+  zx::eventpair::create(0, &view_holder_token, &view_token);
+  const ResourceId view_holder_id = 1u;
+  Apply(scenic::NewCreateViewHolderCmd(
+      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  const ResourceId view_id = 2u;
+  Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
+  // Destroy the ViewHolder and disconnect the link.
+  Apply(scenic::NewReleaseResourceCmd(view_holder_id));
+  events_.clear();
+
+  // Mark the view as rendering.
+  auto view = FindResource<View>(view_id);
+  view->SignalRender();
+  RunLoopUntilIdle();
+
+  EXPECT_ERROR_COUNT(0);
+  // No additional render state events should have been posted.
+  EXPECT_EQ(0u, events_.size());
 }
 
 TEST_F(ViewTest, RenderStateFalseWhenViewHolderDisconnectsFromScene) {
@@ -377,6 +466,7 @@ TEST_F(ViewTest, RenderStateFalseWhenViewHolderDisconnectsFromScene) {
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
   EXPECT_ERROR_COUNT(0);
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
+  auto view = FindResource<View>(view_id);
   events_.clear();
   // Make sure that the ViewHolder is connected to the Scene and the View is
   // rendering.
@@ -384,7 +474,8 @@ TEST_F(ViewTest, RenderStateFalseWhenViewHolderDisconnectsFromScene) {
   Apply(scenic::NewCreateSceneCmd(scene_id));
   auto scene = FindResource<Scene>(scene_id);
   Apply(scenic::NewAddChildCmd(scene_id, view_holder_id));
-  view_holder->SetIsViewRendering(true);
+  view->SignalRender();
+  RunLoopUntilIdle();
   events_.clear();
 
   // Detach ViewHolder from the scene.

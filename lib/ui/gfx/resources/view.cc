@@ -61,6 +61,21 @@ void View::DetachChildren() {
   children_.clear();
 }
 
+void View::SignalRender() {
+  if (!render_handle_) {
+    return;
+  }
+
+  // Verify the render_handle_ is still valid before attempting to signal it.
+  if (zx_object_get_info(render_handle_, ZX_INFO_HANDLE_VALID, /*buffer=*/NULL,
+                         /*buffer_size=*/0, /*actual=*/NULL, /*avail=*/NULL)
+      == ZX_OK) {
+    zx_status_t status =
+        zx_object_signal(render_handle_, /*clear_mask=*/ 0u, ZX_EVENT_SIGNALED);
+    ZX_ASSERT(status == ZX_OK);
+  }
+}
+
 void View::LinkResolved(ViewHolder* view_holder) {
   FXL_DCHECK(!view_holder_);
   view_holder_ = view_holder;
@@ -85,6 +100,10 @@ void View::LinkDisconnected() {
   }
 
   view_holder_ = nullptr;
+  // ViewHolder was disconnected. There are no guarantees on liveness of the
+  // render event, so invalidate the handle.
+  InvalidateRenderEventHandle();
+
   SendViewHolderDisconnectedEvent();
 }
 

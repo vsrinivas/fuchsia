@@ -8,6 +8,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/zx/handle.h>
 #include <unordered_set>
 
 #include "garnet/lib/ui/gfx/engine/object_linker.h"
@@ -65,6 +66,18 @@ class View final : public Resource {
   void DetachChildren();
   const std::unordered_set<NodePtr>& children() const { return children_; }
 
+  // Called by |ViewHolder| to set the handle of the render event. It is
+  // triggered on the next render pass this View is involved in.
+  void SetOnRenderEventHandle(zx_handle_t render_handle) {
+    render_handle_ = render_handle;
+  }
+  // Called by |ViewHolder| to invalidate the event handle when the event is
+  // closed.
+  void InvalidateRenderEventHandle() { render_handle_ = ZX_HANDLE_INVALID; }
+  // Called by the scenic render pass when this view's children are rendered
+  // as part of a render frame.
+  void SignalRender();
+
  private:
   // | ViewLinker::ExportCallbacks |
   void LinkResolved(ViewHolder* view_holder);
@@ -81,6 +94,10 @@ class View final : public Resource {
   ViewLinker::ImportLink link_;
   ViewHolder* view_holder_ = nullptr;
   std::unordered_set<NodePtr> children_;
+
+  // Handle signaled when any of this View's children are involved in a render
+  // pass.
+  zx_handle_t render_handle_;
 
   // Used for |RemoveChild|.
   // TODO(SCN-820): Remove when parent-child relationships are split out of Node

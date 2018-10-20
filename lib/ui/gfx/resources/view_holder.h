@@ -6,6 +6,7 @@
 #define GARNET_LIB_UI_GFX_RESOURCES_VIEW_HOLDER_H_
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 
 #include "garnet/lib/ui/gfx/engine/object_linker.h"
@@ -77,13 +78,15 @@ class ViewHolder final : public Resource {
   // ViewHolder's scene is determined from the ViewHolder's parent node.
   void RefreshScene();
 
-  // Called when the corresponding View is traversed for rendering.
-  void SetIsViewRendering(bool is_view_rendering);
-
  private:
+
   // | ViewLinker::ImportCallbacks |
   void LinkResolved(View* view);
   void LinkDisconnected();
+
+  void ResetRenderEvent();
+  void CloseRenderEvent();
+  void SetIsViewRendering(bool is_view_rendering);
 
   // Send an event to the child View's SessionListener.
   void SendViewPropertiesChangedEvent();
@@ -104,6 +107,14 @@ class ViewHolder final : public Resource {
 
   fuchsia::ui::gfx::ViewProperties view_properties_;
   fuchsia::ui::gfx::ViewState view_state_;
+
+  // Event that is signaled when the corresponding View's children are rendered
+  // by scenic.
+  zx::event render_event_;
+  // The waiter that is signaled when the View is involved in a render pass. The
+  // wait is not set until after the View has connected, and is always cleared
+  // in |LinkDisconnected|. The waiter must be destroyed before the event.
+  async::Wait render_waiter_;
 };
 using ViewHolderPtr = fxl::RefPtr<ViewHolder>;
 
