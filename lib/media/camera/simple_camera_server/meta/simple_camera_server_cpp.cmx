@@ -3,7 +3,10 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services" ],
-        "dev": [ "class/camera" ]
+        "dev": [
+            "class/camera"
+        ],
+        "features": [],
+        "services": []
     }
 }

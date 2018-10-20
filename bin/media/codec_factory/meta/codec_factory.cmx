@@ -3,7 +3,13 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services" ],
-        "dev": [ "class/media-codec" ]
+        "dev": [
+            "class/media-codec"
+        ],
+        "features": [],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracelink.Registry"
+        ]
     }
 }
