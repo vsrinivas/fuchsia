@@ -1039,6 +1039,7 @@ foreach(target, paver_targets) {
   action(target.name) {
     deps = [
       ":default-images",
+      "zedboot",
     ]
     testonly = true
     sources = [
