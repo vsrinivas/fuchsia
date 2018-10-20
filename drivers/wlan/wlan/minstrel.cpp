@@ -317,7 +317,6 @@ void UpdateStatsPeer(Peer* peer) {
             }
             tsp->attempts_cur = 0;
             tsp->success_cur = 0;
-            debugmstl("%s\n", debug::Describe(*tsp).c_str());
         }
         constexpr float kNanoSecondsPerSecond = 1e9;
         // perfect_tx_time is always non-zero as guaranteed by AddSupportedHt and AddSupportedErp
@@ -329,7 +328,6 @@ void UpdateStatsPeer(Peer* peer) {
             peer->max_probability = tx_idx;
         }
     }
-    debugmstl("max_tp: %hu, max_prob: %hu\n", peer->max_tp, peer->max_probability);
 }
 
 bool MinstrelRateSelector::HandleTimeout() {
@@ -347,7 +345,6 @@ void MinstrelRateSelector::UpdateStats() {
     for (auto peer_addr : outdated_peers_) {
         auto* peer = GetPeer(peer_addr);
         if (peer != nullptr) {
-            debugmstl("%s has update.\n", peer_addr.ToString().c_str());
             UpdateStatsPeer(peer);
         } else {
             ZX_DEBUG_ASSERT(0);
