@@ -20,7 +20,7 @@ struct Mode {
     // Resolution in pixels.
     uint32 horizontal_resolution;
     uint32 vertical_resolution;
-    // Vertical refresh rate in Hz * 100
+    // Vertical refresh rate in units of (Hz / 100).
     uint32 refresh_rate_e2;
 
     // Bitfield of flags defined below which further specify the mode.
