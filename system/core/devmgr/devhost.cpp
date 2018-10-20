@@ -51,10 +51,8 @@ static zx_status_t dh_handle_dc_rpc(port_handler_t* ph, zx_signals_t signals, ui
 
 static port_t dh_port;
 
-typedef struct devhost_iostate iostate_t;
-
-static iostate_t root_ios = []() {
-    iostate_t ios;
+static devhost_iostate_t root_ios = []() {
+    devhost_iostate_t ios;
     ios.ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     ios.ph.func = dh_handle_dc_rpc;
     return ios;
@@ -239,7 +237,7 @@ static fidl_txn_t dh_null_txn = {
     .reply = dh_null_reply,
 };
 
-static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
+static zx_status_t dh_handle_rpc_read(zx_handle_t h, devhost_iostate_t* ios) {
     dc_msg_t msg;
     zx_handle_t hin[3];
     uint32_t msize = sizeof(msg);
@@ -286,17 +284,15 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
             r = ZX_ERR_INVALID_ARGS;
             goto fail;
         }
-        iostate_t* newios = static_cast<iostate_t*>(calloc(1, sizeof(iostate_t)));
-        if (newios == nullptr) {
+        auto newios = fbl::make_unique<devhost_iostate_t>();
+        if (!newios) {
             r = ZX_ERR_NO_MEMORY;
             break;
         }
-        new (newios) iostate_t;
 
         //TODO: dev->ops and other lifecycle bits
         // no name means a dummy proxy device
         if ((newios->dev = static_cast<zx_device_t*>(calloc(1, sizeof(zx_device_t)))) == nullptr) {
-            free(newios);
             r = ZX_ERR_NO_MEMORY;
             break;
         }
@@ -314,10 +310,11 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         newios->ph.func = dh_handle_dc_rpc;
         if ((r = port_wait(&dh_port, &newios->ph)) < 0) {
             free(newios->dev);
-            free(newios);
             break;
         }
-        log(RPC_IN, "devhost[%s] created '%s' ios=%p\n", path, name, newios);
+        log(RPC_IN, "devhost[%s] created '%s' ios=%p\n", path, name, newios.get());
+        // dh_port has now taken ownership of newios.
+        __UNUSED auto ptr = newios.release();
         return ZX_OK;
     }
 
@@ -335,17 +332,15 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
             r = ZX_ERR_INVALID_ARGS;
             break;
         }
-        iostate_t* newios = static_cast<iostate_t*>(calloc(1, sizeof(iostate_t)));
-        if (newios == nullptr) {
+        auto newios = fbl::make_unique<devhost_iostate_t>();
+        if (!newios) {
             r = ZX_ERR_NO_MEMORY;
             break;
         }
-        new (newios) iostate_t;
 
         // named driver -- ask it to create the device
         zx_driver_t* drv;
         if ((r = dh_find_driver(name, hin[1], &drv)) < 0) {
-            free(newios);
             log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
             break;
         }
@@ -368,7 +363,8 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
                 log(ERROR, "devhost[%s] driver create() failed: %d\n", path, r);
                 break;
             }
-            if ((newios->dev = ctx.child) == nullptr) {
+            newios->dev = ctx.child;
+            if (newios->dev == nullptr) {
                 log(ERROR, "devhost[%s] driver create() failed to create a device!", path);
                 r = ZX_ERR_BAD_STATE;
                 break;
@@ -384,10 +380,11 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         newios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
         newios->ph.func = dh_handle_dc_rpc;
         if ((r = port_wait(&dh_port, &newios->ph)) < 0) {
-            free(newios);
             break;
         }
-        log(RPC_IN, "devhost[%s] created '%s' ios=%p\n", path, name, newios);
+        log(RPC_IN, "devhost[%s] created '%s' ios=%p\n", path, name, newios.get());
+        // dh_port has now taken ownership of newios
+        __UNUSED auto ptr = newios.release();
         return ZX_OK;
     }
 
@@ -481,13 +478,13 @@ fail:
 
 // handles devcoordinator rpc
 static zx_status_t dh_handle_dc_rpc(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    iostate_t* ios = ios_from_ph(ph);
+    devhost_iostate_t* ios = ios_from_ph(ph);
 
     if (evt != 0) {
         // we send an event to request the destruction
         // of an iostate, to ensure that's the *last*
         // packet about the iostate that we get
-        free(ios);
+        delete ios;
         return ZX_ERR_STOP;
     }
     if (ios->dead) {
@@ -514,7 +511,7 @@ static zx_status_t dh_handle_dc_rpc(port_handler_t* ph, zx_signals_t signals, ui
 
 // handles remoteio rpc
 static zx_status_t dh_handle_fidl_rpc(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    iostate_t* ios = ios_from_ph(ph);
+    devhost_iostate_t* ios = ios_from_ph(ph);
 
     zx_status_t r;
     if (signals & ZX_CHANNEL_READABLE) {
@@ -535,7 +532,7 @@ static zx_status_t dh_handle_fidl_rpc(port_handler_t* ph, zx_signals_t signals, 
     // the device was released, and will no longer be used, so we will free
     // it before returning.
     zx_handle_close(ios->ph.handle);
-    free(ios);
+    delete ios;
     return r;
 }
 
@@ -717,20 +714,18 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child, const char* pro
     char name[namelen];
     snprintf(name, namelen, "%s,%s", libname, child->name);
 
-    zx_status_t r;
-    iostate_t* ios = static_cast<iostate_t*>(calloc(1, sizeof(*ios)));
-    if (ios == nullptr) {
-        r = ZX_ERR_NO_MEMORY;
-        goto fail;
+    auto ios = fbl::make_unique<devhost_iostate_t>();
+    if (!ios) {
+        return ZX_ERR_NO_MEMORY;
     }
-    new (ios) iostate_t;
 
+    zx_status_t r;
     dc_msg_t msg;
     uint32_t msglen;
     if ((r = dc_msg_pack(&msg, &msglen,
                          props, prop_count * sizeof(zx_device_prop_t),
                          name, proxy_args)) < 0) {
-        goto fail;
+        return r;
     }
     msg.op = (child->flags & DEV_FLAG_INVISIBLE) ?
         dc_msg_t::Op::kAddDeviceInvisible : dc_msg_t::Op::kAddDevice;
@@ -739,7 +734,7 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child, const char* pro
     // handles: remote endpoint, resource (optional)
     zx_handle_t hrpc, hsend;
     if ((r = zx_channel_create(0, &hrpc, &hsend)) < 0) {
-        goto fail;
+        return r;
     }
 
     dc_status_t rsp;
@@ -752,17 +747,12 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child, const char* pro
         ios->ph.func = dh_handle_dc_rpc;
         if ((r = port_wait(&dh_port, &ios->ph)) == ZX_OK) {
             child->rpc = hrpc;
-            child->ios = ios;
+            child->ios = ios.release();
             return ZX_OK;
         }
 
     }
     zx_handle_close(hrpc);
-    free(ios);
-    return r;
-
-fail:
-    free(ios);
     return r;
 }
 
@@ -964,11 +954,17 @@ zx_status_t devhost_publish_metadata(zx_device_t* dev, const char* path, uint32_
 zx_handle_t root_resource_handle;
 
 
-zx_status_t devhost_start_iostate(devhost_iostate_t* ios, zx_handle_t h) {
-    ios->ph.handle = h;
+zx_status_t devhost_start_iostate(fbl::unique_ptr<devhost_iostate_t> ios, zx::channel h) {
+    ios->ph.handle = h.get();
     ios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     ios->ph.func = dh_handle_fidl_rpc;
-    return port_wait(&dh_port, &ios->ph);
+    zx_status_t status = port_wait(&dh_port, &ios->ph);
+    if (status == ZX_OK) {
+        // dh_port now owns the iostate and handle
+        __UNUSED auto ptr = ios.release();
+        __UNUSED auto channel = h.release();
+    }
+    return status;
 }
 
 __EXPORT int device_host_main(int argc, char** argv) {

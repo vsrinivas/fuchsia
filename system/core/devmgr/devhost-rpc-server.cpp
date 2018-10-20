@@ -70,30 +70,21 @@ static zx_status_t create_description(zx_device_t* dev, zxrio_describe_t* msg,
     return ZX_OK;
 }
 
-devhost_iostate_t* create_devhost_iostate(zx_device_t* dev) {
-    devhost_iostate_t* ios;
-    if ((ios = static_cast<devhost_iostate_t*>(calloc(1, sizeof(devhost_iostate_t)))) == nullptr) {
-        return nullptr;
-    }
-    new (ios) devhost_iostate_t;
-    ios->dev = dev;
-    return ios;
-}
-
 static zx_status_t devhost_get_handles(zx::channel rh, zx_device_t* dev,
                                        const char* path, uint32_t flags) {
     zx_status_t r;
-    devhost_iostate_t* newios;
     // detect response directives and discard all other
     // protocol flags
     bool describe = flags & ZX_FS_FLAG_DESCRIBE;
     flags &= (~ZX_FS_FLAG_DESCRIBE);
 
-    if ((newios = create_devhost_iostate(dev)) == nullptr) {
+    auto newios = fbl::make_unique<devhost_iostate_t>();
+    if (!newios) {
+        r = ZX_ERR_NO_MEMORY;
         if (describe) {
-            describe_error(fbl::move(rh), ZX_ERR_NO_MEMORY);
+            describe_error(fbl::move(rh), r);
         }
-        return ZX_ERR_NO_MEMORY;
+        return r;
     }
 
     newios->flags = flags;
@@ -120,19 +111,16 @@ static zx_status_t devhost_get_handles(zx::channel rh, zx_device_t* dev,
 
     // If we can't add the new ios and handle to the dispatcher our only option
     // is to give up and tear down.  In practice, this should never happen.
-    if ((r = devhost_start_iostate(newios, rh.get())) != ZX_OK) {
+    if ((r = devhost_start_iostate(fbl::move(newios), fbl::move(rh))) != ZX_OK) {
         fprintf(stderr, "devhost_get_handles: failed to start iostate\n");
+        // TODO(teisenbe/kulakowski): Should this be goto fail_open?
         goto fail;
-    } else {
-        // If the iostate successfully started, it now owns the channel.
-        __UNUSED auto channel = rh.release();
     }
     return ZX_OK;
 
 fail_open:
     device_close(dev, flags);
 fail:
-    free(newios);
     if (describe) {
         describe_error(fbl::move(rh), r);
     }

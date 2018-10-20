@@ -12,8 +12,10 @@
 #include <ddk/driver.h>
 
 #include <fbl/intrusive_double_list.h>
+#include <fbl/unique_ptr.h>
 
 #include <lib/fdio/remoteio.h>
+#include <lib/zx/channel.h>
 
 #include <zircon/compiler.h>
 #include <zircon/fidl.h>
@@ -84,17 +86,18 @@ zx_status_t devhost_publish_metadata(zx_device_t* dev, const char* path, uint32_
 
 // shared between devhost.c and rpc-device.c
 typedef struct devhost_iostate {
-    zx_device_t* dev;
-    size_t io_off;
-    uint32_t flags;
-    bool dead;
-    port_handler_t ph;
+    devhost_iostate() = default;
+
+    zx_device_t* dev = nullptr;
+    size_t io_off = 0;
+    uint32_t flags = 0;
+    bool dead = false;
+    port_handler_t ph = {};
 } devhost_iostate_t;
 
-devhost_iostate_t* create_devhost_iostate(zx_device_t* dev);
 zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);
 
-zx_status_t devhost_start_iostate(devhost_iostate_t* ios, zx_handle_t h);
+zx_status_t devhost_start_iostate(fbl::unique_ptr<devhost_iostate_t> ios, zx::channel h);
 
 // routines devhost uses to talk to dev coordinator
 zx_status_t devhost_add(zx_device_t* dev, zx_device_t* child, const char* proxy_args,
