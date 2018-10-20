@@ -12,6 +12,7 @@
 #include <zircon/types.h>
 #include <zircon/device/vfs.h>
 
+#include <fbl/string.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/util.h>
@@ -34,18 +35,27 @@ struct dc_watcher {
     zx_handle_t handle;
 };
 
+// BUG(ZX-2868): We currently never free these after allocating them
 struct dc_devnode {
-    const char* name;
-    uint64_t ino;
+    explicit dc_devnode(fbl::String name);
+
+    dc_devnode(const dc_devnode&) = delete;
+    dc_devnode& operator=(const dc_devnode&) = delete;
+
+    dc_devnode(dc_devnode&&) = delete;
+    dc_devnode& operator=(dc_devnode&&) = delete;
+
+    fbl::String name;
+    uint64_t ino = 0;
 
     // nullptr if we are a pure directory node,
     // otherwise the device we are referencing
-    device_t* device;
+    device_t* device = nullptr;
 
-    watcher_t* watchers;
+    watcher_t* watchers = nullptr;
 
     // entry in our parent devnode's children list
-    list_node_t node;
+    list_node_t node = {};
 
     // list of our child devnodes
     list_node_t children;
@@ -55,7 +65,7 @@ struct dc_devnode {
 
     // used to assign unique small device numbers
     // for class device links
-    uint32_t seqcount;
+    uint32_t seqcount = 0;
 };
 
 struct dc_iostate {
@@ -74,19 +84,12 @@ extern port_t dc_port;
 
 static uint64_t next_ino = 2;
 
-static devnode_t root_devnode = []() {
-    devnode_t node = {};
-    node.name = "";
-    node.ino = 1;
-    node.children = LIST_INITIAL_VALUE(root_devnode.children);
-    node.iostate = LIST_INITIAL_VALUE(root_devnode.iostate);
-    return node;
-}();
+static fbl::unique_ptr<devnode_t> root_devnode;
 
-static devnode_t* class_devnode;
+static fbl::unique_ptr<devnode_t> class_devnode;
 
 static zx_status_t dc_fidl_handler(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
-static devnode_t* devfs_mkdir(devnode_t* parent, const char* name);
+static fbl::unique_ptr<devnode_t> devfs_mkdir(devnode_t* parent, const char* name);
 
 #define PNMAX 16
 static const char* proto_name(uint32_t id, char buf[PNMAX]) {
@@ -112,6 +115,13 @@ static pinfo_t proto_info[] = {
     { nullptr, nullptr, 0, 0 },
 };
 
+dc_devnode::dc_devnode(fbl::String name)
+    : name(fbl::move(name)) {
+
+    list_initialize(&children);
+    list_initialize(&iostate);
+}
+
 static devnode_t* proto_dir(uint32_t id) {
     for (pinfo_t* info = proto_info; info->name; info++) {
         if (info->id == id) {
@@ -122,10 +132,10 @@ static devnode_t* proto_dir(uint32_t id) {
 }
 
 static void prepopulate_protocol_dirs() {
-    class_devnode = devfs_mkdir(&root_devnode, "class");
+    class_devnode = devfs_mkdir(root_devnode.get(), "class");
     for (pinfo_t* info = proto_info; info->name; info++) {
         if (!(info->flags & PF_NOPUB)) {
-            info->devnode = devfs_mkdir(class_devnode, info->name);
+            info->devnode = devfs_mkdir(class_devnode.get(), info->name).release();
         }
     }
 }
@@ -195,13 +205,13 @@ static bool devnode_is_local(devnode_t* dn) {
     return false;
 }
 
-static void devfs_notify(devnode_t* dn, const char* name, unsigned op) {
+static void devfs_notify(devnode_t* dn, const fbl::String& name, unsigned op) {
     watcher_t* w = dn->watchers;
     if (w == nullptr) {
         return;
     }
 
-    size_t len = strlen(name);
+    size_t len = name.length();
     if (len > fuchsia_io_MAX_FILENAME) {
         return;
     }
@@ -209,7 +219,7 @@ static void devfs_notify(devnode_t* dn, const char* name, unsigned op) {
     uint8_t msg[fuchsia_io_MAX_FILENAME + 2];
     msg[0] = static_cast<uint8_t>(op);
     msg[1] = static_cast<uint8_t>(len);
-    memcpy(msg + 2, name, len);
+    memcpy(msg + 2, name.c_str(), len);
 
     // convert to mask
     op = (1u << op);
@@ -264,31 +274,18 @@ static zx_status_t devfs_watch(devnode_t* dn, zx_handle_t h, uint32_t mask) {
     return ZX_OK;
 }
 
-// If namelen is nonzero, it is the null-terminator-inclusive length
-// of name, which should be copied into the devnode.  Otherwise name
-// is guaranteed to exist for the lifetime of the devnode.
-static devnode_t* devfs_mknode(device_t* dev, const char* name, size_t namelen) {
-    devnode_t* dn = static_cast<devnode_t*>(calloc(1, sizeof(devnode_t) + namelen));
-    if (dn == nullptr) {
+static fbl::unique_ptr<devnode_t> devfs_mknode(device_t* dev, const char* name) {
+    auto dn = fbl::make_unique<devnode_t>(name);
+    if (!dn) {
         return nullptr;
-    }
-    new (dn) devnode_t;
-    if (namelen > 0) {
-        char* p = (char*) (dn + 1);
-        memcpy(p, name, namelen);
-        dn->name = p;
-    } else {
-        dn->name = name;
     }
     dn->ino = next_ino++;
     dn->device = dev;
-    list_initialize(&dn->children);
-    list_initialize(&dn->iostate);
     return dn;
 }
 
-static devnode_t* devfs_mkdir(devnode_t* parent, const char* name) {
-    devnode_t* dn = devfs_mknode(nullptr, name, 0);
+static fbl::unique_ptr<devnode_t> devfs_mkdir(devnode_t* parent, const char* name) {
+    fbl::unique_ptr<devnode_t> dn = devfs_mknode(nullptr, name);
     if (dn == nullptr) {
         return nullptr;
     }
@@ -299,7 +296,7 @@ static devnode_t* devfs_mkdir(devnode_t* parent, const char* name) {
 static devnode_t* devfs_lookup(devnode_t* parent, const char* name) {
     devnode_t* child;
     list_for_every_entry(&parent->children, child, devnode_t, node) {
-        if (!strcmp(name, child->name)) {
+        if (!strcmp(name, child->name.c_str())) {
             return child;
         }
     }
@@ -334,7 +331,7 @@ zx_status_t devfs_publish(device_t* parent, device_t* dev) {
         return ZX_ERR_INTERNAL;
     }
 
-    devnode_t* dnself = devfs_mknode(dev, dev->name, 0);
+    fbl::unique_ptr<devnode_t> dnself = devfs_mknode(dev, dev->name);
     if (dnself == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -356,7 +353,6 @@ zx_status_t devfs_publish(device_t* parent, device_t* dev) {
     if (dir != nullptr) {
         char tmp[32];
         const char* name = dev->name;
-        size_t namelen = 0;
 
         if (dev->protocol_id != ZX_PROTOCOL_CONSOLE) {
 
@@ -364,31 +360,28 @@ zx_status_t devfs_publish(device_t* parent, device_t* dev) {
                 snprintf(tmp, sizeof(tmp), "%03u", (dir->seqcount++) % 1000);
                 if (devfs_lookup(dir, tmp) == nullptr) {
                     name = tmp;
-                    namelen = 4;
                     goto got_name;
                 }
             }
-            free(dnself);
             return ZX_ERR_ALREADY_EXISTS;
 got_name:
             ;
         }
 
-        devnode_t* dnlink = devfs_mknode(dev, name, namelen);
+        fbl::unique_ptr<devnode_t> dnlink = devfs_mknode(dev, name);
         if (dnlink == nullptr) {
-            free(dnself);
             return ZX_ERR_NO_MEMORY;
         }
 
         // add link node to class directory
         list_add_tail(&dir->children, &dnlink->node);
-        dev->link = dnlink;
+        dev->link = dnlink.release();
     }
 
 done:
     // add self node to parent directory
     list_add_tail(&parent->self->children, &dnself->node);
-    dev->self = dnself;
+    dev->self = dnself.release();
 
     if (!(dev->flags & DEV_CTX_INVISIBLE)) {
         devfs_advertise(dev);
@@ -484,7 +477,7 @@ again:
     }
     devnode_t* child;
     list_for_every_entry(&dn->children, child, devnode_t, node) {
-        if (!strcmp(child->name, name)) {
+        if (!strcmp(child->name.c_str(), name)) {
             if(child->device && (child->device->flags & DEV_CTX_INVISIBLE)) {
                 continue;
             }
@@ -572,7 +565,8 @@ static_assert((fuchsia_io_DirectoryOpenOrdinal &
                static_cast<uint32_t>(dc_msg_t::Op::kIdBit)) == 0, "");
 
 static zx_status_t fill_dirent(vdirent_t* de, size_t delen, uint64_t ino,
-                               const char* name, size_t len, uint8_t type) {
+                               const fbl::String& name, uint8_t type) {
+    size_t len = name.length();
     size_t sz = sizeof(vdirent_t) + len;
 
     if (sz > delen || len > NAME_MAX) {
@@ -581,7 +575,7 @@ static zx_status_t fill_dirent(vdirent_t* de, size_t delen, uint64_t ino,
     de->ino = ino;
     de->size = static_cast<uint8_t>(len);
     de->type = type;
-    memcpy(de->name, name, len);
+    memcpy(de->name, name.c_str(), len);
     return static_cast<zx_status_t>(sz);
 }
 
@@ -609,8 +603,7 @@ static zx_status_t devfs_readdir(devnode_t* dn, uint64_t* _ino, void* data, size
         }
         ino = child->ino;
         auto vdirent = reinterpret_cast<vdirent_t*>(ptr);
-        auto child_name_len = static_cast<uint32_t>(strlen(child->name));
-        zx_status_t r = fill_dirent(vdirent, len, ino, child->name, child_name_len,
+        zx_status_t r = fill_dirent(vdirent, len, ino, child->name,
                                     VTYPE_TO_DTYPE(V_TYPE_DIR));
         if (r < 0) {
             break;
@@ -784,15 +777,22 @@ zx_handle_t devfs_root_clone() {
 void devfs_init(zx_handle_t root_job) {
     printf("devmgr: init\n");
 
+    root_devnode = fbl::make_unique<devnode_t>("");
+    if (!root_devnode) {
+        printf("devmgr: failed to allocate devfs root node\n");
+        return;
+    }
+    root_devnode->ino = 1;
+
     prepopulate_protocol_dirs();
 
-    root_devnode.device = coordinator_init(root_job);
-    root_devnode.device->self = &root_devnode;
+    root_devnode->device = coordinator_init(root_job);
+    root_devnode->device->self = root_devnode.get();
 
     zx_handle_t h0, h1;
     if (zx_channel_create(0, &h0, &h1) != ZX_OK) {
         return;
-    } else if (iostate_create(&root_devnode, h0) != ZX_OK) {
+    } else if (iostate_create(root_devnode.get(), h0) != ZX_OK) {
         zx_handle_close(h0);
         zx_handle_close(h1);
         return;
