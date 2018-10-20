@@ -132,12 +132,12 @@ zx_status_t brcmf_sdiod_get_bootloader_macaddr(struct brcmf_sdio_dev* sdiodev, u
                                           &actual_len);
 
     if (ret != ZX_OK || actual_len < ETH_ALEN) {
-        printf("failed to get bootloader mac address: %d\n", ret);
+        brcmf_err("failed to get bootloader mac address: %d\n", ret);
         return ret;
     }
     memcpy(macaddr, bootloader_macaddr, 6);
-    printf("got bootloader mac address: %02x:%02x:%02x:%02x:%02x:%02x\n",
-            macaddr[0], macaddr[1], macaddr[2], macaddr[3], macaddr[4], macaddr[5]);
+    brcmf_dbg(INFO, "got bootloader mac address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+              macaddr[0], macaddr[1], macaddr[2], macaddr[3], macaddr[4], macaddr[5]);
     return ZX_OK;
 }
 
