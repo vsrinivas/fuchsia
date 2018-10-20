@@ -187,7 +187,7 @@ executable("buffer_utils_tests") {
 
   deps = [
     ":test_main",
-    "//garnet/lib/wlan/mlme",
+    "//garnet/lib/wlan/common",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

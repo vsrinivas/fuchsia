@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <wlan/mlme/buffer_reader.h>
-#include <wlan/mlme/buffer_writer.h>
+#include <wlan/common/buffer_reader.h>
+#include <wlan/common/buffer_writer.h>
 
 #include <gtest/gtest.h>
 
