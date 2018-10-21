@@ -832,13 +832,6 @@ if (target_cpu != "arm64") {
     } else {
       cmdline = "efi_local_cmdline.txt"
     }
-    deps = [
-      ":fuchsia",
-      "zedboot:zbi",
-    ]
-    fuchsia_zbi_outputs = get_target_outputs(":fuchsia")
-    zircon_bin = fuchsia_zbi_outputs[0]
-    zedboot = "$root_out_dir/zedboot.zbi"
   }
   images += [
     {
