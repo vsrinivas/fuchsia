@@ -4,8 +4,6 @@
 
 #include "util.h"
 
-#include <zircon/syscalls.h>
-
 #include "gtest/gtest.h"
 
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
@@ -15,6 +13,7 @@ namespace btlib {
 using common::ContainersEqual;
 using common::CreateStaticByteBuffer;
 using common::DeviceAddress;
+using common::RandomUInt128;
 using common::UInt128;
 
 namespace sm {

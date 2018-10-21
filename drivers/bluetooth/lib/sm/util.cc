@@ -6,7 +6,6 @@
 
 #include <openssl/aes.h>
 #include <zircon/assert.h>
-#include <zircon/syscalls.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
 
@@ -281,7 +280,7 @@ DeviceAddress GenerateRpa(const UInt128& irk) {
   // least one bit is 0. We expect that zx_cprng_draw() satisfies these
   // requirements.
   // TODO(SEC-87): Maybe generate within a range to enforce this?
-  zx_cprng_draw(prand_bytes.mutable_data(), prand_bytes.size());
+  prand_bytes.FillWithRandomBytes();
 
   // Make sure that the highest two bits are 0 and 1 respectively.
   prand_bytes[2] |= 0b01000000;

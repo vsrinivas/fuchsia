@@ -343,7 +343,7 @@ class SMP_MasterPairingTest : public SMP_PairingStateTest {
                                         UInt128* out_random, uint32_t tk = 0) {
     ZX_DEBUG_ASSERT(out_confirm);
     ZX_DEBUG_ASSERT(out_random);
-    zx_cprng_draw(out_random->data(), out_random->size());
+    *out_random = common::RandomUInt128();
     GenerateConfirmValue(*out_random, out_confirm, false /* peer_initiator */,
                          tk);
   }

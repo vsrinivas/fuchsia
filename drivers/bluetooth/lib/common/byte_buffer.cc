@@ -49,6 +49,12 @@ void MutableByteBuffer::Write(const uint8_t* data, size_t size, size_t pos) {
   std::memcpy(mutable_data() + pos, data, size);
 }
 
+void MutableByteBuffer::FillWithRandomBytes() {
+  if (size()) {
+    zx_cprng_draw(mutable_data(), size());
+  }
+}
+
 MutableBufferView MutableByteBuffer::mutable_view(size_t pos, size_t size) {
   ZX_ASSERT_MSG(pos <= this->size(), "invalid offset (pos = %zu)", pos);
   return MutableBufferView(mutable_data() + pos,

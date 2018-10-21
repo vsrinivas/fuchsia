@@ -244,8 +244,8 @@ TEST(GAP_AdvertisingDataTest, Equality) {
 TEST(GAP_AdvertisingDataTest, Copy) {
   common::UUID gatt(kGattUuid);
   common::UUID eddy(kEddystoneUuid);
-  auto rand_data = common::DynamicByteBuffer(kRandomDataSize);
-  zx_cprng_draw(rand_data.mutable_data(), kRandomDataSize);
+  common::StaticByteBuffer<kRandomDataSize> rand_data;
+  rand_data.FillWithRandomBytes();
 
   AdvertisingData source;
   source.AddURI("http://fuchsia.cl");
@@ -272,8 +272,8 @@ TEST(GAP_AdvertisingDataTest, Copy) {
 TEST(GAP_AdvertisingDataTest, Move) {
   common::UUID gatt(kGattUuid);
   common::UUID eddy(kEddystoneUuid);
-  auto rand_data = common::DynamicByteBuffer(kRandomDataSize);
-  zx_cprng_draw(rand_data.mutable_data(), kRandomDataSize);
+  common::StaticByteBuffer<kRandomDataSize> rand_data;
+  rand_data.FillWithRandomBytes();
 
   AdvertisingData source;
   source.AddURI("http://fuchsia.cl");

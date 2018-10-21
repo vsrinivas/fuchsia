@@ -11,6 +11,7 @@
 #include <string>
 
 #include <zircon/assert.h>
+#include <zircon/syscalls.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
@@ -160,6 +161,9 @@ class MutableByteBuffer : public ByteBuffer {
 
   // Sets the contents of the buffer to 0s.
   void SetToZeros() { Fill(0); }
+
+  // Fills the contents of the buffer with random bytes.
+  void FillWithRandomBytes();
 
   // Fills the contents of the buffer with the given value.
   virtual void Fill(uint8_t value) = 0;

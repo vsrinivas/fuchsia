@@ -264,7 +264,7 @@ void PairingState::BeginLegacyPairingPhase2(const ByteBuffer& preq,
     // We have TK so we can generate the confirm value now.
     const DeviceAddress *ia, *ra;
     self->LEPairingAddresses(&ia, &ra);
-    zx_cprng_draw(state->local_rand.data(), state->local_rand.size());
+    state->local_rand = common::RandomUInt128();
     util::C1(state->tk, state->local_rand, state->preq, state->pres, *ia, *ra,
              &state->local_confirm);
 
