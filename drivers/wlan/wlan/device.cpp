@@ -425,9 +425,61 @@ zx_status_t Device::SendEthernet(fbl::unique_ptr<Packet> packet) {
     return ZX_OK;
 }
 
-zx_status_t Device::SendWlan(fbl::unique_ptr<Packet> packet) {
+TxVector GetTxVector(const fbl::unique_ptr<MinstrelRateSelector>& minstrel,
+                     const fbl::unique_ptr<Packet>& packet, CBW cbw, PHY phy, uint32_t flags) {
+    const auto fc = packet->field<FrameControl>(0);
+
+    constexpr size_t kAddr1Offset = 4;
+    ZX_DEBUG_ASSERT(packet->len() >= kAddr1Offset + common::kMacAddrLen);
+    auto peer_addr = common::MacAddr(packet->field<uint8_t>(kAddr1Offset));
+
+    if (minstrel != nullptr) {
+        tx_vec_idx_t idx = minstrel->GetTxVectorIdx(*fc, peer_addr, flags);
+        TxVector tv;
+        zx_status_t status = TxVector::FromIdx(idx, &tv);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
+        return tv;
+    } else {
+        // TODO(NET-645): Choose an optimal MCS for management frames
+        uint8_t mcs = fc->type() == FrameType::kData ? 7 : 3;
+        return {
+            .phy = static_cast<PHY>(phy),
+            .cbw = static_cast<CBW>(cbw),
+            .mcs_idx = mcs,
+            .nss = 1,
+            .gi = WLAN_GI_800NS,
+        };
+    }
+}
+
+wlan_tx_info_t MakeTxInfo(const fbl::unique_ptr<Packet>& packet, const TxVector& tv,
+                          uint32_t has_minstrel, uint32_t flags) {
+    tx_vec_idx_t idx;
+    zx_status_t status = tv.ToIdx(&idx);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+
+    uint32_t valid_fields =
+        WLAN_TX_INFO_VALID_PHY | WLAN_TX_INFO_VALID_CHAN_WIDTH | WLAN_TX_INFO_VALID_MCS;
+    if (has_minstrel) { valid_fields |= WLAN_TX_INFO_VALID_TX_VECTOR_IDX; }
+
+    const auto fc = packet->field<FrameControl>(0);
+    if (fc->protected_frame()) { flags |= WLAN_TX_INFO_FLAGS_PROTECTED; }
+
+    return {
+        .phy = static_cast<uint16_t>(tv.phy),
+        .cbw = static_cast<uint8_t>(tv.cbw),
+        .mcs = tv.mcs_idx,
+        .tx_vector_idx = idx,
+        .valid_fields = valid_fields,
+        .tx_flags = flags,
+    };
+}
+
+zx_status_t Device::SendWlan(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy, uint32_t flags) {
     ZX_DEBUG_ASSERT(packet->len() <= fbl::numeric_limits<uint16_t>::max());
 
+    auto tv = GetTxVector(minstrel_, packet, cbw, phy, flags);
+    packet->CopyCtrlFrom(MakeTxInfo(packet, tv, minstrel_ != nullptr, flags));
     wlan_tx_packet_t tx_pkt = packet->AsWlanTxPacket();
     auto status = wlanmac_proxy_.QueueTx(0u, &tx_pkt);
     // TODO(tkilbourn): remove this once we implement WlanmacCompleteTx and allow wlanmac drivers to
@@ -540,8 +592,7 @@ zx_status_t Device::GetMinstrelPeers(wlan_minstrel::Peers* peers_fidl) {
     return minstrel_->GetListToFidl(peers_fidl);
 }
 
-zx_status_t Device::GetMinstrelStats(const common::MacAddr& addr,
-                                       wlan_minstrel::Peer* peer_fidl) {
+zx_status_t Device::GetMinstrelStats(const common::MacAddr& addr, wlan_minstrel::Peer* peer_fidl) {
     if (minstrel_ == nullptr) { return ZX_ERR_NOT_SUPPORTED; }
     return minstrel_->GetStatsToFidl(addr, peer_fidl);
 }
@@ -799,4 +850,5 @@ void Device::AddMinstrelPeer(const wlan_assoc_ctx_t& assoc_ctx) {
     ZX_DEBUG_ASSERT(wlanmac_info_.ifc_info.mac_role == WLAN_MAC_ROLE_CLIENT);
     minstrel_->AddPeer(assoc_ctx);
 }
+
 }  // namespace wlan

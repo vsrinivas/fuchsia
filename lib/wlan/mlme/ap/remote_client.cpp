@@ -11,7 +11,6 @@
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/mlme/packet_utils.h>
 #include <wlan/mlme/rates_elements.h>
 #include <wlan/mlme/service.h>
 #include <zircon/status.h>
@@ -434,10 +433,10 @@ void AssociatedState::HandlePsPollFrame(CtrlFrame<PsPollFrame>&& frame) {
     data_hdr->addr3 = client_->bss()->bssid();
     data_hdr->sc.set_seq(client_->bss()->NextSeq(*data_hdr));
 
-    packet->CopyCtrlFrom(MakeTxInfo(data_hdr->fc, CBW20, WLAN_PHY_OFDM));
     packet->set_len(w.WrittenBytes());
 
-    zx_status_t status = client_->bss()->SendDataFrame(DataFrame<>(fbl::move(packet)));
+    zx_status_t status = client_->bss()->SendDataFrame(DataFrame<>(fbl::move(packet)),
+                                                       WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
     if (status != ZX_OK) {
         errorf(
             "[client] [%s] could not send null data frame as PS-POLL response: "
@@ -593,11 +592,10 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRe
     llc_hdr->protocol_id = htobe16(kEapolProtocolId);
     w.Write({req.body()->data->data(), eapol_pdu_len});
 
-    packet->CopyCtrlFrom(
-        MakeTxInfo(data_hdr->fc, CBW20, WLAN_PHY_OFDM, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY));
     packet->set_len(w.WrittenBytes());
 
-    auto status = client_->bss()->SendDataFrame(DataFrame<>(fbl::move(packet)));
+    auto status = client_->bss()->SendDataFrame(DataFrame<>(fbl::move(packet)),
+                                                WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send EAPOL request packet: %d\n",
                client_->addr().ToString().c_str(), status);
@@ -809,7 +807,6 @@ zx_status_t RemoteClient::SendAuthentication(status_code::StatusCode result) {
     // track seq number.
     auth->auth_txn_seq_number = 2;
 
-    packet->CopyCtrlFrom(MakeTxInfo(mgmt_hdr->fc, CBW20, WLAN_PHY_OFDM));
     packet->set_len(w.WrittenBytes());
 
     auto status = bss_->SendMgmtFrame(MgmtFrame<>(fbl::move(packet)));
@@ -866,7 +863,6 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     // Validate the request in debug mode.
     ZX_DEBUG_ASSERT(assoc->Validate(elem_w.WrittenBytes()));
 
-    packet->CopyCtrlFrom(MakeTxInfo(mgmt_hdr->fc, CBW20, WLAN_PHY_OFDM));
     packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
     auto status = bss_->SendMgmtFrame(MgmtFrame<>(fbl::move(packet)));
@@ -896,7 +892,6 @@ zx_status_t RemoteClient::SendDeauthentication(wlan_mlme::ReasonCode reason_code
 
     w.Write<Deauthentication>()->reason_code = static_cast<uint16_t>(reason_code);
 
-    packet->CopyCtrlFrom(MakeTxInfo(mgmt_hdr->fc, CBW20, WLAN_PHY_OFDM));
     packet->set_len(w.WrittenBytes());
 
     auto status = bss_->SendMgmtFrame(MgmtFrame<>(fbl::move(packet)));
@@ -964,7 +959,6 @@ zx_status_t RemoteClient::SendAddBaRequest() {
     addbareq_hdr->seq_ctrl.set_fragment(0);  // TODO(NET-599): Send this down to the lower MAC
     addbareq_hdr->seq_ctrl.set_starting_seq(1);
 
-    packet->CopyCtrlFrom(MakeTxInfo(mgmt_hdr->fc, CBW20, WLAN_PHY_OFDM));
     packet->set_len(w.WrittenBytes());
 
     finspect("Outbound ADDBA Req frame: len %zu\n", w.WrittenBytes());
@@ -1011,7 +1005,6 @@ zx_status_t RemoteClient::SendAddBaResponse(const AddBaRequestFrame& req) {
     addbaresp_hdr->params.set_buffer_size(buffer_size);
     addbaresp_hdr->timeout = req.timeout;
 
-    packet->CopyCtrlFrom(MakeTxInfo(mgmt_hdr->fc, CBW20, WLAN_PHY_OFDM));
     packet->set_len(w.WrittenBytes());
 
     finspect("Outbound ADDBA Resp frame: len %zu\n", w.WrittenBytes());

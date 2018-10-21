@@ -25,6 +25,7 @@
 
 #include <mutex>
 #include <thread>
+#include <tuple>
 
 #include "lib/svc/cpp/services.h"
 
@@ -68,7 +69,8 @@ class Device : public DeviceInterface {
     // DeviceInterface methods
     zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final;
     zx_status_t SendEthernet(fbl::unique_ptr<Packet> packet) override final;
-    zx_status_t SendWlan(fbl::unique_ptr<Packet> packet) override final;
+    zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy,
+                         uint32_t flags) override final;
     zx_status_t SendService(fbl::unique_ptr<Packet> packet) override final;
     zx_status_t SetChannel(wlan_channel_t chan) override final;
     zx_status_t SetStatus(uint32_t status) override final;

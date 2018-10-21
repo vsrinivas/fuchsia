@@ -6,7 +6,6 @@
 #include <wlan/common/channel.h>
 #include <wlan/common/write_element.h>
 #include <wlan/mlme/beacon.h>
-#include <wlan/mlme/packet_utils.h>
 #include <wlan/mlme/rates_elements.h>
 
 namespace wlan {
@@ -153,7 +152,6 @@ static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config, common
     ZX_DEBUG_ASSERT(bcn->Validate(elem_w.WrittenBytes()));
 
     // Update packet's final length and tx_info.
-    packet->CopyCtrlFrom(MakeTxInfo(mgmt_hdr->fc, CBW20, WLAN_PHY_OFDM));
     packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
     if (tim_ele_offset != nullptr) {

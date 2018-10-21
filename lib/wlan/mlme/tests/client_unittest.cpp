@@ -8,7 +8,6 @@
 #include <wlan/mlme/client/station.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/mlme/packet_utils.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 

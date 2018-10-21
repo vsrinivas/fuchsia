@@ -11,6 +11,7 @@
 #include <test_timer.h>  // //garnet/lib/wlan/mlme/tests
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/timer_manager.h>
+#include <wlan/protocol/info.h>
 
 namespace wlan {
 namespace {
@@ -56,6 +57,10 @@ struct MinstrelTest : public ::testing::Test {
                     },
             },
     };
+    // Note: 129 is the lowest basic rate and will never be used to probe.
+    const tx_vec_idx_t want_probe_idx_[23] = {
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 129, 130, 131, 132, 133, 134, 135,
+        /* 136 */};
 };
 
 TEST_F(MinstrelTest, AddPeer) {
@@ -199,6 +204,27 @@ TEST_F(MinstrelTest, AddMissingTxVector) {
     EXPECT_EQ(ZX_OK, minstrel_.GetStatsToFidl(kTestMacAddr, &peer));
     indices = GetAllIndices(peer);
     EXPECT_TRUE(indices.count(kErpStartIdx + kErpNumTxVector - 1));
+}
+
+TEST_F(MinstrelTest, DataFramesEligibleForProbing) {
+    clock.Set(zx::time(0));
+    minstrel_.AddPeer(assoc_ctx_ht_);
+    wlan_minstrel::Peer peer;
+    EXPECT_EQ(ZX_OK, minstrel_.GetStatsToFidl(kTestMacAddr, &peer));
+
+    FrameControl fc;
+    fc.set_type(FrameType::kData);
+    for (tx_vec_idx_t i = 0; i < kProbeInterval * countof(want_probe_idx_); ++i) {
+        const tx_vec_idx_t idx = minstrel_.GetTxVectorIdx(fc, kTestMacAddr, 0);
+        if (i % kProbeInterval == kProbeInterval - 1) {
+            tx_vec_idx_t want = want_probe_idx_[(i + 1) / kProbeInterval - 1];
+            if (want != idx) { printf("probe mismatch #%d\n", i); }
+            EXPECT_EQ(want, idx);
+        } else {
+            if (peer.max_tp != idx) { printf("non-probe mismatch #%d\n", i); }
+            EXPECT_EQ(peer.max_tp, idx);
+        }
+    }
 }
 
 }  // namespace

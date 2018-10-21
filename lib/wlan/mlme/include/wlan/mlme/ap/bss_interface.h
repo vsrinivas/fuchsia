@@ -41,7 +41,7 @@ class BssInterface {
     virtual const Span<const SupportedRate> Rates() const = 0;
 
     virtual zx_status_t SendMgmtFrame(MgmtFrame<>&& mgmt_frame) = 0;
-    virtual zx_status_t SendDataFrame(DataFrame<>&& data_frame) = 0;
+    virtual zx_status_t SendDataFrame(DataFrame<>&& data_frame, uint32_t flags = 0) = 0;
     virtual zx_status_t SendEthFrame(EthFrame&& eth_frame) = 0;
 
     // Indications reported from lower MAC layer.

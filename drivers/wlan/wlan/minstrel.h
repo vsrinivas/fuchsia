@@ -12,6 +12,7 @@
 #include <wlan/mlme/client/station.h>
 #include <wlan/mlme/timer_manager.h>
 #include <wlan/protocol/info.h>
+#include <wlan/protocol/mac.h>
 
 #include <fbl/unique_ptr.h>
 #include <zx/time.h>
@@ -76,6 +77,9 @@ class MinstrelRateSelector {
     // Called after every tx packet.
     void HandleTxStatusReport(const wlan_tx_status_t& tx_status);
     bool HandleTimeout();
+
+    tx_vec_idx_t GetTxVectorIdx(const FrameControl& fc, const common::MacAddr& peer_addr,
+                                uint32_t flags);
     zx_status_t GetListToFidl(::fuchsia::wlan::minstrel::Peers* peers_fidl) const;
     zx_status_t GetStatsToFidl(const common::MacAddr& peer_addr,
                                ::fuchsia::wlan::minstrel::Peer* peer_fidl) const;
@@ -84,7 +88,7 @@ class MinstrelRateSelector {
    private:
     void UpdateStats();
     tx_vec_idx_t GetNextProbe(Peer* peer);
-    tx_vec_idx_t GetTxVector(const common::MacAddr& addr, bool is_vip);
+    tx_vec_idx_t GetTxVector(const common::MacAddr& addr, bool needs_reliability);
     Peer* GetPeer(const common::MacAddr& addr);
     const Peer* GetPeer(const common::MacAddr& addr) const;
 

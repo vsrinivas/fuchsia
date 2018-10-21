@@ -384,6 +384,19 @@ bool MinstrelRateSelector::HandleTimeout() {
     }
 }
 
+tx_vec_idx_t MinstrelRateSelector::GetTxVectorIdx(const FrameControl& fc,
+                                                  const common::MacAddr& peer_addr,
+                                                  uint32_t flags) {
+    const Peer* peer = GetPeer(peer_addr);
+    if (peer == nullptr) { return kErpStartIdx + kErpNumTxVector - 1; }
+    if (!fc.IsData()) { return peer->basic_max_probability; }
+    const bool needs_reliability = (flags & WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY) != 0;
+    tx_vec_idx_t idx = kInvalidTxVectorIdx;
+    idx = GetTxVector(peer_addr, needs_reliability);
+    if (idx == kInvalidTxVectorIdx) { idx = peer->basic_highest; }
+    return idx;
+}
+
 void MinstrelRateSelector::UpdateStats() {
     for (auto peer_addr : outdated_peers_) {
         auto* peer = GetPeer(peer_addr);
@@ -405,19 +418,20 @@ tx_vec_idx_t MinstrelRateSelector::GetNextProbe(Peer* peer) {
     return idx;
 }
 
-tx_vec_idx_t MinstrelRateSelector::GetTxVector(const wlan::common::MacAddr& addr, bool is_vip) {
+tx_vec_idx_t MinstrelRateSelector::GetTxVector(const wlan::common::MacAddr& addr,
+                                               bool needs_reliability) {
     Peer* peer = GetPeer(addr);
     if (peer == nullptr) {
         errorf("Error getting tx vector: peer %s does not exist.\n", addr.ToString().c_str());
         ZX_DEBUG_ASSERT(0);
         return kInvalidTxVectorIdx;
     }
-    if (is_vip) { return peer->max_probability; }
+    if (needs_reliability) { return peer->max_probability; }
     if (peer->num_pkt_until_next_probe > 0) {
         --peer->num_pkt_until_next_probe;
         return peer->max_tp;
     }
-    peer->num_pkt_until_next_probe = kProbeInterval;
+    peer->num_pkt_until_next_probe = kProbeInterval - 1;
 
     tx_vec_idx_t probe_idx;
     bool should_not_probe = true;

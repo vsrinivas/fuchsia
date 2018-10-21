@@ -51,7 +51,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
     uint64_t timestamp() override;
 
     zx_status_t SendMgmtFrame(MgmtFrame<>&& mgmt_frame) override;
-    zx_status_t SendDataFrame(DataFrame<>&& data_frame) override;
+    zx_status_t SendDataFrame(DataFrame<>&& data_frame, uint32_t flags = 0) override;
     zx_status_t SendEthFrame(EthFrame&& eth_frame) override;
 
     seq_t NextSeq(const MgmtFrameHeader& hdr) override;

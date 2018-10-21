@@ -12,7 +12,6 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/mlme/packet_utils.h>
 #include <wlan/mlme/service.h>
 
 #include <zircon/syscalls.h>
@@ -388,16 +387,26 @@ zx_status_t InfraBss::BufferFrame(fbl::unique_ptr<Packet> packet) {
     return ZX_OK;
 }
 
-zx_status_t InfraBss::SendDataFrame(DataFrame<>&& data_frame) {
+zx_status_t InfraBss::SendDataFrame(DataFrame<>&& data_frame, uint32_t flags) {
     if (ShouldBufferFrame(data_frame.hdr()->addr1)) { return BufferFrame(data_frame.Take()); }
 
-    return device_->SendWlan(data_frame.Take());
+    // Ralink appears to setup BlockAck session AND AMPDU handling
+    // TODO(porce): Use a separate sequence number space in that case
+    CBW cbw = CBW20;
+    if (Ht().cbw_40_tx_ready && data_frame.hdr()->addr3.IsUcast()) {
+        // 40MHz direction does not matter here.
+        // Radio uses the operational channel setting. This indicates the
+        // bandwidth without direction.
+        cbw = CBW40;
+    }
+
+    return device_->SendWlan(data_frame.Take(), cbw, WLAN_PHY_HT, flags);
 }
 
 zx_status_t InfraBss::SendMgmtFrame(MgmtFrame<>&& mgmt_frame) {
     if (ShouldBufferFrame(mgmt_frame.hdr()->addr1)) { return BufferFrame(mgmt_frame.Take()); }
 
-    return device_->SendWlan(mgmt_frame.Take());
+    return device_->SendWlan(mgmt_frame.Take(), CBW20, WLAN_PHY_OFDM);
 }
 
 zx_status_t InfraBss::SendEthFrame(EthFrame&& eth_frame) {
@@ -416,7 +425,7 @@ zx_status_t InfraBss::SendNextBu() {
         // IEEE Std 802.11-2016, 9.2.4.1.8
         fc->set_more_data(bu_queue_.size() > 0);
         debugps("[infra-bss] [%s] sent group addressed BU\n", bssid_.ToString().c_str());
-        return device_->SendWlan(fbl::move(packet));
+        return device_->SendWlan(fbl::move(packet), CBW20, WLAN_PHY_OFDM);
     } else {
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
@@ -452,9 +461,6 @@ std::optional<DataFrame<LlcHeader>> InfraBss::EthToDataFrame(const EthFrame& eth
     llc_hdr->protocol_id = eth_frame.hdr()->ether_type;
     w.Write({eth_frame.body()->data, payload_len});
 
-    CBW cbw = CBW20;
-    if (Ht().cbw_40_tx_ready && eth_frame.hdr()->src.IsUcast()) { cbw = CBW40; }
-    packet->CopyCtrlFrom(MakeTxInfo(data_hdr->fc, cbw, WLAN_PHY_HT));
     packet->set_len(w.WrittenBytes());
 
     finspect("Outbound data frame: len %zu\n", w.WrittenBytes());
