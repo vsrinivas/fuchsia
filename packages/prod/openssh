@@ -1,6 +1,5 @@
 {
     "imports": [
-        "garnet/packages/prod/boringssl",
         "garnet/packages/prod/listen"
     ],
     "packages": [

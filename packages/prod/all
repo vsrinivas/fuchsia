@@ -7,7 +7,7 @@
         "garnet/packages/prod/auth",
         "garnet/packages/prod/bluetooth",
         "garnet/packages/prod/bluetooth_drivers",
-        "garnet/packages/prod/boringssl",
+        "garnet/packages/prod/boringssl_tool",
         "garnet/packages/prod/broadcom",
         "garnet/packages/prod/build_info",
         "garnet/packages/prod/chrealm",

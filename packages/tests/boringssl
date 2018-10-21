@@ -1,6 +1,6 @@
 {
     "imports": [
-        "garnet/packages/prod/boringssl"
+        "garnet/packages/prod/boringssl_tool"
     ],
     "packages": [
         "//third_party/boringssl:boringssl_tests"
