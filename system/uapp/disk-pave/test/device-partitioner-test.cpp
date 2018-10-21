@@ -337,7 +337,7 @@ bool WipePartitionsTest() {
 
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(&partitioner), ZX_OK);
-    ASSERT_EQ(partitioner->WipePartitions(fbl::Vector<paver::Partition>()), ZX_OK);
+    ASSERT_EQ(partitioner->WipePartitions(), ZX_OK);
 
     END_TEST;
 }
@@ -476,7 +476,7 @@ bool WipePartitionsTest() {
 
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(&partitioner), ZX_OK);
-    ASSERT_EQ(partitioner->WipePartitions(fbl::Vector<paver::Partition>()), ZX_OK);
+    ASSERT_EQ(partitioner->WipePartitions(), ZX_OK);
 
     END_TEST;
 }

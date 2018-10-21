@@ -29,8 +29,14 @@ bool (*TestSkipBlockFilter)(const fbl::unique_fd&) = nullptr;
 
 namespace {
 
-bool KernelFilterCallback(const gpt_partition_t& part, fbl::StringPiece partition_name) {
-    const uint8_t kern_type[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
+constexpr char kEfiName[] = "EFI Gigaboot";
+constexpr char kGptDriverName[] = "/boot/driver/gpt.so";
+constexpr char kFvmPartitionName[] = "fvm";
+constexpr char kZirconAName[] = "ZIRCON-A";
+constexpr char kZirconBName[] = "ZIRCON-B";
+constexpr char kZirconRName[] = "ZIRCON-R";
+
+bool KernelFilterCallback(const gpt_partition_t& part, const uint8_t kern_type[GPT_GUID_LEN], fbl::StringPiece partition_name) {
     char cstring_name[GPT_NAME_LEN];
     utf16_to_cstring(cstring_name, reinterpret_cast<const uint16_t*>(part.name), GPT_NAME_LEN);
     return memcmp(part.type, kern_type, GPT_GUID_LEN) == 0 &&
@@ -42,13 +48,45 @@ bool FvmFilterCallback(const gpt_partition_t& part) {
     return memcmp(part.type, partition_type, GPT_GUID_LEN) == 0;
 }
 
+bool IsGigabootPartition(const gpt_partition_t& part) {
+    const uint8_t efi_type[GPT_GUID_LEN] = GUID_EFI_VALUE;
+    char cstring_name[GPT_NAME_LEN];
+    utf16_to_cstring(cstring_name, reinterpret_cast<const uint16_t*>(part.name), GPT_NAME_LEN);
+    // Disk-paved EFI: Identified by "EFI Gigaboot" label.
+    const bool gigaboot_efi = strncmp(cstring_name, kEfiName, strlen(kEfiName)) == 0;
+    return memcmp(part.type, efi_type, GPT_GUID_LEN) == 0 && gigaboot_efi;
+}
+
+bool WipeFilterCallback(const gpt_partition_t& part) {
+    const uint8_t efi_removable_types[][GPT_GUID_LEN] = {
+        GUID_FVM_VALUE,
+        GUID_INSTALL_VALUE,
+        GUID_SYSTEM_VALUE,
+        GUID_BLOB_VALUE,
+        GUID_DATA_VALUE,
+        GUID_ZIRCON_A_VALUE,
+        GUID_ZIRCON_B_VALUE,
+        GUID_ZIRCON_R_VALUE,
+    };
+
+    if (IsGigabootPartition(part)) {
+        return true;
+    }
+
+    for (const auto &type : efi_removable_types) {
+        if (memcmp(part.type, type, GPT_GUID_LEN) == 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 constexpr size_t ReservedHeaderBlocks(size_t blk_size) {
     constexpr size_t kReservedEntryBlocks = (16 * 1024);
     return (kReservedEntryBlocks + 2 * blk_size) / blk_size;
 };
 
-constexpr char kGptDriverName[] = "/boot/driver/gpt.so";
-constexpr char kFvmPartitionName[] = "fvm";
 
 // Helper function to auto-deduce type.
 template <typename T>
@@ -561,12 +599,6 @@ zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_ptr<DevicePartitioner>*
     return ZX_OK;
 }
 
-// Name used by previous Fuchsia Installer.
-constexpr char kOldEfiName[] = "EFI";
-
-// Name used for EFI partitions added by paver.
-constexpr char kEfiName[] = "EFI Gigaboot";
-
 zx_status_t EfiDevicePartitioner::AddPartition(Partition partition_type, fbl::unique_fd* out_fd) {
     const char* name;
     uint8_t type[GPT_GUID_LEN];
@@ -577,8 +609,29 @@ zx_status_t EfiDevicePartitioner::AddPartition(Partition partition_type, fbl::un
     case Partition::kEfi: {
         const uint8_t efi_type[GPT_GUID_LEN] = GUID_EFI_VALUE;
         memcpy(type, efi_type, GPT_GUID_LEN);
-        minimum_size_bytes = 1LU * (1 << 30);
+        minimum_size_bytes = 20LU * (1 << 20);
         name = kEfiName;
+        break;
+    }
+    case Partition::kZirconA: {
+        const uint8_t zircon_a_type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
+        memcpy(type, zircon_a_type, GPT_GUID_LEN);
+        minimum_size_bytes = 16LU * (1 << 20);
+        name = kZirconAName;
+        break;
+    }
+    case Partition::kZirconB: {
+        const uint8_t zircon_b_type[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
+        memcpy(type, zircon_b_type, GPT_GUID_LEN);
+        minimum_size_bytes = 16LU * (1 << 20);
+        name = kZirconBName;
+        break;
+    }
+    case Partition::kZirconR: {
+        const uint8_t zircon_r_type[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
+        memcpy(type, zircon_r_type, GPT_GUID_LEN);
+        minimum_size_bytes = 24LU * (1 << 20);
+        name = kZirconRName;
         break;
     }
     case Partition::kFuchsiaVolumeManager: {
@@ -597,34 +650,30 @@ zx_status_t EfiDevicePartitioner::AddPartition(Partition partition_type, fbl::un
                               optional_reserve_bytes, out_fd);
 }
 
-bool EfiDevicePartitioner::FilterZirconPartition(const block_info_t& info,
-                                                 const gpt_partition_t& part) {
-    const uint8_t efi_type[GPT_GUID_LEN] = GUID_EFI_VALUE;
-    char cstring_name[GPT_NAME_LEN];
-    utf16_to_cstring(cstring_name, reinterpret_cast<const uint16_t*>(part.name), GPT_NAME_LEN);
-    // Old EFI: Installed by the legacy Fuchsia installer, identified by
-    // large size and "EFI" label.
-    constexpr unsigned int k512MB = (1LU << 29);
-    const bool old_efi = strncmp(cstring_name, kOldEfiName, strlen(kOldEfiName)) == 0 &&
-                         ((part.last - part.first + 1) * info.block_size) > k512MB;
-    // Disk-paved EFI: Identified by "EFI Gigaboot" label.
-    const bool new_efi = strncmp(cstring_name, kEfiName, strlen(kEfiName)) == 0;
-    return memcmp(part.type, efi_type, GPT_GUID_LEN) == 0 && (old_efi || new_efi);
-}
-
 zx_status_t EfiDevicePartitioner::FindPartition(Partition partition_type,
                                                 fbl::unique_fd* out_fd) const {
-    block_info_t info;
-    zx_status_t status;
-    if ((status = gpt_->GetBlockInfo(&info)) != ZX_OK) {
-        ERROR("Unable to get block info\n");
-        return ZX_ERR_IO;
-    }
-
     switch (partition_type) {
     case Partition::kEfi: {
-        const auto filter = [&info](const gpt_partition_t& part) {
-            return FilterZirconPartition(info, part);
+        return gpt_->FindPartition(IsGigabootPartition, out_fd);
+    }
+    case Partition::kZirconA: {
+        const auto filter = [](const gpt_partition_t& part) {
+            const uint8_t guid[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
+            return KernelFilterCallback(part, guid, kZirconAName);
+        };
+        return gpt_->FindPartition(filter, out_fd);
+    }
+    case Partition::kZirconB: {
+        const auto filter = [](const gpt_partition_t& part) {
+            const uint8_t guid[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
+            return KernelFilterCallback(part, guid, kZirconBName);
+        };
+        return gpt_->FindPartition(filter, out_fd);
+    }
+    case Partition::kZirconR: {
+        const auto filter = [](const gpt_partition_t& part) {
+            const uint8_t guid[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
+            return KernelFilterCallback(part, guid, kZirconRName);
         };
         return gpt_->FindPartition(filter, out_fd);
     }
@@ -637,67 +686,8 @@ zx_status_t EfiDevicePartitioner::FindPartition(Partition partition_type,
     }
 }
 
-zx_status_t EfiDevicePartitioner::WipePartitions(const fbl::Vector<Partition>& partitions) {
-    const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
-    const uint8_t install_type[GPT_GUID_LEN] = GUID_INSTALL_VALUE;
-    const uint8_t system_type[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
-    const uint8_t blob_type[GPT_GUID_LEN] = GUID_BLOB_VALUE;
-    const uint8_t data_type[GPT_GUID_LEN] = GUID_DATA_VALUE;
-
-    block_info_t info;
-    zx_status_t status;
-    if ((status = gpt_->GetBlockInfo(&info)) != ZX_OK) {
-        ERROR("Unable to get block info\n");
-        return ZX_ERR_IO;
-    }
-
-    fbl::Vector<const uint8_t*> partition_list;
-    bool efi = false;
-    for (const Partition& partition_type : partitions) {
-        switch (partition_type) {
-        case Partition::kEfi: {
-            // Special case.
-            efi = true;
-            break;
-        }
-        case Partition::kKernelC:
-            break;
-        case Partition::kFuchsiaVolumeManager:
-            partition_list.push_back(fvm_type);
-            break;
-        case Partition::kInstallType:
-            partition_list.push_back(install_type);
-            break;
-        case Partition::kSystem:
-            partition_list.push_back(system_type);
-            break;
-        case Partition::kBlob:
-            partition_list.push_back(blob_type);
-            break;
-        case Partition::kData:
-            partition_list.push_back(data_type);
-            break;
-        default:
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-    }
-
-    // Early return if nothing to wipe.
-    if (partition_list.is_empty() && !efi) {
-        return ZX_OK;
-    }
-
-    const auto filter = [&info, &partition_list, efi](const gpt_partition_t& part) {
-        for (const auto& type : partition_list) {
-            if (memcmp(part.type, type, GPT_GUID_LEN) == 0)
-                return true;
-        }
-        if (efi) {
-            return FilterZirconPartition(info, part);
-        }
-        return false;
-    };
-    return gpt_->WipePartitions(filter);
+zx_status_t EfiDevicePartitioner::WipePartitions() {
+    return gpt_->WipePartitions(WipeFilterCallback);
 }
 
 zx_status_t EfiDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
@@ -743,10 +733,6 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_ptr<DevicePartitioner>
     return ZX_OK;
 }
 
-constexpr char kZirconAName[] = "ZIRCON-A";
-// TODO(raggi): near future - constexpr char kZirconBName[] = "ZIRCON-B";
-// TODO(raggi): near future - constexpr char kZirconRName[] = "ZIRCON-R";
-
 zx_status_t CrosDevicePartitioner::AddPartition(Partition partition_type,
                                                 fbl::unique_fd* out_fd) {
     const char* name;
@@ -782,7 +768,8 @@ zx_status_t CrosDevicePartitioner::FindPartition(Partition partition_type,
     switch (partition_type) {
     case Partition::kKernelC: {
         const auto filter = [](const gpt_partition_t& part) {
-            return KernelFilterCallback(part, kZirconAName);
+            const uint8_t guid[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
+            return KernelFilterCallback(part, guid, kZirconAName);
         };
         return gpt_->FindPartition(filter, out_fd);
     }
@@ -825,7 +812,8 @@ zx_status_t CrosDevicePartitioner::FinalizePartition(Partition partition_type) {
     }
 
     const auto filter_zircona = [](const gpt_partition_t& part) {
-        return KernelFilterCallback(part, kZirconAName);
+        const uint8_t guid[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
+        return KernelFilterCallback(part, guid, kZirconAName);
     };
     zx_status_t status;
     gpt_partition_t* partition;
@@ -860,49 +848,8 @@ zx_status_t CrosDevicePartitioner::FinalizePartition(Partition partition_type) {
     return ZX_OK;
 }
 
-zx_status_t CrosDevicePartitioner::WipePartitions(const fbl::Vector<Partition>& partitions) {
-    const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
-    const uint8_t install_type[GPT_GUID_LEN] = GUID_INSTALL_VALUE;
-    const uint8_t system_type[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
-    const uint8_t blob_type[GPT_GUID_LEN] = GUID_BLOB_VALUE;
-    const uint8_t data_type[GPT_GUID_LEN] = GUID_DATA_VALUE;
-
-    // TODO(raggi): add logic here to cleanup the kernc, rootc, and a/b/r partitions.
-
-    fbl::Vector<const uint8_t*> partition_list;
-    for (const auto& partition_type : partitions) {
-        switch (partition_type) {
-        case Partition::kEfi:
-            continue;
-        case Partition::kFuchsiaVolumeManager:
-            partition_list.push_back(fvm_type);
-            break;
-        case Partition::kInstallType:
-            partition_list.push_back(install_type);
-            break;
-        case Partition::kSystem:
-            partition_list.push_back(system_type);
-            break;
-        case Partition::kBlob:
-            partition_list.push_back(blob_type);
-            break;
-        case Partition::kData:
-            partition_list.push_back(data_type);
-            break;
-        default:
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-    }
-
-    auto filter = [&](const gpt_partition_t& part) {
-        for (const auto& type : partition_list) {
-            if (memcmp(part.type, type, GPT_GUID_LEN) == 0) {
-                return true;
-            }
-        }
-        return false;
-    };
-    return gpt_->WipePartitions(filter);
+zx_status_t CrosDevicePartitioner::WipePartitions() {
+    return gpt_->WipePartitions(WipeFilterCallback);
 }
 
 zx_status_t CrosDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
@@ -961,22 +908,13 @@ zx_status_t FixedDevicePartitioner::FindPartition(Partition partition_type,
     return OpenBlockPartition(nullptr, type, ZX_SEC(5), out_fd);
 }
 
-zx_status_t FixedDevicePartitioner::WipePartitions(const fbl::Vector<Partition>& partitions) {
+zx_status_t FixedDevicePartitioner::WipePartitions() {
     const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
     zx_status_t status;
-    for (const Partition& partition_type : partitions) {
-        switch (partition_type) {
-        case Partition::kFuchsiaVolumeManager:
-            if ((status = WipeBlockPartition(nullptr, fvm_type)) != ZX_OK) {
-                ERROR("Failed to wipe FVM.\n");
-            } else {
-                LOG("Wiped FVM successfully.\n");
-            }
-            break;
-        default:
-            // All non-FVM partitions are currently ignored on FixedDevices.
-            continue;
-        }
+    if ((status = WipeBlockPartition(nullptr, fvm_type)) != ZX_OK) {
+        ERROR("Failed to wipe FVM.\n");
+    } else {
+        LOG("Wiped FVM successfully.\n");
     }
     LOG("Immediate reboot strongly recommended\n");
     return ZX_OK;
@@ -1047,22 +985,13 @@ zx_status_t SkipBlockDevicePartitioner::FindPartition(Partition partition_type,
     return OpenSkipBlockPartition(type, ZX_SEC(5), out_fd);
 }
 
-zx_status_t SkipBlockDevicePartitioner::WipePartitions(const fbl::Vector<Partition>& partitions) {
+zx_status_t SkipBlockDevicePartitioner::WipePartitions() {
     const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
     zx_status_t status;
-    for (const Partition& partition_type : partitions) {
-        switch (partition_type) {
-        case Partition::kFuchsiaVolumeManager:
-            if ((status = WipeBlockPartition(nullptr, fvm_type)) != ZX_OK) {
-                ERROR("Failed to wipe FVM.\n");
-            } else {
-                LOG("Wiped FVM successfully.\n");
-            }
-            break;
-        default:
-            // All non-FVM partitions are currently ignored on SkipBlockDevices.
-            continue;
-        }
+    if ((status = WipeBlockPartition(nullptr, fvm_type)) != ZX_OK) {
+        ERROR("Failed to wipe FVM.\n");
+    } else {
+        LOG("Wiped FVM successfully.\n");
     }
     LOG("Immediate reboot strongly recommended\n");
     return ZX_OK;

@@ -17,6 +17,7 @@
 namespace paver {
 
 enum class Partition {
+    kUnknown,
     kBootloader,
     kKernelC,
     kEfi,
@@ -63,8 +64,8 @@ public:
     // written.
     virtual zx_status_t FinalizePartition(Partition partition_type) = 0;
 
-    // Wipes partition list specified.
-    virtual zx_status_t WipePartitions(const fbl::Vector<Partition>& partitions) = 0;
+    // Wipes Fuchsia specific partitions.
+    virtual zx_status_t WipePartitions() = 0;
 
     // Returns block size in bytes for specified device.
     virtual zx_status_t GetBlockSize(const fbl::unique_fd& device_fd,
@@ -147,15 +148,13 @@ public:
 
     zx_status_t FinalizePartition(Partition unused) override { return ZX_OK; }
 
-    zx_status_t WipePartitions(const fbl::Vector<Partition>& partitions) override;
+    zx_status_t WipePartitions() override;
 
     zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
 private:
     EfiDevicePartitioner(fbl::unique_ptr<GptDevicePartitioner> gpt)
         : gpt_(fbl::move(gpt)) {}
-
-    static bool FilterZirconPartition(const block_info_t& info, const gpt_partition_t& part);
 
     fbl::unique_ptr<GptDevicePartitioner> gpt_;
 };
@@ -175,7 +174,7 @@ public:
 
     zx_status_t FinalizePartition(Partition unused) override;
 
-    zx_status_t WipePartitions(const fbl::Vector<Partition>& partitions) override;
+    zx_status_t WipePartitions() override;
 
     zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
@@ -206,7 +205,7 @@ public:
 
     zx_status_t FinalizePartition(Partition unused) override { return ZX_OK; }
 
-    zx_status_t WipePartitions(const fbl::Vector<Partition>& partitions) override;
+    zx_status_t WipePartitions() override;
 
     zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
@@ -235,7 +234,7 @@ public:
 
     zx_status_t FinalizePartition(Partition unused) override { return ZX_OK; }
 
-    zx_status_t WipePartitions(const fbl::Vector<Partition>& partitions) override;
+    zx_status_t WipePartitions() override;
 
     zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 

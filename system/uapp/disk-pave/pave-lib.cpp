@@ -42,6 +42,27 @@
 namespace paver {
 namespace {
 
+static Partition PartitionType(const Command command) {
+    switch(command) {
+    case Command::kInstallBootloader:
+        return Partition::kBootloader;
+    case Command::kInstallEfi:
+        return Partition::kEfi;
+    case Command::kInstallKernc:
+        return Partition::kKernelC;
+    case Command::kInstallZirconA:
+        return Partition::kZirconA;
+    case Command::kInstallZirconB:
+        return Partition::kZirconB;
+    case Command::kInstallZirconR:
+        return Partition::kZirconR;
+    case Command::kInstallFvm:
+        return Partition::kFuchsiaVolumeManager;
+    default:
+        return Partition::kUnknown;
+    }
+}
+
 // The number of additional slices a partition will need to become
 // zxcrypt'd.
 //
@@ -825,36 +846,6 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
 
 } // namespace
 
-zx_status_t FvmPave(fbl::unique_ptr<DevicePartitioner> device_partitioner,
-                    fbl::unique_fd payload_fd) {
-    LOG("Paving FVM\n");
-
-    fbl::unique_fd partition_fd;
-    zx_status_t status;
-    status = device_partitioner->FindPartition(Partition::kFuchsiaVolumeManager, &partition_fd);
-    if (status == ZX_OK) {
-        LOG("FVM partition already exists\n");
-    } else if (status != ZX_ERR_NOT_FOUND) {
-        ERROR("Failure finding FVM partition: %s\n", zx_status_get_string(status));
-        return status;
-    } else {
-        LOG("Could not find FVM; attempting to add it: %s\n", zx_status_get_string(status));
-        status = device_partitioner->AddPartition(Partition::kFuchsiaVolumeManager, &partition_fd);
-        if (status != ZX_OK) {
-            ERROR("Failure creating partition: %s\n", zx_status_get_string(status));
-            return status;
-        }
-    }
-
-    LOG("Streaming partitions...\n");
-    if ((status = FvmStreamPartitions(fbl::move(partition_fd), fbl::move(payload_fd))) != ZX_OK) {
-        ERROR("Failed to stream partitions: %s\n", zx_status_get_string(status));
-        return status;
-    }
-    LOG("Completed successfully\n");
-    return ZX_OK;
-}
-
 zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
                           fbl::unique_fd payload_fd, Partition partition_type, Arch arch) {
     LOG("Paving partition.\n");
@@ -872,6 +863,16 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
         }
     } else {
         LOG("Partition already exists\n");
+    }
+
+    if (partition_type == Partition::kFuchsiaVolumeManager) {
+        LOG("Streaming partitions...\n");
+        if ((status = FvmStreamPartitions(fbl::move(partition_fd), fbl::move(payload_fd))) != ZX_OK) {
+            ERROR("Failed to stream partitions: %s\n", zx_status_get_string(status));
+            return status;
+        }
+        LOG("Completed successfully\n");
+        return ZX_OK;
     }
 
     uint32_t block_size_bytes;
@@ -918,17 +919,6 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
     return ZX_OK;
 }
 
-zx_status_t FvmClean(fbl::unique_ptr<DevicePartitioner> partitioner) {
-    const fbl::Vector<Partition> partition_list = {
-        Partition::kEfi,
-        Partition::kFuchsiaVolumeManager,
-        Partition::kSystem,
-        Partition::kBlob,
-        Partition::kData,
-    };
-    return partitioner->WipePartitions(partition_list);
-}
-
 void Drain(fbl::unique_fd fd) {
     char buf[8192];
     while (read(fd.get(), &buf, sizeof(buf)) > 0)
@@ -944,70 +934,46 @@ zx_status_t RealMain(Flags flags) {
     const bool is_cros_device = device_partitioner->IsCros();
 
     switch (flags.cmd) {
+    case Command::kWipe:
+        return device_partitioner->WipePartitions();
+    case Command::kInstallFvm:
+        break;
     case Command::kInstallBootloader:
         if (flags.arch == Arch::X64 && !flags.force) {
             LOG("SKIPPING BOOTLOADER install on x64 device, pass --force if desired.\n");
             Drain(fbl::move(flags.payload_fd));
             return ZX_OK;
         }
-        return PartitionPave(fbl::move(device_partitioner), fbl::move(flags.payload_fd),
-                             Partition::kBootloader, flags.arch);
-
+        break;
     case Command::kInstallEfi:
         if ((is_cros_device || flags.arch == Arch::ARM64) && !flags.force) {
             LOG("SKIPPING EFI install on ARM64/CROS device, pass --force if desired.\n");
             Drain(fbl::move(flags.payload_fd));
             return ZX_OK;
         }
-        return PartitionPave(fbl::move(device_partitioner), fbl::move(flags.payload_fd),
-                             Partition::kEfi, flags.arch);
-
+        break;
     case Command::kInstallKernc:
         if (!is_cros_device && !flags.force) {
             LOG("SKIPPING KERNC install on non-CROS device, pass --force if desired.\n");
             Drain(fbl::move(flags.payload_fd));
             return ZX_OK;
         }
-        return PartitionPave(fbl::move(device_partitioner), fbl::move(flags.payload_fd),
-                             Partition::kKernelC, flags.arch);
-
+        break;
     case Command::kInstallZirconA:
-        // TODO(ZX-2220): At some point x64 devices will want to pave A/B/R partitions as well.
-        if (flags.arch == Arch::X64 && !flags.force) {
-            LOG("SKIPPING ZIRCON-A install on x64 device, pass --force if desired.\n");
-            Drain(fbl::move(flags.payload_fd));
-            return ZX_OK;
-        }
-        return PartitionPave(fbl::move(device_partitioner), fbl::move(flags.payload_fd),
-                             Partition::kZirconA, flags.arch);
-
     case Command::kInstallZirconB:
-        if (flags.arch == Arch::X64 && !flags.force) {
-            LOG("SKIPPING ZIRCON-B install on x64 device, pass --force if desired.\n");
-            Drain(fbl::move(flags.payload_fd));
-            return ZX_OK;
-        }
-        return PartitionPave(fbl::move(device_partitioner), fbl::move(flags.payload_fd),
-                             Partition::kZirconB, flags.arch);
-
     case Command::kInstallZirconR:
-        if (flags.arch == Arch::X64 && !flags.force) {
-            LOG("SKIPPING ZIRCON-R install on x64 device, pass --force if desired.\n");
+        if (is_cros_device && !flags.force) {
+            LOG("SKIPPING Zircon-{A/B/R} install on CROS device, pass --force if desired.\n");
             Drain(fbl::move(flags.payload_fd));
             return ZX_OK;
         }
-        return PartitionPave(fbl::move(device_partitioner), fbl::move(flags.payload_fd),
-                             Partition::kZirconR, flags.arch);
-    case Command::kInstallFvm:
-        return FvmPave(fbl::move(device_partitioner), fbl::move(flags.payload_fd));
-
-    case Command::kWipe:
-        return FvmClean(fbl::move(device_partitioner));
-
+        break;
     default:
         ERROR("Unsupported command.");
         return ZX_ERR_NOT_SUPPORTED;
     }
+    return PartitionPave(fbl::move(device_partitioner), fbl::move(flags.payload_fd),
+                            PartitionType(flags.cmd), flags.arch);
 }
 
 } //  namespace paver
