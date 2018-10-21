@@ -677,7 +677,7 @@ Upon successfully starting a stream, drivers **must** provide their best
 estimate of the time at which their hardware began to transmit or capture the
 stream in the `start_time` field of the response.  This time stamp **must** be
 taken from the clock exposed via the
-[ZX_CLOCK_MONOTONIC](../syscalls/clock_get.md) syscall.  Along with with the FIFO
+[ZX_CLOCK_MONOTONIC](../syscalls/clock_get.md) syscall.  Along with the FIFO
 depth property of the ring buffer, this timestamp allows applications to send or
 receive stream data without the need for periodic position updates from the
 driver.  Along with the outboard latency estimate provided by the stream
