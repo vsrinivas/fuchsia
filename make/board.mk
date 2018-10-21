@@ -17,15 +17,18 @@
 #
 # PLATFORM_USE_MKBOOTIMG := true        # package the zircon image with the Android mkbootimg tool
 #
-# PLATFORM_DTB := append                # set if bootloader expects dtb appended to the image
+# PLATFORM_DTB_PATH := <path>           # set if bootloader requires a custom device tree (optional)
+#                                       # common dummy dtb used if none specified
 #
-# PLATFORM_DTB := kdtb                  # set if bootloader expects dtb packaged in kdtb format
+# PLATFORM_DTB_TYPE := append           # set if bootloader expects dtb appended to the image
 #
-# PLATFORM_DTB := mkbootimg             # set if bootloader expects dtb added via mkbootimg --second
+# PLATFORM_DTB_TYPE := kdtb             # set if bootloader expects dtb packaged in kdtb format
+#
+# PLATFORM_DTB_TYPE := mkbootimg        # set if bootloader expects dtb added via mkbootimg --second
 #                                         (requires PLATFORM_DTB_OFFSET)
 #
 # PLATFORM_DTB_OFFSET := <offset>       # DTB offset passed to mkbootimg
-#                                         (required if using PLATFORM_DTB := mkbootimg)
+#                                         (required if using PLATFORM_DTB_TYPE := mkbootimg)
 #
 # PLATFORM_KERNEL_OFFSET := <offset>    # kernel offset to pass to mkbootimg
 #
@@ -51,6 +54,10 @@ ifeq ($(TARGET),arm64)
 include kernel/target/arm64/boot-shim/rules.mk
 else
 $(error PLATFORM_USE_SHIM not supported for target $(TARGET))
+endif
+
+ifeq ($(PLATFORM_DTB_PATH),)
+PLATFORM_DTB_PATH := kernel/target/arm64/dtb/dummy-device-tree.dtb
 endif
 
 # capture board specific variables for the build rules
@@ -92,7 +99,6 @@ endif
 
 MKBOOTIMG := third_party/tools/android/mkbootimg
 MKBOOTFS_ARGS :=
-DUMMY_DTB := kernel/target/arm64/dtb/dummy-device-tree.dtb
 
 BOARD_BOOTIMG := $(BUILDDIR)/$(PLATFORM_BOARD_NAME)-boot.img
 
@@ -102,19 +108,19 @@ else
 BOARD_ZIRCON_BOOTIMAGE2 := $(BOARD_ZIRCON_BOOTIMAGE)
 endif
 
-ifeq ($(PLATFORM_DTB),append)
+ifeq ($(PLATFORM_DTB_TYPE),append)
 # device tree binary is appended to end of zircon image
 BOARD_ZIRCON_BOOTIMAGE3 := $(BUILDDIR)/$(PLATFORM_BOARD_NAME)-zircon-bootimage-dtb
-else ifeq ($(PLATFORM_DTB),kdtb)
+else ifeq ($(PLATFORM_DTB_TYPE),kdtb)
 # device tree binary is appended with the mkkdtb tool
 BOARD_ZIRCON_BOOTIMAGE3 := $(BUILDDIR)/$(PLATFORM_BOARD_NAME)-zircon-bootimage-kdtb
-else ifeq ($(PLATFORM_DTB),mkbootimg)
+else ifeq ($(PLATFORM_DTB_TYPE),mkbootimg)
 # device tree binary passed via mkbootimg
 ifeq ($(PLATFORM_DTB_OFFSET),)
 $(error PLATFORM_DTB_OFFSET not defined)
 endif
 BOARD_ZIRCON_BOOTIMAGE3 := $(BOARD_ZIRCON_BOOTIMAGE2)
-MKBOOTFS_ARGS += --second $(DUMMY_DTB) --second_offset $(PLATFORM_DTB_OFFSET)
+MKBOOTFS_ARGS += --second $(PLATFORM_DTB_PATH) --second_offset $(PLATFORM_DTB_OFFSET)
 else
 # no device tree is necessary
 BOARD_ZIRCON_BOOTIMAGE3 := $(BOARD_ZIRCON_BOOTIMAGE2)
@@ -126,6 +132,7 @@ $(BOARD_ZIRCON_BOOTIMAGE2): BOARD_ZIRCON_BOOTIMAGE:=$(BOARD_ZIRCON_BOOTIMAGE)
 $(BOARD_ZIRCON_BOOTIMAGE3): BOARD_ZIRCON_BOOTIMAGE3:=$(BOARD_ZIRCON_BOOTIMAGE3)
 $(BOARD_ZIRCON_BOOTIMAGE3): BOARD_ZIRCON_BOOTIMAGE:=$(BOARD_ZIRCON_BOOTIMAGE)
 $(BOARD_ZIRCON_BOOTIMAGE3): BOARD_ZIRCON_BOOTIMAGE2:=$(BOARD_ZIRCON_BOOTIMAGE2)
+$(BOARD_ZIRCON_BOOTIMAGE3): PLATFORM_DTB_PATH:=$(PLATFORM_DTB_PATH)
 
 $(BOARD_BOOTIMG): BOARD_BOOTIMG:=$(BOARD_BOOTIMG)
 $(BOARD_BOOTIMG): BOARD_ZIRCON_BOOTIMAGE:=$(BOARD_ZIRCON_BOOTIMAGE)
@@ -135,6 +142,7 @@ $(BOARD_BOOTIMG): PLATFORM_KERNEL_OFFSET:=$(PLATFORM_KERNEL_OFFSET)
 $(BOARD_BOOTIMG): PLATFORM_MEMBASE:=$(PLATFORM_MEMBASE)
 $(BOARD_BOOTIMG): PLATFORM_CMDLINE:=$(PLATFORM_CMDLINE)
 $(BOARD_BOOTIMG): MKBOOTFS_ARGS:=$(MKBOOTFS_ARGS)
+$(BOARD_BOOTIMG): PLATFORM_DTB_PATH:=$(PLATFORM_DTB_PATH)
 
 ifeq ($(PLATFORM_USE_GZIP),true)
 $(BOARD_ZIRCON_BOOTIMAGE2): $(BOARD_ZIRCON_BOOTIMAGE)
@@ -142,16 +150,16 @@ $(BOARD_ZIRCON_BOOTIMAGE2): $(BOARD_ZIRCON_BOOTIMAGE)
 	$(NOECHO)gzip -c $< > $@
 endif
 
-ifeq ($(PLATFORM_DTB),append)
+ifeq ($(PLATFORM_DTB_TYPE),append)
 # device tree binary is appended to end of zircon image
-$(BOARD_ZIRCON_BOOTIMAGE3): $(BOARD_ZIRCON_BOOTIMAGE2) $(DUMMY_DTB)
+$(BOARD_ZIRCON_BOOTIMAGE3): $(BOARD_ZIRCON_BOOTIMAGE2) $(PLATFORM_DTB_PATH)
 	$(call BUILDECHO,generating $@)
-	$(NOECHO)cat $(BOARD_ZIRCON_BOOTIMAGE2) $(DUMMY_DTB) > $@
-else ifeq ($(PLATFORM_DTB),kdtb)
+	$(NOECHO)cat $(BOARD_ZIRCON_BOOTIMAGE2) $(PLATFORM_DTB_PATH) > $@
+else ifeq ($(PLATFORM_DTB_TYPE),kdtb)
 # device tree binary is appended with the mkkdtb tool
-$(BOARD_ZIRCON_BOOTIMAGE3): $(BOARD_ZIRCON_BOOTIMAGE2) $(DUMMY_DTB) $(KDTBTOOL)
+$(BOARD_ZIRCON_BOOTIMAGE3): $(BOARD_ZIRCON_BOOTIMAGE2) $(PLATFORM_DTB_PATH) $(KDTBTOOL)
 	$(call BUILDECHO,generating $@)
-	$(NOECHO)$(KDTBTOOL) $(BOARD_ZIRCON_BOOTIMAGE2) $(DUMMY_DTB) $@
+	$(NOECHO)$(KDTBTOOL) $(BOARD_ZIRCON_BOOTIMAGE2) $(PLATFORM_DTB_PATH) $@
 endif
 
 $(BOARD_BOOTIMG): $(BOARD_ZIRCON_BOOTIMAGE3)
@@ -205,7 +213,8 @@ endif # PLATFORM_USE_AVB
 # clear variables that were passed in to us
 PLATFORM_USE_SHIM :=
 PLATFORM_USE_GZIP :=
-PLATFORM_DTB :=
+PLATFORM_DTB_PATH :=
+PLATFORM_DTB_TYPE :=
 PLATFORM_USE_MKBOOTIMG :=
 PLATFORM_USE_AVB :=
 PLATFORM_BOARD_NAME :=
