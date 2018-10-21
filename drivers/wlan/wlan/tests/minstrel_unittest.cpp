@@ -150,5 +150,43 @@ TEST_F(MinstrelTest, UpdateStats) {
     EXPECT_EQ(9, peer.max_tp);
 }
 
+std::unordered_set<tx_vec_idx_t> GetAllIndices(const wlan_minstrel::Peer& peer) {
+    std::unordered_set<tx_vec_idx_t> indices;
+    for (const auto& entry : *peer.entries) {
+        indices.emplace(entry.tx_vector_idx);
+    }
+    return indices;
+}
+
+TEST_F(MinstrelTest, AddMissingTxVector) {
+    clock.Set(zx::time(0));
+
+    assoc_ctx_ht_.rates_cnt = 10;
+    const uint8_t fewer_rates[10] = {2, 4, 11, 22, 12, 18, 24, 36, 48, 72};  // missing 96 and 108
+    std::copy(std::cbegin(fewer_rates), std::cend(fewer_rates), assoc_ctx_ht_.rates);
+    minstrel_.AddPeer(assoc_ctx_ht_);
+
+    wlan_tx_status_t tx_status{
+        .success = true,
+        .tx_status_entry =
+            {
+                // ERP, CBW20, GI 800 ns,
+                {kErpStartIdx + kErpNumTxVector - 1, 1},  // MCS 7, 108, non-present, fail
+                {kErpStartIdx + kErpNumTxVector - 3, 1},  // MCS 5, 72,  present,     succeed
+            },
+    };
+    kTestMacAddr.CopyTo(tx_status.peer_addr);
+
+    wlan_minstrel::Peer peer;
+    EXPECT_EQ(ZX_OK, minstrel_.GetStatsToFidl(kTestMacAddr, &peer));
+    auto indices = GetAllIndices(peer);
+    EXPECT_FALSE(indices.count(kErpStartIdx + kErpNumTxVector - 1));
+
+    minstrel_.HandleTxStatusReport(tx_status);
+    EXPECT_EQ(ZX_OK, minstrel_.GetStatsToFidl(kTestMacAddr, &peer));
+    indices = GetAllIndices(peer);
+    EXPECT_TRUE(indices.count(kErpStartIdx + kErpNumTxVector - 1));
+}
+
 }  // namespace
 }  // namespace wlan

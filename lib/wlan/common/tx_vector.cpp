@@ -99,6 +99,13 @@ zx_status_t TxVector::FromSupportedRate(const SupportedRate& erp_rate, TxVector*
     return ZX_OK;
 }
 
+// Inverse of FromSupportedRate above, supports ERP rates but not CCK rates.
+std::optional<SupportedRate> TxVectorIdxToErpRate(tx_vec_idx_t idx) {
+  if (idx < kErpStartIdx || idx >= kErpStartIdx + kErpNumTxVector) { return {}; }
+  constexpr uint16_t erp_rate_list[] = {12, 18, 34, 36, 48, 72, 96, 108};
+  return SupportedRate(erp_rate_list[idx - kErpStartIdx]);
+}
+
 bool IsTxVecIdxValid(tx_vec_idx_t idx) {
     return kInvalidTxVectorIdx < idx && idx <= kMaxValidIdx;
 }

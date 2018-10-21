@@ -30,6 +30,18 @@ zx::duration TxTimeErp(SupportedRate rate) {
     return HeaderTxTimeErp() + PayloadTxTimeErp(rate);
 }
 
+void EmplaceErp(std::unordered_map<tx_vec_idx_t, TxStats>* map, tx_vec_idx_t idx,
+                SupportedRate rate) {
+    zx::duration time = TxTimeErp(rate);
+    ZX_DEBUG_ASSERT(time.to_nsecs() != 0);
+    debugmstl("%s, tx_time %lu nsec\n", debug::Describe(idx).c_str(), time.to_nsecs());
+    TxStats tx_stats{
+        .tx_vector_idx = idx,
+        .perfect_tx_time = time,
+    };
+    map->emplace(idx, tx_stats);
+}
+
 void AddSupportedErp(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
                      const std::vector<SupportedRate>& rates) {
     size_t tx_stats_added = 0;
@@ -41,18 +53,22 @@ void AddSupportedErp(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
         if (tx_vector.phy != WLAN_PHY_ERP) { continue; }
         tx_vec_idx_t tx_vector_idx;
         status = tx_vector.ToIdx(&tx_vector_idx);
-        zx::duration perfect_tx_time = TxTimeErp(rate);
-        ZX_DEBUG_ASSERT(perfect_tx_time.to_nsecs() != 0);
-        debugmstl("%s, tx_time %lu nsec\n", debug::Describe(tx_vector).c_str(),
-                  perfect_tx_time.to_nsecs());
-        TxStats tx_stats{
-            .tx_vector_idx = tx_vector_idx,
-            .perfect_tx_time = perfect_tx_time,
-        };
-        tx_stats_map->emplace(tx_vector_idx, tx_stats);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
+        EmplaceErp(tx_stats_map, tx_vector_idx, rate);
         ++tx_stats_added;
     }
     debugmstl("%zu ERP added.\n", tx_stats_added);
+}
+
+bool AddMissingErp(std::unordered_map<tx_vec_idx_t, TxStats>* map, tx_vec_idx_t idx) {
+    auto erp_rate = TxVectorIdxToErpRate(idx);
+    if (!erp_rate.has_value()) {
+        ZX_DEBUG_ASSERT(0);
+        return false;
+    } else {
+        EmplaceErp(map, idx, *erp_rate);
+        return true;
+    }
 }
 
 zx::duration HeaderTxTimeHt() {
@@ -261,8 +277,17 @@ void MinstrelRateSelector::HandleTxStatusReport(const wlan_tx_status_t& tx_statu
     for (auto entry : tx_status.tx_status_entry) {
         if (entry.tx_vector_idx == kInvalidTxVectorIdx) { break; }
         last_idx = entry.tx_vector_idx;
-        (*tx_stats_map)[last_idx].attempts_cur += entry.attempts;
+        if (tx_stats_map->count(last_idx) == 0) {
+            if (!AddMissingErp(&peer->tx_stats_map, last_idx)) {
+                debugmstl("error: Invalid tx_vec_idx: %u.\n", last_idx);
+                last_idx = kInvalidTxVectorIdx;
+            }
+        }
+        if (last_idx != kInvalidTxVectorIdx) {
+            (*tx_stats_map)[last_idx].attempts_cur += entry.attempts;
+        }
     }
+
     if (tx_status.success && last_idx != kInvalidTxVectorIdx) {
         (*tx_stats_map)[last_idx].success_cur++;
     }

@@ -14,6 +14,7 @@
 #include <zx/time.h>
 
 #include <cstdio>
+#include <optional>
 
 namespace wlan {
 
@@ -73,6 +74,7 @@ bool operator==(const TxVector& lhs, const TxVector& rhs);
 bool operator!=(const TxVector& lhs, const TxVector& rhs);
 // Used by ralink driver to check if its auto-fallback mechanism changed anything other than MCS.
 bool IsEqualExceptMcs(const ::wlan::TxVector& lhs, const ::wlan::TxVector& rhs);
+std::optional<SupportedRate> TxVectorIdxToErpRate(tx_vec_idx_t idx);
 }  // namespace wlan
 
 #endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_TX_VECTOR_H_
