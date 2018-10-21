@@ -5,16 +5,12 @@
 
 ### start a remote interactive shell in the target device
 
-## usage: fx shell [-h|--help] [-d|--device <device>] [<command>]
+## usage: fx shell [-h|--help] [<command>]
 ##
-## Creates an SSH connection with a device and executes a command
-## (if specified) on the device.
+## Creates an SSH connection with a device and executes a command.
 ##
 ## Arguments:
 ##   -h|--help    Print out this message.
-##   -d|--device  Fuchsia link-local name of the device. If not
-##                specified, will connect to the only available
-##                device on the link-local network.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
@@ -23,21 +19,16 @@ case $1 in
   fx-command-help
   exit 0
   ;;
-  -d|--device)
-  shift  # name
-  if [[ -z "$1" ]]; then
-      echo "Missing parameter: <device>" >&2
-      fx-command-help
-      exit 1
-  fi
-  device="$1"
-  shift  # value
-  ;;
 esac
 
+device_addr="$(get-fuchsia-device-addr)"
+if [[ -z "${device_addr}" ]]; then
+  echo >&2 "Device not found"
+  exit 1
+fi
 # Note: I know there are people who don't like the host-key message, but DO NOT
 # apply -q here, it silences error messages and makes network and configuration
 # failures much harder to diagnose when helping people. The control master will
 # mean you only get one per TCP socket, which is once per newly booted host.
 # It's not a huge burden compared to end user support.
-fx-command-exec ssh "$(fx-command-run netaddr --fuchsia "${device}")" "$@"
+fx-command-exec ssh "${device_addr}" "$@"

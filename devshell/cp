@@ -40,7 +40,7 @@ fi
 
 src=$1
 dst=$2
-host="$(fx-command-run netaddr --fuchsia)"
+host="$(get-fuchsia-device-addr)"
 
 if [[ "${to_target}" = "true" ]]; then
   fx-command-run sftp -q -b - "[${host}]" > /dev/null << EOF

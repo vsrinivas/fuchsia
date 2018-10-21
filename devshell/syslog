@@ -5,24 +5,19 @@
 
 ### Listen for logs
 
-## usage: fx syslog [-d|--device <device>] [log-listener flags]
+## usage: fx syslog [log-listener flags]
 ##
 ## Creates an SSH connection with a device and starts listening for logs.
 ## Pass -h to get help with log-listener flags.
-##
-## Arguments:
-##   -d|--device  Fuchsia link-local name of the device. If not
-##                specified, will connect to the only available
-##                device on the link-local network.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
 function listen {
   trap "exit 0" INT
   while true; do
-    addr=$(fx-command-run netaddr --fuchsia --nowait --timeout=1000 "${device}")
-    if [[ $? -eq 0 ]]; then
-      echo "Connecting to device..."
+    addr="$(get-fuchsia-device-addr --nowait --timeout=1000)"
+    if [[ -n "${addr}" ]]; then
+      echo "Connecting to device (${addr})..."
       (fx-command-exec ssh "${addr}" /system/bin/log_listener "$@" || true)
       if [[ $? -eq 0 ]]; then
         break
@@ -30,19 +25,6 @@ function listen {
     fi
   done
 }
-
-case $1 in
-  -d|--device)
-  shift  # name
-  if [[ -z "$1" ]]; then
-      echo "Missing parameter: <device>" >&2
-      fx-command-help
-      exit 1
-  fi
-  device="$1"
-  shift  # value
-  ;;
-esac
 
 echo "Looking for device"
 listen $@

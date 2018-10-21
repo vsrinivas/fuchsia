@@ -42,7 +42,6 @@ usage() {
 }
 
 netboot=false
-ip_targ=()
 bootserver_extra=()
 sign_tool=""
 machine_type=
@@ -50,10 +49,6 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
   -h|--help)
     usage
-    ;;
-  -a)
-    shift
-    ip_targ=("-a" "$1")
     ;;
   --netboot)
     netboot=true
@@ -203,8 +198,13 @@ if $add_fvm; then
   disks=("${disks[@]}" --fvm "${fuchsia_dir}/${IMAGE_FVM_SPARSE}")
 fi
 
+name="$(get-device-name)"
+if [[ -n "${name}" ]]; then
+  device_args=("-n" "${name}")
+fi
+
 exec "${zircon_tools}/bootserver" \
-  "${ip_targ[@]}" \
+  "${device_args[@]}" \
   "${disks[@]}" \
   "${ramdisk}" \
   "${bootserver_extra[@]}"

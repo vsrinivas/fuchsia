@@ -4,9 +4,8 @@
 # found in the LICENSE file.
 
 ### start the update server and attach to a running fuchsia device
-## usage: fx serve-updates [-v] [-d <device>] [--direct]
+## usage: fx serve-updates [-v] [--direct]
 ##   -v verbose (do not suppress `pm serve` output)
-##   -d <device> to specify a specific target device
 ##   --no-direct configure target to use an SSH tunnel as transport (deprecated)
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
@@ -21,8 +20,6 @@ set -- "${FX_ARGV[@]}"
 
 verbose=false
 very_verbose=false
-device=""
-device_arg=""
 direct=true
 while (($#)); do
   case "$1" in
@@ -36,11 +33,6 @@ while (($#)); do
     -vv)
       verbose=true
       very_verbose=true
-      ;;
-    -d|--device)
-      device="$2"
-      device_arg="-d $2"
-      shift
       ;;
     --no-direct)
       direct=false
@@ -96,9 +88,9 @@ if ! kill -0 "${pm_srv_pid}" 2> /dev/null; then
   exit $?
 fi
 
-device_addr=
+device_addr=$(get-fuchsia-device-addr)
 update_device_addr() {
-  device_addr="$(fx-command-run netaddr --nowait --timeout=1000 --fuchsia "$@" 2>/dev/null)"
+  device_addr="$(get-fuchsia-device-addr 2>/dev/null)"
 }
 
 if [[ "$(uname -s)" = "Darwin" ]]; then
@@ -124,7 +116,7 @@ while true; do
 
   if [[ "$direct" == false ]]; then
     log_verbose "Updating device address with device arg \"$device\""
-    update_device_addr $device
+    update_device_addr
     if [[ -z "${device_addr}" ]]; then
       if [[ "${state}" != "discover1" ]]; then
         log "No device found, waiting..."
@@ -170,7 +162,7 @@ while true; do
 
     if [[ "$state" == "discover" || "$state" == "discover1" ]]; then
       log_verbose "Updating device address (direct) with \"$device\""
-      update_device_addr $device
+      update_device_addr
       if [[ -z "${device_addr}" ]]; then
         if [[ "${state}" != "discover1" ]]; then
           log "No device found, waiting..."

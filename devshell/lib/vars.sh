@@ -116,6 +116,31 @@ FUCHSIA_BUILD_ZIRCON_ARGS=(${zircon_args})
 "
 }
 
+function get-device-name {
+  fx-config-read
+  # If DEVICE_NAME was passed in fx -d, use it
+  if [[ "${FUCHSIA_DEVICE_NAME+isset}" == "isset" ]]; then
+    echo "${FUCHSIA_DEVICE_NAME}"
+    return
+  fi
+  # Uses a file outside the build dir so that it is not removed by `gn clean`
+  local pairfile="${FUCHSIA_BUILD_DIR}.device"
+  # If .device file exists, use that
+  if [[ -f "${pairfile}" ]]; then
+    echo "$(<"${pairfile}")"
+    return
+  fi
+  echo ""
+}
+
+function get-fuchsia-device-addr {
+  fx-command-run netaddr "$(get-device-name)" --fuchsia "$@"
+}
+
+function get-netsvc-device-addr {
+  fx-command-run netaddr "$(get-device-name)" "$@"
+}
+
 # if $1 is "-d" or "--device" return
 #   - the netaddr if $2 looks like foo-bar-baz-flarg
 #     OR

@@ -80,7 +80,7 @@ function help {
 
 function usage {
   cat <<END
-usage: fx [--config CONFIG_FILE | --dir BUILD_DIR] [-i] [-x] COMMAND [...]
+usage: fx [--config CONFIG_FILE | --dir BUILD_DIR] [-d DEVICE_NAME] [-i] [-x] COMMAND [...]
 
 Run Fuchsia development commands. Must be run with either a current working
 directory that is contained in a Fuchsia source tree or the FUCHSIA_DIR
@@ -97,6 +97,9 @@ optional arguments:
                         build configuration) is used by COMMAND.
   --dir=BUILD_DIR       Path to the build directory to use when running COMMAND.
                         If specified, FILE is ignored.
+  -d=DEVICE_NAME        Target a specific device. DEVICE_NAME may be a Fuchsia
+                        device name. Note: `fx set-device` can be used to set a
+                        default DEVICE_NAME for a BUILD_DIR.
   -i                    Iterative mode.  Repeat the command whenever a file is
                         modified under your Fuchsia directory, not including
                         out/.
@@ -137,7 +140,7 @@ source "${vars_sh}"
 
 while [[ $# -ne 0 ]]; do
   case $1 in
-    --config=*|--dir=*)
+    --config=*|--dir=*|-d=*)
       # Turn --switch=value into --switch value.
       arg="$1"
       shift
@@ -170,6 +173,15 @@ while [[ $# -ne 0 ]]; do
       fi
       # This tells fx-config-read not to use the file.
       export FUCHSIA_CONFIG=-
+      ;;
+    -d)
+      if [[ $# -lt 2 ]]; then
+        usage
+        echo >&2 "ERROR: Missing device name for -d argument"
+        exit 1
+      fi
+      shift # removes -d
+      export FUCHSIA_DEVICE_NAME="$1"
       ;;
     -i)
       declare iterative=1

@@ -117,13 +117,6 @@ abspath() {
   fi
 }
 
-set_device() {
-  if [[ -z "${device}" ]] ; then
-    device=$(fx-command-run netaddr --fuchsia)
-    [[ $? -eq 0 ]] || fatal "failed to connect to device"
-  fi
-}
-
 set_staging() {
   if [[ -z "${staging}" ]] ; then
     staging=$(mktemp -d)
@@ -315,9 +308,6 @@ main() {
   # Parse options
   while [[ "$1" == "-"* ]] ; do
     case $1 in
-      -d|--device)
-        device=$(get-device-addr $1 $2)
-        ;;
       -o|--output)
         output="$2"
         ;;
@@ -338,6 +328,7 @@ main() {
   output=$(abspath "${output}")
 
   # Parse command
+  local device="$(get-fuchsia-device-addr)"
   local command=$1
   local fuzzer=$2
   local args="${@:3}"
@@ -347,24 +338,20 @@ main() {
       exit 0
       ;;
     list|check|stop|repro|merge)
-      set_device
       fx-command-run ssh ${device} fuzz ${command} ${fuzzer} ${args}
       record "${fuzzer}"
       ;;
     start)
-      set_device
       fx-command-run ssh ${device} fuzz ${command} ${fuzzer} ${args} &
       sleep 1
       record "${fuzzer}"
       ;;
     fetch|store)
-      set_device
       set_staging
       query "${fuzzer}"
       ${command} ${args}
       ;;
     watch)
-      set_device
       query "${fuzzer}"
       monitor &
       ;;
@@ -373,7 +360,6 @@ main() {
       fuzzer="${command}"
       args="${@:2}"
       echo "Command omitted; starting fuzzer '${fuzzer}' in automatic mode."
-      set_device
       set_staging
       query "${fuzzer}"
       if [[ ${corpus_size} == "0" ]] ; then

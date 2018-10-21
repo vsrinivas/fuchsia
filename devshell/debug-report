@@ -56,7 +56,7 @@ done
 
 # Post-flag processing.
 format="--format=${formatter}"
-host="$(fx-command-run netaddr --fuchsia)"
+host="$(get-fuchsia-device-addr)"
 regexps="$@"
 find_target="/hub"
 

@@ -6,7 +6,7 @@
 ### Runs a single remote test target through //scripts/run-dart-action.py
 
 ## usage: fx dart-remote-test
-##            [-h|--help] [-d|--device <device>] <target-pattern>
+##            [-h|--help] <target-pattern>
 ##
 ## Attempts to run a test targeting a remote fuchsia device.
 ##
@@ -16,9 +16,6 @@
 ##
 ## Arguments:
 ##   -h|--help    Print out this message.
-##   -d|--device  Fuchsia link-local name of the device. If not
-##                specified, will connect to the only available
-##                device on the link-local network.
 
 DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VERBOSE=false
@@ -30,16 +27,6 @@ case $1 in
   fx-command-help
   exit 0
   ;;
-  -d|--device)
-  shift  # name
-  if [[ -z "$1" ]]; then
-      echo "Missing parameter: <device>" >&2
-      fx-command-help
-      exit 1
-  fi
-  device="$1"
-  shift  # value
-  ;;
 esac
 
 TARGET_PATTERN="$1"
@@ -50,7 +37,7 @@ if [ -z "$TARGET_PATTERN" ]; then
   exit 1
 fi
 
-IP_ADDR_LINK_LOCAL="$(fx-command-run netaddr --fuchsia "${device}")"
+IP_ADDR_LINK_LOCAL="$(get-fuchsia-device-addr)"
 SSH_CONFIG="${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config"
 RUN_DART_ACTION="${FUCHSIA_DIR}/scripts/run-dart-action.py"
 "${RUN_DART_ACTION}" target-test \

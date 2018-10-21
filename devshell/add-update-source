@@ -5,7 +5,7 @@
 
 ### register dev host as target's update source
 
-## usage: fx add-update-source [--type=TYPE] [--name=NAME] [--device=hostname] [--disable-source=NAME]
+## usage: fx add-update-source [--type=TYPE] [--name=NAME] [--disable-source=NAME]
 ##
 ## Configure target device to use a new update source.
 ##
@@ -16,7 +16,6 @@
 ## update source.
 ##
 ## --name=NAME           Name the generated update source config NAME. Defaults to the config type.
-## --device=hostname     Configure the given device.
 ## --disable-source=NAME Disable the update source with NAME after adding the new update source.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
@@ -32,8 +31,6 @@ function main {
 
   config_type="devhost"
   source_name=""
-  device_name=""
-  device_arg=""
   disable_source=""
   while [[ $# -ne 0 ]]; do
     case "$1" in
@@ -43,11 +40,6 @@ function main {
         ;;
       --name)
         source_name="$2"
-        shift
-        ;;
-      -d|--device)
-        device_name="$2"
-        device_arg="-d $2"
         shift
         ;;
       --disable-source)
@@ -75,13 +67,13 @@ function main {
     exit 1
   fi
 
-  device_addr="$(fx-command-run netaddr --local $device_name)"
-  if [[ $? -ne 0 || -z "${device_addr}" ]]; then
+  local local_addr="$(fx-command-run netaddr --local "$(get-device-name)")"
+  if [[ $? -ne 0 || -z "${local_addr}" ]]; then
     echo >&2 "Unable to determine host's IP.  Is the target up?"
     exit 1
   fi
   # Strip interface name suffix.
-  device_addr="${device_addr%%%*}"
+  local_addr="${local_addr%%%*}"
 
   repository_dir="${FUCHSIA_BUILD_DIR}/amber-files/repository"
   if [[ ! -d "${repository_dir}" ]]; then
@@ -92,10 +84,10 @@ function main {
   config_dir="${repository_dir}/${source_name}"
   mkdir -p "${config_dir}"
   config_path="${config_dir}/config.json"
-  config_url="http://[${device_addr}]:8083/${source_name}/config.json"
+  config_url="http://[${local_addr}]:8083/${source_name}/config.json"
 
   if [[ "${config_type}" == "devhost" ]]; then
-    repo_url="http://[${device_addr}]:8083"
+    repo_url="http://[${local_addr}]:8083"
   elif [[ "${config_type}" == "localhost" ]]; then
     repo_url="http://127.0.0.1:8083"
   else
@@ -130,7 +122,7 @@ function main {
 
   if [[ -n "${disable_source}" ]]; then
     # Best effort, don't show status or fail on error
-    fx-command-run shell $device_arg amber_ctl disable_src -n "${disable_source}" >/dev/null 2>/dev/null || true
+    fx-command-run shell amber_ctl disable_src -n "${disable_source}" >/dev/null 2>/dev/null || true
   fi
 }
 

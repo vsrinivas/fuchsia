@@ -5,7 +5,7 @@
 
 ### push packages to a device
 
-## usage: fx push-package [-d|--device <device_address>] [pkg1 pkg2 ...]
+## usage: fx push-package [pkg1 pkg2 ...]
 ##
 ## Push packages to a device. One or more package names may be supplied. If no
 ## package name is suppled all packages in the build output will be pushed. The
@@ -14,9 +14,6 @@
 ##
 ## See https://fuchsia.googlesource.com/docs/+/master/development/workflows/package_update.md
 ## for more information about using this workflow.
-##
-## optional arguments (must be first):
-##   -d|--device         IP address of the target
 
 set -e
 
@@ -31,16 +28,6 @@ function main {
   fx-standard-switches "$@"
   set -- "${FX_ARGV[@]}"
 
-  local device=""
-  local device_args=()
-  device="$(get-device-addr $@)"
-
-  if [[ -n "$device" ]]; then
-    shift
-    device_args=("-d" "$1")
-    shift
-  fi
-
   # if the second arg is set, but 0-length, publish nothing
   if [[ $# -eq 1 ]] && [[ -z "${1}" ]]; then
     exit 0
@@ -48,7 +35,7 @@ function main {
 
   fx-command-run publish "$@"
 
-  fx-command-run push-package-no-publish "${device_args[@]}" "$@"
+  fx-command-run push-package-no-publish "$@"
 }
 
 main "$@"

@@ -4,9 +4,8 @@
 # found in the LICENSE file.
 
 ### start `boot` and `serve-updates` in a single command
-## usage: fx serve [-v] [-d device] [--direct]
+## usage: fx serve [-v] [--direct]
 ##   -v enable more verbose output (must be first argument)
-##   -d target a specifc device
 ##   --no-direct configure target to use an SSH tunnel as transport (deprecated)
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
@@ -24,32 +23,12 @@ trap kill_child_processes EXIT
 
 boot_args=()
 serve_args=()
-device=""
 
 fx-standard-switches "$@"
 set -- "${FX_ARGV[@]}"
 
 while (($#)); do
   case "$1" in
-    -d|--device)
-      serve_args+=("$1")
-      shift
-      if [[ "$1" != *"-"* ]]; then
-        echo "Device argument must be a name, eg. 'acid-grab-stuck-line'"
-        exit 1
-      fi
-      serve_args+=("$1")
-      boot_args+=("-a")
-      device="$(get-device-addr --device $1 -z)"
-      if [[ ! -n "${device}" ]]; then
-        echo "'$1' does not resolve"
-        exit 1
-      fi
-      sep="%"
-      prefix="${device%%$sep*}"
-      device="${device:0:${#prefix}}"
-      boot_args+=("${device}")
-      ;;
     -v|-vv|--verbose)
       serve_args+=("$1")
       ;;
