@@ -83,8 +83,8 @@ enum BlockMode {
 [Discoverable]
 interface VirtioBlock : VirtioDevice {
     // Start the block device.
-    0x81000001: Start(StartInfo start_info, BlockFormat block_fmt,
-                      BlockMode block_mode, fuchsia.io.File file);
+    0x81000001: Start(StartInfo start_info, BlockMode mode, BlockFormat format,
+                      fuchsia.io.File file) -> (uint64 size);
 };
 
 [Discoverable]

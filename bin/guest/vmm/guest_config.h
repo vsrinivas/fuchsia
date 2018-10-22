@@ -5,24 +5,41 @@
 #ifndef GARNET_BIN_GUEST_VMM_GUEST_CONFIG_H_
 #define GARNET_BIN_GUEST_VMM_GUEST_CONFIG_H_
 
-#include <functional>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include <fuchsia/guest/device/cpp/fidl.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include "garnet/lib/machina/block_dispatcher.h"
+struct Guid {
+  enum class Type {
+    NONE,
+
+    // Each GPT partition has 2 GUIDs, one that is unique to that specific
+    // partition, and one that specifies the purpose of the partition.
+    //
+    // For a partial list of existing partition type GUIDs, see
+    // https://en.wikipedia.org/wiki/GUID_Partition_Table#Partition_type_GUIDs
+    GPT_PARTITION,
+    GPT_PARTITION_TYPE,
+  };
+
+  Type type = Type::NONE;
+  uint8_t bytes[GUID_LEN];
+
+  // If |false|, |bytes| contains a valid GUID.
+  bool empty() const { return type == Type::NONE; }
+};
 
 struct BlockSpec {
   std::string path;
-  machina::BlockDispatcher::Guid guid;
-
-  fuchsia::guest::device::BlockFormat block_fmt =
+  Guid guid;
+  fuchsia::guest::device::BlockFormat format =
       fuchsia::guest::device::BlockFormat::RAW;
-  fuchsia::guest::device::BlockMode block_mode =
+  fuchsia::guest::device::BlockMode mode =
       fuchsia::guest::device::BlockMode::READ_WRITE;
 };
 

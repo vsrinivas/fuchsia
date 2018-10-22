@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/machina/qcow.h"
+#include "garnet/bin/guest/vmm/device/qcow.h"
 
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
 
-#include "lib/fxl/logging.h"
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <lib/fxl/logging.h>
 
 // Implementation based on the spec located at:
 //
-// https://github.com/qemu/qemu/blob/27e757e29cc79f3f104d2a84d17cdb3b4c11c8ff/docs/interop/qcow2.txt
-namespace machina {
+// https://github.com/qemu/qemu/blob/master/docs/interop/qcow2.txt
 
 // Compute the number of L1 table entries required to hold all mappings for a
 // disk of |disk_size|.
@@ -22,12 +23,12 @@ static size_t ComputeL1Size(size_t disk_size, uint32_t cluster_bits) {
   size_t cluster_size = 1 << cluster_bits;
   // Each L2 table is an array of 8b cluster addresses, so each table can hold
   // |cluster_size| / 8 entries.
-  size_t l2_num_entries = 1 << (cluster_bits - 3);
-  size_t l1_entry_size = (cluster_size * l2_num_entries);
+  size_t l2_num_entries = cluster_size / sizeof(uint64_t);
+  size_t l1_entry_size = cluster_size * l2_num_entries;
   return (disk_size + l1_entry_size - 1) / l1_entry_size;
 }
 
-// A LookupTable holds the 2-level table mapping a linear cluster addres to the
+// A LookupTable holds the 2-level table mapping a linear cluster address to the
 // physical offset in the QCOW file.
 class QcowFile::LookupTable {
  public:
@@ -43,48 +44,47 @@ class QcowFile::LookupTable {
   // of tables per 8GB of virtual disk.
   //
   // TODO(tjdetwiler): Add some bound to this L2 cache.
-  zx_status_t Load(int fd, const QcowHeader& header) {
+  void Load(const QcowHeader& header, BlockDispatcher* disp,
+            BlockDispatcher::Callback callback) {
     if (!l1_table_.empty()) {
-      return ZX_ERR_BAD_STATE;
+      callback(ZX_ERR_BAD_STATE);
+      return;
     }
 
-    uint64_t l1_entries[header.l1_size];
-    off_t ret = lseek(fd, header.l1_table_offset, SEEK_SET);
-    if (ret < 0) {
-      FXL_LOG(ERROR) << "Failed to seek to L1 table: " << ret;
-      return ZX_ERR_IO;
-    }
-    ssize_t result = read(fd, l1_entries, sizeof(l1_entries));
-    if (result != static_cast<ssize_t>(sizeof(l1_entries))) {
-      FXL_LOG(ERROR) << "Failed to read L1 table: " << result;
-      return ZX_ERR_IO;
-    }
-
+    auto io_guard = fbl::MakeRefCounted<IoGuard>(std::move(callback));
+    uint32_t l1_size = header.l1_size;
+    std::vector<L1Entry> l1_entries(l1_size);
+    auto l1_entries_ptr = l1_entries.data();
     size_t l2_size = 1 << (header.cluster_bits - 3);
-    l1_table_.resize(header.l1_size);
-    for (size_t l1_entry = 0; l1_entry < header.l1_size; ++l1_entry) {
-      uint64_t offset = BigToHostEndianTraits::Convert(l1_entries[l1_entry]) &
-                        kTableOffsetMask;
-      if (!offset) {
-        continue;
+
+    auto load_l1 = [this, io_guard, l1_entries = std::move(l1_entries), l2_size,
+                    disp](zx_status_t status) {
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to read L1 table " << status;
+        io_guard->SetStatus(status);
+        return;
       }
-      L2Table l2_table(l2_size);
-      ret = lseek(fd, offset, SEEK_SET);
-      if (ret < 0) {
-        FXL_LOG(ERROR) << "Failed to seek to L2 table " << l1_entry << ": "
-                       << ret;
-        return ZX_ERR_IO;
+
+      l1_table_.resize(l1_entries.size());
+      for (size_t l1_index = 0; l1_index < l1_entries.size(); ++l1_index) {
+        uint64_t off = BigToHostEndianTraits::Convert(l1_entries[l1_index]) &
+                       kTableOffsetMask;
+        if (off == 0) {
+          continue;
+        }
+        auto load_l2 = [io_guard](zx_status_t status) {
+          if (status != ZX_OK) {
+            FXL_LOG(ERROR) << "Failed to read L2 table " << status;
+            io_guard->SetStatus(status);
+          }
+        };
+        auto& l2_table = l1_table_[l1_index];
+        l2_table.resize(l2_size);
+        disp->ReadAt(l2_table.data(), l2_size * sizeof(L2Entry), off, load_l2);
       }
-      // l2_size is number of 8b entries.
-      result = read(fd, l2_table.data(), l2_size << 3);
-      if (result != static_cast<ssize_t>(l2_size << 3)) {
-        FXL_LOG(ERROR) << "Failed to read L2 table " << l1_entry << ": "
-                       << result;
-        return ZX_ERR_IO;
-      }
-      l1_table_[l1_entry] = std::move(l2_table);
-    }
-    return ZX_OK;
+    };
+    disp->ReadAt(l1_entries_ptr, l1_size * sizeof(L1Entry),
+                 header.l1_table_offset, std::move(load_l1));
   }
 
   // Walks the tables to find the physical offset of |linear_offset| into
@@ -136,6 +136,7 @@ class QcowFile::LookupTable {
   size_t l2_bits_;
   size_t l1_size_;
 
+  using L1Entry = uint64_t;
   using L2Entry = uint64_t;
   using L2Table = std::vector<L2Entry>;
   using L1Table = std::vector<L2Table>;
@@ -145,38 +146,28 @@ class QcowFile::LookupTable {
 QcowFile::QcowFile() = default;
 QcowFile::~QcowFile() = default;
 
-QcowFile::QcowFile(QcowFile&& other)
-    : fd_(std::move(other.fd_)),
-      header_(other.header_),
-      lookup_table_(std::move(other.lookup_table_)) {}
-
-QcowFile& QcowFile::operator=(QcowFile&& other) {
-  fd_ = std::move(other.fd_);
-  lookup_table_ = std::move(other.lookup_table_);
-  header_ = other.header_;
-  return *this;
+void QcowFile::Load(BlockDispatcher* disp, BlockDispatcher::Callback callback) {
+  auto load = [this, disp,
+               callback = std::move(callback)](zx_status_t status) mutable {
+    // Load QCOW header.
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to read QCOW header";
+      callback(ZX_ERR_WRONG_TYPE);
+      return;
+    }
+    header_ = header_.BigToHostEndian();
+    LoadLookupTable(disp, std::move(callback));
+  };
+  disp->ReadAt(&header_, sizeof(header_), 0, std::move(load));
 }
 
-zx_status_t QcowFile::Load(int fd) {
-  fd_.reset(fd);
-
-  // Load QCOW header.
-  ssize_t result = -1;
-  off_t off = lseek(fd_.get(), 0, SEEK_SET);
-  if (off >= 0) {
-    result = read(fd_.get(), &header_, sizeof(header_));
-  }
-  if (result != sizeof(header_)) {
-    FXL_LOG(ERROR) << "Unable to read QCOW header";
-    return ZX_ERR_WRONG_TYPE;
-  }
-
-  header_ = header_.BigToHostEndian();
+void QcowFile::LoadLookupTable(BlockDispatcher* disp,
+                               BlockDispatcher::Callback callback) {
   if (header_.magic != kQcowMagic) {
-    FXL_LOG(ERROR) << "Image file is not a valid QCOW file";
-    return ZX_ERR_WRONG_TYPE;
+    FXL_LOG(ERROR) << "Invalid QCOW image";
+    callback(ZX_ERR_WRONG_TYPE);
+    return;
   }
-
   // Default values for version 2.
   if (header_.version == 2) {
     header_.incompatible_features = 0;
@@ -186,7 +177,23 @@ zx_status_t QcowFile::Load(int fd) {
     header_.header_length = 72;
   } else if (header_.version != 3) {
     FXL_LOG(ERROR) << "QCOW version " << header_.version << " is not supported";
-    return ZX_ERR_NOT_SUPPORTED;
+    callback(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+  // We don't support any optional features so refuse to load an image that
+  // requires any.
+  if (header_.incompatible_features) {
+    FXL_LOG(ERROR) << "Rejecting QCOW image with incompatible features "
+                   << std::hex << "0x" << header_.incompatible_features;
+    callback(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+  // No encryption is supported.
+  if (header_.crypt_method) {
+    FXL_LOG(ERROR) << "Rejecting QCOW image with crypt method " << std::hex
+                   << "0x" << header_.crypt_method;
+    callback(ZX_ERR_NOT_SUPPORTED);
+    return;
   }
 
   // clang-format off
@@ -211,103 +218,47 @@ zx_status_t QcowFile::Load(int fd) {
   FXL_VLOG(1) << "\theader_length:           " << header_.header_length;
   // clang-format on
 
-  // We don't support any optional features so refuse to load an image that
-  // requires any.
-  if (header_.incompatible_features) {
-    FXL_LOG(ERROR) << "Refusing to open QCOW image with incompatible features "
-                   << std::hex << "0x" << header_.incompatible_features;
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  // No encryption is supported.
-  if (header_.crypt_method) {
-    FXL_LOG(ERROR) << "Refusing to open QCOW image with crypt method "
-                   << std::hex << "0x" << header_.crypt_method;
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  auto lookup_table =
+  lookup_table_ =
       std::make_unique<LookupTable>(header_.cluster_bits, header_.size);
-  zx_status_t status = lookup_table->Load(fd_.get(), header_);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to load L1 table.";
-    return status;
-  }
-  lookup_table_ = std::move(lookup_table);
-  return ZX_OK;
-}
+  lookup_table_->Load(header_, disp, std::move(callback));
+};
 
-zx_status_t QcowFile::Read(uint64_t disk_offset, void* buf, size_t size) {
+void QcowFile::ReadAt(BlockDispatcher* disp, void* data, uint64_t size,
+                      uint64_t off, BlockDispatcher::Callback callback) {
   if (!lookup_table_) {
-    return ZX_ERR_BAD_STATE;
+    callback(ZX_ERR_BAD_STATE);
+    return;
   }
 
+  auto io_guard = fbl::MakeRefCounted<IoGuard>(std::move(callback));
+  auto addr = static_cast<uint8_t*>(data);
   uint64_t cluster_mask = cluster_size() - 1;
   while (size) {
     uint64_t physical_offset;
-    uint64_t cluster_offset = disk_offset & cluster_mask;
+    uint64_t cluster_offset = off & cluster_mask;
     uint64_t read_size = std::min(size, cluster_size() - cluster_offset);
-    zx_status_t status = lookup_table_->Walk(disk_offset, &physical_offset);
+    zx_status_t status = lookup_table_->Walk(off, &physical_offset);
     switch (status) {
       case ZX_OK: {
-        off_t off = lseek(fd_.get(), physical_offset, SEEK_SET);
-        if (off < 0) {
-          FXL_LOG(ERROR) << "Failed to seek to 0x" << std::hex
-                         << physical_offset;
-          return ZX_ERR_IO;
-        }
-        ssize_t result = read(fd_.get(), buf, read_size);
-        if (result != static_cast<ssize_t>(read_size)) {
-          FXL_LOG(ERROR) << "Failed to read cluster at 0x" << std::hex
-                         << physical_offset;
-          return ZX_ERR_IO;
-        }
+        auto load = [io_guard](zx_status_t status) {
+          if (status != ZX_OK) {
+            io_guard->SetStatus(status);
+          }
+        };
+        disp->ReadAt(addr, read_size, physical_offset, load);
         break;
       }
       case ZX_ERR_NOT_FOUND:
         // Cluster is not mapped; read as zero.
-        memset(buf, 0, read_size);
+        memset(addr, 0, read_size);
         break;
       default:
-        return status;
+        io_guard->SetStatus(status);
+        return;
     }
+
+    off += read_size;
+    addr += read_size;
     size -= read_size;
-    disk_offset += read_size;
-    buf = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(buf) + read_size);
   }
-  return ZX_OK;
 }
-
-zx_status_t QcowDispatcher::Create(int fd, bool read_only,
-                                   std::unique_ptr<BlockDispatcher>* out) {
-  if (!read_only) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  QcowFile file = QcowFile();
-  zx_status_t status = file.Load(fd);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  *out = std::unique_ptr<QcowDispatcher>(
-      new QcowDispatcher(std::move(file), read_only));
-  return ZX_OK;
-}
-
-QcowDispatcher::QcowDispatcher(QcowFile qcow, bool read_only)
-    : BlockDispatcher(qcow.size(), read_only), qcow_(std::move(qcow)) {}
-
-zx_status_t QcowDispatcher::Read(off_t disk_offset, void* buf, size_t size) {
-  return qcow_.Read(disk_offset, buf, size);
-}
-
-zx_status_t QcowDispatcher::Write(off_t disk_offset, const void* buf,
-                                  size_t size) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t QcowDispatcher::Submit() { return ZX_OK; }
-
-zx_status_t QcowDispatcher::Flush() { return ZX_OK; }
-
-}  //  namespace machina

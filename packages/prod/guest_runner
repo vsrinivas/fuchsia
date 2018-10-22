@@ -8,6 +8,7 @@
     "packages": [
         "//garnet/bin/guest/vmm",
         "//garnet/bin/guest/vmm/device:virtio_balloon",
+        "//garnet/bin/guest/vmm/device:virtio_block",
         "//garnet/bin/guest/vmm/device:virtio_console",
         "//garnet/bin/guest/vmm/device:virtio_input",
         "//garnet/bin/guest/vmm/device:virtio_rng",

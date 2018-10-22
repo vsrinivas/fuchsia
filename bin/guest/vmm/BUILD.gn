@@ -105,11 +105,15 @@ test_package("vmm_tests") {
   deps = [
     ":vmm_unittests",
     "//garnet/bin/guest/vmm/device:device_tests",
+    "//garnet/bin/guest/vmm/device:device_unittests",
   ]
 
   tests = [
     {
       name = "device_tests"
+    },
+    {
+      name = "device_unittests"
     },
     {
       name = "vmm_unittests"

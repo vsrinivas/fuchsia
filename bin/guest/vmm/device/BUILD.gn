@@ -4,12 +4,29 @@
 
 import("//build/package.gni")
 
-source_set("lib") {
+source_set("block_lib") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "block_dispatcher.cc",
+    "block_dispatcher.h",
+    "qcow.cc",
+    "qcow.h",
+  ]
+  public_deps = [
+    "//garnet/lib/machina/device",
+    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/public/lib/bitmap",
+  ]
+}
+
+source_set("device_lib") {
+  visibility = [ ":*" ]
+
   sources = [
     "device_base.h",
     "stream_base.h",
   ]
-
   public_deps = [
     "//garnet/lib/machina/device",
     "//garnet/lib/machina/fidl:fuchsia.guest.device",
@@ -28,7 +45,7 @@ executable("virtio_balloon_bin") {
     "virtio_balloon.cc",
   ]
   deps = [
-    ":lib",
+    ":device_lib",
   ]
 }
 
@@ -36,6 +53,26 @@ package("virtio_balloon") {
   binary = "virtio_balloon"
   deps = [
     ":virtio_balloon_bin",
+  ]
+}
+
+executable("virtio_block_bin") {
+  visibility = [ ":*" ]
+
+  output_name = "virtio_block"
+  sources = [
+    "virtio_block.cc",
+  ]
+  deps = [
+    ":block_lib",
+    ":device_lib",
+  ]
+}
+
+package("virtio_block") {
+  binary = "virtio_block"
+  deps = [
+    ":virtio_block_bin",
   ]
 }
 
@@ -47,7 +84,7 @@ executable("virtio_console_bin") {
     "virtio_console.cc",
   ]
   deps = [
-    ":lib",
+    ":device_lib",
   ]
 }
 
@@ -66,7 +103,7 @@ executable("virtio_input_bin") {
     "virtio_input.cc",
   ]
   deps = [
-    ":lib",
+    ":device_lib",
   ]
 }
 
@@ -85,7 +122,7 @@ executable("virtio_rng_bin") {
     "virtio_rng.cc",
   ]
   deps = [
-    ":lib",
+    ":device_lib",
   ]
 }
 
@@ -105,6 +142,7 @@ executable("device_tests") {
     "test_with_device.cc",
     "test_with_device.h",
     "virtio_balloon_test.cc",
+    "virtio_block_test.cc",
     "virtio_console_test.cc",
     "virtio_input_test.cc",
     "virtio_queue_fake.cc",
@@ -117,8 +155,26 @@ executable("device_tests") {
     "//garnet/lib/machina/fidl:fuchsia.guest.device",
     "//garnet/public/lib/component/cpp/testing",
     "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/fzl",
     "//zircon/public/lib/virtio",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]
+}
+
+executable("device_unittests") {
+  visibility = [ "//garnet/bin/guest/vmm:*" ]
+  testonly = true
+
+  sources = [
+    "qcow_unittest.cc",
+    "volatile_write_block_dispatcher_unittest.cc",
+  ]
+
+  deps = [
+    ":block_lib",
+    "//garnet/public/lib/fxl",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
 }

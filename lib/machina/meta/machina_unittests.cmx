@@ -3,7 +3,6 @@
         "binary": "test/machina_unittests"
     },
     "sandbox": {
-        "features": ["system-temp"],
         "services": []
     }
 }

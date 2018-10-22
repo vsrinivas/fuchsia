@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dirent.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <atomic>
 #include <unordered_map>
@@ -18,6 +20,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/component/cpp/startup_context.h>
+#include <lib/fdio/namespace.h>
+#include <lib/fzl/fdio.h>
 #include <trace-provider/provider.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -58,6 +62,7 @@ static constexpr char kDsdtPath[] = "/pkg/data/dsdt.aml";
 static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
 #endif
 
+static constexpr char kBlockDirPath[] = "/dev/class/block";
 static constexpr char kWaylandDispatcherPackage[] = "wayland_bridge";
 
 // For devices that can have their addresses anywhere we run a dynamic
@@ -77,11 +82,29 @@ static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv,
   return parser.ParseArgcArgv(argc, argv);
 }
 
-static zx_gpaddr_t allocate_device_addr(size_t device_size) {
+static zx_gpaddr_t alloc_device_addr(size_t device_size) {
   static zx_gpaddr_t next_device_addr = kFirstDynamicDeviceAddr;
   zx_gpaddr_t ret = next_device_addr;
   next_device_addr += device_size;
   return ret;
+}
+
+static fbl::unique_fd open_guid(const Guid& guid, int flags) {
+  auto ioctl = guid.type == Guid::Type::GPT_PARTITION
+                   ? ioctl_block_get_partition_guid
+                   : ioctl_block_get_type_guid;
+  DIR* dir = opendir(kBlockDirPath);
+  for (dirent* ent; (ent = readdir(dir)) != nullptr;) {
+    fbl::unique_fd fd(open(ent->d_name, flags));
+    uint8_t device_guid[GUID_LEN];
+    ssize_t res = ioctl(fd.get(), device_guid, sizeof(device_guid));
+    if (res < 0 || res != sizeof(device_guid) ||
+        memcmp(guid.bytes, device_guid, sizeof(device_guid)) != 0) {
+      continue;
+    }
+    return fd;
+  }
+  return fbl::unique_fd();
 }
 
 int main(int argc, char** argv) {
@@ -183,44 +206,36 @@ int main(int argc, char** argv) {
   // Setup block device.
   std::vector<std::unique_ptr<machina::VirtioBlock>> block_devices;
   for (const auto& block_spec : cfg.block_devices()) {
-    std::unique_ptr<machina::BlockDispatcher> dispatcher;
+    int flags = block_spec.mode == fuchsia::guest::device::BlockMode::READ_WRITE
+                    ? O_RDWR
+                    : O_RDONLY;
+    fbl::unique_fd fd;
     if (!block_spec.path.empty()) {
-      status = machina::BlockDispatcher::CreateFromPath(
-          block_spec.path.c_str(), block_spec.block_mode, block_spec.block_fmt,
-          guest.phys_mem(), &dispatcher);
+      fd = fbl::unique_fd(open(block_spec.path.c_str(), flags));
     } else if (!block_spec.guid.empty()) {
-      status = machina::BlockDispatcher::CreateFromGuid(
-          block_spec.guid, cfg.block_wait() ? ZX_TIME_INFINITE : 0,
-          block_spec.block_mode, block_spec.block_fmt, guest.phys_mem(),
-          &dispatcher);
+      fd = open_guid(block_spec.guid, flags);
     } else {
       FXL_LOG(ERROR) << "Block spec missing path or GUID attributes " << status;
       return ZX_ERR_INVALID_ARGS;
     }
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create block dispatcher " << status;
+    if (!fd) {
+      FXL_LOG(ERROR) << "Failed to open file for block device";
       return status;
     }
-    if (block_spec.block_mode ==
-        fuchsia::guest::device::BlockMode::VOLATILE_WRITE) {
-      status = machina::BlockDispatcher::CreateVolatileWrapper(
-          std::move(dispatcher), &dispatcher);
-      if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to create volatile block dispatcher "
-                       << status;
-        return status;
-      }
-    }
+    fzl::FdioCaller fdio(std::move(fd));
+    fuchsia::io::FilePtr file;
+    file.Bind(zx::channel(fdio.borrow_channel()));
 
     auto block = std::make_unique<machina::VirtioBlock>(guest.phys_mem(),
-                                                        std::move(dispatcher));
-    status = block->Start(guest.device_dispatcher());
+                                                        block_spec.mode);
+    status = bus.Connect(block->pci_device(), true);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to start block device " << status;
       return status;
     }
-    status = bus.Connect(block->pci_device());
+    status = block->Start(*guest.object(), block_spec.format, std::move(file),
+                          launcher.get(), guest.device_dispatcher());
     if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to start block device " << status;
       return status;
     }
     block_devices.push_back(std::move(block));
@@ -322,7 +337,7 @@ int main(int argc, char** argv) {
 
   // Setup wayland device.
   size_t wl_dev_mem_size = cfg.wayland_memory();
-  zx_gpaddr_t wl_dev_mem_offset = allocate_device_addr(wl_dev_mem_size);
+  zx_gpaddr_t wl_dev_mem_offset = alloc_device_addr(wl_dev_mem_size);
   if (!dev_mem.AddRange(wl_dev_mem_offset, wl_dev_mem_size)) {
     FXL_LOG(INFO) << "Could not reserve device memory range for wayland device";
     return status;

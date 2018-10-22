@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/machina/qcow.h"
+#include "garnet/bin/guest/vmm/device/qcow.h"
 
-#include <stdlib.h>
-#include <unistd.h>
+#include <sys/stat.h>
 
-#include "gtest/gtest.h"
-#include "lib/fxl/logging.h"
+#include <fbl/unique_fd.h>
+#include <gtest/gtest.h>
+#include <lib/fxl/logging.h>
 
-namespace machina {
 namespace {
 
 static constexpr size_t kClusterBits = 16;
@@ -99,6 +98,31 @@ static constexpr QcowHeader kDefaultHeaderV3 = {
     .header_length = sizeof(QcowHeader),
 };
 
+class FdBlockDispatcher : public BlockDispatcher {
+ public:
+  explicit FdBlockDispatcher(int fd) : fd_(fd) {}
+
+ private:
+  int fd_;
+
+  void Sync(Callback callback) override {
+    int ret = fsync(fd_);
+    callback(ret < 0 ? ZX_ERR_IO : ZX_OK);
+  }
+
+  void ReadAt(void* data, uint64_t size, uint64_t off,
+              Callback callback) override {
+    int ret = pread(fd_, data, size, off);
+    callback(ret < 0 ? ZX_ERR_IO : ZX_OK);
+  }
+
+  void WriteAt(const void* data, uint64_t size, uint64_t off,
+               Callback callback) override {
+    int ret = pwrite(fd_, data, size, off);
+    callback(ret < 0 ? ZX_ERR_IO : ZX_OK);
+  }
+};
+
 class QcowTest : public testing::Test {
  public:
   QcowTest() {}
@@ -113,18 +137,17 @@ class QcowTest : public testing::Test {
   void VerifyPaddingClustersAreEmpty() {
     uint8_t cluster[kClusterSize];
     for (size_t i = 0; i < countof(kPaddingClusterOffsets); ++i) {
-      SeekTo(kPaddingClusterOffsets[i]);
-      ASSERT_EQ(read(fd_.get(), cluster, kClusterSize),
-                static_cast<int>(kClusterSize));
-      ASSERT_EQ(memcmp(cluster, kZeroCluster, kClusterSize), 0);
+      ASSERT_EQ(
+          static_cast<int>(kClusterSize),
+          pread(fd_.get(), cluster, kClusterSize, kPaddingClusterOffsets[i]));
+      ASSERT_EQ(0, memcmp(cluster, kZeroCluster, kClusterSize));
     }
   }
 
   void WriteQcowHeader(const QcowHeader& header) {
     header_ = header;
     QcowHeader be_header = header.HostToBigEndian();
-    SeekTo(0);
-    Write(&be_header);
+    WriteAt(&be_header, 0);
     WriteL1Table();
     WriteRefcountTable();
   }
@@ -137,13 +160,11 @@ class QcowTest : public testing::Test {
     }
 
     // Write L1 table.
-    SeekTo(header_.l1_table_offset);
-    Write(be_table, countof(kL2TableClusterOffsets));
+    WriteAt(be_table, countof(kL2TableClusterOffsets), header_.l1_table_offset);
 
     // Initialize empty L2 tables.
     for (size_t i = 0; i < countof(kL2TableClusterOffsets); ++i) {
-      SeekTo(kL2TableClusterOffsets[i]);
-      Write(kZeroCluster, sizeof(kZeroCluster));
+      WriteAt(kZeroCluster, sizeof(kZeroCluster), kL2TableClusterOffsets[i]);
     }
   }
 
@@ -156,31 +177,42 @@ class QcowTest : public testing::Test {
     }
 
     // Write refcount table
-    SeekTo(header_.refcount_table_offset);
-    Write(be_table, countof(kRefcountBlockClusterOffsets));
+    WriteAt(be_table, countof(kRefcountBlockClusterOffsets),
+            header_.refcount_table_offset);
 
     // Initialize empty refcount blocks.
     for (size_t i = 0; i < countof(kRefcountBlockClusterOffsets); ++i) {
-      SeekTo(kRefcountBlockClusterOffsets[i]);
-      Write(kZeroCluster, sizeof(kZeroCluster));
+      WriteAt(kZeroCluster, sizeof(kZeroCluster),
+              kRefcountBlockClusterOffsets[i]);
     }
   }
 
-  void SeekTo(off_t offset) {
-    ASSERT_EQ(lseek(fd_.get(), offset, SEEK_SET), offset);
-  }
-
   template <typename T>
-  void Write(const T* ptr) {
-    ASSERT_EQ(write(fd_.get(), ptr, sizeof(T)),
-              static_cast<ssize_t>(sizeof(T)));
+  void WriteAt(const T* ptr, off_t off) {
+    ASSERT_EQ(static_cast<ssize_t>(sizeof(T)),
+              pwrite(fd_.get(), ptr, sizeof(T), off));
   }
 
   // Writes an array of T values at the current file location.
   template <typename T>
-  void Write(const T* ptr, size_t len) {
-    ASSERT_EQ(write(fd_.get(), ptr, len * sizeof(T)),
-              static_cast<ssize_t>(len * sizeof(T)));
+  void WriteAt(const T* ptr, size_t len, off_t off) {
+    ASSERT_EQ(static_cast<ssize_t>(len * sizeof(T)),
+              pwrite(fd_.get(), ptr, len * sizeof(T), off));
+  }
+
+  zx_status_t Load() {
+    FdBlockDispatcher disp(fd_.get());
+    zx_status_t status;
+    file_.Load(&disp, [&status](zx_status_t s) { status = s; });
+    return status;
+  }
+
+  zx_status_t ReadAt(void* data, uint64_t size) {
+    FdBlockDispatcher disp(fd_.get());
+    zx_status_t status;
+    file_.ReadAt(&disp, data, size, 0,
+                 [&status](zx_status_t s) { status = s; });
+    return status;
   }
 
  protected:
@@ -192,7 +224,7 @@ class QcowTest : public testing::Test {
 
 TEST_F(QcowTest, V2Load) {
   WriteQcowHeader(kDefaultHeaderV2);
-  ASSERT_EQ(file_.Load(fd_.get()), ZX_OK);
+  ASSERT_EQ(ZX_OK, Load());
 }
 
 TEST_F(QcowTest, V2IgnoreExtendedAttributes) {
@@ -206,31 +238,31 @@ TEST_F(QcowTest, V2IgnoreExtendedAttributes) {
   WriteQcowHeader(header);
 
   // Load and validate the QCOW2 defaults are used.
-  ASSERT_EQ(file_.Load(fd_.get()), ZX_OK);
-  EXPECT_EQ(file_.header().incompatible_features, 0u);
-  EXPECT_EQ(file_.header().compatible_features, 0u);
-  EXPECT_EQ(file_.header().autoclear_features, 0u);
-  EXPECT_EQ(file_.header().refcount_order, 4u);
-  EXPECT_EQ(file_.header().header_length, 72u);
+  ASSERT_EQ(ZX_OK, Load());
+  EXPECT_EQ(0u, file_.header().incompatible_features);
+  EXPECT_EQ(0u, file_.header().compatible_features);
+  EXPECT_EQ(0u, file_.header().autoclear_features);
+  EXPECT_EQ(4u, file_.header().refcount_order);
+  EXPECT_EQ(72u, file_.header().header_length);
 }
 
 TEST_F(QcowTest, V3Load) {
   WriteQcowHeader(kDefaultHeaderV3);
-  ASSERT_EQ(file_.Load(fd_.get()), ZX_OK);
+  ASSERT_EQ(ZX_OK, Load());
 }
 
 TEST_F(QcowTest, V3RejectIncompatibleFeatures) {
   QcowHeader header = kDefaultHeaderV3;
   header.incompatible_features = 1;
   WriteQcowHeader(header);
-  ASSERT_EQ(file_.Load(fd_.get()), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, Load());
 }
 
 TEST_F(QcowTest, V3RejectCryptMethod) {
   QcowHeader header = kDefaultHeaderV3;
   header.crypt_method = 1;
   WriteQcowHeader(header);
-  ASSERT_EQ(file_.Load(fd_.get()), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, Load());
 }
 
 TEST_F(QcowTest, ReadUnmappedCluster) {
@@ -240,9 +272,9 @@ TEST_F(QcowTest, ReadUnmappedCluster) {
   uint8_t result[kClusterSize];
   memset(result, 0xff, sizeof(result));
   uint8_t expected[kClusterSize] = {};
-  ASSERT_EQ(file_.Load(fd_.get()), ZX_OK);
-  ASSERT_EQ(file_.Read(0, result, sizeof(result)), ZX_OK);
-  ASSERT_EQ(memcmp(result, expected, sizeof(result)), 0);
+  ASSERT_EQ(ZX_OK, Load());
+  ASSERT_EQ(ZX_OK, ReadAt(result, sizeof(result)));
+  ASSERT_EQ(0, memcmp(result, expected, sizeof(result)));
 }
 
 TEST_F(QcowTest, ReadMappedCluster) {
@@ -252,19 +284,17 @@ TEST_F(QcowTest, ReadMappedCluster) {
   uint64_t l2_offset = kL2TableClusterOffsets[0];
   uint64_t data_cluster_offset = ClusterOffset(kFirstDataCluster);
   uint64_t l2_entry = HostToBigEndianTraits::Convert(data_cluster_offset);
-  SeekTo(l2_offset);
-  Write(&l2_entry);
+  WriteAt(&l2_entry, l2_offset);
 
   // Write data to cluster.
   uint8_t cluster_data[kClusterSize];
   memset(cluster_data, 0xab, sizeof(cluster_data));
-  SeekTo(data_cluster_offset);
-  Write(cluster_data, kClusterSize);
+  WriteAt(cluster_data, kClusterSize, data_cluster_offset);
 
   // Read cluster.
   uint8_t result[kClusterSize];
-  ASSERT_EQ(file_.Load(fd_.get()), ZX_OK);
-  ASSERT_EQ(file_.Read(0, result, sizeof(result)), ZX_OK);
+  ASSERT_EQ(ZX_OK, Load());
+  ASSERT_EQ(ZX_OK, ReadAt(result, sizeof(result)));
   ASSERT_EQ(memcmp(result, cluster_data, sizeof(result)), 0);
 }
 
@@ -276,20 +306,16 @@ TEST_F(QcowTest, RejectCompressedCluster) {
   uint64_t data_cluster_offset = ClusterOffset(kFirstDataCluster);
   uint64_t l2_entry = HostToBigEndianTraits::Convert(data_cluster_offset |
                                                      kTableEntryCompressedBit);
-  SeekTo(l2_offset);
-  Write(&l2_entry);
+  WriteAt(&l2_entry, l2_offset);
 
   // Write data to cluster.
   uint8_t cluster_data[kClusterSize];
   memset(cluster_data, 0xab, sizeof(cluster_data));
-  SeekTo(data_cluster_offset);
-  Write(cluster_data, kClusterSize);
+  WriteAt(cluster_data, kClusterSize, data_cluster_offset);
 
   // Attempt to read compressed cluster.
-  ASSERT_EQ(file_.Load(fd_.get()), ZX_OK);
-  ASSERT_EQ(file_.Read(0, cluster_data, sizeof(cluster_data)),
-            ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(ZX_OK, Load());
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, ReadAt(cluster_data, sizeof(cluster_data)));
 }
 
 }  // namespace
-}  // namespace machina

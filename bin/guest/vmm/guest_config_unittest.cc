@@ -135,31 +135,29 @@ TEST(GuestConfigParserTest, BlockSpecArg) {
   ASSERT_EQ(4, config.block_devices().size());
 
   const BlockSpec& spec0 = config.block_devices()[0];
-  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_ONLY, spec0.block_mode);
-  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec0.block_fmt);
+  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_ONLY, spec0.mode);
+  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec0.format);
   ASSERT_EQ("/pkg/data/foo", spec0.path);
   ASSERT_TRUE(spec0.guid.empty());
 
   const BlockSpec& spec1 = config.block_devices()[1];
-  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_WRITE, spec1.block_mode);
-  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec1.block_fmt);
+  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_WRITE, spec1.mode);
+  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec1.format);
   ASSERT_EQ("/dev/class/block/001", spec1.path);
   ASSERT_TRUE(spec1.guid.empty());
 
   const BlockSpec& spec2 = config.block_devices()[2];
-  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_WRITE, spec2.block_mode);
-  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec2.block_fmt);
+  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_WRITE, spec2.mode);
+  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec2.format);
   ASSERT_TRUE(spec2.path.empty());
-  ASSERT_EQ(machina::BlockDispatcher::GuidType::GPT_PARTITION_GUID,
-            spec2.guid.type);
+  ASSERT_EQ(Guid::Type::GPT_PARTITION, spec2.guid.type);
   ASSERT_EQ(0, memcmp(spec2.guid.bytes, TEST_GUID_VALUE, GUID_LEN));
 
   const BlockSpec& spec3 = config.block_devices()[3];
-  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_ONLY, spec3.block_mode);
-  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec3.block_fmt);
+  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_ONLY, spec3.mode);
+  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec3.format);
   ASSERT_TRUE(spec3.path.empty());
-  ASSERT_EQ(machina::BlockDispatcher::GuidType::GPT_PARTITION_TYPE_GUID,
-            spec3.guid.type);
+  ASSERT_EQ(Guid::Type::GPT_PARTITION_TYPE, spec3.guid.type);
   ASSERT_EQ(0, memcmp(spec3.guid.bytes, TEST_GUID_VALUE, GUID_LEN));
 }
 
@@ -179,29 +177,27 @@ TEST(GuestConfigParserTest, BlockSpecJson) {
   ASSERT_EQ(4, config.block_devices().size());
 
   const BlockSpec& spec0 = config.block_devices()[0];
-  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_ONLY, spec0.block_mode);
-  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec0.block_fmt);
+  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_ONLY, spec0.mode);
+  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec0.format);
   ASSERT_EQ("/pkg/data/foo", spec0.path);
 
   const BlockSpec& spec1 = config.block_devices()[1];
-  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_WRITE, spec1.block_mode);
-  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec1.block_fmt);
+  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_WRITE, spec1.mode);
+  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec1.format);
   ASSERT_EQ("/dev/class/block/001", spec1.path);
 
   const BlockSpec& spec2 = config.block_devices()[2];
-  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_WRITE, spec2.block_mode);
-  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec2.block_fmt);
+  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_WRITE, spec2.mode);
+  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec2.format);
   ASSERT_TRUE(spec2.path.empty());
-  ASSERT_EQ(machina::BlockDispatcher::GuidType::GPT_PARTITION_GUID,
-            spec2.guid.type);
+  ASSERT_EQ(Guid::Type::GPT_PARTITION, spec2.guid.type);
   ASSERT_EQ(0, memcmp(spec2.guid.bytes, TEST_GUID_VALUE, GUID_LEN));
 
   const BlockSpec& spec3 = config.block_devices()[3];
-  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_ONLY, spec3.block_mode);
-  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec3.block_fmt);
+  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_ONLY, spec3.mode);
+  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec3.format);
   ASSERT_TRUE(spec3.path.empty());
-  ASSERT_EQ(machina::BlockDispatcher::GuidType::GPT_PARTITION_TYPE_GUID,
-            spec3.guid.type);
+  ASSERT_EQ(Guid::Type::GPT_PARTITION_TYPE, spec3.guid.type);
   ASSERT_EQ(0, memcmp(spec3.guid.bytes, TEST_GUID_VALUE, GUID_LEN));
 }
 

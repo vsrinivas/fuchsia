@@ -6,15 +6,8 @@
 #define GARNET_LIB_MACHINA_QCOW_H_
 
 #include <endian.h>
-#include <fbl/unique_fd.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
-#include <string>
 
-#include "garnet/lib/machina/block_dispatcher.h"
-#include "lib/fxl/macros.h"
-
-namespace machina {
+#include "garnet/bin/guest/vmm/device/block_dispatcher.h"
 
 // Each QCOW file starts with this magic value "QFI\xfb".
 static constexpr uint32_t kQcowMagic = 0x514649fb;
@@ -108,8 +101,10 @@ class QcowFile {
   QcowFile();
   ~QcowFile();
 
-  QcowFile(QcowFile&& other);
-  QcowFile& operator=(QcowFile&& other);
+  QcowFile(const QcowFile&) = delete;
+  QcowFile& operator=(const QcowFile&) = delete;
+  QcowFile(QcowFile&& other) = delete;
+  QcowFile& operator=(QcowFile&& other) = delete;
 
   const QcowHeader& header() const { return header_; }
 
@@ -123,42 +118,23 @@ class QcowFile {
   size_t cluster_size() const { return 1u << header_.cluster_bits; }
 
   // Load the file header and verifiy the image is a valid QCOW file.
-  zx_status_t Load(int fd);
+  void Load(BlockDispatcher* disp, BlockDispatcher::Callback callback);
 
-  // Read |size| bytes from the given |linear_offset| in the file.
+  // Read |size| bytes at |off| from within the file.
   //
-  // It is not an error for a read to cross an unmapped cluster, but in that
-  // cast the section of |buf| that would contain those bytes for the unmapped
-  // cluster will be left unmodified.
-  zx_status_t Read(uint64_t linear_offset, void* buf, size_t size);
+  // It is not an error for a read to cross an unmapped cluster. The section of
+  // |data| for the unmapped cluster will be left unmodified.
+  void ReadAt(BlockDispatcher* disp, void* data, uint64_t size, uint64_t off,
+              BlockDispatcher::Callback callback);
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(QcowFile);
-
-  fbl::unique_fd fd_;
   QcowHeader header_;
 
   class LookupTable;
   std::unique_ptr<LookupTable> lookup_table_;
+
+  void LoadLookupTable(BlockDispatcher* disp,
+                       BlockDispatcher::Callback callback);
 };
-
-class QcowDispatcher : public BlockDispatcher {
- public:
-  static zx_status_t Create(int fd, bool read_only,
-                            std::unique_ptr<BlockDispatcher>* out);
-
- private:
-  QcowDispatcher(QcowFile qcow, bool read_only);
-
-  // |BlockDispatcher|
-  zx_status_t Flush() override;
-  zx_status_t Read(off_t disk_offset, void* buf, size_t size) override;
-  zx_status_t Write(off_t disk_offset, const void* buf, size_t size) override;
-  zx_status_t Submit() override;
-
-  QcowFile qcow_;
-};
-
-}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_QCOW_H_

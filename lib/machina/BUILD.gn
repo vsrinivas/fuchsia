@@ -7,8 +7,6 @@ import("//build/test/test_package.gni")
 source_set("machina") {
   sources = [
     "bits.h",
-    "block_dispatcher.cc",
-    "block_dispatcher.h",
     "dev_mem.h",
     "framebuffer_scanout.cc",
     "framebuffer_scanout.h",
@@ -23,8 +21,6 @@ source_set("machina") {
     "pci.cc",
     "pci.h",
     "platform_device.h",
-    "qcow.cc",
-    "qcow.h",
     "vcpu.cc",
     "vcpu.h",
     "virtio_balloon.cc",
@@ -50,8 +46,6 @@ source_set("machina") {
     "virtio_vsock.h",
     "virtio_wl.cc",
     "virtio_wl.h",
-    "volatile_write_block_dispatcher.cc",
-    "volatile_write_block_dispatcher.h",
   ]
 
   if (current_cpu == "arm64") {
@@ -129,8 +123,6 @@ executable("machina_unittests") {
     "dev_mem_unittest.cc",
     "pci_unittest.cc",
     "phys_mem_fake.h",
-    "qcow_unittest.cc",
-    "virtio_block_unittest.cc",
     "virtio_device_fake.h",
     "virtio_gpu_unittest.cc",
     "virtio_net_unittest.cc",
@@ -140,7 +132,6 @@ executable("machina_unittests") {
     "virtio_queue_waiter_unittest.cc",
     "virtio_vsock_unittest.cc",
     "virtio_wl_unittest.cc",
-    "volatile_write_block_dispatcher_unittest.cc",
   ]
 
   if (current_cpu == "x64") {

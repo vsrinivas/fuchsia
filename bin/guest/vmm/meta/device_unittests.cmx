@@ -1,0 +1,9 @@
+{
+    "program": {
+        "binary": "test/device_unittests"
+    },
+    "sandbox": {
+        "features": ["system-temp"],
+        "services": []
+    }
+}

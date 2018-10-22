@@ -214,8 +214,7 @@ static GuestConfigParser::OptionHandler set_flag(bool* out,
   };
 }
 
-static zx_status_t parse_guid(const std::string& guid_str,
-                              machina::BlockDispatcher::Guid& guid) {
+static zx_status_t parse_guid(const std::string& guid_str, Guid& guid) {
   if (!guid.empty()) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -239,15 +238,15 @@ static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
   std::istringstream tokenStream(spec);
   while (std::getline(tokenStream, token, ',')) {
     if (token == "fdio") {
-      out->block_fmt = fuchsia::guest::device::BlockFormat::RAW;
+      out->format = fuchsia::guest::device::BlockFormat::RAW;
     } else if (token == "qcow") {
-      out->block_fmt = fuchsia::guest::device::BlockFormat::QCOW;
+      out->format = fuchsia::guest::device::BlockFormat::QCOW;
     } else if (token == "rw") {
-      out->block_mode = fuchsia::guest::device::BlockMode::READ_WRITE;
+      out->mode = fuchsia::guest::device::BlockMode::READ_WRITE;
     } else if (token == "ro") {
-      out->block_mode = fuchsia::guest::device::BlockMode::READ_ONLY;
+      out->mode = fuchsia::guest::device::BlockMode::READ_ONLY;
     } else if (token == "volatile") {
-      out->block_mode = fuchsia::guest::device::BlockMode::VOLATILE_WRITE;
+      out->mode = fuchsia::guest::device::BlockMode::VOLATILE_WRITE;
     } else if (token.size() > 0 && token[0] == '/') {
       out->path = std::move(token);
     } else if (token.compare(0, 5, "guid:") == 0) {
@@ -256,15 +255,14 @@ static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
       if (status != ZX_OK) {
         return status;
       }
-      out->guid.type = machina::BlockDispatcher::GuidType::GPT_PARTITION_GUID;
+      out->guid.type = Guid::Type::GPT_PARTITION;
     } else if (token.compare(0, 10, "type-guid:") == 0) {
       std::string guid_str = token.substr(10);
       zx_status_t status = parse_guid(guid_str, out->guid);
       if (status != ZX_OK) {
         return status;
       }
-      out->guid.type =
-          machina::BlockDispatcher::GuidType::GPT_PARTITION_TYPE_GUID;
+      out->guid.type = Guid::Type::GPT_PARTITION_TYPE;
     }
   }
 

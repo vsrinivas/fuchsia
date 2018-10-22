@@ -207,6 +207,9 @@ class VirtioChain {
   VirtioChain(VirtioChain&&) = default;
   VirtioChain& operator=(VirtioChain&&) = default;
 
+  VirtioChain(const VirtioChain&) = delete;
+  VirtioChain& operator=(const VirtioChain&) = delete;
+
   bool IsValid() const;
   bool HasDescriptor() const;
   bool NextDescriptor(VirtioDescriptor* desc);
@@ -220,9 +223,6 @@ class VirtioChain {
   uint16_t head_ = 0;
   uint16_t next_ = 0;
   bool has_next_ = false;
-
-  VirtioChain(const VirtioChain&) = delete;
-  VirtioChain& operator=(const VirtioChain&) = delete;
 };
 
 }  // namespace machina

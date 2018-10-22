@@ -5,40 +5,37 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_BLOCK_H_
 #define GARNET_LIB_MACHINA_VIRTIO_BLOCK_H_
 
-#include <mutex>
-
-#include <lib/async/cpp/wait.h>
+#include <fuchsia/guest/device/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <virtio/block.h>
 #include <virtio/virtio_ids.h>
 
-#include "garnet/lib/machina/block_dispatcher.h"
 #include "garnet/lib/machina/virtio_device.h"
 
 namespace machina {
 
-// Stores the state of a block device.
+static constexpr uint16_t kVirtioBlockNumQueues = 1;
+
 class VirtioBlock
-    : public VirtioInprocessDevice<VIRTIO_ID_BLOCK, 1, virtio_blk_config_t> {
+    : public VirtioComponentDevice<VIRTIO_ID_BLOCK, kVirtioBlockNumQueues,
+                                   virtio_blk_config_t> {
  public:
-  static constexpr size_t kSectorSize = 512;
+  VirtioBlock(const PhysMem& phys_mem, fuchsia::guest::device::BlockMode mode);
 
-  VirtioBlock(const PhysMem& phys_mem,
-              std::unique_ptr<BlockDispatcher> dispatcher);
-
-  // Starts a thread to monitor the queue for incoming block requests.
-  zx_status_t Start(async_dispatcher_t* dispatcher);
-
-  zx_status_t HandleBlockRequest(VirtioQueue* queue, uint16_t head,
-                                 uint32_t* used);
-
-  bool is_read_only() { return pci_.has_device_features(VIRTIO_BLK_F_RO); }
-
-  // The queue used for handling block requests.
-  VirtioQueue* request_queue() { return queue(0); }
+  zx_status_t Start(const zx::guest& guest,
+                    fuchsia::guest::device::BlockFormat format,
+                    fuchsia::io::FilePtr file, fuchsia::sys::Launcher* launcher,
+                    async_dispatcher_t* dispatcher);
 
  private:
-  async::Wait wait_;
-  std::unique_ptr<BlockDispatcher> dispatcher_;
+  fuchsia::guest::device::BlockMode mode_;
+  fuchsia::sys::ComponentControllerPtr controller_;
+  // Use a sync pointer for consistency of virtual machine execution.
+  fuchsia::guest::device::VirtioBlockSyncPtr block_;
+
+  zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                             zx_gpaddr_t avail, zx_gpaddr_t used);
+  zx_status_t Ready(uint32_t negotiated_features);
 };
 
 }  // namespace machina
