@@ -6,6 +6,7 @@ import("//build/package.gni")
 
 source_set("device") {
   sources = [
+    "block.h",
     "config.h",
     "input.h",
     "phys_mem.cc",
