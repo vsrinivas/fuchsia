@@ -21,7 +21,7 @@
 #include "lib/fsl/vmo/file.h"
 #include "lib/fxl/logging.h"
 
-constexpr char kConfigBinProtoPath[] = "/pkg/data/cobalt_config.binproto";
+constexpr char kConfigBinProtoPath[] = "/pkg/data/cobalt_config.pb";
 const uint32_t kUptimeMetricId = 1;
 const uint32_t kMemoryUsageMetricId = 3;
 const unsigned int kIntervalMinutes = 1;

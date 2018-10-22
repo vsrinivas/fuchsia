@@ -37,7 +37,7 @@ namespace testapp {
 // This app is not launched through appmgr as part of a package so we need the
 // full path
 constexpr char kConfigBinProtoPath[] =
-    "/pkgfs/packages/cobalt_tests/0/data/cobalt_config.binproto";
+    "/pkgfs/packages/cobalt_tests/0/data/cobalt_config.pb";
 
 fuchsia::cobalt::ProjectProfile CobaltTestApp::LoadCobaltConfig() {
   fsl::SizedVmo config_vmo;

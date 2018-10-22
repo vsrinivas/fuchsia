@@ -7,6 +7,7 @@ import("//build/package.gni")
 import("//third_party/cobalt_config/cobalt_config.gni")
 
 cobalt_config("generate_wlan_config") {
+  output_name = "cobalt_config.pb"
   # This ID must match the Cobalt config from
   # //third_party/cobalt_config/projects.yaml
   project_id = 106
@@ -67,8 +68,8 @@ package("wlanstack2") {
               get_label_info(
                              ":generate_wlan_config",
                              "target_gen_dir")
-              + "/cobalt_config.binproto")
-      dest = "cobalt_config.binproto"
+              + "/cobalt_config.pb")
+      dest = "cobalt_config.pb"
     }
   ]
 }

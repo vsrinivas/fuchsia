@@ -23,6 +23,8 @@ executable("system-metrics") {
 }
 
 cobalt_config("generate_system_metrics_config") {
+  output_name = "cobalt_config.pb"
+
   project_id = 102
 }
 
@@ -43,8 +45,8 @@ package("cobalt_system_metrics") {
     {
       path = rebase_path(
               get_label_info(":generate_system_metrics_config",
-                             "target_gen_dir") + "/cobalt_config.binproto")
-      dest = "cobalt_config.binproto"
+                             "target_gen_dir") + "/cobalt_config.pb")
+      dest = "cobalt_config.pb"
     },
   ]
 

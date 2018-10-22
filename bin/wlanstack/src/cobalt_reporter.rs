@@ -16,7 +16,7 @@ use std::io::Seek;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-const COBALT_CONFIG_PATH: &'static str = "/pkg/data/cobalt_config.binproto";
+const COBALT_CONFIG_PATH: &'static str = "/pkg/data/cobalt_config.pb";
 
 const COBALT_BUFFER_SIZE: usize = 100;
 
