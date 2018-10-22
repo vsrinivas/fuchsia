@@ -5,6 +5,8 @@ iquery --recursive --format=json --full_paths objects
         "contents": {
             "objects": {
                 "table0x0": {
+                    "b64:BQEC": "b64:AQI=",
+                    "binary_data": "b64:IAAREgU=",
                     "object_name": "Example Table",
                     "row0x1": {
                         "cell0x2": {

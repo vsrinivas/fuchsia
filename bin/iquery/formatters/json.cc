@@ -5,10 +5,15 @@
 #include <rapidjson/prettywriter.h>
 
 #include "garnet/bin/iquery/formatters/json.h"
+#include "garnet/bin/iquery/utils.h"
+
+#include "third_party/cobalt/util/crypto_util/base64.h"
 
 namespace iquery {
 
 namespace {
+
+using cobalt::crypto::Base64Encode;
 
 // Create the appropriate Json exporter according to the given options.
 // NOTE(donoso): For some reason, rapidjson decided that while Writer is a class
@@ -69,13 +74,13 @@ void RecursiveFormatCat(rapidjson::PrettyWriter<OutputStream>* writer,
 
   // Properties.
   for (const auto& property : *root.object.properties) {
-    writer->String(FormatString(property.key));
-    writer->String(FormatString(property.value));
+    writer->String(FormatStringBase64Fallback(*property.key));
+    writer->String(FormatStringBase64Fallback(*property.value));
   }
 
   // Metrics.
   for (const auto& metric : *root.object.metrics) {
-    writer->String(FormatString(metric.key));
+    writer->String(FormatStringBase64Fallback(*metric.key));
     writer->String(FormatMetricValue(metric));
   }
 

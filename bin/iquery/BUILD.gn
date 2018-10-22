@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 
 source_set("lib") {
   sources = [
@@ -21,8 +22,11 @@ source_set("lib") {
     "utils.h",
   ]
 
+  configs += [ "//third_party/cobalt:cobalt_config" ]
+
   deps = [
     "//garnet/public/lib/fxl",
+    "//third_party/cobalt/util/crypto_util",
     "//third_party/rapidjson",
   ]
 
@@ -47,6 +51,20 @@ executable("bin") {
   ]
 }
 
+executable("test") {
+  testonly = true
+  output_name = "iquery_test"
+
+  sources = [
+    "utils_test.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
 package("iquery") {
   deprecated_system_image = true
   deps = [
@@ -56,6 +74,18 @@ package("iquery") {
   binaries = [
     {
       name = "iquery"
+    },
+  ]
+}
+
+test_package("iquery_test") {
+  deps = [
+    ":test",
+  ]
+
+  tests = [
+    {
+      name = "iquery_test"
     },
   ]
 }

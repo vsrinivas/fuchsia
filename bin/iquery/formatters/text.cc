@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cstdio>
 #include <sstream>
 
 #include <lib/fxl/strings/string_printf.h>
@@ -30,12 +31,12 @@ std::string RecursiveFormatCat(const Options& options, const ObjectNode& root,
   std::ostringstream ss;
   const auto& object = root.object;
   for (const auto& property : *object.properties) {
-    ss << Indent(indent) << FormatString(property.key) << " = "
-       << FormatString(property.value) << std::endl;
+    ss << Indent(indent) << FormatStringHexFallback(*property.key) << " = "
+       << FormatStringHexFallback(*property.value) << std::endl;
   }
 
   for (const auto& metric : *object.metrics) {
-    ss << Indent(indent) << FormatString(metric.key) << " = "
+    ss << Indent(indent) << FormatStringHexFallback(*metric.key) << " = "
        << FormatMetricValue(metric) << std::endl;
   }
 

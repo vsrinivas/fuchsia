@@ -96,6 +96,12 @@ int main(int argc, char** argv) {
 
   // Set a property directly on the table.
   table.object_dir().set_prop("object_name", "Example Table");
+  table.object_dir().set_prop("binary_data",
+                              std::string("\x20\x00\x11\x12\x05", 5));
+  table.object_dir().set_prop(std::string("\x05\x01\x02", 3),
+                              "The key of this value is a binary value.");
+  table.object_dir().set_prop(std::string("\x05\x01\x02", 3),
+                              std::string("\x01\x02", 2));
 
   // Finally, expose the table itself as an object in the top-level directory.
   // This appears under out/objects/ in the hub for this component.

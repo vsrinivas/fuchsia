@@ -7,24 +7,27 @@
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/string_printf.h>
 #include <lib/fxl/strings/utf_codecs.h>
+#include <third_party/cobalt/util/crypto_util/base64.h>
 
 #include "garnet/bin/iquery/options.h"
 #include "garnet/bin/iquery/utils.h"
 
 #include <iostream>
 
+using cobalt::crypto::Base64Encode;
+
 namespace iquery {
 
 namespace {
 
 constexpr size_t kMaxHexSize = 256;
-std::string HexDump(const std::string& contents) {
+std::string HexDump(fxl::StringView contents) {
   std::ostringstream out;
   if (contents.size() > kMaxHexSize) {
     out << "\nFirst " << kMaxHexSize << " bytes of " << contents.size();
   }
-  out << fostr::HexDump(&contents.front(),
-                        std::min(kMaxHexSize, contents.size()), 0x0);
+  out << fostr::HexDump(contents.data(), std::min(kMaxHexSize, contents.size()),
+                        0x0);
   return out.str();
 }
 
@@ -52,11 +55,21 @@ std::string FormatPath(Options::PathFormatting path_format,
   }
 };
 
-std::string FormatString(fidl::StringPtr val) {
-  if (fxl::IsStringUTF8(*val)) {
-    return val->data();
+std::string FormatStringHexFallback(fxl::StringView val) {
+  if (IsStringPrintable(val)) {
+    return std::string(val.begin(), val.end());
   } else {
-    return fxl::StringPrintf("Binary: %s", HexDump(*val).c_str());
+    return fxl::StringPrintf("Binary: %s", HexDump(val).c_str());
+  }
+}
+
+std::string FormatStringBase64Fallback(fxl::StringView val) {
+  if (IsStringPrintable(val)) {
+    return std::string(val.begin(), val.end());
+  } else {
+    std::string content;
+    Base64Encode((uint8_t*)val.data(), val.size(), &content);
+    return fxl::Concatenate({"b64:", content});
   }
 }
 
@@ -73,6 +86,30 @@ std::string FormatMetricValue(const fuchsia::inspect::Metric& metric) {
     FXL_LOG(WARNING) << "Unknown metric type";
   }
   return out;
+}
+
+bool IsStringPrintable(fxl::StringView input) {
+  if (!fxl::IsStringUTF8(input)) {
+    return false;
+  }
+
+  // Ensure the string does not contain unprintable ASCII characters.
+  uint32_t code_point;
+  for (size_t index = 0; fxl::ReadUnicodeCharacter(input.data(), input.size(),
+                                                   &index, &code_point) &&
+                         index != input.size();
+       index++) {
+    // Skip any non-ASCII code points.
+    if (code_point & (~0x7F)) {
+      continue;
+    }
+    if (isprint(code_point) || code_point == '\t' || code_point == '\n' ||
+        code_point == '\r') {
+      continue;
+    }
+    return false;
+  }
+  return true;
 }
 
 }  // namespace iquery
