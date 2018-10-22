@@ -126,31 +126,31 @@ struct UserProfileInfo {
   // string as the user identifier.
   string id;
 
-  // The name that is displayed on the device shell while logging in. Display
+  // The name that is displayed on the base shell while logging in. Display
   // name is fetched from user profile attributes as configured by the user at
   // the given identity provider.
   string? display_name;
 
-  // User's profile url that is used by the device shell while logging in.
+  // User's profile url that is used by the base shell while logging in.
   // Profile url is fetched from user profile attributes as configured by the
   // user at the given identity provider.
   string? url;
 
-  // User's profile image url that is used by the device shell while logging in.
+  // User's profile image url that is used by the base shell while logging in.
   // Profile image url is fetched from user profile attributes as configured by
   // the user at the given identity provider.
   string? image_url;
 };
 
-// This interface is implemented by device shell. It is used to notify the
-// device shell that a view for login needs to be started / stopped.
+// This interface is implemented by base shell. It is used to notify the
+// base shell that a view for login needs to be started / stopped.
 interface AuthenticationUIContext {
-  // Requests device shell to display |view_owner| for authentication. Another
+  // Requests base shell to display |view_owner| for authentication. Another
   // call to StartOverlay() will not be made until StopOverlay() has been
   // called.
   1: StartOverlay(fuchsia.ui.viewsv1token.ViewOwner view_owner);
 
-  // Requests device shell to stop displaying the auth view.
+  // Requests base shell to stop displaying the auth view.
   2: StopOverlay();
 };
 
@@ -170,7 +170,7 @@ interface AuthProvider {
   //
   // During OAuth handshake, user needs to explicitly consent to the permissions
   // as configured at the server. The consent is presented in a web_view using
-  // an |auth_ui_context| overlay provided by the device_shell.
+  // an |auth_ui_context| overlay provided by the base_shell.
   //
   // An optional |user_profile_id| is provided for simplifying reauthorization
   // flow.
@@ -234,7 +234,7 @@ interface AuthProvider {
   // user needs to explicitly consent to the permissions on the target device
   // and the auth_code is returned to the device directly. The consent is
   // presented in a web_view using an |auth_ui_context| overlay provided by the
-  // device_shell. An optional |user_profile_id| is provided for simplifying
+  // base_shell. An optional |user_profile_id| is provided for simplifying
   // reauthorization flow.
   //
   // The authorization code is exchanged to a bound refresh token using an

@@ -15,11 +15,11 @@ The JSON file specified by `--test_file` parameter looks similar to this:
   "tests":[
     {
       "name":"dummy_user_shell",
-      "exec":"basemgr --ledger_repository_for_testing --device_shell=dummy_device_shell --user_shell=dummy_user_shell"
+      "exec":"basemgr --ledger_repository_for_testing --base_shell=dummy_base_shell --user_shell=dummy_user_shell"
     },
     {
       "name":"parent_child",
-      "exec":"basemgr --ledger_repository_for_testing --device_shell=dummy_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/test/modular_tests/parent_module"
+      "exec":"basemgr --ledger_repository_for_testing --base_shell=dummy_base_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/test/modular_tests/parent_module"
     }
 }
 ```
