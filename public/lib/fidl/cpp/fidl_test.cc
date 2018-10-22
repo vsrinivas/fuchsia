@@ -146,11 +146,11 @@ std::vector<fidl::VectorPtr<A>> BuildSortedVector(
 
 TEST(FidlTest, TestBuildSortedVector) {
   EXPECT_EQ(2u,
-            BuildSortedVector<size_t>(0, [](size_t i) { return i; }).size());
+            BuildSortedVector<uint64_t>(0, [](uint64_t i) { return i; }).size());
   EXPECT_EQ(5u,
-            BuildSortedVector<size_t>(1, [](size_t i) { return i; }).size());
+            BuildSortedVector<uint64_t>(1, [](uint64_t i) { return i; }).size());
   EXPECT_EQ(14u,
-            BuildSortedVector<size_t>(2, [](size_t i) { return i; }).size());
+            BuildSortedVector<uint64_t>(2, [](uint64_t i) { return i; }).size());
 }
 
 TEST(FidlTest, VectorOfIntComparison) {

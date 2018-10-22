@@ -6,7 +6,11 @@
 #define LIB_FIDL_CPP_ENCODER_H_
 
 #include <lib/fidl/cpp/message.h>
+
+#ifdef __Fuchsia__
 #include <lib/zx/object.h>
+#endif
+
 #include <zircon/fidl.h>
 
 #include <vector>
@@ -15,7 +19,10 @@ namespace fidl {
 
 class Encoder {
  public:
+  enum NoHeader { NO_HEADER };
+
   explicit Encoder(uint32_t ordinal);
+  explicit Encoder(NoHeader) {}
   ~Encoder();
 
   size_t Alloc(size_t size);
@@ -25,7 +32,9 @@ class Encoder {
     return reinterpret_cast<T*>(bytes_.data() + offset);
   }
 
+#ifdef __Fuchsia__
   void EncodeHandle(zx::object_base* value, size_t offset);
+#endif
 
   Message GetMessage();
 
@@ -34,6 +43,8 @@ class Encoder {
   size_t CurrentLength() const { return bytes_.size(); }
 
   size_t CurrentHandleCount() const { return handles_.size(); }
+
+  std::vector<uint8_t> TakeBytes() { return std::move(bytes_); }
 
  private:
   void EncodeMessageHeader(uint32_t ordinal);

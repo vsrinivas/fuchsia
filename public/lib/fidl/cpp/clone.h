@@ -8,14 +8,13 @@
 #include <lib/fidl/cpp/array.h>
 #include <zircon/assert.h>
 #include <memory>
-#include "lib/fidl/cpp/interface_handle.h"
-#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/traits.h"
 #include "lib/fidl/cpp/vector.h"
 
 namespace fidl {
 
+#ifdef __Fuchsia__
 namespace internal {
 
 template <typename T>
@@ -33,6 +32,7 @@ CloneKernelObject(const zx::object<T>& object, zx::object<T>* result) {
 }
 
 }  // namespace internal
+#endif  // __Fuchsia__
 
 // Deep copies the contents of |value| into |result|.
 // This operation also attempts to duplicate any handles the value contains.
@@ -50,13 +50,19 @@ inline typename std::enable_if<IsPrimitive<T>::value, zx_status_t>::type Clone(
 }
 
 template <typename T>
-inline typename std::enable_if<!IsPrimitive<T>::value &&
-                                   !std::is_base_of<zx::object_base, T>::value,
-                               zx_status_t>::type
-Clone(const T& value, T* result) {
+inline
+#ifdef __Fuchsia__
+    typename std::enable_if<!IsPrimitive<T>::value &&
+                                !std::is_base_of<zx::object_base, T>::value,
+                            zx_status_t>::type
+#else   // __Fuchsia__
+    typename std::enable_if<!IsPrimitive<T>::value, zx_status_t>::type
+#endif  // __Fuchsia__
+    Clone(const T& value, T* result) {
   return value.Clone(result);
 }
 
+#ifdef __Fuchsia__
 template <typename T>
 zx_status_t Clone(const zx::object<T>& value, zx::object<T>* result) {
   if (!value) {
@@ -65,6 +71,7 @@ zx_status_t Clone(const zx::object<T>& value, zx::object<T>* result) {
   }
   return internal::CloneKernelObject(value, result);
 }
+#endif  // __Fuchsia__
 
 template <typename T>
 inline zx_status_t Clone(const std::unique_ptr<T>& value,
@@ -115,26 +122,6 @@ inline zx_status_t Clone(const Array<T, N>& value, Array<T, N>* result) {
 }
 
 zx_status_t Clone(const StringPtr& value, StringPtr* result);
-
-template <typename T>
-inline zx_status_t Clone(const InterfaceHandle<T>& value,
-                         InterfaceHandle<T>* result) {
-  if (!value) {
-    *result = InterfaceHandle<T>();
-    return ZX_OK;
-  }
-  return ZX_ERR_ACCESS_DENIED;
-}
-
-template <typename T>
-inline zx_status_t Clone(const InterfaceRequest<T>& value,
-                         InterfaceRequest<T>* result) {
-  if (!value) {
-    *result = InterfaceRequest<T>();
-    return ZX_OK;
-  }
-  return ZX_ERR_ACCESS_DENIED;
-}
 
 // Returns a deep copy of |value|.
 // This operation also attempts to duplicate any handles the value contains.

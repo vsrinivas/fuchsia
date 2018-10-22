@@ -5,7 +5,10 @@
 #include "lib/fidl/cpp/clone.h"
 #include "gtest/gtest.h"
 
+#ifdef __Fuchsia__
+#include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
+#endif
 
 namespace fidl {
 namespace {
@@ -17,6 +20,7 @@ TEST(Clone, Control) {
   EXPECT_EQ(32, b);
 }
 
+#ifdef __Fuchsia__
 TEST(Clone, Socket) {
   zx::socket h1, h2;
   EXPECT_EQ(ZX_OK, zx::socket::create(0, &h1, &h2));
@@ -37,6 +41,7 @@ TEST(Clone, Channel) {
   EXPECT_EQ(ZX_OK, Clone(h, &h2));
   EXPECT_FALSE(h2.is_valid());
 }
+#endif
 
 }  // namespace
 }  // namespace fidl

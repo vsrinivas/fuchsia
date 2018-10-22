@@ -10,6 +10,8 @@
 
 #include <lib/fidl/cpp/array.h>
 #include <lib/fit/function.h>
+
+#ifdef __Fuchsia__
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
@@ -28,15 +30,20 @@
 #include <lib/zx/timer.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#endif
 
 #include "lib/fidl/cpp/coding_traits.h"
 #include "lib/fidl/cpp/enum.h"
+
+#ifdef __Fuchsia__
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fidl/cpp/internal/proxy_controller.h"
 #include "lib/fidl/cpp/internal/stub_controller.h"
 #include "lib/fidl/cpp/internal/synchronous_proxy.h"
-#include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
+#endif
+
+#include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/vector.h"
 
 // clone.h must be imported before any of the generated Clone methods are

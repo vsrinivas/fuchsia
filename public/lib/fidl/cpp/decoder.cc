@@ -23,11 +23,13 @@ size_t Decoder::GetOffset(uintptr_t ptr) {
   return ptr - reinterpret_cast<uintptr_t>(message_.bytes().data());
 }
 
+#ifdef __Fuchsia__
 void Decoder::DecodeHandle(zx::object_base* value, size_t offset) {
   zx_handle_t* handle = GetPtr<zx_handle_t>(offset);
   value->reset(*handle);
   *handle = ZX_HANDLE_INVALID;
 }
+#endif
 
 uint8_t* Decoder::InternalGetPtr(size_t offset) {
   return message_.bytes().data() + offset;

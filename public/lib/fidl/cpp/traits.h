@@ -5,7 +5,6 @@
 #ifndef LIB_FIDL_CPP_TRAITS_H_
 #define LIB_FIDL_CPP_TRAITS_H_
 
-#include <lib/zx/object.h>
 #include <stdint.h>
 
 #include <type_traits>

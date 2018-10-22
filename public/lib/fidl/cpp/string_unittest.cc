@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/zx/channel.h>
-
-#include "gtest/gtest.h"
 #include "lib/fidl/cpp/string.h"
+#include "gtest/gtest.h"
 
 namespace fidl {
 namespace {

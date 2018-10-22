@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <utility>
 
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/coding_traits.h"
 #include "lib/fidl/cpp/interface_request.h"
 
@@ -169,6 +170,16 @@ bool operator>=(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) {
 template <typename T>
 struct CodingTraits<InterfaceHandle<T>>
     : public EncodableCodingTraits<InterfaceHandle<T>, sizeof(zx_handle_t)> {};
+
+template <typename T>
+inline zx_status_t Clone(const InterfaceHandle<T>& value,
+                         InterfaceHandle<T>* result) {
+  if (!value) {
+    *result = InterfaceHandle<T>();
+    return ZX_OK;
+  }
+  return ZX_ERR_ACCESS_DENIED;
+}
 
 }  // namespace fidl
 

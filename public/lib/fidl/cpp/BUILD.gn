@@ -14,8 +14,6 @@ sdk_source_set("cpp") {
   sources = [
     "binding.h",
     "binding_set.h",
-    "clone.cc",
-    "clone.h",
     "enum.h",
     "interface_ptr.h",
     "interface_ptr_set.h",
@@ -38,8 +36,6 @@ sdk_source_set("cpp") {
     "internal/weak_stub_controller.cc",
     "internal/weak_stub_controller.h",
     "optional.h",
-    "string.cc",
-    "string.h",
     "thread_safe_binding_set.h",
   ]
 
@@ -50,6 +46,7 @@ sdk_source_set("cpp") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
@@ -63,7 +60,35 @@ sdk_source_set("cpp_sync") {
   sdk_name = "fidl_cpp_sync"
 
   sources = [
+    "interface_handle.h",
+    "interface_request.h",
+    "internal/synchronous_proxy.cc",
+    "internal/synchronous_proxy.h",
+    "synchronous_interface_ptr.h",
+  ]
+
+  include_base = "//garnet/public"
+
+  public_configs = [ "//garnet/public:config" ]
+
+  public_deps = [
+    ":cpp_base",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+sdk_source_set("cpp_base") {
+  category = "partner"
+
+  sdk_name = "fidl_cpp_base"
+
+  sources = [
     "array.h",
+    "clone.cc",
+    "clone.h",
     "coding_traits.cc",
     "coding_traits.h",
     "comparison.h",
@@ -71,13 +96,11 @@ sdk_source_set("cpp_sync") {
     "decoder.h",
     "encoder.cc",
     "encoder.h",
-    "interface_handle.h",
-    "interface_request.h",
     "internal/logging.cc",
     "internal/logging.h",
-    "internal/synchronous_proxy.cc",
-    "internal/synchronous_proxy.h",
-    "synchronous_interface_ptr.h",
+    "object_coding.h",
+    "string.cc",
+    "string.h",
     "traits.h",
     "vector.h",
   ]
@@ -87,10 +110,16 @@ sdk_source_set("cpp_sync") {
   public_configs = [ "//garnet/public:config" ]
 
   public_deps = [
-    "//zircon/public/lib/fidl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/zx",
+    "//zircon/public/lib/fidl",
   ]
+
+  if (is_fuchsia) {
+    public_deps += [
+      "//zircon/public/lib/fidl-async",
+      "//zircon/public/lib/zx",
+    ]
+  }
 }
 
 source_set("test_support") {
@@ -115,6 +144,26 @@ fidl("fidl_test") {
   ]
 }
 
+source_set("host_test_sources") {
+  testonly = true
+
+  sources = [
+    "array_unittest.cc",
+    "clone_unittest.cc",
+    "fidl_test.cc",
+    "object_coding_unittest.cc",
+    "roundtrip_test.cc",
+    "string_unittest.cc",
+    "vector_unittest.cc",
+  ]
+
+  deps = [
+    ":cpp_base",
+    ":fidl_test",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 source_set("test_sources") {
   testonly = true
 
@@ -123,11 +172,8 @@ source_set("test_sources") {
   # include_base = "//garnet/public"
 
   sources = [
-    "array_unittest.cc",
     "binding_set_unittest.cc",
     "binding_unittest.cc",
-    "clone_unittest.cc",
-    "fidl_test.cc",
     "interface_handle_unittest.cc",
     "interface_ptr_set_unittest.cc",
     "interface_ptr_unittest.cc",
@@ -135,11 +181,8 @@ source_set("test_sources") {
     "internal/message_reader_unittest.cc",
     "internal/proxy_controller_unittest.cc",
     "internal/stub_controller_unittest.cc",
-    "roundtrip_test.cc",
-    "string_unittest.cc",
     "synchronous_interface_ptr_unittest.cc",
     "thread_safe_binding_set_unittest.cc",
-    "vector_unittest.cc",
   ]
 
   deps = [
@@ -164,6 +207,7 @@ executable("fidl_cpp_unittests") {
 
   deps = [
     ":test_sources",
+    ":host_test_sources",
     ":test_support",
     "//garnet/public/lib/fidl/cpp/test",
     "//garnet/public/lib/fxl/test:gtest_main",
@@ -185,4 +229,21 @@ package("fidl_tests") {
       name = "fidl_cpp_unittests"
     },
   ]
+}
+
+executable("fidl_cpp_host_unittests") {
+  testonly = true
+
+  deps = [
+    ":host_test_sources",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+group("host_tests") {
+  deps = [
+    ":fidl_cpp_host_unittests($host_toolchain)",
+  ]
+  testonly = true
 }

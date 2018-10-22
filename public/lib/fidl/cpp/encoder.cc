@@ -29,6 +29,7 @@ size_t Encoder::Alloc(size_t size) {
   return offset;
 }
 
+#ifdef __Fuchsia__
 void Encoder::EncodeHandle(zx::object_base* value, size_t offset) {
   if (value->is_valid()) {
     *GetPtr<zx_handle_t>(offset) = FIDL_HANDLE_PRESENT;
@@ -37,6 +38,7 @@ void Encoder::EncodeHandle(zx::object_base* value, size_t offset) {
     *GetPtr<zx_handle_t>(offset) = FIDL_HANDLE_ABSENT;
   }
 }
+#endif
 
 Message Encoder::GetMessage() {
   return Message(BytePart(bytes_.data(), bytes_.size(), bytes_.size()),

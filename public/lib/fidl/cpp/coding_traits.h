@@ -49,6 +49,7 @@ struct CodingTraits<bool> {
   }
 };
 
+#ifdef __Fuchsia__
 template <typename T>
 struct CodingTraits<T, typename std::enable_if<
                            std::is_base_of<zx::object_base, T>::value>::type> {
@@ -60,6 +61,7 @@ struct CodingTraits<T, typename std::enable_if<
     decoder->DecodeHandle(value, offset);
   }
 };
+#endif
 
 template <typename T>
 struct CodingTraits<std::unique_ptr<T>> {

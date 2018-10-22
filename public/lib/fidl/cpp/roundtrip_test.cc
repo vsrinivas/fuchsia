@@ -27,11 +27,11 @@ Output RoundTrip(const Input& input) {
       ::fidl::FidlField(Output::FidlType, 16),
   };
   const fidl_type_t fake_output_interface_struct{::fidl::FidlCodedStruct(
-      fake_output_interface_fields, 1, 16 + CodingTraits<Input>::encoded_size,
+      fake_output_interface_fields, 1, 16 + CodingTraits<Output>::encoded_size,
       "Output")};
 
   fidl::Encoder enc(0xfefefefe);
-  auto ofs = enc.Alloc(CodingTraits<Output>::encoded_size);
+  auto ofs = enc.Alloc(CodingTraits<Input>::encoded_size);
   fidl::Clone(input).Encode(&enc, ofs);
   auto msg = enc.GetMessage();
   const char* err_msg = nullptr;

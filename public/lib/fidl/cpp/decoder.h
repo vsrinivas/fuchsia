@@ -6,8 +6,11 @@
 #define LIB_FIDL_CPP_DECODER_H_
 
 #include <lib/fidl/cpp/message.h>
-#include <lib/zx/object.h>
 #include <zircon/fidl.h>
+
+#ifdef __Fuchsia__
+#include <lib/zx/object.h>
+#endif
 
 namespace fidl {
 
@@ -24,7 +27,9 @@ class Decoder {
   size_t GetOffset(void* ptr);
   size_t GetOffset(uintptr_t ptr);
 
+#ifdef __Fuchsia__
   void DecodeHandle(zx::object_base* value, size_t offset);
+#endif
 
  private:
   uint8_t* InternalGetPtr(size_t offset);
