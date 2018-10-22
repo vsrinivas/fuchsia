@@ -16,7 +16,7 @@
 class BlobfsCreator : public FsCreator {
 public:
     BlobfsCreator()
-        : FsCreator(blobfs::kStartBlockMinimum) {}
+        : FsCreator(blobfs::kMinimumDataBlocks) {}
 
 private:
     // Parent overrides:
