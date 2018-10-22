@@ -112,7 +112,7 @@ static const struct ath10k_band ath10k_supported_bands[] = {
         .name = "2.4 GHz",
         .ht_supported = true,
         .vht_supported = false,
-        // TODO(NET-1321, NET-1375):
+        // TODO(NET-1375):
         // Unmark the "BasicRate" bit for the first 4 rates.
         // Rename ".basic_rates" to ".supported_rates"
         // See IEEE Std 802.11-2016, 9.4.2.3 for encoding
@@ -126,7 +126,7 @@ static const struct ath10k_band ath10k_supported_bands[] = {
         .name = "5 GHz",
         .ht_supported = true,
         .vht_supported = true,
-        // TODO(NET-1321, NET-1375):
+        // TODO(NET-1375):
         // Unmark the "BasicRate" bit for the first 4 rates.
         // Rename ".basic_rates" to ".supported_rates"
         // See IEEE Std 802.11-2016, 9.4.2.3 for encoding

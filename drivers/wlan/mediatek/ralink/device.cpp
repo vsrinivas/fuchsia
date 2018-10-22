@@ -3475,7 +3475,7 @@ zx_status_t Device::Query(wlan_info_t* info) {
             },
         .vht_supported = false,
         .vht_caps = {},
-        // TODO(NET-1321, NET-1375):
+        // TODO(NET-1375):
         // Unmark the "BasicRate" bit for the first 4 rates.
         // Rename ".basic_rates" to ".supported_rates"
         // See IEEE Std 802.11-2016, 9.4.2.3 for encoding
@@ -3527,7 +3527,7 @@ zx_status_t Device::Query(wlan_info_t* info) {
                 },
             .vht_supported = false,
             .vht_caps = {},
-            // TODO(NET-1321, NET-1375):
+            // TODO(NET-1375):
             // Unmark the "BasicRate" bit for the first 4 rates.
             // Rename ".basic_rates" to ".supported_rates"
             // See IEEE Std 802.11-2016, 9.4.2.3 for encoding
