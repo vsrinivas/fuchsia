@@ -91,10 +91,6 @@ package("amber_tools") {
 
 amber_host_binaries = [
   {
-    name = "amber-srv"
-    gopkg = "amber/cmd/amber-serve"
-  },
-  {
     name = "amber-publish"
     gopkg = "amber/cmd/publish"
   },

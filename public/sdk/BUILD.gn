@@ -34,7 +34,6 @@ sdk("garnet") {
     "//garnet/bin/far:bin_sdk($host_toolchain)",
     "//garnet/bin/zxdb:zxdb_sdk($host_toolchain)",
     "//garnet/go/src/amber:amber-publish_sdk($host_toolchain)",
-    "//garnet/go/src/amber:amber-srv_sdk($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_sdk($host_toolchain)",
     "//garnet/go/src/pm:pm_bin_sdk($host_toolchain)",
     "//garnet/lib/vulkan:vulkan_layers",
