@@ -11,7 +11,6 @@
 #include <fbl/unique_ptr.h>
 
 #include <zircon/compiler.h>
-#include <zircon/device/rtc.h>
 
 #include <librtc.h>
 
@@ -27,7 +26,7 @@ static zx_status_t fidl_Get(void* ctx, fidl_txn_t* txn);
 static zx_status_t fidl_Set(void* ctx, const zircon_rtc_Time* rtc, fidl_txn_t* txn);
 
 class FallbackRtc;
-using RtcDevice = ddk::Device<FallbackRtc, ddk::Ioctlable, ddk::Messageable>;
+using RtcDevice = ddk::Device<FallbackRtc, ddk::Messageable>;
 
 // The fallback RTC driver is a fake driver which avoids to special case
 // in the upper layers on boards which don't have an RTC chip (and battery).
@@ -56,29 +55,6 @@ class FallbackRtc : public RtcDevice,
 
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
         return zircon_rtc_Device_dispatch(this, txn, msg, &fidl_ops_);
-    }
-
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                         size_t out_len, size_t* out_actual) {
-        switch (op) {
-        case IOCTL_RTC_GET: {
-            if (out_len < sizeof(rtc_t)) {
-                return ZX_ERR_BUFFER_TOO_SMALL;
-            }
-            *out_actual = sizeof(rtc_t);
-            auto *rtc = static_cast<zircon_rtc_Time*>(out_buf);
-            return Get(*rtc);
-        }
-        case IOCTL_RTC_SET: {
-            if (in_len < sizeof(rtc_t)) {
-                return ZX_ERR_BUFFER_TOO_SMALL;
-            }
-            auto *rtc = static_cast<const zircon_rtc_Time*>(in_buf);
-            return Set(*rtc);
-        }
-        default:
-            return ZX_ERR_NOT_SUPPORTED;
-        }
     }
 
   private:

@@ -10,7 +10,6 @@
 #include <ddk/protocol/i2c.h>
 #include <stdlib.h>
 #include <zircon/assert.h>
-#include <zircon/device/rtc.h>
 #include <librtc.h>
 
 typedef struct {
@@ -106,30 +105,8 @@ static zx_status_t pcf8563_rtc_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* t
     return zircon_rtc_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
-static zx_status_t pcf8563_rtc_ioctl(void* ctx, uint32_t op,
-                                   const void* in_buf, size_t in_len,
-                                   void* out_buf, size_t out_len, size_t* out_actual) {
-    switch (op) {
-    case IOCTL_RTC_GET: {
-        if (out_len < sizeof(rtc_t)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        *out_actual = sizeof(rtc_t);
-        return pcf8563_rtc_get(ctx, out_buf);
-    }
-    case IOCTL_RTC_SET: {
-        if (in_len < sizeof(rtc_t)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        return pcf8563_rtc_set(ctx, in_buf);
-    }
-    }
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 static zx_protocol_device_t pcf8563_rtc_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .ioctl = pcf8563_rtc_ioctl,
     .message = pcf8563_rtc_message
 };
 

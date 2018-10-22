@@ -8,7 +8,6 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
-#include <zircon/device/rtc.h>
 
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -87,30 +86,8 @@ static zx_status_t pl031_rtc_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn
     return zircon_rtc_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
-static zx_status_t pl031_rtc_ioctl(void* ctx, uint32_t op,
-                                   const void* in_buf, size_t in_len,
-                                   void* out_buf, size_t out_len, size_t* out_actual) {
-    switch (op) {
-    case IOCTL_RTC_GET: {
-        if (out_len < sizeof(rtc_t)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        *out_actual = sizeof(rtc_t);
-        return pl031_rtc_get(ctx, out_buf);
-    }
-    case IOCTL_RTC_SET: {
-        if (in_len < sizeof(rtc_t)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        return pl031_rtc_set(ctx, in_buf);
-    }
-    }
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 static zx_protocol_device_t pl031_rtc_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .ioctl = pl031_rtc_ioctl,
     .message = pl031_rtc_message
 };
 

@@ -6,7 +6,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <zircon/device/rtc.h>
 #include <hw/inout.h>
 #include <librtc.h>
 
@@ -233,30 +232,8 @@ static zx_status_t intel_rtc_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn
     return zircon_rtc_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
-static zx_status_t intel_rtc_ioctl(void* ctx, uint32_t op,
-                                   const void* in_buf, size_t in_len,
-                                   void* out_buf, size_t out_len, size_t* out_actual) {
-    switch (op) {
-    case IOCTL_RTC_GET: {
-        if (out_len < sizeof(rtc_t)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        *out_actual = sizeof(rtc_t);
-        return intel_rtc_get(ctx, out_buf);
-    }
-    case IOCTL_RTC_SET: {
-        if (in_len < sizeof(rtc_t)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        return intel_rtc_set(ctx, in_buf);
-    }
-    }
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 static zx_protocol_device_t intel_rtc_device_proto __UNUSED = {
     .version = DEVICE_OPS_VERSION,
-    .ioctl = intel_rtc_ioctl,
     .message = intel_rtc_message
 };
 
