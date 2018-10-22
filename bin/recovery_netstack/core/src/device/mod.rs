@@ -102,7 +102,9 @@ pub enum DeviceLayerTimerId {
 
 /// Handle a timer event firing in the device layer.
 pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: DeviceLayerTimerId) {
-    unimplemented!()
+    match id {
+        DeviceLayerTimerId::ArpIpv4(inner_id) => arp::handle_timeout(ctx, inner_id),
+    }
 }
 
 /// An event dispatcher for the device layer.

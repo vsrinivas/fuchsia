@@ -191,6 +191,12 @@ pub trait PType: FromBytes + AsBytes + Unaligned + Copy + Clone {
     fn ptype() -> EtherType;
     /// The in-memory size of an instance of the type.
     fn plen() -> u8;
+    /// Returns a concrete instance of the protocol address
+    ///
+    /// This is a hack, since we only support Ipv4 - if we support more
+    /// protocols in the future, we'll need to change this to return an enum of
+    /// all the possible protocol addresses.
+    fn addr(self) -> Ipv4Addr;
 }
 
 impl HType for Mac {
@@ -210,6 +216,9 @@ impl PType for Ipv4Addr {
     fn plen() -> u8 {
         use std::convert::TryFrom;
         u8::try_from(mem::size_of::<Ipv4Addr>()).unwrap()
+    }
+    fn addr(self) -> Ipv4Addr {
+        self
     }
 }
 
