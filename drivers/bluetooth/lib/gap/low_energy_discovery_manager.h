@@ -241,7 +241,7 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
 
   // The device cache that we use for storing and looking up scan results. We
   // hold a raw pointer as we expect this to out-live us.
-  RemoteDeviceCache* device_cache_;
+  RemoteDeviceCache* const device_cache_;
 
   // True if background scanning is enabled.
   bool background_scan_enabled_;

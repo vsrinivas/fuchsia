@@ -10,6 +10,7 @@
 #include <lib/async/cpp/task.h>
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
+#include "garnet/drivers/bluetooth/lib/gap/identity_resolving_list.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/sm/types.h"
@@ -91,9 +92,7 @@ class RemoteDeviceCache final {
   RemoteDevice* FindDeviceById(const std::string& identifier) const;
 
   // Finds and returns a RemoteDevice with address |address| if it exists,
-  // returns nullptr otherwise.
-  // TODO(armansito): This should perform address resolution for devices using
-  // LE privacy.
+  // returns nullptr otherwise. Tries to resolve |address| if it is resolvable.
   RemoteDevice* FindDeviceByAddress(const common::DeviceAddress& address) const;
 
   // When set, |callback| will be invoked whenever a device is added
@@ -181,6 +180,9 @@ class RemoteDeviceCache final {
   // TODO(armansito): Replace this with an implementation that can resolve
   // device identity, to handle bonded LE devices that use privacy.
   std::unordered_map<common::DeviceAddress, std::string> address_map_;
+
+  // The LE identity resolving list used to resolve RPAs.
+  IdentityResolvingList le_resolving_list_;
 
   DeviceCallback device_updated_callback_;
   DeviceIdCallback device_removed_callback_;

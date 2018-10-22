@@ -4,13 +4,16 @@
 
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 
+#include "gtest/gtest.h"
+#include "lib/gtest/test_loop_fixture.h"
+
 #include "garnet/drivers/bluetooth/lib/common/device_class.h"
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
+#include "garnet/drivers/bluetooth/lib/common/uint128.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_scanner.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "garnet/drivers/bluetooth/lib/sm/types.h"
-#include "gtest/gtest.h"
+#include "garnet/drivers/bluetooth/lib/sm/util.h"
 
 namespace btlib {
 namespace gap {
@@ -329,6 +332,24 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, AddBondedDeviceSuccess) {
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
+       AddBondedDeviceWithIrkIsAddedToResolvingList) {
+  const std::string kId("test-id");
+  sm::PairingData data;
+  data.ltk = kLTK;
+  data.irk = sm::Key(sm::SecurityProperties(), common::RandomUInt128());
+
+  EXPECT_TRUE(cache()->AddBondedDevice(kId, kAddrLeRandom, data));
+  auto* dev = cache()->FindDeviceByAddress(kAddrLeRandom);
+  ASSERT_TRUE(dev);
+  EXPECT_EQ(kAddrLeRandom, dev->address());
+
+  // Looking up the device by RPA generated using the IRK should return the same
+  // device.
+  DeviceAddress rpa = sm::util::GenerateRpa(data.irk->value());
+  EXPECT_EQ(dev, cache()->FindDeviceByAddress(rpa));
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
        StoreLowEnergyBondFailsWithNoKeys) {
   sm::PairingData data;
   EXPECT_FALSE(cache()->StoreLowEnergyBond(device()->identifier(), data));
@@ -422,6 +443,26 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
 
   // The old address should still map to |dev|.
   ASSERT_EQ(device(), cache()->FindDeviceByAddress(old_address));
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
+       StoreLowEnergyBondWithIrkIsAddedToResolvingList) {
+  ASSERT_TRUE(NewDevice(kAddrLeRandom, true));
+  ASSERT_FALSE(device()->identity_known());
+
+  sm::PairingData data;
+  data.ltk = kLTK;
+  data.identity_address = kAddrLeRandom;
+  data.irk = sm::Key(sm::SecurityProperties(), common::RandomUInt128());
+
+  EXPECT_TRUE(cache()->StoreLowEnergyBond(device()->identifier(), data));
+  ASSERT_TRUE(device()->le()->bonded());
+  ASSERT_TRUE(device()->identity_known());
+
+  // Looking up the device by RPA generated using the IRK should return the same
+  // device.
+  DeviceAddress rpa = sm::util::GenerateRpa(data.irk->value());
+  EXPECT_EQ(device(), cache()->FindDeviceByAddress(rpa));
 }
 
 class GAP_RemoteDeviceCacheTest_UpdateCallbackTest

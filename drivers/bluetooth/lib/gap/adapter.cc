@@ -195,7 +195,6 @@ bool Adapter::AddBondedDevice(const std::string& identifier,
                               const sm::PairingData& le_bond_data) {
   return remote_device_cache()->AddBondedDevice(identifier, address,
                                                 le_bond_data);
-  // TODO(bwb) auto-connect the device
 }
 
 void Adapter::SetPairingDelegate(fxl::WeakPtr<PairingDelegate> delegate) {

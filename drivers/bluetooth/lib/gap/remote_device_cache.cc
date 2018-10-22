@@ -16,7 +16,9 @@
 namespace btlib {
 namespace gap {
 
-RemoteDevice* RemoteDeviceCache::NewDevice(const common::DeviceAddress& address,
+using common::DeviceAddress;
+
+RemoteDevice* RemoteDeviceCache::NewDevice(const DeviceAddress& address,
                                            bool connectable) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   if (address_map_.find(address) != address_map_.end()) {
@@ -51,7 +53,7 @@ void RemoteDeviceCache::ForEach(DeviceCallback f) {
 }
 
 bool RemoteDeviceCache::AddBondedDevice(const std::string& identifier,
-                                        const common::DeviceAddress& address,
+                                        const DeviceAddress& address,
                                         const sm::PairingData& bond_data) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(!bond_data.identity_address ||
@@ -71,12 +73,12 @@ bool RemoteDeviceCache::AddBondedDevice(const std::string& identifier,
     return false;
   }
 
-  ZX_DEBUG_ASSERT(address.type() != common::DeviceAddress::Type::kLEAnonymous);
+  ZX_DEBUG_ASSERT(address.type() != DeviceAddress::Type::kLEAnonymous);
 
   // |bond_data| must contain either a LTK or CSRK for LE Security Mode 1 or 2.
   // TODO(armansito): Accept empty |bond_data| if a BR/EDR link key is provided.
   if (!bond_data.ltk && !bond_data.csrk) {
-    bt_log(ERROR, "gap-le", "mandatorykeys missing: no IRK or CSRK (id: %s)",
+    bt_log(ERROR, "gap-le", "mandatory keys missing: no IRK or CSRK (id: %s)",
            identifier.c_str());
     return false;
   }
@@ -100,6 +102,14 @@ bool RemoteDeviceCache::AddBondedDevice(const std::string& identifier,
   ZX_DEBUG_ASSERT(!device->temporary());
   ZX_DEBUG_ASSERT(device->le()->bonded());
   ZX_DEBUG_ASSERT(device->identity_known());
+
+  // Add the device to the resolving list if it has an IRK.
+  if (bond_data.irk) {
+    le_resolving_list_.Add(device->address(), bond_data.irk->value());
+  }
+
+  bt_log(SPEW, "gap", "restored bonded device: %s, id: %s",
+         address.ToString().c_str(), identifier.c_str());
 
   // Don't call UpdateExpiry(). Since a bonded device starts out as
   // non-temporary it is not necessary to ever set up the expiration callback.
@@ -145,6 +155,11 @@ bool RemoteDeviceCache::StoreLowEnergyBond(const std::string& identifier,
   ZX_DEBUG_ASSERT(!device->temporary());
   ZX_DEBUG_ASSERT(device->le()->bonded());
 
+  // Add the device to the resolving list if it has an IRK.
+  if (device->identity_known() && bond_data.irk) {
+    le_resolving_list_.Add(device->address(), bond_data.irk->value());
+  }
+
   // Report the bond for persisting only if the identity of the device is known.
   if (device->identity_known()) {
     NotifyDeviceBonded(*device);
@@ -160,11 +175,25 @@ RemoteDevice* RemoteDeviceCache::FindDeviceById(
 }
 
 RemoteDevice* RemoteDeviceCache::FindDeviceByAddress(
-    const common::DeviceAddress& address) const {
+    const DeviceAddress& in_address) const {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
-  auto iter = address_map_.find(address);
-  if (iter == address_map_.end())
+
+  std::optional<DeviceAddress> address;
+  if (in_address.IsResolvable()) {
+    address = le_resolving_list_.Resolve(in_address);
+  }
+
+  // Fall back to the input if an identity wasn't resolved.
+  if (!address) {
+    address = in_address;
+  }
+
+  ZX_DEBUG_ASSERT(address);
+
+  auto iter = address_map_.find(*address);
+  if (iter == address_map_.end()) {
     return nullptr;
+  }
 
   auto* dev = FindDeviceById(iter->second);
   ZX_DEBUG_ASSERT(dev);
