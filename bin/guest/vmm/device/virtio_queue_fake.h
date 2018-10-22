@@ -50,6 +50,11 @@ class DescriptorChainBuilder {
                                                    uint32_t len);
   DescriptorChainBuilder& AppendWritableDescriptor(void** buf, uint32_t len);
 
+  template<typename T>
+  DescriptorChainBuilder& AppendWritableDescriptor(T** ptr, uint32_t len) {
+    return AppendWritableDescriptor(reinterpret_cast<void**>(ptr), len);
+  }
+
   zx_status_t Build();
 
  private:

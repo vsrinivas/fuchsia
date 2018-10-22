@@ -56,13 +56,10 @@ TEST_F(VirtioInputTest, Keyboard) {
 
   virtio_input_event_t* event_1;
   virtio_input_event_t* event_2;
-  zx_status_t status =
-      DescriptorChainBuilder(event_queue_)
-          .AppendWritableDescriptor(reinterpret_cast<void**>(&event_1),
-                                    sizeof(*event_1))
-          .AppendWritableDescriptor(reinterpret_cast<void**>(&event_2),
-                                    sizeof(*event_2))
-          .Build();
+  zx_status_t status = DescriptorChainBuilder(event_queue_)
+                           .AppendWritableDescriptor(&event_1, sizeof(*event_1))
+                           .AppendWritableDescriptor(&event_2, sizeof(*event_2))
+                           .Build();
   ASSERT_EQ(ZX_OK, status);
 
   status = input_->NotifyQueue(0);
@@ -88,15 +85,11 @@ TEST_F(VirtioInputTest, PointerMove) {
   virtio_input_event_t* event_1;
   virtio_input_event_t* event_2;
   virtio_input_event_t* event_3;
-  zx_status_t status =
-      DescriptorChainBuilder(event_queue_)
-          .AppendWritableDescriptor(reinterpret_cast<void**>(&event_1),
-                                    sizeof(*event_1))
-          .AppendWritableDescriptor(reinterpret_cast<void**>(&event_2),
-                                    sizeof(*event_2))
-          .AppendWritableDescriptor(reinterpret_cast<void**>(&event_3),
-                                    sizeof(*event_3))
-          .Build();
+  zx_status_t status = DescriptorChainBuilder(event_queue_)
+                           .AppendWritableDescriptor(&event_1, sizeof(*event_1))
+                           .AppendWritableDescriptor(&event_2, sizeof(*event_2))
+                           .AppendWritableDescriptor(&event_3, sizeof(*event_3))
+                           .Build();
   ASSERT_EQ(ZX_OK, status);
 
   status = input_->NotifyQueue(0);
@@ -128,17 +121,12 @@ TEST_F(VirtioInputTest, PointerUp) {
   virtio_input_event_t* event_2;
   virtio_input_event_t* event_3;
   virtio_input_event_t* event_4;
-  zx_status_t status =
-      DescriptorChainBuilder(event_queue_)
-          .AppendWritableDescriptor(reinterpret_cast<void**>(&event_1),
-                                    sizeof(*event_1))
-          .AppendWritableDescriptor(reinterpret_cast<void**>(&event_2),
-                                    sizeof(*event_2))
-          .AppendWritableDescriptor(reinterpret_cast<void**>(&event_3),
-                                    sizeof(*event_3))
-          .AppendWritableDescriptor(reinterpret_cast<void**>(&event_4),
-                                    sizeof(*event_4))
-          .Build();
+  zx_status_t status = DescriptorChainBuilder(event_queue_)
+                           .AppendWritableDescriptor(&event_1, sizeof(*event_1))
+                           .AppendWritableDescriptor(&event_2, sizeof(*event_2))
+                           .AppendWritableDescriptor(&event_3, sizeof(*event_3))
+                           .AppendWritableDescriptor(&event_4, sizeof(*event_4))
+                           .Build();
   ASSERT_EQ(ZX_OK, status);
 
   status = input_->NotifyQueue(0);

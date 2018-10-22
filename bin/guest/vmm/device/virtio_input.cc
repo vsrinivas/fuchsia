@@ -208,6 +208,7 @@ static uint32_t YCoordinate(float y) {
   return static_cast<uint32_t>(y * machina::kInputAbsMaxY + 0.5f);
 }
 
+// Stream for event queue.
 class EventStream : public StreamBase,
                     public fuchsia::ui::input::InputDispatcher {
  public:
