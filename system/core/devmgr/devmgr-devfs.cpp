@@ -25,13 +25,13 @@
 
 namespace devmgr {
 
-typedef struct dc_watcher watcher_t;
-
 struct dc_watcher {
-    watcher_t* next;
-    devnode_t* devnode;
-    uint32_t mask;
-    zx_handle_t handle;
+    dc_watcher() = default;
+
+    dc_watcher* next = nullptr;
+    devnode_t* devnode = nullptr;
+    uint32_t mask = 0;
+    zx_handle_t handle = ZX_HANDLE_INVALID;
 };
 
 // BUG(ZX-2868): We currently never free these after allocating them
@@ -51,7 +51,7 @@ struct dc_devnode {
     // otherwise the device we are referencing
     device_t* device = nullptr;
 
-    watcher_t* watchers = nullptr;
+    dc_watcher* watchers = nullptr;
 
     // entry in our parent devnode's children list
     list_node_t node = {};
@@ -207,7 +207,7 @@ static bool devnode_is_local(devnode_t* dn) {
 }
 
 static void devfs_notify(devnode_t* dn, const fbl::String& name, unsigned op) {
-    watcher_t* w = dn->watchers;
+    dc_watcher* w = dn->watchers;
     if (w == nullptr) {
         return;
     }
@@ -225,8 +225,8 @@ static void devfs_notify(devnode_t* dn, const fbl::String& name, unsigned op) {
     // convert to mask
     op = (1u << op);
 
-    watcher_t** wp;
-    watcher_t* next;
+    dc_watcher** wp;
+    dc_watcher* next;
     for (wp = &dn->watchers; w != nullptr; w = next) {
         next = w->next;
         if (!(w->mask & op)) {
@@ -235,7 +235,7 @@ static void devfs_notify(devnode_t* dn, const fbl::String& name, unsigned op) {
         if (zx_channel_write(w->handle, 0, msg, static_cast<uint32_t>(len + 2), nullptr, 0) < 0) {
             *wp = next;
             zx_handle_close(w->handle);
-            free(w);
+            delete w;
         } else {
             wp = &w->next;
         }
@@ -243,18 +243,17 @@ static void devfs_notify(devnode_t* dn, const fbl::String& name, unsigned op) {
 }
 
 static zx_status_t devfs_watch(devnode_t* dn, zx_handle_t h, uint32_t mask) {
-    watcher_t* watcher = static_cast<watcher_t*>(calloc(1, sizeof(watcher_t)));
+    auto watcher = fbl::make_unique<dc_watcher>();
     if (watcher == nullptr) {
         zx_handle_close(h);
         return ZX_ERR_NO_MEMORY;
     }
-    new (watcher) watcher_t;
 
     watcher->devnode = dn;
     watcher->next = dn->watchers;
     watcher->handle = h;
     watcher->mask = mask;
-    dn->watchers = watcher;
+    dn->watchers = watcher.get();
 
     if (mask & fuchsia_io_WATCH_MASK_EXISTING) {
         devnode_t* child;
@@ -272,6 +271,8 @@ static zx_status_t devfs_watch(devnode_t* dn, zx_handle_t h, uint32_t mask) {
     // Don't send EXISTING or IDLE events from now on...
     watcher->mask &= ~(fuchsia_io_WATCH_MASK_EXISTING | fuchsia_io_WATCH_MASK_IDLE);
 
+    // dn->watchers now owns this
+    __UNUSED auto ptr = watcher.release();
     return ZX_OK;
 }
 
@@ -432,12 +433,12 @@ static void _devfs_remove(devnode_t* dn) {
     }
 
     // destroy all watchers
-    watcher_t* watcher;
-    watcher_t* next;
+    dc_watcher* watcher;
+    dc_watcher* next;
     for (watcher = dn->watchers; watcher != nullptr; watcher = next) {
         next = watcher->next;
         zx_handle_close(watcher->handle);
-        free(watcher);
+        delete watcher;
     }
     dn->watchers = nullptr;
 
