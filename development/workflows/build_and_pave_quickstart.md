@@ -61,3 +61,9 @@ The workflow for re-building and re-deploying using `fx` is slightly different:
 NOTE: If desired, the device can be re-paved using Zedboot USB as per steps 4-5
 in the previous section. This is slower, but may be necessary in some cases
 where the system handles the OTA less than gracefully.
+
+## Troubleshooting
+
+1.  Having '.' in your PATH may cause `fx full-build` to fail.  The script will
+    change the working directory such that it may create conflicts between the
+    commands it uses (e.g. `touch`) and the binaries in the working directory.
