@@ -16,6 +16,7 @@ struct GpuFeatures {
     static constexpr uint32_t kThreadMaxThreadsOffset = 0xa0;
     static constexpr uint32_t kThreadMaxWorkgroupSizeOffset = 0xa4;
     static constexpr uint32_t kThreadMaxBarrierSizeOffset = 0xa8;
+    static constexpr uint32_t kThreadTlsAllocOffset = 0x310;
     static constexpr uint32_t kJsFeaturesOffset = 0xc0;
     static constexpr uint32_t kTextureFeaturesOffset = 0xb0;
 
@@ -47,6 +48,7 @@ struct GpuFeatures {
     uint32_t address_space_present;
     uint32_t job_slot_present;
     registers::ThreadFeatures thread_features;
+    uint32_t thread_tls_alloc;
     uint32_t thread_max_threads;
     uint32_t thread_max_workgroup_size;
     uint32_t thread_max_barrier_size;
@@ -73,6 +75,8 @@ struct GpuFeatures {
         mmu_features = registers::MmuFeatures::Get().ReadFrom(io);
         address_space_present = io->Read32(kAsPresentOffset);
         job_slot_present = io->Read32(kJsPresentOffset);
+        // Defaults to 0 on older GPUs.
+        thread_tls_alloc = io->Read32(kThreadTlsAllocOffset);
         thread_max_threads = io->Read32(kThreadMaxThreadsOffset);
         thread_max_workgroup_size = io->Read32(kThreadMaxWorkgroupSizeOffset);
         thread_max_barrier_size = io->Read32(kThreadMaxBarrierSizeOffset);
