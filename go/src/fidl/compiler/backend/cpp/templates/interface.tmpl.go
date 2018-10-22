@@ -426,4 +426,21 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
 {{- end }}
 
 {{ end }}
+
+{{- define "InterfaceTestBase" }}
+class {{ .Name }}_TestBase : public {{ .Name }} {
+  public:
+  virtual ~{{ .Name }}_TestBase() { }
+  virtual void NotImplemented_(const std::string& name) = 0;
+
+  {{- range .Methods }}
+    {{- if .HasRequest }}
+  void {{ template "RequestMethodSignature" . }} override {
+    NotImplemented_("{{ .Name }}");
+  }
+    {{- end }}
+  {{- end }}
+
+};
+{{ end }}
 `

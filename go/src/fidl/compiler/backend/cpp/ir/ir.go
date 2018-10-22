@@ -25,6 +25,7 @@ type Decl interface {
 	Declaration(*template.Template, io.Writer) error
 	Traits(*template.Template, io.Writer) error
 	Definition(*template.Template, io.Writer) error
+	TestBase(*template.Template, io.Writer) error
 }
 
 type Type struct {
@@ -167,6 +168,10 @@ func (c *Const) Definition(tmpls *template.Template, wr io.Writer) error {
 	return tmpls.ExecuteTemplate(wr, "ConstDefinition", c)
 }
 
+func (c *Const) TestBase(tmpls *template.Template, wr io.Writer) error {
+	return nil
+}
+
 func (e *Enum) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
 	return tmpls.ExecuteTemplate(wr, "EnumForwardDeclaration", e)
 }
@@ -180,6 +185,10 @@ func (e *Enum) Traits(tmpls *template.Template, wr io.Writer) error {
 }
 
 func (e *Enum) Definition(tmpls *template.Template, wr io.Writer) error {
+	return nil
+}
+
+func (e *Enum) TestBase(tmpls *template.Template, wr io.Writer) error {
 	return nil
 }
 
@@ -199,6 +208,10 @@ func (u *Union) Definition(tmpls *template.Template, wr io.Writer) error {
 	return tmpls.ExecuteTemplate(wr, "UnionDefinition", u)
 }
 
+func (u *Union) TestBase(tmpls *template.Template, wr io.Writer) error {
+	return nil
+}
+
 func (t *Table) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
 	return tmpls.ExecuteTemplate(wr, "TableForwardDeclaration", t)
 }
@@ -213,6 +226,10 @@ func (t *Table) Traits(tmpls *template.Template, wr io.Writer) error {
 
 func (t *Table) Definition(tmpls *template.Template, wr io.Writer) error {
 	return tmpls.ExecuteTemplate(wr, "TableDefinition", t)
+}
+
+func (t *Table) TestBase(tmpls *template.Template, wr io.Writer) error {
+	return nil
 }
 
 func (s *Struct) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
@@ -231,6 +248,10 @@ func (s *Struct) Definition(tmpls *template.Template, wr io.Writer) error {
 	return tmpls.ExecuteTemplate(wr, "StructDefinition", s)
 }
 
+func (s *Struct) TestBase(tmpls *template.Template, wr io.Writer) error {
+	return nil
+}
+
 func (i *Interface) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
 	return tmpls.ExecuteTemplate(wr, "InterfaceForwardDeclaration", i)
 }
@@ -245,6 +266,10 @@ func (i *Interface) Traits(tmpls *template.Template, wr io.Writer) error {
 
 func (i *Interface) Definition(tmpls *template.Template, wr io.Writer) error {
 	return tmpls.ExecuteTemplate(wr, "InterfaceDefinition", i)
+}
+
+func (i *Interface) TestBase(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "InterfaceTestBase", i)
 }
 
 func (m *Method) CallbackWrapper() string {

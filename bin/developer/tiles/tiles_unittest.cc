@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/developer/tiles/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl_test_base.h>
 #include <gtest/gtest.h>
 
 #include "garnet/bin/developer/tiles/tiles.h"
@@ -12,7 +13,7 @@
 
 namespace {
 
-class FakeViewManager : public fuchsia::ui::viewsv1::ViewManager {
+class FakeViewManager : public fuchsia::ui::viewsv1::testing::ViewManager_TestBase {
  public:
   FakeViewManager() : binding_(this) {}
 
@@ -20,25 +21,9 @@ class FakeViewManager : public fuchsia::ui::viewsv1::ViewManager {
     binding_.Bind(std::move(req));
   }
 
- private:
-  // fuchsia::ui::viewsv1::ViewManager implementation.
-  void GetScenic(
-      fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> scenic) final {}
-  void CreateView(
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1::View> view,
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-      fidl::InterfaceHandle<fuchsia::ui::viewsv1::ViewListener> view_listener,
-      zx::eventpair parent_export_token, fidl::StringPtr label) final {}
-  void CreateView2(
-      fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
-      zx::eventpair view,
-      fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewListener> view_listener,
-      zx::eventpair parent_export_token, fidl::StringPtr label) final {}
-  void CreateViewTree(
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewTree> view_tree,
-      fidl::InterfaceHandle<fuchsia::ui::viewsv1::ViewTreeListener>
-          view_tree_listener,
-      fidl::StringPtr label) final {}
+  void NotImplemented_(const std::string& name) {
+    // Do nothing.
+  }
 
   fidl::Binding<fuchsia::ui::viewsv1::ViewManager> binding_;
 };

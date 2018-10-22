@@ -28,6 +28,7 @@ func NewFidlGenerator() *FidlGenerator {
 	template.Must(tmpls.Parse(templates.Interface))
 	template.Must(tmpls.Parse(templates.Struct))
 	template.Must(tmpls.Parse(templates.Table))
+	template.Must(tmpls.Parse(templates.TestBase))
 	template.Must(tmpls.Parse(templates.Union))
 	return &FidlGenerator{
 		tmpls: tmpls,
@@ -94,6 +95,26 @@ func (gen *FidlGenerator) GenerateSource(wr io.Writer, tree ir.Root) error {
 	return nil
 }
 
+func (gen *FidlGenerator) GenerateTestBase(wr io.Writer, tree ir.Root) error {
+	tmpls := gen.tmpls
+
+	if err := tmpls.ExecuteTemplate(wr, "GenerateTestBasePreamble", tree); err != nil {
+		return err
+	}
+
+	for _, d := range tree.Decls {
+		if err := d.TestBase(tmpls, wr); err != nil {
+			return err
+		}
+	}
+
+	if err := tmpls.ExecuteTemplate(wr, "GenerateTestBasePostamble", tree); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // GenerateFidl generates all files required for the C++ bindings.
 func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
 	tree := ir.Compile(fidl)
@@ -106,6 +127,7 @@ func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) err
 
 	headerPath := config.OutputBase + ".h"
 	sourcePath := config.OutputBase + ".cc"
+	testBasePath := config.OutputBase + "_test_base.h"
 
 	if err := os.MkdirAll(filepath.Dir(config.OutputBase), os.ModePerm); err != nil {
 		return err
@@ -128,6 +150,17 @@ func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) err
 	defer sourceFile.Close()
 
 	if err := gen.GenerateSource(sourceFile, tree); err != nil {
+		return err
+	}
+
+	testBaseFile, err := os.Create(testBasePath)
+	if err != nil {
+		return err
+	}
+	defer testBaseFile.Close()
+
+	err = gen.GenerateTestBase(testBaseFile, tree)
+	if err != nil {
 		return err
 	}
 
