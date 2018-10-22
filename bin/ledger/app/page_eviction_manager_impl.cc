@@ -165,29 +165,6 @@ void PageEvictionManagerImpl::TryEvictPages(
       });
 }
 
-void PageEvictionManagerImpl::TryEvictPage(
-    fxl::StringView ledger_name, storage::PageIdView page_id,
-    PageEvictionCondition condition,
-    fit::function<void(Status, PageWasEvicted)> callback) {
-  coroutine_manager_.StartCoroutine(
-      std::move(callback),
-      [this, ledger_name = ledger_name.ToString(), page_id = page_id.ToString(),
-       condition](
-          coroutine::CoroutineHandler* handler,
-          fit::function<void(Status, PageWasEvicted)> callback) mutable {
-        ExpiringToken token = NewExpiringToken();
-        Status status = initialization_completer_.WaitUntilDone(handler);
-        if (LogOnInitializationError("TryEvictPage", status)) {
-          callback(status, PageWasEvicted(false));
-          return;
-        }
-        PageWasEvicted was_evicted;
-        status = SynchronousTryEvictPage(handler, ledger_name, page_id,
-                                         condition, &was_evicted);
-        callback(status, was_evicted);
-      });
-}
-
 void PageEvictionManagerImpl::MarkPageOpened(fxl::StringView ledger_name,
                                              storage::PageIdView page_id) {
   coroutine_manager_.StartCoroutine([this, ledger_name = ledger_name.ToString(),
@@ -216,6 +193,29 @@ void PageEvictionManagerImpl::MarkPageClosed(fxl::StringView ledger_name,
     status = db_.MarkPageClosed(handler, ledger_name, page_id);
     LogOnPageUpdateError("mark page as closed", status, ledger_name, page_id);
   });
+}
+
+void PageEvictionManagerImpl::TryEvictPage(
+    fxl::StringView ledger_name, storage::PageIdView page_id,
+    PageEvictionCondition condition,
+    fit::function<void(Status, PageWasEvicted)> callback) {
+  coroutine_manager_.StartCoroutine(
+      std::move(callback),
+      [this, ledger_name = ledger_name.ToString(), page_id = page_id.ToString(),
+       condition](
+          coroutine::CoroutineHandler* handler,
+          fit::function<void(Status, PageWasEvicted)> callback) mutable {
+        ExpiringToken token = NewExpiringToken();
+        Status status = initialization_completer_.WaitUntilDone(handler);
+        if (LogOnInitializationError("TryEvictPage", status)) {
+          callback(status, PageWasEvicted(false));
+          return;
+        }
+        PageWasEvicted was_evicted;
+        status = SynchronousTryEvictPage(handler, ledger_name, page_id,
+                                         condition, &was_evicted);
+        callback(status, was_evicted);
+      });
 }
 
 void PageEvictionManagerImpl::EvictPage(fxl::StringView ledger_name,

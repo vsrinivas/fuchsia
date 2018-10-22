@@ -20,7 +20,8 @@
 
 namespace ledger {
 
-class PageEvictionManagerImpl : public PageEvictionManager {
+class PageEvictionManagerImpl : public PageEvictionManager,
+                                public PageEvictionDelegate {
  public:
   PageEvictionManagerImpl(Environment* environment, DetachedPath db_path);
   ~PageEvictionManagerImpl() override;
@@ -41,16 +42,17 @@ class PageEvictionManagerImpl : public PageEvictionManager {
   void TryEvictPages(PageEvictionPolicy* policy,
                      fit::function<void(Status)> callback) override;
 
-  void TryEvictPage(
-      fxl::StringView ledger_name, storage::PageIdView page_id,
-      PageEvictionCondition condition,
-      fit::function<void(Status, PageWasEvicted)> callback) override;
-
   void MarkPageOpened(fxl::StringView ledger_name,
                       storage::PageIdView page_id) override;
 
   void MarkPageClosed(fxl::StringView ledger_name,
                       storage::PageIdView page_id) override;
+
+  // PageEvictionDelegate:
+  void TryEvictPage(
+      fxl::StringView ledger_name, storage::PageIdView page_id,
+      PageEvictionCondition condition,
+      fit::function<void(Status, PageWasEvicted)> callback) override;
 
  private:
   // A token that performs a given action on destruction. ExpiringToken objects

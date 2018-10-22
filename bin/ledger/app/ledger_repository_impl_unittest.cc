@@ -22,7 +22,8 @@
 namespace ledger {
 namespace {
 
-class FakeDiskCleanupManager : public DiskCleanupManager {
+class FakeDiskCleanupManager : public DiskCleanupManager,
+                               public PageUsageListener {
  public:
   FakeDiskCleanupManager() {}
   ~FakeDiskCleanupManager() override {}
@@ -30,6 +31,11 @@ class FakeDiskCleanupManager : public DiskCleanupManager {
   void set_on_empty(fit::closure on_empty_callback) override {}
 
   bool IsEmpty() override { return true; }
+
+  void TryCleanUp(fit::function<void(Status)> callback) override {
+    // Do not call the callback directly.
+    cleanup_callback = std::move(callback);
+  }
 
   void OnPageOpened(fxl::StringView /*ledger_name*/,
                     storage::PageIdView /*page_id*/) override {}
@@ -39,11 +45,6 @@ class FakeDiskCleanupManager : public DiskCleanupManager {
 
   void OnPageUnused(fxl::StringView /*ledger_name*/,
                     storage::PageIdView /*page_id*/) override {}
-
-  void TryCleanUp(fit::function<void(Status)> callback) override {
-    // Do not call the callback directly.
-    cleanup_callback = std::move(callback);
-  }
 
   fit::function<void(Status)> cleanup_callback;
 
@@ -61,7 +62,7 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
     repository_ = std::make_unique<LedgerRepositoryImpl>(
         DetachedPath(tmpfs_.root_fd()), &environment_,
         std::make_unique<storage::FakeDbFactory>(dispatcher()), nullptr,
-        nullptr, std::move(fake_page_eviction_manager));
+        nullptr, std::move(fake_page_eviction_manager), disk_cleanup_manager_);
   }
 
   ~LedgerRepositoryImplTest() override {}

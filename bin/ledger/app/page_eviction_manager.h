@@ -36,7 +36,7 @@ namespace ledger {
 //
 // If neither of these conditions is fulfilled, the page will fail to be
 // evicted.
-class PageEvictionManager : public PageEvictionDelegate {
+class PageEvictionManager {
  public:
   // A Delegate, providing the necessary functionality to allow
   // PageEvictionManager to perform storage clean up operations.
@@ -65,7 +65,7 @@ class PageEvictionManager : public PageEvictionDelegate {
   };
 
   PageEvictionManager() {}
-  ~PageEvictionManager() override {}
+  virtual ~PageEvictionManager() {}
 
   // Sets the callback to be called every time the PageEvictionManager is empty.
   virtual void set_on_empty(fit::closure on_empty_callback) = 0;
@@ -91,12 +91,6 @@ class PageEvictionManager : public PageEvictionDelegate {
                               storage::PageIdView page_id) = 0;
 
  private:
-  // PageEvictionDelegate:
-  void TryEvictPage(
-      fxl::StringView ledger_name, storage::PageIdView page_id,
-      PageEvictionCondition condition,
-      fit::function<void(Status, PageWasEvicted)> callback) override = 0;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(PageEvictionManager);
 };
 

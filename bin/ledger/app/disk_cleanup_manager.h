@@ -18,10 +18,10 @@ namespace ledger {
 //
 // Implementations of DiskCleanupManager define the policies about when and how
 // each cleanup operation is executed in Ledger.
-class DiskCleanupManager : public PageUsageListener {
+class DiskCleanupManager {
  public:
   DiskCleanupManager() {}
-  virtual ~DiskCleanupManager() override {}
+  virtual ~DiskCleanupManager() {}
 
   // Sets the callback to be called every time the DiskCleanupManager is empty.
   virtual void set_on_empty(fit::closure on_empty_callback) = 0;
@@ -32,14 +32,6 @@ class DiskCleanupManager : public PageUsageListener {
 
   // Tries to free up disk space.
   virtual void TryCleanUp(fit::function<void(Status)> callback) = 0;
-
-  // PageUsageListener:
-  void OnPageOpened(fxl::StringView ledger_name,
-                    storage::PageIdView page_id) override = 0;
-  void OnPageClosed(fxl::StringView ledger_name,
-                    storage::PageIdView page_id) override = 0;
-  void OnPageUnused(fxl::StringView ledger_name,
-                    storage::PageIdView page_id) override = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(DiskCleanupManager);

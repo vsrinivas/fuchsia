@@ -258,7 +258,7 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
       repository_information.content_path, environment_,
       std::make_unique<storage::LevelDbFactory>(environment_->dispatcher()),
       std::move(watchers), std::move(user_sync),
-      std::move(disk_cleanup_manager));
+      std::move(disk_cleanup_manager), disk_cleanup_manager_ptr);
   disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());
   container->SetRepository(Status::OK, std::move(repository));
 }

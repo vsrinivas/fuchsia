@@ -19,14 +19,16 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
     std::unique_ptr<storage::DbFactory> db_factory,
     std::unique_ptr<SyncWatcherSet> watchers,
     std::unique_ptr<sync_coordinator::UserSync> user_sync,
-    std::unique_ptr<DiskCleanupManager> disk_cleanup_manager)
+    std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
+    PageUsageListener* page_usage_listener)
     : content_path_(std::move(content_path)),
       environment_(environment),
       db_factory_(std::move(db_factory)),
       encryption_service_factory_(environment),
       watchers_(std::move(watchers)),
       user_sync_(std::move(user_sync)),
-      disk_cleanup_manager_(std::move(disk_cleanup_manager)) {
+      disk_cleanup_manager_(std::move(disk_cleanup_manager)),
+      page_usage_listener_(page_usage_listener) {
   bindings_.set_empty_set_handler([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
   ledger_repository_debug_bindings_.set_empty_set_handler(
@@ -113,7 +115,7 @@ LedgerManager* LedgerRepositoryImpl::GetLedgerManager(
       std::forward_as_tuple(environment_, std::move(name_as_string),
                             std::move(encryption_service),
                             std::move(ledger_storage), std::move(ledger_sync),
-                            disk_cleanup_manager_.get()));
+                            page_usage_listener_));
   FXL_DCHECK(result.second);
   return &(result.first->second);
 }

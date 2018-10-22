@@ -13,7 +13,8 @@
 
 namespace ledger {
 
-class DiskCleanupManagerImpl : public DiskCleanupManager {
+class DiskCleanupManagerImpl : public DiskCleanupManager,
+                               public PageUsageListener {
  public:
   DiskCleanupManagerImpl(Environment* environment, DetachedPath db_path);
   ~DiskCleanupManagerImpl() override;
@@ -29,6 +30,8 @@ class DiskCleanupManagerImpl : public DiskCleanupManager {
   void set_on_empty(fit::closure on_empty_callback) override;
   bool IsEmpty() override;
   void TryCleanUp(fit::function<void(Status)> callback) override;
+
+  // PageUsageListener:
   void OnPageOpened(fxl::StringView ledger_name,
                     storage::PageIdView page_id) override;
   void OnPageClosed(fxl::StringView ledger_name,

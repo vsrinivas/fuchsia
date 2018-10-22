@@ -204,7 +204,8 @@ class FakeLedgerSync : public sync_coordinator::LedgerSync {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerSync);
 };
 
-class FakeDiskCleanupManager : public DiskCleanupManager {
+class FakeDiskCleanupManager : public DiskCleanupManager,
+                               public PageUsageListener {
  public:
   FakeDiskCleanupManager() {}
   ~FakeDiskCleanupManager() override {}
@@ -212,6 +213,8 @@ class FakeDiskCleanupManager : public DiskCleanupManager {
   void set_on_empty(fit::closure on_empty_callback) override {}
 
   bool IsEmpty() override { return true; }
+
+  void TryCleanUp(fit::function<void(Status)> callback) override {}
 
   void OnPageOpened(fxl::StringView /*ledger_name*/,
                     storage::PageIdView /*page_id*/) override {
@@ -227,8 +230,6 @@ class FakeDiskCleanupManager : public DiskCleanupManager {
                     storage::PageIdView /*page_id*/) override {
     ++page_unused_count;
   }
-
-  void TryCleanUp(fit::function<void(Status)> callback) override {}
 
   int page_opened_count = 0;
   int page_closed_count = 0;

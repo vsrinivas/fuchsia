@@ -34,12 +34,12 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
                              public ledger_internal::LedgerRepositoryDebug,
                              public PageEvictionManager::Delegate {
  public:
-  LedgerRepositoryImpl(
-      DetachedPath content_path, Environment* environment,
-      std::unique_ptr<storage::DbFactory> db_factory,
-      std::unique_ptr<SyncWatcherSet> watchers,
-      std::unique_ptr<sync_coordinator::UserSync> user_sync,
-      std::unique_ptr<DiskCleanupManager> disk_cleanup_manager);
+  LedgerRepositoryImpl(DetachedPath content_path, Environment* environment,
+                       std::unique_ptr<storage::DbFactory> db_factory,
+                       std::unique_ptr<SyncWatcherSet> watchers,
+                       std::unique_ptr<sync_coordinator::UserSync> user_sync,
+                       std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
+                       PageUsageListener* page_usage_listener);
   ~LedgerRepositoryImpl() override;
 
   void set_on_empty(fit::closure on_empty_callback) {
@@ -103,6 +103,7 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
   std::unique_ptr<SyncWatcherSet> watchers_;
   std::unique_ptr<sync_coordinator::UserSync> user_sync_;
   std::unique_ptr<DiskCleanupManager> disk_cleanup_manager_;
+  PageUsageListener* page_usage_listener_;
   callback::AutoCleanableMap<std::string, LedgerManager,
                              convert::StringViewComparator>
       ledger_managers_;
