@@ -8,14 +8,14 @@
 #include <efi/system-table.h>
 
 // Gets the current framebuffer graphics mode.
-uint32_t get_gfx_mode();
+uint32_t get_gfx_mode(void);
 
 // Gets the maximum framebuffer graphics mode index.
-uint32_t get_gfx_max_mode();
+uint32_t get_gfx_max_mode(void);
 
 // Returns the horizontal or vertical resolution of the current mode.
-uint32_t get_gfx_hres();
-uint32_t get_gfx_vres();
+uint32_t get_gfx_hres(void);
+uint32_t get_gfx_vres(void);
 
 // Sets the framebuffer graphics mode.
 void set_gfx_mode(uint32_t mode);
@@ -26,10 +26,10 @@ void set_gfx_mode(uint32_t mode);
 void set_gfx_mode_from_cmdline(const char* fbres);
 
 // Print all the supported framebuffer modes to the system console.
-void print_fb_modes();
+void print_fb_modes(void);
 
 // Clears the screen and draws the Fuchsia logo.
-void draw_logo();
+void draw_logo(void);
 
 typedef struct font_t {
     const uint16_t* data;

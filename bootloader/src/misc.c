@@ -20,9 +20,7 @@ static uint8_t Smbios3Anchor[5] = "_SM3_";
 
 uint64_t find_acpi_root(efi_handle img, efi_system_table* sys) {
     efi_configuration_table* cfgtab = sys->ConfigurationTable;
-    int i;
-
-    for (i = 0; i < sys->NumberOfTableEntries; i++) {
+    for (size_t i = 0; i < sys->NumberOfTableEntries; i++) {
         if (xefi_cmp_guid(&cfgtab[i].VendorGuid, &AcpiTableGUID) &&
             xefi_cmp_guid(&cfgtab[i].VendorGuid, &Acpi2TableGUID)) {
             // not an ACPI table
@@ -39,9 +37,7 @@ uint64_t find_acpi_root(efi_handle img, efi_system_table* sys) {
 
 uint64_t find_smbios(efi_handle img, efi_system_table* sys) {
     efi_configuration_table* cfgtab = sys->ConfigurationTable;
-    int i;
-
-    for (i = 0; i < sys->NumberOfTableEntries; i++) {
+    for (size_t i = 0; i < sys->NumberOfTableEntries; i++) {
         if (!xefi_cmp_guid(&cfgtab[i].VendorGuid, &SmbiosTableGUID)) {
             if (!memcmp(cfgtab[i].VendorTable, SmbiosAnchor, sizeof(SmbiosAnchor))) {
                 return (uint64_t)cfgtab[i].VendorTable;

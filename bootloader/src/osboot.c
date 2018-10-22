@@ -76,7 +76,7 @@ nbfile* netboot_get_buffer(const char* name, size_t size) {
 // Wait for a keypress from a set of valid keys. If 0 < timeout_s < INT_MAX, the
 // first key in the set of valid keys will be returned after timeout_s seconds
 // if no other valid key is pressed.
-char key_prompt(char* valid_keys, int timeout_s) {
+char key_prompt(const char* valid_keys, int timeout_s) {
     if (strlen(valid_keys) < 1) return 0;
     if (timeout_s <= 0) return valid_keys[0];
 
@@ -100,10 +100,10 @@ char key_prompt(char* valid_keys, int timeout_s) {
         return 0;
     }
 
-    int wait_idx = 0;
-    int key_idx = wait_idx;
+    size_t wait_idx = 0;
+    size_t key_idx = wait_idx;
     WaitList[wait_idx++] = gSys->ConIn->WaitForKey;
-    int timer_idx = wait_idx;  // timer should always be last
+    size_t timer_idx = wait_idx;  // timer should always be last
     WaitList[wait_idx++] = TimerEvent;
 
     bool cur_vis = gConOut->Mode->CursorVisible;
@@ -167,7 +167,7 @@ void do_select_fb() {
         printf("Choose a framebuffer mode or press (b) to return to the menu\n");
         char key = key_prompt("b0123456789", INT_MAX);
         if (key == 'b') break;
-        if (key - '0' >= max_mode) {
+        if ((uint32_t)(key - '0') >= max_mode) {
             printf("invalid mode: %c\n", key);
             continue;
         }
@@ -184,7 +184,7 @@ void do_select_fb() {
 }
 
 void do_bootmenu(bool have_fb) {
-    char* menukeys;
+    const char* menukeys;
     if (have_fb)
         menukeys = "rfx";
     else
@@ -470,7 +470,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
     char valid_keys[5];
     memset(valid_keys, 0, sizeof(valid_keys));
-    int key_idx = 0;
+    size_t key_idx = 0;
 
     if (have_network) {
         valid_keys[key_idx++] = 'n';

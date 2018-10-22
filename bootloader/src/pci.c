@@ -63,18 +63,20 @@ efi_status xefi_find_pci_mmio(efi_boot_services* bs, uint8_t cls, uint8_t sub, u
         return status;
     }
 
-    for (int i = 0; i < num_handles; i++) {
-        printf("handle %d\n", i);
+    for (size_t i = 0; i < num_handles; i++) {
+        printf("handle %zu\n", i);
         efi_pci_root_bridge_io_protocol* iodev;
         status = bs->HandleProtocol(handles[i], &PciRootBridgeIoProtocol, (void**)&iodev);
         if (EFI_ERROR(status)) {
-            printf("Could not get protocol for handle %d: %s\n", i, xefi_strerror(status));
+            printf("Could not get protocol for handle %zu: %s\n",
+                   i, xefi_strerror(status));
             continue;
         }
         acpi_addrspace_desc64_t* descriptors;
         status = iodev->Configuration(iodev, (void**)&descriptors);
         if (EFI_ERROR(status)) {
-            printf("Could not get configuration for handle %d: %s\n", i, xefi_strerror(status));
+            printf("Could not get configuration for handle %zu: %s\n",
+                   i, xefi_strerror(status));
             continue;
         }
 

@@ -14,7 +14,7 @@
 #define xprintf(fmt...) printf(fmt)
 #endif
 
-efi_file_protocol* xefi_open_file(char16_t* filename) {
+efi_file_protocol* xefi_open_file(const char16_t* filename) {
     efi_loaded_image_protocol* loaded;
     efi_status r;
     efi_file_protocol* file = NULL;
@@ -99,7 +99,8 @@ void* xefi_read_file(efi_file_protocol* file, size_t* _sz, size_t front_bytes) {
     return data + front_bytes;
 }
 
-void* xefi_load_file(char16_t* filename, size_t* _sz, size_t front_bytes) {
+void* xefi_load_file(const char16_t* filename, size_t* _sz,
+                     size_t front_bytes) {
     efi_file_protocol* file = xefi_open_file(filename);
     if (!file) {
         return NULL;

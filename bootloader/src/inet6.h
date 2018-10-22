@@ -122,7 +122,7 @@ char* ip6toa(char* _out, void* ip6addr);
 // provided by inet6.c
 void ip6_init(void* macaddr);
 void eth_recv(void* data, size_t len);
-mac_addr eth_addr();
+mac_addr eth_addr(void);
 
 // provided by interface driver
 void* eth_get_buffer(size_t len);

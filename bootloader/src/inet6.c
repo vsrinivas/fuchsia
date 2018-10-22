@@ -113,7 +113,7 @@ void ip6_init(void* macaddr) {
     printf("snmaddr: %s\n", ip6toa(tmp, &snm_ip6_addr));
 }
 
-mac_addr eth_addr() {
+mac_addr eth_addr(void) {
     return ll_mac_addr;
 }
 

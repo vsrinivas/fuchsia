@@ -259,7 +259,6 @@ link_fail:
 int netifc_open(void) {
     efi_boot_services* bs = gSys->BootServices;
     efi_status ret;
-    int j;
 
     bs->CreateEvent(EVT_TIMER, TPL_CALLBACK, NULL, NULL, &net_timer);
 
@@ -276,7 +275,7 @@ int netifc_open(void) {
 
     num_eth_buffers = NUM_BUFFER_PAGES * 2;
     uint8_t* ptr = (void*)eth_buffers_base;
-    for (ret = 0; ret < num_eth_buffers; ret++) {
+    for (int i = 0; i < num_eth_buffers; ++i) {
         eth_buffer* buf = (void*)ptr;
         buf->magic = ETH_BUFFER_MAGIC;
         eth_put_buffer(buf);
@@ -304,7 +303,7 @@ int netifc_open(void) {
     for (size_t i = 0; i < mcast_filter_count; i++) {
         //uint8_t *m = (void*) &mcast_filters[i];
         //printf("i=%d %02x %02x %02x %02x %02x %02x\n", i, m[0], m[1], m[2], m[3], m[4], m[5]);
-        for (j = 0; j < mcast_filter_count; j++) {
+        for (size_t j = 0; j < mcast_filter_count; j++) {
             //m = (void*) &snp->Mode->MCastFilter[j];
             //printf("j=%d %02x %02x %02x %02x %02x %02x\n", j, m[0], m[1], m[2], m[3], m[4], m[5]);
             if (!memcmp(mcast_filters + i, &snp->Mode->MCastFilter[j], 6)) {

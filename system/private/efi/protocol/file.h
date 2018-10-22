@@ -63,7 +63,7 @@ typedef struct efi_file_protocol {
     uint64_t Revision;
 
     efi_status (*Open) (struct efi_file_protocol* self, struct efi_file_protocol** new_handle,
-                        char16_t* filename, uint64_t open_mode, uint64_t attributes) EFIAPI;
+                        const char16_t* filename, uint64_t open_mode, uint64_t attributes) EFIAPI;
 
     efi_status (*Close) (struct efi_file_protocol* self) EFIAPI;
 

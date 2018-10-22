@@ -87,7 +87,7 @@ void set_gfx_mode_from_cmdline(const char* fbres) {
 
     uint32_t max_mode = gop->Mode->MaxMode;
 
-    for (int i = 0; i < max_mode; i++) {
+    for (uint32_t i = 0; i < max_mode; i++) {
         efi_graphics_output_mode_information* mode_info;
         size_t info_size = 0;
         efi_status status = gop->QueryMode(gop, i, &info_size, &mode_info);
@@ -111,7 +111,7 @@ void print_fb_modes() {
     efi_graphics_output_protocol* gop = fb_get_gop();
     uint32_t max_mode = gop->Mode->MaxMode;
     uint32_t cur_mode = gop->Mode->Mode;
-    for (int i = 0; i < max_mode; i++) {
+    for (uint32_t i = 0; i < max_mode; i++) {
         efi_graphics_output_mode_information* mode_info;
         size_t info_size = 0;
         efi_status status = gop->QueryMode(gop, i, &info_size, &mode_info);

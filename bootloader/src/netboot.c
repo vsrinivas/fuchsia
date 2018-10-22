@@ -106,7 +106,7 @@ void netboot_recv(void* data, size_t len, const ip6_addr* saddr, uint16_t sport)
         if (len == 0)
             return;
         msg->data[len - 1] = 0;
-        for (int i = 0; i < (len - 1); i++) {
+        for (size_t i = 0; i < (len - 1); i++) {
             if ((msg->data[i] < ' ') || (msg->data[i] > 127)) {
                 msg->data[i] = '.';
             }

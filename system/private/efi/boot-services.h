@@ -195,7 +195,7 @@ typedef struct {
 
     efi_status (*CalculateCrc32) (void* data, size_t len, uint32_t* crc32) EFIAPI;
 
-    void (*CopyMem) (void* dest, void* src, size_t len) EFIAPI;
+    void (*CopyMem) (void* dest, const void* src, size_t len) EFIAPI;
 
     void (*SetMem) (void* buf, size_t len, uint8_t val) EFIAPI;
 
