@@ -6,6 +6,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
+#include <iostream>
+#include <vector>
 
 #include <fbl/unique_fd.h>
 #include <lib/fxl/strings/string_number_conversions.h>
@@ -14,7 +16,6 @@
 #include <zircon/device/block.h>
 
 static constexpr char kDevBlockDir[] = "/dev/class/block";
-static constexpr uint32_t kMaxBlockSize = 512;
 
 fbl::unique_fd find_block_device(uint32_t block_size, uint32_t block_count) {
   DIR* dir = opendir(kDevBlockDir);
@@ -44,16 +45,16 @@ fbl::unique_fd find_block_device(uint32_t block_size, uint32_t block_count) {
 
 bool read_block(fbl::unique_fd fd, uint32_t block_size, uint32_t offset,
                 uint8_t expected) {
-  uint8_t data[kMaxBlockSize];
-  errno = 0;
-  ssize_t r = pread(fd.get(), &data, block_size, offset * block_size);
+  std::vector<uint8_t> data(block_size);
+  ssize_t r = pread(fd.get(), &data[0], block_size, offset * block_size);
   if (r != block_size) {
-    printf("Failed to read: %d\n", errno);
+    std::cout << "Failed to read: " << strerror(errno) << "\n";
     return false;
   }
   for (size_t i = 0; i != block_size; ++i) {
     if (data[i] != expected) {
-      printf("Read byte %zu as %u, expected %u\n", i, data[i], expected);
+      std::cout << "Read byte " << i << " as " << data[i] << ", expected "
+                << expected << "\n";
       return false;
     }
   }
@@ -62,12 +63,10 @@ bool read_block(fbl::unique_fd fd, uint32_t block_size, uint32_t offset,
 
 bool write_block(fbl::unique_fd fd, uint32_t block_size, uint32_t offset,
                  uint8_t value) {
-  uint8_t data[kMaxBlockSize];
-  memset(data, value, block_size);
-  errno = 0;
-  ssize_t r = pwrite(fd.get(), data, block_size, offset * block_size);
+  std::vector<uint8_t> data(block_size, value);
+  ssize_t r = pwrite(fd.get(), &data[0], block_size, offset * block_size);
   if (r != block_size) {
-    printf("Failed to write: %d\n", errno);
+    std::cout << "Failed to write: " << strerror(errno) << "\n";
     return false;
   }
   return true;
@@ -94,21 +93,21 @@ static bool parse_number(const char* arg, T* value) {
 //   Writes all bytes of the block at <offset> to <value>.
 bool parse_args(int argc, const char** argv) {
   if (argc < 4) {
-    printf("Wrong number of arguments\n");
+    std::cout << "Wrong number of arguments\n";
     return false;
   }
   uint32_t block_size, block_count;
   if (!parse_number(argv[2], &block_size)) {
-    printf("Failed to parse block size\n");
+    std::cout << "Failed to parse block size\n";
     return false;
   }
   if (!parse_number(argv[3], &block_count)) {
-    printf("Failed to parse block count\n");
+    std::cout << "Failed to parse block count\n";
     return false;
   }
   fbl::unique_fd fd = find_block_device(block_size, block_count);
   if (!fd) {
-    printf("Failed to open block device\n");
+    std::cout << "Failed to open block device\n";
     return false;
   }
   fxl::StringView cmd_view(argv[1]);
@@ -117,36 +116,36 @@ bool parse_args(int argc, const char** argv) {
   } else if (cmd_view == "read" && argc == 6) {
     uint32_t offset;
     if (!parse_number(argv[4], &offset)) {
-      printf("Failed to parse offset\n");
+      std::cout << "Failed to parse offset\n";
       return false;
     }
     uint8_t value;
     if (!parse_number(argv[5], &value)) {
-      printf("Failed to parse read value\n");
+      std::cout << "Failed to parse read value\n";
       return false;
     }
     return read_block(std::move(fd), block_size, offset, value);
   } else if (cmd_view == "write" && argc == 6) {
     uint32_t offset;
     if (!parse_number(argv[4], &offset)) {
-      printf("Failed to parse offset\n");
+      std::cout << "Failed to parse offset\n";
       return false;
     }
     uint8_t value;
     if (!parse_number(argv[5], &value)) {
-      printf("Failed to parse write value\n");
+      std::cout << "Failed to parse write value\n";
       return false;
     }
     return write_block(std::move(fd), block_size, offset, value);
   }
-  printf("Failed to parse arguments\n");
+  std::cout << "Failed to parse arguments\n";
   return false;
 }
 
 int main(int argc, const char** argv) {
   if (parse_args(argc, argv)) {
-    printf("PASS");
+    std::cout << "PASS\n";
   } else {
-    printf("FAIL");
+    std::cout << "FAIL\n";
   }
 }
