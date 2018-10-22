@@ -64,6 +64,7 @@ sdk("garnet") {
     "//zircon/public/fidl/fuchsia-logger:fuchsia-logger_sdk($fidl_toolchain)",
     "//zircon/public/fidl/fuchsia-mem:fuchsia-mem_sdk($fidl_toolchain)",
     "//zircon/public/fidl/fuchsia-process:fuchsia-process_sdk($fidl_toolchain)",
+    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_sdk($fidl_toolchain)",
     "//zircon/public/lib/async:async_sdk",
     "//zircon/public/lib/async-default:async-default_sdk",
     "//zircon/public/lib/async-loop:async-loop_sdk",
