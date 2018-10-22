@@ -42,7 +42,7 @@ TEST_F(UserControllerImplTest, StartUserRunnerWithTokenProviderFactory) {
       CloneStruct(app_config), std::move(token_provider_factory_ptr),
       std::move(ledger_token_manager), std::move(agent_token_manager),
       nullptr /* account */, nullptr /* view_owner_request */,
-      nullptr /* device_shell_services */, user_controller_ptr.NewRequest(),
+      nullptr /* base_shell_services */, user_controller_ptr.NewRequest(),
       nullptr /* done_callback */);
 
   EXPECT_TRUE(callback_called);
@@ -74,7 +74,7 @@ TEST_F(UserControllerImplTest, StartUserRunnerWithTokenManagers) {
       CloneStruct(app_config), std::move(token_provider_factory_ptr),
       std::move(ledger_token_manager_ptr), std::move(agent_token_manager_ptr),
       nullptr /* account */, nullptr /* view_owner_request */,
-      nullptr /* device_shell_services */, user_controller_ptr.NewRequest(),
+      nullptr /* base_shell_services */, user_controller_ptr.NewRequest(),
       nullptr /* done_callback */);
 
   EXPECT_TRUE(callback_called);

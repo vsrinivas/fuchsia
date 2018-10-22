@@ -50,8 +50,7 @@ class UserControllerImpl : fuchsia::modular::UserController,
       fuchsia::modular::auth::AccountPtr account,
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
-      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
-          device_shell_services,
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> base_shell_services,
       fidl::InterfaceRequest<fuchsia::modular::UserController>
           user_controller_request,
       DoneCallback done);
@@ -91,7 +90,7 @@ class UserControllerImpl : fuchsia::modular::UserController,
 
   std::vector<LogoutCallback> logout_response_callbacks_;
 
-  fuchsia::sys::ServiceProviderPtr device_shell_services_;
+  fuchsia::sys::ServiceProviderPtr base_shell_services_;
 
   DoneCallback done_;
 

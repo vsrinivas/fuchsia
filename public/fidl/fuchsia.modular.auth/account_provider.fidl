@@ -62,15 +62,15 @@ interface AccountProviderContext {
     1: GetAuthenticationContext(string account_id, request<AuthenticationContext> request);
 };
 
-// This interface is implemented by device shell. It is used to notify the
-// device shell that a view for login needs to be started or stopped. The device
+// This interface is implemented by base shell. It is used to notify the
+// base shell that a view for login needs to be started or stopped. The base
 // shell can close this connection if it wants to cancel the current
 // authentication flow.
 interface AuthenticationContext {
-    // Requests device shell to display |view_owner| for authentication. No other
+    // Requests base shell to display |view_owner| for authentication. No other
     // call to StartOverlay() must be made until StopOverlay() has been called.
     1: StartOverlay(fuchsia.ui.viewsv1token.ViewOwner view_owner);
 
-    // Requests device shell to stop displaying the auth view.
+    // Requests base shell to stop displaying the auth view.
     2: StopOverlay();
 };

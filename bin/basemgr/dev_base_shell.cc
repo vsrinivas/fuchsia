@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Implementation of the fuchsia::modular::DeviceShell service that passes a
+// Implementation of the fuchsia::modular::BaseShell service that passes a
 // command line configurable user name to its fuchsia::modular::UserProvider,
 // and is able to run a story with a single module through its life cycle.
 
@@ -59,12 +59,11 @@ class Settings {
   bool test{};
 };
 
-class DevDeviceShellApp
-    : modular::SingleServiceApp<fuchsia::modular::DeviceShell>,
-      fuchsia::modular::UserWatcher {
+class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell>,
+                        fuchsia::modular::UserWatcher {
  public:
-  explicit DevDeviceShellApp(component::StartupContext* const startup_context,
-                             Settings settings)
+  explicit DevBaseShellApp(component::StartupContext* const startup_context,
+                           Settings settings)
       : SingleServiceApp(startup_context),
         settings_(std::move(settings)),
         user_watcher_binding_(this),
@@ -72,21 +71,21 @@ class DevDeviceShellApp
     if (settings_.test) {
       testing::Init(this->startup_context(), __FILE__);
       testing::Await(testing::kTestShutdown,
-                     [this] { device_shell_context_->Shutdown(); });
+                     [this] { base_shell_context_->Shutdown(); });
 
       // Start a timer to quit in case a test component misbehaves and hangs.
       async::PostDelayedTask(
           async_get_default_dispatcher(),
           callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                                [this] {
-                                 FXL_LOG(WARNING) << "DevDeviceShell timed out";
-                                 device_shell_context_->Shutdown();
+                                 FXL_LOG(WARNING) << "DevBaseShell timed out";
+                                 base_shell_context_->Shutdown();
                                }),
           zx::msec(settings_.test_timeout_ms));
     }
   }
 
-  ~DevDeviceShellApp() override = default;
+  ~DevBaseShellApp() override = default;
 
   // |SingleServiceApp|
   void Terminate(std::function<void()> done) override {
@@ -108,39 +107,39 @@ class DevDeviceShellApp
     Connect();
   }
 
-  // |fuchsia::modular::DeviceShell|
+  // |fuchsia::modular::BaseShell|
   void Initialize(
-      fidl::InterfaceHandle<fuchsia::modular::DeviceShellContext>
-          device_shell_context,
-      fuchsia::modular::DeviceShellParams device_shell_params) override {
-    device_shell_context_.Bind(std::move(device_shell_context));
-    device_shell_context_->GetUserProvider(user_provider_.NewRequest());
+      fidl::InterfaceHandle<fuchsia::modular::BaseShellContext>
+          base_shell_context,
+      fuchsia::modular::BaseShellParams base_shell_params) override {
+    base_shell_context_.Bind(std::move(base_shell_context));
+    base_shell_context_->GetUserProvider(user_provider_.NewRequest());
 
     Connect();
   }
 
-  // |fuchsia::modular::DeviceShell|
+  // |fuchsia::modular::BaseShell|
   void GetAuthenticationContext(
       fidl::StringPtr /*username*/,
       fidl::InterfaceRequest<
           fuchsia::modular::auth::AuthenticationContext> /*request*/) override {
-    FXL_LOG(INFO) << "fuchsia::modular::DeviceShell::GetAuthenticationContext()"
+    FXL_LOG(INFO) << "fuchsia::modular::BaseShell::GetAuthenticationContext()"
                      " is unimplemented.";
   }
 
-  // |fuchsia::modular::DeviceShell|
+  // |fuchsia::modular::BaseShell|
   void GetAuthenticationUIContext(
       fidl::InterfaceRequest<
           fuchsia::auth::AuthenticationUIContext> /*request*/) override {
     FXL_LOG(INFO)
-        << "fuchsia::modular::DeviceShell::GetAuthenticationUIContext() is"
+        << "fuchsia::modular::BaseShell::GetAuthenticationUIContext() is"
            " unimplemented.";
   }
 
   // |fuchsia::modular::UserWatcher|
   void OnLogout() override {
     FXL_LOG(INFO) << "fuchsia::modular::UserWatcher::OnLogout()";
-    device_shell_context_->Shutdown();
+    base_shell_context_->Shutdown();
   }
 
   void Login(const std::string& account_id) {
@@ -194,11 +193,11 @@ class DevDeviceShellApp
   fidl::Binding<fuchsia::modular::UserWatcher> user_watcher_binding_;
   fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
       view_owner_request_;
-  fuchsia::modular::DeviceShellContextPtr device_shell_context_;
+  fuchsia::modular::BaseShellContextPtr base_shell_context_;
   fuchsia::modular::UserControllerPtr user_controller_;
   fuchsia::modular::UserProviderPtr user_provider_;
-  fxl::WeakPtrFactory<DevDeviceShellApp> weak_ptr_factory_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(DevDeviceShellApp);
+  fxl::WeakPtrFactory<DevBaseShellApp> weak_ptr_factory_;
+  FXL_DISALLOW_COPY_AND_ASSIGN(DevBaseShellApp);
 };
 
 }  // namespace modular
@@ -210,9 +209,9 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   auto context = component::StartupContext::CreateFromStartupInfo();
-  modular::AppDriver<modular::DevDeviceShellApp> driver(
+  modular::AppDriver<modular::DevBaseShellApp> driver(
       context->outgoing().deprecated_services(),
-      std::make_unique<modular::DevDeviceShellApp>(context.get(), settings),
+      std::make_unique<modular::DevBaseShellApp>(context.get(), settings),
       [&loop] { loop.Quit(); });
 
   loop.Run();

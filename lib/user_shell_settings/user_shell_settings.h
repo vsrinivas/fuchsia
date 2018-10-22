@@ -12,7 +12,7 @@
 namespace modular {
 
 // A data structure representing User Shell Settings. See
-// |kDeviceShellConfigJsonPath| in user_shell_settings.cc for the path name and
+// |kBaseShellConfigJsonPath| in user_shell_settings.cc for the path name and
 // JSON that this is intended to represent.
 struct UserShellSettings {
   // Returns the user shell settings for the system. This is guaranteed to be

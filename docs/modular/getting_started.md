@@ -28,12 +28,12 @@ example (from [test runner invocation]):
 
 ```
 basemgr --test --account_provider=dev_token_manager \
-  --device_shell=dev_device_shell --user_shell=dev_user_shell \
+  --base_shell=dev_base_shell --user_shell=dev_user_shell \
   --story_shell=dev_story_shell \
   --user_shell_args=--root_module=parent_child_test_parent_module
 ```
 
-`dev_device_shell` is used to log in a dummy user directly without going through
+`dev_base_shell` is used to log in a dummy user directly without going through
 an authentication dialog. `dev_user_shell` runs the module given to it in
 `--user_shell_args` in a story.
 
@@ -45,9 +45,9 @@ flags. Commas inside the value of such arguments are escaped by backslashes. The
 value of `--root_module` selects the module to run. The value of `--root_link`
 is a JSON representation of the initial data the module is started with.
 
-The user name provided by `dev_device_shell` can be set with `--user`. It is
+The user name provided by `dev_base_shell` can be set with `--user`. It is
 used by `basemgr` when opening the Ledger. However, the `--user` parameter
-does not work for `userpicker_device_shell`, because that shell displays a GUI
+does not work for `userpicker_base_shell`, because that shell displays a GUI
 to select the user to login.
 
 ## Module URLs

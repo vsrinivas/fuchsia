@@ -8,8 +8,8 @@ using fuchsia.modular.auth;
 using fuchsia.ui.viewsv1token;
 using fuchsia.sys;
 
-// Given by the |Basemgr| to the |DeviceShell| at Initialize() so the
-// |DeviceShell| can get information about the users of this device from the
+// Given by the |Basemgr| to the |BaseShell| at Initialize() so the
+// |BaseShell| can get information about the users of this device from the
 // |Basemgr|, and act on the provided information (including extending the
 // user database).
 interface UserProvider {
@@ -53,7 +53,7 @@ struct UserLoginParams {
     // logged-in user.
     request<fuchsia.ui.viewsv1token.ViewOwner> view_owner;
 
-    // Services provided by the |DeviceShell| that can be offered to the
+    // Services provided by the |BaseShell| that can be offered to the
     // |UserShell| that is being logged into.
     fuchsia.sys.ServiceProvider? services;
 
@@ -61,12 +61,11 @@ struct UserLoginParams {
     request<UserController> user_controller;
 
     // Configuration of the user shell to run. It can be NULL which means that
-    // this configuration is picked up from command-line arguments to device
-    // runner.
+    // this configuration is picked up from command-line arguments to basemgr.
     AppConfig? user_shell_config;
 };
 
-// Provided by the |Basemgr| to the |DeviceShell| when it authenticates a
+// Provided by the |Basemgr| to the |BaseShell| when it authenticates a
 // new user. This interface provides control to a logged-in user's life cycle,
 // and the life of this interface is bound to a user being logged in.
 //
@@ -103,7 +102,7 @@ interface UserController {
     3: SwapUserShell(AppConfig user_shell_config) -> ();
 };
 
-// Implemented by a |DeviceShell| implementation in order to receive
+// Implemented by a |BaseShell| implementation in order to receive
 // notification about life cycle changes of a logged in user.
 interface UserWatcher {
     // Called when a user has logged out, either by UserController.Logout() or by

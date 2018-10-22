@@ -28,14 +28,14 @@ UserControllerImpl::UserControllerImpl(
     fuchsia::modular::auth::AccountPtr account,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request,
-    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> device_shell_services,
+    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> base_shell_services,
     fidl::InterfaceRequest<fuchsia::modular::UserController>
         user_controller_request,
     DoneCallback done)
     : user_context_binding_(this),
       user_controller_binding_(this, std::move(user_controller_request)),
-      device_shell_services_(
-          device_shell_services ? device_shell_services.Bind() : nullptr),
+      base_shell_services_(base_shell_services ? base_shell_services.Bind()
+                                               : nullptr),
       done_(std::move(done)) {
   // 0. Generate the path to map '/data' for the user runner we are starting.
   std::string data_origin;
@@ -95,9 +95,9 @@ void UserControllerImpl::Logout(LogoutCallback done) {
 // |UserContext|
 void UserControllerImpl::GetPresentation(
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
-  if (device_shell_services_) {
-    device_shell_services_->ConnectToService(kPresentationService,
-                                             request.TakeChannel());
+  if (base_shell_services_) {
+    base_shell_services_->ConnectToService(kPresentationService,
+                                           request.TakeChannel());
   }
 }
 

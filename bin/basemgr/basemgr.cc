@@ -46,8 +46,8 @@ namespace {
 class Settings {
  public:
   explicit Settings(const fxl::CommandLine& command_line) {
-    device_shell.url = command_line.GetOptionValueWithDefault(
-        "device_shell", "userpicker_device_shell");
+    base_shell.url = command_line.GetOptionValueWithDefault(
+        "base_shell", "userpicker_base_shell");
     story_shell.url =
         command_line.GetOptionValueWithDefault("story_shell", "mondrian");
     user_runner.url =
@@ -66,8 +66,8 @@ class Settings {
         command_line.HasOption("enable_garnet_token_manager");
 
     ParseShellArgs(
-        command_line.GetOptionValueWithDefault("device_shell_args", ""),
-        &device_shell.args);
+        command_line.GetOptionValueWithDefault("base_shell_args", ""),
+        &base_shell.args);
 
     ParseShellArgs(
         command_line.GetOptionValueWithDefault("story_shell_args", ""),
@@ -82,7 +82,7 @@ class Settings {
         &user_shell.args);
 
     if (test) {
-      device_shell.args.push_back("--test");
+      base_shell.args.push_back("--test");
       story_shell.args.push_back("--test");
       user_runner.args.push_back("--test");
       user_shell.args.push_back("--test");
@@ -95,8 +95,8 @@ class Settings {
 
   static std::string GetUsage() {
     return R"USAGE(basemgr
-      --device_shell=DEVICE_SHELL
-      --device_shell_args=SHELL_ARGS
+      --base_shell=BASE_SHELL
+      --base_shell_args=SHELL_ARGS
       --user_shell=USER_SHELL
       --user_shell_args=SHELL_ARGS
       --story_shell=STORY_SHELL
@@ -109,9 +109,9 @@ class Settings {
       --enable_presenter
       --enable_garnet_token_manager
     DEVICE_NAME: Name which user shell uses to identify this device.
-    DEVICE_SHELL: URL of the device shell to run.
-                Defaults to "userpicker_device_shell".
-                For integration testing use "dev_device_shell".
+    BASE_SHELL:  URL of the base shell to run.
+                Defaults to "userpicker_base_shell".
+                For integration testing use "dev_base_shell".
     USER_RUNNER: URL of the user runner to run.
                 Defaults to "user_runner".
     USER_SHELL: URL of the user shell to run.
@@ -126,7 +126,7 @@ class Settings {
                 For integration tests use "dev_token_manager".)USAGE";
   }
 
-  fuchsia::modular::AppConfig device_shell;
+  fuchsia::modular::AppConfig base_shell;
   fuchsia::modular::AppConfig story_shell;
   fuchsia::modular::AppConfig user_runner;
   fuchsia::modular::AppConfig user_shell;
@@ -199,7 +199,7 @@ class Settings {
 
 }  // namespace
 
-class BasemgrApp : fuchsia::modular::DeviceShellContext,
+class BasemgrApp : fuchsia::modular::BaseShellContext,
                    fuchsia::auth::AuthenticationContextProvider,
                    fuchsia::modular::auth::AccountProviderContext,
                    fuchsia::ui::policy::KeyboardCaptureListenerHACK,
@@ -212,7 +212,7 @@ class BasemgrApp : fuchsia::modular::DeviceShellContext,
         user_provider_impl_("UserProviderImpl"),
         context_(std::move(context)),
         on_shutdown_(std::move(on_shutdown)),
-        device_shell_context_binding_(this),
+        base_shell_context_binding_(this),
         account_provider_context_binding_(this),
         authentication_context_provider_binding_(this) {
     if (!context_->has_environment_services()) {
@@ -269,52 +269,51 @@ class BasemgrApp : fuchsia::modular::DeviceShellContext,
     SetShadowTechnique(presentation_state_.shadow_technique);
   }
 
-  void StartDeviceShell() {
-    if (device_shell_running_) {
-      FXL_DLOG(INFO) << "StartDeviceShell() called when already running";
+  void StartBaseShell() {
+    if (base_shell_running_) {
+      FXL_DLOG(INFO) << "StartBaseShell() called when already running";
 
       return;
     }
 
-    device_shell_app_ =
-        std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-            context_->launcher().get(), CloneStruct(settings_.device_shell));
-    device_shell_app_->services().ConnectToService(device_shell_.NewRequest());
+    base_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+        context_->launcher().get(), CloneStruct(settings_.base_shell));
+    base_shell_app_->services().ConnectToService(base_shell_.NewRequest());
 
-    fuchsia::ui::viewsv1::ViewProviderPtr device_shell_view_provider;
-    device_shell_app_->services().ConnectToService(
-        device_shell_view_provider.NewRequest());
+    fuchsia::ui::viewsv1::ViewProviderPtr base_shell_view_provider;
+    base_shell_app_->services().ConnectToService(
+        base_shell_view_provider.NewRequest());
 
-    // We still need to pass a request for root view to device shell since
-    // dev_device_shell (which mimics flutter behavior) blocks until it receives
+    // We still need to pass a request for root view to base shell since
+    // dev_base_shell (which mimics flutter behavior) blocks until it receives
     // the root view request.
     fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> root_view;
-    device_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
+    base_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
 
     InitializePresentation(std::move(root_view));
 
-    // Populate parameters and initialize the device shell.
-    fuchsia::modular::DeviceShellParams params;
+    // Populate parameters and initialize the base shell.
+    fuchsia::modular::BaseShellParams params;
     params.presentation = std::move(presentation_state_.presentation);
-    device_shell_->Initialize(device_shell_context_binding_.NewBinding(),
-                              std::move(params));
+    base_shell_->Initialize(base_shell_context_binding_.NewBinding(),
+                            std::move(params));
 
-    device_shell_running_ = true;
+    base_shell_running_ = true;
   }
 
-  FuturePtr<> StopDeviceShell() {
-    if (!device_shell_running_) {
-      FXL_DLOG(INFO) << "StopDeviceShell() called when already stopped";
+  FuturePtr<> StopBaseShell() {
+    if (!base_shell_running_) {
+      FXL_DLOG(INFO) << "StopBaseShell() called when already stopped";
 
-      return Future<>::CreateCompleted("StopDeviceShell::Completed");
+      return Future<>::CreateCompleted("StopBaseShell::Completed");
     }
 
-    auto did_stop = Future<>::Create("StopDeviceShell");
+    auto did_stop = Future<>::Create("StopBaseShell");
 
-    device_shell_app_->Teardown(kBasicTimeout, [did_stop, this] {
-      FXL_DLOG(INFO) << "- fuchsia::modular::DeviceShell down";
+    base_shell_app_->Teardown(kBasicTimeout, [did_stop, this] {
+      FXL_DLOG(INFO) << "- fuchsia::modular::BaseShell down";
 
-      device_shell_running_ = false;
+      base_shell_running_ = false;
       did_stop->Complete();
     });
 
@@ -372,9 +371,9 @@ class BasemgrApp : fuchsia::modular::DeviceShellContext,
           << std::endl;
     }
 
-    // Start the device shell. This is done first so that we can show some UI
+    // Start the base shell. This is done first so that we can show some UI
     // until other things come up.
-    StartDeviceShell();
+    StartBaseShell();
 
     // Wait for persistent data to come up.
     if (!settings_.no_minfs) {
@@ -414,21 +413,21 @@ class BasemgrApp : fuchsia::modular::DeviceShellContext,
     ReportEvent(ModularEvent::BOOTED_TO_BASEMGR);
   }
 
-  // |fuchsia::modular::DeviceShellContext|
+  // |fuchsia::modular::BaseShellContext|
   void GetUserProvider(
       fidl::InterfaceRequest<fuchsia::modular::UserProvider> request) override {
     user_provider_impl_->Connect(std::move(request));
   }
 
-  // |fuchsia::modular::DeviceShellContext|
+  // |fuchsia::modular::BaseShellContext|
   void Shutdown() override {
     // TODO(mesch): Some of these could be done in parallel too.
     // fuchsia::modular::UserProvider must go first, but the order after user
-    // provider is for now rather arbitrary. We terminate device shell last so
+    // provider is for now rather arbitrary. We terminate base shell last so
     // that in tests testing::Teardown() is invoked at the latest possible time.
     // Right now it just demonstrates that AppTerminate() works as we like it
     // to.
-    FXL_DLOG(INFO) << "fuchsia::modular::DeviceShellContext::Shutdown()";
+    FXL_DLOG(INFO) << "fuchsia::modular::BaseShellContext::Shutdown()";
 
     if (settings_.test) {
       FXL_LOG(INFO)
@@ -444,7 +443,7 @@ class BasemgrApp : fuchsia::modular::DeviceShellContext,
         FXL_DLOG(INFO) << "- fuchsia::modular::auth::AccountProvider down";
         StopTokenManagerFactoryApp()->Then([this] {
           FXL_DLOG(INFO) << "- fuchsia::auth::TokenManagerFactory down";
-          StopDeviceShell()->Then([this] {
+          StopBaseShell()->Then([this] {
             FXL_LOG(INFO) << "Clean Shutdown";
             on_shutdown_();
           });
@@ -459,10 +458,10 @@ class BasemgrApp : fuchsia::modular::DeviceShellContext,
       fidl::InterfaceRequest<fuchsia::modular::auth::AuthenticationContext>
           request) override {
     // TODO(MI4-1107): Basemgr needs to implement AuthenticationContext
-    // itself, and proxy calls for StartOverlay & StopOverlay to DeviceShell,
+    // itself, and proxy calls for StartOverlay & StopOverlay to BaseShell,
     // starting it if it's not running yet.
-    FXL_CHECK(device_shell_);
-    device_shell_->GetAuthenticationContext(account_id, std::move(request));
+    FXL_CHECK(base_shell_);
+    base_shell_->GetAuthenticationContext(account_id, std::move(request));
   }
 
   // |AuthenticationContextProvider|
@@ -470,10 +469,10 @@ class BasemgrApp : fuchsia::modular::DeviceShellContext,
       fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request)
       override {
     // TODO(MI4-1107): Basemgr needs to implement AuthenticationUIContext
-    // itself, and proxy calls for StartOverlay & StopOverlay to DeviceShell,
+    // itself, and proxy calls for StartOverlay & StopOverlay to BaseShell,
     // starting it if it's not running yet.
-    FXL_CHECK(device_shell_);
-    device_shell_->GetAuthenticationUIContext(std::move(request));
+    FXL_CHECK(base_shell_);
+    base_shell_->GetAuthenticationUIContext(std::move(request));
   }
 
   // |UserProviderImpl::Delegate|
@@ -481,16 +480,16 @@ class BasemgrApp : fuchsia::modular::DeviceShellContext,
     // Continues if `enable_presenter` is set to true during testing, as
     // ownership of the Presenter should still be moved to the user shell.
     if (settings_.test && !settings_.enable_presenter) {
-      // TODO(MI4-1117): Integration tests currently expect device shell to
+      // TODO(MI4-1117): Integration tests currently expect base shell to
       // always be running. So, if we're running under a test, do not shut down
-      // the device shell after login.
+      // the base shell after login.
       return;
     }
 
-    // TODO(MI4-1117): See above. The device shell shouldn't be shut down.
+    // TODO(MI4-1117): See above. The base shell shouldn't be shut down.
     if (!settings_.test) {
-      FXL_DLOG(INFO) << "Stopping device shell due to login";
-      StopDeviceShell();
+      FXL_DLOG(INFO) << "Stopping base shell due to login";
+      StopBaseShell();
     }
 
     InitializePresentation(user_shell_view_owner_);
@@ -509,16 +508,16 @@ class BasemgrApp : fuchsia::modular::DeviceShellContext,
   // |UserProviderImpl::Delegate|
   void DidLogout() override {
     if (settings_.test) {
-      // TODO(MI4-1117): Integration tests currently expect device shell to
+      // TODO(MI4-1117): Integration tests currently expect base shell to
       // always be running. So, if we're running under a test, DidLogin() will
-      // not shut down the device shell after login; thus this method doesn't
-      // need to re-start the device shell after a logout.
+      // not shut down the base shell after login; thus this method doesn't
+      // need to re-start the base shell after a logout.
       return;
     }
 
-    FXL_DLOG(INFO) << "Re-starting device shell due to logout";
+    FXL_DLOG(INFO) << "Re-starting base shell due to logout";
 
-    StartDeviceShell();
+    StartBaseShell();
   }
 
   // |UserProviderImpl::Delegate|
@@ -681,8 +680,7 @@ class BasemgrApp : fuchsia::modular::DeviceShellContext,
   fuchsia::modular::BasemgrMonitorPtr monitor_;
   std::function<void()> on_shutdown_;
 
-  fidl::Binding<fuchsia::modular::DeviceShellContext>
-      device_shell_context_binding_;
+  fidl::Binding<fuchsia::modular::BaseShellContext> base_shell_context_binding_;
   fidl::Binding<fuchsia::modular::auth::AccountProviderContext>
       account_provider_context_binding_;
   fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
@@ -694,9 +692,9 @@ class BasemgrApp : fuchsia::modular::DeviceShellContext,
       token_manager_factory_app_;
   fuchsia::auth::TokenManagerFactoryPtr token_manager_factory_;
 
-  bool device_shell_running_{};
-  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> device_shell_app_;
-  fuchsia::modular::DeviceShellPtr device_shell_;
+  bool base_shell_running_{};
+  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> base_shell_app_;
+  fuchsia::modular::BaseShellPtr base_shell_;
 
   fidl::BindingSet<fuchsia::ui::policy::KeyboardCaptureListenerHACK>
       keyboard_capture_listener_bindings_;

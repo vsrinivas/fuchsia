@@ -13,7 +13,7 @@ namespace modular {
 constexpr char kRootModuleName[] = "root";
 
 // The service name of the Presentation service that is routed between
-// DeviceShell and UserShell. The same service exchange between UserShell and
+// BaseShell and UserShell. The same service exchange between UserShell and
 // StoryShell uses the UserShellPresentationProvider service, which is
 // discoverable.
 // TODO(SCN-595): mozart.Presentation is being renamed to ui.Presenter.

@@ -38,7 +38,7 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
     // Enables the delegate to intercept the user shell's view owner, so that
     // e.g. the delegate can embed it in a parent view or present it.
     // |default_view_owner| is the view owner request that's passed to
-    // UserProviderImpl from device shell. If you don't need to intercept the
+    // UserProviderImpl from base shell. If you don't need to intercept the
     // view owner, return it without modifying it.
     virtual fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
     GetUserShellViewOwner(
@@ -47,7 +47,7 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
 
     // Enables the delegate to supply a different service provider to the user
     // shell. |default_service_provider| is the service provider passed to the
-    // user shell by the device shell. If you don't need to replace it, return
+    // user shell by the base shell. If you don't need to replace it, return
     // it without modifying it.
     virtual fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
     GetUserShellServiceProvider(

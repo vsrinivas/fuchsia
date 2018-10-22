@@ -30,7 +30,7 @@
 #    - _module -- Module
 #    - _agent -- Agent
 #    - _user_shell -- UserShell
-#    - _device_shell -- DeviceShell
+#    - _base_shell -- BaseShell
 #    - _story_shell -- StoryShell
 #    - _service -- FIDL interfaces
 #

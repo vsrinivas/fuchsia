@@ -15,8 +15,8 @@ namespace modular {
 
 namespace {
 
-constexpr char kDeviceShellConfigJsonPath[] =
-    "/system/data/sysui/device_shell_config.json";
+constexpr char kBaseShellConfigJsonPath[] =
+    "/system/data/sysui/base_shell_config.json";
 std::vector<UserShellSettings>* g_system_settings;
 
 }  // namespace
@@ -80,7 +80,7 @@ fuchsia::ui::policy::DisplayUsage GetObjectValue(const rapidjson::Value& object,
   }
 
   // Keep in sync with
-  // <https://fuchsia.googlesource.com/topaz/+/master/lib/device_shell/lib/user_shell_chooser.dart#64>.
+  // <https://fuchsia.googlesource.com/topaz/+/master/lib/base_shell/lib/user_shell_chooser.dart#64>.
   if (str == "handheld") {
     return fuchsia::ui::policy::DisplayUsage::kHandheld;
   } else if (str == "close") {
@@ -99,7 +99,7 @@ fuchsia::ui::policy::DisplayUsage GetObjectValue(const rapidjson::Value& object,
 
 // Given a |json| string, parses it into list of user shell settings.
 std::vector<UserShellSettings> ParseUserShellSettings(const std::string& json) {
-  // TODO(MI4-1166): topaz/lib/device_shell/lib/user_shell_chooser.dart is a
+  // TODO(MI4-1166): topaz/lib/base_shell/lib/user_shell_chooser.dart is a
   // similar implementation of this in Dart. One of the two implementations
   // could probably be removed now.
 
@@ -159,8 +159,8 @@ const std::vector<UserShellSettings>& UserShellSettings::GetSystemSettings() {
   g_system_settings = new std::vector<UserShellSettings>;
 
   std::string json;
-  if (!files::ReadFileToString(kDeviceShellConfigJsonPath, &json)) {
-    FXL_LOG(ERROR) << kDeviceShellConfigJsonPath << ": read failed";
+  if (!files::ReadFileToString(kBaseShellConfigJsonPath, &json)) {
+    FXL_LOG(ERROR) << kBaseShellConfigJsonPath << ": read failed";
 
     return *g_system_settings;
   }
