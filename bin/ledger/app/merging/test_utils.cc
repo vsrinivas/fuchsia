@@ -90,14 +90,17 @@ TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
 
 ::testing::AssertionResult TestWithPageStorage::CreatePageStorage(
     std::unique_ptr<storage::PageStorage>* page_storage) {
-  // TODO(nellyv): Initialize db when initialization is not longer done in
-  // PageStorage.
   auto db = std::make_unique<storage::LevelDb>(environment_.dispatcher(),
                                                DetachedPath(tmpfs_.root_fd()));
+  storage::Status status = db->Init();
+  if (status != storage::Status::OK) {
+    return ::testing::AssertionFailure()
+           << "LevelDb::Init failed with status " << status;
+  }
   auto local_page_storage = std::make_unique<storage::PageStorageImpl>(
       &environment_, &encryption_service_, std::move(db),
       kRootPageId.ToString());
-  storage::Status status;
+
   bool called;
   local_page_storage->Init(
       callback::Capture(callback::SetWhenCalled(&called), &status));

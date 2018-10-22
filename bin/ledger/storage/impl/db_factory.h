@@ -18,13 +18,15 @@ class DbFactory {
   DbFactory() {}
   virtual ~DbFactory() {}
 
-  // Creates a new instance of LevelDb in the given |db_path|.
+  // Creates and returns through the callback a new, initialized instance of
+  // LevelDb in the given |db_path|.
   // TODO(nellyv): Change LevelDb to Db.
   virtual void CreateDb(
       ledger::DetachedPath db_path,
       fit::function<void(Status, std::unique_ptr<LevelDb>)> callback) = 0;
 
-  // Opens and returns an existing instance of LevelDb in the given |db_path|.
+  // Opens and returns an initialized, existing instance of LevelDb in the given
+  // |db_path|.
   // TODO(nellyv): Change LevelDb to Db.
   virtual void GetDb(
       ledger::DetachedPath db_path,

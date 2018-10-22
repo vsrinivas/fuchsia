@@ -1033,15 +1033,9 @@ void PageStorageImpl::FillBufferWithObjectContent(
 }
 
 Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
-  // Initialize PageDb.
-  Status s = db_->Init(handler);
-  if (s != Status::OK) {
-    return s;
-  }
-
   // Add the default page head if this page is empty.
   std::vector<CommitId> heads;
-  s = db_->GetHeads(handler, &heads);
+  Status s = db_->GetHeads(handler, &heads);
   if (s != Status::OK) {
     return s;
   }

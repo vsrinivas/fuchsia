@@ -256,7 +256,7 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   DiskCleanupManagerImpl* disk_cleanup_manager_ptr = disk_cleanup_manager.get();
   auto repository = std::make_unique<LedgerRepositoryImpl>(
       repository_information.content_path, environment_,
-      std::make_unique<storage::LevelDbFactory>(environment_->dispatcher()),
+      std::make_unique<storage::LevelDbFactory>(environment_),
       std::move(watchers), std::move(user_sync),
       std::move(disk_cleanup_manager), disk_cleanup_manager_ptr);
   disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());

@@ -27,6 +27,12 @@ class FakeDbFactory : public DbFactory {
       fit::function<void(Status, std::unique_ptr<LevelDb>)> callback) override;
 
  private:
+  // Creates a new instance of LevelDb in the given |db_path|, initializes it
+  // and then returns it through the |callback|.
+  void CreateInitializedDb(
+      ledger::DetachedPath db_path,
+      fit::function<void(Status, std::unique_ptr<LevelDb>)> callback);
+
   async_dispatcher_t* dispatcher_;
 };
 

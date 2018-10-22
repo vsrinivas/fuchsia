@@ -9,9 +9,6 @@
 #include <string>
 #include <vector>
 
-#include <lib/async/dispatcher.h>
-#include <lib/fxl/memory/ref_ptr.h>
-
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
@@ -29,7 +26,6 @@ class PageDbImpl : public PageDb {
   PageDbImpl(ledger::Environment* environment, std::unique_ptr<LevelDb> db);
   ~PageDbImpl() override;
 
-  Status Init(coroutine::CoroutineHandler* handler) override;
   Status StartBatch(coroutine::CoroutineHandler* handler,
                     std::unique_ptr<PageDb::Batch>* batch) override;
   Status GetHeads(coroutine::CoroutineHandler* handler,
@@ -108,11 +104,6 @@ class PageDbImpl : public PageDb {
   Status MarkPageOnline(coroutine::CoroutineHandler* handler) override;
 
  private:
-  struct DbInitializationState;
-
-  void InitOnIOThread(fxl::RefPtr<DbInitializationState> initialization_state,
-                      fit::function<void(Status)> callback);
-
   ledger::Environment* environment_;
   std::unique_ptr<LevelDb> db_;
 };

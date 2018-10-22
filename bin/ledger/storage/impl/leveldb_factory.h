@@ -9,17 +9,24 @@
 
 #include <memory>
 
+#include "peridot/bin/ledger/coroutine/coroutine_manager.h"
+#include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
 #include "peridot/bin/ledger/storage/impl/leveldb.h"
 
 namespace storage {
 
 // A factory for LevelDb instances.
-// TODO(LE-617): Update API to return pre-cached, initialized LevelDb instances.
+//
+// When creating new LevelDb instances, using either |CreateDb| or |GetDb|, the
+// caller should make sure that there is no live LevelDb instance for the same
+// path.
 class LevelDbFactory : public DbFactory {
  public:
-  explicit LevelDbFactory(async_dispatcher_t* dispatcher);
+  explicit LevelDbFactory(ledger::Environment* environment);
 
+  // TODO(LE-617): Update implementation to return pre-cached, LevelDb
+  // instances.
   void CreateDb(
       ledger::DetachedPath db_path,
       fit::function<void(Status, std::unique_ptr<LevelDb>)> callback) override;
@@ -29,7 +36,26 @@ class LevelDbFactory : public DbFactory {
       fit::function<void(Status, std::unique_ptr<LevelDb>)> callback) override;
 
  private:
-  async_dispatcher_t* dispatcher_;
+  struct DbInitializationState;
+
+  // Creates a new instance of LevelDb in the given |db_path|, initializes it
+  // in the I/O thread and then returns it through the |callback|.
+  void CreateInitializedDb(
+      ledger::DetachedPath db_path,
+      fit::function<void(Status, std::unique_ptr<LevelDb>)> callback);
+
+  // Creates and initializes a new LevelDb instance. This method should be
+  // called from the I/O thread. When initialization is complete, it makes sure
+  // to call the |callback| with the computed result from the main thread.
+  void InitOnIOThread(
+      ledger::DetachedPath db_path,
+      fxl::RefPtr<DbInitializationState> initialization_state,
+      fit::function<void(Status, std::unique_ptr<LevelDb>)> callback);
+
+  ledger::Environment* environment_;
+  coroutine::CoroutineManager coroutine_manager_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(LevelDbFactory);
 };
 
 }  // namespace storage

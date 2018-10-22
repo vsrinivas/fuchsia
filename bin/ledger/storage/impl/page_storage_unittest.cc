@@ -148,7 +148,6 @@ class FakePageDbImpl : public PageDbEmptyImpl {
  public:
   FakePageDbImpl(rng::Random* random) : random_(random) {}
 
-  Status Init(CoroutineHandler* /*handler*/) override { return Status::OK; }
   Status CreateJournalId(CoroutineHandler* /*handler*/,
                          JournalType /*journal_type*/, const CommitId& /*base*/,
                          JournalId* journal_id) override {
@@ -182,11 +181,11 @@ class PageStorageTest : public ledger::TestWithEnvironment {
     }
     tmpfs_ = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
     PageId id = RandomString(environment_.random(), 10);
+    auto db = std::make_unique<LevelDb>(
+        dispatcher(), ledger::DetachedPath(tmpfs_->root_fd()));
+    ASSERT_EQ(Status::OK, db->Init());
     storage_ = std::make_unique<PageStorageImpl>(
-        &environment_, &encryption_service_,
-        std::make_unique<LevelDb>(dispatcher(),
-                                  ledger::DetachedPath(tmpfs_->root_fd())),
-        id);
+        &environment_, &encryption_service_, std::move(db), id);
 
     bool called;
     Status status;

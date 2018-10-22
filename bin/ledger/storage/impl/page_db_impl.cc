@@ -8,8 +8,6 @@
 #include <mutex>
 #include <string>
 
-#include <lib/async/cpp/task.h>
-#include <lib/fxl/memory/ref_counted.h>
 #include <lib/fxl/strings/concatenate.h>
 
 #include "peridot/bin/ledger/storage/impl/data_serialization.h"
@@ -118,20 +116,6 @@ class JournalEntryIterator final : public Iterator<const EntryChange> {
 
 }  // namespace
 
-struct PageDbImpl::DbInitializationState
-    : public fxl::RefCountedThreadSafe<PageDbImpl::DbInitializationState> {
- public:
-  bool cancelled = false;
-  std::mutex mutex;
-
- private:
-  FRIEND_REF_COUNTED_THREAD_SAFE(DbInitializationState);
-  FRIEND_MAKE_REF_COUNTED(DbInitializationState);
-
-  DbInitializationState() {}
-  ~DbInitializationState() {}
-};
-
 PageDbImpl::PageDbImpl(ledger::Environment* environment,
                        std::unique_ptr<LevelDb> db)
     : environment_(environment), db_(std::move(db)) {
@@ -140,43 +124,6 @@ PageDbImpl::PageDbImpl(ledger::Environment* environment,
 }
 
 PageDbImpl::~PageDbImpl() {}
-
-Status PageDbImpl::Init(coroutine::CoroutineHandler* handler) {
-  auto db_initialization_state = fxl::MakeRefCounted<DbInitializationState>();
-  Status status;
-  if (coroutine::SyncCall(
-          handler,
-          [&](fit::function<void(Status)> callback) {
-            async::PostTask(environment_->io_dispatcher(),
-                            [this, db_initialization_state,
-                             callback = std::move(callback)]() mutable {
-                              InitOnIOThread(std::move(db_initialization_state),
-                                             std::move(callback));
-                            });
-          },
-          &status) == coroutine::ContinuationStatus::OK) {
-    // The coroutine returned normally, the initialization was done completely
-    // on the IO thread, return normally.
-    return status;
-  }
-  // The coroutine is interrupted, but the initialization has been posted on the
-  // io thread. The lock must be acquired and |cancelled| must be set to |true|.
-  //
-  // There are 3 cases to consider:
-  // 1. The lock is acquired before |InitOnIOThread| is called. |cancelled| will
-  //    be set to |true| and when |InitOnIOThread| is executed, it will return
-  //    early.
-  // 2. The lock is acquired after |InitOnIOThread| is executed.
-  //    |InitOnIOThread| will not be called again, and there is no concurrency
-  //    issue anymore.
-  // 3. The lock is tentatively acquired while |InitOnIOThread| is run. Because
-  //    |InitOnIOThread| is guarded by the same mutex, this will block until
-  //    |InitOnIOThread| is executed, and the case is the same as 2.
-
-  std::lock_guard<std::mutex> guard(db_initialization_state->mutex);
-  db_initialization_state->cancelled = true;
-  return Status::INTERRUPTED;
-}
 
 Status PageDbImpl::StartBatch(coroutine::CoroutineHandler* handler,
                               std::unique_ptr<Batch>* batch) {
@@ -472,19 +419,6 @@ Status PageDbImpl::MarkPageOnline(coroutine::CoroutineHandler* handler) {
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(batch->MarkPageOnline(handler));
   return batch->Execute(handler);
-}
-
-void PageDbImpl::InitOnIOThread(
-    fxl::RefPtr<DbInitializationState> initialization_state,
-    fit::function<void(Status)> callback) {
-  std::lock_guard<std::mutex> guard(initialization_state->mutex);
-  if (initialization_state->cancelled) {
-    return;
-  }
-  Status status = db_->Init();
-  async::PostTask(
-      environment_->dispatcher(),
-      [status, callback = std::move(callback)] { callback(status); });
 }
 
 }  // namespace storage

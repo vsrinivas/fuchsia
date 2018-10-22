@@ -41,18 +41,23 @@ void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
   }
 }
 
+std::unique_ptr<LevelDb> GetLevelDb(async_dispatcher_t* dispatcher,
+                                    ledger::DetachedPath db_path) {
+  auto db = std::make_unique<LevelDb>(dispatcher, std::move(db_path));
+  EXPECT_EQ(Status::OK, db->Init());
+  return db;
+}
+
 class PageDbTest : public ledger::TestWithEnvironment {
  public:
   PageDbTest()
       : encryption_service_(dispatcher()),
         base_path(tmpfs_.root_fd()),
         page_storage_(&environment_, &encryption_service_,
-                      std::make_unique<LevelDb>(dispatcher(),
-                                                base_path.SubPath("storage")),
+                      GetLevelDb(dispatcher(), base_path.SubPath("storage")),
                       "page_id"),
         page_db_(&environment_,
-                 std::make_unique<LevelDb>(dispatcher(),
-                                           base_path.SubPath("page_db"))) {}
+                 GetLevelDb(dispatcher(), base_path.SubPath("page_db"))) {}
 
   ~PageDbTest() override {}
 
@@ -67,10 +72,6 @@ class PageDbTest : public ledger::TestWithEnvironment {
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(Status::OK, status);
-
-    RunInCoroutine([&](CoroutineHandler* handler) {
-      ASSERT_EQ(Status::OK, page_db_.Init(handler));
-    });
   }
 
  protected:
