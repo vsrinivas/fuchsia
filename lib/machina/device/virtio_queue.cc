@@ -74,9 +74,6 @@ zx_status_t VirtioQueue::NextAvailLocked(uint16_t* index) {
 }
 
 bool VirtioQueue::HasAvailLocked() const {
-  if (ring_.avail == nullptr) {
-    return false;
-  }
   return ring_.avail->idx != ring_.index;
 }
 
