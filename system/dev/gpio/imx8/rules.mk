@@ -4,12 +4,13 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MODULE := $(LOCAL_DIR)
+MODULE := $(LOCAL_DIR).m
 
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/imx8-gpio.c \
+    $(LOCAL_DIR)/imx8m-gpio.c \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
