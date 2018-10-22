@@ -26,7 +26,6 @@
 namespace devmgr {
 
 typedef struct dc_watcher watcher_t;
-typedef struct dc_iostate iostate_t;
 
 struct dc_watcher {
     watcher_t* next;
@@ -69,15 +68,17 @@ struct dc_devnode {
 };
 
 struct dc_iostate {
-    port_handler_t ph;
+    dc_iostate() = default;
+
+    port_handler_t ph = {};
 
     // entry in our devnode's iostate list
-    list_node_t node;
+    list_node_t node = {};
 
     // pointer to our devnode, nullptr if it has been removed
-    devnode_t* devnode;
+    devnode_t* devnode = nullptr;
 
-    uint64_t readdir_ino;
+    uint64_t readdir_ino = 0;
 };
 
 extern port_t dc_port;
@@ -150,11 +151,10 @@ void describe_error(zx_handle_t h, zx_status_t status) {
 }
 
 static zx_status_t iostate_create(devnode_t* dn, zx_handle_t h) {
-    iostate_t* ios = static_cast<iostate_t*>(calloc(1, sizeof(iostate_t)));
+    auto ios = fbl::make_unique<dc_iostate>();
     if (ios == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
-    new (ios) iostate_t;
 
     ios->ph.handle = h;
     ios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
@@ -163,21 +163,22 @@ static zx_status_t iostate_create(devnode_t* dn, zx_handle_t h) {
     list_add_tail(&dn->iostate, &ios->node);
 
     zx_status_t r;
-    if ((r = port_wait(&dc_port, &ios->ph)) < 0) {
+    if ((r = port_wait(&dc_port, &ios->ph)) != ZX_OK) {
         list_delete(&ios->node);
-        free(ios);
     }
+    // dc_port now owns |ios|
+    __UNUSED auto ptr = ios.release();
     return r;
 }
 
-static void iostate_destroy(iostate_t* ios) {
+static void iostate_destroy(dc_iostate* ios) {
     if (ios->devnode) {
         list_delete(&ios->node);
         ios->devnode = nullptr;
     }
     zx_handle_close(ios->ph.handle);
     ios->ph.handle = ZX_HANDLE_INVALID;
-    free(ios);
+    delete ios;
 }
 
 // A devnode is a directory (from stat's perspective) if
@@ -395,8 +396,8 @@ static void _devfs_remove(devnode_t* dn) {
     }
 
     // detach all connected iostates
-    iostate_t* ios;
-    list_for_every_entry(&dn->iostate, ios, iostate_t, node) {
+    dc_iostate* ios;
+    list_for_every_entry(&dn->iostate, ios, dc_iostate, node) {
         ios->devnode = nullptr;
         zx_handle_close(ios->ph.handle);
         ios->ph.handle = ZX_HANDLE_INVALID;
@@ -638,7 +639,7 @@ static zx_status_t devfs_readdir(devnode_t* dn, uint64_t* _ino, void* data, size
 
 
 static zx_status_t devfs_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie) {
-    auto ios = static_cast<iostate_t*>(cookie);
+    auto ios = static_cast<dc_iostate*>(cookie);
     devnode_t* dn = ios->devnode;
     if (dn == nullptr) {
         return ZX_ERR_PEER_CLOSED;
@@ -749,7 +750,7 @@ static zx_status_t devfs_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* co
 }
 
 static zx_status_t dc_fidl_handler(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    iostate_t* ios = containerof(ph, iostate_t, ph);
+    dc_iostate* ios = containerof(ph, dc_iostate, ph);
 
     zx_status_t r;
     if (signals & ZX_CHANNEL_READABLE) {
