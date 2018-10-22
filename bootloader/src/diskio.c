@@ -332,7 +332,7 @@ void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* _sz) {
     }
 
     if (identify_image(image, sz) != IMAGE_COMBO) {
-        printf("ZIRCON parition has no valid image\n");
+        printf("ZIRCON partition has no valid image\n");
         goto fail1;
     }
 
