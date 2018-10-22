@@ -9,7 +9,7 @@
 #include "garnet/bin/guest/vmm/device/device_base.h"
 #include "garnet/bin/guest/vmm/device/stream_base.h"
 
-// Per Virtio 1.0 Section 5.5.6, This value is historical, and independent
+// From Virtio 1.0, Section 5.5.6: This value is historical, and independent
 // of the guest page size.
 static constexpr uint32_t kPageSize = 4096;
 
@@ -39,7 +39,7 @@ class BalloonStream : public StreamBase {
   }
 
  private:
-  // Handle balloon inflate/deflate requests. From VIRTIO 1.0 Section 5.5.6:
+  // Handle balloon inflate/deflate requests. From Virtio 1.0, Section 5.5.6:
   //
   // To supply memory to the balloon (aka. inflate):
   //  (a) The driver constructs an array of addresses of unused memory pages.

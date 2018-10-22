@@ -4,7 +4,6 @@
 
 #include "garnet/lib/machina/virtio_console.h"
 
-#include <lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
 
 namespace machina {
@@ -16,7 +15,6 @@ VirtioConsole::VirtioConsole(const PhysMem& phys_mem)
           phys_mem, 0 /* device_features */,
           fit::bind_member(this, &VirtioConsole::ConfigureQueue),
           fit::bind_member(this, &VirtioConsole::Ready)) {
-  std::lock_guard<std::mutex> lock(device_config_.mutex);
   config_.max_nr_ports = kVirtioConsoleMaxNumPorts;
 }
 

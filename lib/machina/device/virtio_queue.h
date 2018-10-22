@@ -204,6 +204,8 @@ class VirtioChain {
  public:
   VirtioChain() = default;
   VirtioChain(VirtioQueue* queue, uint16_t head);
+  VirtioChain(VirtioChain&&) = default;
+  VirtioChain& operator=(VirtioChain&&) = default;
 
   bool IsValid() const;
   bool HasDescriptor() const;
@@ -218,6 +220,9 @@ class VirtioChain {
   uint16_t head_ = 0;
   uint16_t next_ = 0;
   bool has_next_ = false;
+
+  VirtioChain(const VirtioChain&) = delete;
+  VirtioChain& operator=(const VirtioChain&) = delete;
 };
 
 }  // namespace machina
