@@ -102,12 +102,7 @@ static device_t root_device = []() {
     device.protocol_id = ZX_PROTOCOL_ROOT;
     device.name = "root";
     device.libname = "";
-
-    constexpr const char kArgs[] = "root,";
-    auto args = fbl::make_unique<char[]>(sizeof(kArgs));
-    memcpy(args.get(), kArgs, sizeof(kArgs));
-    device.args.reset(args.release());
-
+    device.args = "root,";
     device.children = LIST_INITIAL_VALUE(root_device.children);
     device.metadata = LIST_INITIAL_VALUE(root_device.metadata);
     device.AddRef();
@@ -121,12 +116,7 @@ static device_t misc_device = []() {
     device.protocol_id = ZX_PROTOCOL_MISC_PARENT;
     device.name = "misc";
     device.libname = "";
-
-    constexpr const char kArgs[] = "misc,";
-    auto args = fbl::make_unique<char[]>(sizeof(kArgs));
-    memcpy(args.get(), kArgs, sizeof(kArgs));
-    device.args.reset(args.release());
-
+    device.args = "misc,";
     device.children = LIST_INITIAL_VALUE(misc_device.children);
     device.metadata = LIST_INITIAL_VALUE(misc_device.metadata);
     device.AddRef();
@@ -139,12 +129,7 @@ static device_t sys_device = []() {
     device.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
     device.name = "sys";
     device.libname = "";
-
-    constexpr const char kArgs[] = "sys,";
-    auto args = fbl::make_unique<char[]>(sizeof(kArgs));
-    memcpy(args.get(), kArgs, sizeof(kArgs));
-    device.args.reset(args.release());
-
+    device.args = "sys,";
     device.children = LIST_INITIAL_VALUE(sys_device.children);
     device.metadata = LIST_INITIAL_VALUE(sys_device.metadata);
     device.AddRef();
@@ -158,12 +143,7 @@ static device_t test_device = []() {
     device.protocol_id = ZX_PROTOCOL_TEST_PARENT;
     device.name = "test";
     device.libname = "";
-
-    constexpr const char kArgs[] = "test,";
-    auto args = fbl::make_unique<char[]>(sizeof(kArgs));
-    memcpy(args.get(), kArgs, sizeof(kArgs));
-    device.args.reset(args.release());
-
+    device.args = "test,";
     device.children = LIST_INITIAL_VALUE(test_device.children);
     device.metadata = LIST_INITIAL_VALUE(test_device.metadata);
     device.AddRef();
@@ -428,7 +408,7 @@ static void dc_dump_device_props(device_t* dev) {
 
         dmprintf("%u Propert%s\n", dev->prop_count, dev->prop_count == 1 ? "y" : "ies");
         for (uint32_t i = 0; i < dev->prop_count; ++i) {
-            const zx_device_prop_t* p = &dev->props[i];
+            const zx_device_prop_t* p = dev->Props() + i;
             const char* param_name = di_bind_param_name(p->id);
 
             if (param_name) {
@@ -582,7 +562,7 @@ static zx_status_t dc_notify(device_t* dev, uint32_t op) {
         char msg[len + DC_PATH_MAX];
         auto evt = reinterpret_cast<devmgr_event_t*>(msg);
         memset(evt, 0, sizeof(devmgr_event_t));
-        memcpy(msg + sizeof(devmgr_event_t), dev->props.get(), propslen);
+        memcpy(msg + sizeof(devmgr_event_t), dev->Props(), propslen);
         if (dc_get_topo_path(dev, msg + len, DC_PATH_MAX) < 0) {
             return ZX_OK;
         }
@@ -783,18 +763,7 @@ static void dc_release_device(device_t* dev) {
     }
 
     //TODO: cancel any pending rpc responses
-    //TODO: Have dtor assert that DEV_CTX_IMMORTAL set on flags
-    delete dev;
-}
-
-dc_device::dc_device()
-    : hrpc(ZX_HANDLE_INVALID), flags(0), ph({}), host(nullptr),
-      name(nullptr), libname(nullptr), work({}), refcount_(0), protocol_id(0), prop_count(0),
-      self(nullptr), link(nullptr), parent(nullptr), proxy(nullptr), node({}), dhnode({}),
-      anode({}) {
-
-    list_initialize(&children);
-    list_initialize(&metadata);
+    free(dev);
 }
 
 // Add a new device to a parent device (same devhost)
@@ -807,47 +776,43 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
     if (msg->datalen % sizeof(zx_device_prop_t)) {
         return ZX_ERR_INVALID_ARGS;
     }
-
-    auto dev = fbl::make_unique<device_t>();
-    if (!dev) {
+    device_t* dev;
+    // allocate device struct, followed by space for props, followed
+    // by space for bus arguments, followed by space for the name
+    size_t sz = sizeof(*dev) + msg->datalen + msg->argslen + msg->namelen + 2;
+    if ((dev = static_cast<device_t*>(calloc(1, sz))) == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
-
-    const uint32_t prop_count = static_cast<uint32_t>(msg->datalen / sizeof(zx_device_prop_t));
-    auto args_buf = fbl::make_unique<char[]>(msg->argslen + 1);
-    dev->props = fbl::make_unique<zx_device_prop_t[]>(prop_count);
-    dev->name_alloc_ = fbl::make_unique<char[]>(msg->namelen + 1);
-    if (!args_buf || !dev->props || !dev->name_alloc_) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
+    new (dev) device_t;
+    list_initialize(&dev->children);
+    list_initialize(&dev->metadata);
     dev->hrpc = hrpc;
-    dev->prop_count = prop_count;
+    dev->prop_count = static_cast<uint32_t>(msg->datalen / sizeof(zx_device_prop_t));
     dev->protocol_id = msg->protocol_id;
 
-    memcpy(args_buf.get(), args, msg->argslen);
-    args_buf[msg->argslen] = 0;
-    // release+reset is used here to add const to the inner type
-    dev->args.reset(args_buf.release());
+    char* text = (char*) (dev->Props() + dev->prop_count);
+    memcpy(text, args, msg->argslen + 1);
+    dev->args = text;
 
-    memcpy(dev->name_alloc_.get(), name, msg->namelen);
-    dev->name_alloc_[msg->namelen] = 0;
+    text += msg->argslen + 1;
+    memcpy(text, name, msg->namelen + 1);
 
-    char* text = strchr(dev->name_alloc_.get(), ',');
-    if (text != nullptr) {
-        *text++ = 0;
-        dev->name = text;
-        dev->libname = dev->name_alloc_.get();
+    char* text2 = strchr(text, ',');
+    if (text2 != nullptr) {
+        *text2++ = 0;
+        dev->name = text2;
+        dev->libname = text;
     } else {
-        dev->name = dev->name_alloc_.get();
+        dev->name = text;
         dev->libname = "";
     }
 
+    memcpy(dev->Props(), data, msg->datalen);
+
     if (strlen(dev->name) > ZX_DEVICE_NAME_MAX) {
+        free(dev);
         return ZX_ERR_INVALID_ARGS;
     }
-
-    memcpy(dev->props.get(), data, prop_count * sizeof(zx_device_prop_t));
 
     // If we have bus device args we are,
     // by definition, a bus device.
@@ -873,7 +838,8 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
     }
 
     zx_status_t r;
-    if ((r = devfs_publish(parent, dev.get())) < 0) {
+    if ((r = devfs_publish(parent, dev)) < 0) {
+        free(dev);
         return r;
     }
 
@@ -881,7 +847,8 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
     dev->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     dev->ph.func = dc_handle_device;
     if ((r = port_wait(&dc_port, &dev->ph)) < 0) {
-        devfs_unpublish(dev.get());
+        devfs_unpublish(dev);
+        free(dev);
         return r;
     }
 
@@ -900,15 +867,12 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
         parent, parent->name, parent->refcount_);
 
     log(DEVLC, "devcoord: publish %p '%s' props=%u args='%s' parent=%p\n",
-        dev.get(), dev->name, dev->prop_count, dev->args.get(), dev->parent);
+        dev, dev->name, dev->prop_count, dev->args, dev->parent);
 
     if (!invisible) {
-        dc_notify(dev.get(), DEVMGR_OP_DEVICE_ADDED);
+        dc_notify(dev, DEVMGR_OP_DEVICE_ADDED);
         queue_work(&dev->work, dc_work::Op::kDeviceAdded, 0);
     }
-    // TODO(teisenbe/kulakowski): This should go away once we switch to refptrs
-    // here
-    __UNUSED auto ptr = dev.release();
     return ZX_OK;
 }
 
@@ -1074,7 +1038,7 @@ static zx_status_t dc_bind_device(device_t* dev, const char* drvlibname) {
     list_for_every_entry(&list_drivers, drv, driver_t, node) {
         if (autobind || !strcmp(drv->libname, drvlibname)) {
             if (dc_is_bindable(drv, dev->protocol_id,
-                               dev->props.get(), dev->prop_count, autobind)) {
+                               dev->Props(), dev->prop_count, autobind)) {
                 log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n",
                     drv->name, dev->name);
                 dc_attempt_bind(drv, dev);
@@ -1570,64 +1534,51 @@ fail_after_write:
 }
 
 static zx_status_t dc_create_proxy(device_t* parent) {
-    static constexpr const char kLibSuffix[] = ".so";
-    static constexpr const char kProxyLibSuffix[] = ".proxy.so";
-    static constexpr size_t kLibSuffixLen = sizeof(kLibSuffix) - 1;
-    static constexpr size_t kProxyLibSuffixLen = sizeof(kProxyLibSuffix) - 1;
-
     if (parent->proxy != nullptr) {
         return ZX_OK;
     }
 
-    const size_t namelen = strlen(parent->name);
+    size_t namelen = strlen(parent->name);
     size_t liblen = strlen(parent->libname);
-    const size_t parent_liblen = liblen;
+    size_t devlen = sizeof(device_t) + namelen + liblen + 2;
 
     // non-immortal devices, use foo.proxy.so for
     // their proxy devices instead of foo.so
     bool proxylib = !(parent->flags & DEV_CTX_IMMORTAL);
 
     if (proxylib) {
-        if (liblen < kLibSuffixLen) {
+        if (liblen < 3) {
             return ZX_ERR_INTERNAL;
         }
-        // Switch from the normal library suffix to the proxy one.
-        liblen = liblen - kLibSuffixLen + kProxyLibSuffixLen;
+        // space for ".proxy"
+        devlen += 6;
     }
 
-    auto dev = fbl::make_unique<device_t>();
+    device_t* dev = static_cast<device_t*>(calloc(1, devlen));
     if (dev == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
-
-    dev->name_alloc_ = fbl::make_unique<char[]>(namelen + liblen + 2);
-    if (dev->name_alloc_ == nullptr) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    char* dst = dev->name_alloc_.get();
-    memcpy(dst, parent->name, namelen + 1);
-    dev->name = dst;
-
-    dst = &dev->name_alloc_[namelen + 1];
-    memcpy(dst, parent->libname, parent_liblen);
+    new (dev) device_t;
+    char* text = (char*) (dev + 1);
+    memcpy(text, parent->name, namelen + 1);
+    dev->name = text;
+    text += namelen + 1;
+    memcpy(text, parent->libname, liblen + 1);
     if (proxylib) {
-        memcpy(dst + parent_liblen - kLibSuffixLen, kProxyLibSuffix,
-               kProxyLibSuffixLen + 1);
+        memcpy(text + liblen - 3, ".proxy.so", 10);
     }
-    dev->libname = dst;
+    dev->libname = text;
 
+    list_initialize(&dev->children);
+    list_initialize(&dev->metadata);
     dev->flags = DEV_CTX_PROXY;
     dev->protocol_id = parent->protocol_id;
     dev->parent = parent;
     dev->AddRef();
-    parent->proxy = dev.get();
+    parent->proxy = dev;
     parent->AddRef();
     log(DEVLC, "devcoord: dev %p name='%s' ++ref=%d (proxy)\n",
         parent, parent->name, parent->refcount_);
-    // TODO(teisenbe/kulakowski): This should go away once we switch to refptrs
-    // here
-    __UNUSED auto ptr = dev.release();
     return ZX_OK;
 }
 
@@ -1687,7 +1638,7 @@ static zx_status_t dc_prepare_proxy(device_t* dev) {
     }
 
     // proxy args are "processname,args"
-    const char* arg0 = dev->args.get();
+    const char* arg0 = dev->args;
     const char* arg1 = strchr(arg0, ',');
     if (arg1 == nullptr) {
         return ZX_ERR_INTERNAL;
@@ -1775,7 +1726,7 @@ static void dc_handle_new_device(device_t* dev) {
 
     list_for_every_entry(&list_drivers, drv, driver_t, node) {
         if (dc_is_bindable(drv, dev->protocol_id,
-                           dev->props.get(), dev->prop_count, true)) {
+                           dev->Props(), dev->prop_count, true)) {
             log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n",
                 drv->name, dev->name);
 
@@ -2140,7 +2091,7 @@ void dc_bind_driver(driver_t* drv) {
                 continue;
             }
             if (dc_is_bindable(drv, dev->protocol_id,
-                               dev->props.get(), dev->prop_count, true)) {
+                               dev->Props(), dev->prop_count, true)) {
                 log(INFO, "devcoord: drv='%s' bindable to dev='%s'\n",
                     drv->name, dev->name);
 
