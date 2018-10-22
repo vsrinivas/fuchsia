@@ -159,6 +159,10 @@ static void qmi_handle_interrupt(qmi_ctx_t* qmi_ctx, usb_request_t* request) {
           &qmi_ctx->usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
           USB_CDC_GET_ENCAPSULATED_RESPONSE, 0, QMI_INTERFACE_NUM, buffer,
           packet_size, ZX_TIME_INFINITE, NULL);
+      if (!qmi_ctx->channel) {
+        zxlogf(WARN, "qmi-usb-transport: recieving USB CDC frames without a channel\n");
+        return;
+      }
       status = zx_channel_write(qmi_ctx->channel, 0, buffer, sizeof(buffer),
                                 NULL, 0);
       if (status < 0) {
