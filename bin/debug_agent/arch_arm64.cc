@@ -157,7 +157,8 @@ debug_ipc::NotifyException::Type ArchProvider::DecodeExceptionType(
     case ZX_EXCP_SW_BREAKPOINT:
       return debug_ipc::NotifyException::Type::kSoftware;
     case ZX_EXCP_HW_BREAKPOINT:
-      return debug_ipc::NotifyException::Type::kHardware;
+      // For now HW exception means single step.
+      return debug_ipc::NotifyException::Type::kSingleStep;
     default:
       return debug_ipc::NotifyException::Type::kGeneral;
   }
