@@ -7,8 +7,6 @@ package main
 import (
 	"flag"
 	"log"
-	"net/http"
-	_ "net/http/pprof"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
@@ -31,8 +29,6 @@ import (
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 )
-
-var pprofServer = flag.Bool("pprof", false, "run the pprof http server")
 
 var OnInterfacesChanged func()
 
@@ -145,18 +141,13 @@ func main() {
 		log.Fatal(err)
 	}
 
+	ctx.Serve()
+
 	// Serve FIDL bindings on two threads. Since the Go FIDL bindings are blocking,
 	// this allows two outstanding requests at a time.
 	// TODO(tkilbourn): revisit this and tune the number of serving threads.
-	ctx.Serve()
-	go fidl.Serve()
-	go fidl.Serve()
-
-	if *pprofServer {
-		go func() {
-			log.Println("starting http pprof server on 0.0.0.0:6060")
-			log.Println(http.ListenAndServe("0.0.0.0:6060", nil))
-		}()
+	for i := 0; i < 2; i++ {
+		go fidl.Serve()
 	}
 
 	<-(chan struct{})(nil)
