@@ -1,5 +1,5 @@
 {
     "packages": [
-        "//garnet/bin/wlan-smoke-test"
+        "//garnet/bin/wlan/wlan-smoke-test"
     ]
 }

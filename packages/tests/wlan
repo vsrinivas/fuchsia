@@ -4,8 +4,8 @@
         "//garnet/lib/rust/wlan-rsn:wlan-rsn-tests",
         "//garnet/lib/rust/wlan-sme:wlan-sme-tests",
         "//garnet/lib/wlan/mlme/tests:wlan_tests",
-        "//garnet/bin/wlancfg:wlancfg-tests",
-        "//garnet/bin/wlanstack:wlanstack2-tests",
-        "//garnet/bin/wlantool:wlantool2-tests"
+        "//garnet/bin/wlan/wlancfg:wlancfg-tests",
+        "//garnet/bin/wlan/wlanstack:wlanstack2-tests",
+        "//garnet/bin/wlan/wlantool:wlantool2-tests"
     ]
 }

@@ -1,5 +1,5 @@
 {
     "packages": [
-        "//garnet/bin/wlancfg"
+        "//garnet/bin/wlan/wlancfg"
     ]
 }

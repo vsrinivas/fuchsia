@@ -3,6 +3,6 @@
         "garnet/packages/prod/wlan-hw-sim"
     ],
     "packages": [
-        "//garnet/bin/wlan-hw-sim:wlan-hw-sim-tests"
+        "//garnet/bin/wlan/wlan-hw-sim:wlan-hw-sim-tests"
     ]
 }

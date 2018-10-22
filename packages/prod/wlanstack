@@ -1,5 +1,5 @@
 {
     "packages": [
-        "//garnet/bin/wlanstack:wlanstack2"
+        "//garnet/bin/wlan/wlanstack:wlanstack2"
     ]
 }
