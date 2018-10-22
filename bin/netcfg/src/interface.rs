@@ -399,7 +399,7 @@ mod tests {
             },
         ];
         // expect empty cur_config
-        let temp_dir = tempdir::TempDir::new("netcfg_test_stable_names")
+        let temp_dir = tempfile::TempDir::new()
             .expect("failed to create the temp dir");
         let path = temp_dir.path().join("net.config.json");
         let mut interface_config =
@@ -449,7 +449,7 @@ mod tests {
     #[test]
     fn test_load_malformed_file() {
         let temp_dir =
-            tempdir::TempDir::new("netcfg_test_invalid").expect("failed to create the temp dir");
+            tempfile::TempDir::new().expect("failed to create the temp dir");
         let path = temp_dir.path().join("net.config.json");
         {
             let mut file = fs::File::create(&path).expect("failed to open file for writing");
