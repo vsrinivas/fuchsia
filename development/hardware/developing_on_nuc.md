@@ -28,7 +28,7 @@ This table shows what I bought from Amazon.
 
 | Item | Link | Notes: |
 | ---- | ---- | ------ |
-| NUC | [B01MSZLO9P](https://www.amazon.com/gp/product/B01MSZLO9P) | Works fine. |
+| NUC | [B01MSZLO9P](https://www.amazon.com/gp/product/B01MSZLO9P) | Get a NUC7 or NUC6 for gpu support. |
 | RAM | [B01BIWKP58](https://www.amazon.com/gp/product/B01BIWKP58) | Works fine. |
 | SSD (Only need one, | [B01IAGSDJ0](https://www.amazon.com/gp/product/B01IAGSDJ0) | Works fine. |
 | I bought some of each) | [B00TGIVZTW](https://www.amazon.com/gp/product/B00TGIVZTW) | Works fine. |
