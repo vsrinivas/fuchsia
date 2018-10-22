@@ -1,14 +1,16 @@
-# Using the debugger
+# zxdb: Fuchsia native debugger setup and troubleshooting
+
+This is the setup guide. Please see the [user guide](debugger_usage.md) for
+help on debugger commands.
 
 ## Overview
 
-Currently the debugger is usable for certain tasks by members of the
-development team.
-
 The debugger is for C/C++ code running on Fuchsia compiled in-tree for either
-CPU (ARM64 or x64). Rust almost works if you compile with symbols (which we
-don’t). I don’t know how to test Go. Please contact brettw if you’re interested
-in helping with these.
+CPU (ARM64 or x64). Rust kind of works but there [are
+issues](https://fuchsia.atlassian.net/browse/DX-604). I don’t know how to test
+Go. Please contact brettw if you’re interested in helping! Even if you don't
+know how to write debugger code, just defining the proper behavior for Rust or
+Go would be helpful (the team has no experience with these languages).
 
 The debugger runs remotely only (you can't do self-hosted debug).
 
@@ -24,13 +26,20 @@ The debugger runs remotely only (you can't do self-hosted debug).
   * “step” steps into syscalls which end up as a few assembly instructions you
     have to step through.
 
+  * Obviuosly many advanced features are missing.
+
 ### Bugs
 
   * [Open zxdb bugs](https://fuchsia.atlassian.net/browse/DX-80?jql=project%20%3D%20DX%20AND%20component%20%3D%20zxdb%20order%20by%20lastViewed%20DESC)
 
   * [Report a new zxdb bug](https://fuchsia.atlassian.net/secure/CreateIssueDetails!init.jspa?pid=11718&issuetype=10006&priority=3&components=11886)
 
-## Compiling
+## Binary location (for SDK users)
+
+The binary is `tools/zxdb` in the Fuchsia SDK. SDK users will have to do an
+extra step to set up your symbols. See "Running out-of-tree" below for more.
+
+## Compiling (for Fuchsia team members)
 
 When you do a local Fuchsia build at the Garnet layer the debugger should
 always be built by default. We try to keep it enabled at Peridot and Topaz
@@ -84,118 +93,22 @@ out/x64/host_x64/zxdb
 If you're connecting or running many times, there are command-line switches:
 
 ```sh
-zxdb -c 192.168.3.53:2345 -r /system/bin/coway
+zxdb -c 192.168.3.53:2345 -r /system/bin/cowsay
 ```
 
 See `help connect` for more examples, including IPv6 syntax.
 
-### 4. Run or attach to a program
+### 4. Read the user guide
 
-From within the debugger:
-
-```
-[zxdb] run /path/to/some/program
-```
-
-or
-
-```
-[zxdb] ps
-...process tree...
-
-[zxdb] attach 3452
-```
-
-### 5. Run and step
-
-Type "help" for commands, there is an extensive built-in help system. The key
-commands are:
-
-   * **run:** Runs a program.
-   * **continue:** Continues a paused thread.
-   * **next:** Advance to next line.
-   * **step:** Advance, stepping into function calls.
-   * **finish:** Runs the current function to the end.
-
-Some examples:
-
-```
-[zxdb] b main
-Breakpoint 1 on Global, Enabled, stop=All, @ main
-Pending: No matches for location, it will be pending library loads.
-
-[zxdb] r /foo/bar/myapp
-Process 1 Running koid=7537 /foo/bar/myapp
-Thread 1 stopped on breakpoint 1 at main() • ps.c:257
-   255 }
-   256
- ▶ 257 int main(int argc, char** argv) {
-   258     bool with_threads = false;
-   259     for (int i = 1; i < argc; ++i) {
-
-[zxdb] s
-   257 int main(int argc, char** argv) {
-   258     bool with_threads = false;
- ▶ 259     for (int i = 1; i < argc; ++i) {
-   260         const char* arg = argv[i];
-   261         if (!strcmp(arg, "--help")) {
-
-[zxdb] l
-...source code...
-
-[zxdb] f
-▶  0  main() • ps.c:259
-   1  start_main() • __libc_start_main.c:49
-   2  0x0
-
-[zxdb] c
-Exited with code 0: Process 1 Not running /foo/bar/myapp
-
-[zxdb] q
-```
-
-### 6. Print stuff.
-
-The main querying commands are:
-
-   * **print:** Print an expressions.
-   * **f:** Print a short backtrace of stack frames.
-   * **bt:** Print a backtrace with function parameters.
-   * **locals:** Print all local variables.
-
-Some examples:
-
-```
-[zxdb] bt
-▶  0 main() • ps.c:282
-      IP=0x1a77a1f9b991, BP=0x6db4c69eff0, SP=0x6db4c69efd0
-      argc = 1
-      argv = (char**) 0x49d00d252eac
-   1 start_main() • __libc_start_main.c:49
-      IP=0x598098780d2f, BP=0x6db4c69eff0, SP=0x6db4c69efe0
-      p = <no type>
-
-[zxdb] locals
-arg = <invalid pointer>
-i = 5
-options = {also_show_threads = false, only_show_jobs = false}
-ret = 0
-status = 2
-
-[zxdb] print ret
-0
-
-[zxdb] print options.also_show_threads
-false
-```
+The [user guide](debugger_usage.md) has detailed instructions!
 
 ## Tips
 
 ### Getting less optimization
 
-Fuchsia's "debug" build compiles with `-Og` which does some optimizations but
-tries to be debugger-friendly about it. Some things will still be optimized
-out and reordered that can make debugging more challenging.
+Fuchsia's "debug" build compiles with `-Og` which ends up being the same as
+`-O1` (some optimizations). Some things will still be optimized out and
+reordered that can make debugging more challenging.
 
 If you're encountering optimization problems you can do a local build change to
 override the debug flag for your target only. In the target's definition (in
@@ -297,7 +210,13 @@ symbols in it. Normally this means the binary was not built with symbols
 enabled or the symbols were stripped. Check your build, the compile line should
 have a `-g` in it for gcc and Clang.
 
-## Running the tests
+## Debugging the debugger and running the tests
+
+For developers working on the debugger, you can debug the client on GDB or LLDB
+on your host machine. You will want to run the unstripped binary:
+`out/<yourbuild>/host_x64/exe.unstripped/zxdb`. Since this path is different
+than the default, you will need to specify the location of ids.txt (in the root
+build directory) with `-s` on the command line.
 
 There are tests for the debugger that run on the host. These are relevant
 if you're working on the debugger client.
