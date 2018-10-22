@@ -148,13 +148,11 @@ QcowFile::~QcowFile() = default;
 QcowFile::QcowFile(QcowFile&& other)
     : fd_(std::move(other.fd_)),
       header_(other.header_),
-      lookup_table_(std::move(other.lookup_table_)),
-      refcount_table_(std::move(other.refcount_table_)) {}
+      lookup_table_(std::move(other.lookup_table_)) {}
 
 QcowFile& QcowFile::operator=(QcowFile&& other) {
   fd_ = std::move(other.fd_);
   lookup_table_ = std::move(other.lookup_table_);
-  refcount_table_ = std::move(other.refcount_table_);
   header_ = other.header_;
   return *this;
 }
@@ -235,13 +233,6 @@ zx_status_t QcowFile::Load(int fd) {
     FXL_LOG(ERROR) << "Failed to load L1 table.";
     return status;
   }
-
-  status = refcount_table_.Load(fd_.get(), header_);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to load refcount table.";
-    return status;
-  }
-
   lookup_table_ = std::move(lookup_table);
   return ZX_OK;
 }

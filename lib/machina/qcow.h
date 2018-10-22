@@ -12,7 +12,6 @@
 #include <string>
 
 #include "garnet/lib/machina/block_dispatcher.h"
-#include "garnet/lib/machina/qcow_refcount.h"
 #include "lib/fxl/macros.h"
 
 namespace machina {
@@ -133,8 +132,6 @@ class QcowFile {
   // cluster will be left unmodified.
   zx_status_t Read(uint64_t linear_offset, void* buf, size_t size);
 
-  QcowRefcount* refcount_table() { return &refcount_table_; }
-
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(QcowFile);
 
@@ -143,7 +140,6 @@ class QcowFile {
 
   class LookupTable;
   std::unique_ptr<LookupTable> lookup_table_;
-  QcowRefcount refcount_table_;
 };
 
 class QcowDispatcher : public BlockDispatcher {
