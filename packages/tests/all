@@ -70,6 +70,7 @@
         "garnet/packages/tests/sysmgr",
         "garnet/packages/tests/sysmgr_tests",
         "garnet/packages/tests/syzkaller",
+        "garnet/packages/tests/telephony",
         "garnet/packages/tests/tiles",
         "garnet/packages/tests/timezone",
         "garnet/packages/tests/tracing",
