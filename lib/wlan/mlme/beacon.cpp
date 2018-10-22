@@ -3,47 +3,47 @@
 // found in the LICENSE file.
 
 #include <wlan/common/channel.h>
+#include <wlan/common/write_element.h>
 #include <wlan/mlme/beacon.h>
 #include <wlan/mlme/rates_elements.h>
 
 namespace wlan {
 
-static bool WriteSsid(ElementWriter* w, const BeaconConfig& config) {
+static void WriteSsid(BufferWriter* w, const BeaconConfig& config) {
     if (config.ssid != nullptr) {
-        return w->write<SsidElement>(config.ssid, config.ssid_len);
-    } else {
-        return true;
+        common::WriteSsid(w, {config.ssid, config.ssid_len});
     }
 }
 
-static bool WriteDsssParamSet(ElementWriter* w, const BeaconConfig& config) {
-    return w->write<DsssParamSetElement>(config.channel.primary);
+static void WriteDsssParamSet(BufferWriter* w, const BeaconConfig& config) {
+    common::WriteDsssParamSet(w, config.channel.primary);
 }
 
-static bool WriteTim(ElementWriter* w, const PsCfg* ps_cfg, size_t* rel_tim_ele_offset) {
-    if (!ps_cfg) { return true; }
+static void WriteTim(BufferWriter* w, const PsCfg* ps_cfg, size_t* rel_tim_ele_offset) {
+    if (!ps_cfg) { return; }
 
     // To get the TIM offset in frame, we have to count the header, fixed parameters and tagged
     // parameters before TIM is written.
-    *rel_tim_ele_offset = w->size();
+    *rel_tim_ele_offset = w->WrittenBytes();
 
     size_t bitmap_len;
     uint8_t bitmap_offset;
     uint8_t pvb[TimElement::kMaxLenBmp];
-    auto status =
-        ps_cfg->GetTim()->WritePartialVirtualBitmap(pvb, sizeof(pvb), &bitmap_len, &bitmap_offset);
-    if (status != ZX_OK) { return false; }
+    ps_cfg->GetTim()->WritePartialVirtualBitmap(pvb, sizeof(pvb), &bitmap_len, &bitmap_offset);
 
-    BitmapControl bmp_ctrl;
-    bmp_ctrl.set_offset(bitmap_offset);
-    if (ps_cfg->IsDtim()) { bmp_ctrl.set_group_traffic_ind(ps_cfg->GetTim()->HasGroupTraffic()); }
-    return w->write<TimElement>(ps_cfg->dtim_count(), ps_cfg->dtim_period(), bmp_ctrl, pvb,
-                                bitmap_len);
+    TimHeader header;
+    header.dtim_count = ps_cfg->dtim_count();
+    header.dtim_period = ps_cfg->dtim_period();
+    header.bmp_ctrl.set_offset(bitmap_offset);
+    if (ps_cfg->IsDtim()) {
+        header.bmp_ctrl.set_group_traffic_ind(ps_cfg->GetTim()->HasGroupTraffic());
+    }
+    common::WriteTim(w, header, {pvb, bitmap_len});
 }
 
-static bool WriteCountry(ElementWriter* w, const BeaconConfig& config) {
+static void WriteCountry(BufferWriter* w, const BeaconConfig& config) {
     // TODO(NET-799): Read from dot11CountryString MIB
-    const uint8_t kCountry[3] = {'U', 'S', ' '};
+    const Country kCountry = {{ 'U', 'S', ' ' }};
 
     std::vector<SubbandTriplet> subbands;
 
@@ -57,66 +57,55 @@ static bool WriteCountry(ElementWriter* w, const BeaconConfig& config) {
         subbands.push_back({149, 5, 36});
     }
 
-    return w->write<CountryElement>(kCountry, subbands);
+    common::WriteCountry(w, kCountry, subbands);
 }
 
-static bool WriteHtCapabilities(ElementWriter* w, const BeaconConfig& config) {
+static void WriteHtCapabilities(BufferWriter* w, const BeaconConfig& config) {
     if (config.ht.ready) {
         auto h = BuildHtCapabilities(config.ht);
-        return w->write<HtCapabilities>(h.ht_cap_info, h.ampdu_params, h.mcs_set, h.ht_ext_cap,
-                                        h.txbf_cap, h.asel_cap);
-    } else {
-        return true;
+        common::WriteHtCapabilities(w, h);
     }
 }
 
-static bool WriteHtOperation(ElementWriter* w, const BeaconConfig& config) {
+static void WriteHtOperation(BufferWriter* w, const BeaconConfig& config) {
     if (config.ht.ready) {
         HtOperation hto = BuildHtOperation(config.channel);
-        return w->write<HtOperation>(hto.primary_chan, hto.head, hto.tail, hto.basic_mcs_set);
-    } else {
-        return true;
+        common::WriteHtOperation(w, hto);
     }
 }
 
-static bool WriteRsne(ElementWriter* w, const BeaconConfig& config) {
+static void WriteRsne(BufferWriter* w, const BeaconConfig& config) {
     if (config.rsne != nullptr) {
-        return w->write<RsnElement>(config.rsne, config.rsne_len);
-    } else {
-        return true;
+        w->Write({config.rsne, config.rsne_len});
     }
 }
 
-static bool WriteMeshConfiguration(ElementWriter* w, const BeaconConfig& config) {
+static void WriteMeshConfiguration(BufferWriter* w, const BeaconConfig& config) {
     if (config.mesh_config != nullptr) {
-        return w->write<MeshConfigurationElement>(*config.mesh_config);
-    } else {
-        return true;
+        common::WriteMeshConfiguration(w, *config.mesh_config);
     }
 }
 
-static bool WriteMeshId(ElementWriter* w, const BeaconConfig& config) {
+static void WriteMeshId(BufferWriter* w, const BeaconConfig& config) {
     if (config.mesh_id != nullptr) {
-        return w->write<MeshIdElement>(config.mesh_id, config.mesh_id_len);
-    } else {
-        return true;
+        common::WriteMeshId(w, {config.mesh_id, config.mesh_id_len});
     }
 }
 
-static bool WriteElements(ElementWriter* w, const BeaconConfig& config, size_t* rel_tim_ele_offset) {
-    RatesWriter rates_writer { config.rates, config.rates_len };
+static void WriteElements(BufferWriter* w, const BeaconConfig& config, size_t* rel_tim_ele_offset) {
+    RatesWriter rates_writer {{ config.rates, config.rates_len }};
     // TODO(hahnr): Query from hardware which IEs must be filled out here.
-    return WriteSsid(w, config)
-        && rates_writer.WriteSupportedRates(w)
-        && WriteDsssParamSet(w, config)
-        && WriteTim(w, config.ps_cfg, rel_tim_ele_offset)
-        && WriteCountry(w, config)
-        && rates_writer.WriteExtendedSupportedRates(w)
-        && WriteRsne(w, config)
-        && WriteHtCapabilities(w, config)
-        && WriteHtOperation(w, config)
-        && WriteMeshConfiguration(w, config)
-        && WriteMeshId(w, config);
+    WriteSsid(w, config);
+    rates_writer.WriteSupportedRates(w);
+    WriteDsssParamSet(w, config);
+    WriteTim(w, config.ps_cfg, rel_tim_ele_offset);
+    WriteCountry(w, config);
+    rates_writer.WriteExtendedSupportedRates(w);
+    WriteRsne(w, config);
+    WriteHtCapabilities(w, config);
+    WriteHtOperation(w, config);
+    WriteMeshConfiguration(w, config);
+    WriteMeshId(w, config);;
 }
 
 template<typename T>
@@ -159,14 +148,15 @@ static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config, common
     bcn->cap.set_short_preamble(1);
 
     // Write elements.
-    ElementWriter w(bcn->elements, reserved_ie_len);
-    size_t rel_tim_ele_offset = SIZE_MAX;
-    if (!WriteElements(&w, config, &rel_tim_ele_offset)) { return ZX_ERR_BUFFER_TOO_SMALL; }
 
-    ZX_DEBUG_ASSERT(bcn->Validate(w.size()));
+    BufferWriter w({bcn->elements, reserved_ie_len});
+    size_t rel_tim_ele_offset = SIZE_MAX;
+    WriteElements(&w, config, &rel_tim_ele_offset);
+
+    ZX_DEBUG_ASSERT(bcn->Validate(w.WrittenBytes()));
 
     // Update the length with final values
-    size_t body_len = buffer->body()->len() + w.size();
+    size_t body_len = buffer->body()->len() + w.WrittenBytes();
     status = buffer->set_body_len(body_len);
     if (status != ZX_OK) {
         errorf("could not set body length to %zu: %d\n", body_len, status);

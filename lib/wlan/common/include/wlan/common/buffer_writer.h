@@ -4,9 +4,9 @@
 
 #pragma once
 
+#include <cstring>
 #include <fbl/unique_ptr.h>
 #include <wlan/common/span.h>
-#include <wlan/mlme/packet.h>
 #include <zircon/types.h>
 
 namespace wlan {
@@ -15,6 +15,12 @@ class BufferWriter {
    public:
     explicit BufferWriter(Span<uint8_t> buf) : buf_(buf) {
         ZX_ASSERT(buf.data() != nullptr);
+    }
+
+    void WriteByte(uint8_t byte) {
+        ZX_ASSERT(buf_.size() >= offset_ + 1);
+        buf_[offset_] = byte;
+        offset_ += 1;
     }
 
     template <typename T> T* Write() {
@@ -27,12 +33,17 @@ class BufferWriter {
     }
 
     void Write(Span<const uint8_t> buf) {
+        Write(as_bytes(buf));
+    }
+
+    void Write(Span<const std::byte> buf) {
         ZX_ASSERT(buf_.size() >= offset_ + buf.size());
 
         std::memcpy(buf_.data() + offset_, buf.data(), buf.size());
         offset_ += buf.size();
     }
 
+    Span<const uint8_t> WrittenData() const { return buf_.subspan(0, offset_); }
     size_t WrittenBytes() const { return offset_; }
     size_t RemainingBytes() const { return buf_.size() - offset_; }
 

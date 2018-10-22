@@ -6,6 +6,7 @@
 #include "mock_device.h"
 
 #include <wlan/common/channel.h>
+#include <wlan/common/write_element.h>
 #include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
@@ -24,45 +25,23 @@ namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
-zx_status_t WriteSsid(ElementWriter* w, const uint8_t* ssid, size_t ssid_len) {
-    if (!w->write<SsidElement>(ssid, ssid_len)) {
-        errorf("could not write ssid \"%s\" to Beacon\n",
-               debug::ToAsciiOrHexStr(ssid, ssid_len).c_str());
-        return ZX_ERR_IO;
-    }
-    return ZX_OK;
-}
-
-zx_status_t WriteDsssParamSet(ElementWriter* w, const wlan_channel_t chan) {
-    if (!w->write<DsssParamSetElement>(chan.primary)) {
-        errorf("could not write DSSS parameters\n");
-        return ZX_ERR_IO;
-    }
-    return ZX_OK;
-}
-
-zx_status_t WriteTim(ElementWriter* w, const PsCfg& ps_cfg) {
+void WriteTim(BufferWriter* w, const PsCfg& ps_cfg) {
     size_t bitmap_len = ps_cfg.GetTim()->BitmapLen();
     uint8_t bitmap_offset = ps_cfg.GetTim()->BitmapOffset();
 
-    uint8_t dtim_count = ps_cfg.dtim_count();
-    uint8_t dtim_period = ps_cfg.dtim_period();
-    ZX_DEBUG_ASSERT(dtim_count != dtim_period);
-    if (dtim_count == dtim_period) { warnf("illegal DTIM state"); }
+    TimHeader hdr;
+    hdr.dtim_count = ps_cfg.dtim_count();
+    hdr.dtim_period = ps_cfg.dtim_period();
+    ZX_DEBUG_ASSERT(hdr.dtim_count != hdr.dtim_period);
+    if (hdr.dtim_count == hdr.dtim_period) { warnf("illegal DTIM state"); }
 
-    BitmapControl bmp_ctrl;
-    bmp_ctrl.set_offset(bitmap_offset);
-    if (ps_cfg.IsDtim()) { bmp_ctrl.set_group_traffic_ind(ps_cfg.GetTim()->HasGroupTraffic()); }
-    if (!w->write<TimElement>(dtim_count, dtim_period, bmp_ctrl, ps_cfg.GetTim()->BitmapData(),
-                              bitmap_len)) {
-        errorf("could not write TIM element\n");
-        return ZX_ERR_IO;
-    }
-    return ZX_OK;
+    hdr.bmp_ctrl.set_offset(bitmap_offset);
+    if (ps_cfg.IsDtim()) { hdr.bmp_ctrl.set_group_traffic_ind(ps_cfg.GetTim()->HasGroupTraffic()); }
+    common::WriteTim(w, hdr, {ps_cfg.GetTim()->BitmapData(), bitmap_len});
 }
 
-zx_status_t WriteCountry(ElementWriter* w, const wlan_channel_t chan) {
-    const uint8_t kCountry[3] = {'U', 'S', ' '};
+void WriteCountry(BufferWriter* w, const wlan_channel_t chan) {
+    const Country kCountry = {{'U', 'S', ' '}};
 
     std::vector<SubbandTriplet> subbands;
 
@@ -76,30 +55,7 @@ zx_status_t WriteCountry(ElementWriter* w, const wlan_channel_t chan) {
         subbands.push_back({149, 5, 36});
     }
 
-    if (!w->write<CountryElement>(kCountry, subbands)) {
-        errorf("could not write CountryElement\n");
-        return ZX_ERR_IO;
-    }
-
-    return ZX_OK;
-}
-
-zx_status_t WriteHtCapabilities(ElementWriter* w, const HtCapabilities& htc) {
-    if (!w->write<HtCapabilities>(htc.ht_cap_info, htc.ampdu_params, htc.mcs_set, htc.ht_ext_cap,
-                                  htc.txbf_cap, htc.asel_cap)) {
-        errorf("could not write HtCapabilities\n");
-        return ZX_ERR_IO;
-    }
-
-    return ZX_OK;
-}
-
-zx_status_t WriteHtOperation(ElementWriter* w, const HtOperation& hto) {
-    if (!w->write<HtOperation>(hto.primary_chan, hto.head, hto.tail, hto.basic_mcs_set)) {
-        errorf("could not write HtOperation\n");
-        return ZX_ERR_IO;
-    }
-    return ZX_OK;
+    common::WriteCountry(w, kCountry, subbands);
 }
 
 wlan_mlme::BSSDescription CreateBssDescription() {
@@ -262,20 +218,17 @@ zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>* out_packet, comm
     bcn->cap.set_ess(1);
     bcn->cap.set_short_preamble(1);
 
-    ElementWriter w(bcn->elements, body_payload_len);
-    if (WriteSsid(&w, kSsid, sizeof(kSsid)) != ZX_OK) { return ZX_ERR_IO; }
+    BufferWriter w({bcn->elements, body_payload_len});
+    common::WriteSsid(&w, kSsid);
 
-    RatesWriter rates_writer{kSupportedRates, countof(kSupportedRates)};
-    if (!rates_writer.WriteSupportedRates(&w)) { return ZX_ERR_IO; }
+    RatesWriter rates_writer { kSupportedRates };
+    rates_writer.WriteSupportedRates(&w);
+    common::WriteDsssParamSet(&w, kBssChannel.primary);
+    WriteCountry(&w, kBssChannel);
+    rates_writer.WriteExtendedSupportedRates(&w);
 
-    if (WriteDsssParamSet(&w, kBssChannel) != ZX_OK) { return ZX_ERR_IO; }
-
-    if (WriteCountry(&w, kBssChannel) != ZX_OK) { return ZX_ERR_IO; }
-
-    if (!rates_writer.WriteExtendedSupportedRates(&w)) { return ZX_ERR_IO; }
-
-    ZX_DEBUG_ASSERT(bcn->Validate(w.size()));
-    size_t body_len = bcn->len() + w.size();
+    ZX_DEBUG_ASSERT(bcn->Validate(w.WrittenBytes()));
+    size_t body_len = bcn->len() + w.WrittenBytes();
     if (frame.set_body_len(body_len) != ZX_OK) { return ZX_ERR_IO; }
 
     auto pkt = frame.Take();
@@ -389,9 +342,9 @@ zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>* out_packet) {
     assoc->listen_interval = kListenInterval;
 
     size_t elems_len = sizeof(SsidElement) + sizeof(kSsid) + sizeof(kRsne);
-    ElementWriter w(assoc->elements, elems_len);
-    if (!w.write<SsidElement>(kSsid, sizeof(kSsid))) { return ZX_ERR_IO; }
-    if (!w.write<RsnElement>(kRsne, sizeof(kRsne))) { return ZX_ERR_IO; }
+    BufferWriter w({assoc->elements, elems_len});
+    common::WriteSsid(&w, kSsid);
+    w.Write(kRsne);
 
     frame.set_body_len(sizeof(AssociationRequest) + elems_len);
     auto pkt = frame.Take();

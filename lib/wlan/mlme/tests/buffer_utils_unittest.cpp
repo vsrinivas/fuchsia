@@ -36,15 +36,20 @@ TEST(BufferUtils, Writer) {
     uint8_t data[4] = {5, 6, 7, 8};
     w.Write(data);
 
-    EXPECT_EQ(w.WrittenBytes(), 10u);
-    EXPECT_EQ(w.RemainingBytes(), 6u);
+    w.WriteByte(0xffu);
+
+    EXPECT_EQ(w.WrittenBytes(), 11u);
+    EXPECT_EQ(w.RemainingBytes(), 5u);
 
     EXPECT_EQ(buf[0], 1);
+    EXPECT_EQ(buf[1], 0);
+    EXPECT_EQ(buf[2], 0);
     EXPECT_EQ(buf[3], 2);
     EXPECT_EQ(buf[4], 3);
     EXPECT_EQ(buf[5], 4);
     EXPECT_EQ(buf[6], 5);
     EXPECT_EQ(buf[9], 8);
+    EXPECT_EQ(buf[10], 0xffu);
 }
 
 TEST(BufferUtils, Reader) {

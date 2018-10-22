@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <wlan/common/buffer_writer.h>
+#include <wlan/common/write_element.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/wlan.h>
 
@@ -107,7 +109,7 @@ TEST(ElementReader, ReadElements) {
     ASSERT_EQ(element_id::kCountry, hdr->id);
     auto country_elem = r.read<CountryElement>();
     ASSERT_NE(nullptr, country_elem);
-    EXPECT_EQ(0, std::memcmp(country_elem->country, buf + 18, 3));
+    EXPECT_EQ(0, std::memcmp(country_elem->country.data, buf + 18, 3));
 
     EXPECT_FALSE(r.is_valid());
     EXPECT_EQ(sizeof(buf), r.offset());
@@ -128,24 +130,6 @@ TEST(ElementReader, ReadElements_fail) {
     EXPECT_EQ(0u, r.offset());
 }
 
-TEST(ElementWriter, Insert) {
-    uint8_t buf[1024] = {};
-    ElementWriter w(buf, sizeof(buf));
-    EXPECT_EQ(0u, w.size());
-
-    const uint8_t ssid[] = {'t', 'e', 's', 't'};
-    EXPECT_TRUE(w.write<SsidElement>(ssid, sizeof(ssid)));
-    EXPECT_EQ(6u, w.size());
-
-    std::vector<SupportedRate> rates = {SupportedRate(1), SupportedRate(2), SupportedRate(3),
-                                        SupportedRate(4)};
-    EXPECT_TRUE(w.write<SupportedRatesElement>(rates.data(), rates.size()));
-    EXPECT_EQ(12u, w.size());
-
-    EXPECT_TRUE(w.write<DsssParamSetElement>(11));
-    EXPECT_EQ(15u, w.size());
-}
-
 class Elements : public ::testing::Test {
    protected:
     Elements() { buf_offset_ = buf_; }
@@ -159,85 +143,6 @@ class Elements : public ::testing::Test {
     size_t actual_ = 0;
 };
 
-TEST_F(Elements, Ssid) {
-    const uint8_t ssid[] = {'t', 'e', 's', 't', ' ', 's', 's', 'i', 'd'};
-    EXPECT_TRUE(SsidElement::Create(buf_, sizeof(buf_), &actual_, ssid, sizeof(ssid)));
-    EXPECT_EQ(sizeof(SsidElement) + sizeof(ssid), actual_);
-
-    auto element = FromBytes<SsidElement>(buf_, sizeof(buf_));
-    ASSERT_NE(nullptr, element);
-    EXPECT_EQ(0, std::memcmp(ssid, element->ssid, sizeof(ssid)));
-}
-
-TEST_F(Elements, SsidTooLong) {
-    uint8_t ssid[33];
-    std::fill_n(ssid, sizeof(ssid), 'x');
-    ASSERT_GT(sizeof(ssid), SsidElement::kMaxLen);
-    EXPECT_FALSE(SsidElement::Create(buf_, sizeof(buf_), &actual_, ssid, sizeof(ssid)));
-}
-
-TEST_F(Elements, SupportedRates) {
-    SupportedRate rates[] = {SupportedRate(1), SupportedRate(2), SupportedRate(3)};
-    EXPECT_TRUE(SupportedRatesElement::Create(buf_, sizeof(buf_), &actual_, rates, countof(rates)));
-    EXPECT_EQ(sizeof(SupportedRatesElement) + sizeof(rates), actual_);
-
-    // Check that the rates are the same. mismatch will return a pair of iterators pointing to
-    // mismatching elements, or the end() iterator.
-    auto element = FromBytes<SupportedRatesElement>(buf_, sizeof(buf_));
-    ASSERT_NE(nullptr, element);
-    auto pair = std::mismatch(std::cbegin(rates), std::cend(rates), element->rates);
-    EXPECT_EQ(std::cend(rates), pair.first);
-}
-
-TEST_F(Elements, SupportedRatesTooLong) {
-    std::vector<SupportedRate> rates = {SupportedRate(1), SupportedRate(2), SupportedRate(3),
-                                        SupportedRate(4), SupportedRate(5), SupportedRate(6),
-                                        SupportedRate(7), SupportedRate(8), SupportedRate(9)};
-    ASSERT_GT(rates.size(), SupportedRatesElement::kMaxLen);
-    EXPECT_FALSE(SupportedRatesElement::Create(buf_, sizeof(buf_), &actual_,
-                                               rates.data(), rates.size()));
-}
-
-TEST_F(Elements, DsssParamSet) {
-    EXPECT_TRUE(DsssParamSetElement::Create(buf_, sizeof(buf_), &actual_, 11));
-    EXPECT_EQ(sizeof(DsssParamSetElement), actual_);
-
-    auto element = FromBytes<DsssParamSetElement>(buf_, sizeof(buf_));
-    ASSERT_NE(nullptr, element);
-    EXPECT_EQ(11u, element->current_chan);
-}
-
-TEST_F(Elements, CfParamSet) {
-    EXPECT_TRUE(CfParamSetElement::Create(buf_, sizeof(buf_), &actual_, 1, 2, 3, 4));
-    EXPECT_EQ(sizeof(CfParamSetElement), actual_);
-
-    auto element = FromBytes<CfParamSetElement>(buf_, sizeof(buf_));
-    ASSERT_NE(nullptr, element);
-    EXPECT_EQ(1u, element->count);
-    EXPECT_EQ(2u, element->period);
-    EXPECT_EQ(3u, element->max_duration);
-    EXPECT_EQ(4u, element->dur_remaining);
-}
-
-TEST_F(Elements, Tim) {
-    std::vector<uint8_t> bmp = {1, 2, 3, 4, 5};
-    BitmapControl bmp_ctrl = BitmapControl();
-    bmp_ctrl.set_group_traffic_ind(1);
-    bmp_ctrl.set_offset(7);
-    EXPECT_TRUE(
-        TimElement::Create(buf_, sizeof(buf_), &actual_, 1, 2, bmp_ctrl, bmp.data(), bmp.size()));
-    EXPECT_EQ(sizeof(TimElement) + bmp.size(), actual_);
-
-    auto element = FromBytes<TimElement>(buf_, sizeof(buf_));
-    ASSERT_NE(nullptr, element);
-    EXPECT_EQ(1u, element->dtim_count);
-    EXPECT_EQ(2u, element->dtim_period);
-    EXPECT_EQ(1, element->bmp_ctrl.group_traffic_ind());
-    EXPECT_EQ(7, element->bmp_ctrl.offset());
-    auto pair = std::mismatch(bmp.begin(), bmp.end(), element->bmp);
-    EXPECT_EQ(bmp.end(), pair.first);
-}
-
 TEST_F(Elements, TimBufferedTraffic) {
     // Set traffic for aids
     std::vector<uint16_t> aids = {1, 42, 1337, 1338, 2007};
@@ -246,12 +151,15 @@ TEST_F(Elements, TimBufferedTraffic) {
         bmp[aid / 8] |= 1 << (aid % 8);
     }
 
-    BitmapControl bmp_ctrl = BitmapControl();
-    bmp_ctrl.set_group_traffic_ind(0);
-    bmp_ctrl.set_offset(0);
-    EXPECT_TRUE(
-        TimElement::Create(buf_, sizeof(buf_), &actual_, 1, 2, bmp_ctrl, bmp.data(), bmp.size()));
-    EXPECT_EQ(sizeof(TimElement) + bmp.size(), actual_);
+    TimHeader hdr;
+    hdr.dtim_count = 1;
+    hdr.dtim_period = 2;
+    hdr.bmp_ctrl.set_group_traffic_ind(0);
+    hdr.bmp_ctrl.set_offset(0);
+
+    BufferWriter w(buf_);
+    common::WriteTim(&w, hdr, bmp);
+    EXPECT_EQ(sizeof(TimElement) + bmp.size(), w.WrittenBytes());
 
     auto element = FromBytes<TimElement>(buf_, sizeof(buf_));
     ASSERT_NE(nullptr, element);
@@ -267,11 +175,15 @@ TEST_F(Elements, TimPartialBitmapBufferedTraffic) {
     bmp[2] |= 1 << 7;                // aid = 55
     bmp[7] |= 1 << 7;                // aid = 95
 
-    BitmapControl bmp_ctrl = BitmapControl();
-    bmp_ctrl.set_group_traffic_ind(0);
-    bmp_ctrl.set_offset(2);  // Skip first 32 aids
-    EXPECT_TRUE(
-        TimElement::Create(buf_, sizeof(buf_), &actual_, 1, 2, bmp_ctrl, bmp.data(), bmp.size()));
+    TimHeader hdr;
+    hdr.dtim_count = 1;
+    hdr.dtim_period = 2;
+    hdr.bmp_ctrl.set_group_traffic_ind(0);
+    hdr.bmp_ctrl.set_offset(2);  // Skip first 32 aids
+
+    BufferWriter w(buf_);
+    common::WriteTim(&w, hdr, bmp);
+    EXPECT_EQ(sizeof(TimElement) + bmp.size(), w.WrittenBytes());
 
     auto element = FromBytes<TimElement>(buf_, sizeof(buf_));
     ASSERT_NE(nullptr, element);
@@ -283,93 +195,6 @@ TEST_F(Elements, TimPartialBitmapBufferedTraffic) {
     EXPECT_EQ(false, element->traffic_buffered(54));
     EXPECT_EQ(false, element->traffic_buffered(56));
     EXPECT_EQ(false, element->traffic_buffered(96));
-}
-
-TEST_F(Elements, Country) {
-    // TODO(porce): Read from dot11CountryString. The AP mode should start with its country
-    const uint8_t kCountry[3] = {'U', 'S', ' '};
-
-    std::vector<SubbandTriplet> subbands;
-    // TODO(porce): Read from the AP's regulatory domain
-    subbands.push_back({36, 1, 17});
-    subbands.push_back({100, 1, 17});
-
-    SubbandTriplet s3 = {149, 1, 23};
-    subbands.push_back(s3);
-
-    EXPECT_TRUE(CountryElement::Create(buf_, sizeof(buf_), &actual_, kCountry, subbands));
-    size_t len_expected = sizeof(CountryElement) + subbands.size() * sizeof(SubbandTriplet);
-    if (len_expected % 2 == 1) {
-        len_expected += 1;  // padding
-    }
-
-    EXPECT_EQ(len_expected, actual_);
-
-    auto element = FromBytes<CountryElement>(buf_, sizeof(buf_));
-    ASSERT_NE(nullptr, element);
-    EXPECT_EQ(0, std::memcmp(element->country, kCountry, sizeof(element->country)));
-    EXPECT_EQ(0, std::memcmp(element->triplets, subbands.data(), sizeof(SubbandTriplet)));
-    EXPECT_EQ(0, std::memcmp(element->triplets + 2 * sizeof(SubbandTriplet), &s3,
-                             sizeof(SubbandTriplet)));
-}
-
-TEST_F(Elements, MeshConfiguration) {
-    MeshConfiguration::MeshFormationInfo formation_info;
-    formation_info.set_val(0xCC);
-    MeshConfiguration::MeshCapability mesh_cap;
-    mesh_cap.set_val(0xF0);
-
-    const MeshConfiguration mesh_config = {MeshConfiguration::kHwmp,
-                                           MeshConfiguration::kAirtime,
-                                           MeshConfiguration::kCongestCtrlInactive,
-                                           MeshConfiguration::kNeighborOffsetSync,
-                                           MeshConfiguration::kSae,
-                                           formation_info,
-                                           mesh_cap};
-
-    EXPECT_TRUE(MeshConfigurationElement::Create(buf_, sizeof(buf_), &actual_, mesh_config));
-    EXPECT_EQ(sizeof(MeshConfigurationElement), actual_);
-
-    auto element = FromBytes<MeshConfigurationElement>(buf_, actual_);
-    ASSERT_NE(nullptr, element);
-    EXPECT_EQ(0, std::memcmp(&mesh_config, &element->body, sizeof(mesh_config)));
-}
-
-TEST_F(Elements, MeshId) {
-    const uint8_t mesh_id[] = {'t', 'e', 's', 't', ' ', 'm', 'e', 's', 'h'};
-    EXPECT_TRUE(MeshIdElement::Create(buf_, sizeof(buf_), &actual_, mesh_id, sizeof(mesh_id)));
-    EXPECT_EQ(sizeof(MeshIdElement) + sizeof(mesh_id), actual_);
-
-    auto element = FromBytes<MeshIdElement>(buf_, actual_);
-    ASSERT_NE(nullptr, element);
-    EXPECT_EQ(0, std::memcmp(mesh_id, element->mesh_id, sizeof(mesh_id)));
-}
-
-TEST_F(Elements, QosAp) {
-    QosInfo info;
-    info.set_edca_param_set_update_count(9);
-    info.set_txop_request(1);
-    EXPECT_TRUE(QosCapabilityElement::Create(buf_, sizeof(buf_), &actual_, info));
-    EXPECT_EQ(sizeof(QosCapabilityElement), actual_);
-
-    auto element = FromBytes<QosCapabilityElement>(buf_, sizeof(buf_));
-    ASSERT_NE(nullptr, element);
-    EXPECT_EQ(element->qos_info.val(), info.val());
-}
-
-TEST_F(Elements, QosClient) {
-    QosInfo info;
-    info.set_ac_vo_uapsd_flag(1);
-    info.set_ac_vi_uapsd_flag(1);
-    info.set_ac_be_uapsd_flag(1);
-    info.set_qack(1);
-    info.set_more_data_ack(1);
-    EXPECT_TRUE(QosCapabilityElement::Create(buf_, sizeof(buf_), &actual_, info));
-    EXPECT_EQ(sizeof(QosCapabilityElement), actual_);
-
-    auto element = FromBytes<QosCapabilityElement>(buf_, sizeof(buf_));
-    ASSERT_NE(nullptr, element);
-    EXPECT_EQ(element->qos_info.val(), info.val());
 }
 
 TEST_F(Elements, Tspec) {
@@ -457,57 +282,6 @@ TEST_F(Elements, TsInfoScheduleSetting) {
 
     ts_info.p1.set_apsd(1);
     EXPECT_EQ(ts_info.GetScheduleSetting(), TsScheduleSetting::kScheduledApsd);
-}
-
-TEST_F(Elements, VhtCapabilities) {
-    // Consider endianness if test vector changes.
-    VhtCapabilitiesInfo vht_cap_info(0xffffffff);
-    VhtMcsNss vht_mcs_nss(0xaaaaaaaaaaaaaaaa);
-
-    EXPECT_TRUE(VhtCapabilities::Create(buf_, sizeof(buf_), &actual_, vht_cap_info, vht_mcs_nss));
-    EXPECT_EQ(sizeof(VhtCapabilities), actual_);
-
-    auto element = FromBytes<VhtCapabilities>(buf_, sizeof(buf_));
-    ASSERT_NE(nullptr, element);
-
-    EXPECT_EQ(element->vht_cap_info.max_mpdu_len(), 3);
-    EXPECT_EQ(element->vht_cap_info.supported_cbw_set(), 3);
-    EXPECT_EQ(element->vht_cap_info.rx_ldpc(), 1);
-    EXPECT_EQ(element->vht_cap_info.sgi_cbw80(), 1);
-    EXPECT_EQ(element->vht_cap_info.sgi_cbw160(), 1);
-    EXPECT_EQ(element->vht_cap_info.tx_stbc(), 1);
-
-    EXPECT_EQ(element->vht_cap_info.bfee_sts(), 7);
-    EXPECT_EQ(element->vht_cap_info.num_sounding(), 7);
-    EXPECT_EQ(element->vht_cap_info.link_adapt(), VhtCapabilitiesInfo::LINK_ADAPT_BOTH);
-
-    EXPECT_EQ(element->vht_mcs_nss.rx_max_mcs_ss1(), VhtMcsNss::VHT_MCS_0_TO_9);
-    EXPECT_EQ(element->vht_mcs_nss.rx_max_mcs_ss2(), VhtMcsNss::VHT_MCS_0_TO_9);
-    EXPECT_EQ(element->vht_mcs_nss.tx_max_mcs_ss4(), VhtMcsNss::VHT_MCS_0_TO_9);
-    EXPECT_EQ(element->vht_mcs_nss.max_nsts(), 5);
-    EXPECT_EQ(element->vht_mcs_nss.ext_nss_bw(), 1);
-}
-
-TEST_F(Elements, VhtOperation) {
-    BasicVhtMcsNss basic_mcs(0xaaaa);
-    uint8_t vht_cbw = VhtOperation::VHT_CBW_80_160_80P80;
-    uint8_t center_freq_seg0 = 155;
-    uint8_t center_freq_seg1 = 42;
-
-    EXPECT_TRUE(VhtOperation::Create(buf_, sizeof(buf_), &actual_, vht_cbw, center_freq_seg0,
-                                     center_freq_seg1, basic_mcs));
-    EXPECT_EQ(sizeof(VhtOperation), actual_);
-
-    auto element = FromBytes<VhtOperation>(buf_, sizeof(buf_));
-    ASSERT_NE(nullptr, element);
-
-    EXPECT_EQ(element->vht_cbw, vht_cbw);
-    EXPECT_EQ(element->center_freq_seg0, center_freq_seg0);
-    EXPECT_EQ(element->center_freq_seg1, center_freq_seg1);
-
-    EXPECT_EQ(element->basic_mcs.ss1(), VhtMcsNss::VHT_MCS_0_TO_9);
-    EXPECT_EQ(element->basic_mcs.ss2(), VhtMcsNss::VHT_MCS_0_TO_9);
-    EXPECT_EQ(element->basic_mcs.ss8(), VhtMcsNss::VHT_MCS_0_TO_9);
 }
 
 TEST(HtCapabilities, DdkConversion) {

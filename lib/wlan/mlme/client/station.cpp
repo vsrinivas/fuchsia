@@ -9,6 +9,7 @@
 #include <wlan/common/energy.h>
 #include <wlan/common/logging.h>
 #include <wlan/common/stats.h>
+#include <wlan/common/write_element.h>
 #include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/client/client_mlme.h>
 #include <wlan/mlme/debug.h>
@@ -284,35 +285,13 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
         BuildAssocReqSuppRates(*join_ctx_->bss(), client_capability, &supp_rates, &ext_rates);
     if (status != ZX_OK) { return status; }
 
-    ElementWriter elem_w(assoc->elements, reserved_ie_len);
-    if (!elem_w.write<SsidElement>(join_ctx_->bss()->ssid->data(),
-                                   join_ctx_->bss()->ssid->size())) {
-        errorf("could not write ssid \"%s\" to association request\n",
-               debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str());
-        service::SendAssocConfirm(device_,
-                                  wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
-        return ZX_ERR_IO;
-    }
-
-    if (!elem_w.write<SupportedRatesElement>(supp_rates.data(), supp_rates.size())) {
-        errorf("could not write supported rates\n");
-        service::SendAssocConfirm(device_,
-                                  wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
-        return ZX_ERR_IO;
-    }
-
-    if (!elem_w.write<ExtendedSupportedRatesElement>(ext_rates.data(), ext_rates.size())) {
-        errorf("could not write extended supported rates\n");
-        service::SendAssocConfirm(device_,
-                                  wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
-        return ZX_ERR_IO;
-    }
-
+    BufferWriter elem_w({assoc->elements, reserved_ie_len});
+    common::WriteSsid(&elem_w, *join_ctx_->bss()->ssid);
+    common::WriteSupportedRates(&elem_w, supp_rates);
+    common::WriteExtendedSupportedRates(&elem_w, ext_rates);
     // Write RSNE from MLME-Association.request if available.
     if (req.body()->rsn) {
-        if (!elem_w.write<RsnElement>(req.body()->rsn->data(), req.body()->rsn->size())) {
-            return ZX_ERR_IO;
-        }
+        elem_w.Write(*req.body()->rsn);
     }
 
     if (join_ctx_->IsHtOrLater()) {
@@ -328,18 +307,12 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
         }
         debugf("HT cap(after overriding): %s\n", debug::Describe(ht_cap).c_str());
 
-        if (!elem_w.write<HtCapabilities>(ht_cap.ht_cap_info, ht_cap.ampdu_params, ht_cap.mcs_set,
-                                          ht_cap.ht_ext_cap, ht_cap.txbf_cap, ht_cap.asel_cap)) {
-            errorf("could not write HtCapabilities\n");
-            service::SendAssocConfirm(device_,
-                                      wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
-            return ZX_ERR_IO;
-        }
+        common::WriteHtCapabilities(&elem_w, ht_cap);
     }
-    ZX_DEBUG_ASSERT(assoc->Validate(elem_w.size()));
+    ZX_DEBUG_ASSERT(assoc->Validate(elem_w.WrittenBytes()));
 
     packet->CopyCtrlFrom(MakeTxInfo(mgmt_hdr->fc, CBW20, WLAN_PHY_OFDM));
-    packet->set_len(w.WrittenBytes() + elem_w.size());
+    packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
     finspect("Outbound Mgmt Frame (AssocReq): %s\n", debug::Describe(*mgmt_hdr).c_str());
     status = SendNonData(fbl::move(packet));
@@ -1502,27 +1475,27 @@ zx_status_t ParseAssocRespIe(const uint8_t* ie_chains, size_t ie_chains_len,
             break;
         }
         case element_id::kHtCapabilities: {
-            auto ie = reader.read<HtCapabilities>();
+            auto ie = reader.read<HtCapabilitiesElement>();
             if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->ht_cap = std::make_optional(*ie);
+            assoc_ctx->ht_cap = std::make_optional(ie->body);
             break;
         }
         case element_id::kHtOperation: {
-            auto ie = reader.read<HtOperation>();
+            auto ie = reader.read<HtOperationElement>();
             if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->ht_op = std::make_optional(*ie);
+            assoc_ctx->ht_op = std::make_optional(ie->body);
             break;
         }
         case element_id::kVhtCapabilities: {
-            auto ie = reader.read<VhtCapabilities>();
+            auto ie = reader.read<VhtCapabilitiesElement>();
             if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->vht_cap = std::make_optional(*ie);
+            assoc_ctx->vht_cap = std::make_optional(ie->body);
             break;
         }
         case element_id::kVhtOperation: {
-            auto ie = reader.read<VhtOperation>();
+            auto ie = reader.read<VhtOperationElement>();
             if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->vht_op = std::make_optional(*ie);
+            assoc_ctx->vht_op = std::make_optional(ie->body);
             break;
         }
         default:

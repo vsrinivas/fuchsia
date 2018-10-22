@@ -6,6 +6,7 @@
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_AP_REMOTE_CLIENT_H_
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <wlan/common/buffer_writer.h>
 #include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/ap/remote_client_interface.h>
 #include <wlan/mlme/device_interface.h>
@@ -70,9 +71,6 @@ class RemoteClient : public RemoteClientInterface {
     const common::MacAddr& addr() { return addr_; }
 
    private:
-    zx_status_t WriteHtCapabilities(ElementWriter* w, const HtConfig& ht);
-    zx_status_t WriteHtOperation(ElementWriter* w);
-
     Listener* const listener_;
     DeviceInterface* const device_;
     BssInterface* const bss_;

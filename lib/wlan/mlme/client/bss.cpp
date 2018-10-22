@@ -244,7 +244,7 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
             }
 
             bss_desc_.country.resize(0);
-            bss_desc_.country->assign(ie->country, ie->country + CountryElement::kCountryLen);
+            bss_desc_.country->assign(ie->country.data, ie->country.data + Country::kCountryLen);
 
             debugbcn("%s Country: %3s\n", dbgmsghdr, bss_desc_.country->data());
             break;
@@ -274,48 +274,48 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
             break;
         }
         case element_id::kHtCapabilities: {
-            auto ie = reader.read<HtCapabilities>();
+            auto ie = reader.read<HtCapabilitiesElement>();
             if (ie == nullptr) {
                 debugbcn("%s Failed to parse\n", dbgmsghdr);
                 return ZX_ERR_INTERNAL;
             }
 
-            bss_desc_.ht_cap = std::make_unique<wlan_mlme::HtCapabilities>(ie->ToFidl());
+            bss_desc_.ht_cap = std::make_unique<wlan_mlme::HtCapabilities>(ie->body.ToFidl());
 
             debugbcn("%s HtCapabilities parsed\n", dbgmsghdr);
-            debugbcn("%s\n", debug::Describe(*ie).c_str());
+            debugbcn("%s\n", debug::Describe(ie->body).c_str());
             break;
         }
         case element_id::kHtOperation: {
-            auto ie = reader.read<HtOperation>();
+            auto ie = reader.read<HtOperationElement>();
             if (ie == nullptr) {
                 debugbcn("%s Failed to parse\n", dbgmsghdr);
                 return ZX_ERR_INTERNAL;
             }
 
-            bss_desc_.ht_op = std::make_unique<wlan_mlme::HtOperation>(ie->ToFidl());
+            bss_desc_.ht_op = std::make_unique<wlan_mlme::HtOperation>(ie->body.ToFidl());
             debugbcn("%s HtOperation parsed\n", dbgmsghdr);
             break;
         }
         case element_id::kVhtCapabilities: {
-            auto ie = reader.read<VhtCapabilities>();
+            auto ie = reader.read<VhtCapabilitiesElement>();
             if (ie == nullptr) {
                 debugbcn("%s Failed to parse\n", dbgmsghdr);
                 return ZX_ERR_INTERNAL;
             }
 
-            bss_desc_.vht_cap = std::make_unique<wlan_mlme::VhtCapabilities>(ie->ToFidl());
+            bss_desc_.vht_cap = std::make_unique<wlan_mlme::VhtCapabilities>(ie->body.ToFidl());
             debugbcn("%s VhtCapabilities parsed\n", dbgmsghdr);
             break;
         }
         case element_id::kVhtOperation: {
-            auto ie = reader.read<VhtOperation>();
+            auto ie = reader.read<VhtOperationElement>();
             if (ie == nullptr) {
                 debugbcn("%s Failed to parse\n", dbgmsghdr);
                 return ZX_ERR_INTERNAL;
             }
 
-            bss_desc_.vht_op = std::make_unique<wlan_mlme::VhtOperation>(ie->ToFidl());
+            bss_desc_.vht_op = std::make_unique<wlan_mlme::VhtOperation>(ie->body.ToFidl());
             debugbcn("%s VhtOperation parsed\n", dbgmsghdr);
             break;
         }

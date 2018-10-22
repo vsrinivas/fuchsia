@@ -21,6 +21,11 @@ template <typename T> const T* FromBytes(const uint8_t* buf, size_t len) {
     return reinterpret_cast<const T*>(buf);
 }
 
+template <typename T> const T* FromBytes(Span<const uint8_t> bytes) {
+    if (bytes.size() < sizeof(T)) return nullptr;
+    return reinterpret_cast<const T*>(bytes.data());
+}
+
 // Port keys
 //
 // When waiting on a port, the key will have both a type and an id. The type is used for routing the

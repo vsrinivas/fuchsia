@@ -4,6 +4,7 @@
 
 #include <wlan/mlme/ap/remote_client.h>
 
+#include <wlan/common/write_element.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
@@ -824,38 +825,28 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     assoc->cap.set_short_preamble(1);
 
     // Write elements.
-    ElementWriter w(assoc->elements, reserved_ie_len);
+    BufferWriter w({assoc->elements, reserved_ie_len});
 
     size_t num_rates;
     auto* rates = bss_->Rates(&num_rates);
 
-    RatesWriter rates_writer { rates, num_rates };
+    RatesWriter rates_writer {{ rates, num_rates }};
 
-    if (!rates_writer.WriteSupportedRates(&w)) {
-        errorf("[client] [%s] could not write supported rates\n", addr_.ToString().c_str());
-        return ZX_ERR_IO;
-    }
-
-    if (!rates_writer.WriteExtendedSupportedRates(&w)) {
-        errorf("[client] [%s] could not write ext. supported rates\n", addr_.ToString().c_str());
-        return ZX_ERR_IO;
-    }
+    rates_writer.WriteSupportedRates(&w);
+    rates_writer.WriteExtendedSupportedRates(&w);
 
     // TODO(NET-567): Write negotiated SupportedRates, ExtendedSupportedRates IEs
 
     auto ht = bss_->Ht();
     if (ht.ready) {
-        auto status = WriteHtCapabilities(&w, ht);
-        if (status != ZX_OK) { return status; }
-
-        status = WriteHtOperation(&w);
-        if (status != ZX_OK) { return status; }
+        common::WriteHtCapabilities(&w, BuildHtCapabilities(ht));
+        common::WriteHtOperation(&w, BuildHtOperation(bss_->Chan()));
     }
 
     // Validate the request in debug mode.
-    ZX_DEBUG_ASSERT(assoc->Validate(w.size()));
+    ZX_DEBUG_ASSERT(assoc->Validate(w.WrittenBytes()));
 
-    size_t body_len = frame.body()->len() + w.size();
+    size_t body_len = frame.body()->len() + w.WrittenBytes();
     status = frame.set_body_len(body_len);
     if (status != ZX_OK) {
         errorf("[client] [%s] could not set assocresp length to %zu: %d\n",
@@ -910,27 +901,6 @@ void RemoteClient::ReportDeauthentication() {
 
 void RemoteClient::ReportDisassociation(aid_t aid) {
     if (listener_ != nullptr) { listener_->HandleClientDisassociation(aid); }
-}
-
-zx_status_t RemoteClient::WriteHtCapabilities(ElementWriter* w, const HtConfig& c) {
-    HtCapabilities htc = BuildHtCapabilities(c);
-    if (!w->write<HtCapabilities>(htc.ht_cap_info, htc.ampdu_params, htc.mcs_set, htc.ht_ext_cap,
-                                  htc.txbf_cap, htc.asel_cap)) {
-        errorf("[client] [%s] could not write HtCapabilities\n", addr_.ToString().c_str());
-        return ZX_ERR_IO;
-    }
-
-    return ZX_OK;
-}
-
-zx_status_t RemoteClient::WriteHtOperation(ElementWriter* w) {
-    auto chan = bss_->Chan();
-    HtOperation hto = BuildHtOperation(chan);
-    if (!w->write<HtOperation>(hto.primary_chan, hto.head, hto.tail, hto.basic_mcs_set)) {
-        errorf("[client] [%s] could not write HtOperation\n", addr_.ToString().c_str());
-        return ZX_ERR_IO;
-    }
-    return ZX_OK;
 }
 
 uint8_t RemoteClient::GetTid() {

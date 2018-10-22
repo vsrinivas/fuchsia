@@ -4,31 +4,22 @@
 
 #include <wlan/mlme/rates_elements.h>
 
+#include <wlan/common/write_element.h>
+
 namespace wlan {
 
-bool RatesWriter::WriteSupportedRates(ElementWriter* w) const {
-    if (all_rates_ == nullptr || rates_len_ == 0) {
-        return true;
+void RatesWriter::WriteSupportedRates(BufferWriter* w) const {
+    if (!all_rates_.empty()) {
+        size_t num_rates = std::min(all_rates_.size(), SupportedRatesElement::kMaxLen);
+        common::WriteSupportedRates(w, all_rates_.subspan(0, num_rates));
     }
-
-    size_t num_rates = std::min(rates_len_, SupportedRatesElement::kMaxLen);
-    return w->write<SupportedRatesElement>(all_rates_, num_rates);
 }
 
-bool RatesWriter::WriteExtendedSupportedRates(ElementWriter* w) const {
-    if (all_rates_ == nullptr) {
-        return true;
-    }
-
+void RatesWriter::WriteExtendedSupportedRates(BufferWriter* w) const {
     // Don't write the Extended Supported Rates element if everything fits in Supported rates
-    if (rates_len_ <= SupportedRatesElement::kMaxLen) {
-        return true;
+    if (all_rates_.size() > SupportedRatesElement::kMaxLen) {
+        common::WriteExtendedSupportedRates(w, all_rates_.subspan(SupportedRatesElement::kMaxLen));
     }
-
-    const SupportedRate* ext_rates = all_rates_ + SupportedRatesElement::kMaxLen;
-    size_t num_rates = rates_len_ - SupportedRatesElement::kMaxLen;
-
-    return w->write<ExtendedSupportedRatesElement>(ext_rates, num_rates);
 }
 
 } // namespace wlan

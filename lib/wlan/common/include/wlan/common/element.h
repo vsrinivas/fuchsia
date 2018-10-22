@@ -101,46 +101,10 @@ class ElementReader {
     size_t offset_ = 0;
 };
 
-// An ElementWriter will serialize Elements into a buffer. The size() method will return the total
-// length of the buffer.
-class ElementWriter {
-   public:
-    ElementWriter(uint8_t* buf, size_t len);
-
-    template <typename E, typename... Args> bool write(Args&&... args) {
-        static_assert(fbl::is_base_of<Element<E, E::element_id()>, E>::value,
-                      "Only Elements may be inserted.");
-        if (offset_ >= len_) return false;
-
-        size_t actual = 0;
-        bool success =
-            E::Create(buf_ + offset_, len_ - offset_, &actual, std::forward<Args>(args)...);
-        if (!success) return false;
-
-        auto elem = reinterpret_cast<const E*>(buf_ + offset_);
-        if (!elem->is_valid()) {
-            warnf("ElementWriter: IE %3u has invalid body length: %3u\n", E::element_id(),
-                  elem->hdr.len);
-        }
-
-        offset_ += actual;
-        ZX_DEBUG_ASSERT(offset_ <= len_);
-        return true;
-    }
-
-    size_t size() const { return offset_; }
-
-   private:
-    uint8_t* buf_;
-    const size_t len_;
-    size_t offset_ = 0;
-};
-
 // IEEE Std 802.11-2016, 9.4.2.2
 struct SsidElement : public Element<SsidElement, element_id::kSsid> {
-    static bool Create(void* buf, size_t len, size_t* actual, const uint8_t* ssid, size_t ssid_len);
-    static const size_t kMinLen = 0;
-    static const size_t kMaxLen = 32;
+    static constexpr size_t kMinLen = 0;
+    static constexpr size_t kMaxLen = 32;
 
     ElementHeader hdr;
     uint8_t ssid[];
@@ -170,10 +134,8 @@ struct SupportedRate : public common::BitField<uint8_t> {
 
 // IEEE Std 802.11-2016, 9.4.2.3
 struct SupportedRatesElement : public Element<SupportedRatesElement, element_id::kSuppRates> {
-    static bool Create(void* buf, size_t len, size_t* actual,
-                       const SupportedRate rates[], size_t num_rates);
-    static const size_t kMinLen = 1;
-    static const size_t kMaxLen = 8;
+    static constexpr size_t kMinLen = 1;
+    static constexpr size_t kMaxLen = 8;
 
     ElementHeader hdr;
     SupportedRate rates[];
@@ -181,52 +143,58 @@ struct SupportedRatesElement : public Element<SupportedRatesElement, element_id:
 
 // IEEE Std 802.11-2016, 9.4.2.4
 struct DsssParamSetElement : public Element<DsssParamSetElement, element_id::kDsssParamSet> {
-    static bool Create(void* buf, size_t len, size_t* actual, uint8_t chan);
-    static const size_t kMinLen = 1;
-    static const size_t kMaxLen = 1;
+    static constexpr size_t kMinLen = 1;
+    static constexpr size_t kMaxLen = 1;
 
     ElementHeader hdr;
     uint8_t current_chan;
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.5
-struct CfParamSetElement : public Element<CfParamSetElement, element_id::kCfParamSet> {
-    static bool Create(void* buf, size_t len, size_t* actual, uint8_t count, uint8_t period,
-                       uint16_t max_duration, uint16_t dur_remaining);
-    static const size_t kMinLen = 6;
-    static const size_t kMaxLen = 6;
-
-    ElementHeader hdr;
+struct CfParamSet {
     uint8_t count;
     uint8_t period;
     uint16_t max_duration;
     uint16_t dur_remaining;
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.4.2.5
+struct CfParamSetElement : public Element<CfParamSetElement, element_id::kCfParamSet> {
+    static constexpr size_t kMinLen = 6;
+    static constexpr size_t kMaxLen = 6;
+
+    ElementHeader hdr;
+    CfParamSet body;
+} __PACKED;
+
 // IEEE Std 802.11-2016, 9.4.2.6
 class BitmapControl : public common::BitField<uint8_t> {
    public:
+    BitmapControl() = default;
+    explicit BitmapControl(uint8_t raw) : BitField(raw) {}
     WLAN_BIT_FIELD(group_traffic_ind, 0, 1);
     WLAN_BIT_FIELD(offset, 1, 7);
 };
 
 // IEEE Std 802.11-2016, 9.4.2.6
+struct TimHeader {
+    uint8_t dtim_count;
+    uint8_t dtim_period;
+    BitmapControl bmp_ctrl;
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.2.6
 struct TimElement : public Element<TimElement, element_id::kTim> {
-    static bool Create(void* buf, size_t len, size_t* actual, uint8_t dtim_count,
-                       uint8_t dtim_period, BitmapControl bmp_ctrl, const uint8_t* bmp,
-                       size_t bmp_len);
-    static const size_t kMinLenBmp = 1;
-    static const size_t kMaxLenBmp = 251;
-    static const size_t kFixedLenBody = 3;
-    static const size_t kMinLen = kFixedLenBody + kMinLenBmp;
-    static const size_t kMaxLen = kFixedLenBody + kMaxLenBmp;
+    static constexpr size_t kMinLenBmp = 1;
+    static constexpr size_t kMaxLenBmp = 251;
+    static constexpr size_t kFixedLenBody = 3;
+    static constexpr size_t kMinLen = kFixedLenBody + kMinLenBmp;
+    static constexpr size_t kMaxLen = kFixedLenBody + kMaxLenBmp;
 
     ElementHeader hdr;
 
     // body: fixed 3 bytes
-    uint8_t dtim_count;
-    uint8_t dtim_period;
-    BitmapControl bmp_ctrl;
+    TimHeader tim_hdr;
 
     // body: variable length 1-251 bytes.
     uint8_t bmp[];
@@ -241,11 +209,16 @@ struct SubbandTriplet {
     uint8_t max_tx_power;  // dBm
 } __PACKED;
 
+
+// IEEE Std 802.11-2016, 9.4.2.9
+struct Country {
+    static constexpr size_t kCountryLen = 3;
+    uint8_t data[kCountryLen];
+} __PACKED;
+static_assert(sizeof(Country) == Country::kCountryLen);
+
 // IEEE Std 802.11-2016, 9.4.2.9
 struct CountryElement : public Element<CountryElement, element_id::kCountry> {
-    static bool Create(void* buf, size_t len, size_t* actual, const uint8_t* country,
-                       const std::vector<SubbandTriplet>& subbands);
-    static const size_t kCountryLen = 3;
     static const size_t kMinLen = 3;  // TODO(porce): revisit the spec.
     static const size_t kMaxLen = 255;
 
@@ -261,7 +234,7 @@ struct CountryElement : public Element<CountryElement, element_id::kCountry> {
     // - ASCII 'I' : Indoor environment only
     // - ASCII 'X' : Noncountry entity
     // - Binary value of the Operating Class table number. Annex E Table E-1 becomes 0x01.
-    uint8_t country[kCountryLen];
+    Country country;
     static_assert(sizeof(SubbandTriplet) == 3,
                   "Wireformat for SubbandTriplet is of length 3 octets.");
 
@@ -324,12 +297,18 @@ struct MeshConfiguration {
     };
 
     struct MeshFormationInfo : public common::BitField<uint8_t> {
+        MeshFormationInfo() = default;
+        explicit MeshFormationInfo(uint8_t raw) : BitField(raw) {}
+
         WLAN_BIT_FIELD(connected_to_mesh_gate, 0, 1);
         WLAN_BIT_FIELD(num_peerings, 1, 6);
         WLAN_BIT_FIELD(connected_to_as, 7, 1);
     } __PACKED;
 
     struct MeshCapability : public common::BitField<uint8_t> {
+        MeshCapability() = default;
+        explicit MeshCapability(uint8_t raw) : BitField(raw) {}
+
         WLAN_BIT_FIELD(accepting_additional_peerings, 0, 1);
         WLAN_BIT_FIELD(mcca_supported, 1, 1);
         WLAN_BIT_FIELD(mcca_enabled, 2, 1);
@@ -964,15 +943,7 @@ class AselCapability : public common::BitField<uint8_t> {
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56
-struct HtCapabilities : public Element<HtCapabilities, element_id::kHtCapabilities> {
-    static bool Create(void* buf, size_t len, size_t* actual, HtCapabilityInfo ht_cap_info,
-                       AmpduParams ampdu_params, SupportedMcsSet mcs_set,
-                       HtExtCapabilities ht_ext_cap, TxBfCapability txbf_cap,
-                       AselCapability asel_cap);
-    static constexpr size_t kMinLen = 26;
-    static constexpr size_t kMaxLen = 26;
-
-    ElementHeader hdr;
+struct HtCapabilities {
     HtCapabilityInfo ht_cap_info;
     AmpduParams ampdu_params;
     SupportedMcsSet mcs_set;
@@ -982,8 +953,6 @@ struct HtCapabilities : public Element<HtCapabilities, element_id::kHtCapabiliti
 
     static HtCapabilities FromDdk(const wlan_ht_caps_t& ddk) {
         HtCapabilities dst{};
-        dst.hdr.id = element_id::kHtCapabilities;
-        dst.hdr.len = HtCapabilities::kMaxLen;  // same as kMinLen
         dst.ht_cap_info.set_val(ddk.ht_capability_info);
         dst.ampdu_params.set_val(ddk.ampdu_params);
         dst.mcs_set.rx_mcs_head.set_val(ddk.mcs_set.rx_mcs_head);
@@ -1010,31 +979,34 @@ struct HtCapabilities : public Element<HtCapabilities, element_id::kHtCapabiliti
 
     static HtCapabilities FromFidl(const ::fuchsia::wlan::mlme::HtCapabilities& fidl) {
         HtCapabilities dst;
-
-        dst.hdr.id = element_id::kHtCapabilities;
-        dst.hdr.len = HtCapabilities::kMaxLen;  // same as kMinLen
         dst.ht_cap_info = HtCapabilityInfo::FromFidl(fidl.ht_cap_info);
         dst.ampdu_params = AmpduParams::FromFidl(fidl.ampdu_params);
         dst.mcs_set = SupportedMcsSet::FromFidl(fidl.mcs_set);
         dst.ht_ext_cap = HtExtCapabilities::FromFidl(fidl.ht_ext_cap);
         dst.txbf_cap = TxBfCapability::FromFidl(fidl.txbf_cap);
         dst.asel_cap = AselCapability::FromFidl(fidl.asel_cap);
-
         return dst;
     }
 
     ::fuchsia::wlan::mlme::HtCapabilities ToFidl() const {
         ::fuchsia::wlan::mlme::HtCapabilities fidl;
-
         fidl.ht_cap_info = ht_cap_info.ToFidl();
         fidl.ampdu_params = ampdu_params.ToFidl();
         fidl.mcs_set = mcs_set.ToFidl();
         fidl.ht_ext_cap = ht_ext_cap.ToFidl();
         fidl.txbf_cap = txbf_cap.ToFidl();
         fidl.asel_cap = asel_cap.ToFidl();
-
         return fidl;
     }
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.2.56
+struct HtCapabilitiesElement : public Element<HtCapabilitiesElement, element_id::kHtCapabilities> {
+    static constexpr size_t kMinLen = 26;
+    static constexpr size_t kMaxLen = 26;
+
+    ElementHeader hdr;
+    HtCapabilities body;
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.57
@@ -1096,14 +1068,7 @@ class HtOpInfoTail : public common::BitField<uint8_t> {
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.57
-struct HtOperation : public Element<HtOperation, element_id::kHtOperation> {
-    static bool Create(void* buf, size_t len, size_t* actual, uint8_t primary_chan,
-                       HtOpInfoHead head, HtOpInfoTail tail, SupportedMcsSet basic_mcs_set);
-    static constexpr size_t kMinLen = 22;
-    static constexpr size_t kMaxLen = 22;
-
-    ElementHeader hdr;
-
+struct HtOperation {
     uint8_t primary_chan;  // Primary 20 MHz channel.
 
     // Implementation hack to support 40bits bitmap.
@@ -1113,8 +1078,6 @@ struct HtOperation : public Element<HtOperation, element_id::kHtOperation> {
 
     static HtOperation FromDdk(const wlan_ht_op_t& ddk) {
         HtOperation dst{};
-        dst.hdr.id = element_id::kHtOperation;
-        dst.hdr.id = HtOperation::kMaxLen;  // same as kMinLen
         dst.primary_chan = ddk.primary_chan;
         dst.head.set_val(ddk.head);
         dst.tail.set_val(ddk.tail);
@@ -1188,9 +1151,17 @@ struct HtOperation : public Element<HtOperation, element_id::kHtOperation> {
     }
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.4.2.57
+struct HtOperationElement : public Element<HtOperationElement, element_id::kHtOperation> {
+    static constexpr size_t kMinLen = 22;
+    static constexpr size_t kMaxLen = 22;
+
+    ElementHeader hdr;
+    HtOperation body;
+} __PACKED;
+
 // IEEE Std 802.11-2016, 9.4.2.126
 struct GcrGroupAddressElement {
-    static bool Create(void* buf, size_t len, size_t* actual, const common::MacAddr& addr);
     static const size_t kMinLen = common::kMacAddrLen;
     static const size_t kMaxLen = common::kMacAddrLen;
 
@@ -1416,21 +1387,12 @@ struct VhtMcsNss : public common::BitField<uint64_t> {
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.158
-struct VhtCapabilities : public Element<VhtCapabilities, element_id::kVhtCapabilities> {
-    static bool Create(void* buf, size_t len, size_t* actual,
-                       const VhtCapabilitiesInfo& vht_cap_info, const VhtMcsNss& vht_mcs_nss);
-    static constexpr size_t kMinLen = 12;
-    static constexpr size_t kMaxLen = 12;
-
-    ElementHeader hdr;
-
+struct VhtCapabilities {
     VhtCapabilitiesInfo vht_cap_info;
     VhtMcsNss vht_mcs_nss;
 
     static VhtCapabilities FromDdk(const wlan_vht_caps_t& ddk) {
         VhtCapabilities dst{};
-        dst.hdr.id = element_id::kVhtCapabilities;
-        dst.hdr.len = VhtCapabilities::kMaxLen;  // same as kMinLen
         dst.vht_cap_info.set_val(ddk.vht_capability_info);
         dst.vht_mcs_nss.set_val(ddk.supported_vht_mcs_and_nss_set);
         return dst;
@@ -1445,21 +1407,26 @@ struct VhtCapabilities : public Element<VhtCapabilities, element_id::kVhtCapabil
 
     static VhtCapabilities FromFidl(const ::fuchsia::wlan::mlme::VhtCapabilities& fidl) {
         VhtCapabilities dst;
-
         dst.vht_cap_info = VhtCapabilitiesInfo::FromFidl(fidl.vht_cap_info);
         dst.vht_mcs_nss = VhtMcsNss::FromFidl(fidl.vht_mcs_nss);
-
         return dst;
     }
 
     ::fuchsia::wlan::mlme::VhtCapabilities ToFidl() const {
         ::fuchsia::wlan::mlme::VhtCapabilities fidl;
-
         fidl.vht_cap_info = vht_cap_info.ToFidl();
         fidl.vht_mcs_nss = vht_mcs_nss.ToFidl();
-
         return fidl;
     }
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.2.158
+struct VhtCapabilitiesElement : public Element<VhtCapabilitiesElement, element_id::kVhtCapabilities> {
+    static constexpr size_t kMinLen = 12;
+    static constexpr size_t kMaxLen = 12;
+
+    ElementHeader hdr;
+    VhtCapabilities body;
 } __PACKED;
 
 // IEEE Std 802.11-2016, Figure 9-562
@@ -1523,15 +1490,7 @@ struct BasicVhtMcsNss : public common::BitField<uint16_t> {
 };
 
 // IEEE Std 802.11-2016, 9.4.2.159
-struct VhtOperation : public Element<VhtOperation, element_id::kVhtOperation> {
-    static bool Create(void* buf, size_t len, size_t* actual, uint8_t vht_cbw,
-                       uint8_t center_freq_seg0, uint8_t center_freq_seg1,
-                       const BasicVhtMcsNss& basic_mcs);
-    static constexpr size_t kMinLen = 5;
-    static constexpr size_t kMaxLen = 5;
-
-    ElementHeader hdr;
-
+struct VhtOperation {
     uint8_t vht_cbw;
     uint8_t center_freq_seg0;
     uint8_t center_freq_seg1;
@@ -1586,6 +1545,15 @@ struct VhtOperation : public Element<VhtOperation, element_id::kVhtOperation> {
 
         return fidl;
     }
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.2.159
+struct VhtOperationElement : public Element<VhtOperationElement, element_id::kVhtOperation> {
+    static constexpr size_t kMinLen = 5;
+    static constexpr size_t kMaxLen = 5;
+
+    ElementHeader hdr;
+    VhtOperation body;
 } __PACKED;
 
 SupportedMcsSet IntersectMcs(const SupportedMcsSet& lhs, const SupportedMcsSet& rhs);

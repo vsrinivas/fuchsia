@@ -108,6 +108,7 @@ executable("mac_tests") {
     "sequence_unittest.cpp",
     "tim_unittest.cpp",
     "tx_vector_unittest.cpp",
+    "write_element_unittest.cpp",
   ]
 
   deps = [

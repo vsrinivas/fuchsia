@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include <wlan/common/buffer_writer.h>
 #include <wlan/common/element.h>
+#include <wlan/common/span.h>
 
 // Utilities for writing SupportedRates / ExtendedSupportedRates elements
 
@@ -12,16 +14,14 @@ namespace wlan {
 
 class RatesWriter {
  public:
-    RatesWriter(const SupportedRate all_rates[], size_t rates_len)
-      : all_rates_(all_rates), rates_len_(rates_len) {}
+    explicit RatesWriter(Span<const SupportedRate> all_rates) : all_rates_(all_rates) {}
 
-    bool WriteSupportedRates(ElementWriter* w) const;
+    void WriteSupportedRates(BufferWriter* w) const;
 
-    bool WriteExtendedSupportedRates(ElementWriter* w) const;
+    void WriteExtendedSupportedRates(BufferWriter* w) const;
 
  private:
-    const SupportedRate* all_rates_;
-    size_t rates_len_;
+    Span<const SupportedRate> all_rates_;
 };
 
 } // namespace wlan

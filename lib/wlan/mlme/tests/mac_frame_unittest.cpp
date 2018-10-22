@@ -4,6 +4,8 @@
 
 #include "test_data.h"
 
+#include <wlan/common/buffer_writer.h>
+#include <wlan/common/write_element.h>
 #include <wlan/mlme/client/station.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
@@ -80,44 +82,44 @@ using PaddedTripleHdrFrame = TripleHdrFrame<4, 10>;
 
 TEST(ProbeRequest, Validate) {
     uint8_t buf[128];
-    ElementWriter writer(buf, sizeof(buf));
+    BufferWriter writer(buf);
 
     const uint8_t ssid[] = {'t', 'e', 's', 't', ' ', 's', 's', 'i', 'd'};
-    ASSERT_TRUE(writer.write<SsidElement>(ssid, sizeof(ssid)));
+    common::WriteSsid(&writer, ssid);
 
     std::vector<SupportedRate> rates{SupportedRate(2), SupportedRate(4), SupportedRate(11),
                                      SupportedRate(22)};
-    ASSERT_TRUE(writer.write<SupportedRatesElement>(rates.data(), rates.size()));
+    common::WriteSupportedRates(&writer, rates);
 
-    auto probe_request = FromBytes<ProbeRequest>(buf, writer.size());
-    EXPECT_TRUE(probe_request->Validate(writer.size()));
+    auto probe_request = FromBytes<ProbeRequest>(buf, writer.WrittenBytes());
+    EXPECT_TRUE(probe_request->Validate(writer.WrittenBytes()));
 }
 
 TEST(ProbeRequest, OutOfOrderElements) {
     uint8_t buf[128];
-    ElementWriter writer(buf, sizeof(buf));
+    BufferWriter writer(buf);
 
     std::vector<SupportedRate> rates{SupportedRate(2), SupportedRate(4), SupportedRate(11),
                                      SupportedRate(22)};
-    ASSERT_TRUE(writer.write<SupportedRatesElement>(rates.data(), rates.size()));
+    common::WriteSupportedRates(&writer, rates);
 
     const uint8_t ssid[] = {'t', 'e', 's', 't', ' ', 's', 's', 'i', 'd'};
-    ASSERT_TRUE(writer.write<SsidElement>(ssid, sizeof(ssid)));
+    common::WriteSsid(&writer, ssid);
 
-    auto probe_request = FromBytes<ProbeRequest>(buf, writer.size());
-    EXPECT_FALSE(probe_request->Validate(writer.size()));
+    auto probe_request = FromBytes<ProbeRequest>(buf, writer.WrittenBytes());
+    EXPECT_FALSE(probe_request->Validate(writer.WrittenBytes()));
 }
 
 TEST(ProbeRequest, InvalidElement) {
     uint8_t buf[128];
-    ElementWriter writer(buf, sizeof(buf));
+    BufferWriter writer(buf);
 
     const uint8_t ssid[] = {'t', 'e', 's', 't', ' ', 's', 's', 'i', 'd'};
-    ASSERT_TRUE(writer.write<SsidElement>(ssid, sizeof(ssid)));
-    ASSERT_TRUE(writer.write<CfParamSetElement>(1, 2, 3, 4));
+    common::WriteSsid(&writer, ssid);
+    common::WriteCfParamSet(&writer, { 1, 2, 3, 4 });
 
-    auto probe_request = FromBytes<ProbeRequest>(buf, writer.size());
-    EXPECT_FALSE(probe_request->Validate(writer.size()));
+    auto probe_request = FromBytes<ProbeRequest>(buf, writer.WrittenBytes());
+    EXPECT_FALSE(probe_request->Validate(writer.WrittenBytes()));
 }
 
 TEST(Frame, General) {
