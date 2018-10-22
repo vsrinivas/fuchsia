@@ -147,13 +147,6 @@ static int aml_start_thread(void* arg) {
         goto fail;
     }
 
-    // This function includes some non-trivial delays, so lets run this last
-    // to avoid slowing down the rest of the boot.
-    if ((status = aml_bluetooth_init(bus)) != ZX_OK) {
-        zxlogf(ERROR, "aml_bluetooth_init failed: %d\n", status);
-        goto fail;
-    }
-
     if ((status = aml_clk_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_clk_init failed: %d\n", status);
         goto fail;
@@ -168,6 +161,14 @@ static int aml_start_thread(void* arg) {
         zxlogf(ERROR, "astro_tdm_init failed: %d\n", status);
         goto fail;
     }
+
+    // This function includes some non-trivial delays, so lets run this last
+    // to avoid slowing down the rest of the boot.
+    if ((status = aml_bluetooth_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "aml_bluetooth_init failed: %d\n", status);
+        goto fail;
+    }
+
     return ZX_OK;
 fail:
     zxlogf(ERROR, "aml_start_thread failed, not all devices have been initialized\n");
