@@ -16,6 +16,9 @@ Segment::~Segment() {}
 
 void Segment::Provision(Graph* graph, async_dispatcher_t* dispatcher,
                         fit::closure update_callback) {
+  FXL_DCHECK(graph);
+  FXL_DCHECK(dispatcher);
+
   graph_ = graph;
   dispatcher_ = dispatcher;
   update_callback_ = std::move(update_callback);
@@ -29,7 +32,11 @@ void Segment::Deprovision() {
   update_callback_ = nullptr;
 }
 
-void Segment::NotifyUpdate() {
+void Segment::SetUpdateCallback(fit::closure update_callback) {
+  update_callback_ = std::move(update_callback);
+}
+
+void Segment::NotifyUpdate() const {
   if (update_callback_) {
     update_callback_();
   }

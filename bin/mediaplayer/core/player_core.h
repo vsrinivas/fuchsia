@@ -34,12 +34,14 @@ class PlayerCore {
     update_callback_ = std::move(update_callback);
   }
 
-  // Sets the current source segment. |source_segment| may be null, indicating
-  // there is no source segment. The callback is called when the initial set
-  // of streams supplied by the segment have been connected. |callback| may be
-  // null.
+  // Sets the current source segment. |source_segment| must be provisioned. The
+  // callback is called when the initial set of streams supplied by the segment
+  // have been connected.
   void SetSourceSegment(std::unique_ptr<SourceSegment> source_segment,
                         fit::closure callback);
+
+  // Removes the current source segment, if there is one.
+  void ClearSourceSegment();
 
   // Sets the current sink segment for the specified medium. |sink_segment| may
   // be null, indicating there is no sink segment for the specified medium.
@@ -122,9 +124,8 @@ class PlayerCore {
   // there is no such problem.
   const fuchsia::mediaplayer::Problem* problem() const;
 
-  // Test only.
   // Returns a pointer to the graph.
-  const Graph* graph() const { return &graph_; }
+  Graph* graph() { return &graph_; }
 
   // Test only.
   // Returns a reference to the source node.
@@ -160,10 +161,10 @@ class PlayerCore {
   SinkSegment* GetParkedSinkSegment(StreamType::Medium medium) const;
 
   // Called when the source segment signals that a stream has been updated.
-  void OnStreamUpdated(size_t index, const StreamType& type, OutputRef output);
+  void OnStreamUpdated(size_t index, const SourceSegment::Stream& stream);
 
   // Called when the source segment signals that a stream has been removed.
-  void OnStreamRemoval(size_t index);
+  void OnStreamRemoved(size_t index);
 
   // Called when an action kicked off by a call to |SetSourceSegment| completes.
   // If |set_source_segment_callback_| is set, |set_source_segment_countdown_|

@@ -15,6 +15,7 @@
 #include "garnet/bin/mediaplayer/demux/reader.h"
 #include "garnet/bin/mediaplayer/fidl/fidl_audio_renderer.h"
 #include "garnet/bin/mediaplayer/fidl/fidl_video_renderer.h"
+#include "garnet/bin/mediaplayer/source_impl.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/media/timeline/timeline.h"
@@ -82,12 +83,12 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
 
   static const char* ToString(State value);
 
-  // Begins the process of setting the reader.
-  void BeginSetReader(std::shared_ptr<Reader> reader);
+  // Begins the process of setting a new source.
+  void BeginSetSource(std::unique_ptr<SourceImpl> source);
 
-  // Finishes the process of setting the reader, assuming we're in |kIdle|
-  // state and have no source segment.
-  void FinishSetReader();
+  // Finishes the process of setting a new source, assuming we're in |kIdle|
+  // state and have no current source.
+  void FinishSetSource();
 
   // Creates the renderer for |medium| if it doesn't exist already.
   void MaybeCreateRenderer(StreamType::Medium medium);
@@ -100,19 +101,27 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
 
   // Determines whether we need to flush.
   bool NeedToFlush() const {
-    return setting_reader_ ||
+    return setting_source_ ||
            target_position_ != fuchsia::media::NO_TIMESTAMP ||
            target_state_ == State::kFlushed;
   }
 
   // Determines whether we should hold a frame when flushing.
   bool ShouldHoldFrame() const {
-    return !setting_reader_ && target_state_ != State::kFlushed;
+    return !setting_source_ && target_state_ != State::kFlushed;
   }
 
   // Sets the timeline function.
   void SetTimelineFunction(float rate, int64_t reference_time,
                            fit::closure callback);
+
+  // Creates a |Source| that uses the specified reader. |source_request| is
+  // optional. The optional |connection_failure_callback| is provided to the
+  // source to signal a connection failure.
+  std::unique_ptr<SourceImpl> CreateSource(
+      std::shared_ptr<Reader> reader,
+      fidl::InterfaceRequest<fuchsia::mediaplayer::Source> source_request,
+      fit::closure connection_failure_callback = nullptr);
 
   // Sends status updates to clients.
   void SendStatusUpdates();
@@ -156,16 +165,18 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
   // The minimum program range PTS to be used for SetProgramRange.
   int64_t program_range_min_pts_ = kMinTime;
 
-  // Whether we need to set the reader, possibly with nothing. When this is
-  // true, the state machine will transition to |kIdle|, removing an existing
-  // reader if there is one, then call |FinishSetReader| to set up the new
-  // reader |new_reader_|.
-  bool setting_reader_ = false;
+  // Whether the player is in the process of setting the source, possibly to
+  // nothing. This is set to true when any of the Set*Source methods is called,
+  // at which time |new_source_| is set to identify the new source. In this
+  // state, the state machine will transition to |kIdle|, removing an existing
+  // source, if there is one, then call |FinishSetSource| to set up the new
+  // source.
+  bool setting_source_ = false;
 
-  // Reader that needs to be used once we're ready to use it. If this field is
-  // null when |setting_reader_| is true, we're waiting to remove the existing
-  // reader and transition to kInactive.
-  std::shared_ptr<Reader> new_reader_;
+  // |SourceImpl| that needs to be used once we're ready to use it. If this
+  // field is null when |setting_source_| is true, we're waiting to remove the
+  // existing source and transition to kInactive.
+  std::unique_ptr<SourceImpl> new_source_;
 
   fuchsia::mediaplayer::PlayerStatus status_;
 };

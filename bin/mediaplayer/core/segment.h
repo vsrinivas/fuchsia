@@ -31,16 +31,22 @@ class Segment {
   virtual ~Segment();
 
   // Provides the graph and task runner for this segment. |update_callback|
-  // is called whenever the player should reinterrogate the segment for state
-  // changes. The update callback is used to notify of changes to the value
-  // returned by problem(). Subclasses of Segment may use this callback to
-  // signal additional changes.
+  // is optional and is called whenever the player should reinterrogate the
+  // segment for state changes. The update callback is used to notify of changes
+  // to the value returned by problem(). Subclasses of Segment may use this
+  // callback to signal additional changes.
   void Provision(Graph* graph, async_dispatcher_t* dispatcher,
                  fit::closure update_callback);
 
   // Revokes the graph, task runner and update callback provided in a previous
   // call to |Provision|.
   virtual void Deprovision();
+
+  // Indicates whether the segment is provisioned.
+  bool provisioned() const { return graph_ != nullptr; }
+
+  // Sets the update callback. |update_callback| may be null.
+  void SetUpdateCallback(fit::closure update_callback);
 
   // Returns the current problem preventing intended operation or nullptr if
   // there is no such problem.
@@ -60,16 +66,13 @@ class Segment {
   }
 
   // Notifies the player of state updates (calls the update callback).
-  void NotifyUpdate();
+  void NotifyUpdate() const;
 
   // Report a problem.
   void ReportProblem(const std::string& type, const std::string& details);
 
   // Clear any prior problem report.
   void ReportNoProblem();
-
-  // Indicates whether the segment is provisioned.
-  bool provisioned() { return graph_ != nullptr; }
 
   // Called when the segment has been provisioned. The default implementation
   // does nothing.

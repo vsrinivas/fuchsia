@@ -7,13 +7,14 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
-
+#include <vector>
 #include "garnet/bin/mediaplayer/core/segment.h"
 #include "garnet/bin/mediaplayer/graph/graph.h"
+#include "lib/fxl/logging.h"
 
 namespace media_player {
 
-// A graph segment that produces elementary streams.
+// Abstract base class for a graph segment that produces elementary streams.
 //
 // Note that the update callback supplied in Segment::Provision is used to
 // notify of changes to the values returned by duration_ns(), can_pause(),
@@ -23,23 +24,68 @@ namespace media_player {
 // concerned with metadata.
 class SourceSegment : public Segment {
  public:
-  using StreamUpdateCallback = fit::function<void(
-      size_t index, const StreamType* type, OutputRef output, bool more)>;
+  // Describes a stream.
+  struct Stream {
+   public:
+    // Indicates whether this stream is valid. An invalid stream is a
+    // placeholder for a removed stream.
+    bool valid() const {
+      FXL_DCHECK((stream_type_ != nullptr) == static_cast<bool>(output_));
+      return stream_type_ != nullptr;
+    }
+
+    // Gets the type of the stream. This method must not be called on an invalid
+    // |Stream|.
+    const StreamType& type() const {
+      FXL_DCHECK(stream_type_);
+      return *stream_type_;
+    }
+
+    // The output that produces the stream. This method must not be called on
+    // an invalid |Stream|.
+    const OutputRef output() const {
+      FXL_DCHECK(output_);
+      return output_;
+    }
+
+   private:
+    std::unique_ptr<StreamType> stream_type_;
+    OutputRef output_;
+
+    friend class SourceSegment;
+  };
+
+  // Callback type used to inform the owner of stream changes. Stream adds
+  // and updated are indicated by non-null |stream| value. Stream removes are
+  // indicated by null |stream| value. |more| is true during initial stream
+  // enumeration when the segment knows there are more streams to report.
+  using StreamUpdateCallback =
+      fit::function<void(size_t index, const Stream* stream, bool more)>;
 
   SourceSegment();
 
   ~SourceSegment() override;
 
   // Provides the graph, async and callbacks for this source segment.
-  // The player expects stream updates shortly after this method is called,
-  // the last of which should have a |more| value of false.
+  // |updateCallback| and |stream_update_callback| are both optional. If the
+  // segment can decide when streams are enumerated, it does so immediately
+  // after this method is called.
   void Provision(Graph* graph, async_dispatcher_t* dispatcher,
                  fit::closure updateCallback,
                  StreamUpdateCallback stream_update_callback);
 
-  // Revokes the graph, task runner and callbacks provided in a previous call to
-  // |Provision|.
+  // Revokes the graph, task runner and callbacks provided in a previous call
+  // to |Provision|.
   void Deprovision() override;
+
+  // Sets the stream update callback. |stream_update_callback| may be null.
+  void SetStreamUpdateCallback(StreamUpdateCallback stream_update_callback);
+
+  const std::vector<Stream>& streams() { return streams_; }
+
+  // Indicates whether the addition of one or more streams is imminent. A false
+  // value is no guarantee that more streams won't be added.
+  bool stream_add_imminent() const { return stream_add_imminent_; }
 
   // Returns the duration of the content in nanoseconds or 0 if the duration is
   // currently unknown.
@@ -73,7 +119,12 @@ class SourceSegment : public Segment {
   // Called by subclasses when a stream is removed.
   void OnStreamRemoved(size_t index, bool more);
 
+ private:
+  bool stream_add_imminent_ = true;
   StreamUpdateCallback stream_update_callback_;
+  // TODO(dalesat): Do we really need to maintain this or can we just have an
+  // abstract GetStreams()?
+  std::vector<Stream> streams_;
 };
 
 }  // namespace media_player

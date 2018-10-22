@@ -21,48 +21,63 @@ PlayerCore::~PlayerCore() {}
 
 void PlayerCore::SetSourceSegment(std::unique_ptr<SourceSegment> source_segment,
                                   fit::closure callback) {
-  if (source_segment_) {
-    while (!streams_.empty()) {
-      OnStreamRemoval(streams_.size() - 1);
-    }
+  FXL_DCHECK(source_segment);
+  FXL_DCHECK(source_segment->provisioned());
+  FXL_DCHECK(callback);
 
-    source_segment_->Deprovision();
-  }
+  ClearSourceSegment();
 
   source_segment_ = std::move(source_segment);
-  if (!source_segment_) {
-    if (callback) {
-      callback();
-    }
-
-    return;
-  }
 
   set_source_segment_callback_ = std::move(callback);
   set_source_segment_countdown_ = 1;
 
-  source_segment_->Provision(&graph_, dispatcher_,
-                             [this]() {
-                               // This callback notifies the player of changes
-                               // to source_segment_'s problem() and/or
-                               // metadata() values.
-                               NotifyUpdate();
-                             },
-                             [this](size_t index, const StreamType* type,
-                                    OutputRef output, bool more) {
-                               if (output) {
-                                 FXL_DCHECK(type);
-                                 ++set_source_segment_countdown_;
-                                 OnStreamUpdated(index, *type, output);
-                               } else {
-                                 FXL_DCHECK(!type);
-                                 OnStreamRemoval(index);
-                               }
+  // This callback notifies the player of changes to source_segment_'s
+  // problem() and/or metadata() values.
+  source_segment_->SetUpdateCallback([this]() { NotifyUpdate(); });
 
-                               if (!more) {
-                                 MaybeCompleteSetSourceSegment();
-                               }
-                             });
+  // This callback notifies of changes to the set of streams.
+  source_segment_->SetStreamUpdateCallback(
+      [this](size_t index, const SourceSegment::Stream* stream, bool more) {
+        if (stream) {
+          ++set_source_segment_countdown_;
+          OnStreamUpdated(index, *stream);
+        } else {
+          OnStreamRemoved(index);
+        }
+
+        if (!more) {
+          MaybeCompleteSetSourceSegment();
+        }
+      });
+
+  // Account for the streams that have already been enumerated.
+  size_t index = 0;
+  for (auto& stream : source_segment_->streams()) {
+    if (stream.valid()) {
+      ++set_source_segment_countdown_;
+      OnStreamUpdated(index, stream);
+    }
+
+    ++index;
+  }
+
+  if (!source_segment_->stream_add_imminent()) {
+    MaybeCompleteSetSourceSegment();
+  }
+}
+
+void PlayerCore::ClearSourceSegment() {
+  if (!source_segment_) {
+    return;
+  }
+
+  while (!streams_.empty()) {
+    OnStreamRemoved(streams_.size() - 1);
+  }
+
+  source_segment_->Deprovision();
+  source_segment_ = nullptr;
 }
 
 void PlayerCore::SetSinkSegment(std::unique_ptr<SinkSegment> sink_segment,
@@ -275,8 +290,8 @@ SinkSegment* PlayerCore::GetParkedSinkSegment(StreamType::Medium medium) const {
   return iter == parked_sink_segments_.end() ? nullptr : iter->second.get();
 }
 
-void PlayerCore::OnStreamUpdated(size_t index, const StreamType& type,
-                                 OutputRef output) {
+void PlayerCore::OnStreamUpdated(size_t index,
+                                 const SourceSegment::Stream& update_stream) {
   if (streams_.size() < index + 1) {
     streams_.resize(index + 1);
   }
@@ -286,7 +301,7 @@ void PlayerCore::OnStreamUpdated(size_t index, const StreamType& type,
   if (stream.sink_segment_) {
     FXL_DCHECK(stream.stream_type_);
 
-    if (stream.stream_type_->medium() != type.medium()) {
+    if (stream.stream_type_->medium() != update_stream.type().medium()) {
       // The sink segment for this stream is for the wrong medium. Park it.
       FXL_DCHECK(!GetParkedSinkSegment(stream.stream_type_->medium()));
       parked_sink_segments_[stream.stream_type_->medium()] =
@@ -294,8 +309,8 @@ void PlayerCore::OnStreamUpdated(size_t index, const StreamType& type,
     }
   }
 
-  stream.stream_type_ = type.Clone();
-  stream.output_ = output;
+  stream.stream_type_ = update_stream.type().Clone();
+  stream.output_ = update_stream.output();
 
   if (!stream.sink_segment_) {
     stream.sink_segment_ = TakeSinkSegment(stream.stream_type_->medium());
@@ -309,7 +324,7 @@ void PlayerCore::OnStreamUpdated(size_t index, const StreamType& type,
   ConnectStream(&stream);
 }
 
-void PlayerCore::OnStreamRemoval(size_t index) {
+void PlayerCore::OnStreamRemoved(size_t index) {
   if (streams_.size() < index + 1) {
     return;
   }

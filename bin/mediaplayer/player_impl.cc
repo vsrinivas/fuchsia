@@ -22,6 +22,7 @@
 #include "garnet/bin/mediaplayer/fidl/fidl_type_conversions.h"
 #include "garnet/bin/mediaplayer/fidl/fidl_video_renderer.h"
 #include "garnet/bin/mediaplayer/graph/formatting.h"
+#include "garnet/bin/mediaplayer/source_impl.h"
 #include "garnet/bin/mediaplayer/util/safe_clone.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
@@ -197,18 +198,18 @@ void PlayerImpl::Update() {
   while (true) {
     switch (state_) {
       case State::kInactive:
-        if (setting_reader_) {
-          // Need to set the reader. |FinishSetReader| will set the reader and
-          // post another call to |Update|.
-          FinishSetReader();
+        if (setting_source_) {
+          // Need to set the reader. |FinishSetSource| will set the
+          // reader and post another call to |Update|.
+          FinishSetSource();
         }
         return;
 
       case State::kFlushed:
-        if (setting_reader_) {
+        if (setting_source_) {
           // We have a new reader. Get rid of the current reader and transition
           // to inactive state. From there, we'll set up the new reader.
-          core_.SetSourceSegment(nullptr, nullptr);
+          core_.ClearSourceSegment();
           state_ = State::kInactive;
           break;
         }
@@ -374,44 +375,49 @@ void PlayerImpl::SetTimelineFunction(float rate, int64_t reference_time,
 void PlayerImpl::SetHttpSource(
     fidl::StringPtr http_url,
     fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers) {
-  BeginSetReader(
-      HttpReader::Create(startup_context_, http_url, std::move(headers)));
+  BeginSetSource(CreateSource(
+      HttpReader::Create(startup_context_, http_url, std::move(headers)),
+      nullptr));
 }
 
 void PlayerImpl::SetFileSource(zx::channel file_channel) {
-  BeginSetReader(FileReader::Create(std::move(file_channel)));
+  BeginSetSource(
+      CreateSource(FileReader::Create(std::move(file_channel)), nullptr));
 }
 
 void PlayerImpl::SetReaderSource(
     fidl::InterfaceHandle<fuchsia::mediaplayer::SeekingReader> reader_handle) {
   if (!reader_handle) {
-    BeginSetReader(nullptr);
+    BeginSetSource(nullptr);
     return;
   }
 
-  BeginSetReader(FidlReader::Create(reader_handle.Bind()));
+  BeginSetSource(
+      CreateSource(FidlReader::Create(reader_handle.Bind()), nullptr));
 }
 
-void PlayerImpl::BeginSetReader(std::shared_ptr<Reader> reader) {
-  // Note the pending reader change and advance the state machine. When the
-  // old reader (if any) is shut down, the state machine will call
-  // |FinishSetReader|.
+void PlayerImpl::BeginSetSource(std::unique_ptr<SourceImpl> source) {
+  // Note the pending source change and advance the state machine. When the old
+  // source (if any) is shut down, the state machine will call
+  // |FinishSetSource|.
+  new_source_ = std::move(source);
+
+  setting_source_ = true;
   ready_if_no_problem_ = false;
-  setting_reader_ = true;
-  new_reader_ = reader;
+
   target_position_ = 0;
   async::PostTask(dispatcher_, [this]() { Update(); });
 }
 
-void PlayerImpl::FinishSetReader() {
-  FXL_DCHECK(setting_reader_);
+void PlayerImpl::FinishSetSource() {
+  FXL_DCHECK(setting_source_);
   FXL_DCHECK(state_ == State::kInactive);
   FXL_DCHECK(!core_.has_source_segment());
 
-  setting_reader_ = false;
+  setting_source_ = false;
 
-  if (!new_reader_) {
-    // We were asked to clear the reader, which was already done by the state
+  if (!new_source_) {
+    // We were asked to clear the source  which was already done by the state
     // machine. We're done.
     return;
   }
@@ -423,19 +429,13 @@ void PlayerImpl::FinishSetReader() {
 
   MaybeCreateRenderer(StreamType::Medium::kAudio);
 
-  std::shared_ptr<Demux> demux;
-  demux_factory_->CreateDemux(ReaderCache::Create(new_reader_), &demux);
-  // TODO(dalesat): Handle CreateDemux failure.
-  FXL_DCHECK(demux);
-  demux->SetCacheOptions(kCacheLead, kCacheBacktrack);
-
-  new_reader_ = nullptr;
-
-  core_.SetSourceSegment(DemuxSourceSegment::Create(demux), [this]() {
+  core_.SetSourceSegment(new_source_->TakeSourceSegment(), [this]() {
     state_ = State::kFlushed;
     SendStatusUpdates();
     Update();
   });
+
+  new_source_ = nullptr;
 }
 
 void PlayerImpl::Play() {
@@ -506,6 +506,20 @@ void PlayerImpl::AddBinding(
 
   // Fire |OnStatusChanged| event for the new client.
   bindings_.bindings().back()->events().OnStatusChanged(fidl::Clone(status_));
+}
+
+std::unique_ptr<SourceImpl> PlayerImpl::CreateSource(
+    std::shared_ptr<Reader> reader,
+    fidl::InterfaceRequest<fuchsia::mediaplayer::Source> source_request,
+    fit::closure connection_failure_callback) {
+  std::shared_ptr<Demux> demux;
+  demux_factory_->CreateDemux(ReaderCache::Create(reader), &demux);
+  // TODO(dalesat): Handle CreateDemux failure.
+  FXL_DCHECK(demux);
+  demux->SetCacheOptions(kCacheLead, kCacheBacktrack);
+  return DemuxSourceImpl::Create(demux, core_.graph(),
+                                 std::move(source_request),
+                                 std::move(connection_failure_callback));
 }
 
 void PlayerImpl::SendStatusUpdates() {

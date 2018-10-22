@@ -112,20 +112,13 @@ TEST_F(PlayerTest, FreshPlayer) {
   EXPECT_EQ(NodeRef(), player_core.source_node());
 }
 
-// Tests that SetSourceSegment calls back immediately if a null source segment
-// is set.
+// Tests ClearSourceSegment.
 TEST_F(PlayerTest, NullSourceSegment) {
   PlayerCore player_core(dispatcher());
 
-  bool set_source_segment_callback_called = false;
-
-  player_core.SetSourceSegment(nullptr,
-                               [&set_source_segment_callback_called]() {
-                                 set_source_segment_callback_called = true;
-                               });
+  player_core.ClearSourceSegment();
 
   RunLoopUntilIdle();
-  EXPECT_TRUE(set_source_segment_callback_called);
   EXPECT_FALSE(player_core.has_source_segment());
   ExpectNoStreams(player_core);
 }
@@ -156,6 +149,9 @@ TEST_F(PlayerTest, FakeSegments) {
   EXPECT_FALSE(source_segment_raw->TEST_provisioned());
 
   EXPECT_FALSE(player_core.has_source_segment());
+
+  source_segment->Provision(player_core.graph(), dispatcher(), nullptr,
+                            nullptr);
 
   bool set_source_segment_callback_called = false;
   player_core.SetSourceSegment(std::move(source_segment),
@@ -508,13 +504,8 @@ TEST_F(PlayerTest, FakeSegments) {
   EXPECT_FALSE(source_segment_raw->flush_called_);
 
   EXPECT_FALSE(source_segment_destroyed);
-  set_source_segment_callback_called = false;
-  player_core.SetSourceSegment(nullptr,
-                               [&set_source_segment_callback_called]() {
-                                 set_source_segment_callback_called = true;
-                               });
+  player_core.ClearSourceSegment();
   RunLoopUntilIdle();
-  EXPECT_TRUE(set_source_segment_callback_called);
   EXPECT_TRUE(source_segment_destroyed);
   source_segment_raw = nullptr;
 
@@ -585,8 +576,12 @@ TEST_F(PlayerTest, BuildGraphWithRealSegmentsSourceFirst) {
   std::unique_ptr<DecoderFactory> decoder_factory =
       DecoderFactory::Create(nullptr);
 
-  player_core.SetSourceSegment(DemuxSourceSegment::Create(FakeDemux::Create()),
-                               nullptr);
+  auto source_segment = DemuxSourceSegment::Create(FakeDemux::Create());
+
+  source_segment->Provision(player_core.graph(), dispatcher(), nullptr,
+                            nullptr);
+
+  player_core.SetSourceSegment(std::move(source_segment), []() {});
 
   player_core.SetSinkSegment(
       RendererSinkSegment::Create(FakeAudioRenderer::Create(),
@@ -623,8 +618,12 @@ TEST_F(PlayerTest, BuildGraphWithRealSegmentsSinksFirst) {
       StreamType::Medium::kVideo);
   EXPECT_FALSE(player_core.medium_connected(StreamType::Medium::kVideo));
 
-  player_core.SetSourceSegment(DemuxSourceSegment::Create(FakeDemux::Create()),
-                               nullptr);
+  auto source_segment = DemuxSourceSegment::Create(FakeDemux::Create());
+
+  source_segment->Provision(player_core.graph(), dispatcher(), nullptr,
+                            nullptr);
+
+  player_core.SetSourceSegment(std::move(source_segment), []() {});
   RunLoopUntilIdle();
   EXPECT_TRUE(player_core.medium_connected(StreamType::Medium::kAudio));
   EXPECT_TRUE(player_core.medium_connected(StreamType::Medium::kVideo));

@@ -26,6 +26,8 @@ executable("mediaplayer_bin") {
     "main.cc",
     "player_impl.cc",
     "player_impl.h",
+    "source_impl.cc",
+    "source_impl.h",
   ]
 
   deps = [
