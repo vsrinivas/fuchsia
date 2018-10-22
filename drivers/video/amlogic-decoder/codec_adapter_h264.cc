@@ -391,7 +391,7 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   // to camp on more frames than this.
   constexpr uint32_t kDefaultPacketCountForClient = kPacketCountForClientForced;
 
-  uint32_t per_packet_buffer_bytes = width_ * height_ * 3 / 2;
+  uint32_t per_packet_buffer_bytes = stride_ * height_ * 3 / 2;
 
   std::unique_ptr<fuchsia::mediacodec::CodecOutputConfig> config =
       std::make_unique<fuchsia::mediacodec::CodecOutputConfig>();
