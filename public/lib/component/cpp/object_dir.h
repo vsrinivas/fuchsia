@@ -66,63 +66,63 @@ class ObjectDir {
 
   // Sets a property on this object to the given value.
   void set_prop(std::string name, const std::string& value) const {
-    inner_set_prop({}, std::move(name), Property(value.c_str()));
+    inner_set_prop({}, std::move(name), Property(value));
   }
 
   // Sets a property on the child specified by path to the given value.
   // All objects along the path that do not exist will be initialized.
-  void set_prop(ObjectPath path, std::string name,
+  bool set_prop(ObjectPath path, std::string name,
                 const std::string& value) const {
-    inner_set_prop(std::move(path), std::move(name), Property(value.c_str()));
+    return inner_set_prop(std::move(path), std::move(name), Property(value));
   }
 
   // Sets a property on this object to use the given callback for its value.
-  void set_prop(std::string name, Property::ValueCallback callback) const {
-    inner_set_prop({}, std::move(name), Property(std::move(callback)));
+  bool set_prop(std::string name, Property::ValueCallback callback) const {
+    return inner_set_prop({}, std::move(name), Property(std::move(callback)));
   }
 
   // Sets a property on the child specified by path to use the given callback
   // for its value.
   // All objects along the path that do not exist will be initialized.
-  void set_prop(ObjectPath path, std::string name,
+  bool set_prop(ObjectPath path, std::string name,
                 Property::ValueCallback callback) const {
-    inner_set_prop(std::move(path), std::move(name),
-                   Property(std::move(callback)));
+    return inner_set_prop(std::move(path), std::move(name),
+                          Property(std::move(callback)));
   }
 
   // Sets a metric on this object to the given value.
-  void set_metric(std::string name, Metric metric) const {
-    set_metric({}, std::move(name), std::move(metric));
+  bool set_metric(std::string name, Metric metric) const {
+    return set_metric({}, std::move(name), std::move(metric));
   }
 
   // Sets a metric on the child specified by path to use the given value.
   // All objects along the path that do not exist will be initialized.
-  void set_metric(ObjectPath path, std::string name, Metric metric) const;
+  bool set_metric(ObjectPath path, std::string name, Metric metric) const;
 
   // Adds to a metric on this object.
   template <typename T>
-  void add_metric(std::string name, T amount) const {
-    add_metric({}, std::move(name), amount);
+  bool add_metric(std::string name, T amount) const {
+    return add_metric({}, std::move(name), amount);
   }
 
   // Subtracts from a metric on this object.
   template <typename T>
-  void sub_metric(std::string name, T amount) const {
-    sub_metric({}, std::move(name), amount);
+  bool sub_metric(std::string name, T amount) const {
+    return sub_metric({}, std::move(name), amount);
   }
 
   // Adds to a metric on a child specified by path.
   // All objects along the path that do not exist will be initialized.
   template <typename T>
-  void add_metric(ObjectPath path, std::string name, T amount) const {
-    find(path).object()->AddMetric(name, amount);
+  bool add_metric(ObjectPath path, std::string name, T amount) const {
+    return find(path).object()->AddMetric(name, amount);
   }
 
   // Subtracts from a metric on a child specified by path.
   // All objects along the path that do not exist will be initialized.
   template <typename T>
-  void sub_metric(ObjectPath path, std::string name, T amount) const {
-    find(path).object()->SubMetric(name, amount);
+  bool sub_metric(ObjectPath path, std::string name, T amount) const {
+    return find(path).object()->SubMetric(name, amount);
   }
 
   // Sets a child on this object to the given object.
@@ -146,7 +146,7 @@ class ObjectDir {
 
  private:
   // Inner implementation of setting properties by path.
-  void inner_set_prop(ObjectPath path, std::string name,
+  bool inner_set_prop(ObjectPath path, std::string name,
                       Property property) const;
 
   // The wrapper object.

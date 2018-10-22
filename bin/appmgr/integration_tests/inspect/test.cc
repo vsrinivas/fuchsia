@@ -80,9 +80,18 @@ TEST_F(InspectTest, InspectTopLevel) {
       ElementsAre(GetObjectPath("table-t1"), GetObjectPath("table-t2")));
 }
 
+MATCHER_P2(Property, name, value, "") {
+  return arg.key == name && arg.value == value;
+}
+
 MATCHER_P2(UIntMetric, name, value, "") {
   return arg.key == name && arg.value.is_uint_value() &&
          arg.value.uint_value() == (uint64_t)value;
+}
+
+MATCHER_P2(IntMetric, name, value, "") {
+  return arg.key == name && arg.value.is_int_value() &&
+         arg.value.int_value() == (int64_t)value;
 }
 
 TEST_F(InspectTest, InspectOpenRead) {
@@ -99,9 +108,13 @@ TEST_F(InspectTest, InspectOpenRead) {
   fuchsia::inspect::Object obj;
   ASSERT_EQ(ZX_OK, inspect->ReadData(&obj));
   EXPECT_EQ("table-t1", obj.name);
-  EXPECT_THAT(*obj.properties, UnorderedElementsAre(fuchsia::inspect::Property(
-                                   {.key = "version", .value = "1.0"})));
-  EXPECT_THAT(*obj.metrics, UnorderedElementsAre(UIntMetric("item_size", 32)));
+  EXPECT_THAT(*obj.properties,
+              UnorderedElementsAre(
+                  Property("version", "1.0"),
+                  Property("frame", std::string("\x00\x00\x00", 3)),
+                  Property("\x10\x10", std::string("\x00\x00\x00", 3))));
+  EXPECT_THAT(*obj.metrics, UnorderedElementsAre(UIntMetric("item_size", 32),
+                                                 IntMetric("\x10", -10)));
 }
 
 }  // namespace

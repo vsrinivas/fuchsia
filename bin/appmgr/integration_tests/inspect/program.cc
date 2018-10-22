@@ -31,7 +31,12 @@ class Table : public component::ExposedObject {
           }
           out_metric->SetUInt(sum);
         }));
-    object_dir().set_prop({"version"}, "1.0");
+    object_dir().set_prop("version", "1.0");
+    // Try binary values and keys.
+    object_dir().set_prop("frame", std::string("\x00\x00\x00", 3));
+    object_dir().set_prop(std::string("\x10\x10", 2),
+                          std::string("\x00\x00\x00", 3));
+    object_dir().set_metric(std::string("\x10", 1), component::IntMetric(-10));
   }
 
   std::shared_ptr<Item> NewItem(int64_t value) {

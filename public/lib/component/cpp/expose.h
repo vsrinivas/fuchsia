@@ -99,7 +99,7 @@ class Metric {
 
   // Converts the value of this metric into its FIDL representation,
   // using the given name for the |name| field.
-  fuchsia::inspect::Metric ToFidl(const char* name) const;
+  fuchsia::inspect::Metric ToFidl(const std::string& name) const;
 
   // Adds a numeric type to the value of this metric. The type of
   // the metric will not be affected by this operation regardless of the
@@ -183,7 +183,7 @@ class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
 
   // Constructs a new |Object| with the given name.
   // Every object requires a name, and names for children must be unique.
-  explicit Object(fbl::String name) : name_(name) {}
+  explicit Object(fbl::String name);
 
   // Gets the name of this |Object|.
   fbl::String name() { return name_; }
@@ -211,23 +211,35 @@ class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
   void ClearChildrenCallback();
 
   // Sets a |Property| on this |Object| to the given value.
-  void SetProperty(const std::string& name, Property value);
+  // The name of the property cannot include null bytes.
+  bool SetProperty(const std::string& name, Property value);
 
   // Sets a |Metric| on this |Object| to the given value.
-  void SetMetric(const std::string& name, Metric metric);
+  // The name of the metric cannot include null bytes.
+  bool SetMetric(const std::string& name, Metric metric);
 
   // Adds to a numeric |Metric| on this |Object|.
   template <typename T>
-  void AddMetric(const std::string& name, T amount) {
+  bool AddMetric(const std::string& name, T amount) {
     fbl::AutoLock lock(&mutex_);
-    metrics_[name].Add(amount);
+    auto it = metrics_.find(name);
+    if (it == metrics_.end()) {
+      return false;
+    }
+    it->second.Add(amount);
+    return true;
   }
 
   // Subtracts from a numeric |Metric| on this |Object|.
   template <typename T>
-  void SubMetric(const std::string& name, T amount) {
+  bool SubMetric(const std::string& name, T amount) {
     fbl::AutoLock lock(&mutex_);
-    metrics_[name].Sub(amount);
+    auto it = metrics_.find(name);
+    if (it == metrics_.end()) {
+      return false;
+    }
+    it->second.Sub(amount);
+    return true;
   }
 
   // |Inspect| implementation

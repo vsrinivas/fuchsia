@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fs/service.h>
+#include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_printf.h>
 
 #include "expose.h"
@@ -60,7 +61,7 @@ std::string Metric::ToString() const {
   }
 }
 
-fuchsia::inspect::Metric Metric::ToFidl(const char* name) const {
+fuchsia::inspect::Metric Metric::ToFidl(const std::string& name) const {
   fuchsia::inspect::Metric ret;
   switch (type_) {
     case INT:
@@ -103,6 +104,11 @@ Metric CallbackMetric(Metric::ValueCallback callback) {
   Metric ret;
   ret.SetCallback(std::move(callback));
   return ret;
+}
+
+Object::Object(fbl::String name) : name_(name) {
+  FXL_CHECK(std::find(name_.begin(), name_.end(), '\0') == name_.end())
+      << "Object name cannot contain null bytes";
 }
 
 void Object::ReadData(ReadDataCallback callback) {
@@ -171,14 +177,24 @@ void Object::ClearChildrenCallback() {
   lazy_object_callback_.swap(temp);
 }
 
-void Object::SetProperty(const std::string& name, Property value) {
+bool Object::SetProperty(const std::string& name, Property value) {
+  if (name.find('\0') != std::string::npos) {
+    FXL_DCHECK(false) << "Null bytes are not allowed in property names.";
+    return false;
+  }
   fbl::AutoLock lock(&mutex_);
-  properties_[name] = std::move(value);
+  properties_[name.c_str()] = std::move(value);
+  return true;
 }
 
-void Object::SetMetric(const std::string& name, Metric metric) {
+bool Object::SetMetric(const std::string& name, Metric metric) {
+  if (name.find('\0') != std::string::npos) {
+    FXL_DCHECK(false) << "Null bytes are not allowed in metric names.";
+    return false;
+  }
   fbl::AutoLock lock(&mutex_);
-  metrics_[name] = std::move(metric);
+  metrics_[name.c_str()] = std::move(metric);
+  return true;
 }
 
 void Object::GetContents(LazyEntryVector* out_vector) {
@@ -290,7 +306,7 @@ fuchsia::inspect::Object Object::ToFidl() __TA_REQUIRES(mutex_) {
     ret.properties.push_back({it.first, it.second.Get()});
   }
   for (const auto& it : metrics_) {
-    ret.metrics.push_back(it.second.ToFidl(it.first.c_str()));
+    ret.metrics.push_back(it.second.ToFidl(it.first));
   }
   return ret;
 }
