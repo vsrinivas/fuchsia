@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/lib/rust/fuchsia-net:fuchsia_net_tests"
+    ]
+}

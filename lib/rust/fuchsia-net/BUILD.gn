@@ -1,0 +1,25 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/package.gni")
+
+rustc_library("fuchsia_net") {
+  with_unit_tests = true
+  edition = "2018"
+  deps = [
+    "//third_party/rust-crates/rustc_deps:serde",
+    "//third_party/rust-crates/rustc_deps:serde_derive",
+    "//third_party/rust-crates/rustc_deps:serde_json",
+    "//zircon/public/fidl/zircon-ethernet:zircon-ethernet-rustc",
+  ]
+}
+
+package("fuchsia_net_tests") {
+  testonly = true
+  deps = [
+    ":fuchsia_net",
+  ]
+  tests = [ { name = "fuchsia_net_lib_test_rustc" } ]
+}

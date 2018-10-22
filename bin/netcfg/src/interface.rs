@@ -4,41 +4,14 @@
 
 use {
     failure::{self, ResultExt},
+    fuchsia_net::MacAddress,
     serde_derive::{Deserialize, Serialize},
-    std::{fmt, fs, io, path},
+    std::{fs, io, path},
 };
-
-// A hack, since we can't add functionality to the fidl type.
-#[derive(PartialEq, Eq, Serialize, Deserialize, Debug)]
-pub struct MacAddressDef {
-    octets: [u8; 6],
-}
-
-impl MacAddressDef {
-    pub fn from_fidl(
-        // This destructuring ensures that we don't deviate from the fidl type.
-        fidl_zircon_ethernet::MacAddress { octets }: fidl_zircon_ethernet::MacAddress,
-    ) -> Self {
-        Self { octets }
-    }
-}
-
-impl fmt::Display for MacAddressDef {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { octets } = self;
-        for (i, byte) in octets.iter().enumerate() {
-            if i > 0 {
-                write!(f, ":")?;
-            }
-            write!(f, "{:02x}", byte)?;
-        }
-        Ok(())
-    }
-}
 
 #[derive(PartialEq, Eq, Serialize, Deserialize, Debug)]
 enum PersistentIdentifier {
-    MacAddress(MacAddressDef),
+    MacAddress(MacAddress),
     TopologicalPath(String),
 }
 
@@ -53,7 +26,7 @@ impl Config {
     }
 
     fn generate_identifier(
-        &self, topological_path: String, mac_address: MacAddressDef,
+        &self, topological_path: String, mac_address: MacAddress,
     ) -> PersistentIdentifier {
         if topological_path.contains("/pci/") {
             if topological_path.contains("/usb/") {
@@ -129,7 +102,7 @@ impl Config {
         }
         Err(failure::format_err!(
             "could not find unique name for mac={}, wlan={}",
-            MacAddressDef { octets: *octets },
+            MacAddress { octets: *octets },
             wlan
         ))
     }
@@ -169,8 +142,8 @@ impl Config {
         &self, persistent_id: &PersistentIdentifier, wlan: bool,
     ) -> Result<String, failure::Error> {
         match persistent_id {
-            PersistentIdentifier::MacAddress(MacAddressDef { octets }) => {
-                self.generate_name_from_mac(&octets, wlan)
+            PersistentIdentifier::MacAddress(mac_addr) => {
+                self.generate_name_from_mac(&mac_addr.octets, wlan)
             }
             PersistentIdentifier::TopologicalPath(ref topological_path) => {
                 self.generate_name_from_topological_path(&topological_path, wlan)
@@ -242,7 +215,7 @@ impl<'a> FileBackedConfig<'a> {
     }
 
     pub fn get_stable_name(
-        &mut self, topological_path: String, mac_address: MacAddressDef, wlan: bool,
+        &mut self, topological_path: String, mac_address: MacAddress, wlan: bool,
     ) -> Result<&str, failure::Error> {
         let persistent_id = self
             .config
@@ -265,14 +238,6 @@ impl<'a> FileBackedConfig<'a> {
 mod tests {
     use super::*;
     use std::io::Write;
-
-    #[test]
-    fn test_display_macaddress() {
-        let mac_addr = MacAddressDef {
-            octets: [0u8, 1u8, 2u8, 255u8, 254u8, 253u8],
-        };
-        assert_eq!("00:01:02:ff:fe:fd".to_owned(), format!("{}", mac_addr));
-    }
 
     #[test]
     fn test_get_stable_name() {
@@ -444,7 +409,7 @@ mod tests {
             let name = interface_config
                 .get_stable_name(
                     test.topological_path,
-                    MacAddressDef { octets: test.mac },
+                    MacAddress { octets: test.mac },
                     test.wlan,
                 )
                 .expect("failed to get the interface config");
@@ -464,7 +429,7 @@ mod tests {
             let octets = [n, 0x01, 0x01, 0x01, 0x01, 00];
 
             let persistent_id =
-                config.generate_identifier(topo_usb.clone(), MacAddressDef { octets });
+                config.generate_identifier(topo_usb.clone(), MacAddress { octets });
 
             if let Some(index) = config.lookup_by_identifier(&persistent_id) {
                 assert_eq!(format!("{}{:x}", "wlanx", n), config.names[index].1);
@@ -477,7 +442,7 @@ mod tests {
             }
         }
         let octets = [0x00, 0x00, 0x01, 0x01, 0x01, 00];
-        let persistent_id = config.generate_identifier(topo_usb, MacAddressDef { octets });
+        let persistent_id = config.generate_identifier(topo_usb, MacAddress { octets });
         assert!(config.generate_name(&persistent_id, true).is_err());
     }
 

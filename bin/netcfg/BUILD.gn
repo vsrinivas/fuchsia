@@ -10,6 +10,7 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/fuchsia-net:fuchsia_net",
     "//garnet/public/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
     "//garnet/public/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
