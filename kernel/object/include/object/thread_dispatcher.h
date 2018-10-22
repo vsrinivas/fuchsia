@@ -32,7 +32,8 @@
 
 class ProcessDispatcher;
 
-class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher> {
+class ThreadDispatcher final :
+    public SoloDispatcher<ThreadDispatcher, ZX_DEFAULT_THREAD_RIGHTS> {
 public:
     // Traits to belong in the parent process's list.
     struct ThreadListTraits {
@@ -78,7 +79,6 @@ public:
 
     // Dispatcher implementation.
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_THREAD; }
-    bool has_state_tracker() const final { return true; }
     zx_koid_t get_related_koid() const final;
 
     // Performs initialization on a newly constructed ThreadDispatcher

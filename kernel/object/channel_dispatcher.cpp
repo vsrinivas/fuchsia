@@ -56,7 +56,7 @@ zx_status_t ChannelDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
     ch0->Init(ch1);
     ch1->Init(ch0);
 
-    *rights = ZX_DEFAULT_CHANNEL_RIGHTS;
+    *rights = default_rights();
     *dispatcher0 = fbl::move(ch0);
     *dispatcher1 = fbl::move(ch1);
     return ZX_OK;

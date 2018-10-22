@@ -35,7 +35,7 @@ zx_status_t VirtualInterruptDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatch
     disp->set_flags(INTERRUPT_VIRTUAL);
 
     // Transfer control of the new dispatcher to the creator and we are done.
-    *rights = ZX_DEFAULT_IRQ_RIGHTS;
+    *rights = default_rights();
     *dispatcher = fbl::move(disp_ref);
 
     return ZX_OK;

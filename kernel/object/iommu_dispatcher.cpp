@@ -50,7 +50,7 @@ zx_status_t IommuDispatcher::Create(uint32_t type, fbl::unique_ptr<const uint8_t
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    *rights = ZX_DEFAULT_IOMMU_RIGHTS;
+    *rights = default_rights();
     *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
     return ZX_OK;
 }

@@ -15,15 +15,18 @@
 #include <object/handle.h>
 #include <region-alloc/region-alloc.h>
 #include <sys/types.h>
+
 #include <zircon/compiler.h>
+#include <zircon/rights.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
 class ResourceRecord;
 
-class ResourceDispatcher final : public SoloDispatcher<ResourceDispatcher>,
-                                 public fbl::DoublyLinkedListable<ResourceDispatcher*> {
+class ResourceDispatcher final :
+    public SoloDispatcher<ResourceDispatcher, ZX_DEFAULT_RESOURCE_RIGHTS>,
+    public fbl::DoublyLinkedListable<ResourceDispatcher*> {
 public:
     static constexpr size_t kMaxRegionPoolSize = 64 << 10;
 
@@ -58,7 +61,6 @@ public:
     }
 
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_RESOURCE; }
-    bool has_state_tracker() const final { return true; }
 
     // Returns a null-terminated name, or the empty string if set_name() has not
     // been called.

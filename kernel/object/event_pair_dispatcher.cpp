@@ -32,7 +32,7 @@ zx_status_t EventPairDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
     disp0->Init(disp1);
     disp1->Init(disp0);
 
-    *rights = ZX_DEFAULT_EVENTPAIR_RIGHTS;
+    *rights = default_rights();
     *dispatcher0 = fbl::move(disp0);
     *dispatcher1 = fbl::move(disp1);
 

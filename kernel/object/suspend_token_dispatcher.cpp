@@ -26,7 +26,7 @@ zx_status_t SuspendTokenDispatcher::Create(fbl::RefPtr<ThreadDispatcher> thread,
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    *rights = ZX_DEFAULT_SUSPEND_TOKEN_RIGHTS;
+    *rights = default_rights();
     *dispatcher = fbl::AdoptRef<Dispatcher>(disp.release());
     return ZX_OK;
 }

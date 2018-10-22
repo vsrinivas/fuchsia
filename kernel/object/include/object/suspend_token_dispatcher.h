@@ -6,14 +6,16 @@
 
 #pragma once
 
+#include <zircon/rights.h>
 #include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <object/dispatcher.h>
 
 #include <sys/types.h>
 
 class SuspendTokenDispatcher final :
-    public SoloDispatcher<SuspendTokenDispatcher> {
+    public SoloDispatcher<SuspendTokenDispatcher, ZX_DEFAULT_SUSPEND_TOKEN_RIGHTS> {
 public:
     static zx_status_t Create(fbl::RefPtr<ThreadDispatcher> thread,
                               fbl::RefPtr<Dispatcher>* dispatcher,

@@ -12,8 +12,11 @@
 #include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
 #include <vm/vm_aspace.h>
+
+#include <zircon/rights.h>
 #include <zircon/syscalls/pci.h>
 #include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/mutex.h>
@@ -24,7 +27,8 @@
 
 class PciInterruptDispatcher;
 
-class PciDeviceDispatcher final : public SoloDispatcher<PciDeviceDispatcher> {
+class PciDeviceDispatcher final
+    : public SoloDispatcher<PciDeviceDispatcher, ZX_DEFAULT_PCI_DEVICE_RIGHTS> {
 public:
     static zx_status_t Create(uint32_t index,
                               zx_pcie_device_info_t*    out_info,

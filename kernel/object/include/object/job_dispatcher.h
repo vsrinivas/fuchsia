@@ -55,7 +55,7 @@ protected:
 // and in the current implementation will call platform_halt() when its process
 // and job count reaches zero. The root job is not exposed to user mode, instead
 // the single child Job of the root job is given to the userboot process.
-class JobDispatcher final : public SoloDispatcher<JobDispatcher> {
+class JobDispatcher final : public SoloDispatcher<JobDispatcher, ZX_DEFAULT_JOB_RIGHTS> {
 public:
     // Traits to belong to the parent's raw job list.
     struct ListTraitsRaw {
@@ -83,7 +83,6 @@ public:
 
     // Dispatcher implementation.
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_JOB; }
-    bool has_state_tracker() const final { return true; }
     zx_koid_t get_related_koid() const final;
     fbl::RefPtr<JobDispatcher> parent() { return fbl::RefPtr<JobDispatcher>(parent_); }
 

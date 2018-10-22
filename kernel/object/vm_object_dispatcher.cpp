@@ -29,7 +29,7 @@ zx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo,
         return ZX_ERR_NO_MEMORY;
 
     disp->vmo()->set_user_id(disp->get_koid());
-    *rights = ZX_DEFAULT_VMO_RIGHTS;
+    *rights = default_rights();
     *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
     return ZX_OK;
 }

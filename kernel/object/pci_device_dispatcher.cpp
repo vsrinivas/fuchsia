@@ -38,7 +38,7 @@ zx_status_t PciDeviceDispatcher::Create(uint32_t                  index,
         return ZX_ERR_NO_MEMORY;
 
     *out_dispatcher = fbl::AdoptRef<Dispatcher>(disp);
-    *out_rights     = ZX_DEFAULT_PCI_DEVICE_RIGHTS;
+    *out_rights     = default_rights();
     return ZX_OK;
 }
 

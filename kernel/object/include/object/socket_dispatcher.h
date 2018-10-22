@@ -13,13 +13,16 @@
 #include <object/handle.h>
 #include <object/mbuf.h>
 
+#include <zircon/rights.h>
 #include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 
-class SocketDispatcher final : public PeeredDispatcher<SocketDispatcher> {
+class SocketDispatcher final :
+    public PeeredDispatcher<SocketDispatcher, ZX_DEFAULT_SOCKET_RIGHTS> {
 public:
     static zx_status_t Create(uint32_t flags, fbl::RefPtr<Dispatcher>* dispatcher0,
                               fbl::RefPtr<Dispatcher>* dispatcher1, zx_rights_t* rights);
@@ -28,7 +31,6 @@ public:
 
     // Dispatcher implementation.
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_SOCKET; }
-    bool has_state_tracker() const final { return true; }
 
     // Socket methods.
     zx_status_t Write(user_in_ptr<const void> src, size_t len, size_t* written);

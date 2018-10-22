@@ -8,14 +8,17 @@
 
 #include <kernel/dpc.h>
 #include <kernel/timer.h>
+
+#include <zircon/rights.h>
 #include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
 #include <object/dispatcher.h>
 
 #include <sys/types.h>
 
-class TimerDispatcher final : public SoloDispatcher<TimerDispatcher> {
+class TimerDispatcher final : public SoloDispatcher<TimerDispatcher, ZX_DEFAULT_TIMERS_RIGHTS> {
 public:
     static zx_status_t Create(uint32_t options,
                               fbl::RefPtr<Dispatcher>* dispatcher,
@@ -23,7 +26,6 @@ public:
 
     ~TimerDispatcher() final;
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_TIMER; }
-    bool has_state_tracker() const final { return true; }
     void on_zero_handles() final;
 
     // Timer specific ops.

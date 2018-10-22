@@ -22,13 +22,12 @@ class BusTransactionInitiatorDispatcher;
 class VmObject;
 
 class PinnedMemoryTokenDispatcher final :
-    public SoloDispatcher<PinnedMemoryTokenDispatcher>,
+    public SoloDispatcher<PinnedMemoryTokenDispatcher, ZX_DEFAULT_PMT_RIGHTS>,
     public fbl::DoublyLinkedListable<PinnedMemoryTokenDispatcher*> {
 public:
     ~PinnedMemoryTokenDispatcher();
 
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_PMT; }
-    bool has_state_tracker() const final { return false; }
     void on_zero_handles() final;
 
     // Traits to belong in the BTI's list.

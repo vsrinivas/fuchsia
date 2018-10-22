@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <zircon/rights.h>
 #include <zircon/types.h>
 
 #include <fbl/canary.h>
@@ -15,7 +16,7 @@
 #include <sys/types.h>
 #include <vm/vm_object.h>
 
-class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher>,
+class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DEFAULT_VMO_RIGHTS>,
                                  public VmObjectChildObserver {
 public:
     static zx_status_t Create(fbl::RefPtr<VmObject> vmo,
@@ -29,7 +30,6 @@ public:
 
     // SoloDispatcher implementation.
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_VMO; }
-    bool has_state_tracker() const final { return true; }
     void get_name(char out_name[ZX_MAX_NAME_LEN]) const final;
     zx_status_t set_name(const char* name, size_t len) final;
     CookieJar* get_cookie_jar() final { return &cookie_jar_; }

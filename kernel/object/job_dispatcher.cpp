@@ -133,7 +133,7 @@ zx_status_t JobDispatcher::Create(uint32_t flags,
         return ZX_ERR_BAD_STATE;
     }
 
-    *rights = ZX_DEFAULT_JOB_RIGHTS;
+    *rights = default_rights();
     *dispatcher = fbl::move(job);
     return ZX_OK;
 }

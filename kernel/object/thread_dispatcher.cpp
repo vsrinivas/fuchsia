@@ -54,7 +54,7 @@ zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uin
     if (result != ZX_OK)
         return result;
 
-    *out_rights = ZX_DEFAULT_THREAD_RIGHTS;
+    *out_rights = default_rights();
     *out_dispatcher = fbl::move(disp);
     return ZX_OK;
 }

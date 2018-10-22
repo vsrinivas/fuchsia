@@ -112,7 +112,7 @@ zx_status_t sys_port_cancel(zx_handle_t handle, zx_handle_t source, uint64_t key
             return ZX_ERR_ACCESS_DENIED;
 
         auto dispatcher = watched->dispatcher();
-        if (!dispatcher->has_state_tracker())
+        if (!dispatcher->is_waitable())
             return ZX_ERR_NOT_SUPPORTED;
 
         bool had_observer = dispatcher->CancelByKey(watched, port.get(), key);

@@ -58,7 +58,7 @@ zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitia
     }();
 
     *dispatcher = fbl::move(pmo);
-    *rights = ZX_DEFAULT_PMT_RIGHTS;
+    *rights = default_rights();
     return ZX_OK;
 }
 

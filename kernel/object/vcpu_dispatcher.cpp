@@ -28,7 +28,7 @@ zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    *rights = ZX_DEFAULT_VCPU_RIGHTS;
+    *rights = default_rights();
     *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
     return ZX_OK;
 }

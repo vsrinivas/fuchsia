@@ -121,7 +121,7 @@ zx_status_t ResourceDispatcher::Create(fbl::RefPtr<ResourceDispatcher>* dispatch
         disp->set_name(name, ZX_MAX_NAME_LEN);
     }
 
-    *rights = ZX_DEFAULT_RESOURCE_RIGHTS;
+    *rights = default_rights();
     *dispatcher = fbl::move(disp);
 
     LTRACEF("%s [%u, %#lx, %zu] resource created.\n", kLogTag, kind, base, size);

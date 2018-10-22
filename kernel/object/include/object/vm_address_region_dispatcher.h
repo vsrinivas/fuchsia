@@ -6,7 +6,9 @@
 
 #pragma once
 
+#include <zircon/rights.h>
 #include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <object/dispatcher.h>
 
@@ -17,7 +19,7 @@ class VmMapping;
 class VmObject;
 
 class VmAddressRegionDispatcher final :
-    public SoloDispatcher<VmAddressRegionDispatcher> {
+    public SoloDispatcher<VmAddressRegionDispatcher, ZX_DEFAULT_VMAR_RIGHTS> {
 public:
     static zx_status_t Create(fbl::RefPtr<VmAddressRegion> vmar,
                               uint base_arch_mmu_flags,

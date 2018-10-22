@@ -92,7 +92,7 @@ zx_status_t InterruptEventDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher
     unmask_interrupt(vector);
 
     // Transfer control of the new dispatcher to the creator and we are done.
-    *rights = ZX_DEFAULT_IRQ_RIGHTS;
+    *rights = default_rights();
     *dispatcher = fbl::move(disp_ref);
 
     return ZX_OK;

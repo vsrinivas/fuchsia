@@ -27,7 +27,7 @@ zx_status_t BusTransactionInitiatorDispatcher::Create(fbl::RefPtr<Iommu> iommu, 
         return ZX_ERR_NO_MEMORY;
     }
 
-    *rights = ZX_DEFAULT_BTI_RIGHTS;
+    *rights = default_rights();
     *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
     return ZX_OK;
 }

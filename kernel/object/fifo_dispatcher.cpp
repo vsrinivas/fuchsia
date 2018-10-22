@@ -54,7 +54,7 @@ zx_status_t FifoDispatcher::Create(size_t count, size_t elemsize, uint32_t optio
     fifo0->Init(fifo1);
     fifo1->Init(fifo0);
 
-    *rights = ZX_DEFAULT_FIFO_RIGHTS;
+    *rights = default_rights();
     *dispatcher0 = fbl::move(fifo0);
     *dispatcher1 = fbl::move(fifo1);
     return ZX_OK;

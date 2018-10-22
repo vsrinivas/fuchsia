@@ -77,7 +77,7 @@ zx_status_t SocketDispatcher::Create(uint32_t flags,
     socket0->Init(socket1);
     socket1->Init(socket0);
 
-    *rights = ZX_DEFAULT_SOCKET_RIGHTS;
+    *rights = default_rights();
     *dispatcher0 = fbl::move(socket0);
     *dispatcher1 = fbl::move(socket1);
     return ZX_OK;

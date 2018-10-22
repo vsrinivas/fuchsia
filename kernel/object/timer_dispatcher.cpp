@@ -52,7 +52,7 @@ zx_status_t TimerDispatcher::Create(uint32_t options,
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    *rights = ZX_DEFAULT_TIMERS_RIGHTS;
+    *rights = default_rights();
     *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
     return ZX_OK;
 }

@@ -10,8 +10,10 @@
 #include <object/semaphore.h>
 #include <object/state_observer.h>
 
+#include <zircon/rights.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -159,7 +161,7 @@ private:
 // thread unblocks and gets the packet. In all cases |sema_| is used to signal
 // and manage the waiting threads.
 
-class PortDispatcher final : public SoloDispatcher<PortDispatcher> {
+class PortDispatcher final : public SoloDispatcher<PortDispatcher, ZX_DEFAULT_PORT_RIGHTS> {
 public:
     static void Init();
     static PortAllocator* DefaultPortAllocator();

@@ -10,13 +10,15 @@
 
 #include <object/dispatcher.h>
 
+#include <zircon/rights.h>
 #include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <lib/user_copy/user_ptr.h>
 
-class FifoDispatcher final : public PeeredDispatcher<FifoDispatcher> {
+class FifoDispatcher final : public PeeredDispatcher<FifoDispatcher, ZX_DEFAULT_FIFO_RIGHTS> {
 public:
     static zx_status_t Create(size_t elem_count, size_t elem_size, uint32_t options,
                               fbl::RefPtr<Dispatcher>* dispatcher0,
@@ -26,7 +28,6 @@ public:
     ~FifoDispatcher() final;
 
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_FIFO; }
-    bool has_state_tracker() const final { return true; }
 
     zx_status_t WriteFromUser(size_t elem_size, user_in_ptr<const uint8_t> src, size_t count,
                               size_t* actual);

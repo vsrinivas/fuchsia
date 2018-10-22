@@ -96,7 +96,7 @@ zx_status_t VmAddressRegionDispatcher::Create(fbl::RefPtr<VmAddressRegion> vmar,
                                               zx_rights_t* rights) {
 
     // The initial rights should match the VMAR's creation permissions
-    zx_rights_t vmar_rights = ZX_DEFAULT_VMAR_RIGHTS;
+    zx_rights_t vmar_rights = default_rights();
     uint32_t vmar_flags = vmar->flags();
     if (vmar_flags & VMAR_FLAG_CAN_MAP_READ) {
         vmar_rights |= ZX_RIGHT_READ;

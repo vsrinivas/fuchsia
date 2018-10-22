@@ -18,14 +18,13 @@
 class Iommu;
 
 class BusTransactionInitiatorDispatcher final :
-    public SoloDispatcher<BusTransactionInitiatorDispatcher> {
+    public SoloDispatcher<BusTransactionInitiatorDispatcher, ZX_DEFAULT_BTI_RIGHTS> {
 public:
     static zx_status_t Create(fbl::RefPtr<Iommu> iommu, uint64_t bti_id,
                               fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights);
 
     ~BusTransactionInitiatorDispatcher() final;
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_BTI; }
-    bool has_state_tracker() const final { return true; }
 
     // Pins the given VMO range and returns an PinnedMemoryTokenDispatcher
     // representing the pinned range.

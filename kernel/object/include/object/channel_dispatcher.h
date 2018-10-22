@@ -12,14 +12,17 @@
 #include <object/dispatcher.h>
 #include <object/message_packet.h>
 
+#include <zircon/rights.h>
 #include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/unique_ptr.h>
 
-class ChannelDispatcher final : public PeeredDispatcher<ChannelDispatcher> {
+class ChannelDispatcher final :
+    public PeeredDispatcher<ChannelDispatcher, ZX_DEFAULT_CHANNEL_RIGHTS> {
 public:
     class MessageWaiter;
 
@@ -28,7 +31,6 @@ public:
 
     ~ChannelDispatcher() final;
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_CHANNEL; }
-    bool has_state_tracker() const final { return true; }
     zx_status_t add_observer(StateObserver* observer) final;
 
     // Read from this endpoint's message queue.

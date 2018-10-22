@@ -172,7 +172,7 @@ void Handle::TearDown() TA_EXCL(ArenaLock::Get()) {
 void Handle::Delete() {
     fbl::RefPtr<Dispatcher> disp = dispatcher();
 
-    if (disp->has_state_tracker())
+    if (disp->is_waitable())
         disp->Cancel(this);
 
     TearDown();

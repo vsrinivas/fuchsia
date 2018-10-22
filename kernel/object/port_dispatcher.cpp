@@ -176,7 +176,7 @@ zx_status_t PortDispatcher::Create(uint32_t options, fbl::RefPtr<Dispatcher>* di
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    *rights = ZX_DEFAULT_PORT_RIGHTS;
+    *rights = default_rights();
     *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
     return ZX_OK;
 }
@@ -350,7 +350,7 @@ zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
     // Called under the handle table lock.
 
     auto dispatcher = handle->dispatcher();
-    if (!dispatcher->has_state_tracker())
+    if (!dispatcher->is_waitable())
         return ZX_ERR_NOT_SUPPORTED;
 
     uint32_t type;

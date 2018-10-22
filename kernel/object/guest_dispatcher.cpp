@@ -34,7 +34,7 @@ zx_status_t GuestDispatcher::Create(fbl::RefPtr<Dispatcher>* guest_dispatcher,
         return status;
     }
 
-    *guest_rights = ZX_DEFAULT_GUEST_RIGHTS;
+    *guest_rights = default_rights();
     *guest_dispatcher = fbl::move(disp);
     return ZX_OK;
 }

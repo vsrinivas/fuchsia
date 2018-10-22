@@ -8,7 +8,10 @@
 
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
+
+#include <zircon/rights.h>
 #include <zircon/types.h>
+
 #include <fbl/mutex.h>
 #include <object/dispatcher.h>
 #include <sys/types.h>
@@ -24,7 +27,7 @@ enum class InterruptState {
 
 // Note that unlike most Dispatcher subclasses, this one is further
 // subclassed, and so cannot be final.
-class InterruptDispatcher : public SoloDispatcher<InterruptDispatcher> {
+class InterruptDispatcher : public SoloDispatcher<InterruptDispatcher, ZX_DEFAULT_IRQ_RIGHTS> {
 public:
     InterruptDispatcher& operator=(const InterruptDispatcher&) = delete;
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_INTERRUPT; }

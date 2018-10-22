@@ -144,15 +144,13 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
         if (status != ZX_OK)
             return status;
 
-        bool waitable = dispatcher->has_state_tracker();
-
         // build the info structure
         zx_info_handle_basic_t info = {
             .koid = dispatcher->get_koid(),
             .rights = rights,
             .type = dispatcher->get_type(),
             .related_koid = dispatcher->get_related_koid(),
-            .props = waitable ? ZX_OBJ_PROP_WAITABLE : ZX_OBJ_PROP_NONE,
+            .props = dispatcher->is_waitable() ? ZX_OBJ_PROP_WAITABLE : ZX_OBJ_PROP_NONE,
         };
 
         return single_record_result(
@@ -885,7 +883,7 @@ zx_status_t sys_object_signal(zx_handle_t handle_value, uint32_t clear_mask, uin
     if (status != ZX_OK)
         return status;
 
-    return dispatcher->user_signal(clear_mask, set_mask, false);
+    return dispatcher->user_signal_self(clear_mask, set_mask);
 }
 
 // zx_status_t zx_object_signal_peer
@@ -899,7 +897,7 @@ zx_status_t sys_object_signal_peer(zx_handle_t handle_value, uint32_t clear_mask
     if (status != ZX_OK)
         return status;
 
-    return dispatcher->user_signal(clear_mask, set_mask, true);
+    return dispatcher->user_signal_peer(clear_mask, set_mask);
 }
 
 // Given a kernel object with children objects, obtain a handle to the
@@ -959,9 +957,6 @@ zx_status_t sys_object_set_cookie(zx_handle_t handle, zx_handle_t hscope, uint64
     if (status != ZX_OK)
         return status;
 
-    if (!dispatcher->has_state_tracker())
-        return ZX_ERR_NOT_SUPPORTED;
-
     return dispatcher->SetCookie(dispatcher->get_cookie_jar(), scope, cookie);
 }
 
@@ -977,9 +972,6 @@ zx_status_t sys_object_get_cookie(zx_handle_t handle, zx_handle_t hscope, user_o
     auto status = up->GetDispatcher(handle, &dispatcher);
     if (status != ZX_OK)
         return status;
-
-    if (!dispatcher->has_state_tracker())
-        return ZX_ERR_NOT_SUPPORTED;
 
     uint64_t cookie;
     status = dispatcher->GetCookie(dispatcher->get_cookie_jar(), scope, &cookie);

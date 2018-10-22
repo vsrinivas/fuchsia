@@ -36,7 +36,7 @@ zx_status_t ProfileDispatcher::Create(const zx_profile_info_t& info,
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    *rights = ZX_DEFAULT_PROFILE_RIGHTS;
+    *rights = default_rights();
     *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
     return ZX_OK;
 }

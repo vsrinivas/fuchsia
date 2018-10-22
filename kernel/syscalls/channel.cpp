@@ -103,7 +103,7 @@ static void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
     handles.copy_array_to_user(hvs, num_handles);
 
     for (size_t i = 0; i < num_handles; ++i) {
-        if (handle_list[i]->dispatcher()->has_state_tracker())
+        if (handle_list[i]->dispatcher()->is_waitable())
             handle_list[i]->dispatcher()->Cancel(handle_list[i]);
         HandleOwner handle(handle_list[i]);
         // TODO(ZX-969): This takes a lock per call. Consider doing these in a batch.

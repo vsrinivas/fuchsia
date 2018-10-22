@@ -42,7 +42,6 @@ zx_status_t WaitStateObserver::Begin(Event* event,
 zx_signals_t WaitStateObserver::End() {
     canary_.Assert();
     DEBUG_ASSERT(dispatcher_);
-    DEBUG_ASSERT(dispatcher_->has_state_tracker());
 
     dispatcher_->RemoveObserver(this);
     dispatcher_.reset();

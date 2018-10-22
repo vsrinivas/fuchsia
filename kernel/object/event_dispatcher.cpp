@@ -18,7 +18,7 @@ zx_status_t EventDispatcher::Create(uint32_t options, fbl::RefPtr<Dispatcher>* d
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    *rights = ZX_DEFAULT_EVENT_RIGHTS;
+    *rights = default_rights();
     *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
     return ZX_OK;
 }

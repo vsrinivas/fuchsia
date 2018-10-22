@@ -84,7 +84,7 @@ zx_status_t ProcessDispatcher::Create(
         return result;
     }
 
-    *rights = ZX_DEFAULT_PROCESS_RIGHTS;
+    *rights = default_rights();
     *dispatcher = fbl::move(process);
     *root_vmar_disp = DownCastDispatcher<VmAddressRegionDispatcher>(
             &new_vmar_dispatcher);

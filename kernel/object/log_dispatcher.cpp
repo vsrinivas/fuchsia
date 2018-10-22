@@ -24,7 +24,7 @@ zx_status_t LogDispatcher::Create(uint32_t flags, fbl::RefPtr<Dispatcher>* dispa
         dlog_reader_init(&disp->reader_, &LogDispatcher::Notify, disp);
     }
 
-    *rights = ZX_DEFAULT_LOG_RIGHTS;
+    *rights = default_rights();
     *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
     return ZX_OK;
 }

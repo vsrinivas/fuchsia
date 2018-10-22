@@ -94,7 +94,7 @@ void Dispatcher::fbl_recycle() {
 }
 
 zx_status_t Dispatcher::add_observer(StateObserver* observer) {
-    if (!has_state_tracker())
+    if (!is_waitable())
         return ZX_ERR_NOT_SUPPORTED;
     AddObserver(observer, nullptr);
     return ZX_OK;
@@ -142,7 +142,7 @@ template <typename LockType>
 void Dispatcher::AddObserverHelper(StateObserver* observer,
                                    const StateObserver::CountInfo* cinfo,
                                    Lock<LockType>* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
-    ZX_DEBUG_ASSERT(has_state_tracker());
+    ZX_DEBUG_ASSERT(is_waitable());
     DEBUG_ASSERT(observer != nullptr);
 
     StateObserver::Flags flags;
@@ -172,28 +172,25 @@ void Dispatcher::AddObserverLocked(StateObserver* observer, const StateObserver:
 }
 
 void Dispatcher::RemoveObserver(StateObserver* observer) {
-    ZX_DEBUG_ASSERT(has_state_tracker());
+    ZX_DEBUG_ASSERT(is_waitable());
 
     Guard<fbl::Mutex> guard{get_lock()};
     DEBUG_ASSERT(observer != nullptr);
     observers_.erase(*observer);
 }
 
-bool Dispatcher::Cancel(Handle* handle) {
-    ZX_DEBUG_ASSERT(has_state_tracker());
+void Dispatcher::Cancel(const Handle* handle) {
+    ZX_DEBUG_ASSERT(is_waitable());
 
-    StateObserver::Flags flags = CancelWithFunc(&observers_, get_lock(),
-                                                [handle](StateObserver* obs) {
+    CancelWithFunc(&observers_, get_lock(), [handle](StateObserver* obs) {
         return obs->OnCancel(handle);
     });
 
     kcounter_add(dispatcher_cancel_bh_count, 1);
-
-    return flags & StateObserver::kHandled;
 }
 
-bool Dispatcher::CancelByKey(Handle* handle, const void* port, uint64_t key) {
-    ZX_DEBUG_ASSERT(has_state_tracker());
+bool Dispatcher::CancelByKey(const Handle* handle, const void* port, uint64_t key) {
+    ZX_DEBUG_ASSERT(is_waitable());
 
     StateObserver::Flags flags = CancelWithFunc(&observers_, get_lock(),
                                                 [handle, port, key](StateObserver* obs) {
@@ -214,7 +211,6 @@ void Dispatcher::UpdateStateHelper(zx_signals_t clear_mask,
                                    zx_signals_t set_mask,
                                    Lock<LockType>* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
     Dispatcher::ObserverList obs_to_remove;
-
     {
         Guard<LockType> guard{lock};
 
@@ -235,24 +231,33 @@ void Dispatcher::UpdateStateHelper(zx_signals_t clear_mask,
 
 void Dispatcher::UpdateState(zx_signals_t clear_mask,
                              zx_signals_t set_mask) {
-    ZX_DEBUG_ASSERT(has_state_tracker());
-
     UpdateStateHelper(clear_mask, set_mask, get_lock());
 }
 
 void Dispatcher::UpdateStateLocked(zx_signals_t clear_mask,
                                    zx_signals_t set_mask) {
-    ZX_DEBUG_ASSERT(has_state_tracker());
-
     // Type tag and local NullLock to make lockdep happy.
     struct DispatcherUpdateStateLocked {};
     DECLARE_LOCK(DispatcherUpdateStateLocked, fbl::NullLock) lock;
     UpdateStateHelper(clear_mask, set_mask, &lock);
 }
 
-zx_status_t Dispatcher::SetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t cookie) {
-    ZX_DEBUG_ASSERT(has_state_tracker());
+void Dispatcher::UpdateInternalLocked(ObserverList* obs_to_remove, zx_signals_t signals) {
+    ZX_DEBUG_ASSERT(is_waitable());
 
+    for (auto it = observers_.begin(); it != observers_.end();) {
+        StateObserver::Flags it_flags = it->OnStateChange(signals);
+        if (it_flags & StateObserver::kNeedRemoval) {
+            auto to_remove = it;
+            ++it;
+            obs_to_remove->push_back(observers_.erase(to_remove));
+        } else {
+            ++it;
+        }
+    }
+}
+
+zx_status_t Dispatcher::SetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t cookie) {
     if (cookiejar == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
 
@@ -277,8 +282,6 @@ zx_status_t Dispatcher::SetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_
 }
 
 zx_status_t Dispatcher::GetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t* cookie) {
-    ZX_DEBUG_ASSERT(has_state_tracker());
-
     if (cookiejar == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
 
@@ -293,8 +296,6 @@ zx_status_t Dispatcher::GetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_
 }
 
 zx_status_t Dispatcher::InvalidateCookieLocked(CookieJar* cookiejar) {
-    ZX_DEBUG_ASSERT(has_state_tracker());
-
     if (cookiejar == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
 
@@ -307,17 +308,3 @@ zx_status_t Dispatcher::InvalidateCookie(CookieJar* cookiejar) {
     return InvalidateCookieLocked(cookiejar);
 }
 
-void Dispatcher::UpdateInternalLocked(ObserverList* obs_to_remove, zx_signals_t signals) {
-    ZX_DEBUG_ASSERT(has_state_tracker());
-
-    for (auto it = observers_.begin(); it != observers_.end();) {
-        StateObserver::Flags it_flags = it->OnStateChange(signals);
-        if (it_flags & StateObserver::kNeedRemoval) {
-            auto to_remove = it;
-            ++it;
-            obs_to_remove->push_back(observers_.erase(to_remove));
-        } else {
-            ++it;
-        }
-    }
-}

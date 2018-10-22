@@ -11,12 +11,11 @@
 
 namespace {
 
-class TestDispatcher final : public SoloDispatcher<TestDispatcher> {
+class TestDispatcher final : public SoloDispatcher<TestDispatcher, ZX_RIGHTS_BASIC> {
 public:
     TestDispatcher() {}
     ~TestDispatcher() final = default;
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_NONE; }
-    bool has_state_tracker() const final { return true; }
 
     // Heler: Causes OnStateChange() to be called.
     void CallUpdateState() {
