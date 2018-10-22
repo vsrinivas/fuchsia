@@ -27,14 +27,14 @@ package("ledger") {
     {
       path = rebase_path(
               get_label_info("cobalt:generate_ledger_config",
-                             "target_gen_dir") + "/cobalt_config.binproto")
-      dest = "ledger_cobalt_config.binproto"
+                             "target_gen_dir") + "/cobalt_config.pb")
+      dest = "ledger_cobalt_config.pb"
     },
     {
       path = rebase_path(
               get_label_info("cobalt:generate_ledger_config",
-                             "target_gen_dir") + "/cobalt_config.binproto")
-      dest = "firebase_auth_cobalt_config.binproto"
+                             "target_gen_dir") + "/cobalt_config.pb")
+      dest = "firebase_auth_cobalt_config.pb"
     },
   ]
 }

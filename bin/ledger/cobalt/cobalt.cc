@@ -10,8 +10,7 @@
 
 namespace ledger {
 namespace {
-constexpr char kConfigBinProtoPath[] =
-    "/pkg/data/ledger_cobalt_config.binproto";
+constexpr char kConfigBinProtoPath[] = "/pkg/data/ledger_cobalt_config.pb";
 constexpr int32_t kCobaltMetricId = 2;
 
 cobalt::CobaltLogger* g_cobalt_logger = nullptr;

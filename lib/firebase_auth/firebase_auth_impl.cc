@@ -17,7 +17,7 @@ namespace firebase_auth {
 namespace {
 
 constexpr char kConfigBinProtoPath[] =
-    "/pkg/data/firebase_auth_cobalt_config.binproto";
+    "/pkg/data/firebase_auth_cobalt_config.pb";
 constexpr int32_t kCobaltAuthFailureMetricId = 3;
 
 // Returns true if the authentication failure may be transient.
