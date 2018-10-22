@@ -15,7 +15,7 @@
 namespace lockdep {
 
 // Default implementation of the runtime functions supporting the thread-local
-// ThreadLockState. These MUST be overidden in environments that do not support
+// ThreadLockState. These MUST be overridden in environments that do not support
 // the C++ thread_local TLS mechanism.
 
 __WEAK ThreadLockState* SystemGetThreadLockState() {

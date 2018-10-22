@@ -391,7 +391,7 @@ produces a message like the following in the kernel log:
 Although this is reported as a panic (required wording for `fx symbolize` to
 recognize the kernel stack trace) the error is informational and non-fatal. The
 first line identifies the thread and process where the kernel lock violation
-occured. The next line identifies the type of violation. The next two lines
+occurred. The next line identifies the type of violation. The next two lines
 identify which locks were found to be inconsistent with previous observations;
 the "Bad lock" is the lock that is about to be acquired, while "Conflict" is
 a lock that is already held by the current context and is the point of
@@ -416,7 +416,7 @@ Reports from the loop detection thread look like this:
 ```
 
 Each of the locks involved in the cycle are reported in a group. Frequently only
-two of the circularly-depedent locks are acquired by a single thread at any
+two of the circularly-dependent locks are acquired by a single thread at any
 given time, making manual detection difficult or impossible. However, the
 potential for deadlock between three or more threads is real and should be
 addressed for long-term system stability.

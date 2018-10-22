@@ -199,7 +199,7 @@ void SystemInitThreadLockState(ThreadLockState* state) {
     new (state) ThreadLockState();
 }
 
-// Wakes up the loop detector thread to re-evaluate the depedency graph.
+// Wakes up the loop detector thread to re-evaluate the dependency graph.
 void SystemTriggerLoopDetection() {
     event_signal(&graph_edge_event, /*reschedule=*/false);
 }
