@@ -11,6 +11,7 @@
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 #include "third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h"
+#include "third_party/crashpad/snapshot/memory_map_region_snapshot.h"
 #include "third_party/crashpad/util/misc/uuid.h"
 
 namespace zxdb {
@@ -531,8 +532,31 @@ void MinidumpRemoteAPI::Backtrace(
 void MinidumpRemoteAPI::AddressSpace(
     const debug_ipc::AddressSpaceRequest& request,
     std::function<void(const Err&, debug_ipc::AddressSpaceReply)> cb) {
-  // TODO
-  ErrNoImpl(cb);
+  if (!minidump_) {
+    ErrNoDump(cb);
+    return;
+  }
+
+  debug_ipc::AddressSpaceReply reply;
+
+  if (static_cast<pid_t>(request.process_koid) == minidump_->ProcessID()) {
+    for (const auto& region_object : minidump_->MemoryMap()) {
+      const auto& region = region_object->AsMinidumpMemoryInfo();
+
+      if (request.address > 0 &&
+          (request.address < region.BaseAddress ||
+           request.address >= region.BaseAddress + region.RegionSize)) {
+        continue;
+      }
+
+      auto& record = reply.map.emplace_back();
+
+      record.base = region.BaseAddress;
+      record.size = region.RegionSize;
+    }
+  }
+
+  Succeed(cb, reply);
 }
 
 }  // namespace zxdb

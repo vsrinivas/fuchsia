@@ -358,4 +358,21 @@ TEST_F(MinidumpTest, Modules) {
   EXPECT_EQ("aceb6958-deae-a336-d43a-24359083c628", reply.modules[16].build_id);
 }
 
+TEST_F(MinidumpTest, AddressSpace) {
+  ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
+
+  Err err;
+  debug_ipc::AddressSpaceRequest request;
+  debug_ipc::AddressSpaceReply reply;
+
+  request.process_koid = kTestExampleMinidumpKOID;
+
+  DoRequest(request, reply, err, &RemoteAPI::AddressSpace);
+  ASSERT_ZXDB_SUCCESS(err);
+
+  // TODO(DX-591): When we can get dumps that actually fill out this field we
+  // should attempt to parse it.
+  ASSERT_EQ(0UL, reply.map.size());
+}
+
 }  // namespace zxdb
