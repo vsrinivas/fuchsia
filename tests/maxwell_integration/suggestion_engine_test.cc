@@ -220,28 +220,6 @@ class SuggestionEngineTest : public ContextEngineTestBase,
     suggestion_debug_ =
         suggestion_services
             .ConnectToService<fuchsia::modular::SuggestionDebug>();
-
-    // Hack to get an unbound fuchsia::modular::PuppetMaster for
-    // Initialize().
-    fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master_handle;
-    puppet_master_handle.NewRequest();
-
-    fidl::InterfaceHandle<fuchsia::modular::ContextWriter>
-        context_writer_handle;
-    fidl::InterfaceHandle<fuchsia::modular::ContextReader>
-        context_reader_handle;
-    fuchsia::modular::ComponentScope scope;
-    scope.set_global_scope(fuchsia::modular::GlobalScope());
-    fuchsia::modular::ComponentScope scope_clone;
-    fidl::Clone(scope, &scope_clone);
-    context_engine()->GetWriter(std::move(scope_clone),
-                                context_writer_handle.NewRequest());
-    context_engine()->GetReader(std::move(scope),
-                                context_reader_handle.NewRequest());
-
-    suggestion_engine()->Initialize(std::move(context_writer_handle),
-                                    std::move(context_reader_handle),
-                                    std::move(puppet_master_handle));
   }
 
  protected:

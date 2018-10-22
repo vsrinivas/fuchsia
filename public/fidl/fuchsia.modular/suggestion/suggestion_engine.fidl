@@ -7,13 +7,9 @@ library fuchsia.modular;
 // Administrative interface for Suggestion Engine.
 [Discoverable]
 interface SuggestionEngine {
-  // Initializes the SuggestionEngine and provides dependencies.
-  1: Initialize(ContextWriter context_writer, ContextReader context_reader,
-      PuppetMaster puppet_master);
-
   // Registers a component that produces suggestions.
-  2: RegisterProposalPublisher(string url, request<ProposalPublisher> publisher);
+  1: RegisterProposalPublisher(string url, request<ProposalPublisher> publisher);
 
   // Registers a component that produces suggestions based on a query.
-  3: RegisterQueryHandler(string url, QueryHandler query_handler);
+  2: RegisterQueryHandler(string url, QueryHandler query_handler);
 };

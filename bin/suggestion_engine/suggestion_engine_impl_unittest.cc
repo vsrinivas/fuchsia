@@ -91,30 +91,23 @@ class SuggestionEngineTest : public testing::TestWithSessionStorage {
   void SetUp() override {
     TestWithSessionStorage::SetUp();
 
-    suggestion_engine_impl_ = std::make_unique<SuggestionEngineImpl>();
-    suggestion_engine_impl_->Connect(engine_ptr_.NewRequest());
-    suggestion_engine_impl_->Connect(provider_ptr_.NewRequest());
-    suggestion_engine_impl_->Connect(debug_ptr_.NewRequest());
-
-    // Get an unbound handles for Initialize(). We won't make use of these
-    // interfaces during the test.
-    fidl::InterfaceHandle<fuchsia::modular::ContextWriter>
-        context_writer_handle;
-    context_writer_handle.NewRequest();
-    fidl::InterfaceHandle<fuchsia::modular::ContextReader>
-        context_reader_handle;
-    context_reader_impl_ = std::make_unique<TestContextReaderImpl>(
-        context_reader_handle.NewRequest());
+    // Get an unbound handles. We won't make use of these interfaces during the
+    // test except for our mock puppet master.
+    fuchsia::modular::ContextReaderPtr context_reader;
+    context_reader_impl_ =
+        std::make_unique<TestContextReaderImpl>(context_reader.NewRequest());
 
     session_storage_ = MakeSessionStorage("page");
     puppet_master_impl_ = std::make_unique<PuppetMasterImpl>(
         session_storage_.get(), &test_executor_);
-    fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master;
+    fuchsia::modular::PuppetMasterPtr puppet_master;
     puppet_master_impl_->Connect(puppet_master.NewRequest());
 
-    suggestion_engine_impl_->Initialize(std::move(context_writer_handle),
-                                        std::move(context_reader_handle),
-                                        std::move(puppet_master));
+    suggestion_engine_impl_ = std::make_unique<SuggestionEngineImpl>(
+        std::move(context_reader), std::move(puppet_master));
+    suggestion_engine_impl_->Connect(engine_ptr_.NewRequest());
+    suggestion_engine_impl_->Connect(provider_ptr_.NewRequest());
+    suggestion_engine_impl_->Connect(debug_ptr_.NewRequest());
 
     proposal_publisher_ = std::make_unique<ProposalPublisherImpl>(
         suggestion_engine_impl_.get(), "Proposinator");

@@ -1,8 +1,12 @@
 {
-  "program": {
-    "binary": "bin/app"
-  },
-  "sandbox": {
-    "services": [ "fuchsia.media.Audio" ]
-  }
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.modular.ContextReader",
+            "fuchsia.modular.ContextWriter",
+            "fuchsia.modular.PuppetMaster"
+        ]
+    }
 }

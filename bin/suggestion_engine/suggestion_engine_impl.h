@@ -60,7 +60,8 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
                              public fuchsia::modular::SuggestionEngine,
                              public fuchsia::modular::SuggestionProvider {
  public:
-  SuggestionEngineImpl();
+  SuggestionEngineImpl(fuchsia::modular::ContextReaderPtr context_reader,
+                       fuchsia::modular::PuppetMasterPtr puppet_master);
   ~SuggestionEngineImpl() override;
 
   fxl::WeakPtr<SuggestionDebugImpl> debug();
@@ -145,13 +146,6 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
       fidl::StringPtr url, fidl::InterfaceHandle<fuchsia::modular::QueryHandler>
                                query_handler_handle) override;
 
-  // |fuchsia::modular::SuggestionEngine|
-  void Initialize(
-      fidl::InterfaceHandle<fuchsia::modular::ContextWriter> context_writer,
-      fidl::InterfaceHandle<fuchsia::modular::ContextReader> context_reader,
-      fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master)
-      override;
-
   void Terminate(std::function<void()> done) { done(); }
 
  private:
@@ -216,10 +210,11 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   // The context reader that is used to rank suggestions using the current
   // context.
   fuchsia::modular::ContextReaderPtr context_reader_;
-  fidl::Binding<fuchsia::modular::ContextListener> context_listener_binding_;
 
   // The puppet master connection that is used to execute actions.
   fuchsia::modular::PuppetMasterPtr puppet_master_;
+
+  fidl::Binding<fuchsia::modular::ContextListener> context_listener_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SuggestionEngineImpl);
 };

@@ -34,11 +34,17 @@
 
 namespace modular {
 
-SuggestionEngineImpl::SuggestionEngineImpl()
+SuggestionEngineImpl::SuggestionEngineImpl(
+    fuchsia::modular::ContextReaderPtr context_reader,
+    fuchsia::modular::PuppetMasterPtr puppet_master)
     : debug_(std::make_shared<SuggestionDebugImpl>()),
       next_processor_(debug_),
       query_processor_(debug_),
-      context_listener_binding_(this) {}
+      context_reader_(std::move(context_reader)),
+      puppet_master_(std::move(puppet_master)),
+      context_listener_binding_(this) {
+  RegisterRankingFeatures();
+}
 
 SuggestionEngineImpl::~SuggestionEngineImpl() = default;
 
@@ -256,17 +262,6 @@ void SuggestionEngineImpl::RegisterQueryHandler(
     fidl::StringPtr url, fidl::InterfaceHandle<fuchsia::modular::QueryHandler>
                              query_handler_handle) {
   query_processor_.RegisterQueryHandler(url, std::move(query_handler_handle));
-}
-
-// |fuchsia::modular::SuggestionEngine|
-void SuggestionEngineImpl::Initialize(
-    fidl::InterfaceHandle<fuchsia::modular::ContextWriter> context_writer,
-    fidl::InterfaceHandle<fuchsia::modular::ContextReader> context_reader,
-    fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master) {
-  context_reader_.Bind(std::move(context_reader));
-  query_processor_.Initialize(std::move(context_writer));
-  puppet_master_.Bind(std::move(puppet_master));
-  RegisterRankingFeatures();
 }
 
 // end fuchsia::modular::SuggestionEngine

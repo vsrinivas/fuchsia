@@ -16,7 +16,14 @@ namespace modular {
 class SuggestionEngineApp {
  public:
   SuggestionEngineApp(component::StartupContext* const context) {
-    engine_impl_ = std::make_unique<modular::SuggestionEngineImpl>();
+    fuchsia::modular::ContextReaderPtr context_reader;
+    fuchsia::modular::PuppetMasterPtr puppet_master;
+
+    context->ConnectToEnvironmentService(context_reader.NewRequest());
+    context->ConnectToEnvironmentService(puppet_master.NewRequest());
+
+    engine_impl_ = std::make_unique<modular::SuggestionEngineImpl>(
+        std::move(context_reader), std::move(puppet_master));
 
     context->outgoing().AddPublicService<fuchsia::modular::SuggestionEngine>(
         [this](fidl::InterfaceRequest<fuchsia::modular::SuggestionEngine>

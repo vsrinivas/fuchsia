@@ -33,8 +33,12 @@ class UserIntelligenceProviderImpl
           focus_provider_handle,
       fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
           visible_stories_provider_handle,
+      // TODO(MI4-1357): remove.
       fidl::InterfaceHandle<fuchsia::modular::PuppetMaster>
-          puppet_master_handle);
+          puppet_master_handle,
+      fit::function<
+          void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
+          puppet_master_connector);
   ~UserIntelligenceProviderImpl() override = default;
 
   void GetComponentIntelligenceServices(
@@ -92,9 +96,8 @@ class UserIntelligenceProviderImpl
   fidl::VectorPtr<fidl::StringPtr> AddStandardServices(
       const std::string& url, component::ServiceNamespace* agent_host);
 
-  // Starts an app in the parent environment, with full access to environment
-  // services.
-  component::Services StartTrustedApp(const std::string& url);
+  // Starts suggestion engine.
+  void StartSuggestionEngine();
 
   void StartAgent(const std::string& url);
 
@@ -104,7 +107,9 @@ class UserIntelligenceProviderImpl
   component::StartupContext* context_;  // Not owned.
 
   fuchsia::modular::ContextEnginePtr context_engine_;
+
   component::Services suggestion_services_;
+  component::ServiceProviderImpl suggestion_engine_service_provider_;
   fuchsia::modular::SuggestionEnginePtr suggestion_engine_;
 
   std::map<std::string, SessionAgentData> session_agents_;
@@ -119,6 +124,8 @@ class UserIntelligenceProviderImpl
   fidl::InterfacePtr<fuchsia::modular::PuppetMaster> puppet_master_;
   fidl::InterfacePtr<fuchsia::modular::VisibleStoriesProvider>
       visible_stories_provider_;
+  fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
+      puppet_master_connector_;
 
   // Framework fuchsia::modular::Agent controllers. Hanging onto these tells the
   // Framework we want the Agents to keep running.

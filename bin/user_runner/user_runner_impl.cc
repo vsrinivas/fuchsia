@@ -450,15 +450,51 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
       visible_stories_provider;
   auto visible_stories_provider_request = visible_stories_provider.NewRequest();
 
-  user_intelligence_provider_impl_.reset(new UserIntelligenceProviderImpl(
-      startup_context_, std::move(context_engine), std::move(story_provider),
-      std::move(focus_provider_maxwell), std::move(visible_stories_provider),
-      std::move(puppet_master)));
-  AtEnd(Reset(&user_intelligence_provider_impl_));
+  fuchsia::modular::FocusProviderPtr focus_provider_puppet_master;
+  auto focus_provider_request_puppet_master =
+      focus_provider_puppet_master.NewRequest();
+  fuchsia::modular::StoryProviderPtr story_provider_puppet_master;
+  auto story_provider_puppet_master_request =
+      story_provider_puppet_master.NewRequest();
 
   entity_provider_runner_ = std::make_unique<EntityProviderRunner>(
       static_cast<EntityProviderLauncher*>(this));
   AtEnd(Reset(&entity_provider_runner_));
+
+  // Initialize the PuppetMaster.
+  // TODO(miguelfrde): there's no clean runtime interface we can inject to
+  // puppet master. Hence, for now we inject this function to be able to focus
+  // mods. Eventually we want to have a StoryRuntime and SessionRuntime classes
+  // similar to Story/SessionStorage but for runtime management.
+  auto module_focuser =
+      [story_provider = std::move(story_provider_puppet_master)](
+          fidl::StringPtr story_id, fidl::VectorPtr<fidl::StringPtr> mod_name) {
+        fuchsia::modular::StoryControllerPtr story_controller;
+        story_provider->GetController(story_id, story_controller.NewRequest());
+
+        fuchsia::modular::ModuleControllerPtr module_controller;
+        story_controller->GetModuleController(std::move(mod_name),
+                                              module_controller.NewRequest());
+        module_controller->Focus();
+      };
+  session_storage_ = std::make_unique<SessionStorage>(
+      ledger_client_.get(), fuchsia::ledger::PageId());
+  AtEnd(Reset(&session_storage_));
+  story_command_executor_ = MakeProductionStoryCommandExecutor(
+      session_storage_.get(), std::move(focus_provider_puppet_master),
+      module_resolver_service_.get(), entity_provider_runner_.get(),
+      std::move(module_focuser));
+  puppet_master_impl_ = std::make_unique<PuppetMasterImpl>(
+      session_storage_.get(), story_command_executor_.get());
+
+  user_intelligence_provider_impl_.reset(new UserIntelligenceProviderImpl(
+      startup_context_, std::move(context_engine), std::move(story_provider),
+      std::move(focus_provider_maxwell), std::move(visible_stories_provider),
+      std::move(puppet_master),
+      [this](fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
+        puppet_master_impl_->Connect(std::move(request));
+      }));
+  AtEnd(Reset(&user_intelligence_provider_impl_));
 
   agent_runner_storage_ = std::make_unique<AgentRunnerStorageImpl>(
       ledger_client_.get(), MakePageId(kAgentRunnerPageId));
@@ -592,9 +628,6 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   // all modules to be terminated before agents are terminated. Agents must
   // outlive the stories which contain modules that are connected to those
   // agents.
-  session_storage_ = std::make_unique<SessionStorage>(
-      ledger_client_.get(), fuchsia::ledger::PageId());
-  AtEnd(Reset(&session_storage_));
   story_provider_impl_.reset(new StoryProviderImpl(
       user_environment_.get(), device_map_impl_->current_device_id(),
       session_storage_.get(), std::move(story_shell), component_context_info,
@@ -608,39 +641,9 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
 
   AtEnd(
       Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
-
-  fuchsia::modular::FocusProviderPtr focus_provider_puppet_master;
-  auto focus_provider_request_puppet_master =
-      focus_provider_puppet_master.NewRequest();
-  fuchsia::modular::StoryProviderPtr story_provider_puppet_master;
-  auto story_provider_puppet_master_request =
-      story_provider_puppet_master.NewRequest();
-
-  // Initialize the PuppetMaster.
-  // TODO(miguelfrde): there's no clean runtime interface we can inject to
-  // puppet master. Hence, for now we inject this function to be able to focus
-  // mods. Eventually we want to have a StoryRuntime and SessionRuntime classes
-  // similar to Story/SessionStorage but for runtime management.
-  auto module_focuser =
-      [story_provider = std::move(story_provider_puppet_master)](
-          fidl::StringPtr story_id, fidl::VectorPtr<fidl::StringPtr> mod_name) {
-        fuchsia::modular::StoryControllerPtr story_controller;
-        story_provider->GetController(story_id, story_controller.NewRequest());
-
-        fuchsia::modular::ModuleControllerPtr module_controller;
-        story_controller->GetModuleController(std::move(mod_name),
-                                              module_controller.NewRequest());
-        module_controller->Focus();
-      };
-  story_command_executor_ = MakeProductionStoryCommandExecutor(
-      session_storage_.get(), std::move(focus_provider_puppet_master),
-      module_resolver_service_.get(), entity_provider_runner_.get(),
-      std::move(module_focuser));
+  puppet_master_impl_->Connect(std::move(puppet_master_request));
   story_provider_impl_->Connect(
       std::move(story_provider_puppet_master_request));
-  puppet_master_impl_ = std::make_unique<PuppetMasterImpl>(
-      session_storage_.get(), story_command_executor_.get());
-  puppet_master_impl_->Connect(std::move(puppet_master_request));
 
   session_ctl_ =
       std::make_unique<SessionCtl>(startup_context_->outgoing().debug_dir(),

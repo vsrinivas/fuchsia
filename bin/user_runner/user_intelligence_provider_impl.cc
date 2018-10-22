@@ -90,8 +90,11 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
         focus_provider_handle,
     fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
         visible_stories_provider_handle,
-    fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master_handle)
-    : context_(context) {
+    fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master_handle,
+    fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
+        puppet_master_connector)
+    : context_(context),
+      puppet_master_connector_(std::move(puppet_master_connector)) {
   context_engine_.Bind(std::move(context_engine_handle));
   story_provider_.Bind(std::move(story_provider_handle));
   focus_provider_.Bind(std::move(focus_provider_handle));
@@ -100,26 +103,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 
   // Start dependent processes. We get some component-scope services from
   // these processes.
-  suggestion_services_ = StartTrustedApp("suggestion_engine");
-  suggestion_engine_ =
-      suggestion_services_
-          .ConnectToService<fuchsia::modular::SuggestionEngine>();
-
-  // Generate a fuchsia::modular::ContextWriter and
-  // fuchsia::modular::ContextReader to pass to the
-  // fuchsia::modular::SuggestionEngine.
-  fidl::InterfaceHandle<fuchsia::modular::ContextReader> context_reader;
-  fidl::InterfaceHandle<fuchsia::modular::ContextWriter> context_writer;
-  fuchsia::modular::ComponentScope scope1;
-  scope1.set_global_scope(fuchsia::modular::GlobalScope());
-  fuchsia::modular::ComponentScope scope2;
-  fidl::Clone(scope1, &scope2);
-  context_engine_->GetWriter(std::move(scope1), context_writer.NewRequest());
-  context_engine_->GetReader(std::move(scope2), context_reader.NewRequest());
-
-  suggestion_engine_->Initialize(std::move(context_writer),
-                                 std::move(context_reader),
-                                 Duplicate(puppet_master_));
+  StartSuggestionEngine();
 }
 
 void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(
@@ -179,14 +163,39 @@ void UserIntelligenceProviderImpl::GetServicesForAgent(
   callback(std::move(service_list));
 }
 
-component::Services UserIntelligenceProviderImpl::StartTrustedApp(
-    const std::string& url) {
-  component::Services services;
+void UserIntelligenceProviderImpl::StartSuggestionEngine() {
+  auto service_list = fuchsia::sys::ServiceList::New();
+
+  service_list->names.push_back(fuchsia::modular::ContextReader::Name_);
+  suggestion_engine_service_provider_
+      .AddService<fuchsia::modular::ContextReader>(
+          [this](
+              fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) {
+            fuchsia::modular::ComponentScope scope;
+            scope.set_global_scope(fuchsia::modular::GlobalScope());
+            context_engine_->GetReader(std::move(scope), std::move(request));
+          });
+
+  service_list->names.push_back(fuchsia::modular::PuppetMaster::Name_);
+  suggestion_engine_service_provider_
+      .AddService<fuchsia::modular::PuppetMaster>(
+          [this](
+              fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
+            puppet_master_connector_(std::move(request));
+          });
+
+  fuchsia::sys::ServiceProviderPtr service_provider;
+  suggestion_engine_service_provider_.AddBinding(service_provider.NewRequest());
+  service_list->provider = std::move(service_provider);
+
   fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = url;
-  launch_info.directory_request = services.NewRequest();
+  launch_info.url = "suggestion_engine";
+  launch_info.directory_request = suggestion_services_.NewRequest();
+  launch_info.additional_services = std::move(service_list);
   context_->launcher()->CreateComponent(std::move(launch_info), nullptr);
-  return services;
+  suggestion_engine_ =
+      suggestion_services_
+          .ConnectToService<fuchsia::modular::SuggestionEngine>();
 }
 
 void UserIntelligenceProviderImpl::StartAgent(const std::string& url) {
