@@ -6,13 +6,9 @@
 
 namespace sketchy_example {
 
-View::View(async::Loop* loop, component::StartupContext* startup_context,
-           ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-           fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-               view_owner_request)
-    : BaseView(std::move(view_manager), std::move(view_owner_request),
-               "Sketchy Example"),
-      canvas_(startup_context, loop),
+View::View(scenic::ViewContext context, async::Loop* loop)
+    : V1BaseView(std::move(context), "Sketchy Example"),
+      canvas_(startup_context(), loop),
       background_node_(session()),
       import_node_holder_(session()),
       import_node_(&canvas_, import_node_holder_),
@@ -45,7 +41,7 @@ bool View::OnInputEvent(fuchsia::ui::input::InputEvent event) {
     const auto& pointer = event.pointer();
     switch (pointer.phase) {
       case fuchsia::ui::input::PointerEventPhase::DOWN: {
-        auto stroke = fxl::MakeRefCounted<Stroke>(&canvas_);
+        auto stroke = fxl::MakeRefCounted<sketchy_lib::Stroke>(&canvas_);
         pointer_id_to_stroke_map_.insert({pointer.pointer_id, stroke});
         scratch_group_.AddStroke(*stroke);
         stroke->Begin({pointer.x, pointer.y});

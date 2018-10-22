@@ -39,9 +39,11 @@ BaseView::BaseView(
 
   zx::eventpair parent_export_token;
   parent_node_.BindAsRequest(&parent_export_token);
-  view_manager_->CreateView(view_.NewRequest(), std::move(view_owner_request),
-                            view_listener_binding_.NewBinding(),
-                            std::move(parent_export_token), label);
+  view_manager_->CreateView2(
+      view_.NewRequest(),
+      zx::eventpair(view_owner_request.TakeChannel().release()),
+      view_listener_binding_.NewBinding(), std::move(parent_export_token),
+      label);
 
   component::ConnectToService(GetViewServiceProvider(),
                               input_connection_.NewRequest());

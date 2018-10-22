@@ -35,7 +35,7 @@ fuchsia::ui::scenic::SessionPtr GetSession(
 }  // anonymous namespace
 
 Tiles::Tiles(::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-             fidl::InterfaceRequest<ViewOwner> view_owner_request,
+             zx::eventpair view_token,
              component::StartupContext* startup_context, int border)
     : startup_context_(startup_context),
       view_manager_(std::move(view_manager)),
@@ -56,9 +56,9 @@ Tiles::Tiles(::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
   root_node_.AddChild(background_node_);
   root_node_.AddChild(container_node_);
 
-  view_manager_->CreateView(view_.NewRequest(), std::move(view_owner_request),
-                            view_listener_binding_.NewBinding(),
-                            std::move(root_export_token), "Tile");
+  view_manager_->CreateView2(view_.NewRequest(), std::move(view_token),
+                             view_listener_binding_.NewBinding(),
+                             std::move(root_export_token), "Tile");
 
   view_->GetContainer(view_container_.NewRequest());
   view_container_->SetListener(view_container_listener_binding_.NewBinding());
@@ -95,12 +95,13 @@ void Tiles::AddTileFromURL(fidl::StringPtr url, bool allow_focus,
   // Get the view provider back from the launched app.
   auto view_provider = services.ConnectToService<ViewProvider>();
 
-  fidl::InterfaceHandle<ViewOwner> child_view_owner;
-  view_provider->CreateView(child_view_owner.NewRequest(), nullptr);
+  fidl::InterfaceHandle<ViewOwner> view_owner_token;
+  view_provider->CreateView(view_owner_token.NewRequest(), nullptr);
 
   uint32_t child_key = next_child_view_key_++;
 
-  AddChildView(child_key, std::move(child_view_owner), url,
+  AddChildView(child_key,
+               zx::eventpair(view_owner_token.TakeChannel().release()), url,
                std::move(controller), allow_focus);
 
   if (callback)
@@ -113,12 +114,13 @@ void Tiles::AddTileFromViewProvider(
   FXL_VLOG(2) << "AddTile " << url;
   auto view_provider = provider.Bind();
 
-  fidl::InterfaceHandle<ViewOwner> child_view_owner;
-  view_provider->CreateView(child_view_owner.NewRequest(), nullptr);
+  fidl::InterfaceHandle<ViewOwner> view_owner_token;
+  view_provider->CreateView(view_owner_token.NewRequest(), nullptr);
 
   uint32_t child_key = next_child_view_key_++;
 
-  AddChildView(child_key, std::move(child_view_owner), url,
+  AddChildView(child_key,
+               zx::eventpair(view_owner_token.TakeChannel().release()), url,
                nullptr /* controller */, true /* allow_focus */);
 
   if (callback)
@@ -133,7 +135,7 @@ void Tiles::RemoveTile(uint32_t child_key) {
   it->second->host_node.Detach();
   views_.erase(it);
 
-  view_container_->RemoveChild(child_key, nullptr);
+  view_container_->RemoveChild2(child_key, zx::eventpair());
   InvalidateScene();
 }
 
@@ -193,8 +195,7 @@ void Tiles::OnChildUnavailable(uint32_t child_key,
   InvalidateScene();
 }
 
-void Tiles::AddChildView(uint32_t child_key,
-                         fidl::InterfaceHandle<ViewOwner> child_view_owner,
+void Tiles::AddChildView(uint32_t child_key, zx::eventpair view_owner_token,
                          const std::string& url,
                          fuchsia::sys::ComponentControllerPtr controller,
                          bool allow_focus) {
@@ -206,8 +207,8 @@ void Tiles::AddChildView(uint32_t child_key,
   container_node_.AddChild(view_data->host_node);
   views_.emplace(child_key, std::move(view_data));
 
-  view_container_->AddChild(child_key, std::move(child_view_owner),
-                            std::move(host_import_token));
+  view_container_->AddChild2(child_key, std::move(view_owner_token),
+                             std::move(host_import_token));
   InvalidateScene();
 }
 

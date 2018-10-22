@@ -11,8 +11,8 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/base_view/cpp/base_view.h"
+#include "lib/ui/base_view/cpp/v1_base_view.h"
 #include "lib/ui/scenic/cpp/resources.h"
-#include "lib/ui/view_framework/base_view.h"
 
 namespace shadertoy_client {
 
@@ -66,22 +66,19 @@ class ViewImpl {
 };
 
 // Views v1, deprecated.
-class OldView : public mozart::BaseView {
+class OldView : public scenic::V1BaseView {
  public:
-  OldView(component::StartupContext* startup_context,
-          ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-          fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-              view_owner_request);
+  OldView(scenic::ViewContext context, const std::string& debug_name);
   ~OldView() = default;
 
-  // |mozart::BaseView|.
+  // | scenic::V1BaseView |
   virtual bool OnInputEvent(fuchsia::ui::input::InputEvent event) override;
 
  private:
   scenic::EntityNode root_node_;
   ViewImpl impl_;
 
-  // |mozart::BaseView|.
+  // | scenic::V1BaseView |
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
 

@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_UI_SNAPSHOT_VIEW_H_
-#define GARNET_EXAMPLES_UI_SNAPSHOT_VIEW_H_
-
-#include <lib/async-loop/cpp/loop.h>
+#ifndef GARNET_BIN_UI_SNAPSHOT_VIEW_H_
+#define GARNET_BIN_UI_SNAPSHOT_VIEW_H_
 
 #include <fuchsia/scenic/snapshot/cpp/fidl.h>
 
@@ -13,20 +11,15 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
-#include "lib/ui/view_framework/base_view.h"
+#include "lib/ui/base_view/cpp/v1_base_view.h"
 
 namespace snapshot {
 
 // A view that displays saved snapshot of views.
-class View final : public mozart::BaseView,
+class View final : public scenic::V1BaseView,
                    public fuchsia::scenic::snapshot::Loader {
  public:
-  View(async::Loop* loop, component::StartupContext* startup_context,
-       ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-       fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-           view_owner_request,
-       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services);
-
+  View(scenic::ViewContext view_context);
   ~View() override = default;
 
   // |fuchsia::scenic::snapshot::Loader|.
@@ -34,7 +27,6 @@ class View final : public mozart::BaseView,
 
  private:
   fidl::BindingSet<fuchsia::scenic::snapshot::Loader> loader_bindings_;
-  component::ServiceNamespace service_namespace_;
 
   void LoadNode(scenic::ContainerNode& parent_node,
                 const snapshot::Node* flat_node);
@@ -48,4 +40,4 @@ class View final : public mozart::BaseView,
 
 }  // namespace snapshot
 
-#endif  // GARNET_EXAMPLES_UI_SNAPSHOT_VIEW_H_
+#endif  // GARNET_BIN_UI_SNAPSHOT_VIEW_H_

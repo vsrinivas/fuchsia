@@ -11,12 +11,12 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
-#include "lib/ui/base_view/cpp/view_provider_service.h"
+#include "lib/ui/base_view/cpp/view_provider_component.h"
 
 using namespace hello_base_view;
 
 int main(int argc, const char** argv) {
-  FXL_LOG(INFO) << "Launching hello_base_view!";
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
@@ -25,51 +25,47 @@ int main(int argc, const char** argv) {
   const bool kUseRootPresenter = command_line.HasOption("use_root_presenter");
   const bool kUseExamplePresenter =
       command_line.HasOption("use_example_presenter");
-
   if (kUseRootPresenter && kUseExamplePresenter) {
     FXL_LOG(ERROR)
         << "Cannot set both --use_root_presenter and --use_example_presenter";
     return 1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  std::unique_ptr<component::StartupContext> startup_context =
-      component::StartupContext::CreateFromStartupInfo();
-
-  fidl::InterfacePtr<fuchsia::ui::scenic::Scenic> scenic =
-      startup_context
-          ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-  scenic.set_error_handler([&loop] {
-    FXL_LOG(INFO) << "Lost connection to Scenic.";
-    loop.Quit();
-  });
-
-  // We need to attach ourselves to a Presenter. To do this, we create a pair of
-  // tokens, and use one to create a View locally (which we attach the rest of
-  // our UI to), and one which we pass to a Presenter to create a ViewHolder to
-  // embed us.
-  //
-  // In the Peridot layer of Fuchsia, the basemgr both launches the device
-  // shell, and connects it to the root presenter.  Here, we create two
-  // eventpair handles, one of which will be passed to our example Presenter and
-  // the other to the View.
-  //
-  // For simplicity, both the presenter and the view run in-process, and the
-  // tokens are passed to them via C++ methods.  However, it would work just as
-  // well if the presenter/view lived in two other processes, and we passed the
-  // tokens to them via FIDL messages.  In Peridot, this is exactly what the
-  // basemgr does.
-  zx::eventpair view_holder_token, view_token;
-  if (ZX_OK != zx::eventpair::create(0u, &view_holder_token, &view_token)) {
-    FXL_LOG(ERROR) << "hello_base_view: parent failed to create tokens.";
-    return 1;
-  }
-
+  // If the user asked us to use a Presenter, then do so.  Otherwise, just
+  // provide our view as a service.
   if (kUseRootPresenter) {
     FXL_LOG(INFO) << "Using root presenter.";
     FXL_LOG(INFO) << "To quit: Tap the background and hit the ESC key.";
 
-    // Create a View; Shadertoy's View will be plumbed through it.
+    // We need to attach ourselves to a Presenter. To do this, we create a
+    // pair of tokens, and use one to create a View locally (which we attach
+    // the rest of our UI to), and one which we pass to a Presenter to create
+    // a ViewHolder to embed us.
+    //
+    // In the Peridot layer of Fuchsia, the device_runner both launches the
+    // device shell, and connects it to the root presenter.  Here, we create
+    // two eventpair handles, one of which will be passed to the root presenter
+    // and the other to the View.
+    zx::eventpair view_holder_token, view_token;
+    if (ZX_OK != zx::eventpair::create(0u, &view_holder_token, &view_token)) {
+      FXL_LOG(ERROR) << "hello_base_view: parent failed to create tokens.";
+      return 1;
+    }
+
+    // Create a startup context for ourselves and use it to connect to
+    // environment services.
+    std::unique_ptr<component::StartupContext> startup_context =
+        component::StartupContext::CreateFromStartupInfo();
+    fidl::InterfacePtr<fuchsia::ui::scenic::Scenic> scenic =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+    scenic.set_error_handler([&loop] {
+      FXL_LOG(INFO) << "Lost connection to Scenic.";
+      loop.Quit();
+    });
+
+    // Create a View which will launch shadertoy and attach shadertoy's View to
+    // itself.
     scenic::ViewContext view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
@@ -80,20 +76,53 @@ int main(int argc, const char** argv) {
     };
     auto view =
         std::make_unique<ShadertoyEmbedderView>(std::move(view_context), &loop);
+    view->LaunchShadertoyClient();
 
+    // Display the newly-created view using root_presenter.
     fuchsia::ui::policy::Presenter2Ptr root_presenter =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter2>();
     root_presenter->PresentView(std::move(view_holder_token), nullptr);
 
-    // Launch the real shadertoy and attach its View to this View.
-    view->LaunchShadertoyClient();
     loop.Run();
-
   } else if (kUseExamplePresenter) {
     FXL_LOG(INFO) << "Using example presenter.";
 
-    // Create a View; Shadertoy's View will be plumbed through it.
+    // We need to attach ourselves to a Presenter. To do this, we create a
+    // pair of tokens, and use one to create a View locally (which we attach
+    // the rest of our UI to), and one which we pass to a Presenter to create
+    // a ViewHolder to embed us.
+    //
+    // In the Peridot layer of Fuchsia, the device_runner both launches the
+    // device shell, and connects it to the root presenter.  Here, we create
+    // two eventpair handles, one of which will be passed to our example
+    // Presenter and the other to the View.
+    //
+    // For simplicity, both the presenter and the view run in-process, and the
+    // tokens are passed to them via C++ methods.  However, it would work just
+    // as well if the presenter/view lived in two other processes, and we
+    // passed the tokens to them via FIDL messages.  In Peridot, this is
+    // exactly what the device_runner does.
+    zx::eventpair view_holder_token, view_token;
+    if (ZX_OK != zx::eventpair::create(0u, &view_holder_token, &view_token)) {
+      FXL_LOG(ERROR) << "hello_base_view: parent failed to create tokens.";
+      return 1;
+    }
+
+    // Create a startup context for ourselves and use it to connect to
+    // environment services.
+    std::unique_ptr<component::StartupContext> startup_context =
+        component::StartupContext::CreateFromStartupInfo();
+    fidl::InterfacePtr<fuchsia::ui::scenic::Scenic> scenic =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+    scenic.set_error_handler([&loop] {
+      FXL_LOG(INFO) << "Lost connection to Scenic.";
+      loop.Quit();
+    });
+
+    // Create a View which will launch shadertoy and attach shadertoy's View to
+    // itself.
     scenic::ViewContext view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
@@ -104,37 +133,35 @@ int main(int argc, const char** argv) {
     };
     auto view =
         std::make_unique<ShadertoyEmbedderView>(std::move(view_context), &loop);
-
-    // N.B. The example presenter has an independent session to Scenic.
-    auto example_presenter = std::make_unique<ExamplePresenter>(scenic.get());
-    // This would typically be done by the root Presenter.
-    scenic->GetDisplayInfo(
-        [&example_presenter, view_holder_token = std::move(view_holder_token)](
-            fuchsia::ui::gfx::DisplayInfo display_info) mutable {
-          example_presenter->Init(
-              static_cast<float>(display_info.width_in_px),
-              static_cast<float>(display_info.height_in_px));
-          example_presenter->PresentView(std::move(view_holder_token), nullptr);
-        });
-
-    // Launch the real shadertoy and attach its View to this View.
     view->LaunchShadertoyClient();
-    loop.Run();
 
+    // Display the newly created View using our in-process presenter, which
+    // creates a DisplayCompositor directly for screen output.
+    // NOTE: The example presenter has an independent session to Scenic even
+    // though it resides in the same process as the view.
+    auto example_presenter = std::make_unique<ExamplePresenter>(scenic.get());
+    example_presenter->PresentView(std::move(view_holder_token), nullptr);
+
+    loop.Run();
   } else {
-    // Instead of creating a View directly, provide a service that will do so.
+    // Instead of creating a View directly, provide a component that will do so
+    // when asked via FIDL.
+    //
+    // NOTE: This will not work with set_root_view until view_manager creates V2
+    // views internally.
     FXL_LOG(INFO) << "Launching view provider service.";
-    auto view_provider_service = std::make_unique<scenic::ViewProviderService>(
-        startup_context.get(), scenic.get(),
+    scenic::ViewProviderComponent component(
         [&loop](scenic::ViewContext context) {
-          // Create a View; Shadertoy's View will be plumbed through it.
+          // Create a View which will launch shadertoy and attach shadertoy's
+          // View to itself.
           auto view = std::make_unique<ShadertoyEmbedderView>(
               std::move(context), &loop);
-
-          // Launch the real shadertoy and attach its View to this View.
           view->LaunchShadertoyClient();
+
           return view;
-        });
+        },
+        &loop);
+
     loop.Run();
   }
 

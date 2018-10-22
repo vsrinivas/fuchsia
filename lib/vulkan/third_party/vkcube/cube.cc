@@ -2972,11 +2972,9 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv) {
   trace::TraceProvider trace_provider(demo->fuchsia_state->loop.dispatcher());
 #endif
 
-  auto startup_context_ = component::StartupContext::CreateFromStartupInfo();
-
-  demo->fuchsia_state->view_provider_service =
-      std::make_unique<mozart::ViewProviderService>(
-          startup_context_.get(), [demo](mozart::ViewContext view_context) {
+  demo->fuchsia_state->component =
+      std::make_unique<scenic::ViewProviderComponent>(
+          [demo](scenic::ViewContext view_context) {
             auto resize_callback = [demo](float width, float height) {
               demo->width = width;
               demo->height = height;
@@ -2986,20 +2984,21 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv) {
                 demo_prepare(demo);
               }
             };
-            auto view = std::make_unique<VkCubeView>(
-                std::move(view_context.view_manager),
-                std::move(view_context.view_owner_request), resize_callback);
+            auto view = std::make_unique<VkCubeView>(std::move(view_context),
+                                                     resize_callback);
             demo->fuchsia_state->image_pipe_handle =
                 view->TakeImagePipeChannel().release();
             demo_init_vk_swapchain(demo);
             return view;
-          });
+          },
+          &demo->fuchsia_state->loop);
 
-  while (!demo->quit) {
+  zx_status_t loop_status = ZX_OK;
+  while (!demo->quit && loop_status == ZX_OK) {
     if (demo->prepared) {
       demo_update_magma_one_frame(demo);
     }
-    demo->fuchsia_state->loop.RunUntilIdle();
+    loop_status = demo->fuchsia_state->loop.RunUntilIdle();
   }
 }
 

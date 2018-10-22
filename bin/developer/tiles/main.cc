@@ -4,6 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
+#include <zx/eventpair.h>
 
 #include "fuchsia/ui/policy/cpp/fidl.h"
 #include "garnet/bin/developer/tiles/tiles.h"
@@ -54,8 +55,10 @@ int main(int argc, const char** argv) {
   }
 
   // Create tiles with a token for its root view.
-  fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner;
-  tiles::Tiles tiles(std::move(view_manager), view_owner.NewRequest(),
+  zx::eventpair view_owner_token, view_token;
+  FXL_DCHECK(zx::eventpair::create(0u, &view_owner_token, &view_token) == ZX_OK)
+      << "failed to create tokens.";
+  tiles::Tiles tiles(std::move(view_manager), std::move(view_token),
                      startup_context.get(), border);
 
   tiles.AddTilesByURL(command_line.positional_args());
@@ -64,7 +67,7 @@ int main(int argc, const char** argv) {
   auto presenter =
       startup_context
           ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
-  presenter->Present(std::move(view_owner), nullptr);
+  presenter->Present2(std::move(view_owner_token), nullptr);
   presenter->HACK_SetInputPath(input_path);
 
   loop.Run();

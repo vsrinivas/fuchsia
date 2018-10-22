@@ -33,8 +33,9 @@ std::unique_ptr<FrameSink> FrameSink::Create(
 }
 
 FrameSink::~FrameSink() {
-  // Only after ~view_provider_app_ do we know there will be zero views_ left.
-  view_provider_app_.reset();
+  // Only after ~view_provider_component_ do we know there will be zero views_
+  // left.
+  view_provider_component_.reset();
   FXL_DCHECK(views_.empty());
 }
 
@@ -161,12 +162,11 @@ FrameSink::FrameSink(component::StartupContext* startup_context,
       // IEEE 754 floating point can represent 0.0 exactly.
       frames_per_second_(frames_per_second != 0.0 ? frames_per_second
                                                   : kDefaultFramesPerSecond) {
-  view_provider_app_ = std::make_unique<mozart::ViewProviderApp>(
-      startup_context_, [this](mozart::ViewContext view_context) {
-        return FrameSinkView::Create(
-            this, main_loop_, std::move(view_context.view_manager),
-            std::move(view_context.view_owner_request));
-      });
+  view_provider_component_ = std::make_unique<scenic::ViewProviderComponent>(
+      [this](scenic::ViewContext view_context) {
+        return FrameSinkView::Create(std::move(view_context), this, main_loop_);
+      },
+      main_loop_, startup_context_);
 }
 
 void FrameSink::CheckIfAllFramesReturned() {

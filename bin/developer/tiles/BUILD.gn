@@ -16,6 +16,7 @@ source_set("tiles_lib") {
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
+    "//zircon/public/lib/zx",
   ]
 
   deps = [

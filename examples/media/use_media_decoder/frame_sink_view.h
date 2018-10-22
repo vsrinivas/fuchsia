@@ -9,8 +9,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fxl/macros.h>
+#include <lib/ui/base_view/cpp/v1_base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
-#include <lib/ui/view_framework/base_view.h>
 
 // Sets up an ImagePipe (including scene graph aspects) such that FrameSink can
 // push frames to all the ImagePipe(s) of all the FrameSinkView(s) that are
@@ -19,13 +19,11 @@
 // Registers with parent on construction and de-registers on destruction.  Only
 // called on the thread that's running |loop|.
 class FrameSink;
-class FrameSinkView : public mozart::BaseView {
+class FrameSinkView : public scenic::V1BaseView {
  public:
-  static std::unique_ptr<FrameSinkView> Create(
-      FrameSink* parent, async::Loop* main_loop,
-      ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request);
+  static std::unique_ptr<FrameSinkView> Create(scenic::ViewContext context,
+                                               FrameSink* parent,
+                                               async::Loop* main_loop);
 
   ~FrameSinkView() override;
 
@@ -38,12 +36,12 @@ class FrameSinkView : public mozart::BaseView {
       fit::closure on_done);
 
  private:
-  FrameSinkView(FrameSink* parent, async::Loop* loop,
-                ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-                fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-                    view_owner_request);
+  FrameSinkView(scenic::ViewContext context, FrameSink* parent,
+                async::Loop* main_loop);
 
-  // From mozart::BaseView. Called when the scene is "invalidated".
+  // | scenic::V1BaseView |
+  // Called when the scene is invalidated, meaning its metrics or dimensions
+  // have changed.
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
 

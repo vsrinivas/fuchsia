@@ -14,11 +14,16 @@
 namespace media_player {
 
 // static
-std::shared_ptr<FidlVideoRenderer> FidlVideoRenderer::Create() {
-  return std::make_shared<FidlVideoRenderer>();
+std::shared_ptr<FidlVideoRenderer> FidlVideoRenderer::Create(
+    component::StartupContext* startup_context) {
+  return std::make_shared<FidlVideoRenderer>(startup_context);
 }
 
-FidlVideoRenderer::FidlVideoRenderer() : arrivals_(true) {
+FidlVideoRenderer::FidlVideoRenderer(component::StartupContext* startup_context)
+    : startup_context_(startup_context),
+      scenic_(startup_context_
+                  ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>()),
+      arrivals_(true) {
   supported_stream_types_.push_back(VideoStreamTypeSet::Create(
       {StreamType::kVideoEncodingUncompressed},
       Range<uint32_t>(0, std::numeric_limits<uint32_t>::max()),
@@ -273,13 +278,14 @@ void FidlVideoRenderer::SetGeometryUpdateCallback(fit::closure callback) {
   geometry_update_callback_ = std::move(callback);
 }
 
-void FidlVideoRenderer::CreateView(
-    fidl::InterfacePtr<::fuchsia::ui::viewsv1::ViewManager> view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request) {
+void FidlVideoRenderer::CreateView(zx::eventpair view_token) {
+  scenic::ViewContext view_context{
+      .session_and_listener_request =
+          scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
+      .view_token = std::move(view_token),
+      .startup_context = startup_context_};
   auto view =
-      std::make_unique<View>(std::move(view_manager),
-                             std::move(view_owner_request), shared_from_this());
+      std::make_unique<View>(std::move(view_context), shared_from_this());
   View* view_raw_ptr = view.get();
   views_.emplace(view_raw_ptr, std::move(view));
 
@@ -403,13 +409,9 @@ void FidlVideoRenderer::Image::WaitHandler(async_dispatcher_t* dispatcher,
 ////////////////////////////////////////////////////////////////////////////////
 // FidlVideoRenderer::View implementation.
 
-FidlVideoRenderer::View::View(
-    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request,
-    std::shared_ptr<FidlVideoRenderer> renderer)
-    : mozart::BaseView(std::move(view_manager), std::move(view_owner_request),
-                       "Video Renderer"),
+FidlVideoRenderer::View::View(scenic::ViewContext context,
+                              std::shared_ptr<FidlVideoRenderer> renderer)
+    : scenic::V1BaseView(std::move(context), "Video Renderer"),
       renderer_(renderer),
       entity_node_(session()),
       clip_node_(session()),

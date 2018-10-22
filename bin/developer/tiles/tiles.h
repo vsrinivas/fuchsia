@@ -10,6 +10,8 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 
+#include <zx/eventpair.h>
+
 #include "lib/component/cpp/startup_context.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
 #include "lib/ui/scenic/cpp/resources.h"
@@ -22,9 +24,8 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
               public fuchsia::developer::tiles::Controller {
  public:
   Tiles(::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-        fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-            view_owner_request,
-        component::StartupContext* startup_context, int border);
+        zx::eventpair view_token, component::StartupContext* startup_context,
+        int border);
 
   ~Tiles() final;
 
@@ -71,11 +72,9 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
 
   // Launches initial list of views, passed as command line parameters.
 
-  void AddChildView(
-      uint32_t child_key,
-      fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-      const std::string& url, fuchsia::sys::ComponentControllerPtr,
-      bool allow_focus);
+  void AddChildView(uint32_t child_key, zx::eventpair view_owner_token,
+                    const std::string& url,
+                    fuchsia::sys::ComponentControllerPtr, bool allow_focus);
 
   void InvalidateScene();
   void Layout();
