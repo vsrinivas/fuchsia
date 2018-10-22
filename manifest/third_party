@@ -61,7 +61,7 @@
     <project name="cobalt_config"
              path="third_party/cobalt_config"
              remote="https://cobalt-analytics.googlesource.com/config"
-             revision="a05b1e31b802b78d7449e09c3da2f788248f9d58"
+             revision="33da543bf842c098bc960673ccf777f1d744b0cd"
              gerrithost="https://cobalt-analytics-review.googlesource.com"/>
     <project name="third_party/crashpad"
              path="third_party/crashpad"
