@@ -405,7 +405,7 @@ void ViewRegistry::SetChildProperties(
     return;
 
   // Apply the change.
-  child_stub->SetProperties(std::move(child_properties));
+  child_stub->SetProperties(std::move(child_properties), &session_);
   if (child_stub->state()) {
     InvalidateView(child_stub->state(),
                    ViewState::INVALIDATION_PROPERTIES_CHANGED);

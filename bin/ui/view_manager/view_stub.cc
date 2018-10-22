@@ -62,10 +62,21 @@ void ViewStub::AttachView(ViewState* state) {
 }
 
 void ViewStub::SetProperties(
-    ::fuchsia::ui::viewsv1::ViewPropertiesPtr properties) {
+    ::fuchsia::ui::viewsv1::ViewPropertiesPtr properties,
+    scenic::Session* session) {
   FXL_DCHECK(!is_unavailable());
 
   properties_ = std::move(properties);
+
+  // TODO(SCN-1026): Remove this.
+  if (properties_ && properties_->custom_focus_behavior && host_node_) {
+    fuchsia::ui::gfx::SetImportFocusCmd import_focus;
+    import_focus.id = host_node_->id();
+    import_focus.focusable = properties_->custom_focus_behavior->allow_focus;
+    fuchsia::ui::gfx::Command cmd;
+    cmd.set_set_import_focus(std::move(import_focus));
+    session->Enqueue(std::move(cmd));
+  }
 }
 
 ViewState* ViewStub::ReleaseView() {

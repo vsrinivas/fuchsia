@@ -92,7 +92,8 @@ class ViewStub {
   // Sets the properties set by the container.
   // May be called when the view is pending or attached but not after it
   // has become unavailable.
-  void SetProperties(::fuchsia::ui::viewsv1::ViewPropertiesPtr properties);
+  void SetProperties(::fuchsia::ui::viewsv1::ViewPropertiesPtr properties,
+                     scenic::Session* session);
 
   // Binds the stub to the specified actual view, which must not be null.
   // Must be called at most once to apply the effects of resolving the
