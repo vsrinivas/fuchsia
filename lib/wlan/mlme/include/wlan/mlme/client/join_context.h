@@ -6,6 +6,9 @@
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_JOIN_CONTEXT_H_
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <wlan/common/channel.h>
+#include <wlan/common/logging.h>
+#include <wlan/common/macaddr.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
@@ -13,27 +16,24 @@ namespace wlan {
 
 class JoinContext {
    public:
-    JoinContext(::fuchsia::wlan::mlme::BSSDescription bss, wlan_channel_t channel,
-                ::fuchsia::wlan::mlme::PHY phy)
-        : bss_(std::move(bss)), channel_(channel), phy_(phy) {
-        bssid_ = common::MacAddr(bss_.bssid);
-        bss_channel_ = wlan_channel_t{
-            .primary = bss_.chan.primary,
-            .cbw = static_cast<uint8_t>(bss_.chan.cbw),
-        };
-    }
+    JoinContext(::fuchsia::wlan::mlme::BSSDescription bss, ::fuchsia::wlan::mlme::PHY phy,
+                ::fuchsia::wlan::mlme::CBW cbw);
 
     const common::MacAddr& bssid() const { return bssid_; }
-
     const wlan_channel_t& channel() const { return channel_; }
-
     const wlan_channel_t& bss_channel() const { return bss_channel_; }
-
+    const ::fuchsia::wlan::mlme::PHY& phy() const { return phy_; }
     const ::fuchsia::wlan::mlme::BSSDescription* bss() const { return &bss_; }
 
     bool IsHtOrLater() const {
         return (phy_ == ::fuchsia::wlan::mlme::PHY::HT || phy_ == ::fuchsia::wlan::mlme::PHY::VHT);
     }
+
+    // SanitizeChannel tests the validation of input wlan_channel_t
+    // to support interoperable Join and Association.
+    // This provides a defensive meature to inconsistent
+    // announcement from the neighbor BSS, and potential ignorance of SME.
+    static wlan_channel_t SanitizeChannel(const wlan_channel_t& chan);
 
    private:
     ::fuchsia::wlan::mlme::BSSDescription bss_;

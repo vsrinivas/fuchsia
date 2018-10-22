@@ -43,7 +43,7 @@ struct ClientTest : public ::testing::Test {
     ClientTest()
         : device(),
           chan_sched(ChannelScheduler(&on_channel_handler, &device, device.CreateTimer(0))),
-          join_ctx(CreateBssDescription(), kBssChannel, wlan_mlme::PHY::HR),
+          join_ctx(CreateBssDescription(), wlan_mlme::PHY::HR, wlan_mlme::CBW::CBW40BELOW),
           station(&device, device.CreateTimer(1), &chan_sched, &join_ctx),
           off_channel_handler(MockOffChannelHandler()) {
         device.SetTime(zx::time(0));

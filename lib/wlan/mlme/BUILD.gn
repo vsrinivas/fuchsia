@@ -49,6 +49,7 @@ source_set("mlme") {
     "client/bss.cpp",
     "client/channel_scheduler.cpp",
     "client/client_mlme.cpp",
+    "client/join_context.cpp",
     "client/scanner.cpp",
     "client/station.cpp",
     "debug.cpp",

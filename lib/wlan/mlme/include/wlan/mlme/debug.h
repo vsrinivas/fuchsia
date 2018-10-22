@@ -6,6 +6,7 @@
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_DEBUG_H_
 
 #include <wlan/common/tx_vector.h>
+#include <wlan/mlme/client/join_context.h>
 #include <wlan/mlme/client/station.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
@@ -62,6 +63,7 @@ std::string Describe(const std::vector<SupportedRate> rates);
 std::string ToAsciiOrHexStr(const uint8_t bytes[], size_t len);
 std::string ToAsciiOrHexStr(const std::vector<uint8_t>& vec);
 
+std::string Describe(const JoinContext& jc);
 }  // namespace debug
 }  // namespace wlan
 

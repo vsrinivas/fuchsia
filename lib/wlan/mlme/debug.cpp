@@ -631,5 +631,16 @@ std::string ToAsciiOrHexStr(const std::vector<uint8_t>& vec) {
     return ToAsciiOrHexStr(&vec[0], vec.size());
 }
 
+std::string Describe(const JoinContext& jc) {
+    std::ostringstream oss;
+    oss << "[BSS] BSSID" << jc.bssid().ToString();
+    oss << " Chan " << jc.bss_channel().primary;
+    oss << " CBW " << jc.bss_channel().cbw;
+    oss << " Sec80 " << jc.bss_channel().secondary80;
+    oss << " [Config] Phy " << static_cast<uint8_t>(jc.phy());
+    oss << " CBW " << jc.channel().cbw;
+    return oss.str();
+}
+
 }  // namespace debug
 }  // namespace wlan
