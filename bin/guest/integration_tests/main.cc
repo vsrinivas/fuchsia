@@ -8,26 +8,21 @@
 
 #include <fbl/unique_fd.h>
 #include <fs-management/ramdisk.h>
-#include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <gmock/gmock.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/testing/test_with_environment.h>
 #include <lib/fdio/util.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_printf.h>
 #include <lib/zx/socket.h>
 #include <zircon/syscalls/hypervisor.h>
 
-#include "garnet/bin/guest/integration_tests/test_serial.h"
+#include "garnet/bin/guest/integration_tests/enclosed_guest.h"
 
 using ::testing::HasSubstr;
 
-static constexpr char kGuestMgrUrl[] = "guestmgr";
 static constexpr char kZirconGuestUrl[] = "zircon_guest";
 static constexpr char kLinuxGuestUrl[] = "linux_guest";
-static constexpr char kRealm[] = "realmguestintegrationtest";
 static constexpr char kTestUtilsUrl[] =
     "fuchsia-pkg://fuchsia.com/guest_integration_tests_utils";
 static constexpr char kVirtioBlockUtilCmx[] = "meta/virtio_block_test_util.cmx";
@@ -37,102 +32,31 @@ static constexpr char kVirtioBlockUtilCmx[] = "meta/virtio_block_test_util.cmx";
 static constexpr uint32_t kVirtioBlockSize = 512;
 static constexpr uint32_t kVirtioBlockCount = 32;
 
-class GuestTest : public component::testing::TestWithEnvironment {
+template <class T>
+class GuestTest : public ::testing::Test {
  protected:
-  void StartGuest(uint8_t num_cpus) {
-    auto services = CreateServices();
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = kGuestMgrUrl;
-    zx_status_t status = services->AddServiceWithLaunchInfo(
-        std::move(launch_info), fuchsia::guest::EnvironmentManager::Name_);
-    ASSERT_EQ(ZX_OK, status);
-    enclosing_environment_ =
-        CreateNewEnclosingEnvironment(kRealm, std::move(services));
-    bool started = WaitForEnclosingEnvToStart(enclosing_environment_.get());
-    ASSERT_TRUE(started);
-
-    fuchsia::guest::LaunchInfo guest_launch_info = LaunchInfo();
-    guest_launch_info.args.push_back(fxl::StringPrintf("--cpus=%u", num_cpus));
-
-    enclosing_environment_->ConnectToService(environment_manager_.NewRequest());
-    environment_manager_->Create(guest_launch_info.url,
-                                 environment_controller_.NewRequest());
-    fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
-    environment_controller_->LaunchInstance(
-        std::move(guest_launch_info), view_provider.NewRequest(),
-        instance_controller_.NewRequest(), [](...) {});
-
-    zx::socket socket;
-    instance_controller_->GetSerial(
-        [&socket](zx::socket s) { socket = std::move(s); });
-    bool is_valid = RunLoopWithTimeoutOrUntil(
-        [&socket] { return socket.is_valid(); }, zx::sec(5));
-    ASSERT_TRUE(is_valid);
-    status = serial_.Start(std::move(socket));
-    ASSERT_EQ(ZX_OK, status);
+  static void SetUpTestCase() {
+    enclosed_guest_ = new EnclosedGuest();
+    ASSERT_EQ(enclosed_guest_->Start(T::LaunchInfo()), ZX_OK);
+    ASSERT_TRUE(T::SetUpGuest());
+    setup_succeeded_ = true;
   }
 
-  zx_status_t Execute(std::string message, std::string* result = nullptr) {
-    return serial_.ExecuteBlocking(message, result);
+  static bool SetUpGuest() { return true; }
+
+  static void TearDownTestCase() {
+    enclosed_guest_->Stop();
+    delete enclosed_guest_;
   }
 
-  virtual fuchsia::guest::LaunchInfo LaunchInfo() = 0;
-
-  std::unique_ptr<component::testing::EnclosingEnvironment>
-      enclosing_environment_;
-  fuchsia::guest::EnvironmentManagerPtr environment_manager_;
-  fuchsia::guest::EnvironmentControllerPtr environment_controller_;
-  fuchsia::guest::InstanceControllerPtr instance_controller_;
-  TestSerial serial_;
-};
-
-class ZirconGuestTest : public GuestTest {
- protected:
-  fuchsia::guest::LaunchInfo LaunchInfo() override {
-    fuchsia::guest::LaunchInfo launch_info;
-    launch_info.url = kZirconGuestUrl;
-    launch_info.args.push_back("--display=none");
-    return launch_info;
-  }
-};
-
-TEST_F(ZirconGuestTest, LaunchGuest) {
-  StartGuest(1);
-  std::string result;
-  EXPECT_EQ(Execute("echo \"test\"", &result), ZX_OK);
-  EXPECT_EQ(result, "test\n");
-  QuitLoop();
-}
-
-TEST_F(ZirconGuestTest, LaunchGuestMultiprocessor) {
-  StartGuest(4);
-  std::string result;
-  EXPECT_EQ(Execute("echo \"test\"", &result), ZX_OK);
-  EXPECT_EQ(result, "test\n");
-  QuitLoop();
-}
-
-class ZirconGuestRamdiskTest : public GuestTest {
- protected:
-  fuchsia::guest::LaunchInfo LaunchInfo() override {
-    fuchsia::guest::LaunchInfo launch_info;
-    launch_info.url = kZirconGuestUrl;
-    launch_info.args.push_back("--display=none");
-
-    create_ramdisk(kVirtioBlockSize, kVirtioBlockCount, ramdisk_path_);
-    launch_info.args.push_back(fxl::StringPrintf("--block=%s", ramdisk_path_));
-
-    return launch_info;
-  }
-
-  zx_status_t WaitForPkgfs() {
+  static zx_status_t WaitForPkgfs() {
     for (size_t i = 0; i != 20; ++i) {
       std::string ps;
       zx_status_t status = Execute("ps", &ps);
       if (status != ZX_OK) {
         return status;
       }
-      zx_nanosleep(zx_deadline_after(ZX_MSEC(200)));
+      zx::nanosleep(zx::deadline_after(zx::msec(200)));
       auto pkgfs = ps.find("pkgfs");
       if (pkgfs != std::string::npos) {
         return ZX_OK;
@@ -141,17 +65,89 @@ class ZirconGuestRamdiskTest : public GuestTest {
     return ZX_ERR_BAD_STATE;
   }
 
-  void SetUp() override {
-    StartGuest(1);
-    ASSERT_EQ(WaitForPkgfs(), ZX_OK);
+  void SetUp() {
+    // An assertion failure in SetUpTestCase doesn't prevent tests from running,
+    // so we need to check that it succeeded here.
+    ASSERT_TRUE(setup_succeeded_) << "Guest setup failed";
   }
 
-  void TearDown() override { QuitLoop(); }
+  static zx_status_t Execute(std::string message,
+                             std::string* result = nullptr) {
+    return enclosed_guest_->Execute(message, result);
+  }
 
-  char ramdisk_path_[PATH_MAX];
+ private:
+  static bool setup_succeeded_;
+  static EnclosedGuest* enclosed_guest_;
 };
 
-TEST_F(ZirconGuestRamdiskTest, BlockDeviceExists) {
+template <class T>
+bool GuestTest<T>::setup_succeeded_ = false;
+template <class T>
+EnclosedGuest* GuestTest<T>::enclosed_guest_ = nullptr;
+
+class ZirconGuestTest : public GuestTest<ZirconGuestTest> {
+ public:
+  static fuchsia::guest::LaunchInfo LaunchInfo() {
+    fuchsia::guest::LaunchInfo launch_info;
+    launch_info.url = kZirconGuestUrl;
+    launch_info.args.push_back("--display=none");
+    launch_info.args.push_back("--cpus=1");
+    return launch_info;
+  }
+};
+
+TEST_F(ZirconGuestTest, LaunchGuest) {
+  std::string result;
+  EXPECT_EQ(Execute("echo \"test\"", &result), ZX_OK);
+  EXPECT_EQ(result, "test\n");
+}
+
+class ZirconMultiprocessorGuestTest
+    : public GuestTest<ZirconMultiprocessorGuestTest> {
+ public:
+  static fuchsia::guest::LaunchInfo LaunchInfo() {
+    fuchsia::guest::LaunchInfo launch_info;
+    launch_info.url = kZirconGuestUrl;
+    launch_info.args.push_back("--display=none");
+    launch_info.args.push_back("--cpus=4");
+    return launch_info;
+  }
+};
+
+TEST_F(ZirconMultiprocessorGuestTest, LaunchGuest) {
+  std::string result;
+  EXPECT_EQ(Execute("echo \"test\"", &result), ZX_OK);
+  EXPECT_EQ(result, "test\n");
+}
+
+class ZirconRamdiskGuestTest : public GuestTest<ZirconRamdiskGuestTest> {
+ public:
+  static fuchsia::guest::LaunchInfo LaunchInfo() {
+    create_ramdisk(kVirtioBlockSize, kVirtioBlockCount, ramdisk_path_);
+    fuchsia::guest::LaunchInfo launch_info;
+    launch_info.url = kZirconGuestUrl;
+    launch_info.args.push_back("--display=none");
+    launch_info.args.push_back("--cpus=1");
+    launch_info.args.push_back(fxl::StringPrintf("--block=%s", ramdisk_path_));
+    return launch_info;
+  }
+
+  static bool SetUpGuest() {
+    if (WaitForPkgfs() != ZX_OK) {
+      ADD_FAILURE() << "Failed to wait for pkgfs";
+      return false;
+    }
+    return true;
+  }
+
+  static char ramdisk_path_[PATH_MAX];
+};
+
+char ZirconRamdiskGuestTest::ramdisk_path_[PATH_MAX] = "";
+
+TEST_F(ZirconRamdiskGuestTest, BlockDeviceExists) {
+  ASSERT_EQ(WaitForPkgfs(), ZX_OK);
   std::string cmd = fxl::StringPrintf("run %s#%s check %u %u", kTestUtilsUrl,
                                       kVirtioBlockUtilCmx, kVirtioBlockSize,
                                       kVirtioBlockCount);
@@ -160,7 +156,8 @@ TEST_F(ZirconGuestRamdiskTest, BlockDeviceExists) {
   EXPECT_THAT(result, HasSubstr("PASS"));
 }
 
-TEST_F(ZirconGuestRamdiskTest, Read) {
+TEST_F(ZirconRamdiskGuestTest, Read) {
+  ASSERT_EQ(WaitForPkgfs(), ZX_OK);
   fbl::unique_fd fd(open(ramdisk_path_, O_RDWR));
   ASSERT_TRUE(fd);
 
@@ -180,7 +177,8 @@ TEST_F(ZirconGuestRamdiskTest, Read) {
   }
 }
 
-TEST_F(ZirconGuestRamdiskTest, Write) {
+TEST_F(ZirconRamdiskGuestTest, Write) {
+  ASSERT_EQ(WaitForPkgfs(), ZX_OK);
   fbl::unique_fd fd(open(ramdisk_path_, O_RDWR));
   ASSERT_TRUE(fd);
 
@@ -202,9 +200,9 @@ TEST_F(ZirconGuestRamdiskTest, Write) {
   }
 }
 
-class LinuxGuestTest : public GuestTest {
- protected:
-  fuchsia::guest::LaunchInfo LaunchInfo() override {
+class LinuxGuestTest : public GuestTest<LinuxGuestTest> {
+ public:
+  static fuchsia::guest::LaunchInfo LaunchInfo() {
     fuchsia::guest::LaunchInfo launch_info;
     launch_info.url = kLinuxGuestUrl;
     launch_info.args.push_back("--display=none");
@@ -214,19 +212,27 @@ class LinuxGuestTest : public GuestTest {
 };
 
 TEST_F(LinuxGuestTest, LaunchGuest) {
-  StartGuest(1);
   std::string result;
   EXPECT_EQ(Execute("echo \"test\"", &result), ZX_OK);
   EXPECT_EQ(result, "test\n");
-  QuitLoop();
 }
 
-TEST_F(LinuxGuestTest, LaunchGuestMultiprocessor) {
-  StartGuest(4);
+class LinuxMultiprocessorGuestTest
+    : public GuestTest<LinuxMultiprocessorGuestTest> {
+ public:
+  static fuchsia::guest::LaunchInfo LaunchInfo() {
+    fuchsia::guest::LaunchInfo launch_info;
+    launch_info.url = kLinuxGuestUrl;
+    launch_info.args.push_back("--display=none");
+    launch_info.args.push_back("--cmdline-append=loglevel=0 console=hvc0");
+    return launch_info;
+  }
+};
+
+TEST_F(LinuxMultiprocessorGuestTest, LaunchGuest) {
   std::string result;
   EXPECT_EQ(Execute("echo \"test\"", &result), ZX_OK);
   EXPECT_EQ(result, "test\n");
-  QuitLoop();
 }
 
 zx_status_t hypervisor_supported() {

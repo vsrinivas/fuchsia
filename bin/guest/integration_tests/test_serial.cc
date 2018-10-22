@@ -12,7 +12,7 @@
 
 static constexpr bool kGuestOutput = false;
 static constexpr size_t kSerialBufferSize = 1024;
-static constexpr zx::duration kTestTimeout = zx::sec(10);
+static constexpr zx::duration kTestTimeout = zx::sec(15);
 
 static std::string command_hash(const std::string& command) {
   size_t hash = std::hash<std::string>{}(command);

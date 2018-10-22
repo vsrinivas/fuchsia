@@ -11,6 +11,8 @@ executable("bin") {
   testonly = true
 
   sources = [
+    "enclosed_guest.cc",
+    "enclosed_guest.h",
     "main.cc",
     "test_serial.cc",
     "test_serial.h",
