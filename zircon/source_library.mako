@@ -45,6 +45,14 @@ source_set("${data.name}") {
   public_configs = [
     ":${data.name}_config",
   ]
+
+  % if data.depends_on_zircon:
+  if (is_fuchsia) {
+    libs += ["zircon"]
+  } else {
+    public_deps += [ "//zircon/system/public" ]
+  }
+  % endif
 }
 
 file_base = "pkg/${data.name}"

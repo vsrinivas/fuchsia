@@ -15,7 +15,7 @@ import sys
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(             # build
-    SCRIPT_DIR))                 # zircon
+        SCRIPT_DIR))                 # zircon
 ZIRCON_ROOT = os.path.join(FUCHSIA_ROOT, 'zircon')
 
 sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'mako')]
@@ -30,11 +30,11 @@ SYSROOT_PACKAGES = ['c', 'zircon']
 NON_SDK_SYSROOT_HEADER_PREFIXES = ['zircon/device']
 # TODO(FIDL-273): remove this allowlist.
 MANDATORY_SDK_HEADERS = [
-    'zircon/device/ioctl.h', # Needed by zircon/device/ramdisk.h
+    'zircon/device/ioctl.h',         # Needed by zircon/device/ramdisk.h
     'zircon/device/ioctl-wrapper.h', # Needed by zircon/device/ramdisk.h
     # TODO(ZX-2503): remove this entry.
-    'zircon/device/ramdisk.h', # Needed by fs-management/ramdisk.h
-    'zircon/device/sysinfo.h', # Needed by some external clients
+    'zircon/device/ramdisk.h',       # Needed by fs-management/ramdisk.h
+    'zircon/device/sysinfo.h',       # Needed by some external clients
 ]
 
 # List of libraries with header files being transitioned from
@@ -42,12 +42,12 @@ MANDATORY_SDK_HEADERS = [
 # the library's 'include/' and 'include/lib' directories are added to the
 # include path so both old and new style include work.
 # TODO(ZX-1871): Once everything in Zircon is migrated, remove this mechanism.
-LIBRARIES_BEING_MOVED = [ 'zx' ]
+LIBRARIES_BEING_MOVED = ['zx']
 
 # Prebuilt libraries for which headers shouldn't be included in an SDK.
 # While this kind of mechanism exists in the GN build, there's no equivalent in
 # the make build and we have to manually curate these libraries.
-LIBRARIES_WITHOUT_SDK_HEADERS = [ 'trace-engine' ]
+LIBRARIES_WITHOUT_SDK_HEADERS = ['trace-engine']
 
 
 def make_dir(path, is_dir=False):
@@ -78,6 +78,7 @@ def parse_package(lines):
     section_exp = re.compile('^\[([^\]]+)\]$')
     attr_exp = re.compile('^([^=]+)=(.*)$')
     current_section = None
+
     def finalize_section():
         if not current_section:
             return
@@ -149,6 +150,7 @@ class SourceLibrary(object):
         self.fidl_deps = []
         self.banjo_deps = []
         self.libs = set()
+        self.depends_on_zircon = False
 
 
 def generate_source_library(package, context):
@@ -175,9 +177,9 @@ def generate_source_library(package, context):
     data.fidl_deps = filter_deps(package.get('fidl-deps', []))
     data.banjo_deps = filter_deps(package.get('banjo-deps', []))
 
-    # Libraries.
-    if 'zircon' in package.get('deps', []):
-        data.libs.add('zircon')
+    # Special hack for zircon library dependency: enables special codegen
+    # in template depending on whether we're building on Fuchsia or not.
+    data.depends_on_zircon = 'zircon' in package.get('deps', [])
 
     # Generate the build file.
     build_path = os.path.join(context.out_dir, 'lib', lib_name, 'BUILD.gn')
@@ -350,7 +352,7 @@ def generate_fidl_library(package, context):
     '''Generates the build glue for a FIDL library.'''
     pkg_name = package['package']['name']
     # TODO(pylaligand): remove fallback.
-    data  = FidlLibrary(pkg_name, package['package'].get('library', pkg_name))
+    data = FidlLibrary(pkg_name, package['package'].get('library', pkg_name))
 
     for name, path in package.get('fidl', {}).iteritems():
         (file, _) = extract_file(name, path, context)

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/fidl_cpp.gni")
 import("//build/dart/toolchain.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/go/toolchain.gni")
@@ -47,6 +48,10 @@ template("fidl") {
     fidl_library(target_name) {
       forward_variables_from(invoker, "*")
     }
+
+    fidl_cpp_codegen(target_name) {
+      forward_variables_from(invoker, "*")
+    }
   } else if (current_toolchain == dart_toolchain) {
     import("//build/dart/fidl_dart.gni")
 
@@ -65,11 +70,8 @@ template("fidl") {
     fidl_go(target_name) {
       forward_variables_from(invoker, "*")
     }
-
-    # This case needs to be last
   } else if (is_fuchsia) {
     import("//build/rust/fidl_rust_library.gni")
-    import("//build/cpp/fidl_cpp.gni")
     import("//build/c/fidl_c.gni")
 
     fidl_tables(target_name) {
@@ -110,7 +112,21 @@ template("fidl") {
       ]
     }
   } else {
-    assert(false,
-           "Unable to process FIDL target in toolchain $current_toolchain.")
+    # TODO(ctiller): this case is for host-side FIDL, and ultimately
+    # should be identical to the previous case (once C & Rust are usable from
+    # host)
+    import("//build/c/fidl_c.gni")
+
+    fidl_tables(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+    }
+
+    fidl_cpp(target_name) {
+      forward_variables_from(invoker, "*")
+    }
   }
 }

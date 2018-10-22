@@ -6,8 +6,6 @@ import("//build/compiled_action.gni")
 import("//build/fidl/toolchain.gni")
 
 template("fidl_tables") {
-  assert(is_fuchsia, "This template can only be used in $target_toolchain.")
-
   main_target_name = target_name
 
   fidl_target_gen_dir =
