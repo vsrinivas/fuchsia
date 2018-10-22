@@ -3,14 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/cpp/task.h>
+
 #include <lib/gtest/real_loop_fixture.h>
 
 #include "garnet/bin/media/audio_core/test/audio_core_tests_shared.h"
 #include "lib/component/cpp/environment_services_helper.h"
-#include "lib/fidl/cpp/synchronous_interface_ptr.h"
-#include "lib/fxl/logging.h"
 
 namespace media {
 namespace audio {
@@ -69,8 +66,8 @@ class AudioRendererTest : public gtest::RealLoopFixture {
 class AudioRendererTest_Negative : public AudioRendererTest {
  protected:
   void TearDown() override {
-    EXPECT_FALSE(audio_renderer_);
     EXPECT_TRUE(error_occurred_);
+    EXPECT_FALSE(audio_renderer_);
 
     ::gtest::RealLoopFixture::TearDown();
   }
@@ -116,7 +113,7 @@ TEST_F(AudioRendererTest, SetPcmStreamType) {
   format.frames_per_second = 48000;
   audio_renderer_->SetPcmStreamType(std::move(format));
 
-  ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
+  ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
 
   fuchsia::media::AudioStreamType format2;
   format2.sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8;
@@ -155,7 +152,7 @@ TEST_F(AudioRendererTest_Negative, SetStreamType) {
 // Verify success after setting format and submitting buffers.
 
 // Before setting format, Play should not succeed.
-TEST_F(AudioRendererTest_Negative, PlayNoFormat) {
+TEST_F(AudioRendererTest_Negative, PlayWithoutFormat) {
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
 
@@ -175,7 +172,7 @@ TEST_F(AudioRendererTest_Negative, PlayNoFormat) {
 }
 
 // After setting format but before submitting buffers, Play should not succeed.
-TEST_F(AudioRendererTest_Negative, PlayNoBuffers) {
+TEST_F(AudioRendererTest_Negative, PlayWithoutBuffers) {
   fuchsia::media::AudioStreamType format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 1;
@@ -204,7 +201,7 @@ TEST_F(AudioRendererTest_Negative, PlayNoBuffers) {
 // Verify success after setting format and submitting buffers.
 
 // Before setting format, PlayNoReply should cause a Disconnect.
-TEST_F(AudioRendererTest_Negative, PlayNoReplyNoFormat) {
+TEST_F(AudioRendererTest_Negative, PlayNoReplyWithoutFormat) {
   audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
                                fuchsia::media::NO_TIMESTAMP);
 
@@ -213,7 +210,7 @@ TEST_F(AudioRendererTest_Negative, PlayNoReplyNoFormat) {
 }
 
 // Before setting format, Pause should not succeed.
-TEST_F(AudioRendererTest_Negative, PauseNoFormat) {
+TEST_F(AudioRendererTest_Negative, PauseWithoutFormat) {
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
 
@@ -234,7 +231,7 @@ TEST_F(AudioRendererTest_Negative, PauseNoFormat) {
 // Verify success after setting format and submitting buffers.
 
 // After setting format but before submitting buffers, Pause should not succeed.
-TEST_F(AudioRendererTest_Negative, PauseNoBuffers) {
+TEST_F(AudioRendererTest_Negative, PauseWithoutBuffers) {
   fuchsia::media::AudioStreamType format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 1;
@@ -261,7 +258,7 @@ TEST_F(AudioRendererTest_Negative, PauseNoBuffers) {
 // Verify success after setting format and submitting buffers.
 
 // Before setting format, PauseNoReply should cause a Disconnect.
-TEST_F(AudioRendererTest_Negative, PauseNoReplyNoFormat) {
+TEST_F(AudioRendererTest_Negative, PauseNoReplyWithoutFormat) {
   audio_renderer_->PauseNoReply();
 
   // Disconnect callback should be received.
@@ -283,8 +280,9 @@ TEST_F(AudioRendererTest, EnableMinLeadTimeEvents) {
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
   EXPECT_EQ(min_lead_time, 0);
 
-  // FYI: after setting format, MinLeadTime > 0 IF we have devices. Otherwise it
-  // remains 0 (no callback). Both are valid, so we don't test that aspect here.
+  // FYI: after setting format, MinLeadTime > 0 IF we have devices. Otherwise
+  // it remains 0 (no callback). Both are valid, so we don't test that aspect
+  // here.
 }
 
 // Validate MinLeadTime events, when disabled.
@@ -324,7 +322,7 @@ TEST_F(AudioRendererTest, BindGainControl) {
   // Validate AudioRenderer can create GainControl interface.
   audio_renderer_->BindGainControl(gain_control_.NewRequest());
   // Give AudioRenderer interface a chance to disconnect if it must.
-  EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
+  ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
   EXPECT_TRUE(gain_control_);
   EXPECT_TRUE(audio_renderer_);
 
@@ -346,82 +344,6 @@ TEST_F(AudioRendererTest, BindGainControl) {
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
   // ... and by now, it should be gone.
   EXPECT_FALSE(gain_control_);
-}
-
-//
-// AudioRendererSync tests
-//
-// Base class for tests of the synchronous AudioRendererSync interface.
-// We expect the async and sync interfaces to track each other exactly -- any
-// behavior otherwise is a bug in core FIDL. These tests were only created to
-// better understand how errors manifest themselves when using sync interfaces.
-//
-// In short, further testing of the sync interfaces (over and above any testing
-// done on the async interfaces) should not be needed.
-class AudioRendererSyncTest : public gtest::RealLoopFixture {
- protected:
-  void SetUp() override {
-    ::gtest::RealLoopFixture::SetUp();
-
-    environment_services_ = component::GetEnvironmentServices();
-    environment_services_->ConnectToService(audio_.NewRequest());
-    ASSERT_TRUE(audio_);
-
-    ASSERT_EQ(ZX_OK, audio_->CreateAudioRenderer(audio_renderer_.NewRequest()));
-    ASSERT_TRUE(audio_renderer_);
-  }
-
-  std::shared_ptr<component::Services> environment_services_;
-  fuchsia::media::AudioSyncPtr audio_;
-  fuchsia::media::AudioRendererSyncPtr audio_renderer_;
-};
-
-// Basic validation of GetMinLeadTime() for the synchronous AudioRenderer.
-// In subsequent synchronous-interface test(s), receiving a valid return value
-// from this call is our only way of verifying that the connection survived.
-TEST_F(AudioRendererSyncTest, GetMinLeadTime) {
-  int64_t min_lead_time = -1;
-  ASSERT_EQ(ZX_OK, audio_renderer_->GetMinLeadTime(&min_lead_time));
-  EXPECT_GE(min_lead_time, 0);
-}
-
-// Before renderers are operational, multiple SetPcmStreamTypes should succeed.
-// We test twice because of previous bug, where the first succeeded but any
-// subsequent call (before Play) would cause a FIDL channel disconnect.
-// GetMinLeadTime is our way of verifying whether the connection survived.
-TEST_F(AudioRendererSyncTest, SetPcmFormat_Double) {
-  fuchsia::media::AudioStreamType format;
-  format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
-  format.channels = 2;
-  format.frames_per_second = 48000;
-  EXPECT_EQ(ZX_OK, audio_renderer_->SetPcmStreamType(std::move(format)));
-
-  int64_t min_lead_time = -1;
-  EXPECT_EQ(ZX_OK, audio_renderer_->GetMinLeadTime(&min_lead_time));
-  EXPECT_GE(min_lead_time, 0);
-
-  fuchsia::media::AudioStreamType format2;
-  format2.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
-  format2.channels = 1;
-  format2.frames_per_second = 44100;
-  EXPECT_EQ(ZX_OK, audio_renderer_->SetPcmStreamType(std::move(format2)));
-
-  min_lead_time = -1;
-  EXPECT_EQ(ZX_OK, audio_renderer_->GetMinLeadTime(&min_lead_time));
-  EXPECT_GE(min_lead_time, 0);
-}
-
-// Before setting format, PlayNoReply should cause a Disconnect.
-// GetMinLeadTime is our way of verifying whether the connection survived.
-TEST_F(AudioRendererSyncTest, PlayNoReplyNoFormat) {
-  EXPECT_EQ(ZX_OK, audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
-                                                fuchsia::media::NO_TIMESTAMP));
-
-  int64_t min_lead_time = -1;
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED,
-            audio_renderer_->GetMinLeadTime(&min_lead_time));
-  // Although the connection has disconnected, the proxy should still exist.
-  EXPECT_TRUE(audio_renderer_);
 }
 
 }  // namespace test

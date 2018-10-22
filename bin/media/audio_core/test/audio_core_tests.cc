@@ -3,14 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/cpp/task.h>
+
 #include <lib/gtest/real_loop_fixture.h>
-#include <cmath>
 
 #include "garnet/bin/media/audio_core/test/audio_core_tests_shared.h"
 #include "lib/component/cpp/environment_services_helper.h"
-#include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -36,7 +33,9 @@ class AudioCoreTest : public gtest::RealLoopFixture {
   }
 
   void TearDown() override {
-    EXPECT_FALSE(error_occurred_);
+    if (received_initial_callback_) {
+      EXPECT_FALSE(error_occurred_);
+    }
 
     audio_capturer_.Unbind();
     audio_renderer_.Unbind();
@@ -51,10 +50,11 @@ class AudioCoreTest : public gtest::RealLoopFixture {
   // system into a known state as the baseline for gain&mute tests.
   // This is split into a separate method, rather than included in SetUp(),
   // because it is not needed for tests that do not change Gain|Mute.
-  void SaveState() {
+  bool InitialSetup() {
     audio_.events().SystemGainMuteChanged = [this](float gain_db, bool muted) {
       received_gain_db_ = gain_db;
       received_mute_ = muted;
+      received_initial_callback_ = true;
       QuitLoop();
     };
 
@@ -68,10 +68,13 @@ class AudioCoreTest : public gtest::RealLoopFixture {
     // of connection. Conversely, if a client DOES return before registering,
     // even after subsequently registering for the event the client has no way
     // of learning the current Gain|Mute settings until they are changed.
-    // Also, in this case, if we RunLoopWithTimeout BEFORE registering for
-    // SystemGainMuteChanged events, then later when we look for this event
-    // here, we will miss the chance to receive that initial event.
-    EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
+    bool timed_out = RunLoopWithTimeout(kDurationResponseExpected);
+    EXPECT_TRUE(!timed_out && received_initial_callback_) << kConnectionErr;
+
+    // Bail early if we have no connection to service.
+    if (timed_out || !received_initial_callback_) {
+      return false;
+    }
 
     prev_system_gain_db_ = received_gain_db_;
     prev_system_mute_ = received_mute_;
@@ -89,10 +92,12 @@ class AudioCoreTest : public gtest::RealLoopFixture {
     // Once these callbacks arrive, we are primed and ready to test gain|mute.
     EXPECT_EQ(received_gain_db_, kUnityGainDb);
     EXPECT_EQ(received_mute_, false);
+
+    return true;
   }
 
-  // Testing done; restore the previously-saved systemwide Gain|Mute settings.
-  // Also, restore the audio output routing policy (as some tests change this).
+  // Test is done; restore the previously-saved systemwide Gain|Mute settings.
+  // Also, reset the audio output routing policy (as some tests change this).
   // This is split into a separate method, rather than included in TearDown(),
   // because it is not needed for tests that do not change Gain|Mute or routing.
   void RestoreState() {
@@ -123,9 +128,11 @@ class AudioCoreTest : public gtest::RealLoopFixture {
 
   float prev_system_gain_db_;
   bool prev_system_mute_;
+
   float received_gain_db_;
   bool received_mute_;
 
+  bool received_initial_callback_ = false;
   bool error_occurred_ = false;
 };
 
@@ -136,19 +143,17 @@ constexpr float AudioCoreTest::kUnityGainDb;
 //
 // Test creation and interface independence of AudioRenderer.
 TEST_F(AudioCoreTest, CreateAudioRenderer) {
-  ASSERT_TRUE(audio_);
-
   // Validate Audio can create AudioRenderer interface.
   audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
-  // Give Audio and AudioRenderer interfaces a chance to disconnect if needed.
+  // Give time for Disconnect to occur, if it must.
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
-  EXPECT_TRUE(audio_);
+  ASSERT_TRUE(audio_) << kConnectionErr;
   EXPECT_TRUE(audio_renderer_);
 
   // Validate that Audio persists without AudioRenderer.
   audio_renderer_.Unbind();
   EXPECT_FALSE(audio_renderer_);
-  // Give Audio interface a chance to disconnect if it must.
+  // Give time for Disconnect to occur, if it must.
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
   EXPECT_TRUE(audio_);
 
@@ -156,20 +161,18 @@ TEST_F(AudioCoreTest, CreateAudioRenderer) {
   audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
   audio_.Unbind();
   EXPECT_FALSE(audio_);
-  // Give AudioRenderer interface a chance to disconnect if it must.
+  // Allow Disconnect to occur, if it must.
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
   EXPECT_TRUE(audio_renderer_);
 }
 
 // Test creation and interface independence of AudioCapturer.
 TEST_F(AudioCoreTest, CreateAudioCapturer) {
-  ASSERT_TRUE(audio_);
-
   // Validate Audio can create AudioCapturer interface.
   audio_->CreateAudioCapturer(audio_capturer_.NewRequest(), false);
   // Give Audio and AudioCapturer interfaces a chance to disconnect if needed.
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
-  EXPECT_TRUE(audio_);
+  ASSERT_TRUE(audio_) << kConnectionErr;
   EXPECT_TRUE(audio_capturer_);
 
   // Validate that Audio persists without AudioCapturer.
@@ -190,8 +193,8 @@ TEST_F(AudioCoreTest, CreateAudioCapturer) {
 
 // Test setting the systemwide Mute.
 TEST_F(AudioCoreTest, SetSystemMute_Basic) {
-  ASSERT_TRUE(audio_);
-  SaveState();  // Sets system Gain to 0.0 dB and Mute to false.
+  // Sets system Gain to 0.0 dB and Mute to false.
+  ASSERT_TRUE(InitialSetup());
 
   audio_->SetSystemMute(true);
   // Expect: gain-change callback received; Mute is set, Gain is unchanged.
@@ -210,8 +213,8 @@ TEST_F(AudioCoreTest, SetSystemMute_Basic) {
 
 // Test setting the systemwide Gain.
 TEST_F(AudioCoreTest, SetSystemGain_Basic) {
-  ASSERT_TRUE(audio_);
-  SaveState();  // Sets system Gain to 0.0 dB and Mute to false.
+  // Sets system Gain to 0.0 dB and Mute to false.
+  ASSERT_TRUE(InitialSetup());
 
   audio_->SetSystemGain(-11.0f);
   // Expect: gain-change callback received; Gain is updated, Mute is unchanged.
@@ -235,8 +238,8 @@ TEST_F(AudioCoreTest, SetSystemGain_Basic) {
 // Test the independence of systemwide Gain and Mute. Setting the system Gain to
 // -- and away from -- MUTED_GAIN_DB should have no effect on the system Mute.
 TEST_F(AudioCoreTest, SetSystemMute_Independence) {
-  ASSERT_TRUE(audio_);
-  SaveState();  // Sets system Gain to 0.0 dB and Mute to false.
+  // Sets system Gain to 0.0 dB and Mute to false.
+  ASSERT_TRUE(InitialSetup());
 
   audio_->SetSystemGain(fuchsia::media::MUTED_GAIN_DB);
   // Expect: callback; Gain is mute-equivalent; Mute is unchanged.
@@ -265,8 +268,8 @@ TEST_F(AudioCoreTest, SetSystemMute_Independence) {
 // 'No callback if no change in Mute' should be the case REGARDLESS of Gain.
 // This test relies upon Gain-Mute independence verified by previous test.
 TEST_F(AudioCoreTest, SetSystemMute_NoCallbackIfNoChange) {
-  ASSERT_TRUE(audio_);
-  SaveState();  // Sets system Gain to 0.0 dB and Mute to false.
+  // Sets system Gain to 0.0 dB and Mute to false.
+  ASSERT_TRUE(InitialSetup());
 
   audio_->SetSystemMute(true);
   // Expect: gain-change callback received (Mute is now set).
@@ -311,8 +314,8 @@ TEST_F(AudioCoreTest, SetSystemMute_NoCallbackIfNoChange) {
 // 'No callback if no change in Gain' should be the case REGARDLESS of Mute.
 // This test relies upon Gain-Mute independence verified by previous test.
 TEST_F(AudioCoreTest, SetSystemGain_NoCallbackIfNoChange) {
-  ASSERT_TRUE(audio_);
-  SaveState();  // Sets system Gain to 0.0 dB and Mute to false.
+  // Sets system Gain to 0.0 dB and Mute to false.
+  ASSERT_TRUE(InitialSetup());
 
   // If setting gain to existing value, we should not receive a callback.
   audio_->SetSystemGain(kUnityGainDb);
@@ -345,7 +348,8 @@ TEST_F(AudioCoreTest, SetSystemGain_NoCallbackIfNoChange) {
 
 // Test setting (and re-setting) the audio output routing policy.
 TEST_F(AudioCoreTest, SetRoutingPolicy) {
-  ASSERT_TRUE(audio_);
+  // Sets system Gain to 0.0 dB and Mute to false.
+  ASSERT_TRUE(InitialSetup());
 
   audio_->SetRoutingPolicy(
       fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
@@ -357,92 +361,6 @@ TEST_F(AudioCoreTest, SetRoutingPolicy) {
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
 
   RestoreState();
-}
-
-//
-// Tests of the synchronous AudioSync interface.
-//
-// We expect the async and sync interfaces to track each other exactly -- any
-// behavior otherwise is a bug in core FIDL. These tests were only created to
-// better understand how errors manifest themselves when using sync interfaces.
-// In short, further testing of the sync interfaces (over and above any testing
-// done on the async interfaces) should not be needed.
-//
-class AudioCoreSyncTest : public gtest::RealLoopFixture {
- protected:
-  void SetUp() override {
-    ::gtest::RealLoopFixture::SetUp();
-
-    environment_services_ = component::GetEnvironmentServices();
-    environment_services_->ConnectToService(audio_.NewRequest());
-    ASSERT_TRUE(audio_);
-  }
-
-  std::shared_ptr<component::Services> environment_services_;
-  fuchsia::media::AudioSyncPtr audio_;
-  fuchsia::media::AudioRendererSyncPtr audio_renderer_;
-  fuchsia::media::AudioCapturerSyncPtr audio_capturer_;
-};
-
-// Test creation and interface independence of AudioRenderer.
-TEST_F(AudioCoreSyncTest, CreateAudioRenderer) {
-  // Validate Audio can create AudioRenderer interface.
-  EXPECT_EQ(ZX_OK, audio_->CreateAudioRenderer(audio_renderer_.NewRequest()));
-  EXPECT_TRUE(audio_renderer_);
-
-  // Validate that Audio persists without AudioRenderer.
-  audio_renderer_ = nullptr;
-  ASSERT_TRUE(audio_);
-
-  // Validate AudioRenderer persists after Audio is unbound.
-  EXPECT_EQ(ZX_OK, audio_->CreateAudioRenderer(audio_renderer_.NewRequest()));
-  audio_ = nullptr;
-  EXPECT_TRUE(audio_renderer_);
-}
-
-// Test creation and interface independence of AudioCapturer.
-TEST_F(AudioCoreSyncTest, CreateAudioCapturer) {
-  // Validate Audio can create AudioCapturer interface.
-  EXPECT_EQ(ZX_OK,
-            audio_->CreateAudioCapturer(audio_capturer_.NewRequest(), true));
-  EXPECT_TRUE(audio_capturer_);
-
-  // Validate that Audio persists without AudioCapturer.
-  audio_capturer_ = nullptr;
-  ASSERT_TRUE(audio_);
-
-  // Validate AudioCapturer persists after Audio is unbound.
-  audio_->CreateAudioCapturer(audio_capturer_.NewRequest(), false);
-  audio_ = nullptr;
-  EXPECT_TRUE(audio_capturer_);
-}
-
-// Test the setting of audio output routing policy.
-TEST_F(AudioCoreSyncTest, SetRoutingPolicy) {
-  // Validate Audio can set last-plugged routing policy synchronously.
-  EXPECT_EQ(ZX_OK,
-            audio_->SetRoutingPolicy(
-                fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT));
-
-  // Validate Audio can set all-outputs routing policy synchronously.
-  EXPECT_EQ(ZX_OK,
-            audio_->SetRoutingPolicy(
-                fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS));
-
-  // This is a persistent systemwide setting. Leave system in the default state!
-  EXPECT_EQ(ZX_OK,
-            audio_->SetRoutingPolicy(
-                fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT));
-}
-
-// TODO(mpuryear): If we ever add functionality such as parameter parsing,
-// relocate the below along with it, to a separate main.cc file.
-//
-int main(int argc, char** argv) {
-  testing::InitGoogleTest(&argc, argv);
-  int result = RUN_ALL_TESTS();
-
-  return result;
 }
 
 }  // namespace test

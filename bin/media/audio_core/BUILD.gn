@@ -102,9 +102,12 @@ executable("test_bin") {
   output_name = "audio_core_tests"
 
   sources = [
+    "test/audio_core_sync_tests.cc",
     "test/audio_core_tests.cc",
     "test/audio_core_tests_shared.h",
+    "test/audio_renderer_sync_tests.cc",
     "test/audio_renderer_tests.cc",
+    "test/main.cc",
   ]
 
   deps = [

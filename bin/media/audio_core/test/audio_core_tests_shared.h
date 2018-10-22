@@ -20,6 +20,9 @@ namespace test {
 constexpr zx::duration kDurationResponseExpected = zx::sec(5);
 constexpr zx::duration kDurationTimeoutExpected = zx::msec(50);
 
+constexpr char kConnectionErr[] =
+    "Connection to fuchsia.media.Audio svc was lost!\n";
+
 }  // namespace test
 }  // namespace audio
 }  // namespace media
