@@ -632,17 +632,20 @@ static void proxy_ios_destroy(zx_device_t* dev) {
 static zx_handle_t devhost_log_handle;
 
 static ssize_t _devhost_log_write(uint32_t flags, const void* _data, size_t len) {
-    static thread_local struct Context {
-        uint32_t next;
-        zx_handle_t handle;
-        char data[LOGBUF_MAX];
-    }* ctx = nullptr;
+    struct Context {
+        Context() = default;
+
+        uint32_t next = 0;
+        zx_handle_t handle = ZX_HANDLE_INVALID;
+        char data[LOGBUF_MAX] = {};
+    };
+    static thread_local fbl::unique_ptr<Context> ctx;
 
     if (ctx == nullptr) {
-        if ((ctx = static_cast<decltype(ctx)>(calloc(1, sizeof(*ctx)))) == nullptr) {
+        ctx = fbl::make_unique<Context>();
+        if (ctx == nullptr) {
             return len;
         }
-        new (ctx) Context;
         ctx->handle = devhost_log_handle;
     }
 
