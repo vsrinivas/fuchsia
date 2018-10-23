@@ -66,7 +66,7 @@ fdio_t* fdio_null_create(void);
 // Takes ownership of h and e.
 fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t event);
 
-// Wraps a channel with an fdio_t using an unknown rpc protocl.
+// Wraps a channel with an fdio_t using an unknown rpc protocol.
 // Takes ownership of h.
 fdio_t* fdio_service_create(zx_handle_t);
 
@@ -93,12 +93,12 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
 // As above but allows the passing of flags
 zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t zxflags, zx_handle_t h);
 
-// Attempt to clone a sevice handle by doing a pipelined
+// Attempt to clone a service handle by doing a pipelined
 // CLONE operation, returning the new channel endpoint,
 // or ZX_HANDLE_INVALID.
 zx_handle_t fdio_service_clone(zx_handle_t h);
 
-// Attempt to clone a sevice handle by doing a pipelined
+// Attempt to clone a service handle by doing a pipelined
 // CLONE operation, using the provided serving channel.
 // On success srv is bound to a clone of h.  On failure
 // an error is returned and srv is closed.

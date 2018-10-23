@@ -337,7 +337,7 @@ zx_status_t fdio_acquire_socket(zx_handle_t socket, fdio_t** out_io) {
 
 // Create a fdio (if possible) from handles and info.
 //
-// The Control channel is provided in |handle|, and auxillary
+// The Control channel is provided in |handle|, and auxiliary
 // handles may be provided in the |info| object.
 //
 // This function always takes control of all handles.

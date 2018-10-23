@@ -19,5 +19,5 @@
 // Maximum size for an ioctl input.
 #define FDIO_IOCTL_MAX_INPUT 1024
 
-// Maxium length of a filename.
+// Maximum length of a filename.
 #define FDIO_MAX_FILENAME NAME_MAX
