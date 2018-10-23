@@ -72,7 +72,7 @@ package("vmm") {
         dest = "board.dtb"
       },
     ]
-  } else if (current_cpu == "x64") {
+  } else if (target_cpu == "x64") {
     resources = [
       {
         path = rebase_path("//garnet/lib/machina/arch/x86/asl/dsdt.aml")
@@ -110,18 +110,26 @@ test_package("vmm_tests") {
 
   tests = [
     {
-      name = "device_tests"
-      environments = [
-        {
-          device = [{type = "Intel NUC Kit NUC7i5DNHE"}]
-        },
-      ]
-    },
-    {
       name = "device_unittests"
     },
     {
       name = "vmm_unittests"
     },
   ]
+  if (target_cpu == "x64") {
+    tests += [
+      {
+        name = "device_tests"
+        environments = [
+          {
+            device = [
+              {
+                type = "Intel NUC Kit NUC7i5DNHE"
+              },
+            ]
+          },
+        ]
+      },
+    ]
+  }
 }
