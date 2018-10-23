@@ -38,6 +38,7 @@ public:
 
 private:
     friend class TestMsdArmBuffer;
+    friend class TestConnection;
 
     MsdArmBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf);
 

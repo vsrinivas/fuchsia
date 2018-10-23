@@ -105,9 +105,23 @@ public:
             magma::PlatformBuffer::Create(PAGE_SIZE, "test");
         EXPECT_FALSE(buffer->SetCachePolicy(100));
 
+        uint32_t duplicate_handle;
+        ASSERT_TRUE(buffer->duplicate_handle(&duplicate_handle));
+        std::unique_ptr<magma::PlatformBuffer> buffer1 =
+            magma::PlatformBuffer::Import(duplicate_handle);
+
         EXPECT_TRUE(buffer->SetCachePolicy(MAGMA_CACHE_POLICY_CACHED));
         EXPECT_TRUE(buffer->SetCachePolicy(MAGMA_CACHE_POLICY_WRITE_COMBINING));
+        magma_cache_policy_t cache_policy;
+        EXPECT_EQ(MAGMA_STATUS_OK, buffer->GetCachePolicy(&cache_policy));
+        EXPECT_EQ(static_cast<uint32_t>(MAGMA_CACHE_POLICY_WRITE_COMBINING), cache_policy);
+        EXPECT_EQ(MAGMA_STATUS_OK, buffer1->GetCachePolicy(&cache_policy));
+        EXPECT_EQ(static_cast<uint32_t>(MAGMA_CACHE_POLICY_WRITE_COMBINING), cache_policy);
         EXPECT_TRUE(buffer->SetCachePolicy(MAGMA_CACHE_POLICY_UNCACHED));
+        EXPECT_EQ(MAGMA_STATUS_OK, buffer->GetCachePolicy(&cache_policy));
+        EXPECT_EQ(static_cast<uint32_t>(MAGMA_CACHE_POLICY_UNCACHED), cache_policy);
+        EXPECT_EQ(MAGMA_STATUS_OK, buffer1->GetCachePolicy(&cache_policy));
+        EXPECT_EQ(static_cast<uint32_t>(MAGMA_CACHE_POLICY_UNCACHED), cache_policy);
     }
 
     static void test_buffer_passing(magma::PlatformBuffer* buf, magma::PlatformBuffer* buf1)

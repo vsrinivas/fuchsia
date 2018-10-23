@@ -187,6 +187,32 @@ bool ZirconPlatformBuffer::SetCachePolicy(magma_cache_policy_t cache_policy)
     return DRETF(status == ZX_OK, "zx_vmo_set_cache_policy failed with status %d", status);
 }
 
+magma_status_t ZirconPlatformBuffer::GetCachePolicy(magma_cache_policy_t* cache_policy_out)
+{
+    zx_info_vmo_t vmo_info;
+    zx_status_t status = vmo_.get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, 0);
+    if (status != ZX_OK) {
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "ZX_INFO_VMO returned status: %d", status);
+    }
+    switch (vmo_info.cache_policy) {
+        case ZX_CACHE_POLICY_CACHED:
+            *cache_policy_out = MAGMA_CACHE_POLICY_CACHED;
+            return MAGMA_STATUS_OK;
+
+        case ZX_CACHE_POLICY_UNCACHED:
+            *cache_policy_out = MAGMA_CACHE_POLICY_UNCACHED;
+            return MAGMA_STATUS_OK;
+
+        case ZX_CACHE_POLICY_WRITE_COMBINING:
+            *cache_policy_out = MAGMA_CACHE_POLICY_WRITE_COMBINING;
+            return MAGMA_STATUS_OK;
+
+        default:
+            return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Unknown cache policy: %d",
+                            vmo_info.cache_policy);
+    }
+}
+
 std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size, const char* name)
 {
     size = magma::round_up(size, PAGE_SIZE);

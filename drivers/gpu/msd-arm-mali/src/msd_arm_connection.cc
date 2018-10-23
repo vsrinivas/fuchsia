@@ -363,7 +363,10 @@ bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping) __TA_NO_THREAD
         if (!bus_mapping)
             return DRETF(false, "Couldn't pin 0x%lx pages", pages_to_add);
 
-        if (!(mapping->flags() & kMagmaArmMaliGpuMapFlagBothShareable)) {
+        magma_cache_policy_t cache_policy;
+        magma_status_t status = buffer->platform_buffer()->GetCachePolicy(&cache_policy);
+        if (!(mapping->flags() & kMagmaArmMaliGpuMapFlagBothShareable) &&
+            (status != MAGMA_STATUS_OK || cache_policy == MAGMA_CACHE_POLICY_CACHED)) {
             // Flushing the region must happen after the region is mapped to the bus, as otherwise
             // the backing memory may not exist yet.
             if (!buffer->EnsureRegionFlushed(page_offset_in_buffer * PAGE_SIZE,

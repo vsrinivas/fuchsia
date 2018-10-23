@@ -47,6 +47,10 @@ public:
     AddressSpaceObserver* GetAddressSpaceObserver() override { return &observer_; }
     TestAddressSpaceObserver* GetTestAddressSpaceObserver() { return &observer_; }
     magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
+    ArmMaliCacheCoherencyStatus cache_coherency_status() override
+    {
+        return kArmMaliCacheCoherencyAce;
+    }
 
     const std::vector<MsdArmConnection*>& cancel_atoms_list() { return cancel_atoms_list_; }
     const std::vector<std::shared_ptr<MsdArmAtom>>& atoms_list() { return atoms_list_; }
@@ -377,6 +381,66 @@ public:
         EXPECT_EQ(kAtomFlagSemaphoreWait, soft_atom->soft_flags());
         EXPECT_EQ(semaphore, soft_atom->platform_semaphore());
     }
+
+    void FlushRegion()
+    {
+        FakeConnectionOwner owner;
+        auto connection = MsdArmConnection::Create(0, &owner);
+        EXPECT_TRUE(connection);
+        constexpr uint64_t kBufferSize = PAGE_SIZE * 100;
+
+        std::shared_ptr<MsdArmBuffer> buffer(
+            MsdArmBuffer::Create(kBufferSize, "test-buffer").release());
+        EXPECT_TRUE(buffer);
+
+        constexpr uint64_t kGpuOffset[] = {1000, 1100, 1200};
+
+        auto mapping0 = std::make_unique<GpuMapping>(kGpuOffset[0] * PAGE_SIZE, 1, PAGE_SIZE * 5, 0,
+                                                     connection.get(), buffer);
+        EXPECT_TRUE(connection->AddMapping(std::move(mapping0)));
+
+        EXPECT_TRUE(connection->CommitMemoryForBuffer(buffer.get(), 1, 99));
+        EXPECT_EQ(static_cast<uint32_t>(PAGE_SIZE), buffer->flushed_region_start_bytes_);
+        EXPECT_EQ(static_cast<uint32_t>(PAGE_SIZE * 6), buffer->flushed_region_end_bytes_);
+
+        auto mapping1 = std::make_unique<GpuMapping>(kGpuOffset[1] * PAGE_SIZE, 1, PAGE_SIZE * 6, 0,
+                                                     connection.get(), buffer);
+        EXPECT_TRUE(connection->AddMapping(std::move(mapping1)));
+
+        EXPECT_EQ(static_cast<uint32_t>(PAGE_SIZE), buffer->flushed_region_start_bytes_);
+        EXPECT_EQ(static_cast<uint32_t>(PAGE_SIZE * 7), buffer->flushed_region_end_bytes_);
+
+        // Outer cache-coherent mappings shouldn't flush pages.
+        auto mapping2 = std::make_unique<GpuMapping>(kGpuOffset[2] * PAGE_SIZE, 1, PAGE_SIZE * 99,
+                                                     kMagmaArmMaliGpuMapFlagBothShareable,
+                                                     connection.get(), buffer);
+        EXPECT_TRUE(connection->AddMapping(std::move(mapping2)));
+        EXPECT_EQ(static_cast<uint32_t>(PAGE_SIZE), buffer->flushed_region_start_bytes_);
+        EXPECT_EQ(static_cast<uint32_t>(PAGE_SIZE * 7), buffer->flushed_region_end_bytes_);
+    }
+
+    void FlushUncachedRegion()
+    {
+        FakeConnectionOwner owner;
+        auto connection = MsdArmConnection::Create(0, &owner);
+        EXPECT_TRUE(connection);
+        constexpr uint64_t kBufferSize = PAGE_SIZE * 100;
+
+        std::shared_ptr<MsdArmBuffer> buffer(
+            MsdArmBuffer::Create(kBufferSize, "test-buffer").release());
+        EXPECT_TRUE(buffer);
+        EXPECT_TRUE(buffer->platform_buffer()->SetCachePolicy(MAGMA_CACHE_POLICY_UNCACHED));
+
+        constexpr uint64_t kGpuOffset = 1000;
+        auto mapping = std::make_unique<GpuMapping>(kGpuOffset * PAGE_SIZE, 1, PAGE_SIZE * 99, 0,
+                                                    connection.get(), buffer);
+        EXPECT_TRUE(connection->AddMapping(std::move(mapping)));
+
+        // Mappings of uncached buffers shouldn't flush pages.
+        EXPECT_TRUE(connection->CommitMemoryForBuffer(buffer.get(), 1, 1));
+        EXPECT_EQ(0u, buffer->flushed_region_start_bytes_);
+        EXPECT_EQ(0u, buffer->flushed_region_end_bytes_);
+    }
 };
 
 TEST(TestConnection, MapUnmap)
@@ -419,4 +483,16 @@ TEST(TestConnection, GrowableMemory)
 {
     TestConnection test;
     test.GrowableMemory();
+}
+
+TEST(TestConnection, FlushRegion)
+{
+    TestConnection test;
+    test.FlushRegion();
+}
+
+TEST(TestConnection, FlushUncachedRegion)
+{
+    TestConnection test;
+    test.FlushUncachedRegion();
 }

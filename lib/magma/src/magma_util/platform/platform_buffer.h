@@ -44,6 +44,8 @@ public:
 
     virtual bool SetCachePolicy(magma_cache_policy_t cache_policy) = 0;
 
+    virtual magma_status_t GetCachePolicy(magma_cache_policy_t* cache_policy_out) = 0;
+
     static bool IdFromHandle(uint32_t handle, uint64_t* id_out);
 
     static uint64_t MinimumMappableAddress();
