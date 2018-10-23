@@ -156,3 +156,93 @@ captures the state of each repo tracked by jiri.
 
 A: You'll want to run `fx setup-macos`, which registers all the relevant Fuchsia
 tools with the MacOS Application Firewall.
+
+## Q: When/how do I make a soft vs hard transition when changing APIs?
+
+A: Most API transitions in the SDK should be *soft transitions*. A soft
+transition is one in which the new version of the SDK is compatible with both
+old and new clients. After the old clients have migrated to the new API, support
+for the old clients can be removed from the SDK.
+
+Soft transitions will become the only practical way to make changes to the
+system as the project grows more and more incoming dependencies. Executing a
+hard transition implies a degree of synchronization that is difficult to achieve
+across many different source repositories.
+
+## Q: How do I update a FIDL protocol?
+
+A: The preferred method for updating a FIDL protocol is to use a *soft
+transition*. In order for a soft transition to work, you need to create an
+intermediate state that supports both the old and new versions of the protocol.
+
+Use the following steps to execute a soft transition:
+
+1.  Modify the FIDL definition in the Stem repository to support both the old
+    and new protocol elements. Before landing the change, trigger the *global
+    integration* tryjobs to validate that step 2 will succeed.
+
+1.  Publish the Stem repository, either by waiting for the daily automatic
+    publication or by manually publishing the repository.
+
+1.  Update all the clients to use the new protocol elements.
+
+1.  Publish all the clients.
+
+1.  Remove the old protocol elements from the FIDL definition in the Stem
+    repository.
+
+1.  Publish the Stem repository, typically by waiting for the daily automatic
+    publication.
+
+## Q: How do I coordinate changes across multiple Petals?
+
+A: Coordinating an atomic change across multiple Petals (or between the Stem
+repository and one or more Petals) requires performing a *hard transition*.
+
+Use the following steps to execute a hard transition:
+
+1.  Prepare changes to all affected repositories. If all of these repositories
+    are part of the Fuchsia source tree:
+
+    1.  Upload CLs containing the changes to fuchsia-review.googlesource.com.
+    1.  Upload another CL to fuchsia-review.googlesource.com that modifies the
+        *global integration* repository to reference the git revisions from your
+        CLs. Perform a "dry run" of the commit queue for this CL.
+
+1.  Notify the team stating your intention to execute a hard transition.
+
+1.  Land all the changes in the affected repositories. This step will break
+    local integration in these repositories but will not break global
+    integration because the changes have not been published yet.
+
+1.  Land a change in the *global integration* repository that references the new
+    versions of the affected repositories. This change will publish the new
+    version of all the affected repositories and should not break global
+    integration. This change should unbreak local integration in the affected
+    repositories.
+
+## Q: How do I bisect history to track down when something changed?
+
+A: To bisect history, perform the following steps:
+
+1.  Bisect the history in the configuration repository, which contains the
+    revision history of global integration, before and after the observable
+    change. The result of this bisect will be a single change to configuration
+    repository, presumably that includes the publication of one or more
+    repositories or prebuilt packages.
+
+1.  If the change to the configuration repository is a publication of a single
+    repository, bisect the history of that repository before and after the
+    publication of global integration. The result of this bisect should be the
+    revision at which the behavior changed.
+
+1.  If the change to the configuration repository is a publication of prebuilt
+    packages, switch to the source tree from which the prebuilt packages were
+    created. Consult the documentation for that repository regarding how to
+    bisect changes in that repository.
+
+1.  If the change to the configuration repository is a publication of multiple
+    repositories, bisecting history becomes complicated because the two
+    repositories have likely been changed in concert and you will need to
+    traverse their history in concert. Consider studying the history of the
+    repositories to understand why they were published together.
