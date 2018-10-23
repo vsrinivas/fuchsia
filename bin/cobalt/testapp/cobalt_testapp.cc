@@ -40,7 +40,7 @@ constexpr char kLegacyConfigBinProtoPath[] =
     "/pkgfs/packages/cobalt_tests/0/data/cobalt_config.pb";
 
 constexpr char kConfigBinProtoPath[] =
-    "/pkgfs/packages/cobalt_tests/0/data/cobalt_config2.binproto";
+    "/pkgfs/packages/cobalt_tests/0/data/cobalt_config2.pb";
 
 fuchsia::cobalt::ProjectProfile CobaltTestApp::LoadCobaltConfig(
     CobaltConfigType type) {

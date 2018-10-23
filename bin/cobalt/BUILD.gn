@@ -42,8 +42,8 @@ package("cobalt_tests") {
     {
       path = rebase_path(
               get_label_info("testapp:generate_testapp2_config",
-                             "target_gen_dir") + "/cobalt_config2.binproto")
-      dest = "cobalt_config2.binproto"
+                             "target_gen_dir") + "/cobalt_config2.pb")
+      dest = "cobalt_config2.pb"
     },
   ]
 

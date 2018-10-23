@@ -7,13 +7,13 @@ import("//third_party/cobalt_config/cobalt_config.gni")
 import("//third_party/protobuf/proto_library.gni")
 
 cobalt_config("generate_testapp_config") {
-  output_name = "cobalt_config.pb"
   project_id = 2
 }
 
 cobalt_config("generate_testapp2_config") {
   project_name = "test_app2"
-  output_name = "cobalt_config2.binproto"
+  output_name = "cobalt_config2"
+  add_extensions = true
 }
 
 executable("cobalt_testapp") {

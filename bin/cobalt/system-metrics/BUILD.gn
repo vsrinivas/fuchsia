@@ -23,8 +23,6 @@ executable("system-metrics") {
 }
 
 cobalt_config("generate_system_metrics_config") {
-  output_name = "cobalt_config.pb"
-
   project_id = 102
 }
 
