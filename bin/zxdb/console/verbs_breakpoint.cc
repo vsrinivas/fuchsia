@@ -202,7 +202,7 @@ const char kBreakHelp[] =
 
   Alias: "b"
 
-  Creates or modifies a breakpoint. Not to be confused the the "breakpoint" /
+  Creates or modifies a breakpoint. Not to be confused with the "breakpoint" /
   "bp" noun which lists breakpoints and modifies the breakpoint context. See
   "help bp" for more.
 

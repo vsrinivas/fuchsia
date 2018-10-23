@@ -38,7 +38,7 @@ class Breakpoint : public ClientObject {
   virtual void SetSettings(const BreakpointSettings& settings,
                            std::function<void(const Err&)> callback) = 0;
 
-  // Returns true if this is an internal breapoint. Internal breakpoints are
+  // Returns true if this is an internal breakpoint. Internal breakpoints are
   // used to implement other operations and are never exposed to the user.
   virtual bool IsInternal() const = 0;
 

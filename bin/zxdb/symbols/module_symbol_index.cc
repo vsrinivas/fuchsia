@@ -333,7 +333,7 @@ void ModuleSymbolIndex::CreateIndex(llvm::object::ObjectFile* object_file) {
     IndexCompileUnit(context.get(), compile_units[i].get(), i);
 
     // Free all compilation units as we process them. They will hold all of
-    // the parsed DIE data that we don't need any more which can be mutliple
+    // the parsed DIE data that we don't need any more which can be multiple
     // GB's for large programs.
     compile_units[i].reset();
   }

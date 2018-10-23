@@ -193,7 +193,7 @@ std::vector<OutputBuffer> DescribeRegister(const Register& reg,
     result.emplace_back(color, fxl::StringPrintf("0x%" PRIx64, value));
 
     // For plausible small integers, show the decimal value also. This size
-    // check is intented to avoid cluttering up the results with large numbers
+    // check is intended to avoid cluttering up the results with large numbers
     // corresponding to pointers.
     constexpr uint64_t kMaxSmallMagnitude = 0xffff;
     if (value <= kMaxSmallMagnitude ||

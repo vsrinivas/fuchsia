@@ -72,7 +72,7 @@ void FinishThreadController::InitWithFrames(
   // Note if this was called asynchronously the thread could be resumed
   // and it could have no frames, or totally different ones.
 
-  // Find the frame corresponding to the reqested one.
+  // Find the frame corresponding to the requested one.
   constexpr size_t kNotFound = std::numeric_limits<size_t>::max();
   size_t requested_index = kNotFound;
   for (size_t i = 0; i < frames.size(); i++) {

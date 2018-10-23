@@ -22,7 +22,7 @@ namespace zxdb {
 
 namespace {
 
-// In-place replaces instances of ANY of the charcters in "search_for" with the
+// In-place replaces instances of ANY of the characters in "search_for" with the
 // given replacement in the given string.
 void ReplaceAllInstancesOf(const char* search_for, char replace_with,
                            std::string* str) {
@@ -55,7 +55,7 @@ void SplitInstruction(std::string* instruction, std::string* params) {
 
   size_t first_char = instruction->find_first_not_of("\t");
   if (first_char == std::string::npos)
-    return;  // Leave instuction unchanged if there are no tabs.
+    return;  // Leave instruction unchanged if there are no tabs.
 
   // Trim leading tabs.
   instruction->erase(instruction->begin(), instruction->begin() + first_char);

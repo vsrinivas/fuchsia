@@ -50,7 +50,7 @@ constexpr int kMaxArraySize = 7;
 // returns false and sets the err.
 //
 // When doing global things like System::Continue(), it will succeed if there
-// are no running prograns (it will successfully continue all 0 processes).
+// are no running programs (it will successfully continue all 0 processes).
 // This is confusing to the user so this function is used to check first.
 bool VerifySystemHasRunningProcess(System* system, Err* err) {
   for (const Target* target : system->GetTargets()) {
@@ -183,7 +183,7 @@ Examples
   pr c
   process continue
   process 4 continue
-      Contiue all threads of a process (the current process is implicit if
+      Continue all threads of a process (the current process is implicit if
       no process index is specified).
 
   t c
@@ -271,7 +271,7 @@ const char kLocalsHelp[] =
     R"(locals
 
   Prints all local variables and the current function's arguments. By default
-  it will print the variables for the curretly selected stack frame.
+  it will print the variables for the currently selected stack frame.
 
   You can override the stack frame with the "frame" noun to get the locals
   for any specific stack frame of thread.

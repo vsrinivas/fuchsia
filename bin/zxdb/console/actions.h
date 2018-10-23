@@ -17,7 +17,7 @@ namespace zxdb {
 class Session;
 
 // The flag processing will generate actions that will be run after the flag
-// processing. a global ActionFlow
+// processing. A global ActionFlow
 // is used and PostActionCallback is used as the overall callback.
 // See PostActionCallback below for details.
 class Action {
@@ -79,7 +79,7 @@ class ActionFlow {
   // ErrType::kCanceled
   static void PostActionCallback(Err);
 
-  // Useful for tests, that require a clean slate everytime
+  // Useful for tests, that require a clean slate every time
   void Clear();
 
   const std::vector<Action>& flow() const { return flow_; }

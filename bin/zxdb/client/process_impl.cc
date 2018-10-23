@@ -140,7 +140,7 @@ void ProcessImpl::ReadMemory(
 void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record) {
   if (threads_.find(record.koid) != threads_.end()) {
     // Duplicate new thread notification. Some legitimate cases could cause
-    // this, like the client requeusting a thread list (which will add missing
+    // this, like the client requesting a thread list (which will add missing
     // ones and get here) racing with the notification for just-created thread.
     return;
   }

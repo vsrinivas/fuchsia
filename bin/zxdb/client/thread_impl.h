@@ -59,7 +59,7 @@ class ThreadImpl : public Thread {
       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints);
 
  private:
-  // Invlidates the cached frames.
+  // Invalidates the cached frames.
   void ClearFrames();
 
   ProcessImpl* const process_;
@@ -84,7 +84,7 @@ class ThreadImpl : public Thread {
   mutable std::vector<Frame*> frames_cache_;
 
   // Ordered list of ThreadControllers that apply to this thread. This is
-  // a stack where back() is the topmost contoller that applies first.
+  // a stack where back() is the topmost controller that applies first.
   std::vector<std::unique_ptr<ThreadController>> controllers_;
 
   fxl::WeakPtrFactory<ThreadImpl> weak_factory_;

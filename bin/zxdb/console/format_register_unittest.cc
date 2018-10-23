@@ -176,7 +176,7 @@ TEST(FormatRegisters, AllRegisters) {
   err = FormatRegisters(options, filtered_set, &out);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
-  // TODO(donosoc): Detect the maximum length and make the the tables coincide.
+  // TODO(donosoc): Detect the maximum length and make the tables coincide.
   EXPECT_EQ(
       "General Purpose Registers\n"
       "rax                0x1 = 1\n"

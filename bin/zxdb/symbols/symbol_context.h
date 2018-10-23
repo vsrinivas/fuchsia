@@ -8,7 +8,7 @@
 
 namespace zxdb {
 
-// Addressess in symbols are interpreted in terms of relative offsets from the
+// Addresses in symbols are interpreted in terms of relative offsets from the
 // beginning of the module. When a module is loaded into memory, it has a
 // physical address, and all symbol addresses need to be offset to convert
 // back and forth between physical and symbolic addresses.

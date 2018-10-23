@@ -90,7 +90,7 @@ class Disassembler {
   // Like DisassembleMany() but uses a MemoryDump object. The dump will start
   // at the beginning of the memory dump. This function understands the
   // addresses of the memory dump, and also invalid ranges (which will be
-  // marked in the disassemly).
+  // marked in the disassembly).
   //
   // An unmapped range will be counted as one instruction. The memory
   // addresses for unmapped ranges will always be shown even if disabled in the

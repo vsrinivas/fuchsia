@@ -106,7 +106,7 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
 
   // Call after all data has been appended.
   //
-  // This needs to be a sepatate call since not all output is asynchronous, and
+  // This needs to be a separate call since not all output is asynchronous, and
   // we don't want to call a callback before everything is complete, or not at
   // all.
   void Complete(Callback callback);
@@ -127,7 +127,7 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
     OutputBuffer buffer;  // Only used when there are no children.
 
     // Used for sanity checking. This is set when waiting on async resolution
-    // on a given node, and clearned when async resolution is complete. It
+    // on a given node, and cleared when async resolution is complete. It
     // makes sure we don't miss or double-set anything.
     bool pending = false;
 
@@ -159,7 +159,7 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // Formats the given expression value to the output buffer. The variant that
   // takes an Err will do an error check before printing the value, and will
   // output the appropriate error message instead if there is one. It will
-  // modify the error messaage to be appropriate as a replacement for a value.
+  // modify the error message to be appropriate as a replacement for a value.
   // output the appropriate error message instead if there is one.
   //
   // When set, suppress_type_printing will suppress the use of

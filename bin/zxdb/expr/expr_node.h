@@ -46,7 +46,7 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
   // of Eval itself).
   //
   // Some eval operations are asynchronous because they require reading data
-  // from the remote system. Many are not. Since we expect realtively few
+  // from the remote system. Many are not. Since we expect relatively few
   // evals (from user typing) and that they are quite simple (most are one
   // value or a simple dereference), we opt for simplicity and make all
   // evals require a callback.

@@ -21,7 +21,7 @@ Options
 
 const char kConnectHelp[] = R"(  --connect=<host>:<port>
   -c <host>:<port>
-      Attemps to connect to a debug_agent running on the given host/port.)";
+      Attempts to connect to a debug_agent running on the given host/port.)";
 
 const char kDebugInfoHelp[] = R"(  --debug-info
   -d
@@ -34,7 +34,7 @@ const char kHelpHelp[] = R"(  --help
 
 const char kRunHelp[] = R"(  --run=<program>
   -r <program>
-      Attemps to run a binary in the target system. The debugger must be
+      Attempts to run a binary in the target system. The debugger must be
       already connected to the debug_agent (use with -c).)";
 
 const char kQuitAgentOnExit[] = R"(  --quit-agent-on-exit

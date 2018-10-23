@@ -44,7 +44,7 @@ class ModuleSymbols {
 
   // Converts the given InputLocation into one or more locations. If the
   // location is an address, it will be be returned whether or not the address
-  // is inside this module (it will be symbolzed if possible). If the input is
+  // is inside this module (it will be symbolized if possible). If the input is
   // a function or file/line, they could match more than one location and all
   // locations will be returned.
   //

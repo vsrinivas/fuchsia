@@ -84,7 +84,7 @@ class DwarfExprEval {
   // The return value will indicate if the request completed synchronously. In
   // synchronous completion the callback will have been called reentrantly from
   // within the stack of this function. This does not indicate success as it
-  // could suceed or fail both synchronously and asynchronously.
+  // could succeed or fail both synchronously and asynchronously.
   Completion Eval(fxl::RefPtr<SymbolDataProvider> data_provider,
                   const SymbolContext& symbol_context, Expression expr,
                   CompletionCallback cb);
@@ -171,7 +171,7 @@ class DwarfExprEval {
   Expression expr_;
 
   // Index into expr_ of the next thing to read. This is a uint32_t to
-  // intergrate with LLVM DataExtractor.
+  // integrate with LLVM DataExtractor.
   uint32_t expr_index_ = 0;
 
   CompletionCallback completion_callback_;

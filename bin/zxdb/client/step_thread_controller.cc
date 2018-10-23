@@ -71,7 +71,7 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
     finish_unsymolized_function_->Log("Reported stop, continuing with step.");
     finish_unsymolized_function_.reset();
   } else {
-    // Only count hardware debug exceptions as being eligable for continuation.
+    // Only count hardware debug exceptions as being eligible for continuation.
     // We wouldn't want to try to resume from a crash just because it's in our
     // range, or if there was a hardcoded debug instruction in the range, for
     // example.
@@ -151,7 +151,7 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
         // the right type of jump. This involves two memory lookups which make
         // it difficult for us to implement since they require async calls.
         // We might be able to just check that the address is inside the
-        // prodecure linkage table (see below).
+        // procedure linkage table (see below).
         //
         // ELF imports
         // -----------

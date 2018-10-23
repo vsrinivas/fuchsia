@@ -54,7 +54,7 @@ bool IsTokenSeparator(char c) { return c == ' '; }
 // includes the two leading dashes), or null if there is no match.
 //
 // The token can contain and equals sign. In this case, only the text
-// preceeding the equals sign counts as the switch, and the index of the equals
+// preceding the equals sign counts as the switch, and the index of the equals
 // sign is placed into *equals_index. Otherwise *equals_index will be set to
 // std::string::npos. This is to handle the fact that long switches can be
 // expressed as either "--foo=bar" and "--foo bar".
@@ -198,7 +198,7 @@ Err ConsumeVerb(const std::vector<std::string>& tokens, size_t* token_index_ptr,
 }
 
 // Consumes tokens and interprets them as switches. Each verb has a particular
-// set of switches associated to it. The appeareance of another switch means
+// set of switches associated to it. The appearance of another switch means
 // the command is erroneous.
 //
 // If successful, it will set the switches to the command and will update the

@@ -35,7 +35,7 @@ class LoadedModuleSymbols {
   // Base address for the module.
   uint64_t load_address() const { return load_address_; }
 
-  // Most functions in ModuleSymbols take a symbol context to convery between
+  // Most functions in ModuleSymbols take a symbol context to convert between
   // absolute addresses in memory to ones relative to the module load address.
   const SymbolContext& symbol_context() const { return symbol_context_; }
 

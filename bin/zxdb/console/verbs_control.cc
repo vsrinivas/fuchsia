@@ -323,7 +323,7 @@ Err DoDisconnect(ConsoleContext* context, const Command& cmd,
     else
       Console::get()->Output("Disconnected successfully.");
 
-    // We call the given callbasck
+    // We call the given callback
     if (callback)
       callback(err);
   });
@@ -412,22 +412,22 @@ Schemas
 
   Each setting level (thread, target, etc.) has an associated schema.
   This defines what settings are available for it and the default values.
-  Initially, all objects default to their schemas, but values can be overriden
+  Initially, all objects default to their schemas, but values can be overridden
   for individual objects.
 
 Instance Overrides
 
   Values overriding means that you can modify behaviour for a particular object.
-  If a setting has not been overriden for that object, it will fallback to the
+  If a setting has not been overridden for that object, it will fallback to the
   settings of parent object. The fallback order is as follows:
 
   Thread -> Process -> System -> Schema Default
 
-  This means that if a thread has not overriden a value, it will check if the
-  owning process has overriden it, then is the system has overriden it. If
+  This means that if a thread has not overridden a value, it will check if the
+  owning process has overridden it, then is the system has overridden it. If
   there are none, it will get the default value of the thread schema.
 
-  For example, if t1 has overriden "foo" but t2 has not:
+  For example, if t1 has overridden "foo" but t2 has not:
 
   t 1 foo
       Gets the value of "foo" for t1.
@@ -454,7 +454,7 @@ Examples
   p 2 t1 get
       List the values of settings for t1 of p2.
       This will list all the settings within the Thread schema, highlighting
-      which ones are overriden.
+      which ones are overridden.
 
   get -s
       List the values of settings at the system level.

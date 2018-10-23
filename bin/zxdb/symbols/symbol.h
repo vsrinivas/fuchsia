@@ -43,7 +43,7 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   // C++ class definition.
   static constexpr int kTagClassType = 0x02;
 
-  // "Alterate entry point" to a function. Seems to be not generated.
+  // "Alternate entry point" to a function. Seems to be not generated.
   static constexpr int kTagEntryPoint = 0x03;
 
   // C/C++ "enum" declaration. May have children of kTagEnumerator.
@@ -163,7 +163,7 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   // declaration location, and location.
   static constexpr int kTagVariable = 0x34;
 
-  // Type modifier that indicates aadding "volatile" to an underlying type.
+  // Type modifier that indicates adding "volatile" to an underlying type.
   static constexpr int kTagVolatileType = 0x35;
   static constexpr int kTagDwarfProcedure = 0x36;
 

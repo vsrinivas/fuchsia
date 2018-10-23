@@ -122,7 +122,7 @@ TEST_F(ResolvePtrRefTest, NotRef) {
         out_value = result;
       });
 
-  // Should have run synchronosly.
+  // Should have run synchronously.
   EXPECT_TRUE(called);
   EXPECT_EQ(value, out_value);
 }
@@ -161,7 +161,7 @@ TEST_F(ResolvePtrRefTest, ConstRef) {
         debug_ipc::MessageLoop::Current()->QuitNow();
       });
 
-  // Should have run asynchronosly.
+  // Should have run asynchronously.
   EXPECT_FALSE(called);
   loop().Run();
   EXPECT_TRUE(called);

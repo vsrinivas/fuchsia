@@ -70,7 +70,7 @@ class SymbolVariableResolver {
   void OnDwarfEvalComplete(fxl::RefPtr<ResolutionState> state, const Err& err,
                            fxl::RefPtr<Type> type);
 
-  // Issuse the callback. The callback could possibly delete |this| so don't
+  // Issue the callback. The callback could possibly delete |this| so don't
   // do anything after calling.
   void OnComplete(fxl::RefPtr<ResolutionState> state, const Err& err,
                   ExprValue value);

@@ -18,7 +18,7 @@ class Thread;
 // For example "process", "process 2 thread", "thread 5".
 Err ExecuteNoun(ConsoleContext* context, const Command& cmd);
 
-// Populates the nounds map.
+// Populates the nouns map.
 void AppendNouns(std::map<Noun, NounRecord>* nouns);
 
 // Returns the set of all switches valid for nouns. Since a command can have

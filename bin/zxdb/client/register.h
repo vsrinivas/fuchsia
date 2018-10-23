@@ -78,7 +78,7 @@ class Register {
   std::vector<uint8_t>& data() { return reg_.data; }
   const std::vector<uint8_t>& data() const { return reg_.data; }
 
-  // Intented for <=64-bits values, check length.
+  // Intended for <=64-bits values, check length.
   uint64_t GetValue() const;
 
   const_iterator begin() const { return &reg_.data[0]; }

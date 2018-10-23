@@ -57,10 +57,10 @@ class BuildIDIndex {
   // so may cause I/O.
   StatusList GetStatus();
 
-  // Clears all cachehed build IDs. They will be reloaded when required.
+  // Clears all cached build IDs. They will be reloaded when required.
   void ClearCache();
 
-  // Parses a build ID maping file (ids.txt). This is a separate static
+  // Parses a build ID mapping file (ids.txt). This is a separate static
   // function for testing purposes. The results are added to the output.
   // Returns the number of items loaded.
   static int ParseIDs(const std::string& input, IDMap* output);

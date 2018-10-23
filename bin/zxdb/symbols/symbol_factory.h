@@ -25,7 +25,7 @@ class Symbol;
 // is unloaded, the factory may still be around but it will return empty types.
 //
 // Last, this class allows types to be mocked without requiring that the
-// full and complex Symbol interface be virutal and duplicated.
+// full and complex Symbol interface be virtual and duplicated.
 class SymbolFactory : public fxl::RefCountedThreadSafe<SymbolFactory> {
  public:
   SymbolFactory() = default;

@@ -69,7 +69,7 @@ class Process : public ClientObject {
 
   // Returns all threads in the process. This is as of the last update from
   // the system. If the program is currently running, the actual threads may be
-  // different since it can be asynchonously creating and destroying them.
+  // different since it can be asynchronously creating and destroying them.
   //
   // Some programs also change thread names dynamically, so the names may be
   // stale. Call SyncThreads() to update the thread list with the debuggee.

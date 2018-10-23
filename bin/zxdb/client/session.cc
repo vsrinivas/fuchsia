@@ -132,7 +132,7 @@ class Session::PendingConnection
   fxl::UniqueFD socket_;
   std::unique_ptr<debug_ipc::BufferedFD> buffer_;
 
-  // Callback when the conncetion is complete (or fails). Access only on the
+  // Callback when the connection is complete (or fails). Access only on the
   // main thread.
   std::function<void(const Err&)> callback_;
 };

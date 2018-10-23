@@ -80,7 +80,7 @@ class System : public ClientObject {
   virtual Breakpoint* CreateNewInternalBreakpoint() = 0;
 
   // Deletes the given breakpoint. The passed-in pointer will be invalid after
-  // this call. Used for both internal and external breapoints.
+  // this call. Used for both internal and external breakpoints.
   virtual void DeleteBreakpoint(Breakpoint* breakpoint) = 0;
 
   // Applies to all threads of all debugged processes.

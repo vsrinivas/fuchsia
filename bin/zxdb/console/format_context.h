@@ -26,7 +26,7 @@ class Process;
 // displayed.
 //
 // Disassembly dumps will be done asynchronously since the memory must be
-// requested from the target system. Source dumps will be synchonous.
+// requested from the target system. Source dumps will be synchronous.
 //
 // An error will be returned if the location is symbolized but the file can't
 // be found or doesn't contain that line. In this case, nothing will be output.
@@ -55,7 +55,7 @@ struct FormatSourceOpts {
   // When 0 or 1, the entire line will be highlighted.
   int highlight_column = 0;
 
-  // When true, all nonhighlighted lines will be dimmed in source listings.
+  // When true, all non-highlighted lines will be dimmed in source listings.
   // Otherwise they will be shown in the normal color.
   bool dim_others = false;
 

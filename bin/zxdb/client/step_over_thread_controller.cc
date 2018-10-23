@@ -64,7 +64,7 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     // Ignore the stop type when giving control back to the "step into"
     // controller. In this case the stop type will be a software debug
     // exception (from the breakpoint inserted by the "finish" controller).
-    // We want the "step into" controller to check for contiuation even though
+    // We want the "step into" controller to check for continuation even though
     // this stop type doesn't match what it's looking for.
     if (step_into_->OnThreadStopIgnoreType(hit_breakpoints) == kContinue) {
       Log("Still in range after stepping out.");

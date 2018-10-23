@@ -452,7 +452,7 @@ Err DoDisassemble(ConsoleContext* context, const Command& cmd) {
     //
     // TODO(brettw) by default it would be nice if this showed a few lines
     // of disassembly before the given address. Going backwards in x86 can be
-    // dicy though, the formatter may have to guess-and-check about a good
+    // dicey though, the formatter may have to guess-and-check about a good
     // starting boundary for the dump.
     Frame* frame = cmd.frame();
     if (!frame) {

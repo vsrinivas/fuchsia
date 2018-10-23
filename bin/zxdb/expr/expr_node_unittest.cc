@@ -440,7 +440,7 @@ TEST_F(ExprNodeTest, MemberAccess) {
     debug_ipc::MessageLoop::Current()->QuitNow();
   });
 
-  // Should have run synchronsly.
+  // Should have run synchronously.
   EXPECT_TRUE(called);
   EXPECT_FALSE(out_err.has_error());
   EXPECT_EQ(0x12345678, out_value.GetAs<int32_t>());
@@ -454,7 +454,7 @@ TEST_F(ExprNodeTest, MemberAccess) {
   context->data_provider()->AddMemory(kAddress, {0x44, 0x33, 0x22, 0x11});
   context->data_provider()->AddMemory(kAddress + 4, {0x88, 0x77, 0x66, 0x55});
 
-  // Make this one evaluate the left-hand-size asynchronosly. This value
+  // Make this one evaluate the left-hand-size asynchronously. This value
   // references kAddress (little-endian).
   auto struct_ptr_node = fxl::MakeRefCounted<TestExprNode>(
       false, ExprValue(foo_ptr_type,
@@ -475,7 +475,7 @@ TEST_F(ExprNodeTest, MemberAccess) {
     debug_ipc::MessageLoop::Current()->QuitNow();
   });
 
-  // Should have run asynchronsly.
+  // Should have run asynchronously.
   EXPECT_FALSE(called);
   loop().Run();
   EXPECT_TRUE(called);

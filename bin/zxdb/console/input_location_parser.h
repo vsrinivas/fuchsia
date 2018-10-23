@@ -69,7 +69,7 @@ Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
   " foo.cc:123\n"                                                         \
   "\n"                                                                    \
   "    ▷ To disambiguate different files with the same name, include\n" \
-  "      directory names preceeding the name (from the right).\n"         \
+  "      directory names preceding the name (from the right).\n"          \
   "\n"                                                                    \
   "  <line number> (within the frame's file)\n"                           \
   "    " cmd                                                              \

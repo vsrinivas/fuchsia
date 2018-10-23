@@ -41,7 +41,7 @@ class SettingValue {
 
   bool valid() const { return type_ != SettingType::kNull; }
 
-  // IMPORTANT: getters will assert if the wrong typeis used.
+  // IMPORTANT: getters will assert if the wrong type is used.
   //            This will help catch bugs earlier.
   bool& GetBool();
   bool GetBool() const;

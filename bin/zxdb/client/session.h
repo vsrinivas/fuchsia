@@ -74,7 +74,7 @@ class Session {
   // Will issue an error if the agent is not connected.
   void QuitAgent(std::function<void(const Err&)> callback);
 
-  // Open a minidump instead of connectiong to a running system. The callback
+  // Open a minidump instead of connecting to a running system. The callback
   // will be issued with an error if the file cannot be opened or if there is
   // already a connection.
   void OpenMinidump(const std::string& path,

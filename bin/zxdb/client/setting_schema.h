@@ -40,7 +40,7 @@ class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
 
   // Create new items for settings that only belong to this schema.
   // For inter-schema options, the easier way is to create the SettingSchemaItem
-  // separatedly and then insert it to each schema with AddSetting.
+  // separately and then insert it to each schema with AddSetting.
   //
   // |overriden| marks whether this option is meant to be an override for
   // another schema. This enables the frontend to only list the setting once in

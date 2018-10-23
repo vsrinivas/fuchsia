@@ -187,7 +187,7 @@ class Command {
 
  private:
   // The nouns specified for this command. If not present here, the noun
-  // was not written on the command line. If present but ther was no index
+  // was not written on the command line. If present but there was no index
   // given for it, the mapped value will be kNoIndex. Otherwise the mapped
   // value will be the index specified.
   std::map<Noun, int> nouns_;
@@ -296,7 +296,7 @@ const std::map<Verb, VerbRecord>& GetVerbs();
 // not happen) or is kNone (this is what noun-only commands use), returns null.
 const VerbRecord* GetVerbRecord(Verb verb);
 
-// Returns the mappping from possible inputs to the noun/verb. This is an
+// Returns the mapping from possible inputs to the noun/verb. This is an
 // inverted version of the map returned by GetNouns()/GetVerbs();
 const std::map<std::string, Noun>& GetStringNounMap();
 const std::map<std::string, Verb>& GetStringVerbMap();

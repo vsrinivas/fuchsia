@@ -132,7 +132,7 @@ Examples
 
   l
   list
-      List around the current frame's locaton.
+      List around the current frame's location.
 
   f 2 l
   frame 2 list

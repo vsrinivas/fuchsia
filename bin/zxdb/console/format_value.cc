@@ -900,7 +900,7 @@ void FormatValue::CheckPendingResolution() {
 
 void FormatValue::RecursiveCollectOutput(const OutputNode* node,
                                          OutputBuffer* out) {
-  // Everything should be reolved when producing output.
+  // Everything should be resolved when producing output.
   FXL_DCHECK(!node->pending);
 
   // Each node should either have children or a buffer, but not both.

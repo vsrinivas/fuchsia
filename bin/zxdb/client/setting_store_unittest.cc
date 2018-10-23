@@ -140,7 +140,7 @@ TEST(SettingStore, Fallback) {
 
   // Also test that the correct fallback level is communicated.
 
-  // Should get default for not overriden.
+  // Should get default for not overridden.
   auto setting = store.GetSetting("int");
   ASSERT_TRUE(setting.value.is_int());
   EXPECT_EQ(setting.value.GetInt(), kDefaultInt);

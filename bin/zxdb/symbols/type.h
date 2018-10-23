@@ -18,7 +18,7 @@ class Type : public Symbol {
   const std::string& GetAssignedName() const final { return assigned_name_; }
 
   // Returns the type with no "const" or "volatile" modifiers. If this is
-  // neither of those types, or the underlying modified typen can not be
+  // neither of those types, or the underlying modified type can not be
   // resolved, it will return |this|.
   //
   // Most operations don't care about "const" and "volatile". This function

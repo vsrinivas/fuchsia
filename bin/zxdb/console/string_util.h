@@ -9,7 +9,7 @@
 
 namespace zxdb {
 
-// Returns a string containing the right arrow marker for narking the current
+// Returns a string containing the right arrow marker for marking the current
 // line. May be UTF-8 so size() could be > 1, but it will only be one Unicode
 // character.
 std::string GetRightArrow();

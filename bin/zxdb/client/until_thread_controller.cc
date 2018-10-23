@@ -70,7 +70,7 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
   // as a sub-controller. If the controllers don't care about breakpoint set
   // failures, they may start using the thread right away without waiting for
   // the callback in InitWithThread() to asynchronously complete (indicating
-  // the breakpoint was set successfull).
+  // the breakpoint was set successful).
   //
   // This is generally fine, we just need to be careful not to do anything in
   // OnBreakpointSet() that the code in this function depends on.
@@ -132,7 +132,7 @@ void UntilThreadController::OnBreakpointSet(
   } else if (!breakpoint_ || breakpoint_->GetLocations().empty()) {
     // Setting the breakpoint may have resolved to no locations and the
     // breakpoint is now pending. For "until" this is not good because if the
-    // user does "until SometyhingNonexistant" they would like to see the error
+    // user does "until SomethingNonexistant" they would like to see the error
     // rather than have the thread transparently continue without stopping.
     cb(Err("Destination to run until matched no location."));
   } else {

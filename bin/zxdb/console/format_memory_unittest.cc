@@ -109,7 +109,7 @@ TEST(MemoryFormat, Limits) {
   MemoryFormatOptions opts;
   opts.show_addrs = true;
 
-  // Simple 2-line output with no addresses or ascii agains end of address
+  // Simple 2-line output with no addresses or ascii against end of address
   // space.
   std::string output = FormatMemory(dump, max - 0x1F, 0x20, opts);
   char expected1[] =

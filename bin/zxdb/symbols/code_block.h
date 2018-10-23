@@ -36,7 +36,7 @@ class CodeBlock : public Symbol {
   // range of validity.
   //
   // Function declarations will have no ranges associated with them. These
-  // arent't strictly "code blocks" but many functions won't have a
+  // aren't strictly "code blocks" but many functions won't have a
   // declaration/implementation split and there's so much overlap it's more
   // convenient to just have one type representing both.
   //

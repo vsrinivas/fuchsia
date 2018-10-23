@@ -44,7 +44,7 @@ using InfixFunc = fxl::RefPtr<ExprNode> (ExprParser::*)(
 // Precedence constants used in DispatchInfo. Note that these aren't
 // contiguous. At least need to do every-other-one to handle the possible
 // "precedence - 1" that occurs when evaluating right-associative operators. We
-// don't want that operation to push the precendence into a completely other
+// don't want that operation to push the precedence into a completely other
 // category, rather, it should only affect comparisons that would otherwise be
 // equal.
 //
@@ -154,7 +154,7 @@ fxl::RefPtr<ExprNode> ExprParser::AmpersandPrefix(const ExprToken& token) {
 
 fxl::RefPtr<ExprNode> ExprParser::DotOrArrowInfix(fxl::RefPtr<ExprNode> left,
                                                   const ExprToken& token) {
-  // These are left-assocaitive.
+  // These are left-associative.
   fxl::RefPtr<ExprNode> right = ParseExpression(kPrecedenceCallAccess);
   if (!right || !right->AsIdentifier()) {
     SetError(token, fxl::StringPrintf(
@@ -164,7 +164,7 @@ fxl::RefPtr<ExprNode> ExprParser::DotOrArrowInfix(fxl::RefPtr<ExprNode> left,
   }
 
   // Use the name from the right-hand-side identifier, we don't need a full
-  // expression for that. If we add function calls it will ne necessary.
+  // expression for that. If we add function calls it will be necessary.
   return fxl::MakeRefCounted<MemberAccessExprNode>(
       std::move(left), token, right->AsIdentifier()->name());
 }

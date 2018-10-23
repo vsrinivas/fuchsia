@@ -45,7 +45,7 @@ class SystemSymbols {
     FRIEND_REF_COUNTED_THREAD_SAFE(ModuleRef);
     ~ModuleRef();
 
-    // May be null to indicate teh SystemSymbols object is deleted.
+    // May be null to indicate the SystemSymbols object is deleted.
     SystemSymbols* system_symbols_;
 
     std::unique_ptr<ModuleSymbols> module_symbols_;

@@ -131,7 +131,7 @@ const char kForegroundLightYellow[] = "\x1b[38;5;190m";
 using ForegroundColorMap =
     std::map<TextForegroundColor, std::pair<const char*, size_t>>;
 static const ForegroundColorMap& GetForegroundColorMap() {
-  // We substract 1 from the sizeof the strings to avoid the end null char.
+  // We subtract 1 from the sizeof the strings to avoid the end null char.
   static ForegroundColorMap foreground_color_map = {
       {TextForegroundColor::kBlack,
        {kForegroundBlack, sizeof(kForegroundBlack) - 1}},

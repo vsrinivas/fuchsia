@@ -31,7 +31,7 @@ class ThreadControllerTest : public RemoteAPITest {
   Thread* thread() { return thread_; }
 
   // Load address that a mock module with no symbols is loaded at. If a test
-  // needs an address into an unsymolized module, it should be between this
+  // needs an address into an unsymbolized module, it should be between this
   // value and kSymbolizedModuleAddress.
   static const uint64_t kUnsymbolizedModuleAddress;
 

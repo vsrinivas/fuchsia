@@ -88,7 +88,7 @@ std::vector<LineMatch> GetBestLineTableMatchesInUnit(
   const char* compilation_dir = unit->getCompilationDir();
 
   // The file table usually has a bunch of entries not referenced by the line
-  // table (these are uusually for declarations of things).
+  // table (these are usually for declarations of things).
   std::vector<FileChecked> checked;
   checked.resize(line_table->Prologue.FileNames.size(),
                  FileChecked::kUnchecked);
@@ -242,8 +242,8 @@ Err ModuleSymbolsImpl::Load() {
 
   // We could consider creating a new binary/object file just for indexing.
   // The indexing will page all of the binary in, and most of it won't be
-  // needed again (it will be paged back in slowl savings may make
-  // such a change worth it for large programs.y as needed).
+  // needed again (it will be paged back in slowly, savings may make
+  // such a change worth it for large programs as needed).
   //
   // Although it will be slightly slower to create, the memory savings may make
   // such a change worth it for large programs.

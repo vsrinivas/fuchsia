@@ -79,7 +79,7 @@ LineVector ExtractSourceContext(const std::string& contents,
   return result;
 }
 
-// Formats the given line, highting from the column to the end of the line.
+// Formats the given line, highlighting from the column to the end of the line.
 // The column is 1-based but we also accept 0.
 OutputBuffer HighlightLine(std::string str, int column) {
   // Convert to 0-based with clamping (since the offsets come from symbols,

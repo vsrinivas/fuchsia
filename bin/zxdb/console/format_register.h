@@ -52,7 +52,7 @@ Err FormatRegisters(const FormatRegisterOptions&, const FilteredRegisterSet&,
 // Formats the register and returns a vector with the following information:
 //  - name
 //  - hex value
-//  - comment (may be empty if unapplicable).
+//  - comment (may be empty if inapplicable).
 std::vector<OutputBuffer> DescribeRegister(const Register& reg,
                                            TextForegroundColor color);
 

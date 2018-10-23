@@ -47,7 +47,7 @@ void ActionFlow::ScheduleActions(std::vector<Action>&& actions,
     return;
   }
 
-  // We store the paramaters as they will be used in the future.
+  // We store the parameters as they will be used in the future.
   flow_ = std::move(actions);
   session_ = session;
   console_ = console;

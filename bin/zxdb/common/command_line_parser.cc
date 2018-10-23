@@ -27,7 +27,7 @@ char GetShortOption(const char* arg, const char** value_begin) {
 
 // Checks if the given argument is a long option and returns it, not including
 // the preceding "--". If it's not an option, returns the empty string. To
-// differentiate args comsisting of only "--" and non-options, callers should
+// differentiate args consisting of only "--" and non-options, callers should
 // call IsOptionEndFlag() before this.
 std::string GetLongOption(const char* arg, const char** value_begin) {
   *value_begin = nullptr;

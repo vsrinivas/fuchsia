@@ -13,7 +13,7 @@ namespace zxdb {
 // (currently not supported yet).
 class ExprValueSource {
  public:
-  // Where this value vame from.
+  // Where this value came from.
   //
   // TODO(brettw) We will want to add a "register" mode along with some
   // indication of what register it was.

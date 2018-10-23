@@ -78,7 +78,7 @@ class DwarfDieDecoder {
 
   // For cross-DIE references. These references can be within the current
   // unit (byte offsets, not DIE indices), or from within the object file.
-  // To accomodate both, this function will fill in the corresponding output
+  // To accommodate both, this function will fill in the corresponding output
   // variable according to the storage form of the attribute.
   //
   // See also the DIE wrapper below.

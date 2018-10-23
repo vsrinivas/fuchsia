@@ -25,7 +25,7 @@ namespace zxdb {
 // for the "-c" switch or a standalone parameter. fxl::CommandLine also
 // supports modification and generation of new command lines.
 //
-// In constrast, this command-line parser requires registration of all switches
+// In contrast, this command-line parser requires registration of all switches
 // in advance. It can then validate inputs, generate help, and accept more
 // flexible value formatting. This class is designed exclusively as a parser
 // which makes it simpler.

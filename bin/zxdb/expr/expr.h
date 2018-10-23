@@ -14,7 +14,7 @@ class Err;
 class ExprEvalContext;
 
 // Main entrypoint to evaluate an expression. This will parse the input,
-// execute the result with the given contxet, and call the callback when
+// execute the result with the given context, and call the callback when
 // complete.
 //
 // The callback may get issued asynchronously in the future or it may get

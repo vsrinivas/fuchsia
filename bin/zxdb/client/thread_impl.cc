@@ -182,7 +182,7 @@ FrameFingerprint ThreadImpl::GetFrameFingerprint(size_t frame_index) const {
     return FrameFingerprint();
   }
 
-  // The frame address requires looking at the previour frame. When this is the
+  // The frame address requires looking at the previous frame. When this is the
   // last entry, we can't do that. This returns the frame base pointer instead
   // which will at least identify the frame in some ways, and can be used to
   // see if future frames are younger.
@@ -190,7 +190,7 @@ FrameFingerprint ThreadImpl::GetFrameFingerprint(size_t frame_index) const {
   if (prev_frame_index == frames_.size())
     return FrameFingerprint(frames_[frame_index]->GetStackPointer());
 
-  // Use the previuos frame's stack pointer. See frame_fingerprint.h.
+  // Use the previous frame's stack pointer. See frame_fingerprint.h.
   return FrameFingerprint(frames_[prev_frame_index]->GetStackPointer());
 }
 
@@ -287,7 +287,7 @@ void ThreadImpl::OnException(
     }
   }
 
-  // The existance of any non-internal breakpoints being hit means the thread
+  // The existence of any non-internal breakpoints being hit means the thread
   // should always stop. This check happens after notifying the controllers so
   // if a controller triggers, it's counted as a "hit" (otherwise, doing
   // "run until" to a line with a normal breakpoint on it would keep the "run

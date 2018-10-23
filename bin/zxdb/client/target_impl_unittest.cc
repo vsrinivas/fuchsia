@@ -108,7 +108,7 @@ TEST_F(TargetImplTest, LaunchNoConnection) {
   ASSERT_EQ(1u, target_impls.size());
   TargetImpl* target = target_impls[0];
 
-  Err expected_err(ErrType::kNoConnection, "No conncetion.");
+  Err expected_err(ErrType::kNoConnection, "No connection.");
   sink().set_launch_err(expected_err);
 
   Err out_err;
