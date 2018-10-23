@@ -214,8 +214,8 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
             }
 
             has_dsss_param_set_chan_ = true;
-            dsss_param_set_chan_ = ie->current_chan;
-            debugbcn("%s Current channel: %u\n", dbgmsghdr, ie->current_chan);
+            dsss_param_set_chan_ = ie->body.current_chan;
+            debugbcn("%s Current channel: %u\n", dbgmsghdr, ie->body.current_chan);
             break;
         }
         case element_id::kCountry: {

@@ -93,7 +93,7 @@ TEST(ElementReader, ReadElements) {
     ASSERT_EQ(element_id::kDsssParamSet, hdr->id);
     auto dsss_elem = r.read<DsssParamSetElement>();
     ASSERT_NE(nullptr, dsss_elem);
-    EXPECT_EQ(11, dsss_elem->current_chan);
+    EXPECT_EQ(11, dsss_elem->body.current_chan);
 
     ASSERT_TRUE(r.is_valid());
     EXPECT_EQ(9u, r.offset());

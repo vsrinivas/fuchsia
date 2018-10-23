@@ -142,12 +142,17 @@ struct SupportedRatesElement : public Element<SupportedRatesElement, element_id:
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.4
+struct DsssParamSet {
+    uint8_t current_chan;
+};
+
+// IEEE Std 802.11-2016, 9.4.2.4
 struct DsssParamSetElement : public Element<DsssParamSetElement, element_id::kDsssParamSet> {
     static constexpr size_t kMinLen = 1;
     static constexpr size_t kMaxLen = 1;
 
     ElementHeader hdr;
-    uint8_t current_chan;
+    DsssParamSet body;
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.5
