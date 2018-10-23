@@ -3640,8 +3640,8 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
     // Initialize queues
     for (size_t i = 0; i < kReadReqCount; i++) {
         usb_request_t* req;
-        zx_status_t status = usb_request_alloc(&req, kReadBufSize, rx_endpt_,
-                                               sizeof(usb_request_t));
+        zx_status_t status =
+            usb_request_alloc(&req, kReadBufSize, rx_endpt_, sizeof(usb_request_t));
         if (status != ZX_OK) {
             errorf("failed to allocate rx usb request\n");
             return status;
@@ -3654,8 +3654,8 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
     auto tx_endpt = tx_endpts_.front();
     for (size_t i = 0; i < kWriteReqCount; i++) {
         usb_request_t* req;
-        zx_status_t status = usb_request_alloc(&req, kWriteBufSize, tx_endpt,
-                                               sizeof(usb_request_t));
+        zx_status_t status =
+            usb_request_alloc(&req, kWriteBufSize, tx_endpt, sizeof(usb_request_t));
         if (status != ZX_OK) {
             errorf("failed to allocate tx usb request\n");
             return status;
@@ -4205,8 +4205,19 @@ int Device::WriteTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt) {
     // the interval [0, kTxStatsFifoSize - 1) so we generate TX packet IDs on the interval
     // [1, kTxStatsFifoSize).
     const int packet_id = tx_stats_fifo_counter_ + 1;
+    static size_t num_overrun = 0;
+    static size_t max_overrun = 0;
     TxStatsFifoEntry& tx_stats = tx_stats_fifo_[packet_id];
     if (!tx_stats_fifo_[packet_id].in_use) {
+        if (num_overrun > 0) {
+            if (num_overrun > max_overrun) {
+                debugmstl(
+                    "Recovered from a tx_stats_fifo_ overrun. max backlog increased: %zu -> %zu\n",
+                    max_overrun, num_overrun);
+                max_overrun = num_overrun;
+            }
+            num_overrun = 0;
+        }
         tx_stats_fifo_counter_ = (tx_stats_fifo_counter_ + 1) % (kTxStatsFifoSize - 1);
         auto bytes = static_cast<uint8_t*>(wlan_pkt.packet_head.data);
         auto addr1_offset = bytes + kMacHdrAddr1Offset;
@@ -4215,7 +4226,7 @@ int Device::WriteTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt) {
         tx_stats.in_use = true;
         return packet_id;
     } else {
-        errorf("tx_stats_fifo_ overrun\n");
+        ++num_overrun;
         return kInvalidTxPacketId;
     }
 }
