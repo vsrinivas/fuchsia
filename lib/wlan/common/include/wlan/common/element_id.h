@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ELEMENT_ID_H_
+#define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ELEMENT_ID_H_
+
 // IEEE Std 802.11-2016, 9.4.2.1 Table 9-77
 
 #include <cstdint>
@@ -211,3 +214,5 @@ enum ElementIdExtension : uint8_t {
 };
 
 }  // namespace wlan
+
+#endif // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ELEMENT_ID_H_

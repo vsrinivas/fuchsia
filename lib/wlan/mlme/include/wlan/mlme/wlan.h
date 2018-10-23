@@ -5,26 +5,13 @@
 #ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_WLAN_H_
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_WLAN_H_
 
+#include <wlan/common/from_bytes.h>
+
 #include <cstdint>
 #include <cstring>
 #include <type_traits>
 
 namespace wlan {
-
-template <typename T> T* FromBytes(uint8_t* buf, size_t len) {
-    if (len < sizeof(T)) return nullptr;
-    return reinterpret_cast<T*>(buf);
-}
-
-template <typename T> const T* FromBytes(const uint8_t* buf, size_t len) {
-    if (len < sizeof(T)) return nullptr;
-    return reinterpret_cast<const T*>(buf);
-}
-
-template <typename T> const T* FromBytes(Span<const uint8_t> bytes) {
-    if (bytes.size() < sizeof(T)) return nullptr;
-    return reinterpret_cast<const T*>(bytes.data());
-}
 
 // Port keys
 //

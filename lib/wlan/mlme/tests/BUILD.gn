@@ -99,6 +99,7 @@ executable("mac_tests") {
   sources = [
     "channel_unittest.cpp",
     "element_fidl_unittest.cpp",
+    "element_splitter_unittest.cpp",
     "element_unittest.cpp",
     "energy_unittest.cpp",
     "frame_validation_unittest.cpp",
