@@ -47,7 +47,7 @@ void fx_logger::ActivateFallback(int fallback_fd) {
         fallback_fd = STDERR_FILENO;
     }
     // Do not change fd_to_close_ as we don't want to close fallback_fd.
-    // We will still close original cosole_fd_
+    // We will still close original console_fd_
     logger_fd_.store(fallback_fd, fbl::memory_order_relaxed);
 }
 
