@@ -28,13 +28,13 @@ bool RoughTimeServer::IsValid() const { return valid_; }
 Status RoughTimeServer::GetTimeFromServer(
     roughtime::rough_time_t* timestamp) const {
   if (!IsValid()) {
-    FX_LOGS(ERROR) << "Time server not supported: " << address_;
+    FX_LOGS(ERROR) << "time server not supported: " << address_;
     return NOT_SUPPORTED;
   }
   // Create Socket
   const size_t colon_offset = address_.rfind(':');
   if (colon_offset == std::string::npos) {
-    FX_LOGS(ERROR) << "No port number in server address: " << address_;
+    FX_LOGS(ERROR) << "no port number in server address: " << address_;
     return NOT_SUPPORTED;
   }
 
@@ -56,7 +56,7 @@ Status RoughTimeServer::GetTimeFromServer(
   struct addrinfo* addrs;
   int err = getaddrinfo(host.c_str(), port_str.c_str(), &hints, &addrs);
   if (err != 0) {
-    FX_LOGS(ERROR) << "Failed to resolve " << address_ << ": "
+    FX_LOGS(ERROR) << "resolving " << address_ << ": "
                    << gai_strerror(err);
     return NETWORK_ERROR;
   }
@@ -64,13 +64,13 @@ Status RoughTimeServer::GetTimeFromServer(
   fxl::UniqueFD sock_ufd(
       socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol));
   if (!sock_ufd.is_valid()) {
-    FX_LOGS(ERROR) << "Failed to create UDP socket: " << strerror(errno);
+    FX_LOGS(ERROR) << "creating UDP socket: " << strerror(errno);
     return NETWORK_ERROR;
   }
   int sock_fd = sock_ufd.get();
 
   if (connect(sock_fd, addrs->ai_addr, addrs->ai_addrlen)) {
-    FX_LOGS(ERROR) << "Failed to connect UDP socket: " << strerror(errno);
+    FX_LOGS(ERROR) << "connecting UDP socket: " << strerror(errno);
     return NETWORK_ERROR;
   }
 
@@ -119,7 +119,7 @@ Status RoughTimeServer::GetTimeFromServer(
     return NETWORK_ERROR;
   }
   if (readfd.revents != POLLIN) {
-    FX_LOGS(ERROR) << "Error poll, revents = " << readfd.revents;
+    FX_LOGS(ERROR) << "poll, revents = " << readfd.revents;
     return NETWORK_ERROR;
   }
   buf_len = recv(sock_fd, recv_buf, sizeof(recv_buf), 0 /* flags */);
@@ -135,7 +135,7 @@ Status RoughTimeServer::GetTimeFromServer(
   std::string error;
   if (!roughtime::ParseResponse(timestamp, &radius, &error, public_key_,
                                 recv_buf, buf_len, nonce)) {
-    FX_LOGS(ERROR) << "Response from " << address_ << " failed verification: ",
+    FX_LOGS(ERROR) << "response from " << address_ << " failed verification: ",
         error;
     return BAD_RESPONSE;
   }
