@@ -84,7 +84,11 @@ source_set("thread") {
   ]
 }
 
-source_set("system") {
+group("system") {
+  public_deps = [ ":allocator" ]
+}
+
+source_set("allocator") {
   public_configs = [
     ":magma_util_config",
     "$magma_build_root:magma_src_include_config",
