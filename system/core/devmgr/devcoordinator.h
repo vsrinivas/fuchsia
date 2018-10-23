@@ -270,7 +270,15 @@ struct dc_driver {
     uint32_t binding_size = 0;
     uint32_t flags = 0;
     zx_handle_t dso_vmo = ZX_HANDLE_INVALID;
-    struct list_node node = {};
+
+    fbl::DoublyLinkedListNodeState<dc_driver*> node;
+    struct Node {
+        static fbl::DoublyLinkedListNodeState<dc_driver*>& node_state(
+            dc_driver& obj) {
+            return obj.node;
+        }
+    };
+
     fbl::String libname;
 };
 
@@ -289,7 +297,7 @@ void load_driver(const char* path,
 void find_loadable_drivers(const char* path,
                            void (*func)(driver_t* drv, const char* version));
 
-bool dc_is_bindable(driver_t* drv, uint32_t protocol_id,
+bool dc_is_bindable(const driver_t* drv, uint32_t protocol_id,
                     zx_device_prop_t* props, size_t prop_count,
                     bool autobind);
 

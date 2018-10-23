@@ -274,7 +274,7 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
 }
 
 static zx_status_t dc_handle_device(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
-static zx_status_t dc_attempt_bind(driver_t* drv, device_t* dev);
+static zx_status_t dc_attempt_bind(const driver_t* drv, device_t* dev);
 
 static bool dc_running;
 
@@ -284,13 +284,13 @@ static zx_handle_t devhost_job;
 port_t dc_port;
 
 // All Drivers
-static list_node_t list_drivers = LIST_INITIAL_VALUE(list_drivers);
+static fbl::DoublyLinkedList<driver_t*, driver_t::Node> list_drivers;
 
 // Drivers to add to All Drivers
-static list_node_t list_drivers_new = LIST_INITIAL_VALUE(list_drivers_new);
+static fbl::DoublyLinkedList<driver_t*, driver_t::Node> list_drivers_new;
 
 // Drivers to try last
-static list_node_t list_drivers_fallback = LIST_INITIAL_VALUE(list_drivers_fallback);
+static fbl::DoublyLinkedList<driver_t*, driver_t::Node> list_drivers_fallback;
 
 // All Devices (excluding static immortal devices)
 static list_node_t list_devices = LIST_INITIAL_VALUE(list_devices);
@@ -298,11 +298,10 @@ static list_node_t list_devices = LIST_INITIAL_VALUE(list_devices);
 // All DevHosts
 static list_node_t list_devhosts = LIST_INITIAL_VALUE(list_devhosts);
 
-static driver_t* libname_to_driver(const char* libname) {
-    driver_t* drv;
-    list_for_every_entry(&list_drivers, drv, driver_t, node) {
-        if (!strcmp(libname, drv->libname.c_str())) {
-            return drv;
+static const driver_t* libname_to_driver(const char* libname) {
+    for (const auto& drv : list_drivers) {
+        if (!strcmp(libname, drv.libname.c_str())) {
+            return &drv;
         }
     }
     return nullptr;
@@ -330,7 +329,7 @@ static zx_status_t load_vmo(const char* libname, zx_handle_t* out) {
 }
 
 static zx_status_t libname_to_vmo(const char* libname, zx_handle_t* out) {
-    driver_t* drv = libname_to_driver(libname);
+    const driver_t* drv = libname_to_driver(libname);
     if (drv == nullptr) {
         log(ERROR, "devcoord: cannot find driver '%s'\n", libname);
         return ZX_ERR_NOT_FOUND;
@@ -453,19 +452,18 @@ static void dc_dump_devprops() {
 }
 
 static void dc_dump_drivers() {
-    driver_t* drv;
     bool first = true;
-    list_for_every_entry(&list_drivers, drv, driver_t, node) {
-        dmprintf("%sName    : %s\n", first ? "" : "\n", drv->name.c_str());
-        dmprintf("Driver  : %s\n", !drv->libname.empty() ? drv->libname.c_str() : "(null)");
-        dmprintf("Flags   : 0x%08x\n", drv->flags);
-        if (drv->binding_size) {
+    for (const auto& drv : list_drivers) {
+        dmprintf("%sName    : %s\n", first ? "" : "\n", drv.name.c_str());
+        dmprintf("Driver  : %s\n", !drv.libname.empty() ? drv.libname.c_str() : "(null)");
+        dmprintf("Flags   : 0x%08x\n", drv.flags);
+        if (drv.binding_size) {
             char line[256];
-            uint32_t count = drv->binding_size / static_cast<uint32_t>(sizeof(drv->binding[0]));
+            uint32_t count = drv.binding_size / static_cast<uint32_t>(sizeof(drv.binding[0]));
             dmprintf("Binding : %u instruction%s (%u bytes)\n",
-                     count, (count == 1) ? "" : "s", drv->binding_size);
+                     count, (count == 1) ? "" : "s", drv.binding_size);
             for (uint32_t i = 0; i < count; ++i) {
-                di_dump_bind_inst(&drv->binding[i], line, sizeof(line));
+                di_dump_bind_inst(&drv.binding[i], line, sizeof(line));
                 dmprintf("[%u/%u]: %s\n", i + 1, count, line);
             }
         }
@@ -1065,14 +1063,13 @@ static zx_status_t dc_bind_device(device_t* dev, const char* drvlibname) {
     bool autobind = (drvlibname[0] == 0);
 
     //TODO: disallow if we're in the middle of enumeration, etc
-    driver_t* drv;
-    list_for_every_entry(&list_drivers, drv, driver_t, node) {
-        if (autobind || !strcmp(drv->libname.c_str(), drvlibname)) {
-            if (dc_is_bindable(drv, dev->protocol_id,
+    for (const auto& drv : list_drivers) {
+        if (autobind || !strcmp(drv.libname.c_str(), drvlibname)) {
+            if (dc_is_bindable(&drv, dev->protocol_id,
                                dev->props.get(), dev->prop_count, autobind)) {
                 log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n",
-                    drv->name.c_str(), dev->name);
-                dc_attempt_bind(drv, dev);
+                    drv.name.c_str(), dev->name);
+                dc_attempt_bind(&drv, dev);
                 return ZX_OK;
             }
         }
@@ -1734,7 +1731,7 @@ static zx_status_t dc_prepare_proxy(device_t* dev) {
     return ZX_OK;
 }
 
-static zx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
+static zx_status_t dc_attempt_bind(const driver_t* drv, device_t* dev) {
     // cannot bind driver to already bound device
     if ((dev->flags & DEV_CTX_BOUND) && (!(dev->flags & DEV_CTX_MULTI_BIND))) {
         return ZX_ERR_BAD_STATE;
@@ -1762,15 +1759,13 @@ static zx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
 }
 
 static void dc_handle_new_device(device_t* dev) {
-    driver_t* drv;
-
-    list_for_every_entry(&list_drivers, drv, driver_t, node) {
-        if (dc_is_bindable(drv, dev->protocol_id,
+    for (auto& drv : list_drivers) {
+        if (dc_is_bindable(&drv, dev->protocol_id,
                            dev->props.get(), dev->prop_count, true)) {
             log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n",
-                drv->name.c_str(), dev->name);
+                drv.name.c_str(), dev->name);
 
-            dc_attempt_bind(drv, dev);
+            dc_attempt_bind(&drv, dev);
             if (!(dev->flags & DEV_CTX_MULTI_BIND)) {
                 break;
             }
@@ -2073,13 +2068,13 @@ static bool is_root_driver(driver_t* drv) {
 static void dc_driver_added_init(driver_t* drv, const char* version) {
     if (version[0] == '*') {
         // fallback driver, load only if all else fails
-        list_add_tail(&list_drivers_fallback, &drv->node);
+        list_drivers_fallback.push_back(drv);
     } else if (version[0] == '!') {
         // debugging / development hack
         // prioritize drivers with version "!..." over others
-        list_add_head(&list_drivers, &drv->node);
+        list_drivers.push_front(drv);
     } else {
-        list_add_tail(&list_drivers, &drv->node);
+        list_drivers.push_back(drv);
     }
 }
 
@@ -2089,7 +2084,7 @@ static work_t new_driver_work;
 // devcoordinator has started.  The driver is added to the new-drivers
 // list and work is queued to process it.
 static void dc_driver_added(driver_t* drv, const char* version) {
-    list_add_tail(&list_drivers_new, &drv->node);
+    list_drivers_new.push_back(drv);
     if (new_driver_work.op == dc_work::Op::kIdle) {
         queue_work(&new_driver_work, dc_work::Op::kDriverAdded, 0);
     }
@@ -2151,8 +2146,8 @@ void dc_bind_driver(driver_t* drv) {
 
 void dc_handle_new_driver() {
     driver_t* drv;
-    while ((drv = list_remove_head_type(&list_drivers_new, driver_t, node)) != nullptr) {
-        list_add_tail(&list_drivers, &drv->node);
+    while ((drv = list_drivers_new.pop_front()) != nullptr) {
+        list_drivers.push_back(drv);
         dc_bind_driver(drv);
     }
 }
@@ -2164,7 +2159,7 @@ static bool system_available;
 static bool system_loaded;
 
 // List of drivers loaded from /system by system_driver_loader()
-static list_node_t list_drivers_system = LIST_INITIAL_VALUE(list_drivers_system);
+static fbl::DoublyLinkedList<driver_t*, driver_t::Node> list_drivers_system;
 
 static int system_driver_loader(void* arg);
 
@@ -2183,13 +2178,13 @@ static zx_status_t dc_control_event(port_handler_t* ph, zx_signals_t signals, ui
     case CTL_ADD_SYSTEM: {
         driver_t* drv;
         // Add system drivers to the new list
-        while ((drv = list_remove_head_type(&list_drivers_system, driver_t, node)) != nullptr) {
-            list_add_tail(&list_drivers_new, &drv->node);
+        while ((drv = list_drivers_system.pop_front()) != nullptr) {
+            list_drivers_new.push_back(drv);
         }
         // Add any remaining fallback drivers to the new list
-        while ((drv = list_remove_tail_type(&list_drivers_fallback, driver_t, node)) != nullptr) {
+        while ((drv = list_drivers_fallback.pop_back()) != nullptr) {
             printf("devcoord: fallback driver '%s' is available\n", drv->name.c_str());
-            list_add_tail(&list_drivers_new, &drv->node);
+            list_drivers_new.push_back(drv);
         }
         // Queue Driver Added work if not already queued
         if (new_driver_work.op == dc_work::Op::kIdle) {
@@ -2221,9 +2216,9 @@ static void dc_driver_added_sys(driver_t* drv, const char* version) {
     }
     if (version[0] == '*') {
         // de-prioritize drivers that are "fallback"
-        list_add_tail(&list_drivers_system, &drv->node);
+        list_drivers_system.push_back(drv);
     } else {
-        list_add_head(&list_drivers_system, &drv->node);
+        list_drivers_system.push_front(drv);
     }
 }
 
@@ -2288,15 +2283,14 @@ void coordinator() {
         printf("devcoord: full system required, ignoring fallback drivers until /system is loaded\n");
     } else {
         driver_t* drv;
-        while ((drv = list_remove_tail_type(&list_drivers_fallback, driver_t, node)) != nullptr) {
-            list_add_tail(&list_drivers, &drv->node);
+        while ((drv = list_drivers_fallback.pop_back()) != nullptr) {
+            list_drivers.push_back(drv);
         }
     }
 
     // Initial bind attempt for drivers enumerated at startup.
-    driver_t* drv;
-    list_for_every_entry(&list_drivers, drv, driver_t, node) {
-        dc_bind_driver(drv);
+    for (auto& drv : list_drivers) {
+        dc_bind_driver(&drv);
     }
 
     dc_running = true;
