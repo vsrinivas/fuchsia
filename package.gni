@@ -171,11 +171,12 @@ template("pm_build_package") {
 #       dest (optional)
 #         [path] Location the binary will be placed within `test/`.
 #
-#       environments (optional):
+#       environments (optional, default: [ { device = { type = "QEMU" } } ]):
 #         [list of scopes] Target device environments in which the test will
-#         run. The scopes must mirror the Environment go struct found in the
-#         testexec package in https://fuchsia.googlesource.com/infra/infra. If
-#         not present, the default QEMU environment will be used.
+#         run. The scopes must be element-wise subscopes of the full platform
+#         environments specified in //build/testing/platforms.gni. Environments
+#         mirror the Environment struct defined in
+#         https://fuchsia.googlesource.com/infra/infra/+/master/fuchsia/testexec/environment.go
 #
 #       disabled (optional)
 #         [bool] Whether to disable the test on continuous integration

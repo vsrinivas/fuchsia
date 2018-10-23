@@ -1,0 +1,36 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file is a source of truth for what platforms are available for testing
+# and what properties they possess.
+# Please do not update this file; contact fuchsia-infra-team@google.com with any
+# questions.
+#
+# A test platform entry is given by a scope that mirrors the Environment
+# struct defined in
+# https://fuchsia.googlesource.com/infra/infra/+/master/fuchsia/testexec/environment.go
+#
+# TODO(joshuaseaton): Check in or detail Environment's JSON schema, instead of linking
+# the associated go struct.
+
+test_platforms = [
+  {
+    device = {
+      type = "QEMU"
+      arch = "x64"
+    }
+  },
+  {
+    device = {
+      type = "QEMU"
+      arch = "arm64"
+    }
+  },
+  {
+    device = {
+      type = "Intel NUC Kit NUC7i5DNHE"
+      arch = "x64"
+    }
+  },
+]

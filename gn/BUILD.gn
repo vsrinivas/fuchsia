@@ -5,6 +5,7 @@
 import("//build/config/fuchsia/zircon.gni")
 import("//build/gn/packages.gni")
 import("//build/package.gni")
+import("//build/testing/platforms.gni")
 import("//build/toolchain/goma.gni")
 
 # Permit dependencies on testonly targets from packages.
@@ -166,3 +167,17 @@ action("breakpad_symbols") {
            rebase_path(depfile, root_build_dir),
          ] + rebase_path(sources, root_build_dir)
 }
+
+# Generates a JSON manifest of the platforms available for testing, along with
+# their properties.
+target_platforms = []
+foreach(platform, test_platforms) {
+  # TODO(crbug.com/gn/10): Use platform.device.arch when this becomes allowed.
+  platform_device = { # Clear from previous iteration.
+  }
+  platform_device = platform.device
+  if (platform_device.arch == current_cpu) {
+    target_platforms += [ platform ]
+  }
+}
+write_file("$root_build_dir/platforms.json", target_platforms, "json")

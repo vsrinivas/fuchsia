@@ -2,7 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(IN-575): Run a policy check to ensure that the spec is valid.
+import("//build/testing/platforms.gni")
+
+# Names of members of an environment's `device` subscope.
+_device_ids = [ "type" ]
+
 # TODO(joshuaseaton): Only used in package() today; consider a scheme in which
 #   test specs are re-used for host tests.
 
@@ -16,30 +20,118 @@
 #   output_dir
 #     Required: Where to write the test spec.
 #   environments
-#     Optional: Target device environments in which the test should run. This is
-#       a list of scopes that mirror the Environment go struct found in the
-#       testexec package in https://fuchsia.googlesource.com/infra/infra. If not
-#       present, the default QEMU environment will be used.
+#     Optional: Target device environments in which the test should run. Valid
+#       environments are element-wise subsets of the full platform environments
+#       specified in //build/testing/platforms.gni.
 #
 template("test_spec") {
   assert(defined(invoker.path), "path must be defined.")
   assert(defined(invoker.output_dir), "output_dir must be defined.")
 
+  if (defined(invoker.environments)) {
+    environments = invoker.environments
+  } else {
+    environments = [
+      {
+        device = {
+          type = "QEMU"
+        }
+      },
+    ]
+  }
+
   test_spec = {
     test = {
-      name = target_name
+      name = get_label_info(":$target_name", "label_no_toolchain")
       location = invoker.path
     }
-    if (defined(invoker.environments)) {
-      environments = invoker.environments
-    } else {
-      environments = [
+    environments = []
+  }
+
+  # Consider the operation that takes a scope
+  # {
+  #  x = a
+  #  y = b
+  #  z = c
+  #  ...
+  # }
+  # and converts it to a list [{x=a}, {y=b}, {z=c},...]. Call an evironment or
+  # platform "expanded" (denoted below with a prefix of "exp") if each of its
+  # subscopes (device, etc.) have been transformed in this way.
+  #
+  # The utility of the expanded versions is that it allows for a simplified
+  # check of "A is a sub-environment of B" (in which we need only check if
+  # A.device is a sublist of B.device and so on.)
+  #
+  # Expand each test platform and group them by architecture.
+  exp_platforms_target = []
+  exp_platforms_other = []
+  foreach(platform, test_platforms) {
+    exp_platform = {  # Clear from previous iteration.
+    }
+    exp_platform.device = []
+
+    # Expand out the device subscope.
+    foreach(id, _device_ids) {
+      exp_platform.device += [
         {
-          device = {
-            type = "QEMU"
-          }
+          forward_variables_from(platform.device, [ id ])
         },
       ]
+    }
+
+    # TODO(crbug.com/gn/10): Use platform.device.arch when this becomes allowed.
+    platform_device = {
+    }
+    platform_device = platform.device
+    if (platform_device.arch == current_cpu) {
+      exp_platforms_target += [ exp_platform ]
+    } else {
+      exp_platforms_other += [ exp_platform ]
+    }
+  }
+
+  foreach(env, environments) {
+    # Likewise, expand each environment.
+    device_list = []  # Clear from previous iteration.
+    if (defined(env.device)) {
+      foreach(id, _device_ids) {
+        device_list += [
+          {
+            forward_variables_from(env.device, [ id ])
+          },
+        ]
+      }
+    }
+
+    # Check if the environment matches a platform of the target architecture,
+    # If a match, include the environment among the test spec's.
+    # Note that in GN "A is a subset of B" is equivalent to `A + B - B == []`.
+    matches = false
+    foreach(exp_platform, exp_platforms_target) {
+      matches_on_device =
+          device_list + exp_platform.device - exp_platform.device == []
+      if (matches_on_device) {
+        matches = true
+        test_spec.environments += [ env ]
+      }
+    }
+
+    # If the environment doesn't match a target architecture, ensure that it
+    # matches a platform of another architecture.
+    if (!matches) {
+      foreach(exp_platform, exp_platforms_other) {
+        matches_on_device =
+            device_list + exp_platform.device - exp_platform.device == []
+        matches = matches || matches_on_device
+      }
+      if (!matches) {
+        print("Could not match environment specifications for '$target_name':")
+        print("$env")
+        assert(
+            matches,
+            "Consult //build/testing/platforms.gni for all allowable specifications")
+      }
     }
   }
 
