@@ -475,7 +475,6 @@ static void dc_handle_new_device(device_t* dev);
 static void dc_handle_new_driver();
 
 static fbl::DoublyLinkedList<dc_work*, dc_work::Node> list_pending_work;
-static list_node_t list_unbound_devices = LIST_INITIAL_VALUE(list_unbound_devices);
 
 static void queue_work(work_t* work, dc_work::Op op, uint32_t arg) {
     ZX_ASSERT(work->op == dc_work::Op::kIdle);
