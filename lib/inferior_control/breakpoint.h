@@ -71,7 +71,7 @@ class SoftwareBreakpoint final : public ProcessBreakpoint {
   bool IsInserted() const override;
 
  private:
-  // Contains the bytes of the original instructions that were overriden while
+  // Contains the bytes of the original instructions that were overridden while
   // inserting this breakpoint. We keep a copy of these here to restore the
   // original bytes while removing this breakpoint.
   std::vector<uint8_t> original_bytes_;

@@ -45,7 +45,7 @@ GdbSignal ComputeGdbSignal(const zx_exception_context_t& context);
 // Returns true if |context| is a single-stepping exception.
 bool IsSingleStepException(const zx_exception_context_t& context);
 
-// Dump random bits about the architecuture.
+// Dump random bits about the architecture.
 // TODO(dje): Switch to iostreams maybe later.
 void DumpArch(FILE* out);
 

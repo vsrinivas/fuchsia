@@ -335,7 +335,7 @@ bool Process::AllocDebugHandle(zx_koid_t pid) {
   auto handle = process.release();
 
   // TODO(armansito): Check that |handle| has ZX_RIGHT_DEBUG (this seems
-  // not to be set by anything at the moment but eventully we should check)?
+  // not to be set by anything at the moment but eventually we should check)?
 
   // Syscalls shouldn't return ZX_HANDLE_INVALID in the case of ZX_OK.
   FXL_DCHECK(handle != ZX_HANDLE_INVALID);
@@ -432,7 +432,7 @@ bool Process::Kill() {
   // - OnProcessExit, called when we receive an exception indicating
   //   the process has exited, will send back a stop reply which we don't want
   // - we don't want to unbind the exception port before killing the process
-  //   because we don't want to accidently cause the process to resume before
+  //   because we don't want to accidentally cause the process to resume before
   //   we kill it
   // - we need the debug handle to kill the process
 
