@@ -478,19 +478,19 @@ static void dc_dump_drivers() {
 static void dc_handle_new_device(device_t* dev);
 static void dc_handle_new_driver();
 
-static list_node_t list_pending_work = LIST_INITIAL_VALUE(list_pending_work);
+static fbl::DoublyLinkedList<dc_work*, dc_work::Node> list_pending_work;
 static list_node_t list_unbound_devices = LIST_INITIAL_VALUE(list_unbound_devices);
 
 static void queue_work(work_t* work, dc_work::Op op, uint32_t arg) {
     ZX_ASSERT(work->op == dc_work::Op::kIdle);
     work->op = op;
     work->arg = arg;
-    list_add_tail(&list_pending_work, &work->node);
+    list_pending_work.push_back(work);
 }
 
 static void cancel_work(work_t* work) {
     if (work->op != dc_work::Op::kIdle) {
-        list_delete(&work->node);
+        list_pending_work.erase(*work);
         work->op = dc_work::Op::kIdle;
     }
 }
@@ -2307,12 +2307,13 @@ void coordinator() {
 
     for (;;) {
         zx_status_t status;
-        if (list_is_empty(&list_pending_work)) {
+        if (list_pending_work.is_empty()) {
             status = port_dispatch(&dc_port, ZX_TIME_INFINITE, true);
         } else {
             status = port_dispatch(&dc_port, 0, true);
             if (status == ZX_ERR_TIMED_OUT) {
-                process_work(list_remove_head_type(&list_pending_work, work_t, node));
+                auto work = list_pending_work.pop_front();
+                process_work(work);
                 continue;
             }
         }

@@ -28,7 +28,14 @@ typedef struct dc_driver driver_t;
 typedef struct dc_devnode devnode_t;
 
 struct dc_work {
-    list_node_t node;
+    fbl::DoublyLinkedListNodeState<dc_work*> node;
+    struct Node {
+        static fbl::DoublyLinkedListNodeState<dc_work*>& node_state(
+            dc_work& obj) {
+            return obj.node;
+        }
+    };
+
     enum struct Op : uint32_t {
         kIdle = 0,
         kDeviceAdded = 1,
