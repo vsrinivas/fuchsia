@@ -258,6 +258,13 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
   llvm::Optional<uint64_t> decl_line;
   decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_decl_line, &decl_line);
 
+  VariableLocation frame_base;
+  decoder.AddCustom(llvm::dwarf::DW_AT_frame_base,
+                    [ unit = die.getDwarfUnit(),
+                      &frame_base ](const llvm::DWARFFormValue& value) {
+                      frame_base = DecodeVariableLocation(unit, value);
+                    });
+
   llvm::DWARFDie object_ptr;
   decoder.AddReference(llvm::dwarf::DW_AT_object_pointer, &object_ptr);
 
@@ -291,6 +298,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
   function->set_decl_line(MakeFileLine(decl_file, decl_line));
   if (type)
     function->set_return_type(MakeLazy(type));
+  function->set_frame_base(std::move(frame_base));
   if (object_ptr)
     function->set_object_pointer(MakeLazy(object_ptr));
 

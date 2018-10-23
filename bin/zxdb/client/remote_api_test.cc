@@ -20,7 +20,7 @@ RemoteAPITest::RemoteAPITest() { loop_.Init(); }
 RemoteAPITest::~RemoteAPITest() { loop_.Cleanup(); }
 
 void RemoteAPITest::SetUp() {
-  session_ = std::make_unique<Session>(GetRemoteAPIImpl());
+  session_ = std::make_unique<Session>(GetRemoteAPIImpl(), GetArch());
 }
 
 void RemoteAPITest::TearDown() { session_.reset(); }

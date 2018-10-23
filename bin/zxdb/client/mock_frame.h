@@ -28,7 +28,9 @@ class MockFrame : public Frame {
   Thread* GetThread() const override;
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
-  uint64_t GetBasePointer() const override;
+  uint64_t GetBasePointerRegister() const override;
+  std::optional<uint64_t> GetBasePointer() const override;
+  void GetBasePointerAsync(std::function<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;
   fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
   fxl::RefPtr<ExprEvalContext> GetExprEvalContext() const override;

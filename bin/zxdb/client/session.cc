@@ -147,8 +147,9 @@ void Session::PendingConnection::Initiate(
 
   // Create the background thread, and run the background function. The
   // context will keep a ref to this class.
-  thread_ = std::make_unique<std::thread>(
-      [owner = fxl::RefPtr<PendingConnection>(this)]() {
+  thread_ =
+      std::make_unique<std::thread>([owner = fxl::RefPtr<PendingConnection>(
+                                         this)]() {
         owner->ConnectBackgroundThread(owner);
       });
 }
@@ -156,7 +157,7 @@ void Session::PendingConnection::Initiate(
 void Session::PendingConnection::ConnectBackgroundThread(
     fxl::RefPtr<PendingConnection> owner) {
   Err err = DoConnectBackgroundThread();
-  main_loop_->PostTask([owner = std::move(owner), err]() {
+  main_loop_->PostTask([ owner = std::move(owner), err ]() {
     owner->ConnectCompleteMainThread(owner, err);
   });
 }
@@ -285,8 +286,17 @@ Session::Session()
       system_(this),
       weak_factory_(this) {}
 
-Session::Session(std::unique_ptr<RemoteAPI> remote_api)
-    : remote_api_(std::move(remote_api)), system_(this), weak_factory_(this) {}
+Session::Session(std::unique_ptr<RemoteAPI> remote_api, debug_ipc::Arch arch)
+    : remote_api_(std::move(remote_api)),
+      system_(this),
+      arch_(arch),
+      weak_factory_(this) {
+  arch_info_ = std::make_unique<ArchInfo>();
+  Err err = arch_info_->Init(arch);
+
+  // Should not fail for synthetically set-up architectures.
+  FXL_DCHECK(!err.has_error());
+}
 
 Session::Session(debug_ipc::StreamBuffer* stream)
     : stream_(stream), system_(this), weak_factory_(this) {}
@@ -361,9 +371,7 @@ void Session::OnStreamReadable() {
   }
 }
 
-void Session::OnStreamError() {
-  ClearConnectionData();
-}
+void Session::OnStreamError() { ClearConnectionData(); }
 
 bool Session::ConnectCanProceed(std::function<void(const Err&)> callback) {
   Err err;

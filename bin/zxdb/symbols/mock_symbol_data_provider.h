@@ -31,6 +31,8 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   bool GetRegister(int dwarf_register_number, uint64_t* output) override;
   void GetRegisterAsync(int dwarf_register_number,
                         GetRegisterCallback callback) override;
+  std::optional<uint64_t> GetFrameBase() override;
+  void GetFrameBaseAsync(GetRegisterCallback callback) override;
   void GetMemoryAsync(uint64_t address, uint32_t size,
                       GetMemoryCallback callback) override;
 

@@ -6,6 +6,9 @@
 
 #include <stdint.h>
 
+#include <functional>
+#include <optional>
+
 #include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
 #include "garnet/public/lib/fxl/macros.h"
@@ -37,8 +40,29 @@ class Frame : public ClientObject {
   // GetLocation().address() since it doesn't need to be symbolized.
   virtual uint64_t GetAddress() const = 0;
 
-  // Returns the frame base pointer.
-  virtual uint64_t GetBasePointer() const = 0;
+  // Returns the value of the base pointer register computed by the backend.
+  // Most callers will want to use the GetBasePointer() call below which
+  // takes into account symbol information that may redirect the logical base
+  // pointer to somewhere else. This function specifically returns the CPU
+  // value.
+  virtual uint64_t GetBasePointerRegister() const = 0;
+
+  // The frame base pointer.
+  //
+  // This is not necessarily the "BP" register. The symbols can specify
+  // an arbitrary frame base for a location and this value will reflect that.
+  // For unsymbolized code or if the symbols do not declare a frame base, this
+  // will default to the CPU register.
+  //
+  // In most cases the frame base is available synchronously (when it's in
+  // a register which is the common case), but symbols can declare any DWARF
+  // expression to compute the frame base.
+  //
+  // The synchronous version will return the base pointer if possible. If it
+  // returns no value, code that can handle async calls can call the
+  // asynchronous version to be notified when the value is available.
+  virtual std::optional<uint64_t> GetBasePointer() const = 0;
+  virtual void GetBasePointerAsync(std::function<void(uint64_t bp)> cb) = 0;
 
   // Returns the stack pointer at this location.
   virtual uint64_t GetStackPointer() const = 0;

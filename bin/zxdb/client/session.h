@@ -37,7 +37,7 @@ class Session {
 
   // Creates a session using a custom RemoteAPI implementation. Use for tests
   // to mock out sending IPC messages.
-  explicit Session(std::unique_ptr<RemoteAPI> remote_api);
+  Session(std::unique_ptr<RemoteAPI> remote_api, debug_ipc::Arch arch);
 
   // Creates with a previously-allocated connection. The pointer must outlive
   // this class. In this mode, the stream can not be disconnected.

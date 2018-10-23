@@ -56,10 +56,11 @@ class FinishThreadController : public ThreadController {
   // know we don't need it.
   void InitWithFingerprint(std::function<void(const Err&)> cb);
 
-  // The instruction and base pointer of the frame when the address and
-  // fingerprint are not known.
+  // The instruction and stack pointer of the frame when the address and
+  // fingerprint are not known. The SP allows disambiguation for two frames
+  // at the same address.
   uint64_t frame_ip_ = 0;
-  uint64_t frame_bp_ = 0;
+  uint64_t frame_sp_ = 0;
 
   // When set, to_address_ will be nonzero and to_frame_fingerprint_ will be
   // is_valid(). See HaveAddressAndFingerprint().

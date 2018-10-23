@@ -11,7 +11,6 @@
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace llvm {
-class InitLLVM;
 class MCInstrInfo;
 class MCRegisterInfo;
 class MCSubtargetInfo;
@@ -65,7 +64,6 @@ class ArchInfo {
   std::string triple_name_;
   std::string processor_name_;
 
-  std::unique_ptr<llvm::InitLLVM> init_;
   std::unique_ptr<llvm::Triple> triple_;
 
   const llvm::Target* target_ = nullptr;  // Non-owning.

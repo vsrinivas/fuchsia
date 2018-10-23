@@ -31,7 +31,9 @@ class RegisterSet {
   virtual ~RegisterSet();
 
   // Movable
+  RegisterSet(const RegisterSet&);
   RegisterSet(RegisterSet&&);
+  RegisterSet& operator=(const RegisterSet&);
   RegisterSet& operator=(RegisterSet&&);
 
   debug_ipc::Arch arch() const { return arch_; }
@@ -57,9 +59,7 @@ class RegisterSet {
 
  private:
   CategoryMap category_map_;
-  debug_ipc::Arch arch_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(RegisterSet);
+  debug_ipc::Arch arch_ = debug_ipc::Arch::kUnknown;
 };
 
 // Main wrapper over the register information. Also holds information about the

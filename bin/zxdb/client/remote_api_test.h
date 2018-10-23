@@ -52,6 +52,12 @@ class RemoteAPITest : public testing::Test {
   // (most implementations will want to keep a pointer).
   virtual std::unique_ptr<RemoteAPI> GetRemoteAPIImpl() = 0;
 
+  // Allows tests to override the architecture for the test to run in. Defaults
+  // to x64.
+  virtual debug_ipc::Arch GetArch() const {
+    return debug_ipc::Arch::kX64;
+  }
+
  private:
   debug_ipc::PlatformMessageLoop loop_;
   std::unique_ptr<Session> session_;

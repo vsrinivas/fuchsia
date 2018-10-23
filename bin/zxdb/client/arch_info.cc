@@ -16,15 +16,23 @@
 
 namespace zxdb {
 
-ArchInfo::ArchInfo() {
-  int argc = 0;
-  const char* arg = nullptr;
-  const char** argv = &arg;
-  init_ = std::make_unique<llvm::InitLLVM>(argc, argv);
+namespace {
 
-  llvm::InitializeAllTargetInfos();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllDisassemblers();
+std::unique_ptr<llvm::InitLLVM> init_llvm;
+
+}  // namespace
+
+ArchInfo::ArchInfo() {
+  if (!init_llvm) {
+    int argc = 0;
+    const char* arg = nullptr;
+    const char** argv = &arg;
+    init_llvm = std::make_unique<llvm::InitLLVM>(argc, argv);
+
+    llvm::InitializeAllTargetInfos();
+    llvm::InitializeAllTargetMCs();
+    llvm::InitializeAllDisassemblers();
+  }
 }
 
 ArchInfo::~ArchInfo() = default;

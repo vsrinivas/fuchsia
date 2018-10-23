@@ -33,10 +33,6 @@ bool MockSymbolDataProvider::GetRegister(int dwarf_register_number,
     *output = ip_;
     return true;
   }
-  if (dwarf_register_number == kRegisterBP) {
-    *output = bp_;
-    return true;
-  }
 
   const auto& found = regs_.find(dwarf_register_number);
   if (found == regs_.end())
@@ -66,6 +62,19 @@ void MockSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
   });
 }
 
+std::optional<uint64_t> MockSymbolDataProvider::GetFrameBase() { return bp_; }
+
+void MockSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback callback) {
+  debug_ipc::MessageLoop::Current()->PostTask(
+      [ callback, weak_provider = weak_factory_.GetWeakPtr() ]() {
+        if (!weak_provider) {
+          // Destroyed before callback ready.
+          return;
+        }
+        callback(Err(), weak_provider->bp_);
+      });
+}
+
 void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                                             GetMemoryCallback callback) {
   auto found = FindBlockForAddress(address);
@@ -89,7 +98,8 @@ void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
   }
 }
 
-MockSymbolDataProvider::RegisteredMemory::const_iterator MockSymbolDataProvider::FindBlockForAddress(uint64_t address) const {
+MockSymbolDataProvider::RegisteredMemory::const_iterator
+MockSymbolDataProvider::FindBlockForAddress(uint64_t address) const {
   // Finds the first block >= address.
   auto found = mem_.lower_bound(address);
 

@@ -15,7 +15,7 @@ namespace zxdb {
 FinishThreadController::FinishThreadController(FromFrame, const Frame* frame)
     : ThreadController(),
       frame_ip_(frame->GetAddress()),
-      frame_bp_(frame->GetBasePointer()) {}
+      frame_sp_(frame->GetStackPointer()) {}
 
 FinishThreadController::FinishThreadController(
     ToFrame, uint64_t to_address, const FrameFingerprint& to_frame_fingerprint)
@@ -77,7 +77,7 @@ void FinishThreadController::InitWithFrames(
   size_t requested_index = kNotFound;
   for (size_t i = 0; i < frames.size(); i++) {
     if (frames[i]->GetAddress() == frame_ip_ &&
-        frames[i]->GetBasePointer() == frame_bp_) {
+        frames[i]->GetStackPointer() == frame_sp_) {
       requested_index = i;
       break;
     }

@@ -77,7 +77,8 @@ class TargetImplTest : public testing::Test {
   TargetImplTest() {
     loop_.Init();
     sink_ = new TargetSink;
-    session_ = std::make_unique<Session>(std::unique_ptr<RemoteAPI>(sink_));
+    session_ = std::make_unique<Session>(std::unique_ptr<RemoteAPI>(sink_),
+        debug_ipc::Arch::kX64);
   }
   ~TargetImplTest() {
     session_.reset();

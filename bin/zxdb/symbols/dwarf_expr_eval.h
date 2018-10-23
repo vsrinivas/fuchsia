@@ -46,7 +46,7 @@ class DwarfExprEval {
 
   // A DWARF expression can compute either the address of the desired object in
   // the debugged programs address space, or it can compute the actual value of
-  // the object (because it may not expst in memory).
+  // the object (because it may not exist in memory).
   enum class ResultType { kPointer, kValue };
 
   // Storage for opcode data.

@@ -126,8 +126,9 @@ void MemoryAnalysis::SetFrames(const std::vector<Frame*>& frames) {
   // covered by the CPU registers.
   for (int i = 1; i < static_cast<int>(frames.size()); i++) {
     AddAnnotation(frames[i]->GetAddress(), fxl::StringPrintf("frame %d IP", i));
-    AddAnnotation(frames[i]->GetBasePointer(),
-                  fxl::StringPrintf("frame %d BP", i));
+    // TODO(brettw) make this work when the BP is asynchronous.
+    if (auto bp = frames[i]->GetBasePointer())
+      AddAnnotation(*bp, fxl::StringPrintf("frame %d BP", i));
     AddAnnotation(frames[i]->GetStackPointer(),
                   fxl::StringPrintf("frame %d SP", i));
   }

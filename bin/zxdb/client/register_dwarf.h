@@ -13,6 +13,12 @@ namespace zxdb {
 debug_ipc::RegisterID GetDWARFRegisterID(debug_ipc::Arch,
                                          uint32_t dwarf_reg_id);
 
+// Some registers have special meaning. This function returns whether and what
+// speciual meaning the given DWARF register ID has on the given platform.
+enum class SpecialRegisterType { kNone, kIP, kSP, kBP };
+SpecialRegisterType GetSpecialRegisterTypeFromDWARFRegisterID(
+    debug_ipc::Arch, uint32_t dwarf_reg_id);
+
 // Platform specific -----------------------------------------------------------
 
 debug_ipc::RegisterID GetARMv8DWARFRegisterID(uint32_t dwarf_reg_id);

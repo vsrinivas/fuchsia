@@ -48,6 +48,7 @@ std::string SyncFormatFrameLong(const Frame* frame,
 TEST(FormatFrame, Unsymbolized) {
   debug_ipc::StackFrame stack_frame;
   stack_frame.ip = 0x12345678;
+  stack_frame.bp = 0xdeadbeef;
   stack_frame.sp = 0x567890;
 
   MockFrame frame(nullptr, nullptr, stack_frame,
@@ -60,7 +61,7 @@ TEST(FormatFrame, Unsymbolized) {
   EXPECT_EQ("0x12345678", out.AsString());
 
   // Long version should do the same (not duplicate it).
-  EXPECT_EQ("\n      IP = 0x12345678, BP = 0x0, SP = 0x567890",
+  EXPECT_EQ("\n      IP = 0x12345678, BP = 0xdeadbeef, SP = 0x567890",
             SyncFormatFrameLong(&frame, FormatValueOptions()));
 
   // With index.

@@ -30,7 +30,9 @@ RegisterSet::RegisterSet(debug_ipc::Arch arch,
   }
 }
 
+RegisterSet::RegisterSet(const RegisterSet&) = default;
 RegisterSet::RegisterSet(RegisterSet&&) = default;
+RegisterSet& RegisterSet::operator=(const RegisterSet&) = default;
 RegisterSet& RegisterSet::operator=(RegisterSet&&) = default;
 
 RegisterSet::~RegisterSet() = default;

@@ -459,25 +459,45 @@ DwarfExprEval::Completion DwarfExprEval::OpDup() {
 
 // 1 parameter: Signed LEB128 offset from frame base pointer.
 DwarfExprEval::Completion DwarfExprEval::OpFbreg() {
-  uint64_t bp = 0;
-  if (!data_provider_->GetRegister(SymbolDataProvider::kRegisterBP, &bp)) {
-    ReportError("Stack frame pointer not available.");
-    return Completion::kSync;
-  }
-
-  // Certain problems can cause the BP to be set to 0 which is obviously
-  // invalid, report that error specifically.
-  if (bp == 0) {
-    ReportError("Base Pointer is 0, can't evaluate.");
-    return Completion::kSync;
-  }
-
   int64_t offset = 0;
-  if (ReadLEBSigned(&offset)) {
+  if (!ReadLEBSigned(&offset))
+    return Completion::kSync;
+
+  if (auto bp = data_provider_->GetFrameBase()) {
+    // Available synchronously.
+
+    // Certain problems can cause the BP to be set to 0 which is obviously
+    // invalid, report that error specifically.
+    if (*bp == 0)
+      ReportError("Base Pointer is 0, can't evaluate.");
+
     result_type_ = ResultType::kPointer;
-    Push(bp + offset);
+    Push(*bp + offset);
+    return Completion::kSync;
   }
-  return Completion::kSync;
+
+  // Must request async.
+  data_provider_->GetFrameBaseAsync(
+      [ weak_eval = weak_factory_.GetWeakPtr(), offset ](
+                                 const Err& err, uint64_t value) {
+        if (!weak_eval)
+          return;
+        if (err.has_error()) {
+          weak_eval->ReportError(err);
+          return;
+        }
+
+        if (value == 0)
+          weak_eval->ReportError("Base Pointer is 0, can't evaluate.");
+
+        weak_eval->result_type_ = ResultType::kPointer;
+        weak_eval->Push(static_cast<uint64_t>(value + offset));
+
+        // Picks up processing at the next instruction.
+        weak_eval->ContinueEval();
+      });
+
+  return Completion::kAsync;
 }
 
 // 1 parameter: ULEB128 constant indexing the register.

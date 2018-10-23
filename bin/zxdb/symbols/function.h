@@ -8,6 +8,7 @@
 
 #include "garnet/bin/zxdb/symbols/code_block.h"
 #include "garnet/bin/zxdb/symbols/file_line.h"
+#include "garnet/bin/zxdb/symbols/variable_location.h"
 
 namespace zxdb {
 
@@ -58,6 +59,15 @@ class Function final : public CodeBlock {
   const std::vector<LazySymbol>& parameters() const { return parameters_; }
   void set_parameters(std::vector<LazySymbol> p) { parameters_ = std::move(p); }
 
+  // The frame base is the location where "fbreg" expressions are evaluated
+  // relative to (this will be most local variables in a function).
+  //
+  // When compiled with full stack frames, this will usually evaluate to the
+  // contents of the CPU's "BP" register, but can be different or arbitrarily
+  // complicated, especially when things are optimized.
+  const VariableLocation& frame_base() const { return frame_base_; }
+  void set_frame_base(VariableLocation base) { frame_base_ = std::move(base); }
+
   // The object pointer will be a reference to a parameter (object type
   // Variable). It should theoretically match one of the entries in the
   // parameters() list but we can't guarantee what the compiler has generated.
@@ -82,6 +92,7 @@ class Function final : public CodeBlock {
   FileLine decl_line_;
   LazySymbol return_type_;
   std::vector<LazySymbol> parameters_;
+  VariableLocation frame_base_;
   LazySymbol object_pointer_;
 };
 

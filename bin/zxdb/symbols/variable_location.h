@@ -38,6 +38,8 @@ class VariableLocation {
     // Returns whether this entry matches the given physical IP.
     bool InRange(const SymbolContext& symbol_context, uint64_t ip) const;
 
+    // The DWARF expression that evaluates to the result. Evaluate with the
+    // DwarfExprEval object.
     std::vector<uint8_t> expression;
   };
 

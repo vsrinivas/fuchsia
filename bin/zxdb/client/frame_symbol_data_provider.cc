@@ -10,6 +10,8 @@
 #include "garnet/bin/zxdb/client/memory_dump.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/register.h"
+#include "garnet/bin/zxdb/client/register_dwarf.h"
+#include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
@@ -34,9 +36,21 @@ bool FrameSymbolDataProvider::GetRegister(int dwarf_register_number,
     *output = frame_->GetAddress();
     return true;
   }
-  if (dwarf_register_number == kRegisterBP) {
-    *output = frame_->GetBasePointer();
-    return true;
+
+  // Some common registers are known without having to do a register request.
+  switch (GetSpecialRegisterTypeFromDWARFRegisterID(frame_->session()->arch(),
+                                                    dwarf_register_number)) {
+    case SpecialRegisterType::kIP:
+      *output = frame_->GetAddress();
+      return true;
+    case SpecialRegisterType::kSP:
+      *output = frame_->GetStackPointer();
+      return true;
+    case SpecialRegisterType::kBP:
+      *output = frame_->GetBasePointerRegister();
+      return true;
+    case SpecialRegisterType::kNone:
+      break;
   }
 
   // TODO(brettw) enable synchronous access if the registers are cached.
@@ -70,7 +84,7 @@ void FrameSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
   // TODO: Other categories will need to be supported here (eg. floating point).
   frame_->GetThread()->GetRegisters(
       {debug_ipc::RegisterCategory::Type::kGeneral},
-      [dwarf_register_number, cb = std::move(callback)](
+      [ dwarf_register_number, cb = std::move(callback) ](
           const Err& err, const RegisterSet& regs) {
         uint64_t value = 0;
         if (err.has_error()) {
@@ -84,6 +98,25 @@ void FrameSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
              0);
         }
       });
+}
+
+std::optional<uint64_t> FrameSymbolDataProvider::GetFrameBase() {
+  if (!frame_)
+    return std::nullopt;
+  return frame_->GetBasePointer();
+}
+
+void FrameSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback cb) {
+  if (!frame_) {
+    debug_ipc::MessageLoop::Current()->PostTask([cb = std::move(cb)]() {
+      cb(Err("Call frame destroyed."), 0);
+    });
+    return;
+  }
+
+  frame_->GetBasePointerAsync([cb = std::move(cb)](uint64_t value) {
+    cb(Err(), value);
+  });
 }
 
 void FrameSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
@@ -147,6 +180,8 @@ bool FrameSymbolDataProvider::IsTopFrame() const {
   if (!frame_)
     return false;
   auto frames = frame_->GetThread()->GetFrames();
+  if (frames.empty())
+    return false;
   return frames[0] == frame_;
 }
 

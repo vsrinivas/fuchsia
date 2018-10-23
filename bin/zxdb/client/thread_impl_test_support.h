@@ -5,7 +5,7 @@
 #pragma once
 
 // This file contains a test harness and helper classes for writing tests
-// involving lower-level thread contol such as ThreadImpl utself, and
+// involving lower-level thread contol such as ThreadImpl itself, and
 // ThreadControllers.
 
 #include "garnet/bin/zxdb/client/mock_remote_api.h"

@@ -96,12 +96,15 @@ void FormatFrameLong(const Frame* frame, FormatValue* out,
     out->Append(DescribeLocation(location, false));
 
   // Long format includes the IP address.
+  // TODO(brettw) handle asynchronously available BP.
+  uint64_t bp = 0;
+  if (auto optional_bp = frame->GetBasePointer())
+    bp = *optional_bp;
   out->Append(OutputBuffer(
       Syntax::kComment,
       fxl::StringPrintf("\n      IP = 0x%" PRIx64 ", BP = 0x%" PRIx64
                         ", SP = 0x%" PRIx64,
-                        frame->GetAddress(), frame->GetBasePointer(),
-                        frame->GetStackPointer())));
+                        frame->GetAddress(), bp, frame->GetStackPointer())));
 
   if (location.function()) {
     const Function* func = location.function().Get()->AsFunction();
