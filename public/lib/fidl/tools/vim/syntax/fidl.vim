@@ -25,7 +25,7 @@ syn match fidlType "\<handle\>?\?"
 syn match fidlBadType "\<handle<[^>]*>?\?"
 syn match fidlType "\<handle<\(channel\|debuglog\|event\|eventpair\|fifo\|guest\|interrupt\|job\|port\|process\|resource\|socket\|thread\|timer\|vmar\|vmo\)>?\?"
 
-syn match fidlType "\<string\>\(:\d\+\)\??\?"
+syn match fidlType "\<string\>\%(:\%(\d\+\|\K\k*\%(\.\K\k*\)*\)\)\??\?"
 syn match fidlType "\<bool\>"
 syn match fidlBadType "\<bool?"
 syn match fidlType "\<float\(32\|64\)\>"
@@ -33,7 +33,6 @@ syn match fidlBadType "\<float\(32\|64\)?"
 syn match fidlType "\<u\?int\(8\|16\|32\|64\)\>"
 syn match fidlBadType "\<u\?int\(8\|16\|32\|64\)?"
 
-" TODO: error highlight arrays without length / with "?"
 syn region fidlType matchgroup=Type start="\<vector<" end=">\%(:\%(\d\+\|\K\k*\%(\.\K\k*\)*\)\)\??\?" contains=fidlType,fidlBadType transparent
 syn region fidlType matchgroup=Type start="\<array<" end=">:\%(\d\+\|\K\k*\%(\.\K\k*\)*\)" contains=fidlType,fidlBadType transparent
 
