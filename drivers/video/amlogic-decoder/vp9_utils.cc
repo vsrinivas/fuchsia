@@ -40,6 +40,12 @@ std::vector<uint32_t> TryParseSuperframeHeader(const uint8_t* data,
       case 2:
         sub_frame_size = reinterpret_cast<const uint16_t*>(index_data)[i];
         break;
+      case 3:
+        sub_frame_size = 0;
+        for (uint32_t j = 0; j < 3; ++j) {
+          sub_frame_size |= index_data[i * 3 + j] << (j * 8);
+        }
+        break;
       case 4:
         sub_frame_size = reinterpret_cast<const uint32_t*>(index_data)[i];
         break;
