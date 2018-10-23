@@ -21,7 +21,10 @@ namespace crash {
 
 class CrashpadAnalyzerImpl : public Analyzer {
  public:
-  CrashpadAnalyzerImpl();
+  // Static factory method.
+  // Returns nullptr if the analyzer cannot be instantiated, e.g., because the
+  // local report database cannot be accessed.
+  static std::unique_ptr<CrashpadAnalyzerImpl> TryCreate();
 
   void HandleException(zx::process process, zx::thread thread,
                        zx::port exception_port,
@@ -31,6 +34,9 @@ class CrashpadAnalyzerImpl : public Analyzer {
                        ProcessCrashlogCallback callback) override;
 
  private:
+  explicit CrashpadAnalyzerImpl(
+      std::unique_ptr<crashpad::CrashReportDatabase> database);
+
   int HandleException(zx::process process, zx::thread thread,
                       zx::port exception_port);
   int ProcessCrashlog(fuchsia::mem::Buffer crashlog);
@@ -41,7 +47,7 @@ class CrashpadAnalyzerImpl : public Analyzer {
   std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport>
   GetUploadReport(const crashpad::UUID& local_report_id);
 
-  std::unique_ptr<crashpad::CrashReportDatabase> database_;
+  const std::unique_ptr<crashpad::CrashReportDatabase> database_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashpadAnalyzerImpl);
 };

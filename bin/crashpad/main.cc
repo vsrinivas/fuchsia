@@ -14,15 +14,19 @@
 int main(int argc, const char** argv) {
   syslog::InitLogger({"crash"});
 
+  std::unique_ptr<fuchsia::crash::CrashpadAnalyzerImpl> analyzer =
+      fuchsia::crash::CrashpadAnalyzerImpl::TryCreate();
+  if (!analyzer) {
+    return EXIT_FAILURE;
+  }
+
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   std::unique_ptr<component::StartupContext> app_context(
       component::StartupContext::CreateFromStartupInfo());
-
-  fuchsia::crash::CrashpadAnalyzerImpl analyzer;
   fidl::BindingSet<::fuchsia::crash::Analyzer> bindings;
-  app_context->outgoing().AddPublicService(bindings.GetHandler(&analyzer));
+  app_context->outgoing().AddPublicService(bindings.GetHandler(analyzer.get()));
 
   loop.Run();
 
-  return 0;
+  return EXIT_SUCCESS;
 }

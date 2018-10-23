@@ -14,6 +14,7 @@
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/files/path.h>
+#include <lib/fxl/logging.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/trim.h>
 #include <lib/syslog/cpp/logger.h>
@@ -248,9 +249,6 @@ int CrashpadAnalyzerImpl::HandleException(zx::process process,
   const std::string package_name = GetPackageName(process);
   FX_LOGS(INFO) << "generating crash report for exception thrown by "
                 << package_name;
-  if (!database_) {
-    return EXIT_FAILURE;
-  }
 
   // Prepare annotations and attachments.
   const std::map<std::string, std::string> annotations =
@@ -320,9 +318,6 @@ int CrashpadAnalyzerImpl::HandleException(zx::process process,
 
 int CrashpadAnalyzerImpl::ProcessCrashlog(fuchsia::mem::Buffer crashlog) {
   FX_LOGS(INFO) << "generating crash report for previous kernel panic";
-  if (!database_) {
-    return EXIT_FAILURE;
-  }
 
   crashpad::CrashReportDatabase::OperationStatus database_status;
 
@@ -371,22 +366,10 @@ int CrashpadAnalyzerImpl::ProcessCrashlog(fuchsia::mem::Buffer crashlog) {
   return UploadReport(std::move(upload_report), annotations);
 }
 
-CrashpadAnalyzerImpl::CrashpadAnalyzerImpl() {
-  if (!files::IsDirectory(kLocalCrashDatabase)) {
-    files::CreateDirectory(kLocalCrashDatabase);
-  }
-
-  database_ = crashpad::CrashReportDatabase::Initialize(
-      base::FilePath(kLocalCrashDatabase));
-  if (!database_) {
-    FX_LOGS(ERROR) << "error initializing local crash report database at "
-                   << kLocalCrashDatabase;
-    return;
-  }
-
-  // Today we enable uploads here. In the future, this will most likely be set
-  // in some external settings.
-  database_->GetSettings()->SetUploadsEnabled(true);
+CrashpadAnalyzerImpl::CrashpadAnalyzerImpl(
+    std::unique_ptr<crashpad::CrashReportDatabase> database)
+    : database_(std::move(database)) {
+  FXL_DCHECK(database_);
 }
 
 void CrashpadAnalyzerImpl::HandleException(zx::process process,
@@ -406,6 +389,28 @@ void CrashpadAnalyzerImpl::ProcessCrashlog(fuchsia::mem::Buffer crashlog,
   if (ProcessCrashlog(fbl::move(crashlog)) != EXIT_SUCCESS) {
     FX_LOGS(ERROR) << "failed to process VMO crashlog. Won't retry.";
   }
+}
+
+std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate() {
+  if (!files::IsDirectory(kLocalCrashDatabase)) {
+    files::CreateDirectory(kLocalCrashDatabase);
+  }
+
+  std::unique_ptr<crashpad::CrashReportDatabase> database(
+      crashpad::CrashReportDatabase::Initialize(
+          base::FilePath(kLocalCrashDatabase)));
+  if (!database) {
+    FX_LOGS(ERROR) << "error initializing local crash report database at "
+                   << kLocalCrashDatabase;
+    return nullptr;
+  }
+
+  // Today we enable uploads here. In the future, this will most likely be set
+  // in some external settings.
+  database->GetSettings()->SetUploadsEnabled(true);
+
+  return std::unique_ptr<CrashpadAnalyzerImpl>(
+      new CrashpadAnalyzerImpl(std::move(database)));
 }
 
 }  // namespace crash
