@@ -28,7 +28,7 @@ class PoseBufferLatchingShader {
   //   mat4  vp_matrix;
   // }
   //
-  // Note that this is a convienence entry point which simply calls through
+  // Note that this is a convenience entry point which simply calls through
   // to LatchStereoPose.
   //
   // For details on pose buffers and the layout of the Pose struct see

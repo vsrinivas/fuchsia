@@ -51,12 +51,12 @@ class BoundingBox {
 
   bool is_empty() const { return *this == BoundingBox(); }
 
-  // Return the number of bounding box corners that are clipped by the the
+  // Return the number of bounding box corners that are clipped by the
   // specified plane (between 0 and 8).  Since this is a 2D plane, the z
   // coordinate is ignored, and only 4 corners need to be tested.
   uint32_t NumClippedCorners(const plane2& plane) const;
 
-  // Return the number of bounding box corners that are clipped by the the
+  // Return the number of bounding box corners that are clipped by the
   // specified plane (between 0 and 8).
   uint32_t NumClippedCorners(const plane3& plane) const;
 

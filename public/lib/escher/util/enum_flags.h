@@ -99,7 +99,7 @@ EnumFlags<BitT> operator^(BitT bit, const EnumFlags<BitT>& flags) {
 }
 
 // Reduce boilerplate by bundling two things that clients always want anyway:
-// - a more convenient name: e.g. MyFlags insead of EnumFlags<MyFlagBits>
+// - a more convenient name: e.g. MyFlags instead of EnumFlags<MyFlagBits>
 // - two inline functions for implicitly going from "Bits" to "Flags".
 #define ESCHER_DECLARE_ENUM_FLAGS(FLAGS_NAME, BITS_NAME)        \
   using FLAGS_NAME = EnumFlags<BITS_NAME>;                      \

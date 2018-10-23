@@ -94,7 +94,7 @@ PaperShapeCacheEntry ProcessTriangleMesh2d(
             auto it = silhouette_edges.find(opposite);
             if (it != silhouette_edges.end()) {
               // The opposite edge was already seen in the mesh, so neither this
-              // edge nor the opposite can be a silhoutte edge.
+              // edge nor the opposite can be a silhouette edge.
               silhouette_edges.erase(it);
             } else {
               // No opposite edge was found, so this edge is a candidate to be a

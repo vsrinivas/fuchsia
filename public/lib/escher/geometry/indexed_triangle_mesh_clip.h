@@ -79,7 +79,7 @@ void IndexedTriangleMeshPushLerpedAttributes(MeshT* target, MeshT* source,
       &target->attributes3, &source->attributes3, index1, index2, interp_param);
 }
 
-// Helper functions that copy an a attribute from a source mesh, pushing it to
+// Helper functions that copy an attribute from a source mesh, pushing it to
 // the back of a target mesh.
 template <typename AttrT>
 void IndexedTriangleMeshPushCopiedAttribute(std::vector<AttrT>* target,

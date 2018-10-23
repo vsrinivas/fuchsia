@@ -46,7 +46,7 @@ RenderPassInfo::LoadStoreOpsForColorAttachment(uint32_t index) const {
     // render a new one every frame.
     // NOTE: we might want to relax this someday, e.g. to support temporal AA.
     // If so, RenderPass::FillColorAttachmentDescription() would need to be
-    // adjusted to choose an appropriate intial layout for the attachment.
+    // adjusted to choose an appropriate initial layout for the attachment.
     FXL_DCHECK(!color_attachments[index]->image()->is_swapchain_image());
 
     load_op = vk::AttachmentLoadOp::eLoad;
@@ -158,7 +158,7 @@ bool RenderPassInfo::Validate() const {
           << "RenderPass depth-stencil attachment load/clear conflict.";
     }
 
-    // Cannot load or store transient image attachements.
+    // Cannot load or store transient image attachments.
     if (depth_stencil_attachment->image()->is_transient()) {
       if (op_flags & kLoadDepthStencilOp) {
         success = false;

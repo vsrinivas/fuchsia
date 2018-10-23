@@ -145,7 +145,7 @@ class CommandBuffer : public Reffable {
       vk::DeviceSize stride,
       vk::VertexInputRate step_rate = vk::VertexInputRate::eVertex);
   // These two variants keep |buffer| alive while the command buffer is pending;
-  // the one above makes this the responsiblity of the caller.
+  // the one above makes this the responsibility of the caller.
   void BindVertices(
       uint32_t binding, Buffer* buffer, vk::DeviceSize offset,
       vk::DeviceSize stride,
@@ -430,7 +430,7 @@ class CommandBuffer : public Reffable {
                         const impl::DescriptorSetLayout& set_layout);
 
   // Called when there is the possibility that a pipeline change may be
-  // required.  A hash is generated from the currenty-enabled vertex attributes
+  // required.  A hash is generated from the currently-enabled vertex attributes
   // (i.e. those that are used by the current pipeline layout), as well as the
   // current subpass index, and other "static" state.  This hash is used to
   // look up a cached pipeline.  If no pipeline is available, then a new one is

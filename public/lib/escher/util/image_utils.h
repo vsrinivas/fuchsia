@@ -49,7 +49,7 @@ std::pair<bool, bool> IsDepthStencilFormat(vk::Format format);
 vk::ImageAspectFlags FormatToColorOrDepthStencilAspectFlags(vk::Format format);
 
 // Helper function that creates a VkImage given the parameters in ImageInfo.
-// This does not bind the the VkImage to memory; the caller must do that
+// This does not bind the VkImage to memory; the caller must do that
 // separately after calling this function.
 vk::Image CreateVkImage(const vk::Device& device, ImageInfo info);
 
@@ -84,7 +84,7 @@ ImagePtr NewImage(ImageFactory* image_factory, vk::Format format,
 // If the format of |pixels| is different from |gpu_image|, a conversion
 // function that can convert from |pixels| to |gpu_image| should be
 // provided as |convertion_func|.
-// Note that all echer images are stored in GPU memory.  The use of gpu_image
+// Note that all escher images are stored in GPU memory.  The use of gpu_image
 // here is to specifically differentiate it from pixels, which may be stored in
 // host_memory.
 void WritePixelsToImage(impl::GpuUploader* gpu_uploader, uint8_t* pixels,

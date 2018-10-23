@@ -73,7 +73,7 @@ class Bitmap {
   uint32_t bits_size_ = 0;
 };
 
-// An implmentation of Bitmap that manages its own storage.
+// An implementation of Bitmap that manages its own storage.
 class BitmapWithStorage : public Bitmap {
  public:
   BitmapWithStorage() : Bitmap(nullptr, 0) {}

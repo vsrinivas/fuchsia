@@ -27,7 +27,7 @@ struct PaperRendererConfig;
 // that is invoked by PaperRenderer2::Draw().  Clients may use pre-existing
 // implementations of PaperDrawable, or roll their own.
 //
-// Currently, PaperLegacyDrawable is the the only standard implementation of
+// Currently, PaperLegacyDrawable is the only standard implementation of
 // PaperDrawable.  It allows PaperRenderer2 to draw "legacy" escher::Objects.
 class PaperDrawable;
 class PaperLegacyDrawable;

@@ -202,7 +202,7 @@ std::vector<UniformBinding> PaperDrawCallFactory::BeginFrame(
   // The camera points down the negative-Z axis, so its world-space direction
   // can be obtained by applying the camera transform to the direction vector
   // [0, 0, -1, 0] (remembering that directions vectors have a w-coord of 0, vs.
-  // 1 for postion vectors).  This is equivalent to taking the negated third
+  // 1 for position vectors).  This is equivalent to taking the negated third
   // column of the transform.
   camera_dir_ = -vec3(glm::column(camera.transform(), 2));
 

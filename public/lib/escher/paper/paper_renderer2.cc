@@ -305,7 +305,7 @@ void PaperRenderer2::InitRenderPassInfo(RenderPassInfo* rp) {
     if (msaa_texture) {
       FXL_DCHECK(rp->num_color_attachments == 1 && rp->clear_attachments == 1u);
       // Move the output image to attachment #1, so that attachment #0 is always
-      // the attachment that we render indo.
+      // the attachment that we render into.
       rp->color_attachments[kResolveTargetAttachmentIndex] =
           std::move(rp->color_attachments[kRenderTargetAttachmentIndex]);
       rp->color_attachments[kRenderTargetAttachmentIndex] = msaa_texture;

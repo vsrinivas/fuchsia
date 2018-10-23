@@ -40,7 +40,7 @@ class Ownable : public TypedReffable<TypeInfoT> {
 
   // If |owner| is null, returns true so that the Ownable is immediately
   // destroyed.  Otherwise, returns false; destruction of the Ownable is now
-  // the responsiblity of the |owner_|, which is notified via ReceiveOwnable().
+  // the responsibility of the |owner_|, which is notified via ReceiveOwnable().
   bool OnZeroRefCount() final override {
     if (owner_) {
       // FXL_DCHECK(this->IsKindOf<OwnableT>());

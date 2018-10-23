@@ -82,7 +82,7 @@ class GpuUploader : public ResourceRecycler {
 
   vk::Device device_;
 
-  // Use the queue transfer-specfic queue if available, otherwise the default
+  // Use the queue transfer-specific queue if available, otherwise the default
   // queue.
   vk::Queue queue_;
 

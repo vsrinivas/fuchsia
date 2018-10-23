@@ -14,7 +14,7 @@ namespace escher {
 // |PaperDrawable| is an abstract drawable object which can be rendered by
 // |PaperRenderer2|, or anything that passes the right args to |DrawInScene()|.
 //
-// There are three levels of sophstication for users of |PaperDrawable|:
+// There are three levels of sophistication for users of |PaperDrawable|:
 // 1) Use pre-existing subclasses of |PaperDrawable|.
 // 2) Implement new subclass of |PaperDrawable| using the existing functionality
 //    provided by arguments to |DrawInScene()|.

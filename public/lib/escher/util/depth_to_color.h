@@ -12,7 +12,7 @@ namespace escher {
 
 // Utility that uses a compute shader to transform a depth image to a color
 // image.  One common use-case is for debugging, since Vulkan does not support
-// directly bliting a depth image into a color image.
+// directly blitting a depth image into a color image.
 class DepthToColor {
  public:
   DepthToColor(EscherWeakPtr escher, ImageFactory* image_factory);
