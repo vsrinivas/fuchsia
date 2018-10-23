@@ -1,4 +1,4 @@
-use failure::{bail, ensure};
+use failure::ensure;
 use std::collections::HashMap;
 use wlan_rsn::Authenticator;
 

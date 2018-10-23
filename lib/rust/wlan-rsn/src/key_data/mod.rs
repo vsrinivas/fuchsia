@@ -7,7 +7,7 @@ pub mod kde;
 use bytes::BufMut;
 use crate::rsne;
 use crate::Error;
-use failure::{self, bail, ensure};
+use failure::{self, ensure};
 use nom::IResult::{Done, Incomplete};
 use nom::{call, error_position, many0, named, take, try_parse};
 use nom::{IResult, Needed};

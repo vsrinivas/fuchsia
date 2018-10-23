@@ -5,7 +5,7 @@
 use crate::cipher::Cipher;
 use crate::crypto_utils::prf;
 use crate::Error;
-use failure::{self, bail, ensure};
+use failure::{self, ensure};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Gtk {

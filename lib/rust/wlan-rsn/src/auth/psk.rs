@@ -6,7 +6,7 @@ use crate::Error;
 use crypto::hmac::Hmac;
 use crypto::pbkdf2;
 use crypto::sha1::Sha1;
-use failure::{self, bail, ensure};
+use failure::{self, ensure};
 
 /// Keys derived from a passphrase provide comparably low levels of security.
 /// Passphrases should have a minimum length of 20 characters since shorter passphrases

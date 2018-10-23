@@ -4,7 +4,7 @@
 
 use bytes::Bytes;
 use crate::Error;
-use failure::{self, bail, ensure};
+use failure::{self, ensure};
 
 pub type Pmkid = Bytes;
 

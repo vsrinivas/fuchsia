@@ -6,7 +6,7 @@ pub mod nonce;
 
 // Used in PRF as specified in IEEE Std 802.11-2016, 12.7.1.2.
 use crate::Error;
-use failure::{self, bail, ensure};
+use failure::{self, ensure};
 use mundane::hash::Digest;
 #[allow(deprecated)]
 use mundane::insecure::InsecureHmacSha1;

@@ -5,7 +5,7 @@
 use bytes::Bytes;
 use crate::suite_selector;
 use crate::Error;
-use failure::{self, bail, ensure};
+use failure::{self, ensure};
 use std::fmt;
 
 macro_rules! return_none_if_unknown_usage {

@@ -6,7 +6,7 @@ use crate::akm::Akm;
 use crate::cipher::Cipher;
 use crate::crypto_utils::prf;
 use crate::Error;
-use failure::{self, bail, ensure};
+use failure::{self, ensure};
 use std::cmp::{max, min};
 
 /// A PTK is derived from a PMK and provides access to the PTK's key-hierarchy which yields a KEK,
