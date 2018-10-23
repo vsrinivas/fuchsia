@@ -33,7 +33,7 @@ namespace {
 // would give uv_horizontal_bits_per_pixel = 4 (8 bits for U and 8 for V for every 2 pixels), and
 // a uv_vertical_subsample = 2, to indicate that those 8 bits actually correspond to a set
 // of 4 pixels.
-// |buffer_size| is set to the total (maximum) image size, rounded up to the nearest page boundry.
+// |buffer_size| is set to the total (maximum) image size, rounded up to the nearest page boundary.
 void SetImagePlaneInfoPlanarYuv(fuchsia_sysmem_ImageFormat* format,
                                 size_t* buffer_size, uint32_t y_bits_per_pixel,
                                 uint32_t uv_horizontal_bits_per_pixel,
@@ -62,7 +62,7 @@ void SetImagePlaneInfoPlanarYuv(fuchsia_sysmem_ImageFormat* format,
 // The width and height fields of |format| must be valid before calling
 // this function.
 // |format|->layers and |format|->planes will be set.
-// |buffer_size| is set to the total (maximum) image buffer size, rounded up to the nearest page boundry.
+// |buffer_size| is set to the total (maximum) image buffer size, rounded up to the nearest page boundary.
 void SetImagePlaneInfoPacked(fuchsia_sysmem_ImageFormat* format,
                              size_t* buffer_size, uint32_t bits_per_pixel) {
     format->planes[0].bytes_per_row = (format->width * bits_per_pixel) / 8;
@@ -94,7 +94,7 @@ zx_status_t PickImageFormat(const fuchsia_sysmem_BufferSpec& spec,
     case fuchsia_sysmem_PixelFormatType_NV12:
         SetImagePlaneInfoPlanarYuv(format, buffer_size, 8, 4, 2, true, false);
         break;
-    // I420 has an NxN Y plane and seperate (N/2)x(N/2) U and V planes.
+    // I420 has an NxN Y plane and separate (N/2)x(N/2) U and V planes.
     case fuchsia_sysmem_PixelFormatType_I420:
         SetImagePlaneInfoPlanarYuv(format, buffer_size, 8, 4, 2, false, false);
         break;
