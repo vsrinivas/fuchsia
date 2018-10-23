@@ -14,7 +14,7 @@ import("//build/images/manifest.gni")
 import("//build/package.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/sdk/sdk_molecule.gni")
-import("//garnet/go/src/amber/amber.gni")
+import("//garnet/go/src/pm/pm.gni")
 
 declare_args() {
   # Groups to include from the Zircon /boot manifest into /boot.
@@ -1412,7 +1412,7 @@ action("amber_publish_blobs") {
 }
 
 # Sign and publish the package index.
-amber_publish("amber_publish_index") {
+pm_publish("amber_publish_index") {
   testonly = true
   deps = [
     ":amber_index",
