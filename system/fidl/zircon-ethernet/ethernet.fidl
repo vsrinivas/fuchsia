@@ -115,10 +115,10 @@ interface Device {
 // - none -
 
 // flags values for response messages
-const uint32 FIFO_RX_OK = 0x00000001; // packet received okay
-const uint32 FIFO_TX_OK = 0x00000001; // packet transmitted okay
-const uint32 FIFO_INVALID = 0x00000002; // offset+length not within io_vmo bounds
-const uint32 FIFO_RX_TX = 0x00000004; // received our own tx packet (when Listen enabled)
+const uint16 FIFO_RX_OK   = 0x00000001; // packet received okay
+const uint16 FIFO_TX_OK   = 0x00000001; // packet transmitted okay
+const uint16 FIFO_INVALID = 0x00000002; // offset+length not within io_vmo bounds
+const uint16 FIFO_RX_TX   = 0x00000004; // received our own tx packet (when Listen enabled)
 
 struct FifoEntry {
     // offset from start of io vmo to packet data
