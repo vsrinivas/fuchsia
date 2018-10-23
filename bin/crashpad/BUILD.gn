@@ -9,10 +9,10 @@ executable("bin") {
 
   deps = [
     ":crashpad_analyzer_impl",
-    "//zircon/public/fidl/fuchsia-crash",
-    "//zircon/public/lib/async-loop-cpp",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/syslog/cpp",
+    "//zircon/public/fidl/fuchsia-crash",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 
   sources = [
@@ -51,13 +51,26 @@ source_set("crashpad_analyzer_impl") {
   ]
 
   deps = [
+    ":report_annotations",
     "//garnet/public/lib/syslog/cpp",
     "//third_party/crashpad/handler",
     "//third_party/crashpad/minidump",
     "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
-    "//zircon/public/fidl/zircon-sysinfo:zircon-sysinfo_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
   ]
 }
 
+source_set("report_annotations") {
+  sources = [
+    "report_annotations.cc",
+    "report_annotations.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/syslog/cpp",
+    "//zircon/public/fidl/zircon-sysinfo:zircon-sysinfo_c",
+    "//zircon/public/lib/zx",
+  ]
+}

@@ -4,19 +4,18 @@
 
 #include "crashpad_analyzer_impl.h"
 
+#include <map>
 #include <string>
 #include <utility>
 
 #include <fbl/type_support.h>
 #include <fuchsia/crash/cpp/fidl.h>
 #include <lib/fdio/io.h>
-#include <lib/fdio/util.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/files/path.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/concatenate.h>
-#include <lib/fxl/strings/trim.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/log.h>
 #include <lib/zx/time.h>
@@ -39,12 +38,12 @@
 #include <third_party/crashpad/util/net/http_multipart_builder.h>
 #include <third_party/crashpad/util/net/http_transport.h>
 #include <third_party/crashpad/util/net/url.h>
-#include <zircon/boot/image.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/object.h>
-#include <zircon/sysinfo/c/fidl.h>
+
+#include "report_annotations.h"
 
 namespace fuchsia {
 namespace crash {
@@ -118,66 +117,12 @@ std::string WriteKernelLogToFile() {
   return filename;
 }
 
-std::string GetVersion() {
-  const char kFilepath[] = "/system/data/build/last-update";
-  std::string build_timestamp;
-  if (!files::ReadFileToString(kFilepath, &build_timestamp)) {
-    FX_LOGS(ERROR) << "Failed to read build timestamp from '" << kFilepath
-                   << "'.";
-    return "unknown";
-  }
-  return fxl::TrimString(build_timestamp, "\r\n").ToString();
-}
-
 std::string GetPackageName(const zx::process& process) {
   char name[ZX_MAX_NAME_LEN];
   if (process.get_property(ZX_PROP_NAME, name, sizeof(name)) == ZX_OK) {
     return std::string(name);
   }
   return std::string("unknown-package");
-}
-
-std::string GetBoardName() {
-  const char kSysInfoPath[] = "/dev/misc/sysinfo";
-  const int fd = open(kSysInfoPath, O_RDWR);
-  if (fd < 0) {
-    FX_LOGS(ERROR) << "failed to open " << kSysInfoPath;
-    return "unknown";
-  }
-
-  zx::channel channel;
-  zx_status_t status =
-      fdio_get_service_handle(fd, channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to get board name";
-    return "unknown";
-  }
-
-  char board_name[ZBI_BOARD_NAME_LEN];
-  size_t actual_size;
-  zx_status_t fidl_status = zircon_sysinfo_DeviceGetBoardName(
-      channel.get(), &status, board_name, sizeof(board_name), &actual_size);
-  if (fidl_status != ZX_OK || status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to get board name";
-    return "unknown";
-  }
-  return std::string(board_name);
-}
-
-// Most annotations are shared between userspace and kernel crashes.
-// Add additional arguments to this function for values that differ between the
-// two, e.g., the package name can be extracted from the crashing process in
-// userspace, but it's just "kernel" in kernel space.
-std::map<std::string, std::string> GetAnnotations(
-    const std::string& package_name) {
-  return {
-      {"product", "Fuchsia"},
-      {"version", GetVersion()},
-      // We use ptype to benefit from Chrome's "Process type" handling in
-      // the UI.
-      {"ptype", package_name},
-      {"board_name", GetBoardName()},
-  };
 }
 
 }  // namespace
@@ -252,7 +197,7 @@ int CrashpadAnalyzerImpl::HandleException(zx::process process,
 
   // Prepare annotations and attachments.
   const std::map<std::string, std::string> annotations =
-      GetAnnotations(package_name);
+      MakeAnnotations(package_name);
   std::map<std::string, base::FilePath> attachments;
   ScopedUnlink temp_kernel_log_file(WriteKernelLogToFile());
   if (temp_kernel_log_file.is_valid()) {
@@ -332,7 +277,7 @@ int CrashpadAnalyzerImpl::ProcessCrashlog(fuchsia::mem::Buffer crashlog) {
 
   // Prepare annotations and attachments.
   const std::map<std::string, std::string> annotations =
-      GetAnnotations(/*package_name=*/"kernel");
+      MakeAnnotations(/*package_name=*/"kernel");
   crashpad::FileWriter* writer = report->AddAttachment("log");
   if (!writer) {
     return EXIT_FAILURE;
