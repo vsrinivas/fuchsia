@@ -453,7 +453,9 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   user_intelligence_provider_impl_.reset(new UserIntelligenceProviderImpl(
       startup_context_, std::move(context_engine), std::move(story_provider),
       std::move(focus_provider_maxwell), std::move(visible_stories_provider),
-      std::move(puppet_master),
+      [this](fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
+        focus_handler_->AddProviderBinding(std::move(request));
+      },
       [this](fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
         puppet_master_impl_->Connect(std::move(request));
       }));

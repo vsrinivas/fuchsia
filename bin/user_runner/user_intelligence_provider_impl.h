@@ -29,16 +29,18 @@ class UserIntelligenceProviderImpl
           context_engine_handle,
       fidl::InterfaceHandle<fuchsia::modular::StoryProvider>
           story_provider_handle,
+      // TODO(MI4-1357) remove
       fidl::InterfaceHandle<fuchsia::modular::FocusProvider>
           focus_provider_handle,
       fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
           visible_stories_provider_handle,
-      // TODO(MI4-1357): remove.
-      fidl::InterfaceHandle<fuchsia::modular::PuppetMaster>
-          puppet_master_handle,
+      fit::function<
+          void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
+          focus_provider_connector,
       fit::function<
           void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
           puppet_master_connector);
+
   ~UserIntelligenceProviderImpl() override = default;
 
   void GetComponentIntelligenceServices(
@@ -93,7 +95,7 @@ class UserIntelligenceProviderImpl
   // A ServiceProviderInitializer that adds standard agent services, including
   // attributed context and suggestion service entry points. Returns the names
   // of the services added.
-  fidl::VectorPtr<fidl::StringPtr> AddStandardServices(
+  fidl::VectorPtr<fidl::StringPtr> AddAgentServices(
       const std::string& url, component::ServiceNamespace* agent_host);
 
   // Starts suggestion engine.
@@ -121,9 +123,11 @@ class UserIntelligenceProviderImpl
   fidl::InterfacePtr<fuchsia::modular::ComponentContext> component_context_;
   fidl::InterfacePtr<fuchsia::modular::StoryProvider> story_provider_;
   fidl::InterfacePtr<fuchsia::modular::FocusProvider> focus_provider_;
-  fidl::InterfacePtr<fuchsia::modular::PuppetMaster> puppet_master_;
   fidl::InterfacePtr<fuchsia::modular::VisibleStoriesProvider>
       visible_stories_provider_;
+
+  fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
+      focus_provider_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
       puppet_master_connector_;
 

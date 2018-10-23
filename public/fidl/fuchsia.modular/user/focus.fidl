@@ -19,84 +19,82 @@ library fuchsia.modular;
 // user runner to stop / pause stories that are not visible to the
 // user.
 
-// Implemented by user runner. Given to user shell in UserShell.Initialize().
+// Implemented by user runner. Given to user shell through its namespace.
 interface FocusController {
-  // Sets the focus on this device.
-  1: Set(string? focused_story_id);
-  2: WatchRequest(FocusRequestWatcher watcher);
+    // Sets the focus on this device.
+    1: Set(string? focused_story_id);
+    2: WatchRequest(FocusRequestWatcher watcher);
 };
 
 // Implemented by user shell. OnFocusRequest() gets called whenever there
 // is a new request to change focus on this device. Requests can be
 // made via FocusProvider.Request().
 interface FocusRequestWatcher {
-  1: OnFocusRequest(string story_id);
+    1: OnFocusRequest(string story_id);
 };
 
-// Implemented by user runner. Given to user shell in
-// UserShell.Initialize() and to Maxwell in
-// maxwell.Launcher.Initialize(). Focus is persisted on the ledger.
+// Implemented by user runner. Given to user shell and session agents through
+// their namespace. Focus is persisted on the ledger.
+[Discoverable]
 interface FocusProvider {
- // Returns the stories that are focused across all devices.
- 1: Query() -> (vector<FocusInfo> focused_stories);
+    // Returns the stories that are focused across all devices.
+    1: Query() -> (vector<FocusInfo> focused_stories);
 
- // Watches for change in focus on any of the user's devices.
- 2: Watch(FocusWatcher watcher);
+    // Watches for change in focus on any of the user's devices.
+    2: Watch(FocusWatcher watcher);
 
- // Requests user shell to change focus on this device. If user shell
- // responds to this request, focus shall be taken away from
- // previously focused story and an update will be sent on
- // FocusWatcher.OnFocusChange(). If |story_id| is NULL, the timeline
- // is brought back into focus.
- //
- // TODO(alhaad): Consider making this available for remote devices as
- // well.
- 3: Request(string? story_id);
+    // Requests user shell to change focus on this device. If user shell
+    // responds to this request, focus shall be taken away from
+    // previously focused story and an update will be sent on
+    // FocusWatcher.OnFocusChange(). If |story_id| is NULL, the timeline
+    // is brought back into focus.
+    //
+    // TODO(alhaad): Consider making this available for remote devices as
+    // well.
+    3: Request(string? story_id);
 
- 4: Duplicate(request<FocusProvider> provider);
+    4: Duplicate(request<FocusProvider> provider);
 };
 
 // Implemented by anyone who is interested in getting updates when focus
 // changes.
 interface FocusWatcher {
-  1: OnFocusChange(FocusInfo? focus_info);
+    1: OnFocusChange(FocusInfo? focus_info);
 };
 
 // Specifies the focused story of a device.
 struct FocusInfo {
-  // The id of the device.
-  string device_id;
+    // The id of the device.
+    string device_id;
 
-  // The id of the focused story.  If null, no stories are focused.
-  string? focused_story_id;
+    // The id of the focused story.  If null, no stories are focused.
+    string? focused_story_id;
 
-  // The time the focused story on the device |device_id| was last
-  // changed. 0 if no focus has ever been set for device |device_id|.
-  uint64 last_focus_change_timestamp;
+    // The time the focused story on the device |device_id| was last
+    // changed. 0 if no focus has ever been set for device |device_id|.
+    uint64 last_focus_change_timestamp;
 };
 
-// Implemented by user runner. Given to user shell in
-// UserShell.Initialize().
+// Implemented by user runner. Given to user shell through its namespace.
 interface VisibleStoriesController {
-  1: Set(vector<string>? visible_story_ids);
+    1: Set(vector<string>? visible_story_ids);
 };
 
-// Implemented by user runner. Given to Maxwell in
-// maxwell.Launcher.Initialize(). Visible stories are NOT stored on
-// the ledger.
-[Discoverable]  // Maxwell apps request this from environment.
+// Implemented by user runner. Given to story info through its namespace.
+// Visible stories are NOT stored on the ledger.
+[Discoverable] // Maxwell apps request this from environment.
 interface VisibleStoriesProvider {
-  // Returns the |story_ids| that are currently visible.
-  1: Query() -> (vector<string> story_id);
+    // Returns the |story_ids| that are currently visible.
+    1: Query() -> (vector<string> story_id);
 
-  // Watches for change in visible stories on this device.
-  2: Watch(VisibleStoriesWatcher watcher);
+    // Watches for change in visible stories on this device.
+    2: Watch(VisibleStoriesWatcher watcher);
 
-  3: Duplicate(request<VisibleStoriesProvider> provider);
+    3: Duplicate(request<VisibleStoriesProvider> provider);
 };
 
 // Implemented by anyone (maxwell) who is interested in getting updates when
 // stories that are currently visible change.
 interface VisibleStoriesWatcher {
-  1: OnVisibleStoriesChange(vector<string>? visible_story_ids);
+    1: OnVisibleStoriesChange(vector<string>? visible_story_ids);
 };

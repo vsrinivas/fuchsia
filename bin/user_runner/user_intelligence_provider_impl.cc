@@ -91,15 +91,16 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
         focus_provider_handle,
     fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
         visible_stories_provider_handle,
-    fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master_handle,
+    fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
+        focus_provider_connector,
     fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
         puppet_master_connector)
     : context_(context),
+      focus_provider_connector_(std::move(focus_provider_connector)),
       puppet_master_connector_(std::move(puppet_master_connector)) {
   context_engine_.Bind(std::move(context_engine_handle));
   story_provider_.Bind(std::move(story_provider_handle));
   focus_provider_.Bind(std::move(focus_provider_handle));
-  puppet_master_.Bind(std::move(puppet_master_handle));
   visible_stories_provider_.Bind(std::move(visible_stories_provider_handle));
 
   // Start dependent processes. We get some component-scope services from
@@ -160,7 +161,8 @@ void UserIntelligenceProviderImpl::GetServicesForAgent(
     fidl::StringPtr url, GetServicesForAgentCallback callback) {
   fuchsia::sys::ServiceList service_list;
   agent_namespaces_.emplace_back(service_list.provider.NewRequest());
-  service_list.names = AddStandardServices(url, &agent_namespaces_.back());
+  auto* agent_host = &agent_namespaces_.back();
+  service_list.names = AddAgentServices(url, agent_host);
   callback(std::move(service_list));
 }
 
@@ -213,12 +215,6 @@ void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
   component_context_->ConnectToAgent(url, agent_data->services.NewRequest(),
                                      agent_data->controller.NewRequest());
 
-  fuchsia::modular::SessionAgentInitializerPtr initializer;
-  component::ConnectToService(agent_data->services.get(),
-                              initializer.NewRequest());
-  initializer->Initialize(Duplicate(focus_provider_),
-                          Duplicate(puppet_master_));
-
   // complete any pending connection requests
   for (auto& request : agent_data->pending_service_requests) {
     agent_data->services->ConnectToService(request.name,
@@ -268,8 +264,7 @@ void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
   });
 }
 
-fidl::VectorPtr<fidl::StringPtr>
-UserIntelligenceProviderImpl::AddStandardServices(
+fidl::VectorPtr<fidl::StringPtr> UserIntelligenceProviderImpl::AddAgentServices(
     const std::string& url, component::ServiceNamespace* agent_host) {
   fuchsia::modular::ComponentScope agent_info;
   fuchsia::modular::AgentScope agent_scope;
@@ -327,6 +322,22 @@ UserIntelligenceProviderImpl::AddStandardServices(
         [this](
             fidl::InterfaceRequest<fuchsia::modular::SuggestionDebug> request) {
           suggestion_services_.ConnectToService(std::move(request));
+        });
+  }
+
+  if (session_agents_.find(url) != session_agents_.end()) {
+    // All services added below should be exclusive to session agents.
+    service_names.push_back(fuchsia::modular::PuppetMaster::Name_);
+    agent_host->AddService<fuchsia::modular::PuppetMaster>(
+        [this](fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
+          puppet_master_connector_(std::move(request));
+        });
+
+    service_names.push_back(fuchsia::modular::FocusProvider::Name_);
+    agent_host->AddService<fuchsia::modular::FocusProvider>(
+        [this,
+         url](fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
+          focus_provider_connector_(std::move(request));
         });
   }
 
