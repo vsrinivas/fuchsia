@@ -9,9 +9,10 @@
 
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/client/setting_schema.h"
+#include "garnet/bin/zxdb/client/setting_store_observer.h"
 #include "garnet/bin/zxdb/client/setting_value.h"
-
 #include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/observer_list.h"
 
 namespace zxdb {
 
@@ -42,6 +43,9 @@ class SettingStore {
 
   void set_fallback(SettingStore* fallback) { fallback_ = fallback; }
 
+  void AddObserver(const std::string& setting_name, SettingStoreObserver*);
+  void RemoveObserver(const std::string& setting_name, SettingStoreObserver*);
+
   Level level() const { return level_; }
 
   Err SetBool(const std::string& key, bool);
@@ -68,6 +72,11 @@ class SettingStore {
                            bool return_default = true) const;
   std::map<std::string, StoredSetting> GetSettings() const;
 
+ protected:
+  std::map<std::string, fxl::ObserverList<SettingStoreObserver>>& observers() {
+    return observer_map_;
+  }
+
  private:
   // Actual function that traverses the path and creates the intermediate
   // nodes. |add_value_fn| is called to add the correct value to the newly
@@ -79,16 +88,20 @@ class SettingStore {
   template <typename T>
   Err SetSetting(const std::string& key, T t);
 
+  void NotifySettingChanged(const std::string& setting_name) const;
+
   // Should always exist. All settings are validated against this.
   fxl::RefPtr<SettingSchema> schema_;
 
   // SettingStore this store lookup settings when it cannot find them locally.
   // Can be null. If set, should outlive |this|.
   SettingStore* fallback_;
-
   Level level_;
-
   std::map<std::string, SettingValue> settings_;
+
+  std::map<std::string, fxl::ObserverList<SettingStoreObserver>> observer_map_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(SettingStore);
 };
 
 // Represents a value of a setting with some metadata associated to it so

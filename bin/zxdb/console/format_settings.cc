@@ -46,21 +46,18 @@ std::vector<std::string> ListToBullet(const std::vector<std::string>& list) {
   return output;
 }
 
-OutputBuffer FormatSetting(const StoredSetting&) {
-  // TODO(donosoc): Do the in detail setting formatting.
-  FXL_NOTREACHED() << "NOT IMPLEMENTED";
-  return OutputBuffer();
-}
-
+// |add_heading| refers whether it should show the setting name or just list the
+// values.
 void AddSettingToTable(const StoredSetting& setting,
-                       std::vector<std::vector<OutputBuffer>>* rows) {
+                       std::vector<std::vector<OutputBuffer>>* rows,
+                       bool add_heading = true) {
   // TODO(donosoc): We need to check what level the setting comes from so we can
   //                highlight it in the listing.
-
   if (!setting.value.is_list()) {
     // Normal values as just entered as key-value pairs.
     auto& row = rows->emplace_back();
-    row.emplace_back(setting.schema_item.name());
+    if (add_heading)
+      row.emplace_back(setting.schema_item.name());
     row.emplace_back(SettingValueToString(setting.value));
   } else {
     // List get special treatment so that we can show them as bullet lists.
@@ -70,20 +67,51 @@ void AddSettingToTable(const StoredSetting& setting,
     // Special case for empty list.
     if (bullet_list.empty()) {
       auto& row = rows->emplace_back();
-      row.emplace_back(setting.schema_item.name());
+      if (add_heading)
+        row.emplace_back(setting.schema_item.name());
       row.emplace_back("<empty>");
     } else {
       for (size_t i = 0; i < bullet_list.size(); i++) {
         auto& row = rows->emplace_back();
 
-        // The first entry has the setting name.
-        auto title = i == 0 ? OutputBuffer(setting.schema_item.name())
-                            : OutputBuffer();
-        auto it = row.emplace_back(std::move(title));
+        if (add_heading) {
+          // The first entry has the setting name.
+          auto title = i == 0 ? OutputBuffer(setting.schema_item.name())
+                              : OutputBuffer();
+          auto it = row.emplace_back(std::move(title));
+        }
         row.emplace_back(std::move(bullet_list[i]));
       }
     }
   }
+}
+
+OutputBuffer FormatSetting(const StoredSetting& setting) {
+  OutputBuffer out;
+  out.Append({Syntax::kHeading, setting.schema_item.name()});
+  out.Append(OutputBuffer("\n"));
+
+  out.Append(setting.schema_item.description());
+  out.Append(OutputBuffer("\n\n"));
+
+  out.Append({Syntax::kHeading, "Value(s):\n"});
+  OutputBuffer item_out;
+  std::vector<std::vector<OutputBuffer>> rows;
+  AddSettingToTable(setting, &rows, false);
+  FormatTable(std::vector<ColSpec>{1}, std::move(rows), &item_out);
+  out.Append(std::move(item_out));
+
+  // List have a copy-paste value for setting the value.
+  if (setting.value.is_list()) {
+    out.Append("\n");
+    out.Append({Syntax::kComment,
+                "See \"help set\" about using the set value for lists.\n"});
+    out.Append(fxl::StringPrintf("Set value: %s",
+                                 SettingValueToString(setting.value).data()));
+    out.Append("\n");
+  }
+
+  return out;
 }
 
 }  // namespace
@@ -107,7 +135,11 @@ Err FormatSettings(const SettingStore& store, const std::string& setting_name,
   for (auto& [key, setting] : store.GetSettings())
     AddSettingToTable(setting, &rows);
 
-  FormatTable(std::vector<ColSpec>(2), std::move(rows), out);
+  OutputBuffer list_out;
+  FormatTable(std::vector<ColSpec>(2), std::move(rows), &list_out);
+  out->Append({Syntax::kComment,
+               "Run get <option> to see detailed information.\n"});
+  out->Append(std::move(list_out));
   return Err();
 }
 

@@ -27,6 +27,26 @@ SettingStore::SettingStore(SettingStore::Level level,
                            SettingStore* fallback)
     : schema_(std::move(schema)), fallback_(fallback), level_(level) {}
 
+void SettingStore::AddObserver(const std::string& setting_name,
+                               SettingStoreObserver* observer) {
+  observer_map_[setting_name].AddObserver(observer);
+}
+
+void SettingStore::RemoveObserver(const std::string& setting_name,
+                                  SettingStoreObserver* observer) {
+  observer_map_[setting_name].RemoveObserver(observer);
+}
+
+void SettingStore::NotifySettingChanged(const std::string& setting_name) const {
+  for (const auto& [key, observers] : observer_map_) {
+    if (key != setting_name)
+      continue;
+
+    for (auto& observer : observers)
+      observer.SettingChanged(*this, setting_name);
+  }
+}
+
 // Getters ---------------------------------------------------------------------
 
 bool SettingStore::GetBool(const std::string& key) const {
@@ -122,8 +142,10 @@ Err SettingStore::SetSetting(const std::string& key, T t) {
   if (err.has_error())
     return err;
 
-  // We can safely insert or override.
+  // We can safely insert or override and notify observers.
   settings_[key] = SettingValue(std::move(t));
+  NotifySettingChanged(key);
+
   return Err();
 }
 

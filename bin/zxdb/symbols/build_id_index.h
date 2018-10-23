@@ -62,6 +62,11 @@ class BuildIDIndex {
   // Returns the number of items loaded.
   static int ParseIDs(const std::string& input, IDMap* output);
 
+  const std::vector<std::string>& build_id_files() const {
+    return build_id_files_;
+  }
+  const std::vector<std::string>& sources() const { return sources_; }
+
  private:
   // Updates the build_id_to_file_ cache if necessary.
   void EnsureCacheClean();

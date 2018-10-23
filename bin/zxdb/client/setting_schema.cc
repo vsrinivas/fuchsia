@@ -86,9 +86,10 @@ Err SettingSchema::ValidateSetting(const std::string& key,
 
   auto& schema_item = it->second;
   if (schema_item.type() != value.type())
-    return Err("Setting \"%s\" expects a different type (%s vs %s given)",
-               key.data(), SettingTypeToString(value.type()),
-               SettingTypeToString(schema_item.type()));
+    return Err(
+        "Setting \"%s\" expects a different type (expected: %s, given: %s)",
+        key.data(), SettingTypeToString(value.type()),
+        SettingTypeToString(schema_item.type()));
 
   if (value.is_string() &&
       !StringWithinOptions(value.GetString(), schema_item.valid_values()))

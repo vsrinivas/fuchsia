@@ -4,7 +4,7 @@
 
 #include "garnet/bin/zxdb/client/system.h"
 
-#include "garnet/bin/zxdb/client/setting_schema.h"
+#include "garnet/bin/zxdb/client/setting_schema_definition.h"
 
 namespace zxdb {
 
@@ -22,8 +22,7 @@ void System::RemoveObserver(SystemObserver* observer) {
 }
 
 fxl::RefPtr<SettingSchema> System::GetSchema() {
-  // TODO(donosoc): Fill in the target schema.
-  static auto schema = fxl::MakeRefCounted<SettingSchema>();
+  static auto schema = CreateSystemSchema();
   return schema;
 }
 

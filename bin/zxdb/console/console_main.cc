@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/console/console_main.h"
 
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/setting_schema_definition.h"
 #include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/bin/zxdb/console/actions.h"
 #include "garnet/bin/zxdb/console/command_line_options.h"
@@ -104,14 +105,27 @@ int ConsoleMain(int argc, const char* argv[]) {
     Console console(&session);
 
     // Save command-line switches.
+    BuildIDIndex& build_id_index =
+        session.system().GetSymbols()->build_id_index();
     for (const auto& path : options.symbol_paths) {
       if (StringEndsWith(path, ".txt")) {
-        session.system().GetSymbols()->build_id_index().AddBuildIDMappingFile(
-            path);
+        build_id_index.AddBuildIDMappingFile(path);
       } else {
-        session.system().GetSymbols()->build_id_index().AddSymbolSource(path);
+        build_id_index.AddSymbolSource(path);
       }
     }
+
+    // At this moment, the build index has all the "default" paths.
+    auto paths =
+        session.system().settings().GetList(ClientSettings::kSymbolPaths);
+    for (const auto& build_id_file : build_id_index.build_id_files())
+      paths.push_back(build_id_file);
+    for (const auto& source : build_id_index.sources())
+      paths.push_back(source);
+    session.system().settings().SetList(ClientSettings::kSymbolPaths,
+                                        std::move(paths));
+    // TODO(donosoc): Hook-up the build ID index to use observe the symbol paths
+    //                setting.
 
     if (!actions.empty()) {
       ScheduleActions(session, console, std::move(actions));

@@ -15,65 +15,72 @@ namespace zxdb {
 fxl::RefPtr<SettingSchema> GetSchema() {
   auto schema = fxl::MakeRefCounted<SettingSchema>();
 
-  schema->AddBool("thread-bool", "Thread bool description");
-  schema->AddBool("thread-bool2", "Thread bool description", true);
+  schema->AddBool("setting-bool", "Setting bool description");
+  schema->AddBool("setting-bool2", "Setting bool description", true);
 
-  schema->AddInt("thread-int", "Thread int description");
-  schema->AddInt("thread-int2", "Thread int description", 12334);
+  schema->AddInt("setting-int", "Setting int description");
+  schema->AddInt("setting-int2", "Setting int description", 12334);
 
-  schema->AddString("thread-string", "Thread string description");
-  schema->AddString("thread-string2", "Thread string description",
+  schema->AddString("setting-string", "Setting string description");
+  schema->AddString("setting-string2", R"(
+  Setting string description,
+  with many lines.)",
                     "Test string");
 
-  schema->AddList("thread-list", "Thread list description");
-  schema->AddList("thread-list2", "Thread list description",
+  schema->AddList("setting-list", "Setting list description");
+  schema->AddList("setting-list2", R"(
+  Some very long description about how this setting is very important to the
+  company and all its customers.)",
                   {"first", "second", "third"});
 
   return schema;
 }
 
-TEST(FormatSetting, Schema) {
+TEST(FormatSetting, Store) {
   SettingStore store(SettingStore::Level::kDefault, GetSchema(), nullptr);
 
   OutputBuffer out;
   Err err = FormatSettings(store, "", &out);
   EXPECT_FALSE(err.has_error()) << err.msg();
 
-  EXPECT_EQ("thread-bool    false\n"
-            "thread-bool2   true\n"
-            "thread-int     0\n"
-            "thread-int2    12334\n"
-            "thread-list    <empty>\n"
-            "thread-list2   • first\n"
-            "               • second\n"
-            "               • third\n"
-            "thread-string  <empty>\n"
-            "thread-string2 Test string\n",
+  EXPECT_EQ("Run get <option> to see detailed information.\n"
+            "setting-bool    false\n"
+            "setting-bool2   true\n"
+            "setting-int     0\n"
+            "setting-int2    12334\n"
+            "setting-list    <empty>\n"
+            "setting-list2   • first\n"
+            "                • second\n"
+            "                • third\n"
+            "setting-string  <empty>\n"
+            "setting-string2 Test string\n",
             out.AsString());
 }
 
-// TODO(donosoc): Activate these tests when the individual format settings is
-//                implemented.
-#if 0
+TEST(FormatSetting, NotFound) {
+  SettingStore store(SettingStore::Level::kDefault, GetSchema(), nullptr);
 
-const char kName[] = "setting-name";
-const char kLongDescriptionText[] = R"(This is a title.
+  OutputBuffer out;
+  Err err = FormatSettings(store, "invalid", &out);
+  EXPECT_TRUE(err.has_error());
+}
 
-This is a long description text.
-This one spans many lines.)";
 
-TEST(FormatSetting, SchemaItem) {
-  auto item = SettingSchemaItem(kName, kLongDescriptionText, true);
+TEST(FormatSetting, Setting) {
+  SettingStore store(SettingStore::Level::kDefault, GetSchema(), nullptr);
 
-  EXPECT_EQ("setting-name\n"
+  OutputBuffer out;
+  Err err = FormatSettings(store, "setting-string2", &out);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  EXPECT_EQ("setting-string2\n"
             "\n"
-            "value(s): true\n"
+            "  Setting string description,\n"
+            "  with many lines.\n"
             "\n"
-            "This is a title.\n"
-            "\n"
-            "This is a long description text.\n"
-            "This one spans many lines.",
-            FormatSchemaItem(std::move(item)).AsString());
+            "Value(s):\n"
+            "Test string\n",
+            out.AsString());
 }
 
 TEST(FormatSetting, SchemaItemList) {
@@ -83,28 +90,30 @@ TEST(FormatSetting, SchemaItemList) {
       "/yet/another/some/very/long/and/annoying/path/that/actually/leads/"
       "nowhere"};
 
-  auto item =
-      SettingSchemaItem(kName, kLongDescriptionText, std::move(options));
+  SettingStore store(SettingStore::Level::kDefault, GetSchema(), nullptr);
+  Err err = store.SetList("setting-list2", std::move(options));
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  OutputBuffer out;
+  err = FormatSettings(store, "setting-list2", &out);
+  EXPECT_FALSE(err.has_error()) << err.msg();
 
   // clang-format makes this one very hard to read.
   // Leave this text easier.
   EXPECT_EQ(
-  "setting-name\n"
+  "setting-list2\n"
   "\n"
-  "value(s): • /some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
-  "          • /another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
-  "          • /yet/another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
+  "  Some very long description about how this setting is very important to the\n"
+  "  company and all its customers.\n"
   "\n"
-  "See \"help set\" for information on the setter text.\n"
-  "setter: /some/very/long/and/annoying/path/that/actually/leads/nowhere:/another/some/very/long/and/annoying/path/that/actually/leads/nowhere:/yet/another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
+  "Value(s):\n"
+  "• /some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
+  "• /another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
+  "• /yet/another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
   "\n"
-  "This is a title.\n"
-  "\n"
-  "This is a long description text.\n"
-  "This one spans many lines.",
-  FormatSchemaItem(std::move(item)).AsString());
+  "See \"help set\" about using the set value for lists.\n"
+  "Set value: /some/very/long/and/annoying/path/that/actually/leads/nowhere:/another/some/very/long/and/annoying/path/that/actually/leads/nowhere:/yet/another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n",
+  out.AsString());
 }
-
-#endif
 
 }  // namespace zxdb

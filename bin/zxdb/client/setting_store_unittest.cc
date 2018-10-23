@@ -41,6 +41,32 @@ fxl::RefPtr<SettingSchema> GetSchema() {
   return schema;
 }
 
+class SettingObserver : public SettingStoreObserver {
+ public:
+  // Keep track of who called.
+  struct SettingNotificationRecord {
+    const SettingStore* store;
+    std::string setting_name;
+    SettingValue new_value;
+  };
+
+  void SettingChanged(const SettingStore& store,
+                      const std::string& setting_name) override {
+    SettingNotificationRecord record = {};
+    record.store = &store;
+    record.setting_name = setting_name;
+    record.new_value = store.GetSetting(setting_name, false).value;
+    notifications_.push_back(std::move(record));
+  }
+
+  const std::vector<SettingNotificationRecord>& notifications() const {
+    return notifications_;
+  }
+
+ private:
+  std::vector<SettingNotificationRecord> notifications_;
+};
+
 }  // namespace
 
 TEST(SettingStore, Defaults) {
@@ -136,6 +162,121 @@ TEST(SettingStore, Fallback) {
   ASSERT_TRUE(setting.value.is_list());
   EXPECT_EQ(setting.value.GetList(), new_list);
   EXPECT_EQ(setting.level, SettingStore::Level::kSystem);
+}
+
+TEST(SettingStore, Notifications) {
+  SettingStore store(SettingStore::Level::kDefault, GetSchema(), nullptr);
+
+  SettingObserver observer;
+  store.AddObserver("int", &observer);
+  store.AddObserver("list", &observer);
+
+  // Getting values should not notify.
+  store.GetBool("bool");
+  store.GetInt("int");
+  store.GetString("string");
+  store.GetList("list");
+  EXPECT_TRUE(observer.notifications().empty());
+
+  Err err;
+
+  // Setting another value should not notify.
+  err = store.SetBool("bool", false);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+  EXPECT_TRUE(observer.notifications().empty());
+
+  // Setting the int should call.
+  constexpr int kNewInt = 15;
+  err = store.SetInt("int", kNewInt);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  ASSERT_EQ(observer.notifications().size(), 1u);
+  auto record = observer.notifications().back();
+  EXPECT_EQ(record.store, &store);
+  EXPECT_EQ(record.setting_name, "int");
+  ASSERT_TRUE(record.new_value.is_int());
+  EXPECT_EQ(record.new_value.GetInt(), kNewInt);
+
+  // List should also call.
+  std::vector<std::string> new_list = {"new", "list"};
+  err = store.SetList("list", new_list);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  ASSERT_EQ(observer.notifications().size(), 2u);
+  record = observer.notifications().back();
+  EXPECT_EQ(record.store, &store);
+  EXPECT_EQ(record.setting_name, "list");
+  ASSERT_TRUE(record.new_value.is_list());
+  EXPECT_EQ(record.new_value.GetList(), new_list);
+
+  // Removing an observer should not make to stop notifying.
+  store.RemoveObserver("int", &observer);
+  err = store.SetInt("int", 55);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+  EXPECT_EQ(observer.notifications().size(), 2u);
+
+  // But not for the other one.
+  new_list.push_back("another value");
+  err = store.SetList("list", new_list);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  ASSERT_EQ(observer.notifications().size(), 3u);
+  record = observer.notifications().back();
+  EXPECT_EQ(record.store, &store);
+  EXPECT_EQ(record.setting_name, "list");
+  ASSERT_TRUE(record.new_value.is_list());
+  EXPECT_EQ(record.new_value.GetList(), new_list);
+
+  // Adding another observer should notify twice.
+  SettingObserver observer2;
+  store.AddObserver("list", &observer2);
+  new_list.push_back("yet another value");
+  err = store.SetList("list", new_list);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  ASSERT_EQ(observer.notifications().size(), 4u);
+  record = observer.notifications().back();
+  EXPECT_EQ(record.store, &store);
+  EXPECT_EQ(record.setting_name, "list");
+  ASSERT_TRUE(record.new_value.is_list());
+  EXPECT_EQ(record.new_value.GetList(), new_list);
+
+  ASSERT_EQ(observer2.notifications().size(), 1u);
+  record = observer2.notifications().back();
+  EXPECT_EQ(record.store, &store);
+  EXPECT_EQ(record.setting_name, "list");
+  ASSERT_TRUE(record.new_value.is_list());
+  EXPECT_EQ(record.new_value.GetList(), new_list);
+
+  // Removing the first one should still notify the second.
+  store.RemoveObserver("list", &observer);
+  new_list.push_back("even another value?");
+  err = store.SetList("list", new_list);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  EXPECT_EQ(observer.notifications().size(), 4u);
+
+  ASSERT_EQ(observer2.notifications().size(), 2u);
+  record = observer2.notifications().back();
+  EXPECT_EQ(record.store, &store);
+  EXPECT_EQ(record.setting_name, "list");
+  ASSERT_TRUE(record.new_value.is_list());
+  EXPECT_EQ(record.new_value.GetList(), new_list);
+
+  // Removing all observers should not notify.
+  store.RemoveObserver("list", &observer2);
+
+  err = store.SetBool("bool", true);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+  err = store.SetInt("int", 22);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+  err = store.SetString("string", "blah");
+  EXPECT_FALSE(err.has_error()) << err.msg();
+  err = store.SetList("list", {"meh"});
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  EXPECT_EQ(observer.notifications().size(), 4u);
+  EXPECT_EQ(observer2.notifications().size(), 2u);
 }
 
 }  // namespace zxdb
