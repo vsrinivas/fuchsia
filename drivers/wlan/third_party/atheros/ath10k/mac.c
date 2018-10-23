@@ -29,6 +29,7 @@
 #include "macros.h"
 #include "testmode.h"
 #include "txrx.h"
+#include "utils.h"
 #include "wmi-ops.h"
 #include "wmi-tlv.h"
 #include "wmi.h"
@@ -2869,24 +2870,6 @@ static int ath10k_mac_vif_recalc_txbf(struct ath10k* ar,
     return 0;
 }
 #endif  // NEEDS PORTING
-
-static void ethaddr_sprintf(char* str, uint8_t* addr) {
-    bool first = true;
-    for (unsigned ndx = 0; ndx < ETH_ALEN; ndx++) {
-        str += sprintf(str, "%s%02X", first ? "" : ":", *addr);
-        addr++;
-        first = false;
-    }
-}
-
-static bool is_zero_ether_addr(uint8_t* addr) {
-    for (size_t i = 0; i < ETH_ALEN; ++i) {
-        if (addr[i] != 0) {
-            return false;
-        }
-    }
-    return true;
-}
 
 static void ath10k_mac_parse_ampdu(uint8_t response_ampdu,
                                    struct wmi_peer_assoc_complete_arg* assoc_arg) {

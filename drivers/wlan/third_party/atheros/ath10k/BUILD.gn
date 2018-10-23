@@ -58,6 +58,8 @@ driver_module("ath10k_driver") {
     "thermal.h",
     "txrx.c",
     "txrx.h",
+    "utils.c",
+    "utils.h",
     "wmi.c",
     "wmi.h",
     "wmi-ops.h",
