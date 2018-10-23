@@ -44,6 +44,20 @@ func link(a, b *channel.Endpoint) {
 	}
 }
 
+func TestCombineCapabilities(t *testing.T) {
+	resolutionRequired := stack.LinkEndpointCapabilities(stack.CapabilityResolutionRequired)
+	var resolutionNotRequired stack.LinkEndpointCapabilities
+	if bridge.CombineCapabilities(resolutionRequired, resolutionNotRequired) != resolutionRequired {
+		t.Errorf("got bridge.Combinecapabilities(%#v, %#v) == %#v, want == %#v", resolutionRequired, resolutionNotRequired, bridge.CombineCapabilities(resolutionRequired, resolutionNotRequired), resolutionRequired)
+	}
+
+	checksumAndLoopback := stack.LinkEndpointCapabilities(stack.CapabilityChecksumOffload | stack.CapabilityLoopback)
+	var noChecksumAndLoopback stack.LinkEndpointCapabilities
+	if bridge.CombineCapabilities(checksumAndLoopback, noChecksumAndLoopback) != noChecksumAndLoopback {
+		t.Errorf("got bridge.Combinecapabilities(%#v, %#v) == %#v, want == %#v", checksumAndLoopback, noChecksumAndLoopback, bridge.CombineCapabilities(checksumAndLoopback, noChecksumAndLoopback), noChecksumAndLoopback)
+	}
+}
+
 func TestBridge(t *testing.T) {
 	s1addr := tcpip.Address([]byte{192, 168, 42, 10})
 	s1, s1ep, err := makeStackWithChannel(tcpip.LinkAddress(bytes.Repeat([]byte{1}, 6)), s1addr)
@@ -66,10 +80,17 @@ func TestBridge(t *testing.T) {
 	})
 
 	{
-		_, ep1 := channel.New(1, 100, tcpip.LinkAddress(bytes.Repeat([]byte{3}, 6)))
+		_, ep1 := channel.New(1, 101, tcpip.LinkAddress(bytes.Repeat([]byte{3}, 6)))
 		_, ep2 := channel.New(1, 100, tcpip.LinkAddress(bytes.Repeat([]byte{4}, 6)))
-		if err := makeStack().CreateNIC(1, stack.RegisterLinkEndpoint(bridge.New([]stack.LinkEndpoint{ep1, ep2}))); err != nil {
+		bridge1 := bridge.New([]stack.LinkEndpoint{ep1, ep2})
+		if err := makeStack().CreateNIC(1, stack.RegisterLinkEndpoint(bridge1)); err != nil {
 			t.Fatal(err)
+		}
+		if bridge1.MTU() != 100 {
+			t.Errorf("got bridge1.MTU() == %d but want 100", bridge1.MTU())
+		}
+		if bridge1.LinkAddress()[0]&0x2 == 0 {
+			t.Errorf("bridge1.LinkAddress() expected to be locally administered MAC address")
 		}
 		go link(s1ep, ep1)
 		go link(ep1, s1ep)
