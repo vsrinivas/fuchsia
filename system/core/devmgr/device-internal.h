@@ -13,8 +13,12 @@ typedef struct proxy_iostate proxy_iostate_t;
 
 } // namespace devmgr
 
+#define DEV_MAGIC 'MDEV'
+
 struct zx_device {
-    zx_device() = default;
+    zx_device() {
+        list_initialize(&children);
+    }
     ~zx_device() = default;
 
     zx_device(const zx_device&) = delete;
@@ -74,45 +78,45 @@ struct zx_device {
         return ops->message(ctx, msg, txn);
     }
 
-    uintptr_t magic;
+    uintptr_t magic = DEV_MAGIC;
 
-    zx_protocol_device_t* ops;
+    zx_protocol_device_t* ops = nullptr;
 
     // reserved for driver use; will not be touched by devmgr
-    void* ctx;
+    void* ctx = nullptr;
 
-    uint32_t flags;
-    uint32_t refcount;
+    uint32_t flags = 0;
+    uint32_t refcount = 0;
 
-    zx_handle_t event;
-    zx_handle_t local_event;
-    zx_handle_t rpc;
+    zx_handle_t event = ZX_HANDLE_INVALID;
+    zx_handle_t local_event = ZX_HANDLE_INVALID;
+    zx_handle_t rpc = ZX_HANDLE_INVALID;
 
     // most devices implement a single
     // protocol beyond the base device protocol
-    uint32_t protocol_id;
-    void* protocol_ops;
+    uint32_t protocol_id = 0;
+    void* protocol_ops = nullptr;
 
     // driver that has published this device
-    zx_driver_t* driver;
+    zx_driver_t* driver = nullptr;
 
     // parent in the device tree
-    zx_device_t* parent;
+    zx_device_t* parent = nullptr;
 
     // for the parent's device_list
-    struct list_node node;
+    struct list_node node = {};
 
     // list of this device's children in the device tree
     struct list_node children;
 
     // list node for the defer_device_list
-    struct list_node defer;
+    struct list_node defer = {};
 
     // iostate
-    void* ios;
-    devmgr::proxy_iostate_t* proxy_ios;
+    void* ios = nullptr;
+    devmgr::proxy_iostate_t* proxy_ios = nullptr;
 
-    char name[ZX_DEVICE_NAME_MAX + 1];
+    char name[ZX_DEVICE_NAME_MAX + 1] = {};
 };
 
 // zx_device_t objects must be created or initialized by the driver manager's
@@ -131,8 +135,6 @@ struct zx_device {
 #define DEV_FLAG_INVISIBLE      0x00000200  // device not visible via devfs
 #define DEV_FLAG_UNBOUND        0x00000400  // informed that it should self-delete asap
 #define DEV_FLAG_WANTS_REBIND   0x00000800  // when last child goes, rebind this device
-
-#define DEV_MAGIC 'MDEV'
 
 zx_status_t device_bind(zx_device_t* dev, const char* drv_libname);
 zx_status_t device_unbind(zx_device_t* dev);

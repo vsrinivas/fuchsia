@@ -206,7 +206,8 @@ void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK {
     list_add_tail(&dead_list, &dev->node);
 
     if (dead_count == DEAD_DEVICE_MAX) {
-        free(list_remove_head_type(&dead_list, zx_device_t, node));
+        zx_device_t* to_delete = list_remove_head_type(&dead_list, zx_device_t, node);
+        delete to_delete;
     } else {
         dead_count++;
     }
@@ -338,35 +339,35 @@ zx_status_t devhost_device_create(zx_driver_t* drv, zx_device_t* parent,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    auto dev = static_cast<zx_device_t*>(malloc(sizeof(zx_device_t)));
+    auto dev = fbl::make_unique<zx_device_t>();
     if (dev == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
-    new (dev) zx_device_t;
 
-    memset(dev, 0, sizeof(zx_device_t));
-    dev->magic = DEV_MAGIC;
     dev->ops = ops;
     dev->driver = drv;
-    list_initialize(&dev->children);
 
     if (name == nullptr) {
-        printf("devhost: dev=%p has null name.\n", dev);
+        printf("devhost: dev=%p has null name.\n", dev.get());
         name = "invalid";
         dev->magic = 0;
     }
 
     size_t len = strlen(name);
+    // TODO(teisenbe): I think this is overly aggresive, and could be changed
+    // to |len > ZX_DEVICE_NAME_MAX| and |len = ZX_DEVICE_NAME_MAX|.
     if (len >= ZX_DEVICE_NAME_MAX) {
-        printf("devhost: dev=%p name too large '%s'\n", dev, name);
+        printf("devhost: dev=%p name too large '%s'\n", dev.get(), name);
         len = ZX_DEVICE_NAME_MAX - 1;
         dev->magic = 0;
     }
 
     memcpy(dev->name, name, len);
     dev->name[len] = 0;
-    dev->ctx = ctx ? ctx : dev;
-    *out = dev;
+    // TODO(teisenbe): Why do we default to dev.get() here?  Why not just
+    // nullptr
+    dev->ctx = ctx ? ctx : dev.get();
+    *out = dev.release();
     return ZX_OK;
 }
 

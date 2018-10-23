@@ -291,31 +291,31 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, devhost_iostate_t* ios) {
             break;
         }
 
+        auto dev = fbl::make_unique<zx_device>();
         //TODO: dev->ops and other lifecycle bits
         // no name means a dummy proxy device
-        if ((newios->dev = static_cast<zx_device_t*>(calloc(1, sizeof(zx_device_t)))) == nullptr) {
+        if (dev == nullptr) {
             r = ZX_ERR_NO_MEMORY;
             break;
         }
-        new (newios->dev) zx_device_t;
-        zx_device_t* dev = newios->dev;
         strcpy(dev->name, "proxy");
         dev->protocol_id = msg.protocol_id;
         dev->ops = &device_default_ops;
         dev->rpc = hin[0];
         dev->refcount = 1;
-        list_initialize(&dev->children);
+        newios->dev = dev.get();
 
         newios->ph.handle = hin[0];
         newios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
         newios->ph.func = dh_handle_dc_rpc;
         if ((r = port_wait(&dh_port, &newios->ph)) < 0) {
-            free(newios->dev);
             break;
         }
         log(RPC_IN, "devhost[%s] created '%s' ios=%p\n", path, name, newios.get());
         // dh_port has now taken ownership of newios.
         __UNUSED auto ptr = newios.release();
+        // TODO(teisenbe): This can go away once zx_device uses RefPtr.
+        __UNUSED auto ptr2 = dev.release();
         return ZX_OK;
     }
 
