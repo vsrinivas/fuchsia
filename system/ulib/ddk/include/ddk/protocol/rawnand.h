@@ -27,7 +27,7 @@ typedef struct raw_nand_protocol_ops {
     zx_status_t (*write_page_hwecc)(void* ctx, const void* data_buffer, size_t data_size,
                                     const void* oob_buffer, size_t oob_size, uint32_t nandpage);
     zx_status_t (*erase_block)(void* ctx, uint32_t nandpage);
-    zx_status_t (*get_nand_info)(void* ctx, nand_info_t* out_info);
+    zx_status_t (*get_nand_info)(void* ctx, zircon_nand_Info* out_info);
     void (*cmd_ctrl)(void* ctx, zx_status_t cmd, uint32_t ctrl);
     uint8_t (*read_byte)(void* ctx);
 } raw_nand_protocol_ops_t;
@@ -60,7 +60,7 @@ static inline zx_status_t raw_nand_erase_block(const raw_nand_protocol_t* proto,
     return proto->ops->erase_block(proto->ctx, nandpage);
 }
 static inline zx_status_t raw_nand_get_nand_info(const raw_nand_protocol_t* proto,
-                                                 nand_info_t* out_info) {
+                                                 zircon_nand_Info* out_info) {
     return proto->ops->get_nand_info(proto->ctx, out_info);
 }
 // Send ONFI command down to controller.

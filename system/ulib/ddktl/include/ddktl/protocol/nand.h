@@ -35,7 +35,7 @@
 //     NandDevice(zx_device_t* parent)
 //       : NandDeviceType("my-nand-device", parent) {}
 //
-//     void Query(nand_info_t* info_out, size_t* nand_op_size_out);
+//     void Query(zircon_nand_Info* info_out, size_t* nand_op_size_out);
 //     void Queue(nand_op_t* operation);
 //     zx_status_t GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
 //                                        uint32_t* num_bad_blocks);
@@ -63,7 +63,7 @@ protected:
     nand_protocol_ops_t nand_proto_ops_ = {};
 
 private:
-    static void Query(void* ctx, nand_info_t* info_out, size_t* nand_op_size_out) {
+    static void Query(void* ctx, zircon_nand_Info* info_out, size_t* nand_op_size_out) {
         static_cast<D*>(ctx)->Query(info_out, nand_op_size_out);
     }
 
@@ -83,7 +83,7 @@ public:
     NandProtocolProxy(nand_protocol_t* proto)
         : ops_(proto->ops), ctx_(proto->ctx) {}
 
-    void Query(nand_info_t* info_out, size_t* nand_op_size_out) {
+    void Query(zircon_nand_Info* info_out, size_t* nand_op_size_out) {
         ops_->query(ctx_, info_out, nand_op_size_out);
     }
 

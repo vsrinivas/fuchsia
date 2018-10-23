@@ -81,7 +81,7 @@ ParentDevice::~ParentDevice() {
     }
 }
 
-void ParentDevice::SetInfo(const nand_info_t& info) {
+void ParentDevice::SetInfo(const zircon_nand_Info& info) {
     ZX_DEBUG_ASSERT(!ram_nand_);
     config_.info = info;
     if (!config_.num_blocks) {

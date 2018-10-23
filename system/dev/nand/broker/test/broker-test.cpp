@@ -74,7 +74,7 @@ public:
     // pattern for the desired number of pages, skipping the pages before start.
     bool CheckPattern(uint8_t expected, int start, int num_pages, const void* memory);
 
-    const nand_info_t& Info() const { return parent_->Info(); }
+    const zircon_nand_Info& Info() const { return parent_->Info(); }
 
     uint32_t PageSize() const { return parent_->Info().page_size; }
     uint32_t OobSize() const { return parent_->Info().oob_size; }
@@ -179,7 +179,7 @@ bool NandDevice::ValidateNandDevice() {
         // This looks like using code under test to setup the test, but this
         // path is for external devices, not really the broker. The issue is that
         // ParentDevice cannot query a nand device for the actual parameters.
-        nand_info_t info;
+        zircon_nand_Info info;
         if (ioctl_nand_broker_get_info(get(), &info) < 0) {
             printf("Failed to query nand device\n");
             return false;
@@ -215,7 +215,7 @@ bool QueryTest() {
     NandDevice device;
     ASSERT_TRUE(device.IsValid());
 
-    nand_info_t info;
+    zircon_nand_Info info;
     ASSERT_EQ(sizeof(info), ioctl_nand_broker_get_info(device.get(), &info));
 
     EXPECT_EQ(device.Info().page_size, info.page_size);

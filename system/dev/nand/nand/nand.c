@@ -317,7 +317,7 @@ static zx_status_t nand_worker_thread(void* arg) {
     return ZX_OK;
 }
 
-static void nand_query(void* ctx, nand_info_t* info_out, size_t* nand_op_size_out) {
+static void nand_query(void* ctx, zircon_nand_Info* info_out, size_t* nand_op_size_out) {
     nand_device_t* dev = (nand_device_t*)ctx;
 
     memcpy(info_out, &dev->nand_info, sizeof(*info_out));

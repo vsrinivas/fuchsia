@@ -10,7 +10,6 @@
 #include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 #include <zircon/boot/image.h>
-#include <zircon/device/ram-nand.h>
 #include <zircon/nand/c/fidl.h>
 #include <zircon/process.h>
 
@@ -199,7 +198,7 @@ fbl::unique_ptr<NandDevice> CreateDevice(size_t* operation_size) {
     }
 
     if (operation_size) {
-        nand_info_t info;
+        zircon_nand_Info info;
         device->Query(&info, operation_size);
     }
 
@@ -243,7 +242,7 @@ bool QueryTest() {
     NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 8);  // 6 bits of ECC, 8 OOB bytes.
     NandDevice device(params);
 
-    nand_info_t info;
+    zircon_nand_Info info;
     size_t operation_size;
     device.Query(&info, &operation_size);
     ASSERT_EQ(0, memcmp(&info, &params, sizeof(info)));

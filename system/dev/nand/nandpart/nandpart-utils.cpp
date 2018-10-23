@@ -18,7 +18,7 @@
 
 // Checks that the partition map is valid, sorts it in partition order, and
 // ensures blocks are on erase block boundaries.
-zx_status_t SanitizePartitionMap(zbi_partition_map_t* pmap, const nand_info_t& nand_info) {
+zx_status_t SanitizePartitionMap(zbi_partition_map_t* pmap, const zircon_nand_Info& nand_info) {
     if (pmap->partition_count == 0) {
         zxlogf(ERROR, "nandpart: partition count is zero\n");
         return ZX_ERR_INTERNAL;

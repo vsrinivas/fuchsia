@@ -11,7 +11,6 @@
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/ram-nand.h>
 #include <zircon/nand/c/fidl.h>
 #include <zircon/types.h>
 

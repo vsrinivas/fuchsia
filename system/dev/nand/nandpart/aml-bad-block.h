@@ -56,7 +56,7 @@ private:
     };
 
     AmlBadBlock(zx::vmo data_vmo, zx::vmo oob_vmo, fbl::Array<uint8_t> nand_op,
-                Config config, nand_info_t nand_info, BlockStatus* table, uint32_t table_len,
+                Config config, zircon_nand_Info nand_info, BlockStatus* table, uint32_t table_len,
                 OobMetadata* oob)
         : BadBlock(fbl::move(data_vmo), fbl::move(oob_vmo), fbl::move(nand_op)),
           config_(config.bad_block_config), nand_proto_(config.nand_proto), nand_(&nand_proto_),
@@ -93,7 +93,7 @@ private:
     // Parent nand protocol implementation.
     nand_protocol_t nand_proto_;
     ddk::NandProtocolProxy nand_;
-    const nand_info_t nand_info_;
+    const zircon_nand_Info nand_info_;
     // Information about blocks which store BBT entries.
     BlockListEntry block_list_[kBlockListMax];
     // Block with most recent valid BBT entry.

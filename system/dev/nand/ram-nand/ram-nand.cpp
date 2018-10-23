@@ -16,7 +16,6 @@
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <zircon/assert.h>
-#include <zircon/device/ram-nand.h>
 #include <zircon/driver/binding.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -232,7 +231,7 @@ zx_status_t NandDevice::Unlink()  {
     return ZX_OK;
 }
 
-void NandDevice::Query(nand_info_t* info_out, size_t* nand_op_size_out) {
+void NandDevice::Query(zircon_nand_Info* info_out, size_t* nand_op_size_out) {
     *info_out = params_;
     *nand_op_size_out = sizeof(RamNandOp);
 }

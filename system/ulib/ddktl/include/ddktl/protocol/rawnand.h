@@ -49,7 +49,7 @@
 //
 //     zx_status_t RawNandEraseBlock(uint32_t nandpage);
 //
-//     zx_status_t RawNandGetNandInfo(nand_info_t* out_info);
+//     zx_status_t RawNandGetNandInfo(zircon_nand_Info* out_info);
 //
 //     void RawNandCmdCtrl(zx_status_t cmd, uint32_t ctrl);
 //
@@ -97,7 +97,7 @@ private:
     static zx_status_t RawNandEraseBlock(void* ctx, uint32_t nandpage) {
         return static_cast<D*>(ctx)->RawNandEraseBlock(nandpage);
     }
-    static zx_status_t RawNandGetNandInfo(void* ctx, nand_info_t* out_info) {
+    static zx_status_t RawNandGetNandInfo(void* ctx, zircon_nand_Info* out_info) {
         return static_cast<D*>(ctx)->RawNandGetNandInfo(out_info);
     }
     // Send ONFI command down to controller.
@@ -136,7 +136,7 @@ public:
     }
     // Erase nand block.
     zx_status_t EraseBlock(uint32_t nandpage) { return ops_->erase_block(ctx_, nandpage); }
-    zx_status_t GetNandInfo(nand_info_t* out_info) { return ops_->get_nand_info(ctx_, out_info); }
+    zx_status_t GetNandInfo(zircon_nand_Info* out_info) { return ops_->get_nand_info(ctx_, out_info); }
     // Send ONFI command down to controller.
     void CmdCtrl(zx_status_t cmd, uint32_t ctrl) { ops_->cmd_ctrl(ctx_, cmd, ctrl); }
     // Read byte (used to read status as well as other info, such as ID).

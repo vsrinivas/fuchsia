@@ -80,12 +80,12 @@ bool ValidateOptions(const Config& config) {
 }
 
 zircon_nand_Info GetNandInfo(const Config& config) {
-    nand_info_t info = {};
+    zircon_nand_Info info = {};
     info.page_size = config.page_size;
     info.pages_per_block = config.block_size;
     info.ecc_bits = 8;
     info.oob_size = 8;
-    info.nand_class = NAND_CLASS_FTL;
+    info.nand_class = zircon_nand_Class_FTL;
     return info;
 };
 
@@ -102,7 +102,7 @@ bool FinishDeviceConfig(const char* path, zircon_nand_RamNandInfo* device_config
         printf("Unable to get file length\n");
         return false;
     }
-    nand_info_t& info = device_config->nand_info;
+    zircon_nand_Info& info = device_config->nand_info;
 
     uint32_t block_size = info.pages_per_block * (info.oob_size + info.page_size);
     if (in_size % block_size != 0) {

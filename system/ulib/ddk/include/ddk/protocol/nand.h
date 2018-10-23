@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include <zircon/device/nand.h>
+#include <zircon/nand/c/fidl.h>
 #include <zircon/types.h>
 
 // nand_op_t's are submitted for processing via the queue() method of the
@@ -104,11 +105,11 @@ struct nand_op {
 };
 
 typedef struct nand_protocol_ops {
-    // Obtains the parameters of the nand device (nand_info_t) and the required
-    // size of nand_op_t. The nand_op_t's submitted via queue() must have
-    // nand_op_size_out - sizeof(nand_op_t) bytes available at the end of the
-    // structure for the use of the driver.
-    void (*query)(void* ctx, nand_info_t* info_out, size_t* nand_op_size_out);
+    // Obtains the parameters of the nand device (zircon_nand_Info) and the
+    // required size of nand_op_t. The nand_op_t's submitted via queue() must
+    // have nand_op_size_out - sizeof(nand_op_t) bytes available at the end of
+    // the structure for the use of the driver.
+    void (*query)(void* ctx, zircon_nand_Info* info_out, size_t* nand_op_size_out);
 
     // Submits an IO request for processing. Success or failure will be reported
     // via the completion_cb() in the nand_op_t. The callback may be called

@@ -42,8 +42,8 @@ void CompletionCallback(nand_op_t* op, zx_status_t status) {
 } // namespace
 
 zx_status_t AmlBadBlock::Create(Config config, fbl::RefPtr<BadBlock>* out) {
-    // Query parent to get its nand_info_t and size for nand_op_t.
-    nand_info_t nand_info;
+    // Query parent to get its zircon_nand_Info and size for nand_op_t.
+    zircon_nand_Info nand_info;
     size_t parent_op_size;
     config.nand_proto.ops->query(config.nand_proto.ctx, &nand_info, &parent_op_size);
 

@@ -74,7 +74,7 @@ class Broker : public DeviceType {
                          void* out_buf, size_t out_len, size_t* out_actual);
 
   private:
-    zx_status_t Query(nand_info_t* info);
+    zx_status_t Query(zircon_nand_Info* info);
     zx_status_t Queue(uint32_t command, const nand_broker_request_t& request,
                       nand_broker_response_t* response);
 
@@ -89,7 +89,7 @@ zx_status_t Broker::Bind() {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    nand_info_t info;
+    zircon_nand_Info info;
     Query(&info);
     if (!op_size_) {
         zxlogf(ERROR, "nand-broker: unable to query the nand driver\n");
@@ -109,11 +109,11 @@ zx_status_t Broker::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
         return ZX_OK;
 
     case IOCTL_NAND_BROKER_GET_INFO:
-        if (out_len < sizeof(nand_info_t)) {
+        if (out_len < sizeof(zircon_nand_Info)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        *out_actual = sizeof(nand_info_t);
-        return Query(reinterpret_cast<nand_info_t*>(out_buf));
+        *out_actual = sizeof(zircon_nand_Info);
+        return Query(reinterpret_cast<zircon_nand_Info*>(out_buf));
 
     case IOCTL_NAND_BROKER_READ:
     case IOCTL_NAND_BROKER_WRITE:
@@ -133,7 +133,7 @@ zx_status_t Broker::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
     }
 }
 
-zx_status_t Broker::Query(nand_info_t* info) {
+zx_status_t Broker::Query(zircon_nand_Info* info) {
     ddk::NandProtocolProxy proxy(&nand_protocol_);
     proxy.Query(info, &op_size_);
     return ZX_OK;

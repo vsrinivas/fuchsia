@@ -25,7 +25,7 @@ constexpr uint32_t kPageSize = ZX_PAGE_SIZE;
 constexpr uint32_t kPagesPerBlock = 16;
 constexpr uint32_t kNumBlocks = 100;
 constexpr uint32_t kOobSize = 8;
-constexpr nand_info_t kNandInfo = {
+constexpr zircon_nand_Info kNandInfo = {
     .page_size = kPageSize,
     .pages_per_block = kPagesPerBlock,
     .num_blocks = kNumBlocks,
@@ -75,7 +75,7 @@ struct Context {
     TableEntries& table_entries;
 };
 
-void MockQuery(void* ctx, nand_info_t* info_out, size_t* nand_op_size_out) {
+void MockQuery(void* ctx, zircon_nand_Info* info_out, size_t* nand_op_size_out) {
     memcpy(info_out, &kNandInfo, sizeof(kNandInfo));
     *nand_op_size_out = sizeof(nand_op_t);
 }

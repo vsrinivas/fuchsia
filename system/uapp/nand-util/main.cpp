@@ -16,8 +16,8 @@
 #include <pretty/hexdump.h>
 #include <zircon/assert.h>
 #include <zircon/device/device.h>
-#include <zircon/device/nand.h>
 #include <zircon/device/nand-broker.h>
+#include <zircon/nand/c/fidl.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zxcpp/new.h>
@@ -111,7 +111,7 @@ class NandBroker {
     const char* data() const { return reinterpret_cast<char*>(vmo_->GetData()); }
     const char* oob() const { return data() + info_.page_size * info_.pages_per_block; }
 
-    const nand_info_t& Info() const { return info_; }
+    const zircon_nand_Info& Info() const { return info_; }
 
     // The operations to perform (return true on success):
     bool Query();
@@ -127,7 +127,7 @@ class NandBroker {
 
     const char* path_;
     fbl::unique_fd device_;
-    nand_info_t info_ = {};
+    zircon_nand_Info info_ = {};
     fbl::unique_ptr<fzl::MappedVmo> vmo_;
 };
 
@@ -406,7 +406,8 @@ bool ValidateOptionsWithNand(const NandBroker& nand, const Config& config) {
         return false;
     }
 
-    if (config.erase && nand.Info().nand_class == NAND_CLASS_PARTMAP && config.block_num < 24) {
+    if (config.erase && nand.Info().nand_class == zircon_nand_Class_PARTMAP &&
+        config.block_num < 24) {
         printf("Erasing the restricted area is not a good idea, sorry\n");
         return false;
     }

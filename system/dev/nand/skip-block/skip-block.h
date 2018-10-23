@@ -73,7 +73,7 @@ private:
     ddk::BadBlockProtocolProxy bad_block_ __TA_GUARDED(lock_);
     LogicalToPhysicalMap block_map_ __TA_GUARDED(lock_);
     fbl::Mutex lock_;
-    nand_info_t nand_info_;
+    zircon_nand_Info nand_info_;
     size_t parent_op_size_;
     // Operation buffer of size parent_op_size_.
     fbl::Array<uint8_t> nand_op_ __TA_GUARDED(lock_);

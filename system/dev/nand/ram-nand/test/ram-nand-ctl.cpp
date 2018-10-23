@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -10,7 +11,6 @@
 #include <fs-management/ram-nand.h>
 #include <lib/fzl/fdio.h>
 #include <unittest/unittest.h>
-#include <zircon/device/ram-nand.h>
 #include <zircon/nand/c/fidl.h>
 
 namespace {

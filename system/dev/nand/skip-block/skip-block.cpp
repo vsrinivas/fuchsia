@@ -25,7 +25,7 @@ namespace {
 
 struct BlockOperationContext {
     ReadWriteOperation op;
-    nand_info_t* nand_info;
+    zircon_nand_Info* nand_info;
     LogicalToPhysicalMap* block_map;
     ddk::NandProtocolProxy* nand;
     uint32_t copy;

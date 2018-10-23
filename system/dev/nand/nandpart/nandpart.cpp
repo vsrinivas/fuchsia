@@ -48,8 +48,8 @@ zx_status_t NandPartDevice::Create(zx_device_t* parent) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    // Query parent to get its nand_info_t and size for nand_op_t.
-    nand_info_t nand_info;
+    // Query parent to get its zircon_nand_Info and size for nand_op_t.
+    zircon_nand_Info nand_info;
     size_t parent_op_size;
     nand_proto.ops->query(nand_proto.ctx, &nand_info, &parent_op_size);
     // Make sure parent_op_size is aligned, so we can safely add our data at the end.
@@ -186,7 +186,7 @@ zx_status_t NandPartDevice::Bind(const char* name, uint32_t copy_count) {
     return ZX_OK;
 }
 
-void NandPartDevice::Query(nand_info_t* info_out, size_t* nand_op_size_out) {
+void NandPartDevice::Query(zircon_nand_Info* info_out, size_t* nand_op_size_out) {
     memcpy(info_out, &nand_info_, sizeof(*info_out));
     // Add size of translated_op.
     *nand_op_size_out = parent_op_size_ + sizeof(nand_op_t);

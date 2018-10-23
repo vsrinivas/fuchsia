@@ -8,7 +8,7 @@
 
 #include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
-#include <zircon/device/nand.h>
+#include <zircon/nand/c/fidl.h>
 
 #define IOCTL_NAND_BROKER_UNLINK \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_NAND_BROKER, 1)
@@ -45,8 +45,8 @@ typedef struct nand_broker_response {
 // ssize_t ioctl_nand_broker_unlink(int fd);
 IOCTL_WRAPPER(ioctl_nand_broker_unlink, IOCTL_NAND_BROKER_UNLINK);
 
-// ssize_t ioctl_nand_broker_get_info(int fd, nand_info_t* nand_info);
-IOCTL_WRAPPER_OUT(ioctl_nand_broker_get_info, IOCTL_NAND_BROKER_GET_INFO, nand_info_t);
+// ssize_t ioctl_nand_broker_get_info(int fd, zircon_nand_Info* nand_info);
+IOCTL_WRAPPER_OUT(ioctl_nand_broker_get_info, IOCTL_NAND_BROKER_GET_INFO, zircon_nand_Info);
 
 // ssize_t ioctl_nand_broker_read(int fd, nand_broker_request_t* request,
 //                                nand_broker_response_t* response);

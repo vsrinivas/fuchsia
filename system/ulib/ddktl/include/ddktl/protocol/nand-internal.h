@@ -11,7 +11,7 @@ namespace ddk {
 namespace internal {
 
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_query, Query,
-                                     void (C::*)(nand_info_t*, size_t*));
+                                     void (C::*)(zircon_nand_Info*, size_t*));
 
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_queue, Queue, void (C::*)(nand_op_t*));
 
@@ -22,7 +22,7 @@ template <typename D>
 constexpr void CheckNandProtocolSubclass() {
     static_assert(internal::has_query<D>::value,
                   "NandProtocol subclasses must implement "
-                  "Query(nand_info_t* info_out, size_t* nand_op_size_out)");
+                  "Query(zircon_nand_Info* info_out, size_t* nand_op_size_out)");
     static_assert(internal::has_queue<D>::value,
                   "NandProtocol subclasses must implement "
                   "Queue(nand_op_t* operation)");

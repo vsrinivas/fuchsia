@@ -18,6 +18,7 @@
 #include <unittest/unittest.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/device.h>
+#include <zircon/device/nand.h>
 #include <zircon/hw/gpt.h>
 #include <zircon/nand/c/fidl.h>
 #include <zircon/syscalls.h>

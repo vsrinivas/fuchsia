@@ -7,7 +7,6 @@
 #include <inttypes.h>
 
 #include <zircon/compiler.h>
-#include <zircon/device/ram-nand.h>
 #include <zircon/nand/c/fidl.h>
 
 __BEGIN_CDECLS

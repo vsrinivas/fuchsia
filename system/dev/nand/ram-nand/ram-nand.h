@@ -15,22 +15,21 @@
 #include <fbl/mutex.h>
 #include <lib/zx/vmo.h>
 #include <lib/sync/completion.h>
-#include <zircon/device/ram-nand.h>
 #include <zircon/listnode.h>
 #include <zircon/nand/c/fidl.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
-// Wrapper for nand_info_t. It simplifies initialization of NandDevice.
-struct NandParams : public nand_info_t {
+// Wrapper for zircon_nand_Info. It simplifies initialization of NandDevice.
+struct NandParams : public zircon_nand_Info {
     NandParams() : NandParams(0, 0, 0, 0, 0) {}
 
     NandParams(uint32_t page_size, uint32_t pages_per_block, uint32_t num_blocks, uint32_t ecc_bits,
                uint32_t oob_size)
-        : NandParams(nand_info_t {page_size, pages_per_block, num_blocks, ecc_bits, oob_size,
+        : NandParams(zircon_nand_Info {page_size, pages_per_block, num_blocks, ecc_bits, oob_size,
                      NAND_CLASS_FTL, {}}) {}
 
-    NandParams(const nand_info_t& base) {
+    NandParams(const zircon_nand_Info& base) {
         // NandParams has no data members.
         *this = *reinterpret_cast<const NandParams*>(&base);
     }
@@ -70,7 +69,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice> {
     zx_status_t Unlink();
 
     // NAND protocol implementation.
-    void Query(nand_info_t* info_out, size_t* nand_op_size_out);
+    void Query(zircon_nand_Info* info_out, size_t* nand_op_size_out);
     void Queue(nand_op_t* operation);
     zx_status_t GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
                                        uint32_t* num_bad_blocks);
