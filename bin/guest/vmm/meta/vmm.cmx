@@ -8,6 +8,9 @@
             "class/ethernet",
             "misc"
         ],
+        "features": [
+            "shell"
+        ],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.tracelink.Registry"

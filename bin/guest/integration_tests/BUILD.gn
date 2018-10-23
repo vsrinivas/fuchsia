@@ -13,12 +13,16 @@ executable("bin") {
   sources = [
     "enclosed_guest.cc",
     "enclosed_guest.h",
+    "guest_test.h",
     "main.cc",
     "test_serial.cc",
     "test_serial.h",
+    "virtio_block_tests.cc",
   ]
 
   deps = [
+    "//garnet/bin/guest/vmm/device:qcow_test_data",
+    "//garnet/lib/machina/device",
     "//garnet/public/fidl/fuchsia.guest",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl",
@@ -43,7 +47,11 @@ test_package("guest_integration_tests") {
       if (target_cpu == "x64") {
         environments = [
           {
-            device = [{type = "Intel NUC Kit NUC7i5DNHE"}]
+            device = [
+              {
+                type = "Intel NUC Kit NUC7i5DNHE"
+              },
+            ]
           },
         ]
       }
