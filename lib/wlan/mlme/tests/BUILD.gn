@@ -75,7 +75,6 @@ executable("client_tests") {
   testonly = true
 
   sources = [
-    "bss_unittest.cpp",
     "client_unittest.cpp",
     "station_unittest.cpp",
   ]
@@ -108,6 +107,7 @@ executable("mac_tests") {
     "macaddr_unittest.cpp",
     "mcs_unittest.cpp",
     "packet_unittest.cpp",
+    "parse_beacon_unittest.cpp",
     "parse_element_unittest.cpp",
     "sequence_unittest.cpp",
     "tim_unittest.cpp",

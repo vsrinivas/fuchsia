@@ -54,7 +54,7 @@ class Bss : public fbl::RefCounted<Bss> {
 
     // Update content such as IEs.
     zx_status_t Update(const Beacon& beacon, size_t len);
-    zx_status_t ParseIE(const uint8_t* ie_chains, size_t ie_chains_len);
+    void ParseIE(Span<const uint8_t> ies);
 
     // TODO(porce): Move Beacon method into Beacon class.
     uint32_t GetBeaconSignature(const Beacon& beacon, size_t len) const;
@@ -78,24 +78,12 @@ class Bss : public fbl::RefCounted<Bss> {
     bool has_dsss_param_set_chan_ = false;
     uint8_t dsss_param_set_chan_;
 
-    std::unique_ptr<uint8_t[]> rsne_;
-    size_t rsne_len_{0};
-
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Bss);
 };
 
 using BssMap = MacAddrMap<fbl::RefPtr<Bss>, macaddr_map_type::kBss>;
 
 ::fuchsia::wlan::mlme::BSSTypes GetBssType(const CapabilityInfo& cap);
-
-bool ValidateBssDesc(const ::fuchsia::wlan::mlme::BSSDescription& bss_desc,
-                     bool has_dsss_param_set_chan, uint8_t dsss_param_set_chan);
-wlan_channel_t DeriveChanFromBssDesc(const ::fuchsia::wlan::mlme::BSSDescription& bss_desc,
-                                     uint8_t bcn_rx_chan_primary, bool has_dsss_param_set_chan,
-                                     uint8_t dsss_param_set_chan = 0);
-void BuildMlmeRateSets(const std::vector<uint8_t>& supp_rates,
-                       const std::vector<uint8_t>& ext_supp_rates,
-                       ::fidl::VectorPtr<uint8_t>* basic, ::fidl::VectorPtr<uint8_t>* op);
 
 }  // namespace wlan
 

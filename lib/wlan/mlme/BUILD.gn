@@ -63,6 +63,7 @@ source_set("mlme") {
     "mesh/mesh_mlme.cpp",
     "packet.cpp",
     "packet_utils.cpp",
+    "parse_beacon.cpp",
     "rates_elements.cpp",
     "service.cpp",
     "timer.cpp",

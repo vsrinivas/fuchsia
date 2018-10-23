@@ -12,11 +12,10 @@
 #include <cstdint>
 #include <string>
 
-namespace wlan {
-
 bool operator==(const wlan_channel_t& lhs, const wlan_channel_t& rhs);
 bool operator!=(const wlan_channel_t& lhs, const wlan_channel_t& rhs);
 
+namespace wlan {
 namespace common {
 
 typedef uint16_t Mhz;
