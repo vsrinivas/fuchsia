@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_ui_gfx::Command as GfxCommand;
-use fidl_fuchsia_ui_gfx::{AddChildCmd, ColorRgba, ColorRgbaValue, CreateResourceCmd,
-                                DetachCmd, ImportResourceCmd, ExportResourceCmd, ImportSpec, Quaternion,
-                                QuaternionValue, ReleaseResourceCmd, ResourceArgs, SetColorCmd,
-                                SetEventMaskCmd, SetMaterialCmd, SetRotationCmd, SetScaleCmd,
-                                SetShapeCmd, SetTextureCmd, SetTranslationCmd, Vec3, Vector3Value};
+use fidl_fuchsia_ui_gfx::{
+    AddChildCmd, ColorRgba, ColorRgbaValue, CreateResourceCmd, DetachCmd, ExportResourceCmd,
+    ImportResourceCmd, ImportSpec, Quaternion, QuaternionValue, ReleaseResourceCmd, ResourceArgs,
+    SetColorCmd, SetEventMaskCmd, SetMaterialCmd, SetRotationCmd, SetScaleCmd, SetShapeCmd,
+    SetTextureCmd, SetTranslationCmd, Vec3, Vector3Value,
+};
 use fidl_fuchsia_ui_scenic::Command;
 use fuchsia_zircon::EventPair;
 

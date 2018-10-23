@@ -7,9 +7,10 @@
 mod cmd;
 
 use fidl_fuchsia_images::{ImageInfo, MemoryType, PixelFormat, PresentationInfo, Tiling};
-use fidl_fuchsia_ui_gfx::{CircleArgs, ColorRgba, EntityNodeArgs, ImageArgs, ImportSpec,
-                          MaterialArgs, MemoryArgs, RectangleArgs, ResourceArgs,
-                          RoundedRectangleArgs, ShapeNodeArgs, Value};
+use fidl_fuchsia_ui_gfx::{
+    CircleArgs, ColorRgba, EntityNodeArgs, ImageArgs, ImportSpec, MaterialArgs, MemoryArgs,
+    RectangleArgs, ResourceArgs, RoundedRectangleArgs, ShapeNodeArgs, Value,
+};
 use fidl_fuchsia_ui_scenic::{Command, SessionProxy};
 use fuchsia_zircon::{Event, EventPair, HandleBased, Rights, Status, Vmar, VmarFlags, Vmo};
 use parking_lot::Mutex;
