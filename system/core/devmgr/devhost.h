@@ -12,6 +12,7 @@
 #include <ddk/driver.h>
 
 #include <fbl/intrusive_double_list.h>
+#include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 
 #include <lib/fdio/remoteio.h>
@@ -34,13 +35,15 @@
 
 // Safe external APIs are in device.h and device_internal.h
 
-typedef struct zx_driver : fbl::DoublyLinkedListable<zx_driver*> {
-    const char* name;
-    zx_driver_rec_t* driver_rec;
-    const zx_driver_ops_t* ops;
-    void* ctx;
-    const char* libname;
-    zx_status_t status;
+typedef struct zx_driver : fbl::DoublyLinkedListable<fbl::unique_ptr<zx_driver>> {
+    zx_driver() = default;
+
+    const char* name = nullptr;
+    zx_driver_rec_t* driver_rec = nullptr;
+    const zx_driver_ops_t* ops = nullptr;
+    void* ctx = nullptr;
+    fbl::String libname;
+    zx_status_t status = ZX_OK;
 } zx_driver_t;
 
 namespace devmgr {

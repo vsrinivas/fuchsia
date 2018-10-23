@@ -60,7 +60,7 @@ static devhost_iostate_t root_ios = []() {
     return ios;
 }();
 
-static fbl::DoublyLinkedList<zx_driver*> dh_drivers;
+static fbl::DoublyLinkedList<fbl::unique_ptr<zx_driver>> dh_drivers;
 
 static const char* mkdevpath(zx_device_t* dev, char* path, size_t max) {
     if (dev == nullptr) {
@@ -129,23 +129,22 @@ static void logflag(char* flag, uint32_t* flags) {
 static zx_status_t dh_find_driver(const char* libname, zx_handle_t vmo, zx_driver_t** out) {
     // check for already-loaded driver first
     for (auto& drv : dh_drivers) {
-        if (!strcmp(libname, drv.libname)) {
+        if (!strcmp(libname, drv.libname.c_str())) {
             *out = &drv;
             zx_handle_close(vmo);
             return drv.status;
         }
     }
 
-    size_t len = strlen(libname) + 1;
-    auto drv = static_cast<zx_driver_t*>(calloc(1, sizeof(zx_driver_t) + len));
-    if (drv == nullptr) {
+    // TODO(kulakowski/teisenbe): This should probably be a RefPtr
+    auto new_driver = fbl::make_unique<zx_driver_t>();
+    if (new_driver == nullptr) {
         zx_handle_close(vmo);
         return ZX_ERR_NO_MEMORY;
     }
-    new (drv) zx_driver_t;
-    memcpy((void*) (drv + 1), libname, len);
-    drv->libname = (const char*) (drv + 1);
-    dh_drivers.push_back(drv);
+    new_driver->libname.Set(libname);
+    zx_driver_t* drv = new_driver.get();
+    dh_drivers.push_back(fbl::move(new_driver));
     *out = drv;
 
     void* dl = dlopen_vmo(vmo, RTLD_NOW);
@@ -716,7 +715,7 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child, const char* pro
     const char* path = mkdevpath(parent, buffer, sizeof(buffer));
     log(RPC_OUT, "devhost[%s] add '%s'\n", path, child->name);
 
-    const char* libname = child->driver->libname;
+    const char* libname = child->driver->libname.c_str();
     size_t namelen = strlen(libname) + strlen(child->name) + 2;
     char name[namelen];
     snprintf(name, namelen, "%s,%s", libname, child->name);
