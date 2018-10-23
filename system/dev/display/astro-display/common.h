@@ -52,6 +52,12 @@ enum {
     GPIO_COUNT,
 };
 
+// Should match display_irqs table in board driver
+enum {
+    IRQ_VSYNC,
+    IRQ_RDMA,
+};
+
 constexpr uint8_t PANEL_DISPLAY_ID = 1;
 
 // Astro Display dimension

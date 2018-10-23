@@ -205,7 +205,7 @@ void AstroDisplay::DisplayControllerImplApplyConfiguration( const display_config
         addr = (uint8_t) (uint64_t) display_configs[0]->layer_list[0]->cfg.primary.image.handle;
         current_image_valid_= true;
         current_image_ = addr;
-        osd_->Flip(addr);
+        osd_->FlipOnVsync(addr);
     } else {
         current_image_valid_= false;
         osd_->Disable();
@@ -223,7 +223,7 @@ void AstroDisplay::DdkUnbind() {
 
 void AstroDisplay::DdkRelease() {
     if (osd_) {
-        osd_->Disable();
+        osd_->Release();
     }
     vsync_irq_.destroy();
     thrd_join(vsync_thread_, NULL);
@@ -469,7 +469,7 @@ zx_status_t AstroDisplay::Bind() {
     }
 
     // Map VSync Interrupt
-    status = pdev_map_interrupt(&pdev_, 0, vsync_irq_.reset_and_get_address());
+    status = pdev_map_interrupt(&pdev_, IRQ_VSYNC, vsync_irq_.reset_and_get_address());
     if (status  != ZX_OK) {
         DISP_ERROR("Could not map vsync interrupt\n");
         return status;

@@ -5,6 +5,7 @@
 #include "osd.h"
 #include "vpp-regs.h"
 #include "vpu-regs.h"
+#include "rdma-regs.h"
 #include <ddk/debug.h>
 #include <ddktl/device.h>
 
@@ -38,6 +39,27 @@ unsigned int osd_filter_coefs_bicubic[] = {
 };
 
 } // namespace
+
+int Osd::RdmaThread() {
+    zx_status_t status;
+    while (1) {
+        status = rdma_irq_.wait(nullptr);
+        if (status != ZX_OK) {
+            DISP_ERROR("RDMA Interrupt wait failed\n");
+            break;
+        }
+        // RDMA completed. Remove source for all finished DMA channels
+        for (int i = 0; i < kMaxRdmaChannels; i++) {
+            if (vpu_mmio_->Read32(VPU_RDMA_STATUS) & RDMA_STATUS_DONE(i)) {
+                uint32_t regVal = vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO);
+                regVal &= ~RDMA_ACCESS_AUTO_INT_EN(i); // VSYNC interrupt source
+                vpu_mmio_->Write32(regVal, VPU_RDMA_ACCESS_AUTO);
+            }
+        }
+    }
+    return status;
+}
+
 zx_status_t Osd::Init(zx_device_t* parent) {
     if (initialized_) {
         return ZX_OK;
@@ -59,6 +81,34 @@ zx_status_t Osd::Init(zx_device_t* parent) {
 
     vpu_mmio_ = ddk::MmioBuffer(mmio);
 
+    // Get BTI from parent
+    status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not get BTI handle\n");
+        return status;
+    }
+
+    //Map RDMA Done Interrupt
+    status = pdev_map_interrupt(&pdev_, IRQ_RDMA, rdma_irq_.reset_and_get_address());
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not map RDMA interrupt\n");
+        return status;
+    }
+
+    auto start_thread = [](void* arg) {return static_cast<Osd*>(arg)->RdmaThread(); };
+    status = thrd_create_with_name(&rdma_thread_, start_thread, this, "rdma_thread");
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not create rdma_thread\n");
+        return status;
+    }
+
+    // Setup RDMA
+    status = SetupRdma();
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not setup RDMA\n");
+        return status;
+    }
+
     // OSD object is ready to be used.
     initialized_ = true;
     return ZX_OK;
@@ -66,6 +116,8 @@ zx_status_t Osd::Init(zx_device_t* parent) {
 
 void Osd::Disable(void) {
     ZX_DEBUG_ASSERT(initialized_);
+    // Display RDMA
+    vpu_mmio_->ClearBits32(RDMA_ACCESS_AUTO_INT_EN_ALL, VPU_RDMA_ACCESS_AUTO);
     vpu_mmio_->ClearBits32(1 << 0, VPU_VIU_OSD1_CTRL_STAT);
 }
 
@@ -89,15 +141,46 @@ zx_status_t Osd::Configure() {
     return ZX_OK;
 }
 
+void Osd::FlipOnVsync(uint8_t idx) {
 
-void Osd::Flip(uint8_t idx) {
+    // Get the first available channel
+    int rdma_channel = GetNextAvailableRdmaChannel();
+    uint8_t retry_count = 0;
+    while (rdma_channel == -1 && retry_count++ < kMaxRetries) {
+        zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+        rdma_channel = GetNextAvailableRdmaChannel();
+    }
+
+    if (rdma_channel < 0) {
+        ZX_DEBUG_ASSERT(false);
+        return;
+    }
+
+    DISP_SPEW("Channel used is %d\n", rdma_channel);
+
+    // Update CFG_W0 with correct Canvas Index
     uint32_t cfg_w0 = (idx << VpuViuOsd1BlkCfgTblAddrShift) |
         VpuViuOsd1BlkCfgLittleEndian |
         (VpuViuOsd1BlkCfgOsdBlkMode32Bit << VpuViuOsd1BlkCfgOsdBlkModeShift) |
         (VpuViuOsd1BlkCfgColorMatrixArgb << VpuViuOsd1BlkCfgColorMatrixShift);
+    SetRdmaTableValue(rdma_channel, IDX_CFG_W0, cfg_w0);
+    SetRdmaTableValue(rdma_channel, IDX_CTRL_STAT,
+                      vpu_mmio_->Read32(VPU_VIU_OSD1_CTRL_STAT) | (1 << 0));
+    FlushRdmaTable(rdma_channel);
 
-    vpu_mmio_->Write32(cfg_w0, VPU_VIU_OSD1_BLK0_CFG_W0);
-    Enable();
+    // Write the start and end address of the table. End address is the last address that the
+    // RDMA engine reads from.
+    vpu_mmio_->Write32(static_cast<uint32_t> (rdma_chnl_container_[rdma_channel].phys_offset),
+                       VPU_RDMA_AHB_START_ADDR(rdma_channel));
+    vpu_mmio_->Write32(static_cast<uint32_t>(rdma_chnl_container_[rdma_channel].phys_offset +
+                       (sizeof(RdmaTable) * kRdmaTableMaxSize) - 4),
+                       VPU_RDMA_AHB_END_ADDR(rdma_channel));
+
+    // Enable Auto mode: Non-Increment, VSync Interrupt Driven, Write
+    uint32_t regVal = vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO);
+    regVal |= RDMA_ACCESS_AUTO_INT_EN(rdma_channel); // VSYNC interrupt source
+    regVal |= RDMA_ACCESS_AUTO_WRITE(rdma_channel); // Write
+    vpu_mmio_->Write32(regVal, VPU_RDMA_ACCESS_AUTO);
 }
 
 void Osd::DefaultSetup() {
@@ -252,8 +335,103 @@ void Osd::EnableScaling(bool enable) {
                       vf_phase_step, 0, 28);
         WRITE32_REG(VPU, VPU_VPP_OSD_VSC_INI_PHASE, data32);
     }
+}
+
+void Osd::ResetRdmaTable() {
+    // For Astro display driver, RDMA table is simple.
+    // Setup RDMA Table Register values
+    for (int i = 0; i < kMaxRdmaChannels; i++) {
+        RdmaTable* rdma_table = reinterpret_cast<RdmaTable*>(rdma_chnl_container_[i].virt_offset);
+        rdma_table[IDX_CFG_W0].reg = (VPU_VIU_OSD1_BLK0_CFG_W0 >> 2);
+        rdma_table[IDX_CTRL_STAT].reg = (VPU_VIU_OSD1_CTRL_STAT >> 2);
+    }
 
 }
+
+void Osd::SetRdmaTableValue(uint32_t channel, uint32_t idx, uint32_t val) {
+    ZX_DEBUG_ASSERT(idx < IDX_MAX);
+    ZX_DEBUG_ASSERT(channel < kMaxRdmaChannels);
+    RdmaTable* rdma_table = reinterpret_cast<RdmaTable*>(rdma_chnl_container_[channel].virt_offset);
+    rdma_table[idx].val = val;
+}
+
+void Osd::FlushRdmaTable(uint32_t channel) {
+    zx_status_t status = zx_cache_flush(rdma_chnl_container_[channel].virt_offset,
+                                        sizeof(RdmaTable),
+                                        ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not clean cache %d\n", status);
+        return;
+    }
+}
+
+int Osd::GetNextAvailableRdmaChannel() {
+    // The next RDMA channel is the one that is not being used by hardware
+    // A channel is considered available if it's not busy OR the done bit is set
+    for (int i = 0; i < kMaxRdmaChannels; i++) {
+        if (!rdma_chnl_container_[i].active ||
+            vpu_mmio_->Read32(VPU_RDMA_STATUS) & RDMA_STATUS_DONE(i)) {
+            // found one
+            rdma_chnl_container_[i].active = true;
+            // clear interrupts
+            vpu_mmio_->Write32(vpu_mmio_->Read32(VPU_RDMA_CTRL) | RDMA_CTRL_INT_DONE(i),
+                               VPU_RDMA_CTRL);
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+zx_status_t Osd::SetupRdma() {
+    zx_status_t status = ZX_OK;
+    DISP_INFO("Setting up RDMA\n");
+
+    // since we are flushing the caches, make sure the tables are at least cache_line apart
+    ZX_DEBUG_ASSERT(kChannelBaseOffset > zx_system_get_dcache_line_size());
+
+    // Allocate one page for RDMA Table
+    status = zx_vmo_create_contiguous(bti_.get(), ZX_PAGE_SIZE, 0,
+                                                  rdma_vmo_.reset_and_get_address());
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not create RDMA VMO (%d)\n", status);
+        return status;
+    }
+
+    status = zx_bti_pin(bti_.get(), ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, rdma_vmo_.get(),
+                        0, ZX_PAGE_SIZE, &rdma_phys_, 1, &rdma_pmt_);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not pin RDMA VMO (%d)\n", status);
+        return status;
+    }
+
+    status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                         0, rdma_vmo_.get(), 0, ZX_PAGE_SIZE,
+                         reinterpret_cast<zx_vaddr_t*>(&rdma_vbuf_));
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not map vmar (%d)\n", status);
+        return status;
+    }
+
+    // Initialize each rdma channel container
+    for (int i = 0; i < kMaxRdmaChannels; i++) {
+        ZX_DEBUG_ASSERT((i * kChannelBaseOffset) < ZX_PAGE_SIZE);
+        rdma_chnl_container_[i].phys_offset = rdma_phys_ + (i * kChannelBaseOffset);
+        rdma_chnl_container_[i].virt_offset = rdma_vbuf_ + (i * kChannelBaseOffset);
+        rdma_chnl_container_[i].active = false;
+    }
+
+    // Setup RDMA_CTRL:
+    // Default: no reset, no clock gating, burst size 4x16B for read and write
+    // DDR Read/Write request urgent
+    uint32_t regVal = RDMA_CTRL_READ_URGENT | RDMA_CTRL_WRITE_URGENT;
+    vpu_mmio_->Write32(regVal, VPU_RDMA_CTRL);
+
+    ResetRdmaTable();
+
+    return status;
+}
+
 void Osd::HwInit() {
     ZX_DEBUG_ASSERT(initialized_);
     // Setup VPP horizontal width
@@ -400,6 +578,13 @@ void Osd::Dump() {
             reg = VPU_VIU_OSD2_BLK0_CFG_W4;
         DISP_INFO("reg[0x%x]: 0x%08x\n\n", reg, READ32_REG(VPU, reg));
     }
+}
+
+void Osd::Release() {
+    Disable();
+    rdma_irq_.destroy();
+    thrd_join(rdma_thread_, NULL);
+    zx_pmt_unpin(rdma_pmt_);
 }
 
 } // namespace astro_display

@@ -162,6 +162,7 @@
 #define S905D2_GPIO_IRQ_5               101
 #define S905D2_GPIO_IRQ_6               102
 #define S905D2_GPIO_IRQ_7               103
+#define S905D2_RDMA_DONE                121
 #define S905D2_MALI_IRQ_GP              192
 #define S905D2_MALI_IRQ_GPMMU           193
 #define S905D2_MALI_IRQ_PP              194

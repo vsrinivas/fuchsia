@@ -83,7 +83,6 @@ private:
     // Zircon handles
     zx::bti                             bti_;
     zx::interrupt                       inth_;
-    zx::vmo                             fb_vmo_;
 
     // Thread handles
     thrd_t                              vsync_thread_;

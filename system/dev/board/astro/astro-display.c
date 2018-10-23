@@ -52,6 +52,10 @@ static const pbus_irq_t display_irqs[] = {
         .irq = S905D2_VIU1_VSYNC_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
+    {
+        .irq = S905D2_RDMA_DONE,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
 };
 
 static const pbus_gpio_t display_gpios[] = {
