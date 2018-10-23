@@ -54,7 +54,7 @@ constexpr uint32_t kMinfsDirectPerDindirect = kMinfsDirectPerIndirect * kMinfsDi
 // constexpr uint64_t kMinfsMaxFileBlock = (kMinfsDirect + (kMinfsIndirect * kMinfsDirectPerIndirect)
 //                                         + (kMinfsDoublyIndirect * kMinfsDirectPerIndirect
 //                                         * kMinfsDirectPerIndirect));
-// TODO(ZX-1523): Remove this artifical cap when MinFS can safely deal
+// TODO(ZX-1523): Remove this artificial cap when MinFS can safely deal
 // with files larger than 4GB.
 constexpr uint64_t kMinfsMaxFileBlock = (fbl::numeric_limits<uint32_t>::max() / kMinfsBlockSize)
                                         - 1;

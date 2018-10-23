@@ -895,7 +895,7 @@ void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
     ManagedVfs::Shutdown([this, cb = fbl::move(cb)](zx_status_t status) mutable {
         Sync([this, cb = fbl::move(cb)](zx_status_t) mutable {
             async::PostTask(dispatcher(), [this, cb = fbl::move(cb)]() mutable {
-                // Ensure writeback buffer completes before auxilliary structures
+                // Ensure writeback buffer completes before auxiliary structures
                 // are deleted.
                 writeback_ = nullptr;
                 bc_->Sync();
