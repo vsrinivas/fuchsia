@@ -36,18 +36,53 @@ template("dart_tool") {
 
   dart_library_target_name = target_name + "_dart_library"
 
+  if (defined(invoker.package_name)) {
+    package_name = invoker.package_name
+  } else if (!defined(invoker.infer_package_name) ||
+             invoker.infer_package_name) {
+    # Compute a package name from the label:
+    #   //foo/bar --> foo.bar
+    #   //foo/bar:blah --> foo.bar._blah
+    #   //garnet/public/foo/bar --> foo.bar
+    # Strip public directories.
+    full_dir = get_label_info(":$dart_library_target_name", "dir")
+    foreach(sdk_dir, sdk_dirs) {
+      full_dir = string_replace(full_dir, "$sdk_dir/", "")
+    }
+    package_name = full_dir
+    package_name = string_replace(package_name, "//", "")
+    package_name = string_replace(package_name, "/", ".")
+
+    # If the last directory name does not match the target name, add the
+    # target name to the resulting package name.
+    name = get_label_info(":$dart_library_target_name", "name")
+    last_dir = get_path_info(full_dir, "name")
+    if (last_dir != name) {
+      package_name = "$package_name._$name"
+    }
+  } else {
+    assert(false, "Must specify either a package_name or infer_package_name")
+  }
+
+  package_root = "."
+  if (defined(invoker.package_root)) {
+    package_root = invoker.package_root
+  }
+
+  source_dir = "$package_root/lib"
+  if (defined(invoker.source_dir)) {
+    source_dir = "$package_root/${invoker.source_dir}"
+  }
+
   dart_library(dart_library_target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
                              "disable_analysis",
-                             "source_dir",
                            ])
-    if (defined(invoker.package_name)) {
-      package_name = invoker.package_name
-    } else {
-      infer_package_name = true
-    }
+    package_name = package_name
+    package_root = package_root
+    source_dir = source_dir
 
     sources = []
     if (defined(invoker.sources)) {
@@ -93,11 +128,18 @@ template("dart_tool") {
     rebased_depfile_path = rebase_path(depfile_path)
     rebased_packages_path = rebase_path(packages_path)
 
+    main_uri = rebase_path(invoker.main_dart)
+    package_relative = rebase_path(invoker.main_dart, source_dir)
+    # Approximation for source_dir contains main_dart.
+    if (get_path_info(get_path_info(package_relative, "dir"), "file") != "bin") {
+      main_uri = "package:" + package_name + "/" + package_relative
+    }
+
     args = [
       "--snapshot=$rebased_snapshot_path",
       "--snapshot-depfile=$rebased_depfile_path",
       "--packages=$rebased_packages_path",
-      rebase_path(invoker.main_dart),
+      main_uri,
     ]
 
     deps = dart_sdk_deps + [ ":$dart_library_target_name" ]
