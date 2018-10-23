@@ -484,22 +484,23 @@ static void load_cmdline_from_bootfs() {
         return;
     }
 
-    auto cfg = static_cast<char*>(malloc(file_size + 1));
+    auto cfg = fbl::make_unique<char[]>(file_size + 1);
     if (cfg == nullptr) {
         zx_handle_close(vmo);
         return;
     }
 
-    zx_status_t status = zx_vmo_read(vmo, cfg, 0, file_size);
+    zx_status_t status = zx_vmo_read(vmo, cfg.get(), 0, file_size);
     if (status != ZX_OK) {
         printf("zx_vmo_read on /boot/config/devmgr BOOTFS VMO: %d (%s)\n",
                status, zx_status_get_string(status));
-        free(cfg);
         return;
     }
     cfg[file_size] = '\0';
 
-    char* x = cfg;
+    // putenv() below takes ownership of pieces of this memory, so just release
+    // ownership of it now.
+    char* x = cfg.release();
     while (*x) {
         // skip any leading whitespace
         while (isspace(*x)) {
