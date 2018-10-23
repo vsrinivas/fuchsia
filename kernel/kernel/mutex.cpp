@@ -190,16 +190,8 @@ static inline void mutex_release_internal(mutex_t* m, bool reschedule, bool thre
 
     ktrace_ptr(TAG_KWAIT_WAKE, &m->wait, 1, 0);
 
-    // boost the priority of the new thread we're waking
-    // if the wait queue is empty, it'll return -1 and we'll deboost the thread if
-    // it's not already holding a mutex
-    bool local_resched = false;
-    int blocked_priority = wait_queue_blocked_priority(&m->wait);
-    if (blocked_priority >= 0 || t->mutexes_held == 0) {
-        sched_inherit_priority(t, blocked_priority, &local_resched);
-    }
-
     // deboost ourself if this is the last mutex we held
+    bool local_resched = false;
     if (ct->inherited_priority >= 0 && ct->mutexes_held == 0) {
         sched_inherit_priority(ct, -1, &local_resched);
     }
