@@ -214,37 +214,32 @@ void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK {
 }
 
 // defered work list
-static struct list_node defer_device_list USE_DM_LOCK = LIST_INITIAL_VALUE(defer_device_list);
+static fbl::DoublyLinkedList<zx_device*, zx_device::DeferNode> defer_device_list USE_DM_LOCK;
 
 static int devhost_enumerators USE_DM_LOCK = 0;
 
 static void devhost_finalize() REQ_DM_LOCK {
     // Early exit if there's no work
-    if (list_is_empty(&defer_device_list)) {
+    if (defer_device_list.is_empty()) {
         return;
     }
 
     // Otherwise we snapshot the list
-    list_node_t list;
-    list_move(&defer_device_list, &list);
+    auto list = fbl::move(defer_device_list);
 
     // We detach all the devices from their parents list-of-children
     // while under the DM lock to avoid an enumerator starting to mutate
     // things before we're done detaching them.
-    zx_device_t* dev;
-    list_for_every_entry(&list, dev, zx_device_t, defer) {
-        if (dev->parent) {
-            list_delete(&dev->node);
+    for (auto& dev : list) {
+        if (dev.parent) {
+            list_delete(&dev.node);
         }
     }
 
     // Then we can get to the actual final teardown where we have
     // to drop the lock to call the callback
-    zx_device_t* tmp;
-    list_for_every_entry_safe(&list, dev, tmp, zx_device_t, defer) {
-        // remove from this list
-        list_delete(&dev->defer);
-
+    zx_device* dev;
+    while ((dev = list.pop_front()) != nullptr) {
         // invoke release op
         if (dev->flags & DEV_FLAG_ADDED) {
             DM_UNLOCK();
@@ -320,7 +315,7 @@ void dev_ref_release(zx_device_t* dev) REQ_DM_LOCK {
         zx_handle_close(dev->local_event);
 
         // Put on the defered work list for finalization
-        list_add_tail(&defer_device_list, &dev->defer);
+        defer_device_list.push_back(dev);
 
         // Immediately finalize if there's not an active enumerator
         if (devhost_enumerators == 0) {

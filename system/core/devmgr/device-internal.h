@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <fbl/intrusive_double_list.h>
 #include <zircon/compiler.h>
 
 namespace devmgr {
@@ -110,7 +111,13 @@ struct zx_device {
     struct list_node children;
 
     // list node for the defer_device_list
-    struct list_node defer = {};
+    fbl::DoublyLinkedListNodeState<zx_device*> defer;
+    struct DeferNode {
+        static fbl::DoublyLinkedListNodeState<zx_device*>& node_state(
+            zx_device& obj) {
+            return obj.defer;
+        }
+    };
 
     // iostate
     void* ios = nullptr;
