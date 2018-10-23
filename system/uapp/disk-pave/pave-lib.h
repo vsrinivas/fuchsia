@@ -44,7 +44,7 @@ extern zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
 
 // Reads the entire file from supplied file descriptor. This is necessary due to
 // implementation of streaming protocol which forces entire file to be
-// transfered.
+// transferred.
 extern void Drain(fbl::unique_fd fd);
 
 // Implements tool commands.

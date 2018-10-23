@@ -114,7 +114,7 @@ public:
                               fbl::unique_fd* out_fd);
     zx_status_t FindPartition(FilterCallback filter, fbl::unique_fd* out_fd) const;
 
-    // Wipes a specified partition from the GPT, and ovewrites first 8KiB with
+    // Wipes a specified partition from the GPT, and overwrites first 8KiB with
     // nonsense.
     zx_status_t WipePartitions(FilterCallback filter);
 
