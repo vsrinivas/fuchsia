@@ -22,7 +22,7 @@ static zx_driver_ops_t virtio_driver_ops = {
     .bind = virtio_pci_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(virtio, virtio_driver_ops, "zircon", "0.1", 13)
+ZIRCON_DRIVER_BEGIN(virtio, virtio_driver_ops, "zircon", "0.1", 14)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, VIRTIO_PCI_VENDOR_ID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_BLOCK),
@@ -35,5 +35,6 @@ ZIRCON_DRIVER_BEGIN(virtio, virtio_driver_ops, "zircon", "0.1", 13)
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_NETWORK),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_GPU),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_INPUT), // Input device
+    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_SOCKET),
     BI_ABORT(),
 ZIRCON_DRIVER_END(virtio)

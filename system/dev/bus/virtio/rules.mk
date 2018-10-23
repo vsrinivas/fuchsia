@@ -18,16 +18,24 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/input.cpp \
     $(LOCAL_DIR)/ring.cpp \
     $(LOCAL_DIR)/rng.cpp \
+    $(LOCAL_DIR)/socket.cpp \
     $(LOCAL_DIR)/virtio_c.c \
     $(LOCAL_DIR)/virtio_driver.cpp \
 	$(LOCAL_DIR)/backends/pci.cpp \
 	$(LOCAL_DIR)/backends/pci_legacy.cpp \
 	$(LOCAL_DIR)/backends/pci_modern.cpp \
 
+MODULE_FIDL_LIBS := system/fidl/fuchsia-device-vsock
+
 MODULE_STATIC_LIBS := \
+    system/ulib/async \
+    system/ulib/async.cpp \
+    system/ulib/async-loop \
+    system/ulib/async-loop.cpp \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
+    system/ulib/fidl \
     system/ulib/hid \
     system/ulib/hwreg \
     system/ulib/pretty \

@@ -29,6 +29,7 @@
 #include "gpu.h"
 #include "input.h"
 #include "rng.h"
+#include "socket.h"
 
 extern "C" zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device, void** cookie) {
     zx_status_t status;
@@ -98,6 +99,10 @@ extern "C" zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device, void*
     case VIRTIO_DEV_TYPE_INPUT:
         virtio_device.reset(new virtio::InputDevice(bus_device, std::move(bti),
                                                     std::move(backend)));
+        break;
+    case VIRTIO_DEV_TYPE_SOCKET:
+        virtio_device.reset(new virtio::SocketDevice(bus_device, std::move(bti),
+                                                     std::move(backend)));
         break;
     default:
         return ZX_ERR_NOT_SUPPORTED;

@@ -122,6 +122,7 @@ typedef struct virtio_pci_common_cfg {
 #define VIRTIO_DEV_ID_GPU               16
 #define VIRTIO_DEV_ID_TIMER             17
 #define VIRTIO_DEV_ID_INPUT             18
+#define VIRTIO_DEV_ID_SOCKET            19
 
 // Device Types (transitional)
 #define VIRTIO_DEV_TYPE_T_NETWORK       0x1000
@@ -143,5 +144,6 @@ typedef struct virtio_pci_common_cfg {
 #define VIRTIO_DEV_TYPE_9P             VIRTIO_LEGACY_DEV_TYPE(VIRTIO_DEV_ID_9P)
 #define VIRTIO_DEV_TYPE_GPU            VIRTIO_LEGACY_DEV_TYPE(VIRTIO_DEV_ID_GPU)
 #define VIRTIO_DEV_TYPE_INPUT          VIRTIO_LEGACY_DEV_TYPE(VIRTIO_DEV_ID_INPUT)
+#define VIRTIO_DEV_TYPE_SOCKET         VIRTIO_LEGACY_DEV_TYPE(VIRTIO_DEV_ID_SOCKET)
 
 __END_CDECLS
