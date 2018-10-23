@@ -2,6 +2,7 @@
     "packages": [
         "//garnet/lib/rust/connectivity-testing:connectivity-testing-tests",
         "//garnet/lib/rust/ethernet:ethernet-tests",
+        "//garnet/lib/rust/fuchsia-pkg-uri:fuchsia-pkg-uri-tests",
         "//garnet/public/rust:rust-crates-tests"
     ]
 }

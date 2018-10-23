@@ -1,0 +1,58 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+
+rustc_binary("bin") {
+  name = "pkgctl"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:structopt",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+package("pkg_ctl") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "rust_crates/pkgctl"
+      dest = "pkgctl"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/pkgctl.cmx")
+      dest = "pkgctl.cmx"
+    },
+  ]
+}
+
+test_package("pkg_ctl_tests") {
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "pkgctl_bin_test_rustc"
+    },
+  ]
+}

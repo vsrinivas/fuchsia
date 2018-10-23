@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/pkgctl"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.pkg.PackageResolver"
+        ]
+    }
+}

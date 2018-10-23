@@ -1,0 +1,8 @@
+{
+    "imports": [
+        "garnet/packages/prod/pkg_ctl"
+    ],
+    "packages": [
+        "//garnet/bin/pkg_ctl:pkg_ctl_tests"
+    ]
+}
