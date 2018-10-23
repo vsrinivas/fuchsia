@@ -22,6 +22,36 @@ using common::UpperBits;
 using TestingBase =
     ::btlib::testing::FakeControllerTest<::btlib::testing::TestController>;
 
+// clang-format off
+#define COMMAND_COMPLETE_RSP(opcode)                                         \
+  common::CreateStaticByteBuffer(hci::kCommandCompleteEventCode, 0x04, 0xF0, \
+                                 LowerBits((opcode)), UpperBits((opcode)),   \
+                                 hci::kSuccess)
+
+#define COMMAND_STATUS_RSP(opcode, statuscode)                       \
+  common::CreateStaticByteBuffer(hci::kCommandStatusEventCode, 0x04, \
+                                 (statuscode), 0xF0,                 \
+                                 LowerBits((opcode)), UpperBits((opcode)))
+
+
+const auto kWriteInquiryActivity = common::CreateStaticByteBuffer(
+    LowerBits(hci::kWriteInquiryScanActivity), UpperBits(hci::kWriteInquiryScanActivity),
+    0x04, // Param total size
+    0xE1, 0x01, // Inquiry Scan Interval
+    0x12, 0x00 // Inquiry Scan Window
+);
+
+const auto kWriteInquiryActivityRsp = COMMAND_COMPLETE_RSP(hci::kWriteInquiryScanActivity);
+
+const auto kWriteInquiryType = common::CreateStaticByteBuffer(
+    LowerBits(hci::kWriteInquiryScanType), UpperBits(hci::kWriteInquiryScanType),
+    0x01, // Param total size
+    0x01 // Interlaced Inquiry Scan
+);
+
+const auto kWriteInquiryTypeRsp = COMMAND_COMPLETE_RSP(hci::kWriteInquiryScanType);
+// clang-format on
+
 class BrEdrDiscoveryManagerTest : public TestingBase {
  public:
   BrEdrDiscoveryManagerTest() = default;
@@ -30,10 +60,10 @@ class BrEdrDiscoveryManagerTest : public TestingBase {
   void SetUp() override {
     TestingBase::SetUp();
 
-    NewDiscoveryManager(hci::InquiryMode::kStandard);
-
     test_device()->StartCmdChannel(test_cmd_chan());
     test_device()->StartAclChannel(test_acl_chan());
+
+    NewDiscoveryManager(hci::InquiryMode::kStandard);
   }
 
   void TearDown() override {
@@ -43,8 +73,16 @@ class BrEdrDiscoveryManagerTest : public TestingBase {
   }
 
   void NewDiscoveryManager(hci::InquiryMode mode) {
+    // We expect to set the Inquiry Scan and the Type when we start.
+    test_device()->QueueCommandTransaction(
+        CommandTransaction(kWriteInquiryActivity, {&kWriteInquiryActivityRsp}));
+    test_device()->QueueCommandTransaction(
+        CommandTransaction(kWriteInquiryType, {&kWriteInquiryTypeRsp}));
+
     discovery_manager_ = std::make_unique<BrEdrDiscoveryManager>(
         transport(), mode, &device_cache_);
+
+    RunLoopUntilIdle();
   }
 
   const RemoteDeviceCache* device_cache() const { return &device_cache_; }
@@ -64,16 +102,6 @@ class BrEdrDiscoveryManagerTest : public TestingBase {
 using GAP_BrEdrDiscoveryManagerTest = BrEdrDiscoveryManagerTest;
 
 // clang-format off
-#define COMMAND_COMPLETE_RSP(opcode)                                         \
-  common::CreateStaticByteBuffer(hci::kCommandCompleteEventCode, 0x04, 0xF0, \
-                                 LowerBits((opcode)), UpperBits((opcode)),   \
-                                 hci::kSuccess);
-
-#define COMMAND_STATUS_RSP(opcode, statuscode)                       \
-  common::CreateStaticByteBuffer(hci::kCommandStatusEventCode, 0x04, \
-                                 (statuscode), 0xF0,                 \
-                                 LowerBits((opcode)), UpperBits((opcode)));
-
 const auto kInquiry = common::CreateStaticByteBuffer(
   LowerBits(hci::kInquiry), UpperBits(hci::kInquiry),
   0x05, // Paramreter total size

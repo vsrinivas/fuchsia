@@ -161,6 +161,12 @@ class BrEdrDiscoveryManager final {
   // pending requests and the current scan state.
   void SetInquiryScan();
 
+  // Writes the Inquiry Scan Settings to the controller.
+  // If |interlaced| is true, and the controller does not supoport interlaces
+  // inquiry scan mode, standard mode is used.
+  void WriteInquiryScanSettings(uint16_t interval, uint16_t window,
+                                bool interlaced);
+
   // Creates and stores a new session object and returns it.
   std::unique_ptr<BrEdrDiscoverableSession> AddDiscoverableSession();
 

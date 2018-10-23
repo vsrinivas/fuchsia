@@ -485,6 +485,39 @@ struct WritePageScanActivityCommandParams {
   uint16_t page_scan_window;
 } __PACKED;
 
+// ===============================================
+// Read Inquiry Scan Activity Command (v1.1) (BR/EDR)
+constexpr OpCode kReadInquiryScanActivity = ControllerAndBasebandOpCode(0x001D);
+
+struct ReadInquiryScanActivityReturnParams {
+  // See enum StatusCode in hci_constants.h.
+  StatusCode status;
+
+  // Inquiry_Scan_Interval, in time slices (0.625ms)
+  // Range: kInquiryScanIntervalMin - kInquiryScanIntervalMax in hci_constants.h
+  uint16_t inquiry_scan_interval;
+
+  // Inquiry_Scan_Window, in time slices
+  // Range: kInquiryScanWindowMin - kInquiryScanWindowMax in hci_constants.h
+  uint16_t inquiry_scan_window;
+} __PACKED;
+
+// ================================================
+// Write Inquiry Scan Activity Command (v1.1) (BR/EDR)
+constexpr OpCode kWriteInquiryScanActivity =
+    ControllerAndBasebandOpCode(0x001E);
+
+struct WriteInquiryScanActivityCommandParams {
+  // Page_Scan_Interval, in time slices (0.625ms)
+  // Valid Range: kInquiryScanIntervalMin - kInquiryScanIntervalMax in
+  // hci_constants.h
+  uint16_t inquiry_scan_interval;
+
+  // Page_Scan_Window, in time slices
+  // Valid Range: kPageScanWindowMin - kPageScanWindowMax in hci_constants.h
+  uint16_t inquiry_scan_window;
+} __PACKED;
+
 // ============================================
 // Read Class of Device Command (v1.1) (BR/EDR)
 constexpr OpCode kReadClassOfDevice = ControllerAndBasebandOpCode(0x0023);
@@ -532,6 +565,27 @@ struct ReadTransmitPowerLevelReturnParams {
   //   Range: -30 ≤ N ≤ 20
   //   Units: dBm
   int8_t tx_power_level;
+} __PACKED;
+
+// ===================================
+// Read Inquiry Scan Type (v1.2) (BR/EDR)
+constexpr OpCode kReadInquiryScanType = ControllerAndBasebandOpCode(0x0042);
+
+struct ReadInquiryScanTypeReturnParams {
+  // See enum StatusCode in hci_constants.h.
+  StatusCode status;
+
+  // See enum class InquiryScanType in hci_constants.h for possible values.
+  InquiryScanType inquiry_scan_type;
+} __PACKED;
+
+// ====================================
+// Write Inquiry Scan Type (v1.2) (BR/EDR)
+constexpr OpCode kWriteInquiryScanType = ControllerAndBasebandOpCode(0x0043);
+
+struct WriteInquiryScanTypeCommandParams {
+  // See enum class InquiryScanType in hci_constants.h for possible values.
+  InquiryScanType inquiry_scan_type;
 } __PACKED;
 
 // =================================

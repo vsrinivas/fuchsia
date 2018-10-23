@@ -104,12 +104,14 @@ BrEdrDiscoveryManager::BrEdrDiscoveryManager(fxl::RefPtr<hci::Transport> hci,
       fbl::BindMember(this, &BrEdrDiscoveryManager::InquiryResult),
       dispatcher_);
   ZX_DEBUG_ASSERT(rssi_handler_id_);
-  // TODO(NET-729): add event handlers for the other inquiry modes
   eir_handler_id_ = hci_->command_channel()->AddEventHandler(
       hci::kExtendedInquiryResultEventCode,
       fbl::BindMember(this, &BrEdrDiscoveryManager::ExtendedInquiryResult),
       dispatcher_);
   ZX_DEBUG_ASSERT(eir_handler_id_);
+
+  // Set the Inquiry Scan Settings
+  WriteInquiryScanSettings(0x01E1, 0x0012, true);
 }
 
 BrEdrDiscoveryManager::~BrEdrDiscoveryManager() {
@@ -446,6 +448,50 @@ void BrEdrDiscoveryManager::SetInquiryScan() {
   auto read_enable = hci::CommandPacket::New(hci::kReadScanEnable);
   hci_->command_channel()->SendCommand(std::move(read_enable), dispatcher_,
                                        std::move(scan_enable_cb));
+}
+
+void BrEdrDiscoveryManager::WriteInquiryScanSettings(uint16_t interval,
+                                                     uint16_t window,
+                                                     bool interlaced) {
+  // TODO(jamuraa): add a callback for success or failure?
+  auto write_activity = hci::CommandPacket::New(
+      hci::kWriteInquiryScanActivity,
+      sizeof(hci::WriteInquiryScanActivityCommandParams));
+  auto* activity_params =
+      write_activity->mutable_view()
+          ->mutable_payload<hci::WriteInquiryScanActivityCommandParams>();
+  activity_params->inquiry_scan_interval = htole16(interval);
+  activity_params->inquiry_scan_window = htole16(window);
+
+  hci_->command_channel()->SendCommand(
+      std::move(write_activity), dispatcher_,
+      [](auto id, const hci::EventPacket& event) {
+        if (hci_is_error(event, WARN, "gap-bredr",
+                         "write inquiry scan activity failed")) {
+          return;
+        }
+        bt_log(SPEW, "gap-bredr", "inquiry scan activity updated");
+      });
+
+  auto write_type =
+      hci::CommandPacket::New(hci::kWriteInquiryScanType,
+                              sizeof(hci::WriteInquiryScanTypeCommandParams));
+  auto* type_params =
+      write_type->mutable_view()
+          ->mutable_payload<hci::WriteInquiryScanTypeCommandParams>();
+  type_params->inquiry_scan_type =
+      (interlaced ? hci::InquiryScanType::kInterlacedScan
+                  : hci::InquiryScanType::kStandardScan);
+
+  hci_->command_channel()->SendCommand(
+      std::move(write_type), dispatcher_,
+      [](auto id, const hci::EventPacket& event) {
+        if (hci_is_error(event, WARN, "gap-bredr",
+                         "write inquiry scan type failed")) {
+          return;
+        }
+        bt_log(SPEW, "gap-bredr", "inquiry scan type updated");
+      });
 }
 
 std::unique_ptr<BrEdrDiscoverySession>
