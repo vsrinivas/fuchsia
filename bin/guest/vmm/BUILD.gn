@@ -111,6 +111,11 @@ test_package("vmm_tests") {
   tests = [
     {
       name = "device_tests"
+      environments = [
+        {
+          device = [{type = "Intel NUC Kit NUC7i5DNHE"}]
+        },
+      ]
     },
     {
       name = "device_unittests"
