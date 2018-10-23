@@ -3,6 +3,8 @@
         "binary": "bin/magma_info"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services", "vulkan" ]
+        "features": [
+            "vulkan"
+        ]
     }
 }

@@ -1,8 +1,13 @@
 {
-    "sandbox": {
-        "features": [ "deprecated-all-services", "vulkan" ]
-    },
     "program": {
         "binary": "test/vkcopy"
+    },
+    "sandbox": {
+        "features": [
+            "vulkan"
+        ],
+        "services": [
+            "fuchsia.vulkan.loader.Loader"
+        ]
     }
 }
