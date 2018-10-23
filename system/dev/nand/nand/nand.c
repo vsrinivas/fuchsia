@@ -450,7 +450,7 @@ static zx_status_t nand_bind(void* ctx, zx_device_t* parent) {
 
     zx_device_prop_t props[] = {
         { BIND_PROTOCOL, 0, ZX_PROTOCOL_NAND },
-        { BIND_NAND_CLASS, 0, NAND_CLASS_PARTMAP },
+        { BIND_NAND_CLASS, 0, zircon_nand_Class_PARTMAP },
     };
 
     device_add_args_t args = {

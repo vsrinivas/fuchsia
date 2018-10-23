@@ -801,7 +801,7 @@ static zx_status_t aml_get_nand_info(void* ctx, zircon_nand_Info* nand_info) {
     nand_info->num_blocks = (uint32_t)capacity;
     nand_info->ecc_bits = raw_nand->controller_params.ecc_strength;
 
-    nand_info->nand_class = NAND_CLASS_PARTMAP;
+    nand_info->nand_class = zircon_nand_Class_PARTMAP;
     memset(&nand_info->partition_guid, 0, sizeof(nand_info->partition_guid));
 
     if (raw_nand->controller_params.user_mode == 2)

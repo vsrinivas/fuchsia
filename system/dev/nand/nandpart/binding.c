@@ -1,4 +1,4 @@
-
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -19,5 +19,5 @@ static zx_driver_ops_t nandpart_driver_ops = {
 
 ZIRCON_DRIVER_BEGIN(nandpart, nandpart_driver_ops, "zircon", "0.1", 2)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
-    BI_MATCH_IF(EQ, BIND_NAND_CLASS, NAND_CLASS_PARTMAP),
+    BI_MATCH_IF(EQ, BIND_NAND_CLASS, zircon_nand_Class_PARTMAP),
 ZIRCON_DRIVER_END(nandpart)

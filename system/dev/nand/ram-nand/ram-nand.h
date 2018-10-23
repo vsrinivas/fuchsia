@@ -27,7 +27,7 @@ struct NandParams : public zircon_nand_Info {
     NandParams(uint32_t page_size, uint32_t pages_per_block, uint32_t num_blocks, uint32_t ecc_bits,
                uint32_t oob_size)
         : NandParams(zircon_nand_Info {page_size, pages_per_block, num_blocks, ecc_bits, oob_size,
-                     NAND_CLASS_FTL, {}}) {}
+                     zircon_nand_Class_FTL, {}}) {}
 
     NandParams(const zircon_nand_Info& base) {
         // NandParams has no data members.

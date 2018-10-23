@@ -8,7 +8,7 @@
 #pragma once
 
 #include <zircon/compiler.h>
-#include <zircon/device/nand.h>
+#include <zircon/nand/c/fidl.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS;

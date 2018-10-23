@@ -121,9 +121,9 @@ zx_status_t NandPartDevice::Create(zx_device_t* parent) {
         memcpy(&nand_info.partition_guid, &part->type_guid, sizeof(nand_info.partition_guid));
         // We only use FTL for the FVM partition.
         if (memcmp(part->type_guid, fvm_guid, sizeof(fvm_guid)) == 0) {
-            nand_info.nand_class = NAND_CLASS_FTL;
+            nand_info.nand_class = zircon_nand_Class_FTL;
         } else {
-            nand_info.nand_class = NAND_CLASS_BBS;
+            nand_info.nand_class = zircon_nand_Class_BBS;
         }
 
         fbl::AllocChecker ac;

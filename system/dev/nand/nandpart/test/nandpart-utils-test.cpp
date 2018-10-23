@@ -21,7 +21,7 @@ constexpr zircon_nand_Info kNandInfo = {
     .num_blocks = kNumBlocks,
     .ecc_bits = 2,
     .oob_size = kOobSize,
-    .nand_class = NAND_CLASS_BBS,
+    .nand_class = zircon_nand_Class_BBS,
     .partition_guid = {},
 };
 

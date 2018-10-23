@@ -7,7 +7,6 @@
 #include <assert.h>
 #include <stdint.h>
 
-#include <zircon/device/nand.h>
 #include <zircon/nand/c/fidl.h>
 #include <zircon/types.h>
 

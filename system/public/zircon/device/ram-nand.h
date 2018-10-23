@@ -10,7 +10,7 @@
 #include <zircon/boot/image.h>
 #include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
-#include <zircon/device/nand.h>
+#include <zircon/nand/c/fidl.h>
 #include <zircon/types.h>
 
 #define IOCTL_RAM_NAND_CREATE \

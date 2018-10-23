@@ -18,7 +18,6 @@
 #include <unittest/unittest.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/device.h>
-#include <zircon/device/nand.h>
 #include <zircon/hw/gpt.h>
 #include <zircon/nand/c/fidl.h>
 #include <zircon/syscalls.h>
@@ -47,7 +46,7 @@ constexpr zircon_nand_RamNandInfo kNandInfo = {
         .num_blocks = kNumBlocks,
         .ecc_bits = 8,
         .oob_size = kOobSize,
-        .nand_class = NAND_CLASS_PARTMAP,
+        .nand_class = zircon_nand_Class_PARTMAP,
         .partition_guid = {},
     },
     .partition_map = {

@@ -11,7 +11,7 @@
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
-#include <zircon/device/nand.h>
+#include <zircon/nand/c/fidl.h>
 #include <zircon/types.h>
 
 #include "rawnand-internal.h"
