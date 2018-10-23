@@ -8,6 +8,7 @@ This document is a description of the Fuchsia Interface Definition Language
 *   [FIDL: Wire Format Specification]
 *   [FIDL: Language Specification]
 *   [FIDL: Compiler Specification]
+*   [FIDL: API Readability / Style Guide]
 *   [FIDL: C Language Bindings]
 *   [FIDL: C++ Language Bindings]
 *   [FIDL Examples]: Some small example code used during development
@@ -18,6 +19,7 @@ This document is a description of the Fuchsia Interface Definition Language
 [FIDL: Wire Format Specification]: ../reference/wire-format/index.md
 [FIDL: Language Specification]: ../reference/language.md
 [FIDL: Compiler Specification]: ../reference/compiler.md
+[FIDL: API Readability / Style Guide]: ../../../api/fidl.md
 [FIDL: C Language Bindings]: ../languages/c.md
 [FIDL: C++ Language Bindings]: ../languages/cpp.md
 [FIDL Examples]: https://fuchsia.googlesource.com/zircon/+/master/system/host/fidl/examples
