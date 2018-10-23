@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <zircon/device/thermal.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/system.h>
-#include <zircon/sysinfo/c/fidl.h>
 
 #include <lib/async-loop/cpp/loop.h>
 
@@ -47,7 +47,7 @@ static zx_status_t get_root_resource(zx_handle_t* root_resource) {
     return status;
   }
 
-  zx_status_t fidl_status = zircon_sysinfo_DeviceGetRootResource(
+  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootResource(
       channel.get(), &status, root_resource);
   if (fidl_status != ZX_OK) {
     return fidl_status;

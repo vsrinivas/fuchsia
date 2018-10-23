@@ -59,7 +59,7 @@ static_library("debugger_utils") {
 
   if (is_fuchsia) {
     public_deps += [
-      "//zircon/public/fidl/zircon-sysinfo:zircon-sysinfo_c",
+      "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
       "//zircon/public/lib/fdio",
       "//zircon/public/lib/zx",
     ]

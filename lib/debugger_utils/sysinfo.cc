@@ -10,8 +10,8 @@
 #include <lib/zx/job.h>
 #include <unistd.h>
 
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <zircon/syscalls.h>
-#include <zircon/sysinfo/c/fidl.h>
 
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
@@ -41,7 +41,7 @@ zx::job GetRootJob() {
 
   zx_handle_t root_job;
   zx_status_t fidl_status =
-      zircon_sysinfo_DeviceGetRootJob(channel.get(), &status, &root_job);
+      fuchsia_sysinfo_DeviceGetRootJob(channel.get(), &status, &root_job);
   if (fidl_status != ZX_OK || status != ZX_OK) {
     FXL_LOG(ERROR) << "unable to get root job";
     return zx::job();

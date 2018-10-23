@@ -13,10 +13,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/object.h>
-#include <zircon/sysinfo/c/fidl.h>
 
 namespace bt_le_heart_rate {
 namespace {
@@ -33,7 +33,7 @@ zx::handle GetRootResource() {
     return {};
 
   zx_handle_t root_resource;
-  zx_status_t fidl_status = zircon_sysinfo_DeviceGetRootResource(
+  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootResource(
       channel.get(), &status, &root_resource);
   if (fidl_status != ZX_OK || status != ZX_OK)
     return {};

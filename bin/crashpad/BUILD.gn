@@ -70,7 +70,7 @@ source_set("report_annotations") {
   deps = [
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/syslog/cpp",
-    "//zircon/public/fidl/zircon-sysinfo:zircon-sysinfo_c",
+    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/zx",
   ]
 }

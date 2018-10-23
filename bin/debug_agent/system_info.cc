@@ -5,6 +5,7 @@
 #include "garnet/bin/debug_agent/system_info.h"
 
 #include <fcntl.h>
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
@@ -12,7 +13,6 @@
 #include <unistd.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
-#include <zircon/sysinfo/c/fidl.h>
 
 #include "garnet/bin/debug_agent/object_util.h"
 #include "lib/fxl/logging.h"
@@ -41,7 +41,7 @@ zx::job GetRootJob() {
 
   zx_handle_t root_job;
   zx_status_t fidl_status =
-      zircon_sysinfo_DeviceGetRootJob(channel.get(), &status, &root_job);
+      fuchsia_sysinfo_DeviceGetRootJob(channel.get(), &status, &root_job);
   if (fidl_status != ZX_OK || status != ZX_OK) {
     FXL_NOTREACHED();
     return zx::job();

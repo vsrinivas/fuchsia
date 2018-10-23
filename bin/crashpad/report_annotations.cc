@@ -9,13 +9,13 @@
 #include <sys/types.h>
 #include <string>
 
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/strings/trim.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/image.h>
-#include <zircon/sysinfo/c/fidl.h>
 
 namespace fuchsia {
 namespace crash {
@@ -39,7 +39,7 @@ std::string GetBoardName() {
 
   char board_name[ZBI_BOARD_NAME_LEN];
   size_t actual_size;
-  zx_status_t fidl_status = zircon_sysinfo_DeviceGetBoardName(
+  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(
       channel.get(), &status, board_name, sizeof(board_name), &actual_size);
   if (fidl_status != ZX_OK || status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to get board name";

@@ -10,13 +10,13 @@
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/channel.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
-#include <zircon/sysinfo/c/fidl.h>
 #include <zircon/threads.h>
 
 #include "garnet/lib/machina/io.h"
@@ -44,7 +44,7 @@ static zx_status_t guest_get_resource(zx::resource* resource) {
     return status;
   }
 
-  zx_status_t fidl_status = zircon_sysinfo_DeviceGetHypervisorResource(
+  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetHypervisorResource(
       channel.get(), &status, resource->reset_and_get_address());
   if (fidl_status != ZX_OK) {
     return fidl_status;

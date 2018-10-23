@@ -11,11 +11,11 @@
 #include <thread>
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/resource.h>
 #include <zircon/device/device.h>
-#include <zircon/sysinfo/c/fidl.h>
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/vmo/file.h"
@@ -45,7 +45,7 @@ zx_status_t get_root_resource(zx::resource* resource_out) {
   }
 
   zx_handle_t raw_resource;
-  zx_status_t fidl_status = zircon_sysinfo_DeviceGetRootResource(
+  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootResource(
       channel.get(), &status, &raw_resource);
   if (fidl_status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get root resource: " << fidl_status;

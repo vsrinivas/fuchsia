@@ -9,12 +9,12 @@
 #include <iostream>
 #include <string.h>
 
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/async/default.h>
 #include <lib/async/cpp/time.h>
 #include <lib/fdio/util.h>
 #include <trace/event.h>
 #include <zircon/status.h>
-#include <zircon/sysinfo/c/fidl.h>
 
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
@@ -41,7 +41,7 @@ zx_status_t get_root_resource(zx_handle_t* root_resource) {
     return status;
   }
 
-  zx_status_t fidl_status = zircon_sysinfo_DeviceGetRootResource(
+  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootResource(
       channel.get(), &status, root_resource);
   if (fidl_status != ZX_OK) {
     FXL_LOG(ERROR) << "Cannot obtain root resource: "

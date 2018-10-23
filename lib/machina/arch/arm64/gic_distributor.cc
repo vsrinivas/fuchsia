@@ -8,11 +8,11 @@
 #include <fcntl.h>
 
 #include <fbl/unique_fd.h>
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/channel.h>
 #include <libzbi/zbi.h>
 #include <zircon/boot/driver-config.h>
-#include <zircon/sysinfo/c/fidl.h>
 
 #include "garnet/lib/machina/bits.h"
 #include "garnet/lib/machina/guest.h"
@@ -45,8 +45,8 @@ static zx_status_t get_gic_version(GicVersion* version) {
     return status;
   }
 
-  zircon_sysinfo_InterruptControllerInfo info;
-  zx_status_t fidl_status = zircon_sysinfo_DeviceGetInterruptControllerInfo(
+  fuchsia_sysinfo_InterruptControllerInfo info;
+  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetInterruptControllerInfo(
       channel.get(), &status, &info);
   if (fidl_status != ZX_OK) {
     return fidl_status;
@@ -55,10 +55,10 @@ static zx_status_t get_gic_version(GicVersion* version) {
   }
 
   switch (info.type) {
-    case zircon_sysinfo_InterruptControllerType_GIC_V2:
+    case fuchsia_sysinfo_InterruptControllerType_GIC_V2:
       *version = GicVersion::V2;
       return ZX_OK;
-    case zircon_sysinfo_InterruptControllerType_GIC_V3:
+    case fuchsia_sysinfo_InterruptControllerType_GIC_V3:
       *version = GicVersion::V3;
       return ZX_OK;
     default:
