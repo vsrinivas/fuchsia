@@ -17,23 +17,25 @@ syn keyword fidlKeyword as const enum interface library struct union using
 
 
 " Types
-syn match fidlType "request<@\?[a-zA-Z][a-zA-Z0-9]*\(\.[a-zA-Z][a-zA-Z0-9]*\)*>?\?"
+syn match fidlType "\<request<@\?[a-zA-Z][a-zA-Z0-9]*\(\.[a-zA-Z][a-zA-Z0-9]*\)*>?\?"
 
-syn match fidlType "handle?\?\<\@!"
-syn match fidlBadType "handle<[a-z]*>?\?"
-syn match fidlType "handle<\(channel\|event\|eventpair\|fifo\|job\|process\|port\|resource\|socket\|thread\|vmo\)>?\?"
+syn match fidlType "\<handle\>?\?"
+" Exhaustive list of the handle types is listed below.  Highlight anything else
+" as invalid.
+syn match fidlBadType "\<handle<[^>]*>?\?"
+syn match fidlType "\<handle<\(channel\|debuglog\|event\|eventpair\|fifo\|guest\|interrupt\|job\|port\|process\|resource\|socket\|thread\|timer\|vmar\|vmo\)>?\?"
 
-syn match fidlType "string\(:[0-9][0-9]*\)\??\?"
-syn match fidlType "bool"
-syn match fidlBadType "bool?"
-syn match fidlType "float\(32\|64\)"
-syn match fidlBadType "float\(32\|64\)?"
-syn match fidlType "u\?int\(8\|16\|32\|64\)"
-syn match fidlBadType "u\?int\(8\|16\|32\|64\)?"
+syn match fidlType "\<string\>\(:\d\+\)\??\?"
+syn match fidlType "\<bool\>"
+syn match fidlBadType "\<bool?"
+syn match fidlType "\<float\(32\|64\)\>"
+syn match fidlBadType "\<float\(32\|64\)?"
+syn match fidlType "\<u\?int\(8\|16\|32\|64\)\>"
+syn match fidlBadType "\<u\?int\(8\|16\|32\|64\)?"
 
 " TODO: error highlight arrays without length / with "?"
-syn region fidlType matchgroup=Type start="vector<" end=">\%(:\%(\d\+\|\K\k*\%(\.\K\k*\)*\)\)\??\?" contains=fidlType,fidlBadType transparent
-syn region fidlType matchgroup=Type start="array<" end=">:\%(\d\+\|\K\k*\%(\.\K\k*\)*\)" contains=fidlType,fidlBadType transparent
+syn region fidlType matchgroup=Type start="\<vector<" end=">\%(:\%(\d\+\|\K\k*\%(\.\K\k*\)*\)\)\??\?" contains=fidlType,fidlBadType transparent
+syn region fidlType matchgroup=Type start="\<array<" end=">:\%(\d\+\|\K\k*\%(\.\K\k*\)*\)" contains=fidlType,fidlBadType transparent
 
 
 " Identifiers prefixed with @
