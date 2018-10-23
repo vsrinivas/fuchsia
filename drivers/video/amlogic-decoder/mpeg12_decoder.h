@@ -7,6 +7,7 @@
 
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 
 #include <thread>
 #include <vector>

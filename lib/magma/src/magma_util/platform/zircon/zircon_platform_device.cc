@@ -4,6 +4,7 @@
 
 #include <ddk/device.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <zircon/process.h>
 
 #include "magma_util/dlog.h"
@@ -24,10 +25,11 @@ ZirconPlatformDevice::CpuMapMmio(unsigned int index, PlatformMmio::CachePolicy c
     zx_status_t status;
     void* vaddr;
     size_t size;
+    zx_paddr_t paddr;
     zx_handle_t vmo_handle;
 
     if ((status = pdev_map_mmio(&pdev_, index, ZX_CACHE_POLICY_UNCACHED_DEVICE, &vaddr, &size,
-                                &vmo_handle)) != ZX_OK) {
+                                &paddr, &vmo_handle)) != ZX_OK) {
         DRETP(nullptr, "mapping resource failed");
     }
 
@@ -64,8 +66,8 @@ std::unique_ptr<PlatformDevice> PlatformDevice::Create(void* device_handle)
     if (!device_handle)
         return DRETP(nullptr, "device_handle is null, cannot create PlatformDevice");
     zx_device_t* zx_device = static_cast<zx_device_t*>(device_handle);
-    platform_device_protocol_t pdev;
-    if (device_get_protocol(zx_device, ZX_PROTOCOL_PLATFORM_DEV, &pdev) != ZX_OK)
+    pdev_protocol_t pdev;
+    if (device_get_protocol(zx_device, ZX_PROTOCOL_PDEV, &pdev) != ZX_OK)
         return DRETP(nullptr, "Failed to get protocol\n");
 
     return std::unique_ptr<PlatformDevice>(new ZirconPlatformDevice(zx_device, pdev));

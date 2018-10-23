@@ -77,12 +77,12 @@ static void brcmf_sdiod_dummy_irqhandler(struct brcmf_sdio_dev* sdiodev) {}
 
 zx_status_t brcmf_sdiod_configure_oob_interrupt(struct brcmf_sdio_dev* sdiodev,
                                                 wifi_config_t *config) {
-    platform_device_protocol_t pdev;
+    pdev_protocol_t pdev;
     zx_status_t ret = ZX_OK;
 
-    if ((ret = device_get_protocol(sdiodev->dev.zxdev, ZX_PROTOCOL_PLATFORM_DEV, &pdev))
+    if ((ret = device_get_protocol(sdiodev->dev.zxdev, ZX_PROTOCOL_PDEV, &pdev))
                                                                                 != ZX_OK) {
-        zxlogf(ERROR, "brcmf_sdiod_intr_register: ZX_PROTOCOL_PLATFORM_DEV not available\n");
+        zxlogf(ERROR, "brcmf_sdiod_intr_register: ZX_PROTOCOL_PDEV not available\n");
         //TODO: This driver could be run on X64 platforms. When X64 platforms have parallel apis,
         // we need to check for those apis instead of returning an error.
         return ZX_ERR_INTERNAL;
@@ -99,13 +99,17 @@ zx_status_t brcmf_sdiod_configure_oob_interrupt(struct brcmf_sdio_dev* sdiodev,
         zxlogf(ERROR, "brcmf_sdiod_intr_register: OOB gpio not available\n");
         return ZX_ERR_INTERNAL;
     }
+    const size_t size = sizeof(sdiodev->gpios[WIFI_OOB_IRQ_GPIO_INDEX]);
+    size_t actual;
     if ((ret = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, WIFI_OOB_IRQ_GPIO_INDEX,
-                                 &sdiodev->gpios[WIFI_OOB_IRQ_GPIO_INDEX])) != ZX_OK) {
+                                 &sdiodev->gpios[WIFI_OOB_IRQ_GPIO_INDEX], size,
+                                 &actual)) != ZX_OK) {
         zxlogf(ERROR, "brcmf_sdiod_intr_register: GPIO WIFI_OOB_IRQ_GPIO_INDEX not available\n");
         return ret;
     }
     // Debug GPIO is optional.
-    pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, DEBUG_GPIO_INDEX, &sdiodev->gpios[DEBUG_GPIO_INDEX]);
+    pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, DEBUG_GPIO_INDEX, &sdiodev->gpios[DEBUG_GPIO_INDEX],
+                      size, &actual);
 
     ret = gpio_config_in(&sdiodev->gpios[WIFI_OOB_IRQ_GPIO_INDEX], GPIO_NO_PULL);
     if (ret != ZX_OK) {

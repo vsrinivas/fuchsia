@@ -167,7 +167,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   void SwapInCurrentInstance() __TA_REQUIRES(video_decoder_lock_);
 
   zx_device_t* parent_ = nullptr;
-  platform_device_protocol_t pdev_;
+  pdev_protocol_t pdev_;
   canvas_protocol_t canvas_;
   DeviceType device_type_ = DeviceType::kUnknown;
   std::unique_ptr<CbusRegisterIo> cbus_;

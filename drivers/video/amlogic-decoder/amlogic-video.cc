@@ -661,7 +661,7 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   parent_ = parent;
 
   zx_status_t status =
-      device_get_protocol(parent_, ZX_PROTOCOL_PLATFORM_DEV, &pdev_);
+      device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev_);
 
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to get parent protocol");

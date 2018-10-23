@@ -22,7 +22,7 @@ static zx_driver_ops_t amlogic_video_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(amlogic_video, amlogic_video_driver_ops, "zircon", "0.1", 4)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_VIDEO),
     ZIRCON_DRIVER_END(amlogic_video)

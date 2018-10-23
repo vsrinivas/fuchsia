@@ -14,7 +14,7 @@ namespace magma {
 
 class ZirconPlatformDevice : public PlatformDevice {
 public:
-    ZirconPlatformDevice(zx_device_t* zx_device, platform_device_protocol_t pdev)
+    ZirconPlatformDevice(zx_device_t* zx_device, pdev_protocol_t pdev)
         : zx_device_(zx_device), pdev_(pdev)
     {
     }
@@ -32,7 +32,7 @@ private:
     zx_device_t* zx_device() const { return zx_device_; }
 
     zx_device_t* zx_device_;
-    platform_device_protocol_t pdev_;
+    pdev_protocol_t pdev_;
 };
 
 } // namespace magma
