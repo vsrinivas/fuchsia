@@ -16,6 +16,9 @@
 #include <threads.h>
 #include <zircon/types.h>
 
+// NOTE: A lot of magic numbers, they come from vendor
+//       source code.
+
 namespace camera {
 
 namespace {
@@ -37,8 +40,7 @@ zx_status_t AmlMipiDevice::InitPdev(zx_device_t* parent) {
 
     mmio_buffer_t mmio;
     status = pdev_map_mmio_buffer2(&pdev_,
-                                   kCsiPhy0,
-                                   ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                   kCsiPhy0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                    &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
@@ -66,6 +68,20 @@ zx_status_t AmlMipiDevice::InitPdev(zx_device_t* parent) {
         return status;
     }
     mipi_adap_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+
+    // Get our bti.
+    status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: could not obtain bti: %d\n", __FUNCTION__, status);
+        return status;
+    }
+
+    // Get adapter interrupt.
+    status = pdev_map_interrupt(&pdev_, 0, adap_irq_.reset_and_get_address());
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: could not obtain adapter interrupt %d\n", __FUNCTION__, status);
+        return status;
+    }
 
     return status;
 }
@@ -123,8 +139,8 @@ void AmlMipiDevice::MipiPhyInit(const mipi_info_t* info) {
     csi_phy0_mmio_->Write32(0x00000123, MIPI_PHY_MUX_CTRL1);
 
     // NOTE: Possible bug in reference code. Leaving it here for future reference.
-    // data32 = ((~(m_info->channel)) & 0xf) | (0 << 4); //enable lanes digital clock
-    // data32 |= ((0x10 | m_info->channel) << 5);        //mipi_chpu  to analog
+    // uint32_t data32 = ((~(info->channel)) & 0xf) | (0 << 4); //enable lanes digital clock
+    // data32 |= ((0x10 | info->channel) << 5);        //mipi_chpu  to analog
     csi_phy0_mmio_->Write32(0, MIPI_PHY_CTRL);
 }
 
@@ -258,6 +274,12 @@ zx_status_t AmlMipiDevice::Create(zx_device_t* parent) {
     __UNUSED auto ptr = mipi_device.release();
 
     return status;
+}
+
+AmlMipiDevice::~AmlMipiDevice() {
+    adap_irq_.destroy();
+    running_.store(false);
+    thrd_join(irq_thread_, NULL);
 }
 
 } // namespace camera

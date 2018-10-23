@@ -55,6 +55,19 @@ constexpr camera_sensor_t mipi_sensor[] = {
     },
 };
 
+constexpr pbus_bti_t mipi_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = BTI_CAMERA,
+    },
+};
+
+constexpr pbus_irq_t mipi_irqs[] = {
+    {
+        .irq = T931_MIPI_ADAPTER_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    }};
+
 constexpr pbus_metadata_t mipi_metadata[] = {
     {
         .type = DEVICE_METADATA_PRIVATE,
@@ -116,6 +129,10 @@ static pbus_dev_t mipi_dev = []() {
     dev.metadata_count = countof(mipi_metadata);
     dev.child_list = &mipi_children;
     dev.child_count = 1;
+    dev.bti_list = mipi_btis;
+    dev.bti_count = countof(mipi_btis);
+    dev.irq_list = mipi_irqs;
+    dev.irq_count = countof(mipi_irqs);
     return dev;
 }();
 
@@ -129,7 +146,6 @@ zx_status_t Sherlock::CameraInit() {
 
     gpio_impl.SetAltFunction(T931_GPIOA(14), kI2cSDAAltFunc);
     gpio_impl.SetAltFunction(T931_GPIOA(15), kI2cSCLAltFunc);
-
 
     zx_status_t status = pbus_.DeviceAdd(&mipi_dev);
     if (status != ZX_OK) {

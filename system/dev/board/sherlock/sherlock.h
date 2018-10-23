@@ -23,6 +23,7 @@ enum {
     BTI_MALI,
     BTI_CANVAS,
     BTI_VIDEO,
+    BTI_CAMERA,
 };
 
 // These should match the mmio table defined in sherlock-i2c.c

@@ -111,6 +111,7 @@
 #define T931_MALI_IRQ_GP                192
 #define T931_MALI_IRQ_GPMMU             193
 #define T931_MALI_IRQ_PP                194
+#define T931_MIPI_ADAPTER_IRQ           211
 
 // Alternate Functions for EMMC
 #define T931_EMMC_D0                    T931_GPIOBOOT(0)

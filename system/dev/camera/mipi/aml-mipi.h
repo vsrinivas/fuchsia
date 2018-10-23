@@ -9,7 +9,11 @@
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
+#include <fbl/atomic.h>
 #include <fbl/unique_ptr.h>
+#include <lib/fzl/pinned-vmo.h>
+#include <lib/zx/interrupt.h>
+#include <threads.h>
 
 namespace camera {
 
@@ -18,7 +22,7 @@ public:
     static zx_status_t Create(zx_device_t* parent);
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlMipiDevice);
     AmlMipiDevice(){};
-
+    ~AmlMipiDevice();
     zx_device_t* device_;
 
     // Methods required by the ddk.
@@ -42,7 +46,17 @@ private:
 
     pdev_protocol_t pdev_;
 
+    zx::bti bti_;
+    zx::interrupt adap_irq_;
+    fbl::atomic<bool> running_;
+    thrd_t irq_thread_;
+
+    zx::vmo ring_buffer_vmo_;
+    fzl::PinnedVmo pinned_ring_buffer_;
+
+    zx_status_t InitBuffer(const mipi_adap_info_t* info, size_t size);
     zx_status_t InitPdev(zx_device_t* parent);
+    int AdapterIrqHandler();
 
     // MIPI Iternal APIs
     void MipiPhyInit(const mipi_info_t* info);
@@ -69,6 +83,7 @@ private:
     void AdapFrontEndStart(const mipi_adap_info_t* info);
 
     uint32_t AdapGetDepth(const mipi_adap_info_t* info);
+    void MipiDumpRegisters();
 };
 
 } // namespace camera

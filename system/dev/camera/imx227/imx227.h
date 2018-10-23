@@ -106,10 +106,10 @@ private:
     uint8_t ReadReg(uint16_t addr);
     void WriteReg(uint16_t addr, uint8_t val);
 
-    void ShutDown();
     zx_status_t InitPdev(zx_device_t* parent);
-    bool ValidateSensorID();
     zx_status_t InitSensor(uint8_t idx);
+    void ShutDown();
+    bool ValidateSensorID();
 };
 
 } // namespace camera

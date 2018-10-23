@@ -267,7 +267,7 @@ zx_status_t Imx227Device::SetMode(uint8_t mode) {
     adap_info.resolution.width = supported_modes[mode].resolution.width;
     adap_info.resolution.height = supported_modes[mode].resolution.height;
     adap_info.path = MIPI_PATH_PATH0;
-    adap_info.mode = MIPI_MODES_DIR_MODE;
+    adap_info.mode = MIPI_MODES_DDR_MODE;
     return mipi.Init(&mipi_info, &adap_info);
 }
 
