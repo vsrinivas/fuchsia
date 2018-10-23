@@ -44,7 +44,7 @@ These optional parameters are interpreted as follows:
 
     --wav[=<FILEPATH>]      Save to file (default /tmp/signal_generator.wav)
                             Gain/mute settings do not affect .file contents.
-                            24-bit signals are saved in left-justified int32s. 
+                            24-bit signals are saved in left-justified int32s.
 
     --gain=<GAIN_DB>        Set AudioRenderer gain, in dB (default 0.0,
                             range [-160.0, +24.0]). If flag is absent, SetGain

@@ -104,6 +104,7 @@ test("test_bin") {
 
   sources = [
     "test/audio_core_tests.cc",
+    "test/audio_core_tests_shared.h",
     "test/audio_renderer_tests.cc",
   ]
 
