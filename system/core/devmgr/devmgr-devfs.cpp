@@ -34,6 +34,26 @@ struct dc_watcher {
     zx_handle_t handle = ZX_HANDLE_INVALID;
 };
 
+struct dc_iostate {
+    dc_iostate() = default;
+
+    port_handler_t ph = {};
+
+    // entry in our devnode's iostate list
+    fbl::DoublyLinkedListNodeState<dc_iostate*> node;
+    struct Node {
+        static fbl::DoublyLinkedListNodeState<dc_iostate*>& node_state(
+            dc_iostate& obj) {
+            return obj.node;
+        }
+    };
+
+    // pointer to our devnode, nullptr if it has been removed
+    devnode_t* devnode = nullptr;
+
+    uint64_t readdir_ino = 0;
+};
+
 // BUG(ZX-2868): We currently never free these after allocating them
 struct dc_devnode {
     explicit dc_devnode(fbl::String name);
@@ -60,25 +80,11 @@ struct dc_devnode {
     list_node_t children;
 
     // list of attached iostates
-    list_node_t iostate;
+    fbl::DoublyLinkedList<dc_iostate*, dc_iostate::Node> iostate;
 
     // used to assign unique small device numbers
     // for class device links
     uint32_t seqcount = 0;
-};
-
-struct dc_iostate {
-    dc_iostate() = default;
-
-    port_handler_t ph = {};
-
-    // entry in our devnode's iostate list
-    list_node_t node = {};
-
-    // pointer to our devnode, nullptr if it has been removed
-    devnode_t* devnode = nullptr;
-
-    uint64_t readdir_ino = 0;
 };
 
 extern port_t dc_port;
@@ -120,7 +126,6 @@ dc_devnode::dc_devnode(fbl::String name)
     : name(fbl::move(name)) {
 
     list_initialize(&children);
-    list_initialize(&iostate);
 }
 
 static devnode_t* proto_dir(uint32_t id) {
@@ -160,11 +165,11 @@ static zx_status_t iostate_create(devnode_t* dn, zx_handle_t h) {
     ios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     ios->ph.func = dc_fidl_handler;
     ios->devnode = dn;
-    list_add_tail(&dn->iostate, &ios->node);
+    dn->iostate.push_back(ios.get());
 
     zx_status_t r;
     if ((r = port_wait(&dc_port, &ios->ph)) != ZX_OK) {
-        list_delete(&ios->node);
+        dn->iostate.erase(*ios);
     } else {
         // dc_port now owns |ios|
         __UNUSED auto ptr = ios.release();
@@ -174,7 +179,7 @@ static zx_status_t iostate_create(devnode_t* dn, zx_handle_t h) {
 
 static void iostate_destroy(dc_iostate* ios) {
     if (ios->devnode) {
-        list_delete(&ios->node);
+        ios->devnode->iostate.erase(*ios);
         ios->devnode = nullptr;
     }
     zx_handle_close(ios->ph.handle);
@@ -398,11 +403,10 @@ static void _devfs_remove(devnode_t* dn) {
     }
 
     // detach all connected iostates
-    dc_iostate* ios;
-    list_for_every_entry(&dn->iostate, ios, dc_iostate, node) {
-        ios->devnode = nullptr;
-        zx_handle_close(ios->ph.handle);
-        ios->ph.handle = ZX_HANDLE_INVALID;
+    for (auto& ios : dn->iostate) {
+        ios.devnode = nullptr;
+        zx_handle_close(ios.ph.handle);
+        ios.ph.handle = ZX_HANDLE_INVALID;
     }
 
     // notify own file watcher
