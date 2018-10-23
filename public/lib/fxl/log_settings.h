@@ -39,7 +39,7 @@ FXL_EXPORT void SetLogSettings(const LogSettings& settings);
 // Gets the active log settings for the current process.
 FXL_EXPORT LogSettings GetLogSettings();
 
-// Gets the minimum log level for the current process. Never returs a value
+// Gets the minimum log level for the current process. Never returns a value
 // higher than LOG_FATAL.
 FXL_EXPORT int GetMinLogLevel();
 

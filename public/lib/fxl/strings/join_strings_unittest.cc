@@ -25,7 +25,7 @@ TEST(StringUtil, JoinStrings) {
   EXPECT_EQ("foo, , bar, ", JoinStrings(v2, ", "));
   EXPECT_EQ("foobar", JoinStrings(v2));
 
-  // Check that only one stringis joined correctly.
+  // Check that only one string is joined correctly.
   std::vector<std::string> v3 = {"foo"};
   EXPECT_EQ("foo", JoinStrings(v3, ","));
   EXPECT_EQ("foo", JoinStrings(v3, ", "));

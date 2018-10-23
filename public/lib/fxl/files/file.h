@@ -48,7 +48,7 @@ FXL_EXPORT bool ReadFileToVector(const std::string& path,
                                  std::vector<uint8_t>* result);
 
 // Reads the contents of the file at the given path and if successful, returns
-// pair of read allocated bytes with data and size of the data if succesful.
+// pair of read allocated bytes with data and size of the data if successful.
 // pair of <nullptr, -1> if read failed.
 FXL_EXPORT std::pair<uint8_t*, intptr_t> ReadFileToBytes(
     const std::string& path);

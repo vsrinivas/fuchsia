@@ -228,7 +228,7 @@ inline RefPtr<T> AdoptRef(T* ptr) {
 }
 
 // Constructs a |RefPtr<T>| from a plain pointer (to an object that must
-// have already been adoped).  Avoids having to spell out the full type name.
+// have already been adopted).  Avoids having to spell out the full type name.
 //
 //   Foo* foo = ...;
 //   auto foo_ref = Ref(foo);

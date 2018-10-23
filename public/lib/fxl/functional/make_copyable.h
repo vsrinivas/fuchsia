@@ -36,13 +36,13 @@ class CopyableLambda {
 
 }  // namespace internal
 
-// Provides a wrapper for a move-only lambda that is implictly convertable to an
+// Provides a wrapper for a move-only lambda that is implicitly convertible to an
 // std::function.
 //
 // std::function is copyable, but if a lambda captures an argument with a
 // move-only type, the lambda itself is not copyable. In order to use the lambda
 // in places that accept std::functions, we provide a copyable object that wraps
-// the lambda and is implicitly convertable to an std::function.
+// the lambda and is implicitly convertible to an std::function.
 //
 // EXAMPLE:
 //

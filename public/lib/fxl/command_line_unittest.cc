@@ -139,7 +139,7 @@ TEST(CommandLineTest, CommandLineFromIteratorsFindFirstPositionalArg) {
   }
 }
 
-TEST(CommandLineTest, CommmandLineFromIterators) {
+TEST(CommandLineTest, CommandLineFromIterators) {
   {
     // Note (here and below): The |const| ensures that the factory method can
     // accept const iterators.

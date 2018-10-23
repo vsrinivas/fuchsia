@@ -23,7 +23,7 @@ FXL_EXPORT std::string GenerateUUID();
 
 // Returns true if the input string conforms to the version 4 UUID format.
 // Note that this does NOT check if the hexadecimal values "a" through "f"
-// are in lower case characters, as Version 4 RFC says onput they're
+// are in lower case characters, as Version 4 RFC says they're
 // case insensitive. (Use IsValidUUIDOutputString for checking if the
 // given string is valid output string)
 FXL_EXPORT bool IsValidUUID(const std::string& guid);

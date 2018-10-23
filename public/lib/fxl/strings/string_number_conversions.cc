@@ -162,7 +162,7 @@ bool StringToNumberWithError(fxl::StringView string, NumberType* number,
   return true;
 }
 
-// Explicit instantiatiations for (u)intN_t; count on (unsigned) int being one
+// Explicit instantiations for (u)intN_t; count on (unsigned) int being one
 // of these:
 template std::string NumberToString<int8_t>(int8_t number, Base base);
 template std::string NumberToString<uint8_t>(uint8_t number, Base base);
