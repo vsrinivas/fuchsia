@@ -96,13 +96,24 @@ struct dc_devhost {
 };
 
 struct dc_metadata_t {
-    list_node_t node;
+    fbl::DoublyLinkedListNodeState<fbl::unique_ptr<dc_metadata_t>> node;
+    struct Node {
+        static fbl::DoublyLinkedListNodeState<fbl::unique_ptr<dc_metadata_t>>& node_state(
+            dc_metadata_t& obj) {
+            return obj.node;
+        }
+    };
+
     uint32_t type;
     uint32_t length;
     bool has_path;      // zero terminated string starts at data[length]
 
     char* Data() {
         return reinterpret_cast<char*>(this + 1);
+    }
+
+    const char* Data() const {
+        return reinterpret_cast<const char*>(this + 1);
     }
 
     static zx_status_t Create(size_t data_len, fbl::unique_ptr<dc_metadata_t>* out) {
@@ -176,8 +187,8 @@ struct dc_device {
     // listnode for this device in the all devices list
     list_node_t anode;
 
-    // listnode for this device's metadata (list of dc_metadata_t)
-    list_node_t metadata;
+    // Metadata entries associated to this device.
+    fbl::DoublyLinkedList<fbl::unique_ptr<dc_metadata_t>, dc_metadata_t::Node> metadata;
 
     fbl::unique_ptr<zx_device_prop_t[]> props;
 

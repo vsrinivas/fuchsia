@@ -76,7 +76,7 @@ static suspend_context_t suspend_ctx = []() {
     return suspend;
 }();
 
-static list_node_t published_metadata = LIST_INITIAL_VALUE(published_metadata);
+static fbl::DoublyLinkedList<fbl::unique_ptr<dc_metadata_t>, dc_metadata_t::Node> published_metadata;
 
 static bool dc_in_suspend() {
     return suspend_ctx.flags == suspend_context_t::Flags::kSuspend;
@@ -767,14 +767,13 @@ static void dc_release_device(device_t* dev) {
 
     cancel_work(&dev->work);
 
-    dc_metadata_t* md;
-    while ((md = list_remove_head_type(&dev->metadata, dc_metadata_t, node)) != nullptr) {
+    fbl::unique_ptr<dc_metadata_t> md;
+    while ((md = dev->metadata.pop_front()) != nullptr) {
         if (md->has_path) {
             // return to published_metadata list
-            list_add_tail(&published_metadata, &md->node);
+            published_metadata.push_back(fbl::move(md));
         } else {
-            // metadata was attached directly to this device, so we free it here
-            delete md;
+            // metadata was attached directly to this device, so we release it now
         }
     }
 
@@ -790,7 +789,6 @@ dc_device::dc_device()
       anode({}) {
 
     list_initialize(&children);
-    list_initialize(&metadata);
 }
 
 dc_device::~dc_device() {
@@ -1130,18 +1128,16 @@ static bool path_is_child(const char* parent_path, const char* child_path) {
 
 static zx_status_t dc_get_metadata(device_t* dev, uint32_t type, void* buffer, size_t buflen,
                                    size_t* actual) {
-    dc_metadata_t* md;
-
     // search dev and its parent devices for a match
     device_t* test = dev;
     while (test) {
-        list_for_every_entry(&test->metadata, md, dc_metadata_t, node) {
-            if (md->type == type) {
-                if (md->length > buflen) {
+        for (const auto& md : test->metadata) {
+            if (md.type == type) {
+                if (md.length > buflen) {
                     return ZX_ERR_BUFFER_TOO_SMALL;
                 }
-                memcpy(buffer, md->Data(), md->length);
-                *actual = md->length;
+                memcpy(buffer, md.Data(), md.length);
+                *actual = md.length;
                 return ZX_OK;
             }
         }
@@ -1155,15 +1151,14 @@ static zx_status_t dc_get_metadata(device_t* dev, uint32_t type, void* buffer, s
         return status;
     }
 
-    dc_metadata_t* temp;
-    list_for_every_entry_safe(&published_metadata, md, temp, dc_metadata_t, node) {
-        char* md_path = md->Data() + md->length;
-        if (md->type == type && path_is_child(md_path, path)) {
-            if (md->length > buflen) {
+    for (const auto& md : published_metadata) {
+        const char* md_path = md.Data() + md.length;
+        if (md.type == type && path_is_child(md_path, path)) {
+            if (md.length > buflen) {
                 return ZX_ERR_BUFFER_TOO_SMALL;
             }
-            memcpy(buffer, md->Data(), md->length);
-            *actual = md->length;
+            memcpy(buffer, md.Data(), md.length);
+            *actual = md.length;
             return ZX_OK;
         }
     }
@@ -1182,10 +1177,7 @@ static zx_status_t dc_add_metadata(device_t* dev, uint32_t type, const void* dat
     md->type = type;
     md->length = length;
     memcpy(md->Data(), data, length);
-    list_add_head(&dev->metadata, &md->node);
-    // TODO(teisenbe/kulakowski): Don't release this, instead track it as a
-    // unique_ptr in the list
-    __UNUSED auto ptr = md.release();
+    dev->metadata.push_front(fbl::move(md));
     return ZX_OK;
 }
 
@@ -1225,10 +1217,7 @@ static zx_status_t dc_publish_metadata(device_t* dev, const char* path, uint32_t
     md->has_path = true;
     memcpy(md->Data(), data, length);
     strcpy(md->Data() + length, path);
-    list_add_head(&published_metadata, &md->node);
-    // TODO(teisenbe/kulakowski): Don't release this, instead track it as a
-    // unique_ptr in the list
-    __UNUSED auto ptr = md.release();
+    published_metadata.push_front(fbl::move(md));
     return ZX_OK;
 }
 
