@@ -11,7 +11,7 @@
 //     Safe to use at early boot time if necessary or in other situations where
 //     allocation may not be desirable.
 // (2) Trivially Portable
-//     This library attempts to limit the number of depedencies on the
+//     This library attempts to limit the number of dependencies on the
 //     environment:
 //      + A C99 compliant compiler
 //      + Support for sized integer types (uint8_t and uint32_t)
