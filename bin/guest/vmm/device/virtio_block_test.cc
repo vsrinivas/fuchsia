@@ -13,6 +13,8 @@
 static constexpr char kVirtioBlockUrl[] = "virtio_block";
 static constexpr uint16_t kNumQueues = 1;
 static constexpr uint16_t kQueueSize = 16;
+
+static constexpr char kVirtioBlockId[] = "block-id";
 static constexpr size_t kNumSectors = 2;
 static constexpr uint8_t kSectorBytes[kNumSectors] = {0xab, 0xcd};
 
@@ -29,7 +31,7 @@ class VirtioBlockTest : public TestWithDevice {
     ASSERT_EQ(ZX_OK, status);
 
     // Setup block file.
-    char path_template[] = "/tmp/virtio-block-test.XXXXXX";
+    char path_template[] = "/tmp/block.XXXXXX";
     fbl::unique_fd fd = CreateBlockFile(path_template);
     ASSERT_TRUE(fd);
     fzl::FdioCaller fdio(std::move(fd));
@@ -39,9 +41,10 @@ class VirtioBlockTest : public TestWithDevice {
     // Start device execution.
     services.ConnectToService(block_.NewRequest());
     uint64_t size;
-    status = block_->Start(
-        std::move(start_info), fuchsia::guest::device::BlockMode::READ_WRITE,
-        fuchsia::guest::device::BlockFormat::RAW, std::move(file), &size);
+    status = block_->Start(std::move(start_info), kVirtioBlockId,
+                           fuchsia::guest::device::BlockMode::READ_WRITE,
+                           fuchsia::guest::device::BlockFormat::RAW,
+                           std::move(file), &size);
     ASSERT_EQ(ZX_OK, status);
     ASSERT_EQ(machina::kBlockSectorSize * kNumSectors, size);
 
@@ -364,7 +367,7 @@ TEST_F(VirtioBlockTest, Id) {
   ASSERT_EQ(ZX_OK, status);
 
   EXPECT_EQ(VIRTIO_BLK_S_OK, *blk_status);
-  EXPECT_EQ(0, memcmp(id, machina::kBlockId, sizeof(machina::kBlockId)));
+  EXPECT_EQ(0, memcmp(id, kVirtioBlockId, sizeof(kVirtioBlockId)));
 }
 
 TEST_F(VirtioBlockTest, IdLengthIncorrect) {

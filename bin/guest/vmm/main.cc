@@ -21,6 +21,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/namespace.h>
+#include <lib/fxl/strings/string_printf.h>
 #include <lib/fzl/fdio.h>
 #include <trace-provider/provider.h>
 #include <zircon/process.h>
@@ -205,7 +206,8 @@ int main(int argc, char** argv) {
 
   // Setup block device.
   std::vector<std::unique_ptr<machina::VirtioBlock>> block_devices;
-  for (const auto& block_spec : cfg.block_devices()) {
+  for (size_t i = 0; i < cfg.block_devices().size(); i++) {
+    const auto& block_spec = cfg.block_devices()[i];
     int flags = block_spec.mode == fuchsia::guest::device::BlockMode::READ_WRITE
                     ? O_RDWR
                     : O_RDONLY;
@@ -226,14 +228,16 @@ int main(int argc, char** argv) {
     fuchsia::io::FilePtr file;
     file.Bind(zx::channel(fdio.borrow_channel()));
 
-    auto block = std::make_unique<machina::VirtioBlock>(guest.phys_mem(),
-                                                        block_spec.mode);
+    auto block = std::make_unique<machina::VirtioBlock>(block_spec.mode,
+                                                        guest.phys_mem());
     status = bus.Connect(block->pci_device(), true);
     if (status != ZX_OK) {
       return status;
     }
-    status = block->Start(*guest.object(), block_spec.format, std::move(file),
-                          launcher.get(), guest.device_dispatcher());
+    std::string id = fxl::StringPrintf("block-%zu", i);
+    status =
+        block->Start(*guest.object(), id, block_spec.format, std::move(file),
+                     launcher.get(), guest.device_dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to start block device " << status;
       return status;
@@ -442,8 +446,8 @@ int main(int argc, char** argv) {
 
   // Setup VCPUs.
   auto initialize_vcpu = [boot_ptr, &interrupt_controller](
-      machina::Guest* guest, uintptr_t guest_ip, uint64_t id,
-      machina::Vcpu* vcpu) {
+                             machina::Guest* guest, uintptr_t guest_ip,
+                             uint64_t id, machina::Vcpu* vcpu) {
     zx_status_t status = vcpu->Create(guest, guest_ip, id);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to create VCPU " << status;

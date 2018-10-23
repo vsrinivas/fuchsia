@@ -59,10 +59,11 @@ class Request : public fbl::RefCounted<Request> {
 // Stream for request queue.
 class RequestStream : public StreamBase {
  public:
-  void Init(std::unique_ptr<BlockDispatcher> disp,
+  void Init(std::unique_ptr<BlockDispatcher> disp, const std::string& id,
             const machina::PhysMem& phys_mem,
             machina::VirtioQueue::InterruptFn interrupt) {
     dispatcher_ = std::move(disp);
+    id_ = id;
     StreamBase::Init(phys_mem, std::move(interrupt));
   }
 
@@ -117,6 +118,7 @@ class RequestStream : public StreamBase {
 
  private:
   std::unique_ptr<BlockDispatcher> dispatcher_;
+  std::string id_;
 
   void DoRead(fbl::RefPtr<Request> request, uint64_t off) {
     while (request->NextDescriptor(&desc_, true /* writable */)) {
@@ -168,8 +170,8 @@ class RequestStream : public StreamBase {
         request->SetStatus(VIRTIO_BLK_S_IOERR);
         continue;
       }
-      auto len = std::min<uint32_t>(sizeof(machina::kBlockId), desc_.len);
-      memcpy(desc_.addr, machina::kBlockId, len);
+      auto len = std::min<uint32_t>(id_.size() + 1, desc_.len);
+      memcpy(desc_.addr, id_.c_str(), len);
       request->AddUsed(len);
     }
   }
@@ -201,7 +203,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
 
  private:
   // |fuchsia::guest::device::VirtioBlock|
-  void Start(fuchsia::guest::device::StartInfo start_info,
+  void Start(fuchsia::guest::device::StartInfo start_info, fidl::StringPtr id,
              fuchsia::guest::device::BlockMode mode,
              fuchsia::guest::device::BlockFormat format,
              fidl::InterfaceHandle<fuchsia::io::File> file,
@@ -209,9 +211,9 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
     PrepStart(std::move(start_info));
 
     NestedBlockDispatcherCallback nested =
-        [this, callback = std::move(callback)](
+        [this, id = std::move(id), callback = std::move(callback)](
             size_t size, std::unique_ptr<BlockDispatcher> disp) {
-          request_stream_.Init(std::move(disp), phys_mem_,
+          request_stream_.Init(std::move(disp), id, phys_mem_,
                                fit::bind_member<zx_status_t, DeviceBase>(
                                    this, &VirtioBlockImpl::Interrupt));
           callback(size);

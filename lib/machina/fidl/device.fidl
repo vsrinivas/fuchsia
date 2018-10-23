@@ -62,6 +62,8 @@ interface VirtioBalloon : VirtioDevice {
                         vector<fuchsia.guest.MemStat>? mem_stats);
 };
 
+const uint64 MAX_ID_SIZE = 20;
+
 // Data format of the file backing a block device.
 enum BlockFormat {
     // Raw IO. All reads and writes go directly to disk.
@@ -83,8 +85,9 @@ enum BlockMode {
 [Discoverable]
 interface VirtioBlock : VirtioDevice {
     // Start the block device.
-    0x81000001: Start(StartInfo start_info, BlockMode mode, BlockFormat format,
-                      fuchsia.io.File file) -> (uint64 size);
+    0x81000001: Start(StartInfo start_info, string:MAX_ID_SIZE id,
+                      BlockMode mode, BlockFormat format, fuchsia.io.File file)
+                    -> (uint64 size);
 };
 
 [Discoverable]

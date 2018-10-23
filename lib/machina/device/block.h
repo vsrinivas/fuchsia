@@ -13,8 +13,6 @@ namespace machina {
 // 512-byte sectors) is always present.
 static constexpr size_t kBlockSectorSize = 512;
 
-static constexpr char kBlockId[] = "machina-block";
-
 }  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_DEVICE_BLOCK_H_

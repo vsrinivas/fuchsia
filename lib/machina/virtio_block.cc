@@ -16,8 +16,8 @@ static bool read_only(fuchsia::guest::device::BlockMode mode) {
   return mode == fuchsia::guest::device::BlockMode::READ_ONLY;
 }
 
-VirtioBlock::VirtioBlock(const PhysMem& phys_mem,
-                         fuchsia::guest::device::BlockMode mode)
+VirtioBlock::VirtioBlock(fuchsia::guest::device::BlockMode mode,
+                         const PhysMem& phys_mem)
     : VirtioComponentDevice(
           phys_mem,
           // From Virtio 1.0, Section 5.2.5.2: Devices SHOULD always offer
@@ -30,7 +30,7 @@ VirtioBlock::VirtioBlock(const PhysMem& phys_mem,
           fit::bind_member(this, &VirtioBlock::Ready)),
       mode_(mode) {}
 
-zx_status_t VirtioBlock::Start(const zx::guest& guest,
+zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id,
                                fuchsia::guest::device::BlockFormat format,
                                fuchsia::io::FilePtr file,
                                fuchsia::sys::Launcher* launcher,
@@ -49,8 +49,8 @@ zx_status_t VirtioBlock::Start(const zx::guest& guest,
     return status;
   }
   uint64_t size;
-  status = block_->Start(std::move(start_info), mode_, format, std::move(file),
-                         &size);
+  status = block_->Start(std::move(start_info), id, mode_, format,
+                         std::move(file), &size);
   if (status != ZX_OK) {
     return status;
   }
