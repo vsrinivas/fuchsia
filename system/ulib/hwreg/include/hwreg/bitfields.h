@@ -111,7 +111,10 @@ public:
     ValueType reg_value() const { return reg_value_; }
     ValueType* reg_value_ptr() { return &reg_value_; }
     const ValueType* reg_value_ptr() const { return &reg_value_; }
-    void set_reg_value(IntType value) { reg_value_ = value; }
+    SelfType& set_reg_value(IntType value) {
+        reg_value_ = value;
+        return *static_cast<SelfType*>(this);
+    }
 
     SelfType& ReadFrom(RegisterIo* reg_io) {
         reg_value_ = reg_io->Read<ValueType>(reg_addr_);
