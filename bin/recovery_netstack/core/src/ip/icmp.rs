@@ -4,20 +4,14 @@
 
 //! The Internet Control Message Protocol (ICMP).
 
-use std::convert::TryInto;
 use std::mem;
-use std::ops::Range;
 
 use log::trace;
 
 use crate::ip::{send_ip_packet, IpAddr, IpProto, Ipv4, Ipv6};
-use crate::wire::icmp::{
-    IcmpEchoReply, IcmpEchoRequest, IcmpIpExt, IcmpMessage, IcmpPacket, IcmpPacketSerializer,
-    Icmpv4Packet, Icmpv6Packet,
-};
+use crate::wire::icmp::{IcmpPacketSerializer, Icmpv4Packet, Icmpv6Packet};
 use crate::wire::{BufferAndRange, SerializationRequest};
 use crate::{Context, EventDispatcher};
-use zerocopy::ByteSlice;
 
 /// Receive an ICMP message in an IP packet.
 pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
@@ -134,7 +128,7 @@ mod tests {
     use super::*;
     use crate::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
     use crate::testutil::DummyEventDispatcher;
-    use crate::{Context, StackState};
+    use crate::Context;
 
     #[test]
     fn test_send_echo_request_v4() {

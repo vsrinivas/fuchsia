@@ -1007,7 +1007,7 @@ mod tests {
     use super::*;
     use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketSerializer};
     use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketSerializer};
-    use crate::wire::util::{InnerSerializationRequest, SerializationRequest};
+    use crate::wire::util::SerializationRequest;
 
     fn serialize_to_bytes<B: ByteSlice, M: IcmpMessage<Ipv4>>(
         src_ip: Ipv4Addr, dst_ip: Ipv4Addr, icmp: &IcmpPacket<Ipv4, B, M>,

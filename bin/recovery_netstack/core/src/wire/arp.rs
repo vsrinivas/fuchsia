@@ -396,7 +396,7 @@ impl<B, HwAddr, ProtoAddr> Debug for ArpPacket<B, HwAddr, ProtoAddr> {
 mod tests {
     use super::*;
     use crate::ip::Ipv4Addr;
-    use crate::wire::ethernet::{EthernetFrame, EthernetFrameSerializer};
+    use crate::wire::ethernet::EthernetFrame;
     use crate::wire::util::{InnerSerializationRequest, SerializationRequest};
 
     const TEST_SENDER_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);

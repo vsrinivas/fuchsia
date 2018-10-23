@@ -14,7 +14,7 @@ use crate::ip::Ipv4Addr;
 use log::debug;
 use crate::wire::{
     arp::{ArpPacket, ArpPacketSerializer, HType, PType},
-    BufferAndRange, InnerSerializationRequest, SerializationRequest,
+    BufferAndRange, SerializationRequest,
 };
 use crate::{Context, EventDispatcher, TimerId, TimerIdInner};
 
@@ -357,11 +357,9 @@ impl<H, P: Hash + Eq> Default for ArpTable<H, P> {
 mod tests {
     use super::*;
     use crate::device::ethernet::{set_ip_addr, EtherType, Mac};
-    use crate::device::{DeviceId, DeviceLayerEventDispatcher};
     use crate::ip::{Ipv4Addr, Subnet};
     use crate::testutil;
     use crate::testutil::DummyEventDispatcher;
-    use crate::transport::TransportLayerEventDispatcher;
     use crate::wire::arp::{peek_arp_types, ArpPacketSerializer};
     use crate::wire::ethernet::EthernetFrame;
     use crate::wire::{BufferAndRange, InnerSerializationRequest};

@@ -15,8 +15,6 @@ use crate::wire::udp::{UdpPacket, UdpPacketSerializer};
 use crate::wire::{BufferAndRange, SerializationRequest};
 use crate::{Context, EventDispatcher, StackState};
 
-use log::log;
-
 /// The state associated with the UDP protocol.
 pub struct UdpState<D: EventDispatcher> {
     ipv4: UdpStateInner<D, Ipv4Addr>,
