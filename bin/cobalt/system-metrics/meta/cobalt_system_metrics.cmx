@@ -3,7 +3,9 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services" ],
-        "dev": [ "misc" ]
+        "dev": [ "misc" ],
+        "services": [
+          "fuchsia.cobalt.LoggerFactory"
+        ]
     }
 }

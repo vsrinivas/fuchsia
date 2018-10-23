@@ -5,9 +5,11 @@
     "sandbox": {
         "pkgfs": [ "packages" ],
         "features": [
-            "deprecated-all-services",
             "root-ssl-certificates",
             "persistent-storage"
+        ],
+        "services": [
+            "fuchsia.net.LegacySocketProvider"
         ]
     }
 }
