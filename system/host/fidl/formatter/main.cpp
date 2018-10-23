@@ -63,11 +63,8 @@ bool Format(const fidl::SourceFile& source_file,
 } // namespace
 
 int main(int argc, char* argv[]) {
-    std::vector<std::string> args(argc);
-    for (int i = 0; i < argc; i++) {
-        args[i] = argv[i];
-    }
-
+    // Construct the args vector from the argv array.
+    std::vector<std::string> args(argv, argv + argc);
     bool in_place = false;
     int pos = 1;
     // Process options
@@ -91,9 +88,9 @@ int main(int argc, char* argv[]) {
     fidl::SourceManager source_manager;
 
     // Process filenames.
-    for (const auto& arg : args) {
-        if (!source_manager.CreateSource(arg.data())) {
-            Fail("Couldn't read in source data from %s\n", arg.data());
+    for (size_t i = pos; i < args.size(); i++) {
+        if (!source_manager.CreateSource(args[i])) {
+            Fail("Couldn't read in source data from %s\n", args[i].c_str());
         }
     }
 
