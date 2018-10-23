@@ -683,8 +683,6 @@ static zx_status_t dc_launch_devhost(devhost_t* host,
 dc_devhost::dc_devhost()
     : ph({}), hrpc(ZX_HANDLE_INVALID), proc(ZX_HANDLE_INVALID), koid(0), refcount_(0),
       flags(0), parent(nullptr), anode({}), snode({}), node({}) {
-
-    list_initialize(&devices);
 }
 
 static zx_status_t dc_new_devhost(const char* name, devhost_t* parent,
@@ -881,7 +879,7 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
     if (dev->host) {
         //TODO host == nullptr should be impossible
         dev->host->AddRef();
-        list_add_tail(&dev->host->devices, &dev->dhnode);
+        dev->host->devices.push_back(dev.get());
     }
     dev->AddRef();
     parent->children.push_back(dev.get());
@@ -966,8 +964,8 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
     // detach from devhost
     devhost_t* dh = dev->host;
     if (dh != nullptr) {
+        dev->host->devices.erase(*dev);
         dev->host = nullptr;
-        list_delete(&dev->dhnode);
 
         // If we are responding to a disconnect,
         // we'll remove all the other devices on this devhost too.
@@ -978,7 +976,8 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
 
             device_t* next;
             device_t* last = nullptr;
-            while ((next = list_peek_head_type(&dh->devices, device_t, dhnode)) != nullptr) {
+            while (!dh->devices.is_empty()) {
+                next = &dh->devices.front();
                 if (last == next) {
                     // This shouldn't be possbile, but let's not infinite-loop if it happens
                     log(ERROR, "devcoord: fatal: failed to remove dev %p from devhost\n", next);
@@ -1547,7 +1546,7 @@ static zx_status_t dh_create_device(device_t* dev, devhost_t* dh,
     }
     dev->host = dh;
     dh->AddRef();
-    list_add_tail(&dh->devices, &dev->dhnode);
+    dh->devices.push_back(dev);
     return ZX_OK;
 
 fail:
@@ -1787,10 +1786,10 @@ static void dc_suspend_fallback(uint32_t flags) {
 }
 
 static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
-    device_t* dev = list_peek_head_type(&dh->devices, device_t, dhnode);
-    if (!dev) {
+    if (dh->devices.is_empty()) {
         return ZX_OK;
     }
+    device_t* dev = &dh->devices.front();
 
     if (!(dev->flags & DEV_CTX_PROXY)) {
         log(INFO, "devcoord: devhost root '%s' (%p) is not a proxy\n",

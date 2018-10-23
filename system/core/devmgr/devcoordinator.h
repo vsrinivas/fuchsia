@@ -63,51 +63,6 @@ struct dc_pending {
     } op;
 };
 
-struct dc_devhost {
-    dc_devhost();
-
-    port_handler_t ph;
-    zx_handle_t hrpc;
-    zx_handle_t proc;
-    zx_koid_t koid;
-    mutable int32_t refcount_;
-    uint32_t flags;
-    devhost_t* parent;
-
-    // list of all devices on this devhost
-    list_node_t devices;
-
-    // listnode for this devhost in the all devhosts list
-    list_node_t anode;
-
-    // listnode for this devhost in the order-to-suspend list
-    list_node_t snode;
-
-    // listnode for this devhost in its parent devhost's list-of-children
-    fbl::DoublyLinkedListNodeState<dc_devhost*> node;
-    struct Node {
-        static fbl::DoublyLinkedListNodeState<dc_devhost*>& node_state(
-            dc_devhost& obj) {
-            return obj.node;
-        }
-    };
-
-    // list of all child devhosts of this devhost
-    fbl::DoublyLinkedList<dc_devhost*, Node> children;
-
-    // The AddRef and Release functions follow the contract for fbl::RefPtr.
-    void AddRef() const {
-        ++refcount_;
-    }
-
-    // Returns true when the last reference has been released.
-    bool Release() const {
-        const int32_t rc = refcount_;
-        --refcount_;
-        return rc == 1;
-    }
-};
-
 struct dc_metadata_t {
     fbl::DoublyLinkedListNodeState<fbl::unique_ptr<dc_metadata_t>> node;
     struct Node {
@@ -194,7 +149,13 @@ struct dc_device {
 
     // listnode for this device in its devhost's
     // list-of-devices
-    list_node_t dhnode;
+    fbl::DoublyLinkedListNodeState<dc_device*> dhnode;
+    struct DevhostNode {
+        static fbl::DoublyLinkedListNodeState<dc_device*>& node_state(
+            dc_device& obj) {
+            return obj.dhnode;
+        }
+    };
 
     // list of all child devices of this device
     fbl::DoublyLinkedList<dc_device*, Node> children;
@@ -213,6 +174,51 @@ struct dc_device {
 
     // Allocation backing |name| and |libname|
     fbl::unique_ptr<char[]> name_alloc_;
+
+    // The AddRef and Release functions follow the contract for fbl::RefPtr.
+    void AddRef() const {
+        ++refcount_;
+    }
+
+    // Returns true when the last reference has been released.
+    bool Release() const {
+        const int32_t rc = refcount_;
+        --refcount_;
+        return rc == 1;
+    }
+};
+
+struct dc_devhost {
+    dc_devhost();
+
+    port_handler_t ph;
+    zx_handle_t hrpc;
+    zx_handle_t proc;
+    zx_koid_t koid;
+    mutable int32_t refcount_;
+    uint32_t flags;
+    devhost_t* parent;
+
+    // list of all devices on this devhost
+    fbl::DoublyLinkedList<dc_device*, dc_device::DevhostNode> devices;
+
+    // listnode for this devhost in the all devhosts list
+    list_node_t anode;
+
+    // listnode for this devhost in the order-to-suspend list
+    list_node_t snode;
+
+    // listnode for this devhost in its parent devhost's list-of-children
+    fbl::DoublyLinkedListNodeState<dc_devhost*> node;
+    struct Node {
+        static fbl::DoublyLinkedListNodeState<dc_devhost*>& node_state(
+            dc_devhost& obj) {
+            return obj.node;
+        }
+    };
+
+    // list of all child devhosts of this devhost
+    fbl::DoublyLinkedList<dc_devhost*, Node> children;
 
     // The AddRef and Release functions follow the contract for fbl::RefPtr.
     void AddRef() const {
