@@ -94,28 +94,13 @@ private:
     // |BlockForward|.
     static void BlockCallback(block_op_t* block, zx_status_t status);
 
-    // Device state.  This atomic is a combination of bit flags and a counter for the number of
-    // outstanding requests.  These are combined to allow accessing both in a lock free manner; e.g.
-    // "if the device is active, increment the request count" becomes a read-modify-write operation.
-    // The role of each bit is represented by one of the constants below, and is as follows:
-    //
-    //   Bit 31:     Set if device is active, i.e. |Init| has been called but |DdkUnbind| hasn't.
-    //                 I/O requests to |BlockQueue| are immediately completed with
-    //                 |ZX_ERR_BAD_STATE| if this is not set.
-    //
-    //   Bit 30:     Set if writes are stalled, i.e.  a write request was deferred due to lack of
-    //                 space in the write buffer, and no requests have since completed.
-    //
-    //   Bits 29-24: Reserved.
-    //
-    //   Bits 23-0:  Number of accepted requests waiting to be completed.  When this limit is
-    //                 reached, additional I/O requests to |BlockQueue| will be completed with
-    //                |ZX_ERR_BAD_STATE|.
-    //
-    fbl::atomic_uint32_t state_;
-    static constexpr uint32_t kActive = 1U << 31;
-    static constexpr uint32_t kStalled = 1U << 30;
-    static constexpr uint32_t kMaxReqs = 0x00FFFFFF;
+    // Set if device is active, i.e. |Init| has been called but |DdkUnbind| hasn't. I/O requests to
+    // |BlockQueue| are immediately completed with |ZX_ERR_BAD_STATE| if this is not set.
+    fbl::atomic_bool active_;
+
+    // Set if writes are stalled, i.e.  a write request was deferred due to lack of space in the
+    // write buffer, and no requests have since completed.
+    fbl::atomic_bool stalled_;
 
     // This struct bundles several commonly accessed fields.  The bare pointer IS owned by the
     // object; it's "constness" prevents it from being an automatic pointer but allows it to be used

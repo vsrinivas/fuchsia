@@ -47,7 +47,8 @@ int InitThread(void* arg) {
 
 // Public methods
 
-Device::Device(zx_device_t* parent) : DeviceType(parent), state_(0), info_(nullptr), hint_(0) {
+Device::Device(zx_device_t* parent)
+    : DeviceType(parent), active_(false), stalled_(false), info_(nullptr), hint_(0) {
     LOG_ENTRY();
 
     list_initialize(&queue_);
@@ -177,7 +178,7 @@ zx_status_t Device::Init() {
     DeviceInfo* released __attribute__((unused)) = info.release();
 
     // Enable the device
-    state_.store(kActive);
+    active_.store(true);
     DdkMakeVisible();
     zxlogf(TRACE, "zxcrypt device %p initialized\n", this);
 
@@ -270,12 +271,8 @@ zx_off_t Device::DdkGetSize() {
 // this on demand.
 void Device::DdkUnbind() {
     LOG_ENTRY();
-
-    // Clear the active flag.  The state is only zero if |DdkUnbind| has been called and all
-    // requests are complete.
-    if (state_.fetch_and(~kActive) == kActive) {
-        DdkRemove();
-    }
+    active_.store(false);
+    DdkRemove();
 }
 
 void Device::DdkRelease() {
@@ -337,25 +334,11 @@ void Device::BlockQueue(block_op_t* block) {
     LOG_ENTRY_ARGS("block=%p", block);
     ZX_DEBUG_ASSERT(info_);
 
-    // Check if the device is active, and if so increment the count to accept this request. The
-    // corresponding decrement is in |BlockComplete|; all requests that make it out of this loop
-    // must go through that function.  If the |state_| indicates we can't accept the request,
-    // complete it without using |BlockComplete| to avoid touching |state_|.
-    uint32_t expected = kActive;
-    uint32_t desired = expected + 1;
-    while (!state_.compare_exchange_weak(&expected, desired, fbl::memory_order_seq_cst,
-                                         fbl::memory_order_seq_cst)) {
-        if ((expected & kActive) == 0) {
-            zxlogf(ERROR, "rejecting I/O request: device is not active\n");
-            block->completion_cb(block, ZX_ERR_BAD_STATE);
-            return;
-        }
-        if ((expected & kMaxReqs) == kMaxReqs) {
-            zxlogf(ERROR, "rejecting I/O request: maximum requests exceeded\n");
-            block->completion_cb(block, ZX_ERR_UNAVAILABLE);
-            return;
-        }
-        desired = expected + 1;
+    // Check if the device is active.
+    if (!active_.load()) {
+        zxlogf(ERROR, "rejecting I/O request: device is not active\n");
+        BlockComplete(block, ZX_ERR_BAD_STATE);
+        return;
     }
 
     // Initialize our extra space and save original values
@@ -392,7 +375,7 @@ void Device::BlockForward(block_op_t* block, zx_status_t status) {
         return;
     }
     // Check if the device is active (i.e. |DdkUnbind| has not been called).
-    if ((state_.load() & kActive) == 0) {
+    if (!active_.load()) {
         zxlogf(ERROR, "aborting request; device is not active\n");
         BlockComplete(block, ZX_ERR_BAD_STATE);
         return;
@@ -428,14 +411,8 @@ void Device::BlockComplete(block_op_t* block, zx_status_t status) {
 
     // If we previously stalled, try to re-queue the deferred requests; otherwise, avoid taking the
     // lock.
-    if (state_.fetch_and(~kStalled) & kStalled) {
+    if (stalled_.exchange(false)) {
         EnqueueWrite();
-    }
-
-    // Decrement the reference count.  It can only hit zero if |DdkUnbind| has been called and all
-    // requests are complete.
-    if (state_.fetch_sub(1) == 1) {
-        DdkRemove();
     }
 }
 
@@ -454,7 +431,7 @@ void Device::EnqueueWrite(block_op_t* block) {
         extra = BlockToExtra(block, info_->op_size);
         list_add_tail(&queue_, &extra->node);
     }
-    if (state_.load() & kStalled) {
+    if (stalled_.load()) {
         zxlogf(SPEW, "early return; no requests completed since last stall\n");
         return;
     }
@@ -472,7 +449,7 @@ void Device::EnqueueWrite(block_op_t* block) {
         if ((rc = map_.Find(false, hint_, map_.size(), len, &off)) == ZX_ERR_NO_RESOURCES &&
             (rc = map_.Find(false, 0, map_.size(), len, &off)) == ZX_ERR_NO_RESOURCES) {
             zxlogf(TRACE, "zxcrypt device %p stalled pending request completion\n", this);
-            state_.fetch_or(kStalled);
+            stalled_.store(true);
             break;
         }
 
