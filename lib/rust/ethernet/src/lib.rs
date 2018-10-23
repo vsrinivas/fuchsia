@@ -4,21 +4,28 @@
 
 //! Fuchsia Ethernet client
 
-#![feature(arbitrary_self_types, futures_api, pin)]
+#![feature(
+    arbitrary_self_types,
+    async_await,
+    await_macro,
+    futures_api,
+    pin
+)]
 #![deny(warnings)]
 #![deny(missing_docs)]
 
 use bitflags::bitflags;
+use fidl_zircon_ethernet as sys;
 use fuchsia_async as fasync;
-use futures::{Poll, FutureExt, Stream, task::LocalWaker, ready, try_ready};
-use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};
+use fuchsia_zircon::{self as zx, AsHandleRef};
+use futures::{ready, task::LocalWaker, try_ready, FutureExt, Poll, Stream};
 
 use std::fs::File;
+use std::os::unix::io::AsRawFd;
 use std::pin::{Pin, Unpin};
 use std::sync::{Arc, Mutex};
 
 mod buffer;
-mod sys;
 
 /// Default buffer size communicating with Ethernet devices.
 ///
@@ -28,55 +35,72 @@ pub const DEFAULT_BUFFER_SIZE: usize = 2048;
 bitflags! {
     /// Features supported by an Ethernet device.
     #[repr(transparent)]
-    #[derive(Default)]
     pub struct EthernetFeatures: u32 {
         /// The Ethernet device is a wireless device.
-        const WLAN = sys::ETH_FEATURE_WLAN;
+        const WLAN = sys::INFO_FEATURE_WLAN;
         /// The Ethernet device does not represent a hardware device.
-        const SYNTHETIC = sys::ETH_FEATURE_SYNTH;
+        const SYNTHETIC = sys::INFO_FEATURE_SYNTH;
         /// The Ethernet device is a loopback device.
         ///
         /// This bit should not be set outside of network stacks.
-        const LOOPBACK = sys::ETH_FEATURE_LOOPBACK;
+        const LOOPBACK = sys::INFO_FEATURE_LOOPBACK;
     }
 }
 
 /// Information retrieved about an Ethernet device.
-#[derive(Copy, Clone, Debug)]
+#[derive(Debug)]
 pub struct EthernetInfo {
     /// The features supported by the device.
     pub features: EthernetFeatures,
     /// The maximum transmission unit (MTU) of the device.
     pub mtu: u32,
     /// The MAC address of the device.
-    pub mac: [u8; 6],
+    pub mac: fidl_zircon_ethernet::MacAddress,
+}
+
+impl From<fidl_zircon_ethernet::Info> for EthernetInfo {
+    fn from(fidl_zircon_ethernet::Info { features, mtu, mac }: fidl_zircon_ethernet::Info) -> Self {
+        let mut ethernet_features = EthernetFeatures::empty();
+        if features & sys::INFO_FEATURE_WLAN != 0 {
+            ethernet_features |= EthernetFeatures::WLAN;
+        }
+        if features & sys::INFO_FEATURE_SYNTH != 0 {
+            ethernet_features |= EthernetFeatures::SYNTHETIC;
+        }
+        if features & sys::INFO_FEATURE_LOOPBACK != 0 {
+            ethernet_features |= EthernetFeatures::LOOPBACK;
+        }
+        Self {
+            features: ethernet_features,
+            mtu,
+            mac,
+        }
+    }
 }
 
 bitflags! {
     /// Status flags for an Ethernet device.
     #[repr(transparent)]
-    #[derive(Default)]
     pub struct EthernetStatus: u32 {
         /// The Ethernet device is online, meaning its physical link is up.
-        const ONLINE = sys::ETH_STATUS_ONLINE;
+        const ONLINE = sys::DEVICE_STATUS_ONLINE;
     }
 }
 
 bitflags! {
     /// Status flags describing the result of queueing a packet to an Ethernet device.
     #[repr(transparent)]
-    #[derive(Default)]
     pub struct EthernetQueueFlags: u16 {
         /// The packet was received correctly.
-        const RX_OK = sys::ETH_FIFO_RX_OK;
+        const RX_OK = sys::FIFO_RX_OK as u16;
         /// The packet was transmitted correctly.
-        const TX_OK = sys::ETH_FIFO_TX_OK;
+        const TX_OK = sys::FIFO_TX_OK as u16;
         /// The packet was out of the bounds of the memory shared with the Ethernet device driver.
-        const INVALID = sys::ETH_FIFO_INVALID;
+        const INVALID = sys::FIFO_INVALID as u16;
         /// The received packet was sent by this host.
         ///
         /// This bit is only set after `tx_listen_start` is called.
-        const TX_ECHO = sys::ETH_FIFO_RX_TX;
+        const TX_ECHO = sys::FIFO_RX_TX as u16;
     }
 }
 
@@ -95,17 +119,27 @@ impl Client {
     ///
     /// TODO(tkilbourn): handle the buffer size better. How does the user of this crate know what
     /// to pass, before the device is opened?
-    pub fn new(
-        dev: File,
-        buf: zx::Vmo,
-        buf_size: usize,
-        name: &str,
-    ) -> Result<Self, zx::Status> {
-        sys::set_client_name(&dev, name)?;
-        let fifos = sys::get_fifos(&dev)?;
+    pub async fn new(
+        dev: File, buf: zx::Vmo, buf_size: usize, name: &str,
+    ) -> Result<Self, failure::Error> {
+        let dev = dev.as_raw_fd();
+        let mut client = 0;
+        // Safe because we're passing a valid fd.
+        let () =
+            zx::Status::ok(unsafe { fdio::fdio_sys::fdio_get_service_handle(dev, &mut client) })?;
+        let dev = fidl::endpoints::ClientEnd::<sys::DeviceMarker>::new(
+            // Safe because we checked the return status above.
+            fuchsia_zircon::Channel::from(unsafe { fuchsia_zircon::Handle::from_raw(client) }),
+        )
+        .into_proxy()?;
+        let () = zx::Status::ok(await!(dev.set_client_name(name))?)?;
+        let (status, fifos) = await!(dev.get_fifos())?;
+        let () = zx::Status::ok(status)?;
+        // Safe because we checked the return status above.
+        let fifos = *fifos.unwrap();
         {
             let buf = zx::Vmo::from(buf.as_handle_ref().duplicate(zx::Rights::SAME_RIGHTS)?);
-            sys::set_iobuf(&dev, buf)?;
+            await!(dev.set_io_buffer(buf))?;
         }
         let pool = Mutex::new(buffer::BufferPool::new(buf, buf_size)?);
         Ok(Client {
@@ -124,55 +158,43 @@ impl Client {
     }
 
     /// Retrieve information about the Ethernet device.
-    pub fn info(&self) -> Result<EthernetInfo, zx::Status> {
-        let info = sys::get_info(&self.inner.dev)?;
-        let mut features = EthernetFeatures::default();
-        if info.features & sys::ETH_FEATURE_WLAN != 0 {
-            features |= EthernetFeatures::WLAN;
-        }
-        if info.features & sys::ETH_FEATURE_SYNTH != 0 {
-            features |= EthernetFeatures::SYNTHETIC;
-        }
-        if info.features & sys::ETH_FEATURE_LOOPBACK != 0 {
-            features |= EthernetFeatures::LOOPBACK;
-        }
-        Ok(EthernetInfo {
-            features,
-            mtu: info.mtu,
-            mac: info.mac,
-        })
+    pub async fn info(&self) -> Result<EthernetInfo, fidl::Error> {
+        let info = await!(self.inner.dev.get_info())?;
+        Ok(info.into())
     }
 
     /// Start transferring packets.
     ///
-    /// Before this is called, no packets will be tranferred.
-    pub fn start(&self) -> Result<(), zx::Status> {
-        sys::start(&self.inner.dev)
+    /// Before this is called, no packets will be transferred.
+    pub async fn start(&self) -> Result<(), failure::Error> {
+        let raw = await!(self.inner.dev.start())?;
+        Ok(zx::Status::ok(raw)?)
     }
 
     /// Stop transferring packets.
     ///
     /// After this is called, no packets will be transferred.
-    pub fn stop(&self) -> Result<(), zx::Status> {
-        sys::stop(&self.inner.dev)
+    pub async fn stop(&self) -> Result<(), fidl::Error> {
+        await!(self.inner.dev.stop())
     }
 
     /// Start receiving all packets transmitted by this host.
     ///
     /// Such packets will have the `EthernetQueueFlags::TX_ECHO` bit set.
-    pub fn tx_listen_start(&self) -> Result<(), zx::Status> {
-        sys::tx_listen_start(&self.inner.dev)
+    pub async fn tx_listen_start(&self) -> Result<(), failure::Error> {
+        let raw = await!(self.inner.dev.listen_start())?;
+        Ok(zx::Status::ok(raw)?)
     }
 
     /// Stop receiving all packets transmitted by this host.
-    pub fn tx_listen_stop(&self) -> Result<(), zx::Status> {
-        sys::tx_listen_stop(&self.inner.dev)
+    pub async fn tx_listen_stop(&self) -> Result<(), fidl::Error> {
+        await!(self.inner.dev.listen_stop())
     }
 
     /// Get the status of the Ethernet device.
-    pub fn get_status(&self) -> Result<EthernetStatus, zx::Status> {
-        Ok(EthernetStatus::from_bits_truncate(sys::get_status(
-            &self.inner.dev,
+    pub async fn get_status(&self) -> Result<EthernetStatus, fidl::Error> {
+        Ok(EthernetStatus::from_bits_truncate(await!(
+            self.inner.dev.get_status()
         )?))
     }
 
@@ -201,7 +223,9 @@ impl Client {
     }
 
     /// Poll the Ethernet client to complete any attempted packet transmissions.
-    pub fn poll_complete_tx(&self, cx: &LocalWaker) -> Poll<Result<EthernetQueueFlags, zx::Status>> {
+    pub fn poll_complete_tx(
+        &self, cx: &LocalWaker,
+    ) -> Poll<Result<EthernetQueueFlags, zx::Status>> {
         self.inner.poll_complete_tx(cx)
     }
 
@@ -238,13 +262,11 @@ impl Stream for EventStream {
     type Item = Result<Event, zx::Status>;
 
     fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
-        Poll::Ready(
-            match ready!(self.poll_inner(lw)) {
-                Ok(event) => Some(Ok(event)),
-                Err(zx::Status::PEER_CLOSED) => None,
-                Err(e) => Some(Err(e)),
-            }
-        )
+        Poll::Ready(match ready!(self.poll_inner(lw)) {
+            Ok(event) => Some(Ok(event)),
+            Err(zx::Status::PEER_CLOSED) => None,
+            Err(e) => Some(Err(e)),
+        })
     }
 }
 
@@ -284,36 +306,36 @@ impl EventStream {
 
 #[derive(Debug)]
 struct ClientInner {
-    dev: File,
+    dev: sys::DeviceProxy,
     pool: Mutex<buffer::BufferPool>,
-    rx_fifo: fasync::Fifo<sys::eth_fifo_entry>,
-    tx_fifo: fasync::Fifo<sys::eth_fifo_entry>,
+    rx_fifo: fasync::Fifo<buffer::FifoEntry>,
+    tx_fifo: fasync::Fifo<buffer::FifoEntry>,
     rx_depth: u32,
     tx_depth: u32,
-    tx_pending: Mutex<Vec<sys::eth_fifo_entry>>,
+    tx_pending: Mutex<Vec<buffer::FifoEntry>>,
     signals: Mutex<fasync::OnSignals>,
 }
 
 impl ClientInner {
     fn new(
-        dev: File,
-        pool: Mutex<buffer::BufferPool>,
-        fifos: sys::eth_fifos_t,
+        dev: sys::DeviceProxy, pool: Mutex<buffer::BufferPool>, fifos: sys::Fifos,
     ) -> Result<Self, zx::Status> {
-        let rx_fifo = unsafe {
-            fasync::Fifo::from_fifo(zx::Fifo::from_handle(zx::Handle::from_raw(fifos.rx_fifo)))?
-        };
-        let tx_fifo = unsafe {
-            fasync::Fifo::from_fifo(zx::Fifo::from_handle(zx::Handle::from_raw(fifos.tx_fifo)))?
-        };
+        let sys::Fifos {
+            rx,
+            tx,
+            rx_depth,
+            tx_depth,
+        } = fifos;
+        let rx_fifo = fasync::Fifo::from_fifo(rx)?;
+        let tx_fifo = fasync::Fifo::from_fifo(tx)?;
         let signals = Mutex::new(fasync::OnSignals::new(&rx_fifo, zx::Signals::USER_0));
         Ok(ClientInner {
             dev,
             pool,
             rx_fifo,
             tx_fifo,
-            rx_depth: fifos.rx_depth,
-            tx_depth: fifos.tx_depth,
+            rx_depth,
+            tx_depth,
             tx_pending: Mutex::new(vec![]),
             signals,
         })
@@ -352,14 +374,9 @@ impl ClientInner {
     /// Returns the flags indicating success or failure.
     fn poll_complete_tx(&self, lw: &LocalWaker) -> Poll<Result<EthernetQueueFlags, zx::Status>> {
         match try_ready!(self.tx_fifo.try_read(lw)) {
-            Some(entry) => {
-                self.pool
-                    .lock()
-                    .unwrap()
-                    .release_tx_buffer(entry.offset as usize);
-                Poll::Ready(Ok(EthernetQueueFlags::from_bits_truncate(
-                    entry.flags,
-                )))
+            Some(buffer::FifoEntry { offset, flags, .. }) => {
+                self.pool.lock().unwrap().release_tx_buffer(offset as usize);
+                Poll::Ready(Ok(EthernetQueueFlags::from_bits_truncate(flags)))
             }
             None => Poll::Ready(Err(zx::Status::PEER_CLOSED)),
         }
@@ -372,11 +389,12 @@ impl ClientInner {
         match pool_guard.alloc_rx_buffer() {
             None => Poll::Pending,
             Some(entry) => {
-                let result = self.rx_fifo.try_write(&[entry], lw)?;
+                let fifo_offset = entry.offset;
+                let result = self.rx_fifo.try_write(&[entry.into()], lw)?;
                 if let Poll::Pending = result {
                     // Map the buffer and drop it immediately, to return it to the set of available
                     // buffers.
-                    let _ = pool_guard.map_rx_buffer(entry.offset as usize, 0);
+                    let _ = pool_guard.map_rx_buffer(fifo_offset as usize, 0);
                 }
                 Poll::Ready(Ok(()))
             }
@@ -385,15 +403,13 @@ impl ClientInner {
 
     /// Receive a buffer from the Ethernet device representing a packet from the network.
     fn poll_complete_rx(&self, lw: &LocalWaker) -> Poll<Result<buffer::RxBuffer, zx::Status>> {
-        Poll::Ready(
-            match try_ready!(self.rx_fifo.try_read(lw)) {
-                Some(entry) => {
-                    let mut pool_guard = self.pool.lock().unwrap();
-                    let buf = pool_guard.map_rx_buffer(entry.offset as usize, entry.length as usize);
-                    Ok(buf)
-                }
-                None => Err(zx::Status::PEER_CLOSED),
+        Poll::Ready(match try_ready!(self.rx_fifo.try_read(lw)) {
+            Some(entry) => {
+                let mut pool_guard = self.pool.lock().unwrap();
+                let buf = pool_guard.map_rx_buffer(entry.offset as usize, entry.length as usize);
+                Ok(buf)
             }
-        )
+            None => Err(zx::Status::PEER_CLOSED),
+        })
     }
 }

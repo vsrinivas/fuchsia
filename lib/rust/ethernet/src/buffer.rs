@@ -2,14 +2,43 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_zircon_ethernet as sys;
+use fuchsia_zircon as zx;
 use shared_buffer::SharedBuffer;
 use std::fmt;
 use std::sync::{Arc, Mutex};
-use crate::sys;
-use fuchsia_zircon as zx;
 
-fn fifo_entry(offset: u32, length: u16) -> sys::eth_fifo_entry {
-    sys::eth_fifo_entry {
+#[repr(C)]
+#[derive(Debug)]
+pub struct FifoEntry {
+    pub offset: u32,
+    pub length: u16,
+    pub flags: u16,
+    cookie: u64,
+}
+
+unsafe impl fuchsia_async::FifoEntry for FifoEntry {}
+
+impl From<sys::FifoEntry> for FifoEntry {
+    fn from(
+        sys::FifoEntry {
+            offset,
+            length,
+            flags,
+            cookie,
+        }: sys::FifoEntry,
+    ) -> Self {
+        Self {
+            offset,
+            length,
+            flags,
+            cookie,
+        }
+    }
+}
+
+fn fifo_entry(offset: u32, length: u16) -> FifoEntry {
+    FifoEntry {
         offset,
         length,
         flags: 0,
@@ -61,8 +90,8 @@ impl<'a> TxBuffer<'a> {
         self.length
     }
 
-    pub fn entry(self) -> sys::eth_fifo_entry {
-        sys::eth_fifo_entry {
+    pub fn entry(self) -> FifoEntry {
+        FifoEntry {
             offset: self.offset as u32,
             length: self.length as u16,
             flags: 0,
@@ -129,7 +158,7 @@ impl BufferPool {
 
     /// Allocate a receive buffer and return the Ethernet fifo entry needed to queue it for the
     /// driver.
-    pub fn alloc_rx_buffer(&mut self) -> Option<sys::eth_fifo_entry> {
+    pub fn alloc_rx_buffer(&mut self) -> Option<FifoEntry> {
         let mut rx_avail = self.rx_avail.lock().unwrap();
         let offset = rx_avail.find_first_set()?;
         rx_avail.clear_bit(offset);

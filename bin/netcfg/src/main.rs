@@ -140,12 +140,9 @@ fn main() -> Result<(), failure::Error> {
                     let device = device.as_raw_fd();
                     let mut client = 0;
                     // Safe because we're passing a valid fd.
-                    let () = match fuchsia_zircon::Status::from_raw(unsafe {
+                    let () = fuchsia_zircon::Status::ok(unsafe {
                         fdio::fdio_sys::fdio_get_service_handle(device, &mut client)
-                    }) {
-                        fuchsia_zircon::Status::OK => Ok(()),
-                        status => Err(status.into_io_error()),
-                    }
+                    })
                     .with_context(|_| {
                         format!(
                             "fuchsia_zircon::sys::fdio_get_service_handle({})",

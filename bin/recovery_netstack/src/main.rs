@@ -4,7 +4,7 @@
 
 //! A networking stack.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await, await_macro, futures_api)]
 // In case we roll the toolchain and something we're using as a feature has been
 // stabilized.
 #![allow(stable_features)]
@@ -20,5 +20,6 @@ fn main() -> Result<(), failure::Error> {
     // Severity is set to debug during development.
     fuchsia_syslog::set_severity(-1);
 
-    EventLoop::dummy_run()
+    let mut executor = fuchsia_async::Executor::new()?;
+    Ok(executor.run_singlethreaded(EventLoop::dummy_run())?)
 }

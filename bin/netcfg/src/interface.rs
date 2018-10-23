@@ -428,8 +428,7 @@ mod tests {
         for n in 0u8..255u8 {
             let octets = [n, 0x01, 0x01, 0x01, 0x01, 00];
 
-            let persistent_id =
-                config.generate_identifier(topo_usb.clone(), MacAddress { octets });
+            let persistent_id = config.generate_identifier(topo_usb.clone(), MacAddress { octets });
 
             if let Some(index) = config.lookup_by_identifier(&persistent_id) {
                 assert_eq!(format!("{}{:x}", "wlanx", n), config.names[index].1);
