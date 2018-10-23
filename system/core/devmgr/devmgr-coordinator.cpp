@@ -358,7 +358,7 @@ void devmgr_set_bootdata(zx_handle_t vmo) {
     }
 }
 
-static void dc_dump_device(device_t* dev, size_t indent) {
+static void dc_dump_device(const device_t* dev, size_t indent) {
     zx_koid_t pid = dev->host ? dev->host->koid : 0;
     char extra[256];
     if (log_flags & LOG_DEVLC) {
@@ -377,13 +377,12 @@ static void dc_dump_device(device_t* dev, size_t indent) {
                  pid, extra,
                  dev->libname ? dev->libname : "");
     }
-    device_t* child;
     if (dev->proxy) {
         indent++;
         dc_dump_device(dev->proxy, indent);
     }
-    list_for_every_entry(&dev->children, child, device_t, node) {
-        dc_dump_device(child, indent + 1);
+    for (const auto& child : dev->children) {
+        dc_dump_device(&child, indent + 1);
     }
 }
 
@@ -394,7 +393,7 @@ static void dc_dump_state() {
     dc_dump_device(&test_device, 1);
 }
 
-static void dc_dump_device_props(device_t* dev) {
+static void dc_dump_device_props(const device_t* dev) {
     if (dev->host) {
         dmprintf("Name [%s]%s%s%s\n",
                  dev->name,
@@ -438,12 +437,11 @@ static void dc_dump_device_props(device_t* dev) {
         dmprintf("\n");
     }
 
-    device_t* child;
     if (dev->proxy) {
         dc_dump_device_props(dev->proxy);
     }
-    list_for_every_entry(&dev->children, child, device_t, node) {
-        dc_dump_device_props(child);
+    for (const auto& child : dev->children) {
+        dc_dump_device_props(&child);
     }
 }
 
@@ -786,8 +784,6 @@ dc_device::dc_device()
       name(nullptr), libname(nullptr), work({}), refcount_(0), protocol_id(0), prop_count(0),
       self(nullptr), link(nullptr), parent(nullptr), proxy(nullptr), node({}), dhnode({}),
       anode({}) {
-
-    list_initialize(&children);
 }
 
 dc_device::~dc_device() {
@@ -890,7 +886,7 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
         list_add_tail(&dev->host->devices, &dev->dhnode);
     }
     dev->AddRef();
-    list_add_tail(&parent->children, &dev->node);
+    parent->children.push_back(dev.get());
     parent->AddRef();
 
     list_add_tail(&list_devices, &dev->anode);
@@ -1008,8 +1004,8 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
         if (dev->flags & DEV_CTX_PROXY) {
             parent->proxy = nullptr;
         } else {
-            list_delete(&dev->node);
-            if (list_is_empty(&parent->children)) {
+            parent->children.erase(*dev);
+            if (parent->children.is_empty()) {
                 parent->flags &= (~DEV_CTX_BOUND);
 
                 //TODO: This code is to cause the bind process to

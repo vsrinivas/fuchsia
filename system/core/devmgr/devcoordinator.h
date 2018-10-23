@@ -184,14 +184,20 @@ struct dc_device {
 
     // listnode for this device in its parent's
     // list-of-children
-    list_node_t node;
+    fbl::DoublyLinkedListNodeState<dc_device*> node;
+    struct Node {
+        static fbl::DoublyLinkedListNodeState<dc_device*>& node_state(
+            dc_device& obj) {
+            return obj.node;
+        }
+    };
 
     // listnode for this device in its devhost's
     // list-of-devices
     list_node_t dhnode;
 
     // list of all child devices of this device
-    list_node_t children;
+    fbl::DoublyLinkedList<dc_device*, Node> children;
 
     // list of outstanding requests from the devcoord
     // to this device's devhost, awaiting a response
