@@ -165,9 +165,10 @@ static zx_status_t iostate_create(devnode_t* dn, zx_handle_t h) {
     zx_status_t r;
     if ((r = port_wait(&dc_port, &ios->ph)) != ZX_OK) {
         list_delete(&ios->node);
+    } else {
+        // dc_port now owns |ios|
+        __UNUSED auto ptr = ios.release();
     }
-    // dc_port now owns |ios|
-    __UNUSED auto ptr = ios.release();
     return r;
 }
 
