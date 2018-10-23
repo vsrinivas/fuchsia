@@ -101,4 +101,61 @@ func TestOutput(t *testing.T) {
 			t.Errorf("want `ifconfig route add` to print \"%s\", got \"%s\"", expected, out)
 		}
 	})
+
+	t.Run("Interface name exact match: `ifconfig lo` should return 1 interface", func(t *testing.T) {
+		out, err := exec.Command("/system/bin/ifconfig", "lo").CombinedOutput()
+		if err != nil {
+			t.Errorf("want no error but got error:\n%s", out)
+		}
+		headlines := findLinesContainingHWaddr(string(out))
+		if len(headlines) != 1 {
+			t.Errorf("want exactly 1 interface from `ifconfig lo`, got: %d", len(headlines))
+		} else {
+			expected := "lo\tHWaddr  Id:1"
+			if !strings.HasPrefix(headlines[0], expected) {
+				t.Errorf("want interface `lo` from `ifconfig lo`, got:\n%s", out)
+			}
+		}
+	})
+
+	t.Run("Interface name no match: `ifconfig o` should return 0 interface", func(t *testing.T) {
+		out, err := exec.Command("/system/bin/ifconfig", "o").CombinedOutput()
+		if err != nil {
+			t.Errorf("want no error but got error:\n%s", out)
+		}
+		expected := "ifconfig: no such interface"
+		if !(strings.HasPrefix(string(out), expected)) {
+			t.Errorf("want no interface from `ifconfig o`, got:\n%s", out)
+		}
+	})
+
+	t.Run("Interface name partial match: `ifconfig l` should return 1 interface", func(t *testing.T) {
+		out, err := exec.Command("/system/bin/ifconfig", "l").CombinedOutput()
+		if err != nil {
+			t.Errorf("want no error from `ifconfig l` but got error:\n%s", out)
+		}
+		headlines := findLinesContainingHWaddr(string(out))
+		if len(headlines) != 1 {
+			t.Errorf("want exactly 1 interface from `ifconfig l`, got: %d", len(headlines))
+		} else {
+			expected := "lo\tHWaddr  Id:1"
+			if !strings.HasPrefix(headlines[0], expected) {
+				t.Errorf("want interface `lo` from `ifconfig l`, got:\n%s", out)
+			}
+		}
+	})
+
+	t.Run("ambiguous match: `ifconfig \"\"` should return 0 interfaces", func(t *testing.T) {
+		// TODO(NET-1749): add an interface to ensure there are at least 2 interfaces.
+	})
+}
+
+func findLinesContainingHWaddr(in string) []string {
+	var out []string
+	for _, line := range strings.Split(in, "\n") {
+		if strings.Contains(line, "HWaddr") {
+			out = append(out, line)
+		}
+	}
+	return out
 }

@@ -39,12 +39,16 @@ func (a *netstackClientApp) printAll() {
 }
 
 func getIfaceByNameFromIfaces(name string, ifaces []netstack.NetInterface) *netstack.NetInterface {
-	for _, iface := range ifaces {
-		if iface.Name == name {
-			return &iface
+	var candidate *netstack.NetInterface
+	for i, iface := range ifaces {
+		if strings.HasPrefix(iface.Name, name) {
+			if candidate != nil {
+				return nil
+			}
+			candidate = &ifaces[i]
 		}
 	}
-	return nil
+	return candidate
 }
 
 func getIfaceByIdFromIfaces(id uint32, ifaces []netstack.NetInterface) *netstack.NetInterface {
