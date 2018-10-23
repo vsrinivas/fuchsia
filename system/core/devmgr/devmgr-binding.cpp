@@ -150,9 +150,9 @@ bool dc_is_bindable(driver_t* drv, uint32_t protocol_id,
     ctx.props = props;
     ctx.end = props + prop_count;
     ctx.protocol_id = protocol_id;
-    ctx.binding = drv->binding;
+    ctx.binding = drv->binding.get();
     ctx.binding_size = drv->binding_size;
-    ctx.name = drv->name;
+    ctx.name = drv->name.c_str();
     ctx.autobind = autobind ? 1 : 0;
     return is_bindable(&ctx);
 }

@@ -46,10 +46,6 @@ static void found_driver(zircon_driver_note_payload_t* note,
     }
 
     const char* libname = ctx->libname;
-    size_t pathlen = strlen(libname) + 1;
-    size_t namelen = strlen(note->name) + 1;
-    size_t bindlen = note->bindcount * sizeof(zx_bind_inst_t);
-    size_t len = sizeof(driver_t) + bindlen + pathlen + namelen;
 
     if ((note->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) && !dc_asan_drivers) {
         if (dc_launched_first_devhost) {
@@ -61,21 +57,22 @@ static void found_driver(zircon_driver_note_payload_t* note,
         dc_asan_drivers = true;
     }
 
-    driver_t* drv;
-    if ((drv = static_cast<driver_t*>(malloc(len))) == nullptr) {
+    auto drv = fbl::make_unique<dc_driver>();
+    if (drv == nullptr) {
         return;
     }
-    new (drv) driver_t;
 
-    memset(drv, 0, sizeof(driver_t));
+    auto binding = fbl::make_unique<zx_bind_inst_t[]>(note->bindcount);
+    if (binding == nullptr) {
+        return;
+    }
+    const size_t bindlen = note->bindcount * sizeof(zx_bind_inst_t);
+    memcpy(binding.get(), bi, bindlen);
+    drv->binding.reset(binding.release());
     drv->binding_size = static_cast<uint32_t>(bindlen);
-    drv->binding = reinterpret_cast<const zx_bind_inst_t*>(drv + 1);
-    drv->libname = reinterpret_cast<const char*>(drv->binding + note->bindcount);
-    drv->name = drv->libname + pathlen;
 
-    memcpy((void*) drv->binding, bi, bindlen);
-    memcpy((void*) drv->libname, libname, pathlen);
-    memcpy((void*) drv->name, note->name, namelen);
+    drv->libname.Set(libname);
+    drv->name.Set(note->name);
 
 #if VERBOSE_DRIVER_LOAD
     printf("found driver: %s\n", (char*) cookie);
@@ -89,7 +86,7 @@ static void found_driver(zircon_driver_note_payload_t* note,
     }
 #endif
 
-    ctx->func(drv, note->version);
+    ctx->func(drv.release(), note->version);
 }
 
 void find_loadable_drivers(const char* path,

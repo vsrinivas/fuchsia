@@ -13,6 +13,7 @@
 #include <zircon/listnode.h>
 
 #include <fbl/intrusive_double_list.h>
+#include <fbl/string.h>
 #include <port/port.h>
 
 namespace devmgr {
@@ -190,13 +191,17 @@ struct dc_device {
 #define DEV_CTX_INVISIBLE     0x80
 
 struct dc_driver {
-    const char* name;
-    const zx_bind_inst_t* binding;
-    uint32_t binding_size;
-    uint32_t flags;
-    zx_handle_t dso_vmo;
-    struct list_node node;
-    const char* libname;
+    dc_driver() = default;
+
+    fbl::String name;
+    fbl::unique_ptr<const zx_bind_inst_t[]> binding;
+    // Binding size in number of bytes, not number of entries
+    // TODO: Change it to number of entries
+    uint32_t binding_size = 0;
+    uint32_t flags = 0;
+    zx_handle_t dso_vmo = ZX_HANDLE_INVALID;
+    struct list_node node = {};
+    fbl::String libname;
 };
 
 #define DRIVER_NAME_LEN_MAX 64
