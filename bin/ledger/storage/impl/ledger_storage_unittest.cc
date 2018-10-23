@@ -12,9 +12,9 @@
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
-#include "peridot/bin/ledger/storage/impl/db_factory.h"
-#include "peridot/bin/ledger/storage/impl/fake_db_factory.h"
+#include "peridot/bin/ledger/storage/fake/fake_db_factory.h"
 #include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
+#include "peridot/bin/ledger/storage/public/db_factory.h"
 #include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
@@ -36,7 +36,7 @@ class LedgerStorageTest : public ledger::TestWithEnvironment {
   encryption::FakeEncryptionService encryption_service_;
 
  protected:
-  FakeDbFactory db_factory_;
+  fake::FakeDbFactory db_factory_;
   LedgerStorageImpl storage_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerStorageTest);

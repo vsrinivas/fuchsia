@@ -1,29 +1,23 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_LEVELDB_H_
-#define PERIDOT_BIN_LEDGER_STORAGE_IMPL_LEVELDB_H_
+#ifndef PERIDOT_BIN_LEDGER_STORAGE_FAKE_FAKE_DB_H_
+#define PERIDOT_BIN_LEDGER_STORAGE_FAKE_FAKE_DB_H_
 
-#include <utility>
+#include <map>
 
 #include <lib/async/dispatcher.h>
 
-#include "leveldb/db.h"
-#include "leveldb/write_batch.h"
-#include "peridot/bin/ledger/filesystem/detached_path.h"
 #include "peridot/bin/ledger/storage/public/db.h"
 
 namespace storage {
+namespace fake {
 
-class LevelDb : public Db {
+class FakeDb : public Db {
  public:
-  explicit LevelDb(async_dispatcher_t* dispatcher,
-                   ledger::DetachedPath db_path);
-
-  ~LevelDb() override;
-
-  Status Init();
+  explicit FakeDb(async_dispatcher_t* dispatcher);
+  ~FakeDb() override;
 
   // Db:
   Status StartBatch(coroutine::CoroutineHandler* handler,
@@ -50,18 +44,13 @@ class LevelDb : public Db {
 
  private:
   async_dispatcher_t* const dispatcher_;
-  const ledger::DetachedPath db_path_;
-  std::unique_ptr<leveldb::Env> env_;
-  std::unique_ptr<leveldb::DB> db_;
 
-  const leveldb::WriteOptions write_options_;
-  const leveldb::ReadOptions read_options_;
+  std::map<std::string, std::string> key_value_store_;
 
-  uint64_t active_batches_count_ = 0;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(LevelDb);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeDb);
 };
 
+}  // namespace fake
 }  // namespace storage
 
-#endif  // PERIDOT_BIN_LEDGER_STORAGE_IMPL_LEVELDB_H_
+#endif  // PERIDOT_BIN_LEDGER_STORAGE_FAKE_FAKE_DB_H_

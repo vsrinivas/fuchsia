@@ -24,7 +24,7 @@
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
 #include "peridot/bin/ledger/p2p_sync/public/user_communicator.h"
-#include "peridot/bin/ledger/storage/impl/db_factory.h"
+#include "peridot/bin/ledger/storage/public/db_factory.h"
 #include "peridot/bin/ledger/sync_coordinator/public/user_sync.h"
 #include "peridot/lib/convert/convert.h"
 

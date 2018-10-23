@@ -20,6 +20,7 @@
 #include "peridot/bin/ledger/storage/impl/commit_impl.h"
 #include "peridot/bin/ledger/storage/impl/commit_random_impl.h"
 #include "peridot/bin/ledger/storage/impl/journal_impl.h"
+#include "peridot/bin/ledger/storage/impl/leveldb.h"
 #include "peridot/bin/ledger/storage/impl/page_db_impl.h"
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"

@@ -79,7 +79,7 @@ void LedgerStorageImpl::CreatePageStorage(
           weak_factory_.GetWeakPtr(),
           [this, page_id = std::move(page_id),
            callback = std::move(timed_callback)](
-              Status status, std::unique_ptr<LevelDb> db) mutable {
+              Status status, std::unique_ptr<Db> db) mutable {
             if (status != Status::OK) {
               callback(status, nullptr);
               return;
@@ -106,7 +106,7 @@ void LedgerStorageImpl::GetPageStorage(
           weak_factory_.GetWeakPtr(),
           [this, page_id = std::move(page_id),
            callback = std::move(timed_callback)](
-              Status status, std::unique_ptr<LevelDb> db) mutable {
+              Status status, std::unique_ptr<Db> db) mutable {
             if (status != Status::OK) {
               callback(status, nullptr);
               return;
@@ -173,7 +173,7 @@ std::vector<PageId> LedgerStorageImpl::ListLocalPages() {
 }
 
 void LedgerStorageImpl::InitializePageStorage(
-    PageId page_id, std::unique_ptr<LevelDb> db,
+    PageId page_id, std::unique_ptr<Db> db,
     fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
   auto storage = std::make_unique<PageStorageImpl>(
       environment_, encryption_service_, std::move(db), std::move(page_id));

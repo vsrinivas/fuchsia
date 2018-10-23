@@ -15,7 +15,8 @@
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
-#include "peridot/bin/ledger/storage/impl/db_factory.h"
+#include "peridot/bin/ledger/storage/public/db_factory.h"
+#include "peridot/bin/ledger/storage/public/db.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
 
 namespace storage {
@@ -48,7 +49,7 @@ class LedgerStorageImpl : public LedgerStorage {
   // Creates and returns through the callback, an initialized |PageStorageImpl|
   // object.
   void InitializePageStorage(
-      PageId page_id, std::unique_ptr<storage::LevelDb> db,
+      PageId page_id, std::unique_ptr<Db> db,
       fit::function<void(Status, std::unique_ptr<PageStorage>)> callback);
 
   ledger::DetachedPath GetPathFor(PageIdView page_id);

@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_LEVELDB_FACTORY_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_LEVELDB_FACTORY_H_
 
-#include "peridot/bin/ledger/storage/impl/db_factory.h"
+#include "peridot/bin/ledger/storage/public/db_factory.h"
 
 #include <memory>
 
@@ -29,11 +29,11 @@ class LevelDbFactory : public DbFactory {
   // instances.
   void CreateDb(
       ledger::DetachedPath db_path,
-      fit::function<void(Status, std::unique_ptr<LevelDb>)> callback) override;
+      fit::function<void(Status, std::unique_ptr<Db>)> callback) override;
 
   void GetDb(
       ledger::DetachedPath db_path,
-      fit::function<void(Status, std::unique_ptr<LevelDb>)> callback) override;
+      fit::function<void(Status, std::unique_ptr<Db>)> callback) override;
 
  private:
   struct DbInitializationState;
@@ -42,7 +42,7 @@ class LevelDbFactory : public DbFactory {
   // in the I/O thread and then returns it through the |callback|.
   void CreateInitializedDb(
       ledger::DetachedPath db_path,
-      fit::function<void(Status, std::unique_ptr<LevelDb>)> callback);
+      fit::function<void(Status, std::unique_ptr<Db>)> callback);
 
   // Creates and initializes a new LevelDb instance. This method should be
   // called from the I/O thread. When initialization is complete, it makes sure
@@ -50,7 +50,7 @@ class LevelDbFactory : public DbFactory {
   void InitOnIOThread(
       ledger::DetachedPath db_path,
       fxl::RefPtr<DbInitializationState> initialization_state,
-      fit::function<void(Status, std::unique_ptr<LevelDb>)> callback);
+      fit::function<void(Status, std::unique_ptr<Db>)> callback);
 
   ledger::Environment* environment_;
   coroutine::CoroutineManager coroutine_manager_;

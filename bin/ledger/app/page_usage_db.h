@@ -15,7 +15,7 @@
 #include "peridot/bin/ledger/app/types.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/environment/environment.h"
-#include "peridot/bin/ledger/storage/impl/db.h"
+#include "peridot/bin/ledger/storage/public/db.h"
 #include "peridot/bin/ledger/storage/impl/leveldb.h"
 #include "peridot/bin/ledger/storage/public/iterator.h"
 #include "peridot/bin/ledger/storage/public/types.h"

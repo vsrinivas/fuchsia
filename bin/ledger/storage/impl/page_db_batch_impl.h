@@ -6,7 +6,7 @@
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_PAGE_DB_BATCH_IMPL_H_
 
 #include "peridot/bin/ledger/coroutine/coroutine.h"
-#include "peridot/bin/ledger/storage/impl/db.h"
+#include "peridot/bin/ledger/storage/public/db.h"
 #include "peridot/bin/ledger/storage/impl/page_db.h"
 #include "peridot/lib/rng/random.h"
 

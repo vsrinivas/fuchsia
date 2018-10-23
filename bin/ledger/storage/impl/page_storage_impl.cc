@@ -75,8 +75,8 @@ struct StringPointerComparator {
 
 PageStorageImpl::PageStorageImpl(
     ledger::Environment* environment,
-    encryption::EncryptionService* encryption_service,
-    std::unique_ptr<LevelDb> db, PageId page_id)
+    encryption::EncryptionService* encryption_service, std::unique_ptr<Db> db,
+    PageId page_id)
     : PageStorageImpl(environment, encryption_service,
                       std::make_unique<PageDbImpl>(environment, std::move(db)),
                       std::move(page_id)) {}

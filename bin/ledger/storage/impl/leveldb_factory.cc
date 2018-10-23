@@ -39,31 +39,31 @@ LevelDbFactory::LevelDbFactory(ledger::Environment* environment)
 
 void LevelDbFactory::CreateDb(
     ledger::DetachedPath db_path,
-    fit::function<void(Status, std::unique_ptr<LevelDb>)> callback) {
+    fit::function<void(Status, std::unique_ptr<Db>)> callback) {
   CreateInitializedDb(std::move(db_path), std::move(callback));
 }
 
 void LevelDbFactory::GetDb(
     ledger::DetachedPath db_path,
-    fit::function<void(Status, std::unique_ptr<LevelDb>)> callback) {
+    fit::function<void(Status, std::unique_ptr<Db>)> callback) {
   CreateInitializedDb(std::move(db_path), std::move(callback));
 }
 
 void LevelDbFactory::CreateInitializedDb(
     ledger::DetachedPath db_path,
-    fit::function<void(Status, std::unique_ptr<LevelDb>)> callback) {
+    fit::function<void(Status, std::unique_ptr<Db>)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, db_path = std::move(db_path)](
           coroutine::CoroutineHandler* handler,
-          fit::function<void(Status, std::unique_ptr<LevelDb>)> callback) {
+          fit::function<void(Status, std::unique_ptr<Db>)> callback) {
         auto db_initialization_state =
             fxl::MakeRefCounted<DbInitializationState>();
         Status status;
-        std::unique_ptr<LevelDb> db;
+        std::unique_ptr<Db> db;
         if (coroutine::SyncCall(
                 handler,
-                [&](fit::function<void(Status, std::unique_ptr<LevelDb>)>
+                [&](fit::function<void(Status, std::unique_ptr<Db>)>
                         callback) {
                   async::PostTask(environment_->io_dispatcher(),
                                   [this, db_path = std::move(db_path),
@@ -106,7 +106,7 @@ void LevelDbFactory::CreateInitializedDb(
 void LevelDbFactory::InitOnIOThread(
     ledger::DetachedPath db_path,
     fxl::RefPtr<DbInitializationState> initialization_state,
-    fit::function<void(Status, std::unique_ptr<LevelDb>)> callback) {
+    fit::function<void(Status, std::unique_ptr<Db>)> callback) {
   std::lock_guard<std::mutex> guard(initialization_state->mutex);
   if (initialization_state->cancelled) {
     return;

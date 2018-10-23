@@ -116,8 +116,7 @@ class JournalEntryIterator final : public Iterator<const EntryChange> {
 
 }  // namespace
 
-PageDbImpl::PageDbImpl(ledger::Environment* environment,
-                       std::unique_ptr<LevelDb> db)
+PageDbImpl::PageDbImpl(ledger::Environment* environment, std::unique_ptr<Db> db)
     : environment_(environment), db_(std::move(db)) {
   FXL_DCHECK(environment_);
   FXL_DCHECK(db_);

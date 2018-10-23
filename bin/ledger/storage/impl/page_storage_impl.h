@@ -19,6 +19,7 @@
 #include "peridot/bin/ledger/coroutine/coroutine_manager.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/storage/public/db.h"
 #include "peridot/bin/ledger/storage/impl/page_db_impl.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
@@ -30,7 +31,7 @@ class PageStorageImpl : public PageStorage {
  public:
   PageStorageImpl(ledger::Environment* environment,
                   encryption::EncryptionService* encryption_service,
-                  std::unique_ptr<LevelDb> db, PageId page_id);
+                  std::unique_ptr<Db> db, PageId page_id);
   PageStorageImpl(ledger::Environment* environment,
                   encryption::EncryptionService* encryption_service,
                   std::unique_ptr<PageDb> page_db, PageId page_id);

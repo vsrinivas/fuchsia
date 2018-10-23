@@ -12,7 +12,7 @@
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
-#include "peridot/bin/ledger/storage/impl/leveldb.h"
+#include "peridot/bin/ledger/storage/public/db.h"
 #include "peridot/bin/ledger/storage/impl/page_db.h"
 
 namespace storage {
@@ -23,7 +23,7 @@ class PageStorageImpl;
 // TRANSIENT objects.
 class PageDbImpl : public PageDb {
  public:
-  PageDbImpl(ledger::Environment* environment, std::unique_ptr<LevelDb> db);
+  PageDbImpl(ledger::Environment* environment, std::unique_ptr<Db> db);
   ~PageDbImpl() override;
 
   Status StartBatch(coroutine::CoroutineHandler* handler,
@@ -105,7 +105,7 @@ class PageDbImpl : public PageDb {
 
  private:
   ledger::Environment* environment_;
-  std::unique_ptr<LevelDb> db_;
+  std::unique_ptr<Db> db_;
 };
 
 }  // namespace storage
