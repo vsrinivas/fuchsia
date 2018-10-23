@@ -33,7 +33,6 @@
 #include "garnet/bin/guest/vmm/instance_controller_impl.h"
 #include "garnet/bin/guest/vmm/linux.h"
 #include "garnet/bin/guest/vmm/zircon.h"
-#include "garnet/lib/machina/framebuffer_scanout.h"
 #include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/interrupt_controller.h"
 #include "garnet/lib/machina/pci.h"
@@ -260,9 +259,8 @@ int main(int argc, char** argv) {
 
   machina::VirtioInput input(guest.phys_mem());
   machina::VirtioGpu gpu(guest.phys_mem(), guest.device_dispatcher());
-  std::unique_ptr<machina::FramebufferScanout> framebuffer_scanout;
   std::unique_ptr<ScenicScanout> scenic_scanout;
-  if (cfg.display() != GuestDisplay::NONE) {
+  if (cfg.display() == GuestDisplay::SCENIC) {
     // Setup input device.
     status = bus.Connect(input.pci_device(), true);
     if (status != ZX_OK) {
@@ -275,20 +273,11 @@ int main(int argc, char** argv) {
       return status;
     }
 
-    if (cfg.display() == GuestDisplay::FRAMEBUFFER) {
-      status = machina::FramebufferScanout::Create(gpu.scanout(),
-                                                   &framebuffer_scanout);
-      if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to acquire framebuffer " << status;
-        return status;
-      }
-    } else {
-      // Expose a view that can be composited by mozart. Input events will be
-      // injected by the view events.
-      scenic_scanout = std::make_unique<ScenicScanout>(
-          context.get(), std::move(input_dispatcher), gpu.scanout());
-      instance_controller.SetViewProvider(scenic_scanout.get());
-    }
+    // Expose a view that can be composited by mozart. Input events will be
+    // injected by the view events.
+    scenic_scanout = std::make_unique<ScenicScanout>(
+        context.get(), std::move(input_dispatcher), gpu.scanout());
+    instance_controller.SetViewProvider(scenic_scanout.get());
 
     // Setup GPU device.
     status = gpu.Init();

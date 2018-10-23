@@ -49,7 +49,6 @@ enum class Kernel {
 };
 
 enum class GuestDisplay {
-  FRAMEBUFFER,
   SCENIC,
   NONE,
 };

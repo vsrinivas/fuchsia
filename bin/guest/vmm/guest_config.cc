@@ -40,8 +40,7 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t                             The suffixes 'k', 'M', and 'G' are accepted\n";
   std::cerr << "\t--balloon-demand-page        Demand-page balloon deflate requests\n";
   std::cerr << "\t--display={scenic,           Specify the display backend to use for the guest.\n";
-  std::cerr << "\t           framebuffer,      'scenic' (default) will render to a scenic view.\n";
-  std::cerr << "\t           none}             'framebuffer' will draw to a zircon framebuffer.\n";
+  std::cerr << "\t           none}             'scenic' (default) will render to a scenic view.\n";
   std::cerr << "\t                             'none' disables graphical output\n";
   std::cerr << "\t--wayland-memory=[bytes]     Reserve 'bytes' of device memory for Wayland buffers.\n";
   std::cerr << "\t                             The suffixes 'k', 'M', and 'G' are accepted\n";
@@ -295,8 +294,6 @@ static GuestConfigParser::OptionHandler parse_display(GuestDisplay* out) {
     }
     if (value == "scenic") {
       *out = GuestDisplay::SCENIC;
-    } else if (value == "framebuffer") {
-      *out = GuestDisplay::FRAMEBUFFER;
     } else if (value == "none") {
       *out = GuestDisplay::NONE;
     } else {
