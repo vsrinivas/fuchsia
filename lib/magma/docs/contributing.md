@@ -84,7 +84,7 @@ A full UI stress test.  Launch the spinning_cube example and the infinite_scroll
 
 #### C0
 
-For some changes, it's appropriate to run the vulkan conformance test suite before submitting.
+For some changes, it's appropriate to run the Vulkan conformance test suite before submitting.
 See [Conformance](#conformance).
 
 #### P0

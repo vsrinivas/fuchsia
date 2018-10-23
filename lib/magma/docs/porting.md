@@ -59,7 +59,7 @@ The gpu vendor supplies and maintains the system driver using the Zircon DDK.
 
 Not required to be open source; for bringup, the repo may be hosted by the Magma team internally and only the binary objects will be distributed.
 
-The client driver library should provide a conformant implementatation of Vulkan 1.0/1.1.  It must also implement several Fuchsia specific variants of common KHR Vulkan extensions for external memory and semaphores. These are currently WIP and subject to change, but can be found in the Fuchsia internal [Vulkan header](https://fuchsia.googlesource.com/third_party/vulkan_loader_and_validation_layers/+/master/include/vulkan/vulkan.h):
+The client driver library should provide a conformant implementation of Vulkan 1.0/1.1.  It must also implement several Fuchsia specific variants of common KHR Vulkan extensions for external memory and semaphores. These are currently WIP and subject to change, but can be found in the Fuchsia internal [Vulkan header](https://fuchsia.googlesource.com/third_party/vulkan_loader_and_validation_layers/+/master/include/vulkan/vulkan.h):
 * VK_KHR_external_memory_fuchsia
 * VK_KHR_external_semaphore_fuchsia
 
@@ -78,7 +78,7 @@ Eventually, the vendor will be able to build and test for Fuchsia, so the Fuchsi
 * Implement Fuchsia Vulkan extensions
 
 ### Validation Stages
-* A simple vulkan test passes
+* A simple Vulkan test passes
 	* Test: [vkreadback](../../../lib/magma/tests/vkreadback) (draws a color then reads back the framebuffer values)
 * Add support for fuchsia window system integration extensions using zircon framebuffer library
     * Test: [vkcube](../../../lib/magma/tests/vkcube) (animated, using VK_KHR_swapchain)

@@ -3,11 +3,11 @@ Vulkan Development
 
 1) Runtime dependencies
 
-    The magma driver and libraries should already be built into a complete fuchsia image, however you should have your project depend on the 'magma' package to be sure that the necessary files are included in the system image of whatever build includes your project.
+    The magma driver and libraries should already be built into a complete Fuchsia image, however you should have your project depend on the 'magma' package to be sure that the necessary files are included in the system image of whatever build includes your project.
 
 2) Buildtime dependencies
 
-    In order for your project to access the vulkan headers, and to link against the vulkan loader libvulkan.so, add the following GN dependency:
+    In order for your project to access the Vulkan headers, and to link against the Vulkan loader libvulkan.so, add the following GN dependency:
 
     //garnet/public/lib/vulkan
 
@@ -37,9 +37,9 @@ Vulkan Development
 
     Currently, on system startup the gfxconsole owns the display.
 
-    When a vulkan application starts, it will take over the display.
+    When a Vulkan application starts, it will take over the display.
 
-    To toggle display ownership between the vulkan app and the gfxconsole, press alt-esc.
+    To toggle display ownership between the Vulkan app and the gfxconsole, press alt-esc.
 
 5) Reporting issues
 
@@ -84,4 +84,4 @@ Vulkan Development
 
 6) Demo
 
-    The magma build includes a spinning cube demo 'vkcube', which you can copy over to your fuchsia system and execute via netruncmd.
+    The magma build includes a spinning cube demo 'vkcube', which you can copy over to your Fuchsia system and execute via netruncmd.

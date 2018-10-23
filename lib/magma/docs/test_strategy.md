@@ -28,7 +28,7 @@ Four major components
 * Vulkan CTS (conformance) takes several hours to run
     * Should be run on a daily build, not part of normal CQ
 * Upstreaming libvulkan changes to the vendor
-    * Vendor must be provided a build and test environment with which they can validate Vulkan CTS on fuchsia
+    * Vendor must be provided a build and test environment with which they can validate Vulkan CTS on Fuchsia
 * Source access to gfxbench is restricted
     * Should we test a binary package?
 
@@ -56,7 +56,7 @@ Some of these require hardware; those that don't are included in pre-submit chec
 
 ## Hardware Interaction Tests
 
-The interaction between app, libvulkan, msd, and gpu is complex.  Generally speaking the app generates vulkan command buffers and shader programs which are created in a gpu specific binary format by libvulkan. 
+The interaction between app, libvulkan, msd, and gpu is complex.  Generally speaking the app generates Vulkan command buffers and shader programs which are created in a gpu specific binary format by libvulkan.
 Those command buffers as well as other resources are shared with the magma system driver, which maps resources into the gpu's address space and schedules command buffers on the gpu's execution units.
 
 * magma_abi_conformance_tests
@@ -68,15 +68,15 @@ Those command buffers as well as other resources are shared with the magma syste
     * Shutdown
     * Hang/fault recovery
 * vkreadback
-    * Validates vulkan end-to-end as simply as possible
+    * Validates Vulkan end-to-end as simply as possible
 * vkloop
     * Validates hang detection and recovery
 * vkext
-    * Validates fuchsia vulkan extensions
+    * Validates Fuchsia Vulkan extensions
 * [Vulkan CTS](https://github.com/KhronosGroup/VK-GL-CTS)
     * Takes several hours to run
     * Should be run at least once a day
-    * Vendor must be provided a build and test environment with which they can validate Vulkan CTS on fuchsia
+    * Vendor must be provided a build and test environment with which they can validate Vulkan CTS on Fuchsia
 
 ### Hardware required
 

@@ -7,7 +7,7 @@ For an overview of Magma including background, hardware requirements, and descri
 
 ### Extensible core
 
-Magma aims to pragmatically minimize the architectural differences in the way that client drivers communicate with their respective system drivers across different gpu and client driver designs.  Where necessary, Magma adds gpu-specific queries, command structures, and interfaces to accomodate specific requirements.  These differences are clarified in driver-specific documentation.
+Magma aims to pragmatically minimize the architectural differences in the way that client drivers communicate with their respective system drivers across different gpu and client driver designs.  Where necessary, Magma adds gpu-specific queries, command structures, and interfaces to accommodate specific requirements.  These differences are clarified in driver-specific documentation.
 
 ### Feed forward
 
@@ -42,7 +42,7 @@ The Magma interface is a service interface provided by the Magma system driver. 
 plus gpu specific headers (example: [intel](../../../drivers/gpu/msd-intel-gen/include/msd_intel_gen_query.h)).
 
 ### Physical devices
-During the fuchsia boot sequence, a Magma system driver is instantiated for each physical device capable of accelerated graphics.  The instantiation creates a device binding in the class gpu; for example, in a single gpu system the device is bound to /dev/class/gpu/000.
+During the Fuchsia boot sequence, a Magma system driver is instantiated for each physical device capable of accelerated graphics.  The instantiation creates a device binding in the class gpu; for example, in a single gpu system the device is bound to /dev/class/gpu/000.
 With appropriate application privilege, client drivers may scan for the presence of one or more gpu class devices, and open them.
 Synchronous queries may be performed on the device file descriptor to return various parameters, some of which may be useful for helping the application decide which physical devices, under which configuration, to work with.
 
@@ -76,7 +76,7 @@ Pre-emption of inflight command buffers, if supported by hardware, can be used t
 
 ### Semaphores
 
-Magma provides semaphores as a general signalling mechanism that can be used to implement vulkan fences and semaphores.  Magma semaphores are built on zircon [events](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/event.md).
+Magma provides semaphores as a general signalling mechanism that can be used to implement Vulkan fences and semaphores.  Magma semaphores are built on zircon [events](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/event.md).
 
 ### Summary of object ownership
 * Client: owns connections; shared ownership of buffers, mappings, contexts
@@ -102,7 +102,7 @@ Note that the process boundary enclosing the msd is the Fuchsia devhost process 
 
 ## Error Handling
 
-When an error occurs in the magma service driver, the corresponding connection is killed.  When the client driver attempts to access the closed connection it typically will pass up a "device lost" vulkan api error.
+When an error occurs in the magma service driver, the corresponding connection is killed.  When the client driver attempts to access the closed connection it typically will pass up a "device lost" Vulkan api error.
 
 ## Power Management
 
