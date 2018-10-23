@@ -5,11 +5,23 @@
 #pragma once
 
 // Peripheral Memory
+#define MT8167_XO_BASE                                      0x10000000
+#define MT8167_XO_SIZE                                      0x2000
+
 #define MT8167_GPIO_BASE                                    0x10005000
 #define MT8167_GPIO_SIZE                                    0x700
 
 #define MT8167_SOC_BASE                                     0x10200000
 #define MT8167_SOC_SIZE                                     0x1D00
+
+#define MT8167_I2C0_BASE                                    0x11009000
+#define MT8167_I2C0_SIZE                                    0x8c
+
+#define MT8167_I2C1_BASE                                    0x1100a000
+#define MT8167_I2C1_SIZE                                    0x8c
+
+#define MT8167_I2C2_BASE                                    0x1100b000
+#define MT8167_I2C2_SIZE                                    0x8c
 
 #define MT8167_MSDC0_BASE                                   0x11120000
 #define MT8167_MSDC0_SIZE                                   0x22c
@@ -55,3 +67,5 @@
 #define MT8167_IRQ_WDT                                      230
 #define MT8167_IRQ_I2C3                                     241
 #define MT8167_IRQ_UART2                                    243
+
+#define MT8167_I2C_CNT                                      3

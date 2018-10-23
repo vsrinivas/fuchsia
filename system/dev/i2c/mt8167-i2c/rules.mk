@@ -8,26 +8,24 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS := \
+MODULE_SRCS += \
     $(LOCAL_DIR)/bind.c \
-    $(LOCAL_DIR)/mt8167.cpp \
-    $(LOCAL_DIR)/mt8167-emmc.cpp \
-    $(LOCAL_DIR)/mt8167-soc.cpp \
-    $(LOCAL_DIR)/mt8167-gpio.cpp \
-    $(LOCAL_DIR)/mt8167-display.cpp \
     $(LOCAL_DIR)/mt8167-i2c.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/dev/lib/mt8167 \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
+    system/ulib/hwreg \
+    system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
 
 MODULE_LIBS := \
     system/ulib/driver \
-    system/ulib/zircon \
     system/ulib/c \
+    system/ulib/zircon \
+
+MODULE_HEADER_DEPS := system/dev/lib/mt8167
 
 include make/module.mk

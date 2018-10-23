@@ -46,12 +46,12 @@ private:
     zx_status_t SocInit();
     zx_status_t GpioInit();
     zx_status_t DisplayInit();
+    zx_status_t I2cInit();
     int Thread();
 
     ddk::PBusProtocolProxy pbus_;
     thrd_t thread_;
 };
-
 
 } // namespace board_mt8167
 
