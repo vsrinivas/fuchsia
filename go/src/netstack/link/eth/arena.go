@@ -10,6 +10,8 @@ import (
 	"sync"
 	"syscall/zx"
 	"unsafe"
+
+	"fidl/zircon/ethernet"
 )
 
 // numBuffers is size of freebufs in arena
@@ -133,20 +135,21 @@ func (a *Arena) freeAll(c *Client) {
 	}
 }
 
-func (a *Arena) entry(b Buffer) bufferEntry {
+func (a *Arena) entry(b Buffer) ethernet.FifoEntry {
 	i := a.index(b)
 
-	return bufferEntry{
-		offset: uint32(i) * bufferSize,
-		length: uint16(len(b)),
-		cookie: (cookieMagic << 32) | uintptr(i),
+	entry := ethernet.FifoEntry{
+		Offset: uint32(i) * bufferSize,
+		Length: uint16(len(b)),
+		Cookie: (cookieMagic << 32) | uint64(i),
 	}
+	return entry
 }
 
-func (a *Arena) bufferFromEntry(e bufferEntry) Buffer {
-	i := int(int32(e.cookie))
-	if e.cookie>>32 != cookieMagic || i < 0 || i >= numBuffers {
-		panic(fmt.Sprintf("eth.Arena: buffer entry has bad cookie: %x", e.cookie))
+func (a *Arena) bufferFromEntry(e ethernet.FifoEntry) Buffer {
+	i := int32(e.Cookie)
+	if e.Cookie>>32 != cookieMagic || i < 0 || i >= numBuffers {
+		panic(fmt.Sprintf("eth.Arena: buffer entry has bad cookie: %x", e.Cookie))
 	}
 	a.mu.Lock()
 	isFree := a.mu.owner[i] == nil
@@ -154,20 +157,7 @@ func (a *Arena) bufferFromEntry(e bufferEntry) Buffer {
 	if isFree {
 		panic(fmt.Sprintf("eth: buffer entry %d is on free list", i))
 	}
-	return a.buffer(i)[:e.length]
+	return a.buffer(int(i))[:e.Length]
 }
 
-// bufferEntry is used to communicate a buffer over tx/rx fifos.
-//
-// The layout is known to ethernet drivers as eth_fifo_entry_t.
-//
-// In a departure from the zircon convention, we store a buffer index
-// in cookie instead of a pointer.
-type bufferEntry struct {
-	offset uint32
-	length uint16
-	flags  uint16
-	cookie uintptr // opaque void*
-}
-
-const cookieMagic = 0x42420102 // used to fill top 32-bits of bufferEntry.cookie
+const cookieMagic = 0x42420102 // used to fill top 32-bits of ethernet.FifoEntry.Cookie

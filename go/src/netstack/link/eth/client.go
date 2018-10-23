@@ -69,9 +69,9 @@ type Client struct {
 	state     State
 	stateFunc func(State)
 	arena     *Arena
-	tmpbuf    []bufferEntry // used to fill rx and drain tx
-	recvbuf   []bufferEntry // packets received
-	sendbuf   []bufferEntry // packets ready to send
+	tmpbuf    []ethernet.FifoEntry // used to fill rx and drain tx
+	recvbuf   []ethernet.FifoEntry // packets received
+	sendbuf   []ethernet.FifoEntry // packets ready to send
 
 	// These are counters for buffer management purpose.
 	txTotal    uint32
@@ -117,9 +117,9 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 		fifos:     *fifos,
 		stateFunc: stateFunc,
 		arena:     arena,
-		tmpbuf:    make([]bufferEntry, 0, maxDepth),
-		recvbuf:   make([]bufferEntry, 0, fifos.RxDepth),
-		sendbuf:   make([]bufferEntry, 0, fifos.TxDepth),
+		tmpbuf:    make([]ethernet.FifoEntry, 0, maxDepth),
+		recvbuf:   make([]ethernet.FifoEntry, 0, fifos.RxDepth),
+		sendbuf:   make([]ethernet.FifoEntry, 0, fifos.TxDepth),
 	}
 
 	c.mu.Lock()
@@ -282,13 +282,13 @@ func (c *Client) Free(b Buffer) {
 	c.arena.free(c, b)
 }
 
-func fifoWrite(handle zx.Handle, b []bufferEntry) (zx.Status, uint32) {
+func fifoWrite(handle zx.Handle, b []ethernet.FifoEntry) (zx.Status, uint32) {
 	var actual uint
 	status := zx.Sys_fifo_write(handle, uint(unsafe.Sizeof(b[0])), unsafe.Pointer(&b[0]), uint(len(b)), &actual)
 	return status, uint32(actual)
 }
 
-func fifoRead(handle zx.Handle, b []bufferEntry) (zx.Status, uint32) {
+func fifoRead(handle zx.Handle, b []ethernet.FifoEntry) (zx.Status, uint32) {
 	var actual uint
 	status := zx.Sys_fifo_read(handle, uint(unsafe.Sizeof(b[0])), unsafe.Pointer(&b[0]), uint(len(b)), &actual)
 	return status, uint32(actual)
