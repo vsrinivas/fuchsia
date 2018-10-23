@@ -43,6 +43,7 @@ package eth
 import (
 	"fmt"
 	"log"
+	"reflect"
 	"sync"
 	"syscall/zx"
 	"syscall/zx/zxwait"
@@ -282,15 +283,19 @@ func (c *Client) Free(b Buffer) {
 	c.arena.free(c, b)
 }
 
+const sizeof_fifo_entry = uint(unsafe.Sizeof(ethernet.FifoEntry{}))
+
 func fifoWrite(handle zx.Handle, b []ethernet.FifoEntry) (zx.Status, uint32) {
 	var actual uint
-	status := zx.Sys_fifo_write(handle, uint(unsafe.Sizeof(b[0])), unsafe.Pointer(&b[0]), uint(len(b)), &actual)
+	data := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&b)).Data)
+	status := zx.Sys_fifo_write(handle, sizeof_fifo_entry, data, uint(len(b)), &actual)
 	return status, uint32(actual)
 }
 
 func fifoRead(handle zx.Handle, b []ethernet.FifoEntry) (zx.Status, uint32) {
 	var actual uint
-	status := zx.Sys_fifo_read(handle, uint(unsafe.Sizeof(b[0])), unsafe.Pointer(&b[0]), uint(len(b)), &actual)
+	data := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&b)).Data)
+	status := zx.Sys_fifo_read(handle, sizeof_fifo_entry, data, uint(len(b)), &actual)
 	return status, uint32(actual)
 }
 

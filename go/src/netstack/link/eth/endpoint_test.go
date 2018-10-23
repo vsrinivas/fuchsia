@@ -5,6 +5,7 @@
 package eth_test
 
 import (
+	"runtime"
 	"syscall/zx"
 	"testing"
 
@@ -46,10 +47,7 @@ func TestEndpoint_WritePacket(t *testing.T) {
 			return int32(zx.ErrOk), nil
 		},
 		getFifos: func() (int32, *ethernet.Fifos, error) {
-			return int32(zx.ErrOk), &ethernet.Fifos{
-				Rx: zx.HandleInvalid,
-				Tx: zx.HandleInvalid,
-			}, nil
+			return int32(zx.ErrOk), &ethernet.Fifos{}, nil
 		},
 	}
 	c, err := eth.NewClient(t.Name(), "topo", &d, arena, nil)
@@ -69,4 +67,8 @@ func TestEndpoint_WritePacket(t *testing.T) {
 	if want := 1; packetsDelivered != want {
 		t.Errorf("got %d packets delivered, want = %d", packetsDelivered, want)
 	}
+	// We've created a driver with bogus fifos; the loop servicing them
+	// might crash. Give it a chance to run to make such crashes
+	// deterministic.
+	runtime.Gosched()
 }
