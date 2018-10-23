@@ -32,8 +32,8 @@ syn match fidlType "u\?int\(8\|16\|32\|64\)"
 syn match fidlBadType "u\?int\(8\|16\|32\|64\)?"
 
 " TODO: error highlight arrays without length / with "?"
-syn region fidlType matchgroup=Type start="vector<" end=">\(:[0-9][0-9]*\)\??\?" contains=fidlType,fidlBadType transparent
-syn region fidlType matchgroup=Type start="array<" end=">:[0-9][0-9]*" contains=fidlType,fidlBadType transparent
+syn region fidlType matchgroup=Type start="vector<" end=">\%(:\%(\d\+\|\K\k*\%(\.\K\k*\)*\)\)\??\?" contains=fidlType,fidlBadType transparent
+syn region fidlType matchgroup=Type start="array<" end=">:\%(\d\+\|\K\k*\%(\.\K\k*\)*\)" contains=fidlType,fidlBadType transparent
 
 
 " Identifiers prefixed with @
