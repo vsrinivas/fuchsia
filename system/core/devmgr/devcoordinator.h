@@ -165,7 +165,13 @@ struct dc_device {
     fbl::DoublyLinkedList<dc_pending*, dc_pending::Node> pending;
 
     // listnode for this device in the all devices list
-    list_node_t anode;
+    fbl::DoublyLinkedListNodeState<dc_device*> anode;
+    struct AllDevicesNode {
+        static fbl::DoublyLinkedListNodeState<dc_device*>& node_state(
+            dc_device& obj) {
+            return obj.anode;
+        }
+    };
 
     // Metadata entries associated to this device.
     fbl::DoublyLinkedList<fbl::unique_ptr<dc_metadata_t>, dc_metadata_t::Node> metadata;

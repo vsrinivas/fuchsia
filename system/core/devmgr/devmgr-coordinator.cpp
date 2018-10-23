@@ -293,7 +293,7 @@ static fbl::DoublyLinkedList<driver_t*, driver_t::Node> list_drivers_new;
 static fbl::DoublyLinkedList<driver_t*, driver_t::Node> list_drivers_fallback;
 
 // All Devices (excluding static immortal devices)
-static list_node_t list_devices = LIST_INITIAL_VALUE(list_devices);
+static fbl::DoublyLinkedList<dc_device*, dc_device::AllDevicesNode> list_devices;
 
 // All DevHosts
 static list_node_t list_devhosts = LIST_INITIAL_VALUE(list_devhosts);
@@ -524,7 +524,7 @@ static const char* get_devhost_bin() {
 
 zx_handle_t get_service_root();
 
-static zx_status_t dc_get_topo_path(device_t* dev, char* out, size_t max) {
+static zx_status_t dc_get_topo_path(const device_t* dev, char* out, size_t max) {
     char tmp[max];
     char* path = tmp + max - 1;
     *path = 0;
@@ -563,7 +563,7 @@ static zx_status_t dc_get_topo_path(device_t* dev, char* out, size_t max) {
 }
 
 //TODO: use a better device identifier
-static zx_status_t dc_notify(device_t* dev, uint32_t op) {
+static zx_status_t dc_notify(const device_t* dev, uint32_t op) {
     if (dc_watch_channel == ZX_HANDLE_INVALID) {
         return ZX_ERR_BAD_STATE;
     }
@@ -611,13 +611,12 @@ static void dc_watch(zx_handle_t h) {
         zx_handle_close(dc_watch_channel);
     }
     dc_watch_channel = h;
-    device_t* dev;
-    list_for_every_entry(&list_devices, dev, device_t, anode) {
-        if (dev->flags & (DEV_CTX_DEAD | DEV_CTX_ZOMBIE)) {
+    for (const auto& dev : list_devices) {
+        if (dev.flags & (DEV_CTX_DEAD | DEV_CTX_ZOMBIE)) {
             // if device is dead, ignore it
             continue;
         }
-        if (dc_notify(dev, DEVMGR_OP_DEVICE_ADDED) < 0) {
+        if (dc_notify(&dev, DEVMGR_OP_DEVICE_ADDED) < 0) {
             break;
         }
     }
@@ -885,7 +884,7 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
     parent->children.push_back(dev.get());
     parent->AddRef();
 
-    list_add_tail(&list_devices, &dev->anode);
+    list_devices.push_back(dev.get());
 
     log(DEVLC, "devcoord: dev %p name='%s' ++ref=%d (child)\n",
         parent, parent->name, parent->refcount_);
@@ -1032,7 +1031,7 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
 
     if (!(dev->flags & DEV_CTX_PROXY)) {
         // remove from list of all devices
-        list_delete(&dev->anode);
+        list_devices.erase(*dev);
         dc_notify(dev, DEVMGR_OP_DEVICE_REMOVED);
     }
 
@@ -1654,7 +1653,7 @@ static zx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     return ZX_OK;
 }
 
-static zx_status_t dh_connect_proxy(device_t* dev, zx_handle_t h) {
+static zx_status_t dh_connect_proxy(const device_t* dev, zx_handle_t h) {
     dc_msg_t msg;
     uint32_t mlen;
     zx_status_t r;
@@ -1876,8 +1875,8 @@ static void process_suspend_list(suspend_context_t* ctx) {
     ctx->dh = dh;
 }
 
-static bool check_pending(device_t* dev) {
-    pending_t* pending = nullptr;
+static bool check_pending(const device_t* dev) {
+    const pending_t* pending = nullptr;
     if (dev->proxy) {
         if (!dev->proxy->pending.is_empty()) {
             pending = &dev->proxy->pending.back();
@@ -1906,9 +1905,8 @@ static int suspend_timeout_thread(void* arg) {
         }
         log(ERROR, "devcoord: suspend time out\n");
         log(ERROR, "  sflags: 0x%08x\n", ctx->sflags);
-        device_t* dev;
-        list_for_every_entry(&list_devices, dev, device_t, anode) {
-            check_pending(dev);
+        for (const auto& dev : list_devices) {
+            check_pending(&dev);
         }
         check_pending(&root_device);
         check_pending(&misc_device);
@@ -2125,19 +2123,18 @@ void dc_bind_driver(driver_t* drv) {
     } else if (is_test_driver(drv)) {
         dc_attempt_bind(drv, &test_device);
     } else if (dc_running) {
-        device_t* dev;
-        list_for_every_entry(&list_devices, dev, device_t, anode) {
-            if (dev->flags & (DEV_CTX_BOUND | DEV_CTX_DEAD |
-                              DEV_CTX_ZOMBIE | DEV_CTX_INVISIBLE)) {
+        for (auto& dev : list_devices) {
+            if (dev.flags & (DEV_CTX_BOUND | DEV_CTX_DEAD |
+                             DEV_CTX_ZOMBIE | DEV_CTX_INVISIBLE)) {
                 // if device is already bound or being destroyed or invisible, skip it
                 continue;
             }
-            if (dc_is_bindable(drv, dev->protocol_id,
-                               dev->props.get(), dev->prop_count, true)) {
+            if (dc_is_bindable(drv, dev.protocol_id,
+                               dev.props.get(), dev.prop_count, true)) {
                 log(INFO, "devcoord: drv='%s' bindable to dev='%s'\n",
-                    drv->name.c_str(), dev->name);
+                    drv->name.c_str(), dev.name);
 
-                dc_attempt_bind(drv, dev);
+                dc_attempt_bind(drv, &dev);
             }
         }
     }
