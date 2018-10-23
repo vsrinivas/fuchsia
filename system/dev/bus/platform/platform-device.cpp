@@ -623,8 +623,7 @@ zx_status_t PlatformDevice::Start() {
                 status = DdkAddMetadata(metadata.zbi_type, data, length);
             }
             if (status != ZX_OK) {
-                DdkRemove();
-                return status;
+                zxlogf(WARN, "%s failed to add metadata for new device\n", __func__);
             }
         }
 

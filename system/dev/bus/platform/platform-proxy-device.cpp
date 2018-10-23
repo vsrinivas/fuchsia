@@ -655,13 +655,12 @@ zx_status_t ProxyDevice::InitChild(device_add_args_t* args) {
 
         status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.pdev.header,
                              sizeof(resp));
-        if (status != ZX_OK) {
-            return status;
+        if (status == ZX_OK) {
+           status = DdkAddMetadata(resp.pdev.metadata_type, resp.metadata,
+                                   resp.pdev.metadata_length);
         }
-        status = DdkAddMetadata(resp.pdev.metadata_type, resp.metadata,
-                                resp.pdev.metadata_length);
         if (status != ZX_OK) {
-            return status;
+            zxlogf(WARN, "%s failed to add metadata for new device\n", __func__);
         }
     }
 
