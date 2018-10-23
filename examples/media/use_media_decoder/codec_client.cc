@@ -329,6 +329,13 @@ void CodecClient::QueueInputEndOfStream(uint64_t stream_lifetime_ordinal) {
   });
 }
 
+void CodecClient::FlushEndOfStreamAndCloseStream(
+    uint64_t stream_lifetime_ordinal) {
+  PostSerial(dispatcher_, [this, stream_lifetime_ordinal] {
+    codec_->FlushEndOfStreamAndCloseStream(stream_lifetime_ordinal);
+  });
+}
+
 std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
   while (true) {
     // The rule is that a required pending config won't be followed by any more

@@ -82,6 +82,8 @@ class CodecClient {
 
   void QueueInputEndOfStream(uint64_t stream_lifetime_ordinal);
 
+  void FlushEndOfStreamAndCloseStream(uint64_t stream_lifetime_ordinal);
+
   // Use the current thread to do what is necessary to get an ouput packet.
   // Near the start, this will include configuring output buffers once.  In
   // steady state this thread will just wait for an output packet to show up or

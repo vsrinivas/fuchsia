@@ -867,6 +867,12 @@ void CodecImpl::QueueInputEndOfStream_StreamControl(
       }
     }
 
+    if (stream_->input_end_of_stream()) {
+      FailLocked("client already sent QueueInputEndOfStream() for this stream");
+      return;
+    }
+    stream_->SetInputEndOfStream();
+
     if (stream_->future_discarded()) {
       // Don't queue to OMX.  The stream_ may have never fully started, or may
       // have been future-discarded since.  Either way, skip queueing to OMX. We

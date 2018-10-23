@@ -189,6 +189,9 @@ void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes,
 
   // Send through QueueInputEndOfStream().
   codec_client->QueueInputEndOfStream(kStreamLifetimeOrdinal);
+  // We flush and close to run the handling code server-side.  However, we don't
+  // yet verify that this successfully achieves what it says.
+  codec_client->FlushEndOfStreamAndCloseStream(kStreamLifetimeOrdinal);
   // input thread done
 }
 void QueueVp9Frames(CodecClient* codec_client, uint8_t* input_bytes,
@@ -230,6 +233,9 @@ void QueueVp9Frames(CodecClient* codec_client, uint8_t* input_bytes,
 
   // Send through QueueInputEndOfStream().
   codec_client->QueueInputEndOfStream(kStreamLifetimeOrdinal);
+  // We flush and close to run the handling code server-side.  However, we don't
+  // yet verify that this successfully achieves what it says.
+  codec_client->FlushEndOfStreamAndCloseStream(kStreamLifetimeOrdinal);
   // input thread done
 }
 
