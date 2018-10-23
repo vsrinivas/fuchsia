@@ -1,8 +1,4 @@
 {
-    "labels": [
-        "//garnet/go/src/amber:amber-srv-keys",
-        "//garnet/go/src/amber:amber_host_tools"
-    ],
     "packages": [
         "//garnet/go/src/amber",
         "//garnet/go/src/amber:amber_tools",

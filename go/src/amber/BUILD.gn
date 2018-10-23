@@ -89,47 +89,10 @@ package("amber_tools") {
   ]
 }
 
-amber_host_binaries = [
-  {
-    name = "amber-publish"
-    gopkg = "amber/cmd/publish"
-  },
-]
-
-foreach(tgt, amber_host_binaries) {
-  go_binary(tgt.name) {
-    output_name = tgt.name
-
-    gopackage = tgt.gopkg
-
-    sdk_category = "partner"
-
-    deps = [ ":amber_lib" ]
-  }
-}
-
-install_host_tools("amber_host_tools") {
-  deps = []
-  outputs = []
-
-  foreach(tgt, amber_host_binaries) {
-    deps += [ ":${tgt.name}" ]
-    outputs += [ tgt.name ]
-  }
-}
-
 test_targets = [
   {
     name = "amber_daemon_test"
     gopkg = "amber/daemon"
-  },
-  {
-    name = "amber_publish_test"
-    gopkg = "amber/publish"
-  },
-  {
-    name = "amber_cmd_publish_test"
-    gopkg = "amber/cmd/publish"
   },
   {
     name = "amber_source_test"
