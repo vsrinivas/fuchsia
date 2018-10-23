@@ -14,6 +14,6 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/fidl
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
-MODULE_FIDL_LIBS := system/fidl/zircon-sysinfo
+MODULE_FIDL_LIBS := system/fidl/fuchsia-sysinfo
 
 include make/module.mk

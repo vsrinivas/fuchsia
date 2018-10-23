@@ -4,10 +4,10 @@
 
 #include "resources.h"
 
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-#include <zircon/sysinfo/c/fidl.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -31,7 +31,7 @@ zx_status_t get_root_resource(zx_handle_t* root_resource) {
         return status;
     }
 
-    zx_status_t fidl_status = zircon_sysinfo_DeviceGetRootResource(channel, &status, root_resource);
+    zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootResource(channel, &status, root_resource);
     zx_handle_close(channel);
 
     if (fidl_status != ZX_OK) {

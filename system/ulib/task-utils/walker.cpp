@@ -11,11 +11,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-#include <zircon/sysinfo/c/fidl.h>
 
 // Immutable state of a specific call to walk_job_tree, passed along
 // to most helper functions.
@@ -342,7 +342,7 @@ zx_status_t walk_root_job_tree(task_callback_t job_callback,
     }
 
     zx_handle_t root_job;
-    zx_status_t fidl_status = zircon_sysinfo_DeviceGetRootJob(channel.get(), &status, &root_job);
+    zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootJob(channel.get(), &status, &root_job);
 
     if (fidl_status != ZX_OK || status != ZX_OK) {
         fprintf(stderr, "task-utils/walker: cannot obtain root job\n");

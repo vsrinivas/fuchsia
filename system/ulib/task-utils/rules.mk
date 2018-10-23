@@ -21,6 +21,6 @@ MODULE_LIBS := \
 
 MODULE_STATIC_LIBS := system/ulib/zx
 
-MODULE_FIDL_LIBS := system/fidl/zircon-sysinfo
+MODULE_FIDL_LIBS := system/fidl/fuchsia-sysinfo
 
 include make/module.mk

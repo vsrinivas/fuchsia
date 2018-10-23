@@ -24,7 +24,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/task-utils
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-sysinfo
+    system/fidl/fuchsia-sysinfo
 
 include make/module.mk
 
@@ -48,7 +48,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/task-utils
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-sysinfo
+    system/fidl/fuchsia-sysinfo
 
 include make/module.mk
 
@@ -71,7 +71,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/task-utils
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-sysinfo
+    system/fidl/fuchsia-sysinfo
 
 include make/module.mk
 
@@ -94,7 +94,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/task-utils
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-sysinfo
+    system/fidl/fuchsia-sysinfo
 
 include make/module.mk
 
@@ -118,7 +118,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/task-utils
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-sysinfo
+    system/fidl/fuchsia-sysinfo
 
 include make/module.mk
 
@@ -144,7 +144,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/task-utils
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-sysinfo
+    system/fidl/fuchsia-sysinfo
 
 include make/module.mk
 
@@ -171,7 +171,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/task-utils
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-sysinfo
+    system/fidl/fuchsia-sysinfo
 
 # Generate an include file that contains the schema json
 
@@ -222,7 +222,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/pretty
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-sysinfo
+    system/fidl/fuchsia-sysinfo
 
 include make/module.mk
 
@@ -252,6 +252,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/task-utils \
 
 MODULE_FIDL_LIBS := \
-    system/fidl/zircon-sysinfo
+    system/fidl/fuchsia-sysinfo
 
 include make/module.mk

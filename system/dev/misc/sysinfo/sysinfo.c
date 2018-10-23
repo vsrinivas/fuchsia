@@ -11,10 +11,10 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/sysinfo.h>
 #include <zircon/syscalls/resource.h>
-#include <zircon/sysinfo/c/fidl.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,17 +53,17 @@ static zx_status_t fidl_get_root_job(void* ctx, fidl_txn_t* txn) {
     zx_handle_t h = get_sysinfo_job_root(sysinfo);
     zx_status_t status = h == ZX_HANDLE_INVALID ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
 
-    return zircon_sysinfo_DeviceGetRootJob_reply(txn, status, h);
+    return fuchsia_sysinfo_DeviceGetRootJob_reply(txn, status, h);
 }
 
 static zx_status_t fidl_get_root_resource(void* ctx, fidl_txn_t* txn) {
     zx_handle_t h = get_root_resource();
     if (h == ZX_HANDLE_INVALID) {
-        return zircon_sysinfo_DeviceGetRootResource_reply(txn, ZX_ERR_NOT_SUPPORTED, h);
+        return fuchsia_sysinfo_DeviceGetRootResource_reply(txn, ZX_ERR_NOT_SUPPORTED, h);
     }
 
     zx_status_t status = zx_handle_duplicate(h, ZX_RIGHT_TRANSFER, &h);
-    return zircon_sysinfo_DeviceGetRootResource_reply(txn, status, h);
+    return fuchsia_sysinfo_DeviceGetRootResource_reply(txn, status, h);
 }
 
 static zx_status_t fidl_get_hypervisor_resource(void* ctx, fidl_txn_t* txn) {
@@ -72,7 +72,7 @@ static zx_status_t fidl_get_hypervisor_resource(void* ctx, fidl_txn_t* txn) {
     zx_status_t status = zx_resource_create(get_root_resource(),
                                             ZX_RSRC_KIND_HYPERVISOR,
                                             0, 0, name, sizeof(name), &h);
-    return zircon_sysinfo_DeviceGetHypervisorResource_reply(txn, status, h);
+    return fuchsia_sysinfo_DeviceGetHypervisorResource_reply(txn, status, h);
 }
 
 static zx_status_t fidl_get_board_name(void* ctx, fidl_txn_t* txn) {
@@ -89,13 +89,13 @@ static zx_status_t fidl_get_board_name(void* ctx, fidl_txn_t* txn) {
     }
     mtx_unlock(&sysinfo->lock);
 
-    return zircon_sysinfo_DeviceGetBoardName_reply(txn, status, sysinfo->board_name,
+    return fuchsia_sysinfo_DeviceGetBoardName_reply(txn, status, sysinfo->board_name,
                                                    sizeof(sysinfo->board_name));
 }
 
 static zx_status_t fidl_get_interrupt_controller_info(void* ctx, fidl_txn_t* txn) {
     zx_status_t status = ZX_OK;
-    zircon_sysinfo_InterruptControllerInfo info = {};
+    fuchsia_sysinfo_InterruptControllerInfo info = {};
 
 #if defined(__aarch64__)
     sysinfo_t* sysinfo = ctx;
@@ -103,15 +103,15 @@ static zx_status_t fidl_get_interrupt_controller_info(void* ctx, fidl_txn_t* txn
     status = device_get_metadata(sysinfo->zxdev, DEVICE_METADATA_INTERRUPT_CONTROLLER_TYPE,
                                  &info.type, sizeof(uint8_t), &actual);
 #elif defined(__x86_64__)
-    info.type = zircon_sysinfo_InterruptControllerType_APIC;
+    info.type = fuchsia_sysinfo_InterruptControllerType_APIC;
 #else
-    info.type = zircon_sysinfo_InterruptControllerType_UNKNOWN;
+    info.type = fuchsia_sysinfo_InterruptControllerType_UNKNOWN;
 #endif
 
-    return zircon_sysinfo_DeviceGetInterruptControllerInfo_reply(txn, status, &info);
+    return fuchsia_sysinfo_DeviceGetInterruptControllerInfo_reply(txn, status, &info);
 }
 
-static zircon_sysinfo_Device_ops_t fidl_ops = {
+static fuchsia_sysinfo_Device_ops_t fidl_ops = {
     .GetRootJob = fidl_get_root_job,
     .GetRootResource = fidl_get_root_resource,
     .GetHypervisorResource = fidl_get_hypervisor_resource,
@@ -120,7 +120,7 @@ static zircon_sysinfo_Device_ops_t fidl_ops = {
 };
 
 static zx_status_t sysinfo_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-    return zircon_sysinfo_Device_dispatch(ctx, txn, msg, &fidl_ops);
+    return fuchsia_sysinfo_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 static zx_status_t sysinfo_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,

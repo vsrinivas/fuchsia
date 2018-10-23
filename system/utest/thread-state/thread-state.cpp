@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include <fbl/algorithm.h>
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/channel.h>
 #include <zircon/process.h>
@@ -18,7 +19,6 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
-#include <zircon/sysinfo/c/fidl.h>
 #include <zircon/threads.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
@@ -89,7 +89,7 @@ static zx_status_t get_root_resource(zx_handle_t* root_resource) {
         return status;
     }
 
-    zx_status_t fidl_status = zircon_sysinfo_DeviceGetRootResource(channel.get(), &status,
+    zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootResource(channel.get(), &status,
                                                                    root_resource);
     if (fidl_status != ZX_OK) {
         fprintf(stderr, "ERROR: Cannot obtain root resource: %s (%d)\n",

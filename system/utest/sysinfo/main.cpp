@@ -5,12 +5,12 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/image.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
-#include <zircon/sysinfo/c/fidl.h>
 #include <unittest/unittest.h>
 
 #define SYSINFO_PATH    "/dev/misc/sysinfo"
@@ -28,7 +28,7 @@ bool get_root_resource_succeeds() {
 
     zx_handle_t root_resource;
     zx_status_t status;
-    ASSERT_EQ(zircon_sysinfo_DeviceGetRootResource(channel.get(), &status, &root_resource), ZX_OK,
+    ASSERT_EQ(fuchsia_sysinfo_DeviceGetRootResource(channel.get(), &status, &root_resource), ZX_OK,
               "Failed to get root resource");
     ASSERT_EQ(status, ZX_OK, "Failed to get root resource");
 
@@ -57,11 +57,11 @@ bool get_board_name_succeeds() {
     ASSERT_EQ(fdio_get_service_handle(fd, channel.reset_and_get_address()), ZX_OK,
               "Failed to get channel");
 
-    // Test zircon_sysinfo_DeviceGetBoardName().
+    // Test fuchsia_sysinfo_DeviceGetBoardName().
     char board_name[ZBI_BOARD_NAME_LEN];
     zx_status_t status;
     size_t actual_size;
-    zx_status_t fidl_status = zircon_sysinfo_DeviceGetBoardName(channel.get(), &status, board_name,
+    zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(channel.get(), &status, board_name,
                                                                 sizeof(board_name), &actual_size);
     ASSERT_EQ(fidl_status, ZX_OK, "Failed to get board name");
     ASSERT_EQ(status, ZX_OK, "Failed to get board name");
@@ -83,13 +83,13 @@ bool get_interrupt_controller_info_succeeds() {
     ASSERT_EQ(fdio_get_service_handle(fd, channel.reset_and_get_address()), ZX_OK,
               "Failed to get channel");
 
-    // Test zircon_sysinfo_DeviceGetInterruptControllerInfo().
-    zircon_sysinfo_InterruptControllerInfo info;
+    // Test fuchsia_sysinfo_DeviceGetInterruptControllerInfo().
+    fuchsia_sysinfo_InterruptControllerInfo info;
     zx_status_t status;
-    ASSERT_EQ(zircon_sysinfo_DeviceGetInterruptControllerInfo(channel.get(), &status, &info), ZX_OK,
-              "Failed to get interrupt controller info");
+    ASSERT_EQ(fuchsia_sysinfo_DeviceGetInterruptControllerInfo(channel.get(), &status, &info),
+              ZX_OK, "Failed to get interrupt controller info");
     ASSERT_EQ(status, ZX_OK, "Failed to get interrupt controller info");
-    EXPECT_NE(info.type, zircon_sysinfo_InterruptControllerType_UNKNOWN,
+    EXPECT_NE(info.type, fuchsia_sysinfo_InterruptControllerType_UNKNOWN,
               "interrupt controller type is unknown");
 
     END_TEST;
