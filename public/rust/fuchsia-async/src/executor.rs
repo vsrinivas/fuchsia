@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::atomic_future::AtomicFuture;
-use crossbeam::sync::SegQueue;
+use crossbeam::queue::SegQueue;
 use fuchsia_zircon as zx;
 use futures::future::{self, FutureObj, LocalFutureObj};
 use futures::task::{
