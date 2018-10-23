@@ -209,7 +209,13 @@ struct dc_devhost {
     fbl::DoublyLinkedList<dc_device*, dc_device::DevhostNode> devices;
 
     // listnode for this devhost in the all devhosts list
-    list_node_t anode;
+    fbl::DoublyLinkedListNodeState<dc_devhost*> anode;
+    struct AllDevhostsNode {
+        static fbl::DoublyLinkedListNodeState<dc_devhost*>& node_state(
+            dc_devhost& obj) {
+            return obj.anode;
+        }
+    };
 
     // listnode for this devhost in the order-to-suspend list
     list_node_t snode;

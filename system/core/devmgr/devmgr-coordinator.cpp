@@ -296,7 +296,7 @@ static fbl::DoublyLinkedList<driver_t*, driver_t::Node> list_drivers_fallback;
 static fbl::DoublyLinkedList<dc_device*, dc_device::AllDevicesNode> list_devices;
 
 // All DevHosts
-static list_node_t list_devhosts = LIST_INITIAL_VALUE(list_devhosts);
+static fbl::DoublyLinkedList<dc_devhost*, dc_devhost::AllDevhostsNode> list_devhosts;
 
 static const driver_t* libname_to_driver(const char* libname) {
     for (const auto& drv : list_drivers) {
@@ -707,7 +707,7 @@ static zx_status_t dc_new_devhost(const char* name, devhost_t* parent,
         dh->parent->AddRef();
         dh->parent->children.push_back(dh.get());
     }
-    list_add_tail(&list_devhosts, &dh->anode);
+    list_devhosts.push_back(dh.get());
 
     log(DEVLC, "devcoord: new host %p\n", dh.get());
 
@@ -726,7 +726,7 @@ static void dc_release_devhost(devhost_t* dh) {
         dh->parent = nullptr;
         dc_release_devhost(parent);
     }
-    list_delete(&dh->anode);
+    list_devhosts.erase(*dh);
     zx_handle_close(dh->hrpc);
     zx_task_kill(dh->proc);
     zx_handle_close(dh->proc);
