@@ -2,59 +2,54 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/mediaplayer/test/mediaplayer_test_unattended.h"
-
+#include <lib/gtest/real_loop_fixture.h>
 #include <iostream>
-
-#include <fuchsia/media/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/cpp/task.h>
-#include <lib/fit/function.h>
-
 #include "garnet/bin/mediaplayer/test/fakes/fake_audio_renderer.h"
 #include "garnet/bin/mediaplayer/test/fakes/fake_wav_reader.h"
-#include "lib/component/cpp/connect.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/optional.h"
+#include "lib/component/cpp/environment_services_helper.h"
 #include "lib/fxl/logging.h"
-#include "lib/media/timeline/timeline_rate.h"
 
 namespace media_player {
 namespace test {
 
-MediaPlayerTestUnattended::MediaPlayerTestUnattended(
-    fit::function<void(int)> quit_callback)
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
-      quit_callback_(std::move(quit_callback)) {
-  FXL_DCHECK(quit_callback_);
-  std::cerr << "MediaPlayerTest starting\n";
+static constexpr uint32_t kFramesPerSecond = 48000;  // 48kHz
 
-  media_player_ =
-      startup_context_
-          ->ConnectToEnvironmentService<fuchsia::mediaplayer::Player>();
-  media_player_.events().OnStatusChanged =
+// Base class for mediaplayer tests.
+class MediaPlayerTestUnattended : public gtest::RealLoopFixture {
+ protected:
+  void SetUp() override {
+    environment_services_ = component::GetEnvironmentServices();
+    environment_services_->ConnectToService(player_.NewRequest());
+
+    player_.set_error_handler([this]() {
+      FXL_LOG(ERROR) << "Player connection closed.";
+      player_connection_closed_ = true;
+      QuitLoop();
+    });
+  }
+
+  void TearDown() override { EXPECT_FALSE(player_connection_closed_); }
+
+  std::shared_ptr<component::Services> environment_services_;
+  fuchsia::mediaplayer::PlayerPtr player_;
+  bool player_connection_closed_ = false;
+
+  FakeWavReader fake_reader_;
+  FakeAudioRenderer fake_audio_renderer_;
+};
+
+// Play a synthetic WAV file from beginning to end.
+TEST_F(MediaPlayerTestUnattended, PlayWav) {
+  player_.events().OnStatusChanged =
       [this](fuchsia::mediaplayer::PlayerStatus status) {
         if (status.end_of_stream) {
-          bool succeeded = true;
-
-          if (!status.ready) {
-            FXL_LOG(ERROR) << "MediaPlayerTest: status.ready false";
-            succeeded = false;
-          }
-
-          if (!fake_audio_renderer_.expected()) {
-            FXL_LOG(ERROR)
-                << "MediaPlayerTest: audio renderer expectations not met";
-            succeeded = false;
-          }
-
-          FXL_LOG(INFO) << "MediaPlayerTest "
-                        << (succeeded ? "SUCCEEDED" : "FAILED");
-          quit_callback_(succeeded ? 0 : 1);
+          EXPECT_TRUE(status.ready);
+          EXPECT_TRUE(fake_audio_renderer_.expected());
+          QuitLoop();
         }
       };
 
-  fake_audio_renderer_.SetPtsUnits(48000, 1);
+  fake_audio_renderer_.SetPtsUnits(kFramesPerSecond, 1);
 
   fake_audio_renderer_.ExpectPackets({{0, 4096, 0x20c39d1e31991800},
                                       {1024, 4096, 0xeaf137125d313800},
@@ -81,11 +76,13 @@ MediaPlayerTestUnattended::MediaPlayerTestUnattended(
   fuchsia::media::AudioRendererPtr fake_audio_renderer_ptr;
   fake_audio_renderer_.Bind(fake_audio_renderer_ptr.NewRequest());
 
-  media_player_->SetAudioRenderer(std::move(fake_audio_renderer_ptr));
+  player_->SetAudioRenderer(std::move(fake_audio_renderer_ptr));
 
-  media_player_->SetReaderSource(std::move(fake_reader_ptr));
+  player_->SetReaderSource(std::move(fake_reader_ptr));
 
-  media_player_->Play();
+  player_->Play();
+
+  EXPECT_FALSE(RunLoopWithTimeout());
 }
 
 }  // namespace test
