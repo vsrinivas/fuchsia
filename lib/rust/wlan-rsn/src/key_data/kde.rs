@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use super::Element;
-#[allow(unused_imports)]
-use bitfield::{bitfield, bitfield_bitrange, bitfield_debug, bitfield_fields};
+use bitfield::bitfield;
 use bytes::BufMut;
 use nom::IResult::{Done, Incomplete};
 use nom::{call, do_parse, eof, error_position, map, named, named_args, take, try_parse};

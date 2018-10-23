@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[allow(unused_imports)]
-use bitfield::{bitfield, bitfield_bitrange, bitfield_fields};
+use bitfield::bitfield;
 use byteorder::{LittleEndian, WriteBytesExt};
 use std::io;
 

@@ -5,8 +5,7 @@
 #![feature(test)]
 #![deny(warnings)]
 
-#[allow(unused_imports)]
-use bitfield::{bitfield, bitfield_bitrange, bitfield_debug, bitfield_fields};
+use bitfield::bitfield;
 use bytes::{BufMut, Bytes};
 use nom::{be_u16, be_u64, be_u8, call, do_parse, eof, error_position, map, named_args, take, verify};
 use std::convert::AsMut;

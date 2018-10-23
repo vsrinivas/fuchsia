@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[allow(unused_imports)]
-use bitfield::{bitfield, bitfield_bitrange, bitfield_debug, bitfield_fields};
+use bitfield::bitfield;
 use bytes::{BufMut, Bytes};
 use crate::akm;
 use crate::cipher;
