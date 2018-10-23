@@ -123,7 +123,7 @@ string-type = "string" , ( ":" , constant ) , ( "?" ) ;
 handle-type = "handle" , ( "<" , handle-subtype , ">" ) , ( "?" ) ;
 
 handle-subtype = "process" | "thread" | "vmo" | "channel" | "event" | "port" |
-                 "interrupt" | "log" | "socket" | "resource" | "eventpair" |
+                 "interrupt" | "debuglog" | "socket" | "resource" | "eventpair" |
                  "job" | "vmar" | "fifo" | "guest" | "timer" ;
 
 request-type = "request" , "<" , compound-identifier , ">" , ( "?" ) ;
