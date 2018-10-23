@@ -53,28 +53,38 @@ static void dc_dump_state();
 static void dc_dump_devprops();
 static void dc_dump_drivers();
 
-typedef struct {
+typedef struct suspend_context {
+    suspend_context() = default;
+    ~suspend_context() {
+        devhosts.clear();
+    }
+
+    suspend_context(suspend_context&&) = default;
+    suspend_context& operator=(suspend_context&&) = default;
+
     zx_status_t status;
     enum struct Flags : uint32_t {
         kRunning = 0u,
         kSuspend = 1u,
-    } flags;
-    uint32_t sflags;    // suspend flags
-    uint32_t count;     // outstanding msgs
-    devhost_t* dh;      // next devhost to process
-    list_node_t devhosts;
+    } flags = Flags::kRunning;;
 
-    zx_handle_t socket; // socket to notify on for 'dm reboot' and 'dm poweroff'
+    // suspend flags
+    uint32_t sflags = 0u;
+    // outstanding msgs
+    uint32_t count = 0u;
+    // next devhost to process
+    devhost_t* dh = nullptr;
+    fbl::DoublyLinkedList<dc_devhost*, dc_devhost::SuspendNode> devhosts;
+
+    // socket to notify on for 'dm reboot' and 'dm poweroff'
+    zx_handle_t socket = ZX_HANDLE_INVALID;
 
     // mexec arguments
-    zx_handle_t kernel;
-    zx_handle_t bootdata;
+    zx_handle_t kernel = ZX_HANDLE_INVALID;
+    zx_handle_t bootdata = ZX_HANDLE_INVALID;
 } suspend_context_t;
-static suspend_context_t suspend_ctx = []() {
-    suspend_context_t suspend = {};
-    suspend.devhosts = LIST_INITIAL_VALUE(suspend_ctx.devhosts);
-    return suspend;
-}();
+
+static suspend_context_t suspend_ctx;
 
 static fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> published_metadata;
 
@@ -1832,33 +1842,39 @@ static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
 static void append_suspend_list(suspend_context_t* ctx, devhost_t* dh) {
     // suspend order is children first
     for (auto& child : dh->children) {
-        list_add_head(&ctx->devhosts, &child.snode);
+        ctx->devhosts.push_front(&child);
     }
     for (auto& child : dh->children) {
         append_suspend_list(ctx, &child);
     }
 }
 
-static void build_suspend_list(suspend_context_t* ctx) {
+// Returns the devhost at the front of the queue.
+static devhost_t* build_suspend_list(suspend_context_t* ctx) {
     // sys_device must suspend last as on x86 it invokes
     // ACPI S-state transition
-    list_add_head(&ctx->devhosts, &sys_device.proxy->host->snode);
+    ctx->devhosts.push_front(sys_device.proxy->host);
     append_suspend_list(ctx, sys_device.proxy->host);
-    list_add_head(&ctx->devhosts, &root_device.proxy->host->snode);
+
+    ctx->devhosts.push_front(root_device.proxy->host);
     append_suspend_list(ctx, root_device.proxy->host);
-    list_add_head(&ctx->devhosts, &misc_device.proxy->host->snode);
+
+    ctx->devhosts.push_front(misc_device.proxy->host);
     append_suspend_list(ctx, misc_device.proxy->host);
+
     // test devices do not (yet) participate in suspend
+
+    return &ctx->devhosts.front();
 }
 
 static void process_suspend_list(suspend_context_t* ctx) {
-    devhost_t* dh = ctx->dh;
+    auto dh = ctx->devhosts.make_iterator(*ctx->dh);
     devhost_t* parent = nullptr;
     do {
         if (!parent || (dh->parent == parent)) {
             // send dc_msg_t::Op::kSuspend each set of children of a devhost at a time,
             // since they can run in parallel
-            dc_suspend_devhost(dh, &suspend_ctx);
+            dc_suspend_devhost(dh.CopyPointer(), &suspend_ctx);
             parent = dh->parent;
         } else {
             // if the parent is different than the previous devhost's
@@ -1868,10 +1884,14 @@ static void process_suspend_list(suspend_context_t* ctx) {
             parent = nullptr;
             break;
         }
-    } while ((dh = list_next_type(&ctx->devhosts, &dh->snode,
-                                  devhost_t, snode)) != nullptr);
+    } while (++dh != ctx->devhosts.end());
     // next devhost to process once all the outstanding suspends are done
-    ctx->dh = dh;
+    if (dh.IsValid()) {
+        ctx->dh = dh.CopyPointer();
+    } else {
+        ctx->dh = nullptr;
+        ctx->devhosts.clear();
+    }
 }
 
 static bool check_pending(const device_t* dev) {
@@ -1929,15 +1949,14 @@ static void dc_suspend(uint32_t flags) {
     if (ctx->flags == suspend_context_t::Flags::kSuspend) {
         return;
     }
-    memset(ctx, 0, sizeof(*ctx));
+    *ctx = suspend_context();
     ctx->status = ZX_OK;
     ctx->flags = suspend_context_t::Flags::kSuspend;
     ctx->sflags = flags;
     ctx->socket = dmctl_socket;
     dmctl_socket = ZX_HANDLE_INVALID;   // to prevent the rpc handler from closing this handle
-    list_initialize(&ctx->devhosts);
 
-    build_suspend_list(ctx);
+    ctx->dh = build_suspend_list(ctx);
 
     if (suspend_fallback || suspend_debug) {
         thrd_t t;
@@ -1948,7 +1967,6 @@ static void dc_suspend(uint32_t flags) {
         }
     }
 
-    ctx->dh = list_peek_head_type(&ctx->devhosts, devhost_t, snode);
     process_suspend_list(ctx);
 }
 
@@ -1963,16 +1981,15 @@ static void dc_mexec(zx_handle_t* h) {
     if (ctx->flags == suspend_context_t::Flags::kSuspend) {
         return;
     }
-    memset(ctx, 0, sizeof(*ctx));
+    *ctx = {};
     ctx->status = ZX_OK;
     ctx->flags = suspend_context_t::Flags::kSuspend;
     ctx->sflags = DEVICE_SUSPEND_FLAG_MEXEC;
-    list_initialize(&ctx->devhosts);
 
     ctx->kernel = *h;
     ctx->bootdata = *(h + 1);
 
-    build_suspend_list(ctx);
+    ctx->dh = build_suspend_list(ctx);
 
     if (suspend_fallback || suspend_debug) {
         thrd_t t;
@@ -1983,7 +2000,6 @@ static void dc_mexec(zx_handle_t* h) {
         }
     }
 
-    ctx->dh = list_peek_head_type(&ctx->devhosts, devhost_t, snode);
     process_suspend_list(ctx);
 }
 

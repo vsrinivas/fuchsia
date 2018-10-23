@@ -217,7 +217,13 @@ struct dc_devhost {
     };
 
     // listnode for this devhost in the order-to-suspend list
-    list_node_t snode;
+    fbl::DoublyLinkedListNodeState<dc_devhost*> snode;
+    struct SuspendNode {
+        static fbl::DoublyLinkedListNodeState<dc_devhost*>& node_state(
+            dc_devhost& obj) {
+            return obj.snode;
+        }
+    };
 
     // listnode for this devhost in its parent devhost's list-of-children
     fbl::DoublyLinkedListNodeState<dc_devhost*> node;
