@@ -29,6 +29,8 @@ using modular::testing::TestPoint;
 
 namespace {
 
+const char kStoryName[] = "story";
+
 // Cf. README.md for what this test does and how.
 class TestApp : public modular::testing::ComponentBase<void> {
  public:
@@ -41,6 +43,10 @@ class TestApp : public modular::testing::ComponentBase<void> {
             ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
+    puppet_master_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
+
     CreateStory();
   }
 
@@ -50,21 +56,13 @@ class TestApp : public modular::testing::ComponentBase<void> {
   TestPoint create_story_{"CreateStory()"};
 
   void CreateStory() {
-    // Create an empty Story. Once it has been created, add our first Module.
-    story_provider_->CreateStory(
-        nullptr /* module_url */, [this](const fidl::StringPtr& story_id) {
-          create_story_.Pass();
-          story_id_ = story_id;
-          story_provider_->GetController(story_id_,
-                                         story_controller_.NewRequest());
-          AddRootModule();
-        });
-  }
+    puppet_master_->ControlStory("story", story_puppet_master_.NewRequest());
 
-  void AddRootModule() {
-    fuchsia::modular::Intent intent;
-    intent.action = "action";
-    intent.handler = kModuleUrl;
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    fuchsia::modular::AddMod add_mod;
+    add_mod.mod_name.push_back("root");
+    add_mod.intent.action = "action";
+    add_mod.intent.handler = kModuleUrl;
 
     fuchsia::modular::IntentParameterData data;
     fsl::SizedVmo vmo;
@@ -73,27 +71,34 @@ class TestApp : public modular::testing::ComponentBase<void> {
     fuchsia::modular::IntentParameter intent_parameter;
     intent_parameter.name = "rootModuleParam1";
     intent_parameter.data = std::move(data);
-    intent.parameters.push_back(std::move(intent_parameter));
-    story_controller_->AddModule(nullptr, "rootMod", std::move(intent),
-                                 nullptr /* surface_relation */);
-    fidl::VectorPtr<fidl::StringPtr> path;
-    path.reset({"rootMod"});
-    story_controller_->GetModuleController(std::move(path),
-                                           child_module_.NewRequest());
-    StartStory();
+    add_mod.intent.parameters.push_back(std::move(intent_parameter));
+    add_mod.surface_parent_mod_name.resize(0);
+
+    fuchsia::modular::StoryCommand command;
+    command.set_add_mod(std::move(add_mod));
+    commands.push_back(std::move(command));
+
+    story_puppet_master_->Enqueue(std::move(commands));
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          create_story_.Pass();
+          StartStory();
+        });
   }
 
   void StartStory() {
     // Start and show the new story.
+    story_provider_->GetController(kStoryName, story_controller_.NewRequest());
     fidl::InterfacePtr<fuchsia::ui::viewsv1token::ViewOwner> story_view_binding;
     story_controller_->Start(story_view_binding.NewRequest());
   }
 
   fuchsia::modular::UserShellContextPtr user_shell_context_;
+  fuchsia::modular::PuppetMasterPtr puppet_master_;
+  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   fidl::StringPtr story_id_;
   fuchsia::modular::StoryControllerPtr story_controller_;
-  fuchsia::modular::ModuleControllerPtr child_module_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 

@@ -22,6 +22,8 @@ using modular::testing::TestPoint;
 
 namespace {
 
+constexpr char kStoryName[] = "story1";
+
 // A simple story provider watcher implementation. It confirms that it sees an
 // increase in the last_focus_time in the fuchsia::modular::StoryInfo it
 // receives, and pushes the test through to the next step.
@@ -151,6 +153,9 @@ class TestApp : public modular::testing::ComponentBase<void> {
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
 
+    puppet_master_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
     user_shell_context_ =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
@@ -170,24 +175,31 @@ class TestApp : public modular::testing::ComponentBase<void> {
   TestPoint create_story_{"CreateStory()"};
 
   void CreateStory() {
-    story_provider_->CreateStory(nullptr,
-                                 [this](const fidl::StringPtr& story_id) {
-                                   create_story_.Pass();
-                                   story_id_ = story_id;
-                                   StartStory();
-                                 });
+    puppet_master_->ControlStory(kStoryName, story_puppet_master_.NewRequest());
+
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    fuchsia::modular::AddMod add_mod;
+    add_mod.mod_name.push_back("mod1");
+    add_mod.intent.handler = kCommonNullModule;
+    add_mod.intent.action = kCommonNullAction;
+    add_mod.surface_parent_mod_name.resize(0);
+
+    fuchsia::modular::StoryCommand command;
+    command.set_add_mod(std::move(add_mod));
+    commands.push_back(std::move(command));
+
+    story_puppet_master_->Enqueue(std::move(commands));
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          create_story_.Pass();
+          StartStory();
+        });
   }
 
   TestPoint start_story_{"StartStory()"};
 
   void StartStory() {
-    story_provider_->GetController(story_id_, story_controller_.NewRequest());
-
-    fuchsia::modular::Intent intent;
-    intent.handler = kCommonNullModule;
-    intent.action = kCommonNullAction;
-    story_controller_->AddModule(nullptr, "root", std::move(intent), nullptr);
-
+    story_provider_->GetController(kStoryName, story_controller_.NewRequest());
     story_watcher_.Watch(story_controller_.get());
 
     // Start and show the new story.
@@ -204,7 +216,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
   TestPoint focus_{"Focus()"};
 
   void Focus() {
-    focus_controller_->Set(story_id_);
+    focus_controller_->Set(kStoryName);
 
     story_provider_watcher_.Continue([this] {
       focus_.Pass();
@@ -217,10 +229,12 @@ class TestApp : public modular::testing::ComponentBase<void> {
 
   fuchsia::modular::UserShellContextPtr user_shell_context_;
 
+  fuchsia::modular::PuppetMasterPtr puppet_master_;
+  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
+
   fuchsia::modular::StoryProviderPtr story_provider_;
   StoryProviderWatcherImpl story_provider_watcher_;
 
-  fidl::StringPtr story_id_;
   fuchsia::modular::StoryControllerPtr story_controller_;
   StoryWatcherImpl story_watcher_;
 

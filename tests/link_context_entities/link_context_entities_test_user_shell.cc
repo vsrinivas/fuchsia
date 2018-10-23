@@ -27,6 +27,8 @@ using modular::testing::TestPoint;
 
 namespace {
 
+const char kStoryName[] = "story";
+
 // A context reader watcher implementation.
 class ContextListenerImpl : fuchsia::modular::ContextListener {
  public:
@@ -85,6 +87,9 @@ class TestApp : public modular::testing::ComponentBase<void> {
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
 
+    puppet_master_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
     user_shell_context_ =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
@@ -108,11 +113,25 @@ class TestApp : public modular::testing::ComponentBase<void> {
   TestPoint create_story_{"CreateStory()"};
 
   void CreateStory() {
-    story_provider_->CreateStory(nullptr, [this](fidl::StringPtr story_id) {
-      story_id_ = story_id;
-      create_story_.Pass();
-      StartStory();
-    });
+    puppet_master_->ControlStory(kStoryName, story_puppet_master_.NewRequest());
+
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    fuchsia::modular::AddMod add_mod;
+    add_mod.mod_name.push_back("root");
+    add_mod.intent.handler = kModuleUrl;
+    add_mod.intent.action = kModuleAction;
+    add_mod.surface_parent_mod_name.resize(0);
+
+    fuchsia::modular::StoryCommand command;
+    command.set_add_mod(std::move(add_mod));
+    commands.push_back(std::move(command));
+
+    story_puppet_master_->Enqueue(std::move(commands));
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          create_story_.Pass();
+          StartStory();
+        });
   }
 
   TestPoint start_story_enter_{"StartStory() Enter"};
@@ -126,14 +145,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
           ProcessContextValue(value);
         });
 
-    story_provider_->GetController(story_id_, story_controller_.NewRequest());
-    fuchsia::modular::Intent intent;
-    intent.handler = kModuleUrl;
-    intent.action = kModuleAction;
-    story_controller_->AddModule(nullptr, "root_module_name", std::move(intent),
-                                 nullptr);
-
-    // Start and show the new story.
+    story_provider_->GetController(kStoryName, story_controller_.NewRequest());
     fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
@@ -154,7 +166,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
       return;
     }
 
-    if (value.meta.story->id != story_id_ ||
+    if (value.meta.story->id != kStoryName ||
         value.meta.entity->type.is_null() ||
         value.meta.entity->type->size() != 1) {
       FXL_LOG(ERROR) << "fuchsia::modular::ContextValue metadata is incorrect: "
@@ -217,7 +229,9 @@ class TestApp : public modular::testing::ComponentBase<void> {
   fuchsia::modular::UserShellContextPtr user_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
 
-  fidl::StringPtr story_id_;
+  fuchsia::modular::PuppetMasterPtr puppet_master_;
+  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
+
   fuchsia::modular::StoryControllerPtr story_controller_;
 
   fuchsia::modular::ContextReaderPtr context_reader_;

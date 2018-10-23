@@ -38,7 +38,7 @@ class Settings {
     root_module =
         command_line.GetOptionValueWithDefault("root_module", "example_recipe");
     root_link = command_line.GetOptionValueWithDefault("root_link", "");
-    story_id = command_line.GetOptionValueWithDefault("story_id", "");
+    story_id = command_line.GetOptionValueWithDefault("story_id", "story");
     module_under_test_url =
         command_line.GetOptionValueWithDefault("module_under_test_url", "");
     test_driver_url =
@@ -62,6 +62,9 @@ class DevUserShellApp : fuchsia::modular::StoryWatcher,
       : ViewApp(startup_context),
         settings_(std::move(settings)),
         story_watcher_binding_(this) {
+    puppet_master_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
     user_shell_context_ =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
@@ -95,6 +98,7 @@ class DevUserShellApp : fuchsia::modular::StoryWatcher,
   void Connect() {
     FXL_CHECK(!!view_owner_request_);
     FXL_CHECK(!!story_provider_);
+    FXL_CHECK(!!puppet_master_);
     FXL_LOG(INFO) << "DevUserShell START " << settings_.root_module << " "
                   << settings_.root_link;
 
@@ -103,14 +107,26 @@ class DevUserShellApp : fuchsia::modular::StoryWatcher,
             ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewManager>(),
         std::move(view_owner_request_));
 
-    if (settings_.story_id.empty()) {
-      story_provider_->CreateStory(nullptr,
-                                   [this](const fidl::StringPtr& story_id) {
-                                     StartStoryById(story_id);
-                                   });
-    } else {
-      StartStoryById(settings_.story_id);
-    }
+    puppet_master_->ControlStory(settings_.story_id,
+                                 story_puppet_master_.NewRequest());
+
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    fuchsia::modular::AddMod add_mod;
+    add_mod.mod_name.push_back("root");
+    add_mod.intent.handler = settings_.root_module;
+    add_mod.intent.action = "action";
+    add_mod.intent.parameters = CreateIntentParameters();
+    add_mod.surface_parent_mod_name.resize(0);
+
+    fuchsia::modular::StoryCommand command;
+    command.set_add_mod(std::move(add_mod));
+    commands.push_back(std::move(command));
+
+    story_puppet_master_->Enqueue(std::move(commands));
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          StartStoryById(settings_.story_id);
+        });
   }
 
   fidl::VectorPtr<fuchsia::modular::IntentParameter> CreateIntentParameters() {
@@ -155,13 +171,6 @@ class DevUserShellApp : fuchsia::modular::StoryWatcher,
       FXL_LOG(ERROR) << "Story controller for story " << story_id
                      << " died. Does this story exist?";
     });
-
-    fuchsia::modular::Intent intent;
-    intent.handler = settings_.root_module;
-    intent.action = "action";
-    intent.parameters = CreateIntentParameters();
-    story_controller_->AddModule(nullptr, modular::kRootModuleName,
-                                 std::move(intent), nullptr);
 
     story_controller_->Watch(story_watcher_binding_.NewBinding());
 
@@ -233,6 +242,8 @@ class DevUserShellApp : fuchsia::modular::StoryWatcher,
   std::unique_ptr<modular::ViewHost> view_;
 
   fuchsia::modular::UserShellContextPtr user_shell_context_;
+  fuchsia::modular::PuppetMasterPtr puppet_master_;
+  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;
   fuchsia::modular::FocusControllerPtr focus_controller_;

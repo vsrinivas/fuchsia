@@ -30,6 +30,8 @@
 
 namespace {
 
+const char kStoryName[] = "story";
+
 class Settings {
  public:
   explicit Settings(const fxl::CommandLine& command_line) {
@@ -142,6 +144,9 @@ class TestApp : public modular::ViewApp {
         startup_context
             ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    puppet_master_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
     tracing_waiter_.WaitForTracing([this] { Loop(); });
   }
 
@@ -173,10 +178,26 @@ class TestApp : public modular::ViewApp {
   void StoryCreate() {
     FXL_LOG(INFO) << "StoryCreate()";
     TRACE_ASYNC_BEGIN("benchmark", "story/create", 0);
-    story_provider_->CreateStory(nullptr, [this](fidl::StringPtr story_id) {
-      TRACE_ASYNC_END("benchmark", "story/create", 0);
-      StoryInfo(story_id);
-    });
+    puppet_master_->ControlStory(kStoryName,
+                                 story_puppet_master_.NewRequest());
+
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    fuchsia::modular::AddMod add_mod;
+    add_mod.mod_name.push_back("root");
+    add_mod.intent.handler = settings_.module_url;
+    add_mod.intent.action = "action";
+    add_mod.surface_parent_mod_name.resize(0);
+
+    fuchsia::modular::StoryCommand command;
+    command.set_add_mod(std::move(add_mod));
+    commands.push_back(std::move(command));
+
+    story_puppet_master_->Enqueue(std::move(commands));
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          TRACE_ASYNC_END("benchmark", "story/create", 0);
+          StoryInfo(kStoryName);
+        });
   }
 
   void StoryInfo(fidl::StringPtr story_id) {
@@ -265,6 +286,9 @@ class TestApp : public modular::ViewApp {
 
   StoryWatcherImpl story_watcher_;
   LinkWatcherImpl link_watcher_;
+
+  fuchsia::modular::PuppetMasterPtr puppet_master_;
+  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
 
   fuchsia::modular::UserShellContextPtr user_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;

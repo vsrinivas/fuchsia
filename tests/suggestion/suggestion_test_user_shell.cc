@@ -22,6 +22,8 @@ using modular::testing::TestPoint;
 
 namespace {
 
+const char kStoryName[] = "story";
+
 // Cf. README.md for what this test does and how.
 class TestApp : fuchsia::modular::NextListener,
                 public modular::testing::ComponentBase<void> {
@@ -30,6 +32,9 @@ class TestApp : fuchsia::modular::NextListener,
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
 
+    puppet_master_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
     user_shell_context_ =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
@@ -49,9 +54,24 @@ class TestApp : fuchsia::modular::NextListener,
 
  private:
   void CreateStory() {
-    story_provider_->CreateStory(
-        nullptr,
-        [this](const fidl::StringPtr& story_id) { StartStoryById(story_id); });
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    fuchsia::modular::AddMod add_mod;
+    add_mod.mod_name.push_back("root");
+    add_mod.intent.action = kSuggestionTestAction;
+    add_mod.intent.handler = kSuggestionTestModule;
+    add_mod.surface_parent_mod_name.resize(0);
+
+    fuchsia::modular::StoryCommand command;
+    command.set_add_mod(std::move(add_mod));
+    commands.push_back(std::move(command));
+
+    puppet_master_->ControlStory(kStoryName,
+                                 story_puppet_master_.NewRequest());
+    story_puppet_master_->Enqueue(std::move(commands));
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          StartStory();
+        });
 
     Await(kSuggestionTestModuleDone, [this] {
       story_controller_->Stop([this] {
@@ -61,19 +81,12 @@ class TestApp : fuchsia::modular::NextListener,
     });
   }
 
-  void StartStoryById(const fidl::StringPtr& story_id) {
-    story_provider_->GetController(story_id, story_controller_.NewRequest());
-
-    fuchsia::modular::Intent intent;
-    intent.handler = kSuggestionTestModule;
-    intent.action = kSuggestionTestAction;
-    story_controller_->AddModule(nullptr, "root", std::move(intent), nullptr);
-
-    story_controller_.set_error_handler([this, story_id] {
-      FXL_LOG(ERROR) << "Story controller for story " << story_id
+  void StartStory() {
+    story_provider_->GetController(kStoryName, story_controller_.NewRequest());
+    story_controller_.set_error_handler([] {
+      FXL_LOG(ERROR) << "Story controller for story " << kStoryName
                      << " died. Does this story exist?";
     });
-
     story_controller_->Start(view_owner_.NewRequest());
   }
 
@@ -100,6 +113,8 @@ class TestApp : fuchsia::modular::NextListener,
   // |fuchsia::modular::NextListener|
   void OnProcessingChange(bool processing) override {}
 
+  fuchsia::modular::PuppetMasterPtr puppet_master_;
+  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
   fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner_;
   fuchsia::modular::UserShellContextPtr user_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;

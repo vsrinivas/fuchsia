@@ -24,12 +24,17 @@ using ::modular::testing::TestPoint;
 
 namespace {
 
+const char kStoryName[] = "story";
+
 class TestApp : public modular::testing::ComponentBase<void> {
  public:
   TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context), weak_ptr_factory_(this) {
     TestInit(__FILE__);
 
+    puppet_master_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
     user_shell_context_ =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
@@ -46,10 +51,24 @@ class TestApp : public modular::testing::ComponentBase<void> {
   TestPoint story_create_{"Created story."};
 
   void CreateStory() {
-    story_provider_->CreateStory(nullptr, [this](fidl::StringPtr story_id) {
-      story_create_.Pass();
-      StartStory(story_id);
-    });
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    fuchsia::modular::AddMod add_mod;
+    add_mod.mod_name.push_back("root");
+    add_mod.surface_parent_mod_name.resize(0);
+    add_mod.intent.action = kModuleAction;
+    add_mod.intent.handler = kModuleUrl;
+
+    fuchsia::modular::StoryCommand command;
+    command.set_add_mod(std::move(add_mod));
+    commands.push_back(std::move(command));
+
+    puppet_master_->ControlStory(kStoryName, story_puppet_master_.NewRequest());
+    story_puppet_master_->Enqueue(std::move(commands));
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          story_create_.Pass();
+          StartStory();
+        });
     async::PostDelayedTask(
         async_get_default_dispatcher(),
         callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
@@ -62,16 +81,10 @@ class TestApp : public modular::testing::ComponentBase<void> {
   TestPoint story_was_deleted_{"Story was deleted."};
   TestPoint agent_executed_delete_task_{
       "fuchsia::modular::Agent executed message queue task."};
-  void StartStory(const std::string& story_id) {
-    story_provider_->GetController(story_id, story_controller_.NewRequest());
-
-    fuchsia::modular::Intent intent;
-    intent.handler = kModuleUrl;
-    intent.action = kModuleAction;
-    story_controller_->AddModule(nullptr, "root", std::move(intent), nullptr);
-
-    story_controller_.set_error_handler([this, story_id] {
-      FXL_LOG(ERROR) << "Story controller for story " << story_id
+  void StartStory() {
+    story_provider_->GetController(kStoryName, story_controller_.NewRequest());
+    story_controller_.set_error_handler([this] {
+      FXL_LOG(ERROR) << "Story controller for story " << kStoryName
                      << " died. Does this story exist?";
     });
 
@@ -80,16 +93,15 @@ class TestApp : public modular::testing::ComponentBase<void> {
     // Retrieve the message queue token for the messsage queue that the module
     // created.
     modular::testing::GetStore()->Get(
-        "trigger_test_module_queue_token",
-        [this, story_id](fidl::StringPtr value) {
+        "trigger_test_module_queue_token", [this](fidl::StringPtr value) {
           got_queue_token_.Pass();
           // Wait for the module to finish its test cases for communicating
           // with the agent.
-          Await("trigger_test_module_done", [this, story_id, value] {
+          Await("trigger_test_module_done", [this, value] {
             module_finished_.Pass();
             // Delete the story to trigger the deletion of the message
             // queue that the module created.
-            story_provider_->DeleteStory(story_id, [this, value]() {
+            puppet_master_->DeleteStory(kStoryName, [this, value]() {
               story_was_deleted_.Pass();
               // Verify that the agent task was triggered, by checking
               // that the agent wrote the message queue token to the
@@ -103,6 +115,8 @@ class TestApp : public modular::testing::ComponentBase<void> {
         });
   }
 
+  fuchsia::modular::PuppetMasterPtr puppet_master_;
+  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
   fuchsia::modular::UserShellContextPtr user_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;

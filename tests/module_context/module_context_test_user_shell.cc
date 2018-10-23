@@ -27,6 +27,8 @@ using ::modular::testing::TestPoint;
 
 namespace {
 
+const char kStoryName[] = "story";
+
 // A simple story activity watcher implementation.
 class StoryActivityWatcherImpl : fuchsia::modular::StoryActivityWatcher {
  public:
@@ -66,25 +68,21 @@ class StoryActivityWatcherImpl : fuchsia::modular::StoryActivityWatcher {
 };
 
 class TestApp : public modular::testing::ComponentBase<void> {
- private:
-  TestPoint story_create_{"Created story."};
-
  public:
   TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context), weak_ptr_factory_(this) {
     TestInit(__FILE__);
 
+    puppet_master_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
     user_shell_context_ =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
 
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    story_provider_->CreateStory(nullptr, [this](fidl::StringPtr story_id) {
-      story_create_.Pass();
-      story_id_ = story_id;
-      StartStory(story_id);
-    });
+    CreateStory();
     async::PostDelayedTask(
         async_get_default_dispatcher(),
         callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
@@ -97,26 +95,49 @@ class TestApp : public modular::testing::ComponentBase<void> {
  private:
   using TestPoint = modular::testing::TestPoint;
 
+  TestPoint story_create_{"Created story."};
+  void CreateStory() {
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    {
+      fuchsia::modular::AddMod add_mod;
+      add_mod.mod_name.push_back(kFirstModuleName);
+      add_mod.intent = IntentWithParameterString(kFirstModuleName);
+      add_mod.surface_parent_mod_name.resize(0);
+
+      fuchsia::modular::StoryCommand command;
+      command.set_add_mod(std::move(add_mod));
+      commands.push_back(std::move(command));
+    }
+    {
+      fuchsia::modular::AddMod add_mod;
+      add_mod.mod_name.push_back(kSecondModuleName);
+      add_mod.intent = IntentWithParameterString(kSecondModuleName);
+      add_mod.surface_parent_mod_name.resize(0);
+
+      fuchsia::modular::StoryCommand command;
+      command.set_add_mod(std::move(add_mod));
+      commands.push_back(std::move(command));
+    }
+
+    puppet_master_->ControlStory(kStoryName, story_puppet_master_.NewRequest());
+    story_puppet_master_->Enqueue(std::move(commands));
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          story_create_.Pass();
+          StartStory();
+        });
+  }
+
   TestPoint story_get_controller_{"Story GetController()"};
   // Starts the story and adds two modules to it.
-  void StartStory(const std::string& story_id) {
-    story_provider_->GetController(story_id, story_controller_.NewRequest());
-    story_controller_.set_error_handler([this, story_id] {
-      FXL_LOG(ERROR) << "Story controller for story " << story_id
+  void StartStory() {
+    story_provider_->GetController(kStoryName, story_controller_.NewRequest());
+    story_controller_.set_error_handler([this] {
+      FXL_LOG(ERROR) << "Story controller for story " << kStoryName
                      << " died. Does this story exist?";
     });
 
-    story_controller_->AddModule(nullptr /* parent_module_path */,
-                                 kFirstModuleName,
-                                 IntentWithParameterString(kFirstModuleName),
-                                 nullptr /* surface_relation */);
-    story_controller_->AddModule(nullptr /* parent_module_path */,
-                                 kSecondModuleName,
-                                 IntentWithParameterString(kSecondModuleName),
-                                 nullptr /* surface_relation */);
-
     story_controller_->Start(story_view_.NewRequest());
-
     story_controller_->GetInfo(
         [this](fuchsia::modular::StoryInfo, fuchsia::modular::StoryState) {
           story_get_controller_.Pass();
@@ -132,7 +153,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
         [this](
             fidl::StringPtr story_id,
             fidl::VectorPtr<fuchsia::modular::OngoingActivityType> activities) {
-          if (story_id == story_id_ && activities->empty()) {
+          if (story_id == kStoryName && activities->empty()) {
             on_watch_ongoing_activities_dispatched.Pass();
           }
           PerformFirstModuleStartActivity();
@@ -149,7 +170,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
         [this](
             fidl::StringPtr story_id,
             fidl::VectorPtr<fuchsia::modular::OngoingActivityType> activities) {
-          if (story_id == story_id_ && activities->size() == 1 &&
+          if (story_id == kStoryName && activities->size() == 1 &&
               activities.get()[0] ==
                   fuchsia::modular::OngoingActivityType::VIDEO) {
             on_start_ongoing_activity_dispatched.Pass();
@@ -168,7 +189,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
         [this](
             fidl::StringPtr story_id,
             fidl::VectorPtr<fuchsia::modular::OngoingActivityType> activities) {
-          if (story_id == story_id_ && activities->size() == 2 &&
+          if (story_id == kStoryName && activities->size() == 2 &&
               activities.get()[0] ==
                   fuchsia::modular::OngoingActivityType::VIDEO &&
               activities.get()[1] ==
@@ -189,7 +210,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
         [this](
             fidl::StringPtr story_id,
             fidl::VectorPtr<fuchsia::modular::OngoingActivityType> activities) {
-          if (story_id == story_id_ && activities->size() == 1 &&
+          if (story_id == kStoryName && activities->size() == 1 &&
               activities.get()[0] ==
                   fuchsia::modular::OngoingActivityType::VIDEO) {
             on_stop_remaining_ongoing_activities_dispatched.Pass();
@@ -224,7 +245,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
         [this](
             fidl::StringPtr story_id,
             fidl::VectorPtr<fuchsia::modular::OngoingActivityType> activities) {
-          if (story_id == story_id_ && activities->empty()) {
+          if (story_id == kStoryName && activities->empty()) {
             on_done_ongoing_activities_stopped.Pass();
           }
         });
@@ -277,7 +298,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
           // Check all the running stories to make sure the one created for this
           // test is no longer running.
           for (const auto& story_id : *story_ids) {
-            found_story |= story_id == story_id_;
+            found_story |= story_id == kStoryName;
           }
           callback(found_story);
         });
@@ -308,12 +329,12 @@ class TestApp : public modular::testing::ComponentBase<void> {
     return intent;
   }
 
+  fuchsia::modular::PuppetMasterPtr puppet_master_;
+  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
   fuchsia::modular::UserShellContextPtr user_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;
   StoryActivityWatcherImpl story_activity_watcher_;
-
-  std::string story_id_ = "";
 
   fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view_;
 

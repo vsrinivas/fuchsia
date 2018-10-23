@@ -35,6 +35,9 @@ using modular::testing::TestPoint;
 
 namespace {
 
+const char kStoryName1[] = "story1";
+const char kStoryName2[] = "story2";
+
 // Cf. README.md for what this test does and how.
 class TestApp : public modular::testing::ComponentBase<void>,
                 fuchsia::modular::UserShellPresentationProvider {
@@ -43,6 +46,9 @@ class TestApp : public modular::testing::ComponentBase<void>,
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
 
+    puppet_master_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
     user_shell_context_ =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
@@ -73,13 +79,13 @@ class TestApp : public modular::testing::ComponentBase<void>,
   void GetPresentation(fidl::StringPtr story_id,
                        fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                            request) override {
-    if (!story1_id_.is_null() && story_id == story1_id_ &&
+    if (story_id == kStoryName1 &&
         !story1_presentation_request_received_) {
       story1_presentation_request_.Pass();
       story1_presentation_request_received_ = true;
     }
 
-    if (!story2_id_.is_null() && story_id == story2_id_ &&
+    if (story_id == kStoryName2 &&
         !story2_presentation_request_received_) {
       story2_presentation_request_.Pass();
       story2_presentation_request_received_ = true;
@@ -108,22 +114,41 @@ class TestApp : public modular::testing::ComponentBase<void>,
   TestPoint story1_create_{"Story1 Create"};
 
   void Story1_Create() {
-    story_provider_->CreateStory(nullptr, [this](fidl::StringPtr story_id) {
-      story1_id_ = std::move(story_id);
-      story1_create_.Pass();
-      Story1_Run1();
-    });
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    auto addMod = [&commands](fidl::StringPtr name,
+                              std::vector<fidl::StringPtr> parent) {
+      fuchsia::modular::AddMod add_mod;
+      add_mod.mod_name.push_back(name);
+      add_mod.intent.action = kCommonNullAction;
+      add_mod.intent.handler = kCommonNullModule;
+      add_mod.surface_parent_mod_name.resize(0);
+      for (auto i : parent) {
+        add_mod.surface_parent_mod_name.push_back(i);
+      }
+
+      fuchsia::modular::StoryCommand command;
+      command.set_add_mod(std::move(add_mod));
+      commands.push_back(std::move(command));
+    };
+
+    addMod("root", {});
+    addMod("one", {"root"});
+    addMod("two", {"root", "one"});
+
+    puppet_master_->ControlStory(kStoryName1,
+                                 story_puppet_master_.NewRequest());
+    story_puppet_master_->Enqueue(std::move(commands));
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          story1_create_.Pass();
+          Story1_Run1();
+        });
   }
 
   TestPoint story1_run1_{"Story1 Run1"};
 
   void Story1_Run1() {
-    story_provider_->GetController(story1_id_, story_controller_.NewRequest());
-
-    fuchsia::modular::Intent intent;
-    intent.action = kCommonNullAction;
-    intent.handler = kCommonNullModule;
-    story_controller_->AddModule(nullptr, "root", std::move(intent), nullptr);
+    story_provider_->GetController(kStoryName1, story_controller_.NewRequest());
 
     // TODO(jphsiao|vardhan): remodel this |proceed_after_6| style of
     // continuation to use Futures instead.
@@ -141,29 +166,6 @@ class TestApp : public modular::testing::ComponentBase<void>,
 
     fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
-
-    // TODO(mesch):
-    // fuchsia::modular::StoryController.fuchsia::modular::AddModule() with a
-    // null parent module loses information about the order in which modules are
-    // added. When the story is resumed, external modules without parent modules
-    // are started in alphabetical order of their names, not in the order they
-    // were added to the story.
-    fidl::VectorPtr<fidl::StringPtr> parent_one;
-    parent_one.push_back("root");
-    fuchsia::modular::Intent intent_one;
-    intent_one.action = kCommonNullAction;
-    story_controller_->AddModule(std::move(parent_one), "one",
-                                 std::move(intent_one),
-                                 nullptr /* surface_relation */);
-
-    fidl::VectorPtr<fidl::StringPtr> parent_two;
-    parent_two.push_back("root");
-    parent_two.push_back("one");
-    fuchsia::modular::Intent intent_two;
-    intent_two.action = kCommonNullAction;
-    story_controller_->AddModule(std::move(parent_two), "two",
-                                 std::move(intent_two),
-                                 nullptr /* surface_relation */);
   }
 
   void Story1_Stop1() {
@@ -199,23 +201,40 @@ class TestApp : public modular::testing::ComponentBase<void>,
   TestPoint story2_create_{"Story2 Create"};
 
   void Story2_Create() {
-    story_provider_->CreateStory(nullptr, [this](fidl::StringPtr story_id) {
-      story2_id_ = std::move(story_id);
-      story2_create_.Pass();
-      Story2_Run1();
-    });
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    auto addMod = [&commands](fidl::StringPtr name,
+                              std::vector<fidl::StringPtr> parent) {
+      fuchsia::modular::AddMod add_mod;
+      add_mod.mod_name.push_back(name);
+      add_mod.intent.action = kCommonNullAction;
+      add_mod.intent.handler = kCommonNullModule;
+      add_mod.surface_parent_mod_name.resize(0);
+      for (auto i : parent) {
+        add_mod.surface_parent_mod_name.push_back(i);
+      }
+
+      fuchsia::modular::StoryCommand command;
+      command.set_add_mod(std::move(add_mod));
+      commands.push_back(std::move(command));
+    };
+
+    addMod("root", {});
+    addMod("one", {"root"});
+    addMod("two", {"root", "one"});
+
+    puppet_master_->ControlStory(kStoryName2,
+                                 story_puppet_master_.NewRequest());
+    story_puppet_master_->Enqueue(std::move(commands));
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          story2_create_.Pass();
+          Story2_Run1();
+        });
   }
 
   TestPoint story2_run1_{"Story2 Run1"};
 
   void Story2_Run1() {
-    story_provider_->GetController(story2_id_, story_controller_.NewRequest());
-
-    fuchsia::modular::Intent intent;
-    intent.handler = kCommonNullModule;
-    intent.action = kCommonNullAction;
-    story_controller_->AddModule(nullptr, "root", std::move(intent), nullptr);
-
     auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
       story2_run1_.Pass();
       Story2_Stop1();
@@ -227,27 +246,9 @@ class TestApp : public modular::testing::ComponentBase<void>,
     Get("root:one:two manifest", proceed_after_5);
     Get("root:one:two ordering", proceed_after_5);
 
+    story_provider_->GetController(kStoryName2, story_controller_.NewRequest());
     fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
-
-    fidl::VectorPtr<fidl::StringPtr> parent_one;
-    parent_one.push_back("root");
-    fuchsia::modular::Intent intent_one;
-    intent_one.handler = kCommonNullModule;
-    intent_one.action = kCommonNullAction;
-    story_controller_->AddModule(std::move(parent_one), "one",
-                                 std::move(intent_one),
-                                 nullptr /*surface_relation) */);
-
-    fidl::VectorPtr<fidl::StringPtr> parent_two;
-    parent_two.push_back("root");
-    parent_two.push_back("one");
-    fuchsia::modular::Intent intent_two;
-    intent_two.handler = kCommonNullModule;
-    intent_two.action = kCommonNullAction;
-    story_controller_->AddModule(std::move(parent_two), "two",
-                                 std::move(intent_two),
-                                 nullptr /* surface_relation */);
   }
 
   void Story2_Stop1() {
@@ -288,14 +289,13 @@ class TestApp : public modular::testing::ComponentBase<void>,
     }
   }
 
+  fuchsia::modular::PuppetMasterPtr puppet_master_;
+  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
   fuchsia::modular::UserShellContextPtr user_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;
   fidl::BindingSet<fuchsia::modular::UserShellPresentationProvider>
       presentation_provider_bindings_;
-
-  fidl::StringPtr story1_id_;
-  fidl::StringPtr story2_id_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
