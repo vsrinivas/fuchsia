@@ -1,5 +1,5 @@
 {
-  "test_suite_name": "fuchsia.ledger.local",
+  "test_suite_name": "fuchsia.ledger.disk_space",
   "app": "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/disk_space.cmx",
   "args": ["--page-count=0", "--unique-key-count=0", "--key-size=10",
            "--value-size=10", "--commit-count=0"],
@@ -8,6 +8,7 @@
   "measure": [
     {
       "type": "argument_value",
+      "output_test_name": "empty_ledger/ledger_directory_size",
       "event_name": "ledger_directory_size",
       "event_category": "benchmark",
       "argument_name": "directory_size",

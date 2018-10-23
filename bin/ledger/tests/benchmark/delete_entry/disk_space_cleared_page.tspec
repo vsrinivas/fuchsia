@@ -1,5 +1,5 @@
 {
-  "test_suite_name": "fuchsia.ledger.local",
+  "test_suite_name": "fuchsia.ledger.delete_entry",
   "app": "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/delete_entry.cmx",
   "args": ["--entry-count=100", "--key-size=100", "--value-size=1000",
            "--transaction-size=100"],
@@ -8,6 +8,7 @@
   "measure": [
     {
       "type": "argument_value",
+      "output_test_name": "cleared_page/ledger_directory_size",
       "event_name": "ledger_directory_size",
       "event_category": "benchmark",
       "argument_name": "directory_size",

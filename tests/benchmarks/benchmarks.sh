@@ -20,25 +20,21 @@ runbench_read_arguments "$@"
 # runbench_exec "${OUT_DIR}/ledger.add_many_pages.json" \
 #    trace record \
 #    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/DISABLED_add_many_pages.tspec \
-#    --test-suite=fuchsia.ledger.add_many_pages \
 #    --benchmark-results-file="${OUT_DIR}/ledger.add_many_pages.json"
 
 runbench_exec "${OUT_DIR}/ledger.add_new_page.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/add_new_page.tspec \
-    --test-suite=fuchsia.ledger.add_new_page \
     --benchmark-results-file="${OUT_DIR}/ledger.add_new_page.json"
 
 runbench_exec "${OUT_DIR}/ledger.get_same_page.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/get_same_page.tspec \
-    --test-suite=fuchsia.ledger.get_same_page \
     --benchmark-results-file="${OUT_DIR}/ledger.get_same_page.json"
 
 runbench_exec "${OUT_DIR}/ledger.get_page_id.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/get_page_id.tspec \
-    --test-suite=fuchsia.ledger.get_page_id \
     --benchmark-results-file="${OUT_DIR}/ledger.get_page_id.json"
 
 runbench_exec "${OUT_DIR}/ledger.put.json" \
@@ -64,79 +60,66 @@ runbench_exec "${OUT_DIR}/ledger.transaction.json" \
 runbench_exec "${OUT_DIR}/ledger.update_entry.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/update_entry.tspec \
-    --test-suite=fuchsia.ledger.update_entry \
     --benchmark-results-file="${OUT_DIR}/ledger.update_entry.json"
 
 runbench_exec "${OUT_DIR}/ledger.update_big_entry.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/update_big_entry.tspec \
-    --test-suite=fuchsia.ledger.update_big_entry \
     --benchmark-results-file="${OUT_DIR}/ledger.update_big_entry.json"
 
 runbench_exec "${OUT_DIR}/ledger.update_entry_transactions.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/update_entry_transactions.tspec \
-    --test-suite=fuchsia.ledger.update_entry_transactions \
     --benchmark-results-file="${OUT_DIR}/ledger.update_entry_transactions.json"
 
 runbench_exec "${OUT_DIR}/ledger.delete_entry.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/delete_entry.tspec \
-    --test-suite=fuchsia.ledger.delete_entry \
     --benchmark-results-file="${OUT_DIR}/ledger.delete_entry.json"
 
 runbench_exec "${OUT_DIR}/ledger.delete_big_entry.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/delete_big_entry.tspec \
-    --test-suite=fuchsia.ledger.delete_big_entry \
     --benchmark-results-file="${OUT_DIR}/ledger.delete_big_entry.json"
 
 runbench_exec "${OUT_DIR}/ledger.delete_entry_transactions.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/delete_entry_transactions.tspec \
-    --test-suite=fuchsia.ledger.delete_entry_transactions \
     --benchmark-results-file="${OUT_DIR}/ledger.delete_entry_transactions.json"
 
 runbench_exec "${OUT_DIR}/ledger.disk_space_empty_ledger.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/disk_space_empty_ledger.tspec \
-    --test-suite=fuchsia.ledger.disk_space_empty_ledger \
     --benchmark-results-file="${OUT_DIR}/ledger.disk_space_empty_ledger.json"
 
 runbench_exec "${OUT_DIR}/ledger.disk_space_empty_pages.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/disk_space_empty_pages.tspec \
-    --test-suite=fuchsia.ledger.disk_space_empty_pages \
     --benchmark-results-file="${OUT_DIR}/ledger.disk_space_empty_pages.json"
 
 runbench_exec "${OUT_DIR}/ledger.disk_space_entries.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/disk_space_entries.tspec \
-    --test-suite=fuchsia.ledger.disk_space_entries \
     --benchmark-results-file="${OUT_DIR}/ledger.disk_space_entries.json"
 
 runbench_exec "${OUT_DIR}/ledger.disk_space_small_keys.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/disk_space_small_keys.tspec \
-    --test-suite=fuchsia.ledger.disk_space_small_keys \
     --benchmark-results-file="${OUT_DIR}/ledger.disk_space_small_keys.json"
 
 runbench_exec "${OUT_DIR}/ledger.disk_space_updates.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/disk_space_updates.tspec \
-    --test-suite=fuchsia.ledger.disk_space_updates \
     --benchmark-results-file="${OUT_DIR}/ledger.disk_space_updates.json"
 
 runbench_exec "${OUT_DIR}/ledger.disk_space_one_commit_per_entry.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/disk_space_one_commit_per_entry.tspec \
-    --test-suite=fuchsia.ledger.disk_space_one_commit_per_entry \
     --benchmark-results-file="${OUT_DIR}/ledger.disk_space_one_commit_per_entry.json"
 
 runbench_exec "${OUT_DIR}/ledger.disk_space_cleared_page.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/disk_space_cleared_page.tspec \
-    --test-suite=fuchsia.ledger.disk_space_cleared_page \
     --benchmark-results-file="${OUT_DIR}/ledger.disk_space_cleared_page.json"
 
 runbench_exec "${OUT_DIR}/modular.story_runner.json" \

@@ -1,5 +1,5 @@
 {
-  "test_suite_name": "fuchsia.ledger.local",
+  "test_suite_name": "fuchsia.ledger.get_page",
   "app": "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/get_page.cmx",
   "args": ["--requests-count=500", "--reuse"],
   "categories": ["benchmark", "ledger"],
@@ -7,6 +7,7 @@
   "measure": [
     {
       "type": "duration",
+      "output_test_name": "same_page/get_page",
       "event_name": "get page",
       "event_category": "benchmark",
       "expected_sample_count": 500,
