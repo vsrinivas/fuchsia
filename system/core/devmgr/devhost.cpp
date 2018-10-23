@@ -37,8 +37,10 @@ namespace devmgr {
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 struct proxy_iostate {
-    zx_device_t* dev;
-    port_handler_t ph;
+    proxy_iostate() = default;
+
+    zx_device_t* dev = nullptr;
+    port_handler_t ph = {};
 };
 static void proxy_ios_create(zx_device_t* dev, zx_handle_t h);
 static void proxy_ios_destroy(zx_device_t* dev);
@@ -543,11 +545,13 @@ static zx_status_t dh_handle_proxy_rpc(port_handler_t* ph, zx_signals_t signals,
     proxy_iostate_t* ios = proxy_ios_from_ph(ph);
 
     if (evt != 0) {
+        // TODO(kulakowski/teisenbe): Can |ios->dev| still have a reference to
+        // |ios| here?
         log(RPC_SDW, "proxy-rpc: destroy (ios=%p)\n", ios);
         // we send an event to request the destruction
         // of an iostate, to ensure that's the *last*
         // packet about the iostate that we get
-        free(ios);
+        delete ios;
         return ZX_ERR_STOP;
     }
     if (ios->dev == nullptr) {
@@ -566,7 +570,7 @@ static zx_status_t dh_handle_proxy_rpc(port_handler_t* ph, zx_signals_t signals,
 destroy:
             ios->dev->proxy_ios = nullptr;
             zx_handle_close(ios->ph.handle);
-            free(ios);
+            delete ios;
             return ZX_ERR_STOP;
         }
         return ZX_OK;
@@ -584,12 +588,11 @@ static void proxy_ios_create(zx_device_t* dev, zx_handle_t h) {
         proxy_ios_destroy(dev);
     }
 
-    proxy_iostate_t* ios;
-    if ((ios = static_cast<proxy_iostate_t*>(calloc(sizeof(proxy_iostate_t), 1))) == nullptr) {
+    auto ios = fbl::make_unique<proxy_iostate>();
+    if (ios == nullptr) {
         zx_handle_close(h);
         return;
     }
-    new (ios) proxy_iostate_t;
 
     ios->dev = dev;
     ios->ph.handle = h;
@@ -597,10 +600,11 @@ static void proxy_ios_create(zx_device_t* dev, zx_handle_t h) {
     ios->ph.func = dh_handle_proxy_rpc;
     if (port_wait(&dh_port, &ios->ph) != ZX_OK) {
         zx_handle_close(h);
-        free(ios);
-    } else {
-        dev->proxy_ios = ios;
+        return;
     }
+
+    // TODO(kulakowski/teisenbe): Is |ios| owned by |dev| here or by |dh_port|?
+    dev->proxy_ios = ios.release();
 }
 
 static void proxy_ios_destroy(zx_device_t* dev) {
