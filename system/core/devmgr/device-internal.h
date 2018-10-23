@@ -17,9 +17,7 @@ typedef struct proxy_iostate proxy_iostate_t;
 #define DEV_MAGIC 'MDEV'
 
 struct zx_device {
-    zx_device() {
-        list_initialize(&children);
-    }
+    zx_device() = default;
     ~zx_device() = default;
 
     zx_device(const zx_device&) = delete;
@@ -105,10 +103,16 @@ struct zx_device {
     zx_device_t* parent = nullptr;
 
     // for the parent's device_list
-    struct list_node node = {};
+    fbl::DoublyLinkedListNodeState<zx_device*> node;
+    struct Node {
+        static fbl::DoublyLinkedListNodeState<zx_device*>& node_state(
+            zx_device& obj) {
+            return obj.node;
+        }
+    };
 
     // list of this device's children in the device tree
-    struct list_node children;
+    fbl::DoublyLinkedList<zx_device*, Node> children;
 
     // list node for the defer_device_list
     fbl::DoublyLinkedListNodeState<zx_device*> defer;

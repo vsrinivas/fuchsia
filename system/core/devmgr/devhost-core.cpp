@@ -180,7 +180,7 @@ static zx_protocol_device_t device_invalid_ops = []() {
 #define DEAD_DEVICE_MAX 7
 
 void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK {
-    static struct list_node dead_list = LIST_INITIAL_VALUE(dead_list);
+    static fbl::DoublyLinkedList<zx_device*, zx_device::Node> dead_list;
     static unsigned dead_count = 0;
 
     // ensure any ops will be fatal
@@ -203,10 +203,10 @@ void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK {
     // Defer destruction to help catch use-after-free and also
     // so the compiler can't (easily) optimize away the poisoning
     // we do above.
-    list_add_tail(&dead_list, &dev->node);
+    dead_list.push_back(dev);
 
     if (dead_count == DEAD_DEVICE_MAX) {
-        zx_device_t* to_delete = list_remove_head_type(&dead_list, zx_device_t, node);
+        zx_device_t* to_delete = dead_list.pop_front();
         delete to_delete;
     } else {
         dead_count++;
@@ -232,7 +232,7 @@ static void devhost_finalize() REQ_DM_LOCK {
     // things before we're done detaching them.
     for (auto& dev : list) {
         if (dev.parent) {
-            list_delete(&dev.node);
+            dev.parent->children.erase(dev);
         }
     }
 
@@ -252,7 +252,7 @@ static void devhost_finalize() REQ_DM_LOCK {
             // And the parent is not dead, And this was the last child...
             if ((dev->parent->flags & DEV_FLAG_WANTS_REBIND) &&
                 (!(dev->parent->flags & DEV_FLAG_DEAD)) &&
-                list_is_empty(&dev->parent->children)) {
+                dev->parent->children.is_empty()) {
                 // Clear the wants rebind flag and request the rebind
                 dev->parent->flags &= (~DEV_FLAG_WANTS_REBIND);
                 devhost_device_bind(dev->parent, "");
@@ -307,7 +307,7 @@ void dev_ref_release(zx_device_t* dev) REQ_DM_LOCK {
         if (!(dev->flags & DEV_FLAG_VERY_DEAD)) {
             printf("device: %p(%s): only mostly dead (this is bad)\n", dev, dev->name);
         }
-        if (!list_is_empty(&dev->children)) {
+        if (!dev->children.is_empty()) {
             printf("device: %p(%s): still has children! not good.\n", dev, dev->name);
         }
 
@@ -493,7 +493,7 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
     dev->parent = parent;
 
     // attach to our parent
-    list_add_tail(&parent->children, &dev->node);
+    parent->children.push_back(dev);
 
     if (!(dev->flags & DEV_FLAG_INSTANCE)) {
         // devhost_add always consumes the handle
@@ -501,13 +501,13 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
         if (status < 0) {
             printf("devhost: %p(%s): remote add failed %d\n",
                    dev, dev->name, status);
+            dev->parent->children.erase(*dev);
             dev_ref_release(dev->parent);
             dev->parent = nullptr;
 
             // since we are under the lock the whole time, we added the node
             // to the tail and then we peeled it back off the tail when we
             // failed, we don't need to interact with the enum lock mechanism
-            list_delete(&dev->node);
             dev->flags &= (~DEV_FLAG_BUSY);
             dev_ref_release(dev);
             return status;
@@ -544,14 +544,13 @@ static const char* removal_problem(uint32_t flags) {
 }
 
 static void devhost_unbind_children(zx_device_t* dev) REQ_DM_LOCK {
-    zx_device_t* child = nullptr;
 #if TRACE_ADD_REMOVE
     printf("devhost_unbind_children: %p(%s)\n", dev, dev->name);
 #endif
     enum_lock_acquire();
-    list_for_every_entry(&dev->children, child, zx_device_t, node) {
-        if (!(child->flags & DEV_FLAG_DEAD)) {
-            devhost_device_unbind(child);
+    for (auto& child : dev->children) {
+        if (!(child.flags & DEV_FLAG_DEAD)) {
+            devhost_device_unbind(&child);
         }
     }
     enum_lock_release();
@@ -654,10 +653,9 @@ zx_status_t devhost_device_close(zx_device_t* dev, uint32_t flags) REQ_DM_LOCK {
 static zx_status_t _devhost_device_suspend(zx_device_t* dev, uint32_t flags) REQ_DM_LOCK {
     // first suspend children (so we suspend from leaf up)
     zx_status_t st;
-    zx_device_t* child = nullptr;
-    list_for_every_entry(&dev->children, child, zx_device_t, node) {
-        if (!(child->flags & DEV_FLAG_DEAD)) {
-            st = devhost_device_suspend(child, flags);
+    for (auto& child : dev->children) {
+        if (!(child.flags & DEV_FLAG_DEAD)) {
+            st = devhost_device_suspend(&child, flags);
             if (st != ZX_OK) {
                 return st;
             }
