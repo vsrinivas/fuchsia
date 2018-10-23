@@ -76,44 +76,6 @@ static suspend_context_t suspend_ctx = []() {
     return suspend;
 }();
 
-struct dc_metadata_t {
-    list_node_t node;
-    uint32_t type;
-    uint32_t length;
-    bool has_path;      // zero terminated string starts at data[length]
-
-    char* Data() {
-        return reinterpret_cast<char*>(this + 1);
-    }
-
-    static zx_status_t Create(size_t data_len, fbl::unique_ptr<dc_metadata_t>* out) {
-        uint8_t* buf = new uint8_t[sizeof(dc_metadata_t) + data_len];
-        if (!buf) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        new (buf) dc_metadata_t();
-
-        out->reset(reinterpret_cast<dc_metadata_t*>(buf));
-        return ZX_OK;
-    }
-
-    // Implement a custom delete to deal with the allocation mechanism used in
-    // Create().  Since the ctor is private, all dc_metadata_t* will come from
-    // Create().
-    void operator delete(void* ptr) {
-        delete [] reinterpret_cast<uint8_t*>(ptr);
-    }
-
- private:
-    dc_metadata_t() = default;
-
-    dc_metadata_t(const dc_metadata_t&) = delete;
-    dc_metadata_t& operator=(const dc_metadata_t&) = delete;
-
-    dc_metadata_t(dc_metadata_t&&) = delete;
-    dc_metadata_t& operator=(dc_metadata_t&&) = delete;
-};
-
 static list_node_t published_metadata = LIST_INITIAL_VALUE(published_metadata);
 
 static bool dc_in_suspend() {

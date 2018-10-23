@@ -13,7 +13,9 @@
 #include <zircon/listnode.h>
 
 #include <fbl/intrusive_double_list.h>
+#include <fbl/new.h>
 #include <fbl/string.h>
+#include <fbl/unique_ptr.h>
 #include <port/port.h>
 
 namespace devmgr {
@@ -91,6 +93,44 @@ struct dc_devhost {
         --refcount_;
         return rc == 1;
     }
+};
+
+struct dc_metadata_t {
+    list_node_t node;
+    uint32_t type;
+    uint32_t length;
+    bool has_path;      // zero terminated string starts at data[length]
+
+    char* Data() {
+        return reinterpret_cast<char*>(this + 1);
+    }
+
+    static zx_status_t Create(size_t data_len, fbl::unique_ptr<dc_metadata_t>* out) {
+        uint8_t* buf = new uint8_t[sizeof(dc_metadata_t) + data_len];
+        if (!buf) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        new (buf) dc_metadata_t();
+
+        out->reset(reinterpret_cast<dc_metadata_t*>(buf));
+        return ZX_OK;
+    }
+
+    // Implement a custom delete to deal with the allocation mechanism used in
+    // Create().  Since the ctor is private, all dc_metadata_t* will come from
+    // Create().
+    void operator delete(void* ptr) {
+        delete [] reinterpret_cast<uint8_t*>(ptr);
+    }
+
+ private:
+    dc_metadata_t() = default;
+
+    dc_metadata_t(const dc_metadata_t&) = delete;
+    dc_metadata_t& operator=(const dc_metadata_t&) = delete;
+
+    dc_metadata_t(dc_metadata_t&&) = delete;
+    dc_metadata_t& operator=(dc_metadata_t&&) = delete;
 };
 
 #define DEV_HOST_DYING 1
