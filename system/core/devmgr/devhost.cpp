@@ -25,6 +25,7 @@
 #include <lib/fdio/util.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fidl/coding.h>
+#include <lib/zx/vmo.h>
 #include <zxcpp/new.h>
 
 #include "devcoordinator.h"
@@ -126,12 +127,11 @@ static void logflag(char* flag, uint32_t* flags) {
     }
 }
 
-static zx_status_t dh_find_driver(const char* libname, zx_handle_t vmo, zx_driver_t** out) {
+static zx_status_t dh_find_driver(const char* libname, zx::vmo vmo, zx_driver_t** out) {
     // check for already-loaded driver first
     for (auto& drv : dh_drivers) {
         if (!strcmp(libname, drv.libname.c_str())) {
             *out = &drv;
-            zx_handle_close(vmo);
             return drv.status;
         }
     }
@@ -139,7 +139,6 @@ static zx_status_t dh_find_driver(const char* libname, zx_handle_t vmo, zx_drive
     // TODO(kulakowski/teisenbe): This should probably be a RefPtr
     auto new_driver = fbl::make_unique<zx_driver_t>();
     if (new_driver == nullptr) {
-        zx_handle_close(vmo);
         return ZX_ERR_NO_MEMORY;
     }
     new_driver->libname.Set(libname);
@@ -147,11 +146,11 @@ static zx_status_t dh_find_driver(const char* libname, zx_handle_t vmo, zx_drive
     dh_drivers.push_back(fbl::move(new_driver));
     *out = drv;
 
-    void* dl = dlopen_vmo(vmo, RTLD_NOW);
+    void* dl = dlopen_vmo(vmo.get(), RTLD_NOW);
     if (dl == nullptr) {
         log(ERROR, "devhost: cannot load '%s': %s\n", libname, dlerror());
         drv->status = ZX_ERR_IO;
-        goto done;
+        return drv->status;
     }
 
     const zircon_driver_note_t* dn;
@@ -159,26 +158,26 @@ static zx_status_t dh_find_driver(const char* libname, zx_handle_t vmo, zx_drive
     if (dn == nullptr) {
         log(ERROR, "devhost: driver '%s' missing __zircon_driver_note__ symbol\n", libname);
         drv->status = ZX_ERR_IO;
-        goto done;
+        return drv->status;
     }
     zx_driver_rec_t* dr;
     dr = static_cast<zx_driver_rec_t*>(dlsym(dl, "__zircon_driver_rec__"));
     if (dr == nullptr) {
         log(ERROR, "devhost: driver '%s' missing __zircon_driver_rec__ symbol\n", libname);
         drv->status = ZX_ERR_IO;
-        goto done;
+        return drv->status;
     }
     if (!dr->ops) {
         log(ERROR, "devhost: driver '%s' has nullptr ops\n", libname);
         drv->status = ZX_ERR_INVALID_ARGS;
-        goto done;
+        return drv->status;
     }
     if (dr->ops->version != DRIVER_OPS_VERSION) {
         log(ERROR, "devhost: driver '%s' has bad driver ops version %" PRIx64
             ", expecting %" PRIx64 "\n", libname,
             dr->ops->version, DRIVER_OPS_VERSION);
         drv->status = ZX_ERR_INVALID_ARGS;
-        goto done;
+        return drv->status;
     }
 
     drv->driver_rec = dr;
@@ -217,8 +216,6 @@ static zx_status_t dh_find_driver(const char* libname, zx_handle_t vmo, zx_drive
         drv->status = ZX_OK;
     }
 
-done:
-    zx_handle_close(vmo);
     return drv->status;
 }
 
@@ -340,8 +337,10 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, devhost_iostate_t* ios) {
         }
 
         // named driver -- ask it to create the device
+        zx::vmo vmo(hin[1]);
+        hin[1] = ZX_HANDLE_INVALID;
         zx_driver_t* drv;
-        if ((r = dh_find_driver(name, hin[1], &drv)) < 0) {
+        if ((r = dh_find_driver(name, fbl::move(vmo), &drv)) < 0) {
             log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
             break;
         }
@@ -400,10 +399,12 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, devhost_iostate_t* ios) {
         if (ios->dev->flags & DEV_FLAG_DEAD) {
             log(ERROR, "devhost[%s] bind to removed device disallowed\n", path);
             r = ZX_ERR_IO_NOT_PRESENT;
-        } else if ((r = dh_find_driver(name, hin[0], &drv)) < 0) {
-            log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
         } else {
-            if (drv->ops->bind) {
+            zx::vmo vmo(hin[0]);
+            hin[0] = ZX_HANDLE_INVALID;
+            if ((r = dh_find_driver(name, fbl::move(vmo), &drv)) < 0) {
+                log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
+            } else if (drv->ops->bind) {
                 creation_context_t ctx = {
                     .parent = ios->dev,
                     .child = nullptr,
