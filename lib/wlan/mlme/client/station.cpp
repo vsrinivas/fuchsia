@@ -1316,6 +1316,7 @@ uint8_t Station::GetTid(const EthFrame& frame) {
 }
 
 zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& frame) {
+    ZX_DEBUG_ASSERT(join_ctx_ != nullptr);
     assoc_ctx_ = AssocContext{};
     assoc_ctx_.ts_start = timer_mgr_.Now();
     assoc_ctx_.bssid = join_ctx_->bssid();
@@ -1377,7 +1378,8 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
             std::make_optional(IntersectVhtCap(ap.vht_cap.value(), client.vht_cap.value()));
         assoc_ctx_.vht_op = ap.vht_op;
     }
-    debugjoin("final AssocCtx:[%s]\n", debug::Describe(assoc_ctx_).c_str());
+
+    assoc_ctx_.chan = join_ctx_->channel();
 
     assoc_ctx_.is_ht = assoc_ctx_.ht_cap.has_value();
     assoc_ctx_.is_cbw40_rx =
@@ -1388,6 +1390,8 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
     // TODO(porce): Test capabilities and configurations of the client and its BSS.
     // TODO(porce): Ralink dependency on BlockAck, AMPDU handling
     assoc_ctx_.is_cbw40_tx = false;
+
+    debugjoin("final AssocCtx:[%s]\n", debug::Describe(assoc_ctx_).c_str());
 
     return ZX_OK;
 }
