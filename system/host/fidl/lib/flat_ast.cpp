@@ -167,10 +167,6 @@ TypeShape CUnionTypeShape(const std::vector<flat::Union::Member>& members) {
     return TypeShape(size, alignment, depth, max_handles, max_out_of_line);
 }
 
-TypeShape FidlStructTypeShape(std::vector<FieldShape*>* fields) {
-    return CStructTypeShape(fields);
-}
-
 TypeShape PointerTypeShape(TypeShape element, uint32_t max_element_count = 1u) {
     // Because FIDL supports recursive data structures, we might not have
     // computed the TypeShape for the element we're pointing to. In that case,
@@ -726,12 +722,6 @@ bool Library::ConsumeInterfaceDeclaration(
     for (auto& method : interface_declaration->methods) {
         auto attributes = std::move(method->attributes);
         auto ordinal_literal = std::move(method->ordinal);
-        uint32_t value;
-        if (!ParseOrdinal<decltype(value)>(ordinal_literal.get(), &value))
-            return Fail(ordinal_literal->location(), "Unable to parse ordinal");
-        if (value == 0u)
-            return Fail(ordinal_literal->location(), "Fidl ordinals cannot be 0");
-        Ordinal ordinal(std::move(ordinal_literal), value);
 
         SourceLocation method_name = method->identifier->location();
 
@@ -762,7 +752,7 @@ bool Library::ConsumeInterfaceDeclaration(
         assert(maybe_request != nullptr || maybe_response != nullptr);
 
         methods.emplace_back(std::move(attributes),
-                             std::move(ordinal),
+                             std::move(ordinal_literal),
                              std::move(method_name), std::move(maybe_request),
                              std::move(maybe_response));
     }
@@ -806,12 +796,6 @@ bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
     std::vector<Table::Member> members;
     for (auto& member : table_declaration->members) {
         auto ordinal_literal = std::move(member->ordinal);
-        uint32_t value;
-        if (!ParseOrdinal<decltype(value)>(ordinal_literal.get(), &value))
-            return Fail(ordinal_literal->location(), "Unable to parse ordinal");
-        if (value == 0u)
-            return Fail(ordinal_literal->location(), "Fidl ordinals cannot be 0");
-        auto ordinal = std::make_unique<Ordinal>(std::move(ordinal_literal), value);
 
         if (member->maybe_used) {
             std::unique_ptr<Type> type;
@@ -827,11 +811,11 @@ bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
                 return Fail(member->location(), "Table members cannot be nullable");
             }
             auto attributes = std::move(member->maybe_used->attributes);
-            members.emplace_back(std::move(ordinal), std::move(type),
+            members.emplace_back(std::move(ordinal_literal), std::move(type),
                                  member->maybe_used->identifier->location(),
                                  std::move(maybe_default_value), std::move(attributes));
         } else {
-            members.emplace_back(std::move(ordinal));
+            members.emplace_back(std::move(ordinal_literal));
         }
     }
 
@@ -1415,7 +1399,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
                 return Fail(method.name,
                             "Multiple methods with the same name in an interface; last occurance was at " +
                                 name_result.previous_occurance().position());
-            auto ordinal_result = method_scope.ordinals.Insert(method.ordinal.Value(), method.name);
+            auto ordinal_result = method_scope.ordinals.Insert(method.ordinal->value, method.name);
             if (!ordinal_result.ok())
                 return Fail(method.name,
                             "Mulitple methods with the same ordinal in an interface; last occurance was at " +
@@ -1442,7 +1426,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
                     return false;
                 message_struct.push_back(&param.fieldshape);
             }
-            message->typeshape = FidlStructTypeShape(&message_struct);
+            message->typeshape = CStructTypeShape(&message_struct);
             return true;
         };
         if (method.maybe_request) {
@@ -1514,9 +1498,9 @@ bool Library::CompileTable(Table* table_declaration) {
 
     uint32_t max_member_handles = 0;
     for (auto& member : table_declaration->members) {
-        auto ordinal_result = ordinal_scope.Insert(member.ordinal->Value(), member.ordinal->source_element()->location());
+        auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->location());
         if (!ordinal_result.ok())
-            return Fail(member.ordinal->source_element()->location(),
+            return Fail(member.ordinal->location(),
                         "Multiple table fields with the same ordinal; previous was at " +
                             ordinal_result.previous_occurance().position());
         if (member.maybe_used) {
@@ -1549,7 +1533,7 @@ bool Library::CompileTable(Table* table_declaration) {
     std::vector<TypeShape*> fields(table_declaration->members.size());
     for (auto& member : table_declaration->members) {
         if (member.maybe_used) {
-            fields[member.ordinal->Value() - 1] = &member.maybe_used->typeshape;
+            fields[member.ordinal->value - 1] = &member.maybe_used->typeshape;
         }
     }
 

@@ -158,14 +158,26 @@ std::unique_ptr<raw::NumericLiteral> Parser::ParseNumericLiteral() {
 
 std::unique_ptr<raw::Ordinal> Parser::ParseOrdinal() {
     ASTScope scope(this);
+
     ConsumeToken(OfKind(Token::Kind::kNumericLiteral));
     if (!Ok())
         return Fail();
+    auto data = scope.GetSourceElement().location().data();
+    std::string string_data(data.data(), data.data() + data.size());
+    errno = 0;
+    unsigned long long value = strtoull(string_data.data(), nullptr, 0);
+    assert(errno == 0 && "Unparsable number should not be lexed.");
+    if (value > std::numeric_limits<uint32_t>::max())
+        return Fail("Ordinal out-of-bound");
+    uint32_t ordinal = static_cast<uint32_t>(value);
+    if (ordinal == 0u)
+        return Fail("Fidl ordinals cannot be 0");
+
     ConsumeToken(OfKind(Token::Kind::kColon));
     if (!Ok())
         return Fail();
 
-    return std::make_unique<raw::Ordinal>(scope.GetSourceElement());
+    return std::make_unique<raw::Ordinal>(scope.GetSourceElement(), ordinal);
 }
 
 std::unique_ptr<raw::TrueLiteral> Parser::ParseTrueLiteral() {

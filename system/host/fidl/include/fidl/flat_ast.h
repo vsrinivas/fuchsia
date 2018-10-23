@@ -94,18 +94,6 @@ struct LiteralConstant : Constant {
     std::unique_ptr<raw::Literal> literal;
 };
 
-struct Ordinal {
-    Ordinal(std::unique_ptr<raw::Ordinal> literal, uint32_t value)
-        : literal_(std::move(literal)), value_(value) {}
-
-    uint32_t Value() const { return value_; }
-    raw::SourceElement* source_element() { return literal_ ? literal_.get() : nullptr; }
-
-private:
-    std::unique_ptr<raw::Ordinal> literal_;
-    uint32_t value_;
-};
-
 template <typename IntType>
 struct IntConstant {
     IntConstant(std::unique_ptr<Constant> constant, IntType value)
@@ -404,7 +392,8 @@ struct Interface : public Decl {
         Method& operator=(Method&&) = default;
 
         Method(std::unique_ptr<raw::AttributeList> attributes,
-               Ordinal ordinal, SourceLocation name, std::unique_ptr<Message> maybe_request,
+               std::unique_ptr<raw::Ordinal> ordinal, SourceLocation name,
+               std::unique_ptr<Message> maybe_request,
                std::unique_ptr<Message> maybe_response)
             : attributes(std::move(attributes)), ordinal(std::move(ordinal)), name(std::move(name)),
               maybe_request(std::move(maybe_request)), maybe_response(std::move(maybe_response)) {
@@ -412,7 +401,7 @@ struct Interface : public Decl {
         }
 
         std::unique_ptr<raw::AttributeList> attributes;
-        Ordinal ordinal;
+        std::unique_ptr<raw::Ordinal> ordinal;
         SourceLocation name;
         std::unique_ptr<Message> maybe_request;
         std::unique_ptr<Message> maybe_response;
@@ -456,16 +445,16 @@ struct Struct : public Decl {
 
 struct Table : public Decl {
     struct Member {
-        Member(std::unique_ptr<Ordinal> ordinal, std::unique_ptr<Type> type, SourceLocation name,
+        Member(std::unique_ptr<raw::Ordinal> ordinal, std::unique_ptr<Type> type, SourceLocation name,
                std::unique_ptr<Constant> maybe_default_value,
                std::unique_ptr<raw::AttributeList> attributes)
             : ordinal(std::move(ordinal)),
               maybe_used(std::make_unique<Used>(std::move(type), std::move(name),
                                                 std::move(maybe_default_value),
                                                 std::move(attributes))) {}
-        Member(std::unique_ptr<Ordinal> ordinal)
+        Member(std::unique_ptr<raw::Ordinal> ordinal)
             : ordinal(std::move(ordinal)) {}
-        std::unique_ptr<Ordinal> ordinal;
+        std::unique_ptr<raw::Ordinal> ordinal;
         struct Used {
             Used(std::unique_ptr<Type> type, SourceLocation name,
                  std::unique_ptr<Constant> maybe_default_value,
@@ -653,38 +642,6 @@ public:
     // constant, say.
     template <typename IntType>
     bool ParseIntegerLiteral(const raw::NumericLiteral* literal, IntType* out_value) const {
-        if (!literal) {
-            return false;
-        }
-        auto data = literal->location().data();
-        std::string string_data(data.data(), data.data() + data.size());
-        if (std::is_unsigned<IntType>::value) {
-            errno = 0;
-            unsigned long long value = strtoull(string_data.data(), nullptr, 0);
-            if (errno != 0)
-                return false;
-            if (value > std::numeric_limits<IntType>::max())
-                return false;
-            *out_value = static_cast<IntType>(value);
-        } else {
-            errno = 0;
-            long long value = strtoll(string_data.data(), nullptr, 0);
-            if (errno != 0) {
-                return false;
-            }
-            if (value > std::numeric_limits<IntType>::max()) {
-                return false;
-            }
-            if (value < std::numeric_limits<IntType>::min()) {
-                return false;
-            }
-            *out_value = static_cast<IntType>(value);
-        }
-        return true;
-    }
-
-    template <typename IntType>
-    bool ParseOrdinal(const raw::Ordinal* literal, IntType* out_value) const {
         if (!literal) {
             return false;
         }

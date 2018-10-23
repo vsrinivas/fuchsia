@@ -323,8 +323,8 @@ void JSONGenerator::Generate(const raw::AttributeList& value) {
     Generate(value.attributes);
 }
 
-void JSONGenerator::Generate(const flat::Ordinal& value) {
-    EmitUint32(&json_file_, value.Value());
+void JSONGenerator::Generate(const raw::Ordinal& value) {
+    EmitUint32(&json_file_, value.value);
 }
 
 void JSONGenerator::Generate(const flat::Name& value) {

@@ -133,10 +133,12 @@ public:
 
 class Ordinal : public SourceElement {
 public:
-    explicit Ordinal(SourceElement const& element)
-        : SourceElement(element) {}
+    Ordinal(SourceElement const& element, uint32_t value)
+        : SourceElement(element), value(value) {}
 
     void Accept(TreeVisitor& visitor);
+
+    const uint32_t value;
 };
 
 class TrueLiteral : public Literal {

@@ -558,7 +558,7 @@ void TablesGenerator::CompileFields(const flat::Decl* decl) {
         std::vector<coded::TableField>& table_fields = coded_table->fields;
         std::map<uint32_t, const flat::Table::Member*> members;
         for (const auto& member : table_decl->members) {
-            if (!members.emplace(member.ordinal->Value(), &member).second) {
+            if (!members.emplace(member.ordinal->value, &member).second) {
                 assert(false && "Duplicate ordinal found in table generation");
             }
         }
@@ -570,7 +570,7 @@ void TablesGenerator::CompileFields(const flat::Decl* decl) {
                 coded_table->coded_name + "_" + std::string(member.maybe_used->name.data());
             auto coded_member_type = CompileType(member.maybe_used->type.get());
             if (coded_member_type->coding_needed == coded::CodingNeeded::kNeeded)
-                table_fields.emplace_back(coded_member_type, member.ordinal->Value());
+                table_fields.emplace_back(coded_member_type, member.ordinal->value);
         }
         break;
     }
