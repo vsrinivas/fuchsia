@@ -74,6 +74,8 @@ class InputCommandDispatcher : public CommandDispatcher {
   void DispatchCommand(const fuchsia::ui::input::SendKeyboardInputCmd command);
   void DispatchCommand(
       const fuchsia::ui::input::SetHardKeyboardDeliveryCmd command);
+  void DispatchCommand(
+      const fuchsia::ui::input::SetParallelDispatchCmd command);
 
   // Enqueue the focus event into the view's SessionListener.
   void EnqueueEventToView(GlobalId view_id, fuchsia::ui::input::FocusEvent focus);
@@ -104,6 +106,9 @@ class InputCommandDispatcher : public CommandDispatcher {
   // their respective DOWN event. In particular, changes in focus from a new
   // finger should *not* affect delivery of events for existing fingers.
   std::unordered_map<uint32_t, ViewStack> pointer_targets_;
+
+  // TODO(SCN-1047): Remove when gesture disambiguation is the default.
+  bool parallel_dispatch_ = true;
 };
 
 }  // namespace input

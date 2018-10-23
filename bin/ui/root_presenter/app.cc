@@ -9,6 +9,8 @@
 #include <string>
 
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
+
 #include "lib/component/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/files/file.h"
@@ -279,6 +281,16 @@ void App::InitializeServices() {
       FXL_LOG(ERROR) << "Session died, destroying view trees.";
       Reset();
     });
+
+    // Globally disable parallel dispatch of input events.
+    // TODO(SCN-1047): Enable parallel dispatch.
+    {
+      fuchsia::ui::input::SetParallelDispatchCmd cmd;
+      cmd.parallel_dispatch = false;
+      fuchsia::ui::input::Command input_cmd;
+      input_cmd.set_set_parallel_dispatch(std::move(cmd));
+      session_->Enqueue(std::move(input_cmd));
+    }
 
     compositor_ = std::make_unique<scenic::DisplayCompositor>(session_.get());
     layer_stack_ = std::make_unique<scenic::LayerStack>(session_.get());

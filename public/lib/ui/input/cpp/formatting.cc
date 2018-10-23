@@ -406,6 +406,8 @@ std::ostream& operator<<(std::ostream& os,
       return os << value.send_pointer_input();
     case Command::Tag::kSetHardKeyboardDelivery:
       return os << value.set_hard_keyboard_delivery();
+    case Command::Tag::kSetParallelDispatch:
+      return os << value.set_parallel_dispatch();
     case Command::Tag::Invalid:
       return os << "Invalid";
   }
@@ -428,6 +430,13 @@ std::ostream& operator<<(
     const fuchsia::ui::input::SetHardKeyboardDeliveryCmd& value) {
   return os << "{SetHardKeyboardDeliveryCmd: delivery_request="
             << (value.delivery_request ? "on" : "off") << "}";
+}
+
+std::ostream& operator<<(
+    std::ostream& os,
+    const fuchsia::ui::input::SetParallelDispatchCmd& value) {
+  return os << "{SetParallelDispatchCmd: parallel_dispatch="
+            << (value.parallel_dispatch ? "on" : "off") << "}";
 }
 
 }  // namespace input

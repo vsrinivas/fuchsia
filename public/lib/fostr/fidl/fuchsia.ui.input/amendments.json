@@ -28,6 +28,7 @@
     "fuchsia.ui.input/Command",
     "fuchsia.ui.input/SendKeyboardInputCmd",
     "fuchsia.ui.input/SendPointerInputCmd",
-    "fuchsia.ui.input/SetHardKeyboardDeliveryCmd"
+    "fuchsia.ui.input/SetHardKeyboardDeliveryCmd",
+    "fuchsia.ui.input/SetParallelDispatchCmd"
   ]
 }

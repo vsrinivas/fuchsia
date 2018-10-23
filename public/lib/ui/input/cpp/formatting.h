@@ -84,6 +84,8 @@ std::ostream& operator<<(std::ostream& os,
 std::ostream& operator<<(
     std::ostream& os,
     const fuchsia::ui::input::SetHardKeyboardDeliveryCmd& value);
+std::ostream& operator<<(
+    std::ostream& os, const fuchsia::ui::input::SetParallelDispatchCmd& value);
 
 }  // namespace input
 }  // namespace ui

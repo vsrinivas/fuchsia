@@ -44,6 +44,7 @@ using fuchsia::ui::input::PointerEventPhase;
 using fuchsia::ui::input::SendKeyboardInputCmd;
 using fuchsia::ui::input::SendPointerInputCmd;
 using fuchsia::ui::input::SetHardKeyboardDeliveryCmd;
+using fuchsia::ui::input::SetParallelDispatchCmd;
 
 namespace {
 // Helper for DispatchCommand.
@@ -219,6 +220,8 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command) {
     DispatchCommand(std::move(input.send_pointer_input()));
   } else if (input.is_set_hard_keyboard_delivery()) {
     DispatchCommand(std::move(input.set_hard_keyboard_delivery()));
+  } else if (input.is_set_parallel_dispatch()) {
+    DispatchCommand(std::move(input.set_parallel_dispatch()));
   }
 }
 
@@ -335,6 +338,10 @@ void InputCommandDispatcher::DispatchCommand(
 
     auto clone = ClonePointerWithCoords(command.pointer_event, hit.x, hit.y);
     EnqueueEventToView(entry.view_id, std::move(clone));
+
+    if (!parallel_dispatch_) {
+      break;  // TODO(SCN-1047): Remove when gesture disambiguation is ready.
+    }
   }
 
   if (pointer_phase == PointerEventPhase::REMOVE ||
@@ -374,6 +381,12 @@ void InputCommandDispatcher::DispatchCommand(
   } else {
     input_system_->hard_keyboard_requested().erase(session_id);
   }
+}
+
+void InputCommandDispatcher::DispatchCommand(const SetParallelDispatchCmd command) {
+  FXL_LOG(INFO) << "Scenic: Parallel dispatch is turned "
+                << (command.parallel_dispatch ? "ON" : "OFF");
+  parallel_dispatch_ = command.parallel_dispatch;
 }
 
 void InputCommandDispatcher::EnqueueEventToView(GlobalId view_id,
