@@ -85,7 +85,7 @@ struct ProcessStartData {
     // Should be passed to |zx_process_start| when starting the process.
     uint64 vdso_base;
 
-    // The base load address of the the ELF file loaded.
+    // The base load address of the ELF file loaded.
     //
     // Most often used by debuggers or other tools that inspect the process.
     uint64 base;
@@ -125,12 +125,12 @@ interface Launcher {
 
     // Adds the given arguments to the command-line for the process.
     //
-    // Calling this method multiple times concatentates the arguments.
+    // Calling this method multiple times concatenattes the arguments.
     10: AddArgs(vector<string> args);
 
-    // Adds the given variables to the enviornment variables for the process.
+    // Adds the given variables to the environment variables for the process.
     //
-    // Calling this method multiple times concatentates the variables.
+    // Calling this method multiple times concatenates the variables.
     11: AddEnvirons(vector<string> environ);
 
     // Adds the given names to the namespace for the process.
@@ -138,11 +138,11 @@ interface Launcher {
     // The paths in the namespace must be non-overlapping. See
     // <https://fuchsia.googlesource.com/docs/+/master/the-book/namespaces.md> for details.
     //
-    // Calling this method multiple times concatentates the names.
+    // Calling this method multiple times concatenates the names.
     12: AddNames(vector<NameInfo> names);
 
     // Adds the given handles to the startup handles for the process.
     //
-    // Calling this method multiple times concatentates the handles.
+    // Calling this method multiple times concatenates the handles.
     13: AddHandles(vector<HandleInfo> handles);
 };

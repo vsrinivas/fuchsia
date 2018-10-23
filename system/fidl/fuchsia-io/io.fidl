@@ -355,7 +355,7 @@ struct FilesystemInfo {
     // A unique identifier for the type of the underlying filesystem.
     uint32 fs_type;
     uint32 padding;
-    // TODO(smklein): Replace this field with a string when suppported
+    // TODO(smklein): Replace this field with a string when supported
     // by the "Simple" interface. At the moment, name is a fixed-size,
     // null-terminated buffer.
     array<int8>:MAX_FS_NAME_BUFFER name;

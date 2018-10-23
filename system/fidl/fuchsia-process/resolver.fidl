@@ -16,7 +16,7 @@ interface Resolver {
     // the PA_LDSVC_LOADER handle when launching the process.
     //
     // For example, the resolver might locate the given |name| inside a package
-    // and return the exectuable binary from the package as well as a shared
+    // and return the executable binary from the package as well as a shared
     // library loader scoped to that package.
     1: Resolve(string:4096 name) -> (zx.status status,
                                      handle<vmo>? executable,
