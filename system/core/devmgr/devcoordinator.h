@@ -77,10 +77,16 @@ struct dc_devhost {
     list_node_t snode;
 
     // listnode for this devhost in its parent devhost's list-of-children
-    list_node_t node;
+    fbl::DoublyLinkedListNodeState<dc_devhost*> node;
+    struct Node {
+        static fbl::DoublyLinkedListNodeState<dc_devhost*>& node_state(
+            dc_devhost& obj) {
+            return obj.node;
+        }
+    };
 
     // list of all child devhosts of this devhost
-    list_node_t children;
+    fbl::DoublyLinkedList<dc_devhost*, Node> children;
 
     // The AddRef and Release functions follow the contract for fbl::RefPtr.
     void AddRef() const {

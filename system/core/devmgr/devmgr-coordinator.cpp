@@ -689,7 +689,6 @@ dc_devhost::dc_devhost()
       flags(0), parent(nullptr), anode({}), snode({}), node({}) {
 
     list_initialize(&devices);
-    list_initialize(&children);
 }
 
 static zx_status_t dc_new_devhost(const char* name, devhost_t* parent,
@@ -713,7 +712,7 @@ static zx_status_t dc_new_devhost(const char* name, devhost_t* parent,
     if (parent) {
         dh->parent = parent;
         dh->parent->AddRef();
-        list_add_tail(&dh->parent->children, &dh->node);
+        dh->parent->children.push_back(dh.get());
     }
     list_add_tail(&list_devhosts, &dh->anode);
 
@@ -730,8 +729,8 @@ static void dc_release_devhost(devhost_t* dh) {
     log(INFO, "devcoord: destroy host %p\n", dh);
     devhost_t* parent = dh->parent;
     if (parent != nullptr) {
+        dh->parent->children.erase(*dh);
         dh->parent = nullptr;
-        list_delete(&dh->node);
         dc_release_devhost(parent);
     }
     list_delete(&dh->anode);
@@ -1844,12 +1843,11 @@ static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
 
 static void append_suspend_list(suspend_context_t* ctx, devhost_t* dh) {
     // suspend order is children first
-    devhost_t* child = nullptr;
-    list_for_every_entry(&dh->children, child, devhost_t, node) {
-        list_add_head(&ctx->devhosts, &child->snode);
+    for (auto& child : dh->children) {
+        list_add_head(&ctx->devhosts, &child.snode);
     }
-    list_for_every_entry(&dh->children, child, devhost_t, node) {
-        append_suspend_list(ctx, child);
+    for (auto& child : dh->children) {
+        append_suspend_list(ctx, &child);
     }
 }
 
