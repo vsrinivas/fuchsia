@@ -127,7 +127,7 @@ bool Adapter::Initialize(InitializeCallback callback,
       hci::CommandPacket::New(hci::kReadLocalSupportedCommands),
       [this](const hci::EventPacket& cmd_complete) {
         if (hci_is_error(cmd_complete, WARN, "gap",
-                         "read local supported commmands failed")) {
+                         "read local supported commands failed")) {
           return;
         }
         auto params =

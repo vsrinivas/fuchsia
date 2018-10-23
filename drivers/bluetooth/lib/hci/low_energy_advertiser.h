@@ -64,7 +64,7 @@ class LowEnergyAdvertiser {
   virtual bool StopAdvertising(const common::DeviceAddress& address) = 0;
 
   // Callback for an incoming connection.  |connection| should be an LE
-  // connection that has been remotely-intiated.  This function should be called
+  // connection that has been remotely-initiated.  This function should be called
   // in reaction to any connection that was not initiated locally.   This object
   // will determine if it was a result of an active advertisement and call the
   // appropriate callback.

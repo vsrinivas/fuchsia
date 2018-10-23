@@ -440,7 +440,7 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
     const auto& params = event->view().payload<CommandCompleteEventParams>();
     matching_opcode = le16toh(params.command_opcode);
     allowed_command_packets_ = params.num_hci_command_packets;
-  } else {  // kComandStatusEventCode
+  } else {  // kCommandStatusEventCode
     const auto& params = event->view().payload<CommandStatusEventParams>();
     matching_opcode = le16toh(params.command_opcode);
     allowed_command_packets_ = params.num_hci_command_packets;

@@ -46,7 +46,7 @@ class LowEnergyAdvertisingManager {
   //      are invalid (e.g. |data| is too large).
   //    * common::HostError::kNotSupported if another set cannot be advertised
   //      or if the requested parameters are not supported by the hardware.
-  //    * common::HostError::kProtocolError with the a HCI error reported from
+  //    * common::HostError::kProtocolError with a HCI error reported from
   //      the controller, otherwise.
   //
   // TODO(armansito): Return integer IDs instead.

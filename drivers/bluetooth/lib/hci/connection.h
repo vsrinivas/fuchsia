@@ -143,7 +143,7 @@ class Connection {
   }
 
   // Closes this connection by sending the HCI_Disconnect command to the
-  // controller. This method is a NOP if the connecton is already closed.
+  // controller. This method is a NOP if the connection is already closed.
   virtual void Close(
       StatusCode reason = StatusCode::kRemoteUserTerminatedConnection) = 0;
 

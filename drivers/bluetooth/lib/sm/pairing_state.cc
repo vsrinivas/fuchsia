@@ -341,7 +341,7 @@ void PairingState::CompleteLegacyPairing() {
 
   le_smp_->StopTimer();
 
-  // The security properties of all keys are determined by the the security
+  // The security properties of all keys are determined by the security
   // properties of the link used to distribute them. This is reflected by
   // |le_sec_|.
 
@@ -364,7 +364,7 @@ void PairingState::CompleteLegacyPairing() {
   delegate_->OnPairingComplete(Status());
   delegate_->OnNewPairingData(pairing_data);
 
-  // Separate out the requests that are satisifed by the current security level
+  // Separate out the requests that are satisfied by the current security level
   // from the ones that require a higher level. We'll retry pairing for the
   // latter.
   std::queue<PendingRequest> satisfied;

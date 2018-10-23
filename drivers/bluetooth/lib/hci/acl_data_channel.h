@@ -46,7 +46,7 @@ class DataBufferInfo {
   size_t max_data_length() const { return max_data_length_; }
 
   // Returns the total number of HCI ACL data packets that can be stored in the
-  // data buffer reprented by this object.
+  // data buffer represented by this object.
   size_t max_num_packets() const { return max_num_packets_; }
 
   // Returns true if both fields are set to zero.

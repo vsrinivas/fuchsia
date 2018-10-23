@@ -25,7 +25,7 @@ class CommandDispatcher final {
   //
   // Returns false if the command could not be handled, either because |argv|
   // contained invalid arguments or if no handler for the command had been
-  // previously registered. |out_cmd_found| will be set to false if no comand
+  // previously registered. |out_cmd_found| will be set to false if no command
   // handler for this command was registered, true otherwise.
   bool ExecuteCommand(const std::vector<std::string>& argv,
                       fit::closure complete_cb, bool* out_cmd_found);

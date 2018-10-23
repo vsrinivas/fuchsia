@@ -110,7 +110,7 @@ TEST_F(SDP_DataElementTest, ReadUUID) {
 
 TEST_F(SDP_DataElementTest, Write) {
   // This represents a plausible attribute_lists parameter of a
-  // SDP_ServiceSearchAtttributeResponse PDU for an SPP service.
+  // SDP_ServiceSearchAttributeResponse PDU for an SPP service.
   std::vector<DataElement> attribute_list;
 
   // SerialPort from Assigned Numbers

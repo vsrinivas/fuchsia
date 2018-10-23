@@ -135,7 +135,7 @@ class LowEnergyScanner {
   // will NOT generate an OnDeviceFound event until a scan response is received
   // from the corresponding broadcaster. If a scan response from a scannable
   // device is never received during a scan period, then an OnDeviceFound event
-  // (exluding scan response data) will be generated for that device at the end
+  // (excluding scan response data) will be generated for that device at the end
   // of the scan period, UNLESS the scan was explicitly stopped via StopScan().
   enum class ScanStatus {
     // Reported when the scan could not be started.

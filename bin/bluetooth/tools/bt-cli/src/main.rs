@@ -188,7 +188,7 @@ impl State {
     }
 }
 
-/// Handle a single raw input command from a user and indicate whether the the command should
+/// Handle a single raw input command from a user and indicate whether the command should
 /// result in continuation or breaking of the read evaluate print loop.
 async fn handle_cmd(bt_svc: &ControlProxy, state: Arc<Mutex<State>>, line: String)
     -> Result<ReplControl, Error>

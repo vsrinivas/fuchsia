@@ -94,7 +94,7 @@ class CommandChannel final {
   // are invalid.  This ID will be supplied to |callback| in its |id| parameter
   // to identify the transaction.
   //
-  // NOTE: Commmands queued are not guaranteed to be finished or sent in order,
+  // NOTE: Commands queued are not guaranteed to be finished or sent in order,
   // although commands with the same opcode will be sent in order, and
   // commands with the same |complete_code| will be sent in order.
   // If strict ordering of commands is required, use SequentialCommandRunner
@@ -216,7 +216,7 @@ class CommandChannel final {
   };
 
   // Adds an internal event handler for |data| if one does not exist yet and
-  // another ransaction is not waiting on the same event.
+  // another transaction is not waiting on the same event.
   // Used to add expiring event handlers for asynchronous commands.
   void MaybeAddTransactionHandler(TransactionData* data)
       __TA_REQUIRES(event_handler_mutex_);

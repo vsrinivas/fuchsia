@@ -1162,7 +1162,7 @@ TEST_F(GATT_ClientTest, CharacteristicDiscoveryResultsBeyondRange) {
   EXPECT_TRUE(chrcs.empty());
 }
 
-// Expects the the characteristic value handle to immediately follow the
+// Expects the characteristic value handle to immediately follow the
 // declaration as specified in Vol 3, Part G, 3.3.
 TEST_F(GATT_ClientTest, CharacteristicDiscoveryValueNotContiguous) {
   constexpr att::Handle kStart = 0x0002;

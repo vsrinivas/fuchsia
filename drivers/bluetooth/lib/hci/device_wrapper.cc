@@ -43,7 +43,7 @@ zx::channel IoctlDeviceWrapper::GetACLDataChannel() {
   return channel;
 }
 
-// ================= DdkDeviceWrappper =================
+// ================= DdkDeviceWrapper =================
 
 DdkDeviceWrapper::DdkDeviceWrapper(const bt_hci_protocol_t& hci)
     : hci_proto_(hci) {}

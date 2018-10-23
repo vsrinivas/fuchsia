@@ -59,7 +59,7 @@ btlib::hci::StatusCode VendorHci::SendHciReset() const {
   SendCommand(packet->view());
 
   // TODO(armansito): Consider collecting a metric for initialization time
-  // (succesful and failing) to provide us with a better sense of how long these
+  // (successful and failing) to provide us with a better sense of how long these
   // timeouts should be.
   auto evt_packet =
       WaitForEventPacket(kInitTimeoutMs, &btlib::hci::kCommandCompleteEventCode);

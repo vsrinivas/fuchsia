@@ -31,7 +31,7 @@ const DeviceAddress kAddrBrEdr(DeviceAddress::Type::kBREDR,
 const DeviceAddress kAddrLePublic(DeviceAddress::Type::kLEPublic,
                                   "01:02:03:04:05:06");
 
-// TODO(armansito): Make these adhere to privacy specfication.
+// TODO(armansito): Make these adhere to privacy specification.
 const DeviceAddress kAddrLeRandom(DeviceAddress::Type::kLERandom,
                                   "06:05:04:03:02:01");
 const DeviceAddress kAddrLeRandom2(DeviceAddress::Type::kLERandom,

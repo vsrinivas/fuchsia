@@ -248,7 +248,7 @@ zx_status_t Device::LoadFirmware() {
     }
   }
 
-  auto note = fbl::StringPrintf("loaded succesfully");
+  auto note = fbl::StringPrintf("loaded successfully");
   return Appear(note.c_str());
 }
 

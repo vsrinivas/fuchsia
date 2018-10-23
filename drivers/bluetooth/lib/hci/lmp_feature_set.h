@@ -17,7 +17,7 @@ namespace hci {
 // Remote devices and local controllers have a feature set defined by the
 // Link Manager Protocol.
 // LMP features are organized into "pages", each containing a bit-mask of
-// supported controller features. See Core Spec v5.0, Vol 2, Part C, Secton 3.3
+// supported controller features. See Core Spec v5.0, Vol 2, Part C, Section 3.3
 // "Feature Mask Definition".
 // Three of these pages (the standard page plus two "extended feature" pages)
 // are defined by the spec.
